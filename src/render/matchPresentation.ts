@@ -40,6 +40,7 @@ import { CaseRenderer } from './caseRenderer';
 import { ExitRenderer } from './exitRenderer';
 import type { FigureModel } from './externalModels';
 import { FlagRenderer } from './flagRenderer';
+import type { ProbeGrid } from './probeGrid';
 import { projectMarker, type ScreenMarker } from './screenMarker';
 import { SpectatorCamera } from './spectatorCamera';
 import { type FigureCrowd, HUMAN_CROWD } from './figureMix';
@@ -223,6 +224,11 @@ export class MatchPresentation {
   /** Player detail (QualitySettings.figureDetail, FA8): the figures are built again at the new level. */
   setFigureDetail(level: DetailLevel): void {
     this.characters.setDetail(level);
+  }
+
+  /** The map's baked bounce light on the figures as they move (G6, render/bakedLight.ts), or null for none. */
+  setBakedLight(grid: ProbeGrid | null): void {
+    this.characters.setBakedLight(grid);
   }
 
   /** On-screen sound cues turned on or off (also called once as the match is built). */

@@ -1,13 +1,13 @@
-import { AUDIO, type LoopId, VOLUME, type VolumeChannel } from '../config/audio';
+import { AUDIO, type LoopId, type ReverbSpec, VOLUME, type VolumeChannel } from '../config/audio';
 import { cues, SHOT_PROFILES, type SoundCue } from '../config/sounds';
 import { renderAmbienceBed } from './ambience';
 import { volumeGain, type Volumes } from './audioMix';
-import { seededRandom } from './dsp';
+import { Biquad, seededRandom } from './dsp';
 import { finish, MAP_SOUND_RENDERERS, type MapSoundRenderers, SoundLibrary, suppressedCopies } from './soundBank';
 import type { Soundscape } from './soundscape';
 
-/** What a field plays beyond the title screen's sounds (M33j): its map cues and loops. */
-export type FieldSounds = Pick<Soundscape, 'cues' | 'loops'>;
+/** What a field plays beyond the title screen's sounds (M33j): its map cues and loops, and its echo (M69). */
+export type FieldSounds = Pick<Soundscape, 'cues' | 'loops' | 'reverb'>;
 
 /** Lets an audio context's promise (resume, suspend, close) settle quietly: a refusal changes nothing we rely on. */
 export function settle(p: Promise<void>): void {
@@ -31,20 +31,31 @@ export interface DuckShape {
   readonly release: number;
 }
 
+/** A dark echo's low-pass is maximally flat (Butterworth): 12 dB an octave above ReverbSpec.darkHz, no bump below. */
+const DARK_Q = Math.SQRT1_2;
+
 /**
- * Stereo impulse response: noise dying away over `seconds` (a small walled yard, no roof). Seeded, like every other
- * sound (audit CORE-17), and made a channel per step of the warm-up. At the context's own rate: a convolver refuses
- * a buffer at any other.
+ * Stereo impulse response of echo `r` (config/audio.ts ReverbSpec): noise dying away over `r.seconds` (the yard's: a
+ * small walled yard, no roof), its highs rolled off above `r.darkHz` if it sets one. Seeded, like every other sound
+ * (audit CORE-17), and made a channel per step. At the context's own rate: a convolver refuses a buffer at any other.
  */
-function* reverbImpulse(ctx: AudioContext): Generator<void, AudioBuffer> {
-  const r = AUDIO.reverb;
+function* reverbImpulse(ctx: AudioContext, r: ReverbSpec): Generator<void, AudioBuffer> {
   const len = Math.round(ctx.sampleRate * r.seconds);
   const buf = ctx.createBuffer(2, len, ctx.sampleRate);
   const rand = seededRandom(r.seed);
   for (let ch = 0; ch < 2; ch++) {
     yield;
     const d = buf.getChannelData(ch);
-    for (let i = 0; i < len; i++) d[i] = (rand() * 2 - 1) * (1 - i / len) ** r.decayPower;
+    // A low-pass for a dark echo (M69, audit AUD-10); without darkHz the noise is used as it comes, as the yard's always was.
+    let dark: Biquad | null = null;
+    if (r.darkHz !== undefined) {
+      dark = new Biquad('lowpass', ctx.sampleRate);
+      dark.set(r.darkHz, DARK_Q);
+    }
+    for (let i = 0; i < len; i++) {
+      const n = rand() * 2 - 1;
+      d[i] = (dark ? dark.process(n) : n) * (1 - i / len) ** r.decayPower;
+    }
   }
   return buf;
 }
@@ -64,7 +75,8 @@ export class AudioEngine {
   private readonly buses = new Map<VolumeChannel, GainNode>();
   private readonly buffers = new Map<SoundCue, AudioBuffer[]>();
   private readonly muffled = new Map<SoundCue, AudioBuffer[]>();
-  private reverb: AudioBuffer | null = null;
+  /** The echoes made so far: the yard's (AUDIO.reverb, the title screen's last step) and each played field's own (M69). */
+  private readonly reverbs = new Map<ReverbSpec, AudioBuffer>();
   /** The yard's outdoor bed, a loop (audit CORE-34). */
   private ambience: AudioBuffer | null = null;
   /** The other loops a map played (M33j: the woods' wind and insects, a fire's crackle), rendered when first needed. */
@@ -86,16 +98,18 @@ export class AudioEngine {
   private warming: Generator<void> | null = null;
   /**
    * The picked field's own sounds, rendered ahead of Play in the title screen's spare time (M65, audit AUD-01): the
-   * field to work out at the next spare moment (prefetch), then what it plays; each map cue's and loop's rendering
-   * while it is under way; and those finished ahead that no match has played yet. Only the picked field's: a new pick
-   * lets go of the rest, so beyond what is kept today only that one field's sounds are held.
+   * field to work out at the next spare moment (prefetch), then what it plays; each map cue's, loop's and echo's (M69)
+   * rendering while it is under way; and those finished ahead that no match has played yet. Only the picked field's: a
+   * new pick lets go of the rest, so beyond what is kept today only that one field's sounds are held.
    */
   private aheadOf: (() => FieldSounds) | null = null;
   private ahead: FieldSounds | null = null;
   private readonly cueJobs = new Map<SoundCue, Generator<void, Float32Array[]>>();
   private readonly loopJobs = new Map<LoopId, Generator<void, Float32Array>>();
+  private readonly reverbJobs = new Map<ReverbSpec, Generator<void, AudioBuffer>>();
   private readonly unplayedCues = new Set<SoundCue>();
   private readonly unplayedLoops = new Set<LoopId>();
+  private readonly unplayedReverbs = new Set<ReverbSpec>();
   /** A spare moment is asked for (pump). */
   private pumping = false;
   /** A match is being played (setRunning): the context should run. */
@@ -148,7 +162,7 @@ export class AudioEngine {
    */
   warmUp(): void {
     const ctx = this.context();
-    if (!ctx || this.warming || this.reverb) return;
+    if (!ctx || this.warming || this.reverbs.has(AUDIO.reverb)) return;
     this.warming = this.warm(ctx);
     this.pump();
   }
@@ -189,10 +203,25 @@ export class AudioEngine {
     return this.cueBuffers().get(cue)?.map((b) => b.getChannelData(0)) ?? [];
   }
 
-  /** The yard's echo (a stereo impulse response for a convolver). Null without a context. */
-  reverbImpulse(): AudioBuffer | null {
-    this.finishWarmUp();
-    return this.reverb;
+  /**
+   * Echo `spec`'s impulse (a stereo impulse response for a convolver): the yard's from the title screen's rendering, a
+   * field's own (M69, audit AUD-10) made the first time it is asked for and kept for the page (prepare does it as the
+   * match loads, from where New game's spare time left it). Null without a context.
+   */
+  reverbImpulse(spec: ReverbSpec = AUDIO.reverb): AudioBuffer | null {
+    if (spec === AUDIO.reverb) {
+      this.finishWarmUp();
+      return this.reverbs.get(spec) ?? null;
+    }
+    const ctx = this.context();
+    if (!ctx) return null;
+    let buf = this.reverbs.get(spec);
+    if (!buf) {
+      buf = finish(this.reverbJobs.get(spec) ?? reverbImpulse(ctx, spec));
+      this.reverbJobs.delete(spec);
+      this.reverbs.set(spec, buf);
+    }
+    return buf;
   }
 
   /** The yard's outdoor bed: a mono loop (audio/ambience.ts). Null without a context. */
@@ -220,9 +249,10 @@ export class AudioEngine {
   }
 
   /**
-   * Renders what `scene` plays beyond the title screen's sounds (M33j: its map cues and loops), once per page, so a map
-   * that never uses them costs nothing and the match never waits on them mid-play. Call as the match loads. What New
-   * game's spare time rendered ahead (prefetch, M65) is taken as it is; what it began is finished from where it was.
+   * Renders what `scene` plays beyond the title screen's sounds (M33j: its map cues and loops; M69: its echo), once per
+   * page, so a map that never uses them costs nothing and the match never waits on them mid-play. Call as the match
+   * loads. What New game's spare time rendered ahead (prefetch, M65) is taken as it is; what it began is finished from
+   * where it was.
    */
   prepare(scene: FieldSounds): void {
     const ctx = this.context();
@@ -238,6 +268,10 @@ export class AudioEngine {
       if (id === 'yard') continue;
       this.unplayedLoops.delete(id);
       this.loop(id);
+    }
+    if (scene.reverb !== AUDIO.reverb) {
+      this.unplayedReverbs.delete(scene.reverb);
+      this.reverbImpulse(scene.reverb);
     }
   }
 
@@ -353,15 +387,17 @@ export class AudioEngine {
     this.aheadOf = this.ahead = null;
     this.cueJobs.clear();
     this.loopJobs.clear();
+    this.reverbJobs.clear();
     this.unplayedCues.clear();
     this.unplayedLoops.clear();
+    this.unplayedReverbs.clear();
     this.unavailable = true;
     if (this.ctx) settle(this.ctx.close());
     this.ctx = null;
     this.buses.clear();
     this.buffers.clear();
     this.loops.clear();
-    this.reverb = null;
+    this.reverbs.clear();
     this.ambience = null;
     this.ducker = null;
   }
@@ -417,7 +453,7 @@ export class AudioEngine {
     this.library.release(rate);
     yield;
     this.ambience = toBuffer(ctx, yield* renderAmbienceBed(rate));
-    this.reverb = yield* reverbImpulse(ctx);
+    this.reverbs.set(AUDIO.reverb, yield* reverbImpulse(ctx, AUDIO.reverb));
   }
 
   /**
@@ -462,6 +498,8 @@ export class AudioEngine {
       for (const id of [...this.loopJobs.keys()]) if (!field.loops.includes(id)) this.loopJobs.delete(id);
       for (const cue of this.unplayedCues) if (!field.cues.includes(cue) && this.unplayedCues.delete(cue)) this.buffers.delete(cue);
       for (const id of this.unplayedLoops) if (!field.loops.includes(id) && this.unplayedLoops.delete(id)) this.loops.delete(id);
+      for (const spec of [...this.reverbJobs.keys()]) if (spec !== field.reverb) this.reverbJobs.delete(spec);
+      for (const spec of this.unplayedReverbs) if (spec !== field.reverb && this.unplayedReverbs.delete(spec)) this.reverbs.delete(spec);
       return true;
     }
     const field = this.ahead;
@@ -491,12 +529,25 @@ export class AudioEngine {
       }
       return true;
     }
+    // The field's own echo last (M69, audit AUD-10), a channel a step (5-8 ms at 48 kHz); the yard's comes with the title screen.
+    const echo = field.reverb;
+    if (echo !== AUDIO.reverb && !this.reverbs.has(echo)) {
+      const job = this.reverbJobs.get(echo) ?? reverbImpulse(ctx, echo);
+      const r = job.next();
+      if (!r.done) this.reverbJobs.set(echo, job);
+      else {
+        this.reverbJobs.delete(echo);
+        this.reverbs.set(echo, r.value);
+        this.unplayedReverbs.add(echo);
+      }
+      return true;
+    }
     this.ahead = null;
     return false;
   }
 
   private finishWarmUp(): void {
-    if (this.reverb) return;
+    if (this.reverbs.has(AUDIO.reverb)) return;
     const ctx = this.context();
     if (!ctx) return;
     const job = this.warming ?? this.warm(ctx);

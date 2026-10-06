@@ -33,7 +33,9 @@ const F = REPLICA_FINISH;
  * adds: rounded corners on boxes with a lighter bevel (the CS edge highlight) and lighter worn edges, a moulded speckle
  * (roughness and normal maps) on the polymer and a stipple on the rubber, painted steel that reflects the replica's sheen,
  * real rail slots, ring and post sights, glass lenses and an emissive laser lens, and per-part detail on every optic,
- * grip, magazine and the laser. Hand detail `high` dresses the gloves and sleeves (handModels.ts). Low is unchanged.
+ * grip, magazine and the laser. Hand detail `high` dresses the gloves and sleeves (handModels.ts). Low keeps
+ * the same shapes, plain, with steel, rubber and stipple in the detail material, so it draws no more triangles and no
+ * more meshes per part than before G2.
  */
 
 // Hand poses (joint bends in radians: knuckle, middle, tip).

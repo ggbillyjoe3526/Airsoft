@@ -26,7 +26,7 @@ export const RENDER = {
  */
 export const ATMOSPHERE = {
   /** Sky dome colours: straight up, at the horizon, and below it (seen only over low walls). */
-  zenith: 0x5f9fd8,
+  zenith: 0x3f82d6,
   horizon: 0xd3e5f1,
   below: 0xc4d0cc,
   /** A warm glow round the sun's direction: its colour and how tightly it gathers (higher = smaller). */
@@ -220,7 +220,24 @@ export interface QualitySettings {
    * A fixed number for the match, so no shader is rebuilt as you move. Nothing on a map without light pools.
    */
   poolLights: PoolLightCount;
+  // G6: materials and baked lighting.
+  /**
+   * Baked bounce light (G6, render/bakedLight.ts) on a map that ships a bake (MapData.bakedLight): `pixel` reads the
+   * probe grid on every surface pixel (one 3D texture read), `vertex` bakes it into the map's vertex colours when the
+   * map is built (no per-pixel cost), `off` draws without it. Figures read it on the CPU either way.
+   */
+  bakedLight: BakedLightMode;
+  /**
+   * Weathering (G6, render/surfaceShader.ts): dirt creeping up from the ground, patches, rain streaks and rust on
+   * steel, worked out per pixel in world space, so it never repeats with the texture. A rebuild of the map's shaders.
+   */
+  weathering: boolean;
 }
+
+/** How baked bounce light is drawn (QualitySettings.bakedLight). */
+export type BakedLightMode = 'off' | 'vertex' | 'pixel';
+/** The baked-light modes, cheapest first. */
+export const BAKED_LIGHT_MODES: readonly BakedLightMode[] = ['off', 'vertex', 'pixel'];
 
 /** Night lights (QualitySettings.poolLights): real point lights on the nearest light pools. */
 export type PoolLightCount = 0 | 2 | 4;
@@ -237,11 +254,14 @@ export type TreeDetail = 0 | 1 | 2;
  */
 export const QUALITY: Record<QualityPreset, QualitySettings> = {
   low: { renderScale: 0.8, maxPixelRatio: 1, antialias: false, shadows: false, shadowMapSize: 1024, shadowRadius: 1, shadowFollowsView: false, figureShadows: false, surfaceRelief: false, textureSize: 256, anisotropy: 1, dustMotes: 0, replicaSheen: false,
-    environment: false, normalMaps: false, mapDetail: false, trees: 1, clouds: false, figureDetail: 'low', replicaDetail: 'low', handDetail: 'low', bbGlow: false, impactGrit: false, laserBeam: false, poolLights: 0 },
+    environment: false, normalMaps: false, mapDetail: false, trees: 1, clouds: false, figureDetail: 'low', replicaDetail: 'low', handDetail: 'low', bbGlow: false, impactGrit: false, laserBeam: false, poolLights: 0,
+    bakedLight: 'vertex', weathering: false },
   medium: { renderScale: 1, maxPixelRatio: 1.25, antialias: true, shadows: true, shadowMapSize: 1024, shadowRadius: 1.5, shadowFollowsView: false, figureShadows: true, surfaceRelief: true, textureSize: 512, anisotropy: 4, dustMotes: 90, replicaSheen: true,
-    environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', bbGlow: true, impactGrit: true, laserBeam: false, poolLights: 2 },
+    environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', bbGlow: true, impactGrit: true, laserBeam: false, poolLights: 2,
+    bakedLight: 'pixel', weathering: true },
   high: { renderScale: 1, maxPixelRatio: 1.5, antialias: true, shadows: true, shadowMapSize: 2048, shadowRadius: 2.5, shadowFollowsView: true, figureShadows: true, surfaceRelief: true, textureSize: 1024, anisotropy: 16, dustMotes: 180, replicaSheen: true,
-    environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', bbGlow: true, impactGrit: true, laserBeam: false, poolLights: 4 },
+    environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', bbGlow: true, impactGrit: true, laserBeam: false, poolLights: 4,
+    bakedLight: 'pixel', weathering: true },
 };
 
 /** The fields of a QualitySettings, in the order the Custom rows show them. */
@@ -420,17 +440,22 @@ export const CONTACT_SHADOWS = {
 } as const;
 
 /**
- * Bright, friendly daylight: a warm late-morning sun and a cool sky fill (M14). The hemisphere's ground colour is the
- * sunlit concrete's bounce, so shaded sides stay warm and readable, never murky.
+ * Bright, friendly daylight: a warm sun and a cool sky fill (M14). The hemisphere's ground colour is the sunlit
+ * concrete's bounce, so shaded sides stay warm and readable, never murky. G6 (the approved v3 look, Breath of the Wild's
+ * light): the sun lower (about 35° up) and warmer, so walls and figures take it across their faces and throw longer
+ * shadows, and a bluer, stronger sky fill, so the shade reads cool; the sun a touch stronger to keep the ground's light.
  */
 export const LIGHTING = {
-  hemiSky: 0xcfe2ff,
-  hemiGround: 0x8f8268,
-  hemiIntensity: 1.45,
-  sunColor: 0xffe4bd,
-  sunIntensity: 2.7,
-  /** Sun position relative to the map centre (metres): high enough that walls throw short, readable shadows. */
-  sunOffset: { x: 20, y: 42, z: 14 },
+  hemiSky: 0xb6d0f2,
+  hemiGround: 0xa08e70,
+  hemiIntensity: 1.6,
+  sunColor: 0xffd9aa,
+  sunIntensity: 3.1,
+  /**
+   * Sun position relative to the map centre (metres): about 35° above the horizon (G6; 60° before), as far out as
+   * before (49 m), so the shadow camera's reach is unchanged.
+   */
+  sunOffset: { x: 32.5, y: 27.8, z: 23 },
   /** Extra margin around the level box for the shadow camera (metres). */
   shadowMargin: 2,
   shadowBias: -0.0004,
@@ -834,8 +859,14 @@ export type NatureSurfaceId = 'bark' | 'planks' | 'stone' | 'groundDetail';
  */
 export type CitySurfaceId = BlockFinish | 'glass';
 
+/**
+ * The texture library's own surfaces (G6, render/textureLibrary.ts): worn paint on steel for the set dressing to come
+ * (G8, G9). Drawn only when a map uses it, as the woods' and the city's are.
+ */
+export type LibrarySurfaceId = 'paint';
+
 /** Every surface texture (render/proceduralTextures.ts). */
-export type SurfaceTextureId = CoreSurfaceId | NatureSurfaceId | CitySurfaceId;
+export type SurfaceTextureId = CoreSurfaceId | NatureSurfaceId | CitySurfaceId | LibrarySurfaceId;
 
 /**
  * The look of the field's surfaces and props (M14, render/proceduralTextures.ts and render/mapMeshes.ts). Everything
@@ -843,9 +874,9 @@ export type SurfaceTextureId = CoreSurfaceId | NatureSurfaceId | CitySurfaceId;
  */
 export const SURFACES = {
   /** Metres one texture repeat covers, for the textures mapped in world space (crates are mapped once per face). */
-  worldSize: { concrete: 4, blockWall: 1.6, crate: 1.2, corrugated: 2, steelPlate: 1.2, barrier: 1, sandbag: 1.2, gabion: 1.2, bark: 1.6, planks: 1.6, stone: 1.6, groundDetail: 4, plaster: 2.4, cladding: 1.6, tiles: 0.6, asphalt: 3, paving: 1.2, glass: 1.2 } satisfies Record<SurfaceTextureId, number>,
+  worldSize: { concrete: 4, blockWall: 2, crate: 1.2, corrugated: 2, steelPlate: 1.2, barrier: 1, sandbag: 1.2, gabion: 1.2, paint: 1.2, bark: 1.6, planks: 1.6, stone: 1.6, groundDetail: 4, plaster: 2.4, cladding: 1.6, tiles: 0.6, asphalt: 3, paving: 1.2, glass: 1.2 } satisfies Record<SurfaceTextureId, number>,
   /** How strongly each texture's light and dark read as relief when surface relief is on (bump scale). */
-  relief: { concrete: 1.2, blockWall: 2.2, crate: 1.6, corrugated: 3, steelPlate: 2.4, barrier: 0.8, sandbag: 2.4, gabion: 1.8, bark: 2.6, planks: 1.8, stone: 1.8, groundDetail: 1, plaster: 0.6, cladding: 1.6, tiles: 1.4, asphalt: 1.4, paving: 1.6, glass: 0.4 } satisfies Record<SurfaceTextureId, number>,
+  relief: { concrete: 1.2, blockWall: 1.6, crate: 1.6, corrugated: 3, steelPlate: 2.4, barrier: 0.8, sandbag: 2.4, gabion: 2.4, paint: 0.8, bark: 2.6, planks: 1.8, stone: 1.8, groundDetail: 1, plaster: 0.6, cladding: 1.6, tiles: 1.4, asphalt: 1.4, paving: 1.6, glass: 0.4 } satisfies Record<SurfaceTextureId, number>,
   /**
    * Grime and contact shade near the floor: the sides of walls, containers, crates and barriers darken towards their
    * foot over this height (metres), to this share of their colour at the very bottom.
@@ -885,7 +916,8 @@ export const SURFACES = {
      * shelf shows in front of the spine.
      */
     rack: { bay: 1.2, post: 0.08, beam: 0.1, beamSet: 0.01, loadInset: 0.04, spine: 0.04, headroom: 0.06, boxGap: 0.05, shortBoxes: [0.9, 0.84] },
-    gabion: { sandTop: 0.04, sandInset: 0.05 },
+    /** The gabion's open top: grey rubble (G6: never sand) set `topDrop` below the wire's rim, `topInset` in from it. */
+    gabion: { topDrop: 0.04, topInset: 0.05, topShade: 0.82 },
     ibc: { base: 0.14, inset: 0.05, bar: 0.03, lid: 0.12 },
     sandbags: { course: 0.2, inset: 0.025, topInset: 0.05 },
     generator: { skid: 0.1, inset: 0.04, louvres: 5, louvreFrom: 0.25, louvreStep: 0.1, louvreHeight: 0.04, louvreEnd: 0.2, panelWidth: 0.5, panelY: [0.6, 1.0] },
@@ -896,7 +928,6 @@ export const SURFACES = {
     latch: 0x2e3032,
     cardboard: 0xb8915e,
     film: 0xdfe3e6,
-    sand: 0xc8b48a,
     palletWood: 0xd8ccb4,
     strap: 0x34383c,
     cageSteel: 0x9aa0a6,
@@ -907,7 +938,7 @@ export const SURFACES = {
    * into a normal map (render/surfaceNormals.ts heightToNormal). The slope scale per surface, for the original
    * 256-pixel drawing (the maps at other sizes are scaled to match, so relief reads the same at any texture size).
    */
-  normalStrength: { concrete: 1.4, blockWall: 2.2, crate: 2, corrugated: 3.2, steelPlate: 2.8, barrier: 1, sandbag: 2.6, gabion: 2, bark: 2.8, planks: 2, stone: 2, groundDetail: 1.2, plaster: 0.6, cladding: 1.8, tiles: 1.6, asphalt: 1.6, paving: 1.8, glass: 0.4 } satisfies Record<SurfaceTextureId, number>,
+  normalStrength: { concrete: 1.4, blockWall: 1.8, crate: 2, corrugated: 3.2, steelPlate: 2.8, barrier: 1, sandbag: 2.6, gabion: 2.6, paint: 1, bark: 2.8, planks: 2, stone: 2, groundDetail: 1.2, plaster: 0.6, cladding: 1.8, tiles: 1.6, asphalt: 1.6, paving: 1.8, glass: 0.4 } satisfies Record<SurfaceTextureId, number>,
   /** The largest normal map (pixels a side): High's 1024² pictures are scaled down to it first (render/surfaceNormals.ts). */
   normalMapMaxSize: 512,
   /**
@@ -967,6 +998,8 @@ export const SURFACES = {
     chevronHeight: 0.22,
     chevronY: 0.55,
     minWall: 6,
+    /** Atlas texels fainter than this are skipped (the mesh is blended, G6). */
+    alphaFloor: 0.02,
     stencil: '#f2efe6',
     paint: '#f2efe6',
     ink: '#2a2d30',

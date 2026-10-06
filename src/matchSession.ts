@@ -42,10 +42,12 @@ import { PhysicsWorld } from './physics/physicsWorld';
 import { updateFirstPersonCamera } from './render/cameraRig';
 import { CombatPresentation } from './render/combatPresentation';
 import { ContactShadows } from './render/contactShadows';
+import { bakedLightFor, bakedLightMode } from './render/bakedLight';
 import { addLighting, type Daylight } from './render/lighting';
 import { resolveLighting } from './render/lightingPreset';
 import { mapLookOf } from './render/mapMeshes';
 import { MatchPresentation } from './render/matchPresentation';
+import type { ProbeGrid } from './render/probeGrid';
 import { TorchBeams } from './render/torchBeams';
 import type { Renderer } from './render/renderer';
 import { canAimDownSights } from './sim/aiming';
@@ -153,6 +155,8 @@ export class MatchSession {
   private readonly daylight: Daylight;
   /** The map's light as resolved (M33f): a night preset gives the bots their torches and draws the beams (M33h). */
   private readonly lighting: LightingPreset;
+  /** The map's baked bounce light (G6, render/bakedLight.ts), or null when it has none. */
+  private readonly probes: ProbeGrid | null;
   /** The weapon torches drawn (M33h): nothing by day, or in a match where nobody carries one. */
   private readonly torches: TorchBeams;
   /** A soft dark disc on the floor under every player (audit section 5, F5), on every preset. */
@@ -202,7 +206,8 @@ export class MatchSession {
     this.botLoadout = LOADOUT.map((r) => replicaUnderRules(r, setup.rules));
     // The surface textures are the renderer's, shared by every session (audit L-04), and so are the last map's meshes,
     // kept between sessions (audit CORE-33): the same map again takes them back rather than building them.
-    renderer.scene.add(renderer.mapMeshes.take(map, renderer.surfaceTexturesFor(map), mapLookOf(quality)));
+    this.probes = bakedLightFor(map);
+    renderer.scene.add(renderer.mapMeshes.take(map, renderer.surfaceTexturesFor(map), mapLookOf(quality, this.probes)));
     this.build.phase('map meshes');
     if (renderer.mapMeshes.reused) this.build.notes.push('map meshes reused');
     // The map's light (M33f): its haze, exposure and environment on the renderer, set by every session so none keeps the
@@ -296,6 +301,7 @@ export class MatchSession {
     this.match.setProTips(difficultyAtLeast(setup.difficulty, 'pro'));
     this.match.setFigureShadows(quality.figureShadows);
     this.match.setFlagQuality(quality);
+    this.match.setBakedLight(bakedLightMode(quality.bakedLight, this.probes) === 'off' ? null : this.probes);
     // Teammates only on the minimap, with no heard patches, under rules that say so (M39).
     this.match.setHeardOnMinimap(setup.rules.heardOnMinimap);
     this.contact = new ContactShadows(this.state.characters, this.hits.vanishTime);
@@ -472,8 +478,9 @@ export class MatchSession {
     this.daylight.setQuality(quality);
     this.torches.setQuality(quality);
     this.daylight.reserveLights(this.torches.reserved);
-    this.renderer.mapMeshes.restyle(this.renderer.surfaceTexturesFor(this.setup.map), mapLookOf(quality));
+    this.renderer.mapMeshes.restyle(this.renderer.surfaceTexturesFor(this.setup.map), mapLookOf(quality, this.probes));
     this.match.setFigureShadows(quality.figureShadows);
+    this.match.setBakedLight(bakedLightMode(quality.bakedLight, this.probes) === 'off' ? null : this.probes);
     this.match.setFlagQuality(quality);
     this.match.setFigureDetail(quality.figureDetail);
     this.combat.setQuality(quality);
