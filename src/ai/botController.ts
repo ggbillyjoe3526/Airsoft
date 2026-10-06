@@ -8,7 +8,7 @@ import { NAV } from '../config/nav';
 import type { ReplicaConfig } from '../config/replicas';
 import { SQUAD_ORDERS, type SquadOrderKind } from '../config/squad';
 import { botSeed, planSeed } from '../core/seed';
-import { cellX, cellZ, createNavSearch, findPath, floorAt, type NavGrid, type NavSearch } from '../nav/navGrid';
+import { beginRoute, cellX, cellZ, createNavSearch, endRoute, floorAt, type NavGrid, type NavSearch, stepRoute } from '../nav/navGrid';
 import { shotHeardScale, type WorldQuery } from '../sim/armament';
 import type { Character } from '../sim/character';
 import { createCommand, type PlayerCommand } from '../sim/commands';
@@ -17,7 +17,7 @@ import { createHitFacts, type HitFacts, recordHitFacts } from '../sim/hitFacts';
 import { createRng, type RngState, rngNext } from '../sim/rng';
 import { blockedShare } from '../sim/soundPath';
 import type { GameState } from '../sim/state';
-import { type Vec3, vec3 } from '../sim/vec';
+import { copy, type Vec3, vec3 } from '../sim/vec';
 import { type AngleFeatures, angleFeaturesOf } from './angleFeatures';
 import { RunRoles } from './extractionRoles';
 import { type Bot, type BotWorld, createBot, lastSeenAt, pick, resetBot } from './bot';
@@ -86,6 +86,9 @@ export class BotController {
    */
   private readonly given = new Map<Character, { kind: SquadOrderKind; ownSpot: boolean }>();
   private plannerCursor = 0;
+  /** The bot whose route search is open in `search`, carried over from an earlier tick (audit AI-04), and its goal. */
+  private searching: Bot | undefined;
+  private readonly searchGoal = vec3();
   /** Per team, the tuning its bots play by (BotControllerOptions.teamCfg). */
   private readonly teamCfg: readonly BotConfig[];
   /** Hunt sectors: per team, the last time a player of that team stood in each sector. */
@@ -200,9 +203,9 @@ export class BotController {
     for (const c of state.characters) {
       if (isInPlay(c)) this.visited[c.team]![this.sectorOf(c.position.x, c.position.z)] = state.time;
     }
-    // One route search a tick in all (AI-10): a walk-off search runs in this tick's simulation step when someone was hit
-    // last tick, so the bots wait a tick.
-    if (!walkOffSearchDue(state.characters)) this.planRoutes();
+    // One route planned a tick in all (AI-10): a walk-off route is planned in this tick's simulation step when someone
+    // was hit last tick, so the bots wait a tick.
+    if (!walkOffRouteDue(state.characters)) this.planRoutes();
     this.updateOrders();
     this.pickRetakers();
     this.pickRaiser();
@@ -744,28 +747,58 @@ export class BotController {
     return undefined;
   }
 
-  /** Serves at most cfg.pathsPerTick route requests, round-robin across bots. */
+  /**
+   * Serves at most cfg.pathsPerTick route requests, round-robin across bots, within NAV.searchBudget node expansions
+   * a tick in all (audit AI-04): a search the budget doesn't finish carries on next tick, its bot still waiting for
+   * the route (and following its old one, botMovement). A bot that stops wanting it, or wants it elsewhere, drops it.
+   */
   private planRoutes(): void {
-    let budget = this.world.cfg.pathsPerTick;
+    let budget = NAV.searchBudget;
+    for (let served = 0; served < this.world.cfg.pathsPerTick && budget > 0; served++) {
+      const b = this.openSearch();
+      if (!b) return;
+      const step = stepRoute(this.opts.nav, this.search, budget);
+      budget -= this.search.expanded;
+      if (step === 'pending') return;
+      this.searching = undefined;
+      if (step === 'found') endRoute(this.opts.nav, this.search, b.character.position, b.routeGoal, b.route, this.opts.legProbe ?? NAV.legProbe);
+      this.routeDone(b, step === 'found');
+    }
+  }
+
+  /** The bot whose search is open: the one carried over if it still wants that route, else the next to begin one. */
+  private openSearch(): Bot | undefined {
+    const open = this.searching;
+    if (open && open.routeState === 'wanted' && open.routeGoal.x === this.searchGoal.x && open.routeGoal.y === this.searchGoal.y && open.routeGoal.z === this.searchGoal.z) return open;
+    this.searching = undefined;
     const n = this.bots.length;
-    const start = this.plannerCursor;
-    for (let k = 0; k < n && budget > 0; k++) {
-      const i = (start + k) % n;
+    for (let k = 0; k < n; k++) {
+      const i = (this.plannerCursor + k) % n;
       const b = this.bots[i]!;
       if (b.routeState !== 'wanted') continue;
-      budget--;
-      this.plannerCursor = (i + 1) % n; // the next tick starts after the last bot served
-      const ok = findPath(this.opts.nav, this.search, b.character.position, b.routeGoal, this.opts.navSnap, b.route, this.opts.legProbe ?? NAV.legProbe);
-      b.routeLeg = 0;
-      b.stuckFor = 0;
-      b.routeState = ok ? 'ok' : 'failed';
-      if (!ok) b.routeRetryAt = this.world.time + this.world.cfg.routeRetryDelay;
+      if (!beginRoute(this.opts.nav, this.search, b.character.position, b.routeGoal, this.opts.navSnap)) {
+        this.routeDone(b, false);
+        continue;
+      }
+      this.plannerCursor = (i + 1) % n; // the next search starts after this bot
+      this.searching = b;
+      copy(this.searchGoal, b.routeGoal);
+      return b;
     }
+    return undefined;
+  }
+
+  private routeDone(b: Bot, ok: boolean): void {
+    if (!ok) b.route.length = 0;
+    b.routeLeg = 0;
+    b.stuckFor = 0;
+    b.routeState = ok ? 'ok' : 'failed';
+    if (!ok) b.routeRetryAt = this.world.time + this.world.cfg.routeRetryDelay;
   }
 }
 
-/** True if a walk-off route search will run in the coming simulation step (a victim hit last tick, M27). */
-function walkOffSearchDue(characters: readonly Character[]): boolean {
+/** True if a walk-off route will be planned in the coming simulation step (a victim hit last tick, M27). */
+function walkOffRouteDue(characters: readonly Character[]): boolean {
   for (const c of characters) if (c.walkOffRoutePending) return true;
   return false;
 }

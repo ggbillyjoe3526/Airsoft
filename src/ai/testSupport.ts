@@ -14,6 +14,7 @@ import { type Character, createCharacter } from '../sim/character';
 import { createCommand, type PlayerCommand } from '../sim/commands';
 import type { CharacterMover } from '../sim/movement';
 import { createSimContext, stepSimulation } from '../sim/simulation';
+import { deadZoneFields } from '../sim/elimination';
 import { createGameState, type GameState } from '../sim/state';
 import { OPEN_FIELD, OPEN_NAV } from '../sim/testSupport';
 import { type Vec3, vec3 } from '../sim/vec';
@@ -142,6 +143,14 @@ export function skirmish(map: MapData, chars: readonly (readonly [number, number
   return { state, player: state.characters[0]!, query, nav, ...world };
 }
 
+const FLOOR_DEAD_ZONES = [[{ position: vec3(-40, 0, 0), yaw: 0 }], [{ position: vec3(40, 0, 0), yaw: 0 }]];
+let openFields: Float32Array[] | undefined;
+/** The open field's dead-zone fields, built by the first duel that needs them (a quarter-million nodes, M74). */
+function openDeadZoneFields(): Float32Array[] {
+  openFields ??= deadZoneFields(FLOOR_DEAD_ZONES, OPEN_NAV, NAV.snap);
+  return openFields;
+}
+
 /** Bots for `botChars` in `state` on a flat floor, and a run loop stepping bots and simulation together. */
 function playOnFloor(
   state: GameState,
@@ -157,9 +166,10 @@ function playOnFloor(
     ballistics: BALLISTICS,
     killY: -10,
     hits: HITS,
-    deadZones: [[{ position: vec3(-40, 0, 0), yaw: 0 }], [{ position: vec3(40, 0, 0), yaw: 0 }]],
+    deadZones: FLOOR_DEAD_ZONES,
     nav: o.nav,
     navSnap: NAV.snap,
+    deadZoneFields: o.nav === OPEN_NAV ? openDeadZoneFields() : undefined,
     rounds: ROUNDS,
   });
   const commands = new Map<number, PlayerCommand>([[0, createCommand()]]);

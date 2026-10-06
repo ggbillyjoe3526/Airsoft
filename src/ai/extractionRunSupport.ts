@@ -10,7 +10,7 @@ import { LOADOUT } from '../config/replicas';
 import { caseSeed, runSeed } from '../core/seed';
 import { DEPOT } from '../map/depot';
 import type { MapData } from '../map/mapTypes';
-import { buildNavGrid, createNavSearch } from '../nav/navGrid';
+import { buildNavGrid } from '../nav/navGrid';
 import { PhysicsWorld } from '../physics/physicsWorld';
 import { rollRunCases } from '../pool/caches';
 import { GAME_POOL } from '../pool/gamePool';
@@ -186,7 +186,7 @@ export function setUpRun(opts: RunOptions) {
     you.velocity.y = 0;
     you.velocity.z = 0;
   };
-  const elimination = { deadZones: map.deadZones, nav, navSearch: createNavSearch(nav), snap: NAV.snap };
+  const elimination = ctx.targets.elimination;
   /** You're hit by the first opponent. */
   const hitYou = () => eliminate(you, squad, state.characters, elimination);
   /** `c` is hit by you. */

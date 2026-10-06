@@ -6,7 +6,7 @@ import { PHYSICS } from './physics';
 const CELL = 0.2;
 const CLEARANCE = BODY.radius + 0.06;
 
-export const NAV: NavGridConfig & { snap: number; legProbe: number } = {
+export const NAV: NavGridConfig & { snap: number; legProbe: number; searchBudget: number } = {
   /** Fine enough that ~1 m door gaps keep a walkable lane down the middle. */
   cell: CELL,
   /** Body radius plus a small margin so routes don't scrape walls and corners. */
@@ -22,4 +22,10 @@ export const NAV: NavGridConfig & { snap: number; legProbe: number } = {
    * leg keeps the body's radius from corners (see clearLineFor): radius + half a cell diagonal − clearance.
    */
   legProbe: BODY.radius + (CELL * Math.SQRT2) / 2 - CLEARANCE,
+  /**
+   * Node expansions the bots' route searches make a tick in all (audit AI-04); a longer search carries on next tick.
+   * Measured 2026-10-05 in a loaded 4-core container at 250–330 ns an expansion, so about 2–2.6 ms there: most Depot
+   * searches (mean 2,300, max 16,000 expansions) end in their first tick, Woodland's longest (47,000) in six.
+   */
+  searchBudget: 8000,
 };
