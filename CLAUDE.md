@@ -71,7 +71,7 @@ These are defaults to prototype, not final. Tune them through play.
 - On hit: the player hears a distinct "tick" impact, sees a hit indicator, and their character raises a hand ("HIT!" callout).
 - Eliminated players become a visible **"dead" state**: hand raised, walking off to the dead zone, cannot shoot, and cannot be targeted. They can still spectate.
 - Prototype bots always call their hits honestly. Honesty is enforced by the game, not the player.
-- Later: a **medic mode** with a bleed-out timer, where a medic revives a hit player (owner, 2026-10-03: a future feature; 0.3 since 2026-10-05).
+- Later: a **medic mode** with a bleed-out timer, where a medic revives a hit player (owner, 2026-10-03: a future feature; 0.1 Dev 7 since 2026-10-06).
 
 **Replicas (Phase 1 needs only two)**
 - **AEG rifle**: full auto, medium range, medium magazine.
@@ -124,7 +124,10 @@ Elimination and Attack / Defend.
 2026-10-05):** 0.2 the graphics overhaul; 0.3 the armoury and the rules (medic, TDM, Survival, Extraction public, field
 rule presets, chrono, gas simulation, grenades, parts and pouches, the first new replica types); 0.4 more fields and
 ways to play (Rush, Domination, Capture the Flag, prone, weather, callouts, bot personalities, team communication);
-0.5 kit, looks and progression (skins, challenges and badges). Don't build these during 0.1.
+0.5 kit, looks and progression (skins, challenges and badges). Don't build these during 0.1, except what the owner's
+Dev 6 and Dev 7 picks (2026-10-06, `docs/ROADMAP.md`) pulled into 0.1: medic, field rule presets, the chrono, gas
+simulation, grenades, rigs and pouches, the blowback pistol and spring sniper, the Extraction rework, weather,
+callouts, pings, bot personalities and skins. Dev builds continue until the owner calls the game feature complete.
 
 **Placing work:** new systems, modes and content (maps, replicas, menus, art) are alpha; fixing, balance,
 performance, stability, UX/QoL, polish and final tuning are beta. During alpha, note beta-type work in

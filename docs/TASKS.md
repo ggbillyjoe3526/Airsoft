@@ -103,7 +103,8 @@ attempts: 0
 **The owner's 0.1 Dev 4 playtest notes (2026-10-06).** Recorded on his ask, not built yet; they follow the Audit 2
 tasks above and the rest of the paused 0.1 Dev 5 work. His words and the per-item reasoning are in the project's shared
 files (`plans/playtest-feedback-0.1-dev-4.md`); the table under Alpha in `docs/ROADMAP.md` maps all 26 notes. M80–M91
-and M96 are 0.1 Dev 5 fixes and changes, M92–M95 suggested 0.1 Dev 6 features. Notes 5, 20–23 go to 0.3 and 0.4 (ROADMAP).
+and M96 are 0.1 Dev 5 fixes and changes, M92–M95 suggested 0.1 Dev 6 features. Notes 5, 20–23 went to 0.3 and 0.4; notes 5, 20, 22 and 23 are now
+0.1 Dev 6 and Dev 7 (owner's feature picks, 2026-10-06, ROADMAP).
 Every block below carries note 19: tune on Normal, then check that Easy, Hard and Pro still scale. `touches` are
 first guesses; the build thread confirms them before it starts. The owner ruled on every conflict on 2026-10-06
 (ROADMAP, under the playtest table).
