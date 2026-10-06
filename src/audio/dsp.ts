@@ -65,6 +65,11 @@ export interface SoundRecipe {
   gainSpread: number;
   /** Soft saturation (0 = none): more body and punch from the same layers, without a hard edge. */
   drive?: number;
+  /**
+   * Variants rendered (M69, audit AUD-08; absent: AUDIO.variants). One for a recipe with no spread, whose variants would
+   * differ only in an oscillator's start phase.
+   */
+  variants?: number;
 }
 
 /** -60 dB in natural-log units: an exponential decay reaches 1/1000 after its decay time. */
@@ -77,6 +82,8 @@ const GLIDE_BLOCK = 32;
 const MAX_FREQ_FRACTION = 0.45;
 /** Peak a rendered sound is limited to (headroom when several play at once is the mixer's job). */
 const PEAK_LIMIT = 0.98;
+/** A rendered sound ends where it falls for good under this fraction of its peak (-60 dB; M69, audit AUD-09). */
+const TAIL_FLOOR = 1e-3;
 
 /** Mulberry32: a small, fast seeded generator in [0, 1). */
 export function seededRandom(seed: number): () => number {
@@ -268,7 +275,10 @@ function renderLayer(layer: Layer, out: Float32Array, sampleRate: number, pitch:
 
 /**
  * Renders one variant of `recipe` at `sampleRate`. Variants differ through `rand` (pitch, timing, levels, noise),
- * so the same seed gives the same sound. The result never peaks above PEAK_LIMIT and fades out at its end.
+ * so the same seed gives the same sound. The result never peaks above PEAK_LIMIT and fades out at its end, END_FADE
+ * samples after its last sample above TAIL_FLOOR of its peak (M69, audit AUD-09): the buffer is sized for the longest
+ * variant and each layer for its own -60 dB, so a quiet layer's long decay left a silent tail (16 % of the bank).
+ * Every sample before the fade is what it was.
  */
 export function renderRecipe(recipe: SoundRecipe, sampleRate: number, rand: () => number): Float32Array {
   const pitch = spreadFactor(rand, recipe.pitchSpread);
@@ -284,11 +294,14 @@ export function renderRecipe(recipe: SoundRecipe, sampleRate: number, rand: () =
   let peak = 0;
   for (let i = 0; i < out.length; i++) peak = Math.max(peak, Math.abs(out[i]!));
   const scale = peak > PEAK_LIMIT ? PEAK_LIMIT / peak : 1;
-  for (let i = 0; i < out.length; i++) {
-    const tail = out.length - i;
+  let last = out.length - 1;
+  while (last > 0 && Math.abs(out[last]!) <= peak * TAIL_FLOOR) last--;
+  const end = Math.min(out.length, last + 1 + END_FADE);
+  for (let i = 0; i < end; i++) {
+    const tail = end - i;
     out[i] = out[i]! * scale * (tail < END_FADE ? tail / END_FADE : 1);
   }
-  return out;
+  return out.subarray(0, end);
 }
 
 /** Low-passes and turns down a rendered sound in place (a suppressed replica: duller and quieter). */
