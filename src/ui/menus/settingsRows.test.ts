@@ -132,7 +132,7 @@ describe('a note on every settings row (G3, criterion 8)', () => {
   });
 
   // BUG (criterion 8: "a note on every row"): audioSettings.ts SLIDERS.master.help is '', so Master volume has no note.
-  it.fails('gives every Audio slider a note, Master volume included', () => {
+  it('gives every Audio slider a note, Master volume included', () => {
     const rows = audioSettings({ initial: { master: 1, effects: 1, interface: 1 } as never, onChange: () => {} }) as unknown as FakeElement[];
     for (const r of rows) expect(note(r), label(r)).not.toBe('');
   });

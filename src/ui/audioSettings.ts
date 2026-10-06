@@ -11,7 +11,7 @@ export interface AudioSettingsOptions {
 
 /** Each volume slider's label and the line under it. */
 const SLIDERS: Readonly<Record<VolumeChannel, { label: string; help: string }>> = {
-  master: { label: 'Master volume', help: '' },
+  master: { label: 'Master volume', help: 'Everything the game plays; the two below set each part.' },
   effects: { label: 'Effects volume', help: 'Replicas, footsteps, impacts and the field.' },
   interface: { label: 'Interface volume', help: 'Hit tick, hit marker and the referee’s whistle.' },
 };
