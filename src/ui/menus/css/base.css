@@ -1,0 +1,436 @@
+/*
+ * The menus' ground (G3): the type scale and tokens, a screen, the panels, the backdrop, the top bar, the key hints
+ * and the numbered section heads.
+ */
+
+/* Base: the menus' own type scale (15 px the smallest), the cut corner, the top bar's height and the page's edges. */
+.menus {
+  --fs-2xs: 15px;
+  --fs-xs: 15px;
+  --fs-sm: 15px;
+  --fs-md: 16px;
+  --fs-lg: 18px;
+  --fs-xl: 21px;
+  --fs-2xl: 26px;
+  --fs-3xl: clamp(36px, 3.4vw, 64px);
+  --ls-caps: 0.06em;
+  --ls-wide: 0.14em;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --cut: 12px;
+  --topbar-h: clamp(60px, 4.4vw, 84px);
+  --menu-gutter: clamp(16px, 2.5vw, 48px);
+  --page-top: clamp(20px, 2.2vw, 40px);
+  --hints-h: 84px;
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  overflow: hidden;
+  color: var(--paper);
+  font: 500 var(--fs-md) / 1.4 var(--ui-font);
+  background: var(--menu-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+.menus[hidden],
+.menu-screen[hidden],
+.menus [hidden] {
+  display: none !important;
+}
+
+.menus svg.icon {
+  flex: none;
+  width: 1.2em;
+  height: 1.2em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* A screen: a page over the backdrop that scrolls when it must, its key hints pinned along the bottom. */
+.menu-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  padding: var(--page-top) var(--menu-gutter) 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--menu-line) transparent;
+}
+
+.menus.has-topbar .menu-hub {
+  padding-top: calc(var(--topbar-h) + var(--page-top));
+}
+
+/* A screen coming up fades its content in; the animation restarts each time it is shown (it leaves display: none). */
+.menu-screen > * {
+  animation: menu-enter var(--t-med) var(--ease) both;
+}
+
+@keyframes menu-enter {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Headings, labels and buttons in capitals, in the condensed face (owner, 2026-10-03; G3). */
+.menu-heading,
+.menu-panel-title,
+.menu-dialog-title,
+.menu-kicker,
+.choice-name,
+.settings-tab-name,
+.settings-panel-title,
+.menu-row-label,
+.menu-result-headline,
+.menu-later,
+.menu-button,
+.picker-button,
+.key-reset,
+.menu-section-title,
+.menu-nav-item,
+.menu-mark,
+.menu-chip,
+.menu-hints,
+.tag-pill,
+.gear-name,
+.item-name,
+.option-name,
+.customise-part-name,
+.customise-title,
+.selected-name,
+.kit-name,
+.play-map-line,
+.perf-title,
+.settings-about-title,
+.colour-real-title,
+.armory-shots-title,
+.title-next-map,
+.tier-text,
+.gear-tier,
+.item-tier,
+.option-tier,
+.summary-result {
+  font-family: var(--ui-display);
+  text-transform: uppercase;
+}
+
+.menu-heading {
+  margin: 0;
+  font-size: var(--fs-3xl);
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: 0.02em;
+}
+
+.menu-kicker {
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: var(--ls-wide);
+  color: var(--menu-faint);
+}
+
+.menu-panel-title {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.menu-hint {
+  margin: 0;
+  max-width: 28em;
+  font-size: var(--fs-md);
+  color: var(--hint);
+}
+
+.menu-footer-note,
+.menu-readout {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  color: var(--menu-muted);
+}
+
+.menu-readout {
+  flex-basis: 100%;
+}
+
+.menu-faint {
+  color: var(--menu-faint);
+}
+
+/* A panel: navy, a hairline edge, the top-right corner cut. */
+.menu-card,
+.menu-panel {
+  background: rgba(12, 20, 42, 0.92);
+  border: 1px solid var(--menu-line-soft);
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%);
+}
+
+.menu-panel {
+  padding: var(--sp-5) var(--sp-6);
+}
+
+/* The backdrop: the title's picture sharp, every other screen the one blurred when it was made, darkened. */
+.menu-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.menu-backdrop img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.menu-backdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(7, 13, 31, 0.96) 0%, rgba(7, 13, 31, 0.8) 38%, rgba(7, 13, 31, 0.5) 70%, rgba(7, 13, 31, 0.72) 100%),
+    linear-gradient(0deg, rgba(7, 13, 31, 0.9), rgba(7, 13, 31, 0) 30%);
+}
+
+.menu-backdrop.even::after {
+  background: rgba(7, 13, 31, 0.86);
+}
+
+/* The top bar: the wordmark, the places (the current one underlined in orange), the wallet and the build. */
+.menu-topbar {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: clamp(12px, 2vw, 40px);
+  height: var(--topbar-h);
+  padding: 0 var(--menu-gutter);
+  background: linear-gradient(180deg, rgba(7, 13, 31, 0.97), rgba(7, 13, 31, 0.82));
+  border-bottom: 1px solid var(--menu-line-soft);
+}
+
+.menu-mark,
+.menu-title-wordmark {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: 0.05em;
+}
+
+.menu-mark {
+  gap: 12px;
+  font-size: clamp(24px, 1.8vw, 34px);
+  line-height: 1;
+}
+
+.menu-mark i,
+.menu-title-wordmark i {
+  flex: none;
+  width: 1em;
+  height: 1em;
+  background: var(--orange);
+  clip-path: polygon(30% 0, 100% 0, 70% 100%, 0 100%);
+}
+
+.menu-nav {
+  display: flex;
+  align-self: stretch;
+  gap: 2px;
+  min-width: 0;
+}
+
+.menu-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 clamp(10px, 1.1vw, 22px);
+  font: 700 clamp(17px, 1.1vw, 21px) / 1 var(--ui-display);
+  letter-spacing: 0.08em;
+  color: var(--menu-muted);
+  background: transparent;
+  border: 0;
+  border-bottom: 4px solid transparent;
+  cursor: pointer;
+}
+
+.menu-nav-item:hover {
+  color: var(--paper);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.menu-nav-item.on {
+  color: var(--paper);
+  border-bottom-color: var(--orange);
+  background: linear-gradient(0deg, rgba(255, 107, 26, 0.2), transparent);
+}
+
+.menu-nav-item:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.menu-wallet,
+.title-wallet {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.menu-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  background: var(--menu-panel-hi);
+  border: 1px solid var(--menu-line);
+}
+
+.menu-chip::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ffc21a;
+}
+
+.menu-chip-tokens::before {
+  background: #1fd6c4;
+}
+
+.menu-build {
+  font: 600 var(--fs-sm) / 1 var(--ui-display);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--menu-faint);
+}
+
+/* The key hints along the bottom: each key as a cap, then what it does; a line on the right. */
+.menu-hints {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 28px;
+  margin: auto calc(-1 * var(--menu-gutter)) 0;
+  padding: var(--sp-6) var(--menu-gutter) clamp(14px, 1.4vw, 22px);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--menu-muted);
+  background: linear-gradient(0deg, var(--menu-bg) 62%, rgba(7, 13, 31, 0));
+}
+
+/* More of the screen below (audit UI-18): the page fades into the hints, so it doesn't read as ending there. */
+.menu-screen.more-below > .menu-hints::before,
+.menu-screen.more-below > .menu-hints-box > .menu-hints::before {
+  content: '';
+  position: absolute;
+  inset: auto 0 100%;
+  height: 48px;
+  background: linear-gradient(0deg, var(--menu-bg), rgba(7, 13, 31, 0));
+  pointer-events: none;
+}
+
+.menu-hint-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+}
+
+button.menu-hint-key {
+  cursor: pointer;
+}
+
+button.menu-hint-key:hover {
+  color: var(--paper);
+}
+
+.menu-hints kbd,
+.menu-hints-box kbd {
+  min-width: 30px;
+  padding: 4px 8px;
+  font: 700 var(--fs-sm) / 1 var(--ui-display);
+  letter-spacing: 0.06em;
+  color: var(--paper);
+  background: var(--menu-panel-hi);
+  border: 1px solid var(--menu-line);
+  border-bottom-width: 3px;
+  border-radius: 0;
+}
+
+.menu-hints-aside {
+  margin-left: auto;
+  text-align: right;
+}
+
+/* A screen whose hints change (the Loadout's, Customise's) keeps them in a box: the box is what stays pinned. */
+.menu-hints-box {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin-top: auto;
+}
+
+/* Numbered section heads: "01 MAP" with a rule out to the right and a note after it. */
+.menu-section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin: 0 0 14px;
+}
+
+.menu-section-n {
+  font: 700 var(--fs-md) / 1 var(--ui-display);
+  letter-spacing: 0.12em;
+  color: var(--orange-text);
+}
+
+.menu-section-title {
+  margin: 0;
+  font-size: clamp(22px, 1.5vw, 28px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.05em;
+}
+
+.menu-section-rule {
+  flex: 1;
+  align-self: center;
+  min-width: 24px;
+  height: 1px;
+  background: var(--menu-line-soft);
+}
+
+.menu-section-extra {
+  font-size: var(--fs-sm);
+  color: var(--menu-muted);
+}

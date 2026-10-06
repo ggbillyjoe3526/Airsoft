@@ -49,7 +49,10 @@ describe.each<LightingPresetId>(['day', 'night'])('a 4v4 Elimination match on Ne
     // standard error; here 39.8 % by day (33 of 83) and 50.6 % by night (43 of 85), ±5.5. The band is centred on that
     // 45 % (it was 40-60 %, its floor one standard error under it) until a layout change evens the ends (KNOWN_ISSUES).
     // Every night figure so far played without the torches the game fits every bot at night; with them (M57, audit
-    // AI-02) the west wins 54.0 % here by night (47 of 87), none on time, so by Night the band stays 40-60 %.
+    // AI-02) the west wins 54.0 % here by night (47 of 87), none on time, so by Night the band stays 40-60 %. M71 (Audit
+    // 2: every level hunts the middle and keeps out of the light, torches only for a close fight): 40.4 % by day (36 of
+    // 89, 1 of 90 on time) and 43.2 % by night (38 of 88, none on time): the west under 45 % calls M73's lane point at
+    // the bar door (audit BAL-04, owner decision 6).
     expect(westWins / decided).toBeGreaterThanOrEqual(WEST[light][0]);
     expect(westWins / decided).toBeLessThanOrEqual(WEST[light][1]);
     expect(onTime / rounds).toBeLessThan(0.1);

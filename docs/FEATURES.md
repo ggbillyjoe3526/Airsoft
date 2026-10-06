@@ -34,7 +34,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 ## Bots
 
 - Bots patrol lanes, spot, react with a human delay, shoot with inaccuracy, take cover, keep apart from teammates and search (Phase 1, FA4)
-- Four difficulty levels (Easy, Normal, Hard, Pro), picked for your teammates and the other team separately; each level changes reactions, aim and tactics (cover, flanking); Pro holds angles at corners, answers pre-aimed peeks faster, slices corners, trades hits and holds crossfires as a team, holds bush edges, tree gaps and stair tops and keeps out of the light at night, shown only with Dev content on (M4a, M20, FA4, M36, M37, M38, M40)
+- Four difficulty levels (Easy, Normal, Hard, Pro), picked for your teammates and the other team separately; each level changes reactions, aim and tactics (cover, flanking); all hunt the map's middle once their lane is swept; Normal, Hard and Pro hold their posts out of lantern light at night; Pro also holds angles at corners, answers pre-aimed peeks faster, slices corners, trades hits and holds crossfires as a team on bush edges, tree gaps and stair tops, shown only with Dev content on (M4a, M20, FA4, M36, M37, M38, M40, M71)
 - Bots crouch-peek over low cover, lean round corners, move as a team on varied routes and walk when it pays (M4b, M10)
 - Bots hear shots, near misses, hit calls and footsteps, less through walls (M2, M22)
 - In Attack / Defend defenders hold near the pole; one attacking bot raises the flag while the others guard it from cover (M5, FA4)
@@ -91,13 +91,14 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Title screen, New game (Map, Match, Difficulty, Loadout, Settings, Play), pause, match summary and result screens (M15, M15b, M24); the pause screen shows the match's seed for bug reports (BP1)
 - Error screen on crash with the seed, a report, Reload and Copy Report buttons; Play Again starts a new match with its own seed (FA1)
 - No map is loaded until Play (M15b)
-- Settings tabs: Graphics (quality presets with Custom option, frame-rate limit, show FPS, field of view), Audio, Controls (every action rebindable, mouse buttons and mouse wheel), Crosshair, HUD, Accessibility, Look (Robots, Realistic colours) (M15, M18a, M19, M24, FA2, FA5, G1)
+- Settings groups: Graphics (quality presets with Custom option, frame-rate limit), Display (fullscreen, field of view, tone mapping, show FPS), Audio, Controls (every action rebindable, mouse buttons and mouse wheel), Gameplay (crosshair, HUD), Accessibility, Look (Robots, Realistic colours), Save file, with a search box and a note on every row (M15, M18a, M19, M24, FA2, FA5, G1, G3)
 - Save system: automatic saving in the browser, download to a JSON file, load from file with a side-by-side comparison, restore points (one per day), Undo the last load, Delete and start over; warns if storage is blocked or full, or if the save is from a newer version (M31)
 - Mouse sensitivity as cm/360 at a typed DPI, invert mouse, aim and sprint as hold or toggle; raw mouse input setting (M18a, FA5)
 - Key names in Settings follow your keyboard layout (AZERTY, QWERTZ, etc.) where the browser can tell; second key per action; Backspace or Delete clears a binding (FA5)
 - HUD size slider (0.8–1.5) in Settings > HUD (FA5)
 - A hidden Dev tab: debug info, BB paths, game speed, bottomless magazines, ghost, Disable Armory, Unlock all gear, Diagnostics Copy, Dev content switch, Retro pixels (M24, M26d, FA1, M35, M42)
 - The build's version on the title screen (M24)
+- Menus in the concept look (G3): a top bar between matches (Play, Loadout, Armory, Range, Settings, wallet, version), key hints that are real buttons, map and mode picture cards on the Play screen, replica pictures on the Loadout, Customise and Armory, Settings grouped with a search and a note on every row
 
 ## HUD and match info
 

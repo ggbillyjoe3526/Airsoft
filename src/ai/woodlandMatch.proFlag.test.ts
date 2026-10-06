@@ -9,9 +9,9 @@ const TEAM_SIZE = 4;
 /** Long enough for a whole match, first to 5 (the longest of these seeds takes about 13 minutes of game time). */
 const SECONDS = 900;
 /**
- * The attackers' band (M57, DECISIONS): with the torches the game fits every bot at night they win 24 %, under the plan's
- * 40 %. The floor is that less two standard errors (about 8 points), the ceiling the plan's: the Woodland balance pass
- * that brings them back into PRO_BAND puts the floor back.
+ * The attackers' band (M57, DECISIONS): with the torches the game fits every bot at night they won 24 % (33 % since
+ * M71's torch discipline), under the plan's 40 %. The floor is M57's measure less two standard errors (about 8 points),
+ * the ceiling the plan's: whatever brings them into PRO_BAND puts the floor back.
  */
 const ATTACKERS: readonly [number, number] = [0.15, PRO_BAND[1]];
 
@@ -29,7 +29,9 @@ describe('a 4v4 Attack / Defend match on Woodland, both teams on Pro (M40)', () 
     // M55 (audit SIM-05: a log and a boulder out of what they stood in) deals every seed again: attackers 43.4 % here
     // (49 of 113), 40.7 % over seeds 1-48 (43.0 % before, ±3.7 between the two). Every figure so far played without the
     // torches the game fits every bot at night. With them (M57, audit AI-02, on M55's maps): attackers 24.2 % (30 of 124),
-    // none on time, against 43.4 % without on the same seeds; why is the Woodland balance pass's to find.
+    // none on time, against 43.4 % without on the same seeds. M71 (Audit 2: every level hunts the middle, Normal and up keep out of the light, bots step aside when pressed together, a
+    // torch comes on only for a fight within 20 m or a search's last stretch): 33.3 % (41 of 123), none on time.
+    // The beams were why: a bot lit itself for every defender in the fort the moment a fight 20-40 m off began.
     expectProBalance(tallyBalance(16, SECONDS, botConfig('pro'), 'attackDefend', WOODLAND, TEAM_SIZE), 'attackDefend', 'Woodland Pro', ATTACKERS);
   });
 });

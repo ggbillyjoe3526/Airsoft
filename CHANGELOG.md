@@ -106,6 +106,11 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 
 ### Changed
 - **G5** · A Custom graphics mix saved before this build gets High's new effects (ambient occlusion, temporal smoothing, light shafts, bloom); each can be turned off under Custom
+- **G3** · New menus: a bold navy and orange look in Barlow type, a top bar (Play, Loadout, Armory, Range, Settings, your Field Credits and Tokens) and key hints along the bottom; text is never smaller than 15 px
+- **G3** · The Play screen shows maps and modes as picture cards (Day | Night on the card, a Dev tag on maps still being built) with the match rows and a Your match panel on the same page; the Map, Mode, Match and Difficulty pop-ups are gone
+- **G3** · Loadout and Customise show your replicas as pictures; Customise lists the parts down the left, Colour first, with each option as a picture tile beside the replica and its numbers
+- **G3** · Settings regrouped into Graphics, Display, Audio, Controls, Gameplay, Accessibility, Look, Save file and Dev, with a search box and a short note on every row
+- **G3** · The Armory's collection is a picture grid with a how-it-works strip; the title, pause, summary, result and loading screens take the new look
 - **M70** · The Armory's odds caption says the odds are for each item drawn, before pity (#122)
 - **M68** · Settings → Graphics is shorter: the Custom rows fold away under Low, Medium and High and open when you pick Custom or click "Custom settings" (#121)
 - **M69** · Woodland and Neon Heights each have an echo of their own (long and dark in the woods, brighter in the city), and the neon hum is easier to hear on small speakers (#124)
@@ -139,6 +144,9 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M43** · The summary's records table has no column for a mode still being built (its matches aren't recorded) (#83)
 - **G5** · Frame-rate limit choices are Unlimited (the default), 30, 60, 120, 144 and 240; an older saved limit becomes the nearest choice
 - **G5** · Graphics › Night lights adds Nearest 8
+- **M71** · Bots hunt the map's middle once their lane is swept (now all levels, not just Pro); Normal and Hard hold their posts out of lantern light at night (#133)
+- **M71** · At night, bots switch their weapon torch on only for fights within 20 m and the final approach to search targets, not for the whole journey (#133)
+- **M71** · Bots already sidestepping in a fight step further apart when pressed together (#133)
 
 ### Fixed
 - **M70** · If another open tab of the game saved your collection first, the Armory now reloads it at once and says so, instead of quietly undoing your Shot later (#122)

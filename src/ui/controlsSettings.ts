@@ -143,7 +143,7 @@ export function controlsSettings(opts: ControlsSettingsOptions): HTMLDivElement[
   opts.rawInput.watch((status) => (rawStatus.textContent = RAW_INPUT_STATUS[status]));
 
   return [
-    menuRow('Mouse sensitivity', '', slider),
+    menuRow('Mouse sensitivity', 'How far your view turns for the same move of the mouse.', slider),
     turnRow,
     // A multiple of the mouse sensitivity, so it follows when that changes.
     menuRow(
@@ -160,13 +160,13 @@ export function controlsSettings(opts: ControlsSettingsOptions): HTMLDivElement[
     ),
     menuRow(
       'Invert mouse',
-      '',
+      'Whether pushing the mouse forward looks up or down.',
       new OptionPicker('Invert mouse', INVERT_MOUSE, opts.invertMouse.initial ? 'on' : 'off', 'invertMouse', (v) => opts.invertMouse.onChange(v === 'on')).root,
     ),
     rawRow,
-    menuRow('Crouch key', '', new OptionPicker('Crouch key', CROUCH_MODES, opts.crouch.initial, 'crouch', opts.crouch.onChange).root),
-    menuRow('Aim button', '', new OptionPicker('Aim button', AIM_MODES, opts.aim.initial, 'aimMode', opts.aim.onChange).root),
-    menuRow('Sprint key', '', new OptionPicker('Sprint key', SPRINT_MODES, opts.sprint.initial, 'sprintMode', opts.sprint.onChange).root),
+    menuRow('Crouch key', 'Hold the key to stay down, or press it once to crouch and again to stand.', new OptionPicker('Crouch key', CROUCH_MODES, opts.crouch.initial, 'crouch', opts.crouch.onChange).root),
+    menuRow('Aim button', 'Hold the button to aim, or press it once to raise the sight and again to lower it.', new OptionPicker('Aim button', AIM_MODES, opts.aim.initial, 'aimMode', opts.aim.onChange).root),
+    menuRow('Sprint key', 'Hold the key to sprint, or press it once to run until you stop.', new OptionPicker('Sprint key', SPRINT_MODES, opts.sprint.initial, 'sprintMode', opts.sprint.onChange).root),
     menuRow(
       'Order wheel',
       'Hold the order wheel key for squad orders. The mouse moves the wheel’s pointer, not your view.',

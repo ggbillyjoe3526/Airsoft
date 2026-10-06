@@ -1,0 +1,275 @@
+/*
+ * The menus' controls (G3): tags, buttons, the keyboard focus ring, pictures and the tiers' colours.
+ */
+
+/* Tags: acid good news, pink dev content, orange, blue, gold. */
+.tag-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+  color: var(--menu-acid);
+  background: rgba(200, 255, 46, 0.12);
+  border: 1px solid rgba(200, 255, 46, 0.45);
+}
+
+.tag-dev {
+  color: #ff8fbb;
+  background: rgba(255, 61, 139, 0.14);
+  border-color: rgba(255, 61, 139, 0.5);
+}
+
+.tag-orange {
+  color: var(--orange-text);
+  background: rgba(255, 107, 26, 0.14);
+  border-color: rgba(255, 107, 26, 0.55);
+}
+
+.tag-blue {
+  color: var(--menu-blue);
+  background: rgba(63, 140, 255, 0.14);
+  border-color: rgba(63, 140, 255, 0.55);
+}
+
+.tag-gold {
+  color: #ffd15c;
+  background: rgba(255, 194, 26, 0.12);
+  border-color: rgba(255, 194, 26, 0.5);
+}
+
+.beta-tag {
+  display: inline-flex;
+  padding: 3px 8px;
+  font: 800 var(--fs-sm) / 1.1 var(--ui-display);
+  letter-spacing: 0.12em;
+  vertical-align: middle;
+  color: var(--ink);
+  background: var(--orange);
+}
+
+.menu-later {
+  padding: 3px 8px;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: var(--ls-wide);
+  color: var(--menu-muted);
+  background: var(--menu-panel-hi);
+}
+
+/* Buttons: orange (primary) moves you on, navy (secondary) does everything else, ghost stays quiet in a line of text.
+   Each has hover, pressed, focus and disabled states, and the cut corners of the panels. */
+.menu-button,
+.picker-button,
+.key-button,
+.key-reset,
+.menu-close,
+.choice-card,
+.choice-variant,
+.settings-tab,
+.gear-slot,
+.item-tile,
+.item-chip,
+.option-tile,
+.customise-part,
+.menu-nav-item {
+  transition:
+    background-color var(--t-fast) var(--ease),
+    border-color var(--t-fast) var(--ease),
+    color var(--t-fast) var(--ease),
+    box-shadow var(--t-fast) var(--ease),
+    translate var(--t-fast) var(--ease);
+}
+
+.menu-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: var(--control-lg);
+  padding: 0 var(--sp-5);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--paper);
+  background: var(--menu-panel-hi);
+  border: 1px solid var(--menu-line);
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut)));
+  cursor: pointer;
+}
+
+.menu-button:hover {
+  background: #1d2d5c;
+  border-color: var(--menu-muted);
+}
+
+.menu-button:active {
+  background: var(--menu-panel);
+}
+
+.menu-button-primary {
+  min-height: var(--control-xl);
+  padding: 0 var(--sp-6);
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(180deg, #ff7f2e, #ff5a10);
+  border-color: transparent;
+}
+
+.menu-button-primary:hover {
+  background: linear-gradient(180deg, #ff9045, #ff6a20);
+  border-color: transparent;
+  translate: 0 -1px;
+}
+
+.menu-button-primary:active {
+  translate: 0;
+  filter: brightness(0.95);
+}
+
+/* The big one (Play): the label on the left, the arrow on the right. */
+.menu-button-big {
+  justify-content: space-between;
+  min-height: clamp(64px, 5vw, 84px);
+  padding: 0 clamp(24px, 2.4vw, 48px);
+  font-size: clamp(30px, 2.2vw, 40px);
+  letter-spacing: 0.08em;
+}
+
+/* The label first, its sign at the far end (Resume's play sign as Play's arrow). */
+.menu-button-big > svg.icon:first-child {
+  order: 2;
+}
+
+.menu-button-ghost {
+  min-height: var(--control-sm);
+  padding: 0 var(--sp-2);
+  font-size: var(--fs-md);
+  color: var(--orange-text);
+  background: transparent;
+  border-color: transparent;
+  clip-path: none;
+}
+
+.menu-button-ghost:hover {
+  color: var(--paper);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: transparent;
+}
+
+.menu-button:disabled,
+.picker-button:disabled,
+.key-reset:disabled,
+.menu-close:disabled,
+.choice-card:disabled,
+.option-tile:disabled,
+.item-chip:disabled {
+  cursor: default;
+  opacity: 0.45;
+  translate: 0;
+  filter: none;
+}
+
+.menu-button:disabled:hover {
+  background: var(--menu-panel-hi);
+  border-color: var(--menu-line);
+}
+
+.menu-button-primary:disabled:hover {
+  background: linear-gradient(180deg, #ff7f2e, #ff5a10);
+}
+
+/* Keyboard focus, one rule for every control (audit section 6, item 6): the orange ring, with a page-coloured gap
+   under it so the ring reads on the orange buttons too. A cut-corner control draws it inside (its clip would hide it). */
+.menus :is(button, [role='tab'], input, select, a, summary, .gear-slot, .item-tile, .item-chip):focus-visible,
+.menu-dialog :is(button, input):focus-visible,
+.crash-screen :is(button, textarea):focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--menu-bg);
+}
+
+.menus :is(.menu-button, .choice-card, .option-tile, .item-tile, .gear-slot, .customise-part, .settings-tab, .menu-nav-item):focus-visible {
+  outline-offset: -4px;
+}
+
+/* Pictures: a drawing until the picture is drawn, then the picture, on a deep blue glow. */
+.pic-slot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: radial-gradient(120% 90% at 50% 40%, #11214d, #050e24 72%);
+}
+
+.pic-slot img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.pic-placeholder {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: var(--menu-line);
+}
+
+.pic-placeholder svg {
+  width: 42%;
+  height: 42%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.pic-slot.has-picture .pic-placeholder {
+  display: none;
+}
+
+/* Rarity colours, common to rarest (pool.md's tiers; a tier added there shows grey until it gets one here) */
+[data-tier] {
+  --tier: #aab4c8;
+}
+
+[data-tier='uncommon'] {
+  --tier: #5ce08a;
+}
+
+[data-tier='rare'] {
+  --tier: #4f97ff;
+}
+
+[data-tier='veryRare'] {
+  --tier: #a47bff;
+}
+
+[data-tier='epic'] {
+  --tier: #ff5c9d;
+}
+
+[data-tier='legendary'] {
+  --tier: #ffc21a;
+}
+
+.tier-bar {
+  position: absolute;
+  inset: auto 0 0;
+  height: 4px;
+  background: var(--tier, var(--menu-line));
+}
+
+.tier-text,
+.gear-tier,
+.item-tier,
+.option-tier {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--tier, var(--menu-muted));
+}

@@ -1,0 +1,96 @@
+/*
+ * Narrower windows (G3): the three-column screens drop their right column under the rest, then stack. Imported last,
+ * so these rules win over every screen's own.
+ */
+
+/* Narrower windows: the three-column screens drop their right column under the rest, then stack. */
+@media (max-width: 1500px) {
+  .loadout-view {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .loadout-selected {
+    grid-column: 1 / -1;
+    position: static;
+  }
+
+  .customise-layout,
+  .settings-columns {
+    grid-template-columns: clamp(240px, 24vw, 320px) minmax(0, 1fr);
+  }
+
+  .customise-side,
+  .settings-about {
+    grid-column: 2;
+    position: static;
+  }
+
+  .armory-columns {
+    grid-template-columns: clamp(280px, 30vw, 420px) minmax(0, 1fr);
+  }
+
+  .armory-owned {
+    grid-column: 1 / -1;
+  }
+
+  .menu-nav-item svg.icon {
+    display: none;
+  }
+}
+
+@media (max-width: 1180px) {
+  .play-layout,
+  .summary-layout,
+  .title-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .title-body {
+    grid-template-areas: 'hero' 'actions' 'side';
+    padding-left: 0;
+  }
+
+  .play-aside {
+    position: static;
+    max-height: none;
+  }
+
+  .match-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .menu-build {
+    display: none;
+  }
+
+  .menu-title-warning {
+    max-width: none;
+    margin-top: 64px;
+  }
+}
+
+@media (max-width: 900px) {
+  .loadout-view,
+  .customise-layout,
+  .settings-columns,
+  .armory-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .customise-side,
+  .settings-about {
+    grid-column: auto;
+  }
+
+  .settings-side {
+    position: static;
+  }
+
+  .menu-chip {
+    padding: 4px 8px;
+  }
+
+  .menu-mark {
+    display: none;
+  }
+}

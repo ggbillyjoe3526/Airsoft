@@ -1,127 +1,135 @@
-import { BARRELS, GRIPS, handlingOf, MAGAZINES, MUZZLES, type ReplicaParts } from '../../config/attachments';
-import { GLOW_BB_CHOICES } from '../../config/glowBBs';
-import { LASERS } from '../../config/lasers';
-import { TORCHES } from '../../config/torches';
-import { OPTIC_BLURBS } from '../../config/optics';
-import { BB_WEIGHT, type FireMode, HOP_UP, type PowerSource, type ReplicaConfig } from '../../config/replicas';
-import { LOADOUT_TEXT, PERFORMANCE_SHEET } from '../../config/menus';
+import { HOP_UP } from '../../config/replicas';
+import { GEAR_TEXT, LOADOUT_TEXT, MENU_TEXT } from '../../config/menus';
+import { SCHEMES, hasFixedColours, FAMILIES } from '../../config/schemes';
 import type { ItemRef } from '../../pool/collection';
-import type { FitSlot, KitSlot } from '../../pool/kit';
 import { GEAR_SLOTS, type GearSlot, type LoadoutModel } from '../../pool/loadoutModel';
-import { hasBuiltInPower, replicaOf } from '../../pool/pool';
-import {
-  bbWeightLabel,
-  bbWeightReadout,
-  gripReadout,
-  hopUpLabel,
-  hopUpReadout,
-  barrelReadout,
-  laserReadout,
-  lightReadout,
-  magazineReadout,
-  muzzleReadout,
-  opticReadout,
-  powerReadout,
-} from '../loadoutChoice';
-import { OptionPicker } from '../optionPicker';
-import { gearLine, performanceOf, type SheetRow, sheetRows, tierBlurb } from '../performanceSheet';
-import { ITEM_ICONS, itemIcon } from './icons';
-import { backButton, el, laterRow, menuButton, menuPage, menuRow, rangeControl } from './menuParts';
+import { type Asset, replicaOf } from '../../pool/pool';
+import { gearLine, performanceOf, sheetRows, tierBlurb } from '../performanceSheet';
+import { hintsBar, type MenuHint, optionTick, sectionHead } from './chrome';
+import { CustomiseView } from './customiseView';
+import { ITEM_ICONS, itemIcon, MENU_ICONS } from './icons';
+import type { PictureContext } from './kitStrip';
+import { el, menuButton } from './menuParts';
+import { partSubject, PictureSlot, replicaSubject } from './menuPictures';
+import { perfRows, perfSheet } from './perfBars';
 
-const FIRE_MODE_WORDS: Readonly<Record<FireMode, string>> = { semi: 'semi', burst: 'burst', auto: 'auto' };
-const POWER_WORDS: Readonly<Record<PowerSource, string>> = { electric: 'Electric', gas: 'Gas' };
-
-/**
- * The line under a replica's name: power, fire modes and the fitted magazine, e.g.
- * "Electric · semi, burst, auto · 60 BBs a magazine".
- */
-export function replicaSummary(r: ReplicaConfig, parts: ReplicaParts): string {
-  return `${POWER_WORDS[r.power]} · ${r.fireModes.map((m) => FIRE_MODE_WORDS[m]).join(', ')} · ${handlingOf(r, parts).magSize} BBs a magazine`;
-}
+export { fixedValue, replicaSummary } from './customiseView';
 
 export interface LoadoutOptions {
   model: LoadoutModel;
-  /** Something on the loadout changed (it is already saved): New game's Loadout tile and the next Play follow it. */
+  context: PictureContext;
+  /** Something on the loadout changed (it is already saved): the Play screen and the next Play follow it. */
   onChange: () => void;
   onBack: () => void;
 }
 
-/** The gear column's slots: the two replica slots, then Grenades (empty until grenades arrive, v0.3). */
-type ColumnSlot = GearSlot | 'grenades';
-const COLUMN: readonly ColumnSlot[] = [...GEAR_SLOTS, 'grenades'];
+/** A carried replica's card: its slot's button (the picture, name, tier and stat line) and its Customise button. */
+interface CarriedCard {
+  root: HTMLDivElement;
+  button: HTMLButtonElement;
+  pic: PictureSlot;
+  name: HTMLSpanElement;
+  tier: HTMLSpanElement;
+  stats: HTMLSpanElement;
+  chips: HTMLDivElement;
+  customise: HTMLButtonElement;
+}
 
-/** The Customise screen's rows that pick an item, top to bottom, with the label each shows for "as it comes". */
-const FIT_ROWS: readonly { slot: FitSlot; label: string; none: string | null }[] = [
-  { slot: 'optic', label: 'Optic', none: 'Iron Sights' },
-  { slot: 'grip', label: 'Grip', none: 'No Grip' },
-  { slot: 'laser', label: 'Laser', none: 'No Laser' },
-  { slot: 'barrel', label: 'Barrel', none: 'Standard' },
-  { slot: 'muzzle', label: 'Muzzle', none: 'None' },
-  { slot: 'magazine', label: 'Magazine', none: 'Standard' },
-  // Every replica needs a power source: no "none".
-  { slot: 'power', label: 'Power Source', none: null },
-  // M33h: the weapon torch, switched in play with the Weapon torch key.
-  { slot: 'light', label: 'Light', none: 'No Light' },
-];
+/** A replica you own, as a tile in the grid. */
+interface ReplicaTile {
+  ref: ItemRef;
+  button: HTMLButtonElement;
+  pic: PictureSlot;
+  note: HTMLSpanElement;
+}
 
 /**
- * The Loadout screen (M26b), after Destiny 2's character screen without the character: a column of three square gear
- * slots (Primary, Secondary, Grenades) on the left; clicking one lists the replicas you own for it on the right (any
- * replica goes in either slot). Right-clicking an equipped replica (or its Customise button) opens its Customise view:
- * the optic, BB weight, hop-up, grip, laser, magazine and power source, showing only items you own that fit it. Every
- * item tile carries its rarity tier's colour. Changes save as they are made; the next Play (or Resume on the range)
- * uses them.
+ * The Loadout screen (M26b; G3 layout): what you carry on the left (Primary and Secondary as big picture cards with
+ * their fitted parts, then Grenades, empty until they arrive), the replicas you own in the middle (any goes in either
+ * slot) and the selected slot's numbers on the right. Right-click an equipped replica, its Customise button or C opens
+ * Customise. A pick changes only the tiles it touches; nothing here redraws on its own.
  */
 export class LoadoutScreen {
   readonly root: HTMLDivElement;
-  private readonly column = new Map<ColumnSlot, { button: HTMLButtonElement; art: HTMLSpanElement; name: HTMLSpanElement; tier: HTMLSpanElement; line: HTMLSpanElement }>();
-  private readonly panel: HTMLDivElement;
-  private selected: ColumnSlot = 'primary';
-  /** The gear slot whose replica is being customised, or null on the item list. */
+  private readonly gearView: HTMLDivElement;
+  private readonly cards = new Map<GearSlot, CarriedCard>();
+  private readonly grid: HTMLDivElement;
+  private tiles: ReplicaTile[] = [];
+  private readonly selectedName: HTMLHeadingElement;
+  private readonly selectedLine: HTMLParagraphElement;
+  private readonly sheet = perfSheet('loadout-perf');
+  private readonly customiseBox: HTMLDivElement;
+  private readonly footer: HTMLDivElement;
+  private readonly gearHints: readonly MenuHint[];
+  private selected: GearSlot = 'primary';
+  /** The Customise view while it is open, and the slot whose replica it customises. */
+  private view: CustomiseView | null = null;
   private customising: GearSlot | null = null;
 
   constructor(private readonly opts: LoadoutOptions) {
-    const page = menuPage('menu-loadout', 'Loadout');
-    this.root = page.root;
-    const gear = el('div', 'gear-column');
-    for (const slot of COLUMN) {
-      const label = el('p', 'menu-kicker gear-label', LOADOUT_TEXT.slots[slot]);
-      const button = el('button', 'gear-slot');
-      button.type = 'button';
-      const art = el('span', 'item-art');
-      const name = el('span', 'gear-name');
-      const tier = el('span', 'gear-tier');
-      const line = el('span', 'gear-stats');
-      button.append(art, name, tier, line);
-      button.addEventListener('click', () => this.select(slot));
-      if (slot !== 'grenades') {
-        button.addEventListener('contextmenu', (e) => {
-          e.preventDefault();
-          this.customise(slot);
-        });
-      }
-      if (slot === 'primary') button.dataset.autofocus = '';
-      gear.append(label, button);
-      this.column.set(slot, { button, art, name, tier, line });
+    this.root = el('div', 'menu-screen menu-page menu-loadout menu-hub');
+    this.root.hidden = true;
+    this.gearView = el('div', 'loadout-view');
+
+    const carried = el('section', 'loadout-carried');
+    carried.append(sectionHead('01', GEAR_TEXT.carried));
+    for (const slot of GEAR_SLOTS) {
+      const card = this.carriedCard(slot);
+      this.cards.set(slot, card);
+      carried.append(card.root);
     }
-    gear.append(el('p', 'gear-hint', LOADOUT_TEXT.rightClickHint));
-    this.panel = el('div', 'menu-panel loadout-panel');
-    const columns = el('div', 'loadout-columns');
-    columns.append(gear, this.panel);
-    page.body.append(columns);
-    page.footer.append(backButton(() => this.back()));
+    const grenades = el('button', 'gear-slot gear-grenades empty');
+    grenades.type = 'button';
+    grenades.setAttribute('aria-disabled', 'true');
+    grenades.setAttribute('aria-label', `${LOADOUT_TEXT.slots.grenades}: ${LOADOUT_TEXT.empty}`);
+    const lock = el('span', 'gear-lock');
+    lock.innerHTML = MENU_ICONS.lock;
+    const words = el('span', 'gear-words');
+    words.append(el('span', 'menu-kicker', LOADOUT_TEXT.slots.grenades), el('span', 'gear-note', LOADOUT_TEXT.grenadesLater));
+    grenades.append(el('span', 'stripes'), lock, words);
+    carried.append(grenades);
+
+    const owned = el('section', 'loadout-replicas');
+    owned.append(sectionHead('02', GEAR_TEXT.replicas));
+    this.grid = el('div', 'item-grid replica-grid');
+    owned.append(this.grid, el('p', 'loadout-note', GEAR_TEXT.unlockMore));
+
+    const aside = el('aside', 'loadout-selected menu-card');
+    aside.setAttribute('aria-label', GEAR_TEXT.selected);
+    this.selectedName = el('h2', 'selected-name');
+    this.selectedLine = el('p', 'selected-line');
+    this.sheet.root.classList.add('selected-sheet');
+    aside.append(el('p', 'menu-kicker', GEAR_TEXT.selected), this.selectedName, this.selectedLine, this.sheet.root, el('p', 'gear-hint', LOADOUT_TEXT.rightClickHint));
+
+    this.gearView.append(carried, owned, aside);
+    this.customiseBox = el('div', 'customise-box');
+    this.customiseBox.hidden = true;
+    this.gearHints = [
+      { keys: ['Esc'], label: MENU_TEXT.hints.back, run: () => this.back() },
+      { keys: ['C'], label: MENU_TEXT.hints.customise, run: () => this.customise(this.selected), code: 'KeyC', echo: true },
+      { keys: [MENU_TEXT.hints.rightClick], label: MENU_TEXT.hints.customise },
+    ];
+    this.footer = el('div', 'menu-hints-box');
+    this.footer.append(hintsBar(this.gearHints));
+    this.root.append(el('h1', 'menu-heading sr-only', 'Loadout'), this.gearView, this.customiseBox, this.footer);
     // Right-click means Customise here: never the browser's menu, even off a replica.
     this.root.addEventListener('contextmenu', (e) => e.preventDefault());
     this.refresh();
   }
 
-  /** Re-reads the loadout (after the Armory unlocked something, say) and shows the item list of the picked slot. */
-  refresh(): void {
-    this.customising = null;
-    this.render();
+  /** The key hints on show now: the gear's, or Customise's. */
+  get hints(): readonly MenuHint[] {
+    return this.view?.hints ?? this.gearHints;
   }
 
-  /** Esc: the Customise view goes back to the item list (true); on the item list the menus take Esc as Back (false). */
+  /** Re-reads the loadout (after the Armory unlocked something, say) and shows the gear. */
+  refresh(): void {
+    this.closeView();
+    this.buildGrid();
+    this.update();
+  }
+
+  /** Esc: Customise goes back to the gear (true); on the gear the menus take Esc as Back (false). */
   handleEscape(): boolean {
     if (this.customising === null) return false;
     this.closeCustomise();
@@ -132,267 +140,189 @@ export class LoadoutScreen {
     if (!this.handleEscape()) this.opts.onBack();
   }
 
-  private select(slot: ColumnSlot): void {
+  private carriedCard(slot: GearSlot): CarriedCard {
+    const root = el('div', `carried-card carried-${slot}`);
+    const button = el('button', 'gear-slot');
+    button.type = 'button';
+    const pic = new PictureSlot('carried-pic');
+    const name = el('span', 'gear-name');
+    const tier = el('span', 'gear-tier');
+    const stats = el('span', 'gear-stats');
+    const words = el('span', 'gear-words');
+    words.append(el('span', 'menu-kicker', LOADOUT_TEXT.slots[slot]), name, tier, stats);
+    const chips = el('div', 'part-chips');
+    button.append(pic.root, words, chips, el('span', 'tier-bar'));
+    button.addEventListener('click', () => this.select(slot));
+    button.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      this.customise(slot);
+    });
+    if (slot === 'primary') button.dataset.autofocus = '';
+    const customise = menuButton(LOADOUT_TEXT.customise, 'primary', () => this.customise(slot));
+    customise.classList.add('carried-customise');
+    root.append(button, customise);
+    return { root, button, pic, name, tier, stats, chips, customise };
+  }
+
+  /** The replicas you own, a tile each (made again only when what you own may have changed). */
+  private buildGrid(): void {
+    const m = this.opts.model;
+    this.tiles = m.replicaChoices().map((ref) => {
+      const asset = m.pool.byId.get(ref.asset)!;
+      const button = el('button', 'item-tile replica-tile');
+      button.type = 'button';
+      button.dataset.item = key(ref);
+      button.dataset.tier = ref.tier;
+      button.title = tierBlurb(m.pool, ref);
+      const pic = new PictureSlot('tile-pic');
+      const note = el('span', 'item-note');
+      const words = el('span', 'item-words');
+      words.append(el('span', 'item-name', asset.name), el('span', 'item-tier', this.tierLabel(ref)));
+      button.append(pic.root, words, note, el('span', 'tier-bar'), optionTick());
+      button.addEventListener('click', () => this.equip(ref));
+      // Right-click customises the equipped replica only: a misplaced right-click never swaps what you carry.
+      button.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        const i = GEAR_SLOTS.indexOf(this.selected);
+        const current = m.equipped()[i];
+        if (current && sameItem(current, ref)) this.customise(this.selected);
+      });
+      return { ref, button, pic, note };
+    });
+    this.grid.replaceChildren(...this.tiles.map((t) => t.button));
+  }
+
+  private select(slot: GearSlot): void {
     this.selected = slot;
-    this.customising = null;
-    this.render();
+    this.update();
+  }
+
+  private equip(ref: ItemRef): void {
+    const m = this.opts.model;
+    m.equip(this.selected, ref);
+    this.opts.onChange();
+    this.update();
+  }
+
+  /**
+   * Shows the loadout as it is now. Each element changes only if what it shows changed, so picking a replica touches its
+   * tile, the one it replaced, the slot's card and the numbers, and the pictures already drawn stay.
+   */
+  private update(): void {
+    const m = this.opts.model;
+    const equipped = m.equipped();
+    const realistic = this.opts.context.realistic();
+    for (const [slot, card] of this.cards) {
+      const ref = equipped[GEAR_SLOTS.indexOf(slot)] ?? null;
+      const on = slot === this.selected;
+      card.button.classList.toggle('selected', on);
+      setAttr(card.button, 'aria-pressed', String(on));
+      card.root.classList.toggle('selected', on);
+      const asset = ref ? m.pool.byId.get(ref.asset)! : null;
+      setText(card.name, asset ? asset.name : LOADOUT_TEXT.empty);
+      const tier = ref ? this.tierLabel(ref) : '';
+      setText(card.tier, ref && asset ? `${tier}${hasFixedColours(replicaOf(asset)) ? '' : ` · ${this.schemeName(asset)}`}` : '');
+      setText(card.stats, ref ? gearLine(m.slotKit(ref), m.bbWeight(ref.asset)) : '');
+      if (ref) card.root.dataset.tier = ref.tier;
+      else delete card.root.dataset.tier;
+      card.root.classList.toggle('empty', !ref);
+      setAttr(card.button, 'aria-label', `${LOADOUT_TEXT.slots[slot]}: ${ref ? `${asset!.name}, ${tier}` : LOADOUT_TEXT.empty}`);
+      card.customise.hidden = !ref;
+      if (asset) setAttr(card.customise, 'aria-label', `${LOADOUT_TEXT.customise} ${asset.name}`);
+      card.pic.show(this.opts.context.pictures, ref && asset ? replicaSubject(asset, m.scheme(asset.id), realistic, m.slotKit(ref)) : null, asset ? itemIcon(asset) : ITEM_ICONS.aeg);
+      this.updateChips(card, ref);
+    }
+    const i = GEAR_SLOTS.indexOf(this.selected);
+    const current = equipped[i] ?? null;
+    for (const t of this.tiles) {
+      const isCurrent = !!current && sameItem(t.ref, current);
+      const elsewhere = equipped.some((r, j) => j !== i && r && sameItem(r, t.ref));
+      t.button.classList.toggle('selected', isCurrent);
+      setAttr(t.button, 'aria-pressed', String(isCurrent));
+      setText(t.note, isCurrent ? LOADOUT_TEXT.equipped : elsewhere ? LOADOUT_TEXT.slots[GEAR_SLOTS[1 - i]!] : '');
+      const asset = m.pool.byId.get(t.ref.asset)!;
+      t.pic.show(this.opts.context.pictures, replicaSubject(asset, m.scheme(asset.id), realistic, m.slotKit(t.ref)), itemIcon(asset));
+    }
+    this.updateSelected(current);
+  }
+
+  /** The parts fitted to a carried replica, as small pictures under its name. */
+  private updateChips(card: CarriedCard, ref: ItemRef | null): void {
+    const m = this.opts.model;
+    const fit = ref ? m.fitOf(ref.asset) : null;
+    const items = fit ? (['optic', 'grip', 'laser', 'barrel', 'muzzle', 'magazine', 'light'] as const).flatMap((s) => (fit[s] ? [m.pool.byId.get(fit[s]!.asset)!] : [])) : [];
+    const signature = items.map((a) => a.id).join(',');
+    if (card.chips.dataset.items === signature) return;
+    card.chips.dataset.items = signature;
+    card.chips.replaceChildren(
+      ...items.map((a) => {
+        const chip = el('span', 'part-chip');
+        const pic = new PictureSlot('chip-pic');
+        pic.show(this.opts.context.pictures, partSubject(a, this.opts.context.realistic()), itemIcon(a));
+        chip.append(pic.root, el('span', '', a.name));
+        return chip;
+      }),
+    );
+  }
+
+  /** The Selected panel: the selected slot's replica as carried, its numbers against the replica as it comes. */
+  private updateSelected(ref: ItemRef | null): void {
+    const m = this.opts.model;
+    if (!ref) {
+      setText(this.selectedName, LOADOUT_TEXT.empty);
+      this.selectedLine.replaceChildren();
+      this.sheet.rows.replaceChildren();
+      return;
+    }
+    const asset = m.pool.byId.get(ref.asset)!;
+    const base = replicaOf(asset);
+    setText(this.selectedName, asset.name);
+    const tier = el('span', 'tier-text', this.tierLabel(ref));
+    tier.dataset.tier = ref.tier;
+    this.selectedLine.replaceChildren(tier, ` · ${GEAR_TEXT.asCarried}`);
+    const factory = performanceOf(m.asItComes(asset.id), base.bbWeight, base.hopUpDial);
+    const now = performanceOf(m.slotKit(ref), m.bbWeight(asset.id), m.hopUp(asset.id), m.capped(ref));
+    this.sheet.rows.replaceChildren(...perfRows(sheetRows(now, factory, HOP_UP.readoutRange)));
   }
 
   private customise(slot: GearSlot): void {
+    const ref = this.opts.model.equipped()[GEAR_SLOTS.indexOf(slot)];
+    if (!ref) return;
+    this.closeView();
     this.selected = slot;
     this.customising = slot;
-    this.render();
-    // The first part to pick, not Back To Gear (which comes first in the page).
-    (this.panel.querySelector<HTMLElement>('.item-chip') ?? this.panel.querySelector<HTMLElement>('.loadout-close'))?.focus({ preventScroll: true });
+    this.view = new CustomiseView({ model: this.opts.model, context: this.opts.context, onChange: () => this.opts.onChange(), onBack: () => this.closeCustomise() }, ref);
+    this.customiseBox.replaceChildren(this.view.root);
+    this.customiseBox.hidden = false;
+    this.gearView.hidden = true;
+    this.footer.replaceChildren(this.view.hintsBar());
+    this.view.focus();
   }
 
   private closeCustomise(): void {
     const slot = this.customising;
+    this.closeView();
+    this.update();
+    if (slot) this.cards.get(slot)?.button.focus({ preventScroll: true });
+  }
+
+  private closeView(): void {
+    if (!this.view) return;
+    this.view = null;
     this.customising = null;
-    this.render();
-    if (slot) this.column.get(slot)?.button.focus({ preventScroll: true });
-  }
-
-  private render(): void {
-    this.renderColumn();
-    this.panel.replaceChildren();
-    if (this.customising) this.renderCustomise(this.customising);
-    else if (this.selected === 'grenades') this.renderGrenades();
-    else this.renderChoices(this.selected);
-  }
-
-  private renderColumn(): void {
-    const m = this.opts.model;
-    const equipped = m.equipped();
-    for (const slot of COLUMN) {
-      const parts = this.column.get(slot)!;
-      const on = slot === this.selected;
-      parts.button.classList.toggle('selected', on);
-      parts.button.setAttribute('aria-pressed', String(on));
-      const ref = slot === 'grenades' ? null : (equipped[GEAR_SLOTS.indexOf(slot)] ?? null);
-      // What goes in the slot, drawn (FA13): the equipped replica, or a grenade's outline on the empty Grenades slot.
-      const art = ref ? itemIcon(m.pool.byId.get(ref.asset)!) : slot === 'grenades' ? ITEM_ICONS.grenade : '';
-      if (parts.art.innerHTML !== art) parts.art.innerHTML = art;
-      parts.name.textContent = ref ? m.pool.byId.get(ref.asset)!.name : LOADOUT_TEXT.empty;
-      parts.tier.textContent = ref ? this.tierLabel(ref) : '';
-      parts.line.textContent = ref ? gearLine(m.slotKit(ref), m.bbWeight(ref.asset)) : '';
-      setTier(parts.button, ref);
-      parts.button.classList.toggle('empty', !ref);
-      parts.button.setAttribute('aria-label', `${LOADOUT_TEXT.slots[slot]}: ${ref ? `${parts.name.textContent}, ${parts.tier.textContent}` : LOADOUT_TEXT.empty}`);
-    }
-  }
-
-  /** The replicas you own for `slot` (any replica goes in either slot), the equipped one marked. */
-  private renderChoices(slot: GearSlot): void {
-    const m = this.opts.model;
-    const i = GEAR_SLOTS.indexOf(slot);
-    const equipped = m.equipped();
-    const current = equipped[i];
-    const head = el('div', 'loadout-replica-head');
-    head.append(el('h2', 'menu-panel-title', LOADOUT_TEXT.slots[slot]));
-    this.panel.append(head);
-    const grid = el('div', 'item-grid');
-    for (const ref of m.replicaChoices()) {
-      const isCurrent = !!current && sameItem(ref, current);
-      const elsewhere = equipped.some((r, j) => j !== i && r && sameItem(r, ref));
-      const tile = this.itemTile(ref, isCurrent ? LOADOUT_TEXT.equipped : elsewhere ? LOADOUT_TEXT.slots[GEAR_SLOTS[1 - i]!] : '', isCurrent);
-      tile.addEventListener('click', () => {
-        m.equip(slot, ref);
-        this.opts.onChange();
-        this.render();
-        this.panel.querySelector<HTMLElement>(`[data-item="${key(ref)}"]`)?.focus({ preventScroll: true });
-      });
-      // Right-click customises the equipped replica only: a misplaced right-click never swaps what you carry.
-      if (isCurrent) {
-        tile.addEventListener('contextmenu', (e) => {
-          e.preventDefault();
-          this.customise(slot);
-        });
-      }
-      grid.append(tile);
-    }
-    this.panel.append(grid);
-    if (current) {
-      const customise = menuButton(`${LOADOUT_TEXT.customise} ${m.pool.byId.get(current.asset)!.name}`, 'secondary', () => this.customise(slot), true);
-      customise.classList.add('loadout-customise');
-      this.panel.append(customise);
-    }
-  }
-
-  private renderGrenades(): void {
-    const head = el('div', 'loadout-replica-head');
-    head.append(el('h2', 'menu-panel-title', LOADOUT_TEXT.slots.grenades));
-    this.panel.append(head, el('p', 'loadout-note', LOADOUT_TEXT.grenadesLater));
-  }
-
-  /** The Customise view: every customisable part of the replica in `slot`, its numbers under each. */
-  private renderCustomise(slot: GearSlot): void {
-    const m = this.opts.model;
-    const ref = m.equipped()[GEAR_SLOTS.indexOf(slot)];
-    if (!ref) return this.renderChoices(slot);
-    const asset = m.pool.byId.get(ref.asset)!;
-    const base = replicaOf(asset);
-    const kit = m.slotKit(ref);
-    const head = el('div', 'loadout-replica-head');
-    const title = el('h2', 'menu-panel-title', `${LOADOUT_TEXT.customise}: ${asset.name}`);
-    const tier = el('span', 'tier-tag', this.tierLabel(ref));
-    setTier(tier, ref);
-    title.append(' ', tier);
-    const close = menuButton(LOADOUT_TEXT.backToGear, 'secondary', () => this.closeCustomise());
-    close.classList.add('loadout-close');
-    head.append(title, close);
-    // What the replica's tier does (audit POOL-10): rarity is handling, never "damage".
-    this.panel.append(head, el('p', 'loadout-replica-summary', replicaSummary(kit.replica, kit.parts)), el('p', 'menu-readout tier-blurb', tierBlurb(m.pool, ref)));
-    // The parts on the left, the Performance sheet beside them (above them on a narrow window).
-    const body = el('div', 'customise-body');
-    const rows = el('div', 'customise-rows');
-    const sheet = el('aside', 'perf-sheet');
-    sheet.setAttribute('aria-label', PERFORMANCE_SHEET.title);
-    const sheetRowsBox = el('dl', 'perf-rows');
-    sheet.append(el('h3', 'menu-kicker perf-title', PERFORMANCE_SHEET.title), sheetRowsBox, el('p', 'perf-note', PERFORMANCE_SHEET.against(PERFORMANCE_SHEET.chronoGrams)));
-    body.append(rows, sheet);
-    this.panel.append(body);
-
-    const fit = m.fitOf(asset.id);
-    let grams = m.bbWeight(asset.id);
-    let dial = m.hopUp(asset.id);
-    const factory = performanceOf(m.asItComes(asset.id), base.bbWeight, base.hopUpDial);
-    const capped = m.capped(ref);
-    // Readouts that follow the sliders without a full redraw (that would drop the slider being dragged).
-    const powerLine = el('p', 'menu-readout');
-    const live = (): void => {
-      powerLine.textContent = powerReadout(kit, grams);
-      sheetRowsBox.replaceChildren(...sheetRows(performanceOf(kit, grams, dial, capped), factory, HOP_UP.readoutRange).flatMap(sheetRow));
-    };
-    for (const row of FIT_ROWS) {
-      // A light (M33h) is dev content while it is built: no row at all unless one is offered for this replica.
-      if (row.slot === 'light' && !m.hasSlot(asset.id, row.slot)) continue;
-      // No rail for it in the pool (nothing could ever fit): a greyed row. Magazines and power have a choice unless the
-      // replica takes nothing but its own (the Cyber Pistol, M32).
-      if (!m.hasSlot(asset.id, row.slot) && (row.none !== null || hasBuiltInPower(asset))) {
-        rows.append(fixedRow(row.label, fixedValue(row.slot, kit)));
-        if (row.slot === 'optic') this.appendBbRows(rows, asset.id, kit.replica, grams, dial, (g, d) => ((grams = g), (dial = d), live()));
-        continue;
-      }
-      const choices = m.fitChoices(asset.id, row.slot);
-      const tiles = el('div', 'item-row');
-      tiles.setAttribute('role', 'group');
-      tiles.setAttribute('aria-label', row.label);
-      const pick = (item: ItemRef | null): void => {
-        m.setFit(asset.id, row.slot, item);
-        this.opts.onChange();
-        const focusKey = item ? key(item) : `none:${row.slot}`;
-        this.render();
-        this.panel.querySelector<HTMLElement>(`[data-item="${focusKey}"]`)?.focus({ preventScroll: true });
-      };
-      if (row.none !== null) {
-        const tile = smallTile(row.none, '', fit[row.slot] === null);
-        tile.dataset.item = `none:${row.slot}`;
-        tile.addEventListener('click', () => pick(null));
-        tiles.append(tile);
-      }
-      for (const item of choices) {
-        const on = !!fit[row.slot] && sameItem(fit[row.slot]!, item);
-        const tile = smallTile(m.pool.byId.get(item.asset)!.name, this.tierLabel(item), on);
-        tile.dataset.item = key(item);
-        tile.title = tierBlurb(m.pool, item);
-        setTier(tile, item);
-        tile.addEventListener('click', () => pick(item));
-        tiles.append(tile);
-      }
-      const control = el('div', 'menu-row-control');
-      control.append(tiles, el('p', 'picker-blurb', this.fitBlurb(row.slot, kit, fit.power)));
-      control.append(row.slot === 'power' ? powerLine : el('p', 'menu-readout', this.fitReadout(row.slot, kit)));
-      if (choices.length === 0 && row.none !== null) control.append(el('p', 'menu-readout menu-faint', LOADOUT_TEXT.armoryHint));
-      rows.append(menuRow(row.label, '', control));
-      // BB weight and hop-up go after the optic, before the parts that change handling: as you set a replica up at a site.
-      if (row.slot === 'optic') this.appendBbRows(rows, asset.id, kit.replica, grams, dial, (g, d) => ((grams = g), (dial = d), live()));
-    }
-    live();
-    rows.append(laterRow('Skins', '', LOADOUT_TEXT.skinsLater));
-  }
-
-  /**
-   * The BB weight slider (free, never pooled) and the hop-up dial, their readouts following each other, then the Glowing
-   * BBs choice (M33b; free too).
-   */
-  private appendBbRows(into: HTMLElement, replicaId: string, carried: ReplicaConfig, grams0: number, dial0: number, changed: (grams: number, dial: number) => void): void {
-    let grams = grams0;
-    let dial = dial0;
-    const weightLine = el('p', 'menu-readout', bbWeightReadout(carried, grams));
-    const hopLine = el('p', 'menu-readout', hopUpReadout(carried, dial, grams));
-    // A slider fires an input event for every step dragged over: the readouts (each a few flight simulations) and the
-    // New game tile follow once a frame at most.
-    let queued = 0;
-    const update = (): void => {
-      if (queued) return;
-      queued = requestAnimationFrame(() => {
-        queued = 0;
-        weightLine.textContent = bbWeightReadout(carried, grams);
-        hopLine.textContent = hopUpReadout(carried, dial, grams);
-        changed(grams, dial);
-        this.opts.onChange();
-      });
-    };
-    const weight = rangeControl(`${carried.name} BB weight`, { min: BB_WEIGHT.min, max: BB_WEIGHT.max, step: BB_WEIGHT.step }, grams, bbWeightLabel, this.opts.model.dialField('bbWeight', replicaId), (v) => {
-      grams = Math.round(v * 100) / 100;
-      update();
-    });
-    weight.append(weightLine);
-    const hop = rangeControl(`${carried.name} hop-up`, { min: HOP_UP.minDial, max: HOP_UP.maxDial, step: HOP_UP.dialStep }, dial, hopUpLabel, this.opts.model.dialField('hopUp', replicaId), (v) => {
-      dial = v;
-      update();
-    });
-    hop.classList.add('loadout-hopup');
-    hop.append(hopLine);
-    const m = this.opts.model;
-    const glow = new OptionPicker('Glowing BBs', GLOW_BB_CHOICES, m.glowBBs(replicaId), m.glowField(replicaId), () => this.opts.onChange());
-    into.append(menuRow('BB Weight', '', weight), menuRow('Hop-Up', '', hop), menuRow('Glowing BBs', '', glow.root));
-  }
-
-  /** What the fitted item (or "as it comes") is, in a line. */
-  private fitBlurb(slot: FitSlot, kit: KitSlot, power: ItemRef | null): string {
-    if (slot === 'optic') return OPTIC_BLURBS[kit.optic ?? 'none'];
-    if (slot === 'grip') return GRIPS[kit.parts.grip].blurb;
-    if (slot === 'magazine') return MAGAZINES[kit.parts.magazine].blurb;
-    if (slot === 'laser') return kit.parts.laser ? LASERS[kit.parts.laser].blurb : 'No laser: the spread as it comes.';
-    if (slot === 'barrel') return kit.parts.barrel ? BARRELS[kit.parts.barrel].blurb : LOADOUT_TEXT.standardBarrel;
-    if (slot === 'muzzle') return kit.parts.muzzle ? MUZZLES[kit.parts.muzzle].blurb : LOADOUT_TEXT.noMuzzle;
-    if (slot === 'light') return kit.parts.light ? TORCHES[kit.parts.light].blurb : LOADOUT_TEXT.noLight;
-    const type = power ? this.opts.model.pool.byId.get(power.asset)?.power?.type : undefined;
-    return type ? LOADOUT_TEXT.powerBlurb[type] : '';
-  }
-
-  private fitReadout(slot: FitSlot, kit: KitSlot): string {
-    if (slot === 'optic') return opticReadout(kit);
-    if (slot === 'grip') return gripReadout(kit);
-    if (slot === 'magazine') return magazineReadout(kit);
-    if (slot === 'laser') return laserReadout(kit);
-    if (slot === 'barrel') return barrelReadout(kit);
-    if (slot === 'muzzle') return muzzleReadout(kit);
-    if (slot === 'light') return lightReadout(kit);
-    return '';
+    this.customiseBox.replaceChildren();
+    this.customiseBox.hidden = true;
+    this.gearView.hidden = false;
+    this.footer.replaceChildren(hintsBar(this.gearHints));
   }
 
   private tierLabel(ref: ItemRef): string {
     return this.opts.model.pool.tiers.find((t) => t.id === ref.tier)?.label ?? ref.tier;
   }
 
-  /** A square tile for an owned item: its name, its tier, and a note (Equipped, or the other slot it is in). */
-  private itemTile(ref: ItemRef, note: string, selected: boolean): HTMLButtonElement {
-    const tile = el('button', 'item-tile');
-    tile.type = 'button';
-    tile.dataset.item = key(ref);
-    tile.title = tierBlurb(this.opts.model.pool, ref);
-    setTier(tile, ref);
-    tile.classList.toggle('selected', selected);
-    tile.setAttribute('aria-pressed', String(selected));
-    const asset = this.opts.model.pool.byId.get(ref.asset)!;
-    const art = el('span', 'item-art');
-    art.innerHTML = itemIcon(asset);
-    tile.append(art, el('span', 'item-name', asset.name), el('span', 'item-tier', this.tierLabel(ref)));
-    if (note) tile.append(el('span', 'item-note', note));
-    return tile;
+  private schemeName(asset: Asset): string {
+    const scheme = this.opts.model.scheme(asset.id);
+    return this.opts.context.realistic() ? FAMILIES[SCHEMES[scheme].family].name : SCHEMES[scheme].name;
   }
 }
 
@@ -404,46 +334,11 @@ function sameItem(a: ItemRef, b: ItemRef): boolean {
   return a.asset === b.asset && a.tier === b.tier;
 }
 
-/** The tier colour hook for the stylesheet (`data-tier`; a tier the stylesheet doesn't know shows grey). */
-function setTier(node: HTMLElement, ref: ItemRef | null): void {
-  if (ref) node.dataset.tier = ref.tier;
-  else delete node.dataset.tier;
+/** Sets a node's text only when it changes, so an unchanged tile isn't touched. */
+function setText(node: HTMLElement, text: string): void {
+  if (node.textContent !== text) node.textContent = text;
 }
 
-function smallTile(name: string, tier: string, selected: boolean): HTMLButtonElement {
-  const tile = el('button', 'item-chip');
-  tile.type = 'button';
-  tile.classList.toggle('selected', selected);
-  tile.setAttribute('aria-pressed', String(selected));
-  tile.append(el('span', 'item-name', name));
-  if (tier) tile.append(el('span', 'item-tier', tier));
-  return tile;
-}
-
-/** One stat of the Performance sheet: its name, its value, and its change against the replica as it comes. */
-function sheetRow(r: SheetRow): HTMLElement[] {
-  const value = el('dd', 'perf-value', r.value);
-  if (r.delta) {
-    const delta = el('span', `perf-delta${r.change ? ` perf-${r.change}` : ''}`, r.delta);
-    if (r.change) delta.title = PERFORMANCE_SHEET[r.change];
-    value.append(' ', delta);
-    if (r.change) value.append(el('span', 'sr-only', ` (${PERFORMANCE_SHEET[r.change]})`));
-  }
-  return [el('dt', 'perf-label', r.label), value];
-}
-
-/** What a row says when nothing can be fitted there. */
-export function fixedValue(slot: FitSlot, kit: KitSlot): string {
-  if (slot === 'barrel') return LOADOUT_TEXT.fixedBarrel;
-  if (slot === 'muzzle') return LOADOUT_TEXT.noThread;
-  if (slot === 'magazine') return LOADOUT_TEXT.ownMagazine(handlingOf(kit.replica, kit.parts).magSize);
-  if (slot === 'power') return LOADOUT_TEXT.builtInBattery;
-  return LOADOUT_TEXT.noMount;
-}
-
-/** A greyed row for a part this replica has no rail or mount for. */
-function fixedRow(label: string, value: string): HTMLDivElement {
-  const control = el('div', 'menu-row-control');
-  control.append(el('span', 'menu-later-value', value));
-  return menuRow(label, '', control, true);
+function setAttr(node: HTMLElement, name: string, value: string): void {
+  if (node.getAttribute(name) !== value) node.setAttribute(name, value);
 }

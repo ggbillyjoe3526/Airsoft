@@ -11,13 +11,14 @@ export function el<K extends keyof HTMLElementTagNameMap>(tag: K, className = ''
 }
 
 const ARROW_RIGHT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
-const ARROW_LEFT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>';
-const CHEVRON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
 const CROSS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 
-export type MenuButtonKind = 'primary' | 'secondary';
+export type MenuButtonKind = 'primary' | 'secondary' | 'ghost';
 
-/** A menu button: `primary` is the orange one that moves you on (Start, Play, Resume), with an arrow when `arrow`. */
+/**
+ * A menu button: `primary` is the orange one that moves you on (Play, Resume), `ghost` a quiet one in a line of text
+ * (Change), `secondary` everything else; with an arrow when `arrow`.
+ */
 export function menuButton(label: string, kind: MenuButtonKind, onClick: () => void, arrow = false): HTMLButtonElement {
   const button = el('button', `menu-button menu-button-${kind}`, label);
   button.type = 'button';
@@ -32,12 +33,6 @@ export function withIcon(button: HTMLButtonElement, icon: string): HTMLButtonEle
   return button;
 }
 
-export function backButton(onClick: () => void): HTMLButtonElement {
-  const button = menuButton('Back', 'secondary', onClick);
-  button.insertAdjacentHTML('afterbegin', ARROW_LEFT);
-  return button;
-}
-
 /** The close (×) button of a pop-up. */
 export function closeButton(label: string, onClick: () => void): HTMLButtonElement {
   const button = el('button', 'menu-close');
@@ -48,40 +43,13 @@ export function closeButton(label: string, onClick: () => void): HTMLButtonEleme
   return button;
 }
 
-export function chevron(): string {
-  return CHEVRON;
-}
-
-/** "AIRSOFT." with the orange full stop. */
-export function wordmark(className: string, tag: 'h1' | 'p' = 'p'): HTMLElement {
-  const node = el(tag, className, 'AIRSOFT');
-  node.append(el('span', '', '.'));
-  return node;
-}
-
-/** A full-screen menu page: the small wordmark, a heading, a body and a footer (Back on the left). */
-export interface MenuPage {
-  root: HTMLDivElement;
-  body: HTMLDivElement;
-  footer: HTMLDivElement;
-}
-
-export function menuPage(className: string, heading: string): MenuPage {
-  const root = el('div', `menu-screen menu-page ${className}`);
-  root.hidden = true;
-  const body = el('div', 'menu-page-body');
-  const footer = el('div', 'menu-footer');
-  root.append(wordmark('menu-wordmark'), el('h1', 'menu-heading', heading), body, footer);
-  watchScroll(root, body);
-  return { root, body, footer };
-}
-
 /**
- * Marks a page `more-below` while some of it is out of sight under the pinned footer (audit UI-18): the stylesheet
- * fades the last row, so a page that scrolls doesn't read as ending there. Checked as it scrolls and whenever the page
- * or its content changes size (a window resize, another Settings tab, the screen shown).
+ * Marks a screen `more-below` while some of it is out of sight under its pinned key hints (audit UI-18; G3): the
+ * stylesheet fades the page into the hints, so a screen that scrolls doesn't read as ending there. Checked as it
+ * scrolls and whenever the screen or its first child changes size (a window resize, another Settings group, the screen
+ * shown); never per frame.
  */
-function watchScroll(root: HTMLElement, body: HTMLElement): void {
+export function watchScroll(root: HTMLElement): void {
   const update = (): void => {
     root.classList.toggle('more-below', moreBelow(root.scrollTop, root.clientHeight, root.scrollHeight));
   };
@@ -89,7 +57,7 @@ function watchScroll(root: HTMLElement, body: HTMLElement): void {
   if (typeof ResizeObserver === 'undefined') return;
   const observer = new ResizeObserver(update);
   observer.observe(root);
-  observer.observe(body);
+  for (const child of root.children) observer.observe(child);
 }
 
 /** The "LATER" tag on things not built yet. */

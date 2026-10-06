@@ -1,3 +1,6 @@
+import { MENU_TEXT, SUMMARY_TEXT } from '../../config/menus';
+import { hintsBar, type MenuHint } from './chrome';
+import { MENU_ICONS } from './icons';
 import { el, hintLine, menuButton, setHint } from './menuParts';
 
 export interface ResultActions {
@@ -15,6 +18,7 @@ export interface ResultActions {
  */
 export class ResultScreen {
   readonly root: HTMLDivElement;
+  readonly hints: readonly MenuHint[];
   private readonly headline: HTMLHeadingElement;
   private readonly detail: HTMLParagraphElement;
   private readonly hint = hintLine();
@@ -25,19 +29,23 @@ export class ResultScreen {
     const centre = el('div', 'menu-result-centre');
     this.headline = el('h1', 'menu-result-headline');
     this.detail = el('p', 'menu-result-detail');
-    centre.append(el('p', 'menu-kicker', 'Match over'), this.headline, this.detail);
+    centre.append(el('p', 'menu-kicker', SUMMARY_TEXT.over), this.headline, this.detail);
     const buttons = el('div', 'menu-result-buttons');
     const playAgain = menuButton('Play again', 'primary', actions.onPlayAgain);
+    playAgain.classList.add('menu-button-big');
+    playAgain.insertAdjacentHTML('beforeend', MENU_ICONS.arrowRight);
     playAgain.dataset.autofocus = '';
-    buttons.append(
-      playAgain,
+    const more = el('div', 'menu-result-more');
+    more.append(
       menuButton('New game', 'secondary', actions.onChangeSetup),
       menuButton('Summary', 'secondary', actions.onSummary),
       menuButton('Quit', 'secondary', actions.onTitle),
     );
+    buttons.append(playAgain, more);
     const foot = el('div', 'menu-result-foot');
     foot.append(this.hint, buttons);
-    this.root.append(centre, foot);
+    this.hints = [{ keys: ['Enter'], label: 'Play again', run: actions.onPlayAgain, echo: true }];
+    this.root.append(centre, foot, hintsBar(this.hints, MENU_TEXT.free));
   }
 
   set(headline: string, detail: string): void {

@@ -14,8 +14,12 @@ const BANDS: ExtractionBands = {
   // game fits every bot at night (M57, audit AI-02, on M55's maps): Easy 52 % (25 of 48) and 48, Normal 10 % (5) and 13,
   // Hard 12.5 % (6) and 17.5, Pro 19 % (9) and 24; Easy's and Normal's floors moved down (45 to 35 %, 5 to 3 %): each
   // measure sat about one standard error above its old floor. The Extraction balance pass (BAL PR 2) sets them again.
+  // M71 (Audit 2: every level hunts the middle and keeps out of the light, a torch only for a fight within 20 m or a
+  // search's last stretch): Easy 56 % (27) and 45, Normal 35.4 % (17) and 35, Hard 19 % (9) and 19, Pro 25 % (12) and
+  // 29: Easy, Normal and Hard come out in order again. Normal's ceiling moved 35 to 50 % (it read 35.4 %); BAL PR 2
+  // (M72) sets every band round its own figures.
   easy: { extract: [0.35, 0.8], fcPerMinute: [30, 80] },
-  normal: { extract: [0.03, 0.35], fcPerMinute: [5, 40] },
+  normal: { extract: [0.03, 0.5], fcPerMinute: [5, 40] },
   hard: { extract: [0.05, 0.35], fcPerMinute: [5, 45] },
   pro: { extract: [0.08, 0.4], fcPerMinute: [10, 55] },
 };

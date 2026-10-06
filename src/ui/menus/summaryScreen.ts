@@ -9,7 +9,10 @@ import type { TeamBlock } from '../statsRows';
 import { haulWhat } from '../runStatus';
 import { StatsTable } from '../statsTable';
 import { itemTile } from './itemTile';
-import { el, menuButton, menuPage } from './menuParts';
+import { MENU_TEXT, SUMMARY_TEXT } from '../../config/menus';
+import { hintsBar, type MenuHint } from './chrome';
+import { MENU_ICONS } from './icons';
+import { el, menuButton } from './menuParts';
 
 /** What the end-of-match summary shows. */
 export interface MatchSummary {
@@ -48,33 +51,52 @@ export type Unpaid = 'dev' | 'off' | 'devContent';
  */
 export class SummaryScreen {
   readonly root: HTMLDivElement;
-  private readonly result: HTMLParagraphElement;
+  readonly hints: readonly MenuHint[];
+  private readonly result: HTMLHeadingElement;
+  private readonly outcome = el('span');
+  private readonly score = el('span', 'summary-score');
   private readonly table = new StatsTable('summary-table');
   private readonly records: HTMLDivElement;
   private readonly credits: HTMLDivElement;
   private readonly haul: HTMLDivElement;
 
   constructor(onContinue: () => void) {
-    const page = menuPage('menu-summary', 'Match summary');
-    this.root = page.root;
-    this.result = el('p', 'summary-result');
-    this.records = el('div', 'summary-records');
-    this.credits = el('div', 'summary-credits');
-    this.haul = el('div', 'summary-haul');
-    const panel = el('div', 'menu-panel summary-panel');
-    panel.append(this.result, this.haul, this.credits, this.table.root, this.records);
-    page.body.append(panel);
-    const next = menuButton('Continue', 'primary', onContinue, true);
+    this.root = el('div', 'menu-screen menu-page menu-summary');
+    this.root.hidden = true;
+    const head = el('header', 'summary-head');
+    this.result = el('h1', 'menu-heading summary-result');
+    this.result.append(this.outcome, this.score);
+    head.append(el('p', 'menu-kicker', SUMMARY_TEXT.kicker), this.result);
+    this.records = el('div', 'summary-records menu-card');
+    this.credits = el('div', 'summary-credits menu-card');
+    this.haul = el('div', 'summary-haul menu-card');
+    const main = el('section', 'summary-main menu-card');
+    main.setAttribute('aria-label', SUMMARY_TEXT.players);
+    main.append(this.table.root);
+    const next = menuButton(SUMMARY_TEXT.next, 'primary', onContinue);
+    next.classList.add('menu-button-big');
+    next.insertAdjacentHTML('beforeend', MENU_ICONS.arrowRight);
     next.dataset.autofocus = '';
-    page.footer.append(next);
+    const aside = el('aside', 'summary-aside');
+    aside.append(this.credits, this.haul, this.records, next);
+    const layout = el('div', 'summary-layout');
+    layout.append(main, aside);
+    this.hints = [{ keys: ['Enter'], label: SUMMARY_TEXT.next, run: onContinue, echo: true }];
+    this.root.append(head, layout, hintsBar(this.hints, MENU_TEXT.free));
   }
 
   set(summary: MatchSummary): void {
-    this.result.textContent = summary.result;
+    // "You win!" large, the score after it smaller: one heading, read out as one line.
+    const cut = summary.result.indexOf(' · ');
+    this.outcome.textContent = cut < 0 ? summary.result : summary.result.slice(0, cut);
+    this.score.textContent = cut < 0 ? '' : ` ${summary.result.slice(cut + 3)}`;
     this.table.set(summary.blocks);
     this.records.replaceChildren(...recordsBlock(summary.records));
-    this.credits.replaceChildren(...creditsBlock(summary.fieldCredits ?? null, summary.unpaid ?? null));
+    const credits = creditsBlock(summary.fieldCredits ?? null, summary.unpaid ?? null);
+    this.credits.replaceChildren(...credits);
+    this.credits.hidden = credits.length === 0;
     this.haul.replaceChildren(...(summary.haul ? haulBlock(summary.haul) : []));
+    this.haul.hidden = !summary.haul;
   }
 }
 
