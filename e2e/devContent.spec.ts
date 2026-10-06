@@ -317,7 +317,7 @@ test('Extraction: the locker asks for G, opens while held, is carried out throug
   await expect(tile).toHaveCount(1);
   await expect(tile).toContainText('Not kept');
   expect(await tile.getAttribute('data-tier')).toBe(found.item!.tier);
-  const colours: Record<string, string> = { rare: 'rgb(61, 139, 255)', veryRare: 'rgb(164, 107, 255)', epic: 'rgb(255, 95, 180)', legendary: 'rgb(255, 193, 59)' };
+  const colours: Record<string, string> = { rare: 'rgb(79, 151, 255)', veryRare: 'rgb(164, 123, 255)', epic: 'rgb(255, 92, 157)', legendary: 'rgb(255, 194, 26)' };
   const tierColour = await tile.locator('.item-tier').evaluate((n) => getComputedStyle(n).color);
   expect(tierColour).toBe(colours[found.item!.tier]);
   expect(errors, errors.join(' | ')).toEqual([]);

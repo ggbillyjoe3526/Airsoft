@@ -109,7 +109,7 @@ function scope2x(b: ModelBuilder): void {
 
 /** The vertical grip on the handguard rail, behind the support hand: a squared, tapering block. High: three rubber bands. */
 function verticalGrip(b: ModelBuilder): void {
-  b.box('detail', 0.196, 0.244, -0.008, 0.002, 0.03);
+  b.box(b.high ? 'detail' : 'furniture', 0.196, 0.244, -0.008, 0.002, 0.03); // one mesh on Low
   b.profile('furniture', [[0.202, -0.008], [0.238, -0.008], [0.234, -0.088], [0.228, -0.096], [0.21, -0.096], [0.204, -0.088]], 0.032, b.high ? 0.003 : 0.006);
   if (!b.high) return;
   for (let i = 0; i < 3; i++) b.box('stipple', 0.2045, 0.2345, -0.03 - i * 0.02, -0.024 - i * 0.02, 0.0335);
@@ -337,7 +337,7 @@ function silencer(layout: MuzzleLayout, radius: number, cap: number): MuzzleDraw
     const body = length - cap - from;
     const capRadius = radius - S.capStep;
     b.tube('detail', from, body, up, radius, 6);
-    b.tube('accent', from + body * S.ringAt, S.ring, up, radius * S.ringProud, 6);
+    b.tube(b.high ? 'accent' : 'detail', from + body * S.ringAt, S.ring, up, radius * S.ringProud, 6); // one mesh on Low
     b.tube(orangeTip ? 'orange' : 'metal', length - cap, cap, up, capRadius, b.high ? S.segments : 12);
     if (!b.high) return;
     b.tube('metal', 0, S.adapter, up, radius * S.adapterShare, S.segments);

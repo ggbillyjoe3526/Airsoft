@@ -62,6 +62,32 @@ describe('Replica detail (FA8, QualitySettings.replicaDetail)', () => {
     low.dispose();
   });
 
+  it('draws no more meshes (draw calls) on Low for any part than before G2', () => {
+    // Meshes per part on Low before G2 (the hands aside): '-' is the replica's own body.
+    const BEFORE: Readonly<Record<string, Readonly<Record<string, number>>>> = {
+      aeg: { '-': 4, 'barrel:long': 1, 'grip:angled': 1, 'grip:vertical': 1, 'light:weaponTorch': 2, 'magazine:hiCap': 3, 'magazine:lowCap': 2, 'magazine:standard': 2, 'muzzle:none': 2, 'muzzle:silencer': 1, 'optic:redDot': 2, 'optic:scope2x': 2, sightsDown: 1, sightsUp: 1 },
+      pistol: { '-': 4, 'laser:redLaser': 2, 'light:weaponTorch': 2, 'magazine:extended': 3, 'magazine:standard': 2, 'muzzle:silencer': 1 },
+      cyber: { '-': 4, 'light:weaponTorch': 2, 'magazine:standard': 3 },
+    };
+    const HAND_PARTS = new Set(['supportHand', 'glove', 'sleeve', 'armband']);
+    const low = buildReplicaModels(LOADOUT, 0x3a7bd5, false, LOW_DETAIL, { schemes: ['ghost', 'ghost', 'ghost'], realistic: false });
+    for (const r of LOADOUT) {
+      const counts = new Map<string, number>();
+      const group = low.models.get(r.id)!.group;
+      group.traverse((o) => {
+        if (!(o instanceof THREE.Mesh) || HAND_PARTS.has(o.name)) return;
+        let part = '-';
+        for (let p = o.parent; p && p !== group; p = p.parent) if (p.name.includes(':') || p.name.startsWith('sights')) part = p.name;
+        if (part === '-' && o.parent?.name === 'supportHand') return;
+        counts.set(part, (counts.get(part) ?? 0) + 1);
+      });
+      const before = BEFORE[r.id]!;
+      expect([...counts.keys()].sort(), r.id).toEqual(Object.keys(before).sort());
+      for (const [part, n] of counts) expect(n, `${r.id} ${part}`).toBeLessThanOrEqual(before[part]!);
+    }
+    low.dispose();
+  });
+
   it('draws the high replicas with bevels, speckle and edge highlights, within their budgets', () => {
     const low = buildReplicaModels(LOADOUT, 0x3a7bd5, false);
     const high = buildReplicaModels(LOADOUT, 0x3a7bd5, false, HIGH);

@@ -170,8 +170,8 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   // The sheet follows the BB weight slider: a heavier BB is a little more energy, marked against the rifle as it comes.
   await expect(sheet.locator('dd', { hasText: /^0\.99 J/ })).toBeVisible();
   await expect(sheet.locator('dd', { hasText: /^0\.28 g/ })).toBeVisible();
-  await expect(sheet.locator('dd', { hasText: /^0\.99 J/ }).locator('.perf-better')).toHaveText(/^\+\d/);
-  await expect(sheet.locator('dd', { hasText: /^\d+ m\/s/ }).locator('.perf-worse')).toHaveText(/^−\d/);
+  await expect(sheet.locator('dd', { hasText: /^0\.99 J/ }).locator('.perf-delta.perf-better')).toHaveText(/^\+\d/);
+  await expect(sheet.locator('dd', { hasText: /^\d+ m\/s/ }).locator('.perf-delta.perf-worse')).toHaveText(/^−\d/);
   // The red dot just fitted shows as its raise time instead of "no optic".
   await expect(sheet.locator('dd', { hasText: /^\d\.\d\d s/ }).last()).toBeVisible();
   await expect(loadout.getByText(/Leaves the barrel at \d+ m\/s .* Longest reach at about 75% hop-up/).first()).toBeVisible();
@@ -204,6 +204,8 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(rifleGrip.getByRole('button', { name: /Angled Grip/ })).toContainText('Rare');
   // The numbers themselves are the unit tests' (loadoutChoice.test.ts); here only that they show (audit L-10).
   await expect(loadout.getByText(/Brings the AEG Rifle up in [\d.]+ s/)).toBeVisible();
+  // The optic's line names the grip that steadies it: on the Optic part, where it belongs (G3: one part at a time).
+  await partTab('Optic').click();
   await expect(loadout.getByText(/Up to your eye in [\d.]+ s with the angled grip\./)).toBeVisible();
   await partTab('Magazine').click();
   await loadout.getByRole('group', { name: 'Magazine' }).getByRole('button', { name: /Hi-Cap/ }).click();
@@ -655,15 +657,15 @@ for (const withParts of [false, true]) {
       await expect(barrel.getByRole('button', { name: /Long Barrel/ })).toHaveAttribute('aria-pressed', 'true');
       await expect(loadout.locator('.menu-row', { has: page.getByRole('group', { name: 'Barrel', exact: true }) }).getByText(/Brings it up in [\d.]+ s\./)).toBeVisible();
       // A long barrel is front-heavy: a slower draw is marked worse, the extra energy better.
-      await expect(sheet.locator('dt', { hasText: /^Draw$/ }).locator('xpath=following-sibling::dd[1]').locator('.perf-worse')).toHaveText(/^\+15%/);
-      await expect(sheet.locator('dt', { hasText: /^Energy$/ }).locator('xpath=following-sibling::dd[1]').locator('.perf-better')).toHaveText(/^\+8%/);
+      await expect(sheet.locator('dt', { hasText: /^Draw$/ }).locator('xpath=following-sibling::dd[1]').locator('.perf-delta.perf-worse')).toHaveText(/^\+15%/);
+      await expect(sheet.locator('dt', { hasText: /^Energy$/ }).locator('xpath=following-sibling::dd[1]').locator('.perf-delta.perf-better')).toHaveText(/^\+8%/);
       // The silencer halves how far shots are heard, which the sheet marks as better, and says it to the player.
       await partTab('Muzzle').click();
       await expect(muzzle.getByRole('button', { name: /None/ })).toHaveAttribute('aria-pressed', 'true');
       await expect(muzzle.getByRole('button')).toHaveCount(2);
       await muzzle.getByRole('button', { name: /Silencer/ }).click();
       await expect(heardFrom).toHaveText(/^11 m/);
-      await expect(heardFrom.locator('.perf-better')).toHaveText(/^−50%/);
+      await expect(heardFrom.locator('.perf-delta.perf-better')).toHaveText(/^−50%/);
       await expect(loadout.getByText('Bots hear your shots from 11 m (22 m without a silencer).')).toBeVisible();
     }
     // The pistol's barrel is fixed (a greyed row), and its muzzle is threaded: owned, it offers the silencer.
@@ -671,8 +673,7 @@ for (const withParts of [false, true]) {
     await loadout.getByRole('button', { name: /^Secondary: Gas Pistol/ }).click({ button: 'right' });
     await expect(loadout.getByRole('heading', { name: /Customise: Gas Pistol/ })).toBeVisible();
     await expect(partTab('Barrel')).toHaveAttribute('aria-disabled', 'true');
-    await partTab('Barrel').click();
-    await expect(loadout.locator('.menu-row.later', { hasText: 'Barrel' })).toContainText('Fixed barrel');
+    await expect(partTab('Barrel')).toContainText('Fixed barrel');
     await expect(loadout.getByRole('group', { name: 'Barrel', exact: true })).toHaveCount(0);
     await partTab('Muzzle').click();
     const pistolMuzzle = loadout.getByRole('group', { name: 'Muzzle', exact: true });
@@ -688,6 +689,8 @@ test('the game boots to the title screen on High', async ({ page }) => {
   page.on('console', (msg) => {
     if (msg.type() === 'error') errors.push(`console: ${msg.text()}`);
   });
+  // FC enough for Ten Shots, saved before the game reads the collection (the bug-pass check below opens its pop-up).
+  await page.addInitScript(() => localStorage.setItem('airsoft.collection', JSON.stringify({ version: 1, owned: {}, fc: 2000, tokens: 0, seed: 1 })));
   await page.goto('/?nolock&seed=1&quality=high');
   await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
   // Asked for in the address, so the warning doesn't claim Low was picked.
@@ -696,8 +699,7 @@ test('the game boots to the title screen on High', async ({ page }) => {
   const shadows = await page.evaluate(() => (window as unknown as { airsoft: { renderer: { renderer: { shadowMap: { enabled: boolean } } } } }).airsoft.renderer.renderer.shadowMap.enabled);
   expect(shadows).toBe(true);
   // A pop-up open when the graphics context is lost closes, so the notice isn't under it (bug pass): the Armory's Ten
-  // Shots asks first, with the FC saved for it.
-  await page.evaluate(() => localStorage.setItem('airsoft.collection', JSON.stringify({ version: 1, owned: {}, fc: 2000, tokens: 0, seed: 1 })));
+  // Shots asks first.
   await page.locator('.menu-title').getByRole('button', { name: 'Armory' }).click();
   await page.locator('.menu-armory').getByRole('button', { name: /^10 Shots/ }).click();
   const ask = page.getByRole('dialog', { name: 'Take 10 Shots?' });
