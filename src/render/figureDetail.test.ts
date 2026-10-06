@@ -6,7 +6,7 @@ import { TEAM_COLOUR_SETS } from '../config/teams';
 import { fitParts } from '../sim/armament';
 import { createCharacter } from '../sim/character';
 import { vec3 } from '../sim/vec';
-import { BARE_KIT, buildFigure, disposeFigure, type Figure } from './characterModels';
+import { BARE_KIT, buildFigure, disposeFigure, type Figure, figureLooks } from './characterModels';
 import { CharacterRenderer, rifleSilenced } from './characterRenderer';
 import { FINISH_ATTRIBUTE, hasVertexFinish, useVertexFinish } from './figureFinish';
 
@@ -46,9 +46,10 @@ describe('Player detail (FA8, QualitySettings.figureDetail)', () => {
         expect(finish.count).toBe(m.geometry.getAttribute('position').count);
         expect(m.geometry.getAttribute('uv')).toBeUndefined();
       }
-      // More detail where it shows, but six figures stay cheap: at most twice Low's triangles, under 7,500 at once.
+      // More detail where it shows, but six figures stay cheap: under 7,500 at once. (G7 cut Low to about half its old
+      // triangles, so the old cap of twice Low no longer bounds High; the 7,500 cap stays.)
       expect(drawn(high)).toBeGreaterThan(drawn(low) * 1.3);
-      expect(drawn(high)).toBeLessThan(Math.min(7500, drawn(low) * 2));
+      expect(drawn(high)).toBeLessThan(7500);
       disposeFigure(low);
       disposeFigure(high);
     }
@@ -77,7 +78,8 @@ describe('Player detail (FA8, QualitySettings.figureDetail)', () => {
           for (let i = 0; i < c.count; i++) if (Math.abs(c.getX(i) - want.r) + Math.abs(c.getY(i) - want.g) + Math.abs(c.getZ(i) - want.b) < 1e-6) found++;
           expect(found, 'team colour on every part').toBeGreaterThan(0);
         }
-        // The torso band: the full quarter-metre of exact team colour, all the way round (no shade or edge light on it).
+        // The carrier (G7): a quarter-metre and more of exact team colour on the torso, all the way round (no shade or
+        // edge light on it).
         const body = figure.upper.children[0] as THREE.Mesh;
         const pos = body.geometry.getAttribute('position');
         const col = body.geometry.getAttribute('color');
@@ -86,57 +88,47 @@ describe('Player detail (FA8, QualitySettings.figureDetail)', () => {
         for (let i = 0; i < pos.count; i++) {
           if (Math.abs(col.getX(i) - want.r) + Math.abs(col.getY(i) - want.g) + Math.abs(col.getZ(i) - want.b) > 1e-6) continue;
           p.fromBufferAttribute(pos, i);
-          if (p.y + FIGURE.hipHeight < FIGURE.shoulderHeight - 0.05) box.expandByPoint(p);
+          if (p.y + FIGURE.hipHeight < FIGURE.shoulderHeight + 0.1) box.expandByPoint(p);
         }
         expect(box.getSize(p).y).toBeGreaterThanOrEqual(0.24);
+        expect(box.getSize(p).x).toBeGreaterThan(FIGURE.torso.width);
+        expect(box.getSize(p).z).toBeGreaterThan(FIGURE.torso.depth);
         disposeFigure(figure);
       }
     }
   });
 
-  it('keeps the detailed helmet\'s shell inside its team tape at the front and back (no shell showing through)', () => {
-    const team = new THREE.Color(0x3d8bff);
-    const figure = buildFigure(0x3d8bff, new THREE.MeshStandardMaterial(), new THREE.SpriteMaterial(), 1, null, FIGURE.detail.high);
-    const body = figure.upper.children[0] as THREE.Mesh;
-    const pos = body.geometry.getAttribute('position');
-    const col = body.geometry.getAttribute('color');
-    const fin = body.geometry.getAttribute(FINISH_ATTRIBUTE);
-    const isTeam = (i: number): boolean => Math.abs(col.getX(i) - team.r) + Math.abs(col.getY(i) - team.g) + Math.abs(col.getZ(i) - team.b) < 1e-6;
-    // The tape: the team colour above the shoulders. Its oval reach (z over its 1.05 depth), and its height.
-    const oval = (i: number): number => Math.hypot(pos.getX(i), pos.getZ(i) / 1.05);
-    let top = -Infinity;
-    let bottom = Infinity;
-    let reach = Infinity;
-    const shoulders = FIGURE.shoulderHeight - FIGURE.hipHeight;
-    for (let i = 0; i < pos.count; i++) {
-      if (!isTeam(i) || pos.getY(i) < shoulders + 0.1) continue;
-      top = Math.max(top, pos.getY(i));
-      bottom = Math.min(bottom, pos.getY(i));
-      if (oval(i) > 0.05) reach = Math.min(reach, oval(i)); // its rim, not its caps' centres
+  // G7: the helmets are a team-coloured shell now (no tape round a grey one), and the hem shade went with the shirts.
+  it('makes every detailed helmet a glossy team-coloured shell over the head, and the balaclava a hood in the team\'s dark', () => {
+    const want = new THREE.Color(0x3d8bff);
+    for (const id of [0, 1, 2, 3, 4, 5]) {
+      const figure = buildFigure(0x3d8bff, new THREE.MeshStandardMaterial(), new THREE.SpriteMaterial(), id, null, FIGURE.detail.high);
+      const body = figure.upper.children[0] as THREE.Mesh;
+      const pos = body.geometry.getAttribute('position');
+      const col = body.geometry.getAttribute('color');
+      const fin = body.geometry.getAttribute(FINISH_ATTRIBUTE);
+      // The highest glossy team-coloured point over the head's centre (its crown).
+      let crown = -Infinity;
+      for (let i = 0; i < pos.count; i++) {
+        if (Math.abs(col.getX(i) - want.r) + Math.abs(col.getY(i) - want.g) + Math.abs(col.getZ(i) - want.b) > 1e-6) continue;
+        if (Math.abs(fin.getX(i) - FIGURE.finish.shell[0]) > 1e-3 || Math.hypot(pos.getX(i), pos.getZ(i)) > 0.06) continue;
+        crown = Math.max(crown, pos.getY(i) + FIGURE.hipHeight);
+      }
+      if (figureLooks(id).headgear === 'balaclava') expect(crown, 'no helmet on a balaclava').toBe(-Infinity);
+      else expect(crown, `look ${id}'s helmet covers the crown`).toBeGreaterThan(FIGURE.headHeight + FIGURE.headRadius * 0.9);
+      disposeFigure(figure);
     }
-    expect(top - bottom).toBeCloseTo(0.045, 3);
-    // Its flat sides sit a little inside its corners; every shell corner in its height, front and back, is inside them.
-    const inside = reach * Math.cos(Math.PI / FIGURE.detail.high.wrap[1]);
-    let checked = 0;
-    for (let i = 0; i < pos.count; i++) {
-      const y = pos.getY(i);
-      if (y < bottom || y > top || Math.abs(fin.getX(i) - FIGURE.finish.shell[0]) > 1e-3 || Math.abs(pos.getZ(i)) < Math.abs(pos.getX(i))) continue;
-      checked++;
-      expect(oval(i)).toBeLessThan(inside);
-    }
-    expect(checked).toBeGreaterThan(0);
-    disposeFigure(figure);
   });
 
-  it('shades the torso darker towards its hem (baked occlusion) and lights bevels, never above full colour', () => {
+  it('lights bevels on the detailed figure, never above full colour', () => {
     const figure = buildFigure(0x3d8bff, new THREE.MeshStandardMaterial(), new THREE.SpriteMaterial(), 0, null, FIGURE.detail.high);
     const body = figure.upper.children[0] as THREE.Mesh;
     const col = body.geometry.getAttribute('color');
     for (let i = 0; i < col.count; i++) expect(Math.max(col.getX(i), col.getY(i), col.getZ(i))).toBeLessThanOrEqual(1);
-    const top = new THREE.Color(FIGURE.looks[0]!.top);
-    let darker = 0;
-    for (let i = 0; i < col.count; i++) if (Math.abs(col.getX(i) / top.r - FIGURE.hemShade) < 0.02 && Math.abs(col.getY(i) / top.g - FIGURE.hemShade) < 0.02) darker++;
-    expect(darker).toBeGreaterThan(0);
+    const gear = new THREE.Color(FIGURE.colors.gear);
+    let lit = 0;
+    for (let i = 0; i < col.count; i++) if (Math.abs(col.getX(i) / gear.r - FIGURE.edgeLight) < 0.01 && Math.abs(col.getZ(i) / gear.b - FIGURE.edgeLight) < 0.01) lit++;
+    expect(lit).toBeGreaterThan(0);
     disposeFigure(figure);
   });
 });

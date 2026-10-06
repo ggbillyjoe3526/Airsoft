@@ -7,6 +7,9 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 ### Added
 - **G1** · Replica colour schemes (Cobalt, Signal, Acid, Teal, Hazard, Coral, Onyx, Ghost): rifles Cobalt and pistols Ghost for now; Settings › Look: Robots (Mixed by default) and Realistic colours options
 - **G2** · Replicas rebuilt blockier, two-tone with stippled grips; red dot and silencer redesigned; Cyber Pistol white with cyan glow and magenta core, grey and unlit in Realistic mode
+- **G7** · Players rebuilt: masked humans (high-cut or bump helmet, balaclava, visor) in team camo and a team-colour plate carrier, and robots in a light or dark shell
+- **G7** · Settings › Look › Robots now mixes humans and robots on both teams each match; others' replicas show their team's colours (plain with Realistic colours)
+- **G7** · Your hands: dark gloves, sleeves in your team's camo and its armband; robot arms when your player is a robot
 - **M33j** · Woodland's sounds (dev content): wind in the pines, insects and a distant owl at night, a crackle at each camp fire, and footsteps that sound like the ground underfoot (grass, leaf litter, earth, the creek's gravel, the cabin's boards), as loud as on concrete; Depot sounds exactly as before
 - **FA7** · Environment lighting on Medium and High: sky reflects in players, the flag, range targets and steel; contact shadows under every player on all presets (#71)
 - **FA7** · Settings → Graphics: tone mapping choice (Neutral, AgX, ACES) and relief maps option (Normal, Bump) (#71)

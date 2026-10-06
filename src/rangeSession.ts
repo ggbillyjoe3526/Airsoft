@@ -18,6 +18,7 @@ import { RANGE_MAP } from './map/range';
 import { buildNavGrid } from './nav/navGrid';
 import { PhysicsWorld } from './physics/physicsWorld';
 import { bbGlowFor, kitPaint } from './pool/loadoutModel';
+import { figureCrowd, playerArms } from './render/figureMix';
 import { updateFirstPersonCamera } from './render/cameraRig';
 import { CombatPresentation } from './render/combatPresentation';
 import { addLighting, type Daylight } from './render/lighting';
@@ -155,7 +156,9 @@ export class RangeSession {
     input.ordersEnabled = false;
     if (pose) input.pitch = pose.pitch;
 
-    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map, audio, (action) => input.keyName(action), crosshair, quality, HITS, bbGlowFor(setup.kit, map.night ?? false), seed, kitPaint(setup.kit, setup.look));
+    // On the range you are alone: a robot half the time when Settings › Look › Robots is on (G7), from the seed.
+    const crowd = figureCrowd(seed, this.state.characters, setup.look);
+    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map, audio, (action) => input.keyName(action), crosshair, quality, HITS, bbGlowFor(setup.kit, map.night ?? false), seed, kitPaint(setup.kit, setup.look), playerArms(crowd, this.state.characters.indexOf(this.player), this.player.team));
     // The held replica's light and the range's sound, by day or at night (M33j: the sound follows the preset's flag).
     this.combat.setLighting(lighting);
     this.combat.skipStartWhistle();

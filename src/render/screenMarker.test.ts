@@ -4,7 +4,7 @@ import { FIGURE } from '../config/characters';
 import { TEAMMATE_MARKERS } from '../config/matchInfo';
 import { BODY } from '../config/movement';
 import { FOV_SETTING } from '../config/render';
-import { buildFigure, disposeFigure } from './characterModels';
+import { buildFigure, disposeFigure, HUMAN_DRESS } from './characterModels';
 import { verticalFovFor } from './renderer';
 import { projectMarker, type ScreenMarker } from './screenMarker';
 
@@ -64,10 +64,12 @@ describe('screen markers and the camera matrices (audit UI-13)', () => {
 });
 
 describe("teammates' name markers (FA13)", () => {
-  // The figures' visible heads, tallest headgear included (the hit pose's raised arm is hidden while playing).
+  // The figures' visible heads, tallest headgear included (the hit pose's raised arm is hidden while playing): humans
+  // and robots (G7), whose antenna stands highest.
   const headTop = Math.max(
-    ...[0, 1, 2, 3, 4, 5].map((id) => {
-      const f = buildFigure(0x3d8bff, new THREE.MeshStandardMaterial(), new THREE.SpriteMaterial(), id, null, FIGURE.detail.high);
+    ...[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((n) => {
+      const id = n % 6;
+      const f = buildFigure(0x3d8bff, new THREE.MeshStandardMaterial(), new THREE.SpriteMaterial(), id, null, FIGURE.detail.high, undefined, { ...HUMAN_DRESS, robot: n >= 6 });
       f.root.updateMatrixWorld(true);
       const box = new THREE.Box3();
       f.root.traverseVisible((o) => {
