@@ -20,9 +20,9 @@ acceptance:
   1. Figures cast shadows from a low-triangle proxy (High figure detail unchanged on screen).
   2. Extraction's exit rings, washes and boards are instanced: a fixed number of draw calls whatever the exit count.
   3. Woodland's horizon tree ring at night draws at `trees: 1` (owner decision 8).
-  4. Woodland and Neon Heights Extraction on Medium measure at or under 120 draw calls in the container perf run; rows 166 and 189 updated.
-status: retry 3 (waiting on the owner's Neon Heights Medium ruling)
-attempts: 3
+  4. Woodland and Neon Heights Extraction on Medium measure at or under 120 draw calls in the container perf run; rows 166 and 189 updated. Owner ruling 2026-10-06 14:25 ("go with recommended" on the decision card): Neon Heights is held to its own Medium line of 140 (M76), since G5's bloom on Medium costs about 13 draws.
+status: critic
+attempts: 4
 
 ## M76 · Perf gate matrix, baselines, quick-gate precompression and build label (Audit 2 CORE-C: CORE-03, CORE-10, CORE-11, CORE-12)
 tier: ui
