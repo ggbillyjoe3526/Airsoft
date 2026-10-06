@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import { REPLICA_FINISH } from '../config/replicaFinish';
 import { AEG, CYBER_PISTOL, GAS_PISTOL } from '../config/replicas';
-import { FAMILIES, SCHEMES } from '../config/schemes';
+import { CYBER_COLOURS, FAMILIES, SCHEMES } from '../config/schemes';
 import { buildReplicaModels, LOW_DETAIL } from './replicaModels';
 
 const HIGH = { replica: 'high', hands: 'high' } as const;
@@ -18,15 +18,23 @@ function coloursOf(root: THREE.Object3D, scale = 1): Set<number> {
 }
 
 describe('Replica paint (G1)', () => {
-  it('draws each replica in its own scheme: body, furniture, magazine and steel', () => {
-    const models = buildReplicaModels([AEG, GAS_PISTOL], 0x3d8bff, false, LOW_DETAIL, { schemes: ['signal', 'acid'], realistic: false });
-    const rifle = coloursOf(models.models.get(AEG.id)!.group);
-    const pistol = coloursOf(models.models.get(GAS_PISTOL.id)!.group);
-    for (const part of ['body', 'furniture', 'steel'] as const) expect(rifle.has(SCHEMES.signal[part])).toBe(true);
-    // The pistol's magazine is a small part (the rifle's is moulded in its body colour).
-    for (const part of ['body', 'furniture', 'detail', 'steel'] as const) expect(pistol.has(SCHEMES.acid[part])).toBe(true);
-    expect(pistol.has(SCHEMES.signal.furniture)).toBe(false);
-    models.dispose();
+  it('draws each replica in its own scheme: body, furniture, details, accent line and steel', () => {
+    // On Low the steel shares the detail material (G2: no more draw calls than before), so it shows on High only.
+    const levels = [
+      [LOW_DETAIL, ['body', 'furniture', 'detail', 'accent']],
+      [HIGH, ['body', 'furniture', 'detail', 'accent', 'steel']],
+    ] as const;
+    for (const [detail, parts] of levels) {
+      const models = buildReplicaModels([AEG, GAS_PISTOL], 0x3d8bff, false, detail, { schemes: ['signal', 'acid'], realistic: false });
+      // High's vertex-coloured materials are brightened by 1 / wearLight (see below), so either form counts.
+      const both = (root: THREE.Object3D): Set<number> => new Set([...coloursOf(root), ...coloursOf(root, 1 / REPLICA_FINISH.wearLight)]);
+      const rifle = detail.replica === 'high' ? both(models.models.get(AEG.id)!.group) : coloursOf(models.models.get(AEG.id)!.group);
+      const pistol = detail.replica === 'high' ? both(models.models.get(GAS_PISTOL.id)!.group) : coloursOf(models.models.get(GAS_PISTOL.id)!.group);
+      for (const part of parts) expect(rifle.has(SCHEMES.signal[part]), `${detail.replica} ${part}`).toBe(true);
+      for (const part of parts) expect(pistol.has(SCHEMES.acid[part]), `${detail.replica} ${part}`).toBe(true);
+      expect(pistol.has(SCHEMES.signal.furniture)).toBe(false);
+      models.dispose();
+    }
   });
 
   it('draws the scheme’s plain family under Realistic colours, and the black and tan of before with no paint', () => {
@@ -48,14 +56,23 @@ describe('Replica paint (G1)', () => {
     models.dispose();
   });
 
-  it('leaves the Cyber Pistol mint and pink, unless Realistic colours turns it plain', () => {
+  it('keeps the Cyber Pistol in its own colours whatever the scheme, plain and unlit under Realistic colours', () => {
     const own = buildReplicaModels([CYBER_PISTOL], 0x3d8bff, false, LOW_DETAIL, { schemes: ['coral'], realistic: false });
     const colours = coloursOf(own.models.get(CYBER_PISTOL.id)!.group);
-    expect(colours.has(REPLICA_FINISH.cyber.mint)).toBe(true);
+    expect(colours.has(CYBER_COLOURS.bold.slab)).toBe(true);
     expect(colours.has(SCHEMES.coral.furniture)).toBe(false);
     own.dispose();
+    // The same with no paint at all (a tool or a test): its colours are its own.
+    const bare = buildReplicaModels([CYBER_PISTOL], 0x3d8bff, false);
+    expect(coloursOf(bare.models.get(CYBER_PISTOL.id)!.group).has(CYBER_COLOURS.bold.slab)).toBe(true);
+    bare.dispose();
     const real = buildReplicaModels([CYBER_PISTOL], 0x3d8bff, false, LOW_DETAIL, { schemes: ['coral'], realistic: true });
-    expect(coloursOf(real.models.get(CYBER_PISTOL.id)!.group).has(REPLICA_FINISH.cyber.mint)).toBe(false);
+    const plain = coloursOf(real.models.get(CYBER_PISTOL.id)!.group);
+    expect(plain.has(CYBER_COLOURS.bold.slab)).toBe(false);
+    expect(plain.has(CYBER_COLOURS.realistic.slab)).toBe(true);
+    real.models.get(CYBER_PISTOL.id)!.group.traverse((o) => {
+      if (o instanceof THREE.Mesh) expect((o.material as THREE.MeshStandardMaterial).emissive?.getHex() ?? 0, o.name).toBe(0);
+    });
     real.dispose();
   });
 

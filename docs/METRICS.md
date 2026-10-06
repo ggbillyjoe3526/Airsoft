@@ -108,3 +108,5 @@ performance, triage, critic, changelog); the build thread's own tokens and the c
 | 2026-10-05 | M70 | 1 | build thread | ✓ 30 s | ✓ 809 s | ✓ 267 s | – (skip) | ✓ | ✓ | 8/8 Accept (ui) | QA rev-race and notice edges, no defects | ~45 min | QA, critic |
 | 2026-10-05 | G1 | 1 | build thread | ✓ 22 s | ✓ 805 s | ✓ 350 s | ✓ 91 s | ✗ → ✓ | ✓ | 7/8 Accept (ui, Opus) | scope failed on committed QA artifacts, QA commit rewritten; scheme-picker copy reworded | ~3 h | QA, changelog, critic |
 | 2026-10-05 | M69 | 1 | build thread | ✓ 25 s | ✓ 612 s | ✓ 280 s | ✓ 54 s | ✓ | ✓ | 8/8 Accept (core) | QA 26 tests, all 62 cues pinned against base; performance clean | ~1.5 h | QA, performance, critic |
+| 2026-10-06 | G2 | 1 | build thread | ✓ 47 s | ✗ 2180 s (load timeouts, untouched; CI green) | ✓ 423 s | ✓ 126 s | ✓ | ✓ | 7/8 Retry (core) | a failed picture left its model in the scene; pictures ignored a long barrel; Low +2 to 5 meshes | ~4 h | QA, changelog, critic |
+| 2026-10-06 | G2 | 2 | build thread | ✓ 68 s | ✗ 2367 s (load timeouts, untouched; CI green) | ✓ 416 s | ✓ 130 s | ✓ | ✓ | 8/8 Accept (core) | – | ~1 h | critic |
