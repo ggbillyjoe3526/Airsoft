@@ -55,7 +55,8 @@ describe.each<LightingPresetId>(['day', 'night'])('a 4v4 Elimination match on Ne
     // the bar door (audit BAL-04, owner decision 6). With it (M73): 45.5 % by day (40 of 88, none on time) and 52.5 %
     // by night (42 of 80, 2 of 82 on time). Seeds 1-48 since 2026-10-06 (16 left the Day figure a standard error from its
     // floor, ±5.5): before M73's lane point 44.0 % by day (121 of 275) and 44.1 % by night (119 of 270); with it 45.7 %
-    // by day (126 of 276) and 48.3 % by night (125 of 259), ±3.
+    // by day (126 of 276) and 48.3 % by night (125 of 259), ±3. M74 (route searches under a per-tick budget, audit AI-04):
+    // 43.5 % by day (118 of 271) and 46.9 % by night (127 of 271), within noise of that.
     expect(westWins / decided).toBeGreaterThanOrEqual(WEST[light][0]);
     expect(westWins / decided).toBeLessThanOrEqual(WEST[light][1]);
     expect(onTime / rounds).toBeLessThan(0.1);

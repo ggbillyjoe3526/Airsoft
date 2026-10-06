@@ -299,7 +299,9 @@ describe('watching where someone ducked out of sight', () => {
     unarmed(state.characters);
     const b = bots.bots[0]!;
     setSkill(b, { ...botConfig(level), huntsMiddle: false });
+    // Until it has seen the player (seed 1's first route search runs over three ticks since M74, so it looks later).
     run(0.5);
+    for (let k = 0; k < 10 && !b.targetVisible; k++) run(0.1);
     expect(b.targetVisible).toBe(true);
     player.position.x = 30;
     player.position.z = 30;
