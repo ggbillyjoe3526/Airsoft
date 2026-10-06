@@ -95,8 +95,11 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **G6** · Depot by day: a lower, warmer sun with longer shadows, a bluer sky and fill, and light bounced off walls and containers into the shade (Baked light)
 - **G6** · New surfaces: grey precast concrete walls and rubble gabions in wire (no more sand); weathering on Medium and High (dirt at wall feet, rain streaks, rust) and stains on the ground
 - **G6** · New Custom graphics rows: Baked light (Off, Vertex, Per pixel) and Weathering; Low keeps its cost
+- **G5** · Ultra graphics preset for fast graphics cards: soft 4096 shadows, up to 2× resolution, the most dust and night lights; never picked automatically
+- **G5** · Graphics effects: bloom from Medium; ambient occlusion, temporal smoothing and light shafts on High; reflections and film grain on Ultra
 
 ### Changed
+- **G5** · A Custom graphics mix saved before this build gets High's new effects (ambient occlusion, temporal smoothing, light shafts, bloom); each can be turned off under Custom
 - **M70** · The Armory's odds caption says the odds are for each item drawn, before pity (#122)
 - **M68** · Settings → Graphics is shorter: the Custom rows fold away under Low, Medium and High and open when you pick Custom or click "Custom settings" (#121)
 - **M69** · Woodland and Neon Heights each have an echo of their own (long and dark in the woods, brighter in the city), and the neon hum is easier to hear on small speakers (#124)
@@ -128,6 +131,8 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **FA12** · BB and line-of-sight checks against the map are 15–25× faster, with the same results (#60)
 - **M35** · Woodland's Coming soon entry shows only with Dev content on; a match using dev content stays out of the records and pays no Field Credits (#70)
 - **M43** · The summary's records table has no column for a mode still being built (its matches aren't recorded) (#83)
+- **G5** · Frame-rate limit choices are Unlimited (the default), 30, 60, 120, 144 and 240; an older saved limit becomes the nearest choice
+- **G5** · Graphics › Night lights adds Nearest 8
 
 ### Fixed
 - **M70** · If another open tab of the game saved your collection first, the Armory now reloads it at once and says so, instead of quietly undoing your Shot later (#122)
@@ -198,6 +203,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **FA11a** · TypeScript stricter (exactOptionalPropertyTypes); GitHub checks verify scope and changelog; dead code removed (#61)
 - **M33c** · Sloping ground for maps (physics, BBs, sight, bot routes, minimap); BBs land in earth with no bounce. Groundwork for Woodland
 - **M50** · Woodland and Neon Heights download only once Dev content is on, the pool and stats tables are a file of their own, and the code size budget is 900 kB with a warning at 90 % (#107)
+- **G5** · The perf harness measures Ultra (`--preset all` and `--preset ultra`), a desktop environment and any window size (`--viewport`)
 
 ## 0.1 Dev 3 · 2026-10-03
 

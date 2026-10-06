@@ -347,6 +347,8 @@ export class Game {
         'pixel ratio': this.renderer.renderer.getPixelRatio(),
         'frame ms (sim / draw / GPU)': `${this.simMs.toFixed(1)} / ${this.drawMs.toFixed(1)} / ${Number.isNaN(this.renderer.gpuMs) ? 'n/a' : this.renderer.gpuMs.toFixed(1)}`,
         antialias: this.antialiasText(),
+        // G5: the post stack's passes in force (none on Low).
+        post: this.renderer.postPasses.join(' ') || 'none',
         'draw calls': this.renderer.renderer.info.render.calls,
         triangles: this.renderer.renderer.info.render.triangles,
         'programs / geometries / textures': `${this.renderer.renderer.info.programs?.length ?? 0} / ${this.renderer.renderer.info.memory.geometries} / ${this.renderer.renderer.info.memory.textures}`,
@@ -1061,6 +1063,7 @@ export class Game {
         const look = retroLookOf(this.dev, this.scripted);
         return look ? `${look.pixelSize} px, ${look.levels} levels` : 'off';
       })],
+      ['Post', read(() => this.renderer.postPasses.join(' ') || 'none')],
       ['Pixel ratio', read(() => this.renderer.renderer.getPixelRatio())],
       ['GPU', read(() => rendererName(this.renderer.renderer.getContext()))],
       ['Window', `${window.innerWidth} × ${window.innerHeight} at ${window.devicePixelRatio}`],
