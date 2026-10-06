@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PRECOMPRESS, precompressedCopies, shouldPrecompress, type BuildFile } from './precompress';
+import { PRECOMPRESS, precompressedCopies, precompressWanted, shouldPrecompress, type BuildFile } from './precompress';
 
 const file = (fileName: string, bytes: number): BuildFile => ({ fileName, source: new Uint8Array(bytes) });
 /** Stand-in compressors: Brotli halves a file, gzip takes three quarters; neither touches its input. */
@@ -35,5 +35,16 @@ describe('precompressed copies of the release build (audit CORE-29)', () => {
   it('uses the strongest settings, since it runs once per release build', () => {
     expect(PRECOMPRESS.brotliQuality).toBe(11);
     expect(PRECOMPRESS.gzipLevel).toBe(9);
+  });
+
+  it('runs on a release build unless the flag says 0 (audit CORE-11: the gate\'s --quick build), never on the e2e build', () => {
+    expect(PRECOMPRESS.envFlag).toBe('AIRSOFT_PRECOMPRESS');
+    expect(precompressWanted('production', undefined)).toBe(true);
+    expect(precompressWanted('production', '1')).toBe(true);
+    expect(precompressWanted('production', '')).toBe(true);
+    expect(precompressWanted('production', '0')).toBe(false);
+    expect(precompressWanted('production', ' 0\n')).toBe(false);
+    expect(precompressWanted('e2e', undefined)).toBe(false);
+    expect(precompressWanted('e2e', '1')).toBe(false);
   });
 });

@@ -32,10 +32,13 @@ jobs:
     timeout-minutes: 20
     steps:
       # The whole history, so the scope gate can diff the pull request against its base and find the task block a
-      # branch cleared before merging (pipeline/scope.mjs).
+      # branch cleared before merging (pipeline/scope.mjs), and the tags with it, so the build's `git describe` names
+      # the release it follows ("0.1 Dev 3+12 · abc1234") rather than "build abc1234" (audit CORE-10;
+      # config/buildVersion.ts). fetch-depth 0 brings the tags already; fetch-tags says so where it can't be missed.
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          fetch-tags: true
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -80,7 +83,8 @@ jobs:
           retention-days: 7
 
   # The headless bot-match guards (src/ai/depotMatch*.test.ts, the Pro, levels and Extraction balance guards), in three
-  # shares of their files (vitest --shard): no build or browser, so each starts on its tests at once.
+  # shares of their files (vitest --shard): no build or browser, so each starts on its tests at once. Nothing here is
+  # built, so the default shallow checkout (no tags) is enough: the version label only matters in `check`'s build.
   slow:
     runs-on: ubuntu-latest
     timeout-minutes: 20
