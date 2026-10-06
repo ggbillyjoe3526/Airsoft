@@ -16,7 +16,18 @@ export const PRECOMPRESS = {
   brotliWindowBits: 24,
   /** gzip's strongest level. */
   gzipLevel: 9,
+  /**
+   * The environment variable that turns the copies off for one build when it is `0` (audit CORE-11, owner decision 3 of
+   * audit 2): the gate's `--quick` build sets it, since only the release smoke test and a host read the copies. The full
+   * gate, CI and `npm run build` keep them. pipeline/build-cached.mjs keys its cache on it too.
+   */
+  envFlag: 'AIRSOFT_PRECOMPRESS',
 } as const;
+
+/** Whether a build writes the copies: a release build (not the e2e one, which only the tests load) unless the flag is `0`. */
+export function precompressWanted(mode: string, flag: string | undefined): boolean {
+  return mode !== 'e2e' && flag?.trim() !== '0';
+}
 
 /** One output file. */
 export interface BuildFile {

@@ -26,8 +26,9 @@ config, asset loading, docs; `trivial` is a one-constant change, a wording fix, 
 2. **Build**: one thread per task, on the tier's model. Two tasks run at once only when their `touches` don't overlap.
 3. **QA**: tests for every acceptance criterion, then the full suite (the gate).
 4. **Performance**: the gate runs the harness when the diff touches `src/sim`, `src/physics`, `src/render`, `src/ai`,
-   `src/nav`, `src/audio`, `src/core`, `src/map`, `src/assets` or `vite.config.ts`; the performance agent reviews the
-   diff. UI-only changes skip it.
+   `src/nav`, `src/audio`, `src/core`, `src/map`, `src/assets`, `src/config`, `src/pool` or `vite.config.ts` (tests
+   under them don't count), once for each map, mode and preset of the perf matrix the change reaches (below); the
+   performance agent reviews the diff. UI-only changes skip it.
 5. **Triage**: the gate script writes the structured summaries itself; Haiku condenses what scripts can't (a failing
    test's output, a trace, the diff summary the critic and changelog read).
 6. **Gates**: `node pipeline/gate.mjs` (below). A failed gate goes straight back to the worker with the evidence.
@@ -50,10 +51,10 @@ node pipeline/gate.mjs [--task M27[,M28]] [--quick] [--no-smoke] [--perf] [--env
 
 | Gate | Runs | Passes when |
 |---|---|---|
-| `build` | `build-cached.mjs --mode production --force`: `npm run build` (tsc, Vite, chunk budgets, the `.br`/`.gz` copies) | exit 0 |
+| `build` | `build-cached.mjs --mode production --force`: `npm run build` (tsc, Vite, chunk budgets, the `.br`/`.gz` copies; not under `--quick`) | exit 0 |
 | `tests` | `vitest run --reporter=json` (`src/**/*.test.ts` and the pipeline's own `pipeline/**/*.test.mjs`; both projects, `fast` and `slow`) | no failures |
 | `smoke` | `playwright test`: project `chromium` runs `e2e/boot.spec.ts` and `e2e/crash.spec.ts` on the e2e build (`?nolock`, `window.airsoft`); project `release` runs `e2e/release.spec.ts` on `dist/` without test flags, with the real pointer lock. Every test asserts zero console and page errors; a failure prints the test's describe path, project and line and the error's locator, expectation and call-log lines (`smokeReport.mjs`) | no failures |
-| `perf` | `perf-run.mjs`, only when required | every budget line for the env within `perf-budget.json`, nothing more than 10 % worse than `baseline/<env>.json` |
+| `perf` | `perf-run.mjs` once per combination of the perf matrix the diff reaches (`perfMatrix.mjs`; `--perf` runs them all) | for each: every budget line for the env and map within `perf-budget.json`, nothing more than 10 % worse than its own baseline; a baseline more than 20 commits old is a warning, not a failure |
 | `scope` | the diff vs the task's `touches` (`scope.mjs`) | every changed file is in `touches`, a test, under `e2e/` or `docs/`, CHANGELOG or README (`pool.md` and `CLAUDE.md` only when listed); `Agent: qa` commits touch only tests |
 | `changelog` | `CHANGELOG.md` › Unreleased | a line names `**<task>**` (each task, when several) |
 
@@ -61,8 +62,11 @@ node pipeline/gate.mjs [--task M27[,M28]] [--quick] [--no-smoke] [--perf] [--env
 of their `touches`. A block the branch has already cleared from `docs/TASKS.md` is looked for in the branch's history
 since the base.
 
-`--quick` is build and tests: about two minutes (build about 20 s with the `.br`/`.gz` copies, the suite 75-90 s;
-measured 2026-10-04 in the container with other work running). While working, `npx vitest run --project fast` runs
+`--quick` is build and tests: about two minutes (the suite 75-90 s; measured 2026-10-04 in the container with other
+work running). Its build leaves out the `.br`/`.gz` copies (owner decision 3 of audit 2, CORE-11: the gate sets
+`AIRSOFT_PRECOMPRESS=0`, which `vite.config.ts` reads), about 9 s of Brotli a build that only the release smoke test
+and a host need; the full gate and CI build with them (the gate sets `AIRSOFT_PRECOMPRESS=1` for its build and smoke
+steps, so a leftover `0` in the shell can't reach them). While working, `npx vitest run --project fast` runs
 every unit test except the headless bot-match guards (project `slow`, `src/ai/depotMatch*.test.ts` and the Pro guards `src/ai/*Match.pro*.test.ts`, `src/ai/proBalance.test.ts`) in about 12 s; the
 gate, CI and `npm test` always run both projects (vite.config.ts, audit CORE-15). The full gate in a cloud container is about five minutes plus the perf run
 when it is required; set `PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium` there. The report is
@@ -70,7 +74,8 @@ when it is required; set `PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium` there. 
 
 **Builds.** `build-cached.mjs` builds the production bundle (`dist/`) or the e2e bundle (`dist-e2e/`, `--mode e2e`) and
 skips the build when the output is already that of the same source (a hash of `src/` without tests, `public/`,
-`index.html`, `pool.md`, `stats.md`, the Vite, TypeScript and npm files, and `git describe`). The gate's build step always
+`index.html`, `pool.md`, `stats.md`, the Vite, TypeScript and npm files, `git describe` and, for `dist/`, whether it
+has the `.br`/`.gz` copies: a `--quick` build is never reused where the release smoke test needs them). The gate's build step always
 builds; the smoke test's two servers and the perf harness then reuse what is there, so one gate run makes each bundle
 once. Two bundles stay necessary: the e2e one has the test hooks, the production one is what players get.
 
@@ -89,11 +94,32 @@ can't start without them.
 Perf environments: `container` (SwiftShader, no GPU; frame times are noise, counts and memory are real), `laptop`
 (the owner's low-spec laptop with CPU throttled 4×; the only environment whose frame times are judged), `ci` (no
 baseline). **Frame-time gating is a manual owner step**: no automation runs `laptop`; the owner runs
-`node pipeline/perf-run.mjs --env laptop` before a release tag (and with `--baseline` at milestones, committed). `pipeline/baseline/<env>.json` (Low, the budget preset) and `<env>-medium.json`, `<env>-high.json`, `<env>-ultra.json` are
-written by `perf-run.mjs --preset all --baseline` on `main` after a merge that changed perf-relevant code, and
-committed. The gate runs Low; `--preset all` runs Low, Medium, High and Ultra in turn (audit REN-15; Ultra since G5), so
-a change that makes High or Ultra dearer is seen too (`--preset ultra` alone for one). `--viewport WxH` sets the page's
-size (default 1920x1080).
+`node pipeline/perf-run.mjs --env laptop` before a release tag (and with `--baseline` at milestones, committed).
+
+**The perf matrix** (M76, audit CORE-03; `perf-budget.json` › `matrix`): every map (Depot, Woodland, Neon Heights) in
+both modes (Elimination, Extraction) on Low, and Extraction on Medium on Woodland and Neon Heights (the heaviest
+scenes the game draws; Elimination there is the same field with fewer figures and no exits or cases). A combination
+runs only when the diff reaches it (`pipeline/perfMatrix.mjs`): a map's own files (`src/map/depot.ts`,
+`woodland.ts`, `neonHeights.ts`, the city's props and textures) reach that map's combinations, a map's Extraction data
+only its Extraction ones, Extraction's own code (`sim/extraction.ts`, `config/extraction.ts`, `ai/extraction*`, the
+exit and case renderers) every map's Extraction ones, and every other perf path all eight. In the container a Low run
+takes about a minute and a half and a Medium one about four, so the whole matrix is about 20 minutes on top of the gate.
+Budgets are `presets.<preset>` with `maps.<map>.<preset>` over them (owner decision 4 of audit 2: map-scoped Medium
+budgets for the big maps). `node pipeline/perf-run.mjs --map <map> --mode <mode> --preset <preset>` runs one by hand.
+
+**Baselines.** One file per combination under `pipeline/baseline/`: `<env><tag>.json` on Low (the budget preset) and
+`<env><tag>-<preset>.json` otherwise, where the tag is `-<map>` (not for Depot) then `-extraction` (not for
+Elimination): `container.json` (Depot Elimination Low), `container-extraction.json`, `container-woodland.json`,
+`container-woodland-extraction.json`, `container-woodland-extraction-medium.json`, `container-neon.json`,
+`container-neon-extraction.json`, `container-neon-extraction-medium.json`; Depot's `container-medium.json` and
+`container-high.json` are kept for `--preset all` but not gated. Each records the `head` it was measured on.
+**Reset the baselines in the pull request that changes what they measure** (audit CORE-12): when a change moves a
+combination's numbers on purpose (a trim, a new effect, a map edit), re-record that combination with `perf-run.mjs
+--env container --map <map> --mode <mode> --preset <preset> --baseline` on the branch and commit the file with the
+change, so the next pull request is compared with what the game now is. The gate warns (never fails) when a
+baseline's head is more than `baselineMaxLag` (20) commits behind HEAD, or not in the clone's history at all.
+`--preset all` runs Low, Medium, High and Ultra in turn (audit REN-15; Ultra since G5), so a change that makes High or
+Ultra dearer is seen too (`--preset ultra` alone for one). `--viewport WxH` sets the page's size (default 1920x1080).
 
 **The laptop run** (the owner, on the target laptop, from the repository with `npm ci` done and Chrome installed):
 
@@ -106,7 +132,8 @@ another build) on the real GPU (no SwiftShader flags under `--env laptop`), play
 preset for 3600 ticks (60 s) with the CPU throttled 4×, and writes `pipeline/baseline/laptop.json`,
 `laptop-medium.json`, `laptop-high.json` and `laptop-ultra.json`. Leave the window alone and the laptop plugged in;
 commit the four files. From then on `node pipeline/gate.mjs --env laptop --perf` judges p95 and p99 against the budget
-there.
+there, on the whole matrix: the combinations without a laptop baseline yet (every one but Depot Elimination) are judged
+on their budgets alone until the owner records them (`--map`, `--mode` as above, with `--baseline`).
 
 **The desktop run** (G5; the owner's desktop PC, where Ultra is measured at 4K, the same setup as the laptop run):
 

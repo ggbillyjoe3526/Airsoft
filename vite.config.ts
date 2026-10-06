@@ -1,18 +1,20 @@
 import type { HtmlTagDescriptor, Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
-import { archivalDescribe, versionLabel } from './src/config/buildVersion.ts';
+import { archivalDescribe, readmeRelease, versionLabel } from './src/config/buildVersion.ts';
 import { CHUNK_BUDGET, chunkVerdict } from './src/config/chunkBudget.ts';
 import { LOADING } from './src/config/loading.ts';
 import { CONTENT_SECURITY_POLICY } from './src/config/page.ts';
-import { PRECOMPRESS, precompressedCopies } from './src/config/precompress.ts';
+import { PRECOMPRESS, precompressedCopies, precompressWanted } from './src/config/precompress.ts';
 
 
 /** The headless bot-match guards (src/ai/depotMatchSupport.ts): most of the unit suite's time, project `slow`; the
  * Pro guards on every map (M40) and the Extraction balance runs on every map (M46, M48) with them. */
 const SLOW_TESTS = ['src/ai/depotMatch*.test.ts', 'src/ai/*Match.pro*.test.ts', 'src/ai/proBalance.test.ts', 'src/ai/*Match.extraction*.test.ts', 'src/ai/*Match.levels*.test.ts'];
 
-/** True on a CI runner (the workflow's runner sets CI); read without Node's types, which the project doesn't load. */
-const ON_CI = Boolean((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.CI);
+/** The build's environment variables, read without Node's types, which the project doesn't load. */
+const ENV = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
+/** True on a CI runner (the workflow's runner sets CI). */
+const ON_CI = Boolean(ENV.CI);
 
 /**
  * Checks every output chunk against its budget (config/chunkBudget.ts), so the game, three.js and Rapier chunks can't
@@ -74,13 +76,14 @@ interface FsCalls {
 
 /**
  * Brotli and gzip copies of the release build's files (audit CORE-29, config/precompress.ts), for a static host that
- * serves precompressed files (README › Hosting). Not in the e2e build, which only the tests load. Written once the
- * bundle is on disk, so the page itself (emitted last) is among them.
+ * serves precompressed files (README › Hosting). Not in the e2e build, which only the tests load, nor with
+ * AIRSOFT_PRECOMPRESS=0 (the gate's --quick build, audit CORE-11). Written once the bundle is on disk, so the page
+ * itself (emitted last) is among them.
  */
 function precompress(): Plugin {
   return {
     name: 'airsoft-precompress',
-    apply: (_config, env) => env.command === 'build' && env.mode !== 'e2e',
+    apply: (_config, env) => env.command === 'build' && precompressWanted(env.mode, ENV[PRECOMPRESS.envFlag]),
     enforce: 'post',
     writeBundle: {
       order: 'post',
@@ -111,25 +114,37 @@ interface NodeCalls {
 
 /**
  * Which build this is, for the title screen (config/buildVersion.ts): `git describe` in a checkout, else the
- * `.git_archival.txt` GitHub fills in when it zips a release, else nothing.
+ * `.git_archival.txt` GitHub fills in when it zips a release, else nothing. With it, the release README.md's download
+ * link names: a clone without its tags (a pipeline worktree, a shallow CI checkout) describes itself as a bare commit,
+ * and is then labelled as some commits after that release rather than "build <sha>" (audit CORE-10).
  */
-async function buildDescribe(): Promise<string> {
+async function buildDescribe(): Promise<{ describe: string; latestRelease: string }> {
   const node = { ...(await import('node:child_process' as string)), ...(await import('node:fs' as string)) } as NodeCalls;
-  try {
-    return node.execFileSync('git', ['describe', '--tags', '--always'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
-  } catch {
+  const read = (path: string): string => {
     try {
-      return archivalDescribe(node.readFileSync(new URL('./.git_archival.txt', import.meta.url), 'utf8'));
+      return node.readFileSync(new URL(path, import.meta.url), 'utf8');
     } catch {
       return '';
     }
+  };
+  const latestRelease = readmeRelease(read('./README.md'));
+  try {
+    return { describe: node.execFileSync('git', ['describe', '--tags', '--always'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }), latestRelease };
+  } catch {
+    return { describe: archivalDescribe(read('./.git_archival.txt')), latestRelease };
   }
+}
+
+/** The title screen's version for this build (config/buildVersion.ts › versionLabel). */
+async function buildVersion(): Promise<ReturnType<typeof versionLabel>> {
+  const { describe, latestRelease } = await buildDescribe();
+  return versionLabel(describe, latestRelease);
 }
 
 export default defineConfig(async () => ({
   base: './',
   define: {
-    __BUILD_VERSION__: JSON.stringify(versionLabel(await buildDescribe())),
+    __BUILD_VERSION__: JSON.stringify(await buildVersion()),
   },
   plugins: [chunkBudget(), pageMeta(), precompress()],
   build: {

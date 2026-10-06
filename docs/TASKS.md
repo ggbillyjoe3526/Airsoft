@@ -11,19 +11,6 @@ accepted and lands with this list. Below, the rest of section 8 of the report
 POOL-D, Extraction pay (owner decision 23: keep until the playtest shows the extraction rate) and REN-03 step 3 with
 REN-12 (when 4v4 and 5v5 go public); both stay in KNOWN_ISSUES.
 
-## M76 · Perf gate matrix, baselines, quick-gate precompression and build label (Audit 2 CORE-C: CORE-03, CORE-10, CORE-11, CORE-12)
-tier: ui
-perf: skip
-touches: pipeline/gate.mjs, pipeline/perf-run.mjs, pipeline/perf-budget.json, pipeline/baseline/, pipeline/build-cached.mjs, pipeline/README.md, vite.config.ts, src/config/buildVersion.ts, src/config/precompress.ts, .github/workflows/check.yml, docs/KNOWN_ISSUES.md
-contract: none
-acceptance:
-  1. The perf gate runs every map and both modes on Low, and Medium on the big maps, against map-scoped Medium budgets (owner decision 4).
-  2. Container baselines re-recorded on the fixed game for every combination the gate reads.
-  3. `--quick` skips precompression; the full gate and CI keep it (owner decision 3).
-  4. A CI or pipeline build reads its version from tags (CI fetches them), not "build <sha>".
-status: open
-attempts: 0
-
 ## M77 · Hot-path trims (Audit 2 SIM-D: SIM-06, SIM-07, REN-10)
 tier: core
 perf: required

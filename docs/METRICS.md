@@ -126,3 +126,5 @@ performance, triage, critic, changelog); the build thread's own tokens and the c
 | 2026-10-06 | M75 | 2 | build thread | ✓ | ✓ 3345 | ✓ 38/38 | ✓ container Low | ✓ | ✓ | 7/8 Retry (Haiku) | 1: Neon Heights Medium 134 against 120 | ~45 min | critic |
 | 2026-10-06 | M75 | 3 | build thread | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 7/8 Retry (Opus near-miss re-run) | 1: the build thread may not widen its criterion; owner card posted | ~10 min | critic |
 | 2026-10-06 | M75 | 4 | build thread | ✓ (CI) | ✓ (CI) | ✓ (CI) | ✓ | ✓ | ✓ | 8/8 Accept | owner ruling: Neon Heights Medium line 140; chunk budget 950 kB after CI's build failed at 901 of 900 | ~30 min | critic |
+| 2026-10-06 | M76 | 1 | build thread | ✓ | ✓ 3364 | ✓ 38/38 | ✓ matrix, 8 combinations | ✓ | ✓ | 6/8 Retry (Haiku) | 7, 8: rebase marks left in KNOWN_ISSUES | ~1 h | critic |
+| 2026-10-06 | M76 | 2 | build thread | ✓ | ✓ 3364 | ✓ 38/38 | ✓ matrix, 8 combinations | ✓ | ✓ | 8/8 Accept (Haiku) | – | ~5 min | critic |

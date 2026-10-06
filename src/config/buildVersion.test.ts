@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { archivalDescribe, releaseName, UNKNOWN_BUILD, versionLabel } from './buildVersion';
+import readme from '../../README.md?raw';
+import { archivalDescribe, readmeRelease, releaseName, UNKNOWN_BUILD, versionLabel } from './buildVersion';
 
 describe('the title screen version (owner, 2026-10-04)', () => {
   it('names a release in the owner\'s style (owner, 2026-10-05)', () => {
@@ -41,5 +42,30 @@ describe('the title screen version (owner, 2026-10-04)', () => {
     expect(archivalDescribe('commit: 1dc698e\ndescribe: v0.1-alpha.3\n')).toBe('v0.1-alpha.3');
     expect(archivalDescribe('describe: $Format:%(describe:tags=true)$\n')).toBe('');
     expect(archivalDescribe('')).toBe('');
+  });
+
+  it('names the release a tag-less clone came after, from README\'s download link (audit CORE-10)', () => {
+    expect(versionLabel('1dc698e\n', '0.1-dev.3')).toEqual({
+      label: '0.1 Dev 3+? · 1dc698e',
+      title: 'Commit 1dc698e, after 0.1 Dev 3 (built without the git tags, so the commits since it aren\'t counted)',
+    });
+    expect(versionLabel('1dc698e', '0.1-beta.2').label).toBe('0.1 Beta 2+? · 1dc698e');
+    // No release named, or not a release: the plain commit, as before.
+    expect(versionLabel('1dc698e', '').label).toBe('build 1dc698e');
+    expect(versionLabel('1dc698e', 'main').label).toBe('build 1dc698e');
+    // A describe that reaches a tag is never overridden by README.
+    expect(versionLabel('0.1-dev.3-12-g1dc698e', '0.1-dev.2').label).toBe('0.1 Dev 3+12 · 1dc698e');
+    expect(versionLabel('0.1-dev.4', '0.1-dev.3').label).toBe('0.1 Dev 4');
+    expect(versionLabel('', '0.1-dev.3').label).toBe(UNKNOWN_BUILD);
+  });
+
+  it('reads the release README.md links to, and only a release', () => {
+    expect(readmeRelease('**https://github.com/owner/Airsoft/archive/refs/tags/0.1-dev.3.zip**')).toBe('0.1-dev.3');
+    expect(readmeRelease('[zip](https://github.com/o/r/archive/refs/tags/0.1-beta.1.zip)')).toBe('0.1-beta.1');
+    expect(readmeRelease('https://github.com/o/r/archive/refs/heads/main.zip')).toBe('');
+    expect(readmeRelease('https://github.com/o/r/archive/refs/tags/latest.zip')).toBe('');
+    expect(readmeRelease('')).toBe('');
+    // The repository's own README names one (the release checklist, CLAUDE.md §7, keeps it current).
+    expect(releaseName(readmeRelease(readme))).not.toBe('');
   });
 });

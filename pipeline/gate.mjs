@@ -7,11 +7,13 @@
  *   node pipeline/gate.mjs [--task M27[,M28]] [--quick] [--no-smoke] [--perf] [--env container|laptop|ci] [--base origin/main] [--ci]
  *                          [--tests all|fast|slow] [--shard k/n] [--only tests]
  *
- * Gates: build (tsc + vite build with the chunk budgets), tests (vitest), smoke (playwright), perf (only when the diff
- * touches a perf-relevant path, or --perf; needs pipeline/perf-run.mjs), scope (the diff stays inside the task's
- * `touches`, QA commits touch only tests) and changelog (CHANGELOG.md names the task under Unreleased).
- * --quick runs build and tests only. --ci is what the workflow runs: build, tests, smoke (no perf: a runner has no
- * baseline); without --task it takes the task ids from the pull request's title in GATE_PR_TITLE (audit CORE-08).
+ * Gates: build (tsc + vite build with the chunk budgets), tests (vitest), smoke (playwright), perf (one perf-run.mjs
+ * run per map, mode and preset of perf-budget.json's matrix that the diff reaches, pipeline/perfMatrix.mjs; --perf runs
+ * the whole matrix), scope (the diff stays inside the task's `touches`, QA commits touch only tests) and changelog
+ * (CHANGELOG.md names the task under Unreleased).
+ * --quick runs build and tests only, and builds without the .br/.gz copies (AIRSOFT_PRECOMPRESS=0, audit CORE-11).
+ * --ci is what the workflow runs: build, tests, smoke (no perf: a runner has no baseline); without --task it takes
+ * the task ids from the pull request's title in GATE_PR_TITLE (audit CORE-08).
  * With no task, scope and changelog are skipped. Exit code 1 when any gate fails.
  * CI splits the work across jobs (audit CORE-04): `--tests fast` runs the unit tests' fast project only, `--tests slow
  * --shard k/n` one share of the headless bot-match guards (vitest's own sharding, by file), and `--only tests` runs
@@ -22,6 +24,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { allowedFile, findTaskBlock, parseTaskList, qaAllowedFile, taskIdsFromTitle, tasksVersions } from './scope.mjs';
+import { baselineFileName, baselineLag, baselineLagWarning, budgetFor, judgeRun, runFileName, runName, selectPerfRuns } from './perfMatrix.mjs';
 import { smokeFailures } from './smokeReport.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -30,12 +33,6 @@ const ARTIFACTS = join(OUT, 'qa-artifacts');
 const REPORT = join(OUT, 'gate-report.json');
 const TASKS = join(ROOT, 'docs', 'TASKS.md');
 
-/** Paths whose change makes the perf gate required (the proposal's "render loop, physics, entities, assets"). */
-const PERF_PATHS = ['src/sim/', 'src/physics/', 'src/render/', 'src/ai/', 'src/nav/', 'src/audio/', 'src/core/', 'src/map/', 'src/assets/', 'vite.config.ts'];
-/** Perf metrics compared with the baseline; frame times only where the budget file says they are gated. */
-const RELATIVE_METRICS = ['drawCalls', 'triangles', 'gpuMemoryMB'];
-const FRAME_METRICS = ['p95Ms', 'p99Ms'];
-const RELATIVE_TOLERANCE = 0.1;
 
 const args = process.argv.slice(2);
 const flag = (name) => args.includes(name);
@@ -76,7 +73,10 @@ try {
 const changed = new Set(
   [...git('diff', '--name-only', mergeBase).split('\n'), ...git('ls-files', '--others', '--exclude-standard').split('\n')].filter(Boolean),
 );
-const perfRequired = options.perf || [...changed].some((f) => PERF_PATHS.some((p) => f.startsWith(p)));
+/** The perf runs this diff needs (perf-budget.json › matrix, perfMatrix.mjs): --perf runs them all. */
+const budgets = JSON.parse(readFileSync(join(ROOT, 'pipeline', 'perf-budget.json'), 'utf8'));
+const perfRuns = selectPerfRuns(changed, budgets.matrix ?? [], { force: options.perf });
+const perfRequired = perfRuns.length > 0;
 
 const report = {
   task: options.tasks.length > 0 ? options.tasks.join(',') : null,
@@ -88,6 +88,7 @@ const report = {
   mode: options.quick ? 'quick' : options.ci ? 'ci' : 'full',
   changedFiles: changed.size,
   perfRequired,
+  perfRuns: perfRuns.map(runName),
   pass: true,
   gates: {},
 };
@@ -117,11 +118,15 @@ function record(name, gate) {
 }
 
 // 1. build: type check and the production build with its chunk budgets (vite.config.ts fails over budget on CI). Always
-// built; the stamp it leaves lets the smoke test's release server reuse dist/ (pipeline/build-cached.mjs).
+// built; the stamp it leaves lets the smoke test's release server reuse dist/ (pipeline/build-cached.mjs). --quick
+// leaves out the .br/.gz copies (owner decision 3 of audit 2, CORE-11): only the release smoke test and a host read
+// them, and Brotli is most of the build's plugin time. The full gate and CI say so explicitly, so a shell's leftover
+// AIRSOFT_PRECOMPRESS=0 can't reach them.
+const PRECOMPRESS_ENV = { AIRSOFT_PRECOMPRESS: options.quick ? '0' : '1' };
 if (skipAllBut('build')) record('build', { pass: null, reason: `skipped (--only ${options.only})` });
 else {
-  const r = run('build', 'node', ['pipeline/build-cached.mjs', '--mode', 'production', '--force'], options.ci ? { CI: '1' } : {});
-  record('build', { pass: r.ok, ms: r.ms, log: r.log, ...(r.ok ? {} : { evidence: tail(r.output) }) });
+  const r = run('build', 'node', ['pipeline/build-cached.mjs', '--mode', 'production', '--force'], { ...PRECOMPRESS_ENV, ...(options.ci ? { CI: '1' } : {}) });
+  record('build', { pass: r.ok, ms: r.ms, log: r.log, precompressed: !options.quick, ...(r.ok ? {} : { evidence: tail(r.output) }) });
 }
 
 // 2. tests: the unit suite, with its JSON report as the artifact.
@@ -152,7 +157,8 @@ else if (!options.smoke) {
   record('smoke', { pass: null, reason: options.quick ? 'skipped (--quick)' : 'skipped (--no-smoke)' });
 } else {
   const json = join(ARTIFACTS, 'playwright.json');
-  const r = run('smoke', 'npx', ['playwright', 'test']); // playwright.config.ts writes the JSON report into qa-artifacts
+  // playwright.config.ts writes the JSON report into qa-artifacts; its release server reuses the build step's dist/.
+  const r = run('smoke', 'npx', ['playwright', 'test'], PRECOMPRESS_ENV);
   let summary = { pass: r.ok, ms: r.ms, log: r.log };
   try {
     const data = JSON.parse(readFileSync(json, 'utf8'));
@@ -166,51 +172,53 @@ else if (!options.smoke) {
   record('smoke', summary);
 }
 
-// 4. perf: the harness (pipeline/perf-run.mjs) against the budget and this environment's baseline.
+// 4. perf: the harness (pipeline/perf-run.mjs), once per combination of the matrix the diff reaches (perfMatrix.mjs,
+// audit CORE-03), each against its map's budget and its own baseline. A baseline whose head is far behind HEAD is a
+// warning, never a failure (CORE-12).
 if (skipAllBut('perf')) record('perf', { pass: null, reason: `skipped (--only ${options.only})` });
 else if (!perfRequired) {
   record('perf', { pass: null, reason: 'not required (no perf-relevant path changed)' });
 } else if (options.quick || options.ci) {
-  record('perf', { pass: null, reason: `required but skipped (${options.quick ? '--quick' : '--ci: no baseline on a runner'})` });
+  record('perf', { pass: null, reason: `required but skipped (${options.quick ? '--quick' : '--ci: no baseline on a runner'}); would run ${perfRuns.map(runName).join(', ')}` });
 } else if (!existsSync(join(ROOT, 'pipeline', 'perf-run.mjs'))) {
   record('perf', { pass: null, reason: 'required but the harness (pipeline/perf-run.mjs) is not installed yet' });
 } else {
-  const r = run('perf', 'node', ['pipeline/perf-run.mjs', '--env', options.env]);
-  const runFile = join(OUT, `perf-${options.env}.json`);
-  let summary = { pass: r.ok, ms: r.ms, log: r.log };
-  try {
-    const result = JSON.parse(readFileSync(runFile, 'utf8'));
-    const budgets = JSON.parse(readFileSync(join(ROOT, 'pipeline', 'perf-budget.json'), 'utf8'));
-    const budget = budgets.presets[result.preset] ?? {};
-    const frameTimesGated = (budgets.frameTimeGatedEnvs ?? []).includes(options.env);
-    const over = [];
-    for (const [metric, limit] of Object.entries(budget)) {
-      if (FRAME_METRICS.includes(metric) && !frameTimesGated) continue;
-      if (typeof result.metrics[metric] === 'number' && result.metrics[metric] > limit) over.push({ metric, limit, now: result.metrics[metric] });
-    }
-    // The budget preset's baseline is <env>.json; the others' <env>-<preset>.json (perf-run.mjs --preset all --baseline).
-    const baselineName = result.preset === budgets.budgetPreset ? `${options.env}.json` : `${options.env}-${result.preset}.json`;
-    const baselinePath = join(ROOT, 'pipeline', 'baseline', baselineName);
-    const worse = [];
-    let baselineNote;
-    if (existsSync(baselinePath)) {
-      const baseline = JSON.parse(readFileSync(baselinePath, 'utf8'));
-      if (baseline.preset !== result.preset) baselineNote = `baseline preset ${baseline.preset} differs from ${result.preset}; relative check skipped`;
-      else {
-        for (const metric of [...RELATIVE_METRICS, ...(frameTimesGated ? FRAME_METRICS : [])]) {
-          const was = baseline.metrics[metric];
-          const now = result.metrics[metric];
-          if (typeof was !== 'number' || typeof now !== 'number' || was <= 0) continue;
-          const pct = ((now - was) / was) * 100;
-          if (pct > RELATIVE_TOLERANCE * 100) worse.push({ metric, baseline: was, now, pct: Math.round(pct) });
-        }
+  const started = Date.now();
+  const frameTimesGated = (budgets.frameTimeGatedEnvs ?? []).includes(options.env);
+  const runs = [];
+  const warnings = [];
+  const failures = [];
+  for (const combo of perfRuns) {
+    const name = runName(combo);
+    // --expose-gc for the harness's own process too (the page gets gc() from its own flags).
+    const r = run(`perf-${name.replaceAll(' ', '-')}`, 'node', ['--expose-gc', 'pipeline/perf-run.mjs', '--env', options.env, '--map', combo.map, '--mode', combo.mode, '--preset', combo.preset]);
+    const runFile = join(OUT, runFileName(options.env, combo));
+    let summary = { run: name, pass: r.ok, ms: r.ms, log: r.log };
+    try {
+      const result = JSON.parse(readFileSync(runFile, 'utf8'));
+      if (result.head !== head) throw new Error(`${relative(ROOT, runFile)} is from ${String(result.head).slice(0, 7)}, not this head`);
+      const baselineName = baselineFileName(options.env, combo, budgets.budgetPreset);
+      const baselinePath = join(ROOT, 'pipeline', 'baseline', baselineName);
+      const baseline = existsSync(baselinePath) ? JSON.parse(readFileSync(baselinePath, 'utf8')) : null;
+      const { over, worse, note: baselineNote } = judgeRun({ run: combo, metrics: result.metrics, budget: budgetFor(budgets, combo.map, combo.preset), baseline, baselineName, frameTimesGated });
+      if (baseline) {
+        const warning = baselineLagWarning(baselineName, baseline.head, baselineLag(baseline.head, (h) => git('rev-list', '--count', `${h}..HEAD`)), budgets.baselineMaxLag ?? 20);
+        if (warning) warnings.push(warning);
       }
-    } else baselineNote = `no baseline for ${options.env} (pipeline/baseline/${baselineName}); relative check skipped`;
-    summary = { ...summary, pass: r.ok && over.length === 0 && worse.length === 0, preset: result.preset, run: relative(ROOT, runFile), metrics: result.metrics, frameTimesGated, ...(over.length ? { overBudget: over } : {}), ...(worse.length ? { worse } : {}), ...(baselineNote ? { reason: baselineNote } : {}) };
-  } catch (e) {
-    summary = { ...summary, pass: false, reason: `no readable perf run (${e.message})`, evidence: tail(r.output) };
+      const { drawCalls, drawCallsMax, triangles, gpuMemoryMB, heapGrowthMB, p95Ms, p99Ms } = result.metrics;
+      summary = { ...summary, pass: r.ok && over.length === 0 && worse.length === 0, file: relative(ROOT, runFile), metrics: { drawCalls, drawCallsMax, triangles, gpuMemoryMB, heapGrowthMB, p95Ms, p99Ms }, ...(over.length ? { overBudget: over } : {}), ...(worse.length ? { worse } : {}), ...(baselineNote ? { reason: baselineNote } : {}), ...(r.ok ? {} : { evidence: tail(r.output, 10) }) };
+    } catch (e) {
+      summary = { ...summary, pass: false, reason: `no readable perf run (${e.message})`, evidence: tail(r.output) };
+    }
+    runs.push(summary);
+    if (!summary.pass) {
+      const what = [...(summary.overBudget ?? []).map((o) => `${o.metric} ${o.now} over the budget ${o.limit}`), ...(summary.worse ?? []).map((w) => `${w.metric} ${w.now} is ${w.pct} % over the baseline's ${w.baseline}`)];
+      failures.push({ test: name, message: what.length ? what.join('; ') : summary.reason ?? `perf-run.mjs failed (${summary.log})` });
+    }
+    console.log(`  perf ${name}: ${summary.pass ? 'pass' : 'FAIL'}${summary.metrics ? ` · ${summary.metrics.drawCalls} draw calls, ${Math.round(summary.metrics.triangles)} triangles, ${summary.metrics.gpuMemoryMB} MB` : ''}`);
   }
-  record('perf', summary);
+  for (const w of warnings) console.warn(`  perf warning: ${w}`);
+  record('perf', { pass: runs.every((x) => x.pass), ms: Date.now() - started, frameTimesGated, runs, ...(warnings.length ? { warnings } : {}), ...(failures.length ? { failures } : {}) });
 }
 
 // 5. scope: the diff stays inside the task's `touches` (plus tests and docs), and QA commits touch only tests.
