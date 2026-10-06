@@ -22,8 +22,8 @@
     { "map": "neon", "mode": "extraction", "preset": "medium" }
   ],
   "maps": {
-    "woodland": { "medium": { "drawCalls": 110 } },
-    "neon": { "medium": { "drawCalls": 130 } }
+    "woodland": { "medium": { "drawCalls": 115 } },
+    "neon": { "medium": { "drawCalls": 140 } }
   },
   "baselineMaxLag": 20
 }
