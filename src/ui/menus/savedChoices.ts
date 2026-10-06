@@ -6,6 +6,7 @@ import {
   SOUND_CUE_SIZE,
   type SoundCueColour,
 } from '../../config/accessibility';
+import { DEFAULT_REALISTIC_COLOURS, DEFAULT_ROBOTS, type LookSettings, REALISTIC_COLOUR_CHOICES, ROBOT_CHOICES } from '../../config/look';
 import { DEFAULT_DIFFICULTY, DIFFICULTIES, type Difficulty, defaultTeammateDifficulty, TEAMMATE_DIFFICULTIES } from '../../config/bots';
 import {
   AIM_MODES,
@@ -43,7 +44,7 @@ import {
 import { DEFAULT_HIT_FEED_MODE, DEFAULT_WHAT_GOT_YOU_MODE, HIT_FEED_MODES, type HitFeedMode, HUD_SIZE, SCOREBOARD_SIZE, WHAT_GOT_YOU_MODES, type WhatGotYouMode } from '../../config/matchInfo';
 import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../../config/modes';
 import { AIMING } from '../../config/optics';
-import { FRAME_RATE_CAP_CHOICES, GRAPHICS_ROWS, graphicsKey, parseStored, SHOW_FPS_CHOICES, TONE_MAPPING_CHOICES } from '../../config/graphics';
+import { frameRateCapFromSaved, GRAPHICS_ROWS, graphicsKey, parseStored, SHOW_FPS_CHOICES, TONE_MAPPING_CHOICES } from '../../config/graphics';
 import { FOV_SETTING, type FrameRateCap, type LightingPresetId, QUALITY_CHOICES, type QualityChoice, type QualitySettings, RENDER, TONE_MAPPING, type ToneMappingId } from '../../config/render';
 import { DEFAULT_WHEEL_SELECT, WHEEL_SELECT_MODES, type WheelSelect } from '../../config/squad';
 import { DEFAULT_TEAM_COLOURS, TEAM_COLOUR_CHOICES, type TeamColourSetId } from '../../config/teams';
@@ -188,10 +189,12 @@ export function loadCustomQuality(storage = browserStorage()): Partial<QualitySe
   return custom as Partial<QualitySettings>;
 }
 
-/** The frame-rate cap (Settings → Graphics; 0 = none, the default). */
-export function loadFrameRateCap(): FrameRateCap {
-  const id = loadChoice('frameRateCap', FRAME_RATE_CAP_CHOICES, 'off');
-  return FRAME_RATE_CAP_CHOICES.find((c) => c.id === id)!.value;
+/**
+ * The frame-rate choice (Settings → Graphics; 0 = Unlimited, the default). Every id an earlier build saved reads back as
+ * itself, any other number as the nearest choice (G5, config/graphics.ts frameRateCapFromSaved).
+ */
+export function loadFrameRateCap(storage = browserStorage()): FrameRateCap {
+  return loadSetting('frameRateCap', frameRateCapFromSaved, 0, storage);
 }
 
 /** Tone mapping (Settings → Graphics; F2): Neutral unless the player picked another (owner decision). */
@@ -247,6 +250,14 @@ export function motionClass(saved: boolean | null): 'reduced-motion' | 'full-mot
 /** The team colour set (Settings → Accessibility, M18b). */
 export function loadTeamColours(): TeamColourSetId {
   return loadChoice('teamColours', TEAM_COLOUR_CHOICES, DEFAULT_TEAM_COLOURS);
+}
+
+/** Settings › Look (G1): robots mixed in with humans (on unless turned off) and Realistic colours (off unless turned on). */
+export function loadLook(): LookSettings {
+  return {
+    robots: loadChoice('robots', ROBOT_CHOICES, DEFAULT_ROBOTS ? 'on' : 'off') === 'on',
+    realisticColours: loadChoice('realisticColours', REALISTIC_COLOUR_CHOICES, DEFAULT_REALISTIC_COLOURS ? 'on' : 'off') === 'on',
+  };
 }
 
 /** On-screen sound cues (Settings → Accessibility, M18b): off unless the player turned them on. */

@@ -450,12 +450,16 @@ export const SOUNDS: Readonly<Record<SoundCue, SoundRecipe>> = {
     gainSpread: 0.05,
   },
 
-  /** A site timer box's beep, as on a bomb prop: the exit counting you out (M43). */
+  /**
+   * A site timer box's beep, as on a bomb prop: the exit counting you out (M43). Always the same beep, so one variant
+   * (M69, audit AUD-08: five differed only in the square wave's start phase).
+   */
   'count.beep': {
     layers: [{ kind: 'tone', wave: 'square', attack: 0.002, decay: 0.06, gain: 0.12, hz: 1650 }],
     pitchSpread: 0,
     timeSpread: 0,
     gainSpread: 0,
+    variants: 1,
   },
 
   // ---- The field -----------------------------------------------------------------------------

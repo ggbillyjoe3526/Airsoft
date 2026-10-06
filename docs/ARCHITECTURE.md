@@ -88,7 +88,10 @@ ends the round). A hit character is eliminated
   → Graphics and saved, `?quality=` for a visit, or else the GPU's preset (`gpuCheck.ts` `probeGpu`/`gpuTier`: Low in
   software, Medium on integrated graphics, High on a discrete card), which steps down by itself on slow frames
   (`qualityStepDown.ts`, never saved). It sets the render scale and DPI cap (`effectivePixelRatio`), antialiasing,
-  shadows, the figures' shading, surface relief, texture size and filtering, dust and the replica's sheen:
+  shadows, the figures' shading, surface relief, texture size and filtering, dust, the replica's sheen and, from Medium
+  up, the post stack (`render/post/`, G5: `postPlan` picks ambient occlusion, reflections, light shafts, temporal
+  smoothing, bloom and the lens finish per preset, and `PostHost` makes, sizes and frees the stack for the renderer; Low
+  builds none; the viewmodel is drawn after it, on the canvas):
   `Game.changeQuality` applies new settings at once through `Renderer.setQuality` (a new WebGL context on a new canvas
   when antialiasing changes; the pointer lock is on the container, so it survives) and `MatchSession.setQuality` (the
   daylight, `restyleMap`, the figures and `CombatPresentation.setQuality`). The frame-rate cap
@@ -166,7 +169,7 @@ ends the round). A hit character is eliminated
   one-off world sounds (BB impacts, the flag's rope) get a panner of their own, disconnected when they end. Footsteps
   sound by the surface underfoot (`MapBlock.surface`), BB impacts by the block they hit (`audio/soundMaterials.ts`),
   and crouching, standing and leaning rustle (`audio/foley.ts`, presentation only: bots hear what they did before).
-  Buses: master, effects (in-world, with the yard's reverb) and interface (hit tick, hit marker, whistle, dry), set
+  Buses: master, effects (in-world, with the field's echo) and interface (hit tick, hit marker, whistle, dry), set
   by the Settings → Audio sliders (`audio/audioMix.ts`, saved in the settings store). Since FA6 the limiter and the
   ducking (your own hit, the whistles) sit on effects only; interface goes straight to master. Sounds render at
   `AUDIO.renderRate` whatever the device's rate; one-off sounds beyond `maxDistance` aren't played; while you're out
@@ -181,7 +184,9 @@ ends the round). A hit character is eliminated
   stream and their samples (pinned in `audio/woodlandSound.test.ts`). M34g adds
   the `city` ambience (traffic and drones with a shop chime by day; traffic and a neon `hum` loop, `renderHum`, with
   arcade bleeps by night), Neon Heights' `MapData.ambience`; a field's own sounds stay within about 7 MB, and every
-  map sound a page may keep within 12 MB.
+  map sound a page may keep within 12 MB. Since M69 each ambience names its echo (`Ambience.reverb`: the yard's
+  `AUDIO.reverb`, the woods' and the city's own), rendered at the context's rate with the field's other sounds, and a
+  cue's buffer ends where it falls under -60 dB of its peak (`SoundRecipe.variants` sets a cue's own variant count).
 - **sim/lean.ts**: leaning (hold Q / E). One geometry: the upper body tilts about a hip pivot (`hits.lean`), so
   `leanOffset` moves any point above the hips sideways and a little down. `stepLean` (after movement) eases the lean
   in and out, drops it in the air and clamps it with sideways rays so the head and shoulders stay clear of walls.
@@ -200,7 +205,10 @@ ends the round). A hit character is eliminated
 - **sim/footsteps.ts**: after movement, emits `footstep` events every stride while running/sprinting and on hard
   landings; walking and crouched movement are silent.
 - **render/matchPresentation.ts**: other players (`characterRenderer.ts` + `characterModels.ts`: vertex-coloured
-  figures in casual airsoft kit with the team colour as tape, six looks by id (`FIGURE.looks`), six merged meshes
+  figures, G7: masked humans (`figureHuman.ts`) or robots (`figureRobot.ts`) on a shared part builder
+  (`figureParts.ts`, `figureShapes.ts`), coloured from the team colour (`figurePalette.ts`), holding blocky replicas
+  in their team's bot schemes (`figureReplicas.ts`, `figureHands.ts`); who is a robot comes from the match seed and the
+  Robots setting (`figureMix.ts`); six looks by id (`FIGURE.looks`), six merged meshes
   each on one material per figure, four drawn at once: legs, body, and the rifle, pistol or hit-call arms), hit feedback (`ui/hitFeedback.ts`), the spectator camera used once
   you're out, round messages (`ui/roundBanner.ts`, worded from your side) and the scoreboard (`ui/scoreboard.ts`:
   score, clock, who's still in; in Attack / Defend ATK/DEF tags and the flag strip, `ui/flagStatus.ts`). In Attack / Defend
@@ -282,7 +290,7 @@ ends the round). A hit character is eliminated
   (`syncCollection`: another tab's newer revision wins) and saves it (`saveOrReload`: if another tab saved first, the
   save is reloaded and the screen says the change was not kept); `ui/menus/armoryScreen.ts` is the screen, opened from
   New game's Armory tile, with `confirmDialog.ts` before big spends.
-- **render/replicaModels.ts + handModels.ts**: first-person replicas (AR-pattern AEG, polymer pistol) and gloved hands built in code from extruded profiles, capsules and lathe shapes, merged per material; poses are data. The viewmodel's scene can reflect a prefiltered room environment (`Viewmodel.setEnvironment`, the replica's sheen).
+- **render/replicaModels.ts + handModels.ts**: first-person replicas (AR-pattern AEG, polymer pistol) and gloved hands (or a robot's, `robotHands.ts` on the same hand skeleton, styled by `replicaArms.ts`, G7) built in code from extruded profiles, capsules and lathe shapes, merged per material; poses are data. `replicaBuilder.ts` holds the materials and the builder, `replicaParts.ts` the fittable parts; `itemPictures.ts` draws the same models off screen for the menus (G2). The viewmodel's scene can reflect a prefiltered room environment (`Viewmodel.setEnvironment`, the replica's sheen).
 - **game.ts**: composition root and main loop: the app that outlives matches (renderer, input, menus, debug overlay)
   and New game's choices. No map is loaded on the title and New game screens (M15b).
 - **matchSession.ts**: one match on one map (`map/maps.ts` lists the maps): the field's meshes and lighting, physics,
@@ -363,9 +371,11 @@ request. Each line names where it lives and what pins it.
   the character controller the simulation sees; the simulation never calls Rapier. Pinned by `physics/physicsWorld.test.ts`.
 - **`MatchSession.advance(dt)` / `draw(dt)` / `afterTick()`** (`matchSession.ts`): simulation first, presentation
   after; `afterTick` is where stats, the HUD and sound read the tick's events. Pinned by the smoke test.
-- **`QualitySettings`, `QUALITY`, `QualityChoice`, `resolveQuality`, `qualityChoiceOf`** (`config/render.ts`): the
+- **`QualitySettings`, `QUALITY`, `QualityChoice`, `resolveQuality`, `qualityChoiceOf`** (`config/render.ts`, which
+  re-exports them from `config/renderQuality.ts` since G5 split it by concern; import from `config/render.ts`): the
   fields a preset or the Custom rows may set (every preset sets every field; `QUALITY` is the preset table; a choice is
-  a preset or `'custom'`, which resolves to High overlaid with the saved rows); `Renderer.setQuality` and
+  a preset, Low to Ultra (Ultra since G5, never the automatic pick), or `'custom'`, which resolves to High overlaid
+  with the saved rows); `Renderer.setQuality` and
   `MatchSession.setQuality` apply them at once, antialiasing included. Fields are added, never renamed: a new field
   takes a value on every preset, a row in `config/graphics.ts` and a `graphics.<field>` store key, with no further
   contract change (G6 added `bakedLight` and `weathering`). Pinned by `config/render.test.ts`, `config/graphics.test.ts`,
@@ -374,7 +384,8 @@ request. Each line names where it lives and what pins it.
   renaming a key needs a migration: one `case` in `migrate` (FA5; the per-setting keys of the first builds are its
   "version 0"), and an object from a newer version is never read or overwritten. Fields are only ever added: `quality`
   holds a `QualityChoice`; `graphics.<field>` holds a Custom row (an option id or a slider position), `frameRateCap`
-  and `showFps` the two Graphics rows outside the presets (FA2), all read with a fallback, so version 1 stands. Pinned
+  (Unlimited, 30, 60, 120, 144 or 240; an older number reads as the nearest, G5) and `showFps` the two Graphics rows
+  outside the presets (FA2), all read with a fallback, so version 1 stands. Pinned
   by `settings/storage.test.ts`. Since M31 `browserStorage()` returns the save system's guarded storage once it has
   started (same keys, same values).
 - **The save file format** (`save/saveFile.ts`, M31): `{ game, format, build, savedAt, summary, stores, checksum }`,

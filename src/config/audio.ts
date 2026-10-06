@@ -82,7 +82,10 @@ export const AUDIO = {
    * shows a hint on the menus (audit CORE-21).
    */
   blockedCheck: 1,
-  /** Variants rendered per sound (each moves pitch, timing and mix a little, so repeats don't sound looped). */
+  /**
+   * Variants rendered per sound (each moves pitch, timing and mix a little, so repeats don't sound looped), unless its
+   * recipe sets its own (SoundRecipe.variants, M69).
+   */
   variants: 5,
   /** Seed of the presentation-only generator the variants are rendered with. */
   synthSeed: 1301,
@@ -190,7 +193,8 @@ export const AUDIO = {
   impactBlockMargin: 0.06,
   /**
    * The yard's echo: a short procedural reverb (decaying noise) that every in-world sound feeds, so shots and
-   * steps sound like they're between walls. Interface sounds (hit tick, hit marker, whistle) stay dry.
+   * steps sound like they're between walls. Interface sounds (hit tick, hit marker, whistle) stay dry. A field with
+   * an echo of its own sets it on its ambience (Ambience.reverb, M69).
    */
   reverb: { seconds: 0.8, decayPower: 3.5, wet: 0.22, seed: 1302 },
   /** Referee whistle at the end and start of a round. */
@@ -224,7 +228,8 @@ export const AUDIO = {
   /**
    * The sounds are rendered in the browser's spare time on the title screen (audit M-09), a cue at a time, for as
    * long as a spare moment has more than this many milliseconds left (a cue takes about 4 ms). The picked field's own
-   * sounds follow the same way (M65, audit AUD-01), a map cue's variant or a second of a loop at a time (1-18 ms).
+   * sounds follow the same way (M65, audit AUD-01), a map cue's variant, a second of a loop or a channel of its echo (M69)
+   * at a time (1-18 ms).
    */
   warmUpSliceMs: 5,
   /**
@@ -320,8 +325,12 @@ export type LoopSpec = NoiseLoopSpec | InsectLoopSpec | CrackleLoopSpec | HumLoo
 /** The ambience's looping sounds (M33j), each rendered once per page and only for a map that plays it. */
 export type LoopId = 'yard' | 'pines' | 'insects' | 'crackle' | 'traffic' | 'drones' | 'neon';
 
-/** The neon by night (M34g): a mains hum at 100 Hz and its low harmonics, and a faint tube sizzle round 6.5 kHz. */
-const NEON_LOOP: HumLoopSpec = { kind: 'hum', seconds: 3, crossfade: 0.2, seed: 3483, hz: 100, harmonics: [1, 0.55, 0.3, 0.12], flickers: 2, flickerDepth: 0.25, buzzHz: 6500, buzzQ: 2, buzzLevel: 0.3 };
+/**
+ * The neon by night (M34g): a mains hum at 100 Hz and its low harmonics, and a faint tube sizzle round 6.5 kHz. The
+ * stack leans on 200 and 300 Hz (M69, audit AUD-11): a laptop's speakers give little under 150 Hz, where 100 Hz alone
+ * held 60 % of the loop's power and left only the sizzle; the ear still hears a 100 Hz hum from its harmonics.
+ */
+const NEON_LOOP: HumLoopSpec = { kind: 'hum', seconds: 3, crossfade: 0.2, seed: 3483, hz: 100, harmonics: [0.5, 1, 0.6, 0.2], flickers: 2, flickerDepth: 0.25, buzzHz: 6500, buzzQ: 2, buzzLevel: 0.3 };
 
 export const AMBIENT_LOOPS: Readonly<Record<LoopId, LoopSpec>> = {
   /** The yard's bed (audit CORE-34), as it always was: rendered on the title screen. */
@@ -399,10 +408,24 @@ export interface AmbientCallSpec {
   readonly seed: number;
 }
 
-/** A field's sound by day or by night: its beds, and its calls (none at all: null). */
+/**
+ * A field's echo (audio/audioEngine.ts reverbImpulse): a stereo impulse of noise dying away over `seconds` as
+ * (1 - t / seconds) ^ `decayPower`, from `seed`, that every in-world sound feeds at `wet`. `darkHz` (absent: none) rolls
+ * its highs off above that (12 dB an octave): leaves and soft ground soak up the highs a wall throws back.
+ */
+export interface ReverbSpec {
+  readonly seconds: number;
+  readonly decayPower: number;
+  readonly wet: number;
+  readonly seed: number;
+  readonly darkHz?: number;
+}
+
+/** A field's sound by day or by night: its beds, its calls (none at all: null) and its echo (M69, audit AUD-10). */
 export interface Ambience {
   readonly beds: readonly AmbienceBed[];
   readonly call: AmbientCallSpec | null;
+  readonly reverb: ReverbSpec;
 }
 
 /** The yard's birds (audit CORE-34), as they always were. */
@@ -419,6 +442,14 @@ const BIRDS: AmbientCallSpec = {
 const OWL: AmbientCallSpec = { cue: 'ambience.owl', level: AUDIO.levels.owl, every: [25, 60], distance: [30, 50], height: 8, seed: 3374 };
 
 const YARD_BED: AmbienceBed = { loop: 'yard', gain: AUDIO.ambience.gain, width: AUDIO.ambience.width };
+
+/**
+ * The woods' echo (M69, audit AUD-10): long, faint and dark. Its tail runs 1.6 s but falls fast at first (no walls to
+ * slap back), rolled off above 2.5 kHz, and sits under the yard's.
+ */
+const WOODS_ECHO: ReverbSpec = { seconds: 1.6, decayPower: 6, wet: 0.12, seed: 3375, darkHz: 2500 };
+/** The city's (M69, audit AUD-10): hard façades either side of the street, brighter and a little wetter than the yard's. */
+const CITY_ECHO: ReverbSpec = { seconds: 1.1, decayPower: 3, wet: 0.25, seed: 3486 };
 /**
  * The woods' wind and insects (gameplay first: steps, BBs and bot cues on top). The wind sits low (round 600 Hz, rolled off
  * above 1.1 kHz) and quieter than the yard's bed, so the two together put no more into the 0.7–4 kHz band footsteps live
@@ -435,11 +466,12 @@ const TRAFFIC_BED: AmbienceBed = { loop: 'traffic', gain: 0.026, width: 0.8 };
 const TRAFFIC_NIGHT_BED: AmbienceBed = { loop: 'traffic', gain: 0.016, width: 0.8 };
 const DRONES_BED: AmbienceBed = { loop: 'drones', gain: 0.006, width: 0.9 };
 /**
- * The neon's second copy a fifth of a hum cycle on (M53, audit AUD-02): its harmonics then sit 72°, 144°, 216° and 288°
- * from the first copy's, which for the stack's levels sums to twice one copy's power (citySound.test.ts), as the noise
- * beds' copies do, and the hum has the bed's width. Half a loop alone is 150 whole cycles: the copies' hums were one.
+ * The neon's second copy 0.119 of a hum cycle on (M53, audit AUD-02; M69 for the stack that leans on 200 and 300 Hz):
+ * its harmonics then sit 43°, 86°, 129° and 171° from the first copy's, which for the stack's levels sums to twice one
+ * copy's power (citySound.test.ts), as the noise beds' copies do, and the hum has the bed's width. Half a loop alone is
+ * 150 whole cycles: the copies' hums were one.
  */
-const NEON_BED: AmbienceBed = { loop: 'neon', gain: 0.012, width: 0.5, copyOffset: 1 / (5 * NEON_LOOP.hz) };
+const NEON_BED: AmbienceBed = { loop: 'neon', gain: 0.012, width: 0.5, copyOffset: 0.119 / NEON_LOOP.hz };
 
 /** A shop door's two-note chime somewhere down the street by day (M34g). */
 const CHIME: AmbientCallSpec = { cue: 'ambience.chime', level: AUDIO.levels.chime, every: [12, 28], distance: [12, 30], height: 2.5, seed: 3484 };
@@ -451,9 +483,12 @@ const ARCADE: AmbientCallSpec = { cue: 'ambience.arcade', level: AUDIO.levels.ar
  * engine's rule: no birds under a night preset, on any map.
  */
 export const AMBIENCES: Readonly<Record<AmbienceId, Readonly<Record<'day' | 'night', Ambience>>>> = {
-  yard: { day: { beds: [YARD_BED], call: BIRDS }, night: { beds: [YARD_BED], call: null } },
-  woods: { day: { beds: [PINES_BED], call: BIRDS }, night: { beds: [PINES_BED, INSECTS_BED], call: OWL } },
-  city: { day: { beds: [TRAFFIC_BED, DRONES_BED], call: CHIME }, night: { beds: [TRAFFIC_NIGHT_BED, NEON_BED], call: ARCADE } },
+  yard: { day: { beds: [YARD_BED], call: BIRDS, reverb: AUDIO.reverb }, night: { beds: [YARD_BED], call: null, reverb: AUDIO.reverb } },
+  woods: { day: { beds: [PINES_BED], call: BIRDS, reverb: WOODS_ECHO }, night: { beds: [PINES_BED, INSECTS_BED], call: OWL, reverb: WOODS_ECHO } },
+  city: {
+    day: { beds: [TRAFFIC_BED, DRONES_BED], call: CHIME, reverb: CITY_ECHO },
+    night: { beds: [TRAFFIC_NIGHT_BED, NEON_BED], call: ARCADE, reverb: CITY_ECHO },
+  },
 };
 
 /**

@@ -13,6 +13,7 @@ import { isFullscreen, onFullscreenChange, toggleFullscreen } from '../fullscree
 import { GraphicsSettings, type GraphicsSettingsOptions } from '../graphicsSettings';
 import { type HudSettingsOptions, hudSettings } from '../hudSettings';
 import { KeySettings } from '../keySettings';
+import { type LookSettingsOptions, lookSettings } from '../lookSettings';
 import { SaveSettings } from '../saveSettings';
 import type { SaveManager } from '../../save/saveManager';
 import { SETTINGS_TAB_ICONS } from './icons';
@@ -35,6 +36,8 @@ export interface SettingsOptions {
   accessibility: AccessibilitySettingsOptions;
   /** The HUD tab (ui/hudSettings.ts, M24). */
   hud: HudSettingsOptions;
+  /** The Look tab (ui/lookSettings.ts, G1): robots and Realistic colours. */
+  look: LookSettingsOptions;
   /** The hidden Dev tab (ui/devSettings.ts, M24): `enabled`, the box under the tabs is ticked and the tab shown. */
   dev: DevSettingsOptions & { enabled: boolean; onEnabled: (on: boolean) => void };
   /** The save (M31), for the Save tab: download, load, restore points. */
@@ -43,7 +46,7 @@ export interface SettingsOptions {
 }
 
 /**
- * The Settings screen: tabs down the left (Controls, Key Bindings, Graphics, Crosshair, HUD, Audio, Accessibility, Save,
+ * The Settings screen: tabs down the left (Controls, Key Bindings, Graphics, Crosshair, HUD, Audio, Accessibility, Look, Save,
  * and Dev once the box under them is ticked), the picked tab's settings on the right. Everything saves as it changes.
  * Reached from New game and from the pause menu; Back returns to whichever opened it.
  */
@@ -225,6 +228,8 @@ export class SettingsScreen {
       panel.append(...hudSettings(opts.hud));
     } else if (id === 'accessibility') {
       panel.append(...accessibilitySettings(opts.accessibility));
+    } else if (id === 'look') {
+      panel.append(...lookSettings(opts.look));
     } else if (id === 'save') {
       panel.append(...this.saveSettings.rows);
       this.saveSettings.acceptDrops(panel);

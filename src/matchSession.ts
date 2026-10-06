@@ -25,12 +25,14 @@ import { contentPool } from './pool/contentPool';
 import { rollRunCases } from './pool/caches';
 import type { SupplyEvent } from './pool/supplyEvents';
 import { GAME_POOL } from './pool/gamePool';
-import { bbGlowFor, type PlayerKit } from './pool/loadoutModel';
+import { bbGlowFor, kitPaint, type PlayerKit } from './pool/loadoutModel';
+import type { LookSettings } from './config/look';
 import { SIM, SIM_DT } from './config/sim';
 import type { SquadCommand } from './config/squad';
 import { TEAMS, type TeamColours } from './config/teams';
 import { BuildTiming } from './core/buildTiming';
 import { caseSeed, runSeed } from './core/seed';
+import { figureCrowd, playerArms } from './render/figureMix';
 import { advanceStepper, createStepper, stepperAlpha } from './core/fixedStepper';
 import type { PlayerInput } from './input/playerInput';
 import type { MapData } from './map/mapTypes';
@@ -117,6 +119,8 @@ export interface MatchSetup {
   supply?: SupplyEvent | null;
   /** The team colours picked on Settings → Accessibility (M18b): the figures, the flag and your armband. */
   teamColours: TeamColours;
+  /** Settings → Look (G1): robots and Realistic colours. Absent: their defaults. */
+  look?: LookSettings;
 }
 
 /** What an Extraction run found, for the summary (MatchSession.runFinds). */
@@ -282,14 +286,16 @@ export class MatchSession {
     this.torches = new TorchBeams(this.state.characters, lighting, quality, this.physics, BODY, this.hits);
     renderer.scene.add(this.torches.object);
     this.daylight.reserveLights(this.torches.reserved);
-    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map, audio, (action) => input.keyName(action), crosshair, quality, this.hits, bbGlowFor(this.kit, this.lighting.night), seed);
+    // Who the figures are drawn as (G7): humans and robots mixed from the seed when Settings › Look › Robots is on.
+    const crowd = figureCrowd(seed, this.state.characters, setup.look);
+    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map, audio, (action) => input.keyName(action), crosshair, quality, this.hits, bbGlowFor(this.kit, this.lighting.night), seed, kitPaint(this.kit, setup.look), playerArms(crowd, this.state.characters.indexOf(this.player), this.player.team));
     this.build.phase('replica and effects');
     // The field's own sounds (M33j): whatever New game's spare time didn't render ahead is finished here (M65, audit
     // AUD-01), so `?perf` shows what was left.
     this.combat.setLighting(lighting);
     this.build.phase('sound');
     this.stats = new MatchStats(this.state.characters);
-    this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, this.teamSizes(), this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours, map, renderer.figureModel, quality.figureDetail, this.extraction);
+    this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, this.teamSizes(), this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours, map, renderer.figureModel, quality.figureDetail, this.extraction, crowd);
     this.match.setHitFacts(this.bots.lastHit);
     // Pro briefing tips on the board between rounds, when the opponents are Pro (M41).
     this.match.setProTips(difficultyAtLeast(setup.difficulty, 'pro'));

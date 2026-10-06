@@ -75,11 +75,14 @@ function jitter(spread: number): number {
 export class Sfx {
   /** The engine's context, once this match's graph is built on it (null before unlock, without audio, and after dispose). */
   private ctx: AudioContext | null = null;
-  /** In-world sounds go here, then through the "you're out" muffling to the effects bus and the yard's reverb. */
+  /** In-world sounds go here, then through the "you're out" muffling to the effects bus and the field's echo. */
   private world: GainNode | null = null;
   /** The world heard from the side line while you're out (AUDIO.out; audit CORE-30/34): a low-pass and a level. */
   private outFilter: BiquadFilterNode | null = null;
   private outLevel: GainNode | null = null;
+  /** The field's echo (M69, audit AUD-10: the scene's impulse) and its level. */
+  private echo: ConvolverNode | null = null;
+  private echoWet: GainNode | null = null;
   /** You were out when the last tick looked. */
   private playerOut = false;
   /** The ambience's looping sources (its beds' copies, the fires' crackle), once play has started (audit CORE-34). */
@@ -151,6 +154,15 @@ export class Sfx {
     this.scene = scene;
     this.calls = this.callsOf(scene);
     this.engine.prepare(scene);
+    // Set after the graph is built: the echo follows (M69).
+    if (this.echo) this.setEcho(this.echo, this.echoWet!);
+  }
+
+  /** The scene's echo on `convolver`, at its wet level (M69, audit AUD-10: the yard's unless the field has its own). */
+  private setEcho(convolver: ConvolverNode, wet: GainNode): void {
+    const buffer = this.engine.reverbImpulse(this.scene.reverb);
+    if (convolver.buffer !== buffer) convolver.buffer = buffer;
+    wet.gain.value = this.scene.reverb.wet;
   }
 
   /**
@@ -200,9 +212,10 @@ export class Sfx {
     this.graph.push(effects, this.world, this.outFilter, this.outLevel);
     this.world.connect(this.outFilter).connect(this.outLevel).connect(effects);
     const reverb = ctx.createConvolver();
-    reverb.buffer = this.engine.reverbImpulse();
     const wet = ctx.createGain();
-    wet.gain.value = AUDIO.reverb.wet;
+    this.setEcho(reverb, wet);
+    this.echo = reverb;
+    this.echoWet = wet;
     this.graph.push(reverb, wet);
     this.outLevel.connect(reverb).connect(wet).connect(effects);
     this.self = ctx.createGain();
@@ -448,6 +461,7 @@ export class Sfx {
     this.world = null;
     this.outFilter = null;
     this.outLevel = null;
+    this.echo = this.echoWet = null;
     this.playerOut = false;
     this.self = null;
     this.ui = null;

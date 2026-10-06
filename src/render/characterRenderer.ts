@@ -9,6 +9,7 @@ import { lerpAngle } from '../sim/vec';
 import { BARE_KIT, buildFigure, createCalloutTexture, disposeFigure, type Figure, type FigureKit, figureLeanRoll, setReceiveShadows } from './characterModels';
 import { type FigureModel, fadeModelMaterials } from './externalModels';
 import { useVertexFinish } from './figureFinish';
+import { type FigureCrowd, figureDress, HUMAN_CROWD } from './figureMix';
 import { type ProbeGrid, type ProbeSample, probeTint, sampleProbes } from './probeGrid';
 
 interface FigureState {
@@ -120,12 +121,15 @@ export class CharacterRenderer {
     private readonly model: FigureModel | null = null,
     /** Player detail (QualitySettings.figureDetail, FA8); setDetail changes it. */
     private detail: DetailLevel = 'low',
+    /** Which figures are robots this match and whether replicas are in Realistic colours (G7, Settings › Look). */
+    private readonly crowd: FigureCrowd = HUMAN_CROWD,
   ) {
-    for (const c of characters) {
+    for (let i = 0; i < characters.length; i++) {
+      const c = characters[i]!;
       const silencer = rifleSilenced(c);
       const rifleTorch = torchFitted(c, false);
       const pistolTorch = torchFitted(c, true);
-      const { figure, material } = this.build(c, { rifleSilencer: silencer, rifleTorch, pistolTorch });
+      const { figure, material } = this.build(i, { rifleSilencer: silencer, rifleTorch, pistolTorch });
       this.figures.push({ figure, material, phase: 0, lastX: c.position.x, lastZ: c.position.z, flinchAge: FIGURE.flinch.time, flinchX: 0, flinchZ: 0, silencer, rifleTorch, pistolTorch, lift: 0, bounce: new THREE.Color(0, 0, 0) });
     }
   }
@@ -200,7 +204,7 @@ export class CharacterRenderer {
     const s = this.figures[i]!;
     disposeFigure(s.figure);
     s.material.dispose();
-    const { figure, material } = this.build(this.characters[i]!, { rifleSilencer: silencer, rifleTorch, pistolTorch });
+    const { figure, material } = this.build(i, { rifleSilencer: silencer, rifleTorch, pistolTorch });
     s.figure = figure;
     s.material = material;
     s.silencer = silencer;
@@ -209,14 +213,19 @@ export class CharacterRenderer {
     s.lift = 0;
   }
 
-  /** One character's figure at the current detail, added to the scene, with its own copy of the material. */
-  private build(c: Character, parts: FigureKit): { figure: Figure; material: THREE.MeshStandardMaterial } {
+  /**
+   * Character `i`'s figure at the current detail, added to the scene, with its own copy of the material: a human or a
+   * robot as the crowd says, its replicas in its team's colours.
+   */
+  private build(i: number, parts: FigureKit): { figure: Figure; material: THREE.MeshStandardMaterial } {
+    const c = this.characters[i]!;
     const high = this.detail === 'high';
     // The detailed figure reads each vertex's roughness and metalness (glossy goggles and shells, steel barrels).
     const material = high ? useVertexFinish(this.material.clone()) : this.material.clone();
     // A silencer shows on the detailed figure only (as before M33h); a torch at every detail.
     const kit: FigureKit = parts.rifleSilencer || parts.rifleTorch || parts.pistolTorch ? parts : BARE_KIT;
-    const figure = buildFigure(this.teamColors[c.team] ?? 0xffffff, material, this.calloutMaterial, c.id, this.model, FIGURE.detail[this.detail], kit);
+    const dress = figureDress(this.crowd, i, c.team, c.armament.replicas);
+    const figure = buildFigure(this.teamColors[c.team] ?? 0xffffff, material, this.calloutMaterial, c.id, this.model, FIGURE.detail[this.detail], kit, dress);
     this.object.add(figure.root);
     return { figure, material };
   }

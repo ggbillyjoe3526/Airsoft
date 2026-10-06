@@ -4,18 +4,18 @@
  * (`?script=perf`, config/perfScript.ts) and seed 1, at a fixed resolution and pixel ratio, with the CPU throttled
  * over CDP, and records frame times, draw calls, triangles, GPU memory and heap growth for 60 s.
  *
- *   node pipeline/perf-run.mjs [--env container|laptop|ci] [--preset low|medium|high|all] [--cpu N] [--ticks 3600]
- *                              [--warmup-ticks 120] [--max-seconds 300] [--baseline] [--no-build] [--chromium /path]
- *                              [--channel chrome|msedge] [--headless] [--map depot|woodland|neon]
- *                              [--mode extraction]
+ *   node pipeline/perf-run.mjs [--env container|laptop|desktop|ci] [--preset low|medium|high|ultra|all] [--cpu N]
+ *                              [--ticks 3600] [--warmup-ticks 120] [--max-seconds 300] [--baseline] [--no-build]
+ *                              [--chromium /path] [--channel chrome|msedge] [--headless] [--map depot|woodland|neon]
+ *                              [--mode extraction] [--viewport 1920x1080]
  *
  * The e2e bundle is reused when the source hasn't changed since it was built (pipeline/build-cached.mjs).
  *
  * The window is counted in simulation ticks, not wall time, so the player is at the same point of the script
  * whatever the frame rate: 3600 ticks is 60 s of play on a laptop and about four minutes in software rendering,
  * where the simulation runs at about 16 ticks/s (five catch-up ticks a frame). perf-budget.json sets each
- * environment's default (`ticks`, and `presetTicks` where Medium and High run far slower in software). `--preset all`
- * runs Low, Medium and High in turn (audit REN-15). Writes pipeline/out/perf-<env>-<preset>.json, and
+ * environment's default (`ticks`, and `presetTicks` where Medium, High and Ultra run far slower in software). `--preset all`
+ * runs Low, Medium, High and Ultra in turn (audit REN-15; Ultra since G5). Writes pipeline/out/perf-<env>-<preset>.json, and
  * perf-<env>.json for the budget preset (what the gate reads); --baseline also writes pipeline/baseline/<env>.json
  * for the budget preset and <env>-<preset>.json for the others (commit those). Frame times mean something only on
  * hardware rendering (the owner's laptop); in a container they are noise and the gate ignores them (perf-budget.json
@@ -31,6 +31,9 @@
  *
  * `--env laptop` measures the real GPU: no SwiftShader flags, a visible window (vsync, as a player sees it; --headless
  * to hide it) and the installed Chrome (`--channel chrome`, the default there; or `--chromium /path`).
+ *
+ * `--env desktop` (G5) is the same on the owner's desktop PC, without CPU throttling: where the Ultra budget is measured.
+ * `--viewport WxH` sets the page's size (default 1920x1080 at pixel ratio 1; 3840x2160 for 4K); the result records it.
  */
 import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -45,7 +48,7 @@ const args = process.argv.slice(2);
 const flag = (name) => args.includes(name);
 const value = (name, fallback) => (args.includes(name) ? args[args.indexOf(name) + 1] : fallback);
 const budget = JSON.parse(readFileSync(join(ROOT, 'pipeline', 'perf-budget.json'), 'utf8'));
-const PRESETS = ['low', 'medium', 'high'];
+const PRESETS = ['low', 'medium', 'high', 'ultra'];
 const options = {
   env: value('--env', 'container'),
   preset: value('--preset', budget.budgetPreset),
@@ -56,7 +59,10 @@ const options = {
   chromium: value('--chromium', process.env.PLAYWRIGHT_CHROMIUM),
   map: value('--map', 'depot'),
   mode: value('--mode', 'elimination'),
+  viewport: value('--viewport', '1920x1080'),
 };
+const [viewWidth, viewHeight] = options.viewport.split('x').map(Number);
+if (!(viewWidth > 0 && viewHeight > 0)) throw new Error('--viewport must be WIDTHxHEIGHT, e.g. 3840x2160');
 const MAPS = { depot: /Depot/i, woodland: /Woodland/i, neon: /Neon Heights/i };
 const MODES = ['elimination', 'extraction'];
 if (!MODES.includes(options.mode)) throw new Error(`--mode must be one of ${MODES.join(', ')}`);
@@ -68,8 +74,9 @@ const presets = options.preset === 'all' ? PRESETS : [options.preset];
 if (!presets.every((p) => PRESETS.includes(p))) throw new Error(`--preset must be one of ${PRESETS.join(', ')} or all`);
 /** The measured window for a preset: --ticks, else the budget's per-preset line for this env, else the env's. */
 const ticksFor = (preset) => Number(value('--ticks', budget.presetTicks?.[options.env]?.[preset] ?? budget.ticks?.[options.env] ?? 3600));
-const laptop = options.env === 'laptop';
-/** Software rendering in the container and on CI; the real GPU on the laptop (REN-15). */
+/** A real GPU (the owner's laptop, or his desktop PC since G5): no SwiftShader, a visible window, the installed Chrome. */
+const laptop = options.env === 'laptop' || options.env === 'desktop';
+/** Software rendering in the container and on CI; the real GPU on the laptop and the desktop (REN-15). */
 // `--expose-gc` gives the page `gc()`, so heap growth is measured between two full collections, not between whatever
 // garbage happened to be waiting at the first and last sample (that swung ±10 MB between runs of one head).
 const heapArgs = ['--enable-precise-memory-info', '--js-flags=--expose-gc'];
@@ -119,7 +126,7 @@ try {
 /** One preset's run: a fresh page, the match started, `ticksFor(preset)` ticks measured. */
 async function measure(preset) {
   const ticks = ticksFor(preset);
-  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
+  const page = await browser.newPage({ viewport: { width: viewWidth, height: viewHeight }, deviceScaleFactor: 1 });
   const errors = [];
   page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(`console: ${m.text()}`); });
@@ -220,7 +227,7 @@ async function measure(preset) {
     };
   }, { ticks, maxSeconds: options.maxSeconds });
   await page.close();
-  return { env: options.env, map: options.map, mode: options.mode, preset, cpu: options.cpu, ticksWanted: ticks, warmupTicks: options.warmupTicks, head, when: new Date().toISOString(), seed: 1, viewport: '1920x1080@1', metrics: sample, errors };
+  return { env: options.env, map: options.map, mode: options.mode, preset, cpu: options.cpu, ticksWanted: ticks, warmupTicks: options.warmupTicks, head, when: new Date().toISOString(), seed: 1, viewport: `${options.viewport}@1`, metrics: sample, errors };
 }
 
 /** The baseline file for a preset: `<env>.json` for the budget preset (what the gate compares), `<env>-<preset>.json` otherwise. */
