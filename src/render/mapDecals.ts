@@ -13,7 +13,7 @@ import { withoutEnvironment } from './surfaceMaterials';
  * barriers (not on a finished one, M34f). A sign is left out where something stands in front of it. No brands, no team
  * colours. With them, stains on the floors (G6: oil, dirt, cracks, tyre marks, scuffs; WEATHERING.stains), never under
  * a block. The atlas's cells never overlap (atlasRects); the mesh is blended, so the stains fade at their edges. G8: the
- * map's set dressing adds its own quads (render/mapDressing.ts dressingDecals: dirt, litter, logos, sprays, signs), drawn
+ * map's set dressing adds its own quads (render/mapDressing.ts placeDressing(…).decals: dirt, litter, logos, sprays, signs), drawn
  * from a third of the atlas below the first square, so the whole lot stays one draw call.
  */
 
@@ -518,7 +518,7 @@ function drawStains(g: CanvasRenderingContext2D, stains: AtlasLayout['stains'], 
 
 /**
  * The signs and stains as one mesh (null when the map has none), with `extra` quads (G8: the map's set dressing,
- * render/mapDressing.ts dressingDecals); `atlas` makes the texture (the tests pass a stand-in). Drawn before the other
+ * render/mapDressing.ts placeDressing(…).decals); `atlas` makes the texture (the tests pass a stand-in). Drawn before the other
  * blended things (DECAL_RENDER_ORDER): it lies flat on the field, and everything else blended stands in front of it.
  */
 export function buildMapDecals(map: MapData, atlas: () => THREE.Texture = drawDecalAtlas, extra: readonly DecalQuad[] = []): THREE.Mesh | null {

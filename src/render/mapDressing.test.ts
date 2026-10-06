@@ -171,3 +171,18 @@ describe('set dressing placement (G8)', () => {
     expect(readsAsTeam(new THREE.Color(0xf07c2a))).toBe(true);
   });
 });
+
+describe('junk facing junk (G8 critic)', () => {
+  const overlap = (a: readonly number[], b: readonly number[]): boolean => a[0]! < b[1]! && b[0]! < a[1]! && a[2]! < b[3]! && b[2]! < a[3]!;
+
+  it('never puts a piece in another piece\'s open front, on Depot\'s seed or any other', () => {
+    for (let seed = 1; seed <= 40; seed++) {
+      const junk = placeDressing({ ...DEPOT, dressing: { ...DEPOT.dressing!, seed } }).junk;
+      for (const p of junk) {
+        for (const q of junk) {
+          if (p !== q) expect(overlap(frontRect(p), junkRect(q)), `seed ${seed}: ${q.kind} in front of ${p.kind}`).toBe(false);
+        }
+      }
+    }
+  });
+});

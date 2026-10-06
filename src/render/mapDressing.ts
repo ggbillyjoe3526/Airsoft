@@ -288,10 +288,18 @@ export function junkFits(map: MapData, blocks: readonly MapBlock[], p: JunkPiece
   // The floor stays open `openFront` in front of it (people pass there), up to head height.
   if (boxHitsBlock(blocks, frontRect(p), p.y + 0.02, p.y + 2)) return false;
   if (!clearOfPlay(map, r, spots)) return false;
+  // Apart from every placed piece, and neither in the other's open front (two pieces never face each other across a
+  // passage narrower than `openFront`).
+  const front = frontRect(p);
   return placed.every((q) => {
     const s = junkRect(q);
-    return Math.max(s[0] - r[1], r[0] - s[1], s[2] - r[3], r[2] - s[3]) >= J.gap;
+    return Math.max(s[0] - r[1], r[0] - s[1], s[2] - r[3], r[2] - s[3]) >= J.gap && !overlaps(front, s) && !overlaps(frontRect(q), r);
   });
+}
+
+/** Whether two plan rectangles overlap (touching edges do not). */
+function overlaps(a: Rect, b: Rect): boolean {
+  return a[0] < b[1] && b[0] < a[1] && a[2] < b[3] && b[2] < a[3];
 }
 
 /** Junk joins the layout with its contact shadow (and grit round rubble) in the decal mesh. */
