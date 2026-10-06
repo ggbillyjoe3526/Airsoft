@@ -21,7 +21,7 @@ describe('a 4v4 Elimination match on Neon Heights by Night, both teams on Pro (M
     // seeds 41.2 % (75 of 182), none on time. By Day the east end is the stronger (KNOWN_ISSUES). Re-measure with this
     // test after any bot, layout or night-sight change. M71 (Audit 2: every level hunts the middle, Normal and up keep out of the light, bots step aside when pressed together, a
     // torch comes on only for a fight within 20 m or a search's last stretch): west 42.2 % (70 of 166), 4 of 172 on
-    // time.
+    // time. M73 (the east's last mid-lane holds inside the bar's door line): 44.9 % (84 of 187), 1 of 188 on time.
     expectProBalance(tallyBalance(32, 300, botConfig('pro'), 'elimination', NIGHT, TEAM_SIZE), 'elimination', 'Neon Heights by Night Pro');
   });
 });

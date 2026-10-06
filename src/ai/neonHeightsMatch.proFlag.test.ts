@@ -20,7 +20,7 @@ describe('a 4v4 Attack / Defend match on Neon Heights, both teams on Pro (M40)',
     // post) it was 59 %: posts are now about square (anglePostSquareness). Hard on seeds 1-32: 55 % (128 of 231), none on
     // time. Re-measure with this test after any bot or layout change. M71 (Audit 2: every level hunts the middle, Normal and up keep out of the light, bots step aside when pressed together, a
     // torch comes on only for a fight within 20 m or a search's last stretch): 55.7 % (127 of 228),
-    // none on time.
+    // none on time. M73 (the east's last mid-lane holds inside the bar's door line): 55.6 % (124 of 223), none on time.
     expectProBalance(tallyBalance(32, 400, botConfig('pro'), 'attackDefend', DAY, TEAM_SIZE), 'attackDefend', 'Neon Heights Pro');
   });
 });

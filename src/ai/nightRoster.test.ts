@@ -127,7 +127,7 @@ describe('the harness fits the light the match build fits, by its rule (M57 acce
   });
 });
 
-describe('the Pro band: the plan\'s 40-60 % except Woodland Attack / Defend (M57 acceptance 3) and Neon Heights by Day until M73 (M71)', () => {
+describe('the Pro band: the plan\'s 40-60 % except Woodland Attack / Defend (M57 acceptance 3)', () => {
   const ad = (wins: number, rounds = 100): BalanceTally => ({ rounds, decided: rounds, attackerWins: wins, end0Wins: 50, onTime: 0 });
   const elim = (end0: number, decided = 100): BalanceTally => ({ rounds: decided, decided, attackerWins: 50, end0Wins: end0, onTime: 0 });
 
@@ -154,7 +154,7 @@ describe('the Pro band: the plan\'s 40-60 % except Woodland Attack / Defend (M57
     expect(() => expectProBalance({ ...ad(40), onTime: 10 }, 'attackDefend', 'ad', band)).toThrow();
   });
 
-  it('no Pro guard but Woodland Attack / Defend and Neon Heights Elimination by Day passes a band, and both keep the plan\'s ceiling', () => {
+  it('no Pro guard but Woodland Attack / Defend passes a band, and that one keeps the plan\'s ceiling', () => {
     const sources = import.meta.glob<string>('./*.test.ts', { query: '?raw', import: 'default', eager: true });
     const calls: { file: string; args: string }[] = [];
     for (const [file, src] of Object.entries(sources)) {
@@ -166,11 +166,8 @@ describe('the Pro band: the plan\'s 40-60 % except Woodland Attack / Defend (M57
     expect(calls.length).toBe(8);
     // A call without a band ends at its label; anything after the label is a band.
     const banded = calls.filter((c) => !/, '[^']*'$/.test(c.args));
-    expect(banded.map((c) => c.file).sort()).toEqual(['./neonHeightsMatch.pro.test.ts', './woodlandMatch.proFlag.test.ts']);
-    expect(banded.find((c) => c.file.includes('woodland'))!.args).toContain("'attackDefend', WOODLAND,");
+    expect(banded.map((c) => c.file)).toEqual(['./woodlandMatch.proFlag.test.ts']);
+    expect(banded[0]!.args).toContain("'attackDefend', WOODLAND,");
     expect(sources['./woodlandMatch.proFlag.test.ts']).toContain('const ATTACKERS: readonly [number, number] = [0.15, PRO_BAND[1]];');
-    // M71: the west's floor at 35 % until M73's lane point at the bar door, which puts it back.
-    expect(banded.find((c) => c.file.includes('neon'))!.args).toContain("'elimination', DAY,");
-    expect(sources['./neonHeightsMatch.pro.test.ts']).toContain('const WEST_UNTIL_M73: readonly [number, number] = [0.35, PRO_BAND[1]];');
   });
 });
