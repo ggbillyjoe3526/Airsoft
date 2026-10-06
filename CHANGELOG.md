@@ -158,7 +158,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M73** · Neon Heights (dev content): the east team's bots hold the middle from deeper in the bar, so the two ends are closer to even (#137)
 
 ### Fixed
-- **M74** · No frame hitches when you're hit or a bot plans a route
+- **M74** · No frame hitches when you're hit or a bot plans a route (#138)
 - **M70** · If another open tab of the game saved your collection first, the Armory now reloads it at once and says so, instead of quietly undoing your Shot later (#122)
 - **M64** · The reload, case-opening and count bars fill smoothly in one motion (still step by step with Reduced motion on); the Key Bindings screen no longer holds on to the mouse wheel when no key is waiting (#118)
 - **M65** · A map's sounds are made while you're on the title screen, so pressing Play on Woodland or Neon Heights starts the match sooner (#119)
