@@ -7,9 +7,19 @@ import { muffle, renderRecipe, seededRandom } from './dsp';
 export type RenderedSounds = ReadonlyMap<SoundCue, readonly Float32Array[]>;
 
 /**
+ * How many variants of `cue` are rendered: its recipe's own count (M69, audit AUD-08; absent: AUDIO.variants), at most
+ * `most` (a test's lighter bank).
+ */
+export function variantsOf(cue: SoundCue, most: number = Number.POSITIVE_INFINITY): number {
+  return Math.min(SOUNDS[cue].variants ?? AUDIO.variants, most);
+}
+
+/**
  * Renders `variants` versions of every title-screen cue in config/sounds.ts (TITLE_CUES: all but the map cues) at
- * `sampleRate`, in table order from one seeded stream, pausing (yielding) after each cue so the work can be spread over
- * the browser's spare time. Deterministic for a given seed, however it is spread.
+ * `sampleRate`, in table order from one seeded stream, and keeps as many as the cue has (variantsOf), pausing (yielding)
+ * after each cue so the work can be spread over the browser's spare time. Deterministic for a given seed, however it is
+ * spread. A cue that keeps fewer still draws the others from the stream (M69, audit AUD-08), so every cue after it
+ * sounds as it did: a dropped count.beep costs well under a millisecond.
  */
 export function* renderSoundsGradually(
   sampleRate: number,
@@ -20,7 +30,11 @@ export function* renderSoundsGradually(
   const out = new Map<SoundCue, Float32Array[]>();
   for (const cue of TITLE_CUES) {
     const list: Float32Array[] = [];
-    for (let v = 0; v < variants; v++) list.push(renderRecipe(SOUNDS[cue], sampleRate, rand));
+    const keep = variantsOf(cue, variants);
+    for (let v = 0; v < variants; v++) {
+      const samples = renderRecipe(SOUNDS[cue], sampleRate, rand);
+      if (v < keep) list.push(samples);
+    }
     out.set(cue, list);
     yield;
   }
@@ -28,10 +42,10 @@ export function* renderSoundsGradually(
 }
 
 /**
- * `variants` versions of map cue `cue` (MAP_CUE_SEEDS, M33j) at `sampleRate`, from the cue's own seed: the same whatever
- * else has been rendered, and whichever maps were played first.
+ * The variants of map cue `cue` (MAP_CUE_SEEDS, M33j; variantsOf, at most `variants`) at `sampleRate`, from the cue's
+ * own seed: the same whatever else has been rendered, and whichever maps were played first.
  */
-export function renderMapCue(cue: SoundCue, sampleRate: number, variants: number = AUDIO.variants): Float32Array[] {
+export function renderMapCue(cue: SoundCue, sampleRate: number, variants?: number): Float32Array[] {
   return finish(renderMapCueGradually(cue, sampleRate, variants));
 }
 
@@ -39,12 +53,12 @@ export function renderMapCue(cue: SoundCue, sampleRate: number, variants: number
  * renderMapCue a variant at a time (M65, audit AUD-01): pauses (yields) after each variant but the last, so New game's
  * spare time can render a field's sounds ahead of Play. The same samples however the steps are spread.
  */
-export function* renderMapCueGradually(cue: SoundCue, sampleRate: number, variants: number = AUDIO.variants): Generator<void, Float32Array[]> {
+export function* renderMapCueGradually(cue: SoundCue, sampleRate: number, variants?: number): Generator<void, Float32Array[]> {
   const seed = MAP_CUE_SEEDS[cue];
   if (seed === undefined) throw new Error(`${cue} is not a map cue`);
   const rand = seededRandom(seed);
   const list: Float32Array[] = [];
-  for (let v = 0; v < variants; v++) {
+  for (let v = 0, n = variantsOf(cue, variants); v < n; v++) {
     if (v > 0) yield;
     list.push(renderRecipe(SOUNDS[cue], sampleRate, rand));
   }
@@ -60,8 +74,8 @@ export interface MapSoundRenderers {
 export const MAP_SOUND_RENDERERS: MapSoundRenderers = { cue: (cue, sampleRate) => renderMapCueGradually(cue, sampleRate), loop: renderLoop };
 
 /**
- * Renders `variants` versions of every title-screen cue in config/sounds.ts at `sampleRate`, all at once (test only: the game renders
- * them a slice at a time through SoundBank).
+ * Renders every title-screen cue in config/sounds.ts at `sampleRate` (renderSoundsGradually), all at once (test only: the game
+ * renders them a slice at a time through SoundBank).
  */
 export function renderSounds(sampleRate: number, variants: number = AUDIO.variants, seed: number = AUDIO.synthSeed): Map<SoundCue, Float32Array[]> {
   return finish(renderSoundsGradually(sampleRate, variants, seed));

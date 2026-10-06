@@ -157,7 +157,7 @@ ends the round). A hit character is eliminated
   one-off world sounds (BB impacts, the flag's rope) get a panner of their own, disconnected when they end. Footsteps
   sound by the surface underfoot (`MapBlock.surface`), BB impacts by the block they hit (`audio/soundMaterials.ts`),
   and crouching, standing and leaning rustle (`audio/foley.ts`, presentation only: bots hear what they did before).
-  Buses: master, effects (in-world, with the yard's reverb) and interface (hit tick, hit marker, whistle, dry), set
+  Buses: master, effects (in-world, with the field's echo) and interface (hit tick, hit marker, whistle, dry), set
   by the Settings → Audio sliders (`audio/audioMix.ts`, saved in the settings store). Since FA6 the limiter and the
   ducking (your own hit, the whistles) sit on effects only; interface goes straight to master. Sounds render at
   `AUDIO.renderRate` whatever the device's rate; one-off sounds beyond `maxDistance` aren't played; while you're out
@@ -172,7 +172,9 @@ ends the round). A hit character is eliminated
   stream and their samples (pinned in `audio/woodlandSound.test.ts`). M34g adds
   the `city` ambience (traffic and drones with a shop chime by day; traffic and a neon `hum` loop, `renderHum`, with
   arcade bleeps by night), Neon Heights' `MapData.ambience`; a field's own sounds stay within about 7 MB, and every
-  map sound a page may keep within 12 MB.
+  map sound a page may keep within 12 MB. Since M69 each ambience names its echo (`Ambience.reverb`: the yard's
+  `AUDIO.reverb`, the woods' and the city's own), rendered at the context's rate with the field's other sounds, and a
+  cue's buffer ends where it falls under -60 dB of its peak (`SoundRecipe.variants` sets a cue's own variant count).
 - **sim/lean.ts**: leaning (hold Q / E). One geometry: the upper body tilts about a hip pivot (`hits.lean`), so
   `leanOffset` moves any point above the hips sideways and a little down. `stepLean` (after movement) eases the lean
   in and out, drops it in the air and clamps it with sideways rays so the head and shoulders stay clear of walls.
