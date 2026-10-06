@@ -29,6 +29,7 @@ import { ImpactGrit, shooterSide } from './impactGrit';
 import { ImpactPuffs } from './impactPuffs';
 import type { Renderer } from './renderer';
 import { sprintCarry, Viewmodel } from './viewmodel';
+import type { ReplicaPaint } from '../config/schemes';
 
 /** Whose BBs are drawn glowing (M33b): the player's by gear slot, and every other shooter's. */
 export interface BBGlow {
@@ -141,13 +142,15 @@ export class CombatPresentation {
     private readonly glow: BBGlow = NO_GLOW,
     /** The match's seed: the ambience's calls are timed from it (M53, audit AUD-07; Sfx). */
     seed = 0,
+    /** Your replicas' colour schemes by gear slot and the Realistic colours setting (G1); null: the black and tan of before. */
+    paint: ReplicaPaint | null = null,
   ) {
     this.sfx = new Sfx(heardReplicas(loadout, state.characters), field.blocks, query, audio, seed);
     this.bbs = new BBRenderer(state.bbs, tickSeconds);
     this.paths = new BBPathsDebug(state.bbs);
     renderer.scene.add(this.bbs.object, this.puffs.object, this.grit.object, this.hitPuffs.object, this.gasPuffs.object, this.motes.object, this.paths.object);
     for (const [material, dust] of Object.entries(IMPACT_DUST)) this.dustTints.set(material as ImpactMaterial, new THREE.Color(dust.tint));
-    this.viewmodel = new Viewmodel(renderer.camera.aspect, teamColor, loadout, { replica: quality.replicaDetail, hands: quality.handDetail });
+    this.viewmodel = new Viewmodel(renderer.camera.aspect, teamColor, loadout, { replica: quality.replicaDetail, hands: quality.handDetail }, paint);
     this.overlay = { scene: this.viewmodel.scene, camera: this.viewmodel.camera };
     this.hud = new Hud(container, keyName, crosshair);
     this.quality = quality;

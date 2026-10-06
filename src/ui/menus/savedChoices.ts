@@ -6,6 +6,7 @@ import {
   SOUND_CUE_SIZE,
   type SoundCueColour,
 } from '../../config/accessibility';
+import { DEFAULT_REALISTIC_COLOURS, DEFAULT_ROBOTS, type LookSettings, REALISTIC_COLOUR_CHOICES, ROBOT_CHOICES } from '../../config/look';
 import { DEFAULT_DIFFICULTY, DIFFICULTIES, type Difficulty, defaultTeammateDifficulty, TEAMMATE_DIFFICULTIES } from '../../config/bots';
 import {
   AIM_MODES,
@@ -247,6 +248,14 @@ export function motionClass(saved: boolean | null): 'reduced-motion' | 'full-mot
 /** The team colour set (Settings → Accessibility, M18b). */
 export function loadTeamColours(): TeamColourSetId {
   return loadChoice('teamColours', TEAM_COLOUR_CHOICES, DEFAULT_TEAM_COLOURS);
+}
+
+/** Settings › Look (G1): robots mixed in with humans (on unless turned off) and Realistic colours (off unless turned on). */
+export function loadLook(): LookSettings {
+  return {
+    robots: loadChoice('robots', ROBOT_CHOICES, DEFAULT_ROBOTS ? 'on' : 'off') === 'on',
+    realisticColours: loadChoice('realisticColours', REALISTIC_COLOUR_CHOICES, DEFAULT_REALISTIC_COLOURS ? 'on' : 'off') === 'on',
+  };
 }
 
 /** On-screen sound cues (Settings → Accessibility, M18b): off unless the player turned them on. */

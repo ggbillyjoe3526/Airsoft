@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import { REDUCED_MOTION } from '../config/accessibility';
 import { VIEWMODEL } from '../config/render';
 import { LOADOUT } from '../config/replicas';
+import { FAMILIES, SCHEMES } from '../config/schemes';
+import { kitPaint } from '../pool/loadoutModel';
 import { createArmament, fitOptics, fitParts } from '../sim/armament';
 import { AEG_MUZZLE, buildReplicaModels, PISTOL_MUZZLE, RIFLE_OPTIC, RIFLE_SCOPE } from './replicaModels';
 import { magazineOut, magazineSwap, sprintCarry, Viewmodel } from './viewmodel';
@@ -365,6 +367,48 @@ describe('Viewmodel barrels and muzzle parts (M29b)', () => {
     // Forward is -z: the muzzle now sits past the longer barrel and the silencer.
     expect(muzzleZ(0)).toBeCloseTo(stockZ[0]! - AEG_MUZZLE.extensions.long - (AEG_MUZZLE.tips.silencer - AEG_MUZZLE.tips.none), 6);
     expect(muzzleZ(1)).toBeCloseTo(stockZ[1]! - PISTOL_MUZZLE.tips.silencer, 6);
+    vm.dispose();
+  });
+});
+
+describe('Viewmodel paint (G1: what the match and the range hand it)', () => {
+  /** Every material colour (hex) in the viewmodel's scene. */
+  const sceneColours = (vm: Viewmodel): Set<number> => {
+    const out = new Set<number>();
+    vm.scene.traverse((o) => {
+      if (o instanceof THREE.Mesh) for (const m of [o.material].flat() as THREE.MeshStandardMaterial[]) if (m.color) out.add(m.color.getHex());
+    });
+    return out;
+  };
+
+  it('draws the held replicas in the schemes it is built with, and in the black and tan of before with none', () => {
+    const painted = new Viewmodel(16 / 9, 0x3a7bd5, LOADOUT, undefined, { schemes: ['signal', 'acid'], realistic: false });
+    const colours = sceneColours(painted);
+    expect(colours.has(SCHEMES.signal.furniture)).toBe(true);
+    expect(colours.has(SCHEMES.acid.furniture)).toBe(true);
+    painted.dispose();
+    const plain = new Viewmodel(16 / 9, 0x3a7bd5, LOADOUT);
+    const before = sceneColours(plain);
+    expect(before.has(SCHEMES.signal.furniture)).toBe(false);
+    expect(before.has(SCHEMES.acid.furniture)).toBe(false);
+    plain.dispose();
+  });
+
+  it('uses the plain family under Realistic colours, and keeps the paint when the detail is rebuilt', () => {
+    const vm = new Viewmodel(16 / 9, 0x3a7bd5, LOADOUT, undefined, { schemes: ['signal', 'acid'], realistic: true });
+    expect(sceneColours(vm).has(SCHEMES.signal.furniture)).toBe(false);
+    expect(sceneColours(vm).has(FAMILIES.tan.furniture)).toBe(true);
+    expect(sceneColours(vm).has(FAMILIES.ranger.furniture)).toBe(true);
+    vm.setDetail({ replica: 'high', hands: 'high' });
+    expect(sceneColours(vm).has(SCHEMES.signal.furniture)).toBe(false);
+    vm.dispose();
+  });
+
+  it('is what the kit gives: kitPaint of the kit under the Look settings feeds the viewmodel', () => {
+    const paint = kitPaint({ slots: [], hopUps: [], bbWeights: [], glowBBs: [], schemes: ['teal', 'hazard'] }, { robots: true, realisticColours: false });
+    const vm = new Viewmodel(16 / 9, 0x3a7bd5, LOADOUT, undefined, paint);
+    expect(sceneColours(vm).has(SCHEMES.teal.furniture)).toBe(true);
+    expect(sceneColours(vm).has(SCHEMES.hazard.furniture)).toBe(true);
     vm.dispose();
   });
 });

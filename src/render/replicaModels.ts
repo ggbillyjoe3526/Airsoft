@@ -6,6 +6,7 @@ import type { MagazineId } from '../config/attachments';
 import type { DetailLevel } from '../config/render';
 import { REPLICA_FINISH } from '../config/replicaFinish';
 import type { ReplicaConfig } from '../config/replicas';
+import { FAMILIES, FIXED_COLOUR_FAMILY, hasFixedColours, type ReplicaPaint, type Scheme, schemeColours } from '../config/schemes';
 import { LASERS } from '../config/lasers';
 import { TORCHES } from '../config/torches';
 import { projectSpeckleUvs, type SpeckleTextures, speckleTextures } from './replicaFinish';
@@ -112,6 +113,37 @@ function createMaterials(teamColor: number, detail: ReplicaDetail, speckle: Spec
   // much brighter: a flat face is its colour as before, a bevel or worn edge lighter.
   if (vertexColors) for (const mat of Object.values(materials)) if (mat instanceof THREE.MeshStandardMaterial && mat.vertexColors) mat.color.multiplyScalar(1 / VERTEX_BASE);
   return materials;
+}
+
+/** The materials a colour scheme repaints (graphics overhaul G1): body, furniture, small parts and steel. */
+const PAINTED: readonly MaterialKey[] = ['polymer', 'furniture', 'mag', 'metal', 'mint', 'pink'];
+
+/**
+ * One replica's materials in `colours` (its scheme, or that scheme's plain family): copies of the painted materials,
+ * the rest shared with `base`. The Cyber Pistol keeps its mint and pink unless Realistic colours turns it plain.
+ */
+function paintedMaterials(base: Record<MaterialKey, THREE.Material>, colours: Scheme, fixed: boolean): Record<MaterialKey, THREE.Material> {
+  const out = { ...base };
+  const tint: Partial<Record<MaterialKey, number>> = fixed
+    ? { mint: colours.furniture, pink: colours.body }
+    : { polymer: colours.body, furniture: colours.furniture, mag: colours.detail, metal: colours.steel };
+  for (const key of PAINTED) {
+    const hex = tint[key];
+    if (hex === undefined) continue;
+    const mat = (base[key] as THREE.MeshStandardMaterial).clone();
+    mat.color.setHex(hex);
+    if (mat.vertexColors) mat.color.multiplyScalar(1 / VERTEX_BASE);
+    out[key] = mat;
+  }
+  return out;
+}
+
+/** A replica's colours: its scheme in the loadout's paint, or (fixed colours) its own unless Realistic colours is on. */
+function paintOf(r: ReplicaConfig, slot: number, paint: ReplicaPaint | null): { colours: Scheme; fixed: boolean } | null {
+  if (!paint) return null;
+  if (hasFixedColours(r)) return paint.realistic ? { colours: FAMILIES[FIXED_COLOUR_FAMILY], fixed: true } : null;
+  const id = paint.schemes[slot];
+  return id ? { colours: schemeColours(id, paint.realistic), fixed: false } : null;
 }
 
 /** A flat face's vertex colour when parts are coloured: the brightest edge (a worn one) is white. */
@@ -1049,18 +1081,30 @@ function buildRaisedHand(m: Record<MaterialKey, THREE.Material>, detail: Replica
 
 /**
  * Builds the held-replica model (with hands and team armband) for each replica in the loadout, keyed by replica id, at
- * `detail` (Replica and Hand detail, FA8; Low's by default).
+ * `detail` (Replica and Hand detail, FA8; Low's by default), each in its colour scheme from `paint` (G1; by loadout slot)
+ * or, without one, the two-tone black and tan it had before.
  */
-export function buildReplicaModels(loadout: readonly ReplicaConfig[], teamColor: number, orangeTips: boolean, detail: ReplicaDetail = LOW_DETAIL): ReplicaModels {
+export function buildReplicaModels(
+  loadout: readonly ReplicaConfig[],
+  teamColor: number,
+  orangeTips: boolean,
+  detail: ReplicaDetail = LOW_DETAIL,
+  paint: ReplicaPaint | null = null,
+): ReplicaModels {
   const speckle = detail.replica === 'high' ? speckleTextures() : null;
   const materials = createMaterials(teamColor, detail, speckle);
   const models = new Map<string, ReplicaModel>();
-  for (const r of loadout) {
+  // Every material made for a replica's own paint, to dispose and to switch with the sheen (setReflections).
+  const painted: THREE.Material[] = [];
+  loadout.forEach((r, slot) => {
     const build = r.look.viewmodel === 'cyber' ? buildCyberPistol : r.look.model === 'pistol' ? buildPistol : buildAeg;
-    models.set(r.id, build(materials, orangeTips, detail));
-  }
+    const own = paintOf(r, slot, paint);
+    const mats = own ? paintedMaterials(materials, own.colours, own.fixed) : materials;
+    for (const key of PAINTED) if (mats[key] !== materials[key]) painted.push(mats[key]);
+    models.set(r.id, build(mats, orangeTips, detail));
+  });
   const raisedHand = buildRaisedHand(materials, detail);
-  const metal = materials.metal as THREE.MeshStandardMaterial;
+  const metals = [materials.metal, ...painted.filter((m) => (m as THREE.MeshStandardMaterial).metalness > 0)] as THREE.MeshStandardMaterial[];
   return {
     models,
     raisedHand,
@@ -1068,8 +1112,10 @@ export function buildReplicaModels(loadout: readonly ReplicaConfig[], teamColor:
     setReflections(on) {
       if (detail.replica !== 'high') return;
       const M = on ? F.metal.lit : F.metal.unlit;
-      metal.metalness = M.metalness;
-      metal.roughness = M.roughness;
+      for (const metal of metals) {
+        metal.metalness = M.metalness;
+        metal.roughness = M.roughness;
+      }
     },
     setTorchLit(on) {
       const lens = materials.torchLens;
@@ -1087,6 +1133,7 @@ export function buildReplicaModels(loadout: readonly ReplicaConfig[], teamColor:
         });
       }
       for (const mat of Object.values(materials)) mat.dispose();
+      for (const mat of painted) mat.dispose();
       speckle?.dispose();
     },
   };

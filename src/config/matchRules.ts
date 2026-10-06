@@ -5,6 +5,7 @@ import { defaultTeammateDifficulty, type Difficulty, DIFFICULTIES } from './bots
 import type { Tagged } from './content';
 import type { Switch } from './controls';
 import { BOT_GLOW_BBS } from './glowBBs';
+import { defaultScheme } from './schemes';
 import { HITS, type HitConfig, ROUNDS } from './hits';
 import { LOADOUT, REALCAP, replicaUnderRules } from './replicas';
 
@@ -282,6 +283,7 @@ export function kitUnderRules(kit: PlayerKit, rules: MatchRules): PlayerKit {
         hopUps: LOADOUT.map((r) => r.hopUpDial),
         bbWeights: LOADOUT.map((r) => r.bbWeight),
         glowBBs: LOADOUT.map(() => BOT_GLOW_BBS),
+        schemes: LOADOUT.map(defaultScheme),
       }
     : kit;
   if (!rules.semiAutoOnly && !rules.realcap) return base;

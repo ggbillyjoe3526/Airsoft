@@ -43,6 +43,7 @@ import type { AudioSettingsOptions } from '../audioSettings';
 import type { ControlsSettingsOptions } from '../controlsSettings';
 import type { CrosshairSettingsOptions } from '../crosshairSettings';
 import type { HudSettingsOptions } from '../hudSettings';
+import type { LookSettingsOptions } from '../lookSettings';
 import { ChoiceDialog } from './choiceDialog';
 import { type ArmoryOptions, ArmoryScreen } from './armoryScreen';
 import { type LoadoutOptions, LoadoutScreen } from './loadoutScreen';
@@ -104,6 +105,8 @@ export interface MenusOptions {
   crosshair: CrosshairSettingsOptions;
   accessibility: AccessibilitySettingsOptions;
   hud: HudSettingsOptions;
+  /** Settings › Look (G1). */
+  look: LookSettingsOptions;
   /**
    * The Dev tab (M24); `cheating`: a Dev setting now in force keeps the next match out of the records. `devContent`:
    * dev content is offered (M35); `devContentUsed`: New game's picks, the Loadout or the opponents' possible gear use
@@ -274,6 +277,7 @@ export class Menus {
       crosshair: opts.crosshair,
       accessibility: opts.accessibility,
       hud: opts.hud,
+      look: opts.look,
       // New game's note on the records follows the Dev settings.
       dev: {
         ...opts.dev,
