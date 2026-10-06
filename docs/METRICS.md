@@ -120,3 +120,4 @@ performance, triage, critic, changelog); the build thread's own tokens and the c
 | 2026-10-06 | G3 | 1 | build thread | ✗ (CI: tsc on two QA tests) | ✓ (CI 43 s) | ✗ (CI: no server, the build failed) | – | ✓ | ✓ | 6/8 Retry | 1: notes' case and contrast, and a note on every group's rows, untested | ~5 h | QA, critic |
 | 2026-10-06 | G3 | 2 | build thread | ✓ (tsc) | – (CI on the PR) | – (CI on the PR) | – | ✓ | ✓ | 7/8 Accept | 7: menus.ts over 600 lines | ~20 min | none spawned |
 | 2026-10-06 | M73 | 2 | build thread | ✓ (tsc) | ✓ Neon Heights suites (20 files) | – (CI on the PR) | – (skip) | ✓ | ✓ | 8/8 Accept (core) | re-applied from the paused patches; guards to 48 seeds | ~40 min | critic |
+| 2026-10-06 | M74 | 1 | build thread | ✓ (tsc) | ✗ 3209/3211 (Neon Heights guards at 16 seeds; at 48 within noise, guards moved to 48 in M73) | – (CI on the PR) | ✓ container Low | ✓ | ✓ | 8/8 Accept (core) | re-applied from the paused patches | ~1 h | critic |
