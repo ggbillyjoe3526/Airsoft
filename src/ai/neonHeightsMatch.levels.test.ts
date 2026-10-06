@@ -13,7 +13,8 @@ const SEEDS = 48;
 /**
  * The east's share of the rounds' first hits at Normal by night, at most (M73, audit BAL-04). Acceptance 2 asked for 55 %:
  * seeds 1-16 read 50.5 % with the bar-door holds, but seeds 1-48 read 55.1 % with them and 55.3 % without (2026-10-06),
- * so the first hit hardly moves (KNOWN_ISSUES); the holds even the wins instead (depotMatch.neonHeights.test.ts). The
+ * so the first hit hardly moves (KNOWN_ISSUES); the holds even the wins instead (depotMatch.neonHeights.test.ts). M74's
+ * route budget reads 56.6 % (168 of 297), within noise. The
  * ceiling stands about two standard errors (2.9 points at 48 seeds) over the measure, a guard against the east's door
  * opening up again.
  */
