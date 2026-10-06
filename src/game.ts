@@ -65,6 +65,7 @@ import { SAVE_TEXT } from './config/save';
 import { screenWhenStopped } from './ui/menus/menuNav';
 import { Menus } from './ui/menus/menus';
 import { followingPictureTarget, ItemPictures, webglPictureTarget } from './render/itemPictures';
+import { kitSubjects } from './ui/menus/menuPictures';
 import { recordsView } from './ui/recordsView';
 import {
   effectiveReducedMotion,
@@ -882,6 +883,7 @@ export class Game {
       this.session.setSoundCues(this.soundCues);
       this.session.setHitFeedMode(this.hitFeedMode);
       this.session.setWhatGotYouMode(this.whatGotYouMode);
+      this.session.combat.setReplicaPictures(this.pictures, kitSubjects(this.loadout.kit(), this.look.realisticColours));
       this.applyDevTo(this.session);
       applyTeamCss(this.container, TEAM_COLOUR_SETS[this.teamColours]);
     }
@@ -908,6 +910,7 @@ export class Game {
       look: this.look,
     }, this.options.seed, this.quality, this.audio, this.crosshair, pose, tutorialFrom);
     this.session.onTutorialStep = (step) => saveSetting('tutorialStep', step);
+    this.session.combat.setReplicaPictures(this.pictures, kitSubjects(this.loadout.kit(), this.look.realisticColours));
     this.steppedDown = false;
     this.session.setMotion(motionScale(this.motionReduced()));
     this.applyDevTo(this.session);

@@ -20,6 +20,8 @@ import type { Character } from '../sim/character';
 import type { GameState } from '../sim/state';
 import { lightInHand, torchLit } from '../sim/torch';
 import { Hud } from '../ui/hud';
+import type { PictureSource } from '../ui/menus/menuPictures';
+import type { PictureSubject } from './itemPictures';
 import { BBPathsDebug } from './bbPathsDebug';
 import { BBRenderer } from './bbRenderer';
 import { figureMuzzle, type FigureHold } from './characterModels';
@@ -210,6 +212,11 @@ export class CombatPresentation {
   /** The crosshair changed on Settings → Crosshair. */
   setCrosshair(crosshair: CrosshairSettings): void {
     this.hud.setCrosshair(crosshair);
+  }
+
+  /** The carried replicas' pictures on the HUD's replica panel (graphics overhaul G4), by slot. */
+  setReplicaPictures(source: PictureSource | null, subjects: readonly (PictureSubject | null)[]): void {
+    this.hud.setPictures(source, subjects);
   }
 
   /** A short line on the HUD (the game's own quality step-down says so, REN-03). */

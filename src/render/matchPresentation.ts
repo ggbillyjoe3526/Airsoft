@@ -1,3 +1,4 @@
+import { HUD_TEXT } from '../config/hudText';
 import * as THREE from 'three';
 import type { Action } from '../config/controls';
 import { EXTRACTION } from '../config/extraction';
@@ -31,7 +32,8 @@ import { respawnBanner, roundBanner } from '../ui/roundBanner';
 import { runNews } from '../ui/runStatus';
 import { Scoreboard } from '../ui/scoreboard';
 import { type HeardSound, SoundCues, soundCueOf } from '../ui/soundCues';
-import { type OrderNotice, SquadOrderLine } from '../ui/squadOrderLine';
+import type { OrderNotice } from '../ui/squadOrderLine';
+import { SquadBar } from '../ui/squadBar';
 import { rosterNames, statsBlocks } from '../ui/statsRows';
 import { TeammateMarkers } from '../ui/teammateMarkers';
 import { WhatGotYouCard, whatGotYouText } from '../ui/whatGotYou';
@@ -81,7 +83,7 @@ export class MatchPresentation {
   private readonly mateAt: ScreenMarker = { x: 0, y: 0, onScreen: false };
   /** On-screen sound cues (Settings → Accessibility, M18b; off unless turned on). */
   private readonly soundCues: SoundCues;
-  private readonly squadLine: SquadOrderLine;
+  private readonly squadLine: SquadBar;
   private readonly holdMarker: HoldMarker;
   private readonly holdAnchor = new THREE.Vector3();
   private readonly holdAt: ScreenMarker = { x: 0, y: 0, onScreen: false };
@@ -141,7 +143,7 @@ export class MatchPresentation {
     /** The team colours picked on Settings → Accessibility (the HUD's follow the container's CSS, see Game.play). */
     teamColours: TeamColours,
     /** The map's blocks, sloping ground, bushes and storeys, for the minimap's drawing of the field. */
-    field: Pick<MapData, 'blocks' | 'terrain' | 'foliage' | 'storeys'>,
+    field: Pick<MapData, 'blocks' | 'terrain' | 'foliage' | 'storeys'> & { name?: string },
     /** The figure model, if the build has one (M25a); null draws the built-in figures. */
     figureModel: FigureModel | null = null,
     /** Player detail (QualitySettings.figureDetail, FA8); setFigureDetail changes it. */
@@ -156,6 +158,7 @@ export class MatchPresentation {
     scene.add(this.characters.object, this.flag.object);
     this.feedback = new HitFeedback(container, () => keyName('fire'));
     this.scoreboard = new Scoreboard(container, teamSizes, player.team);
+    this.scoreboard.setAim(extraction ? HUD_TEXT.run : HUD_TEXT.firstTo(rules.winsNeeded, rules.winBy));
     this.marker = new FlagMarker(container);
     this.spectator = new SpectatorCamera(state.characters, player, body, query);
     this.names = rosterNames(state.characters, player.id);
@@ -165,9 +168,12 @@ export class MatchPresentation {
     this.board = new MatchBoard(container);
     this.whatGotYou = new WhatGotYouCard(container);
     this.soundCues = new SoundCues(container);
-    this.squadLine = new SquadOrderLine(container, player.team);
+    this.squadLine = new SquadBar(container, player.team, [player, ...this.mates], this.names, keyName);
     this.holdMarker = new HoldMarker(container, teamCss(player.team));
     this.minimap = new Minimap(container, field.blocks, cssColor(teamColours.hud[player.team]!), cssColor(teamColours.hud[1 - player.team]!), field.terrain ?? null, field.foliage ?? [], field.storeys);
+    this.mapName = field.name ?? '';
+    // The map and round under the minimap (G4); an Extraction run is one long round, so only the map.
+    this.minimap.setCaption(HUD_TEXT.where(this.mapName, extraction ? 0 : state.round.number));
     const run = state.round.run;
     this.minimapFrame = {
       x: 0,
@@ -198,6 +204,8 @@ export class MatchPresentation {
   }
 
   private readonly keyName: (action: Action) => string;
+  /** The map's name, for the minimap's caption (G4). */
+  private readonly mapName: string;
   private wheelHintSelect: WheelSelect | '' = '';
   private wheelHintOn = false;
   private wheelHintText = '';
@@ -314,6 +322,7 @@ export class MatchPresentation {
         warned = true;
       } else if (e.type === 'roundStart') {
         this.roundStartedAt = this.state.time;
+        this.minimap.setCaption(HUD_TEXT.where(this.mapName, this.extraction ? 0 : e.round));
         this.whatGotYou.clear();
         this.spectator.reset();
         this.feed.roundStarted(e.round);
@@ -336,7 +345,7 @@ export class MatchPresentation {
     }
   }
 
-  /** You pressed a squad order key and `result` is now in force (`why`: the reason if none is); see SquadOrderLine. */
+  /** You pressed a squad order key and `result` is now in force (`why`: the reason if none is); see SquadBar. */
   orderGiven(result: SquadOrderKind | 'none', why: OrderNotice): void {
     this.squadLine.ordered(result, why);
   }

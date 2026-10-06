@@ -4,7 +4,7 @@ import { cssColor } from '../config/teams';
 import type { Bush } from '../map/foliage';
 import type { MapBlock } from '../map/mapTypes';
 import { type Terrain, terrainMaxX, terrainMaxZ, terrainRange, vertexHeight } from '../map/terrain';
-import { clampToRim, coverHeight, type HeardPlayer, insideCircle, type MapPoint, minimapPixelRatio, noiseAlpha, toMinimap } from './minimapView';
+import { clampToSquare, coverHeight, FrameCheck, type HeardPlayer, insideSquare, type MapPoint, minimapPixelRatio, noiseAlpha, toMinimap } from './minimapView';
 
 /** A teammate as the minimap shows them: where they are (`y`: their feet), and whether they've called a hit (greyed). */
 export interface MinimapMate {
@@ -63,12 +63,19 @@ const NO_DASH: readonly number[] = [];
 
 /**
  * The minimap (M23), top left while you play: the field round you, turned so the way you look is up, with your
- * teammates always on it (pinned to the rim when further off) and the other team only where you last heard each of
- * them (minimapView.ts HeardPlayers). Everything is drawn on one canvas each frame from a field drawing made once per
- * match; nothing is allocated per frame.
+ * teammates always on it (pinned to the edge when further off) and the other team only where you last heard each of
+ * them (minimapView.ts HeardPlayers). Since G4 a square panel in a frame, with the map and round under it. Everything is
+ * drawn on one canvas from a field drawing made once per match, and drawn again only when something on it changed (a
+ * FrameCheck of every number the drawing uses); nothing is allocated per frame.
  */
 export class Minimap {
+  private readonly frame: HTMLDivElement;
+  private readonly caption: HTMLParagraphElement;
   private readonly root: HTMLCanvasElement;
+  private readonly check = new FrameCheck();
+  private shownCaption = '';
+  /** Frames actually drawn (the others were the same as the last): for the tests. */
+  draws = 0;
   private readonly ctx: CanvasRenderingContext2D | null;
   /** The field drawing, one per storey (M34c) on a map with several, lowest first; else one. */
   private readonly fields: (FieldLayer | null)[];
@@ -77,8 +84,8 @@ export class Minimap {
   /** The backing canvas's pixels per CSS pixel, and the HUD's scale (style.css --hud-scale), as last laid out. */
   private pixelRatio = 0;
   private scale = 0;
-  /** Where the minimap's circle is on the screen (px from the game's top left), for the markers it hides (audit UI-13). */
-  private readonly circle = { x: 0, y: 0, r: 0 };
+  /** Where the minimap's square is on the screen (px from the game's top left), for the markers it hides (audit UI-13). */
+  private readonly box = { x: 0, y: 0, size: 0 };
   private readonly at: MapPoint = { x: 0, y: 0 };
   private visible = false;
   /** Whether the other team shows where heard (M23); off under rules that show teammates only (M39). */
@@ -100,14 +107,19 @@ export class Minimap {
     /** The map's storeys (M34c, MapData.storeys): one drawing of the field per storey. */
     storeys: readonly number[] = [],
   ) {
+    this.frame = document.createElement('div');
+    this.frame.className = 'minimap-frame';
+    this.frame.hidden = true;
+    this.frame.setAttribute('aria-hidden', 'true');
     this.root = document.createElement('canvas');
     this.root.className = 'minimap';
-    this.root.hidden = true;
-    this.root.setAttribute('aria-hidden', 'true');
+    this.caption = document.createElement('p');
+    this.caption.className = 'minimap-caption';
+    this.frame.append(this.root, this.caption);
     this.ctx = this.root.getContext('2d');
     this.storeys = storeys.length > 1 ? storeys : [];
     this.fields = this.storeys.length > 0 ? this.storeys.map((_, i) => drawField(blocks, terrain, foliage, this.storeys, i)) : [drawField(blocks, terrain, foliage)];
-    parent.appendChild(this.root);
+    parent.appendChild(this.frame);
     this.layout();
     // The window moved to a screen of another pixel ratio, browser zoom, or the HUD's size changed (audit UI-14).
     globalThis.addEventListener?.('resize', this.layout);
@@ -116,7 +128,8 @@ export class Minimap {
   /** False while a menu is up. Shown again, it is laid out afresh (the HUD's size may have changed on the menus). */
   setVisible(visible: boolean): void {
     this.visible = visible;
-    this.root.hidden = !visible;
+    this.frame.hidden = !visible;
+    this.check.reset();
     // A class on the container, so the debug panel can sit below the minimap while it shows (style.css, audit UI-06:
     // a parent `:has()` rule is dropped by Firefox before 121).
     this.parent.classList.toggle('minimap-on', visible);
@@ -126,19 +139,25 @@ export class Minimap {
   /** Heard patches shown (true, M23) or not: teammates only (the Rules picker's minimap switch, M39). */
   setHeardShown(shown: boolean): void {
     this.heardShown = shown;
+    this.check.reset();
+  }
+
+  /** The line under the panel: the map and the round ("Depot · Round 2"). */
+  setCaption(text: string): void {
+    if (text !== this.shownCaption) this.caption.textContent = this.shownCaption = text;
   }
 
   /**
-   * Whether (x, y), px from the game's top left, is under the minimap's circle while it shows: a teammate marker there
-   * would read through it (audit UI-13).
+   * Whether (x, y), px from the game's top left, is under the minimap while it shows: a teammate marker there would read
+   * through it (audit UI-13).
    */
   covers(x: number, y: number): boolean {
-    return this.visible && insideCircle(x, y, this.circle.x, this.circle.y, this.circle.r);
+    return this.visible && insideSquare(x, y, this.box.x, this.box.y, this.box.size);
   }
 
   /**
    * Sizes the canvas for the HUD's scale and the screen's pixel ratio, re-read each time (audit UI-14: once per match
-   * left it blurry or oversized after a move to another screen), and notes where its circle is.
+   * left it blurry or oversized after a move to another screen), and notes where its square is.
    */
   private readonly layout = (): void => {
     const scale = Number(this.parent.style.getPropertyValue('--hud-scale')) || 1;
@@ -149,21 +168,23 @@ export class Minimap {
       const px = Math.round(MINIMAP.size * scale * ratio);
       this.root.width = px;
       this.root.height = px;
+      this.check.reset(); // a resized canvas is blank
       // On the container, so the debug panel can move clear of the minimap too (style.css, bug pass).
       this.parent.style.setProperty('--minimap-size', `${MINIMAP.size * scale}px`);
     }
     if (!this.visible) return;
     const box = this.root.getBoundingClientRect();
     const origin = this.parent.getBoundingClientRect();
-    this.circle.r = box.width / 2;
-    this.circle.x = box.left - origin.left + this.circle.r;
-    this.circle.y = box.top - origin.top + this.circle.r;
+    this.box.size = box.width;
+    this.box.x = box.left - origin.left;
+    this.box.y = box.top - origin.top;
   };
 
-  /** Once per frame while playing. */
+  /** Once per frame while playing: drawn only when it would differ from the last frame drawn. */
   update(f: MinimapFrame, heard: readonly HeardPlayer[]): void {
     const ctx = this.ctx;
-    if (!ctx || !this.visible) return;
+    if (!ctx || !this.visible || !this.changed(f, heard)) return;
+    this.draws++;
     const half = MINIMAP.size / 2;
     const rim = half - 3;
     const scale = rim / MINIMAP.viewRadius;
@@ -171,10 +192,10 @@ export class Minimap {
     ctx.setTransform(k, 0, 0, k, 0, 0);
     ctx.clearRect(0, 0, MINIMAP.size, MINIMAP.size);
 
-    // The field, turned with the view, inside the circle.
+    // The field, turned with the view, inside the square.
     ctx.save();
     ctx.beginPath();
-    ctx.arc(half, half, rim, 0, Math.PI * 2);
+    ctx.rect(0, 0, MINIMAP.size, MINIMAP.size);
     ctx.fillStyle = MINIMAP.colours.backdrop;
     ctx.fill();
     ctx.clip();
@@ -191,10 +212,10 @@ export class Minimap {
     ctx.save();
     ctx.translate(half, half);
     // The other team where they were heard: a patch as wide as the guess is vague, dashed for a footstep, kept inside
-    // the circle. Heard beyond the map's edge (a shot carries further than it shows), a small patch on the rim towards
+    // the square. Heard beyond the map's edge (a shot carries further than it shows), a small patch on the edge towards
     // them.
     ctx.beginPath();
-    ctx.arc(0, 0, rim, 0, Math.PI * 2);
+    ctx.rect(-half, -half, MINIMAP.size, MINIMAP.size);
     ctx.save();
     ctx.clip();
     for (const h of heard) {
@@ -202,8 +223,8 @@ export class Minimap {
       const alpha = noiseAlpha(f.time - h.at);
       if (alpha <= 0) continue;
       const p = toMinimap(f.yaw, f.x, f.z, h.x, h.z, scale, this.at);
-      // Pinned only once its middle is off the map: a patch reaching past the rim is just clipped by it.
-      const pinned = clampToRim(p, rim);
+      // Pinned only once its middle is off the map: a patch reaching past the edge is just clipped by it.
+      const pinned = clampToSquare(p, rim);
       ctx.beginPath();
       ctx.arc(p.x, p.y, pinned ? MINIMAP.rimPatch : Math.max(4, h.radius * scale), 0, Math.PI * 2);
       ctx.fillStyle = this.theirs;
@@ -230,29 +251,61 @@ export class Minimap {
     for (let i = 0; i < f.count; i++) this.drawMate(f, f.mates[i]!, scale, rim);
     this.drawYou();
     ctx.restore();
+  }
 
-    // The rim.
-    ctx.beginPath();
-    ctx.arc(half, half, rim, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
+  /** Whether this frame would draw anything other than the last one did: every number the drawing reads, in order. */
+  private changed(f: MinimapFrame, heard: readonly HeardPlayer[]): boolean {
+    const c = this.check;
+    c.begin();
+    c.add(f.x);
+    c.add(f.z);
+    c.add(f.yaw);
+    c.add(storeyOf(this.storeys, f.y));
+    for (let i = 0; i < f.count; i++) {
+      const m = f.mates[i]!;
+      c.add(m.x);
+      c.add(m.z);
+      c.add(m.hit ? 1 : 0);
+      c.add(storeyOf(this.storeys, m.y));
+    }
+    c.add(f.hold ? f.hold.x : -1e9);
+    c.add(f.hold ? f.hold.z : -1e9);
+    c.add(f.flag ? f.flag.x : -1e9);
+    c.add(f.flag ? f.flag.z : -1e9);
+    for (let i = 0; i < f.exitCount; i++) {
+      const e = f.exits[i]!;
+      c.add(e.x);
+      c.add(e.z);
+      c.add(e.open ? 1 : 0);
+    }
+    if (this.heardShown) {
+      for (const h of heard) {
+        const alpha = Number.isNaN(h.at) ? 0 : noiseAlpha(f.time - h.at);
+        if (alpha <= 0) continue;
+        c.add(h.x);
+        c.add(h.z);
+        c.add(h.radius);
+        c.add(h.kind === 'step' ? 1 : 0);
+        c.add(alpha);
+      }
+    }
+    return c.end();
   }
 
   dispose(): void {
     globalThis.removeEventListener?.('resize', this.layout);
     this.parent.classList.remove('minimap-on');
-    this.root.remove();
+    this.frame.remove();
   }
 
   /**
-   * A teammate: a dot in your team's colour, grey once hit, pinned to the rim (and hollow) when off the map's edge; on
+   * A teammate: a dot in your team's colour, grey once hit, pinned to the edge (and faded) when off the map's edge; on
    * another storey than the one drawn (M34c), a small arrow over it pointing up or down to theirs.
    */
   private drawMate(f: MinimapFrame, m: MinimapMate, scale: number, rim: number): void {
     const ctx = this.ctx!;
     const p = toMinimap(f.yaw, f.x, f.z, m.x, m.z, scale, this.at);
-    const pinned = clampToRim(p, rim - 5);
+    const pinned = clampToSquare(p, rim - 5);
     ctx.beginPath();
     ctx.arc(p.x, p.y, 4.5, 0, Math.PI * 2);
     ctx.lineWidth = 1.5;
@@ -297,7 +350,7 @@ export class Minimap {
   private drawHold(f: MinimapFrame, scale: number, rim: number): void {
     const ctx = this.ctx!;
     const p = toMinimap(f.yaw, f.x, f.z, f.hold!.x, f.hold!.z, scale, this.at);
-    clampToRim(p, rim - 6);
+    clampToSquare(p, rim - 6);
     ctx.beginPath();
     ctx.moveTo(p.x, p.y - 6);
     ctx.lineTo(p.x + 6, p.y);
@@ -315,7 +368,7 @@ export class Minimap {
   private drawExit(f: MinimapFrame, e: MinimapExit, scale: number, rim: number): void {
     const ctx = this.ctx!;
     const p = toMinimap(f.yaw, f.x, f.z, e.x, e.z, scale, this.at);
-    clampToRim(p, rim - 7);
+    clampToSquare(p, rim - 7);
     ctx.beginPath();
     ctx.rect(p.x - 4, p.y - 5, 8, 10);
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
@@ -330,7 +383,7 @@ export class Minimap {
   private drawFlag(f: MinimapFrame, scale: number, rim: number): void {
     const ctx = this.ctx!;
     const p = toMinimap(f.yaw, f.x, f.z, f.flag!.x, f.flag!.z, scale, this.at);
-    clampToRim(p, rim - 7);
+    clampToSquare(p, rim - 7);
     ctx.beginPath();
     ctx.moveTo(p.x - 3, p.y + 6);
     ctx.lineTo(p.x - 3, p.y - 7);

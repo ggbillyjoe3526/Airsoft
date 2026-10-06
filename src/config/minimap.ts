@@ -6,11 +6,11 @@ import { SOUND_CUES } from './accessibility';
  * sound plays: the sound cue ranges), as a patch rather than a point, wider the further off it was, fading out.
  */
 export const MINIMAP = {
-  /** On-screen size (CSS px, square; the field is drawn in a circle inside it), before the HUD's scale. */
+  /** On-screen size (CSS px, square: the field fills the square panel, G4), before the HUD's scale. */
   size: 200,
   /** The canvas never draws finer than this many pixels per CSS pixel: the field drawing's detail (layerScale). */
   maxPixelRatio: 2,
-  /** Metres from the middle to the edge of the circle. */
+  /** Metres from the middle to the panel's edge (its corners reach a little further). */
   viewRadius: 20,
   /**
    * Pixels per metre in the field drawing made once per match (it's scaled as drawn: about 4.9 px/m on screen, so this
@@ -34,7 +34,7 @@ export const MINIMAP = {
   noiseMaxBlur: 7,
   /** The patch's radius is the blur plus this (m), so the player is always inside it. */
   noisePad: 1,
-  /** A player heard beyond the minimap's edge shows as a patch this big (px) on its rim, towards them. */
+  /** A player heard beyond the minimap's edge shows as a patch this big (px) on that edge, towards them. */
   rimPatch: 5,
   /** Blocks whose top is at most this high (m) above the floor they stand on draw as low cover; taller ones as walls. */
   lowCoverTop: 1.3,

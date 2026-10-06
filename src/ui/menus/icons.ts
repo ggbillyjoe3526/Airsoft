@@ -84,10 +84,12 @@ export const PAUSE_ICONS = {
 /** The title screen's warning (no hardware acceleration). */
 export const WARNING_ICON = icon('<path d="M12 3.5L2.5 20h19z"/><path d="M12 10v4.5M12 17.2h.01"/>');
 
-/** The hit feed's tags: a hit on a teammate, a BB that bounced first. */
+/** The hit feed's marks: a hit on a teammate, a BB that bounced first, the BB between the two names. */
 export const FEED_ICONS = {
   friendly: icon('<circle cx="8.5" cy="8" r="3"/><circle cx="16" cy="9" r="2.5"/><path d="M3 19.5a5.5 5.5 0 0 1 11 0M14 14.5a4.5 4.5 0 0 1 7 4"/>'),
   ricochet: icon('<path d="M3 6l7 12 4-8 7 6"/><path d="M17.5 16h3.5v-3.5"/>'),
+  /** Between the shooter and who called it (G4): a BB with its trail. */
+  bb: icon('<circle cx="16.5" cy="12" r="4" fill="currentColor"/><path d="M3 12h7M5 8.5h5M5 15.5h5"/>'),
 } as const;
 
 /**

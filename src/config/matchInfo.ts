@@ -5,7 +5,7 @@
 
 import { type Difficulty, difficultyAtLeast } from './bots';
 
-/** The hit feed in the top-right corner: "Orange 2 called HIT · Blue 1", newest at the top. */
+/** The hit feed in the top-right corner, newest at the top (a screen reader hears "Orange 2 called HIT · Blue 1"). */
 export const HIT_FEED = {
   /** Most lines shown at once; an older line is dropped when a new one comes in. */
   maxLines: 5,
@@ -14,6 +14,8 @@ export const HIT_FEED = {
   fadeTime: 1,
   /** Lines kept when the feed is set to Keep (Settings → HUD, M24): the match's last this many hits, none fading. */
   keptLines: 10,
+  /** The tag at the end of each row (G4). */
+  tag: 'Hit',
 } as const;
 
 /** Settings → HUD → Hit feed (M24): lines fade as before, or the last few stay up for the whole match. */
