@@ -136,6 +136,9 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M43** · The summary's records table has no column for a mode still being built (its matches aren't recorded) (#83)
 - **G5** · Frame-rate limit choices are Unlimited (the default), 30, 60, 120, 144 and 240; an older saved limit becomes the nearest choice
 - **G5** · Graphics › Night lights adds Nearest 8
+- **M71** · Bots hunt the map's middle once their lane is swept (now all levels, not just Pro); Normal and Hard hold their posts out of lantern light at night (#133)
+- **M71** · At night, bots switch their weapon torch on only for fights within 20 m and the final approach to search targets, not for the whole journey (#133)
+- **M71** · Bots already sidestepping in a fight step further apart when pressed together (#133)
 
 ### Fixed
 - **M70** · If another open tab of the game saved your collection first, the Armory now reloads it at once and says so, instead of quietly undoing your Shot later (#122)

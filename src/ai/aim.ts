@@ -41,7 +41,8 @@ export function aimErrorSize(sinceAcquired: number, moving: boolean, dist: numbe
 
 /**
  * Turns the view towards (desiredYaw, desiredPitch) plus the wandering aim error of size `errorSize`,
- * at most skill.turnRate per second (the error wanders at the shared cfg.aimWanderRate). Returns the
+ * at most skill.turnRate per second (the error wanders at the shared cfg.aimWanderRate, chasing each new wander goal
+ * at cfg.aimWanderSettle times that rate). Returns the
  * angle (radians) still left between the view and the erroneous aim point.
  */
 export function stepAim(a: AimState, desiredYaw: number, desiredPitch: number, errorSize: number, cfg: BotBehaviour, skill: BotSkill, rng: RngState, dt: number): number {
@@ -53,7 +54,7 @@ export function stepAim(a: AimState, desiredYaw: number, desiredPitch: number, e
     a.goalErrYaw = Math.cos(angle) * r;
     a.goalErrPitch = Math.sin(angle) * r;
   }
-  const k = 1 - Math.exp(-cfg.aimWanderRate * 3 * dt);
+  const k = 1 - Math.exp(-cfg.aimWanderRate * cfg.aimWanderSettle * dt);
   a.errYaw += (a.goalErrYaw - a.errYaw) * k;
   a.errPitch += (a.goalErrPitch - a.errPitch) * k;
 

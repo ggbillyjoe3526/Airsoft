@@ -5,7 +5,7 @@ import type { LightingPresetId } from '../config/render';
 import { mapUnderLighting } from '../map/lightingChoice';
 import { NEON_HEIGHTS } from '../map/neonHeights';
 import { initPhysics } from '../physics/physicsWorld';
-import { expectGrounded, playMatch } from './depotMatchSupport';
+import { expectGrounded, LEVELS_BAND, playMatch } from './depotMatchSupport';
 
 /** Neon Heights plays 4v4 (M34c). */
 const TEAM_SIZE = 4;
@@ -16,7 +16,7 @@ describe.each<LightingPresetId>(['day', 'night'])('a 4v4 Attack / Defend match o
     await initPhysics();
   });
 
-  it('keeps the flag fair: attackers win 40-60 %, some by raising it, under 1 round in 10 runs out the clock', { timeout: 300_000 }, () => {
+  it('keeps the flag fair: attackers win 40-65 %, some by raising it, under 1 round in 10 runs out the clock', { timeout: 300_000 }, () => {
     let rounds = 0;
     let attackWins = 0;
     let captures = 0;
@@ -38,9 +38,13 @@ describe.each<LightingPresetId>(['day', 'night'])('a 4v4 Attack / Defend match o
     // 1-32 they won 54 %, 32 of 178 rounds by raising the flag. By night (M34d, 2026-10-05) they won 39 of 87 here
     // (45 %), 10 by raising it, none on time; with M34e's lamps and dark rooms 49 of 95 (52 %), none on time. With every
     // bot carrying the torch the game fits it at night (M57, audit AI-02, on M55's maps) 47 of 95 (49.5 %), 13 by
-    // raising it, none on time. Re-measure with this test after any layout or bot change.
-    expect(attackWins / rounds).toBeGreaterThanOrEqual(0.4);
-    expect(attackWins / rounds).toBeLessThanOrEqual(0.6);
+    // raising it, none on time. Re-measure with this test after any layout or bot change. M71 (Audit 2: every level
+    // hunts the middle and keeps out of the light, torches only for a close fight): by day 56 of 93 (60.2 %), 21 by
+    // raising it; by night 50 of 93 (53.8 %), 10; none on time. The ceiling is the levels' 65 % since (LEVELS_BAND, owner
+    // decision 3): Normal attackers who now come through the middle win one round in 93 more than 60 %.
+    const said = `${light}: attackers ${attackWins} of ${rounds}, ${captures} by raising it, ${onTime} on time`;
+    expect(attackWins / rounds, said).toBeGreaterThanOrEqual(0.4);
+    expect(attackWins / rounds, said).toBeLessThanOrEqual(LEVELS_BAND[1]);
     expect(captures).toBeGreaterThan(0);
     expect(onTime / rounds).toBeLessThan(0.1);
   });

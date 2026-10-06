@@ -125,6 +125,9 @@ describe('bots in a headless match cannot see a player hiding in a bush (M33e, a
     const stats = playMatch(seconds, 5, HIDER, BOTS, 'elimination', { ...ROUNDS, eliminationFirstEnd: 0 }, field(foliage), 3, HITS, (state, controller) => {
       const hider = state.characters[0]!;
       if (hider.status !== 'alive' || state.round.phase !== 'live') return;
+      // Only while hiding: once found (since Audit 2 every level hunts the middle, where the bush is, so the first round
+      // ends), the next round starts the hider at its spawn in the open.
+      if (Math.hypot(hider.position.x - HIDER.x, hider.position.z - HIDER.z) > HIDING.radius) return;
       for (const b of controller.bots) {
         if (!b.targetVisible || b.targetId !== hider.id) continue;
         const d = Math.hypot(b.character.position.x - hider.position.x, b.character.position.z - hider.position.z);

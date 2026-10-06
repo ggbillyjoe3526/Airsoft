@@ -38,7 +38,9 @@ describe('a 3v3 Attack / Defend match on Depot: the pole over 16 seeds', () => {
     // FA4 (2026-10-04: one attacker raises, the others guard the pole from cover): 13 captures in 120 rounds, flags
     // raised in 7 of 16, attackers 51%, no friendly hits; over seeds 1-48 37 captures in 359 rounds (10%; 19% before
     // FA4, when all three crowded the rope), attackers 51% (52% before). After merging M30 and FA1: 20 captures in 123
-    // rounds, flags raised in 13 of 16, attackers 55% (without FA4: 25 in 125, 58%).
+    // rounds, flags raised in 13 of 16, attackers 55% (without FA4: 25 in 125, 58%). M71 (Audit 2: every level hunts
+    // the middle, bots step aside when pressed together): 14 captures in 122 rounds, flags raised in 8 of 16, attackers
+    // 57%, 1 friendly hit.
     // Re-measure and update DECISIONS with this test after any bot tuning change.
     expect(friendlyHits).toBeLessThanOrEqual(1);
     expect(captures).toBeGreaterThanOrEqual(9);
