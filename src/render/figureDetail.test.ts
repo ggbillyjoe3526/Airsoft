@@ -231,6 +231,70 @@ describe('figure shadows (M75, audit REN-03 step 1)', () => {
   });
 });
 
+describe('figure shadows, what the camera and the renderer see (M75, QA)', () => {
+  const FITTED: FigureKit = { rifleSilencer: true, rifleTorch: true, pistolTorch: true };
+  // Triangles the camera drew of all six parts over looks 0-5, before the stand-ins (read off main at 0.1 Dev 4's G7
+  // figures): the stand-ins lie after these in the geometry and must never reach the camera.
+  const BEFORE: Record<string, number> = {
+    'low human bare': 18792, 'low human fitted': 19224, 'low robot bare': 17796, 'low robot fitted': 18228,
+    'high human bare': 64152, 'high human fitted': 64584, 'high robot bare': 57072, 'high robot fitted': 57504,
+  };
+
+  it('draws exactly the triangles the figure drew before the stand-ins, at both details, human or robot, bare or fitted', () => {
+    for (const [dn, detail] of [['low', FIGURE.detail.low], ['high', FIGURE.detail.high]] as const) {
+      for (const robot of [false, true]) {
+        for (const [kn, kit] of [['bare', BARE_KIT], ['fitted', FITTED]] as const) {
+          let n = 0;
+          for (const id of [0, 1, 2, 3, 4, 5]) {
+            const f = buildFigure(0x3d8bff, new THREE.MeshStandardMaterial(), new THREE.SpriteMaterial(), id, null, detail, kit, { ...HUMAN_DRESS, robot });
+            for (const o of [f.legL, f.legR, f.upper.children[0]!, f.aimRifle, f.aimPistol, f.hitPose]) n += tris(o);
+            disposeFigure(f);
+          }
+          const key = `${dn} ${robot ? 'robot' : 'human'} ${kn}`;
+          expect(n, key).toBe(BEFORE[key]);
+        }
+      }
+    }
+  }, 30_000);
+
+  it('swaps the draw range to the stand-ins for a shadow pass and back after it', () => {
+    const f = buildFigure(0x3d8bff, new THREE.MeshStandardMaterial(), new THREE.SpriteMaterial(), 1, null, FIGURE.detail.high);
+    for (const m of meshesOf(f.root)) {
+      const g = m.geometry;
+      const total = g.getAttribute('position').count;
+      const seen = g.drawRange.count;
+      expect(seen).toBeLessThan(total);
+      expect(g.drawRange.start).toBe(0);
+      m.onBeforeShadow({} as never, {} as never, {} as never, {} as never, g, {} as never, null as never);
+      expect(g.drawRange.start).toBe(seen);
+      expect(g.drawRange.count).toBe(total - seen);
+      m.onAfterShadow({} as never, {} as never, {} as never, {} as never, g, {} as never, null as never);
+      expect(g.drawRange.start).toBe(0);
+      expect(g.drawRange.count).toBe(seen);
+    }
+    disposeFigure(f);
+  });
+
+  it('gives the renderer\'s detailed figures (a silencer fitted between rounds) the light shadows too', () => {
+    vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => null }) });
+    try {
+      const characters = [createCharacter(0, vec3(), 0), createCharacter(1, vec3(2, 0, 0), 1)];
+      const r = new CharacterRenderer(characters, [0x3d8bff, 0xff8a2a], HITS, null, 'high');
+      r.setReceiveShadows(true);
+      r.update(1, 0.016, -1);
+      const rifle = characters[0]!.armament.replicas.findIndex((c) => c.look.model !== 'pistol');
+      fitParts(characters[0]!.armament, characters[0]!.armament.parts.map((p, i) => (i === rifle ? { ...p, muzzle: 'silencer' as const } : p)));
+      r.update(1, 0.016, -1);
+      const parts = meshesOf(r.object).filter((m) => m.castShadow);
+      expect(parts).toHaveLength(12);
+      for (const m of parts) expect(shadowTris(m)).toBeLessThan(tris(m) / 2);
+      r.dispose();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
 /** The widest the aiming rifle gets across (from its bore) in the last `from`..`to` metres behind its muzzle. */
 const widthNearMuzzle = (f: Figure, from: number, to: number): number => {
   const pos = (f.aimRifle as THREE.Mesh).geometry.getAttribute('position');

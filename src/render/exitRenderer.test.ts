@@ -111,6 +111,97 @@ describe('ExitRenderer on terrain (M48)', () => {
     }
   });
 
+  it('keeps the same five draws, the same buffers and every exit in exactly one board draw as exits open and shut in any order (M75, QA)', () => {
+    const run = createRunState();
+    // Three columns, two rows, 7 m apart: no two rings touch (each is 3 m round).
+    const spots = [[-7, -5], [0, -5], [7, -5], [-7, 5], [0, 5], [7, 5]] as const;
+    run.exits = spots.map(([x, z], i) => ({ ...exitAt(x, z), late: i % 2 === 1, open: i % 2 === 0 }));
+    run.exits.push({ ...exitAt(0, 0), closed: true });
+    const r = new ExitRenderer(run, SLOPE);
+    r.update(run);
+    const before = meshes(r.object);
+    const floor = r.object.getObjectByName('exit-floor') as THREE.Mesh;
+    const buffers = (m: THREE.Mesh): unknown[] => [m.geometry, ...Object.values(m.geometry.attributes)];
+    const buffersBefore = before.map(buffers);
+    const colour = floor.geometry.getAttribute('color');
+    const boards = (name: string) => r.object.getObjectByName(name) as THREE.InstancedMesh;
+    /** Meshes that would draw this frame: visible, and (instanced) with something to draw. */
+    const draws = (): number => meshes(r.object).filter((m) => m.visible && (!(m instanceof THREE.InstancedMesh) || m.count > 0)).length;
+    const shownColours = (i: number): string => {
+      // The colours of exit i's floor vertices: the ones within its radius of its middle.
+      const [x, z] = spots[i]!;
+      const seen = new Set<string>();
+      const pos = floor.geometry.getAttribute('position');
+      for (let v = 0; v < pos.count; v++) if (Math.hypot(pos.getX(v) - x, pos.getZ(v) - z) < 3.01) seen.add([colour.getX(v), colour.getY(v), colour.getZ(v)].map((c) => c.toFixed(4)).join());
+      return [...seen].join('|');
+    };
+    const open = new THREE.Color(V.openColor);
+    const shut = new THREE.Color(V.shutColor);
+    const key = (c: THREE.Color): string => [c.r, c.g, c.b].map((v) => v.toFixed(4)).join();
+    // Opens and re-closes a late exit at a time, in different orders, then all at once and all shut.
+    const orders: number[][] = [[1, 3, 5], [5, 1, 3, 3, 1], [3, 5, 5, 3, 1], [1, 1, 1, 5]];
+    for (const order of orders) {
+      for (const i of order) {
+        run.exits[i]!.open = !run.exits[i]!.open;
+        r.update(run);
+        const now = meshes(r.object);
+        expect(now).toEqual(before);
+        now.forEach((m, k) => buffers(m).forEach((b, j) => expect(b).toBe(buffersBefore[k]![j])));
+        expect(r.object.children).toHaveLength(5);
+        // Every drawn exit's board is in exactly one of the two draws, and the draw call count stays within five.
+        expect(boards('exit-boards-open').count + boards('exit-boards-shut').count).toBe(6);
+        expect(boards('exit-boards-open').count).toBe(run.exits.slice(0, 6).filter((e) => e.open).length);
+        expect(draws()).toBeLessThanOrEqual(5);
+        for (let k = 0; k < 6; k++) expect(shownColours(k), `exit ${k}`).toBe(key(run.exits[k]!.open ? open : shut));
+      }
+    }
+    for (const e of run.exits) e.open = false;
+    r.update(run);
+    expect(boards('exit-boards-open').count).toBe(0);
+    expect(boards('exit-boards-open').visible).toBe(false);
+    expect(boards('exit-boards-shut').count).toBe(6);
+    for (const e of run.exits) e.open = true;
+    r.update(run);
+    expect(boards('exit-boards-shut').count).toBe(0);
+    expect(boards('exit-boards-shut').visible).toBe(false);
+    expect(boards('exit-boards-open').count).toBe(6);
+    expect(draws()).toBe(4);
+    r.dispose();
+  });
+
+  it('keeps every ring and wash of several exits draped on the slope, before and after they repaint', () => {
+    const run = createRunState();
+    // Exits on the steep part, across the fall line, and one at the field\'s edge, each with its own radius.
+    run.exits = [exitAt(6, 6), exitAt(-6, -4), exitAt(5, -7), { ...exitAt(-5, 6), radius: 2.2, late: true, open: false }];
+    const r = new ExitRenderer(run, SLOPE);
+    r.object.updateMatrixWorld(true);
+    const { floor, alpha } = floorOf(r);
+    const drape = (when: string): void => {
+      let worst = 0;
+      worldVertices(floor).forEach((v, i) => {
+        const gap = Math.abs(v.y - groundAt(v.x, v.z) - liftOf(alpha(i)));
+        worst = Math.max(worst, gap);
+        // A few centimetres at most (the ring is laid on its own ground, so it is exact; the lift is its width over it).
+        expect(gap, `${when}: ${v.x.toFixed(2)}, ${v.z.toFixed(2)}`).toBeLessThan(0.02);
+      });
+      expect(worst).toBeLessThan(0.02);
+    };
+    drape('built');
+    expect(floor.geometry.getAttribute('position').count).toBeGreaterThan(4 * V.ringSegments * 2);
+    r.update(run);
+    drape('painted');
+    run.exits[3]!.open = true;
+    r.update(run);
+    drape('opened');
+    run.exits[3]!.open = false;
+    r.update(run);
+    drape('shut again');
+    // Over the slope the ring is not flat: it climbs with the ground, where a flat one would bury or hover.
+    const ys = worldVertices(floor).map((v) => v.y);
+    expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThan(1);
+    r.dispose();
+  });
+
   it('paints an exit open or shut in the colours and see-through it had, and moves its board to the open draw when it opens', () => {
     const run = createRunState();
     run.exits = [exitAt(-4, -3), { ...exitAt(4, 3), late: true, open: false }];
