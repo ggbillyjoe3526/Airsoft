@@ -92,8 +92,8 @@ export const EXTRACTION: ExtractionRules = {
   dropOpenTime: 0,
   /** The plan's numbers; Pro waves come as fast as Hard's (its bots are what make it harder). */
   waveEvery: { easy: 100, normal: 75, hard: 60, pro: 60 },
-  /** Measured on Woodland (audit check 9): Normal one fewer extracts 3 of 8 instead of 1 of 8; Pro one more, 0 of 8. */
-  opponentsByLevel: { easy: 0, normal: -1, hard: 0, pro: 1 },
+  /** Normal is the baseline (owner, 2026-10-06: Extraction wants more opponents, not fewer); Pro one more (Woodland, audit check 9: 0 of 8 out). */
+  opponentsByLevel: { easy: 0, normal: 0, hard: 0, pro: 1 },
   /** About a step and a half out of the insertion at a run: long enough to see who is there, too short to cross the yard. */
   insertionGrace: 3,
   /** "One more in play in the last third". */

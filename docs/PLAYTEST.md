@@ -1122,9 +1122,9 @@ Dev content on, Extraction on Depot, Normal, as above.
 - [ ] **Back in a wave:** a bot back in a wave takes an empty guard post first, else hunts or joins a patrol.
 - [ ] **Your teammates cover you:** hold G at a case with your two bot teammates following. They crouch at cover near
   you, each facing a different way outwards, until you're done.
-- [ ] **Difficulty:** Easy should let you out with three cases most runs, Normal about half of them, Hard rarely,
-  Pro hardly ever: say how it felt. The home team is the map's base plus your squad, one fewer on Normal and one more
-  on Pro (M72): with a squad of three on Depot, Normal 4, Hard 5, Pro 6.
+- [ ] **Difficulty:** Easy should let you out with three cases most runs, Normal about a third of them, Hard
+  rarely, Pro hardly ever: say how it felt. The home team is the map's base plus your squad, one more on Pro (M72):
+  with a squad of three on Depot, Easy, Normal and Hard 5, Pro 6.
 - [ ] **Coming in (M72):** for 3 s after you come in, and after a respawn, BBs neither hit you nor leave your replica
   (they stop where they land). On Woodland nobody of the home team stands within about 30 m of your insertion at the
   start. Does the first fight now start after you have had a look round?

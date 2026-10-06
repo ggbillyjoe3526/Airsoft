@@ -15,13 +15,13 @@ const BANDS: ExtractionBands = {
   // Hard 12.5 % (6) and 17.5, Pro 19 % (9) and 24. M71 (Audit 2: every level hunts the middle and keeps out of the
   // light, a torch only for a fight within 20 m or a search's last stretch): Easy 56 % (27) and 45, Normal 35.4 % (17)
   // and 35, Hard 19 % (9) and 19, Pro 25 % (12) and 29.
-  // M72 (Audit 2 BAL-03, owner decisions 1a and 8: the home team one fewer at Normal and one more at Pro, a 3 s grace for
+  // M72 (Audit 2 BAL-03, owner decisions 1a and 8: the home team one more at Pro, a 3 s grace for
   // the squad at the insertion and after a respawn, and the home team
-  // keeping 30 m from Woodland's insertion), seeds 1-48: Easy 54 % (26) and 45, Normal 46 % (22) and 40,
-  // Hard 15 % (7) and 15, Pro 19 % (9) and 21: Easy, Normal and Hard in order again, asserted below. Each band is
+  // keeping 30 m from Woodland's insertion), seeds 1-48: Easy 54 % (26) and 45, Normal (the baseline, the base
+  // plus the squad, owner 2026-10-06) 33 % (16) and 32, Hard 15 % (7) and 15, Pro 19 % (9) and 21: Easy, Normal and Hard in order again, asserted below. Each band is
   // the figure ±15 points (extract) and ±20 FC a minute, floored at 0.
   easy: { extract: [0.39, 0.69], fcPerMinute: [25, 65] },
-  normal: { extract: [0.31, 0.61], fcPerMinute: [20, 60] },
+  normal: { extract: [0.18, 0.48], fcPerMinute: [12, 52] },
   hard: { extract: [0, 0.3], fcPerMinute: [0, 35] },
   pro: { extract: [0.04, 0.34], fcPerMinute: [1, 41] },
 };

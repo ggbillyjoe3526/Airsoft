@@ -129,17 +129,17 @@ describe('Extraction: the home team by its level (M72, audit BAL-03)', () => {
   };
   const setup = { squad: 3, seed: 1, runner: 0, squadTeam: 0, respawnAfter: HITS.callTime, spawnLift: 0.05 };
 
-  it('is the base plus the squad, one fewer at Normal and one more at Pro, never under 1', () => {
-    expect(EXTRACTION.opponentsByLevel).toEqual({ easy: 0, normal: -1, hard: 0, pro: 1 });
+  it('is the base plus the squad, one more at Pro, never under 1', () => {
+    expect(EXTRACTION.opponentsByLevel).toEqual({ easy: 0, normal: 0, hard: 0, pro: 1 });
     expect(homeTeamCap(2, 3, 'easy')).toBe(5);
-    expect(homeTeamCap(2, 3, 'normal')).toBe(4);
+    expect(homeTeamCap(2, 3, 'normal')).toBe(5);
     expect(homeTeamCap(2, 3, 'hard')).toBe(5);
     expect(homeTeamCap(2, 3, 'pro')).toBe(6);
     expect(homeTeamCap(0, 1, 'normal')).toBe(1);
   });
 
   it('sizes the run by it: as many starts as the cap, and without a level the base plus the squad as before', () => {
-    expect(createRunContext(data, { ...setup, opponents: 'normal' }).opponentStarts).toHaveLength(4);
+    expect(createRunContext(data, { ...setup, opponents: 'normal' }).opponentStarts).toHaveLength(5);
     expect(createRunContext(data, { ...setup, opponents: 'pro' }).opponentStarts).toHaveLength(6);
     expect(createRunContext(data, setup).opponentStarts).toHaveLength(5);
   });

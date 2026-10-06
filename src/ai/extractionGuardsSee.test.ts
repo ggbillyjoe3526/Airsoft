@@ -23,8 +23,8 @@ const SECONDS = 12;
 /** The share of its ticks at the post a guard sees its way in (measured: every guard well over this). */
 const SEEN_SHARE = 0.8;
 /**
- * The home team's level: Normal, except on Depot, where only a field case's guard has a lean post and a Normal home
- * team (one fewer since M72, EXTRACTION.opponentsByLevel) is two locker guards and a patrol pair, no field case guard.
+ * The home team's level: Normal, except on Depot, where only a field case's guard has a lean post; Hard there (the same
+ * size as Normal, EXTRACTION.opponentsByLevel) as measured when M72 was built.
  */
 const MAPS: { name: string; map: MapData; opponents: Difficulty }[] = [
   { name: 'Depot', map: DEPOT, opponents: 'hard' },

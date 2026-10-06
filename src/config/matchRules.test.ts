@@ -119,8 +119,8 @@ describe('custom match rules (M20)', () => {
       value: 'Squad of 2 · 4 in the home team',
       detail: "One 8:00 run. Friendly fire on; ricochets don't count.",
     });
-    // The home team's size follows its level (Audit 2, EXTRACTION.opponentsByLevel): Normal one fewer, Pro one more.
-    expect(runRulesSummary({ ...DEFAULT_MATCH_RULES, teamSize: 2 }, { baseOpponents: 2, runTime: 480 }, 'normal').value).toBe('Squad of 2 · 3 in the home team');
+    // The home team's size follows its level (Audit 2, EXTRACTION.opponentsByLevel): Normal is the baseline, Pro one more.
+    expect(runRulesSummary({ ...DEFAULT_MATCH_RULES, teamSize: 2 }, { baseOpponents: 2, runTime: 480 }, 'normal').value).toBe('Squad of 2 · 4 in the home team');
     expect(runRulesSummary({ ...DEFAULT_MATCH_RULES, teamSize: 2 }, { baseOpponents: 2, runTime: 480 }, 'pro').value).toBe('Squad of 2 · 5 in the home team');
   });
 

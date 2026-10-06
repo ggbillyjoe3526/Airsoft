@@ -139,7 +139,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M71** · Bots hunt the map's middle once their lane is swept (now all levels, not just Pro); Normal and Hard hold their posts out of lantern light at night (#133)
 - **M71** · At night, bots switch their weapon torch on only for fights within 20 m and the final approach to search targets, not for the whole journey (#133)
 - **M71** · Bots already sidestepping in a fight step further apart when pressed together (#133)
-- **M72** · Extraction home team size now follows its level: the map's base plus squad, one fewer on Normal and one more on Pro
+- **M72** · Extraction home team size now follows its level: the map's base plus squad, one more on Pro
 - **M72** · A squad member just in or back from respawn has a 3 s grace: BBs neither hit them nor hit anyone from them
 - **M72** · Woodland's Extraction: the home team keeps 30 m from the insertion at the start
 - **M72** · Extraction guards at their posts lean out and watch the way in instead of turning to the wall

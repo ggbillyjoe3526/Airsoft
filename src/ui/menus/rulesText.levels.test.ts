@@ -30,10 +30,10 @@ const bots = (text: string) => Number(/against (\d+) Orange bots/.exec(text)?.[1
 const home = (value: string) => Number(/· (\d+) in the home team/.exec(value)?.[1]);
 
 describe('M72 QA: the rules text and the Match button by level', () => {
-  it('says the base plus the squad at Easy and Hard, one fewer at Normal, one more at Pro', () => {
+  it('says the base plus the squad at Easy, Normal and Hard, one more at Pro', () => {
     const said = DIFFICULTIES.map((opponents) => bots(describeRules({ ...RULES, opponents }, 'extraction', X)));
     expect(said).toEqual(DIFFICULTIES.map((l) => 2 + 3 + EXTRACTION.opponentsByLevel[l]));
-    expect(said).toEqual([5, 4, 5, 6]);
+    expect(said).toEqual([5, 5, 5, 6]);
     const sums = DIFFICULTIES.map((opponents) => home(runRulesSummary({ ...DEFAULT_MATCH_RULES, teamSize: 3 }, { baseOpponents: 2, runTime: 480 }, opponents).value));
     expect(sums).toEqual(said);
   });
