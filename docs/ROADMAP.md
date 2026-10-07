@@ -1005,8 +1005,9 @@ per note are in the project's shared files (`plans/playtest-feedback-2026-10-07.
 | 7 | The Armory's "Your collection" in columns, one per kind | M100 |
 | 8 | The Tutorial under START on a clean save only; a Replay tutorial setting | M100 (the title) and M97 (the setting) |
 
-Open for his ruling (defaults in the notes file): the font (Barlow was approved with G3), the shorter tagline, "Beta" as
-a team name beside the Beta builds, and Practice and the Tutorial leaving the title screen (his M21 and M16 rulings).
+**His rulings (2026-10-07, all four recommendations):** Inter replaces Barlow in the menus; the tagline becomes "Call
+your hit. Go again."; the teams are Alpha and Beta even beside the Beta builds (colours unchanged); Practice and the
+Tutorial leave the title screen as his notes say, replacing his M21 and M16 rulings of 2026-10-04.
 
 ### The owner's feature picks for 0.1 Dev 6 (2026-10-06)
 
