@@ -930,8 +930,13 @@ to [0.1 Dev 6](#the-owners-feature-picks-for-01-dev-6-2026-10-06)). The order:
 4. **Bug pass BP2** (the Dev 4 rows in `docs/KNOWN_ISSUES.md`), after the last Audit 2 tasks M77–M79 in `docs/TASKS.md`.
 5. **Graphics** (the overhaul pulled forward from 0.2 by the owner, 2026-10-05; plan `plans/graphics-overhaul-0.2.md`
    in the project files): G1–G3 and G5–G8 are merged; left are the G4 HUD restyle with the menu redesign M100 (his
-   2026-10-07 notes), G9 the Woodland and Neon Heights re-dress, G10 WebGPU (only if the perf run shows a gain) and
-   the map pictures.
+   2026-10-07 notes), G9 the Woodland and Neon Heights re-dress, then **WebGPU as a complete overhaul** (owner,
+   2026-10-07; replaces G10 and its "only if the perf run shows a gain"; scope `plans/webgpu-overhaul-scope.md`):
+   WebGPU draws every preset, with WebGL2 only as the automatic fallback through the same code; every material,
+   shader and post pass rebuilt on the node material system; GPU compute for particles, Woodland's grass and culling;
+   a performance gate on every map and both back ends. Its milestones: W0 the owner's laptop and desktop WebGL
+   baselines, W1 foundation, W2 world materials, W3 figures, replicas and clustered lights, W4 post stack and retro
+   filter, W5 compute, W6 the switch (old renderer deleted). The map pictures come last, from the new renderer.
 6. **The owner's playtest notes:** the Dev 4 notes M80–M91 and M96, and the 2026-10-07 notes M97–M99 (tables below).
 7. **The content toolkit, all four parts** (plan `plans/content-toolkit-concept.md`, approved with all defaults
    2026-10-05; about six to eight pull requests): 1 rulebooks and briefs, replica and attachment checks and the report
