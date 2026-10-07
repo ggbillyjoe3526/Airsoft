@@ -71,7 +71,7 @@ These are defaults to prototype, not final. Tune them through play.
 - On hit: the player hears a distinct "tick" impact, sees a hit indicator, and their character raises a hand ("HIT!" callout).
 - Eliminated players become a visible **"dead" state**: hand raised, walking off to the dead zone, cannot shoot, and cannot be targeted. They can still spectate.
 - Prototype bots always call their hits honestly. Honesty is enforced by the game, not the player.
-- Later: a **medic mode** with a bleed-out timer, where a medic revives a hit player (owner, 2026-10-03: a future feature; 0.1 Dev 7 since 2026-10-06).
+- Later: a **medic mode** with a bleed-out timer, where a medic revives a hit player (owner, 2026-10-03: a future feature; 0.1 Dev 6 since 2026-10-06).
 
 **Replicas (Phase 1 needs only two)**
 - **AEG rifle**: full auto, medium range, medium magazine.

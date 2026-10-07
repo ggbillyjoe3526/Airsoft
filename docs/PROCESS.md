@@ -26,7 +26,7 @@ Elimination and Attack / Defend.
 rule presets, chrono, gas simulation, grenades, parts and pouches, the first new replica types); 0.4 more fields and
 ways to play (Rush, Domination, Capture the Flag, prone, weather, callouts, bot personalities, team communication);
 0.5 kit, looks and progression (skins, challenges and badges). Don't build these during 0.1, except what the owner's
-Dev 6 and Dev 7 picks (2026-10-06, `docs/ROADMAP.md`) pulled into 0.1: medic, field rule presets, the chrono, gas
+Dev 6 picks (2026-10-06, `docs/ROADMAP.md`; Dev 7 folded into Dev 6) pulled into 0.1: medic, field rule presets, the chrono, gas
 simulation, grenades, rigs and pouches, the blowback pistol and spring sniper, the Extraction rework, weather,
 callouts, pings, bot personalities and skins. Dev builds continue until the owner calls the game feature complete.
 
