@@ -54,7 +54,7 @@ attempts: 0
 tasks above and the rest of the paused 0.1 Dev 5 work. His words and the per-item reasoning are in the project's shared
 files (`plans/playtest-feedback-0.1-dev-4.md`); the table under Alpha in `docs/ROADMAP.md` maps all 26 notes. M80–M91
 and M96 are 0.1 Dev 5 fixes and changes, M92–M95 suggested 0.1 Dev 6 features. Notes 5, 20–23 went to 0.3 and 0.4; notes 5, 20, 22 and 23 are now
-0.1 Dev 6 and Dev 7 (owner's feature picks, 2026-10-06, ROADMAP).
+0.1 Dev 6 (owner's feature picks, 2026-10-06, with Dev 7 folded into Dev 6 the same night; ROADMAP).
 Every block below carries note 19: tune on Normal, then check that Easy, Hard and Pro still scale. `touches` are
 first guesses; the build thread confirms them before it starts. The owner ruled on every conflict on 2026-10-06
 (ROADMAP, under the playtest table).
@@ -197,6 +197,76 @@ acceptance:
 status: open
 attempts: 0
 
+## M96 · The Retro look goes public (owner's ruling on playtest note 2)
+tier: ui
+perf: skip
+touches: src/config/dev.ts, src/ui/devSettings.ts, src/ui/graphicsSettings.ts, src/ui/lookSettings.ts, src/render/retroFilter.ts, src/settings/, docs/PLAYTEST.md
+contract: none
+acceptance:
+  1. The Retro pixel filter (M42) leaves the Dev tab and becomes a public "Retro look" option with its Pixel size and Colours sliders, as soon as possible in 0.1 Dev 5 (owner, 2026-10-06: "I've tested it and I'm happy with it").
+  2. A saved Dev choice carries over to the public setting.
+status: open
+attempts: 0
+
+**The owner's playtest notes on main (2026-10-07).** Recorded on his ask, not built yet. His words, the type and the
+defaults per note are in the project's shared files (`plans/playtest-feedback-2026-10-07.md`); the table under Alpha in
+`docs/ROADMAP.md` maps all eight. M97–M99 join the Dev 4 notes batch (Dev 5 item 6); M100 is the graphics work's (Dev 5
+item 5, with the G4 HUD restyle); note 3 is a bug for BP2 (`docs/KNOWN_ISSUES.md`); note 2 is already in the game
+(Settings › Controls › Aim button). Note 19 of the Dev 4 notes still applies.
+
+## M97 · A Hit marker setting and Replay tutorial (playtest notes 1, 8)
+tier: ui
+perf: skip
+touches: src/ui/hitFeedback.ts, src/config/hits.ts, src/ui/hudSettings.ts, src/ui/crosshairSettings.ts, src/ui/menus/settingsScreen.ts, src/settings/, src/tutorial/, src/ui/menus/titleScreen.ts
+contract: none
+acceptance:
+  1. A "Hit marker" setting (On / Off, **Off by default**) in the settings group that holds the crosshair: Off shows no red X when the player's BB lands; On shows it as today. The hit tick sound is unchanged either way.
+  2. A "Replay tutorial" button in Settings starts the tutorial at once, whether or not it was finished before.
+  3. Both are saved with the other settings; an old save loads with the marker Off.
+status: open
+attempts: 0
+
+## M98 · Teams Alpha and Beta, and pick your team (playtest note 4)
+tier: core
+perf: skip
+touches: src/config/teams.ts, src/matchSession.ts, src/game.ts, src/ui/scoreboard.ts, src/ui/roundBanner.ts, src/ui/hitFeed.ts, src/ui/menus/rulesText.ts, src/ui/menus/playView.ts, src/ui/menus/savedChoices.ts, src/sim/
+contract: none
+acceptance:
+  1. The teams are **Alpha** (blue) and **Beta** (orange) everywhere the player reads them (hit feed, scoreboard, banners, minimap, summary, menus, screen reader text); colours and both colour sets are unchanged.
+  2. The Match screen has a "Your team" pick (Alpha or Beta), Alpha by default, remembered between visits; solo Extraction doesn't show it.
+  3. A full match plays correctly on either team on every map and mode (spawns, ends swapping at half-time in Attack / Defend, records, bots' orders and squad wheel), checked by a test that plays one match per team.
+status: open
+attempts: 0
+
+## M99 · Replica pictures show the whole replica (playtest note 6)
+tier: ui
+perf: skip
+touches: src/ui/menus/loadoutScreen.ts, src/ui/menus/itemTile.ts, src/ui/menus/menuPictures.ts, src/ui/menus/css/loadout.css
+contract: none
+acceptance:
+  1. Every replica picture in the Loadout's "Your replicas" (and anywhere else a replica tile is drawn) shows the whole replica, muzzle to stock, at every supported window size from 1280 × 720 up.
+  2. A browser test fails if a replica picture is cropped.
+status: open
+attempts: 0
+
+## M100 · Menu redesign 2: title screen, top bar, Match screen, Practice as a mode, a clearer font (playtest notes 5, 7, 8)
+tier: ui
+perf: skip
+touches: src/ui/menus/, src/config/menus.ts, src/assets/fonts/, docs/ASSETS.md, docs/PLAYTEST.md
+contract: none
+acceptance:
+  1. The game opens on a plain title screen: the title "Airsoft", the tagline, a START button and, on a clean save only, the Tutorial button under START (until the tutorial is finished or a first match started); the build's version small at the bottom left; nothing else.
+  2. START opens the Match screen (today's Play, renamed). The top bar is the main navigation: MATCH, LOADOUT, ARMORY, SETTINGS from the left, the player's FC and Tokens on the far right, no version.
+  3. The key prompts along the bottom of the menus (Back, Customise, Search and the rest) are gone; every screen is clear to navigate with the mouse alone, and the keys still work.
+  4. Practice is the last mode on the Match screen, after Elimination, Attack / Defend and Extraction (only the range until M94 adds maps); it leaves the title screen.
+  5. The Armory's "Your collection" shows each kind (replicas, power sources, optics and the rest) in its own column.
+  6. The menus use a font that reads easily, numbers above all (the owner rules on the font first, then approves screenshots before merge, as with G3).
+status: open
+attempts: 0
+
+**0.1 Dev 6 (confirmed with the roadmap, 2026-10-06).** M92–M95, the holster and the practice
+upgrades, come before the 26 features in `docs/ROADMAP.md` › 0.1 Dev 6, whose blocks are written when that build starts.
+
 ## M92 · Holster and two kinds of sprint (playtest note 3)
 tier: core
 perf: skip
@@ -239,16 +309,5 @@ contract: none
 acceptance:
   1. In Practice the player picks any replica they own and can Customise it freely.
   2. With Dev settings on (Unlock all gear), every replica and part is available.
-status: open
-attempts: 0
-
-## M96 · The Retro look goes public (owner's ruling on playtest note 2)
-tier: ui
-perf: skip
-touches: src/config/dev.ts, src/ui/devSettings.ts, src/ui/graphicsSettings.ts, src/ui/lookSettings.ts, src/render/retroFilter.ts, src/settings/, docs/PLAYTEST.md
-contract: none
-acceptance:
-  1. The Retro pixel filter (M42) leaves the Dev tab and becomes a public "Retro look" option with its Pixel size and Colours sliders, as soon as possible in 0.1 Dev 5 (owner, 2026-10-06: "I've tested it and I'm happy with it").
-  2. A saved Dev choice carries over to the public setting.
 status: open
 attempts: 0
