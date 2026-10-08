@@ -10,7 +10,7 @@ import { NAV } from '../config/nav';
 import { LOADOUT } from '../config/replicas';
 import { buildNavGrid } from '../nav/navGrid';
 import { initPhysics, PhysicsWorld } from '../physics/physicsWorld';
-import { clearOfPlay, clearSpots, frontRect, junkRect } from '../render/dressingSpots';
+import { boxHitsBlock, clearOfPlay, clearSpots, frontRect, junkRect } from '../render/dressingSpots';
 import { placeDressing } from '../render/mapDressing';
 import { fallenCorners, fallenParts } from '../render/woodsDressing';
 import { createCharacter } from '../sim/character';
@@ -124,13 +124,17 @@ describe("Woodland's wood floor (G9)", () => {
       expect(clearOfPlay(WOODLAND, r, spots), `${where}: clear of play`).toBe(true);
       const reach = Math.hypot(r[1] - r[0], r[3] - r[2]) / 2;
       for (const b of WOODLAND.foliage ?? []) expect(Math.hypot(b.x - q.x, b.z - q.z), `${where}: bush`).toBeGreaterThanOrEqual(b.radius + reach + WOODS.leaves.bushClear);
-      // The ground in front of it stays open, and no block stands in it.
+      // DRESSING.junk.openFront (1.6 m) of ground stays clear in front of it, so it narrows no passage: no block
+      // stands in that strip at body height, and no other piece lies in it.
       const front = frontRect(q);
-      expect(Math.hypot(front[1] - front[0], front[3] - front[2]), where).toBeGreaterThan(0);
+      expect(front[1] - front[0], where).toBeGreaterThan(0);
+      expect(front[3] - front[2], where).toBeGreaterThan(0);
+      expect(boxHitsBlock(WOODLAND.blocks, front, q.y + 0.05, q.y + BODY.height), `${where}: open in front`).toBe(false);
       for (const p of layout.fallen) {
         if (p === q) continue;
         const s = junkRect(p);
         expect(Math.max(s[0] - r[1], r[0] - s[1], s[2] - r[3], r[2] - s[3]), `${where}: apart from ${p.kind}`).toBeGreaterThanOrEqual(DRESSING.junk.gap);
+        expect(Math.max(s[0] - front[1], front[0] - s[1], s[2] - front[3], front[2] - s[3]), `${where}: ${p.kind} in its front`).toBeGreaterThan(0);
       }
     }
   });

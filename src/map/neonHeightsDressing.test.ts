@@ -9,7 +9,7 @@ import { NAV } from '../config/nav';
 import { LOADOUT } from '../config/replicas';
 import { buildNavGrid } from '../nav/navGrid';
 import { initPhysics, PhysicsWorld } from '../physics/physicsWorld';
-import { clearOfPlay, clearSpots, floorUnder, junkRect } from '../render/dressingSpots';
+import { boxHitsBlock, clearOfPlay, clearSpots, floorUnder, frontRect, junkRect } from '../render/dressingSpots';
 import { placeDressing } from '../render/mapDressing';
 import { neonPlate, neonSpellable } from '../render/neonDressing';
 import { createCharacter } from '../sim/character';
@@ -129,6 +129,9 @@ describe("Neon Heights' street dressing (G9)", () => {
       expect(p.height, where).toBeLessThanOrEqual(DRESSING.junk.maxHeight);
       expect(floorUnder(NEON_HEIGHTS.blocks, r, p.y), `${where}: on a floor`).not.toBeNull();
       expect(clearOfPlay(NEON_HEIGHTS, r, spots), `${where}: clear of play`).toBe(true);
+      // DRESSING.junk.openFront (1.6 m) of floor stays clear in front of it, so it narrows no passage or doorway.
+      const front = frontRect(p);
+      expect(boxHitsBlock(NEON_HEIGHTS.blocks, front, p.y + 0.05, p.y + BODY.height), `${where}: open in front`).toBe(false);
     }
   });
 
