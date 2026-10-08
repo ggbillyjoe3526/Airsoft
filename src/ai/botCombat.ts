@@ -6,7 +6,7 @@ import { type Character, eyeHeight } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
 import { isInPlay } from '../sim/elimination';
 import { characterHitVolume, createHitVolume, type HitVolume, rayCharacter } from '../sim/hitbox';
-import { type Vec3, vec3, wrapAngle } from '../sim/vec';
+import { length3, type Vec3, vec3, wrapAngle } from '../sim/vec';
 import { aimErrorSize, lookAngles, stepAim } from './aim';
 import { findHeldAngles, type HeldAngle } from './angles';
 import { type Bot, type BotWorld, holdYaw, pick, threatInMind } from './bot';
@@ -42,7 +42,7 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
   if (b.targetVisible && target && b.contact) {
     // Aim at the part of the body it can see, leading the target by part of the BB's flight time (slowed by drag, M30).
     bodyPoint(target, w.hits, b.targetPart, aimPoint);
-    const dist = Math.hypot(aimPoint.x - eye.x, aimPoint.y - eye.y, aimPoint.z - eye.z);
+    const dist = length3(aimPoint.x - eye.x, aimPoint.y - eye.y, aimPoint.z - eye.z);
     const flight = bbFlightTime(w, dist);
     aimPoint.x += target.velocity.x * flight * b.skill.leadFactor;
     aimPoint.z += target.velocity.z * flight * b.skill.leadFactor;

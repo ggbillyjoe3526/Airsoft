@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { BB_VISUALS, RETRO } from '../config/render';
 import type { BB, BBPool } from '../sim/ballistics';
+import { length3 } from '../sim/vec';
 import { softDotTexture } from './softDot';
 
 /** Vertices and indices of one streak: a quad, two corners at the head and two at the tail. */
@@ -43,15 +44,15 @@ export class BBRenderer {
   /** The glow's soft dot, drawn the first time the glow is turned on. */
   private glowDot: THREE.CanvasTexture | null = null;
   private glowOn = false;
-  private readonly glowScale = new THREE.Vector3();
-  private readonly glowPos = new THREE.Vector3();
+  /** The glow dots' turn this frame, to face the camera (`facing` as a matrix, made once a frame). */
+  private readonly facingBasis = new THREE.Matrix4();
   private readonly trails: THREE.Mesh;
   private readonly trailPositions: Float32Array;
-  private readonly matrix = new THREE.Matrix4();
-  /** Scratch for a streak's camera-facing side. */
-  private readonly along = new THREE.Vector3();
-  private readonly toEye = new THREE.Vector3();
-  private readonly side = new THREE.Vector3();
+  /**
+   * The streak writeStreak draws: head x, y, z then tail x, y, z. Handed over in this buffer, not as six numbers, so the
+   * call boxes nothing in any of V8's tiers (audit REN-10: the per-BB loop makes no garbage).
+   */
+  private readonly ends = new Float64Array(6);
   /** One retro pixel's width (radians of view) while the retro filter is on (M42), else 0. */
   private pixelAngle = 0;
   /** This frame's streak half-width (radians of view): BB_VISUALS.trailAngularWidth, or a retro pixel's if wider. */
@@ -164,6 +165,14 @@ export class BBRenderer {
     const minScale = Math.max(BB_VISUALS.minAngularRadius, retroMin) / BB_VISUALS.radius;
     const luminousMinScale = Math.max(BB_VISUALS.glowInDark.minAngularRadius, retroMin) / BB_VISUALS.radius;
     this.trailHalfAngle = Math.max(BB_VISUALS.trailAngularWidth, this.pixelAngle * RETRO.trailMinPixels) / 2;
+    // Each instance's matrix is written straight into its buffer (no Matrix4 per BB, nothing boxed; REN-10). A ball's is
+    // a uniform scale and a move, so only those six numbers are written: the rest keep the identity InstancedMesh
+    // starts every instance with, as nothing else writes them. A glow dot's is the camera's turn, scaled, and a move.
+    const ballMatrices = this.balls.instanceMatrix.array as Float32Array;
+    const glowMatrices = this.glow.instanceMatrix.array as Float32Array;
+    const turn = this.facingBasis.elements;
+    if (glowing) this.facingBasis.makeRotationFromQuaternion(facing);
+    const ends = this.ends;
     for (let i = 0; i < bbs.length; i++) {
       const bb = bbs[i]!;
       if (!bb.active) continue;
@@ -197,21 +206,32 @@ export class BBRenderer {
         tz += this.offsets[o + 2]! * tail;
       }
       // Keep far BBs visible: scale up in proportion to distance once they'd be under the minimum size.
-      const dist = Math.hypot(x - camera.x, y - camera.y, z - camera.z);
+      const dist = length3(x - camera.x, y - camera.y, z - camera.z);
       const s = Math.max(1, dist * (luminous ? luminousMinScale : minScale));
-      this.matrix.makeScale(s, s, s).setPosition(x, y, z);
-      this.balls.setMatrixAt(count, this.matrix);
+      const m = count * 16;
+      ballMatrices[m] = ballMatrices[m + 5] = ballMatrices[m + 10] = s;
+      ballMatrices[m + 12] = x;
+      ballMatrices[m + 13] = y;
+      ballMatrices[m + 14] = z;
       this.balls.setColorAt(count, luminous ? this.glowInDarkColor : WHITE);
       if (glowing) {
-        this.matrix.compose(this.glowPos.set(x, y, z), facing, this.glowScale.setScalar(s));
-        this.glow.setMatrixAt(count, this.matrix);
+        for (let k = 0; k < 11; k++) glowMatrices[m + k] = turn[k]! * s; // the turn's 3×3, scaled; its zeros stay zero
+        glowMatrices[m + 12] = x;
+        glowMatrices[m + 13] = y;
+        glowMatrices[m + 14] = z;
       }
       const o = count * QUAD_VERTICES * 3;
       const head = luminous ? this.glowInDarkTrailHead : this.trailHead;
       tc[o] = tc[o + 3] = head.r;
       tc[o + 1] = tc[o + 4] = head.g;
       tc[o + 2] = tc[o + 5] = head.b;
-      this.writeStreak(o, x, y, z, tx, ty, tz, camera);
+      ends[0] = x;
+      ends[1] = y;
+      ends[2] = z;
+      ends[3] = tx;
+      ends[4] = ty;
+      ends[5] = tz;
+      this.writeStreak(o, camera);
       count++;
     }
     this.balls.count = count;
@@ -230,35 +250,50 @@ export class BBRenderer {
   }
 
   /**
-   * One streak's quad at float offset `o`: the head (x, y, z) and tail (tx, ty, tz) each widened sideways, across the
+   * One streak's quad at float offset `o`: the head and tail (`ends`) each widened sideways, across the
    * line of sight, by their own distance × trailAngularWidth (or a retro pixel, M42), so the ribbon is the same width
    * on screen end to end.
    * A streak seen exactly end-on has no side: its quad is a line, drawn as nothing (the ball covers it).
    */
-  private writeStreak(o: number, x: number, y: number, z: number, tx: number, ty: number, tz: number, eye: { x: number; y: number; z: number }): void {
+  private writeStreak(o: number, eye: { x: number; y: number; z: number }): void {
+    const e = this.ends;
+    const x = e[0]!;
+    const y = e[1]!;
+    const z = e[2]!;
+    const tx = e[3]!;
+    const ty = e[4]!;
+    const tz = e[5]!;
     const tp = this.trailPositions;
     const halfAngle = this.trailHalfAngle;
-    this.along.set(x - tx, y - ty, z - tz);
-    this.toEye.set(eye.x - x, eye.y - y, eye.z - z);
-    this.side.crossVectors(this.along, this.toEye);
-    const len = this.side.length();
-    if (len > 1e-9) this.side.multiplyScalar(1 / len);
-    else this.side.set(0, 0, 0);
-    const s = this.side;
-    const headHalf = Math.hypot(x - eye.x, y - eye.y, z - eye.z) * halfAngle;
-    const tailHalf = Math.hypot(tx - eye.x, ty - eye.y, tz - eye.z) * halfAngle;
-    tp[o] = x + s.x * headHalf;
-    tp[o + 1] = y + s.y * headHalf;
-    tp[o + 2] = z + s.z * headHalf;
-    tp[o + 3] = x - s.x * headHalf;
-    tp[o + 4] = y - s.y * headHalf;
-    tp[o + 5] = z - s.z * headHalf;
-    tp[o + 6] = tx + s.x * tailHalf;
-    tp[o + 7] = ty + s.y * tailHalf;
-    tp[o + 8] = tz + s.z * tailHalf;
-    tp[o + 9] = tx - s.x * tailHalf;
-    tp[o + 10] = ty - s.y * tailHalf;
-    tp[o + 11] = tz - s.z * tailHalf;
+    // The side: along the streak × towards the eye, normalised (by hand: no vector calls in the per-BB path).
+    const ax = x - tx;
+    const ay = y - ty;
+    const az = z - tz;
+    const ex = eye.x - x;
+    const ey = eye.y - y;
+    const ez = eye.z - z;
+    let sx = ay * ez - az * ey;
+    let sy = az * ex - ax * ez;
+    let sz = ax * ey - ay * ex;
+    const len = Math.sqrt(sx * sx + sy * sy + sz * sz);
+    const inv = len > 1e-9 ? 1 / len : 0;
+    sx *= inv;
+    sy *= inv;
+    sz *= inv;
+    const headHalf = length3(x - eye.x, y - eye.y, z - eye.z) * halfAngle;
+    const tailHalf = length3(tx - eye.x, ty - eye.y, tz - eye.z) * halfAngle;
+    tp[o] = x + sx * headHalf;
+    tp[o + 1] = y + sy * headHalf;
+    tp[o + 2] = z + sz * headHalf;
+    tp[o + 3] = x - sx * headHalf;
+    tp[o + 4] = y - sy * headHalf;
+    tp[o + 5] = z - sz * headHalf;
+    tp[o + 6] = tx + sx * tailHalf;
+    tp[o + 7] = ty + sy * tailHalf;
+    tp[o + 8] = tz + sz * tailHalf;
+    tp[o + 9] = tx - sx * tailHalf;
+    tp[o + 10] = ty - sy * tailHalf;
+    tp[o + 11] = tz - sz * tailHalf;
   }
 
   /** Draws `bb` as a glowing (glow-in-the-dark) BB, or not, for the rest of its flight (M33b). */

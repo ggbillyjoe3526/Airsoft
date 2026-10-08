@@ -9,7 +9,7 @@ import type { WorldQuery } from '../sim/armament';
 import type { Character } from '../sim/character';
 import { hitTop } from '../sim/hitbox';
 import { leanedEye, leanOffset } from '../sim/lean';
-import { type Vec3, vec3 } from '../sim/vec';
+import { length3, type Vec3, vec3 } from '../sim/vec';
 
 const eye = vec3();
 const point = vec3();
@@ -38,7 +38,7 @@ export function lineClear(query: WorldQuery, a: Vec3, b: Vec3): boolean {
   dir.x = b.x - a.x;
   dir.y = b.y - a.y;
   dir.z = b.z - a.z;
-  const d = Math.hypot(dir.x, dir.y, dir.z);
+  const d = length3(dir.x, dir.y, dir.z);
   if (d < 1e-6) return true;
   dir.x /= d;
   dir.y /= d;

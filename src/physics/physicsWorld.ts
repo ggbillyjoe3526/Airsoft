@@ -8,7 +8,7 @@ import type { SurfaceHit } from '../sim/armament';
 import type { Character } from '../sim/character';
 import { buildLevelRay, castLevelRay, type LevelRay } from '../sim/levelRay';
 import type { CharacterMover } from '../sim/movement';
-import type { Vec3 } from '../sim/vec';
+import { type Vec3, vec3 } from '../sim/vec';
 
 /** Collision group bits (Rapier packs membership in the high 16 bits, filter in the low 16). */
 const GROUP_STATIC = 0x0001;
@@ -88,6 +88,14 @@ export class PhysicsWorld implements CharacterMover {
   private readonly world: Rapier.World;
   private readonly controller: Rapier.KinematicCharacterController;
   private readonly characterColliders = new Map<number, Rapier.Collider>();
+  /**
+   * Per character (by id), where the last ground probe set its feet down at rest (x NaN: that probe found no ground).
+   * A character still exactly there hasn't moved since (a move, a fall or a teleport all change its position) and the
+   * level never moves, so the probe would find the same floor: probeGround skips the cast and answers 0 (audit SIM-06).
+   * Measured in bot matches on all three maps (2026-10-08): about 40 % of probes, every one a character standing still,
+   * where a fresh cast would have moved it by 2 µm on average and under a millimetre at most (the cast's tolerance).
+   */
+  private readonly restingAt = new Map<number, Vec3>();
   private readonly capsuleHalfHeight: number;
   private readonly capsuleCenterOffset: number;
   private readonly scratch = { x: 0, y: 0, z: 0 };
@@ -168,6 +176,23 @@ export class PhysicsWorld implements CharacterMover {
   }
 
   probeGround(c: Character, maxDrop: number): number {
+    let rest = this.restingAt.get(c.id);
+    if (!rest) {
+      rest = vec3(Number.NaN, Number.NaN, Number.NaN);
+      this.restingAt.set(c.id, rest);
+    }
+    const p = c.position;
+    if (p.x === rest.x && p.y === rest.y && p.z === rest.z) return 0;
+    const dy = this.castGround(c, maxDrop);
+    // Where the caller puts it (the same sum, so the same number), or nowhere when there's no ground to rest on.
+    rest.x = Number.isNaN(dy) ? Number.NaN : p.x;
+    rest.y = p.y + dy;
+    rest.z = p.z;
+    return dy;
+  }
+
+  /** probeGround's shape cast: the offset to rest on the ground under `c`, or NaN if there is none within `maxDrop`. */
+  private castGround(c: Character, maxDrop: number): number {
     const lift = PHYSICS.groundProbeLift;
     const s = this.scratch;
     s.x = c.position.x;
@@ -219,5 +244,6 @@ export class PhysicsWorld implements CharacterMover {
     this.controller.free();
     this.world.free();
     this.characterColliders.clear();
+    this.restingAt.clear();
   }
 }

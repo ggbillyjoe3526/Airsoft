@@ -19,6 +19,7 @@ import type { BB } from '../sim/ballistics';
 import type { Character } from '../sim/character';
 import type { GameState } from '../sim/state';
 import { lightInHand, torchLit } from '../sim/torch';
+import { length3 } from '../sim/vec';
 import { Hud } from '../ui/hud';
 import { BBPathsDebug } from './bbPathsDebug';
 import { BBRenderer } from './bbRenderer';
@@ -437,7 +438,7 @@ export class CombatPresentation {
   /** Rough seconds until `bb` hits level geometry (straight line at its launch speed); Infinity if nothing is near. */
   private estimateFlightTime(bb: BB): number {
     const v = bb.velocity;
-    const speed = Math.hypot(v.x, v.y, v.z);
+    const speed = length3(v.x, v.y, v.z);
     if (speed <= 0) return Number.POSITIVE_INFINITY;
     this.dir.x = v.x / speed;
     this.dir.y = v.y / speed;

@@ -12,6 +12,15 @@ export function vec3(x = 0, y = 0, z = 0): Vec3 {
   return { x, y, z };
 }
 
+/**
+ * The length of (x, y, z). For the per-BB, per-ray and per-frame paths instead of a three-argument `Math.hypot`, which
+ * makes garbage on every call until V8 optimises the caller (audit SIM-07, REN-10) and isn't required to round the same
+ * in every browser; `Math.sqrt` is exact to the last bit everywhere. Game distances are nowhere near overflowing a square.
+ */
+export function length3(x: number, y: number, z: number): number {
+  return Math.sqrt(x * x + y * y + z * z);
+}
+
 export function copy(out: Vec3, a: Vec3): Vec3 {
   out.x = a.x;
   out.y = a.y;

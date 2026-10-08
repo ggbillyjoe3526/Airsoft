@@ -17,7 +17,7 @@ import { createHitFacts, type HitFacts, recordHitFacts } from '../sim/hitFacts';
 import { createRng, type RngState, rngNext } from '../sim/rng';
 import { blockedShare } from '../sim/soundPath';
 import type { GameState } from '../sim/state';
-import { copy, type Vec3, vec3 } from '../sim/vec';
+import { copy, length3, type Vec3, vec3 } from '../sim/vec';
 import { type AngleFeatures, angleFeaturesOf } from './angleFeatures';
 import { RunRoles } from './extractionRoles';
 import { type Bot, type BotWorld, createBot, lastSeenAt, pick, resetBot } from './bot';
@@ -452,7 +452,7 @@ export class BotController {
         for (const b of this.bots) {
           if (shooter && shooter.team === b.character.team) continue;
           const p = bodyPoint(b.character, this.opts.hits, cfg.aimHeightFraction, this.chest);
-          if (Math.hypot(e.position.x - p.x, e.position.y - p.y, e.position.z - p.z) <= cfg.suppressionRadius) {
+          if (length3(e.position.x - p.x, e.position.y - p.y, e.position.z - p.z) <= cfg.suppressionRadius) {
             b.suppressedAt = time;
             b.lastThreatAt = time;
             // A near miss gives away roughly where it came from, however far off the shot was (AI-04): the bot hears the

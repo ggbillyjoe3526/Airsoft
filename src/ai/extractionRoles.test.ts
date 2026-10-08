@@ -6,6 +6,7 @@ import { PHYSICS } from '../config/physics';
 import { DEPOT_LAYOUT } from '../map/depot';
 import { isWalkableAt } from '../nav/navGrid';
 import { initPhysics } from '../physics/physicsWorld';
+import type { SurfaceHit } from '../sim/armament';
 import { createCommand } from '../sim/commands';
 import { isInPlay } from '../sim/elimination';
 import { vec3, wrapAngle } from '../sim/vec';
@@ -130,19 +131,39 @@ describe('Extraction: the home team’s jobs (M46)', () => {
     g.post.y = post.y;
     g.post.z = post.z;
     g.routeState = 'none';
+    // A stretch of flat, upright wall near it, wide enough for the guard, walked at square on from where it stands on
+    // the same floor: the check is the hold once blocked, not where a slide off a wall's end happens to stop, which a
+    // micrometre anywhere earlier in the match can change (M77: a character at rest is no longer cast for again).
     const c = g.character;
-    const waist = { x: c.position.x, y: c.position.y + BODY.height / 2, z: c.position.z };
-    let wall = -1;
+    const reach = cfg.leanSpotApproachMax * 4;
+    const from = { x: 0, y: c.position.y + BODY.height / 2, z: 0 };
     const dir = { x: 0, y: 0, z: 0 };
-    for (let i = 0; i < 16 && wall < 0; i++) {
-      dir.x = Math.cos((i * Math.PI) / 8);
-      dir.z = Math.sin((i * Math.PI) / 8);
-      wall = w.query.raycastStatic(waist, dir, cfg.leanSpotApproachMax * 4);
+    const surface: SurfaceHit = { normal: vec3(), material: 'concrete' };
+    const wallAt = (side: number): number => {
+      from.x = c.position.x - dir.z * side;
+      from.z = c.position.z + dir.x * side;
+      const t = w.query.raycastSurface!(from, dir, reach, surface);
+      return t > 0 && Math.abs(surface.normal.y) < 0.05 && surface.normal.x * dir.x + surface.normal.z * dir.z < -0.999 ? t : -1;
+    };
+    let wall = -1;
+    let side = 0;
+    const width = BODY.radius + 0.1;
+    search: for (const [x, z] of [[1, 0], [0, 1], [-1, 0], [0, -1]] as const) {
+      dir.x = x;
+      dir.z = z;
+      for (side = -1.5; side <= 1.5; side += 0.25) {
+        wall = wallAt(side);
+        if (wall > 0 && wallAt(side - width) === wall && wallAt(side + width) === wall) {
+          wallAt(side);
+          if (isWalkableAt(w.nav, from.x + dir.x * (wall - width), c.position.y, from.z + dir.z * (wall - width))) break search;
+        }
+        wall = -1;
+      }
     }
     expect(wall).toBeGreaterThan(0);
     const stand = wall - BODY.radius - 0.05;
-    c.position.x += dir.x * stand;
-    c.position.z += dir.z * stand;
+    c.position.x = from.x + dir.x * stand;
+    c.position.z = from.z + dir.z * stand;
     c.prevPosition.x = c.position.x;
     c.prevPosition.z = c.position.z;
     g.post.x = c.position.x + dir.x * (cfg.leanSpotApproachMax - 0.1);
