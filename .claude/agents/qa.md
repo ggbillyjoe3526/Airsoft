@@ -19,8 +19,9 @@ checks that such a commit touches nothing else. If the feature cannot be tested 
   `npx vitest run src/sim/foo.test.ts --reporter=dot` for one file) for pure
   logic: the simulation (`src/sim`), bots (`src/ai`), config, input mapping, stats, pool. Tests build state with the
   helpers in `src/sim/testSupport.ts` and drive `stepSimulation`; bot matches run headless through
-  `src/ai/depotMatchSupport.ts` (keep a new match test file no longer than the longest today, about 50 s; audit CORE-15 is to shorten them). Randomness is seeded (`state.rng`).
-- **Playwright** (`e2e/boot.spec.ts`, `npm run test:browser`; in a cloud container set `PLAYWRIGHT_CHROMIUM` to
+  `src/ai/depotMatchSupport.ts` (keep a new match test file no longer than the longest today, `depotMatch.neonHeights.test.ts`: about 7 minutes in
+  a full run on a 4-core container, 2026-10-08; audit CORE-15 is to shorten them). Randomness is seeded (`state.rng`).
+- **Playwright** (`e2e/*.spec.ts`, `npm run test:browser`; in a cloud container set `PLAYWRIGHT_CHROMIUM` to
   `/opt/pw-browsers/chromium`) for what a player sees. SwiftShader draws a few frames a second: assert on page text
   and `window.airsoft` state, poll with `expect.poll` or `waitForFunction`, never wait a fixed time. Extend the
   existing spec's flow where a step fits; add a new spec only for a new screen. `?nolock` plays without pointer lock.

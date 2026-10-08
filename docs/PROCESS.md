@@ -188,5 +188,7 @@ to be and no longer, technical detail only where it's needed, nothing critical l
    "in order to"). No em-dashes: use a colon, a comma or a full stop. "·" is fine as a separator in short labels.
 6. **Names.** Menu paths with ›, e.g. `Settings › Graphics › Quality`. Code, files, commands and config keys in
    backticks. Dates as 2026-10-08. An owner ruling is tagged `(owner, 2026-10-07)`.
-7. **Wrap** prose and list items at 120 columns. Table rows don't wrap; keep cells short.
-8. **Cross-references** by relative path, with › for a heading: `docs/PROCESS.md › Releases`.
+7. **Timings carry their date** (audit CORE-13): "about 2 minutes (2026-10-08)". The pull request that changes the
+   suite or the gate refreshes them.
+8. **Wrap** prose and list items at 120 columns. Table rows don't wrap; keep cells short.
+9. **Cross-references** by relative path, with › for a heading: `docs/PROCESS.md › Releases`.

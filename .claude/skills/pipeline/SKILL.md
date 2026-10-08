@@ -23,7 +23,8 @@ frontmatter) at the top of the prompt, the task content last. Tell every worker 
    task's decisions (its record's lines and any new DECISIONS lines). It writes the `Unreleased` line(s) and the
    FEATURES line.
 5. **Full gate**: `PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium node pipeline/gate.mjs --task <id>` (drop the
-   variable outside a cloud container). About five minutes, plus the perf run when it is required.
+   variable outside a cloud container). About 30 minutes in a cloud container (2026-10-08), plus the perf run when it is
+   required.
    - Any gate `false`: fix from the report's evidence (spawn `triage` on a log longer than about 60 lines first),
      count an attempt in the block's `attempts:` line, go to 2. No critic on a failed gate.
    - `perf` ran: spawn `performance` with the env, so its diff review and ranking are on file. A regression it

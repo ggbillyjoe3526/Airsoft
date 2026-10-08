@@ -232,10 +232,10 @@ Cross-cutting rules; folder-specific ones are in that folder's `README.md`.
   hard-coded.
 - **Menus.** One screen at a time (`Menus.go`). `Menus.setBlocked` makes them inert (graphics reset).
 - **Tests.** Files share a worker's modules (`isolate: false`), so a test that stubs a global or resets modules
-  undoes it when it ends: restore what you stub. `npm run t` runs the fast project (about 12 s); the gate and CI run
+  undoes it when it ends: restore what you stub. `npm run t` runs the fast project (about 2 minutes, 2026-10-08); the gate and CI run
   fast and slow. The slow project holds the headless bot-match guards, which are seed-sensitive: re-measure over
   16 seeds before changing a threshold.
-- **Checks.** `npm run check` takes about 75 s. In a cloud container set `PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium`
+- **Checks.** `npm run check` (all tests, then the build) takes about 20 minutes in a 4-core container (2026-10-08). In a cloud container set `PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium`
   for the smoke test and the gate (the session-start hook does it). The smoke test also loses and restores the WebGL
   context, opens and closes the order wheel (Z) and presses F twice for the squad line. It patches
   `airsoft.session.match.afterTick` to add a shot after each tick (a sound cue); that patch exists in the `e2e` build

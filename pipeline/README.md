@@ -55,7 +55,7 @@ node pipeline/gate.mjs [--task M27[,M28]] [--quick] [--no-smoke] [--perf] [--env
 |---|---|---|
 | `build` | `build-cached.mjs --mode production --force`: `npm run build` (tsc, Vite, chunk budgets, the `.br`/`.gz` copies; not under `--quick`) | exit 0 |
 | `tests` | `vitest run --reporter=json` (`src/**/*.test.ts` and the pipeline's own `pipeline/**/*.test.mjs`; both projects, `fast` and `slow`) | no failures |
-| `smoke` | `playwright test`: project `chromium` runs `e2e/boot.spec.ts` and `e2e/crash.spec.ts` on the e2e build (`?nolock`, `window.airsoft`); project `release` runs `e2e/release.spec.ts` on `dist/` without test flags, with the real pointer lock. Every test asserts zero console and page errors; a failure prints the test's describe path, project and line and the error's locator, expectation and call-log lines (`smokeReport.mjs`) | no failures |
+| `smoke` | `playwright test`: project `chromium` runs every `e2e/*.spec.ts` but `release.spec.ts` on the e2e build (`?nolock`, `window.airsoft`); project `release` runs `e2e/release.spec.ts` on `dist/` without test flags, with the real pointer lock. Every test asserts zero console and page errors; a failure prints the test's describe path, project and line and the error's locator, expectation and call-log lines (`smokeReport.mjs`) | no failures |
 | `perf` | `perf-run.mjs` once per combination of the perf matrix the diff reaches (`perfMatrix.mjs`; `--perf` runs them all) | for each: every budget line for the env and map within `perf-budget.json`, nothing more than 10 % worse than its own baseline; a baseline more than 20 commits old is a warning, not a failure |
 | `scope` | the diff vs the task's `touches` (`scope.mjs`) | every changed file is in `touches`, a test, under `e2e/` or `docs/`, CHANGELOG, README or a `src/` folder's README (`pool.md` and `CLAUDE.md` only when listed); `Agent: qa` commits touch only tests |
 | `changelog` | `CHANGELOG.md` › Unreleased | a line names `**<task>**` (each task, when several) |
@@ -64,16 +64,18 @@ node pipeline/gate.mjs [--task M27[,M28]] [--quick] [--no-smoke] [--perf] [--env
 of their `touches`. A block the branch has already cleared from `docs/TASKS.md` is looked for in the branch's history
 since the base.
 
-`--quick` is build and tests: about two minutes (the suite 75-90 s; measured 2026-10-04 in the container with other
-work running). Its build leaves out the `.br`/`.gz` copies (owner decision 3 of audit 2, CORE-11: the gate sets
-`AIRSOFT_PRECOMPRESS=0`, which `vite.config.ts` reads), about 9 s of Brotli a build that only the release smoke test
-and a host need; the full gate and CI build with them (the gate sets `AIRSOFT_PRECOMPRESS=1` for its build and smoke
-steps, so a leftover `0` in the shell can't reach them). While working, `npx vitest run --project fast` runs
-every unit test except the headless bot-match guards (project `slow`, `src/ai/depotMatch*.test.ts` and the Pro guards `src/ai/*Match.pro*.test.ts`, `src/ai/proBalance.test.ts`) in about 12 s; the
-gate, CI and `npm test` always run both projects (vite.config.ts, audit CORE-15). The full gate in a cloud container is about five minutes plus the perf run
-when it is required; set `PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium` there. The report is
-`pipeline/out/gate-report.json`, the attempt row for the task's record `pipeline/out/metrics-row.md`
-(`records.mjs` › `metricsRow`), and the logs and reports are under `pipeline/out/qa-artifacts/`; all git-ignored.
+`--quick` is build and tests, both projects: about 20 minutes in a 4-core cloud container (measured 2026-10-08: build 33
+s, the 3,383 tests 21 minutes, most of it the `slow` project's bot-match guards). Its build leaves out the `.br`/`.gz`
+copies (owner decision 3 of audit 2, CORE-11: the gate sets `AIRSOFT_PRECOMPRESS=0`, which `vite.config.ts` reads),
+about 9 s of Brotli a build that only the release smoke test and a host need; the full gate and CI build with them (the
+gate sets `AIRSOFT_PRECOMPRESS=1` for its build and smoke steps, so a leftover `0` in the shell can't reach them). While
+working, `npx vitest run --project fast` runs every unit test except the headless bot-match guards (project `slow`,
+`src/ai/depotMatch*.test.ts` and the Pro guards `src/ai/*Match.pro*.test.ts`, `src/ai/proBalance.test.ts`) in about 2
+minutes (2026-10-08); the gate, CI and `npm test` always run both projects (vite.config.ts, audit CORE-15). The full
+gate in a cloud container is about 30 minutes (2026-10-08: smoke 8 minutes on top of `--quick`) plus the perf run when
+it is required; set `PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium` there. The report is
+`pipeline/out/gate-report.json`, the attempt row for the task's record `pipeline/out/metrics-row.md` (`records.mjs` ›
+`metricsRow`), and the logs and reports are under `pipeline/out/qa-artifacts/`; all git-ignored.
 
 **Builds.** `build-cached.mjs` builds the production bundle (`dist/`) or the e2e bundle (`dist-e2e/`, `--mode e2e`) and
 skips the build when the output is already that of the same source (a hash of `src/` without tests, `public/`,
