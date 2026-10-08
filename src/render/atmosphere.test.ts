@@ -211,6 +211,9 @@ describe('the horizon ring at night on a map with its own trees (M75, owner deci
     const mesh = scene.getObjectByName('trees') as THREE.Mesh | undefined;
     return mesh ? mesh.geometry.getAttribute('position').count / 3 : 0;
   };
+  // The ring alone: Woodland without its set dressing, whose skyline (G9) joins the same mesh on Medium and High.
+  const WOODS: typeof WOODLAND = { ...WOODLAND };
+  delete WOODS.dressing;
 
   it('caps the ring at ATMOSPHERE.trees.nightWithOwnTrees by night in the woods, and keeps the setting anywhere else', () => {
     const cap = ATMOSPHERE.trees.nightWithOwnTrees;
@@ -223,44 +226,44 @@ describe('the horizon ring at night on a map with its own trees (M75, owner deci
   });
 
   it('draws Woodland’s ring as the simple one on Medium by night, as Depot’s under the same night keeps the detailed one', () => {
-    const night = resolveLighting(WOODLAND);
+    const night = resolveLighting(WOODS);
     expect(night.night).toBe(true);
     expect(QUALITY.medium.trees).toBe(2);
-    const ring = (map: typeof WOODLAND, quality: typeof QUALITY.medium): { scene: THREE.Scene; dispose: () => void } => {
+    const ring = (map: typeof WOODS, quality: typeof QUALITY.medium): { scene: THREE.Scene; dispose: () => void } => {
       const scene = new THREE.Scene();
       const lighting = addLighting(scene, map, quality, night);
       return { scene, dispose: () => lighting.dispose() };
     };
-    const woodsMedium = ring(WOODLAND, QUALITY.medium);
-    const woodsLow = ring(WOODLAND, QUALITY.low);
+    const woodsMedium = ring(WOODS, QUALITY.medium);
+    const woodsLow = ring(WOODS, QUALITY.low);
     const depotMedium = ring(DEPOT, QUALITY.medium);
     const depotLow = ring(DEPOT, QUALITY.low);
     expect(trees(woodsMedium.scene)).toBe(trees(woodsLow.scene));
     expect(trees(depotMedium.scene)).toBeGreaterThan(trees(depotLow.scene));
     // Trees: None stays none.
-    const woodsNone = ring(WOODLAND, { ...QUALITY.medium, trees: 0 });
+    const woodsNone = ring(WOODS, { ...QUALITY.medium, trees: 0 });
     expect(trees(woodsNone.scene)).toBe(0);
     for (const r of [woodsMedium, woodsLow, depotMedium, depotLow, woodsNone]) r.dispose();
   });
 
   it('keeps the setting’s own ring on Woodland by day, and on Depot and Neon Heights under their own presets (M75, QA)', () => {
-    const ring = (map: typeof WOODLAND, quality: typeof QUALITY.medium, preset: typeof LIGHTING_PRESETS.day): number => {
+    const ring = (map: typeof WOODS, quality: typeof QUALITY.medium, preset: typeof LIGHTING_PRESETS.day): number => {
       const scene = new THREE.Scene();
       const lighting = addLighting(scene, map, quality, preset);
       const n = trees(scene);
       lighting.dispose();
       return n;
     };
-    const simple = ring(WOODLAND, QUALITY.low, LIGHTING_PRESETS.night);
+    const simple = ring(WOODS, QUALITY.low, LIGHTING_PRESETS.night);
     expect(simple).toBeGreaterThan(0);
     // Woodland: the detailed ring by day (the preset's own level), the simple one by night.
-    const woodsDay = ring(WOODLAND, QUALITY.medium, LIGHTING_PRESETS.day);
+    const woodsDay = ring(WOODS, QUALITY.medium, LIGHTING_PRESETS.day);
     expect(woodsDay).toBeGreaterThan(simple);
-    expect(ring(WOODLAND, QUALITY.medium, resolveLighting(WOODLAND))).toBe(simple);
-    expect(ring(WOODLAND, QUALITY.high, LIGHTING_PRESETS.night)).toBe(simple);
-    expect(ring(WOODLAND, QUALITY.high, LIGHTING_PRESETS.day)).toBeGreaterThan(simple);
+    expect(ring(WOODS, QUALITY.medium, resolveLighting(WOODS))).toBe(simple);
+    expect(ring(WOODS, QUALITY.high, LIGHTING_PRESETS.night)).toBe(simple);
+    expect(ring(WOODS, QUALITY.high, LIGHTING_PRESETS.day)).toBeGreaterThan(simple);
     // A Low setting is kept by day too (the cap only lowers).
-    expect(ring(WOODLAND, QUALITY.low, LIGHTING_PRESETS.day)).toBe(simple);
+    expect(ring(WOODS, QUALITY.low, LIGHTING_PRESETS.day)).toBe(simple);
     // Neon Heights (night by default, and day): no trees of its own, so Medium and High keep the detailed ring.
     expect(NEON_HEIGHTS.blocks.some((b) => b.kind === 'tree')).toBe(false);
     for (const preset of [resolveLighting(NEON_HEIGHTS), resolveLighting(NEON_HEIGHTS, 'day')]) {

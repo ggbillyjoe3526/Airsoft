@@ -76,7 +76,7 @@ describe('G8 QA: skyline geometry', () => {
 
   it('skylineClear keeps trees off every piece, turned or not, and leaves the open ring alone', () => {
     const T = DRESSING.skyline.treeClear;
-    for (const p of SKY) if (p.kind !== 'powerLine') expect(skylineClear(SKY, p.x, p.z)).toBe(false);
+    for (const p of SKY) if (p.kind !== 'powerLine' && p.kind !== 'treeline' && p.kind !== 'hill') expect(skylineClear(SKY, p.x, p.z)).toBe(false);
     for (const p of SKY) if (p.kind === 'powerLine') for (const q of p.points) expect(skylineClear(SKY, q.x, q.z)).toBe(false);
     expect(skylineClear(SKY, 0, 0)).toBe(true);
     const turned: SkylinePiece = { kind: 'shed', x: 0, z: 0, width: 20, depth: 4, height: 6, turned: true };

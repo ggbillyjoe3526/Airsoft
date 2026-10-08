@@ -85,13 +85,13 @@ describe('G8 QA: dressing effects', () => {
   it('Custom: Trees detailed with Impact grit off shows smoke only, and grit alone shows dust only', () => {
     const a = new THREE.Scene();
     const fa = new DressingEffects(a, DEPOT.dressing);
-    fa.setQuality({ trees: 2, impactGrit: false });
+    fa.setQuality({ trees: 2, impactGrit: false, mapDetail: false });
     fa.afterTick([footstep('sprint')], walker(), vec3());
     fa.update(DT, camera(), vec3());
     expect(a.children.map((o) => o.name)).toEqual(['smokePlumes']);
     const b = new THREE.Scene();
     const fb = new DressingEffects(b, DEPOT.dressing);
-    fb.setQuality({ trees: 1, impactGrit: true });
+    fb.setQuality({ trees: 1, impactGrit: true, mapDetail: false });
     expect(b.children).toHaveLength(1);
     expect(b.children[0]!.name).not.toBe('smokePlumes');
     fa.dispose();
