@@ -25,7 +25,6 @@ export const NAV_ICONS = {
   setup: PLAY,
   loadout: RIFLE,
   armory: CRATE,
-  range: TARGET,
   settings: SLIDERS,
   tutorial: INFO,
 } as const;
@@ -54,7 +53,18 @@ export const MODE_ICONS = {
   elimination: icon('<circle cx="12" cy="12" r="8"/><path d="M12 1.5v5M12 17.5v5M1.5 12h5M17.5 12h5"/><circle cx="12" cy="12" r="2" fill="currentColor"/>'),
   attackDefend: icon('<path d="M5 22V2.5M5 3h13.5l-3 4.5 3 4.5H5"/>'),
   extraction: icon('<path d="M14 3.5H5v17h9"/><path d="M10 12h11M17 8l4 4-4 4"/>'),
+  /** Practice, the last mode card (M100). */
+  practice: TARGET,
 } as const;
+
+/**
+ * Practice's picture (M100): a paper target on the range, drawn rather than shot (the other modes' stills come from the
+ * game's own maps, and the range has none yet). Static SVG filling the card's picture frame; decoration only.
+ */
+export const PRACTICE_ART =
+  '<svg class="practice-art" viewBox="-12 -12 184 184" preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false">' +
+  '<g transform="translate(80 80)"><circle r="66" fill="#e8ecf8"/><circle r="51" fill="#14214a"/><circle r="38" fill="#e8ecf8"/><circle r="25" fill="#ff6b1a"/><circle r="11" fill="#14214a"/>' +
+  '<circle cx="9" cy="-7" r="3.4" fill="#e8ecf8"/><circle cx="-16" cy="13" r="3.4" fill="#e8ecf8"/><circle cx="28" cy="24" r="3.4" fill="#14214a"/></g></svg>';
 
 /** The Settings groups, by the group. */
 export const SETTINGS_TAB_ICONS: Record<SettingsTab, string> = {

@@ -1,49 +1,30 @@
 /*
- * The title and the Play screen (G3): the wordmark and the next match, the kit strip, the map and mode cards, the
- * Match section and Your match.
+ * The title and the Match screen (G3, M100): the wordmark, the kit strip, the map and mode cards, the rules section and
+ * Your match.
  */
 
-/* The title: the wordmark over the field, Play and the places under it, a tip and the next match on the right. */
+/* The title (M100): the wordmark over the field, the tagline, START and (on a clean save) the Tutorial under it; the
+   version small at the bottom left. Nothing else. */
 .menu-title {
-  padding-top: clamp(24px, 4vw, 72px);
-}
-
-.title-wallet {
-  position: absolute;
-  top: clamp(16px, 2vw, 32px);
-  right: var(--menu-gutter);
+  justify-content: center;
 }
 
 .title-body {
-  display: grid;
-  grid-template-columns: minmax(320px, 680px) minmax(300px, 520px);
-  grid-template-rows: auto 1fr;
-  grid-template-areas: 'hero hero' 'actions side';
-  justify-content: space-between;
-  align-items: end;
-  gap: clamp(24px, 3vw, 56px) var(--sp-6);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(28px, 3.4vw, 64px);
   width: 100%;
   padding-left: clamp(0px, 4.2vw, 72px);
-  flex: 1 0 auto;
 }
 
 .title-hero {
-  grid-area: hero;
   align-self: start;
-}
-
-.title-kicker {
-  margin: 0 0 var(--sp-2);
-  font: 600 var(--fs-md) / 1 var(--ui-display);
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--orange-text);
 }
 
 .menu-title-wordmark {
   gap: 0.25em;
-  font: italic 800 clamp(72px, 9vw, 176px) / 0.9 var(--ui-display);
-  letter-spacing: 0.01em;
+  font: 800 clamp(72px, 9vw, 176px) / 0.9 var(--ui-display);
+  letter-spacing: -0.02em;
   text-transform: uppercase;
 }
 
@@ -56,99 +37,51 @@
   margin: var(--sp-4) 0 0;
   font-size: clamp(20px, 1.6vw, 30px);
   font-weight: 500;
+  letter-spacing: 0.01em;
   color: var(--paper);
 }
 
 .title-actions {
-  grid-area: actions;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-width: 560px;
+  width: min(100%, 420px);
 }
 
-.title-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.title-list .menu-button {
+.title-actions .menu-button {
   justify-content: flex-start;
-  min-height: clamp(48px, 3vw, 58px);
+  min-height: clamp(52px, 3.4vw, 64px);
   padding: 0 var(--sp-5);
-  font-size: clamp(20px, 1.3vw, 25px);
-  font-weight: 800;
+}
+
+.title-actions .menu-title-tutorial {
+  font-size: clamp(18px, 1.2vw, 22px);
   background: rgba(14, 24, 52, 0.92);
 }
 
-.title-list .menu-button .tag-pill {
-  margin-left: auto;
-}
-
-.title-side {
-  grid-area: side;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  width: 100%;
-}
-
-.title-tip {
-  display: flex;
-  gap: 14px;
+.title-version {
+  position: absolute;
+  left: var(--menu-gutter);
+  bottom: clamp(14px, 1.4vw, 24px);
   margin: 0;
-  padding: var(--sp-4) var(--sp-5);
-  font-size: var(--fs-lg);
-  line-height: 1.4;
-  border-left: 4px solid var(--menu-acid);
-  clip-path: none;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: var(--ls-caps);
+  color: var(--menu-faint);
 }
 
-.title-tip svg.icon {
-  margin-top: 2px;
-  color: var(--menu-acid);
-}
-
-.title-next {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-3);
-  padding: var(--sp-5);
-}
-
-.title-next-row {
-  display: flex;
-  gap: var(--sp-4);
-  align-items: center;
-}
-
-.title-next-still {
-  flex: 0 0 44%;
-  aspect-ratio: 16 / 9;
-  overflow: hidden;
-  background: var(--menu-panel-hi);
-}
-
-.title-next-still img,
 .play-still img,
-.choice-card-pic img {
+.choice-card-pic img,
+.choice-card-pic svg,
+.practice-still,
+.practice-still svg {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.title-next-map {
-  margin: 0 0 6px;
-  font-size: var(--fs-2xl);
-  font-weight: 800;
-  letter-spacing: 0.05em;
-}
-
-.title-next-line {
-  margin: 0;
-  font-size: var(--fs-lg);
-  color: var(--menu-muted);
+.practice-still {
+  display: block;
 }
 
 /* The kit you carry: one picture card per slot, its name over the foot, its tier along the bottom. */
@@ -462,7 +395,7 @@
   display: flex;
   flex-direction: column;
   gap: clamp(6px, 0.9vh, 14px);
-  max-height: calc(100vh - var(--topbar-h) - var(--page-top) - var(--hints-h));
+  max-height: calc(100vh - var(--topbar-h) - 2 * var(--page-top));
   padding: var(--sp-5);
   /* A window too short for it all still reaches Play, by scrolling the panel. */
   overflow-y: auto;

@@ -235,7 +235,6 @@ export const SETTINGS_TEXT = {
   hudHeading: 'HUD',
   /** Under the Key Bindings: the mouse and the fixed keys. */
   fixedKeys: 'Wheel switches replica (a direction bound above does that instead) · Esc pauses and resumes · ` or F3 shows the debug info',
-  saved: 'Saved as you change them',
 } as const;
 
 /** Settings not built yet, listed greyed out in their group (label and a short line on what it will do). */
@@ -258,63 +257,52 @@ export const SETTINGS_LATER: Readonly<Record<SettingsTab, readonly { label: stri
 export const SETTINGS_WRITE_DELAY_MS = 400;
 
 /**
- * The menus' frame (graphics overhaul G3): the bar across the top of the screens you move between, the key hints along
- * the bottom and the words they share.
+ * The menus' frame (graphics overhaul G3, M100): the bar across the top of the screens you move between, the keys the
+ * screens answer to and the words they share.
  */
 export const MENU_TEXT = {
-  /** The top bar's places, in order (the Range starts the practice range). */
+  /** The top bar's places, in order (M100: Match, Loadout, Armory, Settings; the Range is a mode on the Match screen). */
   nav: [
-    { id: 'setup', label: 'Play' },
+    { id: 'setup', label: 'Match' },
     { id: 'loadout', label: 'Loadout' },
     { id: 'armory', label: 'Armory' },
-    { id: 'range', label: 'Range' },
     { id: 'settings', label: 'Settings' },
   ],
   navLabel: 'Menu',
   wordmark: 'Airsoft',
+  /** The top bar's wordmark is a button back to the title; opened from the pause menu it is Back. */
+  toTitle: 'Back to the title screen',
+  back: 'Back',
   /** The wallet on the top bar. */
   fc: (fc: number) => `${fc.toLocaleString('en-GB')} FC`,
   tokens: (n: number) => `${n} ${n === 1 ? 'Token' : 'Tokens'}`,
-  free: 'Completely free: nothing is ever sold',
   dev: 'Dev',
+  /** The buttons and keys the screens name (no key prompts are drawn along the bottom since M100). */
   hints: {
     back: 'Back',
-    play: 'Play',
+    start: 'START',
+    startMatch: 'Start match',
+    startPractice: 'Start practice',
     tutorial: 'Tutorial',
     settings: 'Settings',
     customise: 'Customise',
-    rightClick: 'Right-click',
-    search: 'Search',
     shot: '1 Shot',
     resume: 'Resume',
-    next: 'Next',
+    search: 'Search',
   },
 } as const;
 
-/** The title screen's words (G3). */
+/** The title screen's words (M100: a plain title). */
 export const TITLE_TEXT = {
-  kicker: 'Single player against bots',
-  tagline: 'Call your hit. Walk it off. Go again.',
-  newTag: 'New? Start here',
-  tokensToSpend: (n: number) => `${n} ${n === 1 ? 'Token' : 'Tokens'} to spend`,
-  nextMatch: 'Your next match',
-  kit: 'Your kit',
-  /** One shows at a time, a different one each visit. */
-  tips: [
-    'When a BB hits you, your hand goes up and you walk off. Bots do the same.',
-    'Field Credits come from playing matches, more for a win. Spend them in the Armory.',
-    'Hop-up lifts a BB for a longer reach. Set it for each replica in Loadout › Customise.',
-    'BBs bounce off concrete and steel. Whether a bounce counts as a hit is a match rule.',
-  ],
-  tip: 'Tip',
+  tagline: 'Call your hit. Go again.',
 } as const;
 
-/** The Play screen's words (G3: New game in the new look). */
+/** The Match screen's words (G3: New game in the new look; M100: the screen is Match, Practice its last mode). */
 export const PLAY_TEXT = {
-  heading: 'New game',
+  heading: 'Match',
   map: 'Map',
   mode: 'Mode',
-  match: 'Match',
+  match: 'Match rules',
   matchNote: 'Pick a set of rules; the rows they leave open are yours to change',
   bots: 'Bots',
   yourMatch: 'Your match',
@@ -325,6 +313,14 @@ export const PLAY_TEXT = {
   change: 'Change',
   night: 'Night',
   light: 'Light',
+  /** Practice, the last mode card: the range, with no bots and no score. */
+  practice: {
+    label: 'Practice',
+    blurb: 'The range: targets to shoot at, no bots, no score.',
+    mapLine: 'Practice range',
+    rules: 'No score, no clock',
+    teams: 'On your own',
+  },
   /** "Normal bots", "Hard / Normal bots". */
   botsLine: (levels: string) => `${levels} bots`,
   pays: 'Pays Field Credits for the Armory as you play.',
@@ -362,7 +358,6 @@ export const GEAR_TEXT = {
   skinsLater: 'Skins come in a later version.',
   /** The BB rows' own heading in the part list. */
   ammo: 'BBs',
-  changesSave: 'Changes save as you go',
 } as const;
 
 /**

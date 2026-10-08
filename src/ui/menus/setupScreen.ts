@@ -6,9 +6,9 @@ import { LIGHTING_LABELS, lightingChoices } from '../../map/lightingChoice';
 import { COMING_MAPS, COMING_SOON_TAG, DEFAULT_MAP, MAPS, type MapId, mapData } from '../../map/maps';
 import { modeOffered } from '../../map/playableMode';
 import type { LoadoutModel } from '../../pool/loadoutModel';
-import { hintsBar, menuArt, type MenuHint, sectionHead } from './chrome';
+import { menuArt, type MenuHint, sectionHead } from './chrome';
 import { ChoiceCards } from './choiceCards';
-import { MENU_ICONS, MODE_ICONS } from './icons';
+import { MENU_ICONS, MODE_ICONS, PRACTICE_ART } from './icons';
 import { KitStrip, type PictureContext } from './kitStrip';
 import { type MatchModel, MatchPanel, type MatchShown } from './matchPanel';
 import { el, hintLine, menuButton, setHint } from './menuParts';
@@ -47,13 +47,18 @@ export interface PlayView extends MatchShown {
 export interface SetupActions {
   onLoadout: () => void;
   onBack: () => void;
+  /** Start match: the match as picked. */
   onPlay: () => void;
+  /** Start practice: the Practice mode (the last card) is picked, so the same button opens the range instead. */
+  onPractice: () => void;
 }
 
 /**
- * The Play screen (New game, in the G3 look): the map as picture cards (Day | Night on a map that has both), the mode as
- * cards with their pictures, and the match's rules and bots, with "Your match" beside them: the map picked, the rules,
- * your kit and Play. Everything saves as it is picked.
+ * The Match screen (New game, in the G3 look; M100: Play renamed Match): the map as picture cards (Day | Night on a map
+ * that has both), the mode as cards with their pictures, Practice the last of them, and the match's rules and bots, with
+ * "Your match" beside them: the map picked, the rules, your kit and Start match. Everything saves as it is picked
+ * except Practice, which is the range: picked, it hides the map and the rules (a range has neither) and the button
+ * reads Start practice.
  */
 export class SetupScreen {
   readonly root: HTMLDivElement;
@@ -68,7 +73,14 @@ export class SetupScreen {
   private readonly kit: KitStrip;
   private readonly rules: HTMLParagraphElement;
   private readonly pays: HTMLParagraphElement;
+  private readonly start: HTMLButtonElement;
+  private readonly sections: { map: HTMLElement; rules: HTMLElement };
+  private readonly practiceArt: HTMLElement;
+  private modeNumber!: HTMLElement;
+  private readonly startLabel = el('span', '', MENU_TEXT.hints.startMatch);
   private readonly hint = hintLine();
+  /** Practice, the last mode card, is the pick (not saved: the saved mode stays as it was). */
+  private practice = false;
 
   constructor(
     private readonly model: PlayModel,
@@ -106,6 +118,7 @@ export class SetupScreen {
       devTag: MENU_TEXT.dev,
       picture: (id) => (MODE_STILLS[id] ? menuArt(MODE_STILLS[id]!.file) : null),
       icon: (id) => MODE_ICONS[id],
+      extra: { label: PLAY_TEXT.practice.label, blurb: PLAY_TEXT.practice.blurb, icon: '', art: PRACTICE_ART, onToggle: (on) => this.setPractice(on) },
     });
     this.modes.root.classList.add('mode-cards');
     this.match = new MatchPanel(model);
@@ -116,7 +129,16 @@ export class SetupScreen {
       s.append(sectionHead(n, title, extra), body);
       return s;
     };
-    main.append(section('01', PLAY_TEXT.map, this.maps.root), section('02', PLAY_TEXT.mode, this.modes.root), section('03', PLAY_TEXT.match, this.match.root, PLAY_TEXT.matchNote));
+    this.sections = {
+      map: section('01', PLAY_TEXT.map, this.maps.root),
+      rules: section('03', PLAY_TEXT.match, this.match.root, PLAY_TEXT.matchNote),
+    };
+    // Without the map above it, the mode is the page's first section (its number follows, setPractice).
+    const modeHead = sectionHead('02', PLAY_TEXT.mode);
+    this.modeNumber = modeHead.children[0] as HTMLElement;
+    const modes = el('section', 'play-section');
+    modes.append(modeHead, this.modes.root);
+    main.append(this.sections.map, modes, this.sections.rules);
 
     const aside = el('aside', 'play-aside menu-card');
     aside.setAttribute('aria-label', PLAY_TEXT.yourMatch);
@@ -124,7 +146,10 @@ export class SetupScreen {
     this.still = el('img');
     this.still.alt = '';
     this.still.decoding = 'async';
-    frame.append(this.still);
+    this.practiceArt = el('span', 'practice-still');
+    this.practiceArt.innerHTML = PRACTICE_ART;
+    this.practiceArt.hidden = true;
+    frame.append(this.still, this.practiceArt);
     this.mapLine = el('h2', 'play-map-line');
     const facts = el('dl', 'play-facts');
     const fact = (label: string): HTMLElement => {
@@ -141,19 +166,41 @@ export class SetupScreen {
     this.loadoutLine = el('p', 'play-loadout-line');
     this.rules = el('p', 'setup-rules');
     this.pays = el('p', 'play-pays');
-    const play = menuButton(MENU_TEXT.hints.play, 'primary', actions.onPlay);
-    play.classList.add('menu-button-big', 'play-button');
-    play.insertAdjacentHTML('beforeend', MENU_ICONS.arrowRight);
-    play.dataset.autofocus = '';
-    aside.append(el('p', 'menu-kicker', PLAY_TEXT.yourMatch), frame, this.mapLine, facts, loadoutHead, this.kit.root, this.loadoutLine, this.rules, this.pays, this.hint, play);
+    this.start = menuButton('', 'primary', () => (this.practice ? actions.onPractice() : actions.onPlay()));
+    this.start.classList.add('menu-button-big', 'play-button');
+    this.start.append(this.startLabel);
+    this.start.insertAdjacentHTML('beforeend', MENU_ICONS.arrowRight);
+    this.start.dataset.autofocus = '';
+    aside.append(el('p', 'menu-kicker', PLAY_TEXT.yourMatch), frame, this.mapLine, facts, loadoutHead, this.kit.root, this.loadoutLine, this.rules, this.pays, this.hint, this.start);
 
     const layout = el('div', 'play-layout');
     layout.append(main, aside);
-    this.hints = [
-      { keys: ['Esc'], label: MENU_TEXT.hints.back, run: actions.onBack },
-      { keys: ['Tab'], label: MENU_TEXT.hints.next },
-    ];
-    this.root.append(el('h1', 'menu-heading sr-only', PLAY_TEXT.heading), layout, hintsBar(this.hints, MENU_TEXT.free));
+    // Esc is Back (the top bar's wordmark does it for the mouse).
+    this.hints = [{ keys: ['Esc'], label: MENU_TEXT.hints.back, run: actions.onBack }];
+    this.root.append(el('h1', 'menu-heading sr-only', PLAY_TEXT.heading), layout);
+  }
+
+  /** Practice picked (true) or another mode (false): the map and the rules go, the button and the summary follow. */
+  private setPractice(on: boolean): void {
+    this.practice = on;
+    this.root.classList.toggle('is-practice', on);
+    this.sections.map.hidden = this.sections.rules.hidden = on;
+    this.modeNumber.textContent = on ? '01' : '02';
+    this.startLabel.textContent = on ? MENU_TEXT.hints.startPractice : MENU_TEXT.hints.startMatch;
+    this.showPracticeFacts();
+  }
+
+  private showPracticeFacts(): void {
+    const on = this.practice;
+    this.still.hidden = on;
+    this.practiceArt.hidden = !on;
+    this.rules.hidden = on || this.rules.textContent === '';
+    if (!on) return;
+    this.mapLine.textContent = PLAY_TEXT.practice.mapLine;
+    this.facts.mode.textContent = PLAY_TEXT.practice.label;
+    this.facts.rules.textContent = PLAY_TEXT.practice.rules;
+    this.facts.teams.textContent = PLAY_TEXT.practice.teams;
+    this.pays.hidden = true;
   }
 
   /** Shows the match as it will play. */
@@ -176,6 +223,7 @@ export class SetupScreen {
     this.rules.textContent = view.notes;
     this.pays.textContent = view.pays;
     this.pays.hidden = view.pays === '';
+    this.showPracticeFacts();
   }
 
   /** The line under Extraction for the supply event on now (M49): read as the screen opens. */

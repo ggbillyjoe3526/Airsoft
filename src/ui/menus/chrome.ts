@@ -4,9 +4,9 @@ import { MENU_ICONS, NAV_ICONS } from './icons';
 import { el } from './menuParts';
 
 /**
- * The menus' frame (graphics overhaul G3): the bar across the top of the screens you move between (Play, Loadout,
- * Armory, Range, Settings, with the wallet and the build), the key hints along the bottom of every screen, and the
- * backdrop behind them all: one picture, blurred once when it was made, never live.
+ * The menus' frame (graphics overhaul G3, M100): the bar across the top of the screens you move between (Match, Loadout,
+ * Armory, Settings, with the wallet on the far right), and the backdrop behind them all: one picture, blurred once when
+ * it was made, never live. No key prompts are drawn along the bottom; the keys a screen answers to are its `hints`.
  */
 
 /** A place on the top bar. */
@@ -17,17 +17,26 @@ export function menuArt(file: string): string {
   return `${import.meta.env.BASE_URL}${MENU_ART_DIR}/${file}`;
 }
 
-/** The top bar: the wordmark, the places (the current one marked), the wallet and the build. */
+/**
+ * The top bar: the wordmark (a button back to the title; Back to the pause menu when opened from there), the places
+ * (the current one marked) and the wallet at the far right. It carries no version: the title screen has it.
+ */
 export class TopBar {
   readonly root: HTMLElement;
   private readonly places = new Map<NavPlace, HTMLButtonElement>();
+  private readonly mark: HTMLButtonElement;
+  private readonly markText: HTMLSpanElement;
   private readonly fc: HTMLSpanElement;
   private readonly tokens: HTMLSpanElement;
 
-  constructor(onPlace: (place: NavPlace) => void) {
+  constructor(onPlace: (place: NavPlace) => void, onMark: () => void) {
     this.root = el('header', 'menu-topbar');
-    const mark = el('p', 'menu-mark', MENU_TEXT.wordmark);
-    mark.prepend(el('i'));
+    this.mark = el('button', 'menu-mark');
+    this.mark.type = 'button';
+    this.markText = el('span', '', MENU_TEXT.wordmark);
+    this.mark.append(el('i'), this.markText);
+    this.mark.title = MENU_TEXT.toTitle;
+    this.mark.addEventListener('click', onMark);
     const nav = el('nav', 'menu-nav');
     nav.setAttribute('aria-label', MENU_TEXT.navLabel);
     for (const { id, label } of MENU_TEXT.nav) {
@@ -42,15 +51,13 @@ export class TopBar {
     const wallet = el('div', 'menu-wallet');
     this.fc = el('span', 'menu-chip menu-chip-fc');
     this.tokens = el('span', 'menu-chip menu-chip-tokens');
-    const build = el('span', 'menu-build', __BUILD_VERSION__.label);
-    build.title = __BUILD_VERSION__.title;
-    wallet.append(this.fc, this.tokens, build);
-    this.root.append(mark, nav, wallet);
+    wallet.append(this.fc, this.tokens);
+    this.root.append(this.mark, nav, wallet);
   }
 
   /**
    * Marks `current` as the screen on show. `alone`: opened from the pause menu, where the other places can't be reached
-   * (a match is under way), so only the current one shows.
+   * (a match is under way), so only the current one shows, and the wordmark button reads Back.
    */
   show(current: NavPlace | null, alone: boolean): void {
     for (const [id, b] of this.places) {
@@ -60,6 +67,9 @@ export class TopBar {
       else b.removeAttribute('aria-current');
       b.hidden = alone && !on;
     }
+    this.root.classList.toggle('alone', alone);
+    this.markText.textContent = alone ? MENU_TEXT.back : MENU_TEXT.wordmark;
+    this.mark.title = alone ? MENU_TEXT.back : MENU_TEXT.toTitle;
   }
 
   /** The wallet: Field Credits and Tokens (null hides it: the Armory is off). `armoryOff` greys the Armory out. */
@@ -76,9 +86,8 @@ export class TopBar {
 }
 
 /**
- * A key hint along the bottom of a screen: the key (or keys) and what it does. With `run` it is a button too, for the
- * mouse (Esc Back is the screen's Back button); `code` is the key that does it (KeyboardEvent.code), handled by the
- * menus while no text box has the keyboard.
+ * A key a screen answers to (M100: no longer drawn along the bottom). `code` is the key (KeyboardEvent.code), handled by
+ * the menus while no text box has the keyboard; `run` is what it does. `label` names it for the tests and the docs.
  */
 export interface MenuHint {
   keys: readonly string[];
@@ -87,35 +96,6 @@ export interface MenuHint {
   code?: string;
   /** The key does it only while no control has the keyboard (Space presses a focused button instead). */
   idle?: boolean;
-  /**
-   * The screen has a button of its own for it (Play, Customise, Resume): the hint is then a click target for the mouse
-   * only, left out of the tab order and hidden from screen readers, so the action is named once.
-   */
-  echo?: boolean;
-}
-
-/** The row of key hints: `hints`, then a line on the right (`aside`). */
-export function hintsBar(hints: readonly MenuHint[], aside = ''): HTMLDivElement {
-  const bar = el('div', 'menu-hints');
-  for (const h of hints) {
-    const item = h.run ? el('button', 'menu-hint-key') : el('span', 'menu-hint-key');
-    if (h.run) (item as HTMLButtonElement).type = 'button';
-    if (h.run && h.echo) {
-      item.tabIndex = -1;
-      item.setAttribute('aria-hidden', 'true');
-    }
-    // The keys are what the hint looks like; its words are its name ("Back"), so a screen reader reads the action.
-    for (const k of h.keys) {
-      const key = el('kbd', '', k);
-      key.setAttribute('aria-hidden', 'true');
-      item.append(key);
-    }
-    item.append(el('span', '', h.label));
-    if (h.run) item.addEventListener('click', h.run);
-    bar.append(item);
-  }
-  if (aside) bar.append(el('span', 'menu-hints-aside', aside));
-  return bar;
 }
 
 /** A numbered section heading: "01 Map" with a rule to the right and `extra` after it. */

@@ -41,7 +41,7 @@ import {
   TIME_OUT_CHOICES,
   WINS_NEEDED_CHOICES,
 } from '../../config/matchRules';
-import { DEFAULT_HIT_FEED_MODE, DEFAULT_WHAT_GOT_YOU_MODE, HIT_FEED_MODES, type HitFeedMode, HUD_SIZE, SCOREBOARD_SIZE, WHAT_GOT_YOU_MODES, type WhatGotYouMode } from '../../config/matchInfo';
+import { DEFAULT_HIT_FEED_MODE, DEFAULT_WHAT_GOT_YOU_MODE, HIT_FEED_MODES, type HitFeedMode, HUD_SIZE, RECORDS_KEY, SCOREBOARD_SIZE, WHAT_GOT_YOU_MODES, type WhatGotYouMode } from '../../config/matchInfo';
 import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../../config/modes';
 import { AIMING } from '../../config/optics';
 import { frameRateCapFromSaved, GRAPHICS_ROWS, graphicsKey, parseStored, SHOW_FPS_CHOICES, TONE_MAPPING_CHOICES } from '../../config/graphics';
@@ -268,6 +268,20 @@ export function loadSoundCues(): boolean {
 /** Whether the tutorial was played to the end (M16). */
 export function loadTutorialDone(): boolean {
   return loadSetting('tutorialDone', (raw) => (typeof raw === 'boolean' ? raw : undefined), false);
+}
+
+/**
+ * Whether a first match was started (M100; saved as `matchStarted`, false on a clean save): the title offers the Tutorial
+ * only before that. A save from before the flag counts as started when it already holds records, so a returning player
+ * isn't pointed at the tutorial again.
+ */
+export function loadMatchStarted(storage = browserStorage()): boolean {
+  if (loadSetting('matchStarted', (raw) => (typeof raw === 'boolean' ? raw : undefined), false, storage)) return true;
+  try {
+    return storage?.getItem(RECORDS_KEY) != null;
+  } catch {
+    return false;
+  }
 }
 
 /**

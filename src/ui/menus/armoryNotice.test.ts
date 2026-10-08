@@ -57,7 +57,7 @@ describe('the Armory says once when another tab saved first (M70, audit POOL-05)
   const setup = (onChange: () => boolean | void) => {
     const c = newCollection(pool, 7);
     c.tokens = 5;
-    const screen = new ArmoryScreen({ pool: () => pool, collection: () => c, equipped: () => [], onChange, onBack: () => {} });
+    const screen = new ArmoryScreen({ pool: () => pool, collection: () => c, equipped: () => [], onChange });
     const root = screen.root as unknown as Node;
     return {
       screen,
@@ -124,7 +124,7 @@ describe('the Armory notice, further cases (M70, audit POOL-05)', () => {
     c.tokens = 5;
     c.fc = fc;
     let calls = 0;
-    const screen = new ArmoryScreen({ pool: () => pool, collection: () => c, equipped: () => [], onChange: () => (calls++, onChange(c) as boolean | void), onBack: () => {} });
+    const screen = new ArmoryScreen({ pool: () => pool, collection: () => c, equipped: () => [], onChange: () => (calls++, onChange(c) as boolean | void) });
     const root = screen.root as unknown as Node;
     const text = (n: Node): string => n.textContent + n.children.map((k) => text(k as Node)).join(' ');
     return {

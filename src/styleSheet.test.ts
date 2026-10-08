@@ -291,3 +291,37 @@ describe('the HUD\'s sheets (G4)', () => {
     expect(blockOf('.minimap-on > .debug-overlay')).toMatch(/--minimap-caption/);
   });
 });
+
+describe('the font (M100: Inter replaces Barlow)', () => {
+  const faces = [...sheet.matchAll(/@font-face\s*\{([^}]*)\}/g)].map((m) => m[1]!);
+
+  it('loads Inter, in the weights the sheets use, from files served with the game, and names no Barlow anywhere', () => {
+    const named = faces.map((f) => /font-family:\s*'([^']+)'/.exec(f)![1]);
+    expect(new Set(named)).toEqual(new Set(['Inter']));
+    expect(faces.map((f) => /font-weight:\s*(\d+)/.exec(f)![1])).toEqual(['500', '600', '700', '800']);
+    for (const f of faces) expect(f).toMatch(/url\('[^']*assets\/fonts\/Inter-\d+\.woff2'\)/);
+    expect(css).not.toMatch(/barlow/i);
+  });
+
+  it('points both font variables, the menus\' and the HUD\'s, at Inter', () => {
+    for (const v of ['--ui-font', '--ui-display']) expect(new RegExp(`${v}:\\s*'Inter',`).test(sheet), v).toBe(true);
+    // Every weight a sheet asks for is one that is loaded (no faux-bold from a missing file).
+    const used = new Set([...menuSheet.matchAll(/font(?:-weight)?:\s*(?:italic\s+)?(\d{3})\b/g), ...hudSheet.matchAll(/font(?:-weight)?:\s*(?:italic\s+)?(\d{3})\b/g)].map((m) => m[1]));
+    for (const w of used) expect(['500', '600', '700', '800'], `weight ${w}`).toContain(w);
+  });
+
+  it('sets numbers in tabular figures, in the menus and over the HUD', () => {
+    expect(declared('.menus', 'font-variant-numeric')).toBe('tabular-nums');
+    expect(declared('.hud', 'font-variant-numeric')).toBe('tabular-nums');
+  });
+
+  it('draws no key prompts along the bottom of the menus (M100)', () => {
+    expect(menuSheet).not.toMatch(/menu-hint-key|\.menu-hints|menu-build/);
+  });
+
+  it('lays the Armory\'s collection out as one column per kind, under the other columns', () => {
+    expect(declared('.armory-list', 'grid-template-columns')).toMatch(/^repeat\(auto-fit, minmax\(\d+px, 1fr\)\)$/);
+    expect(declared('.armory-kind', 'flex-direction')).toBe('column');
+    expect(declared('.armory-owned', 'grid-column')).toBe('1 / -1');
+  });
+});

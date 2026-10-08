@@ -12,7 +12,7 @@
   --fs-lg: 18px;
   --fs-xl: 21px;
   --fs-2xl: 26px;
-  --fs-3xl: clamp(36px, 3.4vw, 64px);
+  --fs-3xl: clamp(32px, 2.8vw, 52px);
   --ls-caps: 0.06em;
   --ls-wide: 0.14em;
   --radius-sm: 0;
@@ -22,13 +22,14 @@
   --topbar-h: clamp(60px, 4.4vw, 84px);
   --menu-gutter: clamp(16px, 2.5vw, 48px);
   --page-top: clamp(20px, 2.2vw, 40px);
-  --hints-h: 84px;
   position: absolute;
   inset: 0;
   z-index: 20;
   overflow: hidden;
   color: var(--paper);
   font: 500 var(--fs-md) / 1.4 var(--ui-font);
+  /* Inter's tabular figures: FC, Tokens, stats and scores keep their width as they change (M100). */
+  font-variant-numeric: tabular-nums;
   background: var(--menu-bg);
   -webkit-font-smoothing: antialiased;
 }
@@ -50,14 +51,14 @@
   stroke-linejoin: round;
 }
 
-/* A screen: a page over the backdrop that scrolls when it must, its key hints pinned along the bottom. */
+/* A screen: a page over the backdrop that scrolls when it must (it fades out at the foot while more lies below). */
 .menu-screen {
   position: absolute;
   inset: 0;
   z-index: 1;
   display: flex;
   flex-direction: column;
-  padding: var(--page-top) var(--menu-gutter) 0;
+  padding: var(--page-top) var(--menu-gutter);
   overflow-x: hidden;
   overflow-y: auto;
   scrollbar-width: thin;
@@ -66,6 +67,18 @@
 
 .menus.has-topbar .menu-hub {
   padding-top: calc(var(--topbar-h) + var(--page-top));
+}
+
+/* More of the screen below (audit UI-18): the page fades out along its foot, so it doesn't read as ending there. */
+.menu-screen.more-below::after {
+  content: '';
+  position: sticky;
+  bottom: calc(-1 * var(--page-top));
+  flex: none;
+  height: 56px;
+  margin: -56px calc(-1 * var(--menu-gutter)) calc(-1 * var(--page-top));
+  background: linear-gradient(0deg, var(--menu-bg), rgba(7, 13, 31, 0));
+  pointer-events: none;
 }
 
 /* A screen coming up fades its content in; the animation restarts each time it is shown (it leaves display: none). */
@@ -79,7 +92,7 @@
   }
 }
 
-/* Headings, labels and buttons in capitals, in the condensed face (owner, 2026-10-03; G3). */
+/* Headings, labels and buttons in capitals (owner, 2026-10-03; G3), in Inter's heavier weights. */
 .menu-heading,
 .menu-panel-title,
 .menu-dialog-title,
@@ -97,7 +110,6 @@
 .menu-nav-item,
 .menu-mark,
 .menu-chip,
-.menu-hints,
 .tag-pill,
 .gear-name,
 .item-name,
@@ -111,7 +123,6 @@
 .settings-about-title,
 .colour-real-title,
 .armory-shots-title,
-.title-next-map,
 .tier-text,
 .gear-tier,
 .item-tier,
@@ -207,7 +218,7 @@
   background: rgba(7, 13, 31, 0.86);
 }
 
-/* The top bar: the wordmark, the places (the current one underlined in orange), the wallet and the build. */
+/* The top bar (M100): the wordmark, the places from the left (the current one underlined in orange), the wallet at the far right. */
 .menu-topbar {
   position: absolute;
   inset: 0 0 auto;
@@ -217,7 +228,7 @@
   gap: clamp(12px, 2vw, 40px);
   height: var(--topbar-h);
   padding: 0 var(--menu-gutter);
-  background: linear-gradient(180deg, rgba(7, 13, 31, 0.97), rgba(7, 13, 31, 0.82));
+  background: var(--menu-bg);
   border-bottom: 1px solid var(--menu-line-soft);
 }
 
@@ -227,14 +238,23 @@
   align-items: center;
   margin: 0;
   font-weight: 800;
-  font-style: italic;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.03em;
 }
 
+/* The wordmark is a button: back to the title (Back to the pause menu when Settings or the Loadout came from there). */
 .menu-mark {
   gap: 12px;
-  font-size: clamp(24px, 1.8vw, 34px);
+  padding: 0;
+  font-size: clamp(22px, 1.6vw, 30px);
   line-height: 1;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.menu-mark:hover span {
+  color: var(--orange-text);
 }
 
 .menu-mark i,
@@ -283,8 +303,7 @@
   opacity: 0.45;
 }
 
-.menu-wallet,
-.title-wallet {
+.menu-wallet {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -314,90 +333,6 @@
 
 .menu-chip-tokens::before {
   background: #1fd6c4;
-}
-
-.menu-build {
-  font: 600 var(--fs-sm) / 1 var(--ui-display);
-  letter-spacing: var(--ls-wide);
-  text-transform: uppercase;
-  white-space: nowrap;
-  color: var(--menu-faint);
-}
-
-/* The key hints along the bottom: each key as a cap, then what it does; a line on the right. */
-.menu-hints {
-  position: sticky;
-  bottom: 0;
-  z-index: 1;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 28px;
-  margin: auto calc(-1 * var(--menu-gutter)) 0;
-  padding: var(--sp-6) var(--menu-gutter) clamp(14px, 1.4vw, 22px);
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  color: var(--menu-muted);
-  background: linear-gradient(0deg, var(--menu-bg) 62%, rgba(7, 13, 31, 0));
-}
-
-/* More of the screen below (audit UI-18): the page fades into the hints, so it doesn't read as ending there. */
-.menu-screen.more-below > .menu-hints::before,
-.menu-screen.more-below > .menu-hints-box > .menu-hints::before {
-  content: '';
-  position: absolute;
-  inset: auto 0 100%;
-  height: 48px;
-  background: linear-gradient(0deg, var(--menu-bg), rgba(7, 13, 31, 0));
-  pointer-events: none;
-}
-
-.menu-hint-key {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0;
-  font: inherit;
-  letter-spacing: inherit;
-  text-transform: inherit;
-  color: inherit;
-  background: none;
-  border: 0;
-}
-
-button.menu-hint-key {
-  cursor: pointer;
-}
-
-button.menu-hint-key:hover {
-  color: var(--paper);
-}
-
-.menu-hints kbd,
-.menu-hints-box kbd {
-  min-width: 30px;
-  padding: 4px 8px;
-  font: 700 var(--fs-sm) / 1 var(--ui-display);
-  letter-spacing: 0.06em;
-  color: var(--paper);
-  background: var(--menu-panel-hi);
-  border: 1px solid var(--menu-line);
-  border-bottom-width: 3px;
-  border-radius: 0;
-}
-
-.menu-hints-aside {
-  margin-left: auto;
-  text-align: right;
-}
-
-/* A screen whose hints change (the Loadout's, Customise's) keeps them in a box: the box is what stays pinned. */
-.menu-hints-box {
-  position: sticky;
-  bottom: 0;
-  z-index: 1;
-  margin-top: auto;
 }
 
 /* Numbered section heads: "01 MAP" with a rule out to the right and a note after it. */

@@ -24,7 +24,7 @@ import type { Collection, ItemRef } from '../../pool/collection';
 import { type Asset, comesIn, fcPerToken, isChase, type Pool } from '../../pool/pool';
 import { ConfirmDialog, noKeyRepeat } from './confirmDialog';
 import { tierLine } from '../performanceSheet';
-import { hintsBar, type MenuHint, sectionHead, tagPill } from './chrome';
+import { type MenuHint, sectionHead, tagPill } from './chrome';
 import { MENU_ICONS } from './icons';
 import { CATEGORY_LABELS, itemPicture, itemTile, tierLabel } from './itemTile';
 import type { PictureContext } from './kitStrip';
@@ -42,7 +42,6 @@ export interface ArmoryOptions {
    * had saved first, so the collection was reloaded from its save and the change was not kept (M70, audit POOL-05).
    */
   onChange: () => boolean | void;
-  onBack: () => void;
   /** Where the items' pictures come from (G3); without, each item shows its drawing. */
   context?: PictureContext;
 }
@@ -76,7 +75,8 @@ export class ArmoryScreen {
   private nowEquipped = new Set<string>();
   /** Says once that the last change was not kept (M70, audit POOL-05); empty otherwise. */
   private readonly notice = el('p', 'menu-readout armory-notice');
-  private readonly back: HTMLButtonElement;
+  /** Where the keyboard goes when no action is left to take (the heading, which the page always has). */
+  private readonly fallbackFocus: HTMLElement;
 
   constructor(private readonly opts: ArmoryOptions) {
     this.root = el('div', 'menu-screen menu-page menu-armory menu-hub');
@@ -86,6 +86,8 @@ export class ArmoryScreen {
     // The left column: the heading, the balance, the exchange and the Shots (renderSide fills the part under the heading).
     const left = el('div', 'armory-left menu-card');
     const heading = el('h1', 'menu-heading', 'Armory');
+    heading.tabIndex = -1;
+    this.fallbackFocus = heading;
     heading.append(' ', el('span', 'beta-tag', ARMORY_TEXT.beta));
     const head = el('div', 'armory-head');
     head.append(heading, tagPill(ARMORY_TEXT.freeTag));
@@ -103,14 +105,9 @@ export class ArmoryScreen {
     this.owned = el('div', 'armory-owned menu-card');
     const columns = el('div', 'armory-columns');
     columns.append(left, main, this.owned);
-    this.hints = [
-      { keys: ['Space'], label: MENU_TEXT.hints.shot, run: () => this.shotOne(), code: 'Space', idle: true, echo: true },
-      { keys: ['Esc'], label: MENU_TEXT.hints.back, run: opts.onBack },
-    ];
-    const bar = hintsBar(this.hints, MENU_TEXT.free);
-    // The Back hint (the second): the one there for the keyboard, as the 1 Shot hint echoes the screen's own button.
-    this.back = bar.querySelectorAll<HTMLButtonElement>('button')[1]!;
-    this.root.append(columns, bar, this.confirm.root);
+    // Space takes a Shot (the 1 Shot button does it for the mouse); Esc is Back, handled by the menus.
+    this.hints = [{ keys: ['Space'], label: MENU_TEXT.hints.shot, run: () => this.shotOne(), code: 'Space', idle: true }];
+    this.root.append(columns, this.confirm.root);
     this.refresh();
   }
 
@@ -149,13 +146,13 @@ export class ArmoryScreen {
     if (b && !b.disabled) b.click();
   }
 
-  /** The first of these actions on screen and enabled, else Back (always there). */
-  private firstEnabled(actions: readonly string[]): HTMLButtonElement {
+  /** The first of these actions on screen and enabled, else the heading (always there). */
+  private firstEnabled(actions: readonly string[]): HTMLElement {
     for (const action of actions) {
       const b = this.root.querySelector<HTMLButtonElement>(`[data-action="${action}"]`);
       if (b && !b.disabled) return b;
     }
-    return this.back;
+    return this.fallbackFocus;
   }
 
   private render(): void {
@@ -341,14 +338,20 @@ export class ArmoryScreen {
       all.dataset.action = 'scrap-all';
       head.append(all);
     }
+    // Each kind in its own column (M100): replicas, power sources, optics and the rest, a heading over its assets.
     const list = el('div', 'armory-list');
     let category: Asset['category'] | null = null;
+    let column: HTMLElement | null = null;
     for (const row of catalogue.rows) {
-      if (row.asset.category !== category) {
+      if (!column || row.asset.category !== category) {
         category = row.asset.category;
-        list.append(el('p', 'menu-kicker armory-category', CATEGORY_LABELS[category]));
+        column = el('section', 'armory-kind');
+        column.dataset.kind = category;
+        column.setAttribute('aria-label', CATEGORY_LABELS[category]);
+        column.append(el('h3', 'menu-kicker armory-category', CATEGORY_LABELS[category]));
+        list.append(column);
       }
-      list.append(this.assetRow(row, c));
+      column.append(this.assetRow(row, c));
     }
     this.owned.replaceChildren(head, el('p', 'menu-readout', ARMORY_TEXT.keepOne), list);
   }

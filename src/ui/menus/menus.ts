@@ -1,100 +1,27 @@
-import { type Difficulty, defaultTeammateDifficulty } from '../../config/bots';
-import type { MatchRules, RulesetId } from '../../config/matchRules';
-import type { MatchMode } from '../../config/modes';
 import { PAUSE_ESC_GUARD_MS } from '../../config/controls';
-import type { LightingPresetId, QualityChoice, QualitySettings } from '../../config/render';
-import type { GraphicsSettingsOptions } from '../graphicsSettings';
-import type { KeyBindings } from '../../input/keyBindings';
-import { lightingPicked } from '../../map/lightingChoice';
-import { type MapId, mapData, mapEntry } from '../../map/maps';
+import type { QualityChoice, QualitySettings } from '../../config/render';
 import type { NewGamePicks } from '../../newGamePicks';
 import { saveSetting } from '../../settings/storage';
-import type { AccessibilitySettingsOptions } from '../accessibilitySettings';
-import type { AudioSettingsOptions } from '../audioSettings';
-import type { ControlsSettingsOptions } from '../controlsSettings';
-import type { CrosshairSettingsOptions } from '../crosshairSettings';
-import type { HudSettingsOptions } from '../hudSettings';
-import type { LookSettingsOptions } from '../lookSettings';
-import { type ArmoryOptions, ArmoryScreen } from './armoryScreen';
+import { ArmoryScreen } from './armoryScreen';
 import { Backdrop, type MenuHint, type NavPlace, TopBar } from './chrome';
 import type { PictureContext } from './kitStrip';
-import { type LoadoutOptions, LoadoutScreen } from './loadoutScreen';
-import type { PictureSource } from './menuPictures';
+import { LoadoutScreen } from './loadoutScreen';
 import { backTarget, escResumes, type MenuScreen, type SettingsOrigin } from './menuNav';
 import { el, watchScroll } from './menuParts';
 import { PauseScreen } from './pauseScreen';
+import { PlayPicks } from './playModel';
+import { loadMatchStarted } from './savedChoices';
 import { ResultScreen } from './resultScreen';
 import { playView } from './playView';
-import type { MatchRulesText } from './rulesText';
-import { type SettingsOptions, SettingsScreen } from './settingsScreen';
-import { type PlayModel, type PlayView, SetupScreen } from './setupScreen';
+import { SettingsScreen } from './settingsScreen';
+import { type PlayView, SetupScreen } from './setupScreen';
 import { type MatchSummary, SummaryScreen } from './summaryScreen';
-import { type NextMatch, TitleScreen } from './titleScreen';
+import type { MenusOptions } from './menusOptions';
+import { TitleScreen, tutorialOffered } from './titleScreen';
 
-/** The parts of the rules text that the Match section doesn't change (team names, the flag, who attacks first). */
-export type FixedRulesText = Omit<MatchRulesText, 'teamSize' | 'winsNeeded' | 'roundTime' | 'halfTimeAfter' | 'friendlyFire' | 'ricochetsCount' | 'switches'>;
+export type { FixedRulesText, MenusOptions, MenuWallet } from './menusOptions';
 
-/** The wallet the menus show: Field Credits and Tokens, or null while the Armory is switched off (Dev settings). */
-export type MenuWallet = { fc: number; tokens: number } | null;
-
-/** What the menus show and what they report back to the game. */
-export interface MenusOptions {
-  rules: FixedRulesText;
-  bindings: KeyBindings;
-  /**
-   * The game's picture studio (G3, render/itemPictures.ts): the menus ask it for replica, part and scheme pictures and
-   * show a drawing until each arrives. Null where there is none (a test): every item keeps its drawing.
-   */
-  pictures: PictureSource | null;
-  /** The Loadout screen's model and change hook, and the line the Play screen shows under your kit. */
-  loadout: Omit<LoadoutOptions, 'onBack' | 'context'> & { summary: () => { replicas: string; detail: string } };
-  /** The Armory (M26c): its pool and the collection it changes, and the wallet on the top bar and the title. */
-  armory: Omit<ArmoryOptions, 'onBack' | 'context'> & { wallet: () => MenuWallet };
-  /** Start (or resume) play: Play on New game, Resume, Play Again. */
-  onPlay: () => void;
-  /** The player leaves the match (Quit; New Game or Quit after it): it is unloaded. */
-  onLeaveMatch: () => void;
-  /** The title screen's Practice range (M21): open the range and play. */
-  onRange: () => void;
-  /** The title screen's Tutorial (M16): the range with the coach. `tutorialDone`: it was played through before. */
-  onTutorial: () => void;
-  tutorialDone: boolean;
-  /** The pause menu during the tutorial (audit POOL-14): skip the step under way, or the rest of it. */
-  onSkipTutorialStep: () => void;
-  onSkipTutorial: () => void;
-  map: { initial: MapId; onChange: (m: MapId) => void };
-  /** Each map's Day or Night pick (M34d), on the maps that offer both. */
-  lighting: { initial: Partial<Record<MapId, LightingPresetId>>; onChange: (m: MapId, light: LightingPresetId) => void };
-  /** `supply`: the line under Extraction for the supply event on as the Play screen opens (M49), or null when none is. */
-  mode: { initial: MatchMode; onChange: (m: MatchMode) => void; supply?: () => string | null };
-  /** The opponents' bot difficulty and your bot teammates' (M20). */
-  difficulty: { initial: Difficulty; onChange: (d: Difficulty) => void };
-  /** `follows`: no teammate level is saved yet, so it follows the opponents' picks until one is chosen. */
-  teammateDifficulty: { initial: Difficulty; follows: boolean; onChange: (d: Difficulty) => void };
-  /** The Match section's rules (M20), and its Rules row (M39). */
-  matchRules: { initial: MatchRules; onChange: (m: MatchRules) => void };
-  ruleset: { initial: RulesetId; onChange: (r: RulesetId) => void };
-  controls: ControlsSettingsOptions;
-  fov: { initial: number; onChange: (v: number) => void };
-  /** The quality rows on Settings → Graphics (ui/graphicsSettings.ts). */
-  graphics: GraphicsSettingsOptions;
-  audio: AudioSettingsOptions;
-  crosshair: CrosshairSettingsOptions;
-  accessibility: AccessibilitySettingsOptions;
-  hud: HudSettingsOptions;
-  /** Settings › Look (G1); its Realistic colours also decides how the menus' replica pictures look. */
-  look: LookSettingsOptions;
-  /**
-   * The Dev tab (M24); `cheating`: a Dev setting now in force keeps the next match out of the records. `devContent`:
-   * dev content is offered (M35); `devContentUsed`: New game's picks, the Loadout or the opponents' possible gear use
-   * some, so the match won't count or pay.
-   */
-  dev: SettingsOptions['dev'] & { cheating: () => boolean; devContent: () => boolean; devContentUsed: () => boolean };
-  /** The save, for Settings → Save (M31). */
-  save: SettingsOptions['save'];
-}
-
-/** A screen as the menus hold it: its page and the key hints along its foot. */
+/** A screen as the menus hold it: its page and the keys it answers to. */
 interface Screen {
   readonly root: HTMLElement;
   readonly hints?: readonly MenuHint[];
@@ -113,7 +40,7 @@ const EVEN_BACKDROP: ReadonlySet<MenuScreen> = new Set(['loadout', 'armory', 'se
  * showPause / showResult) and the buttons and the top bar move between the rest. Each screen is built the first time it
  * opens; nothing here runs per frame.
  */
-export class Menus implements PlayModel {
+export class Menus {
   private readonly root: HTMLDivElement;
   private readonly backdrop = new Backdrop();
   private readonly topBar: TopBar;
@@ -129,14 +56,12 @@ export class Menus implements PlayModel {
   private pause?: PauseScreen;
   private summary?: SummaryScreen;
   private result?: ResultScreen;
-  /** New game's picks as made (a dev pick stays; playedPicks says how they play). `rules` is changed in place. */
-  private readonly picked: NewGamePicks;
-  /** Each map's Day or Night pick (M34d). */
-  private readonly lightingPicks: Partial<Record<MapId, LightingPresetId>>;
-  /** Until a teammate level is picked (and saved), teammates follow the opponents' level, as every bot did before M20. */
-  private teammatesFollow: boolean;
+  /** The Match screen's picks as made (a dev pick stays; playedPicks says how they play), each change saved and reported. */
+  private readonly model: PlayPicks;
   private realistic: boolean;
   private tutorialDone: boolean;
+  /** A first match was started, or the save already holds records: the title stops offering the Tutorial (M100). */
+  private matchStarted: boolean;
   /** Set before the screens they belong on are built: shown as each is. */
   private titleWarning = '';
   private shownQuality: { choice: QualityChoice; settings: QualitySettings } | null = null;
@@ -154,7 +79,7 @@ export class Menus implements PlayModel {
     private readonly opts: MenusOptions,
   ) {
     this.root = el('div', 'menus');
-    this.picked = {
+    const picked: NewGamePicks = {
       map: opts.map.initial,
       mode: opts.mode.initial,
       difficulty: opts.difficulty.initial,
@@ -162,12 +87,25 @@ export class Menus implements PlayModel {
       ruleset: opts.ruleset.initial,
       rules: { ...opts.matchRules.initial },
     };
-    this.lightingPicks = { ...opts.lighting.initial };
-    this.teammatesFollow = opts.teammateDifficulty.follows;
+    this.model = new PlayPicks(picked, { ...opts.lighting.initial }, opts.teammateDifficulty.follows, {
+      onMap: (m) => opts.map.onChange(m),
+      onLight: (m, light) => opts.lighting.onChange(m, light),
+      onMode: (m) => opts.mode.onChange(m),
+      onRuleset: (r) => opts.ruleset.onChange(r),
+      onRules: (rules) => opts.matchRules.onChange(rules),
+      onDifficulty: (d) => opts.difficulty.onChange(d),
+      onTeammates: (d) => opts.teammateDifficulty.onChange(d),
+      supply: opts.mode.supply,
+      refresh: () => this.refreshViews(),
+    });
     this.realistic = opts.look.initial.realisticColours;
     this.tutorialDone = opts.tutorialDone;
+    this.matchStarted = loadMatchStarted();
     this.context = { pictures: opts.pictures, realistic: () => this.realistic };
-    this.topBar = new TopBar((place) => this.navigate(place));
+    this.topBar = new TopBar(
+      (place) => this.navigate(place),
+      () => this.fromMark(),
+    );
     this.topBar.root.hidden = true;
     this.root.append(this.backdrop.root, this.topBar.root);
     parent.appendChild(this.root);
@@ -253,82 +191,11 @@ export class Menus implements PlayModel {
   /** The tutorial was just played through (M16). */
   markTutorialDone(): void {
     this.tutorialDone = true;
-    this.title?.setTutorialDone(true);
+    this.title?.setTutorialShown(this.tutorialOffered());
   }
 
   /** The screens again, after something outside the menus changed what they show (a match paid Field Credits). */
   refresh(): void {
-    this.refreshViews();
-  }
-
-  // The Play screen's model (PlayModel): the picks as made, each change saved and reported to the game.
-
-  picks(): Readonly<NewGamePicks> {
-    return this.picked;
-  }
-
-  /** The light `id` plays under (M34d): its saved pick if it offers it, else its first preset. */
-  lightingOf(id: MapId): LightingPresetId {
-    return lightingPicked(mapData(id), this.lightingPicks[id]);
-  }
-
-  /** A map was picked: the team size becomes the map's own (Depot 3v3, Woodland 4v4, M33), and is saved. */
-  setMap(id: MapId): void {
-    this.picked.map = id;
-    this.opts.map.onChange(id);
-    const size = mapEntry(id).teamSize.standard;
-    if (this.picked.rules.teamSize !== size) {
-      this.picked.rules.teamSize = size;
-      saveSetting('teamSize', String(size));
-      this.opts.matchRules.onChange({ ...this.picked.rules });
-    }
-    this.refreshViews();
-  }
-
-  setLight(id: MapId, light: LightingPresetId): void {
-    if (this.lightingOf(id) === light) return;
-    this.lightingPicks[id] = light;
-    saveSetting(`lighting.${id}`, light);
-    this.opts.lighting.onChange(id, light);
-    this.refreshViews();
-  }
-
-  setMode(mode: MatchMode): void {
-    this.picked.mode = mode;
-    this.opts.mode.onChange(mode);
-    this.refreshViews();
-  }
-
-  supply(): string | null {
-    return this.opts.mode.supply?.() ?? null;
-  }
-
-  setRuleset(r: RulesetId): void {
-    this.picked.ruleset = r;
-    this.opts.ruleset.onChange(r);
-    this.refreshViews();
-  }
-
-  setRules(rules: MatchRules): void {
-    Object.assign(this.picked.rules, rules);
-    this.opts.matchRules.onChange({ ...this.picked.rules });
-    this.refreshViews();
-  }
-
-  setDifficulty(d: Difficulty): void {
-    this.picked.difficulty = d;
-    this.opts.difficulty.onChange(d);
-    if (this.teammatesFollow) {
-      this.picked.teammateDifficulty = defaultTeammateDifficulty(d);
-      this.opts.teammateDifficulty.onChange(this.picked.teammateDifficulty);
-    }
-    this.refreshViews();
-  }
-
-  setTeammates(d: Difficulty): void {
-    this.teammatesFollow = false;
-    this.picked.teammateDifficulty = d;
-    this.opts.teammateDifficulty.onChange(d);
     this.refreshViews();
   }
 
@@ -338,16 +205,11 @@ export class Menus implements PlayModel {
     if (!this.title) {
       const t = (this.title = new TitleScreen(
         {
-          onPlay: () => this.openSetup(),
+          onStart: () => this.openSetup(),
           onTutorial: () => this.openRange(this.opts.onTutorial),
-          onRange: () => this.openRange(this.opts.onRange),
-          onLoadout: () => this.openLoadout('title'),
-          onArmory: () => this.openArmory('title'),
           onSettings: () => this.openSettings('title'),
         },
-        this.tutorialDone,
-        this.opts.loadout.model,
-        this.context,
+        this.tutorialOffered(),
       ));
       t.setWarning(this.titleWarning);
       this.add('title', t);
@@ -357,10 +219,11 @@ export class Menus implements PlayModel {
 
   private setupScreen(): SetupScreen {
     if (!this.setup) {
-      this.setup = new SetupScreen(this, this.opts.loadout.model, this.context, {
+      this.setup = new SetupScreen(this.model, this.opts.loadout.model, this.context, {
         onLoadout: () => this.openLoadout('setup'),
         onBack: () => this.back(),
-        onPlay: () => this.play(),
+        onPlay: () => this.startMatch(),
+        onPractice: () => this.openRange(this.opts.onRange),
       });
       this.add('setup', this.setup);
     }
@@ -371,7 +234,7 @@ export class Menus implements PlayModel {
     if (!this.loadout) {
       const lo = this.opts.loadout;
       // Every loadout change also shows on the title's and the Play screen's kit.
-      this.loadout = new LoadoutScreen({ model: lo.model, context: this.context, onChange: () => (lo.onChange(), this.refreshViews()), onBack: () => this.back() });
+      this.loadout = new LoadoutScreen({ model: lo.model, context: this.context, onChange: () => (lo.onChange(), this.refreshViews()) });
       this.add('loadout', this.loadout);
     }
     return this.loadout;
@@ -391,7 +254,6 @@ export class Menus implements PlayModel {
           this.refreshViews();
           return reloaded;
         },
-        onBack: () => this.back(),
       });
       this.add('armory', this.armory);
     }
@@ -419,7 +281,6 @@ export class Menus implements PlayModel {
           onEnabled: (on) => (o.dev.onEnabled(on), this.refreshViews()),
         },
         save: o.save,
-        onBack: () => this.back(),
       }));
       if (this.shownQuality) s.showQuality(this.shownQuality.choice, this.shownQuality.settings);
       this.add('settings', s);
@@ -501,8 +362,7 @@ export class Menus implements PlayModel {
     if (TOP_BAR_PLACES[this.current] === place) return;
     // Back returns to the Play screen when the bar was used from there, else to the title (the places are its own).
     const from: SettingsOrigin = this.current === 'setup' ? 'setup' : 'title';
-    if (place === 'range') this.openRange(this.opts.onRange);
-    else if (place === 'setup') this.openSetup();
+    if (place === 'setup') this.openSetup();
     else if (place === 'loadout') this.openLoadout(from);
     else if (place === 'armory') this.openArmory(from);
     else this.openSettings(from);
@@ -518,6 +378,32 @@ export class Menus implements PlayModel {
   private play(): void {
     this.showHint('');
     this.opts.onPlay();
+  }
+
+  /** Start match on the Match screen: the first one ends the title's Tutorial offer for good (M100). */
+  private startMatch(): void {
+    this.noteMatchStarted();
+    this.play();
+  }
+
+  private noteMatchStarted(): void {
+    if (this.matchStarted) return;
+    this.matchStarted = true;
+    saveSetting('matchStarted', true);
+    this.title?.setTutorialShown(this.tutorialOffered());
+  }
+
+  private tutorialOffered(): boolean {
+    return tutorialOffered(this.tutorialDone, this.matchStarted);
+  }
+
+  /** The top bar's wordmark: back to the title, or Back to the pause menu when Settings or the Loadout came from there. */
+  private fromMark(): void {
+    const from = this.current === 'settings' ? this.origins.settings : this.current === 'loadout' ? this.origins.loadout : 'title';
+    if (from === 'pause') return this.back();
+    // A Start match whose mouse lock was refused leaves a match built and unstarted: leaving for the title unloads it.
+    this.opts.onLeaveMatch();
+    this.go('title');
   }
 
   private openRange(open: () => void): void {
@@ -649,19 +535,12 @@ export class Menus implements PlayModel {
   private refreshViews(): void {
     const wallet = this.opts.armory.wallet();
     this.topBar.setWallet(wallet, wallet === null);
-    if (!this.title && !this.setup) return;
-    const view = this.playView();
-    this.setup?.refresh(view);
-    if (this.title) {
-      this.title.setWallet(wallet);
-      const next: NextMatch = { still: view.still, mapLine: view.mapLine, modeLine: `${view.modeLabel} · ${view.bots}`, rulesLine: view.rules };
-      this.title.setNext(next);
-    }
+    this.setup?.refresh(this.playView());
   }
 
   /** The match as it will play (playView.ts). */
   private playView(): PlayView {
-    return playView(this.picked, this.opts, (id) => this.lightingOf(id));
+    return playView(this.model.picks(), this.opts, (id) => this.model.lightingOf(id));
   }
 }
 

@@ -2,10 +2,11 @@
  * The Armory (G3): balance, exchange and Shots; the last Shot, the odds and how it works; the collection.
  */
 
-/* The Armory: balance, exchange and Shots on the left; the last Shot and the odds in the middle; the collection right. */
+/* The Armory: balance, exchange and Shots on the left; the last Shot and the odds beside them; the collection under both,
+   a column to each kind of item (M100). */
 .armory-columns {
   display: grid;
-  grid-template-columns: clamp(300px, 26vw, 520px) minmax(0, 1fr) clamp(300px, 26vw, 520px);
+  grid-template-columns: clamp(300px, 26vw, 520px) minmax(0, 1fr);
   gap: clamp(16px, 1.6vw, 32px);
   align-items: start;
 }
@@ -63,7 +64,7 @@
 }
 
 .armory-figure-value {
-  font: 800 clamp(30px, 2.2vw, 42px) / 1 var(--ui-display);
+  font: 800 clamp(26px, 1.9vw, 36px) / 1 var(--ui-display);
   white-space: nowrap;
 }
 
@@ -104,8 +105,9 @@
 }
 
 .item-chip .item-name {
-  font-size: clamp(22px, 1.5vw, 28px);
+  font-size: clamp(18px, 1.2vw, 22px);
   font-weight: 800;
+  letter-spacing: 0.03em;
 }
 
 .item-chip .item-note {
@@ -318,15 +320,29 @@
   color: var(--menu-muted);
 }
 
+/* One column per kind, side by side while they fit at 190 px each, then wrapping to a second row of columns. */
+.armory-owned {
+  grid-column: 1 / -1;
+}
+
 .armory-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--sp-5) var(--sp-3);
+  align-items: start;
+}
+
+.armory-kind {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
+  min-width: 0;
 }
 
 .armory-category {
-  grid-column: 1 / -1;
-  margin: var(--sp-3) 0 0;
+  margin: 0 0 2px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--menu-line-soft);
 }
 
 .armory-row {

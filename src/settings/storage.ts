@@ -67,6 +67,8 @@ export type SettingField =
   | 'tutorialDone'
   /** The tutorial's step still to do, to resume there next time (audit POOL-14); 0 once it is over. */
   | 'tutorialStep'
+  /** A first match was started (M100): the title stops offering the Tutorial to a player who has begun playing. */
+  | 'matchStarted'
   | `hopUp.${string}`
   | `volume.${string}`
   | `bbWeight.${string}`

@@ -9,8 +9,8 @@ import type { TeamBlock } from '../statsRows';
 import { haulWhat } from '../runStatus';
 import { StatsTable } from '../statsTable';
 import { itemTile } from './itemTile';
-import { MENU_TEXT, SUMMARY_TEXT } from '../../config/menus';
-import { hintsBar, type MenuHint } from './chrome';
+import { SUMMARY_TEXT } from '../../config/menus';
+import type { MenuHint } from './chrome';
 import { MENU_ICONS } from './icons';
 import { el, menuButton } from './menuParts';
 
@@ -81,8 +81,9 @@ export class SummaryScreen {
     aside.append(this.credits, this.haul, this.records, next);
     const layout = el('div', 'summary-layout');
     layout.append(main, aside);
-    this.hints = [{ keys: ['Enter'], label: SUMMARY_TEXT.next, run: onContinue, echo: true }];
-    this.root.append(head, layout, hintsBar(this.hints, MENU_TEXT.free));
+    // Enter presses the focused Continue; no key of its own.
+    this.hints = [];
+    this.root.append(head, layout);
   }
 
   set(summary: MatchSummary): void {

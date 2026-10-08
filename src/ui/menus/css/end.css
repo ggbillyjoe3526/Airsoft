@@ -206,7 +206,13 @@
 
 .menu-result-more {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(3, auto);
+  justify-content: stretch;
+}
+
+.menu-result-more .menu-button {
+  padding: 0 var(--sp-4);
+  white-space: nowrap;
 }
 
 /* Pop-ups (a confirm, the Save group's): a panel over a darkened page. No live blur behind them. */
