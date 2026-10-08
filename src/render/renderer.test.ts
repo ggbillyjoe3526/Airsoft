@@ -188,6 +188,7 @@ describe('the lighting preset on the renderer (M33f, acceptance 4)', () => {
     Object.assign(fields, {
       scene: new THREE.Scene(),
       gl: { toneMapping: THREE.NoToneMapping, toneMappingExposure: 1 },
+      node: null,
       toneMapping: TONE_MAPPING.default,
       lighting: LIGHTING_PRESETS.day,
       environmentLook: defaultEnvironmentLook(),
@@ -461,9 +462,13 @@ describe('the shader warm-up runs once per match build, never per frame (M63, au
 
   it('compiles nowhere but in Renderer.warmShaders: not in Renderer.render, nor anywhere else', () => {
     const compiles = Object.entries(sources).flatMap(([file, text]) => [...text.matchAll(/\.compile(Async)?\(/g)].map(() => file));
-    expect(compiles).toEqual(['/src/render/renderer.ts', '/src/render/renderer.ts']);
+    // W1: the node renderer's compile (render/webgpu/nodeBackend.ts, its two compileAsync calls) is reached from
+    // warmShaders alone, as WebGL's two are.
+    expect(compiles).toEqual(['/src/render/renderer.ts', '/src/render/renderer.ts', '/src/render/renderer.ts', '/src/render/webgpu/nodeBackend.ts', '/src/render/webgpu/nodeBackend.ts']);
     const renderer = sources['/src/render/renderer.ts']!;
-    expect(bodyOf(renderer, '  warmShaders(').split('.compile(').length - 1).toBe(2);
+    expect(bodyOf(renderer, '  warmShaders(').split('.compile(').length - 1).toBe(3);
+    expect(bodyOf(renderer, '  warmShaders(')).toMatch(/this\.node\.compile\(this\.scene, this\.camera, overlay\)/);
+    expect(bodyOf(sources['/src/render/webgpu/nodeBackend.ts']!, '  compile(').split('.compileAsync(').length - 1).toBe(2);
     expect(bodyOf(renderer, '  render(overlay')).not.toMatch(/compile|warmShaders/);
   });
 });

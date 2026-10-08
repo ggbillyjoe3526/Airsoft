@@ -23,6 +23,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **G9** · Neon Heights is dressed on Medium and up: street litter and bin bags against the walls, puddles in the avenue and the alleys, pasted posters and a few sprays, tube-letter neon signs (PLAY, NOODLE, HOTEL and more) with the odd gentle flicker, and steam drifting up from the vents and drains
 - **G9** · Beyond Neon Heights' walls on Detailed trees: a city of lit towers with blade signs, rooftop tanks and masts, and a plane crossing over every twenty seconds
 - **G9** · Low looks and costs exactly as before on both maps, and Depot is unchanged; under Reduced motion the fireflies, steam, plane and sign flicker all hold still
+- **W1** · Settings › Graphics › Renderer: Auto (the default), WebGPU or WebGL; Auto draws with WebGPU where the browser has it, WebGL otherwise
+- **W1** · On WebGPU the world and figures draw with plain materials and no screen effects for now; pick WebGL on the Renderer row for the full look
 
 ### Changed
 - **M71** · Bots hunt the map's middle once their lane is swept (now all levels, not just Pro); Normal and Hard hold their posts out of lantern light at night (#133)
@@ -87,6 +89,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **BP2** · QA tests for each fix; KNOWN_ISSUES swept (8 rows fixed and deleted, stale rows corrected, new rows for what stays); a scripted run started every mode on every map with no errors; bot balance report re-run (#150)
 - **M77** · Fewer garbage-collection hitches: BB trails, dust and flag cloth stop making garbage each frame, and standing characters skip the ground check (#151)
 - **M79** · Two import cycles broken and a cycle check added to the pipeline; loop-seam audio tests use fixed percentiles (#151)
+- **W1** · The perf harness records which renderer drew (`--renderer`, `--force-webgl`); a browser without WebGPU never downloads the new renderer
 
 ## 0.1 Dev 4 · 2026-10-06
 

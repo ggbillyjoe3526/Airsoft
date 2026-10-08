@@ -11,7 +11,8 @@ holds no magic numbers.
 - Bots: `bots.ts` (behaviour and difficulties), `squad.ts` (orders, order wheel), `nav.ts`.
 - Rendering: `render.ts` re-exports `renderQuality.ts`, `renderEffects.ts`, `renderLighting.ts`, `renderSurfaces.ts` and
   `renderView.ts`: import from `render.ts`. Also `graphics.ts` (the Custom rows), `post.ts`, `look.ts`, `weathering.ts`,
-  `bake.ts`, `dressing.ts`, `materials.ts`.
+  `bake.ts`, `dressing.ts`, `materials.ts`. The Renderer row (W1): `rendererPick.ts` (the picks boot reads, in the main
+  chunk) and `renderBackend.ts` (the row's texts and the back ends' tuning, read only by the lazy renderer chunks).
 - Sound, input and UI: `audio.ts`, `sounds.ts`, `controls.ts`, `menus.ts`, `menuArt.ts`, `minimap.ts`, `matchInfo.ts`, `hudText.ts` (the HUD's words),
   `teams.ts`, `tutorial.ts`, `accessibility.ts`, `itemPictures.ts`.
 - Content and saving: `content.ts` (public or dev tags), `dev.ts` (Dev settings), `save.ts`, `assets.ts`.

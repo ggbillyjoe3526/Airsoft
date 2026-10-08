@@ -4,6 +4,7 @@ import { QUALITY, resolveQuality, type QualityChoice } from '../config/render';
 import { loadCustomQuality, loadFrameRateCap } from './menus/savedChoices';
 import { MemoryStorage } from '../pool/testStorage';
 import { GraphicsSettings } from './graphicsSettings';
+import { fillRendererRow } from './rendererRow';
 import { FakeElement } from './testSupport';
 
 /** The fake element with the two lookups the Custom rows use: tag names only, depth first. */
@@ -289,5 +290,67 @@ describe('Ultra and the frame-rate row in the settings (G5 QA)', () => {
       expect(saved().frameRateCap, label).toBe(id);
       expect(loadFrameRateCap(), label).toBe(cap);
     }
+  });
+});
+
+// WebGPU overhaul W1: the Renderer row (Auto, WebGPU, WebGL), a public row with Auto by default (the owner's ruling, 2026-10-08).
+describe('the Renderer row (W1)', () => {
+  beforeEach(() => {
+    vi.stubGlobal('document', { createElement: (tag: string) => new QueryElement(tag) });
+    storage = new MemoryStorage();
+    vi.stubGlobal('localStorage', storage);
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  /** The Settings group with the Renderer row, filled as the game fills it (ui/rendererRow.ts, from the start chunk). */
+  async function buildWithRenderer(initial: 'auto' | 'webgpu' | 'webgl' = 'auto', drawing = { backend: 'webgl' as const, lostToWebGL: false }) {
+    const g = new GraphicsSettings({
+      quality: { initial: 'low', settings: QUALITY.low, onChange: () => {}, status: () => ({ antialiased: true, antialiasPending: false, maxAnisotropy: 16 }) },
+      frameRateCap: { initial: 0, onChange: () => {} },
+      showFps: { initial: false, onChange: () => {} },
+      toneMapping: { initial: 'neutral', onChange: () => {} },
+      renderer: (row) => fillRendererRow(row, { initial, drawing }),
+    });
+    return g;
+  }
+  const noteOf = (g: GraphicsSettings): FakeElement => (g.rendererRow as unknown as QueryElement).querySelectorAll('p').find((p) => p.className === 'graphics-note')!;
+  /** The row's picker group (the buttons). */
+  const rendererGroup = (g: GraphicsSettings): QueryElement => {
+    const row = g.rendererRow as unknown as QueryElement;
+    return row.querySelectorAll('div').find((d) => d.getAttribute('aria-label') === 'Renderer') as QueryElement;
+  };
+
+  it('is built only when the game passes it', () => {
+    // Without it the row is there but empty, which the menus' CSS doesn't show (`.menu-row:empty`).
+    expect((build('low').rendererRow as unknown as QueryElement).children).toHaveLength(0);
+  });
+
+  it('shows Auto, WebGPU and WebGL with Auto pressed, always, and saves a pick as `renderer`', async () => {
+    const g = await buildWithRenderer();
+    expect(g.rendererRow!.hidden).toBeFalsy();
+    expect(g.rendererRow!.className).toBe('menu-row');
+    expect((g.rendererRow as unknown as QueryElement).text).toContain('Renderer');
+    const group = rendererGroup(g);
+    expect(group.querySelectorAll('button').map((b) => b.textContent)).toEqual(['Auto', 'WebGPU', 'WebGL']);
+    expect(pressed(group)).toEqual(['Auto']);
+    group.querySelectorAll('button').find((b) => b.textContent === 'WebGPU')!.click();
+    expect(saved().renderer).toBe('webgpu');
+    expect(g.rows(new QueryElement('div') as unknown as HTMLElement)).toContain(g.rendererRow);
+  });
+
+  it('says nothing under the row on Auto without WebGPU, and says why a WebGPU pick isn’t honoured', async () => {
+    const g = await buildWithRenderer();
+    const note = noteOf(g);
+    expect(note.hidden).toBe(true);
+    rendererGroup(g).querySelectorAll('button').find((b) => b.textContent === 'WebGPU')!.click();
+    expect(note.hidden).toBe(false);
+    expect(note.textContent).toBe('No WebGPU here: drawn with WebGL.');
+    rendererGroup(g).querySelectorAll('button').find((b) => b.textContent === 'Auto')!.click();
+    expect(note.hidden).toBe(true);
+  });
+
+  it('after WebGL took over from a lost WebGPU device, says so rather than that there is no WebGPU', async () => {
+    const g = await buildWithRenderer('webgpu', { backend: 'webgl', lostToWebGL: true } as never);
+    expect(noteOf(g).textContent).toBe('The WebGPU device was lost: WebGL draws until the next load.');
   });
 });

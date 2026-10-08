@@ -160,6 +160,14 @@ baseline's head is more than `baselineMaxLag` (20) commits behind HEAD, or not i
 `--preset all` runs Low, Medium, High and Ultra in turn (audit REN-15; Ultra since G5), so a change that makes High or
 Ultra dearer is seen too (`--preset ultra` alone for one). `--viewport WxH` sets the page's size (default 1920x1080).
 
+**The renderer** (WebGPU overhaul W1): `--renderer auto|webgl|webgpu` sets Graphics › Renderer before the page loads.
+`auto` is the default and what a player gets: WebGPU where the browser gives an adapter, WebGL otherwise (always WebGL
+in the container and on CI). `--force-webgl` puts the node renderer on its WebGL2 back end, how it runs in a container.
+Every result records `backend` (what drew: `webgl`, `webgpu` or `webgpu-webgl2`), and a run the node renderer drew
+names its files with it after the environment (`perf-laptop-webgpu-low.json`, baseline `laptop-webgpu.json`), beside
+the WebGL files the gate reads. On a machine with WebGPU, run the gate's laptop and desktop combinations with
+`--renderer webgl` by hand until the gate learns the back end (KNOWN_ISSUES).
+
 **The laptop run** (the owner, on the target laptop, from the repository with `npm ci` done and Chrome installed):
 
 ```

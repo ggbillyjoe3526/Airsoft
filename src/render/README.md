@@ -5,6 +5,19 @@ and never writes the simulation.
 
 - `renderer.ts`: `Renderer` owns the scene, camera, quality (`setQuality`), lighting and environment, tone mapping,
   field of view and zoom, the retro filter, `warmUp` and `warmShaders`. `mapMeshCache.ts` keeps the last map's meshes.
+  `rendererParts.ts` holds its helpers (field of view, tone mapping, idle warm-up, handing GPU resources to a new
+  renderer, the draw counts read the same on WebGL and the node renderer). The Renderer draws with WebGL or the node
+  renderer (`webgpu/nodeBackend.ts`) and recovers a lost device itself (`nodeLost`): a new device, or WebGL with the
+  post stack, retro filter and sheen back.
+- The node renderer (WebGPU overhaul W1; Graphics › Renderer, Auto by default): `rendererStart.ts` decides at load
+  which renderer draws, in a chunk of its own loaded at boot with the Renderer row (`ui/rendererRow.ts`). On Auto or
+  WebGPU, `webgpuProbe.ts` asks for an adapter first, and only when one is given (on Auto, not a software one) is
+  `webgpu/nodeBackend.ts` imported (with `three/webgpu`, never in the main chunk); with none, or on the WebGL pick, it
+  is WebGL as before. `nodeBackend.ts` makes `WebGPURenderer` (WebGL if no device can be made), reads the GPU time
+  from timestamp queries, compiles ahead and makes the replacement renderer when the device is lost. On that path
+  materials draw as Three's node versions of the plain ones: `onBeforeCompile` patches (the surfaces' baked light,
+  weathering and relief, the figures' per-vertex finish, the shader-moved stars, smoke, motes, fireflies and flames)
+  are left out, and there is no post stack, retro filter or environment sheen yet (W2 to W4).
 - `matchPresentation.ts`: other players, hit feedback, spectator camera, round banner, scoreboard, flag.
   `combatPresentation.ts`: after each tick it consumes `state.events`; each frame it draws the BBs, puffs, the held
   replica (a second render pass) and the HUD. Also `cameraRig.ts`, `viewmodel.ts`.
@@ -32,7 +45,8 @@ and never writes the simulation.
   is `post/` (`postPlan.ts` picks passes per preset); Low builds none.
 - Quality: `gpuCheck.ts` rates the GPU, `qualityStepDown.ts` steps down on slow frames (never saved).
   `Game.changeQuality` → `Renderer.setQuality` → `MatchSession.setQuality`. Changing antialiasing makes a new WebGL
-  context on a new canvas (the pointer lock is on the container, so it survives).
+  context on a new canvas (the pointer lock is on the container, so it survives); on the node renderer it waits for
+  the next load.
 - Tuning, in `config/`: `render.ts` (re-exports the `render*.ts` files), `graphics.ts`, `post.ts`, `look.ts`,
   `characters.ts`, `weathering.ts`. Tests: `renderer.test.ts`, `disposal.test.ts`, one per feature.
 - Rules: every graphical effect is an engine feature read from quality settings and map data, never map-exclusive

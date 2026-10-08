@@ -73,6 +73,9 @@ async function main(): Promise<void> {
     save,
     // ?perf logs each match build's parts to the console (audit CORE-33), so a real machine shows where the time goes.
     perfLog: params.has('perf'),
+    // ?forceWebGL: the node renderer (W1, when the Renderer row is on Auto or WebGPU) on its WebGL2 back end, for a
+    // machine without WebGPU (the e2e spec's container). Dev server and the `e2e` build only.
+    forceWebGL: (import.meta.env.DEV || import.meta.env.MODE === 'e2e') && params.has('forceWebGL'),
   });
   running = game;
   game.start();
