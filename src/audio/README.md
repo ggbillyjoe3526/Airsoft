@@ -20,4 +20,5 @@ and never changes the simulation.
 - Tuning: `config/audio.ts` (`AUDIO`, `AMBIENCES`, `AMBIENT_LOOPS`), `config/sounds.ts` (recipes, `MAP_CUE_SEEDS`). A
   field's own sounds stay within about 7 MB, and every map sound a page may keep within 12 MB.
 - Tests: `audio.test.ts`, `sfx.test.ts`, `voiceLimit.test.ts`, `woodlandSound.test.ts` (pins the title cues' stream and
-  samples), `citySound.test.ts`.
+  samples), `citySound.test.ts`. `loopSeamSupport.ts` is test support: it measures how a loop closes where it wraps (the
+  loop tests bound it by fixed percentiles of the loop's own); `loopSeamSupport.test.ts` shows it fails on a click.

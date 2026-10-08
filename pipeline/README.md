@@ -49,6 +49,12 @@ writes its probe file, `src/map/bakes/<file>.probes.b64` (Node only, through Vit
 for Depot). Run it after changing a baked map's blocks or tints, the day lighting or `config/bake.ts`'s `bake` values:
 `src/map/bakes/bakes.test.ts` fails, naming the command, until the file matches. The same map gives the same bytes.
 
+## `cycles.mjs`
+
+`node pipeline/cycles.mjs` lists the import cycles among the modules under `src/` and exits 1 if there are any (audit
+CORE-08). Value imports and re-exports count; `import type`, `export type` and dynamic `import()` don't. Its test,
+`cycles.test.mjs`, runs in the fast suite (so in the gate's `tests`) and fails, naming the files, on a new cycle.
+
 ## `gate.mjs`
 
 ```
