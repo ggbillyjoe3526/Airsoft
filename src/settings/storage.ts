@@ -63,6 +63,8 @@ export type SettingField =
   | 'showFps'
   /** Settings → Graphics → Tone mapping (audit section 5 F2; not part of a preset). */
   | 'toneMapping'
+  /** Settings → Graphics → Renderer (WebGPU overhaul W1, config/renderBackend.ts): 'auto', 'webgpu' or 'webgl'. */
+  | 'renderer'
   /** The tutorial was played to the end (M16): the title stops pointing new players at it. */
   | 'tutorialDone'
   /** The tutorial's step still to do, to resume there next time (audit POOL-14); 0 once it is over. */

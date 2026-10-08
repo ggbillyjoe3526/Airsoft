@@ -70,9 +70,17 @@ export function perfTag(map, mode) {
   return `${map === 'depot' ? '' : `-${map}`}${mode === 'elimination' ? '' : `-${mode}`}`;
 }
 
+/**
+ * What a run adds after the environment for the back end that drew it (WebGPU overhaul W1; the result's `backend`):
+ * nothing for WebGL (every file the gate and the baselines read), `-webgpu` or `-webgpu-webgl2` for the node renderer.
+ */
+export function rendererTag(backend) {
+  return backend === undefined || backend === 'webgl' ? '' : `-${backend}`;
+}
+
 /** The run file perf-run.mjs writes under pipeline/out/ for one combination. */
 export function runFileName(env, run) {
-  return `perf-${env}${perfTag(run.map, run.mode)}-${run.preset}.json`;
+  return `perf-${env}${rendererTag(run.backend)}${perfTag(run.map, run.mode)}-${run.preset}.json`;
 }
 
 /**
@@ -80,7 +88,7 @@ export function runFileName(env, run) {
  * `<env><tag>-<preset>.json` on another, e.g. `container.json`, `container-woodland-extraction-medium.json`.
  */
 export function baselineFileName(env, run, budgetPreset) {
-  const tag = perfTag(run.map, run.mode);
+  const tag = `${rendererTag(run.backend)}${perfTag(run.map, run.mode)}`;
   return run.preset === budgetPreset ? `${env}${tag}.json` : `${env}${tag}-${run.preset}.json`;
 }
 

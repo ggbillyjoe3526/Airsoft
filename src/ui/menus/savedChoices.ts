@@ -46,6 +46,7 @@ import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../../config/modes';
 import { AIMING } from '../../config/optics';
 import { frameRateCapFromSaved, GRAPHICS_ROWS, graphicsKey, parseStored, SHOW_FPS_CHOICES, TONE_MAPPING_CHOICES } from '../../config/graphics';
 import { FOV_SETTING, type FrameRateCap, type LightingPresetId, QUALITY_CHOICES, type QualityChoice, type QualitySettings, RENDER, TONE_MAPPING, type ToneMappingId } from '../../config/render';
+import { RENDER_BACKEND, RENDERER_CHOICES, type RendererChoice } from '../../config/renderBackend';
 import { DEFAULT_WHEEL_SELECT, WHEEL_SELECT_MODES, type WheelSelect } from '../../config/squad';
 import { DEFAULT_TEAM_COLOURS, TEAM_COLOUR_CHOICES, type TeamColourSetId } from '../../config/teams';
 import { lightingChoices, parseLightingPick } from '../../map/lightingChoice';
@@ -200,6 +201,14 @@ export function loadFrameRateCap(storage = browserStorage()): FrameRateCap {
 /** Tone mapping (Settings → Graphics; F2): Neutral unless the player picked another (owner decision). */
 export function loadToneMapping(): ToneMappingId {
   return loadChoice('toneMapping', TONE_MAPPING_CHOICES, TONE_MAPPING.default);
+}
+
+/**
+ * The Renderer row (Settings → Graphics, WebGPU overhaul W1): Auto unless the player picked another. Every save before
+ * W1 has none and reads as Auto, which draws with WebGL until the flip (config/renderBackend.ts).
+ */
+export function loadRendererChoice(storage = browserStorage()): RendererChoice {
+  return loadSetting('renderer', oneOf(RENDERER_CHOICES.map((c) => c.id)), RENDER_BACKEND.defaultChoice, storage);
 }
 
 /** The FPS readout (Settings → Graphics): off unless the player turned it on. */

@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { baselineFileName, baselineLag, baselineLagWarning, budgetFor, isPerfPath, judgeRun, perfScope, perfTag, runFileName, runName, selectPerfRuns } from './perfMatrix.mjs';
+import { baselineFileName, baselineLag, baselineLagWarning, budgetFor, isPerfPath, judgeRun, perfScope, perfTag, rendererTag, runFileName, runName, selectPerfRuns } from './perfMatrix.mjs';
 
 const budgets = JSON.parse(readFileSync('pipeline/perf-budget.json', 'utf8'));
 const matrix = budgets.matrix;
@@ -86,6 +86,14 @@ describe('each combination\'s files and budget', () => {
     expect(baselineFileName('laptop', { map: 'neon', mode: 'elimination', preset: 'low' }, 'low')).toBe('laptop-neon.json');
     expect(runFileName('container', { map: 'depot', mode: 'elimination', preset: 'low' })).toBe('perf-container-low.json');
     expect(runFileName('container', { map: 'neon', mode: 'extraction', preset: 'medium' })).toBe('perf-container-neon-extraction-medium.json');
+    // A run the node renderer drew (W1, its result's backend) is named apart; WebGL's names stay what the gate reads.
+    expect(rendererTag(undefined)).toBe('');
+    expect(rendererTag('webgl')).toBe('');
+    expect(runFileName('container', { backend: 'webgl', map: 'depot', mode: 'elimination', preset: 'low' })).toBe('perf-container-low.json');
+    expect(runFileName('container', { backend: 'webgpu-webgl2', map: 'depot', mode: 'elimination', preset: 'low' })).toBe('perf-container-webgpu-webgl2-low.json');
+    expect(runFileName('laptop', { backend: 'webgpu', map: 'neon', mode: 'extraction', preset: 'high' })).toBe('perf-laptop-webgpu-neon-extraction-high.json');
+    expect(baselineFileName('laptop', { backend: 'webgpu', map: 'depot', mode: 'elimination', preset: 'low' }, 'low')).toBe('laptop-webgpu.json');
+    expect(baselineFileName('laptop', { backend: 'webgpu', map: 'woodland', mode: 'elimination', preset: 'ultra' }, 'low')).toBe('laptop-webgpu-woodland-ultra.json');
   });
 
   it('lays a map\'s own lines over its preset\'s (owner decision 4: map-scoped Medium budgets)', () => {

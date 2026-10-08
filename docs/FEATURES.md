@@ -238,6 +238,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   puddles on its paths, moss on its trunks and boulders, a conifer treeline and wooded hills beyond the fence, and
   fireflies at night; Neon Heights gets street litter, puddles, pasted posters and sprays, tube-letter neon signs that
   flicker now and then, steam from its vents and drains, and a lit city skyline with a plane crossing it (G9)
+- Renderer choice: Auto (WebGPU where the browser has it, WebGL otherwise), WebGPU or WebGL, from the next load; a lost
+  graphics device is replaced without leaving the match (W1)
 
 ## Practice range and tutorial
 

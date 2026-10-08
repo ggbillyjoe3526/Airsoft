@@ -4,7 +4,8 @@ import { graphicsKey, GRAPHICS_ROWS, storedValue } from '../../config/graphics';
 import { HUD_OPACITY } from '../../config/matchInfo';
 import { QUALITY, qualityChoiceOf, resolveQuality } from '../../config/render';
 import { parseSaveText, SAVE_FORMAT, saveFileText } from '../../save/saveFile';
-import { effectiveReducedMotion, loadCustomQuality, loadFrameRateCap, loadHudOpacity, loadReducedMotion, motionClass } from './savedChoices';
+import { RENDER_BACKEND } from '../../config/renderBackend';
+import { effectiveReducedMotion, loadCustomQuality, loadFrameRateCap, loadHudOpacity, loadReducedMotion, loadRendererChoice, motionClass } from './savedChoices';
 
 function storageWith(fields: Record<string, unknown>): Storage {
   return storageHolding({ [SETTINGS_KEY]: JSON.stringify({ version: SETTINGS_VERSION, ...fields }) });
@@ -208,5 +209,43 @@ describe('HUD opacity, a field new in G4', () => {
     if (!parsed.ok) return;
     const loaded = storageHolding({ [SETTINGS_KEY]: JSON.stringify(parsed.save.stores.settings) });
     expect(loadHudOpacity(loaded)).toBe(HUD_OPACITY.default);
+  });
+});
+
+// WebGPU overhaul W1: Settings → Graphics → Renderer, a new saved field, `renderer`: 'auto', 'webgpu' or 'webgl', Auto
+// by default (which draws with WebGL until the flip, W6). The key is permanent.
+describe('the Renderer row, a field new in W1', () => {
+  it('reads back each pick, and Auto by default', () => {
+    expect(RENDER_BACKEND.defaultChoice).toBe('auto');
+    for (const id of ['auto', 'webgpu', 'webgl'] as const) expect(loadRendererChoice(storageWith({ renderer: id }))).toBe(id);
+  });
+
+  it('reads junk as the default: an unknown pick, the wrong type, an unreadable object or no storage at all', () => {
+    for (const junk of ['WebGPU', 'vulkan', '', 1, true, null, {}, ['webgpu']]) {
+      expect(loadRendererChoice(storageWith({ renderer: junk })), JSON.stringify(junk)).toBe('auto');
+    }
+    expect(loadRendererChoice(storageHolding({ [SETTINGS_KEY]: '{not json' }))).toBe('auto');
+    expect(loadRendererChoice(null)).toBe('auto');
+  });
+
+  it('migrates: a save from before it (the settings object of G9, without the field) loads with Auto, the rest as saved', () => {
+    const beforeW1 = storageWith({ quality: 'high', toneMapping: 'agx', 'dev.enabled': true, 'dev.retroPixels': 'on', hudOpacity: 0.8 });
+    expect(loadRendererChoice(beforeW1)).toBe('auto');
+    expect(JSON.parse(beforeW1.getItem(SETTINGS_KEY)!)).toMatchObject({ quality: 'high', toneMapping: 'agx', hudOpacity: 0.8 });
+    // Older still: the keys before the settings object ("version 0"), read through the store's own migrate path.
+    expect(loadRendererChoice(storageHolding({ 'airsoft.sensitivity': '1.4', 'airsoft.mode': 'attackDefend' }))).toBe('auto');
+  });
+
+  it('migrates: a save file written before it, loaded, gives Auto', () => {
+    const file = saveFileText({
+      format: SAVE_FORMAT,
+      build: '0.1 Dev 4+40 · 0171b77',
+      savedAt: '2026-10-08T12:00:00.000Z',
+      stores: { settings: { version: 1, quality: 'medium', 'dev.enabled': true } },
+    });
+    const parsed = parseSaveText(file);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(loadRendererChoice(storageHolding({ [SETTINGS_KEY]: JSON.stringify(parsed.save.stores.settings) }))).toBe('auto');
   });
 });

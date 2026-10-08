@@ -6,6 +6,7 @@ import type { VolumeChannel } from './config/audio';
 import type { LookSettings } from './config/look';
 import type { Difficulty } from './config/bots';
 import { activeDev, type DevSettings, devCheating, retroLookOf } from './config/dev';
+import { rendererNote, wantsWebGpu } from './config/renderBackend';
 import { PERF_SCRIPT } from './config/perfScript';
 import { ROUNDS } from './config/hits';
 import type { MatchRules, RulesetId } from './config/matchRules';
@@ -37,6 +38,7 @@ import { loadFigureModel } from './render/externalModels';
 import { FrameTimeWatch, presetBelow, slowFrameMs } from './render/qualityStepDown';
 import { rendererName } from './render/gpuCheck';
 import { Renderer } from './render/renderer';
+import { type StartingRenderer, startingRenderer } from './render/rendererStart';
 import { matchSeed } from './matchFlow';
 import { nextSessionAction } from './core/sessionPlan';
 import { MatchSession } from './matchSession';
@@ -88,6 +90,7 @@ import {
   loadReducedMotion,
   loadSensitivity,
   loadShowFps,
+  loadRendererChoice,
   loadToneMapping,
   loadHitFeedMode,
   loadHudOpacity,
@@ -141,6 +144,11 @@ export interface GameOptions {
   save: SaveManager;
   /** `?perf`: each match build logs how long its parts took (audit CORE-33, MatchSession.build), in any build. */
   perfLog?: boolean;
+  /**
+   * `?forceWebGL` (dev server and the e2e build only): when the node renderer is wanted (Renderer on Auto or WebGPU,
+   * WebGPU overhaul W1), it draws on its WebGL2 back end without asking for an adapter, so a container can run it.
+   */
+  forceWebGL?: boolean;
 }
 
 /**
@@ -288,8 +296,12 @@ export class Game {
     // A figure model (M25a) loads alongside the physics; with none in the build this resolves at once. With Dev content
     // on, so do the dev maps (M50), so New game can show a dev map picked last time. The maps' baked light (G6) too.
     const devMaps = activeDev(loadDevEnabled(), loadDevSettings()).devContent ? loadDevMaps() : null;
-    const [, figureModel] = await Promise.all([initPhysics(), loadFigureModel(), devMaps, loadBakedLight()]);
-    const game = new Game(container, options);
+    // The renderer (W1): on Auto or WebGPU the adapter is asked for alongside the physics, and only when one is given are
+    // `three/webgpu` loaded and its device made; otherwise (or on the WebGL pick) WebGL, as before.
+    const choice = loadRendererChoice();
+    const starting = startingRenderer(choice, options.forceWebGL === true, options.qualitySettings.antialias);
+    const [, figureModel, , , start] = await Promise.all([initPhysics(), loadFigureModel(), devMaps, loadBakedLight(), starting]);
+    const game = new Game(container, options, start, wantsWebGpu(choice));
     game.renderer.figureModel = figureModel;
     return game;
   }
@@ -297,12 +309,16 @@ export class Game {
   private constructor(
     private readonly container: HTMLElement,
     private readonly options: GameOptions,
+    /** What this visit draws with (render/rendererStart.ts): the back end, the node renderer and the adapter's name. */
+    private readonly rendering: StartingRenderer,
+    /** This visit loaded wanting the node renderer (the Renderer row's note). */
+    private readonly startedWantingWebGpu: boolean,
   ) {
     this.qualityChoice = options.quality;
     this.quality = options.qualitySettings;
     this.autoQuality = options.automaticQuality;
     this.matchSeed = options.seed;
-    this.renderer = new Renderer(container, this.quality);
+    this.renderer = new Renderer(container, this.quality, rendering.node);
     this.renderer.setFov(loadFov());
     this.renderer.setToneMapping(loadToneMapping());
     this.map = loadMap();
@@ -351,19 +367,20 @@ export class Game {
         'BBs in flight': s?.combat.bbsInFlight ?? 0,
         'audio latency (ms)': this.audio.latencyMs()?.toFixed(1) ?? '-',
         quality: this.qualityText(),
+        renderer: this.renderer.backend,
         'pixel ratio': this.renderer.renderer.getPixelRatio(),
         'frame ms (sim / draw / GPU)': `${this.simMs.toFixed(1)} / ${this.drawMs.toFixed(1)} / ${Number.isNaN(this.renderer.gpuMs) ? 'n/a' : this.renderer.gpuMs.toFixed(1)}`,
         antialias: this.antialiasText(),
         // G5: the post stack's passes in force (none on Low).
         post: this.renderer.postPasses.join(' ') || 'none',
-        'draw calls': this.renderer.renderer.info.render.calls,
-        triangles: this.renderer.renderer.info.render.triangles,
-        'programs / geometries / textures': `${this.renderer.renderer.info.programs?.length ?? 0} / ${this.renderer.renderer.info.memory.geometries} / ${this.renderer.renderer.info.memory.textures}`,
+        'draw calls': this.renderer.stats.calls,
+        triangles: this.renderer.stats.triangles,
+        'programs / geometries / textures': `${this.renderer.stats.programs} / ${this.renderer.stats.geometries} / ${this.renderer.stats.textures}`,
       };
     });
 
     // The menus' pictures of replicas and parts (G3), drawn by whichever WebGL renderer the game has now.
-    this.pictures = new ItemPictures(followingPictureTarget(() => this.renderer.renderer, webglPictureTarget));
+    this.pictures = new ItemPictures(followingPictureTarget(() => this.renderer.pictureRenderer, webglPictureTarget));
     this.menus = new Menus(container, {
       pictures: this.pictures,
       rules: {
@@ -455,6 +472,10 @@ export class Game {
         frameRateCap: { initial: this.frameRateCap, onChange: (cap) => (this.frameRateCap = cap) },
         showFps: { initial: loadShowFps(), onChange: (on) => this.debug.setFpsReadout(on) },
         toneMapping: { initial: this.renderer.toneMappingId, onChange: (id) => this.renderer.setToneMapping(id) },
+        renderer: {
+          initial: loadRendererChoice(),
+          note: (picked) => rendererNote(picked, this.startedWantingWebGpu, this.renderer.backend),
+        },
       },
       audio: { initial: this.audio.volumes, onChange: (channel, v) => this.changeVolume(channel, v), onRelease: (channel) => this.audio.preview(channel) },
       crosshair: { initial: this.crosshair, onChange: (c) => this.changeCrosshair(c) },
@@ -715,8 +736,7 @@ export class Game {
 
   /** The debug overlay's antialiasing line (REN-21): asked for, given, and the samples per pixel. */
   private antialiasText(): string {
-    const gl = this.renderer.renderer.getContext();
-    return `${this.quality.antialias ? 'on' : 'off'} asked, ${this.renderer.antialiased ? 'on' : 'off'} given (${String(gl.getParameter(gl.SAMPLES))} samples)`;
+    return `${this.quality.antialias ? 'on' : 'off'} asked, ${this.renderer.antialiased ? 'on' : 'off'} given (${this.renderer.samples} samples)`;
   }
 
   /** On-screen sound cues turned on or off: kept for the next match and applied to the one loaded. */
@@ -1074,7 +1094,7 @@ export class Game {
     const range = s instanceof RangeSession;
     const match = s instanceof MatchSession ? s : null;
     const r = match?.state.round;
-    const info = this.renderer.renderer.info;
+    const stats = this.renderer.stats;
     return [
       ['Seed', range ? this.options.seed : this.matchSeed],
       ['Map', read(() => (range ? 'range' : match ? match.setup.map.name : '-'))],
@@ -1093,10 +1113,14 @@ export class Game {
       })],
       ['Post', read(() => this.renderer.postPasses.join(' ') || 'none')],
       ['Pixel ratio', read(() => this.renderer.renderer.getPixelRatio())],
-      ['GPU', read(() => rendererName(this.renderer.renderer.getContext()))],
+      ['Renderer', this.renderer.backend],
+      ['GPU', read(() => {
+        const gl = this.renderer.renderer;
+        return 'isWebGPURenderer' in gl ? this.rendering.adapterName || '-' : rendererName(gl.getContext());
+      })],
       ['Window', `${window.innerWidth} × ${window.innerHeight} at ${window.devicePixelRatio}`],
       ['Sim ticks/s', this.tickRate],
-      ['Draw calls / triangles', read(() => `${info.render.calls} / ${info.render.triangles}`)],
+      ['Draw calls / triangles', read(() => `${stats.calls} / ${stats.triangles}`)],
       ['Dev settings', this.devEnabled ? JSON.stringify(this.dev) : 'off'],
       // Pending slider writes (FA5's saveSettingSoon) go first, so the stored settings are the ones in use.
       ['Settings', read(() => {

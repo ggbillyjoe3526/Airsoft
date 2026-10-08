@@ -291,3 +291,56 @@ describe('Ultra and the frame-rate row in the settings (G5 QA)', () => {
     }
   });
 });
+
+// WebGPU overhaul W1: the Renderer row (Auto, WebGPU, WebGL), a public row with Auto by default (the owner's ruling, 2026-10-08).
+describe('the Renderer row (W1)', () => {
+  beforeEach(() => {
+    vi.stubGlobal('document', { createElement: (tag: string) => new QueryElement(tag) });
+    storage = new MemoryStorage();
+    vi.stubGlobal('localStorage', storage);
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  function buildWithRenderer(note: (picked: string) => string = () => '') {
+    return new GraphicsSettings({
+      quality: { initial: 'low', settings: QUALITY.low, onChange: () => {}, status: () => ({ antialiased: true, antialiasPending: false, maxAnisotropy: 16 }) },
+      frameRateCap: { initial: 0, onChange: () => {} },
+      showFps: { initial: false, onChange: () => {} },
+      toneMapping: { initial: 'neutral', onChange: () => {} },
+      renderer: { initial: 'auto', note },
+    });
+  }
+  const noteOf = (g: GraphicsSettings): FakeElement => (g.rendererRow as unknown as QueryElement).querySelectorAll('p').find((p) => p.className === 'graphics-note')!;
+  /** The row's picker group (the buttons). */
+  const rendererGroup = (g: GraphicsSettings): QueryElement => {
+    const row = g.rendererRow as unknown as QueryElement;
+    return row.querySelectorAll('div').find((d) => d.getAttribute('aria-label') === 'Renderer') as QueryElement;
+  };
+
+  it('is built only when the game passes it', () => {
+    expect(build('low').rendererRow).toBeNull();
+    expect(build('low').rows(new QueryElement('div') as unknown as HTMLElement)).toHaveLength(6);
+  });
+
+  it('shows Auto, WebGPU and WebGL with Auto pressed, always, and saves a pick as `renderer`', () => {
+    const g = buildWithRenderer();
+    expect(g.rendererRow!.hidden).toBeFalsy();
+    const group = rendererGroup(g);
+    expect(group.querySelectorAll('button').map((b) => b.textContent)).toEqual(['Auto', 'WebGPU', 'WebGL']);
+    expect(pressed(group)).toEqual(['Auto']);
+    group.querySelectorAll('button').find((b) => b.textContent === 'WebGPU')!.click();
+    expect(saved().renderer).toBe('webgpu');
+    expect(g.rows(new QueryElement('div') as unknown as HTMLElement)).toContain(g.rendererRow);
+  });
+
+  it('shows the game’s note for the pick under the row, and none when it has nothing to say', () => {
+    const g = buildWithRenderer((picked) => (picked === 'webgpu' ? 'Changes from the next time the game loads.' : ''));
+    const note = noteOf(g);
+    expect(note.hidden).toBe(true);
+    rendererGroup(g).querySelectorAll('button').find((b) => b.textContent === 'WebGPU')!.click();
+    expect(note.hidden).toBe(false);
+    expect(note.textContent).toBe('Changes from the next time the game loads.');
+    rendererGroup(g).querySelectorAll('button').find((b) => b.textContent === 'Auto')!.click();
+    expect(note.hidden).toBe(true);
+  });
+});

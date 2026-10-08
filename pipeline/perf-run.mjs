@@ -8,6 +8,7 @@
  *                              [--ticks 3600] [--warmup-ticks 120] [--max-seconds 300] [--baseline] [--no-build]
  *                              [--chromium /path] [--channel chrome|msedge] [--headless] [--map depot|woodland|neon]
  *                              [--mode elimination|extraction] [--viewport 1920x1080] [--port 4181]
+ *                              [--renderer auto|webgl|webgpu] [--force-webgl]
  *
  * The e2e bundle is reused when the source hasn't changed since it was built (pipeline/build-cached.mjs).
  *
@@ -38,6 +39,15 @@
  *
  * `--env desktop` (G5) is the same on the owner's desktop PC, without CPU throttling: where the Ultra budget is measured.
  * `--viewport WxH` sets the page's size (default 1920x1080 at pixel ratio 1; 3840x2160 for 4K); the result records it.
+ *
+ * `--renderer` (WebGPU overhaul W1) sets Graphics › Renderer before the page loads: `auto` (the default, what a player
+ * gets: WebGPU where the browser gives an adapter, WebGL otherwise, so WebGL in the container and on CI), `webgl` or
+ * `webgpu`. `--force-webgl` puts the node renderer on its WebGL2 back end (`?forceWebGL`), the only way it runs in the
+ * container. Every result records `renderer` (what was asked) and `backend` (what drew: webgl, webgpu or
+ * webgpu-webgl2); a run the node renderer drew names its files with the back end after the environment
+ * (perf-laptop-webgpu-low.json, perf-container-webgpu-webgl2-low.json), so the WebGL files and baselines the gate reads
+ * are never overwritten. Draw calls are the renderer's draws either way (Renderer.stats: WebGL's `render.calls`, the
+ * node renderer's `drawCalls`).
  */
 import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -64,7 +74,13 @@ const options = {
   map: value('--map', 'depot'),
   mode: value('--mode', 'elimination'),
   viewport: value('--viewport', '1920x1080'),
+  renderer: value('--renderer', 'auto'),
+  forceWebGL: flag('--force-webgl'),
 };
+if (!['auto', 'webgl', 'webgpu'].includes(options.renderer)) throw new Error('--renderer must be auto, webgl or webgpu');
+if (options.forceWebGL && options.renderer === 'webgl') throw new Error('--force-webgl needs --renderer auto or webgpu');
+/** The Renderer pick saved before the page loads (none for Auto: a fresh save's default). */
+const rendererSettings = options.renderer === 'auto' ? null : { version: 1, renderer: options.renderer };
 const [viewWidth, viewHeight] = options.viewport.split('x').map(Number);
 if (!(viewWidth > 0 && viewHeight > 0)) throw new Error('--viewport must be WIDTHxHEIGHT, e.g. 3840x2160');
 /** The preview server's port: --port for a second run beside another worktree's (the default 4181 is refused when busy). */
@@ -98,7 +114,7 @@ if (options.build || !existsSync(join(ROOT, 'dist-e2e', 'index.html'))) {
   console.log('perf: the e2e bundle');
   execFileSync('node', ['pipeline/build-cached.mjs', '--mode', 'e2e'], { cwd: ROOT, stdio: 'ignore' });
 }
-const urlFor = (preset) => `http://localhost:${PORT}/?nolock&seed=1&script=perf&quality=${preset}`;
+const urlFor = (preset) => `http://localhost:${PORT}/?nolock&seed=1&script=perf&quality=${preset}${options.forceWebGL ? '&forceWebGL' : ''}`;
 // A server already on the port (another run's, left over) would be measured instead of this build: refuse.
 if (await fetch(urlFor(presets[0])).then(() => true, () => false)) {
   console.error(`perf: port ${PORT} is already serving something (a leftover perf server?); stop it and run again`);
@@ -115,12 +131,18 @@ for (let i = 0; i < 50; i++) {
 }
 
 const { chromium } = await import(pathToFileURL(join(ROOT, 'node_modules', '@playwright', 'test', 'index.mjs')).href);
-const browser = await chromium.launch({
-  ...(options.chromium ? { executablePath: options.chromium } : {}),
-  ...(channel ? { channel } : {}),
-  headless: !laptop || flag('--headless'),
-  args: browserArgs,
-});
+// A browser that fails to start (no executable at the path) must not leave the preview server serving the port.
+const browser = await chromium
+  .launch({
+    ...(options.chromium ? { executablePath: options.chromium } : {}),
+    ...(channel ? { channel } : {}),
+    headless: !laptop || flag('--headless'),
+    args: browserArgs,
+  })
+  .catch((err) => {
+    server.kill();
+    throw err;
+  });
 const results = [];
 try {
   for (const preset of presets) results.push(await measure(preset));
@@ -138,6 +160,8 @@ async function measure(preset) {
   page.on('console', (m) => { if (m.type() === 'error') errors.push(`console: ${m.text()}`); });
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: options.cpu });
+  // A fresh context each preset, so its storage is empty: the Renderer pick is the only setting saved.
+  if (rendererSettings) await page.addInitScript((text) => localStorage.setItem('airsoft.settings', text), JSON.stringify(rendererSettings));
   await page.goto(urlFor(preset));
   await page.waitForSelector('.menu-title-start', { timeout: 60_000 });
   // The title's START opens the Match screen (G3, M100): the map and the mode are cards on it, Settings is on the top bar.
@@ -155,11 +179,14 @@ async function measure(preset) {
   }
   await setup.getByRole('button', { name: 'Start match', exact: true }).click();
   await page.waitForFunction((t) => globalThis.airsoft?.state && globalThis.airsoft.state.tick >= t, options.warmupTicks, { timeout: 120_000 });
-  console.log(`perf: match running (map ${options.map}, mode ${options.mode}, env ${options.env}, preset ${preset}, cpu ×${options.cpu}); measuring ${ticks} ticks from tick ${options.warmupTicks}`);
+  const backend = await page.evaluate(() => globalThis.airsoft.renderer.backend);
+  console.log(`perf: match running (map ${options.map}, mode ${options.mode}, env ${options.env}, preset ${preset}, cpu ×${options.cpu}, drawn with ${backend}); measuring ${ticks} ticks from tick ${options.warmupTicks}`);
+  if (options.renderer === 'webgpu' && backend === 'webgl') console.warn('perf: WebGPU was picked but WebGL drew (no adapter: --force-webgl runs the node renderer on WebGL2)');
 
   const sample = await page.evaluate(async ({ ticks, maxSeconds }) => {
     const g = globalThis.airsoft;
-    const info = g.renderer.renderer.info;
+    // The renderer's draw counts, read the same on WebGL and the node renderer (one object, refilled each read).
+    const stats = () => g.renderer.stats;
     const frames = [];
     const heap = [];
     let calls = 0, callsMax = 0, tris = 0, trisMax = 0;
@@ -180,8 +207,9 @@ async function measure(preset) {
       const f = (now) => {
         frames.push(now - last);
         last = now;
-        calls += info.render.calls; callsMax = Math.max(callsMax, info.render.calls);
-        tris += info.render.triangles; trisMax = Math.max(trisMax, info.render.triangles);
+        const s = stats();
+        calls += s.calls; callsMax = Math.max(callsMax, s.calls);
+        tris += s.triangles; trisMax = Math.max(trisMax, s.triangles);
         if (now >= nextHeap) { heap.push(heapNow()); nextHeap += 1000; }
         if (g.state.tick - tick0 < ticks && now - t0 < maxSeconds * 1000) requestAnimationFrame(f); else done();
       };
@@ -212,6 +240,7 @@ async function measure(preset) {
     const n = frames.length;
     const worstPct = sorted.slice(Math.floor(n * 0.99));
     const onePercentLowMs = worstPct.reduce((s, v) => s + v, 0) / Math.max(1, worstPct.length);
+    const end = stats();
     let gcSpikes = 0;
     for (let i = 1; i < heap.length; i++) if (heap[i] < heap[i - 1] * 0.8) gcSpikes++;
     return {
@@ -220,7 +249,7 @@ async function measure(preset) {
       onePercentLowFps: 1000 / onePercentLowMs,
       p50Ms: q(0.5), p95Ms: q(0.95), p99Ms: q(0.99), worstMs: sorted.at(-1),
       drawCalls: calls / n, drawCallsMax: callsMax, triangles: tris / n, trianglesMax: trisMax,
-      geometries: info.memory.geometries, textures: info.memory.textures, programs: info.programs?.length ?? 0,
+      geometries: end.geometries, textures: end.textures, programs: end.programs,
       gpuMemoryMB: (geometryBytes + textureBytes) / 1e6,
       // Start and end are the live heap (after a full GC); the max and the GC drops are the samples taken during play.
       heapStartMB: heapStart / 1e6, heapEndMB: heapEnd / 1e6, heapGrowthMB: (heapEnd - heapStart) / 1e6, heapMaxMB: Math.max(...heap) / 1e6, heapGc,
@@ -230,11 +259,11 @@ async function measure(preset) {
     };
   }, { ticks, maxSeconds: options.maxSeconds });
   await page.close();
-  return { env: options.env, map: options.map, mode: options.mode, preset, cpu: options.cpu, ticksWanted: ticks, warmupTicks: options.warmupTicks, head, when: new Date().toISOString(), seed: 1, viewport: `${options.viewport}@1`, metrics: sample, errors };
+  return { env: options.env, renderer: options.renderer, backend, map: options.map, mode: options.mode, preset, cpu: options.cpu, ticksWanted: ticks, warmupTicks: options.warmupTicks, head, when: new Date().toISOString(), seed: 1, viewport: `${options.viewport}@1`, metrics: sample, errors };
 }
 
-/** The baseline file for a preset: `<env>.json` for the budget preset (what the gate compares), `<env>-<preset>.json` otherwise. */
-const baselineName = (preset) => baselineFileName(options.env, { map: options.map, mode: options.mode, preset }, budget.budgetPreset);
+/** A run's baseline file: `<env>.json` for the budget preset (what the gate compares), `<env>-<preset>.json` otherwise. */
+const baselineName = (result) => baselineFileName(options.env, result, budget.budgetPreset);
 const round = (v) => (typeof v === 'number' ? Math.round(v * 100) / 100 : v);
 for (const result of results) {
   for (const k of Object.keys(result.metrics)) result.metrics[k] = round(result.metrics[k]);
@@ -242,16 +271,16 @@ for (const result of results) {
   const out = join(OUT, runFileName(options.env, result));
   writeFileSync(out, json);
   // Depot Elimination's budget-preset run (or a single-preset one) also as perf-<env>.json, what the performance agent reads.
-  if (!mapTag && (result.preset === budget.budgetPreset || presets.length === 1)) writeFileSync(join(OUT, `perf-${options.env}.json`), json);
+  if (!mapTag && result.backend === 'webgl' && (result.preset === budget.budgetPreset || presets.length === 1)) writeFileSync(join(OUT, `perf-${options.env}.json`), json);
   console.log(`perf: ${relative(ROOT, out)}`);
   const m = result.metrics;
-  console.log(`  ${result.preset}: ${m.ticks} ticks in ${m.seconds} s · fps ${m.fps} (1 % low ${m.onePercentLowFps}) · p50 ${m.p50Ms} ms · p95 ${m.p95Ms} ms · p99 ${m.p99Ms} ms · sim ${m.simTicksPerSecond} ticks/s`);
+  console.log(`  ${result.preset} on ${result.backend}: ${m.ticks} ticks in ${m.seconds} s · fps ${m.fps} (1 % low ${m.onePercentLowFps}) · p50 ${m.p50Ms} ms · p95 ${m.p95Ms} ms · p99 ${m.p99Ms} ms · sim ${m.simTicksPerSecond} ticks/s`);
   console.log(`  draw calls ${m.drawCalls} (max ${m.drawCallsMax}) · triangles ${m.triangles} (max ${m.trianglesMax}) · GPU memory ~${m.gpuMemoryMB} MB · heap ${m.heapStartMB} → ${m.heapEndMB} MB (${m.heapGrowthMB >= 0 ? "+" : ""}${m.heapGrowthMB}${m.heapGc ? ', live after GC' : ', NO forced GC: noisy'}), ${m.gcSpikes} GC drops`);
   if (result.errors.length) console.log(`  page errors: ${result.errors.length} (${result.errors[0]})`);
   if (options.baseline) {
     const dir = join(ROOT, 'pipeline', 'baseline');
     mkdirSync(dir, { recursive: true });
-    const file = join(dir, baselineName(result.preset));
+    const file = join(dir, baselineName(result));
     writeFileSync(file, json);
     console.log(`perf: baseline written to ${relative(ROOT, file)} (commit it)`);
   }

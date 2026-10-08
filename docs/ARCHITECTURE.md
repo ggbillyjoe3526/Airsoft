@@ -154,17 +154,31 @@ request. Each entry says where the contract lives, what it holds today and what 
     is the preset table.
   - A `QualityChoice` is a preset (Low to Ultra; Ultra is never the automatic pick) or `'custom'`, which resolves to
     High overlaid with the saved rows.
-  - `Renderer.setQuality` and `MatchSession.setQuality` apply a change at once, antialiasing included.
+  - `Renderer.setQuality` and `MatchSession.setQuality` apply a change at once, antialiasing included (on the node
+    renderer an antialiasing change waits for the next load).
   - Fields are added, never renamed. A new field takes a value on every preset, a row in `config/graphics.ts` and a
     `graphics.<field>` store key, with no further contract change (`bakedLight` and `weathering` were added so).
 
   Pinned by `config/render.test.ts`, `config/graphics.test.ts`, `render/renderer.test.ts`.
+- **The renderer back end** (WebGPU overhaul W1; `config/renderBackend.ts`, `render/rendererStart.ts`). Graphics ›
+  Renderer picks Auto (the default), WebGPU or WebGL (owner, 2026-10-08: WebGPU is the default, behind no Dev
+  setting). On Auto or WebGPU, `Game.create` asks for a WebGPU adapter alongside the physics; only when one is given
+  does it load `render/webgpu/nodeBackend.ts` and `three/webgpu` by a dynamic import (their own chunks, never the main
+  one) and draw with `WebGPURenderer` on node materials built from the plain ones. No `navigator.gpu`, no adapter, or
+  no device made is Three's `WebGLRenderer`, quietly: the same renderer and draws as before W1, which is what the
+  container, CI and every gate here run. The WebGL pick never asks. `Renderer.backend` says what drew (`webgl`,
+  `webgpu`, or `webgpu-webgl2` for the node renderer on its WebGL2 back end under `?forceWebGL`), and
+  `Renderer.stats` gives the draw counts read the same on either. A pick applies from the next load. On the node path
+  there is no post stack, retro filter or prefiltered sky yet (W2 to W4); a lost device is replaced by a new one, or
+  by WebGL when none can be made. Pinned by `render/rendererStart.test.ts`, `render/rendererNode.test.ts`,
+  `render/webgpu/nodeBackend.test.ts`, `e2e/webgpu.spec.ts`.
 - **The settings store keys** (`settings/storage.ts`, `settings/dev.ts`). Saved under `airsoft.*` and versioned
   (`SETTINGS_VERSION` 1). Renaming a key needs a migration: one `case` in `migrate` (the per-setting keys of the first
   builds are its "version 0"). An object from a newer version is never read or overwritten. Fields are only ever
   added, each read with a fallback, so version 1 stands: `quality` holds a `QualityChoice`; `graphics.<field>` holds a
   Custom row (an option id or a slider position); `frameRateCap` (Unlimited, 30, 60, 120, 144 or 240; an older number
-  reads as the nearest) and `showFps` are the two Graphics rows outside the presets. `browserStorage()` returns the
+  reads as the nearest) and `showFps` are the two Graphics rows outside the presets; `renderer` (`auto`, `webgpu` or
+  `webgl`, W1) is the Renderer row. `browserStorage()` returns the
   save system's guarded storage once it has started (same keys, same values). Pinned by `settings/storage.test.ts`.
 - **The save file format** (`save/saveFile.ts`). `{ game, format, build, savedAt, summary, stores, checksum }`, the
   stores as their own modules store them. A save from any earlier `format` loads (one `MIGRATIONS` step per format);
@@ -252,8 +266,9 @@ Cross-cutting rules; folder-specific ones are in that folder's `README.md`.
   only.
 - **URL flags.** `?seed=N` replays a match (any match's seed, shown on the pause screen). `?quality=` picks a preset
   for the visit. `?perf` logs the match build's phases in the console. `?nolock` plays without the pointer lock, and
-  `?script=perf` drives the scripted player for the perf harness; both work on the dev server and the `e2e` build only,
-  never in a release build.
+  `?script=perf` drives the scripted player for the perf harness, and `?forceWebGL` puts the node renderer (on Auto or
+  WebGPU) on its WebGL2 back end, how it runs in a container without WebGPU (W1); these work on the dev server and the `e2e`
+  build only, never in a release build.
 - **Ending a match quickly in a scratch script.** Set `airsoft.state.round.score` to 4-4 and one team's characters'
   `status` to `'out'`.
 - **Lockfile.** Re-lock with npm 11 (`npx -y npm@11 install`) so the lockfile keeps its `libc` fields; otherwise Linux

@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import {
   type CoreSurfaceId,
   effectivePixelRatio,
-  FRAME_TIMING,
   type LightingPreset,
   LIGHTING_PRESETS,
   RENDER,
@@ -12,9 +11,11 @@ import {
   type TextureSize,
   type ToneMappingId,
 } from '../config/render';
+import type { RenderBackend } from '../config/renderBackend';
 import type { MapData } from '../map/mapTypes';
+import type { WebGPURenderer } from 'three/webgpu';
 import type { FigureModel } from './externalModels';
-import { GpuTimer } from './gpuTimer';
+import { type DrawingRenderer, DrawingDevice, type DrawStats } from './drawingDevice';
 import { environmentLookOf } from './lightingPreset';
 import { MapMeshCache } from './mapMeshCache';
 import { mapLookOf, texturesFor } from './mapMeshes';
@@ -23,134 +24,39 @@ import type { PostPassId } from './post/postPlan';
 import type { PostStack } from './post/postStack';
 import { addSurfaceTextures, CORE_SURFACES, disposeSurfaceTextures, type ProceduralTexture, setSurfaceAnisotropy, type SurfaceTextures } from './proceduralTextures';
 import { defaultEnvironmentLook, type EnvironmentLook, ReplicaSheen } from './replicaSheen';
+import { browserIdle, handOverRenderer, type IdleScheduler, type RetiringRenderer, toneMappingOf, verticalFovFor, warmSurfacesInIdle, zoomedFov } from './rendererParts';
 import { RetroFilter, retroPixelAngle } from './retroFilter';
 import { releaseNormalMaps, usesNormalMaps } from './surfaceNormals';
+import type { NodeBackend } from './webgpu/nodeBackend';
 
-const REFERENCE_ASPECT = 16 / 9;
-const DEG = Math.PI / 180;
+export {
+  handOverRenderer,
+  type IdleScheduler,
+  releaseGpuResources,
+  type RendererProperties,
+  type RetiringRenderer,
+  toneMappingOf,
+  verticalFovFor,
+  warmSurfacesInIdle,
+  zoomedFov,
+} from './rendererParts';
 
-/** Vertical FOV (degrees) that yields the configured horizontal FOV on a 16:9 screen. */
-export function verticalFovFor(horizontalFov16x9: number): number {
-  return (2 * Math.atan(Math.tan((horizontalFov16x9 * DEG) / 2) / REFERENCE_ASPECT)) / DEG;
-}
-
-/** The vertical FOV (degrees) that magnifies a `fov` view by `zoom`. */
-export function zoomedFov(fov: number, zoom: number): number {
-  return (2 * Math.atan(Math.tan((fov * DEG) / 2) / zoom)) / DEG;
-}
-
-/** Three.js's tone mapping for each choice on the Tone mapping row (audit section 5, F2). */
-const TONE_MAPPERS: Readonly<Record<ToneMappingId, THREE.ToneMapping>> = {
-  aces: THREE.ACESFilmicToneMapping,
-  agx: THREE.AgXToneMapping,
-  neutral: THREE.NeutralToneMapping,
-};
-
-/** The renderer's tone mapping and exposure for a choice, the exposure times a lighting preset's `scale` (M33f). */
-export function toneMappingOf(id: ToneMappingId, scale = 1): { mapping: THREE.ToneMapping; exposure: number } {
-  return { mapping: TONE_MAPPERS[id], exposure: TONE_MAPPING.exposure[id] * scale };
-}
-
-/** Runs `work` in a spare moment. */
-export type IdleScheduler = (work: () => void) => void;
-
-/** The browser's idle callback (a timeout where it has none). */
-const browserIdle: IdleScheduler = (work) => {
-  if (typeof requestIdleCallback === 'function') requestIdleCallback(() => work());
-  else setTimeout(work, 0);
-};
+export type { DrawingRenderer, DrawStats } from './drawingDevice';
 
 /**
- * Draws the surface textures and uploads them in idle moments (audit REN-14), so the first Play doesn't: one moment
- * draws one of `ids` (`draw`), the next uploads it, and so on through the list. One texture a moment, not the whole set
- * (BP2): at High a library surface alone takes most of a second to draw, the set several seconds of a frozen title
- * screen. `upload` skips a texture its set no longer holds (a texture-size change dropped it).
+ * Owns the renderer, main camera and scene. Handles resizing. The renderer is Three's WebGLRenderer, or on the node path
+ * (WebGPU overhaul W1, wherever the browser gives a WebGPU adapter) the node renderer handed in by Game.create: the same scene and draws, with no
+ * post stack, retro filter, environment map or replica sheen until W2 to W4 rebuild them as node materials and passes.
  */
-export function warmSurfacesInIdle<Id>(ids: readonly Id[], draw: (id: Id) => THREE.Texture, upload: (texture: THREE.Texture) => void, idle: IdleScheduler): void {
-  let next = 0;
-  const step = (): void => {
-    if (next >= ids.length) return;
-    const texture = draw(ids[next++]!);
-    idle(() => {
-      upload(texture);
-      idle(step);
-    });
-  };
-  idle(step);
-}
-
-/** A renderer's own record of each material (WebGLRenderer.properties): the uniforms it binds, its own textures among them. */
-export interface RendererProperties {
-  get(object: object): unknown;
-}
-
-/** What `handOverRenderer` needs of a WebGL renderer (a stub stands in for it in tests). */
-export interface RetiringRenderer {
-  readonly domElement: { replaceWith(next: HTMLCanvasElement): void };
-  readonly properties: RendererProperties;
-  dispose(): void;
-  forceContextLoss(): void;
-}
-
-/**
- * Lets go of everything a WebGL renderer has seen under `root`: each geometry, material, texture (a material's maps and
- * a shader's texture uniforms, a scene's background and environment), instanced mesh and light shadow map is disposed,
- * which drops the renderer's GPU copy and the dispose listener it keeps on the object. With the renderer's `properties`,
- * the textures it binds to a material by itself go too (Three's shared DFG lookup table for standard materials, which
- * would otherwise keep every old renderer alive). Nothing on the CPU side is lost: the next renderer to draw them uploads
- * them again from their copies (a shadow map is made again).
- */
-export function releaseGpuResources(root: THREE.Object3D, properties?: RendererProperties): void {
-  if (root instanceof THREE.Scene) {
-    disposeIfTexture(root.background);
-    disposeIfTexture(root.environment);
-  }
-  root.traverse((o) => {
-    if (o instanceof THREE.InstancedMesh) o.dispose();
-    const { geometry, material } = o as Partial<THREE.Mesh>;
-    geometry?.dispose();
-    if (material) for (const m of Array.isArray(material) ? material : [material]) releaseMaterial(m, properties);
-    const shadow = (o as Partial<THREE.DirectionalLight>).shadow;
-    if (shadow?.map) {
-      shadow.map.dispose();
-      shadow.map = null;
-    }
-  });
-}
-
-function releaseMaterial(material: THREE.Material, properties: RendererProperties | undefined): void {
-  for (const value of Object.values(material)) disposeIfTexture(value);
-  disposeUniformTextures((material as Partial<THREE.ShaderMaterial>).uniforms);
-  disposeUniformTextures((properties?.get(material) as { uniforms?: Record<string, THREE.IUniform> } | undefined)?.uniforms);
-  material.dispose();
-}
-
-function disposeUniformTextures(uniforms: Record<string, THREE.IUniform> | undefined): void {
-  if (uniforms) for (const u of Object.values(uniforms)) disposeIfTexture(u.value);
-}
-
-function disposeIfTexture(value: unknown): void {
-  if (value instanceof THREE.Texture) value.dispose();
-}
-
-/**
- * Antialiasing's context swap (REN-04, REN-24): `next` takes `old`'s place on the page, and `old` is freed with its
- * context. Three.js keeps a dispose listener (holding its renderer) on every geometry, material, texture, instanced mesh
- * and render target it has drawn, and never removes them on its own dispose(): without releasing `roots` first, every
- * swap would keep the old renderer, its lost context and its canvas alive for as long as the scene lives.
- */
-export function handOverRenderer(old: RetiringRenderer, next: { domElement: HTMLCanvasElement }, roots: readonly THREE.Object3D[]): void {
-  for (const root of roots) releaseGpuResources(root, old.properties);
-  old.domElement.replaceWith(next.domElement);
-  old.dispose();
-  // Frees the context at once rather than when the canvas is collected (REN-24): browsers cap live contexts.
-  old.forceContextLoss();
-}
-
-/** Owns the WebGL renderer, main camera and scene. Handles resizing. */
 export class Renderer {
-  /** The WebGL renderer: replaced (a new canvas and context) when antialiasing is turned on or off (setQuality). */
-  private gl: THREE.WebGLRenderer;
+  /**
+   * The renderer drawing and what it reports (render/drawingDevice.ts): the WebGL renderer, replaced (a new canvas and
+   * context) when antialiasing is turned on or off (setQuality); or the node renderer (W1), replaced when its device is
+   * lost (recoverNode; WebGL takes over if no new device can be made).
+   */
+  private readonly device: DrawingDevice;
+  /** Set by dispose(): a device recovery still on its way does nothing. */
+  private disposed = false;
   /** What the WebGL context was asked for: multisampling is fixed for a context's life. */
   private contextAntialias: boolean;
   readonly scene = new THREE.Scene();
@@ -182,8 +88,6 @@ export class Renderer {
   private toneMapping: ToneMappingId = TONE_MAPPING.default;
   /** The lighting preset in force (M33f, setLighting): its haze, exposure and environment. Day until a session sets one. */
   private lighting: LightingPreset = LIGHTING_PRESETS.day;
-  /** GPU time per frame (REN-17), made while `gpuTiming` is on; null without it. */
-  private gpuTimer: GpuTimer | null = null;
   /** Time the GPU's work each frame (the debug overlay, while shown). */
   gpuTiming = false;
   /**
@@ -213,12 +117,16 @@ export class Renderer {
    */
   private readonly post = new PostHost(() => this.drawsHalfFloat());
 
-  /** `quality` is what the game loads with; everything in it can change later (setQuality). */
+  /**
+   * `quality` is what the game loads with; everything in it can change later (setQuality). `node`: the node renderer to
+   * draw with (W1, render/webgpuProbe.ts startingRenderer), made for `quality.antialias`; none for WebGL.
+   */
   constructor(
     private readonly container: HTMLElement,
     private quality: QualitySettings,
+    node: NodeBackend | null = null,
   ) {
-    this.gl = this.makeWebGL(quality.antialias);
+    this.device = new DrawingDevice(node ? this.adoptNode(node) : this.makeWebGL(quality.antialias), node);
     this.contextAntialias = quality.antialias;
     container.appendChild(this.gl.domElement);
 
@@ -234,20 +142,38 @@ export class Renderer {
 
     this.resize();
     window.addEventListener('resize', this.resize);
-    this.listen(this.canvas);
+    // The node renderer hears its own context or device loss (adoptNode).
+    if (!node) this.listen(this.canvas);
   }
 
-  /** The WebGL renderer in use (a new one after antialiasing changes: don't keep it). */
-  get renderer(): THREE.WebGLRenderer {
-    return this.gl;
+  /** The renderer in use (a new one after antialiasing changes or a lost device: don't keep it). */
+  get renderer(): DrawingRenderer {
+    return this.device.gl;
   }
 
-  /**
-   * Whether the screen is really multisampled (REN-21): the context reports what it was given, and Firefox on Linux and
-   * some drivers give no multisampling whatever was asked.
-   */
+  /** Which renderer draws (W1): WebGL, or the node renderer on WebGPU or on its WebGL2 back end. */
+  get backend(): RenderBackend {
+    return this.device.backend;
+  }
+
+  /** The WebGL renderer the menus' item pictures are drawn with (DrawingDevice.pictureRenderer). */
+  get pictureRenderer(): THREE.WebGLRenderer {
+    return this.device.pictureRenderer;
+  }
+
+  /** This frame's draw calls and triangles and what the renderer holds, read the same on either renderer (reused). */
+  get stats(): DrawStats {
+    return this.device.stats;
+  }
+
+  /** Whether the screen is really multisampled (REN-21). */
   get antialiased(): boolean {
-    return this.gl.getContext().getContextAttributes()?.antialias ?? false;
+    return this.device.antialiased;
+  }
+
+  /** The canvas's samples per pixel. */
+  get samples(): number {
+    return this.device.samples;
   }
 
   /** Antialiasing asked for but not in force: a new context could not be made, so it changes on the next load (REN-04). */
@@ -257,12 +183,27 @@ export class Renderer {
 
   /** The most anisotropic filtering the graphics card offers (Texture filtering is clamped to it). */
   get maxAnisotropy(): number {
-    return this.gl.capabilities.getMaxAnisotropy();
+    return this.device.maxAnisotropy;
   }
 
-  /** The GPU's milliseconds a frame, smoothed (REN-17): NaN without the timer extension (Firefox) or while not timing. */
+  /** The GPU's milliseconds a frame, smoothed (REN-17; timestamp queries on the node path): NaN when not known. */
   get gpuMs(): number {
-    return this.gpuTimer?.ms ?? Number.NaN;
+    return this.device.gpuMs;
+  }
+
+  /** The renderer drawing (the device's, swapped with it). */
+  private get gl(): DrawingRenderer {
+    return this.device.gl;
+  }
+
+  /** The node renderer's back end (W1), null on the WebGL path. */
+  private get node(): NodeBackend | null {
+    return this.device.node;
+  }
+
+  /** The WebGL renderer, null on the node path. */
+  private get webgl(): THREE.WebGLRenderer | null {
+    return this.device.webgl;
   }
 
   /**
@@ -309,7 +250,9 @@ export class Renderer {
    * shared by every match and range; null while Replica sheen is off. Sessions must not dispose it.
    */
   get replicaSheen(): THREE.Texture | null {
-    return this.sheen.texture(this.gl, this.quality.replicaSheen, this.environmentLook);
+    // The node path has no prefiltered sky yet (its PMREM is W2's): no sheen.
+    const gl = this.webgl;
+    return gl ? this.sheen.texture(gl, this.quality.replicaSheen, this.environmentLook) : null;
   }
 
   /**
@@ -437,16 +380,18 @@ export class Renderer {
    * it off and frees its render target and pass. Applies from the next frame, on every map and the range.
    */
   setRetro(look: RetroLook | null): void {
-    this.retroLook = look ? { ...look } : null;
+    // The filter is a GLSL pass: not on the node path until W4 rebuilds it.
+    this.retroLook = look && !this.node ? { ...look } : null;
     // The retro filter draws instead of the post stack (a dev look): the stack goes while it is on, and comes back after.
     this.post.drop();
-    if (!look) {
+    const kept = this.retroLook;
+    if (!kept) {
       this.retro?.dispose();
       this.retro = null;
       return;
     }
-    if (this.retro) this.retro.setLook(look);
-    else this.retro = this.makeRetro(look);
+    if (this.retro) this.retro.setLook(kept);
+    else this.retro = this.makeRetro(kept);
     this.retro.resize(this.width, this.height, this.gl.getPixelRatio());
   }
 
@@ -477,7 +422,9 @@ export class Renderer {
     if (this.environmentDirty) this.applyEnvironment();
     // A session's build has just ended: its reflective meshes (if any) are found on the next frame.
     this.post.rescan();
-    const gl = this.gl;
+    // The node path (W1) compiles its pipelines ahead in the background: no post stack or retro target to draw into.
+    if (this.node) return this.node.compile(this.scene, this.camera, overlay);
+    const gl = this.gl as THREE.WebGLRenderer;
     const retro = this.retro;
     // The world draws into the post stack's target when there is one (G5), the held replica onto the canvas after it.
     const post = this.postStack();
@@ -497,9 +444,11 @@ export class Renderer {
 
   /** Draws the world, then (optionally) an overlay scene such as the held replica on top of it. */
   render(overlay?: { scene: THREE.Scene; camera: THREE.Camera }): void {
+    // A lost device draws nothing until its replacement takes over (recoverNode).
+    if (this.node?.lost) return;
     if (this.environmentDirty) this.applyEnvironment();
     const gl = this.gl;
-    const timer = this.timer();
+    const timer = this.device.timer(this.gpuTiming);
     timer?.begin();
     // Count both passes in renderer.info (the debug overlay reads it).
     gl.info.autoReset = false;
@@ -513,7 +462,7 @@ export class Renderer {
     const post = this.postStack();
     if (post) {
       this.post.findReflective(post, this.scene);
-      post.render(gl, this.scene, this.camera);
+      post.render(gl as THREE.WebGLRenderer, this.scene, this.camera);
     } else {
       gl.render(this.scene, this.camera);
     }
@@ -523,8 +472,9 @@ export class Renderer {
       gl.clearDepth();
       gl.render(overlay.scene, overlay.camera);
     }
-    retro?.present(gl);
+    retro?.present(gl as THREE.WebGLRenderer);
     timer?.end();
+    this.node?.frameDone();
   }
 
   /** The post stack's passes in force, in order (the debug overlay): none on Low. */
@@ -544,11 +494,9 @@ export class Renderer {
     this.retro = null;
     this.figureModel?.dispose();
     this.figureModel = null;
-    this.dropTimer();
-    this.gl.dispose();
+    this.disposed = true;
     // Frees the context at once rather than when the canvas is collected (REN-24): browsers cap live contexts.
-    this.gl.forceContextLoss();
-    this.gl.domElement.remove();
+    this.device.dispose();
   }
 
   /**
@@ -558,7 +506,8 @@ export class Renderer {
    */
   private applyEnvironment(): void {
     this.environmentDirty = false;
-    this.scene.environment = this.sheen.texture(this.gl, this.quality.environment, this.environmentLook);
+    const gl = this.webgl;
+    this.scene.environment = gl ? this.sheen.texture(gl, this.quality.environment, this.environmentLook) : null;
     this.scene.environmentIntensity = this.lighting.environment.intensity;
   }
 
@@ -572,12 +521,14 @@ export class Renderer {
 
   /** Whether the context can draw into half floats (WebGL 2 with EXT_color_buffer_half_float or _float, near universal). */
   private drawsHalfFloat(): boolean {
-    const ext = this.gl.extensions;
+    const ext = (this.gl as THREE.WebGLRenderer).extensions;
     return ext.has('EXT_color_buffer_half_float') || ext.has('EXT_color_buffer_float');
   }
 
   /** The post stack for this frame (G5): none on Low, while the retro filter is on and while the context is lost. */
   private postStack(): PostStack | null {
+    // The post passes are GLSL: none on the node path until W4 rebuilds them.
+    if (this.node) return null;
     return this.post.stackFor(this.quality, this.lighting, this.retroLook !== null);
   }
 
@@ -589,7 +540,11 @@ export class Renderer {
 
   /** A WebGL renderer with the game's output settings, on a canvas of its own. Throws if the browser refuses a context. */
   private makeWebGL(antialias: boolean): THREE.WebGLRenderer {
-    const gl = new THREE.WebGLRenderer({ antialias, powerPreference: 'high-performance' });
+    return this.dress(new THREE.WebGLRenderer({ antialias, powerPreference: 'high-performance' }));
+  }
+
+  /** The game's output settings on a new renderer of either kind: colour space, tone mapping, shadows, the canvas's class. */
+  private dress<R extends DrawingRenderer>(gl: R): R {
     gl.outputColorSpace = THREE.SRGBColorSpace;
     const { mapping, exposure } = toneMappingOf(this.toneMapping, this.lighting.exposureScale);
     gl.toneMapping = mapping;
@@ -607,14 +562,16 @@ export class Renderer {
    * Returns false, keeping the old context, if the browser refuses a new one: the change then waits for the next load.
    */
   private replaceContext(antialias: boolean): boolean {
+    // The node renderer's multisampling is fixed for its life too: on that path (W1) the change waits for the next load.
+    if (this.node) return false;
     let next: THREE.WebGLRenderer;
     try {
       next = this.makeWebGL(antialias);
     } catch {
       return false;
     }
-    const old = this.gl;
-    this.dropTimer();
+    const old = this.gl as THREE.WebGLRenderer;
+    this.device.dropTimer();
     this.unlisten(old.domElement);
     // The post stack's targets belong to the old context: freed with it, and made again on the new one's first frame.
     this.post.drop();
@@ -625,19 +582,8 @@ export class Renderer {
     // The retro filter's target belongs to the old context: freed with it, and made again on the new one below.
     this.retro?.dispose();
     this.retro = null;
-    // Kept map meshes outside the scene are freed rather than handed over (CORE-33); a held map is in the scene.
-    this.mapMeshes.contextReplaced();
-    // Everything the old renderer has drawn (or uploaded ahead, the surface textures) lets go of it (REN-24).
-    const roots: THREE.Object3D[] = [this.scene];
-    if (this.overlayScene) roots.push(this.overlayScene);
-    const figure = this.figureModel;
-    if (figure) for (const part of [...Object.values(figure.parts), figure.whole]) if (part) roots.push(part);
-    if (this.surfaces) for (const t of Object.values(this.surfaces)) {
-      t.texture.dispose();
-      t.normal?.dispose();
-    }
-    handOverRenderer(old, next, roots);
-    this.gl = next;
+    this.handOver(old, next);
+    this.device.use(next, null);
     this.contextAntialias = antialias;
     this.listen(next.domElement);
     // A swap while the old context was lost: its restore event will never come (the old canvas is no longer heard), and
@@ -650,6 +596,70 @@ export class Renderer {
     return true;
   }
 
+  /**
+   * `next`'s canvas takes `old`'s place: kept map meshes outside the scene are freed rather than handed over (CORE-33; a
+   * held map is in the scene), and everything the old renderer has drawn (or uploaded ahead, the surface textures) lets
+   * go of it (REN-24), to be uploaded again by the next one.
+   */
+  private handOver(old: RetiringRenderer, next: { domElement: HTMLCanvasElement }): void {
+    this.mapMeshes.contextReplaced();
+    const roots: THREE.Object3D[] = [this.scene];
+    if (this.overlayScene) roots.push(this.overlayScene);
+    const figure = this.figureModel;
+    if (figure) for (const part of [...Object.values(figure.parts), figure.whole]) if (part) roots.push(part);
+    if (this.surfaces) for (const t of Object.values(this.surfaces)) {
+      t.texture.dispose();
+      t.normal?.dispose();
+    }
+    handOverRenderer(old, next, roots);
+  }
+
+  /** The node renderer (W1) dressed with the game's output settings, its loss heard. */
+  private adoptNode(node: NodeBackend): WebGPURenderer {
+    node.onLost(this.nodeLost);
+    return this.dress(node.renderer);
+  }
+
+  /** The node renderer's device (or its WebGL2 back end's context) is lost: the game pauses, and a new one is asked for. */
+  private readonly nodeLost = (): void => {
+    this.contextListener(true);
+    void this.recoverNode();
+  };
+
+  /**
+   * Device-lost recovery (W1): a new node renderer on a new canvas and device takes the lost one's place, as an
+   * antialiasing swap does (everything is uploaded again from its copies; render targets come back empty, so the session
+   * redraws them on contextRestored), and play can resume. With none given (NodeBackend.replacement) the game stays
+   * paused under the graphics notice, which says to reload.
+   */
+  private async recoverNode(): Promise<void> {
+    const old = this.node;
+    if (!old) return;
+    const gone = (): boolean => this.disposed || this.node !== old;
+    const next = await old.replacement(gone);
+    if (gone()) return next?.dispose();
+    const retiring = { domElement: old.renderer.domElement, properties: { get: () => undefined }, dispose: () => old.dispose(), forceContextLoss: () => undefined };
+    if (next) {
+      this.handOver(retiring, next.renderer);
+      this.device.use(this.adoptNode(next), next);
+    } else {
+      // No new device after every try: WebGL takes over, as for a browser without WebGPU (stays paused if refused too).
+      let gl: THREE.WebGLRenderer;
+      try {
+        gl = this.makeWebGL(this.quality.antialias);
+      } catch {
+        return;
+      }
+      this.handOver(retiring, gl);
+      this.device.use(gl, null);
+      this.contextAntialias = this.quality.antialias;
+      this.listen(gl.domElement);
+    }
+    this.environmentDirty = true;
+    this.resize();
+    this.contextListener(false);
+  }
+
   private listen(canvas: HTMLCanvasElement): void {
     canvas.addEventListener('webglcontextlost', this.contextLost);
     canvas.addEventListener('webglcontextrestored', this.contextRestored);
@@ -660,32 +670,10 @@ export class Renderer {
     canvas.removeEventListener('webglcontextrestored', this.contextRestored);
   }
 
-  /** The GPU timer while timing is on (made on first use, for the context in use); null otherwise. */
-  private timer(): GpuTimer | null {
-    if (!this.gpuTiming) {
-      if (this.gpuTimer) this.dropTimer();
-      return null;
-    }
-    return (this.gpuTimer ??= new GpuTimer(this.gl.getContext() as WebGL2RenderingContext, FRAME_TIMING.smoothing));
-  }
-
-  private dropTimer(): void {
-    this.gpuTimer?.dispose();
-    this.gpuTimer = null;
-  }
-
-  /**
-   * The timer's query went with a lost context: forgotten rather than deleted (an object of a lost context can't be),
-   * and the next frame timed makes one on the context in use.
-   */
-  private forgetTimer(): void {
-    this.gpuTimer = null;
-  }
-
   private readonly contextLost = (e: Event): void => {
     // Without this the browser never gives the context back (Three.js does it too; repeating it is harmless).
     e.preventDefault();
-    this.forgetTimer();
+    this.device.forgetTimer();
     // The post stack goes with the context (its targets are gone) and is made again once the context is back.
     this.post.contextLost();
     this.contextListener(true);
@@ -699,7 +687,7 @@ export class Renderer {
     this.post.contextBack();
     // A timer made while the context was gone (a frame drawn then) holds no query, or one of the lost context: the next
     // frame makes a new one on the restored context (M63, audit REN-07).
-    this.forgetTimer();
+    this.device.forgetTimer();
     this.contextListener(false);
   };
 
