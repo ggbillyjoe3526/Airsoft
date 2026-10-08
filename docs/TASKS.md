@@ -5,22 +5,6 @@ commit, before its pull request merges (CI's scope gate finds the block in the b
 (`docs/records/<id>.md`) and its CHANGELOG line remain. The planning thread writes blocks; the build thread sets
 `status` and `attempts` once, in its records commit (no status-only commits).
 
-## TE2 · Docs rewrite and per-task records (token step 2)
-tier: ui
-perf: skip
-touches: CLAUDE.md, pool.md, stats.md, pipeline/, .claude/
-contract: none
-acceptance:
-  1. Every live doc is rewritten in one house style (owner, 2026-10-05), with the playtest guide shown to the owner first; nothing important is lost.
-  2. Finished history moves word for word to `docs/archive/0.1-dev/`; the live docs hold the current state (token plan item 1).
-  3. Each task keeps one record file in `docs/records/`, read and checked by `pipeline/records.mjs` with tests; `docs/REVIEWS.md` and `docs/METRICS.md` retire to the archive (items 3, 4).
-  4. The gate writes the attempt row for the task's record from its own report (item 4).
-  5. `docs/HANDOFF.md` is a short "now" (item 6); `docs/ARCHITECTURE.md` is a one-page module map with every contract, plus a `README.md` per `src/` folder (item 7).
-  6. `pool.md` and `stats.md`: prose only, every table line unchanged, their tests passing.
-  7. The overdue 0.1 Dev 4 release records: CHANGELOG split at the tag with PR numbers, `docs/patch-notes/0.1-dev.4.md`, README on 0.1 Dev 4; Audit 2 section 5 and the owed DECISIONS lines (from M79).
-status: open
-attempts: 0
-
 **Audit 2, what is left (2026-10-05 20:45 UTC).** Merged: M50–M57, M63–M65, M68, M70 (#107–#122). M69 (AUD PR 4) is
 accepted and lands with this list. Below, the rest of section 8 of the report
 (`audits/full-audit-2026-10-05.md` in the project's shared files), in its order. Not built in this pass:
@@ -46,7 +30,7 @@ perf: required
 touches: src/render/replicaModels.ts, src/render/, src/config/render.ts, src/config/, docs/ARCHITECTURE.md, docs/KNOWN_ISSUES.md
 contract: none
 acceptance:
-  1. `src/render/replicaModels.ts` and `src/config/render.ts` are split by concern into files under about 600 lines, with no change in what is drawn (the replica and render tests unchanged).
+  1. `src/render/replicaModels.ts` and `src/config/render.ts` are split by concern into files under about 600 lines, with no change in what is drawn (the replica and render tests unchanged). On 2026-10-08 they are 542 and 9 lines (G2 and G5 split them): confirm, then this criterion may already hold.
   2. High caps flat city surfaces at 512² textures (owner decision 9), checked with a screenshot; Neon Heights High holds about 28 MB less.
   3. The `src/render/` and `src/config/` READMEs name the new files.
 status: open

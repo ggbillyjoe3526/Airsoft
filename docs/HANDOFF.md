@@ -7,7 +7,7 @@ each `src/` folder's `README.md`.
 ## Now
 
 - **Building 0.1 Dev 5.** The last tag is `0.1-dev.4` (2026-10-06). The plan's eight items, in order, are in
-  `docs/ROADMAP.md` › 0.1 Dev 5. This batch is item 1: the docs rewrite with token step 2 (TE2).
+  `docs/ROADMAP.md` › 0.1 Dev 5. Item 1, the docs rewrite with token step 2 (TE2), is done (2026-10-08).
 - **Next.** Token step 3 (TE3, a pipeline pull request), token step 4 (TE4), bug pass BP2 after the Audit 2 tasks
   M77–M79, then the graphics thread: the HUD restyle with the menu redesign (M100), the Woodland and Neon Heights
   re-dress, WebGPU as a complete overhaul (W0–W6) and the map pictures.

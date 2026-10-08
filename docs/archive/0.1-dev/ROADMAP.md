@@ -896,8 +896,8 @@ pool, items 11, 12 and part of 14).
 ## Live sections before the rewrite
 
 These sections stay in `docs/ROADMAP.md`, tidied. Their wording from before the rewrite is kept here so that no detail
-is lost: the Dev 5 plan and its playtest notes, the Dev 6 picks, token efficiency, Beta, the feature triage, the
-release and After 0.1.
+is lost: the Dev 5 plan and its playtest notes, the Dev 6 picks, token efficiency, what v0.1 is, Beta, the feature
+triage, the release and After 0.1.
 
 ### 0.1 Dev 5: the plan (owner, 2026-10-06)
 
@@ -1061,6 +1061,36 @@ included. Models and effort levels stay as they are.
 | TE3 | 15 review packet for the critic and QA, 16 performance agent only on a flagged perf run, 17 (a) leaner changelog agent, 18 near-miss re-run only for judgment checks, 19 failures-only gate summary | Dev 5 item 2 | Open |
 | TE4 | 8 fewer chat lines, 21 lighter local test run, 22 bot balance as a report | Dev 5 item 3 (approved 2026-10-06, 23:27 UTC) | Open |
 | Gradual | 26 split the largest files when a task already edits them | Ongoing | Open |
+
+## What v0.1 is (owner decision, 2026-10-01)
+
+v0.1 focuses on core gameplay and foundations. Later content builds on those foundations.
+
+- **Replicas:** the two that exist, the AEG rifle and the gas pistol. More platforms come later.
+- **Loadout** (owner, 2026-10-03): a primary and a secondary replica, BB weight, hop-up and a first set of
+  attachments (optics, grips, magazines), picked before a match. Gear and more parts come with later versions.
+- **Match info and options** (owner, 2026-10-03): a hit feed, teammate markers, an end-of-match summary, crosshair
+  options, custom match settings (rounds, round time, team size, a ricochets setting) and a practice range.
+- **Comfort, accessibility and squad orders** (owner, 2026-10-03, second batch): the basic comfort and accessibility
+  settings, browser basics (pause on a hidden tab, fullscreen, graphics problems handled), and three orders for your
+  bot teammates.
+- **Modes:** the two that exist, Elimination and Attack / Defend.
+- **Field:** Depot, reworked to the field checklist below.
+- **Foundations:** magazines and reloads, a BB physics pass, and movement and positioning.
+
+### Design rules for everything on this roadmap
+
+- **Movement and positioning matter more than raw weapon stats** (owner). Where you stand, how you
+  move and when you peek should decide fights, not a better gun.
+- **Replicas differ mechanically, not in damage.** One hit is one hit with every replica. Platforms
+  differ in how they load, cycle, sound, handle and run out.
+- **Fields are built from a checklist** (owner). Every field has cover, barricades, buildings, windows,
+  doorways, choke points, flanking routes, objective locations, and dead zones / spawn areas. Layout
+  rules are tested in code, as for Depot.
+- **Unlocks never block fun.** Progression is earned by unlocking replicas and gear, never by levels. From M26
+  (owner, 2026-10-04) replicas and parts are assets in a pool (`pool.md`) unlocked in the Armory with Field Credits
+  earned by playing: completely free, never bought with money, marked beta, and it can be switched off. The
+  starting kit (AEG Rifle, Gas Pistol, Standard Battery, Green Gas) is a full loadout, and BBs are always free.
 
 ## Beta: finishing 0.1 (not scheduled yet)
 
