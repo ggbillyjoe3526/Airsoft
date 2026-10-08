@@ -39,7 +39,7 @@ pulled into Dev 5, and Dev 7 is folded away (its mode checks join the toolkit he
 2. **Token step 3** (TE3, a pipeline pull request). Done (2026-10-08).
 3. **Token step 4** (TE4, approved 2026-10-06). Done (2026-10-08).
 4. **Bug pass BP2** (the Dev 4 rows in `docs/KNOWN_ISSUES.md`). Done (2026-10-08; `docs/records/BP2.md`). The last
-   Audit 2 tasks M77–M79 in `docs/TASKS.md` follow it, before BP3.
+   Audit 2 tasks M77–M79 followed it (done 2026-10-08), before BP3.
 5. **Graphics** (the overhaul the owner pulled forward from 0.2 on 2026-10-05). G1–G3 and G5–G8 are merged. Left: G4,
    G9, WebGPU as a complete overhaul (W0–W6) and the map pictures (see Graphics below).
 6. **The owner's playtest notes:** the Dev 4 notes M80–M91 and M96, and the 2026-10-07 notes M97–M99 (M100 is part of
@@ -49,17 +49,17 @@ pulled into Dev 5, and Dev 7 is folded away (its mode checks join the toolkit he
    with pictures; 2 map checks; 3 mode checks; 4 skin checks.
 8. **Bug pass BP3**, then the owner tags 0.1 Dev 5 and playtests it.
 
-### Audit 2: tasks left
+### Audit 2: the last tasks
 
 Audit 2 is the full audit of 2026-10-05 (91 findings: 0 critical, 1 high, 18 medium, 51 low, 21 improvements). The owner
-confirmed all 34 decisions on their defaults. It is built as tasks from M50 on; three are left, with their acceptance
-criteria in `docs/TASKS.md`. They come after bug pass BP2 and before BP3.
+confirmed all 34 decisions on their defaults. It was built as tasks from M50 on; the last three are done (2026-10-08,
+records in `docs/records/`), after bug pass BP2 and before BP3.
 
-| Task | What | Audit findings |
-|---|---|---|
-| M77 | Hot-path trims | SIM-06, SIM-07, REN-10 |
-| M78 | Splits: replica models, render config and city texture size | REN-09, REN-11 |
-| M79 | Docs, change records and small leaks | CORE-07, CORE-08, CORE-13, CORE-14, AUD-06, report section 5 |
+| Task | What | Audit findings | Status |
+|---|---|---|---|
+| M77 | Hot-path trims | SIM-06, SIM-07, REN-10 | Done |
+| M78 | Splits: replica models, render config and city texture size | REN-09, REN-11 | Done |
+| M79 | Small leaks and import cycles | CORE-07, CORE-08, CORE-14, AUD-06 (CORE-13 and the report's section 5 docs went into TE2) | Done |
 
 ### Graphics: what is left
 

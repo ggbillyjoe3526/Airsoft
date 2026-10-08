@@ -9,7 +9,8 @@ each `src/` folder's `README.md`.
 - **Building 0.1 Dev 5.** The last tag is `0.1-dev.4` (2026-10-06). The plan's eight items, in order, are in
   `docs/ROADMAP.md` › 0.1 Dev 5. Items 1 to 4, the docs rewrite (TE2), token steps 3 and 4 (TE3, TE4) and bug pass
   BP2, are done (2026-10-08).
-- **Next.** The Audit 2 tasks M77–M79, then the graphics thread: the HUD restyle with the menu redesign (M100), the
+- **Audit 2 is built.** Its last tasks M77–M79 are done (2026-10-08).
+- **Next.** The graphics thread: the HUD restyle with the menu redesign (M100), the
   Woodland and Neon Heights re-dress, WebGPU as a complete overhaul (W0–W6) and the map pictures.
 - **After BP3** the owner tags 0.1 Dev 5 and playtests it; the release checklist follows (`docs/PROCESS.md` ›
   Releases).

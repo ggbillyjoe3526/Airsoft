@@ -1,4 +1,4 @@
-import type { CaseKind } from './caches';
+import type { CaseKind } from './tables';
 import { missingColumns, type PoolRow, type PoolTable } from './poolFile';
 
 /**

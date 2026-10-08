@@ -4,7 +4,7 @@ import { isInPlay } from '../sim/elimination';
 import type { RunCase } from '../sim/extraction';
 import { type Vec3, vec3 } from '../sim/vec';
 import { type Bot, type BotWorld, lastSeenAt, type PatrolRound, pick } from './bot';
-import { teammateSpots } from './botMovement';
+import { teammateSpots } from './routes';
 import { createCoverSpot, type CoverSearch, findCover, type TakenSpots } from './cover';
 import { lineClear } from './perception';
 

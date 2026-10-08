@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { PuffConfig } from '../config/render';
-import type { Vec3 } from '../sim/vec';
+import { length3, type Vec3 } from '../sim/vec';
 import { softDotTexture } from './softDot';
 
 interface Puff {
@@ -94,7 +94,7 @@ export class ImpactPuffs {
       const t = p.age;
       const grow = P.startScale + (1 - P.startScale) * Math.min(1, t / P.growTime);
       const fade = 1 - Math.max(0, (t - P.growTime) / (P.lifetime - P.growTime));
-      const dist = Math.hypot(p.x - eye.x, p.y - eye.y, p.z - eye.z);
+      const dist = length3(p.x - eye.x, p.y - eye.y, p.z - eye.z);
       const s = Math.max(0, grow * fade) * Math.max(p.scale, dist * minScale);
       // The push eases off over the puff's life: distance covered is v·t·(1 - t / 2·lifetime).
       const pushed = Math.min(t, P.lifetime) * (1 - Math.min(t, P.lifetime) / (2 * P.lifetime));

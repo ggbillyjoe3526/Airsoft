@@ -5,7 +5,7 @@ import type { MapBlock } from '../map/mapTypes';
 import { rampCorners } from '../map/surfaces';
 import { type Terrain, vertexHeight } from '../map/terrain';
 import type { SurfaceHit } from './armament';
-import type { Vec3 } from './vec';
+import { length3, type Vec3 } from './vec';
 
 /**
  * Ray casts against the level without Rapier (audit SIM-01). The level is axis-aligned boxes and ramp wedges, so each
@@ -94,7 +94,7 @@ export function buildLevelRay(blocks: readonly MapBlock[], cell: number = PHYSIC
       let nx = ay * bz - az * by;
       let ny = az * bx - ax * bz;
       let nz = ax * by - ay * bx;
-      const len = Math.hypot(nx, ny, nz);
+      const len = length3(nx, ny, nz);
       nx /= len;
       ny /= len;
       nz /= len;
@@ -469,7 +469,7 @@ function rayTriangle(
   let nx = e1y * e2z - e1z * e2y;
   let ny = e1z * e2x - e1x * e2z;
   let nz = e1x * e2y - e1y * e2x;
-  const len = Math.hypot(nx, ny, nz);
+  const len = length3(nx, ny, nz);
   const s = nx * dx + ny * dy + nz * dz > 0 ? -1 / len : 1 / len;
   nx *= s;
   ny *= s;

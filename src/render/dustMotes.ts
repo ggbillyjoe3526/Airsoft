@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { DRESSING } from '../config/dressing';
 import { DUST_MOTES } from '../config/render';
 import { createRng, rngNext } from '../sim/rng';
+import { length3 } from '../sim/vec';
 import { softDotTexture } from './softDot';
 
 /** Wraps `v` into 0..size. */
@@ -155,7 +156,7 @@ export class DustMotes {
       const dx = this.positions[j]! - eye.x;
       const dy = this.positions[j + 1]! - eye.y;
       const dz = this.positions[j + 2]! - eye.z;
-      const fade = moteFade(Math.hypot(dx, dy, dz), Math.max(Math.abs(dx), Math.abs(dy), Math.abs(dz)));
+      const fade = moteFade(length3(dx, dy, dz), Math.max(Math.abs(dx), Math.abs(dy), Math.abs(dz)));
       this.alphas[i * 4 + 3] = this.hangsLow ? fade * moteHeightFade(this.positions[j + 1]!) : fade;
     }
     this.attribute.needsUpdate = true;

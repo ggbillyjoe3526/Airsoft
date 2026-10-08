@@ -6,9 +6,9 @@ import type { PlayerCommand } from '../sim/commands';
 import { type Vec3, vec3, wrapAngle } from '../sim/vec';
 import { isInPlay } from '../sim/elimination';
 import { type Bot, type BotWorld, flagRole } from './bot';
-import { followRoute, stepOnto, teammateSpots, wantRoute } from './botMovement';
 import { createCoverSpot, type CoverSearch, findCover, leanSideToSee } from './cover';
 import { eyeOf } from './perception';
+import { followRoute, stepOnto, teammateSpots, wantRoute } from './routes';
 
 /**
  * Squad orders (M22): how bot teammates carry out Follow me, Hold here and Regroup from a player on their team. The

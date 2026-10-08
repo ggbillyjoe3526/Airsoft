@@ -4,6 +4,7 @@ import type { QualitySettings } from '../config/render';
 import type { MapDressing } from '../map/mapTypes';
 import type { Character } from '../sim/character';
 import type { GameEvent } from '../sim/events';
+import { length3 } from '../sim/vec';
 import { ImpactPuffs } from './impactPuffs';
 import { SmokePlumes } from './smokePlumes';
 import { smokingChimneys } from './skyline';
@@ -70,7 +71,7 @@ export class DressingEffects {
       for (const ch of characters) if (ch.id === e.characterId) c = ch;
       if (!c) continue;
       const p = c.position;
-      if (Math.hypot(p.x - eye.x, p.y - eye.y, p.z - eye.z) > KICKED_DUST.range) continue;
+      if (length3(p.x - eye.x, p.y - eye.y, p.z - eye.z) > KICKED_DUST.range) continue;
       this.dustAt.x = p.x;
       this.dustAt.y = p.y + KICKED_DUST.lift;
       this.dustAt.z = p.z;

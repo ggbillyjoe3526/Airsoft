@@ -7,7 +7,9 @@ import { AEG, hopUpLift } from '../config/replicas';
 import type { ImpactMaterial } from '../config/sounds';
 import { DEPOT } from '../map/depot';
 import type { MapBlock, MapData } from '../map/mapTypes';
+import { NEON_HEIGHTS } from '../map/neonHeights';
 import { RANGE_MAP } from '../map/range';
+import { WOODLAND } from '../map/woodland';
 import { SLOPE_YARD } from '../map/testSupport';
 import { terrainHeightAt, terrainMesh } from '../map/terrain';
 import type { SurfaceHit, WorldQuery } from '../sim/armament';
@@ -192,6 +194,75 @@ describe('level ray casts (sim/levelRay.ts) against Rapier (audit SIM-01, SIM-18
     expect(blocks).toBeGreaterThan(20);
     rapier.free();
     world.dispose();
+  });
+
+  it('agrees with a Rapier ray on Woodland and Neon Heights too: seeded rays at every block and over each map (M77)', () => {
+    for (const [map, seed] of [
+      [WOODLAND, 71],
+      [NEON_HEIGHTS, 72],
+    ] as const) {
+      const world = new PhysicsWorld(map, BODY, DT);
+      const rapier = rapierQuery(map);
+      const rng = createRng(seed);
+      const a: SurfaceHit = { normal: vec3(), material: 'concrete' };
+      const b: SurfaceHit = { normal: vec3(), material: 'concrete' };
+      const dir = vec3();
+      const origin = vec3();
+      let rays = 0;
+      let hits = 0;
+      const check = (label: string, maxDist: number): void => {
+        rays++;
+        const t = world.raycastSurface(origin, dir, maxDist, a);
+        const want = rapier.raycastSurface(origin, dir, maxDist, b);
+        const where = `${map.name} ${label}: from (${origin.x}, ${origin.y}, ${origin.z}) along (${dir.x}, ${dir.y}, ${dir.z}) max ${maxDist}`;
+        if (want < 0) {
+          expect(t, where).toBe(-1);
+          return;
+        }
+        hits++;
+        expect(Math.abs(t - want), where).toBeLessThan(5e-4);
+        expect(a.material, where).toBe(b.material);
+        expect(a.normal.x * b.normal.x + a.normal.y * b.normal.y + a.normal.z * b.normal.z, where).toBeGreaterThan(0.99);
+        expect(world.raycastStatic(origin, dir, maxDist), where).toBe(t);
+      };
+      const outsideAll = (): boolean => !map.blocks.some((k) => insideBox(k, origin, 1e-3));
+      // The map's extent from its blocks.
+      const lo = vec3(Infinity, Infinity, Infinity);
+      const hi = vec3(-Infinity, -Infinity, -Infinity);
+      for (const k of map.blocks) {
+        for (const axis of ['x', 'y', 'z'] as const) {
+          lo[axis] = Math.min(lo[axis], k.center[axis] - k.size[axis] / 2);
+          hi[axis] = Math.max(hi[axis], k.center[axis] + k.size[axis] / 2);
+        }
+      }
+      // A few rays at each block (every one is covered), then BB-sized segments and sightlines anywhere over the map.
+      map.blocks.forEach((block, i) => {
+        for (let n = 0; n < 4; n++) {
+          const tx = block.center.x + (rngNext(rng) - 0.5) * (block.size.x + 0.2);
+          const ty = block.center.y + (rngNext(rng) - 0.5) * (block.size.y + 0.2);
+          const tz = block.center.z + (rngNext(rng) - 0.5) * (block.size.z + 0.2);
+          randomDir(rng, dir);
+          const back = 0.3 + rngNext(rng) * 12;
+          origin.x = tx - dir.x * back;
+          origin.y = ty - dir.y * back;
+          origin.z = tz - dir.z * back;
+          if (!outsideAll()) continue;
+          check(`block ${i} (${block.kind})`, back + 1 + rngNext(rng) * 20);
+        }
+      });
+      for (let n = 0; n < 4_000; n++) {
+        origin.x = lo.x + rngNext(rng) * (hi.x - lo.x);
+        origin.y = Math.max(lo.y, -1) + rngNext(rng) * 7;
+        origin.z = lo.z + rngNext(rng) * (hi.z - lo.z);
+        if (!outsideAll()) continue;
+        randomDir(rng, dir);
+        check('segment', n % 4 === 0 ? rngNext(rng) * 60 : 1.6);
+      }
+      expect(rays, map.name).toBeGreaterThan(2_000);
+      expect(hits, map.name).toBeGreaterThan(rays / 40);
+      rapier.free();
+      world.dispose();
+    }
   });
 
   /** A floor, a concrete wall `thickness` m thick whose near face is 10 m out along -z, and a crate in front of it. */

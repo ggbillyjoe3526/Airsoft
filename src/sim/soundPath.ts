@@ -1,4 +1,4 @@
-import type { Vec3 } from './vec';
+import { length3, type Vec3 } from './vec';
 
 /**
  * Whether level geometry stands between a sound and an ear, for the player's audio (muffling, M13) and the bots'
@@ -17,7 +17,7 @@ export function lineBlocked(query: SoundPathQuery, from: Vec3, to: Vec3, gap = 0
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const dz = to.z - from.z;
-  const dist = Math.hypot(dx, dy, dz);
+  const dist = length3(dx, dy, dz);
   const reach = dist - gap;
   if (reach <= 0) return false;
   dir.x = dx / dist;

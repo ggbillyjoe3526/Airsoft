@@ -5,51 +5,8 @@ commit, before its pull request merges (CI's scope gate finds the block in the b
 (`docs/records/<id>.md`) and its CHANGELOG line remain. The planning thread writes blocks; the build thread sets
 `status` and `attempts` once, in its records commit (no status-only commits).
 
-**Audit 2, what is left (2026-10-05 20:45 UTC).** Merged: M50–M57, M63–M65, M68, M70 (#107–#122). M69 (AUD PR 4) is
-accepted and lands with this list. Below, the rest of section 8 of the report
-(`audits/full-audit-2026-10-05.md` in the project's shared files), in its order. Not built in this pass:
-POOL-D, Extraction pay (owner decision 23: keep until the playtest shows the extraction rate) and REN-03 step 3 with
-REN-12 (when 4v4 and 5v5 go public); both stay in KNOWN_ISSUES.
-
-## M77 · Hot-path trims (Audit 2 SIM-D: SIM-06, SIM-07, REN-10)
-tier: core
-perf: required
-touches: src/sim/, src/physics/, src/render/bbRenderer.ts, src/render/dustMotes.ts, src/render/flagRenderer.ts, docs/KNOWN_ISSUES.md
-contract: CharacterMover (behaviour unchanged)
-acceptance:
-  1. No `Math.hypot` with three arguments in the BB and ray hot paths.
-  2. `probeGround` is skipped when the mover has already found the ground that tick; character movement is unchanged in the tests.
-  3. BB streaks, dust and flag cloth make no per-frame garbage.
-  4. The level-ray test covers every map.
-status: open
-attempts: 0
-
-## M78 · Splits: replica models, render config and city texture size (Audit 2 REN PR 4: REN-09, REN-11)
-tier: core
-perf: required
-touches: src/render/replicaModels.ts, src/render/, src/config/render.ts, src/config/, docs/ARCHITECTURE.md, docs/KNOWN_ISSUES.md
-contract: none
-acceptance:
-  1. `src/render/replicaModels.ts` and `src/config/render.ts` are split by concern into files under about 600 lines, with no change in what is drawn (the replica and render tests unchanged). On 2026-10-08 they are 542 and 9 lines (G2 and G5 split them): confirm, then this criterion may already hold.
-  2. High caps flat city surfaces at 512² textures (owner decision 9), checked with a screenshot; Neon Heights High holds about 28 MB less.
-  3. The `src/render/` and `src/config/` READMEs name the new files.
-status: open
-attempts: 0
-
-## M79 · Small leaks and import cycles (Audit 2 CORE-D + AUD PR 3: CORE-07, CORE-08, AUD-06)
-tier: ui
-perf: skip
-touches: src/game.ts, src/ui/menus/menuParts.ts, src/ai/botMovement.ts, src/ai/squadOrders.ts, src/pool/pool.ts, src/pool/caches.ts, src/audio/, pipeline/, .claude/, CHANGELOG.md, docs/
-contract: none
-acceptance:
-  1. `Game.dispose()` unregisters every callback it registered; menu pages disconnect their ResizeObserver (CORE-07).
-  2. No import cycles, with a test that fails on one (CORE-08).
-  3. Loop-seam tests bound the wrap by a fixed threshold, through one shared helper (AUD-06).
-status: open
-attempts: 0
-
-**The owner's 0.1 Dev 4 playtest notes (2026-10-06).** Recorded on his ask, not built yet; they follow the Audit 2
-tasks above and the rest of the paused 0.1 Dev 5 work. His words and the per-item reasoning are in the project's shared
+**The owner's 0.1 Dev 4 playtest notes (2026-10-06).** Recorded on his ask, not built yet; they follow the rest
+of the paused 0.1 Dev 5 work. His words and the per-item reasoning are in the project's shared
 files (`plans/playtest-feedback-0.1-dev-4.md`); `docs/ROADMAP.md` › Playtest notes: 0.1 Dev 4 maps all 26 notes. M80–M91
 and M96 are 0.1 Dev 5 fixes and changes, M92–M95 suggested 0.1 Dev 6 features. Notes 5, 20–23 went to 0.3 and 0.4; notes 5, 20, 22 and 23 are now
 0.1 Dev 6 (owner's feature picks, 2026-10-06, with Dev 7 folded into Dev 6 the same night; ROADMAP).

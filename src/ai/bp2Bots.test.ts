@@ -6,7 +6,8 @@ import { vec3 } from '../sim/vec';
 import { resetBot } from './bot';
 import { thinkBot } from './botBrain';
 import type { BotController } from './botController';
-import { followRoute, moveBot } from './botMovement';
+import { moveBot } from './botMovement';
+import { followRoute } from './routes';
 import { duel, skirmish } from './testSupport';
 
 // BP2 (bug pass 2): the bot fixes. Unit level; no match is played.

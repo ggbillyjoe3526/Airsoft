@@ -7,7 +7,7 @@ import { isInPlay } from '../sim/elimination';
 import { hitTop } from '../sim/hitbox';
 import { leanedEye } from '../sim/lean';
 import { lightInHand, torchLit } from '../sim/torch';
-import { vec3 } from '../sim/vec';
+import { length3, vec3 } from '../sim/vec';
 import type { NightField } from './nightSight';
 
 /**
@@ -58,7 +58,7 @@ export function updateTorchLight(field: TorchLight, characters: readonly Charact
       ray.x = point.x - eye.x;
       ray.y = point.y - eye.y;
       ray.z = point.z - eye.z;
-      const d = Math.hypot(ray.x, ray.y, ray.z);
+      const d = length3(ray.x, ray.y, ray.z);
       // Reach is measured across the ground, as perception measures sight ranges.
       if (Math.hypot(ray.x, ray.z) > light.reach || d < 1e-6) continue;
       ray.x /= d;

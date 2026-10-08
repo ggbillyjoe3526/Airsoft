@@ -7,7 +7,8 @@ Rapier (`@dimforge/rapier3d-compat`): level collision and the character controll
 - Characters collide only with level geometry, never each other. Level blocks collide as closed triangle meshes, which
   avoids a Rapier capsule-vs-cuboid bug.
 - Standing characters move horizontally, then `probeGround` (a downward sphere cast) rests them 0.04 m above the floor;
-  Rapier's snap-to-ground is deliberately not used.
+  Rapier's snap-to-ground is deliberately not used. A character still exactly where the last probe set it down is not
+  cast for again (audit SIM-06: about 40 % of probes in a match).
 - The static ray casts (`raycastStatic`, `raycastSurface`) are answered by `sim/levelRay.ts`, held to Rapier's answer by
   `levelRay.rapier.test.ts`. The sim returns anything below `killY` to its spawn.
 - Tuning: `config/physics.ts`. Tests: `physicsWorld.test.ts`, `levelRay.rapier.test.ts`.

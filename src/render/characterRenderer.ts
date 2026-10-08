@@ -5,7 +5,7 @@ import { BAKED_LIGHT } from '../config/bake';
 import type { HitConfig } from '../config/hits';
 import type { DetailLevel } from '../config/render';
 import type { Character } from '../sim/character';
-import { lerpAngle } from '../sim/vec';
+import { length3, lerpAngle } from '../sim/vec';
 import { BARE_KIT, buildFigure, createCalloutTexture, disposeFigure, type Figure, type FigureKit, figureLeanRoll, setReceiveShadows } from './characterModels';
 import { type FigureModel, fadeModelMaterials } from './externalModels';
 import { useVertexFinish } from './figureFinish';
@@ -307,7 +307,7 @@ export class CharacterRenderer {
       f.aim.rotation.x = c.status === 'out' ? FIGURE.outAimPitch : c.prevPitch + (c.pitch - c.prevPitch) * alpha;
       f.hitPose.visible = handUp;
       f.callout.visible = c.status === 'calling';
-      if (f.callout.visible && eye) placeCallout(f.callout, Math.hypot(x - eye.x, y + FIGURE.callout.height - eye.y, z - eye.z));
+      if (f.callout.visible && eye) placeCallout(f.callout, length3(x - eye.x, y + FIGURE.callout.height - eye.y, z - eye.z));
 
       // A walk-off that couldn't finish leaves the field: the figure fades out where it stands (the sim
       // then puts it in the dead zone) instead of visibly jumping there.

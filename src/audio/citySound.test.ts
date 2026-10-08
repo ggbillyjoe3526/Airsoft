@@ -8,6 +8,7 @@ import { NEON_HEIGHTS } from '../map/neonHeights';
 import { WOODLAND } from '../map/woodland';
 import { vec3 } from '../sim/vec';
 import { renderLoop } from './ambience';
+import { measureSeam, seamFailures } from './loopSeamSupport';
 import { renderMapCue, renderSounds } from './soundBank';
 import { surfaceUnder } from './soundMaterials';
 import { soundscapeOf } from './soundscape';
@@ -246,19 +247,12 @@ describe('M34g city acceptance 1: each new loop renders at its length and a loud
       expect(Math.sqrt(power(v))).toBeCloseTo(1, 3);
     });
 
-    it(`wraps ${id} without a click: the jump from its last sample to its first is no bigger than a step inside it`, () => {
-      const v = finish(renderLoop(id, RATE));
-      let biggest = 0;
-      let total = 0;
-      for (let i = 1; i < v.length; i++) {
-        const d = Math.abs(v[i]! - v[i - 1]!);
-        biggest = Math.max(biggest, d);
-        total += d;
-      }
-      const wrap = Math.abs(v[0]! - v[v.length - 1]!);
-      expect(wrap).toBeLessThan(biggest);
-      // And not out of the ordinary: within a few times the mean step (a plain cut would be a random jump of full scale).
-      expect(wrap).toBeLessThan(6 * (total / (v.length - 1)));
+    it(`wraps ${id} without a click: its jump, bend and spectrum at the wrap sit within the loop's own (loopSeamSupport.ts)`, () => {
+      // Measured 2026-10-08 (jump and bend as a percentile of the loop's own steps and second differences; spectrum as the
+      // last window against the first, dB and percentile of its adjacent windows): traffic p75 p98 7.9 dB p60; drones
+      // p10 p48 8.4 dB p93; neon p24 p2 7.7 dB p43.
+      const failures = seamFailures(measureSeam(finish(renderLoop(id, RATE))));
+      expect(failures, `${id}`).toEqual([]);
     });
 
     it(`is the same samples each time (${id} comes from its own seed)`, () => {

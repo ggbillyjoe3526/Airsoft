@@ -10,7 +10,7 @@ import { characterHitVolume, createHitVolume, type HitVolume, rayCharacter } fro
 import { firstRangeTargetHit, hitRangeTarget, type RangeTarget, type RangeTargetHit } from './rangeTargets';
 import { ricochet } from './ricochet';
 import type { RngState } from './rng';
-import { copy, type Vec3, vec3 } from './vec';
+import { copy, length3, type Vec3, vec3 } from './vec';
 
 const segmentDir = vec3();
 /**
@@ -99,7 +99,7 @@ export function stepBBs(
     const dx = bb.position.x - bb.prevPosition.x;
     const dy = bb.position.y - bb.prevPosition.y;
     const dz = bb.position.z - bb.prevPosition.z;
-    const len = Math.hypot(dx, dy, dz);
+    const len = length3(dx, dy, dz);
     if (len > 1e-9) {
       segmentDir.x = dx / len;
       segmentDir.y = dy / len;
