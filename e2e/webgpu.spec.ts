@@ -133,3 +133,210 @@ test('on Auto without a WebGPU adapter the game draws with WebGL, as before, nev
   expect(nodeChunks).toEqual([]);
   expect(errors()).toEqual([]);
 });
+
+// ---- W1 QA: the adversarial pass (what a browser without WebGPU, or a broken one, must never turn into an error) ----
+
+/** Names every request for the node renderer's chunks (vite.config.ts: `three-webgpu`, and the node back end's own). */
+function watchNodeChunks(page: Page): () => string[] {
+  const chunks: string[] = [];
+  page.on('request', (req) => {
+    if (/three-webgpu|nodeBackend/.test(req.url())) chunks.push(req.url());
+  });
+  return () => chunks;
+}
+
+/** Boots to the title and counts the game's canvases. */
+async function bootToTitle(page: Page, query = ''): Promise<void> {
+  await page.goto(`/?nolock&seed=1${query}`);
+  await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
+}
+
+async function startMatch(page: Page): Promise<void> {
+  await page.locator('.menu-title-start').click();
+  await page.locator('.menu-setup').getByRole('button', { name: 'Start match', exact: true }).click();
+  await expect(page.locator('.menus')).toBeHidden({ timeout: 20_000 });
+  await expect(page.locator('.hud')).toBeVisible();
+}
+
+async function openRendererRow(page: Page) {
+  await page.keyboard.press('Escape');
+  const settings = page.locator('.menu-settings');
+  await settings.getByRole('tab', { name: /Graphics/i }).click();
+  const row = settings.getByRole('group', { name: 'Renderer' });
+  await expect(row).toBeVisible();
+  const note = settings.locator('.menu-row', { has: page.getByRole('group', { name: 'Renderer' }) }).locator('.graphics-note');
+  return { settings, row, note };
+}
+
+test('an explicit WebGL pick never touches navigator.gpu, ignores ?forceWebGL and never fetches the node renderer', async ({ page }) => {
+  const errors = watchErrors(page);
+  const chunks = watchNodeChunks(page);
+  await seedSettings(page, { renderer: 'webgl' });
+  await page.addInitScript(() => {
+    (window as unknown as { gpuTouched: number }).gpuTouched = 0;
+    Object.defineProperty(Navigator.prototype, 'gpu', {
+      configurable: true,
+      get() {
+        (window as unknown as { gpuTouched: number }).gpuTouched++;
+        return undefined;
+      },
+    });
+  });
+  await bootToTitle(page, '&forceWebGL');
+  expect(await backend(page)).toBe('webgl');
+  expect(await page.evaluate(() => (window as unknown as { gpuTouched: number }).gpuTouched)).toBe(0);
+  await startMatch(page);
+  const stats = await page.evaluate(() => ({ ...(window as unknown as GameHandle).airsoft.renderer.stats }));
+  await expect.poll(() => tick(page), { timeout: 30_000 }).toBeGreaterThan(30);
+  expect(stats.calls).toBeGreaterThanOrEqual(0);
+  expect(await page.evaluate(() => (window as unknown as { gpuTouched: number }).gpuTouched)).toBe(0);
+  expect(chunks()).toEqual([]);
+  expect(errors()).toEqual([]);
+});
+
+// Every way a browser can fail the adapter probe on Auto ends on WebGL with no console error and no node chunk fetched.
+const PROBE_FAILURES: Record<string, string> = {
+  'no navigator.gpu': `Object.defineProperty(Navigator.prototype, 'gpu', { configurable: true, get: () => undefined });`,
+  'requestAdapter throwing': `Object.defineProperty(Navigator.prototype, 'gpu', { configurable: true, get: () => ({ requestAdapter: () => { throw new TypeError('blocked'); } }) });`,
+  'requestAdapter rejecting': `Object.defineProperty(Navigator.prototype, 'gpu', { configurable: true, get: () => ({ requestAdapter: () => Promise.reject(new DOMException('no', 'OperationError')) }) });`,
+  'requestAdapter that never answers': `Object.defineProperty(Navigator.prototype, 'gpu', { configurable: true, get: () => ({ requestAdapter: () => new Promise(() => {}) }) });`,
+};
+for (const [name, script] of Object.entries(PROBE_FAILURES)) {
+  test(`on Auto, ${name} is WebGL with no console error and no node chunk fetched`, async ({ page }) => {
+    const errors = watchErrors(page);
+    const chunks = watchNodeChunks(page);
+    await page.addInitScript(script);
+    await bootToTitle(page);
+    expect(await backend(page)).toBe('webgl');
+    await expect(page.locator('canvas.game-canvas')).toHaveCount(1);
+    expect(chunks()).toEqual([]);
+    expect(errors()).toEqual([]);
+  });
+}
+
+test('a WebGPU adapter that cannot give a device (requestDevice fails at boot) is WebGL, quietly, with one canvas and the row saying so', async ({ page }) => {
+  const errors = watchErrors(page);
+  const chunks = watchNodeChunks(page);
+  await seedSettings(page, { renderer: 'webgpu' });
+  await page.addInitScript(() => {
+    const adapter = {
+      features: new Set<string>(),
+      limits: {},
+      info: { vendor: 'qa', architecture: 'fake', description: 'adapter without a device', isFallbackAdapter: false },
+      requestDevice: () => Promise.reject(new DOMException('device creation failed', 'OperationError')),
+    };
+    Object.defineProperty(Navigator.prototype, 'gpu', { configurable: true, get: () => ({ requestAdapter: () => Promise.resolve(adapter), getPreferredCanvasFormat: () => 'bgra8unorm' }) });
+  });
+  await bootToTitle(page);
+  expect(await backend(page)).toBe('webgl');
+  // The probe found an adapter, so the node renderer was tried (its chunk fetched) and given up on.
+  expect(chunks().length).toBeGreaterThan(0);
+  await expect(page.locator('canvas.game-canvas')).toHaveCount(1);
+  const { note } = await openRendererRow(page);
+  await expect(note).toHaveText('No WebGPU here: drawn with WebGL.');
+  expect(errors()).toEqual([]);
+});
+
+test('changing the Renderer row mid-session changes nothing until the next load, says so, and the next load follows the pick', async ({ page }) => {
+  test.setTimeout(150_000);
+  const errors = watchErrors(page);
+  await bootToTitle(page, '&forceWebGL');
+  expect(await backend(page)).toBe('webgpu-webgl2');
+  const canvasBefore = await page.evaluate(() => document.querySelector('canvas.game-canvas')!.id || 'canvas');
+  const { row, note } = await openRendererRow(page);
+  await expect(row.getByRole('button', { name: 'Auto' })).toHaveAttribute('aria-pressed', 'true');
+  await row.getByRole('button', { name: 'WebGL' }).click();
+  await expect(note).toHaveText('Changes from the next time the game loads.');
+  expect(await backend(page)).toBe('webgpu-webgl2');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('airsoft.settings')!).renderer)).toBe('webgl');
+  await expect(page.locator('canvas.game-canvas')).toHaveCount(1);
+  expect(canvasBefore).toBeTruthy();
+  // Put back to Auto: the line goes.
+  await row.getByRole('button', { name: 'Auto' }).click();
+  await expect(note).toBeHidden();
+  await row.getByRole('button', { name: 'WebGL' }).click();
+  await page.reload();
+  await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
+  expect(await backend(page)).toBe('webgl');
+  expect(errors()).toEqual([]);
+});
+
+test('a second loss is recovered too, and when no new device can be made the game ends on WebGL and plays on, with no errors', async ({ page }, testInfo) => {
+  test.setTimeout(240_000);
+  const errors = watchErrors(page);
+  await bootToTitle(page, '&forceWebGL');
+  expect(await backend(page)).toBe('webgpu-webgl2');
+  await startMatch(page);
+  const lose = () =>
+    page.evaluate(() => {
+      const lost = document.querySelector<HTMLCanvasElement>('canvas.game-canvas')!.getContext('webgl2')!.getExtension('WEBGL_lose_context')!;
+      lost.loseContext();
+    });
+  const notice = page.locator('.graphics-notice');
+  const pauseMenu = page.locator('.menu-pause');
+
+  // Loss 1: a new node renderer takes over, on a new canvas.
+  await page.evaluate(() => ((window as unknown as { firstCanvas: Element }).firstCanvas = document.querySelector('canvas.game-canvas')!));
+  await lose();
+  await expect(notice).toBeVisible({ timeout: 10_000 });
+  await expect(notice).toBeHidden({ timeout: 30_000 });
+  expect(await backend(page)).toBe('webgpu-webgl2');
+  expect(await page.evaluate(() => document.querySelector('canvas.game-canvas') === (window as unknown as { firstCanvas: Element }).firstCanvas)).toBe(false);
+  await expect(page.locator('canvas.game-canvas')).toHaveCount(1);
+
+  // Loss 2, and now the browser refuses the node renderer's WebGL2 context (Three asks without `failIfMajorPerformanceCaveat`,
+  // which WebGLRenderer always sets): three tries, then the game's own WebGL renderer takes over.
+  await page.evaluate(() => {
+    const w = window as unknown as { nodeAsks: number; loseNow: () => void };
+    const lost = document.querySelector<HTMLCanvasElement>('canvas.game-canvas')!.getContext('webgl2')!.getExtension('WEBGL_lose_context')!;
+    w.loseNow = () => lost.loseContext();
+    w.nodeAsks = 0;
+    const real = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, type: string, attributes?: unknown) {
+      if (type === 'webgl2' && attributes && !('failIfMajorPerformanceCaveat' in (attributes as object))) {
+        w.nodeAsks++;
+        return null;
+      }
+      return real.call(this, type, attributes as never);
+    } as typeof real;
+    w.loseNow();
+  });
+  await expect(notice).toBeVisible({ timeout: 10_000 });
+  await expect(notice).toBeHidden({ timeout: 60_000 });
+  expect(await backend(page)).toBe('webgl');
+  expect(await page.evaluate(() => (window as unknown as { nodeAsks: number }).nodeAsks)).toBeGreaterThanOrEqual(3);
+  await expect(page.locator('canvas.game-canvas')).toHaveCount(1);
+  await expect(pauseMenu).toContainText('Graphics are back');
+  await pauseMenu.getByRole('button', { name: 'Resume' }).click();
+  await expect(page.locator('.menus')).toBeHidden({ timeout: 10_000 });
+  const t0 = await tick(page);
+  await expect.poll(() => tick(page), { timeout: 30_000 }).toBeGreaterThan(t0 + 30);
+  // The WebGL renderer draws: its calls and triangles are counted the way the debug overlay reads them.
+  await expect.poll(() => page.evaluate(() => (window as unknown as GameHandle).airsoft.renderer.stats.calls), { timeout: 30_000 }).toBeGreaterThan(10);
+  await testInfo.attach('fell-back-to-webgl', { body: await page.screenshot(), contentType: 'image/png' });
+  expect(errors()).toEqual([]);
+});
+
+test('the GPU timer is safe without timestamp queries: turned on in a match on the node renderer it reads n/a, warns of nothing and draws on', async ({ page }) => {
+  test.setTimeout(150_000);
+  const errors = watchErrors(page);
+  const warnings: string[] = [];
+  page.on('console', (msg) => {
+    if (msg.type() === 'warning') warnings.push(msg.text());
+  });
+  await bootToTitle(page, '&forceWebGL');
+  expect(await backend(page)).toBe('webgpu-webgl2');
+  await startMatch(page);
+  const gpuMs = () => page.evaluate(() => (window as unknown as { airsoft: { renderer: { gpuMs: number } } }).airsoft.renderer.gpuMs);
+  await page.evaluate(() => ((window as unknown as { airsoft: { renderer: { gpuTiming: boolean } } }).airsoft.renderer.gpuTiming = true));
+  const before = await renders(page);
+  // More frames than the timer's read interval (RENDER_BACKEND.timestampEvery), so a read would have been asked for.
+  await expect.poll(() => renders(page), { timeout: 60_000 }).toBeGreaterThan(before + 40);
+  const ms = await gpuMs();
+  // Either this machine's WebGL2 offers a disjoint timer (then a positive number) or it does not (NaN, "n/a"): never zero, negative or Infinity.
+  expect(Number.isNaN(ms) || (ms > 0 && Number.isFinite(ms))).toBe(true);
+  await page.evaluate(() => ((window as unknown as { airsoft: { renderer: { gpuTiming: boolean } } }).airsoft.renderer.gpuTiming = false));
+  await expect.poll(async () => Number.isNaN(await gpuMs()), { timeout: 10_000 }).toBe(true);
+  expect(warnings.filter((w) => /timestamp/i.test(w))).toEqual([]);
+  expect(errors()).toEqual([]);
+});
