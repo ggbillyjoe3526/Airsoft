@@ -151,6 +151,11 @@ describe('the summary (failuresSummary, failureSections)', () => {
     expect(text).toContain('… and 10 more (pipeline/out/qa-artifacts/vitest.json)');
   });
 
+  it('counts the test files that did not load beside the failed tests', () => {
+    const failures = [{ test: '(the file did not load)', file: 'src/a.test.ts', message: 'Cannot find module' }];
+    expect(failuresSummary({ pass: false, gates: { tests: { pass: false, total: 9, failed: 0, failures } } })).toContain('## tests · 0 failed of 9, 1 file did not load');
+  });
+
   it('prints a gate with no failure list by its reason, stray files and output', () => {
     const lines = failureSections({
       pass: false,

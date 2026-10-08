@@ -166,7 +166,8 @@ export function assemblePacket({ ids, head, base, blocks, report, contracts, con
   });
 
   lines.push('## Gates', '', ...gateSummary(report, head), '');
-  if (report && report.pass === false) lines.push('## Failures', '', ...failureSections(report), '');
+  // The failures summary's gate headings sit one level down here, under "Failures".
+  if (report && report.pass === false) lines.push('## Failures', '', ...failureSections(report).map((l) => (l.startsWith('## ') ? `#${l}` : l)), '');
 
   lines.push('## Contracts', '');
   if (contracts.length === 0) lines.push(`The diff touches no file a contract in \`docs/ARCHITECTURE.md\` › Contracts names (${contractCount} contracts), and the task names none.`, '');
@@ -203,9 +204,11 @@ export function assemblePacket({ ids, head, base, blocks, report, contracts, con
   if (files.every((f) => !f.diff)) lines.push('No diff to show: every changed file is left out (see the file list).');
 
   const text = `${lines.join('\n')}\n`;
-  const kb = Math.round(Buffer.byteLength(text) / 1024);
   const summaryEnd = diffStart - 4;
-  const read = `Read lines 1–${summaryEnd} first: the task, the gates, the contracts, QA's report and the file list. The diff runs from line ${diffStart} to ${lines.length} (${kb} KB in all, ${CONTEXT_LINES} lines of context; ${diffCommand} shows a left-out file).${kb * 1024 > READ_GUARD_BYTES ? ' Over 40 KB: read the diff by range, with the line ranges in the file list.' : ''}`;
+  const byRange = ' Over 40 KB: read the diff by range, with the line ranges in the file list.';
+  // The size as written, line 2 included (counted with the by-range note, so a packet at the limit gets the note).
+  const bytes = Buffer.byteLength(text) - '{{READ}}'.length + 200 + Buffer.byteLength(byRange);
+  const read = `Read lines 1–${summaryEnd} first: the task, the gates, the contracts, QA's report and the file list. The diff runs from line ${diffStart} to ${lines.length} (${Math.ceil(bytes / 1024)} KB in all, ${CONTEXT_LINES} lines of context; ${diffCommand} shows a left-out file).${bytes > READ_GUARD_BYTES ? byRange : ''}`;
   return text.replace('{{READ}}', read);
 }
 
@@ -247,7 +250,7 @@ export function writePacket({ ids = [], base = 'origin/main', mergeBase = null, 
   let bytes = 0;
   const files = stats.map((s) => {
     const leftOut = leftOutReason(s.file);
-    let diff = leftOut || s.binary ? null : diffs.get(s.file) ?? null;
+    const diff = leftOut || s.binary ? null : diffs.get(s.file) ?? null;
     if (diff && bytes + diff.length > MAX_DIFF_BYTES) return { ...s, diff: null, leftOut: `over the packet's ${MAX_DIFF_BYTES / 1024} KB` };
     if (diff) bytes += diff.length;
     return { ...s, diff, leftOut };

@@ -13,6 +13,9 @@ const DETAIL_LINES = 3;
 /** Lines kept from a log's end when nothing in it could be placed. */
 const TAIL_LINES = 10;
 
+/** The name a test file that failed to load is listed under (it names no test of its own). */
+const NOT_LOADED = '(the file did not load)';
+
 const stripAnsi = (text) => String(text ?? '').replace(/\x1b\[[0-9;]*m/g, '');
 const STACK_LINE = /^\s*(at\s|❯\s)/;
 
@@ -66,7 +69,7 @@ export function vitestFailures(data, root) {
     }
     if (failedTests.length === 0 && file.status === 'failed') {
       const detail = errorHead(file.message ?? '');
-      failures.push({ test: '(the file did not load)', file: path, at: firstFrame(file.message ?? '', root), message: detail[0] ?? '', detail });
+      failures.push({ test: NOT_LOADED, file: path, at: firstFrame(file.message ?? '', root), message: detail[0] ?? '', detail });
     }
   }
   return failures;
@@ -135,7 +138,8 @@ export function failureSections(report) {
   if (failed.length === 0) return [];
   const out = [`Failed: ${failed.map(([name]) => name).join(', ')}. Every other gate passed or was skipped.`];
   for (const [name, gate] of failed) {
-    const counts = name === 'tests' && typeof gate.failed === 'number' ? ` · ${gate.failed} failed of ${gate.total}` : '';
+    const unloaded = (gate.failures ?? []).filter((f) => f.test === NOT_LOADED).length;
+    const counts = name === 'tests' && typeof gate.failed === 'number' ? ` · ${gate.failed} failed of ${gate.total}${unloaded ? `, ${unloaded} file${unloaded > 1 ? 's' : ''} did not load` : ''}` : '';
     const logs = [gate.log, ...(gate.runs ?? []).filter((r) => !r.pass).map((r) => r.log)].filter(Boolean);
     out.push('', `## ${name}${counts}${logs.length ? ` (${logs.join(', ')})` : ''}`);
     const failures = gate.failures ?? [];

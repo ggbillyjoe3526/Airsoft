@@ -168,6 +168,7 @@ describe('the packet\'s layout (assemblePacket)', () => {
     const text = assemblePacket({ ...parts, blocks: [null], report });
     expect(text).toContain('No block "## M1" in docs/TASKS.md or its history');
     expect(text).toContain('## Failures\n\nFailed: tests.');
+    expect(text).toContain('\n### tests · 1 failed of 2');
     expect(text).toContain('✗ src/a.test.ts › a b');
   });
 });
