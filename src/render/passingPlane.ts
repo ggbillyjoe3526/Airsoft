@@ -4,8 +4,10 @@ import { createRng, rngNext } from '../sim/rng';
 
 /**
  * A plane crossing the sky now and then (G9, MapDressing.plane): a small dark airframe with steady wingtip and beacon
- * lights, high over the field on a seeded line. One mesh, one draw call while it is up there (hidden between passes:
- * one crosses, then the sky is empty until the next is due). A pass starts every `every` seconds, start to start; the
+ * lights, high over the field on a seeded line, hidden between passes (one crosses, then the sky is empty until the
+ * next is due). Its mesh draws it (one draw call while it is up there) only where nothing carries it: in the game the
+ * tree ring's mesh does (render/skyHost.ts, no draw call of its own) and this is its flight, which DressingEffects
+ * hands to the ring each frame. A pass starts every `every` seconds, start to start; the
  * crossing (PLANE.path / PLANE.speed) takes part of that. Built once with fixed geometry; update only moves its matrix
  * and setNight rewrites the airframe's colours in place, so it allocates nothing after it is made. Under Reduced motion
  * it is hidden altogether. No flashing: its lights are steady.
@@ -42,22 +44,9 @@ export class PassingPlane {
   ) {
     this.crossing = P.path / P.speed;
     this.period = Math.max(every, this.crossing);
-    const body = new THREE.CylinderGeometry(P.length * 0.055, P.length * 0.04, P.length, 6).rotateZ(Math.PI / 2);
-    const nose = new THREE.ConeGeometry(P.length * 0.055, P.length * 0.16, 6).rotateZ(-Math.PI / 2).translate(P.length * 0.58, 0, 0);
-    const wing = new THREE.BoxGeometry(P.length * 0.2, P.length * 0.015, P.span).translate(P.length * 0.03, 0, 0);
-    const tail = new THREE.BoxGeometry(P.length * 0.14, P.length * 0.2, P.length * 0.014).translate(-P.length * 0.44, P.length * 0.1, 0);
-    const stab = new THREE.BoxGeometry(P.length * 0.12, P.length * 0.012, P.span * 0.36).translate(-P.length * 0.44, 0, 0);
-    const parts = [body, nose, wing, tail, stab].map((g) => paint(g, night ? P.night : P.day, 1));
-    this.airframe = parts.reduce((n, g) => n + g.getAttribute('position').count, 0);
-    // The lights: a small cube at each wingtip and under the belly, in their own colours, bright (they are unlit).
-    const lights: [number, number, number, string][] = [
-      [P.length * 0.04, 0, -P.span / 2, P.lights.port],
-      [P.length * 0.04, 0, P.span / 2, P.lights.starboard],
-      [-P.length * 0.1, -P.length * 0.05, 0, P.lights.beacon],
-    ];
-    for (const [x, y, z, colour] of lights) parts.push(paint(new THREE.BoxGeometry(0.5, 0.5, 0.5).translate(x, y, z), colour, 1.5));
-    const merged = mergeAll(parts);
-    this.object = new THREE.Mesh(merged, new THREE.MeshBasicMaterial({ vertexColors: true, fog: false }));
+    const { geometry, airframe } = planeGeometry(night);
+    this.airframe = airframe;
+    this.object = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ vertexColors: true, fog: false }));
     this.object.name = 'passingPlane';
     this.object.frustumCulled = false;
     this.object.matrixAutoUpdate = false;
@@ -120,6 +109,37 @@ export class PassingPlane {
     (this.object.material as THREE.Material).dispose();
     this.object.removeFromParent();
   }
+}
+
+/**
+ * The plane as one geometry (positions and colours, non-indexed), its nose along its own +x: the airframe in the day's
+ * or the `night`'s colour, then a steady light at each wingtip and under the belly. `airframe`: how many of its vertices
+ * (the first) are the airframe. PassingPlane draws it; render/skyHost.ts puts the same plane in the tree ring's mesh.
+ */
+export function planeGeometry(night: boolean): { geometry: THREE.BufferGeometry; airframe: number } {
+  const body = new THREE.CylinderGeometry(P.length * 0.055, P.length * 0.04, P.length, 6).rotateZ(Math.PI / 2);
+  const nose = new THREE.ConeGeometry(P.length * 0.055, P.length * 0.16, 6).rotateZ(-Math.PI / 2).translate(P.length * 0.58, 0, 0);
+  const wing = new THREE.BoxGeometry(P.length * 0.2, P.length * 0.015, P.span).translate(P.length * 0.03, 0, 0);
+  const tail = new THREE.BoxGeometry(P.length * 0.14, P.length * 0.2, P.length * 0.014).translate(-P.length * 0.44, P.length * 0.1, 0);
+  const stab = new THREE.BoxGeometry(P.length * 0.12, P.length * 0.012, P.span * 0.36).translate(-P.length * 0.44, 0, 0);
+  const parts = [body, nose, wing, tail, stab].map((g) => paint(g, night ? P.night : P.day, 1));
+  const airframe = parts.reduce((n, g) => n + g.getAttribute('position').count, 0);
+  // The lights: a small cube at each wingtip and under the belly, in their own colours, bright (they are unlit).
+  const lights: [number, number, number, string][] = [
+    [P.length * 0.04, 0, -P.span / 2, P.lights.port],
+    [P.length * 0.04, 0, P.span / 2, P.lights.starboard],
+    [-P.length * 0.1, -P.length * 0.05, 0, P.lights.beacon],
+  ];
+  for (const [x, y, z, colour] of lights) parts.push(paint(new THREE.BoxGeometry(0.5, 0.5, 0.5).translate(x, y, z), colour, 1.5));
+  return { geometry: mergeAll(parts), airframe };
+}
+
+/**
+ * The farthest the plane gets from the world's middle across the field (m) and its highest flight (m), for a plane
+ * `height` m up: the sphere a mesh carrying it is culled by must hold every point of every pass.
+ */
+export function planeReach(height: number): { across: number; top: number } {
+  return { across: Math.hypot(P.path / 2, P.path * 0.3) + P.length, top: height * 1.15 + P.length };
 }
 
 const UP = new THREE.Vector3(0, 1, 0);

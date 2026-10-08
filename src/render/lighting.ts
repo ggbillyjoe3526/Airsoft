@@ -192,7 +192,7 @@ export function addLighting(scene: THREE.Scene, map: MapData, quality: QualitySe
   scene.add(hemi, sun, sun.target);
   const sunDirection = sun.position.clone().sub(sun.target.position).normalize();
   const ownTrees = map.blocks.some((b) => b.kind === 'tree');
-  const atmosphere = addAtmosphere(scene, sun.target.position, sunDirection, quality, box, preset, map.dressing?.skyline, ownTrees);
+  const atmosphere = addAtmosphere(scene, sun.target.position, sunDirection, quality, box, preset, map.dressing?.skyline, ownTrees, map.dressing?.plane);
   const pools = preset.night ? addLightPools(scene, map, quality) : NO_LIGHT_POOLS;
   const signs = addMapSigns(scene, map, preset.night);
   let poolQuality: Pick<QualitySettings, 'poolLights'> = quality;

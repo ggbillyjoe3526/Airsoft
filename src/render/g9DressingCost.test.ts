@@ -11,6 +11,7 @@ import { vec3 } from '../sim/vec';
 import { addAtmosphere } from './atmosphere';
 import { DressingEffects } from './dressingEffects';
 import { resolveLighting } from './lightingPreset';
+import { SKY_PART, type SkyPlaneUniforms } from './skyHost';
 import { buildMapMeshes, disposeMapMeshes, type MapLook, mapLookOf, texturesFor } from './mapMeshes';
 import { neonFlicker } from './neonDressing';
 import type { SurfaceTextures } from './proceduralTextures';
@@ -350,23 +351,68 @@ describe('G9: what the two maps’ dressing costs', () => {
     });
   }
 
-  it('the horizon is freed and rebuilt when the Trees setting changes, leaving nothing behind', () => {
+  it('the horizon is freed and rebuilt when the Trees setting changes, leaving nothing behind; the lights and plane ride the ring', () => {
     const scene = new THREE.Scene();
     const box = new THREE.Box3(new THREE.Vector3(-24, -0.5, -16), new THREE.Vector3(24, 8, 16));
-    const a = addAtmosphere(scene, new THREE.Vector3(), new THREE.Vector3(0.4, 0.8, 0.3).normalize(), QUALITY.high, box, resolveLighting(NEON_HEIGHTS), NEON_HEIGHTS.dressing?.skyline);
-    const lights = scene.getObjectByName('skylineLights') as THREE.Mesh;
-    expect(lights).toBeDefined();
+    const a = addAtmosphere(scene, new THREE.Vector3(), new THREE.Vector3(0.4, 0.8, 0.3).normalize(), QUALITY.high, box, resolveLighting(NEON_HEIGHTS), NEON_HEIGHTS.dressing?.skyline, false, NEON_HEIGHTS.dressing?.plane);
+    const parts = (o: THREE.Object3D | undefined): number[] => {
+      const a = (o as THREE.Mesh | undefined)?.geometry.getAttribute('skyPart');
+      return a ? [...new Set(a.array)].sort() : [];
+    };
+    // One mesh, one draw call: the ring, the skyline's lights and the plane (render/skyHost.ts).
+    const ring = scene.getObjectByName('trees') as THREE.Mesh;
+    expect(parts(ring)).toEqual([SKY_PART.ring, SKY_PART.light, SKY_PART.plane]);
+    expect(ring.userData.skyPlane).toBeDefined();
+    expect(scene.getObjectByName('skylineLights')).toBeUndefined();
     let freed = 0;
-    lights.geometry.addEventListener('dispose', () => freed++);
-    (lights.material as THREE.Material).addEventListener('dispose', () => freed++);
+    ring.geometry.addEventListener('dispose', () => freed++);
+    (ring.material as THREE.Material).addEventListener('dispose', () => freed++);
+    // Trees: Simple draws no skyline: a plain ring again, on the program it always had.
     a.setQuality({ ...QUALITY.high, trees: 1 });
     expect(freed).toBe(2);
-    expect(scene.getObjectByName('skylineLights')).toBeUndefined();
+    const simple = scene.getObjectByName('trees') as THREE.Mesh;
+    expect(parts(simple)).toEqual([]);
+    expect(simple.userData.skyPlane).toBeUndefined();
+    expect((simple.material as THREE.Material).customProgramCacheKey()).toBe('without-environment');
     a.setQuality(QUALITY.high);
-    expect(scene.getObjectByName('skylineLights')).toBeDefined();
+    expect(parts(scene.getObjectByName('trees'))).toEqual([SKY_PART.ring, SKY_PART.light, SKY_PART.plane]);
     a.dispose();
-    expect(scene.getObjectByName('skylineLights')).toBeUndefined();
     expect(scene.getObjectByName('trees')).toBeUndefined();
+  });
+
+  it('the plane rides the ring in the game: its matrix and whether it is up reach the ring, its own mesh undrawn', () => {
+    const scene = new THREE.Scene();
+    const box = new THREE.Box3(new THREE.Vector3(-24, -0.5, -16), new THREE.Vector3(24, 8, 16));
+    const a = addAtmosphere(scene, new THREE.Vector3(), new THREE.Vector3(0.4, 0.8, 0.3).normalize(), QUALITY.medium, box, resolveLighting(NEON_HEIGHTS), NEON_HEIGHTS.dressing?.skyline, false, NEON_HEIGHTS.dressing?.plane);
+    const fx = new DressingEffects(scene, NEON_HEIGHTS);
+    fx.setQuality(QUALITY.medium);
+    fx.setNight(true);
+    const plane = scene.getObjectByName('passingPlane')!;
+    const host = (scene.getObjectByName('trees') as THREE.Mesh).userData.skyPlane as SkyPlaneUniforms;
+    const at = new THREE.Vector3();
+    let up = 0;
+    for (let i = 0; i < 400; i++) {
+      fx.update(0.1, new THREE.PerspectiveCamera(), { x: 0, z: 0 });
+      expect(plane.layers.mask, 'the plane’s own mesh is not drawn').toBe(0);
+      expect(host.skyPlaneUp.value).toBe(plane.visible ? 1 : 0);
+      if (plane.visible) {
+        up++;
+        expect(at.setFromMatrixPosition(host.skyPlane.value).distanceTo(new THREE.Vector3().setFromMatrixPosition(plane.matrix))).toBe(0);
+        // Inside the ring's culling sphere, which holds every pass.
+        expect((scene.getObjectByName('trees') as THREE.Mesh).geometry.boundingSphere!.containsPoint(at)).toBe(true);
+      }
+    }
+    expect(up).toBeGreaterThan(0);
+    // Reduced motion: the plane is gone from the ring at once.
+    fx.setMotion(false);
+    fx.update(0.1, new THREE.PerspectiveCamera(), { x: 0, z: 0 });
+    expect(host.skyPlaneUp.value).toBe(0);
+    // Without the ring (the Trees setting rebuilt it, or no host at all), the plane draws itself again.
+    a.dispose();
+    fx.setMotion(true);
+    fx.update(0.1, new THREE.PerspectiveCamera(), { x: 0, z: 0 });
+    expect(plane.layers.mask).toBe(1);
+    fx.dispose();
   });
 
   for (const [name, map] of MAPS) {

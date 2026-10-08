@@ -9,6 +9,7 @@ import { Fireflies } from './fireflies';
 import { ImpactPuffs } from './impactPuffs';
 import { neonFlickerLevels } from './neonDressing';
 import { PassingPlane } from './passingPlane';
+import type { SkyPlaneUniforms } from './skyHost';
 import { SmokePlumes, STEAM_PLUME } from './smokePlumes';
 import { smokingChimneys } from './skyline';
 
@@ -16,7 +17,8 @@ import { smokingChimneys } from './skyline';
  * A map's moving dressing (G8, G9): its chimneys' smoke (Trees: Detailed, one instanced draw while in view), the dust
  * sprinting and landing feet kick up (Impact grit, one instanced draw while any is in the air), and G9's steam from
  * vents and drains (Map detail, one instanced draw), fireflies by night (Map detail, one draw) and a plane crossing the
- * sky (Trees: Detailed, one draw while it is up there), each pooled with fixed buffers. Each is made the first time its
+ * sky (Trees: Detailed; drawn by the tree ring's mesh where that carries it, render/skyHost.ts, else one draw while it
+ * is up there), each pooled with fixed buffers. Each is made the first time its
  * setting is on, and only for a map whose dressing has it, so Low (and a map without dressing) adds nothing to the
  * scene. Under Reduced motion the smoke and steam stand still, no dust is kicked up, the fireflies hold steady, no
  * plane crosses and the neon signs' flicker is off.
@@ -40,6 +42,8 @@ export class DressingEffects {
   /** The junk mesh's neon flicker levels, while a built map has flickering signs (render/dressingMeshes.ts). */
   private flicker: { value: THREE.Vector3 } | null = null;
   private readonly levels = new Float64Array(3);
+  /** The tree ring's mesh while it carries the plane (render/skyHost.ts); looked for again once it leaves the scene. */
+  private planeHostMesh: THREE.Object3D | null = null;
   private readonly dustTint = new THREE.Color();
   private readonly dustAt = { x: 0, y: 0, z: 0 };
   private readonly dressing: MapDressing | undefined;
@@ -164,6 +168,7 @@ export class DressingEffects {
     this.steam?.update(dt, camera, wind);
     this.flies?.update(dt);
     if (this.plane && this.planeOn) this.plane.update(dt);
+    this.drivePlaneHost();
     if (this.motion) {
       this.time += dt;
       if (this.flicker) {
@@ -179,6 +184,36 @@ export class DressingEffects {
     }
   }
 
+  /**
+   * The plane rides the tree ring's mesh where that carries it (render/skyHost.ts): its matrix and whether it is up go
+   * to the ring's uniforms, and its own mesh is left undrawn (no layer). With no such mesh it draws itself.
+   */
+  private drivePlaneHost(): void {
+    const plane = this.plane;
+    if (!plane) return;
+    const host = this.planeHost();
+    plane.object.layers.mask = host ? 0 : 1;
+    if (!host) return;
+    const up = this.planeOn && plane.object.visible;
+    host.skyPlaneUp.value = up ? 1 : 0;
+    if (up) host.skyPlane.value.copy(plane.object.matrix);
+  }
+
+  /** The ring's uniforms for the plane, while a mesh in the scene carries it (a rebuilt ring is found again). */
+  private planeHost(): SkyPlaneUniforms | null {
+    const cached = this.planeHostMesh;
+    if (cached && cached.parent === this.scene) return cached.userData.skyPlane as SkyPlaneUniforms;
+    this.planeHostMesh = null;
+    const children = this.scene.children;
+    for (let i = 0; i < children.length; i++) {
+      if (children[i]!.userData.skyPlane) {
+        this.planeHostMesh = children[i]!;
+        return children[i]!.userData.skyPlane as SkyPlaneUniforms;
+      }
+    }
+    return null;
+  }
+
   dispose(): void {
     this.smoke?.dispose();
     this.steam?.dispose();
@@ -191,5 +226,6 @@ export class DressingEffects {
     this.plane = null;
     this.dust = null;
     this.flicker = null;
+    this.planeHostMesh = null;
   }
 }

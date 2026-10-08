@@ -36,6 +36,20 @@ const drawn = (page: Page): Promise<Record<string, boolean>> =>
     return out;
   });
 
+/**
+ * What the tree ring's mesh carries besides the ring (render/skyHost.ts's `skyPart`): 1 the skyline's lights, 2 the
+ * plane. They ride the ring's draw call (G9 perf), so a scene has no mesh of their own to look for.
+ */
+const ringCarries = (page: Page): Promise<number[]> =>
+  page.evaluate(() => {
+    let parts: number[] = [];
+    (window as unknown as Game).airsoft.renderer.scene.traverse((o) => {
+      const a = o.name === 'trees' ? (o as unknown as { geometry?: { getAttribute: (n: string) => { array: ArrayLike<number> } | undefined } }).geometry?.getAttribute('skyPart') : undefined;
+      if (a) parts = [...new Set(Array.from(a.array))].filter((v) => v > 0).sort();
+    });
+    return parts;
+  });
+
 const watchErrors = (page: Page): string[] => {
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
@@ -76,11 +90,13 @@ for (const [name, map] of [['Woodland', /Woodland/i], ['Neon Heights', /Neon Hei
     await startMatch(page, map, 'low');
     const scene = await drawn(page);
     for (const n of ['map-junk', 'map-puddles', 'fireflies', 'steamPlumes', 'passingPlane', 'skylineLights']) expect(scene[n], n).toBeUndefined();
+    // Nor do the skyline's lights or the plane ride the ring on Low.
+    expect(await ringCarries(page)).toEqual([]);
     expect(errors).toEqual([]);
   });
 }
 
-test('Neon Heights on Medium draws its steam and its plane, and its junk, puddle and skyline-light meshes', async ({ page }) => {
+test('Neon Heights on Medium draws its steam and its plane, its junk and puddle meshes, and its skyline’s lights', async ({ page }) => {
   test.setTimeout(240_000);
   const errors = watchErrors(page);
   await startMatch(page, /Neon Heights/i, 'medium');
@@ -88,8 +104,10 @@ test('Neon Heights on Medium draws its steam and its plane, and its junk, puddle
   expect(scene['map-junk']).toBe(true);
   expect(scene['map-puddles']).toBe(true);
   expect(scene['steamPlumes']).toBe(true);
-  expect(scene['skylineLights']).toBe(true);
-  // The plane is made (hidden between passes).
+  // The skyline's lights and the plane are drawn by the tree ring's mesh (one draw call; render/skyHost.ts).
+  expect(scene['trees']).toBe(true);
+  expect(await ringCarries(page)).toEqual([1, 2]);
+  // The plane's flight is made (hidden between passes; the ring draws it).
   expect(Object.keys(scene)).toContain('passingPlane');
   expect(scene['fireflies']).toBeUndefined();
   expect(errors).toEqual([]);

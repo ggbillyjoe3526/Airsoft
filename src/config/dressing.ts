@@ -25,11 +25,12 @@ import type { PuffConfig, QualitySettings } from './render';
  *   twigs and logs and the leaf drifts (6 874 triangles), the puddle mesh the mud and the puddles (2 040), and the
  *   treeline and hills join the tree ring (2 722, no draw call). The moss on the trunks, logs and boulders is vertex
  *   colour on meshes that were already there (nothing added). Moving: the fireflies at night are one draw.
- * - Neon Heights (Medium, High): 9 654 more triangles and 3 more draw calls — the junk mesh carries the street litter,
- *   the posters and the neon tubes (5 666 triangles), the dirt, litter scraps and sprays join the decal mesh (428, no
- *   draw call), the puddle mesh the puddles (840), the towers join the tree ring (2 354, no draw call) and their lit
- *   windows, blades and beacons are one more draw (366 triangles). Moving: the vents' steam is one instanced draw
- *   while in view, the passing plane one more while it crosses.
+ * - Neon Heights (Medium, High): 9 654 more triangles and 2 more draw calls — the junk mesh carries the street litter,
+ *   the posters and every neon tube, the flickering ones too (5 666 triangles), the dirt, litter scraps and sprays join
+ *   the decal mesh (428, no draw call), the puddle mesh the puddles (840), and the towers join the tree ring (2 354)
+ *   with their lit windows, blades and beacons (366, unlit; no draw call either, render/skyHost.ts). Moving: the vents'
+ *   steam is one instanced draw while in view; the passing plane rides the tree ring too (108 triangles, collapsed to a
+ *   point between passes: no draw call).
  * - The totals are pinned against the real meshes by render/g9EffectsQA.test.ts (it reads them from this comment).
  * - Depot is untouched: it draws exactly what it drew before, to the vertex (pinned from `main`).
  * - The signs' gentle flicker rides the junk mesh's own material as one vec3 uniform and a per-vertex channel: no extra
@@ -286,10 +287,10 @@ export const STEAM = { puffs: 9, period: 4.2, rise: 2.8, spread: 0.3, windShare:
 export const FIREFLIES = { size: 0.11, colour: '#d6ff7a', height: [0.3, 1.9] as const, drift: 0.35, period: [2.6, 5] as const, low: 0.12, reach: 2.5, seed: 6161 };
 
 /**
- * G9: a plane crossing the sky (MapDressing.plane; render/passingPlane.ts): `length` m long at the map's height,
- * `speed` m/s along a seeded line through the sky over the field, `path` m long (a 10 s crossing, so with Neon Heights'
- * pass every 20 s, start to start, the sky is empty half the time); unlit, in `day` or `night` colours with steady
- * wingtip and beacon lights. Hidden under Reduced motion.
+ * G9: a plane crossing the sky (MapDressing.plane; render/passingPlane.ts flies it, the tree ring's mesh draws it,
+ * render/skyHost.ts): `length` m long at the map's height, `speed` m/s along a seeded line through the sky over the
+ * field, `path` m long (a 10 s crossing, so with Neon Heights' pass every 20 s, start to start, the sky is empty half
+ * the time); unlit, in `day` or `night` colours with steady wingtip and beacon lights. Hidden under Reduced motion.
  */
 export const PLANE = { length: 9, span: 9, speed: 26, path: 260, day: '#cfd3da', night: '#14151c', lights: { port: '#d94fc0', starboard: '#5aff8a', beacon: '#fffbe6' }, seed: 4421 };
 

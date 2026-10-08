@@ -16,7 +16,8 @@ and never writes the simulation.
   logs and leaf drifts on terrain), `streetDressing.ts` (pasted posters), `neonDressing.ts` (tube-letter signs and
   their flicker); `dressingMeshes.ts` merges the lot into one junk mesh and one puddle mesh. The horizon beyond the
   field is `skyline.ts` (towers, treelines, hills, and the lights they carry at night). Moving pieces are owned by
-  `dressingEffects.ts`: `smokePlumes.ts` (chimney smoke and vent steam), `fireflies.ts`, `passingPlane.ts`.
+  `dressingEffects.ts`: `smokePlumes.ts` (chimney smoke and vent steam), `fireflies.ts`, `passingPlane.ts`. The
+  skyline's lights and the plane ride the tree ring's draw call (`skyHost.ts`).
 - Light: `lighting.ts` (sun and sky fill; on High the shadow map follows the view), `lightingPreset.ts` (day or night),
   `atmosphere.ts`, `lightPools.ts`, `torchBeams.ts`. Baked bounce light: `lightBake.ts`, `probeGrid.ts`,
   `bakedLight.ts`, read in `surfaceShader.ts` (which also draws weathering).
