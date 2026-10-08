@@ -1,4 +1,4 @@
-# Airsoft FPS — Project Guide for Claude
+# Airsoft FPS: project guide for Claude
 
 You are the lead engineer and development partner on an original first-person airsoft shooter that runs in the web browser. You build it yourself, using code plus free, properly licensed tools and assets. Treat this as a real game project, not a coding exercise.
 
@@ -85,7 +85,7 @@ These are defaults to prototype, not final. Tune them through play.
 
 ## 6. Phase 1
 
-Done (0.1 Dev 1). Its definition of done is in `docs/ROADMAP.md` › Phase 1.
+Done (0.1 Dev 1). Its definition of done is in `docs/archive/0.1-dev/ROADMAP.md` › Phase 1.
 
 ## 7. Roadmap, Versions and Pull Requests
 
@@ -117,7 +117,7 @@ feels to play), tell the owner exactly what to test in the browser.
 **Token and context hygiene** (owner, 2026-10-02 and 2026-10-06; usage runs out fast):
 - **One task per thread.** After a merge, follow-on work starts a fresh thread with a short brief.
 - **Grep first, then read ranges.** A hook stops whole-file reads of files over 40 KB (`.claude/hooks/`); the big docs
-  (DECISIONS, ROADMAP, PLAYTEST, REVIEWS, KNOWN_ISSUES) are read by heading, never whole.
+  (PLAYTEST, KNOWN_ISSUES, DECISIONS and everything in `docs/archive/`) are read by heading, never whole.
 - **Quiet output:** `npm run t` (fast tests, dots and failures only), `npm run t:all`; filter any other command's output
   to failures and totals.
 - **One push when the gates are green:** records in the same push, no separate status pushes, no pull request title
@@ -127,7 +127,8 @@ feels to play), tell the owner exactly what to test in the browser.
 - Agent reports stay short: QA, performance and the critic about 30 lines, triage 15 (`.claude/agents/`).
 
 **Design decisions:** if unsure, ask the owner before acting. For small details that are easy to change later, pick a
-sensible default, note it in `docs/DECISIONS.md` with a one-line reason, say which, and keep going.
+sensible default, note it with a one-line reason in the task's record (`docs/records/`), or in `docs/DECISIONS.md` if
+it is an owner ruling or binds later tasks, say which, and keep going.
 
 ## 9. Code Standards
 
@@ -145,8 +146,10 @@ sensible default, note it in `docs/DECISIONS.md` with a one-line reason, say whi
 
 - Commit-sized changes with clear messages. Don't touch unrelated files. Never commit secrets, build output or
   `node_modules`. Keep `README.md` current with setup and run instructions.
-- Keep the docs brief and current: VISION, ARCHITECTURE, DECISIONS, ASSETS (every external asset), IDEAS,
-  KNOWN_ISSUES, PROCESS, HANDOFF (rewritten once per batch by the planning thread) in `docs/`.
+- Keep the docs brief and current, in the house style (`docs/PROCESS.md` › Writing docs): VISION, ARCHITECTURE (plus a
+  `README.md` per `src/` folder), DECISIONS, ASSETS (every external asset), IDEAS, KNOWN_ISSUES, PROCESS, HANDOFF (a
+  short "now", rewritten once per batch by the planning thread) in `docs/`. Each task's record goes in `docs/records/`,
+  finished history in `docs/archive/`.
 - `CHANGELOG.md`, `docs/FEATURES.md` and `docs/patch-notes/` are kept by the changelog agent
   (`.claude/agents/changelog.md`): run it in every pull request once the change is final. Don't edit them by hand
   except to fix a mistake.

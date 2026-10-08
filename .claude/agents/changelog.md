@@ -14,7 +14,8 @@ write what a player or the owner would notice, never how the code does it. You e
 ## Per change (the usual call)
 
 You are given: a task id and title (for example `M27 · probeGround without a per-tick allocation`), the pull request
-title, a short diff summary, and any new lines in `docs/DECISIONS.md`. Do this:
+title, a short diff summary, and the task's decisions (its record's lines and any new `docs/DECISIONS.md` lines). Do
+this:
 
 1. Read `CHANGELOG.md`. Under `## Unreleased`, add the change in the right group (`### Added`, `### Changed`,
    `### Fixed`, `### Internal`), creating the group if missing, newest line last. One line per user-visible change:

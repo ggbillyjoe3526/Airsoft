@@ -1,9 +1,25 @@
 # Tasks
 
 Open tasks only, one block each (format in `pipeline/README.md`). A task that lands leaves this file in its records
-commit, before its pull request merges (CI's scope gate finds the block in the branch's history): its REVIEWS line, its
-ROADMAP row and the CHANGELOG line are the record. The planning thread writes blocks; the build thread
-sets `status` and `attempts` once, in its records commit (no status-only commits).
+commit, before its pull request merges (CI's scope gate finds the block in the branch's history): its record
+(`docs/records/<id>.md`) and its CHANGELOG line remain. The planning thread writes blocks; the build thread sets
+`status` and `attempts` once, in its records commit (no status-only commits).
+
+## TE2 · Docs rewrite and per-task records (token step 2)
+tier: ui
+perf: skip
+touches: CLAUDE.md, pool.md, stats.md, pipeline/, .claude/
+contract: none
+acceptance:
+  1. Every live doc is rewritten in one house style (owner, 2026-10-05), with the playtest guide shown to the owner first; nothing important is lost.
+  2. Finished history moves word for word to `docs/archive/0.1-dev/`; the live docs hold the current state (token plan item 1).
+  3. Each task keeps one record file in `docs/records/`, read and checked by `pipeline/records.mjs` with tests; `docs/REVIEWS.md` and `docs/METRICS.md` retire to the archive (items 3, 4).
+  4. The gate writes the attempt row for the task's record from its own report (item 4).
+  5. `docs/HANDOFF.md` is a short "now" (item 6); `docs/ARCHITECTURE.md` is a one-page module map with every contract, plus a `README.md` per `src/` folder (item 7).
+  6. `pool.md` and `stats.md`: prose only, every table line unchanged, their tests passing.
+  7. The overdue 0.1 Dev 4 release records: CHANGELOG split at the tag with PR numbers, `docs/patch-notes/0.1-dev.4.md`, README on 0.1 Dev 4; Audit 2 section 5 and the owed DECISIONS lines (from M79).
+status: open
+attempts: 0
 
 **Audit 2, what is left (2026-10-05 20:45 UTC).** Merged: M50–M57, M63–M65, M68, M70 (#107–#122). M69 (AUD PR 4) is
 accepted and lands with this list. Below, the rest of section 8 of the report
@@ -32,11 +48,11 @@ contract: none
 acceptance:
   1. `src/render/replicaModels.ts` and `src/config/render.ts` are split by concern into files under about 600 lines, with no change in what is drawn (the replica and render tests unchanged).
   2. High caps flat city surfaces at 512² textures (owner decision 9), checked with a screenshot; Neon Heights High holds about 28 MB less.
-  3. ARCHITECTURE's file map names the new files.
+  3. The `src/render/` and `src/config/` READMEs name the new files.
 status: open
 attempts: 0
 
-## M79 · Docs, change records and small leaks (Audit 2 CORE-D + AUD PR 3: CORE-07, CORE-08, CORE-13, CORE-14, AUD-06, section 5)
+## M79 · Small leaks and import cycles (Audit 2 CORE-D + AUD PR 3: CORE-07, CORE-08, AUD-06)
 tier: ui
 perf: skip
 touches: src/game.ts, src/ui/menus/menuParts.ts, src/ai/botMovement.ts, src/ai/squadOrders.ts, src/pool/pool.ts, src/pool/caches.ts, src/audio/, pipeline/, .claude/, CHANGELOG.md, docs/
@@ -45,14 +61,12 @@ acceptance:
   1. `Game.dispose()` unregisters every callback it registered; menu pages disconnect their ResizeObserver (CORE-07).
   2. No import cycles, with a test that fails on one (CORE-08).
   3. Loop-seam tests bound the wrap by a fixed threshold, through one shared helper (AUD-06).
-  4. Report section 5 items 1–7: stale rows and timings, the CHANGELOG PR numbers, the PLAYTEST start section.
-  5. The owed records: DECISIONS lines for the five final-audit defaults the owner confirmed and for Woodland and Neon Heights staying dev-only until he plays them; a DECISIONS line and a ROADMAP 0.2 row for the graphics overhaul; an IDEAS entry for a desktop wrapper; ROADMAP rows for the content toolkit checks (replicas, attachments and maps in 0.1 Beta, modes in 0.3, skins in 0.5).
 status: open
 attempts: 0
 
 **The owner's 0.1 Dev 4 playtest notes (2026-10-06).** Recorded on his ask, not built yet; they follow the Audit 2
 tasks above and the rest of the paused 0.1 Dev 5 work. His words and the per-item reasoning are in the project's shared
-files (`plans/playtest-feedback-0.1-dev-4.md`); the table under Alpha in `docs/ROADMAP.md` maps all 26 notes. M80–M91
+files (`plans/playtest-feedback-0.1-dev-4.md`); `docs/ROADMAP.md` › Playtest notes: 0.1 Dev 4 maps all 26 notes. M80–M91
 and M96 are 0.1 Dev 5 fixes and changes, M92–M95 suggested 0.1 Dev 6 features. Notes 5, 20–23 went to 0.3 and 0.4; notes 5, 20, 22 and 23 are now
 0.1 Dev 6 (owner's feature picks, 2026-10-06, with Dev 7 folded into Dev 6 the same night; ROADMAP).
 Every block below carries note 19: tune on Normal, then check that Easy, Hard and Pro still scale. `touches` are
@@ -209,8 +223,8 @@ status: open
 attempts: 0
 
 **The owner's playtest notes on main (2026-10-07).** Recorded on his ask, not built yet. His words, the type and the
-defaults per note are in the project's shared files (`plans/playtest-feedback-2026-10-07.md`); the table under Alpha in
-`docs/ROADMAP.md` maps all eight. M97–M99 join the Dev 4 notes batch (Dev 5 item 6); M100 is the graphics work's (Dev 5
+defaults per note are in the project's shared files (`plans/playtest-feedback-2026-10-07.md`);
+`docs/ROADMAP.md` › Playtest notes: main after G3 maps all eight. M97–M99 join the Dev 4 notes batch (Dev 5 item 6); M100 is the graphics work's (Dev 5
 item 5, with the G4 HUD restyle); note 3 is a bug for BP2 (`docs/KNOWN_ISSUES.md`); note 2 is already in the game
 (Settings › Controls › Aim button). Note 19 of the Dev 4 notes still applies.
 

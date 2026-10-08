@@ -30,7 +30,7 @@ report, and refuse to judge if its `head` is not `git rev-parse HEAD` (say so an
 | 5 | Simulation stays apart from presentation; no magic numbers in gameplay code; no hidden global state (CLAUDE.md §9) | yes |
 | 6 | Fits the pillars, the fixed technical decisions and the assets policy (CLAUDE.md §2, §3, §4, §11) | yes |
 | 7 | Maintainability: small modules, GPU resources disposed, no copy-paste of an existing module, names that read | no |
-| 8 | Scope: nothing beyond the task; the docs CLAUDE.md asks for are updated (ROADMAP status, DECISIONS, KNOWN_ISSUES) | no |
+| 8 | Scope: nothing beyond the task; the docs it affects are updated (KNOWN_ISSUES rows for what it leaves, DECISIONS for an owner ruling or a rule for later tasks, a folder README for a file added or moved) | no |
 
 **Verdict:** `Accept` when every blocking check passes and at most one non-blocking check fails. Otherwise `Retry`.
 Score is `passed/8`. A verdict exactly one check short of Accept is a **near miss**: say so on the verdict line, so
