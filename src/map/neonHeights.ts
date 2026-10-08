@@ -1,5 +1,6 @@
 import { type Vec3, vec3 } from '../sim/vec';
 import type { BlockFinish, BlockKind, MapBlock, MapData, MapSign, Overlook, RampRise, SpawnPoint } from './mapTypes';
+import { NEON_HEIGHTS_DRESSING } from './neonHeightsDressing';
 import { neonHeightsExtraction } from './neonHeightsExtraction';
 import type { MapLight } from './nightSight';
 
@@ -879,6 +880,8 @@ export const NEON_HEIGHTS: MapData = {
   signs: [...NEON_SIGNS, ...TRIMS, ...perimeterWindows(), ...roadMarkings(ON_STREET)].map(signToWorld),
   // Extraction (M48): the run's own data, placed on this layout in neonHeightsExtraction.ts.
   extraction: neonHeightsExtraction({ toWorld, spawnToWorld, yards: SPAWNS }),
+  // G9: the street's set dressing (look only: map/neonHeightsDressing.ts).
+  dressing: NEON_HEIGHTS_DRESSING,
 };
 
 /** Layout facts the tests check against, in world coordinates, so they can't drift from the geometry. */

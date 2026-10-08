@@ -4,6 +4,7 @@ import type { Bush } from './foliage';
 import type { MapLight } from './nightSight';
 import type { BlockKind, GroundPatch, MapBlock, MapData, MapGround, SpawnPoint } from './mapTypes';
 import { buildTerrain, type Terrain, terrainHeightAt } from './terrain';
+import { WOODLAND_DRESSING } from './woodlandDressing';
 import { woodlandExtraction } from './woodlandExtraction';
 
 /**
@@ -544,6 +545,8 @@ export const WOODLAND: MapData = {
   ambience: 'woods',
   // Extraction (M48): the run's own data, placed on this layout in woodlandExtraction.ts.
   extraction: woodlandExtraction({ onGround, spawnAt, westCamp: SPAWNS[0] }),
+  // G9: the woods' set dressing (look only: map/woodlandDressing.ts).
+  dressing: WOODLAND_DRESSING,
 };
 
 /** Layout facts the tests check against (world coordinates), exported so they can't drift from the geometry. */
