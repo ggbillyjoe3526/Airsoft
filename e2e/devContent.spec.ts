@@ -90,7 +90,7 @@ test('Neon Heights (dev content, M34c) picked by Day (M34d) loads and plays: the
   await light.getByRole('button', { name: 'Day' }).click();
   await expect(maps.getByRole('button', { name: /Neon Heights/i }).first()).toHaveAttribute('aria-pressed', 'true');
   await expect(setup.locator('.play-map-line')).toHaveText('Neon Heights · Day');
-  await setup.getByRole('button', { name: 'Play', exact: true }).click();
+  await setup.getByRole('button', { name: 'Start match', exact: true }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 20_000 });
   expect(await page.evaluate(() => (window as unknown as { airsoft: { state: unknown } }).airsoft.state !== null)).toBe(true);
   await expect(page.locator('.hud')).toBeVisible();
@@ -145,7 +145,7 @@ test('Neon Heights by Night (M34e, the default light) plays with its lamps lit a
   await page.keyboard.press('Escape');
   await setup.getByRole('group', { name: 'Map', exact: true }).getByRole('button', { name: /Neon Heights/i }).first().click();
   await expect(setup.locator('.play-map-line')).toHaveText('Neon Heights · Night');
-  await setup.getByRole('button', { name: 'Play', exact: true }).click();
+  await setup.getByRole('button', { name: 'Start match', exact: true }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 20_000 });
   await expect(page.locator('.hud')).toBeVisible();
   type Lit = {
@@ -197,9 +197,9 @@ test('with Dev content off there is no Light row, no torch in the match, and T d
   // Customise's parts are tabs (G3): Optic is offered, Light is not.
   await expect(loadout.getByRole('tab', { name: /^Optic/ })).toBeVisible();
   await expect(loadout.getByRole('tab', { name: /^Light/ })).toHaveCount(0);
-  await loadout.getByRole('button', { name: 'Back', exact: true }).click();
-  await loadout.getByRole('button', { name: 'Back', exact: true }).click();
-  await setup.getByRole('button', { name: 'Play', exact: true }).click();
+  await loadout.getByRole('button', { name: 'Loadout', exact: true }).click(); // the crumb: back to the gear
+  await page.locator('.menu-topbar').getByRole('button', { name: 'Match', exact: true }).click();
+  await setup.getByRole('button', { name: 'Start match', exact: true }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 20_000 });
   type View = { airsoft: { state: { tick: number; characters: { id: number; torchOn: boolean }[] } | null; renderer: { scene: { traverse: (f: (o: { name: string }) => void) => void } } } };
   await expect.poll(() => page.evaluate(() => (window as unknown as View).airsoft.state?.tick ?? 0), { timeout: 60_000 }).toBeGreaterThan(10);
@@ -257,7 +257,7 @@ test('Extraction: the locker asks for G, opens while held, is carried out throug
   await extraction.click();
   await expect(extraction).toHaveAttribute('aria-pressed', 'true');
   await expect(setup.locator('.play-facts')).toContainText('Extraction');
-  await setup.getByRole('button', { name: 'Play', exact: true }).click();
+  await setup.getByRole('button', { name: 'Start match', exact: true }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 20_000 });
   const run = <T>(read: (r: Run, you: { x: number; y: number; z: number }) => T): Promise<T> =>
     page.evaluate(

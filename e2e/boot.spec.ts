@@ -88,7 +88,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(page.locator('.setup-rules')).not.toBeEmpty();
   // The top bar (G3) shows the place on screen and the wallet.
   const topBar = page.locator('.menu-topbar');
-  await expect(topBar.getByRole('button', { name: 'Play' })).toHaveAttribute('aria-current', 'page');
+  await expect(topBar.getByRole('button', { name: 'Match', exact: true })).toHaveAttribute('aria-current', 'page');
 
   // The Map cards: Depot, the default, picked.
   const maps = setup.getByRole('group', { name: 'Map', exact: true });
@@ -184,10 +184,11 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(loadout.getByRole('group', { name: 'Glowing BBs' }).getByRole('button', { name: 'Always' })).toHaveAttribute('aria-pressed', 'true');
   await loadout.getByRole('group', { name: 'Glowing BBs' }).getByRole('button', { name: 'At Night' }).click();
   await expect(loadout.getByRole('group', { name: 'Glowing BBs' }).getByRole('button', { name: 'At Night' })).toHaveAttribute('aria-pressed', 'true');
-  // Back leaves Customise for the gear first, then the Loadout.
-  await loadout.getByRole('button', { name: 'Back', exact: true }).click();
+  // The Loadout crumb leaves Customise for the gear, then the top bar's Match returns to the Match screen (no key prompts
+  // along the bottom since M100: the mouse has a button for each).
+  await loadout.getByRole('button', { name: 'Loadout', exact: true }).click();
   await expect(loadout.locator('.item-grid')).toBeVisible();
-  await loadout.getByRole('button', { name: 'Back', exact: true }).click();
+  await topBar.getByRole('button', { name: 'Match', exact: true }).click();
   const loadoutLine = setup.locator('.play-loadout-line');
   await expect(loadoutLine).toContainText('Red Dot');
   await expect(loadoutLine).toContainText('0.28 g / 0.20 g BBs');
@@ -219,7 +220,8 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await loadout.getByRole('button', { name: /^Secondary: Gas Pistol/ }).click({ button: 'right' });
   await expect(partTab('Optic')).toHaveAttribute('aria-disabled', 'true');
   await page.keyboard.press('Escape');
-  await loadout.getByRole('button', { name: 'Back', exact: true }).click();
+  await page.keyboard.press('Escape'); // Esc on the gear is Back too
+  await expect(setup).toBeVisible();
   await expect(loadoutLine).toContainText('2x Scope · Angled Grip · Hi-Cap Magazine');
 
   // The Armory (M26c), on the top bar with the wallet: beta and free. The saved 400 FC buy a Token (160 FC), and a Shot
@@ -372,7 +374,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
 
   const teamCss = () => page.evaluate(() => getComputedStyle(document.getElementById('app')!).getPropertyValue('--team-1').trim());
   const standardOrange = await teamCss(); // the stylesheet's until a match applies the picked set
-  await setup.getByRole('button', { name: 'Play', exact: true }).click();
+  await setup.getByRole('button', { name: 'Start match', exact: true }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 10_000 });
   expect(await matchLoaded()).toBe(true);
   await expect(page.locator('.hud')).toBeVisible();
@@ -643,7 +645,8 @@ for (const withParts of [false, true]) {
     await page.goto('/?nolock&seed=1&quality=low');
     await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
     // The title's Loadout (G3), then Customise on the rifle: its parts are tabs, Barrel and Muzzle among them.
-    await page.locator('.menu-title').getByRole('button', { name: 'Loadout' }).click();
+    await page.locator('.menu-title-start').click();
+    await page.locator('.menu-topbar').getByRole('button', { name: 'Loadout', exact: true }).click();
     const loadout = page.locator('.menu-loadout');
     await loadout.getByRole('button', { name: /^Primary: AEG Rifle/ }).click({ button: 'right' });
     await expect(loadout.getByRole('heading', { name: /Customise: AEG Rifle/ })).toBeVisible();
@@ -714,7 +717,8 @@ test('the game boots to the title screen on High', async ({ page }) => {
   expect(shadows).toBe(true);
   // A pop-up open when the graphics context is lost closes, so the notice isn't under it (bug pass): the Armory's Ten
   // Shots asks first.
-  await page.locator('.menu-title').getByRole('button', { name: 'Armory' }).click();
+  await page.locator('.menu-title-start').click();
+  await page.locator('.menu-topbar').getByRole('button', { name: 'Armory', exact: true }).click();
   await page.locator('.menu-armory').getByRole('button', { name: /^10 Shots/ }).click();
   const ask = page.getByRole('dialog', { name: 'Take 10 Shots?' });
   await expect(ask).toBeVisible();
@@ -741,16 +745,21 @@ test('the practice range opens from the title screen and reads out the last BB',
   // and draws fast enough in software on a CI runner (as the first test).
   await page.goto('/?nolock&seed=1&quality=medium');
   await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
-  await page.locator('.menu-title').getByRole('button', { name: 'Settings' }).click();
+  await page.keyboard.press('Escape'); // Esc on the title opens Settings
   const settings = page.locator('.menu-settings');
   await settings.getByRole('tab', { name: /Graphics/i }).click();
   await settings.getByRole('group', { name: 'Quality' }).getByRole('button', { name: 'Low' }).click();
   await page.keyboard.press('Escape');
   await expect(page.locator('.menu-title')).toBeVisible();
-  // A refused mouse lock (Practice Range or Tutorial clicked too soon after Esc) says so on the title too (audit L-29).
+  // Practice is the last mode on the Match screen (M100), and starts the range.
+  await page.locator('.menu-title-start').click();
+  const modes = page.locator('.menu-setup').getByRole('group', { name: 'Mode', exact: true });
+  await expect(modes.getByRole('button').last()).toContainText('Practice');
+  await modes.getByRole('button', { name: /Practice/ }).click();
+  // A refused mouse lock (Start practice or Tutorial clicked too soon after Esc) says so on the screen too (audit L-29).
   await page.evaluate(() => document.dispatchEvent(new Event('pointerlockerror')));
-  await expect(page.locator('.menu-title .menu-hint')).toContainText('Click again');
-  await page.getByRole('button', { name: 'Practice Range' }).click();
+  await expect(page.locator('.menu-setup .menu-hint')).toContainText('Click again');
+  await page.locator('.menu-setup').getByRole('button', { name: 'Start practice', exact: true }).click();
   const readout = page.locator('.range-readout');
   await expect(readout).toBeVisible();
   await expect(readout).toContainText('Practice range');
@@ -820,8 +829,9 @@ test('the practice range opens from the title screen and reads out the last BB',
   await loadout.getByRole('button', { name: /^Primary: AEG Rifle/ }).click({ button: 'right' });
   await loadout.getByRole('tab', { name: /^BBs/ }).click();
   await loadout.getByRole('slider', { name: 'AEG Rifle BB weight' }).fill('0.3');
-  await loadout.getByRole('button', { name: 'Back', exact: true }).click();
-  await loadout.getByRole('button', { name: 'Back', exact: true }).click();
+  // The crumb back to the gear, then Back (the top bar's wordmark, alone there from the pause menu) to the pause menu.
+  await loadout.getByRole('button', { name: 'Loadout', exact: true }).click();
+  await page.locator('.menu-topbar').getByRole('button', { name: 'Back', exact: true }).click();
   await pauseMenu.getByRole('button', { name: 'Resume' }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 10_000 });
   await expect(readout).toContainText('Practice range'); // a new range: no last shot yet
@@ -847,9 +857,12 @@ test('the tutorial opens on the range with the coach', async ({ page }) => {
   // Low, so the range draws fast enough in software on a CI runner (as the first test).
   await page.goto('/?nolock&seed=1&quality=low');
   await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
-  const tutorial = page.getByRole('button', { name: /Tutorial/ });
-  await expect(tutorial.locator('.menu-title-new')).toBeVisible();
-  await expect(tutorial).toContainText('New? Start here');
+  // A clean save: the Tutorial shows under START (M100), and nothing else but the wordmark, the tagline and the version.
+  const tutorial = page.locator('.menu-title').getByRole('button', { name: 'Tutorial', exact: true });
+  await expect(tutorial).toBeVisible();
+  await expect(page.locator('.menu-title').getByRole('button')).toHaveText(['START', 'Tutorial']);
+  await expect(page.locator('.menu-title-tagline')).toHaveText('Call your hit. Go again.');
+  await expect(page.locator('.menu-title .title-version')).toBeVisible();
   await tutorial.click();
   const coach = page.locator('.coach');
   await expect(coach).toBeVisible();
@@ -878,7 +891,7 @@ test('the tutorial opens on the range with the coach', async ({ page }) => {
   await expect(coach).toContainText('Move');
 
   // The last card read to its end (the tracker's debug jump, e2e build only): the coach gives way to the range readout,
-  // and the title stops tagging the button.
+  // and the title stops offering the button.
   await page.evaluate(() => {
     const t = (window as unknown as Tut).airsoft.session.tutorial;
     const last = t.steps.length - 1;
@@ -888,6 +901,6 @@ test('the tutorial opens on the range with the coach', async ({ page }) => {
   await expect(coach).toBeHidden();
   await page.reload();
   await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
-  await expect(page.getByRole('button', { name: /Tutorial/ }).locator('.menu-title-new')).toBeHidden();
+  await expect(page.locator('.menu-title').getByRole('button', { name: 'Tutorial', exact: true })).toBeHidden();
   expect(errors).toEqual([]);
 });

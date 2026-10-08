@@ -40,7 +40,7 @@ for (const map of [
     const extraction = setup.getByRole('group', { name: 'Mode', exact: true }).getByRole('button', { name: /Extraction/i });
     await extraction.click();
     await expect(extraction).toHaveAttribute('aria-pressed', 'true');
-    await setup.getByRole('button', { name: 'Play', exact: true }).click();
+    await setup.getByRole('button', { name: 'Start match', exact: true }).click();
     await expect(page.locator('.menus')).toBeHidden({ timeout: 20_000 });
     await expect.poll(() => page.evaluate(() => (window as unknown as Airsoft).airsoft.state?.tick ?? 0), { timeout: 60_000 }).toBeGreaterThan(10);
 
