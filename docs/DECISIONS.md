@@ -127,6 +127,12 @@ replaces its line; the old one stays findable in the archive or in git.
 - **A task that adds, renames or moves a file keeps its folder's `README.md` current (2026-10-08, TE2).** The module
   map (`docs/ARCHITECTURE.md`) and the folder READMEs replace grep sweeps across `src/`; the scope gate allows a
   `src/` folder README in any task.
+- **Agents start from the gate's own summaries, and an agent runs only where it can change the outcome (owner,
+  2026-10-06, token plan step 3; built 2026-10-08, TE3).** The critic and QA read the review packet first
+  (`pipeline/out/review-packet.md`); the performance agent runs only when the perf gate fails; the triage agent only for
+  a failure the gate's summary (`pipeline/out/failures.md`) can't place; the changelog agent reads only `Unreleased`
+  and one FEATURES heading; a near miss is re-run on Opus only when its failed check is a judgment, never a measured
+  number. Models and effort levels are unchanged.
 
 ## Art direction and graphics
 

@@ -30,6 +30,16 @@ export function qaAllowedFile(file) {
   return QA_ALLOWED.some((re) => re.test(file));
 }
 
+/**
+ * The block `## <id> · …` of a docs/TASKS.md text as written: its heading and the lines under it up to the first blank
+ * line or the next `## ` heading (the prose between blocks is not part of one). The review packet quotes it
+ * (pipeline/packet.mjs); null when there is none.
+ */
+export function taskBlockText(text, id) {
+  const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return text.match(new RegExp(`^## ${escaped}\\b[^\\n]*(?:\\n(?!## )[^\\n]*\\S[^\\n]*)*`, 'm'))?.[0] ?? null;
+}
+
 /** The block `## <id> · …` of a docs/TASKS.md text: its touches, tier and perf; null when the text has no such block. */
 export function parseTaskBlock(text, id) {
   const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

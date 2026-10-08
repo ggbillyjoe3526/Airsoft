@@ -127,14 +127,18 @@ Every task runs through the build pipeline (owner's design, 2026-10-04). `pipeli
 
 A script, not a model. `node pipeline/gate.mjs --task <id>` runs the build, the unit tests, the browser smoke test,
 the perf harness when the diff touches a perf-relevant path, a scope check against the task's `touches`, and a
-changelog check. It writes `pipeline/out/gate-report.json` and the attempt row for the task's record
-(`pipeline/out/metrics-row.md`). A failed gate goes back to the worker with the evidence; the critic never sees it.
+changelog check. It writes `pipeline/out/gate-report.json`, the attempt row for the task's record
+(`pipeline/out/metrics-row.md`), a failures-only summary (`pipeline/out/failures.md`: each failure's test, error, file
+and line) and the review packet the critic and QA read first (`pipeline/out/review-packet.md`: the task block, the gate
+summary, the contracts the diff touches, QA's report and the diff). A failed gate goes back to the worker with the
+evidence; the critic never sees it. The performance agent runs only when the perf gate fails, and the triage agent
+only for a failure the summary can't place (token step 3, `pipeline/README.md`).
 
 ### Critic
 
 Judgment only, on green gates. The critic (`.claude/agents/critic.md`) runs as a separate subagent with fresh context.
-It reads the diff, the gate report, the triaged QA and performance summaries and the task's acceptance criteria, and
-ticks eight binary checks:
+It reads the review packet first (the task's acceptance criteria, the gate summary, the contracts the diff touches,
+QA's report and the diff), opens a file in full only where a hunk can't settle a check, and ticks eight binary checks:
 
 | # | Check | Blocking |
 |---|---|---|
@@ -149,7 +153,10 @@ ticks eight binary checks:
 
 - **Score** is the checks passed, out of 8. **Accept** when every blocking check passes and at most one non-blocking
   check fails. Otherwise **Retry** with only the failed checks and their evidence.
-- **Near miss.** A verdict one check short of Accept is re-run on Opus before the task goes back.
+- **Near miss.** A verdict one check short of Accept is re-run on Opus before the task goes back, when its failed
+  check is a judgment (checks 5 to 8, or one of 1 to 4 decided by reading). A check failed on a measured number (a
+  budget, a count) goes straight back, or to the owner when only a changed criterion can pass it: a re-run can't
+  change a number (token plan item 18).
 - **Trivial tasks.** Small changes (typo fixes, config tweaks, docs) are `tier: trivial`: they skip the critic, and
   green gates plus a Haiku diff check accept them.
 - **The owner's playtest wins.** The critic cannot play the game: it lists browser tests for the owner, whose

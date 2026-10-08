@@ -10,11 +10,11 @@ each finished task's record in `docs/records/`.
 |---|---|---|---|
 | Coordinator | the project's persistent session, plus a planning thread per batch (Fable 5.1, high) | | `docs/TASKS.md`, `docs/ARCHITECTURE.md` › Contracts |
 | Worker | the build thread itself (one task per thread); `.claude/agents/worker.md` only when a thread splits its task | Opus 5.5 high for `tier: core`; Sonnet 5.5 medium for `tier: ui` and `tier: trivial` | the task's `touches`, tests, docs |
-| QA | `.claude/agents/qa.md` | Sonnet 5.5 medium | tests only (commit trailer `Agent: qa`; the gate checks) |
-| Performance | `.claude/agents/performance.md` | Sonnet 5.5 medium; Opus 5.5 high when a regression stays unexplained | nothing (writes under `pipeline/out/`) |
-| Triage | `.claude/agents/triage.md` | Haiku 5.5 low | nothing (summaries under `pipeline/out/qa-artifacts/`) |
-| Critic | `.claude/agents/critic.md` | Sonnet 5.5 medium; Opus 5.5 for `tier: core` and near-miss verdicts | nothing (`pipeline/out/critic.md`; its verdict goes in the task's record) |
-| Changelog | `.claude/agents/changelog.md` | Haiku 5.5 low | `CHANGELOG.md`, `docs/FEATURES.md`, `docs/patch-notes/`, README's "New since" |
+| QA | `.claude/agents/qa.md`; reads the review packet first | Sonnet 5.5 medium | tests only (commit trailer `Agent: qa`; the gate checks); its report to `pipeline/out/qa-artifacts/qa-report.md` |
+| Performance | `.claude/agents/performance.md`; only when the perf gate fails | Sonnet 5.5 medium; Opus 5.5 high when a regression stays unexplained | nothing (writes under `pipeline/out/`) |
+| Triage | `.claude/agents/triage.md`; only for what the gate's failures summary can't place | Haiku 5.5 low | nothing (summaries under `pipeline/out/qa-artifacts/`) |
+| Critic | `.claude/agents/critic.md`; reads the review packet first | Sonnet 5.5 medium; Opus 5.5 for `tier: core` and near misses on a judgment check | nothing (`pipeline/out/critic.md`; its verdict goes in the task's record) |
+| Changelog | `.claude/agents/changelog.md`; reads only `Unreleased` and one FEATURES heading | Haiku 5.5 low | `CHANGELOG.md`, `docs/FEATURES.md`, `docs/patch-notes/`, README's "New since" |
 
 Tiers: `core` is the simulation, physics, rendering, bots, navigation, audio engine; `ui` is menus, HUD, settings,
 config, asset loading, docs; `trivial` is a one-constant change, a wording fix, a docs-only change.
@@ -24,17 +24,21 @@ config, asset loading, docs; `trivial` is a one-constant change, a wording fix, 
 1. **Plan**, once per batch: a planning thread turns the owner's list into task blocks (below), updates the Contracts
    section of `docs/ARCHITECTURE.md` when a contract changes, and asks the owner what needs asking before any build.
 2. **Build**: one thread per task, on the tier's model. Two tasks run at once only when their `touches` don't overlap.
-3. **QA**: tests for every acceptance criterion, then the full suite (the gate).
+3. **QA**: tests for every acceptance criterion, then the full suite (the gate). QA starts from the review packet.
 4. **Performance**: the gate runs the harness when the diff touches `src/sim`, `src/physics`, `src/render`, `src/ai`,
    `src/nav`, `src/audio`, `src/core`, `src/map`, `src/assets`, `src/config`, `src/pool` or `vite.config.ts` (tests
-   under them don't count), once for each map, mode and preset of the perf matrix the change reaches (below); the
-   performance agent reviews the diff. UI-only changes skip it.
-5. **Triage**: the gate script writes the structured summaries itself; Haiku condenses what scripts can't (a failing
-   test's output, a trace, the diff summary the critic and changelog read).
+   under them don't count), once for each map, mode and preset of the perf matrix the change reaches (below). The
+   performance agent is spawned only when a run fails, to rank its causes (token plan item 16); a passing run's numbers
+   are in the gate report and the packet, and the critic's check 3 reads the hot paths. UI-only changes skip it.
+5. **Triage**: the gate script writes the structured summaries itself, the failures-only summary among them
+   (`pipeline/out/failures.md`, item 19); Haiku condenses only what that can't place (a long log with no file and
+   line, a trace).
 6. **Gates**: `node pipeline/gate.mjs` (below). A failed gate goes straight back to the worker with the evidence.
-7. **Critic**: eight binary checks (`critic.md`), only on green gates. `tier: trivial` tasks get a Haiku diff check.
+7. **Critic**: eight binary checks (`critic.md`), only on green gates, starting from the review packet (item 15).
+   `tier: trivial` tasks get a Haiku diff check.
 8. **Retry**: only the failed checks and evidence go back; four attempts in all, then the owner's auto-accept rule
-   (gates green, at least 6/8 with checks 1 and 2 passing, leftovers to KNOWN_ISSUES) or a report to the owner.
+   (gates green, at least 6/8 with checks 1 and 2 passing, leftovers to KNOWN_ISSUES) or a report to the owner. A near
+   miss is re-run on Opus first only when its failed check is a judgment, not a measured number (item 18).
 
 Then the thread writes the task's record, `docs/records/<id>.md` (below), and ships the work and the record in one push.
 
@@ -59,6 +63,14 @@ node pipeline/gate.mjs [--task M27[,M28]] [--quick] [--no-smoke] [--perf] [--env
 | `perf` | `perf-run.mjs` once per combination of the perf matrix the diff reaches (`perfMatrix.mjs`; `--perf` runs them all) | for each: every budget line for the env and map within `perf-budget.json`, nothing more than 10 % worse than its own baseline; a baseline more than 20 commits old is a warning, not a failure |
 | `scope` | the diff vs the task's `touches` (`scope.mjs`) | every changed file is in `touches`, a test, under `e2e/` or `docs/`, CHANGELOG, README or a `src/` folder's README (`pool.md` and `CLAUDE.md` only when listed); `Agent: qa` commits touch only tests |
 | `changelog` | `CHANGELOG.md` › Unreleased | a line names `**<task>**` (each task, when several) |
+
+Besides its report, every run writes the failures-only summary, `pipeline/out/failures.md` (`failures.mjs`, token plan
+item 19): each failed gate with its log, then each failure's test, error (its first lines), and file and line, the
+first stack frame inside the repository. It covers failed tests, test files that fail to load (a syntax error or a
+missing import, which name no test), TypeScript and Vite build errors, smoke and perf failures, scope's stray files and
+the changelog's missing line, and prints the same lines as each gate finishes, on CI too. An entry it can't place
+says "no file and line"; only those are left for the triage agent, on a long log. Every run but CI's also writes the
+review packet (`packet.mjs`, below).
 
 `--task` takes one id or several (`FA5,FA9`) for a pull request that carries more than one task; the scope is the union
 of their `touches`. A block the branch has already cleared from `docs/TASKS.md` is looked for in the branch's history
@@ -148,6 +160,28 @@ node pipeline/perf-run.mjs --env desktop --preset all --viewport 3840x2160 --bas
 
 The same as the laptop run without CPU throttling, at 3840×2160 at pixel ratio 1, writing `pipeline/baseline/desktop.json`
 and `desktop-<preset>.json`. Its frame times are reported, not judged, until the owner sets a 4K target.
+
+## `packet.mjs`: the review packet
+
+```
+node pipeline/packet.mjs [--task M27[,M28]] [--base origin/main]
+```
+
+`pipeline/out/review-packet.md` is what the critic and QA read first (token plan item 15), so they stop exploring. In
+order: the task block (from `docs/TASKS.md`, or the branch's history once the records commit cleared it), the gate
+summary (where the report is from, a line per gate, each perf run's numbers, and the failures when a gate failed), the
+contracts of `docs/ARCHITECTURE.md` › Contracts that the task names or whose source files the diff touches (for check
+2), QA's report (`pipeline/out/qa-artifacts/qa-report.md`, when its first line names the task), the file list with
+each file's `+`/`−` lines, and the diff of the working tree against the merge base with 8 lines of context, untracked
+files included. The change records and generated files are named in the list but their diff is left out: the task's
+record, CHANGELOG, FEATURES, patch notes, the archive, TASKS (its block is quoted), `package-lock.json`, perf
+baselines and light bakes. Line 2 says where the summary ends and the diff runs, and the file list gives each file's
+line range in the packet, so one over the read guard's 40 KB is read by range. The diff stops at 512 KB; the files
+after that are listed with the `git diff` command that shows them.
+
+The gate writes it at the end of every run but CI's (no agent reads it there), and never fails over it. Run
+`packet.mjs` alone to rebuild it after a commit, or once QA's report is in; without `--task` it takes the ids from the
+last gate report.
 
 ## Task block (`docs/TASKS.md`)
 
