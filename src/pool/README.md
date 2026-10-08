@@ -13,8 +13,10 @@ the game reads: a new asset is a row there, and a new behaviour (a Key) needs co
   saved in the settings store and read back against an `Ownership`. `kit.ts` turns a replica item and its fit into a
   `KitSlot` (power source, laser, tier shares and the energy limit applied). `Game` passes `loadout.kit()` to each
   match.
+- `tables.ts`: what `pool.ts` reads that the files built on it also need (`tierId`, the Caches table's `CaseKind`s and
+  `readCaseKinds`), below `pool.ts` so no two pool files import each other (`pipeline/cycles.mjs` checks).
 - `armory.ts`: pure rules over a `Collection`: `matchEarnings`, `buyTokens`, `takeShots`, `scrapSpares`.
-- `botKit.ts`: Hard opponents' seeded kits. `caches.ts` and `supplyEvents.ts`: Extraction's cases and supply events.
+- `botKit.ts`: Hard opponents' seeded kits. `caches.ts` and `supplyEvents.ts`: Extraction's cases (placing and rolling them) and supply events.
   `contentPool.ts`: the pool as seen with Dev content on or off. `oldPicks.ts`: carries pre-pool picks over once.
 - Tuning: `pool.md` (economy, odds, scrap values) and `stats.md` (numbers, through `config/statsFile.ts`).
 - Tests: `pool.test.ts` (pins every shipped ID: IDs are save keys), `kit.test.ts`, `armory.test.ts`,

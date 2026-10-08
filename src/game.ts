@@ -496,7 +496,7 @@ export class Game {
     this.showMotion();
     this.systemMotion?.addEventListener('change', this.systemMotionChanged);
     this.showTitleWarning();
-    options.save.onChange(() => this.showTitleWarning());
+    this.unwatchSave = options.save.onChange(() => this.showTitleWarning());
     this.graphicsNotice = new GraphicsNotice(container, BROWSER_NOTES.graphicsLost);
     this.renderer.onContextChange((lost) => this.graphicsContextChanged(lost));
     this.stopWatchingAway = awayWatch({ doc: document, win: window }, this.goneAway);
@@ -541,6 +541,7 @@ export class Game {
 
   /** The tab hidden or the window's focus lost (M18b, audit CORE-20) stops play, as Esc would; this stops watching. */
   private readonly stopWatchingAway: () => void;
+  private readonly unwatchSave: () => void;
   /** The browser wouldn't let the sound start since play last resumed (audit CORE-21): the menus say so. */
   private audioBlocked = false;
 
@@ -816,6 +817,9 @@ export class Game {
     this.disposed = true;
     cancelAnimationFrame(this.rafId);
     this.stopWatchingAway();
+    this.unwatchSave();
+    // The audio engine's single blocked-context slot; the pointer's, the renderer's and the keyboard's own dispose() below clear theirs.
+    this.audio.onBlocked = null;
     window.removeEventListener('resize', this.showHudLook);
     this.systemMotion?.removeEventListener('change', this.systemMotionChanged);
     window.removeEventListener('pagehide', this.flushSettings);

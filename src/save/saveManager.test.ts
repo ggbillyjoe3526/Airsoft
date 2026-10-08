@@ -134,6 +134,18 @@ describe('save manager (M31)', () => {
     expect(loadSetting('fov', numberIn(60, 120), 90, fresh)).toBe(100);
   });
 
+  it('stops telling a listener once the function onChange returned is called (Game.dispose relies on it, audit CORE-07)', () => {
+    const { manager, storage } = setup();
+    const heard = vi.fn();
+    const stop = manager.onChange(heard);
+    storage.setItem('airsoft.settings', '{"version":1}');
+    const before = heard.mock.calls.length;
+    expect(before).toBeGreaterThan(0);
+    stop();
+    storage.setItem('airsoft.settings', '{"version":1,"fov":80}');
+    expect(heard.mock.calls.length).toBe(before);
+  });
+
   it('asks the browser for persistent storage only when asked', async () => {
     const persist = { persisted: vi.fn(async () => false), persist: vi.fn(async () => true) };
     const manager = new SaveManager({ storage: new GuardedStorage(new MemoryStorage()), build: 'b', reload: () => undefined, persist });

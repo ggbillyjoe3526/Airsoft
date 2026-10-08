@@ -47,17 +47,23 @@ export function closeButton(label: string, onClick: () => void): HTMLButtonEleme
  * Marks a screen `more-below` while some of it is out of sight under its pinned key hints (audit UI-18; G3): the
  * stylesheet fades the page into the hints, so a screen that scrolls doesn't read as ending there. Checked as it
  * scrolls and whenever the screen or its first child changes size (a window resize, another Settings group, the screen
- * shown); never per frame.
+ * shown); never per frame. Returns the function that stops watching (removes the listener, disconnects the observer; M79,
+ * audit CORE-07).
  */
-export function watchScroll(root: HTMLElement): void {
+export function watchScroll(root: HTMLElement): () => void {
   const update = (): void => {
     root.classList.toggle('more-below', moreBelow(root.scrollTop, root.clientHeight, root.scrollHeight));
   };
   root.addEventListener('scroll', update, { passive: true });
-  if (typeof ResizeObserver === 'undefined') return;
+  const stopScroll = (): void => root.removeEventListener('scroll', update);
+  if (typeof ResizeObserver === 'undefined') return stopScroll;
   const observer = new ResizeObserver(update);
   observer.observe(root);
   for (const child of root.children) observer.observe(child);
+  return () => {
+    stopScroll();
+    observer.disconnect();
+  };
 }
 
 /** The "LATER" tag on things not built yet. */

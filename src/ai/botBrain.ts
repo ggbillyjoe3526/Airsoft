@@ -6,11 +6,12 @@ import { isInPlay } from '../sim/elimination';
 import { type Vec3, vec3 } from '../sim/vec';
 import { type Bot, type BotWorld, flagRole, pick, threatInMind, wantsFlag } from './bot';
 import { aimBot, lowOnBBs, reloadBot, shootBot } from './botCombat';
-import { enterFlagMode, keepApart, moveBot, startSearch, teammateSpots, wantRoute } from './botMovement';
+import { enterFlagMode, keepApart, moveBot, startSearch } from './botMovement';
 import { currentTarget, perceive } from './botSenses';
 import { stepBotTorch } from './botTorch';
 import { type CoverSearch, findCover, hidesFrom, leanSideToSee } from './cover';
 import { eyeOf } from './perception';
+import { teammateSpots, wantRoute } from './routes';
 
 /**
  * One bot's mind. Bots are ordinary characters driven through PlayerCommands; each tick this decides

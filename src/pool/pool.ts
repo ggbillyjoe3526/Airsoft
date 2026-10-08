@@ -5,9 +5,9 @@ import { LASERS, type LaserId } from '../config/lasers';
 import { type OpticId, OPTICS } from '../config/optics';
 import { LIGHT_KEYS } from '../config/torches';
 import { AEG, CYBER_PISTOL, GAS_PISTOL, type ReplicaConfig } from '../config/replicas';
-import { type CaseKind, readCaseKinds } from './caches';
 import { readSupplyEvents, type SupplyEvent } from './supplyEvents';
 import { type PoolRow, type PoolTable, readTables } from './poolFile';
+import { type CaseKind, readCaseKinds, tierId } from './tables';
 
 /**
  * The asset pool (M26a): every replica and part the player can own, and the Armory's numbers, read from pool.md (the
@@ -175,12 +175,6 @@ const KEYS_BY_CATEGORY: Readonly<Record<Exclude<AssetCategory, 'power'>, readonl
 
 const ID_PATTERN = /^\d{6}$/;
 const TAG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
-
-/** "Very Rare" → "veryRare". */
-export function tierId(label: string): string {
-  const words = label.trim().toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
-  return words.map((w, i) => (i === 0 ? w : w[0]!.toUpperCase() + w.slice(1))).join('');
-}
 
 /** Reads pool.md's text. Never throws: rows it can't read are left out and listed in `errors`. */
 export function loadPool(text: string): Pool {

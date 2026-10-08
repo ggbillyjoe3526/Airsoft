@@ -10,6 +10,7 @@ import { WOODLAND, WOODLAND_LAYOUT } from '../map/woodland';
 import { terrainHeightAt } from '../map/terrain';
 import { vec3 } from '../sim/vec';
 import { renderAmbienceBed, renderLoop } from './ambience';
+import { measureSeam, seamFailures } from './loopSeamSupport';
 import { renderMapCue, renderSounds } from './soundBank';
 import { surfaceUnder } from './soundMaterials';
 import { soundscapeOf, YARD_BY_DAY } from './soundscape';
@@ -317,9 +318,11 @@ describe('M33j acceptance 2: the woods at night', () => {
       expect(v.length, id).toBe(Math.round(AMBIENT_LOOPS[id].seconds * RATE));
       expect(v.every(Number.isFinite), id).toBe(true);
       expect(Math.sqrt(power(v)), id).toBeCloseTo(1, 3);
-      let biggest = 0;
-      for (let i = 1; i < v.length; i++) biggest = Math.max(biggest, Math.abs(v[i]! - v[i - 1]!));
-      expect(Math.abs(v[0]! - v[v.length - 1]!), `${id} clicks where it loops`).toBeLessThan(biggest);
+      // The wrap against the loop's own interior (loopSeamSupport.ts, audit AUD-06). Measured 2026-10-08 (jump and bend as a
+      // percentile of the loop's own steps and second differences; spectrum as the last window against the first, dB and
+      // percentile of its adjacent windows): yard p37 p14 7.5 dB p15; pines p75 p98 8.1 dB p82; insects p74 p74 0.0 dB p48;
+      // crackle p76 p88 10.9 dB p44; traffic p75 p98 7.9 dB p60; drones p10 p48 8.4 dB p93; neon p24 p2 7.7 dB p43.
+      expect(seamFailures(measureSeam(v)), `${id} clicks where it loops`).toEqual([]);
     }
   });
 

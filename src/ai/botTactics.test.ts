@@ -17,7 +17,8 @@ import type { GameState } from '../sim/state';
 import { vec3, wrapAngle } from '../sim/vec';
 import type { Bot } from './bot';
 import type { BotController } from './botController';
-import { jitterPoint, keepApart, moveBot, startSearch, teammateSpots } from './botMovement';
+import { jitterPoint, keepApart, moveBot, startSearch } from './botMovement';
+import { teammateSpots } from './routes';
 import { createCoverSpot, findCover, type TakenSpots } from './cover';
 import { boxQuery, depotBots, duel } from './testSupport';
 
