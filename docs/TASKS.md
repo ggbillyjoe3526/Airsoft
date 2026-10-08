@@ -204,21 +204,6 @@ acceptance:
 status: open
 attempts: 0
 
-## M100 · Menu redesign 2: title screen, top bar, Match screen, Practice as a mode, a clearer font (playtest notes 5, 7, 8)
-tier: ui
-perf: skip
-touches: src/ui/menus/, src/config/menus.ts, src/config/menuArt.ts, pipeline/map-stills.mjs, public/menu/, src/assets/fonts/, docs/ASSETS.md, docs/PLAYTEST.md, src/style.css, src/ui/hud.css, src/settings/storage.ts, pipeline/perf-run.mjs
-contract: none
-acceptance:
-  1. The game opens on a plain title screen: the title "Airsoft", the tagline "Call your hit. Go again." (owner, 2026-10-07), a START button and, on a clean save only, the Tutorial button under START (until the tutorial is finished or a first match started); the build's version small at the bottom left; nothing else.
-  2. START opens the Match screen (today's Play, renamed). The top bar is the main navigation: MATCH, LOADOUT, ARMORY, SETTINGS from the left, the player's FC and Tokens on the far right, no version.
-  3. The key prompts along the bottom of the menus (Back, Customise, Search and the rest) are gone; every screen is clear to navigate with the mouse alone, and the keys still work.
-  4. Practice is the last mode on the Match screen, after Elimination, Attack / Defend and Extraction (only the range until M94 adds maps); it leaves the title screen.
-  5. The Armory's "Your collection" shows each kind (replicas, power sources, optics and the rest) in its own column.
-  6. The menus use **Inter** (SIL OFL, in `docs/ASSETS.md`) for all text and numbers instead of Barlow (owner, 2026-10-07); the owner approves screenshots before merge, as with G3.
-status: review
-attempts: 0
-
 **0.1 Dev 6 (confirmed with the roadmap, 2026-10-06).** M92–M95, the holster and the practice
 upgrades, come before the 26 features in `docs/ROADMAP.md` › 0.1 Dev 6, whose blocks are written when that build starts.
 
@@ -265,20 +250,4 @@ acceptance:
   1. In Practice the player picks any replica they own and can Customise it freely.
   2. With Dev settings on (Unlock all gear), every replica and part is available.
 status: open
-attempts: 0
-
-## G4 · HUD restyle (graphics overhaul, 0.1 Dev 5)
-tier: ui
-perf: required
-touches: src/ui/, src/style.css, src/main.ts, src/config/hudText.ts, src/config/minimap.ts, src/config/matchInfo.ts, src/render/combatPresentation.ts, src/render/matchPresentation.ts, src/game.ts, src/settings/storage.ts
-contract: none (every HUD setting keeps its key and meaning; the HUD keeps its layout and positions)
-acceptance:
-  1. Score bar (top centre): each team's name and a slanted pip per player (dimmed once out) on a navy panel with a cut outer corner, the score on a solid block in the team's colour, the clock between them with the match's aim under it ("First to 5"; the run's line in Extraction); "You" on your side, ATK / DEF, the flag strip, the low clock and the Scoreboard size setting kept.
-  2. Minimap (top left): a framed navy panel with rounded corners holding the turned field (teammates pinned to its edge), with the map and round under it ("Depot · Round 2"); the canvas is drawn again only when something on it changed (where you stand or look, a teammate, the hold spot, the flag, an exit, a heard patch still fading, its size), a test counting the draws.
-  3. Hit feed (top right): one navy row per hit, the shooter, a BB mark and who called it in their team colours, with a Hit tag; your own rows marked with an acid edge; friendly and ricochet tags, Fade and Keep kept; a screen reader still hears "<who> called HIT · <shooter>".
-  4. Replica panel (bottom right): the carried replica's picture in its scheme with its parts (ItemPictures, the drawing until it arrives), its name, a chip per fire mode it has with the current one orange, the loaded BBs large, the BBs in the spare magazines and how many there are, and a bar per spare magazine filled to its BBs with the one a reload takes marked; the reload bar and the status line kept.
-  5. Bottom left (owner, 2026-10-08, replacing the squad cards): no squad cards or order keys on screen; the squad orders show only on the order wheel (unchanged), the order keys still work, and the order line's notices are kept for screen readers in an off-screen status region. Owner's review, same day: the panels more opaque (90 %) with a HUD opacity setting (50–100 %, steps of 5, saved as `hudOpacity`, an older save loading the default); the round banner "ROUND 1", larger, in the HUD's heavy capitals on its panel (text-transform; timing and screen-reader text kept); SCOREBOARD_SIZE.halfWidth from the bar's widest form (365), so it never covers the feed or the minimap at 1280 px at the largest size.
-  6. The Tab scoreboard (.match-board): a navy panel with a cut corner, each team under a bar in its colour with its score, your row marked; same rows and columns.
-  7. Every HUD setting still works (HUD size, Scoreboard size, Hit feed, What got you, sound cues, crosshair); no per-frame allocation, DOM written only on a change; Low draws the same.
-status: building
 attempts: 0

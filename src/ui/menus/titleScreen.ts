@@ -18,7 +18,7 @@ export function tutorialOffered(tutorialDone: boolean, matchStarted: boolean): b
 }
 
 /**
- * The first thing a player sees (M100): the wordmark over the field, the tagline, START, and under it the Tutorial on
+ * The first thing a player sees (M100): the wordmark on a plain background (no picture: the owner, 2026-10-08), the tagline, START, and under it the Tutorial on
  * a clean save; the build's version small at the bottom left. Nothing else. START opens the Match screen, whose top
  * bar leads to the Loadout, the Armory and Settings.
  */

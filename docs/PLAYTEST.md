@@ -642,9 +642,17 @@ there maps each symptom to its numbers):
 - [ ] **Crosshair** (Settings › Gameplay › Crosshair). Two previews (still, and opened as when moving), then Shape,
   Size, Thickness, Gap, Colour (no blue or orange: those are the teams'; a custom colour box at the end), Opacity,
   Spread (Static keeps the gap while moving) and Outline. In a match it looks the same and still opens as you move.
-- [ ] **HUD size** (Settings › Gameplay › HUD). 150 % makes the replica panel, scoreboard, minimap, hit feed, squad
-  line, round messages, order wheel and teammate markers bigger with nothing overlapping at 1280×720; the crosshair
+- [ ] **HUD size** (Settings › Gameplay › HUD). 150 % makes the replica panel, score bar, minimap, hit feed,
+  round messages, order wheel and teammate markers bigger with nothing overlapping at 1280×720; the crosshair
   keeps its size. On a 1440p or 4K screen without system scaling, 100 % is already larger than on 1080p.
+- [ ] **The G4 HUD.** A score bar at the top middle (team blocks, the clock, "First to N" under it); the replica panel
+  at the bottom right (its picture, the mode chips with the current one orange, the loaded count over "/ N · M spare",
+  the magazine bars with the next one marked); no squad cards, order line or key hints on screen (orders live on the
+  Z wheel). Low quality looks the same.
+- [ ] **HUD opacity** (Settings › Gameplay › HUD opacity, 50 to 100 %, default 90 %). The panels fade while the text,
+  team blocks and bars stay solid; the value is kept after a reload.
+- [ ] **ROUND banner.** At a round start "ROUND 1" shows large, in heavy capitals on its own panel, with the same
+  timing as before; the between-rounds result fits on one line at 1280 px.
 - [ ] **Scoreboard size.** At 200 % in a window about 1366 wide it stops growing where the hit feed needs room, and
   when you're hit, HIT! and the OUT tag stay readable.
 - [ ] **Hit feed Keep.** The last 10 hits stay up through every round; Play again starts with none. Back to Fade
@@ -654,7 +662,8 @@ there maps each symptom to its numbers):
 
 ## Squad orders and minimap
 
-- [ ] **Follow me (F).** A radio double-click answers and the bottom-left line reads SQUAD · FOLLOW ME. Your teammates
+- [ ] **Follow me (F).** A radio double-click answers (a screen reader hears SQUAD · FOLLOW ME; nothing is printed on
+  screen). Your teammates
   keep up a few metres behind, either side, sprinting to catch up; stop and one looks back the way you came, the other
   to a side. Walk or crouch and they do too. They still fight, then come back. F again: "Back to the team plan".
 - [ ] **Hold here (X).** Look at a spot and press X: both go there side by side, watch the way you looked and stay
@@ -666,10 +675,10 @@ there maps each symptom to its numbers):
   stay still while a small pointer lights the order it's on; let go on one to give it, or without moving to give
   none. You keep walking with Z held; firing stops and needs a new pull after. Settings › Controls › Order wheel ›
   Click: point and click instead (that click fires no BB).
-- [ ] **The minimap.** A round map at the top left, the way you look always up, you the white arrow. Teammates are
-  blue dots (on the rim when off the edge), grey once hit. An opponent you hear shows as an orange patch roughly where
+- [ ] **The minimap.** A square map at the top left on a navy panel, "Depot · Round 2" under it, the way you look
+  always up, you the white arrow. Teammates are blue dots (pinned to the edge when off it), grey once hit. An opponent you hear shows as an orange patch roughly where
   (dashed for steps, a dot for a shot) for a few seconds; far sounds give wider patches; nothing for one you can't
-  hear. A teammate whose marker would sit inside the minimap circle has none there.
+  hear. A teammate whose marker would sit inside the minimap square has none there.
 - [ ] **Floors.** On Neon Heights the minimap shows your floor (floors below darker) and marks teammates on other
   floors with an up or down arrow.
 - [ ] **A second screen.** Drag the window to a screen with other scaling mid-match (or zoom the browser), pause and
