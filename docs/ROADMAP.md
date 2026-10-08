@@ -38,8 +38,8 @@ pulled into Dev 5, and Dev 7 is folded away (its mode checks join the toolkit he
 1. **Docs rewrite with token step 2** (TE2 below).
 2. **Token step 3** (TE3, a pipeline pull request). Done (2026-10-08).
 3. **Token step 4** (TE4, approved 2026-10-06). Done (2026-10-08).
-4. **Bug pass BP2** (the Dev 4 rows in `docs/KNOWN_ISSUES.md`), after the last Audit 2 tasks M77–M79 in
-   `docs/TASKS.md`.
+4. **Bug pass BP2** (the Dev 4 rows in `docs/KNOWN_ISSUES.md`). Done (2026-10-08; `docs/records/BP2.md`). The last
+   Audit 2 tasks M77–M79 in `docs/TASKS.md` follow it, before BP3.
 5. **Graphics** (the overhaul the owner pulled forward from 0.2 on 2026-10-05). G1–G3 and G5–G8 are merged. Left: G4,
    G9, WebGPU as a complete overhaul (W0–W6) and the map pictures (see Graphics below).
 6. **The owner's playtest notes:** the Dev 4 notes M80–M91 and M96, and the 2026-10-07 notes M97–M99 (M100 is part of
@@ -53,7 +53,7 @@ pulled into Dev 5, and Dev 7 is folded away (its mode checks join the toolkit he
 
 Audit 2 is the full audit of 2026-10-05 (91 findings: 0 critical, 1 high, 18 medium, 51 low, 21 improvements). The owner
 confirmed all 34 decisions on their defaults. It is built as tasks from M50 on; three are left, with their acceptance
-criteria in `docs/TASKS.md`. They come before bug pass BP2.
+criteria in `docs/TASKS.md`. They come after bug pass BP2 and before BP3.
 
 | Task | What | Audit findings |
 |---|---|---|
@@ -152,7 +152,7 @@ are blocks M97–M100 in `docs/TASKS.md`. All of it is 0.1 Dev 5.
 |---|---|---|
 | 1 | A setting for the red X hit marker, Off by default | M97 (Dev 5 item 6) |
 | 2 | Aim down sights by Hold or Toggle, Hold by default | Already in the game: `Settings › Controls › Aim button` (Hold by default) |
-| 3 | Customise won't take "No light" on the AEG rifle; check every replica | BP2 (Dev 5 item 4; `docs/KNOWN_ISSUES.md`) |
+| 3 | Customise won't take "No light" on the AEG rifle; check every replica | Fixed in BP2 (Dev 5 item 4), on every replica |
 | 4 | Teams renamed Alpha (blue) and Beta (orange); the player picks a team | M98 (Dev 5 item 6) |
 | 5 | A plain title screen (Airsoft, the tagline, START, the version small at the bottom left); Play renamed Match; the top bar is the navigation (Match, Loadout, Armory, Settings; FC and Tokens on the right; no version); no key prompts along the bottom; Practice as the last mode; a more readable font | M100 (Dev 5 item 5, the graphics work, with the G4 HUD restyle) |
 | 6 | Replica pictures in "Your replicas" are cropped | M99 (Dev 5 item 6) |

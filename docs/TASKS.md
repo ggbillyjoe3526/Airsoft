@@ -209,7 +209,7 @@ attempts: 0
 **The owner's playtest notes on main (2026-10-07).** Recorded on his ask, not built yet. His words, the type and the
 defaults per note are in the project's shared files (`plans/playtest-feedback-2026-10-07.md`);
 `docs/ROADMAP.md` › Playtest notes: main after G3 maps all eight. M97–M99 join the Dev 4 notes batch (Dev 5 item 6); M100 is the graphics work's (Dev 5
-item 5, with the G4 HUD restyle); note 3 is a bug for BP2 (`docs/KNOWN_ISSUES.md`); note 2 is already in the game
+item 5, with the G4 HUD restyle); note 3 was a bug, fixed in BP2; note 2 is already in the game
 (Settings › Controls › Aim button). Note 19 of the Dev 4 notes still applies.
 
 ## M97 · A Hit marker setting and Replay tutorial (playtest notes 1, 8)

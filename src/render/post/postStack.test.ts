@@ -175,6 +175,36 @@ describe('the post stack (G5)', () => {
     medium.dispose();
   });
 
+  it('never blends an in-place pass onto the multisampled scene: it is copied out first (BP2)', () => {
+    // Shade with edge smoothing and no TAA: the scene is multisampled and the shade blends in place.
+    const quality = { ...QUALITY.high, temporalAA: false, antialias: true };
+    expect(sceneSamples(quality)).toBeGreaterThan(0);
+    const stack = new PostStack({ quality, halfFloat: true }, 64, 36);
+    const { gl, draws } = stubGl();
+    stack.render(gl, new THREE.Scene(), new THREE.PerspectiveCamera());
+    expect(draws[0]!.into).toBe(stack.sceneTarget);
+    expect(draws.slice(1).filter((d) => d.into === stack.sceneTarget)).toEqual([]);
+    expect(draws.at(-1)!.into).toBeNull();
+    stack.dispose();
+  });
+
+  it('forgets the temporal history on a cut (a camera jump past the cut distance), not on a walk (BP2)', () => {
+    const stack = stackFor('high');
+    const reset = vi.spyOn(stack, 'reset');
+    const { gl } = stubGl();
+    const camera = new THREE.PerspectiveCamera();
+    stack.render(gl, new THREE.Scene(), camera);
+    camera.position.x += POST.taa.cutDistance * 0.5;
+    stack.render(gl, new THREE.Scene(), camera);
+    expect(reset).not.toHaveBeenCalled();
+    camera.position.z += POST.taa.cutDistance * 2;
+    stack.render(gl, new THREE.Scene(), camera);
+    expect(reset).toHaveBeenCalledTimes(1);
+    stack.render(gl, new THREE.Scene(), camera);
+    expect(reset).toHaveBeenCalledTimes(1);
+    stack.dispose();
+  });
+
   it('bright-passes bloom on the brightest channel, softened, so a saturated neon glows and the sunlit scene does not', () => {
     const pass = brightestChannelBloom(64, 36);
     expect(pass.materialHighPassFilter.fragmentShader).toContain('max( texel.r, max( texel.g, texel.b ) )');

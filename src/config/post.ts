@@ -37,9 +37,10 @@ export const POST = {
    * Temporal antialiasing (render/post/temporalAAPass.ts): the projection is moved by a sub-pixel step from a Halton
    * (2, 3) sequence of `jitterSamples` each frame, and the last frames' picture, reprojected through the depth and the
    * previous view, is blended in at `history` (clipped to the colours round the pixel this frame, so a moving player
-   * leaves no ghost), then sharpened by `sharpen` to make up for the blend's softening.
+   * leaves no ghost), then sharpened by `sharpen` to make up for the blend's softening. A camera that moves more than
+   * `cutDistance` metres in a frame has cut (a new round's spawn, the next player watched): the history is forgotten.
    */
-  taa: { jitterSamples: 8, history: 0.9, sharpen: 0.2 },
+  taa: { jitterSamples: 8, history: 0.9, sharpen: 0.2, cutDistance: 3 },
   /**
    * Light shafts (render/post/lightShaftsPass.ts): the sky's pixels within `sunRadius` (a share of the screen's height)
    * of the sun or moon, blurred along `samples` steps towards it over `length` of the way, each step weighing `decay`

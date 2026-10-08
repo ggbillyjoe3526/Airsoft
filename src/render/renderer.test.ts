@@ -6,7 +6,6 @@ import { DEPOT } from '../map/depot';
 import { RANGE_MAP } from '../map/range';
 import { WOODLAND } from '../map/woodland';
 import { resolveLighting } from './lightingPreset';
-import type { SurfaceTextures } from './proceduralTextures';
 import { PostHost } from './post/postHost';
 import { PostStack } from './post/postStack';
 import { handOverRenderer, releaseGpuResources, Renderer, toneMappingOf, verticalFovFor, warmSurfacesInIdle, zoomedFov } from './renderer';
@@ -35,36 +34,37 @@ describe('warmSurfacesInIdle (REN-14)', () => {
     const jobs: (() => void)[] = [];
     return { idle: (work: () => void) => void jobs.push(work), runOne: () => jobs.shift()?.(), waiting: () => jobs.length };
   }
-  const fakeSet = () =>
-    Object.fromEntries(['concrete', 'blockWall', 'crate'].map((id) => [id, { texture: { name: id } as unknown as THREE.Texture }])) as unknown as SurfaceTextures;
+  const fake = (id: string) => ({ name: id }) as unknown as THREE.Texture;
 
-  it('draws the set in one idle moment, then uploads one texture a moment until all are up, and stops', () => {
+  it('draws one texture an idle moment and uploads it the next, through the list, and stops (BP2)', () => {
     const { idle, runOne, waiting } = manualIdle();
-    const set = fakeSet();
-    const draw = vi.fn(() => set);
+    const draw = vi.fn(fake);
     const uploaded: string[] = [];
-    warmSurfacesInIdle(draw, () => set, (t) => uploaded.push(t.name), idle);
+    warmSurfacesInIdle(['concrete', 'blockWall', 'crate'], draw, (t) => uploaded.push(t.name), idle);
     expect(draw).not.toHaveBeenCalled();
     runOne();
-    expect(draw).toHaveBeenCalledTimes(1);
+    expect(draw.mock.calls.map(([id]) => id)).toEqual(['concrete']);
     expect(uploaded).toEqual([]);
     runOne();
     expect(uploaded).toEqual(['concrete']);
+    runOne();
+    expect(draw).toHaveBeenCalledTimes(2);
     while (waiting() > 0) runOne();
+    expect(draw.mock.calls.map(([id]) => id)).toEqual(['concrete', 'blockWall', 'crate']);
     expect(uploaded).toEqual(['concrete', 'blockWall', 'crate']);
   });
 
-  it('stops uploading once the set is dropped (a texture-size change)', () => {
+  it('leaves the upload to its guard: one the set no longer holds (a texture-size change) is skipped', () => {
     const { idle, runOne, waiting } = manualIdle();
-    const set = fakeSet();
-    let current: SurfaceTextures | null = set;
+    const held = new Set<string>(['concrete', 'blockWall', 'crate']);
     const uploaded: string[] = [];
-    warmSurfacesInIdle(() => set, () => current, (t) => uploaded.push(t.name), idle);
+    warmSurfacesInIdle(['concrete', 'blockWall', 'crate'], fake, (t) => {
+      if (held.has(t.name)) uploaded.push(t.name);
+    }, idle);
     runOne();
-    runOne();
-    current = null;
+    held.delete('concrete');
     while (waiting() > 0) runOne();
-    expect(uploaded).toEqual(['concrete']);
+    expect(uploaded).toEqual(['blockWall', 'crate']);
   });
 });
 
@@ -870,6 +870,40 @@ describe('every post target, material and texture is freed on each teardown path
     s.r.dispose();
     expect(watch.disposed).toHaveLength(seen.size);
     expect(watch.leftover()).toEqual([]);
+  });
+});
+
+describe('the held replica across an edge-smoothing swap (BP2)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  /** An overlay scene (the held replica) whose geometry tells whether it was released. */
+  function heldReplica() {
+    const geometry = new THREE.BoxGeometry();
+    const released = vi.spyOn(geometry, 'dispose');
+    const scene = new THREE.Scene();
+    scene.add(new THREE.Mesh(geometry, new THREE.MeshBasicMaterial()));
+    return { overlay: { scene, camera: new THREE.PerspectiveCamera() }, released };
+  }
+
+  it('releases the held replica on a swap made while spectating (no overlay drawn that frame)', () => {
+    const s = postRenderer(QUALITY.medium);
+    const { overlay, released } = heldReplica();
+    s.r.render(overlay);
+    s.r.render();
+    expect(s.r.setQuality({ ...QUALITY.medium, antialias: false })).toBe(true);
+    expect(released).toHaveBeenCalled();
+  });
+
+  it('keeps nothing of a match that is over: a scene it let go of is not released again on a later swap', () => {
+    const s = postRenderer(QUALITY.medium);
+    const { overlay, released } = heldReplica();
+    s.r.render(overlay);
+    s.r.forgetOverlay(overlay.scene);
+    expect(s.r.setQuality({ ...QUALITY.medium, antialias: false })).toBe(true);
+    expect(released).not.toHaveBeenCalled();
   });
 });
 

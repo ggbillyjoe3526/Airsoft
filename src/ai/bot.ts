@@ -184,6 +184,8 @@ export interface Bot {
    * is drawn) rather than every tick (M55, KNOWN_ISSUES row 200).
    */
   pushInSight: boolean;
+  /** The target pushInSight was looked at for (-1: none yet this fight); a new fight or target looks again at once (BP2). */
+  pushLookFor: number;
 
   // A squad order from a player on the team (M22; 'none': play the team plan).
   order: SquadOrderKind | 'none';
@@ -364,6 +366,7 @@ export function createBot(character: Character, seed: number, cfg: BotBehaviour,
     strafeDir: 1,
     strafeLeft: 0,
     pushInSight: false,
+    pushLookFor: -1,
     order: 'none',
     orderLeader: undefined,
     orderSlot: 0,
@@ -437,6 +440,8 @@ export function resetBot(b: Bot, lane: number, startHold: number, cfg: BotBehavi
   b.holdCover = false;
   b.searchLookLeft = 0;
   b.flanking = false;
+  b.pushInSight = false;
+  b.pushLookFor = -1;
   b.raiser = false;
   b.flagGuard = false;
   b.routeRetryAt = Number.NEGATIVE_INFINITY;

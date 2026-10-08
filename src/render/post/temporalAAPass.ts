@@ -46,6 +46,7 @@ export function jitterProjection(camera: THREE.PerspectiveCamera, dx: number, dy
  */
 export class TemporalAAPass implements PostPass {
   readonly id = 'taa' as const;
+  readonly inPlace = false;
   private readonly history: [THREE.WebGLRenderTarget, THREE.WebGLRenderTarget];
   private current = 0;
   /** No history yet (a new stack, a resize, a restored context): the next frame starts it from itself. */

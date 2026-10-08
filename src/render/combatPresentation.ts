@@ -378,6 +378,7 @@ export class CombatPresentation {
     this.dressing.dispose();
     this.viewmodel.setEnvironment(null);
     this.paths.dispose();
+    this.renderer.forgetOverlay(this.overlay.scene);
     this.viewmodel.dispose();
     this.hud.dispose();
     this.sfx.dispose();

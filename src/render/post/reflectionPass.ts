@@ -40,6 +40,7 @@ interface Proxy {
  */
 export class ReflectionPass implements PostPass {
   readonly id = 'reflections' as const;
+  readonly inPlace = false;
   private readonly maskScene = new THREE.Scene();
   private proxies: Proxy[] = [];
   private mask: THREE.WebGLRenderTarget | null = null;

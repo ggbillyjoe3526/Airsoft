@@ -427,7 +427,11 @@ export function followRoute(b: Bot, w: BotWorld, dt: number, whilePlanning = fal
     b.routeLeg++;
   }
   if (b.routeLeg >= b.route.length) {
-    if (!planning) b.routeState = 'none';
+    if (!planning) {
+      b.routeState = 'none';
+      // Arrived: a step onto the spot after it (stepOnto) gets its own stuckTime, not what is left of the route's (BP2).
+      b.stuckFor = 0;
+    }
     return false;
   }
   const wp = b.route[b.routeLeg]!;
@@ -666,12 +670,16 @@ export function moveBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number, tar
       if (b.fromCover || (b.raiser && atPole(b, w))) return false;
       // Otherwise sidestep while shooting.
       b.strafeLeft -= dt;
-      if (b.strafeLeft <= 0) {
+      const newStep = b.strafeLeft <= 0;
+      if (newStep) {
         b.strafeLeft = pick(b.rng, cfg.strafeTime);
         b.strafeDir = rngNext(b.rng) < 0.5 ? -1 : 1;
-        // A hunter looks whether a step ahead keeps its target in sight once per sidestep, not every tick (M55,
-        // KNOWN_ISSUES row 200); whether the ground ahead is there it looks at every tick (pushing).
-        if (b.role === 'hunter' && target) b.pushInSight = !stepLosesSight(b, w, 0, 1, target);
+      }
+      // A hunter looks whether a step ahead keeps its target in sight once per sidestep, not every tick (M55), and at
+      // once in a new fight or on a new target (BP2); whether the ground ahead is there it looks at every tick (pushing).
+      if (b.role === 'hunter' && target && (newStep || b.pushLookFor !== target.id)) {
+        b.pushInSight = !stepLosesSight(b, w, 0, 1, target);
+        b.pushLookFor = target.id;
       }
       // Never sidestep off a floor, into a wall or out of sight of the target: turn back, or step forward or back if
       // both sides are blocked (so a bot on a narrow walkway doesn't stand still and steady its aim), or stand.

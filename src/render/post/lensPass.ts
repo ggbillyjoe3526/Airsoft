@@ -11,6 +11,7 @@ import { fullScreenMaterial, type PostFrame, type PostPass } from './postPass';
  */
 export class LensPass implements PostPass {
   readonly id = 'lens' as const;
+  readonly inPlace = false;
   private readonly material: THREE.ShaderMaterial;
   private readonly quad: FullScreenQuad;
 

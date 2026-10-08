@@ -43,6 +43,7 @@ export function sunOnScreen(camera: THREE.PerspectiveCamera, sun: THREE.Vector3,
  */
 export class LightShaftsPass implements PostPass {
   readonly id = 'lightShafts' as const;
+  readonly inPlace = true;
   private readonly mask: THREE.WebGLRenderTarget;
   private readonly rays: THREE.WebGLRenderTarget;
   private readonly maskMaterial: THREE.ShaderMaterial;

@@ -155,6 +155,9 @@ export class LoadoutModel {
     if (!replica) return fit;
     for (const slot of FIT_SLOTS) {
       const raw = this.readPick(`fit.${replicaId}.${slot}`);
+      // "As it comes" picked on purpose stays empty, even in a slot with a default (BP2: "No light" fell back to the
+      // torch). A replica always needs a power source, so a saved "none" there still takes the default.
+      if (raw === NONE && slot !== 'power') continue;
       const saved = raw && raw !== NONE ? parseItemKey(raw) : null;
       if (saved && this.canFit(replica, slot, saved)) fit[slot] = saved;
       else {

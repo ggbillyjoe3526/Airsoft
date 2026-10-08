@@ -22,11 +22,13 @@ export interface PostFrame {
 
 /**
  * One pass of the post stack (G5). It draws from `read` either into `read` itself (an in-place blend: shade, shafts,
- * bloom; it returns false) or into `write`, or onto the screen when `write` is null (it returns true). Only `output` and
- * `lens` are ever last, and they always draw out.
+ * bloom; `inPlace`, and it returns false) or into `write`, or onto the screen when `write` is null (it returns true).
+ * Only `output` and `lens` are ever last, and they always draw out.
  */
 export interface PostPass {
   readonly id: PostPassId;
+  /** Blends onto `read` rather than drawing out: the stack gives it no `write` and never the multisampled scene (BP2). */
+  readonly inPlace: boolean;
   render(gl: THREE.WebGLRenderer, frame: PostFrame, read: THREE.WebGLRenderTarget, write: THREE.WebGLRenderTarget | null): boolean;
   /** The drawing buffer's size in pixels. */
   setSize(width: number, height: number): void;

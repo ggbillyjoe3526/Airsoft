@@ -191,6 +191,8 @@ function chooseMode(b: Bot, w: BotWorld, target: Character | undefined, dt: numb
         return;
       }
     }
+    // A new fight looks afresh whether a hunter's push keeps its target in sight (BP2): never the last fight's look.
+    if (b.mode !== 'fight') b.pushLookFor = -1;
     b.mode = 'fight';
   } else if (b.order !== 'none') {
     // A squad order (M22) comes before the team plan: the pole, chasing noises and the lane. A noise still turns its

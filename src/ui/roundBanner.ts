@@ -17,6 +17,8 @@ export function roundBanner(r: RoundState, playerTeam: number, showStart: boolea
     if (r.reason === 'captured') result = mine ? 'Flag raised · your team wins the round' : `${winner} raised their flag · your team loses the round`;
     else if (flagMode && r.reason === 'time') result = mine ? "Time's up · your team held the pole" : `Time's up · ${winner} held the pole`;
     else if (r.winner < 0) result = r.reason === 'time' ? "Time's up · draw" : 'Draw';
+    // An Elimination time-out given to the team with more players left (Tournament, M39; BP2).
+    else if (r.reason === 'time') result = mine ? "Time's up · your team had more players left" : `Time's up · ${winner} had more players left`;
     else result = mine ? 'Your team wins the round' : `Your team loses the round (${winner} wins)`;
     // A draw is played again (audit SIM-19): same round, same ends, so no half-time after it.
     if (roundDrawn(r)) return `${result} · round ${r.number} again in ${secondsToNext}`;

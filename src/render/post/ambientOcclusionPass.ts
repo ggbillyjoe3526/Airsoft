@@ -14,6 +14,7 @@ import { drawCleared, fullScreenMaterial, MULTIPLY, type PostFrame, type PostPas
  */
 export class AmbientOcclusionPass implements PostPass {
   readonly id = 'ao' as const;
+  readonly inPlace = true;
   private readonly ao: THREE.WebGLRenderTarget;
   private readonly denoised: THREE.WebGLRenderTarget;
   private readonly gtao: THREE.ShaderMaterial;
