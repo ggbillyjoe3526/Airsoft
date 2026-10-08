@@ -19,7 +19,6 @@ import {
   resolveQuality,
   type ToneMappingId,
 } from '../config/render';
-import { RENDER_BACKEND, RENDERER_CHOICES, type RendererChoice } from '../config/renderBackend';
 import { saveSetting } from '../settings/storage';
 import { el, menuRow, rangeControl } from './menus/menuParts';
 import { loadCustomQuality } from './menus/savedChoices';
@@ -49,10 +48,11 @@ export interface GraphicsSettingsOptions {
   /** Tone mapping (F2): not part of a preset; the picker saves it. */
   toneMapping: { initial: ToneMappingId; onChange: (id: ToneMappingId) => void };
   /**
-   * The Renderer row (WebGPU overhaul W1; config/renderBackend.ts): saved by its picker, applied on the next load.
-   * `note(picked)` is the grey line under it ('' for none).
+   * The Renderer row (WebGPU overhaul W1): builds it into the empty row it is given (ui/rendererRow.ts, loaded at boot
+   * with the renderer's start, so its texts and rules stay out of the main chunk). With none, the row stays empty and
+   * unseen (`.menu-row:empty`).
    */
-  renderer?: { initial: RendererChoice; note: (picked: RendererChoice) => string };
+  renderer?: ((row: HTMLElement) => void) | null;
 }
 
 /** One Custom row's control, and how to show a value on it without saving. */
@@ -79,10 +79,8 @@ export class GraphicsSettings {
   readonly frameRateRow: HTMLDivElement;
   readonly showFpsRow: HTMLDivElement;
   readonly toneMappingRow: HTMLDivElement;
-  /** The Renderer row (W1); null when the options carry none. */
-  readonly rendererRow: HTMLDivElement | null = null;
-  private rendererNote: HTMLParagraphElement | null = null;
-  private rendererPicked: RendererChoice = RENDER_BACKEND.defaultChoice;
+  /** The Renderer row (W1): empty, and unseen, when the options carry none. */
+  readonly rendererRow = el('div', 'menu-row');
   /**
    * The "Custom settings" disclosure (M68, audit UI-09): its heading is the summary, then the rows. Open when the choice
    * is Custom; under a preset it starts folded, and the player's own opening or folding stays for the session (the page
@@ -109,18 +107,7 @@ export class GraphicsSettings {
     this.showFpsRow = menuRow('Show FPS', GRAPHICS_TEXT.showFpsHelp, fps.root);
     const tone = new OptionPicker('Tone mapping', TONE_MAPPING_CHOICES, opts.toneMapping.initial, 'toneMapping', (id) => opts.toneMapping.onChange(id));
     this.toneMappingRow = menuRow('Tone mapping', GRAPHICS_TEXT.toneMappingHelp, tone.root);
-    const renderer = opts.renderer;
-    if (renderer) {
-      this.rendererPicked = renderer.initial;
-      const picker = new OptionPicker('Renderer', RENDERER_CHOICES, renderer.initial, 'renderer', (id) => {
-        this.rendererPicked = id;
-        this.showRendererNote();
-      });
-      this.rendererNote = el('p', 'graphics-note');
-      picker.root.append(this.rendererNote);
-      this.rendererRow = menuRow('Renderer', RENDER_BACKEND.text.help, picker.root);
-      this.showRendererNote();
-    }
+    opts.renderer?.(this.rendererRow);
 
     this.customBlock = el('details', 'graphics-custom');
     this.customBlock.open = this.choice === 'custom';
@@ -131,16 +118,7 @@ export class GraphicsSettings {
 
   /** The tab's rows below Field of view, in order. */
   rows(fullscreen: HTMLElement): HTMLElement[] {
-    return [this.qualityRow, fullscreen, this.frameRateRow, ...(this.rendererRow ? [this.rendererRow] : []), this.showFpsRow, this.toneMappingRow, this.customBlock];
-  }
-
-  /** The Renderer row's grey line for the pick (W1). */
-  private showRendererNote(): void {
-    const renderer = this.opts.renderer;
-    if (!renderer || !this.rendererNote) return;
-    const text = renderer.note(this.rendererPicked);
-    this.rendererNote.textContent = text;
-    this.rendererNote.hidden = text === '';
+    return [this.qualityRow, fullscreen, this.frameRateRow, this.rendererRow, this.showFpsRow, this.toneMappingRow, this.customBlock];
   }
 
   /** Shows a choice and its settings without saving them (the game's own step-down, REN-03). */

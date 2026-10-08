@@ -48,6 +48,12 @@ function fakeNode(name: string, log: string[]) {
     antialiased: true,
     maxAnisotropy: 16,
     timestamps: true,
+    samples: 4,
+    pictureRenderer: { name: `${name} pictures` },
+    get stats() {
+      const { render, memory } = renderer.info;
+      return { calls: render.drawCalls, triangles: render.triangles, programs: memory.programs, geometries: memory.geometries, textures: memory.textures };
+    },
     timing: [] as boolean[],
     frames: 0,
     next: null as unknown,
@@ -173,6 +179,8 @@ describe('the Renderer on the node path (W1)', () => {
     r.onContextChange((lost) => told.push(lost));
     const listened: string[] = [];
     const glCanvas = { className: '', name: 'webgl', addEventListener: (type: string) => void listened.push(type), removeEventListener: () => undefined };
+    r.setRetro({ pixelSize: 4, levels: 6 });
+    expect(r.retroPixelAngle).toBe(0);
     const gl = {
       domElement: glCanvas,
       info: { autoReset: true, reset: () => undefined, render: { calls: 0, triangles: 0 }, memory: { geometries: 0, textures: 0 }, programs: [] },
@@ -182,6 +190,7 @@ describe('the Renderer on the node path (W1)', () => {
       setSize: () => undefined,
       capabilities: { getMaxAnisotropy: () => 8 },
       getContext: () => ({ getParameter: () => 0, SAMPLES: 0 }),
+      extensions: { has: () => true },
     };
     makeWebGL.mockImplementation(() => gl);
     node.next = null;
@@ -193,6 +202,10 @@ describe('the Renderer on the node path (W1)', () => {
     expect(r.renderer).toBe(gl);
     expect(listened).toEqual(['webglcontextlost', 'webglcontextrestored']);
     expect(told).toEqual([true, false]);
+    // What the node path left off comes back with WebGL: the Dev retro filter, and the row's note says what happened.
+    expect(r.retroPixelAngle).toBeGreaterThan(0);
+    expect(r.lostToWebGL).toBe(true);
+    expect(r.pictureRenderer).toBe(gl);
   });
 
   it('frees the node renderer with itself, and a recovery still on its way does nothing after', async () => {

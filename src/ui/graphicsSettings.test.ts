@@ -4,6 +4,7 @@ import { QUALITY, resolveQuality, type QualityChoice } from '../config/render';
 import { loadCustomQuality, loadFrameRateCap } from './menus/savedChoices';
 import { MemoryStorage } from '../pool/testStorage';
 import { GraphicsSettings } from './graphicsSettings';
+import { fillRendererRow } from './rendererRow';
 import { FakeElement } from './testSupport';
 
 /** The fake element with the two lookups the Custom rows use: tag names only, depth first. */
@@ -301,14 +302,16 @@ describe('the Renderer row (W1)', () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  function buildWithRenderer(note: (picked: string) => string = () => '') {
-    return new GraphicsSettings({
+  /** The Settings group with the Renderer row, filled as the game fills it (ui/rendererRow.ts, from the start chunk). */
+  async function buildWithRenderer(initial: 'auto' | 'webgpu' | 'webgl' = 'auto', drawing = { backend: 'webgl' as const, lostToWebGL: false }) {
+    const g = new GraphicsSettings({
       quality: { initial: 'low', settings: QUALITY.low, onChange: () => {}, status: () => ({ antialiased: true, antialiasPending: false, maxAnisotropy: 16 }) },
       frameRateCap: { initial: 0, onChange: () => {} },
       showFps: { initial: false, onChange: () => {} },
       toneMapping: { initial: 'neutral', onChange: () => {} },
-      renderer: { initial: 'auto', note },
+      renderer: (row) => fillRendererRow(row, { initial, drawing }),
     });
+    return g;
   }
   const noteOf = (g: GraphicsSettings): FakeElement => (g.rendererRow as unknown as QueryElement).querySelectorAll('p').find((p) => p.className === 'graphics-note')!;
   /** The row's picker group (the buttons). */
@@ -318,13 +321,15 @@ describe('the Renderer row (W1)', () => {
   };
 
   it('is built only when the game passes it', () => {
-    expect(build('low').rendererRow).toBeNull();
-    expect(build('low').rows(new QueryElement('div') as unknown as HTMLElement)).toHaveLength(6);
+    // Without it the row is there but empty, which the menus' CSS doesn't show (`.menu-row:empty`).
+    expect((build('low').rendererRow as unknown as QueryElement).children).toHaveLength(0);
   });
 
-  it('shows Auto, WebGPU and WebGL with Auto pressed, always, and saves a pick as `renderer`', () => {
-    const g = buildWithRenderer();
+  it('shows Auto, WebGPU and WebGL with Auto pressed, always, and saves a pick as `renderer`', async () => {
+    const g = await buildWithRenderer();
     expect(g.rendererRow!.hidden).toBeFalsy();
+    expect(g.rendererRow!.className).toBe('menu-row');
+    expect((g.rendererRow as unknown as QueryElement).text).toContain('Renderer');
     const group = rendererGroup(g);
     expect(group.querySelectorAll('button').map((b) => b.textContent)).toEqual(['Auto', 'WebGPU', 'WebGL']);
     expect(pressed(group)).toEqual(['Auto']);
@@ -333,14 +338,19 @@ describe('the Renderer row (W1)', () => {
     expect(g.rows(new QueryElement('div') as unknown as HTMLElement)).toContain(g.rendererRow);
   });
 
-  it('shows the game’s note for the pick under the row, and none when it has nothing to say', () => {
-    const g = buildWithRenderer((picked) => (picked === 'webgpu' ? 'Changes from the next time the game loads.' : ''));
+  it('says nothing under the row on Auto without WebGPU, and says why a WebGPU pick isn’t honoured', async () => {
+    const g = await buildWithRenderer();
     const note = noteOf(g);
     expect(note.hidden).toBe(true);
     rendererGroup(g).querySelectorAll('button').find((b) => b.textContent === 'WebGPU')!.click();
     expect(note.hidden).toBe(false);
-    expect(note.textContent).toBe('Changes from the next time the game loads.');
+    expect(note.textContent).toBe('No WebGPU here: drawn with WebGL.');
     rendererGroup(g).querySelectorAll('button').find((b) => b.textContent === 'Auto')!.click();
     expect(note.hidden).toBe(true);
+  });
+
+  it('after WebGL took over from a lost WebGPU device, says so rather than that there is no WebGPU', async () => {
+    const g = await buildWithRenderer('webgpu', { backend: 'webgl', lostToWebGL: true } as never);
+    expect(noteOf(g).textContent).toBe('The WebGPU device was lost: WebGL draws until the next load.');
   });
 });

@@ -237,6 +237,27 @@ test('a WebGPU adapter that cannot give a device (requestDevice fails at boot) i
   expect(errors()).toEqual([]);
 });
 
+// A software WebGPU adapter (SwiftShader and the like) is far slower than WebGL on the same machine: Auto passes it over,
+// an explicit WebGPU pick still tries it.
+const SOFTWARE_ADAPTER = `{
+  const adapter = { features: new Set(), limits: {}, info: { vendor: 'qa', architecture: 'software', description: '', isFallbackAdapter: true },
+    requestDevice: () => Promise.reject(new DOMException('device creation failed', 'OperationError')) };
+  Object.defineProperty(Navigator.prototype, 'gpu', { configurable: true, get: () => ({ requestAdapter: () => Promise.resolve(adapter), getPreferredCanvasFormat: () => 'bgra8unorm' }) });
+}`;
+test('on Auto a software WebGPU adapter is WebGL with no node chunk fetched; picked WebGPU still tries it', async ({ page }) => {
+  const errors = watchErrors(page);
+  const chunks = watchNodeChunks(page);
+  await page.addInitScript(SOFTWARE_ADAPTER);
+  await bootToTitle(page);
+  expect(await backend(page)).toBe('webgl');
+  expect(chunks()).toEqual([]);
+  await seedSettings(page, { renderer: 'webgpu' });
+  await bootToTitle(page);
+  expect(await backend(page)).toBe('webgl');
+  expect(chunks().length).toBeGreaterThan(0);
+  expect(errors()).toEqual([]);
+});
+
 test('changing the Renderer row mid-session changes nothing until the next load, says so, and the next load follows the pick', async ({ page }) => {
   test.setTimeout(150_000);
   const errors = watchErrors(page);

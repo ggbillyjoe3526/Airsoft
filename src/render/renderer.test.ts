@@ -187,8 +187,8 @@ describe('the lighting preset on the renderer (M33f, acceptance 4)', () => {
     const fields = r as unknown as Record<string, unknown>;
     Object.assign(fields, {
       scene: new THREE.Scene(),
-      // The renderer it draws with is the device's (render/drawingDevice.ts, W1).
-      device: { gl: { toneMapping: THREE.NoToneMapping, toneMappingExposure: 1 }, node: null },
+      gl: { toneMapping: THREE.NoToneMapping, toneMappingExposure: 1 },
+      node: null,
       toneMapping: TONE_MAPPING.default,
       lighting: LIGHTING_PRESETS.day,
       environmentLook: defaultEnvironmentLook(),

@@ -6,7 +6,6 @@ import type { VolumeChannel } from './config/audio';
 import type { LookSettings } from './config/look';
 import type { Difficulty } from './config/bots';
 import { activeDev, type DevSettings, devCheating, retroLookOf } from './config/dev';
-import { rendererNote, wantsWebGpu } from './config/renderBackend';
 import { PERF_SCRIPT } from './config/perfScript';
 import { ROUNDS } from './config/hits';
 import type { MatchRules, RulesetId } from './config/matchRules';
@@ -38,7 +37,7 @@ import { loadFigureModel } from './render/externalModels';
 import { FrameTimeWatch, presetBelow, slowFrameMs } from './render/qualityStepDown';
 import { rendererName } from './render/gpuCheck';
 import { Renderer } from './render/renderer';
-import { type StartingRenderer, startingRenderer } from './render/rendererStart';
+import type { RendererBoot } from './render/rendererStart';
 import { matchSeed } from './matchFlow';
 import { nextSessionAction } from './core/sessionPlan';
 import { MatchSession } from './matchSession';
@@ -88,9 +87,9 @@ import {
   loadMouseDpi,
   loadRuleset,
   loadReducedMotion,
+  loadRendererChoice,
   loadSensitivity,
   loadShowFps,
-  loadRendererChoice,
   loadToneMapping,
   loadHitFeedMode,
   loadHudOpacity,
@@ -296,12 +295,13 @@ export class Game {
     // A figure model (M25a) loads alongside the physics; with none in the build this resolves at once. With Dev content
     // on, so do the dev maps (M50), so New game can show a dev map picked last time. The maps' baked light (G6) too.
     const devMaps = activeDev(loadDevEnabled(), loadDevSettings()).devContent ? loadDevMaps() : null;
-    // The renderer (W1): on Auto or WebGPU the adapter is asked for alongside the physics, and only when one is given are
-    // `three/webgpu` loaded and its device made; otherwise (or on the WebGL pick) WebGL, as before.
+    // The renderer (W1): its start (render/rendererStart.ts, a small chunk of its own with the Renderer row) loads
+    // alongside the physics; on Auto or WebGPU it asks for an adapter, and only when one is given are `three/webgpu`
+    // loaded and its device made. On the WebGL pick, or if that chunk can't be had, WebGL as before.
     const choice = loadRendererChoice();
-    const starting = startingRenderer(choice, options.forceWebGL === true, options.qualitySettings.antialias);
+    const starting = import('./render/rendererStart').then((m) => m.bootRenderer(choice, options.forceWebGL === true, options.qualitySettings.antialias), () => null);
     const [, figureModel, , , start] = await Promise.all([initPhysics(), loadFigureModel(), devMaps, loadBakedLight(), starting]);
-    const game = new Game(container, options, start, wantsWebGpu(choice));
+    const game = new Game(container, options, start);
     game.renderer.figureModel = figureModel;
     return game;
   }
@@ -309,16 +309,17 @@ export class Game {
   private constructor(
     private readonly container: HTMLElement,
     private readonly options: GameOptions,
-    /** What this visit draws with (render/rendererStart.ts): the back end, the node renderer and the adapter's name. */
-    private readonly rendering: StartingRenderer,
-    /** This visit loaded wanting the node renderer (the Renderer row's note). */
-    private readonly startedWantingWebGpu: boolean,
+    /**
+     * What this visit draws with (render/rendererStart.ts): the node renderer, the adapter's name and the Renderer row's
+     * builder. Null if that chunk couldn't be had: WebGL, and no Renderer row.
+     */
+    private readonly rendering: RendererBoot | null,
   ) {
     this.qualityChoice = options.quality;
     this.quality = options.qualitySettings;
     this.autoQuality = options.automaticQuality;
     this.matchSeed = options.seed;
-    this.renderer = new Renderer(container, this.quality, rendering.node);
+    this.renderer = new Renderer(container, this.quality, rendering?.node);
     this.renderer.setFov(loadFov());
     this.renderer.setToneMapping(loadToneMapping());
     this.map = loadMap();
@@ -355,6 +356,7 @@ export class Game {
     this.debug = new DebugOverlay(container, () => {
       const s = this.session;
       const p = s?.player;
+      const drawn = this.renderer.stats;
       return {
         seed: s instanceof RangeSession ? options.seed : this.matchSeed,
         map: s instanceof RangeSession ? 'range' : this.playedPicks().map,
@@ -373,9 +375,9 @@ export class Game {
         antialias: this.antialiasText(),
         // G5: the post stack's passes in force (none on Low).
         post: this.renderer.postPasses.join(' ') || 'none',
-        'draw calls': this.renderer.stats.calls,
-        triangles: this.renderer.stats.triangles,
-        'programs / geometries / textures': `${this.renderer.stats.programs} / ${this.renderer.stats.geometries} / ${this.renderer.stats.textures}`,
+        'draw calls': drawn.calls,
+        triangles: drawn.triangles,
+        'programs / geometries / textures': `${drawn.programs} / ${drawn.geometries} / ${drawn.textures}`,
       };
     });
 
@@ -472,10 +474,7 @@ export class Game {
         frameRateCap: { initial: this.frameRateCap, onChange: (cap) => (this.frameRateCap = cap) },
         showFps: { initial: loadShowFps(), onChange: (on) => this.debug.setFpsReadout(on) },
         toneMapping: { initial: this.renderer.toneMappingId, onChange: (id) => this.renderer.setToneMapping(id) },
-        renderer: {
-          initial: loadRendererChoice(),
-          note: (picked) => rendererNote(picked, this.startedWantingWebGpu, this.renderer.backend),
-        },
+        renderer: this.rendering && ((row) => this.rendering!.fillRow(row, this.renderer)),
       },
       audio: { initial: this.audio.volumes, onChange: (channel, v) => this.changeVolume(channel, v), onRelease: (channel) => this.audio.preview(channel) },
       crosshair: { initial: this.crosshair, onChange: (c) => this.changeCrosshair(c) },
@@ -1116,7 +1115,7 @@ export class Game {
       ['Renderer', this.renderer.backend],
       ['GPU', read(() => {
         const gl = this.renderer.renderer;
-        return 'isWebGPURenderer' in gl ? this.rendering.adapterName || '-' : rendererName(gl.getContext());
+        return 'isWebGPURenderer' in gl ? this.rendering?.adapterName || '-' : rendererName(gl.getContext());
       })],
       ['Window', `${window.innerWidth} × ${window.innerHeight} at ${window.devicePixelRatio}`],
       ['Sim ticks/s', this.tickRate],

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { WebGPURenderer } from 'three/webgpu';
 import { TONE_MAPPING, type ToneMappingId } from '../config/render';
 
 /**
@@ -65,12 +66,37 @@ export interface RendererProperties {
   get(object: object): unknown;
 }
 
-/** What `handOverRenderer` needs of a WebGL renderer (a stub stands in for it in tests). */
+/**
+ * What `handOverRenderer` needs of the renderer it retires (a stub stands in for it in tests): a WebGL renderer, or a
+ * lost node renderer (W1), which has no `properties` of this kind and frees its own context or device on dispose.
+ */
 export interface RetiringRenderer {
   readonly domElement: { replaceWith(next: HTMLCanvasElement): void };
-  readonly properties: RendererProperties;
+  readonly properties?: RendererProperties;
   dispose(): void;
-  forceContextLoss(): void;
+  forceContextLoss?(): void;
+}
+
+/** The renderer drawing the game: Three's WebGLRenderer, or the node renderer (WebGPU overhaul W1). */
+export type DrawingRenderer = THREE.WebGLRenderer | WebGPURenderer;
+
+/** This frame's draw calls and triangles, and the programs, geometries and textures held (the debug overlay). */
+export interface DrawStats {
+  calls: number;
+  triangles: number;
+  programs: number;
+  geometries: number;
+  textures: number;
+}
+
+/** A WebGL renderer's counts (`info`: both passes, as Renderer.render counts them) into `out`, which is returned. */
+export function readWebGLStats(info: THREE.WebGLInfo, out: DrawStats): DrawStats {
+  out.calls = info.render.calls;
+  out.triangles = info.render.triangles;
+  out.programs = info.programs?.length ?? 0;
+  out.geometries = info.memory.geometries;
+  out.textures = info.memory.textures;
+  return out;
 }
 
 /**
@@ -125,5 +151,5 @@ export function handOverRenderer(old: RetiringRenderer, next: { domElement: HTML
   old.domElement.replaceWith(next.domElement);
   old.dispose();
   // Frees the context at once rather than when the canvas is collected (REN-24): browsers cap live contexts.
-  old.forceContextLoss();
+  old.forceContextLoss?.();
 }

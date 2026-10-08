@@ -110,10 +110,10 @@ describe('the adapter probe on the failure modes a browser really has', () => {
     expect(error).not.toHaveBeenCalled();
   });
 
-  // BUG (low): `nav?.gpu` and the `typeof gpu.requestAdapter` check sit outside the probe's try, so a navigator whose `gpu`
-  // getter throws (a locked-down embedder, a Permissions-Policy that throws instead of hiding the member) rejects the probe,
-  // and with it Game.create: the game does not boot at all instead of falling back to WebGL as the criterion says.
-  it.fails('is unavailable, not a rejection, when reading navigator.gpu itself throws', async () => {
+  // Was a bug (low, fixed): `nav?.gpu` and the `typeof gpu.requestAdapter` check sat outside the probe's try, so a navigator
+  // whose `gpu` getter throws (a locked-down embedder, a Permissions-Policy that throws instead of hiding the member)
+  // rejected the probe, and with it Game.create: the game did not boot at all instead of falling back to WebGL.
+  it('is unavailable, not a rejection, when reading navigator.gpu itself throws', async () => {
     const nav = {
       get gpu(): never {
         throw new Error('SecurityError');
@@ -247,7 +247,8 @@ describe('device-lost recovery on the node path (criterion 4)', () => {
     vi.unstubAllGlobals();
   });
 
-  // BUG (medium): a device lost between NodeBackend.make() resolving and the Renderer being built is never recovered.
+  // Was a bug (medium, fixed: Renderer.hear checks `node.lost` once the node is adopted): a device lost between
+  // NodeBackend.make() resolving and the Renderer being built was never recovered.
   // Game.create awaits `startingRenderer` inside a Promise.all with Rapier's 4 MB wasm, the figure model and the baked
   // light, so the node renderer can sit made-but-unused for seconds. NodeBackend sets `lost = true` and calls its (still
   // empty) listener; Renderer's constructor then hands `adoptNode` -> `node.onLost(nodeLost)` a node that is already
@@ -280,7 +281,7 @@ describe('device-lost recovery on the node path (criterion 4)', () => {
     expect(told).toEqual([true, false]);
   });
 
-  it.fails('recovers a real node back end whose device was lost before the Renderer was built: a new one takes over, and the pause is told', async () => {
+  it('recovers a real node back end whose device was lost before the Renderer was built: a new one takes over, and the pause is told', async () => {
     const first = await realNode();
     // The loss comes while the game is still waiting for physics: Three calls the renderer's own hook.
     lose(first);

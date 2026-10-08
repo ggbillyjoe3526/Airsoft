@@ -304,8 +304,7 @@ export class SettingsScreen {
     const opts = this.opts;
     const sub = (text: string): HTMLHeadingElement => el('h3', 'settings-subhead', text);
     if (id === 'graphics') {
-      const renderer = this.graphics.rendererRow;
-      panel.append(this.graphics.qualityRow, this.graphics.frameRateRow, ...(renderer ? [renderer] : []), this.graphics.customBlock);
+      panel.append(this.graphics.qualityRow, this.graphics.frameRateRow, this.graphics.rendererRow, this.graphics.customBlock);
     } else if (id === 'display') {
       panel.append(
         menuRow('Fullscreen', 'The whole screen for the game. Esc leaves it; in a match the Fullscreen key turns it on and off.', this.fullscreenButton()),

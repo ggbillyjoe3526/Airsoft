@@ -36,6 +36,13 @@ describe('the WebGPU adapter probe (W1)', () => {
         },
       }),
     ).toEqual(noWebGpu());
+    // Reading navigator.gpu itself throws (a locked-down embedder): unavailable, not a rejection.
+    const locked = {
+      get gpu(): never {
+        throw new Error('SecurityError');
+      },
+    };
+    expect(await probeWebGpu(locked)).toEqual(noWebGpu());
     expect(error).not.toHaveBeenCalled();
   });
 
@@ -66,5 +73,8 @@ describe('the WebGPU adapter probe (W1)', () => {
     // An older browser's adapter without `info`.
     const old = { requestAdapter: () => Promise.resolve({ features: new Set<string>() }) };
     expect(await probeWebGpu({ gpu: old })).toEqual({ available: true, name: '', timestamps: false, software: false });
+    // An older browser says it is the software adapter on the adapter itself.
+    const older = { requestAdapter: () => Promise.resolve({ features: new Set<string>(), isFallbackAdapter: true }) };
+    expect(await probeWebGpu({ gpu: older })).toMatchObject({ available: true, software: true });
   });
 });

@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { backendFor, RENDER_BACKEND, RENDERER_CHOICES, rendererNote, wantsWebGpu } from './renderBackend';
+import { RENDER_BACKEND, RENDERER_CHOICES, rendererNote, wantsWebGpu } from './renderBackend';
+import { DEFAULT_RENDERER, RENDERER_IDS } from './rendererPick';
 
 // WebGPU overhaul W1 (the owner's ruling of 2026-10-08): the Renderer row, Auto by default, WebGPU first where it is offered.
 describe('which renderer a visit draws with (W1)', () => {
-  it('offers Auto, WebGPU and WebGL, Auto by default, and Auto tries WebGPU first', () => {
+  it('offers Auto, WebGPU and WebGL, Auto by default, the row and the boot-time pick agreeing', () => {
     expect(RENDERER_CHOICES.map((c) => c.id)).toEqual(['auto', 'webgpu', 'webgl']);
+    expect(RENDERER_IDS).toEqual(RENDERER_CHOICES.map((c) => c.id));
     expect(RENDER_BACKEND.defaultChoice).toBe('auto');
-    expect(RENDER_BACKEND.auto).toBe('webgpu');
+    expect(DEFAULT_RENDERER).toBe(RENDER_BACKEND.defaultChoice);
     for (const c of RENDERER_CHOICES) expect(c.blurb.length, c.id).toBeGreaterThan(0);
   });
 
@@ -14,14 +16,6 @@ describe('which renderer a visit draws with (W1)', () => {
     expect(wantsWebGpu('auto')).toBe(true);
     expect(wantsWebGpu('webgpu')).toBe(true);
     expect(wantsWebGpu('webgl')).toBe(false);
-  });
-
-  it('draws with WebGL unless the node renderer is wanted and either an adapter was found or the WebGL2 back end forced', () => {
-    for (const adapter of [false, true]) for (const force of [false, true]) expect(backendFor(false, adapter, force)).toBe('webgl');
-    expect(backendFor(true, false, false)).toBe('webgl');
-    expect(backendFor(true, true, false)).toBe('webgpu');
-    expect(backendFor(true, false, true)).toBe('webgpu-webgl2');
-    expect(backendFor(true, true, true)).toBe('webgpu-webgl2');
   });
 
   it('notes under the row a pick that changes what draws from the next load, and a WebGPU pick the browser could not honour', () => {
@@ -41,5 +35,17 @@ describe('which renderer a visit draws with (W1)', () => {
     expect(rendererNote('webgpu', true, 'webgl')).toBe(fallback);
     expect(rendererNote('auto', true, 'webgl')).toBe('');
     expect(rendererNote('webgl', true, 'webgl')).toBe('');
+  });
+
+  it('says what happened when the WebGPU device was lost mid-visit and WebGL took over: not that there is no WebGPU', () => {
+    const { lost, fallback, pending } = RENDER_BACKEND.text;
+    expect(rendererNote('webgpu', true, 'webgl', true)).toBe(lost);
+    expect(rendererNote('auto', true, 'webgl', true)).toBe(lost);
+    expect(rendererNote('webgpu', true, 'webgl', true)).not.toBe(fallback);
+    // WebGL picked after it: WebGL draws already.
+    expect(rendererNote('webgl', true, 'webgl', true)).toBe('');
+    // Before any loss, the same lines as ever.
+    expect(rendererNote('webgpu', true, 'webgpu', false)).toBe('');
+    expect(rendererNote('webgl', true, 'webgpu', false)).toBe(pending);
   });
 });

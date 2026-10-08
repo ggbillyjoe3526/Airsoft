@@ -1,7 +1,8 @@
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import { WebGPURenderer } from 'three/webgpu';
 import { FRAME_TIMING } from '../../config/render';
 import { RENDER_BACKEND } from '../../config/renderBackend';
+import type { DrawStats } from '../rendererParts';
 
 /**
  * The node renderer (WebGPU overhaul W1): Three's `WebGPURenderer`, on a WebGPU device or on its own WebGL2 back end.
@@ -11,7 +12,9 @@ import { RENDER_BACKEND } from '../../config/renderBackend';
  *
  * What the Renderer (render/renderer.ts) needs of it beyond the drawing calls both renderers share: the device made and
  * initialised before the first frame, a lost device reported (never logged as an error) and a new one made on request,
- * shaders compiled ahead at a map's load, GPU time from timestamp queries, and everything let go on dispose.
+ * shaders compiled ahead at a map's load, GPU time from timestamp queries, the debug overlay's counts, the menus'
+ * item pictures' own WebGL renderer, and everything let go on dispose. All of it is here, in this chunk, rather than in
+ * the Renderer: the main chunk carries only the calls.
  *
  * On this path every material is drawn as Three's node library makes it from the built-in material: a patch through
  * `onBeforeCompile` is not run (W2 and W3 rebuild those as node materials), and the GLSL `ShaderMaterial` passes (the
@@ -35,7 +38,7 @@ interface TimestampSwitch {
 export class NodeBackend {
   /** GPU milliseconds a frame, smoothed (FRAME_TIMING): NaN until a first result, while not timing, or without the feature. */
   gpuMs = Number.NaN;
-  /** The device (or the WebGL2 context) is gone: nothing draws until a new renderer takes over (Renderer.recoverNode). */
+  /** The device (or the WebGL2 context) is gone: nothing draws until a new renderer takes over (Renderer.nodeLost). */
   lost = false;
   /** The back end the renderer settled on: WebGPU, or its WebGL2 back end. */
   readonly kind: 'webgpu' | 'webgpu-webgl2';
@@ -46,6 +49,10 @@ export class NodeBackend {
   private sinceRead = 0;
   private reading = false;
   private lostListener: () => void = () => undefined;
+  /** Filled by `stats`: one object, nothing allocated per read. */
+  private readonly drawStats: DrawStats = { calls: 0, triangles: 0, programs: 0, geometries: 0, textures: 0 };
+  /** The menus' item pictures' own WebGL renderer (pictureRenderer), made when one is first drawn. */
+  private pictureGl: THREE.WebGLRenderer | null = null;
 
   private constructor(
     readonly renderer: WebGPURenderer,
@@ -85,8 +92,36 @@ export class NodeBackend {
     return this.renderer.samples > 0;
   }
 
+  /** The canvas's samples per pixel. */
+  get samples(): number {
+    return this.renderer.samples;
+  }
+
   get maxAnisotropy(): number {
     return this.renderer.getMaxAnisotropy();
+  }
+
+  /**
+   * This frame's draws and triangles (both passes) and what the renderer holds. Unlike WebGL's, the node renderer's
+   * `render.calls` counts render() calls (never reset); its draws are `render.drawCalls`. The object is reused.
+   */
+  get stats(): DrawStats {
+    const out = this.drawStats;
+    const { render, memory } = this.renderer.info;
+    out.calls = render.drawCalls;
+    out.triangles = render.triangles;
+    out.programs = memory.programs;
+    out.geometries = memory.geometries;
+    out.textures = memory.textures;
+    return out;
+  }
+
+  /**
+   * The WebGL renderer the menus' item pictures are drawn with (render/itemPictures.ts reads WebGL render targets): a
+   * small one of their own, no canvas on the page, until W6 draws them with the node renderer.
+   */
+  get pictureRenderer(): THREE.WebGLRenderer {
+    return (this.pictureGl ??= new THREE.WebGLRenderer());
   }
 
   /** `listener` is told once when the device (or the WebGL2 context) is lost. */
@@ -144,11 +179,14 @@ export class NodeBackend {
       .catch(ignore);
   }
 
-  /** Frees the renderer, its canvas's context and (on WebGPU) its device. */
+  /** Frees the renderer, its canvas's context and (on WebGPU) its device, and the pictures' renderer. */
   dispose(): void {
     this.lostListener = () => undefined;
     this.timing = false;
     this.renderer.dispose().catch(ignore);
+    this.pictureGl?.dispose();
+    this.pictureGl?.forceContextLoss();
+    this.pictureGl = null;
   }
 
   private track(on: boolean): void {

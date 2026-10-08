@@ -162,16 +162,20 @@ request. Each entry says where the contract lives, what it holds today and what 
   Pinned by `config/render.test.ts`, `config/graphics.test.ts`, `render/renderer.test.ts`.
 - **The renderer back end** (WebGPU overhaul W1; `config/renderBackend.ts`, `render/rendererStart.ts`). Graphics ›
   Renderer picks Auto (the default), WebGPU or WebGL (owner, 2026-10-08: WebGPU is the default, behind no Dev
-  setting). On Auto or WebGPU, `Game.create` asks for a WebGPU adapter alongside the physics; only when one is given
-  does it load `render/webgpu/nodeBackend.ts` and `three/webgpu` by a dynamic import (their own chunks, never the main
-  one) and draw with `WebGPURenderer` on node materials built from the plain ones. No `navigator.gpu`, no adapter, or
-  no device made is Three's `WebGLRenderer`, quietly: the same renderer and draws as before W1, which is what the
-  container, CI and every gate here run. The WebGL pick never asks. `Renderer.backend` says what drew (`webgl`,
-  `webgpu`, or `webgpu-webgl2` for the node renderer on its WebGL2 back end under `?forceWebGL`), and
-  `Renderer.stats` gives the draw counts read the same on either. A pick applies from the next load. On the node path
-  there is no post stack, retro filter or prefiltered sky yet (W2 to W4); a lost device is replaced by a new one, or
-  by WebGL when none can be made. Pinned by `render/rendererStart.test.ts`, `render/rendererNode.test.ts`,
-  `render/webgpu/nodeBackend.test.ts`, `e2e/webgpu.spec.ts`.
+  setting). `Game.create` loads `render/rendererStart.ts` (a small chunk with the adapter probe, the pick's rules and
+  texts and the Renderer row's builder) alongside the physics; the main chunk holds only the saved pick
+  (`config/rendererPick.ts`) and the empty row. On Auto or WebGPU it asks for a WebGPU adapter; only when one is given
+  (on Auto, a hardware one: a software adapter is slower than WebGL) does it load `render/webgpu/nodeBackend.ts` and
+  `three/webgpu` by a dynamic import (their own chunks, never the main one) and draw with `WebGPURenderer` on node
+  materials built from the plain ones. No `navigator.gpu`, no adapter, or no device made is Three's `WebGLRenderer`,
+  quietly: the same renderer and draws as before W1, which is what the container, CI and every gate here run. The
+  WebGL pick never asks. `Renderer.backend` says what drew (`webgl`, `webgpu`, or `webgpu-webgl2` for the node
+  renderer on its WebGL2 back end under `?forceWebGL`), and `Renderer.stats` gives the draw counts read the same on
+  either. A pick applies from the next load. On the node path there is no post stack, retro filter or prefiltered sky
+  yet (W2 to W4). A lost device (at boot or mid-match) is replaced by a new one, or by WebGL when none can be made:
+  the post stack, retro filter and sheen come back, `Renderer.lostToWebGL` is set and the row says so until the next
+  load. Pinned by `render/rendererStart.test.ts`, `render/rendererNode.test.ts`, `render/webgpu/nodeBackend.test.ts`,
+  `render/webgpuFoundation.qa.test.ts`, `e2e/webgpu.spec.ts`.
 - **The settings store keys** (`settings/storage.ts`, `settings/dev.ts`). Saved under `airsoft.*` and versioned
   (`SETTINGS_VERSION` 1). Renaming a key needs a migration: one `case` in `migrate` (the per-setting keys of the first
   builds are its "version 0"). An object from a newer version is never read or overwritten. Fields are only ever

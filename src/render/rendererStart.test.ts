@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
+import { DEFAULT_RENDERER } from '../config/rendererPick';
 import { RENDER_BACKEND } from '../config/renderBackend';
-import { startingRenderer } from './rendererStart';
+import { FakeElement, fakeDocument, findAll } from '../ui/testSupport';
+import { bootRenderer, startingRenderer } from './rendererStart';
 import type { NodeBackend, NodeStart } from './webgpu/nodeBackend';
 import { noWebGpu, probeWebGpu, type WebGpuProbe } from './webgpuProbe';
 
@@ -13,7 +15,7 @@ describe('the renderer a visit starts with (W1)', () => {
   const loader = (start: NodeStart = vi.fn(() => Promise.resolve(node))) => vi.fn(() => Promise.resolve(start));
 
   it('on Auto (every save’s default) with no adapter is WebGL, the renderer every player drew with before: no chunk loaded', async () => {
-    expect(RENDER_BACKEND.defaultChoice).toBe('auto');
+    expect(DEFAULT_RENDERER).toBe('auto');
     const probe = found(false);
     const load = loader();
     expect(await startingRenderer('auto', false, true, probe, load)).toEqual(webgl);
@@ -48,6 +50,16 @@ describe('the renderer a visit starts with (W1)', () => {
     }
   });
 
+  it('on Auto leaves a software adapter alone (WebGL is far faster on that machine); a WebGPU pick still takes it', async () => {
+    const software = vi.fn((): Promise<WebGpuProbe> => Promise.resolve({ ...noWebGpu(), available: true, software: true, name: 'swiftshader' }));
+    const load = loader();
+    expect(await startingRenderer('auto', false, false, software, load)).toEqual({ ...webgl, adapterName: 'swiftshader' });
+    expect(load).not.toHaveBeenCalled();
+    const start = vi.fn<NodeStart>(() => Promise.resolve(node));
+    expect(await startingRenderer('webgpu', false, false, software, loader(start))).toEqual({ backend: 'webgpu', node, adapterName: 'swiftshader' });
+    expect(start).toHaveBeenCalledTimes(1);
+  });
+
   it('with ?forceWebGL asks for no adapter and starts the node renderer on its WebGL2 back end', async () => {
     const probe = found(false);
     const start = vi.fn<NodeStart>(() => Promise.resolve({ kind: 'webgpu-webgl2' } as NodeBackend));
@@ -63,5 +75,19 @@ describe('the renderer a visit starts with (W1)', () => {
     expect(await startingRenderer('auto', false, false, found(true), loader(() => Promise.reject(new Error('device lost'))))).toEqual(named);
     expect(error).not.toHaveBeenCalled();
     error.mockRestore();
+  });
+});
+
+describe('the boot chunk Game.create loads (W1)', () => {
+  it('starts the visit’s pick and builds the Renderer row for that pick, its note read from what draws', async () => {
+    const boot = await bootRenderer('webgl', false, true);
+    expect({ backend: boot.backend, node: boot.node, adapterName: boot.adapterName }).toEqual({ backend: 'webgl', node: null, adapterName: '' });
+    vi.stubGlobal('document', fakeDocument());
+    const row = new FakeElement('div');
+    // Loaded on WebGL while the node renderer draws (never in practice): the note says the pick waits for the next load.
+    boot.fillRow(row as unknown as HTMLElement, { backend: 'webgpu', lostToWebGL: false });
+    vi.unstubAllGlobals();
+    expect(row.children.length).toBeGreaterThan(0);
+    expect(findAll(row, 'graphics-note')[0]!.textContent).toBe(RENDER_BACKEND.text.pending);
   });
 });

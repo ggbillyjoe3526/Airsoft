@@ -6,10 +6,12 @@ and never writes the simulation.
 - `renderer.ts`: `Renderer` owns the scene, camera, quality (`setQuality`), lighting and environment, tone mapping,
   field of view and zoom, the retro filter, `warmUp` and `warmShaders`. `mapMeshCache.ts` keeps the last map's meshes.
   `rendererParts.ts` holds its helpers (field of view, tone mapping, idle warm-up, handing GPU resources to a new
-  renderer); `drawingDevice.ts` is the renderer it draws with and what that reports (`stats`, GPU time), read the same
-  on WebGL and the node renderer.
+  renderer, the draw counts read the same on WebGL and the node renderer). The Renderer draws with WebGL or the node
+  renderer (`webgpu/nodeBackend.ts`) and recovers a lost device itself (`nodeLost`): a new device, or WebGL with the
+  post stack, retro filter and sheen back.
 - The node renderer (WebGPU overhaul W1; Graphics › Renderer, Auto by default): `rendererStart.ts` decides at load
-  which renderer draws. On Auto or WebGPU, `webgpuProbe.ts` asks for an adapter first, and only when one is given is
+  which renderer draws, in a chunk of its own loaded at boot with the Renderer row (`ui/rendererRow.ts`). On Auto or
+  WebGPU, `webgpuProbe.ts` asks for an adapter first, and only when one is given (on Auto, not a software one) is
   `webgpu/nodeBackend.ts` imported (with `three/webgpu`, never in the main chunk); with none, or on the WebGL pick, it
   is WebGL as before. `nodeBackend.ts` makes `WebGPURenderer` (WebGL if no device can be made), reads the GPU time
   from timestamp queries, compiles ahead and makes the replacement renderer when the device is lost. On that path
