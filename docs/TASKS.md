@@ -11,20 +11,6 @@ accepted and lands with this list. Below, the rest of section 8 of the report
 POOL-D, Extraction pay (owner decision 23: keep until the playtest shows the extraction rate) and REN-03 step 3 with
 REN-12 (when 4v4 and 5v5 go public); both stay in KNOWN_ISSUES.
 
-## BP2 · Bug pass 2 and KNOWN_ISSUES sweep (0.1 Dev 5 item 4)
-tier: core
-perf: required
-touches: src/, e2e/, docs/, CHANGELOG.md
-contract: none
-acceptance:
-  1. Customise takes "No light" on every replica's Light row: saved, shown again on a reload, and the match kit carries no torch (owner's playtest note 3, 2026-10-07).
-  2. Every row of `docs/KNOWN_ISSUES.md` is cross-checked: a row fixed here is deleted with a test or a browser check that shows it; a row left keeps its reason; a stale row is corrected.
-  3. The code added since `0.1-dev.4` is read by two review agents; every bug they find is fixed with a test, or logged in `docs/KNOWN_ISSUES.md` with why.
-  4. A scripted player starts every mode on every map (Depot, Woodland, Neon Heights by Day and Night), the practice range and the tutorial in the browser, changes the quality mid-match, quits and plays again, with no console or page error.
-  5. The perf harness runs every preset of the perf matrix within budget, and the balance report is run and copied to the run folder; a figure outside its band is fixed or logged.
-status: open
-attempts: 0
-
 ## M77 · Hot-path trims (Audit 2 SIM-D: SIM-06, SIM-07, REN-10)
 tier: core
 perf: required
@@ -223,7 +209,7 @@ attempts: 0
 **The owner's playtest notes on main (2026-10-07).** Recorded on his ask, not built yet. His words, the type and the
 defaults per note are in the project's shared files (`plans/playtest-feedback-2026-10-07.md`);
 `docs/ROADMAP.md` › Playtest notes: main after G3 maps all eight. M97–M99 join the Dev 4 notes batch (Dev 5 item 6); M100 is the graphics work's (Dev 5
-item 5, with the G4 HUD restyle); note 3 is a bug for BP2 (`docs/KNOWN_ISSUES.md`); note 2 is already in the game
+item 5, with the G4 HUD restyle); note 3 was a bug, fixed in BP2; note 2 is already in the game
 (Settings › Controls › Aim button). Note 19 of the Dev 4 notes still applies.
 
 ## M97 · A Hit marker setting and Replay tutorial (playtest notes 1, 8)
