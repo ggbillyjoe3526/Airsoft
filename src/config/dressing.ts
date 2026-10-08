@@ -25,10 +25,12 @@ import type { PuffConfig, QualitySettings } from './render';
  *   twigs and logs and the leaf drifts (6 874 triangles), the puddle mesh the mud and the puddles (2 040), and the
  *   treeline and hills join the tree ring (2 722, no draw call). The moss on the trunks, logs and boulders is vertex
  *   colour on meshes that were already there (nothing added). Moving: the fireflies at night are one draw.
- * - Neon Heights (Medium, High): 9 546 more triangles and 3 more draw calls — the junk mesh carries the street litter,
- *   the posters and the neon tubes (5 558 triangles), the puddle mesh the puddles (840), the towers join the tree ring
- *   (2 354, no draw call) and their lit windows, blades and beacons are one more draw (366 triangles). Moving: the
- *   vents' steam is one instanced draw while in view, the passing plane one more while it crosses.
+ * - Neon Heights (Medium, High): 9 654 more triangles and 3 more draw calls — the junk mesh carries the street litter,
+ *   the posters and the neon tubes (5 666 triangles), the dirt, litter scraps and sprays join the decal mesh (428, no
+ *   draw call), the puddle mesh the puddles (840), the towers join the tree ring (2 354, no draw call) and their lit
+ *   windows, blades and beacons are one more draw (366 triangles). Moving: the vents' steam is one instanced draw
+ *   while in view, the passing plane one more while it crosses.
+ * - The totals are pinned against the real meshes by render/g9EffectsQA.test.ts (it reads them from this comment).
  * - Depot is untouched: it draws exactly what it drew before, to the vertex (pinned from `main`).
  * - The signs' gentle flicker rides the junk mesh's own material as one vec3 uniform and a per-vertex channel: no extra
  *   draw and no extra triangle. It is one more shader variant of that material, compiled once and only on a map that
@@ -222,6 +224,12 @@ export const WOODS = {
     bark: ['#5a5140', '#6a5f4a', '#6e6248', '#7a6a4a'],
     /** A sawn log's end grain (pale, unsaturated). */
     grain: '#a99a80',
+    /**
+     * Beside a lying log a piece is trimmed to the log's length less `endClear` at each end (m), so none overhangs the
+     * log's end; one shorter than `minLength` is left out.
+     */
+    endClear: 0.1,
+    minLength: 0.45,
     /** Sides round a branch or a log. */
     sides: 6,
     /** How far a piece sinks into the ground at its lowest corner (m), so on a slope none of it floats. */
@@ -230,21 +238,26 @@ export const WOODS = {
 };
 
 /**
- * G9: neon signs (MapDressing.neon; render/neonDressing.ts): tubes `tube` m thick on a dark plate `standoff` off the
- * wall, glowing `glow` times their colour (self-lit, so they read by day and blaze by night). Flicker: each channel
- * burns steady and, every `every` s or so (seeded), dips gently `dips` times over `burst` s, never below `low` and never
- * more than three times a second (photosensitivity); off under Reduced motion.
+ * G9: neon signs (MapDressing.neon; render/neonDressing.ts): tubes `tube` m thick on a dark plate mounted flush on its
+ * wall (`standoff` only keeps the plate's back off the wall's own surface), glowing `glow` times their colour (self-lit,
+ * so they read by day and blaze by night). A sign is mounted on the wall face behind it within `mount` m, and only
+ * where that face backs its whole plate. Flicker: the channels share one schedule. Each `cycle` s is cut into one slot
+ * a channel; in its slot a channel may burst (skipped with chance `skip`), dipping gently `dips` times over `burst` s,
+ * never below `low`, and every burst ends at least `rest` s before the next slot opens. So no two channels ever dip in
+ * the same second, and all the signs together never flash more than `dips` (two) times a second, under the limit of
+ * three (photosensitivity). Off under Reduced motion.
  */
 export const NEON = {
   tube: 0.035,
   glow: 2.2,
   plate: '#16141c',
   plateDepth: 0.04,
-  standoff: 0.05,
+  standoff: 0.004,
+  mount: 0.4,
   /** The letters' stroke grid: a letter is `cell` wide (in units of its height), `gap` apart. */
   cell: 0.62,
   gap: 0.22,
-  flicker: { every: [8, 15] as const, burst: 1.1, dips: 2, low: 0.4, seed: 9127 },
+  flicker: { channels: 3, cycle: 12, burst: 1.1, dips: 2, low: 0.4, rest: 1.2, skip: 0.35, seed: 9127 },
 };
 
 /**
@@ -274,10 +287,11 @@ export const FIREFLIES = { size: 0.11, colour: '#d6ff7a', height: [0.3, 1.9] as 
 
 /**
  * G9: a plane crossing the sky (MapDressing.plane; render/passingPlane.ts): `length` m long at the map's height,
- * `speed` m/s along a seeded line through the sky over the field, `path` m long; unlit, in `day` or `night` colours with
- * steady wingtip and beacon lights. Hidden under Reduced motion.
+ * `speed` m/s along a seeded line through the sky over the field, `path` m long (a 10 s crossing, so with Neon Heights'
+ * pass every 20 s, start to start, the sky is empty half the time); unlit, in `day` or `night` colours with steady
+ * wingtip and beacon lights. Hidden under Reduced motion.
  */
-export const PLANE = { length: 9, span: 9, speed: 16, path: 260, day: '#cfd3da', night: '#14151c', lights: { port: '#d94fc0', starboard: '#5aff8a', beacon: '#fffbe6' }, seed: 4421 };
+export const PLANE = { length: 9, span: 9, speed: 26, path: 260, day: '#cfd3da', night: '#14151c', lights: { port: '#d94fc0', starboard: '#5aff8a', beacon: '#fffbe6' }, seed: 4421 };
 
 /**
  * Dust kicked up by feet (Impact grit, render/combatPresentation.ts): a low, faint puff at a sprinting footfall and a

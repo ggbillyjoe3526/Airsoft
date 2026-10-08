@@ -7,7 +7,7 @@ import type { GameEvent } from '../sim/events';
 import { length3 } from '../sim/vec';
 import { Fireflies } from './fireflies';
 import { ImpactPuffs } from './impactPuffs';
-import { neonFlicker } from './neonDressing';
+import { neonFlickerLevels } from './neonDressing';
 import { PassingPlane } from './passingPlane';
 import { SmokePlumes, STEAM_PLUME } from './smokePlumes';
 import { smokingChimneys } from './skyline';
@@ -31,9 +31,15 @@ export class DressingEffects {
   private planeOn = false;
   private motion = true;
   private night = false;
+  /** The quality's switches, once setQuality has run (`apply` makes nothing before). */
+  private hasQuality = false;
+  private detail = false;
+  private skyline = false;
+  private grit = false;
   private time = 0;
   /** The junk mesh's neon flicker levels, while a built map has flickering signs (render/dressingMeshes.ts). */
   private flicker: { value: THREE.Vector3 } | null = null;
+  private readonly levels = new Float64Array(3);
   private readonly dustTint = new THREE.Color();
   private readonly dustAt = { x: 0, y: 0, z: 0 };
   private readonly dressing: MapDressing | undefined;
@@ -54,18 +60,40 @@ export class DressingEffects {
     if (this.flicker) this.flicker.value.set(1, 1, 1);
   }
 
+  /**
+   * The quality's settings. The effects are made, shown and hidden from these and the night together (`apply`), so the
+   * game's order (CombatPresentation sets the quality before MatchSession sets the night) and the other one end alike.
+   */
   setQuality(q: Pick<QualitySettings, 'trees' | 'impactGrit' | 'mapDetail'>): void {
+    this.detail = dressingShown(q);
+    this.skyline = skylineShown(q);
+    this.grit = kickedDustShown(q);
+    this.hasQuality = true;
+    this.apply();
+  }
+
+  /** Night or day: the smoke and steam take its tint, the plane its airframe, and the fireflies come out by night. */
+  setNight(night: boolean): void {
+    this.night = night;
+    this.smoke?.setNight(night);
+    this.steam?.setNight(night);
+    this.plane?.setNight(night);
+    if (this.hasQuality) this.apply();
+  }
+
+  /** Makes (the first time), shows and hides each effect for the current quality and night. */
+  private apply(): void {
     const d = this.dressing;
     const chimneys = d?.skyline ? smokingChimneys(d.skyline) : [];
-    const smokeOn = skylineShown(q) && chimneys.length > 0;
+    const smokeOn = this.skyline && chimneys.length > 0;
     if (smokeOn && !this.smoke) this.smoke = this.addPlume(new SmokePlumes(chimneys));
     if (this.smoke) this.smoke.object.visible = smokeOn;
     // G9: steam (map detail), the fireflies (map detail, by night) and the plane (Trees: Detailed).
     const vents = d?.steam ?? [];
-    const steamOn = dressingShown(q) && vents.length > 0;
+    const steamOn = this.detail && vents.length > 0;
     if (steamOn && !this.steam) this.steam = this.addPlume(new SmokePlumes(vents.map((v) => ({ ...v, radius: STEAM_PLUME.spread })), STEAM_PLUME, 'steamPlumes'));
     if (this.steam) this.steam.object.visible = steamOn;
-    const fliesOn = dressingShown(q) && this.night && d?.fireflies !== undefined;
+    const fliesOn = this.detail && this.night && d?.fireflies !== undefined;
     if (fliesOn && !this.flies) {
       const field = this.map && 'blocks' in this.map ? (this.map as MapData) : null;
       if (field?.terrain) {
@@ -76,7 +104,7 @@ export class DressingEffects {
       }
     }
     if (this.flies) this.flies.object.visible = fliesOn;
-    this.planeOn = skylineShown(q) && d?.plane !== undefined;
+    this.planeOn = this.skyline && d?.plane !== undefined;
     if (this.planeOn && !this.plane) {
       // Over the middle of the world, which is every map's own middle.
       this.plane = new PassingPlane({ x: 0, z: 0 }, d!.plane!.height, d!.plane!.every, this.night);
@@ -84,7 +112,7 @@ export class DressingEffects {
       this.scene.add(this.plane.object);
     }
     if (this.plane && !this.planeOn) this.plane.object.visible = false;
-    this.dustOn = kickedDustShown(q) && d?.kickedDust !== undefined;
+    this.dustOn = this.grit && d?.kickedDust !== undefined;
     if (this.dustOn && !this.dust) {
       this.dust = new ImpactPuffs(KICKED_DUST);
       this.dust.object.name = 'kickedDust';
@@ -109,12 +137,6 @@ export class DressingEffects {
     this.flies?.setMotion(on);
     this.plane?.setMotion(on);
     if (!on && this.flicker) this.flicker.value.set(1, 1, 1);
-  }
-
-  setNight(night: boolean): void {
-    this.night = night;
-    this.smoke?.setNight(night);
-    this.steam?.setNight(night);
   }
 
   /** A tick's footfalls: a sprinting step or a landing within range of `eye` kicks up dust. */
@@ -144,7 +166,11 @@ export class DressingEffects {
     if (this.plane && this.planeOn) this.plane.update(dt);
     if (this.motion) {
       this.time += dt;
-      if (this.flicker) this.flicker.value.set(neonFlicker(1, this.time), neonFlicker(2, this.time), neonFlicker(3, this.time));
+      if (this.flicker) {
+        // Into a fixed buffer, then the uniform: no number boxed, nothing allocated.
+        neonFlickerLevels(this.time, this.levels);
+        this.flicker.value.set(this.levels[0]!, this.levels[1]!, this.levels[2]!);
+      }
     }
     const dust = this.dust;
     if (dust) {

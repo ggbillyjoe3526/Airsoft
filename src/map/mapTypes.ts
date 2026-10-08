@@ -344,7 +344,10 @@ export interface MapDressing {
   steam?: readonly { x: number; y: number; z: number }[];
   /** G9: fireflies drifting low over the ground by night (map detail): how many. */
   fireflies?: { count: number };
-  /** G9: a plane crossing the sky now and then (Trees: Detailed): its height (m) and how often one passes (s). */
+  /**
+   * G9: a plane crossing the sky now and then (Trees: Detailed): its height (m), and `every`, the seconds from one pass's
+   * start to the next's (the crossing itself, PLANE.path / PLANE.speed, takes part of that).
+   */
   plane?: { height: number; every: number };
 }
 

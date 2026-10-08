@@ -131,9 +131,19 @@ function placeFallen(map: MapData, t: Terrain, chance: number, rng: RngState, sp
           const [u, uKind, uVariant, uShift] = [rngNext(rng), rngNext(rng), rngNext(rng), rngNext(rng)];
           if (u >= chance || out.length >= J.max) continue;
           const kind = pickFallen(uKind);
-          const [along, depth, height] = F.size[kind];
+          const [full, depth, height] = F.size[kind];
           const mid = at(alongAxis) - half(alongAxis) + F.cornerClear + (i + 0.5) * slot;
-          const centreAlong = mid + (uShift - 0.5) * Math.max(0, slot - along);
+          let along: number = full;
+          let centreAlong = mid + (uShift - 0.5) * Math.max(0, slot - along);
+          if (b.kind === 'log') {
+            // Beside a lying log: trimmed to the log's length (less `endClear` at each end) and kept within it, so no
+            // branch overhangs the end of a short log; too short a stub is left out. (A branch at a trunk's foot may
+            // reach past the trunk: it lies on the ground beside it.)
+            const end = half(alongAxis) - F.endClear;
+            along = Math.min(full, 2 * end);
+            if (along < F.minLength) continue;
+            centreAlong = Math.min(Math.max(centreAlong, at(alongAxis) - end + along / 2), at(alongAxis) + end - along / 2);
+          }
           const centreOut = face + sign * (J.standoff + depth / 2);
           const x = axis === 0 ? centreOut : centreAlong;
           const z = axis === 0 ? centreAlong : centreOut;
@@ -220,7 +230,15 @@ function stick(ax: number, ay: number, az: number, bx: number, by: number, bz: n
  * A fallen piece's parts in its own frame (x along the face, z out from it, y up from the ground, its footprint centred
  * on the origin), each inside `along` × `out` × `height` (the tests check the bounds), with their sRGB colours.
  */
-export function fallenParts(q: Pick<FallenPiece, 'kind' | 'variant'>): { geo: THREE.BufferGeometry; hex: string }[] {
+export function fallenParts(q: Pick<FallenPiece, 'kind' | 'variant' | 'along'>): { geo: THREE.BufferGeometry; hex: string }[] {
+  const F = W.fallen;
+  // A piece trimmed to a short slot is its kind's parts drawn shorter along their length (render/woodsDressing placeFallen).
+  const trim = Math.min(1, q.along / F.size[q.kind][0]);
+  return fallenPartsFull(q).map((p) => (trim < 1 ? { geo: p.geo.scale(trim, 1, 1), hex: p.hex } : p));
+}
+
+/** A fallen kind's parts at its full length (WOODS.fallen.size), in its own frame. */
+function fallenPartsFull(q: Pick<FallenPiece, 'kind' | 'variant'>): { geo: THREE.BufferGeometry; hex: string }[] {
   const F = W.fallen;
   const v = q.variant;
   const S = F.sides;

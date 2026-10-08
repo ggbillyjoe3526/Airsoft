@@ -41,24 +41,26 @@ const sign = (x: number, y: number, z: number, facing: NeonSign['facing'], colou
 const NEON_COLOURS = { magenta: 0xff2bd6, lime: 0x8dff3a, violet: 0x9a6bff, teal: 0x2fc9a0, yellow: 0xecd04a } as const;
 
 /**
- * Tube signs on the walls, all well above head height and clear of every opening and of the map's own panel signs:
+ * Tube signs on the walls, each written on the face of the wall it hangs on (the engine mounts it flush and drops any
+ * sign whose plate a face does not back whole: render/neonDressing.ts mountNeon), all well above head height and
+ * clear of every opening and of the map's own panel signs:
  * the Arcade's name over the avenue, a noodle bowl in Noodle Alley, the Tower's bar and a cocktail in the Back Alley,
  * an arrow over the Drone Dock's shutter, a hotel blade on the perimeter by the West Yard. Two flicker gently.
  */
 const SIGNS: NeonSign[] = [
   // Neon Avenue: the Arcade's east face and the Tower's west face.
-  sign(-3.45, 3.3, 6.6, '+x', NEON_COLOURS.magenta, 0.52, { text: 'PLAY' }),
-  sign(-3.45, 3.3, -9.6, '+x', NEON_COLOURS.lime, 0.46, { text: 'PARTS' }, 2),
-  sign(3.95, 3.4, -4.2, '-x', NEON_COLOURS.teal, 0.5, { text: 'BAR' }),
-  sign(3.95, 5.1, 8.4, '-x', NEON_COLOURS.yellow, 0.44, { emblem: 'cup' as const }),
+  sign(-3.5, 3.5, 6.0, '+x', NEON_COLOURS.magenta, 0.52, { text: 'PLAY' }),
+  sign(-3.5, 3.3, -9.6, '+x', NEON_COLOURS.lime, 0.46, { text: 'PARTS' }, 2),
+  sign(4.0, 3.4, -4.2, '-x', NEON_COLOURS.teal, 0.5, { text: 'BAR' }),
+  sign(4.0, 4.5, 10.0, '-x', NEON_COLOURS.yellow, 0.44, { emblem: 'cup' as const }),
   // Noodle Alley: a bowl on the Arcade's north face and the alley's name on the perimeter wall.
-  sign(-9.2, 3.15, 10.2, '+z', NEON_COLOURS.yellow, 0.6, { emblem: 'bowl' }),
+  sign(-9.2, 3.15, 10.0, '+z', NEON_COLOURS.yellow, 0.6, { emblem: 'bowl' }),
   sign(-6.4, 3.4, HALF_Z, '-z', NEON_COLOURS.magenta, 0.42, { text: 'NOODLE' }, 1),
   // Lantern Lane and the Repair Shop block's north face.
-  sign(-6.2, 2.9, -4.7, '+z', NEON_COLOURS.violet, 0.4, { text: 'LANE' }),
+  sign(-4.75, 3.3, -5.0, '+z', NEON_COLOURS.violet, 0.4, { text: 'LANE' }),
   // The Drone Dock: an arrow over the shutter, and the dock's number on the perimeter.
-  sign(13.2, 3.2, -14.8, '+z', NEON_COLOURS.teal, 0.55, { emblem: 'arrow' as const }),
-  sign(5.6, 3.4, -14.8, '+z', NEON_COLOURS.lime, 0.4, { text: 'DOCK 4' }),
+  sign(13.2, 3.2, -15, '+z', NEON_COLOURS.teal, 0.55, { emblem: 'arrow' as const }),
+  sign(5.6, 3.4, -15, '+z', NEON_COLOURS.lime, 0.4, { text: 'DOCK 4' }),
   // The Back Alley and the East Yard's perimeter.
   sign(9.6, 3.3, HALF_Z, '-z', NEON_COLOURS.magenta, 0.44, { text: 'HOTEL' }, 3),
   sign(HALF_X, 3.6, 2.4, '-x', NEON_COLOURS.teal, 0.42, { text: 'TAXI' }),
@@ -133,7 +135,7 @@ export const NEON_HEIGHTS_DRESSING: MapDressing = {
   neon: SIGNS,
   steam: STEAM.map((s) => ({ x: s.x, y: s.y, z: s.z })),
   skyline: SKYLINE.map((p) => ('points' in p ? p : { ...p, z: -p.z })),
-  // A plane crossing the city's sky about every twenty seconds.
+  // A plane crossing the city's sky: a pass starts every twenty seconds and takes ten.
   plane: { height: 130, every: 20 },
   // The dust in the air and underfoot: city grey, a touch cool.
   motes: { tint: 0xc6cad4 },

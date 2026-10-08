@@ -153,10 +153,11 @@ describe('G9 QA: the cost the code states is the cost it has (acceptance 3: “e
     for (const q of [QUALITY.medium, QUALITY.high]) expect(extraTriangles(WOODLAND, q)).toBe(stated('Woodland'));
   });
 
-  // BUG G9-QA-6: src/config/dressing.ts says Neon Heights costs 9 546 more triangles (the junk mesh 5 558), but the
-  // junk mesh is 5 666 and the whole is 9 654: the stated figure is 108 triangles stale. Under the 15 000 cap, but the
-  // criterion is that the cost stated in the code is the real one.
-  it.fails('BUG: Neon Heights: the stated 9 546 more triangles is what Medium and High draw (it draws 9 654)', () => {
+  // Was BUG G9-QA-6 (fixed): src/config/dressing.ts said Neon Heights costs 9 546 more triangles (the junk mesh 5 558),
+  // but the junk mesh is 5 666 and the whole is 9 654: the stated figure was 108 triangles stale. Under the 15 000 cap,
+  // but the criterion is that the cost stated in the code is the real one.
+  it('Neon Heights: the stated 9 654 more triangles is what Medium and High draw', () => {
+    expect(stated('Neon Heights')).toBe(9654);
     for (const q of [QUALITY.medium, QUALITY.high]) expect(extraTriangles(NEON_HEIGHTS, q)).toBe(stated('Neon Heights'));
   });
 });
@@ -166,9 +167,9 @@ describe('G9 QA: the cost the code states is the cost it has (acceptance 3: “e
 describe('G9 QA: the order the game calls DressingEffects in (acceptance 1: fireflies at night)', () => {
   // The real order, from CombatPresentation: its constructor calls setQuality(quality) while the effects still think it
   // is day, and MatchSession calls setLighting(preset) -> setNight(true) right after. Woodland is a night map.
-  // BUG G9-QA-4 (severe): the fireflies (and the plane's night airframe) are only made inside setQuality, so a night map
+  // Was BUG G9-QA-4 (fixed) (severe): the fireflies (and the plane's night airframe) are only made inside setQuality, so a night map
   // that sets its quality first, as the game does, never gets its fireflies until the player changes a graphics setting.
-  it.fails('BUG: Woodland gets its fireflies when setNight(true) comes after setQuality(High), the order the game uses', () => {
+  it('Woodland gets its fireflies when setNight(true) comes after setQuality(High), the order the game uses', () => {
     const scene = new THREE.Scene();
     const fx = new DressingEffects(scene, WOODLAND);
     fx.setQuality(QUALITY.high);
@@ -202,9 +203,9 @@ describe('G9 QA: the order the game calls DressingEffects in (acceptance 1: fire
     }
   });
 
-  // BUG G9-QA-5: the plane's airframe colour is chosen when it is built, on the same first setQuality, so with the game's
+  // Was BUG G9-QA-5 (fixed): the plane's airframe colour is chosen when it is built, on the same first setQuality, so with the game's
   // order a night map gets the pale day airframe (a light grey shape on a dark sky) instead of the dark night one.
-  it.fails('BUG: Neon Heights’ plane is the night airframe when setNight(true) comes after setQuality(High)', () => {
+  it('Neon Heights’ plane is the night airframe when setNight(true) comes after setQuality(High)', () => {
     const scene = new THREE.Scene();
     const fx = new DressingEffects(scene, NEON_HEIGHTS);
     fx.setQuality(QUALITY.high);
@@ -242,10 +243,10 @@ describe('G9 QA: the plane (acceptance 1: “a passing plane”)', () => {
     expect(run()).toBe(run());
   });
 
-  // BUG G9-QA-7: MapDressing.plane is “how often one passes (s)” and Neon's data says “about every twenty seconds”, but
+  // Was BUG G9-QA-7 (fixed): MapDressing.plane is “how often one passes (s)” and Neon's data says “about every twenty seconds”, but
   // `every` is only the empty gap: a pass takes 260 m / 16 m/s = 16 s on top, so a plane starts a pass every 36 s and is
   // in the sky 45 % of the time.
-  it.fails('BUG: a pass starts about every `every` seconds (20), not every 36', () => {
+  it('a pass starts about every `every` seconds (20), not every 36', () => {
     const p = new PassingPlane({ x: 0, z: 0 }, 130, 20, true);
     const starts: number[] = [];
     let was = false;
@@ -417,10 +418,10 @@ describe('G9 QA: the signs’ flicker never flashes more than three times a seco
     }
   });
 
-  // BUG G9-QA-8: each channel dips twice in a burst, but the three channels have unrelated periods and sometimes burst
+  // Was BUG G9-QA-8 (fixed): each channel dips twice in a burst, but the three channels have unrelated periods and sometimes burst
   // together: with all three flickering signs in view (they hang in four different alleys, so a rooftop sees them at
   // once) the screen flashes six times in a second. The limit is three a second for the picture, not for each sign.
-  it.fails('BUG: all the flickering signs together never dip more than three times in any one second', () => {
+  it('all the flickering signs together never dip more than three times in any one second', () => {
     expect(worstSecond(dipTimes([1, 2, 3], 3600))).toBeLessThanOrEqual(3);
   });
 

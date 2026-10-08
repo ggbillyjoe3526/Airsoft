@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { FULL_MOTION } from '../config/accessibility';
-import { NEON } from '../config/dressing';
+import { NEON, PLANE } from '../config/dressing';
 import { QUALITY, type QualitySettings, SURFACES } from '../config/render';
 import { DEPOT } from '../map/depot';
 import type { MapData } from '../map/mapTypes';
@@ -227,6 +227,71 @@ describe('G9: what the two maps’ dressing costs', () => {
       disposeMapMeshes(group);
     });
   }
+
+  it('makes and shows the effects alike in the game’s call order: the quality first (CombatPresentation), then the map group and the night (MatchSession)', () => {
+    for (const [name, map, effect] of [['Woodland', WOODLAND, 'fireflies'], ['Neon Heights', NEON_HEIGHTS, 'passingPlane']] as const) {
+      const scene = new THREE.Scene();
+      const group = buildMapMeshes(map, textures(map), look(QUALITY.medium), atlas);
+      const fx = new DressingEffects(scene, map);
+      // CombatPresentation's constructor: setQuality while the effects still think it is day.
+      fx.setQuality(QUALITY.medium);
+      // MatchSession, right after: the lighting (night on both maps here) and the built map's group.
+      fx.setNight(true);
+      fx.setMapGroup(group);
+      const camera = new THREE.PerspectiveCamera();
+      for (let i = 0; i < 30; i++) fx.update(1 / 60, camera, vec3());
+      const o = scene.getObjectByName(effect);
+      expect(o, `${name}: ${effect}`).toBeDefined();
+      if (effect === 'fireflies') {
+        expect(o!.visible, name).toBe(true);
+        // By day they go, and come back at night; on Low they are hidden whatever the hour.
+        fx.setNight(false);
+        expect(o!.visible, `${name} by day`).toBe(false);
+        fx.setNight(true);
+        expect(o!.visible, `${name} at night again`).toBe(true);
+        fx.setQuality(QUALITY.low);
+        expect(o!.visible, `${name} on Low`).toBe(false);
+      } else {
+        // The airframe follows the night: dark by night, pale by day (its first vertex is the fuselage's).
+        const colour = (o as THREE.Mesh).geometry.getAttribute('color');
+        const first = (): number[] => [colour.getX(0), colour.getY(0), colour.getZ(0)].map((v) => +v.toFixed(4));
+        const as = (hex: string): number[] => new THREE.Color(hex).toArray().map((v) => +v.toFixed(4));
+        expect(first(), `${name} night airframe`).toEqual(as(PLANE.night));
+        fx.setNight(false);
+        expect(first(), `${name} day airframe`).toEqual(as(PLANE.day));
+        fx.setNight(true);
+        expect(first(), `${name} night again`).toEqual(as(PLANE.night));
+      }
+      fx.dispose();
+      disposeMapMeshes(group);
+    }
+  });
+
+  it('starts a plane pass every `every` seconds, start to start, and leaves the sky empty between passes', () => {
+    const every = NEON_HEIGHTS.dressing!.plane!.every;
+    const scene = new THREE.Scene();
+    const fx = new DressingEffects(scene, NEON_HEIGHTS);
+    fx.setQuality(QUALITY.high);
+    fx.setNight(true);
+    const camera = new THREE.PerspectiveCamera();
+    const plane = scene.getObjectByName('passingPlane')!;
+    const starts: number[] = [];
+    let up = 0;
+    let was = false;
+    const dt = 0.05;
+    for (let t = 0; t < 400; t += dt) {
+      fx.update(dt, camera, vec3());
+      if (plane.visible && !was) starts.push(t);
+      if (plane.visible) up += dt;
+      was = plane.visible;
+    }
+    expect(starts.length).toBeGreaterThanOrEqual(Math.floor(400 / every) - 1);
+    for (let i = 1; i < starts.length; i++) expect(starts[i]! - starts[i - 1]!).toBeCloseTo(every, 0);
+    // The crossing (PLANE.path / PLANE.speed) is shorter than the period: the sky is empty for part of each.
+    expect(PLANE.path / PLANE.speed).toBeLessThan(every);
+    expect(up / 400).toBeLessThan(0.6);
+    fx.dispose();
+  });
 
   it('the signs’ flicker is gentle: never a dip faster than three a second, never dark, and steady most of the time', () => {
     for (const channel of [1, 2, 3]) {

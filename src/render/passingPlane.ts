@@ -5,8 +5,10 @@ import { createRng, rngNext } from '../sim/rng';
 /**
  * A plane crossing the sky now and then (G9, MapDressing.plane): a small dark airframe with steady wingtip and beacon
  * lights, high over the field on a seeded line. One mesh, one draw call while it is up there (hidden between passes:
- * one crosses, then the sky is empty for a while). Built once with fixed geometry; update only moves its matrix, so it
- * allocates nothing per frame. Under Reduced motion it is hidden altogether. No flashing: its lights are steady.
+ * one crosses, then the sky is empty until the next is due). A pass starts every `every` seconds, start to start; the
+ * crossing (PLANE.path / PLANE.speed) takes part of that. Built once with fixed geometry; update only moves its matrix
+ * and setNight rewrites the airframe's colours in place, so it allocates nothing after it is made. Under Reduced motion
+ * it is hidden altogether. No flashing: its lights are steady.
  */
 
 const P = PLANE;
@@ -21,26 +23,32 @@ export class PassingPlane {
   private time = 0;
   private pass = -1;
   private motion = true;
-  /** How long one pass takes (s) and the gap between passes. */
+  /** How long one crossing takes (s). */
   private readonly crossing: number;
+  /** Start to start (s): `every`, or the crossing itself if that is longer (back-to-back passes, never overlapping). */
+  private readonly period: number;
+  /** The airframe's vertices: the first this many of the colour buffer (the lights follow). */
+  private readonly airframe: number;
 
   /**
-   * A plane `height` m up, one passing about every `every` seconds, over a field centred on `centre`; `night` picks the
-   * airframe's colour (a dark silhouette by night, pale by day).
+   * A plane `height` m up, a pass starting every `every` seconds, over a field centred on `centre`; `night` picks the
+   * airframe's colour (a dark silhouette by night, pale by day), and setNight changes it later.
    */
   constructor(
     private readonly centre: { x: number; z: number },
     private readonly height: number,
-    private readonly every: number,
+    every: number,
     night: boolean,
   ) {
     this.crossing = P.path / P.speed;
+    this.period = Math.max(every, this.crossing);
     const body = new THREE.CylinderGeometry(P.length * 0.055, P.length * 0.04, P.length, 6).rotateZ(Math.PI / 2);
     const nose = new THREE.ConeGeometry(P.length * 0.055, P.length * 0.16, 6).rotateZ(-Math.PI / 2).translate(P.length * 0.58, 0, 0);
     const wing = new THREE.BoxGeometry(P.length * 0.2, P.length * 0.015, P.span).translate(P.length * 0.03, 0, 0);
     const tail = new THREE.BoxGeometry(P.length * 0.14, P.length * 0.2, P.length * 0.014).translate(-P.length * 0.44, P.length * 0.1, 0);
     const stab = new THREE.BoxGeometry(P.length * 0.12, P.length * 0.012, P.span * 0.36).translate(-P.length * 0.44, 0, 0);
     const parts = [body, nose, wing, tail, stab].map((g) => paint(g, night ? P.night : P.day, 1));
+    this.airframe = parts.reduce((n, g) => n + g.getAttribute('position').count, 0);
     // The lights: a small cube at each wingtip and under the belly, in their own colours, bright (they are unlit).
     const lights: [number, number, number, string][] = [
       [P.length * 0.04, 0, -P.span / 2, P.lights.port],
@@ -57,19 +65,26 @@ export class PassingPlane {
     this.object.renderOrder = -1;
   }
 
+  /** By night a dark silhouette, by day the pale airframe: its colours rewritten in place (the lights keep theirs). */
+  setNight(night: boolean): void {
+    const colours = this.object.geometry.getAttribute('color') as THREE.BufferAttribute;
+    tint.setStyle(night ? P.night : P.day);
+    for (let i = 0; i < this.airframe; i++) colours.setXYZ(i, tint.r, tint.g, tint.b);
+    colours.needsUpdate = true;
+  }
+
   /** Reduced motion on (false): no plane crosses. */
   setMotion(on: boolean): void {
     this.motion = on;
     if (!on) this.object.visible = false;
   }
 
-  /** Moves it on by `dt`: one pass every `every` seconds along a seeded line; nothing drawn between passes. */
+  /** Moves it on by `dt`: a pass starting every `period` seconds along a seeded line; nothing drawn between passes. */
   update(dt: number): void {
     if (!this.motion) return;
     this.time += dt;
-    const period = this.every + this.crossing;
-    const n = Math.floor(this.time / period);
-    const at = this.time - n * period;
+    const n = Math.floor(this.time / this.period);
+    const at = this.time - n * this.period;
     if (at > this.crossing) {
       this.object.visible = false;
       return;

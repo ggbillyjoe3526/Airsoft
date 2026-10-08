@@ -45,11 +45,10 @@ const watchErrors = (page: Page): string[] => {
   return errors;
 };
 
-// BUG G9-QA-4: the game calls setQuality (in CombatPresentation's constructor) before setNight (MatchSession's
+// Was BUG G9-QA-4 (fixed): the game calls setQuality (in CombatPresentation's constructor) before setNight (MatchSession's
 // setLighting), and the fireflies are only made inside setQuality, so the night map has none until a graphics setting
 // changes. The unit tests of the effects call setNight first, so they cannot see it.
 test('Woodland on Medium has its fireflies drawn by night from the first frame', async ({ page }) => {
-  test.fail(true, 'BUG G9-QA-4: the fireflies are never made when the night is set after the quality, the order the game uses');
   test.setTimeout(240_000);
   const errors = watchErrors(page);
   await startMatch(page, /Woodland/i, 'medium');

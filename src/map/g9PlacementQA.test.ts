@@ -208,17 +208,17 @@ describe('G9 QA: Neon Heights’ neon signs hang on walls (acceptance 2: nothing
     for (const s of ok) expect(backing(NEON_HEIGHTS, s), nameOf(s)).toBe(9);
   });
 
-  // BUG G9-QA-1: the bowl (Noodle Alley), LANE, the Drone Dock arrow and DOCK 4 hang 0.2 to 0.3 m in front of the wall they
+  // Was BUG G9-QA-1 (fixed): the bowl (Noodle Alley), LANE, the Drone Dock arrow and DOCK 4 hang 0.2 to 0.3 m in front of the wall they
   // are meant for (their plan z is 10.2, 4.7, 14.8 and 14.8 where the faces are at 10.0, 5.0, 15.0 and 15.0, while the
   // signs that work sit on the face itself), so nothing is behind any of the nine points of their plate.
-  it.fails('BUG: every sign has a wall face within 12 cm behind its plate (the bowl, LANE, the arrow and DOCK 4 float off their walls)', () => {
+  it('every sign has a wall face within 12 cm behind its plate (the bowl, LANE, the arrow and DOCK 4 float off their walls)', () => {
     const floating = NEON.neon.filter((s) => backing(NEON_HEIGHTS, s) === 0).map(nameOf);
     expect(floating).toEqual([]);
   });
 
-  // BUG G9-QA-2: PLAY overhangs the end of its wall into the opening beside it (a third of the plate has no wall behind
+  // Was BUG G9-QA-2 (fixed): PLAY overhangs the end of its wall into the opening beside it (a third of the plate has no wall behind
   // it) and the cup hangs from the bottom edge of a lintel (two thirds of the plate is in the air).
-  it.fails('BUG: every sign’s whole plate is on wall (PLAY and the cup hang half off the edge of theirs)', () => {
+  it('every sign’s whole plate is on wall (PLAY and the cup hang half off the edge of theirs)', () => {
     const partial = NEON.neon.filter((s) => backing(NEON_HEIGHTS, s) > 0 && backing(NEON_HEIGHTS, s) < 9).map((s) => `${nameOf(s)}: ${backing(NEON_HEIGHTS, s)}/9`);
     expect(partial).toEqual([]);
   });
@@ -323,14 +323,14 @@ describe('G9 QA: the background stays out of the field and hides nobody (accepta
     expect(intruders).toEqual([]);
   });
 
-  // BUG G9-QA-3 (severe): Woodland's east hill ({ x: wx(170), width: 150, height: 26 }) is centred 110 m east with a
+  // Was BUG G9-QA-3 (fixed) (severe): Woodland's east hill ({ x: wx(170), width: 150, height: 26 }) is centred 110 m east with a
   // 75 m radius, so its dome reaches 75 m west of its middle, to x = 35: it stands 14 m high inside the field over the
   // fort and the East camp, a green wall that every line of sight from the west half of the field runs into.
-  it.fails('BUG: no part of the skyline stands in Woodland’s field above the ground (the east hill is 14 m high at the fence)', () => {
+  it('no part of the skyline stands in Woodland’s field above the ground (the east hill is 14 m high at the fence)', () => {
     expect(skylineInField(WOODLAND, 0)).toEqual([]);
   });
 
-  it.fails('BUG: the skyline hides no Woodland player: no West-to-East spawn line of sight passes through a hill (all 25 do)', () => {
+  it('the skyline hides no Woodland player: no West-to-East spawn line of sight passes through a hill (all 25 do)', () => {
     const { blocked } = skylineBlocksSight(WOODLAND);
     expect(blocked).toBe(0);
   });

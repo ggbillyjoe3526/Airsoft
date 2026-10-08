@@ -35,9 +35,10 @@ const POOLS = [
   // The sunken track up to the Knoll.
   pool(76, 25.6, 2.6, 1.8, true),
   pool(86, 29.9, 2.4, 1.6),
-  // The camps' clearings, a stride or two from the fires, and the fort's trampled floor.
-  pool(7.5, 49, 3.0, 2.0, true),
-  pool(113, 49, 2.8, 1.9, true),
+  // The camps' clearings, a stride or two from the fires on the side away from the spawns (each at least 5 m from the
+  // nearest spawn: a figure starts on clean grass), and the fort's trampled floor.
+  pool(7.0, 55.0, 3.0, 2.0, true),
+  pool(113, 56.5, 2.8, 1.9, true),
   pool(99, 45, 2.4, 1.8, true),
   pool(103.5, 49.5, 2.0, 1.5, true),
   // By the cabin's north and east doors.
@@ -59,8 +60,10 @@ const SKYLINE: SkylinePiece[] = [
   { kind: 'treeline', height: 13, depth: 5, points: [{ x: wx(-8), z: wz(-7) }, { x: wx(44), z: wz(-8) }, { x: wx(92), z: wz(-7) }, { x: wx(128), z: wz(-6) }] },
   { kind: 'treeline', height: 14, depth: 4.5, points: [{ x: wx(-8), z: wz(-6) }, { x: wx(-9), z: wz(32) }, { x: wx(-8), z: wz(74) }, { x: wx(-7), z: wz(86) }] },
   { kind: 'treeline', height: 16, depth: 4.5, points: [{ x: wx(128), z: wz(-6) }, { x: wx(129), z: wz(34) }, { x: wx(128), z: wz(76) }, { x: wx(127), z: wz(86) }] },
-  // Wooded hills on the horizon: higher behind the Knoll (east), lower to the west and south.
-  { kind: 'hill', x: wx(170), z: wz(44), width: 150, depth: 90, height: 26 },
+  // Wooded hills on the horizon: higher behind the Knoll (east), lower to the west and south. Each is a dome `width` by
+  // `depth` round its middle, so its whole footprint lies beyond the fence (field x ±60, z ±40) and no line of sight
+  // across the field can touch one (map/g9PlacementQA.test.ts): the east hill reaches no nearer than x = 70.
+  { kind: 'hill', x: wx(170), z: wz(44), width: 80, depth: 96, height: 32 },
   { kind: 'hill', x: wx(118), z: wz(150), width: 180, depth: 90, height: 20 },
   { kind: 'hill', x: wx(-70), z: wz(96), width: 150, depth: 80, height: 17 },
   { kind: 'hill', x: wx(10), z: wz(-82), width: 170, depth: 80, height: 14, colour: 0x22312a },

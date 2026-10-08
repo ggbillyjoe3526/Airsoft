@@ -5,6 +5,7 @@ import { terrainHeightAt } from '../map/terrain';
 import { createRng, rngNext, type RngState } from '../sim/rng';
 import { at, bottom, boxHitsBlock, type ClearSpot, clearOfPlay, clearSpots, floorUnder, frontRect, half, type JunkPiece, junkRect, type Rect, top } from './dressingSpots';
 import { atlasRects, coveredAbove, type DecalQuad, decalBlocked, decalQuads } from './mapDecals';
+import { mountNeon } from './neonDressing';
 import { type Poster, placePosters } from './streetDressing';
 import { type FallenPiece, type LeafDrift, placeWoods } from './woodsDressing';
 
@@ -56,7 +57,7 @@ export interface DressingLayout {
   /** G9: a wood's fallen branches, twigs and logs, and its leaf drifts. */
   fallen: FallenPiece[];
   leaves: LeafDrift[];
-  /** G9: posters on street walls, and the map's neon signs as given. */
+  /** G9: posters on street walls, and the map's neon signs mounted flush on their walls (render/neonDressing.ts). */
   posters: Poster[];
   neon: readonly NeonSign[];
 }
@@ -90,7 +91,7 @@ export function placeDressing(map: MapData, size: number = D.atlasSize): Dressin
   const d = map.dressing;
   if (!d) return { decals: [], junk: [], puddles: [], strips: [], fallen: [], leaves: [], posters: [], neon: [] };
   const rng = createRng(d.seed);
-  const out: DressingLayout = { decals: [], junk: [], puddles: [], strips: d.strips ?? [], fallen: [], leaves: [], posters: [], neon: d.neon ?? [] };
+  const out: DressingLayout = { decals: [], junk: [], puddles: [], strips: d.strips ?? [], fallen: [], leaves: [], posters: [], neon: d.neon ? mountNeon(map.blocks, d.neon) : [] };
   const cells = atlasRects(size).dressing;
   if (d.clutter) placeClutter(map, d.clutter, rng, cells, out);
   if (d.marks) placeMarks(map, d.marks, rng, cells, out, size);

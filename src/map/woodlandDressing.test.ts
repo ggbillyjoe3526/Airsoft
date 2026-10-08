@@ -164,6 +164,18 @@ describe("Woodland's wood floor (G9)", () => {
     }
   });
 
+  it('keeps every puddle and mud patch at least 1.5 m from every spawn and Extraction insertion (a figure starts on clean ground)', () => {
+    const starts = [...WOODLAND.spawns.flat(), ...(WOODLAND.extraction?.insertions ?? []).flatMap((i) => i.spawns)].map((s) => s.position);
+    expect(starts.length).toBeGreaterThan(10);
+    for (const p of layout.puddles) {
+      for (const s of starts) {
+        const dx = Math.max(p.x - p.width / 2 - s.x, 0, s.x - (p.x + p.width / 2));
+        const dz = Math.max(p.z - p.depth / 2 - s.z, 0, s.z - (p.z + p.depth / 2));
+        expect(Math.hypot(dx, dz), `puddle at ${p.x}, ${p.z} by the start at ${s.x.toFixed(1)}, ${s.z.toFixed(1)}`).toBeGreaterThanOrEqual(1.5);
+      }
+    }
+  });
+
   it('lays every puddle and mud patch on the ground, under no block', () => {
     for (const p of layout.puddles) {
       expect(p.draped).toBe(true);

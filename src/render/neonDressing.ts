@@ -1,12 +1,12 @@
 import * as THREE from 'three';
 import { NEON } from '../config/dressing';
-import type { NeonSign } from '../map/mapTypes';
+import type { MapBlock, NeonSign } from '../map/mapTypes';
 
 /**
- * Neon signs (G9, MapDressing.neon): tube letters or an emblem on a dark plate standing a few centimetres off a wall,
+ * Neon signs (G9, MapDressing.neon): tube letters or an emblem on a dark plate mounted flush on a wall (mountNeon),
  * built into the junk mesh (render/dressingMeshes.ts; no draw call of its own). The tubes glow through the junk
  * material's `glow` attribute; a flickering sign's tubes carry its channel in a `flick` attribute, and the material
- * multiplies their glow by that channel's level (neonFlicker, set each frame by render/dressingEffects.ts; 1 under
+ * multiplies their glow by that channel's level (neonFlickerLevels, set each frame by render/dressingEffects.ts; 1 under
  * Reduced motion). Look only: a sign is a few centimetres deep, flat on its wall.
  */
 
@@ -143,19 +143,100 @@ export function neonParts(s: NeonSign): { geo: THREE.BufferGeometry; colour: num
   return out;
 }
 
+const AXIS: Record<NeonSign['facing'], { axis: 'x' | 'z'; along: 'x' | 'z'; sign: 1 | -1 }> = {
+  '+x': { axis: 'x', along: 'z', sign: 1 },
+  '-x': { axis: 'x', along: 'z', sign: -1 },
+  '+z': { axis: 'z', along: 'x', sign: 1 },
+  '-z': { axis: 'z', along: 'x', sign: -1 },
+};
+const lo = (b: MapBlock, k: 'x' | 'y' | 'z'): number => b.center[k] - b.size[k] / 2;
+const hi = (b: MapBlock, k: 'x' | 'y' | 'z'): number => b.center[k] + b.size[k] / 2;
+/** Points across a plate (a 5 × 5 grid, its edges a millimetre in) that a wall face must back. */
+const PLATE_GRID = [-0.5, -0.25, 0, 0.25, 0.5].map((u) => u * 0.998);
+
 /**
- * A flicker channel's level at time `t` (s): 1 most of the time; once every NEON.flicker.every seconds or so (each
- * channel its own period and phase) a short burst of `dips` smooth dips over `burst` seconds, down to `low`. Never more
- * than three dips a second (photosensitivity: render/neonDressing.test.ts samples it).
+ * The signs mounted on their walls (G9): each sign's middle is moved onto the face of the wall behind it, the nearest
+ * face plane within NEON.mount m (or a few centimetres in front of the middle given) whose blocks back every point of
+ * the plate and none of whose blocks stand in front of the plate. A sign no face backs whole (over an opening, off a
+ * wall's end, across a coping) is left out, so nothing ever hangs in the air; map/neonHeightsDressing.test.ts checks
+ * every sign a map gives is mounted.
  */
-export function neonFlicker(channel: number, t: number): number {
+export function mountNeon(blocks: readonly MapBlock[], signs: readonly NeonSign[]): NeonSign[] {
+  const solid = blocks.filter((b) => b.kind !== 'floor' && b.kind !== 'ramp');
+  const out: NeonSign[] = [];
+  for (const s of signs) {
+    const { axis, along, sign } = AXIS[s.facing];
+    const [w, h] = neonPlate(s);
+    const c = s.centre;
+    const depth = NEON.standoff + NEON.plateDepth + NEON.tube;
+    // Every face plane on the facing side, behind the sign (or just in front of it), nearest first.
+    const planes = [...new Set(solid.map((b) => (sign > 0 ? hi(b, axis) : lo(b, axis))))]
+      .filter((f) => {
+        const d = sign * (c[axis] - f);
+        return d >= -0.05 && d <= NEON.mount;
+      })
+      .sort((a, b) => Math.abs(a - c[axis]) - Math.abs(b - c[axis]));
+    const backed = (f: number): boolean =>
+      PLATE_GRID.every((du) =>
+        PLATE_GRID.every((dv) => {
+          const u = c[along] + du * w;
+          const v = c.y + dv * h;
+          return solid.some((b) => Math.abs((sign > 0 ? hi(b, axis) : lo(b, axis)) - f) < 1e-3 && u >= lo(b, along) && u <= hi(b, along) && v >= lo(b, 'y') && v <= hi(b, 'y'));
+        }),
+      );
+    // Nothing may stand in the plate's own few centimetres in front of the face.
+    const clear = (f: number): boolean =>
+      !solid.some((b) => {
+        const near = sign > 0 ? f : f - depth;
+        const far = sign > 0 ? f + depth : f;
+        return lo(b, axis) < far - 1e-4 && hi(b, axis) > near + 1e-4 && lo(b, along) < c[along] + w / 2 && hi(b, along) > c[along] - w / 2 && lo(b, 'y') < c.y + h / 2 && hi(b, 'y') > c.y - h / 2;
+      });
+    const face = planes.find((f) => backed(f) && clear(f));
+    if (face === undefined) continue;
+    out.push({ ...s, centre: axis === 'x' ? { x: face, y: c.y, z: c.z } : { x: c.x, y: c.y, z: face } });
+  }
+  return out;
+}
+
+/**
+ * Every flicker channel's level at time `t` (s), written to `out` (out[c - 1] is channel c): 1 most of the time; in a
+ * channel's own slot of each NEON.flicker.cycle, now and then (seeded per cycle and channel), a burst of `dips` smooth
+ * dips over `burst` s down to `low`. The slots never overlap and each burst ends `rest` s before the next slot, so the
+ * channels never dip in the same second: at most two dips a second over all the signs (photosensitivity: the limit is
+ * three; render/g9EffectsQA.test.ts samples it). One function body writing a typed array, so the frame's call
+ * (render/dressingEffects.ts) allocates nothing.
+ */
+export function neonFlickerLevels(t: number, out: Float64Array): void {
   const F = NEON.flicker;
-  if (channel < 1) return 1;
-  // A channel's period, between `every` [0] and [1], and its phase: spread by the golden ratio, so no two line up.
-  const share = (channel * 0.6180339887 + F.seed * 1e-4) % 1;
-  const period = F.every[0] + share * (F.every[1] - F.every[0]);
-  const at = (((t + channel * 2.71) % period) + period) % period;
-  if (at >= F.burst) return 1;
-  const s = Math.sin((Math.PI * F.dips * at) / F.burst);
-  return 1 - (1 - F.low) * s * s;
+  const slot = F.cycle / F.channels;
+  const n = Math.floor(t / F.cycle);
+  const inCycle = t - n * F.cycle;
+  for (let k = 0; k < F.channels; k++) {
+    // A hash of (cycle, channel): whether this slot bursts, and where in the slot.
+    let h = Math.imul((n | 0) ^ Math.imul(F.seed + k + 1, 0x9e3779b1), 0x85ebca6b);
+    h ^= h >>> 13;
+    h = Math.imul(h, 0xc2b2ae35);
+    h ^= h >>> 16;
+    const pick = (h >>> 0) / 4294967296;
+    let g = Math.imul(h ^ 0x27d4eb2f, 0x165667b1);
+    g ^= g >>> 15;
+    const place = (g >>> 0) / 4294967296;
+    const start = k * slot + place * (slot - F.burst - F.rest);
+    const at = inCycle - start;
+    if (pick < F.skip || at < 0 || at >= F.burst) {
+      out[k] = 1;
+      continue;
+    }
+    const s = Math.sin((Math.PI * F.dips * at) / F.burst);
+    out[k] = 1 - (1 - F.low) * s * s;
+  }
+}
+
+const levels = new Float64Array(NEON.flicker.channels);
+
+/** One flicker channel's level at time `t` (s): `channel` 1 to 3, as neonFlickerLevels gives it; 1 for no channel. */
+export function neonFlicker(channel: number, t: number): number {
+  if (channel < 1 || channel > NEON.flicker.channels) return 1;
+  neonFlickerLevels(t, levels);
+  return levels[channel - 1]!;
 }
