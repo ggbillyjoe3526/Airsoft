@@ -12,9 +12,9 @@ files, `pipeline/pipeline-proposal.md`). Scripts here, agents in `.claude/agents
 | Worker | the build thread itself (one task per thread); `.claude/agents/worker.md` only when a thread splits its task | Opus 5.5 high for `tier: core`; Sonnet 5.5 medium for `tier: ui` and `tier: trivial` | the task's `touches`, tests, docs |
 | QA | `.claude/agents/qa.md` | Sonnet 5.5 medium | tests only (commit trailer `Agent: qa`; the gate checks) |
 | Performance | `.claude/agents/performance.md` | Sonnet 5.5 medium; Opus 5.5 high when a regression stays unexplained | nothing (writes under `pipeline/out/`) |
-| Triage | `.claude/agents/triage.md` | Haiku 4.5 low | nothing (summaries under `pipeline/out/qa-artifacts/`) |
+| Triage | `.claude/agents/triage.md` | Haiku 5.5 low | nothing (summaries under `pipeline/out/qa-artifacts/`) |
 | Critic | `.claude/agents/critic.md` | Sonnet 5.5 medium; Opus 5.5 for `tier: core` and near-miss verdicts | nothing (`pipeline/out/critic.md`, a REVIEWS line) |
-| Changelog | `.claude/agents/changelog.md` | Haiku 4.5 low | `CHANGELOG.md`, `docs/FEATURES.md`, `docs/patch-notes/`, README's "New since" |
+| Changelog | `.claude/agents/changelog.md` | Haiku 5.5 low | `CHANGELOG.md`, `docs/FEATURES.md`, `docs/patch-notes/`, README's "New since" |
 
 Tiers: `core` is the simulation, physics, rendering, bots, navigation, audio engine; `ui` is menus, HUD, settings,
 config, asset loading, docs; `trivial` is a one-constant change, a wording fix, a docs-only change.

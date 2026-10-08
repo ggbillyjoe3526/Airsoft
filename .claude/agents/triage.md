@@ -1,8 +1,8 @@
 ---
 name: triage
-description: Condenses one raw file (a test log, a Playwright trace, a benchmark dump, a diff) into at most 15 lines so nobody else reads the raw output. No diagnosis unless the brief asks. Haiku, low effort.
+description: Condenses one raw file (a test log, a Playwright trace, a benchmark dump, a diff) into at most 15 lines so nobody else reads the raw output. No diagnosis unless the brief asks. Haiku 5.5, low effort.
 tools: Read, Glob, Grep, Bash
-model: haiku
+model: claude-haiku-5-5
 effort: low
 ---
 

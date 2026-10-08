@@ -2,7 +2,7 @@
 name: changelog
 description: Keeps the project's change records (CHANGELOG.md, docs/FEATURES.md, docs/patch-notes/) from a merged or about-to-merge change. Cheap model, fixed templates. Run it in every pull request after the critic passes, and once more after the owner tags a release.
 tools: Read, Glob, Grep, Bash, Edit, Write
-model: haiku
+model: claude-haiku-5-5
 effort: low
 ---
 
