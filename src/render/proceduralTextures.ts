@@ -50,7 +50,7 @@ export function createSurfaceTextures(size: TextureSize, anisotropy: Anisotropy)
  * Draws into `set` each of `ids` it doesn't hold yet (M33i: the woods' textures, when a map that uses them loads), at
  * `size` and `anisotropy` (the set's own). Returns the set.
  */
-export function addSurfaceTextures(set: SurfaceTextures, ids: Iterable<SurfaceTextureId>, size: TextureSize, anisotropy: Anisotropy): SurfaceTextures {
+export function addSurfaceTextures<T extends Partial<SurfaceTextures>>(set: T, ids: Iterable<SurfaceTextureId>, size: TextureSize, anisotropy: Anisotropy): T {
   let draw: ((id: SurfaceTextureId) => ProceduralTexture) | null = null;
   for (const id of ids) {
     if (set[id]) continue;
@@ -448,7 +448,7 @@ function surfaceDrawer(size: TextureSize, anisotropy: Anisotropy): (id: SurfaceT
   return (id) => drawers[id]();
 }
 
-export function disposeSurfaceTextures(t: SurfaceTextures): void {
+export function disposeSurfaceTextures(t: Partial<SurfaceTextures>): void {
   for (const surface of Object.values(t) as ProceduralTexture[]) {
     surface.texture.dispose();
     surface.normal?.dispose();
@@ -459,7 +459,7 @@ export function disposeSurfaceTextures(t: SurfaceTextures): void {
  * Anisotropic filtering for a set already drawn (REN-13): uploaded again with the new filter on the next frame (Three.js
  * clamps it to what the graphics card offers).
  */
-export function setSurfaceAnisotropy(t: SurfaceTextures, anisotropy: Anisotropy): void {
+export function setSurfaceAnisotropy(t: Partial<SurfaceTextures>, anisotropy: Anisotropy): void {
   for (const surface of Object.values(t) as ProceduralTexture[]) {
     for (const texture of [surface.texture, surface.normal]) {
       if (!texture || texture.anisotropy === anisotropy) continue;

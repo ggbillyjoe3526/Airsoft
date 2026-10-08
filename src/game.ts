@@ -454,7 +454,7 @@ export class Game {
       audio: { initial: this.audio.volumes, onChange: (channel, v) => this.changeVolume(channel, v), onRelease: (channel) => this.audio.preview(channel) },
       crosshair: { initial: this.crosshair, onChange: (c) => this.changeCrosshair(c) },
       accessibility: {
-        reducedMotion: { initial: this.motionReduced(), onChange: (on) => this.changeReducedMotion(on) },
+        reducedMotion: { initial: this.motionReduced(), onChange: (on) => this.changeReducedMotion(on), follow: (show) => (this.showSystemMotion = show) },
         // The figures are built with their colours, so a new set shows from the next match.
         // On the range they show from Resume (it's rebuilt where you stood, as after a loadout change).
         teamColours: { initial: this.teamColours, onChange: (set) => ((this.teamColours = set), (this.setupChanged = this.loadoutChanged = true)) },
@@ -654,9 +654,14 @@ export class Game {
     this.container.classList.toggle('full-motion', cls === 'full-motion');
   }
 
-  /** The system's setting changed while the page is open: the 3D motion follows it too, until the player picks. */
+  /** Shows a value on Settings › Accessibility's Reduced motion picker without saving it (BP2). */
+  private showSystemMotion: ((on: boolean) => void) | null = null;
+
+  /** The system's setting changed while the page is open: the 3D motion and the picker follow it, until the player picks. */
   private readonly systemMotionChanged = (): void => {
-    if (this.reducedMotion === null) this.session?.setMotion(motionScale(this.motionReduced()));
+    if (this.reducedMotion !== null) return;
+    this.session?.setMotion(motionScale(this.motionReduced()));
+    this.showSystemMotion?.(this.motionReduced());
   };
 
   /**
@@ -764,7 +769,9 @@ export class Game {
     const dev = activeDev(this.devEnabled, this.devPicked);
     if (!dev.devContent || allMapsLoaded()) return dev;
     void loadDevMaps().then((loaded) => {
-      if (!loaded || this.disposed) return;
+      if (this.disposed) return;
+      // Not here (a failed download): say so by the play buttons, not only in the console (BP2).
+      if (!loaded) return this.menus.showHint(BROWSER_NOTES.devMapsFailed);
       this.applyDev();
       this.menus.refresh();
     });

@@ -761,21 +761,30 @@ export class BotController {
       budget -= this.search.expanded;
       if (step === 'pending') return;
       this.searching = undefined;
-      if (step === 'found') endRoute(this.opts.nav, this.search, b.character.position, b.routeGoal, b.route, this.opts.legProbe ?? NAV.legProbe);
+      // The route ends on the goal it was searched for: a carried search's goal may since have moved a little.
+      if (step === 'found') {
+        copy(b.routeGoal, this.searchGoal);
+        endRoute(this.opts.nav, this.search, b.character.position, b.routeGoal, b.route, this.opts.legProbe ?? NAV.legProbe);
+      }
       this.routeDone(b, step === 'found');
     }
   }
 
-  /** The bot whose search is open: the one carried over if it still wants that route, else the next to begin one. */
+  /**
+   * The bot whose search is open: the one carried over if it is still in play and wants a route about there (its goal
+   * moved less than replanDistance, as Follow me's spot does every tick; BP2), else the next to begin one.
+   */
   private openSearch(): Bot | undefined {
     const open = this.searching;
-    if (open && open.routeState === 'wanted' && open.routeGoal.x === this.searchGoal.x && open.routeGoal.y === this.searchGoal.y && open.routeGoal.z === this.searchGoal.z) return open;
+    const g = this.searchGoal;
+    if (open && open.routeState === 'wanted' && isInPlay(open.character) && open.routeGoal.y === g.y && Math.hypot(open.routeGoal.x - g.x, open.routeGoal.z - g.z) < this.world.cfg.replanDistance) return open;
     this.searching = undefined;
     const n = this.bots.length;
     for (let k = 0; k < n; k++) {
       const i = (this.plannerCursor + k) % n;
       const b = this.bots[i]!;
-      if (b.routeState !== 'wanted') continue;
+      // A bot hit while it waited walks off on its own route (M74): no search for it.
+      if (b.routeState !== 'wanted' || !isInPlay(b.character)) continue;
       if (!beginRoute(this.opts.nav, this.search, b.character.position, b.routeGoal, this.opts.navSnap)) {
         this.routeDone(b, false);
         continue;

@@ -317,6 +317,15 @@ describe('bindable', () => {
     store.setItem('airsoft.keyBindings', JSON.stringify({ reload: ['F5'] }));
     expect(new KeyBindings(store).codes('reload')).toEqual(['KeyR']);
   });
+
+  it("gives an essential action its default back when its saved key is refused and another action holds that default (BP2)", () => {
+    const store = new MemoryStore();
+    store.setItem('airsoft.keyBindings', JSON.stringify({ fire: ['F5'], jump: ['Mouse0'], reload: ['KeyT'] }));
+    const keys = new KeyBindings(store);
+    expect(keys.codes('fire')).toEqual(['Mouse0']);
+    expect(keys.codes('jump')).toEqual([]); // shown as "—" until the player picks a key
+    expect(keys.codes('reload')).toEqual(['KeyT']); // the rest of their bindings kept
+  });
 });
 
 describe('describeKeys', () => {

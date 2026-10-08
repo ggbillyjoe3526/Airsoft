@@ -287,6 +287,8 @@ export function webglPictureTarget(gl: THREE.WebGLRenderer): PictureTarget {
         gl.render(scene, camera);
         const pixels = new Float32Array(width * height * 4);
         gl.readRenderTargetPixels(rt, 0, 0, width, height, pixels);
+        // A lost context draws and reads nothing, which would be kept as a blank picture: failing, it is asked again (BP2).
+        if (gl.getContext().isContextLost()) throw new Error('The graphics context is lost');
         return pixels;
       } finally {
         gl.setRenderTarget(before);

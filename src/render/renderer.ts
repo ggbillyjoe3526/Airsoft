@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {
+  type CoreSurfaceId,
   effectivePixelRatio,
   FRAME_TIMING,
   type LightingPreset,
@@ -20,7 +21,7 @@ import { mapLookOf, texturesFor } from './mapMeshes';
 import { PostHost } from './post/postHost';
 import type { PostPassId } from './post/postPlan';
 import type { PostStack } from './post/postStack';
-import { addSurfaceTextures, createSurfaceTextures, disposeSurfaceTextures, setSurfaceAnisotropy, type SurfaceTextures } from './proceduralTextures';
+import { addSurfaceTextures, CORE_SURFACES, disposeSurfaceTextures, type ProceduralTexture, setSurfaceAnisotropy, type SurfaceTextures } from './proceduralTextures';
 import { defaultEnvironmentLook, type EnvironmentLook, ReplicaSheen } from './replicaSheen';
 import { RetroFilter, retroPixelAngle } from './retroFilter';
 import { releaseNormalMaps, usesNormalMaps } from './surfaceNormals';
@@ -61,26 +62,21 @@ const browserIdle: IdleScheduler = (work) => {
 
 /**
  * Draws the surface textures and uploads them in idle moments (audit REN-14), so the first Play doesn't: one moment
- * draws the set (`draw`), then each following moment uploads one texture, until every one is on the GPU or `current()`
- * no longer gives that set (a texture-size change dropped it; the new size is drawn when a session asks).
+ * draws one of `ids` (`draw`), the next uploads it, and so on through the list. One texture a moment, not the whole set
+ * (BP2): at High a library surface alone takes most of a second to draw, the set several seconds of a frozen title
+ * screen. `upload` skips a texture its set no longer holds (a texture-size change dropped it).
  */
-export function warmSurfacesInIdle(
-  draw: () => SurfaceTextures,
-  current: () => SurfaceTextures | null,
-  upload: (texture: THREE.Texture) => void,
-  idle: IdleScheduler,
-): void {
-  idle(() => {
-    const set = draw();
-    const textures = Object.values(set).map((t) => t.texture);
-    let next = 0;
-    const step = (): void => {
-      if (current() !== set || next >= textures.length) return;
-      upload(textures[next++]!);
+export function warmSurfacesInIdle<Id>(ids: readonly Id[], draw: (id: Id) => THREE.Texture, upload: (texture: THREE.Texture) => void, idle: IdleScheduler): void {
+  let next = 0;
+  const step = (): void => {
+    if (next >= ids.length) return;
+    const texture = draw(ids[next++]!);
+    idle(() => {
+      upload(texture);
       idle(step);
-    };
-    idle(step);
-  });
+    });
+  };
+  idle(step);
 }
 
 /** A renderer's own record of each material (WebGLRenderer.properties): the uniforms it binds, its own textures among them. */
@@ -167,8 +163,11 @@ export class Renderer {
   /** View size in CSS pixels (kept up to date on resize, so HUD code never has to read layout). */
   width = 0;
   height = 0;
-  /** The map surfaces' textures, drawn the first time a session asks (surfaceTextures), and the size they were drawn at. */
-  private surfaces: SurfaceTextures | null = null;
+  /**
+   * The map surfaces' textures, drawn the first time a session asks (surfaceTextures) or one an idle moment before
+   * (warmUp, so it may hold only some of the core ones), and the size they were drawn at.
+   */
+  private surfaces: Partial<SurfaceTextures> | null = null;
   private surfacesSize: TextureSize | null = null;
   /**
    * The prefiltered sky: the held replica's sheen and the scene's environment lighting (F1), made once per context and
@@ -197,7 +196,10 @@ export class Renderer {
    * take and release them (they must not dispose them); freed with the renderer.
    */
   readonly mapMeshes = new MapMeshCache();
-  /** The overlay scene drawn last frame (the held replica), released with the world when the context is swapped. */
+  /**
+   * The overlay scene drawn last (the held replica), released with the world when the context is swapped: kept while
+   * spectating, when no overlay is drawn (BP2), until its owner lets go of it (forgetOverlay).
+   */
   private overlayScene: THREE.Scene | null = null;
   /** The retro pixel filter's look while it is on (Settings → Dev, M42); null while off. */
   private retroLook: RetroLook | null = null;
@@ -279,8 +281,14 @@ export class Renderer {
    * (audit L-04). Sessions must not dispose them.
    */
   get surfaceTextures(): SurfaceTextures {
+    // Every core surface, the ones the idle warm-up hasn't drawn yet drawn now.
+    return addSurfaceTextures(this.surfaceSet(), CORE_SURFACES, this.surfacesSize!, this.quality.anisotropy) as SurfaceTextures;
+  }
+
+  /** The set in force, made (empty) at the quality's texture size if there is none. */
+  private surfaceSet(): Partial<SurfaceTextures> {
     if (!this.surfaces) {
-      this.surfaces = createSurfaceTextures(this.quality.textureSize, this.quality.anisotropy);
+      this.surfaces = {};
       this.surfacesSize = this.quality.textureSize;
     }
     return this.surfaces;
@@ -365,9 +373,11 @@ export class Renderer {
    */
   warmUp(idle: IdleScheduler = browserIdle): void {
     warmSurfacesInIdle(
-      () => this.surfaceTextures,
-      () => this.surfaces,
-      (texture) => this.gl.initTexture(texture),
+      CORE_SURFACES,
+      (id: CoreSurfaceId) => addSurfaceTextures(this.surfaceSet(), [id], this.surfacesSize!, this.quality.anisotropy)[id]!.texture,
+      (texture) => {
+        if (this.surfaces && (Object.values(this.surfaces) as ProceduralTexture[]).some((t) => t.texture === texture)) this.gl.initTexture(texture);
+      },
       idle,
     );
   }
@@ -480,6 +490,11 @@ export class Renderer {
     if (held) gl.setRenderTarget(null);
   }
 
+  /** Lets go of `scene` as the overlay to release on a context swap (its match is over and has freed it, BP2). */
+  forgetOverlay(scene: THREE.Scene): void {
+    if (this.overlayScene === scene) this.overlayScene = null;
+  }
+
   /** Draws the world, then (optionally) an overlay scene such as the held replica on top of it. */
   render(overlay?: { scene: THREE.Scene; camera: THREE.Camera }): void {
     if (this.environmentDirty) this.applyEnvironment();
@@ -502,8 +517,8 @@ export class Renderer {
     } else {
       gl.render(this.scene, this.camera);
     }
-    this.overlayScene = overlay?.scene ?? null;
     if (overlay) {
+      this.overlayScene = overlay.scene;
       gl.autoClear = false;
       gl.clearDepth();
       gl.render(overlay.scene, overlay.camera);

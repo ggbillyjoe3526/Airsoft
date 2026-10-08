@@ -89,7 +89,7 @@ export function ensureNormalMap(surface: ProceduralTexture): THREE.Texture {
  * freed while off: a 512² set is about 11 MB. They are worked out again the next time a material asks
  * (ensureNormalMap). Returns how many it freed.
  */
-export function releaseNormalMaps(textures: SurfaceTextures): number {
+export function releaseNormalMaps(textures: Partial<SurfaceTextures>): number {
   let freed = 0;
   for (const surface of Object.values(textures) as ProceduralTexture[]) {
     if (!surface.normal) continue;

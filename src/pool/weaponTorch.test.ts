@@ -65,6 +65,27 @@ describe('the Weapon Torch in the pool (M33h)', () => {
     expect(dev.fitOf(rifle).light).toEqual(torchRef);
   });
 
+  it('takes "No light" on every replica, saved across a reload and kept out of the match kit (BP2)', () => {
+    vi.stubGlobal('localStorage', new MemoryStorage());
+    const owns = { owns: (r: { tier: string }) => r.tier === 'common' || r.tier === 'legendary' }; // the Cyber Pistol is Legendary
+    const pool = contentPool(GAME_POOL, true);
+    const model = new LoadoutModel(pool, owns);
+    for (const r of [...LOADOUT, CYBER_PISTOL]) {
+      const replica = assetOfReplica(pool, r)!.id;
+      const ref = { asset: replica, tier: r === CYBER_PISTOL ? 'legendary' : 'common' };
+      const power = model.fitOf(replica).power;
+      expect(model.fitOf(replica).light?.asset, r.id).toBe(TORCH_ID);
+      expect(model.slotKit(ref).parts.light, r.id).toBe('weaponTorch');
+      model.setFit(replica, 'light', null);
+      expect(model.fitOf(replica).light, r.id).toBeNull();
+      expect(model.slotKit(ref).parts.light, `${r.id} in the match kit`).toBeNull();
+      expect(new LoadoutModel(pool, owns).fitOf(replica).light, `${r.id} after a reload`).toBeNull();
+      expect(model.fitOf(replica).power, `${r.id} keeps its power source`).toEqual(power);
+      model.setFit(replica, 'light', torchRef);
+      expect(model.fitOf(replica).light, `${r.id} takes the torch back`).toEqual(torchRef);
+    }
+  });
+
   it('is fitted to every replica of a bot that it fits, keeping the other parts', () => {
     const c = createCharacter(3, vec3(), 0, LOADOUT, 1);
     const before = c.armament.parts.map((p) => ({ ...p }));

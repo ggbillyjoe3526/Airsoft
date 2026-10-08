@@ -1,12 +1,12 @@
 import * as THREE from 'three';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
-import type { Pass } from 'three/examples/jsm/postprocessing/Pass.js';
+import { FullScreenQuad, type Pass } from 'three/examples/jsm/postprocessing/Pass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { POST } from '../../config/post';
 import { AmbientOcclusionPass } from './ambientOcclusionPass';
 import { LensPass } from './lensPass';
 import { LightShaftsPass } from './lightShaftsPass';
-import type { PostFrame, PostPass } from './postPass';
+import { fullScreenMaterial, type PostFrame, type PostPass } from './postPass';
 import { type PostPassId, planNeedsDepth, type PostQuality, postPlan, sceneSamples } from './postPlan';
 import { ReflectionPass } from './reflectionPass';
 import { jitterProjection, jitterSequence, TemporalAAPass } from './temporalAAPass';
@@ -20,16 +20,22 @@ export interface PostSetup {
 
 /** One of Three's own passes (bloom, output) in the stack's terms. */
 class ThreePass implements PostPass {
+  /** Bloom blends onto what it reads (Three's `needsSwap` false); output draws out. */
+  readonly inPlace: boolean;
+
   constructor(
     readonly id: PostPassId,
     private readonly pass: Pass,
-  ) {}
+  ) {
+    this.inPlace = !pass.needsSwap;
+  }
 
   render(gl: THREE.WebGLRenderer, _frame: PostFrame, read: THREE.WebGLRenderTarget, write: THREE.WebGLRenderTarget | null): boolean {
-    this.pass.renderToScreen = write === null;
-    // Three's passes draw onto the screen themselves when renderToScreen; `write` is otherwise their target.
-    this.pass.render(gl, write as THREE.WebGLRenderTarget, read, 0, false);
-    return this.pass.needsSwap || write === null;
+    this.pass.renderToScreen = !this.inPlace && write === null;
+    // Three's passes draw onto the screen themselves when renderToScreen; `write` is otherwise their target (an
+    // in-place pass blends onto `read` and ignores it).
+    this.pass.render(gl, (write ?? read) as THREE.WebGLRenderTarget, read, 0, false);
+    return !this.inPlace;
   }
 
   setSize(width: number, height: number): void {
@@ -81,6 +87,10 @@ export class PostStack {
   private height: number;
   private readonly frame: PostFrame;
   private readonly plainProjection = new THREE.Matrix4();
+  /** Where the camera was last frame (null before the first): a jump past POST.taa.cutDistance is a cut (BP2). */
+  private lastCamera: THREE.Vector3 | null = null;
+  /** Copies the resolved multisampled scene out before an in-place pass (made the first time it is needed, BP2). */
+  private copy: { material: THREE.ShaderMaterial; quad: FullScreenQuad } | null = null;
 
   constructor(setup: PostSetup, width: number, height: number) {
     this.width = width;
@@ -146,6 +156,10 @@ export class PostStack {
     const f = this.frame;
     f.camera = camera;
     camera.updateMatrixWorld();
+    // A cut (a new round's spawn, the next player watched) starts the temporal history afresh (BP2).
+    if (!this.lastCamera) this.lastCamera = camera.position.clone();
+    else if (this.lastCamera.distanceToSquared(camera.position) > POST.taa.cutDistance ** 2) this.reset();
+    this.lastCamera.copy(camera.position);
     f.viewProjection.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
     f.inverseViewProjection.copy(f.viewProjection).invert();
     const jitter = this.jitter;
@@ -163,9 +177,17 @@ export class PostStack {
     gl.autoClear = false;
     let read = this.sceneTarget;
     for (let i = 0; i < this.passes.length; i++) {
+      const pass = this.passes[i]!;
+      if (pass.inPlace) {
+        // Never blended onto the multisampled scene target: Three throws its samples away after each resolve
+        // (invalidateFramebuffer), and where a driver honours that the blend lands on nothing (BP2). Copied out first.
+        if (read === this.sceneTarget && read.samples > 0) read = this.copyOut(gl, read);
+        pass.render(gl, f, read, null);
+        continue;
+      }
       const last = i === this.passes.length - 1;
       const write = last ? null : this.target(read === this.pingPong[0] ? 1 : 0);
-      if (this.passes[i]!.render(gl, f, read, write) && write) read = write;
+      if (pass.render(gl, f, read, write) && write) read = write;
     }
     if (jitter) {
       camera.projectionMatrix.copy(this.plainProjection);
@@ -179,12 +201,28 @@ export class PostStack {
   dispose(): void {
     for (const p of this.passes) p.dispose();
     this.passes.length = 0;
+    this.copy?.material.dispose();
+    this.copy?.quad.dispose();
+    this.copy = null;
     this.sceneTarget.depthTexture?.dispose();
     this.sceneTarget.dispose();
     for (let i = 0; i < 2; i++) {
       this.pingPong[i]?.dispose();
       this.pingPong[i] = null;
     }
+  }
+
+  /** Draws the resolved picture in `from` into ping-pong target 0 and returns that target. */
+  private copyOut(gl: THREE.WebGLRenderer, from: THREE.WebGLRenderTarget): THREE.WebGLRenderTarget {
+    if (!this.copy) {
+      const material = fullScreenMaterial('uniform sampler2D tColour; varying vec2 vUv; void main() { gl_FragColor = texture2D(tColour, vUv); }', { tColour: { value: null } });
+      this.copy = { material, quad: new FullScreenQuad(material) };
+    }
+    const to = this.target(0);
+    this.copy.material.uniforms.tColour!.value = from.texture;
+    gl.setRenderTarget(to);
+    this.copy.quad.render(gl);
+    return to;
   }
 
   /** Ping-pong target `i`, made the first time it is drawn into. */

@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ITEM_PICTURE } from '../config/itemPictures';
 import { AEG, CYBER_PISTOL, GAS_PISTOL } from '../config/replicas';
-import { finishPixels, fitParts, frameItem, ItemPictures, pictureKey, pictureSize, type PictureSubject, type PictureTarget, showOnly, toneMap, toSrgb8, visibleBox } from './itemPictures';
+import { finishPixels, fitParts, frameItem, ItemPictures, pictureKey, pictureSize, type PictureSubject, type PictureTarget, showOnly, toneMap, toSrgb8, visibleBox, webglPictureTarget } from './itemPictures';
 import { buildReplicaModels } from './replicaModels';
 
 const HIGH = { replica: 'high', hands: 'high' } as const;
@@ -224,6 +224,34 @@ describe('item pictures (G2)', () => {
     expect(toneMap(0)).toBe(0);
     expect(toneMap(0.5)).toBeGreaterThan(toneMap(0.2));
     expect(toneMap(100)).toBeLessThanOrEqual(1);
+  });
+});
+
+describe('the WebGL picture target on a lost context (BP2)', () => {
+  it('fails the picture rather than handing back the blank pixels a lost context reads, and puts the target back', () => {
+    vi.stubGlobal('document', { createElement: () => ({}) });
+    let lost = false;
+    const into: (THREE.WebGLRenderTarget | null)[] = [];
+    const gl = {
+      getRenderTarget: () => null,
+      getClearColor: (c: THREE.Color) => c,
+      getClearAlpha: () => 1,
+      setRenderTarget: (t: THREE.WebGLRenderTarget | null) => void into.push(t),
+      setClearColor: () => undefined,
+      clear: () => undefined,
+      render: () => undefined,
+      readRenderTargetPixels: () => undefined,
+      getContext: () => ({ isContextLost: () => lost }),
+    } as unknown as THREE.WebGLRenderer;
+    const target = webglPictureTarget(gl);
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera();
+    expect(target.draw(scene, camera, 4, 2)).toHaveLength(4 * 2 * 4);
+    lost = true;
+    expect(() => target.draw(scene, camera, 4, 2)).toThrow('lost');
+    expect(into.at(-1)).toBeNull();
+    target.dispose();
+    vi.unstubAllGlobals();
   });
 });
 
