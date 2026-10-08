@@ -322,8 +322,8 @@ describe('Practice, the last mode of the Match screen (M100 QA)', () => {
     expect(s.line('play-pays').hidden).toBe(false);
   });
 
-  // The saved mode's own card picked while Practice is on is not a change (nothing is reported, so nothing redraws "Your match").
-  it.fails('picking the saved mode again while Practice is picked brings "Your match" back to the match, not the range (setupScreen.setPractice / choiceCards.pick)', () => {
+  // The saved mode's own card picked while Practice is on is not a change the model reports: the screen redraws "Your match" itself.
+  it('picking the saved mode again while Practice is picked brings "Your match" back to the match, not the range (setupScreen.setPractice / choiceCards.pick)', () => {
     const s = setup();
     s.card('Practice').click();
     s.card('Elimination').click();
@@ -395,7 +395,7 @@ describe('the collection in a column for each kind (M100 QA)', () => {
   });
 
   // A pool whose assets are not grouped by kind (a new optic added after the grips in pool.md) draws that kind twice.
-  it.fails('draws a kind once even when the pool lists its items apart (latent: columns follow the pool\'s order, armoryScreen.renderOwned)', () => {
+  it('draws a kind once even when the pool lists its items apart (armoryScreen.renderOwned groups by kind, not by neighbours)', () => {
     const optic = pool.assets.find((x) => x.category === 'optic' && x.tag !== 'dev')!;
     const split = [...pool.assets.filter((x) => x !== optic)];
     split.splice(3, 0, optic);

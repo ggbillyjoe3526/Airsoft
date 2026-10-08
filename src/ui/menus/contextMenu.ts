@@ -28,6 +28,9 @@ export class ContextMenu {
     this.root = el('div', 'context-menu');
     this.root.hidden = true;
     this.root.setAttribute('role', 'group');
+    // Focusable itself (never by Tab): Safari and Firefox on a Mac send the focus to the nearest focusable ancestor of a pressed
+    // button, not to the button. Without this it blurs to nothing, focusout closes the menu, and the click never lands.
+    this.root.tabIndex = -1;
     this.title = el('p', 'context-menu-title');
     this.root.append(this.title);
     // The browser's own menu has no place on top of this one.

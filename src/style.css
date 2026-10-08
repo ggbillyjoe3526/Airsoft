@@ -840,6 +840,7 @@ kbd {
   display: block;
   width: fit-content;
   margin: 5px auto 0;
+  font-family: var(--ui-font);
   font-size: var(--fs-2xs);
 }
 

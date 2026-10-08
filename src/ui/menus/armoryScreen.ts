@@ -106,6 +106,8 @@ export class ArmoryScreen {
     main.append(this.reveal, this.odds);
     // The right: the collection.
     this.owned = el('div', 'armory-owned menu-card');
+    // Right-click scraps spares from a card here: a card with none gets no browser menu either (as in the Loadout).
+    this.owned.addEventListener('contextmenu', (e) => e.preventDefault());
     const columns = el('div', 'armory-columns');
     columns.append(left, main, this.owned);
     // Space takes a Shot (the 1 Shot button does it for the mouse); Esc is Back, handled by the menus.
@@ -344,15 +346,17 @@ export class ArmoryScreen {
     }
     // Each kind in its own column (M100): replicas, power sources, optics and the rest, a heading over its assets.
     const list = el('div', 'armory-list');
-    let category: Asset['category'] | null = null;
-    let column: HTMLElement | null = null;
+    // Grouped by kind, not by neighbours: a kind the pool lists apart still lands in its one column (columns in first-seen order).
+    const columns = new Map<Asset['category'], HTMLElement>();
     for (const row of catalogue.rows) {
-      if (!column || row.asset.category !== category) {
-        category = row.asset.category;
+      const category = row.asset.category;
+      let column = columns.get(category);
+      if (!column) {
         column = el('section', 'armory-kind');
         column.dataset.kind = category;
         column.setAttribute('aria-label', CATEGORY_LABELS[category]);
         column.append(el('h3', 'menu-kicker armory-category', CATEGORY_LABELS[category]));
+        columns.set(category, column);
         list.append(column);
       }
       column.append(this.assetRow(row, c));

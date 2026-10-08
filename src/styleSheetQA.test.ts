@@ -38,7 +38,7 @@ describe('the Inter files are the font they say (M100 QA)', () => {
 
   it('are real woff2 files of a sensible size, one per weight the sheets load, and no Barlow file is left to ship', () => {
     const dir = fs.readdirSync(here('./assets/fonts/'), { withFileTypes: true }).map((e) => e.name);
-    expect(dir.filter((n) => n.endsWith('.woff2')).sort()).toEqual(weights.map((w) => `Inter-${w}.woff2`));
+    expect(dir.filter((n) => n.endsWith('.woff2')).sort()).toEqual([...weights.map((w) => `Inter-${w}.woff2`), ...weights.map((w) => `Inter-marks-${w}.woff2`)].sort());
     expect(dir.some((n) => /barlow/i.test(n))).toBe(false);
     const sizes = new Set<number>();
     for (const w of weights) {
@@ -79,7 +79,7 @@ describe('Inter is the only face the menus and the HUD name (M100 QA)', () => {
   });
 
   // The order wheel's key caps are bare <kbd>: they take style.css's monospace cap, so the digits are not Inter (minor).
-  it.fails('draws the order wheel\'s key caps in Inter too (style.css .order-wheel-key leaves the bare kbd\'s --ui-mono)', () => {
+  it('draws the order wheel\'s key caps in Inter too (style.css .order-wheel-key leaves the bare kbd\'s --ui-mono)', () => {
     const own = rulesFor(baseSheet, '.order-wheel-key').join(';');
     expect(own).toMatch(/font(-family)?:[^;]*(var\(--ui-(font|display)\)|inherit)/);
   });
@@ -165,6 +165,9 @@ function printedSymbols(): { file: string; line: number; ch: string }[] {
 
 describe('every character the screens print is in Inter (M100 QA)', () => {
   const inter = innerCodePoints(here('./assets/fonts/Inter-500.woff2'));
+  // The three symbols the latin files lack come from Inter-marks (fonts.css: a unicode-range @font-face of the same family).
+  const marks = innerCodePoints(here('./assets/fonts/Inter-marks-500.woff2'));
+  const printable = (cp: number): boolean => inter.has(cp) || marks.has(cp);
 
   it('reads the font right: the letters, the middle dot, the multiplication sign, the arrows up and down and the minus', () => {
     for (const ch of ['A', 'z', '0', '9', '·', '×', '↑', '↓', '−', '–', '—', '’', '…']) expect(inter.has(ch.codePointAt(0)!), ch).toBe(true);
@@ -172,9 +175,17 @@ describe('every character the screens print is in Inter (M100 QA)', () => {
     for (const w of ['600', '700', '800']) expect(innerCodePoints(here(`./assets/fonts/Inter-${w}.woff2`)).size, w).toBe(inter.size);
   });
 
-  // The latin subset has ↑ and ↓ but no ←, → or ✓: the key labels, the stepped-down note and the tutorial's tick fall back to a system font.
-  it.fails('has a glyph for every symbol in the text (input/keyBindings.ts ← →, config/graphics.ts →, ui/coachPanel.ts ✓ are not in the subset)', () => {
-    const missing = printedSymbols().filter((s) => !inter.has(s.ch.codePointAt(0)!));
+  it('serves the marks only for their own code points (a unicode-range on the @font-face), in every weight, and holds just those three', () => {
+    expect([...marks].filter((cp) => cp !== 0).sort((a, b) => a - b).filter((cp) => cp > 0x20)).toEqual([0x2190, 0x2192, 0x2713]);
+    for (const w of ['600', '700', '800']) expect(innerCodePoints(here(`./assets/fonts/Inter-marks-${w}.woff2`)).size, w).toBe(marks.size);
+    const faces = [...sheet.matchAll(/@font-face\s*\{[^}]*Inter-marks-(\d+)\.woff2[^}]*\}/g)];
+    expect(faces.map((f) => f[1])).toEqual(['500', '600', '700', '800']);
+    for (const f of faces) expect(f[0]).toMatch(/unicode-range:\s*U\+2190,\s*U\+2192,\s*U\+2713;/);
+  });
+
+  // The latin subset has ↑ and ↓ but no ←, → or ✓ (Inter-marks has them): without it the key labels, the stepped-down note and the tutorial's tick fall back to a system font.
+  it('has a glyph for every symbol in the text (input/keyBindings.ts ← →, config/graphics.ts →, ui/coachPanel.ts ✓ are not in the subset)', () => {
+    const missing = printedSymbols().filter((s) => !printable(s.ch.codePointAt(0)!));
     expect(missing.map((s) => `${s.file}:${s.line} ${s.ch}`)).toEqual([]);
   });
 });

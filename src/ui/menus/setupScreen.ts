@@ -81,6 +81,8 @@ export class SetupScreen {
   private readonly hint = hintLine();
   /** Practice, the last mode card, is the pick (not saved: the saved mode stays as it was). */
   private practice = false;
+  /** The last view drawn: leaving Practice for the saved mode redraws "Your match" from it. */
+  private view: PlayView | null = null;
 
   constructor(
     private readonly model: PlayModel,
@@ -187,6 +189,8 @@ export class SetupScreen {
     this.sections.map.hidden = this.sections.rules.hidden = on;
     this.modeNumber.textContent = on ? '01' : '02';
     this.startLabel.textContent = on ? MENU_TEXT.hints.startPractice : MENU_TEXT.hints.startMatch;
+    // Leaving the range for the saved mode is not a change the model reports (so no refresh follows): draw "Your match" again.
+    if (!on && this.view) this.showMatch(this.view);
     this.showPracticeFacts();
   }
 
@@ -212,6 +216,12 @@ export class SetupScreen {
     this.maps.refresh();
     this.modes.refresh();
     this.match.refresh(view);
+    this.view = view;
+    this.showMatch(view);
+  }
+
+  /** "Your match": the map, the facts, the kit and the pays line, from the last view (the range's own facts replace them while Practice is picked). */
+  private showMatch(view: PlayView): void {
     if (view.still && this.still.getAttribute('src') !== view.still) this.still.src = view.still;
     this.mapLine.textContent = view.mapLine;
     this.facts.mode.textContent = view.modeLabel;

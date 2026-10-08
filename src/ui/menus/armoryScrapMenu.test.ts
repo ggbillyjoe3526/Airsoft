@@ -64,6 +64,15 @@ describe('the collection has no Scrap buttons on its cards (M100)', () => {
 });
 
 describe('a right-click on a card opens its scrap menu (M100)', () => {
+  it('never shows the browser\'s own menu over the collection, on a card with no spares or off any card (as in the Loadout)', () => {
+    const a = setup(1);
+    const owned = a.root.querySelector('.armory-owned')!;
+    // The event reaches the collection's panel from a card (it bubbles); a card with no spares has no handler of its own.
+    const e = owned.fire('contextmenu', { clientX: 20, clientY: 20 });
+    expect(e.defaultPrevented).toBe(true);
+    expect(a.menu.hidden).toBe(true);
+  });
+
   it('opens at the pointer on contextmenu, stopping the browser\'s own menu, with Scrap 1 and Scrap N and their FC', () => {
     const a = setup(4);
     const e = a.row()!.fire('contextmenu', { clientX: 300, clientY: 200 });

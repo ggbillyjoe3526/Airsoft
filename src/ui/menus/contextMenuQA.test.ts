@@ -337,8 +337,7 @@ describe('placeMenu on a seeded spread of pointers and name boxes (M100 QA)', ()
 describe('pressing a button of the menu with a mouse that does not focus buttons (Safari, Firefox on a Mac)', () => {
   // Those browsers send the focus to the page, not to the pressed button, on mouse down; the menu's own focusout then
   // sees no related target and closes it before the click lands. A focusable root (tabindex -1) catches that focus.
-  // Risk, not yet seen in a real Safari: the menu's root is not focusable, so a press on a button there blurs to nothing and closes it.
-  it.fails('takes the focus itself when its text is pressed (the root is focusable with tabindex -1), so a press inside never blurs to nothing', () => {
+  it('takes the focus itself when its text is pressed (the root is focusable with tabindex -1), so a press inside never blurs to nothing', () => {
     const settable: string[] = [];
     class Focusable extends EventNode {
       constructor(tag: string) {

@@ -23,6 +23,7 @@ CC0 models and textures can replace parts of this later. Record each one here, o
 | File | Asset | Source URL | Licence | Author |
 |---|---|---|---|---|
 | `src/assets/fonts/Inter-500.woff2`, `Inter-600.woff2`, `Inter-700.woff2`, `Inter-800.woff2` | Inter (Medium, SemiBold, Bold, ExtraBold; latin subset, from @fontsource/inter 5.3.0), the menus' and the HUD's face for all text and numbers (M100; replaces Barlow and Barlow Condensed, owner 2026-10-07) | https://github.com/rsms/inter | SIL OFL 1.1 (`src/assets/fonts/OFL.txt`) | Rasmus Andersson, The Inter Project Authors |
+| `src/assets/fonts/Inter-marks-500.woff2`, `Inter-marks-600.woff2`, `Inter-marks-700.woff2`, `Inter-marks-800.woff2` | Inter's three symbols the latin subset lacks, ← → ✓ (about 0.6 KB a weight; cut from the same four weights of Inter 4.1.1 in the `inter-ui` npm package, because `@fontsource/inter` 5.3.0 has no subset with them), loaded only where one is printed (`unicode-range`, `src/ui/menus/css/fonts.css`; M100) | https://github.com/rsms/inter | SIL OFL 1.1 (`src/assets/fonts/OFL.txt`) | Rasmus Andersson, The Inter Project Authors |
 
 The font is served with the game (graphics overhaul G3, Inter since M100) because the page's policy loads fonts from itself only. The
 licence travels beside them.

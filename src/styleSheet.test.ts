@@ -381,8 +381,9 @@ describe('the font (M100: Inter replaces Barlow)', () => {
   it('loads Inter, in the weights the sheets use, from files served with the game, and names no Barlow anywhere', () => {
     const named = faces.map((f) => /font-family:\s*'([^']+)'/.exec(f)![1]);
     expect(new Set(named)).toEqual(new Set(['Inter']));
-    expect(faces.map((f) => /font-weight:\s*(\d+)/.exec(f)![1])).toEqual(['500', '600', '700', '800']);
-    for (const f of faces) expect(f).toMatch(/url\('[^']*assets\/fonts\/Inter-\d+\.woff2'\)/);
+    // The latin files, then the same four weights of the marks (← → ✓, a unicode-range face; styleSheetQA.test.ts).
+    expect(faces.map((f) => /font-weight:\s*(\d+)/.exec(f)![1])).toEqual(['500', '600', '700', '800', '500', '600', '700', '800']);
+    for (const f of faces) expect(f).toMatch(/url\('[^']*assets\/fonts\/Inter-(marks-)?\d+\.woff2'\)/);
     expect(css).not.toMatch(/barlow/i);
   });
 

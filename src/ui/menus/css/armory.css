@@ -429,6 +429,11 @@
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
 }
 
+/* The root takes the focus from a press on its text (tabindex -1: Safari, Firefox on a Mac); it is not a stop to draw. */
+.context-menu:focus {
+  outline: none;
+}
+
 .context-menu-title {
   margin: 0;
   padding: 6px 10px 8px;
