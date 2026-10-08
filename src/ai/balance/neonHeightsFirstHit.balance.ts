@@ -1,10 +1,11 @@
-import { beforeAll, describe, expect, it } from 'vitest';
-import { BOTS } from '../config/bots';
-import { HITS, ROUNDS } from '../config/hits';
-import { mapUnderLighting } from '../map/lightingChoice';
-import { NEON_HEIGHTS } from '../map/neonHeights';
-import { initPhysics } from '../physics/physicsWorld';
-import { playMatch } from './depotMatchSupport';
+import { beforeAll, describe, it } from 'vitest';
+import { BOTS } from '../../config/bots';
+import { HITS, ROUNDS } from '../../config/hits';
+import { mapUnderLighting } from '../../map/lightingChoice';
+import { NEON_HEIGHTS } from '../../map/neonHeights';
+import { initPhysics } from '../../physics/physicsWorld';
+import { playMatch } from '../depotMatchSupport';
+import { reportMeasure, share } from './balanceSupport';
 
 /** Neon Heights plays 4v4 (M34c). */
 const TEAM_SIZE = 4;
@@ -15,7 +16,7 @@ const SEEDS = 48;
  * seeds 1-16 read 50.5 % with the bar-door holds, but seeds 1-48 read 55.1 % with them and 55.3 % without (2026-10-06),
  * so the first hit hardly moves (KNOWN_ISSUES); the holds even the wins instead (depotMatch.neonHeights.test.ts). M74's
  * route budget reads 56.6 % (168 of 297), within noise. The
- * ceiling stands about two standard errors (2.9 points at 48 seeds) over the measure, a guard against the east's door
+ * ceiling stands about two standard errors (2.9 points at 48 seeds) over the measure, a check against the east's door
  * opening up again.
  */
 const EAST_FIRST_HIT_MAX = 0.6;
@@ -27,9 +28,9 @@ describe('a 4v4 Elimination match on Neon Heights at Normal by night (M73, audit
   });
 
   // The east "takes" the first hit when its bot's BB is the round's first to land (it holds the bar door over the avenue and
-  // shoots first). Before the lane point moved inside the bar's door line the east took 15 of 24 (seeds 1-4); the message
-  // below carries the counts for seeds 1-48, with the first hits that fell on the east for the other reading.
-  it(`the east end lands at most ${Math.round(EAST_FIRST_HIT_MAX * 100)} % of the rounds' first hits`, { timeout: 900_000 }, () => {
+  // shoots first). Before the lane point moved inside the bar's door line the east took 15 of 24 (seeds 1-4); the figure's
+  // detail carries the counts for seeds 1-48, with the first hits that fell on the east for the other reading.
+  it(`measures the east end's share of the rounds' first hits (target at most ${Math.round(EAST_FIRST_HIT_MAX * 100)} %)`, { timeout: 900_000 }, (ctx) => {
     let rounds = 0;
     let eastFirst = 0;
     let eastHit = 0;
@@ -49,9 +50,12 @@ describe('a 4v4 Elimination match on Neon Heights at Normal by night (M73, audit
         }
       });
     }
-    const said = `the east landed the first hit in ${eastFirst} of ${rounds} rounds (${((100 * eastFirst) / rounds).toFixed(1)} %; the first hit fell on the east in ${eastHit}), seeds 1-${SEEDS}`;
-    console.log(said);
-    expect(rounds, said).toBeGreaterThan(0);
-    expect(eastFirst / rounds, said).toBeLessThanOrEqual(EAST_FIRST_HIT_MAX);
+    reportMeasure(ctx, {
+      label: "Neon Heights by Night, Normal, Elimination: the east end's share of the rounds' first hits",
+      value: share(eastFirst, rounds),
+      of: rounds,
+      band: { max: EAST_FIRST_HIT_MAX },
+      detail: `${eastFirst} of ${rounds}; the first hit fell on the east in ${eastHit}; seeds 1-${SEEDS}`,
+    });
   });
 });

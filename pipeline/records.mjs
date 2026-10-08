@@ -36,13 +36,15 @@ const cell = (value) => String(value ?? '').replace(/\s+/g, ' ').replace(/\|/g, 
 const splitRow = (line) => line.trim().replace(/^\||\|$/g, '').split(/(?<!\\)\|/).map((c) => c.trim());
 
 /**
- * One gate's cell in the attempt table: `✓ 18 s` when it passed, `✗ 64 s (why)` when it failed, `– not required` when it
+ * One gate's cell in the attempt table: `✓ 18 s` when it passed (`✓ 95 s (fast)` for tests run without the slow
+ * project), `✗ 64 s (why)` when it failed, `– not required` when it
  * was skipped (the reason up to its first bracket), `–` when the report has no such gate.
  */
 export function gateCell(gate) {
   if (!gate) return '–';
   const secs = typeof gate.ms === 'number' ? ` ${Math.round(gate.ms / 1000)} s` : '';
-  if (gate.pass === true) return `✓${secs}`;
+  // A tests gate that left the slow guards to CI says so (token plan item 21).
+  if (gate.pass === true) return `✓${secs}${gate.projects === 'fast' ? ' (fast)' : ''}`;
   if (gate.pass === false) {
     const failures = gate.failures ?? [];
     const first = failures[0] ? String(failures[0].test ?? failures[0].title ?? failures[0].message ?? '') : '';

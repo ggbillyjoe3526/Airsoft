@@ -15,7 +15,8 @@ import { GAME_POOL } from '../pool/gamePool';
 import { type Character, createCharacter } from '../sim/character';
 import { lightInHand } from '../sim/torch';
 import { vec3 } from '../sim/vec';
-import { type BalanceTally, DT, expectProBalance, fitNightTorches, playMatch, PRO_BAND } from './depotMatchSupport';
+import { type BalanceMeasure, type MeasureContext, PRO_BAND, reportTally } from './balance/balanceSupport';
+import { type BalanceTally, DT, expectRoundsPlayed, fitNightTorches, playMatch } from './depotMatchSupport';
 import { setUpRun } from './extractionRunSupport';
 
 /**
@@ -127,47 +128,63 @@ describe('the harness fits the light the match build fits, by its rule (M57 acce
   });
 });
 
-describe('the Pro band: the plan\'s 40-60 % except Woodland Attack / Defend (M57 acceptance 3)', () => {
+describe('the Pro band: the plan\'s 40-60 % except Woodland Attack / Defend (M57 acceptance 3; a balance figure since TE4)', () => {
   const ad = (wins: number, rounds = 100): BalanceTally => ({ rounds, decided: rounds, attackerWins: wins, end0Wins: 50, onTime: 0 });
   const elim = (end0: number, decided = 100): BalanceTally => ({ rounds: decided, decided, attackerWins: 50, end0Wins: end0, onTime: 0 });
+  /** The figures reportTally hands the balance report for `t`. */
+  const figures = (...args: Parameters<typeof reportTally> extends [MeasureContext, ...infer R] ? R : never): BalanceMeasure[] => {
+    const ctx = { task: { meta: {} } };
+    reportTally(ctx, ...args);
+    return (ctx.task.meta as { balance: BalanceMeasure[] }).balance;
+  };
 
-  it('PRO_BAND is the plan\'s 40-60 %, and the default band holds both ends in both modes', () => {
-    expect(PRO_BAND).toEqual([0.4, 0.6]);
-    for (const share of [40, 50, 60]) {
-      expect(() => expectProBalance(ad(share), 'attackDefend', 'ad')).not.toThrow();
-      expect(() => expectProBalance(elim(share), 'elimination', 'elim')).not.toThrow();
-    }
-    for (const share of [39, 61, 30]) {
-      expect(() => expectProBalance(ad(share), 'attackDefend', 'ad')).toThrow();
-      expect(() => expectProBalance(elim(share), 'elimination', 'elim')).toThrow();
-    }
+  it('PRO_BAND is the plan\'s 40-60 %, the default band of both modes, with under 1 round in 10 on time', () => {
+    expect(PRO_BAND).toEqual({ min: 0.4, max: 0.6 });
+    const [attackers, onTime] = figures('Depot, Pro, Attack / Defend', ad(45), 'attackDefend');
+    expect(attackers).toMatchObject({ value: 0.45, of: 100, band: PRO_BAND });
+    expect(attackers!.label).toContain("the attackers' share of rounds");
+    expect(onTime).toMatchObject({ value: 0, of: 100, band: { max: 0.1 } });
+    const [west] = figures('Depot, Pro, Elimination', elim(55, 80), 'elimination');
+    expect(west).toMatchObject({ value: 55 / 80, of: 80, band: PRO_BAND });
+    expect(west!.label).toContain("the west end's share of the decided rounds");
   });
 
-  it('a band given replaces both bounds, in both modes', () => {
-    const band = [0.2, 0.6] as const;
-    expect(() => expectProBalance(ad(31), 'attackDefend', 'ad', band)).not.toThrow();
-    expect(() => expectProBalance(ad(19), 'attackDefend', 'ad', band)).toThrow();
-    expect(() => expectProBalance(ad(61), 'attackDefend', 'ad', band)).toThrow();
-    expect(() => expectProBalance(elim(31), 'elimination', 'elim', band)).not.toThrow();
-    expect(() => expectProBalance(elim(19), 'elimination', 'elim', band)).toThrow();
-    // The on-time rule is unchanged by a band.
-    expect(() => expectProBalance({ ...ad(40), onTime: 10 }, 'attackDefend', 'ad', band)).toThrow();
+  it('a band given replaces both bounds, and the end can be named', () => {
+    const band = { min: 0.2, max: 0.6 };
+    expect(figures('Woodland, Pro, Attack / Defend', ad(31), 'attackDefend', band)[0]!.band).toEqual(band);
+    expect(figures('Woodland, Pro, Elimination', elim(31), 'elimination', band, 'the downhill end')[0]!.label).toContain("the downhill end's share");
+    // The on-time band is unchanged by a band.
+    expect(figures('Woodland, Pro, Attack / Defend', { ...ad(40), onTime: 10 }, 'attackDefend', band)[1]).toMatchObject({ value: 0.1, band: { max: 0.1 } });
   });
 
-  it('no Pro guard but Woodland Attack / Defend passes a band, and that one keeps the plan\'s ceiling', () => {
-    const sources = import.meta.glob<string>('./*.test.ts', { query: '?raw', import: 'default', eager: true });
+  it('no Pro figure but Woodland Attack / Defend passes a band, and that one keeps the plan\'s ceiling', () => {
+    const sources = import.meta.glob<string>('./balance/*Pro*.balance.ts', { query: '?raw', import: 'default', eager: true });
     const calls: { file: string; args: string }[] = [];
     for (const [file, src] of Object.entries(sources)) {
-      // The guards below Pro (Audit 2) share the helper with their own band, LEVELS_BAND.
-      if (file.endsWith('nightRoster.test.ts') || file.includes('Match.levels')) continue;
-      for (const m of src.matchAll(/expectProBalance\(tallyBalance\((.*)\);?\s*$/gm)) calls.push({ file, args: m[1]! });
+      for (const m of src.matchAll(/reportTally\(ctx, '[^']*', tallyBalance\((.*)\);?\s*$/gm)) calls.push({ file, args: m[1]! });
     }
-    // Every Pro guard is found: Depot, Neon Heights by Day and by Night, Woodland, each in both modes.
+    // Every Pro figure is found: Depot, Neon Heights by Day and by Night, Woodland, each in both modes.
     expect(calls.length).toBe(8);
-    // A call without a band ends at its label; anything after the label is a band.
-    const banded = calls.filter((c) => !/, '[^']*'$/.test(c.args));
-    expect(banded.map((c) => c.file)).toEqual(['./woodlandMatch.proFlag.test.ts']);
+    // A call without a band ends at its mode; anything after the mode is a band (and Woodland's Elimination names its
+    // downhill end after the plan's band).
+    const banded = calls.filter((c) => !/'(attackDefend|elimination)'$/.test(c.args) && !c.args.endsWith("PRO_BAND, 'the downhill end'"));
+    expect(banded.map((c) => c.file)).toEqual(['./balance/woodlandProFlag.balance.ts']);
     expect(banded[0]!.args).toContain("'attackDefend', WOODLAND,");
-    expect(sources['./woodlandMatch.proFlag.test.ts']).toContain('const ATTACKERS: readonly [number, number] = [0.15, PRO_BAND[1]];');
+    expect(sources['./balance/woodlandProFlag.balance.ts']).toContain('const ATTACKERS: Band = { min: 0.15, max: PRO_BAND.max };');
+  });
+});
+
+describe('a match guard\'s rounds (TE4: the hard part of the old balance guards)', () => {
+  const tally = (rounds: number, onTime: number): BalanceTally => ({ rounds, decided: rounds - onTime, attackerWins: 0, end0Wins: 0, onTime });
+
+  it('passes rounds played with under 1 in 4 on time, whoever wins them', () => {
+    expect(() => expectRoundsPlayed(tally(40, 0), 'none on time')).not.toThrow();
+    expect(() => expectRoundsPlayed(tally(40, 9), '9 of 40')).not.toThrow();
+  });
+
+  it('fails no rounds, or 1 in 4 or more on time (bots that stop finding each other)', () => {
+    expect(() => expectRoundsPlayed(tally(0, 0), 'none')).toThrow();
+    expect(() => expectRoundsPlayed(tally(40, 10), '10 of 40')).toThrow();
+    expect(() => expectRoundsPlayed(tally(82, 38), 'Woodland before M40')).toThrow();
   });
 });

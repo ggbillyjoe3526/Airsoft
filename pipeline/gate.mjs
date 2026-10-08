@@ -6,7 +6,7 @@
  * this report; the critic runs only on a report where every gate passed.
  *
  *   node pipeline/gate.mjs [--task M27[,M28]] [--quick] [--no-smoke] [--perf] [--env container|laptop|ci] [--base origin/main] [--ci]
- *                          [--tests all|fast|slow] [--shard k/n] [--only tests]
+ *                          [--tests auto|all|fast|slow] [--shard k/n] [--only tests]
  *
  * Gates: build (tsc + vite build with the chunk budgets), tests (vitest), smoke (playwright), perf (one perf-run.mjs
  * run per map, mode and preset of perf-budget.json's matrix that the diff reaches, pipeline/perfMatrix.mjs; --perf runs
@@ -21,10 +21,12 @@
  * With no task, scope and changelog are skipped. Exit code 1 when any gate fails.
  * CI splits the work across jobs (audit CORE-04): `--tests fast` runs the unit tests' fast project only, `--tests slow
  * --shard k/n` one share of the headless bot-match guards (vitest's own sharding, by file), and `--only tests` runs
- * the tests gate alone (no build, smoke, perf, scope or changelog). Without them every gate runs both projects.
+ * the tests gate alone (no build, smoke, perf, scope or changelog). Off CI the default, `--tests auto`, runs the slow
+ * project only when the diff reaches one of its files (pipeline/testReach.mjs, token plan item 21); `--tests all` runs
+ * both regardless. CI always runs every test.
  */
 import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { allowedFile, findTaskBlock, parseTaskList, qaAllowedFile, taskIdsFromTitle, tasksVersions } from './scope.mjs';
@@ -33,6 +35,7 @@ import { smokeFailures } from './smokeReport.mjs';
 import { metricsRow } from './records.mjs';
 import { MAX_FAILURES, buildFailures, failureLines, failuresSummary, vitestFailures } from './failures.mjs';
 import { writePacket } from './packet.mjs';
+import { reachNote, slowGuardsReached } from './testReach.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'pipeline', 'out');
@@ -49,6 +52,8 @@ const args = process.argv.slice(2);
 const flag = (name) => args.includes(name);
 const value = (name, fallback) => (args.includes(name) ? args[args.indexOf(name) + 1] : fallback);
 const prTitle = flag('--ci') ? process.env.GATE_PR_TITLE ?? '' : '';
+/** CI, and a run that names a shard, run every test they are given; a local run judges whether the slow guards matter. */
+const testsDefault = flag('--ci') || args.includes('--shard') ? 'all' : 'auto';
 const options = {
   // One task id or several ("FA5,FA9"); on CI, else the ids the pull request's title starts with.
   tasks: args.includes('--task') ? parseTaskList(value('--task', '')) : taskIdsFromTitle(prTitle),
@@ -58,13 +63,16 @@ const options = {
   perf: flag('--perf'),
   env: value('--env', flag('--ci') ? 'ci' : 'container'),
   base: value('--base', 'origin/main'),
-  /** Which vitest project(s) the tests gate runs, and which share of their files (CI's jobs, audit CORE-04). */
-  tests: value('--tests', 'all'),
+  /**
+   * Which vitest project(s) the tests gate runs, and which share of their files (CI's jobs, audit CORE-04). `auto`: the
+   * fast project, plus the slow one when the diff reaches it (token plan item 21).
+   */
+  tests: value('--tests', testsDefault),
   shard: value('--shard', null),
   /** `--only tests`: just the tests gate (CI's slow-guard jobs); every other gate is skipped. */
   only: value('--only', null),
 };
-if (!['all', 'fast', 'slow'].includes(options.tests)) throw new Error(`gate: --tests takes all, fast or slow, not ${options.tests}`);
+if (!['auto', 'all', 'fast', 'slow'].includes(options.tests)) throw new Error(`gate: --tests takes auto, all, fast or slow, not ${options.tests}`);
 const shardOk = (s) => { const m = /^(\d+)\/(\d+)$/.exec(s); return m !== null && Number(m[1]) >= 1 && Number(m[1]) <= Number(m[2]); };
 if (options.shard !== null && !shardOk(options.shard)) throw new Error(`gate: --shard takes k/n with 1 ≤ k ≤ n, not ${options.shard}`);
 if (options.only !== null && options.only !== 'tests') throw new Error(`gate: --only takes tests, not ${options.only}`);
@@ -119,7 +127,7 @@ function record(name, gate) {
   report.gates[name] = gate;
   if (gate.pass === false) report.pass = false;
   const mark = gate.pass === true ? 'pass' : gate.pass === false ? 'FAIL' : 'skip';
-  console.log(`gate ${name.padEnd(9)} ${mark}${gate.ms !== undefined ? ` (${(gate.ms / 1000).toFixed(0)} s)` : ''}${gate.reason ? ` · ${gate.reason}` : ''}`);
+  console.log(`gate ${name.padEnd(9)} ${mark}${gate.ms !== undefined ? ` (${(gate.ms / 1000).toFixed(0)} s)` : ''}${gate.reason ? ` · ${gate.reason}` : ''}${gate.note ? ` · ${gate.note}` : ''}`);
   // A failed gate names what failed in the log too, so a CI run can be read without downloading its artifact: the
   // test, the error's first lines (a smoke failure's locator, expectation and call log) and the file and line.
   for (const f of gate.pass === false ? (gate.failures ?? []) : []) {
@@ -139,10 +147,29 @@ else {
   record('build', { pass: r.ok, ms: r.ms, log: r.log, precompressed: !options.quick, ...(r.ok ? {} : { evidence: tail(r.output), failures: buildFailures(r.output, ROOT).slice(0, MAX_FAILURES) }) });
 }
 
+/**
+ * The vitest project(s) the tests gate runs: `options.tests`, or for `auto` the fast project plus the slow one when the
+ * diff reaches a file the slow guards load (token plan item 21), with the note the gate prints.
+ */
+function testProjects() {
+  if (options.tests !== 'auto') return { projects: options.tests };
+  try {
+    const listed = JSON.parse(execFileSync('npx', ['vitest', 'list', '--project', 'slow', '--filesOnly', '--json'], { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], shell: process.platform === 'win32' }));
+    const guards = listed.map((t) => relative(ROOT, t.file).split('\\').join('/'));
+    const read = (f) => readFileSync(join(ROOT, f), 'utf8');
+    const isFile = (f) => existsSync(join(ROOT, f)) && statSync(join(ROOT, f)).isFile();
+    const reach = slowGuardsReached(changed, guards, read, isFile);
+    return { projects: reach.reached ? 'all' : 'fast', note: reachNote(reach) };
+  } catch (e) {
+    return { projects: 'all', note: `both projects: the slow guards' files could not be listed (${e.message.split('\n')[0]})` };
+  }
+}
+
 // 2. tests: the unit suite, with its JSON report as the artifact.
 {
   const json = join(ARTIFACTS, 'vitest.json');
-  const projects = options.tests === 'all' ? [] : ['--project', options.tests];
+  const chosen = testProjects();
+  const projects = chosen.projects === 'all' ? [] : ['--project', chosen.projects];
   const shard = options.shard ? [`--shard=${options.shard}`] : [];
   const r = run('tests', 'npx', ['vitest', 'run', ...projects, ...shard, '--reporter=json', `--outputFile=${json}`]);
   let summary = { pass: r.ok, ms: r.ms, log: r.log };
@@ -151,7 +178,7 @@ else {
     // Each failed test, and each test file that failed to load, with its file and line (pipeline/failures.mjs).
     const failed = vitestFailures(data, ROOT);
     const pass = r.ok && data.numFailedTests === 0 && data.numTotalTests > 0 && failed.length === 0;
-    summary = { ...summary, projects: options.tests, ...(options.shard ? { shard: options.shard } : {}), total: data.numTotalTests, failed: data.numFailedTests, pass, report: relative(ROOT, json), ...(failed.length ? { failures: failed.slice(0, MAX_FAILURES) } : {}), ...(!pass && !failed.length ? { evidence: tail(r.output, 15) } : {}) };
+    summary = { ...summary, projects: chosen.projects, ...(chosen.note ? { note: chosen.note } : {}), ...(options.shard ? { shard: options.shard } : {}), total: data.numTotalTests, failed: data.numFailedTests, pass, report: relative(ROOT, json), ...(failed.length ? { failures: failed.slice(0, MAX_FAILURES) } : {}), ...(!pass && !failed.length ? { evidence: tail(r.output, 15) } : {}) };
   } catch (e) {
     summary = { ...summary, pass: false, reason: `no readable vitest report (${e.message})`, evidence: tail(r.output) };
   }

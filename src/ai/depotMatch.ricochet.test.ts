@@ -13,6 +13,7 @@ describe('custom matches on Depot (M20): ricochets counting, Elimination', () =>
     // catch a teammate (as at a site that counts them). Attack / Defend: depotMatch.ricochetFlag.test.ts.
     // Re-measured with level rays and own ricochets (FA12): 44 of 406 hits ricochets (11%), the west won 57% (55 of
     // 96), 2 friendly ricochets, and 6 bots caught by their own ricochet (not counted as friendly).
+    // Which end or side the rounds favour is a balance figure since TE4 (balance/depotRicochet.balance.ts).
     expectRicochetsPlayable('elimination');
   });
 });

@@ -9,8 +9,8 @@ in `docs/PROCESS.md`.
 - **Building 0.1 Dev 5.** The game stays in Dev until the owner calls it feature complete (owner, 2026-10-06). Beta then
   adds no features.
 - **Last tag:** `0.1-dev.4`, on 2026-10-06. The owner creates tags.
-- **Next:** the Dev 5 plan below. Items 1 and 2 (the docs rewrite and token step 3) are done; next are token step 4
-  and bug pass BP2.
+- **Next:** the Dev 5 plan below. Items 1 to 3 (the docs rewrite and token steps 3 and 4) are done; next is bug pass
+  BP2.
 - **Single player against bots.** There is no multiplayer, ever (owner, 2026-09-30, confirmed 2026-10-03).
 - **How work moves.** Every task goes through the pipeline and the critic, and lands as a pull request into `main`.
   Each pull request says which parts of the playtest guide (`docs/PLAYTEST.md`) to play. The owner's playtest notes set
@@ -37,7 +37,7 @@ pulled into Dev 5, and Dev 7 is folded away (its mode checks join the toolkit he
 
 1. **Docs rewrite with token step 2** (TE2 below).
 2. **Token step 3** (TE3, a pipeline pull request). Done (2026-10-08).
-3. **Token step 4** (TE4, approved 2026-10-06).
+3. **Token step 4** (TE4, approved 2026-10-06). Done (2026-10-08).
 4. **Bug pass BP2** (the Dev 4 rows in `docs/KNOWN_ISSUES.md`), after the last Audit 2 tasks M77–M79 in
    `docs/TASKS.md`.
 5. **Graphics** (the overhaul the owner pulled forward from 0.2 on 2026-10-05). G1–G3 and G5–G8 are merged. Left: G4,
@@ -177,7 +177,7 @@ Models and effort levels stay as they are.
 | TE1 (memory) | 5 project memory at about 5 KB, 11 fresh threads for follow-ons, 14 pause on a branch, not in patch folders | With TE1, by the coordinator | Open |
 | TE2 | 1 finished history to `docs/archive/`, 3 one record file per task, 4 one-line record formats, 6 HANDOFF shrunk or retired, 7 one-page module map | Inside the docs rewrite, Dev 5 item 1 | Done |
 | TE3 | 15 review packet for the critic and QA, 16 performance agent only on a flagged perf run, 17 (a) leaner changelog agent, 18 near-miss re-run only for judgment checks, 19 failures-only gate summary | Dev 5 item 2 | Done |
-| TE4 | 8 fewer chat lines, 21 lighter local test run, 22 bot balance as a report | Dev 5 item 3 (approved 2026-10-06, 23:27 UTC) | Open |
+| TE4 | 8 fewer chat lines, 21 lighter local test run, 22 bot balance as a report | Dev 5 item 3 (approved 2026-10-06, 23:27 UTC) | Done |
 | Gradual | 26 split the largest files when a task already edits them | Ongoing | Open |
 
 ## 0.1 Dev 6: the feature picks

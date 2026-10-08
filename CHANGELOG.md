@@ -48,6 +48,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **TE1** · Development uses fewer tokens: a shorter project guide (process detail moved to `docs/PROCESS.md`), a guard against reading huge files whole, automatic session setup, quiet test output (`npm run t`) and no status-only commits (#142)
 - **TE2** · Docs rewritten in one house style: finished history archived, one record file per task instead of shared review and metrics tables, a README in each source folder (#147)
 - **TE3** · Build checks write a short review file and a failures-only list; agents run only when they can change the outcome, and the changelog reads less (#148)
+- **TE4** · Local checks run slow bot-match tests only when bots or maps change, and bot balance figures moved to a report (`npm run balance`)
 
 ## 0.1 Dev 4 · 2026-10-06
 

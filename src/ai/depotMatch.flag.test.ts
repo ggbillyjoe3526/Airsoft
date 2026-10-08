@@ -12,7 +12,6 @@ describe('a 3v3 Attack / Defend match on Depot: the pole over 16 seeds', () => {
   it('plays out rounds where the pole matters: flags go up, some rounds are won by raising one, roles and ends swap at half-time', { timeout: 300_000 }, () => {
     let rounds = 0;
     let captures = 0;
-    let attackWins = 0;
     let flagsRaised = 0;
     let friendlyHits = 0;
     for (let seed = 1; seed <= 16; seed++) {
@@ -25,7 +24,6 @@ describe('a 3v3 Attack / Defend match on Depot: the pole over 16 seeds', () => {
       for (const r of stats.results) {
         rounds++;
         if (r.reason === 'captured') captures++;
-        if (r.winner === r.attackers) attackWins++;
         expect(r.length).toBeLessThanOrEqual(ROUNDS.roundTime + ROUNDS.flag.maxOvertime + 0.1); // overtime may run past the clock
       }
       if (stats.maxFlag >= 1) flagsRaised++;
@@ -41,12 +39,11 @@ describe('a 3v3 Attack / Defend match on Depot: the pole over 16 seeds', () => {
     // rounds, flags raised in 13 of 16, attackers 55% (without FA4: 25 in 125, 58%). M71 (Audit 2: every level hunts
     // the middle, bots step aside when pressed together): 14 captures in 122 rounds, flags raised in 8 of 16, attackers
     // 57%, 1 friendly hit.
-    // Re-measure and update DECISIONS with this test after any bot tuning change.
+    // Re-measure and update DECISIONS with this test after any bot tuning change. The attackers' share of rounds is a
+    // balance figure since TE4 (balance/depotFlag.balance.ts, the same 16 seeds).
     expect(friendlyHits).toBeLessThanOrEqual(1);
     expect(captures).toBeGreaterThanOrEqual(9);
     expect(captures / rounds).toBeGreaterThan(0.07);
     expect(flagsRaised).toBeGreaterThanOrEqual(5);
-    expect(attackWins / rounds).toBeGreaterThan(0.38);
-    expect(attackWins / rounds).toBeLessThan(0.67);
   });
 });

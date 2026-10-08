@@ -1,3 +1,4 @@
+import { expect } from 'vitest';
 import { BALLISTICS, WIND } from '../config/ballistics';
 import { BOTS, botConfig, type Difficulty, defaultTeammateDifficulty } from '../config/bots';
 import { EXTRACTION, type ExtractionRules, homeTeamCap } from '../config/extraction';
@@ -243,6 +244,17 @@ export function measureRuns(map: MapData, opponents: Difficulty, seeds: number):
     fcPerMinute: runs.reduce((sum, r) => sum + r.fc, 0) / minutes,
     runs,
   };
+}
+
+/**
+ * Every level's runs on `map` over seeds 1 to `seeds` end by the run's own rules: extracted or out, never on time (the
+ * runner bot leaves with time to spare, so a run on time means someone stuck). How often the squad gets out, and with
+ * what, are balance figures (balance/extractionBalance.ts, token plan item 22).
+ */
+export function expectRunsEndByRules(map: MapData, seeds: number): void {
+  for (const level of ['easy', 'normal', 'hard', 'pro'] as const) {
+    measureRuns(map, level, seeds).runs.forEach((r, i) => expect(['extracted', 'out'], `${map.name} ${level} seed ${i + 1}: ${r.reason}`).toContain(r.reason));
+  }
 }
 
 /**

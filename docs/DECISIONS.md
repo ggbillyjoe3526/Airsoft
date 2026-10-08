@@ -133,6 +133,11 @@ replaces its line; the old one stays findable in the archive or in git.
   a failure the gate's summary (`pipeline/out/failures.md`) can't place; the changelog agent reads only `Unreleased`
   and one FEATURES heading; a near miss is re-run on Opus only when its failed check is a judgment, never a measured
   number. Models and effort levels are unchanged.
+- **Token step 4 (owner, 2026-10-06, token plan items 8, 21 and 22; built 2026-10-08, TE4).** The project chat
+  carries only results, blockers and decisions, from threads and the coordinator alike (`docs/PROCESS.md` ›
+  Sessions). Off CI the gate runs the slow bot-match guards only when the diff reaches a file they load (by their
+  imports, not by folder: bot tuning in `src/config` and the pool reach them too); CI always runs every test. Balance
+  figures are a report, not tests (Bots and balance, below). Test-only files are not perf paths.
 
 ## Art direction and graphics
 
@@ -248,9 +253,13 @@ replaces its line; the old one stays findable in the archive or in git.
 - **Every level hunts the middle of the map; Normal, Hard and Pro keep out of the light at night; Easy stands where its
   lane says (owner, 2026-10-05, decisions 4 and 13).** Below Pro, both teams swept to the far end and passed each other,
   and rounds ran out of time (M71).
-- **Balance is guarded by headless bot-match tests with bands (2026-09-28).** A change that moves a band records its
-  measure in the test. Owner ruling 2026-10-06 (M73): the Normal guards are judged at 45 to 55 %, the Pro guards at
-  their usual 40 to 60 %.
+- **Balance is measured by headless bot matches against bands (2026-09-28), in a report since token step 4 (owner,
+  2026-10-06, token plan item 22; built 2026-10-08, TE4).** Who wins, who lands the first hit, how often the squad gets
+  out of Extraction and the levels' order are figures in `src/ai/balance/`, judged by `node pipeline/balance.mjs`
+  against their bands and standard errors; they never fail a build, and the bug pass reads the report. The `slow`
+  guards keep what must never happen (rounds played and settled, nobody stuck, falling or hit by a teammate, the rules
+  of each mode). A change that moves a figure records its measure beside it. Owner ruling 2026-10-06 (M73): the Normal
+  figures are judged at 45 to 55 %, the Pro ones at their usual 40 to 60 %.
 
 ## Maps and modes
 
