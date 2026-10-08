@@ -191,8 +191,8 @@ the script exits 0 whatever the figures say; 1 only when a measure could not run
 Each figure is judged against its band (the owner's rulings and the measures in each file's comments): **in band**;
 **near an edge** (inside, within one standard error of an edge); **outside, within noise** (past it by under two
 standard errors: re-measure on more seeds before acting); **outside** (two or more, or a plain number past its band).
-A share's standard error is √(p(1−p)/n) over its rounds or runs. The whole set plays every map and mode (about an hour
-on 4 cores, 2026-10-08); the bug pass runs it (`docs/PROCESS.md` › Bug pass), and a task that changes balance on
+A share's standard error is √(p(1−p)/n) over its rounds or runs. The whole set plays every map and mode (about 20
+minutes on 4 cores, 2026-10-08: 74 figures); the bug pass runs it (`docs/PROCESS.md` › Bug pass), and a task that changes balance on
 purpose runs its own filter and quotes the figures in its record.
 
 What stays a guard in the `slow` project is what must never happen, on every seed: rounds played and settled (under 1

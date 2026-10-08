@@ -118,7 +118,7 @@ A full bug pass plus a `docs/KNOWN_ISSUES.md` sweep is a standing practice (owne
   parallel review agents (for example UI and input; pool, Loadout and maps) read the new code: last time they found
   five small bugs the browser didn't show. A scripted Playwright player (`?nolock`, the e2e build served by
   `vite preview`) plays the modes.
-- **Balance.** Run the balance report, `node pipeline/balance.mjs` (about an hour; `pipeline/README.md`), and copy it
+- **Balance.** Run the balance report, `node pipeline/balance.mjs` (about 20 minutes; `pipeline/README.md`), and copy it
   to the run folder. Each figure **outside** its band by two standard errors or more is a balance issue: fix it in the
   pass or log it in `docs/KNOWN_ISSUES.md`. One **outside, within noise** is re-measured on more seeds before anyone acts;
   one **near an edge** is noted. A task that changes balance on purpose runs its own filter and quotes the figures in
