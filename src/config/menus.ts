@@ -138,6 +138,8 @@ export const ARMORY_TEXT = {
   scrapOne: 'Scrap 1',
   /** Under the collection heading (M100): the scrap buttons left the cards for a right-click menu. */
   scrapHint: 'Right-click an item to scrap its spares.',
+  /** On a collection card with spares to scrap (none shown when there are none). */
+  spareCount: (n: number) => `${n} ${n === 1 ? 'spare' : 'spares'}`,
   /** A card's name for a screen reader: how to reach its menu from the keyboard. */
   rowMenuHint: (name: string, spares: number) => `${name}, ${spares} ${spares === 1 ? 'spare' : 'spares'}. Press the Menu key or Shift and F10 to scrap.`,
   scrapAll: 'Scrap all spares',

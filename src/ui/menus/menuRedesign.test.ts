@@ -59,6 +59,19 @@ describe('the title screen (M100: plain)', () => {
     expect(existsSync(new URL('../../../public/menu/backdrop.jpg', import.meta.url))).toBe(true);
   });
 
+  it('puts the no-GPU warning in the title\'s own column, before the wordmark (the same left edge as the wordmark and the buttons)', () => {
+    const screen = title(false);
+    screen.setWarning('Your browser is drawing without hardware acceleration');
+    const t = fake(screen.root);
+    const body = t.children.find((c) => c.className === 'title-body')!;
+    expect(body.children.map((c) => c.className)).toEqual(['menu-title-warning', 'title-hero', 'title-actions']);
+    expect(t.children.map((c) => c.className)).toEqual(['title-body', 'title-version']);
+    const warning = body.children[0]!;
+    expect([warning.hidden, warning.text]).toEqual([false, expect.stringContaining('hardware acceleration')]);
+    screen.setWarning('');
+    expect(warning.hidden).toBe(true);
+  });
+
   it('puts the version small at the bottom left, as its own line after the buttons', () => {
     const t = fake(title(false).root);
     const version = findAll(t, 'title-version')[0]!;

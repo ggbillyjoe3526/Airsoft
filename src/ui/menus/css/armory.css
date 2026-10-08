@@ -117,6 +117,25 @@
   color: inherit;
 }
 
+/* A Shot's price and how it is paid: two lines, each kept whole, in place of one row that wrapped in the narrow panel. */
+.item-chip.armory-shot {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 4px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.item-chip.armory-shot .item-name,
+.item-chip.armory-shot .item-note {
+  white-space: nowrap;
+}
+
+.item-chip.armory-shot .item-note {
+  font-size: var(--fs-md);
+}
+
 .armory-action.armory-shot:first-child {
   color: #fff;
   background: linear-gradient(180deg, #ff7f2e, #ff5a10);
@@ -363,6 +382,12 @@
   font: 700 var(--fs-md) / 1.15 var(--ui-display);
   letter-spacing: 0.05em;
   text-transform: uppercase;
+}
+
+/* "2 spares": a line under the pips, in acid; a card with none has no line. */
+.armory-row-spares {
+  font: 700 var(--fs-sm) / 1.2 var(--ui-font);
+  color: var(--menu-acid);
 }
 
 .armory-row-adds {

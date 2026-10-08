@@ -1,3 +1,4 @@
+import { type Box, placeMenu } from './menuPlacement';
 import { el } from './menuParts';
 
 /** One choice in the menu: the visible label, the name a screen reader reads (the label when absent), and what it does. */
@@ -42,10 +43,11 @@ export class ContextMenu {
   }
 
   /**
-   * Shows `choices` under `title` with its corner at (`x`, `y`) in the window, kept inside it; the keyboard goes to the
-   * first. `returnTo` gets the focus back if the menu is dismissed (Esc) without a choice.
+   * Shows `choices` under `title` with its corner at (`x`, `y`) in the window, flipped to stay inside it and clear of
+   * every box `avoid` gives (the card's own name: see ui/menus/menuPlacement.ts); the keyboard goes to the first.
+   * `returnTo` gets the focus back if the menu is dismissed (Esc) without a choice.
    */
-  open(title: string, choices: readonly ContextChoice[], x: number, y: number, returnTo: HTMLElement | null = null): void {
+  open(title: string, choices: readonly ContextChoice[], x: number, y: number, returnTo: HTMLElement | null = null, avoid: readonly Box[] = []): void {
     if (choices.length === 0) return;
     this.choices = choices;
     this.opener = returnTo;
@@ -60,7 +62,7 @@ export class ContextMenu {
       b.setAttribute('aria-label', choice.name ?? choice.label);
     });
     this.root.hidden = false;
-    this.place(x, y);
+    this.place(x, y, avoid);
     if (!this.opened) this.listen(true);
     this.opened = true;
     this.buttons[0]!.focus({ preventScroll: true });
@@ -97,17 +99,17 @@ export class ContextMenu {
     choice?.run();
   }
 
-  /** Puts the corner at the pointer, moved back in if it would run off the window. */
-  private place(x: number, y: number): void {
+  /** Puts the corner at the pointer, flipped and moved so it stays in the window and off the boxes to avoid. */
+  private place(x: number, y: number, avoid: readonly Box[]): void {
     const win = document.defaultView;
-    const edge = 8;
     this.root.style.left = `${Math.round(x)}px`;
     this.root.style.top = `${Math.round(y)}px`;
     if (!win) return;
     const r = this.root.getBoundingClientRect();
     if (r.width === 0 && r.height === 0) return;
-    this.root.style.left = `${Math.round(Math.max(edge, Math.min(x, win.innerWidth - r.width - edge)))}px`;
-    this.root.style.top = `${Math.round(Math.max(edge, Math.min(y, win.innerHeight - r.height - edge)))}px`;
+    const at = placeMenu(x, y, r.width, r.height, win.innerWidth, win.innerHeight, avoid);
+    this.root.style.left = `${Math.round(at.left)}px`;
+    this.root.style.top = `${Math.round(at.top)}px`;
   }
 
   private onKey(e: KeyboardEvent): void {

@@ -126,8 +126,14 @@
 .play-main {
   display: flex;
   flex-direction: column;
-  gap: clamp(16px, 1.6vw, 28px);
+  gap: clamp(14px, 1.1vw, 20px);
   min-width: 0;
+}
+
+/* The screen is built to fit a 1920 x 1080 window without scrolling (the map card wide and low, the rows in as many
+   columns as fit, the sections close); below that it scrolls as before. */
+.play-main .menu-section-head {
+  margin-bottom: 10px;
 }
 
 /* Three cards across while they fit at 240 px each (fewer, as wide, when there are fewer). */
@@ -184,7 +190,7 @@
 }
 
 .map-cards .choice-card {
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 3 / 1;
   min-height: 0;
 }
 
@@ -267,6 +273,8 @@
 .mode-cards .choice-card {
   align-items: center;
   min-height: clamp(110px, 8vw, 150px);
+  padding-top: var(--sp-3);
+  padding-bottom: var(--sp-3);
   padding-left: calc(33% + var(--sp-4));
 }
 
@@ -354,8 +362,8 @@
 
 .match-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--sp-2) clamp(16px, 2vw, 40px);
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: var(--sp-1) clamp(16px, 2vw, 40px);
 }
 
 .match-panel .menu-row {
@@ -384,6 +392,23 @@
 
 .match-rules-row .picker-button {
   min-height: 56px;
+}
+
+/* The Rules row is one line: its label and note on the left, the two rulesets filling the rest. */
+.match-panel .match-rules-row {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-5);
+}
+
+.match-panel .match-rules-row .menu-row-name {
+  flex: 0 0 clamp(260px, 22vw, 340px);
+}
+
+.match-panel .match-rules-row .menu-row-control,
+.match-panel .match-rules-row .picker {
+  flex: 1;
+  width: auto;
 }
 
 /* Your match: the still, the map, the facts, your kit and Play. It stays in view as the left column scrolls, no taller

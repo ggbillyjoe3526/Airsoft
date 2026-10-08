@@ -184,3 +184,83 @@ describe('the same menu from the keyboard (M100)', () => {
     expect(a.root.querySelector('.context-menu')).toBe(a.menu);
   });
 });
+
+describe('each card says how many spares it has (M100)', () => {
+  const badge = (a: ReturnType<typeof setup>, id = FIRST): string | undefined => a.row(id)?.querySelector('.armory-row-spares')?.textContent;
+
+  it('words the count: one spare, several spares', () => {
+    expect([ARMORY_TEXT.spareCount(1), ARMORY_TEXT.spareCount(2), ARMORY_TEXT.spareCount(12)]).toEqual(['1 spare', '2 spares', '12 spares']);
+  });
+
+  it('shows "N spares" on a card with copies beyond the best one, one less than the copies owned', () => {
+    expect(badge(setup(4))).toBe('3 spares');
+    expect(badge(setup(2))).toBe('1 spare');
+  });
+
+  it('shows nothing on a card with no spare, and the count follows a scrap', () => {
+    const none = setup(1);
+    expect(none.root.querySelectorAll('.armory-row-spares')).toEqual([]);
+    const a = setup(3);
+    a.row()!.fire('contextmenu', { clientX: 10, clientY: 10 });
+    a.choices()[0]!.click();
+    expect(badge(a)).toBe('1 spare');
+    a.row()!.fire('contextmenu', { clientX: 10, clientY: 10 });
+    a.choices()[0]!.click();
+    expect(a.root.querySelectorAll('.armory-row-spares')).toEqual([]);
+  });
+
+  it('is only on cards that have a scrap menu, and is not read twice (the card\'s own name says it)', () => {
+    const a = setup(4);
+    const cards = a.root.querySelectorAll('.armory-row');
+    for (const card of cards) {
+      const has = card.querySelector('.armory-row-spares') !== null;
+      expect([card.dataset.action !== undefined, card.text.includes('spare')]).toEqual([has, has]);
+    }
+    expect(a.row()!.querySelector('.armory-row-spares')!.getAttribute('aria-hidden')).toBe('true');
+  });
+});
+
+describe('the scrap menu does not cover the card\'s own name (M100)', () => {
+  const box = (left: number, top: number, right: number, bottom: number) => ({ left, top, right, bottom, width: right - left, height: bottom - top });
+  const covers = (a: ReturnType<typeof setup>, name: { left: number; top: number; right: number; bottom: number }): boolean => {
+    const left = Number.parseInt(a.menu.style.left!);
+    const top = Number.parseInt(a.menu.style.top!);
+    // The fake menu is 200 x 100.
+    return left < name.right && left + 200 > name.left && top < name.bottom && top + 100 > name.top;
+  };
+
+  it('opens below the name and the spare count when the pointer is right on the name', () => {
+    const a = setup(4);
+    const row = a.row()!;
+    const name = box(300, 400, 400, 416);
+    const spares = box(300, 436, 370, 456);
+    vi.spyOn(row.querySelector('.armory-row-name')!, 'getBoundingClientRect').mockReturnValue(name);
+    vi.spyOn(row.querySelector('.armory-row-spares')!, 'getBoundingClientRect').mockReturnValue(spares);
+    row.fire('contextmenu', { clientX: 320, clientY: 408 });
+    expect([covers(a, name), covers(a, spares)]).toEqual([false, false]);
+    expect(Number.parseInt(a.menu.style.top!)).toBeGreaterThanOrEqual(name.bottom);
+  });
+
+  it('flips left of the pointer at the window\'s right edge and still clears the name', () => {
+    const a = setup(4);
+    const row = a.row()!;
+    const name = box(1150, 400, 1240, 416);
+    vi.spyOn(row.querySelector('.armory-row-name')!, 'getBoundingClientRect').mockReturnValue(name);
+    vi.spyOn(row.querySelector('.armory-row-spares')!, 'getBoundingClientRect').mockReturnValue(box(1200, 330, 1260, 354));
+    row.fire('contextmenu', { clientX: 1230, clientY: 410 });
+    const left = Number.parseInt(a.menu.style.left!);
+    expect(left + 200).toBeLessThanOrEqual(1280 - 8);
+    expect(covers(a, name)).toBe(false);
+  });
+
+  it('does the same from the keyboard, beside the focused card', () => {
+    const a = setup(4);
+    const row = a.row()!;
+    const name = box(100, 150, 220, 170);
+    vi.spyOn(row, 'getBoundingClientRect').mockReturnValue(box(90, 70, 300, 260));
+    vi.spyOn(row.querySelector('.armory-row-name')!, 'getBoundingClientRect').mockReturnValue(name);
+    vi.spyOn(row.querySelector('.armory-row-spares')!, 'getBoundingClientRect').mockReturnValue(box(230, 80, 290, 104));
+    row.fire('keydown', { key: 'ContextMenu' });
+    expect(covers(a, name)).toBe(false);
+  });
+});

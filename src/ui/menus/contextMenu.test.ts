@@ -33,12 +33,21 @@ describe('the context menu', () => {
     expect(page.document.activeElement).toBe(items(m)[0]);
   });
 
-  it('keeps itself inside the window when the pointer is near an edge', () => {
+  it('flips to stay inside the window when the pointer is near an edge (the menu is 200 x 100 here)', () => {
     const m = new ContextMenu();
+    m.open('x', [{ label: 'A', run: vi.fn() }], 1200, 650);
+    expect([node(m).style.left, node(m).style.top]).toEqual(['1000px', '550px']);
+    // Right in the corner there is no room even flipped: it is kept 8 px inside.
     m.open('x', [{ label: 'A', run: vi.fn() }], 1270, 715);
     expect([node(m).style.left, node(m).style.top]).toEqual(['1072px', '612px']);
     m.open('x', [{ label: 'A', run: vi.fn() }], -50, 2);
     expect([node(m).style.left, node(m).style.top]).toEqual(['8px', '8px']);
+  });
+
+  it('opens clear of the boxes it is told to avoid, below them when the pointer is on one', () => {
+    const m = new ContextMenu();
+    m.open('x', [{ label: 'A', run: vi.fn() }], 300, 210, null, [{ left: 280, top: 200, right: 400, bottom: 220 }]);
+    expect([node(m).style.left, node(m).style.top]).toEqual(['300px', '224px']);
   });
 
   it('runs the chosen choice once and closes before it does', () => {

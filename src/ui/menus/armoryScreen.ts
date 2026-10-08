@@ -368,7 +368,8 @@ export class ArmoryScreen {
     r.counts.forEach((n, t) => (best = n > 0 ? t : best));
     if (best >= 0) row.dataset.tier = this.pool.tiers[best]!.id;
     else row.classList.add('is-unowned');
-    row.append(el('span', 'armory-row-name', r.asset.name));
+    const name = el('span', 'armory-row-name', r.asset.name);
+    row.append(name);
     const pips = el('span', 'armory-pips');
     r.counts.forEach((n, t) => {
       const tier = this.pool.tiers[t]!;
@@ -383,19 +384,26 @@ export class ArmoryScreen {
       pips.append(pip);
     });
     row.append(pips);
+    // The spares to scrap, under the pips (the card's own name already says it to a screen reader); none when there are none.
+    const spares = r.spares > 0 ? el('span', 'armory-row-spares', ARMORY_TEXT.spareCount(r.spares)) : null;
+    if (spares) {
+      spares.setAttribute('aria-hidden', 'true');
+      row.append(spares);
+    }
     if (best >= 0) {
       const adds = tierLine(this.pool, { asset: r.asset.id, tier: this.pool.tiers[best]!.id });
       if (adds) row.append(el('span', 'armory-row-adds', adds));
     }
-    this.scrapMenu(row, r, c);
+    this.scrapMenu(row, r, c, spares ? [name, spares] : [name]);
     return row;
   }
 
   /**
    * The card's scrap choices (M100, in place of buttons on every card): a right-click opens them at the pointer, and
-   * the Menu key or Shift+F10 on the focused card opens them beside it. Only a card with a spare has any.
+   * the Menu key or Shift+F10 on the focused card opens them beside it. Only a card with a spare has any. The menu opens
+   * clear of `marks` (the card's name and its spare count), so what it is about stays readable.
    */
-  private scrapMenu(row: HTMLDivElement, r: CollectionRow, c: Collection): void {
+  private scrapMenu(row: HTMLDivElement, r: CollectionRow, c: Collection, marks: readonly HTMLElement[]): void {
     const one = cheapestSpare(this.pool, c, r.asset.id);
     if (!one) return;
     const oneFc = this.pool.tiers.find((t) => t.id === one.tier)!.scrapFc;
@@ -427,13 +435,13 @@ export class ArmoryScreen {
     row.setAttribute('aria-label', ARMORY_TEXT.rowMenuHint(r.asset.name, r.spares));
     row.addEventListener('contextmenu', (e) => {
       e.preventDefault();
-      this.menu.open(r.asset.name, choices, e.clientX + 2, e.clientY + 2, row);
+      this.menu.open(r.asset.name, choices, e.clientX + 2, e.clientY + 2, row, marks.map((m) => m.getBoundingClientRect()));
     });
     row.addEventListener('keydown', (e) => {
       if (e.key !== 'ContextMenu' && !(e.key === 'F10' && e.shiftKey)) return;
       e.preventDefault();
       const box = row.getBoundingClientRect();
-      this.menu.open(r.asset.name, choices, box.left + 12, box.top + 24, row);
+      this.menu.open(r.asset.name, choices, box.left + 12, box.top + 24, row, marks.map((m) => m.getBoundingClientRect()));
     });
   }
 

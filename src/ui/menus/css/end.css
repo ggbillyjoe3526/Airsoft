@@ -291,7 +291,8 @@
 }
 
 /* The title's warning: the browser draws without hardware acceleration (M18b), a slim banner with its sign. */
-/* In the page's flow above the wordmark, so it never covers the title's words; clear of the wallet on the right. */
+/* In the title's column (ui/menus/titleScreen.ts: the same left edge as the wordmark and the buttons), above the wordmark
+   with the column's gap between, so it never covers the title's words. */
 .menu-title-warning {
   position: relative;
   z-index: 2;
@@ -299,8 +300,8 @@
   align-items: flex-start;
   align-self: flex-start;
   gap: var(--sp-3);
-  max-width: min(900px, calc(100% - 380px));
-  margin: 0 0 var(--sp-4);
+  max-width: min(900px, 100%);
+  margin: 0;
   padding: var(--sp-2) var(--sp-4);
   font-size: var(--fs-md);
   line-height: 1.45;

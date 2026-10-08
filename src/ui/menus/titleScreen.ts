@@ -68,8 +68,9 @@ export class TitleScreen {
       { keys: ['Esc'], label: MENU_TEXT.hints.settings, run: actions.onSettings },
     ];
     const body = el('div', 'title-body');
-    body.append(hero, buttons);
-    this.root.append(this.warning, body, version);
+    // The warning sits in the title's own column (the wordmark's left edge), with the column's gap above the wordmark.
+    body.append(this.warning, hero, buttons);
+    this.root.append(body, version);
   }
 
   /** Whether the Tutorial button is on show. */

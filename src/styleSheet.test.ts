@@ -408,3 +408,37 @@ describe('the font (M100: Inter replaces Barlow)', () => {
     expect(declared('.armory-owned', 'grid-column')).toBe('1 / -1');
   });
 });
+
+describe('layout polish before the screenshots (G4, M100)', () => {
+  it('sets the minimap caption on the HUD\'s navy panel colour, which follows HUD opacity, in white text', () => {
+    expect(declared('.minimap-caption', 'background')).toBe('var(--hud-panel)');
+    expect(declared('.minimap-caption', 'color')).toBe('var(--hud-fg)');
+    expect(declared('.minimap-caption', 'width')).toBe('var(--minimap-size)');
+  });
+
+  it('keeps the fire-mode chips and the spare line in rows of their own: the spare line is a block under the chips', () => {
+    expect(declared('.hud-spare', 'display')).toBe('block');
+    expect(declared('.hud-spare', 'margin-top')).toMatch(/^\d+px$/);
+    expect(declared('.hud-ammo', 'flex-direction')).toBeUndefined();
+  });
+
+  it('keeps each Shot button\'s price and payment whole, one to a line', () => {
+    expect(declared('.item-chip.armory-shot', 'flex-direction')).toBe('column');
+    expect(declared('.item-chip.armory-shot .item-name,\n.item-chip.armory-shot .item-note', 'white-space')).toBe('nowrap');
+  });
+
+  it('sets a collection card\'s spare count in acid, in text of 15 px or more', () => {
+    expect(declared('.armory-row-spares', 'color')).toBe('var(--menu-acid)');
+    expect(declared('.armory-row-spares', 'font')).toContain('var(--fs-sm)');
+    expect(Number(/--fs-sm:\s*(\d+)px/.exec(menuSheet)?.[1])).toBeGreaterThanOrEqual(15);
+  });
+
+  it('lays the Match rules out in as many columns as fit, so the page holds in a 1080 px window', () => {
+    expect(declared('.match-grid', 'grid-template-columns')).toMatch(/^repeat\(auto-fit, minmax\(\d+px, 1fr\)\)$/);
+    expect(declared('.match-panel .match-rules-row', 'flex-direction')).toBe('row');
+  });
+
+  it('puts no backdrop blur on any of these', () => {
+    for (const rule of ['.minimap-caption', '.hud-replica', '.armory-row-spares', '.context-menu', '.menu-title-warning']) expect(blockOf(rule), rule).not.toMatch(/backdrop-filter/);
+  });
+});
