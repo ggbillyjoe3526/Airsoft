@@ -8,8 +8,9 @@ description: Run one task of the Airsoft FPS through the build pipeline (gates, 
 The protocol is in `pipeline/README.md`; this is the step list. You are the **worker**: the build thread, started on
 the model the task's `tier` names. Everything else is a worker you spawn with the Agent tool. When the repo's agent
 names (`qa`, `performance`, `triage`, `critic`, `changelog`, `worker`) are not offered as agent types in your
-session, spawn `general-purpose` with the model override the definition names and put the definition's body (the
-text under its frontmatter) at the top of the prompt, the task content last. Tell every worker not to call
+session, spawn `general-purpose` with the model override the definition names (as its alias: `haiku` for
+`claude-haiku-5-5`) and put the definition's body (the text under its frontmatter) at the top of the prompt, the task
+content last. Tell every worker not to call
 `mcp__hearthbot__` tools.
 
 1. **Read** the task block in `docs/TASKS.md` and the contracts it names (grep, then ranges). Branch from the latest
