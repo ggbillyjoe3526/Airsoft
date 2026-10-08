@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {
+  type CoreSurfaceId,
   effectivePixelRatio,
   FRAME_TIMING,
   type LightingPreset,
@@ -17,7 +18,10 @@ import { GpuTimer } from './gpuTimer';
 import { environmentLookOf } from './lightingPreset';
 import { MapMeshCache } from './mapMeshCache';
 import { mapLookOf, texturesFor } from './mapMeshes';
-import { addSurfaceTextures, createSurfaceTextures, disposeSurfaceTextures, setSurfaceAnisotropy, type SurfaceTextures } from './proceduralTextures';
+import { PostHost } from './post/postHost';
+import type { PostPassId } from './post/postPlan';
+import type { PostStack } from './post/postStack';
+import { addSurfaceTextures, CORE_SURFACES, disposeSurfaceTextures, type ProceduralTexture, setSurfaceAnisotropy, type SurfaceTextures } from './proceduralTextures';
 import { defaultEnvironmentLook, type EnvironmentLook, ReplicaSheen } from './replicaSheen';
 import { RetroFilter, retroPixelAngle } from './retroFilter';
 import { releaseNormalMaps, usesNormalMaps } from './surfaceNormals';
@@ -58,26 +62,21 @@ const browserIdle: IdleScheduler = (work) => {
 
 /**
  * Draws the surface textures and uploads them in idle moments (audit REN-14), so the first Play doesn't: one moment
- * draws the set (`draw`), then each following moment uploads one texture, until every one is on the GPU or `current()`
- * no longer gives that set (a texture-size change dropped it; the new size is drawn when a session asks).
+ * draws one of `ids` (`draw`), the next uploads it, and so on through the list. One texture a moment, not the whole set
+ * (BP2): at High a library surface alone takes most of a second to draw, the set several seconds of a frozen title
+ * screen. `upload` skips a texture its set no longer holds (a texture-size change dropped it).
  */
-export function warmSurfacesInIdle(
-  draw: () => SurfaceTextures,
-  current: () => SurfaceTextures | null,
-  upload: (texture: THREE.Texture) => void,
-  idle: IdleScheduler,
-): void {
-  idle(() => {
-    const set = draw();
-    const textures = Object.values(set).map((t) => t.texture);
-    let next = 0;
-    const step = (): void => {
-      if (current() !== set || next >= textures.length) return;
-      upload(textures[next++]!);
+export function warmSurfacesInIdle<Id>(ids: readonly Id[], draw: (id: Id) => THREE.Texture, upload: (texture: THREE.Texture) => void, idle: IdleScheduler): void {
+  let next = 0;
+  const step = (): void => {
+    if (next >= ids.length) return;
+    const texture = draw(ids[next++]!);
+    idle(() => {
+      upload(texture);
       idle(step);
-    };
-    idle(step);
-  });
+    });
+  };
+  idle(step);
 }
 
 /** A renderer's own record of each material (WebGLRenderer.properties): the uniforms it binds, its own textures among them. */
@@ -164,8 +163,11 @@ export class Renderer {
   /** View size in CSS pixels (kept up to date on resize, so HUD code never has to read layout). */
   width = 0;
   height = 0;
-  /** The map surfaces' textures, drawn the first time a session asks (surfaceTextures), and the size they were drawn at. */
-  private surfaces: SurfaceTextures | null = null;
+  /**
+   * The map surfaces' textures, drawn the first time a session asks (surfaceTextures) or one an idle moment before
+   * (warmUp, so it may hold only some of the core ones), and the size they were drawn at.
+   */
+  private surfaces: Partial<SurfaceTextures> | null = null;
   private surfacesSize: TextureSize | null = null;
   /**
    * The prefiltered sky: the held replica's sheen and the scene's environment lighting (F1), made once per context and
@@ -194,7 +196,10 @@ export class Renderer {
    * take and release them (they must not dispose them); freed with the renderer.
    */
   readonly mapMeshes = new MapMeshCache();
-  /** The overlay scene drawn last frame (the held replica), released with the world when the context is swapped. */
+  /**
+   * The overlay scene drawn last (the held replica), released with the world when the context is swapped: kept while
+   * spectating, when no overlay is drawn (BP2), until its owner lets go of it (forgetOverlay).
+   */
   private overlayScene: THREE.Scene | null = null;
   /** The retro pixel filter's look while it is on (Settings → Dev, M42); null while off. */
   private retroLook: RetroLook | null = null;
@@ -202,6 +207,11 @@ export class Renderer {
   private retro: RetroFilter | null = null;
   /** Told when the graphics context is lost (true) and when it comes back (false); see onContextChange. */
   private contextListener: (lost: boolean) => void = () => undefined;
+  /**
+   * The post stack (G5, render/post/postHost.ts) for the quality in force: none on Low (the frame is drawn straight to
+   * the screen as before), while the retro filter is on and while the context is lost.
+   */
+  private readonly post = new PostHost(() => this.drawsHalfFloat());
 
   /** `quality` is what the game loads with; everything in it can change later (setQuality). */
   constructor(
@@ -271,8 +281,14 @@ export class Renderer {
    * (audit L-04). Sessions must not dispose them.
    */
   get surfaceTextures(): SurfaceTextures {
+    // Every core surface, the ones the idle warm-up hasn't drawn yet drawn now.
+    return addSurfaceTextures(this.surfaceSet(), CORE_SURFACES, this.surfacesSize!, this.quality.anisotropy) as SurfaceTextures;
+  }
+
+  /** The set in force, made (empty) at the quality's texture size if there is none. */
+  private surfaceSet(): Partial<SurfaceTextures> {
     if (!this.surfaces) {
-      this.surfaces = createSurfaceTextures(this.quality.textureSize, this.quality.anisotropy);
+      this.surfaces = {};
       this.surfacesSize = this.quality.textureSize;
     }
     return this.surfaces;
@@ -312,6 +328,9 @@ export class Renderer {
    */
   setLighting(preset: LightingPreset): void {
     this.lighting = preset;
+    this.post.setLight(preset);
+    // A session sets its light as it takes its map: the last map's reflective meshes must not be kept (G5 critic).
+    this.post.rescan();
     this.applyHaze();
     this.setToneMapping(this.toneMapping);
     this.setEnvironmentLook(environmentLookOf(preset));
@@ -354,9 +373,11 @@ export class Renderer {
    */
   warmUp(idle: IdleScheduler = browserIdle): void {
     warmSurfacesInIdle(
-      () => this.surfaceTextures,
-      () => this.surfaces,
-      (texture) => this.gl.initTexture(texture),
+      CORE_SURFACES,
+      (id: CoreSurfaceId) => addSurfaceTextures(this.surfaceSet(), [id], this.surfacesSize!, this.quality.anisotropy)[id]!.texture,
+      (texture) => {
+        if (this.surfaces && (Object.values(this.surfaces) as ProceduralTexture[]).some((t) => t.texture === texture)) this.gl.initTexture(texture);
+      },
       idle,
     );
   }
@@ -401,6 +422,10 @@ export class Renderer {
     // Kept map meshes no session holds go when this look would build them again (a held map follows its session).
     this.mapMeshes.trim(mapLookOf(quality));
     this.environmentDirty = true;
+    // The post stack is made again for the new settings on the next frame (G5); the map may be rebuilt, so its
+    // reflective meshes are looked for again.
+    this.post.drop();
+    this.post.rescan();
     const replaced = quality.antialias !== this.contextAntialias && this.replaceContext(quality.antialias);
     this.gl.shadowMap.enabled = quality.shadows;
     this.resize();
@@ -413,6 +438,8 @@ export class Renderer {
    */
   setRetro(look: RetroLook | null): void {
     this.retroLook = look ? { ...look } : null;
+    // The retro filter draws instead of the post stack (a dev look): the stack goes while it is on, and comes back after.
+    this.post.drop();
     if (!look) {
       this.retro?.dispose();
       this.retro = null;
@@ -448,12 +475,24 @@ export class Renderer {
    */
   warmShaders(overlay?: { scene: THREE.Scene; camera: THREE.Camera }): void {
     if (this.environmentDirty) this.applyEnvironment();
+    // A session's build has just ended: its reflective meshes (if any) are found on the next frame.
+    this.post.rescan();
     const gl = this.gl;
     const retro = this.retro;
-    if (retro) gl.setRenderTarget(retro.renderTarget);
+    // The world draws into the post stack's target when there is one (G5), the held replica onto the canvas after it.
+    const post = this.postStack();
+    const world = retro?.renderTarget ?? post?.sceneTarget ?? null;
+    const held = retro?.renderTarget ?? null;
+    if (world) gl.setRenderTarget(world);
     gl.compile(this.scene, this.camera);
+    if (world !== held) gl.setRenderTarget(held);
     if (overlay) gl.compile(overlay.scene, overlay.camera);
-    if (retro) gl.setRenderTarget(null);
+    if (held) gl.setRenderTarget(null);
+  }
+
+  /** Lets go of `scene` as the overlay to release on a context swap (its match is over and has freed it, BP2). */
+  forgetOverlay(scene: THREE.Scene): void {
+    if (this.overlayScene === scene) this.overlayScene = null;
   }
 
   /** Draws the world, then (optionally) an overlay scene such as the held replica on top of it. */
@@ -469,9 +508,17 @@ export class Renderer {
     const retro = this.retro;
     if (retro) gl.setRenderTarget(retro.renderTarget);
     gl.autoClear = true;
-    gl.render(this.scene, this.camera);
-    this.overlayScene = overlay?.scene ?? null;
+    // The post stack (G5) draws the world through its passes onto the canvas; the held replica goes on top after it,
+    // so the temporal blend never smears it and the lens finish never covers it.
+    const post = this.postStack();
+    if (post) {
+      this.post.findReflective(post, this.scene);
+      post.render(gl, this.scene, this.camera);
+    } else {
+      gl.render(this.scene, this.camera);
+    }
     if (overlay) {
+      this.overlayScene = overlay.scene;
       gl.autoClear = false;
       gl.clearDepth();
       gl.render(overlay.scene, overlay.camera);
@@ -480,9 +527,15 @@ export class Renderer {
     timer?.end();
   }
 
+  /** The post stack's passes in force, in order (the debug overlay): none on Low. */
+  get postPasses(): readonly PostPassId[] {
+    return this.post.plan;
+  }
+
   dispose(): void {
     window.removeEventListener('resize', this.resize);
     this.unlisten(this.canvas);
+    this.post.drop();
     this.mapMeshes.clear();
     if (this.surfaces) disposeSurfaceTextures(this.surfaces);
     this.surfaces = null;
@@ -514,8 +567,24 @@ export class Renderer {
    * EXT_color_buffer_half_float or _float, near universal), else 8-bit.
    */
   private makeRetro(look: RetroLook): RetroFilter {
+    return new RetroFilter(look, this.drawsHalfFloat());
+  }
+
+  /** Whether the context can draw into half floats (WebGL 2 with EXT_color_buffer_half_float or _float, near universal). */
+  private drawsHalfFloat(): boolean {
     const ext = this.gl.extensions;
-    return new RetroFilter(look, ext.has('EXT_color_buffer_half_float') || ext.has('EXT_color_buffer_float'));
+    return ext.has('EXT_color_buffer_half_float') || ext.has('EXT_color_buffer_float');
+  }
+
+  /** The post stack for this frame (G5): none on Low, while the retro filter is on and while the context is lost. */
+  private postStack(): PostStack | null {
+    return this.post.stackFor(this.quality, this.lighting, this.retroLook !== null);
+  }
+
+  /** The post stack at the drawing buffer's size (the window times the pixel ratio, render scale included). */
+  private sizePost(): void {
+    const pr = this.gl.getPixelRatio();
+    this.post.setSize(this.width * pr, this.height * pr);
   }
 
   /** A WebGL renderer with the game's output settings, on a canvas of its own. Throws if the browser refuses a context. */
@@ -547,6 +616,8 @@ export class Renderer {
     const old = this.gl;
     this.dropTimer();
     this.unlisten(old.domElement);
+    // The post stack's targets belong to the old context: freed with it, and made again on the new one's first frame.
+    this.post.drop();
     // The sheen's target is freed by the context that made it; the session asks for a new one (contextRestored), and
     // the scene's environment is made again on the next frame.
     this.sheen.dispose();
@@ -569,6 +640,12 @@ export class Renderer {
     this.gl = next;
     this.contextAntialias = antialias;
     this.listen(next.domElement);
+    // A swap while the old context was lost: its restore event will never come (the old canvas is no longer heard), and
+    // the new context is live, so the renderer and the session carry on as after a restore (G5 QA).
+    if (this.post.contextGone) {
+      this.post.contextBack();
+      this.contextListener(false);
+    }
     if (this.retroLook) this.retro = this.makeRetro(this.retroLook);
     return true;
   }
@@ -609,6 +686,8 @@ export class Renderer {
     // Without this the browser never gives the context back (Three.js does it too; repeating it is harmless).
     e.preventDefault();
     this.forgetTimer();
+    // The post stack goes with the context (its targets are gone) and is made again once the context is back.
+    this.post.contextLost();
     this.contextListener(true);
   };
 
@@ -617,6 +696,7 @@ export class Renderer {
     // environment on the next frame).
     this.sheen.forget();
     this.environmentDirty = true;
+    this.post.contextBack();
     // A timer made while the context was gone (a frame drawn then) holds no query, or one of the lost context: the next
     // frame makes a new one on the restored context (M63, audit REN-07).
     this.forgetTimer();
@@ -633,6 +713,7 @@ export class Renderer {
     this.gl.setPixelRatio(effectivePixelRatio(window.devicePixelRatio, this.quality));
     this.gl.setSize(w, h, false);
     this.retro?.resize(w, h, this.gl.getPixelRatio());
+    this.sizePost();
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
   };

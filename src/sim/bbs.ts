@@ -10,7 +10,7 @@ import { characterHitVolume, createHitVolume, type HitVolume, rayCharacter } fro
 import { firstRangeTargetHit, hitRangeTarget, type RangeTarget, type RangeTargetHit } from './rangeTargets';
 import { ricochet } from './ricochet';
 import type { RngState } from './rng';
-import { copy, type Vec3, vec3 } from './vec';
+import { copy, length3, type Vec3, vec3 } from './vec';
 
 const segmentDir = vec3();
 /**
@@ -99,7 +99,7 @@ export function stepBBs(
     const dx = bb.position.x - bb.prevPosition.x;
     const dy = bb.position.y - bb.prevPosition.y;
     const dz = bb.position.z - bb.prevPosition.z;
-    const len = Math.hypot(dx, dy, dz);
+    const len = length3(dx, dy, dz);
     if (len > 1e-9) {
       segmentDir.x = dx / len;
       segmentDir.y = dy / len;
@@ -140,6 +140,11 @@ export function stepBBs(
           events.push({ type: 'ricochetTick', victimId: hit.victim.id, shooterId: bb.ownerId, position, direction });
           continue;
         }
+        // Extraction's insertion grace (Audit 2, SIM-03): a BB on, or from, a squad member just in stops with no hit.
+        if (hit.victim.grace > 0 || inGrace(targets!.characters, bb.ownerId)) {
+          events.push({ type: 'bbImpact', position, ownerId: bb.ownerId });
+          continue;
+        }
         eliminate(hit.victim, bb.ownerId, targets!.characters, targets!.elimination);
         events.push({ type: 'characterHit', victimId: hit.victim.id, shooterId: bb.ownerId, position, direction, ricochet: ricocheted });
         continue;
@@ -161,4 +166,10 @@ export function stepBBs(
       events.push({ type: 'bbLost', position: vec3(bb.position.x, bb.position.y, bb.position.z), ownerId: bb.ownerId });
     }
   }
+}
+
+/** Whether the character with `id` (a BB's owner) is in its insertion grace. */
+function inGrace(characters: readonly Character[], id: number): boolean {
+  for (const c of characters) if (c.id === id) return c.grace > 0;
+  return false;
 }

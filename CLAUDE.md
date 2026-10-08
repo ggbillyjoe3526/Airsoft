@@ -1,4 +1,4 @@
-# Airsoft FPS — Project Guide for Claude
+# Airsoft FPS: project guide for Claude
 
 You are the lead engineer and development partner on an original first-person airsoft shooter that runs in the web browser. You build it yourself, using code plus free, properly licensed tools and assets. Treat this as a real game project, not a coding exercise.
 
@@ -71,7 +71,7 @@ These are defaults to prototype, not final. Tune them through play.
 - On hit: the player hears a distinct "tick" impact, sees a hit indicator, and their character raises a hand ("HIT!" callout).
 - Eliminated players become a visible **"dead" state**: hand raised, walking off to the dead zone, cannot shoot, and cannot be targeted. They can still spectate.
 - Prototype bots always call their hits honestly. Honesty is enforced by the game, not the player.
-- Later: a **medic mode** with a bleed-out timer, where a medic revives a hit player (owner, 2026-10-03: a future feature; 0.3 since 2026-10-05).
+- Later: a **medic mode** with a bleed-out timer, where a medic revives a hit player (owner, 2026-10-03: a future feature; 0.1 Dev 6 since 2026-10-06).
 
 **Replicas (Phase 1 needs only two)**
 - **AEG rifle**: full auto, medium range, medium magazine.
@@ -82,134 +82,53 @@ These are defaults to prototype, not final. Tune them through play.
 - Walk, sprint, crouch, and limited jump. Sprinting disables shooting briefly.
 - Responsive, grounded, no wall-running or superhero movement.
 
-## 6. Phase 1 Goal: Playable Single-Player Slice
 
-### Definition of done
+## 6. Phase 1
 
-- Game loads in the browser from `npm run dev` and from a static production build.
-- Click to play, pointer lock, WASD + mouse controls.
-- One small greybox map (warehouse or CQB arena) with cover, 2–3 routes, and clear sightlines.
-- Two replicas (AEG + pistol) with reloads, ammo counter, and weapon switching.
-- BB projectiles with travel time, arc, and visible trails.
-- One-hit elimination with hit calling for players and bots.
-- Bots that patrol, take cover roughly, spot the player, and shoot with human-like reaction time and inaccuracy.
-- Round flow: 3v3 (player + 2 bots vs 3 bots), elimination wins the round, first to 5 rounds wins the match.
-- Minimal HUD: crosshair, ammo, round timer, score, hit feedback.
-- Runs at a stable **60 FPS** on a mid-range laptop with integrated graphics.
-- Unit tests pass for ballistics, hit rules, and round state.
+Done (0.1 Dev 1). Its definition of done is in `docs/archive/0.1-dev/ROADMAP.md` › Phase 1.
 
-### A player must be able to
+## 7. Roadmap, Versions and Pull Requests
 
-Spawn, understand the goal, move naturally, fire BBs, feel the replica, hit a bot, understand when they themselves were hit, finish a round, and want to play another.
+The plan and build status: `docs/ROADMAP.md`. Versioning, branches, pull requests, the release checklist and the
+bug pass: `docs/PROCESS.md` (grep the heading you need). The rules every session must keep:
 
-**Out of scope for Phase 1:** multiplayer, objectives, progression, cosmetics, menus beyond a start screen, real art assets.
-
-## 7. Roadmap After Phase 1
-
-Move on only when the previous phase is actually fun. Validate before expanding.
-
-Phases and milestones are development steps, not versions: all of Phases 1–4 build the initial **v0.1** product.
-**Current focus: alpha.** The game stays in alpha through Phase 4, until the owner calls it feature complete.
-Detailed plan and build status: `docs/ROADMAP.md`.
-
-v0.1 is the core game with strong foundations (owner, 2026-10-01): two replicas (AEG, gas pistol), Depot,
-Elimination and Attack / Defend.
-
-1. **Phase 2 — Core gameplay (alpha, ships as 0.1 Dev 2):** controls, footsteps and sound, reload animations, hit reactions, smarter bots, the Attack / Defend objective mode, all on Depot.
-2. **Phase 3 — Core foundations (alpha, 0.1 Dev 3):** leaning (Q / E peek), magazines and meaningful reloads (limited ammunition), a BB physics pass, movement and positioning over raw weapon stats, the audit fixes and elevation support (ramps, raised floors).
-3. **Phase 4 — Feel, presentation and onboarding (alpha):** weapon handling from the owner's 0.1 Dev 3 playtest (fire modes, faster reloads, crouch toggle, steadier aim when still, optics as accessories with aiming down sights), a Depot rework to the field checklist (moved from Phase 3, owner, 2026-10-02), the Loadout (owner, 2026-10-03: primary and secondary replica, BB weight, hop-up, optics, grips, magazines), an audio rework, comfort, accessibility and browser basics (owner, 2026-10-03: invert mouse, reduced motion, aim and sprint toggles, colour-blind options, sound cues, pause on a hidden tab, fullscreen), match info (hit feed, teammate markers, scoreboard, end-of-match summary, local records, crosshair options), custom matches (rounds, round time, team size, teammate and opponent difficulty, a ricochets setting off by default), a practice range, three squad orders for bot teammates, art pass, VFX and lighting, proper menus and a full settings screen (incl. accessibility options), onboarding.
-4. **Beta (when the owner calls the game feature complete):** optimisation, final balance and tuning, bug fixing, stability, UX/QoL and polish.
-
-**After 0.1 (later versions, each feature placed in a version in `docs/ROADMAP.md` by the feature triage of
-2026-10-05):** 0.2 the graphics overhaul; 0.3 the armoury and the rules (medic, TDM, Survival, Extraction public, field
-rule presets, chrono, gas simulation, grenades, parts and pouches, the first new replica types); 0.4 more fields and
-ways to play (Rush, Domination, Capture the Flag, prone, weather, callouts, bot personalities, team communication);
-0.5 kit, looks and progression (skins, challenges and badges). Don't build these during 0.1.
-
-**Placing work:** new systems, modes and content (maps, replicas, menus, art) are alpha; fixing, balance,
-performance, stability, UX/QoL, polish and final tuning are beta. During alpha, note beta-type work in
-`docs/ROADMAP.md` (Beta) or `docs/KNOWN_ISSUES.md` unless it blocks alpha work.
-
-### Versioning (authoritative policy)
-
-The number describes the product; a Dev or Beta stage describes its development state. Never move to
-0.2 just because a phase ends, time passes or small improvements pile up.
-
-| Version (git tag) | Meaning |
-|---|---|
-| 0.1 Dev 1, 0.1 Dev 2, 0.1 Dev 3 … (`0.1-dev.1`, `0.1-dev.2` …) | **Dev** (called Alpha until 2026-10-05): building the game. Systems and content can be added, gameplay can change a lot, breaking changes are fine, not feature complete. Each build number (`.2`, `.3`) is a full Dev release. In-between playtests use plain commits, never a tag. |
-| 0.1 Beta 1, 0.1 Beta 2, 0.1 Beta 3 … (`0.1-beta.1`, `0.1-beta.2` …) | **Beta**: starts when the owner calls the planned game feature complete. Bug fixes, balance, performance, stability, UX/QoL, polish, final tuning; no major new systems unless the owner approves. Open-ended number of builds. |
-| 0.1.0 (`0.1.0`) | First public release of the completed initial game, when the owner considers it a stable public product (not when a phase ends). |
-| 0.1.1, 0.1.2 … (`0.1.1`, `0.1.2` …) | Fixes, performance, balance, small UI/UX or accessibility improvements, minor tuning, small content additions, maintenance. |
-| 0.2, 0.3 … (`0.2.0` …, each with `.x` maintenance) | A substantially expanded or evolved product: major new systems or modes, a large content expansion across systems, a core-loop redesign. No feature-count threshold; contents are not predefined. |
-| 1.0 (`1.0.0`) | The release the owner considers fully mature and stable. |
-
-- Milestones and critic cycles give development granularity; they don't each get a version.
-- Names are written as "0.1 Dev 5" or "0.1 Beta 1" (owner, 2026-10-05: Dev replaced Alpha; no "v"). Tags can't hold
-  spaces, so they use the dotted forms above (`0.1-dev.2`, never `0.1-dev-2`); a GitHub release is titled
-  "Airsoft 0.1 Dev 2". The old `v0.1-alpha` tags became `0.1-dev.1` to `0.1-dev.3` on 2026-10-05. Only full
-  releases are tagged (owner, 2026-10-01): no letter checkpoints (`.2a`, `.2b`); the old ones are removed.
-  The owner creates tags; don't create, rename or move them unless asked.
-- **After the owner tags a release** (owner, 2026-10-03), the docs move to the new tag without being asked. The
-  first pull request after a new tag (or a small docs-only one, if no other work is open) updates, to match the
-  owner's release description:
-  1. `README.md`: the title, the intro paragraph and its "New since …" list, the download link
-     (`.../archive/refs/tags/<tag>.zip`), the unzipped folder name (`Airsoft-<tag without the v>`, e.g.
-     `Airsoft-0.1-dev.3`) and the "What's in …" section.
-  2. `docs/ROADMAP.md`: the builds table and the status rows that mention the release.
-  3. Any other "latest release" mention: run `grep -rn "dev\.[0-9]\|beta\.[0-9]\|Dev [0-9]\|Beta [0-9]" README.md docs/ CLAUDE.md src/config/`
-     and update each line that names the previous release as current (history and policy examples stay as they are).
-     The title screen's version needs nothing: it comes from `git describe` as the game is built (M24).
-  4. The change records (owner, 2026-10-04): run the changelog agent (`.claude/agents/changelog.md`) with
-     `--release <tag>`. It closes the `Unreleased` section of `CHANGELOG.md` under the tag, writes the player-facing
-     `docs/patch-notes/<tag>.md` and the README's "New since …" paragraph.
-- **Pull requests** (owner, 2026-10-02): every change lands as a pull request that the owner reviews and merges.
-  Work on a new branch made from the latest `main` (one per milestone or batch), push that branch, and open a pull
-  request into `main`. **Never push to `main`.** A pull request built through the pipeline (`pipeline/README.md`)
-  is merged by its own thread once CI is green and the critic accepted (owner, 2026-10-04: "Claude merges"); any
-  other pull request waits for the owner. One pull request may hold several commits.
-- **Branches** (owner, 2026-10-01): `main` holds the latest stable release.
-  - **Now (the v0.1 cycle):** work reaches `main` only when the owner merges its pull request, and the tagged
-    commits on `main` are the releases.
-  - **Later (about when v0.1 is done and v0.2 starts; the owner decides when):** day-to-day work happens on an
-    `alpha` branch. A build ready for testing is merged into `beta`; once tested, it is merged into `main` and tagged.
-    From then on, never push unreleased work to `main`.
-
-Multiplayer is not planned (owner, confirmed 2026-10-03: absolutely none).
-
-Future ideas (modes, clans, community scenarios, etc.) go in `docs/IDEAS.md`. Do not implement them unless asked.
+- **Dev now.** The game is in 0.1 Dev until the owner calls it feature complete; Beta adds no features. Names read
+  "0.1 Dev 5", "0.1 Beta 1" (no "v"); tags `0.1-dev.5`, `0.1-beta.1`, `0.1.0`.
+- **The owner creates tags.** Don't create, rename or move them. After he tags, the release checklist in
+  `docs/PROCESS.md` is due in the next pull request.
+- **Never push to `main`.** Every change is a pull request from a new branch made from the latest `main`. Pipeline
+  and docs-only pull requests are merged by their own thread once CI is green (and the critic accepted).
+- **Placing work:** new systems, modes and content are Dev; fixing, balance, performance, stability, UX/QoL, polish
+  are Beta (note them in `docs/ROADMAP.md` › Beta or `docs/KNOWN_ISSUES.md` unless they block Dev work). Don't build
+  later-version features unless the owner pulled them into 0.1 (`docs/ROADMAP.md`).
+- Multiplayer is not planned (owner, confirmed 2026-10-03: absolutely none). Future ideas go in `docs/IDEAS.md`; don't
+  implement them unless asked.
 
 ## 8. How to Work
 
-**At the start of the project** (nothing exists yet):
-1. Propose the folder structure and initial setup in a few lines.
-2. Scaffold the Vite + TypeScript + Three.js + Rapier project.
-3. Get a single scene running: a floor, a box, and a first-person camera that moves.
-4. Then build Phase 1 in small steps, each leaving the game runnable.
+**Start of a session:** read the task block or brief and project memory, then only the files the task names. Fetch
+first; grep `docs/` for anything else. Details in `docs/PROCESS.md` › Sessions.
 
-**At the start of every later session:** read `docs/HANDOFF.md` first, then this file and `docs/`, check the repository state and git log (and `git ls-remote --tags origin`: a tag newer than the one `README.md` names means the release checklist in §7 is due), then continue from where we left off.
+**For each substantial change,** state briefly **Goal**, **Approach** (files and systems) and **Risks**. Then
+implement, then **verify**: type check, tests and build; report what changed, what was tested, what passed, what
+failed and what's incomplete. Never claim something works if you haven't verified it. For what you can't verify (how it
+feels to play), tell the owner exactly what to test in the browser.
 
-**At the end of every session** (or when the owner says usage is running out): rewrite `docs/HANDOFF.md` for the next session (where we are, what's next and any half-made plans, open questions, gotchas; about a screen; replace it, don't append), then commit it on the working branch and push it with the rest, so it is part of the pull request.
+**Token and context hygiene** (owner, 2026-10-02 and 2026-10-06; usage runs out fast):
+- **One task per thread.** After a merge, follow-on work starts a fresh thread with a short brief.
+- **Grep first, then read ranges.** A hook stops whole-file reads of files over 40 KB (`.claude/hooks/`); the big docs
+  (PLAYTEST, KNOWN_ISSUES, DECISIONS and everything in `docs/archive/`) are read by heading, never whole.
+- **Quiet output:** `npm run t` (fast tests, dots and failures only), `npm run t:all`; filter any other command's output
+  to failures and totals.
+- **One push when the gates are green:** records in the same push, no separate status pushes, no pull request title
+  edits (each re-runs CI and wakes the thread).
+- **Ask the owner at once** when a check can only pass by changing an acceptance criterion; don't spend attempts on it.
+- Screenshots only when you need to see something; prefer reading values with page text or JS.
+- Agent reports stay short: QA, performance and the critic about 30 lines, triage 15 (`.claude/agents/`).
 
-**For each substantial change,** state briefly:
-- **Goal:** what it achieves
-- **Approach:** which files/systems change
-- **Risks:** anything technical or gameplay-related worth flagging
-
-Then implement, then **verify**: run the type checker, tests, and build, and report what changed, what was tested, what passed, what failed, and what's incomplete. Never claim something works if you haven't verified it. For things you can't verify yourself (how it feels to play), tell me exactly what to test in the browser.
-
-**Context hygiene** (owner, 2026-10-02; the context window fills up fast on long sessions):
-- **One task per session (one thread per task).** After a task is accepted and committed on its branch, push, open the pull request (or update it), and tell the owner. `docs/HANDOFF.md` is rewritten once per batch by the planning thread (owner, 2026-10-04), not in every pull request.
-- Read files in ranges (grep first, then only the lines you need), and filter command and test output (e.g. only failures and totals).
-- Take screenshots only when you need to see something; prefer reading values with page text or JS.
-- Keep agent reports short: QA, performance and the critic return at most about 30 lines, triage 15 (`.claude/agents/`).
-
-**Regular bug pass** (owner, 2026-10-04): after each batch of feature pull requests merges and before the owner's
-playtest, a full bug pass and `docs/KNOWN_ISSUES.md` sweep is due: play every mode in the browser, review the code added
-since the last pass, fix what can be fixed (a test for each), keep the rest logged with why. Remind the owner then; start
-it only when he says go. It runs as a pipeline task (`BP<n>`); how in `docs/HANDOFF.md`.
-
-**Design decisions:** if you're unsure about something, ask me before acting (owner, 2026-10-02). For small details that are easy to change later, choose a sensible default, note it in `docs/DECISIONS.md` with a one-line reason, say which you chose, and keep going.
+**Design decisions:** if unsure, ask the owner before acting. For small details that are easy to change later, pick a
+sensible default, note it with a one-line reason in the task's record (`docs/records/`), or in `docs/DECISIONS.md` if
+it is an owner ruling or binds later tasks, say which, and keep going.
 
 ## 9. Code Standards
 
@@ -222,23 +141,18 @@ it only when he says go. It runs as a pipeline task (`BP<n>`); how in `docs/HAND
 - Fix root causes, not symptoms. Classify technical debt as fix now / document / can wait. Don't endlessly refactor.
 - No new dependencies without a clear reason stated in the change summary.
 
+
 ## 10. Repository Hygiene
 
-- Commit-sized changes with clear messages. Don't touch unrelated files.
-- Never commit secrets, build output, or `node_modules`.
-- Keep `README.md` current with setup and run instructions.
-- Maintain these docs, briefly:
-  - `docs/VISION.md` — pillars and tone
-  - `docs/ARCHITECTURE.md` — how systems fit together
-  - `docs/DECISIONS.md` — decisions and why
-  - `docs/ASSETS.md` — asset sources and licenses
-  - `docs/IDEAS.md` — future features, not yet approved
-  - `docs/KNOWN_ISSUES.md`
-  - `docs/HANDOFF.md` — where the last session left off (rewritten each session)
-  - `CHANGELOG.md`, `docs/FEATURES.md`, `docs/patch-notes/` — kept by the changelog agent
-    (`.claude/agents/changelog.md`, owner, 2026-10-04): run it in every pull request once the change is final, with
-    the task id, the pull request title, a short diff summary and any new DECISIONS lines; it adds the `Unreleased`
-    line(s) and the feature list's line. Don't edit those three by hand except to fix a mistake.
+- Commit-sized changes with clear messages. Don't touch unrelated files. Never commit secrets, build output or
+  `node_modules`. Keep `README.md` current with setup and run instructions.
+- Keep the docs brief and current, in the house style (`docs/PROCESS.md` › Writing docs): VISION, ARCHITECTURE (plus a
+  `README.md` per `src/` folder), DECISIONS, ASSETS (every external asset), IDEAS, KNOWN_ISSUES, PROCESS, HANDOFF (a
+  short "now", rewritten once per batch by the planning thread) in `docs/`. Each task's record goes in `docs/records/`,
+  finished history in `docs/archive/`.
+- `CHANGELOG.md`, `docs/FEATURES.md` and `docs/patch-notes/` are kept by the changelog agent
+  (`.claude/agents/changelog.md`): run it in every pull request once the change is final. Don't edit them by hand
+  except to fix a mistake.
 
 ## 11. Tone Check
 
@@ -249,45 +163,9 @@ The goal is a genuinely fun airsoft game in the browser, not an impressive codeb
 
 ---
 
-## 12. The Pipeline: Gates and the Critic
 
-Every task runs through the build pipeline (owner's design, 2026-10-04): `pipeline/README.md` is the protocol,
-`.claude/skills/pipeline/SKILL.md` the step list, `docs/TASKS.md` the open tasks with their acceptance criteria,
-`.claude/agents/` the agents (worker, qa, performance, triage, critic, changelog).
+## 12. The Pipeline
 
-### Gates (a script, not a model)
-
-`node pipeline/gate.mjs --task <id>` runs the build, the unit tests, the browser smoke test, the perf harness when the
-diff touches a perf-relevant path, a scope check against the task's `touches`, and a changelog check, and writes
-`pipeline/out/gate-report.json`. A failed gate goes back to the worker with the evidence; the critic never sees it.
-
-### Critic (judgment only, on green gates)
-
-The critic (`.claude/agents/critic.md`) runs as a separate subagent with fresh context, reads the diff, the gate
-report, the triaged QA and performance summaries and the task's acceptance criteria, and ticks eight binary checks:
-
-| # | Check | Blocking |
-|---|---|---|
-| 1 | Every acceptance criterion met, with the diff line that meets it | yes |
-| 2 | No contract (`docs/ARCHITECTURE.md` › Contracts) changed unless the task allows it | yes |
-| 3 | No new per-frame or per-tick allocation in the diff | yes |
-| 4 | The new tests exercise the feature (would fail without it) | yes |
-| 5 | Simulation apart from presentation, no magic numbers, no hidden global state (§9) | yes |
-| 6 | Fits the pillars, the fixed decisions and the assets policy (§2, §3, §4, §11) | yes |
-| 7 | Maintainability (small modules, GPU disposal, no copy-paste) | no |
-| 8 | Scope (nothing beyond the task; the docs updated) | no |
-
-**Score** is checks passed out of 8. **Accept**: every blocking check passes and at most one non-blocking fails.
-Otherwise **Retry** with only the failed checks and their evidence. A verdict one check short of Accept is a near
-miss and is re-run on Opus before the task goes back. `tier: trivial` tasks skip the critic: green gates plus a Haiku
-diff check. The critic still cannot play the game: it lists browser tests for the owner, whose playtest overrides it.
-
-### Attempts
-
-Four attempts per task (one build plus three targeted retries). After the fourth:
-- gates green and at least **6 of 8** with checks 1 and 2 passing → **auto-accept** (owner, 2026-10-04); every
-  failed check goes to `docs/KNOWN_ISSUES.md`;
-- otherwise stop, keep the best attempt on its branch and report to the owner what failed and what each attempt tried.
-
-`docs/REVIEWS.md` keeps one line per task (id, attempts, score, verdict); `docs/METRICS.md` one row per attempt.
-Small changes (typo fixes, config tweaks, docs) are `tier: trivial`.
+Every task runs through the pipeline: `pipeline/README.md` (protocol), `.claude/skills/pipeline/SKILL.md` (steps),
+`docs/TASKS.md` (open tasks), `.claude/agents/` (agents). `node pipeline/gate.mjs --task <id>` runs the gates; the
+critic ticks eight binary checks on green gates (the table and the attempt rules: `docs/PROCESS.md` › The pipeline).

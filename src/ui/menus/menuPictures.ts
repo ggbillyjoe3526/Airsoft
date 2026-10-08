@@ -95,8 +95,11 @@ export class PictureSlot {
         this.img.hidden = false;
         this.root.classList.add('has-picture');
       },
-      // A picture that can't be drawn (a lost context) leaves the drawing; the next visit asks again.
-      () => undefined,
+      // A picture that can't be drawn (a lost context) leaves the drawing; the next show of it asks again (BP2: the slot
+      // forgets the key, or the same subject would never be asked for again).
+      () => {
+        if (this.key === key) this.key = '';
+      },
     );
   }
 }

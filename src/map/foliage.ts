@@ -1,4 +1,4 @@
-import type { Vec3 } from '../sim/vec';
+import { length3, type Vec3 } from '../sim/vec';
 
 /**
  * A bush (M33e): an upright ellipsoid of leaves standing on the ground, `radius` across and `height` tall from its
@@ -23,7 +23,7 @@ export function foliageDepth(bushes: readonly Bush[], a: Vec3, b: Vec3, limit = 
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const dz = b.z - a.z;
-  const len = Math.hypot(dx, dy, dz);
+  const len = length3(dx, dy, dz);
   if (len < 1e-6) return 0;
   const minX = Math.min(a.x, b.x);
   const maxX = Math.max(a.x, b.x);

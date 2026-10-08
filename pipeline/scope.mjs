@@ -5,11 +5,12 @@
  */
 
 /**
- * What any task may touch besides its `touches` list: tests, the browser tests, docs, CHANGELOG and README.
+ * What any task may touch besides its `touches` list: tests, the browser tests, docs, CHANGELOG, README and the folder
+ * READMEs under `src/` (a task that adds, renames or moves a file keeps its folder's README current, TE2).
  * `pool.md` (game data the game reads at start) and `CLAUDE.md` (the rules every agent works under) are not on it
  * (audit CORE-07): a task that changes them lists them in `touches`.
  */
-export const ALWAYS_ALLOWED = [/\.test\.ts$/, /^e2e\//, /^docs\//, /^CHANGELOG\.md$/, /^README\.md$/];
+export const ALWAYS_ALLOWED = [/\.test\.ts$/, /^e2e\//, /^docs\//, /^CHANGELOG\.md$/, /^README\.md$/, /^src\/(.+\/)?README\.md$/];
 
 /** What a QA commit (trailer `Agent: qa`) may touch: tests and their support only. */
 export const QA_ALLOWED = [/\.test\.ts$/, /^e2e\//, /^src\/.*\/testSupport\.ts$/, /^src\/ai\/depotMatchSupport\.ts$/, /^src\/pool\/testStorage\.ts$/];
@@ -27,6 +28,16 @@ export function allowedFile(file, touches) {
 /** Whether `file` may change in a commit with the `Agent: qa` trailer. */
 export function qaAllowedFile(file) {
   return QA_ALLOWED.some((re) => re.test(file));
+}
+
+/**
+ * The block `## <id> · …` of a docs/TASKS.md text as written: its heading and the lines under it up to the first blank
+ * line or the next `## ` heading (the prose between blocks is not part of one). The review packet quotes it
+ * (pipeline/packet.mjs); null when there is none.
+ */
+export function taskBlockText(text, id) {
+  const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return text.match(new RegExp(`^## ${escaped}\\b[^\\n]*(?:\\n(?!## )[^\\n]*\\S[^\\n]*)*`, 'm'))?.[0] ?? null;
 }
 
 /** The block `## <id> · …` of a docs/TASKS.md text: its touches, tier and perf; null when the text has no such block. */

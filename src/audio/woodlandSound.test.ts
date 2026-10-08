@@ -10,6 +10,7 @@ import { WOODLAND, WOODLAND_LAYOUT } from '../map/woodland';
 import { terrainHeightAt } from '../map/terrain';
 import { vec3 } from '../sim/vec';
 import { renderAmbienceBed, renderLoop } from './ambience';
+import { measureSeam, seamFailures } from './loopSeamSupport';
 import { renderMapCue, renderSounds } from './soundBank';
 import { surfaceUnder } from './soundMaterials';
 import { soundscapeOf, YARD_BY_DAY } from './soundscape';
@@ -35,12 +36,16 @@ function finish<T>(job: Generator<void, T>): T {
   }
 }
 
-/** Mean power of `v` over its first `seconds`. */
+/**
+ * Mean power of `v` over its first `seconds` (past its end counts as silence: a cue's buffer ends where its sound has
+ * died away, M69, audit AUD-09), or over all of it.
+ */
 function power(v: Float32Array, seconds = Number.POSITIVE_INFINITY): number {
-  const n = Math.min(v.length, Math.floor(seconds * RATE));
+  const window = Number.isFinite(seconds) ? Math.floor(seconds * RATE) : v.length;
+  const n = Math.min(v.length, window);
   let sum = 0;
   for (let i = 0; i < n; i++) sum += v[i]! ** 2;
-  return sum / n;
+  return sum / window;
 }
 
 /** In-place radix-2 FFT of (re, im). */
@@ -137,53 +142,57 @@ function crossings(v: Float32Array, from = 0, to = v.length / RATE): number {
 const STEP_BAND = [700, 4000] as const;
 
 describe('M33j acceptance 4: every existing cue buffer is unchanged (Depot sounds exactly as before)', () => {
-  /** Fingerprints of every cue as the game rendered it before M33j (AUDIO.variants variants, AUDIO.synthSeed). */
+  /**
+   * Fingerprints of every cue (AUDIO.synthSeed, each cue's variants), re-baked by M69 (owner decision 19, audit AUD-08 and
+   * AUD-09) with the fingerprint below: each variant is the same samples as before M33j up to its last sample above -60 dB
+   * of its peak, then a 64-sample fade, and count.beep keeps one variant of its five.
+   */
   const BEFORE: Readonly<Record<string, string>> = {
-    'shot.electric': '2dc09a3f',
-    'shot.gas': '62e7dc47',
-    'shot.spring': '74e23d13',
-    'shot.cyber': 'd62e350f',
-    'motor.spinUp': 'feba5841',
-    'motor.spinDown': '1de13155',
-    'dryFire.electric': '157957ef',
-    'dryFire.gas': '56801531',
-    'dryFire.cyber': '3d9c4646',
-    'dryFire.spring': '80f5198a',
-    'magOut.electric': 'cd89155a',
-    'magIn.electric': '74cf7b5e',
-    'magOut.gas': '32a346c6',
-    'magIn.gas': '473d7ebf',
-    'magOut.cyber': '3ffa5597',
-    'magIn.cyber': '5e5437a8',
-    'magOut.spring': 'b7c56bab',
-    'magIn.spring': '465eff28',
-    selector: '802e8b58',
-    draw: '246af3ad',
-    reloadRefused: 'ee8cd582',
-    'step.concrete.run': 'd1b91d71',
-    'step.concrete.sprint': '2837b7dc',
-    'step.concrete.land': 'dfb84e0c',
-    'step.metal.run': '68e6e977',
-    'step.metal.sprint': 'efdc9aa6',
-    'step.metal.land': 'c740b110',
-    'foley.crouch': '50617e0d',
-    'foley.stand': 'a0fedf69',
-    'foley.lean': 'dc95042f',
-    magRattle: '8fdf9e7c',
-    'impact.concrete': 'c69c97da',
-    'impact.metal': '4587f0de',
-    'impact.wood': '00285c1f',
-    'impact.earth': 'a24035a1',
-    bodyHit: '01e0775d',
-    steelRing: 'cd458344',
-    hitTick: 'e8e8bb03',
-    hitMarker: 'baa3b515',
-    'radio.ack': '92c159c3',
-    'count.beep': '7911efd3',
-    'rope.up': '9d032f3b',
-    'rope.down': 'e2f9d0e0',
-    'ambience.bird': 'b6630b2b',
-    torchClick: '629e665e',
+    'shot.electric': '9c973f89',
+    'shot.gas': 'aec8f467',
+    'shot.spring': '7c720792',
+    'shot.cyber': '5c441fb2',
+    'motor.spinUp': 'fa107c30',
+    'motor.spinDown': '8ea75488',
+    'dryFire.electric': 'ae0bddf8',
+    'dryFire.gas': '95edda4d',
+    'dryFire.cyber': '598be788',
+    'dryFire.spring': '2f24f92c',
+    'magOut.electric': '631a00fb',
+    'magIn.electric': 'cd6bb484',
+    'magOut.gas': '7b2ab6e9',
+    'magIn.gas': 'ae010849',
+    'magOut.cyber': '9ae84194',
+    'magIn.cyber': '3630840a',
+    'magOut.spring': '1df2e013',
+    'magIn.spring': '25e831d0',
+    selector: '29b74bba',
+    draw: '0397b516',
+    reloadRefused: '7d12732b',
+    'step.concrete.run': '93dc3578',
+    'step.concrete.sprint': '43fae070',
+    'step.concrete.land': '57826428',
+    'step.metal.run': 'd07275a9',
+    'step.metal.sprint': '1237982d',
+    'step.metal.land': 'cbe9dc45',
+    'foley.crouch': '2625d4cf',
+    'foley.stand': '65e20796',
+    'foley.lean': '2965fd33',
+    magRattle: '959ab46f',
+    'impact.concrete': 'f2a7263d',
+    'impact.metal': 'f522e471',
+    'impact.wood': 'c08600d6',
+    'impact.earth': '4b2b8af2',
+    bodyHit: '74d6f1d7',
+    steelRing: '5b1b552a',
+    hitTick: 'cb529272',
+    hitMarker: '6e9067f4',
+    'radio.ack': 'c6a26298',
+    'count.beep': '109b9e6d',
+    'rope.up': '1467bf9d',
+    'rope.down': '83cd321d',
+    'ambience.bird': '658ce048',
+    torchClick: 'e6b0db5c',
   };
 
   it("renders every title-screen cue sample for sample as before, in the same order, and no map cue with them", () => {
@@ -241,6 +250,12 @@ describe('M33j acceptance 3: footsteps on terrain sound like the ground underfoo
       expect(surfaceUnder(WOODLAND.blocks, at(fire.position.x + 0.8, fire.position.z), ground)).toBe('earth');
     }
     expect(surfaceUnder(WOODLAND.blocks, at(45 - WOODLAND_LAYOUT.halfX, WOODLAND_LAYOUT.halfZ - 47.5), ground)).toBe('grass');
+    // Standing on top of a log is wood and on a boulder stone, not the ground under them (BP2).
+    for (const kind of ['log', 'boulder'] as const) {
+      const b = WOODLAND.blocks.find((k) => k.kind === kind)!;
+      const top = vec3(b.center.x, b.center.y + b.size.y / 2, b.center.z);
+      expect(surfaceUnder(WOODLAND.blocks, top, ground), kind).toBe(kind === 'log' ? 'wood' : 'concrete');
+    }
     const pine = WOODLAND.blocks.find((b) => b.kind === 'tree' && groundAt(grid, b.center.x, b.center.z) === 'leaves')!;
     expect(surfaceUnder(WOODLAND.blocks, at(pine.center.x + 0.6, pine.center.z), ground)).toBe('leaves');
   });
@@ -303,9 +318,11 @@ describe('M33j acceptance 2: the woods at night', () => {
       expect(v.length, id).toBe(Math.round(AMBIENT_LOOPS[id].seconds * RATE));
       expect(v.every(Number.isFinite), id).toBe(true);
       expect(Math.sqrt(power(v)), id).toBeCloseTo(1, 3);
-      let biggest = 0;
-      for (let i = 1; i < v.length; i++) biggest = Math.max(biggest, Math.abs(v[i]! - v[i - 1]!));
-      expect(Math.abs(v[0]! - v[v.length - 1]!), `${id} clicks where it loops`).toBeLessThan(biggest);
+      // The wrap against the loop's own interior (loopSeamSupport.ts, audit AUD-06). Measured 2026-10-08 (jump and bend as a
+      // percentile of the loop's own steps and second differences; spectrum as the last window against the first, dB and
+      // percentile of its adjacent windows): yard p37 p14 7.5 dB p15; pines p75 p98 8.1 dB p82; insects p74 p74 0.0 dB p48;
+      // crackle p76 p88 10.9 dB p44; traffic p75 p98 7.9 dB p60; drones p10 p48 8.4 dB p93; neon p24 p2 7.7 dB p43.
+      expect(seamFailures(measureSeam(v)), `${id} clicks where it loops`).toEqual([]);
     }
   });
 

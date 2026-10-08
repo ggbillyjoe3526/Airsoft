@@ -58,6 +58,33 @@ describe('bots work their weapon torch at night (M33h)', () => {
     expect(wantsTorch(set(bot, 'search'), world, REACH)).toBe(false); // between rounds
   });
 
+  it('keeps it off on the way to a search, and on for its last stretch (M71)', () => {
+    const { bot, world } = scene(true);
+    set(bot, 'search');
+    bot.lastKnown = vec3(0, 0, -(BOT_SKILL.normal.searchWalkDistance + 5));
+    expect(wantsTorch(bot, world, REACH)).toBe(false);
+    bot.lastKnown = vec3(0, 0, -(BOT_SKILL.normal.searchWalkDistance - 1));
+    expect(wantsTorch(bot, world, REACH)).toBe(true);
+    const easy = scene(true, 20, BOT_SKILL.easy);
+    set(easy.bot, 'search');
+    easy.bot.lastKnown = vec3(0, 0, -30);
+    expect(wantsTorch(easy.bot, easy.world, REACH)).toBe(true); // Easy keeps it on on the move
+  });
+
+  it("switches it on for a fight within BOT_TORCH.fightReach, not across the beam's whole reach (M71)", () => {
+    expect(BOT_TORCH.fightReach).toBeLessThan(REACH);
+    for (const [distance, on] of [
+      [BOT_TORCH.fightReach - 2, true],
+      [BOT_TORCH.fightReach + 5, false],
+    ] as const) {
+      const { bot, me, world, enemy } = scene(true, distance);
+      me.torchTime = BOT_TORCH.minHold;
+      const cmd = createCommand();
+      stepBotTorch(set(bot, 'fight', enemy.id), world, cmd);
+      expect(cmd.toggleTorch, `${distance} m`).toBe(on);
+    }
+  });
+
   it("keeps an Easy bot's on the move", () => {
     const { bot, world } = scene(true, 20, BOT_SKILL.easy);
     expect(wantsTorch(set(bot, 'advance'), world, REACH)).toBe(true);
@@ -85,12 +112,21 @@ describe('bots work their weapon torch at night (M33h)', () => {
     expect(cmd.toggleTorch).toBe(true);
   });
 
-  it('refreshes the torch light the bots see by, once a tick', () => {
+  it('refreshes the torch light the bots see by once per perception interval, not every tick (audit AI-07)', () => {
     const { bot, me, enemy, world } = scene(true);
     me.torchOn = true;
+    const field = world.sight!.torches!;
     stepBotTorch(set(bot, 'search'), world, createCommand());
-    expect(world.sight!.torches!.time).toBe(1);
-    expect(world.sight!.torches!.lit[enemy.id]).toBe(1);
+    expect(field.time).toBe(Math.floor(world.time / world.cfg.thinkInterval));
+    expect(field.lit[enemy.id]).toBe(1);
+    // The torch goes off: within the same interval the field keeps what it worked out; in the next one it is redone.
+    me.torchOn = false;
+    (world as { time: number }).time += world.cfg.thinkInterval / 4;
+    stepBotTorch(bot, world, createCommand());
+    expect(field.lit[enemy.id]).toBe(1);
+    (world as { time: number }).time += world.cfg.thinkInterval;
+    stepBotTorch(bot, world, createCommand());
+    expect(field.lit[enemy.id]).toBe(0);
   });
 
   it('touches nothing by day, or without a light', () => {

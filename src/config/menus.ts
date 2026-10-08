@@ -17,6 +17,8 @@ export const BROWSER_NOTES = {
   graphicsBack: 'Graphics are back. Resume when you’re ready.',
   /** Under the menus' buttons when the browser won't let the game's sound start (audit CORE-21). */
   audioBlocked: 'Sound is blocked by the browser. Allow audio (autoplay) for this site in its settings to hear the game.',
+  /** Under the menus' buttons when Dev content is on but the dev maps' file didn't download (M50, BP2). */
+  devMapsFailed: 'The dev maps didn’t download, so Dev content is off for now. Check the connection, then change a setting or reload to try again.',
 } as const;
 
 /** The Loadout screen's words (M26b). */

@@ -2,6 +2,7 @@ import type { RicochetConfig } from '../config/ballistics';
 import type { SurfaceHit } from './armament';
 import type { BB } from './ballistics';
 import { type RngState, rngNext } from './rng';
+import { length3 } from './vec';
 
 /**
  * A BB in flight meets a surface (`hit`) at its current position: bounces it off if the surface is hard enough and the
@@ -21,7 +22,7 @@ export function ricochet(bb: BB, hit: SurfaceHit, cfg: RicochetConfig, rng?: Rng
   let x = (v.x - into * n.x) * cfg.slide - into * e * n.x;
   let y = (v.y - into * n.y) * cfg.slide - into * e * n.y;
   let z = (v.z - into * n.z) * cfg.slide - into * e * n.z;
-  const speed = Math.hypot(x, y, z);
+  const speed = length3(x, y, z);
   if (speed < cfg.minSpeed) return false;
   // Scatter, then keep the speed and make sure it still leaves the surface.
   if (rng) {
@@ -36,7 +37,7 @@ export function ricochet(bb: BB, hit: SurfaceHit, cfg: RicochetConfig, rng?: Rng
     y -= 2 * out * n.y;
     z -= 2 * out * n.z;
   }
-  const k = speed / Math.max(1e-9, Math.hypot(x, y, z));
+  const k = speed / Math.max(1e-9, length3(x, y, z));
   v.x = x * k;
   v.y = y * k;
   v.z = z * k;

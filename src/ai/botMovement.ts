@@ -1,4 +1,3 @@
-import type { BotBehaviour } from '../config/bots';
 import { FLAG } from '../config/modes';
 import { inLight } from '../map/nightSight';
 import { dropOnLine, floorAt, isWalkableAt } from '../nav/navGrid';
@@ -8,8 +7,9 @@ import { isInPlay } from '../sim/elimination';
 import { rngNext } from '../sim/rng';
 import { type Vec3, vec3, wrapAngle } from '../sim/vec';
 import { type Bot, type BotWorld, flagRole, holdYaw, pick, recallHeardOther } from './bot';
-import { type CoverSearch, findCover, leanSideToSee, type TakenSpots } from './cover';
+import { type CoverSearch, findCover, leanSideToSee } from './cover';
 import { bodyPoint, eyeOf, lineClear } from './perception';
+import { followRoute, stepOnto, teammateSpots, wantRoute } from './routes';
 import { moveOrder } from './squadOrders';
 
 const DEG = Math.PI / 180;
@@ -27,58 +27,6 @@ const newsSpot = vec3();
 
 /** Cover searches by a lane point and round the pole (AI-02, AI-06): spots to peek from only (radius set per call). */
 const holdSearch: CoverSearch = { radius: 0, randomCandidates: 0, peekable: true };
-
-/** Teammates' spots a cover search keeps away from (AI-01), refilled per search. */
-const taken: TakenSpots = { points: [], count: 0, minGap: 0 };
-
-/** Asks the planner for a route to `goal`, unless the current (or failed) one already goes about there. */
-export function wantRoute(b: Bot, goal: Vec3, cfg: BotBehaviour): void {
-  const moved = Math.hypot(goal.x - b.routeGoal.x, goal.z - b.routeGoal.z);
-  if (b.routeState === 'wanted') {
-    b.routeGoal.x = goal.x;
-    b.routeGoal.z = goal.z;
-    return;
-  }
-  if ((b.routeState === 'ok' || b.routeState === 'failed') && moved < cfg.replanDistance) return;
-  b.routeGoal.x = goal.x;
-  b.routeGoal.y = goal.y;
-  b.routeGoal.z = goal.z;
-  b.routeState = 'wanted';
-}
-
-/**
- * Where `b`'s teammates stand or are heading for cover, as spots a cover search for `b` must keep away from (AI-01):
- * every teammate in play (the player too), plus the cover, lane-hold or pole-guard spot each teammate bot is making for.
- */
-export function teammateSpots(b: Bot, w: BotWorld): TakenSpots {
-  const me = b.character;
-  taken.count = 0;
-  taken.minGap = 2 * w.body.radius + w.cfg.coverSpacingMargin;
-  for (const c of w.characters) {
-    if (c !== me && c.team === me.team && isInPlay(c)) addTaken(c.position);
-  }
-  for (const o of w.bots) {
-    if (o === b || o.character.team !== me.team || !isInPlay(o.character)) continue;
-    if (o.mode === 'cover') addTaken(o.cover.position);
-    else if (o.mode === 'advance' && o.holdCover) addTaken(o.holdSpot.position);
-    else if (o.mode === 'flag') addTaken(o.flagGoal);
-    else if (o.role === 'guard') addTaken(o.post);
-    else if (o.orderCovering) addTaken(o.orderGoal);
-  }
-  return taken;
-}
-
-function addTaken(p: Vec3): void {
-  let slot = taken.points[taken.count];
-  if (!slot) {
-    slot = vec3();
-    taken.points.push(slot); // grows once to the most teammates seen, then reused
-  }
-  slot.x = p.x;
-  slot.y = p.y;
-  slot.z = p.z;
-  taken.count++;
-}
 
 /**
  * Next place to go while advancing: the next lane point (moved a little at random onto walkable
@@ -412,40 +360,6 @@ export function startSearch(b: Bot, w: BotWorld): void {
   }
 }
 
-/**
- * Follows the current route: writes the world direction to walk into `b.moveDir` and returns true, or
- * false when there is nothing to walk (no route, or arrived). `whilePlanning`: keep walking the current route
- * while a new one is wanted (a goal on the move), rather than stopping until it comes.
- */
-export function followRoute(b: Bot, w: BotWorld, dt: number, whilePlanning = false): boolean {
-  const planning = whilePlanning && b.routeState === 'wanted';
-  if (b.routeState !== 'ok' && !planning) return false;
-  const p = b.character.position;
-  while (b.routeLeg < b.route.length) {
-    const wp = b.route[b.routeLeg]!;
-    if (Math.hypot(wp.x - p.x, wp.z - p.z) > w.cfg.waypointReach) break;
-    b.routeLeg++;
-  }
-  if (b.routeLeg >= b.route.length) {
-    if (!planning) b.routeState = 'none';
-    return false;
-  }
-  const wp = b.route[b.routeLeg]!;
-  const dx = wp.x - p.x;
-  const dz = wp.z - p.z;
-  const d = Math.hypot(dx, dz);
-  b.moveDir.x = dx / d;
-  b.moveDir.z = dz / d;
-  // Blocked (e.g. by another player): after a moment, ask for a fresh route.
-  const speed = Math.hypot(b.character.velocity.x, b.character.velocity.z);
-  b.stuckFor = speed < w.cfg.stuckSpeed ? b.stuckFor + dt : 0;
-  if (b.stuckFor > w.cfg.stuckTime) {
-    b.stuckFor = 0;
-    b.routeState = 'wanted';
-  }
-  return true;
-}
-
 /** Advance mode: lane points with a pause (and maybe cover) at each, then hunting. See moveBot. */
 function advance(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number, atPost: boolean): boolean {
   const cfg = w.cfg;
@@ -666,12 +580,16 @@ export function moveBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number, tar
       if (b.fromCover || (b.raiser && atPole(b, w))) return false;
       // Otherwise sidestep while shooting.
       b.strafeLeft -= dt;
-      if (b.strafeLeft <= 0) {
+      const newStep = b.strafeLeft <= 0;
+      if (newStep) {
         b.strafeLeft = pick(b.rng, cfg.strafeTime);
         b.strafeDir = rngNext(b.rng) < 0.5 ? -1 : 1;
-        // A hunter looks whether a step ahead keeps its target in sight once per sidestep, not every tick (M55,
-        // KNOWN_ISSUES row 200); whether the ground ahead is there it looks at every tick (pushing).
-        if (b.role === 'hunter' && target) b.pushInSight = !stepLosesSight(b, w, 0, 1, target);
+      }
+      // A hunter looks whether a step ahead keeps its target in sight once per sidestep, not every tick (M55), and at
+      // once in a new fight or on a new target (BP2); whether the ground ahead is there it looks at every tick (pushing).
+      if (b.role === 'hunter' && target && (newStep || b.pushLookFor !== target.id)) {
+        b.pushInSight = !stepLosesSight(b, w, 0, 1, target);
+        b.pushLookFor = target.id;
       }
       // Never sidestep off a floor, into a wall or out of sight of the target: turn back, or step forward or back if
       // both sides are blocked (so a bot on a narrow walkway doesn't stand still and steady its aim), or stand.
@@ -688,31 +606,6 @@ export function moveBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number, tar
       return false;
     }
   }
-}
-
-/**
- * The last few centimetres onto `spot` once its route is done, walking straight at it: a lean spot, where a few
- * centimetres decide whether a lean sees round the corner, or a guard's post (M55, audit AI-01). True while stepping
- * (direction in `b.moveDir`); false once within leanSpotReach, further off than leanSpotApproachMax, with a drop on
- * the way, or once blocked for stuckTime.
- */
-export function stepOnto(b: Bot, w: BotWorld, spot: Vec3, cmd: PlayerCommand, dt: number): boolean {
-  const cfg = w.cfg;
-  const p = b.character.position;
-  const dx = spot.x - p.x;
-  const dz = spot.z - p.z;
-  const d = Math.hypot(dx, dz);
-  if (d <= cfg.leanSpotReach || d > cfg.leanSpotApproachMax) return false;
-  // Blocked on the way (a teammate, or a corner the nav grid rounds off): it stops where it got to, as a route does.
-  if (b.stuckFor > cfg.stuckTime) return false;
-  const speed = Math.hypot(b.character.velocity.x, b.character.velocity.z);
-  b.stuckFor = speed < cfg.stuckSpeed ? b.stuckFor + dt : 0;
-  const reach = Math.min(d, cfg.edgeLookahead) / d;
-  if (dropOnLine(w.nav, p.x, p.y, p.z, p.x + dx * reach, p.z + dz * reach)) return false;
-  b.moveDir.x = dx / d;
-  b.moveDir.z = dz / d;
-  cmd.walk = true;
-  return true;
 }
 
 /**
@@ -767,7 +660,14 @@ export function keepApart(b: Bot, w: BotWorld, moving: boolean, cmd: PlayerComma
     b.moveDir.z = z * scale;
     return true;
   }
-  if (cmd.forward !== 0 || cmd.right !== 0) return false; // sidestepping in a fight already
+  if (cmd.forward !== 0 || cmd.right !== 0) {
+    // Sidestepping in a fight already: step to the side the push points, unless that side is blocked (M71: two
+    // teammates hunting the same middle met in one fight and strafed through each other).
+    const side = px * Math.cos(b.aim.yaw) - pz * Math.sin(b.aim.yaw);
+    const right = side > 0 ? 1 : -1;
+    if (Math.abs(side) > 1e-6 && cmd.right !== right && !stepBlocked(b, w, right, cmd.forward)) cmd.right = right;
+    return false;
+  }
   const len = Math.hypot(px, pz);
   b.moveDir.x = px / len;
   b.moveDir.z = pz / len;

@@ -33,12 +33,12 @@ export function playView(picked: NewGamePicks, opts: Pick<MenusOptions, 'rules' 
   // A map that offers Day and Night names the one picked (M34d).
   const lightLine = lightingChoices(mapData(map.id)).length > 1 ? ` · ${LIGHTING_LABELS[light]}` : '';
   const still = mapStillFile(map.id, light);
-  const match = run ? runRulesSummary(m, run) : matchRulesSummary(m);
+  const match = run ? runRulesSummary(m, run, played.difficulty) : matchRulesSummary(m);
   const opponents = difficultyLabel(played.difficulty);
   const mates = difficultyLabel(played.teammateDifficulty);
   const recorded = countsForRecords(m, played.difficulty, played.teammateDifficulty, played.ruleset);
   const halfTimeAfter = roundRulesFor(m).halfTimeAfter;
-  const rules = describeRules({ ...opts.rules, ...m, halfTimeAfter, switches: m }, played.mode, run);
+  const rules = describeRules({ ...opts.rules, ...m, halfTimeAfter, switches: m, opponents: played.difficulty }, played.mode, run);
   const devContentUsed = opts.dev.devContentUsed();
   const paid = opts.armory.wallet() !== null && !devContentUsed;
   return {

@@ -119,6 +119,8 @@ export class Menus implements PlayModel {
   private readonly topBar: TopBar;
   private readonly context: PictureContext;
   private readonly built: Partial<Record<MenuScreen, Screen>> = {};
+  /** Stops each built screen's scroll watch (menuParts.watchScroll); run by dispose (audit CORE-07). */
+  private readonly stopScrollWatches: Array<() => void> = [];
   private title?: TitleScreen;
   private setup?: SetupScreen;
   private loadout?: LoadoutScreen;
@@ -243,6 +245,8 @@ export class Menus implements PlayModel {
   dispose(): void {
     window.removeEventListener('keydown', this.onKeyDown);
     this.settings?.dispose();
+    for (const stop of this.stopScrollWatches) stop();
+    this.stopScrollWatches.length = 0;
     this.root.remove();
   }
 
@@ -463,7 +467,7 @@ export class Menus implements PlayModel {
     screen.root.hidden = true;
     this.built[id] = screen;
     this.root.append(screen.root);
-    watchScroll(screen.root);
+    this.stopScrollWatches.push(watchScroll(screen.root));
     this.refreshViews();
     if (this.hint) this.showHint(this.hint);
   }

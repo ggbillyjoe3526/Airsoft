@@ -4,7 +4,11 @@ import { el, menuRow, rangeControl } from './menus/menuParts';
 import { OptionPicker } from './optionPicker';
 
 export interface AccessibilitySettingsOptions {
-  reducedMotion: { initial: boolean; onChange: (on: boolean) => void };
+  /**
+   * `follow` hands over a way to show a new value without saving it: the system's setting changing while no choice is
+   * saved (audit UI-07, BP2).
+   */
+  reducedMotion: { initial: boolean; onChange: (on: boolean) => void; follow?: (show: (on: boolean) => void) => void };
   teamColours: { initial: TeamColourSetId; onChange: (set: TeamColourSetId) => void };
   soundCues: { initial: boolean; onChange: (on: boolean) => void };
   /** The markers' size (a scale, 1 = as before M24) and colour. */
@@ -33,14 +37,12 @@ export function accessibilitySettings(opts: AccessibilitySettingsOptions): HTMLD
   const cueColours = new OptionPicker('Sound cue colour', SOUND_CUE_COLOURS, opts.soundCueColour.initial, 'soundCueColour', opts.soundCueColour.onChange);
   cueColours.addSwatches(SOUND_CUE_COLOURS);
   teams.root.append(swatches);
+  const motion = new OptionPicker('Reduced motion', REDUCED_MOTION_CHOICES, opts.reducedMotion.initial ? 'on' : 'off', 'reducedMotion', (v) =>
+    opts.reducedMotion.onChange(v === 'on'),
+  );
+  opts.reducedMotion.follow?.((on) => motion.show(on ? 'on' : 'off'));
   return [
-    menuRow(
-      'Reduced motion',
-      'Less movement on screen, for players who feel motion sick.',
-      new OptionPicker('Reduced motion', REDUCED_MOTION_CHOICES, opts.reducedMotion.initial ? 'on' : 'off', 'reducedMotion', (v) =>
-        opts.reducedMotion.onChange(v === 'on'),
-      ).root,
-    ),
+    menuRow('Reduced motion', 'Less movement on screen, for players who feel motion sick.', motion.root),
     menuRow('Team colours', 'The two teams’ tape and armbands, and their colour on the HUD.', teams.root),
     menuRow(
       'On-screen sound cues',

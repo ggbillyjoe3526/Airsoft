@@ -1,14 +1,16 @@
 import * as THREE from 'three';
-import { type Anisotropy, type CitySurfaceId, type CoreSurfaceId, type NatureSurfaceId, SURFACES, type SurfaceTextureId, type TextureSize } from '../config/render';
+import { type Anisotropy, type CitySurfaceId, type CoreSurfaceId, type LibrarySurfaceId, type NatureSurfaceId, SURFACES, type SurfaceTextureId, type TextureSize } from '../config/render';
 import { createRng, rngNext, type RngState } from '../sim/rng';
 import { cityDrawers } from './cityTextures';
 import { natureDrawers } from './natureTextures';
+import { drawLibraryTexels, type LibraryDrawingId } from './textureLibrary';
 
 /**
  * The field's surface textures, drawn on canvases as each match loads (M14 art pass: no downloaded assets, see
- * docs/ASSETS.md): poured concrete with saw-cut joints, oil stains and hairline cracks; painted breeze blocks; plank
+ * docs/ASSETS.md): poured concrete with saw-cut joints, oil stains and hairline cracks; grey precast wall panels; plank
  * crates with a braced frame and nails; ribbed container steel with dirt streaks; diamond tread plate; moulded
- * plastic; sandbags and sand-filled wire mesh (M25b). Each tiles seamlessly; `worldSize` is how many metres one repeat covers (see mapMeshes' world-space UVs).
+ * plastic; sandbags (M25b); grey rubble behind gabion wire. The precast panels, the rubble and worn paint come from the
+ * texture library (G6, render/textureLibrary.ts). Each tiles seamlessly; `worldSize` is how many metres one repeat covers (see mapMeshes' world-space UVs).
  * Light and dark also read as height, so each texture doubles as its own bump map when surface relief is on.
  */
 export interface ProceduralTexture {
@@ -28,7 +30,7 @@ export interface ProceduralTexture {
  * asked for them (addSurfaceTextures; Renderer.surfaceTexturesFor), so a set no such map has used holds exactly what it
  * did before.
  */
-export type SurfaceTextures = Record<CoreSurfaceId, ProceduralTexture> & Partial<Record<NatureSurfaceId | CitySurfaceId, ProceduralTexture>>;
+export type SurfaceTextures = Record<CoreSurfaceId, ProceduralTexture> & Partial<Record<NatureSurfaceId | CitySurfaceId | LibrarySurfaceId, ProceduralTexture>>;
 
 /** The core surfaces, the ones every set has. */
 export const CORE_SURFACES: readonly CoreSurfaceId[] = ['concrete', 'blockWall', 'crate', 'corrugated', 'steelPlate', 'barrier', 'sandbag', 'gabion'];
@@ -40,19 +42,19 @@ export const CORE_SURFACES: readonly CoreSurfaceId[] = ['concrete', 'blockWall',
  * (Renderer.surfaceTextures shares them between sessions).
  */
 export function createSurfaceTextures(size: TextureSize, anisotropy: Anisotropy): SurfaceTextures {
-  const draw = surfaceDrawer(size, anisotropy);
+  const draw = setDrawer(size, anisotropy);
   return Object.fromEntries(CORE_SURFACES.map((id) => [id, draw(id)])) as SurfaceTextures;
 }
 
 /**
  * Draws into `set` each of `ids` it doesn't hold yet (M33i: the woods' textures, when a map that uses them loads), at
- * `size` and `anisotropy` (the set's own). Returns the set.
+ * `size` (each capped by its drawnSize) and `anisotropy`, the set's own. Returns the set.
  */
-export function addSurfaceTextures(set: SurfaceTextures, ids: Iterable<SurfaceTextureId>, size: TextureSize, anisotropy: Anisotropy): SurfaceTextures {
+export function addSurfaceTextures<T extends Partial<SurfaceTextures>>(set: T, ids: Iterable<SurfaceTextureId>, size: TextureSize, anisotropy: Anisotropy): T {
   let draw: ((id: SurfaceTextureId) => ProceduralTexture) | null = null;
   for (const id of ids) {
     if (set[id]) continue;
-    draw ??= surfaceDrawer(size, anisotropy);
+    draw ??= setDrawer(size, anisotropy);
     set[id] = draw(id);
   }
   return set;
@@ -63,6 +65,29 @@ export function surfaceTexture(set: SurfaceTextures, id: SurfaceTextureId): Proc
   const t = set[id];
   if (!t) throw new Error(`surface texture '${id}' is not drawn: ask the renderer for the map's set (surfaceTexturesFor)`);
   return t;
+}
+
+/**
+ * How many pixels a side surface `id` is drawn at in a set of `size`: `size`, or less where SURFACES.maxSize caps it
+ * (the city's flat finishes stay at 512² on High and Ultra; M78, owner decision 9).
+ */
+export function drawnSize(id: SurfaceTextureId, size: TextureSize): TextureSize {
+  const cap: TextureSize | undefined = (SURFACES.maxSize as Partial<Record<SurfaceTextureId, TextureSize>>)[id];
+  return cap !== undefined && cap < size ? cap : size;
+}
+
+/** A set's drawer: each surface at its drawnSize, from a surfaceDrawer per size made the first time it is needed. */
+function setDrawer(size: TextureSize, anisotropy: Anisotropy): (id: SurfaceTextureId) => ProceduralTexture {
+  const bySize = new Map<TextureSize, (id: SurfaceTextureId) => ProceduralTexture>();
+  return (id) => {
+    const at = drawnSize(id, size);
+    let draw = bySize.get(at);
+    if (!draw) {
+      draw = surfaceDrawer(at, anisotropy);
+      bySize.set(at, draw);
+    }
+    return draw(id);
+  };
 }
 
 /** A drawer of single surface textures at `size` pixels a side with `anisotropy`. */
@@ -187,43 +212,6 @@ function surfaceDrawer(size: TextureSize, anisotropy: Anisotropy): (id: SurfaceT
     ctx.fillRect(0, 1.5 * PX, SIZE, PX);
     ctx.fillRect(1.5 * PX, 0, PX, SIZE);
     return finish(canvas, 'concrete');
-  }
-
-  /** Painted breeze-block wall in running bond, four courses per repeat: each block a touch different, chips and scuffs. */
-  function blockWall(): ProceduralTexture {
-    const [canvas, ctx] = makeCanvas();
-    const rng = createRng(23);
-    ctx.fillStyle = '#8c877b'; // mortar
-    ctx.fillRect(0, 0, SIZE, SIZE);
-    const rows = 4;
-    const rowH = SIZE / rows;
-    const blockW = SIZE / 2;
-    const mortar = 2 * PX;
-    for (let r = 0; r < rows; r++) {
-      const offset = r % 2 === 0 ? 0 : blockW / 2;
-      for (let k = -1; k < 2; k++) {
-        const x = offset + k * blockW + mortar / 2;
-        const y = r * rowH + mortar / 2;
-        const w = blockW - mortar;
-        const h = rowH - mortar;
-        const shade = 0.95 + rngNext(rng) * 0.08;
-        ctx.fillStyle = rgba(206 * shade, 199 * shade, 184 * shade, 1);
-        ctx.fillRect(x, y, w, h);
-        // Light from above: a brighter top edge, a darker bottom one, so each block reads as standing proud of the mortar.
-        const grad = ctx.createLinearGradient(0, y, 0, y + h);
-        grad.addColorStop(0, 'rgba(255,255,255,0.12)');
-        grad.addColorStop(0.2, 'rgba(255,255,255,0)');
-        grad.addColorStop(0.85, 'rgba(0,0,0,0)');
-        grad.addColorStop(1, 'rgba(0,0,0,0.1)');
-        ctx.fillStyle = grad;
-        ctx.fillRect(x, y, w, h);
-      }
-    }
-    speckle(ctx, rng, 4000, 0.12, false);
-    speckle(ctx, rng, 2000, 0.1, true);
-    blotches(ctx, rng, 10, 12, 40, [90, 84, 70], 0.08); // scuffs and dirty handprints
-    blotches(ctx, rng, 8, 3, 7, [120, 112, 98], 0.5); // chips in the paint
-    return finish(canvas, 'blockWall');
   }
 
   /** Draws one wooden board from (x0, y0) to (x1, y1) (a rotated rectangle `width` wide) with grain along it. */
@@ -455,66 +443,35 @@ function surfaceDrawer(size: TextureSize, anisotropy: Anisotropy): (id: SurfaceT
   }
 
   /**
-   * A wire-mesh gabion lined with geotextile and filled with sand (M25b, the field-build barrier): beige fabric bulging
-   * between the welded square mesh, a thicker coil joint down the edge of each cell (one per repeat).
+   * A texture-library drawing (G6, render/textureLibrary.ts): worked out texel by texel, then put on a canvas so it is
+   * finished (fine grain, relief) like the rest.
    */
-  function gabion(): ProceduralTexture {
-    const [canvas, ctx] = makeCanvas();
-    const rng = createRng(67);
-    ctx.fillStyle = '#c9b892';
-    ctx.fillRect(0, 0, SIZE, SIZE);
-    blotches(ctx, rng, 30, 20, 70, [235, 222, 190], 0.12);
-    blotches(ctx, rng, 24, 20, 70, [120, 104, 74], 0.1);
-    speckle(ctx, rng, 7000, 0.1, false);
-    const squares = 16;
-    const sq = SIZE / squares;
-    // The fabric bulges a little in each square of mesh: lighter in the middle.
-    for (let i = 0; i < squares; i++) {
-      for (let j = 0; j < squares; j++) {
-        const g = ctx.createRadialGradient((i + 0.5) * sq, (j + 0.4) * sq, 0, (i + 0.5) * sq, (j + 0.5) * sq, sq * 0.7);
-        g.addColorStop(0, 'rgba(255,248,225,0.16)');
-        g.addColorStop(1, 'rgba(60,50,32,0.12)');
-        ctx.fillStyle = g;
-        ctx.fillRect(i * sq, j * sq, sq, sq);
-      }
-    }
-    // The mesh: dark galvanised wire with a light glint along one side.
-    for (let k = 0; k < squares; k++) {
-      ctx.fillStyle = 'rgba(70,72,74,0.85)';
-      ctx.fillRect(k * sq, 0, 1.4 * PX, SIZE);
-      ctx.fillRect(0, k * sq, SIZE, 1.4 * PX);
-      ctx.fillStyle = 'rgba(235,238,240,0.45)';
-      ctx.fillRect(k * sq + 1.4 * PX, 0, 0.6 * PX, SIZE);
-      ctx.fillRect(0, k * sq + 1.4 * PX, SIZE, 0.6 * PX);
-    }
-    // The coil joint where one cell meets the next.
-    ctx.fillStyle = 'rgba(60,62,64,0.9)';
-    ctx.fillRect(0, 0, 3 * PX, SIZE);
-    for (let y = 0; y < SIZE; y += 4 * PX) {
-      ctx.fillStyle = 'rgba(225,228,230,0.5)';
-      ctx.fillRect(0, y, 3 * PX, 1.2 * PX);
-    }
-    blotches(ctx, rng, 8, 8, 26, [96, 82, 58], 0.14); // dirt splashed up the fabric
-    return finish(canvas, 'gabion');
+  function library(id: LibraryDrawingId): () => ProceduralTexture {
+    return () => {
+      const [canvas, ctx] = makeCanvas();
+      ctx.putImageData(new ImageData(drawLibraryTexels(id, SIZE) as Uint8ClampedArray<ArrayBuffer>, SIZE, SIZE), 0, 0);
+      return finish(canvas, id);
+    };
   }
 
   const kit = { SIZE, PX, makeCanvas, rgba, wrapped, speckle, blotches, crack, finish };
   const drawers: Record<SurfaceTextureId, () => ProceduralTexture> = {
     concrete,
-    blockWall,
+    blockWall: library('blockWall'),
     crate,
     corrugated,
     steelPlate,
     barrier,
     sandbag,
-    gabion,
+    gabion: library('gabion'),
+    paint: library('paint'),
     ...natureDrawers(kit),
     ...cityDrawers(kit),
   };
   return (id) => drawers[id]();
 }
 
-export function disposeSurfaceTextures(t: SurfaceTextures): void {
+export function disposeSurfaceTextures(t: Partial<SurfaceTextures>): void {
   for (const surface of Object.values(t) as ProceduralTexture[]) {
     surface.texture.dispose();
     surface.normal?.dispose();
@@ -525,7 +482,7 @@ export function disposeSurfaceTextures(t: SurfaceTextures): void {
  * Anisotropic filtering for a set already drawn (REN-13): uploaded again with the new filter on the next frame (Three.js
  * clamps it to what the graphics card offers).
  */
-export function setSurfaceAnisotropy(t: SurfaceTextures, anisotropy: Anisotropy): void {
+export function setSurfaceAnisotropy(t: Partial<SurfaceTextures>, anisotropy: Anisotropy): void {
   for (const surface of Object.values(t) as ProceduralTexture[]) {
     for (const texture of [surface.texture, surface.normal]) {
       if (!texture || texture.anisotropy === anisotropy) continue;

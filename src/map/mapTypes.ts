@@ -1,3 +1,4 @@
+import type { BakeFileId } from './bakes/files';
 import type { AmbienceId } from '../config/audio';
 import type { LightingPreset, LightingPresetId } from '../config/render';
 import type { BlockSurface } from '../config/sounds';
@@ -142,6 +143,12 @@ export interface MapData {
    */
   decor?: readonly MapBlock[];
   /**
+   * Baked bounce light (G6, render/bakedLight.ts): the map ships a probe file (src/map/bakes/, written by
+   * `node pipeline/bake-light.mjs`) and is drawn with it under the bake's lighting preset (config/bake.ts). Look only.
+   * Absent: no baked light (the night maps, lit by their own lamps).
+   */
+  bakedLight?: { file: BakeFileId };
+  /**
    * How the map is lit (M33f, render/lightingPreset.ts): the lighting presets it can be played under, the first by
    * default (later a match-start choice picks among them, M34), and `moonOver`, a world point (x, z) the key light is
    * turned towards from the field's centre (keeping its height), so a low moon rims that hill's top. `overrides` tweaks a
@@ -164,6 +171,12 @@ export interface MapData {
    * can't be played in Extraction.
    */
   extraction?: ExtractionData;
+  /**
+   * Set dressing (G8, render/mapDressing.ts): dirt, junk, puddles, marks, glow strips, the skyline round the field and
+   * its smoke, the motes' tint and the dust feet kick up. Look only: nothing in it collides, is walked on, hides anyone
+   * or is read by play (physics, nav, cover, sight and sound read `blocks`). Absent: none, the map draws as before.
+   */
+  dressing?: MapDressing;
   /**
    * Floor heights of a map with several storeys (M34c), lowest first (Neon Heights: street, +3, +6). The minimap draws
    * the storey you stand on and marks teammates on other storeys as above or below. Absent: one storey.
@@ -274,6 +287,11 @@ export interface ExtractionData {
   regens: SpawnPoint[];
   /** How far a regen point must be from every squad member (m): the plan's 25, Depot's 15 for a small field. */
   regenDistance: number;
+  /**
+   * No case within this of the squad's insertion is guarded or patrolled (m; Audit 2, BAL-05). Absent: the bots' shared
+   * BOT_BEHAVIOUR.insertionBerth, sized for Depot; a bigger field sets its own.
+   */
+  insertionBerth?: number;
 }
 
 /**
@@ -285,3 +303,50 @@ export interface CaseSpot {
   yaw: number;
   kinds: string[];
 }
+
+/**
+ * A map's set dressing (G8, MapData.dressing). Every random choice (which faces get dirt or junk, which kind, which
+ * logo, the puddles' outlines) comes from `seed`, so the same map always looks the same. Each part is optional.
+ */
+export interface MapDressing {
+  seed: number;
+  /**
+   * Clutter on the floors (map detail): the chance each slot along a block's foot gets a bank of dirt, and loose junk
+   * (no taller than DRESSING.junk.maxHeight, against the face, never in a lane, a doorway or by a spawn); `litter`, the
+   * chance each square of open floor gets scraps of paper.
+   */
+  clutter?: { dirt: number; junk: number; litter: number };
+  /** Puddles on the floor (map detail): the middle (world x, z) and the size (m); never under a block. */
+  puddles?: readonly DressingPuddle[];
+  /** Marks (map detail): the chance a container gets a shipping line's logo, and a 4 m bay of wall a spray or a sign. */
+  marks?: { logos: number; walls: number };
+  /** Small glow strips on block faces (map detail): self-lit by day and night, as signs are placed (MapSign). */
+  strips?: readonly GlowStrip[];
+  /** The skyline round the field (Trees: Detailed), with smoke from its chimneys. */
+  skyline?: readonly SkylinePiece[];
+  /** The dust motes' colour (sRGB). */
+  motes?: { tint: number };
+  /** Dust kicked up by sprinting and landing feet (Impact grit): its colour (sRGB) and size (1: DRESSING.kickedDust). */
+  kickedDust?: { tint: number; scale: number };
+}
+
+/** A puddle (MapDressing.puddles): `width` along x and `depth` along z, its outline seeded. */
+export interface DressingPuddle {
+  x: number;
+  z: number;
+  width: number;
+  depth: number;
+}
+
+/** A small glow strip (MapDressing.strips): a sign's panel that is always lit. */
+export type GlowStrip = Omit<MapSign, 'kind'>;
+
+/**
+ * A building or structure beyond the field (MapDressing.skyline), standing on the ground at (x, z): `width` along x and
+ * `depth` along z (swapped when `turned`), `height` tall, in `colour` (sRGB, the kind's own if absent). A shed's doors
+ * and a crane's beam face the field. A chimney with `smoke` smokes. A power line runs its pylons through `points`.
+ */
+export type SkylinePiece =
+  | { kind: 'shed' | 'waterTower' | 'crane' | 'containers'; x: number; z: number; width: number; depth: number; height: number; turned?: boolean; colour?: number }
+  | { kind: 'chimney'; x: number; z: number; width: number; depth: number; height: number; smoke?: boolean; colour?: number }
+  | { kind: 'powerLine'; points: readonly { x: number; z: number }[]; height: number };

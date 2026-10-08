@@ -1,6 +1,7 @@
+import { expect } from 'vitest';
 import { BALLISTICS, WIND } from '../config/ballistics';
 import { BOTS, botConfig, type Difficulty, defaultTeammateDifficulty } from '../config/bots';
-import { EXTRACTION } from '../config/extraction';
+import { EXTRACTION, type ExtractionRules, homeTeamCap } from '../config/extraction';
 import { FOOTSTEPS } from '../config/footsteps';
 import { HITS, ROUNDS } from '../config/hits';
 import { BODY, MOVEMENT } from '../config/movement';
@@ -10,7 +11,7 @@ import { LOADOUT } from '../config/replicas';
 import { caseSeed, runSeed } from '../core/seed';
 import { DEPOT } from '../map/depot';
 import type { MapData } from '../map/mapTypes';
-import { buildNavGrid, createNavSearch } from '../nav/navGrid';
+import { buildNavGrid } from '../nav/navGrid';
 import { PhysicsWorld } from '../physics/physicsWorld';
 import { rollRunCases } from '../pool/caches';
 import { GAME_POOL } from '../pool/gamePool';
@@ -45,12 +46,22 @@ export interface RunOptions {
   teammates?: Difficulty;
   /** A bot plays the runner (else you do, by hand: a ghost unless a test wants you hit). */
   runnerBot?: boolean;
+  /** The runner bot can't be hit either (BBs pass through): a run that lasts, to watch the home team's later roles. */
+  ghost?: boolean;
   map?: MapData;
   /** The runner bot's plan (default RUNNER_PLAN). */
   plan?: RunnerPlanConfig;
   /** Every bot carries the weapon torch (fitNightTorches; default: on a night field, as the game fits it; M57, audit AI-02). */
   torches?: boolean;
+  /** The run's rules (default EXTRACTION); SAME_SIZE_AT_EVERY_LEVEL for a test written for the home team's old size. */
+  rules?: ExtractionRules;
 }
+
+/**
+ * The rules with every level's home team at the map's base plus the squad, as before Audit 2 (BAL-03): for the tests
+ * that count guards and patrols in a team of that size.
+ */
+export const SAME_SIZE_AT_EVERY_LEVEL: ExtractionRules = { ...EXTRACTION, opponentsByLevel: { easy: 0, normal: 0, hard: 0, pro: 0 } };
 
 /**
  * How the runner bot plays a run: opens up to `cases` cases, nearest first (going back first for anything it dropped),
@@ -64,9 +75,17 @@ export interface RunnerPlanConfig {
   leaveAt: number;
   /** It opens a case from this far in front of it (within EXTRACTION.caseReach). */
   standOff: number;
+  /** Seconds it waits at each case it opened before setting off again (default none). */
+  dwell?: number;
 }
 
 export const RUNNER_PLAN: RunnerPlanConfig = { cases: 3, skip: ['locker'], leaveAt: 180, standOff: 0.9 };
+
+/**
+ * A slower runner (audit BAL-06): five cases, a 20 s wait at each, out with two minutes left. Its runs last past the
+ * home team's hunting time (BotSkill.huntersFrom of the run), which RUNNER_PLAN's quick runs never reach.
+ */
+export const RUNNER_PLAN_CAREFUL: RunnerPlanConfig = { cases: 5, skip: ['locker'], leaveAt: 120, standOff: 0.9, dwell: 20 };
 
 export function setUpRun(opts: RunOptions) {
   const { seed } = opts;
@@ -90,6 +109,8 @@ export function setUpRun(opts: RunOptions) {
     waveEvery: EXTRACTION.waveEvery[opponents],
     sight: { query: physics, body: BODY },
     deadZones: map.deadZones,
+    opponents,
+    ...(opts.rules ? { rules: opts.rules } : {}),
   });
   const state = createGameState(seed, BALLISTICS.maxBBs, rules, 'extraction');
   const ctx = createSimContext({
@@ -111,7 +132,7 @@ export function setUpRun(opts: RunOptions) {
     extraction: run,
   });
   // The home team's cap and its reserve for the run's last part (M45).
-  const home = x.baseOpponents + squad + reserveSize(run);
+  const home = homeTeamCap(x.baseOpponents, squad, opponents, opts.rules) + reserveSize(run);
   for (let id = 0; id < squad + home; id++) state.characters.push(createCharacter(id, vec3(), 0, LOADOUT, id < squad ? 0 : 1));
   const you = state.characters[0]!;
   // The bots: everyone, or everyone but you when you play the runner by hand.
@@ -119,7 +140,7 @@ export function setUpRun(opts: RunOptions) {
   if (opts.torches ?? map.night === true) fitNightTorches(botCharacters);
   startRun(state.round, state.characters, ctx.round);
   for (const c of state.characters) physics.addCharacter(c);
-  you.ghost = !opts.runnerBot;
+  you.ghost = !opts.runnerBot || opts.ghost === true;
   const commands = new Map<number, PlayerCommand>();
   const bots = new BotController(state, botCharacters, commands, {
     query: physics,
@@ -136,6 +157,7 @@ export function setUpRun(opts: RunOptions) {
     cfg: BOTS,
     teamCfg: [botConfig(teammates), botConfig(opponents)],
     seed,
+    insertionBerth: x.insertionBerth,
   });
   const follow = new SquadFollow();
   const runner = opts.runnerBot ? new RunnerPlan(bots.bots.find((b) => b.character === you)!, opts.plan ?? RUNNER_PLAN) : undefined;
@@ -165,7 +187,7 @@ export function setUpRun(opts: RunOptions) {
     you.velocity.y = 0;
     you.velocity.z = 0;
   };
-  const elimination = { deadZones: map.deadZones, nav, navSearch: createNavSearch(nav), snap: NAV.snap };
+  const elimination = ctx.targets.elimination;
   /** You're hit by the first opponent. */
   const hitYou = () => eliminate(you, squad, state.characters, elimination);
   /** `c` is hit by you. */
@@ -179,6 +201,8 @@ export interface RunResult {
   seconds: number;
   fc: number;
   cases: number;
+  /** Home-team bots hunting the squad when it ended (BAL-06). */
+  hunters: number;
 }
 
 /** Plays a whole run with the runner bot (setUpRun with runnerBot) and reports how it went. */
@@ -193,6 +217,7 @@ export function playRun(opts: RunOptions): RunResult {
     seconds: runTime - r.state.round.clock,
     fc: extracted ? haulTotals(runHaul(run)).fc : 0,
     cases: run.cases.filter((k) => k.open && !k.dropped).length,
+    hunters: r.bots.bots.filter((b) => b.role === 'hunter').length,
   };
   r.dispose();
   return result;
@@ -222,12 +247,25 @@ export function measureRuns(map: MapData, opponents: Difficulty, seeds: number):
 }
 
 /**
+ * Every level's runs on `map` over seeds 1 to `seeds` end by the run's own rules: extracted or out, never on time (the
+ * runner bot leaves with time to spare, so a run on time means someone stuck). How often the squad gets out, and with
+ * what, are balance figures (balance/extractionBalance.ts, token plan item 22).
+ */
+export function expectRunsEndByRules(map: MapData, seeds: number): void {
+  for (const level of ['easy', 'normal', 'hard', 'pro'] as const) {
+    measureRuns(map, level, seeds).runs.forEach((r, i) => expect(['extracted', 'out'], `${map.name} ${level} seed ${i + 1}: ${r.reason}`).toContain(r.reason));
+  }
+}
+
+/**
  * The runner bot's plan (RUNNER_PLAN): a Hold here order on the runner itself, moved each tick to the next goal, and
  * its Use key held by a shut case it stands at with nobody in sight. Fights and cover come first, as for any order.
  */
 class RunnerPlan {
   private readonly goal = vec3();
   private target = -1;
+  /** The run's clock at which a dwell at an opened case ends (the clock counts down). */
+  private dwellUntil = Number.POSITIVE_INFINITY;
 
   constructor(
     private readonly bot: Bot,
@@ -239,6 +277,10 @@ class RunnerPlan {
     const b = this.bot;
     const me = b.character;
     if (!isInPlay(me)) return;
+    // Just opened its case: wait there (the goal and the hold order stay) for the plan's dwell.
+    if (this.target >= 0 && run.cases[this.target]!.open && this.plan.dwell && this.dwellUntil === Number.POSITIVE_INFINITY) this.dwellUntil = clock - this.plan.dwell;
+    if (clock > this.dwellUntil && clock > this.plan.leaveAt) return;
+    this.dwellUntil = Number.POSITIVE_INFINITY;
     this.target = this.nextCase(run, clock);
     if (this.target >= 0) {
       const k = run.cases[this.target]!;

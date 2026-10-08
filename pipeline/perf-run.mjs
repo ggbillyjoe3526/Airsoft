@@ -4,48 +4,55 @@
  * (`?script=perf`, config/perfScript.ts) and seed 1, at a fixed resolution and pixel ratio, with the CPU throttled
  * over CDP, and records frame times, draw calls, triangles, GPU memory and heap growth for 60 s.
  *
- *   node pipeline/perf-run.mjs [--env container|laptop|ci] [--preset low|medium|high|all] [--cpu N] [--ticks 3600]
- *                              [--warmup-ticks 120] [--max-seconds 300] [--baseline] [--no-build] [--chromium /path]
- *                              [--channel chrome|msedge] [--headless] [--map depot|woodland|neon]
- *                              [--mode extraction]
+ *   node pipeline/perf-run.mjs [--env container|laptop|desktop|ci] [--preset low|medium|high|ultra|all] [--cpu N]
+ *                              [--ticks 3600] [--warmup-ticks 120] [--max-seconds 300] [--baseline] [--no-build]
+ *                              [--chromium /path] [--channel chrome|msedge] [--headless] [--map depot|woodland|neon]
+ *                              [--mode elimination|extraction] [--viewport 1920x1080] [--port 4181]
  *
  * The e2e bundle is reused when the source hasn't changed since it was built (pipeline/build-cached.mjs).
  *
  * The window is counted in simulation ticks, not wall time, so the player is at the same point of the script
  * whatever the frame rate: 3600 ticks is 60 s of play on a laptop and about four minutes in software rendering,
  * where the simulation runs at about 16 ticks/s (five catch-up ticks a frame). perf-budget.json sets each
- * environment's default (`ticks`, and `presetTicks` where Medium and High run far slower in software). `--preset all`
- * runs Low, Medium and High in turn (audit REN-15). Writes pipeline/out/perf-<env>-<preset>.json, and
+ * environment's default (`ticks`, and `presetTicks` where Medium, High and Ultra run far slower in software). `--preset all`
+ * runs Low, Medium, High and Ultra in turn (audit REN-15; Ultra since G5). Writes pipeline/out/perf-<env>-<preset>.json, and
  * perf-<env>.json for the budget preset (what the gate reads); --baseline also writes pipeline/baseline/<env>.json
  * for the budget preset and <env>-<preset>.json for the others (commit those). Frame times mean something only on
  * hardware rendering (the owner's laptop); in a container they are noise and the gate ignores them (perf-budget.json
  * frameTimeGatedEnvs). Draw calls, triangles, memory and heap are real everywhere.
  *
  * `--map woodland` (M33i) plays Woodland instead (dev content: Dev settings > Dev content on, then the map) with the same
- * script, and names its files perf-<env>-woodland-<preset>.json (baseline <env>-woodland[-<preset>].json); the gate
- * still reads Depot's run only. `--map neon` (M48) plays Neon Heights the same way.
+ * script, and names its files perf-<env>-woodland-<preset>.json (baseline <env>-woodland[-<preset>].json). `--map neon`
+ * (M48) plays Neon Heights the same way.
  *
  * `--mode extraction` (M48) plays an Extraction run instead of Elimination (dev content too): a trio against the map's
  * home team, the cases and exits drawn, with the same script; its files carry `-extraction` after the map's name. On
  * Woodland it is the heaviest scene the game has (ten characters at night, plan section 7).
  *
+ * The gate (M76, audit CORE-03) runs one map, mode and preset at a time from perf-budget.json's `matrix` and reads
+ * perf-<env><tag>-<preset>.json (pipeline/perfMatrix.mjs names the files); perf-<env>.json stays Depot Elimination's
+ * budget-preset run for the performance agent.
+ *
  * `--env laptop` measures the real GPU: no SwiftShader flags, a visible window (vsync, as a player sees it; --headless
  * to hide it) and the installed Chrome (`--channel chrome`, the default there; or `--chromium /path`).
+ *
+ * `--env desktop` (G5) is the same on the owner's desktop PC, without CPU throttling: where the Ultra budget is measured.
+ * `--viewport WxH` sets the page's size (default 1920x1080 at pixel ratio 1; 3840x2160 for 4K); the result records it.
  */
 import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { baselineFileName, perfTag, runFileName } from './perfMatrix.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'pipeline', 'out');
-const PORT = 4181;
 
 const args = process.argv.slice(2);
 const flag = (name) => args.includes(name);
 const value = (name, fallback) => (args.includes(name) ? args[args.indexOf(name) + 1] : fallback);
 const budget = JSON.parse(readFileSync(join(ROOT, 'pipeline', 'perf-budget.json'), 'utf8'));
-const PRESETS = ['low', 'medium', 'high'];
+const PRESETS = ['low', 'medium', 'high', 'ultra'];
 const options = {
   env: value('--env', 'container'),
   preset: value('--preset', budget.budgetPreset),
@@ -56,20 +63,26 @@ const options = {
   chromium: value('--chromium', process.env.PLAYWRIGHT_CHROMIUM),
   map: value('--map', 'depot'),
   mode: value('--mode', 'elimination'),
+  viewport: value('--viewport', '1920x1080'),
 };
+const [viewWidth, viewHeight] = options.viewport.split('x').map(Number);
+if (!(viewWidth > 0 && viewHeight > 0)) throw new Error('--viewport must be WIDTHxHEIGHT, e.g. 3840x2160');
+/** The preview server's port: --port for a second run beside another worktree's (the default 4181 is refused when busy). */
+const PORT = Number(value('--port', '4181'));
 const MAPS = { depot: /Depot/i, woodland: /Woodland/i, neon: /Neon Heights/i };
 const MODES = ['elimination', 'extraction'];
 if (!MODES.includes(options.mode)) throw new Error(`--mode must be one of ${MODES.join(', ')}`);
 if (!(options.map in MAPS)) throw new Error(`--map must be one of ${Object.keys(MAPS).join(', ')}`);
 /** Depot's files keep their names (what the gate and the baselines read); another map's carry its name. */
-const mapTag = `${options.map === 'depot' ? '' : `-${options.map}`}${options.mode === 'elimination' ? '' : `-${options.mode}`}`;
+const mapTag = perfTag(options.map, options.mode);
 options.cpu = Number(value('--cpu', budget.cpuThrottle?.[options.env] ?? 1));
 const presets = options.preset === 'all' ? PRESETS : [options.preset];
 if (!presets.every((p) => PRESETS.includes(p))) throw new Error(`--preset must be one of ${PRESETS.join(', ')} or all`);
 /** The measured window for a preset: --ticks, else the budget's per-preset line for this env, else the env's. */
 const ticksFor = (preset) => Number(value('--ticks', budget.presetTicks?.[options.env]?.[preset] ?? budget.ticks?.[options.env] ?? 3600));
-const laptop = options.env === 'laptop';
-/** Software rendering in the container and on CI; the real GPU on the laptop (REN-15). */
+/** A real GPU (the owner's laptop, or his desktop PC since G5): no SwiftShader, a visible window, the installed Chrome. */
+const laptop = options.env === 'laptop' || options.env === 'desktop';
+/** Software rendering in the container and on CI; the real GPU on the laptop and the desktop (REN-15). */
 // `--expose-gc` gives the page `gc()`, so heap growth is measured between two full collections, not between whatever
 // garbage happened to be waiting at the first and last sample (that swung ±10 MB between runs of one head).
 const heapArgs = ['--enable-precise-memory-info', '--js-flags=--expose-gc'];
@@ -119,7 +132,7 @@ try {
 /** One preset's run: a fresh page, the match started, `ticksFor(preset)` ticks measured. */
 async function measure(preset) {
   const ticks = ticksFor(preset);
-  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
+  const page = await browser.newPage({ viewport: { width: viewWidth, height: viewHeight }, deviceScaleFactor: 1 });
   const errors = [];
   page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(`console: ${m.text()}`); });
@@ -217,18 +230,18 @@ async function measure(preset) {
     };
   }, { ticks, maxSeconds: options.maxSeconds });
   await page.close();
-  return { env: options.env, map: options.map, mode: options.mode, preset, cpu: options.cpu, ticksWanted: ticks, warmupTicks: options.warmupTicks, head, when: new Date().toISOString(), seed: 1, viewport: '1920x1080@1', metrics: sample, errors };
+  return { env: options.env, map: options.map, mode: options.mode, preset, cpu: options.cpu, ticksWanted: ticks, warmupTicks: options.warmupTicks, head, when: new Date().toISOString(), seed: 1, viewport: `${options.viewport}@1`, metrics: sample, errors };
 }
 
 /** The baseline file for a preset: `<env>.json` for the budget preset (what the gate compares), `<env>-<preset>.json` otherwise. */
-const baselineName = (preset) => (preset === budget.budgetPreset ? `${options.env}${mapTag}.json` : `${options.env}${mapTag}-${preset}.json`);
+const baselineName = (preset) => baselineFileName(options.env, { map: options.map, mode: options.mode, preset }, budget.budgetPreset);
 const round = (v) => (typeof v === 'number' ? Math.round(v * 100) / 100 : v);
 for (const result of results) {
   for (const k of Object.keys(result.metrics)) result.metrics[k] = round(result.metrics[k]);
   const json = `${JSON.stringify(result, null, 2)}\n`;
-  const out = join(OUT, `perf-${options.env}${mapTag}-${result.preset}.json`);
+  const out = join(OUT, runFileName(options.env, result));
   writeFileSync(out, json);
-  // The gate reads the budget preset's run (and a single-preset run, as before), on Depot.
+  // Depot Elimination's budget-preset run (or a single-preset one) also as perf-<env>.json, what the performance agent reads.
   if (!mapTag && (result.preset === budget.budgetPreset || presets.length === 1)) writeFileSync(join(OUT, `perf-${options.env}.json`), json);
   console.log(`perf: ${relative(ROOT, out)}`);
   const m = result.metrics;

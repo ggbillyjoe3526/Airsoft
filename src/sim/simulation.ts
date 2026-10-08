@@ -3,7 +3,7 @@ import type { FootstepConfig } from '../config/footsteps';
 import type { HitConfig } from '../config/hits';
 import type { BodyConfig, MovementConfig } from '../config/movement';
 import type { SpawnPoint } from '../map/mapTypes';
-import { createNavSearch, type NavGrid } from '../nav/navGrid';
+import type { NavGrid } from '../nav/navGrid';
 import { stepAccuracy } from './accuracy';
 import { stepAiming } from './aiming';
 import { type ArmamentContext, type Muzzle, stepArmament, type WorldQuery } from './armament';
@@ -11,7 +11,7 @@ import { createBBPool } from './ballistics';
 import { type BBTargets, stepBBs } from './bbs';
 import { rescueIfOutOfWorld } from './character';
 import { createCommand, type PlayerCommand } from './commands';
-import { fillEliminatedCommand, isInPlay, isParked, planWalkOffRoutes, stepElimination } from './elimination';
+import { createEliminationContext, fillEliminatedCommand, isInPlay, isParked, planWalkOffRoutes, stepElimination } from './elimination';
 import type { ExtractionContext } from './extraction';
 import { stepFootsteps } from './footsteps';
 import { type CharacterMover, createMovementScratch, type MovementScratch, stepMovement } from './movement';
@@ -44,6 +44,11 @@ export interface SimServices {
   nav: NavGrid;
   /** Route ends snap to the nearest walkable cell within this distance. */
   navSnap: number;
+  /**
+   * Per end, the walking distance to its dead zone over `nav` (buildDistanceField), when already built for these
+   * spots on this grid; absent, the context builds them (createEliminationContext).
+   */
+  deadZoneFields?: readonly Float32Array[] | undefined;
   /** Round length, pause between rounds, wins needed, flag rules. */
   rounds: RoundRules;
   /** The flagpole, at end 1 where the defenders start (map data; absent: no flag mode). */
@@ -92,7 +97,7 @@ export function createSimContext(services: SimServices): SimContext {
       characters: [],
       hits: services.hits,
       rangeTargets: [],
-      elimination: { deadZones: services.deadZones, nav: services.nav, navSearch: createNavSearch(services.nav), snap: services.navSnap },
+      elimination: createEliminationContext(services.deadZones, services.nav, services.navSnap, services.deadZoneFields),
     },
     round: { rules: services.rounds, pole: services.pole, spawns: services.spawns ?? [], spawnLift: services.spawnLift ?? 0, extraction: services.extraction },
   };

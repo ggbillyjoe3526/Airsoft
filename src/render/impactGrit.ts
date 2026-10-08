@@ -3,7 +3,7 @@ import { FIGURE } from '../config/characters';
 import { IMPACT_GRIT } from '../config/render';
 import type { Character } from '../sim/character';
 import { createRng, rngNext } from '../sim/rng';
-import type { Vec3 } from '../sim/vec';
+import { length3, type Vec3 } from '../sim/vec';
 
 interface Chip {
   x: number;
@@ -93,7 +93,7 @@ export class ImpactGrit {
     let tx = from.x - at.x;
     let ty = from.y - at.y;
     let tz = from.z - at.z;
-    const len = Math.hypot(tx, ty, tz) || 1;
+    const len = length3(tx, ty, tz) || 1;
     tx /= len;
     ty /= len;
     tz /= len;
@@ -108,7 +108,7 @@ export class ImpactGrit {
       let dx = s * Math.cos(a) + tx * G.toward;
       let dy = u + ty * G.toward + G.up;
       let dz = s * Math.sin(a) + tz * G.toward;
-      const dl = Math.hypot(dx, dy, dz) || 1;
+      const dl = length3(dx, dy, dz) || 1;
       const speed = G.speed[0] + rngNext(this.rng) * (G.speed[1] - G.speed[0]);
       dx = (dx / dl) * speed;
       dy = (dy / dl) * speed;
@@ -143,7 +143,7 @@ export class ImpactGrit {
       c.y += c.vy * dt;
       c.z += c.vz * dt;
       c.roll += c.spin * dt;
-      const dist = Math.hypot(c.x - eye.x, c.y - eye.y, c.z - eye.z);
+      const dist = length3(c.x - eye.x, c.y - eye.y, c.z - eye.z);
       const fade = 1 - Math.max(0, c.age / G.lifetime) ** 2;
       this.scale.setScalar(Math.max(c.size, dist * G.minAngularSize) * fade);
       this.rot.copy(camera.quaternion).multiply(this.roll.setFromAxisAngle(Z_AXIS, c.roll));

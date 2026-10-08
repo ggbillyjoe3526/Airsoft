@@ -210,6 +210,14 @@ export class KeyBindings {
         return;
       }
     }
+    // An essential action on its defaults (its saved key refused, as a browser key now is) that lost them to the
+    // player's own bindings takes them back: the action that held them is left unbound until they pick a key (BP2).
+    for (const action of ESSENTIAL_ACTIONS) {
+      if (this.map.get(action)?.length !== 0) continue;
+      const codes: readonly string[] = DEFAULT_BINDINGS[action];
+      for (const [other, held] of this.map) if (held.some((c) => codes.includes(c))) this.map.set(other, held.filter((c) => !codes.includes(c)));
+      this.map.set(action, [...codes]);
+    }
   }
 }
 

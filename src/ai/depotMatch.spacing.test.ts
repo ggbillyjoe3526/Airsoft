@@ -39,7 +39,9 @@ function overlapCounter() {
 
 it('keeps bots out of each other: two characters stand inside each other on under 0.5 % of live ticks (audit AI-01)', { timeout: 120_000 }, () => {
   // Measured 2026-10-04 (FA4), 180 s per seed: 0.15 / 0.18 / 0.21 % for seeds 1-3, from 5.80 / 8.00 / 3.45 % before
-  // (bots sharing a lane point or a cover spot, nothing keeping them apart).
+  // (bots sharing a lane point or a cover spot, nothing keeping them apart). M71 (every level hunts the middle): seed 2
+  // read 0.78 %, two teammates who met in one fight strafing through each other; with a fight's sidestep turned to
+  // the side the push points, 0.27 / 0.10 / 0.27 %.
   for (const seed of [1, 2, 3]) {
     const { n, onTick } = overlapCounter();
     playMatch(180, seed, undefined, BOTS, 'elimination', ROUNDS, DEPOT, ROUNDS.teamSize, undefined, onTick);

@@ -80,6 +80,8 @@ interface Cloth {
   /** The flat vertex x positions (its ripple is computed from them every frame). */
   x: Float32Array;
   power: number;
+  /** The colour last given its material (sRGB hex; -1 none yet): set again only when it changes (audit REN-10). */
+  hex: number;
 }
 
 /**
@@ -101,6 +103,8 @@ export class FlagRenderer {
   /** The site's flag (drawn the first time detail is on). */
   private design: THREE.Texture | null = null;
   private readonly ripple = { z: 0, slope: 0 };
+  /** The ring's colour as last set (sRGB hex; -1 none yet), as Cloth.hex: no colour conversion per frame. */
+  private ringHex = -1;
   /** The pole, finial and cleat: painted as before, brushed metal with Environment lighting (setEnvironmentLit). */
   private readonly poleMat: THREE.MeshStandardMaterial;
 
@@ -191,7 +195,11 @@ export class FlagRenderer {
     this.markerAnchor.set(flag.position.x, flag.position.y + F.markerHeight, flag.position.z);
     const cloth = this.fine.mesh.visible ? this.fine : this.plain;
     cloth.mesh.position.y = F.clothLowest + (F.clothHighest - F.clothLowest) * flag.progress;
-    cloth.mesh.material.color.setHex(this.teamColors[round.attackers]!);
+    const clothHex = this.teamColors[round.attackers]!;
+    if (cloth.hex !== clothHex) {
+      cloth.hex = clothHex;
+      cloth.mesh.material.color.setHex(clothHex);
+    }
     // Between rounds nobody works the rope any more: the ring goes back to neutral.
     const status = round.phase === 'live' ? flag.status : 'idle';
     const ringColor =
@@ -202,7 +210,10 @@ export class FlagRenderer {
           : status === 'contested'
             ? F.ringContestedColor
             : F.ringColor;
-    this.ring.material.color.setHex(ringColor);
+    if (this.ringHex !== ringColor) {
+      this.ringHex = ringColor;
+      this.ring.material.color.setHex(ringColor);
+    }
 
     // Ripple: a travelling wave, growing from nothing at the pole to full at the free edge. The normals follow the
     // wave's slope (M14), so the folds catch the sun.
@@ -211,7 +222,7 @@ export class FlagRenderer {
     for (let i = 0; i < pos.count; i++) {
       const r = clothRipple(cloth.x[i]!, time, cloth.power, this.ripple);
       pos.setZ(i, r.z);
-      const inv = 1 / Math.hypot(r.slope, 1);
+      const inv = 1 / Math.sqrt(r.slope * r.slope + 1); // not Math.hypot: no garbage per vertex (audit REN-10)
       normal.setXYZ(i, -r.slope * inv, 0, inv);
     }
     pos.needsUpdate = true;
@@ -231,7 +242,7 @@ export class FlagRenderer {
     const mesh = new THREE.Mesh(geo, material);
     mesh.castShadow = true;
     const x = Float32Array.from({ length: geo.attributes.position!.count }, (_, i) => geo.attributes.position!.getX(i));
-    return { mesh, x, power };
+    return { mesh, x, power, hex: -1 };
   }
 
   private track<T extends THREE.BufferGeometry | THREE.Material>(resource: T): T {

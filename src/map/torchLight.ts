@@ -7,18 +7,18 @@ import { isInPlay } from '../sim/elimination';
 import { hitTop } from '../sim/hitbox';
 import { leanedEye } from '../sim/lean';
 import { lightInHand, torchLit } from '../sim/torch';
-import { vec3 } from '../sim/vec';
+import { length3, vec3 } from '../sim/vec';
 import type { NightField } from './nightSight';
 
 /**
- * Who the weapon torches light on a night field (M33h): worked out once per simulation tick from the characters' torches
+ * Who the weapon torches light on a night field (M33h): worked out once per bot perception interval from the characters' torches
  * (sim/torch.ts), and read by the bots' sight (ai/perception.ts) like a light pool: anyone a lit beam falls on is made out
  * from NIGHT_SIGHT.lit. A beam lights a character inside its spill cone, within its reach, with nothing static between
  * the torch and them. The cone is tested first and only those inside it are ray cast. Allocation-free once its table
  * is as long as the highest character id (the first update).
  */
 export interface TorchLight {
-  /** The simulation time it was worked out for (NaN: never). */
+  /** The stamp it was worked out for (the bots pass their perception interval's index; NaN: never). */
   time: number;
   /** By character id: 1 while another's lit torch shines on them. */
   lit: Uint8Array;
@@ -34,12 +34,12 @@ const point = vec3();
 const ray = vec3();
 
 /**
- * Works out who the lit torches shine on at simulation time `time` (once per tick: a second call at the same time does
- * nothing). `height` is the share of a target's height the beam must reach (the bots' chest aim).
+ * Works out who the lit torches shine on, once per `stamp` (a second call with the same stamp does nothing; the bots
+ * pass their perception interval's index, ai/botTorch.ts). `height` is the share of a target's height the beam must reach (the bots' chest aim).
  */
-export function updateTorchLight(field: TorchLight, characters: readonly Character[], query: WorldQuery, body: BodyConfig, hits: HitConfig, height: number, time: number): void {
-  if (field.time === time) return;
-  field.time = time;
+export function updateTorchLight(field: TorchLight, characters: readonly Character[], query: WorldQuery, body: BodyConfig, hits: HitConfig, height: number, stamp: number): void {
+  if (field.time === stamp) return;
+  field.time = stamp;
   let maxId = -1;
   for (const c of characters) maxId = Math.max(maxId, c.id);
   if (field.lit.length <= maxId) field.lit = new Uint8Array(maxId + 1);
@@ -58,7 +58,7 @@ export function updateTorchLight(field: TorchLight, characters: readonly Charact
       ray.x = point.x - eye.x;
       ray.y = point.y - eye.y;
       ray.z = point.z - eye.z;
-      const d = Math.hypot(ray.x, ray.y, ray.z);
+      const d = length3(ray.x, ray.y, ray.z);
       // Reach is measured across the ground, as perception measures sight ranges.
       if (Math.hypot(ray.x, ray.z) > light.reach || d < 1e-6) continue;
       ray.x /= d;

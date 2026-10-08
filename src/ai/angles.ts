@@ -2,7 +2,7 @@ import type { BotBehaviour } from '../config/bots';
 import { foliageDepth } from '../map/foliage';
 import { floorAt, isWalkableAt } from '../nav/navGrid';
 import type { WorldQuery } from '../sim/armament';
-import { type Vec3, vec3, wrapAngle } from '../sim/vec';
+import { length3, type Vec3, vec3, wrapAngle } from '../sim/vec';
 import { lookAngles } from './aim';
 import type { AngleFeatures } from './angleFeatures';
 
@@ -174,7 +174,7 @@ function tryPoint(
     floorY = floorAt(f.nav, p.x, eye.y, p.z);
   }
   p.y = floorY + eyeAbove;
-  const len = Math.hypot(dx, p.y - eye.y, dz);
+  const len = length3(dx, p.y - eye.y, dz);
   dir.x = dx / len;
   dir.y = (p.y - eye.y) / len;
   dir.z = dz / len;

@@ -8,6 +8,7 @@ import { NEON_HEIGHTS } from '../map/neonHeights';
 import { WOODLAND } from '../map/woodland';
 import { vec3 } from '../sim/vec';
 import { renderLoop } from './ambience';
+import { measureSeam, seamFailures } from './loopSeamSupport';
 import { renderMapCue, renderSounds } from './soundBank';
 import { surfaceUnder } from './soundMaterials';
 import { soundscapeOf } from './soundscape';
@@ -193,11 +194,12 @@ describe('M34g city acceptance 1: what each loop is made of (traffic under the f
 
   it("puts the neon's tones at 100 Hz and its harmonics, and its sizzle above the footstep band", () => {
     const neon = loops.get('neon')!;
-    // Whole cycles of the loop, so each tone sits exactly in one bin; nothing at the in-between frequencies.
+    // Whole cycles of the loop, so each tone sits exactly in one bin; nothing at the in-between frequencies. The stack
+    // leans on 200 and 300 Hz (M69, audit AUD-11).
     const [h1, h2, h3, h4] = [100, 200, 300, 400].map((hz) => toneAt(neon, hz)) as [number, number, number, number];
-    expect(h1).toBeGreaterThan(h2);
     expect(h2).toBeGreaterThan(h3);
-    expect(h3).toBeGreaterThan(h4);
+    expect(h3).toBeGreaterThan(h1);
+    expect(h1).toBeGreaterThan(h4);
     expect(h4).toBeGreaterThan(0.05);
     for (const hz of [50, 150, 250, 350, 500]) expect(toneAt(neon, hz), `${hz} Hz`).toBeLessThan(0.01 * h1);
     // The hum is where the energy is; the sizzle is a faint band above the footstep band, not in it.
@@ -205,6 +207,13 @@ describe('M34g city acceptance 1: what each loop is made of (traffic under the f
     const sizzle = bandShare(neon, 5000, 8000);
     expect(sizzle).toBeGreaterThan(0.03);
     expect(sizzle).toBeGreaterThan(5 * bandShare(neon, STEP_BAND[0], STEP_BAND[1]));
+  });
+
+  it('keeps the hum on a laptop: most of its power between 150 and 500 Hz, little under 150 Hz (M69, audit AUD-11)', () => {
+    const neon = loops.get('neon')!;
+    // Small speakers give little under 150 Hz: 100 Hz held 60 % of the loop's power, and they were left the sizzle.
+    expect(bandShare(neon, 0, 150)).toBeLessThan(0.2);
+    expect(bandShare(neon, 150, 500)).toBeGreaterThan(0.65);
   });
 
   it('is the neon that a night preset plays, not a made-up one: the spec says a 100 Hz mains hum', () => {
@@ -238,19 +247,12 @@ describe('M34g city acceptance 1: each new loop renders at its length and a loud
       expect(Math.sqrt(power(v))).toBeCloseTo(1, 3);
     });
 
-    it(`wraps ${id} without a click: the jump from its last sample to its first is no bigger than a step inside it`, () => {
-      const v = finish(renderLoop(id, RATE));
-      let biggest = 0;
-      let total = 0;
-      for (let i = 1; i < v.length; i++) {
-        const d = Math.abs(v[i]! - v[i - 1]!);
-        biggest = Math.max(biggest, d);
-        total += d;
-      }
-      const wrap = Math.abs(v[0]! - v[v.length - 1]!);
-      expect(wrap).toBeLessThan(biggest);
-      // And not out of the ordinary: within a few times the mean step (a plain cut would be a random jump of full scale).
-      expect(wrap).toBeLessThan(6 * (total / (v.length - 1)));
+    it(`wraps ${id} without a click: its jump, bend and spectrum at the wrap sit within the loop's own (loopSeamSupport.ts)`, () => {
+      // Measured 2026-10-08 (jump and bend as a percentile of the loop's own steps and second differences; spectrum as the
+      // last window against the first, dB and percentile of its adjacent windows): traffic p75 p98 7.9 dB p60; drones
+      // p10 p48 8.4 dB p93; neon p24 p2 7.7 dB p43.
+      const failures = seamFailures(measureSeam(finish(renderLoop(id, RATE))));
+      expect(failures, `${id}`).toEqual([]);
     });
 
     it(`is the same samples each time (${id} comes from its own seed)`, () => {
@@ -360,9 +362,13 @@ describe('M34g city acceptance 1 and 2: the city by day and by night, no louder 
 
   it("puts nothing of the city's into any other ambience, and the yard and woods keep their data as before M34g", () => {
     // JSON of each as it stood at 9d32c94 (the beds, call and the call's level, by day and night).
-    const dataOf = (id: AmbienceId): string => hashOf(JSON.stringify(AMBIENCES[id]));
+    // The echo each has since M69 (audit AUD-10) is left out of the JSON: the yard's is AUDIO.reverb as it always was.
+    const dataOf = (id: AmbienceId): string => hashOf(JSON.stringify(AMBIENCES[id], (key, value: unknown) => (key === 'reverb' ? undefined : value)));
     expect(dataOf('yard')).toBe('151064b2');
     expect(dataOf('woods')).toBe('76a25b03');
+    expect(AMBIENCES.yard.day.reverb).toBe(AUDIO.reverb);
+    expect(AMBIENCES.yard.night.reverb).toBe(AUDIO.reverb);
+    expect(AUDIO.reverb).toEqual({ seconds: 0.8, decayPower: 3.5, wet: 0.22, seed: 1302 });
     expect(AUDIO.levels.bird).toEqual({ gain: 0.35, pitchSpread: 0.08 });
     expect(AUDIO.levels.owl).toEqual({ gain: 0.3, pitchSpread: 0.04 });
     expect(AUDIO.ambience.gain).toBe(0.035);
@@ -370,7 +376,8 @@ describe('M34g city acceptance 1 and 2: the city by day and by night, no louder 
 });
 
 describe('M34g city acceptance 1: the chime and the arcade bleeps', () => {
-  it('chimes two bell notes, "ding-dong": the first about 1319 Hz, the second a major third (about 1047 Hz) under it', () => {
+  // Every variant's spectrum: about 3 s alone, past the 5 s default in a full run beside the bot-match guards (TE4).
+  it('chimes two bell notes, "ding-dong": the first about 1319 Hz, the second a major third (about 1047 Hz) under it', { timeout: 15_000 }, () => {
     for (const v of renderMapCue('ambience.chime', RATE)) {
       const notes = notesOf(v);
       expect(notes, 'two notes').toHaveLength(2);
@@ -419,25 +426,28 @@ describe('M34g city acceptance 1: the chime and the arcade bleeps', () => {
 });
 
 describe('M34g city acceptance 3: everything else sounds as before', () => {
-  /** Fingerprints at 9d32c94 (before the city): the woods' loops and map cues at AUDIO.variants variants. */
+  /**
+   * Fingerprints at 9d32c94 (before the city): the woods' loops, and their map cues at AUDIO.variants variants (re-baked by
+   * M69 with the fingerprint above, owner decision 19: the same samples up to -60 dB of each cue's peak, then the fade).
+   */
   const LOOPS_BEFORE: Readonly<Record<string, string>> = { yard: '07126f98', pines: '161eae54', insects: '8fbdbc3c', crackle: '52eb2f6b' };
   const MAP_CUES_BEFORE: Readonly<Record<string, string>> = {
-    'step.grass.run': '3703ec35',
-    'step.grass.sprint': '2322dd2c',
-    'step.grass.land': 'bb786f16',
-    'step.leaves.run': 'dfdbd5d0',
-    'step.leaves.sprint': '2fae9be1',
-    'step.leaves.land': '2b3866df',
-    'step.earth.run': 'a7d4ef86',
-    'step.earth.sprint': '4394cea1',
-    'step.earth.land': '8bd30d83',
-    'step.gravel.run': '7398714f',
-    'step.gravel.sprint': '1df4be4f',
-    'step.gravel.land': '8edcec1f',
-    'step.wood.run': 'fc942d62',
-    'step.wood.sprint': 'e5fe4aa3',
-    'step.wood.land': '04f0aa7d',
-    'ambience.owl': '925807db',
+    'step.grass.run': 'c3cac149',
+    'step.grass.sprint': '08761263',
+    'step.grass.land': 'f15d56ed',
+    'step.leaves.run': 'd19655ca',
+    'step.leaves.sprint': '9b8cde10',
+    'step.leaves.land': '41bd81da',
+    'step.earth.run': 'f322e1ae',
+    'step.earth.sprint': '7fc1f2ab',
+    'step.earth.land': 'b6652b42',
+    'step.gravel.run': 'c3a953e0',
+    'step.gravel.sprint': '2d90b841',
+    'step.gravel.land': '12917838',
+    'step.wood.run': '9f0d3eb1',
+    'step.wood.sprint': '21d6edf3',
+    'step.wood.land': 'ba2f285d',
+    'ambience.owl': '1f55f71e',
   };
 
   it("renders the yard's, the pines', the insects' and the fire's loops sample for sample as before", () => {

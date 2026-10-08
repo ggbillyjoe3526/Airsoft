@@ -6,7 +6,7 @@ import { type Character, eyeHeight } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
 import { isInPlay } from '../sim/elimination';
 import { characterHitVolume, createHitVolume, type HitVolume, rayCharacter } from '../sim/hitbox';
-import { type Vec3, vec3, wrapAngle } from '../sim/vec';
+import { length3, type Vec3, vec3, wrapAngle } from '../sim/vec';
 import { aimErrorSize, lookAngles, stepAim } from './aim';
 import { findHeldAngles, type HeldAngle } from './angles';
 import { type Bot, type BotWorld, holdYaw, pick, threatInMind } from './bot';
@@ -42,7 +42,7 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
   if (b.targetVisible && target && b.contact) {
     // Aim at the part of the body it can see, leading the target by part of the BB's flight time (slowed by drag, M30).
     bodyPoint(target, w.hits, b.targetPart, aimPoint);
-    const dist = Math.hypot(aimPoint.x - eye.x, aimPoint.y - eye.y, aimPoint.z - eye.z);
+    const dist = length3(aimPoint.x - eye.x, aimPoint.y - eye.y, aimPoint.z - eye.z);
     const flight = bbFlightTime(w, dist);
     aimPoint.x += target.velocity.x * flight * b.skill.leadFactor;
     aimPoint.z += target.velocity.z * flight * b.skill.leadFactor;
@@ -82,7 +82,12 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
     look.yaw = facing;
     // Pro (M37) aims at the corners someone would come round instead of sweeping.
     if (b.holding && !(b.skill.holdsAngles && heldAngleLook(b, w, eye, facing, false))) {
-      look.yaw += Math.sin((2 * Math.PI * b.teamWait) / cfg.holdSweepPeriod) * cfg.holdSweepDeg * DEG;
+      const sweep = Math.sin((2 * Math.PI * b.teamWait) / cfg.holdSweepPeriod) * cfg.holdSweepDeg * DEG;
+      // Leaning out (a guard's lean post, M55): sweep only away from the lean's side. The lean follows the look, so
+      // turning towards that side swings the leaned eye back behind the cover it leans past (M72: a Woodland locker
+      // guard saw its way in for 69 % of its ticks). A lean of +1 is to the right and positive yaw turns left, so
+      // holdLean × |sweep| always turns away from the lean.
+      look.yaw += b.holdLean !== 0 ? b.holdLean * Math.abs(sweep) : sweep;
     }
   }
   stepAim(b.aim, look.yaw, look.pitch, 0, cfg, b.skill, b.rng, dt);

@@ -1,13 +1,29 @@
 {
-  "_comment": "Performance budget (pipeline/README.md). The gate reads the preset the run used; `budgetPreset` is the preset the harness runs by default (the owner's choice, 2026-10-04: Low carries the 60 fps target on a low-spec laptop). Frame-time lines (p95Ms, p99Ms) are gated only in the environments listed in frameTimeGatedEnvs: everywhere else they are reported, not judged (no GPU in the cloud container). Draw calls and triangles are set below the owner's ceilings (150, 250k) because today's scene uses 35 and 47k on Low: a doubling must fail. `ticks` is the measured window per environment in simulation ticks (3600 is 60 s of play; the container's simulation runs at about 16 ticks/s in software, so 1800 ticks takes about two minutes there). `presetTicks` shortens the window where a preset is far slower in software (Medium and High draw shadows and relief at a few frames a second in the container, about 1.5 ticks/s, so 360 ticks keeps each run near four minutes); `perf-run.mjs --preset all` runs the three presets in turn (audit REN-15) and their baselines are `baseline/<env>.json` (the budget preset) and `baseline/<env>-<preset>.json`. Raise a line with a DECISIONS entry.",
+  "_comment": "Performance budget (pipeline/README.md). The gate reads the preset the run used; `budgetPreset` is the preset the harness runs by default (the owner's choice, 2026-10-04: Low carries the 60 fps target on a low-spec laptop). Frame-time lines (p95Ms, p99Ms) are gated only in the environments listed in frameTimeGatedEnvs: everywhere else they are reported, not judged (no GPU in the cloud container). Draw calls and triangles are set below the owner's ceilings (150, 250k) because today's scene uses 35 and 47k on Low: a doubling must fail. `ticks` is the measured window per environment in simulation ticks (3600 is 60 s of play; the container's simulation runs at about 16 ticks/s in software, so 1800 ticks takes about two minutes there). `presetTicks` shortens the window where a preset is far slower in software (Medium and High draw shadows and relief at a few frames a second in the container, about 1.5 ticks/s, so 360 ticks keeps each run near four minutes); `perf-run.mjs --preset all` runs the four presets in turn (audit REN-15). `desktop` (G5) is the owner's desktop PC, unthrottled, where Ultra is measured (its frame times are reported, not judged, until the owner sets a 4K target); Ultra's draw-call line is the owner's ceiling, as High's (G5: the post passes add about 15 full-screen draws, and Ultra measured 85 on Depot; gpuMemoryMB counts geometry and textures, not the render targets). `matrix` is what the gate runs (M76, audit CORE-03): every map in both modes on Low, and Extraction on Medium on the big maps, each only when the diff reaches it (pipeline/perfMatrix.mjs); each has its own baseline, `baseline/<env><tag>.json` on the budget preset and `baseline/<env><tag>-<preset>.json` otherwise, where the tag is `-<map>` (not for Depot) then `-extraction` (not for Elimination). `maps` holds a map's own lines over the preset's (owner decision 4 of audit 2: map-scoped Medium budgets for Woodland and Neon Heights after M75's trims). `baselineMaxLag`: the gate warns, never fails, when a baseline's head is more commits behind HEAD than this (CORE-12). Raise a line with a DECISIONS entry.",
   "budgetPreset": "low",
   "frameTimeGatedEnvs": ["laptop"],
-  "cpuThrottle": { "laptop": 4, "container": 1, "ci": 1 },
-  "ticks": { "laptop": 3600, "container": 1800, "ci": 1800 },
-  "presetTicks": { "container": { "medium": 360, "high": 360 }, "ci": { "medium": 360, "high": 360 } },
+  "cpuThrottle": { "laptop": 4, "container": 1, "ci": 1, "desktop": 1 },
+  "ticks": { "laptop": 3600, "container": 1800, "ci": 1800, "desktop": 3600 },
+  "presetTicks": { "container": { "medium": 360, "high": 360, "ultra": 360 }, "ci": { "medium": 360, "high": 360, "ultra": 360 } },
   "presets": {
     "low": { "p95Ms": 14, "p99Ms": 20, "drawCalls": 100, "triangles": 150000, "gpuMemoryMB": 300, "heapGrowthMB": 5 },
     "medium": { "p95Ms": 14, "p99Ms": 20, "drawCalls": 120, "triangles": 200000, "gpuMemoryMB": 300, "heapGrowthMB": 5 },
-    "high": { "p95Ms": 14, "p99Ms": 20, "drawCalls": 150, "triangles": 250000, "gpuMemoryMB": 300, "heapGrowthMB": 5 }
-  }
+    "high": { "p95Ms": 14, "p99Ms": 20, "drawCalls": 150, "triangles": 250000, "gpuMemoryMB": 300, "heapGrowthMB": 5 },
+    "ultra": { "p95Ms": 14, "p99Ms": 20, "drawCalls": 150, "triangles": 250000, "gpuMemoryMB": 300, "heapGrowthMB": 5 }
+  },
+  "matrix": [
+    { "map": "depot", "mode": "elimination", "preset": "low" },
+    { "map": "depot", "mode": "extraction", "preset": "low" },
+    { "map": "woodland", "mode": "elimination", "preset": "low" },
+    { "map": "woodland", "mode": "extraction", "preset": "low" },
+    { "map": "neon", "mode": "elimination", "preset": "low" },
+    { "map": "neon", "mode": "extraction", "preset": "low" },
+    { "map": "woodland", "mode": "extraction", "preset": "medium" },
+    { "map": "neon", "mode": "extraction", "preset": "medium" }
+  ],
+  "maps": {
+    "woodland": { "medium": { "drawCalls": 115 } },
+    "neon": { "medium": { "drawCalls": 140 } }
+  },
+  "baselineMaxLag": 20
 }

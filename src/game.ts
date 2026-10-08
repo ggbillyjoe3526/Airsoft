@@ -31,6 +31,7 @@ import { lightingPicked, mapUnderLighting, playsAtNight } from './map/lightingCh
 import { allMapsLoaded, loadDevMaps, type MapId, mapData } from './map/maps';
 import { initPhysics } from './physics/physicsWorld';
 import { awayWatch } from './core/awayWatch';
+import { loadBakedLight } from './render/bakedLight';
 import { loadFigureModel } from './render/externalModels';
 import { FrameTimeWatch, presetBelow, slowFrameMs } from './render/qualityStepDown';
 import { rendererName } from './render/gpuCheck';
@@ -281,9 +282,9 @@ export class Game {
 
   static async create(container: HTMLElement, options: GameOptions): Promise<Game> {
     // A figure model (M25a) loads alongside the physics; with none in the build this resolves at once. With Dev content
-    // on, so do the dev maps (M50), so New game can show a dev map picked last time.
+    // on, so do the dev maps (M50), so New game can show a dev map picked last time. The maps' baked light (G6) too.
     const devMaps = activeDev(loadDevEnabled(), loadDevSettings()).devContent ? loadDevMaps() : null;
-    const [, figureModel] = await Promise.all([initPhysics(), loadFigureModel(), devMaps]);
+    const [, figureModel] = await Promise.all([initPhysics(), loadFigureModel(), devMaps, loadBakedLight()]);
     const game = new Game(container, options);
     game.renderer.figureModel = figureModel;
     return game;
@@ -349,6 +350,8 @@ export class Game {
         'pixel ratio': this.renderer.renderer.getPixelRatio(),
         'frame ms (sim / draw / GPU)': `${this.simMs.toFixed(1)} / ${this.drawMs.toFixed(1)} / ${Number.isNaN(this.renderer.gpuMs) ? 'n/a' : this.renderer.gpuMs.toFixed(1)}`,
         antialias: this.antialiasText(),
+        // G5: the post stack's passes in force (none on Low).
+        post: this.renderer.postPasses.join(' ') || 'none',
         'draw calls': this.renderer.renderer.info.render.calls,
         triangles: this.renderer.renderer.info.render.triangles,
         'programs / geometries / textures': `${this.renderer.renderer.info.programs?.length ?? 0} / ${this.renderer.renderer.info.memory.geometries} / ${this.renderer.renderer.info.memory.textures}`,
@@ -452,7 +455,7 @@ export class Game {
       audio: { initial: this.audio.volumes, onChange: (channel, v) => this.changeVolume(channel, v), onRelease: (channel) => this.audio.preview(channel) },
       crosshair: { initial: this.crosshair, onChange: (c) => this.changeCrosshair(c) },
       accessibility: {
-        reducedMotion: { initial: this.motionReduced(), onChange: (on) => this.changeReducedMotion(on) },
+        reducedMotion: { initial: this.motionReduced(), onChange: (on) => this.changeReducedMotion(on), follow: (show) => (this.showSystemMotion = show) },
         // The figures are built with their colours, so a new set shows from the next match.
         // On the range they show from Resume (it's rebuilt where you stood, as after a loadout change).
         teamColours: { initial: this.teamColours, onChange: (set) => ((this.teamColours = set), (this.setupChanged = this.loadoutChanged = true)) },
@@ -494,7 +497,7 @@ export class Game {
     this.showMotion();
     this.systemMotion?.addEventListener('change', this.systemMotionChanged);
     this.showTitleWarning();
-    options.save.onChange(() => this.showTitleWarning());
+    this.unwatchSave = options.save.onChange(() => this.showTitleWarning());
     this.graphicsNotice = new GraphicsNotice(container, BROWSER_NOTES.graphicsLost);
     this.renderer.onContextChange((lost) => this.graphicsContextChanged(lost));
     this.stopWatchingAway = awayWatch({ doc: document, win: window }, this.goneAway);
@@ -539,6 +542,7 @@ export class Game {
 
   /** The tab hidden or the window's focus lost (M18b, audit CORE-20) stops play, as Esc would; this stops watching. */
   private readonly stopWatchingAway: () => void;
+  private readonly unwatchSave: () => void;
   /** The browser wouldn't let the sound start since play last resumed (audit CORE-21): the menus say so. */
   private audioBlocked = false;
 
@@ -652,9 +656,14 @@ export class Game {
     this.container.classList.toggle('full-motion', cls === 'full-motion');
   }
 
-  /** The system's setting changed while the page is open: the 3D motion follows it too, until the player picks. */
+  /** Shows a value on Settings › Accessibility's Reduced motion picker without saving it (BP2). */
+  private showSystemMotion: ((on: boolean) => void) | null = null;
+
+  /** The system's setting changed while the page is open: the 3D motion and the picker follow it, until the player picks. */
   private readonly systemMotionChanged = (): void => {
-    if (this.reducedMotion === null) this.session?.setMotion(motionScale(this.motionReduced()));
+    if (this.reducedMotion !== null) return;
+    this.session?.setMotion(motionScale(this.motionReduced()));
+    this.showSystemMotion?.(this.motionReduced());
   };
 
   /**
@@ -762,7 +771,9 @@ export class Game {
     const dev = activeDev(this.devEnabled, this.devPicked);
     if (!dev.devContent || allMapsLoaded()) return dev;
     void loadDevMaps().then((loaded) => {
-      if (!loaded || this.disposed) return;
+      if (this.disposed) return;
+      // Not here (a failed download): say so by the play buttons, not only in the console (BP2).
+      if (!loaded) return this.menus.showHint(BROWSER_NOTES.devMapsFailed);
       this.applyDev();
       this.menus.refresh();
     });
@@ -807,6 +818,9 @@ export class Game {
     this.disposed = true;
     cancelAnimationFrame(this.rafId);
     this.stopWatchingAway();
+    this.unwatchSave();
+    // The audio engine's single blocked-context slot; the pointer's, the renderer's and the keyboard's own dispose() below clear theirs.
+    this.audio.onBlocked = null;
     window.removeEventListener('resize', this.showHudLook);
     this.systemMotion?.removeEventListener('change', this.systemMotionChanged);
     window.removeEventListener('pagehide', this.flushSettings);
@@ -1068,6 +1082,7 @@ export class Game {
         const look = retroLookOf(this.dev, this.scripted);
         return look ? `${look.pixelSize} px, ${look.levels} levels` : 'off';
       })],
+      ['Post', read(() => this.renderer.postPasses.join(' ') || 'none')],
       ['Pixel ratio', read(() => this.renderer.renderer.getPixelRatio())],
       ['GPU', read(() => rendererName(this.renderer.renderer.getContext()))],
       ['Window', `${window.innerWidth} × ${window.innerHeight} at ${window.devicePixelRatio}`],

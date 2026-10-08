@@ -1,25 +1,32 @@
 import * as THREE from 'three';
-import { type QualitySettings, SURFACES, type SurfaceTextureId } from '../config/render';
+import { BAKED_LIGHT } from '../config/bake';
+import { type BakedLightMode, type QualitySettings, SURFACES, type SurfaceTextureId } from '../config/render';
+import { WEATHERING } from '../config/weathering';
 import { buildGroundGrid } from '../map/groundSurfaces';
 import type { BlockKind, MapBlock, MapData } from '../map/mapTypes';
 import { RAMP_FACES, rampCorners } from '../map/surfaces';
 import { terrainHeightAt } from '../map/terrain';
 import { buildCanopyMesh } from './canopyMeshes';
 import { cityPropPieces, cityPropTextures, isCityProp } from './cityProps';
+import { disposeProbeUniforms, probeUniforms, tintVertices } from './bakedLight';
 import { appendCuboid, type Buffers, type Cuboid, type CuboidShape, emptyBuffers, FACES, PLAIN, type UvMode } from './cuboidMesh';
 import { buildFoliageMesh } from './foliageMeshes';
 import { appendFixtureSolids } from './lightFixtures';
 import { keyDirection, resolveLighting } from './lightingPreset';
 import { groundUnder } from '../map/nightSight';
+import { buildJunkMesh, buildPuddleMesh } from './dressingMeshes';
 import { buildMapDecals, disposeMapDecals, drawDecalAtlas } from './mapDecals';
+import { placeDressing } from './mapDressing';
 import { appendNatureShape, appendPebbles, isNatureKind } from './natureShapes';
+import type { ProbeGrid } from './probeGrid';
 import { CORE_SURFACES, type ProceduralTexture, type SurfaceTextures, surfaceTexture } from './proceduralTextures';
 import { isSurfaceMaterial, setReliefMaps, type SurfaceMaterial, withoutEnvironment } from './surfaceMaterials';
 import { releaseNormalMaps, usesNormalMaps } from './surfaceNormals';
+import { patchesShader, patchSurfaceMaterial, type ProbeUniforms, type SurfacePatch } from './surfaceShader';
 import { buildTerrainMesh } from './terrainMeshes';
 import { buildOccluders, type Occluders, occlusionAt, occlusionShade } from './vertexOcclusion';
 
-interface KindStyle {
+export interface KindStyle {
   texture: SurfaceTextureId;
   uv: UvMode;
   /** Tint palette; each block picks one from its position (see blockTint) so props don't look cloned. */
@@ -43,7 +50,7 @@ const STYLES: Record<BlockKind, KindStyle> = {
   // Site props (M25b): each kind's main colour; their details are shades of it (see sitePropPieces).
   toilet: { texture: 'barrier', uv: 'world', tints: [0x5f8f5c, 0x7d8a78, 0xa9a48e], castShadow: true, grime: true },
   rack: { texture: 'barrier', uv: 'world', tints: [0x8a9096, 0x6f7c6a], castShadow: true, grime: true },
-  gabion: { texture: 'gabion', uv: 'world', tints: [0xffffff, 0xeee8da], castShadow: true, grime: true },
+  gabion: { texture: 'gabion', uv: 'world', tints: [0xffffff, 0xe8eaec], castShadow: true, grime: true },
   wrapped: { texture: 'barrier', uv: 'world', tints: [0xe9ecef, 0xddd8cc], castShadow: true, grime: true },
   ibc: { texture: 'barrier', uv: 'world', tints: [0xf2f0ea, 0xe6e2d6], castShadow: true, grime: true },
   sandbags: { texture: 'sandbag', uv: 'world', tints: [0xffffff, 0xeee6d6], castShadow: true, grime: true },
@@ -66,7 +73,7 @@ const STYLES: Record<BlockKind, KindStyle> = {
 };
 
 /** Every block a map draws: its blocks, then its look-only `decor` (M34f). */
-function drawnBlocks(map: MapData): readonly MapBlock[] {
+export function drawnBlocks(map: MapData): readonly MapBlock[] {
   return map.decor ? [...map.blocks, ...map.decor] : map.blocks;
 }
 
@@ -97,7 +104,7 @@ const METAL_PLATE: KindStyle = { texture: 'steelPlate', uv: 'world', tints: [0xf
  * How a block is drawn: in its finish if it has one (M34f: that surface, with its kind's shadow and grime), else as its
  * kind (a steel floor or ramp as tread plate).
  */
-function styleOf(block: MapBlock): KindStyle {
+export function styleOf(block: MapBlock): KindStyle {
   if (block.finish) {
     const kind = STYLES[block.kind];
     return { texture: block.finish, uv: 'world', tints: kind.tints, castShadow: kind.castShadow, grime: kind.grime, ...(kind.cell === undefined ? {} : { cell: kind.cell }) };
@@ -453,12 +460,12 @@ function rackPieces(block: MapBlock, color: THREE.Color, out: Piece[]): void {
   }
 }
 
-/** A gabion: sand-filled wire mesh with the sand showing at the top. */
+/** A gabion: grey rubble behind galvanised wire mesh (G6: never sand), the rubble heaped a little at the top. */
 function gabionPieces(block: MapBlock, color: THREE.Color, out: Piece[]): void {
   const b = boundsOf(block);
   const h = PROP.gabion;
-  add(out, b.min, [b.max[0], b.max[1] - h.sandTop, b.max[2]], 'gabion', color);
-  add(out, [b.min[0] + h.sandInset, b.max[1] - h.sandTop, b.min[2] + h.sandInset], [b.max[0] - h.sandInset, b.max[1], b.max[2] - h.sandInset], 'concrete', new THREE.Color(PROP.sand), false);
+  add(out, b.min, [b.max[0], b.max[1] - h.topDrop, b.max[2]], 'gabion', color);
+  add(out, [b.min[0] + h.topInset, b.max[1] - h.topDrop, b.min[2] + h.topInset], [b.max[0] - h.topInset, b.max[1], b.max[2] - h.topInset], 'gabion', shade(color, h.topShade), false);
 }
 
 /** A pallet load shrink-wrapped in film, on its pallet, with two straps round it. */
@@ -676,29 +683,57 @@ export interface MapLook {
    * 200k ceiling is spent on the figures at 5v5. Changed in place, never a rebuild. Absent: they cast.
    */
   foliageShadows?: boolean;
+  /** Weathering in the surfaces' shader (G6, render/surfaceShader.ts). Absent: none. */
+  weathering?: boolean;
+  /** How the map's baked light is drawn (G6, render/bakedLight.ts), with `probes`, the map's own. Absent: none. */
+  bakedLight?: BakedLightMode;
+  probes?: ProbeGrid | null;
 }
 
-export function mapLookOf(q: QualitySettings): MapLook {
-  return { relief: q.surfaceRelief, normalMaps: q.normalMaps, detail: q.mapDetail, steelSheen: q.environment, foliageShadows: q.shadows && q.shadowFollowsView };
+/** The look `q` gives a map whose baked light is `probes` (render/bakedLight.ts bakedLightFor; null for none). */
+export function mapLookOf(q: QualitySettings, probes: ProbeGrid | null = null): MapLook {
+  return {
+    relief: q.surfaceRelief,
+    normalMaps: q.normalMaps,
+    detail: q.mapDetail,
+    steelSheen: q.environment,
+    foliageShadows: q.shadows && q.shadowFollowsView,
+    weathering: q.weathering,
+    bakedLight: q.bakedLight,
+    probes,
+  };
+}
+
+/** How a look draws the baked light: its mode, or off without probes. */
+export function bakedLightOf(look: MapLook): BakedLightMode {
+  return look.probes ? (look.bakedLight ?? 'off') : 'off';
 }
 
 /** Whether going from one look to another needs the map built again (geometry or material kind changes). */
 export function mapNeedsRebuild(from: MapLook, to: MapLook): boolean {
-  return from.detail !== to.detail || from.steelSheen !== to.steelSheen;
+  return (
+    from.detail !== to.detail ||
+    from.steelSheen !== to.steelSheen ||
+    (from.weathering ?? false) !== (to.weathering ?? false) ||
+    bakedLightOf(from) !== bakedLightOf(to) ||
+    (bakedLightOf(to) !== 'off' && from.probes !== to.probes)
+  );
 }
 
 /**
  * The material for a merged surface mesh: its texture, with relief (a normal map worked out from it, or the texture
  * itself as a bump map) when surface relief is on. Painted surfaces are Lambert and never take the environment map
  * (the largest part of the screen; DECISIONS 2026-09-28); the steel tread plate is painted steel under environment
- * lighting (audit section 5, "Map props and surfaces").
+ * lighting (audit section 5, "Map props and surfaces"). With weathering or per-pixel baked light (G6) the shader takes
+ * render/surfaceShader.ts's additions; without either it is exactly the shader before them (Low's).
  */
-function surfaceMaterial(surface: ProceduralTexture, id: SurfaceTextureId, look: MapLook): SurfaceMaterial {
+function surfaceMaterial(surface: ProceduralTexture, id: SurfaceTextureId, look: MapLook, probes: ProbeUniforms | null): SurfaceMaterial {
   const base = { map: surface.texture, vertexColors: true, bumpScale: SURFACES.relief[id] };
-  const mat: SurfaceMaterial =
-    look.steelSheen && id === 'steelPlate'
-      ? new THREE.MeshStandardMaterial({ ...base, ...SURFACES.steelSheen })
-      : withoutEnvironment(new THREE.MeshLambertMaterial(base));
+  const environment = look.steelSheen && id === 'steelPlate';
+  const mat: SurfaceMaterial = environment ? new THREE.MeshStandardMaterial({ ...base, ...SURFACES.steelSheen }) : new THREE.MeshLambertMaterial(base);
+  const patch: SurfacePatch = { environment, wear: look.weathering ? WEATHERING.shader[id] : null, probes };
+  if (patchesShader(patch)) patchSurfaceMaterial(mat, patch);
+  else if (!environment) withoutEnvironment(mat);
   setReliefMaps(mat, surface, look.relief, look.normalMaps);
   return mat;
 }
@@ -738,9 +773,12 @@ export function setMapTextures(group: THREE.Group, textures: SurfaceTextures): v
   });
 }
 
-/** What map detail adds to a piece: its bevel, its tiles and its baked shade (or the plain box without detail). */
-function pieceShape(piece: Piece, block: MapBlock, index: number, occ: Occluders | null): CuboidShape {
-  if (!occ) return PLAIN;
+/**
+ * What map detail adds to a piece: its bevel, its tiles and its baked shade (or, without detail, `plain`: the plain box,
+ * or the box cut into tiles for Low's baked light to land on).
+ */
+function pieceShape(piece: Piece, block: MapBlock, index: number, occ: Occluders | null, plain: CuboidShape = PLAIN): CuboidShape {
+  if (!occ) return plain;
   const O = SURFACES.occlusion;
   const B = SURFACES.bevel;
   const flat = block.kind === 'floor' || block.kind === 'ramp';
@@ -781,33 +819,58 @@ function appendBuffers(into: Buffers, from: Buffers): void {
 }
 
 /**
- * A detailed map mesh's own shadow proxy: its first `drawn` indices are what the camera sees (bevels, tiles), the rest
- * the same boxes plain, drawn into the shadow map in their place (the same silhouette, a fraction of the triangles).
- * Exported for the tests.
+ * A map mesh's shadow range: its first `drawn` indices are what the camera sees, and the shadow map draws `count`
+ * indices from `start` in their place: with map detail the shadow casters' boxes plain after the drawn part (the same
+ * silhouette, a fraction of the triangles); without, the drawn part's casting pieces only (G6: a texture's casting and
+ * non-casting pieces are one mesh, one draw call, its casters first).
  */
-function shadowProxy(mesh: THREE.Mesh, drawn: number): void {
+function shadowRange(mesh: THREE.Mesh, drawn: number, start: number, count: number): void {
   const geo = mesh.geometry;
-  const total = geo.index?.count ?? 0;
   geo.setDrawRange(0, drawn);
-  mesh.onBeforeShadow = () => geo.setDrawRange(drawn, total - drawn);
+  mesh.onBeforeShadow = () => geo.setDrawRange(start, count);
   mesh.onAfterShadow = () => geo.setDrawRange(0, drawn);
 }
 
+/** One merged map mesh's buffers as it is built: its casting pieces, its others, and the casters' plain boxes. */
+interface MeshParts {
+  cast: Buffers;
+  flat: Buffers;
+  shadow: Buffers | null;
+}
+
+/** A mesh's parts as one set of buffers (casters, others, the shadow boxes), with where the others and the boxes start. */
+function joinParts(parts: MeshParts): { buf: Buffers; flatAt: number; shadowAt: number } {
+  const buf = parts.cast;
+  const flatAt = buf.indices.length;
+  appendBuffers(buf, parts.flat);
+  const shadowAt = buf.indices.length;
+  if (parts.shadow) appendBuffers(buf, parts.shadow);
+  return { buf, flatAt, shadowAt };
+}
+
+/** The face tiles Low's baked light lands on (BAKED_LIGHT.look.vertex.cell); plain boxes otherwise. */
+const VERTEX_LIGHT_SHAPE: CuboidShape = { bevel: 0, cell: BAKED_LIGHT.look.vertex.cell, shade: null };
+
 /**
- * Builds the static level as one merged mesh per surface texture (and whether it casts shadows): a handful of draw
- * calls for the whole map, details included; with map detail, the signs as one more (render/mapDecals.ts; `decalAtlas`
- * draws their texture, null leaves them out). Returns a group; call `disposeMapMeshes` to free GPU resources.
+ * Builds the static level as one merged mesh per surface texture, its shadow casters first and the rest after (the
+ * shadow map draws only the casters): a handful of draw calls for the whole map, details included; with map detail,
+ * the signs and stains as one more (render/mapDecals.ts; `decalAtlas` draws their texture, null leaves them out). With
+ * the map's baked light (G6) per pixel the surfaces read it from a 3D texture; per vertex it is in their vertex
+ * colours. Returns a group; call `disposeMapMeshes` to free GPU resources.
  */
 export function buildMapMeshes(map: MapData, textures: SurfaceTextures, look: MapLook, decalAtlas: (() => THREE.Texture) | null = drawDecalAtlas): THREE.Group {
   const group = new THREE.Group();
   group.name = 'map';
-  // With map detail a shadow-casting mesh also holds its plain boxes, drawn into the shadow map instead (shadowProxy).
-  const meshes = new Map<string, { buf: Buffers; shadow: Buffers | null; texture: SurfaceTextureId; castShadow: boolean }>();
-  const entry = (texture: SurfaceTextureId, castShadow: boolean) => {
-    const key = `${texture}${castShadow ? '' : '-flat'}`;
-    let e = meshes.get(key);
-    if (!e) meshes.set(key, (e = { buf: emptyBuffers(), shadow: look.detail && castShadow ? emptyBuffers() : null, texture, castShadow }));
-    return e;
+  const light = bakedLightOf(look);
+  const probes = light === 'pixel' && look.probes ? probeUniforms(look.probes) : null;
+  if (probes) group.userData.probes = probes;
+  const plainShape = light === 'vertex' ? VERTEX_LIGHT_SHAPE : PLAIN;
+  // With map detail a mesh also holds its casters' plain boxes, drawn into the shadow map instead (shadowRange).
+  const meshes = new Map<SurfaceTextureId, MeshParts>();
+  const entry = (texture: SurfaceTextureId, castShadow: boolean): { buf: Buffers; shadow: Buffers | null } => {
+    let e = meshes.get(texture);
+    if (!e) meshes.set(texture, (e = { cast: emptyBuffers(), flat: emptyBuffers(), shadow: look.detail ? emptyBuffers() : null }));
+    return castShadow ? { buf: e.cast, shadow: e.shadow } : { buf: e.flat, shadow: null };
   };
 
   const pieces: { piece: Piece; block: MapBlock }[] = [];
@@ -830,7 +893,7 @@ export function buildMapMeshes(map: MapData, textures: SurfaceTextures, look: Ma
     const paint = { uv: p.uv, worldSize: surfaceTexture(textures, p.texture).worldSize, color: p.color, grimeFrom: p.grime ? bottom : null };
     // The woods' trees, logs and boulders are shapes inside their box (M33i); the shadow map still takes the box.
     if (isNatureKind(block.kind)) appendNatureShape(e.buf, block, paint, pieceShape(p, block, i, occ).shade);
-    else appendCuboid(e.buf, p.box, paint, pieceShape(p, block, i, occ));
+    else appendCuboid(e.buf, p.box, paint, pieceShape(p, block, i, occ, plainShape));
     if (e.shadow) appendCuboid(e.shadow, p.box, paint, PLAIN);
   });
   // M33i: the light fixtures' stones, logs, lanterns and posts, and the pebbles on gravel: drawn, never in the shadow map.
@@ -841,9 +904,11 @@ export function buildMapMeshes(map: MapData, textures: SurfaceTextures, look: Ma
     appendPebbles(entry('stone', true).buf, map, (x, z) => terrainHeightAt(t, x, z) ?? 0);
   }
 
-  for (const [key, { buf, shadow, texture, castShadow }] of meshes) {
-    const drawn = buf.indices.length;
-    if (shadow) appendBuffers(buf, shadow);
+  for (const [texture, parts] of meshes) {
+    const castShadow = parts.cast.indices.length > 0;
+    const drawnVertices = (parts.cast.positions.length + parts.flat.positions.length) / 3;
+    const { buf, flatAt, shadowAt } = joinParts(parts);
+    if (light === 'vertex' && look.probes) tintVertices(buf, look.probes, 0, drawnVertices);
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(buf.positions, 3));
     geo.setAttribute('normal', new THREE.Float32BufferAttribute(buf.normals, 3));
@@ -851,10 +916,11 @@ export function buildMapMeshes(map: MapData, textures: SurfaceTextures, look: Ma
     geo.setAttribute('color', new THREE.Float32BufferAttribute(buf.colors, 3));
     geo.setIndex(buf.indices);
     geo.computeBoundingSphere();
-    const mesh = new THREE.Mesh(geo, surfaceMaterial(surfaceTexture(textures, texture), texture, look));
-    mesh.name = `map-${key}`;
+    const mesh = new THREE.Mesh(geo, surfaceMaterial(surfaceTexture(textures, texture), texture, look, probes));
+    mesh.name = `map-${texture}`;
     mesh.castShadow = castShadow;
-    if (shadow) shadowProxy(mesh, drawn);
+    if (parts.shadow && castShadow) shadowRange(mesh, shadowAt, shadowAt, buf.indices.length - shadowAt);
+    else if (castShadow && flatAt < shadowAt) shadowRange(mesh, shadowAt, 0, flatAt);
     mesh.receiveShadow = true;
     mesh.matrixAutoUpdate = false;
     mesh.updateMatrix();
@@ -864,7 +930,7 @@ export function buildMapMeshes(map: MapData, textures: SurfaceTextures, look: Ma
   const grid = map.terrain ? buildGroundGrid(map) : null;
   if (map.terrain) {
     const detail = grid ? surfaceTexture(textures, 'groundDetail') : null;
-    group.add(buildTerrainMesh(map.terrain, grid && detail ? { grid, material: surfaceMaterial(detail, 'groundDetail', look), tile: detail.worldSize, mean: detail.mean ?? 1 } : null));
+    group.add(buildTerrainMesh(map.terrain, grid && detail ? { grid, material: surfaceMaterial(detail, 'groundDetail', look, probes), tile: detail.worldSize, mean: detail.mean ?? 1 } : null));
   }
   const moon = map.blocks.some((b) => b.kind === 'tree') || map.ground ? keyDirection(resolveLighting(map)) : null;
   if (moon) {
@@ -873,10 +939,13 @@ export function buildMapMeshes(map: MapData, textures: SurfaceTextures, look: Ma
   }
   const foliage = buildFoliageMesh(map.foliage ?? [], map.ground ? moon : null, look.foliageShadows ?? true);
   if (foliage) group.add(foliage);
+  // G8: a map's set dressing with map detail: its decals join the decal mesh, its junk, strips and puddles two meshes.
+  const dressing = look.detail ? placeDressing(map) : null;
   if (look.detail && decalAtlas) {
-    const decals = buildMapDecals(map, decalAtlas);
+    const decals = buildMapDecals(map, decalAtlas, dressing?.decals);
     if (decals) group.add(decals);
   }
+  if (dressing) for (const mesh of [buildJunkMesh(dressing, probes), buildPuddleMesh(dressing, probes)]) if (mesh) group.add(mesh);
   return group;
 }
 
@@ -928,5 +997,7 @@ export function disposeMapMeshes(group: THREE.Group): void {
     }
   });
   disposeMapDecals(group);
+  const probes = group.userData.probes as ProbeUniforms | undefined;
+  if (probes) disposeProbeUniforms(probes);
   group.removeFromParent();
 }

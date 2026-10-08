@@ -25,7 +25,7 @@ describe('the scope gate (pipeline/gate.mjs)', () => {
   const touches = ['src/physics/physicsWorld.ts', 'src/sim/'];
 
   it('allows the task\'s files and folders, tests, docs, CHANGELOG and README', () => {
-    for (const f of ['src/physics/physicsWorld.ts', 'src/sim/bbs.ts', 'src/ui/hud.test.ts', 'e2e/boot.spec.ts', 'docs/TASKS.md', 'CHANGELOG.md', 'README.md', 'pipeline/out/gate-report.json']) {
+    for (const f of ['src/physics/physicsWorld.ts', 'src/sim/bbs.ts', 'src/ui/hud.test.ts', 'e2e/boot.spec.ts', 'docs/TASKS.md', 'CHANGELOG.md', 'README.md', 'src/ui/README.md', 'src/ui/menus/README.md', 'pipeline/out/gate-report.json']) {
       expect(allowedFile(f, touches), f).toBe(true);
     }
   });
@@ -41,6 +41,7 @@ describe('the scope gate (pipeline/gate.mjs)', () => {
     expect(allowedFile('src/ui/hud.ts', touches)).toBe(false);
     expect(allowedFile('src/physics/physicsWorld.tsx', touches)).toBe(false);
     expect(allowedFile('src/simulation.ts', touches)).toBe(false);
+    expect(allowedFile('src/ui/notes.md', touches)).toBe(false);
     expect(allowedFile('src/physics/other.ts', ['src/physics'])).toBe(false);
     // The pipeline's own tests are not tests any task may change: a task lists them.
     expect(allowedFile('pipeline/scope.test.mjs', touches)).toBe(false);

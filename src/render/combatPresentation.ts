@@ -19,6 +19,7 @@ import type { BB } from '../sim/ballistics';
 import type { Character } from '../sim/character';
 import type { GameState } from '../sim/state';
 import { lightInHand, torchLit } from '../sim/torch';
+import { length3 } from '../sim/vec';
 import { Hud } from '../ui/hud';
 import type { PictureSource } from '../ui/menus/menuPictures';
 import type { PictureSubject } from './itemPictures';
@@ -26,12 +27,14 @@ import { BBPathsDebug } from './bbPathsDebug';
 import { BBRenderer } from './bbRenderer';
 import { figureMuzzle, type FigureHold } from './characterModels';
 import { holdsPistol } from './characterRenderer';
+import { DressingEffects } from './dressingEffects';
 import { DustMotes } from './dustMotes';
 import { ImpactGrit, shooterSide } from './impactGrit';
 import { ImpactPuffs } from './impactPuffs';
 import type { Renderer } from './renderer';
 import { sprintCarry, Viewmodel } from './viewmodel';
 import type { ReplicaPaint } from '../config/schemes';
+import { type ArmStyle, HUMAN_ARMS } from './replicaModels';
 
 /** Whose BBs are drawn glowing (M33b): the player's by gear slot, and every other shooter's. */
 export interface BBGlow {
@@ -82,6 +85,8 @@ export class CombatPresentation {
   private readonly gasPuffs = new ImpactPuffs(GAS_PUFFS);
   /** Dust drifting in the sunlight round the camera (M14); how much is the quality settings' (at most the Custom row's top). */
   private readonly motes = new DustMotes(DUST_MOTES.max);
+  /** The map's chimney smoke and kicked-up dust (G8, MapDressing; nothing for a map without them, or on Low). */
+  private readonly dressing: DressingEffects;
   /** The impact dust's tint per material (linear colours, made once). */
   private readonly dustTints = new Map<ImpactMaterial, THREE.Color>();
   /** The settings in use, to light the replica again after a lost or replaced graphics context (contextRestored). */
@@ -146,13 +151,17 @@ export class CombatPresentation {
     seed = 0,
     /** Your replicas' colour schemes by gear slot and the Realistic colours setting (G1); null: the black and tan of before. */
     paint: ReplicaPaint | null = null,
+    /** The player's own arms (G7): gloved, or a robot's when their figure is a robot (render/figureMix.ts playerArms). */
+    arms: ArmStyle = HUMAN_ARMS,
   ) {
     this.sfx = new Sfx(heardReplicas(loadout, state.characters), field.blocks, query, audio, seed);
     this.bbs = new BBRenderer(state.bbs, tickSeconds);
     this.paths = new BBPathsDebug(state.bbs);
     renderer.scene.add(this.bbs.object, this.puffs.object, this.grit.object, this.hitPuffs.object, this.gasPuffs.object, this.motes.object, this.paths.object);
     for (const [material, dust] of Object.entries(IMPACT_DUST)) this.dustTints.set(material as ImpactMaterial, new THREE.Color(dust.tint));
-    this.viewmodel = new Viewmodel(renderer.camera.aspect, teamColor, loadout, { replica: quality.replicaDetail, hands: quality.handDetail }, paint);
+    this.motes.setMapDust(field.dressing?.motes?.tint ?? null);
+    this.dressing = new DressingEffects(renderer.scene, field.dressing);
+    this.viewmodel = new Viewmodel(renderer.camera.aspect, teamColor, loadout, { replica: quality.replicaDetail, hands: quality.handDetail }, paint, arms);
     this.overlay = { scene: this.viewmodel.scene, camera: this.viewmodel.camera };
     this.hud = new Hud(container, keyName, crosshair);
     this.quality = quality;
@@ -170,6 +179,7 @@ export class CombatPresentation {
     this.viewmodel.setLaserBeam(quality.laserBeam);
     this.bbs.setGlow(quality.bbGlow);
     this.grit.setEnabled(quality.impactGrit);
+    this.dressing.setQuality(quality);
     if (quality.impactGrit && !this.rings) {
       this.rings = new ImpactPuffs(IMPACT_RINGS);
       this.renderer.scene.add(this.rings.object);
@@ -201,12 +211,14 @@ export class CombatPresentation {
   setLighting(preset: LightingPreset): void {
     this.viewmodel.setLighting(preset);
     this.sfx.setScene(soundscapeOf(this.field, preset.night));
+    this.dressing.setNight(preset.night);
   }
 
   /** Reduced motion changed on Settings → Accessibility: the held replica's bob, sway and kick. */
   setMotion(scale: MotionScale): void {
     this.viewmodel.setMotion(scale);
     this.motes.setMotion(scale.dust > 0);
+    this.dressing.setMotion(scale.dust > 0);
   }
 
   /** The crosshair changed on Settings → Crosshair. */
@@ -258,6 +270,7 @@ export class CombatPresentation {
   afterTick(): void {
     this.paths.recordTick();
     this.sfx.afterTick(this.state.characters, this.player.id);
+    this.dressing.afterTick(this.state.events, this.state.characters, this.renderer.camera.position);
     for (const e of this.state.events) {
       if (e.type === 'roundStart') {
         this.viewmodel.resetSway(); // the view snaps to the spawn yaw
@@ -318,6 +331,7 @@ export class CombatPresentation {
     this.gasPuffs.update(dt, this.renderer.camera);
     this.motes.setPixelRatio(this.renderer.renderer.getPixelRatio());
     this.motes.update(dt, this.renderer.camera.position, this.state.wind);
+    this.dressing.update(dt, this.renderer.camera, this.state.wind);
     this.paths.update();
 
     const p = this.player;
@@ -369,8 +383,10 @@ export class CombatPresentation {
     this.hitPuffs.dispose();
     this.gasPuffs.dispose();
     this.motes.dispose();
+    this.dressing.dispose();
     this.viewmodel.setEnvironment(null);
     this.paths.dispose();
+    this.renderer.forgetOverlay(this.overlay.scene);
     this.viewmodel.dispose();
     this.hud.dispose();
     this.sfx.dispose();
@@ -429,7 +445,7 @@ export class CombatPresentation {
   /** Rough seconds until `bb` hits level geometry (straight line at its launch speed); Infinity if nothing is near. */
   private estimateFlightTime(bb: BB): number {
     const v = bb.velocity;
-    const speed = Math.hypot(v.x, v.y, v.z);
+    const speed = length3(v.x, v.y, v.z);
     if (speed <= 0) return Number.POSITIVE_INFINITY;
     this.dir.x = v.x / speed;
     this.dir.y = v.y / speed;

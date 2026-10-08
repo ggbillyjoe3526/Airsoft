@@ -1,4 +1,5 @@
 import { type Vec3, vec3 } from '../sim/vec';
+import { depotDressing } from './depotDressing';
 import type { BlockKind, CaseSpot, ExitZone, MapBlock, MapData, RampRise, SpawnPoint } from './mapTypes';
 
 /**
@@ -398,9 +399,11 @@ function blockToWorld(b: MapBlock): MapBlock {
 /** Mirroring z turns a facing `yaw` (forward = (-sin yaw, -cos yaw)) into π - yaw. */
 const spawnToWorld = (s: SpawnPoint): SpawnPoint => ({ position: toWorld(s.position), yaw: Math.atan2(Math.sin(Math.PI - s.yaw), Math.cos(Math.PI - s.yaw)) });
 
+const BLOCKS: MapBlock[] = [...perimeter(), ...WEST_YARD, ...DOCK_ROAD, ...CONTAINER_ALLEY, ...THE_BAY, ...OFFICE].map(blockToWorld);
+
 export const DEPOT: MapData = {
   name: 'Depot',
-  blocks: [...perimeter(), ...WEST_YARD, ...DOCK_ROAD, ...CONTAINER_ALLEY, ...THE_BAY, ...OFFICE].map(blockToWorld),
+  blocks: BLOCKS,
   killY: -10,
   spawns: [WEST_SPAWNS.map(spawnToWorld), EAST_SPAWNS.map(spawnToWorld)],
   deadZones: [WEST_DEAD_ZONE.map(spawnToWorld), EAST_DEAD_ZONE.map(spawnToWorld)],
@@ -419,6 +422,10 @@ export const DEPOT: MapData = {
     regens: REGENS.map(spawnToWorld),
     regenDistance: REGEN_DISTANCE,
   },
+  // G6: bounce light baked by `node pipeline/bake-light.mjs` (re-bake after any change to the blocks; a test says so).
+  bakedLight: { file: 'depot' },
+  // G8: the set dressing (look only: map/depotDressing.ts).
+  dressing: depotDressing(BLOCKS),
 };
 
 /** Layout facts the tests check against (in world coordinates), exported so they can't drift from the geometry. */

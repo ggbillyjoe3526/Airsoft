@@ -658,7 +658,7 @@ describe('practice range', () => {
 });
 
 
-describe('walk-off route searches through the simulation (M27)', () => {
+describe('walk-off routes through the simulation (M27, M74)', () => {
   const SPOTS = [[{ position: vec3(-30, 0, 0), yaw: 0 }], [{ position: vec3(30, 0, 0), yaw: 0 }, { position: vec3(30, 0, 4), yaw: 0 }]];
 
   /** Two Blue, three Orange on the open field; ids 1 and 2 (Orange) are the ones the tests knock out. */
@@ -670,21 +670,22 @@ describe('walk-off route searches through the simulation (M27)', () => {
     const spare = createCharacter(3, vec3(20, 0, -40), 0, LOADOUT, 1); // keeps Orange from being wiped out
     state.characters.push(blue, a, b, spare);
     const ctx = createSimContext({ mover: floor, query: openSky, movement: MOVEMENT, footsteps: FOOTSTEPS, body: BODY, ballistics: BALLISTICS, killY: KILL_Y, hits: HITS, deadZones: SPOTS, rounds: ROUNDS, nav: OPEN_NAV, navSnap: NAV.snap });
-    const searches = () => ctx.targets.elimination.navSearch.generation;
-    return { state, blue, a, b, ctx, searches, commands: new Map<number, PlayerCommand>() };
+    /** Victims whose walk-off route has been planned (a route is never empty once planned). */
+    const planned = () => [a, b].filter((c) => c.walkOffRoute.length > 0).length;
+    return { state, blue, a, b, ctx, planned, commands: new Map<number, PlayerCommand>() };
   }
 
   it('two victims hit between the same two ticks get their routes on consecutive ticks and both reach their dead-zone spots', () => {
-    const { state, blue, a, b, ctx, searches, commands } = field();
-    const before = searches();
+    const { state, blue, a, b, ctx, planned, commands } = field();
+    const before = planned();
     eliminate(a, blue.id, state.characters, ctx.targets.elimination);
     eliminate(b, blue.id, state.characters, ctx.targets.elimination);
-    expect(searches()).toBe(before); // the hits themselves search nothing
+    expect(planned()).toBe(before); // the hits themselves plan nothing
     expect(a.walkOffRoutePending).toBe(true);
     expect(b.walkOffRoutePending).toBe(true);
 
     stepSimulation(state, commands, ctx, DT);
-    expect(searches()).toBe(before + 1); // one search this tick: the first victim's
+    expect(planned()).toBe(before + 1); // one route this tick: the first victim's
     expect(a.walkOffRoute.length).toBeGreaterThan(0);
     expect(a.walkOffRoutePending).toBe(false);
     expect(b.walkOffRoutePending).toBe(true);
@@ -692,11 +693,11 @@ describe('walk-off route searches through the simulation (M27)', () => {
     expect(b.status).toBe('calling'); // still standing and calling while its route waits
 
     stepSimulation(state, commands, ctx, DT);
-    expect(searches()).toBe(before + 2); // and the second victim's the next tick
+    expect(planned()).toBe(before + 2); // and the second victim's the next tick
     expect(b.walkOffRoute.length).toBeGreaterThan(0);
 
     for (let i = 0; i < 20; i++) stepSimulation(state, commands, ctx, DT);
-    expect(searches()).toBe(before + 2); // nobody waiting: no further search
+    expect(planned()).toBe(before + 2); // nobody waiting: nothing further
 
     const ticks = Math.ceil((HITS.callTime + HITS.walkOffTime) / DT) + 5;
     for (let i = 0; i < ticks && (a.status !== 'out' || b.status !== 'out'); i++) stepSimulation(state, commands, ctx, DT);
@@ -706,13 +707,13 @@ describe('walk-off route searches through the simulation (M27)', () => {
     expect(Math.hypot(b.position.x - 30, b.position.z - 4)).toBeLessThan(0.01); // second spot
   });
 
-  it('a character respawned before its route was searched has no pending route and costs no search', () => {
-    const { state, blue, a, ctx, searches, commands } = field();
-    const before = searches();
+  it('a character respawned before its route was searched has no pending route and costs no route', () => {
+    const { state, blue, a, ctx, planned, commands } = field();
+    const before = planned();
     eliminate(a, blue.id, state.characters, ctx.targets.elimination);
     respawnCharacter(a); // the round ended before the tick that would have searched its route
     for (let i = 0; i < 5; i++) stepSimulation(state, commands, ctx, DT);
-    expect(searches()).toBe(before);
+    expect(planned()).toBe(before);
     expect(a.status).toBe('alive');
     expect(a.walkOffRoutePending).toBe(false);
   });

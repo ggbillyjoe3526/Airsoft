@@ -17,10 +17,14 @@ stated reason, no multiplayer, CC0 assets only, nothing grimdark.
    `docs/ARCHITECTURE.md` › Contracts, and the files you will touch. Grep first, read in ranges.
 2. Build the smallest change that meets every acceptance criterion. Stay inside `touches` (tests, docs and
    CHANGELOG are always allowed); if you must touch another file, say so in the report rather than doing it quietly.
-3. Run `node pipeline/gate.mjs --quick` (type check, build, unit tests; about two minutes) before you report; fix what it
+3. Run `node pipeline/gate.mjs --quick` (type check, build, unit tests; about 10 minutes in a cloud container when the
+   change reaches the bot-match guards, 3 when it doesn't (2026-10-08), so use `npm run t`, about 2 minutes, while
+   you work) before you report; fix what it
    finds. Don't run the smoke test or the perf harness: the thread's full gate does.
-4. Update the docs CLAUDE.md asks for: a DECISIONS line for each default you chose, a KNOWN_ISSUES row for what you
-   left, the ROADMAP row's status.
+4. Update the docs the change needs: list each default you chose with a one-line reason in your report (the thread
+   puts it in the task's record, `docs/records/<id>.md`; an owner ruling or a rule for later tasks goes in
+   `docs/DECISIONS.md`), add a `docs/KNOWN_ISSUES.md` row for what you left, and keep a folder's `README.md` current
+   when you add, rename or move a file in it.
 
 On a **retry** your brief carries only the failed checks with their evidence (the gate report, the critic's failed
 lines, the performance report's ranked fixes). Fix those, nothing else, and keep what passed.

@@ -43,8 +43,9 @@ function meshFingerprint(map: MapData, detail: boolean): string[] {
     { relief: false, normalMaps: false, detail, steelSheen: false },
     null,
   );
+  // G8: a map's set dressing (its junk and puddles) is pinned by its own tests; every other mesh is as before.
   return group.children
-    .filter((c): c is THREE.Mesh => c instanceof THREE.Mesh)
+    .filter((c): c is THREE.Mesh => c instanceof THREE.Mesh && c.name !== 'map-junk' && c.name !== 'map-puddles')
     .map((m) => {
       const g = m.geometry;
       const a = (n: string): ArrayLike<number> =>
@@ -238,23 +239,21 @@ const PINNED = {
   ],
   depotDetail: [
     "map-barrier v21140 i33372 be34de09/b865b405/a0a6e726",
-    "map-blockWall v6230 i18114 83b89309/6769c9a8/1988b810",
-    "map-concrete v3334 i7320 9ab46e9d/63816c8f/abd5525b",
-    "map-concrete-flat v2544 i13596 2f458d95/60b2ba05/9148c7f2",
+    "map-blockWall v6230 i18114 83b89309/b1f87539/1988b810",
+    "map-concrete v5582 i20460 cfe7e0ad/1f665547/1c873578",
     "map-corrugated v24024 i46782 bed07a37/6d466cf6/a30a3534",
     "map-crate v6584 i9888 5319f985/1f3f01e5/ebed566d",
-    "map-gabion v710 i1272 43fe47cd/6989b145/2504e94c",
+    "map-gabion v1006 i1728 9c61cdad/08aafe6d/f8d30cd0",
     "map-sandbag v1176 i1800 2ad8ffe5/50ab9a2f/8417523d",
     "map-steelPlate v774 i1368 31fff975/43fedd56/e7e225ad",
   ],
   depotPlain: [
     "map-barrier v7048 i11100 6a606e45/f70ebed9/2a2f32fd",
-    "map-blockWall v768 i1440 5fcd9225/c34043cd/00fe670d",
-    "map-concrete v768 i1152 68605875/92652cb5/c25a817d",
-    "map-concrete-flat v24 i36 43cf8565/7ad74785/d34582e5",
+    "map-blockWall v768 i1440 5fcd9225/87ed5e35/00fe670d",
+    "map-concrete v648 i972 7ee26e15/60069025/912a2d1d",
     "map-corrugated v5304 i8676 9cf8d745/38c1ceb5/50205ed5",
     "map-crate v1816 i2748 5a190465/5d040585/d81344fd",
-    "map-gabion v192 i360 5fb93945/3acb4525/1ebc9385",
+    "map-gabion v336 i576 e9818b05/f9af1401/1532e6b5",
     "map-sandbag v288 i432 415cfe45/ef273595/28884735",
     "map-steelPlate v228 i336 64973f35/a3381b15/05c3e021",
   ],

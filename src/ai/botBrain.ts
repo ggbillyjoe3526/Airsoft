@@ -6,11 +6,12 @@ import { isInPlay } from '../sim/elimination';
 import { type Vec3, vec3 } from '../sim/vec';
 import { type Bot, type BotWorld, flagRole, pick, threatInMind, wantsFlag } from './bot';
 import { aimBot, lowOnBBs, reloadBot, shootBot } from './botCombat';
-import { enterFlagMode, keepApart, moveBot, startSearch, teammateSpots, wantRoute } from './botMovement';
+import { enterFlagMode, keepApart, moveBot, startSearch } from './botMovement';
 import { currentTarget, perceive } from './botSenses';
 import { stepBotTorch } from './botTorch';
 import { type CoverSearch, findCover, hidesFrom, leanSideToSee } from './cover';
 import { eyeOf } from './perception';
+import { teammateSpots, wantRoute } from './routes';
 
 /**
  * One bot's mind. Bots are ordinary characters driven through PlayerCommands; each tick this decides
@@ -191,6 +192,8 @@ function chooseMode(b: Bot, w: BotWorld, target: Character | undefined, dt: numb
         return;
       }
     }
+    // A new fight looks afresh whether a hunter's push keeps its target in sight (BP2): never the last fight's look.
+    if (b.mode !== 'fight') b.pushLookFor = -1;
     b.mode = 'fight';
   } else if (b.order !== 'none') {
     // A squad order (M22) comes before the team plan: the pole, chasing noises and the lane. A noise still turns its

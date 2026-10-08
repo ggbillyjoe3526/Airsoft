@@ -280,42 +280,53 @@ export function playFollowMatch(seconds: number, seed: number, map: MapData = DE
   return { stats, counted, near, worst, standing };
 }
 
-/**
- * 16 seeds of 3v3 in `mode` with ricochets counting (friendly fire on): bots never shoot a teammate directly, and
- * bounced BBs decide only some hits, few of them on the shooter (FA12). One file per mode, so the two run in parallel.
- */
-export function expectRicochetsPlayable(mode: MatchMode): void {
+/** What 16 seeds of 3v3 in `mode` with ricochets counting tallied (tallyRicochetMatches). */
+export interface RicochetTally {
+  rounds: number;
+  /** Elimination: rounds the west end won; Attack / Defend: rounds the attackers won. */
+  favoured: number;
+  captures: number;
+  hits: number;
+  ricochetHits: number;
+  directFriendly: number;
+  friendlyRicochets: number;
+  selfHits: number;
+}
+
+/** 16 seeds of 3v3 in `mode` with ricochets counting (friendly fire on, FA12): the tallies over them all. */
+export function tallyRicochetMatches(mode: MatchMode): RicochetTally {
   const hits = { ...HITS, ricochetsCount: true };
-  let rounds = 0;
-  let favoured = 0;
-  let captures = 0;
-  let allHits = 0;
-  let ricochetHits = 0;
-  let directFriendly = 0;
-  let friendlyRicochets = 0;
-  let selfHits = 0;
+  const t: RicochetTally = { rounds: 0, favoured: 0, captures: 0, hits: 0, ricochetHits: 0, directFriendly: 0, friendlyRicochets: 0, selfHits: 0 };
   for (let seed = 1; seed <= 16; seed++) {
     const stats = playMatch(mode === 'elimination' ? 300 : 400, seed, undefined, BOTS, mode, ROUNDS, DEPOT, ROUNDS.teamSize, hits);
-    allHits += stats.hits;
-    ricochetHits += stats.ricochetHits;
-    friendlyRicochets += stats.friendlyRicochets;
-    selfHits += stats.selfHits;
-    directFriendly += stats.friendlyHits - stats.friendlyRicochets;
+    t.hits += stats.hits;
+    t.ricochetHits += stats.ricochetHits;
+    t.friendlyRicochets += stats.friendlyRicochets;
+    t.selfHits += stats.selfHits;
+    t.directFriendly += stats.friendlyHits - stats.friendlyRicochets;
     for (const r of stats.results) {
-      rounds++;
-      if (r.reason === 'captured') captures++;
-      if (mode === 'elimination' ? r.winner >= 0 && r.winnerEnd === 0 : r.winner === r.attackers) favoured++;
+      t.rounds++;
+      if (r.reason === 'captured') t.captures++;
+      if (mode === 'elimination' ? r.winner >= 0 && r.winnerEnd === 0 : r.winner === r.attackers) t.favoured++;
     }
   }
-  expect(directFriendly, mode).toBe(0);
-  expect(friendlyRicochets, mode).toBeLessThanOrEqual(8);
+  return t;
+}
+
+/**
+ * Ricochets counting stay playable (FA12): bots never shoot a teammate directly, and bounced BBs decide only some hits,
+ * few of them on the shooter. Which side the rounds favour is a balance figure (src/ai/balance/, token plan item 22).
+ * One file per mode, so the two run in parallel.
+ */
+export function expectRicochetsPlayable(mode: MatchMode): void {
+  const t = tallyRicochetMatches(mode);
+  expect(t.directFriendly, mode).toBe(0);
+  expect(t.friendlyRicochets, mode).toBeLessThanOrEqual(8);
   // A bot's own ricochet now catches it too (audit SIM-07): rare, a few hits in 16 matches.
-  expect(selfHits / allHits, mode).toBeLessThan(0.04);
-  expect(ricochetHits / allHits, mode).toBeGreaterThan(0.05);
-  expect(ricochetHits / allHits, mode).toBeLessThan(0.25);
-  expect(favoured / rounds, mode).toBeGreaterThan(0.35);
-  expect(favoured / rounds, mode).toBeLessThan(0.65);
-  if (mode === 'attackDefend') expect(captures, mode).toBeGreaterThanOrEqual(7);
+  expect(t.selfHits / t.hits, mode).toBeLessThan(0.04);
+  expect(t.ricochetHits / t.hits, mode).toBeGreaterThan(0.05);
+  expect(t.ricochetHits / t.hits, mode).toBeLessThan(0.25);
+  if (mode === 'attackDefend') expect(t.captures, mode).toBeGreaterThanOrEqual(7);
 }
 
 /**
@@ -327,45 +338,60 @@ export function expectRicochetsPlayable(mode: MatchMode): void {
  */
 const CUSTOM_MATCH_SECONDS = 240;
 
+/** What custom matches of `size` a side tallied (tallyCustomMatches). */
+export interface CustomTally {
+  seeds: number;
+  rounds: number;
+  decided: number;
+  /** Decided rounds won by the west end (Elimination) or the attackers (Attack / Defend). */
+  favoured: number;
+  friendlyHits: number;
+}
+
 /**
- * Fair 1v1 (32 seeds) and 2v2 (16 seeds) custom matches in `mode`, first to 3 (M20): rounds get decided, neither end
- * (Elimination) nor side (Attack / Defend) is favoured, nobody stays at spawn, no friendly hits. One file per mode, so
- * the two run in parallel (audit CORE-15).
+ * Custom matches on Depot (M20), first to 3, `size` a side in `mode`: 32 seeds of 1v1 or 16 of 2v2. `onSeed` sees each
+ * seed's stats as it is played.
  */
-export function expectCustomMatchesFair(mode: MatchMode): void {
+export function tallyCustomMatches(mode: MatchMode, size: number, onSeed?: (stats: MatchStats, seed: number) => void): CustomTally {
   const rules = { ...ROUNDS, winsNeeded: 3, halfTimeAfter: 2 };
+  const t: CustomTally = { seeds: size === 1 ? 32 : 16, rounds: 0, decided: 0, favoured: 0, friendlyHits: 0 };
+  for (let seed = 1; seed <= t.seeds; seed++) {
+    const stats = playMatch(CUSTOM_MATCH_SECONDS, seed, undefined, BOTS, mode, rules, DEPOT, size);
+    onSeed?.(stats, seed);
+    t.friendlyHits += stats.friendlyHits;
+    for (const r of stats.results) {
+      t.rounds++;
+      if (r.winner < 0) continue;
+      t.decided++;
+      if (mode === 'elimination' ? r.winnerEnd === 0 : r.winner === r.attackers) t.favoured++;
+    }
+  }
+  return t;
+}
+
+/**
+ * Playable 1v1 and 2v2 custom matches in `mode` (M20): rounds get decided, nobody stays at spawn, nobody falls, no
+ * friendly hits. Whether an end or side is favoured is a balance figure (src/ai/balance/, token plan item 22). One file
+ * per mode, so the two run in parallel (audit CORE-15).
+ */
+export function expectCustomMatchesPlayable(mode: MatchMode): void {
   for (const size of [1, 2]) {
     const label = `${size}v${size} ${mode}`;
-    let rounds = 0;
-    let decided = 0;
-    let favoured = 0; // elimination: rounds the west end won; attack / defend: rounds the attackers won
-    let friendlyHits = 0;
-    const seeds = size === 1 ? 32 : 16;
-    for (let seed = 1; seed <= seeds; seed++) {
-      const stats = playMatch(CUSTOM_MATCH_SECONDS, seed, undefined, BOTS, mode, rules, DEPOT, size);
+    const t = tallyCustomMatches(mode, size, (stats, seed) => {
       expect(stats.farthestFromSpawn, label).toHaveLength(2 * size);
-      friendlyHits += stats.friendlyHits;
-      for (const r of stats.results) {
-        rounds++;
-        if (r.winner < 0) continue;
-        decided++;
-        if (mode === 'elimination' ? r.winnerEnd === 0 : r.winner === r.attackers) favoured++;
-      }
       // Everyone leaves spawn in round 1; in Attack / Defend only the attackers (Blue) must, defenders may hold.
       stats.farthestFromSpawn.forEach((d, i) => {
         if (mode === 'elimination' || i < size) expect(d, `${label} seed ${seed}`).toBeGreaterThan(8);
       });
       expectGrounded(stats, DEPOT);
-    }
-    expect(rounds, label).toBeGreaterThanOrEqual(seeds * 3);
-    expect(decided / rounds, label).toBeGreaterThan(0.9);
-    expect(favoured / decided, label).toBeGreaterThan(0.35);
-    expect(favoured / decided, label).toBeLessThan(0.65);
-    expect(friendlyHits, label).toBe(0);
+    });
+    expect(t.rounds, label).toBeGreaterThanOrEqual(t.seeds * 3);
+    expect(t.decided / t.rounds, label).toBeGreaterThan(0.9);
+    expect(t.friendlyHits, label).toBe(0);
   }
 }
 
-/** The tallies a balance guard reads (M40): rounds played, decided, won by the attackers, won by end 0, ended on time. */
+/** The tallies a match guard and a balance figure read (M40): rounds played, decided, won by the attackers, won by end 0, ended on time. */
 export interface BalanceTally {
   rounds: number;
   decided: number;
@@ -391,25 +417,19 @@ export function tallyBalance(seeds: number, seconds: number, cfg: BotConfig, mod
   return t;
 }
 
-/** The Esports plan's Pro band (M40, owner 2026-10-04): the attackers' or each end's share of rounds. */
-export const PRO_BAND: readonly [number, number] = [0.4, 0.6];
+/**
+ * Rounds that may run out the clock in a match guard: under 1 in 4. Bots that stop finding each other (stuck, or
+ * searching the wrong end) run nearly every round out, as Woodland's did before M40 (38 of 82); the target, under 1 in
+ * 10, is a balance figure (src/ai/balance/, token plan item 22). Every map reads 0-3 % today, so a few seeds suffice.
+ */
+export const STALLED_ROUNDS_MAX = 0.25;
 
 /**
- * The Pro balance guard (M40, the Esports plan's bands, owner 2026-10-04): in Attack / Defend the attackers win 40–60 % of
- * rounds; in Elimination each end wins 40–60 % of the decided rounds; under 1 round in 10 ends on time. `band` other than
- * PRO_BAND only where a guard measures outside the plan's and DECISIONS records it (M57: Woodland's Attack / Defend).
+ * A match guard's tally (tallyBalance) shows rounds being played and settled: some rounds, under STALLED_ROUNDS_MAX of
+ * them on time. Who wins them is a balance figure (src/ai/balance/, token plan item 22).
  */
-export function expectProBalance(t: BalanceTally, mode: MatchMode, label: string, band: readonly [number, number] = PRO_BAND): void {
-  // One standard error of the measured share (audit BAL-07), so a failure says whether it is noise or a real move.
-  const n = mode === 'attackDefend' ? t.rounds : t.decided;
-  const said = `${label}: ${JSON.stringify(t)} (±${(50 / Math.sqrt(Math.max(1, n))).toFixed(0)} % at one standard error)`;
+export function expectRoundsPlayed(t: BalanceTally, label: string): void {
+  const said = `${label}: ${JSON.stringify(t)}`;
   expect(t.rounds, said).toBeGreaterThan(0);
-  if (mode === 'attackDefend') {
-    expect(t.attackerWins / t.rounds, said).toBeGreaterThanOrEqual(band[0]);
-    expect(t.attackerWins / t.rounds, said).toBeLessThanOrEqual(band[1]);
-  } else {
-    expect(t.end0Wins / t.decided, said).toBeGreaterThanOrEqual(band[0]);
-    expect(t.end0Wins / t.decided, said).toBeLessThanOrEqual(band[1]);
-  }
-  expect(t.onTime / t.rounds, said).toBeLessThan(0.1);
+  expect(t.onTime / t.rounds, said).toBeLessThan(STALLED_ROUNDS_MAX);
 }

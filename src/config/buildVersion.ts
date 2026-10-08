@@ -27,11 +27,12 @@ export function releaseName(tag: string): string {
 }
 
 /**
- * "0.1 Dev 3" on a release; "0.1 Dev 3+12 · abc1234" twelve commits after it (commit abc1234); "build abc1234" with
- * no release tag in reach (a shallow clone); UNKNOWN_BUILD for anything else (empty, an archive that wasn't filled
- * in, or a tag that isn't a release).
+ * "0.1 Dev 3" on a release; "0.1 Dev 3+12 · abc1234" twelve commits after it (commit abc1234). With no release tag in
+ * reach (a clone without its tags, a shallow one: audit CORE-10), git gives the bare commit: then "0.1 Dev 3+? · abc1234"
+ * when `latestRelease` (README.md's download link, readmeRelease) names the release it came after, else "build abc1234".
+ * UNKNOWN_BUILD for anything else (empty, an archive that wasn't filled in, or a tag that isn't a release).
  */
-export function versionLabel(describe: string): VersionLabel {
+export function versionLabel(describe: string, latestRelease = ''): VersionLabel {
   const d = describe.trim();
   const after = /^(.+)-(\d+)-g([0-9a-f]{4,})$/.exec(d);
   if (after) {
@@ -42,8 +43,21 @@ export function versionLabel(describe: string): VersionLabel {
   }
   const name = releaseName(d);
   if (name) return { label: name, title: `Release ${name}` };
-  if (/^[0-9a-f]{4,}$/.test(d)) return { label: `build ${d}`, title: `Commit ${d}` };
+  if (/^[0-9a-f]{4,}$/.test(d)) {
+    const latest = releaseName(latestRelease.trim());
+    if (latest) return { label: `${latest}+? · ${d}`, title: `Commit ${d}, after ${latest} (built without the git tags, so the commits since it aren't counted)` };
+    return { label: `build ${d}`, title: `Commit ${d}` };
+  }
   return { label: UNKNOWN_BUILD, title: 'Built outside git' };
+}
+
+/**
+ * The release README.md's download link names (`…/archive/refs/tags/0.1-dev.3.zip`): the latest release, which the
+ * release checklist (CLAUDE.md §7) moves in the first pull request after each tag. '' when the link names no release.
+ */
+export function readmeRelease(text: string): string {
+  const tag = /\/archive\/refs\/tags\/([^/\s)*]+)\.zip\b/.exec(text)?.[1] ?? '';
+  return releaseName(tag) ? tag : '';
 }
 
 /** The `describe:` line of a release download's `.git_archival.txt`, or '' if it wasn't filled in. */

@@ -51,6 +51,8 @@ interface Card<T extends string> {
   img: HTMLImageElement | null;
   note: HTMLElement;
   sides: { root: HTMLElement; buttons: { id: string; button: HTMLButtonElement }[] } | null;
+  /** The side tag's pill (Woodland's Night), kept with its words: worked out again on refresh (BP2). */
+  side: { pill: HTMLSpanElement; text: string };
 }
 
 /**
@@ -143,6 +145,11 @@ export class ChoiceCards<T extends string> {
       }
       const url = this.extras.picture?.(option.id) ?? null;
       if (card.img && url && card.img.getAttribute('src') !== url) card.img.src = url;
+      const sideTag = this.extras.sideTag?.(option.id) ?? '';
+      if (sideTag !== card.side.text) {
+        card.side.text = card.side.pill.textContent = sideTag;
+        card.side.pill.hidden = sideTag === '';
+      }
     }
     for (const { entry, wrap } of this.soonCards) wrap.hidden = !isAvailable(entry.tag, this.devContent);
   }
@@ -169,13 +176,15 @@ export class ChoiceCards<T extends string> {
     button.append(text);
     const tags = el('span', 'choice-card-tags');
     if (option.tag === 'dev' && this.extras.devTag) tags.append(tagPill(this.extras.devTag, 'dev'));
-    const side = this.extras.sideTag?.(option.id);
-    if (side) tags.append(tagPill(side, 'blue'));
+    // The side tag is filled in by refresh: a dev map's data (which says it is night only) may arrive later (M50).
+    const side = { pill: tagPill('', 'blue'), text: '' };
+    side.pill.hidden = true;
+    tags.append(side.pill);
     button.append(tags);
     button.insertAdjacentHTML('beforeend', `<span class="choice-tick">${MENU_ICONS.check}</span>`);
     button.addEventListener('click', () => this.pick(option.id));
     wrap.append(button);
-    const card: Card<T> = { option, wrap, button, img, note, sides: null };
+    const card: Card<T> = { option, wrap, button, img, note, sides: null, side };
     this.cards.set(option.id, card);
     return card;
   }

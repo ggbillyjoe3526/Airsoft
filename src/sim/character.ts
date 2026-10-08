@@ -98,6 +98,11 @@ export interface Character {
   torchOn: boolean;
   /** Seconds since the torch was last switched (bots hold a state at least BOT_TORCH.minHold, so it never strobes). */
   torchTime: number;
+  /**
+   * Seconds left in which BBs neither hit this character nor are hit by it (Extraction's insertion grace, Audit 2
+   * SIM-03; sim/extraction.ts). 0 everywhere else, and from every respawn until a run sets it.
+   */
+  grace: number;
 }
 
 export function createCharacter(
@@ -153,6 +158,7 @@ export function createCharacter(
     ghost: false,
     torchOn: false,
     torchTime: 0,
+    grace: 0,
   };
 }
 
@@ -215,6 +221,7 @@ export function respawnCharacter(c: Character): void {
   c.aiming = false;
   c.torchOn = false;
   c.torchTime = 0;
+  c.grace = 0;
   c.using = false;
   c.status = 'alive';
   c.statusTime = 0;

@@ -434,7 +434,10 @@ export function dropOnLine(g: NavGrid, ax: number, ay: number, az: number, bx: n
   return false;
 }
 
-/** Reusable A* working memory for one grid (so searches don't allocate). */
+/**
+ * Reusable A* working memory for one grid (so searches don't allocate). It also holds a search that is part-way done
+ * (audit AI-04: a bot's route search runs a budget of node expansions a tick and carries on from here the next tick).
+ */
 export interface NavSearch {
   g: Float32Array;
   from: Int32Array;
@@ -444,6 +447,13 @@ export interface NavSearch {
   generation: number;
   heap: Int32Array;
   heapF: Float32Array;
+  /** Entries in the open list of the search under way. */
+  size: number;
+  /** Node expansions the last stepRoute made (what it spent of its budget). */
+  expanded: number;
+  /** The search under way: its first start node and its goal node (-1: none, a distance field's search). */
+  startNode: number;
+  goalNode: number;
   nodes: number[];
 }
 
@@ -460,6 +470,10 @@ export function createNavSearch(grid: NavGrid): NavSearch {
     // that ever needs more grows it once (astar) rather than failing.
     heap: new Int32Array(n * NAV_HEAP_PER_CELL),
     heapF: new Float32Array(n * NAV_HEAP_PER_CELL),
+    size: 0,
+    expanded: 0,
+    startNode: -1,
+    goalNode: -1,
     nodes: [],
   };
 }
@@ -483,29 +497,149 @@ const NDI = [1, -1, 0, 0, 1, 1, -1, -1];
 const NDJ = [0, 0, 1, -1, 1, -1, 1, -1];
 const NCOST = [1, 1, 1, 1, SQRT2, SQRT2, SQRT2, SQRT2];
 
+/** How a route search's step ended: the goal reached, no route, or its expansion budget spent with the search open. */
+export type SearchStep = 'found' | 'none' | 'pending';
+
 /**
  * Shortest walkable route from `start` to `goal` (both snapped to the nearest walkable node within `snap` metres, on
  * the floor under each), smoothed into straight segments, written into `out` as waypoints (excluding the start, ending
  * at the goal, or the nearest walkable node to it), each on its floor. Returns false if there is no route. `legProbe`
- * (> 0) keeps the straight legs a body's width from corners (see clearLineFor).
+ * (> 0) keeps the straight legs a body's width from corners (see clearLineFor). The whole search runs in this call;
+ * beginRoute, stepRoute and endRoute run one a budget at a time.
  */
 export function findPath(g: NavGrid, s: NavSearch, start: Vec3, goal: Vec3, snap: number, out: Vec3[], legProbe = 0): boolean {
-  const a = nearestWalkable(g, start.x, start.y, start.z, snap);
-  const b = nearestWalkable(g, goal.x, goal.y, goal.z, snap);
-  if (a < 0 || b < 0 || !astar(g, s, a, b)) {
+  if (!beginRoute(g, s, start, goal, snap) || stepRoute(g, s, Number.POSITIVE_INFINITY) !== 'found') {
     out.length = 0;
     return false;
   }
-  let n = 0;
+  endRoute(g, s, start, goal, out, legProbe);
+  return true;
+}
 
-  // Nodes from goal back to start, reversed.
+/**
+ * Opens a route search from `start` to `goal` in `s` (snapped as findPath does), dropping any search left open there.
+ * Returns false, with nothing open, when either end has no walkable node within `snap`.
+ */
+export function beginRoute(g: NavGrid, s: NavSearch, start: Vec3, goal: Vec3, snap: number): boolean {
+  s.size = 0;
+  const a = nearestWalkable(g, start.x, start.y, start.z, snap);
+  const b = nearestWalkable(g, goal.x, goal.y, goal.z, snap);
+  if (a < 0 || b < 0) return false;
+  openSearch(s, b);
+  pushStart(s, a);
+  return true;
+}
+
+/** Runs the open search for at most `budget` node expansions (audit AI-04). */
+export function stepRoute(g: NavGrid, s: NavSearch, budget: number): SearchStep {
+  return expand(g, s, budget);
+}
+
+/**
+ * Writes the route a search that returned 'found' leads to into `out`, as findPath does, smoothed from `start` (where
+ * the walker is now: a few ticks on from where the search began, it still reaches the first node in a straight line
+ * or the string-pulling below steps back to it).
+ */
+export function endRoute(g: NavGrid, s: NavSearch, start: Vec3, goal: Vec3, out: Vec3[], legProbe: number): void {
+  const a = s.startNode;
   const nodes = s.nodes;
   nodes.length = 0;
-  for (let k = b; k !== a; k = s.from[k]!) nodes.push(k);
+  for (let k = s.goalNode; k !== a; k = s.from[k]!) nodes.push(k);
   nodes.push(a);
   nodes.reverse();
+  s.size = 0;
+  pullRoute(g, nodes, start, goal, out, legProbe);
+}
 
-  // String-pull: from the current anchor, jump to the furthest node still in a clear straight line on foot.
+/**
+ * Walking distance from every node to the nearest of `sources` (each snapped to its nearest walkable node within
+ * `snap`), in cells, +Infinity where none can be reached: one search over the whole grid, run when a match is set up
+ * (audit SIM-01) so a walk-off route is a walk down it (descendField) rather than a search at the hit. Steps are the
+ * route search's, both ways alike: floors at most maxStep apart, no corner cutting.
+ */
+export function buildDistanceField(g: NavGrid, sources: readonly Vec3[], snap: number): Float32Array {
+  const field = new Float32Array(g.floorY.length).fill(Number.POSITIVE_INFINITY);
+  const s = createNavSearch(g);
+  openSearch(s, -1);
+  for (const p of sources) {
+    const k = nearestWalkable(g, p.x, p.y, p.z, snap);
+    if (k >= 0) pushStart(s, k);
+  }
+  if (s.size === 0) return field;
+  expand(g, s, Number.POSITIVE_INFINITY);
+  for (let k = 0; k < field.length; k++) if (s.closed[k] === s.generation) field[k] = s.g[k]!;
+  return field;
+}
+
+/**
+ * Writes into `nodes` the route from node `a` down `field` (buildDistanceField) to one of its sources: each step to the
+ * neighbour whose distance plus the step's length is least, which is a shortest route. Of steps that tie (on a grid
+ * many routes are equally short) it takes the one ending nearest (towardX, towardZ), so the route keeps near the
+ * straight line there and smooths into the same legs a search's would. Returns false, `nodes` empty, when `a` can't
+ * reach a source.
+ */
+export function descendField(g: NavGrid, field: Float32Array, a: number, towardX: number, towardZ: number, nodes: number[]): boolean {
+  nodes.length = 0;
+  if (a < 0 || !(field[a]! < Number.POSITIVE_INFINITY)) return false;
+  let c = a;
+  nodes.push(c);
+  while (field[c]! > 0) {
+    let best = -1;
+    let bestD = Number.POSITIVE_INFINITY;
+    let bestAway = Number.POSITIVE_INFINITY;
+    for (let k = 0; k < 8; k++) {
+      const n = neighbour(g, c, k);
+      if (n < 0 || !(field[n]! < field[c]!)) continue;
+      const d = field[n]! + NCOST[k]!;
+      if (d > bestD + DESCENT_TIE) continue;
+      const away = Math.hypot(nodeX(g, n) - towardX, nodeZ(g, n) - towardZ);
+      if (d < bestD - DESCENT_TIE || away < bestAway) {
+        best = n;
+        bestD = d;
+        bestAway = away;
+      }
+    }
+    // Every reachable node but a source has a neighbour nearer to one; were a float tie ever to leave none, the walk
+    // ends there and the route's last leg goes straight on from it.
+    if (best < 0) break;
+    nodes.push(best);
+    c = best;
+  }
+  return true;
+}
+
+/** Steps whose distances differ by less than this (cells; float rounding over a long field) tie in descendField. */
+const DESCENT_TIE = 1e-3;
+
+/** The node a walker on node `c` (walkable) reaches stepping to neighbour `k` (NDI/NDJ), or -1 (the search's rules). */
+function neighbour(g: NavGrid, c: number, k: number): number {
+  const cols = g.cols;
+  const cc = g.nodeCell[c]!;
+  const ci = cc % cols;
+  const cj = (cc - ci) / cols;
+  const ni = ci + NDI[k]!;
+  const nj = cj + NDJ[k]!;
+  if (ni < 0 || nj < 0 || ni >= cols || nj >= g.rows) return -1;
+  // No squeezing diagonally past a blocked node (or a drop): both straight neighbours it passes must be walkable.
+  if (k >= 4 && (!walkableStep(g, c, nj * cols + ci) || !walkableStep(g, c, cj * cols + ni))) return -1;
+  const n = stepNode(g, c, nj * cols + ni);
+  return n >= 0 && g.walkable[n] === 1 ? n : -1;
+}
+
+function walkableStep(g: NavGrid, c: number, cell: number): boolean {
+  const n = stepNode(g, c, cell);
+  return n >= 0 && g.walkable[n] === 1;
+}
+
+/**
+ * String-pulls the node route `nodes` (start first) into straight legs from `start`, written into `out` as findPath
+ * describes, ending exactly on `goal` when it is walkable and in a straight line on foot from the last leg.
+ */
+export function pullRoute(g: NavGrid, nodes: readonly number[], start: Vec3, goal: Vec3, out: Vec3[], legProbe: number): void {
+  const a = nodes[0]!;
+  const b = nodes[nodes.length - 1]!;
+  let n = 0;
+  // From the current anchor, jump to the furthest node still in a clear straight line on foot.
   let ax = start.x;
   let ay = start.y;
   let az = start.z;
@@ -542,7 +676,6 @@ export function findPath(g: NavGrid, s: NavSearch, start: Vec3, goal: Vec3, snap
     end.y = g.floorY[goalNode]!;
     end.z = goal.z;
   }
-  return true;
 }
 
 /**
@@ -564,26 +697,54 @@ function emitNode(g: NavGrid, out: Vec3[], n: number, k: number): number {
   return n + 1;
 }
 
-/** 8-neighbour A* over nodes without corner cutting (octile heuristic). Fills s.from; returns false if `b` is unreachable. */
-function astar(g: NavGrid, s: NavSearch, a: number, b: number): boolean {
-  const gen = ++s.generation;
+/** Starts a new search generation in `s` towards node `goal` (-1: no goal, every reachable node, no heuristic). */
+function openSearch(s: NavSearch, goal: number): void {
+  s.generation++;
+  s.size = 0;
+  s.startNode = -1;
+  s.goalNode = goal;
+}
+
+/** Adds node `a` to the open search as a start, at distance 0. */
+function pushStart(s: NavSearch, a: number): void {
+  if (s.startNode < 0) s.startNode = a;
+  if (s.stamp[a] === s.generation) return;
+  s.stamp[a] = s.generation;
+  s.g[a] = 0;
+  s.from[a] = a;
+  if (s.size >= s.heap.length) growHeap(s, s.size);
+  // A start's f is its heuristic: with one start (a route) that's the heap's only entry, with several (a distance
+  // field, no goal) all are 0, so pushing to the end keeps the heap ordered either way.
+  s.heap[s.size] = a;
+  s.heapF[s.size] = 0;
+  s.size++;
+}
+
+/**
+ * 8-neighbour A* over nodes without corner cutting (octile heuristic towards s.goalNode; none and run to the end when
+ * it is -1), carrying on the open search in `s` for at most `budget` expansions. Fills s.g and s.from.
+ */
+function expand(g: NavGrid, s: NavSearch, budget: number): SearchStep {
+  const gen = s.generation;
   const cols = g.cols;
   const rows = g.rows;
   const walk = g.walkable;
   let heap = s.heap;
   let heapF = s.heapF;
-  const bc = g.nodeCell[b]!;
+  const b = s.goalNode;
+  const bc = b >= 0 ? g.nodeCell[b]! : 0;
   const bi = bc % cols;
   const bj = (bc - bi) / cols;
-  let size = 0;
+  const h = b >= 0 ? 1 : 0;
+  let size = s.size;
+  let spent = 0;
 
-  s.stamp[a] = gen;
-  s.g[a] = 0;
-  s.from[a] = a;
-  heap[0] = a;
-  heapF[0] = 0;
-  size = 1;
   while (size > 0) {
+    if (spent >= budget) {
+      s.size = size;
+      s.expanded = spent;
+      return 'pending';
+    }
     // Pop the lowest f.
     const c: number = heap[0]!;
     size--;
@@ -606,7 +767,12 @@ function astar(g: NavGrid, s: NavSearch, a: number, b: number): boolean {
     }
     if (s.closed[c] === gen) continue;
     s.closed[c] = gen;
-    if (c === b) return true;
+    spent++;
+    if (c === b) {
+      s.size = 0;
+      s.expanded = spent;
+      return 'found';
+    }
     const cc: number = g.nodeCell[c]!;
     const ci: number = cc % cols;
     const cj: number = (cc - ci) / cols;
@@ -641,7 +807,7 @@ function astar(g: NavGrid, s: NavSearch, a: number, b: number): boolean {
       }
       const di = Math.abs(ni - bi);
       const dj = Math.abs(nj - bj);
-      const f = ng + (di > dj ? di + (SQRT2 - 1) * dj : dj + (SQRT2 - 1) * di);
+      const f = ng + h * (di > dj ? di + (SQRT2 - 1) * dj : dj + (SQRT2 - 1) * di);
       // Push and sift up.
       let i = size++;
       while (i > 0) {
@@ -655,5 +821,7 @@ function astar(g: NavGrid, s: NavSearch, a: number, b: number): boolean {
       heapF[i] = f;
     }
   }
-  return false;
+  s.size = 0;
+  s.expanded = spent;
+  return b >= 0 ? 'none' : 'found';
 }

@@ -3,6 +3,7 @@ import type { PlayerKit } from '../pool/loadoutModel';
 import { factoryParts } from './attachments';
 import { defaultTeammateDifficulty, type Difficulty, DIFFICULTIES } from './bots';
 import type { Tagged } from './content';
+import { homeTeamCap } from './extraction';
 import type { Switch } from './controls';
 import { BOT_GLOW_BBS } from './glowBBs';
 import { defaultScheme } from './schemes';
@@ -378,9 +379,9 @@ function kitNotes(m: MatchRules): string[] {
  * New game's Match button in Extraction (M43): the squad against the map's home team, and the run's time, since a run
  * is one long round (the wins and round time picked don't apply), then the switches a run plays (M53, audit UI-01).
  */
-export function runRulesSummary(m: MatchRules, run: { baseOpponents: number; runTime: number }): { value: string; detail: string } {
+export function runRulesSummary(m: MatchRules, run: { baseOpponents: number; runTime: number }, opponents: Difficulty): { value: string; detail: string } {
   return {
-    value: `Squad of ${m.teamSize} · ${run.baseOpponents + m.teamSize} in the home team`,
+    value: `Squad of ${m.teamSize} · ${homeTeamCap(run.baseOpponents, m.teamSize, opponents)} in the home team`,
     detail: [`One ${formatRoundTime(run.runTime)} run. Friendly fire ${m.friendlyFire ? 'on' : 'off'}; ricochets ${m.ricochetsCount ? 'count' : "don't count"}.`, ...kitNotes(m)].join(' '),
   };
 }

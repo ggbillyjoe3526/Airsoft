@@ -1,6 +1,6 @@
 import type { HitConfig } from '../config/hits';
 import type { SpawnPoint } from '../map/mapTypes';
-import { findPath, type NavGrid, type NavSearch } from '../nav/navGrid';
+import { buildDistanceField, descendField, type NavGrid, nearestWalkable, pullRoute } from '../nav/navGrid';
 import type { Character } from './character';
 import type { PlayerCommand } from './commands';
 import { copy } from './vec';
@@ -17,9 +17,33 @@ export interface EliminationContext {
   /** Per end of the map, its dead-zone spots (map data); a character uses its own end's (Character.end). */
   deadZones: readonly (readonly SpawnPoint[])[];
   nav: NavGrid;
-  navSearch: NavSearch;
+  /**
+   * Per end, the walking distance from every nav node to its dead zone (buildDistanceField, audit SIM-01): a walk-off
+   * route walks down it, so a hit never runs a route search.
+   */
+  deadZoneFields: readonly Float32Array[];
   /** Route ends snap to the nearest walkable cell within this distance. */
   snap: number;
+  /** Reused node list of the route being planned. */
+  nodes: number[];
+}
+
+/**
+ * The context eliminations need, with each end's dead-zone distance field built now (when a match is set up), unless
+ * `fields` already holds them for these spots on this grid.
+ */
+export function createEliminationContext(
+  deadZones: readonly (readonly SpawnPoint[])[],
+  nav: NavGrid,
+  snap: number,
+  fields: readonly Float32Array[] = deadZoneFields(deadZones, nav, snap),
+): EliminationContext {
+  return { deadZones, nav, deadZoneFields: fields, snap, nodes: [] };
+}
+
+/** Per end, the walking distance from every node of `nav` to that end's dead-zone spots (buildDistanceField). */
+export function deadZoneFields(deadZones: readonly (readonly SpawnPoint[])[], nav: NavGrid, snap: number): Float32Array[] {
+  return deadZones.map((spots) => buildDistanceField(nav, spots.map((p) => p.position), snap));
 }
 
 /** Only characters still in play can be hit or shoot. */
@@ -38,8 +62,8 @@ export function isParked(c: Character): boolean {
 
 /**
  * Eliminates `victim` (no-op if already out of play) and picks its dead-zone spot (the next free one for
- * its team, in the order teammates were hit). The route there is searched by `planWalkOffRoutes` over the
- * following ticks, never inside the hit (M27): a route search is the one costly thing a hit could do in a tick.
+ * its team, in the order teammates were hit). The route there is planned by `planWalkOffRoutes` over the
+ * following ticks, never inside the hit (M27).
  */
 export function eliminate(victim: Character, shooterId: number, characters: readonly Character[], ctx: EliminationContext): void {
   if (!isInPlay(victim)) return;
@@ -62,19 +86,28 @@ export function eliminate(victim: Character, shooterId: number, characters: read
 }
 
 /**
- * Searches the walk-off route of at most one victim per tick (the first still waiting, in character order), so two
- * hits in one tick cost one search that tick and one the next. A victim stands calling for `callTime` before it
- * walks, which covers the wait many times over. With no route (the spot is off the grid) it heads straight for the
- * spot, as before. Returns whether a search ran.
+ * Plans the walk-off route of at most one victim per tick (the first still waiting, in character order): a walk down
+ * its end's distance field, smoothed into straight legs, ending on its spot. A victim stands calling for `callTime`
+ * before it walks, which covers the wait many times over. With no route (the spot is off the grid, or out of reach)
+ * it heads straight for the spot, as before. Returns whether a route was planned.
  */
 export function planWalkOffRoutes(characters: readonly Character[], ctx: EliminationContext): boolean {
   for (const c of characters) {
     if (!c.walkOffRoutePending) continue;
     c.walkOffRoutePending = false;
     c.walkOffLeg = 0;
-    if (!findPath(ctx.nav, ctx.navSearch, c.position, c.deadZoneTarget, ctx.snap, c.walkOffRoute)) {
+    const field = ctx.deadZoneFields[c.end];
+    const nodes = ctx.nodes;
+    const p = c.position;
+    const t = c.deadZoneTarget;
+    if (field && descendField(ctx.nav, field, nearestWalkable(ctx.nav, p.x, p.y, p.z, ctx.snap), t.x, t.z, nodes)) {
+      // The field leads to the nearest of the end's spots; this victim's own is the route's last node.
+      const own = nearestWalkable(ctx.nav, t.x, t.y, t.z, ctx.snap);
+      if (own >= 0 && own !== nodes[nodes.length - 1]) nodes.push(own);
+      pullRoute(ctx.nav, nodes, p, t, c.walkOffRoute, 0);
+    } else {
       c.walkOffRoute.length = 0;
-      c.walkOffRoute.push({ x: c.deadZoneTarget.x, y: c.deadZoneTarget.y, z: c.deadZoneTarget.z });
+      c.walkOffRoute.push({ x: t.x, y: t.y, z: t.z });
     }
     return true;
   }

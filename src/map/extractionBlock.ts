@@ -32,6 +32,7 @@ export interface RunPlan {
   opponentStarts: readonly PlanPoint[];
   cases: readonly (readonly [x: number, y: number, z: number, yaw: number, kinds: readonly string[]])[];
   regens: readonly (readonly [x: number, y: number, z: number, yaw: number])[];
+  insertionBerth?: number;
 }
 
 /** How a map puts a plan point on its level: as a point (an exit's centre) and as a spawn (facing `yaw` on the plan). */
@@ -51,5 +52,6 @@ export function placeRun(plan: RunPlan, at: PlanPlacer): ExtractionData {
     cases: plan.cases.map(([x, y, z, yaw, kinds]): CaseSpot => ({ ...at.spawn([x, y, z], yaw), kinds: [...kinds] })),
     regens: plan.regens.map(([x, y, z, yaw]) => at.spawn([x, y, z], yaw)),
     regenDistance: plan.regenDistance,
+    ...(plan.insertionBerth !== undefined ? { insertionBerth: plan.insertionBerth } : {}),
   };
 }
