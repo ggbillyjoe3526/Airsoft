@@ -15,8 +15,9 @@ export const REPLICA_PANEL_HTML = `
             <div class="hud-replica-name"><span></span></div>
             <div class="hud-modes"></div>
           </div>
-          <div class="hud-ammo"><span class="hud-mag"></span><span class="hud-spare"></span></div>
+          <div class="hud-ammo"><span class="hud-mag"></span></div>
         </div>
+        <span class="hud-spare"></span>
         <div class="hud-mags"></div>
         <div class="hud-reload"><div></div></div>
         <div class="hud-status"></div>

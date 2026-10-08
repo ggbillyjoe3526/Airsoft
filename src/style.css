@@ -75,8 +75,8 @@
   --hud-cut-lg: 18px;
   /* The score bar's height at size 1 (ui/hudCss/score.css: its row and the flag strip), for what keeps under it. */
   --sb-height: 92px;
-  /* The minimap's caption line under it (ui/hudCss/minimap.css), for the debug panel below. */
-  --minimap-caption: 26px;
+  /* The minimap's caption panel under it, with the gap above it (ui/hudCss/minimap.css), for the debug panel below. */
+  --minimap-caption: calc(32px * var(--hud-scale, 1));
   --hud-radius: 6px;
   --hud-l2: 0.92;
   --hud-l3: 0.8;
