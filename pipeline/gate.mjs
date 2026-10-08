@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
  * The pipeline's gates (pipeline/README.md): a plain script, no model, that runs the project's checks and writes
- * pipeline/out/gate-report.json with pass / fail per gate and the evidence paths. A failed gate means the task goes
- * back to the worker with this report; the critic runs only on a report where every gate passed.
+ * pipeline/out/gate-report.json with pass / fail per gate and the evidence paths, plus pipeline/out/metrics-row.md, the
+ * attempt row for the task's record (pipeline/records.mjs). A failed gate means the task goes back to the worker with
+ * this report; the critic runs only on a report where every gate passed.
  *
  *   node pipeline/gate.mjs [--task M27[,M28]] [--quick] [--no-smoke] [--perf] [--env container|laptop|ci] [--base origin/main] [--ci]
  *                          [--tests all|fast|slow] [--shard k/n] [--only tests]
@@ -26,11 +27,14 @@ import { fileURLToPath } from 'node:url';
 import { allowedFile, findTaskBlock, parseTaskList, qaAllowedFile, taskIdsFromTitle, tasksVersions } from './scope.mjs';
 import { baselineFileName, baselineLag, baselineLagWarning, budgetFor, judgeRun, runFileName, runName, selectPerfRuns } from './perfMatrix.mjs';
 import { smokeFailures } from './smokeReport.mjs';
+import { metricsRow } from './records.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'pipeline', 'out');
 const ARTIFACTS = join(OUT, 'qa-artifacts');
 const REPORT = join(OUT, 'gate-report.json');
+/** The attempt row for the task's record (docs/records/README.md), filled from this report (token-efficiency item 4). */
+const METRICS_ROW = join(OUT, 'metrics-row.md');
 const TASKS = join(ROOT, 'docs', 'TASKS.md');
 
 
@@ -263,5 +267,6 @@ else if (options.tasks.length === 0) {
 }
 
 writeFileSync(REPORT, `${JSON.stringify(report, null, 2)}\n`);
-console.log(`${report.pass ? 'ALL GATES PASS' : 'GATES FAILED'} · ${relative(ROOT, REPORT)}`);
+writeFileSync(METRICS_ROW, `${metricsRow(report)}\n`);
+console.log(`${report.pass ? 'ALL GATES PASS' : 'GATES FAILED'} · ${relative(ROOT, REPORT)} · attempt row in ${relative(ROOT, METRICS_ROW)}`);
 process.exit(report.pass ? 0 : 1);

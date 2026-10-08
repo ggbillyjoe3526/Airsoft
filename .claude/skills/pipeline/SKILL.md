@@ -19,10 +19,12 @@ frontmatter) at the top of the prompt, the task content last. Tell every worker 
 2. **Build** (CLAUDE.md §8, §9). Run `npm run t` (dots and failures only) as you go, `node pipeline/gate.mjs --quick`
    before QA.
 3. **QA**: spawn `qa` with the task id and the base commit. It commits its tests with the trailer `Agent: qa`.
-4. **Changelog**: spawn `changelog` with the task id, the PR title you intend, a one-paragraph diff summary and the new
-   DECISIONS lines. It writes the `Unreleased` line(s) and the FEATURES line.
+4. **Changelog**: spawn `changelog` with the task id, the PR title you intend, a one-paragraph diff summary and the
+   task's decisions (its record's lines and any new DECISIONS lines). It writes the `Unreleased` line(s) and the
+   FEATURES line.
 5. **Full gate**: `PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium node pipeline/gate.mjs --task <id>` (drop the
-   variable outside a cloud container). About five minutes, plus the perf run when it is required.
+   variable outside a cloud container). About 30 minutes in a cloud container (2026-10-08), plus the perf run when it is
+   required.
    - Any gate `false`: fix from the report's evidence (spawn `triage` on a log longer than about 60 lines first),
      count an attempt in the block's `attempts:` line, go to 2. No critic on a failed gate.
    - `perf` ran: spawn `performance` with the env, so its diff review and ranking are on file. A regression it
@@ -37,8 +39,10 @@ frontmatter) at the top of the prompt, the task content last. Tell every worker 
    checks 1 and 2 passing, accept it (the owner's auto-accept, 2026-10-04) and log every failed check in
    `docs/KNOWN_ISSUES.md`; otherwise stop, keep the best attempt on the branch and reply to the owner with what failed
    and what each attempt tried.
-8. **Record**: the REVIEWS line (`<id> · <attempts> attempts · <score> · <verdict>`), the ROADMAP row's status, a
-   METRICS row per attempt (`docs/METRICS.md`), and delete the task block from `docs/TASKS.md` (no `done` blocks stay
+8. **Record**: write `docs/records/<id>.md` (format in `docs/records/README.md`): the review line, a row per attempt
+   (copy `pipeline/out/metrics-row.md` from each gate run and fill its `?` cells), the task's own decisions and the
+   known issues it left (each also a row in `docs/KNOWN_ISSUES.md`); `node pipeline/records.mjs --check` passes. Mark
+   the task done where `docs/ROADMAP.md` lists it, and delete its block from `docs/TASKS.md` (no `done` blocks stay
    behind; CI's scope gate finds the block in the branch's history). Copy `pipeline/out/gate-report.json`,
    `critic.md` and the triaged summaries to the project's shared files under `pipeline/runs/<id>/attempt-<n>/`.
 9. **Ship**: merge `origin/main` in, push once with the work and the records together (no separate status or records

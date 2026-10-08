@@ -1,4 +1,7 @@
-# Pipeline metrics
+# Pipeline metrics archive: 0.1 Dev builds to 2026-10-08
+
+Moved out of `docs/METRICS.md` in the docs rewrite of 2026-10-08 (token-efficiency plan, item 1). Kept word for word as
+history; the live file holds what is current. Code comments and old records that cite METRICS may point here.
 
 One row per attempt of a task run through the pipeline (`pipeline/README.md`). Gate columns are ✓, ✗ or – (not run),
 with seconds. Worker tokens are the totals the harness reports when a spawned worker finishes, per worker (QA,

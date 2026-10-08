@@ -1,4 +1,7 @@
-# Critic reviews
+# Critic reviews archive: 0.1 Dev builds to 2026-10-08
+
+Moved out of `docs/REVIEWS.md` in the docs rewrite of 2026-10-08 (token-efficiency plan, item 1). Kept word for word as
+history; the live file holds what is current. Code comments and old records that cite REVIEWS may point here.
 
 One line per feature: feature · attempts used · final score · verdict.
 

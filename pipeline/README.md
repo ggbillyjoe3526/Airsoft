@@ -1,8 +1,8 @@
 # The build pipeline
 
-How a task gets built, checked and merged (owner's design, approved 2026-10-04; proposal in the project's shared
-files, `pipeline/pipeline-proposal.md`). Scripts here, agents in `.claude/agents/`, the step list in
-`.claude/skills/pipeline/SKILL.md`, open tasks in `docs/TASKS.md`.
+How a task gets built, checked, recorded and merged (owner's design, approved 2026-10-04). Scripts are here, the
+agents in `.claude/agents/`, the step list in `.claude/skills/pipeline/SKILL.md`, the open tasks in `docs/TASKS.md` and
+each finished task's record in `docs/records/`.
 
 ## Roles
 
@@ -13,7 +13,7 @@ files, `pipeline/pipeline-proposal.md`). Scripts here, agents in `.claude/agents
 | QA | `.claude/agents/qa.md` | Sonnet 5.5 medium | tests only (commit trailer `Agent: qa`; the gate checks) |
 | Performance | `.claude/agents/performance.md` | Sonnet 5.5 medium; Opus 5.5 high when a regression stays unexplained | nothing (writes under `pipeline/out/`) |
 | Triage | `.claude/agents/triage.md` | Haiku 5.5 low | nothing (summaries under `pipeline/out/qa-artifacts/`) |
-| Critic | `.claude/agents/critic.md` | Sonnet 5.5 medium; Opus 5.5 for `tier: core` and near-miss verdicts | nothing (`pipeline/out/critic.md`, a REVIEWS line) |
+| Critic | `.claude/agents/critic.md` | Sonnet 5.5 medium; Opus 5.5 for `tier: core` and near-miss verdicts | nothing (`pipeline/out/critic.md`; its verdict goes in the task's record) |
 | Changelog | `.claude/agents/changelog.md` | Haiku 5.5 low | `CHANGELOG.md`, `docs/FEATURES.md`, `docs/patch-notes/`, README's "New since" |
 
 Tiers: `core` is the simulation, physics, rendering, bots, navigation, audio engine; `ui` is menus, HUD, settings,
@@ -36,6 +36,8 @@ config, asset loading, docs; `trivial` is a one-constant change, a wording fix, 
 8. **Retry**: only the failed checks and evidence go back; four attempts in all, then the owner's auto-accept rule
    (gates green, at least 6/8 with checks 1 and 2 passing, leftovers to KNOWN_ISSUES) or a report to the owner.
 
+Then the thread writes the task's record, `docs/records/<id>.md` (below), and ships the work and the record in one push.
+
 ## `bake-light.mjs`
 
 `node pipeline/bake-light.mjs [map …]` bakes the bounce light of every map that opts in (`MapData.bakedLight`, G6) and
@@ -53,24 +55,27 @@ node pipeline/gate.mjs [--task M27[,M28]] [--quick] [--no-smoke] [--perf] [--env
 |---|---|---|
 | `build` | `build-cached.mjs --mode production --force`: `npm run build` (tsc, Vite, chunk budgets, the `.br`/`.gz` copies; not under `--quick`) | exit 0 |
 | `tests` | `vitest run --reporter=json` (`src/**/*.test.ts` and the pipeline's own `pipeline/**/*.test.mjs`; both projects, `fast` and `slow`) | no failures |
-| `smoke` | `playwright test`: project `chromium` runs `e2e/boot.spec.ts` and `e2e/crash.spec.ts` on the e2e build (`?nolock`, `window.airsoft`); project `release` runs `e2e/release.spec.ts` on `dist/` without test flags, with the real pointer lock. Every test asserts zero console and page errors; a failure prints the test's describe path, project and line and the error's locator, expectation and call-log lines (`smokeReport.mjs`) | no failures |
+| `smoke` | `playwright test`: project `chromium` runs every `e2e/*.spec.ts` but `release.spec.ts` on the e2e build (`?nolock`, `window.airsoft`); project `release` runs `e2e/release.spec.ts` on `dist/` without test flags, with the real pointer lock. Every test asserts zero console and page errors; a failure prints the test's describe path, project and line and the error's locator, expectation and call-log lines (`smokeReport.mjs`) | no failures |
 | `perf` | `perf-run.mjs` once per combination of the perf matrix the diff reaches (`perfMatrix.mjs`; `--perf` runs them all) | for each: every budget line for the env and map within `perf-budget.json`, nothing more than 10 % worse than its own baseline; a baseline more than 20 commits old is a warning, not a failure |
-| `scope` | the diff vs the task's `touches` (`scope.mjs`) | every changed file is in `touches`, a test, under `e2e/` or `docs/`, CHANGELOG or README (`pool.md` and `CLAUDE.md` only when listed); `Agent: qa` commits touch only tests |
+| `scope` | the diff vs the task's `touches` (`scope.mjs`) | every changed file is in `touches`, a test, under `e2e/` or `docs/`, CHANGELOG, README or a `src/` folder's README (`pool.md` and `CLAUDE.md` only when listed); `Agent: qa` commits touch only tests |
 | `changelog` | `CHANGELOG.md` › Unreleased | a line names `**<task>**` (each task, when several) |
 
 `--task` takes one id or several (`FA5,FA9`) for a pull request that carries more than one task; the scope is the union
 of their `touches`. A block the branch has already cleared from `docs/TASKS.md` is looked for in the branch's history
 since the base.
 
-`--quick` is build and tests: about two minutes (the suite 75-90 s; measured 2026-10-04 in the container with other
-work running). Its build leaves out the `.br`/`.gz` copies (owner decision 3 of audit 2, CORE-11: the gate sets
-`AIRSOFT_PRECOMPRESS=0`, which `vite.config.ts` reads), about 9 s of Brotli a build that only the release smoke test
-and a host need; the full gate and CI build with them (the gate sets `AIRSOFT_PRECOMPRESS=1` for its build and smoke
-steps, so a leftover `0` in the shell can't reach them). While working, `npx vitest run --project fast` runs
-every unit test except the headless bot-match guards (project `slow`, `src/ai/depotMatch*.test.ts` and the Pro guards `src/ai/*Match.pro*.test.ts`, `src/ai/proBalance.test.ts`) in about 12 s; the
-gate, CI and `npm test` always run both projects (vite.config.ts, audit CORE-15). The full gate in a cloud container is about five minutes plus the perf run
-when it is required; set `PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium` there. The report is
-`pipeline/out/gate-report.json`; logs and reports under `pipeline/out/qa-artifacts/`; all git-ignored.
+`--quick` is build and tests, both projects: about 20 minutes in a 4-core cloud container (measured 2026-10-08: build 33
+s, the 3,383 tests 21 minutes, most of it the `slow` project's bot-match guards). Its build leaves out the `.br`/`.gz`
+copies (owner decision 3 of audit 2, CORE-11: the gate sets `AIRSOFT_PRECOMPRESS=0`, which `vite.config.ts` reads),
+about 9 s of Brotli a build that only the release smoke test and a host need; the full gate and CI build with them (the
+gate sets `AIRSOFT_PRECOMPRESS=1` for its build and smoke steps, so a leftover `0` in the shell can't reach them). While
+working, `npx vitest run --project fast` runs every unit test except the headless bot-match guards (project `slow`,
+`src/ai/depotMatch*.test.ts` and the Pro guards `src/ai/*Match.pro*.test.ts`, `src/ai/proBalance.test.ts`) in about 2
+minutes (2026-10-08); the gate, CI and `npm test` always run both projects (vite.config.ts, audit CORE-15). The full
+gate in a cloud container is about 30 minutes (2026-10-08: smoke 8 minutes on top of `--quick`) plus the perf run when
+it is required; set `PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium` there. The report is
+`pipeline/out/gate-report.json`, the attempt row for the task's record `pipeline/out/metrics-row.md` (`records.mjs` ›
+`metricsRow`), and the logs and reports are under `pipeline/out/qa-artifacts/`; all git-ignored.
 
 **Builds.** `build-cached.mjs` builds the production bundle (`dist/`) or the e2e bundle (`dist-e2e/`, `--mode e2e`) and
 skips the build when the output is already that of the same source (a hash of `src/` without tests, `public/`,
@@ -182,9 +187,20 @@ How: <a short paragraph>
 Pipeline: attempts <n> · gates <build ✓ tests ✓ smoke ✓ perf ✓/–> · critic <score> · <link to the run folder>
 ```
 
-## What `docs/METRICS.md` records
+## The task's record (`docs/records/<id>.md`)
 
-One row per attempt: task, attempt, worker model, each gate's result and seconds, critic score, retry reason, wall
-time, and the token totals the harness reports for each spawned worker (the Agent tool's completion notice carries a
-total per worker). The build thread's own tokens and the coordinator's are not visible to any agent; the owner's
-usage page is the only complete view. Pass rate per tier is what decides whether a tier's model is right.
+One file per task, written by the thread in the records step (`docs/records/README.md` has the format):
+
+- **Review line:** attempts, score out of 8, verdict and the critic's model, in one fixed short line.
+- **Attempts:** one row per attempt: the date, the worker model, each gate's result and seconds, the critic's score,
+  the retry reason, the wall time, and the token totals the harness reports for each spawned worker (the Agent tool's
+  completion notice carries one per worker). The gate writes the date and gate cells (`pipeline/out/metrics-row.md`);
+  the thread fills the rest. The build thread's own tokens show only when its session reports them, and the
+  coordinator's never; the owner's usage page is the only complete view. Pass rate per tier is what decides whether a
+  tier's model is right.
+- **Decisions** the task made for itself, and the **known issues** it left (each also a row in
+  `docs/KNOWN_ISSUES.md`).
+
+`node pipeline/records.mjs` prints the index tables (`--metrics`, `--decisions`, `--issues`; `--check` checks the
+format, as the fast test suite does). Rows before 2026-10-08 are in `docs/archive/0.1-dev/METRICS.md` and
+`REVIEWS.md`.

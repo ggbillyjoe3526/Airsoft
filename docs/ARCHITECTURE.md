@@ -1,5 +1,8 @@
 # Architecture
 
+How the code is laid out and the contracts a task must not break. Each `src/` folder has a `README.md` with its files,
+tuning and tests: read the folder's README before grepping across `src/`.
+
 ## Layers
 
 ```
@@ -12,424 +15,236 @@ ai (bots) ─► PlayerCommand ┤   (ai/ and walk-offs use nav/: a walkability 
           render (Three.js) · audio (Web Audio) · ui (DOM HUD)
 ```
 
-- **sim/**: all gameplay rules. Plain data (`GameState`, `Character`, the BB pool), no Three.js, no DOM, no `Math.random`.
-  Each tick: move characters, handle replicas (`armament.ts`: fire, switch, reload by magazine swap; spawns BBs), then fly BBs
-  (`ballistics.ts` flight model, M30: gravity, drag by Reynolds number and Magnus lift from the hop-up's decaying backspin, all against the airflow, one midpoint step a tick; `air.ts` the air's density, viscosity and drag table; `wind.ts` the match's breeze from its seed, into `GameState.wind` each tick; replicas are rated in joules and BB weight, `bbs.ts` collision with the level via the `WorldQuery` ray cast and with
-  characters via `hitbox.ts` capsules; `ricochet.ts` bounces a BB off a hard surface, using the normal and material
-  `WorldQuery.raycastSurface` reports, and a ricochet only knocks someone out if `HitConfig.ricochetsCount`), then match flow (`round.ts`: the match mode, round clock, wipe-out or time-out, score, first to
-`winsNeeded`, `restartMatch(mode)`; in Attack / Defend also who attacks (swapping at half-time) and the pole, stepped by
-`flag.ts`: attackers in play at the pole raise the flag, defenders pull it down, both hold it still; a raised flag
-ends the round). A hit character is eliminated
-  (`elimination.ts`: alive → calling → walkingOff → out) and from then on follows a built-in command instead of its
-  controller's, can't fire and can't be hit. Anything presentation needs
-  to react to is pushed to `state.events` (shots, impacts, reloads), cleared every tick.
-  Advances only via `stepSimulation(state, commands, ctx, dt)`. Randomness comes from the seedable `state.rng`.
-- **Commands**: every character (the player and the bots) is driven by one `PlayerCommand` per tick,
-  passed to the sim in a Map keyed by character id.
-  View angles are absolute, so a lost or duplicated command can't accumulate drift.
-- **physics/**: `PhysicsWorld` implements the sim's `CharacterMover` interface (Rapier kinematic character
-  controller). Characters collide only with level geometry, never each other. Level blocks collide as
-  closed triangle meshes to avoid a Rapier capsule-vs-cuboid bug. Standing characters move horizontally,
-  then `probeGround` (a downward sphere cast) rests them 0.04 m above the floor. Its static ray casts (`raycastStatic`,
-  `raycastSurface`) are answered by `sim/levelRay.ts` (FA12): a slab test against the axis-aligned blocks and ramp wedges
-  through a 1 m column grid, allocation-free, held to Rapier's answer by `physics/levelRay.rapier.test.ts`.
-  The sim returns anything below `killY` to its spawn.
-- **nav/**: `navGrid.ts` builds a 0.2 m walkability grid from map blocks (clearance = body radius + margin) and finds
-  routes (8-neighbour A*, string-pulled into straight legs). The grid is layered (M34b): each cell holds one node per
-  floor over it (the floor and ramp tops at its centre, and a terrain's ground (M33c), with body height clear above), stored flat (`cellStart`,
-  `nodeCell`, `walkable`, `floorY`). Blocks are judged per node against its floor, neighbouring nodes connect only if
-  their floors differ by at most `maxStep` (0.15 m), drops get the same clearance as walls on the floor they edge, and
-  waypoints carry the floor height. Every query takes a height (`nodeAt`, `floorAt`, `isWalkableAt`,
-  `nearestWalkable`, `clearLine`, `dropOnLine`): it picks the highest floor at most `NODE_PICK_ABOVE` above that
-  height, so a character on a balcony and one in the hall under it get different answers. A map with one floor per
-  cell builds the same grid as before. `dropOnLine` tells bots' off-route steps (combat
-  sidesteps, the last step to a lean spot) where a floor ends, so they never walk off an open edge. Pure; used by bots
-  and by the sim for walk-offs.
-- **ai/**: bots. `BotController` runs before each tick (fills every bot's `PlayerCommand`, rations route searches to one
-  per tick) and after it (bots hear shots, near misses, hit calls and footsteps from `state.events`). `bot.ts` holds a bot's state
-  (plain data, including one contact record per enemy seen); `botBrain.ts` is its per-tick decision and mode choice
-  (advance along a lane → fight → cover → search), calling `botSenses.ts` (what it sees: target choice, contacts and
-  reaction), `botMovement.ts` (routes, jittered lane points, waiting for the team, hunting, strafing) and `botCombat.ts` (aim, bursts,
-  reloads). In cover a bot ducks; at crouch-high cover it stands up to look, and at a wall corner it leans out (`cover.lean`), then fights from the spot (`fromCover`) before
-  ducking (leaning back) again. `cover.ts` also tries the spot behind each low block (`lowCoverBlocks`) and just round each outline corner of each full-height block (`tallCoverBlocks`) as cover; a fresh contact at
-  range sends a bot to close cover it can peek from first (a narrowed `CoverSearch`). Each round the controller deals each team's bots onto lanes by a plan (`teamPlan.ts`: split, pair or stack). These build on
-  `perception.ts` (view cone + static ray casts), `aim.ts` (turn rate, settling aim error, hasty first aim, tracking error)
-  and `cover.ts` (random nearby spots hidden from the threat). Tuning is shared behaviour (`BotWorld.cfg`) + one difficulty's
-  skill per bot (`Bot.skill`; config/bots.ts), fixed for a match: the session builds the controller with the levels picked
-  for each team on New game (`BotControllerOptions.teamCfg`: one `BotConfig` per team).
-  Bots read game state, never write it; their randomness is seeded per bot. In Attack / Defend (`BotWorld.round`, `flagRole`
-  / `wantsFlag` in `bot.ts`) defenders walk only the first one or two points of their lane and hold there, chase
-  noises only near the pole, and the two nearest it run to the pole (mode `flag`) once the flag is off the bottom; attackers go to
-  the pole once they have walked their lane to midfield, crouch by it and stay. Nobody hunts.
-  In Extraction (M46, `extractionRoles.ts`: `RunRoles`, made by the controller each run) the home team's bots take
-  roles (`Bot.role`): guards hold a post hidden near a case, facing its approach (`Bot.post`, `postYaw`; `holdYaw`
-  in `bot.ts`) and seeing it, leaning out at a corner of full cover (M55: `postWatch`, `postLean`, `holdLean`), on a
-  leash; patrols walk in pairs, a lead and a follower, round the shut cases away from the insertion
-  (`Bot.patrol`); from a share of the run on (`BotSkill.huntersFrom`) patrols turn hunters that push to the team's
-  freshest news of the squad (`BotWorld.squadNews`). A bot back in a wave fills an empty guard post, hunts, or joins a
-  patrol. The squad's bot teammates cover outwards while their leader opens a case (`squadOrders.ts`).
-  Squad orders (M22, `squadOrders.ts`, `config/squad.ts`): `BotController.giveOrder` hands Follow me, Hold here or Regroup
-  from a player to its bot teammates; between fights an ordered bot is in mode `order` (before the pole, noises and its
-  lane), and `orderOf` tells the HUD's squad line (`ui/squadOrderLine.ts`) what is in force. The order wheel (M23):
-  `PlayerInput` owns a `WheelPointer` (`input/orderWheel.ts`) that takes the mouse while the wheel key is held, and
-  hands the pick to `takeOrder` like an order key; `ui/orderWheel.ts` draws it. The minimap (M23, `ui/minimap.ts`)
-  draws the map's blocks once per match on a canvas (one per storey on a map with `storeys`, M34c: cut away a body's
-  height over that floor, what lies below shaded; the frame shows the storey of whoever's eyes the camera is at, and
-  teammates on another storey carry an up or down arrow) and each frame the teammates and `HeardPlayers`
-  (`ui/minimapView.ts`), fed by the same heard sounds as the sound cues. Hearing (`hear`) casts the
-  same wall rays as the audio's muffling (`sim/soundPath.ts`): through walls a bot hears at `wallHearing` of the range.
-- **core/fixedStepper**: accumulator that turns variable frame time into fixed ticks (max `SIM.maxTicksPerFrame`, 10, catch-up ticks per frame; 5 before FA1, audit SIM-14). Consequence (audit L-34): at 60 ticks/s, 10 ticks cover 167 ms, so below about 6 frames/s the rest of each frame's time is dropped and the whole game (round clock, reloads, BB flight, bots) runs in slow motion rather than spiralling into ever longer catch-up frames (frame time is also capped at `SIM.maxFrameDt`, 0.25 s). Only the debug overlay's "sim ticks/s" shows it; a browser drawing in software starts on Low to stay above it (M-02).
-- **core/crashReport** and **ui/crashScreen** (FA1, audit CORE-04/CORE-28): an error in the game loop or at start-up stops the game for good and shows a pane with a copyable report (seed, map, mode, tick, GPU, settings, stack); Dev › Diagnostics copies the same fields on demand.
-- **core/seed**: the game's seed (a fresh one each page load, or `?seed=N`) and the exact 32-bit derivation of the
-  streams made from it (the bots' plans, each bot).
-- **render/**: reads `GameState` and interpolates between `prevPosition` and `position` using the stepper alpha.
-  Quality (`config/render.ts`): a preset (`QUALITY`) or the player's Custom mix (`resolveQuality` over High, one row
-  per `QualitySettings` field in `config/graphics.ts`, the Graphics tab in `ui/graphicsSettings.ts`), picked on Settings
-  → Graphics and saved, `?quality=` for a visit, or else the GPU's preset (`gpuCheck.ts` `probeGpu`/`gpuTier`: Low in
-  software, Medium on integrated graphics, High on a discrete card), which steps down by itself on slow frames
-  (`qualityStepDown.ts`, never saved). It sets the render scale and DPI cap (`effectivePixelRatio`), antialiasing,
-  shadows, the figures' shading, surface relief, texture size and filtering, dust, the replica's sheen and, from Medium
-  up, the post stack (`render/post/`, G5: `postPlan` picks ambient occlusion, reflections, light shafts, temporal
-  smoothing, bloom and the lens finish per preset, and `PostHost` makes, sizes and frees the stack for the renderer; Low
-  builds none; the viewmodel is drawn after it, on the canvas):
-  `Game.changeQuality` applies new settings at once through `Renderer.setQuality` (a new WebGL context on a new canvas
-  when antialiasing changes; the pointer lock is on the container, so it survives) and `MatchSession.setQuality` (the
-  daylight, `restyleMap`, the figures and `CombatPresentation.setQuality`). The frame-rate cap
-  (`core/framePacer.ts`) skips draws, never ticks. The art pass (M14) is procedural:
-  `lighting.ts` (sun and sky fill; on High the sun's shadow map follows the view, `Daylight.follow` each frame, moved
-  in whole texels, normal bias in texels) adds `atmosphere.ts` (the sky dome, the tree ring at the Trees setting, the
-  clouds and sun disc; the dome is drawn after the opaque field so only sky pixels shade it; the renderer's fog matches
-  the horizon); `proceduralTextures.ts` draws the surface textures, owned by the `Renderer` and drawn and uploaded in
-  the title screen's idle time (`Renderer.warmUp`), with normal maps worked out from them on demand
-  (`surfaceNormals.ts`). The visual overhaul (FA7, `docs/ART.md`) adds the sky-derived environment map
-  (`replicaSheen.ts`: the dome's own colours over a concrete disc, prefiltered once per context and per
-  `EnvironmentLook` passed to `Renderer.setEnvironmentLook`, freed while off; the `Renderer` sets it as `scene.environment` with Environment lighting, and the map's and trees' Lambert materials opt
-  out, `surfaceMaterials.ts`) and the tone mapping choice (`Renderer.setToneMapping`). Night lighting (M33f): a map
-  names its lighting presets in its data (`MapData.lighting`, absent means day; `config/render.ts` `LIGHTING_PRESETS`),
-  `lightingPreset.ts` resolves one (`resolveLighting`, the key light turned to the map's `moonOver`). A map listing two
-  presets offers Day | Night on its card among the Play screen's maps (M34d, `map/lightingChoice.ts`, saved as
-  `lighting.<map id>`): `mapUnderLighting` puts the pick first and sets `night` from it, so the same path, the bots'
-  night sight and glowing BBs follow it (the same object for the same map and pick, so the kept meshes are taken back, M63). Every session
-  passes it to `Renderer.setLighting` (haze, background, exposure, environment) and `addLighting` (key light, fill, sky,
-  clouds), and `lightPools.ts` draws the map's light pools (`MapData.lights`) under a night preset only (M34e): one glow
-  mesh, one additive ground mesh and, on Medium and High, a fixed number of point lights on the pools nearest the eye
-  (`QualitySettings.poolLights`). `mapSigns.ts` draws a map's neon signs and lit windows (`MapData.signs`, M34e) as one
-  mesh of flat panels: unlit and self-lit by Night, Lambert (painted boards, dark glass) by Day. The city look (M34f) is map data too: a block's `finish` (plaster, cladding, tiles, asphalt, paving) picks its texture and `paint` its colour, a finished floor raised over a storey gets a plaster ceiling under it, the six city prop kinds (`cabinet`, `vending`, `stall`, `planter`, `booth`, `van`) are built by `cityProps.ts` inside their boxes with their screens and windows added to the signs (`mapSignsOf`), a map's `decor` blocks are drawn as blocks are but play never reads them (Neon Heights' road on its street slab), and `paint` signs facing `+y` are flat ground markings drawn as a second, always-lit-by-the-scene mesh (`map-paint`). The city's textures (`cityTextures.ts`) are drawn only for a map that uses them. The woodland look
-  (M33i) is map data too: `natureShapes.ts` draws `tree`, `log` and `boulder` blocks as trunks, log courses and
-  faceted stones in the merged meshes (inside their boxes, no gap over 8 cm); `canopyMeshes.ts` hangs a crown over
-  every `tree` block; `terrainMeshes.ts` paints the ground from `MapData.ground`'s grid; `lightFixtures.ts` (built by
-  `lightPools.ts`) gives `MapLight.kind` fires and lanterns their stones, logs, flickering flames (vertex shader, one
-  shared clock) and embers; `nightSky.ts` (from `atmosphere.ts`) draws the moon and stars a preset's `nightSky` asks
-  for. The woods' textures are drawn only for a map that uses them (`mapMeshes.texturesFor`). The bots read the dark
-  from `map/nightSight.ts`: a pool lights only the floor under it, and an unlit spot with a floor or roof overhead is
-  indoors in the dark (`NIGHT_SIGHT.indoor`, M34e). `mapMeshes.ts` turns each block
-  into pieces (container frames, wall copings, pallets, all inside the block's bounds) merged per texture by
-  `cuboidMesh.ts`, with grime shading near the ground; with Map detail the boxes are bevelled with a lighter edge,
-  tiled, shaded by baked vertex occlusion (`vertexOcclusion.ts`) and ground noise, the props get extra pieces, the signs
-  are one alpha-tested mesh (`mapDecals.ts`), and the shadow map draws each mesh's plain boxes from a second index range
-  of the same geometry. G6 (materials and baked light): one mesh per texture, its shadow casters first, so the shadow
-  map draws only them (an index range); the precast walls, rubble gabions and worn paint are pure texel drawings
-  (`textureLibrary.ts`, `texelNoise.ts`; their wear in `config/weathering.ts`); with Weathering the surfaces' shaders
-  add world-space grime, streaks and rust (`surfaceShader.ts`, one program per variant by `customProgramCacheKey`), and
-  the signs' mesh, now blended, carries stains on the floors (never under a block). Baked bounce light: a map that opts
-  in (`MapData.bakedLight`) ships a probe file (`map/bakes/`, written offline by `pipeline/bake-light.mjs` from
-  `lightBake.ts`: voxelised pieces, rays from a probe grid; `probeGrid.ts` reads and samples it), loaded as the game
-  starts (`bakedLight.ts`); Medium and High read it per pixel from a 3D texture (`surfaceShader.ts`), Low bakes it into
-  the map's vertex colours (no shader, no draw call), and the figures read the probes round them each frame on the CPU
-  (`CharacterRenderer.setBakedLight`: colour and emissive). `contactShadows.ts` lays a soft disc under every figure on every preset (one instanced draw).
-  Effects are pooled: `impactPuffs.ts` (impact dust tinted by material, hit puffs, a gas pistol's puffs; soft dots from
-  `softDot.ts`), `bbRenderer.ts` (balls and camera-facing streak quads of a fixed on-screen width) and `dustMotes.ts`
-  (faded out near the camera, size-capped in device pixels times the pixel ratio, hidden with Reduced motion); a pool
-  with nothing in flight uploads nothing.
-  G8 (set dressing, `MapData.dressing`, look only): `mapDressing.ts` places it from the seed (pure); its marks join
-  the decal mesh (`dressingAtlas.ts`, atlas 1024 × 1536), junk and glow strips and the puddles are two meshes
-  (`dressingMeshes.ts`), the skyline joins the tree ring (`skyline.ts`), and `dressingEffects.ts` pools the chimney
-  smoke (`smokePlumes.ts`) and the dust feet kick up; play reads only `blocks`, so physics, nav, cover and sight never see it.
-  The debug overlay shows the quality in force, pixel ratio, sim / draw / GPU milliseconds (`gpuTimer.ts`), the
-  multisampling granted, draw calls and GPU object counts; Show FPS keeps its first line on screen. `Renderer.setFov` applies the
-  Field of view setting (horizontal degrees on 16:9) at once; an optic's zoom narrows whatever is set.
-  `Renderer.setRetro` (M42, Dev › Retro pixels) draws the field and the held replica into a small half-float target
-  (`retroFilter.ts`, a texel per retro pixel) and shows it through one pass that tone maps, crushes colours to a few levels
-  with a 4×4 Bayer dither and samples with no smoothing; the page's HUD and menus are untouched, and `BBRenderer` keeps
-  balls and streaks at least `RETRO.bbMinPixels` / `trailMinPixels` retro pixels wide. Off under the perf script.
-  The local camera uses the latest input angles directly, so aim is never a tick behind.
-- **input/**: `Keyboard` and `PointerLock` collect raw input (mouse buttons go into the keyboard as binding codes, `Mouse0` …, so every action binds to a key or a button); `PlayerInput` latches one-shot actions (jump, reload, switch, trigger clicks) until a tick consumes them, and runs the hold or toggle modes of crouch, aim and sprint. `sensitivity.ts` converts the sensitivity to cm/360.
-- **ui/**: DOM overlays (the menus in `ui/menus/`, debug overlay, ammo HUD), the on-screen sound cue ring `ui/soundCues.ts`, fed by
-  `MatchPresentation` from the tick's events). Team colours (M18b) are a picked set (`config/teams.ts`): the 3D figures,
-  flag and armband take its colours at Play, and the HUD reads `--team-0` / `--team-1`, which `Game.play` sets on the
-  container. The `Renderer` reports a lost and restored graphics context (`onContextChange`) and whether it draws in
-  software (`render/gpuCheck.ts`); `Game` pauses on either a lost context or a hidden tab.
-- **render/combatPresentation.ts**: after each tick consumes `state.events` (puffs, viewmodel kick, sound);
-  each frame draws BBs (instanced, interpolated), puffs, the held replica (second render pass) and the HUD.
-- **audio/** (reworked in M13): every effect is a recipe of layers in `config/sounds.ts` (filtered noise, gliding
-  tones, struck resonances), rendered by the pure `audio/dsp.ts` into a few variants each and played back from
-  buffers. The `Game` keeps one `AudioEngine` (`audio/audioEngine.ts`) for the page: the audio context (made suspended
-  at start, running only while a match is played), the volume buses and every sound's buffers, rendered a cue at a
-  time in the title screen's spare time. Each match's `Sfx` builds only its own graph on it and disconnects it when
-  the match goes. A replica's shots follow its power source (`ReplicaConfig.power`: electric, gas;
-  spring is ready for the v0.3 armoury); an AEG winds its motor up on a fresh trigger pull and down after the last
-  shot (`audio/motor.ts`). `Sfx` keeps one channel per other character (an HRTF panner that follows them, then a
-  low-pass and gain muffling them by how much level geometry blocks two rays from the listener, `audio/occlusion.ts`);
-  one-off world sounds (BB impacts, the flag's rope) get a panner of their own, disconnected when they end. Footsteps
-  sound by the surface underfoot (`MapBlock.surface`), BB impacts by the block they hit (`audio/soundMaterials.ts`),
-  and crouching, standing and leaning rustle (`audio/foley.ts`, presentation only: bots hear what they did before).
-  Buses: master, effects (in-world, with the field's echo) and interface (hit tick, hit marker, whistle, dry), set
-  by the Settings → Audio sliders (`audio/audioMix.ts`, saved in the settings store). Since FA6 the limiter and the
-  ducking (your own hit, the whistles) sit on effects only; interface goes straight to master. Sounds render at
-  `AUDIO.renderRate` whatever the device's rate; one-off sounds beyond `maxDistance` aren't played; while you're out
-  the world is muffled; a seeded outdoor bed and birds (`audio/ambience.ts`) play into the world. Since M33j a match's
-  `Soundscape` (`audio/soundscape.ts`, pure: from the map's data and the lighting preset's night flag, set through
-  `Sfx.setScene` by `CombatPresentation.setLighting`) picks the field's ambience by day or night (`config/audio.ts`
-  AMBIENCES: beds, calls, never birds at night), the camp fires that crackle, and the ground grid footsteps on terrain
-  read after blocks (`map/groundSurfaces.ts`, the terrain's own). Cues and loops only some maps play (`MAP_CUE_SEEDS`,
-  `AMBIENT_LOOPS`) are rendered each from its own seed in New game's spare time once such a field is picked
-  (`AudioEngine.prefetch`, M65; a new pick lets go of what no match has played), and `AudioEngine.prepare` finishes
-  whatever is left as the match loads (the build's `sound` phase); the title screen's cues keep their one shared
-  stream and their samples (pinned in `audio/woodlandSound.test.ts`). M34g adds
-  the `city` ambience (traffic and drones with a shop chime by day; traffic and a neon `hum` loop, `renderHum`, with
-  arcade bleeps by night), Neon Heights' `MapData.ambience`; a field's own sounds stay within about 7 MB, and every
-  map sound a page may keep within 12 MB. Since M69 each ambience names its echo (`Ambience.reverb`: the yard's
-  `AUDIO.reverb`, the woods' and the city's own), rendered at the context's rate with the field's other sounds, and a
-  cue's buffer ends where it falls under -60 dB of its peak (`SoundRecipe.variants` sets a cue's own variant count).
-- **sim/lean.ts**: leaning (hold Q / E). One geometry: the upper body tilts about a hip pivot (`hits.lean`), so
-  `leanOffset` moves any point above the hips sideways and a little down. `stepLean` (after movement) eases the lean
-  in and out, drops it in the air and clamps it with sideways rays so the head and shoulders stay clear of walls.
-  The eye and BB origin (`leanedEye`), the hit volume (`hitbox.ts`: body, a head and shoulder sphere and a hips-to-shoulder torso capsule that
-  swing out), the camera (`render/cameraRig.ts`, plus a small roll), the drawn figure (`figureLeanRoll`) and what
-  bots see and aim at (`ai/perception.ts`) all use it. Leaning slows you towards walking pace (quiet from half a lean) and blocks sprinting.
-- **sim/accuracy.ts**: accuracy by stance and movement. `stepAccuracy` (after leaning) keeps `Character.spreadScale`,
-  the multiplier on the replica's spread (`MOVEMENT.accuracy`): steadier crouched, shakier walking, running, sprinting and
-  in the air; it jumps up at once and locks back on within a few ticks once you stop (slower for a moment after a sprint or a landing). The muzzle carries it into `armament.ts`; the HUD crosshair opens to show it.
-- **sim/aiming.ts**: aiming down sights (hold right click). `stepAiming` (before movement) sets `Character.aiming` only
-  with an optic fitted to the replica in hand (`Armament.optics`, fitted per slot by `fitOptic` from the Loadout screen's
-  pick at each round start; `config/optics.ts`), and not while reloading or drawing. Aiming moves you at walking pace
-  (quiet, no sprint) and adds no accuracy. Presentation raises the sight (`render/viewmodel.ts`, the replica's `aimHold`
-  puts the optic on the view's centre line), narrows the view (`Renderer.setZoom`) and swaps the crosshair for the red
-  dot; `input/playerInput.ts` turns at the aiming sensitivity meanwhile. Bots never aim down sights.
-- **sim/footsteps.ts**: after movement, emits `footstep` events every stride while running/sprinting and on hard
-  landings; walking and crouched movement are silent.
-- **render/matchPresentation.ts**: other players (`characterRenderer.ts` + `characterModels.ts`: vertex-coloured
-  figures, G7: masked humans (`figureHuman.ts`) or robots (`figureRobot.ts`) on a shared part builder
-  (`figureParts.ts`, `figureShapes.ts`), coloured from the team colour (`figurePalette.ts`), holding blocky replicas
-  in their team's bot schemes (`figureReplicas.ts`, `figureHands.ts`); who is a robot comes from the match seed and the
-  Robots setting (`figureMix.ts`); six looks by id (`FIGURE.looks`), six merged meshes
-  each on one material per figure, four drawn at once: legs, body, and the rifle, pistol or hit-call arms), hit feedback (`ui/hitFeedback.ts`), the spectator camera used once
-  you're out, round messages (`ui/roundBanner.ts`, worded from your side) and the scoreboard (`ui/scoreboard.ts`:
-  score, clock, who's still in; in Attack / Defend ATK/DEF tags and the flag strip, `ui/flagStatus.ts`). In Attack / Defend
-  also the pole (`flagRenderer.ts`: pole, rippling cloth at the sim's height, ring at the rope's reach) and its
-  screen marker (`screenMarker.ts` projects it, pinned to the screen edge when out of view; `ui/flagMarker.ts`).
-- **Match info (M19):** `stats/matchStats.ts` keeps every player's numbers for the match and the round (hits on
-  opponents, times hit, friendly hits, BBs fired, time in play while live) from each tick's events, in `MatchSession`
-  after every tick; it reads the simulation and never writes it. `ui/statsRows.ts` (pure) turns them into team blocks
-  for `ui/statsTable.ts`, shown over the field by `ui/matchBoard.ts` (Tab held: the match so far; between rounds: the
-  round) and on the summary screen. `MatchPresentation` also feeds the hit feed (`ui/hitFeed.ts`, lines on simulation
-  time) and projects the teammate markers (`ui/teammateMarkers.ts`, through `screenMarker.ts`). `stats/records.ts`
-  keeps the local records under their own browser key (`airsoft.records`); `Game` adds a finished match once
-  (`MatchSession.takeMatchResult`). An Extraction run (M47, `MatchResult.run`) counts as a run and an extraction in its
-  cell and keeps its own bests (best haul, extractions in a row, fastest extraction with a find), apart from the
-  match-win streak; `recordsView` shows them with the mode's column. The crosshair (`ui/crosshair.ts`) is built and styled from Settings → Crosshair
-  (`ui/crosshairSettings.ts`, saved as `crosshair.<part>`); the HUD opens its gap with the spread.
-- **ui/menus/** (M15, M15b; the concept's look since G3): `Menus` shows one screen at a time over one backdrop
-  picture (`chrome.ts`: the top bar, the key hints, the pre-blurred backdrop; no live blur) and reports choices to
-  `game.ts`. Each screen is built the first time it opens and reused. The title screen; the Play screen
-  (`setupScreen.ts`: Map and Mode as inline `ChoiceCards` with a picture each, the match rows inline in `matchPanel.ts`,
-  and a Your match panel whose text `playView.ts` works out); the Loadout (`loadoutScreen.ts`, with `customiseView.ts`'s
-  part tabs); the Armory; Settings (`settingsScreen.ts`: groups with a search, a note on every row; Key bindings reuses
-  `ui/keySettings.ts`); the pause menu, the match summary (`summaryScreen.ts`, M19) and the result. Replica, part and
-  scheme pictures come from the game's one `render/itemPictures.ts` (`menuPictures.ts` shows a placeholder until each
-  arrives); map and mode stills are files in `public/menu/` from `pipeline/map-stills.mjs` (`config/menuArt.ts`).
-  `menuNav.ts` holds where Back goes and which menu opens when play stops (title before the first match, pause during
-  one, the summary and then the result after it); leaving a match
-  (Quit to title screen, Change setup, Title screen) calls `onLeaveMatch`, which unloads it. The placeholder lists and
-  labels are data in `config/menus.ts`; choices are saved in the browser (`savedChoices.ts` reads them back). Map,
-  mode, difficulty and loadout are picked only on New game, with no match loaded, so Play always uses them as they are.
-- **Loadout (M17a):** `config/replicas.ts` `LOADOUT_SLOTS` lists the replicas that fit each slot (primary, secondary);
-  the session's loadout is the player's picks, and every character in the match carries those replicas (bots with
-  factory setups). Each replica has a hop-up dial (`Armament.hopUps`, 0..1; `setHopUps`) that scales its `hopUpMax`
-  lift (`hopUpLift`), and a BB weight (`Armament.bbWeights`, grams from `BB_WEIGHT.choices`; `setBbWeights`) that
-  sets the BB's mass and, through `muzzleEnergy` / `muzzleVelocity`, its speed. Both are kept between rounds; bots keep
-  the factory `hopUpDial` and `bbWeight`. `sim/hopUp.ts` flies a level shot to word the Loadout screen's readout
-  ("on target to about N m") for the picked weight and dial.
-- **Attachments (M17b):** `config/attachments.ts` holds the grips and magazines; a replica says which it takes
-  (`gripMount`, `magazines`). `Armament.parts` (per slot, `fitParts`) and `Armament.handling` (`handlingOf`: magazine
-  size and count, reload, draw, sight raise, shake, rattle) are what the armament, accuracy, footsteps, HUD, viewmodel
-  and bots read instead of the replica's own `magSize` / `mags` / `reloadTime` / `drawTime`. A hi-cap makes quiet moves
-  emit `footstep` events of kind `rattle`. Optics (`config/optics.ts`) carry their zoom, raise time and whether they
-  are a scope (the HUD's eyepiece; the viewmodel hides while looking through one). Parts on the model are named
-  `optic:<id>`, `grip:<id>`, `magazine:<id>` and shown when fitted.
-- **Asset pool (M26a):** `pool.md` at the repository's root is the register of every asset the player can own (replicas,
-  power sources, optics, grips, lasers, magazines; grenades later) and the Armory's numbers (FC earned, Tokens, Shots,
-  rarity tiers and odds, scrap values). It is bundled as text (`?raw`) and read once at start: `pool/poolFile.ts`
-  pulls out its Markdown tables, `pool/pool.ts` turns them into `Asset`s, `RarityTier`s and an `Economy` (with each
-  unreadable row listed by line and left out), and `pool/gamePool.ts` holds the game's `GAME_POOL`. An asset's Key
-  links it to its behaviour in `config/` (`REPLICA_KEYS`, the optic, grip, laser and magazine ids); compatibility is by
-  tags (`fits`). `pool/collection.ts` keeps what the player owns (a count per asset at a tier, `000002@epic`), their FC
-  and Tokens and the Shots' random state under its own browser key (`airsoft.collection`).
-- **Loadout (M26b):** `pool/loadoutModel.ts` `LoadoutModel` is the player's loadout without a DOM: the replica item in
-  each gear slot, what is fitted to each replica (`ReplicaFit`: an owned item or nothing per slot), each replica's BB
-  weight and hop-up, all saved in the settings store and read back against an `Ownership` (the collection; everything,
-  under the M26d Dev setting). `pool/kit.ts` turns a replica item and its fit into a `KitSlot`: the replica as carried
-  (rarity, power source and laser worked into its numbers) and its parts (with a `PartTune` for the optic's, grip's and
-  magazine's tiers, which `handlingOf` multiplies in). `Game` passes `loadout.kit()` to each match and range visit;
-  `MatchSession` gives the player those replicas (`createCharacter(..., kit replicas)`) and bots `LOADOUT`. Every
-  character's `Armament.replicas` is what it carries, and the sim, renderer and HUD read that, never `LOADOUT`.
-  `ui/menus/loadoutScreen.ts` draws the gear column and Customise view; `ui/loadoutChoice.ts` holds its readouts.
-- **Performance numbers (M29):** `stats.md` beside `pool.md` holds every replica's and part's numbers (energy, BB
-  weight, rate of fire, magazines, handling), what each power source adds, the Tier scaling (which stats a tier's
-  Bonus improves, and by what share) and the site's energy limits. `config/statsFile.ts` reads it (pure, by Key or
-  pool ID, every unreadable cell listed by line) and `config/gameStats.ts` holds `GAME_STATS`; `config/replicas.ts`
-  (`withStats`, which also sets `ReplicaConfig.energyLimit`), `attachments.ts`, `optics.ts` and `lasers.ts` lay it over
-  their built-in numbers when they load, so bots and the sim see the file's numbers too. `pool/kit.ts` applies the
-  power stats and tier shares (`KitStats`, injectable for tests) and caps the energy at the limit (`energyCapped`).
-  Barrels and muzzle parts (M29b, `BARRELS` / `MUZZLES` in `config/attachments.ts`) add to the energy and spread in
-  `kitReplica` and to the handling in `handlingOf` (`heardScale`, `muffled`); `sim/armament.ts` `shotHeardScale` is
-  the one place bots (`ai/botController.ts`), the minimap and sound cues read a shot's reach. On Hard,
-  `pool/botKit.ts` rolls each opponent a seeded kit (`randomKit`, `kittedCharacter`; `BOT_LOADOUTS` in config/bots.ts).
-  The muzzle is the boundary: `muzzleEnergy` / `muzzleVelocity` / `bbMass` (config/replicas.ts) are what leaves the
-  barrel; everything after it is `config/ballistics.ts` and `sim/ballistics.ts`. `ui/performanceSheet.ts` builds the
-  Customise screen's Performance sheet (against `LoadoutModel.asItComes`), the gear slots' line and the Armory's
-  tier line.
-- **Armory (M26c):** `pool/armory.ts` holds its rules, pure, over a `Collection`: `matchEarnings` (the FC a finished
-  match pays, from `MatchSession.takeOutcome`; an Extraction run, M47 `MatchOutcome.extraction`, pays the FC it got
-  out with and its hits instead of the match lines, and `grantHaul` adds only its parts), `buyTokens`, `takeShots` (paid in Tokens, then FC; the draws carry on
-  from the collection's saved `sim/rng.ts` state mixed with fresh entropy per Shot, replayable with a fixed one; pity
-  counts kept in the collection, FA10) and `scrapSpares` (one copy kept per asset, its best tier). `stats/settleMatch.ts`
-  pays and records a decided match once (`MatchTakes`); `Game` syncs the collection with storage before changing it
-  (`syncCollection`: another tab's newer revision wins) and saves it (`saveOrReload`: if another tab saved first, the
-  save is reloaded and the screen says the change was not kept); `ui/menus/armoryScreen.ts` is the screen, opened from
-  New game's Armory tile, with `confirmDialog.ts` before big spends.
-- **render/replicaModels.ts + handModels.ts**: first-person replicas (AR-pattern AEG, polymer pistol) and gloved hands (or a robot's, `robotHands.ts` on the same hand skeleton, styled by `replicaArms.ts`, G7) built in code from extruded profiles, capsules and lathe shapes, merged per material; poses are data. `replicaBuilder.ts` holds the materials and the builder, `replicaParts.ts` the fittable parts; `itemPictures.ts` draws the same models off screen for the menus (G2). The viewmodel's scene can reflect a prefiltered room environment (`Viewmodel.setEnvironment`, the replica's sheen).
-- **game.ts**: composition root and main loop: the app that outlives matches (renderer, input, menus, debug overlay)
-  and New game's choices. No map is loaded on the title and New game screens (M15b).
-- **matchSession.ts**: one match on one map (`map/maps.ts` lists the maps): the field's meshes and lighting, physics,
-  navigation, the simulation, the bots, and the combat and match presentation. `Game` builds it on Play and disposes it
-  when the player leaves the match, so the next Play can load another map; Play Again builds a new one with its own seed (`matchFlow.ts` `matchSeed`; audit SIM-08). What Play does (build a match or the range, rebuild the range, reuse what is loaded) is the pure `core/sessionPlan.ts` `nextSessionAction`; the result and pause screens' text is `ui/matchStopText.ts`, through `MatchSession.resultView` / `pauseLine` (FA11b, audit CORE-05). The field's meshes come from `Renderer.mapMeshes` (`render/mapMeshCache.ts`), which keeps the last map's between sessions, so the same map again reuses them (audit CORE-33); the build ends by compiling the scene's shaders (`Renderer.warmShaders`, M63, audit REN-06), so the first frame doesn't. A decided match is recorded and paid once, the frame it is decided, by the pure `stats/settleMatch.ts` (audit CORE-06). Its
-  `MatchSetup` carries New game's Match rules (M20, `config/matchRules.ts`: team size, rounds to win, round time,
-  friendly fire, ricochets), turned into the match's own round and hit rules, and a bot difficulty per team. Since M39
-  it also carries the Rules picker's ruleset (`RULESETS`: one data entry each, laid over the match panel's picks by
-  `playedPicks`) and its switches (win by two and the Elimination time-out in `RoundRules`, the minimap's heard
-  patches, semi only and realcap through `kitUnderRules` / `replicaUnderRules`, the factory kit); a named ruleset's
-  standard match files its records under `<difficulty>.<mode>.<ruleset>`, and custom rules pay at most ×1.5.
-- **rangeSession.ts**: the practice range (M21): `map/range.ts` with the targets of `config/range.ts`, the player alone,
-  no bots and no rounds. `SimServices.practice` makes `stepSimulation` skip the round flow, step the targets
-  (`sim/rangeTargets.ts`: `GameState.targets`, tested by `stepBBs`, which emits `targetHit`) and keep the spare
-  magazines full. `render/rangeTargetsRenderer.ts` draws the plates, figures and distance markers (one instanced mesh per kind
-  of moving part, one merged mesh per material for the rest) and
-  `ui/rangeReadout.ts` the last BB's distance. `Game` holds a `MatchSession` or a `RangeSession`; changing the loadout
-  from the range's pause menu rebuilds the range where you stood.
-  With a tutorial (M16) it also holds a `tutorial/tutorial.ts` `TutorialTracker`, which watches the player and the
-  tick's events against the steps of `config/tutorial.ts`, and a `ui/coachPanel.ts` panel that shows the current step
-  (the range readout takes over once it's finished); `Game` saves `tutorialDone` when it reports the end.
-- **The save (M31), `src/save/`:** every store (the settings object, key bindings, records, the collection; listed in
-  `save/stores.ts`) keeps its own key and module, and writes through `browserStorage()`, which after start-up is the
-  visit's `GuardedStorage` (`save/guardedStorage.ts`): it notices writes (the Save tab's "Last saved"), keeps refused
-  writes in memory for the visit (a full or blocked browser store, warned on the Save tab and the title) and can be
-  frozen (another tab, a newer build's save, a load about to reload). `main.ts` starts it first, then the tab lock
-  (`save/tabLock.ts`, a BroadcastChannel: one tab plays, a second waits behind `ui/otherTabNotice.ts`), then the
-  `SaveManager` (`save/saveManager.ts`: today's restore point, the Undo slot, load, delete), handed to `Game` for
-  Settings → Save (`ui/saveSettings.ts`, `ui/saveDialog.ts`). The file format and migrations are pure, in
-  `save/saveFile.ts`. Stores keep fields they don't know when they save (`save/overStored.ts`).
+- **The simulation is plain data.** `GameState`, `Character` and the BB pool hold no Three.js object and no DOM
+  reference, and no code in `sim/` calls `Math.random`: randomness comes from the seedable `state.rng` (bots have
+  their own seeded streams). The fixed tick, command-driven characters and seeded RNG are kept because they make the
+  simulation deterministic and unit-testable (headless bot matches). There is no multiplayer.
+- **One way in.** The simulation advances only through `stepSimulation(state, commands, ctx, dt)`, fed fixed ticks by
+  `core/fixedStepper.ts`. Every character, the player and each bot, is driven by one `PlayerCommand` per tick, passed
+  in a `Map` keyed by character id. View angles are absolute, so a lost or duplicated command cannot accumulate drift.
+- **Bots are just another controller.** They read game state and never write it, through the same commands as the
+  player. Physics implements the simulation's `CharacterMover` and `WorldQuery`; the simulation never calls Rapier.
+- **Presentation reads, never writes.** After each tick it consumes `state.events` (shots, impacts, reloads and so on;
+  cleared every tick). Render interpolates between `prevPosition` and `position` with the stepper's alpha; the local
+  camera uses the latest input angles, so aim is never a tick behind.
+
+## Module map
+
+A task that adds, renames or moves a file keeps its folder's `README.md` current.
+
+| Folder | What it owns | Key files |
+|---|---|---|
+| `src/` (root) | The app that outlives matches; one match or range session at a time | `main.ts`, `game.ts`, `matchSession.ts`, `rangeSession.ts`, `matchFlow.ts`, `newGamePicks.ts` |
+| `src/sim/` | Gameplay rules, pure, fixed 60 Hz | `simulation.ts`, `state.ts`, `commands.ts`, `armament.ts`, `ballistics.ts`, `round.ts` |
+| `src/ai/` | Bots: senses, decisions, cover, squad orders, Extraction roles | `botController.ts`, `botBrain.ts`, `bot.ts`, `perception.ts`, `cover.ts`, `squadOrders.ts` |
+| `src/nav/` | The layered walkability grid, A* routes, walk-off fields | `navGrid.ts` |
+| `src/physics/` | Rapier: level collision and the character mover | `physicsWorld.ts` |
+| `src/map/` | Map data (blocks, spawns, lanes, flag, Extraction) and map helpers | `mapTypes.ts`, `maps.ts`, `depot.ts`, `woodland.ts`, `neonHeights.ts`, `range.ts` |
+| `src/input/` | Keyboard, pointer lock, key bindings, order wheel; builds the player's command | `playerInput.ts`, `keyBindings.ts`, `keyboard.ts`, `pointerLock.ts` |
+| `src/render/` | Three.js: field meshes, figures, replicas, lighting, effects, post stack, cameras | `renderer.ts`, `matchPresentation.ts`, `combatPresentation.ts`, `mapMeshes.ts`, `characterRenderer.ts`, `viewmodel.ts` |
+| `src/audio/` | Web Audio: synthesised sounds, mix, 3D positioning, ambience | `audioEngine.ts`, `sfx.ts`, `dsp.ts`, `soundBank.ts`, `audioMix.ts` |
+| `src/ui/` | DOM HUD, overlays and settings tabs; the menus in `ui/menus/` | `hud.ts`, `scoreboard.ts`, `minimap.ts`, `debugOverlay.ts`, `menus/menus.ts` |
+| `src/config/` | Every tunable number and data table | `replicas.ts`, `bots.ts`, `hits.ts`, `render.ts`, `controls.ts`, `dev.ts` |
+| `src/core/` | Loop and session plumbing: stepper, seeds, frame pacer, crash report | `fixedStepper.ts`, `seed.ts`, `sessionPlan.ts`, `crashReport.ts`, `framePacer.ts` |
+| `src/pool/` | The asset pool, the Loadout, the Armory economy, Extraction cases | `pool.ts`, `kit.ts`, `loadoutModel.ts`, `armory.ts`, `collection.ts`, `caches.ts` |
+| `src/stats/` | Match stats, local records, settling a finished match | `matchStats.ts`, `records.ts`, `settleMatch.ts` |
+| `src/save/` | The save system: guarded storage, file format, migrations, tab lock | `saveFile.ts`, `stores.ts`, `guardedStorage.ts`, `saveManager.ts`, `tabLock.ts` |
+| `src/settings/` | The saved settings object and the Dev settings' saved values | `storage.ts`, `dev.ts` |
+| `src/tutorial/` | The tutorial tracker | `tutorial.ts` |
+| `src/assets/` | Bundled fonts and the optional character model | `fonts/`, `models/characters/` |
+| `pool.md`, `stats.md` | Hand-edited tables the game and its tests read: assets and economy, replica and part numbers | read by `pool/poolFile.ts`, `config/statsFile.ts` |
+| `public/` | Static files: icon, manifest, menu stills (from `pipeline/map-stills.mjs`) | `menu/` |
+| `pipeline/` | Gates, perf runs, light bakes, build cache, task records: the task pipeline's scripts | `README.md`, `gate.mjs`, `perf-run.mjs`, `records.mjs`, `bake-light.mjs` |
+| `e2e/` | Playwright smoke tests on the `e2e` build; `release.spec.ts` on `dist/` | `boot.spec.ts`, `crash.spec.ts`, `release.spec.ts` |
+| `docs/` | The plan, process, rulings, open issues, playtest guide, task records; history in `archive/` | `ROADMAP.md`, `PROCESS.md`, `DECISIONS.md`, `KNOWN_ISSUES.md`, `TASKS.md`, `records/` |
+| `.claude/` | Pipeline agents and skill, session hooks, shared settings | `agents/`, `skills/pipeline/SKILL.md`, `hooks/` |
+
+The root files in more detail:
+
+- **`main.ts`** starts the save system first (a second tab waits behind a notice), then downloads and starts Rapier
+  behind the loading bar, reads the URL flags, probes the GPU and builds `Game`. An error before the game runs shows the
+  crash pane.
+- **`Game`** (`game.ts`) is the composition root and main loop: the app that outlives matches (renderer, input, menus,
+  debug overlay, audio engine) and New game's picks. No map is loaded on the title and New game screens.
+- **`MatchSession`** (`matchSession.ts`) is one match on one map: the field's meshes and lighting, physics, nav, the
+  simulation, the bots, and the combat and match presentation. `Game` builds it on Play and disposes it when the player
+  leaves; Play Again builds a new one with its own seed (`matchFlow.ts` `matchSeed`). What Play does is the pure
+  `core/sessionPlan.ts`. A decided match is recorded and paid once, the frame it is decided (`stats/settleMatch.ts`).
+  Its `MatchSetup` carries New game's Match rules (`config/matchRules.ts`), a bot difficulty per team and the Rules
+  picker's ruleset (`RULESETS`, laid over the match panel's picks by `playedPicks` in `newGamePicks.ts`).
+- **`RangeSession`** (`rangeSession.ts`) is the practice range: the player alone on `map/range.ts`, no bots and no
+  rounds, with the tutorial. Changing the loadout from its pause menu rebuilds the range where you stood.
 
 ## Map data
 
-Maps are plain data (`map/mapTypes.ts`): axis-aligned blocks with a visual kind (a `ramp` is a wedge sloping up
-along its `rise`; `map/surfaces.ts` gives the walkable height of floors and ramps; walkable surfaces may stack
-when body height is clear between them), spawns and dead-zone spots
-per end of the map (0 west, 1 east), bot lanes from end 0 to end 1, and optionally one flagpole at end 1 (maps
-without one are elimination only) and an Extraction block (M43: insertions, exits, home-team starts, run time and base
-opponents; M44: case spots, each naming the kinds of case it suits; M45: the home team's regen points and how far from the squad they must be; M72: optionally `insertionBerth`, the metres the home team's bots keep from the insertion at the start (Woodland 30); M48: Woodland's and Neon Heights' blocks, each in a file of its own, `map/woodlandExtraction.ts` and `map/neonHeightsExtraction.ts`, placed on the layout through the map's own helpers; `map/playableMode.ts` falls back to Elimination on a map without the data a mode needs). Teams don't own an end: `round.ts` (`teamEnd`, `placeTeams`) puts each team
-at an end every round start (in Attack / Defend the attackers start at end 0; in Elimination Blue starts at
-`RoundRules.eliminationFirstEnd`, the east on Depot)
-and swaps them at half-time, and `Character.end` says where a character started, for its dead zone and its bot's
-lane direction. Depot is written in plan coordinates (north = +z, as on the layout sketch) and turned into world
-coordinates (north = -z in three.js) in `map/depot.ts`. The same data builds Rapier colliders and merged Three.js meshes
-(one draw call per surface texture).
+Maps are plain data (`map/mapTypes.ts`). One source builds both the Rapier colliders and the merged Three.js meshes
+(one draw call per surface texture). `map/maps.ts` lists the maps; the dev maps' data is a chunk of its own
+(`map/devMaps.ts`).
 
-## Simulation structure
-
-Multiplayer is not planned. The fixed tick, command-driven characters (bots drive the same commands as
-the player), plain-data state and seeded RNG stay because they make the simulation deterministic and
-unit-testable (headless bot matches in tests).
+- **Blocks.** Axis-aligned boxes with a visual kind. A `ramp` is a wedge sloping up along its `rise`;
+  `map/surfaces.ts` gives the walkable height of floors and ramps. Walkable surfaces may stack when body height is
+  clear between them.
+- **Ends.** Spawns and dead-zone spots per end of the map (0 west, 1 east) and bot lanes from end 0 to end 1.
+  Teams do not own an end: `round.ts` (`teamEnd`, `placeTeams`) puts each team at an end at every round start and
+  swaps them at half-time. In Attack / Defend the attackers start at end 0; in Elimination Blue starts at
+  `RoundRules.eliminationFirstEnd` (the east on Depot). `Character.end` says where a character started, for its dead
+  zone and its bot's lane direction.
+- **Flag.** Optionally one flagpole at end 1. A map without one is Elimination only.
+- **Extraction block.** Optional: insertions, exits, home-team starts, run time and base opponents; case spots (each
+  names the kinds of case it suits); the home team's regen points and how far from the squad they must be; optionally
+  `insertionBerth`, the metres the home team's bots keep from the insertion at the start (Woodland 30). Woodland's and
+  Neon Heights' blocks are files of their own (`map/woodlandExtraction.ts`, `map/neonHeightsExtraction.ts`), placed on
+  the layout through the shared helpers in `map/extractionBlock.ts`. `map/playableMode.ts` falls back to Elimination
+  on a map without the data a mode needs.
+- **Look-only data.** `signs`, `decor`, `dressing` and `bakedLight` are drawn but never read by physics, nav, cover or
+  sight.
+- **Coordinates.** Depot is written in plan coordinates (north = +z, as on the layout sketch) and turned into world
+  coordinates (north = -z in three.js) in `map/depot.ts`.
 
 ## Contracts
 
-The interfaces a task may not change unless its block in `docs/TASKS.md` says so (the pipeline's critic checks,
-`pipeline/README.md`). A contract change is a plan step: the planning thread updates this list in the same pull
-request. Each line names where it lives and what pins it.
+The interfaces a task may not change unless its block in `docs/TASKS.md` says so (the critic's check 2 reads this
+list; `pipeline/README.md`). A contract change is a plan step: the planning thread updates this list in the same pull
+request. Each entry says where the contract lives, what it holds today and what pins it.
 
-- **`PlayerCommand`** (`sim/commands.ts`): one command per character per tick, absolute view angles; the only way
-  input or bots drive the simulation. Since M33h `toggleTorch` switches the weapon light in hand (`sim/torch.ts`).
+- **`PlayerCommand`** (`sim/commands.ts`). One command per character per tick, with absolute view angles; the only way
+  input or bots drive the simulation. `toggleTorch` switches the weapon light in hand (`sim/torch.ts`).
   Pinned by `sim/simulation.test.ts`, `input/playerInput.test.ts`.
-- **`GameState` and `state.events`** (`sim/state.ts`, `sim/events.ts`): plain data, no Three.js or DOM; events are
-  the only channel to presentation and are cleared each tick. Since M43 `RoundState.run` holds an Extraction run
-  (`sim/extraction.ts`: exits, respawns used, the exit count, its outcome), and the events `respawned`, `exitCount`,
-  `exitOpened` and `runWarning` report it. Since M44 the run also holds its cases (placed and filled before it starts by
-  `pool/caches.ts rollRunCases`, carried in `ExtractionContext.cases`), what the runner carries, and the case being
-  opened; `PlayerCommand.use` (held) becomes `Character.using` for a character in play while the round is live, and
-  the events `caseNoise` (bots hear it), `caseOpened` and `caseDropped` report the cases. Since M45 the run counts the
-  home team's waves (`ExtractionContext.waves`: regen points, the interval, the cap and its late extra, and the world
-  query the out-of-sight check casts through; `ExtractionContext.reserveAt`: where the reserve past the cap waits), and
-  the event `returned` reports an opponent back in a wave. Since M55 `ExtractionContext.sight` (optional: the world
-  query and body) lets a case open only in the runner's line of sight; without it cases open by reach alone. Since M46 the run names the squad's team (`RunState.squadTeam`). Since M72 `Character.grace` counts down a squad member's insertion grace (BBs neither hit it nor are hit by it; a BB it stops reports `bbImpact`, no hit). The `torch` event (M33h) reports a weapon light switched on
-  or off. Pinned by `sim/simulation.test.ts`, `sim/extraction.test.ts`, `sim/extractionCases.test.ts`,
+- **`GameState` and `state.events`** (`sim/state.ts`, `sim/events.ts`). Plain data with no Three.js or DOM. Events are
+  the only channel to presentation and are cleared each tick. For Extraction:
+  - `RoundState.run` holds the run (`sim/extraction.ts`): exits, respawns used, the exit count, its outcome, the
+    squad's team (`RunState.squadTeam`), the cases, what the runner carries and the case being opened. The cases are
+    placed and filled before the run starts by `pool/caches.ts rollRunCases` and carried in `ExtractionContext.cases`.
+  - `PlayerCommand.use` (held) becomes `Character.using` for a character in play while the round is live.
+  - `ExtractionContext.waves` counts the home team's waves (regen points, the interval, the cap and its late extra,
+    and the world query the out-of-sight check casts through); `ExtractionContext.reserveAt` is where the reserve
+    past the cap waits.
+  - `ExtractionContext.sight` (optional: the world query and body) lets a case open only in the runner's line of
+    sight; without it cases open by reach alone.
+  - `Character.grace` counts down a squad member's insertion grace: BBs neither hit it nor are hit by it, and a BB it
+    stops reports `bbImpact`, no hit.
+  - Events: `respawned`, `exitCount`, `exitOpened` and `runWarning` report the run; `caseNoise` (bots hear it),
+    `caseOpened` and `caseDropped` report the cases; `returned` reports an opponent back in a wave; `torch` reports a
+    weapon light switched on or off.
+
+  Pinned by `sim/simulation.test.ts`, `sim/extraction.test.ts`, `sim/extractionCases.test.ts`,
   `sim/extractionWaves.test.ts`, `sim/torch.test.ts`.
-- **`stepSimulation(state, commands, ctx, dt)`** (`sim/simulation.ts`): the fixed 60 Hz step and the order of its
-  phases (a parked out-of-play character goes straight to the elimination step, FA1); randomness only from `state.rng`. Pinned by the `sim/*.test.ts` files and the `ai/depotMatch*.test.ts` guards.
-- **`WorldQuery` and `CharacterMover`** (`sim/`, implemented by `physics/physicsWorld.ts`): ray and shape casts and
-  the character controller the simulation sees; the simulation never calls Rapier. Pinned by `physics/physicsWorld.test.ts`.
-- **`MatchSession.advance(dt)` / `draw(dt)` / `afterTick()`** (`matchSession.ts`): simulation first, presentation
-  after; `afterTick` is where stats, the HUD and sound read the tick's events. Pinned by the smoke test.
+- **`stepSimulation(state, commands, ctx, dt)`** (`sim/simulation.ts`). The fixed 60 Hz step and the order of its
+  phases (a parked out-of-play character goes straight to the elimination step); randomness only from `state.rng`.
+  Pinned by the `sim/*.test.ts` files and the `ai/depotMatch*.test.ts` guards.
+- **`WorldQuery` and `CharacterMover`** (`sim/armament.ts`, `sim/movement.ts`; implemented by
+  `physics/physicsWorld.ts`). The ray and shape casts and the character controller the simulation sees; the
+  simulation never calls Rapier. Pinned by `physics/physicsWorld.test.ts`.
+- **`MatchSession.advance(dt)` / `draw(dt)` / `afterTick()`** (`matchSession.ts`). Simulation first, presentation
+  after. `afterTick` (private, run after every tick) is where stats, the HUD and sound read the tick's events;
+  `draw` also takes `boardHeld`. Pinned by the smoke test.
 - **`QualitySettings`, `QUALITY`, `QualityChoice`, `resolveQuality`, `qualityChoiceOf`** (`config/render.ts`, which
-  re-exports them from `config/renderQuality.ts` since G5 split it by concern; import from `config/render.ts`): the
-  fields a preset or the Custom rows may set (every preset sets every field; `QUALITY` is the preset table; a choice is
-  a preset, Low to Ultra (Ultra since G5, never the automatic pick), or `'custom'`, which resolves to High overlaid
-  with the saved rows); `Renderer.setQuality` and
-  `MatchSession.setQuality` apply them at once, antialiasing included. Fields are added, never renamed: a new field
-  takes a value on every preset, a row in `config/graphics.ts` and a `graphics.<field>` store key, with no further
-  contract change (G6 added `bakedLight` and `weathering`). Pinned by `config/render.test.ts`, `config/graphics.test.ts`,
-  `render/renderer.test.ts`.
-- **The settings store keys** (`settings/storage.ts`, `settings/dev.ts`): saved under `airsoft.*`, versioned;
-  renaming a key needs a migration: one `case` in `migrate` (FA5; the per-setting keys of the first builds are its
-  "version 0"), and an object from a newer version is never read or overwritten. Fields are only ever added: `quality`
-  holds a `QualityChoice`; `graphics.<field>` holds a Custom row (an option id or a slider position), `frameRateCap`
-  (Unlimited, 30, 60, 120, 144 or 240; an older number reads as the nearest, G5) and `showFps` the two Graphics rows
-  outside the presets (FA2), all read with a fallback, so version 1 stands. Pinned
-  by `settings/storage.test.ts`. Since M31 `browserStorage()` returns the save system's guarded storage once it has
-  started (same keys, same values).
-- **The save file format** (`save/saveFile.ts`, M31): `{ game, format, build, savedAt, summary, stores, checksum }`,
-  the stores as their own modules store them. A save from any earlier `format` loads (one `MIGRATIONS` step per
-  format); a later one is refused. `SAVE_FORMAT` goes up with any store's version or a new store (`STORES_BY_FORMAT`).
-  In every store module (the settings, the collection, the records), an object from a newer version is never read or
-  overwritten (M56, audit POOL-01: `save/overStored.ts` `storedIsNewer`). Pinned by `save/saveFile.test.ts`,
-  `pool/pool.test.ts`, `stats/records.test.ts`.
-- **`pool.md`'s format** (`pool/poolFile.ts`): the hand-edited asset register the game reads. Power sources carry a Type, not a Power % (M29: what they do is in stats.md). A Pity table (`| Guarantee | Shots |`) and an "Unowned item weight" row in Tokens and Shots (FA10). Replicas have two optional columns, Tiers (the tiers an asset comes in) and Drop % (a chase item's own chance per Shot item), and the `built-in-power` tag for a replica whose power source is fixed (M32). An Access column on every asset table, `public` or `dev` (M35; blank reads as public, any other word leaves the row out). A Caches table (M44: `| Case | Key | Per run | Open s | Heard m | FC | BB resupply % | Part % | Parts from |`, `Pool.caseKinds`; the Key is what map data's case spots name, and a missing or unreadable table falls back to the shipped rows). A Supply events table (M49: `| Supply event | Key | When | FC % | Part % |`, `Pool.supplyEvents`, `pool/supplyEvents.ts`; When is two weekdays or two dates, the first row on applies, and `MatchSetup.supply` carries it into `rollRunCases`; no table, no events; FC % and Part % are 0 or 10 to 1000, and a missing column is reported once at the header, M56). The Odds % never rise down the Rarity table and a Difficulty multiplier is at least 0.1 (M56); every shipped ID is pinned to its asset in `pool/pool.test.ts` (IDs are save keys). A Lights table (M33h: category `light`, slot `light`, Fits by tag like the other parts). Pinned by `pool/pool.test.ts`, `pool/caches.test.ts`.
-- **`stats.md`'s format** (`config/statsFile.ts`, M29): the hand-edited performance numbers (replicas and parts by Key,
-  power sources by pool ID, Barrels and Muzzle parts by Key (M29b), Lights by Key (M33h), Tier scaling, Site limits)
-  the config modules lay over their built-in ones. Pinned by
-  `config/stats.test.ts`.
-- **Content tags** (`config/content.ts`, M35): every map, mode, difficulty, ruleset (`tag` on `MAPS`, `MATCH_MODES`,
-  `DIFFICULTIES`, `RULESETS` since M39) and pooled asset (`Asset.tag`, pool.md's Access) is `public` or `dev`; Match panel choices may carry
-  one (untagged is public). `isAvailable(tag, devContent)` is the one check; `devContent` is the Dev tab's Dev content
-  switch (`dev.devContent`, applying only while Dev settings is ticked). Dev content is not shown anywhere while it is
-  off (`contentPool`, `playedPicks`, `ChoiceCards`/`OptionPicker.setDevContent`), never drops from Shots
-  (`dispensable`), and a match using any of it (`MatchSetup.devContentUsed` from `matchUsesDev`: its picks, the
-  player's kit, or dev gear the opponents may roll) stays out of the records and pays nothing (`matchStanding`,
-  `NotCounted` 'devContent'). Since M50 (audit CORE-01) the dev maps' data is in its own chunk (`map/devMaps.ts`),
-  fetched by `loadDevMaps` once Dev content is on (at start when it was left on): `MapEntry` carries no data, `mapData(id)`
-  reads what is loaded (the default map's for a dev map not loaded yet), and Dev content applies only once the dev maps
-  are in (`Game.devInForce`), so a dev map is never listed or played without its data. The unit tests register every
-  map before each file (`src/testSetup.ts`). Pinned by `config/content.test.ts`, `pool/contentPool.test.ts`,
-  `map/maps.test.ts`.
-- **The map block format** (`map/mapTypes.ts`): what `navGrid`, `mapMeshes` and the physics read. `MapData` fields
-  are only added, optional, so every map stays valid: M34c's `storeys` (the floor heights the minimap draws one at a
-  time) and `overlooks` (each watched area and the spots above that see it, for bots and the layout tests), M43's
-  `extraction` (M44 adds its `cases`, M45 its `regens` and `regenDistance`), M34e's `signs` (neon signs and lit windows,
-  presentation only), M33i's `ground` (the ground's patches: one grid, `map/groundSurfaces.ts`, that the terrain is
-  painted from and M33j's footsteps read), `MapLight.kind` (`fire` or `lantern`: the light's fixture) and M33j's
-  `ambience` (the field's sound, absent the yard; `MapBlock.surface` keeps its two block values), and M34f's
-  `MapBlock.finish` and `paint` (look only), six city prop kinds (each with a `BLOCK_MATERIALS` ricochet material,
-  collided as its box) and `MapSign` `facing: '+y'` with `kind: 'paint'` (flat markings) and `MapData.decor` (look-only blocks: drawn,
-  never collided, walked, seen through or heard), and G6's `bakedLight` (the name of the map's probe file; look only,
-  each file pinned to its map by `map/bakes/bakes.test.ts`, which names the bake command when they differ). Pinned by
-  `map/mapData.test.ts`, `nav/navGrid.test.ts`, `map/neonHeights.test.ts`, `map/extractionData.test.ts`,
-  `render/depotLook.test.ts` (a map using none of M33i's fields builds as before), `render/cityLook.test.ts` and `map/neonHeightsArt.test.ts` (M34f: Neon Heights' boxes, materials and floors pinned).
+  re-exports them from `config/renderQuality.ts`: import from `config/render.ts`).
+  - `QualitySettings` lists the fields a preset or the Custom rows may set. Every preset sets every field; `QUALITY`
+    is the preset table.
+  - A `QualityChoice` is a preset (Low to Ultra; Ultra is never the automatic pick) or `'custom'`, which resolves to
+    High overlaid with the saved rows.
+  - `Renderer.setQuality` and `MatchSession.setQuality` apply a change at once, antialiasing included.
+  - Fields are added, never renamed. A new field takes a value on every preset, a row in `config/graphics.ts` and a
+    `graphics.<field>` store key, with no further contract change (`bakedLight` and `weathering` were added so).
+
+  Pinned by `config/render.test.ts`, `config/graphics.test.ts`, `render/renderer.test.ts`.
+- **The settings store keys** (`settings/storage.ts`, `settings/dev.ts`). Saved under `airsoft.*` and versioned
+  (`SETTINGS_VERSION` 1). Renaming a key needs a migration: one `case` in `migrate` (the per-setting keys of the first
+  builds are its "version 0"). An object from a newer version is never read or overwritten. Fields are only ever
+  added, each read with a fallback, so version 1 stands: `quality` holds a `QualityChoice`; `graphics.<field>` holds a
+  Custom row (an option id or a slider position); `frameRateCap` (Unlimited, 30, 60, 120, 144 or 240; an older number
+  reads as the nearest) and `showFps` are the two Graphics rows outside the presets. `browserStorage()` returns the
+  save system's guarded storage once it has started (same keys, same values). Pinned by `settings/storage.test.ts`.
+- **The save file format** (`save/saveFile.ts`). `{ game, format, build, savedAt, summary, stores, checksum }`, the
+  stores as their own modules store them. A save from any earlier `format` loads (one `MIGRATIONS` step per format);
+  a later one is refused. `SAVE_FORMAT` goes up with any store's version or a new store (`STORES_BY_FORMAT`). In every
+  store module (the settings, the collection, the records) an object from a newer version is never read or
+  overwritten (`save/overStored.ts` `storedIsNewer`). Pinned by `save/saveFile.test.ts`, `pool/pool.test.ts`,
+  `stats/records.test.ts`.
+- **`pool.md`'s format** (`pool/poolFile.ts`). The hand-edited asset register the game reads.
+  - Power sources carry a Type, not a Power %; what they do is in `stats.md`.
+  - Tokens and Shots holds a Pity table (`| Guarantee | Shots |`) and an "Unowned item weight" row.
+  - Replicas have two optional columns, Tiers (the tiers an asset comes in) and Drop % (a chase item's own chance per
+    Shot item), and the `built-in-power` tag for a replica whose power source is fixed.
+  - Every asset table has an Access column, `public` or `dev`: blank reads as public, any other word leaves the row
+    out.
+  - A Caches table (`| Case | Key | Per run | Open s | Heard m | FC | BB resupply % | Part % | Parts from |`, read as
+    `Pool.caseKinds`). The Key is what map data's case spots name. A missing or unreadable table falls back to the
+    shipped rows.
+  - A Supply events table (`| Supply event | Key | When | FC % | Part % |`, read as `Pool.supplyEvents` by
+    `pool/supplyEvents.ts`). When is two weekdays or two dates; the first row that applies wins; `MatchSetup.supply`
+    carries it into `rollRunCases`. No table means no events. FC % and Part % are 0 or 10 to 1000, and a missing column
+    is reported once, at the header.
+  - A Lights table: category `light`, slot `light`, Fits by tag like the other parts.
+  - The Odds % never rise down the Rarity table, and a Difficulty multiplier is at least 0.1.
+  - Every shipped ID is pinned to its asset in `pool/pool.test.ts` (IDs are save keys).
+
+  Pinned by `pool/pool.test.ts`, `pool/caches.test.ts`.
+- **`stats.md`'s format** (`config/statsFile.ts`). The hand-edited performance numbers the config modules lay over
+  their built-in ones: replicas and parts by Key, power sources by pool ID, Barrels and Muzzle parts by Key, Lights by
+  Key, Tier scaling and Site limits. Pinned by `config/stats.test.ts`.
+- **Content tags** (`config/content.ts`). Every map, mode, difficulty and ruleset (`tag` on `MAPS`, `MATCH_MODES`,
+  `DIFFICULTIES`, `RULESETS`) and every pooled asset (`Asset.tag`, from pool.md's Access) is `public` or `dev`; Match
+  panel choices may carry one too (untagged is public). `isAvailable(tag, devContent)` is the one check. `devContent`
+  is the Dev tab's Dev content switch (`dev.devContent`, applying only while Dev settings is ticked).
+  - While it is off, dev content is shown nowhere (`contentPool`, `playedPicks`, `ChoiceCards` /
+    `OptionPicker.setDevContent`) and never drops from Shots (`dispensable`).
+  - A match using any of it stays out of the records and pays nothing (`matchStanding`, `NotCounted` 'devContent').
+    `MatchSetup.devContentUsed` comes from `matchUsesDev`: the match's picks, the player's kit, or dev gear the
+    opponents may roll.
+  - The dev maps' data is a chunk of its own (`map/devMaps.ts`), fetched by `loadDevMaps` once Dev content is on (at
+    start when it was left on). `MapEntry` carries no data; `mapData(id)` reads what is loaded (the default map's for
+    a dev map not loaded yet). Dev content applies only once the dev maps are in (`Game.devInForce`), so a dev map is
+    never listed or played without its data.
+  - The unit tests register every map before each file (`src/testSetup.ts`).
+
+  Pinned by `config/content.test.ts`, `pool/contentPool.test.ts`, `map/maps.test.ts`.
+- **The map block format** (`map/mapTypes.ts`). What `navGrid`, `mapMeshes` and the physics read. `MapData` fields are
+  only added, and optional, so every map stays valid. Today's optional fields:
+  - `storeys`: the floor heights the minimap draws one at a time. `overlooks`: each watched area and the spots above
+    that see it, for bots and the layout tests.
+  - `extraction`, with its `cases`, `regens` and `regenDistance`.
+  - `signs`: neon signs and lit windows, presentation only. A `MapSign` with `facing: '+y'` and `kind: 'paint'` is a
+    flat ground marking.
+  - `ground`: the ground's patches, one grid (`map/groundSurfaces.ts`) that the terrain is painted from and the
+    footsteps read.
+  - `MapLight.kind` (`fire` or `lantern`): the light's fixture.
+  - `ambience`: the field's sound; absent means the yard. `MapBlock.surface` keeps its two block values.
+  - `MapBlock.finish` and `paint`: look only. Six city prop kinds, each with a `BLOCK_MATERIALS` ricochet material,
+    collide as their box.
+  - `decor`: look-only blocks, drawn but never collided, walked, seen through or heard.
+  - `bakedLight`: the name of the map's probe file; look only. Each file is pinned to its map by
+    `map/bakes/bakes.test.ts`, which names the bake command when they differ.
+
+  Pinned by `map/mapData.test.ts`, `nav/navGrid.test.ts`, `map/neonHeights.test.ts`, `map/extractionData.test.ts`,
+  `render/depotLook.test.ts` (a map using none of the woodland look's fields, M33i, builds as before),
+  `render/cityLook.test.ts` and `map/neonHeightsArt.test.ts` (Neon Heights' boxes, materials and floors).
+
+## Working notes
+
+Cross-cutting rules; folder-specific ones are in that folder's `README.md`.
+
+- **Input.** Read fire and aim through the bindings, never the mouse. A toggled sprint pressed before forward waits
+  for forward. A default key that moves goes in `MOVED_DEFAULTS` (`config/controls.ts`) so old saved bindings follow.
+- **Loadout.** Read `Armament.handling` and `Armament.replicas`, never `LOADOUT` (that is what bots carry). Match code
+  reads `MatchSession.rounds` / `.hits`, never `ROUNDS` / `HITS`. Team colours come from `teamCss(team)`, never
+  hard-coded.
+- **Menus.** One screen at a time (`Menus.go`). `Menus.setBlocked` makes them inert (graphics reset).
+- **Tests.** Files share a worker's modules (`isolate: false`), so a test that stubs a global or resets modules
+  undoes it when it ends: restore what you stub. `npm run t` runs the fast project (about 2 minutes, 2026-10-08); the gate and CI run
+  fast and slow. The slow project holds the headless bot-match guards, which are seed-sensitive: re-measure over
+  16 seeds before changing a threshold.
+- **Checks.** `npm run check` (all tests, then the build) takes about 20 minutes in a 4-core container (2026-10-08). In a cloud container set `PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium`
+  for the smoke test and the gate (the session-start hook does it). The smoke test also loses and restores the WebGL
+  context, opens and closes the order wheel (Z) and presses F twice for the squad line. It patches
+  `airsoft.session.match.afterTick` to add a shot after each tick (a sound cue); that patch exists in the `e2e` build
+  only.
+- **URL flags.** `?seed=N` replays a match (any match's seed, shown on the pause screen). `?quality=` picks a preset
+  for the visit. `?perf` logs the match build's phases in the console. `?nolock` plays without the pointer lock, and
+  `?script=perf` drives the scripted player for the perf harness; both work on the dev server and the `e2e` build only,
+  never in a release build.
+- **Ending a match quickly in a scratch script.** Set `airsoft.state.round.score` to 4-4 and one team's characters'
+  `status` to `'out'`.
+- **Lockfile.** Re-lock with npm 11 (`npx -y npm@11 install`) so the lockfile keeps its `libc` fields; otherwise Linux
+  installs both the glibc and musl binaries. CI's npm 10 installs either lockfile.
