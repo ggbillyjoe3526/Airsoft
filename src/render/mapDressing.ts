@@ -1,8 +1,12 @@
 import { DRESSING, type JunkKind } from '../config/dressing';
 import { SURFACES } from '../config/render';
-import type { GlowStrip, MapBlock, MapData } from '../map/mapTypes';
+import type { GlowStrip, JunkMix, MapBlock, MapData, NeonSign } from '../map/mapTypes';
+import { terrainHeightAt } from '../map/terrain';
 import { createRng, rngNext, type RngState } from '../sim/rng';
+import { at, bottom, boxHitsBlock, type ClearSpot, clearOfPlay, clearSpots, floorUnder, frontRect, half, type JunkPiece, junkRect, type Rect, top } from './dressingSpots';
 import { atlasRects, coveredAbove, type DecalQuad, decalBlocked, decalQuads } from './mapDecals';
+import { type Poster, placePosters } from './streetDressing';
+import { type FallenPiece, type LeafDrift, placeWoods } from './woodsDressing';
 
 /**
  * Where a map's set dressing goes (G8, MapData.dressing): pure, seeded and read by the tests. Everything here is look
@@ -13,6 +17,8 @@ import { atlasRects, coveredAbove, type DecalQuad, decalBlocked, decalQuads } fr
  *   `openFront` of floor clear in front of it so it never narrows a passage or doorway below that;
  * - litter on open floor, logos on some containers' long sides, sprays and warning signs on some bays of wall;
  * - puddles where the map puts them (dropped when not on a floor or under a block) and its glow strips as given.
+ * G9 adds, each only where a map's data asks: a street's mix of junk, a wood's floor on terrain (render/woodsDressing.ts:
+ * leaf drifts, fallen branches and logs), puddles and mud on terrain, posters (render/streetDressing.ts) and neon signs.
  */
 
 const D = SURFACES.decals;
@@ -22,22 +28,8 @@ const J = DRESSING.junk;
 const K = DRESSING.clutter;
 const X = DRESSING.decals;
 
-/** A piece of loose junk on the floor against a face: its middle at the floor (`y`), its face's outward normal. */
-export interface JunkPiece {
-  kind: JunkKind;
-  x: number;
-  y: number;
-  z: number;
-  /** The face's outward normal: along x (0) or z (2), and which way. */
-  axis: 0 | 2;
-  sign: 1 | -1;
-  /** Footprint along the face and out from it, and height (DRESSING.junk.size). */
-  along: number;
-  out: number;
-  height: number;
-  /** A number in [0, 1) for its looks (colours, turns). */
-  variant: number;
-}
+export { boxHitsBlock, clearOfPlay, clearSpots, floorUnder, frontRect, junkRect } from './dressingSpots';
+export type { ClearSpot, JunkPiece } from './dressingSpots';
 
 /** A puddle placed on its floor: the middle at the floor's top plus DRESSING.puddles.lift. */
 export interface PlacedPuddle {
@@ -48,6 +40,10 @@ export interface PlacedPuddle {
   depth: number;
   /** Its outline's seed. */
   seed: number;
+  /** G9: wet mud, not water. */
+  mud?: boolean;
+  /** G9: on terrain: the mesh lays each vertex on the ground. */
+  draped?: boolean;
 }
 
 /** Everything a map's dressing draws on the field (the skyline and the effects are placed by their own modules). */
@@ -57,108 +53,22 @@ export interface DressingLayout {
   junk: JunkPiece[];
   puddles: PlacedPuddle[];
   strips: readonly GlowStrip[];
+  /** G9: a wood's fallen branches, twigs and logs, and its leaf drifts. */
+  fallen: FallenPiece[];
+  leaves: LeafDrift[];
+  /** G9: posters on street walls, and the map's neon signs as given. */
+  posters: Poster[];
+  neon: readonly NeonSign[];
 }
 
 
-/** A ground rectangle (x0, x1, z0, z1). */
-type Rect = readonly [number, number, number, number];
-
-const top = (b: MapBlock): number => b.center.y + b.size.y / 2;
-const bottom = (b: MapBlock): number => b.center.y - b.size.y / 2;
-const half = (b: MapBlock, a: 0 | 1 | 2): number => (a === 0 ? b.size.x : a === 1 ? b.size.y : b.size.z) / 2;
-const at = (b: MapBlock, a: 0 | 1 | 2): number => (a === 0 ? b.center.x : a === 1 ? b.center.y : b.center.z);
-
-/** The floor whose top is at `y` (within a centimetre) and which holds the whole rectangle, or null. */
-export function floorUnder(blocks: readonly MapBlock[], r: Rect, y: number): MapBlock | null {
-  for (const b of blocks) {
-    if (b.kind !== 'floor' || Math.abs(top(b) - y) > 0.01) continue;
-    if (r[0] >= b.center.x - b.size.x / 2 && r[1] <= b.center.x + b.size.x / 2 && r[2] >= b.center.z - b.size.z / 2 && r[3] <= b.center.z + b.size.z / 2) return b;
-  }
-  return null;
-}
-
-/** True if any block but the floors stands in the box (x0, x1, y0, y1, z0, z1). */
-export function boxHitsBlock(blocks: readonly MapBlock[], r: Rect, y0: number, y1: number): boolean {
-  return blocks.some((b) => {
-    if (b.kind === 'floor') return false;
-    if (b.center.x + b.size.x / 2 <= r[0] || b.center.x - b.size.x / 2 >= r[1]) return false;
-    if (b.center.z + b.size.z / 2 <= r[2] || b.center.z - b.size.z / 2 >= r[3]) return false;
-    return top(b) > y0 && bottom(b) < y1;
-  });
-}
-
-/** The ground rectangle of a piece of junk. */
-export function junkRect(p: Pick<JunkPiece, 'x' | 'z' | 'axis' | 'along' | 'out'>): Rect {
-  const hx = (p.axis === 0 ? p.out : p.along) / 2;
-  const hz = (p.axis === 0 ? p.along : p.out) / 2;
-  return [p.x - hx, p.x + hx, p.z - hz, p.z + hz];
-}
-
-/** The ground a piece leaves clear in front of it (DRESSING.junk.openFront out from its front edge). */
-export function frontRect(p: Pick<JunkPiece, 'x' | 'z' | 'axis' | 'sign' | 'along' | 'out'>): Rect {
-  const r = junkRect(p);
-  const reach = J.openFront;
-  if (p.axis === 0) return p.sign > 0 ? [r[1], r[1] + reach, r[2], r[3]] : [r[0] - reach, r[0], r[2], r[3]];
-  return p.sign > 0 ? [r[0], r[1], r[3], r[3] + reach] : [r[0], r[1], r[2] - reach, r[2]];
-}
-
-/** Distance in plan from (x, z) to the segment a–b. */
-function toSegment(x: number, z: number, ax: number, az: number, bx: number, bz: number): number {
-  const dx = bx - ax;
-  const dz = bz - az;
-  const len = dx * dx + dz * dz;
-  const t = len > 0 ? Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / len)) : 0;
-  return Math.hypot(x - ax - t * dx, z - az - t * dz);
-}
-
-/** Distance in plan from (x, z) to the rectangle (0 inside it). */
-const toRect = (x: number, z: number, r: Rect): number => Math.hypot(Math.max(r[0] - x, 0, x - r[1]), Math.max(r[2] - z, 0, z - r[3]));
-
-/** A spot loose junk keeps clear of: (x, z) and how far beyond `pointClear` (an Extraction exit's radius). */
-export interface ClearSpot {
-  x: number;
-  z: number;
-  radius: number;
-}
-
-/** Every spot junk keeps `pointClear` from: spawns, dead zones, the flag and the Extraction spots. */
-export function clearSpots(map: MapData): ClearSpot[] {
-  const out: ClearSpot[] = [];
-  const add = (p: { x: number; z: number }, radius = 0): void => void out.push({ x: p.x, z: p.z, radius });
-  for (const team of [...map.spawns, ...map.deadZones]) for (const s of team) add(s.position);
-  if (map.flag) add(map.flag);
-  const e = map.extraction;
-  if (e) {
-    for (const i of e.insertions) for (const s of i.spawns) add(s.position);
-    for (const x of e.exits) add(x.position, x.radius);
-    for (const s of [...e.opponentStarts, ...e.cases, ...e.regens]) add(s.position);
-  }
-  return out;
-}
-
-/** True if the rectangle keeps `laneClear` from every lane's route and `pointClear` from every spot. */
-export function clearOfPlay(map: MapData, r: Rect, spots: readonly ClearSpot[] = clearSpots(map)): boolean {
-  const cx = (r[0] + r[1]) / 2;
-  const cz = (r[2] + r[3]) / 2;
-  const reach = Math.hypot(r[1] - r[0], r[3] - r[2]) / 2;
-  for (const lane of map.lanes) {
-    // A one-point lane is a spot: its one "segment" runs from the point to itself.
-    for (let i = 0; i === 0 || i + 1 < lane.length; i++) {
-      const a = lane[i];
-      if (!a) break;
-      const b = lane[i + 1] ?? a;
-      if (toSegment(cx, cz, a.x, a.z, b.x, b.z) - reach < J.laneClear) return false;
-    }
-  }
-  return spots.every((s) => toRect(s.x, s.z, r) >= J.pointClear + s.radius);
-}
-
-/** A kind of junk drawn by DRESSING.junk.weights from `u` in [0, 1). */
-function pickKind(u: number): JunkKind {
-  const kinds = Object.keys(J.weights) as JunkKind[];
-  let pick = u * kinds.reduce((n, k) => n + J.weights[k], 0);
+/** A kind of junk drawn by the mix's weights (DRESSING.junk: `weights` a yard's, `street` a city's) from `u` in [0, 1). */
+function pickKind(u: number, mix: JunkMix = 'yard'): JunkKind {
+  const weights = mix === 'street' ? J.street : J.weights;
+  const kinds = (Object.keys(weights) as JunkKind[]).filter((k) => weights[k] > 0);
+  let pick = u * kinds.reduce((n, k) => n + weights[k], 0);
   for (const k of kinds) {
-    pick -= J.weights[k];
+    pick -= weights[k];
     if (pick < 0) return k;
   }
   return kinds[kinds.length - 1]!;
@@ -178,21 +88,38 @@ function floorQuad(x: number, y: number, z: number, axis: 0 | 2, sign: 1 | -1, a
 /** The dressing a map's data asks for, placed (none without `dressing`). */
 export function placeDressing(map: MapData, size: number = D.atlasSize): DressingLayout {
   const d = map.dressing;
-  if (!d) return { decals: [], junk: [], puddles: [], strips: [] };
+  if (!d) return { decals: [], junk: [], puddles: [], strips: [], fallen: [], leaves: [], posters: [], neon: [] };
   const rng = createRng(d.seed);
-  const out: DressingLayout = { decals: [], junk: [], puddles: [], strips: d.strips ?? [] };
+  const out: DressingLayout = { decals: [], junk: [], puddles: [], strips: d.strips ?? [], fallen: [], leaves: [], posters: [], neon: d.neon ?? [] };
   const cells = atlasRects(size).dressing;
   if (d.clutter) placeClutter(map, d.clutter, rng, cells, out);
   if (d.marks) placeMarks(map, d.marks, rng, cells, out, size);
   for (const [i, p] of (d.puddles ?? []).entries()) {
     const r: Rect = [p.x - p.width / 2, p.x + p.width / 2, p.z - p.depth / 2, p.z + p.depth / 2];
+    const look = p.mud ? { mud: true } : {};
+    // G9: on terrain (no floor under it), on the ground everywhere under it, with no block over or in it.
+    const ground = map.terrain ? terrainUnder(map, r) : undefined;
+    if (ground !== undefined) {
+      if (!boxHitsBlock(map.blocks, r, ground - 1, Infinity)) out.puddles.push({ x: p.x, y: ground, z: p.z, width: p.width, depth: p.depth, seed: d.seed * 31 + i, ...look, draped: true });
+      continue;
+    }
     // The highest floor holding it, under nothing at all.
     const floors = map.blocks.filter((b) => b.kind === 'floor' && floorUnder([b], r, top(b)));
     const floor = floors.sort((a, b) => top(b) - top(a))[0];
     if (!floor || coveredAbove(map.blocks, floor, [r[0], r[2]], [r[1], r[3]], top(floor), Infinity)) continue;
-    out.puddles.push({ x: p.x, y: top(floor) + DRESSING.puddles.lift, z: p.z, width: p.width, depth: p.depth, seed: d.seed * 31 + i });
+    out.puddles.push({ x: p.x, y: top(floor) + DRESSING.puddles.lift, z: p.z, width: p.width, depth: p.depth, seed: d.seed * 31 + i, ...look });
   }
+  if (d.woods) Object.assign(out, placeWoods(map, d.woods, d.seed));
+  if (d.posters) out.posters = placePosters(map, d.posters, d.seed, [...decalQuads(map, size), ...out.decals], out.neon);
   return out;
+}
+
+/** The terrain's height under a rectangle's middle, if the terrain holds all of it and no floor does; else undefined. */
+function terrainUnder(map: MapData, r: Rect): number | undefined {
+  const t = map.terrain!;
+  const corners = [terrainHeightAt(t, r[0], r[2]), terrainHeightAt(t, r[1], r[2]), terrainHeightAt(t, r[0], r[3]), terrainHeightAt(t, r[1], r[3])];
+  if (corners.some((h) => h === undefined)) return undefined;
+  return terrainHeightAt(t, (r[0] + r[1]) / 2, (r[2] + r[3]) / 2);
 }
 
 type Cells = ReturnType<typeof atlasRects>['dressing'];
@@ -218,7 +145,7 @@ function placeClutter(map: MapData, chance: { dirt: number; junk: number; litter
           const mid = at(b, alongAxis) - half(b, alongAxis) + K.cornerClear + (i + 0.5) * slot;
           if (uDirt < chance.dirt) addBank(blocks, axis, sign, face, mid, Math.min(K.bank.length, slot), y, cells.banks[Math.floor(uBank * cells.banks.length)]!, out);
           if (uJunk < chance.junk && out.junk.length < J.max) {
-            const kind = pickKind(uKind);
+            const kind = pickKind(uKind, map.dressing?.clutter?.mix);
             const [along, depth, height] = J.size[kind];
             if (along > slot) continue;
             const centreAlong = mid + (uShift - 0.5) * (slot - along);

@@ -24,6 +24,11 @@ export interface NaturePaint {
   color: THREE.Color;
   /** Height of the ground at its foot: sides darken from here up over SURFACES.grimeHeight. Null: no grime. */
   grimeFrom: number | null;
+  /**
+   * G9 (MapDressing.moss, map detail): moss in patches on the tops and the shaded (north, -z) sides, up to `share` of
+   * `colour` (linear), and a damp dark band at the foot. Absent: the look before G9.
+   */
+  moss?: { colour: THREE.Color; share: number };
 }
 
 /** The share of an octagon's smaller half-extent always left as a flat side. */
@@ -47,6 +52,29 @@ function grime(paint: NaturePaint, y: number): number {
   if (paint.grimeFrom === null) return 1;
   const t = (y - paint.grimeFrom) / SURFACES.grimeHeight;
   return t >= 1 ? 1 : SURFACES.grimeShade + (1 - SURFACES.grimeShade) * Math.max(0, t);
+}
+
+/** G9: how much moss a point gets (0..1 of MapDressing.moss.share): facing up or north, in patches about 0.7 m across. */
+function mossAmount(x: number, y: number, z: number, ny: number, nz: number): number {
+  const facing = Math.min(1, Math.max(0, ny) * 0.9 + Math.max(0, -nz) * 0.5);
+  const patch = hash01(Math.floor(x * 1.4), Math.floor(y * 1.4), Math.floor(z * 1.4));
+  return facing * Math.min(1, Math.max(0, (patch - 0.25) * 1.6));
+}
+
+/** G9: the damp dark band at a mossy foot: 1 above `MOSS_DAMP` m over the ground, darker down to it. */
+const MOSS_DAMP = 0.5;
+function damp(paint: NaturePaint, y: number): number {
+  if (!paint.moss || paint.grimeFrom === null) return 1;
+  const t = Math.min(1, Math.max(0, (y - paint.grimeFrom) / MOSS_DAMP));
+  return 0.8 + 0.2 * t;
+}
+
+const mossy = new THREE.Color();
+
+/** A vertex's colour with G9's moss over it (the paint's own colour without). */
+function withMoss(paint: NaturePaint, base: THREE.Color, x: number, y: number, z: number, ny: number, nz: number): THREE.Color {
+  if (!paint.moss) return base;
+  return mossy.copy(base).lerp(paint.moss.colour, paint.moss.share * mossAmount(x, y, z, ny, nz));
 }
 
 /** Pushes one vertex: position, normal, UV and colour (`colour` times `k`). */
@@ -122,8 +150,8 @@ function prism(
       const nx = ea.x * na + eb.x * nb;
       const ny = ea.y * na + eb.y * nb;
       const nz = ea.z * na + eb.z * nb;
-      const k = colourK * (ny < 0.9 ? grime(paint, y) : 1) * (shade ? shade(x, y, z, nx, ny, nz) : 1);
-      push(buf, x, y, z, nx, ny, nz, around[i]! / paint.worldSize, s / paint.worldSize, paint.color, k);
+      const k = colourK * (ny < 0.9 ? grime(paint, y) * damp(paint, y) : 1) * (shade ? shade(x, y, z, nx, ny, nz) : 1);
+      push(buf, x, y, z, nx, ny, nz, around[i]! / paint.worldSize, s / paint.worldSize, withMoss(paint, paint.color, x, y, z, ny, nz), k);
     }
   }
   const ring = n + 1;
@@ -303,8 +331,8 @@ function triangle(buf: Buffers, p: readonly number[], q: readonly number[], r: r
   for (const v of [p, q, r]) {
     const [x, y, z] = v as [number, number, number];
     const [u, w] = ax >= ay && ax >= az ? [z, y] : ay >= az ? [x, z] : [x, y];
-    const k = facet * (faceN.y < 0.9 ? grime(paint, y) : 1) * (shade ? shade(x, y, z, faceN.x, faceN.y, faceN.z) : 1);
-    push(buf, x, y, z, faceN.x, faceN.y, faceN.z, u / paint.worldSize, w / paint.worldSize, vertexColour, k);
+    const k = facet * (faceN.y < 0.9 ? grime(paint, y) * damp(paint, y) : 1) * (shade ? shade(x, y, z, faceN.x, faceN.y, faceN.z) : 1);
+    push(buf, x, y, z, faceN.x, faceN.y, faceN.z, u / paint.worldSize, w / paint.worldSize, withMoss(paint, vertexColour, x, y, z, faceN.y, faceN.z), k);
   }
   buf.indices.push(base, base + 1, base + 2);
 }

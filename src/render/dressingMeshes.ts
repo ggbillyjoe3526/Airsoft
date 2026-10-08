@@ -1,18 +1,25 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { DRESSING } from '../config/dressing';
+import { DRESSING, NEON } from '../config/dressing';
 import type { GlowStrip } from '../map/mapTypes';
+import { type Terrain, terrainHeightAt } from '../map/terrain';
 import { createRng, rngNext } from '../sim/rng';
 import { DECAL_RENDER_ORDER } from './mapDecals';
 import type { DressingLayout, JunkPiece } from './mapDressing';
+import { neonParts } from './neonDressing';
+import { posterGeometries } from './streetDressing';
 import { applySurfacePatch, type ProbeUniforms, type SurfacePatch, surfacePatchKey } from './surfaceShader';
+import { woodsGeometries } from './woodsDressing';
 
 /**
  * The set dressing's own meshes (G8; render/mapDressing.ts places it): the junk and the glow strips as one mesh (one
  * draw call: flat-shaded, vertex-coloured Lambert, the strips self-lit through a `glow` attribute), the puddles as one
  * more (one draw call: glossy, physically based, flagged `userData.reflective` for the Ultra reflections). Both join
  * the map's group, so disposeMapMeshes frees their geometry and material; neither has a texture. Neither casts a
- * shadow (a shadow pass would be another draw call; the decals' contact shadows ground the junk instead).
+ * shadow (a shadow pass would be another draw call; the decals' contact shadows ground the junk instead). G9: a wood's
+ * fallen pieces and leaves, posters and neon signs join the junk mesh (still one draw call); a map with flickering neon
+ * gets a `flick` attribute and a `neonFlicker` uniform (mesh.userData.neonFlicker, set by render/dressingEffects.ts).
+ * Puddles may be mud, and on terrain lie on the ground vertex by vertex.
  */
 
 const J = DRESSING.junk;
@@ -23,7 +30,7 @@ const turn = new THREE.Matrix4();
 const place = new THREE.Matrix4();
 
 /** One flat-shaded part: non-indexed, no uv, painted `hex` (sRGB), moved by `m`, not glowing. */
-function part(geo: THREE.BufferGeometry, hex: string | number, m: THREE.Matrix4): THREE.BufferGeometry {
+export function part(geo: THREE.BufferGeometry, hex: string | number, m: THREE.Matrix4): THREE.BufferGeometry {
   const g = geo.index ? geo.toNonIndexed() : geo;
   if (g !== geo) geo.dispose();
   g.deleteAttribute('uv');
@@ -121,33 +128,63 @@ function stripGeometry(s: GlowStrip): THREE.BufferGeometry {
  * Lambert off the environment, with the strips' glow added as light of their own colour, and the map's baked light per
  * pixel when the map's surfaces have it (`probes`: render/surfaceShader.ts's patch, so the junk sits in the same light).
  */
-function junkMaterial(probes: ProbeUniforms | null): THREE.MeshLambertMaterial {
+function junkMaterial(probes: ProbeUniforms | null, flicker: { value: THREE.Vector3 } | null): THREE.MeshLambertMaterial {
   const material = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
   const patch: SurfacePatch = { environment: false, wear: null, probes };
   material.onBeforeCompile = (shader) => {
     applySurfacePatch(shader, patch);
+    // G9: a flickering neon tube's glow follows its channel's level (1 for everything else).
+    const level = flicker ? 'flick < 0.5 ? 1.0 : flick < 1.5 ? neonFlicker.x : flick < 2.5 ? neonFlicker.y : neonFlicker.z' : '1.0';
+    if (flicker) shader.uniforms.neonFlicker = flicker;
     shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', 'attribute float glow;\nvarying float vGlow;\n#include <common>')
-      .replace('#include <begin_vertex>', 'vGlow = glow;\n#include <begin_vertex>');
+      .replace('#include <common>', `attribute float glow;\n${flicker ? 'attribute float flick;\nuniform vec3 neonFlicker;\n' : ''}varying float vGlow;\n#include <common>`)
+      .replace('#include <begin_vertex>', `vGlow = glow * (${level});\n#include <begin_vertex>`);
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', 'varying float vGlow;\n#include <common>')
       .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += vColor.rgb * vGlow;');
   };
-  material.customProgramCacheKey = () => `${surfacePatchKey(patch)}:dressing-junk`;
+  material.customProgramCacheKey = () => `${surfacePatchKey(patch)}:dressing-junk${flicker ? '-neon' : ''}`;
   return material;
 }
 
-/** The junk and glow strips as one mesh (null when there are none), in the map's baked light (`probes`) if it has one. */
-export function buildJunkMesh(layout: DressingLayout, probes: ProbeUniforms | null = null): THREE.Mesh | null {
-  const parts = [...junkGeometries(layout.junk), ...layout.strips.map(stripGeometry)];
+/** A neon sign's parts painted as the junk's: the plate dark, the tubes glowing NEON.glow on the sign's channel. */
+function neonGeometries(layout: DressingLayout): THREE.BufferGeometry[] {
+  const out: THREE.BufferGeometry[] = [];
+  turn.identity();
+  for (const s of layout.neon) {
+    for (const p of neonParts(s)) {
+      const g = part(p.geo, p.colour, turn);
+      if (p.tube) (g.getAttribute('glow') as THREE.BufferAttribute).array.fill(NEON.glow);
+      g.setAttribute('flick', new THREE.BufferAttribute(new Float32Array(g.getAttribute('position').count).fill(p.tube ? (s.flicker ?? 0) : 0), 1));
+      out.push(g);
+    }
+  }
+  return out;
+}
+
+/**
+ * The junk, glow strips, a wood's fallen pieces and leaves (lying on `terrain`), posters and neon signs as one mesh (null
+ * when there are none), in the map's baked light (`probes`) if it has one.
+ */
+export function buildJunkMesh(layout: DressingLayout, probes: ProbeUniforms | null = null, terrain?: Terrain): THREE.Mesh | null {
+  const neon = neonGeometries(layout);
+  const parts = [...junkGeometries(layout.junk), ...layout.strips.map(stripGeometry), ...woodsGeometries(layout, terrain, part), ...posterGeometries(layout.posters, part), ...neon];
   if (parts.length === 0) return null;
+  // Every part takes the flicker channel's attribute when any sign flickers (merging needs one set of attributes).
+  const flickers = layout.neon.some((s) => s.flicker !== undefined);
+  for (const p of parts) {
+    if (flickers && !p.getAttribute('flick')) p.setAttribute('flick', new THREE.BufferAttribute(new Float32Array(p.getAttribute('position').count), 1));
+    else if (!flickers) p.deleteAttribute('flick');
+  }
   const merged = mergeGeometries(parts);
   for (const p of parts) p.dispose();
   if (!merged) throw new Error('dressing parts do not merge');
   // Indexed like the map's other meshes (each triangle its own three vertices: flat-shaded).
   merged.setIndex(Array.from({ length: merged.getAttribute('position').count }, (_, i) => i));
   merged.computeBoundingSphere();
-  const mesh = new THREE.Mesh(merged, junkMaterial(probes));
+  const flicker = flickers ? { value: new THREE.Vector3(1, 1, 1) } : null;
+  const mesh = new THREE.Mesh(merged, junkMaterial(probes, flicker));
+  if (flicker) mesh.userData.neonFlicker = flicker;
   mesh.name = 'map-junk';
   mesh.receiveShadow = true;
   mesh.matrixAutoUpdate = false;
@@ -159,13 +196,18 @@ export function buildJunkMesh(layout: DressingLayout, probes: ProbeUniforms | nu
  * The puddles as one mesh (null for none): a seeded outline, a water middle, a wet margin fading out; in the map's
  * baked light (`probes`) if it has one.
  */
-export function buildPuddleMesh(layout: DressingLayout, probes: ProbeUniforms | null = null): THREE.Mesh | null {
+export function buildPuddleMesh(layout: DressingLayout, probes: ProbeUniforms | null = null, terrain?: Terrain): THREE.Mesh | null {
   if (layout.puddles.length === 0) return null;
   const pos: number[] = [];
   const col: number[] = [];
   const idx: number[] = [];
   const water = new THREE.Color(P.water);
   const wet = new THREE.Color(P.wet);
+  const M = DRESSING.mud;
+  const mudCore = new THREE.Color(M.core);
+  const mudWet = new THREE.Color(M.wet);
+  // G9: a draped puddle lays each vertex on the ground under it, `mud.lift` over it.
+  const yAt = (p: DressingLayout['puddles'][number], x: number, z: number): number => (p.draped && terrain ? (terrainHeightAt(terrain, x, z) ?? p.y) + M.lift : p.y);
   const n = P.points;
   const wobble = new Float32Array(n);
   // Ring k's share of the outline, colour and alpha: the core's edge, the wet margin's start, the outline.
@@ -178,17 +220,26 @@ export function buildPuddleMesh(layout: DressingLayout, probes: ProbeUniforms | 
     const rng = createRng(p.seed);
     for (let i = 0; i < n; i++) wobble[i] = 1 - rngNext(rng) * P.wobble; // only in: the outline never leaves the checked rectangle
     const base = pos.length / 3;
-    pos.push(p.x, p.y, p.z);
-    col.push(water.r, water.g, water.b, P.alpha);
-    for (const [share, c, alpha] of rings) {
+    const [core, margin, coreAlpha, marginAlpha] = p.mud ? [mudCore, mudWet, M.alpha, M.wetAlpha] : [water, wet, P.alpha, P.wetAlpha];
+    pos.push(p.x, yAt(p, p.x, p.z), p.z);
+    col.push(core.r, core.g, core.b, coreAlpha);
+    const looks: [THREE.Color, number][] = [
+      [core, coreAlpha],
+      [margin, marginAlpha],
+      [margin, 0],
+    ];
+    rings.forEach(([share], k) => {
+      const [c, alpha] = looks[k]!;
       for (let i = 0; i < n; i++) {
         // Each point's wobble eased with its neighbours', so the outline is lumpy, not spiky.
         const w = (wobble[(i + n - 1) % n]! + 2 * wobble[i]! + wobble[(i + 1) % n]!) / 4;
         const a = (i / n) * Math.PI * 2;
-        pos.push(p.x + Math.cos(a) * (p.width / 2) * share * w, p.y, p.z + Math.sin(a) * (p.depth / 2) * share * w);
+        const x = p.x + Math.cos(a) * (p.width / 2) * share * w;
+        const z = p.z + Math.sin(a) * (p.depth / 2) * share * w;
+        pos.push(x, yAt(p, x, z), z);
         col.push(c.r, c.g, c.b, alpha);
       }
-    }
+    });
     for (let i = 0; i < n; i++) {
       const j = (i + 1) % n;
       idx.push(base, base + 1 + j, base + 1 + i);

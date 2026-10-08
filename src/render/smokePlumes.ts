@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { DRESSING } from '../config/dressing';
+import { DRESSING, STEAM } from '../config/dressing';
 import { createRng, rngNext } from '../sim/rng';
 import { softDotTexture } from './softDot';
 
@@ -7,10 +7,28 @@ import { softDotTexture } from './softDot';
  * Chimney smoke (G8, DRESSING.smoke): soft puffs rising from each smoking chimney of the skyline on a loop, bent by
  * the wind, growing and fading out. One instanced draw for every chimney (culled when out of view), fixed buffers made
  * once: update allocates nothing. Under Reduced motion the smoke stands still (its clock stops). Unlit and fogged; a
- * night preset darkens it.
+ * night preset darkens it. G9: the same pool draws a map's vents and drains with STEAM's smaller, thinner, faster
+ * numbers (`STEAM_PLUME`), one instanced draw for all of them.
  */
 
-const M = DRESSING.smoke;
+/** What a plume looks like (DRESSING.smoke for a chimney, STEAM for a vent). */
+export interface PlumeConfig {
+  puffs: number;
+  period: number;
+  rise: number;
+  spread: number;
+  windShare: number;
+  breeze: number;
+  windEase: number;
+  size: readonly [number, number];
+  opacity: number;
+  colour: string;
+  night: number;
+  fadeIn: number;
+  seed: number;
+}
+/** G9: thin steam from vents and drains. */
+export const STEAM_PLUME: PlumeConfig = STEAM;
 /** The strongest wind the culling sphere allows for (m/s; the match's wind stays well under it, M30). */
 const WIND_MAX = 4;
 
@@ -23,6 +41,7 @@ export interface SmokeSource {
 
 export class SmokePlumes {
   readonly object: THREE.InstancedMesh;
+  private readonly M: PlumeConfig;
   private readonly alpha: Float32Array;
   private readonly alphaAttribute: THREE.InstancedBufferAttribute;
   /** Each puff's seeded spread (x, z, in −1..1) and phase offset. */
@@ -31,11 +50,18 @@ export class SmokePlumes {
   private readonly matrix = new THREE.Matrix4();
   private readonly pos = new THREE.Vector3();
   private readonly scale = new THREE.Vector3();
-  private readonly wind = { x: M.breeze, z: 0 };
+  private readonly wind = { x: 0, z: 0 };
   private time = 0;
   private motion = true;
 
-  constructor(private readonly sources: readonly SmokeSource[]) {
+  constructor(
+    private readonly sources: readonly SmokeSource[],
+    config: PlumeConfig = DRESSING.smoke,
+    /** The mesh's name (the tests and the disposal read it). */
+    name = 'smokePlumes',
+  ) {
+    const M = (this.M = config);
+    this.wind.x = M.breeze;
     const count = sources.length * M.puffs;
     const rng = createRng(M.seed);
     this.jitter = new Float32Array(count * 3);
@@ -59,7 +85,7 @@ export class SmokePlumes {
     };
     material.customProgramCacheKey = () => 'smoke-plumes';
     this.object = new THREE.InstancedMesh(geo, material, count);
-    this.object.name = 'smokePlumes';
+    this.object.name = name;
     // Culled as a whole: a sphere round every plume, as far as a wind of up to WIND_MAX m/s bends it.
     const box = new THREE.Box3();
     for (const s of sources) box.expandByPoint(this.pos.set(s.x, s.y, s.z)).expandByPoint(this.pos.set(s.x, s.y + M.rise, s.z));
@@ -71,7 +97,7 @@ export class SmokePlumes {
 
   /** A night preset darkens the smoke (it is lit by nothing). */
   setNight(night: boolean): void {
-    (this.object.material as THREE.MeshBasicMaterial).color.set(M.colour).multiplyScalar(night ? M.night : 1);
+    (this.object.material as THREE.MeshBasicMaterial).color.set(this.M.colour).multiplyScalar(night ? this.M.night : 1);
   }
 
   /** Reduced motion on (false): the smoke stands still. */
@@ -82,6 +108,7 @@ export class SmokePlumes {
   /** Moves the plumes on by `dt`, bent by the match's `wind` (m/s), facing `camera`. */
   update(dt: number, camera: THREE.Camera, wind: { x: number; z: number }): void {
     if (!this.object.visible) return;
+    const M = this.M;
     if (this.motion) {
       this.time += dt;
       const ease = Math.min(1, dt / M.windEase);

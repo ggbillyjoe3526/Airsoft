@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { skylineShown } from '../config/dressing';
 import { ATMOSPHERE, type LightingPreset, LIGHTING_PRESETS, type QualitySettings, type SkyPalette, type TreeDetail } from '../config/render';
 import { createRng, rngNext, type RngState } from '../sim/rng';
 import type { SkylinePiece } from '../map/mapTypes';
 import { buildNightSky } from './nightSky';
-import { skylineClear, skylineGeometries } from './skyline';
+import { skylineClear, skylineGeometries, skylineLights } from './skyline';
 import { withoutEnvironment } from './surfaceMaterials';
 
 /**
@@ -131,14 +132,19 @@ function placeTree(rng: RngState, i: number, count: number, centre: THREE.Vector
   return { x: centre.x + Math.cos(angle) * dist, z: centre.z + Math.sin(angle) * dist, height, color, broad: rngNext(rng) < T.broadShare };
 }
 
-/** The simple ring (Trees: Simple, the look before the overhaul): pines and broadleaves, one flat-shaded mesh. */
-function simpleTrees(centre: THREE.Vector3, field: THREE.Box3 | null): THREE.BufferGeometry[] {
+/**
+ * The simple ring (Trees: Simple, the look before the overhaul): pines and broadleaves, one flat-shaded mesh. With a
+ * map's `skyline` (G9: a night map with trees of its own, whose ring is capped to Simple) its pieces join this ring too,
+ * and the trees standing on them are left out. Low passes none, so it draws what it always drew.
+ */
+function simpleTrees(centre: THREE.Vector3, field: THREE.Box3 | null, skyline: readonly SkylinePiece[] = []): THREE.BufferGeometry[] {
   const T = ATMOSPHERE.trees;
   const rng = createRng(T.seed);
   const ringMin = treeRingStart(centre, field);
   const parts: THREE.BufferGeometry[] = [];
   for (let i = 0; i < T.count; i++) {
     const { x, z, height, color, broad } = placeTree(rng, i, T.count, centre, ringMin);
+    if (skyline.length > 0 && !skylineClear(skyline, x, z)) continue;
     const trunkHeight = height * 0.25;
     parts.push(painted(new THREE.CylinderGeometry(height * 0.025, height * 0.035, trunkHeight, 5).translate(x, trunkHeight / 2, z), T.trunk));
     if (broad) {
@@ -150,6 +156,7 @@ function simpleTrees(centre: THREE.Vector3, field: THREE.Box3 | null): THREE.Buf
       parts.push(painted(new THREE.ConeGeometry(height * T.pineWidth, coneHeight, 7).translate(x, height - coneHeight / 2, z), color));
     }
   }
+  if (skyline.length > 0) parts.push(...skylineGeometries(skyline, centre));
   return parts;
 }
 
@@ -233,6 +240,22 @@ function shrubs(field: THREE.Box3, sun: THREE.Vector3): THREE.BufferGeometry[] {
 }
 
 /**
+ * G9: the skyline's own lights as one unlit mesh (null when its skyline has none): a tower's mast light and blade sign
+ * always, its lit windows by night. One draw call on the maps that have towers; nothing on Depot or in the woods.
+ */
+function buildSkylineLights(skyline: readonly SkylinePiece[], centre: THREE.Vector3, night: boolean): THREE.Mesh | null {
+  const parts = skylineLights(skyline, centre, night);
+  if (parts.length === 0) return null;
+  const merged = mergeGeometries(parts);
+  for (const p of parts) p.dispose();
+  if (!merged) throw new Error('skyline lights do not merge');
+  const mesh = new THREE.Mesh(merged, new THREE.MeshBasicMaterial({ vertexColors: true, fog: true }));
+  mesh.name = 'skylineLights';
+  mesh.matrixAutoUpdate = false;
+  return mesh;
+}
+
+/**
  * The Trees level the ring is drawn at: the setting's, but at most ATMOSPHERE.trees.nightWithOwnTrees under a night
  * light (`night`) on a map with trees of its own (`ownTrees`: Woodland), whose canopy and haze hide the ring (M75, owner
  * decision 8). Exported for the tests.
@@ -241,10 +264,10 @@ export function horizonTreeLevel(setting: TreeDetail, night: boolean, ownTrees: 
   return night && ownTrees ? (Math.min(setting, ATMOSPHERE.trees.nightWithOwnTrees) as TreeDetail) : setting;
 }
 
-/** The tree ring for a Trees setting, as one mesh (null for none). */
+/** The tree ring for a Trees setting, as one mesh (null for none); `skyline` is empty where the setting draws none. */
 function buildTrees(level: TreeDetail, centre: THREE.Vector3, sun: THREE.Vector3, field: THREE.Box3 | null, skyline: readonly SkylinePiece[]): THREE.Mesh | null {
   if (level === 0) return null;
-  const parts = level === 1 ? simpleTrees(centre, field) : detailedTrees(centre, sun, field, skyline);
+  const parts = level === 1 ? simpleTrees(centre, field, skyline) : detailedTrees(centre, sun, field, skyline);
   const merged = mergeGeometries(parts);
   for (const p of parts) p.dispose();
   if (!merged) throw new Error('no trees');
@@ -402,6 +425,9 @@ export function addAtmosphere(
   let trees: THREE.Mesh | null = null;
   let clouds: THREE.Mesh | null = null;
   let treeLevel: TreeDetail | null = null;
+  /** G9: the skyline's own lights (a tower's lit windows, mast light and blade sign), unlit, as one mesh. */
+  let lights: THREE.Mesh | null = null;
+  let skylineOn: boolean | null = null;
   const drop = (mesh: THREE.Mesh | null): null => {
     if (mesh) {
       scene.remove(mesh);
@@ -412,11 +438,20 @@ export function addAtmosphere(
   };
   const setQuality = (q: Pick<QualitySettings, 'trees' | 'clouds'>): void => {
     const level = horizonTreeLevel(q.trees, preset.night, ownTrees);
-    if (level !== treeLevel) {
+    // G9: a map's skyline is drawn at the Trees setting that asks for it (skylineShown), even where a night map's own
+    // trees cap the ring itself to Simple (horizonTreeLevel); Low draws neither.
+    const wantSkyline = skylineShown(q) && skyline.length > 0;
+    if (level !== treeLevel || wantSkyline !== skylineOn) {
       trees = drop(trees);
+      lights = drop(lights);
       treeLevel = level;
-      trees = buildTrees(level, centre, sunDirection, field, skyline);
+      skylineOn = wantSkyline;
+      trees = buildTrees(level, centre, sunDirection, field, wantSkyline ? skyline : []);
       if (trees) scene.add(trees);
+      if (wantSkyline) {
+        lights = buildSkylineLights(skyline, centre, preset.night);
+        if (lights) scene.add(lights);
+      }
     }
     if (q.clouds !== (clouds !== null)) {
       clouds = drop(clouds);
@@ -428,6 +463,7 @@ export function addAtmosphere(
     setQuality,
     dispose: () => {
       trees = drop(trees);
+      lights = drop(lights);
       clouds = drop(clouds);
       drop(sky);
       nightSky?.dispose();

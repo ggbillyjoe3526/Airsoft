@@ -158,7 +158,7 @@ export class CombatPresentation {
     renderer.scene.add(this.bbs.object, this.puffs.object, this.grit.object, this.hitPuffs.object, this.gasPuffs.object, this.motes.object, this.paths.object);
     for (const [material, dust] of Object.entries(IMPACT_DUST)) this.dustTints.set(material as ImpactMaterial, new THREE.Color(dust.tint));
     this.motes.setMapDust(field.dressing?.motes?.tint ?? null);
-    this.dressing = new DressingEffects(renderer.scene, field.dressing);
+    this.dressing = new DressingEffects(renderer.scene, field);
     this.viewmodel = new Viewmodel(renderer.camera.aspect, teamColor, loadout, { replica: quality.replicaDetail, hands: quality.handDetail }, paint, arms);
     this.overlay = { scene: this.viewmodel.scene, camera: this.viewmodel.camera };
     this.hud = new Hud(container, keyName, crosshair);
@@ -210,6 +210,14 @@ export class CombatPresentation {
     this.viewmodel.setLighting(preset);
     this.sfx.setScene(soundscapeOf(this.field, preset.night));
     this.dressing.setNight(preset.night);
+  }
+
+  /**
+   * The built map's group (G9): the neon signs' flicker is a uniform on its junk mesh, so the effects need it after every
+   * build and restyle. Null (or a map without flickering signs) leaves them steady.
+   */
+  setMapGroup(group: THREE.Object3D | null): void {
+    this.dressing.setMapGroup(group);
   }
 
   /** Reduced motion changed on Settings → Accessibility: the held replica's bob, sway and kick. */
