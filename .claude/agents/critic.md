@@ -69,5 +69,6 @@ Must-fix for the next attempt: ...
 Browser tests for the owner (at most 6, one line each): ...
 ```
 
-Write the same text to `pipeline/out/critic.md`. Cite a file and line for every failed check. No preamble, no
+Write the same text to `pipeline/out/critic.md`. Cite a file and line for every failed check: the line in the file
+itself (a hunk's `@@ … +<line>,… @@` header gives where it starts), never the packet's own line number. No preamble, no
 recap of what you read, no praise.
