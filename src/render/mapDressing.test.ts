@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { DRESSING, type JunkKind, KICKED_DUST } from '../config/dressing';
+import { DRESSING, FIREFLIES, type JunkKind, KICKED_DUST, NEON, PLANE, POSTERS, STEAM, WOODS } from '../config/dressing';
 import { SURFACES } from '../config/render';
 import { TEAM_COLOUR_SETS } from '../config/teams';
 import { DEPOT } from '../map/depot';
@@ -42,10 +42,10 @@ function coloursIn(value: unknown, out: THREE.Color[] = [], key = ''): THREE.Col
 }
 
 describe('set dressing placement (G8)', () => {
-  it('places nothing for a map without dressing, and nothing on Woodland and Neon Heights yet (G9)', () => {
-    expect(placeDressing(BARE)).toEqual({ decals: [], junk: [], puddles: [], strips: [] });
-    expect(WOODLAND.dressing).toBeUndefined();
-    expect(NEON_HEIGHTS.dressing).toBeUndefined();
+  it('places nothing for a map without dressing; Woodland and Neon Heights now have one (G9)', () => {
+    expect(placeDressing(BARE)).toEqual({ decals: [], junk: [], puddles: [], strips: [], fallen: [], leaves: [], posters: [], neon: [] });
+    expect(WOODLAND.dressing).toBeDefined();
+    expect(NEON_HEIGHTS.dressing).toBeDefined();
   });
 
   it('dresses Depot: dirt, junk, litter, logos, wall marks, every puddle and the strips', () => {
@@ -164,8 +164,21 @@ describe('set dressing placement (G8)', () => {
   });
 
   it('uses no colour that reads as a team colour', () => {
-    const colours = [...coloursIn(DRESSING), ...coloursIn(DEPOT.dressing), new THREE.Color(KICKED_DUST.color)];
-    expect(colours.length).toBeGreaterThan(40);
+    // G9: the woods' and the street's palettes and both new maps' dressings (their neon tubes and posters included).
+    const colours = [
+      ...coloursIn(DRESSING),
+      ...coloursIn(WOODS),
+      ...coloursIn(NEON),
+      ...coloursIn(POSTERS),
+      ...coloursIn(PLANE),
+      ...coloursIn(FIREFLIES),
+      ...coloursIn(STEAM),
+      ...coloursIn(DEPOT.dressing),
+      ...coloursIn(WOODLAND.dressing),
+      ...coloursIn(NEON_HEIGHTS.dressing),
+      new THREE.Color(KICKED_DUST.color),
+    ];
+    expect(colours.length).toBeGreaterThan(90);
     for (const c of colours) expect(readsAsTeam(c), `#${c.getHexString()}`).toBe(false);
     // Guard the guard.
     expect(readsAsTeam(new THREE.Color(0xf07c2a))).toBe(true);

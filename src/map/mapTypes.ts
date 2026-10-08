@@ -315,7 +315,7 @@ export interface MapDressing {
    * (no taller than DRESSING.junk.maxHeight, against the face, never in a lane, a doorway or by a spawn); `litter`, the
    * chance each square of open floor gets scraps of paper.
    */
-  clutter?: { dirt: number; junk: number; litter: number };
+  clutter?: { dirt: number; junk: number; litter: number; mix?: JunkMix };
   /** Puddles on the floor (map detail): the middle (world x, z) and the size (m); never under a block. */
   puddles?: readonly DressingPuddle[];
   /** Marks (map detail): the chance a container gets a shipping line's logo, and a 4 m bay of wall a spray or a sign. */
@@ -328,6 +328,45 @@ export interface MapDressing {
   motes?: { tint: number };
   /** Dust kicked up by sprinting and landing feet (Impact grit): its colour (sRGB) and size (1: DRESSING.kickedDust). */
   kickedDust?: { tint: number; scale: number };
+  /**
+   * G9, a wooded map's floor on its terrain (map detail; render/woodsDressing.ts): `leaves`, the chance each square of
+   * ground near a trunk, log, boulder or the fence gets a drift of leaf litter; `fallen`, the chance each slot along
+   * the foot of one gets a fallen branch or a short log (low, against its face, out of every lane and passage).
+   */
+  woods?: { leaves: number; fallen: number };
+  /** G9: moss on the hard cover's tops and shaded sides (boulders, logs, trunks; map detail): its colour and share. */
+  moss?: { colour: number; share: number };
+  /** G9: the chance each 4 m bay of street-level wall gets a few pasted posters (map detail; render/streetDressing.ts). */
+  posters?: number;
+  /** G9: neon signs on the walls (map detail): lit tubes on a dark plate; a few flicker now and then (never under Reduced motion). */
+  neon?: readonly NeonSign[];
+  /** G9: thin steam rising from vents and drains (map detail): where each plume starts (world). */
+  steam?: readonly { x: number; y: number; z: number }[];
+  /** G9: fireflies drifting low over the ground by night (map detail): how many. */
+  fireflies?: { count: number };
+  /**
+   * G9: a plane crossing the sky now and then (Trees: Detailed): its height (m), and `every`, the seconds from one pass's
+   * start to the next's (the crossing itself, PLANE.path / PLANE.speed, takes part of that).
+   */
+  plane?: { height: number; every: number };
+}
+
+/** G9: which junk a map's clutter is made of (DRESSING.junk.street): a yard's (Depot, the default) or a city street's. */
+export type JunkMix = 'yard' | 'street';
+
+/**
+ * G9: a neon sign (MapDressing.neon): `text` in tube letters (neonDressing.ts) or an `emblem`, `size` m tall,
+ * its middle at `centre` on a wall facing `facing`, in `colour`. `flicker` 1-3 puts it on one of three flicker
+ * channels (render/neonDressing.ts neonFlicker); absent, it burns steady.
+ */
+export interface NeonSign {
+  centre: Vec3;
+  facing: '+x' | '-x' | '+z' | '-z';
+  text?: string;
+  emblem?: 'bowl' | 'arrow' | 'cup';
+  size: number;
+  colour: number;
+  flicker?: 1 | 2 | 3;
 }
 
 /** A puddle (MapDressing.puddles): `width` along x and `depth` along z, its outline seeded. */
@@ -336,6 +375,8 @@ export interface DressingPuddle {
   z: number;
   width: number;
   depth: number;
+  /** G9: a patch of wet mud rather than water (darker, browner; the same mesh). On terrain it follows the ground. */
+  mud?: boolean;
 }
 
 /** A small glow strip (MapDressing.strips): a sign's panel that is always lit. */
@@ -349,4 +390,13 @@ export type GlowStrip = Omit<MapSign, 'kind'>;
 export type SkylinePiece =
   | { kind: 'shed' | 'waterTower' | 'crane' | 'containers'; x: number; z: number; width: number; depth: number; height: number; turned?: boolean; colour?: number }
   | { kind: 'chimney'; x: number; z: number; width: number; depth: number; height: number; smoke?: boolean; colour?: number }
-  | { kind: 'powerLine'; points: readonly { x: number; z: number }[]; height: number };
+  | { kind: 'powerLine'; points: readonly { x: number; z: number }[]; height: number }
+  /** G9: a low wooded hill, a mound `height` tall over its `width` × `depth` footprint; ring trees may stand on it. */
+  | { kind: 'hill'; x: number; z: number; width: number; depth: number; height: number; colour?: number }
+  /** G9: a dark band of conifers along `points`, about `height` tall and `depth` deep. */
+  | { kind: 'treeline'; points: readonly { x: number; z: number }[]; height: number; depth: number }
+  /**
+   * G9: a city block standing from `base` m up to `height`: rows of windows on the side facing the field (some lit by
+   * night), a cornice, and on its roof a tank or a mast with a warm light; `sign` hangs a blade sign of that colour.
+   */
+  | { kind: 'tower'; x: number; z: number; width: number; depth: number; height: number; base: number; colour?: number; sign?: number };

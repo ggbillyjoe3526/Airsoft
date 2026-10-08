@@ -885,6 +885,9 @@ export function buildMapMeshes(map: MapData, textures: SurfaceTextures, look: Ma
     }
     for (const piece of blockPieces(block, map.blocks, look.detail)) pieces.push({ piece, block });
   }
+  // G9: with map detail, a map's dressing may grow moss on its hard cover (boulders, logs, trunks).
+  const mossLook = look.detail ? map.dressing?.moss : undefined;
+  const moss = mossLook ? { colour: new THREE.Color().setHex(mossLook.colour, THREE.SRGBColorSpace), share: mossLook.share } : undefined;
   // Map detail: every piece's box shades the others' vertices (the ramps, being wedges, don't).
   const occ = look.detail ? buildOccluders(pieces.map(({ piece: p }) => [...p.box.min, ...p.box.max] as const), SURFACES.occlusion.reach) : null;
   pieces.forEach(({ piece: p, block }, i) => {
@@ -892,7 +895,7 @@ export function buildMapMeshes(map: MapData, textures: SurfaceTextures, look: Ma
     const e = entry(p.texture, p.castShadow);
     const paint = { uv: p.uv, worldSize: surfaceTexture(textures, p.texture).worldSize, color: p.color, grimeFrom: p.grime ? bottom : null };
     // The woods' trees, logs and boulders are shapes inside their box (M33i); the shadow map still takes the box.
-    if (isNatureKind(block.kind)) appendNatureShape(e.buf, block, paint, pieceShape(p, block, i, occ).shade);
+    if (isNatureKind(block.kind)) appendNatureShape(e.buf, block, moss ? { ...paint, moss } : paint, pieceShape(p, block, i, occ).shade);
     else appendCuboid(e.buf, p.box, paint, pieceShape(p, block, i, occ, plainShape));
     if (e.shadow) appendCuboid(e.shadow, p.box, paint, PLAIN);
   });
@@ -945,7 +948,7 @@ export function buildMapMeshes(map: MapData, textures: SurfaceTextures, look: Ma
     const decals = buildMapDecals(map, decalAtlas, dressing?.decals);
     if (decals) group.add(decals);
   }
-  if (dressing) for (const mesh of [buildJunkMesh(dressing, probes), buildPuddleMesh(dressing, probes)]) if (mesh) group.add(mesh);
+  if (dressing) for (const mesh of [buildJunkMesh(dressing, probes, map.terrain), buildPuddleMesh(dressing, probes, map.terrain)]) if (mesh) group.add(mesh);
   return group;
 }
 

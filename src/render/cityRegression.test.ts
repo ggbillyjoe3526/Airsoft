@@ -258,13 +258,15 @@ const PINNED = {
     "map-steelPlate v228 i336 64973f35/a3381b15/05c3e021",
   ],
   // M55 (audit SIM-05): bark and stone re-pinned for the log cut short of the boulder it ran into (its courses fall anew on
-  // the slope) and the boulder moved off the tree; the rest as before.
+  // the slope) and the boulder moved off the tree; the rest as before. G9: with map detail the woods' dressing grows moss
+  // on the trunks, logs and boulders, so bark's and stone's vertex colours are re-pinned (their vertices, positions and
+  // UVs are untouched, and woodlandPlain, which draws no dressing, is exactly as before).
   woodlandDetail: [
-    "map-bark v24419 i57672 414f67c2/15941584/db7d17c4",
+    "map-bark v24419 i57672 414f67c2/15941584/f8aa4770",
     "map-canopy v12360 i0 fdc198ad/811c9dc5/32f7476c",
     "map-foliage v16800 i0 2c532a15/811c9dc5/5d0ab568",
     "map-planks v6500 i12600 c6e31599/7bb3ff75/ed848380",
-    "map-stone v12744 i13500 54817208/5d7d5f6a/eef96b0c",
+    "map-stone v12744 i13500 54817208/5d7d5f6a/797faf91",
     "map-terrain v9801 i57600 70aec22c/006bce1d/b7c02c31",
   ],
   woodlandPlain: [

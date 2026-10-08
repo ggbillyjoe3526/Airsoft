@@ -18,6 +18,11 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **G8** · Depot is dressed on Medium and up: grey dirt at block feet, junk and litter against walls, glossy puddles, a few logos, sprays, warning signs and glow strips (#136)
 - **G8** · Beyond Depot's walls on Detailed trees: sheds, a water tower, a crane, stacked containers, a power line and two smoking chimneys (#136)
 - **G8** · Sprinting and landing kick up a little dust on Depot (Impact grit); the dust in the air is greyer and hangs low; Low looks as before (#136)
+- **G9** · Woodland is dressed on Medium and up: leaf litter and fallen branches, twigs and logs on the forest floor, mud and puddles along the creek, the tracks and the camps, moss on trunks, logs and boulders, and fireflies drifting between the trees at night
+- **G9** · Beyond Woodland's fence on Detailed trees: a band of dark conifers and low wooded hills filling the gap out to the treeline
+- **G9** · Neon Heights is dressed on Medium and up: street litter and bin bags against the walls, puddles in the avenue and the alleys, pasted posters and a few sprays, tube-letter neon signs (PLAY, NOODLE, HOTEL and more) with the odd gentle flicker, and steam drifting up from the vents and drains
+- **G9** · Beyond Neon Heights' walls on Detailed trees: a city of lit towers with blade signs, rooftop tanks and masts, and a plane crossing over every twenty seconds
+- **G9** · Low looks and costs exactly as before on both maps, and Depot is unchanged; under Reduced motion the fireflies, steam, plane and sign flicker all hold still
 
 ### Changed
 - **M71** · Bots hunt the map's middle once their lane is swept (now all levels, not just Pro); Normal and Hard hold their posts out of lantern light at night (#133)

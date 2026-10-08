@@ -1,3 +1,4 @@
+import type { Group } from 'three';
 import { BotController } from './ai/botController';
 import { SquadFollow } from './ai/squadFollow';
 import { lowCoverBlocks, tallCoverBlocks } from './ai/cover';
@@ -157,6 +158,8 @@ export class MatchSession {
   private readonly lighting: LightingPreset;
   /** The map's baked bounce light (G6, render/bakedLight.ts), or null when it has none. */
   private readonly probes: ProbeGrid | null;
+  /** The map's built meshes (G9: the dressing's neon flicker is a uniform on its junk mesh). */
+  private mapGroup: Group;
   /** The weapon torches drawn (M33h): nothing by day, or in a match where nobody carries one. */
   private readonly torches: TorchBeams;
   /** A soft dark disc on the floor under every player (audit section 5, F5), on every preset. */
@@ -207,7 +210,8 @@ export class MatchSession {
     // The surface textures are the renderer's, shared by every session (audit L-04), and so are the last map's meshes,
     // kept between sessions (audit CORE-33): the same map again takes them back rather than building them.
     this.probes = bakedLightFor(map);
-    renderer.scene.add(renderer.mapMeshes.take(map, renderer.surfaceTexturesFor(map), mapLookOf(quality, this.probes)));
+    this.mapGroup = renderer.mapMeshes.take(map, renderer.surfaceTexturesFor(map), mapLookOf(quality, this.probes));
+    renderer.scene.add(this.mapGroup);
     this.build.phase('map meshes');
     if (renderer.mapMeshes.reused) this.build.notes.push('map meshes reused');
     // The map's light (M33f): its haze, exposure and environment on the renderer, set by every session so none keeps the
@@ -295,6 +299,7 @@ export class MatchSession {
     // The field's own sounds (M33j): whatever New game's spare time didn't render ahead is finished here (M65, audit
     // AUD-01), so `?perf` shows what was left.
     this.combat.setLighting(lighting);
+    this.combat.setMapGroup(this.mapGroup);
     this.build.phase('sound');
     this.stats = new MatchStats(this.state.characters);
     this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, this.teamSizes(), this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours, map, renderer.figureModel, quality.figureDetail, this.extraction, crowd);
@@ -480,7 +485,8 @@ export class MatchSession {
     this.daylight.setQuality(quality);
     this.torches.setQuality(quality);
     this.daylight.reserveLights(this.torches.reserved);
-    this.renderer.mapMeshes.restyle(this.renderer.surfaceTexturesFor(this.setup.map), mapLookOf(quality, this.probes));
+    this.mapGroup = this.renderer.mapMeshes.restyle(this.renderer.surfaceTexturesFor(this.setup.map), mapLookOf(quality, this.probes));
+    this.combat.setMapGroup(this.mapGroup);
     this.match.setFigureShadows(quality.figureShadows);
     this.match.setBakedLight(bakedLightMode(quality.bakedLight, this.probes) === 'off' ? null : this.probes);
     this.match.setFlagQuality(quality);

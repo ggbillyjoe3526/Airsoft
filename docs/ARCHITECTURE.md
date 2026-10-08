@@ -98,6 +98,16 @@ Maps are plain data (`map/mapTypes.ts`). One source builds both the Rapier colli
   on a map without the data a mode needs.
 - **Look-only data.** `signs`, `decor`, `dressing` and `bakedLight` are drawn but never read by physics, nav, cover or
   sight.
+  - **`dressing`** (`MapDressing`) is a map's set dressing, in a file of its own per map (`map/depotDressing.ts`,
+    `map/woodlandDressing.ts`, `map/neonHeightsDressing.ts`). `render/mapDressing.ts` turns it into a placement the
+    same way every time from `dressing.seed`; `config/dressing.ts` holds the sizes, colours and what each part costs.
+    The fields: `clutter` (dirt, junk and litter along block feet, `mix` picking the yard's or the street's kinds),
+    `marks` (logos and wall sprays), `posters`, `puddles` (`mud` for a mud patch), `woods` (leaf litter and fallen
+    branches, twigs and logs on terrain), `moss` (damp growth on hard cover's vertex colours), `neon` (tube-letter
+    signs, a few on a gentle flicker channel), `steam`, `fireflies`, `skyline` (towers, treelines and hills beyond the
+    field, with the lights they carry and their chimneys' smoke), `plane`, `strips` (lit panels), `motes` and
+    `kickedDust` (the tint of the dust in the air and underfoot). Everything new is look
+    only: no collider, no cover, no nav change and nowhere to hide (each map's `*Dressing.test.ts` proves it).
 - **Coordinates.** Depot is written in plan coordinates (north = +z, as on the layout sketch) and turned into world
   coordinates (north = -z in three.js) in `map/depot.ts`.
 
