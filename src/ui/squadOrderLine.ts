@@ -1,10 +1,9 @@
 import { SQUAD_ORDERS, type SquadOrderKind } from '../config/squad';
-import { teamCss } from '../config/teams';
 
 /** Why no order is in force after one was given: see SquadOrderLine.ordered. */
 export type OrderNotice = 'cancelled' | 'nobody' | 'notNow' | 'onPlan';
 
-/** What the squad line says: a notice while one lasts, else the order in force ('' hides the line). */
+/** What the squad line says: a notice while one lasts, else the order in force ('' when there is nothing to say). */
 export function squadLineText(order: SquadOrderKind | 'none', notice: string): string {
   if (notice) return notice;
   return order === 'none' ? '' : LINES[order];
@@ -17,8 +16,11 @@ const LINES: Readonly<Record<SquadOrderKind, string>> = {
 };
 
 /**
- * The HUD's squad line (M22), bottom left: the order your bot teammates are carrying out, and for a moment after you
- * give one that changes nothing they do, why. Hidden while they play the team plan. The DOM is only touched on change.
+ * The squad line (M22): the order your bot teammates are carrying out, and for a moment after you give one that changes
+ * nothing they do, why. Since G4 (owner, 2026-10-08) it is not on screen: the orders show only on the order wheel, and
+ * this is a status region off the screen (`.sr-only`) that a screen reader reads out as the line changes (audit UI-15).
+ * It stays in the page while you play, empty while they play the team plan, so each change is heard; it goes only while
+ * a menu is up. The DOM is only touched on change.
  */
 export class SquadOrderLine {
   private readonly root: HTMLDivElement;
@@ -27,13 +29,11 @@ export class SquadOrderLine {
   private shown = '';
   private visible = false;
 
-  /** `team`: yours, whose colour marks the line. */
-  constructor(parent: HTMLElement, team: number) {
+  constructor(parent: HTMLElement) {
     this.root = document.createElement('div');
-    this.root.className = 'squad-order';
+    this.root.className = 'squad-order sr-only';
     // Read out as an order is given or refused (audit UI-15); it changes only on those.
     this.root.setAttribute('role', 'status');
-    this.root.style.setProperty('--team', teamCss(team));
     this.root.hidden = true;
     parent.appendChild(this.root);
   }
@@ -50,8 +50,9 @@ export class SquadOrderLine {
 
   /** False while a menu is up. */
   setVisible(visible: boolean): void {
+    if (visible === this.visible) return;
     this.visible = visible;
-    this.root.hidden = !visible || this.shown === '';
+    this.root.hidden = !visible;
   }
 
   /** Once per frame, with the order in force. */
@@ -61,7 +62,6 @@ export class SquadOrderLine {
     if (text === this.shown) return;
     this.shown = text;
     this.root.textContent = text;
-    this.root.hidden = !this.visible || text === '';
   }
 
   /** A new round: no order, no notice. */

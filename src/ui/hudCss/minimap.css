@@ -1,11 +1,11 @@
 /* The minimap (M23; G4 look), top left: the field round you, turned with your view, on a navy square with rounded
    corners and a cool blue frame, the map and round under it. Drawn on a canvas (ui/minimap.ts) only when something on
-   it changes; its size (--minimap-size) is set on the container with the HUD's. Level 3 of the HUD. */
+   it changes; its size (--minimap-size) is set on the container with the HUD's. The navy square is the element's own
+   background (--hud-panel, as opaque as Settings → HUD → HUD opacity), so the setting needs no redraw. */
 .minimap-frame {
   position: absolute;
   left: var(--hud-edge-x);
   top: var(--hud-margin);
-  opacity: var(--hud-l3);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -23,6 +23,7 @@
   width: var(--minimap-size);
   height: var(--minimap-size);
   border-radius: 10px;
+  background: var(--hud-panel);
   box-shadow: 0 0 0 2px rgba(150, 180, 255, 0.3);
 }
 

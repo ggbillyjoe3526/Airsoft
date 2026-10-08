@@ -1,12 +1,11 @@
 /* The replica panel (the M19 ammo block; G4 look), bottom right: the replica's picture, its name and a chip per fire
    mode (the current one orange), the loaded BBs large with the spare BBs and magazines under them, a bar per spare
-   magazine, then the reload bar and the status line (ui/replicaPanel.ts). Level 2 of the HUD; its size is
+   magazine, then the reload bar and the status line (ui/replicaPanel.ts), as opaque as HUD opacity; its size is
    Settings → HUD (--hud-scale, set on the game's container), grown from the corner. */
 .hud-replica {
   position: absolute;
   right: var(--hud-edge-x);
   bottom: var(--hud-margin);
-  opacity: var(--hud-l2);
   scale: var(--hud-scale, 1);
   transform-origin: 100% 100%;
   width: 420px;

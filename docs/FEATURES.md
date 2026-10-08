@@ -172,7 +172,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Hit feed with team colour bars, teammate markers, the scoreboard on Tab, round stats between rounds (M19, FA9)
 - HUD in the menus' look (G4): a score bar with slanted pips, score blocks and the match's aim under the clock; a framed
   square minimap with the map and round; hit feed rows with a BB mark and a Hit tag; a replica panel with the replica's
-  picture, fire-mode chips and magazine bars; squad cards with the order keys; the Tab scoreboard on a navy panel
+  picture, fire-mode chips and magazine bars; the Tab scoreboard on a navy panel; a "ROUND 1" banner in heavy capitals;
+  HUD opacity (Settings → Gameplay, 50–100 %, 90 % by default); squad orders on the order wheel only
 - End-of-match summary with your stats and local records (wins, accuracy, streaks) (M19)
 - What got you: after you're hit, a card with the shot's direction and distance, whether the bot held the angle, your
   time in view and if you moved; Auto, On or Off; Pro tips between rounds (M41)

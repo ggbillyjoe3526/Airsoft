@@ -1,19 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HUD_TEXT } from '../config/hudText';
+import { HIT_FEED } from '../config/matchInfo';
 import { AEG, GAS_PISTOL, LOADOUT } from '../config/replicas';
+import { SQUAD_ORDERS } from '../config/squad';
 import { defaultScheme } from '../config/schemes';
 import type { PictureSubject } from '../render/itemPictures';
 import { createArmament } from '../sim/armament';
-import type { Character } from '../sim/character';
 import { HitFeed } from './hitFeed';
+import { HitFeedback } from './hitFeedback';
 import { kitSubjects } from './menus/menuPictures';
 import { REPLICA_PANEL_HTML, ReplicaPanel } from './replicaPanel';
-import { SquadBar } from './squadBar';
+import { SquadOrderLine } from './squadOrderLine';
 import { FakeElement, findAll } from './testSupport';
 
 /**
- * G4 (HUD restyle): the replica panel's picture, fire-mode chips and spare line; the squad line's cards and keys; the hit
- * feed's rows as seen and as heard; the HUD's words. Each part writes the DOM only when what it shows changes.
+ * G4 (HUD restyle): the replica panel's picture, fire-mode chips and spare line; the squad order line, now off the
+ * screen; the round banner; the hit feed's rows as seen and as heard; the HUD's words. Each part writes the DOM only when what it shows changes.
  */
 
 /** A fake element that counts its text writes, and finds the replica panel's parts by selector (one fake each). */
@@ -156,69 +158,97 @@ describe('kitSubjects (G4: the HUD\'s pictures of the carried replicas)', () => 
   });
 });
 
-describe('the squad line (G4 criterion 5)', () => {
-  const people = (n: number) => Array.from({ length: n }, (_, id) => ({ id, status: 'alive' }) as unknown as Character);
-  const names = new Map([
-    [0, 'You'],
-    [1, 'Blue 2'],
-    [2, 'Blue 3'],
-  ]);
-  const keys: Record<string, string> = { orderFollow: 'F', orderHold: 'X', orderRegroup: '' };
-  const bar = (members: Character[]) => {
+// Owner, 2026-10-08: the squad cards and the order keys left the HUD (the orders show on the order wheel only); the
+// order line stays, off the screen, for a screen reader (audit UI-15).
+describe('the squad order line, off the screen (G4, owner 2026-10-08)', () => {
+  const line = () => {
     const parent = new Counted('div');
-    const squad = new SquadBar(parent as unknown as HTMLElement, 0, members, names, (a) => keys[a] ?? '');
-    const root = parent.children[0] as Counted;
-    return { squad, root, cards: findAll(root, 'squad-card') as Counted[], strip: findAll(root, 'squad-keys')[0] as Counted };
+    const order = new SquadOrderLine(parent as unknown as HTMLElement);
+    return { parent, order, root: parent.children[0] as Counted };
   };
-  const states = (cards: Counted[]) => cards.map((c) => (findAll(c, 'squad-card-state')[0] as Counted).textContent);
 
-  it('has a card per player on your side, you first, each with a head and the name', () => {
-    const { cards } = bar(people(3));
-    expect(cards).toHaveLength(3);
-    expect(cards.map((c) => c.children.find((w) => w.className === 'squad-card-words')!.children[0]!.textContent)).toEqual(['You', 'Blue 2', 'Blue 3']);
-    for (const c of cards) expect(c.children[0]!.className).toBe('head-icon-box');
+  it('puts one element on the HUD: a status region kept off the screen, with no cards, heads or keys', () => {
+    const { parent, root } = line();
+    expect(parent.children).toHaveLength(1);
+    expect(root.className.split(' ')).toEqual(['squad-order', 'sr-only']);
+    expect(root.getAttribute('role')).toBe('status');
+    expect(root.children).toEqual([]);
+    expect(made.map((el) => el.className)).toEqual(['squad-order sr-only']);
+    for (const gone of ['squad-bar', 'squad-cards', 'squad-card', 'squad-keys', 'head-icon-box']) expect(findAll(parent, gone), gone).toEqual([]);
   });
 
-  it('says what each is doing: in play, the order in force (teammates only), or hit, greyed', () => {
-    const members = people(3);
-    const { squad, cards } = bar(members);
-    squad.update('none', 0.016);
-    expect(states(cards)).toEqual([HUD_TEXT.inPlay, HUD_TEXT.inPlay, HUD_TEXT.inPlay]);
-    squad.update('hold', 0.016);
-    expect(states(cards)).toEqual([HUD_TEXT.inPlay, 'Holding', 'Holding']);
-    (members[2] as { status: string }).status = 'out';
-    squad.update('hold', 0.016);
-    expect(states(cards)).toEqual([HUD_TEXT.inPlay, 'Holding', HUD_TEXT.hit]);
-    expect(cards.map((c) => c.classList.contains('hit'))).toEqual([false, false, true]);
+  it('says the order in force and why an order changed nothing, as before', () => {
+    const { order, root } = line();
+    order.setVisible(true);
+    order.update('follow', 0.016);
+    expect(root.textContent).toBe('Squad · Follow me');
+    order.ordered('none', 'cancelled');
+    order.update('none', 0.016);
+    expect(root.textContent).toBe(SQUAD_ORDERS.cancelled);
+    order.update('none', SQUAD_ORDERS.noticeTime);
+    expect(root.textContent).toBe('');
   });
 
-  it('writes a card only when its state changes', () => {
-    const { squad, cards } = bar(people(3));
-    squad.update('follow', 0.016);
-    const state = findAll(cards[1]!, 'squad-card-state')[0] as Counted;
-    const writes = state.writes;
-    for (let i = 0; i < 100; i++) squad.update('follow', 0.016);
-    expect(state.writes).toBe(writes);
+  it('stays in the page while you play, empty or not, so each change is read out; it goes while a menu is up', () => {
+    const { order, root } = line();
+    expect(root.hidden).toBe(true);
+    order.setVisible(true);
+    expect(root.hidden).toBe(false);
+    order.update('none', 0.016);
+    expect(root.hidden).toBe(false);
+    order.update('hold', 0.016);
+    expect(root.hidden).toBe(false);
+    order.setVisible(false);
+    expect(root.hidden).toBe(true);
   });
 
-  it('shows the order keys as bound when it shows, and leaves out an unbound one', () => {
-    const { squad, strip } = bar(people(3));
-    squad.setVisible(true);
-    const items = strip.children;
-    expect(items.map((i) => i.children[0]!.textContent)).toEqual(['F', 'X', '']);
-    expect(items.map((i) => i.children[1]!.textContent)).toEqual([' Follow', ' Hold', ' Regroup']);
-    expect(items.map((i) => i.hidden)).toEqual([false, false, true]);
-    keys.orderRegroup = 'V';
-    squad.setVisible(true);
-    expect(items[2]!.hidden).toBe(false);
-    expect(items[2]!.children[0]!.textContent).toBe('V');
-    keys.orderRegroup = '';
+  it('writes its words only when they change', () => {
+    const { order, root } = line();
+    order.setVisible(true);
+    order.update('regroup', 0.016);
+    const writes = root.writes;
+    for (let i = 0; i < 100; i++) order.update('regroup', 0.016);
+    expect(root.writes).toBe(writes);
+  });
+});
+
+describe('the round banner (G4, owner 2026-10-08: "ROUND 1")', () => {
+  const banner = () => {
+    const feedback = new HitFeedback(new Counted('div') as unknown as HTMLElement, () => 'F');
+    const round = (feedback as unknown as { round: Counted }).round;
+    const news = (feedback as unknown as { news: Counted }).news;
+    return { feedback, round, news };
+  };
+
+  it('keeps the words as written (the capitals are the stylesheet\'s), and a screen reader hears them so', () => {
+    const { feedback, round, news } = banner();
+    feedback.setRoundMessage('Round 1');
+    expect(round.textContent).toBe('Round 1');
+    expect(news.textContent).toBe('Round 1');
+    expect(round.classList.contains('show')).toBe(true);
   });
 
-  it('has no cards and no keys in a 1v1: nobody to order', () => {
-    const { root } = bar(people(1));
-    expect(findAll(root, 'squad-cards')[0]!.hidden).toBe(true);
-    expect(findAll(root, 'squad-keys')[0]!.hidden).toBe(true);
+  it('marks the round\'s start as its headline, and nothing else it says', () => {
+    const { feedback, round } = banner();
+    for (const start of ['Round 1', 'Round 12', 'Round 3 · Attack', 'Round 3 · Defend']) {
+      feedback.setRoundMessage(start);
+      expect(round.classList.contains('start'), start).toBe(true);
+    }
+    for (const other of ['Your team wins the round · next round in 4', 'You win the match!', 'Extraction · get to an exit', 'Under a minute left']) {
+      feedback.setRoundMessage(other);
+      expect(round.classList.contains('start'), other).toBe(false);
+    }
+    feedback.setRoundMessage('');
+    expect(round.classList.contains('show')).toBe(false);
+    expect(round.classList.contains('start')).toBe(false);
+  });
+
+  it('writes the DOM only when the message changes', () => {
+    const { feedback, round } = banner();
+    feedback.setRoundMessage('Round 2');
+    const writes = round.writes;
+    for (let i = 0; i < 100; i++) feedback.setRoundMessage('Round 2');
+    expect(round.writes).toBe(writes);
   });
 });
 
@@ -234,7 +264,7 @@ describe('the hit feed rows (G4 criterion 3)', () => {
     const seen = line.children.find((c) => c.className === 'hit-feed-row')!;
     expect(seen.getAttribute('aria-hidden')).toBe('true');
     expect(seen.children.map((c) => c.className)).toEqual(['hit-feed-name', 'hit-feed-bb', 'hit-feed-name', 'hit-feed-tag']);
-    expect([seen.children[0]!.textContent, seen.children[2]!.textContent, seen.children[3]!.textContent]).toEqual(['Blue 1', 'Orange 2', HUD_TEXT.hit]);
+    expect([seen.children[0]!.textContent, seen.children[2]!.textContent, seen.children[3]!.textContent]).toEqual(['Blue 1', 'Orange 2', HIT_FEED.tag]);
   });
 
   it('keeps the friendly tag after the row', () => {

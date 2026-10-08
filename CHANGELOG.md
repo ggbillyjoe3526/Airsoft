@@ -41,12 +41,14 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **G3** · Loadout and Customise show your replicas as pictures; Customise lists the parts down the left, Colour first, with each option as a picture tile beside the replica and its numbers (#134)
 - **G3** · Settings regrouped into Graphics, Display, Audio, Controls, Gameplay, Accessibility, Look, Save file and Dev, with a search box and a short note on every row (#134)
 - **G3** · The Armory's collection is a picture grid with a how-it-works strip; the title, pause, summary, result and loading screens take the new look (#134)
-- **G4** · The HUD takes the menus' look: navy panels with cut corners in the menus' type, nothing smaller than 15 px
+- **G4** · The HUD takes the menus' look: navy panels with cut corners in the menus' type, nothing smaller than 15 px; the panels are more solid (90 %), and Settings → Gameplay → HUD opacity sets them from 50 % to 100 %
 - **G4** · Score bar: slanted pips per player, each side's score on a block in its colour, and "First to 5" (or the run) under the clock
 - **G4** · The minimap is a framed square with the map and round under it, and is only redrawn when something on it moves
 - **G4** · Hit feed rows read shooter, BB, who called it and a Hit tag (screen readers still hear "<who> called HIT · <shooter>"); your rows have an acid edge
 - **G4** · Replica panel: a picture of the replica you carry in its colours and parts, a chip per fire mode, the loaded BBs large with the spare BBs and magazines, a bar per spare magazine
-- **G4** · Squad line: a card per player on your side with their head, name and what they're doing (In play, the order, Hit), and the order keys under them; the Tab scoreboard gets the navy panel and your row an acid edge
+- **G4** · The squad cards and order keys leave the bottom left: squad orders show only on the order wheel (Z), and a screen reader still hears each order and notice; the Tab scoreboard gets the navy panel and your row an acid edge
+- **G4** · The round banner says "ROUND 1" large in the HUD's heavy capitals on a navy panel with an orange bar; results and the countdown take the same panel
+- **G4** · At the largest Scoreboard size the score bar no longer runs under the hit feed or over the minimap (it was sized for a bar 444 px wide, not 730)
 - **M78** · High and Ultra draw the city's flat finishes at 512 × 512 as Medium does; Neon Heights on High: 21 MB less graphics memory (#151)
 
 ### Fixed

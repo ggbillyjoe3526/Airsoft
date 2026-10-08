@@ -1,11 +1,10 @@
 /* The hit feed (M19; G4 look), top right: a navy row per hit, read left to right as the shooter, a BB and who called
    it, each name in its team's colour, then a Hit tag; a screen reader hears the airsoft sentence instead (ui/hitFeed.ts).
-   Level 3 of the HUD, with the minimap, the markers and the squad line. */
+   Its rows are panels, as opaque as Settings → HUD → HUD opacity (--hud-panel, style.css #app). */
 .hit-feed {
   position: absolute;
   top: var(--hud-margin);
   right: var(--hud-edge-x);
-  opacity: var(--hud-l3);
   scale: var(--hud-scale, 1);
   transform-origin: 100% 0;
   display: flex;

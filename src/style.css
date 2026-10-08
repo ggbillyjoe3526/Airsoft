@@ -65,13 +65,11 @@
   --danger: #ff5a4f;
   --warning: #ffd84d;
   --success: #5fbf6a;
-  /* The HUD (audit section 6, PR 2): one foreground, one shadow, two panel strengths, one radius, three levels of
-     emphasis (crosshair and hit marker at full, ammo and scoreboard, then the minimap, feed, markers and squad line). */
+  /* The HUD (audit section 6, PR 2): one foreground, one shadow, two panel strengths (#app, below), one radius, three
+     levels of emphasis for what floats over the field without a panel (the crosshair and hit marker at full, then the
+     markers over the field: --hud-l2, --hud-l3). */
   --hud-fg: #fff;
   --hud-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
-  /* The concept's navy (graphics overhaul G4), see-through over the field; the solid one under what you read closely. */
-  --hud-panel: rgba(7, 13, 31, 0.74);
-  --hud-panel-solid: rgba(7, 13, 31, 0.9);
   /* The cut corner of the HUD's panels (the score bar's sides, the replica panel, the Tab scoreboard). */
   --hud-cut: 14px;
   --hud-cut-lg: 18px;
@@ -110,6 +108,12 @@ body {
 #app {
   position: fixed;
   inset: 0;
+  /* The HUD's panels (graphics overhaul G4): the concept's navy, as opaque as Settings → HUD → HUD opacity
+     (--hud-opacity, set here by Game.showHudLook; 90 % until it is), and the solid one under what you read closely (the
+     clock, your own hit feed rows, the Tab scoreboard) halfway from that to solid. Declared on #app, where the setting
+     is, so each panel takes it (a token on :root would keep :root's value). */
+  --hud-panel: rgb(7 13 31 / var(--hud-opacity, 0.9));
+  --hud-panel-solid: rgb(7 13 31 / calc(0.5 + var(--hud-opacity, 0.9) / 2));
 }
 
 /* Reduced motion (Settings → Accessibility, or the system's unless the player picked): menu transitions and entrances
@@ -503,6 +507,8 @@ kbd {
   transition: opacity 0.15s;
   scale: var(--hud-scale, 1);
   transform-origin: 50% 0;
+  /* A stamp over the round banner's panel (ui/hudCss/round.css): the hit that ends a round shows both. */
+  z-index: 1;
 }
 
 .hitfx-banner.show {
@@ -539,8 +545,7 @@ kbd {
   opacity: 0;
 }
 
-.hitfx-spectating.show,
-.hitfx-round.show {
+.hitfx-spectating.show {
   opacity: 1;
 }
 
@@ -563,21 +568,6 @@ kbd {
 
 .hitfx-out.show {
   opacity: 1;
-}
-
-.hitfx-round {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: calc(var(--hud-margin) + 32px + var(--sb-height) * var(--sb-scale, 1));
-  scale: var(--hud-scale, 1);
-  transform-origin: 50% 0;
-  text-align: center;
-  /* One line at 1280 px (audit section 6, item 17; KNOWN_ISSUES row 138): it shrinks with a narrow window. */
-  font-size: min(22px, 1.8vw);
-  font-weight: 700;
-  letter-spacing: var(--ls-caps);
-  opacity: 0;
 }
 
 /* The progress fills (M64, audit UI-11: ui/timedFill.ts): full width, scaled from the left by one `transform`
@@ -933,14 +923,6 @@ kbd {
 
 
 /* Match info (M19): the teammate markers and the stats tables (the hit feed and the Tab scoreboard: ui/hud.css). */
-/* Where the round banner could reach the feed's column, it keeps to the middle and wraps instead. */
-@media (max-width: 1400px) {
-  .hitfx-round {
-    left: calc(50% - 230px);
-    right: calc(50% - 230px);
-  }
-}
-
 /* Teammate markers: a name tag and a team-coloured arrow whose tip is just over the head. */
 .mate-marker {
   position: absolute;
@@ -1344,8 +1326,6 @@ kbd {
   .hold-marker,
   .order-wheel,
   .hit-feed,
-  .squad-order,
-  .squad-bar,
   .match-board,
   .what-got-you,
   .case-prompt,

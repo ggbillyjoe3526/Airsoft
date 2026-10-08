@@ -65,24 +65,44 @@ export const SCOREBOARD_SIZE = {
   max: 2,
   step: 0.1,
   default: 1.3,
-  /** Half the scoreboard's width at size 1 in its widest form (Attack and Defend), px. */
-  halfWidth: 222,
+  /**
+   * Half the score bar's width at size 1 in its widest form (Attack and Defend, 5v5: about 730 px, G4), px: the figure
+   * the hit feed keeps clear of (ui/hudCss/feed.css, `365px * var(--sb-scale)`).
+   */
+  halfWidth: 365,
   /** Room kept between the scoreboard and the screen's right edge for the hit feed, px (bug pass: never under it). */
   feedRoom: 220,
+  /** Room kept between the scoreboard and the minimap's right edge, px: its 2 px ring and 12 px clear (G4). */
+  minimapGap: 14,
 } as const;
 
 /**
  * The scoreboard's scale on a `viewportWidth` px wide screen for the size picked: as picked, unless that would leave the
- * hit feed less than SCOREBOARD_SIZE.feedRoom beside it; then as large as fits, but never below size 1.
+ * hit feed less than SCOREBOARD_SIZE.feedRoom beside it, or reach the minimap (`minimapEdge`: its right edge, px from
+ * the screen's left; 0 for none); then as large as fits, but never below size 1. The bar is centred, so the room on
+ * the tighter side holds on both.
  */
-export function scoreboardScale(picked: number, viewportWidth: number): number {
-  const fits = (viewportWidth / 2 - SCOREBOARD_SIZE.feedRoom) / SCOREBOARD_SIZE.halfWidth;
+export function scoreboardScale(picked: number, viewportWidth: number, minimapEdge = 0): number {
+  const room = Math.max(SCOREBOARD_SIZE.feedRoom, minimapEdge + SCOREBOARD_SIZE.minimapGap);
+  const fits = (viewportWidth / 2 - room) / SCOREBOARD_SIZE.halfWidth;
   return Math.min(picked, Math.max(1, fits));
 }
 
 /**
+ * How far in from the screen's left and right the HUD's corners keep, px (style.css `--hud-edge-x`): inside the middle
+ * 16:9 of an ultrawide screen (`aspect`), then a margin of `share` of the width, held between `min` and `max`.
+ */
+export const HUD_INSET = { aspect: 1.778, share: 0.015, min: 16, max: 32 } as const;
+
+/** The HUD's side inset (`--hud-edge-x`) on a `viewportWidth` × `viewportHeight` px window. */
+export function hudInsetX(viewportWidth: number, viewportHeight: number): number {
+  const safe = Math.max(0, (viewportWidth - HUD_INSET.aspect * viewportHeight) / 2);
+  return safe + Math.min(HUD_INSET.max, Math.max(HUD_INSET.min, HUD_INSET.share * viewportWidth));
+}
+
+/**
  * Settings → HUD → HUD size (audit UI-04): a scale on the whole HUD (the replica panel, the scoreboard, the minimap,
- * the hit feed, the squad line, the round messages, the order wheel and the markers over the field; the crosshair keeps
+ * the hit feed, the round messages, the order wheel and the markers over the field; the crosshair keeps
  * its own size). 100 % fits the screen: the HUD grows with a window taller than `referenceHeight` (1440p, 4K without
  * the system's scaling) up to `maxAuto` times, so its type doesn't shrink to a sliver there.
  */
@@ -102,6 +122,18 @@ export function hudScale(picked: number, viewportHeight: number): number {
   const auto = Math.min(HUD_SIZE.maxAuto, Math.max(1, viewportHeight / HUD_SIZE.referenceHeight));
   return Math.round(picked * auto * 1000) / 1000;
 }
+
+/**
+ * Settings → HUD → HUD opacity (G4, owner 2026-10-08: the panels were too see-through): how opaque the HUD's navy
+ * panels are (the score bar, the minimap, the hit feed's rows, the replica panel, the Tab scoreboard and the round
+ * banner), 1 = solid. The text, the team colours and the bars on them stay solid. Saved as `hudOpacity`.
+ */
+export const HUD_OPACITY = {
+  min: 0.5,
+  max: 1,
+  step: 0.05,
+  default: 0.9,
+} as const;
 
 /** The marker with the name over each teammate (never over an enemy). */
 export const TEAMMATE_MARKERS = {

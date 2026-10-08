@@ -41,7 +41,7 @@ import {
   TIME_OUT_CHOICES,
   WINS_NEEDED_CHOICES,
 } from '../../config/matchRules';
-import { DEFAULT_HIT_FEED_MODE, DEFAULT_WHAT_GOT_YOU_MODE, HIT_FEED_MODES, type HitFeedMode, HUD_SIZE, RECORDS_KEY, SCOREBOARD_SIZE, WHAT_GOT_YOU_MODES, type WhatGotYouMode } from '../../config/matchInfo';
+import { DEFAULT_HIT_FEED_MODE, DEFAULT_WHAT_GOT_YOU_MODE, HIT_FEED_MODES, type HitFeedMode, HUD_OPACITY, HUD_SIZE, RECORDS_KEY, SCOREBOARD_SIZE, WHAT_GOT_YOU_MODES, type WhatGotYouMode } from '../../config/matchInfo';
 import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../../config/modes';
 import { AIMING } from '../../config/optics';
 import { frameRateCapFromSaved, GRAPHICS_ROWS, graphicsKey, parseStored, SHOW_FPS_CHOICES, TONE_MAPPING_CHOICES } from '../../config/graphics';
@@ -320,6 +320,14 @@ export function loadWhatGotYouMode(): WhatGotYouMode {
 /** The HUD's size as picked (Settings → HUD, audit UI-04): a scale, 1 = sized for the screen. */
 export function loadHudSize(): number {
   return loadSetting('hudSize', numberIn(HUD_SIZE.min, HUD_SIZE.max), HUD_SIZE.default);
+}
+
+/**
+ * How opaque the HUD's panels are (Settings → HUD, G4): 0.5 to 1. A save from before it, or one holding anything else
+ * (out of range, not a number), reads as the default.
+ */
+export function loadHudOpacity(storage = browserStorage()): number {
+  return loadSetting('hudOpacity', numberIn(HUD_OPACITY.min, HUD_OPACITY.max), HUD_OPACITY.default, storage);
 }
 
 /** Raw mouse input (Settings → Controls, audit UI-20): on unless the player turned it off. */

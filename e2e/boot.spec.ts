@@ -329,6 +329,20 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(group(/Gameplay/i)).toBeFocused();
   // Gameplay (G3): the HUD's rows (M24) with the crosshair's.
   await expect(settings.getByRole('slider', { name: 'Scoreboard size' })).toHaveValue('1.3');
+  // G4: HUD opacity, 90 % by default, reaches the HUD as --hud-opacity on the container and is saved as hudOpacity.
+  const hudOpacity = settings.getByRole('slider', { name: 'HUD opacity' });
+  await expect(hudOpacity).toHaveValue('0.9');
+  await expect(hudOpacity).toHaveAttribute('aria-valuetext', '90%');
+  const appVar = (name: string) => page.evaluate((n) => document.getElementById('app')!.style.getPropertyValue(n), name);
+  await expect.poll(() => appVar('--hud-opacity')).toBe('0.9');
+  await hudOpacity.focus();
+  await page.keyboard.press('ArrowLeft');
+  await expect(hudOpacity).toHaveValue('0.85');
+  await expect.poll(() => appVar('--hud-opacity')).toBe('0.85');
+  const savedOpacity = () => page.evaluate(() => (JSON.parse(localStorage.getItem('airsoft.settings') ?? '{}') as { hudOpacity?: number }).hudOpacity);
+  await expect.poll(savedOpacity).toBe(0.85);
+  await page.keyboard.press('ArrowRight');
+  await expect.poll(() => appVar('--hud-opacity')).toBe('0.9');
   await expect(settings.getByRole('group', { name: 'Hit feed' }).getByRole('button', { name: 'Fade' })).toHaveAttribute('aria-pressed', 'true');
   // M41: the What got you row, Auto by default (shown against Pro opponents only).
   const whatGotYou = settings.getByRole('group', { name: 'What got you' });
@@ -404,11 +418,15 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   // The minimap (M23) is up while playing, with the map and round under it (G4).
   await expect(page.locator('.minimap')).toBeVisible();
   await expect(page.locator('.minimap-caption')).toHaveText(/^Depot · Round \d+$/);
-  // G4: the score bar says what wins the match; the squad line has a card per player on your side, you first; the
-  // replica panel a chip per fire mode the AEG has.
+  // G4: the score bar says what wins the match; the replica panel has a chip per fire mode the AEG has, on the panel
+  // navy at HUD opacity's 90 %; the round banner sets its words in capitals.
   await expect(page.locator('.sb-aim')).toHaveText(/^First to \d+/);
-  await expect(page.locator('.squad-card b')).toHaveText(['You', /\S/]);
   await expect(page.locator('.hud-mode')).toHaveText(['Semi', 'Burst', 'Auto']);
+  await expect(page.locator('.hud-replica')).toHaveCSS('background-color', 'rgba(7, 13, 31, 0.9)');
+  await expect(page.locator('.hud-replica')).toHaveCSS('opacity', '1');
+  await expect(page.locator('.hitfx-round')).toHaveCSS('text-transform', 'uppercase');
+  // G4 (owner, 2026-10-08): no squad cards or order keys on screen; the squad orders show on the order wheel only.
+  await expect(page.locator('.squad-bar, .squad-card, .squad-keys')).toHaveCount(0);
   // The order wheel (M23) shows while Z is held; let go in the middle, it closes with no order given.
   const wheel = page.locator('.order-wheel');
   await page.keyboard.down('z');
@@ -420,8 +438,12 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(wheel).toHaveAttribute('hidden', '', keyWait);
   // Squad orders (M22): F has the bot teammates follow you and the HUD says so; F again sends them back to the plan.
   // Orders are taken only in a live round with you and a teammate in play (else the line says why for a moment).
+  // The line is read out, not shown (G4): a status region off the screen, empty while they play the team plan.
   const squadLine = page.locator('.squad-order');
-  await expect(squadLine).toBeHidden();
+  await expect(squadLine).toHaveClass(/\bsr-only\b/);
+  await expect(squadLine).toHaveAttribute('role', 'status');
+  await expect(squadLine).toBeEmpty();
+  expect((await squadLine.boundingBox())?.width ?? 0).toBeLessThanOrEqual(1);
   type Orders = { airsoft: { state: { round: { phase: string }; characters: { team: number; status: string }[] }; session: { player: { team: number; status: string } } } };
   const ordersTaken = () =>
     page.evaluate(() => {

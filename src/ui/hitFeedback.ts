@@ -1,6 +1,6 @@
 import { HITS } from '../config/hits';
 import { restartAnimation } from './restartAnimation';
-import { spokenRoundMessage } from './roundBanner';
+import { isRoundStart, spokenRoundMessage } from './roundBanner';
 
 /**
  * Hit feedback and round messages over the game view: the hit marker when your BB lands, the "you're
@@ -123,12 +123,16 @@ export class HitFeedback {
     this.spectating.classList.toggle('show', name !== '');
   }
 
-  /** Round message (e.g. "Blue wins the round"), or '' to hide it. */
+  /**
+   * Round message (e.g. "Blue wins the round"), or '' to hide it. The words are kept as written (a screen reader reads
+   * them so); the banner sets them in capitals, the round's start ("Round 2") larger as its headline (G4).
+   */
   setRoundMessage(text: string): void {
     if (text === this.shownRound) return;
     this.shownRound = text;
     this.round.textContent = text;
     this.round.classList.toggle('show', text !== '');
+    this.round.classList.toggle('start', isRoundStart(text));
     // Without the countdown, so the reader says the result once rather than every second.
     const spoken = spokenRoundMessage(text);
     if (spoken && spoken !== this.spokenRound) this.news.textContent = spoken;

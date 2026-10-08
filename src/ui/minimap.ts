@@ -192,12 +192,10 @@ export class Minimap {
     ctx.setTransform(k, 0, 0, k, 0, 0);
     ctx.clearRect(0, 0, MINIMAP.size, MINIMAP.size);
 
-    // The field, turned with the view, inside the square.
+    // The field, turned with the view, inside the square: over the canvas element's own navy (minimap.css, HUD opacity).
     ctx.save();
     ctx.beginPath();
     ctx.rect(0, 0, MINIMAP.size, MINIMAP.size);
-    ctx.fillStyle = MINIMAP.colours.backdrop;
-    ctx.fill();
     ctx.clip();
     const field = this.fields[storeyOf(this.storeys, f.y)];
     if (field) {
