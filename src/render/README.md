@@ -15,7 +15,10 @@ and never writes the simulation.
   `atmosphere.ts`, `lightPools.ts`, `torchBeams.ts`. Baked bounce light: `lightBake.ts`, `probeGrid.ts`,
   `bakedLight.ts`, read in `surfaceShader.ts` (which also draws weathering).
 - Figures: `characterRenderer.ts`, `characterModels.ts`, `figureHuman.ts` / `figureRobot.ts`. Replicas and hands:
-  `replicaModels.ts`, `replicaBuilder.ts`, `handModels.ts`; `itemPictures.ts` draws them off screen for the menus.
+  `replicaModels.ts` (the bodies and assembly), `replicaParts.ts` (optics, grips, magazines and the other fitted parts),
+  `replicaBuilder.ts` (the mesh builder both use), `handModels.ts`; `itemPictures.ts` draws them off screen for the menus.
+- Surface textures: `proceduralTextures.ts` draws each at the quality's Texture detail, the city's flat finishes capped
+  at 512² (`drawnSize`, M78), with `natureTextures.ts`, `cityTextures.ts` and `textureLibrary.ts`.
 - Pooled effects (nothing in flight uploads nothing): `impactPuffs.ts`, `bbRenderer.ts`, `dustMotes.ts`. The post stack
   is `post/` (`postPlan.ts` picks passes per preset); Low builds none.
 - Quality: `gpuCheck.ts` rates the GPU, `qualityStepDown.ts` steps down on slow frames (never saved).

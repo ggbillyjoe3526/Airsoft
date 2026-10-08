@@ -42,19 +42,19 @@ export const CORE_SURFACES: readonly CoreSurfaceId[] = ['concrete', 'blockWall',
  * (Renderer.surfaceTextures shares them between sessions).
  */
 export function createSurfaceTextures(size: TextureSize, anisotropy: Anisotropy): SurfaceTextures {
-  const draw = surfaceDrawer(size, anisotropy);
+  const draw = setDrawer(size, anisotropy);
   return Object.fromEntries(CORE_SURFACES.map((id) => [id, draw(id)])) as SurfaceTextures;
 }
 
 /**
  * Draws into `set` each of `ids` it doesn't hold yet (M33i: the woods' textures, when a map that uses them loads), at
- * `size` and `anisotropy` (the set's own). Returns the set.
+ * `size` (each capped by its drawnSize) and `anisotropy`, the set's own. Returns the set.
  */
 export function addSurfaceTextures<T extends Partial<SurfaceTextures>>(set: T, ids: Iterable<SurfaceTextureId>, size: TextureSize, anisotropy: Anisotropy): T {
   let draw: ((id: SurfaceTextureId) => ProceduralTexture) | null = null;
   for (const id of ids) {
     if (set[id]) continue;
-    draw ??= surfaceDrawer(size, anisotropy);
+    draw ??= setDrawer(size, anisotropy);
     set[id] = draw(id);
   }
   return set;
@@ -65,6 +65,29 @@ export function surfaceTexture(set: SurfaceTextures, id: SurfaceTextureId): Proc
   const t = set[id];
   if (!t) throw new Error(`surface texture '${id}' is not drawn: ask the renderer for the map's set (surfaceTexturesFor)`);
   return t;
+}
+
+/**
+ * How many pixels a side surface `id` is drawn at in a set of `size`: `size`, or less where SURFACES.maxSize caps it
+ * (the city's flat finishes stay at 512² on High and Ultra; M78, owner decision 9).
+ */
+export function drawnSize(id: SurfaceTextureId, size: TextureSize): TextureSize {
+  const cap: TextureSize | undefined = (SURFACES.maxSize as Partial<Record<SurfaceTextureId, TextureSize>>)[id];
+  return cap !== undefined && cap < size ? cap : size;
+}
+
+/** A set's drawer: each surface at its drawnSize, from a surfaceDrawer per size made the first time it is needed. */
+function setDrawer(size: TextureSize, anisotropy: Anisotropy): (id: SurfaceTextureId) => ProceduralTexture {
+  const bySize = new Map<TextureSize, (id: SurfaceTextureId) => ProceduralTexture>();
+  return (id) => {
+    const at = drawnSize(id, size);
+    let draw = bySize.get(at);
+    if (!draw) {
+      draw = surfaceDrawer(at, anisotropy);
+      bySize.set(at, draw);
+    }
+    return draw(id);
+  };
 }
 
 /** A drawer of single surface textures at `size` pixels a side with `anisotropy`. */

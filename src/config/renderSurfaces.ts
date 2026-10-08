@@ -1,4 +1,5 @@
 import type { BlockFinish } from '../map/mapTypes';
+import type { TextureSize } from './renderQuality';
 
 // The look of the ground, nature and fixtures, the night sky, and the surface textures and city props. Split from
 // config/render.ts in G5, which re-exports every name here: import from there.
@@ -265,6 +266,13 @@ export const SURFACES = {
    * 256-pixel drawing (the maps at other sizes are scaled to match, so relief reads the same at any texture size).
    */
   normalStrength: { concrete: 1.4, blockWall: 1.8, crate: 2, corrugated: 3.2, steelPlate: 2.8, barrier: 1, sandbag: 2.6, gabion: 2.6, paint: 1, bark: 2.8, planks: 2, stone: 2, groundDetail: 1.2, plaster: 0.6, cladding: 1.8, tiles: 1.6, asphalt: 1.6, paving: 1.8, glass: 0.4 } satisfies Record<SurfaceTextureId, number>,
+  /**
+   * The most pixels a side each of these surfaces is drawn at, whatever the quality's textureSize (M78, owner decision
+   * 9 on audit REN-11): the city's flat finishes (even paint and render, plain seams and slabs, glass) gain nothing from
+   * High's and Ultra's 1024² but four times the memory, so they stay at Medium's 512² (Neon Heights High: about 21 MB
+   * less). Every surface not named here follows textureSize (render/proceduralTextures.ts drawnSize).
+   */
+  maxSize: { plaster: 512, cladding: 512, asphalt: 512, paving: 512, glass: 512 } satisfies Partial<Record<SurfaceTextureId, TextureSize>>,
   /** The largest normal map (pixels a side): High's 1024² pictures are scaled down to it first (render/surfaceNormals.ts). */
   normalMapMaxSize: 512,
   /**

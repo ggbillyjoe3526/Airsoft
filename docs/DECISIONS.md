@@ -448,6 +448,11 @@ replaces its line; the old one stays findable in the archive or in git.
   there the gate judges counts, memory and the relative check. The perf gate runs a matrix of maps and modes, a
   combination only when the diff reaches it; baselines are reset in the pull request that changes what they measure
   (2026-10-05).
+- **High and Ultra draw the city's flat finishes at 512², as Medium does (owner, 2026-10-05, audit decision 9; M78).**
+  Plaster, cladding, asphalt, paving and glass (`SURFACES.maxSize`) gain nothing from 1024² but four times the memory;
+  every other surface follows the quality's Texture detail. Ultra is capped too, as the drawings are the same. Neon
+  Heights High holds 21 MB less (112.4 → 91.4 MB); the audit's ~28 MB counted the 1024² maps' whole size, not the
+  difference. Screenshots match at play distances; pressed against a plaster wall its finest grain is a touch softer.
 - **Chunk size budgets fail the build on CI, and growth is a deliberate bump with a decision line (2026-10-04).** The
   game chunk's default is 950 kB (warning from 90 %) and Rapier's 4,550 kB.
 - **Production builds ship Brotli and gzip copies of their files (owner, 2026-10-04: Brotli now, `.wasm` later).**
@@ -456,6 +461,13 @@ replaces its line; the old one stays findable in the archive or in git.
   contacts.
 - **Only the ground probe decides "grounded" (2026-09-28).** The controller reports ground when the capsule's rounded
   bottom touches the top edge of cover, which let players hang on and hop over 1 m barriers.
+- **A character still exactly where the last ground probe set it down is not probed again (2026-10-08, M77, audit
+  SIM-06).** The level never moves, so the answer is "at rest": about 40 % of probes in a match, where a fresh cast
+  would move the character by its tolerance (2 µm on average). The controller's own "grounded" was not used as the
+  shortcut: the probe still moves a controller-grounded character by up to 4 cm on slopes.
+- **Per-tick and per-frame paths take lengths with `length3` (`sim/vec.ts`) or `Math.sqrt`, never a three-argument
+  `Math.hypot` (2026-10-08, M77, audit SIM-07, REN-10).** It makes garbage on every call until V8 optimises the
+  caller and isn't rounded alike in every browser; `Math.sqrt` is exact everywhere. Build-time code may keep it.
 - **Characters don't collide with each other in Rapier (2026-09-28).** The simulation handles spacing (bots steer apart)
   and BB hits, which keeps physics simple and deterministic.
 - **Bot navigation is a 0.2 m grid built from the map's blocks, with one node per floor, not recast (2026-09-30).** Maps

@@ -14,7 +14,7 @@ REN-12 (when 4v4 and 5v5 go public); both stay in KNOWN_ISSUES.
 ## M77 · Hot-path trims (Audit 2 SIM-D: SIM-06, SIM-07, REN-10)
 tier: core
 perf: required
-touches: src/sim/, src/physics/, src/render/bbRenderer.ts, src/render/dustMotes.ts, src/render/flagRenderer.ts, docs/KNOWN_ISSUES.md
+touches: src/sim/, src/physics/, src/render/bbRenderer.ts, src/render/dustMotes.ts, src/render/flagRenderer.ts, src/render/, src/ai/angles.ts, src/ai/botCombat.ts, src/ai/botController.ts, src/ai/perception.ts, src/map/foliage.ts, src/map/torchLight.ts, docs/KNOWN_ISSUES.md
 contract: CharacterMover (behaviour unchanged)
 acceptance:
   1. No `Math.hypot` with three arguments in the BB and ray hot paths.
@@ -39,7 +39,7 @@ attempts: 0
 ## M79 · Small leaks and import cycles (Audit 2 CORE-D + AUD PR 3: CORE-07, CORE-08, AUD-06)
 tier: ui
 perf: skip
-touches: src/game.ts, src/ui/menus/menuParts.ts, src/ai/botMovement.ts, src/ai/squadOrders.ts, src/pool/pool.ts, src/pool/caches.ts, src/audio/, pipeline/, .claude/, CHANGELOG.md, docs/
+touches: src/game.ts, src/ui/menus/menuParts.ts, src/ui/menus/menus.ts, src/ai/botMovement.ts, src/ai/squadOrders.ts, src/ai/routes.ts, src/ai/botBrain.ts, src/ai/extractionRoles.ts, src/pool/pool.ts, src/pool/caches.ts, src/pool/tables.ts, src/pool/supplyEvents.ts, src/audio/, pipeline/, .claude/, CHANGELOG.md, docs/
 contract: none
 acceptance:
   1. `Game.dispose()` unregisters every callback it registered; menu pages disconnect their ResizeObserver (CORE-07).
