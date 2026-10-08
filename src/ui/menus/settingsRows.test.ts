@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { DEFAULT_CROSSHAIR, DEFAULT_HIT_FEED_MODE, DEFAULT_WHAT_GOT_YOU_MODE } from '../../config/matchInfo';
+import { DEFAULT_CROSSHAIR, DEFAULT_HIT_FEED_MODE, DEFAULT_WHAT_GOT_YOU_MODE, HUD_OPACITY } from '../../config/matchInfo';
 import { DEFAULT_LOOK } from '../../config/look';
 import { DEFAULT_SOUND_CUE_COLOUR } from '../../config/accessibility';
 import { MemoryStorage } from '../../pool/testStorage';
@@ -66,15 +66,16 @@ function savedKeys(rows: readonly FakeElement[]): string[] {
 }
 
 describe('every settings row keeps its saved key (G3, criterion 8)', () => {
-  it('saves the HUD rows as hudSize, scoreboardSize, hitFeed and whatGotYou, as before the redesign', () => {
+  it('saves the HUD rows as hudSize, scoreboardSize, hitFeed and whatGotYou, as before the redesign, and HUD opacity (G4) as hudOpacity', () => {
     const noop = () => {};
     const rows = hudSettings({
       hudSize: { initial: 1, onChange: noop },
       scoreboardSize: { initial: 1, onChange: noop },
+      hudOpacity: { initial: 0.9, onChange: noop },
       hitFeed: { initial: DEFAULT_HIT_FEED_MODE, onChange: noop },
       whatGotYou: { initial: DEFAULT_WHAT_GOT_YOU_MODE, onChange: noop },
     }) as unknown as FakeElement[];
-    expect(savedKeys(rows)).toEqual(['hitFeed', 'hudSize', 'scoreboardSize', 'whatGotYou']);
+    expect(savedKeys(rows)).toEqual(['hitFeed', 'hudOpacity', 'hudSize', 'scoreboardSize', 'whatGotYou']);
   });
 
   it('saves the Accessibility rows as reducedMotion, teamColours, soundCues, soundCueSize and soundCueColour', () => {
@@ -107,6 +108,48 @@ describe('every settings row keeps its saved key (G3, criterion 8)', () => {
   });
 });
 
+// G4 (owner, 2026-10-08): HUD opacity, with HUD size and Scoreboard size.
+describe('the HUD opacity row (G4)', () => {
+  const rows = (onChange: (v: number) => void = () => {}) => {
+    const noop = () => {};
+    return hudSettings({
+      hudSize: { initial: 1, onChange: noop },
+      scoreboardSize: { initial: 1.3, onChange: noop },
+      hudOpacity: { initial: HUD_OPACITY.default, onChange },
+      hitFeed: { initial: DEFAULT_HIT_FEED_MODE, onChange: noop },
+      whatGotYou: { initial: DEFAULT_WHAT_GOT_YOU_MODE, onChange: noop },
+    }) as unknown as FakeElement[];
+  };
+  const label = (row: FakeElement) => findAll(row, 'menu-row-label')[0]?.textContent ?? '';
+  const sliderOf = (row: FakeElement) => walk(row).find((n) => n.tag === 'input') as FakeElement & { value: string; min: string; max: string; step: string };
+
+  it('sits right after HUD size and Scoreboard size, with a one-line note', () => {
+    const all = rows();
+    expect(all.map(label).slice(0, 3)).toEqual(['HUD size', 'Scoreboard size', 'HUD opacity']);
+    const note = findAll(all[2]!, 'menu-row-help').map((h) => h.textContent).join(' ');
+    expect(note.length).toBeGreaterThan(20);
+    expect(note).not.toContain('\n');
+  });
+
+  it('runs from 50 % to 100 % in steps of 5, at 90 % until moved, and says the value as a percentage', () => {
+    const slider = sliderOf(rows()[2]!);
+    expect([slider.min, slider.max, slider.step, slider.value]).toEqual(['0.5', '1', '0.05', '0.9']);
+    expect(slider.getAttribute('aria-label')).toBe('HUD opacity');
+    expect(slider.getAttribute('aria-valuetext')).toBe('90%');
+  });
+
+  it('hands each step to the game and saves it as hudOpacity', () => {
+    const got: number[] = [];
+    const slider = sliderOf(rows((v) => got.push(v))[2]!);
+    slider.value = '0.65';
+    fire(slider, 'input');
+    expect(got).toEqual([0.65]);
+    expect(slider.getAttribute('aria-valuetext')).toBe('65%');
+    flushSettings(storage);
+    expect(JSON.parse(storage.getItem(SETTINGS_KEY)!)).toMatchObject({ hudOpacity: 0.65 });
+  });
+});
+
 describe('a note on every settings row (G3, criterion 8)', () => {
   const label = (row: FakeElement) => findAll(row, 'menu-row-label')[0]?.textContent ?? '';
   const note = (row: FakeElement) => findAll(row, 'menu-row-help').map((h) => h.textContent).join(' ');
@@ -117,6 +160,7 @@ describe('a note on every settings row (G3, criterion 8)', () => {
       ...hudSettings({
         hudSize: { initial: 1, onChange: noop },
         scoreboardSize: { initial: 1, onChange: noop },
+        hudOpacity: { initial: 0.9, onChange: noop },
         hitFeed: { initial: DEFAULT_HIT_FEED_MODE, onChange: noop },
         whatGotYou: { initial: DEFAULT_WHAT_GOT_YOU_MODE, onChange: noop },
       }),

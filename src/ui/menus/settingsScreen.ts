@@ -16,7 +16,7 @@ import { KeySettings } from '../keySettings';
 import { type LookSettingsOptions, lookSettings } from '../lookSettings';
 import { SaveSettings } from '../saveSettings';
 import type { SaveManager } from '../../save/saveManager';
-import { hintsBar, type MenuHint } from './chrome';
+import type { MenuHint } from './chrome';
 import { MENU_ICONS, SETTINGS_TAB_ICONS } from './icons';
 import { type SettingsOrigin, tabAfterKey } from './menuNav';
 import { el, laterRow, menuRow, rangeControl } from './menuParts';
@@ -43,7 +43,6 @@ export interface SettingsOptions {
   dev: DevSettingsOptions & { enabled: boolean; onEnabled: (on: boolean) => void };
   /** The save (M31), for the Save group: download, load, restore points. */
   save: SaveManager;
-  onBack: () => void;
 }
 
 /** Whether a setting's words hold every word of a search (any order, any case). Pure. */
@@ -162,11 +161,9 @@ export class SettingsScreen {
 
     const columns = el('div', 'settings-columns');
     columns.append(nav, this.panels, about);
-    this.hints = [
-      { keys: ['Esc'], label: MENU_TEXT.hints.back, run: opts.onBack },
-      { keys: ['/'], label: MENU_TEXT.hints.search, run: () => this.search.focus(), code: 'Slash', echo: true },
-    ];
-    this.root.append(el('h1', 'menu-heading sr-only', 'Settings'), columns, hintsBar(this.hints, SETTINGS_TEXT.saved));
+    // / jumps to the search box (the box is on the page for the mouse); Esc is Back, handled by the menus.
+    this.hints = [{ keys: ['/'], label: MENU_TEXT.hints.search, run: () => this.search.focus(), code: 'Slash' }];
+    this.root.append(el('h1', 'menu-heading sr-only', 'Settings'), columns);
     // The Save group's pop-up lives in the page: a dialog inside a hidden panel can't show.
     this.root.append(this.saveSettings.dialog.root);
     this.showTab('graphics');

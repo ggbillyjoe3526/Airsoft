@@ -46,6 +46,17 @@ export function respawnBanner(left: number): string {
   return `Back in at the insertion · ${left === 0 ? 'no' : left} respawn${left > 1 ? 's' : ''} left`;
 }
 
+/** "Round 2", and in flag mode "Round 2 · Attack" or "· Defend": the words a round starts with (roundBanner). */
+const ROUND_START = /^Round \d+(?: · (?:Attack|Defend))?$/;
+
+/**
+ * Whether `text` is the message a round starts with ("Round 2", with your job in flag mode), which the banner shows as
+ * its headline: larger, in the HUD's heavy capitals (G4, ui/hudCss/round.css).
+ */
+export function isRoundStart(text: string): boolean {
+  return ROUND_START.test(text);
+}
+
 /** Before the countdown in the between-rounds message. */
 const NEXT_ROUND = ' · next round in ';
 

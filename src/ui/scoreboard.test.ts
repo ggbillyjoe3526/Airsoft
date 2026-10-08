@@ -232,3 +232,17 @@ describe('the strip\'s bar when the count ends, restarts or is switched, and in 
     });
   });
 });
+
+describe('the line under the clock (G4 criterion 1)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('sits under the clock between the sides and says what wins the match', () => {
+    vi.stubGlobal('document', { createElement: (tag: string) => new BoardElement(tag) });
+    const parent = new BoardElement('div');
+    const board = new Scoreboard(parent as unknown as HTMLElement, [3, 3], 0);
+    const root = parent.children[0] as BoardElement;
+    expect(root.innerHTML).toMatch(/<span class="sb-mid"><span class="sb-clock">[^<]*<\/span><span class="sb-aim"><\/span><\/span>/);
+    board.setAim('First to 5');
+    expect(root.querySelector('.sb-aim').textContent).toBe('First to 5');
+  });
+});

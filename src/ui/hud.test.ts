@@ -21,6 +21,11 @@ class HudElement extends FakeElement {
       },
     });
   }
+  /** The fire-mode chips (G4) go in as the DOM's replaceChildren puts them. */
+  replaceChildren(...nodes: HudElement[]): void {
+    this.children.length = 0;
+    this.append(...nodes);
+  }
   querySelector(selector: string): HudElement {
     let el = this.found.get(selector);
     if (!el) {

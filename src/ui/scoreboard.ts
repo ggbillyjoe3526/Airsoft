@@ -9,10 +9,11 @@ import { flagLine } from './flagStatus';
 import { TimedFill } from './timedFill';
 
 /**
- * Top-centre scoreboard: rounds won per team either side of the round clock, with a pip per player
- * (filled while still in play). In flag mode each team is tagged ATK or DEF and a strip underneath shows
- * how far up the attackers' flag is and what that means for you. In Extraction (M43) there are no scores: the clock is
- * the run's, and the strip says where you can get out, or how the count is going, beside whether your respawn is spent.
+ * Top-centre score bar (G4 look): each team's name and a slanted pip per player (lit while still in play), its rounds
+ * won on a block in its colour, and the round clock between them with what wins the match under it. In flag mode each
+ * team is tagged ATK or DEF and a strip underneath shows how far up the attackers' flag is and what that means for you.
+ * In Extraction (M43) there are no scores: the clock is the run's, and the strip says where you can get out, or how the
+ * count is going, beside whether your respawn is spent.
  * The DOM is only touched when a shown value changes.
  */
 export class Scoreboard {
@@ -38,6 +39,7 @@ export class Scoreboard {
   /** Extraction: what the strip was last built from (see updateRun). */
   private readonly shownRun = { status: '', second: -1, open: -1, warned: false, outcome: '', respawns: -1, carried: -1 };
   private readonly respawn: HTMLSpanElement;
+  private readonly aim: HTMLSpanElement;
 
   /** `teamSizes`: players per team (Extraction's sides differ). `playerTeam` is marked "you" so it's obvious which score is yours. */
   constructor(
@@ -55,7 +57,7 @@ export class Scoreboard {
         <span class="sb-score">0</span>
       </div>`;
     this.root.innerHTML = `
-      <div class="sb-row">${side(0)}<span class="sb-clock">0:00</span>${side(1)}</div>
+      <div class="sb-row">${side(0)}<span class="sb-mid"><span class="sb-clock">0:00</span><span class="sb-aim"></span></span>${side(1)}</div>
       <div class="sb-flag" hidden><span class="sb-flag-bar"><b></b></span><span class="sb-flag-text"></span><span class="sb-respawn" hidden></span></div>`;
     parent.appendChild(this.root);
     this.scores = [0, 1].map((t) => this.root.querySelector(`.sb-team-${t} .sb-score`) as HTMLSpanElement);
@@ -66,6 +68,12 @@ export class Scoreboard {
     this.flagFill = new TimedFill(this.root.querySelector('.sb-flag-bar b') as HTMLElement);
     this.flagText = this.root.querySelector('.sb-flag-text') as HTMLSpanElement;
     this.respawn = this.root.querySelector('.sb-respawn') as HTMLSpanElement;
+    this.aim = this.root.querySelector('.sb-aim') as HTMLSpanElement;
+  }
+
+  /** The line under the clock (G4): what wins the match ("First to 5"), or the run's aim in Extraction. Set once. */
+  setAim(text: string): void {
+    this.aim.textContent = text;
   }
 
   setVisible(visible: boolean): void {

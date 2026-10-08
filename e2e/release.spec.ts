@@ -41,7 +41,7 @@ test('the release build boots, ignores the test flags and plays with the real po
   // Play asks for the pointer lock: `?nolock` is ignored, so the match starts only once the game holds it
   // (the lock is on the game's container, #app, since FA2: turning edge smoothing on or off replaces the canvas).
   await page.locator('.menu-title-start').click();
-  await page.locator('.menu-setup').getByRole('button', { name: 'Play', exact: true }).click();
+  await page.locator('.menu-setup').getByRole('button', { name: 'Start match', exact: true }).click();
   await page.waitForFunction(() => document.pointerLockElement?.id === 'app', undefined, { timeout: 30_000 });
   await expect(page.locator('.hud')).toBeVisible({ timeout: 30_000 });
 

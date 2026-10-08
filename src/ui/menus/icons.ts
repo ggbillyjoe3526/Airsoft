@@ -25,7 +25,6 @@ export const NAV_ICONS = {
   setup: PLAY,
   loadout: RIFLE,
   armory: CRATE,
-  range: TARGET,
   settings: SLIDERS,
   tutorial: INFO,
 } as const;
@@ -54,7 +53,18 @@ export const MODE_ICONS = {
   elimination: icon('<circle cx="12" cy="12" r="8"/><path d="M12 1.5v5M12 17.5v5M1.5 12h5M17.5 12h5"/><circle cx="12" cy="12" r="2" fill="currentColor"/>'),
   attackDefend: icon('<path d="M5 22V2.5M5 3h13.5l-3 4.5 3 4.5H5"/>'),
   extraction: icon('<path d="M14 3.5H5v17h9"/><path d="M10 12h11M17 8l4 4-4 4"/>'),
+  /** Practice, the last mode card (M100). */
+  practice: TARGET,
 } as const;
+
+/**
+ * Practice's picture (M100): a paper target on the range, drawn rather than shot (the other modes' stills come from the
+ * game's own maps, and the range has none yet). Static SVG filling the card's picture frame; decoration only.
+ */
+export const PRACTICE_ART =
+  '<svg class="practice-art" viewBox="-12 -12 184 184" preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false">' +
+  '<g transform="translate(80 80)"><circle r="66" fill="#e8ecf8"/><circle r="51" fill="#14214a"/><circle r="38" fill="#e8ecf8"/><circle r="25" fill="#ff6b1a"/><circle r="11" fill="#14214a"/>' +
+  '<circle cx="9" cy="-7" r="3.4" fill="#e8ecf8"/><circle cx="-16" cy="13" r="3.4" fill="#e8ecf8"/><circle cx="28" cy="24" r="3.4" fill="#14214a"/></g></svg>';
 
 /** The Settings groups, by the group. */
 export const SETTINGS_TAB_ICONS: Record<SettingsTab, string> = {
@@ -84,10 +94,12 @@ export const PAUSE_ICONS = {
 /** The title screen's warning (no hardware acceleration). */
 export const WARNING_ICON = icon('<path d="M12 3.5L2.5 20h19z"/><path d="M12 10v4.5M12 17.2h.01"/>');
 
-/** The hit feed's tags: a hit on a teammate, a BB that bounced first. */
+/** The hit feed's marks: a hit on a teammate, a BB that bounced first, the BB between the two names. */
 export const FEED_ICONS = {
   friendly: icon('<circle cx="8.5" cy="8" r="3"/><circle cx="16" cy="9" r="2.5"/><path d="M3 19.5a5.5 5.5 0 0 1 11 0M14 14.5a4.5 4.5 0 0 1 7 4"/>'),
   ricochet: icon('<path d="M3 6l7 12 4-8 7 6"/><path d="M17.5 16h3.5v-3.5"/>'),
+  /** Between the shooter and who called it (G4): a BB with its trail. */
+  bb: icon('<circle cx="16.5" cy="12" r="4" fill="currentColor"/><path d="M3 12h7M5 8.5h5M5 15.5h5"/>'),
 } as const;
 
 /**

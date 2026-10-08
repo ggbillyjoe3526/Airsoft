@@ -1,5 +1,5 @@
-import { MENU_TEXT, SUMMARY_TEXT } from '../../config/menus';
-import { hintsBar, type MenuHint } from './chrome';
+import { SUMMARY_TEXT } from '../../config/menus';
+import type { MenuHint } from './chrome';
 import { MENU_ICONS } from './icons';
 import { el, hintLine, menuButton, setHint } from './menuParts';
 
@@ -44,8 +44,9 @@ export class ResultScreen {
     buttons.append(playAgain, more);
     const foot = el('div', 'menu-result-foot');
     foot.append(this.hint, buttons);
-    this.hints = [{ keys: ['Enter'], label: 'Play again', run: actions.onPlayAgain, echo: true }];
-    this.root.append(centre, foot, hintsBar(this.hints, MENU_TEXT.free));
+    // Enter presses the focused Play again; no key of its own.
+    this.hints = [];
+    this.root.append(centre, foot);
   }
 
   set(headline: string, detail: string): void {

@@ -1,0 +1,56 @@
+/* The Tab scoreboard (M19; G4 look): the stats table (style.css .stats-table, the match summary's: each team under a
+   bar in its colour with its score) on a solid navy panel cut at its top left, under the heading. Under the "HIT!"
+   call stamp (.hitfx-banner), so holding Tab while calling a hit doesn't hide it. */
+.match-board {
+  position: absolute;
+  left: 50%;
+  top: calc(max(18%, calc(var(--hud-margin) + 44px + var(--sb-height) * var(--sb-scale, 1))) + 96px * var(--hud-scale, 1));
+  translate: -50% 0;
+  scale: var(--hud-scale, 1);
+  transform-origin: 50% 0;
+  width: min(780px, calc((100% - 32px) / var(--hud-scale, 1)));
+  padding: 16px 20px 20px;
+  color: var(--paper);
+  background: var(--hud-panel-solid);
+  clip-path: polygon(var(--hud-cut-lg) 0, 100% 0, 100% 100%, 0 100%, 0 var(--hud-cut-lg));
+  pointer-events: none;
+  z-index: 12;
+}
+
+.match-board[hidden] {
+  display: none;
+}
+
+.match-board-heading {
+  margin: 0 0 10px var(--sp-2);
+  font: 800 24px/1 var(--ui-display);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  color: var(--hud-fg);
+}
+
+/* The column heads at the HUD's smallest size. */
+.match-board .stats-table thead th {
+  font-size: 15px;
+}
+
+/* Your row: the acid edge your rows in the hit feed have. */
+.match-board .stats-team tr.you td:first-child {
+  box-shadow: inset 4px 0 0 var(--menu-acid);
+}
+
+.match-board-tip {
+  margin: 14px 0 0;
+  font-size: 15px;
+  color: var(--menu-muted);
+}
+
+.match-board-tip::before {
+  content: 'Tip · ';
+  font-weight: 700;
+  color: var(--paper);
+}
+
+.match-board-tip[hidden] {
+  display: none;
+}

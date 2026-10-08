@@ -30,7 +30,7 @@ test('Woodland loads with its bushes drawn, in one mesh that receives shadows, a
   await page.keyboard.press('Escape');
   await setup.getByRole('group', { name: 'Map', exact: true }).getByRole('button', { name: /Woodland/i }).click();
   await expect(setup.locator('.play-map-line')).toContainText('Woodland');
-  await setup.getByRole('button', { name: 'Play', exact: true }).click();
+  await setup.getByRole('button', { name: 'Start match', exact: true }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 20_000 });
   await expect.poll(() => page.evaluate(() => (window as unknown as Airsoft).airsoft.state?.tick ?? 0), { timeout: 60_000 }).toBeGreaterThan(10);
 
@@ -98,7 +98,7 @@ test('Woodland is lit by night and the practice range after it by day again', as
   await settings.getByRole('group', { name: 'Dev content' }).getByRole('button', { name: 'On' }).click();
   await page.keyboard.press('Escape');
   await setup.getByRole('group', { name: 'Map', exact: true }).getByRole('button', { name: /Woodland/i }).click();
-  await setup.getByRole('button', { name: 'Play', exact: true }).click();
+  await setup.getByRole('button', { name: 'Start match', exact: true }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 20_000 });
   await expect.poll(() => page.evaluate(() => (window as unknown as { airsoft: { state: { tick: number } | null } }).airsoft.state?.tick ?? 0), { timeout: 60_000 }).toBeGreaterThan(10);
 
@@ -123,7 +123,9 @@ test('Woodland is lit by night and the practice range after it by day again', as
     document.dispatchEvent(new Event('visibilitychange'));
   });
   await pauseMenu.getByRole('button', { name: 'Quit' }).click();
-  await page.getByRole('button', { name: 'Practice Range' }).click();
+  await page.locator('.menu-title-start').click();
+  await page.locator('.menu-setup').getByRole('group', { name: 'Mode', exact: true }).getByRole('button', { name: /Practice/ }).click();
+  await page.locator('.menu-setup').getByRole('button', { name: 'Start practice', exact: true }).click();
   await expect(page.locator('.range-readout')).toBeVisible({ timeout: 60_000 });
   await expect.poll(async () => (await look()).fogFar, { timeout: 30_000 }).not.toBe(140);
 
@@ -185,7 +187,7 @@ test('Woodland: T switches your weapon torch, one real spot light in place of a 
   await settings.getByRole('group', { name: 'Dev content' }).getByRole('button', { name: 'On' }).click();
   await page.keyboard.press('Escape');
   await setup.getByRole('group', { name: 'Map', exact: true }).getByRole('button', { name: /Woodland/i }).click();
-  await setup.getByRole('button', { name: 'Play', exact: true }).click();
+  await setup.getByRole('button', { name: 'Start match', exact: true }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 20_000 });
   await expect.poll(() => page.evaluate(() => (window as unknown as TorchView).airsoft.state?.tick ?? 0), { timeout: 60_000 }).toBeGreaterThan(10);
 
@@ -229,7 +231,7 @@ test('Woodland: T switches your weapon torch, one real spot light in place of a 
   await pauseMenu.getByRole('button', { name: 'Quit' }).click();
   await page.locator('.menu-title-start').click();
   await setup.getByRole('group', { name: 'Map', exact: true }).getByRole('button', { name: /Depot/i }).click();
-  await setup.getByRole('button', { name: 'Play', exact: true }).click();
+  await setup.getByRole('button', { name: 'Start match', exact: true }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 20_000 });
   const dayTick = () => page.evaluate(() => (window as unknown as TorchView).airsoft.state?.tick ?? 0);
   await expect.poll(dayTick, { timeout: 60_000 }).toBeGreaterThan(10);
@@ -337,7 +339,7 @@ test('Woodland on Low: moon, stars and fires, within 100 draw calls and 150k tri
   await settings.getByRole('group', { name: 'Dev content' }).getByRole('button', { name: 'On' }).click();
   await page.keyboard.press('Escape');
   await setup.getByRole('group', { name: 'Map', exact: true }).getByRole('button', { name: /Woodland/i }).click();
-  await setup.getByRole('button', { name: 'Play', exact: true }).click();
+  await setup.getByRole('button', { name: 'Start match', exact: true }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 20_000 });
   await expect.poll(() => page.evaluate(() => (window as unknown as LookView).airsoft.state?.tick ?? 0), { timeout: 60_000 }).toBeGreaterThan(10);
 
@@ -383,7 +385,7 @@ test('Woodland on Medium at 5v5: within 135 draw calls and 200k triangles, ember
   await setup.getByRole('group', { name: 'Map', exact: true }).getByRole('button', { name: /Woodland/i }).click();
   await setup.locator('.match-panel').getByRole('group', { name: 'Team size' }).getByRole('button', { name: '5v5' }).click();
   await expect(setup.locator('.play-facts')).toContainText('5v5');
-  await setup.getByRole('button', { name: 'Play', exact: true }).click();
+  await setup.getByRole('button', { name: 'Start match', exact: true }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 30_000 });
   await expect.poll(() => page.evaluate(() => (window as unknown as LookView).airsoft.state?.tick ?? 0), { timeout: 90_000 }).toBeGreaterThan(10);
 
@@ -434,7 +436,7 @@ test('Woodland sounds like the woods at night: its beds, fires, owl and ground s
   await settings.getByRole('group', { name: 'Dev content' }).getByRole('button', { name: 'On' }).click();
   await page.keyboard.press('Escape');
   await setup.getByRole('group', { name: 'Map', exact: true }).getByRole('button', { name: /Woodland/i }).click();
-  await setup.getByRole('button', { name: 'Play', exact: true }).click();
+  await setup.getByRole('button', { name: 'Start match', exact: true }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 20_000 });
   await expect.poll(() => page.evaluate(() => (window as unknown as SoundView).airsoft.state?.tick ?? 0), { timeout: 60_000 }).toBeGreaterThan(10);
 

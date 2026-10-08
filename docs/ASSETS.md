@@ -22,18 +22,19 @@ CC0 models and textures can replace parts of this later. Record each one here, o
 
 | File | Asset | Source URL | Licence | Author |
 |---|---|---|---|---|
-| `src/assets/fonts/Barlow-500.woff2`, `Barlow-700.woff2` | Barlow (Medium, Bold), the menus' text face (G3) | https://fonts.google.com/specimen/Barlow | SIL OFL 1.1 (`src/assets/fonts/OFL.txt`) | Jeremy Tribby, The Barlow Project Authors |
-| `src/assets/fonts/BarlowCondensed-600.woff2`, `-700.woff2`, `-800.woff2` | Barlow Condensed (SemiBold, Bold, ExtraBold), the menus' headings, labels and buttons (G3) | https://fonts.google.com/specimen/Barlow+Condensed | SIL OFL 1.1 (`src/assets/fonts/OFL.txt`) | Jeremy Tribby, The Barlow Project Authors |
+| `src/assets/fonts/Inter-500.woff2`, `Inter-600.woff2`, `Inter-700.woff2`, `Inter-800.woff2` | Inter (Medium, SemiBold, Bold, ExtraBold; latin subset, from @fontsource/inter 5.3.0), the menus' and the HUD's face for all text and numbers (M100; replaces Barlow and Barlow Condensed, owner 2026-10-07) | https://github.com/rsms/inter | SIL OFL 1.1 (`src/assets/fonts/OFL.txt`) | Rasmus Andersson, The Inter Project Authors |
+| `src/assets/fonts/Inter-marks-500.woff2`, `Inter-marks-600.woff2`, `Inter-marks-700.woff2`, `Inter-marks-800.woff2` | Inter's three symbols the latin subset lacks, ← → ✓ (about 0.6 KB a weight; cut from the same four weights of Inter 4.1.1 in the `inter-ui` npm package, because `@fontsource/inter` 5.3.0 has no subset with them), loaded only where one is printed (`unicode-range`, `src/ui/menus/css/fonts.css`; M100) | https://github.com/rsms/inter | SIL OFL 1.1 (`src/assets/fonts/OFL.txt`) | Rasmus Andersson, The Inter Project Authors |
 
-The fonts are served with the game (graphics overhaul G3) because the page's policy loads fonts from itself only. The
+The font is served with the game (graphics overhaul G3, Inter since M100) because the page's policy loads fonts from itself only. The
 licence travels beside them.
 
 ## Made by the project
 
 - **The menus' pictures** in `public/menu/` (G3) are the game's own frames. `pipeline/map-stills.mjs` renders each map
-  still (one per map and time of day), each mode's picture, the title's backdrop and the one pre-blurred backdrop from
-  the built game, and saves them as small JPEGs (`src/config/menuArt.ts` lists them and their byte budgets). Run it
-  again when a map, its lighting or the renderer's look changes. No outside source; same licence as the code.
+  still (one per map and time of day), each mode's picture and the one pre-blurred backdrop (every screen but the title,
+  which is plain navy drawn by the stylesheet) from the built game, and saves them as small JPEGs
+  (`src/config/menuArt.ts` lists them and their byte budgets). Run it again when a map, its lighting or the renderer's
+  look changes. No outside source; same licence as the code.
 - **All sounds** are synthesised in code when audio starts (recipes in `src/config/sounds.ts`, rendered by
   `src/audio/dsp.ts`). There are no audio files.
 

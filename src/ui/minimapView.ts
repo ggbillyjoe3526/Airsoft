@@ -22,25 +22,65 @@ export function toMinimap(yaw: number, cx: number, cz: number, x: number, z: num
   return out;
 }
 
-/** Whether (x, y) lies inside the circle at (cx, cy) of radius `r` (a marker under the minimap; audit UI-13). */
-export function insideCircle(x: number, y: number, cx: number, cy: number, r: number): boolean {
-  const dx = x - cx;
-  const dy = y - cy;
-  return r > 0 && dx * dx + dy * dy <= r * r;
-}
-
 /** The minimap canvas's pixels per CSS pixel on a screen of `devicePixelRatio`: 1 to MINIMAP.maxPixelRatio. */
 export function minimapPixelRatio(devicePixelRatio: number | undefined): number {
   return Math.min(MINIMAP.maxPixelRatio, Math.max(1, devicePixelRatio || 1));
 }
 
-/** Pulls `p` back onto a circle of `radius` round the middle if it's further out; true if it was. */
-export function clampToRim(p: MapPoint, radius: number): boolean {
-  const d = Math.hypot(p.x, p.y);
-  if (d <= radius) return false;
-  p.x *= radius / d;
-  p.y *= radius / d;
+/**
+ * Pulls `p` (px from the middle) in to the square of half-width `half` round the middle (G4: the minimap is a square
+ * panel), keeping its direction; true if it was outside (and is now on the edge).
+ */
+export function clampToSquare(p: MapPoint, half: number): boolean {
+  const d = Math.max(Math.abs(p.x), Math.abs(p.y));
+  if (d <= half) return false;
+  p.x *= half / d;
+  p.y *= half / d;
   return true;
+}
+
+/** Whether (x, y) is inside the box from (left, top), `size` square. */
+export function insideSquare(x: number, y: number, left: number, top: number, size: number): boolean {
+  return size > 0 && x >= left && x <= left + size && y >= top && y <= top + size;
+}
+
+/**
+ * Whether a frame of the minimap would differ from the last one drawn (G4: it is drawn again only then). Each frame
+ * adds every number its drawing depends on, in a fixed order, between begin and end; nothing is allocated once the
+ * list has grown to its length.
+ */
+export class FrameCheck {
+  private readonly seen: number[] = [];
+  private count = 0;
+  private length = -1;
+  private changed = false;
+
+  begin(): void {
+    this.count = 0;
+    this.changed = false;
+  }
+
+  add(value: number): void {
+    if (this.seen[this.count] !== value) {
+      this.seen[this.count] = value;
+      this.changed = true;
+    }
+    this.count++;
+  }
+
+  /** True when something added since begin differs from the last frame's (or the list's length did). */
+  end(): boolean {
+    if (this.count !== this.length) {
+      this.length = this.count;
+      this.changed = true;
+    }
+    return this.changed;
+  }
+
+  /** The next frame is drawn whatever it holds (the canvas was cleared by a resize, say). */
+  reset(): void {
+    this.length = -1;
+  }
 }
 
 /** The kinds of sound that place a player of the other team on the minimap (a hit call means they're out). */

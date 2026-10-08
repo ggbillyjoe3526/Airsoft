@@ -5,7 +5,8 @@ import { MENU_TEXT } from '../../config/menus';
 import { DEFAULT_MAP, loadDevMaps } from '../../map/maps';
 import type { NewGamePicks } from '../../newGamePicks';
 import { fakeDocument, type FakeElement } from '../testSupport';
-import { Backdrop, hintsBar, optionTick, TopBar } from './chrome';
+import * as chromeModule from './chrome';
+import { Backdrop, optionTick, TopBar } from './chrome';
 import { PictureSlot } from './menuPictures';
 import { DEV_CONTENT_NOTE, playView } from './playView';
 
@@ -20,10 +21,11 @@ describe('the top bar (G3)', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   const places = (bar: TopBar): FakeElement[] => fake(bar.root).children[1]!.children;
+  const wallet = (bar: TopBar): FakeElement => fake(bar.root).children[2]!;
 
   it('lists every place in order, marks only the current one, and calls back with the place clicked', () => {
     const picked: string[] = [];
-    const bar = new TopBar((p) => picked.push(p));
+    const bar = new TopBar((p) => picked.push(p), () => {});
     expect(fake(bar.root).children[1]!.getAttribute('aria-label')).toBe(MENU_TEXT.navLabel);
     expect(places(bar).map((b) => b.children.at(-1)!.textContent)).toEqual(MENU_TEXT.nav.map((n) => n.label));
     bar.show('loadout', false);
@@ -33,14 +35,40 @@ describe('the top bar (G3)', () => {
     expect(picked).toEqual([MENU_TEXT.nav[0]!.id]);
   });
 
+  it('reads Match, Loadout, Armory, Settings from the left, then the wallet (FC and Tokens only) at the far right, with no version (M100)', () => {
+    const bar = new TopBar(() => {}, () => {});
+    const [mark, nav, end] = fake(bar.root).children;
+    expect(mark!.tag).toBe('button'); // the wordmark is a way back, not a place
+    expect(places(bar).map((b) => b.children.at(-1)!.textContent)).toEqual(['Match', 'Loadout', 'Armory', 'Settings']);
+    expect(fake(bar.root).children.at(-1)).toBe(end);
+    expect(end!.className).toBe('menu-wallet');
+    expect(wallet(bar).children.map((c) => c.className)).toEqual(['menu-chip menu-chip-fc', 'menu-chip menu-chip-tokens']);
+    expect(nav!.children).toHaveLength(4);
+    bar.setWallet({ fc: 1200, tokens: 3 }, false);
+    expect(wallet(bar).children.map((c) => c.textContent)).toEqual(['1,200 FC', '3 Tokens']);
+    expect(fake(bar.root).children.some((c) => c.className.includes('menu-build'))).toBe(false);
+  });
+
+  it("makes the wordmark the way back: to the title, or Back to the pause menu when Settings or the Loadout came from there", () => {
+    let back = 0;
+    const bar = new TopBar(() => {}, () => back++);
+    const mark = fake(bar.root).children[0]!;
+    bar.show('settings', false);
+    expect(mark.children.at(-1)!.textContent).toBe('Airsoft');
+    mark.click();
+    bar.show('settings', true);
+    expect(mark.children.at(-1)!.textContent).toBe('Back');
+    expect(back).toBe(1);
+  });
+
   it('shows only the current place when opened from the pause menu (the others are out of reach mid-match)', () => {
-    const bar = new TopBar(() => {});
+    const bar = new TopBar(() => {}, () => {});
     bar.show('settings', true);
     expect(places(bar).filter((b) => !b.hidden).map((b) => b.getAttribute('aria-current'))).toEqual(['page']);
   });
 
   it('shows the wallet, hides it with the Armory off, and then greys the Armory place out with the reason', () => {
-    const bar = new TopBar(() => {});
+    const bar = new TopBar(() => {}, () => {});
     const [fc, tokens] = fake(bar.root).children[2]!.children;
     const armory = places(bar)[MENU_TEXT.nav.findIndex((n) => n.id === 'armory')]!;
     bar.setWallet({ fc: 1200, tokens: 3 }, false);
@@ -52,30 +80,13 @@ describe('the top bar (G3)', () => {
   });
 });
 
-describe('the key hints (G3)', () => {
+describe('no key prompts along the bottom (M100)', () => {
+  it('no longer builds a hints bar: the keys a screen answers to are data for the menus, not drawn', () => {
+    expect('hintsBar' in chromeModule).toBe(false);
+  });
+
   beforeEach(() => vi.stubGlobal('document', fakeDocument()));
   afterEach(() => vi.unstubAllGlobals());
-
-  it('names each hint by its words, hides the key caps from screen readers, and makes a hint with an action a button', () => {
-    let ran = 0;
-    const bar = fake(hintsBar([{ keys: ['Esc'], label: 'Back', run: () => ran++ }, { keys: ['W', 'S'], label: 'Move' }], 'v0.1'));
-    const [back, move, aside] = bar.children;
-    expect([back!.tag, move!.tag]).toEqual(['button', 'span']);
-    expect(back!.children.map((c) => [c.tag, c.getAttribute('aria-hidden')])).toEqual([
-      ['kbd', 'true'],
-      ['span', null],
-    ]);
-    expect(move!.children.filter((c) => c.tag === 'kbd')).toHaveLength(2);
-    expect(aside!.textContent).toBe('v0.1');
-    back!.click();
-    expect(ran).toBe(1);
-  });
-
-  it("keeps an echo of the screen's own button out of the tab order and the accessibility tree, so the action is named once", () => {
-    const [echo] = fake(hintsBar([{ keys: ['Enter'], label: 'Play', run: () => {}, echo: true }])).children;
-    expect(echo!.getAttribute('aria-hidden')).toBe('true');
-    expect(fake(echo).tabIndex).toBe(-1);
-  });
 
   it("marks a picked tile's tick as decoration", () => {
     const t = fake(optionTick());
@@ -83,18 +94,24 @@ describe('the key hints (G3)', () => {
   });
 });
 
-describe('the backdrop (G3: one picture, blurred when it was made)', () => {
+describe('the backdrop (M100: the title has no picture)', () => {
   beforeEach(() => vi.stubGlobal('document', fakeDocument()));
   afterEach(() => vi.unstubAllGlobals());
 
-  it('shows the sharp title picture on the title and the one pre-blurred picture everywhere else', () => {
+  it('shows no picture at all on the title, and the one pre-blurred picture everywhere else', () => {
     const b = new Backdrop();
-    const [title, blurred] = fake(b.root).children;
+    const pictures = fake(b.root).children;
+    // One picture only, the blurred one; the title never had a second.
+    expect(pictures.map((p) => p.tag)).toEqual(['img']);
     expect(b.root.getAttribute('aria-hidden')).toBe('true');
     b.show('title', false);
-    expect([title!.hidden, blurred!.hidden]).toEqual([false, true]);
+    expect(pictures.every((p) => p.hidden)).toBe(true);
+    expect(b.root.classList.contains('plain')).toBe(true);
     b.show('blurred', true);
-    expect([title!.hidden, blurred!.hidden, b.root.classList.contains('even')]).toEqual([true, false, true]);
+    expect([pictures[0]!.hidden, b.root.classList.contains('plain'), b.root.classList.contains('even')]).toEqual([false, false, true]);
+    // Back to the title: plain again, and the darkening for dense pages does not follow it there.
+    b.show('title', true);
+    expect([pictures[0]!.hidden, b.root.classList.contains('plain'), b.root.classList.contains('even')]).toEqual([true, true, false]);
   });
 });
 

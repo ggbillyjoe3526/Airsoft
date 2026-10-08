@@ -6,11 +6,11 @@ import { SOUND_CUES } from './accessibility';
  * sound plays: the sound cue ranges), as a patch rather than a point, wider the further off it was, fading out.
  */
 export const MINIMAP = {
-  /** On-screen size (CSS px, square; the field is drawn in a circle inside it), before the HUD's scale. */
+  /** On-screen size (CSS px, square: the field fills the square panel, G4), before the HUD's scale. */
   size: 200,
   /** The canvas never draws finer than this many pixels per CSS pixel: the field drawing's detail (layerScale). */
   maxPixelRatio: 2,
-  /** Metres from the middle to the edge of the circle. */
+  /** Metres from the middle to the panel's edge (its corners reach a little further). */
   viewRadius: 20,
   /**
    * Pixels per metre in the field drawing made once per match (it's scaled as drawn: about 4.9 px/m on screen, so this
@@ -34,7 +34,7 @@ export const MINIMAP = {
   noiseMaxBlur: 7,
   /** The patch's radius is the blur plus this (m), so the player is always inside it. */
   noisePad: 1,
-  /** A player heard beyond the minimap's edge shows as a patch this big (px) on its rim, towards them. */
+  /** A player heard beyond the minimap's edge shows as a patch this big (px) on that edge, towards them. */
   rimPatch: 5,
   /** Blocks whose top is at most this high (m) above the floor they stand on draw as low cover; taller ones as walls. */
   lowCoverTop: 1.3,
@@ -51,10 +51,8 @@ export const MINIMAP = {
   storeyCut: 1.8,
   /** Sloping ground (M33c) is lightened by up to this much white at its highest point, so hills read on the minimap. */
   terrainShade: 0.22,
-  /** Colours of the field drawing (CSS). */
+  /** Colours of the field drawing (CSS); the navy square under it is the canvas's own background (minimap.css, G4). */
   colours: {
-    /** The circle under the field: the HUD's panel colour (style.css --hud-panel, audit section 6, item 14). */
-    backdrop: 'rgba(12, 14, 18, 0.6)',
     ground: 'rgba(72, 80, 88, 0.92)',
     raised: 'rgba(96, 104, 110, 0.95)',
     ramp: 'rgba(80, 88, 94, 0.95)',

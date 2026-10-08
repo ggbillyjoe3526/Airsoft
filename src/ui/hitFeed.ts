@@ -16,9 +16,10 @@ interface Line {
 }
 
 /**
- * The hit feed in the top-right corner, in airsoft words: "Orange 2 called HIT · Blue 1" (who called the hit, then
- * whose BB it was), newest at the top. Friendly hits say so. Each name is in its team's colour and its text carries
- * the team as well, so colour isn't the only cue; a bar down the line's edge is in the colour of the team whose BB it was.
+ * The hit feed in the top-right corner, newest at the top: a navy row per hit (G4 look) with whose BB it was, a BB, who
+ * called the hit and a Hit tag; a screen reader hears it in airsoft words, "Orange 2 called HIT · Blue 1". Friendly hits
+ * say so. Each name is in its team's colour and its text carries the team as well, so colour isn't the only cue; your
+ * own rows are edged in acid.
  * The friendly and ricochet tags carry a glyph beside the word. Lines live on simulation time, so a pause holds them. Set to Keep
  * (Settings → HUD, M24), the match's last few lines stay up instead, through every round.
  */
@@ -63,7 +64,22 @@ export class HitFeed {
     const node = document.createElement('div');
     node.className = `hit-feed-line${you ? ' you' : ''}${friendly ? ' friendly' : ''}`;
     node.style.setProperty('--hitter', teamCss(shooter.team));
-    node.append(name(victim), document.createTextNode(' called HIT · '), name(shooter));
+    // Seen as the concept draws it (G4): the shooter, a BB, who called it, and a Hit tag. Heard as the airsoft sentence,
+    // "Orange 2 called HIT · Blue 1", which the row's look leaves out of the accessibility tree.
+    const said = document.createElement('span');
+    said.className = 'sr-only';
+    said.textContent = `${victim.name} called HIT · ${shooter.name}`;
+    const seen = document.createElement('span');
+    seen.className = 'hit-feed-row';
+    seen.setAttribute('aria-hidden', 'true');
+    const bb = document.createElement('i');
+    bb.className = 'hit-feed-bb';
+    bb.innerHTML = FEED_ICONS.bb;
+    const tag = document.createElement('b');
+    tag.className = 'hit-feed-tag';
+    tag.textContent = HIT_FEED.tag;
+    seen.append(name(shooter), bb, name(victim), tag);
+    node.append(said, seen);
     for (const [on, text] of [
       [friendly, 'friendly'],
       [ricochet, 'ricochet'],

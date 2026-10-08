@@ -57,7 +57,7 @@ describe('the Armory says once when another tab saved first (M70, audit POOL-05)
   const setup = (onChange: () => boolean | void) => {
     const c = newCollection(pool, 7);
     c.tokens = 5;
-    const screen = new ArmoryScreen({ pool: () => pool, collection: () => c, equipped: () => [], onChange, onBack: () => {} });
+    const screen = new ArmoryScreen({ pool: () => pool, collection: () => c, equipped: () => [], onChange });
     const root = screen.root as unknown as Node;
     return {
       screen,
@@ -124,7 +124,7 @@ describe('the Armory notice, further cases (M70, audit POOL-05)', () => {
     c.tokens = 5;
     c.fc = fc;
     let calls = 0;
-    const screen = new ArmoryScreen({ pool: () => pool, collection: () => c, equipped: () => [], onChange: () => (calls++, onChange(c) as boolean | void), onBack: () => {} });
+    const screen = new ArmoryScreen({ pool: () => pool, collection: () => c, equipped: () => [], onChange: () => (calls++, onChange(c) as boolean | void) });
     const root = screen.root as unknown as Node;
     const text = (n: Node): string => n.textContent + n.children.map((k) => text(k as Node)).join(' ');
     return {
@@ -150,16 +150,7 @@ describe('the Armory notice, further cases (M70, audit POOL-05)', () => {
     expect(a.notice().textContent).toBe(ARMORY_TEXT.reloaded);
   });
 
-  it('shows it for a refused scrap', () => {
-    const a = setup(() => true);
-    a.c.owned['000001@common'] = 3;
-    a.screen.refresh();
-    const scrap = a.root.querySelector('[data-action="scrap1-000001"]');
-    expect(scrap).not.toBeNull();
-    scrap!.click();
-    expect(a.calls()).toBe(1);
-    expect(a.notice().textContent).toBe(ARMORY_TEXT.reloaded);
-  });
+  // A refused scrap (now through the card's right-click menu, M100) is in armoryScrapMenu.test.ts.
 
   it('reads the answer strictly: only true shows the notice (false, undefined, a truthy non-boolean do not)', () => {
     for (const answer of [false, undefined, 1, 'yes', {}, null]) {

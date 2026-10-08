@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { HUD_INSET, HUD_OPACITY, SCOREBOARD_SIZE } from './config/matchInfo';
 
 
 // The stylesheets pinned as text (audit UI-03, UI-04, UI-06, UI-07), the way bots.ts and maps.ts are in their tests:
 // they can't be drawn in Vitest, so these read their rules. style.css, then the menus' (ui/menus/menus.css and the
-// files it imports, G3), in the order the page loads them.
+// files it imports, G3) and the HUD's (ui/hud.css and its files, G4), in the order the page loads them.
 
 // Read from disk: Vitest empties a `?raw` import of a .css file (its CSS handling is off), and the project's types
 // don't include Node's, so the module name is built at run time.
@@ -18,13 +19,23 @@ function withImports(url: URL): { url: URL; text: string }[] {
 }
 
 const menuFiles = withImports(new URL('./ui/menus/menus.css', import.meta.url));
-const css = [readFileSync(new URL('./style.css', import.meta.url), 'utf8'), ...menuFiles.map((f) => f.text)].join('\n');
+const hudFiles = withImports(new URL('./ui/hud.css', import.meta.url));
+const css = [readFileSync(new URL('./style.css', import.meta.url), 'utf8'), ...menuFiles.map((f) => f.text), ...hudFiles.map((f) => f.text)].join('\n');
 
 /** A stylesheet without its comments, so a comment naming `:has()` or a class is not mistaken for a rule. */
 const uncomment = (text: string): string => text.replace(/\/\*[\s\S]*?\*\//g, '');
 const sheet = uncomment(css);
 /** The menus' rules alone (G3). */
 const menuSheet = uncomment(menuFiles.map((f) => f.text).join('\n'));
+/** The HUD's rules alone (G4). */
+const hudSheet = uncomment(hudFiles.map((f) => f.text).join('\n'));
+
+/** Every text size a sheet sets in px: font-size, the font shorthand, and a clamp()'s or calc()'s smallest. */
+function textSizes(text: string): number[] {
+  const plain = [...text.matchAll(/(?:font-size:|font:[^;]*?)\s(?:calc\()?(\d+(?:\.\d+)?)px/g)].map((m) => Number(m[1]));
+  const floors = [...text.matchAll(/font(?:-size)?:[^;]*clamp\((\d+)px/g)].map((m) => Number(m[1]));
+  return [...plain, ...floors];
+}
 
 /** The body of the first rule or at-rule whose prelude is exactly `prelude`, matched by braces. */
 function blockOf(prelude: string, from = 0): string | null {
@@ -237,5 +248,198 @@ describe('the menus\' sheets (G3)', () => {
 
   it('keep every file short (about 600 lines at most)', () => {
     for (const f of menuFiles) expect(f.text.split('\n').length, f.url.pathname).toBeLessThanOrEqual(640);
+  });
+});
+
+describe('the title\'s ground (M100: plain, no picture)', () => {
+  const plain = blockOf('.menu-backdrop.plain');
+
+  it('is a gradient and a solid navy under it, drawn by the stylesheet, with no image and nothing translucent at the bottom', () => {
+    expect(plain).not.toBeNull();
+    expect(plain).toMatch(/linear-gradient|radial-gradient/);
+    expect(plain).not.toMatch(/url\(|image-set|-webkit-image-set|cross-fade/);
+    // Opaque: the last layer of the background is the menus' solid navy.
+    const layers = /background:\s*([^;]+);/.exec(plain!)![1]!.trim();
+    expect(layers).toMatch(/,\s*var\(--menu-bg\)$/);
+    expect(token('--menu-bg')).toMatch(/^#[0-9a-f]{6}$/i);
+    expect(blockOf('.menu-backdrop.plain::after')).toMatch(/content:\s*none/);
+  });
+
+  it('puts no picture on the title screen anywhere: no url() to an image in any menu rule, and no rule names title.jpg', () => {
+    expect(menuSheet).not.toMatch(/url\([^)]*\.(jpe?g|png|webp|avif|gif|svg)/i);
+    expect(sheet).not.toMatch(/title\.jpg/);
+    for (const rule of ['.menu-title', '.title-body', '.title-hero', '.menu-title-wordmark', '.menu-title-tagline', '.title-actions', '.title-version']) {
+      expect(blockOf(rule), rule).not.toMatch(/url\(|background-image/);
+    }
+  });
+});
+
+describe('the HUD\'s sheets (G4)', () => {
+  it('read every file hud.css imports, each part\'s rules among them', () => {
+    expect(hudFiles.length).toBe(7);
+    for (const rule of ['.scoreboard', '.minimap-frame', '.hit-feed-line', '.hud-replica', '.match-board', '.hitfx-round']) {
+      expect(blockOf(rule), rule).not.toBeNull();
+    }
+    // Moved, not copied: style.css keeps none of them.
+    const style = uncomment(readFileSync(new URL('./style.css', import.meta.url), 'utf8'));
+    for (const rule of ['.scoreboard', '.hit-feed-line', '.hud-replica', '.match-board', '.squad-order', '.hitfx-round']) {
+      expect(style, rule).not.toMatch(new RegExp(`(^|\\})\\s*\\${rule}\\s*\\{`));
+    }
+  });
+
+  it('never set HUD text under 15 px', () => {
+    const sizes = textSizes(hudSheet);
+    expect(sizes.length).toBeGreaterThan(10);
+    expect(sizes.filter((px) => px < 15)).toEqual([]);
+    // No type-scale step under 15 px either (they are 11 to 13 px outside the menus).
+    expect(hudSheet).not.toMatch(/var\(--fs-(2xs|xs|sm)\)/);
+  });
+
+  it('never blur or filter live over the field, and keep every file short', () => {
+    expect(hudSheet).not.toMatch(/backdrop-filter|filter:/);
+    for (const f of hudFiles) expect(f.text.split('\n').length, f.url.pathname).toBeLessThanOrEqual(640);
+  });
+
+  it('draw the concept\'s shapes: slanted pips, cut corners, a rounded minimap, the current fire mode orange', () => {
+    expect(declared('.sb-pips i', 'transform')).toBe('skewX(-14deg)');
+    for (const rule of ['.sb-team-0', '.sb-team-1', '.hud-replica', '.match-board']) expect(declared(rule, 'clip-path'), rule).toMatch(/^polygon\(/);
+    expect(declared('.minimap', 'border-radius')).toBe('10px');
+    expect(declared('.hud-mode.on', 'background')).toBe('var(--orange)');
+    expect(declared('.hit-feed-line.you', 'box-shadow')).toContain('var(--menu-acid)');
+  });
+
+  // Owner, 2026-10-08: the squad cards and the order keys left the screen; the order line is read out, not shown.
+  it('leave no squad cards, heads or order keys on the HUD, and no sheet for them', () => {
+    expect(hudFiles.map((f) => f.url.pathname.split('/').pop())).not.toContain('squad.css');
+    expect(sheet).not.toMatch(/\.squad-(bar|cards?|card-[\w-]+|keys)(?![\w-])/);
+    expect(sheet).not.toMatch(/\.squad-order\s*\{/); // off the screen through the shared .sr-only rule alone
+    expect(blockOf('.sr-only')).toMatch(/clip-path:\s*inset\(50%\)/);
+  });
+
+  // Owner, 2026-10-08: the panels were too see-through; Settings → HUD → HUD opacity (--hud-opacity on #app) sets them.
+  it('make the panels as opaque as HUD opacity, 90 % until it is set, on #app where the game sets it', () => {
+    const app = blockOf('#app')!;
+    expect(app).toMatch(/--hud-panel:\s*rgb\(7 13 31 \/ var\(--hud-opacity, ([\d.]+)\)\)/);
+    expect(app).toMatch(/--hud-panel-solid:\s*rgb\(7 13 31 \/ calc\(0\.5 \+ var\(--hud-opacity, ([\d.]+)\) \/ 2\)\)/);
+    const fallbacks = [...app.matchAll(/var\(--hud-opacity, ([\d.]+)\)/g)].map((m) => Number(m[1]));
+    expect(fallbacks).toEqual([HUD_OPACITY.default, HUD_OPACITY.default]);
+    // Not on :root too: a token there would take :root's --hud-opacity, never the one on #app.
+    expect(sheet).not.toMatch(/:root\s*\{[^}]*--hud-panel/);
+  });
+
+  it('fade no panel as a whole (that would cap the panels under HUD opacity and dim the words), and back each with the panel navy', () => {
+    for (const rule of ['.scoreboard', '.minimap-frame', '.hit-feed', '.hit-feed-line', '.hud-replica', '.match-board']) {
+      expect(blockOf(rule), rule).not.toMatch(/(^|[;\s])opacity:/);
+    }
+    for (const rule of ['.sb-team', '.sb-flag', '.minimap', '.hit-feed-line', '.hud-replica', '.hitfx-round']) expect(declared(rule, 'background'), rule).toBe('var(--hud-panel)');
+    for (const rule of ['.sb-mid', '.hit-feed-line.you', '.match-board']) expect(declared(rule, 'background'), rule).toBe('var(--hud-panel-solid)');
+  });
+
+  it('agree with the inset and the minimap ring the score bar\'s room is worked out with (config/matchInfo.ts)', () => {
+    const pc = (v: number) => Number((v * 100).toFixed(3));
+    expect(sheet).toContain(`--hud-margin: clamp(${HUD_INSET.min}px, ${pc(HUD_INSET.share)}vw, ${HUD_INSET.max}px)`);
+    expect(sheet).toContain(`--hud-safe-x: max(0px, calc((100vw - ${pc(HUD_INSET.aspect)}vh) / 2))`);
+    const ring = Number(/^0 0 0 (\d+)px/.exec(declared('.minimap', 'box-shadow')!)![1]);
+    expect(SCOREBOARD_SIZE.minimapGap).toBeGreaterThanOrEqual(ring + 8);
+  });
+
+  // Owner, 2026-10-08: "Round 1" becomes "ROUND 1", larger and in the HUD's look.
+  it('set the round banner as the HUD: capitals by text-transform, heavy, on a cut navy panel with an orange bar', () => {
+    expect(declared('.hitfx-round', 'text-transform')).toBe('uppercase');
+    expect(declared('.hitfx-round', 'font')).toMatch(/^800 \d+px\/[\d.]+ var\(--ui-display\)$/);
+    expect(declared('.hitfx-round', 'letter-spacing')).toBe('var(--ls-caps)');
+    expect(declared('.hitfx-round', 'clip-path')).toMatch(/^polygon\(var\(--hud-cut\)/);
+    expect(declared('.hitfx-round', 'box-shadow')).toBe('inset 4px 0 0 var(--orange)');
+    expect(declared('.hitfx-round.show', 'opacity')).toBe('1');
+  });
+
+  it('make the round\'s start the banner\'s headline: half as large again at least, wider set, on the larger cut', () => {
+    const base = Number(/(\d+)px/.exec(declared('.hitfx-round', 'font')!)![1]);
+    const headline = Number(/^(\d+)px$/.exec(declared('.hitfx-round.start', 'font-size')!)![1]);
+    expect(base).toBeGreaterThanOrEqual(15);
+    expect(headline).toBeGreaterThanOrEqual(base * 1.5);
+    expect(declared('.hitfx-round.start', 'letter-spacing')).toBe('var(--ls-wide)');
+    expect(declared('.hitfx-round.start', 'clip-path')).toMatch(/^polygon\(var\(--hud-cut-lg\)/);
+  });
+
+  it('keep the round banner within the score bar\'s widest form, as the hit feed keeps clear of it, and under the HIT! stamp', () => {
+    const feedHalf = /(\d+)px \* var\(--sb-scale, 1\) \* var\(--sb-fit, 1\)/.exec(declared('.hit-feed', 'max-width')!)![1];
+    expect(declared('.hitfx-round', 'max-width')).toContain(`${Number(feedHalf) * 2}px * var(--sb-scale, 1) * var(--sb-fit, 1)`);
+    expect(declared('.hitfx-banner', 'z-index')).toBe('1');
+  });
+
+  it('keep what keeps under the score bar on its height token, and the debug panel under the minimap\'s caption', () => {
+    expect(sheet).not.toMatch(/70px \* var\(--sb-scale/);
+    expect(blockOf('.hitfx-banner')).toMatch(/var\(--sb-height\) \* var\(--sb-scale, 1\)/);
+    expect(blockOf('.minimap-on > .debug-overlay')).toMatch(/--minimap-caption/);
+  });
+});
+
+describe('the font (M100: Inter replaces Barlow)', () => {
+  const faces = [...sheet.matchAll(/@font-face\s*\{([^}]*)\}/g)].map((m) => m[1]!);
+
+  it('loads Inter, in the weights the sheets use, from files served with the game, and names no Barlow anywhere', () => {
+    const named = faces.map((f) => /font-family:\s*'([^']+)'/.exec(f)![1]);
+    expect(new Set(named)).toEqual(new Set(['Inter']));
+    // The latin files, then the same four weights of the marks (← → ✓, a unicode-range face; styleSheetQA.test.ts).
+    expect(faces.map((f) => /font-weight:\s*(\d+)/.exec(f)![1])).toEqual(['500', '600', '700', '800', '500', '600', '700', '800']);
+    for (const f of faces) expect(f).toMatch(/url\('[^']*assets\/fonts\/Inter-(marks-)?\d+\.woff2'\)/);
+    expect(css).not.toMatch(/barlow/i);
+  });
+
+  it('points both font variables, the menus\' and the HUD\'s, at Inter', () => {
+    for (const v of ['--ui-font', '--ui-display']) expect(new RegExp(`${v}:\\s*'Inter',`).test(sheet), v).toBe(true);
+    // Every weight a sheet asks for is one that is loaded (no faux-bold from a missing file).
+    const used = new Set([...menuSheet.matchAll(/font(?:-weight)?:\s*(?:italic\s+)?(\d{3})\b/g), ...hudSheet.matchAll(/font(?:-weight)?:\s*(?:italic\s+)?(\d{3})\b/g)].map((m) => m[1]));
+    for (const w of used) expect(['500', '600', '700', '800'], `weight ${w}`).toContain(w);
+  });
+
+  it('sets numbers in tabular figures, in the menus and over the HUD', () => {
+    expect(declared('.menus', 'font-variant-numeric')).toBe('tabular-nums');
+    expect(declared('.hud', 'font-variant-numeric')).toBe('tabular-nums');
+  });
+
+  it('draws no key prompts along the bottom of the menus (M100)', () => {
+    expect(menuSheet).not.toMatch(/menu-hint-key|\.menu-hints|menu-build/);
+  });
+
+  it('lays the Armory\'s collection out as one column per kind, under the other columns', () => {
+    expect(declared('.armory-list', 'grid-template-columns')).toMatch(/^repeat\(auto-fit, minmax\(\d+px, 1fr\)\)$/);
+    expect(declared('.armory-kind', 'flex-direction')).toBe('column');
+    expect(declared('.armory-owned', 'grid-column')).toBe('1 / -1');
+  });
+});
+
+describe('layout polish before the screenshots (G4, M100)', () => {
+  it('sets the minimap caption on the HUD\'s navy panel colour, which follows HUD opacity, in white text', () => {
+    expect(declared('.minimap-caption', 'background')).toBe('var(--hud-panel)');
+    expect(declared('.minimap-caption', 'color')).toBe('var(--hud-fg)');
+    expect(declared('.minimap-caption', 'width')).toBe('var(--minimap-size)');
+  });
+
+  it('keeps the fire-mode chips and the spare line in rows of their own: the spare line is a block under the chips', () => {
+    expect(declared('.hud-spare', 'display')).toBe('block');
+    expect(declared('.hud-spare', 'margin-top')).toMatch(/^\d+px$/);
+    expect(declared('.hud-ammo', 'flex-direction')).toBeUndefined();
+  });
+
+  it('keeps each Shot button\'s price and payment whole, one to a line', () => {
+    expect(declared('.item-chip.armory-shot', 'flex-direction')).toBe('column');
+    expect(declared('.item-chip.armory-shot .item-name,\n.item-chip.armory-shot .item-note', 'white-space')).toBe('nowrap');
+  });
+
+  it('sets a collection card\'s spare count in acid, in text of 15 px or more', () => {
+    expect(declared('.armory-row-spares', 'color')).toBe('var(--menu-acid)');
+    expect(declared('.armory-row-spares', 'font')).toContain('var(--fs-sm)');
+    expect(Number(/--fs-sm:\s*(\d+)px/.exec(menuSheet)?.[1])).toBeGreaterThanOrEqual(15);
+  });
+
+  it('lays the Match rules out in as many columns as fit, so the page holds in a 1080 px window', () => {
+    expect(declared('.match-grid', 'grid-template-columns')).toMatch(/^repeat\(auto-fit, minmax\(\d+px, 1fr\)\)$/);
+    expect(declared('.match-panel .match-rules-row', 'flex-direction')).toBe('row');
+  });
+
+  it('puts no backdrop blur on any of these', () => {
+    for (const rule of ['.minimap-caption', '.hud-replica', '.armory-row-spares', '.context-menu', '.menu-title-warning']) expect(blockOf(rule), rule).not.toMatch(/backdrop-filter/);
   });
 });

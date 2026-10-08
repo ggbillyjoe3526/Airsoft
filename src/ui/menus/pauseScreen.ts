@@ -1,5 +1,4 @@
-import { MENU_TEXT } from '../../config/menus';
-import { hintsBar, type MenuHint } from './chrome';
+import type { MenuHint } from './chrome';
 import { PAUSE_ICONS } from './icons';
 import { el, hintLine, menuButton, setHint, withIcon } from './menuParts';
 
@@ -55,9 +54,9 @@ export class PauseScreen {
     );
     this.setRange(false);
     resume.classList.add('menu-button-big');
-    // Esc resumes too (the menus handle it, after a short guard, audit UI-09); the hint shows it.
-    this.hints = [{ keys: ['Esc'], label: MENU_TEXT.hints.resume, run: actions.onResume, echo: true }];
-    this.root.append(panel, hintsBar(this.hints));
+    // Esc resumes too: the menus handle it, after a short guard (audit UI-09), so there is no key of its own here.
+    this.hints = [];
+    this.root.append(panel);
   }
 
   /** On the practice range (M21): the Loadout button shows; with the tutorial running, Skip step and Skip tutorial. */

@@ -9,7 +9,8 @@ import { activeDev, type DevSettings, devCheating, retroLookOf } from './config/
 import { PERF_SCRIPT } from './config/perfScript';
 import { ROUNDS } from './config/hits';
 import type { MatchRules, RulesetId } from './config/matchRules';
-import { type CrosshairSettings, type HitFeedMode, hudScale, scoreboardScale, type WhatGotYouMode } from './config/matchInfo';
+import { type CrosshairSettings, type HitFeedMode, hudInsetX, hudScale, scoreboardScale, type WhatGotYouMode } from './config/matchInfo';
+import { MINIMAP } from './config/minimap';
 import { FULLSCREEN_RELOCK_MS } from './config/controls';
 import { CRASH_TEXT } from './config/crash';
 import { BROWSER_NOTES } from './config/menus';
@@ -66,6 +67,7 @@ import { SAVE_TEXT } from './config/save';
 import { screenWhenStopped } from './ui/menus/menuNav';
 import { Menus } from './ui/menus/menus';
 import { followingPictureTarget, ItemPictures, webglPictureTarget } from './render/itemPictures';
+import { kitSubjects } from './ui/menus/menuPictures';
 import { recordsView } from './ui/recordsView';
 import {
   effectiveReducedMotion,
@@ -88,6 +90,7 @@ import {
   loadShowFps,
   loadToneMapping,
   loadHitFeedMode,
+  loadHudOpacity,
   loadHudSize,
   loadRawInput,
   loadScoreboardSize,
@@ -240,6 +243,8 @@ export class Game {
   private whatGotYouMode: WhatGotYouMode = loadWhatGotYouMode();
   /** The HUD's size as picked (Settings → HUD, audit UI-04); the screen's height scales it further (hudScale). */
   private hudSize = loadHudSize();
+  /** How opaque the HUD's panels are (Settings → HUD, G4). */
+  private hudOpacity = loadHudOpacity();
   /** When the Fullscreen key was last pressed in play (performance.now()), to take the mouse again (audit UI-19). */
   private fullscreenKeyAt = Number.NEGATIVE_INFINITY;
   /** Stop following the page's fullscreen state and the keyboard layout. */
@@ -467,6 +472,7 @@ export class Game {
       hud: {
         hudSize: { initial: this.hudSize, onChange: (v) => ((this.hudSize = v), this.showHudLook()) },
         scoreboardSize: { initial: this.scoreboardSize, onChange: (v) => ((this.scoreboardSize = v), this.showHudLook()) },
+        hudOpacity: { initial: this.hudOpacity, onChange: (v) => ((this.hudOpacity = v), this.showHudLook()) },
         hitFeed: { initial: this.hitFeedMode, onChange: (m) => this.changeHitFeed(m) },
         whatGotYou: { initial: this.whatGotYouMode, onChange: (m) => this.changeWhatGotYou(m) },
       },
@@ -734,17 +740,21 @@ export class Game {
 
   /**
    * The HUD's look from the settings (M24), as CSS variables on the game's container (style.css): the HUD's size (audit
-   * UI-04), the sound cues' size and colour, and the scoreboard's size (held back in a narrow window so the hit feed
-   * keeps its room). Again on resize.
+   * UI-04), its panels' opacity (G4), the sound cues' size and colour, and the scoreboard's size (held back in a narrow
+   * window so the hit feed and the minimap keep their room). Again on resize.
    */
   private readonly showHudLook = (): void => {
     const style = this.container.style;
-    const hud = hudScale(this.hudSize, this.container.clientHeight || window.innerHeight);
+    const width = this.container.clientWidth || window.innerWidth;
+    const height = this.container.clientHeight || window.innerHeight;
+    const hud = hudScale(this.hudSize, height);
     style.setProperty('--hud-scale', String(hud));
+    style.setProperty('--hud-opacity', String(this.hudOpacity));
     style.setProperty('--cue-scale', String(this.soundCueSize));
     style.setProperty('--cue-colour', soundCueCss(this.soundCueColour));
-    // The scoreboard grows with the HUD, still only as far as leaves the hit feed room.
-    style.setProperty('--sb-scale', scoreboardScale(this.scoreboardSize * hud, this.container.clientWidth || window.innerWidth).toFixed(3));
+    // The scoreboard grows with the HUD, still only as far as leaves the hit feed its room and clears the minimap.
+    const minimapEdge = hudInsetX(width, height) + MINIMAP.size * hud;
+    style.setProperty('--sb-scale', scoreboardScale(this.scoreboardSize * hud, width, minimapEdge).toFixed(3));
   };
 
   /** A Dev setting changed, or the Dev tab was shown or hidden (M24): what applies now goes to the game and the session. */
@@ -896,6 +906,7 @@ export class Game {
       this.session.setSoundCues(this.soundCues);
       this.session.setHitFeedMode(this.hitFeedMode);
       this.session.setWhatGotYouMode(this.whatGotYouMode);
+      this.session.combat.setReplicaPictures(this.pictures, kitSubjects(this.loadout.kit(), this.look.realisticColours));
       this.applyDevTo(this.session);
       applyTeamCss(this.container, TEAM_COLOUR_SETS[this.teamColours]);
     }
@@ -922,6 +933,7 @@ export class Game {
       look: this.look,
     }, this.options.seed, this.quality, this.audio, this.crosshair, pose, tutorialFrom);
     this.session.onTutorialStep = (step) => saveSetting('tutorialStep', step);
+    this.session.combat.setReplicaPictures(this.pictures, kitSubjects(this.loadout.kit(), this.look.realisticColours));
     this.steppedDown = false;
     this.session.setMotion(motionScale(this.motionReduced()));
     this.applyDevTo(this.session);

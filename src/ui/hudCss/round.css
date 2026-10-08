@@ -1,0 +1,42 @@
+/* The round banner (ui/hitFeedback.ts; its words ui/roundBanner.ts; G4 look), top centre under the score bar: a navy
+   panel cut at its top left (as opaque as HUD opacity) with an orange bar down its left edge, the words in the HUD's
+   heavy capitals. The capitals are text-transform only: the words stay as written, for the code and a screen reader.
+   As a round starts, "Round 2" (with your job in flag mode) is its headline, larger (.start); the results and the
+   countdown between rounds keep a size that fits one line at 1280 px. Shown by .show alone, when the game says (its
+   timing is HUD.roundStartMessageTime, config/renderView.ts); the "HIT!" stamp sits over it (style.css). */
+.hitfx-round {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--hud-margin) + 32px + var(--sb-height) * var(--sb-scale, 1));
+  translate: -50% 0;
+  scale: var(--hud-scale, 1);
+  transform-origin: 50% 0;
+  /* No wider than the score bar's widest form (365 px each side, scaled as the bar is), so it keeps out of the hit
+     feed's column as the bar does (feed.css), and wraps rather than reach it. */
+  width: max-content;
+  max-width: calc(min(100% - 32px, 730px * var(--sb-scale, 1) * var(--sb-fit, 1)) / var(--hud-scale, 1));
+  padding: 7px 22px 6px 26px;
+  font: 800 22px/1.15 var(--ui-display);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--hud-fg);
+  background: var(--hud-panel);
+  box-shadow: inset 4px 0 0 var(--orange);
+  clip-path: polygon(var(--hud-cut) 0, 100% 0, 100% 100%, 0 100%, 0 var(--hud-cut));
+  opacity: 0;
+}
+
+.hitfx-round.show {
+  opacity: 1;
+}
+
+/* The headline: "ROUND 2". */
+.hitfx-round.start {
+  padding: 10px 36px 9px 42px;
+  font-size: 44px;
+  line-height: 1;
+  letter-spacing: var(--ls-wide);
+  box-shadow: inset 6px 0 0 var(--orange);
+  clip-path: polygon(var(--hud-cut-lg) 0, 100% 0, 100% 100%, 0 100%, 0 var(--hud-cut-lg));
+}
