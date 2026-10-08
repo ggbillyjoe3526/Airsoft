@@ -5,6 +5,21 @@ commit, before its pull request merges (CI's scope gate finds the block in the b
 (`docs/records/<id>.md`) and its CHANGELOG line remain. The planning thread writes blocks; the build thread sets
 `status` and `attempts` once, in its records commit (no status-only commits).
 
+## TE4 · Token step 4: fewer chat lines, a lighter local test run, bot balance as a report
+tier: ui
+perf: skip
+touches: pipeline/, .claude/, src/ai/, vite.config.ts, package.json
+contract: none
+acceptance:
+  1. Off CI the gate runs the slow bot-match guards only when the diff reaches a file they load (their imports, the test setup file, the test run's own config), else the fast project alone, and says which and why; `--tests all` forces both; CI always runs every test; a record's tests cell shows `(fast)` when the slow guards were left to CI (token plan item 21).
+  2. Win shares, the first-hit share, Extraction's get-out rates and earnings and the levels' order leave the pass/fail guards for `src/ai/balance/` (vitest project `balance`, only on demand); `node pipeline/balance.mjs [filter]` measures them and writes `pipeline/out/balance-report.md`, each figure against its band with its standard error and a verdict; it never fails a build (item 22).
+  3. The slow guards keep what must never happen: rounds played and settled (under 1 in 4 on time), bots leaving spawn, nobody falling, no friendly fire, half-time swaps, the flag raised, Extraction runs ending by their rules; on fewer seeds where only a balance figure needed many.
+  4. The bug pass reads the balance report (`docs/PROCESS.md` › Bug pass): a figure outside by two standard errors is a balance issue, one within noise is re-measured; a task that changes balance runs its filter and quotes the figures in its record.
+  5. The project chat carries only results, blockers and decisions (item 8), recorded in DECISIONS and PROCESS for every thread and the coordinator.
+  6. Test-only files (test support, balance figures) are not perf paths; the new rules are unit-tested in the fast project; the pipeline README, PROCESS, the skill, the `src/ai` READMEs, DECISIONS and ROADMAP describe them.
+status: open
+attempts: 0
+
 **Audit 2, what is left (2026-10-05 20:45 UTC).** Merged: M50–M57, M63–M65, M68, M70 (#107–#122). M69 (AUD PR 4) is
 accepted and lands with this list. Below, the rest of section 8 of the report
 (`audits/full-audit-2026-10-05.md` in the project's shared files), in its order. Not built in this pass:
