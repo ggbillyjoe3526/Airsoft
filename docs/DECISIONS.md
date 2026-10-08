@@ -451,8 +451,9 @@ replaces its line; the old one stays findable in the archive or in git.
 - **High and Ultra draw the city's flat finishes at 512², as Medium does (owner, 2026-10-05, audit decision 9; M78).**
   Plaster, cladding, asphalt, paving and glass (`SURFACES.maxSize`) gain nothing from 1024² but four times the memory;
   every other surface follows the quality's Texture detail. Ultra is capped too, as the drawings are the same. Neon
-  Heights High holds 21 MB less (112.4 → 91.4 MB); the audit's ~28 MB counted the 1024² maps' whole size, not the
-  difference. Screenshots match at play distances; pressed against a plaster wall its finest grain is a touch softer.
+  Heights High holds 21 MB less (112.4 → 91.4 MB; the owner accepted 21 MB, 2026-10-08); the audit's ~28 MB counted
+  the 1024² maps' whole size, not the difference. Screenshots match at play distances; pressed against a plaster wall
+  its finest grain is a touch softer.
 - **Chunk size budgets fail the build on CI, and growth is a deliberate bump with a decision line (2026-10-04).** The
   game chunk's default is 950 kB (warning from 90 %) and Rapier's 4,550 kB.
 - **Production builds ship Brotli and gzip copies of their files (owner, 2026-10-04: Brotli now, `.wasm` later).**
