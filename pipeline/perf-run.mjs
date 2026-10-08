@@ -140,7 +140,7 @@ async function measure(preset) {
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: options.cpu });
   await page.goto(urlFor(preset));
   await page.waitForSelector('.menu-title-start', { timeout: 60_000 });
-  // The title's Play opens the Play screen (G3): the map and the mode are cards on it, Settings is on the top bar.
+  // The title's START opens the Match screen (G3, M100): the map and the mode are cards on it, Settings is on the top bar.
   await page.locator('.menu-title-start').click();
   const setup = page.locator('.menu-setup');
   if (options.map !== 'depot' || options.mode !== 'elimination') {
@@ -149,11 +149,11 @@ async function measure(preset) {
     const settings = page.locator('.menu-settings');
     await settings.getByRole('checkbox', { name: 'Dev settings' }).check();
     await settings.getByRole('group', { name: 'Dev content' }).getByRole('button', { name: 'On' }).click();
-    await page.locator('.menu-topbar').getByRole('button', { name: 'Play' }).click();
+    await page.locator('.menu-topbar').getByRole('button', { name: 'Match' }).click();
     await setup.getByRole('group', { name: 'Map', exact: true }).getByRole('button', { name: MAPS[options.map] }).first().click();
     if (options.mode === 'extraction') await setup.getByRole('group', { name: 'Mode', exact: true }).getByRole('button', { name: /Extraction/i }).click();
   }
-  await setup.getByRole('button', { name: 'Play', exact: true }).click();
+  await setup.getByRole('button', { name: 'Start match', exact: true }).click();
   await page.waitForFunction((t) => globalThis.airsoft?.state && globalThis.airsoft.state.tick >= t, options.warmupTicks, { timeout: 120_000 });
   console.log(`perf: match running (map ${options.map}, mode ${options.mode}, env ${options.env}, preset ${preset}, cpu ×${options.cpu}); measuring ${ticks} ticks from tick ${options.warmupTicks}`);
 

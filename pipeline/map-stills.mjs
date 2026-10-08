@@ -82,12 +82,12 @@ async function draw(shot) {
   await page.addInitScript((saved) => localStorage.setItem('airsoft.settings', JSON.stringify(saved)), picks);
   await page.goto(`${base}?nolock&seed=1&quality=${quality}`);
   await page.waitForSelector('.menu-title-start', { timeout: 120_000 });
-  // A dev map's data arrives after the title shows (map/maps.ts loadDevMaps): wait until the Play screen offers it.
+  // A dev map's data arrives after the title shows (map/maps.ts loadDevMaps): wait until the Match screen offers it.
   await page.locator('.menu-title-start').click();
   const setup = page.locator('.menu-setup');
   await setup.locator('.map-cards .choice-card.selected').waitFor({ timeout: 60_000 });
   await page.waitForFunction((map) => document.querySelector('.menu-setup .play-map-line')?.textContent?.toLowerCase().replace(/\s/g, '').startsWith(map.toLowerCase()), shot.map, { timeout: 60_000 });
-  await setup.getByRole('button', { name: 'Play', exact: true }).click();
+  await setup.getByRole('button', { name: 'Start match', exact: true }).click();
   await page.waitForFunction(() => globalThis.airsoft?.state && globalThis.airsoft.state.tick > 30, null, { timeout: 180_000 });
   const camera = STILL_CAMERA[shot.view];
   const result = await page.evaluate(
