@@ -86,8 +86,8 @@ guards`), and the record's tests cell reads `✓ 95 s (fast)` when the guards we
 audio, docs or pipeline change skips them; anything in the bots, the simulation, the maps or their config runs them.
 `--tests all` runs both regardless. CI always runs every test, so a missed reach costs one more push, never a bug.
 
-`--quick` is build and tests: about 20 minutes in a 4-core cloud container when the slow guards run (measured
-2026-10-08: build 33 s, the 3,383 tests 21 minutes, most of it the `slow` project's bot-match guards), about 3 minutes
+`--quick` is build and tests: about 10 minutes in a 4-core cloud container when the slow guards run (measured
+2026-10-08: build 33 s, the 3,417 tests 9 minutes, most of it the `slow` project's bot-match guards), about 3 minutes
 when they don't. Its build leaves out the `.br`/`.gz`
 copies (owner decision 3 of audit 2, CORE-11: the gate sets `AIRSOFT_PRECOMPRESS=0`, which `vite.config.ts` reads),
 about 9 s of Brotli a build that only the release smoke test and a host need; the full gate and CI build with them (the
@@ -96,7 +96,7 @@ working, `npx vitest run --project fast` (`npm run t`) runs every unit test exce
 (project `slow`: `src/ai/depotMatch*.test.ts`, `src/ai/*Match.pro*.test.ts`, `*Match.levels*`, `*Match.extraction*` and
 `src/ai/proBalance.test.ts`) in about 2 minutes (2026-10-08); CI and `npm test` always run both projects
 (vite.config.ts, audit CORE-15). The full
-gate in a cloud container is about 30 minutes (2026-10-08: smoke 8 minutes on top of `--quick`) plus the perf run when
+gate in a cloud container is about 20 minutes (2026-10-08: smoke 8 minutes on top of `--quick`) plus the perf run when
 it is required; set `PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium` there. The report is
 `pipeline/out/gate-report.json`, the attempt row for the task's record `pipeline/out/metrics-row.md` (`records.mjs` ›
 `metricsRow`), and the logs and reports are under `pipeline/out/qa-artifacts/`; all git-ignored.

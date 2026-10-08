@@ -28,7 +28,7 @@ frontmatter) at the top of the prompt, the task content last. Tell every worker 
    task's decisions (its record's lines and any new DECISIONS lines). It writes the `Unreleased` line(s) and the
    FEATURES line.
 5. **Full gate**: `PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium node pipeline/gate.mjs --task <id>` (drop the
-   variable outside a cloud container). About 30 minutes in a cloud container (2026-10-08), plus the perf run when it is
+   variable outside a cloud container). About 20 minutes in a cloud container (2026-10-08), plus the perf run when it is
    required; about 10 when the diff reaches no bot-match guard, which the gate then leaves to CI (its tests line says
    so; `--tests all` runs them anyway; token plan item 21).
    - Any gate `false`: fix from `pipeline/out/failures.md`, the gate's failures-only summary (each failure's test,
