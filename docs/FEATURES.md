@@ -136,8 +136,9 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 
 ## Menus and settings
 
-- Menus in a navy and orange look (G3): a top bar between matches (Play, Loadout, Armory, Range, Settings, your Field
-  Credits and Tokens, version) and key hints along the bottom that are real buttons (M15, M24, G3)
+- Menus in a navy and orange look in Inter type (G3, M100): a plain title (wordmark, tagline, START, the Tutorial on a
+  clean save), then a top bar of Match, Loadout, Armory and Settings with your Field Credits and Tokens at the right;
+  no key strip, every screen works by mouse and the keys still work; Practice is the last mode on the Match screen
 - Play screen: map and mode picture cards (a Dev tag on maps still being built), the match rows and a Your match panel
   on one page; no map is loaded until Play (M15, M15b, G3)
 - Title screen, pause, match summary and result screens; the pause screen shows the match's seed for bug reports (M15,

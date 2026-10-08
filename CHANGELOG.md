@@ -31,6 +31,11 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **G5** · A Custom graphics mix saved before this build gets High's new effects (ambient occlusion, temporal smoothing, light shafts, bloom); each can be turned off under Custom (#128)
 - **G5** · Frame-rate limit choices are Unlimited (the default), 30, 60, 120, 144 and 240; an older saved limit becomes the nearest choice (#128)
 - **G5** · Graphics › Night lights adds Nearest 8 (#128)
+- **M100** · A plain title: just Airsoft, "Call your hit. Go again.", START and the version small at the bottom left; the Tutorial sits under START until you have played it or started a first match; the Range button leaves the title
+- **M100** · START opens the Match screen (Play is now called Match everywhere); its top bar reads Match, Loadout, Armory, Settings, with your Field Credits and Tokens at the far right and no version there
+- **M100** · The key strip along the bottom of every menu is gone: each screen works with the mouse alone (the Airsoft mark at the top left takes you back), and the keys still work
+- **M100** · Practice is the last mode card on the Match screen, after Elimination, Attack and Defend and Extraction, and opens the range; the Armory's collection puts each kind of gear in its own column
+- **M100** · Menus and the HUD use Inter in place of Barlow, with even-width numbers and heavier headings
 - **G3** · New menus: a bold navy and orange look in Barlow type, a top bar (Play, Loadout, Armory, Range, Settings, your Field Credits and Tokens) and key hints along the bottom; text is never smaller than 15 px (#134)
 - **G3** · The Play screen shows maps and modes as picture cards (Day | Night on the card, a Dev tag on maps still being built) with the match rows and a Your match panel on the same page; the Map, Mode, Match and Difficulty pop-ups are gone (#134)
 - **G3** · Loadout and Customise show your replicas as pictures; Customise lists the parts down the left, Colour first, with each option as a picture tile beside the replica and its numbers (#134)
