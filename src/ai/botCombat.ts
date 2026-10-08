@@ -240,12 +240,7 @@ export function shootBot(b: Bot, w: BotWorld, target: Character | undefined, eye
   }
   aimDirection(aimLine, b.aim.yaw, b.aim.pitch);
   const dist = Math.hypot(target.position.x - me.position.x, target.position.z - me.position.z);
-  // Held by a teammate or cover in the way: the pause between bursts runs on, so the bot fires once the line clears
-  // rather than waiting out the rest of it then (BP2).
-  if (lineOfFireBlocked(b, w, eye, aimPoint, aimLine, dist)) {
-    b.pauseLeft = Math.max(0, b.pauseLeft - dt);
-    return;
-  }
+  if (lineOfFireBlocked(b, w, eye, aimPoint, aimLine, dist)) return;
   if (b.burstLeft <= 0 && b.pauseLeft <= 0) b.burstLeft = pick(b.rng, b.skill.burst);
   if (b.burstLeft > 0) {
     // On semi (a gas pistol, or Pro CQB's semi-only rule, M39) a held trigger fires once: squeeze again every other
