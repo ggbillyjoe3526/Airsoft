@@ -14,12 +14,16 @@ game state and never write it. Tests use the fake DOM in `testSupport.ts` (no js
 - Overlays: `debugOverlay.ts`, `crashScreen.ts`, `loadingScreen.ts`, `graphicsNotice.ts`, `otherTabNotice.ts`,
   `coachPanel.ts` (the tutorial), `saveDialog.ts`.
 - Wording that needs testing is pure (`matchStopText.ts`, `keyNotes.ts`, `statsRows.ts`).
-- The HUD reads `--team-0` / `--team-1` (set by `Game.play`) and `--sb-scale`, `--cue-scale`, `--cue-colour` (set by
-  `Game.showHudLook`). Team colours come from `teamCss(team)`, never hard-coded.
-- The HUD's look (G4): `hud.css` imports one sheet per part (`hudCss/`: score bar, minimap, hit feed, squad line,
-  replica panel, Tab scoreboard), loaded after the menus'; the words are `config/hudText.ts`. `replicaPanel.ts` shows the
+- The HUD reads `--team-0` / `--team-1` (set by `Game.play`) and `--hud-scale`, `--hud-opacity`, `--sb-scale`,
+  `--cue-scale`, `--cue-colour` (set on `#app` by `Game.showHudLook`). The panel tokens `--hud-panel` and
+  `--hud-panel-solid` are declared on `#app` (style.css) from `--hud-opacity` (Settings → HUD opacity). Team colours come
+  from `teamCss(team)`, never hard-coded.
+- The HUD's look (G4): `hud.css` imports one sheet per part (`hudCss/`: score bar, minimap, hit feed, replica panel,
+  Tab scoreboard, round banner), loaded after the menus'; the words are `config/hudText.ts`. `replicaPanel.ts` shows the
   replica's picture (the game's `ItemPictures`, via `CombatPresentation.setReplicaPictures`), fire-mode chips, ammo and
-  magazine bars; `squadBar.ts` puts the squad cards and order keys round `squadOrderLine.ts`; the minimap skips a frame
-  that would draw the same (`FrameCheck`, `minimapView.ts`).
+  magazine bars; the minimap skips a frame that would draw the same (`FrameCheck`, `minimapView.ts`). No squad cards or
+  order keys on screen (owner, 2026-10-08): the orders show on `orderWheel.ts` only, and `squadOrderLine.ts` is an
+  off-screen status region for screen readers. The round banner's start ("Round 2") is its headline (`isRoundStart`,
+  `roundBanner.ts`), set in capitals by the stylesheet.
 - Tuning, in `config/`: `teams.ts`, `minimap.ts`, `matchInfo.ts`, `menus.ts`, `tutorial.ts`, `accessibility.ts`.
 - Tests: a `*.test.ts` beside most files (`hud`, `minimap`, `scoreboard`, `soundCues`, `statsRows`, `settingsNotes`).

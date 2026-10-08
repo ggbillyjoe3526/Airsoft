@@ -92,6 +92,8 @@ export type SettingField =
   /** Settings → HUD → What got you (M41): 'auto', 'on' or 'off'. */
   | 'whatGotYou'
   | 'hudSize'
+  /** Settings → HUD → HUD opacity (G4): how opaque the HUD's panels are, 0.5 to 1. */
+  | 'hudOpacity'
   /** Settings → Controls → Raw mouse input (audit UI-20). */
   | 'rawInput'
   /** Settings → Look (graphics overhaul G1): robots mixed in with humans, and replicas in realistic colours. */

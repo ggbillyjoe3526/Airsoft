@@ -1,4 +1,4 @@
-import { HIT_FEED_MODES, type HitFeedMode, HUD_SIZE, SCOREBOARD_SIZE, WHAT_GOT_YOU_MODES, type WhatGotYouMode } from '../config/matchInfo';
+import { HIT_FEED_MODES, type HitFeedMode, HUD_OPACITY, HUD_SIZE, SCOREBOARD_SIZE, WHAT_GOT_YOU_MODES, type WhatGotYouMode } from '../config/matchInfo';
 import { menuRow, rangeControl } from './menus/menuParts';
 import { OptionPicker } from './optionPicker';
 
@@ -7,6 +7,8 @@ export interface HudSettingsOptions {
   hudSize: { initial: number; onChange: (scale: number) => void };
   /** The scoreboard's size (a scale, 1 = as before M24). */
   scoreboardSize: { initial: number; onChange: (scale: number) => void };
+  /** How opaque the HUD's panels are (G4): 0.5 to 1. */
+  hudOpacity: { initial: number; onChange: (opacity: number) => void };
   hitFeed: { initial: HitFeedMode; onChange: (mode: HitFeedMode) => void };
   /** The "what got you" card after a hit (M41). */
   whatGotYou: { initial: WhatGotYouMode; onChange: (mode: WhatGotYouMode) => void };
@@ -24,6 +26,11 @@ export function hudSettings(opts: HudSettingsOptions): HTMLDivElement[] {
       'Scoreboard size',
       'The score and round clock at the top of the screen. In a narrow window it grows only as far as leaves the hit feed room.',
       rangeControl('Scoreboard size', SCOREBOARD_SIZE, opts.scoreboardSize.initial, (v) => `${Math.round(v * 100)}%`, 'scoreboardSize', opts.scoreboardSize.onChange),
+    ),
+    menuRow(
+      'HUD opacity',
+      'How solid the panels behind the score, minimap, hit feed, ammo and round banner are. Lower lets more of the field show through.',
+      rangeControl('HUD opacity', HUD_OPACITY, opts.hudOpacity.initial, (v) => `${Math.round(v * 100)}%`, 'hudOpacity', opts.hudOpacity.onChange),
     ),
     menuRow('Hit feed', 'Who hit whom, in the top-right corner.', new OptionPicker('Hit feed', HIT_FEED_MODES, opts.hitFeed.initial, 'hitFeed', opts.hitFeed.onChange).root),
     menuRow(

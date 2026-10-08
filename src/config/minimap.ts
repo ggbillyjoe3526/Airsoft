@@ -51,10 +51,8 @@ export const MINIMAP = {
   storeyCut: 1.8,
   /** Sloping ground (M33c) is lightened by up to this much white at its highest point, so hills read on the minimap. */
   terrainShade: 0.22,
-  /** Colours of the field drawing (CSS). */
+  /** Colours of the field drawing (CSS); the navy square under it is the canvas's own background (minimap.css, G4). */
   colours: {
-    /** The square under the field: the HUD's panel navy (style.css --hud-panel, G4; audit section 6, item 14). */
-    backdrop: 'rgba(7, 13, 31, 0.74)',
     ground: 'rgba(72, 80, 88, 0.92)',
     raised: 'rgba(96, 104, 110, 0.95)',
     ramp: 'rgba(80, 88, 94, 0.95)',

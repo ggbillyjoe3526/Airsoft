@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { CROSSHAIR_COLORS, CROSSHAIR_SHAPES, HIT_FEED_MODES, SCOREBOARD_SIZE, scoreboardScale } from '../../config/matchInfo';
+import { CROSSHAIR_COLORS, CROSSHAIR_SHAPES, HIT_FEED_MODES, HUD_SIZE, hudInsetX, hudScale, SCOREBOARD_SIZE, scoreboardScale } from '../../config/matchInfo';
+import { MINIMAP } from '../../config/minimap';
 import { ARMORY_TEXT, SETTINGS_LATER, SETTINGS_TABS } from '../../config/menus';
 import { unpaidLine } from './summaryScreen';
 import { CUSTOM_NOT_RECORDED_NOTE, DEV_CONTENT_NOTE, DEV_CONTENT_PAY_NOTE, DEV_NOT_RECORDED_NOTE, NOT_RECORDED_NOTE, notRecordedNote, setupNotes } from './playView';
@@ -292,6 +293,38 @@ describe('HUD settings (M24)', () => {
     expect(at1280).toBeLessThan(SCOREBOARD_SIZE.max);
     expect(1280 / 2 - SCOREBOARD_SIZE.halfWidth * at1280).toBeCloseTo(SCOREBOARD_SIZE.feedRoom, 5);
     expect(scoreboardScale(SCOREBOARD_SIZE.max, 800)).toBe(1);
+  });
+
+  // G4 retry (QA): the bar's widest form is 730 px at size 1 (feed.css keeps 365 px each side of the middle clear).
+  it('sizes the bar by its widest form, 365 px each side at size 1', () => {
+    expect(SCOREBOARD_SIZE.halfWidth).toBe(365);
+  });
+
+  it('keeps the bar clear of the minimap and the hit feed at the largest size, at 1280 px and on the common screens', () => {
+    const screens = [[1280, 720], [1280, 800], [1280, 1024], [1366, 768], [1440, 900], [1600, 900], [1920, 1080], [1920, 1200], [2560, 1080], [2560, 1440], [3440, 1440], [3840, 2160]] as const;
+    for (const [w, h] of screens) {
+      for (const size of [HUD_SIZE.default, HUD_SIZE.max]) {
+        const hud = hudScale(size, h);
+        const minimapRight = hudInsetX(w, h) + MINIMAP.size * hud + 2; // its 2 px ring (minimap.css)
+        const scale = scoreboardScale(SCOREBOARD_SIZE.max * hud, w, minimapRight - 2);
+        if (scale <= 1) continue; // never below size 1: a screen with no room to give, as before
+        const half = SCOREBOARD_SIZE.halfWidth * scale;
+        const where = `${w} × ${h}, HUD ${size}`;
+        expect(w / 2 - half, where).toBeGreaterThanOrEqual(minimapRight + 10);
+        expect(w / 2 - half, where).toBeGreaterThanOrEqual(SCOREBOARD_SIZE.feedRoom - 1e-9);
+      }
+    }
+    // At 1280 px, the largest size is held back to fit (it was 1.89, with the bar 840 px wide, before the G4 retry).
+    const at1280 = scoreboardScale(SCOREBOARD_SIZE.max, 1280, hudInsetX(1280, 720) + MINIMAP.size);
+    expect(at1280).toBeGreaterThan(1);
+    expect(at1280).toBeLessThan(1.12);
+  });
+
+  it('finds the HUD\'s side inset as style.css does: 1.5 % of the width between 16 and 32 px, inside the middle 16:9', () => {
+    expect(hudInsetX(1280, 720)).toBeCloseTo(19.2, 5);
+    expect(hudInsetX(800, 600)).toBe(16);
+    expect(hudInsetX(3840, 2160)).toBe(32);
+    expect(hudInsetX(2560, 1080)).toBeCloseTo((2560 - 1.778 * 1080) / 2 + 32, 5);
   });
 });
 

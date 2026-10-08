@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ROUNDS } from '../config/hits';
 import { createRoundState, type RoundState } from '../sim/round';
 import { vec3 } from '../sim/vec';
-import { respawnBanner, roundBanner, spokenRoundMessage } from './roundBanner';
+import { isRoundStart, respawnBanner, roundBanner, spokenRoundMessage } from './roundBanner';
 
 const POLE = vec3(10, 0, 0);
 
@@ -82,5 +82,32 @@ describe('the run banner (M43 acceptance 5)', () => {
     expect(respawnBanner(0)).toBe('Back in at the insertion · no respawn left');
     expect(respawnBanner(1)).toBe('Back in at the insertion · 1 respawn left');
     expect(respawnBanner(2)).toBe('Back in at the insertion · 2 respawns left');
+  });
+});
+
+// G4 (owner, 2026-10-08): "Round 1" becomes the banner's headline, "ROUND 1". The words stay as written.
+describe('the round banner\'s headline (G4)', () => {
+  it('is what each mode says as a round starts, written as before (the capitals are the stylesheet\'s)', () => {
+    const starts = [
+      roundBanner(round('elimination', { number: 1 }), 0, true, 0, ROUNDS),
+      roundBanner(round('elimination', { number: 11 }), 1, true, 0, ROUNDS),
+      roundBanner(round('attackDefend', { attackers: 0 }), 0, true, 0, ROUNDS),
+      roundBanner(round('attackDefend', { attackers: 1, number: 6 }), 0, true, 0, ROUNDS),
+    ];
+    expect(starts).toEqual(['Round 1', 'Round 11', 'Round 1 · Attack', 'Round 6 · Defend']);
+    for (const text of starts) expect(isRoundStart(text), text).toBe(true);
+  });
+
+  it('is nothing else the banner says: results, countdowns, the match, the run, a respawn, nothing', () => {
+    const others = [
+      roundBanner(round('elimination', { phase: 'over', winner: 0, reason: 'eliminated' }), 0, false, 3, ROUNDS),
+      roundBanner(round('elimination', { phase: 'over', winner: -1, reason: 'time', number: 2 }), 0, false, 1, ROUNDS),
+      roundBanner(round('elimination', { phase: 'matchOver', matchWinner: 0 }), 0, false, 0, ROUNDS),
+      roundBanner(round('extraction', {}), 0, true, 0, ROUNDS),
+      respawnBanner(1),
+      'ROUND 1',
+      '',
+    ];
+    for (const text of others) expect(isRoundStart(text), text).toBe(false);
   });
 });

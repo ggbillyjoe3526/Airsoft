@@ -13,6 +13,7 @@ import { MatchStats } from '../stats/matchStats';
 import type { HitFeed as HitFeedClass } from '../ui/hitFeed';
 import type { Minimap as MinimapClass } from '../ui/minimap';
 import type { Scoreboard as ScoreboardClass } from '../ui/scoreboard';
+import type { SquadOrderLine as SquadOrderLineClass } from '../ui/squadOrderLine';
 import type { MatchPresentation as MatchPresentationClass } from './matchPresentation';
 
 // G4 QA: how MatchPresentation drives the new HUD parts. Every drawing class is auto-mocked (no DOM or GPU under Vitest),
@@ -31,9 +32,7 @@ vi.mock('../ui/orderWheel');
 vi.mock('../ui/roundBanner');
 vi.mock('../ui/scoreboard');
 vi.mock('../ui/soundCues');
-// Kept while the squad line exists; drop both with it (the other wiring tests mock them too).
 vi.mock('../ui/squadOrderLine');
-vi.mock('../ui/squadBar');
 vi.mock('../ui/teammateMarkers');
 vi.mock('../ui/whatGotYou');
 vi.mock('./characterRenderer');
@@ -56,12 +55,14 @@ let MatchPresentation: typeof MatchPresentationClass;
 let Scoreboard: typeof ScoreboardClass;
 let Minimap: typeof MinimapClass;
 let HitFeed: typeof HitFeedClass;
+let SquadOrderLine: typeof SquadOrderLineClass;
 beforeAll(async () => {
   vi.resetModules();
   ({ MatchPresentation } = await import('./matchPresentation'));
   ({ Scoreboard } = await import('../ui/scoreboard'));
   ({ Minimap } = await import('../ui/minimap'));
   ({ HitFeed } = await import('../ui/hitFeed'));
+  ({ SquadOrderLine } = await import('../ui/squadOrderLine'));
 });
 afterAll(() => {
   vi.resetModules();
@@ -162,6 +163,33 @@ describe('the minimap names the map and the round (G4 criterion 2)', () => {
     const r = rig({ extraction: true });
     r.event({ type: 'roundStart', round: 1 } as never);
     expect(captions()).toEqual(['Depot', 'Depot']);
+  });
+});
+
+// Owner, 2026-10-08: no squad cards or order keys on the HUD; the orders show on the order wheel only, and the order
+// line is a status region off the screen (ui/squadOrderLine.ts) a screen reader still hears.
+describe('the squad orders are on the order wheel only (G4, owner 2026-10-08)', () => {
+  it('builds the order line alone, with nothing but the HUD to go in: no cards, no team, no names, no keys', () => {
+    rig();
+    expect(vi.mocked(SquadOrderLine).mock.calls).toHaveLength(1);
+    expect(vi.mocked(SquadOrderLine).mock.calls[0]).toHaveLength(1);
+  });
+
+  it('hands it each order given and the order in force, and shows and clears it with the match', () => {
+    const r = rig();
+    r.match.setPlaying(true);
+    expect(SquadOrderLine.prototype.setVisible).toHaveBeenLastCalledWith(true);
+    r.match.orderGiven('none', 'cancelled');
+    expect(SquadOrderLine.prototype.ordered).toHaveBeenLastCalledWith('none', 'cancelled');
+    r.match.showSquadOrder('hold', null, new THREE.PerspectiveCamera(), 0.016);
+    expect(SquadOrderLine.prototype.update).toHaveBeenLastCalledWith('hold', 0.016);
+    r.event({ type: 'roundStart', round: 2 } as never);
+    expect(SquadOrderLine.prototype.clear).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves no squad bar to build: its module is gone', () => {
+    expect(Object.keys(import.meta.glob('../ui/squadBar.ts'))).toEqual([]);
+    expect(Object.keys(import.meta.glob('../ui/squadOrderLine.ts'))).toHaveLength(1);
   });
 });
 

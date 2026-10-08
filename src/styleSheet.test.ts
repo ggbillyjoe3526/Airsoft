@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { HUD_INSET, HUD_OPACITY, SCOREBOARD_SIZE } from './config/matchInfo';
 
 
 // The stylesheets pinned as text (audit UI-03, UI-04, UI-06, UI-07), the way bots.ts and maps.ts are in their tests:
@@ -253,12 +254,12 @@ describe('the menus\' sheets (G3)', () => {
 describe('the HUD\'s sheets (G4)', () => {
   it('read every file hud.css imports, each part\'s rules among them', () => {
     expect(hudFiles.length).toBe(7);
-    for (const rule of ['.scoreboard', '.minimap-frame', '.hit-feed-line', '.squad-card', '.hud-replica', '.match-board']) {
+    for (const rule of ['.scoreboard', '.minimap-frame', '.hit-feed-line', '.hud-replica', '.match-board', '.hitfx-round']) {
       expect(blockOf(rule), rule).not.toBeNull();
     }
     // Moved, not copied: style.css keeps none of them.
     const style = uncomment(readFileSync(new URL('./style.css', import.meta.url), 'utf8'));
-    for (const rule of ['.scoreboard', '.hit-feed-line', '.hud-replica', '.match-board', '.squad-order']) {
+    for (const rule of ['.scoreboard', '.hit-feed-line', '.hud-replica', '.match-board', '.squad-order', '.hitfx-round']) {
       expect(style, rule).not.toMatch(new RegExp(`(^|\\})\\s*\\${rule}\\s*\\{`));
     }
   });
@@ -282,7 +283,66 @@ describe('the HUD\'s sheets (G4)', () => {
     expect(declared('.minimap', 'border-radius')).toBe('10px');
     expect(declared('.hud-mode.on', 'background')).toBe('var(--orange)');
     expect(declared('.hit-feed-line.you', 'box-shadow')).toContain('var(--menu-acid)');
-    expect(declared('.squad-card.hit', 'opacity')).toBe('0.6');
+  });
+
+  // Owner, 2026-10-08: the squad cards and the order keys left the screen; the order line is read out, not shown.
+  it('leave no squad cards, heads or order keys on the HUD, and no sheet for them', () => {
+    expect(hudFiles.map((f) => f.url.pathname.split('/').pop())).not.toContain('squad.css');
+    expect(sheet).not.toMatch(/\.squad-(bar|cards?|card-[\w-]+|keys)(?![\w-])/);
+    expect(sheet).not.toMatch(/\.squad-order\s*\{/); // off the screen through the shared .sr-only rule alone
+    expect(blockOf('.sr-only')).toMatch(/clip-path:\s*inset\(50%\)/);
+  });
+
+  // Owner, 2026-10-08: the panels were too see-through; Settings → HUD → HUD opacity (--hud-opacity on #app) sets them.
+  it('make the panels as opaque as HUD opacity, 90 % until it is set, on #app where the game sets it', () => {
+    const app = blockOf('#app')!;
+    expect(app).toMatch(/--hud-panel:\s*rgb\(7 13 31 \/ var\(--hud-opacity, ([\d.]+)\)\)/);
+    expect(app).toMatch(/--hud-panel-solid:\s*rgb\(7 13 31 \/ calc\(0\.5 \+ var\(--hud-opacity, ([\d.]+)\) \/ 2\)\)/);
+    const fallbacks = [...app.matchAll(/var\(--hud-opacity, ([\d.]+)\)/g)].map((m) => Number(m[1]));
+    expect(fallbacks).toEqual([HUD_OPACITY.default, HUD_OPACITY.default]);
+    // Not on :root too: a token there would take :root's --hud-opacity, never the one on #app.
+    expect(sheet).not.toMatch(/:root\s*\{[^}]*--hud-panel/);
+  });
+
+  it('fade no panel as a whole (that would cap the panels under HUD opacity and dim the words), and back each with the panel navy', () => {
+    for (const rule of ['.scoreboard', '.minimap-frame', '.hit-feed', '.hit-feed-line', '.hud-replica', '.match-board']) {
+      expect(blockOf(rule), rule).not.toMatch(/(^|[;\s])opacity:/);
+    }
+    for (const rule of ['.sb-team', '.sb-flag', '.minimap', '.hit-feed-line', '.hud-replica', '.hitfx-round']) expect(declared(rule, 'background'), rule).toBe('var(--hud-panel)');
+    for (const rule of ['.sb-mid', '.hit-feed-line.you', '.match-board']) expect(declared(rule, 'background'), rule).toBe('var(--hud-panel-solid)');
+  });
+
+  it('agree with the inset and the minimap ring the score bar\'s room is worked out with (config/matchInfo.ts)', () => {
+    const pc = (v: number) => Number((v * 100).toFixed(3));
+    expect(sheet).toContain(`--hud-margin: clamp(${HUD_INSET.min}px, ${pc(HUD_INSET.share)}vw, ${HUD_INSET.max}px)`);
+    expect(sheet).toContain(`--hud-safe-x: max(0px, calc((100vw - ${pc(HUD_INSET.aspect)}vh) / 2))`);
+    const ring = Number(/^0 0 0 (\d+)px/.exec(declared('.minimap', 'box-shadow')!)![1]);
+    expect(SCOREBOARD_SIZE.minimapGap).toBeGreaterThanOrEqual(ring + 8);
+  });
+
+  // Owner, 2026-10-08: "Round 1" becomes "ROUND 1", larger and in the HUD's look.
+  it('set the round banner as the HUD: capitals by text-transform, heavy, on a cut navy panel with an orange bar', () => {
+    expect(declared('.hitfx-round', 'text-transform')).toBe('uppercase');
+    expect(declared('.hitfx-round', 'font')).toMatch(/^800 \d+px\/[\d.]+ var\(--ui-display\)$/);
+    expect(declared('.hitfx-round', 'letter-spacing')).toBe('var(--ls-caps)');
+    expect(declared('.hitfx-round', 'clip-path')).toMatch(/^polygon\(var\(--hud-cut\)/);
+    expect(declared('.hitfx-round', 'box-shadow')).toBe('inset 4px 0 0 var(--orange)');
+    expect(declared('.hitfx-round.show', 'opacity')).toBe('1');
+  });
+
+  it('make the round\'s start the banner\'s headline: half as large again at least, wider set, on the larger cut', () => {
+    const base = Number(/(\d+)px/.exec(declared('.hitfx-round', 'font')!)![1]);
+    const headline = Number(/^(\d+)px$/.exec(declared('.hitfx-round.start', 'font-size')!)![1]);
+    expect(base).toBeGreaterThanOrEqual(15);
+    expect(headline).toBeGreaterThanOrEqual(base * 1.5);
+    expect(declared('.hitfx-round.start', 'letter-spacing')).toBe('var(--ls-wide)');
+    expect(declared('.hitfx-round.start', 'clip-path')).toMatch(/^polygon\(var\(--hud-cut-lg\)/);
+  });
+
+  it('keep the round banner within the score bar\'s widest form, as the hit feed keeps clear of it, and under the HIT! stamp', () => {
+    const feedHalf = /(\d+)px \* var\(--sb-scale, 1\) \* var\(--sb-fit, 1\)/.exec(declared('.hit-feed', 'max-width')!)![1];
+    expect(declared('.hitfx-round', 'max-width')).toContain(`${Number(feedHalf) * 2}px * var(--sb-scale, 1) * var(--sb-fit, 1)`);
+    expect(declared('.hitfx-banner', 'z-index')).toBe('1');
   });
 
   it('keep what keeps under the score bar on its height token, and the debug panel under the minimap\'s caption', () => {

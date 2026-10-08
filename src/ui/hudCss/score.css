@@ -1,12 +1,12 @@
 /* The score bar (ui/scoreboard.ts), top centre: each side's name and a slanted pip per player on a navy panel cut at
    its outer corner, its rounds won on a solid block in its colour, and the clock between them with what wins the match
-   under it. Level 2 of the HUD. Its size is Settings → HUD → Scoreboard (--sb-scale), grown from its top centre; its
-   height at size 1 is --sb-height (style.css), which the hit banner, the OUT tag and the round line keep under. */
+   under it, its panels as opaque as HUD opacity (--hud-panel). Its size is Settings → HUD → Scoreboard (--sb-scale),
+   grown from its top centre; its height at size 1 is --sb-height (style.css), which the hit banner, the OUT tag and the
+   round line keep under. */
 .scoreboard {
   position: absolute;
   left: 50%;
   top: var(--hud-margin);
-  opacity: var(--hud-l2);
   translate: -50% 0;
   scale: calc(var(--sb-scale, 1) * var(--sb-fit));
   transform-origin: 50% 0;

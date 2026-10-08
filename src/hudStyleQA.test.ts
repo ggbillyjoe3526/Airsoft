@@ -101,9 +101,10 @@ describe('Scoreboard size keeps the hit feed its room (G4 criterion 7, M24 bug p
   /** The half-width of the widest score bar at size 1 that the hit feed's own rule keeps clear of (feed.css). */
   const feedHalfWidth = Number(/(\d+)px \* var\(--sb-scale/.exec(hudFiles.feed!)![1]);
 
-  // The bar is about 560 to 630 px wide at size 1 (3v3 to 5v5, measured in Chromium) and its widest form 730 px, not the
-  // 444 px SCOREBOARD_SIZE.halfWidth was set for: at the largest size the bar runs under the feed and across the minimap.
-  it.fails('never lets the score bar at the largest size grow into the feed\'s room, on any screen from 1280 px wide', () => {
+  // The bar is about 560 to 630 px wide at size 1 (3v3 to 5v5, measured in Chromium) and its widest form 730 px; until
+  // the G4 retry SCOREBOARD_SIZE.halfWidth was set for 444 px, and at the largest size the bar ran under the feed and
+  // across the minimap.
+  it('never lets the score bar at the largest size grow into the feed\'s room, on any screen from 1280 px wide', () => {
     expect(feedHalfWidth).toBeGreaterThan(300);
     for (const width of [1280, 1366, 1440, 1600, 1920]) {
       const scale = scoreboardScale(SCOREBOARD_SIZE.max, width);

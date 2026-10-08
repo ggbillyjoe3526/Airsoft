@@ -32,8 +32,7 @@ import { respawnBanner, roundBanner } from '../ui/roundBanner';
 import { runNews } from '../ui/runStatus';
 import { Scoreboard } from '../ui/scoreboard';
 import { type HeardSound, SoundCues, soundCueOf } from '../ui/soundCues';
-import type { OrderNotice } from '../ui/squadOrderLine';
-import { SquadBar } from '../ui/squadBar';
+import { type OrderNotice, SquadOrderLine } from '../ui/squadOrderLine';
 import { rosterNames, statsBlocks } from '../ui/statsRows';
 import { TeammateMarkers } from '../ui/teammateMarkers';
 import { WhatGotYouCard, whatGotYouText } from '../ui/whatGotYou';
@@ -85,7 +84,8 @@ export class MatchPresentation {
   private readonly mateAt: ScreenMarker = { x: 0, y: 0, onScreen: false };
   /** On-screen sound cues (Settings → Accessibility, M18b; off unless turned on). */
   private readonly soundCues: SoundCues;
-  private readonly squadLine: SquadBar;
+  /** The squad order line (M22): read out by a screen reader only, since G4 (the order wheel shows the orders). */
+  private readonly squadLine: SquadOrderLine;
   private readonly holdMarker: HoldMarker;
   private readonly holdAnchor = new THREE.Vector3();
   private readonly holdAt: ScreenMarker = { x: 0, y: 0, onScreen: false };
@@ -172,7 +172,7 @@ export class MatchPresentation {
     this.board = new MatchBoard(container);
     this.whatGotYou = new WhatGotYouCard(container);
     this.soundCues = new SoundCues(container);
-    this.squadLine = new SquadBar(container, player.team, [player, ...this.mates], this.names, keyName);
+    this.squadLine = new SquadOrderLine(container);
     this.holdMarker = new HoldMarker(container, teamCss(player.team));
     this.minimap = new Minimap(container, field.blocks, cssColor(teamColours.hud[player.team]!), cssColor(teamColours.hud[1 - player.team]!), field.terrain ?? null, field.foliage ?? [], field.storeys);
     this.mapName = field.name ?? '';
@@ -354,7 +354,7 @@ export class MatchPresentation {
     }
   }
 
-  /** You pressed a squad order key and `result` is now in force (`why`: the reason if none is); see SquadBar. */
+  /** You pressed a squad order key and `result` is now in force (`why`: the reason if none is); see SquadOrderLine. */
   orderGiven(result: SquadOrderKind | 'none', why: OrderNotice): void {
     this.squadLine.ordered(result, why);
   }
