@@ -5,7 +5,7 @@ import type { ItemRef } from '../../pool/collection';
 import { GEAR_SLOTS, type GearSlot, type LoadoutModel } from '../../pool/loadoutModel';
 import { type Asset, replicaOf } from '../../pool/pool';
 import { gearLine, performanceOf, sheetRows, tierBlurb } from '../performanceSheet';
-import { hintsBar, type MenuHint, optionTick, sectionHead } from './chrome';
+import { type MenuHint, optionTick, sectionHead } from './chrome';
 import { CustomiseView } from './customiseView';
 import { ITEM_ICONS, itemIcon, MENU_ICONS } from './icons';
 import type { PictureContext } from './kitStrip';
@@ -20,7 +20,6 @@ export interface LoadoutOptions {
   context: PictureContext;
   /** Something on the loadout changed (it is already saved): the Play screen and the next Play follow it. */
   onChange: () => void;
-  onBack: () => void;
 }
 
 /** A carried replica's card: its slot's button (the picture, name, tier and stat line) and its Customise button. */
@@ -59,7 +58,6 @@ export class LoadoutScreen {
   private readonly selectedLine: HTMLParagraphElement;
   private readonly sheet = perfSheet('loadout-perf');
   private readonly customiseBox: HTMLDivElement;
-  private readonly footer: HTMLDivElement;
   private readonly gearHints: readonly MenuHint[];
   private selected: GearSlot = 'primary';
   /** The Customise view while it is open, and the slot whose replica it customises. */
@@ -104,14 +102,9 @@ export class LoadoutScreen {
     this.gearView.append(carried, owned, aside);
     this.customiseBox = el('div', 'customise-box');
     this.customiseBox.hidden = true;
-    this.gearHints = [
-      { keys: ['Esc'], label: MENU_TEXT.hints.back, run: () => this.back() },
-      { keys: ['C'], label: MENU_TEXT.hints.customise, run: () => this.customise(this.selected), code: 'KeyC', echo: true },
-      { keys: [MENU_TEXT.hints.rightClick], label: MENU_TEXT.hints.customise },
-    ];
-    this.footer = el('div', 'menu-hints-box');
-    this.footer.append(hintsBar(this.gearHints));
-    this.root.append(el('h1', 'menu-heading sr-only', 'Loadout'), this.gearView, this.customiseBox, this.footer);
+    // C customises the selected replica (the Customise button and a right-click do it for the mouse); Esc is Back.
+    this.gearHints = [{ keys: ['C'], label: MENU_TEXT.hints.customise, run: () => this.customise(this.selected), code: 'KeyC' }];
+    this.root.append(el('h1', 'menu-heading sr-only', 'Loadout'), this.gearView, this.customiseBox);
     // Right-click means Customise here: never the browser's menu, even off a replica.
     this.root.addEventListener('contextmenu', (e) => e.preventDefault());
     this.refresh();
@@ -134,10 +127,6 @@ export class LoadoutScreen {
     if (this.customising === null) return false;
     this.closeCustomise();
     return true;
-  }
-
-  private back(): void {
-    if (!this.handleEscape()) this.opts.onBack();
   }
 
   private carriedCard(slot: GearSlot): CarriedCard {
@@ -295,7 +284,6 @@ export class LoadoutScreen {
     this.customiseBox.replaceChildren(this.view.root);
     this.customiseBox.hidden = false;
     this.gearView.hidden = true;
-    this.footer.replaceChildren(this.view.hintsBar());
     this.view.focus();
   }
 
@@ -313,7 +301,6 @@ export class LoadoutScreen {
     this.customiseBox.replaceChildren();
     this.customiseBox.hidden = true;
     this.gearView.hidden = false;
-    this.footer.replaceChildren(hintsBar(this.gearHints));
   }
 
   private tierLabel(ref: ItemRef): string {

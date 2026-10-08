@@ -23,8 +23,9 @@ import {
 import type { Collection, ItemRef } from '../../pool/collection';
 import { type Asset, comesIn, fcPerToken, isChase, type Pool } from '../../pool/pool';
 import { ConfirmDialog, noKeyRepeat } from './confirmDialog';
+import { type ContextChoice, ContextMenu } from './contextMenu';
 import { tierLine } from '../performanceSheet';
-import { hintsBar, type MenuHint, sectionHead, tagPill } from './chrome';
+import { type MenuHint, sectionHead, tagPill } from './chrome';
 import { MENU_ICONS } from './icons';
 import { CATEGORY_LABELS, itemPicture, itemTile, tierLabel } from './itemTile';
 import type { PictureContext } from './kitStrip';
@@ -42,7 +43,6 @@ export interface ArmoryOptions {
    * had saved first, so the collection was reloaded from its save and the change was not kept (M70, audit POOL-05).
    */
   onChange: () => boolean | void;
-  onBack: () => void;
   /** Where the items' pictures come from (G3); without, each item shows its drawing. */
   context?: PictureContext;
 }
@@ -71,12 +71,15 @@ export class ArmoryScreen {
   private readonly odds: HTMLDivElement;
   private readonly owned: HTMLDivElement;
   private readonly confirm = new ConfirmDialog();
+  /** The scrap choices of a collection card (M100): one menu, built once and shown for whichever card is asked. */
+  private readonly menu = new ContextMenu();
   private last: Dispensed[] = [];
   /** The last Shot's items you now carry without picking them (a rarer copy of a replica or part left on its default). */
   private nowEquipped = new Set<string>();
   /** Says once that the last change was not kept (M70, audit POOL-05); empty otherwise. */
   private readonly notice = el('p', 'menu-readout armory-notice');
-  private readonly back: HTMLButtonElement;
+  /** Where the keyboard goes when no action is left to take (the heading, which the page always has). */
+  private readonly fallbackFocus: HTMLElement;
 
   constructor(private readonly opts: ArmoryOptions) {
     this.root = el('div', 'menu-screen menu-page menu-armory menu-hub');
@@ -86,6 +89,8 @@ export class ArmoryScreen {
     // The left column: the heading, the balance, the exchange and the Shots (renderSide fills the part under the heading).
     const left = el('div', 'armory-left menu-card');
     const heading = el('h1', 'menu-heading', 'Armory');
+    heading.tabIndex = -1;
+    this.fallbackFocus = heading;
     heading.append(' ', el('span', 'beta-tag', ARMORY_TEXT.beta));
     const head = el('div', 'armory-head');
     head.append(heading, tagPill(ARMORY_TEXT.freeTag));
@@ -101,16 +106,13 @@ export class ArmoryScreen {
     main.append(this.reveal, this.odds);
     // The right: the collection.
     this.owned = el('div', 'armory-owned menu-card');
+    // Right-click scraps spares from a card here: a card with none gets no browser menu either (as in the Loadout).
+    this.owned.addEventListener('contextmenu', (e) => e.preventDefault());
     const columns = el('div', 'armory-columns');
     columns.append(left, main, this.owned);
-    this.hints = [
-      { keys: ['Space'], label: MENU_TEXT.hints.shot, run: () => this.shotOne(), code: 'Space', idle: true, echo: true },
-      { keys: ['Esc'], label: MENU_TEXT.hints.back, run: opts.onBack },
-    ];
-    const bar = hintsBar(this.hints, MENU_TEXT.free);
-    // The Back hint (the second): the one there for the keyboard, as the 1 Shot hint echoes the screen's own button.
-    this.back = bar.querySelectorAll<HTMLButtonElement>('button')[1]!;
-    this.root.append(columns, bar, this.confirm.root);
+    // Space takes a Shot (the 1 Shot button does it for the mouse); Esc is Back, handled by the menus.
+    this.hints = [{ keys: ['Space'], label: MENU_TEXT.hints.shot, run: () => this.shotOne(), code: 'Space', idle: true }];
+    this.root.append(columns, this.confirm.root, this.menu.root);
     this.refresh();
   }
 
@@ -149,16 +151,17 @@ export class ArmoryScreen {
     if (b && !b.disabled) b.click();
   }
 
-  /** The first of these actions on screen and enabled, else Back (always there). */
-  private firstEnabled(actions: readonly string[]): HTMLButtonElement {
+  /** The first of these actions on screen and enabled, else the heading (always there). */
+  private firstEnabled(actions: readonly string[]): HTMLElement {
     for (const action of actions) {
       const b = this.root.querySelector<HTMLButtonElement>(`[data-action="${action}"]`);
       if (b && !b.disabled) return b;
     }
-    return this.back;
+    return this.fallbackFocus;
   }
 
   private render(): void {
+    this.menu.close(false);
     // Read (and synced with another tab's save) once per redraw; each action reads it again before it changes it.
     const c = this.opts.collection();
     this.renderSide(c);
@@ -341,16 +344,24 @@ export class ArmoryScreen {
       all.dataset.action = 'scrap-all';
       head.append(all);
     }
+    // Each kind in its own column (M100): replicas, power sources, optics and the rest, a heading over its assets.
     const list = el('div', 'armory-list');
-    let category: Asset['category'] | null = null;
+    // Grouped by kind, not by neighbours: a kind the pool lists apart still lands in its one column (columns in first-seen order).
+    const columns = new Map<Asset['category'], HTMLElement>();
     for (const row of catalogue.rows) {
-      if (row.asset.category !== category) {
-        category = row.asset.category;
-        list.append(el('p', 'menu-kicker armory-category', CATEGORY_LABELS[category]));
+      const category = row.asset.category;
+      let column = columns.get(category);
+      if (!column) {
+        column = el('section', 'armory-kind');
+        column.dataset.kind = category;
+        column.setAttribute('aria-label', CATEGORY_LABELS[category]);
+        column.append(el('h3', 'menu-kicker armory-category', CATEGORY_LABELS[category]));
+        columns.set(category, column);
+        list.append(column);
       }
-      list.append(this.assetRow(row, c));
+      column.append(this.assetRow(row, c));
     }
-    this.owned.replaceChildren(head, el('p', 'menu-readout', ARMORY_TEXT.keepOne), list);
+    this.owned.replaceChildren(head, el('p', 'menu-readout armory-scrap-hint', ARMORY_TEXT.scrapHint), el('p', 'menu-readout', ARMORY_TEXT.keepOne), list);
   }
 
   /** One asset of the catalogue: its name, a pip per tier (copies owned, or a dash), and its spares to scrap. */
@@ -361,7 +372,8 @@ export class ArmoryScreen {
     r.counts.forEach((n, t) => (best = n > 0 ? t : best));
     if (best >= 0) row.dataset.tier = this.pool.tiers[best]!.id;
     else row.classList.add('is-unowned');
-    row.append(el('span', 'armory-row-name', r.asset.name));
+    const name = el('span', 'armory-row-name', r.asset.name);
+    row.append(name);
     const pips = el('span', 'armory-pips');
     r.counts.forEach((n, t) => {
       const tier = this.pool.tiers[t]!;
@@ -376,36 +388,65 @@ export class ArmoryScreen {
       pips.append(pip);
     });
     row.append(pips);
+    // The spares to scrap, under the pips (the card's own name already says it to a screen reader); none when there are none.
+    const spares = r.spares > 0 ? el('span', 'armory-row-spares', ARMORY_TEXT.spareCount(r.spares)) : null;
+    if (spares) {
+      spares.setAttribute('aria-hidden', 'true');
+      row.append(spares);
+    }
     if (best >= 0) {
       const adds = tierLine(this.pool, { asset: r.asset.id, tier: this.pool.tiers[best]!.id });
       if (adds) row.append(el('span', 'armory-row-adds', adds));
     }
+    this.scrapMenu(row, r, c, spares ? [name, spares] : [name]);
+    return row;
+  }
+
+  /**
+   * The card's scrap choices (M100, in place of buttons on every card): a right-click opens them at the pointer, and
+   * the Menu key or Shift+F10 on the focused card opens them beside it. Only a card with a spare has any. The menu opens
+   * clear of `marks` (the card's name and its spare count), so what it is about stays readable.
+   */
+  private scrapMenu(row: HTMLDivElement, r: CollectionRow, c: Collection, marks: readonly HTMLElement[]): void {
     const one = cheapestSpare(this.pool, c, r.asset.id);
-    if (one) {
-      const oneFc = this.pool.tiers.find((t) => t.id === one.tier)!.scrapFc;
-      const b = noKeyRepeat(
-        menuButton(`${ARMORY_TEXT.scrapOne} (+${fcText(oneFc)})`, 'secondary', () => {
+    if (!one) return;
+    const oneFc = this.pool.tiers.find((t) => t.id === one.tier)!.scrapFc;
+    const choices: ContextChoice[] = [
+      {
+        label: `${ARMORY_TEXT.scrapOne} (+${fcText(oneFc)})`,
+        name: `${ARMORY_TEXT.scrapOne} ${tierLabel(this.pool, one)} ${r.asset.name} for ${fcText(oneFc)}`,
+        run: () => {
           scrapSpares(this.pool, this.opts.collection(), one, 1);
-          this.changed([`scrap1-${r.asset.id}`, `scrap-${r.asset.id}`, 'scrap-all', 'buy-1']);
-        }),
-      );
-      b.dataset.action = `scrap1-${r.asset.id}`;
-      b.setAttribute('aria-label', `${ARMORY_TEXT.scrapOne} ${tierLabel(this.pool, one)} ${r.asset.name} for ${fcText(oneFc)}`);
-      row.append(b);
-    }
+          this.changed([`spares-${r.asset.id}`, 'scrap-all', 'buy-1']);
+        },
+      },
+    ];
     if (r.spares > 1) {
-      const b = noKeyRepeat(
-        menuButton(`${ARMORY_TEXT.scrap} ${r.spares} (+${fcText(r.spareFc)})`, 'secondary', () => {
+      choices.push({
+        label: `${ARMORY_TEXT.scrap} ${r.spares} (+${fcText(r.spareFc)})`,
+        name: `${ARMORY_TEXT.scrap} ${r.spares} spare ${r.asset.name} for ${fcText(r.spareFc)}`,
+        run: () => {
           const c = this.opts.collection();
           for (let t = this.pool.tiers.length - 1; t >= 0; t--) scrapSpares(this.pool, c, { asset: r.asset.id, tier: this.pool.tiers[t]!.id });
           this.changed(['scrap-all', 'buy-1']);
-        }),
-      );
-      b.dataset.action = `scrap-${r.asset.id}`;
-      b.setAttribute('aria-label', `${ARMORY_TEXT.scrap} ${r.spares} spare ${r.asset.name} for ${fcText(r.spareFc)}`);
-      row.append(b);
+        },
+      });
     }
-    return row;
+    // Reachable from the keyboard, and named for a screen reader as a card with a menu.
+    row.tabIndex = 0;
+    row.dataset.action = `spares-${r.asset.id}`;
+    row.setAttribute('role', 'group');
+    row.setAttribute('aria-label', ARMORY_TEXT.rowMenuHint(r.asset.name, r.spares));
+    row.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      this.menu.open(r.asset.name, choices, e.clientX + 2, e.clientY + 2, row, marks.map((m) => m.getBoundingClientRect()));
+    });
+    row.addEventListener('keydown', (e) => {
+      if (e.key !== 'ContextMenu' && !(e.key === 'F10' && e.shiftKey)) return;
+      e.preventDefault();
+      const box = row.getBoundingClientRect();
+      this.menu.open(r.asset.name, choices, box.left + 12, box.top + 24, row, marks.map((m) => m.getBoundingClientRect()));
+    });
   }
 
   private figure(label: string, value: string): HTMLDivElement {

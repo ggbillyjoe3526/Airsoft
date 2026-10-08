@@ -1,0 +1,116 @@
+/* The hit feed (M19; G4 look), top right: a navy row per hit, read left to right as the shooter, a BB and who called
+   it, each name in its team's colour, then a Hit tag; a screen reader hears the airsoft sentence instead (ui/hitFeed.ts).
+   Its rows are panels, as opaque as Settings → HUD → HUD opacity (--hud-panel, style.css #app). */
+.hit-feed {
+  position: absolute;
+  top: var(--hud-margin);
+  right: var(--hud-edge-x);
+  scale: var(--hud-scale, 1);
+  transform-origin: 100% 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  /* Never under the score bar (bug pass: at 1024 px a friendly-fire line ran beneath it): the feed keeps to the right
+     of its widest form (Attack and Defend, about 730 px at size 1, scaled by --sb-scale and --sb-fit), before the HUD's
+     scale, and a long row wraps. */
+  max-width: calc((50% - var(--hud-edge-x) - 12px - 365px * var(--sb-scale, 1) * var(--sb-fit, 1)) / var(--hud-scale, 1));
+  font: 700 17px/1.2 var(--ui-font);
+  color: var(--paper);
+  pointer-events: none;
+  z-index: 11;
+}
+
+.hit-feed[hidden] {
+  display: none;
+}
+
+/* Each row has a 3 px bar in the colour of the team whose BB it was (audit section 6, item 17); the names say the team
+   too, so colour isn't the only cue. */
+.hit-feed-line {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 7px 14px 7px 12px;
+  background: var(--hud-panel);
+  box-shadow: inset 3px 0 0 var(--hitter, transparent);
+  transition: opacity var(--feed-fade, 1s) linear;
+}
+
+/* Yours (you hit, or were hit): darker, with an acid edge on the outside. */
+.hit-feed-line.you {
+  background: var(--hud-panel-solid);
+  box-shadow:
+    inset 3px 0 0 var(--hitter, transparent),
+    inset -4px 0 0 var(--menu-acid);
+}
+
+.hit-feed-line.fading {
+  opacity: 0;
+}
+
+.hit-feed-row {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+/* Each name a step lighter than its team's colour, so it reads on the navy in every colour set. */
+.hit-feed-name {
+  font-weight: 800;
+  white-space: nowrap;
+  color: color-mix(in srgb, var(--team) 72%, #fff);
+}
+
+.hit-feed-bb {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  color: #fff;
+}
+
+.hit-feed-bb svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.hit-feed-tag {
+  padding: 3px 7px 2px;
+  font: 700 15px/1 var(--ui-display);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+}
+
+/* The friendly and ricochet tags: a glyph and the word (audit section 6, item 19). */
+.hit-feed-line em {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px 2px;
+  font: 700 15px/1 var(--ui-display);
+  font-style: normal;
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.hit-feed-line em svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

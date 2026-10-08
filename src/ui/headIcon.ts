@@ -1,7 +1,7 @@
 /**
  * A player's head as a small drawing (graphics overhaul G3): a helmet in the team's colour over a face and a visor, for
- * the stats tables and (G4) the HUD's squad line. Drawn, not rendered: G7 may swap it for a picture of the figure's own
- * head. The helmet takes `--team` from the stylesheet (.head-icon), so one drawing serves every team and colour set.
+ * the stats tables (the Tab scoreboard and the summary). Drawn, not rendered: G7 may swap it for a picture of the
+ * figure's own head. The helmet takes `--team` from the stylesheet (.head-icon), so one drawing serves every team and colour set.
  * Decoration only: the player's name beside it is what a screen reader reads.
  */
 export const HEAD_ICON =

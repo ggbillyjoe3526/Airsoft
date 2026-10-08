@@ -25,6 +25,19 @@ export interface ChoiceVariants<T extends string> {
   onPick: (id: T, variant: string) => void;
 }
 
+/**
+ * A card after all the others that is not one of the saved options (M100: Practice, the Mode cards' last): picked, it
+ * is shown as picked until another card is, and nothing is saved. `onToggle` hears it picked (true) and left (false).
+ */
+export interface ExtraCard {
+  label: string;
+  blurb: string;
+  /** The card's sign ('' for none), and its picture as inline SVG (decoration; there is no still for it). */
+  icon: string;
+  art: string;
+  onToggle: (on: boolean) => void;
+}
+
 /** How the cards show their options and the entries after them. */
 export interface ChoiceCardsExtras<T extends string> {
   /** Entries after the options, greyed out and disabled, each with `soonTag` on it. */
@@ -42,6 +55,8 @@ export interface ChoiceCardsExtras<T extends string> {
   sideTag?: (id: T) => string;
   /** The tag on dev options (shown only while they are offered). */
   devTag?: string;
+  /** The last card (Practice): not one of the options, never saved. */
+  extra?: ExtraCard;
 }
 
 interface Card<T extends string> {
@@ -68,6 +83,9 @@ export class ChoiceCards<T extends string> {
   private readonly fallback: T;
   private current: T;
   private devContent = false;
+  /** The extra card is the one picked (it stays so until another card is, and is never saved). */
+  private extraOn = false;
+  private extraCard: { wrap: HTMLDivElement; button: HTMLButtonElement } | null = null;
   /** Which options the current context offers (`limit`); the others are hidden and play as the fallback. */
   private offered: (id: T) => boolean = () => true;
 
@@ -95,6 +113,20 @@ export class ChoiceCards<T extends string> {
       this.root.append(wrap);
       this.soonCards.push({ entry, wrap });
     }
+    if (extras.extra) this.root.append(this.makeExtra(extras.extra));
+    this.refresh();
+  }
+
+  /** Whether the extra card (Practice) is the one picked. */
+  get extraPicked(): boolean {
+    return this.extraOn;
+  }
+
+  /** The extra card picked or left from outside (the menus). */
+  setExtra(on: boolean): void {
+    if (on === this.extraOn) return;
+    this.extraOn = on;
+    this.extras.extra?.onToggle(on);
     this.refresh();
   }
 
@@ -133,7 +165,7 @@ export class ChoiceCards<T extends string> {
     const picked = this.value;
     for (const card of this.cards.values()) {
       const { option, button, wrap } = card;
-      const on = option.id === picked;
+      const on = option.id === picked && !this.extraOn;
       button.classList.toggle('selected', on);
       button.setAttribute('aria-pressed', String(on));
       wrap.classList.toggle('selected', on);
@@ -152,6 +184,28 @@ export class ChoiceCards<T extends string> {
       }
     }
     for (const { entry, wrap } of this.soonCards) wrap.hidden = !isAvailable(entry.tag, this.devContent);
+    if (this.extraCard) {
+      this.extraCard.button.classList.toggle('selected', this.extraOn);
+      this.extraCard.button.setAttribute('aria-pressed', String(this.extraOn));
+      this.extraCard.wrap.classList.toggle('selected', this.extraOn);
+    }
+  }
+
+  private makeExtra(extra: ExtraCard): HTMLDivElement {
+    const wrap = el('div', 'choice-card-wrap');
+    const button = el('button', 'choice-card choice-card-extra');
+    button.type = 'button';
+    const frame = el('span', 'choice-card-pic');
+    frame.setAttribute('aria-hidden', 'true');
+    frame.innerHTML = extra.art;
+    button.append(frame);
+    if (extra.icon) button.insertAdjacentHTML('beforeend', `<span class="choice-card-icon">${extra.icon}</span>`);
+    button.append(this.text(extra.label, extra.blurb), el('span', 'choice-card-tags'));
+    button.insertAdjacentHTML('beforeend', `<span class="choice-tick">${MENU_ICONS.check}</span>`);
+    button.addEventListener('click', () => this.setExtra(true));
+    wrap.append(button);
+    this.extraCard = { wrap, button };
+    return wrap;
   }
 
   private card(option: PickerOption<T>): Card<T> {
@@ -196,6 +250,10 @@ export class ChoiceCards<T extends string> {
   }
 
   private pick(id: T): void {
+    if (this.extraOn) {
+      this.extraOn = false;
+      this.extras.extra?.onToggle(false);
+    }
     if (id !== this.current) {
       this.current = id;
       saveSetting(this.field, id);

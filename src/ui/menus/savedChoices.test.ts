@@ -1,11 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { SETTINGS_KEY, SETTINGS_VERSION } from '../../settings/storage';
 import { graphicsKey, GRAPHICS_ROWS, storedValue } from '../../config/graphics';
+import { HUD_OPACITY } from '../../config/matchInfo';
 import { QUALITY, qualityChoiceOf, resolveQuality } from '../../config/render';
-import { effectiveReducedMotion, loadCustomQuality, loadFrameRateCap, loadReducedMotion, motionClass } from './savedChoices';
+import { parseSaveText, SAVE_FORMAT, saveFileText } from '../../save/saveFile';
+import { effectiveReducedMotion, loadCustomQuality, loadFrameRateCap, loadHudOpacity, loadReducedMotion, motionClass } from './savedChoices';
 
 function storageWith(fields: Record<string, unknown>): Storage {
-  const data = new Map<string, string>([[SETTINGS_KEY, JSON.stringify({ version: SETTINGS_VERSION, ...fields })]]);
+  return storageHolding({ [SETTINGS_KEY]: JSON.stringify({ version: SETTINGS_VERSION, ...fields }) });
+}
+
+/** A Storage holding exactly `items` (the settings object, or the keys a build before it used). */
+function storageHolding(items: Record<string, string>): Storage {
+  const data = new Map<string, string>(Object.entries(items));
   return {
     getItem: (k: string) => data.get(k) ?? null,
     setItem: (k: string, v: string) => void data.set(k, v),
@@ -160,5 +167,46 @@ describe('the baked light and weathering rows (G6)', () => {
     expect(saved.weathering).toBe(false);
     // Nonsense is ignored.
     expect(loadCustomQuality(storageWith({ 'graphics.bakedLight': 'sideways' })).bakedLight).toBeUndefined();
+  });
+});
+
+// G4 (owner, 2026-10-08): Settings → HUD → HUD opacity, a new saved field, `hudOpacity`, 0.5 to 1, 0.9 by default.
+describe('HUD opacity, a field new in G4', () => {
+  it('is 90 % by default, from 50 % to 100 % in steps of 5', () => {
+    expect(HUD_OPACITY).toEqual({ min: 0.5, max: 1, step: 0.05, default: 0.9 });
+  });
+
+  it('reads back what was saved, ends included', () => {
+    for (const v of [0.5, 0.75, 0.9, 1]) expect(loadHudOpacity(storageWith({ hudOpacity: v }))).toBe(v);
+  });
+
+  it('reads junk as the default: out of range, not a number, the wrong type, or nothing at all', () => {
+    for (const junk of [0.45, 1.05, -1, 90, Number.NaN, 'solid', '', true, null, {}, [0.8]]) {
+      expect(loadHudOpacity(storageWith({ hudOpacity: junk })), JSON.stringify(junk)).toBe(HUD_OPACITY.default);
+    }
+    expect(loadHudOpacity(storageHolding({ [SETTINGS_KEY]: '{not json' }))).toBe(HUD_OPACITY.default);
+    expect(loadHudOpacity(null)).toBe(HUD_OPACITY.default);
+  });
+
+  it('migrates: a save from before it (the settings object of G3, without the field) loads with the default, the rest as saved', () => {
+    const beforeG4 = storageWith({ hudSize: 1.2, scoreboardSize: 1.5, hitFeed: 'keep', whatGotYou: 'on', fov: 95 });
+    expect(loadHudOpacity(beforeG4)).toBe(HUD_OPACITY.default);
+    expect(JSON.parse(beforeG4.getItem(SETTINGS_KEY)!)).toMatchObject({ hudSize: 1.2, scoreboardSize: 1.5, hitFeed: 'keep' });
+    // Older still: the keys before the settings object ("version 0"), read through the store's own migrate path.
+    expect(loadHudOpacity(storageHolding({ 'airsoft.sensitivity': '1.4', 'airsoft.difficulty': 'hard' }))).toBe(HUD_OPACITY.default);
+  });
+
+  it('migrates: a save file written before it, loaded, gives the default', () => {
+    const file = saveFileText({
+      format: SAVE_FORMAT,
+      build: '0.1 Dev 4+12 · 0a1b2c3',
+      savedAt: '2026-10-01T12:00:00.000Z',
+      stores: { settings: { version: 1, hudSize: 1.1, scoreboardSize: 1.3, hitFeed: 'fade' } },
+    });
+    const parsed = parseSaveText(file);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const loaded = storageHolding({ [SETTINGS_KEY]: JSON.stringify(parsed.save.stores.settings) });
+    expect(loadHudOpacity(loaded)).toBe(HUD_OPACITY.default);
   });
 });

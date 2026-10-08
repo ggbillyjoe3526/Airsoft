@@ -39,7 +39,7 @@ goes wrong: it replays the same match.
 
 What is new since 0.1 Dev 4. Each line points to the section with the full checks.
 
-- [ ] **New menus.** The title screen, the bar across the top, the Play screen's picture cards and the grouped
+- [ ] **New menus.** The plain title screen, the bar across the top, the Match screen's picture cards (Practice the last mode) and the grouped
   Settings with a search box ([Menus](#menus), [Settings and controls](#settings-and-controls)).
 - [ ] **New players and hands.** Masked humans and robots in team colours, and your own gloved or robot arms
   ([Players and replicas](#players-and-replicas)).
@@ -298,8 +298,10 @@ Completely free: Field Credits (FC) come from playing, and nothing is ever sold.
   25 others · 3 new". With reduced motion they appear at once.
 - [ ] **Pity.** "Epic or rarer within 20 more Shots" and "Legendary or rarer within 100 more Shots" count down a Shot
   at a time and survive a reload.
-- [ ] **Your collection.** Every asset Shots can give, owned or not (dimmed), with a pip per tier and "N / 84 items".
-  Scrap 1 scraps the lower copy; fit the Common on Customise first, scrap it, and Customise shows the Rare fitted.
+- [ ] **Your collection.** Under the balance and the odds, one column per kind (replicas, power sources, optics, grips,
+  and the rest), each with a heading. Every asset Shots can give, owned or not (dimmed), with a pip per tier and "N / 84 items".
+  Right-click an item (or focus it and press the Menu key or Shift+F10) for its Scrap 1 / Scrap N menu; Esc, a click
+  elsewhere or a choice closes it. Scrap 1 scraps the lower copy; fit the Common on Customise first, scrap it, and Customise shows the Rare fitted.
   Scrap all spares asks first and keeps your best copy of everything.
 - [ ] **Rarity odds.** The odds table has its caption, and each Rare-or-better copy lists what its tier adds.
 - [ ] **Settings › Dev › Disable Armory.** The Armory is greyed and won't open; a match pays nothing and says why.
@@ -472,7 +474,7 @@ Custom, which opens every row.
 
 ### Practice range
 
-The title screen's Practice range, or Range on the top bar.
+The Match screen's Practice card (the last mode), then Start practice.
 
 - [ ] **The range.** You're alone behind a painted line facing three lanes: white steel plates on the left, standing
   plywood figures in the middle, crouched ones on the right, 10 m to 60 m marked on boards and the floor. No whistle,
@@ -487,7 +489,8 @@ The title screen's Practice range, or Range on the top bar.
 
 ### Tutorial
 
-- [ ] **The title screen** tags Tutorial "New? Start here" until you've finished it once (also after a reload).
+- [ ] **The title screen** offers Tutorial under START on a clean save, until you've finished it once or started a
+  first match (also after a reload).
 - [ ] **Play it through.** The coach says "Tutorial · 1 of 10 · Look around" and moves on as you do each thing: look
   around, walk to the line, ring a plate, knock down a figure at 50 m or more (the coach shows where your last BB
   landed), reload, aim (or, with iron sights, a pointer to the optics), crouch, lean, switch replica and hit
@@ -584,17 +587,24 @@ there maps each symptom to its numbers):
 
 ## Menus
 
-- [ ] **The title screen.** "AIRSOFT" with its tagline, and above it a line naming this build ("0.1 Dev 4+N · …" on
-  `main`, just the release name on a release download; hover it for how many commits after the release it is). A big
-  **Play** button, then Tutorial, Practice range, Loadout, Armory and Settings; a tip, "Your next match" with the map's
-  picture and your kit, and your FC and Tokens. No map is loaded behind the menus.
-- [ ] **Keys.** On the title, Enter plays, T starts the tutorial and Esc opens Settings; the key hints along the
-  bottom are buttons too.
-- [ ] **The top bar** on every other screen: Play, Loadout, Armory, Range and Settings, with your FC and Tokens; the
-  current place is marked.
-- [ ] **The Play screen** (New game). 01 Map as picture cards (a Day | Night switch on maps that have both, kept per
-  map), 02 Mode as cards, 03 Match. On the right, Your match: the map, Mode, Rules, Teams, your Loadout with Change, and
-  **Play**. Play loads the field with a short pause at most.
+- [ ] **The title screen.** Only "AIRSOFT", the tagline "Call your hit. Go again." and a **START** button; on a clean
+  save (tutorial never finished, no match started) a **Tutorial** button under START, gone for good after the tutorial
+  or your first match. The build ("0.1 Dev 4+N · …" on `main`, just the release name on a release download; hover it
+  for how many commits after the release it is) sits small at the bottom left. Nothing else: no tip, no next match, no
+  FC or Tokens. No map is loaded behind the menus.
+- [ ] **Keys.** On the title, Enter presses START, T starts the tutorial (while it is offered) and Esc opens
+  Settings. No key prompts are drawn along the bottom of any screen; every screen works with the mouse alone (the
+  Airsoft wordmark on the top bar goes back to the title) and the keys still work (Esc is Back, C customises, / searches
+  Settings, Space takes a Shot).
+- [ ] **The top bar** on every screen after the title: MATCH, LOADOUT, ARMORY, SETTINGS from the left, your FC and
+  Tokens on the far right, no version; the current place is marked. Opened from the pause menu, only the current place
+  shows and the wordmark reads Back.
+- [ ] **The Match screen** (START). 01 Map as picture cards (a Day | Night switch on maps that have both, kept per
+  map), 02 Mode as cards with **Practice last**, 03 Match rules. On the right, Your match: the map, Mode, Rules, Teams,
+  your Loadout with Change, and **Start match**. Picking Practice hides the map and the rules, and the button reads
+  **Start practice** (the range). Start loads the field with a short pause at most.
+- [ ] **Inter.** All menu and HUD text is one typeface, Inter; numbers (FC, Tokens, stats, scores) keep their width as
+  they change; headings and labels are still in capitals.
 - [ ] **Pause (Esc).** Everything freezes, the mouse is freed, and a solid screen shows the round and score with
   Resume, Settings and Quit. Resume puts you back exactly where you were; so does Esc.
 - [ ] **Quit.** The title screen comes back with nothing behind it. Change the mode and Play: a fresh match in what
@@ -632,9 +642,17 @@ there maps each symptom to its numbers):
 - [ ] **Crosshair** (Settings › Gameplay › Crosshair). Two previews (still, and opened as when moving), then Shape,
   Size, Thickness, Gap, Colour (no blue or orange: those are the teams'; a custom colour box at the end), Opacity,
   Spread (Static keeps the gap while moving) and Outline. In a match it looks the same and still opens as you move.
-- [ ] **HUD size** (Settings › Gameplay › HUD). 150 % makes the replica panel, scoreboard, minimap, hit feed, squad
-  line, round messages, order wheel and teammate markers bigger with nothing overlapping at 1280×720; the crosshair
+- [ ] **HUD size** (Settings › Gameplay › HUD). 150 % makes the replica panel, score bar, minimap, hit feed,
+  round messages, order wheel and teammate markers bigger with nothing overlapping at 1280×720; the crosshair
   keeps its size. On a 1440p or 4K screen without system scaling, 100 % is already larger than on 1080p.
+- [ ] **The G4 HUD.** A score bar at the top middle (team blocks, the clock, "First to N" under it); the replica panel
+  at the bottom right (its picture, the mode chips with the current one orange, the loaded count over "/ N · M spare",
+  the magazine bars with the next one marked); no squad cards, order line or key hints on screen (orders live on the
+  Z wheel). Low quality looks the same.
+- [ ] **HUD opacity** (Settings › Gameplay › HUD opacity, 50 to 100 %, default 90 %). The panels fade while the text,
+  team blocks and bars stay solid; the value is kept after a reload.
+- [ ] **ROUND banner.** At a round start "ROUND 1" shows large, in heavy capitals on its own panel, with the same
+  timing as before; the between-rounds result fits on one line at 1280 px.
 - [ ] **Scoreboard size.** At 200 % in a window about 1366 wide it stops growing where the hit feed needs room, and
   when you're hit, HIT! and the OUT tag stay readable.
 - [ ] **Hit feed Keep.** The last 10 hits stay up through every round; Play again starts with none. Back to Fade
@@ -644,7 +662,8 @@ there maps each symptom to its numbers):
 
 ## Squad orders and minimap
 
-- [ ] **Follow me (F).** A radio double-click answers and the bottom-left line reads SQUAD · FOLLOW ME. Your teammates
+- [ ] **Follow me (F).** A radio double-click answers (a screen reader hears SQUAD · FOLLOW ME; nothing is printed on
+  screen). Your teammates
   keep up a few metres behind, either side, sprinting to catch up; stop and one looks back the way you came, the other
   to a side. Walk or crouch and they do too. They still fight, then come back. F again: "Back to the team plan".
 - [ ] **Hold here (X).** Look at a spot and press X: both go there side by side, watch the way you looked and stay
@@ -656,10 +675,10 @@ there maps each symptom to its numbers):
   stay still while a small pointer lights the order it's on; let go on one to give it, or without moving to give
   none. You keep walking with Z held; firing stops and needs a new pull after. Settings › Controls › Order wheel ›
   Click: point and click instead (that click fires no BB).
-- [ ] **The minimap.** A round map at the top left, the way you look always up, you the white arrow. Teammates are
-  blue dots (on the rim when off the edge), grey once hit. An opponent you hear shows as an orange patch roughly where
+- [ ] **The minimap.** A square map at the top left on a navy panel, "Depot · Round 2" under it, the way you look
+  always up, you the white arrow. Teammates are blue dots (pinned to the edge when off it), grey once hit. An opponent you hear shows as an orange patch roughly where
   (dashed for steps, a dot for a shot) for a few seconds; far sounds give wider patches; nothing for one you can't
-  hear. A teammate whose marker would sit inside the minimap circle has none there.
+  hear. A teammate whose marker would sit inside the minimap square has none there.
 - [ ] **Floors.** On Neon Heights the minimap shows your floor (floors below darker) and marks teammates on other
   floors with an up or down arrow.
 - [ ] **A second screen.** Drag the window to a screen with other scaling mid-match (or zoom the browser), pause and

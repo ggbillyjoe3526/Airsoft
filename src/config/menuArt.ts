@@ -1,6 +1,6 @@
 /**
  * The menus' pictures (graphics overhaul G3): a still of each map in each light it offers, a picture per match mode and
- * the two backdrops (the title's, sharp, and one blurred once for every other screen, so no screen blurs live). All are
+ * the backdrop (one picture blurred once for every screen but the title, so no screen blurs live). All are
  * drawn by the game itself (pipeline/map-stills.mjs, from the built game in a browser) and served from public/menu/.
  * This file has no imports, so that script reads it as it is.
  */
@@ -43,12 +43,11 @@ export const MODE_STILLS: Readonly<Record<string, StillShot>> = {
 export const STILL_SIZE = { width: 480, height: 270, quality: 0.8, maxBytes: 40_000 } as const;
 
 /**
- * The backdrops: the title's (a wide view of Depot), and the same view blurred and darkened once, small, for every other
- * screen (scaled up, a blurred picture loses nothing).
+ * The backdrop: a wide view of Depot, blurred and darkened once, small, for every screen but the title (scaled up, a
+ * blurred picture loses nothing). The title itself has no picture (M100, owner 2026-10-08): plain navy in the stylesheet.
  */
 export const BACKDROPS = {
-  title: { file: 'title.jpg', map: 'depot', light: 'day', view: 'overview', width: 1280, height: 720, quality: 0.78, maxBytes: 160_000 },
-  blurred: { file: 'backdrop.jpg', width: 480, height: 270, blur: 10, quality: 0.75, maxBytes: 20_000 },
+  blurred: { file: 'backdrop.jpg', map: 'depot', light: 'day', view: 'overview', width: 480, height: 270, blur: 10, quality: 0.75, maxBytes: 20_000 },
 } as const;
 
 /** Where the camera stands for each view, in metres from the start it looks across from (`back`, `up`), and what it looks at. */

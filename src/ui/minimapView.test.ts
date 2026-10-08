@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MINIMAP } from '../config/minimap';
 import { DEPOT } from '../map/depot';
-import { clampToRim, coverHeight, HeardPlayers, insideCircle, minimapPixelRatio, noiseAlpha, noiseBlur, toMinimap } from './minimapView';
+import { clampToSquare, coverHeight, HeardPlayers, insideSquare, minimapPixelRatio, noiseAlpha, noiseBlur, toMinimap } from './minimapView';
 import type { HeardSound } from './soundCues';
 
 const at = { x: 0, y: 0 };
@@ -22,14 +22,15 @@ describe('toMinimap (M23)', () => {
     expect(q.y).toBeCloseTo(0);
   });
 
-  it('pins a point beyond the rim to it, and leaves one inside alone', () => {
+  it('pins a point beyond the square panel to its edge, the same way off, and leaves one inside alone (G4)', () => {
     const p = { x: 30, y: 40 };
-    expect(clampToRim(p, 10)).toBe(true);
-    expect(p.x).toBeCloseTo(6);
-    expect(p.y).toBeCloseTo(8);
-    const q = { x: 3, y: 4 };
-    expect(clampToRim(q, 10)).toBe(false);
-    expect(q).toEqual({ x: 3, y: 4 });
+    expect(clampToSquare(p, 10)).toBe(true);
+    expect(p.x).toBeCloseTo(7.5);
+    expect(p.y).toBeCloseTo(10);
+    // A corner reaches further than a circle would: (9, 9) is inside the square.
+    const q = { x: 9, y: 9 };
+    expect(clampToSquare(q, 10)).toBe(false);
+    expect(q).toEqual({ x: 9, y: 9 });
   });
 });
 
@@ -110,11 +111,11 @@ describe('coverHeight (bug pass)', () => {
 });
 
 describe('the minimap on screen (audit UI-13, UI-14)', () => {
-  it('finds a point inside its circle', () => {
-    expect(insideCircle(116, 116, 116, 116, 100)).toBe(true);
-    expect(insideCircle(186, 186, 116, 116, 100)).toBe(true);
-    expect(insideCircle(200, 200, 116, 116, 100)).toBe(false);
-    expect(insideCircle(0, 0, 0, 0, 0)).toBe(false); // not laid out yet
+  it('finds a point inside its square panel, corners included (G4)', () => {
+    expect(insideSquare(116, 116, 16, 16, 200)).toBe(true);
+    expect(insideSquare(210, 210, 16, 16, 200)).toBe(true);
+    expect(insideSquare(220, 116, 16, 16, 200)).toBe(false);
+    expect(insideSquare(0, 0, 0, 0, 0)).toBe(false); // not laid out yet
   });
 
   it('draws 1 to 2 canvas pixels per CSS pixel', () => {

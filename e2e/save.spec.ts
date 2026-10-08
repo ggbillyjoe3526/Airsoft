@@ -20,7 +20,7 @@ function watchErrors(page: Page): () => string[] {
 
 async function openSaveTab(page: Page) {
   await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
-  await page.locator('.menu-title').getByRole('button', { name: 'Settings' }).click();
+  await page.keyboard.press('Escape'); // Esc on the title opens Settings (M100: the title has no Settings button)
   const settings = page.locator('.menu-settings');
   await settings.getByRole('tab', { name: /Save/ }).click();
   return settings;
@@ -250,7 +250,7 @@ test('mid-match, the Save tab cannot load, restore, undo or delete, but still do
   await page.goto('/?nolock&seed=1');
   await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
   await page.locator('.menu-title-start').click();
-  await page.locator('.menu-setup').getByRole('button', { name: 'Play', exact: true }).click();
+  await page.locator('.menu-setup').getByRole('button', { name: 'Start match', exact: true }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 30_000 });
   // Tabbing away pauses the match (no pointer lock here).
   await page.evaluate(() => {
@@ -289,7 +289,7 @@ test('mid-match, the Save tab cannot load, restore, undo or delete, but still do
   expect(download.suggestedFilename()).toMatch(/^airsoft-save-/);
 
   // Back to the title and New game's Settings: loading is possible again.
-  await settings.getByRole('button', { name: 'Back', exact: true }).click();
+  await page.locator('.menu-topbar').getByRole('button', { name: 'Back', exact: true }).click();
   await expect(pause).toBeVisible();
   expect(errors()).toEqual([]);
 });

@@ -12,7 +12,7 @@ holds no magic numbers.
 - Rendering: `render.ts` re-exports `renderQuality.ts`, `renderEffects.ts`, `renderLighting.ts`, `renderSurfaces.ts` and
   `renderView.ts`: import from `render.ts`. Also `graphics.ts` (the Custom rows), `post.ts`, `look.ts`, `weathering.ts`,
   `bake.ts`, `dressing.ts`, `materials.ts`.
-- Sound, input and UI: `audio.ts`, `sounds.ts`, `controls.ts`, `menus.ts`, `menuArt.ts`, `minimap.ts`, `matchInfo.ts`,
+- Sound, input and UI: `audio.ts`, `sounds.ts`, `controls.ts`, `menus.ts`, `menuArt.ts`, `minimap.ts`, `matchInfo.ts`, `hudText.ts` (the HUD's words),
   `teams.ts`, `tutorial.ts`, `accessibility.ts`, `itemPictures.ts`.
 - Content and saving: `content.ts` (public or dev tags), `dev.ts` (Dev settings), `save.ts`, `assets.ts`.
 - Build and pipeline: `buildVersion.ts` (the version comes from git through `vite.config.ts` and `.git_archival.txt`;

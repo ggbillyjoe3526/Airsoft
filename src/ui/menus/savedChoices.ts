@@ -41,7 +41,7 @@ import {
   TIME_OUT_CHOICES,
   WINS_NEEDED_CHOICES,
 } from '../../config/matchRules';
-import { DEFAULT_HIT_FEED_MODE, DEFAULT_WHAT_GOT_YOU_MODE, HIT_FEED_MODES, type HitFeedMode, HUD_SIZE, SCOREBOARD_SIZE, WHAT_GOT_YOU_MODES, type WhatGotYouMode } from '../../config/matchInfo';
+import { DEFAULT_HIT_FEED_MODE, DEFAULT_WHAT_GOT_YOU_MODE, HIT_FEED_MODES, type HitFeedMode, HUD_OPACITY, HUD_SIZE, RECORDS_KEY, SCOREBOARD_SIZE, WHAT_GOT_YOU_MODES, type WhatGotYouMode } from '../../config/matchInfo';
 import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../../config/modes';
 import { AIMING } from '../../config/optics';
 import { frameRateCapFromSaved, GRAPHICS_ROWS, graphicsKey, parseStored, SHOW_FPS_CHOICES, TONE_MAPPING_CHOICES } from '../../config/graphics';
@@ -271,6 +271,20 @@ export function loadTutorialDone(): boolean {
 }
 
 /**
+ * Whether a first match was started (M100; saved as `matchStarted`, false on a clean save): the title offers the Tutorial
+ * only before that. A save from before the flag counts as started when it already holds records, so a returning player
+ * isn't pointed at the tutorial again.
+ */
+export function loadMatchStarted(storage = browserStorage()): boolean {
+  if (loadSetting('matchStarted', (raw) => (typeof raw === 'boolean' ? raw : undefined), false, storage)) return true;
+  try {
+    return storage?.getItem(RECORDS_KEY) != null;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * The tutorial's step to resume at (audit POOL-14): its id ('' or nothing saved: from the beginning). A step index
  * saved by the first build of this (a number) is still read, as an index.
  */
@@ -306,6 +320,14 @@ export function loadWhatGotYouMode(): WhatGotYouMode {
 /** The HUD's size as picked (Settings → HUD, audit UI-04): a scale, 1 = sized for the screen. */
 export function loadHudSize(): number {
   return loadSetting('hudSize', numberIn(HUD_SIZE.min, HUD_SIZE.max), HUD_SIZE.default);
+}
+
+/**
+ * How opaque the HUD's panels are (Settings → HUD, G4): 0.5 to 1. A save from before it, or one holding anything else
+ * (out of range, not a number), reads as the default.
+ */
+export function loadHudOpacity(storage = browserStorage()): number {
+  return loadSetting('hudOpacity', numberIn(HUD_OPACITY.min, HUD_OPACITY.max), HUD_OPACITY.default, storage);
 }
 
 /** Raw mouse input (Settings → Controls, audit UI-20): on unless the player turned it off. */

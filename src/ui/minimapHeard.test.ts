@@ -9,6 +9,9 @@ import type { HeardPlayer } from './minimapView';
 const THEIRS = '#f80';
 const MINE = '#00f';
 
+/** The minimap's frame and caption round its canvas (G4): plain elements. */
+const plain = () => ({ className: '', hidden: false, textContent: '', setAttribute: () => undefined, append: () => undefined, remove: () => undefined });
+
 /** A fake DOM whose minimap canvas records the colour of every fill and stroke it is drawn with. */
 function recordingDom() {
   const painted = { fills: [] as string[], strokes: [] as string[] };
@@ -35,7 +38,7 @@ function recordingDom() {
     appendChild: () => undefined,
     getBoundingClientRect: () => ({ left: 0, top: 0, width: 1280, height: 720 }),
   };
-  (globalThis as { document?: unknown }).document = { createElement: () => canvas };
+  (globalThis as { document?: unknown }).document = { createElement: (tag: string) => (tag === 'canvas' ? canvas : plain()) };
   return { painted, parent: parent as unknown as HTMLElement };
 }
 

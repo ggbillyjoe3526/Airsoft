@@ -136,8 +136,9 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 
 ## Menus and settings
 
-- Menus in a navy and orange look (G3): a top bar between matches (Play, Loadout, Armory, Range, Settings, your Field
-  Credits and Tokens, version) and key hints along the bottom that are real buttons (M15, M24, G3)
+- Menus in a navy and orange look in Inter type (G3, M100): a plain title on navy (wordmark, tagline, START, the Tutorial on a
+  clean save), then a top bar of Match, Loadout, Armory and Settings with your Field Credits and Tokens at the right;
+  no key strip, every screen works by mouse and the keys still work; Practice is the last mode on the Match screen; the Armory's collection scraps spares from a right-click menu
 - Play screen: map and mode picture cards (a Dev tag on maps still being built), the match rows and a Your match panel
   on one page; no map is loaded until Play (M15, M15b, G3)
 - Title screen, pause, match summary and result screens; the pause screen shows the match's seed for bug reports (M15,
@@ -169,6 +170,10 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Ammo and magazine gauges; the empty-magazine hint names your reload key (Phase 1, M8)
 - Round clock, score, round banners worded from your side (Phase 1)
 - Hit feed with team colour bars, teammate markers, the scoreboard on Tab, round stats between rounds (M19, FA9)
+- HUD in the menus' look (G4): a score bar with slanted pips, score blocks and the match's aim under the clock; a framed
+  square minimap with the map and round; hit feed rows with a BB mark and a Hit tag; a replica panel with the replica's
+  picture, fire-mode chips and magazine bars; the Tab scoreboard on a navy panel; a "ROUND 1" banner in heavy capitals;
+  HUD opacity (Settings → Gameplay, 50–100 %, 90 % by default); squad orders on the order wheel only
 - End-of-match summary with your stats and local records (wins, accuracy, streaks) (M19)
 - What got you: after you're hit, a card with the shot's direction and distance, whether the bot held the angle, your
   time in view and if you moved; Auto, On or Off; Pro tips between rounds (M41)

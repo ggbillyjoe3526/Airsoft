@@ -42,7 +42,7 @@ async function pickRules(page: Page, rules: string): Promise<void> {
 
 /** Presses Play and waits for the match to run a few ticks. */
 async function playAndWait(page: Page): Promise<void> {
-  await page.locator('.menu-setup').getByRole('button', { name: 'Play', exact: true }).click();
+  await page.locator('.menu-setup').getByRole('button', { name: 'Start match', exact: true }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 20_000 });
   await expect.poll(() => page.evaluate(() => (window as unknown as Airsoft).airsoft.state?.tick ?? 0), { timeout: 60_000 }).toBeGreaterThan(10);
 }

@@ -204,21 +204,6 @@ acceptance:
 status: open
 attempts: 0
 
-## M100 · Menu redesign 2: title screen, top bar, Match screen, Practice as a mode, a clearer font (playtest notes 5, 7, 8)
-tier: ui
-perf: skip
-touches: src/ui/menus/, src/config/menus.ts, src/assets/fonts/, docs/ASSETS.md, docs/PLAYTEST.md
-contract: none
-acceptance:
-  1. The game opens on a plain title screen: the title "Airsoft", the tagline "Call your hit. Go again." (owner, 2026-10-07), a START button and, on a clean save only, the Tutorial button under START (until the tutorial is finished or a first match started); the build's version small at the bottom left; nothing else.
-  2. START opens the Match screen (today's Play, renamed). The top bar is the main navigation: MATCH, LOADOUT, ARMORY, SETTINGS from the left, the player's FC and Tokens on the far right, no version.
-  3. The key prompts along the bottom of the menus (Back, Customise, Search and the rest) are gone; every screen is clear to navigate with the mouse alone, and the keys still work.
-  4. Practice is the last mode on the Match screen, after Elimination, Attack / Defend and Extraction (only the range until M94 adds maps); it leaves the title screen.
-  5. The Armory's "Your collection" shows each kind (replicas, power sources, optics and the rest) in its own column.
-  6. The menus use **Inter** (SIL OFL, in `docs/ASSETS.md`) for all text and numbers instead of Barlow (owner, 2026-10-07); the owner approves screenshots before merge, as with G3.
-status: open
-attempts: 0
-
 **0.1 Dev 6 (confirmed with the roadmap, 2026-10-06).** M92–M95, the holster and the practice
 upgrades, come before the 26 features in `docs/ROADMAP.md` › 0.1 Dev 6, whose blocks are written when that build starts.
 

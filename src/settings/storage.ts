@@ -67,6 +67,8 @@ export type SettingField =
   | 'tutorialDone'
   /** The tutorial's step still to do, to resume there next time (audit POOL-14); 0 once it is over. */
   | 'tutorialStep'
+  /** A first match was started (M100): the title stops offering the Tutorial to a player who has begun playing. */
+  | 'matchStarted'
   | `hopUp.${string}`
   | `volume.${string}`
   | `bbWeight.${string}`
@@ -92,6 +94,8 @@ export type SettingField =
   /** Settings → HUD → What got you (M41): 'auto', 'on' or 'off'. */
   | 'whatGotYou'
   | 'hudSize'
+  /** Settings → HUD → HUD opacity (G4): how opaque the HUD's panels are, 0.5 to 1. */
+  | 'hudOpacity'
   /** Settings → Controls → Raw mouse input (audit UI-20). */
   | 'rawInput'
   /** Settings → Look (graphics overhaul G1): robots mixed in with humans, and replicas in realistic colours. */

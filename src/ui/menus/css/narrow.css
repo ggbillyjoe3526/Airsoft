@@ -29,10 +29,6 @@
     grid-template-columns: clamp(280px, 30vw, 420px) minmax(0, 1fr);
   }
 
-  .armory-owned {
-    grid-column: 1 / -1;
-  }
-
   .menu-nav-item svg.icon {
     display: none;
   }
@@ -40,13 +36,11 @@
 
 @media (max-width: 1180px) {
   .play-layout,
-  .summary-layout,
-  .title-body {
+  .summary-layout {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .title-body {
-    grid-template-areas: 'hero' 'actions' 'side';
     padding-left: 0;
   }
 
@@ -59,13 +53,8 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .menu-build {
-    display: none;
-  }
-
   .menu-title-warning {
     max-width: none;
-    margin-top: 64px;
   }
 }
 
@@ -90,7 +79,7 @@
     padding: 4px 8px;
   }
 
-  .menu-mark {
+  .menu-mark span {
     display: none;
   }
 }

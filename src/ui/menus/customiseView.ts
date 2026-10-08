@@ -1,7 +1,7 @@
 import { BARRELS, GRIPS, handlingOf, MAGAZINES, MUZZLES, type ReplicaParts } from '../../config/attachments';
 import { GLOW_BB_CHOICES } from '../../config/glowBBs';
 import { LASERS } from '../../config/lasers';
-import { GEAR_TEXT, LOADOUT_TEXT, MENU_TEXT } from '../../config/menus';
+import { GEAR_TEXT, LOADOUT_TEXT } from '../../config/menus';
 import { OPTIC_BLURBS } from '../../config/optics';
 import { BB_WEIGHT, type FireMode, HOP_UP, type PowerSource, type ReplicaConfig } from '../../config/replicas';
 import { FAMILIES, type FamilyId, hasFixedColours, SCHEME_IDS, SCHEMES, type SchemeId, schemeColours } from '../../config/schemes';
@@ -26,7 +26,7 @@ import {
 } from '../loadoutChoice';
 import { OptionPicker } from '../optionPicker';
 import { performanceOf, sheetRows, tierBlurb } from '../performanceSheet';
-import { type MenuHint, hintsBar, optionTick } from './chrome';
+import { type MenuHint, optionTick } from './chrome';
 import { itemIcon } from './icons';
 import type { PictureContext } from './kitStrip';
 import { tabAfterKey } from './menuNav';
@@ -162,20 +162,13 @@ export class CustomiseView {
 
     const layout = el('div', 'customise-layout');
     layout.append(list, centre, side);
-    this.hints = [
-      { keys: ['Esc'], label: MENU_TEXT.hints.back, run: opts.onBack },
-      { keys: ['↑', '↓'], label: GEAR_TEXT.parts },
-    ];
+    // Esc goes back to the gear (the Loadout handles it; the breadcrumb above does it for the mouse); ↑ ↓ move between parts.
+    this.hints = [];
     this.root.append(crumbs, layout);
     this.refreshHead();
     this.livePerformance();
     this.current = this.parts[0]!.id;
     this.show(this.current);
-  }
-
-  /** The hints bar for this view (the Loadout shows it in place of its own). */
-  hintsBar(): HTMLDivElement {
-    return hintsBar(this.hints, GEAR_TEXT.changesSave);
   }
 
   /** The keyboard on the part shown (opening the view). */
