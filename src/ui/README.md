@@ -10,7 +10,8 @@ game state and never write it. Tests use the fake DOM in `testSupport.ts` (no js
   players), `matchBoard.ts` (Tab), `statsRows.ts` (pure) and `statsTable.ts`, `recordsView.ts`, `rangeReadout.ts`,
   `performanceSheet.ts` (the Customise screen's Performance sheet).
 - Settings tabs: one `*Settings.ts` per tab (graphics, audio, controls and `keySettings.ts`, hud, look, accessibility,
-  crosshair, dev, save), shown by `menus/settingsScreen.ts`. `optionPicker.ts` is the shared pop-up choice.
+  crosshair, dev, save), shown by `menus/settingsScreen.ts`; `rendererRow.ts` builds Graphics' Renderer row (W1) in the
+  lazy boot chunk. `optionPicker.ts` is the shared pop-up choice.
 - Overlays: `debugOverlay.ts`, `crashScreen.ts`, `loadingScreen.ts`, `graphicsNotice.ts`, `otherTabNotice.ts`,
   `coachPanel.ts` (the tutorial), `saveDialog.ts`.
 - Wording that needs testing is pure (`matchStopText.ts`, `keyNotes.ts`, `statsRows.ts`).

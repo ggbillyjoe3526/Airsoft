@@ -213,7 +213,7 @@ describe('HUD opacity, a field new in G4', () => {
 });
 
 // WebGPU overhaul W1: Settings → Graphics → Renderer, a new saved field, `renderer`: 'auto', 'webgpu' or 'webgl', Auto
-// by default (which draws with WebGL until the flip, W6). The key is permanent.
+// by default (WebGPU on a hardware adapter, else WebGL: the owner's ruling, 2026-10-08). The key is permanent.
 describe('the Renderer row, a field new in W1', () => {
   it('reads back each pick, and Auto by default', () => {
     expect(RENDER_BACKEND.defaultChoice).toBe('auto');

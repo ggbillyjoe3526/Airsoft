@@ -204,20 +204,6 @@ acceptance:
 status: open
 attempts: 0
 
-## W1 · WebGPU foundation: the node renderer, Auto by default with WebGL as the fallback (WebGPU overhaul, scope `plans/webgpu-overhaul-scope.md`; owner ruling 2026-10-08)
-tier: core
-perf: required
-touches: src/render/renderer.ts, src/render/rendererParts.ts, src/render/rendererStart.ts, src/render/webgpu/, src/render/webgpuProbe.ts, src/config/renderBackend.ts, src/config/rendererPick.ts, src/settings/storage.ts, src/ui/graphicsSettings.ts, src/ui/rendererRow.ts, src/ui/menus/settingsScreen.ts, src/ui/menus/css/rows.css, src/ui/menus/savedChoices.ts, src/game.ts, src/main.ts, vite.config.ts, pipeline/perf-run.mjs, pipeline/perfMatrix.mjs, pipeline/perfMatrix.test.mjs, pipeline/README.md
-contract: none (the settings store gains the `renderer` key, by addition)
-acceptance:
-  1. A public Renderer row (Auto, WebGPU, WebGL) in Settings › Graphics, behind no Dev setting, saved as `renderer` with Auto the default (a migration test reads every older save as Auto). Auto and WebGPU draw a match with `WebGPURenderer` from `three/webgpu` whenever the adapter probe finds a usable adapter (on Auto, a hardware one), on plain node materials (materials patched with `onBeforeCompile` draw unpatched; the GLSL post stack and the retro filter are off on that path until W2–W4, a KNOWN_ISSUES row, fix now). WebGL always draws with the old `WebGLRenderer` path.
-  2. With no `navigator.gpu`, a null adapter or a device that can't be made at boot, Auto and WebGPU fall back to the old `WebGLRenderer` path with no console error, and WebGPU picked says so in one line on the row. A test pins that Auto with no adapter (this container, CI and every gate: smoke, perf, baselines) gives the same renderer, and so the same draws, as before W1.
-  3. `three/webgpu` is loaded by a dynamic import only after the probe finds an adapter (or the e2e build's `?forceWebGL` asks for the WebGL2 back end), so it is never in the main chunk and a WebGL-only browser never downloads it.
-  4. A lost WebGPU device is recovered: the game pauses under the graphics notice, a new device and renderer take over (WebGL if none can be made, with the post stack and retro filter back and the row saying so), and play resumes; the debug overlay's GPU time comes from timestamp queries where the adapter offers them ("n/a" otherwise).
-  5. The perf harness records which back end ran (`backend` in its result; a run the node renderer drew names its files after it); an e2e spec sets Renderer = WebGPU with `?forceWebGL`, boots a match on the node renderer's WebGL2 back end and checks that frames render with no errors.
-status: open
-attempts: 0
-
 **0.1 Dev 6 (confirmed with the roadmap, 2026-10-06).** M92–M95, the holster and the practice
 upgrades, come before the 26 features in `docs/ROADMAP.md` › 0.1 Dev 6, whose blocks are written when that build starts.
 

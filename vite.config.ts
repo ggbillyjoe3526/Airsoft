@@ -169,7 +169,7 @@ export default defineConfig(async () => ({
             { name: 'rapier', test: /node_modules[\\/]@dimforge/ },
             // The glTF loader and its helpers stay out: only a build with a figure model loads them (M25a). So do the
             // node renderer's builds (three.webgpu.js, three.tsl.js): only the WebGPU path's dynamic import loads them
-            // (WebGPU overhaul W1, render/webgpuProbe.ts), in a chunk of their own.
+            // (WebGPU overhaul W1, render/rendererStart.ts), in a chunk of their own.
             { name: 'three', test: /node_modules[\\/]three[\\/](?!examples[\\/]jsm[\\/](loaders|libs|utils[\\/]SkeletonUtils)|build[\\/]three\.(webgpu|tsl))/ },
             { name: 'three-webgpu', test: /node_modules[\\/]three[\\/]build[\\/]three\.(webgpu|tsl)/ },
             // pool.md and stats.md (read at start, M26a) in their own small chunk (M50, audit CORE-01): the owner's
