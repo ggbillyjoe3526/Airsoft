@@ -13,6 +13,9 @@
  * the whole matrix), scope (the diff stays inside the task's `touches`, QA commits touch only tests) and changelog
  * (CHANGELOG.md names the task under Unreleased).
  * --quick runs build and tests only, and builds without the .br/.gz copies (AIRSOFT_PRECOMPRESS=0, audit CORE-11).
+ * Every run writes the failures-only summary, pipeline/out/failures.md (pipeline/failures.mjs: each failure's test,
+ * error, file and line, the same lines the gate prints as it goes), and every run but CI's the review packet the critic
+ * and QA read first, pipeline/out/review-packet.md (pipeline/packet.mjs; token-efficiency plan, items 15 and 19).
  * --ci is what the workflow runs: build, tests, smoke (no perf: a runner has no baseline); without --task it takes
  * the task ids from the pull request's title in GATE_PR_TITLE (audit CORE-08).
  * With no task, scope and changelog are skipped. Exit code 1 when any gate fails.
@@ -28,6 +31,8 @@ import { allowedFile, findTaskBlock, parseTaskList, qaAllowedFile, taskIdsFromTi
 import { baselineFileName, baselineLag, baselineLagWarning, budgetFor, judgeRun, runFileName, runName, selectPerfRuns } from './perfMatrix.mjs';
 import { smokeFailures } from './smokeReport.mjs';
 import { metricsRow } from './records.mjs';
+import { MAX_FAILURES, buildFailures, failureLines, failuresSummary, vitestFailures } from './failures.mjs';
+import { writePacket } from './packet.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'pipeline', 'out');
@@ -35,6 +40,8 @@ const ARTIFACTS = join(OUT, 'qa-artifacts');
 const REPORT = join(OUT, 'gate-report.json');
 /** The attempt row for the task's record (docs/records/README.md), filled from this report (token-efficiency item 4). */
 const METRICS_ROW = join(OUT, 'metrics-row.md');
+/** The failures-only summary (token-efficiency item 19), read instead of a raw log. */
+const FAILURES = join(OUT, 'failures.md');
 const TASKS = join(ROOT, 'docs', 'TASKS.md');
 
 
@@ -113,11 +120,10 @@ function record(name, gate) {
   if (gate.pass === false) report.pass = false;
   const mark = gate.pass === true ? 'pass' : gate.pass === false ? 'FAIL' : 'skip';
   console.log(`gate ${name.padEnd(9)} ${mark}${gate.ms !== undefined ? ` (${(gate.ms / 1000).toFixed(0)} s)` : ''}${gate.reason ? ` · ${gate.reason}` : ''}`);
-  // A failed gate names what failed in the log too, so a CI run can be read without downloading its artifact.
+  // A failed gate names what failed in the log too, so a CI run can be read without downloading its artifact: the
+  // test, the error's first lines (a smoke failure's locator, expectation and call log) and the file and line.
   for (const f of gate.pass === false ? (gate.failures ?? []) : []) {
-    console.log(`  ✗ ${f.project ? `[${f.project}] ` : ''}${f.file ? `${f.file} › ` : ''}${f.test ?? f.title ?? ''}: ${String(f.message ?? '').replace(/\x1b\[[0-9;]*m/g, '').split('\n')[0].slice(0, 300)}`);
-    // The smoke test's failures carry the lines after the first: the locator, what was expected, the call log's start.
-    for (const line of (f.detail ?? []).slice(1)) console.log(`      ${line.slice(0, 300)}`);
+    for (const line of failureLines(f)) console.log(`  ${line}`);
   }
 }
 
@@ -130,7 +136,7 @@ const PRECOMPRESS_ENV = { AIRSOFT_PRECOMPRESS: options.quick ? '0' : '1' };
 if (skipAllBut('build')) record('build', { pass: null, reason: `skipped (--only ${options.only})` });
 else {
   const r = run('build', 'node', ['pipeline/build-cached.mjs', '--mode', 'production', '--force'], { ...PRECOMPRESS_ENV, ...(options.ci ? { CI: '1' } : {}) });
-  record('build', { pass: r.ok, ms: r.ms, log: r.log, precompressed: !options.quick, ...(r.ok ? {} : { evidence: tail(r.output) }) });
+  record('build', { pass: r.ok, ms: r.ms, log: r.log, precompressed: !options.quick, ...(r.ok ? {} : { evidence: tail(r.output), failures: buildFailures(r.output, ROOT).slice(0, MAX_FAILURES) }) });
 }
 
 // 2. tests: the unit suite, with its JSON report as the artifact.
@@ -142,13 +148,10 @@ else {
   let summary = { pass: r.ok, ms: r.ms, log: r.log };
   try {
     const data = JSON.parse(readFileSync(json, 'utf8'));
-    const failed = [];
-    for (const file of data.testResults ?? []) {
-      for (const t of file.assertionResults ?? []) {
-        if (t.status === 'failed') failed.push({ test: t.fullName, file: relative(ROOT, file.name), message: (t.failureMessages?.[0] ?? '').split('\n')[0] });
-      }
-    }
-    summary = { ...summary, projects: options.tests, ...(options.shard ? { shard: options.shard } : {}), total: data.numTotalTests, failed: data.numFailedTests, pass: r.ok && data.numFailedTests === 0 && data.numTotalTests > 0, report: relative(ROOT, json), ...(failed.length ? { failures: failed.slice(0, 20) } : {}) };
+    // Each failed test, and each test file that failed to load, with its file and line (pipeline/failures.mjs).
+    const failed = vitestFailures(data, ROOT);
+    const pass = r.ok && data.numFailedTests === 0 && data.numTotalTests > 0 && failed.length === 0;
+    summary = { ...summary, projects: options.tests, ...(options.shard ? { shard: options.shard } : {}), total: data.numTotalTests, failed: data.numFailedTests, pass, report: relative(ROOT, json), ...(failed.length ? { failures: failed.slice(0, MAX_FAILURES) } : {}), ...(!pass && !failed.length ? { evidence: tail(r.output, 15) } : {}) };
   } catch (e) {
     summary = { ...summary, pass: false, reason: `no readable vitest report (${e.message})`, evidence: tail(r.output) };
   }
@@ -268,5 +271,15 @@ else if (options.tasks.length === 0) {
 
 writeFileSync(REPORT, `${JSON.stringify(report, null, 2)}\n`);
 writeFileSync(METRICS_ROW, `${metricsRow(report)}\n`);
-console.log(`${report.pass ? 'ALL GATES PASS' : 'GATES FAILED'} · ${relative(ROOT, REPORT)} · attempt row in ${relative(ROOT, METRICS_ROW)}`);
+writeFileSync(FAILURES, failuresSummary(report));
+// The review packet (pipeline/packet.mjs) for the critic and QA; not on CI, where no agent reads it. Never fails the gate.
+let packet = null;
+if (!options.ci && options.only === null) {
+  try {
+    packet = writePacket({ ids: options.tasks, base: options.base, mergeBase, report });
+  } catch (e) {
+    console.warn(`gate: no review packet (${e.message})`);
+  }
+}
+console.log(`${report.pass ? 'ALL GATES PASS' : `GATES FAILED · failures in ${relative(ROOT, FAILURES)}`} · ${relative(ROOT, REPORT)} · attempt row in ${relative(ROOT, METRICS_ROW)}${packet ? ` · review packet in ${packet}` : ''}`);
 process.exit(report.pass ? 0 : 1);
