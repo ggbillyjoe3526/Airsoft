@@ -207,7 +207,7 @@ attempts: 0
 ## G9 · Woodland and Neon Heights re-dressed (graphics overhaul, 0.1 Dev 5)
 tier: core
 perf: required
-touches: src/render/, src/map/woodland.ts, src/map/neonHeights.ts, src/map/woodlandDressing.ts, src/map/neonHeightsDressing.ts, src/map/mapTypes.ts, src/config/dressing.ts, src/config/graphics.ts, src/matchSession.ts, docs/ARCHITECTURE.md, docs/KNOWN_ISSUES.md, docs/TASKS.md, docs/records/
+touches: src/render/, src/map/woodland.ts, src/map/neonHeights.ts, src/map/woodlandDressing.ts, src/map/neonHeightsDressing.ts, src/map/mapTypes.ts, src/config/dressing.ts, src/config/graphics.ts, src/matchSession.ts, pipeline/baseline/, docs/ARCHITECTURE.md, docs/KNOWN_ISSUES.md, docs/TASKS.md, docs/records/
 touches note: `src/matchSession.ts` was added to the list by the G9 thread (2026-10-08). The neon signs' flicker is a uniform on the map's own junk mesh, so the moving-dressing owner (`render/dressingEffects.ts`) has to be handed the map group; `matchSession.ts` is the only place that owns it. Three lines of wiring (`setMapGroup`), no behaviour of its own.
 contract: the map block format (`MapData.dressing` may gain optional, look-only fields); nothing else
 acceptance:
