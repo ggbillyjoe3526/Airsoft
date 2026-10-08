@@ -229,6 +229,10 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   weathered surfaces and ground stains, precast concrete walls and rubble gabions, a lower, warmer day sun (G6)
 - Set dressing on Depot from Medium: dirt, junk, litter, puddles, logos, sprays, signs and glow strips; an industrial
   skyline with chimney smoke on Detailed trees; dust kicked up by feet (G8)
+- Set dressing on Woodland and Neon Heights from Medium: Woodland gets leaf litter, fallen branches and logs, mud and
+  puddles on its paths, moss on its trunks and boulders, a conifer treeline and wooded hills beyond the fence, and
+  fireflies at night; Neon Heights gets street litter, puddles, pasted posters and sprays, tube-letter neon signs that
+  flicker now and then, steam from its vents and drains, and a lit city skyline with a plane crossing it (G9)
 
 ## Practice range and tutorial
 

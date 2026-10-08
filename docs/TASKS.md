@@ -222,7 +222,8 @@ attempts: 0
 ## G9 · Woodland and Neon Heights re-dressed (graphics overhaul, 0.1 Dev 5)
 tier: core
 perf: required
-touches: src/render/, src/map/woodland.ts, src/map/neonHeights.ts, src/map/woodlandDressing.ts, src/map/neonHeightsDressing.ts, src/map/mapTypes.ts, src/config/dressing.ts, src/config/graphics.ts, docs/ARCHITECTURE.md, docs/KNOWN_ISSUES.md, docs/TASKS.md, docs/records/
+touches: src/render/, src/map/woodland.ts, src/map/neonHeights.ts, src/map/woodlandDressing.ts, src/map/neonHeightsDressing.ts, src/map/mapTypes.ts, src/config/dressing.ts, src/config/graphics.ts, src/matchSession.ts, docs/ARCHITECTURE.md, docs/KNOWN_ISSUES.md, docs/TASKS.md, docs/records/
+touches note: `src/matchSession.ts` was added to the list by the G9 thread (2026-10-08). The neon signs' flicker is a uniform on the map's own junk mesh, so the moving-dressing owner (`render/dressingEffects.ts`) has to be handed the map group; `matchSession.ts` is the only place that owns it. Three lines of wiring (`setMapGroup`), no behaviour of its own.
 contract: the map block format (`MapData.dressing` may gain optional, look-only fields); nothing else
 acceptance:
   1. Woodland and Neon Heights get set dressing from their map data through G8's engine code (`MapData.dressing`, in `src/map/woodlandDressing.ts` and `src/map/neonHeightsDressing.ts`), extended only where a map needs a new kind. Woodland: leaf litter, fallen branches and logs, mud and puddles on paths, moss and grime on hard cover, a background treeline and hills, fireflies at night. Neon Heights: street litter, puddles, sparse wall sprays and posters, neon signs with an occasional flicker, steam from vents and drains, a background skyline with a passing plane. Depot draws exactly as it does on main.
@@ -230,7 +231,7 @@ acceptance:
   3. Low draws exactly what it drew before on both maps: no new mesh, draw call, triangle, texture or shader. Medium and High: at most four more draw calls per map for the static dressing plus one per moving effect that is on screen (fireflies, steam, the plane), at most 15 000 more triangles per map; each cost stated in the code.
   4. Moving dressing (fireflies, flicker, steam, the plane) is pooled with fixed buffers and allocates nothing per frame; under Reduced motion it stands still or is hidden, and sign flicker is off (no flashing); every new geometry, material and texture is freed with the map or the match.
   5. Placement is deterministic per `dressing.seed`; both maps stay Dev content.
-status: open
+status: review
 attempts: 0
 
 **0.1 Dev 6 (confirmed with the roadmap, 2026-10-06).** M92–M95, the holster and the practice
