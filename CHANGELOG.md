@@ -36,24 +36,26 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **G3** · Loadout and Customise show your replicas as pictures; Customise lists the parts down the left, Colour first, with each option as a picture tile beside the replica and its numbers (#134)
 - **G3** · Settings regrouped into Graphics, Display, Audio, Controls, Gameplay, Accessibility, Look, Save file and Dev, with a search box and a short note on every row (#134)
 - **G3** · The Armory's collection is a picture grid with a how-it-works strip; the title, pause, summary, result and loading screens take the new look (#134)
+- **M78** · High and Ultra draw the city's flat finishes at 512 × 512 as Medium does; Neon Heights on High: 21 MB less graphics memory (#151)
 
 ### Fixed
 - **M74** · No frame hitches when you're hit or a bot plans a route (#138)
-- **BP2** · Customise takes "No light" on every replica's Light row; it stays after a reload, and your match kit carries no torch
-- **BP2** · A hunter checks at once whether pushing keeps you in sight when a new fight starts, not from the last fight's look
-- **BP2** · A bot that reaches the end of a route and steps onto its spot gets its full time to get unstuck
-- **BP2** · A bot waiting for a route no longer holds up teammates' route searches when it's hit; a bot following you (Follow me) no longer restarts its search every frame
-- **BP2** · The round message names an Elimination time-out ("Time's up · your team had more players left") in Tournament
-- **BP2** · Reduced motion in Settings › Accessibility follows a system change while you haven't picked one
-- **BP2** · If the dev maps fail to download, the menus say so by the play buttons
-- **BP2** · An old save whose Fire or move key is now a refused browser key gets its default key back
-- **BP2** · Standing on a Woodland log sounds like wood, on a boulder like stone
-- **BP2** · A replica picture that failed to draw is drawn again next time; a map card's tag (Woodland's Night) shows even when map data arrives late
-- **BP2** · Shade and Light shafts with edge smoothing and no TAA draw correctly on drivers that discard multisampled pixels
-- **BP2** · Turning edge smoothing on or off while spectating frees the old graphics memory; a finished match no longer holds your replica
-- **BP2** · The title screen no longer freezes while it prepares surface textures at High (one at a time now)
-- **BP2** · Temporal antialiasing forgets the old frame on a camera cut (new round, next player watched), so no ghost of the last view
-- **BP2** · A replica picture drawn while the graphics context is lost is no longer left blank
+- **BP2** · Customise takes "No light" on every replica's Light row; it stays after a reload, and your match kit carries no torch (#150)
+- **BP2** · A hunter checks at once whether pushing keeps you in sight when a new fight starts, not from the last fight's look (#150)
+- **BP2** · A bot that reaches the end of a route and steps onto its spot gets its full time to get unstuck (#150)
+- **BP2** · A bot waiting for a route no longer holds up teammates' route searches when it's hit; a bot following you (Follow me) no longer restarts its search every frame (#150)
+- **BP2** · The round message names an Elimination time-out ("Time's up · your team had more players left") in Tournament (#150)
+- **BP2** · Reduced motion in Settings › Accessibility follows a system change while you haven't picked one (#150)
+- **BP2** · If the dev maps fail to download, the menus say so by the play buttons (#150)
+- **BP2** · An old save whose Fire or move key is now a refused browser key gets its default key back (#150)
+- **BP2** · Standing on a Woodland log sounds like wood, on a boulder like stone (#150)
+- **BP2** · A replica picture that failed to draw is drawn again next time; a map card's tag (Woodland's Night) shows even when map data arrives late (#150)
+- **BP2** · Shade and Light shafts with edge smoothing and no TAA draw correctly on drivers that discard multisampled pixels (#150)
+- **BP2** · Turning edge smoothing on or off while spectating frees the old graphics memory; a finished match no longer holds your replica (#150)
+- **BP2** · The title screen no longer freezes while it prepares surface textures at High (one at a time now) (#150)
+- **BP2** · Temporal antialiasing forgets the old frame on a camera cut (new round, next player watched), so no ghost of the last view (#150)
+- **BP2** · A replica picture drawn while the graphics context is lost is no longer left blank (#150)
+- **M79** · Leaving a match or the menus no longer leaves listeners behind, so memory doesn't creep up over a long session (#151)
 
 ### Internal
 - **G8** · Set dressing never collides or blocks sight: Depot's colliders, routes, cover and bot sight are tested identical with and without it (#136)
@@ -64,7 +66,9 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **TE2** · Docs rewritten in one house style: finished history archived, one record file per task instead of shared review and metrics tables, a README in each source folder (#147)
 - **TE3** · Build checks write a short review file and a failures-only list; agents run only when they can change the outcome, and the changelog reads less (#148)
 - **TE4** · Local checks run slow bot-match tests only when bots or maps change, and bot balance figures moved to a report (`npm run balance`) (#149)
-- **BP2** · QA tests for each fix; KNOWN_ISSUES swept (8 rows fixed and deleted, stale rows corrected, new rows for what stays); a scripted run started every mode on every map with no errors; bot balance report re-run
+- **BP2** · QA tests for each fix; KNOWN_ISSUES swept (8 rows fixed and deleted, stale rows corrected, new rows for what stays); a scripted run started every mode on every map with no errors; bot balance report re-run (#150)
+- **M77** · Fewer garbage-collection hitches: BB trails, dust and flag cloth stop making garbage each frame, and standing characters skip the ground check (#151)
+- **M79** · Two import cycles broken and a cycle check added to the pipeline; loop-seam audio tests use fixed percentiles (#151)
 
 ## 0.1 Dev 4 · 2026-10-06
 
