@@ -5,6 +5,21 @@ commit, before its pull request merges (CI's scope gate finds the block in the b
 (`docs/records/<id>.md`) and its CHANGELOG line remain. The planning thread writes blocks; the build thread sets
 `status` and `attempts` once, in its records commit (no status-only commits).
 
+## TE3 · Token step 3: a review packet, fewer agent runs and a failures-only gate summary
+tier: ui
+perf: skip
+touches: pipeline/, .claude/
+contract: none
+acceptance:
+  1. Every gate run but CI's writes `pipeline/out/review-packet.md`: the task block, a gate summary, the contracts whose files the diff touches, QA's report when it names the task, the diff stat and the diff without records and generated files, with each file's line range so a packet over 40 KB reads by range; `node pipeline/packet.mjs` rebuilds it alone. The critic and QA read it first (token plan item 15).
+  2. The performance agent is spawned only when the perf gate fails; a passing perf run's report is the record, and the critic's check 3 reads the hot paths for what that agent looked for (item 16).
+  3. The changelog agent works from the inputs the thread hands it and reads only CHANGELOG's `Unreleased` section and the one FEATURES heading it edits (item 17a).
+  4. The critic marks each failed check measured or judgment; a near miss is re-run on Opus only when its failed check is a judgment (item 18).
+  5. The gate writes and prints a failures-only summary, `pipeline/out/failures.md`: test name, error, file and line and the first lines of output, for failed tests, test files that fail to load, the build, smoke and perf; the triage agent is spawned only for what it can't place (item 19).
+  6. The new rules are unit-tested in the fast project; the pipeline README, PROCESS, the skill and the agents describe the new steps.
+status: open
+attempts: 0
+
 **Audit 2, what is left (2026-10-05 20:45 UTC).** Merged: M50–M57, M63–M65, M68, M70 (#107–#122). M69 (AUD PR 4) is
 accepted and lands with this list. Below, the rest of section 8 of the report
 (`audits/full-audit-2026-10-05.md` in the project's shared files), in its order. Not built in this pass:
