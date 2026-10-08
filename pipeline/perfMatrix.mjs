@@ -33,10 +33,12 @@ export const PERF_SCOPES = [
 ];
 
 const isTest = (file) => /\.test\.(ts|mjs)$/.test(file);
+/** A folder's notes (`src/<folder>/README.md`, TE2): nothing imports them. */
+const isDoc = (file) => /\.md$/.test(file);
 
-/** Whether a changed file is a perf path at all (tests are not: they ship nothing). */
+/** Whether a changed file is a perf path at all (tests and folder READMEs are not: they ship nothing). */
 export function isPerfPath(file) {
-  return !isTest(file) && PERF_PATHS.some((p) => file.startsWith(p));
+  return !isTest(file) && !isDoc(file) && PERF_PATHS.some((p) => file.startsWith(p));
 }
 
 /** The scope a perf path reaches: `{ map?, mode? }`, empty for a shared path. */

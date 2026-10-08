@@ -36,6 +36,7 @@ describe('which combinations a diff runs (pipeline/perfMatrix.mjs)', () => {
   it('runs nothing for a diff without a perf path, nor for tests and docs under one', () => {
     expect(names(['docs/TASKS.md', 'src/ui/hud.ts', 'pipeline/gate.mjs', 'README.md'])).toEqual([]);
     expect(names(['src/render/lighting.test.ts', 'src/ai/botBrain.test.ts', 'pipeline/perfMatrix.test.mjs'])).toEqual([]);
+    expect(names(['src/render/README.md', 'src/ui/menus/README.md', 'src/assets/models/characters/README.md'])).toEqual([]);
   });
 
   it('runs the whole matrix for a shared perf path, config and pool included (CORE-03)', () => {
