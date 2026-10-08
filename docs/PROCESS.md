@@ -93,6 +93,23 @@ release description:
   thread rewrites it once per batch (replace it, don't append). Engine facts live in `docs/ARCHITECTURE.md` and the
   folder READMEs, not there.
 
+## Models
+
+Which model runs which job (owner, 2026-10-08). The per-agent detail is in `pipeline/README.md` › Roles. A thread
+never changes a model or an effort level unless the owner asks.
+
+- **Opus 5.5 for the coordinator, the planning thread and `tier: core` tasks,** each bug pass (`BP<n>`) and the fixes
+  an audit hands on among them. Opus threads run at Extra effort (`xhigh`), the owner's project setting. The critic
+  runs on Opus for core tasks and near misses, and the performance agent when a regression stays unexplained.
+- **Sonnet 5.5, medium, for `tier: ui` and `tier: trivial` tasks,** QA, and the other critic and performance runs.
+- **Haiku 5.5, low, for small helper jobs:** the changelog and triage agents, and the diff check on a `tier: trivial`
+  task.
+- **Fable 5.1 only with the owner's explicit approval, asked for each time.** It costs far more than Opus, so it is
+  proposed only where it would do significantly better: an audit, or a review of a major architectural change, a
+  major redesign, or how a new system fits into the project. The ask names the job, why Opus is not enough and the
+  effort level; nothing starts on Fable until he says yes. A Fable thread writes a report and changes no code; what it
+  asks for is built as tasks on the models above.
+
 ## Decisions and records
 
 - **Ask when unsure** (owner, 2026-10-02). If you're unsure about a design decision, ask the owner before acting. For

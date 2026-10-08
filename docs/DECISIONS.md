@@ -86,8 +86,8 @@ replaces its line; the old one stays findable in the archive or in git.
   checks instead of a 0 to 10 score. Four attempts, then auto-accept at 6 of 8 with checks 1 and 2 passing (owner), else
   a report to the owner. Details: `docs/PROCESS.md › The pipeline`.
 - **The build thread is the worker (2026-10-04).** The coordinator starts each task's thread on the tier's model (Opus
-  5.5 high for core, Sonnet 5.5 medium for UI and trivial); QA, performance, triage, critic and changelog are agents it
-  spawns.
+  5.5 at Extra effort for core, Sonnet 5.5 medium for UI and trivial); QA, performance, triage, critic and changelog
+  are agents it spawns.
 - **The triage and changelog agents run on Haiku 5.5, pinned by full id (`model: claude-haiku-5-5`) (owner,
   2026-10-08).** The bare `haiku` alias follows whatever the installed CLI maps it to. Opus and Sonnet roles are
   unchanged; this replaces "models stay as they are" for Haiku only.
@@ -138,6 +138,12 @@ replaces its line; the old one stays findable in the archive or in git.
   Sessions). Off CI the gate runs the slow bot-match guards only when the diff reaches a file they load (by their
   imports, not by folder: bot tuning in `src/config` and the pool reach them too); CI always runs every test. Balance
   figures are a report, not tests (Bots and balance, below). Test-only files are not perf paths.
+- **Fable 5.1 runs only with the owner's explicit approval, asked for each time, and only where it would do
+  significantly better than Opus (owner, 2026-10-08).** It costs far more. The candidates are audits and reviews of a
+  major architectural change, a major redesign, or how a new system fits into the project; the planning thread runs
+  on Opus unless he approves Fable. Every other job keeps its model: Opus 5.5 at Extra effort (his project setting)
+  for the coordinator and core work, Sonnet 5.5 for UI, Haiku 5.5 for helper jobs (changelog, triage). Details:
+  `docs/PROCESS.md` › Models.
 
 ## Art direction and graphics
 
