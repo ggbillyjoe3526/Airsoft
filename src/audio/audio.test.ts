@@ -13,6 +13,7 @@ import { AmbientCalls, renderAmbienceBed } from './ambience';
 import { loadVolumes, volumeField, volumeGain } from './audioMix';
 import { recipeLength, renderRecipe, seededRandom, type SoundRecipe } from './dsp';
 import { type FoleyMove, FoleyTracker } from './foley';
+import { measureSeam, seamFailures } from './loopSeamSupport';
 import { MotorSound } from './motor';
 import { blockedShare, lineBlocked, muffleFor, type OcclusionQuery } from './occlusion';
 import { renderMapCue, renderSounds, suppressedCopies, variantsOf } from './soundBank';
@@ -407,11 +408,8 @@ describe("the yard's outdoor bed (audit CORE-34)", () => {
     expect(steps).toBeGreaterThanOrEqual(AUDIO.ambience.seconds);
   });
 
-  it('loops without a click: the step from its end back to its start is an ordinary one', () => {
-    let biggest = 0;
-    for (let i = 1; i < bed.length; i++) biggest = Math.max(biggest, Math.abs(bed[i]! - bed[i - 1]!));
-    const wrap = Math.abs(bed[0]! - bed[bed.length - 1]!);
-    expect(wrap).toBeLessThan(biggest * 0.5);
+  it('loops without a click: its jump, bend and spectrum at the wrap sit within the bed\'s own (loopSeamSupport.ts, AUD-06)', () => {
+    expect(seamFailures(measureSeam(bed))).toEqual([]);
   });
 
   it('is low and dull (no hiss): mostly below 1 kHz', () => {
