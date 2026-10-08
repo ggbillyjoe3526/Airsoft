@@ -138,6 +138,10 @@ replaces its line; the old one stays findable in the archive or in git.
   Sessions). Off CI the gate runs the slow bot-match guards only when the diff reaches a file they load (by their
   imports, not by folder: bot tuning in `src/config` and the pool reach them too); CI always runs every test. Balance
   figures are a report, not tests (Bots and balance, below). Test-only files are not perf paths.
+- **Audits and major reviews run on Fable 5.1, at the effort the job needs; every other job keeps its model (owner,
+  2026-10-08).** A major review covers a major architectural change, a major redesign, or how a new system fits into the
+  project. The coordinator and build threads stay on Opus 5.5 (high for core), UI tasks on Sonnet 5.5, and small helper
+  jobs (changelog, triage) on Haiku 5.5. Details: `docs/PROCESS.md` › Models.
 
 ## Art direction and graphics
 

@@ -8,7 +8,7 @@ each finished task's record in `docs/records/`.
 
 | Role | Where | Model / effort | Edits |
 |---|---|---|---|
-| Coordinator | the project's persistent session, plus a planning thread per batch (Fable 5.1, high) | | `docs/TASKS.md`, `docs/ARCHITECTURE.md` › Contracts |
+| Coordinator | the project's persistent session, plus a planning thread per batch | Opus 5.5; the planning thread Fable 5.1 high | `docs/TASKS.md`, `docs/ARCHITECTURE.md` › Contracts |
 | Worker | the build thread itself (one task per thread); `.claude/agents/worker.md` only when a thread splits its task | Opus 5.5 high for `tier: core`; Sonnet 5.5 medium for `tier: ui` and `tier: trivial` | the task's `touches`, tests, docs |
 | QA | `.claude/agents/qa.md`; reads the review packet first | Sonnet 5.5 medium | tests only (commit trailer `Agent: qa`; the gate checks); its report to `pipeline/out/qa-artifacts/qa-report.md` |
 | Performance | `.claude/agents/performance.md`; only when the perf gate fails | Sonnet 5.5 medium; Opus 5.5 high when a regression stays unexplained | nothing (writes under `pipeline/out/`) |
@@ -18,6 +18,9 @@ each finished task's record in `docs/records/`.
 
 Tiers: `core` is the simulation, physics, rendering, bots, navigation, audio engine; `ui` is menus, HUD, settings,
 config, asset loading, docs; `trivial` is a one-constant change, a wording fix, a docs-only change.
+
+Audits and major reviews are not pipeline tasks: they run in their own thread on Fable 5.1 and hand their fixes on
+as tasks (`docs/PROCESS.md` › Models).
 
 ## The eight steps
 

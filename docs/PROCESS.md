@@ -93,6 +93,22 @@ release description:
   thread rewrites it once per batch (replace it, don't append). Engine facts live in `docs/ARCHITECTURE.md` and the
   folder READMEs, not there.
 
+## Models
+
+Which model runs which job (owner, 2026-10-08). The per-agent detail is in `pipeline/README.md` › Roles. A thread
+never changes a model or an effort level unless the owner asks.
+
+- **Fable 5.1 for audits and major reviews,** at the effort the job needs (high unless the owner says otherwise). A
+  major review is a review of a major architectural change or a major redesign, or working out how a new system fits
+  into the project. It runs in its own thread, writes a report and changes no code; what it asks for is built as
+  tasks. The planning thread for each batch runs on Fable 5.1 high too.
+- **Opus 5.5 for the coordinator and for building tasks.** High effort for `tier: core` tasks, which include each bug
+  pass (`BP<n>`) and the fixes an audit hands on. The critic runs on Opus for core tasks and near misses, and the
+  performance agent when a regression stays unexplained.
+- **Sonnet 5.5, medium, for `tier: ui` and `tier: trivial` tasks,** QA, and the other critic and performance runs.
+- **Haiku 5.5, low, for small helper jobs:** the changelog and triage agents, and the diff check on a `tier: trivial`
+  task.
+
 ## Decisions and records
 
 - **Ask when unsure** (owner, 2026-10-02). If you're unsure about a design decision, ask the owner before acting. For
