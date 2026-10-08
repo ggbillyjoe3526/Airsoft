@@ -1,44 +1,37 @@
 /*
- * The menus' typefaces (G3): Barlow for text, Barlow Condensed for headings, labels and buttons (SIL OFL 1.1, docs/ASSETS.md),
- * served with the game (the page's policy loads fonts from itself only).
+ * The menus' and HUD's typeface: Inter (SIL OFL 1.1, docs/ASSETS.md), the latin subset in four weights, served with the
+ * game (the page's policy loads fonts from itself only). The owner chose it on 2026-10-07 (easier
+ * to read, numbers above all). Numbers use tabular figures (base.css), so a count never shifts the line it sits in.
  */
 
 @font-face {
-  font-family: 'Barlow';
+  font-family: 'Inter';
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url('../../../assets/fonts/Barlow-500.woff2') format('woff2');
+  src: url('../../../assets/fonts/Inter-500.woff2') format('woff2');
 }
 
 @font-face {
-  font-family: 'Barlow';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('../../../assets/fonts/Barlow-700.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Barlow Condensed';
+  font-family: 'Inter';
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url('../../../assets/fonts/BarlowCondensed-600.woff2') format('woff2');
+  src: url('../../../assets/fonts/Inter-600.woff2') format('woff2');
 }
 
 @font-face {
-  font-family: 'Barlow Condensed';
+  font-family: 'Inter';
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url('../../../assets/fonts/BarlowCondensed-700.woff2') format('woff2');
+  src: url('../../../assets/fonts/Inter-700.woff2') format('woff2');
 }
 
 @font-face {
-  font-family: 'Barlow Condensed';
+  font-family: 'Inter';
   font-style: normal;
   font-weight: 800;
   font-display: swap;
-  src: url('../../../assets/fonts/BarlowCondensed-800.woff2') format('woff2');
+  src: url('../../../assets/fonts/Inter-800.woff2') format('woff2');
 }

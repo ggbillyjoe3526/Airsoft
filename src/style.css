@@ -1,10 +1,10 @@
 :root {
   /* The design tokens (FA9, audit section 6): one type scale, three letter-spacings, one spacing scale, four control
      heights, three radii, the colours and the motion. Every rule below takes its values from here. */
-  /* Barlow and Barlow Condensed (SIL OFL 1.1, docs/ASSETS.md; @font-face in ui/menus/menus.css, graphics overhaul G3),
-     with the system's sans-serif until they load. */
-  --ui-font: 'Barlow', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --ui-display: 'Barlow Condensed', 'Barlow', system-ui, sans-serif;
+  /* Inter (SIL OFL 1.1, docs/ASSETS.md; @font-face in ui/menus/css/fonts.css), for text, headings and numbers alike,
+     with the system's sans-serif until it loads. */
+  --ui-font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --ui-display: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --ui-mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
   --fs-2xs: 11px;
   --fs-xs: 12px;
@@ -193,6 +193,7 @@ kbd {
   z-index: 10;
   color: var(--hud-fg);
   text-shadow: var(--hud-shadow);
+  font-variant-numeric: tabular-nums;
 }
 
 .hud[hidden] {
