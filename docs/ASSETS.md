@@ -30,9 +30,10 @@ licence travels beside them.
 ## Made by the project
 
 - **The menus' pictures** in `public/menu/` (G3) are the game's own frames. `pipeline/map-stills.mjs` renders each map
-  still (one per map and time of day), each mode's picture, the title's backdrop and the one pre-blurred backdrop from
-  the built game, and saves them as small JPEGs (`src/config/menuArt.ts` lists them and their byte budgets). Run it
-  again when a map, its lighting or the renderer's look changes. No outside source; same licence as the code.
+  still (one per map and time of day), each mode's picture and the one pre-blurred backdrop (every screen but the title,
+  which is plain navy drawn by the stylesheet) from the built game, and saves them as small JPEGs
+  (`src/config/menuArt.ts` lists them and their byte budgets). Run it again when a map, its lighting or the renderer's
+  look changes. No outside source; same licence as the code.
 - **All sounds** are synthesised in code when audio starts (recipes in `src/config/sounds.ts`, rendered by
   `src/audio/dsp.ts`). There are no audio files.
 

@@ -23,6 +23,7 @@ import {
 import type { Collection, ItemRef } from '../../pool/collection';
 import { type Asset, comesIn, fcPerToken, isChase, type Pool } from '../../pool/pool';
 import { ConfirmDialog, noKeyRepeat } from './confirmDialog';
+import { type ContextChoice, ContextMenu } from './contextMenu';
 import { tierLine } from '../performanceSheet';
 import { type MenuHint, sectionHead, tagPill } from './chrome';
 import { MENU_ICONS } from './icons';
@@ -70,6 +71,8 @@ export class ArmoryScreen {
   private readonly odds: HTMLDivElement;
   private readonly owned: HTMLDivElement;
   private readonly confirm = new ConfirmDialog();
+  /** The scrap choices of a collection card (M100): one menu, built once and shown for whichever card is asked. */
+  private readonly menu = new ContextMenu();
   private last: Dispensed[] = [];
   /** The last Shot's items you now carry without picking them (a rarer copy of a replica or part left on its default). */
   private nowEquipped = new Set<string>();
@@ -107,7 +110,7 @@ export class ArmoryScreen {
     columns.append(left, main, this.owned);
     // Space takes a Shot (the 1 Shot button does it for the mouse); Esc is Back, handled by the menus.
     this.hints = [{ keys: ['Space'], label: MENU_TEXT.hints.shot, run: () => this.shotOne(), code: 'Space', idle: true }];
-    this.root.append(columns, this.confirm.root);
+    this.root.append(columns, this.confirm.root, this.menu.root);
     this.refresh();
   }
 
@@ -156,6 +159,7 @@ export class ArmoryScreen {
   }
 
   private render(): void {
+    this.menu.close(false);
     // Read (and synced with another tab's save) once per redraw; each action reads it again before it changes it.
     const c = this.opts.collection();
     this.renderSide(c);
@@ -353,7 +357,7 @@ export class ArmoryScreen {
       }
       column.append(this.assetRow(row, c));
     }
-    this.owned.replaceChildren(head, el('p', 'menu-readout', ARMORY_TEXT.keepOne), list);
+    this.owned.replaceChildren(head, el('p', 'menu-readout armory-scrap-hint', ARMORY_TEXT.scrapHint), el('p', 'menu-readout', ARMORY_TEXT.keepOne), list);
   }
 
   /** One asset of the catalogue: its name, a pip per tier (copies owned, or a dash), and its spares to scrap. */
@@ -383,32 +387,54 @@ export class ArmoryScreen {
       const adds = tierLine(this.pool, { asset: r.asset.id, tier: this.pool.tiers[best]!.id });
       if (adds) row.append(el('span', 'armory-row-adds', adds));
     }
+    this.scrapMenu(row, r, c);
+    return row;
+  }
+
+  /**
+   * The card's scrap choices (M100, in place of buttons on every card): a right-click opens them at the pointer, and
+   * the Menu key or Shift+F10 on the focused card opens them beside it. Only a card with a spare has any.
+   */
+  private scrapMenu(row: HTMLDivElement, r: CollectionRow, c: Collection): void {
     const one = cheapestSpare(this.pool, c, r.asset.id);
-    if (one) {
-      const oneFc = this.pool.tiers.find((t) => t.id === one.tier)!.scrapFc;
-      const b = noKeyRepeat(
-        menuButton(`${ARMORY_TEXT.scrapOne} (+${fcText(oneFc)})`, 'secondary', () => {
+    if (!one) return;
+    const oneFc = this.pool.tiers.find((t) => t.id === one.tier)!.scrapFc;
+    const choices: ContextChoice[] = [
+      {
+        label: `${ARMORY_TEXT.scrapOne} (+${fcText(oneFc)})`,
+        name: `${ARMORY_TEXT.scrapOne} ${tierLabel(this.pool, one)} ${r.asset.name} for ${fcText(oneFc)}`,
+        run: () => {
           scrapSpares(this.pool, this.opts.collection(), one, 1);
-          this.changed([`scrap1-${r.asset.id}`, `scrap-${r.asset.id}`, 'scrap-all', 'buy-1']);
-        }),
-      );
-      b.dataset.action = `scrap1-${r.asset.id}`;
-      b.setAttribute('aria-label', `${ARMORY_TEXT.scrapOne} ${tierLabel(this.pool, one)} ${r.asset.name} for ${fcText(oneFc)}`);
-      row.append(b);
-    }
+          this.changed([`spares-${r.asset.id}`, 'scrap-all', 'buy-1']);
+        },
+      },
+    ];
     if (r.spares > 1) {
-      const b = noKeyRepeat(
-        menuButton(`${ARMORY_TEXT.scrap} ${r.spares} (+${fcText(r.spareFc)})`, 'secondary', () => {
+      choices.push({
+        label: `${ARMORY_TEXT.scrap} ${r.spares} (+${fcText(r.spareFc)})`,
+        name: `${ARMORY_TEXT.scrap} ${r.spares} spare ${r.asset.name} for ${fcText(r.spareFc)}`,
+        run: () => {
           const c = this.opts.collection();
           for (let t = this.pool.tiers.length - 1; t >= 0; t--) scrapSpares(this.pool, c, { asset: r.asset.id, tier: this.pool.tiers[t]!.id });
           this.changed(['scrap-all', 'buy-1']);
-        }),
-      );
-      b.dataset.action = `scrap-${r.asset.id}`;
-      b.setAttribute('aria-label', `${ARMORY_TEXT.scrap} ${r.spares} spare ${r.asset.name} for ${fcText(r.spareFc)}`);
-      row.append(b);
+        },
+      });
     }
-    return row;
+    // Reachable from the keyboard, and named for a screen reader as a card with a menu.
+    row.tabIndex = 0;
+    row.dataset.action = `spares-${r.asset.id}`;
+    row.setAttribute('role', 'group');
+    row.setAttribute('aria-label', ARMORY_TEXT.rowMenuHint(r.asset.name, r.spares));
+    row.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      this.menu.open(r.asset.name, choices, e.clientX + 2, e.clientY + 2, row);
+    });
+    row.addEventListener('keydown', (e) => {
+      if (e.key !== 'ContextMenu' && !(e.key === 'F10' && e.shiftKey)) return;
+      e.preventDefault();
+      const box = row.getBoundingClientRect();
+      this.menu.open(r.asset.name, choices, box.left + 12, box.top + 24, row);
+    });
   }
 
   private figure(label: string, value: string): HTMLDivElement {

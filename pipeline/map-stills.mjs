@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * The menus' pictures (graphics overhaul G3): draws each map still, each mode picture and the two backdrops with the
+ * The menus' pictures (graphics overhaul G3): draws each map still, each mode picture and the blurred backdrop with the
  * game itself, and writes them as small JPEGs into public/menu/ (what src/config/menuArt.ts lists). Run it again when
  * a map, its lighting or the renderer's look changes, and commit the pictures.
  *
@@ -11,7 +11,7 @@
  * the maps still being built), a match started, then the camera stood where config/menuArt.ts STILL_CAMERA says
  * (behind Blue's start, looking across the field at Orange's, or at the flagpole) and one frame drawn with the HUD
  * left out. The frame is scaled down, saved as a JPEG, and checked against its byte budget. The blurred backdrop is
- * the title's picture blurred once here, so no screen ever blurs live.
+ * a view of Depot blurred once here, so no screen ever blurs live (the title has no picture).
  *
  * Software rendering (SwiftShader) draws the same picture as a GPU, only slower: PLAYWRIGHT_CHROMIUM picks the browser.
  */
@@ -43,9 +43,9 @@ if (!base) {
   for (let i = 0; i < 50 && !(await fetch(base).then((r) => r.ok, () => false)); i++) await new Promise((r) => setTimeout(r, 200));
 }
 
-/** Every picture to draw: the title's first (the blurred backdrop is made from it), then the stills and the modes. */
+/** Every picture to draw: the blurred backdrop first, then the stills and the modes. */
 const shots = [
-  { ...BACKDROPS.title, mode: 'elimination', budget: BACKDROPS.title.maxBytes, blurred: BACKDROPS.blurred },
+  { ...BACKDROPS.blurred, mode: 'elimination', budget: BACKDROPS.blurred.maxBytes },
   ...MAP_STILLS.map((s) => ({ ...s, mode: 'elimination', width: STILL_SIZE.width, height: STILL_SIZE.height, quality: STILL_SIZE.quality, budget: STILL_SIZE.maxBytes })),
   ...Object.entries(MODE_STILLS).map(([mode, s]) => ({ ...s, mode, width: STILL_SIZE.width, height: STILL_SIZE.height, quality: STILL_SIZE.quality, budget: STILL_SIZE.maxBytes })),
 ].filter((s) => only.length === 0 || only.includes(s.file));
@@ -61,7 +61,7 @@ try {
   for (const shot of shots) {
     const files = await draw(shot);
     for (const [file, bytes] of files) {
-      const over = bytes.length > (file === shot.file ? shot.budget : shot.blurred.maxBytes);
+      const over = bytes.length > shot.budget;
       if (over) failed = true;
       writeFileSync(join(OUT, file), bytes);
       console.log(`map-stills: ${file} ${(bytes.length / 1000).toFixed(1)} kB${over ? ' (over its budget)' : ''}`);
@@ -73,7 +73,7 @@ try {
 }
 if (failed) process.exit(1);
 
-/** One picture (and, for the title's, the blurred backdrop): its files and their bytes. */
+/** One picture: its files and their bytes. */
 async function draw(shot) {
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
   page.on('pageerror', (e) => console.error(`map-stills: page error: ${e.message}`));
@@ -91,7 +91,7 @@ async function draw(shot) {
   await page.waitForFunction(() => globalThis.airsoft?.state && globalThis.airsoft.state.tick > 30, null, { timeout: 180_000 });
   const camera = STILL_CAMERA[shot.view];
   const result = await page.evaluate(
-    ({ camera, view, width, height, q, blurred }) => {
+    ({ camera, view, width, height, q, blur }) => {
       const game = globalThis.airsoft;
       const state = game.state;
       const r = game.renderer;
@@ -138,20 +138,13 @@ async function draw(shot) {
         ctx.drawImage(canvas, (canvas.width - sw) / 2, (canvas.height - sh) / 2, sw, sh, 0, 0, w, h);
         return c;
       };
-      const main = shrink(width, height, '').toDataURL('image/jpeg', q);
-      let soft = null;
-      if (blurred) {
-        // Drawn small, blurred and darkened once; the menus scale it up behind every screen but the title.
-        const c = shrink(blurred.width, blurred.height, `blur(${blurred.blur}px) saturate(1.1)`);
-        soft = c.toDataURL('image/jpeg', blurred.quality);
-      }
-      return { main, soft };
+      // The backdrop is drawn small and blurred once; the menus scale it up behind every screen but the title.
+      const main = shrink(width, height, blur ? `blur(${blur}px) saturate(1.1)` : '').toDataURL('image/jpeg', q);
+      return { main };
     },
-    { camera, view: shot.view, width: shot.width, height: shot.height, q: shot.quality, blurred: shot.blurred ?? null },
+    { camera, view: shot.view, width: shot.width, height: shot.height, q: shot.quality, blur: shot.blur ?? 0 },
   );
   await page.close();
   const bytes = (url) => Buffer.from(url.slice(url.indexOf(',') + 1), 'base64');
-  const files = [[shot.file, bytes(result.main)]];
-  if (result.soft) files.push([shot.blurred.file, bytes(result.soft)]);
-  return files;
+  return [[shot.file, bytes(result.main)]];
 }

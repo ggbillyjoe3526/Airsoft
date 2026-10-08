@@ -300,7 +300,8 @@ Completely free: Field Credits (FC) come from playing, and nothing is ever sold.
   at a time and survive a reload.
 - [ ] **Your collection.** Under the balance and the odds, one column per kind (replicas, power sources, optics, grips,
   and the rest), each with a heading. Every asset Shots can give, owned or not (dimmed), with a pip per tier and "N / 84 items".
-  Scrap 1 scraps the lower copy; fit the Common on Customise first, scrap it, and Customise shows the Rare fitted.
+  Right-click an item (or focus it and press the Menu key or Shift+F10) for its Scrap 1 / Scrap N menu; Esc, a click
+  elsewhere or a choice closes it. Scrap 1 scraps the lower copy; fit the Common on Customise first, scrap it, and Customise shows the Rare fitted.
   Scrap all spares asks first and keeps your best copy of everything.
 - [ ] **Rarity odds.** The odds table has its caption, and each Rare-or-better copy lists what its tier adds.
 - [ ] **Settings › Dev › Disable Armory.** The Armory is greyed and won't open; a match pays nothing and says why.

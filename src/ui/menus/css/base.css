@@ -190,7 +190,7 @@
   padding: var(--sp-5) var(--sp-6);
 }
 
-/* The backdrop: the title's picture sharp, every other screen the one blurred when it was made, darkened. */
+/* The backdrop: every screen but the title the one picture, blurred when it was made and darkened here. */
 .menu-backdrop {
   position: absolute;
   inset: 0;
@@ -216,6 +216,20 @@
 
 .menu-backdrop.even::after {
   background: rgba(7, 13, 31, 0.86);
+}
+
+/* The title's ground (M100): plain opaque navy, no picture: a soft lift of blue from the lower right, one faint slanted
+   panel and a hairline of orange along its edge (the cut corner's angle). Drawn once by the stylesheet. */
+.menu-backdrop.plain {
+  background:
+    linear-gradient(118deg, transparent 0 63.6%, rgba(255, 106, 32, 0.16) 63.6% 63.75%, transparent 63.75% 100%),
+    linear-gradient(118deg, transparent 0 63.75%, rgba(255, 255, 255, 0.03) 63.75% 100%),
+    radial-gradient(90% 80% at 88% 108%, #14214a 0%, rgba(20, 33, 74, 0) 70%),
+    var(--menu-bg);
+}
+
+.menu-backdrop.plain::after {
+  content: none;
 }
 
 /* The top bar (M100): the wordmark, the places from the left (the current one underlined in orange), the wallet at the far right. */

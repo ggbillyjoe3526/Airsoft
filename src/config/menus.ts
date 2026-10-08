@@ -136,6 +136,10 @@ export const ARMORY_TEXT = {
     `Then one of ${n} assets is picked${weight > 1 ? `, one you don't own at that tier ${weight === 2 ? 'twice' : `${weight} times`} as likely as one you do` : ', each equally likely'}. A given asset at ${rarest} is about 1 in ${oneIn.toLocaleString('en-GB')} draws.`,
   scrap: 'Scrap',
   scrapOne: 'Scrap 1',
+  /** Under the collection heading (M100): the scrap buttons left the cards for a right-click menu. */
+  scrapHint: 'Right-click an item to scrap its spares.',
+  /** A card's name for a screen reader: how to reach its menu from the keyboard. */
+  rowMenuHint: (name: string, spares: number) => `${name}, ${spares} ${spares === 1 ? 'spare' : 'spares'}. Press the Menu key or Shift and F10 to scrap.`,
   scrapAll: 'Scrap all spares',
   keepOne: 'Scrapping keeps your best copy of every asset, so nothing equipped is ever lost: a part fitted at a lower tier moves to the best one.',
   dispensed: 'Last Shot',

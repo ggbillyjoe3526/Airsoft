@@ -207,7 +207,7 @@ attempts: 0
 ## M100 · Menu redesign 2: title screen, top bar, Match screen, Practice as a mode, a clearer font (playtest notes 5, 7, 8)
 tier: ui
 perf: skip
-touches: src/ui/menus/, src/config/menus.ts, src/assets/fonts/, docs/ASSETS.md, docs/PLAYTEST.md, src/style.css, src/ui/hud.css, src/settings/storage.ts
+touches: src/ui/menus/, src/config/menus.ts, src/config/menuArt.ts, pipeline/map-stills.mjs, public/menu/, src/assets/fonts/, docs/ASSETS.md, docs/PLAYTEST.md, src/style.css, src/ui/hud.css, src/settings/storage.ts
 contract: none
 acceptance:
   1. The game opens on a plain title screen: the title "Airsoft", the tagline "Call your hit. Go again." (owner, 2026-10-07), a START button and, on a clean save only, the Tutorial button under START (until the tutorial is finished or a first match started); the build's version small at the bottom left; nothing else.

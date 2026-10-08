@@ -94,18 +94,24 @@ describe('no key prompts along the bottom (M100)', () => {
   });
 });
 
-describe('the backdrop (G3: one picture, blurred when it was made)', () => {
+describe('the backdrop (M100: the title has no picture)', () => {
   beforeEach(() => vi.stubGlobal('document', fakeDocument()));
   afterEach(() => vi.unstubAllGlobals());
 
-  it('shows the sharp title picture on the title and the one pre-blurred picture everywhere else', () => {
+  it('shows no picture at all on the title, and the one pre-blurred picture everywhere else', () => {
     const b = new Backdrop();
-    const [title, blurred] = fake(b.root).children;
+    const pictures = fake(b.root).children;
+    // One picture only, the blurred one; the title never had a second.
+    expect(pictures.map((p) => p.tag)).toEqual(['img']);
     expect(b.root.getAttribute('aria-hidden')).toBe('true');
     b.show('title', false);
-    expect([title!.hidden, blurred!.hidden]).toEqual([false, true]);
+    expect(pictures.every((p) => p.hidden)).toBe(true);
+    expect(b.root.classList.contains('plain')).toBe(true);
     b.show('blurred', true);
-    expect([title!.hidden, blurred!.hidden, b.root.classList.contains('even')]).toEqual([true, false, true]);
+    expect([pictures[0]!.hidden, b.root.classList.contains('plain'), b.root.classList.contains('even')]).toEqual([false, false, true]);
+    // Back to the title: plain again, and the darkening for dense pages does not follow it there.
+    b.show('title', true);
+    expect([pictures[0]!.hidden, b.root.classList.contains('plain'), b.root.classList.contains('even')]).toEqual([true, true, false]);
   });
 });
 

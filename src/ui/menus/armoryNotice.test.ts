@@ -150,16 +150,7 @@ describe('the Armory notice, further cases (M70, audit POOL-05)', () => {
     expect(a.notice().textContent).toBe(ARMORY_TEXT.reloaded);
   });
 
-  it('shows it for a refused scrap', () => {
-    const a = setup(() => true);
-    a.c.owned['000001@common'] = 3;
-    a.screen.refresh();
-    const scrap = a.root.querySelector('[data-action="scrap1-000001"]');
-    expect(scrap).not.toBeNull();
-    scrap!.click();
-    expect(a.calls()).toBe(1);
-    expect(a.notice().textContent).toBe(ARMORY_TEXT.reloaded);
-  });
+  // A refused scrap (now through the card's right-click menu, M100) is in armoryScrapMenu.test.ts.
 
   it('reads the answer strictly: only true shows the notice (false, undefined, a truthy non-boolean do not)', () => {
     for (const answer of [false, undefined, 1, 'yes', {}, null]) {

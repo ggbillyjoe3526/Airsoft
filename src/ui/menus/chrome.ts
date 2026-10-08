@@ -122,28 +122,27 @@ export function optionTick(): HTMLSpanElement {
 }
 
 /**
- * The backdrop behind the menus: the title's picture, sharp, or the blurred one every other screen shares. Both are
- * plain images, loaded once; no screen blurs or redraws anything behind itself.
+ * The ground behind the menus: the title is plain navy (a gradient and a faint angle drawn by the stylesheet, no picture
+ * at all, M100); every other screen shares the one pre-blurred picture. The image is loaded once; no screen blurs or
+ * redraws anything behind itself.
  */
 export class Backdrop {
   readonly root: HTMLDivElement;
-  private readonly title: HTMLImageElement;
   private readonly blurred: HTMLImageElement;
 
   constructor() {
     this.root = el('div', 'menu-backdrop');
     this.root.setAttribute('aria-hidden', 'true');
-    this.title = backdropImage(BACKDROPS.title.file);
     this.blurred = backdropImage(BACKDROPS.blurred.file);
     this.blurred.classList.add('blurred');
-    this.root.append(this.title, this.blurred);
+    this.root.append(this.blurred);
   }
 
-  /** Which picture shows: the title's or the blurred one; `even` darkens it all over (behind dense screens). */
+  /** Which ground shows: the title's plain one or the blurred picture; `even` darkens the picture all over (behind dense screens). */
   show(kind: 'title' | 'blurred', even: boolean): void {
-    this.title.hidden = kind !== 'title';
     this.blurred.hidden = kind === 'title';
-    this.root.classList.toggle('even', even);
+    this.root.classList.toggle('plain', kind === 'title');
+    this.root.classList.toggle('even', even && kind !== 'title');
   }
 }
 

@@ -5,6 +5,7 @@ import { MENU_TEXT, PLAY_TEXT, TITLE_TEXT } from '../../config/menus';
 import { MemoryStorage } from '../../pool/testStorage';
 import { SETTINGS_KEY, saveSetting } from '../../settings/storage';
 import { RECORDS_KEY } from '../../config/matchInfo';
+import { BACKDROPS } from '../../config/menuArt';
 import { FakeElement, findAll } from '../testSupport';
 import { ChoiceCards } from './choiceCards';
 import { loadMatchStarted } from './savedChoices';
@@ -45,6 +46,17 @@ describe('the title screen (M100: plain)', () => {
     expect(findAll(t, 'title-version')).toHaveLength(1);
     // Gone from the title: the tip, the next match, the kit, the wallet, the range, Loadout, Armory and Settings buttons.
     for (const gone of ['title-tip', 'title-next', 'title-side', 'title-wallet', 'title-list', 'title-kicker', 'menu-hints', 'menu-chip']) expect(findAll(t, gone)).toEqual([]);
+  });
+
+  it('shows no picture: no image in its markup, and the title picture is gone from the art list and from public/menu', async () => {
+    const t = fake(title(true).root);
+    expect(all(t, 'img')).toEqual([]);
+    expect(all(t, 'picture')).toEqual([]);
+    expect(Object.keys(BACKDROPS)).toEqual(['blurred']);
+    const nodeFs = 'node:' + 'fs';
+    const { existsSync } = (await import(/* @vite-ignore */ nodeFs)) as { existsSync(path: URL): boolean };
+    expect(existsSync(new URL('../../../public/menu/title.jpg', import.meta.url))).toBe(false);
+    expect(existsSync(new URL('../../../public/menu/backdrop.jpg', import.meta.url))).toBe(true);
   });
 
   it('puts the version small at the bottom left, as its own line after the buttons', () => {

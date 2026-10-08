@@ -707,9 +707,14 @@ test('the game boots to the title screen on High', async ({ page }) => {
     if (msg.type() === 'error') errors.push(`console: ${msg.text()}`);
   });
   // FC enough for Ten Shots, saved before the game reads the collection (the bug-pass check below opens its pop-up).
-  await page.addInitScript(() => localStorage.setItem('airsoft.collection', JSON.stringify({ version: 1, owned: {}, fc: 2000, tokens: 0, seed: 1 })));
+  // Three copies of one item besides: two spares for the Armory's right-click scrap menu (M100).
+  await page.addInitScript(() => localStorage.setItem('airsoft.collection', JSON.stringify({ version: 1, owned: { '000001@common': 3 }, fc: 2000, tokens: 0, seed: 1 })));
   await page.goto('/?nolock&seed=1&quality=high');
   await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
+  // The title is plain navy (M100): no picture of the map or anything else behind it.
+  await expect(page.locator('.menu-backdrop')).toHaveClass(/plain/);
+  await expect(page.locator('.menu-backdrop img:visible')).toHaveCount(0);
+  expect(await page.locator('.menu-backdrop').evaluate((e) => getComputedStyle(e).backgroundImage)).not.toContain('url(');
   // Asked for in the address, so the warning doesn't claim Low was picked.
   await expect(page.locator('.menu-title-warning')).toContainText('without hardware acceleration');
   await expect(page.locator('.menu-title-warning')).not.toContainText('set to Low');
@@ -719,6 +724,24 @@ test('the game boots to the title screen on High', async ({ page }) => {
   // Shots asks first.
   await page.locator('.menu-title-start').click();
   await page.locator('.menu-topbar').getByRole('button', { name: 'Armory', exact: true }).click();
+  // The collection has no Scrap buttons: a hint says to right-click an item, and the menu scraps its spares (M100).
+  const armoryScreen = page.locator('.menu-armory');
+  await expect(armoryScreen.getByText('Right-click an item to scrap its spares.')).toBeVisible();
+  await expect(armoryScreen.getByRole('button', { name: /^Scrap (1|\d+) / })).toHaveCount(0);
+  const card = armoryScreen.locator('.armory-row[data-action="spares-000001"]');
+  await card.scrollIntoViewIfNeeded();
+  const fcBefore = await page.locator('.menu-chip-fc').innerText();
+  await card.click({ button: 'right' });
+  await expect(page.locator('.context-menu .context-item')).toHaveCount(2);
+  await page.keyboard.press('Escape'); // closes the menu and stays on the Armory
+  await expect(page.locator('.context-menu')).toBeHidden();
+  await expect(armoryScreen).toBeVisible();
+  await card.focus();
+  await page.keyboard.press('Shift+F10'); // the keyboard opens the same menu
+  await expect(page.locator('.context-menu .context-item')).toHaveCount(2);
+  await page.locator('.context-menu').getByRole('button', { name: /^Scrap 1 Common / }).click();
+  await expect(page.locator('.context-menu')).toBeHidden();
+  await expect(page.locator('.menu-chip-fc')).not.toHaveText(fcBefore);
   await page.locator('.menu-armory').getByRole('button', { name: /^10 Shots/ }).click();
   const ask = page.getByRole('dialog', { name: 'Take 10 Shots?' });
   await expect(ask).toBeVisible();

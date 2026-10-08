@@ -250,6 +250,29 @@ describe('the menus\' sheets (G3)', () => {
   });
 });
 
+describe('the title\'s ground (M100: plain, no picture)', () => {
+  const plain = blockOf('.menu-backdrop.plain');
+
+  it('is a gradient and a solid navy under it, drawn by the stylesheet, with no image and nothing translucent at the bottom', () => {
+    expect(plain).not.toBeNull();
+    expect(plain).toMatch(/linear-gradient|radial-gradient/);
+    expect(plain).not.toMatch(/url\(|image-set|-webkit-image-set|cross-fade/);
+    // Opaque: the last layer of the background is the menus' solid navy.
+    const layers = /background:\s*([^;]+);/.exec(plain!)![1]!.trim();
+    expect(layers).toMatch(/,\s*var\(--menu-bg\)$/);
+    expect(token('--menu-bg')).toMatch(/^#[0-9a-f]{6}$/i);
+    expect(blockOf('.menu-backdrop.plain::after')).toMatch(/content:\s*none/);
+  });
+
+  it('puts no picture on the title screen anywhere: no url() to an image in any menu rule, and no rule names title.jpg', () => {
+    expect(menuSheet).not.toMatch(/url\([^)]*\.(jpe?g|png|webp|avif|gif|svg)/i);
+    expect(sheet).not.toMatch(/title\.jpg/);
+    for (const rule of ['.menu-title', '.title-body', '.title-hero', '.menu-title-wordmark', '.menu-title-tagline', '.title-actions', '.title-version']) {
+      expect(blockOf(rule), rule).not.toMatch(/url\(|background-image/);
+    }
+  });
+});
+
 describe('the HUD\'s sheets (G4)', () => {
   it('read every file hud.css imports, each part\'s rules among them', () => {
     expect(hudFiles.length).toBe(7);
