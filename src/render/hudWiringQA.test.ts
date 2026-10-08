@@ -13,12 +13,11 @@ import { MatchStats } from '../stats/matchStats';
 import type { HitFeed as HitFeedClass } from '../ui/hitFeed';
 import type { Minimap as MinimapClass } from '../ui/minimap';
 import type { Scoreboard as ScoreboardClass } from '../ui/scoreboard';
-import type { SquadBar as SquadBarClass } from '../ui/squadBar';
 import type { MatchPresentation as MatchPresentationClass } from './matchPresentation';
 
 // G4 QA: how MatchPresentation drives the new HUD parts. Every drawing class is auto-mocked (no DOM or GPU under Vitest),
 // so what is asserted is the presentation's own wiring: what the score bar is told is the match's aim, what the minimap's
-// caption says and when it changes, who gets a squad card, and what the hit feed is handed for a friendly or ricochet hit.
+// caption says and when it changes, and what the hit feed is handed for a friendly or ricochet hit.
 
 vi.mock('../ui/casePrompt');
 vi.mock('../ui/flagMarker');
@@ -32,6 +31,7 @@ vi.mock('../ui/orderWheel');
 vi.mock('../ui/roundBanner');
 vi.mock('../ui/scoreboard');
 vi.mock('../ui/soundCues');
+// Kept while the squad line exists; drop both with it (the other wiring tests mock them too).
 vi.mock('../ui/squadOrderLine');
 vi.mock('../ui/squadBar');
 vi.mock('../ui/teammateMarkers');
@@ -55,14 +55,12 @@ vi.mock('./spectatorCamera', () => ({
 let MatchPresentation: typeof MatchPresentationClass;
 let Scoreboard: typeof ScoreboardClass;
 let Minimap: typeof MinimapClass;
-let SquadBar: typeof SquadBarClass;
 let HitFeed: typeof HitFeedClass;
 beforeAll(async () => {
   vi.resetModules();
   ({ MatchPresentation } = await import('./matchPresentation'));
   ({ Scoreboard } = await import('../ui/scoreboard'));
   ({ Minimap } = await import('../ui/minimap'));
-  ({ SquadBar } = await import('../ui/squadBar'));
   ({ HitFeed } = await import('../ui/hitFeed'));
 });
 afterAll(() => {
@@ -164,46 +162,6 @@ describe('the minimap names the map and the round (G4 criterion 2)', () => {
     const r = rig({ extraction: true });
     r.event({ type: 'roundStart', round: 1 } as never);
     expect(captions()).toEqual(['Depot', 'Depot']);
-  });
-});
-
-describe('the squad line gets a card per player on your side (G4 criterion 5)', () => {
-  it('is built with you first, then your teammates, and their names', () => {
-    rig();
-    const [, team, members, names] = vi.mocked(SquadBar).mock.calls[0]!;
-    expect(team).toBe(0);
-    expect((members as unknown as { id: number }[]).map((c) => c.id)).toEqual([PLAYER, MATE]);
-    expect(names.get(PLAYER)).toBe('You');
-    expect(names.get(MATE)).toBe('Blue 2');
-  });
-
-  it('follows the player to the other team: its cards are the Orange side', () => {
-    rig({ team: 1 });
-    const [, team, members] = vi.mocked(SquadBar).mock.calls[0]!;
-    expect(team).toBe(1);
-    expect((members as unknown as { id: number }[]).map((c) => c.id)).toEqual([PLAYER, MATE]);
-  });
-
-  it('is handed the keys by action so the player\'s rebinds show', () => {
-    const r = rig();
-    const keyName = vi.mocked(SquadBar).mock.calls[0]![4];
-    expect(keyName('orderFollow')).toBe(r.keyName('orderFollow'));
-  });
-
-  it('is shown with the other parts and given each order the player gives', () => {
-    const r = rig();
-    r.match.setPlaying(true);
-    expect(vi.mocked(SquadBar.prototype.setVisible)).toHaveBeenLastCalledWith(true);
-    r.match.orderGiven('hold', 'onPlan');
-    expect(vi.mocked(SquadBar.prototype.ordered)).toHaveBeenCalledWith('hold', 'onPlan');
-    r.match.setPlaying(false);
-    expect(vi.mocked(SquadBar.prototype.setVisible)).toHaveBeenLastCalledWith(false);
-  });
-
-  it('clears its order line at the start of a round', () => {
-    const r = rig();
-    r.event({ type: 'roundStart', round: 2 } as never);
-    expect(vi.mocked(SquadBar.prototype.clear)).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -12,7 +12,6 @@ import { FEED_ICONS } from './menus/icons';
 import { kitSubjects } from './menus/menuPictures';
 import { REPLICA_PANEL_HTML, ReplicaPanel } from './replicaPanel';
 import { Scoreboard } from './scoreboard';
-import { SquadBar } from './squadBar';
 import { rosterNames, statsBlocks } from './statsRows';
 import { StatsTable } from './statsTable';
 import { FakeElement, findAll } from './testSupport';
@@ -402,89 +401,6 @@ describe('the replica panel (G4 criterion 4)', () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------------------------- squad
-
-describe('the squad line (G4 criterion 5)', () => {
-  const people = (n: number): Character[] => Array.from({ length: n }, (_, id) => createCharacter(id, vec3(), 0, LOADOUT, 0));
-  const names = new Map([
-    [0, 'You'],
-    [1, 'Blue 2'],
-    [2, 'Blue 3'],
-  ]);
-  const make = (members: Character[], keys: Record<string, string>) => {
-    const parent = made();
-    const squad = new SquadBar(parent as unknown as HTMLElement, 0, members, names, (a) => keys[a] ?? '');
-    const root = parent.children[0]!;
-    return { squad, root, cards: findAll(root, 'squad-card'), strip: findAll(root, 'squad-keys')[0]! };
-  };
-  const state = (card: FakeElement) => findAll(card, 'squad-card-state')[0]!.textContent;
-
-  it('greys a card once its player is hit, and brings it back when they are in play again', () => {
-    const members = people(3);
-    const { squad, cards } = make(members, {});
-    squad.update('none', 0.016);
-    expect(cards.map((c) => c.classList.contains('hit'))).toEqual([false, false, false]);
-    members[1]!.status = 'calling';
-    members[0]!.status = 'out';
-    squad.update('none', 0.016);
-    expect(cards.map((c) => c.classList.contains('hit'))).toEqual([true, true, false]);
-    expect(cards.map(state)).toEqual(['Hit', 'Hit', 'In play']);
-    // The next round: everyone alive again.
-    for (const m of members) m.status = 'alive';
-    squad.update('none', 0.016);
-    expect(cards.map((c) => c.classList.contains('hit'))).toEqual([false, false, false]);
-    expect(cards.map(state)).toEqual(['In play', 'In play', 'In play']);
-  });
-
-  it('a hit teammate says Hit even under an order, not what they were told to do', () => {
-    const members = people(3);
-    const { squad, cards } = make(members, {});
-    members[2]!.status = 'walkingOff' as never;
-    squad.update('regroup', 0.016);
-    expect(cards.map(state)).toEqual(['In play', 'Regrouping', 'Hit']);
-  });
-
-  it('words each order for the teammates on their cards, and not for you', () => {
-    const { squad, cards } = make(people(3), {});
-    for (const [order, doing] of [['follow', 'Following'], ['hold', 'Holding'], ['regroup', 'Regrouping']] as const) {
-      squad.update(order, 0.016);
-      expect(cards.map(state)).toEqual(['In play', doing, doing]);
-    }
-    squad.update('none', 0.016);
-    expect(cards.map(state)).toEqual(['In play', 'In play', 'In play']);
-  });
-
-  it('shows the order keys as bound, follows a rebind the next time it shows, and drops an unbound key', () => {
-    const keys: Record<string, string> = { orderFollow: 'F', orderHold: 'X', orderRegroup: 'V' };
-    const { squad, strip } = make(people(3), keys);
-    squad.setVisible(true);
-    const letters = () => strip.children.map((i) => (i.hidden ? '-' : i.children[0]!.textContent));
-    expect(letters()).toEqual(['F', 'X', 'V']);
-    // Rebound on the pause menu (the line hides with the menu and shows again after it).
-    squad.setVisible(false);
-    keys.orderFollow = 'G';
-    keys.orderRegroup = '';
-    squad.setVisible(true);
-    expect(letters()).toEqual(['G', 'X', '-']);
-    squad.setVisible(false);
-    keys.orderRegroup = 'Shift+V';
-    squad.setVisible(true);
-    expect(letters()).toEqual(['G', 'X', 'Shift+V']);
-  });
-
-  it('writes nothing in a steady frame, and one card\'s state for one card\'s change', () => {
-    const members = people(3);
-    const { squad } = make(members, { orderFollow: 'F' });
-    squad.setVisible(true);
-    squad.update('follow', 0.016);
-    expect(writesDuring(300, () => squad.update('follow', 0.016))).toBe(0);
-    members[2]!.status = 'out';
-    // That card's words and its grey; nobody else's.
-    expect(writesDuring(1, () => squad.update('follow', 0.016))).toBe(2);
-    expect(writesDuring(300, () => squad.update('follow', 0.016))).toBe(0);
-  });
-});
-
 // ---------------------------------------------------------------------------------------------------------------- hit feed
 
 describe('the hit feed (G4 criterion 3)', () => {
@@ -699,13 +615,11 @@ describe('the Tab scoreboard (G4 criterion 6)', () => {
 // ---------------------------------------------------------------------------------------------------------------- allocation
 
 describe('no element is made per frame (G4 criterion 7)', () => {
-  it('holds for the replica panel, the squad line, the hit feed and the score bar over a steady stretch', () => {
+  it('holds for the replica panel, the hit feed and the score bar over a steady stretch', () => {
     const root = made();
     root.innerHTML = REPLICA_PANEL_HTML;
     const panel = new ReplicaPanel(root as unknown as HTMLElement, () => 'R');
     const armament = createArmament(LOADOUT);
-    const members = [0, 1, 2].map((id) => createCharacter(id, vec3(), 0, LOADOUT, 0));
-    const squad = new SquadBar(made() as unknown as HTMLElement, 0, members, new Map([[0, 'You']]), () => 'F');
     const feed = new HitFeed(made() as unknown as HTMLElement);
     feed.add({ name: 'A', team: 0 }, { name: 'B', team: 1 }, false, false, 0);
     const bar = new Scoreboard(made() as unknown as HTMLElement, [3, 3], 0);
@@ -713,7 +627,6 @@ describe('no element is made per frame (G4 criterion 7)', () => {
     const round = createRoundState({ ...ROUNDS, roundTime: 120 }, 'elimination');
     const frame = (t: number) => {
       panel.update(armament, LOADOUT, 1 / 60);
-      squad.update('hold', 1 / 60);
       feed.update(t);
       bar.update(round, characters);
     };

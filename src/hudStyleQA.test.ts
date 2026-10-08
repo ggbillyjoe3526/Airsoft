@@ -18,7 +18,7 @@ function withImports(url: URL): string[] {
 }
 const uncomment = (text: string): string => text.replace(/\/\*[\s\S]*?\*\//g, '');
 const hudFiles = Object.fromEntries(
-  ['score', 'minimap', 'feed', 'squad', 'replica', 'board'].map((name) => [name, uncomment(readFileSync(new URL(`./ui/hudCss/${name}.css`, import.meta.url), 'utf8'))]),
+  ['score', 'minimap', 'feed', 'replica', 'board'].map((name) => [name, uncomment(readFileSync(new URL(`./ui/hudCss/${name}.css`, import.meta.url), 'utf8'))]),
 );
 const hud = uncomment(withImports(new URL('./ui/hud.css', import.meta.url)).join('\n'));
 const everything = uncomment([readFileSync(new URL('./style.css', import.meta.url), 'utf8'), ...withImports(new URL('./ui/menus/menus.css', import.meta.url)), hud].join('\n'));
@@ -45,7 +45,6 @@ describe('the HUD\'s stylesheets have a rule for each state the HUD parts switch
     ['replica', '.hud-mags i.low b'],
     ['replica', '.hud-mags i.empty'],
     ['replica', '.hud-reload.active'],
-    ['squad', '.squad-card.hit'],
     ['score', '.sb-pips i.out'],
     ['score', '.sb-clock.low'],
     ['score', '.sb-respawn.spent'],
@@ -63,8 +62,7 @@ describe('the HUD\'s stylesheets have a rule for each state the HUD parts switch
   it('styles every class the parts give their elements', () => {
     const classes = [
       'hud-replica', 'hud-replica-main', 'hud-replica-pic', 'hud-replica-words', 'hud-replica-name', 'hud-modes', 'hud-mode', 'hud-ammo', 'hud-mag',
-      'hud-spare', 'hud-mags', 'hud-reload', 'hud-status', 'squad-bar', 'squad-order', 'squad-cards', 'squad-card', 'squad-card-words',
-      'squad-card-state', 'squad-keys', 'sb-row', 'sb-team', 'sb-name', 'sb-role', 'sb-pips', 'sb-score', 'sb-mid', 'sb-clock', 'sb-aim',
+      'hud-spare', 'hud-mags', 'hud-reload', 'hud-status', 'sb-row', 'sb-team', 'sb-name', 'sb-role', 'sb-pips', 'sb-score', 'sb-mid', 'sb-clock', 'sb-aim',
       'sb-flag', 'minimap-frame', 'minimap', 'minimap-caption', 'hit-feed', 'hit-feed-line', 'hit-feed-row', 'hit-feed-name', 'hit-feed-bb',
       'hit-feed-tag', 'match-board', 'match-board-heading',
     ];
@@ -73,7 +71,7 @@ describe('the HUD\'s stylesheets have a rule for each state the HUD parts switch
   });
 
   it('really hides each part the code hides (an author `display` would otherwise beat the hidden attribute)', () => {
-    const hides = ['scoreboard', 'sb-flag', 'sb-respawn', 'minimap-frame', 'hit-feed', 'squad-bar', 'squad-order', 'squad-cards', 'squad-keys', 'match-board', 'match-board-tip'];
+    const hides = ['scoreboard', 'sb-flag', 'sb-respawn', 'minimap-frame', 'hit-feed', 'match-board', 'match-board-tip'];
     const unhidden = hides.filter((c) => !new RegExp(`\\.${c}\\[hidden\\]`).test(everything));
     expect(unhidden).toEqual([]);
   });
