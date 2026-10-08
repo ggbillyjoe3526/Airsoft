@@ -204,6 +204,20 @@ acceptance:
 status: open
 attempts: 0
 
+## W1 · WebGPU foundation: the node renderer behind a Dev setting (WebGPU overhaul, scope `plans/webgpu-overhaul-scope.md`)
+tier: core
+perf: required
+touches: src/render/renderer.ts, src/render/webgpu/, src/render/webgpuProbe.ts, src/config/renderBackend.ts, src/config/dev.ts, src/settings/storage.ts, src/ui/graphicsSettings.ts, src/ui/menus/settingsScreen.ts, src/ui/menus/savedChoices.ts, src/game.ts, src/main.ts, vite.config.ts, pipeline/perf-run.mjs, pipeline/perfMatrix.mjs
+contract: none (the settings store gains the `renderer` and `dev.webgpu` keys, by addition)
+acceptance:
+  1. With the Dev setting "WebGPU renderer" on and WebGPU picked on a new Renderer row (Auto, WebGPU, WebGL) in Settings › Graphics, the game draws a match with `WebGPURenderer` from `three/webgpu`, on plain node materials (materials patched with `onBeforeCompile` draw unpatched; the GLSL post stack and the retro filter are off on that path until W2–W4). Auto means WebGL until W6.
+  2. With the Dev setting off (every player), the WebGL path is untouched: the same draws on every preset, and `three/webgpu` is loaded only by a dynamic import when the WebGPU path is picked, never in the main chunk.
+  3. An adapter probe asks for a WebGPU adapter only when WebGPU is picked; with no `navigator.gpu` or a null adapter it reports unavailable and the game falls back to WebGL with no console error. Both new settings have defaults and a migration test.
+  4. A lost WebGPU device is recovered: the game pauses under the graphics notice, a new device and renderer take over, and play resumes; the debug overlay's GPU time comes from timestamp queries where the adapter offers them ("n/a" otherwise).
+  5. The perf harness records which back end ran (`backend` in its result, and `-webgpu` baselines beside the WebGL ones); an e2e spec boots a match on the node renderer (its WebGL2 back end in a container without WebGPU) and checks that frames render with no errors.
+status: open
+attempts: 0
+
 **0.1 Dev 6 (confirmed with the roadmap, 2026-10-06).** M92–M95, the holster and the practice
 upgrades, come before the 26 features in `docs/ROADMAP.md` › 0.1 Dev 6, whose blocks are written when that build starts.
 
