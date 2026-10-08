@@ -28,8 +28,9 @@ frontmatter) at the top of the prompt, the task content last. Tell every worker 
    task's decisions (its record's lines and any new DECISIONS lines). It writes the `Unreleased` line(s) and the
    FEATURES line.
 5. **Full gate**: `PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium node pipeline/gate.mjs --task <id>` (drop the
-   variable outside a cloud container). About 30 minutes in a cloud container (2026-10-08), plus the perf run when it is
-   required.
+   variable outside a cloud container). About 20 minutes in a cloud container (2026-10-08), plus the perf run when it is
+   required; about 10 when the diff reaches no bot-match guard, which the gate then leaves to CI (its tests line says
+   so; `--tests all` runs them anyway; token plan item 21).
    - Any gate `false`: fix from `pipeline/out/failures.md`, the gate's failures-only summary (each failure's test,
      error, file and line; the gate prints the same lines as it goes; item 19). Spawn `triage` only for an entry it
      marks with no file and line whose log is long. Count an attempt in the block's `attempts:` line, go to 2. No
@@ -48,7 +49,9 @@ frontmatter) at the top of the prompt, the task content last. Tell every worker 
    checks 1 and 2 passing, accept it (the owner's auto-accept, 2026-10-04) and log every failed check in
    `docs/KNOWN_ISSUES.md`; otherwise stop, keep the best attempt on the branch and reply to the owner with what failed
    and what each attempt tried.
-8. **Record**: write `docs/records/<id>.md` (format in `docs/records/README.md`): the review line, a row per attempt
+8. **Record**: a task that changes bot or map balance on purpose first runs its figures, `node pipeline/balance.mjs
+   <filter>` (`pipeline/README.md` › `balance.mjs`), and quotes them in its decisions; figures never fail a gate (item
+   22). Write `docs/records/<id>.md` (format in `docs/records/README.md`): the review line, a row per attempt
    (copy `pipeline/out/metrics-row.md` from each gate run and fill its `?` cells), the task's own decisions and the
    known issues it left (each also a row in `docs/KNOWN_ISSUES.md`); `node pipeline/records.mjs --check` passes. Mark
    the task done where `docs/ROADMAP.md` lists it, and delete its block from `docs/TASKS.md` (no `done` blocks stay

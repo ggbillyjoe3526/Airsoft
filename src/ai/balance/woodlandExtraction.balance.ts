@@ -1,8 +1,8 @@
-import { WOODLAND } from '../map/woodland';
-import { describeExtractionBalance, type ExtractionBands } from './extractionBalanceSupport';
+import { WOODLAND } from '../../map/woodland';
+import { describeExtractionBalance, type ExtractionBands } from './extractionBalance';
 
 /**
- * Extraction's balance on Woodland (M48), measured as on Depot (depotMatch.extractionBalance.test.ts): whole runs at
+ * Extraction's balance on Woodland (M48), measured as on Depot (depotExtraction.balance.ts): whole runs at
  * night, a bot runner by RUNNER_PLAN with two Normal teammates, against the home team at each level (4 / 5 / 6 of them
  * with a trio, three more than the squad). Measured 2026-10-05 over these seeds (DECISIONS M48). Normal already beats
  * the squad here, by day as by night, so Normal, Hard and Pro come out close together (KNOWN_ISSUES): only Easy is
@@ -18,7 +18,7 @@ const BANDS: ExtractionBands = {
   // M72 (Audit 2 BAL-03, owner decisions 1a and 8: the home team one more at Pro, a 3 s grace for
   // the squad at the insertion and after a respawn, and the home team
   // keeping 30 m from Woodland's insertion), seeds 1-48: Easy 54 % (26) and 45, Normal (the baseline, the base
-  // plus the squad, owner 2026-10-06) 33 % (16) and 32, Hard 15 % (7) and 15, Pro 19 % (9) and 21: Easy, Normal and Hard in order again, asserted below. Each band is
+  // plus the squad, owner 2026-10-06) 33 % (16) and 32, Hard 15 % (7) and 15, Pro 19 % (9) and 21: Easy, Normal and Hard in order again, measured below. Each band is
   // the figure ±15 points (extract) and ±20 FC a minute, floored at 0.
   easy: { extract: [0.39, 0.69], fcPerMinute: [25, 65] },
   normal: { extract: [0.18, 0.48], fcPerMinute: [12, 52] },

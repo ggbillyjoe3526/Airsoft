@@ -36,6 +36,10 @@ describe('which combinations a diff runs (pipeline/perfMatrix.mjs)', () => {
   it('runs nothing for a diff without a perf path, nor for tests and docs under one', () => {
     expect(names(['docs/TASKS.md', 'src/ui/hud.ts', 'pipeline/gate.mjs', 'README.md'])).toEqual([]);
     expect(names(['src/render/lighting.test.ts', 'src/ai/botBrain.test.ts', 'pipeline/perfMatrix.test.mjs'])).toEqual([]);
+    // Test support and the balance figures (TE4) ship nothing either; a production file beside them still counts.
+    expect(names(['src/ai/depotMatchSupport.ts', 'src/ai/extractionRunSupport.ts', 'src/sim/testSupport.ts', 'src/ai/balance/depotPro.balance.ts', 'src/ai/balance/balanceSupport.ts'])).toEqual([]);
+    expect(isPerfPath('src/ai/botBrain.ts')).toBe(true);
+    expect(isPerfPath('src/ai/extractionRoles.ts')).toBe(true);
     expect(names(['src/render/README.md', 'src/ui/menus/README.md', 'src/assets/models/characters/README.md'])).toEqual([]);
   });
 

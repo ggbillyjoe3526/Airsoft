@@ -1,8 +1,8 @@
-import { NEON_HEIGHTS } from '../map/neonHeights';
-import { describeExtractionBalance, type ExtractionBands } from './extractionBalanceSupport';
+import { NEON_HEIGHTS } from '../../map/neonHeights';
+import { describeExtractionBalance, type ExtractionBands } from './extractionBalance';
 
 /**
- * Extraction's balance on Neon Heights (M48), measured as on Depot (depotMatch.extractionBalance.test.ts): whole runs by
+ * Extraction's balance on Neon Heights (M48), measured as on Depot (depotExtraction.balance.ts): whole runs by
  * Night (the map's first preset), a bot runner by RUNNER_PLAN with two Normal teammates, against the home team at each
  * level. Measured 2026-10-05 over these seeds (DECISIONS M48): the squad gets out more often than on Depot at Normal (the
  * plan's "about half"), the rooms and floors giving it cover to open cases behind.

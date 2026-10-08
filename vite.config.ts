@@ -8,13 +8,21 @@ import { PRECOMPRESS, precompressedCopies, precompressWanted } from './src/confi
 
 
 /** The headless bot-match guards (src/ai/depotMatchSupport.ts): most of the unit suite's time, project `slow`; the
- * Pro guards on every map (M40) and the Extraction balance runs on every map (M46, M48) with them. */
+ * Pro guards on every map (M40) and the Extraction runs on every map (M46, M48) with them. */
 const SLOW_TESTS = ['src/ai/depotMatch*.test.ts', 'src/ai/*Match.pro*.test.ts', 'src/ai/proBalance.test.ts', 'src/ai/*Match.extraction*.test.ts', 'src/ai/*Match.levels*.test.ts'];
+/**
+ * The bot balance figures (src/ai/balance/, token plan item 22): who wins, who lands the first hit, how often the squad
+ * gets out. Project `balance`, which exists only when AIRSOFT_BALANCE is set: `node pipeline/balance.mjs` sets it and
+ * writes the balance report. `vitest run`, the gate and CI never measure them, so a figure never fails a build.
+ */
+const BALANCE_MEASURES = ['src/ai/balance/*.balance.ts'];
 
 /** The build's environment variables, read without Node's types, which the project doesn't load. */
 const ENV = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
 /** True on a CI runner (the workflow's runner sets CI). */
 const ON_CI = Boolean(ENV.CI);
+/** True when pipeline/balance.mjs runs the balance figures. */
+const MEASURE_BALANCE = Boolean(ENV.AIRSOFT_BALANCE);
 
 /**
  * Checks every output chunk against its budget (config/chunkBudget.ts), so the game, three.js and Rapier chunks can't
@@ -186,6 +194,7 @@ export default defineConfig(async () => ({
       // The pipeline's own rules (pipeline/scope.mjs, pipeline/smokeReport.mjs) are tested here too.
       { extends: true, test: { name: 'fast', include: ['src/**/*.test.ts', 'pipeline/**/*.test.mjs'], exclude: SLOW_TESTS } },
       { extends: true, test: { name: 'slow', include: SLOW_TESTS } },
+      ...(MEASURE_BALANCE ? [{ extends: true, test: { name: 'balance', include: BALANCE_MEASURES } }] : []),
     ],
   },
 }));

@@ -32,11 +32,16 @@ export const PERF_SCOPES = [
   { path: 'src/render/caseRenderer.ts', mode: 'extraction' },
 ];
 
-const isTest = (file) => /\.test\.(ts|mjs)$/.test(file);
+/**
+ * Files only tests load: tests, their support files (`testSupport.ts`, src/ai's match and run supports) and the balance
+ * figures (src/ai/balance/, token plan item 22). They ship nothing, so they measure nothing new.
+ */
+const TEST_ONLY = [/\.test\.(ts|mjs)$/, /(^|\/)testSupport\.ts$/, /^src\/ai\/\w+Support\.ts$/, /^src\/ai\/balance\//];
+const isTest = (file) => TEST_ONLY.some((re) => re.test(file));
 /** A folder's notes (`src/<folder>/README.md`, TE2): nothing imports them. */
 const isDoc = (file) => /\.md$/.test(file);
 
-/** Whether a changed file is a perf path at all (tests and folder READMEs are not: they ship nothing). */
+/** Whether a changed file is a perf path at all (tests, their support and folder READMEs are not: they ship nothing). */
 export function isPerfPath(file) {
   return !isTest(file) && !isDoc(file) && PERF_PATHS.some((p) => file.startsWith(p));
 }

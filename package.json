@@ -20,7 +20,8 @@
     "test:browser": "playwright test",
     "check:all": "npm run check && npm run test:browser",
     "gate": "node pipeline/gate.mjs",
-    "perf": "node pipeline/perf-run.mjs"
+    "perf": "node pipeline/perf-run.mjs",
+    "balance": "node pipeline/balance.mjs"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.21.0",

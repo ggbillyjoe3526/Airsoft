@@ -128,6 +128,7 @@ function gateLines(name, gate) {
   if (name === 'scope' && gate.outsideTouches) bits.push(`outside: ${gate.outsideTouches.join(', ')}`);
   if (name === 'changelog' && gate.lines) bits.push(gate.lines.join(' / '));
   if (gate.reason) bits.push(gate.reason);
+  if (gate.note) bits.push(gate.note);
   const lines = [`- ${name} ${mark(gate)}${seconds(gate)}${bits.length ? ` · ${bits.join(' · ')}` : ''}`];
   for (const run of gate.runs ?? []) {
     const m = run.metrics;

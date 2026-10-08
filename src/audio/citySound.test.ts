@@ -382,7 +382,8 @@ describe('M34g city acceptance 1 and 2: the city by day and by night, no louder 
 });
 
 describe('M34g city acceptance 1: the chime and the arcade bleeps', () => {
-  it('chimes two bell notes, "ding-dong": the first about 1319 Hz, the second a major third (about 1047 Hz) under it', () => {
+  // Every variant's spectrum: about 3 s alone, past the 5 s default in a full run beside the bot-match guards (TE4).
+  it('chimes two bell notes, "ding-dong": the first about 1319 Hz, the second a major third (about 1047 Hz) under it', { timeout: 15_000 }, () => {
     for (const v of renderMapCue('ambience.chime', RATE)) {
       const notes = notesOf(v);
       expect(notes, 'two notes').toHaveLength(2);

@@ -20,5 +20,9 @@ seeded per bot.
 - Tuning: `config/bots.ts` (shared `BotWorld.cfg` plus one difficulty's `Bot.skill`; one `BotConfig` per team through
   `BotControllerOptions.teamCfg`), `config/squad.ts`.
 - Tests: `ai.test.ts`, `botTactics.test.ts` and one file per behaviour. The match guards (`depotMatch.*`, `*Match.*`
-  over `depotMatchSupport.ts`, `extractionBalanceSupport.ts`, `extractionRunSupport.ts`) are the `slow` project. They
-  are seed-sensitive: re-measure over 16 seeds before changing a threshold (`docs/DECISIONS.md`).
+  over `depotMatchSupport.ts` and `extractionRunSupport.ts`) are the `slow` project: they check what must never happen
+  (rounds played and settled, nobody stuck, falling or hit by a teammate, each mode's rules). They are seed-sensitive:
+  re-measure over 16 seeds before changing a threshold (`docs/DECISIONS.md`). Files named `*Support.ts` here are
+  test-only.
+- `balance/`: the bot balance figures (who wins, the first hit, Extraction's get-out rates), measured on demand by
+  `node pipeline/balance.mjs`, never asserted (token plan item 22; `balance/README.md`).

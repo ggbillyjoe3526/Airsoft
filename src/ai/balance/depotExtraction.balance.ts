@@ -1,8 +1,8 @@
-import { DEPOT } from '../map/depot';
-import { describeExtractionBalance, type ExtractionBands } from './extractionBalanceSupport';
+import { DEPOT } from '../../map/depot';
+import { describeExtractionBalance, type ExtractionBands } from './extractionBalance';
 
 /**
- * Extraction's balance on Depot (M46; plan, section 4): whole runs, headless, a bot playing the runner by RUNNER_PLAN
+ * Extraction's balance on Depot (M46; plan, section 4; figures since TE4): whole runs, headless, a bot playing the runner by RUNNER_PLAN
  * (three cases, nearest first, the locker left alone, then the nearest open exit) with two bot teammates, against the
  * home team at each difficulty. The squad is Normal at every level, standing in for you, so only the home team's level
  * changes. Measured 2026-10-05 over these seeds (DECISIONS M46): the bands keep a later change from tipping the mode

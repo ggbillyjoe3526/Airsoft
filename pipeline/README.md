@@ -26,8 +26,8 @@ config, asset loading, docs; `trivial` is a one-constant change, a wording fix, 
 2. **Build**: one thread per task, on the tier's model. Two tasks run at once only when their `touches` don't overlap.
 3. **QA**: tests for every acceptance criterion, then the full suite (the gate). QA starts from the review packet.
 4. **Performance**: the gate runs the harness when the diff touches `src/sim`, `src/physics`, `src/render`, `src/ai`,
-   `src/nav`, `src/audio`, `src/core`, `src/map`, `src/assets`, `src/config`, `src/pool` or `vite.config.ts` (tests
-   under them don't count), once for each map, mode and preset of the perf matrix the change reaches (below). The
+   `src/nav`, `src/audio`, `src/core`, `src/map`, `src/assets`, `src/config`, `src/pool` or `vite.config.ts` (tests,
+   test support and balance figures under them don't count), once for each map, mode and preset of the perf matrix the change reaches (below). The
    performance agent is spawned only when a run fails, to rank its causes (token plan item 16); a passing run's numbers
    are in the gate report and the packet, and the critic's check 3 reads the hot paths. UI-only changes skip it.
 5. **Triage**: the gate script writes the structured summaries itself, the failures-only summary among them
@@ -53,12 +53,13 @@ for Depot). Run it after changing a baked map's blocks or tints, the day lightin
 
 ```
 node pipeline/gate.mjs [--task M27[,M28]] [--quick] [--no-smoke] [--perf] [--env container|laptop|ci] [--base origin/main] [--ci]
+                       [--tests auto|all|fast|slow] [--shard k/n] [--only tests]
 ```
 
 | Gate | Runs | Passes when |
 |---|---|---|
 | `build` | `build-cached.mjs --mode production --force`: `npm run build` (tsc, Vite, chunk budgets, the `.br`/`.gz` copies; not under `--quick`) | exit 0 |
-| `tests` | `vitest run --reporter=json` (`src/**/*.test.ts` and the pipeline's own `pipeline/**/*.test.mjs`; both projects, `fast` and `slow`) | no failures |
+| `tests` | `vitest run --reporter=json` (`src/**/*.test.ts` and the pipeline's own `pipeline/**/*.test.mjs`): project `fast`, plus `slow` when the diff reaches a bot-match guard (below; always on CI) | no failures |
 | `smoke` | `playwright test`: project `chromium` runs every `e2e/*.spec.ts` but `release.spec.ts` on the e2e build (`?nolock`, `window.airsoft`); project `release` runs `e2e/release.spec.ts` on `dist/` without test flags, with the real pointer lock. Every test asserts zero console and page errors; a failure prints the test's describe path, project and line and the error's locator, expectation and call-log lines (`smokeReport.mjs`) | no failures |
 | `perf` | `perf-run.mjs` once per combination of the perf matrix the diff reaches (`perfMatrix.mjs`; `--perf` runs them all) | for each: every budget line for the env and map within `perf-budget.json`, nothing more than 10 % worse than its own baseline; a baseline more than 20 commits old is a warning, not a failure |
 | `scope` | the diff vs the task's `touches` (`scope.mjs`) | every changed file is in `touches`, a test, under `e2e/` or `docs/`, CHANGELOG, README or a `src/` folder's README (`pool.md` and `CLAUDE.md` only when listed); `Agent: qa` commits touch only tests |
@@ -76,15 +77,26 @@ review packet (`packet.mjs`, below).
 of their `touches`. A block the branch has already cleared from `docs/TASKS.md` is looked for in the branch's history
 since the base.
 
-`--quick` is build and tests, both projects: about 20 minutes in a 4-core cloud container (measured 2026-10-08: build 33
-s, the 3,383 tests 21 minutes, most of it the `slow` project's bot-match guards). Its build leaves out the `.br`/`.gz`
+**Which tests run** (token plan item 21). Off CI the default is `--tests auto`: the `fast` project always, the `slow`
+project's headless bot-match guards only when the diff reaches a file they load (`testReach.mjs`): a guard file, any
+file it imports directly or through others (`pool.md` and `stats.md` too), the test setup file, or `package.json`,
+the lockfile, `vite.config.ts` or `tsconfig.json`. The gate's line names what ran and why (`fast project only: the
+diff reaches no bot-match guard (CI runs them)`, or `both projects: src/config/bots.ts reaches the bot-match
+guards`), and the record's tests cell reads `✓ 95 s (fast)` when the guards were left to CI. A HUD, menu, render,
+audio, docs or pipeline change skips them; anything in the bots, the simulation, the maps or their config runs them.
+`--tests all` runs both regardless. CI always runs every test, so a missed reach costs one more push, never a bug.
+
+`--quick` is build and tests: about 10 minutes in a 4-core cloud container when the slow guards run (measured
+2026-10-08: build 33 s, the 3,417 tests 9 minutes, most of it the `slow` project's bot-match guards), about 3 minutes
+when they don't. Its build leaves out the `.br`/`.gz`
 copies (owner decision 3 of audit 2, CORE-11: the gate sets `AIRSOFT_PRECOMPRESS=0`, which `vite.config.ts` reads),
 about 9 s of Brotli a build that only the release smoke test and a host need; the full gate and CI build with them (the
 gate sets `AIRSOFT_PRECOMPRESS=1` for its build and smoke steps, so a leftover `0` in the shell can't reach them). While
-working, `npx vitest run --project fast` runs every unit test except the headless bot-match guards (project `slow`,
-`src/ai/depotMatch*.test.ts` and the Pro guards `src/ai/*Match.pro*.test.ts`, `src/ai/proBalance.test.ts`) in about 2
-minutes (2026-10-08); the gate, CI and `npm test` always run both projects (vite.config.ts, audit CORE-15). The full
-gate in a cloud container is about 30 minutes (2026-10-08: smoke 8 minutes on top of `--quick`) plus the perf run when
+working, `npx vitest run --project fast` (`npm run t`) runs every unit test except the headless bot-match guards
+(project `slow`: `src/ai/depotMatch*.test.ts`, `src/ai/*Match.pro*.test.ts`, `*Match.levels*`, `*Match.extraction*` and
+`src/ai/proBalance.test.ts`) in about 2 minutes (2026-10-08); CI and `npm test` always run both projects
+(vite.config.ts, audit CORE-15). The full
+gate in a cloud container is about 20 minutes (2026-10-08: smoke 8 minutes on top of `--quick`) plus the perf run when
 it is required; set `PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium` there. The report is
 `pipeline/out/gate-report.json`, the attempt row for the task's record `pipeline/out/metrics-row.md` (`records.mjs` ›
 `metricsRow`), and the logs and reports are under `pipeline/out/qa-artifacts/`; all git-ignored.
@@ -100,7 +112,7 @@ once. Two bundles stay necessary: the e2e one has the test hooks, the production
 split across jobs since M50's audit (CORE-04): job `check` runs `--ci --tests fast` (the build, the fast project, the
 smoke test, scope and changelog) and the three `slow` jobs `--ci --tests slow --shard k/3 --only tests` (a third of
 the headless bot-match guards each, vitest's own sharding by file). `--tests all|fast|slow`, `--shard k/n` and
-`--only tests` work locally too; without them the gate runs every test.
+`--only tests` work locally too; locally without them the gate runs `--tests auto` (above).
 On a pull request whose title starts with its task id(s) (`FA12: …`, `FA5 + FA9: …`), `--ci` reads the ids from the
 title (`GATE_PR_TITLE`) and also runs `scope` and `changelog`, diffing the merge commit against its first parent (the
 base it merges into). A title without an id, and a push to `main`, skip those two. **What runs only off CI:** the
@@ -119,7 +131,8 @@ scenes the game draws; Elimination there is the same field with fewer figures an
 runs only when the diff reaches it (`pipeline/perfMatrix.mjs`): a map's own files (`src/map/depot.ts`,
 `woodland.ts`, `neonHeights.ts`, the city's props and textures) reach that map's combinations, a map's Extraction data
 only its Extraction ones, Extraction's own code (`sim/extraction.ts`, `config/extraction.ts`, `ai/extraction*`, the
-exit and case renderers) every map's Extraction ones, and every other perf path all eight. In the container a Low run
+exit and case renderers) every map's Extraction ones, and every other perf path all eight. Tests, test support (`testSupport.ts`, `src/ai/*Support.ts`) and the balance
+figures (`src/ai/balance/`) are not perf paths: they ship nothing. In the container a Low run
 takes about a minute and a half and a Medium one about four, so the whole matrix is about 20 minutes on top of the gate.
 Budgets are `presets.<preset>` with `maps.<map>.<preset>` over them (owner decision 4 of audit 2: map-scoped Medium
 budgets for the big maps). `node pipeline/perf-run.mjs --map <map> --mode <mode> --preset <preset>` runs one by hand.
@@ -160,6 +173,32 @@ node pipeline/perf-run.mjs --env desktop --preset all --viewport 3840x2160 --bas
 
 The same as the laptop run without CPU throttling, at 3840×2160 at pixel ratio 1, writing `pipeline/baseline/desktop.json`
 and `desktop-<preset>.json`. Its frame times are reported, not judged, until the owner sets a 4K target.
+
+## `balance.mjs`: the bot balance report
+
+```
+node pipeline/balance.mjs [filter …]        (npm run balance; e.g. node pipeline/balance.mjs woodland)
+```
+
+Token plan item 22. Who wins (each end's and side's share of rounds, at every level and map), who lands the first
+hit, how often the squad gets out of Extraction and with what, and the levels' order are **balance figures**, not
+pass/fail tests: noise across seeds pushed them past their bands and cost re-measure loops (M73, M74). They live in
+`src/ai/balance/*.balance.ts`, vitest project `balance`, which exists only when `AIRSOFT_BALANCE` is set:
+`balance.mjs` sets it, runs the figures (the filters are vitest's file-name filters) and writes
+`pipeline/out/balance-report.md` and `.json` (`balanceReport.mjs`). The gate, CI and `vitest run` never run them, and
+the script exits 0 whatever the figures say; 1 only when a measure could not run.
+
+Each figure is judged against its band (the owner's rulings and the measures in each file's comments): **in band**;
+**near an edge** (inside, within one standard error of an edge); **outside, within noise** (past it by under two
+standard errors: re-measure on more seeds before acting); **outside** (two or more, or a plain number past its band).
+A share's standard error is √(p(1−p)/n) over its rounds or runs. The whole set plays every map and mode (about 20
+minutes on 4 cores, 2026-10-08: 74 figures); the bug pass runs it (`docs/PROCESS.md` › Bug pass), and a task that changes balance on
+purpose runs its own filter and quotes the figures in its record.
+
+What stays a guard in the `slow` project is what must never happen, on every seed: rounds played and settled (under 1
+in 4 on time, `STALLED_ROUNDS_MAX`), bots leaving spawn, nobody falling or standing in another, no friendly fire, the
+half-time swaps, the flag raised, Extraction runs ending by their rules. Where a guard played many seeds only for a
+figure, it now plays four (the figure keeps the many).
 
 ## `packet.mjs`: the review packet
 

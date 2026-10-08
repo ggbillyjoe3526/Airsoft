@@ -83,6 +83,10 @@ release description:
   `git ls-remote --tags origin`: a tag newer than the one `README.md` names means the release checklist is due.
 - **One task per thread** (owner, 2026-10-02 and 2026-10-06). After a merge, follow-on work starts a fresh thread
   with a short brief.
+- **The project chat carries results, blockers and decisions only** (owner, 2026-10-06, token plan item 8). A thread
+  replies when it has a result, hits something only the owner can unblock, or needs his decision; progress goes in its
+  status checklist. The coordinator posts the same three in the project chat (plus the one-line receipt for a new ask),
+  never a per-milestone progress line.
 - **Pausing.** When the owner says stop or usage is running out, commit and push the work in progress on its branch
   (never patch folders) and say where it stopped.
 - **`docs/HANDOFF.md`** is a short "now": what is being built, what is next, what waits on the owner. The planning
@@ -114,8 +118,13 @@ A full bug pass plus a `docs/KNOWN_ISSUES.md` sweep is a standing practice (owne
   parallel review agents (for example UI and input; pool, Loadout and maps) read the new code: last time they found
   five small bugs the browser didn't show. A scripted Playwright player (`?nolock`, the e2e build served by
   `vite preview`) plays the modes.
-- **Seeds.** The headless bot guards are seed-sensitive: a fix that touches movement or materials can fail one seed.
-  Re-measure over 16 seeds before changing a threshold.
+- **Balance.** Run the balance report, `node pipeline/balance.mjs` (about 20 minutes; `pipeline/README.md`), and copy it
+  to the run folder. Each figure **outside** its band by two standard errors or more is a balance issue: fix it in the
+  pass or log it in `docs/KNOWN_ISSUES.md`. One **outside, within noise** is re-measured on more seeds before anyone acts;
+  one **near an edge** is noted. A task that changes balance on purpose runs its own filter and quotes the figures in
+  its record (token plan item 22).
+- **Seeds.** The headless bot guards keep only what must never happen, but a fix that touches movement or materials
+  can still fail one seed. Re-measure over 16 seeds before changing a threshold.
 
 ## The pipeline
 
@@ -130,8 +139,9 @@ the perf harness when the diff touches a perf-relevant path, a scope check again
 changelog check. It writes `pipeline/out/gate-report.json`, the attempt row for the task's record
 (`pipeline/out/metrics-row.md`), a failures-only summary (`pipeline/out/failures.md`: each failure's test, error, file
 and line) and the review packet the critic and QA read first (`pipeline/out/review-packet.md`: the task block, the gate
-summary, the contracts the diff touches, QA's report and the diff). A failed gate goes back to the worker with the
-evidence; the critic never sees it. The performance agent runs only when the perf gate fails, and the triage agent
+summary, the contracts the diff touches, QA's report and the diff). Off CI the slow bot-match guards run only when the
+diff reaches a file they load; CI always runs them (token step 4, `pipeline/README.md` › `gate.mjs`). A failed
+gate goes back to the worker with the evidence; the critic never sees it. The performance agent runs only when the perf gate fails, and the triage agent
 only for a failure the summary can't place (token step 3, `pipeline/README.md`).
 
 ### Critic
