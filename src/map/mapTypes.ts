@@ -351,11 +351,11 @@ export interface MapDressing {
   plane?: { height: number; every: number };
 }
 
-/** G9: which junk a map's clutter is made of (DRESSING.junk.mixes): a yard's (Depot, the default) or a city street's. */
+/** G9: which junk a map's clutter is made of (DRESSING.junk.street): a yard's (Depot, the default) or a city street's. */
 export type JunkMix = 'yard' | 'street';
 
 /**
- * G9: a neon sign (MapDressing.neon): `text` in tube letters (DRESSING.neon's alphabet) or an `emblem`, `size` m tall,
+ * G9: a neon sign (MapDressing.neon): `text` in tube letters (neonDressing.ts) or an `emblem`, `size` m tall,
  * its middle at `centre` on a wall facing `facing`, in `colour`. `flicker` 1-3 puts it on one of three flicker
  * channels (render/neonDressing.ts neonFlicker); absent, it burns steady.
  */
@@ -397,6 +397,6 @@ export type SkylinePiece =
   | { kind: 'treeline'; points: readonly { x: number; z: number }[]; height: number; depth: number }
   /**
    * G9: a city block standing from `base` m up to `height`: rows of windows on the side facing the field (some lit by
-   * night), a cornice, and on its roof a tank or a mast with a red light; `sign` hangs a blade sign of that colour.
+   * night), a cornice, and on its roof a tank or a mast with a warm light; `sign` hangs a blade sign of that colour.
    */
   | { kind: 'tower'; x: number; z: number; width: number; depth: number; height: number; base: number; colour?: number; sign?: number };

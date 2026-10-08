@@ -303,7 +303,7 @@ function blade(p: { x: number; z: number; base: number; height: number }, w: num
 }
 
 /**
- * The skyline's lights (G9): a red light on each tower's mast and its blade sign's faces always, and by `night` the lit
+ * The skyline's lights (G9): a warm light on each tower's mast and its blade sign's faces always, and by `night` the lit
  * windows, as unlit vertex-coloured parts. They ride the tree ring's mesh (render/skyHost.ts): no draw call of their
  * own. Empty for a skyline without towers.
  */
