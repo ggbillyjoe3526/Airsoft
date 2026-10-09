@@ -1,24 +1,27 @@
 #!/usr/bin/env node
 /**
- * The WebGPU comparison (WebGPU overhaul W2 and W3): draws the same fixed camera views of every map, by day and by night
- * where the map has night, on Medium and High, once with the old WebGL path and once with the node renderer, scores each
- * pair against the bar in `webgpuCompare.mjs` and saves the pairs side by side (WebGL | node | difference) for the
- * owner. Exits 1 when a pair fails the bar.
+ * The WebGPU comparison (WebGPU overhaul W2 to W4): draws the same fixed camera views of every map, by day and by night
+ * where the map has night, once with the old WebGL path and once with the node renderer, scores each pair against the
+ * bar in `webgpuCompare.mjs` and saves the pairs side by side (WebGL | node | difference) for the owner. Exits 1 when a
+ * pair fails the bar. W2's and W3's views are drawn on Medium and High, W4's post views on Low, Medium, High and Ultra.
  *
- *   node pipeline/webgpu-compare.mjs [--out <dir>] [--only depot,woodland] [--quality medium] [--views w2|w3|all]
+ *   node pipeline/webgpu-compare.mjs [--out <dir>] [--only depot,woodland] [--quality medium] [--views w2|w3|w4|all]
  *                                    [--backend webgpu-webgl2|webgpu|all] [--noise] [--full] [--chromium /path]
+ *                                    [--port 4186]
  *
  * It builds the e2e bundle (pipeline/build-cached.mjs, the build with `window.airsoft` and `?forceWebGL`) and serves it
- * on port 4186. Each map, light and preset is one page per renderer: the picks saved as settings, a match started, the
+ * on port 4186 (or `--port`). Each map, light and preset is one page per renderer: the picks saved as settings, a match started, the
  * simulation held still (Dev game speed 0) and the game's own frame loop stopped once the node renderer has compiled
  * what it draws. W2's views (`--views w2`) stand the camera where config/menuArt.ts STILL_CAMERA says (as the menus'
  * stills), hide the figures with their contact shadows and torch beams and draw one frame without the held replica.
  * W3's (`--views w3`, webgpuCompare.mjs FIGURE_VIEWS) stand every character where the view wants it (the same on both
  * pages: the simulation's tick when it stopped differs page to page), draw the figures, their contact shadows and the
- * torch beams, and in first person the held replica through the match's own draw. On the WebGL side the post stack's
- * effects are left out (W4's: the node path has none yet) but not its output step, which is where WebGL tone-maps a
- * Medium or High frame; `--full` also scores the WebGL frame with the whole stack, for information. `--noise` draws
- * each view on WebGL twice (two pages) instead, the floor any bar must sit above.
+ * torch beams, and in first person the held replica through the match's own draw. On both sides W2's and W3's views
+ * leave the post stack's effects out but not its output step, which is where a Medium or High frame is tone-mapped;
+ * `--full` also scores the WebGL frame with the whole stack, for information. W4's post views (`--views w4`,
+ * webgpuCompare.mjs POST_VIEWS) draw the whole frame on both sides: a new stack (or retro filter) once the view has
+ * compiled, then the same number of frames before the grab. `--noise` draws each view on WebGL twice (two pages)
+ * instead, the floor any bar must sit above.
  *
  * The node renderer runs on its WebGL2 back end (`?forceWebGL`, W1), and on WebGPU where Chromium offers a device: in
  * the container its SwiftShader Vulkan adapter, asked for with webgpuCompare.mjs WEBGPU_ARGS in a browser of its own
@@ -43,6 +46,11 @@ import {
   FIRE_CLOCK,
   isFigureView,
   pairFile,
+  POST_CAMERAS,
+  POST_FRAMES,
+  POST_QUALITIES,
+  POST_VIEWS,
+  postBase,
   sceneViews,
   scorePixels,
   verdict,
@@ -50,19 +58,25 @@ import {
 } from './webgpuCompare.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const PORT = 4186;
 const args = process.argv.slice(2);
 const value = (name, fallback) => (args.includes(name) ? args[args.indexOf(name) + 1] : fallback);
+const PORT = Number(value('--port', '4186'));
 const OUT = value('--out', join(ROOT, 'pipeline', 'out', 'webgpu-compare'));
 const only = value('--only', '').split(',').filter(Boolean);
-const qualities = value('--quality', '') ? value('--quality', '').split(',') : COMPARE_QUALITIES;
+const qualityPick = value('--quality', '') ? value('--quality', '').split(',') : null;
 const noise = args.includes('--noise');
 const full = args.includes('--full');
 const chromium = value('--chromium', process.env.PLAYWRIGHT_CHROMIUM);
 const viewSet = value('--views', 'all');
 const backendPick = value('--backend', 'all');
 const wantedBackends = backendPick === 'all' ? COMPARE_BACKENDS : backendPick.split(',');
-const viewsOf = (scene) => sceneViews(scene).filter((v) => viewSet === 'all' || (viewSet === 'w3') === isFigureView(v));
+/** A scene's views on `quality`: W2's and W3's (on their presets) and W4's post views (on theirs), as { name, post }. */
+const viewsOf = (scene, quality) => [
+  ...(COMPARE_QUALITIES.includes(quality) && viewSet !== 'w4' ? sceneViews(scene).filter((v) => viewSet === 'all' || (viewSet === 'w3') === isFigureView(v)) : []).map((name) => ({ name, post: false })),
+  ...(POST_QUALITIES.includes(quality) && (viewSet === 'all' || viewSet === 'w4') ? POST_VIEWS.map((name) => ({ name, post: true })) : []),
+];
+const keyOf = (v) => `${v.post ? 'post:' : ''}${v.name}`;
+const qualities = (qualityPick ?? [...new Set([...COMPARE_QUALITIES, ...POST_QUALITIES])]).sort((a, b) => POST_QUALITIES.indexOf(a) - POST_QUALITIES.indexOf(b));
 
 const art = await import(pathToFileURL(join(ROOT, 'src', 'config', 'menuArt.ts')).href);
 const { STILL_CAMERA } = art;
@@ -101,21 +115,21 @@ const results = [];
 let failed = false;
 try {
   for (const scene of COMPARE_SCENES.filter((s) => only.length === 0 || only.includes(s.map))) {
-    const views = viewsOf(scene);
-    if (views.length === 0) continue;
     for (const quality of qualities) {
+      const views = viewsOf(scene, quality);
+      if (views.length === 0) continue;
       const left = await draw(scene, views, quality, 'webgl', full);
       for (const backend of backends) {
         const right = await draw(scene, views, quality, backend, false);
         for (const view of views) {
-          const a = left.frames[view];
-          const b = right.frames[view];
-          const scored = await compare(a.plain, b.plain, `${scene.map} ${scene.light}, ${quality}, ${view}`, backend);
+          const a = left.frames[keyOf(view)];
+          const b = right.frames[keyOf(view)];
+          const scored = await compare(a.plain, b.plain, `${scene.map} ${scene.light}, ${quality}, ${view.post ? 'post ' : ''}${view.name}`, backend);
           const v = verdict(scored.score);
           if (!v.pass) failed = true;
-          const file = pairFile(scene, quality, view, backend);
+          const file = pairFile(scene, quality, view.name, backend, view.post);
           writeFileSync(join(OUT, file), scored.jpeg);
-          const entry = { map: scene.map, light: scene.light, quality, view, backend, file, ...round(scored.score), pass: v.pass, fails: v.fails, draws: { webgl: a.calls, node: b.calls } };
+          const entry = { map: scene.map, light: scene.light, quality, view: view.name, post: view.post, backend, file, ...round(scored.score), pass: v.pass, fails: v.fails, draws: { webgl: a.calls, node: b.calls } };
           if (full && a.post) entry.withPost = round((await compare(a.post, b.plain, 'post', backend)).score);
           results.push(entry);
           const tag = v.pass ? 'pass' : `FAIL (${v.fails.join('; ')})`;
@@ -192,9 +206,10 @@ async function draw(scene, views, quality, renderer, withPost) {
     };
   }, FIRE_CLOCK);
   const frames = {};
-  for (const view of views.filter((v) => !isFigureView(v))) {
-    frames[view] = await page.evaluate(
-      async ({ camera, view, withPost }) => {
+  for (const v of views.filter((v) => !isFigureView(postBase(v.name)))) {
+    const view = postBase(v.name);
+    frames[keyOf(v)] = await page.evaluate(
+      async ({ camera, view, withPost, post, retro, postFrames }) => {
         const game = globalThis.airsoft;
         // The game's own frame loop stops: from here only this page's renders draw, from the stood camera.
         cancelAnimationFrame(game.rafId);
@@ -239,6 +254,14 @@ async function draw(scene, views, quality, renderer, withPost) {
           cam.position.set(fire.x - (fx / fl) * camera.back, foot + camera.up, fire.z - (fz / fl) * camera.back);
           cam.lookAt(fire.x, foot + camera.lookUp, fire.z);
         }
+        if (view === 'sun') {
+          // Towards the key light (render/lightingPreset.ts keyDirection), a little below it.
+          const k = r.lighting.key.offset;
+          const kl = Math.hypot(k.x, k.y, k.z) || 1;
+          const mid = { x: (blue.x + orange.x) / 2, y: (blue.y + orange.y) / 2 + camera.up, z: (blue.z + orange.z) / 2 };
+          cam.position.set(mid.x, mid.y, mid.z);
+          cam.lookAt(mid.x + (k.x / kl) * 100, mid.y + (k.y / kl - camera.lookDown) * 100, mid.z + (k.z / kl) * 100);
+        }
         if (view === 'sky') {
           const moon = r.scene.getObjectByName('night-moon').geometry.getAttribute('position');
           cam.position.set(blue.x, blue.y + camera.up, blue.z);
@@ -247,18 +270,24 @@ async function draw(scene, views, quality, renderer, withPost) {
         cam.updateMatrixWorld();
         globalThis.settleNight(game, cam);
         const grab = () => r.renderer.domElement.toDataURL('image/png');
-        // The post stack's effects (W4's) are left out of the plain frame, the node path has none yet, but not its output
-        // step: on Medium and up WebGL draws the world into the stack's linear target and tone-maps it after (so the
-        // haze is mixed before the tone mapping, as on the node path). A stack of the output step alone stands in.
+        // W2's views leave the post stack's effects out of the plain frame, but not its output step: on Medium and up
+        // the world draws into the stack's linear target and is tone-mapped after (so the haze is mixed before the tone
+        // mapping). A stack of the output step alone stands in, made as the renderer makes its own (W4: PostHost's
+        // maker, the node renderer's stack on the node path). W4's post views draw the frame's own stack.
         const ownStack = r.postStack;
-        const own = ownStack.call(r);
+        const own = post ? null : ownStack.call(r);
         let plainStack = null;
         if (own) {
           const q = { ...r.quality, ambientOcclusion: 0, reflections: false, lightShafts: false, temporalAA: false, bloom: true, lensFinish: false };
           const pr = r.renderer.getPixelRatio();
-          plainStack = game.__plainStack ??= new own.constructor({ quality: q, halfFloat: r.drawsHalfFloat() }, r.width * pr, r.height * pr);
+          const setup = { quality: q, halfFloat: r.drawsHalfFloat() };
+          plainStack = game.__plainStack ??= r.post.make ? r.post.make(setup, r.width * pr, r.height * pr) : new own.constructor(setup, r.width * pr, r.height * pr);
           plainStack.passes.splice(0, plainStack.passes.length, ...plainStack.passes.filter((p) => p.id === 'output'));
         }
+        const plainFrames = () => {
+          if (!post) r.postStack = () => plainStack;
+        };
+        if (retro) r.setRetro(retro);
         // Draw until the node renderer has compiled everything in view (its draw count settles), then the frame.
         // Each render waits for an animation frame, as the game's own loop does: the node renderer redraws its shadow
         // maps once a frame (it counts frames by them), so renders between two frames would see the last frame's.
@@ -266,36 +295,47 @@ async function draw(scene, views, quality, renderer, withPost) {
         let calls = -1;
         for (let i = 0, still = 0; i < 40 && still < 3; i++) {
           await nextFrame();
-          r.postStack = () => plainStack;
+          plainFrames();
           r.render();
           const now = r.stats.calls;
           still = now === calls ? still + 1 : 0;
           calls = now;
           await new Promise((done) => setTimeout(done, 150));
         }
+        // A post view starts a new stack and draws the same frames on both pages (its history, jitter and grain).
+        if (post) {
+          r.post.drop();
+          r.post.rescan();
+          for (let i = 0; i < postFrames - 1; i++) {
+            await nextFrame();
+            r.render();
+          }
+        }
         await nextFrame();
-        r.postStack = () => plainStack;
+        plainFrames();
         r.render();
         const plain = grab();
         const drawn = r.stats.calls;
         r.postStack = ownStack;
-        let post = null;
+        if (retro) r.setRetro(null);
+        let full = null;
         if (withPost) {
           // The post stack's temporal pass settles over a few frames from the stood camera.
           for (let i = 0; i < 8; i++) {
             await nextFrame();
             r.render();
           }
-          post = grab();
+          full = grab();
         }
-        return { plain, post, calls: drawn };
+        return { plain, post: full, calls: drawn };
       },
-      { camera: STILL_CAMERA[view] ?? EXTRA_CAMERAS[view], view, withPost },
+      { camera: STILL_CAMERA[view] ?? EXTRA_CAMERAS[view] ?? POST_CAMERAS[view], view, withPost: withPost && !v.post, post: v.post, retro: v.name === 'retro' ? POST_CAMERAS.retro.look : null, postFrames: POST_FRAMES },
     );
   }
-  for (const view of views.filter(isFigureView)) {
-    frames[view] = await page.evaluate(
-      async ({ camera, view, states, fade }) => {
+  for (const v of views.filter((v) => isFigureView(postBase(v.name)))) {
+    const view = v.name;
+    frames[keyOf(v)] = await page.evaluate(
+      async ({ camera, view, states, fade, post, postFrames }) => {
         const game = globalThis.airsoft;
         cancelAnimationFrame(game.rafId);
         const s = game.session;
@@ -404,34 +444,46 @@ async function draw(scene, views, quality, renderer, withPost) {
         };
         const grab = () => r.renderer.domElement.toDataURL('image/png');
         const ownStack = r.postStack;
-        const own = ownStack.call(r);
+        const own = post ? null : ownStack.call(r);
         let plainStack = null;
         if (own) {
           const q = { ...r.quality, ambientOcclusion: 0, reflections: false, lightShafts: false, temporalAA: false, bloom: true, lensFinish: false };
           const pr = r.renderer.getPixelRatio();
-          plainStack = game.__plainStack ??= new own.constructor({ quality: q, halfFloat: r.drawsHalfFloat() }, r.width * pr, r.height * pr);
+          const setup = { quality: q, halfFloat: r.drawsHalfFloat() };
+          plainStack = game.__plainStack ??= r.post.make ? r.post.make(setup, r.width * pr, r.height * pr) : new own.constructor(setup, r.width * pr, r.height * pr);
           plainStack.passes.splice(0, plainStack.passes.length, ...plainStack.passes.filter((p) => p.id === 'output'));
         }
+        const plainFrames = () => {
+          if (!post) r.postStack = () => plainStack;
+        };
         const nextFrame = () => new Promise((done) => requestAnimationFrame(done));
         let calls = -1;
         for (let i = 0, still = 0; i < 40 && still < 3; i++) {
           await nextFrame();
-          r.postStack = () => plainStack;
+          plainFrames();
           frame();
           const now = r.stats.calls;
           still = now === calls ? still + 1 : 0;
           calls = now;
           await new Promise((done) => setTimeout(done, 150));
         }
+        if (post) {
+          r.post.drop();
+          r.post.rescan();
+          for (let i = 0; i < postFrames - 1; i++) {
+            await nextFrame();
+            frame();
+          }
+        }
         await nextFrame();
-        r.postStack = () => plainStack;
+        plainFrames();
         frame();
         const plain = grab();
         const drawn = r.stats.calls;
         r.postStack = ownStack;
         return { plain, post: null, calls: drawn };
       },
-      { camera: FIGURE_CAMERAS[view], view, states: FIGURE_STATES, fade: FIGURE_FADE },
+      { camera: FIGURE_CAMERAS[view], view, states: FIGURE_STATES, fade: FIGURE_FADE, post: v.post, postFrames: POST_FRAMES },
     );
   }
   await page.close();
