@@ -255,7 +255,7 @@ describe('Low’s frame straight onto the canvas (W4)', () => {
     const { gl, draws } = stubRenderer();
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0.2, 0.4, 0.6);
-    scene.fog = new THREE.Fog(0xffffff, 10, 100);
+    scene.fog = new THREE.Fog(0x1d2b46, 10, 100);
     const background = scene.background;
     let fogNode: unknown = null;
     const render = gl.render.bind(gl);
@@ -266,8 +266,21 @@ describe('Low’s frame straight onto the canvas (W4)', () => {
     out.drawScreen(gl as unknown as NodeRenderer, scene, new THREE.PerspectiveCamera(), { scene: new THREE.Scene(), camera: new THREE.PerspectiveCamera() });
     expect(draws.map((d) => `${d.what} ${d.into}`)).toEqual(['scene screen', 'scene screen']);
     expect(gl.toneMappingDuring).toEqual([THREE.NoToneMapping, THREE.NoToneMapping]);
+    draws.length = 0;
     // The haze goes on after the tone mapping (its node is the late one while drawing), and the scene is as it was.
     expect((fogNode as { lateFog?: boolean } | null)?.lateFog).toBe(true);
+    // Its colour encoded for the screen, as WebGL hands an unlit colour drawn straight to the canvas.
+    type Late = { colour: { value: THREE.Color }; near: { value: number }; far: { value: number } };
+    const late = fogNode as Late;
+    expect(late.colour.value.getHex(THREE.LinearSRGBColorSpace)).toBe(0x1d2b46);
+    expect([late.near.value, late.far.value]).toEqual([10, 100]);
+    // The Renderer changes its fog in place for each map's light: the next frame draws with the new one.
+    (scene.fog as THREE.Fog).near = 20;
+    (scene.fog as THREE.Fog).far = 140;
+    (scene.fog as THREE.Fog).color.setHex(0x808080);
+    out.drawScreen(gl as unknown as NodeRenderer, scene, new THREE.PerspectiveCamera());
+    expect(fogNode).toBe(late);
+    expect([late.near.value, late.far.value, late.colour.value.getHex(THREE.LinearSRGBColorSpace)]).toEqual([20, 140, 0x808080]);
     expect((scene as unknown as { fogNode: unknown }).fogNode).toBeNull();
     expect(scene.background).toBe(background);
     expect(gl.toneMapping).toBe(THREE.NeutralToneMapping);

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Fn, mix, output, rangeFogFactor, reference, vec4 } from 'three/tsl';
+import { Fn, mix, output, rangeFogFactor, renderGroup, uniform, vec4 } from 'three/tsl';
 import { type AnyNode, displayOf, type NodeRenderer, type NodeTarget } from './nodeKit';
 
 /**
@@ -131,7 +131,15 @@ export class DirectOutput {
     kept.colourSpace = renderer.outputColorSpace;
     kept.context = renderer.contextNode;
     kept.background = scene.background;
-    if (scene.fog instanceof THREE.Fog) (scene as SceneWithFogNode).fogNode = this.lateFog(scene.fog);
+    if (scene.fog instanceof THREE.Fog) {
+      const fog = scene.fog;
+      const late = this.lateFog(fog);
+      late.near.value = fog.near;
+      late.far.value = fog.far;
+      // WebGL hands an unlit colour drawn to the screen over encoded for it (getUnlitUniformColorSpace): the haze too.
+      late.colour.value.copy(fog.color).convertLinearToSRGB();
+      (scene as SceneWithFogNode).fogNode = late;
+    }
     // WebGL clears with the background colour encoded for the screen; the node renderer clears with what it is given.
     if (kept.background instanceof THREE.Color) scene.background = this.background.copy(kept.background).convertLinearToSRGB();
     renderer.contextNode = this.contextFor(renderer, kept.mapping);
@@ -178,16 +186,18 @@ export class DirectOutput {
 
   /**
    * The scene's haze for drawScreen: no haze in the material (its colour goes out as lit), and what the output hook
-   * needs to add it after the tone mapping (the fog's near, far and colour, read each frame).
+   * needs to add it after the tone mapping: the fog's near, far and colour (encoded for the screen), set by `enter` each
+   * frame. Uniforms of the render group, as Three's own fog's: a `reference` to the fog keeps the value it was built
+   * with in the output hook (0.186).
    */
   private lateFog(fog: THREE.Fog): AnyNode {
     let node = this.lateFogs.get(fog);
     if (!node) {
       node = Fn(() => output)();
       node.lateFog = true;
-      node.near = reference('near', 'float', fog);
-      node.far = reference('far', 'float', fog);
-      node.colour = reference('color', 'color', fog);
+      node.near = uniform(fog.near).setGroup(renderGroup);
+      node.far = uniform(fog.far).setGroup(renderGroup);
+      node.colour = uniform(new THREE.Color()).setGroup(renderGroup);
       this.lateFogs.set(fog, node);
     }
     return node;
