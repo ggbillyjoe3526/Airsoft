@@ -42,7 +42,8 @@ and never writes the simulation.
   skyline's lights and the plane ride the tree ring's draw call (`skyHost.ts`).
 - Light: `lighting.ts` (sun and sky fill; on High the shadow map follows the view), `lightingPreset.ts` (day or night),
   `atmosphere.ts`, `lightPools.ts`, `torchBeams.ts`. Baked bounce light: `lightBake.ts`, `probeGrid.ts`,
-  `bakedLight.ts`, read in `surfaceShader.ts` (which also draws weathering).
+  `probeFile.ts` (the file format, loaded in a chunk of its own), `bakedLight.ts`, read in `surfaceShader.ts` (which
+  also draws weathering).
 - Figures: `characterRenderer.ts`, `characterModels.ts`, `figureHuman.ts` / `figureRobot.ts`; `figureFinish.ts` (the
   per-vertex finish) and `figureCamo.ts` (the team camo printed per pixel on clothes and sleeves, G11). Replicas and hands:
   `replicaModels.ts` (the bodies and assembly), `replicaParts.ts` (optics, grips, magazines and the other fitted parts),

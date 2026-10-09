@@ -76,9 +76,9 @@ describe('the team camo (G11)', { timeout: 60_000 }, () => {
     const { vertexShader, fragmentShader } = compiled(useVertexFinish(new THREE.MeshStandardMaterial()));
     expect(vertexShader).toContain(`attribute float ${CAMO_ATTRIBUTE};`);
     expect(vertexShader).toContain(`vCamo = vec4(position, ${CAMO_ATTRIBUTE});`);
-    expect(fragmentShader).toContain('float camoTone(vec3 p, float seed)');
+    expect(fragmentShader).toContain('float camoTone(vec3 p,float s)');
     expect(fragmentShader).toContain('fwidth(n)');
-    expect(fragmentShader).toContain('diffuseColor.rgb *= mix(1.0, camoTone(vCamo.xyz, vCamo.w), step(0.5, vCamo.w));');
+    expect(fragmentShader).toContain('diffuseColor.rgb*=mix(1.,camoTone(vCamo.xyz,vCamo.w),step(.5,vCamo.w));');
     // After the vertex colours, so it multiplies them.
     expect(fragmentShader.indexOf('camoTone(vCamo.xyz')).toBeGreaterThan(fragmentShader.indexOf('#include <color_fragment>'));
     expect(camoGlsl()).toContain(String(FIGURE.camo.darkAt));
@@ -139,6 +139,6 @@ describe('the team camo (G11)', { timeout: 60_000 }, () => {
     for (const m of sleeves('low')) expect(hasSleeveCamo(m)).toBe(false);
     const { fragmentShader } = compiled(useSleeveCamo(new THREE.MeshStandardMaterial()));
     expect(FIGURE.camo.sleeve).toBeLessThan(1);
-    expect(fragmentShader).toContain(`camoTone(vCamoPos * ${1 / FIGURE.camo.sleeve}, ${SLEEVE_CAMO_SEED.toFixed(1)})`);
+    expect(fragmentShader).toContain(`camoTone(vCamoPos*${1 / FIGURE.camo.sleeve},${SLEEVE_CAMO_SEED.toFixed(1)})`);
   });
 });

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { decodeProbeFile, encodeProbeFile, fromBase64, openSample, type ProbeGrid, type ProbeSample, probeTint, sampleProbes, toBase64 } from './probeGrid';
+import { decodeProbeFile, encodeProbeFile, fromBase64, toBase64 } from './probeFile';
+import { openSample, type ProbeGrid, type ProbeSample, probeTint, sampleProbes } from './probeGrid';
 
 /** The probe file and its sampling (G6, render/probeGrid.ts). */
 

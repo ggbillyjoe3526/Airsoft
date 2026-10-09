@@ -5,7 +5,7 @@ import { BAKE_FILES, type BakeFileId } from '../map/bakes/files';
 import { lightingPicked } from '../map/lightingChoice';
 import type { MapData } from '../map/mapTypes';
 import type { Buffers } from './cuboidMesh';
-import { decodeProbeFile, fromBase64, type ProbeGrid, type ProbeSample, probeTint, sampleProbes } from './probeGrid';
+import { type ProbeGrid, type ProbeSample, probeTint, sampleProbes } from './probeGrid';
 import type { ProbeUniforms } from './surfaceShader';
 
 /**
@@ -24,12 +24,17 @@ import type { ProbeUniforms } from './surfaceShader';
 const loaded = new Map<BakeFileId, ProbeGrid>();
 let loading: Promise<void> | null = null;
 
-/** Loads and decodes every probe file (each its own chunk); a file that fails is left out with a warning (no baked light). */
+/**
+ * Loads and decodes every probe file (each its own chunk, the decoder too: G11 moved it out of the main chunk); a file
+ * that fails is left out with a warning (no baked light).
+ */
 export function loadBakedLight(): Promise<void> {
-  loading ??= Promise.all(
+  if (loading) return loading;
+  const file = import('./probeFile');
+  loading = Promise.all(
     (Object.keys(BAKE_FILES) as BakeFileId[]).map((id) =>
-      BAKE_FILES[id]()
-        .then((text) => void loaded.set(id, decodeProbeFile(fromBase64(text))))
+      Promise.all([file, BAKE_FILES[id]()])
+        .then(([{ decodeProbeFile, fromBase64 }, text]) => void loaded.set(id, decodeProbeFile(fromBase64(text))))
         // A file that loads but does not decode is left out too: catching after the decode keeps it from stopping the game's start.
         .catch((error: unknown) => console.warn(`The baked light file ${id} could not be loaded; that map is drawn without it.`, error)),
     ),

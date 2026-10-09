@@ -25,7 +25,7 @@ export function useVertexFinish<M extends THREE.MeshStandardMaterial>(material: 
       .replace('#include <begin_vertex>', `#include <begin_vertex>\nvFinish = ${FINISH_ATTRIBUTE};\nvCamo = vec4(position, ${CAMO_ATTRIBUTE});`);
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', `#include <common>\nvarying vec2 vFinish;\nvarying vec4 vCamo;${camoGlsl()}`)
-      .replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb *= mix(1.0, camoTone(vCamo.xyz, vCamo.w), step(0.5, vCamo.w));')
+      .replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb*=mix(1.,camoTone(vCamo.xyz,vCamo.w),step(.5,vCamo.w));')
       .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = vFinish.x;')
       .replace('#include <metalnessmap_fragment>', 'float metalnessFactor = vFinish.y;');
   };

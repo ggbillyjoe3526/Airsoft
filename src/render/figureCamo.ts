@@ -33,26 +33,17 @@ export const CAMO_EDGE_MIN = 1e-4;
 const glsl = (v: number): string => (Number.isInteger(v) ? v.toFixed(1) : String(v));
 
 /**
- * The GLSL of `float camoTone(vec3 p, float seed)`: the colour multiplier at part position `p` (metres) for pattern
- * `seed`, its blotches' edges blended over one pixel's change of the waves (fwidth), so they stay crisp up close and
- * melt into their average far away instead of shimmering. Called in uniform control flow (fwidth needs it).
+ * The GLSL of `float camoTone(vec3 p,float s)`: the colour multiplier at part position `p` (metres) for pattern `s`, its
+ * blotches' edges blended over one pixel's change of the waves (fwidth), so they stay crisp up close and melt into
+ * their average far away instead of shimmering. Called in uniform control flow (fwidth needs it). Written tight: it
+ * ships in the main chunk (G11).
  */
 export function camoGlsl(): string {
   const C = FIGURE.camo;
-  const w = (i: number): string => {
-    const [x, y, z, s] = CAMO_WAVES[i]!;
-    return `sin(q.x * ${glsl(x)} + q.y * ${glsl(y)} + q.z * ${glsl(z)} + seed * ${glsl(s)})`;
-  };
+  const wave = ([x, y, z, k]: readonly number[]): string => `sin(dot(q,vec3(${x},${y},${z}))+s*${glsl(k!)})`;
+  const step = (at: number): string => `smoothstep(${glsl(at)}-e,${glsl(at)}+e,n)`;
   return `
-float camoTone(vec3 p, float seed) {
-  vec3 q = p * ${glsl(1 / C.scale)};
-  q += ${glsl(C.warp)} * sin(q.yzx * ${glsl(CAMO_WARP_RATE)} + seed * ${glsl(CAMO_WARP_SEED)});
-  float n = ${w(0)} + ${w(1)} + ${w(2)};
-  float edge = max(fwidth(n), ${glsl(CAMO_EDGE_MIN)});
-  float dark = smoothstep(${glsl(C.darkAt)} - edge, ${glsl(C.darkAt)} + edge, n);
-  float light = 1.0 - smoothstep(${glsl(C.lightAt)} - edge, ${glsl(C.lightAt)} + edge, n);
-  return mix(mix(1.0, ${glsl(C.light)}, light), ${glsl(C.dark)}, dark);
-}`;
+float camoTone(vec3 p,float s){vec3 q=p*${glsl(1 / C.scale)};q+=${glsl(C.warp)}*sin(q.yzx*${glsl(CAMO_WARP_RATE)}+s*${glsl(CAMO_WARP_SEED)});float n=${CAMO_WAVES.map(wave).join('+')},e=max(fwidth(n),${glsl(CAMO_EDGE_MIN)});return mix(mix(1.,${glsl(C.light)},1.-${step(C.lightAt)}),${glsl(C.dark)},${step(C.darkAt)});}`;
 }
 
 /**
@@ -87,7 +78,7 @@ export function useSleeveCamo<M extends THREE.MeshStandardMaterial>(material: M)
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvCamoPos = position;');
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', `#include <common>\nvarying vec3 vCamoPos;${camoGlsl()}`)
-      .replace('#include <color_fragment>', `#include <color_fragment>\ndiffuseColor.rgb *= camoTone(vCamoPos * ${glsl(1 / FIGURE.camo.sleeve)}, ${glsl(SLEEVE_CAMO_SEED)});`);
+      .replace('#include <color_fragment>', `#include <color_fragment>\ndiffuseColor.rgb*=camoTone(vCamoPos*${glsl(1 / FIGURE.camo.sleeve)},${glsl(SLEEVE_CAMO_SEED)});`);
   };
   material.customProgramCacheKey = () => PROGRAM_KEY;
   return material;
