@@ -168,6 +168,21 @@ names its files with it after the environment (`perf-laptop-webgpu-low.json`, ba
 the WebGL files the gate reads. On a machine with WebGPU, run the gate's laptop and desktop combinations with
 `--renderer webgl` by hand until the gate learns the back end (KNOWN_ISSUES).
 
+**The WebGPU comparison** (WebGPU overhaul W2; `webgpu-compare.mjs`, rules in `webgpuCompare.mjs`): draws fixed
+camera views of every map, by day and by night where it has night, on Medium and High, with the WebGL path and with the
+node renderer on its WebGL2 back end (`?forceWebGL`), figures hidden (with their contact shadows and torch beams) and
+the game clock stopped. Both sides keep only WebGL's output step (tone mapping and sRGB; no bloom, AO or other pass,
+W4's), so what is compared is the world's materials. Each pair is scored (mean absolute difference per channel, and the share of pixels with a channel more than
+24 steps off) against the bar pinned in `webgpuCompare.mjs` and `webgpuCompare.test.mjs`, and saved side by side
+(WebGL, node, the difference ×4 with red over the threshold) with `scores.json`. Exits 1 when a pair fails. Port 4186.
+
+```
+PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium node pipeline/webgpu-compare.mjs --out <dir> [--only depot] [--quality high] [--full] [--noise]
+```
+
+`--full` also scores each view with WebGL's whole post stack (what a player sees today, for reference); `--noise`
+draws WebGL against WebGL (the floor of the measurement).
+
 **The laptop run** (the owner, on the target laptop, from the repository with `npm ci` done and Chrome installed):
 
 ```

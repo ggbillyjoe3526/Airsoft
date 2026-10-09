@@ -34,8 +34,14 @@ describe('three/webgpu stays out of the main chunk and out of an Auto visit with
     expect(statements("import type { WebGPURenderer } from 'three/webgpu';\n").some((s) => /^(import|export)\s+(?!type\b)[\s\S]*from\s+['"]three\/(webgpu|tsl)['"]/.test(s))).toBe(false);
   });
 
-  it('is imported as a value only by render/webgpu/nodeBackend.ts (types elsewhere), never by a static import of the game', () => {
-    const offenders = files.filter(({ rel, text }) => rel !== NODE_BACKEND && statements(text).some((s) => /^(import|export)\s+(?!type\b)[\s\S]*from\s+['"]three\/(webgpu|tsl)['"]/.test(s)));
+  it('is imported as a value only inside render/webgpu/ (types elsewhere), never by a static import of the game', () => {
+    // W2: the world materials' node twins sit beside the node back end, in its chunk (render/webgpu/worldTwins.ts …).
+    const offenders = files.filter(({ rel, text }) => !rel.startsWith('render/webgpu/') && statements(text).some((s) => /^(import|export)\s+(?!type\b)[\s\S]*from\s+['"]three\/(webgpu|tsl)['"]/.test(s)));
+    expect(offenders.map((f) => f.rel)).toEqual([]);
+  });
+
+  it('has render/webgpu/ imported as a value only from inside it, so only the back end\'s dynamic import reaches it (W2)', () => {
+    const offenders = files.filter(({ rel, text }) => !rel.startsWith('render/webgpu/') && statements(text).some((s) => /^(import|export)\s+(?!type\b)[\s\S]*from\s+['"][^'"]*\/webgpu\/[^'"]+['"]/.test(s)));
     expect(offenders.map((f) => f.rel)).toEqual([]);
   });
 

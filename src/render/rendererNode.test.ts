@@ -61,6 +61,17 @@ function fakeNode(name: string, log: string[]) {
     setTiming: (on: boolean) => void node.timing.push(on),
     frameDone: () => void node.frames++,
     compile: (scene: THREE.Scene, _camera: THREE.Camera, overlay?: { scene: THREE.Scene }) => void log.push(`${name} compile ${scene.name}${overlay ? ` and ${overlay.scene.name}` : ''}`),
+    // W2: the world twins' scene scan and the environment map, made on this renderer.
+    rescans: 0,
+    prepared: 0,
+    sky: Object.assign(new THREE.Texture(), { name: `${name} sky` }),
+    environmentAsks: [] as boolean[],
+    rescan: () => void node.rescans++,
+    prepare: () => void node.prepared++,
+    environment: (on: boolean) => {
+      node.environmentAsks.push(on);
+      return on ? node.sky : null;
+    },
     replacement: () => Promise.resolve(node.next),
     dispose: () => void log.push(`${name} disposed`),
     loseDevice: () => {
@@ -110,11 +121,26 @@ describe('the Renderer on the node path (W1)', () => {
     expect(r.postPasses).toEqual([]);
   });
 
-  it('has no prefiltered sky yet: no environment map and no replica sheen', () => {
-    const { r } = nodeRenderer(QUALITY.ultra);
+  it('has the scene’s environment map from the node renderer (W2) but no replica sheen yet (W3)', () => {
+    const { r, node } = nodeRenderer(QUALITY.ultra);
+    r.render();
+    expect(r.scene.environment).toBe(node.sky);
+    expect(r.replicaSheen).toBeNull();
+    // Off on Low: none, and the node renderer is told so (it frees its prefiltered sky).
+    r.setQuality(QUALITY.low);
     r.render();
     expect(r.scene.environment).toBeNull();
-    expect(r.replicaSheen).toBeNull();
+    expect(node.environmentAsks).toEqual([true, false]);
+  });
+
+  it('looks for new sized points before each frame, and after a quality change (W2)', () => {
+    const { r, node } = nodeRenderer();
+    r.render();
+    r.render();
+    expect(node.prepared).toBe(2);
+    expect(node.rescans).toBe(0);
+    r.setQuality(QUALITY.medium);
+    expect(node.rescans).toBe(1);
   });
 
   it('reads the draw counts and GPU time the same way the debug overlay reads WebGL’s', () => {

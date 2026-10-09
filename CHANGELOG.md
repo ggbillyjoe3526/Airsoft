@@ -57,6 +57,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **G4** · The round banner says "ROUND 1" large in the HUD's heavy capitals on a navy panel with an orange bar; results and the countdown take the same panel
 - **G4** · At the largest Scoreboard size the score bar no longer runs under the hit feed or over the minimap (it was sized for a bar 444 px wide, not 730)
 - **M78** · High and Ultra draw the city's flat finishes at 512 × 512 as Medium does; Neon Heights on High: 21 MB less graphics memory (#151)
+- **W2** · On WebGPU the maps look as on WebGL: weathering, baked light, neon flicker, the skyline and its plane, moving flames, smoke, steam, stars, embers, fireflies and dust; players and screen effects still plain for now
 
 ### Fixed
 - **M74** · No frame hitches when you're hit or a bot plans a route (#138)
@@ -90,6 +91,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M77** · Fewer garbage-collection hitches: BB trails, dust and flag cloth stop making garbage each frame, and standing characters skip the ground check (#151)
 - **M79** · Two import cycles broken and a cycle check added to the pipeline; loop-seam audio tests use fixed percentiles (#151)
 - **W1** · The perf harness records which renderer drew (`--renderer`, `--force-webgl`); a browser without WebGPU never downloads the new renderer
+- **W2** · A comparison script scores WebGPU's pictures of every map against WebGL's, by day and night on Medium and High, against a fixed bar
 
 ## 0.1 Dev 4 · 2026-10-06
 

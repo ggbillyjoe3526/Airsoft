@@ -15,9 +15,12 @@ and never writes the simulation.
   `webgpu/nodeBackend.ts` imported (with `three/webgpu`, never in the main chunk); with none, or on the WebGL pick, it
   is WebGL as before. `nodeBackend.ts` makes `WebGPURenderer` (WebGL if no device can be made), reads the GPU time
   from timestamp queries, compiles ahead and makes the replacement renderer when the device is lost. On that path
-  materials draw as Three's node versions of the plain ones: `onBeforeCompile` patches (the surfaces' baked light,
-  weathering and relief, the figures' per-vertex finish, the shader-moved stars, smoke, motes, fireflies and flames)
-  are left out, and there is no post stack, retro filter or environment sheen yet (W2 to W4).
+  the world's materials draw as node twins of their GLSL patches (W2): `webgpu/worldTwins.ts` asks first, by program
+  key, for a twin (its table lists each patch and twin); `webgpu/surfaceNodes.ts` (surfaces: weathering, per-pixel
+  and vertex baked light, junk glow and neon flicker, the sky host), `webgpu/effectNodes.ts` (flames, smoke and steam,
+  and the sized points' sprite materials), `webgpu/pointSprites.ts` (each sized Points drawn as one instanced sprite,
+  since points draw one pixel wide there) and `webgpu/twinUniforms.ts` (the patch's own uniform objects, read per drawn
+  object). The figures' finish and the replica sheen (W3), the post stack and retro filter (W4) are not there yet.
 - `matchPresentation.ts`: other players, hit feedback, spectator camera, round banner, scoreboard, flag.
   `combatPresentation.ts`: after each tick it consumes `state.events`; each frame it draws the BBs, puffs, the held
   replica (a second render pass) and the HUD. Also `cameraRig.ts`, `viewmodel.ts`.
