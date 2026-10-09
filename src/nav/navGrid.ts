@@ -320,16 +320,16 @@ export function isWalkableAt(g: NavGrid, x: number, y: number, z: number): boole
 /**
  * Nearest walkable node to (x, z) within `maxRadius` metres (ring search), each cell judged at its floor under `y`; or
  * -1. A floor more than a storey's headroom below `y` doesn't count: from a balcony's edge, the nearest spot is on the
- * balcony, not in the street under it. Nor, where one in reach is, does a floor more than half that above or below `y`
- * (G11): a body standing on a dock's lip lower than a storey, its middle just past the edge, stands over the ground
- * below, which was the nearest walkable cell; a route from there walked a bot off the dock (Depot seed 11).
+ * balcony, not in the street under it. Nor, where one in reach is, does a floor more than half that below `y` (G11): a
+ * body standing on a dock's lip lower than a storey, its middle just past the edge, stands over the ground below,
+ * which was the nearest walkable cell; a route from there walked a bot off the dock (Depot seed 11).
  */
 export function nearestWalkable(g: NavGrid, x: number, y: number, z: number, maxRadius: number): number {
   const k = nearestWalkableFrom(g, x, y, z, maxRadius, g.headroom / 2);
   return k >= 0 ? k : nearestWalkableFrom(g, x, y, z, maxRadius, Number.POSITIVE_INFINITY);
 }
 
-/** nearestWalkable's ring search, counting only floors within `level` of `y` (as well as the headroom rule). */
+/** nearestWalkable's ring search, counting only floors at most `level` below `y` (as well as the headroom rule). */
 function nearestWalkableFrom(g: NavGrid, x: number, y: number, z: number, maxRadius: number, level: number): number {
   const ci = Math.min(g.cols - 1, Math.max(0, Math.floor((x - g.minX) / g.cell)));
   const cj = Math.min(g.rows - 1, Math.max(0, Math.floor((z - g.minZ) / g.cell)));
@@ -342,7 +342,7 @@ function nearestWalkableFrom(g: NavGrid, x: number, y: number, z: number, maxRad
         if (Math.max(Math.abs(i - ci), Math.abs(j - cj)) !== ring) continue;
         if (i < 0 || j < 0 || i >= g.cols || j >= g.rows) continue;
         const k = pickNode(g, j * g.cols + i, y);
-        if (k < 0 || !g.walkable[k] || g.floorY[k]! < y - g.headroom || Math.abs(g.floorY[k]! - y) > level) continue;
+        if (k < 0 || !g.walkable[k] || g.floorY[k]! < y - Math.min(level, g.headroom)) continue;
         const d = Math.hypot(cellX(g, i) - x, cellZ(g, j) - z);
         if (d < bestD) {
           bestD = d;
