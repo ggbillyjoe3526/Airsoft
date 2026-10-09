@@ -186,6 +186,10 @@ replaces its line; the old one stays findable in the archive or in git.
   and is never saved.
 - **Art is procedural today: canvas textures and geometry built in code (2026-10-04).** CC0 models and textures may
   replace parts later; each is recorded file by file in `docs/ASSETS.md`, even though CC0 needs no credit.
+- **Higher-detail models come later, after the WebGPU overhaul (owner, 2026-10-09: "I want to try improve characters
+  and all other models in the future but this will be later").** Figures, replicas and every other model; not in Dev 5
+  or Dev 6, no build planned yet; it widens the Blender art pass the owner placed in 0.3 on 2026-10-05
+  (`docs/ROADMAP.md` › 0.3: The armoury and the rules).
 
 ## Gameplay and feel
 

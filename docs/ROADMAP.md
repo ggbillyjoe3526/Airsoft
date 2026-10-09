@@ -416,7 +416,12 @@ went, updated by the feature triage (2026-10-05) and his Dev 6 picks (2026-10-06
 - **Grenades, smoke and flash bombs.** Now 0.1 Dev 6 (owner, 2026-10-06). Airsoft-style throwables (owner, 2026-10-03),
   such as a CO2 sound grenade (a bang, no shrapnel), smoke for cover and a flash bomb, for the Loadout's Grenades slot.
   How each one knocks players out or blinds them, how many you carry and how bots use them are designed when they come.
-- **Blender models** (owner, 2026-10-05): a separate art pass after the code-built models of 0.2.
+- **Higher-detail models.** Later, not now (owner, 2026-10-05 and 2026-10-09). A separate art pass in Blender after the
+  code-built models of the graphics overhaul: better figures (humans and robots), replicas, attachments, props and set
+  dressing. It uses the headroom WebGPU gives (more detail on screen at once, richer materials), so it starts only once
+  the WebGPU overhaul is finished and is scoped then against its measured headroom. It keeps art direction v3
+  (stylised, blocky, not realistic), the download target (about 30 MB to start), Low's 60 fps at 1080p on a laptop and
+  the WebGL fallback. No build is planned for it yet.
 - **From the owner's 0.1 Dev 4 playtest** (2026-10-06, notes 5, 20, 22, 23; see the Dev 4 table above): a 2–4x variable
   scope and a holographic sight, Extraction loot that looks like loot, an inventory (owned items in the menus, carried
   items on I, a small carry limit in Extraction), and an Extraction rework (solo, more and harder opponents, no respawn;
