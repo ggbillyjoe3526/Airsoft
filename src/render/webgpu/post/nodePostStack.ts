@@ -6,7 +6,7 @@ import { PostChain, type PostSetup } from '../../post/postStack';
 import { NodeAmbientOcclusionPass } from './nodeAmbientOcclusion';
 import { NodeBloomPass } from './nodeBloom';
 import { type Finishing, type FinishingPass, NodeLensPass, NodeOutputPass } from './nodeFinish';
-import { at, fullScreen, type NodeRenderer, type NodeTarget, quad, slot, vUv } from './nodeKit';
+import { at, fullScreen, type NodeRenderer, type NodeTarget, quad, slot, vUv, whileUnderWay } from './nodeKit';
 import { NodeLightShaftsPass } from './nodeLightShafts';
 import { type DirectOutput, directTarget } from './nodeOutput';
 import { NodeReflectionPass } from './nodeReflections';
@@ -45,6 +45,8 @@ export class NodePostStack extends PostChain<NodeRenderer, NodeTarget> implement
   private overlayTarget: NodeTarget | null = null;
   private readonly finishing: Finishing = { overlay: null, toneMapping: THREE.NoToneMapping };
   private readonly keep = new THREE.Color();
+  /** The warm-up compile into its targets, while it is still under way (dispose waits for it). */
+  private compiling: Promise<void> | null = null;
 
   constructor(
     setup: PostSetup,
@@ -99,9 +101,10 @@ export class NodePostStack extends PostChain<NodeRenderer, NodeTarget> implement
     gl.setRenderTarget(this.sceneTarget);
     const world = gl.compileAsync(scene, camera);
     gl.setRenderTarget(null);
-    if (!overlay) return world;
-    const held = this.output.compileInto(gl, this.overlayFor(gl), overlay, gl.toneMapping);
-    return Promise.all([world, held]).then(() => undefined);
+    const held = overlay ? this.output.compileInto(gl, this.overlayFor(gl), overlay, gl.toneMapping) : Promise.resolve();
+    const done = Promise.all([world, held]).then(() => undefined);
+    this.compiling = whileUnderWay(done, () => this.compiling === done && (this.compiling = null));
+    return done;
   }
 
   override setSize(width: number, height: number): void {
@@ -109,7 +112,20 @@ export class NodePostStack extends PostChain<NodeRenderer, NodeTarget> implement
     this.overlayTarget?.setSize(this.width, this.height);
   }
 
+  /**
+   * Frees the targets and materials; after the warm-up compile has finished when it is still under way (a quality
+   * change or the retro filter right after a match's build): Three makes a compiled pipeline once its shaders are
+   * built, from its target's state then, and a target freed in between leaves it without a depth format (an error on
+   * WebGPU).
+   */
   override dispose(): void {
+    const pending = this.compiling;
+    this.compiling = null;
+    if (pending) void pending.then(() => this.free(), () => this.free());
+    else this.free();
+  }
+
+  private free(): void {
     super.dispose();
     this.copy?.material.dispose();
     this.copy = null;

@@ -101,3 +101,10 @@ export function quad(): QuadMesh {
 export function colourTarget(width: number, height: number, type: THREE.TextureDataType, scale = 1): NodeTarget {
   return new THREE.RenderTarget(scaled(width, scale), scaled(height, scale), { type, depthBuffer: false });
 }
+
+/** `done`, with `settled` called once it settles either way (how a compile still under way is kept: dispose waits). */
+export function whileUnderWay(done: Promise<void>, settled: () => unknown): Promise<void> {
+  const call = (): void => void settled();
+  done.then(call, call);
+  return done;
+}

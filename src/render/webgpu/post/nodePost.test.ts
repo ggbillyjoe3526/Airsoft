@@ -249,6 +249,77 @@ describe('the node retro filter matches WebGL’s (W4)', () => {
   });
 });
 
+describe('a warm-up compile still under way when the stack or the retro filter is dropped (W4)', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  /** A stand-in renderer whose compiles finish when `finish` is called (Three makes the pipelines then). */
+  function compiling() {
+    const r = stubRenderer();
+    let finish = (): void => undefined;
+    const pending = new Promise<void>((resolve) => (finish = resolve));
+    return { ...r, gl: Object.assign(r.gl, { compileAsync: () => pending }), finish: () => finish() };
+  }
+
+  /** Counts the targets and materials freed from here on. */
+  function freeing(): Set<unknown> {
+    const freed = new Set<unknown>();
+    const note = function (this: unknown): void {
+      freed.add(this);
+    };
+    vi.spyOn(THREE.RenderTarget.prototype, 'dispose').mockImplementation(note);
+    vi.spyOn(THREE.Material.prototype, 'dispose').mockImplementation(note);
+    return freed;
+  }
+
+  const overlay = () => ({ scene: new THREE.Scene(), camera: new THREE.PerspectiveCamera() });
+
+  it('the stack frees its targets once the compile has finished, not before (a freed target leaves no depth format)', async () => {
+    const b = node('high');
+    const { gl, finish } = compiling();
+    const done = b.compile(gl as unknown as NodeRenderer, new THREE.Scene(), sunlit(b), overlay());
+    const targets = reachable(b, THREE.RenderTarget);
+    const freed = freeing();
+    b.dispose();
+    await Promise.resolve();
+    expect(freed.size).toBe(0);
+    finish();
+    await done;
+    await new Promise((r) => setTimeout(r, 0));
+    for (const t of targets) expect(freed.has(t), 'a target left').toBe(true);
+  });
+
+  it('the stack frees at once when its compile has finished, and when it never compiled', async () => {
+    const b = node('medium');
+    const { gl, finish } = compiling();
+    finish();
+    await b.compile(gl as unknown as NodeRenderer, new THREE.Scene(), sunlit(b));
+    await new Promise((r) => setTimeout(r, 0));
+    let freed = freeing();
+    b.dispose();
+    expect(freed.has(b.sceneTarget)).toBe(true);
+    vi.restoreAllMocks();
+    const c = node('medium');
+    freed = freeing();
+    c.dispose();
+    expect(freed.has(c.sceneTarget)).toBe(true);
+  });
+
+  it('the retro filter waits for its compile the same way', async () => {
+    const b = new NodeRetroFilter({ pixelSize: 4, levels: 6 });
+    b.resize(1280, 720, 1);
+    const { gl, finish } = compiling();
+    const done = b.compile(gl as unknown as NodeRenderer, new THREE.Scene(), new THREE.PerspectiveCamera(), overlay());
+    const freed = freeing();
+    b.dispose();
+    await Promise.resolve();
+    expect(freed.has(b.renderTarget)).toBe(false);
+    finish();
+    await done;
+    await new Promise((r) => setTimeout(r, 0));
+    expect(freed.has(b.renderTarget)).toBe(true);
+  });
+});
+
 describe('Low’s frame straight onto the canvas (W4)', () => {
   it('draws the world then the replica onto the screen, two draws as WebGL’s, the renderer’s state put back', () => {
     const out = new DirectOutput();
