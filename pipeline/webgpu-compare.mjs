@@ -7,7 +7,7 @@
  *
  *   node pipeline/webgpu-compare.mjs [--out <dir>] [--only depot,woodland] [--quality medium] [--views w2|w3|w4|all]
  *                                    [--backend webgpu-webgl2|webgpu|all] [--noise] [--full] [--chromium /path]
- *                                    [--port 4186]
+ *                                    [--port 4186] [--post-views ground,sun,first-person,retro,glow]
  *
  * It builds the e2e bundle (pipeline/build-cached.mjs, the build with `window.airsoft` and `?forceWebGL`) and serves it
  * on port 4186 (or `--port`). Each map, light and preset is one page per renderer: the picks saved as settings, a match started, the
@@ -49,8 +49,8 @@ import {
   POST_CAMERAS,
   POST_FRAMES,
   POST_QUALITIES,
-  POST_VIEWS,
   postBase,
+  postViewsOf,
   sceneViews,
   scorePixels,
   verdict,
@@ -68,12 +68,14 @@ const noise = args.includes('--noise');
 const full = args.includes('--full');
 const chromium = value('--chromium', process.env.PLAYWRIGHT_CHROMIUM);
 const viewSet = value('--views', 'all');
+/** `--post-views glow,retro`: only these of W4's post views. */
+const postPick = value('--post-views', '') ? value('--post-views', '').split(',') : null;
 const backendPick = value('--backend', 'all');
 const wantedBackends = backendPick === 'all' ? COMPARE_BACKENDS : backendPick.split(',');
 /** A scene's views on `quality`: W2's and W3's (on their presets) and W4's post views (on theirs), as { name, post }. */
 const viewsOf = (scene, quality) => [
   ...(COMPARE_QUALITIES.includes(quality) && viewSet !== 'w4' ? sceneViews(scene).filter((v) => viewSet === 'all' || (viewSet === 'w3') === isFigureView(v)) : []).map((name) => ({ name, post: false })),
-  ...(POST_QUALITIES.includes(quality) && (viewSet === 'all' || viewSet === 'w4') ? POST_VIEWS.map((name) => ({ name, post: true })) : []),
+  ...(POST_QUALITIES.includes(quality) && (viewSet === 'all' || viewSet === 'w4') ? postViewsOf(scene).filter((name) => !postPick || postPick.includes(name)).map((name) => ({ name, post: true })) : []),
 ];
 const keyOf = (v) => `${v.post ? 'post:' : ''}${v.name}`;
 const qualities = (qualityPick ?? [...new Set([...COMPARE_QUALITIES, ...POST_QUALITIES])]).sort((a, b) => POST_QUALITIES.indexOf(a) - POST_QUALITIES.indexOf(b));
@@ -191,8 +193,8 @@ async function draw(scene, views, quality, renderer, withPost) {
   await page.waitForTimeout(2500);
   // The night settles as in play, the same on both pages whatever their own loops last did: each real pool light fades
   // onto the pools nearest the stood eye (a light that must move fades out, moves, then fades in, one follow each), and
-  // the fires' clock (their flames and their lights' flicker) is pinned. The clock is the flames' shader uniform: their
-  // patch hands it over when run on an empty shader.
+  // the fires' clock (their flames and their lights' flicker) and the neon signs' flicker are pinned. The clock is the
+  // flames' shader uniform: their patch hands it over when run on an empty shader.
   await page.evaluate((pinned) => {
     globalThis.settleNight = (game, cam) => {
       for (let i = 0; i < 4; i++) game.session.daylight.follow(cam, 1);
@@ -202,6 +204,9 @@ async function draw(scene, views, quality, renderer, withPost) {
         flames.material.onBeforeCompile(shader, game.renderer.renderer);
         shader.uniforms.fxTime.value = pinned;
       }
+      // The neon signs' flicker (G9) is left where each page's own loop stopped it: steady on, on both (W4's glow views
+      // and bloom would show a sign caught dimmed on one page only).
+      game.renderer.scene.traverse((o) => o.userData.neonFlicker?.value.set(1, 1, 1));
       game.session.daylight.follow(cam, 0);
     };
   }, FIRE_CLOCK);
@@ -261,6 +266,15 @@ async function draw(scene, views, quality, renderer, withPost) {
           const mid = { x: (blue.x + orange.x) / 2, y: (blue.y + orange.y) / 2 + camera.up, z: (blue.z + orange.z) / 2 };
           cam.position.set(mid.x, mid.y, mid.z);
           cam.lookAt(mid.x + (k.x / kl) * 100, mid.y + (k.y / kl - camera.lookDown) * 100, mid.z + (k.z / kl) * 100);
+        }
+        if (view === 'glow') {
+          // The map's first pool light, from the stood eye's side (the same light and place on both pages).
+          const light = game.session.combat.field.lights[0].position;
+          const lx = light.x - eye.position.x;
+          const lz = light.z - eye.position.z;
+          const ll = Math.hypot(lx, lz) || 1;
+          cam.position.set(light.x - (lx / ll) * camera.back, Math.max(light.y - 1, 0) + camera.up, light.z - (lz / ll) * camera.back);
+          cam.lookAt(light.x, light.y, light.z);
         }
         if (view === 'sky') {
           const moon = r.scene.getObjectByName('night-moon').geometry.getAttribute('position');

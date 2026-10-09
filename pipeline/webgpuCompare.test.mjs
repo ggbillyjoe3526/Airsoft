@@ -15,6 +15,7 @@ import {
   POST_FRAMES,
   POST_QUALITIES,
   POST_VIEWS,
+  postViewsOf,
   postBase,
   sceneViews,
   scorePixels,
@@ -102,9 +103,13 @@ describe('the WebGPU figures, replicas and lights comparison (W3)', () => {
 });
 
 describe('the WebGPU post stack and retro filter comparison (W4)', () => {
-  it('draws the whole frame on every preset: the ground, the sun or moon, first person and the retro filter', () => {
+  it('draws the whole frame on every preset: the ground, the sun or moon, first person, the retro filter and a light', () => {
     expect(POST_QUALITIES).toEqual(['low', 'medium', 'high', 'ultra']);
-    expect(POST_VIEWS).toEqual(['ground', 'sun', 'first-person', 'retro']);
+    expect(POST_VIEWS).toEqual(['ground', 'sun', 'first-person', 'retro', 'glow']);
+    // A pool light by night only: by day nothing blooms, so the view would show nothing of Medium's stack.
+    for (const scene of COMPARE_SCENES) expect(postViewsOf(scene).includes('glow'), scene.map + scene.light).toBe(scene.light === 'night');
+    expect(postViewsOf(COMPARE_SCENES[0])).toEqual(['ground', 'sun', 'first-person', 'retro']);
+    expect(isFigureView(postBase('glow'))).toBe(false);
     // Each stands where a W2 or W3 view does, or has its own camera.
     for (const v of POST_VIEWS) {
       const base = postBase(v);

@@ -98,11 +98,19 @@ export const COMPARE_QUALITIES = ['medium', 'high'];
  * - `sun`: from `up` m over the middle of the two starts, looking towards the key light (the sun, or the moon by night)
  *   a little below it (`lookDown`, as a share of the way), so it is on screen for the light shafts over the scenery.
  * - `retro`: the ground still through the retro filter at `look` (Settings → Dev's defaults), instead of the stack.
+ * - `glow` (night only, `postViewsOf`): `back` m short of the map's first pool light (Woodland's fire, a Neon Heights
+ *   lamp) on the way from the stood eye, `up` m over its foot, looking at it, so the bloom shows: by day nothing on
+ *   these maps is bright enough to bloom (threshold 1), so Medium's stack (bloom alone) changes no pixel of a day view.
  */
-export const POST_VIEWS = ['ground', 'sun', 'first-person', 'retro'];
+export const POST_VIEWS = ['ground', 'sun', 'first-person', 'retro', 'glow'];
 export const POST_QUALITIES = ['low', 'medium', 'high', 'ultra'];
 export const POST_FRAMES = 12;
-export const POST_CAMERAS = { sun: { up: 12, lookDown: 0.15, fov: 70 }, retro: { look: { pixelSize: 4, levels: 6 } } };
+export const POST_CAMERAS = { sun: { up: 12, lookDown: 0.15, fov: 70 }, retro: { look: { pixelSize: 4, levels: 6 } }, glow: { back: 4, up: 1.5, fov: 62 } };
+
+/** The post views of `scene`: every one, but `glow` only by night (no pool light is lit by day). */
+export function postViewsOf(scene) {
+  return POST_VIEWS.filter((v) => v !== 'glow' || scene.light === 'night');
+}
 
 /** The camera a post view stands where (its W2 or W3 view's, or its own). */
 export function postBase(view) {
