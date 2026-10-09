@@ -19,9 +19,9 @@ import { GpuTimer } from './gpuTimer';
 import { environmentLookOf } from './lightingPreset';
 import { MapMeshCache } from './mapMeshCache';
 import { mapLookOf, texturesFor } from './mapMeshes';
-import { PostHost } from './post/postHost';
+import { type AnyPostChain, PostHost } from './post/postHost';
 import type { PostPassId } from './post/postPlan';
-import type { PostStack } from './post/postStack';
+import { PostStack } from './post/postStack';
 import { addSurfaceTextures, CORE_SURFACES, disposeSurfaceTextures, type ProceduralTexture, setSurfaceAnisotropy, type SurfaceTextures } from './proceduralTextures';
 import { defaultEnvironmentLook, type EnvironmentLook, ReplicaSheen } from './replicaSheen';
 import {
@@ -37,7 +37,7 @@ import {
   warmSurfacesInIdle,
   zoomedFov,
 } from './rendererParts';
-import { RetroFilter, retroPixelAngle } from './retroFilter';
+import { RetroFilter, retroPixelAngle, type RetroView } from './retroFilter';
 import { releaseNormalMaps, usesNormalMaps } from './surfaceNormals';
 import type { NodeBackend } from './webgpu/nodeBackend';
 
@@ -58,9 +58,9 @@ export {
 /**
  * Owns the renderer, main camera and scene. Handles resizing. The renderer is Three's WebGLRenderer, or on the node path
  * (WebGPU overhaul W1, wherever the browser gives a WebGPU adapter) the node renderer handed in by Game.create: the same
- * scene and draws, every patched material as its node twin (the world's W2, the figures' and the replica sheen W3) and
- * on WebGPU the night lit by clustered lights (W3), with no post stack or retro filter until W4 rebuilds them as node
- * passes. What the node path needs beyond that lives in its own chunk (render/webgpu/nodeBackend.ts).
+ * scene and draws, every patched material as its node twin (the world's W2, the figures' and the replica sheen W3), on
+ * WebGPU the night lit by clustered lights (W3), and the post stack, the retro filter and the output step as node
+ * passes (W4). What the node path needs beyond that lives in its own chunk (render/webgpu/nodeBackend.ts).
  */
 export class Renderer {
   /** The WebGL renderer, new on an antialiasing change (setQuality); or the node renderer (W1), new on a loss (nodeLost). */
@@ -123,17 +123,20 @@ export class Renderer {
    * spectating, when no overlay is drawn (BP2), until its owner lets go of it (forgetOverlay).
    */
   private overlayScene: THREE.Scene | null = null;
-  /** The retro pixel filter's look while it is on (Settings → Dev, M42; not drawn on the node path); null while off. */
+  /** The retro pixel filter's look while it is on (Settings → Dev, M42); null while off. */
   private retroLook: RetroLook | null = null;
-  /** The filter's target and pass for the context in use, made while the filter is on. */
-  private retro: RetroFilter | null = null;
+  /** The filter's target and pass for the renderer in use (the node renderer's since W4), made while the filter is on. */
+  private retro: RetroView | null = null;
   /** Told when the graphics context is lost (true) and when it comes back (false); see onContextChange. */
   private contextListener: (lost: boolean) => void = () => undefined;
   /**
    * The post stack (G5, render/post/postHost.ts) for the quality in force: none on Low (the frame is drawn straight to
    * the screen as before), while the retro filter is on and while the context is lost.
    */
-  private readonly post = new PostHost(() => this.drawsHalfFloat());
+  private readonly post = new PostHost(
+    () => this.drawsHalfFloat(),
+    (setup, width, height) => (this.node ? this.node.postStack(setup, width, height) : new PostStack(setup, width, height)),
+  );
 
   /**
    * `quality` is what the game loads with; everything in it can change later (setQuality). `node`: the node renderer to
@@ -287,6 +290,8 @@ export class Renderer {
    */
   setLighting(preset: LightingPreset): void {
     this.lighting = preset;
+    // The node path's stack is made afresh for each map (W4): its history and reflective stand-ins go with the last one.
+    if (this.node) this.post.drop();
     this.post.setLight(preset);
     // A session sets its light as it takes its map: the last map's reflective meshes must not be kept (G5 critic).
     this.post.rescan();
@@ -399,11 +404,10 @@ export class Renderer {
    * it off and frees its render target and pass. Applies from the next frame, on every map and the range.
    */
   setRetro(look: RetroLook | null): void {
-    // Kept on the node path too, where the filter (a GLSL pass, W4's) isn't drawn: WebGL taking over draws it.
     this.retroLook = look ? { ...look } : null;
     // The retro filter draws instead of the post stack (a dev look): the stack goes while it is on, and comes back after.
     this.post.drop();
-    if (!look || this.node) {
+    if (!look) {
       this.retro?.dispose();
       this.retro = null;
       return;
@@ -418,7 +422,7 @@ export class Renderer {
    * the filter is off. BBs are kept at least a couple of these wide (RETRO.bbMinPixels).
    */
   get retroPixelAngle(): number {
-    return this.retroLook && !this.node ? retroPixelAngle(this.camera.fov, this.height, this.retroLook.pixelSize) : 0;
+    return this.retroLook ? retroPixelAngle(this.camera.fov, this.height, this.retroLook.pixelSize) : 0;
   }
 
   /** Narrows the main camera's view by `zoom` (1 = the normal view), e.g. while aiming down an optic. */
@@ -440,12 +444,12 @@ export class Renderer {
     if (this.environmentDirty) this.applyEnvironment();
     // A session's build has just ended: its reflective meshes (if any) are found on the next frame.
     this.post.rescan();
-    // The node path (W1) compiles its pipelines ahead in the background: no post stack or retro target to draw into.
-    if (this.node) return this.node.compile(this.scene, this.camera, overlay);
+    // The node path (W1) compiles its pipelines ahead in the background, as the frame will draw them (W4).
+    if (this.node) return this.node.compile(this.scene, this.camera, overlay, this.retro ?? this.postStack());
     const gl = this.gl as THREE.WebGLRenderer;
-    const retro = this.retro;
+    const retro = this.retro as RetroFilter | null;
     // The world draws into the post stack's target when there is one (G5), the held replica onto the canvas after it.
-    const post = this.postStack();
+    const post = this.postStack() as PostStack | null;
     const world = retro?.renderTarget ?? post?.sceneTarget ?? null;
     const held = retro?.renderTarget ?? null;
     if (world) gl.setRenderTarget(world);
@@ -472,28 +476,42 @@ export class Renderer {
     // Count both passes in renderer.info (the debug overlay reads it).
     gl.info.autoReset = false;
     gl.info.reset();
+    if (overlay) this.overlayScene = overlay.scene;
+    // The node path draws the same frame with its own passes (W4: render/webgpu/nodeBackend.ts draw).
+    if (this.node) this.drawNode(this.node, overlay);
+    else this.drawWebGL(gl as THREE.WebGLRenderer, overlay);
+    timer?.end();
+    this.node?.frameDone();
+  }
+
+  /** The frame on the node renderer (W4): its own retro filter or post stack, as drawWebGL's, or Low's straight draw. */
+  private drawNode(node: NodeBackend, overlay?: { scene: THREE.Scene; camera: THREE.Camera }): void {
+    const post = this.retro ? null : this.postStack();
+    if (post) this.post.findReflective(post, this.scene);
+    node.draw(this.scene, this.camera, overlay, this.retro ?? post);
+  }
+
+  /** The frame on WebGL: the world through the retro filter or the post stack (or straight), the overlay on top. */
+  private drawWebGL(gl: THREE.WebGLRenderer, overlay?: { scene: THREE.Scene; camera: THREE.Camera }): void {
     // The retro filter (M42): both passes draw into its small target, then its pass shows that on the canvas.
-    const retro = this.retro;
+    const retro = this.retro as RetroFilter | null;
     if (retro) gl.setRenderTarget(retro.renderTarget);
     gl.autoClear = true;
     // The post stack (G5) draws the world through its passes onto the canvas; the held replica goes on top after it,
     // so the temporal blend never smears it and the lens finish never covers it.
-    const post = this.postStack();
+    const post = this.postStack() as PostStack | null;
     if (post) {
       this.post.findReflective(post, this.scene);
-      post.render(gl as THREE.WebGLRenderer, this.scene, this.camera);
+      post.render(gl, this.scene, this.camera);
     } else {
       gl.render(this.scene, this.camera);
     }
     if (overlay) {
-      this.overlayScene = overlay.scene;
       gl.autoClear = false;
       gl.clearDepth();
       gl.render(overlay.scene, overlay.camera);
     }
-    retro?.present(gl as THREE.WebGLRenderer);
-    timer?.end();
-    this.node?.frameDone();
+    retro?.present(gl);
   }
 
   /** The post stack's passes in force, in order (the debug overlay): none on Low. */
@@ -541,20 +559,20 @@ export class Renderer {
    * The retro filter for the context in use: a half-float target where the context can draw into one (WebGL 2 with
    * EXT_color_buffer_half_float or _float, near universal), else 8-bit.
    */
-  private makeRetro(look: RetroLook): RetroFilter {
-    return new RetroFilter(look, this.drawsHalfFloat());
+  private makeRetro(look: RetroLook): RetroView {
+    return this.node ? this.node.retro(look) : new RetroFilter(look, this.drawsHalfFloat());
   }
 
   /** Whether the context can draw into half floats (WebGL 2 with EXT_color_buffer_half_float or _float, near universal). */
   private drawsHalfFloat(): boolean {
+    // The node renderer always can (WebGPU, and its WebGL2 back end asks for the extension itself).
+    if (this.node) return true;
     const ext = (this.gl as THREE.WebGLRenderer).extensions;
     return ext.has('EXT_color_buffer_half_float') || ext.has('EXT_color_buffer_float');
   }
 
   /** The post stack for this frame (G5): none on Low, while the retro filter is on and while the context is lost. */
-  private postStack(): PostStack | null {
-    // The post passes are GLSL: none on the node path until W4 rebuilds them.
-    if (this.node) return null;
+  private postStack(): AnyPostChain | null {
     return this.post.stackFor(this.quality, this.lighting, this.retroLook !== null);
   }
 
@@ -636,7 +654,7 @@ export class Renderer {
     // A node renderer keeps the multisampling it was made with (antialiasPending says so); WebGL is made for the setting.
     if (!node) this.contextAntialias = this.quality.antialias;
     this.hear(node);
-    if (this.retroLook && !node) this.retro = this.makeRetro(this.retroLook);
+    if (this.retroLook) this.retro = this.makeRetro(this.retroLook);
   }
 
   /**

@@ -6,7 +6,7 @@ import { POST } from '../../config/post';
 import { AmbientOcclusionPass } from './ambientOcclusionPass';
 import { LensPass } from './lensPass';
 import { LightShaftsPass } from './lightShaftsPass';
-import { fullScreenMaterial, type PostFrame, type PostPass } from './postPass';
+import { fullScreenMaterial, type PostFrame, type PostPass, type PostRenderer } from './postPass';
 import { type PostPassId, planNeedsDepth, type PostQuality, postPlan, sceneSamples } from './postPlan';
 import { ReflectionPass } from './reflectionPass';
 import { jitterProjection, jitterSequence, TemporalAAPass } from './temporalAAPass';
@@ -68,29 +68,34 @@ export function brightestChannelBloom(width: number, height: number): UnrealBloo
   return pass;
 }
 
+/** The reflective meshes a stack's reflections follow (render/post/reflectionPass.ts setSurfaces). */
+interface Reflective {
+  setSurfaces(surfaces: readonly { mesh: THREE.Mesh; strength: number }[]): void;
+}
+
 /**
- * The post stack (G5): the scene drawn into a target of its own (with a depth texture when a pass reads it), then the
- * plan's passes in order (render/post/postPlan.ts), the last onto the screen. Made by the Renderer for a quality, and
- * disposed whole on a quality change, a lost context and the antialiasing context swap; Low has none.
+ * The post stack's chain (G5), whatever draws it: the scene drawn into a target of its own (with a depth texture when a
+ * pass reads it), then the plan's passes in order (render/post/postPlan.ts), the last onto the screen. WebGL's passes
+ * are PostStack's (below); the node renderer's are render/webgpu/post/nodePostStack.ts's (W4), the same chain with
+ * the same draws. Made by the Renderer for a quality, and disposed whole on a quality change, a lost context and the
+ * antialiasing context swap; Low has none.
  */
-export class PostStack {
+export abstract class PostChain<G extends PostRenderer<T>, T extends THREE.RenderTarget> {
   readonly plan: readonly PostPassId[];
   /** The scene draws here (the warm-up compiles for it: an off-screen target takes no tone mapping in the shaders). */
-  readonly sceneTarget: THREE.WebGLRenderTarget;
-  private readonly passes: PostPass[] = [];
+  readonly sceneTarget: T;
+  protected readonly passes: PostPass<G, T>[] = [];
   /** The two targets the chain alternates between after the scene's (made when a pass first draws out to one). */
-  private readonly pingPong: [THREE.WebGLRenderTarget | null, THREE.WebGLRenderTarget | null] = [null, null];
-  private readonly type: THREE.TextureDataType;
-  private readonly reflection: ReflectionPass | null = null;
+  private readonly pingPong: [T | null, T | null] = [null, null];
+  protected readonly type: THREE.TextureDataType;
+  private readonly reflection: Reflective | null = null;
   private readonly jitter: Float32Array | null;
-  private width: number;
-  private height: number;
+  protected width: number;
+  protected height: number;
   private readonly frame: PostFrame;
   private readonly plainProjection = new THREE.Matrix4();
   /** Where the camera was last frame (null before the first): a jump past POST.taa.cutDistance is a cut (BP2). */
   private lastCamera: THREE.Vector3 | null = null;
-  /** Copies the resolved multisampled scene out before an in-place pass (made the first time it is needed, BP2). */
-  private copy: { material: THREE.ShaderMaterial; quad: FullScreenQuad } | null = null;
 
   constructor(setup: PostSetup, width: number, height: number) {
     this.width = width;
@@ -98,7 +103,7 @@ export class PostStack {
     this.plan = postPlan(setup.quality);
     this.type = setup.halfFloat ? THREE.HalfFloatType : THREE.UnsignedByteType;
     const depth = planNeedsDepth(this.plan) ? new THREE.DepthTexture(width, height) : null;
-    this.sceneTarget = new THREE.WebGLRenderTarget(width, height, { type: this.type, samples: sceneSamples(setup.quality), ...(depth ? { depthTexture: depth } : {}) });
+    this.sceneTarget = this.makeTarget(width, height, { type: this.type, samples: sceneSamples(setup.quality), ...(depth ? { depthTexture: depth } : {}) });
     this.frame = {
       camera: new THREE.PerspectiveCamera(),
       depth,
@@ -111,11 +116,20 @@ export class PostStack {
     };
     for (const id of this.plan) {
       const pass = this.makePass(id, setup.quality, width, height);
-      if (pass instanceof ReflectionPass) this.reflection = pass;
+      if (id === 'reflections') this.reflection = pass as unknown as Reflective;
       this.passes.push(pass);
     }
     this.jitter = this.plan.includes('taa') ? jitterSequence(POST.taa.jitterSamples) : null;
   }
+
+  /** A colour target of the renderer's kind (called from the constructor: it may read no field of a subclass). */
+  protected abstract makeTarget(width: number, height: number, options: THREE.RenderTargetOptions): T;
+
+  /** Pass `id` of the renderer's kind (called from the constructor, as makeTarget). */
+  protected abstract makePass(id: PostPassId, q: PostQuality, width: number, height: number): PostPass<G, T>;
+
+  /** Draws the resolved picture in `from` into ping-pong target 0 and returns that target. */
+  protected abstract copyOut(gl: G, from: T): T;
 
   /** The reflective meshes in the scene (render/post/reflectionPass.ts findReflective); ignored without reflections. */
   setReflectiveSurfaces(surfaces: readonly { mesh: THREE.Mesh; strength: number }[]): void {
@@ -152,7 +166,7 @@ export class PostStack {
    * Draws `scene` from `camera` through the chain onto the screen. The camera's projection is jittered for the scene and
    * the passes when the temporal blend is on, and put back before this returns.
    */
-  render(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera): void {
+  render(gl: G, scene: THREE.Scene, camera: THREE.PerspectiveCamera): void {
     const f = this.frame;
     f.camera = camera;
     camera.updateMatrixWorld();
@@ -201,9 +215,6 @@ export class PostStack {
   dispose(): void {
     for (const p of this.passes) p.dispose();
     this.passes.length = 0;
-    this.copy?.material.dispose();
-    this.copy?.quad.dispose();
-    this.copy = null;
     this.sceneTarget.depthTexture?.dispose();
     this.sceneTarget.dispose();
     for (let i = 0; i < 2; i++) {
@@ -212,8 +223,29 @@ export class PostStack {
     }
   }
 
-  /** Draws the resolved picture in `from` into ping-pong target 0 and returns that target. */
-  private copyOut(gl: THREE.WebGLRenderer, from: THREE.WebGLRenderTarget): THREE.WebGLRenderTarget {
+  /** Ping-pong target `i`, made the first time it is drawn into. */
+  protected target(i: 0 | 1): T {
+    return (this.pingPong[i] ??= this.makeTarget(this.width, this.height, { type: this.type, depthBuffer: false }));
+  }
+}
+
+/** The post stack on WebGL (G5): the chain with WebGL's passes, Three's bloom and output among them. */
+export class PostStack extends PostChain<THREE.WebGLRenderer, THREE.WebGLRenderTarget> {
+  /** Copies the resolved multisampled scene out before an in-place pass (made the first time it is needed, BP2). */
+  private copy: { material: THREE.ShaderMaterial; quad: FullScreenQuad } | null = null;
+
+  protected makeTarget(width: number, height: number, options: THREE.RenderTargetOptions): THREE.WebGLRenderTarget {
+    return new THREE.WebGLRenderTarget(width, height, options);
+  }
+
+  override dispose(): void {
+    super.dispose();
+    this.copy?.material.dispose();
+    this.copy?.quad.dispose();
+    this.copy = null;
+  }
+
+  protected copyOut(gl: THREE.WebGLRenderer, from: THREE.WebGLRenderTarget): THREE.WebGLRenderTarget {
     if (!this.copy) {
       const material = fullScreenMaterial('uniform sampler2D tColour; varying vec2 vUv; void main() { gl_FragColor = texture2D(tColour, vUv); }', { tColour: { value: null } });
       this.copy = { material, quad: new FullScreenQuad(material) };
@@ -225,12 +257,7 @@ export class PostStack {
     return to;
   }
 
-  /** Ping-pong target `i`, made the first time it is drawn into. */
-  private target(i: 0 | 1): THREE.WebGLRenderTarget {
-    return (this.pingPong[i] ??= new THREE.WebGLRenderTarget(this.width, this.height, { type: this.type, depthBuffer: false }));
-  }
-
-  private makePass(id: PostPassId, q: PostQuality, width: number, height: number): PostPass {
+  protected makePass(id: PostPassId, q: PostQuality, width: number, height: number): PostPass {
     switch (id) {
       case 'ao':
         return new AmbientOcclusionPass(q.ambientOcclusion, width, height);

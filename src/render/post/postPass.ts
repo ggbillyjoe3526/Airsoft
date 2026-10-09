@@ -20,16 +20,23 @@ export interface PostFrame {
   index: number;
 }
 
+/** What a pass and the stack draw with: Three's WebGL renderer, or the node renderer (WebGPU overhaul W4). */
+export interface PostRenderer<T> {
+  autoClear: boolean;
+  setRenderTarget(target: T | null): void;
+  render(scene: THREE.Object3D, camera: THREE.Camera): void;
+}
+
 /**
  * One pass of the post stack (G5). It draws from `read` either into `read` itself (an in-place blend: shade, shafts,
  * bloom; `inPlace`, and it returns false) or into `write`, or onto the screen when `write` is null (it returns true).
  * Only `output` and `lens` are ever last, and they always draw out.
  */
-export interface PostPass {
+export interface PostPass<G = THREE.WebGLRenderer, T = THREE.WebGLRenderTarget> {
   readonly id: PostPassId;
   /** Blends onto `read` rather than drawing out: the stack gives it no `write` and never the multisampled scene (BP2). */
   readonly inPlace: boolean;
-  render(gl: THREE.WebGLRenderer, frame: PostFrame, read: THREE.WebGLRenderTarget, write: THREE.WebGLRenderTarget | null): boolean;
+  render(gl: G, frame: PostFrame, read: T, write: T | null): boolean;
   /** The drawing buffer's size in pixels. */
   setSize(width: number, height: number): void;
   /** Forgets anything carried from earlier frames (the temporal history): a resize, a restored context, a cut. */
@@ -75,8 +82,17 @@ export function scaled(size: number, scale: number): number {
   return Math.max(1, Math.round(size * scale));
 }
 
+/** What drawCleared needs of a renderer (WebGL's or the node renderer's). */
+export interface ClearingRenderer<T> {
+  getClearColor(target: THREE.Color): THREE.Color;
+  getClearAlpha(): number;
+  setRenderTarget(target: T | null): void;
+  setClearColor(colour: THREE.ColorRepresentation, alpha?: number): void;
+  clear(colour?: boolean, depth?: boolean, stencil?: boolean): void;
+}
+
 /** Draws `quad` into `target` after clearing it to `colour`, keeping the renderer's own clear colour. */
-export function drawCleared(gl: THREE.WebGLRenderer, quad: { render(gl: THREE.WebGLRenderer): void }, target: THREE.WebGLRenderTarget, colour: THREE.ColorRepresentation, keep: THREE.Color): void {
+export function drawCleared<G extends ClearingRenderer<T>, T>(gl: G, quad: { render(gl: G): void }, target: T, colour: THREE.ColorRepresentation, keep: THREE.Color): void {
   gl.getClearColor(keep);
   const alpha = gl.getClearAlpha();
   gl.setRenderTarget(target);

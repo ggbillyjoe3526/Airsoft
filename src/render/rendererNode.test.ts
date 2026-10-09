@@ -3,14 +3,25 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { QUALITY, type QualitySettings, TONE_MAPPING } from '../config/render';
 import { Renderer } from './renderer';
 import { toneMappingOf } from './rendererParts';
+import { postPlan } from './post/postPlan';
 import type { NodeBackend } from './webgpu/nodeBackend';
+import { DirectOutput } from './webgpu/post/nodeOutput';
+import { NodePostStack } from './webgpu/post/nodePostStack';
+import { NodeRetroFilter } from './webgpu/post/nodeRetro';
 
 /**
  * The Renderer on the node path (WebGPU overhaul W1): handed a node renderer by Game.create, it draws the same scene
- * through it with no GLSL pass (post stack, retro filter), no prefiltered sky, its own GPU timer and its own device-lost
- * recovery. The node renderer is stood in for (render/webgpu/nodeBackend.test.ts covers the real one): what matters
+ * through it, with its own post stack and retro filter (W4), its own prefiltered sky, its own GPU timer and its own
+ * device-lost recovery. The node renderer is stood in for (render/webgpu/nodeBackend.test.ts covers the real one): what matters
  * here is what the Renderer asks of it.
  */
+
+type PostSetupOf = ConstructorParameters<typeof NodePostStack>[0];
+type RetroLookOf = ConstructorParameters<typeof NodeRetroFilter>[0];
+
+/** What a frame or a compile draws, and through what: the post stack, the retro filter or straight (Low). */
+const what = (scene: THREE.Scene, overlay: { scene: THREE.Scene } | undefined, drawer: object | null): string =>
+  `${scene.name}${overlay ? ` and ${overlay.scene.name}` : ''} ${drawer === null ? 'straight' : drawer instanceof NodeRetroFilter ? 'through retro' : drawer instanceof NodePostStack ? 'through stack' : '?'}`;
 
 /** A node back end as the Renderer sees it, logging what it is asked. */
 function fakeNode(name: string, log: string[]) {
@@ -60,7 +71,12 @@ function fakeNode(name: string, log: string[]) {
     onLost: (listener: () => void) => void (lostListener = listener),
     setTiming: (on: boolean) => void node.timing.push(on),
     frameDone: () => void node.frames++,
-    compile: (scene: THREE.Scene, _camera: THREE.Camera, overlay?: { scene: THREE.Scene }) => void log.push(`${name} compile ${scene.name}${overlay ? ` and ${overlay.scene.name}` : ''}`),
+    // W4: the frame through the Renderer's post stack or retro filter (made here), or straight to the canvas (Low).
+    output: new DirectOutput(),
+    postStack: (setup: PostSetupOf, width: number, height: number) => new NodePostStack(setup, width, height, node.output),
+    retro: (look: RetroLookOf) => new NodeRetroFilter(look),
+    draw: (scene: THREE.Scene, _camera: THREE.Camera, overlay: { scene: THREE.Scene } | undefined, drawer: object | null) => void log.push(`${name} draw ${what(scene, overlay, drawer)}`),
+    compile: (scene: THREE.Scene, _camera: THREE.Camera, overlay: { scene: THREE.Scene } | undefined, drawer: object | null) => void log.push(`${name} compile ${what(scene, overlay, drawer)}`),
     // W2: the world twins' scene scan and the environment map, made on this renderer.
     rescans: 0,
     prepared: 0,
@@ -115,14 +131,35 @@ describe('the Renderer on the node path (W1)', () => {
     expect(r.maxAnisotropy).toBe(16);
   });
 
-  it('draws the world then the held replica straight to the canvas: no post stack or retro filter, even on Ultra', () => {
-    const { r, log } = nodeRenderer(QUALITY.ultra);
-    r.setRetro({ pixelSize: 4, levels: 6 });
-    expect(r.retroPixelAngle).toBe(0);
+  it('draws Low straight to the canvas, and every other preset through its node post stack (W4)', () => {
     const overlay = { scene: Object.assign(new THREE.Scene(), { name: 'replica' }), camera: new THREE.PerspectiveCamera() };
-    r.render(overlay);
-    expect(log).toEqual(['first render world', 'first clearDepth', 'first render replica']);
+    const low = nodeRenderer(QUALITY.low);
+    low.r.render(overlay);
+    expect(low.log).toEqual(['first draw world and replica straight']);
+    expect(low.r.postPasses).toEqual([]);
+    for (const q of [QUALITY.medium, QUALITY.high, QUALITY.ultra]) {
+      const { r, log } = nodeRenderer(q);
+      r.render(overlay);
+      expect(log).toEqual(['first draw world and replica through stack']);
+      expect(r.postPasses).toEqual(postPlan(q));
+    }
+  });
+
+  it('draws through its node retro filter while it is on, with no stack, and the stack comes back after (W4)', () => {
+    const { r, log } = nodeRenderer(QUALITY.ultra);
+    r.render();
+    const stack = (r as unknown as { post: { current: NodePostStack } }).post.current;
+    const freed = vi.spyOn(stack, 'dispose');
+    r.setRetro({ pixelSize: 4, levels: 6 });
+    expect(r.retroPixelAngle).toBeGreaterThan(0);
+    expect(freed).toHaveBeenCalledOnce();
+    r.render();
     expect(r.postPasses).toEqual([]);
+    r.setRetro(null);
+    expect(r.retroPixelAngle).toBe(0);
+    r.render();
+    expect(log).toEqual(['first draw world through stack', 'first draw world through retro', 'first draw world through stack']);
+    expect(r.postPasses).toEqual(postPlan(QUALITY.ultra));
   });
 
   it('has the scene’s environment map (W2) and the replica sheen (W3) from the node renderer’s one prefiltered sky', () => {
@@ -175,7 +212,7 @@ describe('the Renderer on the node path (W1)', () => {
   it('compiles ahead through the node renderer at a match’s build', () => {
     const { r, log } = nodeRenderer();
     r.warmShaders({ scene: Object.assign(new THREE.Scene(), { name: 'replica' }), camera: new THREE.PerspectiveCamera() });
-    expect(log).toEqual(['first compile world and replica']);
+    expect(log).toEqual(['first compile world and replica through stack']);
   });
 
   it('leaves an antialiasing change to the next load', () => {
@@ -207,7 +244,7 @@ describe('the Renderer on the node path (W1)', () => {
     expect(r.renderer).toBe(next.renderer);
     expect(next.renderer.domElement.className).toBe('game-canvas');
     r.render();
-    expect(log.slice(2)).toEqual(['second render world']);
+    expect(log.slice(2)).toEqual(['second draw world through stack']);
     // The new renderer's loss is heard too.
     next.next = null;
     next.loseDevice();
@@ -223,7 +260,9 @@ describe('the Renderer on the node path (W1)', () => {
     const listened: string[] = [];
     const glCanvas = { className: '', name: 'webgl', addEventListener: (type: string) => void listened.push(type), removeEventListener: () => undefined };
     r.setRetro({ pixelSize: 4, levels: 6 });
-    expect(r.retroPixelAngle).toBe(0);
+    const nodeRetro = (r as unknown as { retro: NodeRetroFilter }).retro;
+    expect(nodeRetro).toBeInstanceOf(NodeRetroFilter);
+    const retroFreed = vi.spyOn(nodeRetro, 'dispose');
     const gl = {
       domElement: glCanvas,
       info: { autoReset: true, reset: () => undefined, render: { calls: 0, triangles: 0 }, memory: { geometries: 0, textures: 0 }, programs: [] },
@@ -245,7 +284,9 @@ describe('the Renderer on the node path (W1)', () => {
     expect(r.renderer).toBe(gl);
     expect(listened).toEqual(['webglcontextlost', 'webglcontextrestored']);
     expect(told).toEqual([true, false]);
-    // What the node path left off comes back with WebGL: the Dev retro filter, and the row's note says what happened.
+    // The node path's retro filter goes with its renderer and WebGL's takes its place; the row's note says what happened.
+    expect(retroFreed).toHaveBeenCalledOnce();
+    expect((r as unknown as { retro: unknown }).retro).not.toBeInstanceOf(NodeRetroFilter);
     expect(r.retroPixelAngle).toBeGreaterThan(0);
     expect(r.lostToWebGL).toBe(true);
     expect(r.pictureRenderer).toBe(gl);

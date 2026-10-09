@@ -25,8 +25,12 @@ and never writes the simulation.
   `ClusteredLightsNode` with spot lights added, for the world only; the extra lights themselves are made by
   `lightPools.ts` when `Renderer.clusteredLights` says so) and `webgpu/webgpuCompat.ts` (fits
   what Chromium 141's WebGPU does differently, where a test on the device finds it: Three's string swizzle, and the
-  layer-by-layer write into the baked light's 3D grid). The post stack and retro
-  filter (W4) are not there yet.
+  layer-by-layer write into the baked light's 3D grid). W4: `webgpu/post/` draws the frame as WebGL's does, with
+  the same draws: `nodePostStack.ts` is `post/postStack.ts`'s chain (`PostChain`) with each pass ported to TSL beside
+  it (`nodeAmbientOcclusion.ts`, `nodeReflections.ts`, `nodeLightShafts.ts`, `nodeTemporalAA.ts`, `nodeBloom.ts`,
+  `nodeFinish.ts` for the output step and lens finish), `nodeRetro.ts` is the retro filter, and `nodeOutput.ts` tone-maps
+  each material as it draws where WebGL draws straight to the screen: Low's whole frame (the haze after the tone
+  mapping, as WebGL's), and the held replica, which draws into a target of its own that the stack's last pass lays on.
 - `matchPresentation.ts`: other players, hit feedback, spectator camera, round banner, scoreboard, flag.
   `combatPresentation.ts`: after each tick it consumes `state.events`; each frame it draws the BBs, puffs, the held
   replica (a second render pass) and the HUD. Also `cameraRig.ts`, `viewmodel.ts`.
@@ -51,7 +55,8 @@ and never writes the simulation.
 - Surface textures: `proceduralTextures.ts` draws each at the quality's Texture detail, the city's flat finishes capped
   at 512² (`drawnSize`, M78), with `natureTextures.ts`, `cityTextures.ts` and `textureLibrary.ts`.
 - Pooled effects (nothing in flight uploads nothing): `impactPuffs.ts`, `bbRenderer.ts`, `dustMotes.ts`. The post stack
-  is `post/` (`postPlan.ts` picks passes per preset); Low builds none.
+  is `post/` (`postPlan.ts` picks passes per preset, `postHost.ts` makes and frees it, WebGL's or the node renderer's);
+  Low builds none.
 - Quality: `gpuCheck.ts` rates the GPU, `qualityStepDown.ts` steps down on slow frames (never saved).
   `Game.changeQuality` → `Renderer.setQuality` → `MatchSession.setQuality`. Changing antialiasing makes a new WebGL
   context on a new canvas (the pointer lock is on the container, so it survives); on the node renderer it waits for

@@ -75,13 +75,20 @@ void main() {
 }
 `;
 
+/** What the Renderer holds of a retro filter, whichever renderer draws it (WebGL's below, the node renderer's since W4). */
+export interface RetroView {
+  setLook(look: RetroLook): void;
+  resize(width: number, height: number, pixelRatio: number): void;
+  dispose(): void;
+}
+
 /**
  * The retro pixel filter (M42): the frame is drawn into a small render target (a texel per retro pixel, nearest
  * filtering, half float so bright light keeps its range until the pass tone maps it), then one full-screen triangle
  * pair shows it on the canvas through the colour-crushing shader. Owns its target, material and geometry; Renderer
  * makes one while the filter is on and disposes of it when it goes off, on a context swap and with itself.
  */
-export class RetroFilter {
+export class RetroFilter implements RetroView {
   private readonly target: THREE.WebGLRenderTarget;
   private readonly material: THREE.ShaderMaterial;
   private readonly quad: THREE.Mesh;

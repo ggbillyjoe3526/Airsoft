@@ -82,7 +82,7 @@ describe('a lost device (W1)', () => {
     expect(node.lost).toBe(true);
     expect(told).toHaveBeenCalledTimes(1);
     expect(error).not.toHaveBeenCalled();
-    node.compile(new THREE.Scene(), new THREE.PerspectiveCamera());
+    node.compile(new THREE.Scene(), new THREE.PerspectiveCamera(), undefined, null);
     expect(compile).not.toHaveBeenCalled();
   });
 
@@ -165,17 +165,21 @@ describe('the GPU timer from timestamp queries (W1)', () => {
 });
 
 describe('compiling ahead and letting go (W1)', () => {
-  it('compiles the world, then the held replica, ahead of the first frame, without waiting', async () => {
+  it("compiles the world and the held replica ahead of the first frame, under Low's output step, without waiting", async () => {
     stubInit();
     const node = await NodeBackend.make(WEBGL2);
     const compiled: string[] = [];
-    vi.spyOn(node.renderer, 'compileAsync').mockImplementation(async (scene) => void compiled.push(scene.name));
+    const r = node.renderer;
+    r.toneMapping = THREE.NeutralToneMapping;
+    // Low (no stack) draws straight onto the canvas, each material tone-mapped as it draws (W4): compiled the same way.
+    const plain = r.contextNode;
+    vi.spyOn(r, 'compileAsync').mockImplementation(async (scene) => void compiled.push(`${scene.name}:${r.toneMapping}:${r.contextNode !== plain}`));
     const world = Object.assign(new THREE.Scene(), { name: 'world' });
     const held = Object.assign(new THREE.Scene(), { name: 'held' });
-    node.compile(world, new THREE.PerspectiveCamera(), { scene: held, camera: new THREE.PerspectiveCamera() });
-    expect(compiled).toEqual(['world']);
-    await new Promise((done) => setTimeout(done, 0));
-    expect(compiled).toEqual(['world', 'held']);
+    node.compile(world, new THREE.PerspectiveCamera(), { scene: held, camera: new THREE.PerspectiveCamera() }, null);
+    expect(compiled).toEqual([`world:${THREE.NoToneMapping}:true`, `held:${THREE.NoToneMapping}:true`]);
+    expect(r.toneMapping).toBe(THREE.NeutralToneMapping);
+    expect(r.contextNode).toBe(plain);
   });
 
   it('frees the renderer on dispose, with no unhandled rejection if Three refuses', async () => {
