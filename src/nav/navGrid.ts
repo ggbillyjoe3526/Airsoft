@@ -320,9 +320,17 @@ export function isWalkableAt(g: NavGrid, x: number, y: number, z: number): boole
 /**
  * Nearest walkable node to (x, z) within `maxRadius` metres (ring search), each cell judged at its floor under `y`; or
  * -1. A floor more than a storey's headroom below `y` doesn't count: from a balcony's edge, the nearest spot is on the
- * balcony, not in the street under it.
+ * balcony, not in the street under it. Nor, where one in reach is, does a floor more than half that above or below `y`
+ * (G11): a body standing on a dock's lip lower than a storey, its middle just past the edge, stands over the ground
+ * below, which was the nearest walkable cell; a route from there walked a bot off the dock (Depot seed 11).
  */
 export function nearestWalkable(g: NavGrid, x: number, y: number, z: number, maxRadius: number): number {
+  const k = nearestWalkableFrom(g, x, y, z, maxRadius, g.headroom / 2);
+  return k >= 0 ? k : nearestWalkableFrom(g, x, y, z, maxRadius, Number.POSITIVE_INFINITY);
+}
+
+/** nearestWalkable's ring search, counting only floors within `level` of `y` (as well as the headroom rule). */
+function nearestWalkableFrom(g: NavGrid, x: number, y: number, z: number, maxRadius: number, level: number): number {
   const ci = Math.min(g.cols - 1, Math.max(0, Math.floor((x - g.minX) / g.cell)));
   const cj = Math.min(g.rows - 1, Math.max(0, Math.floor((z - g.minZ) / g.cell)));
   const maxRing = Math.ceil(maxRadius / g.cell);
@@ -334,7 +342,7 @@ export function nearestWalkable(g: NavGrid, x: number, y: number, z: number, max
         if (Math.max(Math.abs(i - ci), Math.abs(j - cj)) !== ring) continue;
         if (i < 0 || j < 0 || i >= g.cols || j >= g.rows) continue;
         const k = pickNode(g, j * g.cols + i, y);
-        if (k < 0 || !g.walkable[k] || g.floorY[k]! < y - g.headroom) continue;
+        if (k < 0 || !g.walkable[k] || g.floorY[k]! < y - g.headroom || Math.abs(g.floorY[k]! - y) > level) continue;
         const d = Math.hypot(cellX(g, i) - x, cellZ(g, j) - z);
         if (d < bestD) {
           bestD = d;
@@ -413,9 +421,11 @@ export function clearLineFor(g: NavGrid, ax: number, ay: number, az: number, bx:
 /**
  * True if walking the straight line from the point (ax, ay, az) to (bx, bz) would step off a floor: some cell under it
  * has no floor within maxStep of the one before (a platform's edge, a balcony's, a ramp's side). Walls and other blocks
- * don't count, only drops; past the grid's edge counts as a drop. Flat maps never have one.
+ * don't count, only drops; past the grid's edge counts as a drop. Flat maps never have one. Given `wallAbove`, a cell
+ * whose every floor is more than that above the one before is a wall the body is stopped by, not a ledge: the line
+ * goes on past it on its own floor (G11: only a side low enough to ride up onto counts, besides drops).
  */
-export function dropOnLine(g: NavGrid, ax: number, ay: number, az: number, bx: number, bz: number): boolean {
+export function dropOnLine(g: NavGrid, ax: number, ay: number, az: number, bx: number, bz: number, wallAbove = Number.POSITIVE_INFINITY): boolean {
   const len = Math.hypot(bx - ax, bz - az);
   const steps = Math.max(1, Math.ceil(len / (g.cell * 0.5)));
   let node = nodeAt(g, ax, ay, az);
@@ -427,6 +437,7 @@ export function dropOnLine(g: NavGrid, ax: number, ay: number, az: number, bx: n
     if (c === cell) continue;
     // Starting off any floor, the first floor met is where the line is.
     const next = node >= 0 ? stepNode(g, node, c) : pickNode(g, c, ay);
+    if (next < 0 && node >= 0 && g.floorY[g.cellStart[c]!]! > g.floorY[node]! + wallAbove) continue;
     if (next < 0) return true;
     node = next;
     cell = c;

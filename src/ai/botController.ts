@@ -801,6 +801,8 @@ export class BotController {
     if (!ok) b.route.length = 0;
     b.routeLeg = 0;
     b.stuckFor = 0;
+    // The first leg starts where the route was pulled from (endRoute: the bot's position now).
+    copy(b.routeFrom, b.character.position);
     b.routeState = ok ? 'ok' : 'failed';
     if (!ok) b.routeRetryAt = this.world.time + this.world.cfg.routeRetryDelay;
   }

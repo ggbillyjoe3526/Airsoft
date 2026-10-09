@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { NAV } from '../config/nav';
-import { DEPOT } from '../map/depot';
+import { DEPOT, DEPOT_LAYOUT } from '../map/depot';
 import { RAMP_YARD, STACK_HOUSE, TEST_YARD } from '../map/testYard';
 import { GENTLE_SLOPE, planeTerrain, SLOPE_YARD, SLOPE_YARD_TERRAIN, terrainOnly } from '../map/testSupport';
 import { buildTerrain, steepestSlope, terrainHeightAt } from '../map/terrain';
@@ -60,6 +60,17 @@ describe('nav grid', () => {
     const c = nearestWalkable(yard, 0, 0, -6, NAV.snap);
     expect(c).toBeGreaterThanOrEqual(0);
     expect(nearestWalkable(yard, 0, 0, -6, 0.1)).toBe(-1);
+  });
+
+  it('snaps a body on the dock’s lip to the dock, not to the road below it (G11)', () => {
+    // Its middle just past the open edge (Depot seed 11): the road's first walkable cells are nearer than the dock's,
+    // and a route from there walked the bot off the dock.
+    const { dockHeight, dock } = DEPOT_LAYOUT;
+    const k = nearestWalkable(depot, 4.5, dockHeight, dock.edgeZ + 0.15, NAV.snap);
+    expect(k).toBeGreaterThanOrEqual(0);
+    expect(depot.floorY[k]).toBeCloseTo(dockHeight, 5);
+    // Nothing at the dock's height in reach: the nearest floor below still counts, as before.
+    expect(depot.floorY[nearestWalkable(depot, 4.5, dockHeight, dock.edgeZ + 2.6, NAV.snap)]).toBe(0);
   });
 
   it('finds a route between every pair of Depot spawns and to every dead-zone spot', () => {

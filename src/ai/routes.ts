@@ -1,8 +1,9 @@
 import type { BotBehaviour } from '../config/bots';
+import { PHYSICS } from '../config/physics';
 import type { PlayerCommand } from '../sim/commands';
 import { isInPlay } from '../sim/elimination';
-import { type Vec3, vec3 } from '../sim/vec';
-import { dropOnLine } from '../nav/navGrid';
+import { copy, type Vec3, vec3 } from '../sim/vec';
+import { dropOnLine, floorAt } from '../nav/navGrid';
 import type { Bot, BotWorld } from './bot';
 import type { TakenSpots } from './cover';
 
@@ -75,7 +76,13 @@ export function followRoute(b: Bot, w: BotWorld, dt: number, whilePlanning = fal
   const p = b.character.position;
   while (b.routeLeg < b.route.length) {
     const wp = b.route[b.routeLeg]!;
-    if (Math.hypot(wp.x - p.x, wp.z - p.z) > w.cfg.waypointReach) break;
+    const d = Math.hypot(wp.x - p.x, wp.z - p.z);
+    if (d > w.cfg.waypointReach) break;
+    // Reached from aside (G11): where cutting the corner to the next waypoint would take a ledge (down off a stair's
+    // foot and back up its side), walk onto this one first.
+    const next = b.route[b.routeLeg + 1];
+    if (next && d > w.cfg.routeOffLeg && ledgeOnWay(w, p, next)) break;
+    copy(b.routeFrom, wp);
     b.routeLeg++;
   }
   if (b.routeLeg >= b.route.length) {
@@ -86,7 +93,22 @@ export function followRoute(b: Bot, w: BotWorld, dt: number, whilePlanning = fal
     }
     return false;
   }
-  const wp = b.route[b.routeLeg]!;
+  let wp = b.route[b.routeLeg]!;
+  // Pushed off the leg (G11): the straight way on from here is not the one the planner checked. Where it takes no ledge
+  // the leg doesn't (a leg onto a stair grazes the stair's foot too), it is the leg from now on; where it would, step
+  // back onto the leg a little ahead and walk it from there (a fresh route only if that way takes one too). By the
+  // leg's start, within waypointReach, the bot is on it: the loop above checked the way on when it got there.
+  const on = legPoint(b.routeFrom, wp, p, 0);
+  const off = Math.hypot(p.x - on.x, p.z - on.z) > w.cfg.routeOffLeg;
+  if (off && Math.hypot(p.x - b.routeFrom.x, p.z - b.routeFrom.z) > w.cfg.waypointReach) {
+    if (!ledgeOnWay(w, p, wp) || ledgeOnWay(w, b.routeFrom, wp)) copy(b.routeFrom, p);
+    else if (!ledgeOnWay(w, p, legPoint(b.routeFrom, wp, p, w.cfg.routeRejoinAhead))) wp = REJOIN;
+    else {
+      b.routeState = 'wanted';
+      b.stuckFor = 0;
+      return false;
+    }
+  }
   const dx = wp.x - p.x;
   const dz = wp.z - p.z;
   const d = Math.hypot(dx, dz);
@@ -100,6 +122,53 @@ export function followRoute(b: Bot, w: BotWorld, dt: number, whilePlanning = fal
     b.routeState = 'wanted';
   }
   return true;
+}
+
+/** legPoint's answer (one per module: bots step one at a time). */
+const REJOIN = vec3();
+
+/**
+ * The point on the leg `a`-`b` nearest `p` on the ground plane, moved `ahead` metres on along it (at most to `b`), at
+ * the leg's height there. Written to REJOIN, which it returns.
+ */
+function legPoint(a: Vec3, b: Vec3, p: Vec3, ahead: number): Vec3 {
+  const ex = b.x - a.x;
+  const ez = b.z - a.z;
+  const len2 = ex * ex + ez * ez;
+  const t = len2 > 0 ? Math.max(0, Math.min(1, ((p.x - a.x) * ex + (p.z - a.z) * ez + ahead * Math.sqrt(len2)) / len2)) : 1;
+  REJOIN.x = a.x + ex * t;
+  REJOIN.y = a.y + (b.y - a.y) * t;
+  REJOIN.z = a.z + ez * t;
+  return REJOIN;
+}
+
+/**
+ * True if walking straight from `p` to `to` would take a ledge: under the body's middle a drop, or a side low enough to
+ * ride up onto (a taller block stops the body without harm: it slides along); or, a body's radius out to either side,
+ * a floor that much higher than the one under its middle (a capsule half over a low stair's or ramp's side rides up
+ * onto it, then drops off as the side climbs away). A way that climbs a ramp or stair from near its foot has the same
+ * floor under its middle and sides, so it counts only where the body straddles the side.
+ */
+function ledgeOnWay(w: BotWorld, p: Vec3, to: Vec3): boolean {
+  const g = w.nav;
+  const wall = PHYSICS.autostepHeight;
+  if (dropOnLine(g, p.x, p.y, p.z, to.x, to.z, wall)) return true;
+  const dx = to.x - p.x;
+  const dz = to.z - p.z;
+  const len = Math.hypot(dx, dz);
+  const r = w.body.radius / (len || 1);
+  const steps = Math.ceil(len / (g.cell * 0.5));
+  let y = p.y;
+  for (let s = 0; s <= steps; s++) {
+    const x = p.x + (dx * s) / (steps || 1);
+    const z = p.z + (dz * s) / (steps || 1);
+    y = floorAt(g, x, y, z);
+    for (let k = -r; k <= r; k += 2 * r) {
+      const rise = floorAt(g, x - dz * k, y, z + dx * k) - y;
+      if (rise > g.maxStep && rise <= wall) return true;
+    }
+  }
+  return false;
 }
 
 /**

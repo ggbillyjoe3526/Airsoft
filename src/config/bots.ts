@@ -231,6 +231,18 @@ export const BOT_BEHAVIOUR = {
   coverSettle: 0.5,
   /** Route waypoints count as reached within this distance (metres). */
   waypointReach: 0.45,
+  /**
+   * A bot this far (metres) off the leg it walks (pushed aside by a hold, a fight or a teammate) checks the straight
+   * way from where it is to the next waypoint before walking on; if that way would take a ledge the leg doesn't, it
+   * steps back onto the leg, routeRejoinAhead on from the nearest point of it (or asks for a fresh route if that way
+   * takes one too). A waypoint reached from further aside than this is walked onto when cutting the corner to the next
+   * would take a ledge. (G11: Stack House bots walked an old leg from a hold spot beside a stair's foot, or cut the
+   * corner at a stair's foot, rode up the stair's side and fell off it.) One nav cell: a smaller push keeps the body
+   * within a few centimetres of the clearance the leg was checked with, and checking only then keeps the cost low.
+   */
+  routeOffLeg: 0.2,
+  /** How far on along the leg (metres) from its nearest point a bot pushed off it steps back onto it: it merges, not stops. */
+  routeRejoinAhead: 0.5,
   /** Walking slower than this (m/s) for `stuckTime` seconds along a route means blocked: re-plan. */
   stuckSpeed: 0.3,
   stuckTime: 1,

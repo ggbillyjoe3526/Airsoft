@@ -9,5 +9,6 @@ Walkability for bots and walk-offs: pure data and A*, no Three.js.
   walls on the floor they edge; `dropOnLine` keeps bots from walking off an open edge.
 - Every query takes a height (`nodeAt`, `floorAt`, `isWalkableAt`, `nearestWalkable`, `clearLine`, `dropOnLine`) and
   picks the highest floor at most `NODE_PICK_ABOVE` above it, so a balcony and the hall under it differ.
+  `nearestWalkable` prefers a floor near that height, so a body on a dock's lip snaps to the dock, not the road (G11).
 - Used by `ai/` and by `sim/elimination.ts` (walk-off routes and distance fields).
 - Tuning: `config/nav.ts`. Tests: `navGrid.test.ts`, `navGridField.test.ts`, `ai/stackHouse.nav.test.ts`.
