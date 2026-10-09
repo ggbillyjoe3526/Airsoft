@@ -204,20 +204,6 @@ acceptance:
 status: open
 attempts: 0
 
-## W2 · WebGPU world materials: node-material twins of the world's shader patches (WebGPU overhaul, scope `plans/webgpu-overhaul-scope.md`)
-tier: core
-perf: required
-touches: src/render/webgpu/, src/render/renderer.ts, src/render/lightFixtures.ts, pipeline/webgpu-compare.mjs, pipeline/webgpuCompare.mjs, pipeline/webgpuCompare.test.mjs, pipeline/README.md
-contract: none (the WebGL path and its draws are unchanged; node materials live only in the node renderer's lazy chunk)
-acceptance:
-  1. Every `onBeforeCompile` patch that draws the world has a node-material twin the node renderer draws with: the surfaces' weathering and per-pixel baked light (Low's vertex light and the relief maps carried over), decals and signs, the G8/G9 junk, neon flicker and puddles, the sky host's skyline lights and plane, terrain, foliage and canopy, the sky, stars and moon, chimney smoke and steam, dust motes, fireflies, and the fires' flames and embers. Each twin reads the same config tuning and the same uniform objects as its GLSL, and the shader-moved effects move again.
-  2. On Auto without an adapter (every gate here, Low, and every WebGL player) nothing changes: the same draws on every preset, the perf gate's WebGL numbers within their baselines, and no node-material code in the main chunk (still within its budget).
-  3. A comparison script draws fixed camera views of Depot, Woodland and Neon Heights, by day and by night where the map has night, on Medium and High, on the WebGL path and on the node path (its WebGL2 back end, `?forceWebGL`). It scores each pair (mean absolute difference per channel and the share of pixels over a threshold) against a bar pinned in the script and saves the side-by-side pairs for the owner. Every pair passes, and each remaining difference is explained.
-  4. On the node path a frame draws no more calls than W1's (Depot Low: 32 on average); any extra is a KNOWN_ISSUES row.
-  5. The twins allocate nothing per frame and are freed with their map or the renderer; modules stay under about 600 lines; unit tests pin each twin's tuning and uniforms against its WebGL patch.
-status: open
-attempts: 0
-
 **0.1 Dev 6 (confirmed with the roadmap, 2026-10-06).** M92–M95, the holster and the practice
 upgrades, come before the 26 features in `docs/ROADMAP.md` › 0.1 Dev 6, whose blocks are written when that build starts.
 

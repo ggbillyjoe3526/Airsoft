@@ -59,7 +59,8 @@ export {
  * Owns the renderer, main camera and scene. Handles resizing. The renderer is Three's WebGLRenderer, or on the node path
  * (WebGPU overhaul W1, wherever the browser gives a WebGPU adapter) the node renderer handed in by Game.create: the same
  * scene and draws, the world's materials as their node twins (W2), with no post stack, retro filter or replica sheen
- * until W3 and W4 rebuild them as node materials and passes. What the node path needs beyond that lives in its own chunk (render/webgpu/nodeBackend.ts).
+ * until W3 and W4 rebuild them as node materials and passes. What the node path needs beyond that lives in its own
+ * chunk (render/webgpu/nodeBackend.ts).
  */
 export class Renderer {
   /** The WebGL renderer, new on an antialiasing change (setQuality); or the node renderer (W1), new on a loss (nodeLost). */
