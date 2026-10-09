@@ -415,9 +415,10 @@ describe('Extraction: the home team’s jobs (M46)', () => {
     for (let i = 1; i < run.cases.length; i++) if (flat(run.cases[i]!.position, r.you.position) < flat(run.cases[at]!.position, r.you.position)) at = i;
     const k = run.cases[at]!;
     r.moveYou({ x: k.position.x - Math.sin(k.yaw) * 0.9, y: k.position.y, z: k.position.z - Math.cos(k.yaw) * 0.9 });
-    // Facing the case; your teammates catch up first.
+    // Facing the case; your teammates catch up first (6 s since G11: with the bots' first aim walked in from one side,
+    // this seed's teammates take cover once on the way and the second reaches its corner later).
     r.yours.yaw = wrapAngle(k.yaw + Math.PI);
-    r.play(4);
+    r.play(6);
     r.yours.use = true;
     const mates = r.bots.bots.filter((b) => b.character.team === 0);
     r.play(k.openTime - 0.2);

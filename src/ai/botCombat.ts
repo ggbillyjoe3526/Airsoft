@@ -7,7 +7,7 @@ import type { PlayerCommand } from '../sim/commands';
 import { isInPlay } from '../sim/elimination';
 import { characterHitVolume, createHitVolume, type HitVolume, rayCharacter } from '../sim/hitbox';
 import { length3, type Vec3, vec3, wrapAngle } from '../sim/vec';
-import { aimErrorSize, lookAngles, stepAim } from './aim';
+import { aimErrorSize, aimFirstErrorSize, aimSettling, lookAngles, stepAim } from './aim';
 import { findHeldAngles, type HeldAngle } from './angles';
 import { type Bot, type BotWorld, holdYaw, pick, threatInMind } from './bot';
 import { hasReacted } from './botSenses';
@@ -50,8 +50,11 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
     // The target's own speed across the line of sight (the bot's movement is aimErrorMovingDeg).
     const v = target.velocity;
     const sideways = (v.x * (aimPoint.z - eye.z) - v.z * (aimPoint.x - eye.x)) / Math.max(Math.hypot(aimPoint.x - eye.x, aimPoint.z - eye.z), 1e-3);
-    const error = aimErrorSize(w.time - b.contact.acquiredAt, walking || cmd.right !== 0, dist, sideways, b.skill);
-    return stepAim(b.aim, look.yaw, look.pitch, error, cfg, b.skill, b.rng, dt);
+    const c = b.contact;
+    const settling = aimSettling(w.time, c.acquiredAt, c.firstSeenAt, c.reactAt, cfg);
+    const first = aimFirstErrorSize(settling, dist, b.skill);
+    const error = aimErrorSize(settling, walking || cmd.right !== 0, dist, sideways, b.skill);
+    return stepAim(b.aim, look.yaw, look.pitch, error - first, cfg, b.skill, b.rng, dt, first);
   }
   look.pitch = 0;
   const walkYaw = Math.atan2(-b.moveDir.x, -b.moveDir.z);

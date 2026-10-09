@@ -64,6 +64,19 @@ export const BOT_BEHAVIOUR = {
    * random direction), then settles: a hasty first aim, never dead on.
    */
   aimFirstErrorMin: 0.6,
+  /**
+   * ...and points to one side, tilted at most this far from level (degrees; G11). Up close an error the size of a body's
+   * width still lands when it points down (the legs) or up (the head), so the first BBs whizz past a shoulder instead,
+   * where the player sees them coming.
+   */
+  aimFirstErrorTiltDeg: 30,
+  /**
+   * How much of the reaction delay the aim error already settles over (0..1; G11). At 1 the error shrinks from first
+   * sight, so the opening burst came already on target after a reaction (the owner's "bots land hits within a few
+   * moments at 5 to 10 metres"); lower, a bot walks its BBs onto its target once it opens fire, which gives the player a
+   * fair moment to answer.
+   */
+  aimSettleWhileReacting: 0,
   /** How fast the error drifts around (Hz): low values look like a hand correcting, not jitter. */
   aimWanderRate: 0.7,
   /**
@@ -655,8 +668,8 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     turnRate: 5.5,
     aimErrorStartDeg: 4,
     aimErrorSettledDeg: 0.9,
-    aimSettleTime: 0.8,
-    aimErrorStartMetres: 0.25,
+    aimSettleTime: 0.6,
+    aimErrorStartMetres: 0.6,
     aimErrorMovingDeg: 1.2,
     aimErrorTracking: 0.06,
     leadFactor: 0.7,
@@ -690,8 +703,8 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     turnRate: 6,
     aimErrorStartDeg: 3.5,
     aimErrorSettledDeg: 0.75,
-    aimSettleTime: 0.7,
-    aimErrorStartMetres: 0.2,
+    aimSettleTime: 0.5,
+    aimErrorStartMetres: 0.5,
     aimErrorMovingDeg: 1.0,
     aimErrorTracking: 0.05,
     leadFactor: 0.85,
