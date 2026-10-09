@@ -219,7 +219,7 @@ export class MatchSession {
     const lighting = resolveLighting(map);
     this.lighting = lighting;
     renderer.setLighting(lighting);
-    this.daylight = addLighting(renderer.scene, map, quality, lighting);
+    this.daylight = addLighting(renderer.scene, map, quality, lighting, renderer.clusteredLights);
     this.build.phase('lighting');
 
     this.physics = new PhysicsWorld(map, BODY, SIM_DT);

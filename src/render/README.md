@@ -20,7 +20,13 @@ and never writes the simulation.
   and vertex baked light, junk glow and neon flicker, the sky host), `webgpu/effectNodes.ts` (flames, smoke and steam,
   and the sized points' sprite materials), `webgpu/pointSprites.ts` (each sized Points drawn as one instanced sprite,
   since points draw one pixel wide there) and `webgpu/twinUniforms.ts` (the patch's own uniform objects, read per drawn
-  object). The figures' finish and the replica sheen (W3), the post stack and retro filter (W4) are not there yet.
+  object). W3: `webgpu/figureNodes.ts` (the figures' per-vertex finish), the replica sheen from the node renderer's
+  prefiltered sky, `webgpu/nightLights.ts` (clustered lights on a real WebGPU device: three/webgpu's Forward+
+  `ClusteredLightsNode` with spot lights added, for the world only; the extra lights themselves are made by
+  `lightPools.ts` when `Renderer.clusteredLights` says so) and `webgpu/webgpuCompat.ts` (fits
+  what Chromium 141's WebGPU does differently, where a test on the device finds it: Three's string swizzle, and the
+  layer-by-layer write into the baked light's 3D grid). The post stack and retro
+  filter (W4) are not there yet.
 - `matchPresentation.ts`: other players, hit feedback, spectator camera, round banner, scoreboard, flag.
   `combatPresentation.ts`: after each tick it consumes `state.events`; each frame it draws the BBs, puffs, the held
   replica (a second render pass) and the HUD. Also `cameraRig.ts`, `viewmodel.ts`.

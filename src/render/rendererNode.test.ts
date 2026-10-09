@@ -72,6 +72,10 @@ function fakeNode(name: string, log: string[]) {
       node.environmentAsks.push(on);
       return on ? node.sky : null;
     },
+    // W3: the prefiltered sky is freed when neither the environment map nor the sheen wants it; clustered lights.
+    trims: [] as boolean[],
+    trimSky: (on: boolean) => void node.trims.push(on),
+    clustered: true,
     replacement: () => Promise.resolve(node.next),
     dispose: () => void log.push(`${name} disposed`),
     loseDevice: () => {
@@ -121,16 +125,29 @@ describe('the Renderer on the node path (W1)', () => {
     expect(r.postPasses).toEqual([]);
   });
 
-  it('has the scene’s environment map from the node renderer (W2) but no replica sheen yet (W3)', () => {
+  it('has the scene’s environment map (W2) and the replica sheen (W3) from the node renderer’s one prefiltered sky', () => {
     const { r, node } = nodeRenderer(QUALITY.ultra);
     r.render();
     expect(r.scene.environment).toBe(node.sky);
-    expect(r.replicaSheen).toBeNull();
-    // Off on Low: none, and the node renderer is told so (it frees its prefiltered sky).
+    expect(r.replicaSheen).toBe(node.sky);
+    // Off on Low: none, and the node renderer is told neither wants it (it frees its prefiltered sky).
     r.setQuality(QUALITY.low);
     r.render();
     expect(r.scene.environment).toBeNull();
-    expect(node.environmentAsks).toEqual([true, false]);
+    expect(r.replicaSheen).toBeNull();
+    expect(node.environmentAsks).toEqual([true, true, false, false]);
+    expect(node.trims).toEqual([false]);
+    // Sheen without the environment map (Custom): the sky is kept for the sheen.
+    r.setQuality({ ...QUALITY.high, environment: false });
+    expect(node.trims).toEqual([false, true]);
+    expect(r.replicaSheen).toBe(node.sky);
+  });
+
+  it('says whether the night is lit by clustered lights (W3): the node renderer’s answer, never on WebGL', () => {
+    const { r, node } = nodeRenderer();
+    expect(r.clusteredLights).toBe(true);
+    node.clustered = false;
+    expect(r.clusteredLights).toBe(false);
   });
 
   it('looks for new sized points before each frame, and after a quality change (W2)', () => {

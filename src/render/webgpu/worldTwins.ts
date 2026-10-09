@@ -3,8 +3,10 @@ import { type NodeMaterial, PMREMGenerator, type WebGPURenderer } from 'three/we
 import { disposeEnvironmentScene, type EnvironmentLook, ReplicaSheen, skyEnvironmentScene } from '../replicaSheen';
 import { REPLICA_SHEEN } from '../../config/render';
 import { copyOnto, flamesTwin, smokeTwin } from './effectNodes';
+import { figureTwin } from './figureNodes';
 import { PointSprites } from './pointSprites';
 import { emptyGrid, SurfaceLambertTwin, SurfaceNodes, surfaceRecipe, SurfaceStandardTwin } from './surfaceNodes';
+import { patchUniforms } from './twinUniforms';
 
 /**
  * The world's materials on the node path (WebGPU overhaul W2). Three's node library turns each plain material into a
@@ -20,9 +22,11 @@ import { emptyGrid, SurfaceLambertTwin, SurfaceNodes, surfaceRecipe, SurfaceStan
  * | `smoke-plumes` | smokePlumes.ts (smoke and steam) | effectNodes.ts smokeTwin |
  * | `night-sky-stars`, `light-fixtures-embers`, `fireflies`, the motes' | nightSky.ts, lightFixtures.ts, fireflies.ts, dustMotes.ts | pointSprites.ts |
  * | `without-environment`, `night-sky-moon` | surfaceMaterials.ts, nightSky.ts | none: Three's own (node Lambert and Basic never take the scene's environment) |
+ * | `fa8-vertex-finish` | figureFinish.ts (the detailed figures) | figureNodes.ts (W3) |
  *
- * The figures' finish (W3) and the GLSL post passes (W4) are not the world's. The scene's environment map (the
- * prefiltered sky Standard surfaces reflect) is made here too, with the node renderer's own prefilter.
+ * The GLSL post passes and the retro filter (W4) are not materials of the scene. The prefiltered sky is made here too,
+ * with the node renderer's own prefilter: the scene's environment map (what Standard surfaces and figures reflect) and
+ * the held replica's sheen (W3), one target for both, as the WebGL path's ReplicaSheen is.
  */
 
 export class WorldTwins {
@@ -42,13 +46,17 @@ export class WorldTwins {
     this.sky = new ReplicaSheen((_gl, look) => this.prefilter(look));
   }
 
-  /** The scene's environment map for `look` while `on` (Settings › Environment lighting), else null (and freed). */
+  /**
+   * The prefiltered sky for `look` while `on`, else null: the scene's environment map (Settings › Environment lighting)
+   * and the held replica's sheen (Replica sheen, W3) both ask. Made on first want; freed by `trim` when neither wants it.
+   */
   environment(on: boolean, look: EnvironmentLook): THREE.Texture | null {
-    if (!on) {
-      this.sky.dispose();
-      return null;
-    }
-    return this.sky.texture(undefined as unknown as THREE.WebGLRenderer, true, look);
+    return this.sky.texture(undefined as unknown as THREE.WebGLRenderer, on, look);
+  }
+
+  /** The settings changed: with neither the environment nor the sheen on (`on` false), the prefiltered sky is freed. */
+  trim(on: boolean): void {
+    this.sky.trim(on);
   }
 
   dispose(): void {
@@ -79,10 +87,12 @@ export function worldTwin(material: THREE.Material, grid: THREE.Data3DTexture): 
   const recipe = surfaceRecipe(key);
   if (recipe && (material instanceof THREE.MeshLambertMaterial || material instanceof THREE.MeshStandardMaterial)) {
     const twin = copyOnto(material, material instanceof THREE.MeshStandardMaterial ? new SurfaceStandardTwin() : new SurfaceLambertTwin());
-    twin.surface = new SurfaceNodes(recipe, grid);
+    // The baked-light read starts on this material's own grid (its map's), so the first draws bind it (see objectTexture3D).
+    const own = recipe.probes ? (patchUniforms(material).bakeTex?.value as THREE.Data3DTexture | null | undefined) : null;
+    twin.surface = new SurfaceNodes(recipe, own ?? grid);
     return twin;
   }
   if (key === 'light-fixtures-flames') return flamesTwin(material);
   if (key === 'smoke-plumes') return smokeTwin(material);
-  return null;
+  return figureTwin(material);
 }

@@ -73,11 +73,21 @@ export function objectValue<T extends THREE.Vector3 | THREE.Matrix4>(name: strin
 /**
  * A 3D texture read at `uvw`, the texture being patch uniform `name` of each drawn object's material (the map's baked
  * light grid); `fallback` while it has none (a freed grid is never drawn, but the node keeps a texture).
+ *
+ * On a WebGPU device a texture is bound in a bind group, which Three remakes when the bound texture's version differs
+ * from the one bound before (three 0.186 Bindings: its "generation"), not when it is another texture of the same
+ * version: a swap between two grids each uploaded once (version 1) kept the first bound, and Depot drew with no baked
+ * light (W3, found by pipeline/webgpu-compare.mjs on WebGPU). So a texture swapped in with the same version as the one
+ * swapped out is marked for upload once (its version moves on), and the bind group follows. The WebGL2 back end binds
+ * by texture and never needed it.
  */
 export function objectTexture3D(name: string, fallback: THREE.Data3DTexture, uvw: Parameters<typeof texture3D>[1]) {
   const node = texture3D(fallback, uvw);
   node.onObjectUpdate((frame: NodeFrame) => {
-    node.value = valueOf<THREE.Texture>(frame, name, fallback);
+    const next = valueOf<THREE.Texture>(frame, name, fallback);
+    const was = node.value as THREE.Texture;
+    if (next !== was && next.version === was.version) next.needsUpdate = true;
+    node.value = next;
   });
   return node;
 }
