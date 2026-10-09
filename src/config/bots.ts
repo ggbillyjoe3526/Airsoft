@@ -103,9 +103,11 @@ export const BOT_BEHAVIOUR = {
   friendlySpreadSigmas: 2,
   /**
    * ...and this far (metres) past the target too: a BB that misses keeps flying, so a teammate just
-   * behind the target in the line of fire is as much in the way as one in front.
+   * behind the target in the line of fire is as much in the way as one in front. 25 since G11 (15 before): a fresh
+   * contact's first BBs go wide on purpose, so more of them fly on past the target, and one reached a teammate 23.5 m
+   * down the line (Depot, Attack / Defend with ricochets counting, seed 16).
    */
-  friendlyBeyondTarget: 15,
+  friendlyBeyondTarget: 25,
   /**
    * ...unless a wall stops the line first. What the aim line meets counts as a wall only if it also stands
    * this much higher (metres) where the line meets it: BBs (spread, hop-up) can sail over low cover such
