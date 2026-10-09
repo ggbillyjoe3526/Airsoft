@@ -2,7 +2,9 @@ import * as THREE from 'three';
 import { WebGPURenderer } from 'three/webgpu';
 import { FRAME_TIMING } from '../../config/render';
 import { RENDER_BACKEND } from '../../config/renderBackend';
+import type { EnvironmentLook } from '../replicaSheen';
 import type { DrawStats } from '../rendererParts';
+import { WorldTwins } from './worldTwins';
 
 /**
  * The node renderer (WebGPU overhaul W1): Three's `WebGPURenderer`, on a WebGPU device or on its own WebGL2 back end.
@@ -16,9 +18,10 @@ import type { DrawStats } from '../rendererParts';
  * item pictures' own WebGL renderer, and everything let go on dispose. All of it is here, in this chunk, rather than in
  * the Renderer: the main chunk carries only the calls.
  *
- * On this path every material is drawn as Three's node library makes it from the built-in material: a patch through
- * `onBeforeCompile` is not run (W2 and W3 rebuild those as node materials), and the GLSL `ShaderMaterial` passes (the
- * post stack, the retro filter) are not drawn at all (W4).
+ * The world's patched materials draw as their node twins (W2, render/webgpu/worldTwins.ts: the surfaces, dressing, sky
+ * and the shader-moved effects, the sized points as sprites, the scene's environment map); every other material is drawn
+ * as Three's node library makes it from the built-in one (the figures' finish is W3's), and the GLSL `ShaderMaterial`
+ * passes (the post stack, the retro filter) are not drawn at all (W4).
  */
 
 const ignore = (): void => undefined;
@@ -53,6 +56,8 @@ export class NodeBackend {
   private readonly drawStats: DrawStats = { calls: 0, triangles: 0, programs: 0, geometries: 0, textures: 0 };
   /** The menus' item pictures' own WebGL renderer (pictureRenderer), made when one is first drawn. */
   private pictureGl: THREE.WebGLRenderer | null = null;
+  /** The world materials' node twins (W2), installed in the renderer's node library. */
+  private readonly world: WorldTwins;
 
   private constructor(
     readonly renderer: WebGPURenderer,
@@ -60,6 +65,7 @@ export class NodeBackend {
   ) {
     this.kind = (renderer.backend as { isWebGLBackend?: boolean }).isWebGLBackend ? 'webgpu-webgl2' : 'webgpu';
     this.timestamps = renderer.hasFeature('timestamp-query');
+    this.world = new WorldTwins(renderer);
     // Three's own handler logs the loss as an error and stops the renderer for good; the game recovers instead.
     renderer.onDeviceLost = () => {
       if (this.lost) return;
@@ -124,6 +130,21 @@ export class NodeBackend {
     return (this.pictureGl ??= new THREE.WebGLRenderer());
   }
 
+  /** The scene changed (a session's build, a quality change): the next frame looks for new sized points (W2). */
+  rescan(): void {
+    this.world.sprites.rescan();
+  }
+
+  /** Before a frame's draws: after a rescan, the new sized points get their sprite twins (W2). Nothing otherwise. */
+  prepare(scene: THREE.Scene): void {
+    this.world.sprites.prepare(scene);
+  }
+
+  /** The scene's environment map (Environment lighting, F1) for `look`, prefiltered on this renderer; null while off. */
+  environment(on: boolean, look: EnvironmentLook): THREE.Texture | null {
+    return this.lost ? null : this.world.environment(on, look);
+  }
+
   /** `listener` is told once when the device (or the WebGL2 context) is lost. */
   onLost(listener: () => void): void {
     this.lostListener = listener;
@@ -172,6 +193,8 @@ export class NodeBackend {
    */
   compile(scene: THREE.Scene, camera: THREE.Camera, overlay?: { scene: THREE.Scene; camera: THREE.Camera }): void {
     if (this.lost) return;
+    this.world.sprites.rescan();
+    this.world.sprites.prepare(scene);
     const r = this.renderer;
     void r
       .compileAsync(scene, camera)
@@ -183,6 +206,7 @@ export class NodeBackend {
   dispose(): void {
     this.lostListener = () => undefined;
     this.timing = false;
+    this.world.dispose();
     this.renderer.dispose().catch(ignore);
     this.pictureGl?.dispose();
     this.pictureGl?.forceContextLoss();

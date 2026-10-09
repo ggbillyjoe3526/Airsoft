@@ -167,15 +167,21 @@ request. Each entry says where the contract lives, what it holds today and what 
   (`config/rendererPick.ts`) and the empty row. On Auto or WebGPU it asks for a WebGPU adapter; only when one is given
   (on Auto, a hardware one: a software adapter is slower than WebGL) does it load `render/webgpu/nodeBackend.ts` and
   `three/webgpu` by a dynamic import (their own chunks, never the main one) and draw with `WebGPURenderer` on node
-  materials built from the plain ones. No `navigator.gpu`, no adapter, or no device made is Three's `WebGLRenderer`,
+  materials. No `navigator.gpu`, no adapter, or no device made is Three's `WebGLRenderer`,
   quietly: the same renderer and draws as before W1, which is what the container, CI and every gate here run. The
   WebGL pick never asks. `Renderer.backend` says what drew (`webgl`, `webgpu`, or `webgpu-webgl2` for the node
   renderer on its WebGL2 back end under `?forceWebGL`), and `Renderer.stats` gives the draw counts read the same on
-  either. A pick applies from the next load. On the node path there is no post stack, retro filter or prefiltered sky
-  yet (W2 to W4). A lost device (at boot or mid-match) is replaced by a new one, or by WebGL when none can be made:
+  either. A pick applies from the next load. On the node path the world draws with node twins of its GLSL patches (W2,
+  `render/webgpu/worldTwins.ts`): Three's node library asks for a twin by the material's program key before building
+  its own, and each twin reads the very uniform objects and config tuning its patch gives WebGL, per drawn object
+  (`twinUniforms.ts`), so the two can't drift; sized points draw as instanced sprites (`pointSprites.ts`) and the
+  prefiltered sky is made by the node renderer. The figures' finish and replica sheen (W3) and the post stack and retro
+  filter (W4) are not there yet. `pipeline/webgpu-compare.mjs` scores both paths' pictures of the same views against a
+  pinned bar. A lost device (at boot or mid-match) is replaced by a new one, or by WebGL when none can be made:
   the post stack, retro filter and sheen come back, `Renderer.lostToWebGL` is set and the row says so until the next
   load. Pinned by `render/rendererStart.test.ts`, `render/rendererNode.test.ts`, `render/webgpu/nodeBackend.test.ts`,
-  `render/webgpuFoundation.qa.test.ts`, `e2e/webgpu.spec.ts`.
+  `render/webgpuFoundation.qa.test.ts`, `render/webgpu/worldTwins.test.ts`, `e2e/webgpu.spec.ts`,
+  `e2e/webgpuWorld.spec.ts`.
 - **The settings store keys** (`settings/storage.ts`, `settings/dev.ts`). Saved under `airsoft.*` and versioned
   (`SETTINGS_VERSION` 1). Renaming a key needs a migration: one `case` in `migrate` (the per-setting keys of the first
   builds are its "version 0"). An object from a newer version is never read or overwritten. Fields are only ever

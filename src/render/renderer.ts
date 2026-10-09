@@ -58,8 +58,8 @@ export {
 /**
  * Owns the renderer, main camera and scene. Handles resizing. The renderer is Three's WebGLRenderer, or on the node path
  * (WebGPU overhaul W1, wherever the browser gives a WebGPU adapter) the node renderer handed in by Game.create: the same
- * scene and draws, with no post stack, retro filter, environment map or replica sheen until W2 to W4 rebuild them as
- * node materials and passes. What the node path needs beyond that lives in its own chunk (render/webgpu/nodeBackend.ts).
+ * scene and draws, the world's materials as their node twins (W2), with no post stack, retro filter or replica sheen
+ * until W3 and W4 rebuild them as node materials and passes. What the node path needs beyond that lives in its own chunk (render/webgpu/nodeBackend.ts).
  */
 export class Renderer {
   /** The WebGL renderer, new on an antialiasing change (setQuality); or the node renderer (W1), new on a loss (nodeLost). */
@@ -378,6 +378,8 @@ export class Renderer {
     // reflective meshes are looked for again.
     this.post.drop();
     this.post.rescan();
+    // The node path's sized points (W2): effects a quality change makes are given their sprites on the next frame.
+    this.node?.rescan();
     const replaced = quality.antialias !== this.contextAntialias && this.replaceContext(quality.antialias);
     this.gl.shadowMap.enabled = quality.shadows;
     this.resize();
@@ -455,6 +457,7 @@ export class Renderer {
     // A lost device draws nothing until its replacement takes over (nodeLost).
     if (this.node?.lost) return;
     if (this.environmentDirty) this.applyEnvironment();
+    this.node?.prepare(this.scene);
     const gl = this.gl;
     const timer = this.timer();
     timer?.begin();
@@ -520,7 +523,9 @@ export class Renderer {
    */
   private applyEnvironment(): void {
     this.environmentDirty = false;
-    this.scene.environment = this.node ? null : this.sheen.texture(this.gl as THREE.WebGLRenderer, this.quality.environment, this.environmentLook);
+    this.scene.environment = this.node
+      ? this.node.environment(this.quality.environment, this.environmentLook)
+      : this.sheen.texture(this.gl as THREE.WebGLRenderer, this.quality.environment, this.environmentLook);
     this.scene.environmentIntensity = this.lighting.environment.intensity;
   }
 

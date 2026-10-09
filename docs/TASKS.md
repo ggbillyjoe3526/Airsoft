@@ -207,7 +207,7 @@ attempts: 0
 ## W2 · WebGPU world materials: node-material twins of the world's shader patches (WebGPU overhaul, scope `plans/webgpu-overhaul-scope.md`)
 tier: core
 perf: required
-touches: src/render/webgpu/, src/render/renderer.ts, pipeline/webgpu-compare.mjs, pipeline/webgpuCompare.mjs, pipeline/README.md
+touches: src/render/webgpu/, src/render/renderer.ts, src/render/lightFixtures.ts, pipeline/webgpu-compare.mjs, pipeline/webgpuCompare.mjs, pipeline/webgpuCompare.test.mjs, pipeline/README.md
 contract: none (the WebGL path and its draws are unchanged; node materials live only in the node renderer's lazy chunk)
 acceptance:
   1. Every `onBeforeCompile` patch that draws the world has a node-material twin the node renderer draws with: the surfaces' weathering and per-pixel baked light (Low's vertex light and the relief maps carried over), decals and signs, the G8/G9 junk, neon flicker and puddles, the sky host's skyline lights and plane, terrain, foliage and canopy, the sky, stars and moon, chimney smoke and steam, dust motes, fireflies, and the fires' flames and embers. Each twin reads the same config tuning and the same uniform objects as its GLSL, and the shader-moved effects move again.

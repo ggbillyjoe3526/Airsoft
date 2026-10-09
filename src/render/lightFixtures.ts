@@ -21,7 +21,7 @@ export type GroundUnder = (x: number, z: number, below: number) => number;
 
 const F = FIXTURES;
 /** How each sine of the flicker is offset by a light's seed (so two fires never flicker together). */
-const PHASE = [1, 1.7, 2.9] as const;
+export const PHASE = [1, 1.7, 2.9] as const;
 
 /** The flicker seed of a map's light `index` (its place in MapData.lights): the flames and the real light share it. */
 export const flickerSeed = (index: number): number => index * 2.3 + 0.7;
