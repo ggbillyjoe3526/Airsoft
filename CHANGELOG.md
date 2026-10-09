@@ -61,6 +61,9 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **W3** · On WebGPU players, held replicas and replica sheen look as on WebGL; at night every lamp and fire near you lights walls and players
 
 ### Fixed
+- **G11** · The team camo on players reads clearly on Medium and up: crisp dark and light blotches printed per pixel, on WebGL and WebGPU; Low keeps plain clothes
+- **G11** · Your left arm wears its team camo sleeve and armband in view, not a plain grey sleeve
+- **G11** · Bots no longer land their first hit almost at once up close: their first BBs go wide to one side and walk in (Normal's first hit at 5 m now takes about 1.5 s); Hard and Pro stay quicker
 - **M74** · No frame hitches when you're hit or a bot plans a route (#138)
 - **BP2** · Customise takes "No light" on every replica's Light row; it stays after a reload, and your match kit carries no torch (#150)
 - **BP2** · A hunter checks at once whether pushing keeps you in sight when a new fight starts, not from the last fight's look (#150)

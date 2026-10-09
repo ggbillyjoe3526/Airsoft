@@ -13,7 +13,8 @@ sets it and writes `pipeline/out/balance-report.md`, each figure judged against 
   minute, the levels' order).
 - Figures: Depot's ends, flag, difficulty, custom 1v1 and 2v2, ricochets and Pro (`depot*.balance.ts`); Woodland's Pro
   and below-Pro levels (`woodland*.balance.ts`); Neon Heights by Day and Night at Normal and Pro, and the east's first
-  hits (`neonHeights*.balance.ts`); Extraction on each map (`*Extraction.balance.ts`). Each file's comments keep the
+  hits (`neonHeights*.balance.ts`); Extraction on each map (`*Extraction.balance.ts`); a bot's first hit up close, in duels at 5 and 10 m and in
+  Depot matches (`closeRange.balance.ts`, G11). Each file's comments keep the
   measures since the figure was first a guard.
 - The pass/fail half of each, what must never happen, is the `slow` guards in `src/ai` (`depotMatchSupport.ts` ›
   `expectRoundsPlayed`, `expectCustomMatchesPlayable`, `expectRicochetsPlayable`; `extractionRunSupport.ts` ›
