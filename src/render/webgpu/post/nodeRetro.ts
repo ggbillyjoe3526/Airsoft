@@ -1,12 +1,12 @@
 import * as THREE from 'three';
 import type { NodeMaterial } from 'three/webgpu';
-import * as TSL from 'three/tsl';
+import { tsl } from './tsl';
 import type { RetroLook } from '../../../config/render';
 import { retroTargetSize, type RetroView } from '../../retroFilter';
 import { type AnyNode, at, displayOf, fullScreen, type NodeRenderer, type NodeTarget, quad } from './nodeKit';
 import type { NodeFrameDrawer, Overlay } from './nodePostStack';
 
-const { abs, clamp, floor, Fn, min, mod, screenCoordinate, screenSize, texture, uniform, vec2, vec3, vec4 } = TSL as AnyNode;
+const { abs, clamp, floor, Fn, min, mod, screenCoordinate, screenSize, texture, uniform, vec2, vec3, vec4 } = tsl;
 
 const bayer2 = (c: AnyNode): AnyNode => abs(c.x.sub(c.y)).mul(2).add(c.y);
 /** The 4×4 ordered-dither threshold of retro pixel `p` (render/retroFilter.ts bayerThreshold). */

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { NodeMaterial } from 'three/webgpu';
-import * as TSL from 'three/tsl';
+import { tsl } from './tsl';
 import { generateMagicSquareNoise } from 'three/examples/jsm/shaders/GTAOShader.js';
 import { generatePdSamplePointInitializer } from 'three/examples/jsm/shaders/PoissonDenoiseShader.js';
 import { POST } from '../../../config/post';
@@ -17,7 +17,7 @@ import { type AnyNode, at, depthAt, fullScreen, type NodeRenderer, type NodeTarg
  * same targets (8-bit, cleared white, at the quality's scale) and the same multiply onto the picture.
  */
 
-const { abs, acos, clamp, cos, cross, Discard, dot, float, Fn, If, int, ivec2, mat3, max, mix, normalize, PI, pow, sin, sqrt, texture, textureSize, uniform, vec2, vec3, vec4 } = TSL as AnyNode;
+const { abs, acos, clamp, cos, cross, Discard, dot, float, Fn, If, int, ivec2, mat3, max, mix, normalize, PI, pow, sin, sqrt, texture, textureSize, uniform, vec2, vec3, vec4 } = tsl;
 
 const C = POST.ao;
 /** GTAOShader's DIRECTIONS and STEPS for C.samples (fewer than 30 samples: 3 directions). */

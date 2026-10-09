@@ -287,3 +287,16 @@ describe('Low’s frame straight onto the canvas (W4)', () => {
     expect(gl.outputColorSpace).toBe(THREE.SRGBColorSpace);
   });
 });
+
+describe('the node path’s TSL stays in its own chunk (W4)', () => {
+  it('takes TSL by named imports: a namespace used as a value shares a bundler helper chunk the physics import then preloads', async () => {
+    const { readdirSync, readFileSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const roots = [join(__dirname), join(__dirname, '..')];
+    for (const dir of roots) {
+      for (const file of readdirSync(dir).filter((f) => f.endsWith('.ts') && !f.endsWith('.test.ts'))) {
+        expect(readFileSync(join(dir, file), 'utf8'), file).not.toMatch(/import \* as \w+ from 'three\/(tsl|webgpu)'/);
+      }
+    }
+  });
+});

@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 import type { NodeMaterial } from 'three/webgpu';
-import * as TSL from 'three/tsl';
+import { tsl } from './tsl';
 import { POST } from '../../../config/post';
 import type { PostFrame, PostPass } from '../../post/postPass';
 import { type AnyNode, at, fullScreen, type NodeRenderer, type NodeTarget, quad, slot, vUv } from './nodeKit';
 
-const { float, Fn, max, mix, smoothstep, texture, uniform, vec2, vec3, vec4 } = TSL as AnyNode;
+const { float, Fn, max, mix, smoothstep, texture, uniform, vec2, vec3, vec4 } = tsl;
 
 const B = POST.bloom;
 /** UnrealBloomPass's mips, their blur kernels' radii and their weights in the composite. */

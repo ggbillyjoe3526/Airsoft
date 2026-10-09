@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 import { NodeMaterial } from 'three/webgpu';
-import * as TSL from 'three/tsl';
+import { tsl } from './tsl';
 import { POST } from '../../../config/post';
 import type { PostFrame, PostPass } from '../../post/postPass';
 import { type AnyNode, at, depthAt, fullScreen, type NodeRenderer, type NodeTarget, quad, screenOf, slot, viewAt, vUv } from './nodeKit';
 
-const { Break, clamp, depth, Discard, dot, float, Fn, If, Loop, max, min, mix, normalize, normalView, pow, reflect, screenUV, uniform, vec2, vec4 } = TSL as AnyNode;
+const { Break, clamp, depth, Discard, dot, float, Fn, If, Loop, max, min, mix, normalize, normalView, pow, reflect, screenUV, uniform, vec2, vec4 } = tsl;
 
 const C = POST.reflections;
 

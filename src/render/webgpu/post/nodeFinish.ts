@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 import type { NodeMaterial } from 'three/webgpu';
-import * as TSL from 'three/tsl';
+import { tsl } from './tsl';
 import { POST } from '../../../config/post';
 import type { PostFrame, PostPass } from '../../post/postPass';
 import { type AnyNode, at, displayOf, fullScreen, type NodeRenderer, type NodeTarget, quad, slot, vUv } from './nodeKit';
 
-const { abs, clamp, dot, float, fract, Fn, screenCoordinate, screenSize, texture, uniform, vec2, vec3, vec4 } = TSL as AnyNode;
+const { abs, clamp, dot, float, fract, Fn, screenCoordinate, screenSize, texture, uniform, vec2, vec3, vec4 } = tsl;
 
 /**
  * What the stack tells the pass that draws onto the screen (output, or the lens finish on Ultra): the held replica's

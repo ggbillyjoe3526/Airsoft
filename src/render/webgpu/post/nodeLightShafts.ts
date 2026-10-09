@@ -1,12 +1,12 @@
 import * as THREE from 'three';
 import type { NodeMaterial } from 'three/webgpu';
-import * as TSL from 'three/tsl';
+import { tsl } from './tsl';
 import { POST } from '../../../config/post';
 import { type SunOnScreen, sunOnScreen } from '../../post/lightShaftsPass';
 import { ADDITIVE, drawCleared, type PostFrame, type PostPass, scaled } from '../../post/postPass';
-import { type AnyNode, at, depthAt, colourTarget, fullScreen, type NodeRenderer, type NodeTarget, quad, slot, vUv } from './nodeKit';
+import { at, depthAt, colourTarget, fullScreen, type NodeRenderer, type NodeTarget, quad, slot, vUv } from './nodeKit';
 
-const { clamp, float, Fn, length, Loop, max, perspectiveDepthToViewZ, pow, texture, uniform, vec2, vec3, vec4 } = TSL as AnyNode;
+const { clamp, float, Fn, length, Loop, max, perspectiveDepthToViewZ, pow, texture, uniform, vec2, vec3, vec4 } = tsl;
 
 const C = POST.lightShafts;
 

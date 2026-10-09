@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 import type { NodeMaterial } from 'three/webgpu';
-import * as TSL from 'three/tsl';
+import { tsl } from './tsl';
 import { POST } from '../../../config/post';
 import type { PostFrame, PostPass } from '../../post/postPass';
 import { type AnyNode, at, depthAt, clipAt, colourTarget, fullScreen, type NodeRenderer, type NodeTarget, quad, slot, vUv } from './nodeKit';
 
-const { clamp, dot, float, Fn, max, min, uniform, vec2, vec3, vec4 } = TSL as AnyNode;
+const { clamp, dot, float, Fn, max, min, uniform, vec2, vec3, vec4 } = tsl;
 
 const toYCoCg = (c: AnyNode): AnyNode => vec3(dot(c, vec3(0.25, 0.5, 0.25)), dot(c, vec3(0.5, 0, -0.5)), dot(c, vec3(-0.25, 0.5, -0.25)));
 const fromYCoCg = (c: AnyNode): AnyNode => vec3(c.x.add(c.y).sub(c.z), c.x.add(c.z), c.x.sub(c.y).sub(c.z));

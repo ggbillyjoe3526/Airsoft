@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { NodeMaterial, QuadMesh, type WebGPURenderer } from 'three/webgpu';
-import * as TSL from 'three/tsl';
+import { tsl } from './tsl';
 import { scaled } from '../../post/postPass';
 
 /**
@@ -17,7 +17,7 @@ import { scaled } from '../../post/postPass';
 /* eslint-disable @typescript-eslint/no-explicit-any -- TSL's node types don't follow its own swizzles and helpers. */
 export type AnyNode = any;
 
-const { clamp, floor, Fn, ivec2, screenCoordinate, screenSize, texture, textureSize, toneMapping, toneMappingExposure, vec2, vec3, vec4, workingToColorSpace } = TSL as AnyNode;
+const { clamp, floor, Fn, ivec2, screenCoordinate, screenSize, texture, textureSize, toneMapping, toneMappingExposure, vec2, vec3, vec4, workingToColorSpace } = tsl;
 
 /** The node renderer's render target and the renderer itself, in the stack's terms. */
 export type NodeTarget = THREE.RenderTarget;
