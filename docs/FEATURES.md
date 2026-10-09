@@ -240,7 +240,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   flicker now and then, steam from its vents and drains, and a lit city skyline with a plane crossing it (G9)
 - Renderer choice: Auto (WebGPU where the browser has it, WebGL otherwise), WebGPU or WebGL, from the next load; a lost
   graphics device is replaced without leaving the match (W1); the maps look the same on either (W2), and players and
-  held replicas too, with every night lamp near you lighting what stands by it on WebGPU (W3)
+  held replicas too, with every night lamp near you lighting what stands by it on WebGPU (W3), and every preset's
+  screen effects and the retro filter (W4)
 
 ## Practice range and tutorial
 
