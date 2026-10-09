@@ -172,7 +172,7 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 
 | Issue | Class | Notes |
 |---|---|---|
-| The pistol armband is off screen | can wait | The glove fingers were slimmed in the art pass. (M14) |
+| The pistol armband is off screen | can wait | The glove fingers were slimmed in the art pass. (M14) Checked again in G11, with the armband moved to 0.3 of the forearm from the wrist and in team colours: with the pistol both forearms still run off the bottom of the screen below the gloves (Depot, High, first person); the rifle's left arm shows it. Showing it would need the pistol's arms posed higher or a wider view. |
 | The team camo is printed per part from each part's own position: its blotches don't run on across a seam (thigh to hip, sleeve to shoulder), and your sleeves' print is smaller than the figures' and doesn't match your own figure's | can wait | Readable at play distances on Medium and up (G11); Low draws plain clothes at Low's cost. A pattern across seams needs one shared space per figure (its rest pose) in the patch. Tune `FIGURE.camo` in `config/characters.ts`. (G11) |
 | A teammate calling a hit raises an arm to ~0.55 m over the eyes, so up close their grey name tag sits over the raised hand | can wait | FA13 lowered the tag to 0.2 m over the eyes; lifting it during a hit call needs the figure's hit pose in the marker code. The tag says "hit", so it still reads. |
 | Figure models (M25a): a baked rig turns normals by the bone matrix, not its inverse transpose; copies carry empty bones; the `three` chunk is ~22 kB bigger | can wait | Only rigs with non-uniform bone scale shade wrong (rare in CC0 packs). Untested with a real CC0 model: the asset sites are blocked here (`docs/CC0_ASSETS.md` §1). |
