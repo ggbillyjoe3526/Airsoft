@@ -22,7 +22,8 @@ import { patchUniforms } from './twinUniforms';
  * | `smoke-plumes` | smokePlumes.ts (smoke and steam) | effectNodes.ts smokeTwin |
  * | `night-sky-stars`, `light-fixtures-embers`, `fireflies`, the motes' | nightSky.ts, lightFixtures.ts, fireflies.ts, dustMotes.ts | pointSprites.ts |
  * | `without-environment`, `night-sky-moon` | surfaceMaterials.ts, nightSky.ts | none: Three's own (node Lambert and Basic never take the scene's environment) |
- * | `fa8-vertex-finish` | figureFinish.ts (the detailed figures) | figureNodes.ts (W3) |
+ * | `fa8-vertex-finish` | figureFinish.ts (the detailed figures, and their camo since G11) | figureNodes.ts (W3) |
+ * | `g11-sleeve-camo` | figureCamo.ts (your sleeves on Hand detail High) | figureNodes.ts |
  *
  * The GLSL post passes and the retro filter (W4) are not materials of the scene. The prefiltered sky is made here too,
  * with the node renderer's own prefilter: the scene's environment map (what Standard surfaces and figures reflect) and

@@ -128,7 +128,7 @@ export function buildFigure(
 ): Figure {
   const F = FIGURE;
   const look = figureLooks(id);
-  const pal = figurePalette(teamColor, look.tone, dress.shell);
+  const pal = figurePalette(teamColor, look.tone, dress.shell, look.camo);
   const an = dress.robot ? ROBOT : HUMAN;
   const root = new THREE.Group();
   const modelMaterials: THREE.Material[] = [];

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { FIGURE, type FigureLook } from '../config/characters';
 import { FIGURE_SHADOW_PROXY } from '../config/render';
 import type { FigurePalette } from './figurePalette';
-import { camoShade, type PartBuilder, type PartLook } from './figureParts';
+import type { PartBuilder, PartLook } from './figureParts';
 import { band, ik, insideOf, type ProfileStop, shapedBand, shellGeo, V } from './figureShapes';
 
 /**
@@ -27,6 +27,8 @@ const TEAM: PartLook = { finish: FIN.shell };
 /** A colour `k` times as bright (clamped). */
 export const tone = (color: number, k: number): number => new THREE.Color(color).multiplyScalar(k).getHex();
 
+/** Each camo part's own pattern (render/figureCamo.ts seeds, at least 1), added to the figure's (FigurePalette.camoSeed). */
+const CAMO = { legL: 1, legR: 2, body: 3, armL: 4, armR: 5 } as const;
 const THIGH: readonly ProfileStop[] = [[0, 0.092, 0.096], [0.45, 0.08, 0.085], [1, 0.062, 0.066]];
 const SHIN: readonly ProfileStop[] = [[0, 0.062, 0.064], [0.3, 0.058, 0.062], [0.8, 0.048, 0.05], [1, 0.054, 0.056]];
 const BOOT_SHAFT: readonly ProfileStop[] = [[0, 0.056, 0.064], [1, 0.058, 0.064]];
@@ -40,8 +42,7 @@ const CUFF: readonly ProfileStop[] = [[0, 0.042, 0.04], [1, 0.038, 0.036]];
 
 /** One leg in its own space: the hip at the origin, the foot FIGURE.foot below. `side`: -1 left, 1 right. */
 export function humanLeg(b: PartBuilder, pal: FigurePalette, side: number): void {
-  const shade = camoShade(side);
-  const camo: PartLook = { shade };
+  const camo: PartLook = { camo: pal.camoSeed + (side < 0 ? CAMO.legL : CAMO.legR) };
   const hip = V(0, 0.03, 0);
   const knee = V(0, -F.knee, -0.015);
   const foot = V(0, -F.foot, 0);
@@ -50,7 +51,7 @@ export function humanLeg(b: PartBuilder, pal: FigurePalette, side: number): void
   b.limb(pal.camo, knee, ankle, SHIN, camo);
   // A cargo pocket with its flap on the outside of the thigh.
   const tl = hip.distanceTo(knee);
-  b.block(tone(pal.camo, 0.94), 0.03, 0.14, 0.12, side * 0.08, tl * 0.58, 0.005, { edge: true, shade }, thigh);
+  b.block(tone(pal.camo, 0.94), 0.03, 0.14, 0.12, side * 0.08, tl * 0.58, 0.005, { ...camo, edge: true }, thigh);
   // The knee pad, a moulded cap in the team colour.
   const pad = knee.clone().add(V(0, -0.03, -0.066));
   if (b.overhaul) {
@@ -83,7 +84,7 @@ export function humanLeg(b: PartBuilder, pal: FigurePalette, side: number): void
  */
 export function humanBody(b: PartBuilder, look: FigureLook, pal: FigurePalette, hy: number): void {
   const at = (y: number): THREE.Vector3 => V(0, y + hy, 0);
-  const camo: PartLook = { shade: camoShade(3) };
+  const camo: PartLook = { camo: pal.camoSeed + CAMO.body };
   b.limb(pal.camo, at(0.84), at(1.08), HIPS, camo, FWD, 0, true);
   b.limb(G.gearDark, at(1.02), at(1.085), BELT, RUBBER, FWD, 0);
   b.box(G.buckle, 0.055, 0.04, 0.012, 0, 1.052 + hy, -0.116, { finish: FIN.steel });
@@ -226,7 +227,7 @@ function visor(b: PartBuilder, H: THREE.Matrix4, pal: FigurePalette): void {
  */
 export function humanArm(b: PartBuilder, pal: FigurePalette, sh: THREE.Vector3, wrist: THREE.Vector3, out: THREE.Vector3, pole: THREE.Vector3, side: number): void {
   const elbow = ik(sh, wrist, F.upperArm, F.forearm, pole);
-  const camo: PartLook = { shade: camoShade(5 + side) };
+  const camo: PartLook = { camo: pal.camoSeed + (side < 0 ? CAMO.armL : CAMO.armR) };
   const upper = b.limb(pal.camo, sh, elbow, UPPER_ARM, camo, pole);
   b.limb(pal.camo, elbow, wrist.clone().addScaledVector(out, -0.02), FOREARM, camo, pole);
   b.sphere(pal.camo, elbow, 0.047, camo);
