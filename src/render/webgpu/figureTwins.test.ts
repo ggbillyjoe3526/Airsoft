@@ -16,7 +16,7 @@ import { Viewmodel } from '../viewmodel';
 import { figureTwin } from './figureNodes';
 import { emptyGrid } from './surfaceNodes';
 import { patchUniforms } from './twinUniforms';
-import { clearSwizzle, fitBrowser, rejectsStringSwizzle } from './webgpuCompat';
+import { clearSwizzle, fitBrowser, no3DAttachment, rejects3DLayerWrite, rejectsStringSwizzle } from './webgpuCompat';
 import { worldTwin } from './worldTwins';
 
 /**
@@ -123,14 +123,14 @@ describe('the WebGPU texture-view swizzle fit (W3)', () => {
     destroy: vi.fn(),
   });
 
-  it('finds a browser that rejects the string swizzle, and frees the test texture either way', () => {
+  it('finds a browser that rejects the string swizzle, and frees the test texture either way', async () => {
     for (const rejects of [true, false]) {
       const t = texture(rejects);
       expect(rejectsStringSwizzle({ createTexture: () => t })).toBe(rejects);
       expect(t.destroy).toHaveBeenCalledOnce();
     }
-    expect(fitBrowser(undefined)).toEqual([]);
-    expect(fitBrowser({ createTexture: () => texture(false) })).toEqual([]);
+    expect(await fitBrowser(undefined)).toEqual([]);
+    expect(await fitBrowser({ createTexture: () => texture(false) })).toEqual([]);
   });
 
   it('clears the swizzle in the descriptor it is given (no copy), once per page', () => {
@@ -140,5 +140,49 @@ describe('the WebGPU texture-view swizzle fit (W3)', () => {
     expect(proto.createView(descriptor)).toBe(descriptor);
     expect(descriptor.swizzle).toBeUndefined();
     expect(clearSwizzle(texture(true))).toBe(false);
+  });
+});
+
+describe('the WebGPU 3D texture layer-write fit (W3)', () => {
+  /** A device whose layer write into a 3D drawable texture raises `error` (null: none), recording what it was given. */
+  const device = (error: unknown) => {
+    const made: { usage: number; dimension: string | undefined }[] = [];
+    const t = { createView: vi.fn(), destroy: vi.fn() };
+    return {
+      made,
+      t,
+      createTexture: (d: { size: [number, number, number?]; format: string; usage: number; dimension?: string }) => {
+        made.push({ usage: d.usage, dimension: d.dimension });
+        return t;
+      },
+      queue: { writeTexture: vi.fn() },
+      pushErrorScope: vi.fn(),
+      popErrorScope: async () => error,
+    };
+  };
+
+  it('finds a browser that fails a layer written into a 3D texture made for drawing into, and frees the test texture', async () => {
+    for (const error of [{ message: 'view dimension' }, null]) {
+      const d = device(error);
+      expect(await rejects3DLayerWrite(d)).toBe(error !== null);
+      expect(d.made).toEqual([{ usage: 0x16, dimension: '3d' }]);
+      expect(d.queue.writeTexture).toHaveBeenCalledOnce();
+      expect(d.t.destroy).toHaveBeenCalledOnce();
+    }
+    // A device with no error scopes (none of these browsers) is taken as fine.
+    expect(await rejects3DLayerWrite({ createTexture: () => ({ createView: vi.fn(), destroy: vi.fn() }) })).toBe(false);
+  });
+
+  it('makes 3D textures without the drawing use, in the descriptor it is given, once per page; 2D textures keep it', () => {
+    const made: number[] = [];
+    const proto = { createTexture: (d: { usage: number }) => (made.push(d.usage), { createView: vi.fn(), destroy: vi.fn() }) };
+    expect(no3DAttachment(proto as never)).toBe(true);
+    const flat = { size: [4, 4] as [number, number], format: 'rgba8unorm', usage: 0x17 };
+    const deep = { size: [4, 4, 4] as [number, number, number], format: 'rgba8unorm', usage: 0x17, dimension: '3d' };
+    proto.createTexture(flat);
+    proto.createTexture(deep);
+    expect(made).toEqual([0x17, 0x07]);
+    expect(deep.usage).toBe(0x07);
+    expect(no3DAttachment(proto as never)).toBe(false);
   });
 });

@@ -420,7 +420,7 @@ export const POOL_LIGHTS = {
    * WebGPU's clustered lights (W3, render/lightPools.ts): every pool within `near` metres of the eye (to its edge) gets
    * its own real light beside the fixed ones, fading out over the last `fade` metres.
    */
-  own: { near: 24, fade: 6 },
+  own: { near: 16, fade: 6 },
 } as const;
 
 /**

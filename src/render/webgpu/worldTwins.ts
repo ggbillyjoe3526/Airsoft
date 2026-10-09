@@ -6,6 +6,7 @@ import { copyOnto, flamesTwin, smokeTwin } from './effectNodes';
 import { figureTwin } from './figureNodes';
 import { PointSprites } from './pointSprites';
 import { emptyGrid, SurfaceLambertTwin, SurfaceNodes, surfaceRecipe, SurfaceStandardTwin } from './surfaceNodes';
+import { patchUniforms } from './twinUniforms';
 
 /**
  * The world's materials on the node path (WebGPU overhaul W2). Three's node library turns each plain material into a
@@ -86,7 +87,9 @@ export function worldTwin(material: THREE.Material, grid: THREE.Data3DTexture): 
   const recipe = surfaceRecipe(key);
   if (recipe && (material instanceof THREE.MeshLambertMaterial || material instanceof THREE.MeshStandardMaterial)) {
     const twin = copyOnto(material, material instanceof THREE.MeshStandardMaterial ? new SurfaceStandardTwin() : new SurfaceLambertTwin());
-    twin.surface = new SurfaceNodes(recipe, grid);
+    // The baked-light read starts on this material's own grid (its map's), so the first draws bind it (see objectTexture3D).
+    const own = recipe.probes ? (patchUniforms(material).bakeTex?.value as THREE.Data3DTexture | null | undefined) : null;
+    twin.surface = new SurfaceNodes(recipe, own ?? grid);
     return twin;
   }
   if (key === 'light-fixtures-flames') return flamesTwin(material);

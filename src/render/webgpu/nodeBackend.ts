@@ -92,7 +92,7 @@ export class NodeBackend {
     // that rejection unhandled inside Three (which the game would take for a crash), and it holds no device to free.
     await renderer.init();
     // Browsers whose WebGPU differs from what Three expects are fitted before the first frame (webgpuCompat.ts).
-    fitBrowser((renderer.backend as { device?: Parameters<typeof fitBrowser>[0] }).device);
+    await fitBrowser((renderer.backend as { device?: Parameters<typeof fitBrowser>[0] }).device);
     const backend = new NodeBackend(renderer, options);
     if (backend.kind === 'webgpu-webgl2' && !options.forceWebGL) {
       backend.dispose();
