@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { MeshBasicNodeMaterial, type NodeFrame, PointsNodeMaterial } from 'three/webgpu';
+import { MeshBasicNodeMaterial, type NodeBuilder, type NodeFrame, type NodeMaterial, PointsNodeMaterial } from 'three/webgpu';
 import {
   attribute,
   bufferAttribute,
@@ -26,7 +26,7 @@ import {
 } from 'three/tsl';
 import { FIXTURES } from '../../config/render';
 import { PHASE } from '../lightFixtures';
-import { objectFloat, patchUniforms } from './twinUniforms';
+import { everyDraw, objectFloat, patchUniforms } from './twinUniforms';
 
 /**
  * The node twins of the world's shader-moved effects (WebGPU overhaul W2): the fires' flames (render/lightFixtures.ts),
@@ -50,6 +50,13 @@ export function copyOnto<T extends THREE.Material>(from: THREE.Material, to: T):
   return to;
 }
 
+/** A twin of a plain Basic material whose uniforms are the drawn object's, set on every draw (twinUniforms.ts everyDraw). */
+export class EffectTwin extends MeshBasicNodeMaterial {
+  override setupObserver(builder: NodeBuilder): ReturnType<NodeMaterial['setupObserver']> {
+    return everyDraw(super.setupObserver(builder));
+  }
+}
+
 /** The flicker curve (lightFixtures.ts flicker and its GLSL fxFlicker) at seed `seed` and clock `t`. */
 function fxFlicker(seed: AnyNode, t: AnyNode): AnyNode {
   const { rates, weights } = F.flicker;
@@ -62,8 +69,8 @@ function fxFlicker(seed: AnyNode, t: AnyNode): AnyNode {
  * The flames and lantern panes: each card's top sways and its colour flickers by its vertex's `flicker` (seed, amount,
  * sway), on the fixtures' clock (`fxTime`). Additive, unfogged, one pass, as the plain material says.
  */
-export function flamesTwin(plain: THREE.Material): MeshBasicNodeMaterial {
-  const twin = copyOnto(plain, new MeshBasicNodeMaterial());
+export function flamesTwin(plain: THREE.Material): EffectTwin {
+  const twin = copyOnto(plain, new EffectTwin());
   const t = objectFloat('fxTime');
   const fx = attribute('flicker', 'vec3');
   const [sway0, sway1] = F.fire.flames.swayRates;
@@ -74,8 +81,8 @@ export function flamesTwin(plain: THREE.Material): MeshBasicNodeMaterial {
 }
 
 /** The smoke and steam puffs: each instance's `puffAlpha` (the CPU's fade over its life) on the sprite's alpha. */
-export function smokeTwin(plain: THREE.Material): MeshBasicNodeMaterial {
-  const twin = copyOnto(plain, new MeshBasicNodeMaterial());
+export function smokeTwin(plain: THREE.Material): EffectTwin {
+  const twin = copyOnto(plain, new EffectTwin());
   twin.opacityNode = materialOpacity.mul(attribute('puffAlpha', 'float'));
   return twin;
 }

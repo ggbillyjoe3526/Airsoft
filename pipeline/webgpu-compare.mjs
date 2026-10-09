@@ -11,10 +11,10 @@
  * on port 4186. Each map, light and preset is one page per renderer: the picks saved as settings, a match started, the
  * simulation held still (Dev game speed 0) and the game's own frame loop stopped once the node renderer has compiled
  * what it draws, then for each view the camera stood where config/menuArt.ts STILL_CAMERA says (as the menus' stills),
- * the figures hidden (W3's) and one frame drawn without the held replica. On the WebGL side the post stack's effects are
- * left out (W4's: the node path has none yet) but not its output step, which is where WebGL tone-maps a Medium or High
- * frame; `--full` also scores the WebGL frame with the whole stack, for information. `--noise` draws
- * each view on WebGL twice (two pages) instead, the floor any bar must sit above.
+ * the figures hidden with their contact shadows and torch beams (W3's) and one frame drawn without the held replica.
+ * On the WebGL side the post stack's effects are left out (W4's: the node path has none yet) but not its output step,
+ * which is where WebGL tone-maps a Medium or High frame; `--full` also scores the WebGL frame with the whole stack, for
+ * information. `--noise` draws each view on WebGL twice (two pages) instead, the floor any bar must sit above.
  *
  * In a container without WebGPU the node renderer runs on its WebGL2 back end (`?forceWebGL`, W1), as the e2e test does:
  * the node materials, their shaders and their uniforms are the ones a WebGPU device draws; only the back end's own
@@ -134,6 +134,11 @@ async function draw(scene, quality, renderer, withPost) {
         const state = game.state;
         const r = game.renderer;
         game.session.match.characters.object.visible = false;
+        // What rides on the figures goes with them (W3's too): the contact shadows under their feet and the torch beams
+        // (the cones, the lit spots and your torch's real spot light), placed where each figure stood when the clock stopped.
+        for (const name of ['contact-shadows', 'torch-beams']) r.scene.traverse((o) => {
+          if (o.name === name) o.visible = false;
+        });
         const eye = (game.__eye ??= { position: r.camera.position.clone(), rotation: r.camera.rotation.clone() });
         const centre = (team) => {
           const own = state.characters.filter((c) => c.team === team);
@@ -173,6 +178,9 @@ async function draw(scene, quality, renderer, withPost) {
           cam.lookAt(blue.x + moon.getX(0), blue.y + camera.up + moon.getY(0) + camera.lookUp * Math.hypot(moon.getX(0), moon.getY(0), moon.getZ(0)), blue.z + moon.getZ(0));
         }
         cam.updateMatrixWorld();
+        // The night's real lights take the pools nearest the stood camera, settled (as the game does each frame with the
+        // eye), so both pages light the same pools whatever their own loop last followed.
+        game.session.daylight.follow(cam, 10);
         const grab = () => r.renderer.domElement.toDataURL('image/png');
         // The post stack's effects (W4's) are left out of the plain frame, the node path has none yet, but not its output
         // step: on Medium and up WebGL draws the world into the stack's linear target and tone-maps it after (so the
@@ -187,8 +195,12 @@ async function draw(scene, quality, renderer, withPost) {
           plainStack.passes.splice(0, plainStack.passes.length, ...plainStack.passes.filter((p) => p.id === 'output'));
         }
         // Draw until the node renderer has compiled everything in view (its draw count settles), then the frame.
+        // Each render waits for an animation frame, as the game's own loop does: the node renderer redraws its shadow
+        // maps once a frame (it counts frames by them), so renders between two frames would see the last frame's.
+        const nextFrame = () => new Promise((done) => requestAnimationFrame(done));
         let calls = -1;
         for (let i = 0, still = 0; i < 40 && still < 3; i++) {
+          await nextFrame();
           r.postStack = () => plainStack;
           r.render();
           const now = r.stats.calls;
@@ -196,6 +208,7 @@ async function draw(scene, quality, renderer, withPost) {
           calls = now;
           await new Promise((done) => setTimeout(done, 150));
         }
+        await nextFrame();
         r.postStack = () => plainStack;
         r.render();
         const plain = grab();
@@ -204,7 +217,10 @@ async function draw(scene, quality, renderer, withPost) {
         let post = null;
         if (withPost) {
           // The post stack's temporal pass settles over a few frames from the stood camera.
-          for (let i = 0; i < 8; i++) r.render();
+          for (let i = 0; i < 8; i++) {
+            await nextFrame();
+            r.render();
+          }
           post = grab();
         }
         return { plain, post, calls: drawn };

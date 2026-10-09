@@ -170,9 +170,9 @@ the WebGL files the gate reads. On a machine with WebGPU, run the gate's laptop 
 
 **The WebGPU comparison** (WebGPU overhaul W2; `webgpu-compare.mjs`, rules in `webgpuCompare.mjs`): draws fixed
 camera views of every map, by day and by night where it has night, on Medium and High, with the WebGL path and with the
-node renderer on its WebGL2 back end (`?forceWebGL`), figures hidden and the game clock stopped. Both sides keep only
-WebGL's output step (tone mapping and sRGB; no bloom, AO or other pass, W4's), so what is compared is the world's
-materials. Each pair is scored (mean absolute difference per channel, and the share of pixels with a channel more than
+node renderer on its WebGL2 back end (`?forceWebGL`), figures hidden (with their contact shadows and torch beams) and
+the game clock stopped. Both sides keep only WebGL's output step (tone mapping and sRGB; no bloom, AO or other pass,
+W4's), so what is compared is the world's materials. Each pair is scored (mean absolute difference per channel, and the share of pixels with a channel more than
 24 steps off) against the bar pinned in `webgpuCompare.mjs` and `webgpuCompare.test.mjs`, and saved side by side
 (WebGL, node, the difference ×4 with red over the threshold) with `scores.json`. Exits 1 when a pair fails. Port 4186.
 

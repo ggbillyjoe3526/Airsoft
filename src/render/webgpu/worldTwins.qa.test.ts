@@ -29,8 +29,8 @@ import { worldTwin, WorldTwins } from './worldTwins';
  * W2 QA: the world's node twins attacked from the side the build worker's tests do not look from: every patched
  * material of every map on every preset (not four hand-picked scenes), the way Three's node renderer decides whether a
  * drawn object's per-object uniforms are sent again (NodeMaterialObserver), the real heap growth of the twins' per-frame
- * paths, and Reduced motion through the sprite twins. Bugs found are pinned with `it.fails` (what must be true, failing
- * today); the Playwright side is e2e/webgpuWorld.qa.spec.ts.
+ * paths, and Reduced motion through the sprite twins. The bugs it found (W2-QA-1, W2-QA-2) are fixed and their tests are
+ * plain tests now; the Playwright side is e2e/webgpuWorld.qa.spec.ts.
  */
 
 /** A Node module by name, which the app's tsconfig (no Node types) does not resolve as a literal. */
@@ -175,18 +175,17 @@ describe('W2 QA: a twin’s per-object uniforms are sent again every frame (acce
     motes.dispose();
   });
 
-  // BUG W2-QA-1: the flames' clock (fxTime), the neon tubes' flicker (neonFlicker) and the passing plane's matrix
-  // (skyPlane, skyPlaneUp) are object uniforms of twins whose observer has hasNode false: on a static mesh nothing makes
-  // Three send them again, so on the node path the flames never sway or flicker, the neon never flickers and the plane
-  // never appears (or moves). Fix: the twins' setupObserver returns an observer with hasNode set (measured: that alone
-  // makes the flames move again).
-  it.fails('the flames’ twin has its observer refresh the object every frame', () => {
+  // W2-QA-1 (fixed): the flames' clock (fxTime), the neon tubes' flicker (neonFlicker) and the passing plane's matrix
+  // (skyPlane, skyPlaneUp) are object uniforms of twins whose observer, looking at the plain material, would say hasNode
+  // false: on a static mesh nothing would make Three send them again, so the flames would never sway or flicker, the neon
+  // never flicker and the plane never appear. The twins' setupObserver marks them (twinUniforms.ts everyDraw).
+  it('the flames’ twin has its observer refresh the object every frame', () => {
     const { plain, twin, done } = flames();
     expect(observerOf(twin as never, plain).hasNode).toBe(true);
     done();
   });
 
-  it.fails('the sky host’s twin (the plane’s matrix and visibility) has its observer refresh the object every frame', () => {
+  it('the sky host’s twin (the plane’s matrix and visibility) has its observer refresh the object every frame', () => {
     const scene = new THREE.Scene();
     const box = new THREE.Box3(new THREE.Vector3(-24, -0.5, -16), new THREE.Vector3(24, 8, 16));
     const atmosphere = addAtmosphere(scene, new THREE.Vector3(), new THREE.Vector3(0.4, 0.8, 0.3).normalize(), QUALITY.high, box, resolveLighting(NEON_HEIGHTS), NEON_HEIGHTS.dressing?.skyline, false, NEON_HEIGHTS.dressing?.plane);
@@ -198,7 +197,7 @@ describe('W2 QA: a twin’s per-object uniforms are sent again every frame (acce
     atmosphere.dispose();
   });
 
-  it.fails('the neon junk’s twin (the flicker channels) has its observer refresh the object every frame', () => {
+  it('the neon junk’s twin (the flicker channels) has its observer refresh the object every frame', () => {
     const group = buildMapMeshes(NEON_HEIGHTS, stub(texturesFor(NEON_HEIGHTS)), look(QUALITY.high), () => new THREE.Texture());
     const junk = drawn(group).find((d) => d.material.customProgramCacheKey().endsWith(':dressing-junk-neon'))!.material;
     const twin = worldTwin(junk, emptyGrid()) as SurfaceLambertTwin;
@@ -429,15 +428,14 @@ describe('W2 QA: the comparison script’s bar tells W1’s plain materials from
   it('fails the plain materials on more than one view, and on both maps with surfaces to weather', async () => {
     const { verdict } = await loadBar();
     const failed = PLAIN.filter((p) => !verdict(p).pass).map((p) => p.view);
-    expect(failed).toEqual(['depot day overview', 'depot day ground', 'neonHeights night sky']);
+    // Every view of the two maps with surfaces to weather; only night Woodland, near black, is left to the twin tests.
+    expect(failed).toEqual(['depot day overview', 'depot day ground', 'neonHeights night aerial', 'neonHeights night ground', 'neonHeights night sky', 'neonHeights day aerial', 'neonHeights day ground']);
   });
 
-  // BUG W2-QA-2: the bar (mean 2.5, 2.5 % over 24) is eight times the twins' worst pair, and W1's plain materials pass it
-  // on 8 of the 11 High pairs, among them Neon Heights' aerial and ground views, where the plain surfaces miss their
-  // weathering and the junk its glow. On those views (and all of Woodland's) a missing twin would be scored as a match, so
-  // "every pair passes" says nothing about them. A bar of mean 0.5 with 1 % over still passes all 22 of the twins' pairs
-  // and fails W1's plain materials on 7 of 11.
-  it.fails('fails the plain materials on Neon Heights’ aerial and ground views too', async () => {
+  // W2-QA-2 (fixed): the bar was mean 2.5 with 2.5 % over 24, eight times the twins' worst pair, and W1's plain
+  // materials passed it on 8 of the 11 High pairs, among them Neon Heights' aerial and ground views, where the plain
+  // surfaces miss their weathering and the junk its glow. The bar is now tight enough to fail them there.
+  it('fails the plain materials on Neon Heights’ aerial and ground views too', async () => {
     const { verdict } = await loadBar();
     for (const view of ['neonHeights night aerial', 'neonHeights night ground', 'neonHeights day aerial', 'neonHeights day ground']) {
       expect(verdict(PLAIN.find((p) => p.view === view)!).pass, view).toBe(false);

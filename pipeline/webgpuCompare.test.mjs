@@ -9,8 +9,8 @@ const frame = (n, rgb) => {
 };
 
 describe('the WebGPU world-materials comparison (W2)', () => {
-  it('pins the bar: mean difference 2.5 steps, at most 2.5 % of pixels over 24 steps', () => {
-    expect(COMPARE_BAR).toEqual({ mad: 2.5, over: 0.025, threshold: 24 });
+  it('pins the bar: mean difference 0.5 steps, at most 1 % of pixels over 24 steps', () => {
+    expect(COMPARE_BAR).toEqual({ mad: 0.5, over: 0.01, threshold: 24 });
     expect(COMPARE_QUALITIES).toEqual(['medium', 'high']);
     expect(COMPARE_VIEWPORT).toEqual({ width: 1280, height: 720 });
   });
@@ -40,9 +40,11 @@ describe('the WebGPU world-materials comparison (W2)', () => {
 
   it('fails a frame shifted as much as W1\'s plain materials were (Depot, 6.5 steps), passes the noise floor', () => {
     const a = frame(100, [100, 100, 100]);
-    expect(verdict(scorePixels(a, frame(100, [106, 107, 106]), 24))).toEqual({ pass: false, fails: ['mean difference 6.33 > 2.5'] });
+    expect(verdict(scorePixels(a, frame(100, [106, 107, 106]), 24))).toEqual({ pass: false, fails: ['mean difference 6.33 > 0.5'] });
+    // W1's plain Neon Heights aerial (1.39, 0.88 % over) fails too.
+    expect(verdict({ mad: 1.392, over: 0.00877 }).fails).toEqual(['mean difference 1.39 > 0.5']);
     expect(verdict({ mad: 0.3, over: 0.008 }).pass).toBe(true);
-    expect(verdict({ mad: 0.3, over: 0.03 }).fails).toEqual(['3.00 % of pixels over 24 > 2.5 %']);
+    expect(verdict({ mad: 0.3, over: 0.012 }).fails).toEqual(['1.20 % of pixels over 24 > 1.0 %']);
     expect(verdict({ mad: Number.NaN, over: 0 }).pass).toBe(false);
   });
 

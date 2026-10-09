@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { type LightingModel, MeshLambertNodeMaterial, MeshStandardNodeMaterial, type Node, type NodeBuilder } from 'three/webgpu';
+import { type LightingModel, MeshLambertNodeMaterial, MeshStandardNodeMaterial, type Node, type NodeBuilder, type NodeMaterial } from 'three/webgpu';
 import {
   abs,
   attribute,
@@ -14,7 +14,6 @@ import {
   materialEmissive,
   materialRoughness,
   max,
-  metalness,
   min,
   mix,
   normalize,
@@ -30,7 +29,7 @@ import {
   vertexColor,
 } from 'three/tsl';
 import { WEATHERING } from '../../config/weathering';
-import { objectFloat, objectTexture3D, objectValue } from './twinUniforms';
+import { everyDraw, objectFloat, objectTexture3D, objectValue } from './twinUniforms';
 
 /**
  * The node twins of the map surfaces' shader patch (render/surfaceShader.ts, G6) and of what rides on it: the set
@@ -186,10 +185,11 @@ export class SurfaceNodes {
 
   /**
    * The lighting model with the baked light after its indirect light (PROBE_GLSL): the sky fill (and on a Standard
-   * surface the sky's reflection) scaled by the probes' sky visibility, and the bounce light added. `physical`: the
-   * model's diffuse colour is the base colour less the metal's share, as Three's Standard writes `material.diffuseColor`.
+   * surface the sky's reflection) scaled by the probes' sky visibility, and the bounce light added. The bounce takes the
+   * full base colour on Lambert and Standard alike: the GLSL reads `material.diffuseColor`, which Three (since r18x) keeps
+   * as the base colour, the metal's share taken off only in `material.diffuseContribution`.
    */
-  lightingModel<T extends LightingModel>(model: T, physical: boolean): T {
+  lightingModel<T extends LightingModel>(model: T): T {
     if (!this.recipe.probes) return model;
     const indirect = model.indirect.bind(model);
     model.indirect = (builder: NodeBuilder): void => {
@@ -201,7 +201,7 @@ export class SurfaceNodes {
       const inside = step(0.0, min(min(p.x, p.y), p.z)).mul(step(max(max(p.x, p.y), p.z), 1.0)).toVar();
       const bake: AnyNode = objectTexture3D('bakeTex', this.grid, p).toVar();
       const vis = mix(1.0, mix(1.0, bake.a, objectFloat('bakeOcclusion')), inside).toVar();
-      const albedo: AnyNode = physical ? diffuseColor.rgb.mul(float(1.0).sub(metalness)) : diffuseColor.rgb;
+      const albedo: AnyNode = diffuseColor.rgb;
       const reflected = (builder.context as unknown as { reflectedLight: { indirectDiffuse: AnyNode; indirectSpecular: AnyNode } }).reflectedLight;
       const bounce = albedo.mul(1 / Math.PI).mul(bake.rgb).mul(objectFloat('bakeScale')).mul(objectFloat('bakeBounce')).mul(inside);
       reflected.indirectDiffuse.assign(reflected.indirectDiffuse.mul(vis).add(bounce));
@@ -232,6 +232,11 @@ interface SurfaceTwin {
 export class SurfaceLambertTwin extends MeshLambertNodeMaterial implements SurfaceTwin {
   surface!: SurfaceNodes;
 
+  /** Its uniforms are the drawn object's, set on every draw (twinUniforms.ts everyDraw). */
+  override setupObserver(builder: NodeBuilder): ReturnType<NodeMaterial['setupObserver']> {
+    return everyDraw(super.setupObserver(builder));
+  }
+
   override setupPosition(builder: NodeBuilder): Node {
     const moved = this.surface.position(positionLocal);
     if (moved !== positionLocal) this.positionNode = moved;
@@ -245,7 +250,7 @@ export class SurfaceLambertTwin extends MeshLambertNodeMaterial implements Surfa
   }
 
   override setupLightingModel(): ReturnType<MeshLambertNodeMaterial['setupLightingModel']> {
-    return this.surface.lightingModel(super.setupLightingModel(), false);
+    return this.surface.lightingModel(super.setupLightingModel());
   }
 
   override setupLighting(builder: NodeBuilder): Node {
@@ -261,6 +266,11 @@ export class SurfaceLambertTwin extends MeshLambertNodeMaterial implements Surfa
 export class SurfaceStandardTwin extends MeshStandardNodeMaterial implements SurfaceTwin {
   surface!: SurfaceNodes;
 
+  /** Its uniforms are the drawn object's, set on every draw (twinUniforms.ts everyDraw). */
+  override setupObserver(builder: NodeBuilder): ReturnType<NodeMaterial['setupObserver']> {
+    return everyDraw(super.setupObserver(builder));
+  }
+
   override setupDiffuseColor(builder: NodeBuilder): void {
     super.setupDiffuseColor(builder);
     this.surface.diffuse();
@@ -274,7 +284,7 @@ export class SurfaceStandardTwin extends MeshStandardNodeMaterial implements Sur
   }
 
   override setupLightingModel(): ReturnType<MeshStandardNodeMaterial['setupLightingModel']> {
-    return this.surface.lightingModel(super.setupLightingModel(), true);
+    return this.surface.lightingModel(super.setupLightingModel());
   }
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */

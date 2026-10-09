@@ -36,20 +36,17 @@ export const COMPARE_VIEWPORT = { width: 1280, height: 720 };
 /**
  * The bar (owner's brief for W2: "matches today's shots" measured). Per pair:
  *
- * - `mad`: the mean absolute difference per channel, averaged over R, G and B, in 0–255 steps. 2.5 is about 1 % of the
- *   range: a uniform shift that small is invisible side by side, while a missing material effect moves the frame's
- *   mean further. Measured with this script on W1's build (plain materials, 2026-10-09): Depot 6.5 to 11.0 (no
- *   weathering or baked light), Neon Heights' night sky 4.2 (no skyline lights or moving plane).
- * - `over`: the share of pixels where any channel differs by more than `threshold` (24 steps, about 10 %). 2.5 % leaves
- *   room for what two renderers legitimately draw differently (antialiased edges, the shadow map's filtering at a
- *   shadow's rim, a flame's flicker) while a missing effect over a surface fails it: W1's Depot had 14 to 30 %.
+ * - `mad`: the mean absolute difference per channel, averaged over R, G and B, in 0–255 steps: at most 0.5.
+ * - `over`: the share of pixels where any channel differs by more than `threshold` (24 steps, about 10 %): at most 1 %.
  *
- * Both must hold. The floor (`--noise`: WebGL against WebGL) is 0.011 at most with no pixel over; W2's node twins
- * score 0.4 at most with under 1 % over, so the bar sits well above what the twins differ by and below what a missing
- * effect costs. Night Woodland is dark enough that W1's plain materials passed it too (0.5 at most): there the unit
- * tests (render/webgpu/worldTwins.test.ts) and e2e/webgpuWorld.spec.ts check that the twins draw.
+ * Both must hold. Measured with this script (High, 2026-10-09): the floor (`--noise`, WebGL against WebGL) is 0.011 at
+ * most with no pixel over; W1's plain materials (no twins) score 6.5 and 11.0 on Depot, 1.4 to 4.2 on every Neon Heights
+ * view (0.9 to 2.2 % over on its aerial and sky), so the bar fails them on 7 of 11 views (QA, W2-QA-2: the first bar,
+ * 2.5 with 2.5 %, failed them on 3). The twins' worst pair sits well inside it (scores.json beside the pairs). Night
+ * Woodland is near black and W1's plain materials pass there too (0.48 at most): the unit tests
+ * (render/webgpu/worldTwins.test.ts, worldTwins.qa.test.ts) and e2e/webgpuWorld.spec.ts check that the twins draw.
  */
-export const COMPARE_BAR = { mad: 2.5, over: 0.025, threshold: 24 };
+export const COMPARE_BAR = { mad: 0.5, over: 0.01, threshold: 24 };
 
 /**
  * Scores two RGBA frames of the same size: the mean absolute difference per channel (R, G, B, then their mean) and

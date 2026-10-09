@@ -7,8 +7,8 @@ import { expect, type Page, test } from '@playwright/test';
  * (flames, embers, fireflies, steam), the uniforms the game changes mid-match reach the screen, Reduced motion stills
  * them, and a quality change or a lost device leaves the twins whole.
  *
- * Bugs found are pinned with `test.fail` (what must be true, failing today): when the worker fixes one the test
- * reports an unexpected pass and the `.fail` goes. Each test of a group shares one page and match (serial).
+ * The bugs found (W2-QA-1: the flames and the passing plane frozen) are fixed and their tests are plain tests now.
+ * Each test of a group shares one page and match (serial).
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- the in-page code reads the game's untyped debug handle. */
@@ -273,11 +273,10 @@ test.describe('Woodland at night on the node renderer: the fire and the fireflie
     expect(flies.reduce((a, b) => a + b, 0)).toBeGreaterThan(200);
   });
 
-  // BUG W2-QA-1 (see worldTwins.qa.test.ts): the flames' clock is an object uniform of a twin whose observer says
-  // hasNode false, so after the first draw Three never sends it again: on a static mesh the flames of a camp fire neither
-  // sway nor flicker on the node path (the game's clock runs, the frames do not change). Measured: with the observer's
-  // hasNode set the same frames differ by a thousand pixels.
-  test.fail('the flames sway and flicker: successive frames of the game’s own loop differ when only the flames are drawn', async () => {
+  // W2-QA-1 (fixed; see worldTwins.qa.test.ts): the flames' clock is an object uniform of a twin, sent again on every
+  // draw only because the twin's observer says it holds nodes; without that the flames of a camp fire neither sway nor
+  // flicker on the node path (the game's clock runs, the frames do not change).
+  test('the flames sway and flicker: successive frames of the game’s own loop differ when only the flames are drawn', async () => {
     const diffs = await moving(null, true);
     expect(diffs.length).toBeGreaterThan(2);
     expect(diffs.reduce((a, b) => a + b, 0)).toBeGreaterThan(200);
@@ -323,10 +322,10 @@ test.describe('Neon Heights at night on the node renderer: the steam moves, the 
     expect(diffs.reduce((a: number, b: number) => a + b, 0)).toBeGreaterThan(1000);
   });
 
-  // BUG W2-QA-1: the passing plane is moved and shown by two uniforms the game writes each frame (skyPlane, skyPlaneUp)
-  // on the tree ring's twin, which Three never sends again after the first draw: on the node path the plane never shows.
+  // W2-QA-1 (fixed): the passing plane is moved and shown by two uniforms the game writes each frame (skyPlane,
+  // skyPlaneUp) on the tree ring's twin, which must reach the GPU on every draw for the plane to show and move.
   // The game's loop is stopped here and the uniforms written as PassingPlane writes them: three places, three frames.
-  test.fail('the passing plane is drawn where its uniforms put it: the frame changes with the matrix and with it hidden', async () => {
+  test('the passing plane is drawn where its uniforms put it: the frame changes with the matrix and with it hidden', async () => {
     const result = await page.evaluate(async () => {
       const q = (window as Any).__qa;
       const game = (window as Any).airsoft;

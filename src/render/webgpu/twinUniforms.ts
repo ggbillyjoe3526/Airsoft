@@ -10,9 +10,23 @@ import { texture3D, uniform } from 'three/tsl';
  * fixtures' clock, the neon flicker, the plane's matrix, the motes' size cap), and kept per material.
  *
  * Several plain materials share one node program (the node renderer keys its programs on the plain material's program
- * key, as WebGL does), so a twin never captures one material's values: each value is a node uniform refreshed per drawn
- * object from that object's own material (`onObjectUpdate`), exactly as WebGL gives each material its own uniforms.
+ * key, as WebGL does), so a twin never captures one material's values: each value is a node uniform set from the drawn
+ * object's own material (`onObjectUpdate`), as WebGL gives each material its own uniforms. Three runs those updates only
+ * for an object its material observer marks as holding nodes, and the observer looks at the plain material (the one
+ * the object carries), which holds none: so every twin with such a uniform has its observer say so (`everyDraw`), and
+ * its uniforms are set on every draw (the fixtures' clock, the neon flicker and the plane move every frame).
  */
+
+/**
+ * A twin's material observer (`setupObserver`) marked as holding nodes, so Three refreshes the drawn object's uniforms on
+ * every draw: the `onObjectUpdate` reads above run each frame for each object, not only on its first draw. No
+ * allocation: the refresh writes into the uniforms' existing values. It costs one object refresh a frame per twinned
+ * mesh: 11 on Depot, 4 on Woodland and 14 on Neon Heights at High (measured 2026-10-09), none at Low (no patches).
+ */
+export function everyDraw<T extends { hasNode: boolean }>(observer: T): T {
+  observer.hasNode = true;
+  return observer;
+}
 
 /** A material's patch uniforms by name (`shader.uniforms` after its onBeforeCompile). */
 export type PatchUniforms = Readonly<Record<string, THREE.IUniform>>;
@@ -38,14 +52,22 @@ function valueOf<T>(frame: NodeFrame, name: string, fallback: T): T {
   return value ?? fallback;
 }
 
+/**
+ * Tags a twin's uniform node with the patch uniform it reads (`patchUniform`, a plain property: the shader's own names
+ * are left to Three), so a test can find what reached the GPU for it in the drawn object's uniform buffer.
+ */
+function tagged<T extends object>(node: T, name: string): T {
+  return Object.assign(node, { patchUniform: name });
+}
+
 /** A float uniform reading patch uniform `name` of each drawn object's material. */
 export function objectFloat(name: string, fallback = 0) {
-  return uniform(fallback).onObjectUpdate((frame: NodeFrame) => valueOf(frame, name, fallback));
+  return tagged(uniform(fallback).onObjectUpdate((frame: NodeFrame) => valueOf(frame, name, fallback)), name);
 }
 
 /** A vec3, mat4 (or any object-valued) uniform reading patch uniform `name` of each drawn object's material, by reference. */
 export function objectValue<T extends THREE.Vector3 | THREE.Matrix4>(name: string, fallback: T) {
-  return uniform(fallback as THREE.Vector3).onObjectUpdate((frame: NodeFrame) => valueOf(frame, name, fallback) as THREE.Vector3);
+  return tagged(uniform(fallback as THREE.Vector3).onObjectUpdate((frame: NodeFrame) => valueOf(frame, name, fallback) as THREE.Vector3), name);
 }
 
 /**
