@@ -1,5 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { COMPARE_BAR, COMPARE_QUALITIES, COMPARE_SCENES, COMPARE_VIEWPORT, EXTRA_CAMERAS, pairFile, scorePixels, verdict } from './webgpuCompare.mjs';
+import {
+  COMPARE_BACKENDS,
+  COMPARE_BAR,
+  COMPARE_QUALITIES,
+  COMPARE_SCENES,
+  COMPARE_VIEWPORT,
+  EXTRA_CAMERAS,
+  FIGURE_CAMERAS,
+  FIGURE_STATES,
+  FIGURE_VIEWS,
+  isFigureView,
+  pairFile,
+  sceneViews,
+  scorePixels,
+  verdict,
+  WEBGPU_ARGS,
+} from './webgpuCompare.mjs';
 
 /** A w×h RGBA frame filled with one colour. */
 const frame = (n, rgb) => {
@@ -50,5 +66,32 @@ describe('the WebGPU world-materials comparison (W2)', () => {
 
   it('names each pair\'s picture by map, light, preset and view', () => {
     expect(pairFile(COMPARE_SCENES[1], 'high', 'fire')).toBe('woodland-night-high-fire.jpg');
+  });
+});
+
+describe('the WebGPU figures, replicas and lights comparison (W3)', () => {
+  it('adds first person and figures near and far to every scene, and a torch beam by night', () => {
+    expect(sceneViews(COMPARE_SCENES[0])).toEqual(['overview', 'ground', 'first-person', 'figures-near', 'figures-far']);
+    for (const s of COMPARE_SCENES) {
+      const views = sceneViews(s);
+      expect(views.slice(0, s.views.length)).toEqual(s.views);
+      expect(views.filter(isFigureView)).toEqual(FIGURE_VIEWS[s.light]);
+      expect(views.includes('torch')).toBe(s.light === 'night');
+    }
+    for (const v of [...FIGURE_VIEWS.day, ...FIGURE_VIEWS.night]) expect(v in FIGURE_CAMERAS, v).toBe(true);
+    // W2's views stay W2's: none of them is a figure view.
+    for (const s of COMPARE_SCENES) for (const v of s.views) expect(isFigureView(v), v).toBe(false);
+  });
+
+  it('stands the figures in every state the twins must draw: alive, calling a hit, out and leaving', () => {
+    expect(new Set(FIGURE_STATES)).toEqual(new Set(['alive', 'calling', 'out', 'leaving']));
+  });
+
+  it('draws on both node back ends, real WebGPU through the software Vulkan adapter', () => {
+    expect(COMPARE_BACKENDS).toEqual(['webgpu-webgl2', 'webgpu']);
+    expect(WEBGPU_ARGS).toContain('--enable-unsafe-webgpu');
+    expect(WEBGPU_ARGS).toContain('--use-webgpu-adapter=swiftshader');
+    expect(pairFile(COMPARE_SCENES[2], 'medium', 'torch', 'webgpu')).toBe('neonHeights-night-medium-torch-webgpu.jpg');
+    expect(pairFile(COMPARE_SCENES[2], 'medium', 'torch', 'webgpu-webgl2')).toBe('neonHeights-night-medium-torch.jpg');
   });
 });

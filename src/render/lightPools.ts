@@ -12,6 +12,12 @@ import { withoutEnvironment } from './surfaceMaterials';
  * mesh for all pools, shaped to the ground; on Medium and High a fixed number of real point lights
  * (QualitySettings.poolLights) take the pools nearest the eye, and the ground mesh fades out under a pool while a real
  * light shines on it. A map without light pools gets nothing.
+ *
+ * On WebGPU's clustered lights (`clustered`, WebGPU overhaul W3: render/webgpu/nightLights.ts) a light costs no shader
+ * of its own, so wherever Night lights is on every other pool near the eye (POOL_LIGHTS.own) gets a real light too: the
+ * fixed pool and the ground mesh are WebGL's, and each pool none of them lights shines on what stands near it (walls,
+ * figures), fading out as one of the fixed lights takes it over or as the eye walks away. Its ground keeps the mesh, so
+ * the pictures stay WebGL's (pipeline/webgpu-compare.mjs).
  */
 
 type PoolConfig = typeof POOL_LIGHTS;
@@ -238,10 +244,10 @@ function poolLightCount(quality: Pick<QualitySettings, 'poolLights'>, reserved =
 }
 
 /**
- * Adds `map`'s light pools to `scene` at `quality`'s Night lights, less `reserved` (M33h: taken by your torch's spot);
- * a map without pools gets nothing.
+ * Adds `map`'s light pools to `scene` at `quality`'s Night lights, less `reserved` (M33h: taken by your torch's spot),
+ * and on `clustered` lights (W3) one more for each pool; a map without pools gets nothing.
  */
-export function addLightPools(scene: THREE.Scene, map: MapData, quality: PoolQuality, reserved = 0): LightPools {
+export function addLightPools(scene: THREE.Scene, map: MapData, quality: PoolQuality, reserved = 0, clustered = false): LightPools {
   const pools = map.lights ?? [];
   if (pools.length === 0) return NO_LIGHT_POOLS;
   const glow = buildPoolGlow(pools);
@@ -253,6 +259,8 @@ export function addLightPools(scene: THREE.Scene, map: MapData, quality: PoolQua
   const decalScale = new Float32Array(pools.length).fill(1);
   let lights: THREE.PointLight[] = [];
   let state = createPoolLightState(0, pools.length);
+  // Every pool's own light (W3, clustered lights wherever Night lights is on), or null.
+  let own: THREE.PointLight[] | null = null;
   const dropLights = (): void => {
     for (const l of lights) {
       scene.remove(l);
@@ -260,8 +268,25 @@ export function addLightPools(scene: THREE.Scene, map: MapData, quality: PoolQua
     }
     lights = [];
   };
+  const setOwn = (on: boolean): void => {
+    if (on === (own !== null)) return;
+    for (const l of own ?? []) {
+      scene.remove(l);
+      l.dispose();
+    }
+    own = on
+      ? pools.map((pool) => {
+          const l = new THREE.PointLight(pool.colour, 0, poolLightReach(pool), POOL_LIGHTS.decay);
+          l.name = 'pool-light-own';
+          l.position.set(pool.position.x, pool.position.y, pool.position.z);
+          scene.add(l);
+          return l;
+        })
+      : null;
+  };
   const setQuality = (q: PoolQuality, reserve = 0): void => {
     if (q.dustMotes !== undefined) fixtures?.setEmbers(q.dustMotes > 0);
+    setOwn(clustered && q.poolLights > 0);
     const count = poolLightCount(q, reserve);
     if (count === lights.length) return;
     dropLights();
@@ -286,12 +311,17 @@ export function addLightPools(scene: THREE.Scene, map: MapData, quality: PoolQua
     setQuality,
     follow: (eye, dt) => {
       fixtures?.advance(dt);
-      if (lights.length === 0) return;
+      if (lights.length === 0 && !own) return;
       stepPoolLights(state, pools, eye.x, eye.z, dt);
       for (let p = 0; p < pools.length; p++) {
         let lit = 0;
         for (let k = 0; k < lights.length; k++) if (state.current[k] === p) lit = Math.max(lit, state.level[k]!);
         setScale(p, 1 - lit);
+        // A pool's own light (W3) gives way to a fixed one as it fades in, and goes out with distance.
+        if (own) {
+          const near = Math.min(1, Math.max(0, (POOL_LIGHTS.own.near - state.distance[p]!) / POOL_LIGHTS.own.fade));
+          own[p]!.intensity = poolLightIntensity(pools[p]!) * (1 - lit) * near * (fixtures && pools[p]!.kind === 'fire' ? flicker(fixtures.time, flickerSeed(p)) : 1);
+        }
       }
       for (let k = 0; k < lights.length; k++) {
         const light = lights[k]!;
@@ -309,6 +339,7 @@ export function addLightPools(scene: THREE.Scene, map: MapData, quality: PoolQua
       }
     },
     dispose: () => {
+      setOwn(false);
       dropLights();
       fixtures?.dispose();
       scene.remove(glow, decal.mesh);

@@ -1,11 +1,14 @@
 /**
- * The WebGPU world-materials comparison's rules (WebGPU overhaul W2; the runner is `webgpu-compare.mjs`): which views
- * are drawn, how a pair of frames is scored and the bar every pair must pass. Pure and dependency-free, so the fast test
- * suite pins it (`webgpuCompare.test.mjs`) and the runner hands `scorePixels` to the browser as it is.
+ * The WebGPU comparison's rules (WebGPU overhaul W2 and W3; the runner is `webgpu-compare.mjs`): which views are drawn,
+ * how a pair of frames is scored and the bar every pair must pass. Pure and dependency-free, so the fast test suite pins
+ * it (`webgpuCompare.test.mjs`) and the runner hands `scorePixels` to the browser as it is.
  *
- * A pair is the same fixed camera view drawn twice, once by the old WebGL path and once by the node renderer (on its
- * WebGL2 back end, `?forceWebGL`, in a container without WebGPU), with the figures hidden (W3's) and nothing of the post
- * stack drawn on either side (W4's): what is left is the world's materials, W2's work.
+ * A pair is the same fixed camera view drawn twice, once by the old WebGL path and once by the node renderer, with
+ * nothing of the post stack drawn on either side (W4's). W2's world views hide the figures, their contact shadows and
+ * the torch beams; W3's figure views (`FIGURE_VIEWS`) draw them, and the held replica in first person, with the
+ * characters stood where the view wants them so both pages draw the same scene. The node renderer runs on its WebGL2
+ * back end (`?forceWebGL`) and, where the browser offers a WebGPU device (in the container, Chromium's SwiftShader
+ * Vulkan adapter, `WEBGPU_ARGS`), on WebGPU itself, where the night maps are lit by clustered lights (W3).
  */
 
 /** Each map in each light it offers (Depot is day only, Woodland night only), and the camera views drawn of it. */
@@ -26,6 +29,60 @@ export const EXTRA_CAMERAS = {
   fire: { back: 3.4, up: 1.5, lookUp: 0.5, fov: 62 },
   sky: { back: 0, up: 12, lookUp: 0.25, fov: 70 },
 };
+
+/**
+ * W3's views, with the figures and the held replica drawn, by the light of the scene (W2's views above stay as they
+ * were, figures hidden):
+ *
+ * - `first-person`: your own eyes at your start, turned towards Orange's start and `pitch` radians below level, the
+ *   held replica drawn (the replica sheen, the arms and hands), your torch off.
+ * - `figures-near` and `figures-far`: the six figures stood in two rows of three, `distance` m out from your start
+ *   along the line to Orange's (or as far as the line is clear, less `margin`), `spacing` m apart, every one facing the
+ *   camera, which stands at your start `up` m over the ground and looks `lookUp` m over their feet. Two are hit:
+ *   one calls the hit (hand up and the HIT! sign), one is out (replica down) and one walks off fading at `fade` of its
+ *   vanish time, so the near view shows the figures' finish, team colours, both looks (humans and robots), the hit and
+ *   out states and a fade; the far one shows them small, as a firefight sees them.
+ * - `torch` (night only): first person with your torch on, `pitch` below level, and a team-mate stood `ahead` m out and
+ *   `side` m to the left with their torch on, pointing the way you look: your beam and theirs (its cone, glare and lit
+ *   disc), and the light on what they land on.
+ */
+export const FIGURE_VIEWS = {
+  day: ['first-person', 'figures-near', 'figures-far'],
+  night: ['first-person', 'figures-near', 'figures-far', 'torch'],
+};
+
+export const FIGURE_CAMERAS = {
+  'first-person': { pitch: 0.06, fov: 70 },
+  'figures-near': { distance: 4.5, margin: 1.2, spacing: 1.1, up: 1.6, lookUp: 1.0, fov: 55 },
+  'figures-far': { distance: 22, margin: 2, spacing: 1.6, up: 1.7, lookUp: 1.0, fov: 40 },
+  torch: { pitch: 0.22, ahead: 3, side: 1.5, fov: 70 },
+};
+
+/** The figures' states in the stood rows (by place: near row left to right, then the far row), and the fade's share. */
+export const FIGURE_STATES = ['alive', 'calling', 'alive', 'out', 'leaving', 'alive'];
+export const FIGURE_FADE = 0.5;
+
+/** The fires' clock (s) on both pages of a pair: their flames' sway and their real lights' flicker. */
+export const FIRE_CLOCK = 7.25;
+
+/** A scene's views: W2's world views (figures hidden) and W3's figure views. */
+export function sceneViews(scene) {
+  return [...scene.views, ...FIGURE_VIEWS[scene.light]];
+}
+
+/** Whether a view is W3's (figures drawn) rather than W2's (figures hidden). */
+export function isFigureView(view) {
+  return view in FIGURE_CAMERAS;
+}
+
+/**
+ * The node renderer's back ends compared: its WebGL2 back end (`?forceWebGL`, any container) and WebGPU itself, where
+ * the browser offers a device. `WEBGPU_ARGS` are the Chromium switches that give the container a WebGPU device
+ * (SwiftShader's Vulkan, a software adapter, which the WebGPU pick accepts and Auto does not); without them Chromium
+ * reaches WebGPU only on a real GPU.
+ */
+export const COMPARE_BACKENDS = ['webgpu-webgl2', 'webgpu'];
+export const WEBGPU_ARGS = ['--enable-unsafe-webgpu', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--use-webgpu-adapter=swiftshader', '--disable-vulkan-surface'];
 
 /** The presets compared: Medium and High (Low draws no weathering or per-pixel baked light, and the gate's perf runs cover it). */
 export const COMPARE_QUALITIES = ['medium', 'high'];
@@ -84,7 +141,7 @@ export function verdict(score, bar = COMPARE_BAR) {
   return { pass: fails.length === 0, fails };
 }
 
-/** The file name of a pair's side-by-side picture. */
-export function pairFile(scene, quality, view) {
-  return `${scene.map}-${scene.light}-${quality}-${view}.jpg`;
+/** The file name of a pair's side-by-side picture: W2's names on the WebGL2 back end, `-webgpu` on WebGPU. */
+export function pairFile(scene, quality, view, backend = 'webgpu-webgl2') {
+  return `${scene.map}-${scene.light}-${quality}-${view}${backend === 'webgpu' ? '-webgpu' : ''}.jpg`;
 }

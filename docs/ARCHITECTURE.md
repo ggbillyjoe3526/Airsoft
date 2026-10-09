@@ -175,13 +175,17 @@ request. Each entry says where the contract lives, what it holds today and what 
   `render/webgpu/worldTwins.ts`): Three's node library asks for a twin by the material's program key before building
   its own, and each twin reads the very uniform objects and config tuning its patch gives WebGL, per drawn object
   (`twinUniforms.ts`), so the two can't drift; sized points draw as instanced sprites (`pointSprites.ts`) and the
-  prefiltered sky is made by the node renderer. The figures' finish and replica sheen (W3) and the post stack and retro
-  filter (W4) are not there yet. `pipeline/webgpu-compare.mjs` scores both paths' pictures of the same views against a
-  pinned bar. A lost device (at boot or mid-match) is replaced by a new one, or by WebGL when none can be made:
+  prefiltered sky is made by the node renderer. Since W3 the figures' per-vertex finish has its twin
+  (`figureNodes.ts`), the held replica reflects the same prefiltered sky, and on a real WebGPU device the night is lit
+  by clustered lights (`nightLights.ts`, built on three/webgpu's Forward+ `ClusteredLightsNode`, with spot lights
+  added): every lamp and fire near the eye has a real light beside WebGL's fixed pool; WebGL and the node renderer's
+  WebGL2 back end keep the fixed pool alone. Only the post stack and retro filter (W4) are not there
+  yet. `pipeline/webgpu-compare.mjs` scores both paths' pictures of the same views (W3: figures, first person and a
+  torch too, on both node back ends) against a pinned bar. A lost device (at boot or mid-match) is replaced by a new one, or by WebGL when none can be made:
   the post stack, retro filter and sheen come back, `Renderer.lostToWebGL` is set and the row says so until the next
   load. Pinned by `render/rendererStart.test.ts`, `render/rendererNode.test.ts`, `render/webgpu/nodeBackend.test.ts`,
-  `render/webgpuFoundation.qa.test.ts`, `render/webgpu/worldTwins.test.ts`, `e2e/webgpu.spec.ts`,
-  `e2e/webgpuWorld.spec.ts`.
+  `render/webgpuFoundation.qa.test.ts`, `render/webgpu/worldTwins.test.ts`, `render/webgpu/figureTwins.test.ts`,
+  `render/webgpu/nightLights.test.ts`, `e2e/webgpu.spec.ts`, `e2e/webgpuWorld.spec.ts`, `e2e/webgpuLights.spec.ts`.
 - **The settings store keys** (`settings/storage.ts`, `settings/dev.ts`). Saved under `airsoft.*` and versioned
   (`SETTINGS_VERSION` 1). Renaming a key needs a migration: one `case` in `migrate` (the per-setting keys of the first
   builds are its "version 0"). An object from a newer version is never read or overwritten. Fields are only ever

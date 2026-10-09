@@ -239,7 +239,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   fireflies at night; Neon Heights gets street litter, puddles, pasted posters and sprays, tube-letter neon signs that
   flicker now and then, steam from its vents and drains, and a lit city skyline with a plane crossing it (G9)
 - Renderer choice: Auto (WebGPU where the browser has it, WebGL otherwise), WebGPU or WebGL, from the next load; a lost
-  graphics device is replaced without leaving the match (W1); the maps look the same on either (W2)
+  graphics device is replaced without leaving the match (W1); the maps look the same on either (W2), and players and
+  held replicas too, with every night lamp near you lighting what stands by it on WebGPU (W3)
 
 ## Practice range and tutorial
 

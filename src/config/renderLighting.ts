@@ -416,6 +416,11 @@ export const POOL_LIGHTS = {
   reach: 1.5,
   decay: 2,
   intensityPerArea: 0.5,
+  /**
+   * WebGPU's clustered lights (W3, render/lightPools.ts): every pool within `near` metres of the eye (to its edge) gets
+   * its own real light beside the fixed ones, fading out over the last `fade` metres.
+   */
+  own: { near: 24, fade: 6 },
 } as const;
 
 /**
@@ -434,3 +439,14 @@ export const SIGNS = {
   glass: 0x27303a,
   offset: 0.02,
 } as const;
+
+/**
+ * Clustered lights on WebGPU (WebGPU overhaul W3, render/webgpu/nightLights.ts): how the view is cut into clusters and
+ * how many lights it holds. Read only by the node renderer's chunk.
+ *
+ * - `maxLights`: the most lights clustered at once (the light data's width): every lamp of the biggest night map, every
+ *   neon sign's spill and the torch fit with room to spare.
+ * - `tileSize`: a cluster's width and height in pixels; `zSlices`: its depth slices, spaced exponentially (Three's).
+ * - `perCluster`: the most lights one cluster lists (a pixel shades at most these).
+ */
+export const CLUSTERED_LIGHTS = { maxLights: 64, tileSize: 32, zSlices: 24, perCluster: 32 } as const;

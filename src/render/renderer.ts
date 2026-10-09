@@ -58,9 +58,9 @@ export {
 /**
  * Owns the renderer, main camera and scene. Handles resizing. The renderer is Three's WebGLRenderer, or on the node path
  * (WebGPU overhaul W1, wherever the browser gives a WebGPU adapter) the node renderer handed in by Game.create: the same
- * scene and draws, the world's materials as their node twins (W2), with no post stack, retro filter or replica sheen
- * until W3 and W4 rebuild them as node materials and passes. What the node path needs beyond that lives in its own
- * chunk (render/webgpu/nodeBackend.ts).
+ * scene and draws, every patched material as its node twin (the world's W2, the figures' and the replica sheen W3) and
+ * on WebGPU the night lit by clustered lights (W3), with no post stack or retro filter until W4 rebuilds them as node
+ * passes. What the node path needs beyond that lives in its own chunk (render/webgpu/nodeBackend.ts).
  */
 export class Renderer {
   /** The WebGL renderer, new on an antialiasing change (setQuality); or the node renderer (W1), new on a loss (nodeLost). */
@@ -174,6 +174,11 @@ export class Renderer {
     return this.node?.kind ?? 'webgl';
   }
 
+  /** WebGPU's clustered lights draw the night (W3): every lamp near the eye its own light; false on WebGL. */
+  get clusteredLights(): boolean {
+    return this.node?.clustered === true;
+  }
+
   /** The WebGL renderer the menus' item pictures are drawn with: the game's own, or the node path's own small one. */
   get pictureRenderer(): THREE.WebGLRenderer {
     return this.node?.pictureRenderer ?? (this.gl as THREE.WebGLRenderer);
@@ -261,8 +266,9 @@ export class Renderer {
    * shared by every match and range; null while Replica sheen is off. Sessions must not dispose it.
    */
   get replicaSheen(): THREE.Texture | null {
-    // The node path has no prefiltered sky yet (its PMREM is W2's): no sheen.
-    return this.node ? null : this.sheen.texture(this.gl as THREE.WebGLRenderer, this.quality.replicaSheen, this.environmentLook);
+    // On the node path the sky its own renderer prefilters (W3), shared with the environment map as here.
+    const on = this.quality.replicaSheen;
+    return this.node ? this.node.environment(on, this.environmentLook) : this.sheen.texture(this.gl as THREE.WebGLRenderer, on, this.environmentLook);
   }
 
   /**
@@ -370,6 +376,7 @@ export class Renderer {
     }
     if (this.surfaces) setSurfaceAnisotropy(this.surfaces, quality.anisotropy);
     this.sheen.trim(quality.replicaSheen || quality.environment);
+    this.node?.trimSky(quality.replicaSheen || quality.environment);
     // Normal maps are freed while nothing draws with them, like the sheen (made again when a material asks).
     if (this.surfaces && !usesNormalMaps(quality)) releaseNormalMaps(this.surfaces);
     // Kept map meshes no session holds go when this look would build them again (a held map follows its session).

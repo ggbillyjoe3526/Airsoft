@@ -4,6 +4,8 @@ import { FRAME_TIMING } from '../../config/render';
 import { RENDER_BACKEND } from '../../config/renderBackend';
 import type { EnvironmentLook } from '../replicaSheen';
 import type { DrawStats } from '../rendererParts';
+import { NightLighting } from './nightLights';
+import { fitBrowser } from './webgpuCompat';
 import { WorldTwins } from './worldTwins';
 
 /**
@@ -58,6 +60,8 @@ export class NodeBackend {
   private pictureGl: THREE.WebGLRenderer | null = null;
   /** The world materials' node twins (W2), installed in the renderer's node library. */
   private readonly world: WorldTwins;
+  /** The night's clustered lights (W3) on a WebGPU device; null on the WebGL2 back end (no storage buffers to shade from). */
+  private readonly lighting: NightLighting | null;
 
   private constructor(
     readonly renderer: WebGPURenderer,
@@ -66,6 +70,8 @@ export class NodeBackend {
     this.kind = (renderer.backend as { isWebGLBackend?: boolean }).isWebGLBackend ? 'webgpu-webgl2' : 'webgpu';
     this.timestamps = renderer.hasFeature('timestamp-query');
     this.world = new WorldTwins(renderer);
+    this.lighting = this.kind === 'webgpu' ? new NightLighting() : null;
+    if (this.lighting) renderer.lighting = this.lighting;
     // Three's own handler logs the loss as an error and stops the renderer for good; the game recovers instead.
     renderer.onDeviceLost = () => {
       if (this.lost) return;
@@ -85,6 +91,8 @@ export class NodeBackend {
     // A renderer whose init failed is left to the collector, not disposed: its dispose() asks for init again and leaves
     // that rejection unhandled inside Three (which the game would take for a crash), and it holds no device to free.
     await renderer.init();
+    // Browsers whose WebGPU differs from what Three expects are fitted before the first frame (webgpuCompat.ts).
+    fitBrowser((renderer.backend as { device?: Parameters<typeof fitBrowser>[0] }).device);
     const backend = new NodeBackend(renderer, options);
     if (backend.kind === 'webgpu-webgl2' && !options.forceWebGL) {
       backend.dispose();
@@ -130,19 +138,36 @@ export class NodeBackend {
     return (this.pictureGl ??= new THREE.WebGLRenderer());
   }
 
+  /** The night is lit by clustered lights (W3): on a WebGPU device, not on the WebGL2 back end. */
+  get clustered(): boolean {
+    return this.lighting !== null;
+  }
+
   /** The scene changed (a session's build, a quality change): the next frame looks for new sized points (W2). */
   rescan(): void {
     this.world.sprites.rescan();
   }
 
-  /** Before a frame's draws: after a rescan, the new sized points get their sprite twins (W2). Nothing otherwise. */
+  /**
+   * Before a frame's draws: after a rescan, the new sized points get their sprite twins (W2); `scene` is the one the
+   * clustered lights shade (W3). Nothing else.
+   */
   prepare(scene: THREE.Scene): void {
+    if (this.lighting) this.lighting.world = scene;
     this.world.sprites.prepare(scene);
   }
 
-  /** The scene's environment map (Environment lighting, F1) for `look`, prefiltered on this renderer; null while off. */
+  /**
+   * The sky prefiltered on this renderer for `look`, null while `on` is false or the device is lost: the scene's
+   * environment map (Environment lighting, F1) and the held replica's sheen (Replica sheen, W3) share it.
+   */
   environment(on: boolean, look: EnvironmentLook): THREE.Texture | null {
     return this.lost ? null : this.world.environment(on, look);
+  }
+
+  /** The settings changed: with neither the environment map nor the sheen wanted, the prefiltered sky is freed. */
+  trimSky(on: boolean): void {
+    this.world.trim(on);
   }
 
   /** `listener` is told once when the device (or the WebGL2 context) is lost. */
@@ -193,6 +218,7 @@ export class NodeBackend {
    */
   compile(scene: THREE.Scene, camera: THREE.Camera, overlay?: { scene: THREE.Scene; camera: THREE.Camera }): void {
     if (this.lost) return;
+    if (this.lighting) this.lighting.world = scene;
     this.world.sprites.rescan();
     this.world.sprites.prepare(scene);
     const r = this.renderer;
@@ -207,6 +233,7 @@ export class NodeBackend {
     this.lostListener = () => undefined;
     this.timing = false;
     this.world.dispose();
+    this.lighting?.dispose();
     this.renderer.dispose().catch(ignore);
     this.pictureGl?.dispose();
     this.pictureGl?.forceContextLoss();

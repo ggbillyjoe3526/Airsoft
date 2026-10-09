@@ -119,7 +119,7 @@ export class RangeSession {
     const lighting = resolveLighting(map);
     this.night = lighting.night;
     renderer.setLighting(lighting);
-    this.daylight = addLighting(renderer.scene, map, quality, lighting);
+    this.daylight = addLighting(renderer.scene, map, quality, lighting, renderer.clusteredLights);
 
     this.physics = new PhysicsWorld(map, BODY, SIM_DT);
     const nav = buildNavGrid(map, NAV);

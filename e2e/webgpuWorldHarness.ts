@@ -1,15 +1,23 @@
 import { expect, type Page } from '@playwright/test';
 
 /**
- * What the W2 browser checks share (e2e/webgpuWorld.spec.ts, e2e/webgpuWorld.qa.spec.ts): one boot per map into a
- * night or day match on High with the node renderer on its WebGL2 back end (`?forceWebGL`, the e2e build only), the
- * in-page helpers, the twin coverage of the whole scene and the read-back of a twin's per-object uniform. The pages are
+ * What the W2 and W3 browser checks share (e2e/webgpuWorld.spec.ts, e2e/webgpuWorld.qa.spec.ts, e2e/webgpuLights.spec.ts):
+ * one boot per map into a night or day match on High with the node renderer on its WebGL2 back end (`?forceWebGL`, the
+ * e2e build only) or, for W3's lights, on a real WebGPU device; the in-page helpers, the twin coverage of the whole
+ * scene and the read-back of a twin's per-object uniform. The pages are
  * small (VIEWPORT): every check counts changed pixels or reads values, and a small frame draws several times faster in
  * SwiftShader; each pixel threshold was checked against the counts at this size.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- the in-page code reads the game's untyped debug handle. */
 export type Any = any;
+
+/**
+ * The flags that give headless Chromium a real WebGPU device without a GPU (W3), on top of the project's SwiftShader
+ * ones: SwiftShader's Vulkan, as pipeline/webgpuCompare.mjs WEBGPU_ARGS. Without the Vulkan ones the device is lost on
+ * its first draw.
+ */
+export const WEBGPU_LAUNCH = ['--enable-unsafe-webgpu', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--use-webgpu-adapter=swiftshader', '--disable-vulkan-surface'];
 
 /** The checks' page size. */
 export const VIEWPORT = { width: 640, height: 360 };
@@ -23,16 +31,22 @@ export function watchErrors(page: Page): () => string[] {
   return () => errors;
 }
 
-/** Starts `map` at `light` on High in the node renderer, waits for the match to draw, and installs the in-page helpers. */
-export async function boot(page: Page, map: string, light: string): Promise<void> {
+/**
+ * Starts `map` at `light` on High in the node renderer, waits for the match to draw, and installs the in-page helpers.
+ * On its WebGL2 back end unless `webgpu` (W3: a real WebGPU device, in a browser launched with WEBGPU_ARGS); returns
+ * what drew, or null when `webgpu` was asked for and the browser gave no device (nothing is booted then).
+ */
+export async function boot(page: Page, map: string, light: string, webgpu = false): Promise<string | null> {
   await page.addInitScript((text) => {
     if (sessionStorage.getItem('w2-seeded')) return;
     sessionStorage.setItem('w2-seeded', '1');
     localStorage.setItem('airsoft.settings', text);
   }, JSON.stringify({ version: 1, renderer: 'webgpu', map, mode: 'elimination', [`lighting.${map}`]: light, 'dev.enabled': true, 'dev.devContent': 'on', ruleset: 'skirmish' }));
-  await page.goto('/?nolock&seed=1&quality=high&forceWebGL');
+  await page.goto(`/?nolock&seed=1&quality=high${webgpu ? '' : '&forceWebGL'}`);
   await page.waitForSelector('.menu-title-start', { timeout: 60_000 });
-  expect(await page.evaluate(() => (window as Any).airsoft.renderer.backend)).toBe('webgpu-webgl2');
+  const backend: string = await page.evaluate(() => (window as Any).airsoft.renderer.backend);
+  if (webgpu && backend !== 'webgpu') return null;
+  expect(backend).toBe(webgpu ? 'webgpu' : 'webgpu-webgl2');
   await page.locator('.menu-title-start').click();
   const setup = page.locator('.menu-setup');
   await setup.locator('.map-cards .choice-card.selected').waitFor({ timeout: 60_000 });
@@ -135,6 +149,7 @@ export async function boot(page: Page, map: string, light: string): Promise<void
     };
     w.__qa = qa;
   });
+  return backend;
 }
 
 /** Runs `fn` in the page with the helpers and the game's handle. */
@@ -162,9 +177,10 @@ export function coverage(page: Page): Promise<Coverage> {
     const keys: Record<string, boolean> = {};
     const points: { name: string; mask: number; sprites: number }[] = [];
     const seen = new Set();
-    // What Three's own node library draws as it is by design: the figures' finish is W3's, the moon and the plain Lambert off the environment need nothing added.
-    const OWN = ['without-environment', 'night-sky-moon', 'fa8-vertex-finish'];
-    const isTwin = (twin: Any) => twin?.isNodeMaterial === true && (twin.surface != null || twin.positionNode != null || twin.opacityNode != null);
+    // What Three's own node library draws as it is by design: the moon and the plain Lambert off the environment need
+    // nothing added. The figures' per-vertex finish has its twin since W3.
+    const OWN = ['without-environment', 'night-sky-moon'];
+    const isTwin = (twin: Any) => twin?.isNodeMaterial === true && (twin.surface != null || twin.positionNode != null || twin.opacityNode != null || twin.roughnessNode != null);
     r.scene.traverse((o: Any) => {
       if (o.isPoints && o.visible) points.push({ name: o.name, mask: o.layers.mask, sprites: o.children.filter((c: Any) => c.isSprite).length });
       if (o.isMesh && !Array.isArray(o.material) && !o.material.isNodeMaterial) {

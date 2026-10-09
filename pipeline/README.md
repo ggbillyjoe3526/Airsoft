@@ -168,7 +168,7 @@ names its files with it after the environment (`perf-laptop-webgpu-low.json`, ba
 the WebGL files the gate reads. On a machine with WebGPU, run the gate's laptop and desktop combinations with
 `--renderer webgl` by hand until the gate learns the back end (KNOWN_ISSUES).
 
-**The WebGPU comparison** (WebGPU overhaul W2; `webgpu-compare.mjs`, rules in `webgpuCompare.mjs`): draws fixed
+**The WebGPU comparison** (WebGPU overhaul W2 and W3; `webgpu-compare.mjs`, rules in `webgpuCompare.mjs`): draws fixed
 camera views of every map, by day and by night where it has night, on Medium and High, with the WebGL path and with the
 node renderer on its WebGL2 back end (`?forceWebGL`), figures hidden (with their contact shadows and torch beams) and
 the game clock stopped. Both sides keep only WebGL's output step (tone mapping and sRGB; no bloom, AO or other pass,
@@ -176,8 +176,14 @@ W4's), so what is compared is the world's materials. Each pair is scored (mean a
 24 steps off) against the bar pinned in `webgpuCompare.mjs` and `webgpuCompare.test.mjs`, and saved side by side
 (WebGL, node, the difference ×4 with red over the threshold) with `scores.json`. Exits 1 when a pair fails. Port 4186.
 
+W3 adds views with the figures drawn (`FIGURE_VIEWS`): first person on each map, everyone stood in rows near and far
+in each state (alive, calling a hit, out, leaving) by day and night, and a torch beam at night (yours and a
+team-mate's), and a second node back end: a real WebGPU device (`--backend webgpu`, SwiftShader's Vulkan through
+`WEBGPU_ARGS`; its pairs end `-webgpu`), which is where the clustered night lights draw. Both pages settle the night's
+lights on the stood eye and pin the fires' clock, so a pair differs only by renderer.
+
 ```
-PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium node pipeline/webgpu-compare.mjs --out <dir> [--only depot] [--quality high] [--full] [--noise]
+PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium node pipeline/webgpu-compare.mjs --out <dir> [--only depot] [--quality high] [--views w2|w3|all] [--backend webgpu-webgl2|webgpu|all] [--full] [--noise]
 ```
 
 `--full` also scores each view with WebGL's whole post stack (what a player sees today, for reference); `--noise`

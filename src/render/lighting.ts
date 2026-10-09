@@ -150,9 +150,10 @@ function applyNormalBias(sun: THREE.DirectionalLight): void {
  * Adds the map's light under `preset` (render/lightingPreset.ts resolveLighting; M33f), sized to the map: a sky fill, one
  * shadow-casting key light (the sun, or the moon at night), the world round it (render/atmosphere.ts: the sky dome, the
  * trees and clouds), the map's light pools (render/lightPools.ts; under a night preset only, M34e: by Day a lamp is off)
- * and its signs (render/mapSigns.ts: glowing by Night, painted by Day), and returns its handle.
+ * and its signs (render/mapSigns.ts: glowing by Night, painted by Day), and returns its handle. On WebGPU's clustered
+ * lights (`clustered`, W3) every lamp near the eye has a real light; WebGL's lights are as before.
  */
-export function addLighting(scene: THREE.Scene, map: MapData, quality: QualitySettings, preset: LightingPreset): Daylight {
+export function addLighting(scene: THREE.Scene, map: MapData, quality: QualitySettings, preset: LightingPreset, clustered = false): Daylight {
   const hemi = new THREE.HemisphereLight(preset.hemi.sky, preset.hemi.ground, preset.hemi.intensity);
 
   const sun = new THREE.DirectionalLight(preset.key.colour, preset.key.intensity);
@@ -193,7 +194,7 @@ export function addLighting(scene: THREE.Scene, map: MapData, quality: QualitySe
   const sunDirection = sun.position.clone().sub(sun.target.position).normalize();
   const ownTrees = map.blocks.some((b) => b.kind === 'tree');
   const atmosphere = addAtmosphere(scene, sun.target.position, sunDirection, quality, box, preset, map.dressing?.skyline, ownTrees, map.dressing?.plane);
-  const pools = preset.night ? addLightPools(scene, map, quality) : NO_LIGHT_POOLS;
+  const pools = preset.night ? addLightPools(scene, map, quality, 0, clustered) : NO_LIGHT_POOLS;
   const signs = addMapSigns(scene, map, preset.night);
   let poolQuality: Pick<QualitySettings, 'poolLights'> = quality;
   let reserved = 0;
