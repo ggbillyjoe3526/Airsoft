@@ -204,6 +204,20 @@ acceptance:
 status: open
 attempts: 0
 
+## W3 · WebGPU figures, replicas and lights: node twins for what still draws plain, clustered night lights (WebGPU overhaul, scope `plans/webgpu-overhaul-scope.md`)
+tier: core
+perf: required
+touches: src/render/webgpu/, src/render/renderer.ts, src/render/lighting.ts, src/render/lightPools.ts, src/render/mapSigns.ts, src/render/torchBeams.ts, src/config/renderLighting.ts, src/matchSession.ts, src/rangeSession.ts, pipeline/webgpu-compare.mjs, pipeline/webgpuCompare.mjs, pipeline/webgpuCompare.test.mjs, pipeline/README.md
+contract: none (the WebGL path and its draws are unchanged; node materials and the clustered lighting live only in the node renderer's lazy chunk)
+acceptance:
+  1. Everything outside the post stack and the retro filter that still draws plain on the node path gets its node twin, or is shown to need none: the figures (humans and robots, their per-vertex finish, team colours, fades, the hit and out states, the baked light on figures), the replicas in the world and in first person, the arms and hands, the replica sheen (the node renderer's prefiltered sky), the torch beams' cones, glare and lit discs. The record lists every `onBeforeCompile` and `ShaderMaterial` with its status.
+  2. On WebGPU the night maps are lit by clustered lights (three/webgpu's own clustered lighting, or the closest equivalent where 0.186 lacks something, said in the record): Neon Heights' lamps and signs, Woodland's fires and lanterns and the torches, beyond WebGL's fixed pool of lights; shadows come only from the sun or moon and the nearest fire. Where it looks better than WebGL is said, within the presets' intent (Low lights as today).
+  3. On Auto without an adapter (every gate here, Low, and every WebGL player) nothing changes: the same draws on every preset, the perf gate's WebGL numbers within their baselines, and no new node code in the main chunk (still within its budget).
+  4. The comparison script (pipeline/webgpu-compare.mjs, same bar) adds views with figures and the held replica: a first-person view on each map, figures near and far by day and night on Medium and High, and a torch beam at night. Every pair passes, W2's 22 views still pass, and W2's build fails the new views; the pairs and scores are saved for the owner.
+  5. On the compared views the node path draws no more calls than WebGL (any extra is a KNOWN_ISSUES row); the twins and lights allocate nothing per frame and are freed with their match or the renderer; modules stay under about 600 lines; unit tests pin each twin against its WebGL patch; the e2e checks add at most about 60 s, one boot per map.
+status: open
+attempts: 0
+
 **0.1 Dev 6 (confirmed with the roadmap, 2026-10-06).** M92–M95, the holster and the practice
 upgrades, come before the 26 features in `docs/ROADMAP.md` › 0.1 Dev 6, whose blocks are written when that build starts.
 
