@@ -48,7 +48,6 @@ export class GpuDressing {
   private tier: GpuDressingTier | null = null;
   private dirty = true;
   private last = Number.NaN;
-  private readonly media = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
 
   constructor(
     private readonly renderer: WebGPURenderer,
@@ -65,8 +64,11 @@ export class GpuDressing {
     return { grass: this.grass?.levels.count ?? 0, forest: this.forest?.count ?? 0 };
   }
 
-  /** Before a frame's draws (and its compile): made or freed for `scene` at `quality` after a rescan, then culled for `camera`. */
-  frame(scene: THREE.Scene, camera: THREE.Camera, quality: QualitySettings | null): void {
+  /**
+   * Before a frame's draws (and its compile): made or freed for `scene` at `quality` after a rescan, then culled for
+   * `camera`; the grass sways while `motion` (the match's MotionScale through the Renderer: off under Reduced motion).
+   */
+  frame(scene: THREE.Scene, camera: THREE.Camera, quality: QualitySettings | null, motion = true): void {
     if (OFF) return;
     if (this.dirty) {
       this.dirty = false;
@@ -81,7 +83,7 @@ export class GpuDressing {
     const dt = Number.isNaN(this.last) ? 0 : Math.min(0.1, (now - this.last) / 1000);
     this.last = now;
     camera.updateMatrixWorld();
-    this.grass?.frame(camera, dt, this.motion());
+    this.grass?.frame(camera, dt, motion);
     this.forest?.frame(camera);
   }
 
@@ -118,12 +120,5 @@ export class GpuDressing {
       this.forest = new ForestStandIns(this.renderer, trees, this.webgpu);
       scene.add(this.forest.mesh);
     }
-  }
-
-  /** Whether the world may move: the player's Reduced motion (the game's container class), else the system's. */
-  private motion(): boolean {
-    const set = this.renderer.domElement.closest('.reduced-motion, .full-motion');
-    if (set) return set.classList.contains('full-motion');
-    return !(this.media?.matches ?? false);
   }
 }

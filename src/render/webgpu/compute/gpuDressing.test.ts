@@ -15,7 +15,7 @@ import { grassLevels } from './grassLayout';
  */
 
 function fakeCanvas(): HTMLCanvasElement {
-  return { style: {}, width: 300, height: 150, addEventListener: () => undefined, removeEventListener: () => undefined, getContext: () => null, closest: () => null } as unknown as HTMLCanvasElement;
+  return { style: {}, width: 300, height: 150, addEventListener: () => undefined, removeEventListener: () => undefined, getContext: () => null } as unknown as HTMLCanvasElement;
 }
 
 beforeEach(() => {
@@ -131,5 +131,17 @@ describe('GpuDressing', () => {
     dressing.dispose();
     expect(freed).toHaveLength(14);
     expect(scene.getObjectByName('forest-gpu')).toBeUndefined();
+  });
+
+  it("sways the grass only while the match's motion allows (Reduced motion stills it)", () => {
+    const { dressing } = setup();
+    const { scene } = sceneOf(WOODLAND);
+    const sway = () => (dressing as unknown as { grass: { sway: { value: number } } }).grass.sway.value;
+    dressing.frame(scene, camera, QUALITY.medium);
+    expect(sway()).toBe(1);
+    dressing.frame(scene, camera, QUALITY.medium, false);
+    expect(sway()).toBe(0);
+    dressing.frame(scene, camera, QUALITY.medium, true);
+    expect(sway()).toBe(1);
   });
 });

@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 import type { ComputeNode, WebGPURenderer } from 'three/webgpu';
 import { Fn, If, instancedArray, instanceIndex, materialColor, materialOpacity, select, uniform, varying, vec3, vec4 } from 'three/tsl';
-import type { DustMotes } from '../../dustMotes';
-import type { Fireflies } from '../../fireflies';
+import { DustMotes } from '../../dustMotes';
+import { Fireflies } from '../../fireflies';
+import { GPU_POOLS } from '../../gpuPools';
 import type { Chip, ImpactGrit } from '../../impactGrit';
-import type { ImpactPuffs, Puff } from '../../impactPuffs';
-import type { SmokePlumes } from '../../smokePlumes';
+import { ImpactPuffs, type Puff } from '../../impactPuffs';
+import { SmokePlumes } from '../../smokePlumes';
 import { IMPACT_GRIT } from '../../../config/render';
 import { makeTwin, type PointTwin } from '../pointSprites';
 import { freeBuffer, xyz } from './computeKit';
@@ -16,7 +17,7 @@ import { basicTwin, type Facing, facing, facingCorner, hangUnder, quads } from '
 /**
  * The particles on the node path, moved by compute passes (WebGPU overhaul W5): the dust motes, the fireflies, the
  * chimney smoke and vent steam, every pool of soft puffs (impacts, hits, gas, the impact rings, kicked dust) and the
- * impact grit. Each CPU module tags its object (`userData.gpuMotes` and so on); `scan` gives each a driver that the
+ * impact grit. Each CPU module registers its object (render/gpuPools.ts); `scan` gives each a driver that the
  * module's `update` hands the frame to (its `gpu`), so the CPU's per-particle loop never runs on this path. What a
  * module keeps on the CPU is what is not per particle: its seeded arrays (uploaded once), its clock, the air, and the
  * spawns, which go into a small storage buffer as they happen. The drivers' passes are dispatched together, once a
@@ -36,7 +37,7 @@ interface Driver {
   dispose(): void;
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any -- the drivers hang on the modules' untyped userData */
+/* eslint-disable @typescript-eslint/no-explicit-any -- the drivers take the module render/gpuPools.ts holds for an object */
 type Owner = any;
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
@@ -49,7 +50,15 @@ export class ParticleTwins {
   constructor(private readonly renderer: WebGPURenderer) {}
 
   /** Whether a Points is drawn by a driver here (pointSprites.ts leaves it alone). */
-  readonly claims = (points: THREE.Object3D): boolean => points.userData.gpuMotes !== undefined || points.userData.gpuFireflies !== undefined;
+  readonly claims = (points: THREE.Object3D): boolean => {
+    const owner = GPU_POOLS.get(points);
+    return owner instanceof DustMotes || owner instanceof Fireflies;
+  };
+
+  /** The CPU module whose pool `object` draws (render/gpuPools.ts), if any (tests, the e2e checks). */
+  ownerOf(object: THREE.Object3D): object | undefined {
+    return GPU_POOLS.get(object);
+  }
 
   /** The scene changed: the next `scan` looks for new pools. */
   rescan(): void {
@@ -86,12 +95,20 @@ export class ParticleTwins {
   }
 
   private readonly visit = (o: THREE.Object3D): void => {
-    const u = o.userData;
-    const owner: Owner = u.gpuMotes ?? u.gpuFireflies ?? u.gpuPlumes ?? u.gpuPuffs ?? u.gpuGrit;
+    const owner: Owner = GPU_POOLS.get(o);
     if (!owner || this.drivers.has(owner)) return;
     const gone = (): void => this.drop(owner);
     const r = this.renderer;
-    const driver = u.gpuMotes ? new MotesDriver(r, owner, gone) : u.gpuFireflies ? new FirefliesDriver(r, owner, gone) : u.gpuPlumes ? new PlumesDriver(r, owner, gone) : u.gpuPuffs ? new PuffsDriver(r, owner, gone) : new GritDriver(r, owner, gone);
+    const driver =
+      owner instanceof DustMotes
+        ? new MotesDriver(r, owner, gone)
+        : owner instanceof Fireflies
+          ? new FirefliesDriver(r, owner, gone)
+          : owner instanceof SmokePlumes
+            ? new PlumesDriver(r, owner, gone)
+            : owner instanceof ImpactPuffs
+              ? new PuffsDriver(r, owner, gone)
+              : new GritDriver(r, owner, gone);
     this.drivers.set(owner, driver);
   };
 

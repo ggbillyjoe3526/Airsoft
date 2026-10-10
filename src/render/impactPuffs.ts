@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { PuffConfig } from '../config/render';
 import { length3, type Vec3 } from '../sim/vec';
+import { GPU_POOLS } from './gpuPools';
 import { softDotTexture } from './softDot';
 
 export interface Puff {
@@ -64,7 +65,7 @@ export class ImpactPuffs {
     for (let i = 0; i < cfg.max; i++) this.object.setColorAt(i, WHITE);
     this.object.count = 0;
     this.object.frustumCulled = false;
-    this.object.userData.gpuPuffs = this;
+    GPU_POOLS.set(this.object, this);
   }
 
   /** A puff at `at`: `tint` multiplies the pool's colour, `scale` its size; `velocity` pushes it, easing off. */

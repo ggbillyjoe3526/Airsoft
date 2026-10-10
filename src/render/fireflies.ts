@@ -3,6 +3,7 @@ import { FIREFLIES } from '../config/dressing';
 import type { Bush } from '../map/foliage';
 import { type Terrain, terrainHeightAt } from '../map/terrain';
 import { createRng, rngNext } from '../sim/rng';
+import { GPU_POOLS } from './gpuPools';
 import { softDotTexture } from './softDot';
 
 /**
@@ -85,7 +86,7 @@ export class Fireflies {
     material.customProgramCacheKey = () => 'fireflies';
     this.object = new THREE.Points(geo, material);
     this.object.name = 'fireflies';
-    this.object.userData.gpuFireflies = this;
+    GPU_POOLS.set(this.object, this);
     this.object.matrixAutoUpdate = false;
   }
 

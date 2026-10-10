@@ -191,7 +191,7 @@ export function coverage(page: Page): Promise<Coverage> {
     r.scene.traverse((o: Any) => {
       if (o.isPoints && o.visible) {
         points.push({ name: o.name, mask: o.layers.mask, sprites: o.children.filter((c: Any) => c.isSprite).length });
-        if ((o.userData.gpuMotes ?? o.userData.gpuFireflies)?.gpu) computed++;
+        if (r.node?.particles.claims(o) && r.node.particles.ownerOf(o)?.gpu) computed++;
       }
       if (o.isMesh && !Array.isArray(o.material) && !o.material.isNodeMaterial) {
         const key = o.material.customProgramCacheKey();

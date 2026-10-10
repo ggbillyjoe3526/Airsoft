@@ -4,6 +4,7 @@ import { IMPACT_GRIT } from '../config/render';
 import type { Character } from '../sim/character';
 import { createRng, rngNext } from '../sim/rng';
 import { length3, type Vec3 } from '../sim/vec';
+import { GPU_POOLS } from './gpuPools';
 
 export interface Chip {
   x: number;
@@ -73,7 +74,7 @@ export class ImpactGrit {
     this.object.count = 0;
     this.object.frustumCulled = false;
     this.object.visible = false;
-    this.object.userData.gpuGrit = this;
+    GPU_POOLS.set(this.object, this);
   }
 
   /** Grit on or off (off: nothing thrown, and what is in the air is gone). */

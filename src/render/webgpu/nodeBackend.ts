@@ -76,6 +76,8 @@ export class NodeBackend {
   private readonly dressing: GpuDressing;
   /** The Renderer's quality in force (the dressing's preset). */
   private quality: QualitySettings | null = null;
+  /** Whether the world may move (the Renderer's, from the match's MotionScale): the grass sways only then. */
+  private motion = true;
   /** The night's clustered lights (W3) on a WebGPU device; null on the WebGL2 back end (no storage buffers to shade from). */
   private readonly lighting: NightLighting | null;
   /** Low's frame straight onto the canvas, and the held replica's on the post stack's presets (W4). */
@@ -176,10 +178,12 @@ export class NodeBackend {
   /**
    * Before a frame's draws: after a rescan, the new particle pools get their compute drivers (W5) and the new sized
    * points their sprite twins (W2); the frame's particle passes are dispatched (W5); `scene` is the one the clustered
-   * lights shade (W3). `quality` is the Renderer's, in force (the grass and stand-ins' preset, W5).
+   * lights shade (W3). `quality` is the Renderer's, in force (the grass and stand-ins' preset, W5), and `motion` whether
+   * the world may move (the grass's sway).
    */
-  prepare(scene: THREE.Scene, quality: QualitySettings | null = null): void {
+  prepare(scene: THREE.Scene, quality: QualitySettings | null = null, motion = true): void {
     this.quality = quality;
+    this.motion = motion;
     if (this.lighting) this.lighting.world = scene;
     this.particles.scan(scene);
     this.particles.frame();
@@ -202,7 +206,7 @@ export class NodeBackend {
    * map's grass and stand-ins are culled here for `camera` (W5).
    */
   draw(scene: THREE.Scene, camera: THREE.PerspectiveCamera, overlay: Overlay | undefined, drawer: object | null): void {
-    this.dressing.frame(scene, camera, this.quality);
+    this.dressing.frame(scene, camera, this.quality, this.motion);
     if (drawer) (drawer as NodeFrameDrawer).draw(this.renderer, scene, camera, overlay);
     else this.output.drawScreen(this.renderer, scene, camera, overlay);
   }
@@ -274,7 +278,7 @@ export class NodeBackend {
     this.world.sprites.prepare(scene);
     // The map's grass and stand-ins (W5) are made now, so their pipelines compile with the rest.
     this.quality = quality;
-    this.dressing.frame(scene, camera, quality);
+    this.dressing.frame(scene, camera, quality, this.motion);
     const r = this.renderer;
     // Each for the target and output step the frame draws it with (W4), so the pipelines match the frame's.
     const done = drawer ? (drawer as NodeFrameDrawer).compile(r, scene, camera, overlay) : this.output.compile(r, scene, camera, overlay);

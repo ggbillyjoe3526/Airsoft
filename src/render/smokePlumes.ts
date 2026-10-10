@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { DRESSING, STEAM } from '../config/dressing';
 import { createRng, rngNext } from '../sim/rng';
+import { GPU_POOLS } from './gpuPools';
 import { softDotTexture } from './softDot';
 
 /**
@@ -88,7 +89,7 @@ export class SmokePlumes {
     material.customProgramCacheKey = () => 'smoke-plumes';
     this.object = new THREE.InstancedMesh(geo, material, count);
     this.object.name = name;
-    this.object.userData.gpuPlumes = this;
+    GPU_POOLS.set(this.object, this);
     // Culled as a whole: a sphere round every plume, as far as a wind of up to WIND_MAX m/s bends it.
     const box = new THREE.Box3();
     for (const s of sources) box.expandByPoint(this.pos.set(s.x, s.y, s.z)).expandByPoint(this.pos.set(s.x, s.y + M.rise, s.z));

@@ -3,6 +3,7 @@ import { DRESSING } from '../config/dressing';
 import { DUST_MOTES } from '../config/render';
 import { createRng, rngNext } from '../sim/rng';
 import { length3 } from '../sim/vec';
+import { GPU_POOLS } from './gpuPools';
 import { softDotTexture } from './softDot';
 
 /** Wraps `v` into 0..size. */
@@ -103,7 +104,7 @@ export class DustMotes {
     };
     this.object = new THREE.Points(geo, material);
     this.object.name = 'dustMotes';
-    this.object.userData.gpuMotes = this;
+    GPU_POOLS.set(this.object, this);
     this.object.frustumCulled = false;
     this.setCount(0);
   }

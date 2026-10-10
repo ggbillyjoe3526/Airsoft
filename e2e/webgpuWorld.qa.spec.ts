@@ -163,13 +163,13 @@ test.describe('Woodland at night on the node renderer', () => {
       const r = (window as Any).airsoft.renderer;
       const tagged: Any[] = [];
       r.scene.traverse((o: Any) => {
-        const u = o.userData;
-        const owner = u.gpuMotes ?? u.gpuFireflies ?? u.gpuPlumes ?? u.gpuPuffs ?? u.gpuGrit;
+        // Each pool's CPU module (render/gpuPools.ts), as the node renderer's particle drivers find it.
+        const owner = r.node.particles.ownerOf(o);
         if (owner) tagged.push({ name: o.name, owner, o });
       });
-      const puffs = tagged.find((t) => t.o.userData.gpuPuffs && t.o.children.some((c: Any) => c.name.endsWith('-gpu')));
+      const puffs = tagged.find((t) => Array.isArray(t.owner.puffs) && t.o.children.some((c: Any) => c.name.endsWith('-gpu')));
       const draw = puffs.o.children.find((c: Any) => c.name.endsWith('-gpu'));
-      // What the draw holds right after the driver's own update in the game's frame (a slow frame can outlive a puff,
+      // An ImpactPuffs pool (its `puffs` slots). What the draw holds right after the driver's own update in the game's frame (a slow frame can outlive a puff,
       // so sampling between frames may miss it).
       const gpu = puffs.owner.gpu;
       const update = gpu.update.bind(gpu);
@@ -249,7 +249,7 @@ test.describe('Woodland at night on the node renderer', () => {
         const r = (window as Any).airsoft.renderer;
         const points = q.points().map((p: Any) => ({ name: p.name, mask: p.layers.mask, sprites: p.children.filter((c: Any) => c.isSprite).length }));
         // The motes and fireflies are drawn by their compute drivers (W5), not by a CPU-fed twin.
-        return { label, points, count: r.node.world.sprites.count + q.points().filter((p: Any) => (p.userData.gpuMotes ?? p.userData.gpuFireflies)?.gpu).length, env: r.scene.environment?.isTexture === true, canvases: document.querySelectorAll('canvas.game-canvas').length };
+        return { label, points, count: r.node.world.sprites.count + q.points().filter((p: Any) => r.node.particles.claims(p) && r.node.particles.ownerOf(p)?.gpu).length, env: r.scene.environment?.isTexture === true, canvases: document.querySelectorAll('canvas.game-canvas').length };
       }, label);
     const rendered = () => page.evaluate(() => (window as Any).airsoft.renderer.renderer.info.render.calls);
     const settled = async () => {
@@ -303,7 +303,7 @@ test.describe('Woodland at night on the node renderer', () => {
         newHooked: library.fromMaterial !== own(library),
         surfaceTwin: twin?.isNodeMaterial === true && twin.surface != null,
         points: w.__qa.points().map((p: Any) => ({ name: p.name, mask: p.layers.mask, sprites: p.children.filter((c: Any) => c.isSprite).length })),
-        count: r.node.world.sprites.count + w.__qa.points().filter((p: Any) => (p.userData.gpuMotes ?? p.userData.gpuFireflies)?.gpu).length,
+        count: r.node.world.sprites.count + w.__qa.points().filter((p: Any) => r.node.particles.claims(p) && r.node.particles.ownerOf(p)?.gpu).length,
         canvases: document.querySelectorAll('canvas.game-canvas').length,
       };
     });
@@ -341,7 +341,7 @@ test.describe('Neon Heights at night on the node renderer', () => {
       const restore = q.showOnly(null);
       try {
         // The first vent, from 4 m off (its puffs' matrices are the compute pass's since W5, not written on the CPU).
-        const v = steam.userData.gpuPlumes.sources[0];
+        const v = (window as Any).airsoft.renderer.node.particles.ownerOf(steam).sources[0];
         return await q.watch(() => ({ from: { x: v.x - 4, y: v.y + 1.5, z: v.z - 4 }, to: { x: v.x, y: v.y + 1.2, z: v.z } }));
       } finally {
         restore();

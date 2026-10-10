@@ -153,4 +153,20 @@ describe('ParticleTwins', () => {
     expect(twins.count).toBe(4);
     expect(freed).toHaveLength(4);
   });
+
+  it('keeps the pools findable without a cycle on their objects: each can still be cloned and serialised', () => {
+    const { twins } = setup();
+    const p = pools();
+    const objects = [p.motes.object, p.flies.object, p.plumes.object, p.puffs.object, p.grit.object];
+    // As the CPU modules make them: nothing of theirs in the objects' userData, so these see no cycle.
+    for (const o of objects) {
+      expect(o.userData).toEqual({});
+      expect(() => JSON.stringify(o.toJSON())).not.toThrow();
+    }
+    twins.scan(p.scene);
+    for (const o of objects) {
+      expect(twins.ownerOf(o)).toBeDefined();
+      expect(() => o.clone()).not.toThrow();
+    }
+  });
 });

@@ -34,7 +34,7 @@ and never writes the simulation.
   mapping, as WebGL's), and the held replica, which draws into a target of its own that the stack's last pass lays on.
   A stack or retro filter frees its targets only once the renderer's warm-up compile is done (`nodeKit.ts` `CompileGate`).
   W5: `webgpu/compute/` runs compute passes. `particleTwins.ts` gives each particle pool a driver that its CPU module
-  (`dustMotes.ts`, `fireflies.ts`, `smokePlumes.ts`, `impactPuffs.ts`, `impactGrit.ts`, tagged by `userData.gpu*`)
+  (`dustMotes.ts`, `fireflies.ts`, `smokePlumes.ts`, `impactPuffs.ts`, `impactGrit.ts`, registered in `gpuPools.ts`)
   hands its frame and spawns to, skipping its own per-particle loop. The formulas are written once in
   `particleKernels.ts` over `kernelOps.ts` (numbers for the tests, TSL for the GPU), and the quads are drawn by
   `particleDraws.ts`. On Medium and up, `gpuDressing.ts` makes a map's GPU grass (`grassField.ts`, a clipmap laid out
