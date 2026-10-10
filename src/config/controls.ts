@@ -22,6 +22,12 @@ export const DEFAULT_BINDINGS = {
   fireMode: ['KeyB'],
   /** Switches the weapon torch on the replica in hand on and off (M33h; T is free and the usual tactical-light key). */
   torch: ['KeyT'],
+  /**
+   * Turns the replica in hand over to look it over (RM2): the model's own inspect (the AEG's charging handle and hop
+   * dial, the gas pistol's press check, the Cyber Pistol's battery check). Y as in Valorant: F (CS) is Follow me, and I
+   * is kept for an inventory.
+   */
+  inspect: ['KeyY'],
   /** Hold beside a case to open it (M44, Extraction). G: E leans and F is Follow me; T is kept for a weapon torch. */
   use: ['KeyG'],
   slot1: ['Digit1'],
@@ -67,6 +73,7 @@ export const REBINDABLE: readonly { action: Action; label: string }[] = [
   { action: 'reload', label: 'Reload' },
   { action: 'fireMode', label: 'Fire mode' },
   { action: 'torch', label: 'Weapon torch' },
+  { action: 'inspect', label: 'Inspect replica' },
   { action: 'use', label: 'Use: open a case (hold)' },
   { action: 'slot1', label: 'Rifle' },
   { action: 'slot2', label: 'Pistol' },

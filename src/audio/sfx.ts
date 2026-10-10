@@ -1,5 +1,6 @@
 import { AUDIO, CASE_OPEN_SOUND, caseWorkSound, FIRE_SOUND, matchOverBlastStart, type SoundLevel } from '../config/audio';
 import type { ReplicaConfig } from '../config/replicas';
+import type { InspectCue } from '../config/render';
 import { SIM_DT } from '../config/sim';
 import { cues, type ImpactMaterial, type ShotProfile, type SoundCue } from '../config/sounds';
 import type { MapBlock } from '../map/mapTypes';
@@ -429,6 +430,17 @@ export class Sfx {
     // Beyond earshot it isn't played, and doesn't use up the window either (audit CORE-01).
     if (!this.ctx || this.distanceTo(at) > AUDIO.spatial.maxDistance) return;
     if (this.impactLimit.take(this.ctx.currentTime)) this.oneShot(cues.impact(material), at, AUDIO.levels.impact);
+  }
+
+  /**
+   * A sound of your replica's parts as you inspect it (RM2, VIEWMODEL.inspect): the magazine's and trigger's in the
+   * replica's own sound (`replicaId`), or a selector's, a torch's or a draw's click; heard from your own hands.
+   */
+  inspect(cue: InspectCue, replicaId: string): void {
+    if (!this.ctx) return;
+    const profile = this.replicas.get(replicaId)?.profile ?? 'electric';
+    const sound: SoundCue = cue === 'magOut' ? cues.magOut(profile) : cue === 'magIn' ? cues.magIn(profile) : cue === 'dryFire' ? cues.dryFire(profile) : cue;
+    this.play(sound, this.self!, AUDIO.levels.mechanism);
   }
 
   /** A teammate's radio keyed twice: the squad order you gave was heard (M22). */

@@ -228,6 +228,7 @@ export class RangeSession {
   advance(dt: number): number {
     const p = this.player;
     this.input.update(p.armament.active, this.loadout.length, this.combat.aimRaised, this.combat.aimSensitivityScale, canAimDownSights(p.armament));
+    if (this.input.takeInspect() && p.status === 'alive') this.combat.inspect();
     const ticks = advanceStepper(this.stepper, dt);
     for (let i = 0; i < ticks; i++) {
       this.input.fillCommand(this.playerCommand);

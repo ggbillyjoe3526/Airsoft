@@ -338,6 +338,7 @@ export class MatchSession {
     const p = this.player;
     this.input.update(p.armament.active, this.loadout.length, this.combat.aimRaised, this.combat.aimSensitivityScale, canAimDownSights(p.armament));
     if (this.match.spectating && this.input.takeClick()) this.match.nextSpectateTarget();
+    if (this.input.takeInspect() && p.status === 'alive') this.combat.inspect();
     const order = this.input.takeOrder();
     if (order) this.giveOrder(order);
     const ticks = advanceStepper(this.stepper, dt);
