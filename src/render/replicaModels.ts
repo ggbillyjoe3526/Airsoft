@@ -47,13 +47,15 @@ const STRAIGHT_INDEX: FingerCurl = [0.12, 0.08, 0.04];
 const WRAP: FingerCurl = [1.15, 1.25, 0.7];
 /**
  * The rifle's support hand (FA13): palm up under the handguard, the four fingers up its far (right) side, and the thumb
- * set against them up the near (left) side, where you see it holding the rifle. Before, the thumb followed the fingers
- * under the handguard, so all you saw was a glove below it. Each finger's bends are the closest it lies along the side
- * without going into it (`handPoses.test.ts` measures it).
+ * set against them on the near (left) side, where you see it holding the rifle. Before, the thumb followed the fingers
+ * under the handguard, so all you saw was a glove below it. The thumb steps out round the bottom corner and lies forward
+ * along the side under the side rail (FP1): aimed up and out past the side, it read in first person as a second barrel
+ * under the real one. Each finger's bends are the closest it lies along the side without going into it
+ * (`handPoses.test.ts` measures it).
  */
 export const AEG_SUPPORT_POSE: HandPose = {
   side: 'left',
-  palm: [-0.016, -0.016, 0.29],
+  palm: [-0.016, -0.017, 0.29],
   across: [0, 0, -1],
   back: [0, -1, 0],
   fingers: [
@@ -62,7 +64,26 @@ export const AEG_SUPPORT_POSE: HandPose = {
     [1.0, 0.6, 0.2],
     [0.8, 0.6, 0.4],
   ],
-  thumb: { swing: 0.2, curl: [0, -0.2], aim: [-1.1, 1, 0.3] },
+  thumb: { swing: 0.2, curl: [0, -0.2], aim: [-0.03, 0.02, 0.008], tipAim: [0.08, 0.1, 1] },
+};
+
+/**
+ * The rifle's support hand on a fitted vertical grip: wrapped round it as the right hand wraps the pistol grip (palm on
+ * its near side, fingers round its front to the far side), the thumb laid along the handguard's near side above it.
+ */
+export const AEG_VERTICAL_GRIP_POSE: HandPose = {
+  side: 'left',
+  palm: [-0.032, -0.054, 0.21],
+  across: [0.3, -1, 0.05],
+  back: [-1, 0, 0],
+  // Each finger's bends are the closest it wraps the grip without going into it (`handPoses.test.ts` measures it).
+  fingers: [
+    [1.1, 1.1, 0.5],
+    [1.3, 1.1, 0.8],
+    [1.2, 1.3, 0.65],
+    [1.3, 0.9, 0.65],
+  ],
+  thumb: { swing: 0.2, curl: [0, 0], aim: [-0.3, 0.35, 1], tipAim: [0.25, 0.05, 1] },
 };
 
 /** The AEG's handguard (the rifle's own numbers, below): across ±halfWidth, from bottom to top, forward from → to. */
@@ -151,6 +172,7 @@ function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, de
   sightsDown.box('detail', 0.362, 0.396, 0.082, 0.089, 0.024);
 
   const support = new ModelBuilder(detail);
+  const supportOnGrip = new ModelBuilder(detail);
   if (arms) {
     // Right hand on the pistol grip: back of the hand to the right, knuckle row running down the grip, three fingers
     // wrapped round its front, index finger straight along the frame (trigger discipline), thumb across the left of the
@@ -165,13 +187,19 @@ function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, de
     // up the left side. Its own part: on reloads it cups the magazine's base plate.
     const leftWrist = arms.hand(support, AEG_SUPPORT_POSE, detail.hands);
     arms.forearm(support, leftWrist, [-0.3, -0.28, 0.02], undefined, detail.hands);
+    // With a vertical grip fitted, the left hand holds the grip instead (on reloads it takes the magazine by its side).
+    const gripWrist = arms.hand(supportOnGrip, AEG_VERTICAL_GRIP_POSE, detail.hands);
+    arms.forearm(supportOnGrip, gripWrist, [-0.3, -0.3, 0.0], undefined, detail.hands);
   }
 
   const group = b.build(m);
   const magazine = magazinePart(AEG_MAGAZINES, m, detail, [0, -0.97, 0.25], { lowCap: [0, 0.064, -0.002] });
   group.add(magazine.group);
-  // From the handguard to just under the magazine's base plate.
-  const supportHand = supportHandPart(support, m, [0.016, -0.244, -0.21]);
+  // From the handguard to just under the magazine's base plate; from the vertical grip to the magazine's side by its base.
+  const supportHand = supportHandPart(m, [
+    { grip: 'none', builder: support, toMag: [0.016, -0.244, -0.21] },
+    ...(arms ? [{ grip: 'vertical', builder: supportOnGrip, toMag: [0, -0.146, -0.135] as const }] : []),
+  ]);
   group.add(supportHand.group);
   group.add(namedPart(sightsUp, m, 'sightsUp'), namedPart(sightsDown, m, 'sightsDown'));
   for (const [name, draw] of Object.entries(AEG_PARTS)) group.add(drawnPart(draw, m, detail, name));
@@ -239,7 +267,7 @@ function buildPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean,
   const magazine = magazinePart(PISTOL_MAGAZINES, m, detail, GRIP_DOWN, { extended: [0, -0.032, 0] });
   group.add(magazine.group);
   // From the side of the grip down to the magazine's base pad.
-  const supportHand = supportHandPart(support, m, [0.004, -0.08, -0.024]);
+  const supportHand = supportHandPart(m, [{ grip: 'none', builder: support, toMag: [0.004, -0.08, -0.024] }]);
   group.add(supportHand.group);
   // A silencer screwed onto the threaded barrel (M29b), from the muzzle-device table.
   const mount = muzzleMount(PISTOL_MUZZLE, PISTOL_MUZZLE_DEVICES, m, detail, orangeTip);
@@ -286,7 +314,7 @@ function buildCyberPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boo
   const magazine = magazinePart(CYBER_MAGAZINES, m, detail, GRIP_DOWN);
   group.add(magazine.group);
   // Down to its base pad (where the Gas Pistol's is).
-  const supportHand = supportHandPart(support, m, [0.004, -0.08, -0.024]);
+  const supportHand = supportHandPart(m, [{ grip: 'none', builder: support, toMag: [0.004, -0.08, -0.024] }]);
   group.add(supportHand.group);
   const mount = muzzleMount(CYBER_MUZZLE, {}, m, detail, orangeTip);
   group.add(mount.group);
@@ -343,10 +371,24 @@ export interface MagazinePart {
   bases: ReadonlyMap<THREE.Object3D, THREE.Vector3>;
 }
 
-/** The support hand and forearm (named 'supportHand'); `toMag` moves it from its grip to holding the magazine. */
+/**
+ * The support hand and forearm (named 'supportHand'); `toMag` moves it from its grip to holding the magazine. A replica
+ * can hold it more than one way (`holds`, by the grip fitted: the rifle's hand takes a vertical grip), each its own part
+ * named 'hold:<grip>'; `fitSupportHand` shows the fitted grip's hold (or 'none', on the handguard) and sets `toMag` to its.
+ */
 export interface SupportHandPart {
   group: THREE.Group;
   toMag: THREE.Vector3;
+  holds: ReadonlyMap<string, { object: THREE.Object3D; toMag: THREE.Vector3 }>;
+  /** The grip whose hold is shown. */
+  shown: string;
+}
+
+/** One way a support hand holds a replica: with `grip` fitted ('none': no grip, or one it doesn't take), and its reach to the magazine. */
+interface SupportHold {
+  grip: string;
+  builder: ModelBuilder;
+  toMag: readonly [number, number, number];
 }
 
 export interface ReplicaModels {
@@ -483,12 +525,33 @@ function magazinePart(
 
 /**
  * The support (left) hand and forearm as their own group named 'supportHand', so reloads can move it
- * to the magazine: `toMag` is the offset from its grip to holding the magazine, as (across, up, forward).
+ * to the magazine: each hold's `toMag` is the offset from its grip to holding the magazine, as (across, up, forward).
+ * The first hold ('none') shows until `fitSupportHand` picks another.
  */
-function supportHandPart(builder: ModelBuilder, m: Record<MaterialKey, THREE.Material>, toMag: readonly [number, number, number]): SupportHandPart {
-  const group = builder.build(m);
+function supportHandPart(m: Record<MaterialKey, THREE.Material>, holds: readonly SupportHold[]): SupportHandPart {
+  const group = new THREE.Group();
   group.name = 'supportHand';
-  return { group, toMag: new THREE.Vector3(toMag[0], toMag[1], -toMag[2]) };
+  const byGrip = new Map<string, { object: THREE.Object3D; toMag: THREE.Vector3 }>();
+  for (const hold of holds) {
+    const object = namedPart(hold.builder, m, `hold:${hold.grip}`);
+    object.visible = byGrip.size === 0;
+    group.add(object);
+    byGrip.set(hold.grip, { object, toMag: new THREE.Vector3(hold.toMag[0], hold.toMag[1], -hold.toMag[2]) });
+  }
+  return { group, toMag: byGrip.get('none')!.toMag.clone(), holds: byGrip, shown: 'none' };
+}
+
+/**
+ * Shows the support hand's hold for the fitted `grip` (on the handguard when it takes none) and aims its reload reach.
+ * Called every frame: it changes (and allocates) nothing unless the hold does.
+ */
+export function fitSupportHand(hand: SupportHandPart, grip: string | null): void {
+  const key = grip !== null && hand.holds.has(grip) ? grip : 'none';
+  if (key === hand.shown) return;
+  hand.shown = key;
+  const fitted = hand.holds.get(key)!;
+  for (const hold of hand.holds.values()) hold.object.visible = hold === fitted;
+  hand.toMag.copy(fitted.toMag);
 }
 
 /** A part the viewmodel shows or hides by name (the fitted optic, grip or magazine, the iron sights up or folded). */
