@@ -16,7 +16,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - An AEG rifle (single, burst or auto on the fire selector), a gas pistol and an electric Cyber Pistol, switched with
   the wheel or keys (Phase 1, M12a, M32)
 - Cyber Pistol: electric semi, burst and auto; white slab with glowing cyan lines and magenta core, plain grey and unlit
-  with Realistic colours; built-in battery, fits either gear slot (M32, G2)
+  with Realistic colours; its model is drawn in Blender and shows on figures too; built-in battery, fits either gear slot
+  (M32, G2, M101)
 - Replica colour schemes: eight two-tone colours (Cobalt, Signal, Acid, Teal, Hazard, Coral, Onyx, Ghost); rifles Cobalt
   and pistols Ghost until the Customise screen lets players pick one per replica (G1)
 - BBs are real projectiles: visible flight with air physics and drag, travel time, drop, and hop-up lift set by a dial

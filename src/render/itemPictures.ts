@@ -3,6 +3,7 @@ import { ITEM_PICTURE } from '../config/itemPictures';
 import type { ReplicaConfig } from '../config/replicas';
 import type { SchemeId } from '../config/schemes';
 import { buildReplicaModels, fitMuzzle, REPLICA_PART_TABLES, type ReplicaDetail, type ReplicaModel } from './replicaModels';
+import { NO_REPLICA_FILES, type ReplicaFiles } from './replicaFiles';
 
 /**
  * Item pictures (graphics overhaul G2): small images of a replica, a part or a colour scheme for the menus, drawn by the
@@ -70,6 +71,8 @@ export class ItemPictures {
   constructor(
     private readonly target: PictureTarget,
     private readonly schedule: FrameScheduler = nextFrame,
+    /** The replica models from files (M101), as the hands draw them: a replica with one is pictured from it. */
+    private readonly files: () => ReplicaFiles = () => NO_REPLICA_FILES,
   ) {
     const L = ITEM_PICTURE.light;
     const key = new THREE.DirectionalLight(L.key.colour, L.key.intensity);
@@ -125,7 +128,7 @@ export class ItemPictures {
 
   private draw(subject: PictureSubject): string {
     const [width, height] = pictureSize(subject);
-    const models = buildReplicaModels([subject.replica], 0, false, PICTURE_DETAIL, { schemes: [subject.scheme], realistic: subject.realistic }, 'bare');
+    const models = buildReplicaModels([subject.replica], 0, false, PICTURE_DETAIL, { schemes: [subject.scheme], realistic: subject.realistic }, 'bare', undefined, this.files());
     const model = models.models.get(subject.replica.id)!;
     try {
       if (subject.part) showOnly(model.group, subject.part);

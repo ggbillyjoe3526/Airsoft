@@ -4,6 +4,8 @@ import type { Scheme } from '../config/schemes';
 import type { GripWrap } from './figureHands';
 import type { PartBuilder, PartLook } from './figureParts';
 import { V } from './figureShapes';
+import type { MaterialKey } from './replicaBuilder';
+import type { ReplicaFilePiece } from './replicaFiles';
 
 /**
  * The replicas figures carry (G7): the first-person replicas' blocky two-tone look (G2) cut down to a handful of
@@ -14,6 +16,23 @@ import { V } from './figureShapes';
 
 /** A replica's colours on a figure (a scheme, or the Cyber Pistol's own). */
 export type FigureReplicaColours = Pick<Scheme, 'body' | 'furniture' | 'detail' | 'accent' | 'steel'>;
+
+/**
+ * A pistol's own shape on a figure, from its model file (M101, render/replicaFiles.ts): its pieces in the pistol's
+ * frame (the back of the slide at the origin, the bore on the axis), each in a role of the replica's colours.
+ */
+export type FigurePistolShape = readonly ReplicaFilePiece[];
+
+/** The colour role a model file's material takes on a figure: the slab the body, the frame the furniture, the lines the accent. */
+const SHAPE_ROLES: Partial<Record<MaterialKey, keyof FigureReplicaColours>> = {
+  cyberSlab: 'body',
+  polymer: 'furniture',
+  furniture: 'furniture',
+  cyberLine: 'accent',
+  cyberCore: 'accent',
+  accent: 'accent',
+  metal: 'steel',
+};
 
 /** The parts a figure shows on its replicas: a silencer on the rifle (M29b; Player detail `high` only), a weapon torch. */
 export interface FigureKit {
@@ -110,17 +129,26 @@ export function addRifle(b: PartBuilder, m: THREE.Matrix4, colours: FigureReplic
 
 /**
  * The pistol, the back of its slide at the frame's origin and its muzzle FIGURE.pistol.length ahead: the slide with its
- * accent line, the frame under it and a raked grip. Detailed: the trigger guard, sights and a base pad.
+ * accent line, the frame under it and a raked grip. Detailed: the trigger guard, sights and a base pad. With `shape` (a
+ * model file's, M101), that shape in place of the built-in one, at every detail.
  */
-export function addPistol(b: PartBuilder, m: THREE.Matrix4, colours: FigureReplicaColours, kit: FigureKit = BARE_KIT): void {
+export function addPistol(b: PartBuilder, m: THREE.Matrix4, colours: FigureReplicaColours, kit: FigureKit = BARE_KIT, shape: FigurePistolShape | null = null): void {
   const c = colours;
   const L = FIGURE.pistol.length;
+  const T = FIGURE.torch;
+  if (shape && shape.length > 0) {
+    for (const p of shape) {
+      const role = SHAPE_ROLES[p.key] ?? 'detail';
+      b.add(p.geometry.clone().applyMatrix4(m), c[role], role === 'steel' ? STEEL : POLYMER);
+    }
+    if (kit.pistolTorch) addTorch(b, m, c, 0, -T.pistolBelow, -L + T.pistolLength / 2, T.size * T.pistolSize, T.pistolLength);
+    return;
+  }
   b.block(c.body, 0.032, 0.036, L, 0, 0.004, -L / 2, POLYMER, m); // slide
   b.box(c.accent, 0.0336, 0.005, L * 0.85, 0, 0.002, -L / 2, {}, m);
   b.block(c.furniture, 0.03, 0.016, L * 0.85, 0, -0.022, -L * 0.48, POLYMER, m); // frame
   const G = PISTOL_GRIP;
   b.block(c.furniture, 0.03, G.half * 2 + 0.02, 0.042, G.at.x, G.at.y, G.at.z, POLYMER, m, new THREE.Euler(G.rake, 0, 0));
-  const T = FIGURE.torch;
   if (kit.pistolTorch) addTorch(b, m, c, 0, -T.pistolBelow, -L + T.pistolLength / 2, T.size * T.pistolSize, T.pistolLength);
   if (!b.overhaul) return;
   b.box(c.furniture, 0.008, 0.024, 0.036, 0, -0.04, -0.075, POLYMER, m); // trigger guard

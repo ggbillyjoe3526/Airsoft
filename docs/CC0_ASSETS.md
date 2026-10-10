@@ -49,6 +49,7 @@ Poly Haven and Quaternius). A file reaches the repository one of two ways:
 
 ```
 src/assets/models/characters/figure.glb   the player and bot model (M25a, wired up)
+src/assets/models/replicas/<id>.glb       a replica's model, by replica id: cyber.glb is the Cyber Pistol's (M101, wired up)
 src/assets/models/props/                  props (planned: not created or wired up yet)
 src/assets/textures/                      loose surface textures (planned: not created or wired up yet)
 ```
@@ -98,6 +99,24 @@ There are two levels of fit:
   can be cut from a rigged character and its bones are left behind. The game doesn't play glTF animations yet (a later
   step: a walk cycle and the hit-call animation from a rigged pack).
 
+### Replica models
+
+The loader is `src/render/replicaFiles.ts`; its settings are `REPLICA_FILE` in `src/config/assets.ts`. A pistol's file
+replaces its built-in model in the hands, on the menus' pictures and on the figures (rifles: not yet). A file that can't
+be used logs a warning and the built-in model is drawn.
+
+- **Space.** Metres, life size. The bore points along Blender's +Y (the game's -Z), up is +Z. The origin is where the
+  frame meets the slide, above the trigger. The grip stays where the built-in pistols' is (raked back about 22°): the
+  hands are posed in code.
+- **Objects.** `Body` (needed), `Magazine` (drops out on a reload; without it the built-in one is drawn), `Figure` (the
+  figures' cut-down version), and the empties `Muzzle` (needed: the centre of the muzzle's face, where BBs leave) and
+  `TorchMount`.
+- **Materials,** by name: `CyberSlab`, `CyberFrame`, `CyberLine`, `CyberCore`, `CyberMetal`, or a replica material's own
+  name (`polymer`, `furniture`, `detail`, `metal`, `rubber`, `stipple`, `accent`). Plain colours: the game draws in its own
+  materials, so Realistic colours, the glow and the High finish apply. No textures needed.
+- **Budget.** At most 3,500 triangles in the hands, 300 on a figure, 300 KB (the loader warns above each). No LODs.
+- **Muzzle.** Leave it plain: the orange-tip setting adds the tip.
+
 ## Blender, step by step
 
 For a Quaternius or Kenney character.
@@ -121,6 +140,7 @@ of it the physics engine.
 | What | Budget |
 |---|---|
 | The figure model | **≤ 3 MB** (the loader warns above that), ≤ 15,000 triangles, ≤ 4 materials, 1K textures |
+| A replica model | ≤ 300 KB, ≤ 3,500 triangles in the hands, ≤ 300 on a figure, ≤ 5 materials, no textures |
 | A prop | ≤ 300 KB, ≤ 2,000 triangles, sharing textures with other props where possible |
 | A surface texture set | ≤ 1.5 MB at 1K (colour, normal, ORM) |
 | Everything external | ≤ 25 MB, so the game stays under 30 MB |
