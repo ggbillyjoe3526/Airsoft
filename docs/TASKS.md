@@ -14,6 +14,19 @@ Every block below carries note 19: tune on Normal, then check that Easy, Hard an
 first guesses; the build thread confirms them before it starts. The owner ruled on every conflict on 2026-10-06
 (ROADMAP, under the playtest table).
 
+## RM3 · Battery, LiPo and gas bottle pictures from their Blender models (owner's ask, 2026-10-10)
+tier: ui
+perf: skip
+touches: src/render/powerSourceModels.ts, src/render/powerSourceModels.test.ts, src/render/itemPictures.ts, src/render/itemPictures.test.ts, src/config/assets.ts, src/ui/menus/menuPictures.ts, src/ui/menus/menuPictures.test.ts, src/ui/menus/itemTile.ts, src/ui/menus/css/controls.css, src/game.ts, src/assets/models/powerSources/, src/render/README.md, e2e/, docs/
+contract: none
+acceptance:
+  1. The Standard Battery, 11.1 V LiPo Battery, Green Gas, Red Gas and Black Gas show pictures drawn from `src/assets/models/powerSources/` (the owner's Blender models) wherever the menus show a power source (Customise, the Loadout, the Armory's collection and reveals), in the replicas' picture studio; the gas bottle's `Label` is painted green, red or black per gas.
+  2. Menu pictures only: nothing shows in a match or first person (owner, 2026-10-10). The files load the first time a menu pictures one, not at start; one that can't be used warns and the item keeps its line drawing.
+  3. Every picture fits its slot whole (no cropping), the existing replica and part pictures included.
+  4. Each file stays within `POWER_SOURCE_FILE.warnBytes` and is recorded in docs/ASSETS.md › Made for the game, with the how-to in docs/CC0_ASSETS.md.
+status: open
+attempts: 0
+
 ## M80 · The tutorial shows what it teaches (playtest note 1)
 tier: ui
 perf: skip

@@ -34,6 +34,7 @@ import { initPhysics } from './physics/physicsWorld';
 import { awayWatch } from './core/awayWatch';
 import { loadBakedLight } from './render/bakedLight';
 import { loadFigureModel } from './render/externalModels';
+import { powerSourceLoader } from './render/powerSourceModels';
 import { loadReplicaFiles } from './render/replicaFiles';
 import { FrameTimeWatch, presetBelow, slowFrameMs } from './render/qualityStepDown';
 import { rendererName } from './render/gpuCheck';
@@ -384,7 +385,7 @@ export class Game {
     });
 
     // The menus' pictures of replicas and parts (G3), drawn by whichever WebGL renderer the game has now.
-    this.pictures = new ItemPictures(followingPictureTarget(() => this.renderer.pictureRenderer, webglPictureTarget), undefined, () => this.renderer.replicaFiles);
+    this.pictures = new ItemPictures(followingPictureTarget(() => this.renderer.pictureRenderer, webglPictureTarget), undefined, () => this.renderer.replicaFiles, powerSourceLoader());
     this.menus = new Menus(container, {
       pictures: this.pictures,
       rules: {

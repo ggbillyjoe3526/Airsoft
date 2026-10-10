@@ -56,7 +56,7 @@ and never writes the simulation.
   `replicaBuilder.ts` (the mesh builder both use), `replicaFiles.ts` (the Blender model files, M101, RM1) and `replicaRig.ts`
   (their moving parts, skinned and posed from the game's state, RM1), `replicaFinish.ts` (moulded speckle), `replicaSheen.ts` (the
   environment reflection), `replicaArms.ts` (the first-person arms), `handModels.ts`; `itemPictures.ts` draws them off
-  screen for the menus.
+  screen for the menus, with the power sources from `powerSourceModels.ts` (the menus' battery, LiPo and gas bottle, RM3).
 - Surface textures: `proceduralTextures.ts` draws each at the quality's Texture detail, the city's flat finishes capped
   at 512² (`drawnSize`, M78), with `natureTextures.ts`, `cityTextures.ts` and `textureLibrary.ts`.
 - Pooled effects (nothing in flight uploads nothing): `impactPuffs.ts`, `bbRenderer.ts`, `dustMotes.ts`. The post stack
