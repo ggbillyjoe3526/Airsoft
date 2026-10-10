@@ -25,6 +25,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **G9** · Low looks and costs exactly as before on both maps, and Depot is unchanged; under Reduced motion the fireflies, steam, plane and sign flicker all hold still
 - **W1** · Settings › Graphics › Renderer: Auto (the default), WebGPU or WebGL; Auto draws with WebGPU where the browser has it, WebGL otherwise
 - **W1** · On WebGPU the world and figures draw with plain materials and no screen effects for now; pick WebGL on the Renderer row for the full look
+- **W5** · On WebGPU at Medium and up, Woodland's meadows grow swaying grass and a deep wood stands beyond the fence
 
 ### Changed
 - **M71** · Bots hunt the map's middle once their lane is swept (now all levels, not just Pro); Normal and Hard hold their posts out of lantern light at night (#133)
@@ -103,6 +104,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **W2** · A comparison script scores WebGPU's pictures of every map against WebGL's, by day and night on Medium and High, against a fixed bar
 - **W3** · The WebGPU comparison adds first-person, near and far player and night torch views, and runs on a real WebGPU device as well
 - **W4** · The WebGPU comparison scores every preset's screen effects by day and night, the retro filter and a lit lamp close up
+- **W5** · On WebGPU particles move on the graphics card; the WebGPU comparison adds Woodland's grass and stand-in views
 
 ## 0.1 Dev 4 · 2026-10-06
 
