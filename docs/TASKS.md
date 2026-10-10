@@ -251,3 +251,17 @@ acceptance:
   2. With Dev settings on (Unlock all gear), every replica and part is available.
 status: open
 attempts: 0
+
+## W5 · WebGPU compute where it pays: GPU particles, Woodland's GPU grass and tree stand-ins, GPU culling (WebGPU overhaul, scope `plans/webgpu-overhaul-scope.md`)
+tier: core
+perf: required
+touches: src/render/webgpu/, src/render/impactPuffs.ts, src/render/impactGrit.ts, src/render/dustMotes.ts, src/render/fireflies.ts, src/render/smokePlumes.ts, src/render/dressingEffects.ts, src/render/atmosphere.ts, src/render/renderer.ts, src/render/mapMeshes.ts, src/config/gpuDressing.ts, src/map/mapTypes.ts, src/map/woodlandDressing.ts, e2e/, pipeline/webgpu-compare.mjs, pipeline/webgpuCompare.mjs, pipeline/webgpuCompare.test.mjs, pipeline/README.md, pipeline/baseline/, docs/KNOWN_ISSUES.md
+contract: none (the WebGL path and its draws are unchanged; the compute passes, the grass and the stand-ins live only in the node renderer's lazy chunk)
+acceptance:
+  1. On the node path (WebGPU and its WebGL2 back end) the particles (dust motes, fireflies, chimney smoke and vent steam, impact, hit and gas puffs, impact rings, kicked dust and impact grit) are simulated by compute passes, the CPU's per-particle loop skipped, with the same counts per preset as WebGL; BB flight stays in the simulation (the GPU only draws BBs, trails and glows). Unit tests pin each compute pass against its CPU counterpart, and a pool with nothing alive draws nothing.
+  2. Woodland on the node path, Medium and up: GPU-driven grass blades on its grass ground that thin with distance (Ultra near the concept's 160,000 if the container's counts allow), and stand-ins (impostors) for about 2,000 trees beyond the fence, captured from the game's own tree shapes; both culled on the GPU (GPU culling for instanced dressing), counts capped per preset, driven by map data (never map-exclusive). Where three/webgpu 0.186 lacks something (indirect draws, atomics on its WebGL2 back end) the closest equivalent, said in the record with what the WebGL2 back end does.
+  3. On Auto without an adapter (every gate here, and every WebGL player) nothing changes: the same draws on every preset, the perf gate's WebGL numbers within their baselines, no new node code in the main chunk (still within its 950 kB budget), every chunk but Rapier's within its budget, and Low no dearer on either path (no grass or stand-ins on Low).
+  4. The comparison script (pipeline/webgpu-compare.mjs, same bar and the owner's rulings for a software adapter of 2026-10-09 and 2026-10-10) runs W2's, W3's and W4's views with the grass and stand-ins switched off by a page switch: every pair passes as before and the node path draws no more calls than WebGL. New views with them on (Woodland at night on Medium, High and Ultra) are saved as pictures for the owner to judge by eye, with draws, triangles and GPU memory recorded per preset and a triangle ceiling for the grass; Woodland's Ultra triangle line is re-set from the container's counts and said in the record.
+  5. No per-frame allocation; the compute buffers, the grass and the stand-ins' atlas are freed on a preset change, a map change and a lost device (and on a resize where anything is sized to the screen); modules stay under about 600 lines; the e2e checks add at most about 60 s.
+status: open
+attempts: 0
