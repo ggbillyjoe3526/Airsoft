@@ -14,6 +14,20 @@ Every block below carries note 19: tune on Normal, then check that Easy, Hard an
 first guesses; the build thread confirms them before it starts. The owner ruled on every conflict on 2026-10-06
 (ROADMAP, under the playtest table).
 
+## RM2 · An Inspect key: each replica's inspect animation plays in first person (owner's ask, 2026-10-10)
+tier: core
+perf: required
+touches: src/config/controls.ts, src/config/renderView.ts, src/input/, src/matchSession.ts, src/rangeSession.ts, src/audio/sfx.ts, src/render/viewmodel.ts, src/render/viewmodelInspect.test.ts, src/render/replicaRig.ts, src/render/replicaRig.test.ts, src/render/replicaFiles.ts, src/render/replicaFiles.test.ts, src/render/combatPresentation.ts, src/render/README.md, e2e/, README.md, docs/
+contract: none
+acceptance:
+  1. A new Inspect action, on Y by default (F, B, T and G are taken; I is kept for an inventory), rebindable in Settings › Key Bindings like the others.
+  2. Pressing it in play turns the replica in hand over in first person while its model file's Inspect clip plays: the AEG's 3 s (charging handle, dust cover, hop-up dial), the gas pistol's 2 s press check, the Cyber Pistol's 2 s battery check (its magazine slides out and back).
+  3. It never gets in the way: it doesn't start while reloading, drawing, sprinting, aiming or calling a hit, and a shot, a hit, a reload, a sprint, aiming or a switch ends it; a shot's BB leaves from the barrel's normal hold.
+  4. The parts make their small mechanical sounds as they move.
+  5. The KNOWN_ISSUES row saying the Inspect animations aren't played is gone (Blowback stays, a 0.1 Dev 6 feature).
+status: open
+attempts: 0
+
 ## M80 · The tutorial shows what it teaches (playtest note 1)
 tier: ui
 perf: skip
