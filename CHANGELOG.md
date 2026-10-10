@@ -102,7 +102,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **W1** · The perf harness records which renderer drew (`--renderer`, `--force-webgl`); a browser without WebGPU never downloads the new renderer
 - **W2** · A comparison script scores WebGPU's pictures of every map against WebGL's, by day and night on Medium and High, against a fixed bar
 - **W3** · The WebGPU comparison adds first-person, near and far player and night torch views, and runs on a real WebGPU device as well
-- **FP1** · Tests pin every barrel and silencer to the bore and measure the support hand on the handguard and on a vertical grip
+- **FP1** · Tests pin every barrel and silencer to the bore and measure the support hand on the handguard and on a vertical grip; the game chunk's size budget is 1,000 kB (main was already over 950)
 
 ## 0.1 Dev 4 · 2026-10-06
 

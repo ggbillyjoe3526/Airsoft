@@ -17,6 +17,8 @@
 - **With the vertical grip, a reload takes the magazine by its side.** The grip hold carried to the magazine reads as a natural grab, so it needs no hold of its own.
 - **The support hand's holds are parts named `hold:<grip>`, one drawn at a time.** No extra draw calls or triangles at once; `fitSupportHand` only changes anything when the grip does.
 
+- **The game chunk's budget goes from 950 to 1,000 kB.** Main was already at 950.2 kB (over) after G11 and G12, and FP1 adds 0.9 kB; a 50 kB step as M50's and M75's (also in DECISIONS).
+
 ## Known issues left
 
 - None.

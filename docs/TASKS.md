@@ -204,19 +204,6 @@ acceptance:
 status: open
 attempts: 0
 
-## FP1 · First-person hands hold the rifle and its parts cleanly (owner, 2026-10-10)
-tier: core
-perf: skip
-touches: src/render/, src/config/chunkBudget.ts, docs/KNOWN_ISSUES.md
-contract: none
-acceptance:
-  1. Nothing in the first-person view reads as a second barrel under the replica's barrel: the rifle's support thumb lies along the handguard's near side instead of standing out past it (owner's screenshot report).
-  2. Every fitted barrel and muzzle device on every replica sits on the bore, in line with the barrel it fits.
-  3. With a vertical grip fitted, the rifle's support hand holds the grip (palm on its side, fingers round its front, nothing through it) and on a reload takes the magazine; every other grip and replica keeps its hold.
-  4. One hold is drawn at a time: no more meshes or triangles drawn than before.
-status: critic
-attempts: 2
-
 **0.1 Dev 6 (confirmed with the roadmap, 2026-10-06).** M92–M95, the holster and the practice
 upgrades, come before the 26 features in `docs/ROADMAP.md` › 0.1 Dev 6, whose blocks are written when that build starts.
 
