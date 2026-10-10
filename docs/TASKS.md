@@ -255,7 +255,7 @@ attempts: 0
 ## W4 · WebGPU post stack and retro filter: every preset's frame as node post-processing (WebGPU overhaul, scope `plans/webgpu-overhaul-scope.md`)
 tier: core
 perf: required
-touches: src/render/webgpu/, src/render/post/, src/render/renderer.ts, src/render/retroFilter.ts, e2e/, pipeline/webgpu-compare.mjs, pipeline/webgpuCompare.mjs, pipeline/webgpuCompare.test.mjs, pipeline/README.md, docs/KNOWN_ISSUES.md
+touches: src/render/webgpu/, src/render/post/, src/render/renderer.ts, src/render/retroFilter.ts, src/render/retroFilterWebGL.ts, e2e/, pipeline/webgpu-compare.mjs, pipeline/webgpuCompare.mjs, pipeline/webgpuCompare.test.mjs, pipeline/README.md, docs/KNOWN_ISSUES.md
 contract: none (the WebGL path and its draws are unchanged; the node passes live only in the node renderer's lazy chunk)
 acceptance:
   1. On the node path every preset's frame draws as today's: Low (no stack) straight onto the canvas with the tone mapping and haze in WebGL's order, Medium, High and Ultra through the post stack (ambient occlusion, reflections where today has them, light shafts, temporal antialiasing or the closest equivalent, bloom, tone mapping, lens finish) with the held replica on top, and the retro filter, each as node post-processing (three/webgpu's own nodes, or the closest TSL equivalent where 0.186 lacks one or draws differently, said in the record), matching today's look on every map.
