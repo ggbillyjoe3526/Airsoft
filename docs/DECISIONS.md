@@ -466,8 +466,9 @@ replaces its line; the old one stays findable in the archive or in git.
   its finest grain is a touch softer.
 - **Chunk size budgets fail the build on CI, and growth is a deliberate bump with a decision line (2026-10-04).** The
   game chunk's default is 1,000 kB (warning from 90 %) and Rapier's 4,550 kB. Bumped from 950 kB on 2026-10-10 (FP1):
-  main's game chunk was 950.2 kB after G11 and G12, already over, and FP1's hand holds made it 951.1; the WebGPU
-  overhaul's step 6 (the old renderer removed) is where it should shrink again.
+  main's game chunk was 950.2 kB after G11 and G12, already over, and FP1's hand holds made it 951.1 (950.3 once W4
+  moved WebGL's retro filter to a chunk of its own); the WebGPU overhaul's step 6 (the old renderer removed) is where it
+  should shrink again.
 - **Production builds ship Brotli and gzip copies of their files (owner, 2026-10-04: Brotli now, `.wasm` later).**
 - **Level blocks collide as closed triangle meshes with `FIX_INTERNAL_EDGES`, not cuboids (2026-09-28).** Rapier's
   capsule controller sinks into any cuboid along its diagonals, and without the flag face-diagonal edges give ghost
