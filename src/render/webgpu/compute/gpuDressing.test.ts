@@ -144,4 +144,20 @@ describe('GpuDressing', () => {
     dressing.frame(scene, camera, QUALITY.medium, true);
     expect(sway()).toBe(1);
   });
+
+  it('culls neither while it is hidden (nothing drawn, nothing to cull)', () => {
+    const { dressing, compute } = setup();
+    const { scene } = sceneOf(WOODLAND);
+    dressing.frame(scene, camera, QUALITY.high);
+    compute.mockClear();
+    scene.getObjectByName('grass-gpu')!.visible = false;
+    dressing.frame(scene, camera, QUALITY.high);
+    expect(compute).toHaveBeenCalledTimes(1);
+    scene.getObjectByName('forest-gpu')!.visible = false;
+    dressing.frame(scene, camera, QUALITY.high);
+    expect(compute).toHaveBeenCalledTimes(1);
+    scene.getObjectByName('grass-gpu')!.visible = true;
+    dressing.frame(scene, camera, QUALITY.high);
+    expect(compute).toHaveBeenCalledTimes(2);
+  });
 });

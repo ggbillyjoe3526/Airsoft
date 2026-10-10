@@ -83,8 +83,9 @@ export class GpuDressing {
     const dt = Number.isNaN(this.last) ? 0 : Math.min(0.1, (now - this.last) / 1000);
     this.last = now;
     camera.updateMatrixWorld();
-    this.grass?.frame(camera, dt, motion);
-    this.forest?.frame(camera);
+    // A hidden one (a debug view, a test) draws nothing, so it is not culled either.
+    if (this.grass?.mesh.visible) this.grass.frame(camera, dt, motion);
+    if (this.forest?.mesh.visible) this.forest.frame(camera);
   }
 
   /** Frees both (the preset or the map changed, or the device went). */

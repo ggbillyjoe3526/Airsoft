@@ -38,6 +38,13 @@ test.describe('Woodland at night on the node renderer', () => {
   const s = shared('woodland', 'night', (page) =>
     qa(page, (q, game) => {
       q.hideFigures();
+      // The GPU grass and tree stand-ins (W5) out of the way, as the figures: the W2 checks measure the effects, and
+      // 93,696 blades a frame slow the software renderer past their timeouts. Hidden, they are not culled either; the
+      // compute check shows them.
+      for (const name of ['grass-gpu', 'forest-gpu']) {
+        const mesh = game.renderer.scene.getObjectByName(name);
+        if (mesh) mesh.visible = false;
+      }
       // Where the first camp fire is seen from, as pipeline/webgpu-compare.mjs's fire view: 3.4 m back from Blue's side.
       q.aimFire = () => {
         const fire = game.session.combat.field.lights.find((l: Any) => l.kind === 'fire').position;
@@ -202,6 +209,7 @@ test.describe('Woodland at night on the node renderer', () => {
       const game = (window as Any).airsoft;
       const r = game.renderer;
       const mesh = r.scene.getObjectByName('grass-gpu');
+      r.scene.getObjectByName('forest-gpu').visible = true;
       const blue = game.state.characters.filter((c: Any) => c.team === 0).reduce((a: Any, c: Any, _i: number, all: Any[]) => ({ x: a.x + c.spawnPosition.x / all.length, z: a.z + c.spawnPosition.z / all.length }), { x: 0, z: 0 });
       const original = r.render.bind(r);
       const shot = async (visible: boolean): Promise<Uint8ClampedArray> => {
