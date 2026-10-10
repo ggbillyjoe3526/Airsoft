@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_BINDINGS, REBINDABLE } from '../config/controls';
-import { bindable, describeKeys, KeyBindings, type KeyValueStore, keyLabel, mouseButtonCode } from './keyBindings';
+import { bindable, describeKeys, KEY_BINDINGS_KEY, KeyBindings, type KeyValueStore, keyLabel, mouseButtonCode } from './keyBindings';
 
 class MemoryStore implements KeyValueStore {
   readonly data = new Map<string, string>();
@@ -385,5 +385,32 @@ describe('keyLabel', () => {
     expect(b.hasLayout).toBe(true);
     b.setLayout(new Map([['KeyZ', 'y']])); // the same layout read again: no change
     expect(changes).toBe(1);
+  });
+});
+
+describe('KeyBindings: Inspect (RM2)', () => {
+  it('is on Y by default, listed for rebinding, and can move to another key', () => {
+    const b = new KeyBindings(null);
+    expect(b.codes('inspect')).toEqual(['KeyY']);
+    expect(b.actionOf('KeyY')).toBe('inspect');
+    expect(REBINDABLE.some((r) => r.action === 'inspect')).toBe(true);
+    expect(b.rebind('inspect', 'KeyU')).toBe(true);
+    expect(b.codes('inspect')).toEqual(['KeyU']);
+    expect(b.actionOf('KeyY')).toBeUndefined();
+  });
+
+  it('gives Y to a save made before the action existed', () => {
+    const store = new MemoryStore();
+    store.setItem(KEY_BINDINGS_KEY, JSON.stringify({ forward: ['KeyW'], torch: ['KeyT'] }));
+    expect(new KeyBindings(store).codes('inspect')).toEqual(['KeyY']);
+  });
+
+  it('leaves Y to the action the player bound it to in an older save', () => {
+    const store = new MemoryStore();
+    store.setItem(KEY_BINDINGS_KEY, JSON.stringify({ torch: ['KeyY'] }));
+    const b = new KeyBindings(store);
+    expect(b.codes('torch')).toEqual(['KeyY']);
+    expect(b.actionOf('KeyY')).toBe('torch');
+    expect(b.codes('inspect')).toEqual([]);
   });
 });

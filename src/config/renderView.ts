@@ -81,6 +81,30 @@ export const HUD = {
   crosshairGapStep: 0.5,
 } as const;
 
+/**
+ * One key of an inspect's pose (VIEWMODEL.inspect): at `at` (a share of the inspect, 0..1), radians of tilt (muzzle
+ * up), turn (muzzle left) and roll (right side up), and metres of lift, inward and back, all added to the hold.
+ */
+export interface InspectKey {
+  at: number;
+  tilt: number;
+  turn: number;
+  roll: number;
+  lift: number;
+  inward: number;
+  back: number;
+}
+
+/** A sound of the parts through an inspect (audio/sfx.ts inspect): magOut, magIn and dryFire are the replica's own. */
+export type InspectCue = 'selector' | 'torchClick' | 'magOut' | 'magIn' | 'dryFire';
+
+/** How one first-person model is inspected (VIEWMODEL.inspect.poses). */
+export interface InspectPose {
+  duration: number;
+  keys: readonly InspectKey[];
+  sounds: readonly { at: number; cue: InspectCue }[];
+}
+
 /** First-person replica rendering and motion. */
 export const VIEWMODEL = {
   /** Paint the muzzle orange like many real-world replicas. Off by default (user preference). */
@@ -152,6 +176,68 @@ export const VIEWMODEL = {
   parts: {
     firePeak: 0.4,
     selector: { semi: 0.5, burst: 0.75, auto: 1 },
+  },
+  /**
+   * Inspecting the replica in hand (RM2, the Inspect key): the replica is turned in the hands to show itself while its
+   * file's Inspect clip works its parts (the AEG's charging handle, dust cover and hop dial, the gas pistol's press
+   * check, the Cyber Pistol's battery check). `poses` by first-person model (ReplicaLook.viewmodel, else .model): the
+   * inspect's length without a file clip (the clip's own length wins), the pose keys (each at a share of the inspect,
+   * eased between: radians of tilt (muzzle up), turn (muzzle left) and roll (right side up), metres of lift, inward
+   * (towards the centre of view) and back (towards the eye), all from the hold), and the parts' sounds (a share of the
+   * inspect each). A shot, a hit, a reload, a draw, a sprint or raising the sight ends it; the pose then eases back
+   * over `cancelTime` seconds and the parts are at rest at once.
+   */
+  inspect: {
+    cancelTime: 0.15,
+    poses: {
+      // Side on, the right side to the eye: the charging handle back, the dust cover open on the hop dial, set a notch.
+      rifle: {
+        duration: 3,
+        keys: [
+          { at: 0, tilt: 0, turn: 0, roll: 0, lift: 0, inward: 0, back: 0 },
+          { at: 0.17, tilt: 0.08, turn: -0.95, roll: 0.12, lift: 0.06, inward: 0.17, back: -0.08 },
+          { at: 0.5, tilt: 0.12, turn: -1.0, roll: 0.18, lift: 0.07, inward: 0.18, back: -0.08 },
+          { at: 0.82, tilt: 0.06, turn: -0.9, roll: 0.1, lift: 0.06, inward: 0.16, back: -0.07 },
+          { at: 1, tilt: 0, turn: 0, roll: 0, lift: 0, inward: 0, back: 0 },
+        ],
+        sounds: [
+          { at: 0.1, cue: 'selector' },
+          { at: 0.17, cue: 'torchClick' },
+          { at: 0.33, cue: 'selector' },
+          { at: 0.42, cue: 'selector' },
+          { at: 0.62, cue: 'dryFire' },
+          { at: 0.82, cue: 'torchClick' },
+        ],
+      },
+      // Side on, the top a little to the eye: the slide eased back a finger's width and let forward.
+      pistol: {
+        duration: 2,
+        keys: [
+          { at: 0, tilt: 0, turn: 0, roll: 0, lift: 0, inward: 0, back: 0 },
+          { at: 0.22, tilt: 0.05, turn: -0.95, roll: 0.1, lift: 0.07, inward: 0.1, back: -0.04 },
+          { at: 0.72, tilt: 0.08, turn: -1.0, roll: 0.2, lift: 0.075, inward: 0.105, back: -0.04 },
+          { at: 1, tilt: 0, turn: 0, roll: 0, lift: 0, inward: 0, back: 0 },
+        ],
+        sounds: [
+          { at: 0.22, cue: 'dryFire' },
+          { at: 0.76, cue: 'magIn' },
+        ],
+      },
+      // Side on, the butt of the grip to the eye: the battery eased out of the grip and pushed home.
+      cyber: {
+        duration: 2,
+        keys: [
+          { at: 0, tilt: 0, turn: 0, roll: 0, lift: 0, inward: 0, back: 0 },
+          { at: 0.22, tilt: -0.15, turn: -0.95, roll: 0.1, lift: 0.07, inward: 0.1, back: -0.04 },
+          { at: 0.72, tilt: -0.35, turn: -1.0, roll: 0.15, lift: 0.08, inward: 0.105, back: -0.04 },
+          { at: 1, tilt: 0, turn: 0, roll: 0, lift: 0, inward: 0, back: 0 },
+        ],
+        sounds: [
+          { at: 0.22, cue: 'torchClick' },
+          { at: 0.8, cue: 'magIn' },
+        ],
+      },
+    },
   },
   /** Pitch-down (radians) of the replica at the start of a draw. */
   drawTilt: 0.6,

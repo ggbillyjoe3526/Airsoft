@@ -67,6 +67,8 @@ export class PlayerInput {
   private fireModeLatch = false;
   /** The Weapon torch key pressed since the last tick (M33h). */
   private torchLatch = false;
+  /** The Inspect key pressed since the last takeInspect (RM2; presentation only, so never part of a command). */
+  private inspectLatch = false;
   /** A squad order key pressed (M22), or an order picked on the wheel (M23), since the last takeOrder. */
   private orderLatch: SquadCommand | null = null;
   private switchLatch = -1;
@@ -143,6 +145,7 @@ export class PlayerInput {
     if (kb.wasPressed('reload')) this.reloadLatch = true;
     if (kb.wasPressed('fireMode')) this.fireModeLatch = true;
     if (kb.wasPressed('torch')) this.torchLatch = true;
+    if (kb.wasPressed('inspect')) this.inspectLatch = true;
     if (kb.wasPressed('orderFollow')) this.latchOrder('follow', false);
     if (kb.wasPressed('orderHold')) this.latchOrder('hold', false);
     if (kb.wasPressed('orderRegroup')) this.latchOrder('regroup', false);
@@ -274,6 +277,13 @@ export class PlayerInput {
     return order;
   }
 
+  /** The Inspect key pressed this frame, once (RM2): the held replica is turned over to look at (render/viewmodel.ts). */
+  takeInspect(): boolean {
+    const inspect = this.inspectLatch;
+    this.inspectLatch = false;
+    return inspect;
+  }
+
   /** Looks the way a new round starts: along `yaw`, level, standing, sight down and not sprinting. */
   resetView(yaw: number): void {
     this.yaw = yaw;
@@ -303,6 +313,7 @@ export class PlayerInput {
     this.fireLatch = false;
     this.fireModeLatch = false;
     this.torchLatch = false;
+    this.inspectLatch = false;
     this.orderLatch = null;
     this.switchLatch = -1;
   }
