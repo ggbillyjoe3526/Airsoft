@@ -21,6 +21,8 @@ interface AttributeStore {
 
 /** Says once, loudly, that Three's private API a compute pass leans on is gone (a Three upgrade renamed it). */
 const said = new Set<string>();
+/** Forgets what was said (tests: each starts with nothing said). */
+export const forgetSaid = (): void => said.clear();
 export function privateApiMissing(what: string, cost: string): void {
   if (said.has(what)) return;
   said.add(what);

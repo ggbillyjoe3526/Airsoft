@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { WebGPURenderer } from 'three/webgpu';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { followSwappedBuffers, freeBuffer } from './computeKit';
+import { followSwappedBuffers, forgetSaid, freeBuffer } from './computeKit';
 
 /**
  * W5: the two places the compute passes lean on Three's private API. `freeBuffer` frees a storage buffer through the
@@ -11,6 +11,7 @@ import { followSwappedBuffers, freeBuffer } from './computeKit';
  */
 
 afterEach(() => {
+  forgetSaid();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });

@@ -43,6 +43,8 @@ type Owner = any;
 
 export class ParticleTwins {
   private readonly drivers = new Map<object, Driver>();
+  /** The same drivers in a list, walked each frame by index (a Map's iterator is an object a frame). */
+  private readonly list: Driver[] = [];
   /** This frame's passes, reused: nothing allocated per frame. */
   private readonly batch: ComputeNode[] = [];
   private dirty = true;
@@ -75,12 +77,15 @@ export class ParticleTwins {
   /** Once a frame before the draws: every pass that has something to move, in one dispatch. */
   frame(): void {
     const batch = this.batch;
-    batch.length = 0;
-    for (const driver of this.drivers.values()) {
-      const pass = driver.frame();
-      if (pass) batch.push(pass);
+    const list = this.list;
+    let n = 0;
+    for (let i = 0; i < list.length; i++) {
+      const pass = list[i]!.frame();
+      if (pass) batch[n++] = pass;
     }
-    if (batch.length > 0) void this.renderer.compute(batch);
+    // Shrunk only when fewer pools move than last frame: the array keeps its store.
+    if (batch.length !== n) batch.length = n;
+    if (n > 0) void this.renderer.compute(batch);
   }
 
   /** How many pools have a driver (tests, the debug checks). */
@@ -90,8 +95,9 @@ export class ParticleTwins {
 
   /** Every driver gone: the modules draw and move themselves again (WebGL taking over after a lost device). */
   dispose(): void {
-    for (const driver of this.drivers.values()) driver.dispose();
+    for (const driver of this.list) driver.dispose();
     this.drivers.clear();
+    this.list.length = 0;
   }
 
   private readonly visit = (o: THREE.Object3D): void => {
@@ -110,11 +116,15 @@ export class ParticleTwins {
               ? new PuffsDriver(r, owner, gone)
               : new GritDriver(r, owner, gone);
     this.drivers.set(owner, driver);
+    this.list.push(driver);
   };
 
   private drop(owner: object): void {
-    this.drivers.get(owner)?.dispose();
+    const driver = this.drivers.get(owner);
+    if (!driver) return;
+    driver.dispose();
     this.drivers.delete(owner);
+    this.list.splice(this.list.indexOf(driver), 1);
   }
 }
 
@@ -404,9 +414,18 @@ abstract class SpawnDriver implements Driver {
     return this.pass;
   }
 
-  /** The clock back to 0, every birth moved with it (nothing is alive, so no age changes). */
+  /**
+   * The clock back to 0 (nothing is alive). Every slot's birth is cleared on the GPU too, and sent with the next
+   * dispatch: a birth left there from before the lull would come back to life once the new clock passed it, replaying
+   * an old puff or burst after the next impact.
+   */
   private rebase(): void {
-    for (let i = 0; i < this.births.length; i++) this.births[i] = -1e9;
+    const record = this.records[0]!.value.array as Float32Array;
+    for (let i = 0; i < this.births.length; i++) {
+      this.births[i] = -1e9;
+      this.writeBirth(record, i);
+    }
+    this.sent = false;
     this.now = 0;
   }
 

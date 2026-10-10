@@ -289,11 +289,11 @@ describe('a slot that has run its course stays dead after the pool rests (accept
     }
   }
 
-  // BUG (W5 QA, 9c12534; flip to `it` once fixed): SpawnDriver.rebase() puts the pool's clock back to 0 after a lull and
+  // Was a bug (W5 QA, found on 9c12534, fixed in attempt 2): SpawnDriver.rebase() puts the pool's clock back to 0 after a lull and
   // clears the CPU's births, but leaves each slot's birth in the record the pass reads. An earlier puff (or burst of
   // chips) then has a birth within a lifetime of the new clock and is drawn again, at its old place, with the next impact.
-  // Found by evaluating the kernel on the records; fix: rebase() also writes -1e9 into the births of the records.
-  it.fails('shows only the new puff, not an earlier one replayed, when an impact follows a lull', () => {
+  // Found by evaluating the kernel on the records; fixed: rebase() also writes -1e9 into the births of the records.
+  it('shows only the new puff, not an earlier one replayed, when an impact follows a lull', () => {
     const { twins } = setup();
     const p = pools();
     twins.scan(p.scene);
@@ -318,8 +318,8 @@ describe('a slot that has run its course stays dead after the pool rests (accept
     expect(ages[0]!).toBeLessThan(0.05);
   });
 
-  // BUG (W5 QA, 9c12534; flip to `it` once fixed): the same, for the grit: the old chips are stepped and drawn full size.
-  it.fails('shows only the new chips, not an earlier burst falling again, when an impact follows a lull', () => {
+  // Was a bug (W5 QA, fixed in attempt 2): the same, for the grit: the old chips are stepped and drawn full size.
+  it('shows only the new chips, not an earlier burst falling again, when an impact follows a lull', () => {
     const { twins } = setup();
     const p = pools();
     twins.scan(p.scene);
@@ -395,11 +395,11 @@ describe('no allocation per frame in the particle drivers (acceptance 5)', () =>
     expect(objects).toBeLessThan(NOISE);
   }, 60_000);
 
-  // BUG (W5 QA, 9c12534; flip to `it` once fixed): ParticleTwins.frame walks `drivers.values()` (a Map iterator and a result
+  // Was a bug (W5 QA, fixed in attempt 2): ParticleTwins.frame walked `drivers.values()` (a Map iterator and a result
   // object per step, about 7 objects a frame) and empties `batch` with `length = 0`, which frees its backing store, so
   // the next push makes one (152 bytes): 8,000 objects in 1,000 frames, against the "nothing allocated per frame" it
-  // says. Fix: walk an array of the drivers, and set `batch.length` only when the number of passes changes.
-  it.fails('makes no object in the frame\'s dispatch of the drivers\' passes (the batch and the walk of the drivers are reused)', async () => {
+  // says. Fixed: it walks an array of the drivers, and sets `batch.length` only when the number of passes changes.
+  it('makes no object in the frame\'s dispatch of the drivers\' passes (the batch and the walk of the drivers are reused)', async () => {
     const { twins, calls } = setup();
     const p = pools();
     twins.scan(p.scene);
