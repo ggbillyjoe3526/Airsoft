@@ -251,16 +251,3 @@ acceptance:
   2. With Dev settings on (Unlock all gear), every replica and part is available.
 status: open
 attempts: 0
-
-## W4 · WebGPU post stack and retro filter: every preset's frame as node post-processing (WebGPU overhaul, scope `plans/webgpu-overhaul-scope.md`)
-tier: core
-perf: required
-touches: src/render/webgpu/, src/render/post/, src/render/renderer.ts, src/render/retroFilter.ts, src/render/retroFilterWebGL.ts, e2e/, pipeline/webgpu-compare.mjs, pipeline/webgpuCompare.mjs, pipeline/webgpuCompare.test.mjs, pipeline/README.md, docs/KNOWN_ISSUES.md
-contract: none (the WebGL path and its draws are unchanged; the node passes live only in the node renderer's lazy chunk)
-acceptance:
-  1. On the node path every preset's frame draws as today's: Low (no stack) straight onto the canvas with the tone mapping and haze in WebGL's order, Medium, High and Ultra through the post stack (ambient occlusion, reflections where today has them, light shafts, temporal antialiasing or the closest equivalent, bloom, tone mapping, lens finish) with the held replica on top, and the retro filter, each as node post-processing (three/webgpu's own nodes, or the closest TSL equivalent where 0.186 lacks one or draws differently, said in the record), matching today's look on every map.
-  2. On Auto without an adapter (every gate here, Low, and every WebGL player) nothing changes: the same draws on every preset, the perf gate's WebGL numbers within their baselines, no new node code in the main chunk (still within its 950 kB budget), and every chunk but Rapier's within its budget.
-  3. The comparison script (pipeline/webgpu-compare.mjs, same bar) adds post views: each map, by day and by night where the map has night, on Low, Medium, High and Ultra, with the whole frame drawn on both sides (the stack, the held replica, the retro filter). Every pair passes on the WebGL2 back end, W2's and W3's views still pass, and W3's build fails the new views; the pairs and scores are saved for the owner.
-  4. On the compared views the node path draws no more calls than WebGL (any extra is a KNOWN_ISSUES row); the passes allocate nothing per frame, and their targets are freed on a resize, a preset change, a map change and a lost device; modules stay under about 600 lines; unit tests pin each pass against its WebGL counterpart; the e2e checks add at most about 60 s.
-status: open
-attempts: 0
