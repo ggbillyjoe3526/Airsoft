@@ -59,6 +59,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M78** · High and Ultra draw the city's flat finishes at 512 × 512 as Medium does; Neon Heights on High: 21 MB less graphics memory (#151)
 - **W2** · On WebGPU the maps look as on WebGL: weathering, baked light, neon flicker, the skyline and its plane, moving flames, smoke, steam, stars, embers, fireflies and dust; players and screen effects still plain for now
 - **W3** · On WebGPU players, held replicas and replica sheen look as on WebGL; at night every lamp and fire near you lights walls and players
+- **FP1** · With a vertical grip fitted, your left hand holds the grip instead of floating in front of it; on a reload it takes the magazine by its side
 
 ### Fixed
 - **G11** · The team camo on players reads clearly on Medium and up: crisp dark and light blotches printed per pixel, on WebGL and WebGPU; Low keeps plain clothes
@@ -83,6 +84,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **BP2** · A replica picture drawn while the graphics context is lost is no longer left blank (#150)
 - **M79** · Leaving a match or the menus no longer leaves listeners behind, so memory doesn't creep up over a long session (#151)
 - **W3** · On WebGPU Depot's bounced light and shade under cover show again, and Chrome 141 no longer stops on the crash screen
+- **FP1** · In first person, your rifle's left thumb lies along the side of the handguard instead of sticking out beside it like a second barrel or silencer
 
 ### Internal
 - **G8** · Set dressing never collides or blocks sight: Depot's colliders, routes, cover and bot sight are tested identical with and without it (#136)
@@ -99,6 +101,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **W1** · The perf harness records which renderer drew (`--renderer`, `--force-webgl`); a browser without WebGPU never downloads the new renderer
 - **W2** · A comparison script scores WebGPU's pictures of every map against WebGL's, by day and night on Medium and High, against a fixed bar
 - **W3** · The WebGPU comparison adds first-person, near and far player and night torch views, and runs on a real WebGPU device as well
+- **FP1** · Tests pin every barrel and silencer to the bore and measure the support hand on the handguard and on a vertical grip
 
 ## 0.1 Dev 4 · 2026-10-06
 
