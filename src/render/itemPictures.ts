@@ -3,6 +3,8 @@ import { ITEM_PICTURE } from '../config/itemPictures';
 import type { ReplicaConfig } from '../config/replicas';
 import type { SchemeId } from '../config/schemes';
 import { buildReplicaModels, fitMuzzle, REPLICA_PART_TABLES, type ReplicaDetail, type ReplicaModel } from './replicaModels';
+import { NO_POWER_SOURCES, type PowerSourceLoader, type PowerSourceModel } from './powerSourceModels';
+import { NO_REPLICA_FILES, type ReplicaFiles } from './replicaFiles';
 
 /**
  * Item pictures (graphics overhaul G2): small images of a replica, a part or a colour scheme for the menus, drawn by the
@@ -30,13 +32,28 @@ export interface PictureSubject {
 }
 export type PictureShape = keyof typeof ITEM_PICTURE.sizes;
 
+/**
+ * A power source's own picture (RM3): drawn from its model file (render/powerSourceModels.ts), with its `Label` material
+ * in `label` (sRGB) when given; wide unless `shape` says otherwise, as most of the menus' item slots are.
+ */
+export interface PowerPictureSubject {
+  power: string;
+  label?: number;
+  shape?: PictureShape;
+}
+
+/** Anything the menus picture: a replica or one of its parts, or a power source. */
+export type ItemSubject = PictureSubject | PowerPictureSubject;
+
 /** A subject's picture size in pixels (width, height). */
-export function pictureSize(s: PictureSubject): readonly [number, number] {
+export function pictureSize(s: ItemSubject): readonly [number, number] {
+  if ('power' in s) return ITEM_PICTURE.sizes[s.shape ?? 'wide'];
   return ITEM_PICTURE.sizes[s.shape ?? (s.part ? 'square' : 'wide')];
 }
 
 /** The cache key of a subject: every field that changes the picture. */
-export function pictureKey(s: PictureSubject): string {
+export function pictureKey(s: ItemSubject): string {
+  if ('power' in s) return ['power', s.power, s.label?.toString(16) ?? '', pictureSize(s).join('x')].join('|');
   const fit = s.fit ? PART_KINDS.filter((k) => s.fit![k as PartKind]).map((k) => `${k}:${s.fit![k as PartKind]}`).join(',') : '';
   return [s.replica.id, s.scheme, s.realistic ? 'real' : 'bold', s.part ?? '', fit, pictureSize(s).join('x')].join('|');
 }
@@ -61,7 +78,8 @@ const PICTURE_DETAIL: ReplicaDetail = { replica: 'high', hands: 'high' };
 /** The queue, the cache and the studio the pictures are drawn in. */
 export class ItemPictures {
   private readonly cache = new Map<string, Promise<string>>();
-  private readonly queue: { subject: PictureSubject; done: (url: string) => void; failed: (error: unknown) => void }[] = [];
+  /** Pictures waiting, oldest first: each its cache key and how it is drawn. */
+  private readonly queue: { key: string; draw: () => string; done: (url: string) => void; failed: (error: unknown) => void }[] = [];
   private scheduled = false;
   private disposed = false;
   private readonly scene = new THREE.Scene();
@@ -70,6 +88,10 @@ export class ItemPictures {
   constructor(
     private readonly target: PictureTarget,
     private readonly schedule: FrameScheduler = nextFrame,
+    /** The replica models from files (M101), as the hands draw them: a replica with one is pictured from it. */
+    private readonly files: () => ReplicaFiles = () => NO_REPLICA_FILES,
+    /** The power-source models (RM3), loaded the first time one is pictured. */
+    private readonly powerSources: PowerSourceLoader = NO_POWER_SOURCES,
   ) {
     const L = ITEM_PICTURE.light;
     const key = new THREE.DirectionalLight(L.key.colour, L.key.intensity);
@@ -79,16 +101,29 @@ export class ItemPictures {
     this.scene.add(new THREE.HemisphereLight(L.sky, L.ground, L.fill), key, rim);
   }
 
-  /** The picture of `subject` as an image URL: drawn on a coming frame the first time, the same promise after. */
-  picture(subject: PictureSubject): Promise<string> {
+  /**
+   * The picture of `subject` as an image URL: drawn on a coming frame the first time, the same promise after. A power
+   * source's waits for its model to load first, and fails (the menus keep its line drawing) when there is none.
+   */
+  picture(subject: ItemSubject): Promise<string> {
     const key = pictureKey(subject);
     let found = this.cache.get(key);
     if (!found) {
-      found = new Promise<string>((done, failed) => this.queue.push({ subject, done, failed }));
+      if ('power' in subject) {
+        found = this.powerSources(subject.power).then((model) => {
+          if (!model) throw new Error(`No ${subject.power} power-source model`);
+          return this.enqueue(key, () => this.drawPower(subject, model));
+        });
+      } else found = this.enqueue(key, () => this.draw(subject));
       this.cache.set(key, found);
-      this.wake();
     }
     return found;
+  }
+
+  private enqueue(key: string, draw: () => string): Promise<string> {
+    const drawn = new Promise<string>((done, failed) => this.queue.push({ key, draw, done, failed }));
+    this.wake();
+    return drawn;
   }
 
   /** Pictures waiting to be drawn. */
@@ -114,10 +149,10 @@ export class ItemPictures {
     const next = this.queue.shift();
     if (!next || this.disposed) return;
     try {
-      next.done(this.draw(next.subject));
+      next.done(next.draw());
     } catch (error) {
       // A picture that can't be drawn (a lost context) is dropped from the cache, so a later visit asks again.
-      this.cache.delete(pictureKey(next.subject));
+      this.cache.delete(next.key);
       next.failed(error);
     }
     if (this.queue.length > 0) this.wake();
@@ -125,7 +160,7 @@ export class ItemPictures {
 
   private draw(subject: PictureSubject): string {
     const [width, height] = pictureSize(subject);
-    const models = buildReplicaModels([subject.replica], 0, false, PICTURE_DETAIL, { schemes: [subject.scheme], realistic: subject.realistic }, 'bare');
+    const models = buildReplicaModels([subject.replica], 0, false, PICTURE_DETAIL, { schemes: [subject.scheme], realistic: subject.realistic }, 'bare', undefined, this.files());
     const model = models.models.get(subject.replica.id)!;
     try {
       if (subject.part) showOnly(model.group, subject.part);
@@ -138,6 +173,21 @@ export class ItemPictures {
       // Taken out even when the draw fails, so a later picture never draws this one's model too.
       this.scene.remove(model.group);
       models.dispose();
+    }
+  }
+
+  /** A power source on its own, its label in the subject's colour; the model is kept for its next picture. */
+  private drawPower(subject: PowerPictureSubject, model: PowerSourceModel): string {
+    const [width, height] = pictureSize(subject);
+    const own = model.label?.color.getHex();
+    try {
+      if (model.label && subject.label !== undefined) model.label.color.setHex(subject.label);
+      this.scene.add(model.group);
+      frameItem(this.camera, visibleBox(model.group), width / height);
+      return this.target.encode(finishPixels(this.target.draw(this.scene, this.camera, width, height), width, height), width, height);
+    } finally {
+      this.scene.remove(model.group);
+      if (model.label && own !== undefined) model.label.color.setHex(own);
     }
   }
 }

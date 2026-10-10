@@ -16,7 +16,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - An AEG rifle (single, burst or auto on the fire selector), a gas pistol and an electric Cyber Pistol, switched with
   the wheel or keys (Phase 1, M12a, M32)
 - Cyber Pistol: electric semi, burst and auto; white slab with glowing cyan lines and magenta core, plain grey and unlit
-  with Realistic colours; built-in battery, fits either gear slot (M32, G2)
+  with Realistic colours; its model is drawn in Blender and shows on figures too; built-in battery, fits either gear slot
+  (M32, G2, M101)
 - Replica colour schemes: eight two-tone colours (Cobalt, Signal, Acid, Teal, Hazard, Coral, Onyx, Ghost); rifles Cobalt
   and pistols Ghost until the Customise screen lets players pick one per replica (G1)
 - BBs are real projectiles: visible flight with air physics and drag, travel time, drop, and hop-up lift set by a dial
@@ -30,6 +31,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - A laser module and a choice of power source on the pistol, from the pool (M26b)
 - BBs can ricochet off concrete and steel; own ricochets can hit you; whether ricochets count as hits is a match
   setting, off by default (M20, FA12)
+- Inspect (Y, rebindable): the replica in your hands turns side on and its parts move; AEG, gas pistol and Cyber Pistol
+  each have their own check, and a shot ends it (RM2)
 
 ## Hits and elimination
 
@@ -143,8 +146,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   on one page; no map is loaded until Play (M15, M15b, G3)
 - Title screen, pause, match summary and result screens; the pause screen shows the match's seed for bug reports (M15,
   M24, BP1, G3)
-- Replica pictures on Loadout, Customise and Armory; Customise lists the parts down the left, Colour first, each option
-  a picture tile beside the replica and its numbers (G3)
+- Replica, battery and gas bottle pictures on Loadout, Customise and Armory; Customise lists the parts down the left, Colour first, each option
+  a picture tile beside the replica and its numbers (G3, RM3)
 - Error screen on a crash with the seed, a report, Reload and Copy Report buttons; Play Again starts a new match with
   its own seed (FA1)
 - Settings groups: Graphics (quality presets with Custom option, frame-rate limit), Display (fullscreen, field of view,
@@ -222,6 +225,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   barrels and silencer model details on High; third-person rifles show a fitted silencer (FA8)
 - Replicas and attachments redesigned: blockier two-tone style with stippled grips; red dot as enclosed square hood,
   silencer hexagonal body (G2)
+- AEG and gas pistol drawn from Blender models, with fittable parts from Blender; in first person the AEG's trigger,
+  fire selector, iron sights and magazine release move, and the pistol's trigger and magazine release (RM1)
 - Players as masked humans (high-cut or bump helmet, balaclava, visor; no bare faces) in team camo with a team-colour
   plate carrier, or robots in a light or dark shell by team, mixed on both teams when Look › Robots is on; their
   replicas in the team's colours (G7)

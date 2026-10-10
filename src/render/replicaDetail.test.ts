@@ -26,7 +26,7 @@ const meshesOf = (root: THREE.Object3D): THREE.Mesh[] => {
 };
 const trianglesOf = (root: THREE.Object3D): number => meshesOf(root).reduce((n, m) => n + m.geometry.getAttribute('position').count / 3, 0);
 /**
- * A replica's triangles drawn at once as it comes: its body, the support hand, the standing sights, the standard
+ * A replica's triangles drawn at once as it comes: its body, the support hand on its handguard, the standing sights, the standard
  * magazine and its bare muzzle's device (M29b's flash hider, on the muzzle mount).
  */
 const drawn = (models: ReplicaModels, id: string): number => {
@@ -37,6 +37,7 @@ const drawn = (models: ReplicaModels, id: string): number => {
     if (fitted.some((kind) => child.name.startsWith(kind)) || child.name === 'sightsDown') continue;
     if (child.name === 'magazine') n += trianglesOf(child.getObjectByName('magazine:standard')!);
     else if (child.name === 'muzzleMount') n += child.getObjectByName('muzzle:none') ? trianglesOf(child.getObjectByName('muzzle:none')!) : 0;
+    else if (child.name === 'supportHand') n += trianglesOf(child.getObjectByName('hold:none')!); // one hold drawn at once
     else n += trianglesOf(child);
   }
   return n;

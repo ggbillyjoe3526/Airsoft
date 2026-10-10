@@ -208,6 +208,9 @@
 }
 
 .pic-slot img {
+  /* Out of the grid's flow, so a picture taller than its slot is fitted whole, never cropped by its overflow (RM3). */
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: contain;

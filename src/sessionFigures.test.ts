@@ -12,7 +12,7 @@ describe('the sessions draw the Robots mix (G7)', () => {
   it('the match mixes from its seed, its characters and the Look settings, for the figures and the player\'s arms', () => {
     const match = source('./matchSession.ts');
     expect(match).toMatch(/const crowd = figureCrowd\(seed, this\.state\.characters, setup\.look\)/);
-    expect(match).toMatch(/new MatchPresentation\([^;]*, crowd\)/);
+    expect(match).toMatch(/new MatchPresentation\([^;]*, crowd, renderer\.replicaFiles\)/);
     expect(match).toMatch(/new CombatPresentation\([^;]*playerArms\(crowd, this\.state\.characters\.indexOf\(this\.player\), this\.player\.team\)\)/);
   });
 
@@ -23,7 +23,7 @@ describe('the sessions draw the Robots mix (G7)', () => {
   });
 
   it('the presentations pass the crowd to the figures and the arms to the viewmodel', () => {
-    expect(source('./render/matchPresentation.ts')).toMatch(/new CharacterRenderer\([^;]*, crowd\)/);
-    expect(source('./render/combatPresentation.ts')).toMatch(/new Viewmodel\([^;]*, arms\)/);
+    expect(source('./render/matchPresentation.ts')).toMatch(/new CharacterRenderer\([^;]*, crowd, replicaFiles\)/);
+    expect(source('./render/combatPresentation.ts')).toMatch(/new Viewmodel\([^;]*, arms, renderer\.replicaFiles\)/);
   });
 });

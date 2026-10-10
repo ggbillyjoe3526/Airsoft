@@ -1,10 +1,12 @@
 import * as THREE from 'three';
 import { FULL_MOTION, type MotionScale } from '../config/accessibility';
-import { LIGHTING_PRESETS, type LightingPreset, VIEWMODEL } from '../config/render';
-import type { ReplicaConfig } from '../config/replicas';
+import { type InspectCue, type InspectKey, type InspectPose, LIGHTING_PRESETS, type LightingPreset, VIEWMODEL } from '../config/render';
+import type { FireMode, ReplicaConfig } from '../config/replicas';
 import type { ReplicaPaint } from '../config/schemes';
 import type { Armament } from '../sim/armament';
-import { type ArmStyle, buildReplicaModels, fitMuzzle, HUMAN_ARMS, LOW_DETAIL, type MagazinePart, type MuzzleMount, type ReplicaDetail, type ReplicaModels, type SupportHandPart } from './replicaModels';
+import { type ArmStyle, buildReplicaModels, fitMuzzle, fitSupportHand, HUMAN_ARMS, LOW_DETAIL, type MagazinePart, type MuzzleMount, type ReplicaDetail, type ReplicaModels, type SupportHandPart } from './replicaModels';
+import { NO_REPLICA_FILES, type ReplicaFiles } from './replicaFiles';
+import type { ReplicaRig } from './replicaRig';
 
 const smooth = (t: number): number => {
   const c = Math.max(0, Math.min(1, t));
@@ -41,6 +43,32 @@ export function sprintCarry(lockout: number, total: number): number {
 }
 
 const clampSway = (v: number, max: number): number => Math.max(-max, Math.min(max, v));
+
+/** An inspect's pose at one moment (VIEWMODEL.inspect): InspectKey without its `at`. */
+export type InspectOffset = Omit<InspectKey, 'at'>;
+
+/** A pose at rest: nothing added to the hold. */
+export const NO_INSPECT: Readonly<InspectOffset> = { tilt: 0, turn: 0, roll: 0, lift: 0, inward: 0, back: 0 };
+
+/**
+ * The pose `keys` give `share` (0..1) of the way through an inspect, eased between the keys around it and scaled by
+ * `weight` (an inspect cut short eases back to the hold), into `out`.
+ */
+export function inspectPose(keys: readonly InspectKey[], share: number, weight: number, out: InspectOffset): InspectOffset {
+  let i = 0;
+  while (i < keys.length - 2 && share > keys[i + 1]!.at) i++;
+  const a = keys[i];
+  const b = keys[i + 1] ?? a;
+  if (!a || !b) return Object.assign(out, NO_INSPECT);
+  const f = b.at > a.at ? smooth((share - a.at) / (b.at - a.at)) : 1;
+  out.tilt = (a.tilt + (b.tilt - a.tilt) * f) * weight;
+  out.turn = (a.turn + (b.turn - a.turn) * f) * weight;
+  out.roll = (a.roll + (b.roll - a.roll) * f) * weight;
+  out.lift = (a.lift + (b.lift - a.lift) * f) * weight;
+  out.inward = (a.inward + (b.inward - a.inward) * f) * weight;
+  out.back = (a.back + (b.back - a.back) * f) * weight;
+  return out;
+}
 
 type PartKind = 'optic' | 'grip' | 'magazine' | 'laser' | 'barrel' | 'muzzle' | 'light';
 const PART_KINDS: readonly string[] = ['optic', 'grip', 'magazine', 'laser', 'barrel', 'muzzle', 'light'];
@@ -89,7 +117,33 @@ export class Viewmodel {
     /** The iron sights standing up / folded (replicas with an optic mount). */
     sightsUp: THREE.Object3D | undefined;
     sightsDown: THREE.Object3D | undefined;
+    /** Its moving parts, from its model file (RM1), and how far into each animation they are (s; -1: not yet posed). */
+    parts3d: ReplicaRig | null;
+    fire: number;
+    selector: number;
+    sights: number;
+    /** How it is inspected (VIEWMODEL.inspect.poses by its first-person model), how long that takes, and its id. */
+    inspect: InspectPose;
+    inspectTime: number;
+    id: string;
   }[] = [];
+  /** The Inspect key was pressed (RM2): an inspect starts at the next update if nothing else is under way. */
+  private inspectAsked = false;
+  /** A hit since the last update: an inspect under way ends (a shot ends it at once, dropInspect). */
+  private inspectCut = false;
+  /** Seconds into the inspect under way (-1: none), and the slot inspected. */
+  private inspectT = -1;
+  private inspectSlot = -1;
+  /** How far through the inspect the pose is (0..1): held where it was when an inspect is cut short. */
+  private inspectShare = 0;
+  /** How much of the inspect's pose is shown: 1 while it runs, easing to 0 over cancelTime once it is cut short. */
+  private inspectWeight = 0;
+  /** The inspect's sounds played so far. */
+  private inspectSounds = 0;
+  private readonly inspectOffset: InspectOffset = { ...NO_INSPECT };
+  private readonly magazineSlide = new THREE.Vector3();
+  /** Plays a sound of the parts through an inspect (the presentation wires it to the audio; null: silent). */
+  onInspectSound: ((cue: InspectCue, replicaId: string) => void) | null = null;
   /** 0 = support hand on its grip, 1 = on the magazine (reloading). */
   private handBlend = 0;
   /** Loadout slot shown last frame: a newly drawn replica starts with its hand on the grip. */
@@ -134,6 +188,8 @@ export class Viewmodel {
     private readonly paint: ReplicaPaint | null = null,
     /** The player's own arms (G7): gloved, or a robot's when their slot is a robot (the Robots setting). */
     private readonly arms: ArmStyle = HUMAN_ARMS,
+    /** Replica models from files (M101, render/replicaFiles.ts), owned by the renderer: a replica with one is drawn from it. */
+    private readonly files: ReplicaFiles = NO_REPLICA_FILES,
   ) {
     this.camera = new THREE.PerspectiveCamera(VIEWMODEL.fov, aspect, VIEWMODEL.near, VIEWMODEL.far);
     // Soft sky fill, a warm key from above-right and a cool rim from behind to separate the silhouette.
@@ -150,11 +206,14 @@ export class Viewmodel {
 
   /** Builds every replica (and the raised hand) at `detail` and puts them in the rig. */
   private build(detail: ReplicaDetail): ReplicaModels {
-    const replicas = buildReplicaModels(this.loadout, this.teamColor, VIEWMODEL.orangeTips, detail, this.paint, 'hands', this.arms);
+    const replicas = buildReplicaModels(this.loadout, this.teamColor, VIEWMODEL.orangeTips, detail, this.paint, 'hands', this.arms, this.files);
     this.slots.length = 0;
     this.beams = [];
+    this.inspectT = -1;
+    this.inspectWeight = 0;
     for (const r of this.loadout) {
-      const { group: model, magazine, supportHand, muzzle, mount } = replicas.models.get(r.id)!;
+      const { group: model, magazine, supportHand, muzzle, mount, rig } = replicas.models.get(r.id)!;
+      const inspect: InspectPose = VIEWMODEL.inspect.poses[r.look.viewmodel ?? r.look.model];
       model.position.set(...r.look.hold.position);
       model.rotation.y = r.look.hold.yaw;
       this.slots.push({
@@ -169,6 +228,14 @@ export class Viewmodel {
         magBase: undefined,
         sightsUp: model.getObjectByName('sightsUp'),
         sightsDown: model.getObjectByName('sightsDown'),
+        parts3d: rig ?? null,
+        fire: 0,
+        selector: -1,
+        sights: -1,
+        inspect,
+        // The file's own Inspect clip sets the length, so the pose and the parts move together.
+        inspectTime: rig?.has('Inspect') ? rig.duration('Inspect') : inspect.duration,
+        id: r.id,
       });
       model.visible = false;
       this.rig.add(model);
@@ -273,11 +340,33 @@ export class Viewmodel {
   /** You've been hit: the replica jolts in your hands before you lower it to call the hit. */
   onHit(): void {
     this.kick = VIEWMODEL.kickMax * VIEWMODEL.hitJolt;
+    this.inspectCut = true;
+  }
+
+  /**
+   * The Inspect key (RM2): at the next update the replica in hand is turned over to look at while its file's Inspect
+   * clip works its parts, unless it is reloading, being drawn, carried for a sprint, aimed or lowered to call a hit. A
+   * press during an inspect is ignored.
+   */
+  inspect(): void {
+    this.inspectAsked = true;
+  }
+
+  /** An inspect is under way (its pose easing back after one is cut short counts too). */
+  get inspecting(): boolean {
+    return this.inspectT >= 0 || this.inspectWeight > 0;
   }
 
   /** A shot from the player's replica: kick back and up. */
   onShot(): void {
     this.kick = Math.min(VIEWMODEL.kickMax, this.kick + 1);
+    this.dropInspect();
+    // The trigger: pulled from the start, or held back at the peak for a shot while it is still moving (full auto).
+    const s = this.slots[this.shownSlot];
+    if (s?.parts3d) {
+      const peak = VIEWMODEL.parts.firePeak * s.parts3d.duration('Fire');
+      s.fire = s.fire <= 0 ? Number.EPSILON : Math.min(s.fire, peak);
+    }
   }
 
   /**
@@ -323,6 +412,7 @@ export class Viewmodel {
         if (p.kind === 'magazine' && p.object.visible) s.magBase = s.mag.bases.get(p.object);
       }
       fitMuzzle(s.mount, barrel, muzzle);
+      fitSupportHand(s.hand, parts?.grip ?? null);
       const fitted = optic != null;
       if (s.sightsUp) s.sightsUp.visible = !fitted;
       if (s.sightsDown) s.sightsDown.visible = fitted;
@@ -370,8 +460,16 @@ export class Viewmodel {
     const handling = armament.handling[armament.active]!;
     const reloadP = armament.reload > 0 ? 1 - armament.reload / handling.reloadTime : 0;
     const reloadDip = Math.sin(Math.PI * reloadP);
+    // Anything the hands are doing (or about to) keeps an inspect from starting and ends one under way.
+    const busy = armament.reload > 0 || armament.draw > 0 || carry > 0 || callingHit || aim > 0;
+    const ip = this.updateInspect(dt, armament.active, busy);
+    for (let i = 0; i < this.slots.length; i++) {
+      const s = this.slots[i]!;
+      s.parts3d?.set('Inspect', i === this.inspectSlot ? this.inspectT : 0);
+      if (s.parts3d) poseParts(s, s.parts3d, armament.modes[i], armament.optics[i] != null, s === slot ? reloadP : 0, dt);
+    }
     const R = VIEWMODEL.reload;
-    slot.model.rotation.set(reloadDip * R.tilt, holdYaw + reloadDip * R.turn, reloadDip * R.roll);
+    slot.model.rotation.set(reloadDip * R.tilt + ip.tilt, holdYaw + reloadDip * R.turn + ip.turn, reloadDip * R.roll + ip.roll);
     // Magazine swap: the support hand goes to the magazine, pulls it, stows it out of view, brings a
     // fresh one up and seats it, then returns to its grip once the reload is done.
     const reloading = armament.reload > 0;
@@ -383,6 +481,8 @@ export class Viewmodel {
     const magDistance = reloading ? magazineOut(reloadP) * R.magTravel + magazineSwap(reloadP) * R.swapTravel : 0;
     const magAxis = slot.mag.axis;
     slot.mag.group.position.copy(magAxis).multiplyScalar(magDistance);
+    // The Cyber Pistol's battery check slides its magazine out a little and back (its file's Inspect clip).
+    if (slot.parts3d && this.inspectT >= 0) slot.mag.group.position.add(slot.parts3d.magazineOffset('Inspect', this.magazineSlide));
     for (const s of this.slots) if (s !== slot) s.hand.group.position.set(0, 0, 0);
     const grab = smooth(this.handBlend);
     const handAt = slot.hand.group.position.copy(slot.hand.toMag);
@@ -399,18 +499,75 @@ export class Viewmodel {
     hand.position.set(hx, hy - (1 - raise) * VIEWMODEL.raiseFrom, hz);
 
     this.rig.position.set(
-      this.swayX + Math.cos(this.bobPhase) * bob - reloadDip * R.inward,
-      this.swayY -
+      this.swayX + Math.cos(this.bobPhase) * bob - reloadDip * R.inward - ip.inward,
+      this.swayY +
+        ip.lift -
         Math.abs(Math.sin(this.bobPhase)) * bob +
         reloadDip * R.lift -
         drawP * VIEWMODEL.drawDrop -
         this.sprintBlend * VIEWMODEL.sprintDrop -
         raise * VIEWMODEL.hitDrop +
         kick * VIEWMODEL.kickLift,
-      kick * VIEWMODEL.kickBack,
+      kick * VIEWMODEL.kickBack + ip.back,
     );
     // No pitch from the kick: the barrel stays parallel to the view (see VIEWMODEL.kickLift).
     this.rig.rotation.set(-drawP * VIEWMODEL.drawTilt, this.sprintBlend * VIEWMODEL.sprintTilt, 0);
+  }
+
+  /**
+   * Ends an inspect at once, its pose taken off the replica straight away (not eased back): a shot's BB is drawn from
+   * the muzzle as it is now, so it must leave from the barrel's hold, in line with the view.
+   */
+  private dropInspect(): void {
+    const ip = this.inspectOffset;
+    const s = this.slots[this.inspectSlot];
+    if (s) s.model.rotation.set(s.model.rotation.x - ip.tilt, s.model.rotation.y - ip.turn, s.model.rotation.z - ip.roll);
+    this.rig.position.x += ip.inward;
+    this.rig.position.y -= ip.lift;
+    this.rig.position.z -= ip.back;
+    Object.assign(ip, NO_INSPECT);
+    this.inspectT = -1;
+    this.inspectWeight = 0;
+    this.inspectAsked = false;
+  }
+
+  /**
+   * The inspect (RM2), once per update: starts one asked for if the hands are free (`busy` false), runs it on (its
+   * parts' sounds as it passes them), and ends it at its end or as soon as the hands are busy, a shot or a hit comes,
+   * or another replica is drawn. Returns the pose to add to the hold this frame.
+   */
+  private updateInspect(dt: number, active: number, busy: boolean): InspectOffset {
+    const cut = busy || this.inspectCut;
+    this.inspectCut = false;
+    if (this.inspectAsked && this.inspectT < 0 && !cut) {
+      this.inspectT = 0;
+      this.inspectSlot = active;
+      this.inspectShare = 0;
+      this.inspectWeight = 1;
+      this.inspectSounds = 0;
+    }
+    this.inspectAsked = false;
+    const s = this.slots[this.inspectSlot];
+    if (this.inspectT >= 0 && s) {
+      if (cut || active !== this.inspectSlot) {
+        this.inspectT = -1;
+      } else {
+        this.inspectT += dt;
+        this.inspectShare = Math.min(1, this.inspectT / s.inspectTime);
+        const sounds = s.inspect.sounds;
+        while (this.inspectSounds < sounds.length && sounds[this.inspectSounds]!.at <= this.inspectShare) {
+          this.onInspectSound?.(sounds[this.inspectSounds]!.cue, s.id);
+          this.inspectSounds++;
+        }
+        if (this.inspectShare >= 1) {
+          this.inspectT = -1;
+          this.inspectWeight = 0;
+        }
+      }
+    }
+    if (this.inspectT < 0) this.inspectWeight = Math.max(0, this.inspectWeight - dt / VIEWMODEL.inspect.cancelTime);
+    if (!s || this.inspectWeight <= 0 || active !== this.inspectSlot) return Object.assign(this.inspectOffset, NO_INSPECT);
+    return inspectPose(s.inspect.keys, this.inspectShare, this.inspectWeight, this.inspectOffset);
   }
 
   /**
@@ -435,4 +592,30 @@ export class Viewmodel {
   dispose(): void {
     this.replicas.dispose();
   }
+}
+
+/** Moves `value` towards `target` at one second a second (a part turned at its animation's own speed). */
+function approach(value: number, target: number, dt: number): number {
+  return value < target ? Math.min(target, value + dt) : Math.max(target, value - dt);
+}
+
+/**
+ * Poses a replica's moving parts (RM1) from the game's state: the trigger after a shot, the fire selector at `mode`,
+ * the iron sights folded while an optic is fitted, and the magazine release through the reload (`reloadP`, 0..1).
+ * The selector and sights start where they belong, then turn when the setting changes.
+ */
+function poseParts(s: { fire: number; selector: number; sights: number }, rig: ReplicaRig, mode: FireMode | undefined, optic: boolean, reloadP: number, dt: number): void {
+  if (s.fire > 0) {
+    s.fire += dt;
+    if (s.fire >= rig.duration('Fire')) s.fire = 0;
+  }
+  rig.set('Fire', s.fire);
+  const selector = (mode ? VIEWMODEL.parts.selector[mode] : 0) * rig.duration('Selector');
+  s.selector = s.selector < 0 ? selector : approach(s.selector, selector, dt);
+  rig.set('Selector', s.selector);
+  const sights = optic ? rig.duration('SightsFold') : 0;
+  s.sights = s.sights < 0 ? sights : approach(s.sights, sights, dt);
+  rig.set('SightsFold', s.sights);
+  rig.set('Reload', reloadP * rig.duration('Reload'));
+  rig.apply();
 }

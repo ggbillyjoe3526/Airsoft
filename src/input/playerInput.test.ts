@@ -305,6 +305,23 @@ describe('squad order keys (M22)', () => {
   });
 });
 
+describe('inspect key (RM2)', () => {
+  it('latches a press once, and clearLatches drops one not yet taken', () => {
+    const keys = fakeKeyboard();
+    const input = new PlayerInput(keys.kb, pointer, MOVEMENT);
+    expect(input.takeInspect()).toBe(false);
+    keys.press('inspect');
+    input.update(0, 2);
+    keys.endFrame();
+    expect(input.takeInspect()).toBe(true);
+    expect(input.takeInspect()).toBe(false);
+    keys.press('inspect');
+    input.update(0, 2);
+    input.clearLatches(); // the game paused before it was taken
+    expect(input.takeInspect()).toBe(false);
+  });
+});
+
 describe('order wheel (M23)', () => {
   function wheelSetup(select: 'hover' | 'click' = 'hover') {
     const keys = fakeKeyboard();

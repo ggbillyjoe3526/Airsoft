@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { REPLICA_KEYS } from '../../pool/pool';
-import type { PictureSubject } from '../../render/itemPictures';
+import type { ItemSubject, PictureSubject } from '../../render/itemPictures';
 import { fakeDocument } from '../testSupport';
 import { type PictureSource, PictureSlot } from './menuPictures';
 
@@ -12,8 +12,8 @@ const replica = REPLICA_KEYS.aeg!;
 const subject = (scheme: PictureSubject['scheme']): PictureSubject => ({ replica, scheme, realistic: false });
 
 /** A source whose pictures arrive when the test says so. */
-function lateSource(): { source: PictureSource; asked: PictureSubject[]; arrive: (i: number, url: string) => void } {
-  const asked: PictureSubject[] = [];
+function lateSource(): { source: PictureSource; asked: ItemSubject[]; arrive: (i: number, url: string) => void } {
+  const asked: ItemSubject[] = [];
   const resolvers: ((url: string) => void)[] = [];
   const source: PictureSource = {
     picture: (s) => {

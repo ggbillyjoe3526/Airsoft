@@ -1,19 +1,20 @@
+import { POWER_SOURCE_FILE } from '../../config/assets';
 import { defaultScheme, type SchemeId } from '../../config/schemes';
 import type { KitSlot } from '../../pool/kit';
 import type { PlayerKit } from '../../pool/loadoutModel';
 import { type Asset, REPLICA_KEYS, replicaOf } from '../../pool/pool';
-import { partHost, pictureKey, type PictureFit, type PictureShape, type PictureSubject } from '../../render/itemPictures';
+import { type ItemSubject, partHost, pictureKey, type PictureFit, type PictureShape, type PictureSubject } from '../../render/itemPictures';
 import { el } from './menuParts';
 
 /**
- * Pictures on the menus (graphics overhaul G3): replicas, parts and colour schemes, drawn by the game's ItemPictures
+ * Pictures on the menus (graphics overhaul G3): replicas, parts, power sources (RM3) and colour schemes, drawn by the game's ItemPictures
  * (render/itemPictures.ts) and shown as they arrive. A slot shows a placeholder (the item's line drawing) until its
  * picture is ready, and never waits for one: a screen opens at once and its pictures fill in over the next frames.
  */
 
 /** What draws the pictures: the game's ItemPictures, or nothing (the unit tests; the placeholders stay). */
 export interface PictureSource {
-  picture(subject: PictureSubject): Promise<string>;
+  picture(subject: ItemSubject): Promise<string>;
 }
 
 /** The parts a kit slot has fitted, as a picture fits them. */
@@ -42,11 +43,16 @@ export function kitSubjects(kit: Pick<PlayerKit, 'slots' | 'schemes'>, realistic
 }
 
 /**
- * A part asset's own picture, drawn off a replica whose model has it (render/itemPictures.ts partHost); null for an item
- * with no model of its own (a power source, a grenade), which keeps its line drawing.
+ * A part asset's own picture, drawn off a replica whose model has it (render/itemPictures.ts partHost), or a power
+ * source's from its own model (RM3, config/assets.ts POWER_SOURCE_FILE); null for an item with no model of its own (a
+ * grenade, a power source without one), which keeps its line drawing.
  */
-export function partSubject(asset: Asset, realistic: boolean): PictureSubject | null {
-  if (asset.category === 'replica' || asset.category === 'power' || asset.category === 'grenade') return null;
+export function partSubject(asset: Asset, realistic: boolean): ItemSubject | null {
+  if (asset.category === 'power') {
+    const pic = POWER_SOURCE_FILE.pictures[asset.id];
+    return pic ? (pic.label === undefined ? { power: pic.file } : { power: pic.file, label: pic.label }) : null;
+  }
+  if (asset.category === 'replica' || asset.category === 'grenade') return null;
   const part = `${asset.category}:${asset.key}`;
   const host = partHost(part);
   if (!host) return null;
@@ -77,7 +83,7 @@ export class PictureSlot {
   }
 
   /** Shows `subject`'s picture once it is drawn (the drawing `icon` till then, and for good with no subject or source). */
-  show(source: PictureSource | null, subject: PictureSubject | null, icon: string): void {
+  show(source: PictureSource | null, subject: ItemSubject | null, icon: string): void {
     const key = subject ? pictureKey(subject) : `icon:${icon}`;
     if (key === this.key) return;
     this.key = key;

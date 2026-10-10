@@ -15,6 +15,7 @@ import {
 import type { RenderBackend } from '../config/renderBackend';
 import type { MapData } from '../map/mapTypes';
 import type { FigureModel } from './externalModels';
+import { NO_REPLICA_FILES, type ReplicaFiles } from './replicaFiles';
 import { GpuTimer } from './gpuTimer';
 import { environmentLookOf } from './lightingPreset';
 import { MapMeshCache } from './mapMeshCache';
@@ -116,6 +117,11 @@ export class Renderer {
    * for the built-in figures. Shared by every match and freed with the renderer.
    */
   figureModel: FigureModel | null = null;
+  /**
+   * The replica models from files (M101, render/replicaFiles.ts), loaded once at start: the viewmodel, the menus'
+   * pictures and the figures draw a replica with one from it. Shared by every match and freed with the renderer.
+   */
+  replicaFiles: ReplicaFiles = NO_REPLICA_FILES;
   /**
    * The last map's meshes, kept between sessions (audit CORE-33): Quit → Play on the same map takes them back. Sessions
    * take and release them (they must not dispose them); freed with the renderer.
@@ -536,6 +542,8 @@ export class Renderer {
     this.retro = null;
     this.figureModel?.dispose();
     this.figureModel = null;
+    for (const file of this.replicaFiles.values()) file.dispose();
+    this.replicaFiles = NO_REPLICA_FILES;
     this.disposed = true;
     this.dropTimer();
     // Frees the context (or device) at once rather than when the canvas is collected (REN-24): browsers cap live contexts.

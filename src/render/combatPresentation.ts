@@ -161,8 +161,9 @@ export class CombatPresentation {
     for (const [material, dust] of Object.entries(IMPACT_DUST)) this.dustTints.set(material as ImpactMaterial, new THREE.Color(dust.tint));
     this.motes.setMapDust(field.dressing?.motes?.tint ?? null);
     this.dressing = new DressingEffects(renderer.scene, field);
-    this.viewmodel = new Viewmodel(renderer.camera.aspect, teamColor, loadout, { replica: quality.replicaDetail, hands: quality.handDetail }, paint, arms);
+    this.viewmodel = new Viewmodel(renderer.camera.aspect, teamColor, loadout, { replica: quality.replicaDetail, hands: quality.handDetail }, paint, arms, renderer.replicaFiles);
     this.overlay = { scene: this.viewmodel.scene, camera: this.viewmodel.camera };
+    this.viewmodel.onInspectSound = (cue, replicaId) => this.sfx.inspect(cue, replicaId);
     this.hud = new Hud(container, keyName, crosshair);
     this.quality = quality;
     this.setQuality(quality);
@@ -268,6 +269,11 @@ export class CombatPresentation {
 
   get bbsInFlight(): number {
     return this.bbs.visibleCount;
+  }
+
+  /** The Inspect key (RM2): the replica in hand is turned over to look at, if nothing else is under way. */
+  inspect(): void {
+    this.viewmodel.inspect();
   }
 
   /** A teammate's radio answers a squad order (M22). */

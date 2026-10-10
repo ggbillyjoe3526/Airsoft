@@ -25,6 +25,13 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **G9** · Low looks and costs exactly as before on both maps, and Depot is unchanged; under Reduced motion the fireflies, steam, plane and sign flicker all hold still
 - **W1** · Settings › Graphics › Renderer: Auto (the default), WebGPU or WebGL; Auto draws with WebGPU where the browser has it, WebGL otherwise
 - **W1** · On WebGPU the world and figures draw with plain materials and no screen effects for now; pick WebGL on the Renderer row for the full look
+- **RM1** · AEG and gas pistol now drawn from their Blender models, in your hands, the menus and on bots (the rifle on bots is new)
+- **RM1** · Replica parts (red dot, 2× scope, foregrips, barrels, silencer, laser, torch, magazines) now come from Blender too
+- **RM1** · First person: the AEG's trigger pulls on each shot and its fire selector turns with the mode; iron sights fold under an optic
+- **RM1** · First person: the magazine release presses on a reload, and the gas pistol's trigger and magazine release move too
+- **RM3** · Standard Battery, 11.1 V LiPo Battery and gas bottles (green, red, black for Green, Red and Black Gas) show real pictures from their Blender models in Customise, Loadout and Armory, not flat icons; nothing changes in a match
+- **RM2** · Y inspects the replica in your hands: it turns side on as parts move, with clicks; firing, hits, reloads, sprinting or aiming stop it
+- **RM2** · AEG charging handle pulls back and the hop-up cover opens (3 s); pistols do a press or battery check (2 s); a shot leaves from the normal hold
 - **W5** · On WebGPU at Medium and up, Woodland's meadows grow swaying grass and a deep wood stands beyond the fence
 
 ### Changed
@@ -60,8 +67,10 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M78** · High and Ultra draw the city's flat finishes at 512 × 512 as Medium does; Neon Heights on High: 21 MB less graphics memory (#151)
 - **W2** · On WebGPU the maps look as on WebGL: weathering, baked light, neon flicker, the skyline and its plane, moving flames, smoke, steam, stars, embers, fireflies and dust; players and screen effects still plain for now
 - **W3** · On WebGPU players, held replicas and replica sheen look as on WebGL; at night every lamp and fire near you lights walls and players
+- **FP1** · With a vertical grip fitted, your left hand holds the grip instead of floating in front of it; on a reload it takes the magazine by its side
 - **G12** · BBs bounce off concrete and steel with less speed, so with Ricochets count on fewer bounced BBs knock players out (about a fifth of hits, down from about a quarter)
 - **W4** · On WebGPU the screen effects look as on WebGL on every preset (bloom, ambient occlusion, temporal smoothing, light shafts, reflections, grain)
+- **M101** · New Cyber Pistol model, drawn in Blender: a smoother white slab with chamfered edges, glow lines and core, in your hands and the menu pictures
 
 ### Fixed
 - **G11** · The team camo on players reads clearly on Medium and up: crisp dark and light blotches printed per pixel, on WebGL and WebGPU; Low keeps plain clothes
@@ -86,7 +95,10 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **BP2** · A replica picture drawn while the graphics context is lost is no longer left blank (#150)
 - **M79** · Leaving a match or the menus no longer leaves listeners behind, so memory doesn't creep up over a long session (#151)
 - **W3** · On WebGPU Depot's bounced light and shade under cover show again, and Chrome 141 no longer stops on the crash screen
+- **FP1** · In first person, your rifle's left thumb lies along the side of the handguard instead of sticking out beside it like a second barrel or silencer
 - **W4** · On WebGPU the Dev retro filter works, and at Low the far haze shades as on WebGL
+- **M101** · Bots and other players show the Cyber Pistol's own shape instead of a plain pistol
+- **RM3** · Item pictures in the menus fit their slots whole: the Armory's pictures and Customise's large replica picture are no longer cut off at the top and bottom
 
 ### Internal
 - **G8** · Set dressing never collides or blocks sight: Depot's colliders, routes, cover and bot sight are tested identical with and without it (#136)
@@ -103,7 +115,12 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **W1** · The perf harness records which renderer drew (`--renderer`, `--force-webgl`); a browser without WebGPU never downloads the new renderer
 - **W2** · A comparison script scores WebGPU's pictures of every map against WebGL's, by day and night on Medium and High, against a fixed bar
 - **W3** · The WebGPU comparison adds first-person, near and far player and night torch views, and runs on a real WebGPU device as well
+- **FP1** · Tests pin every barrel and silencer to the bore and measure the support hand on the handguard and on a vertical grip; the game chunk's size budget is 1,000 kB (main was already over 950)
 - **W4** · The WebGPU comparison scores every preset's screen effects by day and night, the retro filter and a lit lamp close up
+- **M101** · Replica models load from a .glb file per replica when one exists, else the built-in model; only pistols use a file for now
+- **RM1** · Replica animations are posed from game state and skinned into each replica's own meshes, so no extra draw calls
+- **RM1** · Replica parts live in their own model folder, with a file budget per replica
+- **RM2** · Model files' magazine animation tracks are read, so an animation can slide a magazine (the Cyber Pistol's battery check)
 - **W5** · On WebGPU particles move on the graphics card; the WebGPU comparison adds Woodland's grass and stand-in views
 
 ## 0.1 Dev 4 · 2026-10-06

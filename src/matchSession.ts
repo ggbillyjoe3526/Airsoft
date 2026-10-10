@@ -302,7 +302,7 @@ export class MatchSession {
     this.combat.setMapGroup(this.mapGroup);
     this.build.phase('sound');
     this.stats = new MatchStats(this.state.characters);
-    this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, this.teamSizes(), this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours, map, renderer.figureModel, quality.figureDetail, this.extraction, crowd);
+    this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, this.teamSizes(), this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours, map, renderer.figureModel, quality.figureDetail, this.extraction, crowd, renderer.replicaFiles);
     this.match.setHitFacts(this.bots.lastHit);
     // Pro briefing tips on the board between rounds, when the opponents are Pro (M41).
     this.match.setProTips(difficultyAtLeast(setup.difficulty, 'pro'));
@@ -338,6 +338,7 @@ export class MatchSession {
     const p = this.player;
     this.input.update(p.armament.active, this.loadout.length, this.combat.aimRaised, this.combat.aimSensitivityScale, canAimDownSights(p.armament));
     if (this.match.spectating && this.input.takeClick()) this.match.nextSpectateTarget();
+    if (this.input.takeInspect() && p.status === 'alive') this.combat.inspect();
     const order = this.input.takeOrder();
     if (order) this.giveOrder(order);
     const ticks = advanceStepper(this.stepper, dt);
