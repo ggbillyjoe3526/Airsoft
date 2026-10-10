@@ -169,13 +169,19 @@ test.describe('Woodland at night on the node renderer', () => {
       });
       const puffs = tagged.find((t) => t.o.userData.gpuPuffs && t.o.children.some((c: Any) => c.name.endsWith('-gpu')));
       const draw = puffs.o.children.find((c: Any) => c.name.endsWith('-gpu'));
+      // What the draw holds right after the driver's own update in the game's frame (a slow frame can outlive a puff,
+      // so sampling between frames may miss it).
+      const gpu = puffs.owner.gpu;
+      const update = gpu.update.bind(gpu);
+      let drawn = 0;
+      gpu.update = (dt: number, camera: Any) => {
+        update(dt, camera);
+        drawn = Math.max(drawn, draw.geometry.instanceCount);
+      };
       const eye = r.camera.position;
       puffs.owner.spawn({ x: eye.x, y: eye.y, z: eye.z - 2 });
-      let drawn = 0;
-      for (let i = 0; i < 50 && drawn === 0; i++) {
-        await q.sleep(50);
-        drawn = draw.geometry.instanceCount;
-      }
+      for (let i = 0; i < 600 && drawn === 0; i++) await q.sleep(100);
+      delete gpu.update;
       return { drivers: r.node.particles.count, tagged: tagged.length, driven: tagged.filter((t) => t.owner.gpu).length, drawn };
     });
     expect(particles.drivers).toBe(particles.tagged);
