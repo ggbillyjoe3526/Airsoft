@@ -17,7 +17,7 @@ first guesses; the build thread confirms them before it starts. The owner ruled 
 ## RM1 · The AEG and gas pistol drawn from their Blender models, moving parts and all (owner's ask, 2026-10-10)
 tier: core
 perf: required
-touches: src/render/replicaFiles.ts, src/render/replicaFiles.test.ts, src/render/replicaRig.ts, src/render/replicaRig.test.ts, src/render/replicaModels.ts, src/render/externalModels.ts, src/render/viewmodel.ts, src/render/figureReplicas.ts, src/render/figureMix.ts, src/render/characterModels.ts, src/config/assets.ts, src/config/renderView.ts, src/assets/, docs/
+touches: pipeline/baseline/, src/render/replicaFiles.ts, src/render/replicaFiles.test.ts, src/render/replicaRig.ts, src/render/replicaRig.test.ts, src/render/replicaModels.ts, src/render/externalModels.ts, src/render/viewmodel.ts, src/render/figureReplicas.ts, src/render/figureMix.ts, src/render/characterModels.ts, src/config/assets.ts, src/config/renderView.ts, src/assets/, docs/
 contract: none
 acceptance:
   1. `src/assets/models/replicas/aeg.glb` and `pistol.glb` (the owner's Blender models) draw the AEG and the gas pistol in the hands, on the menus' pictures and on the figures, on Low and High; `replicaParts/aeg.glb` and `pistol.glb` draw their fittable parts (optics, grips, barrels, silencer, laser, torch, magazines). A part a file lacks is drawn built-in.
