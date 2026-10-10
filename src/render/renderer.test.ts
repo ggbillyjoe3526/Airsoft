@@ -10,6 +10,7 @@ import { PostHost } from './post/postHost';
 import { PostStack } from './post/postStack';
 import { handOverRenderer, releaseGpuResources, Renderer, toneMappingOf, verticalFovFor, warmSurfacesInIdle, zoomedFov } from './renderer';
 import { defaultEnvironmentLook, type EnvironmentLook, environmentKey } from './replicaSheen';
+import { RetroFilter } from './retroFilterWebGL';
 
 describe('verticalFovFor', () => {
   it('converts a 16:9 horizontal FOV to the matching vertical FOV', () => {
@@ -193,7 +194,7 @@ describe('the lighting preset on the renderer (M33f, acceptance 4)', () => {
       lighting: LIGHTING_PRESETS.day,
       environmentLook: defaultEnvironmentLook(),
       environmentDirty: false,
-      post: new PostHost(() => false),
+      post: new PostHost(() => false, (setup, w, h) => new PostStack(setup, w, h)),
     });
     r.scene.background = new THREE.Color();
     r.scene.fog = new THREE.Fog(0xffffff);
@@ -234,6 +235,23 @@ describe('the lighting preset on the renderer (M33f, acceptance 4)', () => {
     r.setLighting(LIGHTING_PRESETS.night);
     r.setToneMapping('aces');
     expect(look(r).exposure).toBeCloseTo(TONE_MAPPING.exposure.aces * LIGHTING_PRESETS.night.exposureScale);
+  });
+
+  it('frees the node path’s stack on a map change and keeps WebGL’s (W4)', () => {
+    for (const node of [null, {}]) {
+      const r = bareRenderer();
+      (r as unknown as { node: unknown }).node = node;
+      const host = (r as unknown as { post: PostHost }).post;
+      const stack = host.stackFor(QUALITY.high, LIGHTING_PRESETS.day, false)!;
+      const freed = vi.spyOn(stack, 'dispose');
+      r.setLighting(resolveLighting(DEPOT));
+      expect(freed).toHaveBeenCalledTimes(node ? 1 : 0);
+      expect(host.current).toBe(node ? null : stack);
+      // The next frame makes the new map's.
+      const next = host.stackFor(QUALITY.high, LIGHTING_PRESETS.day, false);
+      expect(next === stack).toBe(!node);
+      next?.dispose();
+    }
   });
 });
 
@@ -462,13 +480,39 @@ describe('the shader warm-up runs once per match build, never per frame (M63, au
 
   it('compiles nowhere but in Renderer.warmShaders: not in Renderer.render, nor anywhere else', () => {
     const compiles = Object.entries(sources).flatMap(([file, text]) => [...text.matchAll(/\.compile(Async)?\(/g)].map(() => file));
-    // W1: the node renderer's compile (render/webgpu/nodeBackend.ts, its two compileAsync calls) is reached from
-    // warmShaders alone, as WebGL's two are.
-    expect(compiles).toEqual(['/src/render/renderer.ts', '/src/render/renderer.ts', '/src/render/renderer.ts', '/src/render/webgpu/nodeBackend.ts', '/src/render/webgpu/nodeBackend.ts']);
+    // W1: the node renderer's compile (render/webgpu/nodeBackend.ts) is reached from warmShaders alone, as WebGL's two
+    // are; W4: it hands over to the frame's own compile (Low's output step, the post stack, the retro filter).
+    const post = '/src/render/webgpu/post/';
+    expect(compiles).toEqual([
+      '/src/render/renderer.ts',
+      '/src/render/renderer.ts',
+      '/src/render/renderer.ts',
+      '/src/render/webgpu/nodeBackend.ts',
+      '/src/render/webgpu/nodeBackend.ts',
+      `${post}nodeOutput.ts`,
+      `${post}nodeOutput.ts`,
+      `${post}nodeOutput.ts`,
+      `${post}nodePostStack.ts`,
+      `${post}nodeRetro.ts`,
+      `${post}nodeRetro.ts`,
+    ]);
     const renderer = sources['/src/render/renderer.ts']!;
     expect(bodyOf(renderer, '  warmShaders(').split('.compile(').length - 1).toBe(3);
-    expect(bodyOf(renderer, '  warmShaders(')).toMatch(/this\.node\.compile\(this\.scene, this\.camera, overlay\)/);
-    expect(bodyOf(sources['/src/render/webgpu/nodeBackend.ts']!, '  compile(').split('.compileAsync(').length - 1).toBe(2);
+    expect(bodyOf(renderer, '  warmShaders(')).toMatch(/this\.node\.compile\(this\.scene, this\.camera, overlay, /);
+    const node = sources['/src/render/webgpu/nodeBackend.ts']!;
+    expect(bodyOf(node, '  compile(').split('.compile(').length - 1).toBe(2);
+    expect(bodyOf(node, '  draw(')).not.toMatch(/compile/);
+    const output = sources[`${post}nodeOutput.ts`]!;
+    expect(bodyOf(output, '  compile(').split('.compileAsync(').length - 1).toBe(2);
+    expect(bodyOf(output, '  compileInto(').split('.compileAsync(').length - 1).toBe(1);
+    for (const file of ['nodePostStack.ts', 'nodeRetro.ts']) {
+      const text = sources[`${post}${file}`]!;
+      const signature = '(gl: NodeRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera, overlay?: Overlay)';
+      expect(bodyOf(text, `  compile${signature}: Promise<void> {`).split('.compileAsync(').length - 1, file).toBe(file === 'nodeRetro.ts' ? 2 : 1);
+      expect(bodyOf(text, `  draw${signature}: void {`), file).not.toMatch(/compile/);
+    }
+    expect(bodyOf(output, '  drawScreen(')).not.toMatch(/compile/);
+    expect(bodyOf(output, '  drawInto(')).not.toMatch(/compile/);
     expect(bodyOf(renderer, '  render(overlay')).not.toMatch(/compile|warmShaders/);
   });
 });
@@ -542,7 +586,7 @@ describe('the GPU timer across a lost context: forgotten, never deleted (M63, au
 });
 
 /** The renderer's post stack (G5), or null. */
-const postOf = (r: Renderer) => (r as unknown as { post: PostHost }).post.current;
+const postOf = (r: Renderer) => (r as unknown as { post: PostHost }).post.current as PostStack | null;
 
 describe('the post stack on the renderer (G5)', () => {
   afterEach(() => {
@@ -683,6 +727,24 @@ describe('the post stack on the renderer (G5)', () => {
     r.render();
     expect(dispose).toHaveBeenCalled();
     expect(postOf(r)).toBeNull();
+  });
+
+  it('loads WebGL’s retro filter in a chunk of its own, then makes it for the look in use; off before then, none (W4)', async () => {
+    const held = (r: Renderer) => (r as unknown as { retro: unknown }).retro;
+    const { r } = stubbedRenderer(QUALITY.high);
+    r.setRetro({ pixelSize: 3, levels: 8 });
+    expect(held(r)).toBeNull();
+    r.setRetro({ pixelSize: 5, levels: 4 });
+    await vi.waitFor(() => expect(held(r)).toBeInstanceOf(RetroFilter));
+    expect((held(r) as RetroFilter).renderTarget.width).toBe(Math.ceil(r.width / 5));
+    r.setRetro(null);
+    expect(held(r)).toBeNull();
+    const late = stubbedRenderer(QUALITY.high).r;
+    late.setRetro({ pixelSize: 3, levels: 8 });
+    late.setRetro(null);
+    await import('./retroFilterWebGL');
+    await new Promise((done) => setTimeout(done, 0));
+    expect(held(late)).toBeNull();
   });
 });
 

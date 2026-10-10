@@ -1,10 +1,15 @@
 import * as THREE from 'three';
 import { WebGPURenderer } from 'three/webgpu';
-import { FRAME_TIMING } from '../../config/render';
+import { FRAME_TIMING, type RetroLook } from '../../config/render';
 import { RENDER_BACKEND } from '../../config/renderBackend';
+import type { PostSetup } from '../post/postStack';
 import type { EnvironmentLook } from '../replicaSheen';
 import type { DrawStats } from '../rendererParts';
 import { NightLighting } from './nightLights';
+import { CompileGate } from './post/nodeKit';
+import { DirectOutput } from './post/nodeOutput';
+import { type NodeFrameDrawer, NodePostStack, type Overlay } from './post/nodePostStack';
+import { NodeRetroFilter } from './post/nodeRetro';
 import { fitBrowser } from './webgpuCompat';
 import { WorldTwins } from './worldTwins';
 
@@ -22,8 +27,9 @@ import { WorldTwins } from './worldTwins';
  *
  * The world's patched materials draw as their node twins (W2, render/webgpu/worldTwins.ts: the surfaces, dressing, sky
  * and the shader-moved effects, the sized points as sprites, the scene's environment map); every other material is drawn
- * as Three's node library makes it from the built-in one (the figures' finish is W3's), and the GLSL `ShaderMaterial`
- * passes (the post stack, the retro filter) are not drawn at all (W4).
+ * as Three's node library makes it from the built-in one (the figures' finish is W3's). The frame itself draws as
+ * WebGL's does (W4, render/webgpu/post/): through the post stack's or the retro filter's TSL ports, or on Low straight
+ * onto the canvas with each material tone-mapped as it draws (nodeOutput.ts), with the same draws as WebGL.
  */
 
 const ignore = (): void => undefined;
@@ -62,6 +68,10 @@ export class NodeBackend {
   private readonly world: WorldTwins;
   /** The night's clustered lights (W3) on a WebGPU device; null on the WebGL2 back end (no storage buffers to shade from). */
   private readonly lighting: NightLighting | null;
+  /** Low's frame straight onto the canvas, and the held replica's on the post stack's presets (W4). */
+  private readonly output = new DirectOutput();
+  /** The warm-up compiles under way, which the stacks' and retro filters' frees wait for (W4). */
+  private readonly compiles = new CompileGate();
 
   private constructor(
     readonly renderer: WebGPURenderer,
@@ -157,6 +167,25 @@ export class NodeBackend {
     this.world.sprites.prepare(scene);
   }
 
+  /** The post stack for `setup` on this renderer (W4): the PostHost makes and frees it as on WebGL. */
+  postStack(setup: PostSetup, width: number, height: number): NodePostStack {
+    return new NodePostStack(setup, width, height, this.output, this.compiles);
+  }
+
+  /** The retro filter on this renderer (W4). */
+  retro(look: RetroLook): NodeRetroFilter {
+    return new NodeRetroFilter(look, this.compiles);
+  }
+
+  /**
+   * Draws a frame: `scene` through `drawer` (the post stack or the retro filter the Renderer holds, made here) or, with
+   * neither (Low), straight onto the canvas; then the held replica over it. The Renderer prepares the scene first.
+   */
+  draw(scene: THREE.Scene, camera: THREE.PerspectiveCamera, overlay: Overlay | undefined, drawer: object | null): void {
+    if (drawer) (drawer as NodeFrameDrawer).draw(this.renderer, scene, camera, overlay);
+    else this.output.drawScreen(this.renderer, scene, camera, overlay);
+  }
+
   /**
    * The sky prefiltered on this renderer for `look`, null while `on` is false or the device is lost: the scene's
    * environment map (Environment lighting, F1) and the held replica's sheen (Replica sheen, W3) share it.
@@ -216,16 +245,15 @@ export class NodeBackend {
    * mid-round). Not waited for: what isn't ready by the first frame compiles as it draws, as before. A failure here also
    * fails that frame's draw, which reports it.
    */
-  compile(scene: THREE.Scene, camera: THREE.Camera, overlay?: { scene: THREE.Scene; camera: THREE.Camera }): void {
+  compile(scene: THREE.Scene, camera: THREE.PerspectiveCamera, overlay: Overlay | undefined, drawer: object | null): void {
     if (this.lost) return;
     if (this.lighting) this.lighting.world = scene;
     this.world.sprites.rescan();
     this.world.sprites.prepare(scene);
     const r = this.renderer;
-    void r
-      .compileAsync(scene, camera)
-      .then(() => (overlay && !this.lost ? r.compileAsync(overlay.scene, overlay.camera) : undefined))
-      .catch(ignore);
+    // Each for the target and output step the frame draws it with (W4), so the pipelines match the frame's.
+    const done = drawer ? (drawer as NodeFrameDrawer).compile(r, scene, camera, overlay) : this.output.compile(r, scene, camera, overlay);
+    void this.compiles.track(done).catch(ignore);
   }
 
   /** Frees the renderer, its canvas's context and (on WebGPU) its device, and the pictures' renderer. */
@@ -234,6 +262,7 @@ export class NodeBackend {
     this.timing = false;
     this.world.dispose();
     this.lighting?.dispose();
+    this.output.dispose();
     this.renderer.dispose().catch(ignore);
     this.pictureGl?.dispose();
     this.pictureGl?.forceContextLoss();

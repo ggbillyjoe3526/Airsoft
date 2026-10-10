@@ -102,11 +102,14 @@ export async function boot(page: Page, map: string, light: string, webgpu = fals
       },
       /**
        * The game's own loop keeps running; each render first puts the camera where `aim` says (it is given a function
-       * returning {from, to}), and every other render after a warm-up is kept. Returns how many pixels changed between
+       * returning {from, to}), and every other render after a warm-up is kept (drawn without the post stack). Returns how many pixels changed between
        * successive kept frames (more than `th` in any channel).
        */
       async watch(aim: () => { from: Any; to: Any }, frames = 5, th = 1): Promise<number[]> {
         const original = r.render.bind(r);
+        // What moves is the world's: the frames are drawn without the post stack (W4), whose temporal antialiasing
+        // moves the picture by a sub-pixel step every frame by design.
+        r.postStack = () => null;
         const kept: Uint8ClampedArray[] = [];
         let n = 0;
         r.render = () => {
@@ -123,6 +126,7 @@ export async function boot(page: Page, map: string, light: string, webgpu = fals
         };
         for (let i = 0; i < 1200 && kept.length < frames; i++) await sleep(100);
         r.render = original;
+        delete r.postStack;
         return kept.slice(1).map((f, i) => qa.over(kept[i]!, f, th));
       },
       /** Figures out of the way (their motion is not what is measured). */

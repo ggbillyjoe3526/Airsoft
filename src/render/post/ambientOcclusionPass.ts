@@ -35,7 +35,7 @@ export class AmbientOcclusionPass implements PostPass {
     this.ao = new THREE.WebGLRenderTarget(scaled(width, scale), scaled(height, scale), { depthBuffer: false });
     this.denoised = this.ao.clone();
     this.gtaoNoise = generateMagicSquareNoise();
-    this.denoiseNoise = noiseTexture(c.noiseSize, c.noiseSeed);
+    this.denoiseNoise = denoiseNoise(c.noiseSize, c.noiseSeed);
     this.gtao = new THREE.ShaderMaterial({
       defines: { ...GTAOShader.defines, NORMAL_VECTOR_TYPE: 0, SAMPLES: c.samples },
       uniforms: THREE.UniformsUtils.clone(GTAOShader.uniforms),
@@ -126,7 +126,7 @@ export class AmbientOcclusionPass implements PostPass {
 }
 
 /** The denoise's rotation noise: four random bytes a texel from a fixed seed (Three's GTAOPass uses simplex noise). */
-function noiseTexture(size: number, seed: number): THREE.DataTexture {
+export function denoiseNoise(size: number, seed: number): THREE.DataTexture {
   const rng = createRng(seed);
   const data = new Uint8Array(size * size * 4);
   for (let i = 0; i < data.length; i++) data[i] = Math.floor(rngNext(rng) * 256);

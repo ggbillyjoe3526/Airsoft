@@ -168,11 +168,11 @@ names its files with it after the environment (`perf-laptop-webgpu-low.json`, ba
 the WebGL files the gate reads. On a machine with WebGPU, run the gate's laptop and desktop combinations with
 `--renderer webgl` by hand until the gate learns the back end (KNOWN_ISSUES).
 
-**The WebGPU comparison** (WebGPU overhaul W2 and W3; `webgpu-compare.mjs`, rules in `webgpuCompare.mjs`): draws fixed
+**The WebGPU comparison** (WebGPU overhaul W2 to W4; `webgpu-compare.mjs`, rules in `webgpuCompare.mjs`): draws fixed
 camera views of every map, by day and by night where it has night, on Medium and High, with the WebGL path and with the
 node renderer on its WebGL2 back end (`?forceWebGL`), figures hidden (with their contact shadows and torch beams) and
-the game clock stopped. Both sides keep only WebGL's output step (tone mapping and sRGB; no bloom, AO or other pass,
-W4's), so what is compared is the world's materials. Each pair is scored (mean absolute difference per channel, and the share of pixels with a channel more than
+the game clock stopped. W2's and W3's views keep only the post stack's output step on both sides (tone mapping and
+sRGB; no bloom, AO or other pass), so what is compared is the materials. Each pair is scored (mean absolute difference per channel, and the share of pixels with a channel more than
 24 steps off) against the bar pinned in `webgpuCompare.mjs` and `webgpuCompare.test.mjs`, and saved side by side
 (WebGL, node, the difference ×4 with red over the threshold) with `scores.json`. Exits 1 when a pair fails. Port 4186.
 
@@ -182,8 +182,16 @@ team-mate's), and a second node back end: a real WebGPU device (`--backend webgp
 `WEBGPU_ARGS`; its pairs end `-webgpu`), which is where the clustered night lights draw. Both pages settle the night's
 lights on the stood eye and pin the fires' clock, so a pair differs only by renderer.
 
+W4 adds post views (`--views w4`, `POST_VIEWS`, pairs named `<map>-<light>-<preset>-post-<view>`) on Low, Medium, High
+and Ultra with the whole frame drawn on both sides: the ground still, a view of the sun or moon over the middle of the
+map (the light shafts), first person (the held replica over the stack), the ground still through the retro filter
+and, by night, a pool light close up (`glow`: by day nothing on these maps reaches the bloom's threshold, so a day view
+shows nothing of Medium's stack). Each starts a new stack once its view has compiled and draws `POST_FRAMES` frames
+before the grab, so both pages' temporal history, jitter and grain match. `--post-views` picks some of them; `--port`
+serves on another port (another worktree's run on 4186).
+
 ```
-PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium node pipeline/webgpu-compare.mjs --out <dir> [--only depot] [--quality high] [--views w2|w3|all] [--backend webgpu-webgl2|webgpu|all] [--full] [--noise]
+PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium node pipeline/webgpu-compare.mjs --out <dir> [--only depot] [--quality high] [--views w2|w3|w4|all] [--backend webgpu-webgl2|webgpu|all] [--full] [--noise] [--port 4186] [--post-views glow]
 ```
 
 `--full` also scores each view with WebGL's whole post stack (what a player sees today, for reference); `--noise`

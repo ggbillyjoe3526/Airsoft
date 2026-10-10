@@ -221,6 +221,12 @@ export class SurfaceNodes {
     if (!this.recipe.skyHost || fogged === unfogged) return fogged;
     return select(varying(attribute('skyPart', 'float')).greaterThan(1.5), unfogged, fogged);
   }
+
+  /** The same for the haze added after the tone mapping (W4, render/webgpu/post/nodeOutput.ts): none on the plane. */
+  lateFogShare(share: AnyNode): AnyNode {
+    if (!this.recipe.skyHost) return share;
+    return select(varying(attribute('skyPart', 'float')).greaterThan(1.5), 0, share);
+  }
 }
 
 /** What both twin classes give their setup: the nodes, made with the material (setSurface). */
@@ -259,6 +265,10 @@ export class SurfaceLambertTwin extends MeshLambertNodeMaterial implements Surfa
 
   override setupFog(builder: NodeBuilder, output: Node): Node {
     return this.surface.fog(output, super.setupFog(builder, output));
+  }
+
+  lateFogShare(share: AnyNode): AnyNode {
+    return this.surface.lateFogShare(share);
   }
 }
 

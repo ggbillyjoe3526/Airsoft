@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { bayerThreshold, quantize, RetroFilter, retroPixelAngle, retroTargetSize } from './retroFilter';
+import { bayerThreshold, quantize, retroPixelAngle, retroTargetSize } from './retroFilter';
+import { RetroFilter } from './retroFilterWebGL';
 
 describe('retro pixel filter maths (M42)', () => {
   it('gives the width of one retro pixel as a tangent of the view, so BBs can be kept a couple of them wide', () => {

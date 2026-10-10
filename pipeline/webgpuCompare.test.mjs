@@ -11,6 +11,12 @@ import {
   FIGURE_VIEWS,
   isFigureView,
   pairFile,
+  POST_CAMERAS,
+  POST_FRAMES,
+  POST_QUALITIES,
+  POST_VIEWS,
+  postViewsOf,
+  postBase,
   sceneViews,
   scorePixels,
   verdict,
@@ -93,5 +99,33 @@ describe('the WebGPU figures, replicas and lights comparison (W3)', () => {
     expect(WEBGPU_ARGS).toContain('--use-webgpu-adapter=swiftshader');
     expect(pairFile(COMPARE_SCENES[2], 'medium', 'torch', 'webgpu')).toBe('neonHeights-night-medium-torch-webgpu.jpg');
     expect(pairFile(COMPARE_SCENES[2], 'medium', 'torch', 'webgpu-webgl2')).toBe('neonHeights-night-medium-torch.jpg');
+  });
+});
+
+describe('the WebGPU post stack and retro filter comparison (W4)', () => {
+  it('draws the whole frame on every preset: the ground, the sun or moon, first person, the retro filter and a light', () => {
+    expect(POST_QUALITIES).toEqual(['low', 'medium', 'high', 'ultra']);
+    expect(POST_VIEWS).toEqual(['ground', 'sun', 'first-person', 'retro', 'glow']);
+    // A pool light by night only: by day nothing blooms, so the view would show nothing of Medium's stack.
+    for (const scene of COMPARE_SCENES) expect(postViewsOf(scene).includes('glow'), scene.map + scene.light).toBe(scene.light === 'night');
+    expect(postViewsOf(COMPARE_SCENES[0])).toEqual(['ground', 'sun', 'first-person', 'retro']);
+    expect(isFigureView(postBase('glow'))).toBe(false);
+    // Each stands where a W2 or W3 view does, or has its own camera.
+    for (const v of POST_VIEWS) {
+      const base = postBase(v);
+      expect(['ground', 'first-person'].includes(base) || base in POST_CAMERAS, v).toBe(true);
+    }
+    expect(postBase('retro')).toBe('ground');
+    expect(isFigureView(postBase('first-person'))).toBe(true);
+    expect(isFigureView(postBase('sun'))).toBe(false);
+    // The retro look is Settings → Dev's default; enough frames for the temporal history to settle.
+    expect(POST_CAMERAS.retro.look).toEqual({ pixelSize: 4, levels: 6 });
+    expect(POST_FRAMES).toBeGreaterThanOrEqual(8);
+  });
+
+  it('names a post view’s pair apart from W2’s and W3’s', () => {
+    expect(pairFile(COMPARE_SCENES[0], 'ultra', 'ground', 'webgpu-webgl2', true)).toBe('depot-day-ultra-post-ground.jpg');
+    expect(pairFile(COMPARE_SCENES[2], 'low', 'retro', 'webgpu', true)).toBe('neonHeights-night-low-post-retro-webgpu.jpg');
+    expect(pairFile(COMPARE_SCENES[0], 'high', 'ground')).toBe('depot-day-high-ground.jpg');
   });
 });

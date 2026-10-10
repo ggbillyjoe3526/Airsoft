@@ -180,9 +180,9 @@ request. Each entry says where the contract lives, what it holds today and what 
   by clustered lights (`nightLights.ts`, built on three/webgpu's Forward+ `ClusteredLightsNode`, with spot lights
   added): every lamp and fire near the eye has a real light beside WebGL's fixed pool; WebGL and the node renderer's
   WebGL2 back end keep the fixed pool alone. Where a browser's WebGPU differs from what Three expects (Chromium 141's
-  swizzle member and its 3D-texture layer writes), `webgpuCompat.ts` tests the device and fits it. Only the post stack and retro filter (W4) are not there
-  yet. `pipeline/webgpu-compare.mjs` scores both paths' pictures of the same views (W3: figures, first person and a
-  torch too, on both node back ends) against a pinned bar. A lost device (at boot or mid-match) is replaced by a new one, or by WebGL when none can be made:
+  swizzle member and its 3D-texture layer writes), `webgpuCompat.ts` tests the device and fits it. Since W4 every preset's post stack and the
+  retro filter draw as node passes (`render/webgpu/post/`), with WebGL's draws. `pipeline/webgpu-compare.mjs` scores both paths' pictures of the same views (W3: figures, first person and a
+  torch too, on both node back ends; W4: each preset's post views and the retro filter) against a pinned bar. A lost device (at boot or mid-match) is replaced by a new one, or by WebGL when none can be made:
   the post stack, retro filter and sheen come back, `Renderer.lostToWebGL` is set and the row says so until the next
   load. Pinned by `render/rendererStart.test.ts`, `render/rendererNode.test.ts`, `render/webgpu/nodeBackend.test.ts`,
   `render/webgpuFoundation.qa.test.ts`, `render/webgpu/worldTwins.test.ts`, `render/webgpu/figureTwins.test.ts`,
