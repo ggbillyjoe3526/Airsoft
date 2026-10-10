@@ -67,3 +67,30 @@ test('the held AEG and gas pistol are skinned file models, the selector turns wi
   await expect.poll(slideAtRest, { timeout: 20_000 }).toBeLessThan(1e-6);
   expect(errors).toEqual([]);
 });
+
+test('Y turns the held AEG over (its Inspect clip plays) and a left click ends it (RM2)', async ({ page }) => {
+  test.setTimeout(150_000);
+  type Vm = { inspectT: number; slots: { parts3d: { clips: Map<string, { time: number }> } | null }[] };
+  await page.goto('/?nolock&seed=3&quality=low');
+  await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
+  await page.locator('.menu-title-start').click();
+  await page.locator('.menu-setup').getByRole('button', { name: 'Start match', exact: true }).click();
+  await expect(page.locator('.menus')).toBeHidden({ timeout: 20_000 });
+  await expect.poll(() => page.evaluate(() => (window as unknown as Game).airsoft.state?.tick ?? 0), { timeout: 90_000 }).toBeGreaterThan(30);
+  expect(await page.evaluate(() => (window as unknown as { airsoft: { session: { combat: { viewmodel: Vm } } } }).airsoft.session.combat.viewmodel.inspectT)).toBe(-1);
+
+  await page.keyboard.press('y');
+  await page.waitForFunction(
+    () => {
+      const vm = (window as unknown as { airsoft: { session: { combat: { viewmodel: Vm } } } }).airsoft.session.combat.viewmodel;
+      return vm.inspectT >= 0 && (vm.slots[0]!.parts3d!.clips.get('Inspect')?.time ?? 0) > 0;
+    },
+    undefined,
+    { timeout: 30_000 },
+  );
+
+  await page.mouse.move(640, 360);
+  await page.mouse.down();
+  await page.mouse.up();
+  await page.waitForFunction(() => (window as unknown as { airsoft: { session: { combat: { viewmodel: Vm } } } }).airsoft.session.combat.viewmodel.inspectT === -1, undefined, { timeout: 30_000 });
+});

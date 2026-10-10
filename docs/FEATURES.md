@@ -31,6 +31,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - A laser module and a choice of power source on the pistol, from the pool (M26b)
 - BBs can ricochet off concrete and steel; own ricochets can hit you; whether ricochets count as hits is a match
   setting, off by default (M20, FA12)
+- Inspect (Y, rebindable): the replica in your hands turns side on and its parts move; AEG, gas pistol and Cyber Pistol
+  each have their own check, and a shot ends it (RM2)
 
 ## Hits and elimination
 

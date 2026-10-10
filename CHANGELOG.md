@@ -30,6 +30,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **RM1** · First person: the AEG's trigger pulls on each shot and its fire selector turns with the mode; iron sights fold under an optic
 - **RM1** · First person: the magazine release presses on a reload, and the gas pistol's trigger and magazine release move too
 - **RM3** · Standard Battery, 11.1 V LiPo Battery and gas bottles (green, red, black for Green, Red and Black Gas) show real pictures from their Blender models in Customise, Loadout and Armory, not flat icons; nothing changes in a match
+- **RM2** · Y inspects the replica in your hands: it turns side on as parts move, with clicks; firing, hits, reloads, sprinting or aiming stop it
+- **RM2** · AEG charging handle pulls back and the hop-up cover opens (3 s); pistols do a press or battery check (2 s); a shot leaves from the normal hold
 
 ### Changed
 - **M71** · Bots hunt the map's middle once their lane is swept (now all levels, not just Pro); Normal and Hard hold their posts out of lantern light at night (#133)
@@ -117,6 +119,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M101** · Replica models load from a .glb file per replica when one exists, else the built-in model; only pistols use a file for now
 - **RM1** · Replica animations are posed from game state and skinned into each replica's own meshes, so no extra draw calls
 - **RM1** · Replica parts live in their own model folder, with a file budget per replica
+- **RM2** · Model files' magazine animation tracks are read, so an animation can slide a magazine (the Cyber Pistol's battery check)
 
 ## 0.1 Dev 4 · 2026-10-06
 

@@ -140,6 +140,7 @@ Every action can be rebound under **Settings › Key Bindings**, mouse buttons a
 | Z (hold), F, X, V | Squad order wheel; Follow me, Hold here, Regroup (press again to cancel) |
 | G (hold) | Use: open a case in Extraction (dev content) |
 | T | Weapon torch on and off (dev content) |
+| Y | Inspect: turn the replica in hand over to look it over (the rifle's charging handle and hop-up dial, the pistol's press check) |
 | F10 | Fullscreen |
 | Left click while out | Watch the next player still in play |
 | Esc | Pause: Resume, Loadout, Settings or Quit |

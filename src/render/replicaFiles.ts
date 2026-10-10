@@ -90,6 +90,12 @@ export interface ReplicaFileRig {
   pieces: readonly ReplicaRigPiece[];
   /** The animations by name ('Fire', 'Reload', …), each holding only the tracks that move something in it. */
   clips: ReadonlyMap<string, THREE.AnimationClip>;
+  /**
+   * How far each animation moves the magazine from its seat (metres, in the replica's space), by animation name, for
+   * those that move it (RM2: the Cyber Pistol's battery check). The viewmodel moves the magazine itself through a
+   * reload, so it takes only the animations it asks for.
+   */
+  magazine: ReadonlyMap<string, THREE.VectorKeyframeTrack>;
 }
 
 /** A replica's model from its file, every part in the replica's own space (metres, bore along -Z, up +Y). */
@@ -298,9 +304,33 @@ function rigOf(scene: THREE.Object3D, toScene: THREE.Matrix4, magazine: THREE.Ob
     if (tracks.length > 0) renamed.set(clip.name, new THREE.AnimationClip(clip.name, clip.duration, tracks));
   }
   return {
-    file: { root: new THREE.Matrix4().multiplyMatrices(toScene, parent.matrixWorld), bones, pieces: rigPieces, clips: renamed },
+    file: { root: new THREE.Matrix4().multiplyMatrices(toScene, parent.matrixWorld), bones, pieces: rigPieces, clips: renamed, magazine: magazineMoves(scene, toScene, clips, holdsMagazine) },
     nodes,
   };
+}
+
+/**
+ * Each animation's move of the magazine from its seat (ReplicaFileRig.magazine): the track of the bone holding it that
+ * slides it, as offsets in the replica's space (its turn, if any, is not drawn).
+ */
+function magazineMoves(scene: THREE.Object3D, toScene: THREE.Matrix4, clips: readonly THREE.AnimationClip[], holdsMagazine: (o: THREE.Object3D) => boolean): Map<string, THREE.VectorKeyframeTrack> {
+  const byClip = new Map<string, THREE.VectorKeyframeTrack>();
+  const offset = new THREE.Vector3();
+  for (const clip of clips) {
+    for (const track of clip.tracks) {
+      const { nodeName, propertyName } = THREE.PropertyBinding.parseTrackName(track.name);
+      const bone = scene.getObjectByName(nodeName);
+      if (propertyName !== 'position' || !bone?.parent || !holdsMagazine(bone) || !moves(track)) continue;
+      // The bone's slide is in its parent's space: brought into the replica's by the parent's turn and scale.
+      const toReplica = new THREE.Matrix3().setFromMatrix4(new THREE.Matrix4().multiplyMatrices(toScene, bone.parent.matrixWorld));
+      const values = new Float32Array(track.values.length);
+      for (let i = 0; i < values.length; i += 3) {
+        offset.fromArray(track.values, i).sub(bone.position).applyMatrix3(toReplica).toArray(values, i);
+      }
+      byClip.set(clip.name, new THREE.VectorKeyframeTrack('magazine.position', Array.from(track.times), Array.from(values)));
+    }
+  }
+  return byClip;
 }
 
 /** What the game names a moving part's bone: `rig_<the file's bone>` (three's track names can't take a colon). */
