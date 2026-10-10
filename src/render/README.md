@@ -53,7 +53,8 @@ and never writes the simulation.
 - Figures: `characterRenderer.ts`, `characterModels.ts`, `figureHuman.ts` / `figureRobot.ts`; `figureFinish.ts` (the
   per-vertex finish) and `figureCamo.ts` (the team camo printed per pixel on clothes and sleeves, G11). Replicas and hands:
   `replicaModels.ts` (the bodies and assembly), `replicaParts.ts` (optics, grips, magazines and the other fitted parts),
-  `replicaBuilder.ts` (the mesh builder both use), `replicaFinish.ts` (moulded speckle), `replicaSheen.ts` (the
+  `replicaBuilder.ts` (the mesh builder both use), `replicaFiles.ts` (the Blender model files, M101, RM1) and `replicaRig.ts`
+  (their moving parts, skinned and posed from the game's state, RM1), `replicaFinish.ts` (moulded speckle), `replicaSheen.ts` (the
   environment reflection), `replicaArms.ts` (the first-person arms), `handModels.ts`; `itemPictures.ts` draws them off
   screen for the menus.
 - Surface textures: `proceduralTextures.ts` draws each at the quality's Texture detail, the city's flat finishes capped
