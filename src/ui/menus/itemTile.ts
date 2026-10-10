@@ -27,8 +27,8 @@ export function tierLabel(pool: Pool, item: ItemRef): string {
 }
 
 /**
- * An item's picture (G3): a replica in its first colour scheme, a part on its own, or the item's drawing (a power source,
- * a grenade, or no picture source at all).
+ * An item's picture (G3): a replica in its first colour scheme, a part or a power source (RM3) on its own, or the item's
+ * drawing (a grenade, or no picture source at all).
  */
 export function itemPicture(asset: Asset, context: PictureContext | null | undefined, className: string): PictureSlot {
   const slot = new PictureSlot(className);

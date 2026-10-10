@@ -51,6 +51,7 @@ Poly Haven and Quaternius). A file reaches the repository one of two ways:
 src/assets/models/characters/figure.glb   the player and bot model (M25a, wired up)
 src/assets/models/replicas/<id>.glb       a replica's model, by replica id: aeg, pistol and cyber (M101, RM1, wired up)
 src/assets/models/replicaParts/<id>.glb   that replica's fittable parts, by replica id: aeg and pistol (RM1, wired up)
+src/assets/models/powerSources/<file>.glb the menus' battery, LiPo and gas bottle pictures (RM3, wired up)
 src/assets/models/props/                  props (planned: not created or wired up yet)
 src/assets/textures/                      loose surface textures (planned: not created or wired up yet)
 ```
@@ -127,6 +128,20 @@ warning and the built-in model is drawn.
 - **Budget.** At most 3,500 triangles in the hands and 300 KB (the AEG: 9,000 and 400 KB), 300 triangles on a figure, a
   parts file 150 KB (the AEG's: 300 KB). The loader warns above each. No LODs.
 - **Muzzle.** Leave it plain: the orange-tip setting adds the tip.
+
+### Power-source models
+
+Menu pictures only (RM3): a power source never shows in a match (gas is full at the start, batteries sit inside the
+replicas). The loader is `src/render/powerSourceModels.ts`; its settings are `POWER_SOURCE_FILE` in
+`src/config/assets.ts`, which names the file each power source (by its pool ID) is drawn from. A file loads the first
+time a menu shows its picture; one that can't be used logs a warning and the item keeps its line drawing.
+
+- **Space.** Metres, life size, any way up: the picture frames whatever shows, from the same studio view as the replicas'.
+  `turns` tips a file for its picture (the stick batteries are tipped up their lead end).
+- **Materials.** Plain colours, drawn as the file sets them but no more metallic than `maxMetalness` (the studio has no
+  reflections). A material named `Label` is painted in the power source's own `label` colour, so one gas bottle draws
+  Green, Red and Black Gas.
+- **Budget.** 60 KB a file (the loader warns above it), about 1,500 triangles. No textures.
 
 ## Blender, step by step
 
