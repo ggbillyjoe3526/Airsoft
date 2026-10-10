@@ -144,8 +144,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   on one page; no map is loaded until Play (M15, M15b, G3)
 - Title screen, pause, match summary and result screens; the pause screen shows the match's seed for bug reports (M15,
   M24, BP1, G3)
-- Replica pictures on Loadout, Customise and Armory; Customise lists the parts down the left, Colour first, each option
-  a picture tile beside the replica and its numbers (G3)
+- Replica, battery and gas bottle pictures on Loadout, Customise and Armory; Customise lists the parts down the left, Colour first, each option
+  a picture tile beside the replica and its numbers (G3, RM3)
 - Error screen on a crash with the seed, a report, Reload and Copy Report buttons; Play Again starts a new match with
   its own seed (FA1)
 - Settings groups: Graphics (quality presets with Custom option, frame-rate limit), Display (fullscreen, field of view,

@@ -29,6 +29,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **RM1** · Replica parts (red dot, 2× scope, foregrips, barrels, silencer, laser, torch, magazines) now come from Blender too
 - **RM1** · First person: the AEG's trigger pulls on each shot and its fire selector turns with the mode; iron sights fold under an optic
 - **RM1** · First person: the magazine release presses on a reload, and the gas pistol's trigger and magazine release move too
+- **RM3** · Standard Battery, 11.1 V LiPo Battery and gas bottles (green, red, black for Green, Red and Black Gas) show real pictures from their Blender models in Customise, Loadout and Armory, not flat icons; nothing changes in a match
 
 ### Changed
 - **M71** · Bots hunt the map's middle once their lane is swept (now all levels, not just Pro); Normal and Hard hold their posts out of lantern light at night (#133)
@@ -94,6 +95,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **FP1** · In first person, your rifle's left thumb lies along the side of the handguard instead of sticking out beside it like a second barrel or silencer
 - **W4** · On WebGPU the Dev retro filter works, and at Low the far haze shades as on WebGL
 - **M101** · Bots and other players show the Cyber Pistol's own shape instead of a plain pistol
+- **RM3** · Item pictures in the menus fit their slots whole: the Armory's pictures and Customise's large replica picture are no longer cut off at the top and bottom
 
 ### Internal
 - **G8** · Set dressing never collides or blocks sight: Depot's colliders, routes, cover and bot sight are tested identical with and without it (#136)
