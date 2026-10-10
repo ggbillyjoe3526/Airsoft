@@ -14,6 +14,20 @@ Every block below carries note 19: tune on Normal, then check that Easy, Hard an
 first guesses; the build thread confirms them before it starts. The owner ruled on every conflict on 2026-10-06
 (ROADMAP, under the playtest table).
 
+## RM1 · The AEG and gas pistol drawn from their Blender models, moving parts and all (owner's ask, 2026-10-10)
+tier: core
+perf: required
+touches: src/render/replicaFiles.ts, src/render/replicaFiles.test.ts, src/render/replicaRig.ts, src/render/replicaRig.test.ts, src/render/replicaModels.ts, src/render/externalModels.ts, src/render/viewmodel.ts, src/render/figureReplicas.ts, src/render/figureMix.ts, src/render/characterModels.ts, src/config/assets.ts, src/config/renderView.ts, src/assets/, docs/
+contract: none
+acceptance:
+  1. `src/assets/models/replicas/aeg.glb` and `pistol.glb` (the owner's Blender models) draw the AEG and the gas pistol in the hands, on the menus' pictures and on the figures, on Low and High; `replicaParts/aeg.glb` and `pistol.glb` draw their fittable parts (optics, grips, barrels, silencer, laser, torch, magazines). A part a file lacks is drawn built-in.
+  2. BBs leave from the same muzzle point as before; the hands hold them as before; magazines drop on a reload; the Cyber Pistol is unchanged.
+  3. In first person the files' animations play from the game's state: the trigger on each shot, the AEG's fire selector on the fire mode, its iron sights folding while an optic is fitted, the magazine release through a reload.
+  4. No more draw calls in the hands than the built-in models at Low and High (moving parts are skinned into the body's meshes); the perf gate passes.
+  5. Each file stays within its budget (`REPLICA_FILE`), is recorded in docs/ASSETS.md, with the how-to in docs/CC0_ASSETS.md.
+status: open
+attempts: 0
+
 ## M80 · The tutorial shows what it teaches (playtest note 1)
 tier: ui
 perf: skip
