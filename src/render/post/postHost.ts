@@ -2,8 +2,12 @@ import * as THREE from 'three';
 import type { LightingPreset, QualitySettings } from '../../config/render';
 import { keyDirection } from '../lightingPreset';
 import { type PostPassId, postPlan } from './postPlan';
-import { PostStack } from './postStack';
+import type { PostChain, PostSetup } from './postStack';
 import { findReflective } from './reflectionPass';
+
+/** Any post chain: WebGL's PostStack, or the node renderer's (W4). */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- the host never draws; the Renderer casts per renderer.
+export type AnyPostChain = PostChain<any, any>;
 
 /**
  * The renderer's hold on the post stack (G5): makes it on the first frame that wants it after a change, keeps it at the
@@ -11,7 +15,7 @@ import { findReflective } from './reflectionPass';
  * change, the retro filter, a lost context and the antialiasing swap. Low (no post effect on) makes nothing at all.
  */
 export class PostHost {
-  private stack: PostStack | null = null;
+  private stack: AnyPostChain | null = null;
   private dirty = true;
   /** The context is lost: nothing is made for it until it comes back. */
   private gone = false;
@@ -22,11 +26,17 @@ export class PostHost {
   private width = 1;
   private height = 1;
 
-  /** `halfFloat` says whether the context in use can draw into half floats (asked only as a stack is made). */
-  constructor(private readonly halfFloat: () => boolean) {}
+  /**
+   * `halfFloat` says whether the context in use can draw into half floats (asked only as a stack is made); `make` makes
+   * the stack for the renderer in use (WebGL's PostStack, or the node renderer's, W4).
+   */
+  constructor(
+    private readonly halfFloat: () => boolean,
+    private readonly make: (setup: PostSetup, width: number, height: number) => AnyPostChain,
+  ) {}
 
   /** The stack in force; null on Low, while the retro filter is on, while the context is lost and before the first frame. */
-  get current(): PostStack | null {
+  get current(): AnyPostChain | null {
     return this.stack;
   }
 
@@ -44,12 +54,12 @@ export class PostHost {
    * The stack for this frame, made for `quality` and `lighting` when it is first wanted after a change; null when the
    * quality has no post effect (Low), when `off` (the retro filter draws instead) and while the context is lost.
    */
-  stackFor(quality: QualitySettings, lighting: LightingPreset, off: boolean): PostStack | null {
+  stackFor(quality: QualitySettings, lighting: LightingPreset, off: boolean): AnyPostChain | null {
     if (off || this.gone) return null;
     if (this.dirty) {
       this.dirty = false;
       if (postPlan(quality).length > 0) {
-        const stack = new PostStack({ quality, halfFloat: this.halfFloat() }, this.width, this.height);
+        const stack = this.make({ quality, halfFloat: this.halfFloat() }, this.width, this.height);
         this.stack = stack;
         stack.setLight(keyDirection(lighting, this.keyLight), lighting.night);
         this.reflectiveDirty = true;
@@ -59,7 +69,7 @@ export class PostHost {
   }
 
   /** Hands the stack the scene's reflective meshes once after each change of the scene (rescan). */
-  findReflective(stack: PostStack, scene: THREE.Scene): void {
+  findReflective(stack: AnyPostChain, scene: THREE.Scene): void {
     if (!this.reflectiveDirty) return;
     this.reflectiveDirty = false;
     if (!stack.wantsReflective) return;

@@ -60,6 +60,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **W2** · On WebGPU the maps look as on WebGL: weathering, baked light, neon flicker, the skyline and its plane, moving flames, smoke, steam, stars, embers, fireflies and dust; players and screen effects still plain for now
 - **W3** · On WebGPU players, held replicas and replica sheen look as on WebGL; at night every lamp and fire near you lights walls and players
 - **G12** · BBs bounce off concrete and steel with less speed, so with Ricochets count on fewer bounced BBs knock players out (about a fifth of hits, down from about a quarter)
+- **W4** · On WebGPU the screen effects look as on WebGL on every preset (bloom, ambient occlusion, temporal smoothing, light shafts, reflections, grain)
 
 ### Fixed
 - **G11** · The team camo on players reads clearly on Medium and up: crisp dark and light blotches printed per pixel, on WebGL and WebGPU; Low keeps plain clothes
@@ -84,6 +85,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **BP2** · A replica picture drawn while the graphics context is lost is no longer left blank (#150)
 - **M79** · Leaving a match or the menus no longer leaves listeners behind, so memory doesn't creep up over a long session (#151)
 - **W3** · On WebGPU Depot's bounced light and shade under cover show again, and Chrome 141 no longer stops on the crash screen
+- **W4** · On WebGPU the Dev retro filter works, and at Low the far haze shades as on WebGL
 
 ### Internal
 - **G8** · Set dressing never collides or blocks sight: Depot's colliders, routes, cover and bot sight are tested identical with and without it (#136)
@@ -100,6 +102,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **W1** · The perf harness records which renderer drew (`--renderer`, `--force-webgl`); a browser without WebGPU never downloads the new renderer
 - **W2** · A comparison script scores WebGPU's pictures of every map against WebGL's, by day and night on Medium and High, against a fixed bar
 - **W3** · The WebGPU comparison adds first-person, near and far player and night torch views, and runs on a real WebGPU device as well
+- **W4** · The WebGPU comparison scores every preset's screen effects by day and night, the retro filter and a lit lamp close up
 
 ## 0.1 Dev 4 · 2026-10-06
 

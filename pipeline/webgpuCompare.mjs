@@ -3,10 +3,11 @@
  * how a pair of frames is scored and the bar every pair must pass. Pure and dependency-free, so the fast test suite pins
  * it (`webgpuCompare.test.mjs`) and the runner hands `scorePixels` to the browser as it is.
  *
- * A pair is the same fixed camera view drawn twice, once by the old WebGL path and once by the node renderer, with
- * nothing of the post stack drawn on either side (W4's). W2's world views hide the figures, their contact shadows and
- * the torch beams; W3's figure views (`FIGURE_VIEWS`) draw them, and the held replica in first person, with the
- * characters stood where the view wants them so both pages draw the same scene. The node renderer runs on its WebGL2
+ * A pair is the same fixed camera view drawn twice, once by the old WebGL path and once by the node renderer. W2's
+ * world views hide the figures, their contact shadows and the torch beams; W3's figure views (`FIGURE_VIEWS`) draw them,
+ * and the held replica in first person, with the characters stood where the view wants them so both pages draw the same
+ * scene. Both draw no post effect on either side, only the output step; W4's post views (`POST_VIEWS`) draw the whole
+ * frame on every preset, the post stack (or Low's straight draw) and the retro filter. The node renderer runs on its WebGL2
  * back end (`?forceWebGL`) and, where the browser offers a WebGPU device (in the container, Chromium's SwiftShader
  * Vulkan adapter, `WEBGPU_ARGS`), on WebGPU itself, where the night maps are lit by clustered lights (W3).
  */
@@ -87,6 +88,35 @@ export const WEBGPU_ARGS = ['--enable-unsafe-webgpu', '--enable-features=Vulkan'
 /** The presets compared: Medium and High (Low draws no weathering or per-pixel baked light, and the gate's perf runs cover it). */
 export const COMPARE_QUALITIES = ['medium', 'high'];
 
+/**
+ * W4's post views, drawn on every preset (`POST_QUALITIES`) with the whole frame on both sides: Low's straight draw, the
+ * post stack on Medium and up, the held replica over it in first person, the retro filter. Each starts a new stack (or
+ * retro filter) once the view has compiled, then draws `POST_FRAMES` frames from the stood camera before the grab, so
+ * both pages' temporal history, jitter and grain are at the same frame.
+ *
+ * - `ground` and `first-person`: W2's ground still (figures hidden) and W3's first person (the held replica drawn).
+ * - `sun`: from `up` m over the middle of the two starts, looking towards the key light (the sun, or the moon by night)
+ *   a little below it (`lookDown`, as a share of the way), so it is on screen for the light shafts over the scenery.
+ * - `retro`: the ground still through the retro filter at `look` (Settings → Dev's defaults), instead of the stack.
+ * - `glow` (night only, `postViewsOf`): `back` m short of the map's first pool light (Woodland's fire, a Neon Heights
+ *   lamp) on the way from the stood eye, `up` m over its foot, looking at it, so the bloom shows: by day nothing on
+ *   these maps is bright enough to bloom (threshold 1), so Medium's stack (bloom alone) changes no pixel of a day view.
+ */
+export const POST_VIEWS = ['ground', 'sun', 'first-person', 'retro', 'glow'];
+export const POST_QUALITIES = ['low', 'medium', 'high', 'ultra'];
+export const POST_FRAMES = 12;
+export const POST_CAMERAS = { sun: { up: 12, lookDown: 0.15, fov: 70 }, retro: { look: { pixelSize: 4, levels: 6 } }, glow: { back: 4, up: 1.5, fov: 62 } };
+
+/** The post views of `scene`: every one, but `glow` only by night (no pool light is lit by day). */
+export function postViewsOf(scene) {
+  return POST_VIEWS.filter((v) => v !== 'glow' || scene.light === 'night');
+}
+
+/** The camera a post view stands where (its W2 or W3 view's, or its own). */
+export function postBase(view) {
+  return view === 'retro' ? 'ground' : view;
+}
+
 /** The frame size drawn (CSS pixels at a device pixel ratio of 1). */
 export const COMPARE_VIEWPORT = { width: 1280, height: 720 };
 
@@ -141,7 +171,10 @@ export function verdict(score, bar = COMPARE_BAR) {
   return { pass: fails.length === 0, fails };
 }
 
-/** The file name of a pair's side-by-side picture: W2's names on the WebGL2 back end, `-webgpu` on WebGPU. */
-export function pairFile(scene, quality, view, backend = 'webgpu-webgl2') {
-  return `${scene.map}-${scene.light}-${quality}-${view}${backend === 'webgpu' ? '-webgpu' : ''}.jpg`;
+/**
+ * The file name of a pair's side-by-side picture: W2's names on the WebGL2 back end, `-webgpu` on WebGPU, and `post-`
+ * before a post view's name (W4).
+ */
+export function pairFile(scene, quality, view, backend = 'webgpu-webgl2', post = false) {
+  return `${scene.map}-${scene.light}-${quality}-${post ? 'post-' : ''}${view}${backend === 'webgpu' ? '-webgpu' : ''}.jpg`;
 }
