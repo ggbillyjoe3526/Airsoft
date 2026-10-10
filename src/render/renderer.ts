@@ -37,7 +37,8 @@ import {
   warmSurfacesInIdle,
   zoomedFov,
 } from './rendererParts';
-import { RetroFilter, retroPixelAngle, type RetroView } from './retroFilter';
+import { retroPixelAngle, type RetroView } from './retroFilter';
+import type { RetroFilter } from './retroFilterWebGL';
 import { releaseNormalMaps, usesNormalMaps } from './surfaceNormals';
 import type { NodeBackend } from './webgpu/nodeBackend';
 
@@ -127,6 +128,8 @@ export class Renderer {
   private retroLook: RetroLook | null = null;
   /** The filter's target and pass for the renderer in use (the node renderer's since W4), made while the filter is on. */
   private retro: RetroView | null = null;
+  /** WebGL's retro filter, once its chunk has loaded (makeRetro). */
+  private webglRetro: typeof RetroFilter | null = null;
   /** Told when the graphics context is lost (true) and when it comes back (false); see onContextChange. */
   private contextListener: (lost: boolean) => void = () => undefined;
   /**
@@ -414,7 +417,7 @@ export class Renderer {
     }
     if (this.retro) this.retro.setLook(look);
     else this.retro = this.makeRetro(look);
-    this.retro.resize(this.width, this.height, this.gl.getPixelRatio());
+    this.retro?.resize(this.width, this.height, this.gl.getPixelRatio());
   }
 
   /**
@@ -559,8 +562,18 @@ export class Renderer {
    * The retro filter for the context in use: a half-float target where the context can draw into one (WebGL 2 with
    * EXT_color_buffer_half_float or _float, near universal), else 8-bit.
    */
-  private makeRetro(look: RetroLook): RetroView {
-    return this.node ? this.node.retro(look) : new RetroFilter(look, this.drawsHalfFloat());
+  private makeRetro(look: RetroLook): RetroView | null {
+    if (this.node) return this.node.retro(look);
+    if (this.webglRetro) return new this.webglRetro(look, this.drawsHalfFloat());
+    // WebGL's is in a chunk of its own (W4: a Dev look kept out of the main chunk): the frames draw plain until it is
+    // here, then it is made for the look then in use. A failed load leaves the frame unfiltered.
+    void import('./retroFilterWebGL').then(({ RetroFilter }) => {
+      this.webglRetro = RetroFilter;
+      if (this.disposed || this.retro || !this.retroLook) return;
+      this.retro = this.makeRetro(this.retroLook);
+      this.retro?.resize(this.width, this.height, this.gl.getPixelRatio());
+    }, ignoreLoad);
+    return null;
   }
 
   /** Whether the context can draw into half floats (WebGL 2 with EXT_color_buffer_half_float or _float, near universal). */
@@ -763,3 +776,5 @@ export class Renderer {
     this.camera.updateProjectionMatrix();
   };
 }
+
+const ignoreLoad = (): void => undefined;

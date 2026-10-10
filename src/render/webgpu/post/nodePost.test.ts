@@ -7,7 +7,7 @@ import { POST } from '../../../config/post';
 import { QUALITY, type QualityPreset } from '../../../config/render';
 import { ADDITIVE, MULTIPLY } from '../../post/postPass';
 import { PostStack } from '../../post/postStack';
-import { RetroFilter } from '../../retroFilter';
+import { RetroFilter } from '../../retroFilterWebGL';
 import { denoiseDisk } from './nodeAmbientOcclusion';
 import { bloomKernel, bloomMipSizes } from './nodeBloom';
 import { CompileGate, type NodeRenderer } from './nodeKit';

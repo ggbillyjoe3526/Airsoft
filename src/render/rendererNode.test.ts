@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { QUALITY, type QualitySettings, TONE_MAPPING } from '../config/render';
 import { Renderer } from './renderer';
 import { toneMappingOf } from './rendererParts';
+import { RetroFilter } from './retroFilterWebGL';
 import { postPlan } from './post/postPlan';
 import type { NodeBackend } from './webgpu/nodeBackend';
 import { DirectOutput } from './webgpu/post/nodeOutput';
@@ -286,7 +287,8 @@ describe('the Renderer on the node path (W1)', () => {
     expect(told).toEqual([true, false]);
     // The node path's retro filter goes with its renderer and WebGL's takes its place; the row's note says what happened.
     expect(retroFreed).toHaveBeenCalledOnce();
-    expect((r as unknown as { retro: unknown }).retro).not.toBeInstanceOf(NodeRetroFilter);
+    // WebGL's loads in a chunk of its own (W4), then is made for the look in use.
+    await vi.waitFor(() => expect((r as unknown as { retro: unknown }).retro).toBeInstanceOf(RetroFilter));
     expect(r.retroPixelAngle).toBeGreaterThan(0);
     expect(r.lostToWebGL).toBe(true);
     expect(r.pictureRenderer).toBe(gl);

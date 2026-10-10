@@ -10,6 +10,7 @@ import { PostHost } from './post/postHost';
 import { PostStack } from './post/postStack';
 import { handOverRenderer, releaseGpuResources, Renderer, toneMappingOf, verticalFovFor, warmSurfacesInIdle, zoomedFov } from './renderer';
 import { defaultEnvironmentLook, type EnvironmentLook, environmentKey } from './replicaSheen';
+import { RetroFilter } from './retroFilterWebGL';
 
 describe('verticalFovFor', () => {
   it('converts a 16:9 horizontal FOV to the matching vertical FOV', () => {
@@ -726,6 +727,24 @@ describe('the post stack on the renderer (G5)', () => {
     r.render();
     expect(dispose).toHaveBeenCalled();
     expect(postOf(r)).toBeNull();
+  });
+
+  it('loads WebGL’s retro filter in a chunk of its own, then makes it for the look in use; off before then, none (W4)', async () => {
+    const held = (r: Renderer) => (r as unknown as { retro: unknown }).retro;
+    const { r } = stubbedRenderer(QUALITY.high);
+    r.setRetro({ pixelSize: 3, levels: 8 });
+    expect(held(r)).toBeNull();
+    r.setRetro({ pixelSize: 5, levels: 4 });
+    await vi.waitFor(() => expect(held(r)).toBeInstanceOf(RetroFilter));
+    expect((held(r) as RetroFilter).renderTarget.width).toBe(Math.ceil(r.width / 5));
+    r.setRetro(null);
+    expect(held(r)).toBeNull();
+    const late = stubbedRenderer(QUALITY.high).r;
+    late.setRetro({ pixelSize: 3, levels: 8 });
+    late.setRetro(null);
+    await import('./retroFilterWebGL');
+    await new Promise((done) => setTimeout(done, 0));
+    expect(held(late)).toBeNull();
   });
 });
 
