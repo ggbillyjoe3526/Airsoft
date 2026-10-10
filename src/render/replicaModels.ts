@@ -380,6 +380,8 @@ export interface SupportHandPart {
   group: THREE.Group;
   toMag: THREE.Vector3;
   holds: ReadonlyMap<string, { object: THREE.Object3D; toMag: THREE.Vector3 }>;
+  /** The grip whose hold is shown. */
+  shown: string;
 }
 
 /** One way a support hand holds a replica: with `grip` fitted ('none': no grip, or one it doesn't take), and its reach to the magazine. */
@@ -536,12 +538,18 @@ function supportHandPart(m: Record<MaterialKey, THREE.Material>, holds: readonly
     group.add(object);
     byGrip.set(hold.grip, { object, toMag: new THREE.Vector3(hold.toMag[0], hold.toMag[1], -hold.toMag[2]) });
   }
-  return { group, toMag: byGrip.get('none')!.toMag.clone(), holds: byGrip };
+  return { group, toMag: byGrip.get('none')!.toMag.clone(), holds: byGrip, shown: 'none' };
 }
 
-/** Shows the support hand's hold for the fitted `grip` (on the handguard when it takes none) and aims its reload reach. */
+/**
+ * Shows the support hand's hold for the fitted `grip` (on the handguard when it takes none) and aims its reload reach.
+ * Called every frame: it changes (and allocates) nothing unless the hold does.
+ */
 export function fitSupportHand(hand: SupportHandPart, grip: string | null): void {
-  const fitted = hand.holds.get(grip ?? 'none') ?? hand.holds.get('none')!;
+  const key = grip !== null && hand.holds.has(grip) ? grip : 'none';
+  if (key === hand.shown) return;
+  hand.shown = key;
+  const fitted = hand.holds.get(key)!;
   for (const hold of hand.holds.values()) hold.object.visible = hold === fitted;
   hand.toMag.copy(fitted.toMag);
 }
