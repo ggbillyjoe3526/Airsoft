@@ -168,7 +168,7 @@ names its files with it after the environment (`perf-laptop-webgpu-low.json`, ba
 the WebGL files the gate reads. On a machine with WebGPU, run the gate's laptop and desktop combinations with
 `--renderer webgl` by hand until the gate learns the back end (KNOWN_ISSUES).
 
-**The WebGPU comparison** (WebGPU overhaul W2 to W4; `webgpu-compare.mjs`, rules in `webgpuCompare.mjs`): draws fixed
+**The WebGPU comparison** (WebGPU overhaul W2 to W5; `webgpu-compare.mjs`, rules in `webgpuCompare.mjs`): draws fixed
 camera views of every map, by day and by night where it has night, on Medium and High, with the WebGL path and with the
 node renderer on its WebGL2 back end (`?forceWebGL`), figures hidden (with their contact shadows and torch beams) and
 the game clock stopped. W2's and W3's views keep only the post stack's output step on both sides (tone mapping and
@@ -190,8 +190,17 @@ shows nothing of Medium's stack). Each starts a new stack once its view has comp
 before the grab, so both pages' temporal history, jitter and grain match. `--post-views` picks some of them; `--port`
 serves on another port (another worktree's run on 4186).
 
+W5 switches the node renderer's GPU grass and tree stand-ins off on every node page of those pairs (`?noGpuDressing`,
+`NO_DRESSING`; WebGL has nothing like them), so the pairs still compare the same picture. The GPU particles stay in
+them. A pair also fails when the node path draws more calls than WebGL. W5's own views (`--views w5`, `W5_VIEWS`)
+draw the grass and stand-ins on the node renderer alone: Woodland by night on Medium, High and Ultra, saved as
+`<map>-<light>-<preset>-w5-<view>.png` for the owner to judge by eye. In `scores.json` each records its draws and
+triangles with and without them, the grass's and stand-ins' own triangles, and the GPU memory (Three's count, and what
+freeing the dressing gives back). A view fails when the grass's triangles pass the preset's ceiling
+(`GRASS_TRIANGLES`) or the dressing adds more than two draws.
+
 ```
-PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium node pipeline/webgpu-compare.mjs --out <dir> [--only depot] [--quality high] [--views w2|w3|w4|all] [--backend webgpu-webgl2|webgpu|all] [--full] [--noise] [--port 4186] [--post-views glow]
+PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium node pipeline/webgpu-compare.mjs --out <dir> [--only depot] [--quality high] [--views w2|w3|w4|w5|all] [--backend webgpu-webgl2|webgpu|all] [--full] [--noise] [--port 4186] [--post-views glow]
 ```
 
 `--full` also scores each view with WebGL's whole post stack (what a player sees today, for reference); `--noise`

@@ -228,6 +228,7 @@ export class CombatPresentation {
     this.viewmodel.setMotion(scale);
     this.motes.setMotion(scale.dust > 0);
     this.dressing.setMotion(scale.dust > 0);
+    this.renderer.motion = scale.dust > 0;
   }
 
   /** The crosshair changed on Settings → Crosshair. */

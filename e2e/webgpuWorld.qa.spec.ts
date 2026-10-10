@@ -38,6 +38,13 @@ test.describe('Woodland at night on the node renderer', () => {
   const s = shared('woodland', 'night', (page) =>
     qa(page, (q, game) => {
       q.hideFigures();
+      // The GPU grass and tree stand-ins (W5) out of the way, as the figures: the W2 checks measure the effects, and
+      // 93,696 blades a frame slow the software renderer past their timeouts. Hidden, they are not culled either; the
+      // compute check shows them.
+      for (const name of ['grass-gpu', 'forest-gpu']) {
+        const mesh = game.renderer.scene.getObjectByName(name);
+        if (mesh) mesh.visible = false;
+      }
       // Where the first camp fire is seen from, as pipeline/webgpu-compare.mjs's fire view: 3.4 m back from Blue's side.
       q.aimFire = () => {
         const fire = game.session.combat.field.lights.find((l: Any) => l.kind === 'fire').position;
@@ -153,6 +160,94 @@ test.describe('Woodland at night on the node renderer', () => {
     expect(result.diffs.reduce((a: number, b: number) => a + b, 0)).toBe(0);
   });
 
+  // W5: the particles moved by compute passes, Woodland's grass and tree stand-ins drawn on High, freed when Map detail
+  // goes off mid-match and made again when it comes back.
+  test('compute: every particle pool has its driver and a spawn draws; the grass and stand-ins draw on High and go with Map detail', async () => {
+    test.setTimeout(150_000);
+    const page = s.page();
+    const particles = await page.evaluate(async () => {
+      const q = (window as Any).__qa;
+      const r = (window as Any).airsoft.renderer;
+      const tagged: Any[] = [];
+      r.scene.traverse((o: Any) => {
+        // Each pool's CPU module (render/gpuPools.ts), as the node renderer's particle drivers find it.
+        const owner = r.node.particles.ownerOf(o);
+        if (owner) tagged.push({ name: o.name, owner, o });
+      });
+      const puffs = tagged.find((t) => Array.isArray(t.owner.puffs) && t.o.children.some((c: Any) => c.name.endsWith('-gpu')));
+      const draw = puffs.o.children.find((c: Any) => c.name.endsWith('-gpu'));
+      // An ImpactPuffs pool (its `puffs` slots). What the draw holds right after the driver's own update in the game's frame (a slow frame can outlive a puff,
+      // so sampling between frames may miss it).
+      const gpu = puffs.owner.gpu;
+      const update = gpu.update.bind(gpu);
+      let drawn = 0;
+      gpu.update = (dt: number, camera: Any) => {
+        update(dt, camera);
+        drawn = Math.max(drawn, draw.geometry.instanceCount);
+      };
+      const eye = r.camera.position;
+      puffs.owner.spawn({ x: eye.x, y: eye.y, z: eye.z - 2 });
+      for (let i = 0; i < 600 && drawn === 0; i++) await q.sleep(100);
+      delete gpu.update;
+      return { drivers: r.node.particles.count, tagged: tagged.length, driven: tagged.filter((t) => t.owner.gpu).length, drawn };
+    });
+    expect(particles.drivers).toBe(particles.tagged);
+    expect(particles.driven).toBe(particles.tagged);
+    expect(particles.tagged).toBeGreaterThanOrEqual(5);
+    expect(particles.drawn).toBeGreaterThan(0);
+
+    const dressing = () =>
+      page.evaluate(() => {
+        const r = (window as Any).airsoft.renderer;
+        return { ...r.node.dressing.counts, meshes: ['grass-gpu', 'forest-gpu'].filter((n) => r.scene.getObjectByName(n)).length };
+      });
+    await expect.poll(dressing, { timeout: 30_000 }).toEqual({ grass: 93_696, forest: 1_400, meshes: 2 });
+
+    // The grass is drawn: a low view over Blue's meadow differs with and without it.
+    const grass = await page.evaluate(async () => {
+      const q = (window as Any).__qa;
+      const game = (window as Any).airsoft;
+      const r = game.renderer;
+      const mesh = r.scene.getObjectByName('grass-gpu');
+      r.scene.getObjectByName('forest-gpu').visible = true;
+      const blue = game.state.characters.filter((c: Any) => c.team === 0).reduce((a: Any, c: Any, _i: number, all: Any[]) => ({ x: a.x + c.spawnPosition.x / all.length, z: a.z + c.spawnPosition.z / all.length }), { x: 0, z: 0 });
+      const original = r.render.bind(r);
+      const shot = async (visible: boolean): Promise<Uint8ClampedArray> => {
+        let out: Uint8ClampedArray | null = null;
+        r.render = () => {
+          r.camera.position.set(blue.x * 0.8, 1.2, blue.z * 0.8);
+          r.camera.lookAt(0, 0, 0);
+          r.camera.updateMatrixWorld();
+          mesh.visible = visible;
+          original();
+          out = new Uint8ClampedArray(q.grab());
+        };
+        for (let i = 0; i < 300 && !out; i++) await q.sleep(100);
+        if (!out) throw new Error('the game loop did not render');
+        return out;
+      };
+      try {
+        await shot(true);
+        const on = await shot(true);
+        const off = await shot(false);
+        return q.over(on, off, 12);
+      } finally {
+        r.render = original;
+        mesh.visible = true;
+      }
+    });
+    expect(grass).toBeGreaterThan(2_000);
+
+    await page.evaluate(() => {
+      const game = (window as Any).airsoft;
+      game.__w5 = game.renderer.quality;
+      game.changeQuality('custom', { ...game.__w5, mapDetail: false });
+    });
+    await expect.poll(dressing, { timeout: 30_000 }).toEqual({ grass: 0, forest: 0, meshes: 0 });
+    await page.evaluate(() => (window as Any).airsoft.changeQuality('high', (window as Any).airsoft.__w5));
+    await expect.poll(dressing, { timeout: 30_000 }).toEqual({ grass: 93_696, forest: 1_400, meshes: 2 });
+  });
+
   test('a quality change mid-match and a lost device leave every sized Points a sprite twin, the library hooked once, and the old library whole', async () => {
     test.setTimeout(240_000);
     const page = s.page();
@@ -161,7 +256,8 @@ test.describe('Woodland at night on the node renderer', () => {
         const q = (window as Any).__qa;
         const r = (window as Any).airsoft.renderer;
         const points = q.points().map((p: Any) => ({ name: p.name, mask: p.layers.mask, sprites: p.children.filter((c: Any) => c.isSprite).length }));
-        return { label, points, count: r.node.world.sprites.count, env: r.scene.environment?.isTexture === true, canvases: document.querySelectorAll('canvas.game-canvas').length };
+        // The motes and fireflies are drawn by their compute drivers (W5), not by a CPU-fed twin.
+        return { label, points, count: r.node.world.sprites.count + q.points().filter((p: Any) => r.node.particles.claims(p) && r.node.particles.ownerOf(p)?.gpu).length, env: r.scene.environment?.isTexture === true, canvases: document.querySelectorAll('canvas.game-canvas').length };
       }, label);
     const rendered = () => page.evaluate(() => (window as Any).airsoft.renderer.renderer.info.render.calls);
     const settled = async () => {
@@ -215,7 +311,7 @@ test.describe('Woodland at night on the node renderer', () => {
         newHooked: library.fromMaterial !== own(library),
         surfaceTwin: twin?.isNodeMaterial === true && twin.surface != null,
         points: w.__qa.points().map((p: Any) => ({ name: p.name, mask: p.layers.mask, sprites: p.children.filter((c: Any) => c.isSprite).length })),
-        count: r.node.world.sprites.count,
+        count: r.node.world.sprites.count + w.__qa.points().filter((p: Any) => r.node.particles.claims(p) && r.node.particles.ownerOf(p)?.gpu).length,
         canvases: document.querySelectorAll('canvas.game-canvas').length,
       };
     });
@@ -252,10 +348,9 @@ test.describe('Neon Heights at night on the node renderer', () => {
       const steam = q.find((o: Any) => o.name === 'steamPlumes');
       const restore = q.showOnly(null);
       try {
-        return await q.watch(() => {
-          const m = steam.instanceMatrix.array;
-          return { from: { x: m[12] - 7, y: m[13] + 1, z: m[14] - 7 }, to: { x: m[12], y: m[13] + 2, z: m[14] } };
-        });
+        // The first vent, from 4 m off (its puffs' matrices are the compute pass's since W5, not written on the CPU).
+        const v = (window as Any).airsoft.renderer.node.particles.ownerOf(steam).sources[0];
+        return await q.watch(() => ({ from: { x: v.x - 4, y: v.y + 1.5, z: v.z - 4 }, to: { x: v.x, y: v.y + 1.2, z: v.z } }));
       } finally {
         restore();
       }

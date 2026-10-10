@@ -861,6 +861,8 @@ const VERTEX_LIGHT_SHAPE: CuboidShape = { bevel: 0, cell: BAKED_LIGHT.look.verte
 export function buildMapMeshes(map: MapData, textures: SurfaceTextures, look: MapLook, decalAtlas: (() => THREE.Texture) | null = drawDecalAtlas): THREE.Group {
   const group = new THREE.Group();
   group.name = 'map';
+  // The node renderer's map-driven compute dressing (W5: the grass, the tree stand-ins) reads the map it was built from.
+  group.userData.map = map;
   const light = bakedLightOf(look);
   const probes = light === 'pixel' && look.probes ? probeUniforms(look.probes) : null;
   if (probes) group.userData.probes = probes;

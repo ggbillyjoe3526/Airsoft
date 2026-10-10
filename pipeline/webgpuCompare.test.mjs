@@ -5,11 +5,14 @@ import {
   COMPARE_QUALITIES,
   COMPARE_SCENES,
   COMPARE_VIEWPORT,
+  drawW5Views,
   EXTRA_CAMERAS,
   FIGURE_CAMERAS,
   FIGURE_STATES,
   FIGURE_VIEWS,
+  GRASS_TRIANGLES,
   isFigureView,
+  NO_DRESSING,
   pairFile,
   POST_CAMERAS,
   POST_FRAMES,
@@ -20,6 +23,11 @@ import {
   sceneViews,
   scorePixels,
   verdict,
+  W5_QUALITIES,
+  W5_SCENES,
+  W5_VIEWS,
+  w5File,
+  w5Verdict,
   WEBGPU_ARGS,
 } from './webgpuCompare.mjs';
 
@@ -127,5 +135,53 @@ describe('the WebGPU post stack and retro filter comparison (W4)', () => {
     expect(pairFile(COMPARE_SCENES[0], 'ultra', 'ground', 'webgpu-webgl2', true)).toBe('depot-day-ultra-post-ground.jpg');
     expect(pairFile(COMPARE_SCENES[2], 'low', 'retro', 'webgpu', true)).toBe('neonHeights-night-low-post-retro-webgpu.jpg');
     expect(pairFile(COMPARE_SCENES[0], 'high', 'ground')).toBe('depot-day-high-ground.jpg');
+  });
+});
+
+describe("the WebGPU compute dressing's views (W5)", () => {
+  it("switches the dressing off on the pairs' node pages, and draws it on Woodland by night on Medium and up", () => {
+    expect(NO_DRESSING).toBe('noGpuDressing');
+    expect(W5_SCENES).toEqual([{ map: 'woodland', light: 'night' }]);
+    expect(W5_QUALITIES).toEqual(['medium', 'high', 'ultra']);
+    // Each stands where a W2 view does.
+    for (const v of W5_VIEWS) expect(v in EXTRA_CAMERAS || ['overview', 'ground'].includes(v), v).toBe(true);
+    for (const v of W5_VIEWS) expect(isFigureView(v)).toBe(false);
+  });
+
+  it("holds the grass under a triangle ceiling per preset: three a blade slot (render/webgpu/compute/grassLayout.ts's caps)", () => {
+    // Medium 41,952 slots, High 93,696, Ultra 159,892 (the concept's 160,000), at three triangles a blade.
+    expect(GRASS_TRIANGLES.medium).toBeGreaterThanOrEqual(41_952 * 3);
+    expect(GRASS_TRIANGLES.high).toBeGreaterThanOrEqual(93_696 * 3);
+    expect(GRASS_TRIANGLES.ultra).toBeGreaterThanOrEqual(159_892 * 3);
+    expect(GRASS_TRIANGLES.ultra).toBeLessThanOrEqual(160_000 * 3);
+    const entry = (grass, on, off) => ({ quality: 'ultra', grass: { triangles: grass }, draws: { on, off } });
+    expect(w5Verdict(entry(479_676, 60, 58)).pass).toBe(true);
+    expect(w5Verdict(entry(480_003, 60, 58)).fails[0]).toMatch(/grass 480003 triangles > 480000/);
+    expect(w5Verdict(entry(1000, 61, 58)).fails[0]).toMatch(/3 draws added > 2/);
+  });
+
+  it("names a W5 view's picture apart from the pairs (the node renderer's frame alone)", () => {
+    expect(w5File(W5_SCENES[0], 'ultra', 'ground', 'webgpu')).toBe('woodland-night-ultra-w5-ground-webgpu.png');
+    expect(w5File(W5_SCENES[0], 'medium', 'fire', 'webgpu-webgl2')).toBe('woodland-night-medium-w5-fire.png');
+  });
+
+  it('draws each W5 page once per preset and back end, saves its views and scores their counts', async () => {
+    const counts = (grass) => ({ draws: { on: 30, off: 28 }, triangles: { on: 90_000 + grass, off: 90_000 }, grass: { slots: grass / 3, triangles: grass }, forest: { trees: 900, triangles: 1800 } });
+    const calls = [];
+    const draw = async (scene, views, quality, backend, withPost, dressing) => {
+      calls.push({ views: views.map((v) => v.name), quality, backend, withPost, dressing });
+      const frames = Object.fromEntries(views.map((v) => [v.name, { plain: 'data:image/png;base64,AAAA', counts: counts(quality === 'high' ? 300_000 : 120_000) }]));
+      return { frames, memory: { total: 50e6, storage: 4e6, textures: 30e6, dressing: 11e6 } };
+    };
+    const saved = [];
+    const lines = [];
+    const entries = await drawW5Views({ draw, save: (file) => saved.push(file), log: (l) => lines.push(l), scenes: W5_SCENES, qualities: ['medium', 'high'], backends: ['webgpu-webgl2'] });
+    expect(calls).toEqual(['medium', 'high'].map((quality) => ({ views: W5_VIEWS, quality, backend: 'webgpu-webgl2', withPost: false, dressing: true })));
+    expect(saved).toEqual(['medium', 'high'].flatMap((q) => W5_VIEWS.map((v) => w5File(W5_SCENES[0], q, v, 'webgpu-webgl2'))));
+    expect(entries).toHaveLength(6);
+    expect(entries[0]).toMatchObject({ map: 'woodland', quality: 'medium', w5: true, ceiling: GRASS_TRIANGLES.medium, pass: true, memory: { dressing: 11e6 } });
+    // High's 300,000 grass triangles are over its ceiling.
+    expect(entries[3]).toMatchObject({ quality: 'high', pass: false });
+    expect(lines[0]).toMatch(/draws 28\+2 .* dressing 10\.5 MB {2}pass/);
   });
 });
