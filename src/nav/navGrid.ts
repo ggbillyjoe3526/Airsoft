@@ -36,6 +36,8 @@ export interface NavGrid {
   maxStep: number;
   /** The headroom a floor needs (the body's height): a route end never snaps to a floor further below it than this. */
   headroom: number;
+  /** A route end snaps to a floor further below it than this only when none nearer its height is in reach (G11). */
+  snapDrop: number;
 }
 
 export interface NavGridConfig {
@@ -49,6 +51,8 @@ export interface NavGridConfig {
   bodyHeight: number;
   /** Neighbouring nodes whose floors differ by more than this are not connected (a drop, or a platform's side). */
   maxStep: number;
+  /** NavGrid.snapDrop as a share of bodyHeight. */
+  snapDropShare: number;
 }
 
 /**
@@ -168,6 +172,7 @@ export function buildNavGrid(map: MapData, cfg: NavGridConfig): NavGrid {
     layers,
     maxStep: cfg.maxStep,
     headroom: cfg.bodyHeight,
+    snapDrop: cfg.bodyHeight * cfg.snapDropShare,
   };
 
   // Stamp every blocking box, grown by the clearance, onto the nodes it stops walking on: those whose floor it stands
@@ -320,12 +325,12 @@ export function isWalkableAt(g: NavGrid, x: number, y: number, z: number): boole
 /**
  * Nearest walkable node to (x, z) within `maxRadius` metres (ring search), each cell judged at its floor under `y`; or
  * -1. A floor more than a storey's headroom below `y` doesn't count: from a balcony's edge, the nearest spot is on the
- * balcony, not in the street under it. Nor, where one in reach is, does a floor more than half that below `y` (G11): a
+ * balcony, not in the street under it. Nor, where one in reach is, does a floor more than `snapDrop` below `y` (G11): a
  * body standing on a dock's lip lower than a storey, its middle just past the edge, stands over the ground below,
  * which was the nearest walkable cell; a route from there walked a bot off the dock (Depot seed 11).
  */
 export function nearestWalkable(g: NavGrid, x: number, y: number, z: number, maxRadius: number): number {
-  const k = nearestWalkableFrom(g, x, y, z, maxRadius, g.headroom / 2);
+  const k = nearestWalkableFrom(g, x, y, z, maxRadius, g.snapDrop);
   return k >= 0 ? k : nearestWalkableFrom(g, x, y, z, maxRadius, Number.POSITIVE_INFINITY);
 }
 

@@ -15,6 +15,12 @@ export const NAV: NavGridConfig & { snap: number; legProbe: number; searchBudget
   bodyHeight: BODY.height,
   /** The tallest ledge a character always walks onto; a ramp no steeper than PHYSICS.maxRampSlope rises less than this per cell. */
   maxStep: PHYSICS.maxWalkableLedge,
+  /**
+   * A route end on a raised floor's lip snaps to that floor, not to one more than this share of a body's height below
+   * it (G11: a body on the Depot dock's lip, its middle past the edge, snapped to the road and walked off the dock).
+   * Half (0.9 m): the dock's 1.2 m drop counts; a stair tread or a ramp's next cell does not.
+   */
+  snapDropShare: 0.5,
   /** Route ends off the grid (e.g. inside a wall's clearance) snap to the nearest walkable cell within this. */
   snap: 2,
   /**
