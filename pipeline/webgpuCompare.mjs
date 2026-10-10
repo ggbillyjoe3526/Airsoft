@@ -178,3 +178,69 @@ export function verdict(score, bar = COMPARE_BAR) {
 export function pairFile(scene, quality, view, backend = 'webgpu-webgl2', post = false) {
   return `${scene.map}-${scene.light}-${quality}-${post ? 'post-' : ''}${view}${backend === 'webgpu' ? '-webgpu' : ''}.jpg`;
 }
+
+/**
+ * W5: what the node renderer draws that WebGL has nothing like (the compute dressing: Woodland's grass and tree
+ * stand-ins, render/webgpu/compute/) is left out of every pair above by the page switch `NO_DRESSING`, so those pairs
+ * hold the old bar (the GPU particles are in them, and must). The W5 views draw it, on the node renderer only, and are
+ * saved as pictures for the owner to judge by eye: `W5_VIEWS` of each scene in `W5_SCENES` on `W5_QUALITIES` (Low draws
+ * none), each with its draws, triangles and GPU memory recorded, and the grass's own triangles (three a blade slot: on
+ * WebGPU the draw is indirect and Three counts its cap) held under `GRASS_TRIANGLES`, the ceiling per preset.
+ */
+export const NO_DRESSING = 'noGpuDressing';
+export const W5_SCENES = [{ map: 'woodland', light: 'night' }];
+export const W5_VIEWS = ['ground', 'overview', 'fire'];
+export const W5_QUALITIES = ['medium', 'high', 'ultra'];
+export const GRASS_TRIANGLES = { medium: 126_000, high: 282_000, ultra: 480_000 };
+
+/** The file name of a W5 view's picture (no pair: the node renderer's frame alone). */
+export function w5File(scene, quality, view, backend) {
+  return `${scene.map}-${scene.light}-${quality}-w5-${view}${backend === 'webgpu' ? '-webgpu' : ''}.png`;
+}
+
+/** Whether a W5 view's counts hold: its grass's triangles under the preset's ceiling, and no more than two draws added. */
+export function w5Verdict(entry) {
+  const fails = [];
+  if (!(entry.grass.triangles <= GRASS_TRIANGLES[entry.quality])) fails.push(`grass ${entry.grass.triangles} triangles > ${GRASS_TRIANGLES[entry.quality]}`);
+  if (!(entry.draws.on - entry.draws.off <= 2)) fails.push(`${entry.draws.on - entry.draws.off} draws added > 2`);
+  return { pass: fails.length === 0, fails };
+}
+
+/**
+ * Draws the W5 views of `scenes` on `qualities` and `backends` with the script's `draw(scene, views, quality, backend,
+ * withPost, dressing)`, hands each picture to `save(file, png)` and its line to `log`; returns the scores.json entries,
+ * each with its counts, the page's GPU memory, the grass's ceiling and its verdict.
+ */
+export async function drawW5Views({ draw, save, log, scenes, qualities, backends }) {
+  const entries = [];
+  for (const scene of scenes) {
+    for (const quality of qualities) {
+      for (const backend of backends) {
+        const drawn = await draw(scene, W5_VIEWS.map((name) => ({ name, post: false })), quality, backend, false, true);
+        for (const view of W5_VIEWS) {
+          const f = drawn.frames[view];
+          const file = w5File(scene, quality, view, backend);
+          save(file, Buffer.from(f.plain.slice(f.plain.indexOf(',') + 1), 'base64'));
+          const entry = { map: scene.map, light: scene.light, quality, view, w5: true, backend, file, ...f.counts, memory: drawn.memory, ceiling: GRASS_TRIANGLES[quality] };
+          const v = w5Verdict(entry);
+          entries.push({ ...entry, pass: v.pass, fails: v.fails });
+          const c = f.counts;
+          log(`webgpu-compare: ${file}  draws ${c.draws.off}+${c.draws.on - c.draws.off}  triangles ${c.triangles.off}+${c.grass.triangles} grass+${c.forest.triangles} stand-ins  dressing ${(drawn.memory.dressing / 2 ** 20).toFixed(1)} MB  ${v.pass ? 'pass' : `FAIL (${v.fails.join('; ')})`}`);
+        }
+      }
+    }
+  }
+  return entries;
+}
+
+/** The GPU memory a W5 page's node renderer holds (Three's count), and how much of it is the compute dressing's (freed here). */
+export function dressingMemory(page) {
+  return page.evaluate(() => {
+    const r = globalThis.airsoft.renderer;
+    const m = r.renderer.info.memory;
+    const held = () => ({ total: m.total, storage: m.storageAttributesSize, textures: m.texturesSize });
+    const all = held();
+    r.node.dressing.dispose();
+    return { ...all, dressing: all.total - held().total };
+  });
+}
