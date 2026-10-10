@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { type PointKind, pointKind, type SharedBuffer, spriteTwin } from './effectNodes';
+import { type PointKind, pointKind, type SharedBuffer, type SpriteSource, spriteTwin } from './effectNodes';
 
 /**
  * Sized points on the node path (WebGPU overhaul W2). WebGPU draws a point primitive one pixel wide (and Three's
@@ -18,7 +18,7 @@ import { type PointKind, pointKind, type SharedBuffer, spriteTwin } from './effe
  */
 
 /** One Points' twin. */
-interface PointTwin {
+export interface PointTwin {
   readonly sprite: THREE.Sprite;
   readonly mask: number;
   dispose(): void;
@@ -33,10 +33,13 @@ function quad(): THREE.BufferGeometry {
   return g;
 }
 
-/** Makes `points`' twin of `kind`, a child of it; `gone` is told when the Points' material is freed. */
-function makeTwin(points: THREE.Points, kind: PointKind, gone: () => void): PointTwin {
+/**
+ * Makes `points`' twin of `kind`, a child of it; `gone` is told when the Points' material is freed. With `source` (W5)
+ * the points' centres and alphas are a compute pass's output (compute/particleTwins.ts), not the Points' CPU arrays.
+ */
+export function makeTwin(points: THREE.Points, kind: PointKind, gone: () => void, source: SpriteSource | null = null): PointTwin {
   const buffers: SharedBuffer[] = [];
-  const material = spriteTwin(points, kind, buffers);
+  const material = spriteTwin(points, kind, buffers, source);
   const sprite = new THREE.Sprite(material as unknown as THREE.SpriteMaterial);
   const geometry = quad();
   sprite.geometry = geometry;
@@ -81,6 +84,9 @@ export class PointSprites {
   private readonly twins = new Map<THREE.Points, PointTwin>();
   private dirty = true;
 
+  /** `claimed`: Points a compute pass draws instead (W5: the dust motes and fireflies), given no CPU-fed twin here. */
+  constructor(private readonly claimed: (points: THREE.Points) => boolean = () => false) {}
+
   /** The scene changed (a session's build, a quality change): the next `prepare` looks for new Points. */
   rescan(): void {
     this.dirty = true;
@@ -105,7 +111,7 @@ export class PointSprites {
   }
 
   private readonly visit = (o: THREE.Object3D): void => {
-    if (!(o instanceof THREE.Points) || this.twins.has(o) || Array.isArray(o.material)) return;
+    if (!(o instanceof THREE.Points) || this.twins.has(o) || Array.isArray(o.material) || this.claimed(o)) return;
     const kind = pointKind(o.material as THREE.Material);
     if (kind) this.twins.set(o, makeTwin(o, kind, () => this.drop(o)));
   };

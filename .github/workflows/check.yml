@@ -26,10 +26,12 @@ jobs:
   # The build, the fast unit tests, the browser smoke test and the scope and changelog gates. The headless bot-match
   # guards (vitest project `slow`) run beside it in the `slow` job's shards (audit CORE-04): measured 2026-10-05 in a
   # 4-core container they are about 1,420 s of work (the longest file, Woodland's Extraction balance, 213 s), which in
-  # one job took the whole check towards its 30-minute limit. Split, each job is a few minutes; the limits are 20.
+  # one job took the whole check towards its 30-minute limit. Split, each job is a few minutes; the limits are 20, but
+  # `check` is 25: by W5 (2026-10-10) its browser smoke alone took about 15 minutes on main and W5's WebGPU checks tipped
+  # the job past 20.
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       # The whole history, so the scope gate can diff the pull request against its base and find the task block a
       # branch cleared before merging (pipeline/scope.mjs), and the tags with it, so the build's `git describe` names

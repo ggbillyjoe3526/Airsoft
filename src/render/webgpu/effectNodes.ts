@@ -117,6 +117,15 @@ function perPoint(geometry: THREE.BufferGeometry, name: string, buffers: SharedB
   return from.usage === THREE.DynamicDrawUsage ? dynamicBufferAttribute(buffer, type) : bufferAttribute(buffer, type);
 }
 
+/**
+ * Where a sprite twin's points come from when a compute pass moves them (W5, compute/particleTwins.ts): each point's
+ * centre and alpha as read from the pass's output, in place of the Points' own CPU arrays.
+ */
+export interface SpriteSource {
+  readonly centre: AnyNode;
+  readonly alpha: AnyNode;
+}
+
 /** The view's half height in CSS pixels: what WebGL's point `scale` is (the sizes a point is attenuated by). */
 const halfHeight = new THREE.Vector2();
 
@@ -126,7 +135,7 @@ const halfHeight = new THREE.Vector2();
  * patch's extra: the stars' own sizes and round edge, the embers' rise and fade on the fixtures' clock, the fireflies'
  * pulse, the motes' size cap in device pixels. `uv` is the quad's (gl_PointCoord's, mirrored in y: every mask is round).
  */
-export function spriteTwin(points: THREE.Points, kind: PointKind, buffers: SharedBuffer[]): PointsNodeMaterial {
+export function spriteTwin(points: THREE.Points, kind: PointKind, buffers: SharedBuffer[], source: SpriteSource | null = null): PointsNodeMaterial {
   const plain = points.material as THREE.PointsMaterial;
   const twin = new PointsNodeMaterial();
   twin.color = plain.color;
@@ -143,9 +152,12 @@ export function spriteTwin(points: THREE.Points, kind: PointKind, buffers: Share
   twin.name = `${plain.name || kind}-sprites`;
   const geometry = points.geometry;
   const uniforms = patchUniforms(plain);
-  let centre: AnyNode = perPoint(geometry, 'position', buffers);
-  const colour = plain.vertexColors ? perPoint(geometry, 'color', buffers) : null;
-  if (colour) twin.colorNode = materialColor.mul(geometry.getAttribute('color').itemSize === 4 ? colour : vec4(colour, 1));
+  let centre: AnyNode = source ? source.centre : perPoint(geometry, 'position', buffers);
+  // The motes' colour is white with the CPU's fade in its alpha: from a compute pass, that alpha is the pass's (W5).
+  const rgba = geometry.getAttribute('color')?.itemSize === 4;
+  const colour = plain.vertexColors && !(source && rgba) ? perPoint(geometry, 'color', buffers) : null;
+  if (colour) twin.colorNode = materialColor.mul(rgba ? colour : vec4(colour, 1));
+  else if (source && plain.vertexColors) twin.colorNode = materialColor.mul(vec4(1, 1, 1, source.alpha));
   const round = (inner: number): AnyNode => smoothstep(0.5, inner, length(uv().sub(vec2(0.5))));
   let alpha: AnyNode = null;
   if (kind === 'stars') {
@@ -161,7 +173,7 @@ export function spriteTwin(points: THREE.Points, kind: PointKind, buffers: Share
     centre = centre.add(vec3(ember.y.mul(life).mul(spread).add(sin(t.mul(r(E.wobbleRate, 3)).add(ember.x.mul(6.2832))).mul(r(E.wobble, 3))), life.mul(r(E.rise, 3)), ember.z.mul(life).mul(spread)));
     alpha = varying(float(1).sub(life).mul(smoothstep(0.0, 0.08, life))).mul(round(0.15));
   } else if (kind === 'fireflies') {
-    alpha = varying(perPoint(geometry, 'flyAlpha', buffers));
+    alpha = varying(source ? source.alpha : perPoint(geometry, 'flyAlpha', buffers));
   } else {
     // Dust motes: the attenuated size worked out here, as WebGL does, then capped at the patch's `moteMaxSize`.
     const cap = uniforms.moteMaxSize as THREE.IUniform<number>;

@@ -246,7 +246,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Renderer choice: Auto (WebGPU where the browser has it, WebGL otherwise), WebGPU or WebGL, from the next load; a lost
   graphics device is replaced without leaving the match (W1); the maps look the same on either (W2), and players and
   held replicas too, with every night lamp near you lighting what stands by it on WebGPU (W3), and every preset's
-  screen effects and the retro filter (W4)
+  screen effects and the retro filter (W4); on WebGPU at Medium and up Woodland adds swaying grass on its meadows and
+  a deep wood beyond the fence (W5)
 
 ## Practice range and tutorial
 

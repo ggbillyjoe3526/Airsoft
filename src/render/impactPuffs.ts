@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import type { PuffConfig } from '../config/render';
 import { length3, type Vec3 } from '../sim/vec';
+import { GPU_POOLS } from './gpuPools';
 import { softDotTexture } from './softDot';
 
-interface Puff {
+export interface Puff {
   x: number;
   y: number;
   z: number;
@@ -34,7 +35,9 @@ const SOFT_EDGE = 1.4;
  */
 export class ImpactPuffs {
   readonly object: THREE.InstancedMesh;
-  private readonly puffs: Puff[] = [];
+  /** On the node renderer (W5) a compute pass moves the puffs (render/webgpu/compute/): each spawn is handed to it, the loop skipped. */
+  declare gpu?: { spawn(slot: number, puff: Puff): void; update(dt: number, camera: THREE.Camera): void } | undefined;
+  readonly puffs: Puff[] = [];
   private next = 0;
   private readonly matrix = new THREE.Matrix4();
   private readonly scale = new THREE.Vector3();
@@ -45,7 +48,7 @@ export class ImpactPuffs {
   /** Puffs drawn last frame: with none then and none now there is nothing to upload (REN-22). */
   private lastCount = 0;
 
-  constructor(private readonly cfg: PuffConfig) {
+  constructor(readonly cfg: PuffConfig) {
     for (let i = 0; i < cfg.max; i++) this.puffs.push({ x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, scale: 1, r: 1, g: 1, b: 1, age: cfg.lifetime });
     this.object = new THREE.InstancedMesh(
       new THREE.PlaneGeometry(cfg.radius * 2 * SOFT_EDGE, cfg.radius * 2 * SOFT_EDGE),
@@ -62,12 +65,14 @@ export class ImpactPuffs {
     for (let i = 0; i < cfg.max; i++) this.object.setColorAt(i, WHITE);
     this.object.count = 0;
     this.object.frustumCulled = false;
+    GPU_POOLS.set(this.object, this);
   }
 
   /** A puff at `at`: `tint` multiplies the pool's colour, `scale` its size; `velocity` pushes it, easing off. */
   spawn(at: Vec3, tint: THREE.Color = WHITE, scale = 1, velocity: Vec3 = NO_VELOCITY): void {
-    const p = this.puffs[this.next]!;
-    this.next = (this.next + 1) % this.puffs.length;
+    const slot = this.next;
+    const p = this.puffs[slot]!;
+    this.next = (slot + 1) % this.puffs.length;
     p.x = at.x;
     p.y = at.y;
     p.z = at.z;
@@ -79,10 +84,12 @@ export class ImpactPuffs {
     p.g = tint.g;
     p.b = tint.b;
     p.age = 0;
+    this.gpu?.spawn(slot, p);
   }
 
   /** `camera` is the view: puffs face it, and far ones keep a minimum size on screen. */
   update(dt: number, camera: THREE.Camera): void {
+    if (this.gpu) return this.gpu.update(dt, camera);
     const P = this.cfg;
     let count = 0;
     const minScale = P.minAngularRadius / P.radius;

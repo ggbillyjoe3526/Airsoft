@@ -3,6 +3,7 @@ import { FIREFLIES } from '../config/dressing';
 import type { Bush } from '../map/foliage';
 import { type Terrain, terrainHeightAt } from '../map/terrain';
 import { createRng, rngNext } from '../sim/rng';
+import { GPU_POOLS } from './gpuPools';
 import { softDotTexture } from './softDot';
 
 /**
@@ -17,16 +18,18 @@ const F = FIREFLIES;
 
 export class Fireflies {
   readonly object: THREE.Points;
-  private readonly base: Float32Array;
-  private readonly phase: Float32Array;
-  private readonly rate: Float32Array;
-  private readonly drift: Float32Array;
+  /** On the node renderer (W5) a compute pass moves the flies (render/webgpu/compute/), reading the seeded arrays and `time`. */
+  declare gpu?: { update(): void } | undefined;
+  readonly base: Float32Array;
+  readonly phase: Float32Array;
+  readonly rate: Float32Array;
+  readonly drift: Float32Array;
   private readonly position: THREE.BufferAttribute;
   private readonly alphaAttribute: THREE.BufferAttribute;
   private readonly alpha: Float32Array;
   private readonly sprite = softDotTexture(0.5);
-  private time = 0;
-  private motion = true;
+  time = 0;
+  motion = true;
 
   /** `count` flies over the ground (`terrain`), gathering round `bushes`; seeded, so a map's flies are the same every time. */
   constructor(count: number, terrain: Terrain, bushes: readonly Bush[], bounds: THREE.Box3) {
@@ -83,6 +86,7 @@ export class Fireflies {
     material.customProgramCacheKey = () => 'fireflies';
     this.object = new THREE.Points(geo, material);
     this.object.name = 'fireflies';
+    GPU_POOLS.set(this.object, this);
     this.object.matrixAutoUpdate = false;
   }
 
@@ -101,6 +105,7 @@ export class Fireflies {
   update(dt: number): void {
     if (!this.motion || !this.object.visible) return;
     this.time += dt;
+    if (this.gpu) return this.gpu.update();
     const pos = this.position.array as Float32Array;
     for (let i = 0; i < this.alpha.length; i++) {
       const t = this.time * this.rate[i]! + this.phase[i]!;

@@ -3,6 +3,7 @@ import { DRESSING } from '../config/dressing';
 import { DUST_MOTES } from '../config/render';
 import { createRng, rngNext } from '../sim/rng';
 import { length3 } from '../sim/vec';
+import { GPU_POOLS } from './gpuPools';
 import { softDotTexture } from './softDot';
 
 /** Wraps `v` into 0..size. */
@@ -44,8 +45,13 @@ export function moteHeightFade(y: number): number {
 
 export class DustMotes {
   readonly object: THREE.Points;
-  private readonly base: Float32Array;
-  private readonly phase: Float32Array;
+  /**
+   * On the node renderer (WebGPU overhaul W5) a compute pass moves the motes instead of the loop in `update`, reading
+   * `base`, `phase`, `time`, `drift` and `hangsLow` (render/webgpu/compute/); the CPU only keeps the clock and the air.
+   */
+  declare gpu?: { update(eye: { x: number; y: number; z: number }): void } | undefined;
+  readonly base: Float32Array;
+  readonly phase: Float32Array;
   private readonly positions: Float32Array;
   private readonly attribute: THREE.BufferAttribute;
   /** Per-mote RGBA (white, alpha from moteFade): the material multiplies it in. */
@@ -53,14 +59,14 @@ export class DustMotes {
   private readonly alphaAttribute: THREE.BufferAttribute;
   private readonly sprite: THREE.CanvasTexture;
   private count = 0;
-  private time = 0;
+  time = 0;
   /** The shader's cap on a mote's size in device pixels: DUST_MOTES.maxPixels at the drawing buffer's pixel ratio. */
   private readonly maxSize: { value: number } = { value: DUST_MOTES.maxPixels };
   /** How far the air has carried the motes so far (m, per axis, kept within the box). */
-  private readonly drift = { x: 0, y: 0, z: 0 };
+  readonly drift = { x: 0, y: 0, z: 0 };
   private motionOn = true;
   /** A map's dust (G8, MapDressing.motes): its colour, and the motes thinning out with height. */
-  private hangsLow = false;
+  hangsLow = false;
 
   /** `max`: the most motes any preset shows (the buffer's size). */
   constructor(private readonly max: number) {
@@ -98,6 +104,7 @@ export class DustMotes {
     };
     this.object = new THREE.Points(geo, material);
     this.object.name = 'dustMotes';
+    GPU_POOLS.set(this.object, this);
     this.object.frustumCulled = false;
     this.setCount(0);
   }
@@ -147,6 +154,7 @@ export class DustMotes {
     drift.x = wrap(drift.x + (wind.x * D.windShare + D.breeze.x) * dt, D.box);
     drift.y = wrap(drift.y + (wind.y * D.windShare + D.breeze.y) * dt, D.box);
     drift.z = wrap(drift.z + (wind.z * D.windShare + D.breeze.z) * dt, D.box);
+    if (this.gpu) return this.gpu.update(eye);
     for (let i = 0; i < this.count; i++) {
       const w = t * D.wanderRate + this.phase[i]!;
       const j = i * 3;

@@ -77,14 +77,21 @@ function fakeNode(name: string, log: string[]) {
     postStack: (setup: PostSetupOf, width: number, height: number) => new NodePostStack(setup, width, height, node.output),
     retro: (look: RetroLookOf) => new NodeRetroFilter(look),
     draw: (scene: THREE.Scene, _camera: THREE.Camera, overlay: { scene: THREE.Scene } | undefined, drawer: object | null) => void log.push(`${name} draw ${what(scene, overlay, drawer)}`),
-    compile: (scene: THREE.Scene, _camera: THREE.Camera, overlay: { scene: THREE.Scene } | undefined, drawer: object | null) => void log.push(`${name} compile ${what(scene, overlay, drawer)}`),
+    compile: (scene: THREE.Scene, _camera: THREE.Camera, overlay: { scene: THREE.Scene } | undefined, drawer: object | null, quality?: unknown) => {
+      node.qualities.push(quality);
+      log.push(`${name} compile ${what(scene, overlay, drawer)}`);
+    },
     // W2: the world twins' scene scan and the environment map, made on this renderer.
     rescans: 0,
     prepared: 0,
+    qualities: [] as unknown[],
     sky: Object.assign(new THREE.Texture(), { name: `${name} sky` }),
     environmentAsks: [] as boolean[],
     rescan: () => void node.rescans++,
-    prepare: () => void node.prepared++,
+    prepare: (_scene: THREE.Scene, quality?: unknown) => {
+      node.prepared++;
+      node.qualities.push(quality);
+    },
     environment: (on: boolean) => {
       node.environmentAsks.push(on);
       return on ? node.sky : null;
@@ -301,5 +308,18 @@ describe('the Renderer on the node path (W1)', () => {
     r.dispose();
     await new Promise((done) => setTimeout(done, 0));
     expect(log).toEqual(['first disposed', 'first canvas removed', 'late disposed']);
+  });
+
+  it('tells the node renderer the quality in force with each frame and each compile, so the grass and stand-ins follow the preset (W5)', () => {
+    const { r, node } = nodeRenderer(QUALITY.high);
+    r.warmShaders();
+    r.render();
+    r.setQuality(QUALITY.low);
+    r.render();
+    r.setQuality(QUALITY.ultra);
+    r.warmShaders();
+    expect(node.qualities).toEqual([QUALITY.high, QUALITY.high, QUALITY.low, QUALITY.ultra]);
+    // The preset change it rescans for (the pools and the dressing are looked for again on the next frame).
+    expect(node.rescans).toBe(2);
   });
 });

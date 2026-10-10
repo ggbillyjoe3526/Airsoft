@@ -64,7 +64,7 @@ function buildSky(sunDirection: THREE.Vector3, palette: SkyPalette): THREE.Mesh 
 }
 
 /** Paints every vertex of `geo` one colour (merged meshes keep their colours as a vertex attribute). */
-function painted(geo: THREE.BufferGeometry, color: number): THREE.BufferGeometry {
+export function painted(geo: THREE.BufferGeometry, color: number): THREE.BufferGeometry {
   const g = geo.index ? geo.toNonIndexed() : geo;
   if (g !== geo) geo.dispose();
   g.deleteAttribute('uv');
@@ -162,6 +162,40 @@ function simpleTrees(centre: THREE.Vector3, field: THREE.Box3 | null, skyline: r
 }
 
 /**
+ * One tree of the detailed ring standing at (x, z), `height` m tall, into `parts`: a seven-sided trunk, and two or three
+ * stacked crowns (`broad`) or two cone tiers, each painted by `crown` (the ring's sun-shaded paint; W5's stand-ins,
+ * render/webgpu/compute/forestAtlas.ts, paint them plain and light them as they draw). Draws its jitter from `rng`.
+ */
+export function detailedTree(rng: RngState, x: number, z: number, height: number, color: number, broad: boolean, crown: (geo: THREE.BufferGeometry, color: number, centreY: number, radius: number) => THREE.BufferGeometry, parts: THREE.BufferGeometry[]): void {
+  const T = ATMOSPHERE.trees;
+  const D = ATMOSPHERE.detailedTrees;
+  const trunkHeight = height * 0.25;
+  parts.push(painted(new THREE.CylinderGeometry(height * 0.025, height * 0.035, trunkHeight, D.trunkSides).translate(x, trunkHeight / 2, z), T.trunk));
+  if (broad) {
+    const r = height * T.broadWidth;
+    const crowns = rngNext(rng) < 0.5 ? 2 : 3;
+    for (let k = 0; k < crowns; k++) {
+      const rk = r * D.crowns[k]!;
+      const ox = (rngNext(rng) - 0.5) * 2 * D.crownJitter * rk;
+      const oz = (rngNext(rng) - 0.5) * 2 * D.crownJitter * rk;
+      const cy = height - r * 1.1 + D.crownLift[k]! * r;
+      const shape = new THREE.IcosahedronGeometry(rk, k === 0 ? 1 : 0).scale(1, 1.15, 1).translate(x + ox, cy, z + oz);
+      parts.push(crown(shape, color, cy, rk));
+    }
+  } else {
+    const coneHeight = height - trunkHeight * 0.6;
+    for (let k = 0; k < D.pineTiers; k++) {
+      // Tiers overlap: each higher one narrower and shorter, its foot inside the one below.
+      const share = 1 - k * 0.32;
+      const h = coneHeight * (k === 0 ? 0.62 : 0.55);
+      const foot = height - coneHeight + k * coneHeight * 0.42;
+      const cone = new THREE.ConeGeometry(height * T.pineWidth * share, h, 7).translate(x, foot + h / 2, z);
+      parts.push(crown(cone, color, foot + h / 2, h / 2));
+    }
+  }
+}
+
+/**
  * The detailed ring (Trees: Detailed): more trees, broadleaves of two or three stacked crowns, pines of two cone tiers,
  * seven-sided trunks, every crown self-shaded; and a hedge of shrubs round `field` (the map's bounds), just outside it.
  * With a map's `skyline` (G8, render/skyline.ts) its pieces join the ring, and the trees standing on them are left out.
@@ -175,30 +209,7 @@ function detailedTrees(centre: THREE.Vector3, sun: THREE.Vector3, field: THREE.B
   for (let i = 0; i < D.count; i++) {
     const { x, z, height, color, broad } = placeTree(rng, i, D.count, centre, ringMin);
     if (skyline.length > 0 && !skylineClear(skyline, x, z)) continue;
-    const trunkHeight = height * 0.25;
-    parts.push(painted(new THREE.CylinderGeometry(height * 0.025, height * 0.035, trunkHeight, D.trunkSides).translate(x, trunkHeight / 2, z), T.trunk));
-    if (broad) {
-      const r = height * T.broadWidth;
-      const crowns = rngNext(rng) < 0.5 ? 2 : 3;
-      for (let k = 0; k < crowns; k++) {
-        const rk = r * D.crowns[k]!;
-        const ox = (rngNext(rng) - 0.5) * 2 * D.crownJitter * rk;
-        const oz = (rngNext(rng) - 0.5) * 2 * D.crownJitter * rk;
-        const cy = height - r * 1.1 + D.crownLift[k]! * r;
-        const crown = new THREE.IcosahedronGeometry(rk, k === 0 ? 1 : 0).scale(1, 1.15, 1).translate(x + ox, cy, z + oz);
-        parts.push(shadedCrown(crown, color, cy, rk, sun));
-      }
-    } else {
-      const coneHeight = height - trunkHeight * 0.6;
-      for (let k = 0; k < D.pineTiers; k++) {
-        // Tiers overlap: each higher one narrower and shorter, its foot inside the one below.
-        const share = 1 - k * 0.32;
-        const h = coneHeight * (k === 0 ? 0.62 : 0.55);
-        const foot = height - coneHeight + k * coneHeight * 0.42;
-        const cone = new THREE.ConeGeometry(height * T.pineWidth * share, h, 7).translate(x, foot + h / 2, z);
-        parts.push(shadedCrown(cone, color, foot + h / 2, h / 2, sun));
-      }
-    }
+    detailedTree(rng, x, z, height, color, broad, (geo, c, cy, r) => shadedCrown(geo, c, cy, r, sun), parts);
   }
   if (field) parts.push(...shrubs(field, sun));
   parts.push(...skylineGeometries(skyline, centre));

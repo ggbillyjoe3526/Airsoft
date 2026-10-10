@@ -349,6 +349,16 @@ export interface MapDressing {
    * start to the next's (the crossing itself, PLANE.path / PLANE.speed, takes part of that).
    */
   plane?: { height: number; every: number };
+  /**
+   * W5: grass blades on the grass ground, `height` m tall (each a share of that, config/gpuDressing.ts GPU_GRASS): on
+   * the node renderer, Medium and up, on a map with terrain (render/webgpu/compute/grassField.ts).
+   */
+  grass?: { height: number };
+  /**
+   * W5: a wood beyond the fence of `trees` stand-ins (impostors) on Ultra, fewer below (GPU_FOREST.share): on the node
+   * renderer, Medium and up (render/webgpu/compute/forestStandIns.ts).
+   */
+  forest?: { trees: number };
 }
 
 /** G9: which junk a map's clutter is made of (DRESSING.junk.street): a yard's (Depot, the default) or a city street's. */

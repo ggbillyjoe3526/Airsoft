@@ -5,7 +5,7 @@
  * bar in `webgpuCompare.mjs` and saves the pairs side by side (WebGL | node | difference) for the owner. Exits 1 when a
  * pair fails the bar. W2's and W3's views are drawn on Medium and High, W4's post views on Low, Medium, High and Ultra.
  *
- *   node pipeline/webgpu-compare.mjs [--out <dir>] [--only depot,woodland] [--quality medium] [--views w2|w3|w4|all]
+ *   node pipeline/webgpu-compare.mjs [--out <dir>] [--only depot,woodland] [--quality medium] [--views w2|w3|w4|w5|all]
  *                                    [--backend webgpu-webgl2|webgpu|all] [--noise] [--full] [--chromium /path]
  *                                    [--port 4186] [--post-views ground,sun,first-person,retro,glow]
  *
@@ -21,7 +21,10 @@
  * `--full` also scores the WebGL frame with the whole stack, for information. W4's post views (`--views w4`,
  * webgpuCompare.mjs POST_VIEWS) draw the whole frame on both sides: a new stack (or retro filter) once the view has
  * compiled, then the same number of frames before the grab. `--noise` draws each view on WebGL twice (two pages)
- * instead, the floor any bar must sit above.
+ * instead, the floor any bar must sit above. W5: every node page of those pairs switches the node renderer's compute
+ * dressing off (`?noGpuDressing`: Woodland's grass and tree stand-ins, which WebGL has nothing like), and a pair fails
+ * when the node path draws more calls than WebGL; W5's views (`--views w5`, webgpuCompare.mjs W5_VIEWS) draw it, on the
+ * node renderer alone, saved as pictures (`*-w5-*.png`) with their draws, triangles and GPU memory in scores.json.
  *
  * The node renderer runs on its WebGL2 back end (`?forceWebGL`, W1), and on WebGPU where Chromium offers a device: in
  * the container its SwiftShader Vulkan adapter, asked for with webgpuCompare.mjs WEBGPU_ARGS in a browser of its own
@@ -39,12 +42,15 @@ import {
   COMPARE_QUALITIES,
   COMPARE_SCENES,
   COMPARE_VIEWPORT,
+  dressingMemory,
+  drawW5Views,
   EXTRA_CAMERAS,
   FIGURE_CAMERAS,
   FIGURE_FADE,
   FIGURE_STATES,
   FIRE_CLOCK,
   isFigureView,
+  NO_DRESSING,
   pairFile,
   POST_CAMERAS,
   POST_FRAMES,
@@ -54,6 +60,8 @@ import {
   sceneViews,
   scorePixels,
   verdict,
+  W5_QUALITIES,
+  W5_SCENES,
   WEBGPU_ARGS,
 } from './webgpuCompare.mjs';
 
@@ -73,8 +81,9 @@ const postPick = value('--post-views', '') ? value('--post-views', '').split(','
 const backendPick = value('--backend', 'all');
 const wantedBackends = backendPick === 'all' ? COMPARE_BACKENDS : backendPick.split(',');
 /** A scene's views on `quality`: W2's and W3's (on their presets) and W4's post views (on theirs), as { name, post }. */
+const want = (set) => viewSet === 'all' || viewSet === set;
 const viewsOf = (scene, quality) => [
-  ...(COMPARE_QUALITIES.includes(quality) && viewSet !== 'w4' ? sceneViews(scene).filter((v) => viewSet === 'all' || (viewSet === 'w3') === isFigureView(v)) : []).map((name) => ({ name, post: false })),
+  ...(COMPARE_QUALITIES.includes(quality) ? sceneViews(scene).filter((v) => want(isFigureView(v) ? 'w3' : 'w2')) : []).map((name) => ({ name, post: false })),
   ...(POST_QUALITIES.includes(quality) && (viewSet === 'all' || viewSet === 'w4') ? postViewsOf(scene).filter((name) => !postPick || postPick.includes(name)).map((name) => ({ name, post: true })) : []),
 ];
 const keyOf = (v) => `${v.post ? 'post:' : ''}${v.name}`;
@@ -128,6 +137,9 @@ try {
           const b = right.frames[keyOf(view)];
           const scored = await compare(a.plain, b.plain, `${scene.map} ${scene.light}, ${quality}, ${view.post ? 'post ' : ''}${view.name}`, backend);
           const v = verdict(scored.score);
+          // W5: the node path draws no more than WebGL on every compared view (its compute dressing switched off).
+          if (b.calls > a.calls) v.fails.push(`${b.calls} draws > WebGL's ${a.calls}`);
+          v.pass = v.fails.length === 0;
           if (!v.pass) failed = true;
           const file = pairFile(scene, quality, view.name, backend, view.post);
           writeFileSync(join(OUT, file), scored.jpeg);
@@ -140,6 +152,10 @@ try {
       }
     }
   }
+  // W5: the compute dressing's views, on the node renderer only (pictures for the owner, and their counts).
+  const w5 = noise || !want('w5') ? [] : await drawW5Views({ draw, save: (file, png) => writeFileSync(join(OUT, file), png), log: console.log, scenes: W5_SCENES.filter((s) => only.length === 0 || only.includes(s.map)), qualities: W5_QUALITIES.filter((q) => !qualityPick || qualityPick.includes(q)), backends });
+  results.push(...w5);
+  if (w5.some((e) => !e.pass)) failed = true;
 } finally {
   await browser.close();
   await gpuBrowser?.close();
@@ -166,7 +182,7 @@ async function hasWebGpu(b) {
  * One page: the map in its light on `quality`, drawn by `renderer` (`webgl`, or the node renderer on back end
  * `webgpu-webgl2` or `webgpu`); each of `views`' frames as a PNG data URL.
  */
-async function draw(scene, views, quality, renderer, withPost) {
+async function draw(scene, views, quality, renderer, withPost, dressing = false) {
   const node = renderer !== 'webgl';
   const page = await (renderer === 'webgpu' ? gpuBrowser : browser).newPage({ viewport: COMPARE_VIEWPORT, deviceScaleFactor: 1 });
   const errors = [];
@@ -176,7 +192,8 @@ async function draw(scene, views, quality, renderer, withPost) {
   });
   const picks = { version: 1, map: scene.map, mode: 'elimination', [`lighting.${scene.map}`]: scene.light, 'dev.devContent': 'on', 'dev.enabled': true, ruleset: 'skirmish', renderer: node ? 'webgpu' : 'webgl' };
   await page.addInitScript((saved) => localStorage.setItem('airsoft.settings', JSON.stringify(saved)), picks);
-  await page.goto(`${base}?nolock&seed=1&quality=${quality}${renderer === 'webgpu-webgl2' ? '&forceWebGL' : ''}`);
+  // W5: the node renderer's compute dressing is switched off by the page (NO_DRESSING) but on W5's own views.
+  await page.goto(`${base}?nolock&seed=1&quality=${quality}${renderer === 'webgpu-webgl2' ? '&forceWebGL' : ''}${node && !dressing ? `&${NO_DRESSING}` : ''}`);
   await page.waitForSelector('.menu-title-start', { timeout: 120_000 });
   const backend = await page.evaluate(() => globalThis.airsoft.renderer.backend);
   if (backend !== renderer) throw new Error(`webgpu-compare: asked for ${renderer}, drawn with ${backend}`);
@@ -214,7 +231,7 @@ async function draw(scene, views, quality, renderer, withPost) {
   for (const v of views.filter((v) => !isFigureView(postBase(v.name)))) {
     const view = postBase(v.name);
     frames[keyOf(v)] = await page.evaluate(
-      async ({ camera, view, withPost, post, retro, postFrames }) => {
+      async ({ camera, view, withPost, post, retro, postFrames, dressing }) => {
         const game = globalThis.airsoft;
         // The game's own frame loop stops: from here only this page's renders draw, from the stood camera.
         cancelAnimationFrame(game.rafId);
@@ -330,6 +347,24 @@ async function draw(scene, views, quality, renderer, withPost) {
         r.render();
         const plain = grab();
         const drawn = r.stats.calls;
+        // W5: the frame's counts with the compute dressing, without it, and with each of its two draws alone.
+        let counts = null;
+        if (dressing) {
+          const parts = ['grass-gpu', 'forest-gpu'].map((name) => r.scene.getObjectByName(name));
+          const measure = async (shown) => {
+            parts.forEach((m, k) => m && (m.visible = shown[k]));
+            await nextFrame();
+            plainFrames();
+            r.render();
+            return { calls: r.stats.calls, triangles: r.stats.triangles };
+          };
+          const on = { calls: drawn, triangles: r.stats.triangles };
+          const off = await measure([false, false]);
+          const grass = await measure([true, false]);
+          const forest = await measure([false, true]);
+          parts.forEach((m) => m && (m.visible = true));
+          counts = { draws: { on: on.calls, off: off.calls }, triangles: { on: on.triangles, off: off.triangles }, grass: { slots: r.node.dressing.counts.grass, triangles: grass.triangles - off.triangles }, forest: { trees: r.node.dressing.counts.forest, triangles: forest.triangles - off.triangles } };
+        }
         r.postStack = ownStack;
         if (retro) r.setRetro(null);
         let full = null;
@@ -341,11 +376,13 @@ async function draw(scene, views, quality, renderer, withPost) {
           }
           full = grab();
         }
-        return { plain, post: full, calls: drawn };
+        return { plain, post: full, calls: drawn, counts };
       },
-      { camera: STILL_CAMERA[view] ?? EXTRA_CAMERAS[view] ?? POST_CAMERAS[view], view, withPost: withPost && !v.post, post: v.post, retro: v.name === 'retro' ? POST_CAMERAS.retro.look : null, postFrames: POST_FRAMES },
+      { camera: STILL_CAMERA[view] ?? EXTRA_CAMERAS[view] ?? POST_CAMERAS[view], view, withPost: withPost && !v.post, post: v.post, retro: v.name === 'retro' ? POST_CAMERAS.retro.look : null, postFrames: POST_FRAMES, dressing },
     );
   }
+  // W5: the GPU memory the node renderer holds, and how much of it the compute dressing (freed here, at the page's end).
+  const memory = dressing ? await dressingMemory(page) : null;
   for (const v of views.filter((v) => isFigureView(postBase(v.name)))) {
     const view = v.name;
     frames[keyOf(v)] = await page.evaluate(
@@ -502,7 +539,7 @@ async function draw(scene, views, quality, renderer, withPost) {
   }
   await page.close();
   if (errors.length > 0) console.warn(`webgpu-compare: ${scene.map} ${scene.light} ${quality} ${renderer}: ${errors.length} page error(s): ${errors.slice(0, 3).join(' | ')}`);
-  return { frames };
+  return { frames, memory };
 }
 
 /** Scores a pair in a blank page (the browser decodes the PNGs) and lays it out side by side with its difference. */

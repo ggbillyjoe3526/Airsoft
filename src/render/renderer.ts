@@ -110,6 +110,8 @@ export class Renderer {
   private readonly drawStats: DrawStats = { calls: 0, triangles: 0, programs: 0, geometries: 0, textures: 0 };
   /** Time the GPU's work each frame (the debug overlay, while shown). */
   gpuTiming = false;
+  /** Whether the world may move (the match's MotionScale, set by CombatPresentation): the node path's grass sway (W5). */
+  motion = true;
   /**
    * The figure model every match draws its players with (M25a, render/externalModels.ts), loaded once at start; null
    * for the built-in figures. Shared by every match and freed with the renderer.
@@ -454,7 +456,7 @@ export class Renderer {
     // A session's build has just ended: its reflective meshes (if any) are found on the next frame.
     this.post.rescan();
     // The node path (W1) compiles its pipelines ahead in the background, as the frame will draw them (W4).
-    if (this.node) return this.node.compile(this.scene, this.camera, overlay, this.retro ?? this.postStack());
+    if (this.node) return this.node.compile(this.scene, this.camera, overlay, this.retro ?? this.postStack(), this.quality);
     const gl = this.gl as THREE.WebGLRenderer;
     const retro = this.retro as RetroFilter | null;
     // The world draws into the post stack's target when there is one (G5), the held replica onto the canvas after it.
@@ -478,7 +480,7 @@ export class Renderer {
     // A lost device draws nothing until its replacement takes over (nodeLost).
     if (this.node?.lost) return;
     if (this.environmentDirty) this.applyEnvironment();
-    this.node?.prepare(this.scene);
+    this.node?.prepare(this.scene, this.quality, this.motion);
     const gl = this.gl;
     const timer = this.timer();
     timer?.begin();
