@@ -34,20 +34,28 @@ const GLB_MAGIC = 0x46546c67;
 export async function loadFigureModel(url = figureModelUrl()): Promise<FigureModel | null> {
   if (!url) return null;
   try {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.arrayBuffer();
-    if (data.byteLength < 12 || new DataView(data).getUint32(0, true) !== GLB_MAGIC) throw new Error('not a binary glTF (.glb) file');
-    if (data.byteLength > FIGURE_MODEL.warnBytes) console.warn(`The figure model is ${(data.byteLength / 1e6).toFixed(1)} MB, over its ${FIGURE_MODEL.warnBytes / 1e6} MB budget (docs/CC0_ASSETS.md).`);
-    // The loader only joins the download when there is a model to load. Meshopt-compressed files (gltfpack,
-    // glTF-Transform) decode in the page; Draco and KTX2 need decoder files the game doesn't ship.
-    const [{ GLTFLoader }, { MeshoptDecoder }] = await Promise.all([import('three/examples/jsm/loaders/GLTFLoader.js'), import('three/examples/jsm/libs/meshopt_decoder.module.js')]);
-    const gltf = await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(data, '');
-    return prepareFigureModel(gltf.scene);
+    return prepareFigureModel(await loadGltfScene(url, FIGURE_MODEL.warnBytes, 'The figure model'));
   } catch (err) {
     console.warn(`The figure model (${url}) could not be used, so the built-in figures are drawn instead:`, err);
     return null;
   }
+}
+
+/**
+ * Fetches and parses the binary glTF at `url` (its scene); `what` names it in the warning when it is over `warnBytes`.
+ * Throws when it can't be had or isn't a .glb.
+ */
+export async function loadGltfScene(url: string, warnBytes: number, what: string): Promise<THREE.Object3D> {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const data = await response.arrayBuffer();
+  if (data.byteLength < 12 || new DataView(data).getUint32(0, true) !== GLB_MAGIC) throw new Error('not a binary glTF (.glb) file');
+  if (data.byteLength > warnBytes) console.warn(`${what} is ${(data.byteLength / 1e6).toFixed(2)} MB, over its ${warnBytes / 1e6} MB budget (docs/CC0_ASSETS.md).`);
+  // The loader only joins the download when there is a model to load. Meshopt-compressed files (gltfpack,
+  // glTF-Transform) decode in the page; Draco and KTX2 need decoder files the game doesn't ship.
+  const [{ GLTFLoader }, { MeshoptDecoder }] = await Promise.all([import('three/examples/jsm/loaders/GLTFLoader.js'), import('three/examples/jsm/libs/meshopt_decoder.module.js')]);
+  const gltf = await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(data, '');
+  return gltf.scene;
 }
 
 /**

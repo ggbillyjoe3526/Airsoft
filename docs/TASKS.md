@@ -204,6 +204,19 @@ acceptance:
 status: open
 attempts: 0
 
+## M101 · The Cyber Pistol drawn from a Blender model (owner's ask, 2026-10-10)
+tier: core
+perf: skip
+touches: src/render/replicaFiles.ts, src/render/replicaModels.ts, src/render/replicaBuilder.ts, src/render/externalModels.ts, src/render/figureReplicas.ts, src/render/figureMix.ts, src/render/characterModels.ts, src/render/characterRenderer.ts, src/render/matchPresentation.ts, src/render/combatPresentation.ts, src/render/viewmodel.ts, src/render/itemPictures.ts, src/render/renderer.ts, src/game.ts, src/matchSession.ts, src/sessionFigures.test.ts, src/config/assets.ts, src/assets/, docs/
+contract: none
+acceptance:
+  1. `src/assets/models/replicas/cyber.glb` (the owner's Blender model, spec in the project's `plans/cyber-pistol-model-spec.md`) draws the Cyber Pistol in the hands, on the menus' pictures and on the figures, in its own colours (Realistic colours and the glow as before), on Low and High.
+  2. BBs leave from the same muzzle point as before; the hands hold it as before; its magazine drops on a reload and the weapon torch fits.
+  3. A missing or unusable file logs a warning and the built-in Cyber Pistol is drawn; no other replica changes.
+  4. The file stays within its budget (3,500 triangles in the hands, 300 on a figure, 300 KB), recorded in docs/ASSETS.md, with the how-to in docs/CC0_ASSETS.md.
+status: open
+attempts: 0
+
 **0.1 Dev 6 (confirmed with the roadmap, 2026-10-06).** M92–M95, the holster and the practice
 upgrades, come before the 26 features in `docs/ROADMAP.md` › 0.1 Dev 6, whose blocks are written when that build starts.
 

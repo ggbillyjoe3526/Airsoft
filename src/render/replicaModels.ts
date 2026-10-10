@@ -8,8 +8,10 @@ import { CYBER_COLOURS, type ReplicaPaint } from '../config/schemes';
 import { LASERS } from '../config/lasers';
 import { TORCHES } from '../config/torches';
 import { speckleTextures } from './replicaFinish';
-import { AEG_GAS_BLOCK_END, AEG_MAGAZINES, AEG_MUZZLE, AEG_MUZZLE_DEVICES, AEG_PARTS, CYBER_MAGAZINES, CYBER_MUZZLE, CYBER_PARTS, type MuzzleDraw, type MuzzleLayout, type PartDraw, PISTOL_LASER_LENS, PISTOL_MAGAZINES, PISTOL_MUZZLE, PISTOL_MUZZLE_DEVICES, PISTOL_PARTS } from './replicaParts';
+import { AEG_GAS_BLOCK_END, AEG_MAGAZINES, AEG_MUZZLE, AEG_MUZZLE_DEVICES, AEG_PARTS, CYBER_MAGAZINES, CYBER_MUZZLE, CYBER_PARTS, type MuzzleDraw, type MuzzleLayout, type PartDraw, PISTOL_LASER_LENS, PISTOL_MAGAZINES, PISTOL_MUZZLE, PISTOL_MUZZLE_DEVICES, PISTOL_PARTS, REPLICA_PART_TABLES } from './replicaParts';
 import { coloursOf, createMaterials, LOW_DETAIL, type MaterialKey, ModelBuilder, PAINTED, paintedMaterials, type Pt, type ReplicaDetail } from './replicaBuilder';
+import { NO_REPLICA_FILES, type ReplicaFile, type ReplicaFiles } from './replicaFiles';
+import { REPLICA_FILE } from '../config/assets';
 
 // The public names that moved out with the split stay importable from here.
 export { type ArmStyle, HUMAN_ARMS } from './replicaArms';
@@ -321,6 +323,47 @@ function buildCyberPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boo
   return { group, muzzle: mount.marker, magazine, supportHand, mount };
 }
 
+/** A replica's model builder (the built-in ones above, or one from a file). */
+type ReplicaBuild = (m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, detail: ReplicaDetail, arms: ArmBuilders | null) => ReplicaModel;
+
+/** The built-in muzzle layout of each pistol a file can draw, by its part table (REPLICA_PART_TABLES). */
+const PISTOL_LAYOUTS: Readonly<Record<'pistol' | 'cyber', MuzzleLayout>> = { pistol: PISTOL_MUZZLE, cyber: CYBER_MUZZLE };
+
+/**
+ * A pistol drawn from its model file (M101, render/replicaFiles.ts): the file's body and magazine in the replica's
+ * materials, held as the built-in pistols are (the same grip line and hands), its parts and muzzle devices from its
+ * table (`table`), the muzzle where the file marks it. A file without a magazine keeps the built-in one.
+ */
+function buildFromFile(file: ReplicaFile, table: 'pistol' | 'cyber'): ReplicaBuild {
+  const T = REPLICA_PART_TABLES[table];
+  const layout: MuzzleLayout = { ...PISTOL_LAYOUTS[table], barrelEnd: -file.muzzle.z, up: file.muzzle.y };
+  return (m, orangeTip, detail, arms) => {
+    const b = new ModelBuilder(detail);
+    for (const p of file.body) b.shape(p.key, p.geometry);
+    if (orangeTip) {
+      // The file's muzzle is plain: the orange tip is a disc over its face, a little wider and proud of it.
+      const O = REPLICA_FILE.orangeTip;
+      b.tube('orange', layout.barrelEnd + O.proud - O.depth, O.depth, layout.up, O.radius, 12);
+    }
+    const support = new ModelBuilder(detail);
+    if (arms) pistolHands(b, support, detail, arms);
+    const group = b.build(m);
+    for (const [name, draw] of Object.entries(T.parts)) group.add(drawnPart(draw, m, detail, name));
+    group.getObjectByName('laser:redLaser')?.add(laserBeam(PISTOL_LASER_LENS));
+    const fileMag: PartDraw = (mb) => {
+      for (const p of file.magazine) mb.shape(p.key, p.geometry);
+    };
+    const magazine = magazinePart(file.magazine.length > 0 ? { ...T.magazines, standard: fileMag } : T.magazines, m, detail, GRIP_DOWN, table === 'pistol' ? { extended: [0, -0.032, 0] } : {});
+    group.add(magazine.group);
+    // Down to its base pad (where the built-in pistols' are).
+    const supportHand = supportHandPart(m, [{ grip: 'none', builder: support, toMag: [0.004, -0.08, -0.024] }]);
+    group.add(supportHand.group);
+    const mount = muzzleMount(layout, T.muzzles, m, detail, orangeTip);
+    group.add(mount.group);
+    return { group, muzzle: mount.marker, magazine, supportHand, mount };
+  };
+}
+
 /**
  * The laser's beam (QualitySettings.laserBeam, FA8): a line from the lens straight ahead, fading out, added (not
  * blended) so it reads as light. Named 'laserBeam'; hidden until the setting turns it on (Viewmodel.setLaserBeam).
@@ -447,6 +490,8 @@ export function buildReplicaModels(
   hands: HandsShown = 'hands',
   /** Whose arms hold them (G7): the player's gloved ones, or a robot's when their slot is a robot. */
   arms: ArmStyle = HUMAN_ARMS,
+  /** Replica models from files (M101, render/replicaFiles.ts): a pistol with one is drawn from it. The caller owns them. */
+  files: ReplicaFiles = NO_REPLICA_FILES,
 ): ReplicaModels {
   const speckle = detail.replica === 'high' ? speckleTextures() : null;
   const materials = createMaterials(teamColor, detail, speckle, F.unpainted, CYBER_COLOURS.bold, arms);
@@ -455,7 +500,8 @@ export function buildReplicaModels(
   // Every material made for a replica's own colours, to dispose and to switch with the sheen (setReflections).
   const painted: THREE.Material[] = [];
   loadout.forEach((r, slot) => {
-    const build = r.look.viewmodel === 'cyber' ? buildCyberPistol : r.look.model === 'pistol' ? buildPistol : buildAeg;
+    const file = r.look.model === 'pistol' ? files.get(r.id) : undefined;
+    const build: ReplicaBuild = file ? buildFromFile(file, r.look.viewmodel ?? 'pistol') : r.look.viewmodel === 'cyber' ? buildCyberPistol : r.look.model === 'pistol' ? buildPistol : buildAeg;
     const own = coloursOf(r, slot, paint);
     const mats = own ? paintedMaterials(materials, detail, own.colours, own.cyber) : materials;
     for (const key of PAINTED) if (mats[key] !== materials[key]) painted.push(mats[key]);

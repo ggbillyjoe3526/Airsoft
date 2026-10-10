@@ -37,6 +37,7 @@ import { rosterNames, statsBlocks } from '../ui/statsRows';
 import { TeammateMarkers } from '../ui/teammateMarkers';
 import { WhatGotYouCard, whatGotYouText } from '../ui/whatGotYou';
 import { CharacterRenderer } from './characterRenderer';
+import { NO_REPLICA_FILES, type ReplicaFiles } from './replicaFiles';
 import { CaseRenderer } from './caseRenderer';
 import { ExitRenderer } from './exitRenderer';
 import type { FigureModel } from './externalModels';
@@ -154,10 +155,12 @@ export class MatchPresentation {
     private readonly extraction?: ExtractionContext,
     /** Which figures are robots this match and whether replicas are in Realistic colours (G7, Settings › Look). */
     crowd: FigureCrowd = HUMAN_CROWD,
+    /** Replica models from files (M101, render/replicaFiles.ts), owned by the renderer: the figures' pistols take their shape. */
+    replicaFiles: ReplicaFiles = NO_REPLICA_FILES,
   ) {
     this.keyName = keyName;
     // Each figure holds its own active replica (Armament.replicas): rifle or pistol pose.
-    this.characters = new CharacterRenderer(state.characters, teamColours.figures, hits, figureModel, figureDetail, crowd);
+    this.characters = new CharacterRenderer(state.characters, teamColours.figures, hits, figureModel, figureDetail, crowd, replicaFiles);
     this.flag = new FlagRenderer(teamColours.figures, rules.flag.radius);
     scene.add(this.characters.object, this.flag.object);
     this.feedback = new HitFeedback(container, () => keyName('fire'));

@@ -406,6 +406,15 @@ export class ModelBuilder {
     return this.add(key, geo, 'none');
   }
 
+  /**
+   * A finished shape from a replica model file (M101, render/replicaFiles.ts), already in place: drawn as the built
+   * shapes are (on Low its steel shares the detail material; on High its polymer takes the speckle and its bevels the
+   * edge highlight). `geometry` is copied, not consumed.
+   */
+  shape(key: MaterialKey, geometry: THREE.BufferGeometry): this {
+    return this.add(key, geometry.clone(), 'box');
+  }
+
   build(materials: Record<MaterialKey, THREE.Material>): THREE.Group {
     const group = new THREE.Group();
     for (const [key, geos] of this.parts) {

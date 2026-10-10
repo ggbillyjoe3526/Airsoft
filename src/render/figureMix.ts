@@ -5,6 +5,7 @@ import { BOT_SCHEMES, CYBER_COLOURS, hasFixedColours, schemeColours } from '../c
 import { createRng, rngNext } from '../sim/rng';
 import type { FigureDress, FigureReplicaColours } from './characterModels';
 import { robotShell } from './figurePalette';
+import { NO_REPLICA_FILES, type ReplicaFiles } from './replicaFiles';
 import type { ArmStyle } from './replicaModels';
 
 /**
@@ -60,9 +61,10 @@ function cyberOnFigure(realistic: boolean): FigureReplicaColours {
 /**
  * How character `index` of `team`, carrying `replicas`, is dressed: a robot or not (from the crowd), its team's robot
  * shell, and its rifle and pistol in its team's bot schemes (BOT_SCHEMES; the Cyber Pistol in its own colours), each
- * plain under Realistic colours. Built once per figure build, never per frame.
+ * plain under Realistic colours; the pistol in its model file's shape when `files` has one (M101). Built once per figure
+ * build, never per frame.
  */
-export function figureDress(crowd: FigureCrowd, index: number, team: number, replicas: readonly ReplicaConfig[]): FigureDress {
+export function figureDress(crowd: FigureCrowd, index: number, team: number, replicas: readonly ReplicaConfig[], files: ReplicaFiles = NO_REPLICA_FILES): FigureDress {
   const schemes = BOT_SCHEMES[team] ?? BOT_SCHEMES[0]!;
   const pistol = replicas.find((r) => r.look.model === 'pistol');
   return {
@@ -70,6 +72,7 @@ export function figureDress(crowd: FigureCrowd, index: number, team: number, rep
     shell: robotShell(team),
     rifle: schemeColours(schemes.rifle, crowd.realistic),
     pistol: pistol && hasFixedColours(pistol) ? cyberOnFigure(crowd.realistic) : schemeColours(schemes.pistol, crowd.realistic),
+    pistolShape: (pistol && files.get(pistol.id)?.figure) || null,
   };
 }
 

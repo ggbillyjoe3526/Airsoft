@@ -10,7 +10,7 @@ import { gripHand, type Hand, type HandStyle, openHand, wrapIn } from './figureH
 import { humanArm, humanBody, humanLeg } from './figureHuman';
 import { type FigurePalette, figurePalette, robotShell } from './figurePalette';
 import { type FigureDetail, PartBuilder } from './figureParts';
-import { addPistol, addRifle, BARE_KIT, type FigureKit, type FigureReplicaColours, pistolGrips, rifleGrips } from './figureReplicas';
+import { addPistol, addRifle, BARE_KIT, type FigureKit, type FigurePistolShape, type FigureReplicaColours, pistolGrips, rifleGrips } from './figureReplicas';
 import { robotArm, robotBody, robotLeg } from './figureRobot';
 import { V } from './figureShapes';
 
@@ -46,6 +46,8 @@ export interface FigureDress {
   shell: number;
   rifle: FigureReplicaColours;
   pistol: FigureReplicaColours;
+  /** The pistol's own shape from its model file (M101), or null for the built-in one. */
+  pistolShape?: FigurePistolShape | null;
 }
 
 /** A human of the first team carrying that team's replicas: what a figure is dressed in unless told otherwise. */
@@ -180,7 +182,7 @@ export function buildFigure(
   aim.position.y = F.shoulderHeight + hy;
   const shoulders = V(0, F.shoulderHeight, 0);
   const aimRifle = fromModel('aimRifle', shoulders) ?? builtAimRifle(an, pal, material, detail, kit, dress.rifle);
-  const aimPistol = fromModel('aimPistol', shoulders) ?? builtAimPistol(an, pal, material, detail, kit, dress.pistol);
+  const aimPistol = fromModel('aimPistol', shoulders) ?? builtAimPistol(an, pal, material, detail, kit, dress.pistol, dress.pistolShape ?? null);
   aimPistol.visible = false;
   aim.add(aimRifle, aimPistol);
   upper.add(aim);
@@ -216,11 +218,11 @@ function builtAimRifle(an: Anatomy, pal: FigurePalette, material: THREE.Material
 }
 
 /** The arms with the pistol held out in both hands, in aim-group space: the support hand over the firing hand. */
-function builtAimPistol(an: Anatomy, pal: FigurePalette, material: THREE.Material, detail: FigureDetail, kit: FigureKit, colours: FigureReplicaColours): THREE.Mesh {
+function builtAimPistol(an: Anatomy, pal: FigurePalette, material: THREE.Material, detail: FigureDetail, kit: FigureKit, colours: FigureReplicaColours, shape: FigurePistolShape | null): THREE.Mesh {
   const P = FIGURE.pistol;
   const b = new PartBuilder(detail);
   const m = new THREE.Matrix4().makeTranslation(P.x, P.y, P.butt);
-  addPistol(b, m, colours, kit);
+  addPistol(b, m, colours, kit, shape);
   const g = pistolGrips();
   const style = an.hand(pal);
   const right = gripHand(b, wrapIn(g.firing, m), style, g.trigger.applyMatrix4(m));

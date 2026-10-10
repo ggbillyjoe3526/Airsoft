@@ -10,6 +10,7 @@ import { BARE_KIT, buildFigure, createCalloutTexture, disposeFigure, type Figure
 import { type FigureModel, fadeModelMaterials } from './externalModels';
 import { useVertexFinish } from './figureFinish';
 import { type FigureCrowd, figureDress, HUMAN_CROWD } from './figureMix';
+import { NO_REPLICA_FILES, type ReplicaFiles } from './replicaFiles';
 import { type ProbeGrid, type ProbeSample, probeTint, sampleProbes } from './probeGrid';
 
 interface FigureState {
@@ -123,6 +124,8 @@ export class CharacterRenderer {
     private detail: DetailLevel = 'low',
     /** Which figures are robots this match and whether replicas are in Realistic colours (G7, Settings › Look). */
     private readonly crowd: FigureCrowd = HUMAN_CROWD,
+    /** Replica models from files (M101, render/replicaFiles.ts), owned by the renderer: a pistol with one shows its shape. */
+    private readonly files: ReplicaFiles = NO_REPLICA_FILES,
   ) {
     for (let i = 0; i < characters.length; i++) {
       const c = characters[i]!;
@@ -224,7 +227,7 @@ export class CharacterRenderer {
     const material = high ? useVertexFinish(this.material.clone()) : this.material.clone();
     // A silencer shows on the detailed figure only (as before M33h); a torch at every detail.
     const kit: FigureKit = parts.rifleSilencer || parts.rifleTorch || parts.pistolTorch ? parts : BARE_KIT;
-    const dress = figureDress(this.crowd, i, c.team, c.armament.replicas);
+    const dress = figureDress(this.crowd, i, c.team, c.armament.replicas, this.files);
     const figure = buildFigure(this.teamColors[c.team] ?? 0xffffff, material, this.calloutMaterial, c.id, this.model, FIGURE.detail[this.detail], kit, dress);
     this.object.add(figure.root);
     return { figure, material };

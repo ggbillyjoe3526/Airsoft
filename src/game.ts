@@ -34,6 +34,7 @@ import { initPhysics } from './physics/physicsWorld';
 import { awayWatch } from './core/awayWatch';
 import { loadBakedLight } from './render/bakedLight';
 import { loadFigureModel } from './render/externalModels';
+import { loadReplicaFiles } from './render/replicaFiles';
 import { FrameTimeWatch, presetBelow, slowFrameMs } from './render/qualityStepDown';
 import { rendererName } from './render/gpuCheck';
 import { Renderer } from './render/renderer';
@@ -300,9 +301,10 @@ export class Game {
     // loaded and its device made. On the WebGL pick, or if that chunk can't be had, WebGL as before.
     const choice = loadRendererChoice();
     const starting = import('./render/rendererStart').then((m) => m.bootRenderer(choice, options.forceWebGL === true, options.qualitySettings.antialias), () => null);
-    const [, figureModel, , , start] = await Promise.all([initPhysics(), loadFigureModel(), devMaps, loadBakedLight(), starting]);
+    const [, figureModel, replicaFiles, , , start] = await Promise.all([initPhysics(), loadFigureModel(), loadReplicaFiles(), devMaps, loadBakedLight(), starting]);
     const game = new Game(container, options, start);
     game.renderer.figureModel = figureModel;
+    game.renderer.replicaFiles = replicaFiles;
     return game;
   }
 
@@ -382,7 +384,7 @@ export class Game {
     });
 
     // The menus' pictures of replicas and parts (G3), drawn by whichever WebGL renderer the game has now.
-    this.pictures = new ItemPictures(followingPictureTarget(() => this.renderer.pictureRenderer, webglPictureTarget));
+    this.pictures = new ItemPictures(followingPictureTarget(() => this.renderer.pictureRenderer, webglPictureTarget), undefined, () => this.renderer.replicaFiles);
     this.menus = new Menus(container, {
       pictures: this.pictures,
       rules: {
