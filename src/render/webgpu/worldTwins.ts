@@ -31,8 +31,8 @@ import { patchUniforms } from './twinUniforms';
  */
 
 export class WorldTwins {
-  /** The sized points' sprite twins. */
-  readonly sprites = new PointSprites();
+  /** The sized points' sprite twins (but those a compute pass moves and draws, W5: `claimed`). */
+  readonly sprites: PointSprites;
   /** The baked-light read's stand-in texture until an object's grid is read. */
   private readonly grid = emptyGrid();
   /** The prefiltered sky per look, made with the node renderer (the WebGL path's is the Renderer's ReplicaSheen). */
@@ -40,7 +40,11 @@ export class WorldTwins {
   /** Three's own conversion, given back on dispose. */
   private readonly own: WebGPURenderer['library']['fromMaterial'];
 
-  constructor(private readonly renderer: WebGPURenderer) {
+  constructor(
+    private readonly renderer: WebGPURenderer,
+    claimed?: (points: THREE.Points) => boolean,
+  ) {
+    this.sprites = new PointSprites(claimed);
     const library = renderer.library;
     const own = (this.own = library.fromMaterial);
     library.fromMaterial = ((material: THREE.Material) => worldTwin(material, this.grid) ?? own.call(library, material)) as typeof own;

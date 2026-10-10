@@ -41,21 +41,23 @@ export interface SmokeSource {
 
 export class SmokePlumes {
   readonly object: THREE.InstancedMesh;
-  private readonly M: PlumeConfig;
+  /** On the node renderer (W5) a compute pass moves the puffs (render/webgpu/compute/), reading `jitter`, `time` and `wind`. */
+  declare gpu?: { update(camera: THREE.Camera): void } | undefined;
+  readonly M: PlumeConfig;
   private readonly alpha: Float32Array;
   private readonly alphaAttribute: THREE.InstancedBufferAttribute;
   /** Each puff's seeded spread (x, z, in −1..1) and phase offset. */
-  private readonly jitter: Float32Array;
+  readonly jitter: Float32Array;
   private readonly sprite = softDotTexture(0.35);
   private readonly matrix = new THREE.Matrix4();
   private readonly pos = new THREE.Vector3();
   private readonly scale = new THREE.Vector3();
-  private readonly wind = { x: 0, z: 0 };
-  private time = 0;
+  readonly wind = { x: 0, z: 0 };
+  time = 0;
   private motion = true;
 
   constructor(
-    private readonly sources: readonly SmokeSource[],
+    readonly sources: readonly SmokeSource[],
     config: PlumeConfig = DRESSING.smoke,
     /** The mesh's name (the tests and the disposal read it). */
     name = 'smokePlumes',
@@ -86,6 +88,7 @@ export class SmokePlumes {
     material.customProgramCacheKey = () => 'smoke-plumes';
     this.object = new THREE.InstancedMesh(geo, material, count);
     this.object.name = name;
+    this.object.userData.gpuPlumes = this;
     // Culled as a whole: a sphere round every plume, as far as a wind of up to WIND_MAX m/s bends it.
     const box = new THREE.Box3();
     for (const s of sources) box.expandByPoint(this.pos.set(s.x, s.y, s.z)).expandByPoint(this.pos.set(s.x, s.y + M.rise, s.z));
@@ -115,6 +118,7 @@ export class SmokePlumes {
       this.wind.x += (wind.x * M.windShare + M.breeze - this.wind.x) * ease;
       this.wind.z += (wind.z * M.windShare - this.wind.z) * ease;
     }
+    if (this.gpu) return this.gpu.update(camera);
     const q = camera.quaternion;
     let n = 0;
     for (const s of this.sources) {

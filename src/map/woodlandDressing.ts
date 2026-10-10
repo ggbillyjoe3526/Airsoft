@@ -84,4 +84,7 @@ export const WOODLAND_DRESSING: MapDressing = {
   // The dust in the air and underfoot: a cool woodland grey-green rather than Depot's concrete.
   motes: { tint: 0xc9d2bc },
   kickedDust: { tint: 0x8d8367, scale: 0.9 },
+  // The meadow's grass and the wood beyond the fence, drawn by the node renderer (WebGPU overhaul W5).
+  grass: { height: 0.34 },
+  forest: { trees: 2000 },
 };

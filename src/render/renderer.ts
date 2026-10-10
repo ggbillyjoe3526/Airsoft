@@ -448,7 +448,7 @@ export class Renderer {
     // A session's build has just ended: its reflective meshes (if any) are found on the next frame.
     this.post.rescan();
     // The node path (W1) compiles its pipelines ahead in the background, as the frame will draw them (W4).
-    if (this.node) return this.node.compile(this.scene, this.camera, overlay, this.retro ?? this.postStack());
+    if (this.node) return this.node.compile(this.scene, this.camera, overlay, this.retro ?? this.postStack(), this.quality);
     const gl = this.gl as THREE.WebGLRenderer;
     const retro = this.retro as RetroFilter | null;
     // The world draws into the post stack's target when there is one (G5), the held replica onto the canvas after it.
@@ -472,7 +472,7 @@ export class Renderer {
     // A lost device draws nothing until its replacement takes over (nodeLost).
     if (this.node?.lost) return;
     if (this.environmentDirty) this.applyEnvironment();
-    this.node?.prepare(this.scene);
+    this.node?.prepare(this.scene, this.quality);
     const gl = this.gl;
     const timer = this.timer();
     timer?.begin();

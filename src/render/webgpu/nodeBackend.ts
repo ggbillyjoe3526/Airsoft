@@ -2,9 +2,13 @@ import * as THREE from 'three';
 import { WebGPURenderer } from 'three/webgpu';
 import { FRAME_TIMING, type RetroLook } from '../../config/render';
 import { RENDER_BACKEND } from '../../config/renderBackend';
+import type { QualitySettings } from '../../config/render';
 import type { PostSetup } from '../post/postStack';
 import type { EnvironmentLook } from '../replicaSheen';
 import type { DrawStats } from '../rendererParts';
+import { followSwappedBuffers } from './compute/computeKit';
+import { GpuDressing } from './compute/gpuDressing';
+import { ParticleTwins } from './compute/particleTwins';
 import { NightLighting } from './nightLights';
 import { CompileGate } from './post/nodeKit';
 import { DirectOutput } from './post/nodeOutput';
@@ -66,6 +70,12 @@ export class NodeBackend {
   private pictureGl: THREE.WebGLRenderer | null = null;
   /** The world materials' node twins (W2), installed in the renderer's node library. */
   private readonly world: WorldTwins;
+  /** The particles, moved by compute passes (W5). */
+  private readonly particles: ParticleTwins;
+  /** The map's grass and tree stand-ins (W5), culled each frame. */
+  private readonly dressing: GpuDressing;
+  /** The Renderer's quality in force (the dressing's preset). */
+  private quality: QualitySettings | null = null;
   /** The night's clustered lights (W3) on a WebGPU device; null on the WebGL2 back end (no storage buffers to shade from). */
   private readonly lighting: NightLighting | null;
   /** Low's frame straight onto the canvas, and the held replica's on the post stack's presets (W4). */
@@ -79,7 +89,10 @@ export class NodeBackend {
   ) {
     this.kind = (renderer.backend as { isWebGLBackend?: boolean }).isWebGLBackend ? 'webgpu-webgl2' : 'webgpu';
     this.timestamps = renderer.hasFeature('timestamp-query');
-    this.world = new WorldTwins(renderer);
+    followSwappedBuffers(renderer);
+    this.particles = new ParticleTwins(renderer);
+    this.world = new WorldTwins(renderer, this.particles.claims);
+    this.dressing = new GpuDressing(renderer, this.kind === 'webgpu');
     this.lighting = this.kind === 'webgpu' ? new NightLighting() : null;
     if (this.lighting) renderer.lighting = this.lighting;
     // Three's own handler logs the loss as an error and stops the renderer for good; the game recovers instead.
@@ -153,17 +166,23 @@ export class NodeBackend {
     return this.lighting !== null;
   }
 
-  /** The scene changed (a session's build, a quality change): the next frame looks for new sized points (W2). */
+  /** The scene changed (a session's build, a quality change): the next frame looks for new sized points (W2) and pools (W5). */
   rescan(): void {
     this.world.sprites.rescan();
+    this.particles.rescan();
+    this.dressing.rescan();
   }
 
   /**
-   * Before a frame's draws: after a rescan, the new sized points get their sprite twins (W2); `scene` is the one the
-   * clustered lights shade (W3). Nothing else.
+   * Before a frame's draws: after a rescan, the new particle pools get their compute drivers (W5) and the new sized
+   * points their sprite twins (W2); the frame's particle passes are dispatched (W5); `scene` is the one the clustered
+   * lights shade (W3). `quality` is the Renderer's, in force (the grass and stand-ins' preset, W5).
    */
-  prepare(scene: THREE.Scene): void {
+  prepare(scene: THREE.Scene, quality: QualitySettings | null = null): void {
+    this.quality = quality;
     if (this.lighting) this.lighting.world = scene;
+    this.particles.scan(scene);
+    this.particles.frame();
     this.world.sprites.prepare(scene);
   }
 
@@ -179,9 +198,11 @@ export class NodeBackend {
 
   /**
    * Draws a frame: `scene` through `drawer` (the post stack or the retro filter the Renderer holds, made here) or, with
-   * neither (Low), straight onto the canvas; then the held replica over it. The Renderer prepares the scene first.
+   * neither (Low), straight onto the canvas; then the held replica over it. The Renderer prepares the scene first; the
+   * map's grass and stand-ins are culled here for `camera` (W5).
    */
   draw(scene: THREE.Scene, camera: THREE.PerspectiveCamera, overlay: Overlay | undefined, drawer: object | null): void {
+    this.dressing.frame(scene, camera, this.quality);
     if (drawer) (drawer as NodeFrameDrawer).draw(this.renderer, scene, camera, overlay);
     else this.output.drawScreen(this.renderer, scene, camera, overlay);
   }
@@ -245,11 +266,15 @@ export class NodeBackend {
    * mid-round). Not waited for: what isn't ready by the first frame compiles as it draws, as before. A failure here also
    * fails that frame's draw, which reports it.
    */
-  compile(scene: THREE.Scene, camera: THREE.PerspectiveCamera, overlay: Overlay | undefined, drawer: object | null): void {
+  compile(scene: THREE.Scene, camera: THREE.PerspectiveCamera, overlay: Overlay | undefined, drawer: object | null, quality: QualitySettings | null = null): void {
     if (this.lost) return;
     if (this.lighting) this.lighting.world = scene;
-    this.world.sprites.rescan();
+    this.rescan();
+    this.particles.scan(scene);
     this.world.sprites.prepare(scene);
+    // The map's grass and stand-ins (W5) are made now, so their pipelines compile with the rest.
+    this.quality = quality;
+    this.dressing.frame(scene, camera, quality);
     const r = this.renderer;
     // Each for the target and output step the frame draws it with (W4), so the pipelines match the frame's.
     const done = drawer ? (drawer as NodeFrameDrawer).compile(r, scene, camera, overlay) : this.output.compile(r, scene, camera, overlay);
@@ -260,6 +285,8 @@ export class NodeBackend {
   dispose(): void {
     this.lostListener = () => undefined;
     this.timing = false;
+    this.particles.dispose();
+    this.dressing.dispose();
     this.world.dispose();
     this.lighting?.dispose();
     this.output.dispose();

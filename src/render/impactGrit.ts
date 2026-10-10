@@ -5,7 +5,7 @@ import type { Character } from '../sim/character';
 import { createRng, rngNext } from '../sim/rng';
 import { length3, type Vec3 } from '../sim/vec';
 
-interface Chip {
+export interface Chip {
   x: number;
   y: number;
   z: number;
@@ -51,7 +51,9 @@ export function shooterSide(characters: readonly Character[], ownerId: number, f
  */
 export class ImpactGrit {
   readonly object: THREE.InstancedMesh;
-  private readonly chips: Chip[] = [];
+  /** On the node renderer (W5) a compute pass moves the chips (render/webgpu/compute/): each throw is handed to it, the loop skipped. */
+  declare gpu?: { spawn(slot: number, chip: Chip): void; update(dt: number, camera: THREE.Camera): void } | undefined;
+  readonly chips: Chip[] = [];
   private next = 0;
   private enabled = false;
   private lastCount = 0;
@@ -71,6 +73,7 @@ export class ImpactGrit {
     this.object.count = 0;
     this.object.frustumCulled = false;
     this.object.visible = false;
+    this.object.userData.gpuGrit = this;
   }
 
   /** Grit on or off (off: nothing thrown, and what is in the air is gone). */
@@ -99,8 +102,9 @@ export class ImpactGrit {
     tz /= len;
     const n = G.perImpact[0] + Math.floor(rngNext(this.rng) * (G.perImpact[1] - G.perImpact[0] + 1));
     for (let i = 0; i < n; i++) {
-      const c = this.chips[this.next]!;
-      this.next = (this.next + 1) % this.chips.length;
+      const slot = this.next;
+      const c = this.chips[slot]!;
+      this.next = (slot + 1) % this.chips.length;
       // A random direction, leaning towards the shooter's side and up.
       const u = rngNext(this.rng) * 2 - 1;
       const a = rngNext(this.rng) * Math.PI * 2;
@@ -126,12 +130,14 @@ export class ImpactGrit {
       c.g = tint.g * G.shade;
       c.b = tint.b * G.shade;
       c.age = 0;
+      this.gpu?.spawn(slot, c);
     }
   }
 
   /** Moves the chips on by `dt` and faces them to `camera`. */
   update(dt: number, camera: THREE.Camera): void {
     if (!this.enabled) return;
+    if (this.gpu) return this.gpu.update(dt, camera);
     const G = IMPACT_GRIT;
     const eye = camera.position;
     let count = 0;

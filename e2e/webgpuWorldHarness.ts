@@ -168,7 +168,9 @@ export interface Coverage {
   keys: Record<string, boolean>;
   /** The visible sized Points: their layers and sprite children. */
   points: { name: string; mask: number; sprites: number }[];
+  /** The sprite twins the CPU feeds (render/webgpu/pointSprites.ts) and those a compute pass drives (W5: motes, fireflies). */
   sprites: number;
+  computed: number;
   environment: boolean;
 }
 
@@ -181,12 +183,16 @@ export function coverage(page: Page): Promise<Coverage> {
     const keys: Record<string, boolean> = {};
     const points: { name: string; mask: number; sprites: number }[] = [];
     const seen = new Set();
+    let computed = 0;
     // What Three's own node library draws as it is by design: the moon and the plain Lambert off the environment need
     // nothing added. The figures' per-vertex finish has its twin since W3.
     const OWN = ['without-environment', 'night-sky-moon'];
     const isTwin = (twin: Any) => twin?.isNodeMaterial === true && (twin.surface != null || twin.positionNode != null || twin.opacityNode != null || twin.roughnessNode != null);
     r.scene.traverse((o: Any) => {
-      if (o.isPoints && o.visible) points.push({ name: o.name, mask: o.layers.mask, sprites: o.children.filter((c: Any) => c.isSprite).length });
+      if (o.isPoints && o.visible) {
+        points.push({ name: o.name, mask: o.layers.mask, sprites: o.children.filter((c: Any) => c.isSprite).length });
+        if ((o.userData.gpuMotes ?? o.userData.gpuFireflies)?.gpu) computed++;
+      }
       if (o.isMesh && !Array.isArray(o.material) && !o.material.isNodeMaterial) {
         const key = o.material.customProgramCacheKey();
         if (!(key in keys)) keys[key] = isTwin(library.fromMaterial(o.material));
@@ -210,14 +216,14 @@ export function coverage(page: Page): Promise<Coverage> {
         else unaccounted.push(label);
       }
     });
-    return { unaccounted, kinds, keys, points, sprites: r.node?.world.sprites.count ?? -1, environment: r.scene.environment?.isTexture === true };
+    return { unaccounted, kinds, keys, points, sprites: r.node?.world.sprites.count ?? -1, computed, environment: r.scene.environment?.isTexture === true };
   });
 }
 
 /**
  * The coverage every map must have: no patched material unaccounted for, more than two twins, every surface program
  * (at least `surfaces` of them) and each of `keys` a twin, each of `points` among the sized Points, every sized Points one
- * sprite twin with its own layers off, and the node renderer's prefiltered sky as the scene's environment.
+ * sprite twin with its own layers off (fed by the CPU or driven by a compute pass), and the node renderer's prefiltered sky as the scene's environment.
  */
 export function expectCoverage(c: Coverage, want: { keys: readonly string[]; points: readonly string[]; surfaces: number }): void {
   expect(c.unaccounted).toEqual([]);
@@ -228,7 +234,7 @@ export function expectCoverage(c: Coverage, want: { keys: readonly string[]; poi
   const names = c.points.map((p) => p.name);
   for (const name of want.points) expect(names).toContain(name);
   for (const p of c.points) expect(p, p.name).toMatchObject({ mask: 0, sprites: 1 });
-  expect(c.sprites).toBe(c.points.length);
+  expect(c.sprites + c.computed).toBe(c.points.length);
   expect(c.environment).toBe(true);
 }
 

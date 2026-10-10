@@ -33,6 +33,18 @@ and never writes the simulation.
   each material as it draws where WebGL draws straight to the screen: Low's whole frame (the haze after the tone
   mapping, as WebGL's), and the held replica, which draws into a target of its own that the stack's last pass lays on.
   A stack or retro filter frees its targets only once the renderer's warm-up compile is done (`nodeKit.ts` `CompileGate`).
+  W5: `webgpu/compute/` runs compute passes. `particleTwins.ts` gives each particle pool a driver that its CPU module
+  (`dustMotes.ts`, `fireflies.ts`, `smokePlumes.ts`, `impactPuffs.ts`, `impactGrit.ts`, tagged by `userData.gpu*`)
+  hands its frame and spawns to, skipping its own per-particle loop. The formulas are written once in
+  `particleKernels.ts` over `kernelOps.ts` (numbers for the tests, TSL for the GPU), and the quads are drawn by
+  `particleDraws.ts`. On Medium and up, `gpuDressing.ts` makes a map's GPU grass (`grassField.ts`, a clipmap laid out
+  by `grassLayout.ts`) and the tree stand-ins beyond its fence (`forestStandIns.ts`, placed by `forestLayout.ts` and
+  pictured by `forestAtlas.ts` from `atmosphere.ts` `detailedTree`). Both come from the map's `dressing.grass` and
+  `dressing.forest` (`config/gpuDressing.ts` caps them per preset) and are culled on the GPU each frame. On WebGPU,
+  culling packs what is kept with an atomic counter into an indirect draw. On the WebGL2 back end, compute runs as
+  transform feedback, which has no atomics or indirect draws, so culling sizes a dropped instance to nothing.
+  `computeKit.ts` `followSwappedBuffers` makes that back end's draws read the buffer a pass wrote last. The page switch
+  `?noGpuDressing` (DEV and e2e builds) leaves the grass and stand-ins out for the WebGL comparison.
 - `matchPresentation.ts`: other players, hit feedback, spectator camera, round banner, scoreboard, flag.
   `combatPresentation.ts`: after each tick it consumes `state.events`; each frame it draws the BBs, puffs, the held
   replica (a second render pass) and the HUD. Also `cameraRig.ts`, `viewmodel.ts`.
