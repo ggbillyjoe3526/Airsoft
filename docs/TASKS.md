@@ -256,18 +256,3 @@ attempts: 0
 first-person left arm is plain grey, and bots land hits within a few moments at 5 to 10 metres." One task, one pull
 request.
 
-## G11 · Readable camo, a dressed left arm, and a fair moment up close
-tier: core
-perf: required
-touches: src/render/figureCamo.ts, src/render/figureFinish.ts, src/render/figureParts.ts, src/render/figureHuman.ts, src/render/figurePalette.ts, src/render/characterModels.ts, src/render/replicaArms.ts, src/render/replicaBuilder.ts, src/render/handModels.ts, src/render/webgpu/figureNodes.ts, src/render/webgpu/worldTwins.ts, src/config/characters.ts, src/config/replicaFinish.ts, src/config/bots.ts, src/config/graphics.ts, src/config/nav.ts, src/ai/aim.ts, src/ai/botCombat.ts, src/ai/botSenses.ts, src/ai/bot.ts, src/ai/botController.ts, src/ai/routes.ts, src/ai/squadOrders.ts, src/nav/navGrid.ts, src/ai/depotMatchSupport.ts, src/map/g9PlacementQA.test.ts, src/render/g9EffectsQA.test.ts, src/render/g9DressingCost.test.ts, src/render/probeGrid.ts, src/render/probeFile.ts, src/render/bakedLight.ts, pipeline/bake-light.mjs, src/ai/balance/, pipeline/baseline/
-contract: none
-acceptance:
-  1. The team camo on the detailed figure (Medium and up) reads clearly at play distances, near and far, in the art direction, and the Alpha blue and Beta orange teams still read at a glance; the cause of the faint print is found and fixed, not masked.
-  2. The first-person left arm wears the same sleeve, glove and skin as the right and the team's kit (camo and armband in view), on WebGL and WebGPU.
-  3. Every WebGL change has its WebGPU node twin; `pipeline/webgpu-compare.mjs` on the figure views passes the bar (WebGL2: mean ≤ 0.5 and ≤ 1 % of pixels over 24; a software WebGPU adapter on the pixel share only, owner's ruling 2026-10-09).
-  4. Low costs no more than before: no camo on Low figures or sleeves.
-  5. The cause of fast bot hits at 5 to 10 m is found (reaction, aim error, first-shot accuracy, spread, convergence) and tuned in data so a player has a fair moment to answer; bots stay a threat. Time to first hit at 5 and 10 m is measured before and after with the headless harness, and win rates are reported as figures, never asserted.
-  6. A fast test guards what must never happen: an Easy or Normal bot landing its first hit inside the fair moment at 5 or 10 m, or a bot on Normal and up never hitting a still player up close.
-  7. The latent faults the new match flow showed (coordinator's ruling, 2026-10-09) are fixed at the root with the guards' limits unchanged: a bot pushed off its route leg, or cutting a corner at a waypoint, no longer walks a straight line over a ledge (Stack House: rode up a stair's side), a body on a dock's lip snaps to the dock, not the road below (Depot seed 11), and a Follow me teammate no longer routes round the far side of a container while the leader moves (Depot seed 2). Each has a test that fails without its fix; over seeds 1-16, follow worst-distance stays under 8 m and Stack House air time at 2 ticks or less.
-status: open
-attempts: 0
