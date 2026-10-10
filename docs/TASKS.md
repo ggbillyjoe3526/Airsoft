@@ -251,8 +251,3 @@ acceptance:
   2. With Dev settings on (Unlock all gear), every replica and part is available.
 status: open
 attempts: 0
-
-**The owner's three fixes after W3 (2026-10-09).** His words: "The camo pattern on figures barely shows, the
-first-person left arm is plain grey, and bots land hits within a few moments at 5 to 10 metres." One task, one pull
-request.
-
