@@ -506,4 +506,34 @@ describe('squad orders (M22)', () => {
     expect(byPit.z).toBeCloseTo(-s, 5);
     expect(drops(byPit)).toBe(false);
   });
+
+  it('follow me with no straight way to the spot: round the way you went while you move, not round the far side (G11)', () => {
+    // Depot seed 2 (G11): as the spots swung round behind a leader turning while they sprinted, a follower's spot slid
+    // to the far side of a container; the route there went round its other end, 1.5 m the wrong way, then flipped back
+    // with the next swing, and the follower fell 9.9 m behind. Here you run east past a wall; the follower stands
+    // beyond it from its spot, which you can walk to in a straight line but it can't.
+    const leader = createCharacter(0, vec3(), EAST, LOADOUT, 0);
+    leader.position = vec3(0, 0, 0);
+    leader.yaw = EAST;
+    const g = followSpot(leader, EAST, 0, { nav: OPEN_NAV } as unknown as BotWorld, vec3());
+    const start = vec3(g.x - 3, 0, g.z);
+    const wallNav = buildNavGrid({ ...OPEN_FIELD, blocks: [...OPEN_FIELD.blocks, { kind: 'wall', center: vec3(g.x - 1.5, 1.5, g.z), size: vec3(0.4, 3, 4) }] }, NAV);
+    expect(clearLine(wallNav, start.x, 0, start.z, g.x, g.z)).toBe(false);
+    const goalFor = (leaderSpeed: number) => {
+      leader.velocity = vec3(leaderSpeed, 0, 0);
+      const b = createBot(createCharacter(1, vec3(start.x, 0, start.z), EAST, LOADOUT, 0), 1, BOTS, BOTS);
+      b.character.position = vec3(start.x, 0, start.z);
+      startOrder(b, leader, 'follow', 0);
+      moveOrder(b, { nav: wallNav, cfg: BOTS } as unknown as BotWorld, createCommand(), DT);
+      expect(b.orderGoal.x).toBeCloseTo(g.x, 5); // the spot is the same with the wall there
+      expect(b.routeState).toBe('wanted');
+      return { ...b.routeGoal };
+    };
+    // You on the move: the route goes to you (the way you went), which can't flip as the spot swings.
+    const moving = goalFor(5);
+    expect(flat(moving, leader.position)).toBeLessThan(0.01);
+    // You standing still: to the spot, to settle there.
+    const standing = goalFor(0);
+    expect(flat(standing, g)).toBeLessThan(0.01);
+  });
 });

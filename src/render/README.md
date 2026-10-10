@@ -20,7 +20,7 @@ and never writes the simulation.
   and vertex baked light, junk glow and neon flicker, the sky host), `webgpu/effectNodes.ts` (flames, smoke and steam,
   and the sized points' sprite materials), `webgpu/pointSprites.ts` (each sized Points drawn as one instanced sprite,
   since points draw one pixel wide there) and `webgpu/twinUniforms.ts` (the patch's own uniform objects, read per drawn
-  object). W3: `webgpu/figureNodes.ts` (the figures' per-vertex finish), the replica sheen from the node renderer's
+  object). W3: `webgpu/figureNodes.ts` (the figures' per-vertex finish, and since G11 their camo and your sleeves'), the replica sheen from the node renderer's
   prefiltered sky, `webgpu/nightLights.ts` (clustered lights on a real WebGPU device: three/webgpu's Forward+
   `ClusteredLightsNode` with spot lights added, for the world only; the extra lights themselves are made by
   `lightPools.ts` when `Renderer.clusteredLights` says so) and `webgpu/webgpuCompat.ts` (fits
@@ -47,8 +47,10 @@ and never writes the simulation.
   skyline's lights and the plane ride the tree ring's draw call (`skyHost.ts`).
 - Light: `lighting.ts` (sun and sky fill; on High the shadow map follows the view), `lightingPreset.ts` (day or night),
   `atmosphere.ts`, `lightPools.ts`, `torchBeams.ts`. Baked bounce light: `lightBake.ts`, `probeGrid.ts`,
-  `bakedLight.ts`, read in `surfaceShader.ts` (which also draws weathering).
-- Figures: `characterRenderer.ts`, `characterModels.ts`, `figureHuman.ts` / `figureRobot.ts`. Replicas and hands:
+  `probeFile.ts` (the file format, loaded in a chunk of its own), `bakedLight.ts`, read in `surfaceShader.ts` (which
+  also draws weathering).
+- Figures: `characterRenderer.ts`, `characterModels.ts`, `figureHuman.ts` / `figureRobot.ts`; `figureFinish.ts` (the
+  per-vertex finish) and `figureCamo.ts` (the team camo printed per pixel on clothes and sleeves, G11). Replicas and hands:
   `replicaModels.ts` (the bodies and assembly), `replicaParts.ts` (optics, grips, magazines and the other fitted parts),
   `replicaBuilder.ts` (the mesh builder both use), `replicaFinish.ts` (moulded speckle), `replicaSheen.ts` (the
   environment reflection), `replicaArms.ts` (the first-person arms), `handModels.ts`; `itemPictures.ts` draws them off

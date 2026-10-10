@@ -59,7 +59,7 @@ export function perceive(b: Bot, w: BotWorld): void {
     contact.acquiredAt = w.time - (preAimed ? b.skill.preAimSettled * b.skill.aimSettleTime : 0);
     contact.firstSeenAt = w.time;
     contact.held = b.skill.holdsAngles && b.holding && preAimed;
-    freshAimError(b.aim, cfg, b.rng);
+    freshAimError(b.aim, cfg, b.rng, true);
   } else if (contact !== b.contact) {
     // Back on someone seen moments ago: no new reaction delay, but the aim error is this target's, not the last one's.
     freshAimError(b.aim, cfg, b.rng);

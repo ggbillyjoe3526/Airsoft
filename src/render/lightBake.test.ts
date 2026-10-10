@@ -3,7 +3,8 @@ import { BAKED_LIGHT } from '../config/bake';
 import type { MapBlock, MapData } from '../map/mapTypes';
 import { vec3 } from '../sim/vec';
 import { bakeHash, bakeInputs, bakeProbes, rayDirections } from './lightBake';
-import { decodeProbeFile, encodeProbeFile, type ProbeSample, sampleProbes } from './probeGrid';
+import { decodeProbeFile, encodeProbeFile } from './probeFile';
+import { type ProbeSample, sampleProbes } from './probeGrid';
 
 /**
  * The offline bake (G6, render/lightBake.ts; run by pipeline/bake-light.mjs): a small yard with a red wall beside open

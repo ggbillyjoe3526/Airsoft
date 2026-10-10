@@ -274,7 +274,12 @@ function followMove(b: Bot, w: BotWorld, leader: Character, away: number, wasRus
     b.moveDir.z = dz / len;
     return true;
   }
-  return walkTo(b, w, g, 0, dt, false);
+  // No straight way to the spot. With the leader on the move, go the leader's own way round (G11): the spot is picked
+  // to be walkable from the leader, not from here, and as it swings round behind a turning leader it can slide to the
+  // far side of a container from the follower, whose route then flips round the other end and back (Depot seed 2: a
+  // follower ran 1.5 m the wrong way and fell 9.9 m behind a sprinting leader). The way to the leader can't flip;
+  // once the spot is in a straight line again, the bot makes for it as above.
+  return walkTo(b, w, leaderMoving ? leader.position : g, 0, dt, false);
 }
 
 /** Moves an ordered bot for this tick (moveBot's 'order' mode). Returns whether it walks a route. */

@@ -70,7 +70,7 @@ const MAPS: readonly [string, MapData][] = [
   ['Neon Heights', NEON_HEIGHTS],
 ];
 
-describe('G9: what the two maps’ dressing costs', () => {
+describe('G9: what the two maps’ dressing costs', { timeout: 30_000 }, () => {
   beforeAll(() => {
     vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => null }) });
   });

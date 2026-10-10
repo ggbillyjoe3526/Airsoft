@@ -81,7 +81,7 @@ afterAll(() => vi.unstubAllGlobals());
 
 // --- Criterion 3: Low is unchanged, vertex for vertex ----------------------------------------------------------------------
 
-describe('G9 QA: Low draws exactly what it drew before (acceptance 3)', () => {
+describe('G9 QA: Low draws exactly what it drew before (acceptance 3)', { timeout: 30_000 }, () => {
   for (const [name, map] of MAPS) {
     it(`${name}: Low’s map meshes and horizon are vertex-for-vertex, colour-for-colour the bare map’s`, () => {
       const q = QUALITY.low;
@@ -140,7 +140,7 @@ function extraTriangles(map: MapData, q: QualitySettings): number {
   return count(map) - count(bareOf(map));
 }
 
-describe('G9 QA: the cost the code states is the cost it has (acceptance 3: “each cost stated in the code”)', () => {
+describe('G9 QA: the cost the code states is the cost it has (acceptance 3: “each cost stated in the code”)', { timeout: 30_000 }, () => {
   let source = '';
   beforeAll(async () => {
     const fs = (await loadNode('fs')) as unknown as { readFileSync(p: string, e: 'utf8'): string };

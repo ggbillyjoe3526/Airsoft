@@ -64,6 +64,19 @@ export const BOT_BEHAVIOUR = {
    * random direction), then settles: a hasty first aim, never dead on.
    */
   aimFirstErrorMin: 0.6,
+  /**
+   * ...and points to one side, tilted at most this far from level (degrees; G11). Up close an error the size of a body's
+   * width still lands when it points down (the legs) or up (the head), so the first BBs whizz past a shoulder instead,
+   * where the player sees them coming.
+   */
+  aimFirstErrorTiltDeg: 30,
+  /**
+   * How much of the reaction delay the aim error already settles over (0..1; G11). At 1 the error shrinks from first
+   * sight, so the opening burst came already on target after a reaction (the owner's "bots land hits within a few
+   * moments at 5 to 10 metres"); lower, a bot walks its BBs onto its target once it opens fire, which gives the player a
+   * fair moment to answer.
+   */
+  aimSettleWhileReacting: 0,
   /** How fast the error drifts around (Hz): low values look like a hand correcting, not jitter. */
   aimWanderRate: 0.7,
   /**
@@ -90,9 +103,11 @@ export const BOT_BEHAVIOUR = {
   friendlySpreadSigmas: 2,
   /**
    * ...and this far (metres) past the target too: a BB that misses keeps flying, so a teammate just
-   * behind the target in the line of fire is as much in the way as one in front.
+   * behind the target in the line of fire is as much in the way as one in front. 25 since G11 (15 before): a fresh
+   * contact's first BBs go wide on purpose, so more of them fly on past the target, and one reached a teammate 23.5 m
+   * down the line (Depot, Attack / Defend with ricochets counting, seed 16).
    */
-  friendlyBeyondTarget: 15,
+  friendlyBeyondTarget: 25,
   /**
    * ...unless a wall stops the line first. What the aim line meets counts as a wall only if it also stands
    * this much higher (metres) where the line meets it: BBs (spread, hop-up) can sail over low cover such
@@ -216,6 +231,18 @@ export const BOT_BEHAVIOUR = {
   coverSettle: 0.5,
   /** Route waypoints count as reached within this distance (metres). */
   waypointReach: 0.45,
+  /**
+   * A bot this far (metres) off the leg it walks (pushed aside by a hold, a fight or a teammate) checks the straight
+   * way from where it is to the next waypoint before walking on; if that way would take a ledge the leg doesn't, it
+   * steps back onto the leg, routeRejoinAhead on from the nearest point of it (or asks for a fresh route if that way
+   * takes one too). A waypoint reached from further aside than this is walked onto when cutting the corner to the next
+   * would take a ledge. (G11: Stack House bots walked an old leg from a hold spot beside a stair's foot, or cut the
+   * corner at a stair's foot, rode up the stair's side and fell off it.) One nav cell: a smaller push keeps the body
+   * within a few centimetres of the clearance the leg was checked with, and checking only then keeps the cost low.
+   */
+  routeOffLeg: 0.2,
+  /** How far on along the leg (metres) from its nearest point a bot pushed off it steps back onto it: it merges, not stops. */
+  routeRejoinAhead: 0.5,
   /** Walking slower than this (m/s) for `stuckTime` seconds along a route means blocked: re-plan. */
   stuckSpeed: 0.3,
   stuckTime: 1,
@@ -655,8 +682,8 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     turnRate: 5.5,
     aimErrorStartDeg: 4,
     aimErrorSettledDeg: 0.9,
-    aimSettleTime: 0.8,
-    aimErrorStartMetres: 0.25,
+    aimSettleTime: 0.6,
+    aimErrorStartMetres: 0.6,
     aimErrorMovingDeg: 1.2,
     aimErrorTracking: 0.06,
     leadFactor: 0.7,
@@ -690,8 +717,8 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     turnRate: 6,
     aimErrorStartDeg: 3.5,
     aimErrorSettledDeg: 0.75,
-    aimSettleTime: 0.7,
-    aimErrorStartMetres: 0.2,
+    aimSettleTime: 0.5,
+    aimErrorStartMetres: 0.5,
     aimErrorMovingDeg: 1.0,
     aimErrorTracking: 0.05,
     leadFactor: 0.85,

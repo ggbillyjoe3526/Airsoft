@@ -62,6 +62,10 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **W4** · On WebGPU the screen effects look as on WebGL on every preset (bloom, ambient occlusion, temporal smoothing, light shafts, reflections, grain)
 
 ### Fixed
+- **G11** · The team camo on players reads clearly on Medium and up: crisp dark and light blotches printed per pixel, on WebGL and WebGPU; Low keeps plain clothes
+- **G11** · Your left arm wears its team camo sleeve and armband in view, not a plain grey sleeve
+- **G11** · Bots no longer ride up a stair's side and drop off it or walk off the loading dock, and a Follow me teammate no longer runs the wrong way round a container while you sprint
+- **G11** · Bots no longer land their first hit almost at once up close: their first BBs go wide to one side and walk in (Normal's first hit at 5 m now takes about 1.5 s); Hard and Pro stay quicker
 - **M74** · No frame hitches when you're hit or a bot plans a route (#138)
 - **BP2** · Customise takes "No light" on every replica's Light row; it stays after a reload, and your match kit carries no torch (#150)
 - **BP2** · A hunter checks at once whether pushing keeps you in sight when a new fight starts, not from the last fight's look (#150)

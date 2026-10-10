@@ -1,6 +1,7 @@
 import type * as THREE from 'three';
+import { REPLICA_FINISH } from '../config/replicaFinish';
 import { describe, expect, it } from 'vitest';
-import { buildHand, type FingerCurl, type GeometrySink, type HandPose } from './handModels';
+import { buildForearm, buildHand, type FingerCurl, type GeometrySink, type HandPose } from './handModels';
 
 /** Triangles in everything a sink was given. */
 function triangles(build: (sink: GeometrySink) => void): number {
@@ -28,5 +29,34 @@ describe('buildHand (REN-10)', () => {
       // Still a hand, not a mitten: the 15 capsules alone are over a thousand.
       expect(n).toBeGreaterThan(1000);
     }
+  });
+});
+
+describe('buildForearm (G11)', () => {
+  it('wears the team armband near the wrist, where the support arm shows it in view, hugging the sleeve', () => {
+    const wrist: [number, number, number] = [0, 0, 0];
+    const elbow: [number, number, number] = [0, -0.4, 0];
+    const parts: Partial<Record<string, THREE.BufferGeometry>> = {};
+    buildForearm({ addGeometry: (key, geo) => void (parts[key] ??= geo) }, wrist, elbow, 0.046, 'high');
+    const band = parts.armband!;
+    const sleeve = parts.sleeve!;
+    band.computeBoundingBox();
+    // The wrist is at y 0 and the elbow at -0.4: the band's middle sits REPLICA_FINISH.armband.at of the way down.
+    const mid = -(band.boundingBox!.min.y + band.boundingBox!.max.y) / 2;
+    expect(mid / 0.4).toBeCloseTo(REPLICA_FINISH.armband.at, 1);
+    expect(mid / 0.4).toBeLessThan(0.5);
+    // Between the sleeve's rings either side of it, a little proud (a loose ring would float off the arm, as at 1.05 of
+    // the elbow's width it did here).
+    const pos = sleeve.getAttribute('position');
+    const rings = new Map<number, number>();
+    for (let i = 0; i < pos.count; i++) {
+      const y = Math.round(-pos.getY(i) * 1000) / 1000;
+      rings.set(y, Math.max(rings.get(y) ?? 0, Math.abs(pos.getX(i))));
+    }
+    const ys = [...rings.keys()].sort((a, b) => a - b);
+    const below = rings.get(ys.filter((y) => y <= mid).at(-1)!)!;
+    const above = rings.get(ys.find((y) => y > mid)!)!;
+    expect(band.boundingBox!.max.x).toBeGreaterThan(Math.min(below, above));
+    expect(band.boundingBox!.max.x).toBeLessThan(Math.max(below, above) * REPLICA_FINISH.armband.proud);
   });
 });
