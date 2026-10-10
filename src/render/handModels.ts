@@ -36,9 +36,11 @@ export interface HandPose {
   /**
    * Thumb: how far it swings across the palm (0 = alongside, 1 = fully across) and its two bends. `aim` (optional)
    * points its first segment there instead, for a thumb set against the fingers rather than over them: a support hand
-   * under a handguard, its thumb up the near side while the fingers curl up the far one (FA13).
+   * under a handguard, its thumb up the near side while the fingers curl up the far one (FA13). `tipAim` (optional, with
+   * `aim`) points its second segment there instead of bending it by `curl`: a thumb that steps out round a corner and
+   * then lies along the side it holds.
    */
-  thumb: { swing: number; curl: readonly [number, number]; aim?: V3 };
+  thumb: { swing: number; curl: readonly [number, number]; aim?: V3; tipAim?: V3 };
 }
 
 // Proportions (metres, gloved).
@@ -179,8 +181,10 @@ export function handSkeleton(pose: HandPose): HandSkeleton {
   let tpos = local(-0.034, 0.004, -0.01);
   const tAxis = tDir.clone().cross(nn).normalize();
   const thumb: HandSegment[] = [];
+  const tipAim = aim ? pose.thumb.tipAim : undefined;
   for (let s = 0; s < 2; s++) {
-    tDir.applyQuaternion(new THREE.Quaternion().setFromAxisAngle(tAxis, pose.thumb.curl[s]!));
+    if (s === 1 && tipAim) tDir.copy(toVec(tipAim).normalize());
+    else tDir.applyQuaternion(new THREE.Quaternion().setFromAxisAngle(tAxis, pose.thumb.curl[s]!));
     const next = tpos.clone().addScaledVector(tDir, s === 0 ? 0.034 : 0.028);
     thumb.push({ from: tpos, to: next, radius: s === 0 ? 0.0115 : 0.0105 });
     tpos = next;

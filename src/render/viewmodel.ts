@@ -4,7 +4,7 @@ import { LIGHTING_PRESETS, type LightingPreset, VIEWMODEL } from '../config/rend
 import type { ReplicaConfig } from '../config/replicas';
 import type { ReplicaPaint } from '../config/schemes';
 import type { Armament } from '../sim/armament';
-import { type ArmStyle, buildReplicaModels, fitMuzzle, HUMAN_ARMS, LOW_DETAIL, type MagazinePart, type MuzzleMount, type ReplicaDetail, type ReplicaModels, type SupportHandPart } from './replicaModels';
+import { type ArmStyle, buildReplicaModels, fitMuzzle, fitSupportHand, HUMAN_ARMS, LOW_DETAIL, type MagazinePart, type MuzzleMount, type ReplicaDetail, type ReplicaModels, type SupportHandPart } from './replicaModels';
 
 const smooth = (t: number): number => {
   const c = Math.max(0, Math.min(1, t));
@@ -323,6 +323,7 @@ export class Viewmodel {
         if (p.kind === 'magazine' && p.object.visible) s.magBase = s.mag.bases.get(p.object);
       }
       fitMuzzle(s.mount, barrel, muzzle);
+      fitSupportHand(s.hand, parts?.grip ?? null);
       const fitted = optic != null;
       if (s.sightsUp) s.sightsUp.visible = !fitted;
       if (s.sightsDown) s.sightsDown.visible = fitted;
