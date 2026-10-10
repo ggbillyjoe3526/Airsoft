@@ -100,8 +100,11 @@ export const BALLISTICS: BallisticsConfig = {
   maxLifetime: 2.5,
   maxBBs: 256,
   ricochet: {
-    // Concrete gives back a little under half, steel containers more; crates (wood) and the ground (earth) soak a BB up.
-    restitution: { concrete: 0.4, metal: 0.55, wood: 0, earth: 0 },
+    // Concrete gives back under a third, steel containers more; crates (wood) and the ground (earth) soak a BB up.
+    // G12 (owner's ruling, 2026-10-10: "Bounced BBs lose more speed, so fewer of them knock players out"): three
+    // quarters of M20's 0.4 and 0.55. The ricochets that knock players out are mostly wide BBs coming back off the
+    // wall beside or behind a target, so the share into the surface is the lever; `slide` barely moves them.
+    restitution: { concrete: 0.3, metal: 0.41, wood: 0, earth: 0 },
     slide: 0.75,
     minSpeed: 12,
     maxBounces: 2,

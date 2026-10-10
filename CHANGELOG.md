@@ -59,6 +59,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M78** · High and Ultra draw the city's flat finishes at 512 × 512 as Medium does; Neon Heights on High: 21 MB less graphics memory (#151)
 - **W2** · On WebGPU the maps look as on WebGL: weathering, baked light, neon flicker, the skyline and its plane, moving flames, smoke, steam, stars, embers, fireflies and dust; players and screen effects still plain for now
 - **W3** · On WebGPU players, held replicas and replica sheen look as on WebGL; at night every lamp and fire near you lights walls and players
+- **G12** · BBs bounce off concrete and steel with less speed, so with Ricochets count on fewer bounced BBs knock players out (about a fifth of hits, down from about a quarter)
 - **W4** · On WebGPU the screen effects look as on WebGL on every preset (bloom, ambient occlusion, temporal smoothing, light shafts, reflections, grain)
 
 ### Fixed
