@@ -251,21 +251,3 @@ acceptance:
   2. With Dev settings on (Unlock all gear), every replica and part is available.
 status: open
 attempts: 0
-
-**The owner's ruling on G11's ricochet cap (2026-10-10).** G11's wide first shots lifted bounced BBs from about 14 %
-to about 27 % of hits with "Ricochets count" on, and G11 raised the playability guard's cap from 0.25 to 0.30 meanwhile.
-Asked to raise the cap or weaken bounces, the owner chose: "Weaken bounces: Bounced BBs lose more speed, so fewer of
-them knock players out." One task, one pull request.
-
-## G12 · Bounced BBs lose more speed (owner's ruling, 2026-10-10)
-tier: core
-perf: required
-touches: src/config/ballistics.ts, src/sim/ricochet.ts, src/sim/ricochet.test.ts, src/ai/depotMatchSupport.ts, src/ai/depotMatch.ricochet.test.ts, src/ai/depotMatch.ricochetFlag.test.ts, src/ai/balance/depotRicochet.balance.ts, src/ai/balance/depotRicochetFlag.balance.ts, pipeline/baseline/
-contract: none
-acceptance:
-  1. A bounced BB keeps less of its speed, set in data (`BALLISTICS.ricochet`); BBs still ricochet off hard surfaces and the bounces stay visible (DECISIONS: BBs always ricochet).
-  2. With Ricochets count on, bounced BBs are under 25 % of hits in both Attack / Defend and Elimination over the guard's 16 seeds, and `expectRicochetsPlayable` is back to `toBeLessThan(0.25)` with a comment citing the owner's ruling.
-  3. A unit test pins the new bounce: a bounced BB leaves with the configured share of its speed; it fails with the old value. The existing ricochet tests pass, changed only where they assert the old number on purpose.
-  4. Before and after figures (ricochet share of hits per mode, friendly ricochets, self hits, the ricochets-counting balance figures) are measured with the headless harness and quoted; win rates are reported as figures, not asserted.
-status: open
-attempts: 0
