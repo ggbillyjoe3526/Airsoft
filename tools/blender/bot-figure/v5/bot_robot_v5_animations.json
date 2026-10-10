@@ -1,0 +1,267 @@
+{
+ "figure": "bot_robot_v5",
+ "heightMetres": 1.73,
+ "facing": "+Z",
+ "fps": 30,
+ "clips": [
+  {
+   "name": "Idle",
+   "seconds": 2.0,
+   "frames": 60,
+   "loop": true,
+   "upperBodyOnly": false,
+   "speed": null
+  },
+  {
+   "name": "Run_F",
+   "seconds": 0.567,
+   "frames": 17,
+   "loop": true,
+   "upperBodyOnly": false,
+   "speed": 4.2
+  },
+  {
+   "name": "Run_B",
+   "seconds": 0.467,
+   "frames": 14,
+   "loop": true,
+   "upperBodyOnly": false,
+   "speed": 4.2
+  },
+  {
+   "name": "Run_L",
+   "seconds": 0.4,
+   "frames": 12,
+   "loop": true,
+   "upperBodyOnly": false,
+   "speed": 4.2
+  },
+  {
+   "name": "Run_R",
+   "seconds": 0.4,
+   "frames": 12,
+   "loop": true,
+   "upperBodyOnly": false,
+   "speed": 4.2
+  },
+  {
+   "name": "Walk_F",
+   "seconds": 0.6,
+   "frames": 18,
+   "loop": true,
+   "upperBodyOnly": false,
+   "speed": 2.3
+  },
+  {
+   "name": "Sprint",
+   "seconds": 0.5,
+   "frames": 15,
+   "loop": true,
+   "upperBodyOnly": false,
+   "speed": 6.3
+  },
+  {
+   "name": "CrouchIdle",
+   "seconds": 2.0,
+   "frames": 60,
+   "loop": true,
+   "upperBodyOnly": false,
+   "speed": null
+  },
+  {
+   "name": "CrouchWalk",
+   "seconds": 0.4,
+   "frames": 12,
+   "loop": true,
+   "upperBodyOnly": false,
+   "speed": 2.1
+  },
+  {
+   "name": "Jump",
+   "seconds": 1.0,
+   "frames": 30,
+   "loop": false,
+   "upperBodyOnly": false,
+   "speed": null
+  },
+  {
+   "name": "Rifle_Aim",
+   "seconds": 1.0,
+   "frames": 30,
+   "loop": true,
+   "upperBodyOnly": true,
+   "speed": null
+  },
+  {
+   "name": "Rifle_AimUp",
+   "seconds": 1.0,
+   "frames": 30,
+   "loop": true,
+   "upperBodyOnly": true,
+   "speed": null
+  },
+  {
+   "name": "Rifle_AimDown",
+   "seconds": 1.0,
+   "frames": 30,
+   "loop": true,
+   "upperBodyOnly": true,
+   "speed": null
+  },
+  {
+   "name": "Pistol_Aim",
+   "seconds": 1.0,
+   "frames": 30,
+   "loop": true,
+   "upperBodyOnly": true,
+   "speed": null
+  },
+  {
+   "name": "Pistol_AimUp",
+   "seconds": 1.0,
+   "frames": 30,
+   "loop": true,
+   "upperBodyOnly": true,
+   "speed": null
+  },
+  {
+   "name": "Pistol_AimDown",
+   "seconds": 1.0,
+   "frames": 30,
+   "loop": true,
+   "upperBodyOnly": true,
+   "speed": null
+  },
+  {
+   "name": "Rifle_Reload",
+   "seconds": 1.8,
+   "frames": 54,
+   "loop": false,
+   "upperBodyOnly": true,
+   "speed": null,
+   "fitTo": "reloadTime"
+  },
+  {
+   "name": "Pistol_Reload",
+   "seconds": 1.2,
+   "frames": 36,
+   "loop": false,
+   "upperBodyOnly": true,
+   "speed": null,
+   "fitTo": "reloadTime"
+  },
+  {
+   "name": "Switch",
+   "seconds": 0.6,
+   "frames": 18,
+   "loop": false,
+   "upperBodyOnly": true,
+   "speed": null,
+   "fitTo": "drawTime"
+  },
+  {
+   "name": "HitCall",
+   "seconds": 1.0,
+   "frames": 30,
+   "loop": false,
+   "upperBodyOnly": false,
+   "speed": null
+  },
+  {
+   "name": "WalkOff",
+   "seconds": 0.767,
+   "frames": 23,
+   "loop": true,
+   "upperBodyOnly": false,
+   "speed": 1.5
+  }
+ ],
+ "fitToNote": "Clips with fitTo are time-scaled to that replica stat (e.g. AEG drawTime 0.45 s, pistol 0.3 s; reloads 1.8 s and 1.2 s).",
+ "parts": [
+  "Body",
+  "Body_LOD1",
+  "Body_LOD2",
+  "Body_Neck",
+  "Body_Neck_LOD1",
+  "Body_Neck_LOD2",
+  "Head_Optic",
+  "Head_Optic_LOD1",
+  "Head_Optic_LOD2",
+  "Head_Sensor",
+  "Head_Sensor_LOD1",
+  "Head_Sensor_LOD2"
+ ],
+ "gripBones": [
+  "Grip_R",
+  "Grip_L"
+ ],
+ "firstPerson": {
+  "hide": [
+   "Body_Neck",
+   "Body_Neck_LOD1",
+   "Body_Neck_LOD2",
+   "Head_Optic",
+   "Head_Optic_LOD1",
+   "Head_Optic_LOD2",
+   "Head_Sensor",
+   "Head_Sensor_LOD1",
+   "Head_Sensor_LOD2"
+  ]
+ },
+ "teamMaterials": "tint materials whose names start with Team",
+ "replicaOnGrip": {
+  "rifle": [
+   [
+    0.76604,
+    -0.64279,
+    0.0,
+    -0.0564
+   ],
+   [
+    0.64279,
+    0.76604,
+    0.0,
+    0.045
+   ],
+   [
+    0.0,
+    0.0,
+    1.0,
+    0.11
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ]
+  ],
+  "pistol": [
+   [
+    0.76604,
+    -0.638,
+    -0.07834,
+    -0.06029
+   ],
+   [
+    0.64279,
+    0.76033,
+    0.09336,
+    0.04964
+   ],
+   [
+    0.0,
+    -0.12187,
+    0.99255,
+    0.0626
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ]
+  ]
+ },
+ "replicaOnGripNote": "Row-major 4x4, Blender axes (X right, Y forward, Z up) in the Grip_R bone frame with its origin at the bone head: the replica glb (same axes, metres) placed by this matrix sits in the fist. The pistol clips (Pistol_*, Switch from 35%) hold the pistol, all others the AEG."
+}
