@@ -16,19 +16,21 @@ export interface FigureLook {
   readonly radio: boolean;
   /** Its camo and shirt this many times as light as the team's (FIGURE.palette), so a team doesn't look cloned. */
   readonly tone: number;
+  /** Where its camo's pattern starts (a seed offset, FIGURE.camo; G11), so no two of a team wear the same blotches. */
+  readonly camo: number;
 }
 
 /**
  * The six looks (G7, from the concept's four heads): every head masked, a mix of packs and radios, a little lighter or
- * darker camo each. Figure `id` wears look `id % 6`, so every player in a 3 v 3 looks different. Robots take the pack.
+ * darker camo each, its blotches in places of its own. Figure `id` wears look `id % 6`, so every player in a 3 v 3 looks different. Robots take the pack.
  */
 const LOOKS: readonly FigureLook[] = [
-  { headgear: 'highCut', pack: true, radio: true, tone: 1 },
-  { headgear: 'balaclava', pack: false, radio: false, tone: 0.92 },
-  { headgear: 'visor', pack: true, radio: false, tone: 1.06 },
-  { headgear: 'bump', pack: false, radio: true, tone: 0.96 },
-  { headgear: 'bump', pack: true, radio: false, tone: 1.08 },
-  { headgear: 'highCut', pack: false, radio: false, tone: 0.98 },
+  { headgear: 'highCut', pack: true, radio: true, tone: 1, camo: 0 },
+  { headgear: 'balaclava', pack: false, radio: false, tone: 0.92, camo: 7 },
+  { headgear: 'visor', pack: true, radio: false, tone: 1.06, camo: 13 },
+  { headgear: 'bump', pack: false, radio: true, tone: 0.96, camo: 19 },
+  { headgear: 'bump', pack: true, radio: false, tone: 1.08, camo: 29 },
+  { headgear: 'highCut', pack: false, radio: false, tone: 0.98, camo: 37 },
 ];
 
 /** A colour as [hue, saturation, lightness] in sRGB, each 0..1; a hue of -1 takes the team colour's own. */
@@ -76,11 +78,19 @@ export const FIGURE = {
     dark: { sat: 0.85, light: 0.58 },
     /** The neck gaiter: the shirt this bright. */
     gaiter: 0.8,
-    /** Camo blotches on the detailed figure: its darker and lighter tones, and the blotches' size (metres). */
-    camoDark: 0.74,
-    camoLight: 1.14,
-    camoScale: 0.11,
   },
+  /**
+   * The team camo printed on the detailed figure's clothes and on your first-person sleeves (render/figureCamo.ts; G11).
+   * Drawn per pixel from the part's own position, so a blotch keeps a crisp, anti-aliased edge however coarse the mesh
+   * (the per-vertex print it replaces smeared into a faint shade on 10-sided limbs). Three crossed waves of the position,
+   * gently warped so the blotches are organic, give a value `n` in about ±3: above `darkAt` is the dark tone, below
+   * `lightAt` the light one, the rest the clothes' own colour. `dark` and `light` multiply that colour (linear), so the
+   * pattern keeps the team's hue and stays too grey to read as the team colour; the carrier, pads and helmet carry that.
+   * `scale`: metres per radian of the waves (a blotch is about twice this across); `warp`: how far the waves bend;
+   * `sleeve`: your first-person sleeves print it this much smaller, as a forearm at arm's length shows only a hand's
+   * width of it and the figures' blotches, sized to read across the field, would fill it with one.
+   */
+  camo: { dark: 0.34, light: 1.7, darkAt: 0.6, lightAt: -0.75, scale: 0.075, warp: 0.55, sleeve: 0.3 },
   /**
    * Robots (Settings › Look › Robots): a light shell for the first team and a dark one for the second, as the concept
    * (light and dark tell the teams apart with little colour vision too), dark joints, chrome pistons, a dark visor.

@@ -154,6 +154,12 @@ export interface Bot {
   routeRetryAt: number;
   route: Vec3[];
   routeLeg: number;
+  /**
+   * Where the leg the bot walks now starts (G11): where the route was planned from, then each waypoint reached, then
+   * wherever followRoute last checked the way on from. A bot pushed off that line (a hold, a fight, a teammate) has
+   * the way from where it is checked before it walks on, so it never takes a ledge the leg went round (routes.ts).
+   */
+  routeFrom: Vec3;
   routeGoal: Vec3;
   /** 'none': no route; 'wanted': waiting for the planner; 'ok': following `route`; 'failed': no route exists. */
   routeState: 'none' | 'wanted' | 'ok' | 'failed';
@@ -348,6 +354,7 @@ export function createBot(character: Character, seed: number, cfg: BotBehaviour,
     routeRetryAt: Number.NEGATIVE_INFINITY,
     route: [],
     routeLeg: 0,
+    routeFrom: vec3(),
     routeGoal: vec3(),
     routeState: 'none',
     moveDir: { x: 0, z: 0 },

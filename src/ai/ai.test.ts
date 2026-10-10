@@ -345,20 +345,28 @@ describe('bots in a duel', () => {
 
   it('hold fire for a teammate just past the target, but not for one behind a wall there', () => {
     // An Orange teammate 2.5 m behind the player, in the line of fire; optionally a wall in between. The
-    // bot doesn't sidestep, so the line stays on the teammate.
+    // bot doesn't sidestep, so the line stays on the teammate. Its first BBs, walked in from one side (G11), may fly
+    // past them both while the aim is well off; once it is on the player it holds. It never hits the teammate.
+    const onAim = BOTS.reactionTime[1] + BOTS.aimSettleTime;
     const shotsWith = (query: WorldQuery) => {
       const mate = (s: GameState) => s.characters.push(createCharacter(2, vec3(0, 0, 2.5), 0, LOADOUT, 1));
       const { state, run } = duel(12, mate, query, { ...BOTS, strafeInput: 0 });
-      let shots = 0;
+      const shots = { all: 0, onAim: 0 };
       run(3, () => {
-        for (const e of state.events) if (e.type === 'shot' && e.characterId === 1) shots++;
+        for (const e of state.events) {
+          if (e.type === 'shot' && e.characterId === 1) {
+            shots.all++;
+            if (state.time > onAim) shots.onAim++;
+          }
+          if (e.type === 'characterHit') expect(e.victimId).not.toBe(2);
+        }
       });
       return shots;
     };
-    expect(shotsWith(noWalls)).toBe(0);
-    expect(shotsWith(boxQuery(0, 1.2, 5, 0.2, 3))).toBeGreaterThan(0);
+    expect(shotsWith(noWalls).onAim).toBe(0);
+    expect(shotsWith(boxQuery(0, 1.2, 5, 0.2, 3)).all).toBeGreaterThan(0);
     // A low crate there is no wall: BBs can clear its top, so the teammate still counts.
-    expect(shotsWith(boxQuery(0, 1.2, 5, 0.2, 1.2))).toBe(0);
+    expect(shotsWith(boxQuery(0, 1.2, 5, 0.2, 1.2)).onAim).toBe(0);
   });
 
   it('play out identically from the same seed', () => {

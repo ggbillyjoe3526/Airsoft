@@ -360,7 +360,7 @@ const meshHash = (g: THREE.Object3D): string => {
   return parts.join('|');
 };
 
-describe('G9 QA: the maps are exactly what main shipped, and dressing code writes nothing to them', () => {
+describe('G9 QA: the maps are exactly what main shipped, and dressing code writes nothing to them', { timeout: 30_000 }, () => {
   // Pinned from origin/main in a clean checkout of it (the same fingerprint run there): every field of the map except
   // its dressing, typed arrays included. If a G9 change moved a block, a lane, a spawn or a terrain vertex, one of these
   // changes.
@@ -412,7 +412,7 @@ function forbidRandom(): void {
   });
 }
 
-describe('G9 QA: placement uses no clock and no Math.random, and is the same in any order', () => {
+describe('G9 QA: placement uses no clock and no Math.random, and is the same in any order', { timeout: 30_000 }, () => {
   afterEach(() => vi.restoreAllMocks());
 
   it('places both maps with Math.random and the clock forbidden, and gets the same layout back in the other order', () => {

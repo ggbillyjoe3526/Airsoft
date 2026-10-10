@@ -12,8 +12,9 @@ import { createCharacter } from '../sim/character';
 import { createCommand } from '../sim/commands';
 import { createRng } from '../sim/rng';
 import { vec3 } from '../sim/vec';
-import type { Bot, BotWorld } from './bot';
+import { type Bot, type BotWorld, createBot } from './bot';
 import { jitterPoint, moveBot } from './botMovement';
+import { followRoute } from './routes';
 import { createCoverSpot, findCover, lowCoverBlocks, tallCoverBlocks } from './cover';
 import { followSpot, holdPoint, placeHold } from './squadOrders';
 import { duel, noWalls } from './testSupport';
@@ -218,5 +219,69 @@ describe('bot movement at height on stacked floors (M34b)', () => {
     expect(up.left).toBeGreaterThan(300);
     const down = strafes(0);
     expect(down.right).toBeGreaterThan(0);
+  });
+});
+
+describe('a bot pushed off its route beside a stair (G11)', () => {
+  // Seed 7 of the Stack House match (G11): a bot planned a route up the south-east stair from (13.11, -7.09), off its
+  // foot (x 12) to the east, then stepped aside to hold at (12.54, -7.50) and walked on from there. The straight way
+  // from the hold spot to the next waypoint crosses the stair's side where it is 0.24 m up: the bot's capsule rode up
+  // onto the side and dropped off it, 10 ticks in the air. The route leg itself starts past the foot and never meets
+  // the side.
+  const w = { nav, cfg: BOTS, body: BODY } as unknown as BotWorld;
+  const onRoute = (x: number, z: number): Bot => {
+    const b = createBot(createCharacter(5, vec3(), 0, LOADOUT, 1), 5, BOTS, BOTS);
+    b.character.position = vec3(x, rest, z);
+    b.route.push(vec3(8.5, 1.75, -5.5), vec3(4.7, STOREY, -5.5));
+    b.routeLeg = 0;
+    b.routeFrom = vec3(13.11, rest, -7.09);
+    b.routeState = 'ok';
+    return b;
+  };
+
+  it('walks its leg from where it was planned', () => {
+    const b = onRoute(13.11, -7.09);
+    expect(followRoute(b, w, DT)).toBe(true);
+    expect(b.routeState).toBe('ok');
+    expect(b.moveDir.x).toBeLessThan(-0.9);
+  });
+
+  it('pushed beside the stair’s foot, steps back onto its leg instead of crossing the stair’s side', () => {
+    const b = onRoute(12.54, -7.5);
+    expect(followRoute(b, w, DT)).toBe(true);
+    expect(b.routeState).toBe('ok');
+    // North onto the leg, half a metre on from its nearest point (12.26, -6.80), not on towards the waypoint (-0.90,
+    // 0.45: west over the side).
+    expect(b.moveDir.x).toBeCloseTo(-0.37, 1);
+    expect(b.moveDir.z).toBeCloseTo(0.93, 1);
+    // Back on the leg, it walks the leg.
+    b.character.position = vec3(13.0, rest, -7.05);
+    expect(followRoute(b, w, DT)).toBe(true);
+    expect(b.moveDir.x).toBeLessThan(-0.9);
+  });
+
+  it('reaching a waypoint from aside by the west stair’s foot, walks onto it before turning for the next (G11)', () => {
+    // Seeds 2 and 3 of the Stack House match (G11): down the west stair, a bot counted its foot waypoint reached from
+    // 0.4 m north of it, on the stair's last tread, and cut the corner east: over the stair's side, 3-4 ticks in the air.
+    const b = onRoute(-12.04, 4.91);
+    b.route.length = 0;
+    b.route.push(vec3(-12.1, 0, 4.5), vec3(-6.1, 0, 2.3));
+    b.routeFrom = vec3(-12.1, 0, 4.9);
+    expect(followRoute(b, w, DT)).toBe(true);
+    expect(b.routeLeg).toBe(0);
+    expect(b.moveDir.z).toBeLessThan(-0.95); // south onto the waypoint, not east-south-east (0.92, -0.40)
+    // On it, it turns for the next.
+    b.character.position = vec3(-12.1, rest, 4.6);
+    expect(followRoute(b, w, DT)).toBe(true);
+    expect(b.routeLeg).toBe(1);
+    expect(b.moveDir.x).toBeGreaterThan(0.9);
+  });
+
+  it('pushed aside where the way on stays clear of the side, walks on from there', () => {
+    const b = onRoute(14, -7.4);
+    expect(followRoute(b, w, DT)).toBe(true);
+    expect(b.routeState).toBe('ok');
+    expect(b.routeFrom.x).toBe(14);
+    expect(b.routeFrom.z).toBe(-7.4);
   });
 });

@@ -77,4 +77,10 @@ export const REPLICA_FINISH = {
    * inner fold this share of their colour.
    */
   hands: { knuckleLight: 1.14, seamShade: 0.85, foldShade: 0.8 },
+  /**
+   * The team armband on each forearm (every hand detail): its middle this share of the way from the wrist to the elbow,
+   * its width (metres), and how much wider than the sleeve under it. Near the wrist, so the support arm shows its team
+   * colour in view (G11: at 0.62 it sat below the screen's edge and the arm read as a plain grey tube).
+   */
+  armband: { at: 0.3, width: 0.045, proud: 1.06 },
 } as const;

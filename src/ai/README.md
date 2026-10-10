@@ -9,10 +9,11 @@ seeded per bot.
 - `bot.ts`: a bot's plain-data state (one contact record per enemy seen, `skill`, `role`, `post`, `patrol`).
 - `botBrain.ts`: the per-tick decision and mode choice (lane → fight → cover → search; also `order` and `flag`). It
   calls `botSenses.ts` (target choice, contacts, reaction), `botMovement.ts` (lane points, hunting, strafing),
-  `routes.ts` (asking for and following a route, the last step onto a spot; shared with `squadOrders.ts`, so the two
-  files don't import each other) and `botCombat.ts` (aim, bursts, reloads; bots lead a target with `flightTimeEstimate`); `botTorch.ts` handles weapon
+  `routes.ts` (asking for and following a route, the last step onto a spot; a bot pushed off a leg walks back to it
+  rather than over a ledge, G11; shared with `squadOrders.ts`, so the two files don't import each other) and `botCombat.ts` (aim, bursts, reloads; bots lead a target with `flightTimeEstimate`); `botTorch.ts` handles weapon
   lights at night.
-- `perception.ts`, `aim.ts`, `cover.ts`: view cone and static ray casts; turn rate and aim error; hidden spots, low
+- `perception.ts`, `aim.ts`, `cover.ts`: view cone and static ray casts; turn rate and aim error (a fresh contact's first aim starts wide
+  to one side and settles from the trigger, G11); hidden spots, low
   cover and wall corners (a bot leans out at a corner). `angles.ts`, `angleFeatures.ts`: held angles.
 - `squadOrders.ts`, `squadFollow.ts`: Follow me, Hold here, Regroup (default keys F, X, V, or the order wheel on Z); in
   Extraction the runner's bot teammates follow and cover. `extractionRoles.ts`: home-team guards, patrols and hunters.

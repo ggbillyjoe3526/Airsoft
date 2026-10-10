@@ -9,6 +9,7 @@ import { fitParts, type WorldQuery } from '../../sim/armament';
 import { type Character, createCharacter } from '../../sim/character';
 import { vec3 } from '../../sim/vec';
 import { CharacterRenderer } from '../characterRenderer';
+import { useSleeveCamo } from '../figureCamo';
 import { FINISH_ATTRIBUTE, useVertexFinish } from '../figureFinish';
 import { resolveLighting } from '../lightingPreset';
 import { TorchBeams } from '../torchBeams';
@@ -81,8 +82,9 @@ describe('the figures, replicas, arms, hands and torch beams on the node path (W
         }
       }
     }
-    // The detailed figures' finish (one material per figure), the beams' three light materials, and the plain rest.
-    expect(seen.twinned).toBe(characters.length);
+    // The detailed figures' finish (one material per figure) and your sleeves' camo (G11), the beams' three light
+    // materials, and the plain rest.
+    expect(seen.twinned).toBe(characters.length + 1);
     expect(seen.own).toBe(3);
     expect(seen.plain).toBeGreaterThan(10);
     for (const r of [figures, low]) r.dispose();
@@ -111,6 +113,13 @@ describe('the figures, replicas, arms, hands and torch beams on the node path (W
     // Only the finish's key: a plain Standard or another patch gets no figure twin.
     expect(figureTwin(new THREE.MeshStandardMaterial())).toBeNull();
     expect(figureTwin(useVertexFinish(new THREE.MeshStandardMaterial()))).not.toBeNull();
+    // The camo (G11): the twin prints it on the colour, as the GLSL does after the vertex colours; the sleeves have one too.
+    expect(twin.colorNode).not.toBeNull();
+    const sleeve = useSleeveCamo(new THREE.MeshStandardMaterial({ vertexColors: true }));
+    const sleeveTwin = worldTwin(sleeve, grid) as MeshStandardNodeMaterial;
+    expect(sleeveTwin).toBeInstanceOf(MeshStandardNodeMaterial);
+    expect(sleeveTwin.colorNode).not.toBeNull();
+    expect(sleeveTwin.roughnessNode).toBeNull();
   });
 });
 

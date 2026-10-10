@@ -210,7 +210,7 @@ export const GRAPHICS_ROWS: readonly GraphicsRow[] = [
     cost: 'GPU: small; memory 0.2 MB',
     options: detail,
   }),
-  choice({ field: 'handDetail', label: 'Hand detail', help: 'Knuckle pads, wrist straps and seams on your gloves; folds in your sleeves.', cost: 'GPU: small', options: detail }),
+  choice({ field: 'handDetail', label: 'Hand detail', help: 'Knuckle pads, wrist straps and seams on your gloves; folds in your sleeves. High also prints your team camo on the sleeves.', cost: 'GPU: small', options: detail }),
   choice({ field: 'bbGlow', label: 'BB glow', help: 'A soft warm glow round every BB in flight, so far BBs read as dots.', cost: 'GPU: small', options: onOff }),
   choice({ field: 'impactGrit', label: 'Impact grit', help: 'BBs throw chips of the surface they hit and a faint ring of dust.', cost: 'GPU: small', options: onOff }),
   choice({ field: 'laserBeam', label: 'Laser beam', help: 'A faint beam from the laser module. Real ones can’t be seen by day: a toy cue.', cost: 'Free', options: onOff }),

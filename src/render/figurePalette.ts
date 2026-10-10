@@ -5,7 +5,7 @@ import { FIGURE, type Hsl } from '../config/characters';
  * A figure's colours (G7), all derived from its team colour (FIGURE.palette), so the standard and the colour-blind
  * team colours dress their teams alike: `main` is the team colour exactly (the carrier, knee pads, armbands, helmets);
  * `dark` its darker partner; `camo` and `shirt` its clothes; `lens` the goggles' and visor's tint; `glow` a robot's
- * eyes; `shell` a robot's shell.
+ * eyes; `shell` a robot's shell; `camoSeed` where its camo's pattern starts (FigureLook.camo, a seed offset).
  */
 export interface FigurePalette {
   main: number;
@@ -15,6 +15,7 @@ export interface FigurePalette {
   lens: number;
   glow: number;
   shell: number;
+  camoSeed: number;
 }
 
 const hsl = { h: 0, s: 0, l: 0 };
@@ -34,9 +35,9 @@ export function warmTeam(h: number): boolean {
 
 /**
  * The palette of a figure in `teamColor`. `tone` lightens or darkens the camo and shirt (FigureLook.tone); `shell` is
- * the robot shell its team wears (FIGURE.robot.shells).
+ * the robot shell its team wears (FIGURE.robot.shells); `camoSeed` where its camo's pattern starts (FigureLook.camo).
  */
-export function figurePalette(teamColor: number, tone = 1, shell: number = FIGURE.robot.shells[0]!): FigurePalette {
+export function figurePalette(teamColor: number, tone = 1, shell: number = FIGURE.robot.shells[0]!, camoSeed = 0): FigurePalette {
   const P = FIGURE.palette;
   colour.setHex(teamColor, THREE.SRGBColorSpace).getHSL(hsl, THREE.SRGBColorSpace);
   const { h, s, l } = hsl;
@@ -50,6 +51,7 @@ export function figurePalette(teamColor: number, tone = 1, shell: number = FIGUR
     lens: fromSpec(P.lens, h),
     glow: fromSpec(P.glow, h),
     shell,
+    camoSeed,
   };
 }
 

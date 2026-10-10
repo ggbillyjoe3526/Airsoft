@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BAKED_LIGHT } from '../../config/bake';
 import { bakeHash, bakeInputs } from '../../render/lightBake';
-import { decodeProbeFile, fromBase64 } from '../../render/probeGrid';
+import { decodeProbeFile, fromBase64 } from '../../render/probeFile';
 import { lightingPicked } from '../lightingChoice';
 import { MAPS, mapData, registerMaps } from '../maps';
 import { DEV_MAP_DATA } from '../devMaps';

@@ -199,10 +199,13 @@ wears off, and each match has a light breeze (calm to about 2 m/s) that pushes B
   a bare face) in team camo with a plate carrier in the team colour, or robots in a light or dark shell by team. No
   two look the same. At 30 m, on Low too, can you tell the teams apart at a glance from the front, side and back?
   Try Settings › Accessibility › Team colours › High contrast too.
+- [ ] **Team camo** (Medium and up). Trousers, shirt and sleeves wear clear dark and light blotches in the team's
+  colour, a hand or two across, crisp up close and blending to the team colour far off without shimmering. Does the
+  camo still let you pick Alpha blue from Beta orange at a glance? Low keeps plain clothes.
 - [ ] **Settings › Look › Robots.** Mixed (the default) puts humans and robots on both teams each match; Off makes
   everyone human.
-- [ ] **Your hands.** Dark gloves, sleeves in your team's camo and its armband; robot arms when your player is a
-  robot. The support hand holds the rifle's handguard, thumb up the near side, no finger through it; through a
+- [ ] **Your hands.** Dark gloves, both sleeves printed in your team's camo (Hand detail High; plain on Low) and
+  the team armband in view on the left forearm; robot arms when your player is a robot. The support hand holds the rifle's handguard, thumb up the near side, no finger through it; through a
   reload it takes the magazine and comes back.
 - [ ] **Hit call.** Hit a bot: the HIT! sign, the hand up, the replica hanging; still readable at 20 to 30 m.
 - [ ] **Replicas.** The held rifle and pistol look like toys: blocky, two-tone, with stippled grips; the red dot is a
@@ -334,6 +337,9 @@ You're on Blue with two bot teammates against three Orange bots by default.
 - [ ] **Bots fighting by door frames** don't fire into the frame beside them or dive for cover from their own BB.
 - [ ] **Every level hunts.** Once their lane is swept, bots of every level hunt the map's middle; a round shouldn't
   drag to the clock with nobody left to find.
+- [ ] **Up close, a fair moment.** Walk into a Normal bot at 5 to 10 m: its first BBs go wide to one side and walk
+  in, so you have a moment to see them coming and answer (its first hit takes about 1.5 s, rarely under 0.75 s). Do
+  Hard and Pro still punish a slow answer? Do Normal bots still feel a threat?
 - [ ] **Difficulty.** Easy should feel clearly weaker than Hard. Hard bots sometimes come at a spot from the side;
   Easy never. A change mid-match applies from the next round, and the screen says so.
 - [ ] **Hard opponents' kit.** Their rifles differ (faster, silenced, longer-ranged); Play again rolls new kits. Easy

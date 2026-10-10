@@ -249,6 +249,18 @@ const FOREARM_PROFILE: readonly [number, number][] = [
   [1, 0.96],
 ];
 
+/** The forearm's radius at `t` (0 wrist, 1 elbow) as a share of the elbow radius: FOREARM_PROFILE, linearly between stops. */
+function forearmRadius(t: number): number {
+  const p = FOREARM_PROFILE;
+  const c = Math.min(1, Math.max(0, t));
+  for (let i = 1; i < p.length; i++) {
+    const [t1, r1] = p[i]!;
+    const [t0, r0] = p[i - 1]!;
+    if (c <= t1) return r0 + ((r1 - r0) * (c - t0)) / (t1 - t0);
+  }
+  return p[p.length - 1]![1];
+}
+
 /**
  * A sleeved forearm from the wrist back to the elbow (usually out of view): a tapered, slightly oval
  * sleeve shaped like the arm inside it, a rolled cuff at the wrist end, and the team armband. Hand detail `high` (FA8)
@@ -283,9 +295,12 @@ export function buildForearm(sink: GeometrySink, wrist: V3, elbow: V3, elbowRadi
   if (high) shadeVertices(cuff, () => 1);
   sink.addGeometry('sleeve', cuff);
 
-  // Team armband around the upper forearm.
-  const bandAt = start + 0.62 * (length - start);
-  const band = new THREE.CylinderGeometry(elbowRadius * 1.05, elbowRadius * 1.03, 0.045, 18, 1, true);
+  // The team armband round the forearm, where the support arm shows it in view.
+  const { at, width, proud } = REPLICA_FINISH.armband;
+  const bandAt = start + at * (length - start);
+  const half = width / 2 / (length - start);
+  // Hugging the sleeve's taper: its elbow end (the cylinder's top) as wide as the sleeve there, and its wrist end.
+  const band = new THREE.CylinderGeometry(forearmRadius(at + half) * elbowRadius * proud, forearmRadius(at - half) * elbowRadius * proud, width, 18, 1, true);
   band.scale(1, 1, 0.84);
   band.translate(0, bandAt, 0);
   band.applyQuaternion(orient);

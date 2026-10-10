@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { FIGURE } from '../config/characters';
 import { FIGURE_SHADOW_PROXY } from '../config/render';
+import { CAMO_ATTRIBUTE } from './figureCamo';
 import { FINISH_ATTRIBUTE } from './figureFinish';
 import { chamferBox, frameBetween, limbGeo, type ProfileStop, V } from './figureShapes';
 import { shadowProxy } from './shadowProxy';
@@ -11,13 +12,13 @@ export type FigureDetail = (typeof FIGURE.detail)[keyof typeof FIGURE.detail];
 /** [roughness, metalness] of a vertex on the detailed figure (FIGURE.finish). */
 export type Finish = readonly [roughness: number, metalness: number];
 
-/** How a part is coloured on the detailed figure: its finish, a lighter bevel, a shade by position. Ignored on `low`. */
+/** How a part is coloured on the detailed figure: its finish, a lighter bevel, its camo. Ignored on `low`. */
 export interface PartLook {
   finish?: Finish;
   /** Lighten the bevel faces of a chamfered block (FIGURE.edgeLight): the CS edge highlight. */
   edge?: boolean;
-  /** A colour multiplier by vertex position, in the figure part's space (camo blotches, a baked shade). */
-  shade?: (x: number, y: number, z: number) => number;
+  /** The team camo's pattern (its seed, 1 or more; render/figureCamo.ts), printed per pixel from the part's position. */
+  camo?: number;
 }
 
 /** True for a vertex normal between two faces of a block (a bevel), not on a flat face. */
@@ -55,22 +56,9 @@ function shadowCylinder(r: number, h: number): THREE.BufferGeometry | null {
 }
 
 /**
- * Camo blotches (the detailed figure, FIGURE.palette): a darker and a lighter tone where three crossed waves of the
- * part's position peak, so neighbouring limbs and the torso print one pattern. `seed` shifts it per part.
- */
-export function camoShade(seed = 0): (x: number, y: number, z: number) => number {
-  const P = FIGURE.palette;
-  const k = 1 / P.camoScale;
-  return (x, y, z) => {
-    const n = Math.sin(x * k * 1.3 + y * k * 0.7 + seed) + Math.sin(y * k * 1.1 - z * k * 0.9 + seed * 1.7) + Math.sin(z * k * 1.2 + x * k * 0.8 - seed);
-    return n > 1.1 ? P.camoDark : n < -1.3 ? P.camoLight : 1;
-  };
-}
-
-/**
  * Collects coloured primitives and merges them into one geometry with a `color` attribute (graphics overhaul G7: the
  * builder the human and robot parts share). On the detailed figure every part also carries a per-vertex finish
- * (render/figureFinish.ts), blocks are chamfered and their bevels lightened, and a look's shade is baked in.
+ * (render/figureFinish.ts) and camo pattern (render/figureCamo.ts), and blocks are chamfered and their bevels lightened.
  */
 export class PartBuilder {
   private readonly geos: THREE.BufferGeometry[] = [];
@@ -116,14 +104,11 @@ export class PartBuilder {
     if (!this.overhaul) {
       for (let i = 0; i < n; i++) colors.set([c.r, c.g, c.b], i * 3);
     } else {
-      const pos = g.getAttribute('position');
       const nor = g.getAttribute('normal');
       const finish = new Float32Array(n * 2);
       const [rough, metal] = look.finish ?? FIN.fabric;
       for (let i = 0; i < n; i++) {
-        let k = 1;
-        if (look.edge && onBevel(nor.getX(i), nor.getY(i), nor.getZ(i))) k *= FIGURE.edgeLight;
-        if (look.shade) k *= look.shade(pos.getX(i), pos.getY(i), pos.getZ(i));
+        const k = look.edge && onBevel(nor.getX(i), nor.getY(i), nor.getZ(i)) ? FIGURE.edgeLight : 1;
         colors[i * 3] = Math.min(1, c.r * k);
         colors[i * 3 + 1] = Math.min(1, c.g * k);
         colors[i * 3 + 2] = Math.min(1, c.b * k);
@@ -131,6 +116,7 @@ export class PartBuilder {
         finish[i * 2 + 1] = metal;
       }
       g.setAttribute(FINISH_ATTRIBUTE, new THREE.BufferAttribute(finish, 2));
+      g.setAttribute(CAMO_ATTRIBUTE, new THREE.BufferAttribute(new Float32Array(n).fill(look.camo ?? 0), 1));
     }
     g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     return g;

@@ -130,7 +130,7 @@ export function createMaterials(teamColor: number, detail: ReplicaDetail, speckl
       : new THREE.MeshBasicMaterial({ color: F.torch.lensOff }),
     bb: new THREE.MeshStandardMaterial({ color: F.witnessBb, roughness: 0.35, metalness: 0, vertexColors }),
     // The arms (G7): gloved in the team's camo, or a robot's shell (replicaArms.ts).
-    ...armMaterials(teamColor, arms, vertexColors),
+    ...armMaterials(teamColor, arms, vertexColors, detail.hands === 'high'),
   };
   // Vertex colours only darken (a colour can't pass white), so flat faces sit at VERTEX_BASE and the material is that
   // much brighter: a flat face is its colour as before, a bevel or worn edge lighter.

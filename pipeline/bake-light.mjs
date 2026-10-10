@@ -23,7 +23,7 @@ const [{ MAPS, mapData, registerMaps }, { DEV_MAP_DATA }, bake, probes, files] =
   load('/src/map/maps.ts'),
   load('/src/map/devMaps.ts'),
   load('/src/render/lightBake.ts'),
-  load('/src/render/probeGrid.ts'),
+  load('/src/render/probeFile.ts'),
   load('/src/map/bakes/files.ts'),
 ]);
 registerMaps(DEV_MAP_DATA);
