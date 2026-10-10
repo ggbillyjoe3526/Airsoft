@@ -17,10 +17,12 @@ describe('a 3v3 bot match on the Stack House (floors over floors, M34b)', () => 
   it('plays out rounds on both floors: bots climb the stairs, walk-offs from upstairs come down to the dead zone, nobody steps off an open edge', { timeout: 60_000 }, () => {
     // Measured 2026-10-04 (seeds 1-8, 120 s): 7-9 rounds a match, someone alive upstairs in every match, three players
     // hit upstairs (seeds 3, 5 and 7), each of whom walked down a stair to a dead-zone spot; never more than 2 ticks
-    // in the air.
+    // in the air. Seeds 1-12 since G12 (2026-10-10): the weaker bounce reshuffles the matches, and seeds 1-8 then hold
+    // one player hit upstairs (main held two, the floor); every walk-off from upstairs still came down to its spot
+    // (16 seeds: 8 of 8 after, 3 of 3 before). The floor of 2 is a sample size, not a rate.
     const spots = STACK_HOUSE.deadZones.flat().map((s) => s.position);
     let walkedDown = 0;
-    for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
+    for (const seed of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]) {
       const stats = playMatch(120, seed, undefined, BOTS, 'elimination', ROUNDS, STACK_HOUSE);
       expect(stats.rounds, `seed ${seed}`).toBeGreaterThanOrEqual(5);
       expect(stats.maxAliveY, `seed ${seed}`).toBeGreaterThan(UPSTAIRS);

@@ -46,8 +46,24 @@ describe('BB ricochets (M20)', () => {
     expect(wood.bounces).toBe(0);
   });
 
+  it('give back three quarters of the old bounce: 0.3 of the speed into concrete, 0.41 into steel (G12, owner, 2026-10-10)', () => {
+    // Pinned numbers, not the config's: M20 gave back 0.4 and 0.55 (32 and 44 m/s head-on), which this fails.
+    const head = (material: SurfaceHit['material']) => {
+      const bb = bbFlying(0, -1);
+      ricochet(bb, wall(material), CFG);
+      return Math.hypot(bb.velocity.x, bb.velocity.y, bb.velocity.z);
+    };
+    expect(head('concrete')).toBeCloseTo(24, 6);
+    expect(head('metal')).toBeCloseTo(32.8, 6);
+    // At 45° the part along the wall keeps its slide (0.75) and the part into it comes back at 0.3: 45.7 m/s of 80.
+    const bb = bbFlying(1, -1);
+    expect(ricochet(bb, wall('concrete'), CFG)).toBe(true);
+    expect(Math.hypot(bb.velocity.x, bb.velocity.y, bb.velocity.z)).toBeCloseTo(80 * Math.sqrt(0.5 * (0.75 ** 2 + 0.3 ** 2)), 6);
+    expect(bb.velocity.z).toBeCloseTo(80 * Math.SQRT1_2 * 0.3, 6);
+  });
+
   it('drop a BB that would leave too slowly, and stop after the last allowed bounce', () => {
-    // Head-on at 25 m/s: 10 m/s back off concrete, under the minimum.
+    // Head-on at 25 m/s: 7.5 m/s back off concrete, under the minimum.
     expect(ricochet(bbFlying(0, -1, 25), wall('concrete'), CFG)).toBe(false);
     const bb = bbFlying(0, -1);
     bb.bounces = CFG.maxBounces;

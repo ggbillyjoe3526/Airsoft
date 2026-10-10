@@ -203,10 +203,13 @@ describe('stepBBs hitting characters', () => {
   });
 
   it('ticks a character with a ricochet without knocking them out, unless the match counts ricochets (M20)', () => {
-    // A BB fired at an angle at a concrete wall 10 m away comes back off it towards a target standing beside the line out.
+    // A BB fired at an angle at a concrete wall 10 m away comes back off it towards a target standing beside the line out:
+    // it meets the wall at x = 3 and leaves at dx/dz = 0.3 · slide / restitution (no scatter without an rng).
+    const { slide, restitution } = BALLISTICS.ricochet;
+    const targetX = 3 + 4 * ((0.3 * slide) / restitution.concrete);
     for (const counts of [false, true]) {
       const shooter = createCharacter(1, vec3(), 0, LOADOUT, 0);
-      const target = createCharacter(2, vec3(5.2, 0, -6), 0, LOADOUT, 1);
+      const target = createCharacter(2, vec3(targetX, 0, -6), 0, LOADOUT, 1);
       const characters = [shooter, target];
       const pool = createBBPool(1);
       const dir = vec3(0.3 / Math.hypot(0.3, 1), 0, -1 / Math.hypot(0.3, 1));

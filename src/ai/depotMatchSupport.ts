@@ -325,9 +325,10 @@ export function expectRicochetsPlayable(mode: MatchMode): void {
   // A bot's own ricochet now catches it too (audit SIM-07): rare, a few hits in 16 matches.
   expect(t.selfHits / t.hits, mode).toBeLessThan(0.04);
   expect(t.ricochetHits / t.hits, mode).toBeGreaterThan(0.05);
-  // 0.30 since G11 (2026-10-09): a fresh contact's first aim goes wide, and some of those BBs bounce into hits (16
-  // seeds: Attack / Defend 0.268, Elimination 0.232; 0.135 and 0.140 before). Bounces still decide a minority of hits.
-  expect(t.ricochetHits / t.hits, mode).toBeLessThan(0.3);
+  // Back to 0.25 in G12 (owner's ruling, 2026-10-10: "Weaken bounces: Bounced BBs lose more speed, so fewer of them
+  // knock players out"). G11's wide first aim lifted the share to Attack / Defend 0.268, Elimination 0.232 (16 seeds;
+  // the cap was 0.30 meanwhile); with three quarters of the old restitution (config/ballistics.ts) 0.179 and 0.198.
+  expect(t.ricochetHits / t.hits, mode).toBeLessThan(0.25);
   if (mode === 'attackDefend') expect(t.captures, mode).toBeGreaterThanOrEqual(7);
 }
 
