@@ -142,6 +142,17 @@ export const VIEWMODEL = {
     /** Seated right at the end, when the reloadEnd click plays. */
     magSeated: 0.97,
   },
+  /**
+   * The moving parts of a replica drawn from its model file (RM1, render/replicaRig.ts), posed from the file's
+   * animations. Fire: the trigger, from the start each shot, or back at `firePeak` (its share of the clip, the trigger
+   * fully pulled) for a shot while it is still moving, so full auto holds it back. Selector: how far into its clip each
+   * fire mode sits (safe at 0), turned at the clip's own speed. SightsFold: the iron sights fold down while an optic is
+   * fitted, at the clip's own speed. Reload follows the reload's progress.
+   */
+  parts: {
+    firePeak: 0.4,
+    selector: { semi: 0.5, burst: 0.75, auto: 1 },
+  },
   /** Pitch-down (radians) of the replica at the start of a draw. */
   drawTilt: 0.6,
   /**

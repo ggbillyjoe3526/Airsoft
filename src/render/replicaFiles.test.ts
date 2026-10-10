@@ -20,6 +20,8 @@ const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFile
 async function cyberScene(): Promise<THREE.Object3D> {
   const buf = readFileSync(new URL('../assets/models/replicas/cyber.glb', import.meta.url));
   const gltf = await new GLTFLoader().parseAsync(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer, '');
+  // Its animations on the scene, as loadGltfScene leaves them (RM1).
+  gltf.scene.animations = gltf.animations;
   return gltf.scene;
 }
 
@@ -52,7 +54,7 @@ describe('the replica model files (M101)', () => {
     expect(new Set(file.body.map((p) => p.key))).toEqual(new Set(['cyberSlab', 'polymer', 'cyberLine', 'cyberCore', 'metal']));
     expect(file.magazine.length).toBeGreaterThan(0);
     expect(file.figure.length).toBeGreaterThan(0);
-    expect(file.triangles.held).toBeLessThanOrEqual(REPLICA_FILE.warnTriangles);
+    expect(file.triangles.held).toBeLessThanOrEqual(REPLICA_FILE.warnTriangles.default!);
     expect(file.triangles.figure).toBeLessThanOrEqual(REPLICA_FILE.warnFigureTriangles);
     // Pinned so a new export is seen: 1,220 in the body, 132 in the magazine; 112 on a figure.
     expect(file.triangles).toEqual({ held: 1352, figure: 112 });

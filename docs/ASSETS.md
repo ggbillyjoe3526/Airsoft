@@ -31,7 +31,10 @@ a replica's in `src/assets/models/replicas/<replica id>.glb` (M101).
 
 | File | Asset | Made with | Author |
 |---|---|---|---|
-| `src/assets/models/replicas/cyber.glb` | The Cyber Pistol in the hands (1,352 triangles), its magazine and its figure version (112 triangles) (M101, 2026-10-10) | Blender 5.2, built through the owner's Blender connection; source `.blend` kept by the owner | Claude for William (owner) |
+| `src/assets/models/replicas/cyber.glb` | The Cyber Pistol in the hands (1,352 triangles), its magazine, its figure version (112 triangles) and its trigger and reload animations (M101, RM1; 2026-10-10) | Blender 5.2, built through the owner's Blender connection; source `.blend` kept by the owner | Claude for William (owner) |
+| `src/assets/models/replicas/aeg.glb` | The AEG rifle in the hands (5,558 triangles), its magazine, flash hider and figure version (244 triangles), and eight moving parts with their animations: trigger, fire selector, folding sights, magazine release, charging handle, dust cover, hop-up dial (RM1, 2026-10-10) | Blender 5.2, as above | Claude for William (owner) |
+| `src/assets/models/replicas/pistol.glb` | The gas pistol in the hands (1,700 triangles), its magazine and figure version (60 triangles), and its slide, trigger and magazine release with their animations (RM1, 2026-10-10) | Blender 5.2, as above | Claude for William (owner) |
+| `src/assets/models/replicaParts/aeg.glb`, `pistol.glb` | The fittable parts: the AEG's red dot, 2x scope, two foregrips, long and tight-bore barrels, silencer, weapon torch, low-cap and hi-cap magazines; the gas pistol's laser, torch, silencer and extended magazine (RM1, 2026-10-10) | Blender 5.2, as above | Claude for William (owner) |
 
 The font is served with the game (graphics overhaul G3, Inter since M100) because the page's policy loads fonts from itself only. The
 licence travels beside them.

@@ -10,7 +10,7 @@ import { gripHand, type Hand, type HandStyle, openHand, wrapIn } from './figureH
 import { humanArm, humanBody, humanLeg } from './figureHuman';
 import { type FigurePalette, figurePalette, robotShell } from './figurePalette';
 import { type FigureDetail, PartBuilder } from './figureParts';
-import { addPistol, addRifle, BARE_KIT, type FigureKit, type FigurePistolShape, type FigureReplicaColours, pistolGrips, rifleGrips } from './figureReplicas';
+import { addPistol, addRifle, BARE_KIT, type FigureKit, type FigureReplicaShape, type FigureReplicaColours, pistolGrips, rifleGrips } from './figureReplicas';
 import { robotArm, robotBody, robotLeg } from './figureRobot';
 import { V } from './figureShapes';
 
@@ -46,8 +46,9 @@ export interface FigureDress {
   shell: number;
   rifle: FigureReplicaColours;
   pistol: FigureReplicaColours;
-  /** The pistol's own shape from its model file (M101), or null for the built-in one. */
-  pistolShape?: FigurePistolShape | null;
+  /** The rifle's and the pistol's own shapes from their model files (RM1, M101), or null for the built-in ones. */
+  rifleShape?: FigureReplicaShape | null;
+  pistolShape?: FigureReplicaShape | null;
 }
 
 /** A human of the first team carrying that team's replicas: what a figure is dressed in unless told otherwise. */
@@ -181,13 +182,13 @@ export function buildFigure(
   const aim = new THREE.Group();
   aim.position.y = F.shoulderHeight + hy;
   const shoulders = V(0, F.shoulderHeight, 0);
-  const aimRifle = fromModel('aimRifle', shoulders) ?? builtAimRifle(an, pal, material, detail, kit, dress.rifle);
+  const aimRifle = fromModel('aimRifle', shoulders) ?? builtAimRifle(an, pal, material, detail, kit, dress.rifle, dress.rifleShape ?? null);
   const aimPistol = fromModel('aimPistol', shoulders) ?? builtAimPistol(an, pal, material, detail, kit, dress.pistol, dress.pistolShape ?? null);
   aimPistol.visible = false;
   aim.add(aimRifle, aimPistol);
   upper.add(aim);
 
-  const hitPose = fromModel('hitPose', V(0, F.hipHeight, 0)) ?? builtHitPose(an, pal, material, hy, detail, kit, dress.rifle);
+  const hitPose = fromModel('hitPose', V(0, F.hipHeight, 0)) ?? builtHitPose(an, pal, material, hy, detail, kit, dress.rifle, dress.rifleShape ?? null);
   hitPose.visible = false;
   upper.add(hitPose);
 
@@ -204,11 +205,11 @@ export function buildFigure(
 }
 
 /** The arms with the rifle shouldered on the right, in aim-group space (the shoulder line): its hands on its grips. */
-function builtAimRifle(an: Anatomy, pal: FigurePalette, material: THREE.Material, detail: FigureDetail, kit: FigureKit, colours: FigureReplicaColours): THREE.Mesh {
+function builtAimRifle(an: Anatomy, pal: FigurePalette, material: THREE.Material, detail: FigureDetail, kit: FigureKit, colours: FigureReplicaColours, shape: FigureReplicaShape | null): THREE.Mesh {
   const R = FIGURE.rifle;
   const b = new PartBuilder(detail);
   const m = new THREE.Matrix4().makeTranslation(R.x, R.y, R.butt);
-  addRifle(b, m, colours, kit);
+  addRifle(b, m, colours, kit, shape);
   const g = rifleGrips();
   const style = an.hand(pal);
   const right = gripHand(b, wrapIn(g.firing, m), style, g.trigger.applyMatrix4(m));
@@ -218,7 +219,7 @@ function builtAimRifle(an: Anatomy, pal: FigurePalette, material: THREE.Material
 }
 
 /** The arms with the pistol held out in both hands, in aim-group space: the support hand over the firing hand. */
-function builtAimPistol(an: Anatomy, pal: FigurePalette, material: THREE.Material, detail: FigureDetail, kit: FigureKit, colours: FigureReplicaColours, shape: FigurePistolShape | null): THREE.Mesh {
+function builtAimPistol(an: Anatomy, pal: FigurePalette, material: THREE.Material, detail: FigureDetail, kit: FigureKit, colours: FigureReplicaColours, shape: FigureReplicaShape | null): THREE.Mesh {
   const P = FIGURE.pistol;
   const b = new PartBuilder(detail);
   const m = new THREE.Matrix4().makeTranslation(P.x, P.y, P.butt);
@@ -235,7 +236,7 @@ function builtAimPistol(an: Anatomy, pal: FigurePalette, material: THREE.Materia
  * The hit pose in upper-body space: the right hand straight up (open), the rifle hanging muzzle-down from the left hand
  * by its grip.
  */
-function builtHitPose(an: Anatomy, pal: FigurePalette, material: THREE.Material, hy: number, detail: FigureDetail, kit: FigureKit, colours: FigureReplicaColours): THREE.Mesh {
+function builtHitPose(an: Anatomy, pal: FigurePalette, material: THREE.Material, hy: number, detail: FigureDetail, kit: FigureKit, colours: FigureReplicaColours, shape: FigureReplicaShape | null): THREE.Mesh {
   const F = FIGURE;
   const b = new PartBuilder(detail);
   const top = F.shoulderHeight + hy;
@@ -249,7 +250,7 @@ function builtHitPose(an: Anatomy, pal: FigurePalette, material: THREE.Material,
   const turn = new THREE.Matrix4().makeRotationX(-(Math.PI / 2 - F.hangTilt));
   const grip = g.firing.top.clone().lerp(g.firing.bottom, 0.5).applyMatrix4(turn);
   const m = new THREE.Matrix4().makeTranslation(-F.shoulderSpread - 0.05 - grip.x, top - 0.55 - grip.y, -0.06 - grip.z).multiply(turn);
-  addRifle(b, m, colours, kit);
+  addRifle(b, m, colours, kit, shape);
   const left = gripHand(b, wrapIn({ ...g.firing, side: V(-1, 0, 0) }, m), style);
   arms(b, an, pal, top, [
     [1, { wrist, out: up }, V(1, 0, 0.3)],

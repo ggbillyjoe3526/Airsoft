@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 import { FULL_MOTION, type MotionScale } from '../config/accessibility';
 import { LIGHTING_PRESETS, type LightingPreset, VIEWMODEL } from '../config/render';
-import type { ReplicaConfig } from '../config/replicas';
+import type { FireMode, ReplicaConfig } from '../config/replicas';
 import type { ReplicaPaint } from '../config/schemes';
 import type { Armament } from '../sim/armament';
 import { type ArmStyle, buildReplicaModels, fitMuzzle, fitSupportHand, HUMAN_ARMS, LOW_DETAIL, type MagazinePart, type MuzzleMount, type ReplicaDetail, type ReplicaModels, type SupportHandPart } from './replicaModels';
 import { NO_REPLICA_FILES, type ReplicaFiles } from './replicaFiles';
+import type { ReplicaRig } from './replicaRig';
 
 const smooth = (t: number): number => {
   const c = Math.max(0, Math.min(1, t));
@@ -90,6 +91,11 @@ export class Viewmodel {
     /** The iron sights standing up / folded (replicas with an optic mount). */
     sightsUp: THREE.Object3D | undefined;
     sightsDown: THREE.Object3D | undefined;
+    /** Its moving parts, from its model file (RM1), and how far into each animation they are (s; -1: not yet posed). */
+    parts3d: ReplicaRig | null;
+    fire: number;
+    selector: number;
+    sights: number;
   }[] = [];
   /** 0 = support hand on its grip, 1 = on the magazine (reloading). */
   private handBlend = 0;
@@ -157,7 +163,7 @@ export class Viewmodel {
     this.slots.length = 0;
     this.beams = [];
     for (const r of this.loadout) {
-      const { group: model, magazine, supportHand, muzzle, mount } = replicas.models.get(r.id)!;
+      const { group: model, magazine, supportHand, muzzle, mount, rig } = replicas.models.get(r.id)!;
       model.position.set(...r.look.hold.position);
       model.rotation.y = r.look.hold.yaw;
       this.slots.push({
@@ -172,6 +178,10 @@ export class Viewmodel {
         magBase: undefined,
         sightsUp: model.getObjectByName('sightsUp'),
         sightsDown: model.getObjectByName('sightsDown'),
+        parts3d: rig ?? null,
+        fire: 0,
+        selector: -1,
+        sights: -1,
       });
       model.visible = false;
       this.rig.add(model);
@@ -281,6 +291,12 @@ export class Viewmodel {
   /** A shot from the player's replica: kick back and up. */
   onShot(): void {
     this.kick = Math.min(VIEWMODEL.kickMax, this.kick + 1);
+    // The trigger: pulled from the start, or held back at the peak for a shot while it is still moving (full auto).
+    const s = this.slots[this.shownSlot];
+    if (s?.parts3d) {
+      const peak = VIEWMODEL.parts.firePeak * s.parts3d.duration('Fire');
+      s.fire = s.fire <= 0 ? Number.EPSILON : Math.min(s.fire, peak);
+    }
   }
 
   /**
@@ -374,6 +390,10 @@ export class Viewmodel {
     const handling = armament.handling[armament.active]!;
     const reloadP = armament.reload > 0 ? 1 - armament.reload / handling.reloadTime : 0;
     const reloadDip = Math.sin(Math.PI * reloadP);
+    for (let i = 0; i < this.slots.length; i++) {
+      const s = this.slots[i]!;
+      if (s.parts3d) poseParts(s, s.parts3d, armament.modes[i], armament.optics[i] != null, s === slot ? reloadP : 0, dt);
+    }
     const R = VIEWMODEL.reload;
     slot.model.rotation.set(reloadDip * R.tilt, holdYaw + reloadDip * R.turn, reloadDip * R.roll);
     // Magazine swap: the support hand goes to the magazine, pulls it, stows it out of view, brings a
@@ -439,4 +459,30 @@ export class Viewmodel {
   dispose(): void {
     this.replicas.dispose();
   }
+}
+
+/** Moves `value` towards `target` at one second a second (a part turned at its animation's own speed). */
+function approach(value: number, target: number, dt: number): number {
+  return value < target ? Math.min(target, value + dt) : Math.max(target, value - dt);
+}
+
+/**
+ * Poses a replica's moving parts (RM1) from the game's state: the trigger after a shot, the fire selector at `mode`,
+ * the iron sights folded while an optic is fitted, and the magazine release through the reload (`reloadP`, 0..1).
+ * The selector and sights start where they belong, then turn when the setting changes.
+ */
+function poseParts(s: { fire: number; selector: number; sights: number }, rig: ReplicaRig, mode: FireMode | undefined, optic: boolean, reloadP: number, dt: number): void {
+  if (s.fire > 0) {
+    s.fire += dt;
+    if (s.fire >= rig.duration('Fire')) s.fire = 0;
+  }
+  rig.set('Fire', s.fire);
+  const selector = (mode ? VIEWMODEL.parts.selector[mode] : 0) * rig.duration('Selector');
+  s.selector = s.selector < 0 ? selector : approach(s.selector, selector, dt);
+  rig.set('Selector', s.selector);
+  const sights = optic ? rig.duration('SightsFold') : 0;
+  s.sights = s.sights < 0 ? sights : approach(s.sights, sights, dt);
+  rig.set('SightsFold', s.sights);
+  rig.set('Reload', reloadP * rig.duration('Reload'));
+  rig.apply();
 }
