@@ -10,7 +10,7 @@ import { PostStack } from '../../post/postStack';
 import { RetroFilter } from '../../retroFilter';
 import { denoiseDisk } from './nodeAmbientOcclusion';
 import { bloomKernel, bloomMipSizes } from './nodeBloom';
-import { type NodeRenderer } from './nodeKit';
+import { CompileGate, type NodeRenderer } from './nodeKit';
 import { DirectOutput } from './nodeOutput';
 import { NodePostStack } from './nodePostStack';
 import { NodeRetroFilter } from './nodeRetro';
@@ -302,6 +302,26 @@ describe('a warm-up compile still under way when the stack or the retro filter i
     freed = freeing();
     c.dispose();
     expect(freed.has(c.sceneTarget)).toBe(true);
+  });
+
+  it('a stack or retro filter of the same renderer waits too: Three shares a render context among targets of a kind', async () => {
+    const gate = new CompileGate();
+    const warming = new NodePostStack(setup('high'), 64, 36, new DirectOutput(), gate);
+    const { gl, finish } = compiling();
+    const done = warming.compile(gl as unknown as NodeRenderer, new THREE.Scene(), sunlit(warming));
+    const next = new NodePostStack(setup('high'), 64, 36, new DirectOutput(), gate);
+    const retro = new NodeRetroFilter({ pixelSize: 4, levels: 6 }, gate);
+    const freed = freeing();
+    next.dispose();
+    retro.dispose();
+    await Promise.resolve();
+    expect(gate.busy).toBe(true);
+    expect(freed.has(next.sceneTarget) || freed.has(retro.renderTarget)).toBe(false);
+    finish();
+    await done;
+    await new Promise((r) => setTimeout(r, 0));
+    expect(gate.busy).toBe(false);
+    expect(freed.has(next.sceneTarget) && freed.has(retro.renderTarget)).toBe(true);
   });
 
   it('the retro filter waits for its compile the same way', async () => {

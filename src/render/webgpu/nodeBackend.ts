@@ -6,6 +6,7 @@ import type { PostSetup } from '../post/postStack';
 import type { EnvironmentLook } from '../replicaSheen';
 import type { DrawStats } from '../rendererParts';
 import { NightLighting } from './nightLights';
+import { CompileGate } from './post/nodeKit';
 import { DirectOutput } from './post/nodeOutput';
 import { type NodeFrameDrawer, NodePostStack, type Overlay } from './post/nodePostStack';
 import { NodeRetroFilter } from './post/nodeRetro';
@@ -69,6 +70,8 @@ export class NodeBackend {
   private readonly lighting: NightLighting | null;
   /** Low's frame straight onto the canvas, and the held replica's on the post stack's presets (W4). */
   private readonly output = new DirectOutput();
+  /** The warm-up compiles under way, which the stacks' and retro filters' frees wait for (W4). */
+  private readonly compiles = new CompileGate();
 
   private constructor(
     readonly renderer: WebGPURenderer,
@@ -166,12 +169,12 @@ export class NodeBackend {
 
   /** The post stack for `setup` on this renderer (W4): the PostHost makes and frees it as on WebGL. */
   postStack(setup: PostSetup, width: number, height: number): NodePostStack {
-    return new NodePostStack(setup, width, height, this.output);
+    return new NodePostStack(setup, width, height, this.output, this.compiles);
   }
 
   /** The retro filter on this renderer (W4). */
   retro(look: RetroLook): NodeRetroFilter {
-    return new NodeRetroFilter(look);
+    return new NodeRetroFilter(look, this.compiles);
   }
 
   /**
@@ -250,7 +253,7 @@ export class NodeBackend {
     const r = this.renderer;
     // Each for the target and output step the frame draws it with (W4), so the pipelines match the frame's.
     const done = drawer ? (drawer as NodeFrameDrawer).compile(r, scene, camera, overlay) : this.output.compile(r, scene, camera, overlay);
-    void done.catch(ignore);
+    void this.compiles.track(done).catch(ignore);
   }
 
   /** Frees the renderer, its canvas's context and (on WebGPU) its device, and the pictures' renderer. */

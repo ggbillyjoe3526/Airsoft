@@ -102,9 +102,33 @@ export function colourTarget(width: number, height: number, type: THREE.TextureD
   return new THREE.RenderTarget(scaled(width, scale), scaled(height, scale), { type, depthBuffer: false });
 }
 
-/** `done`, with `settled` called once it settles either way (how a compile still under way is kept: dispose waits). */
-export function whileUnderWay(done: Promise<void>, settled: () => unknown): Promise<void> {
-  const call = (): void => void settled();
-  done.then(call, call);
-  return done;
+/**
+ * The node renderer's warm-up compiles still under way, which every free of a target waits for. Three 0.186 keys a
+ * render context on a target's attachments (format, type, samples, depth), not on the target, and makes each compiled
+ * pipeline once its shaders are built from the depth texture that context holds then: the last target of that kind
+ * drawn into. One freed meanwhile (a stack dropped for a quality change, the retro filter or a new map) leaves the
+ * pipeline without a depth format, an error on WebGPU. One gate per renderer: the stacks and retro filters it makes
+ * share it.
+ */
+export class CompileGate {
+  private readonly underWay = new Set<Promise<unknown>>();
+
+  /** `done`, counted as under way until it settles either way. */
+  track<T>(done: Promise<T>): Promise<T> {
+    this.underWay.add(done);
+    const off = (): void => void this.underWay.delete(done);
+    done.then(off, off);
+    return done;
+  }
+
+  /** Whether a compile is under way (tests). */
+  get busy(): boolean {
+    return this.underWay.size > 0;
+  }
+
+  /** Calls `free` now, or once every compile under way (and any begun meanwhile) has settled. */
+  afterCompiles(free: () => void): void {
+    if (this.underWay.size === 0) return free();
+    void Promise.allSettled([...this.underWay]).then(() => this.afterCompiles(free));
+  }
 }

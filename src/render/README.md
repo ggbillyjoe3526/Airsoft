@@ -31,6 +31,7 @@ and never writes the simulation.
   `nodeFinish.ts` for the output step and lens finish), `nodeRetro.ts` is the retro filter, and `nodeOutput.ts` tone-maps
   each material as it draws where WebGL draws straight to the screen: Low's whole frame (the haze after the tone
   mapping, as WebGL's), and the held replica, which draws into a target of its own that the stack's last pass lays on.
+  A stack or retro filter frees its targets only once the renderer's warm-up compile is done (`nodeKit.ts` `CompileGate`).
 - `matchPresentation.ts`: other players, hit feedback, spectator camera, round banner, scoreboard, flag.
   `combatPresentation.ts`: after each tick it consumes `state.events`; each frame it draws the BBs, puffs, the held
   replica (a second render pass) and the HUD. Also `cameraRig.ts`, `viewmodel.ts`.

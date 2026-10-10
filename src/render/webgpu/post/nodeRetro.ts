@@ -3,7 +3,7 @@ import type { NodeMaterial } from 'three/webgpu';
 import { tsl } from './tsl';
 import type { RetroLook } from '../../../config/render';
 import { retroTargetSize, type RetroView } from '../../retroFilter';
-import { type AnyNode, at, displayOf, fullScreen, type NodeRenderer, type NodeTarget, quad, whileUnderWay } from './nodeKit';
+import { type AnyNode, at, displayOf, fullScreen, type NodeRenderer, type NodeTarget, CompileGate, quad } from './nodeKit';
 import type { NodeFrameDrawer, Overlay } from './nodePostStack';
 
 const { abs, clamp, floor, Fn, min, mod, screenCoordinate, screenSize, texture, uniform, vec2, vec3, vec4 } = tsl;
@@ -28,10 +28,11 @@ export class NodeRetroFilter implements RetroView, NodeFrameDrawer {
   /** One present material per tone mapping it has been drawn with (a settings change makes the next). */
   private readonly present = new Map<THREE.ToneMapping, NodeMaterial>();
   private readonly u = { viewSize: uniform(new THREE.Vector2(1, 1)), pixel: uniform(1), levels: uniform(2) };
-  /** The warm-up compile into the target, while it is still under way (dispose waits for it, as the stack's). */
-  private compiling: Promise<void> | null = null;
-
-  constructor(look: RetroLook) {
+  constructor(
+    look: RetroLook,
+    /** The renderer's compiles under way, which dispose waits for (CompileGate). */
+    private readonly compiles = new CompileGate(),
+  ) {
     this.look = { ...look };
     this.target = new THREE.RenderTarget(1, 1, {
       type: THREE.HalfFloatType,
@@ -91,17 +92,12 @@ export class NodeRetroFilter implements RetroView, NodeFrameDrawer {
     const world = gl.compileAsync(scene, camera);
     const held = overlay ? gl.compileAsync(overlay.scene, overlay.camera) : Promise.resolve();
     gl.setRenderTarget(null);
-    const done = Promise.all([world, held]).then(() => undefined);
-    this.compiling = whileUnderWay(done, () => this.compiling === done && (this.compiling = null));
-    return done;
+    return this.compiles.track(Promise.all([world, held]).then(() => undefined));
   }
 
-  /** Frees the target and materials; after the warm-up compile when it is still under way (NodePostStack.dispose). */
+  /** Frees the target and materials, once no compile is under way on the renderer (CompileGate). */
   dispose(): void {
-    const pending = this.compiling;
-    this.compiling = null;
-    if (pending) void pending.then(() => this.free(), () => this.free());
-    else this.free();
+    this.compiles.afterCompiles(() => this.free());
   }
 
   private free(): void {
