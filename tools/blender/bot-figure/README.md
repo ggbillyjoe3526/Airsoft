@@ -43,3 +43,10 @@ the game yet**: the owner approves the pictures first. Pictures of v5 are in the
   helpers), with no finger segment more than about 2 mm into the surface.
 - Rifle poses stand bladed (`RIFLE_TWIST` -30 degrees, -60 aiming high) so the left hand reaches the handguard
   (`SUPPORT_ON_REPLICA`) with the butt kept in the shoulder. On the pistol the left hand wraps over the right.
+
+## Paused (10 Oct 2026)
+
+Work paused on the owner's word. What is left: the pistol trigger finger should lie straight along the frame, ease
+the aim-up neck (`HEAD_UNTWIST` is in bot13 but not yet exported), show the magazine in the reload pose, and ask him
+whether the robot's headband, ear module and thigh cable count as accessories. The full handoff is in the project
+files at `plans/bot-figure-handoff.md`.
