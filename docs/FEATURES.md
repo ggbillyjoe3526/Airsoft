@@ -223,6 +223,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   barrels and silencer model details on High; third-person rifles show a fitted silencer (FA8)
 - Replicas and attachments redesigned: blockier two-tone style with stippled grips; red dot as enclosed square hood,
   silencer hexagonal body (G2)
+- AEG and gas pistol drawn from Blender models, with fittable parts from Blender; in first person the AEG's trigger,
+  fire selector, iron sights and magazine release move, and the pistol's trigger and magazine release (RM1)
 - Players as masked humans (high-cut or bump helmet, balaclava, visor; no bare faces) in team camo with a team-colour
   plate carrier, or robots in a light or dark shell by team, mixed on both teams when Look › Robots is on; their
   replicas in the team's colours (G7)

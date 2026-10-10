@@ -49,7 +49,8 @@ Poly Haven and Quaternius). A file reaches the repository one of two ways:
 
 ```
 src/assets/models/characters/figure.glb   the player and bot model (M25a, wired up)
-src/assets/models/replicas/<id>.glb       a replica's model, by replica id: cyber.glb is the Cyber Pistol's (M101, wired up)
+src/assets/models/replicas/<id>.glb       a replica's model, by replica id: aeg, pistol and cyber (M101, RM1, wired up)
+src/assets/models/replicaParts/<id>.glb   that replica's fittable parts, by replica id: aeg and pistol (RM1, wired up)
 src/assets/models/props/                  props (planned: not created or wired up yet)
 src/assets/textures/                      loose surface textures (planned: not created or wired up yet)
 ```
@@ -101,20 +102,30 @@ There are two levels of fit:
 
 ### Replica models
 
-The loader is `src/render/replicaFiles.ts`; its settings are `REPLICA_FILE` in `src/config/assets.ts`. A pistol's file
-replaces its built-in model in the hands, on the menus' pictures and on the figures (rifles: not yet). A file that can't
-be used logs a warning and the built-in model is drawn.
+The loader is `src/render/replicaFiles.ts`; its settings are `REPLICA_FILE` in `src/config/assets.ts`. A replica's file
+replaces its built-in model in the hands, on the menus' pictures and on the figures. A file that can't be used logs a
+warning and the built-in model is drawn.
 
 - **Space.** Metres, life size. The bore points along Blender's +Y (the game's -Z), up is +Z. The origin is where the
   frame meets the slide, above the trigger. The grip stays where the built-in pistols' is (raked back about 22°): the
   hands are posed in code.
-- **Objects.** `Body` (needed), `Magazine` (drops out on a reload; without it the built-in one is drawn), `Figure` (the
-  figures' cut-down version), and the empties `Muzzle` (needed: the centre of the muzzle's face, where BBs leave) and
-  `TorchMount`.
+- **Objects.** `Body` (needed), `Magazine` (drops out on a reload; without it the built-in one is drawn), `FlashHider`
+  (shown while no muzzle device is fitted), `Figure` (the figures' cut-down version), and the empties `Muzzle` (needed:
+  the centre of the muzzle's face, where BBs leave) and `TorchMount`. A rifle's figure is scaled so its butt-to-muzzle
+  length is the figures' rifle length; a pistol's keeps its size, the back of the slide at the figures' grip.
+- **Moving parts (RM1).** Objects the file's animations move hang from one bone (the armature's root) and are drawn in
+  the body's own meshes, so they cost no draw call. The game poses them from its state, never on a clock: `Fire` (the
+  trigger, each shot), `Selector` (safe at 0, semi at half its length, burst at three quarters, auto at the end),
+  `SightsFold` (while an optic is fitted) and `Reload` (through the reload); `Inspect` and `Blowback` are kept for later.
+  The magazine is never a bone: the game moves it (and the hand holding it).
+- **Parts.** `replicaParts/<id>.glb`: one top-level object per part named `<kind>_<id>` (`optic_redDot`,
+  `magazine_hiCap`, `muzzle_silencer` …), in the replica's space where it fits; a child `<name>_Figure` is ignored. A
+  part the file lacks is drawn built-in.
 - **Materials,** by name: `CyberSlab`, `CyberFrame`, `CyberLine`, `CyberCore`, `CyberMetal`, or a replica material's own
   name (`polymer`, `furniture`, `detail`, `metal`, `rubber`, `stipple`, `accent`). Plain colours: the game draws in its own
   materials, so Realistic colours, the glow and the High finish apply. No textures needed.
-- **Budget.** At most 3,500 triangles in the hands, 300 on a figure, 300 KB (the loader warns above each). No LODs.
+- **Budget.** At most 3,500 triangles in the hands and 300 KB (the AEG: 9,000 and 400 KB), 300 triangles on a figure, a
+  parts file 150 KB (the AEG's: 300 KB). The loader warns above each. No LODs.
 - **Muzzle.** Leave it plain: the orange-tip setting adds the tip.
 
 ## Blender, step by step

@@ -25,6 +25,10 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **G9** · Low looks and costs exactly as before on both maps, and Depot is unchanged; under Reduced motion the fireflies, steam, plane and sign flicker all hold still
 - **W1** · Settings › Graphics › Renderer: Auto (the default), WebGPU or WebGL; Auto draws with WebGPU where the browser has it, WebGL otherwise
 - **W1** · On WebGPU the world and figures draw with plain materials and no screen effects for now; pick WebGL on the Renderer row for the full look
+- **RM1** · AEG and gas pistol now drawn from their Blender models, in your hands, the menus and on bots (the rifle on bots is new)
+- **RM1** · Replica parts (red dot, 2× scope, foregrips, barrels, silencer, laser, torch, magazines) now come from Blender too
+- **RM1** · First person: the AEG's trigger pulls on each shot and its fire selector turns with the mode; iron sights fold under an optic
+- **RM1** · First person: the magazine release presses on a reload, and the gas pistol's trigger and magazine release move too
 
 ### Changed
 - **M71** · Bots hunt the map's middle once their lane is swept (now all levels, not just Pro); Normal and Hard hold their posts out of lantern light at night (#133)
@@ -109,6 +113,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **FP1** · Tests pin every barrel and silencer to the bore and measure the support hand on the handguard and on a vertical grip; the game chunk's size budget is 1,000 kB (main was already over 950)
 - **W4** · The WebGPU comparison scores every preset's screen effects by day and night, the retro filter and a lit lamp close up
 - **M101** · Replica models load from a .glb file per replica when one exists, else the built-in model; only pistols use a file for now
+- **RM1** · Replica animations are posed from game state and skinned into each replica's own meshes, so no extra draw calls
+- **RM1** · Replica parts live in their own model folder, with a file budget per replica
 
 ## 0.1 Dev 4 · 2026-10-06
 

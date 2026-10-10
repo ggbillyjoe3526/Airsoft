@@ -39,11 +39,21 @@ export const FIGURE_MODEL = {
  */
 export const REPLICA_FILE = {
   /** The nodes the game reads, by name. Only `body` and `muzzle` are needed; without the others the built-in ones are drawn. */
-  nodes: { body: 'Body', magazine: 'Magazine', figure: 'Figure', muzzle: 'Muzzle', torchMount: 'TorchMount' },
-  /** Above this many bytes the loader warns (the whole first download aims to stay under ~30 MB, CLAUDE.md §4). */
-  warnBytes: 300_000,
-  /** Above this many triangles in the hands (body and magazine) the loader warns: the first-person budget. */
-  warnTriangles: 3_500,
+  nodes: { body: 'Body', magazine: 'Magazine', figure: 'Figure', muzzle: 'Muzzle', torchMount: 'TorchMount', flashHider: 'FlashHider' },
+  /** The replicas drawn as rifles (RM1): the AEG's hands, holds and parts, and the figures' rifle frame. */
+  rifles: ['aeg'] as readonly string[],
+  /**
+   * Above this many bytes the loader warns (the whole first download aims to stay under ~30 MB, CLAUDE.md §4): a
+   * pistol's, and the rifle's (RM1: about twice the parts, and the animations).
+   */
+  warnBytes: { default: 300_000, aeg: 400_000 } as Readonly<Record<string, number>>,
+  /** The same for a replica's parts file (`replicaParts/<id>.glb`, RM1). */
+  warnPartBytes: { default: 150_000, aeg: 300_000 } as Readonly<Record<string, number>>,
+  /**
+   * Above this many triangles in the hands (body, moving parts and magazine) the loader warns: the first-person budget,
+   * the rifle's as the models list set it (RM1, against the built-in rifle's 8,508 on Low).
+   */
+  warnTriangles: { default: 3_500, aeg: 9_000 } as Readonly<Record<string, number>>,
   /** Above this many triangles on a figure the loader warns: six figures carry one each. */
   warnFigureTriangles: 300,
   /** The orange tip (VIEWMODEL.orangeTips) on a model's plain muzzle: a disc this deep, this much wider and proud of its face. */

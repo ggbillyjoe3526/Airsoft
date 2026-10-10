@@ -55,6 +55,8 @@ export async function loadGltfScene(url: string, warnBytes: number, what: string
   // glTF-Transform) decode in the page; Draco and KTX2 need decoder files the game doesn't ship.
   const [{ GLTFLoader }, { MeshoptDecoder }] = await Promise.all([import('three/examples/jsm/loaders/GLTFLoader.js'), import('three/examples/jsm/libs/meshopt_decoder.module.js')]);
   const gltf = await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(data, '');
+  // Its animations ride on the scene (Object3D.animations), for a replica's moving parts (replicaFiles.ts).
+  gltf.scene.animations = gltf.animations;
   return gltf.scene;
 }
 

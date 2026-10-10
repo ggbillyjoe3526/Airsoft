@@ -4,7 +4,6 @@ import type { Scheme } from '../config/schemes';
 import type { GripWrap } from './figureHands';
 import type { PartBuilder, PartLook } from './figureParts';
 import { V } from './figureShapes';
-import type { MaterialKey } from './replicaBuilder';
 import type { ReplicaFilePiece } from './replicaFiles';
 
 /**
@@ -18,21 +17,16 @@ import type { ReplicaFilePiece } from './replicaFiles';
 export type FigureReplicaColours = Pick<Scheme, 'body' | 'furniture' | 'detail' | 'accent' | 'steel'>;
 
 /**
- * A pistol's own shape on a figure, from its model file (M101, render/replicaFiles.ts): its pieces in the pistol's
- * frame (the back of the slide at the origin, the bore on the axis), each in a role of the replica's colours.
+ * A replica's own shape on a figure, from its model file (M101, RM1; render/replicaFiles.ts): its pieces in the
+ * figure's frame for it (the rifle's butt or the back of the pistol's slide at the origin, the bore on the axis), each
+ * in a colour role of the replica's colours.
  */
-export type FigurePistolShape = readonly ReplicaFilePiece[];
+export type FigureReplicaShape = readonly ReplicaFilePiece[];
 
-/** The colour role a model file's material takes on a figure: the slab the body, the frame the furniture, the lines the accent. */
-const SHAPE_ROLES: Partial<Record<MaterialKey, keyof FigureReplicaColours>> = {
-  cyberSlab: 'body',
-  polymer: 'furniture',
-  furniture: 'furniture',
-  cyberLine: 'accent',
-  cyberCore: 'accent',
-  accent: 'accent',
-  metal: 'steel',
-};
+/** A file's shape on a figure, each piece in its role's colour. */
+function addShape(b: PartBuilder, m: THREE.Matrix4, colours: FigureReplicaColours, shape: FigureReplicaShape): void {
+  for (const p of shape) b.add(p.geometry.clone().applyMatrix4(m), colours[p.role], p.role === 'steel' ? STEEL : POLYMER);
+}
 
 /** The parts a figure shows on its replicas: a silencer on the rifle (M29b; Player detail `high` only), a weapon torch. */
 export interface FigureKit {
@@ -98,10 +92,20 @@ function addTorch(b: PartBuilder, m: THREE.Matrix4, colours: FigureReplicaColour
  * The rifle, its butt at the frame's origin and its muzzle FIGURE.rifle.length ahead: a hard-angled stock, the receiver
  * with its accent line, a raked grip, the magazine, a squared handguard with its own line, a gas block and the barrel.
  * Detailed: a top rail, a magwell, a cheek riser, the trigger guard and a flash hider, or a fitted silencer at the muzzle.
+ * With `shape` (a model file's, RM1), that shape in place of the built-in one, at every detail (with its fitted torch
+ * and, detailed, its silencer).
  */
-export function addRifle(b: PartBuilder, m: THREE.Matrix4, colours: FigureReplicaColours, kit: FigureKit = BARE_KIT): void {
+export function addRifle(b: PartBuilder, m: THREE.Matrix4, colours: FigureReplicaColours, kit: FigureKit = BARE_KIT, shape: FigureReplicaShape | null = null): void {
   const c = colours;
   const L = FIGURE.rifle.length;
+  const S = FIGURE.silencer;
+  if (shape && shape.length > 0) {
+    addShape(b, m, c, shape);
+    const T = FIGURE.torch;
+    if (kit.rifleTorch) addTorch(b, m, c, T.rifleSide, 0, -T.rifleAt, T.size, T.length);
+    if (b.overhaul && kit.rifleSilencer) b.cylinder(c.body, S.radius, S.length, m, 0, 0, -L + S.length / 2, POLYMER, new THREE.Euler(Math.PI / 2, 0, 0));
+    return;
+  }
   b.block(c.furniture, 0.046, 0.12, 0.2, 0, -0.026, -0.1, POLYMER, m); // stock
   b.block(c.body, 0.056, 0.084, 0.34, 0, 0, -0.37, POLYMER, m); // receiver
   b.box(c.accent, 0.0584, 0.008, 0.2, 0, -0.022, -0.39, {}, m);
@@ -121,7 +125,6 @@ export function addRifle(b: PartBuilder, m: THREE.Matrix4, colours: FigureReplic
   b.block(c.body, 0.05, 0.03, 0.08, 0, -0.05, -0.43, POLYMER, m); // magwell
   b.block(c.furniture, 0.04, 0.016, 0.12, 0, 0.04, -0.12, POLYMER, m); // cheek riser
   b.box(c.detail, 0.008, 0.012, 0.06, 0, -0.05, -0.32, POLYMER, m); // trigger guard
-  const S = FIGURE.silencer;
   const r = kit.rifleSilencer ? S.radius : 0.018;
   const length = kit.rifleSilencer ? S.length : 0.045;
   b.cylinder(kit.rifleSilencer ? c.body : c.steel, r, length, m, 0, 0, -L + length / 2, kit.rifleSilencer ? POLYMER : STEEL, new THREE.Euler(Math.PI / 2, 0, 0));
@@ -132,15 +135,12 @@ export function addRifle(b: PartBuilder, m: THREE.Matrix4, colours: FigureReplic
  * accent line, the frame under it and a raked grip. Detailed: the trigger guard, sights and a base pad. With `shape` (a
  * model file's, M101), that shape in place of the built-in one, at every detail.
  */
-export function addPistol(b: PartBuilder, m: THREE.Matrix4, colours: FigureReplicaColours, kit: FigureKit = BARE_KIT, shape: FigurePistolShape | null = null): void {
+export function addPistol(b: PartBuilder, m: THREE.Matrix4, colours: FigureReplicaColours, kit: FigureKit = BARE_KIT, shape: FigureReplicaShape | null = null): void {
   const c = colours;
   const L = FIGURE.pistol.length;
   const T = FIGURE.torch;
   if (shape && shape.length > 0) {
-    for (const p of shape) {
-      const role = SHAPE_ROLES[p.key] ?? 'detail';
-      b.add(p.geometry.clone().applyMatrix4(m), c[role], role === 'steel' ? STEEL : POLYMER);
-    }
+    addShape(b, m, c, shape);
     if (kit.pistolTorch) addTorch(b, m, c, 0, -T.pistolBelow, -L + T.pistolLength / 2, T.size * T.pistolSize, T.pistolLength);
     return;
   }
