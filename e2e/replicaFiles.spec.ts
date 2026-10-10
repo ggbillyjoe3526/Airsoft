@@ -50,9 +50,8 @@ test('the held AEG and gas pistol are skinned file models, the selector turns wi
   await expect(page.locator('.hud-mode.on')).toHaveText('Semi', { timeout: 10_000 });
   await expect.poll(selector, { timeout: 20_000 }).toBeCloseTo(0.5, 2);
 
-  // The gas pistol (slot 2) is never fired through a clip of the slide: its slide bone stays at rest after a reload.
+  // The gas pistol (slot 2): its slide's blowback clip is not played yet, so the slide bone stays at rest after a shot.
   await page.keyboard.press('2');
-  await page.keyboard.press('t');
   await expect.poll(() => page.evaluate(() => (window as unknown as Game).airsoft.session.combat.viewmodel.shownSlot), { timeout: 20_000 }).toBe(1);
   await page.mouse.move(640, 360);
   await page.mouse.down();
