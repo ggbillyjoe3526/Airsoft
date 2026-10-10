@@ -9,7 +9,8 @@ import { HUMAN_CROWD, figureDress } from './figureMix';
 import { PartBuilder } from './figureParts';
 import { addPistol } from './figureReplicas';
 import { buildReplicaModels, CYBER_MUZZLE, LOW_DETAIL } from './replicaModels';
-import { loadReplicaFiles, NO_REPLICA_FILES, prepareReplicaFile, type ReplicaFile, replicaFileUrls } from './replicaFiles';
+import { ItemPictures } from './itemPictures';
+import { loadReplicaFiles, NO_REPLICA_FILES, prepareReplicaFile, type ReplicaFile, type ReplicaFiles, replicaFileUrls } from './replicaFiles';
 
 // Node's fs, without its types (the project compiles for the browser).
 const nodeFs = 'node:fs';
@@ -174,5 +175,69 @@ describe('a replica drawn from its file (M101)', () => {
       for (let i = 0; i < colours.count && !found; i++) found = Math.abs(colours.getX(i) - slab.r) < 0.02 && Math.abs(colours.getY(i) - slab.g) < 0.02 && Math.abs(colours.getZ(i) - slab.b) < 0.02;
       expect(found).toBe(true);
     }
+  });
+});
+
+describe('the file model beside the built-in one (M101 gaps)', () => {
+  afterEach(() => vi.restoreAllMocks());
+  const paint = (realistic: boolean) => ({ schemes: ['cobalt'] as never, realistic });
+
+  it('takes the Realistic colours look: muted slab and frame, no glow', async () => {
+    const files = new Map([['cyber', prepareReplicaFile('cyber', await cyberScene())]]);
+    const models = buildReplicaModels([CYBER_PISTOL], 0, false, LOW_DETAIL, paint(true), 'bare', undefined, files);
+    const mat = (name: string) => bodyMeshes(models.models.get('cyber')!.group).find((m) => m.name === name)!.material as THREE.MeshStandardMaterial;
+    expect(mat('cyberSlab').color.getHex()).toBe(CYBER_COLOURS.realistic.slab);
+    expect(mat('polymer').color.getHex()).toBe(CYBER_COLOURS.realistic.frame);
+    expect(mat('cyberLine').emissive.getHex()).toBe(0);
+    expect(mat('cyberCore').emissive.getHex()).toBe(0);
+    // The bold look glows, so the check above is not an always-zero.
+    const bold = buildReplicaModels([CYBER_PISTOL], 0, false, LOW_DETAIL, paint(false), 'bare', undefined, files);
+    const boldCore = bodyMeshes(bold.models.get('cyber')!.group).find((m) => m.name === 'cyberCore')!.material as THREE.MeshStandardMaterial;
+    expect(boldCore.emissive.getHex()).not.toBe(0);
+    models.dispose();
+    bold.dispose();
+  });
+
+  it('keeps the weapon torch part and the built-in magazine drop axis on the file model', async () => {
+    const files = new Map([['cyber', prepareReplicaFile('cyber', await cyberScene())]]);
+    const fromFile = buildReplicaModels([CYBER_PISTOL], 0, false, LOW_DETAIL, null, 'bare', undefined, files).models.get('cyber')!;
+    const builtIn = buildReplicaModels([CYBER_PISTOL], 0, false, LOW_DETAIL, null, 'bare', undefined, NO_REPLICA_FILES).models.get('cyber')!;
+    expect(fromFile.group.getObjectByName('light:weaponTorch')).toBeDefined();
+    expect(fromFile.group.getObjectByName('magazine')).toBe(fromFile.magazine.group);
+    expect(fromFile.magazine.axis.toArray()).toEqual(builtIn.magazine.axis.toArray());
+    expect(fromFile.magazine.axis.y).toBeLessThan(0);
+  });
+
+  it('pictures the Cyber Pistol from the file when it has one, and from the built-in model when not', async () => {
+    const files = new Map([['cyber', prepareReplicaFile('cyber', await cyberScene())]]);
+    const meshCount = async (given: () => ReplicaFiles): Promise<number> => {
+      let meshes = 0;
+      const target = {
+        draw(scene: THREE.Scene) {
+          scene.traverseVisible((o) => o instanceof THREE.Mesh && meshes++);
+          return new Float32Array(4 * 4 * 4).fill(0.2);
+        },
+        encode: () => 'picture',
+        dispose() {},
+      };
+      let run: (() => void) | null = null;
+      const pictures = new ItemPictures(target, (w) => (run = w), given);
+      const p = pictures.picture({ replica: CYBER_PISTOL, scheme: 'cobalt', realistic: false });
+      run!();
+      await p;
+      return meshes;
+    };
+    const withFile = await meshCount(() => files);
+    const without = await meshCount(() => NO_REPLICA_FILES);
+    expect(withFile).toBeGreaterThan(0);
+    expect(withFile).not.toBe(without);
+  });
+
+  it('warns and draws the built-in model when the answer is not a .glb', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('<!doctype html><html></html>', { status: 200 }));
+    const files = await loadReplicaFiles(new Map([['cyber', '/index.html']]));
+    expect(files.size).toBe(0);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('built-in model is drawn'), expect.objectContaining({ message: expect.stringContaining('.glb') }));
   });
 });
