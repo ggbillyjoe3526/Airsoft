@@ -62,6 +62,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **FP1** · With a vertical grip fitted, your left hand holds the grip instead of floating in front of it; on a reload it takes the magazine by its side
 - **G12** · BBs bounce off concrete and steel with less speed, so with Ricochets count on fewer bounced BBs knock players out (about a fifth of hits, down from about a quarter)
 - **W4** · On WebGPU the screen effects look as on WebGL on every preset (bloom, ambient occlusion, temporal smoothing, light shafts, reflections, grain)
+- **M101** · New Cyber Pistol model, drawn in Blender: a smoother white slab with chamfered edges, glow lines and core, in your hands and the menu pictures
 
 ### Fixed
 - **G11** · The team camo on players reads clearly on Medium and up: crisp dark and light blotches printed per pixel, on WebGL and WebGPU; Low keeps plain clothes
@@ -88,6 +89,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **W3** · On WebGPU Depot's bounced light and shade under cover show again, and Chrome 141 no longer stops on the crash screen
 - **FP1** · In first person, your rifle's left thumb lies along the side of the handguard instead of sticking out beside it like a second barrel or silencer
 - **W4** · On WebGPU the Dev retro filter works, and at Low the far haze shades as on WebGL
+- **M101** · Bots and other players show the Cyber Pistol's own shape instead of a plain pistol
 
 ### Internal
 - **G8** · Set dressing never collides or blocks sight: Depot's colliders, routes, cover and bot sight are tested identical with and without it (#136)
@@ -106,6 +108,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **W3** · The WebGPU comparison adds first-person, near and far player and night torch views, and runs on a real WebGPU device as well
 - **FP1** · Tests pin every barrel and silencer to the bore and measure the support hand on the handguard and on a vertical grip; the game chunk's size budget is 1,000 kB (main was already over 950)
 - **W4** · The WebGPU comparison scores every preset's screen effects by day and night, the retro filter and a lit lamp close up
+- **M101** · Replica models load from a .glb file per replica when one exists, else the built-in model; only pistols use a file for now
 
 ## 0.1 Dev 4 · 2026-10-06
 
