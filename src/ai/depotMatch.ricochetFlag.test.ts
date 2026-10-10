@@ -13,6 +13,8 @@ describe('custom matches on Depot (M20): ricochets counting, Attack / Defend', (
     // depotMatch.ricochet.test.ts. Re-measured with level rays and own ricochets (FA12): 86 of 455 hits ricochets
     // (19%), attackers won 56% (66 of 118), 25 captures, 7 friendly ricochets, and 6 bots caught by their own
     // ricochet (not counted as friendly).
+    // G11's wide first aim: 147 of 548 (27%), 8 friendly ricochets, 10 own; G12's weaker bounce (owner, 2026-10-10):
+    // 82 of 458 (18%), 3 friendly ricochets, 7 own, attackers 69 of 116, 27 captures.
     // Which end or side the rounds favour is a balance figure since TE4 (balance/depotRicochetFlag.balance.ts).
     expectRicochetsPlayable('attackDefend');
   });
