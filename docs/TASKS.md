@@ -61,30 +61,6 @@ acceptance:
 status: open
 attempts: 0
 
-## M84 · Iron sights on every replica, and walking while aiming (playtest notes 8, 16)
-tier: core
-perf: skip
-touches: src/sim/aiming.ts, src/sim/movement.ts, src/sim/accuracy.ts, src/config/optics.ts, src/config/movement.ts, src/render/replicaModels.ts, src/render/cameraRig.ts, src/render/viewmodel.ts, src/render/combatPresentation.ts, src/config/replicas.ts, src/config/controls.ts, src/config/tutorial.ts, src/config/perfScript.ts, src/sim/commands.ts, src/input/scriptedInput.ts, src/ui/hud.ts, src/ui/performanceSheet.ts, src/style.css
-contract: none
-acceptance:
-  1. Every replica aims down sights; with no optic fitted the view lines up its iron sights. Aiming is more accurate than hip fire, and hip fire stays viable (measured on Normal against bots).
-  2. Holding walk (Shift) while aiming slows the player below the aiming pace.
-  3. Owner's ruling (2026-10-06): iron sights now, beside scopes; this replaces his 0.1 Dev 3 note 3 (aim only with a scope fitted).
-status: open
-attempts: 0
-
-## M85 · BBs stop at the first body they hit (playtest note 17)
-tier: core
-perf: required
-touches: src/sim/bbs.ts, src/sim/hitbox.ts, src/sim/ricochet.ts, src/sim/simulation.ts, src/sim/character.ts, src/sim/elimination.ts, src/sim/events.ts, src/config/hits.ts, src/config/characters.ts, src/config/bots.ts, src/ai/botCombat.ts, src/render/characterRenderer.ts, src/render/combatPresentation.ts, src/audio/sfx.ts, src/render/figureRobot.ts
-contract: none
-acceptance:
-  1. A reproduction test: two bots in a line, the nearer one hit; it shows whether a BB can reach the one behind.
-  2. A BB that hits a body knocks that player out and stops (it does not travel on); a test fails without the fix.
-  3. Hit volumes match the drawn figure closely enough that a BB only hits what the player can see; checked on every pose (standing, crouched, leaning, walking off).
-status: open
-attempts: 0
-
 ## M87 · Bots stop clearing empty corners (playtest notes 15, 19)
 tier: core
 perf: required
