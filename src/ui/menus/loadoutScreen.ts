@@ -12,6 +12,7 @@ import type { PictureContext } from './kitStrip';
 import { el, menuButton } from './menuParts';
 import { partSubject, PictureSlot, replicaSubject } from './menuPictures';
 import { perfRows, perfSheet } from './perfBars';
+import { arrangeByRarity, loadRarityView, RARITY_TEXT, RarityBar, type RarityView, saveRarityView } from './rarityFilter';
 
 export { fixedValue, replicaSummary } from './customiseView';
 
@@ -54,6 +55,10 @@ export class LoadoutScreen {
   private readonly cards = new Map<GearSlot, CarriedCard>();
   private readonly grid: HTMLDivElement;
   private tiles: ReplicaTile[] = [];
+  /** Sort and filter by rarity over the grid (M82), its choice saved; and the line shown when it hides every tile. */
+  private rarityView: RarityView;
+  private readonly rarityBar: RarityBar;
+  private readonly noneShown: HTMLParagraphElement;
   private readonly selectedName: HTMLHeadingElement;
   private readonly selectedLine: HTMLParagraphElement;
   private readonly sheet = perfSheet('loadout-perf');
@@ -90,7 +95,15 @@ export class LoadoutScreen {
     const owned = el('section', 'loadout-replicas');
     owned.append(sectionHead('02', GEAR_TEXT.replicas));
     this.grid = el('div', 'item-grid replica-grid');
-    owned.append(this.grid, el('p', 'loadout-note', GEAR_TEXT.unlockMore));
+    const tiers = opts.model.pool.tiers;
+    this.rarityView = loadRarityView('replicas', tierIds(tiers));
+    this.rarityBar = new RarityBar('replicas', tiers, this.rarityView, (view) => {
+      this.rarityView = view;
+      saveRarityView('replicas', view, tierIds(tiers));
+      this.arrangeGrid();
+    });
+    this.noneShown = el('p', 'loadout-note rarity-none', RARITY_TEXT.noneShown.replicas);
+    owned.append(this.rarityBar.root, this.grid, this.noneShown, el('p', 'loadout-note', GEAR_TEXT.unlockMore));
 
     const aside = el('aside', 'loadout-selected menu-card');
     aside.setAttribute('aria-label', GEAR_TEXT.selected);
@@ -178,7 +191,22 @@ export class LoadoutScreen {
       });
       return { ref, button, pic, note };
     });
-    this.grid.replaceChildren(...this.tiles.map((t) => t.button));
+    this.arrangeGrid();
+  }
+
+  /**
+   * The tiles in the rarity bar's order, those in a hidden tier left out (M82), except a replica you carry: it always
+   * shows. Run when the grid is built and when the bar changes, not on a pick, so a tile never vanishes from under the
+   * pointer.
+   */
+  private arrangeGrid(): void {
+    const m = this.opts.model;
+    const equipped = m.equipped();
+    const carried = (t: ReplicaTile) => equipped.some((r) => r && sameItem(r, t.ref));
+    const shown = arrangeByRarity(this.tiles, (t) => t.ref.tier, tierIds(m.pool.tiers), this.rarityView, carried);
+    this.grid.replaceChildren(...shown.map((t) => t.button));
+    this.rarityBar.setHiddenCount(this.tiles.length - shown.length);
+    this.noneShown.hidden = shown.length > 0;
   }
 
   private select(slot: GearSlot): void {
@@ -311,6 +339,10 @@ export class LoadoutScreen {
     const scheme = this.opts.model.scheme(asset.id);
     return this.opts.context.realistic() ? FAMILIES[SCHEMES[scheme].family].name : SCHEMES[scheme].name;
   }
+}
+
+function tierIds(tiers: readonly { id: string }[]): string[] {
+  return tiers.map((t) => t.id);
 }
 
 function key(ref: ItemRef): string {

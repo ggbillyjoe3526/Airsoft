@@ -230,6 +230,11 @@ replicas are listed with their tier. Right-click an equipped replica, or use Cus
 - [ ] **Swap slots.** Put the Gas Pistol in Primary: the AEG rifle moves to Secondary. Any replica goes in either slot.
 - [ ] **Customise.** Colour first, then the optic, BB weight, hop-up, grip, laser, magazine, power source, barrel,
   muzzle and light, each offering only parts you own that fit. Skins say they come later. Esc goes back.
+- [ ] **Sort and filter by rarity (M82).** Over Your replicas: Sort Replica (as before) or Rarity (rarest first), and
+  a chip per tier; click Common, Uncommon, Rare and Very Rare off to see only Epic and Legendary (what you carry still
+  shows; "3 hidden" says how many are left out; All brings them back). In Customise each part's options have the same
+  bar, one choice for every part. Leave and come back, or reload: both choices are kept. Is the bar easy to read and
+  out of the way?
 - [ ] **BB weight.** 0.25 g on the rifle and 0.20 g on the pistol as they come. 0.28 g on the rifle leaves slower
   (about 84 m/s) and needs more hop: at about 75 % it stays on target to about 41 m. 0.20 g with the dial at 65 % is
   too much hop (far shots fly high and float); about 50 % flies flat.

@@ -33,6 +33,7 @@ import { tabAfterKey } from './menuNav';
 import { el, menuRow, rangeControl } from './menuParts';
 import { partSubject, PictureSlot, replicaSubject } from './menuPictures';
 import { perfRows, perfSheet } from './perfBars';
+import { arrangeByRarity, loadRarityView, RARITY_TEXT, RarityBar, type RarityView, saveRarityView } from './rarityFilter';
 
 const FIRE_MODE_WORDS: Readonly<Record<FireMode, string>> = { semi: 'semi', burst: 'burst', auto: 'auto' };
 const POWER_WORDS: Readonly<Record<PowerSource, string>> = { electric: 'Electric', gas: 'Gas' };
@@ -69,6 +70,17 @@ const FIT_ROWS: readonly { slot: FitSlot; label: string; none: string | null }[]
 ];
 
 type PartId = 'colour' | FitSlot | 'bbs' | 'skins';
+
+/** A part's option tiles (M82: arranged by the rarity bar): "as it comes" first, then each owned item that fits. */
+interface FitList {
+  head: HTMLElement;
+  group: HTMLElement;
+  none: HTMLElement | null;
+  tiles: { item: ItemRef; tile: HTMLButtonElement }[];
+  /** Shown when the hidden tiers leave none of the owned items. */
+  empty: HTMLParagraphElement;
+  hiddenCount: number;
+}
 
 /** One row of the part list: its tab, what it shows now, and its panel (made when first shown). */
 interface Part {
@@ -114,6 +126,10 @@ export class CustomiseView {
   private readonly perf = perfSheet('customise-perf');
   private readonly colourAside: HTMLElement;
   private current: PartId;
+  /** Sort and filter by rarity (M82): one choice for every part, saved; one bar, moved to the part panel shown. */
+  private partsView: RarityView;
+  private readonly partsBar: RarityBar;
+  private readonly fitLists = new Map<PartId, FitList>();
 
   constructor(
     private readonly opts: CustomiseOptions,
@@ -126,6 +142,14 @@ export class CustomiseView {
     this.grams = m.bbWeight(this.asset.id);
     this.dial = m.hopUp(this.asset.id);
     this.root = el('div', 'customise');
+    const tierIds = m.pool.tiers.map((t) => t.id);
+    this.partsView = loadRarityView('parts', tierIds);
+    this.partsBar = new RarityBar('parts', m.pool.tiers, this.partsView, (view) => {
+      this.partsView = view;
+      saveRarityView('parts', view, tierIds);
+      for (const id of this.fitLists.keys()) this.arrangeFit(id);
+      this.placeRarityBar();
+    });
 
     const crumbs = el('p', 'customise-crumbs');
     const toGear = el('button', 'customise-crumb', GEAR_TEXT.breadcrumb);
@@ -244,6 +268,7 @@ export class CustomiseView {
       }
       if (p.panel) p.panel.hidden = !on;
     }
+    this.placeRarityBar();
     const colour = id === 'colour';
     this.perf.root.hidden = colour;
     this.colourAside.hidden = !colour;
@@ -416,11 +441,12 @@ export class CustomiseView {
       m.setFit(this.asset.id, row.slot, item);
       this.changed();
     };
+    const list: FitList = { head, group: tiles, none: null, tiles: [], empty: el('p', 'menu-readout menu-faint rarity-none', RARITY_TEXT.noneShown.parts), hiddenCount: 0 };
     if (row.none !== null) {
       const tile = optionTile(row.none, '', null);
       tile.dataset.item = `none:${row.slot}`;
       tile.addEventListener('click', () => pick(null));
-      tiles.append(tile);
+      list.none = tile;
     }
     for (const item of choices) {
       const asset = m.pool.byId.get(item.asset)!;
@@ -431,14 +457,42 @@ export class CustomiseView {
       tile.dataset.tier = item.tier;
       tile.title = tierBlurb(m.pool, item);
       tile.addEventListener('click', () => pick(item));
-      tiles.append(tile);
+      list.tiles.push({ item, tile });
     }
+    this.fitLists.set(row.slot, list);
+    this.arrangeFit(row.slot);
     const control = el('div', 'menu-row-control');
-    control.append(tiles, el('p', 'picker-blurb'), el('p', 'menu-readout fit-readout'));
+    control.append(tiles, list.empty, el('p', 'picker-blurb'), el('p', 'menu-readout fit-readout'));
     if (choices.length === 0 && row.none !== null) control.append(el('p', 'menu-readout menu-faint', LOADOUT_TEXT.armoryHint));
     const r = menuRow(row.label, '', control);
     r.classList.add('fit-row');
     return [head, r];
+  }
+
+  /**
+   * A part's tiles in the rarity bar's order, a hidden tier's left out (M82) except the one fitted, which always shows.
+   * Run when the panel is made and when the bar changes, not on a pick, so a tile never vanishes from under the pointer.
+   */
+  private arrangeFit(id: PartId): void {
+    const list = this.fitLists.get(id);
+    if (!list) return;
+    const fitted = this.opts.model.fitOf(this.asset.id)[id as FitSlot];
+    const tierIds = this.opts.model.pool.tiers.map((t) => t.id);
+    const shown = arrangeByRarity(list.tiles, (t) => t.item.tier, tierIds, this.partsView, (t) => !!fitted && key(t.item) === key(fitted));
+    list.group.replaceChildren(...(list.none ? [list.none] : []), ...shown.map((t) => t.tile));
+    list.hiddenCount = list.tiles.length - shown.length;
+    list.empty.hidden = shown.length > 0 || list.tiles.length === 0;
+  }
+
+  /** The rarity bar in the head of the part panel shown, when it has items to sort; else nowhere. */
+  private placeRarityBar(): void {
+    const list = this.fitLists.get(this.current);
+    if (!list || list.tiles.length === 0) {
+      this.partsBar.root.remove();
+      return;
+    }
+    if (this.partsBar.root.parentElement !== list.head) list.head.append(this.partsBar.root);
+    this.partsBar.setHiddenCount(list.hiddenCount);
   }
 
   /** What the fitted item (or "as it comes") is, in a line. */

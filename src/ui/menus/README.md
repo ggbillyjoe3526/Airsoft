@@ -13,7 +13,8 @@ choices to `src/game.ts`.
 - Screens: `titleScreen.ts` (plain: Airsoft, the tagline, START, the Tutorial on a clean save, the version at the
   foot; `tutorialOffered`); `setupScreen.ts` (the Match screen: Map and Mode as `choiceCards.ts` with Practice, the
   mode cards' last, an extra card that is never saved; `matchPanel.ts`; and a "Your match" text from `playView.ts`);
-  `loadoutScreen.ts` with `customiseView.ts`; `armoryScreen.ts` (the collection, a column per kind; a card's spares scrap from a right-click / Menu key / Shift+F10 menu, `contextMenu.ts`: built once, reused, listeners on the page only while open; `menuPlacement.ts` places it in the window, clear of the card's name);
+  `loadoutScreen.ts` with `customiseView.ts` (both with `rarityFilter.ts`'s Sort / Show bar, M82: each list's choice
+  saved as `rarity.sort.<list>` and `rarity.hide.<list>`); `armoryScreen.ts` (the collection, a column per kind; a card's spares scrap from a right-click / Menu key / Shift+F10 menu, `contextMenu.ts`: built once, reused, listeners on the page only while open; `menuPlacement.ts` places it in the window, clear of the card's name);
   `settingsScreen.ts` (groups with a search, a note on every row); `pauseScreen.ts` (with
   `tutorialCompleteDialog.ts` over it when the tutorial ends: the practice range or the menu, M80); `summaryScreen.ts`;
   `resultScreen.ts`.
@@ -25,4 +26,4 @@ choices to `src/game.ts`.
 - Styles: `menus.css` imports `css/`; the typeface is Inter (`css/fonts.css`, `src/assets/fonts/`). Tuning:
   `config/menus.ts`, `config/menuArt.ts`.
 - Tests: `menus.test.ts`, `menuRedesign.test.ts`, `choiceCards.test.ts`, `chrome.test.ts`, `contextMenu.test.ts`, `armoryScrapMenu.test.ts` (with `menuTestSupport.ts`), `settingsRows.test.ts`,
-  `rulesText.test.ts`.
+  `rulesText.test.ts`, `rarityFilter.test.ts`.

@@ -105,6 +105,11 @@ export type SettingField =
   | 'realisticColours'
   /** A replica asset's colour scheme (G1, config/schemes.ts), picked in Loadout › Customise. */
   | `scheme.${string}`
+  /**
+   * Sort and filter by rarity (M82, ui/menus/rarityFilter.ts), per list (`replicas`: the Loadout's; `parts`: Customise's):
+   * `rarity.sort.<list>` ('kind' or 'rarity') and `rarity.hide.<list>` (the hidden tier ids, comma-separated).
+   */
+  | `rarity.${string}`
   /** The Dev settings (M24, settings/dev.ts): `dev.enabled` and one per entry in config/dev.ts. */
   | `dev.${string}`;
 
