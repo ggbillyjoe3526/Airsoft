@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { type NodeMaterial, PMREMGenerator, type WebGPURenderer } from 'three/webgpu';
 import { disposeEnvironmentScene, type EnvironmentLook, ReplicaSheen, skyEnvironmentScene } from '../replicaSheen';
 import { REPLICA_SHEEN } from '../../config/render';
-import { copyOnto, flamesTwin, smokeTwin } from './effectNodes';
+import { TORCH_BEAM_KEY } from '../torchBeams';
+import { beamTwin, copyOnto, flamesTwin, smokeTwin } from './effectNodes';
 import { figureTwin } from './figureNodes';
 import { PointSprites } from './pointSprites';
 import { emptyGrid, SurfaceLambertTwin, SurfaceNodes, surfaceRecipe, SurfaceStandardTwin } from './surfaceNodes';
@@ -20,6 +21,7 @@ import { patchUniforms } from './twinUniforms';
  * | `without-environment:sky-host` | skyHost.ts | surfaceNodes.ts |
  * | `light-fixtures-flames` | lightFixtures.ts | effectNodes.ts flamesTwin |
  * | `smoke-plumes` | smokePlumes.ts (smoke and steam) | effectNodes.ts smokeTwin |
+ * | `torch-beam` | torchBeams.ts (M91: no patch, the soft beam is the twin's alone) | effectNodes.ts beamTwin |
  * | `night-sky-stars`, `light-fixtures-embers`, `fireflies`, the motes' | nightSky.ts, lightFixtures.ts, fireflies.ts, dustMotes.ts | pointSprites.ts |
  * | `without-environment`, `night-sky-moon` | surfaceMaterials.ts, nightSky.ts | none: Three's own (node Lambert and Basic never take the scene's environment) |
  * | `fa8-vertex-finish` | figureFinish.ts (the detailed figures, and their camo since G11) | figureNodes.ts (W3) |
@@ -99,5 +101,6 @@ export function worldTwin(material: THREE.Material, grid: THREE.Data3DTexture): 
   }
   if (key === 'light-fixtures-flames') return flamesTwin(material);
   if (key === 'smoke-plumes') return smokeTwin(material);
+  if (key === TORCH_BEAM_KEY) return beamTwin(material);
   return figureTwin(material);
 }

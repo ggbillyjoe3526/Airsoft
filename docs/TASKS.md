@@ -14,28 +14,6 @@ Every block below carries note 19: tune on Normal, then check that Easy, Hard an
 first guesses; the build thread confirms them before it starts. The owner ruled on every conflict on 2026-10-06
 (ROADMAP, under the playtest table).
 
-## M81 · The practice range and tutorial area in the new look (playtest note 9)
-tier: ui
-perf: required
-touches: src/map/range.ts, src/map/testYard.ts, src/render/, src/rangeSession.ts
-contract: none
-acceptance:
-  1. After graphics G5 and G6 merge, the range and tutorial area use the new materials, baked light and post stack on every preset, re-dressed in the art direction like Depot (G8).
-  2. Low still holds its frame budget on the range.
-status: open
-attempts: 0
-
-## M91 · Softer torch beams that cast shadows (playtest note 26)
-tier: core
-perf: required
-touches: src/render/torchBeams.ts, src/map/torchLight.ts, src/config/torches.ts, src/render/lighting.ts
-contract: none
-acceptance:
-  1. The beam is soft and diffused, not a bright white cone (built with or after graphics G5).
-  2. A torch casts shadows behind what it lights (a tree in the beam shadows the ground behind it), on the higher presets only (High and Ultra); Low keeps today's beams and its 60 fps target (owner's ruling, 2026-10-06).
-status: open
-attempts: 0
-
 **The owner's playtest notes on main (2026-10-07).** Recorded on his ask, not built yet. His words, the type and the
 defaults per note are in the project's shared files (`plans/playtest-feedback-2026-10-07.md`);
 `docs/ROADMAP.md` › Playtest notes: main after G3 maps all eight. M97–M99 join the Dev 4 notes batch (Dev 5 item 6); M100 is the graphics work's (Dev 5

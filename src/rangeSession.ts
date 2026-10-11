@@ -22,9 +22,11 @@ import { bbGlowFor, kitPaint } from './pool/loadoutModel';
 import { figureCrowd, playerArms } from './render/figureMix';
 import { updateFirstPersonCamera } from './render/cameraRig';
 import { CombatPresentation } from './render/combatPresentation';
+import { bakedLightFor } from './render/bakedLight';
 import { addLighting, type Daylight } from './render/lighting';
 import { resolveLighting } from './render/lightingPreset';
 import { mapLookOf } from './render/mapMeshes';
+import type { ProbeGrid } from './render/probeGrid';
 import { RangeTargetsRenderer } from './render/rangeTargetsRenderer';
 import type { Renderer } from './render/renderer';
 import { canAimDownSights } from './sim/aiming';
@@ -76,6 +78,8 @@ export class RangeSession {
   private readonly targets: RangeTargetsRenderer;
   private readonly readout: RangeReadout;
   private readonly daylight: Daylight;
+  /** The range's baked bounce light (M81, as Depot's: render/bakedLight.ts), or null before it loads. */
+  private readonly probes: ProbeGrid | null;
   /** Whether the range is lit by a night preset (M33h: the weapon light is fitted only then). */
   private readonly night: boolean;
   private readonly stepper = createStepper(SIM_DT, SIM.maxTicksPerFrame);
@@ -126,7 +130,10 @@ export class RangeSession {
     this.loadout = setup.kit.slots.map((s) => s.replica);
     // The surface textures are the renderer's, shared by every session (audit L-04), and so are the last map's meshes,
     // kept between sessions (audit CORE-33): the same map again takes them back rather than building them.
-    renderer.scene.add(renderer.mapMeshes.take(map, renderer.surfaceTexturesFor(map), mapLookOf(quality)));
+    // M81: the range in the new look, baked light and set dressing as Depot's (map/rangeDressing.ts).
+    this.probes = bakedLightFor(map);
+    const group = renderer.mapMeshes.take(map, renderer.surfaceTexturesFor(map), mapLookOf(quality, this.probes));
+    renderer.scene.add(group);
     // The map's light (M33f): its haze, exposure and environment on the renderer, set by every session so none keeps the
     // last map's; its lights, sky and light pools in the scene.
     const lighting = resolveLighting(map);
@@ -174,6 +181,7 @@ export class RangeSession {
     this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map, audio, (action) => input.keyName(action), crosshair, quality, HITS, bbGlowFor(setup.kit, map.night ?? false), seed, kitPaint(setup.kit, setup.look), playerArms(crowd, this.state.characters.indexOf(this.player), this.player.team));
     // The held replica's light and the range's sound, by day or at night (M33j: the sound follows the preset's flag).
     this.combat.setLighting(lighting);
+    this.combat.setMapGroup(group);
     this.combat.skipStartWhistle();
     this.targets = new RangeTargetsRenderer(this.state.targets, HITS);
     this.targets.setReceiveShadows(quality.figureShadows);
@@ -297,7 +305,7 @@ export class RangeSession {
   /** New quality settings (Settings → Graphics): as MatchSession.setQuality. */
   setQuality(quality: QualitySettings): void {
     this.daylight.setQuality(quality);
-    this.renderer.mapMeshes.restyle(this.renderer.surfaceTexturesFor(RANGE_MAP), mapLookOf(quality));
+    this.combat.setMapGroup(this.renderer.mapMeshes.restyle(this.renderer.surfaceTexturesFor(RANGE_MAP), mapLookOf(quality, this.probes)));
     this.targets.setReceiveShadows(quality.figureShadows);
     this.targets.setDetail(quality.mapDetail);
     this.combat.setQuality(quality);

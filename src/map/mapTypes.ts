@@ -143,6 +143,11 @@ export interface MapData {
    */
   decor?: readonly MapBlock[];
   /**
+   * Boxes on the walls kept clear of the painted signs and the dressing's marks (M81): what another renderer draws on a
+   * wall (the practice range's distance boards, render/rangeTargetsRenderer.ts). Look only, never collided. Absent: none.
+   */
+  keepClear?: readonly { center: Vec3; size: Vec3 }[];
+  /**
    * Baked bounce light (G6, render/bakedLight.ts): the map ships a probe file (src/map/bakes/, written by
    * `node pipeline/bake-light.mjs`) and is drawn with it under the bake's lighting preset (config/bake.ts). Look only.
    * Absent: no baked light (the night maps, lit by their own lamps).
