@@ -156,7 +156,8 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(sheet.locator('dd', { hasText: /^0\.97 J/ })).toBeVisible();
   await expect(sheet.locator('dd', { hasText: /^13 BBs\/s/ })).toBeVisible();
   await expect(sheet.locator('dd', { hasText: /^60 × 4 \(240\)/ })).toBeVisible();
-  await expect(sheet.locator('dd', { hasText: /^no optic/ })).toBeVisible();
+  // Down its iron sights with no optic fitted (M84).
+  await expect(sheet.locator('dt', { hasText: /^Aim raise$/ }).locator('xpath=following-sibling::dd[1]')).toHaveText(/^0\.15 s/);
   for (const label of ['Muzzle speed', 'BB weight', 'On target to', 'Time to 20 m', 'Spread', 'Recoil', 'Reload', 'Draw', 'Aim raise', 'Shots heard from']) await expect(sheet.getByText(label, { exact: true })).toBeVisible();
   const optic = loadout.getByRole('group', { name: 'Optic' });
   await expect(optic.getByRole('button', { name: /Iron Sights/ })).toHaveAttribute('aria-pressed', 'true');
@@ -172,7 +173,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(sheet.locator('dd', { hasText: /^0\.28 g/ })).toBeVisible();
   await expect(sheet.locator('dd', { hasText: /^0\.99 J/ }).locator('.perf-delta.perf-better')).toHaveText(/^\+\d/);
   await expect(sheet.locator('dd', { hasText: /^\d+ m\/s/ }).locator('.perf-delta.perf-worse')).toHaveText(/^−\d/);
-  // The red dot just fitted shows as its raise time instead of "no optic".
+  // The red dot just fitted shows its own raise time.
   await expect(sheet.locator('dd', { hasText: /^\d\.\d\d s/ }).last()).toBeVisible();
   await expect(loadout.getByText(/Leaves the barrel at \d+ m\/s .* Longest reach at about 75% hop-up/).first()).toBeVisible();
   // Glowing BBs (M33b) sit beside BB weight and hop-up: At Night by default, and the pick is kept for the replica.
