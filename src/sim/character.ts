@@ -54,6 +54,12 @@ export interface Character {
   lean: number;
   /** Lean at the start of the last tick, for render interpolation. */
   prevLean: number;
+  /**
+   * The walk cycle's phase (radians, M85): grows with the ground covered (HITS.legs.stridesPerMetre), so the legs'
+   * hit volumes and the drawn legs swing together (sim/hitbox.ts legSwing). `prevWalkCycle` is last tick's, for drawing.
+   */
+  walkCycle: number;
+  prevWalkCycle: number;
   /** View angles at the start of the last tick, for render interpolation of turning. */
   prevYaw: number;
   prevPitch: number;
@@ -136,6 +142,8 @@ export function createCharacter(
     prevCrouchAmount: 0,
     lean: 0,
     prevLean: 0,
+    walkCycle: 0,
+    prevWalkCycle: 0,
     prevYaw: yaw,
     prevPitch: 0,
     grounded: false,
@@ -204,6 +212,8 @@ export function respawnCharacter(c: Character): void {
   c.prevCrouchAmount = 0;
   c.lean = 0;
   c.prevLean = 0;
+  c.walkCycle = 0;
+  c.prevWalkCycle = 0;
   c.grounded = false;
   c.jumpCooldown = 0;
   c.jumpWanted = 0;

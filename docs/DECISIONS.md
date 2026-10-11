@@ -195,7 +195,11 @@ replaces its line; the old one stays findable in the archive or in git.
 
 - **Hit volume is a body capsule plus a head sphere (2026-09-30); arms and the replica don't count, and arm hits stay
   off (owner, 2026-10-01).** The drawn figure is built from the same numbers (a test checks it), so hits look fair. A
-  crouched head top stays at or below 1.15 m, because crouch cover is 1.2 m.
+  crouched head top stays at or below 1.15 m, because crouch cover is 1.2 m. Since M85 (owner's playtest note 17,
+  2026-10-06) the body is a chest, oval hips and two legs (thigh, shin, boot) that swing on the simulation's walk
+  cycle, and `render/figureHitVolume.test.ts` measures it against the drawn figure on every pose; a new figure (the
+  Blender remodel) must pass it. **Every body stops a BB (M85, default ruled 2026-10-06):** a BB that hits someone knocks
+  them out and stops, with no bounce off bodies; one that reaches someone already hit stops on them with no second hit.
 - **Hit calling stays a raised hand and a sign, with no dead rag, night light or shouted "HIT!" for now (owner,
   2026-10-06).** The hit system is good enough; he may revisit. Reverses the triage's Beta place for the night light.
 - **A hit player calls HIT for 1.4 s, then walks to their team's dead zone along nav routes (2026-09-30).** A walk that
