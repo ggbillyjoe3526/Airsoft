@@ -9,9 +9,9 @@
 export const MENU_ART_DIR = 'menu';
 
 /**
- * Where a picture's camera stands: over the field looking across it from behind Blue's start, high over its middle (a
- * city, whose streets only show from above), at eye height behind Blue's start, where the player first stands (a
- * little higher), or on Blue's side of the flagpole looking at it.
+ * Where a picture's camera stands: over the field looking across it from behind Alpha's start, high over its middle (a
+ * city, whose streets only show from above), at eye height behind Alpha's start, where a player on Alpha first stands (a
+ * little higher), or on Alpha's side of the flagpole looking at it.
  */
 export type StillView = 'overview' | 'aerial' | 'ground' | 'street' | 'flag';
 

@@ -127,7 +127,7 @@ describe('the Your match panel (G3, playView.ts)', () => {
     ...over,
   });
   const opts = (devContent: boolean) => ({
-    rules: { playerTeam: 'Blue', enemyTeam: 'Orange', raiseTime: 5, attackFirst: true, eliminationStartEnd: 1, attackDefendStartEnd: 0 },
+    rules: { raiseTime: 5 },
     dev: { devContent: () => devContent, devContentUsed: () => devContent, cheating: () => false },
     armory: { wallet: () => ({ fc: 0, tokens: 0 }) },
     loadout: { summary: () => ({ replicas: 'AEG Rifle · Gas Pistol', detail: '' }) },
@@ -155,6 +155,23 @@ describe('the Your match panel (G3, playView.ts)', () => {
     const label = (id: string) => DIFFICULTIES.find((d) => d.id === id)!.label;
     expect(playView(picks(), opts(false), () => 'day').bots).toContain(label('normal'));
     expect(playView(picks({ difficulty: 'hard' }), opts(false), () => 'day').bots).toContain(`${label('hard')} / ${label('normal')}`);
+  });
+
+  it('says your team beside the bots and in the rules, from where it starts (M98), and nothing of it in an Extraction run', () => {
+    const view = (over: Partial<NewGamePicks>) => playView(picks(over), opts(true), () => 'day');
+    expect(view({}).bots).toMatch(/^Alpha · /);
+    expect(view({}).notes).toContain('(Alpha) against Beta');
+    expect(view({ team: 'beta' }).bots).toMatch(/^Beta · /);
+    expect(view({ team: 'beta' }).notes).toContain('you and 2 bot teammates (Beta) against Alpha.');
+    // Alpha starts Elimination in the east and attacks first (config/hits.ts ROUNDS), so Beta starts in the west and defends.
+    expect(view({}).notes).toContain('You start at the east end');
+    expect(view({ team: 'beta' }).notes).toContain('You start at the west end');
+    expect(view({ mode: 'attackDefend' }).notes).toContain('Your team attacks first, from the west end');
+    expect(view({ mode: 'attackDefend', team: 'beta' }).notes).toContain('Your team defends first, from the east end');
+    const run = view({ mode: 'extraction', team: 'beta' });
+    expect(run.run).toBe(true);
+    expect(run.bots).not.toMatch(/Alpha|Beta/);
+    expect(run.notes).toContain('(Alpha), against');
   });
 });
 

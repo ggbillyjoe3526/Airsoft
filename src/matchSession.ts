@@ -30,7 +30,7 @@ import { bbGlowFor, kitPaint, type PlayerKit } from './pool/loadoutModel';
 import type { LookSettings } from './config/look';
 import { SIM, SIM_DT } from './config/sim';
 import type { SquadCommand } from './config/squad';
-import { TEAMS, type TeamColours } from './config/teams';
+import type { TeamColours } from './config/teams';
 import { BuildTiming } from './core/buildTiming';
 import { caseSeed, runSeed } from './core/seed';
 import { figureCrowd, playerArms } from './render/figureMix';
@@ -58,6 +58,7 @@ import { createCommand, type PlayerCommand } from './sim/commands';
 import { isInPlay } from './sim/elimination';
 import { createRunContext, type ExtractionContext, type FoundItem, haulTotals, reserveSize, runFinds, runHaul } from './sim/extraction';
 import { placeTeams, startRun } from './sim/round';
+import { byTeam, rosterTeams } from './sim/roster';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
 import { partsUnder } from './sim/torch';
 import { createWind } from './sim/wind';
@@ -74,8 +75,8 @@ import { rosterNames, statsBlocks, type TeamBlock } from './ui/statsRows';
 const PLAYER_ID = 0;
 /** The colour figures glow in someone's torch beam (M33h): the torches' cool white. */
 const TORCH_LIFT_COLOUR = TORCHES.weaponTorch.colour;
-/** The team the player is on at the start (Blue); the other team is the opponents. */
-const PLAYER_TEAM = 0;
+/** An Extraction run's squad is Alpha (M98: the run has no "Your team" pick); the home team is Beta. */
+const RUN_SQUAD_TEAM = 0;
 
 /** What New game sets up, read when Play is pressed (M15b: nothing is loaded before that). */
 export interface MatchSetup {
@@ -120,6 +121,11 @@ export interface MatchSetup {
   supply?: SupplyEvent | null;
   /** The team colours picked on Settings → Accessibility (M18b): the figures, the flag and your armband. */
   teamColours: TeamColours;
+  /**
+   * The Match screen's "Your team" (M98, config/teams.ts teamOfPick): 0 Alpha, 1 Beta. An Extraction run ignores it
+   * (the squad is Alpha). Absent: Alpha.
+   */
+  playerTeam?: number;
   /** Settings → Look (G1): robots and Realistic colours. Absent: their defaults. */
   look?: LookSettings;
 }
@@ -234,7 +240,7 @@ export class MatchSession {
             squad: setup.rules.teamSize,
             seed: runSeed(seed),
             runner: PLAYER_ID,
-            squadTeam: PLAYER_TEAM,
+            squadTeam: RUN_SQUAD_TEAM,
             respawnAfter: hitRulesFor(setup.rules).callTime,
             spawnLift: PHYSICS.groundRestGap,
             // The run's cases (M44), filled from pool.md with the parts weighted towards what you don't own yet, richer
@@ -273,6 +279,7 @@ export class MatchSession {
       pole: map.flag,
       extraction: this.extraction,
     });
+    this.playerTeam = this.extraction ? RUN_SQUAD_TEAM : (setup.playerTeam ?? 0);
     this.player = this.spawnRoster(map, seed);
     this.fitPickedLoadout();
     this.commands.set(PLAYER_ID, this.playerCommand);
@@ -287,7 +294,6 @@ export class MatchSession {
     // The perf harness's player (`?script=perf`) plays the script for this mode: Extraction's opens a case (M64, UI-05).
     if (input.script) input.script = perfScriptFor(this.mode);
     input.restartScript();
-    // The player is always on Blue.
     // The torches (M33h), once everyone is kitted: your own takes one of the night lights on Medium and High.
     this.torches = new TorchBeams(this.state.characters, lighting, quality, this.physics, BODY, this.hits);
     renderer.scene.add(this.torches.object);
@@ -322,6 +328,8 @@ export class MatchSession {
 
   /** Extraction's run context (the insertion, the home team's starts, the exits); undefined in the other modes. */
   readonly extraction: ExtractionContext | undefined;
+  /** The team you play on (M98): the pick, or Alpha in an Extraction run. Everything about "your team" reads player.team. */
+  private readonly playerTeam: number;
   /** Extraction: your bot teammates follow you unless you order otherwise (ai/squadFollow.ts). */
   private readonly squadFollow = new SquadFollow();
 
@@ -564,7 +572,7 @@ export class MatchSession {
 
   /**
    * Creates both teams at the map's spawns for round 1 (each team at its end, see placeTeams): the local player
-   * plus bot teammates on Blue, and Orange bots. Returns the player.
+   * plus bot teammates on the picked team, then the other team's bots (sim/roster.ts). Returns the player.
    */
   private spawnRoster(map: MapData, seed: number): Character {
     const [size, opposing] = this.rosterSizes();
@@ -573,24 +581,22 @@ export class MatchSession {
         if (spawns.length < size) throw new Error(`Map ${map.name} needs ${size} spawns at end ${end}`);
       }
     }
-    let id = PLAYER_ID;
+    // You (id 0) and your teammates first, on the team you picked; then the other team (M98).
+    const teams = rosterTeams(this.playerTeam, size, opposing);
     // Bots roll only from what is offered: dev gear only with Dev content on (M35).
     const botPool = contentPool(GAME_POOL, this.setup.devContent);
     // Under the factory kit rule (M39) nobody rolls a kit: everyone carries LOADOUT as it comes.
     const rolls = BOT_LOADOUTS[this.setup.difficulty] === 'random' && !this.setup.rules.factoryKit;
     // Now and then, on a difficulty that rolls kits, one opponent carries a chase replica the player owns (M32).
-    const opponents = TEAMS.flatMap((_, team) => (team === PLAYER_TEAM ? [] : Array.from({ length: opposing }, (_, i) => PLAYER_ID + team * size + i)));
+    const opponents = teams.flatMap((team, id) => (team === this.playerTeam ? [] : [id]));
     const carrier = rolls ? chaseCarrier(botPool, this.setup.chaseOwned ?? [], seed, opponents) : null;
-    for (let team = 0; team < TEAMS.length; team++) {
+    for (const [id, team] of teams.entries()) {
       // You carry your kit; your teammates carry the default loadout as it comes, and so do the other team's bots unless
       // their difficulty rolls each one a kit of its own (M29b).
-      const rolled = team !== PLAYER_TEAM && rolls;
-      const members = team === PLAYER_TEAM ? size : opposing;
-      for (let i = 0; i < members; i++, id++) {
-        if (id === PLAYER_ID) this.state.characters.push(createCharacter(id, vec3(), 0, this.loadout, team));
-        else if (rolled) this.state.characters.push(this.underRules(chaseReady(kittedCharacter(id, team, randomKit(botPool, carriedLoadout(LOADOUT, id, carrier), botKitSeed(seed, id), BOT_PART_CHANCE[this.setup.difficulty])), carrier)));
-        else this.state.characters.push(createCharacter(id, vec3(), 0, this.botLoadout, team));
-      }
+      const rolled = team !== this.playerTeam && rolls;
+      if (id === PLAYER_ID) this.state.characters.push(createCharacter(id, vec3(), 0, this.loadout, team));
+      else if (rolled) this.state.characters.push(this.underRules(chaseReady(kittedCharacter(id, team, randomKit(botPool, carriedLoadout(LOADOUT, id, carrier), botKitSeed(seed, id), BOT_PART_CHANCE[this.setup.difficulty])), carrier)));
+      else this.state.characters.push(createCharacter(id, vec3(), 0, this.botLoadout, team));
     }
     // On a night field every bot carries the offered torch (M33h): by rule, never rolled, so seeded kits don't shift.
     // Not under the factory kit rule (M39): everyone carries LOADOUT as it comes.
@@ -607,16 +613,22 @@ export class MatchSession {
     return this.state.characters[0]!;
   }
 
-  /** Players per team, yours first: equal sides, or in Extraction your squad against the map's opponents in play. */
+  /** Players per team index (the scoreboard's pips): equal sides, or in Extraction your squad against the map's opponents in play. */
   private teamSizes(): [number, number] {
+    const [mine, theirs] = this.sidesInPlay();
+    return byTeam(this.playerTeam, mine, theirs);
+  }
+
+  /** Players in play on your side and on theirs. */
+  private sidesInPlay(): [number, number] {
     const size = this.setup.rules.teamSize;
     const x = this.setup.map.extraction;
     return this.mode === 'extraction' && x ? [size, homeTeamCap(x.baseOpponents, size, this.setup.difficulty)] : [size, size];
   }
 
-  /** Characters per team: the team sizes, and in Extraction the home team's reserve for the run's last part (M45). */
+  /** Characters on your side and on theirs: in Extraction the home team's reserve for the run's last part too (M45). */
   private rosterSizes(): [number, number] {
-    const [size, opposing] = this.teamSizes();
+    const [size, opposing] = this.sidesInPlay();
     return [size, opposing + (this.extraction ? reserveSize(this.extraction) : 0)];
   }
 
@@ -694,5 +706,5 @@ export class MatchSession {
 
 /** Per team, the bots' tuning: your team's bots at the teammates' difficulty, the other team's at the opponents' (M20). */
 function teamBotConfigs(playerTeam: number, setup: MatchSetup): BotConfig[] {
-  return TEAMS.map((_, team) => botConfig(team === playerTeam ? setup.teammateDifficulty : setup.difficulty));
+  return byTeam(playerTeam, botConfig(setup.teammateDifficulty), botConfig(setup.difficulty));
 }

@@ -84,6 +84,7 @@ export class Menus {
       mode: opts.mode.initial,
       difficulty: opts.difficulty.initial,
       teammateDifficulty: opts.teammateDifficulty.initial,
+      team: opts.team.initial,
       ruleset: opts.ruleset.initial,
       rules: { ...opts.matchRules.initial },
     };
@@ -95,6 +96,7 @@ export class Menus {
       onRules: (rules) => opts.matchRules.onChange(rules),
       onDifficulty: (d) => opts.difficulty.onChange(d),
       onTeammates: (d) => opts.teammateDifficulty.onChange(d),
+      onTeam: (t) => opts.team.onChange(t),
       supply: opts.mode.supply,
       refresh: () => this.refreshViews(),
     });
