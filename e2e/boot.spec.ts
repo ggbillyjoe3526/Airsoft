@@ -395,7 +395,9 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(page.locator('.hud .hud-crosshair')).toHaveClass(/\bshape-circle\b/);
   // The match wears the High contrast colours on the HUD, and the sound cue ring is up.
   // The menus already wear the picked set (M98: the Your team dots), and the match keeps it: High contrast's HUD orange.
-  expect(await teamCss()).toBe('#e0601a');
+  const matchOrange = '#e0601a';
+  const standardOrange = '#ff8a2a';
+  expect(await teamCss()).toBe(matchOrange);
   await expect(page.locator('.sound-cues')).not.toHaveAttribute('hidden');
   // The keys below act on the frames after they're pressed, so the match must be drawing first. On a CI runner in
   // software a frame can take seconds early in a match (Chrome 153 there, where these steps were flaky with 10 s waits;
