@@ -90,7 +90,7 @@ describe('content report: rules, compatibility and the spec test', () => {
           label: m.label,
           tag: m.tag,
           lightings: lightingChoices(data),
-          modes: MATCH_MODES.filter((mode) => mode.id !== 'extraction' && playableMode(data, mode.id) === mode.id).map((mode) => mode.id),
+          modes: MATCH_MODES.filter((mode) => playableMode(data, mode.id) === mode.id).map((mode) => mode.id),
         };
       }),
       modes: MATCH_MODES.map((m) => ({ id: m.id, label: m.label, tag: m.tag })),

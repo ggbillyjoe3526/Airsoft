@@ -28,18 +28,6 @@ acceptance:
 status: open
 attempts: 0
 
-## M80 · The tutorial shows what it teaches (playtest note 1)
-tier: ui
-perf: skip
-touches: src/tutorial/, src/config/tutorial.ts, src/ui/scoreboard.ts, src/ui/orderWheel.ts, src/ui/menus/, docs/PLAYTEST.md
-contract: none
-acceptance:
-  1. When the tutorial names the scoreboard or the comm wheel (hold Z), it opens it on screen for the player to see.
-  2. Every tutorial line is reworded: plain words, complete enough to say how the thing works.
-  3. Finishing the tutorial shows a clear "Tutorial complete" pop-up with two choices: the practice range or the menu.
-status: open
-attempts: 0
-
 ## M81 · The practice range and tutorial area in the new look (playtest note 9)
 tier: ui
 perf: required
@@ -48,18 +36,6 @@ contract: none
 acceptance:
   1. After graphics G5 and G6 merge, the range and tutorial area use the new materials, baked light and post stack on every preset, re-dressed in the art direction like Depot (G8).
   2. Low still holds its frame budget on the range.
-status: open
-attempts: 0
-
-## M82 · Sort and filter by rarity (playtest note 4)
-tier: ui
-perf: skip
-touches: src/ui/menus/loadoutScreen.ts, src/ui/menus/itemTile.ts, src/ui/loadoutChoice.ts, src/save/
-contract: none
-acceptance:
-  1. The Loadout's replica list sorts by rarity and can hide chosen rarity tiers (for example show only Epic and Legendary).
-  2. Customise does the same for parts.
-  3. The choice is remembered between visits. Built after the menu redesign (G3).
 status: open
 attempts: 0
 
@@ -102,17 +78,6 @@ defaults per note are in the project's shared files (`plans/playtest-feedback-20
 `docs/ROADMAP.md` › Playtest notes: main after G3 maps all eight. M97–M99 join the Dev 4 notes batch (Dev 5 item 6); M100 is the graphics work's (Dev 5
 item 5, with the G4 HUD restyle); note 3 was a bug, fixed in BP2; note 2 is already in the game
 (Settings › Controls › Aim button). Note 19 of the Dev 4 notes still applies.
-
-## M99 · Replica pictures show the whole replica (playtest note 6)
-tier: ui
-perf: skip
-touches: src/ui/menus/loadoutScreen.ts, src/ui/menus/itemTile.ts, src/ui/menus/menuPictures.ts, src/ui/menus/css/loadout.css
-contract: none
-acceptance:
-  1. Every replica picture in the Loadout's "Your replicas" (and anywhere else a replica tile is drawn) shows the whole replica, muzzle to stock, at every supported window size from 1280 × 720 up.
-  2. A browser test fails if a replica picture is cropped.
-status: open
-attempts: 0
 
 **0.1 Dev 6 (confirmed with the roadmap, 2026-10-06).** M92–M95, the holster and the practice
 upgrades, come before the 26 features in `docs/ROADMAP.md` › 0.1 Dev 6, whose blocks are written when that build starts.

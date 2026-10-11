@@ -26,7 +26,7 @@ A fail stops an item going public. A warning ("look at this") is shown to the ow
 | Replicas | `docs/content/replicas.md` | All four levels |
 | Parts (optics, grips, lasers, magazines, barrels, muzzles, lights, power sources) | `docs/content/attachments.md` | All four levels |
 | Maps | `docs/content/maps.md` | All four levels (level 2 is the layout) |
-| Game modes | `docs/content/modes.md` | Not yet (toolkit part 3) |
+| Game modes | `docs/content/modes.md` | All four levels (level 2 is its fit and short matches) |
 | Skins | `docs/content/skins.md` | Not yet (toolkit part 4, with skins) |
 
 Every type keeps the standing rules: one hit is one hit, toys not firearms, no real brand names or copied trademarked
@@ -36,22 +36,25 @@ designs, nothing map-only, and an ID (pool ID, map id, mode id) never changes on
 
 1. **Rules:** is everything filled in, correctly, and wired up? (seconds)
 2. **Compatibility:** does it work with everything it is meant to work with? For a map, its **layout**: lanes,
-   sightlines, walk times against Depot's. (seconds)
+   sightlines, walk times against Depot's. For a mode, its **fit**: short headless matches of every ruleset, level,
+   team size and Custom switch, and the bots playing it their own way. (seconds; a mode's matches about half a minute)
 3. **Spec test:** does it shoot, look and cost what the spec sheet says? Numbers, model cost, sound and pictures.
    (about a minute, 2026-10-11)
 4. **Balance run:** headless bot matches on every map, lighting, round mode and level: is it fair? (about 3 minutes per
    map, lighting and pairing at the default 8 seeds; the maps run in parallel, 2026-10-11)
 
-Levels 1 and 2 run for every asset and map in every pull request (`src/content/content.test.ts`,
-`src/content/mapChecks.test.ts`). Levels 3 and 4 run on demand. A map's spec test adds the perf run on Low, Medium and
+Levels 1 and 2 run for every asset, map and mode in every pull request (`src/content/content.test.ts`,
+`src/content/mapChecks.test.ts`, `src/content/modeChecks.test.ts`), and each mode's short match in the browser runs in
+the smoke test. Levels 3 and 4 run on demand. A map's spec test adds the perf run on Low, Medium and
 High (about ten minutes in a cloud container) and its balance run plays each lighting and round mode in its own
 process, in parallel.
 
 ## The command
 
 ```
-node pipeline/content-check.mjs <item|all|map:<id>|map:all> [--balance] [--public] [--levels a,b] [--maps a,b]
-                                [--seeds n] [--seconds n] [--no-pictures] [--url u] [--no-perf] [--env e]
+node pipeline/content-check.mjs <item|all|map:<id>|map:all|mode:<id>|mode:all> [--balance] [--public] [--levels a,b]
+                                [--maps a,b] [--seeds n] [--seconds n] [--no-pictures] [--url u] [--no-perf] [--env e]
+                                [--no-browser]
 ```
 
 - **`<item>`** is a pool ID, name or Key (`000007`, `"Red Dot"`, `redDot`). `all` runs levels 1 to 3 on every asset,
@@ -60,11 +63,16 @@ node pipeline/content-check.mjs <item|all|map:<id>|map:all> [--balance] [--publi
 - **`map:<id>`** checks a map by its id or name (`map:depot`, `map:"Neon Heights"`); `map:all` runs levels 1 to 3 on
   every map, without perf runs or pictures. **`--no-perf`** skips a map's perf runs; **`--env`** names their
   environment (`container` by default; `laptop` on the owner's PC).
+- **`mode:<id>`** checks a mode by its id or name (`mode:attackDefend`, `mode:"Attack and Defend"`): its rules and fit,
+  its short matches on every map that hosts it, the browser match on its first public map (**`--no-browser`** skips
+  it), the perf run on each host on the budget preset, and with `--balance` the map balance run in that mode on each
+  host. `mode:all` runs levels 1 and 2 on every mode, its short matches on one public map each.
 - **`--maps`** limits a replica's or part's balance run (`depot,woodland`); each map runs in its own process, in parallel.
 - **`--no-pictures`** skips the pictures, which need the e2e build and a browser (it builds and serves the build
   itself; set `PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium` in a cloud container).
 
-It writes `pipeline/out/content/<id>/report.md` (`map-<id>` for a map, `maps` for every map), `report.html` (one file, the pictures inside it), `report.json` and
+It writes `pipeline/out/content/<id>/report.md` (`map-<id>` for a map, `maps` for every map, `mode-<id>` and `modes`
+for modes), `report.html` (one file, the pictures inside it), `report.json` and
 `pictures/`, and exits 1 when a check fails or a runner could not run. The thread copies the report to
 `/mnt/project-files/content-reports/<id>/` and attaches the HTML page.
 
@@ -82,7 +90,11 @@ It writes `pipeline/out/content/<id>/report.md` (`map-<id>` for a map, `maps` fo
   and never judged (the Cyber Pistol, a chase item, is the first).
 - **A map's balance** is each end's share instead: the end that starts west (the attackers in Attack / Defend) wins 40
   to 60 % at Pro and 35 to 65 % below it (Audit 2 decision 3), with bots leaving spawn and nobody stuck or falling.
-- **Extraction** is not in the balance run yet: it plays as runs, not rounds, and gets its sweep with the mode checks.
+- **Extraction** plays whole runs, not rounds. A replica or part: the squad carries it, then the rival kit, over the
+  same seeds, and of the runs only one of the two got out of, its share holds the 40 to 60 % band. A map or mode: the
+  runs the squad gets out of and what it gets out with, against the map's bands (`src/ai/balance/extractionBands.ts`).
+- **A mode's balance** adds two figures to a map's: the objective decides at least 1 decided round in 10, and its pay
+  a minute is within × 0.75 to × 1.25 of Elimination's on the same map, lighting and level.
 
 ## Going public
 
@@ -90,7 +102,8 @@ It writes `pipeline/out/content/<id>/report.md` (`map-<id>` for a map, `maps` fo
 2. Run `node pipeline/content-check.mjs <item> --public`. Every fail is fixed or overridden (above); every warning is
    put to the owner and he accepts it.
 3. Change its Access to `public` in `pool.md` (or its tag in the map or mode registry) and add it to `PUBLIC_ITEMS` in
-   `src/config/contentRules.ts` with the date and the owner's word. A `public` item missing from that register fails
+   `src/config/contentRules.ts` with the date and the owner's word (`PUBLIC_MAPS` for a map; for a mode `PUBLIC_MODES`,
+   and its id to `SHIPPED_MODE_IDS`). A `public` item missing from that register fails
    the rules check, so nothing skips the gate.
 
 ## Where the rules live

@@ -235,6 +235,11 @@ replicas are listed with their tier. Right-click an equipped replica, or use Cus
 - [ ] **Swap slots.** Put the Gas Pistol in Primary: the AEG rifle moves to Secondary. Any replica goes in either slot.
 - [ ] **Customise.** Colour first, then the optic, BB weight, hop-up, grip, laser, magazine, power source, barrel,
   muzzle and light, each offering only parts you own that fit. Skins say they come later. Esc goes back.
+- [ ] **Sort and filter by rarity (M82).** Over Your replicas: Sort Replica (as before) or Rarity (rarest first), and
+  a chip per tier; click Common, Uncommon, Rare and Very Rare off to see only Epic and Legendary (what you carry still
+  shows; "3 hidden" says how many are left out; All brings them back). In Customise each part's options have the same
+  bar, one choice for every part. Leave and come back, or reload: both choices are kept. Is the bar easy to read and
+  out of the way?
 - [ ] **BB weight.** 0.25 g on the rifle and 0.20 g on the pistol as they come. 0.28 g on the rifle leaves slower
   (about 84 m/s) and needs more hop: at about 75 % it stays on target to about 41 m. 0.20 g with the dial at 65 % is
   too much hop (far shots fly high and float); about 50 % flies flat.
@@ -511,16 +516,22 @@ The Match screen's Practice card (the last mode), then Start practice.
 
 - [ ] **The title screen** offers Tutorial under START on a clean save, until you've finished it once or started a
   first match (also after a reload).
-- [ ] **Play it through.** The coach says "Tutorial · 1 of 10 · Look around" and moves on as you do each thing: look
+- [ ] **Play it through.** The coach says "Tutorial · 1 of 15 · Look around" and moves on as you do each thing: look
   around, walk to the line, ring a plate, knock down a figure at 50 m or more (the coach shows where your last BB
-  landed), reload, aim (or, with iron sights, a pointer to the optics), crouch, lean, switch replica and hit
-  something, the fire selector, shooting out of a sprint, then the "one hit" card. Each finished step ticks green.
-  Did any step feel stuck or unclear?
+  landed), reload, the fire selector, aim (or, with iron sights, a pointer to the optics), crouch, lean, shooting out
+  of a sprint, switch replica and hit something, then the cards to read: one hit, the scoreboard, the order wheel,
+  winning a match. Each finished step ticks green. Did any step feel stuck or unclear?
+- [ ] **Plain words (M80).** Read every card: is each one simple, and does it say how the thing works, not only what
+  it's called? Is there time to read each card before it moves on?
+- [ ] **It shows what it teaches (M80).** The scoreboard card opens the scoreboard (a sample match) under it, and the
+  order wheel card opens the wheel with its pointer moving from order to order; each closes as the next card comes up,
+  and both hide on the pause menu.
 - [ ] **Your keys.** Rebind reload, start the tutorial again: the coach names your key.
 - [ ] **Esc mid-tutorial.** The pause menu names your step and offers Skip step and Skip tutorial. Change the
   loadout and come back: same step. Quit at step 5 and start again: it picks up at step 5. Skip tutorial: free
   practice, and the title stops tagging it.
-- [ ] **After the last step** the coach goes and the range readout appears.
+- [ ] **After the last step (M80)** a "Tutorial complete" pop-up offers Practice range (Enter: back on the range, the
+  readout in the coach's place) or Menu (the Match screen, to start a match). Esc closes it to the pause menu.
 
 ### Extraction (dev content)
 
@@ -646,6 +657,9 @@ there maps each symptom to its numbers):
 - [ ] **The look.** Every screen at 1280×720 and 1920×1080 is tidy: one type scale, buttons in capitals, pictures of
   maps, modes and replicas. Pointing at a button lifts it a little; Tab moves an orange focus ring round every control.
   With reduced motion, screens and dialogs appear with no fade.
+- [ ] **Whole replicas (M99).** On the Loadout's Your replicas, Customise's colour tiles, the Armory's reveal and a
+  run's haul, every replica picture shows the whole replica, muzzle to stock, nothing under its name or the picked
+  tile's tick (now at the foot, by the words). Resize the window from 1280×720 up to full screen: still whole.
 - [ ] **The loading screen** (production build: `npm run build`, then `npm run preview`; DevTools › Network › Slow
   4G, cache off). The dark page with "AIRSOFT." and a thin orange bar shows at once with no white flash; the bar fills
   through "Loading physics…", "Starting physics…" and "Starting the game…", then the title appears.

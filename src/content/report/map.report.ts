@@ -54,7 +54,7 @@ describe('content report: a map’s rules, layout and spec test', () => {
     // The spec test's perf runs (pipeline/perf-run.mjs): Elimination on Low, Medium and High, judged by perf-budget.json.
     const perf = targets.length === 1 ? { map: perfMapName(budget, targets[0]!.id), mode: 'elimination', presets: ['low', 'medium', 'high'] } : null;
 
-    // The balance run's plan: the lightings and round modes it hosts, every level (Extraction comes with part 3).
+    // The balance run's plan: the lightings and modes it hosts (Extraction as runs, CT3), every level.
     const plan = targets.map((m) => {
       const data = mapData(m.id);
       return {
@@ -62,7 +62,7 @@ describe('content report: a map’s rules, layout and spec test', () => {
         label: m.label,
         tag: m.tag,
         lightings: lightingChoices(data),
-        modes: MATCH_MODES.filter((mode) => mode.id !== 'extraction' && playableMode(data, mode.id) === mode.id).map((mode) => mode.id),
+        modes: MATCH_MODES.filter((mode) => playableMode(data, mode.id) === mode.id).map((mode) => mode.id),
         levels: DIFFICULTIES.map((d) => d.id),
       };
     });

@@ -236,14 +236,14 @@ export function layoutRows(layouts) {
  * A perf run's result (perf-run.mjs's file) as the spec test's check: over its budget fails, more than the gate's
  * tolerance worse than its baseline asks for a look, page errors fail. `judged` is perfMatrix.mjs judgeRun's verdict.
  */
-export function perfResult(label, run, judged) {
+export function perfResult(label, run, judged, check = 'map.perf') {
   const m = run.metrics;
   const numbers = `${n(m.drawCalls, 0)} draw calls, ${n(m.triangles / 1000, 0)}k triangles, ${n(m.gpuMemoryMB, 0)} MB of GPU memory, heap ${m.heapGrowthMB >= 0 ? '+' : ''}${n(m.heapGrowthMB, 1)} MB`;
   const item = `${label}, ${run.preset}`;
-  if (run.errors?.length) return { level: 'spec', check: 'map.perf', item, verdict: 'fail', says: `${numbers}; the page had ${run.errors.length} error${run.errors.length > 1 ? 's' : ''} (${run.errors[0]}).` };
-  if (judged.over.length) return { level: 'spec', check: 'map.perf', item, verdict: 'fail', says: `${numbers}; over budget: ${judged.over.map((o) => `${o.metric} ${n(o.now)} (budget ${o.limit})`).join(', ')}.` };
-  if (judged.worse.length) return { level: 'spec', check: 'map.perf', item, verdict: 'warn', says: `${numbers}; worse than its last measure: ${judged.worse.map((w) => `${w.metric} +${w.pct} %`).join(', ')}.` };
-  return { level: 'spec', check: 'map.perf', item, verdict: 'pass', says: `${numbers}; within budget${judged.note ? ` (${judged.note})` : ''}.` };
+  if (run.errors?.length) return { level: 'spec', check, item, verdict: 'fail', says: `${numbers}; the page had ${run.errors.length} error${run.errors.length > 1 ? 's' : ''} (${run.errors[0]}).` };
+  if (judged.over.length) return { level: 'spec', check, item, verdict: 'fail', says: `${numbers}; over budget: ${judged.over.map((o) => `${o.metric} ${n(o.now)} (budget ${o.limit})`).join(', ')}.` };
+  if (judged.worse.length) return { level: 'spec', check, item, verdict: 'warn', says: `${numbers}; worse than its last measure: ${judged.worse.map((w) => `${w.metric} +${w.pct} %`).join(', ')}.` };
+  return { level: 'spec', check, item, verdict: 'pass', says: `${numbers}; within budget${judged.note ? ` (${judged.note})` : ''}.` };
 }
 
 /** The map report as Markdown: as reportMarkdown, with every map's layout beside this one's and the perf runs. */
@@ -266,6 +266,111 @@ export function mapReportMarkdown({ content, item, results, pictures = [], meta 
     if (level === 'compatibility') {
       const order = [...content.layouts].sort((a, b) => (a.id === item.key ? -1 : b.id === item.key ? 1 : 0));
       lines.push('### Its layout beside the other maps', '', ...mdTable(['', ...order.map((l) => l.label)], layoutRows(order)), '');
+    }
+  }
+  if (pictures.length > 0) {
+    lines.push('## Pictures', '');
+    for (const p of pictures) lines.push(p.ok ? `**${p.title}**\n\n![${p.title}](pictures/${p.file})\n` : `- ${p.title}: not drawn (${p.error}).`);
+    lines.push('');
+  }
+  return `${lines.join('\n').trimEnd()}\n`;
+}
+
+// ---- Modes (CT3) --------------------------------------------------------------------------------------------------
+
+/** A mode's level 2 is its fit with the rulesets, the match rows and the levels, and its short matches (CT3). */
+export const MODE_LEVEL_WORDS = { ...LEVEL_WORDS, compatibility: 'Fit' };
+
+const LEVEL_NAMES = { easy: 'Easy', normal: 'Normal', hard: 'Hard', pro: 'Pro' };
+const pct = (x) => `${n(100 * x, 0)} %`;
+
+/**
+ * Pay in line (CT3): each sweep's Field Credits a minute (the balance runner's `pay` meta) beside Elimination's on the
+ * same map, lighting and level, as a ratio held to its band (`band`, config/contentRules.ts MODE_BALANCE_BANDS.pay). A
+ * sweep with no Elimination beside it, or Elimination's own, adds nothing; one not judged (dev content) is a figure. Outside
+ * the band by less than two standard errors (each side's `noise`, modePay.ts roundsPayNoise) asks for a look.
+ */
+export function payResults(pays) {
+  const out = [];
+  for (const p of pays.filter((x) => x.mode !== 'elimination')) {
+    const ref = pays.find((x) => x.mode === 'elimination' && x.map === p.map && x.lighting === p.lighting && x.level === p.level);
+    if (!ref) continue;
+    const ratio = ref.fcPerMinute > 0 ? p.fcPerMinute / ref.fcPerMinute : Number.NaN;
+    const figures = `${n(p.fcPerMinute, 0)} FC a minute against Elimination's ${n(ref.fcPerMinute, 0)} (${Number.isFinite(ratio) ? `× ${n(ratio)}` : 'no ratio'}; target × ${n(p.band.min)} to × ${n(p.band.max)})`;
+    const inBand = Number.isFinite(ratio) && ratio >= p.band.min && ratio <= p.band.max;
+    // Two standard errors of the ratio, from each side's own (a share of its pay): outside by less asks for more seeds.
+    const se = Number.isFinite(ratio) ? ratio * Math.hypot(p.noise || 0, ref.noise || 0) : 0;
+    const near = Number.isFinite(ratio) && ratio >= p.band.min - 2 * se && ratio <= p.band.max + 2 * se;
+    const verdict = !p.judged ? 'info' : inBand ? 'pass' : near ? 'warn' : 'fail';
+    const noise = verdict === 'warn' ? ` Outside, but within noise (± ${n(se)}): re-run on more seeds before acting.` : '';
+    out.push({ level: 'balance', check: 'mode.pay', item: `${p.label}: pay against Elimination's`, verdict, says: `${figures}${p.judged ? '' : '; dev content: shown, not judged'}.${noise}` });
+  }
+  return out;
+}
+
+/**
+ * A run mode's levels in order (CT3): for each map and lighting, each pair [easier, harder] (the runner's `runs` meta
+ * carries the pairs): the squad gets out of the easier level's runs at least as often. Within noise (two standard errors)
+ * asks for a look; a figure not judged is shown.
+ */
+export function runOrderResults(runs) {
+  const out = [];
+  const groups = new Map();
+  for (const r of runs) {
+    const key = `${r.map}|${r.lighting}|${r.mode}`;
+    groups.set(key, [...(groups.get(key) ?? []), r]);
+  }
+  for (const group of groups.values()) {
+    const pairs = group[0].harder ?? [];
+    for (const [easier, harder] of pairs) {
+      const e = group.find((r) => r.level === easier);
+      const h = group.find((r) => r.level === harder);
+      if (!e || !h) continue;
+      const diff = e.extract - h.extract;
+      const se = Math.hypot(e.se || 0, h.se || 0);
+      const judged = e.judged && h.judged;
+      const verdict = !judged ? 'info' : diff >= 0 ? 'pass' : diff > -2 * se ? 'warn' : 'fail';
+      const words = `${LEVEL_NAMES[easier] ?? easier} ${pct(e.extract)} against ${LEVEL_NAMES[harder] ?? harder} ${pct(h.extract)}`;
+      out.push({ level: 'balance', check: 'mode.levels', item: `${e.where}, ${e.mode}: ${LEVEL_NAMES[easier] ?? easier} easier to get out from than ${LEVEL_NAMES[harder] ?? harder}`, verdict, says: `${words}${verdict === 'warn' ? ', the wrong way round but within noise: re-run on more seeds' : ''}${judged ? '' : '; dev content: shown, not judged'}.` });
+    }
+  }
+  return out;
+}
+
+/** Every mode side by side (the mode report's table): `[label, ...one value per mode]`. */
+export function modeRows(modes) {
+  const needs = { flag: 'a flagpole', extraction: 'Extraction data' };
+  return [
+    ['Played as', ...modes.map((m) => (m.play === 'run' ? 'one run' : 'rounds'))],
+    ['Needs from a map', ...modes.map((m) => (m.needs ? needs[m.needs] ?? m.needs : 'nothing'))],
+    ['Maps that host it', ...modes.map((m) => m.maps.join(', ') || 'none')],
+    ['Rulesets', ...modes.map((m) => m.rulesets.join(', '))],
+    ['Match rows it hides', ...modes.map((m) => m.hides.join(', ') || 'none')],
+    ['Tag', ...modes.map((m) => m.tag)],
+  ];
+}
+
+/** The mode report as Markdown: as reportMarkdown, with every mode beside this one and the places that answer for a mode. */
+export function modeReportMarkdown({ content, item, results, pictures = [], meta }) {
+  const lines = [`# Content report: ${item.name} (mode)`, ''];
+  const what = item.id === 'modes' ? `Every mode (${content.items.length})` : `Mode \`${item.key}\`, tagged ${item.tag}`;
+  lines.push(`${what}. Checked ${meta.when} on \`${meta.commit}\`.`, '');
+  lines.push(`**${outcomeLine(results, meta, MODE_LEVEL_WORDS)}**`, '');
+  const attention = results.filter((r) => r.verdict === 'fail' || r.verdict === 'warn');
+  if (attention.length > 0) {
+    lines.push('## What needs you', '');
+    attention.forEach((r, i) => lines.push(`${i + 1}. **${VERDICT_WORDS[r.verdict]}** (${MODE_LEVEL_WORDS[r.level]}, ${r.item}): ${r.says}`));
+    lines.push('');
+  }
+  for (const level of meta.levels) {
+    const own = results.filter((r) => r.level === level);
+    if (own.length === 0 && level !== 'rules') continue;
+    lines.push(`## ${MODE_LEVEL_WORDS[level]}`, '');
+    if (own.length > 0) lines.push(...mdTable(['Check', 'Result', 'What was found'], own.map((r) => [level === 'balance' && r.check === 'balance.figure' ? r.item : `${r.check} · ${r.item}`, VERDICT_WORDS[r.verdict], r.says])), '');
+    if (level === 'rules') {
+      const order = [...content.modes].sort((a, b) => (a.id === item.key ? -1 : b.id === item.key ? 1 : 0));
+      lines.push('### Beside the other modes', '', ...mdTable(['', ...order.map((m) => m.label)], modeRows(order)), '');
+      lines.push('### Where a mode is answered for', '', ...content.places.map((p) => `- ${p}`), '');
     }
   }
   if (pictures.length > 0) {

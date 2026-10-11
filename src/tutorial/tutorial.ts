@@ -34,6 +34,8 @@ export class TutorialTracker {
   /** The step just finished, shown with its tick for `doneLeft` more seconds. */
   private doneIndex = -1;
   private doneLeft = 0;
+  /** A jump or a skip moved the step since the last tick: the next observe reports a change, so the step is redrawn. */
+  private moved = false;
 
   /**
    * `start`: the step to begin at, by index, or by id (a saved step: an id still finds its lesson after a later build
@@ -109,11 +111,13 @@ export class TutorialTracker {
     this.sprinted = false;
     this.doneIndex = -1;
     this.doneLeft = 0;
+    this.moved = true;
   }
 
   /** After a simulation tick. Returns true when the step shown changed (done, or the next one started). */
   observe(v: TutorialView): boolean {
-    let changed = false;
+    let changed = this.moved;
+    this.moved = false;
     const yawStep = Number.isNaN(this.lastYaw) ? 0 : Math.abs(wrap(v.player.yaw - this.lastYaw));
     this.lastYaw = v.player.yaw;
     if (this.doneLeft > 0) {

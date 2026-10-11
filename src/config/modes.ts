@@ -17,6 +17,40 @@ export const MATCH_MODES: readonly { id: MatchMode; label: string; blurb: string
 
 export const DEFAULT_MODE: MatchMode = 'elimination';
 
+/** What a mode needs from a map (map/mapTypes.ts MapData): its flagpole, or its Extraction data. */
+export type ModeMapNeed = 'flag' | 'extraction';
+
+/**
+ * What each mode is (CT3, the content toolkit's mode checks; the rulebook is docs/content/modes.md): how a match of it
+ * is played, and what it needs from a map. A `Record`, so a new mode doesn't compile until it says.
+ */
+export interface ModeShape {
+  /** Rounds between two teams until one wins the match, or one run (Extraction: a squad against the home team). */
+  play: 'rounds' | 'run';
+  /** What the map must have to host it; `null`: every map can. */
+  needs: ModeMapNeed | null;
+  /**
+   * On a map without what it needs: still offered and played as Elimination (Attack / Defend, as before M43), or not
+   * offered at all (Extraction).
+   */
+  without: 'elimination' | 'hidden';
+}
+
+export const MODE_SHAPES: Readonly<Record<MatchMode, ModeShape>> = {
+  elimination: { play: 'rounds', needs: null, without: 'elimination' },
+  attackDefend: { play: 'rounds', needs: 'flag', without: 'elimination' },
+  extraction: { play: 'run', needs: 'extraction', without: 'hidden' },
+};
+
+/**
+ * The never-check at every place a mode must be answered for (CT3): each `switch (mode)` there ends in
+ * `default: return unknownMode(mode)`, so a mode added to MatchMode fails to compile until every place has a case for it,
+ * instead of quietly playing as Elimination. The places are listed in docs/content/modes.md › Checks.
+ */
+export function unknownMode(mode: never): never {
+  throw new Error(`No answer for match mode "${String(mode)}"`);
+}
+
 export interface FlagRules {
   /** Players in play within this distance of the pole (metres, horizontal) work the rope. */
   radius: number;

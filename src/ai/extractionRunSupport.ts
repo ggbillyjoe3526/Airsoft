@@ -3,11 +3,11 @@ import { BALLISTICS, WIND } from '../config/ballistics';
 import { BOTS, botConfig, type Difficulty, defaultTeammateDifficulty } from '../config/bots';
 import { EXTRACTION, type ExtractionRules, homeTeamCap } from '../config/extraction';
 import { FOOTSTEPS } from '../config/footsteps';
-import { HITS, ROUNDS } from '../config/hits';
+import { type HitConfig, HITS, ROUNDS } from '../config/hits';
 import { BODY, MOVEMENT } from '../config/movement';
 import { NAV } from '../config/nav';
 import { PHYSICS } from '../config/physics';
-import { LOADOUT } from '../config/replicas';
+import { LOADOUT, type ReplicaConfig } from '../config/replicas';
 import { caseSeed, runSeed } from '../core/seed';
 import { DEPOT } from '../map/depot';
 import type { MapData } from '../map/mapTypes';
@@ -55,6 +55,12 @@ export interface RunOptions {
   torches?: boolean;
   /** The run's rules (default EXTRACTION); SAME_SIZE_AT_EVERY_LEVEL for a test written for the home team's old size. */
   rules?: ExtractionRules;
+  /** The hit rules (default HITS): friendly fire and ricochets as a match's rules set them (CT3, the mode checks). */
+  hits?: HitConfig;
+  /** What everyone carries (default LOADOUT): the replicas under a match's semi-only and realcap rules (CT3). */
+  loadout?: readonly ReplicaConfig[];
+  /** Who carries something else (playMatch's `carry`: the content toolkit's item balance run, CT3): its character, or undefined. */
+  carry?: (id: number, team: number) => Character | undefined;
 }
 
 /**
@@ -92,6 +98,8 @@ export function setUpRun(opts: RunOptions) {
   const map = opts.map ?? DEPOT;
   const x = map.extraction!;
   const squad = opts.squad ?? 3;
+  const hits = opts.hits ?? HITS;
+  const loadout = opts.loadout ?? LOADOUT;
   const opponents = opts.opponents ?? 'normal';
   const teammates = opts.teammates ?? defaultTeammateDifficulty(opponents);
   const rules = { ...ROUNDS, roundTime: x.runTime, winsNeeded: 1 };
@@ -103,7 +111,7 @@ export function setUpRun(opts: RunOptions) {
     seed: runSeed(seed),
     runner: 0,
     squadTeam: 0,
-    respawnAfter: HITS.callTime,
+    respawnAfter: hits.callTime,
     spawnLift: PHYSICS.groundRestGap,
     cases,
     waveEvery: EXTRACTION.waveEvery[opponents],
@@ -122,7 +130,7 @@ export function setUpRun(opts: RunOptions) {
     ballistics: BALLISTICS,
     wind: createWind(seed, WIND),
     killY: map.killY,
-    hits: HITS,
+    hits,
     deadZones: map.deadZones,
     spawns: map.spawns,
     spawnLift: PHYSICS.groundRestGap,
@@ -133,7 +141,10 @@ export function setUpRun(opts: RunOptions) {
   });
   // The home team's cap and its reserve for the run's last part (M45).
   const home = homeTeamCap(x.baseOpponents, squad, opponents, opts.rules) + reserveSize(run);
-  for (let id = 0; id < squad + home; id++) state.characters.push(createCharacter(id, vec3(), 0, LOADOUT, id < squad ? 0 : 1));
+  for (let id = 0; id < squad + home; id++) {
+    const team = id < squad ? 0 : 1;
+    state.characters.push(opts.carry?.(id, team) ?? createCharacter(id, vec3(), 0, loadout, team));
+  }
   const you = state.characters[0]!;
   // The bots: everyone, or everyone but you when you play the runner by hand.
   const botCharacters = opts.runnerBot ? state.characters : state.characters.filter((c) => c !== you);
@@ -152,8 +163,8 @@ export function setUpRun(opts: RunOptions) {
     // Bushes and night as the map has them (M48: Woodland's woods and both night maps), as a match sets them.
     sight: sightConditionsOf(map),
     body: BODY,
-    hits: HITS,
-    loadout: LOADOUT,
+    hits,
+    loadout,
     cfg: BOTS,
     teamCfg: [botConfig(teammates), botConfig(opponents)],
     seed,

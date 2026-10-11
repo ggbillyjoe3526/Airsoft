@@ -275,7 +275,7 @@ figure, it now plays four (the figure keeps the many).
 ## `content-check.mjs`: the content check
 
 ```
-node pipeline/content-check.mjs <item|all|map:<id>|map:all> [--balance] [--public] [--maps a,b] [--seeds n] [--no-pictures] [--no-perf]
+node pipeline/content-check.mjs <item|all|map:<id>|map:all|mode:<id>|mode:all> [--balance] [--public] [--maps a,b] [--seeds n] [--no-pictures] [--no-perf] [--no-browser]
 ```
 
 The content toolkit's command (`docs/content/README.md`): levels 1 to 3 for a replica or part (rules, compatibility,
@@ -291,6 +291,14 @@ process per lighting and round mode); the spec test adds `perf-run.mjs` in Elimi
 after another on port 4185, judged as the gate judges a run (`perfMatrix.mjs`), and `content-pictures.mjs`
 `drawMapPictures`. `perf-run.mjs --map` takes a game map id or perf-budget.json's short name (`mapIds`), and its modes
 are the game's own (`config/modes.ts`).
+
+For a mode (`mode:<id>`, CT3) level 2 is its fit and the runner is `mode.report.ts`, which also plays its short headless
+matches on each map that hosts it (about 30 s for Attack / Defend on three maps). The spec test adds the short match in
+the browser (`e2e/modeMatch.spec.ts`, one mode on one map through `AIRSOFT_CONTENT_MODE` and
+`AIRSOFT_CONTENT_MAP_LABEL`; the smoke test plays every mode on Depot) and `perf-run.mjs` in that mode on each host on
+the budget preset. Its balance run is `mapBalance.report.ts` in that mode, one process per map and lighting, with
+Elimination beside a round mode so `contentReport.mjs` `payResults` can set the pay a minute side by side; a run mode's
+levels are set in order by `runOrderResults`. `mode:all` runs levels 1 and 2 on every mode (about 17 s).
 
 ## `packet.mjs`: the review packet
 
