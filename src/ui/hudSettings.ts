@@ -1,4 +1,6 @@
 import { HIT_FEED_MODES, type HitFeedMode, HUD_OPACITY, HUD_SIZE, SCOREBOARD_SIZE, WHAT_GOT_YOU_MODES, type WhatGotYouMode } from '../config/matchInfo';
+import { DEFAULT_MINIMAP_TURN, MINIMAP_TURN_CHOICES, type MinimapTurn } from '../config/minimap';
+import { browserStorage, loadSetting, oneOf } from '../settings/storage';
 import { menuRow, rangeControl } from './menus/menuParts';
 import { OptionPicker } from './optionPicker';
 
@@ -12,6 +14,13 @@ export interface HudSettingsOptions {
   hitFeed: { initial: HitFeedMode; onChange: (mode: HitFeedMode) => void };
   /** The "what got you" card after a hit (M41). */
   whatGotYou: { initial: WhatGotYouMode; onChange: (mode: WhatGotYouMode) => void };
+  /** Whether the minimap turns with the view or stays north up (M83). No row without it. */
+  minimapTurn?: { initial: MinimapTurn; onChange: (turn: MinimapTurn) => void };
+}
+
+/** Settings › HUD › Minimap (M83): Rotating (as it always was) unless the player picked Fixed. */
+export function loadMinimapTurn(storage = browserStorage()): MinimapTurn {
+  return loadSetting('minimapTurn', oneOf(MINIMAP_TURN_CHOICES.map((c) => c.id)), DEFAULT_MINIMAP_TURN, storage);
 }
 
 /** The HUD tab's rows (Settings → HUD, M24), each saved and applied as it changes. */
@@ -38,5 +47,8 @@ export function hudSettings(opts: HudSettingsOptions): HTMLDivElement[] {
       'After you are hit: where it came from, whether that bot held the angle, how long you were in view and whether you were moving. Auto shows it against Pro opponents only.',
       new OptionPicker('What got you', WHAT_GOT_YOU_MODES, opts.whatGotYou.initial, 'whatGotYou', opts.whatGotYou.onChange).root,
     ),
+    ...(opts.minimapTurn
+      ? [menuRow('Minimap', 'Turning with you, so the way you look is up, or fixed north up with your arrow turning.', new OptionPicker('Minimap', MINIMAP_TURN_CHOICES, opts.minimapTurn.initial, 'minimapTurn', opts.minimapTurn.onChange).root)]
+      : []),
   ];
 }

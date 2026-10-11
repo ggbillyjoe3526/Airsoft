@@ -103,7 +103,7 @@ export class Menus {
     this.realistic = opts.look.initial.realisticColours;
     this.tutorialDone = opts.tutorialDone;
     this.matchStarted = loadMatchStarted();
-    this.context = { pictures: opts.pictures, realistic: () => this.realistic };
+    this.context = { pictures: opts.pictures, realistic: () => this.realistic, armoryShown: () => opts.armory.wallet() !== null };
     this.topBar = new TopBar(
       (place) => this.navigate(place),
       () => this.fromMark(),
@@ -126,13 +126,15 @@ export class Menus {
 
   /**
    * The pause menu, with `status` (round and score) under the heading; `range`: on the practice range (M21);
-   * `tutorial`: its coach is running there (Skip step, Skip tutorial).
+   * `tutorial`: its coach is running there (Skip step, Skip tutorial). `skip` (M83): you are out in a match, and the
+   * rest of the round can be skipped (to the next round, or to the result).
    */
-  showPause(status: string, seed: number, range = false, tutorial = false): void {
+  showPause(status: string, seed: number, range = false, tutorial = false, skip: 'round' | 'result' | null = null): void {
     const pause = this.pauseScreen();
     pause.setStatus(status);
     pause.setSeed(seed);
     pause.setRange(range, tutorial);
+    pause.setSkip(skip);
     this.pauseShownAt = performance.now();
     this.go('pause');
   }
@@ -246,6 +248,7 @@ export class Menus {
     if (!this.armory) {
       const a = this.opts.armory;
       this.armory = new ArmoryScreen({
+        ...(a.freeShots ? { freeShots: a.freeShots } : {}),
         pool: a.pool,
         collection: a.collection,
         equipped: a.equipped,
@@ -283,6 +286,7 @@ export class Menus {
           onEnabled: (on) => (o.dev.onEnabled(on), this.refreshViews()),
         },
         save: o.save,
+        onReplayTutorial: () => this.openRange(o.onReplayTutorial),
       }));
       if (this.shownQuality) s.showQuality(this.shownQuality.choice, this.shownQuality.settings);
       this.add('settings', s);
@@ -299,6 +303,7 @@ export class Menus {
         onQuit: () => this.leaveMatch('title'),
         onSkipStep: () => this.opts.onSkipTutorialStep(),
         onSkipTutorial: () => this.opts.onSkipTutorial(),
+        onSkipRound: () => (this.showHint(''), this.opts.onSkipRound()),
       });
       this.add('pause', this.pause);
     }

@@ -53,6 +53,8 @@ export class LoadoutScreen {
   private readonly gearView: HTMLDivElement;
   private readonly cards = new Map<GearSlot, CarriedCard>();
   private readonly grid: HTMLDivElement;
+  /** "Unlock more in the Armory": hidden while the Armory is off (M83). */
+  private readonly armoryNote: HTMLParagraphElement;
   private tiles: ReplicaTile[] = [];
   private readonly selectedName: HTMLHeadingElement;
   private readonly selectedLine: HTMLParagraphElement;
@@ -90,7 +92,8 @@ export class LoadoutScreen {
     const owned = el('section', 'loadout-replicas');
     owned.append(sectionHead('02', GEAR_TEXT.replicas));
     this.grid = el('div', 'item-grid replica-grid');
-    owned.append(this.grid, el('p', 'loadout-note', GEAR_TEXT.unlockMore));
+    this.armoryNote = el('p', 'loadout-note', GEAR_TEXT.unlockMore);
+    owned.append(this.grid, this.armoryNote);
 
     const aside = el('aside', 'loadout-selected menu-card');
     aside.setAttribute('aria-label', GEAR_TEXT.selected);
@@ -117,6 +120,8 @@ export class LoadoutScreen {
 
   /** Re-reads the loadout (after the Armory unlocked something, say) and shows the gear. */
   refresh(): void {
+    // The Armory off (Dev settings, M83): no line sends the player there.
+    this.armoryNote.hidden = this.opts.context.armoryShown?.() === false;
     this.closeView();
     this.buildGrid();
     this.update();
