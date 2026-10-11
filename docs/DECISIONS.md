@@ -512,6 +512,9 @@ replaces its line; the old one stays findable in the archive or in git.
 
 ## Performance budgets and technical foundations
 
+- **No ray or path tracing; the game keeps its current lighting (owner, 2026-10-11).** A Dev switch for ray traced
+  light (RT1) was built and shown, then scrapped as too much work for what it adds. Its code is archived as a git
+  bundle in the project's shared files (`archive/ray-tracing/`), not in the repository.
 - **The Low preset must hold 60 fps on weak hardware (owner, 2026-10-04).** `pipeline/perf-budget.json`, measured on the
   owner's laptop: p95 ≤ 14 ms and p99 ≤ 20 ms; Low draw calls ≤ 100 and triangles ≤ 150k; GPU memory ≤ 300 MB; heap
   growth ≤ 5 MB over 60 s; nothing more than 10 % worse than the baseline. His ceilings of 150 draw calls and 250k
