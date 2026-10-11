@@ -23,7 +23,7 @@ import { setUpRun } from './extractionRunSupport';
  * M57 QA (audit AI-02): the headless guards' rosters at night are the match build's. The harness fits each bot the very
  * light matchSession.ts spawnRoster fits it (botLight + fitBotLight over the pool the game offers on that map), by the
  * same rule (every bot on a field that plays at night, nobody by day, never you or a hider), and both overrides work
- * both ways. The Pro band is widened for Woodland Attack / Defend alone.
+ * both ways. Every Pro figure is judged at the plan's band (Woodland Attack / Defend's floor went back in M88 QA).
  */
 
 const DATA: Readonly<Record<MapId, MapData>> = { depot: DEPOT, woodland: WOODLAND, neonHeights: NEON_HEIGHTS };
@@ -128,7 +128,7 @@ describe('the harness fits the light the match build fits, by its rule (M57 acce
   });
 });
 
-describe('the Pro band: the plan\'s 40-60 % except Woodland Attack / Defend (M57 acceptance 3; a balance figure since TE4)', () => {
+describe('the Pro band: the plan\'s 40-60 % on every map and mode (M57 acceptance 3; a balance figure since TE4; Woodland Attack / Defend since M88 QA)', () => {
   const ad = (wins: number, rounds = 100): BalanceTally => ({ rounds, decided: rounds, attackerWins: wins, end0Wins: 50, onTime: 0 });
   const elim = (end0: number, decided = 100): BalanceTally => ({ rounds: decided, decided, attackerWins: 50, end0Wins: end0, onTime: 0 });
   /** The figures reportTally hands the balance report for `t`. */
@@ -157,7 +157,7 @@ describe('the Pro band: the plan\'s 40-60 % except Woodland Attack / Defend (M57
     expect(figures('Woodland, Pro, Attack / Defend', { ...ad(40), onTime: 10 }, 'attackDefend', band)[1]).toMatchObject({ value: 0.1, band: { max: 0.1 } });
   });
 
-  it('no Pro figure but Woodland Attack / Defend passes a band, and that one keeps the plan\'s ceiling', () => {
+  it('no Pro figure passes a band of its own: Woodland Attack / Defend\'s 15 % floor went back (M88 QA, 2026-10-11)', () => {
     const sources = import.meta.glob<string>('./balance/*Pro*.balance.ts', { query: '?raw', import: 'default', eager: true });
     const calls: { file: string; args: string }[] = [];
     for (const [file, src] of Object.entries(sources)) {
@@ -166,11 +166,10 @@ describe('the Pro band: the plan\'s 40-60 % except Woodland Attack / Defend (M57
     // Every Pro figure is found: Depot, Neon Heights by Day and by Night, Woodland, each in both modes.
     expect(calls.length).toBe(8);
     // A call without a band ends at its mode; anything after the mode is a band (and Woodland's Elimination names its
-    // downhill end after the plan's band).
+    // downhill end after the plan's band). Woodland Attack / Defend read 55.7 % (seeds 1-16, M88) and 51.6 % (17-32).
     const banded = calls.filter((c) => !/'(attackDefend|elimination)'$/.test(c.args) && !c.args.endsWith("PRO_BAND, 'the downhill end'"));
-    expect(banded.map((c) => c.file)).toEqual(['./balance/woodlandProFlag.balance.ts']);
-    expect(banded[0]!.args).toContain("'attackDefend', WOODLAND,");
-    expect(sources['./balance/woodlandProFlag.balance.ts']).toContain('const ATTACKERS: Band = { min: 0.15, max: PRO_BAND.max };');
+    expect(banded.map((c) => c.file)).toEqual([]);
+    expect(sources['./balance/woodlandProFlag.balance.ts']).not.toContain('min: 0.15');
   });
 });
 

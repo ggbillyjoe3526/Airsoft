@@ -31,7 +31,8 @@ describe('a 5v5 Elimination match on Woodland, both teams on Pro (M40)', () => {
     // torch comes on only for a fight within 20 m or a search's last stretch): end 0 60.0 % (69 of 115), 1 of 117 on time; on the ceiling, about two
     // standard errors (4.6 points each) over M57's 50.4 %: the downhill end's edge (BAL-09) to watch. M88 (2026-10-11, 5v5,
     // the West Rise and a lower east end): 48.0 % (60 of 125), 1 of 127 on time.
-    // M87 (2026-10-11, hunting bots check by eye and share it): 45.2 % (56 of 124), 1 of 126 on time.
+    // M87 (2026-10-11, hunting bots check by eye and share it): 45.2 % (56 of 124), 1 of 126 on time; M88 QA (one lane
+    // point fewer a lane in the fort: woodlandLevels.balance.ts says why) 51.6 % (63 of 122), none on time.
     reportTally(ctx, 'Woodland, Pro, Elimination', tallyBalance(16, SECONDS, botConfig('pro'), 'elimination', WOODLAND, TEAM_SIZE), 'elimination', PRO_BAND, 'the downhill end');
   });
 });

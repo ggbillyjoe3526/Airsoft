@@ -184,14 +184,20 @@ const centred = (kind: BlockKind, x: number, z: number, w: number, d: number, h:
 
 // --- Lanes, spawns, the flag -------------------------------------------------------------------------------------
 
-/** Advance routes from end 0 to end 1 (plan points); defending bots hold the last or second-last point of theirs. */
+/**
+ * Advance routes from end 0 to end 1 (plan points); defending bots hold the last or second-last point of theirs.
+ * Inside the fort each lane has only those two: a bot pauses at every lane point it reaches, and end 1 walks its lanes
+ * from the fort out, so a third point there (one at each baffle, until 2026-10-11) kept end 1 a pause a lane longer on
+ * its way to the middle, and Elimination's downhill end won 68 % of rounds at Normal (M88 QA). The nav finds the way
+ * round a baffle.
+ */
 const LANE_POINTS: readonly (readonly [number, number])[][] = [
   // Pine Belt: out of the camp's north gap, along the forest track, down the Knoll's north shoulder into the fort.
-  [[13, 51], [24, 62], [38, 69.5], [55, 72], [72, 72], [86, 67], [95, 60], [101, 57], [101, 52.7], [98.3, 52.7], [98.3, 48.5]],
+  [[13, 51], [24, 62], [38, 69.5], [55, 72], [72, 72], [86, 67], [95, 60], [101, 57], [98.3, 52.7], [98.3, 48.5]],
   // Meadow: straight across, past the lone oak's north side, up the Knoll's west face.
-  [[13, 44], [30, 46.5], [49, 47.5], [62, 46.5], [76, 46], [89, 46.5], [95.8, 47], [95.8, 44.2], [98.5, 44.2]],
+  [[13, 44], [30, 46.5], [49, 47.5], [62, 46.5], [76, 46], [89, 46.5], [95.8, 44.2], [98.5, 44.2]],
   // Creek: down to the creek's north bank, past the cabin's south and east sides, up the sunken track into the fort.
-  [[13, 36], [22, 24], [34, 17.5], [50, 17], [60, 16], [73, 16.5], [76, 24], [86, 29], [94, 36], [101, 37], [101, 41.3], [103.8, 41.3], [103.8, 44]],
+  [[13, 36], [22, 24], [34, 17.5], [50, 17], [60, 16], [73, 16.5], [76, 24], [86, 29], [94, 36], [101, 37], [103.8, 41.3], [103.8, 44]],
 ];
 
 /** The flagpole: on the Knoll's top, inside the fort. */

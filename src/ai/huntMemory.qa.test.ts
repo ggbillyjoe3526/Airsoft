@@ -124,8 +124,10 @@ describe('a hunting bot whose goal its team checked meanwhile turns to another (
   });
 
   /**
-   * Over a Woodland 5v5 (the open field, where a glance reaches furthest), the longest a hunting bot kept walking (advance, route in hand) to a goal its team had checked
-   * since it picked it (s), and the ticks spent so. `blind`: the bots are not told of the team's checks (huntGoalChecked
+   * Over a Woodland 5v5 (the open field, where a glance reaches furthest), the longest a hunting bot kept walking
+   * (advance, route in hand) to a goal its team had checked since it picked it (s), and the ticks spent so. A pause at
+   * a point it reached (holdLeft) is not walking: the re-pick comes as it sets off (M88 QA: on seeds 2 and 3 a teammate
+   * checked the next goal during such a pause). `blind`: the bots are not told of the team's checks (huntGoalChecked
    * answers no), as if the re-pick were not there; the measure still asks the real one.
    */
   function staleWalks(seed: number, blind: boolean): { longest: number; ticks: number; hunting: number } {
@@ -141,7 +143,7 @@ describe('a hunting bot whose goal its team checked meanwhile turns to another (
       for (const b of controller.bots) {
         const hunting = isInPlay(b.character) && state.round.phase === 'live' && b.mode === 'advance' && b.hunting && b.role === 'none';
         if (hunting) out.hunting++;
-        if (!hunting || b.routeState !== 'ok' || !checked(b)) {
+        if (!hunting || b.holdLeft > 0 || b.routeState !== 'ok' || !checked(b)) {
           since.delete(b.character.id);
           continue;
         }
@@ -155,9 +157,11 @@ describe('a hunting bot whose goal its team checked meanwhile turns to another (
   }
 
   it('on Woodland, never walks on to a goal its team already checked for longer than a moment', { timeout: 60_000 }, () => {
-    // One seed of 150 s keeps this file to a few seconds in the fast project.
-    const before = [staleWalks(1, true)];
-    const now = [staleWalks(1, false)];
+    // Two seeds of 150 s keep this file to seconds in the fast project. One was enough until Woodland's lanes lost
+    // their points at the fort's baffles (M88 QA, 2026-10-11): on seed 1 the blind bots' longest stale walk is now 1.8
+    // s.
+    const before = [staleWalks(1, true), staleWalks(2, true)];
+    const now = [staleWalks(1, false), staleWalks(2, false)];
     console.log(`QA M87 stale hunt walks: without the re-pick ${JSON.stringify(before)}, with it ${JSON.stringify(now)}`);
     // The measure is not blind: told nothing, bots walk on for seconds to spots their team has seen empty.
     expect(Math.max(...before.map((r) => r.longest))).toBeGreaterThan(2);
