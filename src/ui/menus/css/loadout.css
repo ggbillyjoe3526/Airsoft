@@ -174,9 +174,14 @@
   box-shadow: 0 0 0 3px rgba(255, 107, 26, 0.22);
 }
 
+/*
+ * The picture in the tile's flow, above its words, edge to edge (M99): a replica's wide picture keeps its own 2:1 shape,
+ * so it shows whole, muzzle to stock, never under the name or the tick. A tall tile gives the picture the extra room.
+ */
 .item-tile .pic-slot {
-  position: absolute;
-  inset: 0 0 40%;
+  flex: 1 0 auto;
+  aspect-ratio: 2 / 1;
+  margin: calc(-1 * var(--sp-3)) calc(-1 * var(--sp-3)) var(--sp-1);
   background: none;
 }
 
@@ -213,10 +218,11 @@
   display: none;
 }
 
+/* The picked tile's tick, by its words at the foot (M99): over the picture's corner it hid a rifle's muzzle. */
 .option-tick {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  right: var(--sp-3);
+  bottom: calc(var(--sp-3) + 2px);
   display: none;
   place-items: center;
   width: 28px;
@@ -242,6 +248,11 @@
 
 .replica-tile {
   min-height: clamp(160px, 10.5vw, 200px);
+}
+
+/* Room for the tick beside the words. */
+.replica-tile :is(.item-words, .item-note) {
+  padding-right: 36px;
 }
 
 .loadout-note,
@@ -361,4 +372,109 @@
 
 .perf-bar.perf-worse i {
   background: linear-gradient(90deg, var(--menu-blue) calc(100% - 12px), var(--menu-bad) 0);
+}
+
+/*
+ * Sort and filter by rarity (M82): one compact line over the Loadout's replicas and Customise's parts. Sort is a
+ * two-way switch; each tier is a chip in its colour, lit while it shows, dimmed (hollow dot) while hidden.
+ */
+.rarity-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px var(--sp-4);
+  margin-bottom: var(--sp-3);
+}
+
+.customise-panel-head .rarity-bar {
+  flex-basis: 100%;
+  margin: var(--sp-2) 0 0;
+}
+
+.rarity-label {
+  font: 600 var(--fs-sm) / 1 var(--ui-display);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  color: var(--menu-faint);
+}
+
+.rarity-part {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.rarity-sort,
+.rarity-tiers {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.rarity-sort-option,
+.rarity-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--control-xs);
+  padding: 0 8px;
+  font: 700 var(--fs-sm) / 1 var(--ui-display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--menu-muted);
+  background: rgba(7, 13, 31, 0.82);
+  border: 1px solid var(--menu-line);
+  cursor: pointer;
+}
+
+.rarity-sort-option:hover,
+.rarity-chip:hover {
+  color: var(--paper);
+}
+
+.rarity-sort-option[aria-pressed='true'] {
+  color: var(--paper);
+  border-color: var(--orange);
+  box-shadow: inset 0 -3px 0 var(--orange);
+}
+
+.rarity-chip::before {
+  content: '';
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--tier);
+  border-radius: 50%;
+}
+
+.rarity-chip[aria-pressed='true'] {
+  color: var(--paper);
+  border-color: color-mix(in srgb, var(--tier) 60%, transparent);
+}
+
+.rarity-chip[aria-pressed='true']::before {
+  background: var(--tier);
+}
+
+.rarity-chip[aria-pressed='false'] {
+  color: var(--menu-faint);
+  border-style: dashed;
+}
+
+.rarity-all::before {
+  display: none;
+}
+
+.rarity-hidden {
+  margin-left: 6px;
+  font-size: var(--fs-sm);
+  color: var(--menu-muted);
+}
+
+.rarity-hidden:empty {
+  display: none;
+}
+
+.rarity-none[hidden] {
+  display: none;
 }

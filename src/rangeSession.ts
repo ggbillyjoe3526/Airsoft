@@ -11,6 +11,7 @@ import { RANGE } from './config/range';
 import type { QualitySettings } from './config/render';
 import type { ReplicaConfig } from './config/replicas';
 import { SIM, SIM_DT } from './config/sim';
+import { teamCss } from './config/teams';
 import { advanceStepper, createStepper, stepperAlpha } from './core/fixedStepper';
 import type { PlayerInput } from './input/playerInput';
 import type { MatchSetup } from './matchSession';
@@ -40,6 +41,7 @@ import type { DevSettings } from './config/dev';
 import { tutorialSteps } from './config/tutorial';
 import { TutorialTracker, type TutorialView } from './tutorial/tutorial';
 import { CoachPanel } from './ui/coachPanel';
+import { TutorialShowcase } from './ui/tutorialShowcase';
 import { type LastShot, lastShotText, RangeReadout } from './ui/rangeReadout';
 
 const PLAYER_ID = 0;
@@ -85,6 +87,14 @@ export class RangeSession {
   /** The tutorial (M16), when the range was opened for it, and its coach. */
   private tutorial: TutorialTracker | null = null;
   private coach: CoachPanel | null = null;
+  /** What a step opens on screen (M80): the scoreboard or the order wheel, while that step shows. */
+  private showcase: TutorialShowcase | null = null;
+  /**
+   * The tutorial's last step was just played to its end (M80): the mouse is given back (takeResultDue) and the pause
+   * shows the "Tutorial complete" pop-up instead of the pause menu (takeTutorialComplete). Not after Skip tutorial.
+   */
+  private completeDue = false;
+  private completePopup = false;
   private tutorialFinishedOwed = false;
   private tutorialFinishedSeen = false;
   /**
@@ -175,6 +185,8 @@ export class RangeSession {
       this.tutorial = new TutorialTracker(tutorialSteps(setup.armory !== false), canAimDownSights(this.player.armament), tutorialFrom, this.loadout.length);
       this.coach = new CoachPanel(container, (action) => input.keyName(action));
       this.coach.show(this.tutorial);
+      this.showcase = new TutorialShowcase(container, this.player.team, teamCss(this.player.team), (action) => input.keyName(action), () => input.wheelSelect);
+      this.showcase.set(this.tutorial.step?.shows ?? null);
     }
   }
 
@@ -201,6 +213,8 @@ export class RangeSession {
     if (!t || t.finished) return;
     t.skip();
     this.tutorialMoved(t);
+    // Skipping the last step finishes the tutorial: the pause menu gives way to the pop-up.
+    if (t.finished) this.completePopup = true;
   }
 
   /** The pause menu's Skip tutorial: free practice from here, and the tutorial counts as done. */
@@ -215,6 +229,14 @@ export class RangeSession {
   takeTutorialFinished(): boolean {
     if (!this.tutorialFinishedOwed) return false;
     this.tutorialFinishedOwed = false;
+    return true;
+  }
+
+  /** True once, as the pause menu comes up after the tutorial was finished: show the "Tutorial complete" pop-up. */
+  takeTutorialComplete(): boolean {
+    if (!this.completePopup) return false;
+    // Shown (an Esc that came first opened it): the mouse needn't be given back for it again on Resume.
+    this.completePopup = this.completeDue = false;
     return true;
   }
 
@@ -241,9 +263,11 @@ export class RangeSession {
     return ticks;
   }
 
-  /** The range never ends by itself. */
+  /** The range never ends by itself; true once when the tutorial is played to its end, for its pop-up (M80). */
   takeResultDue(): boolean {
-    return false;
+    if (!this.completeDue) return false;
+    this.completeDue = false;
+    return true;
   }
 
   draw(dt: number): void {
@@ -251,6 +275,7 @@ export class RangeSession {
     const pitch = this.input.pitch + this.player.armament.recoil;
     updateFirstPersonCamera(this.renderer.camera, this.player, BODY, HITS, alpha, this.input.yaw, pitch, this.motion.leanRoll);
     this.targets.update(dt);
+    this.showcase?.frame(dt);
     this.combat.frame(dt, alpha, this.input.yaw, pitch);
     this.daylight.follow(this.renderer.camera, dt);
     this.combat.render(true);
@@ -289,6 +314,7 @@ export class RangeSession {
     const coaching = this.tutorial !== null && !this.tutorial.finished;
     this.readout.setVisible(playing && !coaching);
     this.coach?.setVisible(playing && coaching);
+    this.showcase?.setVisible(playing && coaching);
     if (playing && coaching) this.coach!.show(this.tutorial!); // a key may have been rebound while paused
   }
 
@@ -297,6 +323,7 @@ export class RangeSession {
     this.targets.dispose();
     this.readout.dispose();
     this.coach?.dispose();
+    this.showcase?.dispose();
     // Out of the scene, kept by the renderer for the next session on this map (freed there, CORE-33).
     this.renderer.mapMeshes.release();
     this.daylight.dispose();
@@ -319,6 +346,7 @@ export class RangeSession {
   /** The tutorial's step shown or still to do changed (a step done, or skipped). */
   private tutorialMoved(t: TutorialTracker): void {
     this.coach!.show(t);
+    this.showcase?.set(t.step?.shows ?? null);
     if (t.goalId !== this.savedStep) {
       this.savedStep = t.goalId;
       this.onTutorialStep?.(t.goalId);
@@ -340,7 +368,10 @@ export class RangeSession {
     v.player = this.player;
     v.events = this.state.events;
     v.targets = this.state.targets;
-    if (t && !t.finished && t.observe(v)) this.tutorialMoved(t);
+    if (t && !t.finished && t.observe(v)) {
+      this.tutorialMoved(t);
+      if (t.finished) this.completeDue = this.completePopup = true;
+    }
     for (const e of this.state.events) {
       // Your BB came down (a ricochet's last stop wins), hit a target, or flew out over a wall.
       if (e.type === 'bbImpact' && e.ownerId === PLAYER_ID) this.lastShot = { distance: downrange(e.position), target: null };

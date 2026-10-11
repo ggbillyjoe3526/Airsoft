@@ -41,6 +41,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M83** · A minimap setting: Fixed (north up) or Rotating
 - **M90** · More Dev settings for playtesting: Field Credits and Tokens on demand, free case openings, time of day, bots hold fire, spectate any bot, bot intentions, end the round now and reset the save
 - **M97** · Replay tutorial button in Settings starts the tutorial at once, whether or not you finished it
+- **M82** · Loadout replicas and Customise parts sort and filter by rarity tier, saved between sessions; what you carry or have fitted always shows
 
 ### Changed
 - **M71** · Bots hunt the map's middle once their lane is swept (now all levels, not just Pro); Normal and Hard hold their posts out of lantern light at night (#133)
@@ -86,6 +87,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M97** · Hit marker setting, Off by default: the red X when your BB lands shows only when On; the hit tick sound is unchanged
 - **M83** · With Disable Armory on in Dev settings, the Armory is hidden from every menu and the tutorial instead of greyed out
 - **RM4** · Built-in models are back for replicas, parts, players, bots and menu pictures; the Blender models wait behind two Dev switches in Settings
+- **M80** · Tutorial opens the real scoreboard and order wheel, with plain-word cards in your keys; finishing opens Tutorial complete: Practice range or Menu
 
 ### Fixed
 - **G11** · The team camo on players reads clearly on Medium and up: crisp dark and light blotches printed per pixel, on WebGL and WebGPU; Low keeps plain clothes
@@ -115,6 +117,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M101** · Bots and other players show the Cyber Pistol's own shape instead of a plain pistol
 - **RM3** · Item pictures in the menus fit their slots whole: the Armory's pictures and Customise's large replica picture are no longer cut off at the top and bottom
 - **M85** · BBs stop at the first body they hit; hit areas match the drawn figure in every pose; a BB that hits a player already out knocks on the body
+- **M99** · Replica pictures on the Loadout, Customise and Armory tiles show the whole replica, never cut off or covered
 
 ### Internal
 - **G8** · Set dressing never collides or blocks sight: Depot's colliders, routes, cover and bot sight are tested identical with and without it (#136)

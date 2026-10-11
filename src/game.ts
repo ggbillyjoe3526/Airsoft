@@ -1112,7 +1112,9 @@ export class Game {
     const r = s?.state.round;
     const screen = screenWhenStopped(this.started, r?.phase === 'matchOver');
     if (this.started && s instanceof RangeSession) {
-      this.menus.showPause(s.status, this.options.seed, true, s.coaching);
+      // The tutorial just played to its end (M80): its pop-up, practice on or go to the menu, over the pause menu.
+      if (s.takeTutorialComplete()) this.menus.showTutorialComplete(s.status, this.options.seed);
+      else this.menus.showPause(s.status, this.options.seed, true, s.coaching);
     } else if (!this.started || !(s instanceof MatchSession) || !r) {
       // Play never began (a lock that came late, after Back, and was given straight back): the menus are still up on
       // whichever screen the player went to, so they stay there.
@@ -1143,7 +1145,8 @@ export class Game {
     if (all) s.endTutorial();
     else s.skipTutorialStep();
     this.takeTutorialFinished(s);
-    this.menus.showPause(s.status, this.options.seed, true, s.coaching);
+    if (s.takeTutorialComplete()) this.menus.showTutorialComplete(s.status, this.options.seed);
+    else this.menus.showPause(s.status, this.options.seed, true, s.coaching);
   }
 
   /** The tutorial was played (or skipped) to its end: remembered, and the next one starts from the beginning. */
