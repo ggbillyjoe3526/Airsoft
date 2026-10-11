@@ -76,7 +76,7 @@ attempts: 0
 ## M85 · BBs stop at the first body they hit (playtest note 17)
 tier: core
 perf: required
-touches: src/sim/bbs.ts, src/sim/hitbox.ts, src/sim/ricochet.ts, src/sim/simulation.ts, src/sim/character.ts, src/sim/elimination.ts, src/sim/events.ts, src/config/hits.ts, src/config/characters.ts, src/config/bots.ts, src/ai/botCombat.ts, src/render/characterRenderer.ts, src/render/combatPresentation.ts, src/audio/sfx.ts
+touches: src/sim/bbs.ts, src/sim/hitbox.ts, src/sim/ricochet.ts, src/sim/simulation.ts, src/sim/character.ts, src/sim/elimination.ts, src/sim/events.ts, src/config/hits.ts, src/config/characters.ts, src/config/bots.ts, src/ai/botCombat.ts, src/render/characterRenderer.ts, src/render/combatPresentation.ts, src/audio/sfx.ts, src/render/figureRobot.ts
 contract: none
 acceptance:
   1. A reproduction test: two bots in a line, the nearer one hit; it shows whether a BB can reach the one behind.
