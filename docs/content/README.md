@@ -25,7 +25,7 @@ A fail stops an item going public. A warning ("look at this") is shown to the ow
 |---|---|---|
 | Replicas | `docs/content/replicas.md` | All four levels |
 | Parts (optics, grips, lasers, magazines, barrels, muzzles, lights, power sources) | `docs/content/attachments.md` | All four levels |
-| Maps | `docs/content/maps.md` | Not yet (toolkit part 2) |
+| Maps | `docs/content/maps.md` | All four levels (level 2 is the layout) |
 | Game modes | `docs/content/modes.md` | Not yet (toolkit part 3) |
 | Skins | `docs/content/skins.md` | Not yet (toolkit part 4, with skins) |
 
@@ -35,29 +35,36 @@ designs, nothing map-only, and an ID (pool ID, map id, mode id) never changes on
 ## The four levels
 
 1. **Rules:** is everything filled in, correctly, and wired up? (seconds)
-2. **Compatibility:** does it work with everything it is meant to work with? (seconds)
+2. **Compatibility:** does it work with everything it is meant to work with? For a map, its **layout**: lanes,
+   sightlines, walk times against Depot's. (seconds)
 3. **Spec test:** does it shoot, look and cost what the spec sheet says? Numbers, model cost, sound and pictures.
    (about a minute, 2026-10-11)
 4. **Balance run:** headless bot matches on every map, lighting, round mode and level: is it fair? (about 3 minutes per
    map, lighting and pairing at the default 8 seeds; the maps run in parallel, 2026-10-11)
 
-Levels 1 and 2 run for every asset in every pull request (`src/content/content.test.ts`). Levels 3 and 4 run on demand.
+Levels 1 and 2 run for every asset and map in every pull request (`src/content/content.test.ts`,
+`src/content/mapChecks.test.ts`). Levels 3 and 4 run on demand. A map's spec test adds the perf run on Low, Medium and
+High (about ten minutes in a cloud container) and its balance run plays each lighting and round mode in its own
+process, in parallel.
 
 ## The command
 
 ```
-node pipeline/content-check.mjs <item|all> [--balance] [--public] [--levels a,b] [--maps a,b]
-                                [--seeds n] [--seconds n] [--no-pictures] [--url u]
+node pipeline/content-check.mjs <item|all|map:<id>|map:all> [--balance] [--public] [--levels a,b] [--maps a,b]
+                                [--seeds n] [--seconds n] [--no-pictures] [--url u] [--no-perf] [--env e]
 ```
 
 - **`<item>`** is a pool ID, name or Key (`000007`, `"Red Dot"`, `redDot`). `all` runs levels 1 to 3 on every asset,
   without pictures.
 - **`--balance`** adds level 4. **`--public`** is the public gate: all four levels at full length.
-- **`--maps`** limits the balance run (`depot,woodland`); each map runs in its own process, in parallel.
+- **`map:<id>`** checks a map by its id or name (`map:depot`, `map:"Neon Heights"`); `map:all` runs levels 1 to 3 on
+  every map, without perf runs or pictures. **`--no-perf`** skips a map's perf runs; **`--env`** names their
+  environment (`container` by default; `laptop` on the owner's PC).
+- **`--maps`** limits a replica's or part's balance run (`depot,woodland`); each map runs in its own process, in parallel.
 - **`--no-pictures`** skips the pictures, which need the e2e build and a browser (it builds and serves the build
   itself; set `PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium` in a cloud container).
 
-It writes `pipeline/out/content/<id>/report.md`, `report.html` (one file, the pictures inside it), `report.json` and
+It writes `pipeline/out/content/<id>/report.md` (`map-<id>` for a map, `maps` for every map), `report.html` (one file, the pictures inside it), `report.json` and
 `pictures/`, and exits 1 when a check fails or a runner could not run. The thread copies the report to
 `/mnt/project-files/content-reports/<id>/` and attaches the HTML page.
 
@@ -73,6 +80,8 @@ It writes `pipeline/out/content/<id>/report.md`, `report.html` (one file, the pi
 - **Overrides.** A failed balance check can be overridden by the owner with a reason. The reason goes into
   `docs/DECISIONS.md` and the item into `ALLOWED_STRONGER` (`src/config/contentRules.ts`): its figures are then shown
   and never judged (the Cyber Pistol, a chase item, is the first).
+- **A map's balance** is each end's share instead: the end that starts west (the attackers in Attack / Defend) wins 40
+  to 60 % at Pro and 35 to 65 % below it (Audit 2 decision 3), with bots leaving spawn and nobody stuck or falling.
 - **Extraction** is not in the balance run yet: it plays as runs, not rounds, and gets its sweep with the mode checks.
 
 ## Going public

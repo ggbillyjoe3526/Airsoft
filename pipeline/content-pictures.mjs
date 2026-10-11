@@ -1,7 +1,8 @@
 /**
  * The content report's pictures (CT1, the spec test): a replica on its own and with each part fitted, drawn by the
- * game's own menu pictures (render/itemPictures.ts, at high detail), and the item in first person in a real match.
- * `pipeline/content-check.mjs` calls `drawPictures`; it needs the e2e build (`window.airsoft`), which it builds and
+ * game's own menu pictures (render/itemPictures.ts, at high detail), and the item in first person in a real match; and
+ * a map from above, its minimap and the view from each end's spawns (CT2, drawMapPictures).
+ * `pipeline/content-check.mjs` calls `drawPictures` and `drawMapPictures`; it needs the e2e build (`window.airsoft`), which it builds and
  * serves itself unless given a URL. Software rendering (SwiftShader) draws what a GPU would, only slower.
  *
  * The page is read through the game's objects at run time (`airsoft.pictures`, `airsoft.loadout`), as the smoke tests
@@ -108,6 +109,123 @@ async function firstPerson(browser, base, shot, outDir) {
     return { file: shot.file, title: shot.title, ok: true };
   } catch (e) {
     return { file: shot.file, title: shot.title, ok: false, error: String(e?.message ?? e).split('\n')[0] };
+  } finally {
+    await page.close();
+  }
+}
+
+/**
+ * A map's pictures (CT2, the spec test): per shot `{ file, title, map, light, field: { x, z, middle } }`, one match on
+ * that map under that light, and from it four pictures: the field from above (framed on its walkable ground, `field`),
+ * the minimap as the player first sees it, and the view from each end's spawns across the field (the game's own camera
+ * moved there, the HUD left out, as pipeline/map-stills.mjs draws the menus' stills). Returns `{ file, title, ok, error? }`
+ * per picture, in order.
+ */
+export async function drawMapPictures(shots, { outDir, url = '', chromium = process.env.PLAYWRIGHT_CHROMIUM } = {}) {
+  mkdirSync(outDir, { recursive: true });
+  const server = url ? { base: url, stop: () => {} } : await serve();
+  const { chromium: browserType } = await import(pathToFileURL(join(ROOT, 'node_modules', '@playwright', 'test', 'index.mjs')).href);
+  const browser = await browserType.launch({ ...(chromium ? { executablePath: chromium } : {}), args: SWIFTSHADER });
+  const out = [];
+  try {
+    for (const shot of shots) out.push(...(await mapShot(browser, server.base, shot, outDir)));
+  } finally {
+    await browser.close();
+    server.stop();
+  }
+  return out;
+}
+
+/** The pictures one map shot draws: their files and titles. */
+export function mapShotPictures(shot) {
+  return [
+    { file: `${shot.file}-overhead.jpg`, title: `${shot.title}: from above` },
+    { file: `${shot.file}-minimap.png`, title: `${shot.title}: the minimap at the start` },
+    { file: `${shot.file}-end-0.jpg`, title: `${shot.title}: from end 0's spawns` },
+    { file: `${shot.file}-end-1.jpg`, title: `${shot.title}: from end 1's spawns` },
+  ];
+}
+
+async function mapShot(browser, base, shot, outDir) {
+  const wanted = mapShotPictures(shot);
+  const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  try {
+    // The picks as saved settings, as map-stills.mjs saves them: the map in its light, Elimination, Dev content on.
+    const picks = { version: 1, map: shot.map, mode: 'elimination', [`lighting.${shot.map}`]: shot.light, 'dev.enabled': true, 'dev.devContent': 'on' };
+    await page.addInitScript((saved) => localStorage.setItem('airsoft.settings', JSON.stringify(saved)), picks);
+    await page.goto(`${base}?nolock&seed=1&quality=high`);
+    await page.waitForSelector('.menu-title-start', { timeout: 120_000 });
+    await page.locator('.menu-title-start').click();
+    const setup = page.locator('.menu-setup');
+    await setup.locator('.map-cards .choice-card.selected').waitFor({ timeout: 60_000 });
+    // A dev map's data arrives after the title shows: the Match screen offers it once it is in.
+    await page.waitForFunction((map) => globalThis.airsoft?.playedPicks?.().map === map, shot.map, { timeout: 60_000 });
+    await setup.getByRole('button', { name: 'Start match', exact: true }).click();
+    await page.waitForFunction(() => globalThis.airsoft?.state && globalThis.airsoft.state.tick > 60, null, { timeout: 240_000 });
+    const files = {};
+    const minimap = page.locator('.minimap-frame');
+    if (await minimap.isVisible()) files[wanted[1].file] = await minimap.screenshot({ type: 'png' });
+    const views = await page.evaluate(({ field }) => {
+      const game = globalThis.airsoft;
+      const r = game.renderer;
+      const cam = r.camera;
+      const state = game.state;
+      const centre = (team) => {
+        const own = state.characters.filter((c) => c.team === team);
+        const sum = own.reduce((a, c) => ({ x: a.x + c.spawnPosition.x, y: a.y + c.spawnPosition.y, z: a.z + c.spawnPosition.z }), { x: 0, y: 0, z: 0 });
+        return { x: sum.x / own.length, y: sum.y / own.length, z: sum.z / own.length };
+      };
+      const saved = { position: cam.position.clone(), quaternion: cam.quaternion.clone(), up: cam.up.clone(), fov: cam.fov, aspect: cam.aspect, far: cam.far, fog: r.scene.fog };
+      const grab = () => {
+        r.render();
+        return r.renderer.domElement.toDataURL('image/jpeg', 0.85);
+      };
+      const out = {};
+      // From above: straight down over the middle, high enough to hold the walkable ground, no fog in the way.
+      const fov = 50;
+      const aspect = r.renderer.domElement.width / r.renderer.domElement.height;
+      const half = Math.tan(((fov / 2) * Math.PI) / 180);
+      const height = Math.max(field.z / 2 / half, field.x / 2 / (half * aspect)) * 1.08;
+      cam.fov = fov;
+      cam.far = Math.max(saved.far, height * 2);
+      cam.up.set(0, 0, -1);
+      cam.position.set(field.middle.x, field.middle.y + height, field.middle.z);
+      cam.lookAt(field.middle.x, field.middle.y, field.middle.z);
+      cam.updateProjectionMatrix();
+      r.scene.fog = null;
+      out.overhead = grab();
+      r.scene.fog = saved.fog;
+      cam.up.set(0, 1, 0);
+      cam.far = saved.far;
+      // From each end's spawns, at a standing eye among them (behind them is the field's edge), looking at the other end's.
+      for (const team of [0, 1]) {
+        const from = centre(team);
+        const to = centre(1 - team);
+        cam.fov = 70;
+        cam.position.set(from.x, from.y + 1.7, from.z);
+        cam.lookAt(to.x, to.y + 1.2, to.z);
+        cam.updateProjectionMatrix();
+        out[`end${team}`] = grab();
+      }
+      cam.position.copy(saved.position);
+      cam.quaternion.copy(saved.quaternion);
+      cam.fov = saved.fov;
+      cam.updateProjectionMatrix();
+      return out;
+    }, { field: shot.field });
+    const bytes = (url) => Buffer.from(url.slice(url.indexOf(',') + 1), 'base64');
+    files[wanted[0].file] = bytes(views.overhead);
+    files[wanted[2].file] = bytes(views.end0);
+    files[wanted[3].file] = bytes(views.end1);
+    return wanted.map((p) => {
+      if (!files[p.file]) return { ...p, ok: false, error: p.file.endsWith('minimap.png') ? 'the minimap was not showing' : errors[0] ?? 'not drawn' };
+      writeFileSync(join(outDir, p.file), files[p.file]);
+      return { ...p, ok: true };
+    });
+  } catch (e) {
+    return wanted.map((p) => ({ ...p, ok: false, error: String(e?.message ?? e).split('\n')[0] }));
   } finally {
     await page.close();
   }

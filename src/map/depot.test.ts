@@ -26,17 +26,16 @@ const MIN_UNCLIMBABLE_HEIGHT = JUMP_APEX + 0.2;
 /** A crouched player's eyes must be at least this far below the top of crouch cover. */
 const CROUCH_HIDE_MARGIN = 0.05;
 /**
- * Longest clear line of sight allowed along a lane: keeps fights at AEG/CQB range. Both caps scale with
- * the map: they rose ~13% (23 → 26, 30 → 34 m) when Depot grew ~13% (44 × 28 → 50 × 32 m). Don't raise
- * them to make a layout pass; fix the layout.
+ * Longest clear line of sight allowed along a lane: keeps fights at AEG/CQB range. It and the any-direction cap
+ * (MAP_STANDARD.longestSightline) scale with the map: they rose ~13% (23 → 26, 30 → 34 m) when Depot grew ~13%
+ * (44 × 28 → 50 × 32 m). Don't raise them to make a layout pass; fix the layout.
  */
 const MAX_LANE_SIGHTLINE = 26;
 /**
- * Longest clear line of sight allowed in any direction between two places a player can stand. BBs are
- * still accurate-ish here but slow and visible; beyond it, engagements would be cheap long-range picks.
+ * Players this close to a spawn point count as "at spawn" (the flag must be out of their sight). That the two spawn
+ * yards can't see each other, and the longest sightline in any direction (34 m), are the content toolkit's map checks
+ * on every map (src/content/mapChecks.ts, MAP_STANDARD: Depot's numbers are the standard).
  */
-const MAX_ANY_SIGHTLINE = 34;
-/** Players this close to a spawn point count as "at spawn" and must be hidden from the other spawn. */
 const SPAWN_ZONE_RADIUS = 5;
 
 const top = (b: MapBlock): number => b.center.y + b.size.y / 2;
@@ -418,18 +417,6 @@ describe('Depot map', () => {
     expect(Math.abs(walk(w, mainGate) - walk(e, mainGate)), `Main Gate: west ${walk(w, mainGate).toFixed(1)} m, east ${walk(e, mainGate).toFixed(1)} m`).toBeLessThanOrEqual(MAX_HEAD_START);
   });
 
-  it('hides everyone near one spawn from everyone near the other, standing or crouched', { timeout: 20_000 }, () => {
-    const westZone = spawnZone(west, 0.5);
-    const eastZone = spawnZone(east, 0.5);
-    expect(westZone.length).toBeGreaterThan(50);
-    expect(eastZone.length).toBeGreaterThan(50);
-    for (const eye of [STANDING_EYE, CROUCHED_EYE]) {
-      for (const a of westZone) {
-        for (const b of eastZone) expect(sees(eyeAt(a.x, a.z, eye), eyeAt(b.x, b.z, eye)), `(${a.x}, ${a.z}) sees (${b.x}, ${b.z}) at eye ${eye}`).toBe(false);
-      }
-    }
-  });
-
   it(`keeps every straight west–east line along a lane under ${MAX_LANE_SIGHTLINE} m`, () => {
     for (const [name, lane] of Object.entries(lanes)) {
       for (let z = lane.minZ + BODY.radius; z <= lane.maxZ - BODY.radius; z += 0.25) {
@@ -446,21 +433,6 @@ describe('Depot map', () => {
         expect(longest, `${name} lane, z = ${z.toFixed(2)}: ${longest.toFixed(1)} m clear`).toBeLessThanOrEqual(MAX_LANE_SIGHTLINE);
       }
     }
-  });
-
-  it(`has no line of sight longer than ${MAX_ANY_SIGHTLINE} m in any direction, from the ground or the dock`, { timeout: 60_000 }, () => {
-    const points = standablePoints(0.5).map((p) => eyeAt(p.x, p.z));
-    const limitSq = MAX_ANY_SIGHTLINE * MAX_ANY_SIGHTLINE;
-    const open: string[] = [];
-    for (let i = 0; i < points.length; i++) {
-      const a = points[i]!;
-      for (let j = i + 1; j < points.length; j++) {
-        const b = points[j]!;
-        if ((a.x - b.x) ** 2 + (a.z - b.z) ** 2 <= limitSq) continue;
-        if (sees(a, b)) open.push(`(${a.x}, ${a.y.toFixed(2)}, ${a.z}) → (${b.x}, ${b.y.toFixed(2)}, ${b.z}) ${Math.hypot(a.x - b.x, a.z - b.z).toFixed(1)} m`);
-      }
-    }
-    expect(open.slice(0, 10), `${open.length} long sightlines`).toEqual([]);
   });
 
   describe('with Rapier', () => {

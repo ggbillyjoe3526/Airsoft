@@ -43,10 +43,10 @@ pulled into Dev 5, and Dev 7 is folded away (its mode checks join the toolkit he
 5. **Graphics** (the overhaul the owner pulled forward from 0.2 on 2026-10-05). G1–G3 and G5–G8 are merged. Left: G4,
    G9, WebGPU as a complete overhaul (W0–W6) and the map pictures (see Graphics below).
 6. **The owner's playtest notes:** the Dev 4 notes M80–M91 and M96, and the 2026-10-07 notes M97–M99 (M100 is part of
-   the graphics work, item 5; tables below). Done so far: M84, M85, M86, M89 (2026-10-11).
+   the graphics work, item 5; tables below). Done so far: M84, M85, M86, M89, M98 (2026-10-11).
 7. **The content toolkit, all four parts** (plan `plans/content-toolkit-concept.md`, approved with all defaults
    2026-10-05; about six to eight pull requests): 1 rulebooks and briefs, replica and attachment checks and the report
-   with pictures (CT1, done 2026-10-11: `docs/content/`, `node pipeline/content-check.mjs`); 2 map checks; 3 mode
+   with pictures (CT1, done 2026-10-11: `docs/content/`, `node pipeline/content-check.mjs`); 2 map checks (CT2, done 2026-10-11: `map:<id>`); 3 mode
    checks; 4 skin checks.
 8. **Bug pass BP3**, then the owner tags 0.1 Dev 5 and playtests it.
 
@@ -154,7 +154,7 @@ are blocks M97–M100 in `docs/TASKS.md`. All of it is 0.1 Dev 5.
 | 1 | A setting for the red X hit marker, Off by default | M97 (Dev 5 item 6) |
 | 2 | Aim down sights by Hold or Toggle, Hold by default | Already in the game: `Settings › Controls › Aim button` (Hold by default) |
 | 3 | Customise won't take "No light" on the AEG rifle; check every replica | Fixed in BP2 (Dev 5 item 4), on every replica |
-| 4 | Teams renamed Alpha (blue) and Beta (orange); the player picks a team | M98 (Dev 5 item 6) |
+| 4 | Teams renamed Alpha (blue) and Beta (orange); the player picks a team | M98 (Dev 5 item 6): done (2026-10-11) |
 | 5 | A plain title screen (Airsoft, the tagline, START, the version small at the bottom left); Play renamed Match; the top bar is the navigation (Match, Loadout, Armory, Settings; FC and Tokens on the right; no version); no key prompts along the bottom; Practice as the last mode; a more readable font | M100 (Dev 5 item 5, the graphics work, with the G4 HUD restyle) |
 | 6 | Replica pictures in "Your replicas" are cropped | M99 (Dev 5 item 6) |
 | 7 | The Armory's "Your collection" in columns, one per kind | M100 |

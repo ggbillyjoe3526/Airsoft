@@ -5,6 +5,7 @@ import { DEFAULT_MATCH_RULES, DEFAULT_RULESET, type MatchRules, RULESETS, type R
 import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from './config/modes';
 import type { LightingPresetId } from './config/render';
 import { LOADOUT } from './config/replicas';
+import { DEFAULT_TEAM_PICK, type TeamPickId } from './config/teams';
 import { playsAtNight as nightOf } from './map/lightingChoice';
 import { DEFAULT_MAP, MAPS, type MapId, mapData, mapLoaded, teamSizeOn } from './map/maps';
 import { modeOffered } from './map/playableMode';
@@ -19,6 +20,8 @@ export interface NewGamePicks {
   mode: MatchMode;
   difficulty: Difficulty;
   teammateDifficulty: Difficulty;
+  /** Your team (M98): Alpha or Beta; absent, Alpha. An Extraction run has no pick: its squad plays as Alpha. */
+  team?: TeamPickId;
   /** The Rules picker's ruleset (M39). */
   ruleset: RulesetId;
   /** The Match pop-up's picks; as played (playedPicks), with the ruleset's own switches over them (rulesUnder). */
@@ -47,6 +50,8 @@ export function playedPicks(p: NewGamePicks, devContent: boolean): NewGamePicks 
     mode,
     difficulty: availableChoice(DIFFICULTIES, p.difficulty, devContent, DEFAULT_DIFFICULTY),
     teammateDifficulty: availableChoice(TEAMMATE_DIFFICULTIES, p.teammateDifficulty, devContent, DEFAULT_DIFFICULTY),
+    // An Extraction run's squad is Alpha (M98: no pick there); the saved pick stays for the other modes.
+    team: mode === 'extraction' ? DEFAULT_TEAM_PICK : (p.team ?? DEFAULT_TEAM_PICK),
     ruleset,
     rules: rulesForMode(
       mode,

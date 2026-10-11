@@ -184,7 +184,7 @@ describe('the card is worded for the local player\'s own hit only', () => {
     recorded(r, PLAYER);
     r.hit(PLAYER);
     expect(r.card.words).toHaveLength(1);
-    expect(r.card.words[0]).toMatch(/^Orange 1 · from /);
+    expect(r.card.words[0]).toMatch(/^Beta 1 · from /);
   });
 
   it('says nothing when a teammate is hit, even with your last hit still on the record for that tick', () => {

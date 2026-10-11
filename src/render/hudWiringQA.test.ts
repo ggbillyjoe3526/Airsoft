@@ -82,7 +82,7 @@ const ENEMY2 = 3;
 interface Options {
   rules?: RoundRules;
   extraction?: boolean;
-  /** The player's team (0 = Blue). */
+  /** The player's team (0 = Alpha). */
   team?: number;
   name?: string;
 }
@@ -201,19 +201,19 @@ describe('the hit feed is handed who, which team, friendly, yours and ricochet (
   it('names the one who called the hit and whose BB it was, in their teams', () => {
     const r = rig();
     hit(r, MATE, ENEMY);
-    expect(added()).toEqual([[{ name: 'Blue 2', team: 0 }, { name: 'Orange 1', team: 1 }, false, false, false]]);
+    expect(added()).toEqual([[{ name: 'Alpha 2', team: 0 }, { name: 'Beta 1', team: 1 }, false, false, false]]);
   });
 
   it('marks a hit on a teammate by your side friendly, and yours when it is you who fired', () => {
     const r = rig();
     hit(r, MATE, PLAYER);
-    expect(added()).toEqual([[{ name: 'Blue 2', team: 0 }, { name: 'You', team: 0 }, true, true, false]]);
+    expect(added()).toEqual([[{ name: 'Alpha 2', team: 0 }, { name: 'You', team: 0 }, true, true, false]]);
   });
 
   it('marks a hit on you yours, and carries the ricochet tag', () => {
     const r = rig();
     hit(r, PLAYER, ENEMY, true);
-    expect(added()).toEqual([[{ name: 'You', team: 0 }, { name: 'Orange 1', team: 1 }, false, true, true]]);
+    expect(added()).toEqual([[{ name: 'You', team: 0 }, { name: 'Beta 1', team: 1 }, false, true, true]]);
   });
 
   it('does not call your own ricochet a friendly hit (the row names you twice)', () => {
@@ -225,6 +225,29 @@ describe('the hit feed is handed who, which team, friendly, yours and ricochet (
   it('marks a hit between two others neither friendly nor yours', () => {
     const r = rig();
     hit(r, ENEMY2, ENEMY);
-    expect(added()).toEqual([[{ name: 'Orange 2', team: 1 }, { name: 'Orange 1', team: 1 }, true, false, false]]);
+    expect(added()).toEqual([[{ name: 'Beta 2', team: 1 }, { name: 'Beta 1', team: 1 }, true, false, false]]);
+  });
+});
+
+describe('the HUD reads "your team" from the player, on Beta as on Alpha (M98)', () => {
+  it('marks Beta yours on the score bar and colours the minimap, markers, hold spot and order wheel in Beta\'s colour', async () => {
+    const { OrderWheel } = await import('../ui/orderWheel');
+    const { TeammateMarkers } = await import('../ui/teammateMarkers');
+    const { HoldMarker } = await import('../ui/holdMarker');
+    const set = TEAM_COLOUR_SETS.standard;
+    for (const team of [0, 1]) {
+      vi.clearAllMocks();
+      rig({ team });
+      expect(vi.mocked(Scoreboard).mock.calls[0]![2], `team ${team}`).toBe(team);
+      const css = (c: number) => `#${c.toString(16).padStart(6, '0')}`;
+      // The minimap: your team's dots in its colour, the other team's heard patches in theirs.
+      expect(vi.mocked(Minimap).mock.calls[0]!.slice(2, 4), `team ${team}`).toEqual([css(set.hud[team]!), css(set.hud[1 - team]!)]);
+      expect(vi.mocked(OrderWheel).mock.calls[0]![1]).toBe(`var(--team-${team})`);
+      expect(vi.mocked(HoldMarker).mock.calls[0]![1]).toBe(`var(--team-${team})`);
+      // Over your teammate's head: its name (Beta 2 when you are on Beta) in your colour.
+      const [, names, colour] = vi.mocked(TeammateMarkers).mock.calls[0]!;
+      expect(names).toEqual([team === 0 ? 'Alpha 2' : 'Beta 2']);
+      expect(colour).toBe(`var(--team-${team})`);
+    }
   });
 });

@@ -24,7 +24,7 @@ export interface FlagRules {
   raiseTime: number;
   /** Seconds for the defenders to pull it from the top back down to the bottom. */
   lowerTime: number;
-  /** Team that attacks first (0 = Blue, the player's team). */
+  /** Team that attacks first (0 = Alpha; the player picks Alpha or Beta, M98). */
   firstAttackers: number;
   /**
    * Overtime: when time runs out while the attackers are working the rope (raising it, or contesting it at
