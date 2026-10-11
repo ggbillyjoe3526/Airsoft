@@ -257,7 +257,7 @@ request. Each entry says where the contract lives, what it holds today and what 
   - `bakedLight`: the name of the map's probe file; look only. Each file is pinned to its map by
     `map/bakes/bakes.test.ts`, which names the bake command when they differ.
 
-  Pinned by `map/mapData.test.ts`, `nav/navGrid.test.ts`, `map/neonHeights.test.ts`, `map/extractionData.test.ts`,
+  Pinned by the content toolkit's map checks on every map (`content/mapChecks.test.ts`), `nav/navGrid.test.ts`, `map/neonHeights.test.ts`, `map/extractionData.test.ts`,
   `render/depotLook.test.ts` (a map using none of the woodland look's fields, M33i, builds as before),
   `render/cityLook.test.ts` and `map/neonHeightsArt.test.ts` (Neon Heights' boxes, materials and floors).
 

@@ -8,6 +8,8 @@ import { formatBand, formatValue, judgeAll } from './balanceReport.mjs';
 
 export const LEVELS = ['rules', 'compatibility', 'spec', 'balance'];
 export const LEVEL_WORDS = { rules: 'Rules', compatibility: 'Compatibility', spec: 'Spec test', balance: 'Balance run' };
+/** A map's level 2 is its layout (CT2): measured against Depot's, not a fit with other items. */
+export const MAP_LEVEL_WORDS = { ...LEVEL_WORDS, compatibility: 'Layout' };
 const VERDICT_WORDS = { fail: 'Fail', warn: 'Look at this', pass: 'Pass', info: 'Figure' };
 const ORDER = ['fail', 'warn', 'pass', 'info'];
 
@@ -49,10 +51,10 @@ export function worst(results) {
 }
 
 /** The one-line outcome: what it means for the item. */
-export function outcomeLine(results, { levels, publicGate = false } = {}) {
+export function outcomeLine(results, { levels, publicGate = false } = {}, words = LEVEL_WORDS) {
   const fails = results.filter((r) => r.verdict === 'fail').length;
   const warns = results.filter((r) => r.verdict === 'warn').length;
-  const ran = levels.map((l) => LEVEL_WORDS[l]).join(', ');
+  const ran = levels.map((l) => words[l]).join(', ');
   if (fails > 0) return `Fails ${fails} check${fails > 1 ? 's' : ''}${warns ? ` and has ${warns} thing${warns > 1 ? 's' : ''} to look at` : ''} (${ran}). It can't go public until the fails are fixed.`;
   if (warns > 0) return `Passes, with ${warns} thing${warns > 1 ? 's' : ''} for you to look at (${ran}).${publicGate ? ' Each needs your OK before it goes public.' : ''}`;
   return `Passes every check (${ran}).${publicGate ? ' Ready to go public once you have played it.' : ''}`;
@@ -206,4 +208,70 @@ ${markdownToHtml(md, images)}
 </main></body>
 </html>
 `;
+}
+
+// ---- Maps (CT2) ---------------------------------------------------------------------------------------------------
+
+const metres = (x) => (Number.isFinite(x) ? `${n(x, 1)} m` : '–');
+const walk = (m, s) => (Number.isFinite(m) ? `${n(m, 0)} m (${n(s, 1)} s)` : 'no way');
+
+/** Every map's layout side by side (the map report's table): `[label, ...one value per map]`. */
+export function layoutRows(layouts) {
+  return [
+    ['Walkable ground', ...layouts.map((l) => `${n(l.size.x, 0)} × ${n(l.size.z, 0)} m`)],
+    ['Players a side', ...layouts.map((l) => (l.teamSize.standard === l.teamSize.max ? `${l.teamSize.standard}` : `${l.teamSize.standard} (up to ${l.teamSize.max})`))],
+    ['Lanes', ...layouts.map((l) => String(l.lanes))],
+    ['Longest clear sightline', ...layouts.map((l) => metres(l.sightline))],
+    ['Walk to the middle, end 0', ...layouts.map((l) => walk(l.middleWalk[0], l.middleSeconds[0]))],
+    ['Walk to the middle, end 1', ...layouts.map((l) => walk(l.middleWalk[1], l.middleSeconds[1]))],
+    ['Walk to the flag, attackers', ...layouts.map((l) => (l.flagWalk ? walk(l.flagWalk[0], l.flagSeconds[0]) : 'no flag'))],
+    ['Walk to the flag, defenders', ...layouts.map((l) => (l.flagWalk ? walk(l.flagWalk[1], l.flagSeconds[1]) : 'no flag'))],
+    ['Modes', ...layouts.map((l) => l.modes.join(', '))],
+    ['Lighting', ...layouts.map((l) => l.lightings.join(', '))],
+    ['Tag', ...layouts.map((l) => l.tag)],
+  ];
+}
+
+/**
+ * A perf run's result (perf-run.mjs's file) as the spec test's check: over its budget fails, more than the gate's
+ * tolerance worse than its baseline asks for a look, page errors fail. `judged` is perfMatrix.mjs judgeRun's verdict.
+ */
+export function perfResult(label, run, judged) {
+  const m = run.metrics;
+  const numbers = `${n(m.drawCalls, 0)} draw calls, ${n(m.triangles / 1000, 0)}k triangles, ${n(m.gpuMemoryMB, 0)} MB of GPU memory, heap ${m.heapGrowthMB >= 0 ? '+' : ''}${n(m.heapGrowthMB, 1)} MB`;
+  const item = `${label}, ${run.preset}`;
+  if (run.errors?.length) return { level: 'spec', check: 'map.perf', item, verdict: 'fail', says: `${numbers}; the page had ${run.errors.length} error${run.errors.length > 1 ? 's' : ''} (${run.errors[0]}).` };
+  if (judged.over.length) return { level: 'spec', check: 'map.perf', item, verdict: 'fail', says: `${numbers}; over budget: ${judged.over.map((o) => `${o.metric} ${n(o.now)} (budget ${o.limit})`).join(', ')}.` };
+  if (judged.worse.length) return { level: 'spec', check: 'map.perf', item, verdict: 'warn', says: `${numbers}; worse than its last measure: ${judged.worse.map((w) => `${w.metric} +${w.pct} %`).join(', ')}.` };
+  return { level: 'spec', check: 'map.perf', item, verdict: 'pass', says: `${numbers}; within budget${judged.note ? ` (${judged.note})` : ''}.` };
+}
+
+/** The map report as Markdown: as reportMarkdown, with every map's layout beside this one's and the perf runs. */
+export function mapReportMarkdown({ content, item, results, pictures = [], meta }) {
+  const lines = [`# Content report: ${item.name} (map)`, ''];
+  const what = item.id === 'maps' ? `Every map (${content.items.length})` : `Map \`${item.key}\`, tagged ${item.tag}`;
+  lines.push(`${what}. Checked ${meta.when} on \`${meta.commit}\`. The standard is Depot's measured layout.`, '');
+  lines.push(`**${outcomeLine(results, meta, MAP_LEVEL_WORDS)}**`, '');
+  const attention = results.filter((r) => r.verdict === 'fail' || r.verdict === 'warn');
+  if (attention.length > 0) {
+    lines.push('## What needs you', '');
+    attention.forEach((r, i) => lines.push(`${i + 1}. **${VERDICT_WORDS[r.verdict]}** (${MAP_LEVEL_WORDS[r.level]}, ${r.item}): ${r.says}`));
+    lines.push('');
+  }
+  for (const level of meta.levels) {
+    const own = results.filter((r) => r.level === level);
+    if (own.length === 0 && level !== 'compatibility') continue;
+    lines.push(`## ${MAP_LEVEL_WORDS[level]}`, '');
+    if (own.length > 0) lines.push(...mdTable(['Check', 'Result', 'What was found'], own.map((r) => [level === 'balance' ? r.item : `${r.check} · ${r.item}`, VERDICT_WORDS[r.verdict], r.says])), '');
+    if (level === 'compatibility') {
+      const order = [...content.layouts].sort((a, b) => (a.id === item.key ? -1 : b.id === item.key ? 1 : 0));
+      lines.push('### Its layout beside the other maps', '', ...mdTable(['', ...order.map((l) => l.label)], layoutRows(order)), '');
+    }
+  }
+  if (pictures.length > 0) {
+    lines.push('## Pictures', '');
+    for (const p of pictures) lines.push(p.ok ? `**${p.title}**\n\n![${p.title}](pictures/${p.file})\n` : `- ${p.title}: not drawn (${p.error}).`);
+    lines.push('');
+  }
+  return `${lines.join('\n').trimEnd()}\n`;
 }

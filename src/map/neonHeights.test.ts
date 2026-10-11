@@ -146,12 +146,6 @@ describe('Neon Heights layout', () => {
     expect(held).toEqual([]);
   });
 
-  it("keeps the spawn yards out of each other's sight", () => {
-    for (const a of NEON_HEIGHTS.spawns[0]) {
-      for (const b of NEON_HEIGHTS.spawns[1]) expect(sees(eye(a.position), eye(b.position))).toBe(false);
-    }
-  });
-
   it(`breaks every street line: none longer than ${LONGEST_LINE} m between the spawn walls`, () => {
     const [west, east] = spawnWalls;
     let longest = 0;
