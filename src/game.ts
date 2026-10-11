@@ -3,9 +3,9 @@ import { loadVolumes } from './audio/audioMix';
 import { soundscapeOf } from './audio/soundscape';
 import { motionScale, type SoundCueColour, soundCueCss } from './config/accessibility';
 import type { VolumeChannel } from './config/audio';
-import type { LookSettings } from './config/look';
+import { type LookSettings, type RetroSettings, retroLookOf } from './config/look';
 import type { Difficulty } from './config/bots';
-import { activeDev, type DevSettings, devCheating, retroLookOf } from './config/dev';
+import { activeDev, type DevSettings, devCheating } from './config/dev';
 import { PERF_SCRIPT } from './config/perfScript';
 import { ROUNDS } from './config/hits';
 import type { MatchRules, RulesetId } from './config/matchRules';
@@ -64,6 +64,7 @@ import { activeSupplyEvent, supplyLine } from './pool/supplyEvents';
 import type { Dispensed, Earnings } from './pool/armory';
 import { haulSummary, type Unpaid } from './ui/menus/summaryScreen';
 import { loadDevEnabled, loadDevSettings } from './settings/dev';
+import { carryOverDevRetro, loadRetroSettings } from './settings/retroLook';
 import { browserStorage, flushSettings, SETTINGS_KEY, saveSetting } from './settings/storage';
 import type { SaveManager } from './save/saveManager';
 import { SAVE_TEXT } from './config/save';
@@ -243,6 +244,8 @@ export class Game {
   private soundCues = loadSoundCues();
   /** Settings › Look (G1): robots and Realistic colours, for the next match or range visit. */
   private look: LookSettings = loadLook();
+  /** Settings › Look › Retro look (M96; a Dev setting before, carried over once as the game starts). */
+  private retro: RetroSettings;
   /** The sound cues' size and colour (Settings → Accessibility) and the scoreboard's size and hit feed (Settings → HUD), M24. */
   private soundCueSize = loadSoundCueSize();
   private soundCueColour: SoundCueColour = loadSoundCueColour();
@@ -347,7 +350,9 @@ export class Game {
     this.input = new PlayerInput(this.keyboard, this.pointer, MOVEMENT);
     if (options.scriptedPlayer) this.input.script = PERF_SCRIPT;
     this.scripted = options.scriptedPlayer === true;
-    this.renderer.setRetro(retroLookOf(this.dev, this.scripted));
+    carryOverDevRetro();
+    this.retro = loadRetroSettings();
+    this.renderer.setRetro(retroLookOf(this.retro, this.scripted));
     this.input.crouchMode = loadCrouchMode();
     this.input.aimMode = loadAimMode();
     this.input.sprintMode = loadSprintMode();
@@ -491,7 +496,12 @@ export class Game {
         soundCueColour: { initial: this.soundCueColour, onChange: (c) => ((this.soundCueColour = c), this.showHudLook()) },
       },
       // Built into the figures and replicas, so a change shows from the next match (on the range, from Resume).
-      look: { initial: this.look, onChange: (look) => ((this.look = look), (this.setupChanged = this.loadoutChanged = true)) },
+      look: {
+        initial: this.look,
+        onChange: (look) => ((this.look = look), (this.setupChanged = this.loadoutChanged = true)),
+        // The filter is a screen effect: on, off and its sliders show at once.
+        retro: { initial: this.retro, onChange: (r) => ((this.retro = r), this.renderer.setRetro(retroLookOf(r, this.scripted))) },
+      },
       hud: {
         hudSize: { initial: this.hudSize, onChange: (v) => ((this.hudSize = v), this.showHudLook()) },
         scoreboardSize: { initial: this.scoreboardSize, onChange: (v) => ((this.scoreboardSize = v), this.showHudLook()) },
@@ -787,7 +797,6 @@ export class Game {
     if (this.dev.showDebug !== before.showDebug) this.debug.setVisible(this.dev.showDebug);
     if (this.dev.showBbPaths !== before.showBbPaths) this.session?.combat.setBbPaths(this.dev.showBbPaths);
     this.session?.setDevCheats(this.dev);
-    this.renderer.setRetro(retroLookOf(this.dev, this.scripted));
     // Unlock all gear and Dev content (M35) change what the Loadout offers and carries, and Dev content what New game
     // plays; the next Play rebuilds the match with it.
     if (this.dev.unlockAllGear !== before.unlockAllGear || this.dev.devContent !== before.devContent) this.loadoutChanged = this.setupChanged = true;
@@ -1110,7 +1119,7 @@ export class Game {
       ['Screen', read(() => ((this.pointer.locked || this.unlockedPlay) && s ? 'in play' : `menus: ${this.menus.screen}`))],
       ['Quality', read(() => this.qualityText())],
       ['Retro pixels', read(() => {
-        const look = retroLookOf(this.dev, this.scripted);
+        const look = retroLookOf(this.retro, this.scripted);
         return look ? `${look.pixelSize} px, ${look.levels} levels` : 'off';
       })],
       ['Post', read(() => this.renderer.postPasses.join(' ') || 'none')],

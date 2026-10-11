@@ -14,7 +14,7 @@ type Airsoft = {
   };
 };
 
-/** Boots the e2e build and turns Dev settings and Dev content on (and Retro pixels when asked), back on the Play screen. */
+/** Boots the e2e build and turns Dev settings and Dev content on (and the Retro look when asked), back on the Play screen. */
 async function newGameWithDevContent(page: Page, errors: string[], retro: boolean): Promise<void> {
   page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
   page.on('console', (msg) => {
@@ -28,7 +28,11 @@ async function newGameWithDevContent(page: Page, errors: string[], retro: boolea
   const settings = page.locator('.menu-settings');
   await settings.getByRole('checkbox', { name: 'Dev settings' }).check();
   await settings.getByRole('group', { name: 'Dev content' }).getByRole('button', { name: 'On' }).click();
-  if (retro) await settings.getByRole('group', { name: 'Retro pixels' }).getByRole('button', { name: 'On' }).click();
+  // The Retro look is public since M96: Settings › Look.
+  if (retro) {
+    await settings.getByRole('tab', { name: 'Look', exact: true }).click();
+    await settings.getByRole('group', { name: 'Retro look' }).getByRole('button', { name: 'On' }).click();
+  }
   await page.keyboard.press('Escape');
   await expect(setup).toBeVisible();
 }

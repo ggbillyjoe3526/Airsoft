@@ -103,6 +103,10 @@ export type SettingField =
   /** Settings → Look (graphics overhaul G1): robots mixed in with humans, and replicas in realistic colours. */
   | 'robots'
   | 'realisticColours'
+  /** Settings › Look › Retro look (M96; the Dev tab's Retro pixels before, carried over by settings/retroLook.ts). */
+  | 'retroLook'
+  | 'retroPixelSize'
+  | 'retroColours'
   /** A replica asset's colour scheme (G1, config/schemes.ts), picked in Loadout › Customise. */
   | `scheme.${string}`
   /** The Dev settings (M24, settings/dev.ts): `dev.enabled` and one per entry in config/dev.ts. */

@@ -729,8 +729,10 @@ Settings has groups down the left (Graphics, Display, Audio, Controls, Gameplay,
   through you. With any of them on, the summary says Dev settings kept the match out of your records. Untick the box
   and Play again: everything is back to normal and the match counts. Diagnostics › Copy pastes a report starting
   "Airsoft diagnostics" with your GPU and settings.
-- [ ] **Retro pixels** (Dev). Chunky pixels and a small dithered palette, like a 1990s shooter; Pixel size and Colours
-  change it; the HUD and menus stay sharp.
+- [ ] **Settings › Look › Retro look** (M96; the Dev tab's Retro pixels before). Off by default; On gives chunky pixels
+  and a small dithered palette, like a 1990s shooter, at once; Pixel size and Colours change it; the HUD and menus
+  stay sharp. A save that had Retro pixels on in the Dev tab (with the Dev box ticked) opens with it on here, at the
+  same sliders, and the Dev tab no longer lists it.
 
 ## Sound
 

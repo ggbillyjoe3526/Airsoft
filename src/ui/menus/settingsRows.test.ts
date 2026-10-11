@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_CROSSHAIR, DEFAULT_HIT_FEED_MODE, DEFAULT_WHAT_GOT_YOU_MODE, HUD_OPACITY } from '../../config/matchInfo';
-import { DEFAULT_LOOK } from '../../config/look';
+import { DEFAULT_LOOK, DEFAULT_RETRO } from '../../config/look';
 import { DEFAULT_SOUND_CUE_COLOUR } from '../../config/accessibility';
 import { MemoryStorage } from '../../pool/testStorage';
 import { flushSettings, SETTINGS_KEY } from '../../settings/storage';
@@ -95,9 +95,9 @@ describe('every settings row keeps its saved key (G3, criterion 8)', () => {
     expect(savedKeys(rows)).toEqual(['volume.effects', 'volume.interface', 'volume.master']);
   });
 
-  it('saves the Look rows as robots and realisticColours', () => {
-    const rows = lookSettings({ initial: DEFAULT_LOOK, onChange: () => {} }) as unknown as FakeElement[];
-    expect(savedKeys(rows)).toEqual(['realisticColours', 'robots']);
+  it('saves the Look rows as robots, realisticColours and the Retro look (M96) as retroLook, retroPixelSize and retroColours', () => {
+    const rows = lookSettings({ initial: DEFAULT_LOOK, onChange: () => {}, retro: { initial: { ...DEFAULT_RETRO }, onChange: () => {} } }) as unknown as FakeElement[];
+    expect(savedKeys(rows)).toEqual(['realisticColours', 'retroColours', 'retroLook', 'retroPixelSize', 'robots']);
   });
 
   it('saves the crosshair rows each under crosshair.<part>, so the saved crosshair survives the move to Gameplay', () => {
@@ -171,7 +171,7 @@ describe('a note on every settings row (G3, criterion 8)', () => {
         soundCueSize: { initial: 1, onChange: noop },
         soundCueColour: { initial: DEFAULT_SOUND_CUE_COLOUR, onChange: noop },
       }),
-      ...lookSettings({ initial: DEFAULT_LOOK, onChange: noop }),
+      ...lookSettings({ initial: DEFAULT_LOOK, onChange: noop, retro: { initial: { ...DEFAULT_RETRO }, onChange: noop } }),
     ] as unknown as FakeElement[];
     for (const r of rows) expect(note(r), label(r)).not.toBe('');
   });

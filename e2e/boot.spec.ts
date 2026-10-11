@@ -361,18 +361,9 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(group(/^Dev/i)).toHaveAttribute('aria-selected', 'true');
   await settings.getByRole('group', { name: 'Debug info' }).getByRole('button', { name: 'On' }).click();
   await expect(page.locator('.debug-overlay')).toBeVisible();
-  // M42: the Retro pixels switch (off) and its two sliders sit on the Dev group; the smoke run leaves the filter off.
-  const retro = settings.getByRole('group', { name: 'Retro pixels' });
-  await expect(retro).toBeVisible();
-  await expect(retro.getByRole('button', { name: 'Off' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(retro.getByRole('button', { name: 'On' })).toHaveAttribute('aria-pressed', 'false');
-  const retroPixelSize = settings.getByRole('slider', { name: 'Pixel size' });
-  const retroColours = settings.getByRole('slider', { name: 'Colours' });
-  await expect(retroPixelSize).toHaveValue('4');
-  await expect(retroColours).toHaveValue('6');
+  // M96: the Retro look left the Dev group for Settings › Look (checked below).
   const devPanel = settings.locator('#settings-panel-dev');
-  await expect(devPanel.getByText('4 px', { exact: true })).toBeVisible();
-  await expect(devPanel.getByText('216', { exact: true })).toBeVisible();
+  await expect(devPanel.getByRole('group', { name: /Retro/ })).toHaveCount(0);
   // M26d: Disable Armory greys out the top bar's Armory while it applies.
   const armoryPlace = topBar.getByRole('button', { name: 'Armory' });
   await settings.getByRole('group', { name: 'Disable Armory' }).getByRole('button', { name: 'On' }).click();
@@ -382,6 +373,16 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(armoryPlace).toBeEnabled();
   await expect(group(/^Dev/i)).toBeHidden();
   await expect(group(/Graphics/i)).toHaveAttribute('aria-selected', 'true');
+  // M96: Settings › Look › Retro look, Off, its sliders at 4 px and 216 colours; the smoke run leaves the filter off.
+  await group(/^Look/i).click();
+  const lookPanel = settings.locator('#settings-panel-look');
+  const retro = lookPanel.getByRole('group', { name: 'Retro look' });
+  await expect(retro.getByRole('button', { name: 'Off' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(retro.getByRole('button', { name: 'On' })).toHaveAttribute('aria-pressed', 'false');
+  await expect(lookPanel.getByRole('slider', { name: 'Retro pixel size' })).toHaveValue('4');
+  await expect(lookPanel.getByRole('slider', { name: 'Retro colours' })).toHaveValue('6');
+  await expect(lookPanel.getByText('4 px', { exact: true })).toBeVisible();
+  await expect(lookPanel.getByText('216', { exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(setup).toBeVisible();
   await expect(setup.locator(':focus')).toHaveCount(1); // the keyboard is back on the Play screen
