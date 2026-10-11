@@ -90,9 +90,9 @@ describe('every settings row keeps its saved key (G3, criterion 8)', () => {
     expect(savedKeys(rows)).toEqual(expect.arrayContaining(['reducedMotion', 'soundCueColour', 'soundCueSize', 'soundCues', 'teamColours']));
   });
 
-  it('saves the Audio sliders as volume.master, volume.effects and volume.interface', () => {
-    const rows = audioSettings({ initial: { master: 1, effects: 1, interface: 1 } as never, onChange: () => {} }) as unknown as FakeElement[];
-    expect(savedKeys(rows)).toEqual(['volume.effects', 'volume.interface', 'volume.master']);
+  it('saves the Audio sliders as volume.master, volume.effects and volume.interface, and M86\'s as volume.ambience', () => {
+    const rows = audioSettings({ initial: { master: 1, effects: 1, ambience: 1, interface: 1 } as never, onChange: () => {} }) as unknown as FakeElement[];
+    expect(savedKeys(rows)).toEqual(['volume.ambience', 'volume.effects', 'volume.interface', 'volume.master']);
   });
 
   it('saves the Look rows as robots and realisticColours', () => {
@@ -178,7 +178,7 @@ describe('a note on every settings row (G3, criterion 8)', () => {
 
   // BUG (criterion 8: "a note on every row"): audioSettings.ts SLIDERS.master.help is '', so Master volume has no note.
   it('gives every Audio slider a note, Master volume included', () => {
-    const rows = audioSettings({ initial: { master: 1, effects: 1, interface: 1 } as never, onChange: () => {} }) as unknown as FakeElement[];
+    const rows = audioSettings({ initial: { master: 1, effects: 1, ambience: 1, interface: 1 } as never, onChange: () => {} }) as unknown as FakeElement[];
     for (const r of rows) expect(note(r), label(r)).not.toBe('');
   });
 });
