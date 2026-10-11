@@ -162,7 +162,7 @@ attempts: 0
 ## M98 · Teams Alpha and Beta, and pick your team (playtest note 4)
 tier: core
 perf: skip
-touches: src/config/teams.ts, src/matchSession.ts, src/game.ts, src/ui/scoreboard.ts, src/ui/roundBanner.ts, src/ui/hitFeed.ts, src/ui/menus/rulesText.ts, src/ui/menus/playView.ts, src/ui/menus/savedChoices.ts, src/sim/
+touches: src/config/teams.ts, src/matchSession.ts, src/game.ts, src/ui/scoreboard.ts, src/ui/roundBanner.ts, src/ui/hitFeed.ts, src/ui/menus/rulesText.ts, src/ui/menus/playView.ts, src/ui/menus/savedChoices.ts, src/sim/, src/newGamePicks.ts, src/settings/storage.ts, src/config/hits.ts, src/config/matchInfo.ts, src/config/menuArt.ts, src/config/modes.ts, src/config/schemes.ts, src/render/matchPresentation.ts, src/ui/hitFeedback.ts, src/ui/hudCss/score.css, src/ui/matchStopText.ts, src/ui/statsRows.ts, src/ui/whatGotYou.ts, src/ui/menus/
 contract: none
 acceptance:
   1. The teams are **Alpha** (blue) and **Beta** (orange) everywhere the player reads them (hit feed, scoreboard, banners, minimap, summary, menus, screen reader text); colours and both colour sets are unchanged.
