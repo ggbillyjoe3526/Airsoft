@@ -974,6 +974,33 @@ kbd {
   content: ' · hit';
 }
 
+/* Dev settings › Bot intentions (M90, ui/botIntentLabels.ts): a plain tag over each bot saying what it is doing. */
+.bot-intent {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  gap: 0.35em;
+  translate: -50% -100%;
+  padding: 0.08em 0.5em;
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font: 600 calc(12px * var(--hud-scale, 1)) var(--ui-font);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 9;
+}
+
+.bot-intent[hidden],
+.bot-intent-role[hidden] {
+  display: none;
+}
+
+.bot-intent-role {
+  color: #ffe94a;
+}
+
 /* Tables (audit section 6, item 18; G3 look): one head style, zebra rows instead of lines, numbers right-aligned with
    room; each team's block under a bar in its colour, each player with a drawn head in it (ui/headIcon.ts). */
 .stats-table {

@@ -45,6 +45,8 @@ export interface ArmoryOptions {
   onChange: () => boolean | void;
   /** Where the items' pictures come from (G3); without, each item shows its drawing. */
   context?: PictureContext;
+  /** Dev settings › Free case openings (M90): Shots cost nothing while true. */
+  freeShots?: () => boolean;
 }
 
 /** "1,600 FC". */
@@ -189,7 +191,15 @@ export class ArmoryScreen {
     }
 
     const shots = el('div', 'armory-actions');
+    const free = this.opts.freeShots?.() ?? false;
     for (const n of [1, 10] as ShotCount[]) {
+      // Free case openings (Dev, M90): no price, nothing to ask.
+      if (free) {
+        const b = this.actionButton(`shot-${n}`, `${n === 1 ? ARMORY_TEXT.oneShot : ARMORY_TEXT.tenShots} · ${ARMORY_TEXT.freeShot}`, ARMORY_TEXT.freeShotNote, true, () => this.takeShots(n));
+        b.classList.add('armory-shot');
+        shots.append(b);
+        continue;
+      }
       const price = shotPrice(e, c, n);
       // The FC price on the button (audit POOL-13); how it is paid under it when Tokens cover some.
       const paid = [price.tokens > 0 ? tokensText(price.tokens) : '', price.fc > 0 ? fcText(price.fc) : ''].filter(Boolean).join(' + ');
@@ -294,7 +304,7 @@ export class ArmoryScreen {
 
   private takeShots(n: ShotCount): void {
     const before = new Set(this.opts.equipped().map((r) => r && `${r.asset}@${r.tier}`));
-    const got = takeShots(this.pool, this.opts.collection(), n);
+    const got = takeShots(this.pool, this.opts.collection(), n, undefined, this.opts.freeShots?.() ?? false);
     if (!got) return;
     this.last = got;
     this.nowEquipped = new Set(this.opts.equipped().flatMap((r) => (r && !before.has(`${r.asset}@${r.tier}`) ? [`${r.asset}@${r.tier}`] : [])));

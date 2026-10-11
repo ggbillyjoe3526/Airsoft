@@ -292,6 +292,9 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 
 | Issue | Class | Notes |
 |---|---|---|
+| Dev › Time of day on a map that doesn't offer that time keeps the map's baked bounce light (G6) from its own time, so Woodland by day or Depot by night can look patchy | can wait | Dev-only and kept out of the records; the light itself is the preset's (`map/lightingChoice.ts` `mapUnderPreset`), no renderer change. (M90) |
+| Dev › Bot intentions makes a label's transform string when a bot's label moves on screen (as the teammate tags do) | can wait | Off by default and Dev-only; nothing is made while it is off. (M90) |
+| The owner's suggested Dev aid "skip to the last round" isn't built | can wait | Not in M90's brief; Skip to next round (M83) and End the round now (M90) cover most of it. (M90) |
 | `sim/testSupport.ts` (test fixture) lives in the source tree | can wait | Harmless (tree-shaken from the build); move under a test folder if more fixtures appear. |
 | `config/renderView.ts` and `config/audio.ts` hold small derived helpers (whistle schedule, result-screen delay), and renderView imports audio | can wait | Fine at this size; move derived timing into a module if config grows more logic. G5 split `config/render.ts` into five files that it re-exports (BP2 re-check). |
 | `config/bots.ts` imports `MOVEMENT` (for `leanRoomMargin`), so one config file depends on another | can wait | Small; move the shared value if it grows. (M10) |

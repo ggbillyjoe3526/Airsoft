@@ -746,6 +746,16 @@ Settings has groups down the left (Graphics, Display, Audio, Controls, Gameplay,
   through you. With any of them on, the summary says Dev settings kept the match out of your records. Untick the box
   and Play again: everything is back to normal and the match counts. Diagnostics › Copy pastes a report starting
   "Airsoft diagnostics" with your GPU and settings.
+- [ ] **Dev playtesting aids** (M90). **+1,000 FC** and **+10 Tokens** fill the top bar's wallet at once (and stay
+  after a reload); **Free case openings** makes the Armory's Shot buttons read "Free" and take nothing. **Time of
+  day** Night on Depot (or Day on Woodland), then Start match: the map plays under that light, bots with torches at
+  night (the lighting may look rough where the map's bounce light was baked for the other time). **Bots hold fire**:
+  no bot shoots. **Spectate any bot**: in a match your view follows a bot while you stand still; your fire key moves
+  to the next, on either team (pair it with Ghost or Bots hold fire to stay in). **Bot intentions**: a small tag over
+  each bot in play ("Advancing", "Holding", "Fighting"; in Extraction its job first in yellow, "Guard"). **End the round now**
+  from the pause menu's Settings › Dev, then Resume: the round ends as on time. Each of those (not the wallet buttons
+  or free Shots) keeps the match out of your records. **Reset the save** asks first, then reloads as a new player;
+  Settings › Save › Undo brings it back.
 - [ ] **Settings › Look › Retro look** (M96; the Dev tab's Retro pixels before). Off by default; On gives chunky pixels
   and a small dithered palette, like a 1990s shooter, at once; Pixel size and Colours change it; the HUD and menus
   stay sharp. A save that had Retro pixels on in the Dev tab (with the Dev box ticked) opens with it on here, at the

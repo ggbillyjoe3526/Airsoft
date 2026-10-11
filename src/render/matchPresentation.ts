@@ -2,6 +2,9 @@ import * as THREE from 'three';
 import type { Action } from '../config/controls';
 import { EXTRACTION } from '../config/extraction';
 import { HUD_TEXT, type SkipLabel } from '../config/hudText';
+import { DEV_BOT_INTENT } from '../config/dev';
+import type { Bot } from '../ai/bot';
+import { BotIntentLabels, botIntentText, botRoleText } from '../ui/botIntentLabels';
 import type { HitConfig } from '../config/hits';
 import { type HitFeedMode, TEAMMATE_MARKERS } from '../config/matchInfo';
 import type { BodyConfig } from '../config/movement';
@@ -85,6 +88,12 @@ export class MatchPresentation {
   private readonly mateMarkers: TeammateMarkers;
   private readonly mateAnchor = new THREE.Vector3();
   private readonly mateAt: ScreenMarker = { x: 0, y: 0, onScreen: false };
+  /** Dev settings › Spectate any bot and Bot intentions (M90). */
+  private watchBots = false;
+  private intentsOn = false;
+  private readonly intents: BotIntentLabels;
+  private readonly intentAnchor = new THREE.Vector3();
+  private readonly intentAt: ScreenMarker = { x: 0, y: 0, onScreen: false };
   /** On-screen sound cues (Settings → Accessibility, M18b; off unless turned on). */
   private readonly soundCues: SoundCues;
   /** The squad order line (M22): read out by a screen reader only, since G4 (the order wheel shows the orders). */
@@ -172,6 +181,7 @@ export class MatchPresentation {
     this.spectator = new SpectatorCamera(state.characters, player, body, query);
     this.names = rosterNames(state.characters, player.id);
     this.mates = state.characters.filter((c) => c.team === player.team && c !== player);
+    this.intents = new BotIntentLabels(container);
     this.mateMarkers = new TeammateMarkers(container, this.mates.map((c) => this.names.get(c.id) ?? ''), teamCss(player.team));
     this.feed = new HitFeed(container);
     this.board = new MatchBoard(container);
@@ -309,8 +319,56 @@ export class MatchPresentation {
 
   /** True once you've called your hit and are watching someone else. */
   get spectating(): boolean {
+    return this.out || (this.watchBots && this.player.status === 'alive');
+  }
+
+  /** You've called your hit and are out of the round (spectating for real, not by Dev settings › Spectate any bot). */
+  private get out(): boolean {
     const s = this.player.status;
     return s === 'walkingOff' || s === 'leaving' || s === 'out';
+  }
+
+  /** Dev settings › Spectate any bot (M90): the camera follows a bot while you are still in play. */
+  get watchingBots(): boolean {
+    return this.watchBots;
+  }
+
+  setWatchingBots(on: boolean): void {
+    if (on === this.watchBots) return;
+    this.watchBots = on;
+    this.spectator.reset();
+  }
+
+  /** Dev settings › Bot intentions (M90): a label over each bot in play. */
+  setBotIntents(on: boolean): void {
+    this.intentsOn = on;
+    if (!on) this.intents.hideFrom();
+  }
+
+  /**
+   * Once per frame, after `frame` (the camera placed): each bot in play, on screen and not the one you watch, gets its
+   * label (botIntentLabels.ts); the rest are hidden. Nothing while the labels are off.
+   */
+  showBotIntents(bots: readonly Bot[], camera: THREE.PerspectiveCamera, alpha: number): void {
+    if (!this.intentsOn) return;
+    for (let i = 0; i < bots.length; i++) {
+      const b = bots[i]!;
+      const c = b.character;
+      if (!this.playing || this.boardUp || c.status !== 'alive' || c === this.watched) {
+        this.intents.hide(i);
+        continue;
+      }
+      const crouch = c.prevCrouchAmount + (c.crouchAmount - c.prevCrouchAmount) * alpha;
+      this.intentAnchor.set(
+        c.prevPosition.x + (c.position.x - c.prevPosition.x) * alpha,
+        c.prevPosition.y + (c.position.y - c.prevPosition.y) * alpha + eyeHeight(crouch, this.body) + DEV_BOT_INTENT.aboveEyes,
+        c.prevPosition.z + (c.position.z - c.prevPosition.z) * alpha,
+      );
+      const m = projectMarker(this.intentAnchor, camera, this.view.width, this.view.height, 0, this.intentAt);
+      if (m.onScreen) this.intents.show(i, m.x, m.y, botRoleText(b), botIntentText(b));
+      else this.intents.hide(i);
+    }
+    this.intents.hideFrom(bots.length);
   }
 
   /** Call after every simulation tick, while that tick's events are still in the state. */
@@ -509,11 +567,11 @@ export class MatchPresentation {
     this.listener.yaw = Math.atan2(-this.viewDir.x, -this.viewDir.z);
     this.soundCues.update(this.listener.x, this.listener.z, this.listener.yaw, this.state.time);
     this.updateBoard(boardHeld);
-    this.whatGotYou.setShown(this.playing && spectating && !this.boardUp);
+    this.whatGotYou.setShown(this.playing && this.out && !this.boardUp);
 
     this.feedback.setCalling(status === 'calling');
     if (status === 'calling') this.feedback.setHitDirection(wrapAngle(cameraYaw - this.hitFromYaw));
-    this.feedback.setOutLabel(spectating ? this.outLabel() : '');
+    this.feedback.setOutLabel(this.out ? this.outLabel() : '');
     // Extraction: respawns left first, as the banner says them on the frame you're back.
     if (this.extraction) this.runInfo.respawnsLeft = respawnsLeft(this.state.round.run, this.player, this.extraction);
     this.updateRoundMessage();
@@ -524,6 +582,7 @@ export class MatchPresentation {
   }
 
   dispose(): void {
+    this.intents.dispose();
     this.characters.dispose();
     this.flag.dispose();
     this.exits?.dispose();

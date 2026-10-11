@@ -160,6 +160,9 @@ export const ARMORY_TEXT = {
   spare: 'Spare',
   /** A rarer copy of a replica you never picked goes straight into its Loadout slot. */
   nowEquipped: 'Now equipped',
+  /** Dev settings › Free case openings (M90): the Shot buttons' price and the line under them. */
+  freeShot: 'Free',
+  freeShotNote: 'Free case openings are on in the Dev settings.',
   /** The match summary's line. */
   earned: 'Field Credits earned',
   /**

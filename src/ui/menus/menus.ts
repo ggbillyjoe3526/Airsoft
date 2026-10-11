@@ -246,6 +246,7 @@ export class Menus {
     if (!this.armory) {
       const a = this.opts.armory;
       this.armory = new ArmoryScreen({
+        ...(a.freeShots ? { freeShots: a.freeShots } : {}),
         pool: a.pool,
         collection: a.collection,
         equipped: a.equipped,

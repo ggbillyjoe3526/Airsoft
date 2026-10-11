@@ -322,6 +322,8 @@ export class MatchSession {
     this.build.phase('shaders');
   }
 
+  /** Dev settings › Bots hold fire (M90). */
+  private botsHoldFire = false;
   /** A Skip to next round under way (M83): the ticks run so far and the most it may run. */
   private skip: { ticks: number; cap: number } | null = null;
 
@@ -352,8 +354,11 @@ export class MatchSession {
     const order = this.input.takeOrder();
     if (order) this.giveOrder(order);
     const ticks = advanceStepper(this.stepper, dt);
+    // Dev settings › Spectate any bot (M90): while you watch a bot you stand still, and your clicks change who is watched.
+    const watching = this.match.watchingBots && p.status === 'alive';
     for (let i = 0; i < ticks; i++) {
-      this.input.fillCommand(this.playerCommand);
+      if (watching) idleCommand(this.playerCommand, this.input.yaw, this.input.pitch);
+      else this.input.fillCommand(this.playerCommand);
       this.tick(true);
     }
     return ticks;
@@ -366,6 +371,8 @@ export class MatchSession {
    */
   private tick(shown: boolean): void {
     this.bots.think(this.state, SIM_DT);
+    // Dev settings › Bots hold fire (M90): every bot's trigger stays up whatever its brain decided.
+    if (this.botsHoldFire) for (const b of this.bots.bots) this.commands.get(b.character.id)!.fire = false;
     stepSimulation(this.state, this.commands, this.ctx, SIM_DT);
     this.afterTick(shown);
   }
@@ -519,6 +526,8 @@ export class MatchSession {
     updateFirstPersonCamera(this.renderer.camera, this.player, BODY, this.hits, alpha, this.input.yaw, pitch, this.motion.leanRoll);
     this.match.setSkipLabel(this.skip ? 'skipping' : this.skipOffer);
     const spectating = this.match.frame(this.renderer.camera, alpha, dt, this.input.yaw, boardHeld);
+    // Dev settings › Bot intentions (M90): a label over each bot, from where the camera is now.
+    this.match.showBotIntents(this.bots.bots, this.renderer.camera, alpha);
     // The torches from where the view is (M33h): yours from your eyes, or the watched player's.
     this.torches.update(this.renderer.camera, spectating ? this.match.watchedCharacter : this.player, !spectating, alpha);
     if (this.torches.active) this.match.setTorchLift(this.torches.lit, TORCH_LIFT_COLOUR);
@@ -575,9 +584,25 @@ export class MatchSession {
   setDevCheats(cheats: DevSettings): void {
     this.player.armament.bottomless = cheats.bottomlessMags;
     this.player.ghost = cheats.ghost;
+    this.botsHoldFire = cheats.botsHoldFire;
+    this.match.setWatchingBots(cheats.spectateBots);
+    this.match.setBotIntents(cheats.botIntent);
     // Before play begins (a match built by a Play whose mouse lock was refused) only what applies now counts (bug pass).
     if (!this.played) this.devAssisted = devCheating(cheats);
     else if (devCheating(cheats)) this.devAssisted = true;
+  }
+
+  /**
+   * Dev settings › End the round now (M90): the live round's clock (and any overtime) is run out, so the next tick ends
+   * it as on time, by the mode's own rule. The match stays out of the records. False with no live round.
+   */
+  endRoundNow(): boolean {
+    const r = this.state.round;
+    if (r.phase !== 'live') return false;
+    r.clock = 0;
+    r.overtime = this.rounds.flag.maxOvertime;
+    this.devAssisted = true;
+    return true;
   }
 
   /**

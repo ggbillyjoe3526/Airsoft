@@ -5,7 +5,7 @@ import { motionScale, type SoundCueColour, soundCueCss } from './config/accessib
 import type { VolumeChannel } from './config/audio';
 import { type LookSettings, type RetroSettings, retroLookOf } from './config/look';
 import type { Difficulty } from './config/bots';
-import { activeDev, type DevSettings, devCheating } from './config/dev';
+import { activeDev, DEV_ACTION_TEXT, DEV_GIFTS, type DevActionId, type DevSettings, devCheating } from './config/dev';
 import { PERF_SCRIPT } from './config/perfScript';
 import { ROUNDS } from './config/hits';
 import type { MatchRules, RulesetId } from './config/matchRules';
@@ -28,8 +28,9 @@ import { Keyboard } from './input/keyboard';
 import { browserKeyboardMap, watchKeyboardLayout } from './input/keyboardLayout';
 import { PlayerInput } from './input/playerInput';
 import { PointerLock } from './input/pointerLock';
-import { lightingPicked, mapUnderLighting, playsAtNight } from './map/lightingChoice';
+import { lightingPicked, mapUnderLighting, mapUnderPreset, playsAtNight } from './map/lightingChoice';
 import { allMapsLoaded, loadDevMaps, type MapId, mapData } from './map/maps';
+import type { MapData } from './map/mapTypes';
 import { initPhysics } from './physics/physicsWorld';
 import { awayWatch } from './core/awayWatch';
 import { loadBakedLight } from './render/bakedLight';
@@ -63,7 +64,7 @@ import { matchUsesDev, type NewGamePicks, playedPicks, playedTeamSize } from './
 import { collectionOwnership, gameOwnership, LoadoutModel } from './pool/loadoutModel';
 import { carryOverOldPicks } from './pool/oldPicks';
 import { activeSupplyEvent, supplyLine } from './pool/supplyEvents';
-import type { Dispensed, Earnings } from './pool/armory';
+import { type Dispensed, type Earnings, earn } from './pool/armory';
 import { haulSummary, type Unpaid } from './ui/menus/summaryScreen';
 import { loadDevEnabled, loadDevSettings } from './settings/dev';
 import { carryOverDevRetro, loadRetroSettings } from './settings/retroLook';
@@ -424,7 +425,9 @@ export class Game {
           this.loadoutChanged = this.setupChanged = true;
           return reloaded;
         },
-        // Off in the Dev settings: no wallet, and the Armory's buttons are greyed out.
+        // Dev settings › Free case openings (M90).
+        freeShots: () => this.dev.freeShots,
+        // Off in the Dev settings: no wallet, and the Armory is gone from the menus (M83).
         wallet: () => (this.dev.disableArmory ? null : { fc: this.collection.fc, tokens: this.collection.tokens }),
       },
       onPlay: () => {
@@ -547,6 +550,7 @@ export class Game {
         devContent: () => this.dev.devContent,
         devContentUsed: () => this.devContentUsed(this.playedPicks()),
         diagnostics: () => this.diagnostics(),
+        actions: (id) => this.devAction(id),
       },
       save: options.save,
     });
@@ -594,11 +598,18 @@ export class Game {
    */
   private prefetchFieldSounds(): void {
     const id = this.playedPicks().map;
-    const pick = this.lighting[id];
-    const base = mapData(id);
     // The same map object (and so the same soundscape) the match is built with (play).
-    const map = mapUnderLighting(base, pick);
-    this.audio.prefetch(() => soundscapeOf(map, playsAtNight(base, pick)));
+    const map = this.playedMap(id);
+    this.audio.prefetch(() => soundscapeOf(map, playsAtNight(map)));
+  }
+
+  /**
+   * The map a match on `id` is built with: under its Day or Night pick (M34d), or under Dev settings › Time of day
+   * (M90) on any map. The same object for the same choice, so the sounds prefetched and the meshes kept are its.
+   */
+  private playedMap(id: MapId): MapData {
+    const base = mapData(id);
+    return this.dev.timeOfDay === 'map' ? mapUnderLighting(base, this.lighting[id]) : mapUnderPreset(base, this.dev.timeOfDay);
   }
 
   /** The tab hidden or the window's focus lost (M18b, audit CORE-20) stops play, as Esc would; this stops watching. */
@@ -826,6 +837,30 @@ export class Game {
     // plays; the next Play rebuilds the match with it.
     if (this.dev.unlockAllGear !== before.unlockAllGear || this.dev.devContent !== before.devContent) this.loadoutChanged = this.setupChanged = true;
     if (this.dev.devContent !== before.devContent) this.prefetchFieldSounds();
+    // Time of day (M90) changes the light the next match is built under, and its sounds.
+    if (this.dev.timeOfDay !== before.timeOfDay) {
+      this.setupChanged = true;
+      this.prefetchFieldSounds();
+    }
+  }
+
+  /**
+   * A Dev button (M90): gifts go into the collection (another tab's newer save read first, as the Armory does), End the
+   * round now runs the loaded match's clock out (that match then stays out of the records), Reset the save deletes it
+   * (kept for Undo) and reloads. Returns what the button says for a moment.
+   */
+  private devAction(id: DevActionId): string {
+    if (id === 'giveFc' || id === 'giveTokens') {
+      syncCollection(this.collection, GAME_POOL);
+      if (id === 'giveFc') earn(this.collection, DEV_GIFTS.fc);
+      else this.collection.tokens += DEV_GIFTS.tokens;
+      saveOrReload(this.collection, GAME_POOL);
+      this.menus.refresh();
+      return DEV_ACTION_TEXT.done;
+    }
+    if (id === 'endRound') return this.session instanceof MatchSession && this.session.endRoundNow() ? DEV_ACTION_TEXT.done : DEV_ACTION_TEXT.noRound;
+    this.options.save.deleteSave();
+    return DEV_ACTION_TEXT.done;
   }
 
   /**
@@ -940,7 +975,7 @@ export class Game {
       const picks = this.playedPicks();
       this.session = new MatchSession(this.renderer, this.container, this.input, {
         // Under the map's Day or Night pick (M34d): the one lighting path, night sight and glowing BBs follow it.
-        map: mapUnderLighting(mapData(picks.map), this.lighting[picks.map]),
+        map: this.playedMap(picks.map),
         mode: picks.mode,
         difficulty: picks.difficulty,
         teammateDifficulty: picks.teammateDifficulty,

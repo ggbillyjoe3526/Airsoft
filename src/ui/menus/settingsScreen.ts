@@ -86,7 +86,7 @@ export class SettingsScreen {
   private unwatchFullscreen: () => void = () => undefined;
   /** The Graphics group's quality rows. */
   private readonly graphics: GraphicsSettings;
-  /** Asks before Replay tutorial leaves what is being played (Settings opened from the pause menu). */
+  /** Asks before Replay tutorial leaves what is being played (Settings opened from the pause menu), and before Dev › Reset the save. */
   private readonly confirm = new ConfirmDialog();
 
   constructor(private readonly opts: SettingsOptions) {
@@ -364,7 +364,8 @@ export class SettingsScreen {
       panel.append(...this.saveSettings.rows);
       this.saveSettings.acceptDrops(panel);
     } else if (id === 'dev') {
-      panel.append(el('p', 'menu-readout', devIntro()), ...devSettings(opts.dev));
+      // The Dev buttons that ask first (M90: Reset the save) use the screen's pop-up.
+      panel.append(el('p', 'menu-readout', devIntro()), ...devSettings({ ...opts.dev, ask: (title, question, yes, run) => this.confirm.ask(title, question, yes, run) }));
     }
   }
 }

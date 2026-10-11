@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { loadDevEnabled, loadDevSettings } from '../settings/dev';
 import { SETTINGS_KEY, SETTINGS_VERSION } from '../settings/storage';
-import { activeDev, DEV_DEFAULTS, DEV_ENTRIES, devCheating, devIntro } from './dev';
+import { activeDev, DEV_ACTIONS, DEV_DEFAULTS, DEV_ENTRIES, DEV_GIFTS, devCheating, devIntro } from './dev';
 
 /** A Storage holding one saved settings object. */
 function saved(fields: Record<string, unknown>): Storage {
@@ -42,7 +42,9 @@ describe('Dev settings (M24)', () => {
     expect(devCheating({ ...DEV_DEFAULTS, ghost: true })).toBe(true);
     expect(devCheating({ ...DEV_DEFAULTS, bottomlessMags: true })).toBe(true);
     expect(devCheating({ ...DEV_DEFAULTS, gameSpeed: 0.5 })).toBe(true);
-    expect(devIntro()).toBe("For trying things out. With Unlock all gear, Game speed, Bottomless magazines or Ghost changed, matches don't go into your records.");
+    expect(devIntro()).toBe(
+      "For trying things out. With Unlock all gear, Game speed, Bottomless magazines, Ghost, Bots hold fire, Spectate any bot, Bot intentions or Time of day changed, matches don't go into your records.",
+    );
   });
 
   describe('Dev content (M35)', () => {
@@ -95,5 +97,39 @@ describe('Retro pixels left the Dev tab (M96)', () => {
     expect(Object.keys(DEV_DEFAULTS).filter((id) => /retro/i.test(id))).toEqual([]);
     // An old save's dev.retro* fields are left alone here (the Look tab reads them once) and change no Dev value.
     expect(loadDevSettings(saved({ 'dev.retroPixels': 'on', 'dev.retroPixelSize': 8, 'dev.retroColours': 3 }))).toEqual(DEV_DEFAULTS);
+  });
+});
+
+describe('more Dev settings for playtesting (M90)', () => {
+  const row = (id: string) => DEV_ENTRIES.find((e) => e.id === id)!;
+
+  it('adds Bots hold fire, Spectate any bot, Bot intentions and Time of day as cheats, Free case openings not', () => {
+    for (const id of ['botsHoldFire', 'spectateBots', 'botIntent', 'timeOfDay']) expect(row(id).cheat, id).toBe(true);
+    expect(row('freeShots')).toMatchObject({ kind: 'switch', label: 'Free case openings', cheat: false });
+    expect(DEV_DEFAULTS).toMatchObject({ botsHoldFire: false, spectateBots: false, botIntent: false, timeOfDay: 'map', freeShots: false });
+    for (const [id, v] of [['botsHoldFire', true], ['spectateBots', true], ['botIntent', true], ['timeOfDay', 'night']] as const) {
+      expect(devCheating({ ...DEV_DEFAULTS, [id]: v }), id).toBe(true);
+    }
+    expect(devCheating({ ...DEV_DEFAULTS, freeShots: true })).toBe(false);
+  });
+
+  it("offers Time of day as the map's own, Day or Night, saved as dev.timeOfDay; junk reads as the map's own", () => {
+    const t = row('timeOfDay');
+    if (t.kind !== 'choice') throw new Error('expected a choice');
+    expect(t.choices.map((c) => c.id)).toEqual(['map', 'day', 'night']);
+    expect(loadDevSettings(saved({ 'dev.timeOfDay': 'night' })).timeOfDay).toBe('night');
+    expect(loadDevSettings(saved({ 'dev.timeOfDay': 'day' })).timeOfDay).toBe('day');
+    expect(loadDevSettings(saved({ 'dev.timeOfDay': 'dusk' })).timeOfDay).toBe('map');
+    expect(loadDevSettings(saved({ 'dev.botsHoldFire': 'on', 'dev.freeShots': 'on' }))).toEqual({ ...DEV_DEFAULTS, botsHoldFire: true, freeShots: true });
+  });
+
+  it('has buttons to give FC and Tokens, end the round now and reset the save (that one asks first), saving nothing', () => {
+    expect(DEV_ACTIONS.map((a) => a.id)).toEqual(['giveFc', 'giveTokens', 'endRound', 'resetSave']);
+    expect(DEV_GIFTS.fc).toBeGreaterThanOrEqual(1000);
+    expect(DEV_GIFTS.tokens).toBeGreaterThanOrEqual(10);
+    expect(DEV_ACTIONS.find((a) => a.id === 'giveFc')!.button).toBe('+1,000 FC');
+    expect(DEV_ACTIONS.filter((a) => a.confirm).map((a) => a.id)).toEqual(['resetSave']);
+    expect(DEV_ACTIONS.find((a) => a.id === 'endRound')!.help).toMatch(/records/);
+    for (const a of DEV_ACTIONS) expect(Object.keys(DEV_DEFAULTS), a.id).not.toContain(a.id);
   });
 });

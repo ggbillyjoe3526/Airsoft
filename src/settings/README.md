@@ -4,7 +4,7 @@ The player's saved settings: one versioned object in the browser, plus the Dev s
 
 - `storage.ts`: `airsoft.settings` (`SETTINGS_VERSION`), `loadSetting`, `saveSetting`, `saveSettingSoon`,
   `flushSettings`, `migrate`. `browserStorage()` is the save system's guarded storage once it has started.
-- `dev.ts`: the Dev settings' values as `dev.<id>` (a switch is `'on'` / `'off'`), read back as `DevSettings`.
+- `dev.ts`: the Dev settings' values as `dev.<id>` (a switch is `'on'` / `'off'`, a choice its option's id), read back as `DevSettings`.
   `Game.dev` holds what applies (the defaults while the Dev settings box is unticked).
 - `retroLook.ts`: Settings › Look › Retro look (M96) as `retroLook`, `retroPixelSize`, `retroColours`; a save from
   before reads the Dev tab's old `dev.retro*` keys, written under the new names once (`carryOverDevRetro`).
