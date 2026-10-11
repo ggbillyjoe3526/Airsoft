@@ -7,6 +7,7 @@ import type { PostSetup } from '../post/postStack';
 import type { EnvironmentLook } from '../replicaSheen';
 import type { DrawStats } from '../rendererParts';
 import { followSwappedBuffers } from './compute/computeKit';
+import { deferUniformFrees } from './deferredFrees';
 import { GpuDressing } from './compute/gpuDressing';
 import { ParticleTwins } from './compute/particleTwins';
 import { NightLighting } from './nightLights';
@@ -81,6 +82,8 @@ export class NodeBackend {
   private readonly output = new DirectOutput();
   /** The warm-up compiles under way, which the stacks' and retro filters' frees wait for (W4). */
   private readonly compiles = new CompileGate();
+  /** Uniform buffers Three freed during the frame, destroyed once it is submitted (W6a, deferredFrees.ts). */
+  private readonly frees: { flush(): void };
 
   private constructor(
     readonly renderer: WebGPURenderer,
@@ -89,6 +92,7 @@ export class NodeBackend {
     this.kind = (renderer.backend as { isWebGLBackend?: boolean }).isWebGLBackend ? 'webgl' : 'webgpu';
     this.timestamps = renderer.hasFeature('timestamp-query');
     followSwappedBuffers(renderer);
+    this.frees = deferUniformFrees(renderer);
     this.particles = new ParticleTwins(renderer);
     this.world = new WorldTwins(renderer, this.particles.claims);
     this.dressing = new GpuDressing(renderer, this.kind === 'webgpu');
@@ -247,10 +251,12 @@ export class NodeBackend {
   }
 
   /**
-   * After each frame's draws: every `RENDER_BACKEND.timestampEvery` frames, while timing, reads the GPU time of the last
-   * frame whose timestamps are in (one read on its way at a time, never waited for).
+   * After each frame's draws: the uniform buffers Three freed during the frame are destroyed (W6a), and every
+   * `RENDER_BACKEND.timestampEvery` frames, while timing, the GPU time of the last frame whose timestamps are in is
+   * read (one read on its way at a time, never waited for).
    */
   frameDone(): void {
+    this.frees.flush();
     if (!this.timing || this.reading || !this.timestamps || this.lost) return;
     if (++this.sinceRead < RENDER_BACKEND.timestampEvery) return;
     this.sinceRead = 0;
@@ -292,6 +298,7 @@ export class NodeBackend {
     this.world.dispose();
     this.lighting?.dispose();
     this.output.dispose();
+    this.frees.flush();
     this.renderer.dispose().catch(ignore);
   }
 

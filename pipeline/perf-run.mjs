@@ -181,7 +181,9 @@ async function measure(preset) {
     await page.close();
     throw new Error(`the game does not offer map "${gameMap}" in ${options.mode} (map/maps.ts MAPS, map/playableMode.ts)`);
   }
-  await setup.getByRole('button', { name: 'Start match', exact: true }).click();
+  // The click waits for the menu's page to answer: on a software WebGL2 adapter the menu's item pictures and the
+  // match's warm-up compile hold it for 20 s and more (W6a), past Playwright's 30 s default on a slow run.
+  await setup.getByRole('button', { name: 'Start match', exact: true }).click({ timeout: 120_000 });
   await page.waitForFunction((t) => globalThis.airsoft?.state && globalThis.airsoft.state.tick >= t, options.warmupTicks, { timeout: 120_000 });
   const backend = await page.evaluate(() => globalThis.airsoft.renderer.backend);
   console.log(`perf: match running (map ${options.map}, mode ${options.mode}, env ${options.env}, preset ${preset}, cpu ×${options.cpu}, drawn with ${backend}); measuring ${ticks} ticks from tick ${options.warmupTicks}`);

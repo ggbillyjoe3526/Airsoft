@@ -220,7 +220,9 @@ async function draw(scene, views, quality, renderer, withPost, dressing = false)
   const setup = page.locator('.menu-setup');
   await setup.locator('.map-cards .choice-card.selected').waitFor({ timeout: 60_000 });
   await page.waitForFunction((map) => document.querySelector('.menu-setup .play-map-line')?.textContent?.toLowerCase().replace(/\s/g, '').startsWith(map.toLowerCase()), scene.map, { timeout: 60_000 });
-  await setup.getByRole('button', { name: 'Start match', exact: true }).click();
+  // The click waits for the menu's page to answer: on a software WebGL2 adapter the menu's item pictures and the
+  // match's warm-up compile hold it for 20 s and more (W6a), past Playwright's 30 s default on a slow run.
+  await setup.getByRole('button', { name: 'Start match', exact: true }).click({ timeout: 120_000 });
   await page.waitForFunction(() => globalThis.airsoft?.state && globalThis.airsoft.state.tick > 5, null, { timeout: 180_000 });
   // The simulation held still: the figures stay at their starts and nobody fires; the effects keep drawing.
   await page.evaluate(() => {
