@@ -628,7 +628,10 @@ export function moveBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number, tar
         cmd.crouch = b.routeState === 'none' && b.coverPhase === 'down';
         return false;
       }
-      return b.routeState === 'none' && stepOnto(b, w, b.cover.position, cmd, dt);
+      // A teammate on its way round the same corner (a route rounds a corner just where a lean spot stands): it lets
+      // keepApart walk it aside rather than stepping straight back onto the spot, and steps back once they have passed
+      // (audit AI-01; the spacing guard's seed 1 after M87: a teammate pinned against the wall inside it).
+      return b.routeState === 'none' && !teammatePassing(b, w) && stepOnto(b, w, b.cover.position, cmd, dt);
     }
     case 'order':
       return moveOrder(b, w, cmd, dt);
@@ -680,6 +683,25 @@ function atPole(b: Bot, w: BotWorld): boolean {
   const p = b.character.position;
   const pole = w.round.flag.position;
   return Math.hypot(p.x - pole.x, p.z - pole.z) <= FLAG.radius;
+}
+
+/**
+ * True if a teammate walking past (moving faster than stuckSpeed) is within separationDistance of `b` on about its
+ * floor, where keepApart pushes them apart. Someone standing close (a teammate holding the next spot) doesn't count, so
+ * a bot never leaves its angle for them.
+ */
+function teammatePassing(b: Bot, w: BotWorld): boolean {
+  const me = b.character;
+  for (const c of w.characters) {
+    if (c !== me && Math.hypot(c.velocity.x, c.velocity.z) > w.cfg.stuckSpeed && near(me, c, w)) return true;
+  }
+  return false;
+}
+
+/** A teammate in play within separationDistance of `me` on about its floor. */
+function near(me: Character, o: Character, w: BotWorld): boolean {
+  if (o.team !== me.team || !isInPlay(o) || Math.abs(o.position.y - me.position.y) > w.body.height) return false;
+  return Math.hypot(me.position.x - o.position.x, me.position.z - o.position.z) < w.cfg.separationDistance;
 }
 
 /**

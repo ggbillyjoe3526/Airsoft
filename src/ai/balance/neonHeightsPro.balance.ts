@@ -26,6 +26,8 @@ describe('a 4v4 Elimination match on Neon Heights, both teams on Pro (M40)', () 
     // M73 (audit BAL-04, owner decision 6: the east's last mid-lane holds inside the bar's door line): 42.2 % (73 of
     // 173), 3 of 176 on time; with a planter on the avenue as well 44.5 % (81 of 182), within noise of it, so no planter.
     // M87 (2026-10-11, hunting bots check by eye and share it): 48.6 % (88 of 181), none on time; 50.0 % just before.
+    // M87 lean-spot yield (2026-10-11: a bot at a lean spot walks aside for a teammate walking past):
+    // 47.0 % (93 of 198), 1 of 199 on time; 46.6 % (89 of 191) just before, after the M88 merge of main.
     reportTally(ctx, 'Neon Heights by Day, Pro, Elimination', tallyBalance(32, 300, botConfig('pro'), 'elimination', DAY, TEAM_SIZE), 'elimination');
   });
 });

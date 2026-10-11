@@ -23,6 +23,8 @@ describe('a 5v5 Attack / Defend match on Woodland below Pro (Audit 2 BAL-02)', (
   // M87 (2026-10-11, hunting bots check by eye and share it), then M88 QA (one lane point fewer a lane in the fort):
   // 57.4 % (35 of 61) both times, none on time. Nobody hunts in Attack / Defend, the attackers leave their lanes at the
   // middle and the defenders hold the last two points, which stayed.
+  // M87 lean-spot yield (2026-10-11: a bot at a lean spot walks aside for a teammate walking past):
+  // 52.5 % (32 of 61), none on time; 51.9 % (28 of 54) just before, after the M88 merge of main.
   it('Normal: measures the attackers\' share of rounds (target 35-65 %) and the rounds that run out the clock', { timeout: 300_000 }, (ctx) => {
     reportTally(ctx, 'Woodland, Normal, Attack / Defend', tallyBalance(SEEDS, SECONDS, botConfig('normal'), 'attackDefend', WOODLAND, TEAM_SIZE), 'attackDefend', LEVELS_BAND);
   });
@@ -31,6 +33,8 @@ describe('a 5v5 Attack / Defend match on Woodland below Pro (Audit 2 BAL-02)', (
   // within 40 m 28.3 % (15 of 53), 23.6 % without keepsDark; without torches 45.2 %. As shipped (no habits, no torches)
   // the audit read 76 % on seeds 1-4. M88 (5v5, the West Rise): 50.0 % (29 of 58); 56.1 % (32 of 57) just before, at 4v4.
   // M87 (2026-10-11, both as for Normal): 50.0 % (29 of 58) both times, none on time.
+  // M87 lean-spot yield (2026-10-11: a bot at a lean spot walks aside for a teammate walking past):
+  // 57.6 % (34 of 59), none on time; 60.0 % (36 of 60) just before, after the M88 merge of main.
   it('Hard: measures the attackers\' share of rounds (target 35-65 %) and the rounds that run out the clock', { timeout: 300_000 }, (ctx) => {
     reportTally(ctx, 'Woodland, Hard, Attack / Defend', tallyBalance(SEEDS, SECONDS, botConfig('hard'), 'attackDefend', WOODLAND, TEAM_SIZE), 'attackDefend', LEVELS_BAND);
   });

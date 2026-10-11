@@ -18,6 +18,8 @@ describe('a 3v3 Elimination match on Depot, both teams on Pro (M40)', () => {
     // Re-measure after any bot or layout change. M71 (Audit 2: bots step aside when pressed together;
     // Pro's habits unchanged): 49.5 % (108 of 218), none on time.
     // M87 (2026-10-11, hunting bots check by eye and share it): 51.1 % (117 of 229), none on time; 44.7 % just before.
+    // M87 lean-spot yield (2026-10-11: a bot at a lean spot walks aside for a teammate walking past):
+    // 51.1 % (118 of 231), none on time; 47.9 % (113 of 236) just before, after the M88 merge of main.
     reportTally(ctx, 'Depot, Pro, Elimination', tallyBalance(32, 300, botConfig('pro'), 'elimination', DEPOT, ROUNDS.teamSize), 'elimination');
   });
 });

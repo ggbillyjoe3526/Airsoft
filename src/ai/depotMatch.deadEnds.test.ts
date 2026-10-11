@@ -27,7 +27,12 @@ const LOOK_ABOVE = 0.5;
 /** A visit: a hunting bot that stays this long (s) within VISIT_RADIUS (m) of where it stepped into a dead end. */
 const VISIT_TIME = 1;
 const VISIT_RADIUS = 2;
-const SEEDS = 6;
+/**
+ * Seeds per map. Neon Heights' hunters seldom stopped in a dead end even before M87: after the lean-spot yield
+ * (2026-10-11, botMovement teammatePassing) seeds 1-6 read 0 against 0, seeds 1-16 7 against 1 (Depot 20 against 1).
+ */
+const DEPOT_SEEDS = 6;
+const NEON_SEEDS = 16;
 const SECONDS = 200;
 
 /** Before M87: no checking by eye, and what the team checked stays checked. */
@@ -62,12 +67,12 @@ function deadEnds(g: NavGrid): Uint8Array {
   return out;
 }
 
-/** Dead-end visits by hunting bots over SEEDS matches. */
-function visits(map: MapData, teamSize: number, cfg: BotConfig): number {
+/** Dead-end visits by hunting bots over `seeds` matches. */
+function visits(map: MapData, teamSize: number, seeds: number, cfg: BotConfig): number {
   const nav = buildNavGrid(map, NAV);
   const dead = deadEnds(nav);
   let count = 0;
-  for (let seed = 1; seed <= SEEDS; seed++) {
+  for (let seed = 1; seed <= seeds; seed++) {
     const entered = new Map<number, { t: number; x: number; z: number; counted: boolean }>();
     playMatch(SECONDS, seed, undefined, cfg, 'elimination', ROUNDS, map, teamSize, HITS, (state, controller) => {
       for (const b of controller.bots) {
@@ -95,11 +100,11 @@ describe('hunting bots skip what their team has seen empty (M87, playtest notes 
   });
 
   it.each([
-    ['Depot', DEPOT, 3],
-    ['Neon Heights', NEON_HEIGHTS, 4],
-  ] as const)('on %s, hunting bots stop in dead ends less often than before M87', { timeout: 120_000 }, (_name, map, size) => {
-    const before = visits(map, size, BEFORE);
-    const now = visits(map, size, BOTS);
+    ['Depot', DEPOT, 3, DEPOT_SEEDS],
+    ['Neon Heights', NEON_HEIGHTS, 4, NEON_SEEDS],
+  ] as const)('on %s, hunting bots stop in dead ends less often than before M87', { timeout: 240_000 }, (_name, map, size, seeds) => {
+    const before = visits(map, size, seeds, BEFORE);
+    const now = visits(map, size, seeds, BOTS);
     // The measure is not blind: before M87 they did stop in dead ends.
     expect(before).toBeGreaterThan(0);
     expect(now).toBeLessThan(before);

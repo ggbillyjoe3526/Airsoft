@@ -36,6 +36,9 @@ describe('a 5v5 Attack / Defend match on Woodland, both teams on Pro (M40)', () 
     // M87 (2026-10-11, hunting bots check by eye and share it): 55.7 % (68 of 122), none on time: nobody hunts here.
     // M88 QA (one lane point fewer a lane in the fort, woodlandLevels.balance.ts): 54.9 % (67 of 122), none on time;
     // seeds 17-32 51.6 % (64 of 124), none on time, so 53.3 % over 32 seeds.
+    // M87 lean-spot yield (2026-10-11: a bot at a lean spot walks aside for a teammate walking past):
+    // 61.3 % (76 of 124), none on time; seeds 17-32 53.4 % (63 of 118), so 57.4 % over 32 seeds. Just before, after the
+    // M88 merge of main: 63.6 % (75 of 118) and 55.9 % (66 of 118), 59.7 % over 32 seeds.
     reportTally(ctx, 'Woodland, Pro, Attack / Defend', tallyBalance(16, SECONDS, botConfig('pro'), 'attackDefend', WOODLAND, TEAM_SIZE), 'attackDefend');
   });
 });
