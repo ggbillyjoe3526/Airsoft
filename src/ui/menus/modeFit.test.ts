@@ -117,3 +117,25 @@ describe('M89: the Match section shows only what fits the mode', () => {
     }
   });
 });
+
+describe('M89: a saved pick that does not fit, and difficulty left alone', () => {
+  it('plays a saved Tournament or Pro CQB pick as Skirmish in Extraction, and as itself in Elimination', () => {
+    const map = MAPS.find((m) => mapData(m.id).extraction)!;
+    for (const ruleset of ['tournament', 'proCqb'] as const) {
+      const base = { map: map.id, difficulty: 'normal', teammateDifficulty: 'normal', ruleset, rules: { ...DEFAULT_MATCH_RULES } } as const;
+      expect(playedPicks({ ...base, mode: 'extraction' }, true).ruleset).toBe('skirmish');
+      expect(playedPicks({ ...base, mode: 'elimination' }, true).ruleset).toBe(ruleset);
+    }
+  });
+
+  it('leaves the bot and teammate difficulty as picked in every mode and ruleset', () => {
+    const map = MAPS.find((m) => mapData(m.id).extraction)!;
+    for (const mode of MATCH_MODES)
+      for (const ruleset of RULESETS)
+        for (const difficulty of ['easy', 'hard', 'pro'] as const) {
+          const played = playedPicks({ map: map.id, mode: mode.id, difficulty, teammateDifficulty: difficulty, ruleset: ruleset.id, rules: { ...DEFAULT_MATCH_RULES } }, true);
+          expect(played.difficulty, `${mode.id} ${ruleset.id}`).toBe(difficulty);
+          expect(played.teammateDifficulty, `${mode.id} ${ruleset.id}`).toBe(difficulty);
+        }
+  });
+});

@@ -95,6 +95,18 @@ describe('every settings row keeps its saved key (G3, criterion 8)', () => {
     expect(savedKeys(rows)).toEqual(['volume.ambience', 'volume.effects', 'volume.interface', 'volume.master']);
   });
 
+  it('shows four sliders in order Master, Effects, Ambience, Interface, labelled "Ambience volume" third (M86)', () => {
+    const rows = audioSettings({ initial: { master: 1, effects: 1, ambience: 1, interface: 1 } as never, onChange: () => {} }) as unknown as FakeElement[];
+    expect(rows).toHaveLength(4);
+    const heads = rows.map((r) => r.text);
+    expect(heads[2]).toContain('Ambience volume');
+    expect(heads[0]).toContain('Master volume');
+    expect(heads[1]).toContain('Effects volume');
+    expect(heads[3]).toContain('Interface volume');
+    expect(savedKeys(rows)).toHaveLength(4);
+    expect(walk(rows[2]!).filter((n) => n.tag === 'input')).toHaveLength(1);
+  });
+
   it('saves the Look rows as robots and realisticColours', () => {
     const rows = lookSettings({ initial: DEFAULT_LOOK, onChange: () => {} }) as unknown as FakeElement[];
     expect(savedKeys(rows)).toEqual(['realisticColours', 'robots']);
