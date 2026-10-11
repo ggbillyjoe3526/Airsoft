@@ -62,6 +62,7 @@ import {
   postViewsOf,
   sceneViews,
   scorePixels,
+  judgedBy,
   verdict,
   W5_QUALITIES,
   W5_SCENES,
@@ -153,17 +154,18 @@ try {
           const a = left.frames[keyOf(view)];
           const b = right.frames[keyOf(view)];
           const scored = await compare(a.plain, b.plain, `${scene.map} ${scene.light}, ${quality}, ${view.post ? 'post ' : ''}${view.name}`, backend);
-          const v = verdict(scored.score);
+          const judged = judgedBy(backend, view.name, view.post);
+          const v = verdict(scored.score, COMPARE_BAR, judged);
           // W5: the node path draws no more than WebGL on every compared view (its compute dressing switched off).
           if (b.calls > a.calls) v.fails.push(`${b.calls} draws > WebGL's ${a.calls}`);
           v.pass = v.fails.length === 0;
           if (!v.pass) failed = true;
           const file = pairFile(scene, quality, view.name, backend, view.post);
           writeFileSync(join(OUT, file), scored.jpeg);
-          const entry = { map: scene.map, light: scene.light, quality, view: view.name, post: view.post, backend, file, ...round(scored.score), pass: v.pass, fails: v.fails, draws: { webgl: a.calls, node: b.calls } };
+          const entry = { map: scene.map, light: scene.light, quality, view: view.name, post: view.post, backend, file, ...round(scored.score), judged, pass: v.pass, fails: v.fails, draws: { webgl: a.calls, node: b.calls } };
           if (full && a.post) entry.withPost = round((await compare(a.post, b.plain, 'post', backend)).score);
           results.push(entry);
-          const tag = v.pass ? 'pass' : `FAIL (${v.fails.join('; ')})`;
+          const tag = v.pass ? (judged === 'bar' ? 'pass' : `pass (judged ${judged === 'eye' ? 'by eye' : 'on pixel share'})`) : `FAIL (${v.fails.join('; ')})`;
           console.log(`webgpu-compare: ${file}  mad ${entry.mad}  over ${(entry.over * 100).toFixed(2)} %  draws ${a.calls}/${b.calls}  ${tag}${entry.withPost ? `  (with WebGL's post: mad ${entry.withPost.mad}, over ${(entry.withPost.over * 100).toFixed(2)} %)` : ''}`);
         }
       }

@@ -22,6 +22,7 @@ import {
   postBase,
   sceneViews,
   scorePixels,
+  judgedBy,
   verdict,
   W5_QUALITIES,
   W5_SCENES,
@@ -76,6 +77,18 @@ describe('the WebGPU world-materials comparison (W2)', () => {
     expect(verdict({ mad: 0.3, over: 0.008 }).pass).toBe(true);
     expect(verdict({ mad: 0.3, over: 0.012 }).fails).toEqual(['1.20 % of pixels over 24 > 1.0 %']);
     expect(verdict({ mad: Number.NaN, over: 0 }).pass).toBe(false);
+  });
+
+  it('judges the software WebGPU adapter on pixel share only, and its retro views by eye (DECISIONS W3, W4)', () => {
+    expect(judgedBy('webgl', 'retro', true)).toBe('bar');
+    expect(judgedBy('webgpu', 'figures-near')).toBe('share');
+    expect(judgedBy('webgpu', 'ground', true)).toBe('share');
+    expect(judgedBy('webgpu', 'retro', true)).toBe('eye');
+    // Depot day Medium, figures near on WebGPU (W6a's run): over the mean, inside the share.
+    expect(verdict({ mad: 0.624, over: 0.0021 }, undefined, 'share').pass).toBe(true);
+    expect(verdict({ mad: 0.624, over: 0.0021 }).pass).toBe(false);
+    expect(verdict({ mad: 0.2, over: 0.012 }, undefined, 'share').fails).toEqual(['1.20 % of pixels over 24 > 1.0 %']);
+    expect(verdict({ mad: 9, over: 0.5 }, undefined, 'eye')).toEqual({ pass: true, fails: [] });
   });
 
   it('names each pair\'s picture by map, light, preset and view', () => {

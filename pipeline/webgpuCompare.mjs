@@ -169,10 +169,22 @@ export function scorePixels(a, b, threshold) {
   return { madRgb: [mr, mg, mb], mad: (mr + mg + mb) / 3, over: over / d };
 }
 
-/** Whether a pair's score passes the bar, and if not why. */
-export function verdict(score, bar = COMPARE_BAR) {
+/**
+ * How a pair is judged (owner's rulings, DECISIONS 2026-10-09 W3 and 2026-10-10 W4). This tool's WebGPU device is always
+ * SwiftShader's software adapter, whose noise differs from its WebGL's: its pairs are judged on the pixel share only
+ * (`share`), and its retro filter views by eye (`eye`: the 8-colour palette turns sub-pixel noise into whole steps; the
+ * pair is saved and scored but cannot fail). Everything else holds the whole bar (`bar`).
+ */
+export function judgedBy(backend, view, post = false) {
+  if (backend !== 'webgpu') return 'bar';
+  return post && view === 'retro' ? 'eye' : 'share';
+}
+
+/** Whether a pair's score passes the bar under `judged` (judgedBy), and if not why. */
+export function verdict(score, bar = COMPARE_BAR, judged = 'bar') {
   const fails = [];
-  if (!(score.mad <= bar.mad)) fails.push(`mean difference ${score.mad.toFixed(2)} > ${bar.mad}`);
+  if (judged === 'eye') return { pass: true, fails };
+  if (judged === 'bar' && !(score.mad <= bar.mad)) fails.push(`mean difference ${score.mad.toFixed(2)} > ${bar.mad}`);
   if (!(score.over <= bar.over)) fails.push(`${(score.over * 100).toFixed(2)} % of pixels over ${bar.threshold} > ${(bar.over * 100).toFixed(1)} %`);
   return { pass: fails.length === 0, fails };
 }

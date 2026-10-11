@@ -184,7 +184,8 @@ sRGB; no bloom, AO or other pass), so what is compared is the materials. Each pa
 Since W6a the game has no WebGL path, so the WebGL side is the last commit that had one (`WEBGL_REFERENCE`, b10c006):
 the tool checks it out once as a git worktree in the system's temporary folder (with this clone's `node_modules`
 linked), builds it with `build-cached` and serves it on the next port. `--backend webgl` names the node renderer's
-WebGL2 back end (`?forceWebGL`), `webgpu` the WebGPU device, `all` both; `--noise` draws the reference against itself.
+WebGL2 back end (`?forceWebGL`), `webgpu` the WebGPU device, `all` both; `--noise` draws the reference against itself. A WebGPU pair here is SwiftShader's software adapter, so it is judged on the pixel
+share only and its retro views by eye (owner's rulings, W3 and W4; `judgedBy`), each entry recording `judged`.
 
 W3 adds views with the figures drawn (`FIGURE_VIEWS`): first person on each map, everyone stood in rows near and far
 in each state (alive, calling a hit, out, leaving) by day and night, and a torch beam at night (yours and a
