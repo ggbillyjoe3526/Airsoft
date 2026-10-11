@@ -85,17 +85,6 @@ acceptance:
 status: open
 attempts: 0
 
-## M86 · More varied ambience and an Ambience volume (playtest note 14)
-tier: ui
-perf: skip
-touches: src/audio/, src/config/audio.ts, src/config/sounds.ts, src/ui/audioSettings.ts, docs/PLAYTEST.md
-contract: none
-acceptance:
-  1. Each map's ambience has more variety (layers and one-off sounds at random gaps), kept quiet enough not to mask footsteps.
-  2. Audio settings get an "Ambience volume" slider; field ambience no longer sits only under Effects.
-status: open
-attempts: 0
-
 ## M87 · Bots stop clearing empty corners (playtest notes 15, 19)
 tier: core
 perf: required
@@ -116,17 +105,6 @@ acceptance:
   1. Neither team can see the other from its start: cover (a building, thick trees or a rise) hides each spawn.
   2. The blue end's height edge at the start is reduced; Elimination and Attack / Defend stay within 35–65 % per end on Normal.
   3. Owner's ruling (2026-10-06): Woodland takes the team sizes of note 13: 5v5 by default, 6v6 allowed, and only 5v5 and 6v6 offered there. Low holds its frame budget at 6v6.
-status: open
-attempts: 0
-
-## M89 · Modes and match settings fit together (playtest note 18)
-tier: ui
-perf: skip
-touches: src/config/modes.ts, src/config/matchRules.ts, src/map/playableMode.ts, src/ui/menus/setupScreen.ts, src/ui/menus/matchPanel.ts, src/ui/menus/playView.ts, src/newGamePicks.ts
-contract: none
-acceptance:
-  1. A table of every mode against every match setting and rule set says which fit; the ones that don't (Tournament rules in Extraction, for example) are hidden for that mode.
-  2. A test walks every mode and checks that no hidden setting can be picked.
 status: open
 attempts: 0
 
