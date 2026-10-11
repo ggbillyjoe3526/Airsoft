@@ -35,6 +35,11 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **W5** · On WebGPU at Medium and up, Woodland's meadows grow swaying grass and a deep wood stands beyond the fence
 - **M86** · Rare, distant background sounds: a crow and a dog at Depot and the range, a creak in Woodland at night, pigeons and a car horn on Neon Heights
 - **M84** · Iron sights on every replica: right click lines the view up with the sights when no optic is fitted; a red dot or scope sits on top
+- **M96** · Retro look goes public: Settings › Look offers Retro, and a Retro choice saved in Dev settings carries over
+- **M83** · Skip to next round from the spectator camera while you are out: the rest of the round plays out at once
+- **M83** · A minimap setting: Fixed (north up) or Rotating
+- **M90** · More hidden Dev settings for playtesting, starting with Field Credits and Tokens on demand
+- **M97** · Replay tutorial button in Settings starts the tutorial at once, whether or not you finished it
 
 ### Changed
 - **M71** · Bots hunt the map's middle once their lane is swept (now all levels, not just Pro); Normal and Hard hold their posts out of lantern light at night (#133)
@@ -77,6 +82,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M89** · Match settings fit the mode: no Tournament or Pro CQB in Extraction (a saved pick plays as Skirmish), no Time-out in Attack and Defend
 - **M89** · A setting hidden for a mode no longer changes the match or keeps an Extraction run out of your records
 - **M84** · Aimed fire is twice as tight as hip fire; holding Shift while aiming creeps slower than the aiming pace
+- **M97** · Hit marker setting, Off by default: the red X when your BB lands shows only when On; the hit tick sound is unchanged
+- **M83** · With Disable Armory on in Dev settings, the Armory is hidden from every menu and the tutorial instead of greyed out
 
 ### Fixed
 - **G11** · The team camo on players reads clearly on Medium and up: crisp dark and light blotches printed per pixel, on WebGL and WebGPU; Low keeps plain clothes
