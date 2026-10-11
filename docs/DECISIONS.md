@@ -190,6 +190,12 @@ replaces its line; the old one stays findable in the archive or in git.
   and all other models in the future but this will be later").** Figures, replicas and every other model; not in Dev 5
   or Dev 6, no build planned yet; it widens the Blender art pass the owner placed in 0.3 on 2026-10-05
   (`docs/ROADMAP.md` › 0.3: The armoury and the rules).
+- **The Blender models are locked behind the Dev tab, and the game draws its code-built models by default (owner,
+  2026-10-11: "I'm not happy with the quality of figure models so blender models should be locked in dev settings").**
+  Two Dev switches, both on by default (RM4, `config/dev.ts`): "Disable figure models" keeps the built-in figures and
+  "Disable all models" keeps every built-in model (replicas, parts, figures, the menus' battery and gas pictures).
+  With "Disable all models" off the Blender replicas, parts and power-source pictures return; the figure model then
+  still needs "Disable figure models" off. The files stay in the build and are fetched only when let in.
 
 ## Gameplay and feel
 

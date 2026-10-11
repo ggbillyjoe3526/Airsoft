@@ -56,6 +56,10 @@ src/assets/models/props/                  props (planned: not created or wired u
 src/assets/textures/                      loose surface textures (planned: not created or wired up yet)
 ```
 
+Every model file here is locked behind the Dev tab (RM4, owner 2026-10-11): the game draws its built-in models until
+"Disable all models" is turned off there, and the figure model also needs "Disable figure models" off. To see a file
+you add, tick "Dev settings" under the Settings tabs and turn those switches off.
+
 ### The figure model
 
 The loader is `src/render/externalModels.ts`; its settings are in `src/config/assets.ts`.

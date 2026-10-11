@@ -15,6 +15,8 @@ import { el } from './menuParts';
 /** What draws the pictures: the game's ItemPictures, or nothing (the unit tests; the placeholders stay). */
 export interface PictureSource {
   picture(subject: ItemSubject): Promise<string>;
+  /** Changes when the pictures are drawn from other models (ItemPictures.forget): a slot then asks again. */
+  readonly generation?: number;
 }
 
 /** The parts a kit slot has fitted, as a picture fits them. */
@@ -84,7 +86,7 @@ export class PictureSlot {
 
   /** Shows `subject`'s picture once it is drawn (the drawing `icon` till then, and for good with no subject or source). */
   show(source: PictureSource | null, subject: ItemSubject | null, icon: string): void {
-    const key = subject ? pictureKey(subject) : `icon:${icon}`;
+    const key = subject ? `${source?.generation ?? 0}|${pictureKey(subject)}` : `icon:${icon}`;
     if (key === this.key) return;
     this.key = key;
     if (this.placeholder.innerHTML !== icon) this.placeholder.innerHTML = icon;
