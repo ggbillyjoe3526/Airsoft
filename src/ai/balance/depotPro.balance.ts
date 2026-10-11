@@ -17,6 +17,7 @@ describe('a 3v3 Elimination match on Depot, both teams on Pro (M40)', () => {
     // Before M40's changes: 47 % (91 of 192), mean round 39 s. Hard on the same seeds: 51 % (102 of 201), none on time.
     // Re-measure after any bot or layout change. M71 (Audit 2: bots step aside when pressed together;
     // Pro's habits unchanged): 49.5 % (108 of 218), none on time.
+    // M87 (2026-10-11, hunting bots check by eye and share it): 51.1 % (117 of 229), none on time; 44.7 % just before.
     reportTally(ctx, 'Depot, Pro, Elimination', tallyBalance(32, 300, botConfig('pro'), 'elimination', DEPOT, ROUNDS.teamSize), 'elimination');
   });
 });

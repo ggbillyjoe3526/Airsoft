@@ -23,12 +23,14 @@ import { RunRoles } from './extractionRoles';
 import { type Bot, type BotWorld, createBot, lastSeenAt, pick, resetBot } from './bot';
 import { thinkBot } from './botBrain';
 import type { CoverBlock } from './cover';
-import { bodyPoint, eyeOf, OPEN_SIGHT, type SightConditions } from './perception';
+import { bodyPoint, eyeOf, OPEN_SIGHT, type SightConditions, seesSpot } from './perception';
 import { endOrder, heldCentre, holdPoint, placeHold, startOrder } from './squadOrders';
 import { assignLanes, pickTeamPlan, shuffledLanes, type TeamPlan } from './teamPlan';
 
 /** Score of a sector nobody has visited this round: older than any real visit. */
 const NEVER = -1e6;
+/** A hunt candidate, while huntPoint weighs it. */
+const candidate = vec3();
 
 export interface BotControllerOptions {
   query: WorldQuery;
@@ -62,7 +64,7 @@ export interface BotControllerOptions {
  * Runs every bot: before each simulation tick it writes each bot's PlayerCommand (bots are just
  * another controller); after each tick it lets bots hear what happened (gunfire, near misses,
  * teammates being hit). Route searches are rationed per tick and handed out round-robin. It also
- * remembers, per team, when each part of the map was last visited, so bots hunt where nobody has
+ * remembers, per team, when each part of the map was last visited or seen empty (M87), so bots hunt where nobody has
  * looked for a while, and plans each round per team: which lanes its bots take (TeamPlan) and how far
  * ahead of the team a bot may get.
  */
@@ -154,6 +156,13 @@ export class BotController {
       squadNews: (team, out) => this.run?.newsFor(team, out) ?? Number.NEGATIVE_INFINITY,
       markVisited: (bot, point) => {
         this.visited[bot.character.team]![this.sectorOf(point.x, point.z)] = this.world.time;
+      },
+      huntGoalChecked: (bot) => {
+        const team = bot.character.team;
+        const goal = this.sectorOf(bot.huntGoal.x, bot.huntGoal.z);
+        const p = bot.character.position;
+        if (goal === this.sectorOf(p.x, p.z)) return false;
+        return this.visited[team]![goal]! > bot.huntPickedAt;
       },
       bots: this.bots,
       time: 0,
@@ -674,12 +683,15 @@ export class BotController {
 
   /**
    * A walkable spot worth checking for `bot`'s team: of a few random walkable spots, the one in the
-   * sector the team visited least recently (never-visited sectors further from home first, or with the skill's
-   * huntsMiddle nearer the middle of the map).
+   * sector the team checked least recently (never-checked sectors further from home first, or with the skill's
+   * huntsMiddle nearer the middle of the map). A sector is checked where a teammate stood and, since M87, where one saw
+   * it empty (botMovement glance; a spot the bot can see from where it stands is seen there and then: seesSpot). A check
+   * holds for the skill's huntMemory: older, or never, counts alike, so the middle still draws the hunt.
    */
   private huntPoint(bot: Bot, out: Vec3): boolean {
     const nav = this.opts.nav;
-    const cfg = this.world.cfg;
+    const w = this.world;
+    const cfg = w.cfg;
     const visited = this.visited[bot.character.team]!;
     const home = this.spawnCentre[bot.character.team]!;
     const enemy = this.spawnCentre[1 - bot.character.team]!;
@@ -688,7 +700,11 @@ export class BotController {
     const middle = bot.skill.huntsMiddle;
     const midX = (home.x + enemy.x) / 2;
     const midZ = (home.z + enemy.z) / 2;
+    // Checked longer ago than this counts as never (M87; with no memory limit, NEVER: as before M87).
+    const stale = Math.max(NEVER, w.time - bot.skill.huntMemory);
     let best = Number.POSITIVE_INFINITY;
+    // A spot it sees empty from here is checked now, not worth the walk: one is picked only if every spot drawn is one.
+    let inView = Number.POSITIVE_INFINITY;
     const cells = nav.cols * nav.rows;
     for (let k = 0, tries = 0; k < cfg.huntCandidates && tries < cfg.huntCandidates * cfg.huntTriesPerCandidate; tries++) {
       const cell = Math.floor(rngNext(bot.rng) * cells);
@@ -700,11 +716,25 @@ export class BotController {
       k++;
       const x = cellX(nav, cell % nav.cols);
       const z = cellZ(nav, Math.floor(cell / nav.cols));
-      const seen = visited[this.sectorOf(x, z)]!;
-      // Stale sectors first (never visited counts as long ago); then prefer those far from home (the enemy's side), or
+      const sector = this.sectorOf(x, z);
+      const seen = visited[sector]!;
+      // Stale sectors first (never checked counts as long ago); then prefer those far from home (the enemy's side), or
       // with huntsMiddle those near the middle.
       const lean = middle ? -Math.hypot(x - midX, z - midZ) * cfg.huntMiddleBias : Math.hypot(x - home.x, z - home.z) * cfg.huntFarBias;
-      const score = (Number.isFinite(seen) ? seen : NEVER) - lean;
+      const score = Math.max(Number.isFinite(seen) ? seen : NEVER, stale) - lean;
+      if (cfg.huntClearRange > 0) {
+        candidate.x = x;
+        candidate.y = nav.floorY[node]!;
+        candidate.z = z;
+        if (seesSpot(bot.character, candidate, cfg.huntClearRange, w.query, cfg, w.body, w.hits, w.sight)) {
+          visited[sector] = w.time;
+          if (!Number.isFinite(best) && score < inView) {
+            inView = score;
+            copy(out, candidate);
+          }
+          continue;
+        }
+      }
       if (score < best) {
         best = score;
         out.x = x;
@@ -712,7 +742,7 @@ export class BotController {
         out.z = z;
       }
     }
-    return Number.isFinite(best);
+    return Number.isFinite(best) || Number.isFinite(inView);
   }
 
   private sectorOf(x: number, z: number): number {

@@ -263,6 +263,10 @@ replaces its line; the old one stays findable in the archive or in git.
 - **Every level hunts the middle of the map; Normal, Hard and Pro keep out of the light at night; Easy stands where its
   lane says (owner, 2026-10-05, decisions 4 and 13).** Below Pro, both teams swept to the far end and passed each other,
   and rounds ran out of time (M71).
+- **Hunting bots check by eye, and a team shares what its bots checked (M87, owner's note 15, 2026-10-06).** A spot a
+  bot sees empty, or a teammate stood in, counts as checked for the level's `huntMemory` (Easy 20 s, Normal 40, Hard
+  50, Pro 60; `config/bots.ts`); older, it counts as never checked, so the middle keeps drawing the hunt. A bot that
+  sees its hunt spot empty turns off for the next before it gets there.
 - **Balance is measured by headless bot matches against bands (2026-09-28), in a report since token step 4 (owner,
   2026-10-06, token plan item 22; built 2026-10-08, TE4).** Who wins, who lands the first hit, how often the squad gets
   out of Extraction and the levels' order are figures in `src/ai/balance/`, judged by `node pipeline/balance.mjs`

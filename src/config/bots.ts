@@ -311,6 +311,15 @@ export const BOT_BEHAVIOUR = {
   huntTriesPerCandidate: 20,
   /** Among never-visited sectors, each metre further from home counts like this many seconds staler. */
   huntFarBias: 0.01,
+  /**
+   * Checking by eye (M87, playtest note 15: bots went to corners that were obviously empty): a sector counts as checked
+   * by the team once one of its bots sees a spot in it empty, within this many metres, inside its field of view and, at
+   * night, no further than someone standing there could be made out (perception.ts seesSpot). Each bot glances at one
+   * spot a tick, spread over its field of view; a hunt spot it can see from where it picks is not picked; and a bot
+   * whose hunt goal its team checked meanwhile picks another. How long a check holds is the skill's huntMemory.
+   * 0: only where someone stood counts (as before M87).
+   */
+  huntClearRange: 19,
   // ---- Flag mode -------------------------------------------------------------------------------
   /**
    * Bots stand at a random spot within this distance of the pole (metres): close enough to work the
@@ -565,6 +574,12 @@ export interface BotSkill {
    */
   readonly huntsMiddle: boolean;
   /**
+   * How long (s) a hunt sector its team checked (stood in, or saw empty: huntClearRange) stays checked (M87): until
+   * then a bot hunting picks it only after every sector checked longer ago; after it, it is worth a look again, as if
+   * never checked. Longer at the higher levels, which search more methodically; Infinity: never stale (before M87).
+   */
+  readonly huntMemory: number;
+  /**
    * On a night field (M40; Normal and up since Audit 2, BAL-02), never holds a lane point in a light pool when a dark
    * spot is near (see darkSpotRadius). Easy keeps it off: a learning level whose defenders may stand in the light.
    */
@@ -645,6 +660,7 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     teamPlay: false,
     torchOnTheMove: true,
     huntsMiddle: true,
+    huntMemory: 20,
     keepsDark: false,
     lockerGuards: 1,
     huntersFrom: null,
@@ -673,6 +689,7 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     peekWatchTime: [0, 0],
     teamPlay: false,
     huntsMiddle: true,
+    huntMemory: 40,
     keepsDark: true,
     lockerGuards: 2,
     huntersFrom: 0.5,
@@ -701,6 +718,7 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     peekWatchTime: [0, 0],
     teamPlay: false,
     huntsMiddle: true,
+    huntMemory: 50,
     keepsDark: true,
     lockerGuards: 2,
     huntersFrom: 1 / 3,
@@ -736,6 +754,7 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     peekWatchTime: [1.5, 3],
     teamPlay: true,
     huntsMiddle: true,
+    huntMemory: 60,
     keepsDark: true,
     lockerGuards: 2,
     huntersFrom: 1 / 3,

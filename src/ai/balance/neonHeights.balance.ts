@@ -53,6 +53,8 @@ describe.each<LightingPresetId>(['day', 'night'])('a 4v4 Elimination match on Ne
     // floor, ±5.5): before M73's lane point 44.0 % by day (121 of 275) and 44.1 % by night (119 of 270); with it 45.7 %
     // by day (126 of 276) and 48.3 % by night (125 of 259), ±3. M74 (route searches under a per-tick budget, audit AI-04):
     // 43.5 % by day (118 of 271) and 46.9 % by night (127 of 271), within noise of that.
+    // M87 (2026-10-11, hunting bots check by eye and share it): Day 46.1 % (125 of 271, 1 of 273 on time), Night
+    // 47.8 % (128 of 268, none on time); 44.4 % and 52.8 % just before.
     const label = `Neon Heights by ${light === 'day' ? 'Day' : 'Night'}, Normal, Elimination`;
     const counts = `${onTime} of ${rounds} on time`;
     reportMeasure(ctx, { label: `${label}: the west end's share of the decided rounds`, value: share(westWins, decided), of: decided, band: WEST[light], detail: `${westWins} of ${decided} decided, ${counts}` });

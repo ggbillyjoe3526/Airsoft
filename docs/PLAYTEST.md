@@ -337,6 +337,10 @@ You're on Blue with two bot teammates against three Orange bots by default.
 - [ ] **Bots fighting by door frames** don't fire into the frame beside them or dive for cover from their own BB.
 - [ ] **Every level hunts.** Once their lane is swept, bots of every level hunt the map's middle; a round shouldn't
   drag to the clock with nobody left to find.
+- [ ] **No trips into empty corners (M87).** Spectate a hunting bot: it shouldn't walk into a corner or pocket it (or
+  a teammate) can already see is empty; it turns off for the next spot as soon as it sees one. A spot it hasn't seen
+  into (behind a crate, round a wall) is still worth the walk. It looks again after a while: about 20 s on Easy, 40 s on
+  Normal, 50 s on Hard, 60 s on Pro. Easy should still feel the sloppiest.
 - [ ] **Up close, a fair moment.** Walk into a Normal bot at 5 to 10 m: its first BBs go wide to one side and walk
   in, so you have a moment to see them coming and answer (its first hit takes about 1.5 s, rarely under 0.75 s). Do
   Hard and Pro still punish a slow answer? Do Normal bots still feel a threat?

@@ -25,6 +25,7 @@ describe('a 4v4 Elimination match on Neon Heights, both teams on Pro (M40)', () 
     // west's 41 % sat one standard error (3.6 points) from the floor and fell through it; the floor was 35 % until M73.
     // M73 (audit BAL-04, owner decision 6: the east's last mid-lane holds inside the bar's door line): 42.2 % (73 of
     // 173), 3 of 176 on time; with a planter on the avenue as well 44.5 % (81 of 182), within noise of it, so no planter.
+    // M87 (2026-10-11, hunting bots check by eye and share it): 48.6 % (88 of 181), none on time; 50.0 % just before.
     reportTally(ctx, 'Neon Heights by Day, Pro, Elimination', tallyBalance(32, 300, botConfig('pro'), 'elimination', DAY, TEAM_SIZE), 'elimination');
   });
 });
