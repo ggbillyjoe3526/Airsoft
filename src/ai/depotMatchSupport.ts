@@ -2,7 +2,7 @@ import { expect } from 'vitest';
 import { BALLISTICS, WIND } from '../config/ballistics';
 import { BOTS, type BotConfig } from '../config/bots';
 import { type HitConfig, HITS, ROUNDS } from '../config/hits';
-import type { MatchMode } from '../config/modes';
+import { type MatchMode, unknownMode } from '../config/modes';
 import { FOOTSTEPS } from '../config/footsteps';
 import { BODY, MOVEMENT } from '../config/movement';
 import { NAV } from '../config/nav';
@@ -34,6 +34,23 @@ import { sightConditionsOf } from './perception';
  */
 
 export const DT = 1 / 60;
+
+/**
+ * `mode`'s answer among the round modes these guards play (CT3): each guard says what it means in each, so no mode is
+ * read as another (a new one fails to compile here until it answers), and Extraction, which plays as runs
+ * (extractionRunSupport.ts), is refused.
+ */
+export function forRoundsMode<T>(mode: MatchMode, answers: Readonly<Record<'elimination' | 'attackDefend', T>>): T {
+  switch (mode) {
+    case 'elimination':
+    case 'attackDefend':
+      return answers[mode];
+    case 'extraction':
+      throw new Error('Extraction plays as runs (ai/extractionRunSupport.ts), not rounds');
+    default:
+      return unknownMode(mode);
+  }
+}
 
 /** What the headless bots carry from: the game's pool with Dev content on, as both night maps (dev content) need it. */
 const BOT_POOL = contentPool(GAME_POOL, true);
@@ -298,7 +315,7 @@ export function tallyRicochetMatches(mode: MatchMode): RicochetTally {
   const hits = { ...HITS, ricochetsCount: true };
   const t: RicochetTally = { rounds: 0, favoured: 0, captures: 0, hits: 0, ricochetHits: 0, directFriendly: 0, friendlyRicochets: 0, selfHits: 0 };
   for (let seed = 1; seed <= 16; seed++) {
-    const stats = playMatch(mode === 'elimination' ? 300 : 400, seed, undefined, BOTS, mode, ROUNDS, DEPOT, ROUNDS.teamSize, hits);
+    const stats = playMatch(forRoundsMode(mode, { elimination: 300, attackDefend: 400 }), seed, undefined, BOTS, mode, ROUNDS, DEPOT, ROUNDS.teamSize, hits);
     t.hits += stats.hits;
     t.ricochetHits += stats.ricochetHits;
     t.friendlyRicochets += stats.friendlyRicochets;
@@ -307,7 +324,7 @@ export function tallyRicochetMatches(mode: MatchMode): RicochetTally {
     for (const r of stats.results) {
       t.rounds++;
       if (r.reason === 'captured') t.captures++;
-      if (mode === 'elimination' ? r.winner >= 0 && r.winnerEnd === 0 : r.winner === r.attackers) t.favoured++;
+      if (forRoundsMode(mode, { elimination: r.winner >= 0 && r.winnerEnd === 0, attackDefend: r.winner === r.attackers })) t.favoured++;
     }
   }
   return t;
@@ -329,7 +346,7 @@ export function expectRicochetsPlayable(mode: MatchMode): void {
   // knock players out"). G11's wide first aim lifted the share to Attack / Defend 0.268, Elimination 0.232 (16 seeds;
   // the cap was 0.30 meanwhile); with three quarters of the old restitution (config/ballistics.ts) 0.179 and 0.198.
   expect(t.ricochetHits / t.hits, mode).toBeLessThan(0.25);
-  if (mode === 'attackDefend') expect(t.captures, mode).toBeGreaterThanOrEqual(7);
+  if (forRoundsMode(mode, { elimination: false, attackDefend: true })) expect(t.captures, mode).toBeGreaterThanOrEqual(7);
 }
 
 /**
@@ -366,7 +383,7 @@ export function tallyCustomMatches(mode: MatchMode, size: number, onSeed?: (stat
       t.rounds++;
       if (r.winner < 0) continue;
       t.decided++;
-      if (mode === 'elimination' ? r.winnerEnd === 0 : r.winner === r.attackers) t.favoured++;
+      if (forRoundsMode(mode, { elimination: r.winnerEnd === 0, attackDefend: r.winner === r.attackers })) t.favoured++;
     }
   }
   return t;
@@ -384,7 +401,7 @@ export function expectCustomMatchesPlayable(mode: MatchMode): void {
       expect(stats.farthestFromSpawn, label).toHaveLength(2 * size);
       // Everyone leaves spawn in round 1; in Attack / Defend only the attackers (Blue) must, defenders may hold.
       stats.farthestFromSpawn.forEach((d, i) => {
-        if (mode === 'elimination' || i < size) expect(d, `${label} seed ${seed}`).toBeGreaterThan(8);
+        if (forRoundsMode(mode, { elimination: true, attackDefend: i < size })) expect(d, `${label} seed ${seed}`).toBeGreaterThan(8);
       });
       expectGrounded(stats, DEPOT);
     });

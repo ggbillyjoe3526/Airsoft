@@ -1,6 +1,7 @@
 import type * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
+import { MATCH_MODES } from '../../config/modes';
 import { type MapEntry, MAPS } from '../../map/maps';
 import type { Asset, Pool } from '../../pool/pool';
 import { prepareReplicaFile, type ReplicaFile, type ReplicaFiles } from '../../render/replicaFiles';
@@ -33,6 +34,21 @@ export function contentMaps(named: string | undefined = ENV.AIRSOFT_CONTENT_ITEM
   const want = named.trim().slice('map:'.length).replace(/\s+/g, '').toLowerCase();
   if (want === 'all') return [...MAPS];
   const m = MAPS.find((e) => e.id.toLowerCase() === want || e.label.replace(/\s+/g, '').toLowerCase() === want);
+  return m ? [m] : [];
+}
+
+/** Whether `named` names a mode ("mode:attackDefend"), not a pool item or a map. */
+export const namesMode = (named: string | undefined = ENV.AIRSOFT_CONTENT_ITEM): boolean => /^mode:/i.test(named?.trim() ?? '');
+
+/**
+ * The mode "mode:<id or label>" names (CT3; any case, spaces ignored: "mode:attackDefend", "mode:Attack and Defend"), every
+ * mode for "mode:all", or none.
+ */
+export function contentModes(named: string | undefined = ENV.AIRSOFT_CONTENT_ITEM): (typeof MATCH_MODES)[number][] {
+  if (!named || !namesMode(named)) return [];
+  const want = named.trim().slice('mode:'.length).replace(/\s+/g, '').toLowerCase();
+  if (want === 'all') return [...MATCH_MODES];
+  const m = MATCH_MODES.find((e) => e.id.toLowerCase() === want || e.label.replace(/\s+/g, '').toLowerCase() === want);
   return m ? [m] : [];
 }
 

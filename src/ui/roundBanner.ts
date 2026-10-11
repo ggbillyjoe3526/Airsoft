@@ -1,3 +1,4 @@
+import { unknownMode } from '../config/modes';
 import { TEAMS } from '../config/teams';
 import { halfTimeAfterRound, roundDrawn, type RoundRules, type RoundState } from '../sim/round';
 
@@ -7,9 +8,21 @@ import { halfTimeAfterRound, roundDrawn, type RoundRules, type RoundState } from
  * "Round N" (with your job in flag mode) just after a round starts. Empty when there's nothing to say.
  */
 export function roundBanner(r: RoundState, playerTeam: number, showStart: boolean, secondsToNext: number, rules: RoundRules): string {
-  if (r.mode === 'extraction') return runBanner(r, showStart);
+  switch (r.mode) {
+    case 'elimination':
+      return roundsBanner(r, playerTeam, showStart, secondsToNext, rules, false);
+    case 'attackDefend':
+      return roundsBanner(r, playerTeam, showStart, secondsToNext, rules, true);
+    case 'extraction':
+      return runBanner(r, showStart);
+    default:
+      return unknownMode(r.mode);
+  }
+}
+
+/** A mode played in rounds: the round's result, the match's, or "Round N" (with your job when `flagMode`). */
+function roundsBanner(r: RoundState, playerTeam: number, showStart: boolean, secondsToNext: number, rules: RoundRules, flagMode: boolean): string {
   if (r.phase === 'matchOver') return r.matchWinner === playerTeam ? 'You win the match!' : 'You lose the match';
-  const flagMode = r.mode === 'attackDefend';
   if (r.phase === 'over') {
     const mine = r.winner === playerTeam;
     const winner = r.winner >= 0 ? TEAMS[r.winner]!.name : '';

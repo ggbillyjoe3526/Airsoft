@@ -324,6 +324,14 @@ replaces its line; the old one stays findable in the archive or in git.
   look). The flag is not held to 15 %: the attackers walk at least 1.6 times the defenders' way, Depot's own rule. Bots
   that never leave spawn under 1 in 20, stuck under 1 per 10 bot-minutes. A map that differs for a reason goes into
   `MAP_EXCEPTIONS` with the owner's word, as Woodland's 141 m sightline and Neon Heights's four block clashes did.
+- **A mode's checks hold it to Elimination's numbers (2026-10-11, CT3; the bands are the owner's, 2026-10-05).** A new
+  mode does not build until every wiring point answers for it (a `switch` with a never-check), and the briefing and
+  round banner must not say what Elimination says. Its bots must play it their own way: from the same start they stand
+  at least 1 m on average from where they stand in Elimination after 30 s. The objective decides at least 1 decided
+  round in 10, and the pay a minute in the standard match stays within × 0.75 to × 1.25 of Elimination's on the same
+  map, lighting and level (`MODE_PLAY_TEST`, `MODE_BALANCE_BANDS`). A mode drawn like another may let that mode's perf
+  gate runs stand for it, with a reason (`MODE_PERF_STAND_INS`: Attack / Defend is Elimination with a flagpole). Ids in
+  players' saves are pinned in `SHIPPED_MODE_IDS`.
 
 ## Replicas, Loadout, Armory and economy
 

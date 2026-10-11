@@ -1,4 +1,4 @@
-import type { FlagRules, MatchMode } from '../config/modes';
+import { type FlagRules, type MatchMode, unknownMode } from '../config/modes';
 import type { SpawnPoint } from '../map/mapTypes';
 import type { BBPool } from './ballistics';
 import { type Character, respawnCharacter } from './character';
@@ -138,9 +138,18 @@ export function halfTimeAfterRound(number: number, rules: RoundRules): boolean {
  * way the teams swap ends after rules.halfTimeAfter rounds, so an uneven map is fair over a match.
  */
 export function teamEnd(team: number, mode: MatchMode, number: number, rules: RoundRules): number {
-  if (mode === 'attackDefend') return team === attackersInRound(number, rules) ? 0 : 1;
-  const blueEnd = number <= rules.halfTimeAfter ? rules.eliminationFirstEnd : 1 - rules.eliminationFirstEnd;
-  return team === 0 ? blueEnd : 1 - blueEnd;
+  switch (mode) {
+    case 'attackDefend':
+      return team === attackersInRound(number, rules) ? 0 : 1;
+    case 'elimination':
+    case 'extraction': {
+      // Extraction places the run by its own data (placeRun); a character's end is still set, as in Elimination.
+      const blueEnd = number <= rules.halfTimeAfter ? rules.eliminationFirstEnd : 1 - rules.eliminationFirstEnd;
+      return team === 0 ? blueEnd : 1 - blueEnd;
+    }
+    default:
+      return unknownMode(mode);
+  }
 }
 
 /**
@@ -178,10 +187,23 @@ export function stepRound(round: RoundState, characters: Character[], bbs: BBPoo
     return;
   }
 
-  if (round.mode === 'extraction') {
-    stepRunRound(round, characters, ctx, events, dt);
-    return;
+  switch (round.mode) {
+    case 'elimination':
+      return stepRoundsRound(round, characters, ctx, events, dt, false);
+    case 'attackDefend':
+      return stepRoundsRound(round, characters, ctx, events, dt, true);
+    case 'extraction':
+      return stepRunRound(round, characters, ctx, events, dt);
+    default:
+      return unknownMode(round.mode);
   }
+}
+
+/**
+ * A mode played in rounds, live: a team wiped out loses the round, then (with `flagMode`) the flag raised wins it for the
+ * attackers, then the clock (Attack / Defend's overtime while the rope is worked).
+ */
+function stepRoundsRound(round: RoundState, characters: Character[], ctx: RoundContext, events: GameEvent[], dt: number, flagMode: boolean): void {
   // Live. A team with members but nobody left in play is wiped out (an empty team never is).
   let blue = 0;
   let orange = 0;
@@ -200,7 +222,6 @@ export function stepRound(round: RoundState, characters: Character[], bbs: BBPoo
   const blueOut = blue > 0 && blueInPlay === 0;
   const orangeOut = orange > 0 && orangeInPlay === 0;
   round.clock = Math.max(0, round.clock - dt);
-  const flagMode = round.mode === 'attackDefend';
   if (blueOut || orangeOut) endRound(round, blueOut && orangeOut ? -1 : blueOut ? 1 : 0, 'eliminated', ctx.rules, events);
   else if (flagMode && stepFlag(round.flag, characters, round.attackers, ctx.rules.flag, events, dt)) endRound(round, round.attackers, 'captured', ctx.rules, events);
   else if (round.clock <= 0) {
@@ -243,7 +264,7 @@ export function timeOutWinner(blue: number, orange: number, rules: RoundRules): 
 }
 
 /** Whether `winner`, with `score`, has taken the match: `winsNeeded` round wins and a lead of at least `winBy` (M39). */
-export function matchWon(score: readonly [number, number], winner: number, rules: RoundRules): boolean {
+export function matchWon(score: readonly [number, number], winner: number, rules: Pick<RoundRules, 'winsNeeded' | 'winBy'>): boolean {
   const mine = score[winner]!;
   return mine >= rules.winsNeeded && mine - score[1 - winner]! >= rules.winBy;
 }
@@ -273,10 +294,17 @@ function startRound(round: RoundState, characters: Character[], bbs: BBPool, ctx
   round.timer = 0;
   round.overtime = 0;
   setUpObjective(round, ctx.rules, ctx.pole);
-  if (round.mode === 'extraction') startRun(round, characters, ctx);
-  else {
-    placeTeams(round, characters, ctx);
-    for (const c of characters) respawnCharacter(c);
+  switch (round.mode) {
+    case 'elimination':
+    case 'attackDefend':
+      placeTeams(round, characters, ctx);
+      for (const c of characters) respawnCharacter(c);
+      break;
+    case 'extraction':
+      startRun(round, characters, ctx);
+      break;
+    default:
+      unknownMode(round.mode);
   }
   for (const bb of bbs.bbs) bb.active = false;
   events.push({ type: 'roundStart', round: number });
@@ -317,11 +345,17 @@ function stepRunRound(round: RoundState, characters: Character[], ctx: RoundCont
 
 /** Flag mode: who attacks this round, and the pole at the defenders' end with the flag at the bottom. */
 function setUpObjective(round: RoundState, rules: RoundRules, pole: Vec3 | undefined): void {
-  if (round.mode !== 'attackDefend') {
-    round.attackers = -1;
-    return;
+  switch (round.mode) {
+    case 'attackDefend':
+      round.attackers = attackersInRound(round.number, rules);
+      if (!pole) throw new Error('Flag mode needs a flagpole');
+      resetFlag(round.flag, pole);
+      return;
+    case 'elimination':
+    case 'extraction':
+      round.attackers = -1;
+      return;
+    default:
+      unknownMode(round.mode);
   }
-  round.attackers = attackersInRound(round.number, rules);
-  if (!pole) throw new Error('Flag mode needs a flagpole');
-  resetFlag(round.flag, pole);
 }
