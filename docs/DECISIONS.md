@@ -177,7 +177,8 @@ replaces its line; the old one stays findable in the archive or in git.
 - **On a software adapter the Dev retro filter's views are judged by eye (2026-10-10, W4).** Its 8-colour palette turns
   sub-pixel noise into whole steps, so the numbers say nothing there.
 - **Woodland's triangle lines stayed as they were until the budgets split per renderer (owner, card, 2026-10-10, 15:18:
-  "Keep for now"; W5).**
+  "Keep for now"; W5).** W6a kept them: the scene's own triangles hold the owner's lines on both back ends, and the
+  grass and stand-ins go on a line of their own (Performance budgets, below).
 - **The laser beam stays off on every preset (owner, 2026-10-05, 07:06).** A beam with no dot stops short of what it
   points at.
 - **Torches cast shadows on High and Ultra only; Low keeps today's beams (owner, 2026-10-06).** Keeps Low's 60 fps; an
@@ -467,6 +468,12 @@ replaces its line; the old one stays findable in the archive or in git.
   line.
 - **Medium has map-scoped draw-call lines: Woodland 115 and Neon Heights 140 (owner, 2026-10-06, audit decision 4).**
   The other Medium lines (200k triangles, memory, heap) and every Low line stay the presets'.
+- **The GPU dressing's triangles have a line of their own; the scene keeps the owner's (2026-10-11, W6a).** Three counts
+  Woodland's grass and tree stand-ins at their caps (every blade slot, whatever the GPU cull keeps), which put Woodland's
+  node renderer at about 261k triangles on Medium against 200k, 375k on High and 637k on Ultra against 250k. The perf
+  harness records them apart (`dressingTriangles`), each preset's line being its caps plus 2 % (Medium 130k, High 290k,
+  Ultra 495k, Low 0); `triangles` is the rest of the scene and keeps its lines (Woodland Extraction Medium on WebGPU:
+  132k, max 140k, against 200k). No line was raised. Both back ends hold the same lines (`backends` is empty).
 - **Real light counts per quality are fixed: Low none, Medium 2, High 4 (owner rule, 2026-10-04).** Three.js rebuilds
   every lit shader when the count changes. Low holds 60 fps with no real lights.
 - **Frame times are judged only on hardware rendering (2026-10-04).** The cloud container draws with SwiftShader, so
