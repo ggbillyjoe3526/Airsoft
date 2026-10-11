@@ -159,18 +159,6 @@ acceptance:
 status: open
 attempts: 0
 
-## M98 · Teams Alpha and Beta, and pick your team (playtest note 4)
-tier: core
-perf: skip
-touches: src/config/teams.ts, src/matchSession.ts, src/game.ts, src/ui/scoreboard.ts, src/ui/roundBanner.ts, src/ui/hitFeed.ts, src/ui/menus/rulesText.ts, src/ui/menus/playView.ts, src/ui/menus/savedChoices.ts, src/sim/, src/newGamePicks.ts, src/settings/storage.ts, src/config/hits.ts, src/config/matchInfo.ts, src/config/menuArt.ts, src/config/modes.ts, src/config/schemes.ts, src/render/matchPresentation.ts, src/ui/hitFeedback.ts, src/ui/hudCss/score.css, src/ui/matchStopText.ts, src/ui/statsRows.ts, src/ui/whatGotYou.ts, src/ui/menus/
-contract: none
-acceptance:
-  1. The teams are **Alpha** (blue) and **Beta** (orange) everywhere the player reads them (hit feed, scoreboard, banners, minimap, summary, menus, screen reader text); colours and both colour sets are unchanged.
-  2. The Match screen has a "Your team" pick (Alpha or Beta), Alpha by default, remembered between visits; solo Extraction doesn't show it.
-  3. A full match plays correctly on either team on every map and mode (spawns, ends swapping at half-time in Attack / Defend, records, bots' orders and squad wheel), checked by a test that plays one match per team.
-status: open
-attempts: 0
-
 ## M99 · Replica pictures show the whole replica (playtest note 6)
 tier: ui
 perf: skip

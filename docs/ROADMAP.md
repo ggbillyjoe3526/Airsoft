@@ -153,7 +153,7 @@ are blocks M97–M100 in `docs/TASKS.md`. All of it is 0.1 Dev 5.
 | 1 | A setting for the red X hit marker, Off by default | M97 (Dev 5 item 6) |
 | 2 | Aim down sights by Hold or Toggle, Hold by default | Already in the game: `Settings › Controls › Aim button` (Hold by default) |
 | 3 | Customise won't take "No light" on the AEG rifle; check every replica | Fixed in BP2 (Dev 5 item 4), on every replica |
-| 4 | Teams renamed Alpha (blue) and Beta (orange); the player picks a team | M98 (Dev 5 item 6) |
+| 4 | Teams renamed Alpha (blue) and Beta (orange); the player picks a team | M98 (Dev 5 item 6): done (2026-10-11) |
 | 5 | A plain title screen (Airsoft, the tagline, START, the version small at the bottom left); Play renamed Match; the top bar is the navigation (Match, Loadout, Armory, Settings; FC and Tokens on the right; no version); no key prompts along the bottom; Practice as the last mode; a more readable font | M100 (Dev 5 item 5, the graphics work, with the G4 HUD restyle) |
 | 6 | Replica pictures in "Your replicas" are cropped | M99 (Dev 5 item 6) |
 | 7 | The Armory's "Your collection" in columns, one per kind | M100 |
