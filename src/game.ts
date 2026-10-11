@@ -49,6 +49,7 @@ import type { GameState } from './sim/state';
 import { loadRecords, noNews, type RecordNews, type Records, saveRecords } from './stats/records';
 import { settleMatch } from './stats/settleMatch';
 import { loadCrosshair } from './ui/crosshair';
+import { loadHitMarker } from './ui/crosshairSettings';
 import { CrashScreen } from './ui/crashScreen';
 import { DebugOverlay } from './ui/debugOverlay';
 import { onFullscreenChange, relockAfterFullscreen, toggleFullscreen } from './ui/fullscreen';
@@ -226,6 +227,8 @@ export class Game {
   private readonly audio = new AudioEngine(loadVolumes());
   /** The crosshair's look (Settings → Crosshair), kept across matches. */
   private crosshair: CrosshairSettings = loadCrosshair();
+  /** Settings › Gameplay › Hit marker (M97): off unless the player turned it on. */
+  private hitMarker = loadHitMarker();
   /** The local records (M19), and what the last match finished changed in them. */
   private readonly records: Records = loadRecords(browserStorage());
   private recordNews: RecordNews = noNews();
@@ -438,6 +441,14 @@ export class Game {
         this.play();
       },
       tutorialDone: loadTutorialDone(),
+      // Replay tutorial (M97): from its first step, finished or not; from the pause menu it leaves what was under way.
+      onReplayTutorial: () => {
+        if (this.started) this.leaveMatch();
+        saveSetting('tutorialStep', '');
+        this.practice = true;
+        this.tutorial = true;
+        this.play();
+      },
       onSkipTutorialStep: () => this.skipTutorial(false),
       onSkipTutorial: () => this.skipTutorial(true),
       map: { initial: this.map, onChange: (m) => ((this.map = m), (this.setupChanged = true), this.prefetchFieldSounds()) },
@@ -485,7 +496,11 @@ export class Game {
         renderer: this.rendering && ((row) => this.rendering!.fillRow(row, this.renderer)),
       },
       audio: { initial: this.audio.volumes, onChange: (channel, v) => this.changeVolume(channel, v), onRelease: (channel) => this.audio.preview(channel) },
-      crosshair: { initial: this.crosshair, onChange: (c) => this.changeCrosshair(c) },
+      crosshair: {
+        initial: this.crosshair,
+        onChange: (c) => this.changeCrosshair(c),
+        hitMarker: { initial: this.hitMarker, onChange: (on) => ((this.hitMarker = on), this.session instanceof MatchSession && this.session.setHitMarker(on)) },
+      },
       accessibility: {
         reducedMotion: { initial: this.motionReduced(), onChange: (on) => this.changeReducedMotion(on), follow: (show) => (this.showSystemMotion = show) },
         // The figures are built with their colours, so a new set shows from the next match.
@@ -937,6 +952,7 @@ export class Game {
       this.session.setSoundCues(this.soundCues);
       this.session.setHitFeedMode(this.hitFeedMode);
       this.session.setWhatGotYouMode(this.whatGotYouMode);
+      this.session.setHitMarker(this.hitMarker);
       this.session.combat.setReplicaPictures(this.pictures, kitSubjects(this.loadout.kit(), this.look.realisticColours));
       this.applyDevTo(this.session);
       applyTeamCss(this.container, TEAM_COLOUR_SETS[this.teamColours]);

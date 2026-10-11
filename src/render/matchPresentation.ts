@@ -263,6 +263,11 @@ export class MatchPresentation {
     if (!on) this.whatGotYou.clear();
   }
 
+  /** Settings › Gameplay › Hit marker (M97; also called once as the match is built). */
+  setHitMarker(on: boolean): void {
+    this.feedback.setHitMarker(on);
+  }
+
   /** Pro briefing tips on the board between rounds (M41): on when the opponents are Pro. */
   setProTips(on: boolean): void {
     this.proTips = on;

@@ -648,6 +648,12 @@ there maps each symptom to its numbers):
 - [ ] **Crosshair** (Settings › Gameplay › Crosshair). Two previews (still, and opened as when moving), then Shape,
   Size, Thickness, Gap, Colour (no blue or orange: those are the teams'; a custom colour box at the end), Opacity,
   Spread (Static keeps the gap while moving) and Outline. In a match it looks the same and still opens as you move.
+- [ ] **Hit marker** (Settings › Gameplay › Crosshair, M97). Off by default: hit a bot and no red X flashes over the
+  crosshair, but the hit tick still sounds. On: the red X flashes as before (a teammate hit marks too). Flip it in
+  the pause menu mid-match: it applies at once, and the pick is kept next visit.
+- [ ] **Replay tutorial** (Settings › Gameplay › Tutorial, M97). From the title or the top bar it starts the
+  tutorial on the range at once, from its first step, even after you finished it. From the pause menu in a match it
+  asks first ("This leaves what you are playing now") and then leaves the match (not recorded) for the tutorial.
 - [ ] **HUD size** (Settings › Gameplay › HUD). 150 % makes the replica panel, score bar, minimap, hit feed,
   round messages, order wheel and teammate markers bigger with nothing overlapping at 1280×720; the crosshair
   keeps its size. On a 1440p or 4K screen without system scaling, 100 % is already larger than on 1080p.
@@ -873,7 +879,7 @@ Settings › Save file. Everything saves as it changes; nothing to press.
 
 Fixed in earlier bug passes; a bug pass checks they stay fixed.
 
-- [ ] **Hit a bot, press Esc and resume** (and after Play again): no hit marker or white flash replays.
+- [ ] **Hit a bot, press Esc and resume** (and after Play again; Hit marker On): no hit marker or white flash replays.
 - [ ] **At the start of each round** the replica in your hands stays still; it doesn't swing in from the side.
 - [ ] **Empty the AEG with the trigger held, press 2 then 1 while holding:** it clicks dry and starts a reload.
 - [ ] **Customise › Muzzle** with nothing fitted reads "Bots hear your shots from 22 m."; with a silencer "… from

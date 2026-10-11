@@ -19,7 +19,8 @@ import type { SaveManager } from '../../save/saveManager';
 import type { MenuHint } from './chrome';
 import { MENU_ICONS, SETTINGS_TAB_ICONS } from './icons';
 import { type SettingsOrigin, tabAfterKey } from './menuNav';
-import { el, laterRow, menuRow, rangeControl } from './menuParts';
+import { ConfirmDialog } from './confirmDialog';
+import { el, laterRow, menuButton, menuRow, rangeControl } from './menuParts';
 
 export interface SettingsOptions {
   bindings: KeyBindings;
@@ -43,6 +44,16 @@ export interface SettingsOptions {
   dev: DevSettingsOptions & { enabled: boolean; onEnabled: (on: boolean) => void };
   /** The save (M31), for the Save group: download, load, restore points. */
   save: SaveManager;
+  /** Gameplay › Replay tutorial (M97): starts the tutorial from its first step, finished or not. */
+  onReplayTutorial: () => void;
+}
+
+/**
+ * Whether Replay tutorial (M97) asks first: only when Settings was opened from the pause menu, where it would leave the
+ * match or range under way. From the title or the top bar it starts at once. Pure.
+ */
+export function replayTutorialAsks(origin: SettingsOrigin): boolean {
+  return origin === 'pause';
 }
 
 /** Whether a setting's words hold every word of a search (any order, any case). Pure. */
@@ -75,6 +86,8 @@ export class SettingsScreen {
   private unwatchFullscreen: () => void = () => undefined;
   /** The Graphics group's quality rows. */
   private readonly graphics: GraphicsSettings;
+  /** Asks before Replay tutorial leaves what is being played (Settings opened from the pause menu). */
+  private readonly confirm = new ConfirmDialog();
 
   constructor(private readonly opts: SettingsOptions) {
     this.root = el('div', 'menu-screen menu-page menu-settings menu-hub');
@@ -165,7 +178,7 @@ export class SettingsScreen {
     this.hints = [{ keys: ['/'], label: MENU_TEXT.hints.search, run: () => this.search.focus(), code: 'Slash' }];
     this.root.append(el('h1', 'menu-heading sr-only', 'Settings'), columns);
     // The Save group's pop-up lives in the page: a dialog inside a hidden panel can't show.
-    this.root.append(this.saveSettings.dialog.root);
+    this.root.append(this.saveSettings.dialog.root, this.confirm.root);
     this.showTab('graphics');
   }
 
@@ -216,6 +229,18 @@ export class SettingsScreen {
     });
     label.append(box, el('span', 'toggle-track'), el('span', '', DEV_TOGGLE_LABEL));
     return label;
+  }
+
+  /**
+   * Replay tutorial (M97): at once from the title or the top bar; opened from the pause menu, it asks first, since it
+   * leaves the match or the range under way.
+   */
+  private replayButton(): HTMLButtonElement {
+    return menuButton(SETTINGS_TEXT.replayTutorial, 'secondary', () => {
+      this.confirm.close();
+      if (!replayTutorialAsks(this.origin)) return this.opts.onReplayTutorial();
+      this.confirm.ask(SETTINGS_TEXT.replayTutorialTitle, SETTINGS_TEXT.replayTutorialLeave, SETTINGS_TEXT.replayTutorialYes, () => this.opts.onReplayTutorial());
+    });
   }
 
   /** One button that enters or leaves fullscreen, saying which it will do. */
@@ -321,7 +346,14 @@ export class SettingsScreen {
       keys.append(this.keySettings.root, el('p', 'menu-readout settings-mouse', SETTINGS_TEXT.fixedKeys));
       panel.append(...controlsSettings(opts.controls), sub(SETTINGS_TEXT.keysHeading), keys);
     } else if (id === 'gameplay') {
-      panel.append(sub(SETTINGS_TEXT.crosshairHeading), ...crosshairSettings(opts.crosshair), sub(SETTINGS_TEXT.hudHeading), ...hudSettings(opts.hud));
+      panel.append(
+        sub(SETTINGS_TEXT.crosshairHeading),
+        ...crosshairSettings(opts.crosshair),
+        sub(SETTINGS_TEXT.hudHeading),
+        ...hudSettings(opts.hud),
+        sub(SETTINGS_TEXT.tutorialHeading),
+        menuRow(SETTINGS_TEXT.replayTutorial, SETTINGS_TEXT.replayTutorialHelp, this.replayButton()),
+      );
     } else if (id === 'audio') {
       panel.append(...audioSettings(opts.audio));
     } else if (id === 'accessibility') {

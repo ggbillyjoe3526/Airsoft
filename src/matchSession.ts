@@ -539,6 +539,11 @@ export class MatchSession {
     this.match.setHitFeedMode(mode);
   }
 
+  /** Settings › Gameplay › Hit marker (M97): the red X when your BB lands. */
+  setHitMarker(on: boolean): void {
+    this.match.setHitMarker(on);
+  }
+
   /** Settings → HUD → What got you (M41): the card by this match's opponents (Auto: Pro only). */
   setWhatGotYouMode(mode: WhatGotYouMode): void {
     this.match.setWhatGotYou(whatGotYouShown(mode, this.setup.difficulty));

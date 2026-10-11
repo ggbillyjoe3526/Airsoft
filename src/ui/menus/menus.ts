@@ -281,6 +281,7 @@ export class Menus {
           onEnabled: (on) => (o.dev.onEnabled(on), this.refreshViews()),
         },
         save: o.save,
+        onReplayTutorial: () => this.openRange(o.onReplayTutorial),
       }));
       if (this.shownQuality) s.showQuality(this.shownQuality.choice, this.shownQuality.settings);
       this.add('settings', s);

@@ -1,4 +1,4 @@
-import { HITS } from '../config/hits';
+import { DEFAULT_HIT_MARKER, HITS } from '../config/hits';
 import { restartAnimation } from './restartAnimation';
 import { isRoundStart, spokenRoundMessage } from './roundBanner';
 
@@ -26,6 +26,8 @@ export class HitFeedback {
   private shownOut = '';
   private shownCalling = false;
   private shownAngle = Number.NaN;
+  /** Settings › Gameplay › Hit marker (M97): whether your BB landing shows the red X (the tick sounds either way). */
+  private markerOn = DEFAULT_HIT_MARKER;
 
   /** `fireKey` names the key or button the player has on fire now (the spectating label's "… for next"). */
   constructor(
@@ -70,8 +72,15 @@ export class HitFeedback {
     }
   }
 
-  /** Your BB hit someone. `friendly` marks a teammate (friendly fire counts, as at a real site). */
+  /** The Hit marker setting (M97): off, a landed BB shows no X; one showing now goes at once. */
+  setHitMarker(on: boolean): void {
+    this.markerOn = on;
+    if (!on) this.marker.classList.remove('show');
+  }
+
+  /** Your BB hit someone. `friendly` marks a teammate (friendly fire counts, as at a real site). Nothing with the Hit marker off. */
   showHitMarker(friendly: boolean): void {
+    if (!this.markerOn) return;
     this.marker.classList.toggle('friendly', friendly);
     restartAnimation(this.marker, 'show');
   }

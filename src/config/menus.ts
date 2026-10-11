@@ -239,6 +239,14 @@ export const SETTINGS_TEXT = {
   keysHeading: 'Keys',
   crosshairHeading: 'Crosshair',
   hudHeading: 'HUD',
+  /** Gameplay › Tutorial (M97): play the tutorial again from its first step, finished or not. */
+  tutorialHeading: 'Tutorial',
+  replayTutorial: 'Replay tutorial',
+  replayTutorialHelp: 'Plays the tutorial on the practice range again from its first step, whether or not you finished it.',
+  /** Asked first when Settings was opened from the pause menu: starting it leaves what is being played. */
+  replayTutorialTitle: 'Replay the tutorial?',
+  replayTutorialLeave: 'This leaves what you are playing now. A match left before its end goes into no records.',
+  replayTutorialYes: 'Start tutorial',
   /** Under the Key Bindings: the mouse and the fixed keys. */
   fixedKeys: 'Wheel switches replica (a direction bound above does that instead) · Esc pauses and resumes · ` or F3 shows the debug info',
 } as const;
