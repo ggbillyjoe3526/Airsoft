@@ -5,18 +5,19 @@ import { initPhysics } from '../../physics/physicsWorld';
 import { tallyBalance } from '../depotMatchSupport';
 import { type Band, PRO_BAND, reportTally } from './balanceSupport';
 
-/** Woodland plays 4v4 (M33d), at night with its bushes (sightConditionsOf, as woodlandMatch*.test.ts play it). */
-const TEAM_SIZE = 4;
+/** Woodland plays 5v5 (M88; 4v4 before), at night with its bushes (sightConditionsOf, as woodlandMatch*.test.ts play it). */
+const TEAM_SIZE = 5;
 /** Long enough for a whole match, first to 5 (the longest of these seeds takes about 13 minutes of game time). */
 const SECONDS = 900;
 /**
  * The attackers' band (M57, DECISIONS): with the torches the game fits every bot at night they won 24 % (33 % since
  * M71's torch discipline), under the plan's 40 %. The floor is M57's measure less two standard errors (about 8 points),
- * the ceiling the plan's: whatever brings them into PRO_BAND puts the floor back.
+ * the ceiling the plan's: whatever brings them into PRO_BAND puts the floor back. M88 (5v5, the West Rise) measured
+ * 55.7 %, inside PRO_BAND: the floor can go back once a second measure agrees (nightRoster.test.ts pins it).
  */
 const ATTACKERS: Band = { min: 0.15, max: PRO_BAND.max };
 
-describe('a 4v4 Attack / Defend match on Woodland, both teams on Pro (M40)', () => {
+describe('a 5v5 Attack / Defend match on Woodland, both teams on Pro (M40)', () => {
   beforeAll(async () => {
     await initPhysics();
   });
@@ -32,6 +33,7 @@ describe('a 4v4 Attack / Defend match on Woodland, both teams on Pro (M40)', () 
     // torches the game fits every bot at night. With them (M57, audit AI-02, on M55's maps): attackers 24.2 % (30 of 124),
     // none on time, against 43.4 % without on the same seeds. M71 (Audit 2: every level hunts the middle, Normal and up keep out of the light, bots step aside when pressed together, a
     // torch comes on only for a fight within 20 m or a search's last stretch): 33.3 % (41 of 123), none on time.
+    // M88 (2026-10-11, 5v5, the West Rise and a lower east end): 55.7 % (68 of 122), none on time.
     // The beams were why: a bot lit itself for every defender in the fort the moment a fight 20-40 m off began.
     reportTally(ctx, 'Woodland, Pro, Attack / Defend', tallyBalance(16, SECONDS, botConfig('pro'), 'attackDefend', WOODLAND, TEAM_SIZE), 'attackDefend', ATTACKERS);
   });

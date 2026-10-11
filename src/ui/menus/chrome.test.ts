@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DIFFICULTIES } from '../../config/bots';
-import { DEFAULT_MATCH_RULES } from '../../config/matchRules';
+import { DEFAULT_MATCH_RULES, TEAM_SIZE_CHOICES } from '../../config/matchRules';
 import { MENU_TEXT } from '../../config/menus';
 import { DEFAULT_MAP, loadDevMaps } from '../../map/maps';
 import type { NewGamePicks } from '../../newGamePicks';
@@ -149,6 +149,18 @@ describe('the Your match panel (G3, playView.ts)', () => {
     const on = playView(picks({ map: 'neonHeights' }), opts(true), () => 'night');
     expect(on.notes).toContain(DEV_CONTENT_NOTE);
     expect(on.pays).toBe(''); // dev content pays nothing
+  });
+
+  it('offers only 5v5 and 6v6 on Woodland, playing a smaller pick as 5v5, and a run there still takes a squad of one to three (M88)', () => {
+    const offered = (v: { sizeMin: number; sizeMax: number }) => TEAM_SIZE_CHOICES.filter((c) => Number(c.id) >= v.sizeMin && Number(c.id) <= v.sizeMax).map((c) => c.label);
+    const wood = playView(picks({ map: 'woodland', rules: { ...DEFAULT_MATCH_RULES, teamSize: 3 } }), opts(true), () => 'night');
+    expect(offered(wood)).toEqual(['5v5', '6v6']);
+    expect(wood.rules).toContain('5v5');
+    expect(playView(picks({ map: 'woodland', rules: { ...DEFAULT_MATCH_RULES, teamSize: 6 } }), opts(true), () => 'night').rules).toContain('6v6');
+    expect(offered(playView(picks(), opts(false), () => 'day'))).toEqual(['1v1', '2v2', '3v3']);
+    const run = playView(picks({ map: 'woodland', mode: 'extraction', rules: { ...DEFAULT_MATCH_RULES, teamSize: 2 } }), opts(true), () => 'night');
+    expect(offered(run)).toEqual(['1v1', '2v2', '3v3']);
+    expect(run.rules).toContain('Squad of 2');
   });
 
   it('sums up the bots in one line, both levels only when they differ', () => {

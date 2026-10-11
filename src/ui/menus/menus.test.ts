@@ -128,21 +128,22 @@ describe('menu data', () => {
 
   it('lists Neon Heights as a playable dev map, 4v4 with up to 5v5, played as Depot while Dev content is off (M34c)', () => {
     const city = mapEntry('neonHeights');
-    expect([city.label, city.tag, city.teamSize]).toEqual(['Neon Heights', 'dev', { standard: 4, max: 5 }]);
+    expect([city.label, city.tag, city.teamSize]).toEqual(['Neon Heights', 'dev', { min: 1, standard: 4, max: 5 }]);
     expect(availableChoice(MAPS, 'neonHeights', false, DEFAULT_MAP)).toBe(DEFAULT_MAP);
     expect(availableChoice(MAPS, 'neonHeights', true, DEFAULT_MAP)).toBe('neonHeights');
   });
 
-  it('plays no more a side than a map has spawns for (M33d)', () => {
+  it('plays no more a side than a map has spawns for (M33d), and no fewer than it offers (Woodland, M88)', () => {
     for (const m of MAPS) {
+      expect(m.teamSize.min).toBeLessThanOrEqual(m.teamSize.standard);
       expect(m.teamSize.standard).toBeLessThanOrEqual(m.teamSize.max);
       expect(mapData(m.id).spawns[0].length, m.id).toBeGreaterThanOrEqual(m.teamSize.max);
       expect(mapData(m.id).spawns[1].length, m.id).toBeGreaterThanOrEqual(m.teamSize.max);
-      expect(teamSizeOn(m.id, 5)).toBe(m.teamSize.max);
-      expect(teamSizeOn(m.id, 1)).toBe(1);
+      expect(teamSizeOn(m.id, 9)).toBe(m.teamSize.max);
+      expect(teamSizeOn(m.id, 1)).toBe(m.teamSize.min);
     }
-    expect(mapEntry('depot').teamSize).toEqual({ standard: 3, max: 3 });
-    expect(mapEntry('woodland').teamSize).toEqual({ standard: 4, max: 5 });
+    expect(mapEntry('depot').teamSize).toEqual({ min: 1, standard: 3, max: 3 });
+    expect(mapEntry('woodland').teamSize).toEqual({ min: 5, standard: 5, max: 6 });
   });
 
   it('starts every word of a two-word button with a capital (owner, 2026-10-04)', () => {

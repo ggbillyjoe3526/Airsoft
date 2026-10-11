@@ -23,8 +23,9 @@ import { woodlandExtraction } from './woodlandExtraction';
  *   rooms with doors and windows), then up a sunken track to the Knoll's south side.
  * - The Knoll (x 86–116, z 30–64): a hill 3.8 m over the field's slope, its top +6.5 m, with a log fort around the
  *   flag (Attack / Defend). Its west face is the steepest slope on the map (about 1:2.3).
- * - End 0 camp (west, ±0 m) and end 1 camp (east, about +3.5 m, behind the Knoll's crest): log barricades as spawn
- *   walls.
+ * - End 0 camp (west, +1 m, behind the West Rise, a low ridge across the meadow) and end 1 camp (east, about +2.5 m,
+ *   behind the Knoll's crest): log barricades as spawn walls. Neither camp sees the other, nor anyone within 8 m of
+ *   its spawns (M88, playtest note 13).
  *
  * Every slope stays walkable (no steeper than a ramp, PHYSICS.maxRampSlope), checked in the tests. Bushes (M33e) hide
  * you from sight, but BBs and people pass through them. Night lighting, the camp fires and lanterns, tree canopies and
@@ -55,13 +56,34 @@ const WINDOW_TOP = 2.0;
 
 // --- The ground --------------------------------------------------------------------------------------------------
 
-/** End 0's camp is flat to here; the slope rises from it. */
+/** End 0's camp is flat to here, at WEST_LIFT; the slope rises from it. */
 const SLOPE_X0 = 11;
-/** The foot of the Knoll, and the field's height there (a 3.4% rise). */
+/**
+ * End 0's camp sits a metre up (M88, playtest note 13), so the end 1 camp's height edge over it at the start is about
+ * 1.5 m, not 3.5 m. The slope to the Knoll's foot is gentler for it (a 2 % rise).
+ */
+const WEST_LIFT = 1;
+/** The foot of the Knoll, and the field's height there. */
 const SLOPE_X1 = 85;
 const SLOPE_RISE = 2.5;
-/** East of the Knoll's foot the ground keeps rising a little, to +3 m at the east fence. */
+/** East of the Knoll's foot the ground keeps rising a little, to its height under the Knoll's top (EAST_TOP_X)... */
 const EAST_RISE = 0.5;
+const EAST_TOP_X = 101;
+/**
+ * ...and then falls by EAST_FALL to the east fence (M88), so end 1's camp sits lower behind the Knoll's crest. Kept
+ * small: the fall adds to the Knoll's east face, which must stay walkable.
+ */
+const EAST_FALL = 0.75;
+
+/**
+ * The West Rise (M88, playtest note 13): a low ridge across the meadow in front of end 0's camp, so the two camps start
+ * hidden from each other: from the Knoll's shoulder by end 1's camp you look over the meadow but not over the rise into
+ * the camp behind it. Its crest runs north to south along plan x = RISE.x from z0 to z1 and falls off over RISE_FALL
+ * metres all round (half a cosine), gentle enough to walk over anywhere.
+ */
+const RISE = { x: 22, z0: 28, z1: 60 };
+const RISE_HEIGHT = 2.6;
+const RISE_FALL = 10;
 
 /** The Knoll: a flat top of radius KNOLL_TOP round its centre, falling off over KNOLL_FALL metres. */
 const KNOLL = { x: 101, z: 47 };
@@ -106,12 +128,18 @@ function segmentDistance(x: number, z: number, a: { x: number; z: number }, b: {
 
 /** The field's height at plan point (x, z). */
 function woodlandHeight(x: number, z: number): number {
-  const slope = x <= SLOPE_X0 ? 0 : x <= SLOPE_X1 ? (SLOPE_RISE * (x - SLOPE_X0)) / (SLOPE_X1 - SLOPE_X0) : SLOPE_RISE + EAST_RISE * Math.min(1, (x - SLOPE_X1) / (SIZE_X - SLOPE_X1));
+  const slope =
+    x <= SLOPE_X0
+      ? WEST_LIFT
+      : x <= SLOPE_X1
+        ? WEST_LIFT + ((SLOPE_RISE - WEST_LIFT) * (x - SLOPE_X0)) / (SLOPE_X1 - SLOPE_X0)
+        : SLOPE_RISE + EAST_RISE * Math.min(1, (x - SLOPE_X1) / (SIZE_X - SLOPE_X1)) - EAST_FALL * smoothstep(EAST_TOP_X, SIZE_X, x);
+  const rise = dip(segmentDistance(x, z, { x: RISE.x, z: RISE.z0 }, { x: RISE.x, z: RISE.z1 }), RISE_HEIGHT, 0, RISE_FALL);
   const r = Math.hypot(x - KNOLL.x, z - KNOLL.z);
   const knoll = r <= KNOLL_TOP ? KNOLL_HEIGHT : r >= KNOLL_TOP + KNOLL_FALL ? 0 : (KNOLL_HEIGHT * (1 + Math.cos((Math.PI * (r - KNOLL_TOP)) / KNOLL_FALL))) / 2;
   const creek = dip(Math.abs(z - creekZ(x)), CREEK_DEPTH, CREEK_BED, CREEK_BANK) * (1 - smoothstep(CREEK_END[0], CREEK_END[1], x));
   const track = dip(segmentDistance(x, z, TRACK.from, TRACK.to), TRACK_DEPTH, TRACK_BED, TRACK_BANK) * (1 - smoothstep(TRACK_FADE[0], TRACK_FADE[1], x));
-  return slope + knoll - creek - track;
+  return slope + rise + knoll - creek - track;
 }
 
 // --- Plan to world -----------------------------------------------------------------------------------------------
@@ -169,12 +197,15 @@ const LANE_POINTS: readonly (readonly [number, number])[][] = [
 /** The flagpole: on the Knoll's top, inside the fort. */
 const FLAG = { x: 101, z: 47 };
 
-/** Five spawns a side (Woodland plays 4v4, up to 5v5), each camp facing the other way down the field. */
-const END0_SPAWNS = [38.5, 41, 43.5, 46, 48.5].map((z) => ({ x: 6.5, z, yaw: -Math.PI / 2 }));
-const END1_SPAWNS = [39, 41.5, 44, 46.5, 49].map((z) => ({ x: 116.5, z, yaw: Math.PI / 2 }));
-/** Dead zones: each camp's back corner, behind its barricades and away from every lane. */
-const END0_DEAD = [[2, 64], [3, 64], [2, 65], [3, 65], [2.5, 66]].map(([x, z]) => ({ x: x!, z: z!, yaw: -Math.PI / 2 }));
-const END1_DEAD = [[118, 64], [117, 64], [118, 65], [117, 65], [117.5, 66]].map(([x, z]) => ({ x: x!, z: z!, yaw: Math.PI / 2 }));
+/**
+ * Six spawns a side (Woodland plays 5v5, up to 6v6: owner, 2026-10-06), each camp facing the other way down the field.
+ * End 0's stand behind the West Rise; end 1's as far behind the Knoll's crest as the fence allows (M88).
+ */
+const END0_SPAWNS = [37, 39.5, 42, 44.5, 47, 49.5].map((z) => ({ x: 6.5, z, yaw: -Math.PI / 2 }));
+const END1_SPAWNS = [38.5, 41, 43.5, 46, 48.5, 51].map((z) => ({ x: 117.5, z, yaw: Math.PI / 2 }));
+/** Dead zones: each camp's back corner, behind its barricades and away from every lane; a spot for each spawn. */
+const END0_DEAD = [[2, 64], [3, 64], [2, 65], [3, 65], [2.5, 66], [3.5, 66]].map(([x, z]) => ({ x: x!, z: z!, yaw: -Math.PI / 2 }));
+const END1_DEAD = [[118, 64], [117, 64], [118, 65], [117, 65], [117.5, 66], [116.5, 66]].map(([x, z]) => ({ x: x!, z: z!, yaw: Math.PI / 2 }));
 
 /** Mirroring z turns a facing `yaw` (forward = (-sin yaw, -cos yaw)) into π - yaw, as on Depot. */
 const spawnAt = (s: { x: number; z: number; yaw: number }): SpawnPoint => ({ position: onGround(s.x, s.z), yaw: Math.atan2(Math.sin(Math.PI - s.yaw), Math.cos(Math.PI - s.yaw)) });
@@ -557,6 +588,8 @@ export const WOODLAND_LAYOUT = {
   fullCoverHeight: FULL,
   /** The Knoll's top (its flat part), round the flag. */
   knoll: { x: worldX(KNOLL.x), z: worldZ(KNOLL.z), topRadius: KNOLL_TOP, height: KNOLL_HEIGHT },
+  /** The West Rise's crest (M88): its middle, world coordinates, on the ground. */
+  riseCrest: onGround(RISE.x, (RISE.z0 + RISE.z1) / 2),
   /** The camps' barricade lines (world x): end 0's to the west, end 1's to the east. */
   campLines: [worldX(11), worldX(111)],
   /**

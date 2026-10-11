@@ -21,9 +21,9 @@ import type { PuffConfig, QualitySettings } from './render';
  * render/g9DressingCost.test.ts, which holds both to the same budget):
  * - Low draws none of it on either map: the same meshes, triangles, shaders, textures and horizon as before, and no
  *   moving effect at all.
- * - Woodland (Medium, High): 11 636 more triangles and 2 more draw calls — the junk mesh carries the fallen branches,
- *   twigs and logs and the leaf drifts (6 874 triangles), the puddle mesh the mud and the puddles (2 040), and the
- *   treeline and hills join the tree ring (2 722, no draw call). The moss on the trunks, logs and boulders is vertex
+ * - Woodland (Medium, High): 11 656 more triangles and 2 more draw calls — the junk mesh carries the fallen branches,
+ *   twigs and logs and the leaf drifts (6 894 triangles on M88's ground), the puddle mesh the mud and the puddles
+ *   (2 040), and the treeline and hills join the tree ring (2 722, no draw call). The moss on the trunks, logs and boulders is vertex
  *   colour on meshes that were already there (nothing added). Moving: the fireflies at night are one draw.
  * - Neon Heights (Medium, High): 9 654 more triangles and 2 more draw calls — the junk mesh carries the street litter,
  *   the posters and every neon tube, the flickering ones too (5 666 triangles), the dirt, litter scraps and sprays join

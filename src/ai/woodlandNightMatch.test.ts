@@ -14,14 +14,14 @@ vi.mock('../map/nightSight', async (importOriginal) => {
 });
 
 /**
- * M33g QA, acceptances 1, 2 and 5 together: a 4v4 bot match on the real Woodland with its night field and its bushes.
+ * M33g QA, acceptances 1, 2 and 5 together: a 5v5 bot match on the real Woodland with its night field and its bushes.
  * Every few ticks each bot's sight of each enemy is checked against the range of the spot the enemy stands on; the
  * dark must matter (someone within viewDistance was hidden by it), and the canopy grid is built exactly once.
  */
-const TEAM_SIZE = 4;
+const TEAM_SIZE = 5;
 const SAMPLE_EVERY = 4;
 
-describe('a 4v4 bot match on Woodland at night (M33g, acceptances 1, 2 and 5)', () => {
+describe('a 5v5 bot match on Woodland at night (M33g, acceptances 1, 2 and 5)', () => {
   // Test files share a worker's modules (isolate: false): another file may already have loaded the bots with the real
   // night field, so this file loads its own copies, with the mock, and leaves a clean registry behind.
   let nightSight: typeof NightSight;

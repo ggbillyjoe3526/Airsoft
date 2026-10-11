@@ -408,8 +408,13 @@ with a back door near the pole).
 ### Woodland (dev content)
 
 A wide wood at night: 120 × 80 m on a gentle slope up to the Knoll and its log fort, with three lanes (Pine Belt,
-Meadow, and Creek with the cabin). 4v4 by default, up to 5v5. Turn on Settings › Dev › Dev content, then pick it on
-the Play screen.
+Meadow, and Creek with the cabin). 5v5 by default, or 6v6; nothing smaller. Turn on Settings › Dev › Dev content,
+then pick it on the Play screen.
+
+- [ ] **Hidden starts (M88).** From either camp, and for the first few steps out of it, you can't see the other team:
+  the west camp sits behind the West Rise (a low ridge across the meadow), the east camp behind the Knoll. Play both
+  halves: the east end is only a little higher now. Picking Woodland sets 5v5; the Team size row offers only 5v5 and
+  6v6. Check 6v6 on Low still feels smooth.
 
 - [ ] **The night.** A dark sky under a low moon over the Knoll; camp fires flicker with embers, lanterns glow and
   light the ground; on Medium and up the nearest ones light players too (Settings › Graphics › Night lights).
@@ -464,7 +469,7 @@ Play › Match. The Rules row comes first: Skirmish (the standard match), Tourna
 Custom, which opens every row.
 
 - [ ] **The rows.** Rounds to win (3, 5, 7, 10), Round time (1:30 to 5:00), Team size (1v1 to 3v3; 4v4 and 5v5 on
-  big maps with Dev content), Opponents, Teammates, Friendly fire and Ricochets count; Custom adds Overtime, Time-out,
+  Neon Heights, 5v5 and 6v6 only on Woodland, with Dev content), Opponents, Teammates, Friendly fire and Ricochets count; Custom adds Overtime, Time-out,
   Minimap, Fire modes, Magazines and Kit. Each change shows in Your match at once and is kept after a reload.
 - [ ] **A 1v1 and a 2v2.** No teammate (or one) against one bot (or two); the scoreboard and the pips match. Do rounds
   feel too long or too quick at that size?

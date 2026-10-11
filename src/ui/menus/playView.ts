@@ -23,11 +23,13 @@ import type { PlayView } from './setupScreen';
 export function playView(picked: NewGamePicks, opts: Pick<MenusOptions, 'rules' | 'dev' | 'armory' | 'loadout'>, lightingOf: (id: MapId) => LightingPresetId): PlayView {
   const devContent = opts.dev.devContent();
   const played = playedPicks(picked, devContent);
-  // Each map offers as many players a side as it has room for (Depot 3v3, Woodland up to 5v5, M33).
+  // Each map offers as many players a side as it has room for (Depot up to 3v3, Woodland 5v5 or 6v6, M33, M88).
   // An Extraction run takes a squad of at most three (M43).
   const map = mapEntry(played.map);
   const run = played.mode === 'extraction' ? mapData(map.id).extraction : undefined;
   const sizeMax = run ? squadSize(map.teamSize.max) : map.teamSize.max;
+  // Woodland offers only 5v5 and 6v6 (owner, 2026-10-06, M88); a run's squad may be smaller.
+  const sizeMin = run ? 1 : map.teamSize.min;
   const m = { ...played.rules, teamSize: playedTeamSize(played) };
   const light = lightingOf(map.id);
   // A map that offers Day and Night names the one picked (M34d).
@@ -46,6 +48,7 @@ export function playView(picked: NewGamePicks, opts: Pick<MenusOptions, 'rules' 
     devContent,
     run: run !== undefined,
     sizeMax,
+    sizeMin,
     mapLine: `${map.label}${lightLine}`,
     still: still ? menuArt(still) : null,
     modeLabel: MATCH_MODES.find((o) => o.id === played.mode)?.label ?? played.mode,

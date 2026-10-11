@@ -148,8 +148,8 @@ describe('G9 QA: the cost the code states is the cost it has (acceptance 3: “e
   });
   const stated = (map: string): number => Number(new RegExp(`${map} \\(Medium, High\\): ([\\d ]+) more triangles`).exec(source)![1]!.replace(/ /g, ''));
 
-  it('Woodland: the stated 11 636 more triangles is what Medium and High draw', () => {
-    expect(stated('Woodland')).toBe(11636);
+  it('Woodland: the stated 11 656 more triangles is what Medium and High draw', () => {
+    expect(stated('Woodland')).toBe(11656);
     for (const q of [QUALITY.medium, QUALITY.high]) expect(extraTriangles(WOODLAND, q)).toBe(stated('Woodland'));
   });
 

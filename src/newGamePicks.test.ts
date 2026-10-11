@@ -53,12 +53,12 @@ afterEach(() => {
 const devIds = (list: readonly Taggable[]): string[] => list.filter((o) => o.tag === 'dev').map((o) => o.id);
 
 describe('New game picks and dev content (M35)', () => {
-  it('tags only Woodland, 4v4, 5v5 (M33d), Pro (M36), Neon Heights (M34c) and Extraction (M43) dev today, so the default picks use no dev content', () => {
+  it('tags only Woodland, 4v4, 5v5 (M33d), 6v6 (M88), Pro (M36), Neon Heights (M34c) and Extraction (M43) dev today, so the default picks use no dev content', () => {
     expect(devIds(MAPS)).toEqual(['woodland', 'neonHeights']);
     expect(devIds(MATCH_MODES)).toEqual(['extraction']);
     expect(devIds(WINS_NEEDED_CHOICES)).toEqual([]);
     for (const list of [DIFFICULTIES, TEAMMATE_DIFFICULTIES]) expect(devIds(list)).toEqual(['pro']);
-    expect(devIds(TEAM_SIZE_CHOICES)).toEqual(['4', '5']);
+    expect(devIds(TEAM_SIZE_CHOICES)).toEqual(['4', '5', '6']);
     expect(pickTags(picks()).every((t) => t === 'public')).toBe(true);
     expect(picksUseDev(picks())).toBe(false);
   });

@@ -48,7 +48,7 @@ export class PlayPicks implements PlayModel {
     return lightingPicked(mapData(id), this.lightingPicks[id]);
   }
 
-  /** A map was picked: the team size becomes the map's own (Depot 3v3, Woodland 4v4, M33), and is saved. */
+  /** A map was picked: the team size becomes the map's own (Depot 3v3, Woodland 5v5, M33, M88), and is saved. */
   setMap(id: MapId): void {
     this.picked.map = id;
     this.hooks.onMap(id);

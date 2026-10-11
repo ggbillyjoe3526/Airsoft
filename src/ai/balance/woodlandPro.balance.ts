@@ -5,12 +5,12 @@ import { initPhysics } from '../../physics/physicsWorld';
 import { tallyBalance } from '../depotMatchSupport';
 import { PRO_BAND, reportTally } from './balanceSupport';
 
-/** Woodland plays 4v4 (M33d), at night with its bushes (sightConditionsOf, as woodlandMatch*.test.ts play it). */
-const TEAM_SIZE = 4;
+/** Woodland plays 5v5 (M88; 4v4 before), at night with its bushes (sightConditionsOf, as woodlandMatch*.test.ts play it). */
+const TEAM_SIZE = 5;
 /** Long enough for a whole match, first to 5 (the longest of these seeds takes about 13 minutes of game time). */
 const SECONDS = 900;
 
-describe('a 4v4 Elimination match on Woodland, both teams on Pro (M40)', () => {
+describe('a 5v5 Elimination match on Woodland, both teams on Pro (M40)', () => {
   beforeAll(async () => {
     await initPhysics();
   });
@@ -29,7 +29,8 @@ describe('a 4v4 Elimination match on Woodland, both teams on Pro (M40)', () => {
     // the game fits every bot at night; with them (M57, audit AI-02, on M55's maps) end 0 wins 50.4 % (62 of 123), none
     // on time. M71 (Audit 2: every level hunts the middle, Normal and up keep out of the light, bots step aside when pressed together, a
     // torch comes on only for a fight within 20 m or a search's last stretch): end 0 60.0 % (69 of 115), 1 of 117 on time; on the ceiling, about two
-    // standard errors (4.6 points each) over M57's 50.4 %: the downhill end's edge (BAL-09) to watch.
+    // standard errors (4.6 points each) over M57's 50.4 %: the downhill end's edge (BAL-09) to watch. M88 (2026-10-11, 5v5,
+    // the West Rise and a lower east end): 48.0 % (60 of 125), 1 of 127 on time.
     reportTally(ctx, 'Woodland, Pro, Elimination', tallyBalance(16, SECONDS, botConfig('pro'), 'elimination', WOODLAND, TEAM_SIZE), 'elimination', PRO_BAND, 'the downhill end');
   });
 });

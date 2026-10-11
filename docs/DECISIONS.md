@@ -302,7 +302,9 @@ replaces its line; the old one stays findable in the archive or in git.
   BBs (owner, 2026-10-04).** He picked it from five concepts: no prone yet, a gentle end-to-end slope, one much higher
   end with the flag. It plays 5v5 by default, allows 6v6 and offers only those two (owner, 2026-10-06; replaces 4v4 with
   Custom up to 5v5). Its long open lines are intended (owner decision 11, 2026-10-05); the longest clear line stays
-  under 141 m.
+  under 141 m. Its starts are hidden from each other: nobody within 8 m of one camp's spawns sees anyone within 8 m of
+  the other's, and the east end stands at most 2 m above the west at the start (owner's note 13, 2026-10-06; M88, the
+  West Rise; tested in `map/woodland.test.ts`).
 - **Neon Heights is the third field: a vertical futuristic city with Day and Night (owner, 2026-10-04).** The concept
   was approved with all twelve defaults: 46 × 30 m, three playable floors, roofs not playable, stairs only, open windows
   with a 1.2 m sill, 4v4, both modes and Night first.

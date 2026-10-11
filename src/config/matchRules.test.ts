@@ -96,17 +96,17 @@ describe('custom match rules (M20)', () => {
     expect(roundRulesFor(m)).toMatchObject({ winsNeeded: 3, roundTime: 90, teamSize: 1, resetDelay: ROUNDS.resetDelay });
   });
 
-  it('offer team sizes up to 5v5 and load a saved 4v4 or 5v5 (M33d); a size nobody offers falls back to 3v3', () => {
-    expect(TEAM_SIZE_CHOICES.map((c) => c.id)).toEqual(['1', '2', '3', '4', '5']);
-    expect(TEAM_SIZE_CHOICES.map((c) => c.label)).toEqual(['1v1', '2v2', '3v3', '4v4', '5v5']);
-    for (const size of [4, 5]) {
+  it('offer team sizes up to 6v6 and load a saved 4v4, 5v5 or 6v6 (M33d, M88); a size nobody offers falls back to 3v3', () => {
+    expect(TEAM_SIZE_CHOICES.map((c) => c.id)).toEqual(['1', '2', '3', '4', '5', '6']);
+    expect(TEAM_SIZE_CHOICES.map((c) => c.label)).toEqual(['1v1', '2v2', '3v3', '4v4', '5v5', '6v6']);
+    for (const size of [4, 5, 6]) {
       vi.stubGlobal('localStorage', storageWith({ teamSize: String(size) }));
       expect(loadMatchRules().teamSize).toBe(size);
       expect(roundRulesFor({ ...DEFAULT_MATCH_RULES, teamSize: size }).teamSize).toBe(size);
-      // A 4v4 or 5v5 is not the standard match the records count.
+      // A 4v4, 5v5 or 6v6 is not the standard match the records count.
       expect(countsForRecords({ ...DEFAULT_MATCH_RULES, teamSize: size }, 'normal', 'normal')).toBe(false);
     }
-    vi.stubGlobal('localStorage', storageWith({ teamSize: '6' }));
+    vi.stubGlobal('localStorage', storageWith({ teamSize: '7' }));
     expect(loadMatchRules().teamSize).toBe(3);
   });
 
@@ -127,7 +127,7 @@ describe('custom match rules (M20)', () => {
   it('read back what was saved, and the default for anything missing or off the menu', () => {
     vi.stubGlobal('localStorage', storageWith({ winsNeeded: '7', roundTime: 210, teamSize: '2', friendlyFire: 'off', ricochets: 'on' }));
     expect(loadMatchRules()).toEqual({ winsNeeded: 7, roundTime: 210, teamSize: 2, friendlyFire: false, ricochetsCount: true, ...SKIRMISH_SWITCHES });
-    vi.stubGlobal('localStorage', storageWith({ winsNeeded: '4', roundTime: 200, teamSize: '6', friendlyFire: 'maybe' }));
+    vi.stubGlobal('localStorage', storageWith({ winsNeeded: '4', roundTime: 200, teamSize: '7', friendlyFire: 'maybe' }));
     expect(loadMatchRules()).toEqual(DEFAULT_MATCH_RULES);
   });
 

@@ -11,15 +11,15 @@ import { playMatch } from './depotMatchSupport';
 import { bodyPoint, eyeOf, visiblePart } from './perception';
 
 /**
- * M33e QA, acceptance 1 and 5 together: a 4v4 bot match on the real Woodland, its 70 bushes in the bots' world. Every
+ * M33e QA, acceptance 1 and 5 together: a 5v5 bot match on the real Woodland, its 70 bushes in the bots' world. Every
  * tick (a few in a row sampled) each bot's sight of each enemy is checked against the bushes: no bot has a target in
  * view through more than foliageSeeThrough of leaves unless it is within closeAwareness, and the bushes do hide people
  * from bots in the match (it is not a test that passes because no bush is ever in the way).
  */
-const TEAM_SIZE = 4;
+const TEAM_SIZE = 5;
 const SAMPLE_EVERY = 6;
 
-describe('a 4v4 bot match on Woodland with its bushes (M33e, acceptances 1 and 5)', () => {
+describe('a 5v5 bot match on Woodland with its bushes (M33e, acceptances 1 and 5)', () => {
   beforeAll(async () => {
     await initPhysics();
   });
