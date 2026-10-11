@@ -43,7 +43,7 @@ pulled into Dev 5, and Dev 7 is folded away (its mode checks join the toolkit he
 5. **Graphics** (the overhaul the owner pulled forward from 0.2 on 2026-10-05). G1–G3 and G5–G8 are merged. Left: G4,
    G9, WebGPU as a complete overhaul (W0–W6) and the map pictures (see Graphics below).
 6. **The owner's playtest notes:** the Dev 4 notes M80–M91 and M96, and the 2026-10-07 notes M97–M99 (M100 is part of
-   the graphics work, item 5; tables below). Done so far: M80, M82, M83, M84, M85, M86, M87, M88, M89, M90, M96, M97, M98, M99 (2026-10-11).
+   the graphics work, item 5; tables below). Done so far: M80, M81, M82, M83, M84, M85, M86, M87, M88, M89, M90, M91, M96, M97, M98, M99 (2026-10-11).
 7. **The content toolkit, all four parts** (plan `plans/content-toolkit-concept.md`, approved with all defaults
    2026-10-05; about six to eight pull requests): 1 rulebooks and briefs, replica and attachment checks and the report
    with pictures (CT1, done 2026-10-11: `docs/content/`, `node pipeline/content-check.mjs`); 2 map checks (CT2, done 2026-10-11: `map:<id>`); 3 mode
@@ -104,7 +104,7 @@ conflict with an earlier decision on 2026-10-06 (below the table and in `docs/DE
 | 6 | Skip to the next round from the spectator camera | M83 (0.1 Dev 5); done (2026-10-11) |
 | 7 | A setting for a fixed or rotating minimap | M83 (0.1 Dev 5); done (2026-10-11) |
 | 8 | Walking (Shift) while aiming down sights slows you further | M84 (0.1 Dev 5): done (2026-10-11) |
-| 9 | The practice range and tutorial area in the new graphics | M81 (0.1 Dev 5, after G5 and G6; the graphics plan re-dresses only the three maps) |
+| 9 | The practice range and tutorial area in the new graphics | M81 (0.1 Dev 5, after G5 and G6; the graphics plan re-dresses only the three maps); done (2026-10-11) |
 | 10 | Practice: moving targets, more target types, a timed high-score challenge (off by default) | M93 (0.1 Dev 6) |
 | 11 | Practice on any map with targets instead of bots; rename the range "Practice" | M94 (0.1 Dev 6) |
 | 12 | Practice with any unlocked replica and Customise; everything with Dev on | M95 (0.1 Dev 6) |
@@ -121,7 +121,7 @@ conflict with an earlier decision on 2026-10-06 (below the table and in `docs/DE
 | 23 | Extraction: solo against bots, more of them, quicker and closer waves, bots that hunt, guard and converge on an extraction, a longer extract timer, no respawn; a duo / trio revive later | 0.1 Dev 6, the Extraction rework (feature pick 7): replaces his 2026-10-04 picks (squad of 3, one respawn) and M72's idea of one opponent fewer on Normal (ruled 2026-10-06); the revive goes with Medic |
 | 24 | More Dev settings for playtesting, starting with field credits and tokens on demand | M90 (0.1 Dev 5); done (2026-10-11) |
 | 25 | With the Armory turned off in Dev, hide it instead of greying it | M83 (0.1 Dev 5); done (2026-10-11) |
-| 26 | Softer, diffused torch beams that cast shadows | M91 (0.1 Dev 5, with the graphics work): shadows on High and Ultra only, Low as today for 60 fps (ruled 2026-10-06) |
+| 26 | Softer, diffused torch beams that cast shadows | M91 (0.1 Dev 5, with the graphics work): shadows on High and Ultra only, Low as today for 60 fps (ruled 2026-10-06); done (2026-10-11) |
 
 **His rulings (2026-10-06, after the notes):**
 - The Retro look goes public as soon as possible (M96).
