@@ -13,10 +13,11 @@ export interface MapEntry {
   /** Public or dev (M35): a `dev` map is listed only while the Dev content switch is on. */
   tag: ContentTag;
   /**
-   * Players per team: picking the map sets `standard`, and the Match pop-up offers up to `max` (the map's spawns per
-   * end). Records count only `standard` (config/matchRules countsForRecords).
+   * Players per team: picking the map sets `standard`, and the Match pop-up offers `min` to `max` (at most the map's
+   * spawns per end). Records count only `standard` (config/matchRules countsForRecords). An Extraction run's squad
+   * ignores `min` (newGamePicks.ts playedTeamSize).
    */
-  teamSize: { standard: number; max: number };
+  teamSize: { min: number; standard: number; max: number };
 }
 
 /**
@@ -24,9 +25,10 @@ export interface MapEntry {
  * them public.
  */
 export const MAPS: readonly MapEntry[] = [
-  { id: 'depot', label: 'Depot', blurb: 'An abandoned warehouse yard.', tag: 'public', teamSize: { standard: 3, max: 3 } },
-  { id: 'woodland', label: 'Woodland', blurb: 'A wide wood with a hill, at night.', tag: 'dev', teamSize: { standard: 4, max: 5 } },
-  { id: 'neonHeights', label: 'Neon Heights', blurb: 'A neon city block on three floors.', tag: 'dev', teamSize: { standard: 4, max: 5 } },
+  { id: 'depot', label: 'Depot', blurb: 'An abandoned warehouse yard.', tag: 'public', teamSize: { min: 1, standard: 3, max: 3 } },
+  // Woodland is a big open field: 5v5, or 6v6, and nothing smaller (owner, 2026-10-06, playtest note 13; M88).
+  { id: 'woodland', label: 'Woodland', blurb: 'A wide wood with a hill, at night.', tag: 'dev', teamSize: { min: 5, standard: 5, max: 6 } },
+  { id: 'neonHeights', label: 'Neon Heights', blurb: 'A neon city block on three floors.', tag: 'dev', teamSize: { min: 1, standard: 4, max: 5 } },
 ];
 
 /**
@@ -100,7 +102,8 @@ export function mapLoaded(id: MapId): boolean {
   return loaded.has(id);
 }
 
-/** The team size played on map `id` when `picked` is chosen: no more than the map has spawns for. */
+/** The team size played on map `id` when `picked` is chosen: no more than the map has spawns for, no fewer than its least. */
 export function teamSizeOn(id: MapId, picked: number): number {
-  return Math.min(picked, mapEntry(id).teamSize.max);
+  const { min, max } = mapEntry(id).teamSize;
+  return Math.max(min, Math.min(picked, max));
 }

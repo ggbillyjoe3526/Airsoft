@@ -7,7 +7,7 @@ import type { LightingPresetId } from './config/render';
 import { LOADOUT } from './config/replicas';
 import { DEFAULT_TEAM_PICK, type TeamPickId } from './config/teams';
 import { playsAtNight as nightOf } from './map/lightingChoice';
-import { DEFAULT_MAP, MAPS, type MapId, mapData, mapLoaded, teamSizeOn } from './map/maps';
+import { DEFAULT_MAP, MAPS, type MapId, mapData, mapEntry, mapLoaded, teamSizeOn } from './map/maps';
 import { modeOffered } from './map/playableMode';
 import { botLight, rolledKitMayHoldDev } from './pool/botKit';
 import type { ItemRef } from './pool/collection';
@@ -66,12 +66,13 @@ export function playedPicks(p: NewGamePicks, devContent: boolean): NewGamePicks 
 }
 
 /**
- * Players a side the picks play with: the team size, at most what the map has room for (M33), and in an Extraction run
- * on a map with its data at most a trio (M43).
+ * Players a side the picks play with: the team size, within what the map offers (M33; Woodland 5v5 or 6v6, M88), and in
+ * an Extraction run on a map with its data a squad of at most a trio (M43), which the map's least team size doesn't
+ * raise.
  */
 export function playedTeamSize(p: Pick<NewGamePicks, 'map' | 'mode' | 'rules'>): number {
-  const size = teamSizeOn(p.map, p.rules.teamSize);
-  return p.mode === 'extraction' && mapData(p.map).extraction ? squadSize(size) : size;
+  if (p.mode === 'extraction' && mapData(p.map).extraction) return squadSize(Math.min(p.rules.teamSize, mapEntry(p.map).teamSize.max));
+  return teamSizeOn(p.map, p.rules.teamSize);
 }
 
 /** The content tags of what the picks play: the map, the mode, both difficulties, the ruleset and the tagged Match pop-up choices. */

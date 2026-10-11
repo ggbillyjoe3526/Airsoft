@@ -27,7 +27,7 @@ A fail stops an item going public. A warning ("look at this") is shown to the ow
 | Parts (optics, grips, lasers, magazines, barrels, muzzles, lights, power sources) | `docs/content/attachments.md` | All four levels |
 | Maps | `docs/content/maps.md` | All four levels (level 2 is the layout) |
 | Game modes | `docs/content/modes.md` | All four levels (level 2 is its fit and short matches) |
-| Skins | `docs/content/skins.md` | Not yet (toolkit part 4, with skins) |
+| Skins | `docs/content/skins.md` | Levels 1 to 3 (level 2 is its fit; no balance run, a skin changes no number) |
 
 Every type keeps the standing rules: one hit is one hit, toys not firearms, no real brand names or copied trademarked
 designs, nothing map-only, and an ID (pool ID, map id, mode id) never changes once given.
@@ -44,7 +44,7 @@ designs, nothing map-only, and an ID (pool ID, map id, mode id) never changes on
    map, lighting and pairing at the default 8 seeds; the maps run in parallel, 2026-10-11)
 
 Levels 1 and 2 run for every asset, map and mode in every pull request (`src/content/content.test.ts`,
-`src/content/mapChecks.test.ts`, `src/content/modeChecks.test.ts`), and each mode's short match in the browser runs in
+`src/content/mapChecks.test.ts`, `src/content/modeChecks.test.ts`, `src/content/skinChecks.test.ts`), and each mode's short match in the browser runs in
 the smoke test. Levels 3 and 4 run on demand. A map's spec test adds the perf run on Low, Medium and
 High (about ten minutes in a cloud container) and its balance run plays each lighting and round mode in its own
 process, in parallel.
@@ -52,7 +52,7 @@ process, in parallel.
 ## The command
 
 ```
-node pipeline/content-check.mjs <item|all|map:<id>|map:all|mode:<id>|mode:all> [--balance] [--public] [--levels a,b]
+node pipeline/content-check.mjs <item|all|map:<id>|map:all|mode:<id>|mode:all|skin:<id>|skin:all> [--balance] [--public] [--levels a,b]
                                 [--maps a,b] [--seeds n] [--seconds n] [--no-pictures] [--url u] [--no-perf] [--env e]
                                 [--no-browser]
 ```
@@ -67,12 +67,15 @@ node pipeline/content-check.mjs <item|all|map:<id>|map:all|mode:<id>|mode:all> [
   its short matches on every map that hosts it, the browser match on its first public map (**`--no-browser`** skips
   it), the perf run on each host on the budget preset, and with `--balance` the map balance run in that mode on each
   host. `mode:all` runs levels 1 and 2 on every mode, its short matches on one public map each.
+- **`skin:<id>`** checks a skin by its id or name (`skin:cobalt`, `skin:Signal`): its rules and fit, its team colours
+  and texture, pictures on each replica, and each map's colours measured in the browser (**`--maps`** limits them,
+  **`--no-browser`** skips them; about a minute a map). `skin:all` runs levels 1 to 3 on every skin without the browser.
 - **`--maps`** limits a replica's or part's balance run (`depot,woodland`); each map runs in its own process, in parallel.
 - **`--no-pictures`** skips the pictures, which need the e2e build and a browser (it builds and serves the build
   itself; set `PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium` in a cloud container).
 
 It writes `pipeline/out/content/<id>/report.md` (`map-<id>` for a map, `maps` for every map, `mode-<id>` and `modes`
-for modes), `report.html` (one file, the pictures inside it), `report.json` and
+for modes, `skin-<id>` and `skins` for skins), `report.html` (one file, the pictures inside it), `report.json` and
 `pictures/`, and exits 1 when a check fails or a runner could not run. The thread copies the report to
 `/mnt/project-files/content-reports/<id>/` and attaches the HTML page.
 

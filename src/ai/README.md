@@ -8,7 +8,8 @@ seeded per bot.
   a player's squad order. Each round it deals a team's bots onto lanes by a plan (`teamPlan.ts`).
 - `bot.ts`: a bot's plain-data state (one contact record per enemy seen, `skill`, `role`, `post`, `patrol`).
 - `botBrain.ts`: the per-tick decision and mode choice (lane → fight → cover → search; also `order` and `flag`). It
-  calls `botSenses.ts` (target choice, contacts, reaction), `botMovement.ts` (lane points, hunting, strafing),
+  calls `botSenses.ts` (target choice, contacts, reaction), `botMovement.ts` (lane points, hunting, strafing, and one
+  glance a tick into the view for the team's hunt memory, M87: a spot seen empty isn't walked to),
   `routes.ts` (asking for and following a route, the last step onto a spot; a bot pushed off a leg walks back to it
   rather than over a ledge, G11; shared with `squadOrders.ts`, so the two files don't import each other) and `botCombat.ts` (aim, bursts, reloads; bots lead a target with `flightTimeEstimate`); `botTorch.ts` handles weapon
   lights at night.

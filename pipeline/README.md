@@ -275,7 +275,7 @@ figure, it now plays four (the figure keeps the many).
 ## `content-check.mjs`: the content check
 
 ```
-node pipeline/content-check.mjs <item|all|map:<id>|map:all|mode:<id>|mode:all> [--balance] [--public] [--maps a,b] [--seeds n] [--no-pictures] [--no-perf] [--no-browser]
+node pipeline/content-check.mjs <item|all|map:<id>|map:all|mode:<id>|mode:all|skin:<id>|skin:all> [--balance] [--public] [--maps a,b] [--seeds n] [--no-pictures] [--no-perf] [--no-browser]
 ```
 
 The content toolkit's command (`docs/content/README.md`): levels 1 to 3 for a replica or part (rules, compatibility,
@@ -299,6 +299,12 @@ the browser (`e2e/modeMatch.spec.ts`, one mode on one map through `AIRSOFT_CONTE
 the budget preset. Its balance run is `mapBalance.report.ts` in that mode, one process per map and lighting, with
 Elimination beside a round mode so `contentReport.mjs` `payResults` can set the pay a minute side by side; a run mode's
 levels are set in order by `runOrderResults`. `mode:all` runs levels 1 and 2 on every mode (about 17 s).
+
+For a skin (`skin:<id>`, CT4) level 2 is its fit and the runner is `skin.report.ts` (its rules, fit, team colours and
+texture, and the pictures to draw: each claimed replica bold and Realistic). Then `content-pictures.mjs`
+`measureMapPalettes` starts a match on each map and measures its colours as painted, before light (area-weighted,
+in the browser), and `skinMaps.report.ts` judges the skin against them. No balance run. About two and a half minutes
+for one skin on three maps (2026-10-11); `skin:all` runs levels 1 to 3 on every skin without the browser.
 
 ## `packet.mjs`: the review packet
 

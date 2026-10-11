@@ -260,21 +260,22 @@ const PINNED = {
   // M55 (audit SIM-05): bark and stone re-pinned for the log cut short of the boulder it ran into (its courses fall anew on
   // the slope) and the boulder moved off the tree; the rest as before. G9: with map detail the woods' dressing grows moss
   // on the trunks, logs and boulders, so bark's and stone's vertex colours are re-pinned (their vertices, positions and
-  // UVs are untouched, and woodlandPlain, which draws no dressing, is exactly as before).
+  // UVs are untouched, and woodlandPlain, which draws no dressing, is exactly as before). M88: both re-pinned for the
+  // West Rise and the lower east end (every block, tree and bush on the new ground; the logs there fall in more courses).
   woodlandDetail: [
-    "map-bark v24419 i57672 414f67c2/15941584/f8aa4770",
-    "map-canopy v12360 i0 fdc198ad/811c9dc5/32f7476c",
-    "map-foliage v16800 i0 2c532a15/811c9dc5/5d0ab568",
-    "map-planks v6500 i12600 c6e31599/7bb3ff75/ed848380",
-    "map-stone v12744 i13500 54817208/5d7d5f6a/797faf91",
-    "map-terrain v9801 i57600 70aec22c/006bce1d/b7c02c31",
+    "map-bark v24487 i57816 ed1bee6c/00bf0983/12f15259",
+    "map-canopy v12360 i0 031f958f/811c9dc5/32f7476c",
+    "map-foliage v16800 i0 a789e54e/811c9dc5/5d0ab568",
+    "map-planks v6500 i12600 27873f91/9f349b8d/5691af2a",
+    "map-stone v12744 i13500 b79b51fc/dd536c62/3d21edc7",
+    "map-terrain v9801 i57600 4e80f9d2/006bce1d/4298d710",
   ],
   woodlandPlain: [
-    "map-bark v16771 i43332 3b556e6a/9d27575e/43fa778b",
-    "map-canopy v12360 i0 fdc198ad/811c9dc5/32f7476c",
-    "map-foliage v16800 i0 2c532a15/811c9dc5/5d0ab568",
-    "map-planks v1600 i3000 f2129c69/f369fb4d/d1932a6d",
-    "map-stone v11880 i11880 9c1c1344/e41badca/52eff79b",
-    "map-terrain v9801 i57600 70aec22c/006bce1d/b7c02c31",
+    "map-bark v16839 i43476 3737a830/cd45a029/e77cce1c",
+    "map-canopy v12360 i0 031f958f/811c9dc5/32f7476c",
+    "map-foliage v16800 i0 a789e54e/811c9dc5/5d0ab568",
+    "map-planks v1600 i3000 b1e0a709/eef7627d/cbf74e3d",
+    "map-stone v11880 i11880 be9ecda0/c94609ce/01695e44",
+    "map-terrain v9801 i57600 4e80f9d2/006bce1d/4298d710",
   ],
 } as const;

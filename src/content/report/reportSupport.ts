@@ -52,6 +52,21 @@ export function contentModes(named: string | undefined = ENV.AIRSOFT_CONTENT_ITE
   return m ? [m] : [];
 }
 
+/** Whether `named` names a skin ("skin:cobalt"), not a pool item, a map or a mode. */
+export const namesSkin = (named: string | undefined = ENV.AIRSOFT_CONTENT_ITEM): boolean => /^skin:/i.test(named?.trim() ?? '');
+
+/**
+ * The skin ids "skin:<id or name>" names (CT4; any case, spaces ignored: "skin:cobalt", "skin:Cobalt"), every skin for
+ * "skin:all", or none; `skins` is every skin, id and name.
+ */
+export function contentSkins(skins: readonly { id: string; name: string }[], named: string | undefined = ENV.AIRSOFT_CONTENT_ITEM): string[] {
+  if (!named || !namesSkin(named)) return [];
+  const want = named.trim().slice('skin:'.length).replace(/\s+/g, '').toLowerCase();
+  if (want === 'all') return skins.map((s) => s.id);
+  const s = skins.find((e) => e.id.toLowerCase() === want || e.name.replace(/\s+/g, '').toLowerCase() === want);
+  return s ? [s.id] : [];
+}
+
 /** A number from the environment, or `fallback`. */
 export function envNumber(name: string, fallback: number): number {
   const v = Number(ENV[name]);
@@ -70,7 +85,12 @@ export function reportMeta(ctx: ReportContext, key: string, value: unknown): voi
 
 // Node's fs, without its types.
 const nodeFs = 'node:fs';
-const fs = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync(path: URL): Uint8Array; readdirSync(path: URL): string[]; existsSync(path: URL): boolean };
+const fs = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync(path: URL | string): Uint8Array; readdirSync(path: URL): string[]; existsSync(path: URL): boolean };
+
+/** A JSON file the content check wrote for a runner (its path from the environment). */
+export function readJson(path: string): unknown {
+  return JSON.parse(new TextDecoder().decode(fs.readFileSync(path)));
+}
 
 async function parse(url: URL): Promise<THREE.Object3D> {
   const buf = fs.readFileSync(url);

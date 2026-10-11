@@ -341,3 +341,69 @@ export const MODE_BALANCE_BANDS = {
   objectiveDecides: 0.1,
   pay: { min: 0.75, max: 1.25 },
 } as const;
+
+// ---- Skins (CT4) -------------------------------------------------------------------------------------------------
+
+/**
+ * The register of skins made public (the public gate, CT4): every replica colour scheme tagged `public` in
+ * config/schemes.ts SCHEMES is here, with the date it went public or "before the toolkit". A public skin with no entry
+ * fails the rules check.
+ */
+export const PUBLIC_SKINS: Readonly<Record<string, string>> = {
+  cobalt: 'before the toolkit',
+  signal: 'before the toolkit',
+  acid: 'before the toolkit',
+  teal: 'before the toolkit',
+  hazard: 'before the toolkit',
+  coral: 'before the toolkit',
+  onyx: 'before the toolkit',
+  ghost: 'before the toolkit',
+};
+
+/**
+ * Scheme ids already in players' saves (`scheme.<replica>`, pool/loadoutModel.ts): each stays in SCHEMES under the same
+ * id for good. A new skin's id joins when it first ships in a build.
+ */
+export const SHIPPED_SCHEME_IDS: readonly string[] = ['cobalt', 'signal', 'acid', 'teal', 'hazard', 'coral', 'onyx', 'ghost'];
+
+/**
+ * Skins a player may pick although a colour that covers much of the replica reads as a team's, each with the reason. A
+ * player's own replica is seen only in their hands (single player), so this never excuses a bot's: bots carry only their
+ * own team's colour, whatever this says (the check holds that apart).
+ */
+export const TEAM_COLOUR_SKINS: Readonly<Record<string, string>> = {
+  cobalt: "Alpha's blue: the scheme Alpha's bots carry on purpose (G1, owner 2026-10-05); in a player's hands only they see it",
+  signal: "Beta's orange: the scheme Beta's bots carry on purpose (G1, owner 2026-10-05); in a player's hands only they see it",
+  coral: "the pistol Beta's bots carry (G1); in a player's hands only they see it",
+  hazard: "before the toolkit (G1): its amber reads as Beta's orange, but no bot carries it, so only the player who picks it sees it",
+};
+
+/**
+ * The skin checks' numbers (CT4; src/content/skinDraw.ts, skinSpec.ts, skinMaps.ts):
+ * - `readableShare`: a colour covering at least this share of a replica's surface on a figure reads at a distance (the
+ *   rest, thin lines and small parts, doesn't), so the team and map checks judge it;
+ * - `drawnShare`: a scheme's colours cover at least this share of the replica in first person (the rest is the hands'
+ *   grip, glass, the tip and the BBs), or the scheme isn't really drawn;
+ * - `tipApart`: the orange tip stands at least this far (ΔE00) from the colours around it, so it reads;
+ * - `tipReach`: "around it" is within this many metres of the tip's centre;
+ * - `blend`: a colour this close (ΔE00) to one of a map's common colours blends into it;
+ * - `mapShare`: a map's common colours are those covering at least this share of its painted surface;
+ * - `textureMB`: the texture memory one skin may add to one replica (MB, at 4 bytes a texel, mips a third more): a
+ *   512-texel pattern and its normal map (1.4 MB each; the replicas' shared speckle is 128 texels and no skin's own).
+ */
+export const SKIN_RULES = {
+  readableShare: 0.1,
+  drawnShare: 0.6,
+  tipApart: 20,
+  tipReach: 0.03,
+  blend: 10,
+  mapShare: 0.05,
+  textureMB: 2.8,
+} as const;
+
+/**
+ * What decides how a replica shoots (CT4, "looks only"): the simulation, the bots, the physics, the nav grid and the
+ * kit's numbers (a replica as carried, a bot's kit). None may import config/schemes.ts, directly or through another
+ * module: then no number can read a skin. Paths under the repository root; a folder ends in `/`.
+ */
+export const PLAY_MODULES: readonly string[] = ['src/sim/', 'src/ai/', 'src/physics/', 'src/nav/', 'src/pool/kit.ts', 'src/pool/botKit.ts'];

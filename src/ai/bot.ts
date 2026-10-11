@@ -110,6 +110,10 @@ export interface Bot {
   /** Swept the whole lane: now hunting the least recently checked parts of the map. */
   hunting: boolean;
   huntGoal: Vec3;
+  /** When the hunt goal was picked (s): its sector checked by the team since then sends the bot elsewhere (M87). */
+  huntPickedAt: number;
+  /** Glances taken (M87): each looks at the next spot of a fixed spread over the field of view (botMovement glance). */
+  glances: number;
   /** The current lane point, moved a little at random (laneJitter). */
   laneGoal: Vec3;
   holdLeft: number;
@@ -284,8 +288,16 @@ export interface BotWorld {
    * (s; -Infinity: never, and in the other modes).
    */
   squadNews(team: number, out: Vec3): number;
-  /** Counts `point`'s hunt sector as just checked by `bot`'s team (a spot it found no route to, AI-07). */
+  /**
+   * Counts `point`'s hunt sector as just checked by `bot`'s team: a spot it found no route to (AI-07), or saw empty (M87,
+   * botMovement glance). The team shares what each of its bots checked, for the skill's huntMemory.
+   */
   markVisited(bot: Bot, point: Vec3): void;
+  /**
+   * True if `bot`'s team has checked the sector of its hunt goal since the bot picked it (M87: a teammate went there or
+   * saw it empty, or it saw it itself), and the bot isn't standing in that sector already.
+   */
+  huntGoalChecked(bot: Bot): boolean;
   /** Every bot in the match (teammates' cover spots and lane holds, AI-01). */
   bots: readonly Bot[];
   /** Simulation time now (s). */
@@ -326,6 +338,8 @@ export function createBot(character: Character, seed: number, cfg: BotBehaviour,
     flagGoal: vec3(),
     hunting: false,
     huntGoal: vec3(),
+    huntPickedAt: Number.NEGATIVE_INFINITY,
+    glances: 0,
     laneGoal: vec3(),
     holdLeft: 0,
     teamWait: 0,
@@ -429,6 +443,7 @@ export function resetBot(b: Bot, lane: number, startHold: number, cfg: BotBehavi
   b.laneDir = c.end === 0 ? 1 : -1;
   b.laneIndex = -1;
   b.hunting = false;
+  b.huntPickedAt = Number.NEGATIVE_INFINITY;
   b.lanePoints = lanePoints;
   b.laneDone = false;
   b.retake = false;

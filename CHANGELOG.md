@@ -88,6 +88,11 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M83** · With Disable Armory on in Dev settings, the Armory is hidden from every menu and the tutorial instead of greyed out
 - **RM4** · Built-in models are back for replicas, parts, players, bots and menu pictures; the Blender models wait behind two Dev switches in Settings
 - **M80** · Tutorial opens the real scoreboard and order wheel, with plain-word cards in your keys; finishing opens Tutorial complete: Practice range or Menu
+- **M87** · Hunting bots check spots by eye, share what they have checked with their team and turn away from a goal their team has already checked
+- **M88** · Woodland (dev content): both teams start hidden behind cover (a new West Rise, thick trees); the blue end's height edge is smaller
+- **M88** · Woodland's lanes stop at two points in the fort, so the east team leaves it sooner
+- **M88** · Woodland takes 5v5 by default; 6v6 is allowed, and only 5v5 and 6v6 are offered there; Low keeps its frame rate at 6v6
+- **M87** · A bot holding a corner of cover steps aside while a teammate walks past, instead of standing inside them
 - **W6a** · One renderer for both paths: WebGPU where the browser has it, WebGL otherwise; the pictures look the same as before
 - **W6a** · Menu pictures of replicas wait until the match's shaders are ready, so a match starts no slower
 - **W6a** · The game download is a little smaller: the main code file is 982 kB, down from 1,007 kB
@@ -152,6 +157,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **CT1** · Content toolkit part 1: rulebooks per content kind, and one command that checks a replica or part in four levels and writes a one-page report
 - **CT2** · Content toolkit part 2: a map check covers rules, layout against Depot, performance and bot balance; every test run checks every map
 - **CT3** · Content toolkit part 3: mode checks cover rules, screens, bots, every host map and a browser match; balance runs now include Extraction
+- **CT4** · Content toolkit part 4: skin checks cover a colour scheme's rules, fit on every replica, team colours, texture budget, pictures and map colours
 - **W6a** · The perf checks run on both renderers with their own baselines; the grass and tree stand-ins' triangles have their own perf line
 - **W6a** · Medium draw-call budgets raised, Woodland 115 to 120 and Neon Heights 140 to 145: GPU grass costs two draws, built-in models five
 

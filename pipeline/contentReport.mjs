@@ -380,3 +380,59 @@ export function modeReportMarkdown({ content, item, results, pictures = [], meta
   }
   return `${lines.join('\n').trimEnd()}\n`;
 }
+
+// ---- Skins (CT4) ---------------------------------------------------------------------------------------------------
+
+/** A skin's report calls its levels by what they check: level 2 is how it fits the replicas. */
+export const SKIN_LEVEL_WORDS = { ...LEVEL_WORDS, compatibility: 'Fit' };
+
+/** A colour as text ("#2f6fd6"). */
+const hexColour = (c) => `#${Number(c).toString(16).padStart(6, '0')}`;
+
+/** The skins side by side: one row per skin, its tag, family, colours, what shows at a distance and who carries it. */
+export function skinRows(skins, readableShare) {
+  return skins.map((s) => [
+    `${s.name} (\`${s.id}\`)`,
+    s.tag,
+    s.family,
+    ['body', 'furniture', 'detail', 'accent', 'steel'].map((r) => `${r} ${hexColour(s.colours[r])}`).join(', '),
+    s.shows.filter((c) => c.share >= readableShare).map((c) => `${hexColour(c.colour)} ${pct(c.share)}`).join(', '),
+    s.bots.length > 0 ? `${s.bots.join(' and ')}'s bots` : 'players only',
+  ]);
+}
+
+/** The maps' measured colours: one row per map, its common colours (as the skin checks judged them: merged, the rare ones left out; largest first). */
+export function paletteRows(palettes) {
+  return palettes.map((p) => [p.label, p.error ? `not measured (${p.error})` : p.buckets.slice(0, 6).map((b) => `${hexColour(b.colour)} ${pct(b.share)}`).join(', ')]);
+}
+
+/** A skin's report (CT4): the outcome, what needs the owner, each level, every skin side by side, the maps' colours and the pictures. */
+export function skinReportMarkdown({ content, item, results, pictures = [], palettes = [], meta }) {
+  const lines = [`# Content report: ${item.name} (skin)`, ''];
+  const what = item.id === 'skins' ? `Every skin (${content.items.length})` : `Skin \`${item.key}\`, tagged ${item.tag}`;
+  lines.push(`${what}. Checked ${meta.when} on \`${meta.commit}\`.`, '');
+  lines.push(`**${outcomeLine(results, meta, SKIN_LEVEL_WORDS)}**`, '');
+  const attention = results.filter((r) => r.verdict === 'fail' || r.verdict === 'warn');
+  if (attention.length > 0) {
+    lines.push('## What needs you', '');
+    attention.forEach((r, i) => lines.push(`${i + 1}. **${VERDICT_WORDS[r.verdict]}** (${SKIN_LEVEL_WORDS[r.level]}, ${r.item}): ${r.says}`));
+    lines.push('');
+  }
+  for (const level of meta.levels) {
+    const own = results.filter((r) => r.level === level);
+    if (own.length === 0 && level !== 'rules') continue;
+    lines.push(`## ${SKIN_LEVEL_WORDS[level]}`, '');
+    if (own.length > 0) lines.push(...mdTable(['Check', 'Result', 'What was found'], own.map((r) => [`${r.check} · ${r.item}`, VERDICT_WORDS[r.verdict], r.says])), '');
+    if (level === 'rules') {
+      const order = [...content.skins].sort((a, b) => (a.id === item.key ? -1 : b.id === item.key ? 1 : 0));
+      lines.push('### Beside the other skins', '', ...mdTable(['Skin', 'Access', 'Realistic colours', 'Colours', 'Shows at a distance', 'Carried by'], skinRows(order, content.readableShare)), '');
+    }
+    if (level === 'spec' && palettes.length > 0) lines.push("### The maps' colours", '', 'As painted, before light, by share of the surface (measured in the browser).', '', ...mdTable(['Map', 'Common colours'], paletteRows(palettes)), '');
+  }
+  if (pictures.length > 0) {
+    lines.push('## Pictures', '');
+    for (const p of pictures) lines.push(p.ok ? `**${p.title}**\n\n![${p.title}](pictures/${p.file})\n` : `- ${p.title}: not drawn (${p.error}).`);
+    lines.push('');
+  }
+  return `${lines.join('\n').trimEnd()}\n`;
+}

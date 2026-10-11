@@ -78,14 +78,15 @@ export const WINS_NEEDED_CHOICES: readonly MatchChoice[] = [
   { id: '10', label: '10', blurb: 'A marathon: first to 10 round wins.' },
 ];
 
-/** Players per team. Each map offers as many as it has room for (map/maps.ts teamSize: Depot 3, Woodland 5, M33);
- * 4v4 and 5v5 are dev content until Woodland is public (owner, 2026-10-04). */
+/** Players per team. Each map offers what suits it (map/maps.ts teamSize: Depot up to 3, Woodland 5 or 6, M33, M88);
+ * 4v4, 5v5 and 6v6 are dev content until Woodland is public (owner, 2026-10-04). */
 export const TEAM_SIZE_CHOICES: readonly MatchChoice[] = [
   { id: '1', label: '1v1', blurb: 'You against one bot: no teammates, nobody to cover you.' },
   { id: '2', label: '2v2', blurb: 'You and one bot teammate against two bots.' },
   { id: '3', label: '3v3', blurb: 'You and two bot teammates against three bots.' },
   { id: '4', label: '4v4', blurb: 'You and three bot teammates against four bots.', tag: 'dev' },
   { id: '5', label: '5v5', blurb: 'You and four bot teammates against five bots.', tag: 'dev' },
+  { id: '6', label: '6v6', blurb: 'You and five bot teammates against six bots.', tag: 'dev' },
 ];
 
 export const FRIENDLY_FIRE_CHOICES: readonly { id: Switch; label: string; blurb: string }[] = [
