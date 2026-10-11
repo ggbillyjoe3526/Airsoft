@@ -91,6 +91,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **W6a** · One renderer for both paths: WebGPU where the browser has it, WebGL otherwise; the pictures look the same as before
 - **W6a** · Menu pictures of replicas wait until the match's shaders are ready, so a match starts no slower
 - **W6a** · The game download is a little smaller: the main code file is 946 kB, down from 951 kB
+- **W6a** · Edge smoothing changes apply from the next load on every renderer, WebGPU and WebGL alike
 
 ### Fixed
 - **G11** · The team camo on players reads clearly on Medium and up: crisp dark and light blotches printed per pixel, on WebGL and WebGPU; Low keeps plain clothes
@@ -122,6 +123,9 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M85** · BBs stop at the first body they hit; hit areas match the drawn figure in every pose; a BB that hits a player already out knocks on the body
 - **M99** · Replica pictures on the Loadout, Customise and Armory tiles show the whole replica, never cut off or covered
 - **W6a** · If the graphics device is lost and no new WebGPU device comes, the game carries on with WebGL instead of stopping
+- **W6a** · On WebGPU, Neon Heights on Low no longer drops one of a match's first frames to a graphics error
+- **W6a** · Play asks for the mouse before the match is built, so a slow start no longer fails with "The browser needs a moment before re-capturing the mouse"
+- **W6a** · The first dust puff, grit or kicked dust in a match no longer causes a small hitch: it is ready before the match starts
 
 ### Internal
 - **G8** · Set dressing never collides or blocks sight: Depot's colliders, routes, cover and bot sight are tested identical with and without it (#136)
@@ -149,6 +153,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **CT2** · Content toolkit part 2: a map check covers rules, layout against Depot, performance and bot balance; every test run checks every map
 - **CT3** · Content toolkit part 3: mode checks cover rules, screens, bots, every host map and a browser match; balance runs now include Extraction
 - **W6a** · The perf checks run on both renderers with their own baselines; the grass and tree stand-ins' triangles have their own perf line
+- **W6a** · Medium draw-call budgets raised, Woodland 115 to 120 and Neon Heights 140 to 145: GPU grass costs two draws, built-in models five
 
 ## 0.1 Dev 4 · 2026-10-06
 
