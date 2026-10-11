@@ -203,6 +203,12 @@ replaces its line; the old one stays findable in the archive or in git.
   and all other models in the future but this will be later").** Figures, replicas and every other model; not in Dev 5
   or Dev 6, no build planned yet; it widens the Blender art pass the owner placed in 0.3 on 2026-10-05
   (`docs/ROADMAP.md` › 0.3: The armoury and the rules).
+- **The Blender models are locked behind the Dev tab, and the game draws its code-built models by default (owner,
+  2026-10-11: "I'm not happy with the quality of figure models so blender models should be locked in dev settings").**
+  Two Dev switches, both on by default (RM4, `config/dev.ts`): "Disable figure models" keeps the built-in figures and
+  "Disable all models" keeps every built-in model (replicas, parts, figures, the menus' battery and gas pictures).
+  With "Disable all models" off the Blender replicas, parts and power-source pictures return; the figure model then
+  still needs "Disable figure models" off. The files stay in the build and are fetched only when let in.
 
 ## Gameplay and feel
 
@@ -475,9 +481,10 @@ replaces its line; the old one stays findable in the archive or in git.
   levels only. An item allowed stronger, a part better at everything, a number outside its range and a balance
   override each go into their register in `src/config/contentRules.ts` only on the owner's word, an override's reason
   also here. The ranges, budgets and band there change only on his word too.
-- **What shipped before the toolkit stays as it is (Claude's default, 2026-10-11; the owner can overrule it).** Every
-  public item is registered as public "before the toolkit". The 11.1 V LiPo Battery keeps its faster fire with no
-  number made worse: its cost is that it empties a magazine sooner and is found only in Shots.
+- **What shipped before the toolkit stays as it is (owner, 2026-10-11).** Every public item is registered as public
+  "before the toolkit". The 11.1 V LiPo Battery keeps its faster fire with no number made worse ("leave it for now"):
+  its cost is that it empties a magazine sooner and is found only in Shots. A downside is a possible later change
+  (`docs/IDEAS.md` › Maybe).
 
 ## Performance budgets and technical foundations
 

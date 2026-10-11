@@ -19,6 +19,7 @@ import {
   TIME_OUT_CHOICES,
   WINS_NEEDED_CHOICES,
 } from '../../config/matchRules';
+import { DEFAULT_TEAM_PICK, TEAM_PICKS, teamCss, teamOfPick, type TeamPickId } from '../../config/teams';
 import { playedTeamSize, type NewGamePicks } from '../../newGamePicks';
 import type { saveSetting } from '../../settings/storage';
 import { OptionPicker } from '../optionPicker';
@@ -32,6 +33,8 @@ export interface MatchModel {
   setRules(rules: MatchRules): void;
   setDifficulty(d: Difficulty): void;
   setTeammates(d: Difficulty): void;
+  /** Your team (M98): Alpha or Beta. */
+  setTeam(t: TeamPickId): void;
 }
 
 /** What the section shows as played (the menus work it out): picks with dev content and the ruleset applied. */
@@ -59,6 +62,8 @@ export class MatchPanel {
   private readonly teamSize: OptionPicker<string>;
   private readonly opponents: OptionPicker<Difficulty>;
   private readonly teammates: OptionPicker<Difficulty>;
+  /** Your team (M98), hidden for an Extraction run (its squad is Alpha). */
+  private readonly teamRow: HTMLElement;
 
   constructor(private readonly model: MatchModel) {
     // The menus' own rules, changed in place: a map's pick sets its team size there too (M33), and the rows read it.
@@ -97,6 +102,10 @@ export class MatchPanel {
     );
     this.opponents = this.tag(new OptionPicker('Opponents', DIFFICULTIES, p.difficulty, 'difficulty', (d) => model.setDifficulty(d)), (q) => q.difficulty);
     this.teammates = this.tag(new OptionPicker('Teammates', TEAMMATE_DIFFICULTIES, p.teammateDifficulty, 'teammateDifficulty', (d) => model.setTeammates(d)), (q) => q.teammateDifficulty);
+    // Your team (M98): each button carries its team's swatch (the colour set in force) as well as the name.
+    const team = new OptionPicker('Your team', TEAM_PICKS, p.team ?? DEFAULT_TEAM_PICK, 'playerTeam', (t) => model.setTeam(t));
+    team.addSwatches(TEAM_PICKS.map((t) => ({ css: teamCss(teamOfPick(t.id)) })));
+    this.teamRow = menuRow('Your team', 'Alpha wears blue, Beta orange. Your match says where you start.', team.root);
     const rulesRow = menuRow('Rules', 'Named rulesets keep their own records; Custom never counts.', rules.root);
     rulesRow.classList.add('match-rules-row');
     const grid = el('div', 'match-grid');
@@ -114,6 +123,7 @@ export class MatchPanel {
         ),
       ),
       this.switchRow('teamSize', menuRow('Team size', 'Bigger teams come with bigger fields.', this.teamSize.root)),
+      this.teamRow,
       menuRow('Opponents', 'The other team\'s bots.', this.opponents.root),
       menuRow('Teammates', 'Your bot teammates (none in a 1v1).', this.teammates.root),
       this.switchRow(
@@ -155,6 +165,8 @@ export class MatchPanel {
     // Only what fits the mode as played (M89): its rulesets, and the rows it reads.
     this.rules.limit((r) => rulesetFits(shown.played.mode, r));
     for (const s of this.switchRows) s.row.hidden = !offersRow(shown.played.ruleset, s.field, shown.played.mode);
+    // An Extraction run has no pick: the squad is Alpha (M98).
+    this.teamRow.hidden = shown.run;
     this.teamSize.limit((id) => Number(id) <= shown.sizeMax);
     // The teammates may have followed the opponents' level (M20): shown, not saved.
     this.opponents.show(raw.difficulty);

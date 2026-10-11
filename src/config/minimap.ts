@@ -66,3 +66,15 @@ export const MINIMAP = {
     out: 'rgba(170, 170, 170, 0.8)',
   },
 } as const;
+
+/**
+ * Settings › HUD › Minimap (M83, playtest note 7): the field turning with the view so the way you look is up (the
+ * default: the minimap as it always was), or fixed north up (the map's -z) with your arrow turning instead.
+ */
+export type MinimapTurn = 'rotating' | 'fixed';
+export const MINIMAP_TURN_CHOICES: readonly { id: MinimapTurn; label: string; blurb: string }[] = [
+  { id: 'rotating', label: 'Rotating', blurb: 'The map turns with you: the way you look is always up.' },
+  { id: 'fixed', label: 'Fixed', blurb: 'North up: the map stays still and your arrow turns instead.' },
+];
+export const DEFAULT_MINIMAP_TURN: MinimapTurn = 'rotating';
+export const DEFAULT_MINIMAP_ROTATING = DEFAULT_MINIMAP_TURN === 'rotating';

@@ -357,3 +357,24 @@ describe('item pictures after dispose (G2)', () => {
     expect(await stillPending(late)).toBe(true);
   });
 });
+
+describe('forgetting pictures (RM4)', () => {
+  it('draws a subject again after forget, and counts the change in generation', async () => {
+    const target = fakeTarget();
+    const frames = manualFrames();
+    const pictures = new ItemPictures(target, frames.schedule);
+    const a = pictures.picture(rifle);
+    frames.frame();
+    await a;
+    expect(pictures.picture(rifle)).toBe(a);
+    expect(target.draws).toHaveLength(1);
+    const before = pictures.generation;
+    pictures.forget();
+    expect(pictures.generation).toBe(before + 1);
+    const b = pictures.picture(rifle);
+    expect(b).not.toBe(a);
+    frames.frame();
+    await b;
+    expect(target.draws).toHaveLength(2);
+  });
+});

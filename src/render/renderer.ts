@@ -14,7 +14,8 @@ import {
 import type { RenderBackend } from '../config/renderBackend';
 import type { MapData } from '../map/mapTypes';
 import type { FigureModel } from './externalModels';
-import { NO_REPLICA_FILES, type ReplicaFiles } from './replicaFiles';
+import { ModelFiles } from './modelFiles';
+import type { ReplicaFiles } from './replicaFiles';
 import { environmentLookOf } from './lightingPreset';
 import { MapMeshCache } from './mapMeshCache';
 import { mapLookOf, texturesFor } from './mapMeshes';
@@ -97,15 +98,18 @@ export class Renderer {
   /** Whether the world may move (the match's MotionScale, set by CombatPresentation): the grass sway (W5). */
   motion = true;
   /**
-   * The figure model every match draws its players with (M25a, render/externalModels.ts), loaded once at start; null
-   * for the built-in figures. Shared by every match and freed with the renderer.
+   * The model files (render/modelFiles.ts): the figure model (M25a) and the replica models (M101), loaded as the Dev
+   * tab's model switches let them in (RM4). Shared by every match and freed with the renderer.
    */
-  figureModel: FigureModel | null = null;
-  /**
-   * The replica models from files (M101, render/replicaFiles.ts), loaded once at start: the viewmodel, the menus'
-   * pictures and the figures draw a replica with one from it. Shared by every match and freed with the renderer.
-   */
-  replicaFiles: ReplicaFiles = NO_REPLICA_FILES;
+  models = new ModelFiles();
+  /** The figure model the next match draws its players with; null for the built-in figures. */
+  get figureModel(): FigureModel | null {
+    return this.models.figureModel;
+  }
+  /** The replica models from files the viewmodel, the menus' pictures and the figures draw from; none for the built-in ones. */
+  get replicaFiles(): ReplicaFiles {
+    return this.models.replicaFiles;
+  }
   /**
    * The last map's meshes, kept between sessions (audit CORE-33): Quit → Play on the same map takes them back. Sessions
    * take and release them (they must not dispose them); freed with the renderer.
@@ -471,10 +475,7 @@ export class Renderer {
     this.surfaces = null;
     this.retro?.dispose();
     this.retro = null;
-    this.figureModel?.dispose();
-    this.figureModel = null;
-    for (const file of this.replicaFiles.values()) file.dispose();
-    this.replicaFiles = NO_REPLICA_FILES;
+    this.models.dispose();
     this.disposed = true;
     // Frees the device (or the WebGL2 context) at once rather than when the canvas is collected (REN-24).
     this.node.dispose();
@@ -530,7 +531,7 @@ export class Renderer {
     this.mapMeshes.contextReplaced();
     const roots: THREE.Object3D[] = [this.scene];
     if (this.overlayScene) roots.push(this.overlayScene);
-    const figure = this.figureModel;
+    const figure = this.models.anyFigure;
     if (figure) for (const part of [...Object.values(figure.parts), figure.whole]) if (part) roots.push(part);
     if (this.surfaces) for (const t of Object.values(this.surfaces)) {
       t.texture.dispose();

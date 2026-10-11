@@ -85,6 +85,7 @@ export class ItemPictures {
   private readonly queue: { key: string; draw: () => Promise<string>; done: (url: string) => void; failed: (error: unknown) => void }[] = [];
   private scheduled = false;
   private disposed = false;
+  private forgotten = 0;
   private readonly scene = new THREE.Scene();
   private readonly camera = new THREE.PerspectiveCamera(ITEM_PICTURE.fov, 1, 0.01, 10);
 
@@ -132,6 +133,23 @@ export class ItemPictures {
     const drawn = new Promise<string>((done, failed) => this.queue.push({ key, draw, done, failed }));
     this.wake();
     return drawn;
+  }
+
+  /**
+   * Counts the times the models changed (forget): a menu slot keeps a picture only of the same subject and count, so it
+   * asks again once they have.
+   */
+  get generation(): number {
+    return this.forgotten;
+  }
+
+  /**
+   * The models pictures are drawn from have changed (RM4: the Dev tab's model switches): every picture is drawn afresh
+   * on its next ask. One already queued is drawn from the new models.
+   */
+  forget(): void {
+    this.cache.clear();
+    this.forgotten++;
   }
 
   /** Pictures waiting to be drawn. */

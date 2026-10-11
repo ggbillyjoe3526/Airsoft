@@ -15,3 +15,16 @@ export const SIM = {
 } as const;
 
 export const SIM_DT = 1 / SIM.tickRate;
+
+/**
+ * Skip to next round (M83, playtest note 6): once you are out, the rest of the round is simulated at once, tick by
+ * tick as if watched, in slices of the frame (`frameBudgetMs` of ticks a frame, checking the clock every `ticksPerCheck`)
+ * so the page keeps drawing. A round always ends by its clock; the cap is the longest a round and the pause after it can
+ * run (round time, overtime, the reset delay) plus `spareSeconds`, after which the skip gives up and play carries on
+ * as watched (a guard against a stall that should never come).
+ */
+export const SKIP_ROUND = {
+  frameBudgetMs: 20,
+  ticksPerCheck: 8,
+  spareSeconds: 5,
+} as const;

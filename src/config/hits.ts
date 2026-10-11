@@ -161,7 +161,7 @@ export const ROUNDS = {
   /** First to 5 is at most 9 decided rounds: swap ends after 4, so the decider is in the second half. */
   halfTimeAfter: 4,
   /**
-   * Elimination: Blue starts in the east. On Depot the east end wins a little over half the rounds in bot-only
+   * Elimination: Alpha starts in the east. On Depot the east end wins a little over half the rounds in bot-only
    * matches (54%, DECISIONS 2026-10-03), so the player's team plays its first rounds, the ones that teach the map, there.
    */
   eliminationFirstEnd: 1,
@@ -171,3 +171,13 @@ export const ROUNDS = {
   timeOutToMorePlayers: false,
   flag: FLAG,
 } as const;
+
+/**
+ * Settings › Gameplay › Hit marker (M97, owner's playtest note of 2026-10-07): the red X over the crosshair when your BB
+ * lands. Off by default (his call); the hit tick you hear plays either way.
+ */
+export const HIT_MARKER_CHOICES: readonly { id: 'on' | 'off'; label: string; blurb: string }[] = [
+  { id: 'off', label: 'Off', blurb: 'Only the tick you hear tells you a BB landed.' },
+  { id: 'on', label: 'On', blurb: 'A red X flashes over the crosshair as well as the tick.' },
+];
+export const DEFAULT_HIT_MARKER = false;

@@ -9,13 +9,13 @@ import { addMatch, emptyRecords, noNews } from '../stats/records';
 import { DEV_CONTENT_NOT_RECORDED, extractionBests, recordsView } from './recordsView';
 import { formatAccuracy, formatTime, rosterNames, statsBlocks } from './statsRows';
 
-/** You (0) and Blue 2 (1) against Orange 1 (2) and Orange 2 (3). */
+/** You (0) and Alpha 2 (1) against Beta 1 (2) and Beta 2 (3). */
 const roster = () => [0, 1, 2, 3].map((id) => createCharacter(id, vec3(), 0, LOADOUT, id < 2 ? 0 : 1));
 
 describe('stats tables (M19)', () => {
   it('names everyone by team and number, and the player "You"', () => {
     const names = rosterNames(roster(), 0);
-    expect([...names.values()]).toEqual(['You', 'Blue 2', 'Orange 1', 'Orange 2']);
+    expect([...names.values()]).toEqual(['You', 'Alpha 2', 'Beta 1', 'Beta 2']);
   });
 
   it('formats accuracy and time alive', () => {
@@ -31,16 +31,16 @@ describe('stats tables (M19)', () => {
     stats.get(1)!.hits = 2;
     stats.get(3)!.hits = 1;
     const blocks = statsBlocks(cs, rosterNames(cs, 0), (id) => stats.get(id)!, [1, 3], cs[0]!, false);
-    expect(blocks.map((b) => b.title)).toEqual(['Blue (you) · 1 round won', 'Orange · 3 rounds won']);
-    expect(blocks[0]!.rows.map((r) => r.name)).toEqual(['Blue 2', 'You']);
+    expect(blocks.map((b) => b.title)).toEqual(['Alpha (you) · 1 round won', 'Beta · 3 rounds won']);
+    expect(blocks[0]!.rows.map((r) => r.name)).toEqual(['Alpha 2', 'You']);
     expect(blocks[0]!.rows.map((r) => r.you)).toEqual([false, true]);
-    expect(blocks[1]!.rows.map((r) => r.name)).toEqual(['Orange 2', 'Orange 1']);
+    expect(blocks[1]!.rows.map((r) => r.name)).toEqual(['Beta 2', 'Beta 1']);
   });
 
   it('names the teams by side in an Extraction run, not by rounds won (M43)', () => {
     const cs = roster();
     const blocks = statsBlocks(cs, rosterNames(cs, 0), () => emptyStats(), [1, 0], cs[0]!, false, true);
-    expect(blocks.map((b) => b.title)).toEqual(['Blue (you) · your squad', 'Orange · home team']);
+    expect(blocks.map((b) => b.title)).toEqual(['Alpha (you) · your squad', 'Beta · home team']);
   });
 
   it('marks players hit this round only when asked (the live scoreboard)', () => {

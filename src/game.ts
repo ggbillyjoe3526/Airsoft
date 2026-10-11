@@ -3,9 +3,9 @@ import { loadVolumes } from './audio/audioMix';
 import { soundscapeOf } from './audio/soundscape';
 import { motionScale, type SoundCueColour, soundCueCss } from './config/accessibility';
 import type { VolumeChannel } from './config/audio';
-import type { LookSettings } from './config/look';
+import { type LookSettings, type RetroSettings, retroLookOf } from './config/look';
 import type { Difficulty } from './config/bots';
-import { activeDev, type DevSettings, devCheating, retroLookOf } from './config/dev';
+import { activeDev, DEV_ACTION_TEXT, DEV_GIFTS, type DevActionId, type DevSettings, devCheating, modelFilesInUse } from './config/dev';
 import { PERF_SCRIPT } from './config/perfScript';
 import { ROUNDS } from './config/hits';
 import type { MatchRules, RulesetId } from './config/matchRules';
@@ -20,7 +20,7 @@ import { GRAPHICS_TEXT } from './config/graphics';
 import { FRAME_TIMING, type FrameRateCap, type LightingPresetId, QUALITY, QUALITY_CHOICES, QUALITY_STEP_DOWN, type QualityChoice, type QualityPreset, type QualitySettings } from './config/render';
 import { FramePacer } from './core/framePacer';
 import { SIM } from './config/sim';
-import { applyTeamCss, TEAM_COLOUR_SETS, TEAMS, type TeamColourSetId } from './config/teams';
+import { applyTeamCss, DEFAULT_TEAM_PICK, TEAM_COLOUR_SETS, type TeamColourSetId, teamOfPick, type TeamPickId } from './config/teams';
 import { crashReport, type ReportField } from './core/crashReport';
 import { qualityLine, runReportLine } from './core/reportFields';
 import { KeyBindings } from './input/keyBindings';
@@ -28,14 +28,14 @@ import { Keyboard } from './input/keyboard';
 import { browserKeyboardMap, watchKeyboardLayout } from './input/keyboardLayout';
 import { PlayerInput } from './input/playerInput';
 import { PointerLock } from './input/pointerLock';
-import { lightingPicked, mapUnderLighting, playsAtNight } from './map/lightingChoice';
+import { lightingPicked, mapUnderLighting, mapUnderPreset, playsAtNight } from './map/lightingChoice';
 import { allMapsLoaded, loadDevMaps, type MapId, mapData } from './map/maps';
+import type { MapData } from './map/mapTypes';
 import { initPhysics } from './physics/physicsWorld';
 import { awayWatch } from './core/awayWatch';
 import { loadBakedLight } from './render/bakedLight';
-import { loadFigureModel } from './render/externalModels';
+import { ModelFiles } from './render/modelFiles';
 import { powerSourceLoader } from './render/powerSourceModels';
-import { loadReplicaFiles } from './render/replicaFiles';
 import { FrameTimeWatch, presetBelow, slowFrameMs } from './render/qualityStepDown';
 import { rendererName } from './render/gpuCheck';
 import { Renderer } from './render/renderer';
@@ -44,11 +44,12 @@ import { matchSeed } from './matchFlow';
 import { nextSessionAction } from './core/sessionPlan';
 import { MatchSession } from './matchSession';
 import { type RangePose, RangeSession } from './rangeSession';
-import { teamEnd } from './sim/round';
 import type { GameState } from './sim/state';
 import { loadRecords, noNews, type RecordNews, type Records, saveRecords } from './stats/records';
 import { settleMatch } from './stats/settleMatch';
 import { loadCrosshair } from './ui/crosshair';
+import { loadHitMarker } from './ui/crosshairSettings';
+import { loadMinimapTurn } from './ui/hudSettings';
 import { CrashScreen } from './ui/crashScreen';
 import { DebugOverlay } from './ui/debugOverlay';
 import { onFullscreenChange, relockAfterFullscreen, toggleFullscreen } from './ui/fullscreen';
@@ -61,9 +62,10 @@ import { matchUsesDev, type NewGamePicks, playedPicks, playedTeamSize } from './
 import { collectionOwnership, gameOwnership, LoadoutModel } from './pool/loadoutModel';
 import { carryOverOldPicks } from './pool/oldPicks';
 import { activeSupplyEvent, supplyLine } from './pool/supplyEvents';
-import type { Dispensed, Earnings } from './pool/armory';
+import { type Dispensed, type Earnings, earn } from './pool/armory';
 import { haulSummary, type Unpaid } from './ui/menus/summaryScreen';
 import { loadDevEnabled, loadDevSettings } from './settings/dev';
+import { carryOverDevRetro, loadRetroSettings } from './settings/retroLook';
 import { browserStorage, flushSettings, SETTINGS_KEY, saveSetting } from './settings/storage';
 import type { SaveManager } from './save/saveManager';
 import { SAVE_TEXT } from './config/save';
@@ -105,6 +107,7 @@ import {
   loadSprintMode,
   loadTeammateDifficulty,
   loadTeamColours,
+  loadTeamPick,
   loadTutorialDone,
   loadTutorialStep,
   loadWheelSelect,
@@ -113,8 +116,6 @@ import {
   systemReducedMotionQuery,
 } from './ui/menus/savedChoices';
 
-/** The player is the first character, on Blue (see MatchSession). */
-const PLAYER_TEAM = 0;
 const LOCK_REFUSED_HINT = 'The browser needs a moment before re-capturing the mouse. Click again.';
 
 export interface GameOptions {
@@ -212,6 +213,8 @@ export class Game {
   /** The opponents' bot difficulty and your bot teammates' (M20). */
   private difficulty: Difficulty;
   private teammateDifficulty: Difficulty;
+  /** The Match screen's "Your team" (M98): Alpha or Beta. */
+  private team: TeamPickId;
   /** The Match pop-up's rules (M20), and its Rules row's ruleset (M39). */
   private matchRules: MatchRules;
   private ruleset: RulesetId;
@@ -225,6 +228,10 @@ export class Game {
   private readonly audio = new AudioEngine(loadVolumes());
   /** The crosshair's look (Settings → Crosshair), kept across matches. */
   private crosshair: CrosshairSettings = loadCrosshair();
+  /** Settings › Gameplay › Hit marker (M97): off unless the player turned it on. */
+  private hitMarker = loadHitMarker();
+  /** Settings › HUD › Minimap (M83): rotating, or fixed north up. */
+  private minimapTurn = loadMinimapTurn();
   /** The local records (M19), and what the last match finished changed in them. */
   private readonly records: Records = loadRecords(browserStorage());
   private recordNews: RecordNews = noNews();
@@ -243,6 +250,8 @@ export class Game {
   private soundCues = loadSoundCues();
   /** Settings › Look (G1): robots and Realistic colours, for the next match or range visit. */
   private look: LookSettings = loadLook();
+  /** Settings › Look › Retro look (M96; a Dev setting before, carried over once as the game starts). */
+  private retro: RetroSettings;
   /** The sound cues' size and colour (Settings → Accessibility) and the scoreboard's size and hit feed (Settings → HUD), M24. */
   private soundCueSize = loadSoundCueSize();
   private soundCueColour: SoundCueColour = loadSoundCueColour();
@@ -294,18 +303,19 @@ export class Game {
   private crashScreen: CrashScreen | null = null;
 
   static async create(container: HTMLElement, options: GameOptions): Promise<Game> {
-    // A figure model (M25a) loads alongside the physics; with none in the build this resolves at once. With Dev content
-    // on, so do the dev maps (M50), so New game can show a dev map picked last time. The maps' baked light (G6) too.
-    const devMaps = activeDev(loadDevEnabled(), loadDevSettings()).devContent ? loadDevMaps() : null;
+    // The model files the Dev tab lets in (RM4: none by default) load alongside the physics. With Dev content on, so do
+    // the dev maps (M50), so New game can show a dev map picked last time. The maps' baked light (G6) too.
+    const dev = activeDev(loadDevEnabled(), loadDevSettings());
+    const devMaps = dev.devContent ? loadDevMaps() : null;
+    const models = new ModelFiles();
     // The renderer (W1, W6): its start (render/rendererStart.ts, a small chunk of its own with the Renderer row) loads
     // alongside the physics with `three/webgpu`; on Auto or WebGPU it asks for an adapter first, and draws on WebGPU when
     // one is given, else on WebGL2. A browser with neither can't play: the start-up pane says so.
     const choice = loadRendererChoice();
     const starting = import('./render/rendererStart').then((m) => m.bootRenderer(choice, options.forceWebGL === true, options.qualitySettings.antialias));
-    const [, figureModel, replicaFiles, , , start] = await Promise.all([initPhysics(), loadFigureModel(), loadReplicaFiles(), devMaps, loadBakedLight(), starting]);
+    const [, , , , start] = await Promise.all([initPhysics(), models.use(modelFilesInUse(dev)), devMaps, loadBakedLight(), starting]);
     const game = new Game(container, options, start);
-    game.renderer.figureModel = figureModel;
-    game.renderer.replicaFiles = replicaFiles;
+    game.renderer.models = models;
     return game;
   }
 
@@ -327,6 +337,9 @@ export class Game {
     this.mode = loadMode();
     this.difficulty = loadDifficulty();
     this.teammateDifficulty = loadTeammateDifficulty();
+    this.team = loadTeamPick();
+    // The menus show the team colours of the saved set (the Match screen's Your team), as each match sets them again.
+    applyTeamCss(container, TEAM_COLOUR_SETS[this.teamColours]);
     this.matchRules = loadMatchRules();
     this.ruleset = loadRuleset();
     this.collection = loadCollection(GAME_POOL, options.seed);
@@ -344,7 +357,9 @@ export class Game {
     this.input = new PlayerInput(this.keyboard, this.pointer, MOVEMENT);
     if (options.scriptedPlayer) this.input.script = PERF_SCRIPT;
     this.scripted = options.scriptedPlayer === true;
-    this.renderer.setRetro(retroLookOf(this.dev, this.scripted));
+    carryOverDevRetro();
+    this.retro = loadRetroSettings();
+    this.renderer.setRetro(retroLookOf(this.retro, this.scripted));
     this.input.crouchMode = loadCrouchMode();
     this.input.aimMode = loadAimMode();
     this.input.sprintMode = loadSprintMode();
@@ -381,17 +396,21 @@ export class Game {
       };
     });
 
-    // The menus' pictures of replicas and parts (G3), drawn by the game's renderer (W6; a new one after a lost device).
-    this.pictures = new ItemPictures(followingPictureTarget(() => this.renderer.renderer, nodePictureTarget), undefined, () => this.renderer.replicaFiles, powerSourceLoader(), () => this.renderer.afterCompiles());
+    // The menus' pictures of replicas and parts (G3), drawn by the game's renderer (W6; a new one after a lost device),
+    // once a match's warm-up compile is done. The power sources' models are Blender files too (RM4): pictured only while
+    // the Dev tab's model switches let the replicas' in, else their line drawings stay.
+    const powerSources = powerSourceLoader();
+    this.pictures = new ItemPictures(
+      followingPictureTarget(() => this.renderer.renderer, nodePictureTarget),
+      undefined,
+      () => this.renderer.replicaFiles,
+      (file) => (this.renderer.models.inUse.gear ? powerSources(file) : Promise.resolve(null)),
+      () => this.renderer.afterCompiles(),
+    );
     this.menus = new Menus(container, {
       pictures: this.pictures,
       rules: {
-        playerTeam: TEAMS[PLAYER_TEAM]!.name,
-        enemyTeam: TEAMS[1 - PLAYER_TEAM]!.name,
         raiseTime: ROUNDS.flag.raiseTime,
-        attackFirst: ROUNDS.flag.firstAttackers === PLAYER_TEAM,
-        eliminationStartEnd: teamEnd(PLAYER_TEAM, 'elimination', 1, ROUNDS),
-        attackDefendStartEnd: teamEnd(PLAYER_TEAM, 'attackDefend', 1, ROUNDS),
       },
       bindings: this.bindings,
       loadout: {
@@ -410,7 +429,9 @@ export class Game {
           this.loadoutChanged = this.setupChanged = true;
           return reloaded;
         },
-        // Off in the Dev settings: no wallet, and the Armory's buttons are greyed out.
+        // Dev settings › Free case openings (M90).
+        freeShots: () => this.dev.freeShots,
+        // Off in the Dev settings: no wallet, and the Armory is gone from the menus (M83).
         wallet: () => (this.dev.disableArmory ? null : { fc: this.collection.fc, tokens: this.collection.tokens }),
       },
       onPlay: () => {
@@ -430,6 +451,18 @@ export class Game {
         this.play();
       },
       tutorialDone: loadTutorialDone(),
+      // Replay tutorial (M97): from its first step, finished or not; from the pause menu it leaves what was under way.
+      onReplayTutorial: () => {
+        if (this.started) this.leaveMatch();
+        saveSetting('tutorialStep', '');
+        this.practice = true;
+        this.tutorial = true;
+        this.play();
+      },
+      // Skip to next round (M83): the skip runs from the next frame of play, so Resume takes the mouse as usual.
+      onSkipRound: () => {
+        if (this.session instanceof MatchSession && this.session.beginSkip()) this.play();
+      },
       onSkipTutorialStep: () => this.skipTutorial(false),
       onSkipTutorial: () => this.skipTutorial(true),
       map: { initial: this.map, onChange: (m) => ((this.map = m), (this.setupChanged = true), this.prefetchFieldSounds()) },
@@ -445,6 +478,7 @@ export class Game {
       },
       difficulty: { initial: this.difficulty, onChange: (d) => ((this.difficulty = d), (this.setupChanged = true)) },
       teammateDifficulty: { initial: this.teammateDifficulty, follows: !hasSavedTeammateDifficulty(), onChange: (d) => ((this.teammateDifficulty = d), (this.setupChanged = true)) },
+      team: { initial: this.team, onChange: (t) => ((this.team = t), (this.setupChanged = true)) },
       matchRules: { initial: this.matchRules, onChange: (m) => ((this.matchRules = m), (this.setupChanged = true)) },
       ruleset: { initial: this.ruleset, onChange: (r) => ((this.ruleset = r), (this.setupChanged = true)) },
       controls: {
@@ -477,24 +511,42 @@ export class Game {
         renderer: (row) => this.rendering.fillRow(row, this.renderer),
       },
       audio: { initial: this.audio.volumes, onChange: (channel, v) => this.changeVolume(channel, v), onRelease: (channel) => this.audio.preview(channel) },
-      crosshair: { initial: this.crosshair, onChange: (c) => this.changeCrosshair(c) },
+      crosshair: {
+        initial: this.crosshair,
+        onChange: (c) => this.changeCrosshair(c),
+        hitMarker: { initial: this.hitMarker, onChange: (on) => ((this.hitMarker = on), this.session instanceof MatchSession && this.session.setHitMarker(on)) },
+      },
       accessibility: {
         reducedMotion: { initial: this.motionReduced(), onChange: (on) => this.changeReducedMotion(on), follow: (show) => (this.showSystemMotion = show) },
         // The figures are built with their colours, so a new set shows from the next match.
         // On the range they show from Resume (it's rebuilt where you stood, as after a loadout change).
-        teamColours: { initial: this.teamColours, onChange: (set) => ((this.teamColours = set), (this.setupChanged = this.loadoutChanged = true)) },
+        teamColours: {
+          initial: this.teamColours,
+          onChange: (set) => {
+            this.teamColours = set;
+            this.setupChanged = this.loadoutChanged = true;
+            // The menus' team swatches (the Match screen's Your team) follow at once; a match loaded keeps its own until the next.
+            if (!this.session) applyTeamCss(this.container, TEAM_COLOUR_SETS[set]);
+          },
+        },
         soundCues: { initial: this.soundCues, onChange: (on) => this.changeSoundCues(on) },
         soundCueSize: { initial: this.soundCueSize, onChange: (v) => ((this.soundCueSize = v), this.showHudLook()) },
         soundCueColour: { initial: this.soundCueColour, onChange: (c) => ((this.soundCueColour = c), this.showHudLook()) },
       },
       // Built into the figures and replicas, so a change shows from the next match (on the range, from Resume).
-      look: { initial: this.look, onChange: (look) => ((this.look = look), (this.setupChanged = this.loadoutChanged = true)) },
+      look: {
+        initial: this.look,
+        onChange: (look) => ((this.look = look), (this.setupChanged = this.loadoutChanged = true)),
+        // The filter is a screen effect: on, off and its sliders show at once.
+        retro: { initial: this.retro, onChange: (r) => ((this.retro = r), this.renderer.setRetro(retroLookOf(r, this.scripted))) },
+      },
       hud: {
         hudSize: { initial: this.hudSize, onChange: (v) => ((this.hudSize = v), this.showHudLook()) },
         scoreboardSize: { initial: this.scoreboardSize, onChange: (v) => ((this.scoreboardSize = v), this.showHudLook()) },
         hudOpacity: { initial: this.hudOpacity, onChange: (v) => ((this.hudOpacity = v), this.showHudLook()) },
         hitFeed: { initial: this.hitFeedMode, onChange: (m) => this.changeHitFeed(m) },
         whatGotYou: { initial: this.whatGotYouMode, onChange: (m) => this.changeWhatGotYou(m) },
+        minimapTurn: { initial: this.minimapTurn, onChange: (t) => ((this.minimapTurn = t), this.session instanceof MatchSession && this.session.setMinimapTurn(t)) },
       },
       dev: {
         initial: this.devPicked,
@@ -511,6 +563,7 @@ export class Game {
         devContent: () => this.dev.devContent,
         devContentUsed: () => this.devContentUsed(this.playedPicks()),
         diagnostics: () => this.diagnostics(),
+        actions: (id) => this.devAction(id),
       },
       save: options.save,
     });
@@ -558,11 +611,18 @@ export class Game {
    */
   private prefetchFieldSounds(): void {
     const id = this.playedPicks().map;
-    const pick = this.lighting[id];
-    const base = mapData(id);
     // The same map object (and so the same soundscape) the match is built with (play).
-    const map = mapUnderLighting(base, pick);
-    this.audio.prefetch(() => soundscapeOf(map, playsAtNight(base, pick)));
+    const map = this.playedMap(id);
+    this.audio.prefetch(() => soundscapeOf(map, playsAtNight(map)));
+  }
+
+  /**
+   * The map a match on `id` is built with: under its Day or Night pick (M34d), or under Dev settings › Time of day
+   * (M90) on any map. The same object for the same choice, so the sounds prefetched and the meshes kept are its.
+   */
+  private playedMap(id: MapId): MapData {
+    const base = mapData(id);
+    return this.dev.timeOfDay === 'map' ? mapUnderLighting(base, this.lighting[id]) : mapUnderPreset(base, this.dev.timeOfDay);
   }
 
   /** The tab hidden or the window's focus lost (M18b, audit CORE-20) stops play, as Esc would; this stops watching. */
@@ -714,6 +774,8 @@ export class Game {
    */
   private watchFrameTimes(s: MatchSession | RangeSession, frameSeconds: number): void {
     if (!this.autoQuality || this.steppedDown) return;
+    // A skipped round (M83) spends each frame simulating on purpose: its frames say nothing about the graphics.
+    if (s instanceof MatchSession && s.skipping) return this.frameWatch.reset();
     if (this.stepDownTo === null) {
       const below = presetBelow(this.qualityChoice);
       if (below && this.frameWatch.add(frameSeconds * 1000, slowFrameMs(this.frameRateCap))) this.stepDownTo = below;
@@ -784,11 +846,48 @@ export class Game {
     if (this.dev.showDebug !== before.showDebug) this.debug.setVisible(this.dev.showDebug);
     if (this.dev.showBbPaths !== before.showBbPaths) this.session?.combat.setBbPaths(this.dev.showBbPaths);
     this.session?.setDevCheats(this.dev);
-    this.renderer.setRetro(retroLookOf(this.dev, this.scripted));
     // Unlock all gear and Dev content (M35) change what the Loadout offers and carries, and Dev content what New game
     // plays; the next Play rebuilds the match with it.
     if (this.dev.unlockAllGear !== before.unlockAllGear || this.dev.devContent !== before.devContent) this.loadoutChanged = this.setupChanged = true;
     if (this.dev.devContent !== before.devContent) this.prefetchFieldSounds();
+    if (this.dev.disableAllModels !== before.disableAllModels || this.dev.disableFigureModels !== before.disableFigureModels) this.useModelFiles();
+    // Time of day (M90) changes the light the next match is built under, and its sounds.
+    if (this.dev.timeOfDay !== before.timeOfDay) {
+      this.setupChanged = true;
+      this.prefetchFieldSounds();
+    }
+  }
+
+  /**
+   * The model files the Dev tab's switches let in now (RM4), fetched if they aren't yet: the menus' pictures are drawn
+   * again from them, and the next match or range is built with them (one under way keeps what it was built with).
+   */
+  private useModelFiles(): void {
+    void this.renderer.models.use(modelFilesInUse(this.dev)).then((changed) => {
+      if (!changed || this.disposed) return;
+      this.pictures.forget();
+      this.loadoutChanged = this.setupChanged = true;
+      this.menus.refresh();
+    });
+  }
+
+  /**
+   * A Dev button (M90): gifts go into the collection (another tab's newer save read first, as the Armory does), End the
+   * round now runs the loaded match's clock out (that match then stays out of the records), Reset the save deletes it
+   * (kept for Undo) and reloads. Returns what the button says for a moment.
+   */
+  private devAction(id: DevActionId): string {
+    if (id === 'giveFc' || id === 'giveTokens') {
+      syncCollection(this.collection, GAME_POOL);
+      if (id === 'giveFc') earn(this.collection, DEV_GIFTS.fc);
+      else this.collection.tokens += DEV_GIFTS.tokens;
+      saveOrReload(this.collection, GAME_POOL);
+      this.menus.refresh();
+      return DEV_ACTION_TEXT.done;
+    }
+    if (id === 'endRound') return this.session instanceof MatchSession && this.session.endRoundNow() ? DEV_ACTION_TEXT.done : DEV_ACTION_TEXT.noRound;
+    this.options.save.deleteSave();
+    return DEV_ACTION_TEXT.done;
   }
 
   /**
@@ -811,7 +910,7 @@ export class Game {
   /** New game's picks as they play now (M35: a dev pick plays as its list's default while Dev content is off). */
   private playedPicks(): NewGamePicks {
     return playedPicks(
-      { map: this.map, mode: this.mode, difficulty: this.difficulty, teammateDifficulty: this.teammateDifficulty, ruleset: this.ruleset, rules: this.matchRules },
+      { map: this.map, mode: this.mode, difficulty: this.difficulty, teammateDifficulty: this.teammateDifficulty, team: this.team, ruleset: this.ruleset, rules: this.matchRules },
       this.dev.devContent,
     );
   }
@@ -903,7 +1002,7 @@ export class Game {
       const picks = this.playedPicks();
       this.session = new MatchSession(this.renderer, this.container, this.input, {
         // Under the map's Day or Night pick (M34d): the one lighting path, night sight and glowing BBs follow it.
-        map: mapUnderLighting(mapData(picks.map), this.lighting[picks.map]),
+        map: this.playedMap(picks.map),
         mode: picks.mode,
         difficulty: picks.difficulty,
         teammateDifficulty: picks.teammateDifficulty,
@@ -917,6 +1016,7 @@ export class Game {
         devContent: this.dev.devContent,
         devContentUsed: this.devContentUsed(picks),
         teamColours: TEAM_COLOUR_SETS[this.teamColours],
+        playerTeam: teamOfPick(picks.team ?? DEFAULT_TEAM_PICK),
         look: this.look,
       }, this.matchSeed, this.quality, this.audio, this.crosshair);
       if (this.options.perfLog) console.info(this.session.build.line());
@@ -925,6 +1025,8 @@ export class Game {
       this.session.setSoundCues(this.soundCues);
       this.session.setHitFeedMode(this.hitFeedMode);
       this.session.setWhatGotYouMode(this.whatGotYouMode);
+      this.session.setHitMarker(this.hitMarker);
+      this.session.setMinimapTurn(this.minimapTurn);
       this.session.combat.setReplicaPictures(this.pictures, kitSubjects(this.loadout.kit(), this.look.realisticColours));
       this.applyDevTo(this.session);
       applyTeamCss(this.container, TEAM_COLOUR_SETS[this.teamColours]);
@@ -950,6 +1052,7 @@ export class Game {
       kit: this.loadout.kit(),
       teamColours: TEAM_COLOUR_SETS[this.teamColours],
       look: this.look,
+      armory: !this.dev.disableArmory,
     }, this.options.seed, this.quality, this.audio, this.crosshair, pose, tutorialFrom);
     this.session.onTutorialStep = (step) => saveSetting('tutorialStep', step);
     this.session.combat.setReplicaPictures(this.pictures, kitSubjects(this.loadout.kit(), this.look.realisticColours));
@@ -1024,7 +1127,7 @@ export class Game {
         haul: haulSummary(GAME_POOL, s.runFinds(), this.lastHaul),
       });
     } else {
-      this.menus.showPause(s.pauseLine(), this.matchSeed);
+      this.menus.showPause(s.pauseLine(), this.matchSeed, false, false, s.skipOffer);
     }
     s?.setPlaying(false);
     // The screen just shown starts without a hint: say again why the match was silent.
@@ -1107,7 +1210,7 @@ export class Game {
       ['Screen', read(() => ((this.pointer.locked || this.unlockedPlay) && s ? 'in play' : `menus: ${this.menus.screen}`))],
       ['Quality', read(() => this.qualityText())],
       ['Retro pixels', read(() => {
-        const look = retroLookOf(this.dev, this.scripted);
+        const look = retroLookOf(this.retro, this.scripted);
         return look ? `${look.pixelSize} px, ${look.levels} levels` : 'off';
       })],
       ['Post', read(() => this.renderer.postPasses.join(' ') || 'none')],

@@ -4,7 +4,7 @@ Three.js presentation, all procedural. It reads `GameState` and `state.events`, 
 and never writes the simulation.
 
 - `renderer.ts`: `Renderer` owns the scene, camera, quality (`setQuality`), lighting and environment, tone mapping,
-  field of view and zoom, the retro filter (the node renderer's, `webgpu/post/nodeRetro.ts`), `warmUp` and
+  field of view and zoom, the retro filter (the node renderer's, `webgpu/post/nodeRetro.ts`; Settings › Look › Retro look), `warmUp` and
   `warmShaders`. `mapMeshCache.ts` keeps the last map's meshes. `rendererParts.ts` holds its helpers (field of view,
   tone mapping, idle warm-up, handing GPU resources to a new renderer). The Renderer draws with the node renderer
   (`webgpu/nodeBackend.ts`) and recovers a lost device itself (`nodeLost`): a new device, or the WebGL2 back end, with
@@ -65,7 +65,7 @@ and never writes the simulation.
 - Figures: `characterRenderer.ts`, `characterModels.ts`, `figureHuman.ts` / `figureRobot.ts`; `figureFinish.ts` (the
   per-vertex finish) and `figureCamo.ts` (the team camo printed per pixel on clothes and sleeves, G11). Replicas and hands:
   `replicaModels.ts` (the bodies and assembly), `replicaParts.ts` (optics, grips, magazines and the other fitted parts),
-  `replicaBuilder.ts` (the mesh builder both use), `replicaFiles.ts` (the Blender model files, M101, RM1) and `replicaRig.ts`
+  `replicaBuilder.ts` (the mesh builder both use), `replicaFiles.ts` (the Blender model files, M101, RM1; `modelFiles.ts` loads them, and the figure model, only while the Dev tab's model switches let them in, RM4) and `replicaRig.ts`
   (their moving parts, skinned and posed from the game's state, RM1; the Inspect key plays a file's Inspect clip, RM2), `replicaFinish.ts` (moulded speckle), `replicaSheen.ts` (the
   environment reflection), `replicaArms.ts` (the first-person arms), `handModels.ts`; `itemPictures.ts` draws them off
   screen for the menus, with the power sources from `powerSourceModels.ts` (the menus' battery, LiPo and gas bottle, RM3).

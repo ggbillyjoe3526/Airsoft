@@ -8,6 +8,11 @@ import { el } from './menuParts';
 export interface PictureContext {
   pictures: PictureSource | null;
   realistic: () => boolean;
+  /**
+   * Whether the Armory is on (M83): with Dev settings › Disable Armory it is gone from every menu, so the Loadout's and
+   * Customise's "Unlock more in the Armory" lines go too. On when not given.
+   */
+  armoryShown?: () => boolean;
 }
 
 /**

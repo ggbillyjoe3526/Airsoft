@@ -200,13 +200,16 @@ function drawChase(chase: readonly Asset[], rng: RngState): Asset | null {
  * nothing to dispense. The draws carry on from the collection's saved random state mixed with `entropy` (audit
  * POOL-07: fresh each call, so the save doesn't tell the next Shot; pass a fixed one to replay).
  */
-export function takeShots(pool: Pool, c: Collection, count: ShotCount, entropy = randomSeed()): Dispensed[] | null {
+export function takeShots(pool: Pool, c: Collection, count: ShotCount, entropy = randomSeed(), free = false): Dispensed[] | null {
   const e = pool.economy;
   const assets = shotAssets(pool);
-  if (assets.length === 0 || pool.tiers.length === 0 || !canTakeShots(e, c, count)) return null;
-  const price = shotPrice(e, c, count);
-  c.tokens -= price.tokens;
-  c.fc -= price.fc;
+  // `free`: Dev settings › Free case openings (M90): nothing is paid; the draws, pity and odds are the same.
+  if (assets.length === 0 || pool.tiers.length === 0 || (!free && !canTakeShots(e, c, count))) return null;
+  if (!free) {
+    const price = shotPrice(e, c, count);
+    c.tokens -= price.tokens;
+    c.fc -= price.fc;
+  }
   const rng = createRng((c.seed ^ entropy) >>> 0);
   // Chase items (M32) come on their own chance; the rest are drawn by tier, among those that come in it.
   const chase = assets.filter(isChase);
