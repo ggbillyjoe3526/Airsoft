@@ -88,7 +88,7 @@ attempts: 0
 ## M86 · More varied ambience and an Ambience volume (playtest note 14)
 tier: ui
 perf: skip
-touches: src/audio/, src/config/audio.ts, src/ui/audioSettings.ts
+touches: src/audio/, src/config/audio.ts, src/config/sounds.ts, src/ui/audioSettings.ts, docs/PLAYTEST.md
 contract: none
 acceptance:
   1. Each map's ambience has more variety (layers and one-off sounds at random gaps), kept quiet enough not to mask footsteps.
@@ -122,7 +122,7 @@ attempts: 0
 ## M89 · Modes and match settings fit together (playtest note 18)
 tier: ui
 perf: skip
-touches: src/config/modes.ts, src/config/matchRules.ts, src/map/playableMode.ts, src/ui/menus/setupScreen.ts, src/newGamePicks.ts
+touches: src/config/modes.ts, src/config/matchRules.ts, src/map/playableMode.ts, src/ui/menus/setupScreen.ts, src/ui/menus/matchPanel.ts, src/ui/menus/playView.ts, src/newGamePicks.ts
 contract: none
 acceptance:
   1. A table of every mode against every match setting and rule set says which fit; the ones that don't (Tournament rules in Extraction, for example) are hidden for that mode.
