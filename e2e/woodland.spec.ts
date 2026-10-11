@@ -156,23 +156,42 @@ type TorchView = {
  * before and after could hide a build (W6a).
  */
 async function countProgramsBuilt(page: import('@playwright/test').Page): Promise<void> {
-  // The count starts once the match's warm-up compile is done (it builds over many frames: on a slow runner, or with the
-  // CPU slowed 4x, still hundreds of ticks into the match) and the item pictures, which draw through the game's renderer
-  // after it (W6a), are drawn: those shaders are built ahead of play, not while you play.
-  type Pictures = { airsoft: { renderer: { afterCompiles(): Promise<void> }; pictures: { queue: unknown[]; scheduled: boolean } } };
-  await page.evaluate(() => (window as unknown as Pictures).airsoft.renderer.afterCompiles());
-  await page.waitForFunction(() => {
-    const p = (window as unknown as Pictures).airsoft.pictures;
-    return p.queue.length === 0 && !p.scheduled;
-  }, null, { timeout: 120_000 });
+  // The count starts once the match's warm-up compile is done: it builds over many frames (on a slow runner, or with the
+  // CPU slowed 4x, still hundreds of ticks into the match), so its shaders are built ahead of play, not while you play.
+  type Counted = {
+    programsBuilt?: number;
+    airsoft: {
+      pictures: { scene: object };
+      renderer: {
+        afterCompiles(): Promise<void>;
+        renderer: { backend: { createProgram: (...args: unknown[]) => unknown }; render: (scene: object, ...args: unknown[]) => unknown };
+      };
+    };
+  };
+  await page.evaluate(() => (window as unknown as Counted).airsoft.renderer.afterCompiles());
   await page.evaluate(() => {
-    type Counted = { programsBuilt?: number; airsoft: { renderer: { renderer: { backend: { createProgram: (...args: unknown[]) => unknown } } } } };
     const w = window as unknown as Counted;
-    const backend = w.airsoft.renderer.renderer.backend;
+    const renderer = w.airsoft.renderer.renderer;
+    const backend = renderer.backend;
+    // The menus' and HUD's item pictures draw through the game's renderer too (W6a), one at a time between frames: their
+    // studio's shaders are theirs, not the match's, so a draw of the pictures' scene isn't counted (a slow runner is still
+    // drawing them well into the match).
+    const studio = w.airsoft.pictures.scene;
+    const render = renderer.render;
+    let picturing = false;
+    renderer.render = function (this: unknown, scene: object, ...args: unknown[]) {
+      const was = picturing;
+      picturing = scene === studio;
+      try {
+        return render.call(this, scene, ...args);
+      } finally {
+        picturing = was;
+      }
+    };
     const createProgram = backend.createProgram;
     w.programsBuilt = 0;
     backend.createProgram = function (this: unknown, ...args: unknown[]) {
-      w.programsBuilt = (w.programsBuilt ?? 0) + 1;
+      if (!picturing) w.programsBuilt = (w.programsBuilt ?? 0) + 1;
       return createProgram.apply(this, args);
     };
   });

@@ -63,7 +63,8 @@
   counted from each draw's geometry, as Three's info counts them.
 - **CI's first run counted the warm-up's shaders** (Woodland's spins, 6 and 12 built): Three compiles a match's
   shaders over many frames, and on the runner that was still going when the check began counting. The count now starts
-  once the warm-up and the item pictures are done (checked locally with the CPU slowed 4x).
+  once the warm-up is done (checked locally with the CPU slowed 4x) and leaves out the item pictures' own draws: waiting
+  for those to finish took over 2 minutes on CI's second run (not seen locally, even with the CPU slowed 6x).
 
 ## Decisions
 
