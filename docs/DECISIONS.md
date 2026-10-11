@@ -447,6 +447,15 @@ replaces its line; the old one stays findable in the archive or in git.
 - **Dev settings apply only while their box is ticked (owner asked, 2026-10-04).** Game speed, Bottomless magazines,
   Ghost and Unlock all gear keep a match out of the records and unpaid, for the rest of that match. Debug info, BB paths
   and Retro pixels change only what you see. One click reaches them and one click puts everything back.
+- **New replicas and parts go through the content toolkit (owner approved the concept with all eight defaults,
+  2026-10-05).** `node pipeline/content-check.mjs` checks them (`docs/content/README.md`). A fail blocks going public;
+  a warning needs the owner's OK. A new item's team wins 40 to 60 % of decided rounds, judged on public maps, modes and
+  levels only. An item allowed stronger, a part better at everything, a number outside its range and a balance
+  override each go into their register in `src/config/contentRules.ts` only on the owner's word, an override's reason
+  also here. The ranges, budgets and band there change only on his word too.
+- **What shipped before the toolkit stays as it is (Claude's default, 2026-10-11; the owner can overrule it).** Every
+  public item is registered as public "before the toolkit". The 11.1 V LiPo Battery keeps its faster fire with no
+  number made worse: its cost is that it empties a magazine sooner and is found only in Shots.
 
 ## Performance budgets and technical foundations
 

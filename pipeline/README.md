@@ -255,6 +255,20 @@ in 4 on time, `STALLED_ROUNDS_MAX`), bots leaving spawn, nobody falling or stand
 half-time swaps, the flag raised, Extraction runs ending by their rules. Where a guard played many seeds only for a
 figure, it now plays four (the figure keeps the many).
 
+## `content-check.mjs`: the content check
+
+```
+node pipeline/content-check.mjs <item|all> [--balance] [--public] [--maps a,b] [--seeds n] [--no-pictures]
+```
+
+The content toolkit's command (`docs/content/README.md`): levels 1 to 3 for a replica or part (rules, compatibility,
+the spec test with pictures), and with `--balance` level 4, the balance run (one vitest process per map, in parallel).
+The runners are `src/content/report/*.report.ts`, vitest project `content`, which exists only when `AIRSOFT_CONTENT`
+is set. It writes `pipeline/out/content/<id>/report.md`, `report.html`, `report.json` and `pictures/`
+(`contentReport.mjs` builds the page, `content-pictures.mjs` draws the pictures on the e2e build) and exits 1 on a
+failed check. Levels 1 and 2 for every asset are also ordinary `fast` tests (`src/content/content.test.ts`), so every
+gate and CI run keeps them. About a minute without the balance run (2026-10-11).
+
 ## `packet.mjs`: the review packet
 
 ```
