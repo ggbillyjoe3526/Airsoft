@@ -80,7 +80,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - 3v3 by default with a round clock; first to 5 rounds wins; a whistle starts each round (Phase 1)
 - Custom matches: rounds to win, round time, 1v1 to 3v3 (to 5v5 on maps with room, M33d), friendly fire, ricochets; only
   the standard match counts for the records (M20)
-- Rules: Skirmish, Tournament and Pro CQB (dev) and Custom; Extraction is Skirmish only; named rulesets keep their own
+- Rules: Skirmish, Tournament and Pro CQB (dev) and Custom; Extraction offers Skirmish and Custom only; named rulesets keep their own
   records, Custom never counts; a setting hidden for a mode is ignored (M39, M89)
 
 ## Maps
