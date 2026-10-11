@@ -486,7 +486,9 @@ replaces its line; the old one stays findable in the archive or in git.
   the 1024² maps' whole size, not the difference. Screenshots match at play distances; pressed against a plaster wall
   its finest grain is a touch softer.
 - **Chunk size budgets fail the build on CI, and growth is a deliberate bump with a decision line (2026-10-04).** The
-  game chunk's default is 1,000 kB (warning from 90 %) and Rapier's 4,550 kB. Bumped from 950 kB on 2026-10-10 (FP1):
+  game chunk's default is 1,050 kB (warning from 90 %) and Rapier's 4,550 kB. Bumped from 1,000 kB on 2026-10-11 (M80,
+  M82): main's game chunk was 993.5 kB, and the tutorial's showcase and finish pop-up and the rarity bar made it 1,003.2.
+  Bumped from 950 kB on 2026-10-10 (FP1):
   main's game chunk was 950.2 kB after G11 and G12, already over, and FP1's hand holds made it 951.1 (950.3 once W4
   moved WebGL's retro filter to a chunk of its own); the WebGPU overhaul's step 6 (the old renderer removed) is where it
   should shrink again.
