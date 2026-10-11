@@ -124,7 +124,7 @@ describe('Neon Heights art (M34f)', () => {
     );
   });
 
-  it('paints nothing in a colour that reads as a team (the rule mapMeshes.test.ts keeps for Depot)', () => {
+  it('paints nothing in a colour that reads as a team (the rule the map checks keep for every map, content/mapChecks.ts)', () => {
     const hsl = (hex: number): { h: number; s: number } => {
       const out = { h: 0, s: 0, l: 0 };
       new THREE.Color(hex).getHSL(out);

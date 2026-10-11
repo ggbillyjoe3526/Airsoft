@@ -97,6 +97,15 @@ export interface ReplicaLook {
    * centre line, so the red dot is where your BBs go. A replica without one aims through an optic from its hold.
    */
   aimHold?: readonly [number, number, number];
+  /**
+   * Its iron sights (M84: every replica aims down sights, through these when no optic is fitted), in the model's own
+   * space (metres, bore along -Z, up +Y, as render/replicaModels.ts and its model file draw it): the rear sight's aim
+   * point (an aperture's centre, a notch's top, a fin's tip) and the front sight's (a post's tip), each [height, z],
+   * and how far in front of the eye the rear one sits when aimed (a cheek weld for a rifle, arms out for a pistol).
+   * The viewmodel lines the two up on the view's centre line, so the post's tip is where your BBs go. Without it the
+   * replica only aims through a fitted optic.
+   */
+  ironSight?: { rear: readonly [number, number]; front: readonly [number, number]; eyeRelief: number };
 }
 
 /**
@@ -144,6 +153,9 @@ export const AEG: ReplicaConfig = withStats({
     // The optic's axis is RIFLE_OPTIC.axisUp above the model's origin (render/replicaModels.ts); its back end about
     // 0.2 m in front of the eye, so the tube frames the view without filling it.
     aimHold: [0, -0.126, -0.205],
+    // The flip-up aperture (its hole's centre) at the back of the receiver rail and the front post's tip (the model file
+    // and the built-in model agree to a millimetre); the aperture a short cheek weld from the eye.
+    ironSight: { rear: [0.1005, 0.0755], front: [0.11, -0.378], eyeRelief: 0.16 },
   },
 });
 
@@ -169,7 +181,13 @@ export const GAS_PISTOL: ReplicaConfig = withStats({
   recoilDeg: 0.5,
   magazines: ['standard', 'extended'],
   siteClass: 'pistol',
-  look: { model: 'pistol', suppressed: false, hold: { position: [0.09, -0.095, -0.45], yaw: 0.1 } },
+  look: {
+    model: 'pistol',
+    suppressed: false,
+    hold: { position: [0.09, -0.095, -0.45], yaw: 0.1 },
+    // The rear sight's top at the back of the slide and the front post's tip, the pistol held out at arm's length.
+    ironSight: { rear: [0.045, 0.078], front: [0.0435, -0.09], eyeRelief: 0.36 },
+  },
 });
 
 /**
@@ -201,7 +219,15 @@ export const CYBER_PISTOL: ReplicaConfig = withStats({
   recoilDeg: 0.06,
   magazines: ['standard'],
   siteClass: 'pistol',
-  look: { model: 'pistol', viewmodel: 'cyber', sound: 'cyber', suppressed: false, hold: { position: [0.09, -0.095, -0.45], yaw: 0.1 } },
+  look: {
+    model: 'pistol',
+    viewmodel: 'cyber',
+    sound: 'cyber',
+    suppressed: false,
+    hold: { position: [0.09, -0.095, -0.45], yaw: 0.1 },
+    // One fin sight on top of the slab: its flat tip, back to front, sits on the aim point.
+    ironSight: { rear: [0.056, 0.046], front: [0.056, 0.03], eyeRelief: 0.36 },
+  },
 });
 
 /** The hop-up dial the player turns before a match (0..1 of a replica's hopUpMax), shown as a percentage. */

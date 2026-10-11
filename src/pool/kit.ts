@@ -136,8 +136,12 @@ export function kitReplica(pool: Pool, item: ItemRef, fit: ReplicaFit, stats: Ki
 
 /** True if the site limit cut the energy `item` would shoot with on `fit` (the Loadout says so). */
 export function energyCapped(pool: Pool, item: ItemRef, fit: ReplicaFit, stats: KitStats = GAME_STATS): boolean {
-  const base = replicaOf(pool.byId.get(item.asset)!);
-  return base.muzzleEnergy * energyFactor(pool, item, fit, stats) > base.energyLimit;
+  return uncappedEnergy(pool, item, fit, stats) > replicaOf(pool.byId.get(item.asset)!).energyLimit;
+}
+
+/** The energy (J) `item` would shoot with on `fit` before the site limit stops it (the content toolkit's grid, CT1). */
+export function uncappedEnergy(pool: Pool, item: ItemRef, fit: ReplicaFit, stats: KitStats = GAME_STATS): number {
+  return replicaOf(pool.byId.get(item.asset)!).muzzleEnergy * energyFactor(pool, item, fit, stats);
 }
 
 /** What the replica's tier, its power source, barrel and muzzle part multiply its energy by, before the site limit. */

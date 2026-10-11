@@ -5,7 +5,7 @@ import { flightTimeEstimate } from '../sim/ballistics';
 import { type Character, eyeHeight } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
 import { isInPlay } from '../sim/elimination';
-import { characterHitVolume, createHitVolume, type HitVolume, rayCharacter } from '../sim/hitbox';
+import { characterHitVolume, createHitVolume, type HitVolume, inflateHitVolume, rayCharacter, shiftHitVolume } from '../sim/hitbox';
 import { length3, type Vec3, vec3, wrapAngle } from '../sim/vec';
 import { aimErrorSize, aimFirstErrorSize, aimSettling, lookAngles, stepAim } from './aim';
 import { findHeldAngles, type HeldAngle } from './angles';
@@ -160,41 +160,35 @@ function heldAngleLook(b: Bot, w: BotWorld, eye: Vec3, facingYaw: number, neares
   return a;
 }
 
-/** True if a teammate stands in (or right next to) the line of fire within `dist` metres. */
-function friendInLine(b: Bot, w: BotWorld, from: Vec3, dir: Vec3, dist: number): boolean {
-  // With friendly fire off (M20) BBs pass teammates by, so there's nothing to hold fire for.
-  if (!w.hits.friendlyFire) return false;
+/**
+ * True if a teammate stands in (or right next to) the line of fire within `dist` metres, or someone already hit stands
+ * in it before the target (`toTarget` metres): a BB stops on any body (M85), so firing would only hit a teammate, or
+ * shoot someone who is already out. Teammates count whether or not friendly fire is on, and when they are out of play
+ * too: their bodies stop BBs either way.
+ */
+function bodyInLine(b: Bot, w: BotWorld, from: Vec3, dir: Vec3, dist: number, toTarget: number): boolean {
   const me = b.character;
   const stray = Math.tan(w.cfg.friendlySpreadSigmas * w.loadout[0]!.spreadDeg * DEG); // metres off the line per metre
+  const v = mateVolume;
   for (const mate of w.characters) {
-    if (mate === me || mate.team !== me.team || !isInPlay(mate)) continue;
+    if (mate === me || mate.ghost) continue;
+    if (mate.team !== me.team) {
+      // An opponent already hit, between you and the target: their body would take the BBs.
+      if (isInPlay(mate)) continue;
+      characterHitVolume(mate, w.hits, v);
+      if (rayCharacter(from, dir, toTarget, v) >= 0) return true;
+      continue;
+    }
     // A teammate on the move can run into the BBs' path while they fly: check where they'll be when the BBs pass
     // them too (the flight to them, not to the end of the reach: a far guess put a teammate running across the line
     // already past it, and the BBs met them half-way).
     const along = (mate.position.x - from.x) * dir.x + (mate.position.y - from.y) * dir.y + (mate.position.z - from.z) * dir.z;
     const reach = Math.min(Math.max(0, along), dist);
     const flight = bbFlightTime(w, reach);
-    const margin = w.cfg.friendlyMargin + reach * stray;
-    const v = mateVolume;
     characterHitVolume(mate, w.hits, v);
-    v.body.r += margin;
-    v.head.r += margin;
-    v.shoulder.r += margin;
-    // A leaning mate's tilted torso (audit M-06); radius 0 means upright, with no torso part to widen.
-    if (v.torso.r > 0) v.torso.r += margin;
+    inflateHitVolume(v, w.cfg.friendlyMargin + reach * stray);
     if (rayCharacter(from, dir, dist, v) >= 0) return true;
-    const dx = mate.velocity.x * flight;
-    const dz = mate.velocity.z * flight;
-    v.body.x += dx;
-    v.body.z += dz;
-    v.head.x += dx;
-    v.head.z += dz;
-    v.shoulder.x += dx;
-    v.shoulder.z += dz;
-    v.torso.ax += dx;
-    v.torso.bx += dx;
-    v.torso.az += dz;
-    v.torso.bz += dz;
+    shiftHitVolume(v, mate.velocity.x * flight, mate.velocity.z * flight);
     if (rayCharacter(from, dir, dist, v) >= 0) return true;
   }
   return false;
@@ -204,14 +198,15 @@ function friendInLine(b: Bot, w: BotWorld, from: Vec3, dir: Vec3, dist: number):
  * True if the bot must hold fire at `aimPoint` (`dist` metres away): cover in the way (sight is refreshed
  * 10×/s, so the target may have just stepped behind some), a wall close in front along the aim `dir` (unit),
  * or a teammate in the line of fire `dir`,
- * up to the first wall past the target (a BB that misses flies on, but not through walls).
+ * up to the first wall past the target (a BB that misses flies on, but not through walls), or someone already hit in
+ * front of the target (bodyInLine).
  */
 function lineOfFireBlocked(b: Bot, w: BotWorld, eye: Vec3, aimPoint: Vec3, dir: Vec3, dist: number): boolean {
   if (!lineClear(w.query, eye, aimPoint)) return true;
   const wall = w.query.raycastStatic(eye, dir, dist + w.cfg.friendlyBeyondTarget);
   // The BB flies along the actual aim, not the line to the target: hold fire rather than shoot the wall beside you.
   if (wall >= 0 && wall < dist * w.cfg.aimWallFraction) return true;
-  return friendInLine(b, w, eye, dir, friendlyReach(w, eye, dir, dist, wall));
+  return bodyInLine(b, w, eye, dir, friendlyReach(w, eye, dir, dist, wall), dist);
 }
 
 /**

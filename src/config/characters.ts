@@ -108,7 +108,7 @@ export const FIGURE = {
   hipHeight: HITS.lean.pivotHeight,
   /** The thigh's widest radius, the hips' spread, and the torso's box (the hit volume is built round these). */
   legRadius: 0.092,
-  hipSpread: 0.095,
+  hipSpread: HITS.legs.hipSpread,
   torso: { width: 0.4, height: 0.56, depth: 0.24, bottom: HITS.lean.pivotHeight },
   shoulderHeight: 1.43,
   shoulderSpread: 0.2,
@@ -116,7 +116,7 @@ export const FIGURE = {
   upperArm: 0.3,
   forearm: 0.29,
   /** The knee and the foot's frame below the hip, and the ankle above the foot (metres). */
-  knee: 0.44,
+  knee: HITS.legs.knee,
   foot: 0.82,
   ankle: 0.04,
   /**
@@ -178,12 +178,9 @@ export const FIGURE = {
   headHeight: HITS.headHeight,
   /** Crouched, the upper body drops this far and the legs fold to fit. */
   crouchDrop: HITS.crouchDrop,
-  /** Walk cycle: leg swing (radians) and strides per metre walked. */
-  legSwing: 0.55,
-  stridesPerMetre: 0.75,
-  /** Legs swing only above this speed (m/s); a jump bigger than `maxStride` (m) in one frame is a teleport, not a step. */
-  walkingSpeed: 0.2,
-  maxStride: 1,
+  /** Walk cycle: leg swing (radians) and strides per metre walked; the legs' hit volumes swing with it (HITS.legs). */
+  legSwing: HITS.legs.swing,
+  stridesPerMetre: HITS.legs.stridesPerMetre,
   /**
    * Calling a hit: the raised hand's wrist this high (metres, standing), and the rifle hanging from the other hand this
    * far (radians) off straight down, muzzle forward.

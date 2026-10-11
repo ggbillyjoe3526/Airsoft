@@ -75,41 +75,6 @@ acceptance:
 status: open
 attempts: 0
 
-## M84 · Iron sights on every replica, and walking while aiming (playtest notes 8, 16)
-tier: core
-perf: skip
-touches: src/sim/aiming.ts, src/sim/movement.ts, src/sim/accuracy.ts, src/config/optics.ts, src/config/movement.ts, src/render/replicaModels.ts, src/render/cameraRig.ts
-contract: none
-acceptance:
-  1. Every replica aims down sights; with no optic fitted the view lines up its iron sights. Aiming is more accurate than hip fire, and hip fire stays viable (measured on Normal against bots).
-  2. Holding walk (Shift) while aiming slows the player below the aiming pace.
-  3. Owner's ruling (2026-10-06): iron sights now, beside scopes; this replaces his 0.1 Dev 3 note 3 (aim only with a scope fitted).
-status: open
-attempts: 0
-
-## M85 · BBs stop at the first body they hit (playtest note 17)
-tier: core
-perf: required
-touches: src/sim/bbs.ts, src/sim/hitbox.ts, src/sim/ricochet.ts, src/sim/simulation.ts
-contract: none
-acceptance:
-  1. A reproduction test: two bots in a line, the nearer one hit; it shows whether a BB can reach the one behind.
-  2. A BB that hits a body knocks that player out and stops (it does not travel on); a test fails without the fix.
-  3. Hit volumes match the drawn figure closely enough that a BB only hits what the player can see; checked on every pose (standing, crouched, leaning, walking off).
-status: open
-attempts: 0
-
-## M86 · More varied ambience and an Ambience volume (playtest note 14)
-tier: ui
-perf: skip
-touches: src/audio/, src/config/audio.ts, src/ui/audioSettings.ts
-contract: none
-acceptance:
-  1. Each map's ambience has more variety (layers and one-off sounds at random gaps), kept quiet enough not to mask footsteps.
-  2. Audio settings get an "Ambience volume" slider; field ambience no longer sits only under Effects.
-status: open
-attempts: 0
-
 ## M87 · Bots stop clearing empty corners (playtest notes 15, 19)
 tier: core
 perf: required
@@ -130,17 +95,6 @@ acceptance:
   1. Neither team can see the other from its start: cover (a building, thick trees or a rise) hides each spawn.
   2. The blue end's height edge at the start is reduced; Elimination and Attack / Defend stay within 35–65 % per end on Normal.
   3. Owner's ruling (2026-10-06): Woodland takes the team sizes of note 13: 5v5 by default, 6v6 allowed, and only 5v5 and 6v6 offered there. Low holds its frame budget at 6v6.
-status: open
-attempts: 0
-
-## M89 · Modes and match settings fit together (playtest note 18)
-tier: ui
-perf: skip
-touches: src/config/modes.ts, src/config/matchRules.ts, src/map/playableMode.ts, src/ui/menus/setupScreen.ts, src/newGamePicks.ts
-contract: none
-acceptance:
-  1. A table of every mode against every match setting and rule set says which fit; the ones that don't (Tournament rules in Extraction, for example) are hidden for that mode.
-  2. A test walks every mode and checks that no hidden setting can be picked.
 status: open
 attempts: 0
 
