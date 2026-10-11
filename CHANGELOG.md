@@ -136,6 +136,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **W6a** · Play asks for the mouse before the match is built, so a slow start no longer fails with "The browser needs a moment before re-capturing the mouse"
 - **W6a** · The first dust puff, grit or kicked dust in a match no longer causes a small hitch: it is ready before the match starts
 - **M81** · The site roundel no longer covers the 30 m distance board on the practice range
+- **M91b** · On WebGPU at night on High and Ultra, switching on your weapon torch no longer freezes or garbles the picture once its shadows start; torch shadows show as on WebGL
 
 ### Internal
 - **G8** · Set dressing never collides or blocks sight: Depot's colliders, routes, cover and bot sight are tested identical with and without it (#136)

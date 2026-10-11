@@ -164,3 +164,48 @@ describe('M91 acceptance 1: the soft beam', () => {
     }
   });
 });
+
+describe('M91b: the torch shadow map is drawn once on its first frame, torch on or off', () => {
+  it('a High spot asks for its first draw while autoUpdate stays false with the torch off', () => {
+    const c = me();
+    c.torchOn = false;
+    const b = new TorchBeams([c], night, QUALITY.high, ground, BODY, HITS);
+    const s = b.spotLight!;
+    expect(s.shadow.needsUpdate).toBe(true);
+    expect(s.shadow.autoUpdate).toBe(false);
+    b.update(eyes(), c, true, 1);
+    expect(s.shadow.autoUpdate).toBe(false);
+    b.dispose();
+  });
+
+  it('a spot made anew by setQuality (Medium to High) asks again; a radius-only change does not remake it', () => {
+    const b = new TorchBeams([me()], night, QUALITY.medium, ground, BODY, HITS);
+    b.setQuality(QUALITY.high);
+    const made = b.spotLight!;
+    expect(made.shadow.needsUpdate).toBe(true);
+    expect(made.shadow.autoUpdate).toBe(false);
+    made.shadow.needsUpdate = false; // the renderer clears it after the draw
+    b.setQuality({ ...QUALITY.high, shadowRadius: 7 });
+    expect(b.spotLight).toBe(made);
+    expect(made.shadow.radius).toBe(7);
+    expect(made.shadow.needsUpdate).toBe(false);
+    b.dispose();
+  });
+
+  it('a Medium spot has no shadow to draw, and autoUpdate follows the torch once it is on', () => {
+    const plain = new TorchBeams([me()], night, QUALITY.medium, ground, BODY, HITS);
+    expect(plain.spotLight!.castShadow).toBe(false);
+    expect(plain.spotLight!.shadow.needsUpdate).toBe(false);
+    plain.dispose();
+
+    const c = me();
+    const b = new TorchBeams([c], night, QUALITY.high, ground, BODY, HITS);
+    c.torchOn = true;
+    b.update(eyes(), c, true, 1);
+    expect(b.spotLight!.shadow.autoUpdate).toBe(true);
+    c.torchOn = false;
+    b.update(eyes(), c, true, 1);
+    expect(b.spotLight!.shadow.autoUpdate).toBe(false);
+    b.dispose();
+  });
+});
