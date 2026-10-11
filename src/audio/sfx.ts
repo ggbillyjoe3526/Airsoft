@@ -339,9 +339,19 @@ export class Sfx {
       case 'draw':
         this.playFrom(e.characterId, localId, characterOf, 'draw', L.mechanism);
         return;
-      case 'bbImpact':
-        // Played by impact(), with the material the caller already worked out for the dust (audit L-15).
+      case 'bbImpact': {
+        // Played by impact(), with the material the caller already worked out for the dust (audit L-15); a BB stopped
+        // on a body (M85) knocks on it as a ricochet does.
+        if (e.bodyId === undefined) return;
+        if (e.bodyId === localId) {
+          this.play('bodyHit', this.self!, L.bodyHit);
+          return;
+        }
+        const body = characterOf(e.bodyId);
+        if (body) this.play('bodyHit', this.channel(body).panner, L.bodyHit);
+        else this.oneShot('bodyHit', e.position, L.bodyHit);
         return;
+      }
       case 'footstep': {
         const c = characterOf(e.characterId);
         if (!c) return;

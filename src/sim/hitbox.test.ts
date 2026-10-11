@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { FIGURE } from '../config/characters';
 import { HITS } from '../config/hits';
 import { createCharacter } from './character';
-import { characterHitVolume, createHitVolume, hitTop, rayCapsule, rayCharacter, raySegmentCapsule, type VerticalCapsule } from './hitbox';
+import { characterHitVolume, createHitVolume, hitTop, legSwing, PART, rayCapsule, rayCharacter, raySegmentCapsule, stepWalkCycle, type VerticalCapsule } from './hitbox';
 import { leanOffset } from './lean';
 import { createRng, rngNext } from './rng';
 import { vec3 } from './vec';
@@ -125,6 +125,56 @@ describe('characterHitVolume', () => {
   });
 });
 
+describe('the legs of the hit volume (M85)', () => {
+  const volume = createHitVolume();
+  /** A BB flying along -X at height y, `z` in front (negative) or behind the character's axis (it faces -Z). */
+  const fromSide = (c: ReturnType<typeof createCharacter>, z: number, y: number) => {
+    characterHitVolume(c, HITS, volume);
+    return rayCharacter(vec3(10, y, z), vec3(-1, 0, 0), 20, volume);
+  };
+
+  it('is two legs, not one round volume: from the side a BB just in front of the shins flies by', () => {
+    const c = createCharacter(0, vec3(), 0);
+    expect(fromSide(c, 0, 0.5)).toBeGreaterThan(0);
+    expect(fromSide(c, -0.12, 0.5)).toBe(-1); // inside the old 0.2 m body capsule, on nothing drawn
+    expect(fromSide(c, -0.15, 0.05)).toBeGreaterThan(0); // the boot's toe
+  });
+
+  it('swings the legs on the walk cycle as the figure draws them, one forward and one back', () => {
+    const c = createCharacter(0, vec3(), 0);
+    c.velocity.z = -2;
+    c.walkCycle = Math.PI / 2;
+    expect(legSwing(c.walkCycle, c, HITS)).toBeCloseTo(HITS.legs.swing, 9);
+    // At full stride the feet are ~0.4 m in front and behind: a BB along the ground there hits a boot.
+    const reach = Math.sin(HITS.legs.swing) * HITS.legs.ankle;
+    expect(fromSide(c, -reach, 0.12)).toBeGreaterThan(0);
+    expect(fromSide(c, reach, 0.12)).toBeGreaterThan(0);
+    c.velocity.z = 0; // standing still: the legs hang straight, whatever the cycle says
+    expect(fromSide(c, -reach, 0.12)).toBe(-1);
+  });
+
+  it('moves the walk cycle on by the ground covered, but not across a teleport', () => {
+    const c = createCharacter(0, vec3(), 0);
+    c.position.z = -0.5;
+    stepWalkCycle(c, HITS);
+    expect(c.walkCycle).toBeCloseTo(0.5 * HITS.legs.stridesPerMetre * Math.PI * 2, 9);
+    const before = c.walkCycle;
+    c.prevPosition.z = c.position.z;
+    c.position.x = 30; // a move to the dead zone
+    stepWalkCycle(c, HITS);
+    expect(c.walkCycle).toBe(before);
+  });
+
+  it('squashes the legs towards the hips when crouching, as the drawn legs are', () => {
+    const c = createCharacter(0, vec3(), 0);
+    c.crouchAmount = 1;
+    characterHitVolume(c, HITS, volume);
+    const thigh = volume.parts[PART.thighL]!;
+    expect(thigh.ay).toBeCloseTo(HITS.lean.pivotHeight - HITS.crouchDrop + HITS.legs.hipLift * ((HITS.lean.pivotHeight - HITS.crouchDrop) / HITS.lean.pivotHeight), 9);
+    expect(volume.parts[PART.bootL]!.ay).toBeGreaterThan(0);
+  });
+});
+
 describe('the hit volume of a leaning character', () => {
   const volume = createHitVolume();
   const shoot = (c: ReturnType<typeof createCharacter>, x: number, y: number) => {
@@ -178,15 +228,18 @@ describe('the hit volume of a leaning character', () => {
     }
   });
 
-  it('is the same as before upright: the torso capsule only joins in when leaning', () => {
+  it('rolls the chest and hips with the lean about the hip pivot, and leaves the legs alone (M85)', () => {
     const c = createCharacter(0, vec3(), 0);
     characterHitVolume(c, HITS, volume);
-    expect(volume.torso.r).toBe(0);
-    expect(volume.body.y1).toBeCloseTo(HITS.bodyTop - HITS.bodyRadius, 9);
-    expect(shoot(c, HITS.bodyRadius + 0.01, 1.2)).toBe(-1);
-    c.lean = 0.5;
+    const upright = volume.parts.map((p) => ({ ...p }));
+    expect(volume.parts[PART.chest]!.ax).toBeCloseTo(0, 9);
+    expect(shoot(c, HITS.bodyRadius + 0.01, 1.3)).toBe(-1);
+    c.lean = 1;
     characterHitVolume(c, HITS, volume);
-    expect(volume.torso.r).toBe(HITS.bodyRadius);
+    const top = HITS.torsoTop - HITS.lean.pivotHeight;
+    expect(volume.parts[PART.chest]!.bx).toBeCloseTo(top * Math.sin(HITS.lean.maxAngle), 9);
+    expect(volume.parts[PART.hipR]!.by).toBeLessThan(upright[PART.hipR]!.by);
+    for (const leg of [PART.thighL, PART.shinL, PART.bootL, PART.thighR, PART.shinR, PART.bootR]) expect(volume.parts[leg]).toEqual(upright[leg]);
   });
 
   it('follows a crouch: the pivot comes down with the upper body', () => {

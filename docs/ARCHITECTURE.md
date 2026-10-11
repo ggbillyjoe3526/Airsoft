@@ -134,6 +134,9 @@ request. Each entry says where the contract lives, what it holds today and what 
     sight; without it cases open by reach alone.
   - `Character.grace` counts down a squad member's insertion grace: BBs neither hit it nor are hit by it, and a BB it
     stops reports `bbImpact`, no hit.
+  - Every body stops BBs (M85): a BB that reaches someone already hit, a teammate with friendly fire off, or anyone in
+    the cease-fire after a round is decided stops there and reports `bbImpact`, no hit; only a Ghost lets BBs through.
+    `Character.walkCycle` (and `prevWalkCycle`) is the legs' walk cycle, which the hit volume and the drawn legs share.
   - Events: `respawned`, `exitCount`, `exitOpened` and `runWarning` report the run; `caseNoise` (bots hear it),
     `caseOpened` and `caseDropped` report the cases; `returned` reports an opponent back in a wave; `torch` reports a
     weapon light switched on or off.

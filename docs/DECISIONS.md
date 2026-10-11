@@ -195,7 +195,11 @@ replaces its line; the old one stays findable in the archive or in git.
 
 - **Hit volume is a body capsule plus a head sphere (2026-09-30); arms and the replica don't count, and arm hits stay
   off (owner, 2026-10-01).** The drawn figure is built from the same numbers (a test checks it), so hits look fair. A
-  crouched head top stays at or below 1.15 m, because crouch cover is 1.2 m.
+  crouched head top stays at or below 1.15 m, because crouch cover is 1.2 m. Since M85 (owner's playtest note 17,
+  2026-10-06) the body is a chest, oval hips and two legs (thigh, shin, boot) that swing on the simulation's walk
+  cycle, and `render/figureHitVolume.test.ts` measures it against the drawn figure on every pose; a new figure (the
+  Blender remodel) must pass it. **Every body stops a BB (M85, default ruled 2026-10-06):** a BB that hits someone knocks
+  them out and stops, with no bounce off bodies; one that reaches someone already hit stops on them with no second hit.
 - **Hit calling stays a raised hand and a sign, with no dead rag, night light or shouted "HIT!" for now (owner,
   2026-10-06).** The hit system is good enough; he may revisit. Reverses the triage's Beta place for the night light.
 - **A hit player calls HIT for 1.4 s, then walks to their team's dead zone along nav routes (2026-09-30).** A walk that
@@ -229,7 +233,8 @@ replaces its line; the old one stays findable in the archive or in git.
   stay generic (CLAUDE.md §4).
 - **Every replica aims down sights, through iron sights when no optic is fitted (owner, 2026-10-06).** Replaces his
   2026-10-03 rule that aiming needs a fitted optic. Optics and other attachments stay accessories, never part of a
-  replica's model (owner, 2026-10-03).
+  replica's model (owner, 2026-10-03). Down any sight the spread is halved and Shift creeps below the aiming pace (M84,
+  `MOVEMENT.accuracy.aimed`, `aimWalkScale`); bots fire from the hip.
 - **Up a ramp the pace loss stays: the speed fix is built but off (`MOVEMENT.rampPace` 0) (owner, 2026-10-05, 07:06).**
   Turning it on moved Attack / Defend balance on Depot, so a change needs the owner's call.
 - **Cover heights: full cover is at least 2.4 m and crouch cover exactly 1.2 m; no walkable ledge sits between 0.15 m

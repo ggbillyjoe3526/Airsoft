@@ -128,7 +128,7 @@ Every action can be rebound under **Settings › Key Bindings**, mouse buttons a
 | Mouse | Aim |
 | Left click | Fire (AEG rifle: one BB per click on Semi, three on Burst, hold on Auto; the pistol fires one per click) |
 | B | Fire mode: step the AEG rifle through Semi, Burst and Auto |
-| Right click (hold, or toggle) | Aim down sights: needs an optic, such as the red dot fitted in Loadout. Slows you to a quiet walk; has its own **Aiming sensitivity** |
+| Right click (hold, or toggle) | Aim down sights: through the iron sights, or an optic such as the red dot fitted in Loadout. Tighter spread; slows you to a quiet walk (Shift creeps slower still); has its own **Aiming sensitivity** |
 | Shift | Walk: slow and silent, for sneaking and holding angles |
 | Left Alt | Sprint (forward only; hold, or a toggle under **Settings › Controls**) |
 | C | Crouch: press to go down, again to stand (can be set to hold) |

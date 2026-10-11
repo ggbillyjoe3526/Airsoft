@@ -1,6 +1,6 @@
 import type { Action } from '../config/controls';
 import type { CrosshairSettings } from '../config/matchInfo';
-import { type OpticId, OPTICS } from '../config/optics';
+import { type SightId, sightConfig } from '../config/optics';
 import type { ReplicaConfig } from '../config/replicas';
 import type { PictureSubject } from '../render/itemPictures';
 import type { Armament } from '../sim/armament';
@@ -18,6 +18,7 @@ export class Hud {
   private readonly panel: ReplicaPanel;
   private shownInPlay = true;
   private shownAiming = false;
+  private shownIrons = false;
   private shownScoped = false;
   private readonly crosshair: HTMLDivElement;
   /** The smallest gap the crosshair shows (px, Settings → Crosshair); the spread opens it further. */
@@ -67,14 +68,17 @@ export class Hud {
 
   /**
    * Once per frame (`dt` seconds). `inPlay` is false once you've been hit: the crosshair and the replica panel go
-   * away. `spreadPx` is one standard deviation of where the next BB can go, in screen pixels. `sight`: the optic
-   * up at your eye (null if none), whose red dot or scope reticle takes the crosshair's place.
+   * away. `spreadPx` is one standard deviation of where the next BB can go, in screen pixels. `sight`: the sight
+   * up at your eye (null if none): an optic's red dot or scope reticle takes the crosshair's place; iron sights
+   * (M84) take it themselves, with nothing drawn over them.
    */
-  update(armament: Armament, loadout: readonly ReplicaConfig[], inPlay: boolean, spreadPx: number, sight: OpticId | null, dt: number): void {
+  update(armament: Armament, loadout: readonly ReplicaConfig[], inPlay: boolean, spreadPx: number, sight: SightId | null, dt: number): void {
     if (this.shownInPlay !== inPlay) this.root.classList.toggle('out', !(this.shownInPlay = inPlay));
-    const aiming = sight !== null;
+    const aiming = sight !== null && sight !== 'iron';
     if (this.shownAiming !== aiming) this.root.classList.toggle('aiming', (this.shownAiming = aiming));
-    const scoped = sight !== null && OPTICS[sight].scope;
+    const irons = sight === 'iron';
+    if (this.shownIrons !== irons) this.root.classList.toggle('irons', (this.shownIrons = irons));
+    const scoped = sight !== null && sightConfig(sight).scope;
     if (this.shownScoped !== scoped) this.root.classList.toggle('scoped', (this.shownScoped = scoped));
     const gap = crosshairGap(this.minGap, spreadPx, this.dynamic);
     if (gap !== this.shownGap) setCrosshairGap(this.crosshair, (this.shownGap = gap));
