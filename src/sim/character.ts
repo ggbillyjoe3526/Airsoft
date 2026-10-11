@@ -86,10 +86,12 @@ export interface Character {
   /** Seconds standing still on the ground so far (0 while moving or in the air); steadies the aim (sim/accuracy.ts). */
   stillTime: number;
   /**
-   * Aiming down the sights of the replica in hand (sim/aiming.ts): only with an optic fitted, and it slows you to
-   * walking pace. Bots never aim down sights.
+   * Aiming down the sights of the replica in hand (sim/aiming.ts): its iron sights or a fitted optic, and it slows you
+   * to walking pace. Bots never aim down sights.
    */
   aiming: boolean;
+  /** How far the sight is raised to the eye (0..1, sim/aiming.ts): the aimed accuracy eases in with it (M84). */
+  aimRaise: number;
   /** Holding the Use key this tick while in play (M44: opens a case in Extraction). Bots never use it. */
   using: boolean;
   /** Seconds left in which a sprint's or a jump's shake still settles slowly (sim/accuracy.ts); 0 = locks on fast. */
@@ -161,6 +163,7 @@ export function createCharacter(
     stillTime: 0,
     shakeCarry: 0,
     aiming: false,
+    aimRaise: 0,
     using: false,
     armament: createArmament(loadout),
     ghost: false,
@@ -229,6 +232,7 @@ export function respawnCharacter(c: Character): void {
   c.stillTime = 0;
   c.shakeCarry = 0;
   c.aiming = false;
+  c.aimRaise = 0;
   c.torchOn = false;
   c.torchTime = 0;
   c.grace = 0;

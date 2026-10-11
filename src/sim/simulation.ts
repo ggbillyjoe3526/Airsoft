@@ -151,8 +151,11 @@ export function stepSimulation(
       cmd.yaw = c.yaw;
       cmd.pitch = c.pitch;
     }
-    if (inPlay) stepAiming(c, cmd);
-    else c.aiming = false;
+    if (inPlay) stepAiming(c, cmd, dt);
+    else {
+      c.aiming = false;
+      c.aimRaise = 0;
+    }
     c.using = inPlay && live && cmd.use;
     stepMovement(c, cmd, ctx.movement, dt, ctx.mover, ctx.scratch);
     rescueIfOutOfWorld(c, ctx.killY);

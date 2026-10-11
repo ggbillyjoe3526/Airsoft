@@ -2,7 +2,7 @@ import { handlingOf } from '../config/attachments';
 import { BALLISTICS } from '../config/ballistics';
 import { BOT_BEHAVIOUR } from '../config/bots';
 import { PERFORMANCE_BARS, PERFORMANCE_SHEET } from '../config/menus';
-import { AIMING, OPTICS } from '../config/optics';
+import { AIMING, IRON_SIGHTS, OPTICS } from '../config/optics';
 import { BB_WEIGHT, muzzleEnergy, muzzleVelocity } from '../config/replicas';
 import type { ScaledStat } from '../config/statsFile';
 import type { ItemRef } from '../pool/collection';
@@ -67,7 +67,8 @@ export function performanceOf(slot: KitSlot, grams: number, dial: number, capped
     mags: h.mags,
     reload: h.reloadTime,
     draw: h.drawTime,
-    raise: slot.optic === null ? null : AIMING.raiseTime * OPTICS[slot.optic].raiseScale * h.raiseScale,
+    // Down the iron sights with no optic fitted (M84); null only for a replica with neither.
+    raise: slot.optic === null && !r.look.ironSight ? null : AIMING.raiseTime * (slot.optic === null ? IRON_SIGHTS : OPTICS[slot.optic]).raiseScale * h.raiseScale,
     heardFrom: BOT_BEHAVIOUR.hearingDistance * h.heardScale,
   };
 }

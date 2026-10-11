@@ -233,7 +233,8 @@ replaces its line; the old one stays findable in the archive or in git.
   stay generic (CLAUDE.md §4).
 - **Every replica aims down sights, through iron sights when no optic is fitted (owner, 2026-10-06).** Replaces his
   2026-10-03 rule that aiming needs a fitted optic. Optics and other attachments stay accessories, never part of a
-  replica's model (owner, 2026-10-03).
+  replica's model (owner, 2026-10-03). Down any sight the spread is halved and Shift creeps below the aiming pace (M84,
+  `MOVEMENT.accuracy.aimed`, `aimWalkScale`); bots fire from the hip.
 - **Up a ramp the pace loss stays: the speed fix is built but off (`MOVEMENT.rampPace` 0) (owner, 2026-10-05, 07:06).**
   Turning it on moved Attack / Defend balance on Depot, so a change needs the owner's call.
 - **Cover heights: full cover is at least 2.4 m and crouch cover exactly 1.2 m; no walkable ledge sits between 0.15 m

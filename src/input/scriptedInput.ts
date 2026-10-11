@@ -22,7 +22,7 @@ export interface ScriptStep {
   lean?: number;
   /** Trigger held. */
   fire?: boolean;
-  /** Aim down sights (needs an optic). */
+  /** Aim down sights (the optic, or the iron sights). */
   aim?: boolean;
   /** A reload pressed on this step's first tick. */
   reload?: boolean;
