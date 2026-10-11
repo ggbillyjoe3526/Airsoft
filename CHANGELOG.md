@@ -77,6 +77,9 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M89** · Match settings fit the mode: no Tournament or Pro CQB in Extraction (a saved pick plays as Skirmish), no Time-out in Attack and Defend
 - **M89** · A setting hidden for a mode no longer changes the match or keeps an Extraction run out of your records
 - **M84** · Aimed fire is twice as tight as hip fire; holding Shift while aiming creeps slower than the aiming pace
+- **W6a** · One renderer for both paths: WebGPU where the browser has it, WebGL otherwise; the pictures look the same as before
+- **W6a** · Menu pictures of replicas wait until the match's shaders are ready, so a match starts no slower
+- **W6a** · The game download is a little smaller: the main code file is 946 kB, down from 951 kB
 
 ### Fixed
 - **G11** · The team camo on players reads clearly on Medium and up: crisp dark and light blotches printed per pixel, on WebGL and WebGPU; Low keeps plain clothes
@@ -106,6 +109,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M101** · Bots and other players show the Cyber Pistol's own shape instead of a plain pistol
 - **RM3** · Item pictures in the menus fit their slots whole: the Armory's pictures and Customise's large replica picture are no longer cut off at the top and bottom
 - **M85** · BBs stop at the first body they hit; hit areas match the drawn figure in every pose; a BB that hits a player already out knocks on the body
+- **W6a** · If the graphics device is lost and no new WebGPU device comes, the game carries on with WebGL instead of stopping
 
 ### Internal
 - **G8** · Set dressing never collides or blocks sight: Depot's colliders, routes, cover and bot sight are tested identical with and without it (#136)
@@ -131,6 +135,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **W5** · On WebGPU particles move on the graphics card; the WebGPU comparison adds Woodland's grass and stand-in views
 - **CT1** · Content toolkit part 1: rulebooks per content kind, and one command that checks a replica or part in four levels and writes a one-page report
 - **CT2** · Content toolkit part 2: a map check covers rules, layout against Depot, performance and bot balance; every test run checks every map
+- **W6a** · The perf checks run on both renderers with their own baselines; the grass and tree stand-ins' triangles have their own perf line
 
 ## 0.1 Dev 4 · 2026-10-06
 
