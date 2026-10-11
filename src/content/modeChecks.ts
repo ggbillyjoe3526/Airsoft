@@ -1,16 +1,17 @@
 import { DIFFICULTIES, type Difficulty } from '../config/bots';
 import { MODE_PLAY_TEST } from '../config/contentRules';
 import { squadSize } from '../config/extraction';
-import { type MatchRules, offersRow, ROUND_TIME_SETTING, type RuleSwitch, rulesForMode, type RulesetId, rulesetOf, standardRulesOf } from '../config/matchRules';
+import { type MatchRules, offersRow, ROUND_TIME_SETTING, WINS_NEEDED_CHOICES, type RuleSwitch, rulesForMode, type RulesetId, rulesetOf, standardRulesOf } from '../config/matchRules';
 import { type MatchMode, MODE_SHAPES } from '../config/modes';
 import type { MapEntry } from '../map/maps';
 import { type CheckResult, result } from './checks';
 import { perfMapName, type PerfBudget } from './mapChecks';
 import { gameModeContext, hostMaps, listWords, type ModeContext, type ModeEntry, modeItem, rowWords } from './modeCheckSupport';
 
+import { modeRules, pinnedModes } from './modeRules';
+
 /** A quality preset's name as Settings shows it ("low" is Low). */
 const presetWords = (preset: string): string => preset.charAt(0).toUpperCase() + preset.slice(1);
-import { modeRules, pinnedModes } from './modeRules';
 
 /**
  * A mode's checks (CT3; the rulebook is docs/content/modes.md): levels 1 to 3 of the content toolkit for every mode in
@@ -86,9 +87,10 @@ const PLAYED_SWITCHES: readonly { field: RuleSwitch; on: string; off: string }[]
 
 /**
  * The compatibility check's grid for `mode` on `map` (CT3): the standard match (the default ruleset, Normal, the map's
- * standard team size), then one thing changed at a time: every other ruleset it offers, every other level, the
- * smallest and largest teams, every Custom switch it plays flipped and the shortest round time. One at a time keeps it
- * to a short match each (MODE_PLAY_TEST.seconds); a pairing the Match pop-up hides (MODE_FIT) is not played.
+ * standard team size), then one thing changed at a time: every other ruleset it offers, every other level, every other
+ * team size the map offers, every other Rounds to win, every Custom switch it plays flipped and the shortest round time.
+ * One at a time keeps it to a short match each (MODE_PLAY_TEST.seconds); a pairing the Match pop-up hides (MODE_FIT) is
+ * not played.
  */
 export function modePairings(mode: MatchMode, map: Pick<MapEntry, 'teamSize'>, defaultRuleset: RulesetId, rulesets: readonly RulesetId[]): ModePairing[] {
   const size = map.teamSize.standard;
@@ -97,9 +99,17 @@ export function modePairings(mode: MatchMode, map: Pick<MapEntry, 'teamSize'>, d
   const out: ModePairing[] = [standard];
   for (const r of rulesets.filter((r) => r !== defaultRuleset && r !== 'custom')) out.push({ ...standard, label: rulesetOf(r).label, ruleset: r, rules: under(r) });
   for (const d of DIFFICULTIES.filter((d) => d.id !== standard.level)) out.push({ ...standard, label: d.label, level: d.id });
-  // Extraction's squad is at most squadSize of the pick: the largest pick that changes it, and the smallest.
-  const sizes = MODE_SHAPES[mode].play === 'run' ? [1, map.teamSize.max].filter((n) => squadSize(n) !== squadSize(size)) : [1, map.teamSize.max].filter((n) => n !== size);
-  if (offersRow(defaultRuleset, 'teamSize', mode)) for (const n of new Set(sizes)) out.push({ ...standard, label: `${n}v${n}`, rules: under(defaultRuleset, { teamSize: n }) });
+  // Every team size the map offers; a run's squad is squadSize of the pick, so one pick per squad it makes.
+  const picks = Array.from({ length: map.teamSize.max }, (_, i) => i + 1).filter((n) => n !== size);
+  const sizes = MODE_SHAPES[mode].play === 'run' ? picks.filter((n, i) => squadSize(n) !== squadSize(size) && picks.findIndex((m) => squadSize(m) === squadSize(n)) === i) : picks;
+  if (offersRow(defaultRuleset, 'teamSize', mode)) for (const n of sizes) out.push({ ...standard, label: `${n}v${n}`, rules: under(defaultRuleset, { teamSize: n }) });
+  // Every Rounds to win choice (the ruleset New game starts on offers the row, or Custom does).
+  const winsRuleset = offersRow(defaultRuleset, 'winsNeeded', mode) ? defaultRuleset : offersRow('custom', 'winsNeeded', mode) && rulesets.includes('custom') ? 'custom' : null;
+  if (winsRuleset) {
+    for (const c of WINS_NEEDED_CHOICES.map((c) => Number(c.id)).filter((n) => n !== standard.rules.winsNeeded)) {
+      out.push({ ...standard, label: `${winsRuleset === 'custom' ? 'Custom, ' : ''}first to ${c}`, ruleset: winsRuleset, rules: under(winsRuleset, { winsNeeded: c }) });
+    }
+  }
   if (rulesets.includes('custom')) {
     const custom = standardRulesOf('custom');
     for (const s of PLAYED_SWITCHES.filter((s) => offersRow('custom', s.field, mode))) out.push({ ...standard, label: `Custom, ${custom[s.field] ? s.off : s.on}`, ruleset: 'custom', rules: under('custom', { [s.field]: !custom[s.field] }) });

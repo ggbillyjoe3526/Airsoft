@@ -255,8 +255,11 @@ describe('the compatibility grid', () => {
     const labels = pairings.map((p) => p.label);
     expect(labels).toEqual(expect.arrayContaining([rulesetOf('tournament').label, rulesetOf('proCqb').label, ...DIFFICULTIES.filter((d) => d.id !== 'normal').map((d) => d.label), '1v1', `Custom, ${ROUND_TIME_SETTING.min} s rounds`]));
     expect(new Set(labels).size).toBe(labels.length);
-    // Depot's standard team is its largest: no 3v3 beside the standard one.
+    // Every other team size Depot offers, and every other Rounds to win; Depot's standard team is its largest: no 3v3.
+    expect(labels).toEqual(expect.arrayContaining(['1v1', '2v2', 'first to 3', 'first to 7', 'first to 10']));
     expect(labels).not.toContain('3v3');
+    expect(labels).not.toContain('first to 5');
+    expect(pairings.find((p) => p.label === 'first to 10')).toMatchObject({ ruleset: 'skirmish', rules: { winsNeeded: 10, teamSize: depot.teamSize.standard } });
     // Attack / Defend's time-out is the defenders' whatever the switch: the Match pop-up hides it, so no pairing plays it.
     expect(labels.some((l) => /time-out/.test(l))).toBe(false);
     const oneVOne = pairings.find((p) => p.label === '1v1')!;
@@ -272,7 +275,8 @@ describe('the compatibility grid', () => {
   it('plays a team size it offers above the standard on a map with room', () => {
     const woodland = MAPS.find((m) => m.id === 'woodland')!;
     const labels = modePairings('elimination', woodland, ctx.defaultRuleset, MODE_FIT.elimination.rulesets).map((p) => p.label);
-    expect(labels).toEqual(expect.arrayContaining(['1v1', `${woodland.teamSize.max}v${woodland.teamSize.max}`]));
+    expect(labels).toEqual(expect.arrayContaining(['1v1', '2v2', '3v3', `${woodland.teamSize.max}v${woodland.teamSize.max}`]));
+    expect(labels).not.toContain(`${woodland.teamSize.standard}v${woodland.teamSize.standard}`);
     expect(labels.filter((l) => /time-out/.test(l))).toHaveLength(1);
   });
 
@@ -282,7 +286,7 @@ describe('the compatibility grid', () => {
     expect(labels[0]).toBe('the standard match');
     expect(labels).toContain('1v1');
     expect(labels).not.toContain(rulesetOf('tournament').label);
-    expect(labels.some((l) => /win by two|time-out|s rounds/.test(l))).toBe(false);
+    expect(labels.some((l) => /win by two|time-out|s rounds|first to/.test(l))).toBe(false);
     expect(labels).toEqual(expect.arrayContaining(['Custom, friendly fire off', expect.stringMatching(/^Custom, ricochets/), expect.stringMatching(/^Custom, (semi only|any fire mode)$/)]));
     // A run ignores its rounds rows: every pairing plays them at the ruleset's standard.
     for (const p of pairings) expect(p.rules.winsNeeded, p.label).toBe(standardRulesOf(p.ruleset).winsNeeded);
