@@ -303,6 +303,7 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 
 | Issue | Class | Notes |
 |---|---|---|
+| The WebGPU twins' and particles' allocation tests count heap growth, which can run over their limit while the bot-match guards run beside them | can wait | Seen twice on the gate, never alone: `compute/particles.qa.test.ts:421` (CT3) and `worldTwins.qa.test.ts:251`, 290 KB against 128 KB (CT4); both passed on the re-run and 3 runs of 3 alone. Widen or isolate them if it recurs. |
 | A map's team-colour rule reads each block's tint, and a textured block's tint is white, so an orange or blue texture would pass it | can wait | The skin checks measure each map's colours as painted in the browser (`content-pictures.mjs` `measureMapPalettes`); the map check could use the same. (CT2, found in CT4) |
 | Dev › Time of day on a map that doesn't offer that time keeps the map's baked bounce light (G6) from its own time, so Woodland by day or Depot by night can look patchy | can wait | Dev-only and kept out of the records; the light itself is the preset's (`map/lightingChoice.ts` `mapUnderPreset`), no renderer change. (M90) |
 | Dev › Bot intentions makes a label's transform string when a bot's label moves on screen (as the teammate tags do) | can wait | Off by default and Dev-only; nothing is made while it is off. (M90) |
