@@ -1,7 +1,7 @@
 import type { Difficulty } from '../../config/bots';
 import { EXTRACTION, homeTeamCap } from '../../config/extraction';
 import { formatRoundTime, type MatchRules, REALCAP_TEXT } from '../../config/matchRules';
-import type { MatchMode } from '../../config/modes';
+import { type MatchMode, unknownMode } from '../../config/modes';
 import { TEAMS } from '../../config/teams';
 import type { ExtractionData } from '../../map/mapTypes';
 import { type RoundRules, teamEnd } from '../../sim/round';
@@ -88,7 +88,19 @@ function lateJoin(x: ExtractionData): string {
 
 /** The goal paragraph for `mode` (Extraction: on a map with `extraction` data). */
 export function describeRules(r: MatchRulesText, mode: MatchMode, extraction?: ExtractionData): string {
-  if (mode === 'extraction') return describeRun(r, extraction);
+  switch (mode) {
+    case 'elimination':
+    case 'attackDefend':
+      return describeRounds(r, mode);
+    case 'extraction':
+      return describeRun(r, extraction);
+    default:
+      return unknownMode(mode);
+  }
+}
+
+/** A mode played in rounds: the teams, how a round is won, the ends and how the match is won. */
+function describeRounds(r: MatchRulesText, mode: 'elimination' | 'attackDefend'): string {
   const minutes = Math.floor(r.roundTime / 60);
   const seconds = String(Math.round(r.roundTime % 60)).padStart(2, '0');
   const mates = r.teamSize - 1;

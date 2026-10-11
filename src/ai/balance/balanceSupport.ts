@@ -1,5 +1,5 @@
 import type { MatchMode } from '../../config/modes';
-import type { BalanceTally } from '../depotMatchSupport';
+import { type BalanceTally, forRoundsMode } from '../depotMatchSupport';
 
 /**
  * Test-only (like depotMatchSupport.ts): what a balance measure (`*.balance.ts`, project `balance`) hands the balance
@@ -58,7 +58,8 @@ export const ON_TIME_BAND: Band = { max: 0.1 };
  */
 export function reportTally(ctx: MeasureContext, label: string, t: BalanceTally, mode: MatchMode, band: Band = PRO_BAND, end0 = 'the west end'): void {
   const onTime = `${t.onTime} of ${t.rounds} on time`;
-  if (mode === 'attackDefend') {
+  const attackers = forRoundsMode(mode, { elimination: false, attackDefend: true });
+  if (attackers) {
     reportMeasure(ctx, { label: `${label}: the attackers' share of rounds`, value: share(t.attackerWins, t.rounds), of: t.rounds, band, detail: `${t.attackerWins} of ${t.rounds}, ${onTime}` });
   } else {
     reportMeasure(ctx, { label: `${label}: ${end0}'s share of the decided rounds`, value: share(t.end0Wins, t.decided), of: t.decided, band, detail: `${t.end0Wins} of ${t.decided} decided, ${onTime}` });

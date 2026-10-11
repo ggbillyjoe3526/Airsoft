@@ -10,7 +10,9 @@ This is the thread's step list. The owner is not technical: plain words, numbere
 a default, and only results, blockers and decisions.
 
 1. **Read** `docs/content/README.md` and the type's rulebook (`replicas.md`, `attachments.md`, `maps.md`, `modes.md`,
-   `skins.md`). For modes and skins, say which checks exist yet (the rulebook's Checks heading) before starting.
+   `skins.md`). For skins, say which checks exist yet (the rulebook's Checks heading) before starting. A new mode is
+   real code for its rules and its bots: the build follows `modes.md` › Checks, adding its case wherever the build
+   stops on the never-check.
 2. **Brief.** Ask the rulebook's brief questions, each with its default, in one message (a decision card when one
    answer decides the rest). Take the defaults for anything the owner leaves open, and say so.
 3. **Spec sheet.** Write it from the answers to `/mnt/project-files/content-reports/<name>/spec.md`: the numbers (the
@@ -24,7 +26,8 @@ a default, and only results, blockers and decisions.
    part that fits it, at Low and High), the sounds. Note any reason for a number outside its range, a part that fits by ID, or a part better at everything, and put it to the
    owner: each goes into its register in `src/config/contentRules.ts` only with his OK.
 6. **Check.** `PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium node pipeline/content-check.mjs <id> --balance` (drop the
-   variable outside a cloud container; a map is `map:<id>`, and its perf runs add about ten minutes). Fix every fail. Re-run any balance figure that is outside within noise on
+   variable outside a cloud container; a map is `map:<id>`, and its perf runs add about ten minutes; a mode is
+   `mode:<id>`). Fix every fail. Re-run any balance figure that is outside within noise on
    more seeds (`--seeds 16 --maps <map>`) before acting on it.
 7. **Report.** Copy `pipeline/out/content/<id>/` to `/mnt/project-files/content-reports/<id>/` and attach
    `report.html`. Tell the owner, in a numbered list: the outcome line, each thing to look at in plain words, and what

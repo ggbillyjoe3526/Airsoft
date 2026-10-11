@@ -1,3 +1,5 @@
+import type { MatchMode } from './modes';
+
 /**
  * The content toolkit's rules as data (CT1, plan `plans/content-toolkit-concept.md`, approved by the owner 2026-10-05
  * with every default): what a replica's numbers may be, the names it may not use, which parts may skip a trade-off and
@@ -287,4 +289,55 @@ export const MAP_BALANCE_WATCH = {
 export const MAP_BALANCE_BANDS = {
   stayedAtSpawn: 0.05,
   stuckPerTenMinutes: 1,
+} as const;
+
+// ---- Modes (CT3) -------------------------------------------------------------------------------------------------
+
+/**
+ * The register of modes made public (the public gate, CT3): every mode tagged `public` in config/modes.ts MATCH_MODES is
+ * here, with the date it went public or "before the toolkit". A public mode with no entry fails the rules check.
+ */
+export const PUBLIC_MODES: Readonly<Record<string, string>> = {
+  elimination: 'before the toolkit',
+  attackDefend: 'before the toolkit',
+};
+
+/**
+ * Mode ids already in players' saves (the New game picks and the records' cells, `<level>.<mode>`; stats/records.ts
+ * resultKey): each stays in MATCH_MODES under the same id for good. A new mode's id joins when it first ships in a build.
+ */
+export const SHIPPED_MODE_IDS: readonly string[] = ['elimination', 'attackDefend', 'extraction'];
+
+/**
+ * Modes the perf gate's matrix (pipeline/perf-budget.json) doesn't run, each with the mode whose runs stand for it and
+ * why; any other mode must be in the matrix. The spec test (`content-check mode:<id>`) still measures it on every map.
+ */
+export const MODE_PERF_STAND_INS: Readonly<Record<string, { by: MatchMode; reason: string }>> = {
+  attackDefend: {
+    by: 'elimination',
+    reason: "the same field, figures and replicas as Elimination with one flagpole more, so Elimination's runs measure what it draws",
+  },
+};
+
+/**
+ * The mode checks' short headless matches (CT3; src/content/modePlay.ts): seconds per pairing in the compatibility
+ * check's grid, and in the check that the bots play the mode its own way (`botSeconds`: long enough for the attackers to
+ * reach the flag or the run's jobs to start, short enough for every pull request).
+ */
+export const MODE_PLAY_TEST = {
+  seconds: 40,
+  botSeconds: 30,
+  /** In `botSeconds`, the bots of a mode with its own plan stand at least this far (m, on average) from where Elimination's stood. */
+  botApart: 1,
+} as const;
+
+/**
+ * The mode balance run's own bands (CT3; src/content/report/mapBalance.report.ts), besides each side's share and the
+ * rounds on time (the map run's): in a mode with an objective, the share of decided rounds the objective decides (a flag
+ * raised, or held to the whistle), so it is not Elimination by another name; and its pay a minute against Elimination's
+ * on the same map, lighting and level (`pay`: the ratio's band; the plan's "in line with the other modes").
+ */
+export const MODE_BALANCE_BANDS = {
+  objectiveDecides: 0.1,
+  pay: { min: 0.75, max: 1.25 },
 } as const;

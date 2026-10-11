@@ -4,6 +4,7 @@ import type { Character } from '../sim/character';
 import { isInPlay } from '../sim/elimination';
 import type { RoundState } from '../sim/round';
 import type { ExtractionRules } from '../config/extraction';
+import { unknownMode } from '../config/modes';
 import { carriedNote, respawnNote, runLine } from './runStatus';
 import { flagLine } from './flagStatus';
 import { TimedFill } from './timedFill';
@@ -167,7 +168,7 @@ export class Scoreboard {
 
   /** Flag mode: ATK / DEF tags and the strip showing the flag's height, from your side. */
   private updateFlag(round: RoundState): void {
-    const attackers = round.mode === 'attackDefend' ? round.attackers : -1;
+    const attackers = flagAttackers(round);
     if (attackers !== this.shownAttackers) {
       this.shownAttackers = attackers;
       this.shownPercent = -1; // your side changed: rebuild the line
@@ -187,5 +188,18 @@ export class Scoreboard {
     const line = flagLine(attackers === this.playerTeam, status, round.flag.progress, live);
     this.flagText.textContent = line.text;
     if (line.urgent !== this.shownUrgent) this.flag.classList.toggle('urgent', (this.shownUrgent = line.urgent));
+  }
+}
+
+/** The team attacking the flag this round, or -1 in a mode without one (the strip and the ATK / DEF tags hide). */
+function flagAttackers(round: RoundState): number {
+  switch (round.mode) {
+    case 'attackDefend':
+      return round.attackers;
+    case 'elimination':
+    case 'extraction':
+      return -1;
+    default:
+      return unknownMode(round.mode);
   }
 }

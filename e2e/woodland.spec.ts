@@ -210,9 +210,10 @@ test('Woodland: T switches your weapon torch, one real spot light in place of a 
   expect(on.points + on.spots).toBe(2);
   expect(on.programs).toBe(off.programs);
 
+  // Switching it off gets the same 30 s: a stall can come again on a busy machine (a 10 s wait failed there once).
   await page.keyboard.press('t');
-  await expect.poll(async () => (await look()).torchOn, { timeout: 10_000 }).toBe(false);
-  await expect.poll(async () => (await look()).spotIntensity, { timeout: 10_000 }).toBe(0);
+  await expect.poll(async () => (await look()).torchOn, { timeout: 30_000 }).toBe(false);
+  await expect.poll(async () => (await look()).spotIntensity, { timeout: 30_000 }).toBe(0);
   expect((await look()).points).toBe(off.points);
 
   // M33h QA: Depot by day with Dev content still on. The torch stays fitted in the Loadout (it counts and pays there,

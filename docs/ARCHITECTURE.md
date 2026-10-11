@@ -47,7 +47,7 @@ A task that adds, renames or moves a file keeps its folder's `README.md` current
 | `src/config/` | Every tunable number and data table | `replicas.ts`, `bots.ts`, `hits.ts`, `render.ts`, `controls.ts`, `dev.ts` |
 | `src/core/` | Loop and session plumbing: stepper, seeds, frame pacer, crash report | `fixedStepper.ts`, `seed.ts`, `sessionPlan.ts`, `crashReport.ts`, `framePacer.ts` |
 | `src/pool/` | The asset pool, the Loadout, the Armory economy, Extraction cases | `pool.ts`, `kit.ts`, `loadoutModel.ts`, `armory.ts`, `collection.ts`, `caches.ts` |
-| `src/content/` | The content checks: rules, compatibility, spec test and balance run for a new replica or part | `gameContent.ts`, `replicaChecks.ts`, `partChecks.ts`, `specSheet.ts`, `report/` |
+| `src/content/` | The content checks: rules, compatibility, spec test and balance run for a new replica, part, map or mode | `gameContent.ts`, `replicaChecks.ts`, `partChecks.ts`, `mapChecks.ts`, `modeChecks.ts`, `specSheet.ts`, `report/` |
 | `src/stats/` | Match stats, local records, settling a finished match | `matchStats.ts`, `records.ts`, `settleMatch.ts` |
 | `src/save/` | The save system: guarded storage, file format, migrations, tab lock | `saveFile.ts`, `stores.ts`, `guardedStorage.ts`, `saveManager.ts`, `tabLock.ts` |
 | `src/settings/` | The saved settings object and the Dev settings' saved values | `storage.ts`, `dev.ts` |
@@ -99,7 +99,9 @@ Maps are plain data (`map/mapTypes.ts`). One source builds both the Rapier colli
   `insertionBerth`, the metres the home team's bots keep from the insertion at the start (Woodland 30). Woodland's and
   Neon Heights' blocks are files of their own (`map/woodlandExtraction.ts`, `map/neonHeightsExtraction.ts`), placed on
   the layout through the shared helpers in `map/extractionBlock.ts`. `map/playableMode.ts` falls back to Elimination
-  on a map without the data a mode needs.
+  on a map without the data a mode needs (`config/modes.ts` `MODE_SHAPES` says what each mode needs). Every place that
+  answers for a mode is a `switch` ending in `unknownMode` (a never-check), so a new mode does not build until each
+  answers (the content toolkit's mode checks, `content/modeChecks.ts`).
 - **Look-only data.** `signs`, `decor`, `dressing` and `bakedLight` are drawn but never read by physics, nav, cover or
   sight.
   - **`dressing`** (`MapDressing`) is a map's set dressing, in a file of its own per map (`map/depotDressing.ts`,

@@ -2,7 +2,7 @@ import { AUDIO } from '../config/audio';
 import type { BotConfig } from '../config/bots';
 import type { HitConfig } from '../config/hits';
 import { WHAT_GOT_YOU } from '../config/matchInfo';
-import { FLAG } from '../config/modes';
+import { FLAG, unknownMode } from '../config/modes';
 import type { BodyConfig } from '../config/movement';
 import { NAV } from '../config/nav';
 import type { ReplicaConfig } from '../config/replicas';
@@ -565,7 +565,21 @@ export class BotController {
     this.measureEnds();
     const cfg = this.world.cfg;
     const round = this.world.round;
-    const objective = round.mode === 'attackDefend' && round.attackers >= 0;
+    // What the mode asks of the bots (CT3: every mode answers here): the lanes alone, the flag, or the run's jobs.
+    let objective = false;
+    let run = false;
+    switch (round.mode) {
+      case 'elimination':
+        break;
+      case 'attackDefend':
+        objective = round.attackers >= 0;
+        break;
+      case 'extraction':
+        run = true;
+        break;
+      default:
+        unknownMode(round.mode);
+    }
     for (let team = 0; team < this.plans.length; team++) {
       const members = this.bots.filter((b) => b.character.team === team);
       const defending = objective && team !== round.attackers;
@@ -596,7 +610,7 @@ export class BotController {
     // Extraction (M46): the home team plays the run by jobs, not lanes. The run is the match's one round, so its clock
     // now is the run's length.
     this.run = undefined;
-    if (round.mode === 'extraction') {
+    if (run) {
       const home = 1 - round.run.squadTeam;
       this.run = new RunRoles(home, round.clock, this.cfgOf(home));
       this.run.start(this.bots, this.world, this.spawnCentre[round.run.squadTeam]!, this.opts.insertionBerth);
