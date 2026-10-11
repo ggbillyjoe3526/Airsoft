@@ -14,6 +14,19 @@ Every block below carries note 19: tune on Normal, then check that Easy, Hard an
 first guesses; the build thread confirms them before it starts. The owner ruled on every conflict on 2026-10-06
 (ROADMAP, under the playtest table).
 
+## W6b · The world's shaders as node patches the materials carry (WebGPU overhaul step 6, part 2)
+tier: core
+perf: required
+touches: src/render/, src/config/chunkBudget.ts, src/config/renderQuality.ts, pipeline/
+contract: none
+acceptance:
+  1. Every world material that had an `onBeforeCompile` GLSL patch (surfaces, set dressing, sky host, night sky, fixtures, smoke, fireflies, dust motes, figure finish and sleeve camo) carries its node patch itself: what it draws and the uniforms it reads, set where the material is made.
+  2. The GLSL patches, `withoutEnvironment` and the program-key table that mapped keys to node twins are deleted; nothing in `src/` writes GLSL for a scene material.
+  3. The picture compare against the last WebGL commit (`WEBGL_REFERENCE`) passes as it did after W6a; the perf gate passes on both back ends and Low gets no dearer.
+  4. The chunk budget drops back if the game chunk has room (DECISIONS › Chunk size budgets).
+status: open
+attempts: 0
+
 ## M81 · The practice range and tutorial area in the new look (playtest note 9)
 tier: ui
 perf: required
