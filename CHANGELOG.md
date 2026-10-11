@@ -35,6 +35,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **W5** · On WebGPU at Medium and up, Woodland's meadows grow swaying grass and a deep wood stands beyond the fence
 - **M86** · Rare, distant background sounds: a crow and a dog at Depot and the range, a creak in Woodland at night, pigeons and a car horn on Neon Heights
 - **M84** · Iron sights on every replica: right click lines the view up with the sights when no optic is fitted; a red dot or scope sits on top
+- **M82** · Loadout replicas and Customise parts sort and filter by rarity tier, saved between sessions; what you carry or have fitted always shows
 
 ### Changed
 - **M71** · Bots hunt the map's middle once their lane is swept (now all levels, not just Pro); Normal and Hard hold their posts out of lantern light at night (#133)
@@ -77,6 +78,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M89** · Match settings fit the mode: no Tournament or Pro CQB in Extraction (a saved pick plays as Skirmish), no Time-out in Attack and Defend
 - **M89** · A setting hidden for a mode no longer changes the match or keeps an Extraction run out of your records
 - **M84** · Aimed fire is twice as tight as hip fire; holding Shift while aiming creeps slower than the aiming pace
+- **M80** · Tutorial opens the real scoreboard and order wheel, with plain-word cards in your keys; finishing opens Tutorial complete: Practice range or Menu
 
 ### Fixed
 - **G11** · The team camo on players reads clearly on Medium and up: crisp dark and light blotches printed per pixel, on WebGL and WebGPU; Low keeps plain clothes
@@ -106,6 +108,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M101** · Bots and other players show the Cyber Pistol's own shape instead of a plain pistol
 - **RM3** · Item pictures in the menus fit their slots whole: the Armory's pictures and Customise's large replica picture are no longer cut off at the top and bottom
 - **M85** · BBs stop at the first body they hit; hit areas match the drawn figure in every pose; a BB that hits a player already out knocks on the body
+- **M99** · Replica pictures on the Loadout, Customise and Armory tiles show the whole replica, never cut off or covered
 
 ### Internal
 - **G8** · Set dressing never collides or blocks sight: Depot's colliders, routes, cover and bot sight are tested identical with and without it (#136)
