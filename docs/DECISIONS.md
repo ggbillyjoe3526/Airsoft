@@ -459,9 +459,10 @@ replaces its line; the old one stays findable in the archive or in git.
   levels only. An item allowed stronger, a part better at everything, a number outside its range and a balance
   override each go into their register in `src/config/contentRules.ts` only on the owner's word, an override's reason
   also here. The ranges, budgets and band there change only on his word too.
-- **What shipped before the toolkit stays as it is (Claude's default, 2026-10-11; the owner can overrule it).** Every
-  public item is registered as public "before the toolkit". The 11.1 V LiPo Battery keeps its faster fire with no
-  number made worse: its cost is that it empties a magazine sooner and is found only in Shots.
+- **What shipped before the toolkit stays as it is (owner, 2026-10-11).** Every public item is registered as public
+  "before the toolkit". The 11.1 V LiPo Battery keeps its faster fire with no number made worse ("leave it for now"):
+  its cost is that it empties a magazine sooner and is found only in Shots. A downside is a possible later change
+  (`docs/IDEAS.md` › Maybe).
 
 ## Performance budgets and technical foundations
 
