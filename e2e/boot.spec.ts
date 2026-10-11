@@ -922,7 +922,7 @@ test('the tutorial opens on the range with the coach', async ({ page }) => {
   type Tut = {
     airsoft: {
       input: { yaw: number };
-      session: { tutorial: { steps: { goal: { seconds?: number } }[]; debugJumpTo: (index: number, amount: number) => void } };
+      session: { tutorial: { steps: { id: string; goal: { seconds?: number } }[]; debugJumpTo: (index: number, amount: number) => void } };
     };
   };
   await expect
@@ -938,13 +938,38 @@ test('the tutorial opens on the range with the coach', async ({ page }) => {
     .toMatch(/2 of \d+/);
   await expect(coach).toContainText('Move');
 
-  // The last card read to its end (the tracker's debug jump, e2e build only): the coach gives way to the range readout,
-  // and the title stops offering the button.
-  await page.evaluate(() => {
-    const t = (window as unknown as Tut).airsoft.session.tutorial;
-    const last = t.steps.length - 1;
-    t.debugJumpTo(last, (t.steps[last]!.goal.seconds ?? 0) - 0.1);
-  });
+  // The steps that name the scoreboard and the order wheel open them on screen, and close them as the next step comes
+  // up (M80). The tracker's debug jump (e2e build only) goes to each.
+  const jumpTo = (id: string, readLeft = -1) =>
+    page.evaluate(
+      ([id, readLeft]) => {
+        const t = (window as unknown as Tut).airsoft.session.tutorial;
+        const i = t.steps.findIndex((s) => s.id === id);
+        t.debugJumpTo(i, readLeft < 0 ? 0 : (t.steps[i]!.goal.seconds ?? 0) - readLeft);
+      },
+      [id, readLeft] as const,
+    );
+  await jumpTo('scoreboard');
+  await expect(coach).toContainText('Scoreboard');
+  await expect(page.locator('.match-board')).toBeVisible();
+  await expect(page.locator('.match-board tr.you')).toContainText('You');
+  await jumpTo('orderWheel');
+  // The wheel's root is a point in the middle of the screen (no size): its orders are what show.
+  await expect(page.locator('.order-wheel-item')).toHaveCount(4);
+  await expect(page.locator('.order-wheel-item').first()).toBeVisible();
+  await expect(page.locator('.order-wheel-hint')).toContainText(/order|give/);
+  await expect(page.locator('.match-board')).toBeHidden();
+  await jumpTo('match');
+  await expect(page.locator('.order-wheel-item').first()).toBeHidden();
+
+  // The last card read to its end: the "Tutorial complete" pop-up, with the practice range or the menu (M80). Practice
+  // range: the coach gives way to the range readout, and the title stops offering the button.
+  await jumpTo('match', 0.1);
+  const done = page.getByRole('dialog', { name: 'Tutorial complete' });
+  await expect(done).toBeVisible({ timeout: 10_000 });
+  await expect(done.getByRole('button')).toHaveText(['Practice range', 'Menu']);
+  await done.getByRole('button', { name: 'Practice range' }).click();
+  await expect(done).toBeHidden();
   await expect(page.locator('.range-readout')).toBeVisible({ timeout: 10_000 });
   await expect(coach).toBeHidden();
   await page.reload();

@@ -18,6 +18,7 @@ import { type PlayView, SetupScreen } from './setupScreen';
 import { type MatchSummary, SummaryScreen } from './summaryScreen';
 import type { MenusOptions } from './menusOptions';
 import { TitleScreen, tutorialOffered } from './titleScreen';
+import { TutorialCompleteDialog } from './tutorialCompleteDialog';
 
 export type { FixedRulesText, MenusOptions, MenuWallet } from './menusOptions';
 
@@ -56,6 +57,7 @@ export class Menus {
   private pause?: PauseScreen;
   private summary?: SummaryScreen;
   private result?: ResultScreen;
+  private tutorialComplete?: TutorialCompleteDialog;
   /** The Match screen's picks as made (a dev pick stays; playedPicks says how they play), each change saved and reported. */
   private readonly model: PlayPicks;
   private realistic: boolean;
@@ -137,6 +139,19 @@ export class Menus {
     pause.setSkip(skip);
     this.pauseShownAt = performance.now();
     this.go('pause');
+  }
+
+  /**
+   * The tutorial played to its end (M80): the range's pause menu with the "Tutorial complete" pop-up over it, offering
+   * the practice range (Resume) or the menu (the Match screen, the range unloaded).
+   */
+  showTutorialComplete(status: string, seed: number): void {
+    this.showPause(status, seed, true, false);
+    if (!this.tutorialComplete) {
+      this.tutorialComplete = new TutorialCompleteDialog({ onPractice: () => this.play(), onMenu: () => this.leaveMatch('setup') });
+      this.root.append(this.tutorialComplete.root);
+    }
+    this.tutorialComplete.open();
   }
 
   /** The match's end: the summary first, then (Continue) the result, "You win!" and the score line. */

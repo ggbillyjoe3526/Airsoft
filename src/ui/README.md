@@ -13,7 +13,8 @@ game state and never write it. Tests use the fake DOM in `testSupport.ts` (no js
   crosshair, dev, save), shown by `menus/settingsScreen.ts`; `rendererRow.ts` builds Graphics' Renderer row (W1) in the
   lazy boot chunk. `optionPicker.ts` is the shared pop-up choice.
 - Overlays: `debugOverlay.ts`, `botIntentLabels.ts` (Dev › Bot intentions, M90: a label over each bot), `crashScreen.ts`, `loadingScreen.ts`, `graphicsNotice.ts`, `otherTabNotice.ts`,
-  `coachPanel.ts` (the tutorial), `saveDialog.ts`.
+  `coachPanel.ts` (the tutorial) and `tutorialShowcase.ts` (the scoreboard and order wheel its steps open, M80),
+  `saveDialog.ts`.
 - Wording that needs testing is pure (`matchStopText.ts`, `keyNotes.ts`, `statsRows.ts`).
 - The HUD reads `--team-0` / `--team-1` (set by `Game.play`) and `--hud-scale`, `--hud-opacity`, `--sb-scale`,
   `--cue-scale`, `--cue-colour` (set on `#app` by `Game.showHudLook`). The panel tokens `--hud-panel` and
