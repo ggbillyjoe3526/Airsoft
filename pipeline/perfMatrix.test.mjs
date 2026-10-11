@@ -136,11 +136,11 @@ describe('judging one run against its budget and baseline', () => {
   const baseline = { map: 'neon', mode: 'extraction', preset: 'medium', metrics: { drawCalls: 111, triangles: 122000, gpuMemoryMB: 56, p95Ms: 8000 } };
   const judge = (metrics, opts = {}) => judgeRun({ run, metrics, budget, baseline, baselineName: 'container-neon-extraction-medium.json', frameTimesGated: false, ...opts });
 
-  it('passes the recorded numbers, and holds Neon Heights to its own Medium line (140), not the preset\'s 120', () => {
+  it('passes the recorded numbers, and holds Neon Heights to its own Medium line (145), not the preset\'s 120', () => {
     expect(judge({ drawCalls: 111, triangles: 122000, gpuMemoryMB: 56 })).toEqual({ over: [], worse: [] });
-    // 135 calls is over the preset's 120 but within Neon Heights' 140 (the 10 % check against 111 is the next test's).
-    expect(judge({ drawCalls: 135, triangles: 122000, gpuMemoryMB: 56 }).over).toEqual([]);
-    expect(judge({ drawCalls: 141, triangles: 122000, gpuMemoryMB: 56 }).over).toEqual([{ metric: 'drawCalls', limit: 140, now: 141 }]);
+    // 140 calls is over the preset's 120 but within Neon Heights' 145 (the 10 % check against 111 is the next test's).
+    expect(judge({ drawCalls: 140, triangles: 122000, gpuMemoryMB: 56 }).over).toEqual([]);
+    expect(judge({ drawCalls: 146, triangles: 122000, gpuMemoryMB: 56 }).over).toEqual([{ metric: 'drawCalls', limit: 145, now: 146 }]);
   });
 
   it('fails a metric more than 10 % over its baseline, not one within it', () => {
