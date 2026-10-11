@@ -97,12 +97,12 @@ conflict with an earlier decision on 2026-10-06 (below the table and in `docs/DE
 | # | Note | Goes to |
 |---|---|---|
 | 1 | The tutorial shows the scoreboard and the comm wheel when it names them; plainer but complete wording; a finish pop-up offering the practice range or the menu | M80 (0.1 Dev 5) |
-| 2 | Keep the Retro filter | M96 (0.1 Dev 5): public as soon as possible (ruled 2026-10-06; was 0.5 in the triage) |
+| 2 | Keep the Retro filter | M96 (0.1 Dev 5): public as soon as possible (ruled 2026-10-06; was 0.5 in the triage); done (2026-10-11) |
 | 3 | Holster on 3 (1 primary, 2 secondary); sprinting holstered is faster but drawing to aim is slower; sprinting with the replica ready aims faster | M92 (0.1 Dev 6) |
 | 4 | Sort and filter replicas by rarity in the Loadout, and parts by rarity in Customise | M82 (0.1 Dev 5, after G3) |
 | 5 | A 2–4x variable scope (mouse wheel while aiming) and a holographic sight | 0.1 Dev 6 (feature pick 15) |
-| 6 | Skip to the next round from the spectator camera | M83 (0.1 Dev 5) |
-| 7 | A setting for a fixed or rotating minimap | M83 (0.1 Dev 5) |
+| 6 | Skip to the next round from the spectator camera | M83 (0.1 Dev 5); done (2026-10-11) |
+| 7 | A setting for a fixed or rotating minimap | M83 (0.1 Dev 5); done (2026-10-11) |
 | 8 | Walking (Shift) while aiming down sights slows you further | M84 (0.1 Dev 5): done (2026-10-11) |
 | 9 | The practice range and tutorial area in the new graphics | M81 (0.1 Dev 5, after G5 and G6; the graphics plan re-dresses only the three maps) |
 | 10 | Practice: moving targets, more target types, a timed high-score challenge (off by default) | M93 (0.1 Dev 6) |
@@ -119,8 +119,8 @@ conflict with an earlier decision on 2026-10-06 (below the table and in `docs/DE
 | 21 | Battle royale: pick a map and spawn point, a shrinking zone with a countdown outside it, start with nothing, weapons lie on the map as models, 10 players; experimental dev mode first | 0.4, dev first: an exception to the Free-for-all cut (ruled 2026-10-06); his answers below |
 | 22 | An inventory: owned items in the menus, carried items on I in a match; a small carry limit in Extraction; currency takes one slot | 0.1 Dev 6 (feature pick 38, with the Extraction rework) |
 | 23 | Extraction: solo against bots, more of them, quicker and closer waves, bots that hunt, guard and converge on an extraction, a longer extract timer, no respawn; a duo / trio revive later | 0.1 Dev 6, the Extraction rework (feature pick 7): replaces his 2026-10-04 picks (squad of 3, one respawn) and M72's idea of one opponent fewer on Normal (ruled 2026-10-06); the revive goes with Medic |
-| 24 | More Dev settings for playtesting, starting with field credits and tokens on demand | M90 (0.1 Dev 5) |
-| 25 | With the Armory turned off in Dev, hide it instead of greying it | M83 (0.1 Dev 5) |
+| 24 | More Dev settings for playtesting, starting with field credits and tokens on demand | M90 (0.1 Dev 5); done (2026-10-11) |
+| 25 | With the Armory turned off in Dev, hide it instead of greying it | M83 (0.1 Dev 5); done (2026-10-11) |
 | 26 | Softer, diffused torch beams that cast shadows | M91 (0.1 Dev 5, with the graphics work): shadows on High and Ultra only, Low as today for 60 fps (ruled 2026-10-06) |
 
 **His rulings (2026-10-06, after the notes):**
@@ -151,7 +151,7 @@ are blocks M97–M100 in `docs/TASKS.md`. All of it is 0.1 Dev 5.
 
 | # | Note | Goes to |
 |---|---|---|
-| 1 | A setting for the red X hit marker, Off by default | M97 (Dev 5 item 6) |
+| 1 | A setting for the red X hit marker, Off by default | M97 (Dev 5 item 6); done (2026-10-11) |
 | 2 | Aim down sights by Hold or Toggle, Hold by default | Already in the game: `Settings › Controls › Aim button` (Hold by default) |
 | 3 | Customise won't take "No light" on the AEG rifle; check every replica | Fixed in BP2 (Dev 5 item 4), on every replica |
 | 4 | Teams renamed Alpha (blue) and Beta (orange); the player picks a team | M98 (Dev 5 item 6) |

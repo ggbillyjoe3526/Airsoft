@@ -49,18 +49,6 @@ acceptance:
 status: open
 attempts: 0
 
-## M83 · Small menu and HUD options: skip a round, minimap turn, hidden Armory (playtest notes 6, 7, 25)
-tier: ui
-perf: skip
-touches: src/render/spectatorCamera.ts, src/matchFlow.ts, src/ui/minimap.ts, src/ui/minimapView.ts, src/config/minimap.ts, src/ui/hudSettings.ts, src/ui/menus/, src/config/dev.ts, src/config/hudText.ts, src/config/menus.ts, src/config/sim.ts, src/config/tutorial.ts, src/game.ts, src/matchSession.ts, src/rangeSession.ts, src/render/matchPresentation.ts
-contract: none
-acceptance:
-  1. The spectator camera offers "Skip to next round", which plays the rest of the round out at once and goes to the next.
-  2. A setting picks a fixed (north-up) or rotating minimap.
-  3. With "Disable Armory" on in Dev, the Armory is gone from every menu instead of greyed.
-status: open
-attempts: 0
-
 ## M87 · Bots stop clearing empty corners (playtest notes 15, 19)
 tier: core
 perf: required
@@ -84,17 +72,6 @@ acceptance:
 status: open
 attempts: 0
 
-## M90 · More Dev settings for playtesting (playtest note 24)
-tier: ui
-perf: skip
-touches: src/config/dev.ts, src/ui/devSettings.ts, src/settings/dev.ts, src/pool/, src/save/, src/game.ts, src/config/menus.ts, src/map/lightingChoice.ts, src/matchSession.ts, src/render/matchPresentation.ts, src/style.css, src/ui/botIntentLabels.ts
-contract: none
-acceptance:
-  1. Dev settings can give field credits and tokens on demand, so the Armory's cases can be tested without playing matches.
-  2. More aids, each marked a cheat where it should keep records clean: free case openings, reset the save, the map's time of day, end the round now, bots hold fire, spectate any bot, show what each bot is doing.
-status: open
-attempts: 0
-
 ## M91 · Softer torch beams that cast shadows (playtest note 26)
 tier: core
 perf: required
@@ -103,35 +80,6 @@ contract: none
 acceptance:
   1. The beam is soft and diffused, not a bright white cone (built with or after graphics G5).
   2. A torch casts shadows behind what it lights (a tree in the beam shadows the ground behind it), on the higher presets only (High and Ultra); Low keeps today's beams and its 60 fps target (owner's ruling, 2026-10-06).
-status: open
-attempts: 0
-
-## M96 · The Retro look goes public (owner's ruling on playtest note 2)
-tier: ui
-perf: skip
-touches: src/config/dev.ts, src/ui/devSettings.ts, src/ui/graphicsSettings.ts, src/ui/lookSettings.ts, src/render/retroFilter.ts, src/settings/, docs/PLAYTEST.md, src/config/look.ts, src/game.ts
-contract: none
-acceptance:
-  1. The Retro pixel filter (M42) leaves the Dev tab and becomes a public "Retro look" option with its Pixel size and Colours sliders, as soon as possible in 0.1 Dev 5 (owner, 2026-10-06: "I've tested it and I'm happy with it").
-  2. A saved Dev choice carries over to the public setting.
-status: open
-attempts: 0
-
-**The owner's playtest notes on main (2026-10-07).** Recorded on his ask, not built yet. His words, the type and the
-defaults per note are in the project's shared files (`plans/playtest-feedback-2026-10-07.md`);
-`docs/ROADMAP.md` › Playtest notes: main after G3 maps all eight. M97–M99 join the Dev 4 notes batch (Dev 5 item 6); M100 is the graphics work's (Dev 5
-item 5, with the G4 HUD restyle); note 3 was a bug, fixed in BP2; note 2 is already in the game
-(Settings › Controls › Aim button). Note 19 of the Dev 4 notes still applies.
-
-## M97 · A Hit marker setting and Replay tutorial (playtest notes 1, 8)
-tier: ui
-perf: skip
-touches: src/ui/hitFeedback.ts, src/config/hits.ts, src/ui/hudSettings.ts, src/ui/crosshairSettings.ts, src/ui/menus/settingsScreen.ts, src/settings/, src/tutorial/, src/ui/menus/titleScreen.ts, src/config/menus.ts, src/game.ts, src/matchSession.ts, src/render/matchPresentation.ts
-contract: none
-acceptance:
-  1. A "Hit marker" setting (On / Off, **Off by default**) in the settings group that holds the crosshair: Off shows no red X when the player's BB lands; On shows it as today. The hit tick sound is unchanged either way.
-  2. A "Replay tutorial" button in Settings starts the tutorial at once, whether or not it was finished before.
-  3. Both are saved with the other settings; an old save loads with the marker Off.
 status: open
 attempts: 0
 
