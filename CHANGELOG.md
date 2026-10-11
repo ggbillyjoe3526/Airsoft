@@ -90,7 +90,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M80** · Tutorial opens the real scoreboard and order wheel, with plain-word cards in your keys; finishing opens Tutorial complete: Practice range or Menu
 - **W6a** · One renderer for both paths: WebGPU where the browser has it, WebGL otherwise; the pictures look the same as before
 - **W6a** · Menu pictures of replicas wait until the match's shaders are ready, so a match starts no slower
-- **W6a** · The game download is a little smaller: the main code file is 946 kB, down from 951 kB
+- **W6a** · The game download is a little smaller: the main code file is 982 kB, down from 1,007 kB
 - **W6a** · Edge smoothing changes apply from the next load on every renderer, WebGPU and WebGL alike
 
 ### Fixed

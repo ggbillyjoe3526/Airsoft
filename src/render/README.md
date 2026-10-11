@@ -15,7 +15,9 @@ and never writes the simulation.
   `webgpuProbe.ts` asks for an adapter first, and only when one is given (on Auto, not a software one) is WebGPU
   tried; with none, or on the WebGL pick, it is the WebGL2 back end. `nodeBackend.ts` makes `WebGPURenderer`, reads
   the GPU time from timestamp queries, compiles ahead and makes the replacement renderer when the device is lost
-  (WebGPU a few times, then WebGL2). The world's materials draw as node twins of their GLSL patches (W2): `webgpu/worldTwins.ts` asks first, by program
+  (WebGPU a few times, then WebGL2). `webgpu/deferredFrees.ts` (W6a, WebGPU only) holds the uniform buffers Three
+  frees mid-frame (a draw rebuilt inside its pass) until the frame is submitted, so an earlier draw in the same pass
+  can't use a destroyed buffer. The world's materials draw as node twins of their GLSL patches (W2): `webgpu/worldTwins.ts` asks first, by program
   key, for a twin (its table lists each patch and twin); `webgpu/surfaceNodes.ts` (surfaces: weathering, per-pixel
   and vertex baked light, junk glow and neon flicker, the sky host), `webgpu/effectNodes.ts` (flames, smoke and steam,
   and the sized points' sprite materials), `webgpu/pointSprites.ts` (each sized Points drawn as one instanced sprite,
