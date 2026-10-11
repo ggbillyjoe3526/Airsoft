@@ -421,7 +421,7 @@ describe("the yard's outdoor bed (audit CORE-34)", () => {
   });
 
   it('lets a bird sing between the configured gaps, round the listener at the configured distance', () => {
-    const birds = new AmbientCalls(AMBIENCES.yard.day.call!, 5);
+    const birds = new AmbientCalls(AMBIENCES.yard.day.calls[0]!, 5);
     const at = vec3();
     const listener = vec3(3, 1.6, -4);
     const [least, most] = AUDIO.ambience.birdEvery;

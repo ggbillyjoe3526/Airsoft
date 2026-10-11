@@ -25,4 +25,4 @@ choices to `src/game.ts`.
 - Styles: `menus.css` imports `css/`; the typeface is Inter (`css/fonts.css`, `src/assets/fonts/`). Tuning:
   `config/menus.ts`, `config/menuArt.ts`.
 - Tests: `menus.test.ts`, `menuRedesign.test.ts`, `teamPick.test.ts`, `choiceCards.test.ts`, `chrome.test.ts`, `contextMenu.test.ts`, `armoryScrapMenu.test.ts` (with `menuTestSupport.ts`), `settingsRows.test.ts`,
-  `rulesText.test.ts`.
+  `rulesText.test.ts`, `modeFit.test.ts` (M89: what fits each mode).

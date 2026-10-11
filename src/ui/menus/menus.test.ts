@@ -249,10 +249,10 @@ describe('the Rules picker on New game (M39)', () => {
 
   it('hides Rounds to win and Round time in an Extraction run, and the overtime and time-out switches with them (M53, audit UI-01)', () => {
     const fields = Object.keys(DEFAULT_MATCH_RULES) as (keyof MatchRules)[];
-    expect(fields.filter((f) => offersRow('skirmish', f, true))).toEqual(['teamSize', 'friendlyFire', 'ricochetsCount']);
-    expect(fields.filter((f) => offersRow('custom', f, true))).toEqual(['teamSize', 'friendlyFire', 'ricochetsCount', 'heardOnMinimap', 'semiAutoOnly', 'realcap', 'factoryKit']);
+    expect(fields.filter((f) => offersRow('skirmish', f, 'extraction'))).toEqual(['teamSize', 'friendlyFire', 'ricochetsCount']);
+    expect(fields.filter((f) => offersRow('custom', f, 'extraction'))).toEqual(['teamSize', 'friendlyFire', 'ricochetsCount', 'heardOnMinimap', 'semiAutoOnly', 'realcap', 'factoryKit']);
     // Outside a run (or on a map with no Extraction, played as Elimination), the ruleset alone decides, as before.
-    for (const r of ['skirmish', 'tournament', 'proCqb', 'custom'] as const) for (const f of fields) expect(offersRow(r, f, false), `${r} ${f}`).toBe(offersSwitch(r, f));
+    for (const r of ['skirmish', 'tournament', 'proCqb', 'custom'] as const) for (const f of fields) expect(offersRow(r, f, 'elimination'), `${r} ${f}`).toBe(offersSwitch(r, f));
     // And the Match button under a run still names the switches it plays.
     expect(runRulesSummary({ ...DEFAULT_MATCH_RULES, semiAutoOnly: true, heardOnMinimap: false }, { baseOpponents: 2, runTime: 480 }, 'normal').detail).toBe(
       "One 8:00 run. Friendly fire on; ricochets don't count. Minimap: teammates only. Semi only.",

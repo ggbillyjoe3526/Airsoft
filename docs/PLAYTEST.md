@@ -761,11 +761,16 @@ Headphones help: direction (in front, behind, above) comes through best on them.
   way, quieter than any shot.
 - [ ] **The field.** A very quiet outdoor bed with no audible loop and now and then a small bird; barely there, never
   a hiss. Each field has its own echo. Effects turns it down with the rest.
+- [ ] **More going on round the field (M86).** Depot: now and then a crow far off and a dog a few gardens away, among
+  the birds. Woodland at night: a branch creaking between the owl's hoots. Neon Heights: pigeons by day and a small
+  car's "meep meep" a few streets off. Each is rare, quiet and far away: does any of it make you turn round, or sound
+  like a player?
 - [ ] **Getting hit.** The tick stands out: the world dips for a moment. While you walk off and wait, the field sounds
   muffled and quieter; the whistle stays clear and sits a little above the field.
 - [ ] **Pause mid-burst, then Resume.** No click either way: the sound fades out and back.
-- [ ] **Settings › Audio.** Master, Effects (replicas, steps, impacts) and Interface (hit tick, marker, whistle), each at
-  once and kept. Effects at 0 leaves only the interface cues.
+- [ ] **Settings › Audio.** Master, Effects (replicas, steps, impacts), Ambience (the field's background) and Interface
+  (hit tick, marker, whistle), each at once and kept. Ambience at 0 leaves the field silent but every step and shot
+  as loud as before; Effects at 0 leaves only the interface cues.
 - [ ] **Practice range.** The 50 m and 60 m plates still ring.
 - [ ] **Output devices.** On a 44.1 kHz or 96 kHz device (many USB headsets, HDMI receivers) shots sound as crisp as on
   48 kHz. F3 shows the audio latency (about 10 to 40 ms).

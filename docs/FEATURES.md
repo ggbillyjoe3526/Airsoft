@@ -80,8 +80,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - 3v3 by default with a round clock; first to 5 rounds wins; a whistle starts each round (Phase 1)
 - Custom matches: rounds to win, round time, 1v1 to 3v3 (to 5v5 on maps with room, M33d), friendly fire, ricochets; only
   the standard match counts for the records (M20)
-- Rules: Skirmish, Tournament and Pro CQB (dev) and Custom; named rulesets keep their own records, Custom never counts
-  (M39)
+- Rules: Skirmish, Tournament and Pro CQB (dev) and Custom; Extraction offers Skirmish and Custom only; named rulesets keep their own
+  records, Custom never counts; a setting hidden for a mode is ignored (M39, M89)
 
 ## Maps
 
@@ -196,9 +196,9 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Sounds you can locate by ear, muffled through walls and when eliminated; BB impacts sound by material; world sounds
   carry further (M13, FA6)
 - Getting hit and the round and match whistles briefly dip the rest of the mix (FA6)
-- Outdoor ambience with distant birds plays during play (FA6)
+- Outdoor ambience with distant birds plays during play (FA6); rare, distant crows, dogs, pigeons, a creaking branch and a car horn by map (M86)
 - Pause fades audio in 30 ms; hint when the browser blocks audio (FA6)
-- Master, effects and interface volume sliders (M13)
+- Master, effects, ambience and interface volume sliders; ambience turns only the field's background down (M13, M86)
 
 ## Graphics and art
 
