@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { TUTORIAL, TUTORIAL_STEPS } from '../config/tutorial';
 import { BALLISTICS } from '../config/ballistics';
 import { AEG, LOADOUT } from '../config/replicas';
+import { ORDER_WHEEL } from '../config/squad';
 import { createCharacter } from '../sim/character';
 import type { GameEvent } from '../sim/events';
 import { hopUpReach } from '../sim/hopUp';
@@ -121,13 +122,21 @@ describe('the tutorial (M16)', () => {
     tick([hit(steel.id)]);
     finishStep();
 
-    expectStep('hits');
-    for (let i = 0; i < 8.1 / DT; i++) tick();
-    finishStep();
-
-    expectStep('match');
-    for (let i = 0; i < 14.1 / DT; i++) tick();
-    finishStep();
+    /** A step that is read: done after its seconds, not before. */
+    const readStep = (id: string) => {
+      expectStep(id);
+      const goal = t.step!.goal;
+      if (goal.kind !== 'read') throw new Error(`${id} is read`);
+      for (let i = 0; i < (goal.seconds - 0.3) / DT; i++) tick();
+      expect(t.showingDone).toBe(false);
+      for (let i = 0; i < 0.4 / DT && !t.showingDone; i++) tick();
+      expect(t.showingDone).toBe(true);
+      finishStep();
+    };
+    readStep('hits');
+    readStep('scoreboard');
+    readStep('orderWheel');
+    readStep('match');
     expect(t.finished).toBe(true);
     expect(t.step).toBeNull();
     expect(ids).toEqual(TUTORIAL_STEPS.map((s) => s.id));
@@ -176,7 +185,7 @@ describe('the tutorial (M16)', () => {
     t.debugJumpTo(last, goal.seconds - 1.5 * DT); // two ticks from its end
     expect(t.stepIndex).toBe(last);
     expect(t.finished).toBe(false);
-    tick();
+    expect(tick()).toBe(true); // the jump is reported, so the coach redraws the step
     tick();
     expect(t.goalIndex).toBe(t.steps.length);
     for (let i = 0; i < (TUTORIAL.doneTime + 0.1) / DT; i++) tick();
@@ -203,6 +212,38 @@ describe('the tutorial (M16)', () => {
     // The step asks for a hit beyond it, so it teaches aiming high or turning the hop-up up.
     if (far.goal.kind !== 'hit') throw new Error('the far step asks for a hit');
     expect(far.goal.minDistance).toBeGreaterThan(reach);
+  });
+
+  it('opens the scoreboard and the order wheel on the steps that teach them, each naming its key (M80)', () => {
+    const shows = TUTORIAL_STEPS.filter((s) => s.shows).map((s) => [s.id, s.shows]);
+    expect(shows).toEqual([
+      ['scoreboard', 'scoreboard'],
+      ['orderWheel', 'orderWheel'],
+    ]);
+    expect(TUTORIAL_STEPS.find((s) => s.id === 'scoreboard')!.text).toContain('hold {scoreboard}');
+    expect(TUTORIAL_STEPS.find((s) => s.id === 'orderWheel')!.text).toContain('hold {orderWheel}');
+  });
+
+  it("names the order wheel's orders as the wheel labels them (M80)", () => {
+    const text = TUTORIAL_STEPS.find((s) => s.id === 'orderWheel')!.text;
+    for (const item of ORDER_WHEEL.items) expect(text).toContain(item.label);
+  });
+
+  it('names keys only through the bindings, never a key itself (M80: a rebound key reads right)', () => {
+    for (const s of TUTORIAL_STEPS.flatMap((x) => (x.withoutOptic ? [x, x.withoutOptic] : [x]))) {
+      // Esc can't be rebound (it pauses), so it's the one key named outright.
+      expect(s.text.replace(/\{\w+\}/g, ''), s.id).not.toMatch(/\b(Tab|Shift|Ctrl|Alt|Space|Enter|WASD|[Ll]eft mouse|[Rr]ight mouse|hold [A-Z])\b/);
+    }
+  });
+
+  it('gives every step a heading and enough to read (M80: plain but complete)', () => {
+    for (const s of TUTORIAL_STEPS.flatMap((x) => (x.withoutOptic ? [x, x.withoutOptic] : [x]))) {
+      expect(s.title.length, s.id).toBeGreaterThan(0);
+      // A sentence that says how, not only a name.
+      expect(s.text.split(/[.!?:;]\s/).length, s.id).toBeGreaterThanOrEqual(2);
+      // A read step gives time for its words: at least a second per 4 words, about half a slow reader's pace.
+      if (s.goal.kind === 'read') expect(s.goal.seconds, s.id).toBeGreaterThanOrEqual(s.text.split(/\s+/).length / 4);
+    }
   });
 
   it('names only real key bindings in its text', async () => {

@@ -24,96 +24,125 @@ export type TutorialGoal =
   /** Fire within `within` seconds of a sprint ending (audit POOL-15: the sprint lockout). */
   | { kind: 'sprintShot'; within: number };
 
+/** What a step opens on screen while it is up (M80): the hold-key scoreboard, or the order wheel, as a match shows them. */
+export type TutorialShowcase = 'scoreboard' | 'orderWheel';
+
 export interface TutorialStep {
   id: string;
   /** Short heading, e.g. "Look around". */
   title: string;
   text: string;
   goal: TutorialGoal;
+  /** Opened on screen while this step shows, closed when the next one comes up (M80). */
+  shows?: TutorialShowcase;
   /** Played instead when the replica in hand can't aim down a sight (no optic fitted: iron sights out of the box). */
   withoutOptic?: Omit<TutorialStep, 'withoutOptic'>;
 }
 
+/**
+ * The steps in order (M80 wording, owner's 0.1 Dev 4 note 1): plain words, each saying how the thing works, not only its
+ * name. Keys are always named through `{action}`, so the coach shows the key the player has bound.
+ */
 export const TUTORIAL_STEPS: readonly TutorialStep[] = [
-  { id: 'look', title: 'Look around', text: 'Move the mouse to look around the range.', goal: { kind: 'look', radians: 1.5 } },
+  {
+    id: 'look',
+    title: 'Look around',
+    text: 'Move the mouse to look around. Turn left and right to take in the whole range.',
+    goal: { kind: 'look', radians: 1.5 },
+  },
   {
     id: 'walk',
-    title: 'Move',
-    text: 'Walk up to the painted firing line in front of you: {forward} {left} {back} {right}. Hold {walk} to move quietly, {sprint} to sprint.',
+    title: 'Walk to the line',
+    text: 'Move with {forward} {left} {back} {right} and walk up to the painted firing line in front of you. Hold {walk} to walk slowly and quietly; sprint with {sprint} to run.',
     goal: { kind: 'reach', z: 0.3 },
   },
   {
     id: 'steel',
     title: 'First shot',
-    text: 'Aim at a white steel plate on the left and press {fire}. Steel rings when you hit it.',
+    text: 'Put the mark in the middle of the screen on a white steel plate to the left, then press {fire} to shoot. A plate rings when your BB hits it.',
     goal: { kind: 'hit', target: 'steel', minDistance: 0 },
   },
   {
     id: 'far',
-    title: 'Hop-up and range',
+    title: 'Long shots',
     // The reach is the stock rifle's hopUpReach, rounded; tutorial.test.ts fails when a retune moves it.
-    text: "BBs fly flat while the hop-up's backspin lasts (the stock rifle: about 39 m), then drop. Knock down a figure 50 m out or further: aim high, or turn the hop-up up on the Loadout (Esc).",
+    text: 'A BB is light and slow. The hop-up spins it so it flies flat for a while (the stock rifle: about 39 m), then it drops. Knock down a figure 50 m away or further: aim a little above it, or turn the hop-up up on the Loadout (press Esc, then Loadout).',
     goal: { kind: 'hit', target: 'figure', minDistance: 50 },
   },
   {
     id: 'reload',
     title: 'Reload',
-    text: 'Fire a few BBs, then press {reload} to change magazines: your fullest spare goes in. In a match nothing refills until the next round.',
+    text: 'Shoot a few BBs, then press {reload} to swap in a fresh magazine: you always get your fullest spare. In a match spare magazines only refill at the next round, so watch your count.',
     goal: { kind: 'reload' },
   },
   {
     id: 'selector',
-    title: 'Fire selector',
-    text: 'Press {fireMode} to switch the rifle between full auto and single shots. Single shots save BBs at range; auto wins a close fight.',
+    title: 'Fire mode',
+    text: 'Press {fireMode} to switch between full auto (BBs keep coming while you hold {fire}) and single shots (one BB each press). Single shots save BBs at long range; full auto wins close fights.',
     goal: { kind: 'fireMode' },
   },
   {
     id: 'aim',
     title: 'Aim down the sight',
-    text: 'Aim with {aim} to look through your sight: zoomed in and steadier. Stay on a target for a moment.',
+    text: 'Aim with {aim} to look through your sight: the view zooms in and your BBs land closer together. Keep it on a target for a second.',
     goal: { kind: 'aim', seconds: 1 },
     withoutOptic: {
       id: 'optics',
       title: 'Optics',
-      text: 'Your rifle has iron sights. Fit a red dot or a 2× scope on the Loadout (Esc, then Loadout) and aim through it with {aim}.',
-      goal: { kind: 'read', seconds: 8 },
+      text: 'Your replica has no optic fitted. On the Loadout (press Esc, then Loadout) you can fit a red dot or a 2× scope; then {aim} lets you look through it for zoomed-in, steadier shots.',
+      goal: { kind: 'read', seconds: 9 },
     },
   },
   {
     id: 'crouch',
     title: 'Crouch',
-    text: 'Press {crouch} to crouch. Behind low cover a crouched player is hidden, and smaller in the open (the right lane).',
+    text: 'Press {crouch} to crouch. Crouched, you are a smaller target in the open, and behind low cover nobody can see you at all.',
     goal: { kind: 'crouch' },
   },
   {
     id: 'lean',
     title: 'Lean',
-    text: 'Hold {leanLeft} or {leanRight} to lean out and peek round cover without stepping out of it.',
+    text: 'Hold {leanLeft} to lean left or {leanRight} to lean right. Leaning lets you peek and shoot round cover while most of you stays safely behind it.',
     goal: { kind: 'lean', amount: 0.8 },
   },
   {
     id: 'sprint',
     title: 'Sprint, then shoot',
-    text: 'Sprint with {sprint}, then fire straight after. A replica needs a moment after a sprint before it shoots, so slow down a step before you peek a corner.',
+    text: 'Sprint with {sprint}, stop, and shoot with {fire} straight away. After a sprint your replica needs a short moment before it fires, so slow down before you run round a corner.',
     goal: { kind: 'sprintShot', within: 1.5 },
   },
   {
     id: 'secondary',
     title: 'Switch replica',
-    text: 'Press {slot2} for your second replica and hit any target with it. {slot1} brings the first one back.',
+    text: 'Press {slot2} to take out your second replica, and hit any target with it. Press {slot1} to switch back to the first one.',
     goal: { kind: 'hit', minDistance: 0, slot: 1 },
   },
   {
     id: 'hits',
-    title: 'One hit, you\'re out',
-    text: 'In a match one BB knocks you out: you hear a tick, raise your hand and walk off. Bots call their hits too, and friendly fire counts.',
-    goal: { kind: 'read', seconds: 8 },
+    title: "One hit, you're out",
+    text: "In a match there is no health bar: one BB hit and you're out. You hear a tick, raise your hand to call your hit, and walk off. Bots always call their hits too. Careful: hitting a teammate counts as well.",
+    goal: { kind: 'read', seconds: 11 },
+  },
+  {
+    id: 'scoreboard',
+    title: 'Scoreboard',
+    text: 'This is the scoreboard. In a match, hold {scoreboard} to see it: both teams, who is still in the round (greyed out: hit), and how everyone is doing. Let go of {scoreboard} and it closes.',
+    goal: { kind: 'read', seconds: 10 },
+    shows: 'scoreboard',
+  },
+  {
+    id: 'orderWheel',
+    title: 'Order wheel',
+    // The orders' names are ORDER_WHEEL's labels (config/squad.ts); tutorial.test.ts fails when one is renamed.
+    text: "This is the order wheel. In a match, hold {orderWheel} to open it, move the mouse onto an order and let go to give it to your bot teammates: Follow Me, Hold Here or Regroup. Team Plan sends them back to the team's own plan. The key under an order gives it without the wheel.",
+    goal: { kind: 'read', seconds: 14 },
+    shows: 'orderWheel',
   },
   {
     id: 'match',
-    title: 'In a match',
-    text: "Hold {scoreboard} for the scoreboard; the minimap shows your team and the shots you hear. Hold {orderWheel} to give your bot squad an order. Attack / Defend is won by raising the flag. Matches pay Field Credits: spend them in the Armory for new gear, free. That's the basics: keep practising here, or press Esc and quit to start a match.",
-    goal: { kind: 'read', seconds: 14 },
+    title: 'Winning a match',
+    text: 'Win a round by knocking out the whole other team. In Attack / Defend the attackers can also win by raising their flag at the other pole, and the defenders by holding it off until time runs out. The minimap shows your team and where you heard shots. Matches pay Field Credits (FC): spend them in the Armory on new gear.',
+    goal: { kind: 'read', seconds: 16 },
   },
 ];
 
@@ -122,6 +151,30 @@ export const TUTORIAL = {
   doneTime: 0.9,
   /** How far down (0..1, the character's crouch amount) counts as crouched. */
   crouchedAt: 0.95,
+  /** The order wheel's step (M80): its pointer moves on to the next order this often, to show how one is picked (s). */
+  wheelDemoStep: 1.6,
+  /**
+   * The scoreboard's step (M80): the sample match it shows, as a match's hold-key board would. Each row is a player:
+   * hits, times hit, BBs fired, seconds in play, and whether they are out this round; your team's first row is you.
+   */
+  sampleBoard: {
+    round: 3,
+    score: [2, 1],
+    rows: [
+      [
+        [2, 1, 84, 151, false],
+        [3, 0, 120, 186, false],
+        [1, 1, 66, 140, true],
+        [0, 2, 41, 97, false],
+      ],
+      [
+        [2, 2, 97, 133, false],
+        [1, 1, 73, 150, true],
+        [1, 2, 58, 118, false],
+        [0, 1, 30, 165, true],
+      ],
+    ] as readonly (readonly (readonly [hits: number, timesHit: number, bbsFired: number, timeAlive: number, out: boolean])[])[],
+  },
 } as const;
 
 /**

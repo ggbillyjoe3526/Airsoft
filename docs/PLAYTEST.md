@@ -497,16 +497,22 @@ The Match screen's Practice card (the last mode), then Start practice.
 
 - [ ] **The title screen** offers Tutorial under START on a clean save, until you've finished it once or started a
   first match (also after a reload).
-- [ ] **Play it through.** The coach says "Tutorial · 1 of 10 · Look around" and moves on as you do each thing: look
+- [ ] **Play it through.** The coach says "Tutorial · 1 of 15 · Look around" and moves on as you do each thing: look
   around, walk to the line, ring a plate, knock down a figure at 50 m or more (the coach shows where your last BB
-  landed), reload, aim (or, with iron sights, a pointer to the optics), crouch, lean, switch replica and hit
-  something, the fire selector, shooting out of a sprint, then the "one hit" card. Each finished step ticks green.
-  Did any step feel stuck or unclear?
+  landed), reload, the fire selector, aim (or, with iron sights, a pointer to the optics), crouch, lean, shooting out
+  of a sprint, switch replica and hit something, then the cards to read: one hit, the scoreboard, the order wheel,
+  winning a match. Each finished step ticks green. Did any step feel stuck or unclear?
+- [ ] **Plain words (M80).** Read every card: is each one simple, and does it say how the thing works, not only what
+  it's called? Is there time to read each card before it moves on?
+- [ ] **It shows what it teaches (M80).** The scoreboard card opens the scoreboard (a sample match) under it, and the
+  order wheel card opens the wheel with its pointer moving from order to order; each closes as the next card comes up,
+  and both hide on the pause menu.
 - [ ] **Your keys.** Rebind reload, start the tutorial again: the coach names your key.
 - [ ] **Esc mid-tutorial.** The pause menu names your step and offers Skip step and Skip tutorial. Change the
   loadout and come back: same step. Quit at step 5 and start again: it picks up at step 5. Skip tutorial: free
   practice, and the title stops tagging it.
-- [ ] **After the last step** the coach goes and the range readout appears.
+- [ ] **After the last step (M80)** a "Tutorial complete" pop-up offers Practice range (Enter: back on the range, the
+  readout in the coach's place) or Menu (the Match screen, to start a match). Esc closes it to the pause menu.
 
 ### Extraction (dev content)
 

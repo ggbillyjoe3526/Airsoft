@@ -14,7 +14,8 @@ choices to `src/game.ts`.
   foot; `tutorialOffered`); `setupScreen.ts` (the Match screen: Map and Mode as `choiceCards.ts` with Practice, the
   mode cards' last, an extra card that is never saved; `matchPanel.ts`; and a "Your match" text from `playView.ts`);
   `loadoutScreen.ts` with `customiseView.ts`; `armoryScreen.ts` (the collection, a column per kind; a card's spares scrap from a right-click / Menu key / Shift+F10 menu, `contextMenu.ts`: built once, reused, listeners on the page only while open; `menuPlacement.ts` places it in the window, clear of the card's name);
-  `settingsScreen.ts` (groups with a search, a note on every row); `pauseScreen.ts`; `summaryScreen.ts`;
+  `settingsScreen.ts` (groups with a search, a note on every row); `pauseScreen.ts` (with
+  `tutorialCompleteDialog.ts` over it when the tutorial ends: the practice range or the menu, M80); `summaryScreen.ts`;
   `resultScreen.ts`.
 - Pictures: replica, part and scheme pictures come from `render/itemPictures.ts` via `menuPictures.ts`; map and mode
   stills are files in `public/menu/`, made by `pipeline/map-stills.mjs` (`config/menuArt.ts`); Practice's is drawn
