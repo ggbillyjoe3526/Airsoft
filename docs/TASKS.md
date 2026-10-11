@@ -67,3 +67,14 @@ acceptance:
   2. With Dev settings on (Unlock all gear), every replica and part is available.
 status: open
 attempts: 0
+
+## M91b · Torch shadows draw on WebGPU (bug from M91)
+tier: core
+perf: skip
+touches: src/render/torchBeams.ts, src/render/torchBeams.test.ts, src/render/torchShadows.qa.test.ts
+contract: none
+acceptance:
+  1. On the WebGPU back end at night on High (Woodland and Neon Heights), no "Destroyed texture [ShadowDepthTexture] used in a submit" error, and the first-person views draw the frame asked for (`node pipeline/webgpu-compare.mjs --only woodland --views w3 --backend webgpu --quality high`).
+  2. Your torch's shadow map is drawn on the spot's first frame, torch on or off, and after that only while the torch is on.
+status: open
+attempts: 0
