@@ -43,4 +43,7 @@
 
 ## Known issues left
 
-- None new.
+- After merging main (with RM4 and the playtest fixes) the quick gate's tests failed once on a test this task doesn't
+  touch: `src/render/webgpu/compute/particles.qa.test.ts:421` counted 409 objects against its 400 limit while the bot
+  guards ran beside it; alone it passed 3 runs of 3, and so did the fast suite. A heap count under load, for its owner
+  to widen if it recurs.
