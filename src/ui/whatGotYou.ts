@@ -20,14 +20,14 @@ export function describeBearing(rel: number): string {
 }
 
 export interface WhatGotYouText {
-  /** "Orange 2 · from your left · 14 m". */
+  /** "Beta 2 · from your left · 14 m". */
   where: string;
   /** What the card knows about how it happened, one short sentence each (none when all it can say is where). */
   notes: string[];
 }
 
 /**
- * The card's words for `facts`: `shooter` is the hit feed's name for who fired ("Orange 2"), `viewYaw` the yaw you were
+ * The card's words for `facts`: `shooter` is the hit feed's name for who fired ("Beta 2"), `viewYaw` the yaw you were
  * looking along when it hit (the direction the BB came from is worked out against it). Only where it came from for
  * friendly fire; a ricochet says so, since where it came from is then not where it was fired.
  */

@@ -2,6 +2,7 @@ import { type Difficulty, defaultTeammateDifficulty } from '../../config/bots';
 import type { MatchRules, RulesetId } from '../../config/matchRules';
 import type { MatchMode } from '../../config/modes';
 import type { LightingPresetId } from '../../config/render';
+import type { TeamPickId } from '../../config/teams';
 import { lightingPicked } from '../../map/lightingChoice';
 import { type MapId, mapData, mapEntry } from '../../map/maps';
 import type { NewGamePicks } from '../../newGamePicks';
@@ -17,6 +18,7 @@ export interface PlayPicksHooks {
   onRules: (rules: MatchRules) => void;
   onDifficulty: (d: Difficulty) => void;
   onTeammates: (d: Difficulty) => void;
+  onTeam: (t: TeamPickId) => void;
   supply: (() => string | null) | undefined;
   /** The screens again, after a pick. */
   refresh: () => void;
@@ -98,6 +100,13 @@ export class PlayPicks implements PlayModel {
       this.picked.teammateDifficulty = defaultTeammateDifficulty(d);
       this.hooks.onTeammates(this.picked.teammateDifficulty);
     }
+    this.hooks.refresh();
+  }
+
+  /** Your team (M98): the picker has saved it; the rules text and "Your match" follow. */
+  setTeam(t: TeamPickId): void {
+    this.picked.team = t;
+    this.hooks.onTeam(t);
     this.hooks.refresh();
   }
 

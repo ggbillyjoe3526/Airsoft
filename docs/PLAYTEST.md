@@ -316,9 +316,10 @@ Completely free: Field Credits (FC) come from playing, and nothing is ever sold.
 
 ## Bots
 
-You're on Blue with two bot teammates against three Orange bots by default.
+You're on Alpha (blue) with two bot teammates against three Beta (orange) bots by default; the Match screen's Your
+team puts you on Beta instead.
 
-- [ ] **Hit an Orange bot.** It raises its hand, walks off to the dead zone, and you get a clear sign of the hit.
+- [ ] **Hit a Beta bot.** It raises its hand, walks off to the dead zone, and you get a clear sign of the hit.
 - [ ] **Watch the bots for a few rounds** (spectate once you're out to see what they do unseen). They patrol, take
   cover, crouch behind crates and lean round corners. Note any bot stuck or walking into a wall.
 - [ ] **Two bots on one lane** hold side by side about a metre apart, never inside each other; bots passing bend
@@ -387,7 +388,7 @@ with a back door near the pole).
 - [ ] **Cover.** A pallet rack, a gabion barrier and a portable toilet are full cover. Crouched behind an IBC tank, a
   generator or the sandbags you're hidden; standing you can shoot over. BBs bounce off steel (the skip, racks, IBC
   cages, generators) and sink into sandbags and gabions.
-- [ ] **The east end** (Blue's start in Elimination) has no way out to the north road: the team leaves past the
+- [ ] **The east end** (Alpha's start in Elimination) has no way out to the north road: the team leaves past the
   wall's south end, so the dock and the Main Gate are about as far from both ends. Nobody gets stuck in the yard's
   north corner.
 - [ ] **Balance.** In Attack / Defend, does attacking or defending feel easier, and which lane do the bots pick? In
@@ -519,7 +520,7 @@ Neon Heights). While it is dev content a run keeps nothing and pays nothing; the
   cones and a sign, a marker with the distance and a square on the minimap. No exit stands next to your insertion.
   On slopes each ring, cone and sign stands on the ground.
 - [ ] **Counted out.** Stand in an open exit: a beep a second, "Counting you out · 9 … 1", then "Counted out · you made
-  it!". Step out at 5 and it starts again; an Orange bot in the ring pauses it.
+  it!". Step out at 5 and it starts again; a Beta bot in the ring pauses it.
 - [ ] **Respawn.** Hit once: back at the insertion, "Back in at the insertion · no respawn left". Hit again: "Out of
   the run".
 - [ ] **Coming in.** For 3 seconds after you come in, and after a respawn, BBs neither hit you nor leave your replica.
@@ -569,7 +570,7 @@ Defend: Depot, Woodland and Neon Heights (Day, then Night). Pro pays ×2 but cou
 
 - [ ] **Slow down.** Pro bots hold still aiming at corners and doorways and walk quietly towards where they heard you.
   Run past a corner and you lose; slice it a step at a time or peek short and step back, and you win.
-- [ ] **What got you.** After you're hit a card shows, for example, "Orange 2 · from your left · 14 m", whether that
+- [ ] **What got you.** After you're hit a card shows, for example, "Beta 2 · from your left · 14 m", whether that
   bot held the angle, how long you were in view and whether you moved. It makes sense every time, including a shot
   from behind and a ricochet.
 - [ ] **Tips.** Between rounds (and holding Tab) a Tip line sits under the board against Pro, a different one each
@@ -609,6 +610,16 @@ there maps each symptom to its numbers):
   map), 02 Mode as cards with **Practice last**, 03 Match rules. On the right, Your match: the map, Mode, Rules, Teams,
   your Loadout with Change, and **Start match**. Picking Practice hides the map and the rules, and the button reads
   **Start practice** (the range). Start loads the field with a short pause at most.
+- [ ] **Your team** (M98). In 03 Match, a Your team row: Alpha and Beta, each with its colour dot (light blue and dark
+  orange under Settings › Accessibility › High contrast), Alpha until you pick. Your match's Teams line starts with
+  your team ("Beta · Normal bots") and the rules text says "(Beta) against Alpha", Beta defends first and starts
+  Elimination at the west end. Leave the game and come back: still Beta. Pick Extraction: the row goes (the squad is
+  always Alpha).
+- [ ] **A match on Beta** (each mode, each map). You start at Beta's end with your teammates, wear the orange armband,
+  and the HUD is yours in orange: the YOU tag on the score bar's Beta side (Alpha stays on the left), teammate markers,
+  minimap dots, the order wheel and hold marker. Bot opponents are "Alpha 1…3" in the hit feed. At half-time you swap
+  ends (and in Attack / Defend go from defending to attacking). Squad orders reach your Beta teammates. The result,
+  the summary ("Beta (you) · …" first) and the records count your win or loss.
 - [ ] **Inter.** All menu and HUD text is one typeface, Inter; numbers (FC, Tokens, stats, scores) keep their width as
   they change; headings and labels are still in capitals.
 - [ ] **Pause (Esc).** Everything freezes, the mouse is freed, and a solid screen shows the round and score with
@@ -617,7 +628,7 @@ there maps each symptom to its numbers):
   you picked, from 0–0.
 - [ ] **The result screen.** MATCH OVER, YOU WIN! (or YOU LOSE) and the score, with Play again (same setup), New game,
   Summary and Quit.
-- [ ] **Pause and result text.** "Round 2 · Blue (you) 1 – 0 Orange · first to 5"; in Attack / Defend "you attack" or
+- [ ] **Pause and result text.** "Round 2 · Alpha (you) 1 – 0 Beta · first to 5"; in Attack / Defend "you attack" or
   "you defend"; at half-time "After round 4 · … you defend next".
 - [ ] **The look.** Every screen at 1280×720 and 1920×1080 is tidy: one type scale, buttons in capitals, pictures of
   maps, modes and replicas. Pointing at a button lifts it a little; Tab moves an orange focus ring round every control.
@@ -629,11 +640,11 @@ there maps each symptom to its numbers):
 
 ## HUD and match info
 
-- [ ] **Hit feed.** Each hit adds a line at the top right, newest on top: "Orange 2 called HIT · Blue 3" (who called
+- [ ] **Hit feed.** Each hit adds a line at the top right, newest on top: "Beta 2 called HIT · Alpha 3" (who called
   it, then whose BB), names in team colours with a thin bar in the shooter's colour. Lines about you say "You" and
   stand out; friendly fire says FRIENDLY and a ricochet RICOCHET, each with a small glyph. Lines fade after about six
   seconds and a new round clears them.
-- [ ] **Teammate markers.** A small name tag and a blue arrow over each teammate, also through walls; grey and "hit"
+- [ ] **Teammate markers.** A small name tag and an arrow in your team's colour (blue on Alpha) over each teammate, also through walls; grey and "hit"
   once hit, gone at the dead zone. Enemies never get one. Holding Tab hides every marker over the field. Helpful, or
   too much on screen?
 - [ ] **Hold Tab.** The scoreboard: hits, times hit, friendly hits, BBs fired, accuracy and time alive per player, your
@@ -682,7 +693,7 @@ there maps each symptom to its numbers):
   none. You keep walking with Z held; firing stops and needs a new pull after. Settings › Controls › Order wheel ›
   Click: point and click instead (that click fires no BB).
 - [ ] **The minimap.** A square map at the top left on a navy panel, "Depot · Round 2" under it, the way you look
-  always up, you the white arrow. Teammates are blue dots (pinned to the edge when off it), grey once hit. An opponent you hear shows as an orange patch roughly where
+  always up, you the white arrow. Teammates are dots in your team's colour (blue on Alpha; pinned to the edge when off it), grey once hit. An opponent you hear shows as a patch in theirs (orange on Alpha) roughly where
   (dashed for steps, a dot for a shot) for a few seconds; far sounds give wider patches; nothing for one you can't
   hear. A teammate whose marker would sit inside the minimap square has none there.
 - [ ] **Floors.** On Neon Heights the minimap shows your floor (floors below darker) and marks teammates on other

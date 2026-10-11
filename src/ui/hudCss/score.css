@@ -42,7 +42,7 @@
   height: 56px;
 }
 
-/* A side: its name, its pips, its score; Orange's mirrored, so each cut corner is on the outside. */
+/* A side: its name, its pips, its score; Beta's mirrored, so each cut corner is on the outside. */
 .sb-team {
   display: flex;
   align-items: stretch;

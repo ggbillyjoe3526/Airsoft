@@ -2,6 +2,7 @@ import type { Difficulty } from '../../config/bots';
 import type { MatchRules, RulesetId } from '../../config/matchRules';
 import type { MatchMode } from '../../config/modes';
 import type { LightingPresetId } from '../../config/render';
+import type { TeamPickId } from '../../config/teams';
 import type { GraphicsSettingsOptions } from '../graphicsSettings';
 import type { KeyBindings } from '../../input/keyBindings';
 import type { MapId } from '../../map/maps';
@@ -14,13 +15,16 @@ import type { LookSettingsOptions } from '../lookSettings';
 import type { ArmoryOptions } from './armoryScreen';
 import type { LoadoutOptions } from './loadoutScreen';
 import type { PictureSource } from './menuPictures';
-import type { MatchRulesText } from './rulesText';
+import type { MatchRulesText, SideText } from './rulesText';
 import type { SettingsOptions } from './settingsScreen';
 
 /** What the menus are given and what they report back (out of menus.ts, M100). */
 
-/** The parts of the rules text that the Match section doesn't change (team names, the flag, who attacks first). */
-export type FixedRulesText = Omit<MatchRulesText, 'teamSize' | 'winsNeeded' | 'roundTime' | 'halfTimeAfter' | 'friendlyFire' | 'ricochetsCount' | 'switches'>;
+/**
+ * The parts of the rules text that the Match section doesn't change (the flag's raise time). The team names, who attacks
+ * first and where you start follow the Your team pick (M98, rulesText.ts sideText).
+ */
+export type FixedRulesText = Omit<MatchRulesText, 'teamSize' | 'winsNeeded' | 'roundTime' | 'halfTimeAfter' | 'friendlyFire' | 'ricochetsCount' | 'switches' | keyof SideText>;
 
 /** The wallet the menus show: Field Credits and Tokens, or null while the Armory is switched off (Dev settings). */
 export type MenuWallet = { fc: number; tokens: number } | null;
@@ -62,6 +66,8 @@ export interface MenusOptions {
   difficulty: { initial: Difficulty; onChange: (d: Difficulty) => void };
   /** `follows`: no teammate level is saved yet, so it follows the opponents' picks until one is chosen. */
   teammateDifficulty: { initial: Difficulty; follows: boolean; onChange: (d: Difficulty) => void };
+  /** The Match screen's Your team (M98): Alpha or Beta, saved as it is picked. */
+  team: { initial: TeamPickId; onChange: (t: TeamPickId) => void };
   /** The Match section's rules (M20), and its Rules row (M39). */
   matchRules: { initial: MatchRules; onChange: (m: MatchRules) => void };
   ruleset: { initial: RulesetId; onChange: (r: RulesetId) => void };

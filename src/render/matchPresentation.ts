@@ -100,7 +100,7 @@ export class MatchPresentation {
   /** The player the camera follows while you spectate (the middle of the minimap), as of the last frame. */
   private watched: Character | undefined;
   private readonly viewDir = new THREE.Vector3();
-  /** Display names by character id ("Blue 2", "You"). */
+  /** Display names by character id ("Alpha 2", "You"). */
   private readonly names: Map<number, string>;
   private roundStartedAt = 0;
   /** World yaw the BB that hit you came from (see showHit), and when. */
@@ -650,7 +650,7 @@ export class MatchPresentation {
     }
   }
 
-  /** "OUT · hit by Orange 2", rebuilt only when who hit you changes. */
+  /** "OUT · hit by Beta 2", rebuilt only when who hit you changes. */
   private outLabel(): string {
     const hitBy = this.player.hitBy;
     if (hitBy !== this.outLabelFor) {

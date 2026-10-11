@@ -13,20 +13,20 @@ function round(mode: 'elimination' | 'attackDefend' | 'extraction', patch: Parti
 describe('the round banner', () => {
   it('words elimination results from your side', () => {
     expect(roundBanner(round('elimination', { phase: 'over', winner: 0, reason: 'eliminated' }), 0, false, 3, ROUNDS)).toBe('Your team wins the round · next round in 3');
-    expect(roundBanner(round('elimination', { phase: 'over', winner: 1, reason: 'eliminated' }), 0, false, 2, ROUNDS)).toBe('Your team loses the round (Orange wins) · next round in 2');
+    expect(roundBanner(round('elimination', { phase: 'over', winner: 1, reason: 'eliminated' }), 0, false, 2, ROUNDS)).toBe('Your team loses the round (Beta wins) · next round in 2');
     expect(roundBanner(round('elimination', { phase: 'over', winner: -1, reason: 'time', number: 2 }), 0, false, 1, ROUNDS)).toBe("Time's up · draw · round 2 again in 1");
     expect(roundBanner(round('elimination', { number: 3 }), 0, true, 0, ROUNDS)).toBe('Round 3');
   });
 
   it('says a time-out went to the team with more players left (Tournament; BP2)', () => {
     expect(roundBanner(round('elimination', { phase: 'over', winner: 0, reason: 'time' }), 0, false, 3, ROUNDS)).toBe("Time's up · your team had more players left · next round in 3");
-    expect(roundBanner(round('elimination', { phase: 'over', winner: 1, reason: 'time' }), 0, false, 2, ROUNDS)).toBe("Time's up · Orange had more players left · next round in 2");
+    expect(roundBanner(round('elimination', { phase: 'over', winner: 1, reason: 'time' }), 0, false, 2, ROUNDS)).toBe("Time's up · Beta had more players left · next round in 2");
   });
 
   it('says how a flag round was won, and tells you your job at the start', () => {
     expect(roundBanner(round('attackDefend', { phase: 'over', winner: 0, reason: 'captured' }), 0, false, 4, ROUNDS)).toBe('Flag raised · your team wins the round · next round in 4');
-    expect(roundBanner(round('attackDefend', { phase: 'over', winner: 1, reason: 'captured' }), 0, false, 4, ROUNDS)).toBe('Orange raised their flag · your team loses the round · next round in 4');
-    expect(roundBanner(round('attackDefend', { phase: 'over', winner: 1, reason: 'time' }), 0, false, 4, ROUNDS)).toBe("Time's up · Orange held the pole · next round in 4");
+    expect(roundBanner(round('attackDefend', { phase: 'over', winner: 1, reason: 'captured' }), 0, false, 4, ROUNDS)).toBe('Beta raised their flag · your team loses the round · next round in 4');
+    expect(roundBanner(round('attackDefend', { phase: 'over', winner: 1, reason: 'time' }), 0, false, 4, ROUNDS)).toBe("Time's up · Beta held the pole · next round in 4");
     expect(roundBanner(round('attackDefend', { attackers: 0 }), 0, true, 0, ROUNDS)).toBe('Round 1 · Attack');
     expect(roundBanner(round('attackDefend', { attackers: 1, number: 6 }), 0, true, 0, ROUNDS)).toBe('Round 6 · Defend');
     expect(roundBanner(round('attackDefend', { attackers: 0 }), 0, false, 0, ROUNDS)).toBe('');

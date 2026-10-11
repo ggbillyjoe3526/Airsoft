@@ -13,7 +13,7 @@ export type LifeStatus = 'alive' | 'calling' | 'walkingOff' | 'leaving' | 'out';
 /** Plain-data character state. No Three.js objects live here. */
 export interface Character {
   id: number;
-  /** Team index (0 = Blue, 1 = Orange). */
+  /** Team index (0 = Alpha, 1 = Beta). */
   team: number;
   /**
    * The end of the map (0 or 1) this character starts from this round: map spawns, dead zones and lanes are

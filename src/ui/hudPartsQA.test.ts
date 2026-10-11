@@ -410,13 +410,13 @@ describe('the hit feed (G4 criterion 3)', () => {
     const root = parent.children[0]!;
     return { f, root, lines: () => root.children };
   };
-  const blue = { name: 'Blue 2', team: 0 };
-  const orange = { name: 'Orange 1', team: 1 };
+  const blue = { name: 'Alpha 2', team: 0 };
+  const orange = { name: 'Beta 1', team: 1 };
 
   it('puts the newest row on top, and each row\'s tags after its words, friendly then ricochet', () => {
     const { f, lines } = feed();
     f.add(blue, orange, false, false, 0);
-    f.add(blue, { name: 'Blue 3', team: 0 }, true, false, 1, true);
+    f.add(blue, { name: 'Alpha 3', team: 0 }, true, false, 1, true);
     expect(lines()).toHaveLength(2);
     const newest = lines()[0]!;
     expect(newest.classList.contains('friendly')).toBe(true);
@@ -439,9 +439,9 @@ describe('the hit feed (G4 criterion 3)', () => {
 
   it('reads "<who> called HIT · <shooter>" to a screen reader, for a friendly and a ricochet row too', () => {
     const { f, lines, root } = feed();
-    f.add(blue, { name: 'Blue 3', team: 0 }, true, false, 0, true);
+    f.add(blue, { name: 'Alpha 3', team: 0 }, true, false, 0, true);
     const line = lines()[0]!;
-    expect(findAll(line, 'sr-only')[0]!.textContent).toBe('Blue 2 called HIT · Blue 3');
+    expect(findAll(line, 'sr-only')[0]!.textContent).toBe('Alpha 2 called HIT · Alpha 3');
     // What is drawn is hidden from the reader, so it is not read twice; the tags are not hidden.
     expect(findAll(line, 'hit-feed-row')[0]!.getAttribute('aria-hidden')).toBe('true');
     expect(line.children.filter((c) => c.tag === 'em').every((c) => c.getAttribute('aria-hidden') === null)).toBe(true);
@@ -605,7 +605,7 @@ describe('the Tab scoreboard (G4 criterion 6)', () => {
     const blocks = () => statsBlocks(characters, names, () => emptyStats(), [2, 1], player, true);
     table.set(blocks());
     const titles = (table.root as unknown as FakeElement).children.filter((c) => c.tag === 'tbody').map((b) => b.children[0]!.children[0]!.textContent);
-    expect(titles).toEqual(['Blue (you) · 2 rounds won', 'Orange · 1 round won']);
+    expect(titles).toEqual(['Alpha (you) · 2 rounds won', 'Beta · 1 round won']);
     table.set(blocks());
     expect(writesDuring(100, () => table.set(blocks()))).toBe(0);
   });

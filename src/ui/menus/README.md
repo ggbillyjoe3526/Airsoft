@@ -12,7 +12,8 @@ choices to `src/game.ts`.
   calls `onLeaveMatch`, which unloads it.
 - Screens: `titleScreen.ts` (plain: Airsoft, the tagline, START, the Tutorial on a clean save, the version at the
   foot; `tutorialOffered`); `setupScreen.ts` (the Match screen: Map and Mode as `choiceCards.ts` with Practice, the
-  mode cards' last, an extra card that is never saved; `matchPanel.ts`; and a "Your match" text from `playView.ts`);
+  mode cards' last, an extra card that is never saved; `matchPanel.ts`, with Your team (M98: Alpha or Beta, hidden for an Extraction run); and a "Your match" text from
+  `playView.ts`, whose rules text follows your team, `rulesText.ts` › `sideText`);
   `loadoutScreen.ts` with `customiseView.ts`; `armoryScreen.ts` (the collection, a column per kind; a card's spares scrap from a right-click / Menu key / Shift+F10 menu, `contextMenu.ts`: built once, reused, listeners on the page only while open; `menuPlacement.ts` places it in the window, clear of the card's name);
   `settingsScreen.ts` (groups with a search, a note on every row); `pauseScreen.ts`; `summaryScreen.ts`;
   `resultScreen.ts`.
@@ -23,5 +24,5 @@ choices to `src/game.ts`.
   Map, mode, difficulty and loadout are picked only on the Match screen, with no match loaded.
 - Styles: `menus.css` imports `css/`; the typeface is Inter (`css/fonts.css`, `src/assets/fonts/`). Tuning:
   `config/menus.ts`, `config/menuArt.ts`.
-- Tests: `menus.test.ts`, `menuRedesign.test.ts`, `choiceCards.test.ts`, `chrome.test.ts`, `contextMenu.test.ts`, `armoryScrapMenu.test.ts` (with `menuTestSupport.ts`), `settingsRows.test.ts`,
+- Tests: `menus.test.ts`, `menuRedesign.test.ts`, `teamPick.test.ts`, `choiceCards.test.ts`, `chrome.test.ts`, `contextMenu.test.ts`, `armoryScrapMenu.test.ts` (with `menuTestSupport.ts`), `settingsRows.test.ts`,
   `rulesText.test.ts`.

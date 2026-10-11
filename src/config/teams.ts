@@ -1,11 +1,29 @@
 /**
- * Team identity. Sites mark teams with coloured tape or armbands; here it's Blue vs Orange. These
- * colours belong to the teams only: neutral props must never use them (checked in mapMeshes.test.ts).
+ * Team identity. Sites mark teams with coloured tape or armbands; here it's Alpha (blue tape) vs Beta (orange), by team
+ * index (0, 1; the index is what the simulation and the saves keep). These colours belong to the teams only: neutral
+ * props must never use them (checked in mapMeshes.test.ts).
  */
 export const TEAMS = [
-  { name: 'Blue', color: 0x3d8bff },
-  { name: 'Orange', color: 0xff8a2a },
+  { id: 'alpha', name: 'Alpha', color: 0x3d8bff },
+  { id: 'beta', name: 'Beta', color: 0xff8a2a },
 ] as const;
+
+/** A team as the Match screen's "Your team" pick saves it (M98): its TEAMS id. */
+export type TeamPickId = (typeof TEAMS)[number]['id'];
+
+/** The Match screen's "Your team" row (M98): Alpha or Beta, by its colour in words too (not colour alone). */
+export const TEAM_PICKS: readonly { id: TeamPickId; label: string; blurb: string }[] = [
+  { id: 'alpha', label: 'Alpha', blurb: 'The blue team.' },
+  { id: 'beta', label: 'Beta', blurb: 'The orange team.' },
+];
+
+/** Alpha unless another team is picked (owner, playtest note 4, 2026-10-07). */
+export const DEFAULT_TEAM_PICK: TeamPickId = 'alpha';
+
+/** The team index (0 Alpha, 1 Beta) of a "Your team" pick. */
+export function teamOfPick(id: TeamPickId): number {
+  return Math.max(0, TEAMS.findIndex((t) => t.id === id));
+}
 
 /** The standard team colours (the figures' tape and armbands), by team. */
 export const TEAM_COLORS: readonly number[] = TEAMS.map((t) => t.color);
