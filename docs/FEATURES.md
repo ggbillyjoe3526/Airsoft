@@ -257,7 +257,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - A practice range, from the title screen or the top bar's Range: steel plates that ring, figures that fall, at 10–60 m,
   with a readout of your last BB; figures stand at the same height as match characters (M21, FA1)
 - Range detail: chains, bands, brackets, a BB shelf and scuffed plates, with fewer draw calls than before (FA7)
-- A tutorial of ten coached steps on the range, with your own key bindings and the real scoreboard and order wheel; finishing opens Tutorial complete with Practice range or Menu; skip and resume from pause (M16, FA10, M80)
+- A tutorial of fifteen coached steps on the range, with your own key bindings and the real scoreboard and order wheel; finishing opens Tutorial complete with Practice range or Menu; skip and resume from pause (M16, FA10, M80)
 
 ## Accessibility and comfort
 

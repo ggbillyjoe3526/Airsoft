@@ -17,7 +17,7 @@ first guesses; the build thread confirms them before it starts. The owner ruled 
 ## M80 · The tutorial shows what it teaches (playtest note 1)
 tier: ui
 perf: skip
-touches: src/tutorial/, src/config/tutorial.ts, src/ui/scoreboard.ts, src/ui/orderWheel.ts, src/ui/menus/, docs/PLAYTEST.md
+touches: src/tutorial/, src/config/tutorial.ts, src/ui/scoreboard.ts, src/ui/orderWheel.ts, src/ui/menus/, docs/PLAYTEST.md, src/ui/tutorialShowcase.ts, src/rangeSession.ts, src/game.ts
 contract: none
 acceptance:
   1. When the tutorial names the scoreboard or the comm wheel (hold Z), it opens it on screen for the player to see.
@@ -40,7 +40,7 @@ attempts: 0
 ## M82 · Sort and filter by rarity (playtest note 4)
 tier: ui
 perf: skip
-touches: src/ui/menus/loadoutScreen.ts, src/ui/menus/itemTile.ts, src/ui/loadoutChoice.ts, src/save/
+touches: src/ui/menus/loadoutScreen.ts, src/ui/menus/itemTile.ts, src/ui/loadoutChoice.ts, src/save/, src/settings/storage.ts
 contract: none
 acceptance:
   1. The Loadout's replica list sorts by rarity and can hide chosen rarity tiers (for example show only Epic and Legendary).
