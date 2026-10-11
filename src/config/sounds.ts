@@ -70,7 +70,12 @@ export type SoundCue =
   | 'ambience.owl'
   /** A shop door's chime down a city street by day, an arcade cabinet's bleeps by night (M34g). */
   | 'ambience.chime'
-  | 'ambience.arcade';
+  | 'ambience.arcade'
+  | 'ambience.crow'
+  | 'ambience.dog'
+  | 'ambience.creak'
+  | 'ambience.pigeon'
+  | 'ambience.horn';
 
 /** Typical spreads: shots and mechanisms vary a little, steps and impacts more. */
 const TIGHT = { pitchSpread: 0.04, timeSpread: 0.08, gainSpread: 0.1 } as const;
@@ -497,6 +502,39 @@ export const SOUNDS: Readonly<Record<SoundCue, SoundRecipe>> = {
    */
   torchClick: { layers: [click(0, 1500, 0.28, 0.005), { kind: 'modes', gain: 0.1, modes: [{ hz: 1900, decay: 0.012, gain: 1 }] }], ...TIGHT },
 
+  /**
+   * The yard's other calls (M86): title-screen cues like its birds, since Depot and the range render nothing of their
+   * own as they load, and after torchClick, the title stream's last, so its earlier cues are unchanged (within the title
+   * screen's budget, audio.test.ts). A crow far off: two rough, nasal "caw"s, a saw tone through a narrow
+   * band with a rasp of noise.
+   */
+  'ambience.crow': {
+    layers: [
+      { kind: 'tone', wave: 'saw', attack: 0.02, decay: 0.2, gain: 0.35, hz: 720, hzTo: 610, filter: { type: 'bandpass', hz: 1300, q: 1.6 } },
+      { kind: 'noise', attack: 0.02, decay: 0.16, gain: 0.12, filter: { type: 'bandpass', hz: 1600, q: 2 } },
+      { kind: 'tone', wave: 'saw', at: 0.3, attack: 0.02, decay: 0.22, gain: 0.32, hz: 700, hzTo: 580, filter: { type: 'bandpass', hz: 1250, q: 1.6 } },
+      { kind: 'noise', at: 0.3, attack: 0.02, decay: 0.17, gain: 0.11, filter: { type: 'bandpass', hz: 1550, q: 2 } },
+    ],
+    pitchSpread: 0.06,
+    timeSpread: 0.1,
+    gainSpread: 0.1,
+  },
+  /**
+   * A dog a few gardens off (M86): two short, round "woof"s, a low saw tone through a soft band with a puff of breath.
+   * Nothing in it sits near a BB's tick or a footstep, so it never reads as someone on the field.
+   */
+  'ambience.dog': {
+    layers: [
+      { kind: 'tone', wave: 'saw', attack: 0.012, decay: 0.12, gain: 0.32, hz: 340, hzTo: 250, glide: 0.08, filter: { type: 'bandpass', hz: 650, q: 1.2 } },
+      { kind: 'noise', attack: 0.01, decay: 0.08, gain: 0.08, filter: { type: 'bandpass', hz: 800, q: 1.5 } },
+      { kind: 'tone', wave: 'saw', at: 0.22, attack: 0.012, decay: 0.13, gain: 0.3, hz: 330, hzTo: 240, glide: 0.08, filter: { type: 'bandpass', hz: 640, q: 1.2 } },
+      { kind: 'noise', at: 0.22, attack: 0.01, decay: 0.08, gain: 0.07, filter: { type: 'bandpass', hz: 780, q: 1.5 } },
+    ],
+    pitchSpread: 0.08,
+    timeSpread: 0.12,
+    gainSpread: 0.12,
+  },
+
   // ---- Only for the maps that use them (M33j: MAP_CUE_SEEDS) --------------------------------------
   'step.grass.run': step('grass', 'run'),
   'step.grass.sprint': step('grass', 'sprint'),
@@ -552,6 +590,47 @@ export const SOUNDS: Readonly<Record<SoundCue, SoundRecipe>> = {
     timeSpread: 0.15,
     gainSpread: 0.1,
   },
+  /**
+   * The fields' other calls (M86, the owner's playtest note 14), short (under 0.6 s) with three variants each, as map
+   * sounds share a budget (woodlandSound.test.ts). A branch creaking in the woods' wind: a slow, rising saw tone through
+   * a woody band, soft at both ends.
+   */
+  'ambience.creak': {
+    layers: [
+      { kind: 'tone', wave: 'saw', attack: 0.12, decay: 0.38, gain: 0.3, hz: 170, hzTo: 235, filter: { type: 'bandpass', hz: 900, q: 3.5 } },
+      { kind: 'tone', wave: 'saw', at: 0.05, attack: 0.1, decay: 0.3, gain: 0.12, hz: 340, hzTo: 470, filter: { type: 'bandpass', hz: 1400, q: 4 } },
+    ],
+    pitchSpread: 0.12,
+    timeSpread: 0.15,
+    gainSpread: 0.1,
+    variants: 3,
+  },
+  /** Pigeons on a ledge (M86): a soft "coo-roo", two low, rounded notes with a breath of air. */
+  'ambience.pigeon': {
+    layers: [
+      { kind: 'tone', wave: 'sine', attack: 0.05, decay: 0.16, gain: 0.45, hz: 470, hzTo: 520, glide: 0.08 },
+      { kind: 'tone', wave: 'sine', attack: 0.05, decay: 0.16, gain: 0.08, hz: 940, hzTo: 1040, glide: 0.08 },
+      { kind: 'tone', wave: 'sine', at: 0.22, attack: 0.06, decay: 0.24, gain: 0.42, hz: 540, hzTo: 450 },
+      { kind: 'noise', at: 0.22, attack: 0.05, decay: 0.15, gain: 0.03, filter: { type: 'bandpass', hz: 500, q: 3 } },
+    ],
+    pitchSpread: 0.05,
+    timeSpread: 0.12,
+    gainSpread: 0.1,
+    variants: 3,
+  },
+  /** A small car's horn a few streets off (M86): a toy-like double "meep meep", two notes a third apart, rolled off. */
+  'ambience.horn': {
+    layers: [
+      { kind: 'tone', wave: 'square', attack: 0.008, decay: 0.1, gain: 0.22, hz: 415, filter: { type: 'lowpass', hz: 1600, q: 0.7 } },
+      { kind: 'tone', wave: 'square', attack: 0.008, decay: 0.1, gain: 0.18, hz: 523, filter: { type: 'lowpass', hz: 1600, q: 0.7 } },
+      { kind: 'tone', wave: 'square', at: 0.17, attack: 0.008, decay: 0.12, gain: 0.22, hz: 415, filter: { type: 'lowpass', hz: 1600, q: 0.7 } },
+      { kind: 'tone', wave: 'square', at: 0.17, attack: 0.008, decay: 0.12, gain: 0.18, hz: 523, filter: { type: 'lowpass', hz: 1600, q: 0.7 } },
+    ],
+    pitchSpread: 0.04,
+    timeSpread: 0.1,
+    gainSpread: 0.1,
+    variants: 3,
+  },
 };
 
 /**
@@ -579,6 +658,9 @@ export const MAP_CUE_SEEDS: Readonly<Partial<Record<SoundCue, number>>> = {
   'ambience.owl': 3361,
   'ambience.chime': 3491,
   'ambience.arcade': 3492,
+  'ambience.creak': 3613,
+  'ambience.pigeon': 3614,
+  'ambience.horn': 3615,
 };
 
 /** Whether `cue` is rendered only for a map that plays it (MAP_CUE_SEEDS). */

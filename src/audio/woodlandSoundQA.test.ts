@@ -101,10 +101,10 @@ describe('M33j QA acceptance 1: birds by day exactly as before, and none by nigh
 
   it('sings every daytime ambience\'s birds at the times and places the yard\'s sang before M33j', () => {
     // Every field with birds by day (M34g: the city chimes instead).
-    const birdy = (Object.keys(AMBIENCES) as AmbienceId[]).filter((id) => AMBIENCES[id].day.call?.cue === 'ambience.bird');
+    const birdy = (Object.keys(AMBIENCES) as AmbienceId[]).filter((id) => AMBIENCES[id].day.calls[0]?.cue === 'ambience.bird');
     expect(birdy).toEqual(['yard', 'woods']);
     for (const id of birdy) {
-      const call = AMBIENCES[id].day.call!;
+      const call = AMBIENCES[id].day.calls[0]!;
       expect(call.cue, id).toBe('ambience.bird');
       expect(call.level, id).toEqual({ gain: 0.35, pitchSpread: 0.08 });
       const calls = schedule(call, 600);
@@ -118,17 +118,17 @@ describe('M33j QA acceptance 1: birds by day exactly as before, and none by nigh
   it('plays no bird and no daytime call under the night preset of any field, the range included', () => {
     for (const map of [...MAPS.map((m) => mapData(m.id)), RANGE_MAP] as MapData[]) {
       const night = soundscapeOf(map, true);
-      expect(night.ambience.call?.cue ?? 'none', map.name).not.toBe('ambience.bird');
+      expect(night.ambience.calls.map((c) => c.cue), map.name).not.toContain('ambience.bird');
       expect(night.cues, map.name).not.toContain('ambience.bird');
     }
     // The range plays as it resolves (day): its birds as on Depot.
     const range = resolveLighting(RANGE_MAP);
-    expect(soundscapeOf(RANGE_MAP, range.night).ambience.call?.cue).toBe(range.night ? undefined : 'ambience.bird');
+    expect(soundscapeOf(RANGE_MAP, range.night).ambience.calls[0]?.cue).toBe(range.night ? undefined : 'ambience.bird');
   });
 });
 
 describe('M33j QA acceptance 2: a distant owl now and then', () => {
-  const owl = AMBIENCES.woods.night.call!;
+  const owl = AMBIENCES.woods.night.calls[0]!;
 
   it('hoots every 25 to 60 s, 30 to 50 m off and up in the trees, over an hour of play', () => {
     const calls = schedule(owl, 3600);

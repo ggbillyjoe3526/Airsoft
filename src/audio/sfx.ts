@@ -86,12 +86,17 @@ export class Sfx {
   private echoWet: GainNode | null = null;
   /** You were out when the last tick looked. */
   private playerOut = false;
+  /**
+   * The ambience's way into the world (M86): at the Ambience slider's level (AudioEngine.ambienceLevel), so it is
+   * muffled and echoes with the rest of the world, under the Effects slider too.
+   */
+  private ambience: GainNode | null = null;
   /** The ambience's looping sources (its beds' copies, the fires' crackle), once play has started (audit CORE-34). */
   private readonly bed: AudioBufferSourceNode[] = [];
   /** Where the match is played (M33j): the field's ambience by day or night, the ground underfoot, its fires. */
   private scene: Soundscape = YARD_BY_DAY;
-  /** The ambience's calls (birds by day, an owl in the woods at night), if it has any. */
-  private calls: AmbientCalls | null;
+  /** The ambience's calls (birds by day, an owl in the woods at night, M86's others), each kind timed on its own. */
+  private calls: AmbientCalls[];
   private readonly callAt = vec3();
   /** Your own sounds: centred, into the world (so they echo too). */
   private self: GainNode | null = null;
@@ -140,10 +145,9 @@ export class Sfx {
     this.calls = this.callsOf(YARD_BY_DAY);
   }
 
-  /** `scene`'s calls, timed for this match (null for none). */
-  private callsOf(scene: Soundscape): AmbientCalls | null {
-    const call = scene.ambience.call;
-    return call ? new AmbientCalls(call, (call.seed ^ this.seed) >>> 0) : null;
+  /** `scene`'s calls, timed for this match. */
+  private callsOf(scene: Soundscape): AmbientCalls[] {
+    return scene.ambience.calls.map((call) => new AmbientCalls(call, (call.seed ^ this.seed) >>> 0));
   }
 
   /**
@@ -221,6 +225,9 @@ export class Sfx {
     this.outLevel.connect(reverb).connect(wet).connect(effects);
     this.self = ctx.createGain();
     this.self.connect(this.world);
+    this.ambience = this.engine.ambienceLevel();
+    this.ambience!.connect(this.world);
+    this.graph.push(this.ambience!);
     this.ui = ctx.createGain();
     this.ui.connect(this.engine.bus('interface')!);
     this.graph.push(this.self, this.ui);
@@ -299,8 +306,8 @@ export class Sfx {
     }
     this.updateMuffling(characters, localId);
     this.updateOut(characters, localId);
-    const call = this.scene.ambience.call;
-    if (call && this.listenerPlaced && this.calls!.due(this.simTime, this.listener, this.callAt)) this.oneShot(call.cue, this.callAt, call.level);
+    if (this.listenerPlaced)
+      for (const calls of this.calls) if (calls.due(this.simTime, this.listener, this.callAt)) this.oneShot(calls.spec.cue, this.callAt, calls.spec.level, AUDIO.spatial.maxDistance, this.ambience!);
     this.foley.update(characters, (c, move) => this.foleyMove(c, move, localId));
   }
 
@@ -469,6 +476,8 @@ export class Sfx {
       ch.filter.disconnect();
       ch.gain.disconnect();
     }
+    if (this.ambience) this.engine.dropAmbienceLevel(this.ambience);
+    this.ambience = null;
     this.ctx = null;
     this.world = null;
     this.outFilter = null;
@@ -554,7 +563,7 @@ export class Sfx {
    * A one-off sound at a point in the world, muffled if level geometry is in the way; its nodes go when it ends. Not
    * played at all beyond `range` (the inverse roll-off never reaches silence; audit CORE-01).
    */
-  private oneShot(cue: SoundCue, at: Vec3, level: Level, range: number = AUDIO.spatial.maxDistance): void {
+  private oneShot(cue: SoundCue, at: Vec3, level: Level, range: number = AUDIO.spatial.maxDistance, into: AudioNode = this.world!): void {
     if (this.distanceTo(at) > range) return;
     const ctx = this.ctx!;
     // Equal-power for these (up to 80 BB impacts a second): HRTF is kept for the characters you locate by ear.
@@ -569,7 +578,7 @@ export class Sfx {
     filter.frequency.value = this.muffle.hz;
     const g = ctx.createGain();
     g.gain.value = this.muffle.gain;
-    panner.connect(filter).connect(g).connect(this.world!);
+    panner.connect(filter).connect(g).connect(into);
     voice.src.addEventListener('ended', () => {
       panner.disconnect();
       filter.disconnect();
@@ -660,8 +669,8 @@ export class Sfx {
   /**
    * The ambience, from the first moment of play (audit CORE-34): each of its beds as two copies of its loop half a loop
    * apart (and a tonal loop's `copyOffset` more, M53), panned apart for width, and each camp fire's crackle where the
-   * fire is (M33j), all into the world (so the effects slider sets them and they're muffled with the rest while you're
-   * out). Stopped when the match is disposed.
+   * fire is (M33j), all into the world through the ambience's level (so the Ambience and Effects sliders set them, M86,
+   * and they're muffled with the rest while you're out). Stopped when the match is disposed.
    */
   private startAmbience(): void {
     if (this.bed.length > 0) return;
@@ -671,7 +680,7 @@ export class Sfx {
       if (!buffer) return;
       const level = ctx.createGain();
       level.gain.value = bed.gain;
-      level.connect(this.world!);
+      level.connect(this.ambience!);
       this.graph.push(level);
       for (const side of [-1, 1]) {
         const src = ctx.createBufferSource();
@@ -709,7 +718,7 @@ export class Sfx {
     const src = ctx.createBufferSource();
     src.buffer = buffer;
     src.loop = true;
-    src.connect(level).connect(panner).connect(this.world!);
+    src.connect(level).connect(panner).connect(this.ambience!);
     this.graph.push(src, level, panner);
     src.start(ctx.currentTime, ((i * GOLDEN) % 1) * buffer.duration);
     this.bed.push(src);

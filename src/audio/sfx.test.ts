@@ -24,7 +24,7 @@ import { AudioEngine, type IdleScheduler } from './audioEngine';
 import { volumeGain } from './audioMix';
 import type { OcclusionQuery } from './occlusion';
 import { Sfx } from './sfx';
-import { finish, MAP_SOUND_RENDERERS, type MapSoundRenderers, renderMapCue, renderMapCueGradually, renderSoundsGradually, SoundLibrary, suppressedCopies } from './soundBank';
+import { finish, MAP_SOUND_RENDERERS, type MapSoundRenderers, renderMapCue, renderMapCueGradually, renderSoundsGradually, SoundLibrary, suppressedCopies, variantsOf } from './soundBank';
 import { fitParts } from '../sim/armament';
 
 // ---- A minimal stand-in for the Web Audio API (records what Sfx builds and connects) --------------
@@ -243,7 +243,7 @@ class FakeContext {
 const OPEN: OcclusionQuery = { raycastStatic: () => -1 };
 const WALLED: OcclusionQuery = { raycastStatic: () => 1 };
 const FLOOR: MapBlock[] = [{ kind: 'floor', center: vec3(0, -0.25, 0), size: vec3(100, 0.5, 100) }];
-const VOLUMES = { master: 1, effects: 1, interface: 1 };
+const VOLUMES = { master: 1, effects: 1, ambience: 1, interface: 1 };
 /** Shared across tests: the sounds render once. */
 const LIBRARY = new SoundLibrary();
 const PLAYER = 0;
@@ -1451,7 +1451,9 @@ describe('M33j: Depot sounds exactly as before (its Sfx node graph pinned)', () 
     expect(ctx.sources.filter((s) => s.loop)).toHaveLength(2);
     // Re-baked by M69 (owner decision 19, audit AUD-09): the five one-shots' buffers (two bird calls, two concrete steps,
     // an impact) end at -60 dB of their peak; every node, setting, connection, the bed and the yard's echo as before.
-    expect(fingerprint(graphOf(ctx))).toBe('3f17962a');
+    // Re-baked by M86 (the owner's playtest note 14): the ambience's level (the Ambience slider) between the bed and
+    // the world, and the yard's calls timed one kind at a time (its birds, a crow, a dog); the rest as before.
+    expect(fingerprint(graphOf(ctx))).toBe('84dbb4dd');
     expect([...engine.cueBuffers().keys()].some((c) => c.startsWith('step.grass') || c === 'ambience.owl')).toBe(false);
   });
 });
@@ -1513,7 +1515,9 @@ describe('M33j: the woods at night in a match', () => {
     for (let t = 0; t < Math.round(130 / SIM_DT); t++) sfx.afterTick(all, PLAYER);
     const calls = ctx.sources.filter((s) => !s.loop);
     expect(calls.length).toBeGreaterThanOrEqual(2);
-    for (const s of calls) expect(playsOf(engine, s, 'ambience.owl')).toBe(true);
+    // The owl, and M86's creaking branch between its hoots.
+    for (const s of calls) expect(playsOf(engine, s, 'ambience.owl') || playsOf(engine, s, 'ambience.creak')).toBe(true);
+    expect(calls.some((s) => playsOf(engine, s, 'ambience.owl'))).toBe(true);
     expect(calls.some((s) => plays(s, 'ambience.bird'))).toBe(false);
   });
 
@@ -1523,7 +1527,10 @@ describe('M33j: the woods at night in a match', () => {
       for (let t = 0; t < Math.round(60 / SIM_DT); t++) sfx.afterTick(all, PLAYER);
       const calls = ctx.sources.filter((s) => !s.loop);
       expect(calls.length, `night ${night}`).toBeGreaterThanOrEqual(2);
-      for (const s of calls) expect(playsOf(engine, s, night ? 'ambience.arcade' : 'ambience.chime')).toBe(true);
+      // The chime or the bleeps, with M86's pigeons by day and a car horn either way.
+      const own = night ? (['ambience.arcade', 'ambience.horn'] as const) : (['ambience.chime', 'ambience.pigeon', 'ambience.horn'] as const);
+      for (const s of calls) expect(own.some((cue) => playsOf(engine, s, cue)), `night ${night}`).toBe(true);
+      expect(calls.some((s) => playsOf(engine, s, own[0])), `night ${night}`).toBe(true);
       expect(calls.some((s) => plays(s, 'ambience.bird'))).toBe(false);
     }
   });
@@ -1639,7 +1646,9 @@ describe('M33j QA: the map sounds render only for the fields that play them, and
     for (let t = 0; t < Math.round(60 / SIM_DT); t++) depot.sfx.afterTick(depot.all, PLAYER);
     const calls = depot.ctx.sources.slice(sourcesBefore).filter((s) => !s.loop);
     expect(calls.length).toBeGreaterThan(0);
-    expect(calls.every((s) => plays(s, 'ambience.bird'))).toBe(true);
+    // The yard's own calls (its birds, M86's crow and dog), nothing of the woods'.
+    expect(calls.every((s) => plays(s, 'ambience.bird') || plays(s, 'ambience.crow') || plays(s, 'ambience.dog'))).toBe(true);
+    expect(calls.some((s) => plays(s, 'ambience.bird'))).toBe(true);
     // A bot's step on Depot's yard floor is concrete again (no ground grid left behind), at a step's level.
     const before = depot.ctx.sources.length;
     depot.sfx.onEvent(step(depot.bot.id), PLAYER, depot.characterOf);
@@ -1660,7 +1669,9 @@ describe('M33j QA: the map sounds render only for the fields that play them, and
       expect(mine.filter((s) => s.loop && s.stopAt === null), `night ${night}`).toHaveLength(4);
       const calls = mine.filter((s) => !s.loop);
       expect(calls.length, `night ${night}`).toBeGreaterThan(0);
-      expect(calls.every((s) => playsOf(engine, s, night ? 'ambience.arcade' : 'ambience.chime'))).toBe(true);
+      // The city's own calls by Day or by Night (M86: pigeons by day, a car horn either way).
+      const own = night ? (['ambience.arcade', 'ambience.horn'] as const) : (['ambience.chime', 'ambience.pigeon', 'ambience.horn'] as const);
+      expect(calls.every((s) => own.some((cue) => playsOf(engine, s, cue)))).toBe(true);
       m.sfx.dispose();
       expect(m.ctx.sources.filter((s) => s.loop && s.stopAt === null)).toHaveLength(0);
     }
@@ -1755,7 +1766,7 @@ describe('M53: mix and placement (audit AUD-02, AUD-03, AUD-05, AUD-07, AUD-12)'
       throw new Error('no bird');
     };
     // Seed 0 sings as the call's own seed always did (woodlandSoundQA.test.ts pins those times).
-    const before = new AmbientCalls(AMBIENCES.yard.day.call!);
+    const before = new AmbientCalls(AMBIENCES.yard.day.calls[0]!);
     const at = vec3();
     let tick = 0;
     while (!before.due((tick + 1) * SIM_DT, vec3(0, 1.6, 0), at)) tick++;
@@ -1880,7 +1891,9 @@ describe('M53 QA: the far channel, the listener fallback and the seeded calls on
 
   it('times a later scene\'s calls from the match seed too, not only the yard\'s: setScene on the woods at night (AUD-07)', () => {
     const spawn = WOODLAND.spawns[0][0]!.position;
-    const call = soundscapeOf(WOODLAND, true).ambience.call!;
+    // Every kind of call the woods have by night (the owl, M86's creak), each timed from the match seed: the first heard.
+    const calls = soundscapeOf(WOODLAND, true).ambience.calls;
+    const longest = Math.max(...calls.map((c) => c.every[1]));
     const firstOwl = (seed: number): number => {
       const player = createCharacter(PLAYER, vec3(spawn.x, spawn.y, spawn.z), 0, LOADOUT, 0);
       const sfx = new Sfx(LOADOUT, WOODLAND.blocks, OPEN, engineFor(), seed);
@@ -1889,18 +1902,21 @@ describe('M53 QA: the far channel, the listener fallback and the seeded calls on
       sfx.setListener(vec3(spawn.x, spawn.y + 1.6, spawn.z), 0, 0, -1);
       sfx.setPaused(false);
       const ctx = FakeContext.last;
-      for (let tick = 0; tick < Math.round(call.every[1] / SIM_DT) + 2; tick++) {
+      for (let tick = 0; tick < Math.round(longest / SIM_DT) + 2; tick++) {
         sfx.afterTick([player], PLAYER);
         if (ctx.sources.some((s) => !s.loop)) return tick;
       }
       throw new Error('no owl');
     };
-    const expected = (seed: number): number => {
-      const calls = new AmbientCalls(call, (call.seed ^ seed) >>> 0);
-      let tick = 0;
-      while (!calls.due((tick + 1) * SIM_DT, vec3(0, 1.6, 0), vec3())) tick++;
-      return tick;
-    };
+    const expected = (seed: number): number =>
+      Math.min(
+        ...calls.map((call) => {
+          const timed = new AmbientCalls(call, (call.seed ^ seed) >>> 0);
+          let tick = 0;
+          while (!timed.due((tick + 1) * SIM_DT, vec3(0, 1.6, 0), vec3())) tick++;
+          return tick;
+        }),
+      );
     for (const seed of [0, 77, 4000000000]) expect(firstOwl(seed), `seed ${seed}`).toBe(expected(seed));
     expect(new Set([0, 77, 4000000000, 5, 90210].map(expected)).size).toBeGreaterThan(1);
   });
@@ -2151,7 +2167,7 @@ describe('M65 QA (audit AUD-01): picks, Play, Dev content, the range and Quit ar
   const whole = new Map<string, Float32Array[]>();
   const before65 = (cue: SoundCue): Float32Array[] => {
     const rand = seededRandom(MAP_CUE_SEEDS[cue]!);
-    return Array.from({ length: AUDIO.variants }, () => renderRecipe(SOUNDS[cue], RATE, rand));
+    return Array.from({ length: variantsOf(cue) }, () => renderRecipe(SOUNDS[cue], RATE, rand));
   };
   const wholeCue = (cue: SoundCue): Float32Array[] => whole.get(cue) ?? (whole.set(cue, before65(cue)), whole.get(cue)!);
   const wholeLoop = (id: LoopId): Float32Array[] => whole.get(id) ?? (whole.set(id, [finish(renderLoop(id, RATE))]), whole.get(id)!);
@@ -2801,5 +2817,84 @@ describe('M69 QA (audit AUD-10): the yard keeps its echo exactly, the fields the
     expect((engine['reverbJobs'] as Map<unknown, unknown>).size).toBe(0);
     expect(engine.reverbImpulse(woods)).toBeNull();
     expect(engine.reverbImpulse()).toBeNull();
+  });
+});
+
+// ---- M86: the Ambience slider (the owner's playtest note 14) -----------------------------------------------------------
+
+describe('M86: an Ambience volume of its own', () => {
+  beforeEach(() => {
+    vi.stubGlobal('AudioContext', FakeContext);
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  /** A night match in the woods (beds, fires and calls), its calls given a while to sound, and a bot's step. */
+  function woods(engine: AudioEngine) {
+    const spawn = WOODLAND.spawns[0][0]!.position;
+    const player = createCharacter(PLAYER, vec3(spawn.x, spawn.y, spawn.z), 0, LOADOUT, 0);
+    const bot = createCharacter(1, vec3(spawn.x + 3, spawn.y, spawn.z), 0, LOADOUT, 1);
+    const all = [player, bot];
+    const sfx = new Sfx(LOADOUT, WOODLAND.blocks, OPEN, engine);
+    sfx.setScene(soundscapeOf(WOODLAND, true));
+    sfx.unlock();
+    sfx.setListener(vec3(spawn.x, spawn.y + 1.6, spawn.z), 0, 0, -1);
+    sfx.setPaused(false);
+    for (let t = 0; t < Math.round(90 / SIM_DT); t++) sfx.afterTick(all, PLAYER);
+    const before = FakeContext.last.sources.length;
+    sfx.onEvent(step(bot.id), PLAYER, (id) => all.find((c) => c.id === id));
+    return { sfx, ctx: FakeContext.last, steps: FakeContext.last.sources.slice(before) };
+  }
+
+  it('plays every bed, fire and call through one level at the slider, into the world (muffled and echoed as before), and no step through it', () => {
+    const engine = new AudioEngine({ ...VOLUMES, ambience: 0.6 }, LIBRARY, manualIdle().idle);
+    const { ctx, steps } = woods(engine);
+    const level = ctx.gains.filter((g) => g.gain.value === volumeGain(0.6));
+    expect(level).toHaveLength(1);
+    const ambience = level[0]!;
+    const loops = ctx.sources.filter((s) => s.loop);
+    const calls = ctx.sources.filter((s) => !s.loop && !steps.includes(s));
+    expect(loops.length).toBeGreaterThan(4);
+    expect(calls.length).toBeGreaterThan(0);
+    for (const s of [...loops, ...calls]) expect(downstream(s).has(ambience)).toBe(true);
+    // Into the world: through the echo and on to the speakers, like every other sound in it.
+    expect([...downstream(ambience)].some((n) => n instanceof FakeConvolver)).toBe(true);
+    expect(downstream(ambience).has(ctx.destination)).toBe(true);
+    expect(steps.length).toBeGreaterThan(0);
+    for (const s of steps) expect(downstream(s).has(ambience)).toBe(false);
+  });
+
+  it('eases the ambience alone as its slider moves, and stops following once the match is over', () => {
+    const engine = new AudioEngine({ ...VOLUMES, ambience: 0.6 }, LIBRARY, manualIdle().idle);
+    const { sfx, ctx } = woods(engine);
+    const ambience = ctx.gains.find((g) => g.gain.value === volumeGain(0.6))!;
+    const effects = engine.bus('effects') as unknown as FakeGain;
+    const effectsTargets = effects.gain.targets.length;
+    engine.setVolume('ambience', 0.25);
+    expect(ambience.gain.targets.at(-1)?.value).toBe(volumeGain(0.25));
+    expect(effects.gain.targets.length).toBe(effectsTargets);
+    const seen = ambience.gain.targets.length;
+    engine.setVolume('effects', 0.5);
+    expect(ambience.gain.targets.length).toBe(seen);
+    sfx.dispose();
+    engine.setVolume('ambience', 0.9);
+    expect(ambience.gain.targets.length).toBe(seen);
+    // The next match starts at the slider's new level.
+    const next = woods(engine);
+    expect(next.ctx.gains.some((g) => g.gain.value === volumeGain(0.9))).toBe(true);
+  });
+
+  it('previews the slider at its level through the effects bus, as a match plays the ambience, then suspends again', () => {
+    const engine = engineFor();
+    engine.warmUp();
+    const ctx = FakeContext.last;
+    engine.setVolume('ambience', 0.4);
+    engine.preview('ambience');
+    expect(ctx.state).toBe('running');
+    const [src] = ctx.sources;
+    expect(plays(src!, AUDIO.volumePreview.cue)).toBe(true);
+    expect(([...src!.outputs][0] as FakeGain).gain.value).toBeCloseTo(AUDIO.volumePreview.gain * volumeGain(0.4), 9);
+    expect(downstream(src!).has(engine.bus('effects'))).toBe(true);
+    src!.end();
+    expect(ctx.state).toBe('suspended');
   });
 });
