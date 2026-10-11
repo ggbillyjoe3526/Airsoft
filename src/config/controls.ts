@@ -36,7 +36,7 @@ export const DEFAULT_BINDINGS = {
   scoreboard: ['Tab'],
   /** Mouse buttons are codes too (`Mouse0` left … `Mouse4` the forward side button; see input/keyBindings.ts), so fire and aim rebind like any key (M18). */
   fire: ['Mouse0'],
-  /** Aims down sights (needs an optic); hold or toggle, see AIM_MODES. */
+  /** Aims down sights (the optic, or the iron sights with none fitted; M84); hold or toggle, see AIM_MODES. */
   aim: ['Mouse2'],
   /** Hold for the order wheel (M23, config/squad.ts ORDER_WHEEL): point at an order, then let go or click. */
   orderWheel: ['KeyZ'],
@@ -59,7 +59,7 @@ export type Action = keyof typeof DEFAULT_BINDINGS;
 /** Actions players can rebind, in the order the settings list them, with their labels. */
 export const REBINDABLE: readonly { action: Action; label: string }[] = [
   { action: 'fire', label: 'Fire' },
-  { action: 'aim', label: 'Aim (needs an optic)' },
+  { action: 'aim', label: 'Aim down sights' },
   { action: 'forward', label: 'Move forward' },
   { action: 'back', label: 'Move back' },
   { action: 'left', label: 'Move left' },

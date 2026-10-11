@@ -32,6 +32,11 @@ export interface BBTargets {
   elimination: EliminationContext;
   /** Practice range targets (M21; none in a match). */
   rangeTargets?: RangeTarget[];
+  /**
+   * The round is decided (a cease-fire, as after the end whistle at a site): BBs still in the air stop on whoever they
+   * reach, as on a wall, and knock nobody out. Range targets are left alone.
+   */
+  ceaseFire?: boolean;
 }
 
 /** Builds this tick's hit volumes and team lookup (see `volumes`). */
@@ -41,42 +46,57 @@ function prepareTargets(t: BBTargets): void {
   for (let i = 0; i < characters.length; i++) {
     const c = characters[i]!;
     teamOf.set(c.id, c.team);
-    if (isInPlay(c)) characterHitVolume(c, t.hits, volumes[i]!);
+    characterHitVolume(c, t.hits, volumes[i]!);
   }
 }
 
+/** The body a BB reached this tick (firstBody): who, and how far along the segment; reused, so a hit allocates nothing. */
+const reached: { body: Character | undefined; at: number } = { body: undefined, at: 0 };
+
 /**
- * The first character in play along the BB's segment this tick (before `maxT`), or undefined. Needs prepareTargets
- * first. A character hit earlier in the tick is out of play, so no later BB hits it. The shooter is skipped only until
- * the BB first bounces (its first segment starts at their eye, inside them): a ricochet can come back and hit them
- * (audit SIM-07), under the same rules as anyone on their team.
+ * The first body along the BB's segment this tick (before `maxT`), into `reached` (body undefined if none). Needs
+ * prepareTargets first. Every body on the field stops a BB (M85, the owner's playtest note 17): someone in play, and
+ * also someone already hit (calling, walking off, leaving, out), a teammate when friendly fire is off, and everyone in
+ * a cease-fire; whether the body is knocked out is the caller's (knocksOut). Only a Ghost (Dev settings, M24) lets BBs
+ * through. The shooter is skipped only until the BB first bounces (its first segment starts at their eye, inside
+ * them): a ricochet can come back and hit them (audit SIM-07), under the same rules as anyone on their team.
  */
-function firstCharacterHit(bb: BB, len: number, maxT: number, t: BBTargets): { victim: Character; at: number } | undefined {
-  const ownerTeam = teamOf.get(bb.ownerId) ?? -1;
-  let victim: Character | undefined;
+function firstBody(bb: BB, len: number, maxT: number, t: BBTargets): void {
+  reached.body = undefined;
   let best = Math.min(len, maxT);
   const characters = t.characters;
   for (let i = 0; i < characters.length; i++) {
     const c = characters[i]!;
-    if ((c.id === bb.ownerId && bb.bounces === 0) || c.ghost || !isInPlay(c)) continue;
-    if (!t.hits.friendlyFire && c.team === ownerTeam) continue;
+    if ((c.id === bb.ownerId && bb.bounces === 0) || c.ghost) continue;
     const d = rayCharacter(bb.prevPosition, segmentDir, best, volumes[i]!);
     if (d >= 0 && d <= best) {
       best = d;
-      victim = c;
+      reached.body = c;
     }
   }
-  return victim ? { victim, at: best } : undefined;
+  reached.at = best;
 }
 
 /**
- * Moves every BB in flight one tick and stops it at whatever its path crosses first this tick: a character in play
- * (characterHit event; the character is eliminated) or a level surface (bbImpact event), where a hard surface bounces
- * it off instead (a ricochet, M20; it flies on from there next tick). A ricochet only knocks someone out when the
- * match counts ricochets (HitConfig.ricochetsCount); otherwise it ticks them and stops (ricochetTick event), and they
- * play on. On the practice range a BB also stops at the first target it reaches (targetHit event, M21). BBs that fall
- * out of the world or get too old are removed (bbLost event). A BB never hits anyone already hit, nor whoever fired
- * it until it has bounced. `rng` scatters bounces (the simulation's seeded stream); `wind` (m/s) drifts every BB (M30).
+ * Whether a BB from `ownerId` that reaches `body` knocks it out (or, as a ricochet that doesn't count, ticks it): only a
+ * body in play, outside a cease-fire, and not on the shooter's own team when friendly fire is off. Any other body just
+ * stops the BB.
+ */
+function knocksOut(body: Character, ownerId: number, t: BBTargets): boolean {
+  if (t.ceaseFire || !isInPlay(body)) return false;
+  return t.hits.friendlyFire || body.team !== (teamOf.get(ownerId) ?? -1);
+}
+
+/**
+ * Moves every BB in flight one tick and stops it at whatever its path crosses first this tick: a body (firstBody), or
+ * a level surface (bbImpact event), where a hard surface bounces it off instead (a ricochet, M20; it flies on from there
+ * next tick). A body in play is knocked out (characterHit event; knocksOut says who can be); any other body (already
+ * hit, a teammate with friendly fire off, anyone in a cease-fire) stops the BB as a wall would (bbImpact event), so a BB
+ * never goes on through someone to whoever is behind (M85). A ricochet only knocks someone out when the match counts
+ * ricochets (HitConfig.ricochetsCount); otherwise it ticks them and stops (ricochetTick event), and they play on. On the
+ * practice range a BB also stops at the first target it reaches (targetHit event, M21). BBs that fall out of the world
+ * or get too old are removed (bbLost event). A BB never hits whoever fired it until it has bounced. `rng` scatters
+ * bounces (the simulation's seeded stream); `wind` (m/s) drifts every BB (M30).
  */
 export function stepBBs(
   pool: BBPool,
@@ -109,9 +129,10 @@ export function stepBBs(
         prepareTargets(targets);
         prepared = true;
       }
-      const hit = targets ? firstCharacterHit(bb, len, t >= 0 ? t : len, targets) : undefined;
-      if (targets?.rangeTargets && targets.rangeTargets.length > 0) {
-        firstRangeTargetHit(bb.prevPosition, segmentDir, hit ? hit.at : t >= 0 ? t : len, targets.rangeTargets, targets.hits, targetHit);
+      if (targets) firstBody(bb, len, t >= 0 ? t : len, targets);
+      const hit = targets ? reached.body : undefined;
+      if (targets?.rangeTargets && targets.rangeTargets.length > 0 && !targets.ceaseFire) {
+        firstRangeTargetHit(bb.prevPosition, segmentDir, hit ? reached.at : t >= 0 ? t : len, targets.rangeTargets, targets.hits, targetHit);
         if (targetHit.index >= 0) {
           const target = targets.rangeTargets[targetHit.index]!;
           bb.position.x = bb.prevPosition.x + segmentDir.x * targetHit.at;
@@ -129,24 +150,30 @@ export function stepBBs(
         }
       }
       if (hit) {
-        bb.position.x = bb.prevPosition.x + segmentDir.x * hit.at;
-        bb.position.y = bb.prevPosition.y + segmentDir.y * hit.at;
-        bb.position.z = bb.prevPosition.z + segmentDir.z * hit.at;
+        // The BB stops on the body, whatever happens to its owner (M85: it never travels on, nor bounces off a body).
+        bb.position.x = bb.prevPosition.x + segmentDir.x * reached.at;
+        bb.position.y = bb.prevPosition.y + segmentDir.y * reached.at;
+        bb.position.z = bb.prevPosition.z + segmentDir.z * reached.at;
         bb.active = false;
         const position = vec3(bb.position.x, bb.position.y, bb.position.z);
+        // Someone already hit, a teammate with friendly fire off, or a cease-fire: it stops there with no hit, as on a wall.
+        if (!knocksOut(hit, bb.ownerId, targets!)) {
+          events.push({ type: 'bbImpact', position, ownerId: bb.ownerId, bodyId: hit.id });
+          continue;
+        }
         const direction = vec3(segmentDir.x, segmentDir.y, segmentDir.z);
         const ricocheted = bb.bounces > 0;
         if (ricocheted && !targets!.hits.ricochetsCount) {
-          events.push({ type: 'ricochetTick', victimId: hit.victim.id, shooterId: bb.ownerId, position, direction });
+          events.push({ type: 'ricochetTick', victimId: hit.id, shooterId: bb.ownerId, position, direction });
           continue;
         }
         // Extraction's insertion grace (Audit 2, SIM-03): a BB on, or from, a squad member just in stops with no hit.
-        if (hit.victim.grace > 0 || inGrace(targets!.characters, bb.ownerId)) {
-          events.push({ type: 'bbImpact', position, ownerId: bb.ownerId });
+        if (hit.grace > 0 || inGrace(targets!.characters, bb.ownerId)) {
+          events.push({ type: 'bbImpact', position, ownerId: bb.ownerId, bodyId: hit.id });
           continue;
         }
-        eliminate(hit.victim, bb.ownerId, targets!.characters, targets!.elimination);
-        events.push({ type: 'characterHit', victimId: hit.victim.id, shooterId: bb.ownerId, position, direction, ricochet: ricocheted });
+        eliminate(hit, bb.ownerId, targets!.characters, targets!.elimination);
+        events.push({ type: 'characterHit', victimId: hit.id, shooterId: bb.ownerId, position, direction, ricochet: ricocheted });
         continue;
       }
       if (t >= 0) {

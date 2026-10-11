@@ -23,7 +23,7 @@ export const PERF_SCRIPT: readonly ScriptStep[] = [
   { fromTick: 2220, switchTo: 0, forward: 1, sprint: true, turn: 0.3 },
   { fromTick: 2520, jump: true, forward: 1 },
   { fromTick: 2580, forward: -1, turn: 1.4 }, // back up with a fast spin
-  { fromTick: 2880, aim: true, fire: true }, // aimed fire (iron sights: aim does nothing without an optic)
+  { fromTick: 2880, aim: true, fire: true }, // aimed fire (down the iron sights, M84)
   { fromTick: 3000, reload: true, crouch: true },
   { fromTick: 3120, forward: 1, turn: -0.5 },
   { fromTick: 3600, forward: 0.5, right: -1, turn: 0.8 },

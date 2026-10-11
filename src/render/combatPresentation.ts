@@ -10,10 +10,11 @@ import type { CrosshairSettings } from '../config/matchInfo';
 import { BB_VISUALS, DUST_MOTES, GAS_PUFFS, HIT_PUFFS, HUD, IMPACT_DUST, IMPACT_PUFFS, IMPACT_RINGS, type LightingPreset, type QualitySettings } from '../config/render';
 import type { ImpactMaterial } from '../config/sounds';
 import type { MovementConfig } from '../config/movement';
-import { AIMING, type OpticId, OPTICS } from '../config/optics';
+import { AIMING, type SightId, sightConfig } from '../config/optics';
 import type { ReplicaConfig } from '../config/replicas';
 import { TORCHES } from '../config/torches';
 import type { MapData } from '../map/mapTypes';
+import { aimRaiseTime } from '../sim/aiming';
 import type { WorldQuery } from '../sim/armament';
 import type { BB } from '../sim/ballistics';
 import type { Character } from '../sim/character';
@@ -109,10 +110,10 @@ export class CombatPresentation {
   private playing = false;
   /** The round in play started behind a screen (round 1 of a match, set up before play): whistle on Play. */
   private startWhistleOwed = true;
-  /** How far the player's optic is raised to their eye (0..1): eases over AIMING.raiseTime (× the optic's and grip's scale). */
+  /** How far the player's sight is raised to their eye (0..1): eases over sim/aiming.ts aimRaiseTime. */
   private aimBlend = 0;
-  /** The optic the sight was last raised on: switching away eases out of its zoom rather than snapping. */
-  private aimOptic: OpticId = 'redDot';
+  /** The sight last raised (an optic, or iron sights, M84): switching away eases out of its zoom rather than snapping. */
+  private aimSight: SightId = 'iron';
 
   /** How far the player's optic is raised to their eye (0..1); the aiming sensitivity blends in with it. */
   get aimRaised(): number {
@@ -121,7 +122,7 @@ export class CombatPresentation {
 
   /** The aiming sensitivity's scale for the optic in use: a stronger zoom turns slower (AIMING.sensitivityZoom). */
   get aimSensitivityScale(): number {
-    return AIMING.sensitivityZoom / OPTICS[this.aimOptic].zoom;
+    return AIMING.sensitivityZoom / sightConfig(this.aimSight).zoom;
   }
 
   constructor(
@@ -296,6 +297,9 @@ export class CombatPresentation {
           this.startWhistleOwed = true;
           continue;
         }
+      } else if (e.type === 'bbImpact' && e.bodyId !== undefined) {
+        // A BB stopped on a body it couldn't knock out (M85): the plain puff, as a ricochet's knock; its sound is Sfx's.
+        if (e.bodyId !== this.player.id) this.puffs.spawn(e.position);
       } else if (e.type === 'bbImpact') {
         // Dust by what the BB hit, and its tick: one lookup for both (audit L-15).
         const material = impactMaterialAt(this.field.blocks, e.position, this.field.terrain ?? null);
@@ -354,11 +358,11 @@ export class CombatPresentation {
     // Aiming down sights: the sight comes up to your eye and the view narrows by the optic's zoom. Straight out of a
     // sprint the replica is still carried (firing is locked out too), so it rises once that ends.
     const aiming = p.aiming && p.status === 'alive' && !carried;
-    const optic = p.armament.optics[p.armament.active];
-    if (aiming && optic) this.aimOptic = optic;
-    const raiseTime = AIMING.raiseTime * OPTICS[this.aimOptic].raiseScale * p.armament.handling[p.armament.active]!.raiseScale;
-    this.aimBlend = Math.max(0, Math.min(1, this.aimBlend + (aiming ? dt : -dt) / raiseTime));
-    this.renderer.setZoom(1 + (OPTICS[this.aimOptic].zoom - 1) * this.aimBlend);
+    // Every replica aims (M84): through its optic, or down its iron sights.
+    const inHand: SightId = p.armament.optics[p.armament.active] ?? 'iron';
+    if (aiming) this.aimSight = inHand;
+    this.aimBlend = Math.max(0, Math.min(1, this.aimBlend + (aiming ? dt : -dt) / aimRaiseTime(p.armament)));
+    this.renderer.setZoom(1 + (sightConfig(this.aimSight).zoom - 1) * this.aimBlend);
     this.viewmodel.setAspect(this.renderer.camera.aspect);
     const carry = p.sprinting ? 1 : sprintCarry(p.sprintLockout, this.movement.sprintFireLockout);
     const light = lightInHand(p);
@@ -368,8 +372,8 @@ export class CombatPresentation {
     const cam = this.renderer.camera;
     const spread = THREE.MathUtils.degToRad(p.armament.replicas[p.armament.active]!.spreadDeg * p.spreadScale);
     const focalPx = this.renderer.height / 2 / Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2);
-    const sight = optic != null && this.aimBlend >= AIMING.reticleFrom ? optic : null;
-    this.viewmodel.setScoped(sight !== null && OPTICS[sight].scope);
+    const sight = this.aimBlend >= AIMING.reticleFrom ? inHand : null;
+    this.viewmodel.setScoped(sight !== null && sightConfig(sight).scope);
     this.hud.update(p.armament, this.loadout, p.status === 'alive', Math.tan(spread) * focalPx, sight, dt);
 
     listenerAxes(cam, this.forward, this.up);

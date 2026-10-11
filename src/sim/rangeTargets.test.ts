@@ -9,7 +9,7 @@ import type { WorldQuery } from './armament';
 import { createArmament } from './armament';
 import { createBBPool, spawnBB } from './ballistics';
 import { createCharacter } from './character';
-import { characterHitVolume, createHitVolume, rayCharacter } from './hitbox';
+import { characterHitVolume, createHitVolume, hitTop, rayCharacter } from './hitbox';
 import { stepBBs } from './bbs';
 import type { GameEvent } from './events';
 import { createRangeTargets, firstRangeTargetHit, rayRangeTarget, refillSpares, stepRangeTargets } from './rangeTargets';
@@ -106,8 +106,9 @@ describe('practice range targets (M21)', () => {
       c.crouchAmount = crouched ? 1 : 0;
       const v = createHitVolume();
       characterHitVolume(c, HITS, v);
-      // Level rays from in front, from well below the head's top to just over it: both agree at every height.
-      for (let y = 0.8; y <= 1.9; y += 0.005) {
+      // Level rays from in front, from well below the head's top to just over it: both agree at every height. (Below the
+      // hips a player's volume is two legs (M85) and a range figure one capsule: this ray down the middle would split them.)
+      for (let y = p.y + hitTop(c.crouchAmount, HITS) - 0.6; y <= 1.9; y += 0.005) {
         const o = vec3(p.x, y, p.z + 5);
         const d = vec3(0, 0, -1);
         const onRange = rayRangeTarget(o, d, 10, figure, HITS) >= 0;

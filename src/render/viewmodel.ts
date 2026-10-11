@@ -108,6 +108,8 @@ export class Viewmodel {
     hold: ReplicaConfig['look']['hold'];
     /** Where it sits aiming down a fitted optic (replicas with an optic mount). */
     aimHold: ReplicaConfig['look']['aimHold'];
+    /** Where it sits aiming down its iron sights (M84, ironHold), and the pitch that lines them up; null without any. */
+    ironHold: IronHold | null;
     /** The optics, grips and magazines it can be fitted with ('optic:<id>' …), each shown only while fitted. */
     parts: { kind: PartKind; id: string; object: THREE.Object3D }[];
     /** The muzzle mount, moved to the fitted barrel's and device's end (M29b). */
@@ -223,6 +225,7 @@ export class Viewmodel {
         muzzle,
         hold: r.look.hold,
         aimHold: r.look.aimHold,
+        ironHold: r.look.ironSight ? ironHold(r.look.ironSight) : null,
         parts: fittableParts(model),
         mount,
         magBase: undefined,
@@ -418,10 +421,14 @@ export class Viewmodel {
       if (s.sightsDown) s.sightsDown.visible = fitted;
     }
     const slot = this.slots[armament.active]!;
-    // Raising the sight: the replica comes in from its hip hold to the aiming hold, square to the view.
-    const raised = slot.aimHold ? smooth(aim) : 0;
+    // Raising the sight: the replica comes in from its hip hold to the aiming hold, square to the view: the fitted
+    // optic's, or with none its iron sights' (M84), tipped so the rear sight and the front post line up on the centre.
+    const irons = armament.optics[armament.active] == null ? slot.ironHold : null;
+    const aimAt = irons ? irons.position : slot.aimHold;
+    const raised = aimAt ? smooth(aim) : 0;
     const h = slot.hold.position;
-    const t = slot.aimHold ?? h;
+    const t = aimAt ?? h;
+    const sightPitch = (irons?.pitch ?? 0) * raised;
     slot.model.position.set(h[0] + (t[0] - h[0]) * raised, h[1] + (t[1] - h[1]) * raised, h[2] + (t[2] - h[2]) * raised);
     const holdYaw = slot.hold.yaw * (1 - raised);
     // Steadier on the shoulder: sway and bob shrink while aiming, and the kick only nudges the sight (the dot stays in the glass).
@@ -469,7 +476,7 @@ export class Viewmodel {
       if (s.parts3d) poseParts(s, s.parts3d, armament.modes[i], armament.optics[i] != null, s === slot ? reloadP : 0, dt);
     }
     const R = VIEWMODEL.reload;
-    slot.model.rotation.set(reloadDip * R.tilt + ip.tilt, holdYaw + reloadDip * R.turn + ip.turn, reloadDip * R.roll + ip.roll);
+    slot.model.rotation.set(sightPitch + reloadDip * R.tilt + ip.tilt, holdYaw + reloadDip * R.turn + ip.turn, reloadDip * R.roll + ip.roll);
     // Magazine swap: the support hand goes to the magazine, pulls it, stows it out of view, brings a
     // fresh one up and seats it, then returns to its grip once the reload is done.
     const reloading = armament.reload > 0;
@@ -597,6 +604,27 @@ export class Viewmodel {
 /** Moves `value` towards `target` at one second a second (a part turned at its animation's own speed). */
 function approach(value: number, target: number, dt: number): number {
   return value < target ? Math.min(target, value + dt) : Math.max(target, value - dt);
+}
+
+/** A replica's aimed hold down its iron sights (camera space): where the model sits and its pitch (radians, about +X). */
+export interface IronHold {
+  position: readonly [number, number, number];
+  pitch: number;
+}
+
+/**
+ * Where a replica sits aiming down its iron sights (config/replicas.ts look.ironSight, M84): pitched so the line from
+ * the rear sight's aim point to the front post's tip runs straight down the view (-Z), with the rear one `eyeRelief` in
+ * front of the eye on the centre line, so the post's tip sits on the screen's centre, where BBs go.
+ */
+export function ironHold(sight: NonNullable<ReplicaConfig['look']['ironSight']>): IronHold {
+  const [ry, rz] = sight.rear;
+  const [fy, fz] = sight.front;
+  // Rotating by `pitch` about X takes (y, z) to (y cos - z sin, y sin + z cos): equal heights for both sights.
+  const pitch = Math.atan2(ry - fy, rz - fz);
+  const c = Math.cos(pitch);
+  const sn = Math.sin(pitch);
+  return { position: [0, -(ry * c - rz * sn), -sight.eyeRelief - (ry * sn + rz * c)], pitch };
 }
 
 /**

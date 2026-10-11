@@ -4,7 +4,8 @@ import { overlay } from './statsFile';
 /**
  * Optics: accessories fitted to a replica, never part of its model (owner, 2026-10-03), picked for the rifle on the
  * Loadout screen before a match: the red dot, or a low-power 2× scope (M17b). Aiming down sights (the aim button, right
- * mouse by default, held or toggled) works only with an optic fitted. More optics and full customisation come with bigger loadouts (v0.3)
+ * mouse by default, held or toggled) works on every replica: through the optic if one is fitted, else down its iron
+ * sights (M84, owner 2026-10-06; IRON_SIGHTS). More optics and full customisation come with bigger loadouts (v0.3)
  * and customisation (v0.5).
  */
 export type OpticId = 'redDot' | 'scope2x';
@@ -32,9 +33,23 @@ export const OPTICS: Readonly<Record<OpticId, OpticConfig>> = overlay<OpticConfi
   scope2x: { name: '2x Scope', zoom: 2, raiseScale: 1.6, scope: true },
 }, GAME_STATS.optics) as Record<OpticId, OpticConfig>;
 
+/**
+ * Aiming down a replica's iron sights (M84), with no optic fitted: the view narrows a little less than through the red
+ * dot, the sight comes up at the base raise time, and the sights themselves (the post on the target) replace the
+ * crosshair. Where they sit is each replica's (config/replicas.ts look.ironSight).
+ */
+export const IRON_SIGHTS: OpticConfig = { name: 'Iron sights', zoom: 1.15, raiseScale: 1, scope: false };
+
+/** What a sight raised to your eye is: a fitted optic, or the replica's own iron sights. */
+export type SightId = OpticId | 'iron';
+
+export function sightConfig(sight: SightId): OpticConfig {
+  return sight === 'iron' ? IRON_SIGHTS : OPTICS[sight];
+}
+
 /** One line for each optic choice on the Loadout's Customise screen ('none': iron sights). */
 export const OPTIC_BLURBS: Readonly<Record<'none' | OpticId, string>> = {
-  none: 'No optic: fire from the hip with the crosshair. Aiming down sights needs an optic.',
+  none: 'No optic: aim down the iron sights (right mouse by default), or fire from the hip with the crosshair.',
   redDot: 'A red dot: press the aim button (right mouse by default) to aim through it (walking pace).',
   scope2x: 'A low-power scope: a closer view down the long lanes, but slower to raise and you see nothing around it.',
 };

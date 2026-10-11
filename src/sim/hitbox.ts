@@ -1,7 +1,6 @@
 import type { HitConfig } from '../config/hits';
 import type { Character } from './character';
-import { leanOffset } from './lean';
-import { type Vec3, vec3 } from './vec';
+import { copy, type Vec3, vec3 } from './vec';
 
 /** An upright capsule: vertical axis at (x, z) from y0 to y1 (sphere centres), radius r. */
 export interface VerticalCapsule {
@@ -130,76 +129,209 @@ export function hitTop(crouchAmount: number, cfg: HitConfig): number {
 }
 
 /**
- * A character's hit volume: `body` (boots to shoulders), `head` (a sphere, stored as a capsule with
- * y0 = y1) and `shoulder` (a sphere at the top of the body). Upright, the shoulder sphere sits inside the
- * body; leaning, the head and shoulder swing out with the upper body (sim/lean.ts) while the body's top
- * comes down towards the hips, so only what pokes out past cover can be hit, and `torso` (a capsule from the
- * hips to the shoulder sphere, as wide as the body) covers the tilted upper body in between. Upright, `torso`
- * has radius 0 (the body already covers it).
+ * A character's hit volume, matching the drawn figure on every pose (M85; render/figureHitVolume.test.ts measures it):
+ * the `head` (a sphere, stored as a capsule with y0 = y1) and `parts`, capsules along segments: the chest (hips to
+ * shoulders, PART.chest), the hips as two side by side (an oval: they're narrower front to back than across), and each
+ * leg's thigh, shin and boot. The head, chest and hips roll with a lean about the hip pivot (sim/lean.ts), as the drawn
+ * upper body does, so only what pokes out past cover can be hit; the legs stay put, hang from the hips (squashed
+ * towards them by a crouch, as the drawn legs are) and swing on the walk cycle (legSwing). Arms and replicas aren't
+ * part of it (owner, DECISIONS 2026-10-01). `bound` holds all of it: a ray that misses the bound misses everything.
  */
 export interface HitVolume {
-  body: VerticalCapsule;
   head: VerticalCapsule;
-  shoulder: VerticalCapsule;
-  torso: SegmentCapsule;
+  parts: SegmentCapsule[];
+  bound: VerticalCapsule;
 }
+
+/** Where each part sits in HitVolume.parts. */
+export const PART = { chest: 0, hipL: 1, hipR: 2, thighL: 3, shinL: 4, bootL: 5, thighR: 6, shinR: 7, bootR: 8, count: 9 } as const;
 
 const capsule = (): VerticalCapsule => ({ x: 0, z: 0, y0: 0, y1: 0, r: 0 });
+const segment = (): SegmentCapsule => ({ ax: 0, ay: 0, az: 0, bx: 0, by: 0, bz: 0, r: 0 });
 
 export function createHitVolume(): HitVolume {
-  return { body: capsule(), head: capsule(), shoulder: capsule(), torso: { ax: 0, ay: 0, az: 0, bx: 0, by: 0, bz: 0, r: 0 } };
+  const parts: SegmentCapsule[] = [];
+  for (let i = 0; i < PART.count; i++) parts.push(segment());
+  return { head: capsule(), parts, bound: capsule() };
 }
 
-const offset = vec3();
+/**
+ * The legs' swing right now (radians; the left leg's, the right swings the other way): the walk cycle's (`cycle`), while
+ * moving faster than HITS.legs.walkingSpeed, else 0. The drawn legs use it with the cycle interpolated between ticks.
+ */
+export function legSwing(cycle: number, c: Character, cfg: HitConfig): number {
+  const L = cfg.legs;
+  return Math.hypot(c.velocity.x, c.velocity.z) > L.walkingSpeed ? Math.sin(cycle) * L.swing : 0;
+}
+
+/**
+ * Moves the walk cycle on by the ground covered since last tick (c.prevPosition); a jump of more than
+ * HITS.legs.maxStride (a respawn, a move to the dead zone) is no step. Call once a tick, after the movement step (the
+ * simulation records prevWalkCycle with the other previous-tick values).
+ */
+export function stepWalkCycle(c: Character, cfg: HitConfig): void {
+  const moved = Math.hypot(c.position.x - c.prevPosition.x, c.position.z - c.prevPosition.z);
+  // Never wrapped, so the drawn legs can interpolate from last tick's (a double keeps its precision for any match).
+  if (moved < cfg.legs.maxStride) c.walkCycle += moved * cfg.legs.stridesPerMetre * Math.PI * 2;
+}
+
+/** The pose a volume is being built for (characterHitVolume): the figure's frame and its lean. */
+const frame = { px: 0, py: 0, pz: 0, cosYaw: 1, sinYaw: 0, cosRoll: 1, sinRoll: 0, pivot: 0 };
+
+/** Figure-frame point (x right, y up from the feet, z forward-negative) into world space, turned by the yaw. */
+function place(x: number, y: number, z: number, out: Vec3): Vec3 {
+  out.x = frame.px + x * frame.cosYaw + z * frame.sinYaw;
+  out.y = frame.py + y;
+  out.z = frame.pz - x * frame.sinYaw + z * frame.cosYaw;
+  return out;
+}
+
+/** An upper-body point (figure frame, crouch already taken off its height) rolled by the lean about the hip pivot, placed. */
+function upper(x: number, y: number, out: Vec3): Vec3 {
+  const h = y - frame.pivot;
+  return place(x * frame.cosRoll + h * frame.sinRoll, frame.pivot + h * frame.cosRoll - x * frame.sinRoll, 0, out);
+}
+
+/**
+ * A leg's point (`y` up from the hip pivot, `z` forward-negative, in the leg's own frame), posed as the drawn leg is:
+ * squashed by `squash` towards the hip, swung by `swing` about it, at the hip (`hx` across, `hipY` up), placed.
+ */
+function leg(y: number, z: number, squash: number, swing: number, hx: number, hipY: number, out: Vec3): Vec3 {
+  const sy = y * squash;
+  const cs = Math.cos(swing);
+  const sn = Math.sin(swing);
+  return place(hx, hipY + sy * cs - z * sn, sy * sn + z * cs, out);
+}
+
+const pa = vec3();
+const pb = vec3();
+
+function setSegment(s: SegmentCapsule, r: number): void {
+  s.ax = pa.x;
+  s.ay = pa.y;
+  s.az = pa.z;
+  s.bx = pb.x;
+  s.by = pb.y;
+  s.bz = pb.z;
+  s.r = r;
+}
 
 /** Writes the character's current hit volume (see HitVolume) into `v`. */
 export function characterHitVolume(c: Character, cfg: HitConfig, v: HitVolume): void {
   const drop = cfg.crouchDrop * c.crouchAmount;
-  const p = c.position;
-  const lean = Math.abs(c.lean);
-  const { body, head, shoulder, torso } = v;
-  body.x = p.x;
-  body.z = p.z;
-  body.r = cfg.bodyRadius;
-  body.y0 = p.y + cfg.bodyBottom + cfg.bodyRadius;
-  // Leaning, the body capsule's top comes down from the shoulders to the hips; the shoulder sphere and the
-  // torso capsule (hips to shoulder sphere) cover the tilted upper body.
-  const top = cfg.bodyTop - drop - cfg.bodyRadius;
-  const hips = cfg.lean.pivotHeight - drop;
-  body.y1 = p.y + Math.max(cfg.bodyBottom + cfg.bodyRadius, top - (top - hips) * lean);
+  const roll = c.lean * cfg.lean.maxAngle;
+  frame.px = c.position.x;
+  frame.py = c.position.y;
+  frame.pz = c.position.z;
+  frame.cosYaw = Math.cos(c.yaw);
+  frame.sinYaw = Math.sin(c.yaw);
+  frame.cosRoll = Math.cos(roll);
+  frame.sinRoll = Math.sin(roll);
+  frame.pivot = cfg.lean.pivotHeight - drop;
+  const parts = v.parts;
 
-  leanOffset(top, c.lean, c.crouchAmount, c.yaw, cfg, offset);
-  shoulder.x = p.x + offset.x;
-  shoulder.z = p.z + offset.z;
-  shoulder.y0 = shoulder.y1 = p.y + top + offset.y;
-  shoulder.r = cfg.bodyRadius;
-
-  // The hip point doesn't move with the lean (leanOffset is zero at the pivot).
-  torso.ax = p.x;
-  torso.ay = p.y + hips;
-  torso.az = p.z;
-  torso.bx = shoulder.x;
-  torso.by = shoulder.y0;
-  torso.bz = shoulder.z;
-  torso.r = lean > 0 ? cfg.bodyRadius : 0;
-
-  const headHeight = cfg.headHeight - drop;
-  leanOffset(headHeight, c.lean, c.crouchAmount, c.yaw, cfg, offset);
-  head.x = p.x + offset.x;
-  head.z = p.z + offset.z;
-  head.y0 = head.y1 = p.y + headHeight + offset.y;
+  upper(0, cfg.headHeight - drop, pa);
+  const head = v.head;
+  head.x = pa.x;
+  head.z = pa.z;
+  head.y0 = head.y1 = pa.y;
   head.r = cfg.headRadius;
+
+  upper(0, cfg.torsoBottom - drop, pa);
+  upper(0, cfg.torsoTop - drop, pb);
+  setSegment(parts[PART.chest]!, cfg.bodyRadius);
+  const H = cfg.hips;
+  for (let side = -1; side <= 1; side += 2) {
+    upper(side * H.halfWidth, H.bottom - drop, pa);
+    upper(side * H.halfWidth, H.top - drop, pb);
+    setSegment(parts[side < 0 ? PART.hipL : PART.hipR]!, H.radius);
+  }
+
+  const L = cfg.legs;
+  const hipY = frame.pivot;
+  const squash = hipY / cfg.lean.pivotHeight;
+  const swing = legSwing(c.walkCycle, c, cfg);
+  for (let side = -1; side <= 1; side += 2) {
+    const hx = side * L.hipSpread;
+    // The left leg swings forward as the right goes back (the drawn legs: legL.rotation.x = swing, legR = -swing).
+    const a = side < 0 ? swing : -swing;
+    const first = side < 0 ? PART.thighL : PART.thighR;
+    leg(L.hipLift, 0, squash, a, hx, hipY, pa);
+    leg(-L.knee, L.kneeZ, squash, a, hx, hipY, pb);
+    setSegment(parts[first]!, L.thighRadius);
+    copy(pa, pb);
+    leg(-L.ankle, 0, squash, a, hx, hipY, pb);
+    setSegment(parts[first + 1]!, L.shinRadius);
+    leg(-L.boot.drop, L.boot.heel, squash, a, hx, hipY, pa);
+    leg(-L.boot.drop, L.boot.toe, squash, a, hx, hipY, pb);
+    setSegment(parts[first + 2]!, L.boot.radius);
+  }
+  boundHitVolume(v);
+}
+
+/** The bound being grown by boundHitVolume: its axis, the reach out from it, and the lowest and highest point. */
+const grow = { x: 0, z: 0, reach: 0, lo: 0, hi: 0 };
+
+function growBound(cx: number, cy: number, cz: number, r: number): void {
+  const d = Math.hypot(cx - grow.x, cz - grow.z) + r;
+  if (d > grow.reach) grow.reach = d;
+  if (cy - r < grow.lo) grow.lo = cy - r;
+  if (cy + r > grow.hi) grow.hi = cy + r;
+}
+
+/**
+ * Sets `v.bound` round everything else in `v`: a vertical capsule on the feet's axis whose spheres sit at the lowest
+ * and highest point, so it holds the whole cylinder `reach` round the axis between them (a segment capsule lies within
+ * its two end spheres).
+ */
+function boundHitVolume(v: HitVolume): void {
+  grow.x = frame.px;
+  grow.z = frame.pz;
+  grow.reach = 0;
+  grow.lo = Number.POSITIVE_INFINITY;
+  grow.hi = Number.NEGATIVE_INFINITY;
+  growBound(v.head.x, v.head.y0, v.head.z, v.head.r);
+  for (const s of v.parts) {
+    growBound(s.ax, s.ay, s.az, s.r);
+    growBound(s.bx, s.by, s.bz, s.r);
+  }
+  const b = v.bound;
+  b.x = grow.x;
+  b.z = grow.z;
+  b.r = grow.reach;
+  b.y0 = grow.lo;
+  b.y1 = grow.hi;
+}
+
+/** Widens every part of `v` by `margin` (bots' line-of-fire check: a margin round a teammate). Negative narrows it. */
+export function inflateHitVolume(v: HitVolume, margin: number): void {
+  v.head.r = Math.max(0, v.head.r + margin);
+  for (const s of v.parts) s.r = Math.max(0, s.r + margin);
+  v.bound.r = Math.max(0, v.bound.r + margin);
+}
+
+/** Moves all of `v` by (dx, dz) (bots' line-of-fire check: where a teammate may be when the BBs pass them). */
+export function shiftHitVolume(v: HitVolume, dx: number, dz: number): void {
+  v.head.x += dx;
+  v.head.z += dz;
+  v.bound.x += dx;
+  v.bound.z += dz;
+  for (const s of v.parts) {
+    s.ax += dx;
+    s.bx += dx;
+    s.az += dz;
+    s.bz += dz;
+  }
 }
 
 /** Distance along the unit ray to the character's hit volume (≤ maxT), or -1 if it misses. */
 export function rayCharacter(o: Vec3, d: Vec3, maxT: number, v: HitVolume): number {
-  const body = rayCapsule(o, d, maxT, v.body);
-  const shoulder = rayCapsule(o, d, body >= 0 ? body : maxT, v.shoulder);
-  let nearest = shoulder >= 0 ? shoulder : body;
-  if (v.torso.r > 0) {
-    const torso = raySegmentCapsule(o, d, nearest >= 0 ? nearest : maxT, v.torso);
-    if (torso >= 0) nearest = torso;
+  if (rayCapsule(o, d, maxT, v.bound) < 0) return -1;
+  let nearest = rayCapsule(o, d, maxT, v.head);
+  for (const s of v.parts) {
+    if (s.r <= 0) continue;
+    const t = raySegmentCapsule(o, d, nearest >= 0 ? nearest : maxT, s);
+    if (t >= 0) nearest = t;
   }
-  const head = rayCapsule(o, d, nearest >= 0 ? nearest : maxT, v.head);
-  return head >= 0 ? head : nearest;
+  return nearest;
 }
