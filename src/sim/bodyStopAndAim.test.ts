@@ -8,7 +8,6 @@ import { FOOTSTEPS } from '../config/footsteps';
 import { BODY, MOVEMENT } from '../config/movement';
 import { NAV } from '../config/nav';
 import { LOADOUT } from '../config/replicas';
-import { impactMaterialAt } from '../audio/soundMaterials';
 import { fitOptics } from './armament';
 import { createBBPool, spawnBB } from './ballistics';
 import { type BBTargets, stepBBs } from './bbs';
@@ -75,11 +74,18 @@ describe('M85 probe: what a BB stopped on a body shows', () => {
     expect(impact).toBeDefined();
     if (impact?.type === 'bbImpact') expect(Math.abs(impact.position.z + 5)).toBeLessThan(0.5);
     expect(events.some((e) => e.type === 'characterHit')).toBe(false);
+    // It names the body, so the presentation shows a knock on it, never the floor's concrete dust (M85).
+    if (impact?.type === 'bbImpact') expect(impact.bodyId).toBe(2);
   });
 
-  it('FINDING: the impact material at a body in open air is the concrete default, so the dust and tick are the floor\'s', () => {
-    // Pins today's behaviour so a change (a body puff) is a visible decision: bbImpact carries no "body" marker.
-    expect(impactMaterialAt([], vec3(0, 1.3, -5), null)).toBe('concrete');
+  it('a BB that stops on a wall names no body', () => {
+    const shooter = createCharacter(1, vec3(), 0, LOADOUT, 0);
+    const pool = createBBPool(2);
+    const bb = spawnBB(pool, 1, vec3(0, 1.3, 0), vec3(0, 0, -1), 88, 0, 0.25e-3);
+    const events: GameEvent[] = [];
+    for (let i = 0; i < 60 && bb.active; i++) stepBBs(pool, BALLISTICS, { raycastStatic: (_o, _d, max) => (max > 0.5 ? 0.5 : -1) }, -10, events, DT, { characters: [shooter], hits: HITS, elimination: openFieldElimination(DEAD) });
+    const impact = events.find((e) => e.type === 'bbImpact');
+    expect(impact?.type === 'bbImpact' && impact.bodyId).toBe(undefined);
   });
 });
 
@@ -139,7 +145,7 @@ describe('M84: bot skill still scales with difficulty after aimErrorTracking x 1
   });
 
   it('bots never aim down sights, so the aimed multiplier does not make them tighter than their level says', () => {
-    const { state, bot, run } = duel(15, () => {}, undefined, undefined, 3);
+    const { bot, run } = duel(15, () => {}, undefined, undefined, 3);
     run(3, () => {});
     expect(bot.aiming).toBe(false);
     expect(bot.aimRaise).toBe(0);

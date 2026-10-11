@@ -297,6 +297,9 @@ export class CombatPresentation {
           this.startWhistleOwed = true;
           continue;
         }
+      } else if (e.type === 'bbImpact' && e.bodyId !== undefined) {
+        // A BB stopped on a body it couldn't knock out (M85): the plain puff, as a ricochet's knock; its sound is Sfx's.
+        if (e.bodyId !== this.player.id) this.puffs.spawn(e.position);
       } else if (e.type === 'bbImpact') {
         // Dust by what the BB hit, and its tick: one lookup for both (audit L-15).
         const material = impactMaterialAt(this.field.blocks, e.position, this.field.terrain ?? null);

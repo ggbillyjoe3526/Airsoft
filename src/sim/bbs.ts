@@ -158,7 +158,7 @@ export function stepBBs(
         const position = vec3(bb.position.x, bb.position.y, bb.position.z);
         // Someone already hit, a teammate with friendly fire off, or a cease-fire: it stops there with no hit, as on a wall.
         if (!knocksOut(hit, bb.ownerId, targets!)) {
-          events.push({ type: 'bbImpact', position, ownerId: bb.ownerId });
+          events.push({ type: 'bbImpact', position, ownerId: bb.ownerId, bodyId: hit.id });
           continue;
         }
         const direction = vec3(segmentDir.x, segmentDir.y, segmentDir.z);
@@ -169,7 +169,7 @@ export function stepBBs(
         }
         // Extraction's insertion grace (Audit 2, SIM-03): a BB on, or from, a squad member just in stops with no hit.
         if (hit.grace > 0 || inGrace(targets!.characters, bb.ownerId)) {
-          events.push({ type: 'bbImpact', position, ownerId: bb.ownerId });
+          events.push({ type: 'bbImpact', position, ownerId: bb.ownerId, bodyId: hit.id });
           continue;
         }
         eliminate(hit, bb.ownerId, targets!.characters, targets!.elimination);

@@ -706,6 +706,20 @@ describe('the sound engine: lifecycle, whistle and routing (audit L-18)', () => 
     expect(ctx.panners.at(-1)!.panningModel).toBe('equalpower');
   });
 
+  it('a BB stopped on a body that is out knocks on that body (M85), and a wall impact stays the caller\'s', () => {
+    const { sfx, ctx, bot, characterOf } = setup();
+    sfx.onEvent({ type: 'bbImpact', position: vec3(6, 1.2, 0), ownerId: PLAYER }, PLAYER, characterOf);
+    expect(ctx.sources).toHaveLength(0);
+    sfx.onEvent({ type: 'bbImpact', position: vec3(6, 1.2, 0), ownerId: PLAYER, bodyId: bot.id }, PLAYER, characterOf);
+    expect(ctx.sources).toHaveLength(1);
+    expect(plays(ctx.sources[0]!, 'bodyHit')).toBe(true);
+    expect(destinationOf(ctx.sources[0]!)).toBe(ctx.panners.find((p) => p.panningModel === 'HRTF'));
+    // Never the "you're hit" tick on your own body.
+    sfx.onEvent({ type: 'bbImpact', position: vec3(0, 1.2, 0), ownerId: bot.id, bodyId: PLAYER }, PLAYER, characterOf);
+    expect(ctx.sources).toHaveLength(2);
+    expect(plays(ctx.sources[1]!, 'bodyHit')).toBe(true);
+  });
+
   it("plays a range target's ring and the flag's rope where they are, with the hit marker for your own hit", () => {
     const { sfx, ctx, bot, characterOf } = setup();
     sfx.onEvent({ type: 'targetHit', targetId: 0, kind: 'steel', shooterId: PLAYER, position: vec3(0, 1, -30), ricochet: false }, PLAYER, characterOf);
