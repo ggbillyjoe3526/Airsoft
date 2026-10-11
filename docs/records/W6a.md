@@ -23,6 +23,8 @@
     142 against 140. Per-object draw lists against main's old renderer: the node path draws the grass and stand-ins
     (2 draws the old path never had) and RM4's built-in models add about 5 on both (main itself: 113.3). The owner
     raised the lines on a card (Woodland 120, Neon Heights 145; DECISIONS).
+  - After main's M88 made Woodland 5v5, its six baselines were recorded again on both back ends. Low on WebGL2 stays
+    under main's old-renderer numbers: Elimination 42.5 draws against 43.7, Extraction 41.1 against 43.5.
   - Gate 3 (9cc2362): green but for `perfMatrix.test.mjs`, which pinned the old Neon line; gate 4 (tests only) green
     after that test followed it.
 - **Critic** (Opus, 7/8 Accept): check 8 failed on `src/render/README.md` not naming `webgpu/deferredFrees.ts`; the
