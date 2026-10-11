@@ -67,16 +67,22 @@ describe('the top bar (G3)', () => {
     expect(places(bar).filter((b) => !b.hidden).map((b) => b.getAttribute('aria-current'))).toEqual(['page']);
   });
 
-  it('shows the wallet, hides it with the Armory off, and then greys the Armory place out with the reason', () => {
+  it('shows the wallet, and with the Armory off hides it and takes the Armory place off the bar (M83: gone, not greyed)', () => {
     const bar = new TopBar(() => {}, () => {});
     const [fc, tokens] = fake(bar.root).children[2]!.children;
     const armory = places(bar)[MENU_TEXT.nav.findIndex((n) => n.id === 'armory')]!;
+    bar.show('setup', false);
     bar.setWallet({ fc: 1200, tokens: 3 }, false);
-    expect([fc!.hidden, tokens!.hidden, armory.disabled]).toEqual([false, false, false]);
+    expect([fc!.hidden, tokens!.hidden, armory.hidden, armory.disabled]).toEqual([false, false, false, false]);
     expect(fc!.textContent).toBe(MENU_TEXT.fc(1200));
     bar.setWallet(null, true);
-    expect([fc!.hidden, tokens!.hidden, armory.disabled]).toEqual([true, true, true]);
-    expect(fake(armory).title).not.toBe('');
+    expect([fc!.hidden, tokens!.hidden, armory.hidden, armory.disabled]).toEqual([true, true, true, false]);
+    expect(places(bar).filter((b) => !b.hidden).length).toBe(MENU_TEXT.nav.length - 1);
+    // Moving between screens keeps it gone; the Armory on again puts it back.
+    bar.show('settings', false);
+    expect(armory.hidden).toBe(true);
+    bar.setWallet({ fc: 1200, tokens: 3 }, false);
+    expect(armory.hidden).toBe(false);
   });
 });
 
