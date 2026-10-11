@@ -62,13 +62,13 @@ const RANGE = 4;
 /** How far the hit volume's surface may sit from the drawn one (metres): a few BB widths, the rim. */
 const TOLERANCE = 0.02;
 /**
- * At most this share of the drawn body may be missed, or of the hit volume be thin air, past the rim, on any pose. The
- * volume is the human figure's (measured 2026-10-11 on this grid: at worst 3.5% missed, a pack's back when crouched,
- * and 2.3% thin air; before M85, standing, 10% of the drawn body was missed and 29% of the volume was thin air, rim
- * included). Robots are a look only (Settings › Look: the simulation doesn't know who is drawn as one), with a slimmer
- * waist and wider shoulder caps on the same volume: held to about what they measure today (KNOWN_ISSUES).
+ * At most this share of the drawn body may be missed, or of the hit volume be thin air, past the rim, on any pose, for
+ * humans and robots alike. Robots are a look only (Settings › Look: the simulation doesn't know who is drawn as one), so
+ * the robot is drawn inside the human envelope (render/figureRobot.ts). Measured 2026-10-11 on this grid: humans at worst
+ * 3.5% missed (a pack's back when crouched) and 2.7% thin air; robots 3.5% and 2.6%. Before M85, standing, 10% of the
+ * drawn body was missed and 29% of the volume was thin air, rim included; robots before their M85 refit, 5.2% and 9%.
  */
-const LIMITS = { human: { missed: 0.04, phantom: 0.03 }, robot: { missed: 0.065, phantom: 0.13 } };
+const LIMITS = { missed: 0.04, phantom: 0.03 };
 
 interface Tally {
   /** Rays that touch the drawn body. */
@@ -182,8 +182,7 @@ describe('the hit volume against the drawn figure, on every pose (M85)', () => {
         const t = measure(pose, id, detail, robot);
         const missed = t.missed / t.body;
         const phantom = t.phantom / t.volume;
-        const limit = robot ? LIMITS.robot : LIMITS.human;
-        worst = Math.max(worst, missed / limit.missed, phantom / limit.phantom);
+        worst = Math.max(worst, missed / LIMITS.missed, phantom / LIMITS.phantom);
         rows.push(`${pose.name}: missed ${(100 * missed).toFixed(1)}%, thin air ${(100 * phantom).toFixed(1)}%`);
       }
       if ((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.FIGURE_REPORT) console.log(`look ${id}, ${detail}${robot ? ', robot' : ''}\n  ${rows.join('\n  ')}`);
