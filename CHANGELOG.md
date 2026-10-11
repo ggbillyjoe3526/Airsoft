@@ -35,6 +35,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **W5** · On WebGPU at Medium and up, Woodland's meadows grow swaying grass and a deep wood stands beyond the fence
 - **M86** · Rare, distant background sounds: a crow and a dog at Depot and the range, a creak in Woodland at night, pigeons and a car horn on Neon Heights
 - **M84** · Iron sights on every replica: right click lines the view up with the sights when no optic is fitted; a red dot or scope sits on top
+- **M98** · Two teams, Alpha (blue) and Beta (orange); Your team on the Match screen picks your side; an Extraction run is always Alpha
 
 ### Changed
 - **M71** · Bots hunt the map's middle once their lane is swept (now all levels, not just Pro); Normal and Hard hold their posts out of lantern light at night (#133)

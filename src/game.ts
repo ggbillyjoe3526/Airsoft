@@ -20,7 +20,7 @@ import { GRAPHICS_TEXT } from './config/graphics';
 import { FRAME_TIMING, type FrameRateCap, type LightingPresetId, QUALITY, QUALITY_CHOICES, QUALITY_STEP_DOWN, type QualityChoice, type QualityPreset, type QualitySettings } from './config/render';
 import { FramePacer } from './core/framePacer';
 import { SIM } from './config/sim';
-import { applyTeamCss, TEAM_COLOUR_SETS, TEAMS, type TeamColourSetId } from './config/teams';
+import { applyTeamCss, DEFAULT_TEAM_PICK, TEAM_COLOUR_SETS, type TeamColourSetId, teamOfPick, type TeamPickId } from './config/teams';
 import { crashReport, type ReportField } from './core/crashReport';
 import { qualityLine, runReportLine } from './core/reportFields';
 import { KeyBindings } from './input/keyBindings';
@@ -44,7 +44,6 @@ import { matchSeed } from './matchFlow';
 import { nextSessionAction } from './core/sessionPlan';
 import { MatchSession } from './matchSession';
 import { type RangePose, RangeSession } from './rangeSession';
-import { teamEnd } from './sim/round';
 import type { GameState } from './sim/state';
 import { loadRecords, noNews, type RecordNews, type Records, saveRecords } from './stats/records';
 import { settleMatch } from './stats/settleMatch';
@@ -105,6 +104,7 @@ import {
   loadSprintMode,
   loadTeammateDifficulty,
   loadTeamColours,
+  loadTeamPick,
   loadTutorialDone,
   loadTutorialStep,
   loadWheelSelect,
@@ -113,8 +113,6 @@ import {
   systemReducedMotionQuery,
 } from './ui/menus/savedChoices';
 
-/** The player is the first character, on Blue (see MatchSession). */
-const PLAYER_TEAM = 0;
 const LOCK_REFUSED_HINT = 'The browser needs a moment before re-capturing the mouse. Click again.';
 
 export interface GameOptions {
@@ -212,6 +210,8 @@ export class Game {
   /** The opponents' bot difficulty and your bot teammates' (M20). */
   private difficulty: Difficulty;
   private teammateDifficulty: Difficulty;
+  /** The Match screen's "Your team" (M98): Alpha or Beta. */
+  private team: TeamPickId;
   /** The Match pop-up's rules (M20), and its Rules row's ruleset (M39). */
   private matchRules: MatchRules;
   private ruleset: RulesetId;
@@ -330,6 +330,9 @@ export class Game {
     this.mode = loadMode();
     this.difficulty = loadDifficulty();
     this.teammateDifficulty = loadTeammateDifficulty();
+    this.team = loadTeamPick();
+    // The menus show the team colours of the saved set (the Match screen's Your team), as each match sets them again.
+    applyTeamCss(container, TEAM_COLOUR_SETS[this.teamColours]);
     this.matchRules = loadMatchRules();
     this.ruleset = loadRuleset();
     this.collection = loadCollection(GAME_POOL, options.seed);
@@ -389,12 +392,7 @@ export class Game {
     this.menus = new Menus(container, {
       pictures: this.pictures,
       rules: {
-        playerTeam: TEAMS[PLAYER_TEAM]!.name,
-        enemyTeam: TEAMS[1 - PLAYER_TEAM]!.name,
         raiseTime: ROUNDS.flag.raiseTime,
-        attackFirst: ROUNDS.flag.firstAttackers === PLAYER_TEAM,
-        eliminationStartEnd: teamEnd(PLAYER_TEAM, 'elimination', 1, ROUNDS),
-        attackDefendStartEnd: teamEnd(PLAYER_TEAM, 'attackDefend', 1, ROUNDS),
       },
       bindings: this.bindings,
       loadout: {
@@ -448,6 +446,7 @@ export class Game {
       },
       difficulty: { initial: this.difficulty, onChange: (d) => ((this.difficulty = d), (this.setupChanged = true)) },
       teammateDifficulty: { initial: this.teammateDifficulty, follows: !hasSavedTeammateDifficulty(), onChange: (d) => ((this.teammateDifficulty = d), (this.setupChanged = true)) },
+      team: { initial: this.team, onChange: (t) => ((this.team = t), (this.setupChanged = true)) },
       matchRules: { initial: this.matchRules, onChange: (m) => ((this.matchRules = m), (this.setupChanged = true)) },
       ruleset: { initial: this.ruleset, onChange: (r) => ((this.ruleset = r), (this.setupChanged = true)) },
       controls: {
@@ -485,7 +484,15 @@ export class Game {
         reducedMotion: { initial: this.motionReduced(), onChange: (on) => this.changeReducedMotion(on), follow: (show) => (this.showSystemMotion = show) },
         // The figures are built with their colours, so a new set shows from the next match.
         // On the range they show from Resume (it's rebuilt where you stood, as after a loadout change).
-        teamColours: { initial: this.teamColours, onChange: (set) => ((this.teamColours = set), (this.setupChanged = this.loadoutChanged = true)) },
+        teamColours: {
+          initial: this.teamColours,
+          onChange: (set) => {
+            this.teamColours = set;
+            this.setupChanged = this.loadoutChanged = true;
+            // The menus' team swatches (the Match screen's Your team) follow at once; a match loaded keeps its own until the next.
+            if (!this.session) applyTeamCss(this.container, TEAM_COLOUR_SETS[set]);
+          },
+        },
         soundCues: { initial: this.soundCues, onChange: (on) => this.changeSoundCues(on) },
         soundCueSize: { initial: this.soundCueSize, onChange: (v) => ((this.soundCueSize = v), this.showHudLook()) },
         soundCueColour: { initial: this.soundCueColour, onChange: (c) => ((this.soundCueColour = c), this.showHudLook()) },
@@ -814,7 +821,7 @@ export class Game {
   /** New game's picks as they play now (M35: a dev pick plays as its list's default while Dev content is off). */
   private playedPicks(): NewGamePicks {
     return playedPicks(
-      { map: this.map, mode: this.mode, difficulty: this.difficulty, teammateDifficulty: this.teammateDifficulty, ruleset: this.ruleset, rules: this.matchRules },
+      { map: this.map, mode: this.mode, difficulty: this.difficulty, teammateDifficulty: this.teammateDifficulty, team: this.team, ruleset: this.ruleset, rules: this.matchRules },
       this.dev.devContent,
     );
   }
@@ -920,6 +927,7 @@ export class Game {
         devContent: this.dev.devContent,
         devContentUsed: this.devContentUsed(picks),
         teamColours: TEAM_COLOUR_SETS[this.teamColours],
+        playerTeam: teamOfPick(picks.team ?? DEFAULT_TEAM_PICK),
         look: this.look,
       }, this.matchSeed, this.quality, this.audio, this.crosshair);
       if (this.options.perfLog) console.info(this.session.build.line());

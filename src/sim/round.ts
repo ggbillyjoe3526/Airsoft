@@ -31,7 +31,7 @@ export interface RoundRules {
    * swaps attack and defence too).
    */
   halfTimeAfter: number;
-  /** Elimination: the end of the map (0 west, 1 east) Blue, the player's team, starts the match at. */
+  /** Elimination: the end of the map (0 west, 1 east) Alpha starts the match at (Beta the other). */
   eliminationFirstEnd: number;
   flag: FlagRules;
 }
@@ -134,7 +134,7 @@ export function halfTimeAfterRound(number: number, rules: RoundRules): boolean {
 
 /**
  * The end of the map (0 or 1) `team` starts from in round `number`. Attack / Defend: the attackers start at
- * end 0 and the defenders at end 1, by the pole. Elimination: Blue starts at rules.eliminationFirstEnd. Either
+ * end 0 and the defenders at end 1, by the pole. Elimination: Alpha starts at rules.eliminationFirstEnd. Either
  * way the teams swap ends after rules.halfTimeAfter rounds, so an uneven map is fair over a match.
  */
 export function teamEnd(team: number, mode: MatchMode, number: number, rules: RoundRules): number {

@@ -68,30 +68,30 @@ describe('the card\'s words (M41)', () => {
 
   it('says where, whether the angle was held, how long you were in view and whether you were moving', () => {
     // The BB flew along yaw 0 and you looked along yaw 0: it came from straight ahead.
-    const held = whatGotYouText(facts({ yaw: 0, held: true, inView: 0.42, moving: true }), 'Orange 2', 0);
-    expect(held.where).toBe('Orange 2 · from ahead · 14 m');
-    expect(held.notes).toEqual(['Orange 2 was holding that angle.', 'You were in view 0.4 s, on the move.']);
-    const loose = whatGotYouText(facts({ held: false, inView: 2.26, moving: false }), 'Orange 1', 0);
-    expect(loose.notes).toEqual(['Orange 1 was not holding an angle.', 'You were in view 2.3 s, standing still.']);
+    const held = whatGotYouText(facts({ yaw: 0, held: true, inView: 0.42, moving: true }), 'Beta 2', 0);
+    expect(held.where).toBe('Beta 2 · from ahead · 14 m');
+    expect(held.notes).toEqual(['Beta 2 was holding that angle.', 'You were in view 0.4 s, on the move.']);
+    const loose = whatGotYouText(facts({ held: false, inView: 2.26, moving: false }), 'Beta 1', 0);
+    expect(loose.notes).toEqual(['Beta 1 was not holding an angle.', 'You were in view 2.3 s, standing still.']);
   });
 
   it('turns the direction with your view: the same shot comes from the other side once you have turned the other way', () => {
     // Looking along yaw 90 (towards -x), a BB flying along +z came from the shooter on your right (at -z); the mirror view, your left.
     const shotYaw = 0;
-    expect(whatGotYouText(facts({ yaw: shotYaw }), 'Orange 2', 90 * DEG).where).toContain('from your right');
-    expect(whatGotYouText(facts({ yaw: shotYaw }), 'Orange 2', -90 * DEG).where).toContain('from your left');
+    expect(whatGotYouText(facts({ yaw: shotYaw }), 'Beta 2', 90 * DEG).where).toContain('from your right');
+    expect(whatGotYouText(facts({ yaw: shotYaw }), 'Beta 2', -90 * DEG).where).toContain('from your left');
   });
 
   it('says only where it came from for friendly fire, and that a ricochet bounced', () => {
-    const friendly = whatGotYouText(facts({ friendly: true, held: null, inView: null }), 'Blue 2', 0);
-    expect(friendly.where).toBe('Blue 2 · from ahead · 14 m · friendly fire');
+    const friendly = whatGotYouText(facts({ friendly: true, held: null, inView: null }), 'Alpha 2', 0);
+    expect(friendly.where).toBe('Alpha 2 · from ahead · 14 m · friendly fire');
     expect(friendly.notes).toEqual([]);
-    expect(whatGotYouText(facts({ ricochet: true, held: null, inView: null }), 'Orange 2', 0).notes).toEqual(['It bounced off something first.']);
+    expect(whatGotYouText(facts({ ricochet: true, held: null, inView: null }), 'Beta 2', 0).notes).toEqual(['It bounced off something first.']);
   });
 
   it('leaves out what it does not know', () => {
-    expect(whatGotYouText(facts({ held: null, inView: null }), 'Orange 2', 0).notes).toEqual([]);
-    expect(whatGotYouText(facts({ held: false, inView: null, moving: true }), 'Orange 2', 0).notes).toEqual(['Orange 2 was not holding an angle.', 'You were on the move.']);
+    expect(whatGotYouText(facts({ held: null, inView: null }), 'Beta 2', 0).notes).toEqual([]);
+    expect(whatGotYouText(facts({ held: false, inView: null, moving: true }), 'Beta 2', 0).notes).toEqual(['Beta 2 was not holding an angle.', 'You were on the move.']);
   });
 });
 
@@ -177,9 +177,9 @@ describe('the card\'s panel (M41)', () => {
     expect(root.hidden).toBe(true);
     c.setShown(true);
     expect(root.hidden, 'allowed but nothing to say').toBe(true);
-    c.set({ where: 'Orange 2 · from ahead · 14 m', notes: ['a', 'b'] });
+    c.set({ where: 'Beta 2 · from ahead · 14 m', notes: ['a', 'b'] });
     expect(root.hidden).toBe(false);
-    expect(where.textContent).toBe('Orange 2 · from ahead · 14 m');
+    expect(where.textContent).toBe('Beta 2 · from ahead · 14 m');
     expect(notes.children.map((n) => n.textContent)).toEqual(['a', 'b']);
     c.setShown(false);
     expect(root.hidden, 'not allowed (still in play, or a menu is up)').toBe(true);

@@ -103,7 +103,7 @@ export class HitFeedback {
     if (!calling) this.direction.classList.remove('show'); // it points relative to a view you no longer have
   }
 
-  /** Small label while you're out (e.g. "OUT · hit by Orange 2"), or '' to hide it. */
+  /** Small label while you're out (e.g. "OUT · hit by Beta 2"), or '' to hide it. */
   setOutLabel(text: string): void {
     if (text === this.shownOut) return;
     this.shownOut = text;
@@ -124,7 +124,7 @@ export class HitFeedback {
   }
 
   /**
-   * Round message (e.g. "Blue wins the round"), or '' to hide it. The words are kept as written (a screen reader reads
+   * Round message (e.g. "Alpha wins the round"), or '' to hide it. The words are kept as written (a screen reader reads
    * them so); the banner sets them in capitals, the round's start ("Round 2") larger as its headline (G4).
    */
   setRoundMessage(text: string): void {

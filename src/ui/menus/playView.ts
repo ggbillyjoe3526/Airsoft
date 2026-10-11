@@ -4,13 +4,14 @@ import { squadSize } from '../../config/extraction';
 import { mapStillFile } from '../../config/menuArt';
 import { PLAY_TEXT } from '../../config/menus';
 import { MATCH_MODES } from '../../config/modes';
+import { DEFAULT_TEAM_PICK, TEAMS, teamOfPick } from '../../config/teams';
 import type { LightingPresetId } from '../../config/render';
 import { LIGHTING_LABELS, lightingChoices } from '../../map/lightingChoice';
 import { type MapId, mapData, mapEntry } from '../../map/maps';
 import { type NewGamePicks, playedPicks, playedTeamSize } from '../../newGamePicks';
 import { menuArt } from './chrome';
 import type { MenusOptions } from './menus';
-import { describeRules } from './rulesText';
+import { describeRules, sideText } from './rulesText';
 import type { PlayView } from './setupScreen';
 
 /**
@@ -37,8 +38,11 @@ export function playView(picked: NewGamePicks, opts: Pick<MenusOptions, 'rules' 
   const opponents = difficultyLabel(played.difficulty);
   const mates = difficultyLabel(played.teammateDifficulty);
   const recorded = countsForRecords(m, played.difficulty, played.teammateDifficulty, played.ruleset);
-  const halfTimeAfter = roundRulesFor(m).halfTimeAfter;
-  const rules = describeRules({ ...opts.rules, ...m, halfTimeAfter, switches: m, opponents: played.difficulty }, played.mode, run);
+  const roundRules = roundRulesFor(m);
+  // Your side as picked (M98); an Extraction run's squad is Alpha (playedPicks).
+  const team = teamOfPick(played.team ?? DEFAULT_TEAM_PICK);
+  const rules = describeRules({ ...opts.rules, ...sideText(team, roundRules), ...m, halfTimeAfter: roundRules.halfTimeAfter, switches: m, opponents: played.difficulty }, played.mode, run);
+  const levels = m.teamSize === 1 || played.difficulty === played.teammateDifficulty ? opponents : `${opponents} / ${mates}`;
   const devContentUsed = opts.dev.devContentUsed();
   const paid = opts.armory.wallet() !== null && !devContentUsed;
   return {
@@ -50,7 +54,8 @@ export function playView(picked: NewGamePicks, opts: Pick<MenusOptions, 'rules' 
     still: still ? menuArt(still) : null,
     modeLabel: MATCH_MODES.find((o) => o.id === played.mode)?.label ?? played.mode,
     rules: `${rulesetOf(played.ruleset).label} · ${match.value}`,
-    bots: m.teamSize === 1 || played.difficulty === played.teammateDifficulty ? PLAY_TEXT.botsLine(opponents) : PLAY_TEXT.botsLine(`${opponents} / ${mates}`),
+    // Your team first ("Beta · Hard / Normal bots"); a run's squad has no pick, so it says only the bots.
+    bots: run ? PLAY_TEXT.botsLine(levels) : `${TEAMS[team]!.name} · ${PLAY_TEXT.botsLine(levels)}`,
     notes: setupNotes(rules, { recorded, cheating: opts.dev.cheating(), devContentUsed, ruleset: played.ruleset }),
     loadout: opts.loadout.summary(),
     pays: paid ? (played.ruleset === DEFAULT_RULESET || recordsKeyOf(played.ruleset) !== null ? PLAY_TEXT.pays : PLAY_TEXT.paysCapped(CUSTOM_RULES_PAY_CAP)) : '',
