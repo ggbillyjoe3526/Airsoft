@@ -193,7 +193,7 @@ async function measure(preset) {
     const stats = () => g.renderer.stats;
     const frames = [];
     const heap = [];
-    let calls = 0, callsMax = 0, tris = 0, trisMax = 0;
+    let calls = 0, callsMax = 0, tris = 0, trisMax = 0, dressing = 0, dressingMax = 0;
     const tick0 = g.state.tick;
     const heapNow = () => performance.memory?.usedJSHeapSize ?? 0;
     // The live heap: what is left after full collections (twice, so objects freed by the first one's finalizers go too).
@@ -213,7 +213,11 @@ async function measure(preset) {
         last = now;
         const s = stats();
         calls += s.calls; callsMax = Math.max(callsMax, s.calls);
-        tris += s.triangles; trisMax = Math.max(trisMax, s.triangles);
+        // W6a: the GPU dressing's triangles (Woodland's grass and stand-ins, counted at their caps) apart from the
+        // scene's, each on its own budget line.
+        const d = s.dressingTriangles ?? 0;
+        tris += s.triangles - d; trisMax = Math.max(trisMax, s.triangles - d);
+        dressing += d; dressingMax = Math.max(dressingMax, d);
         if (now >= nextHeap) { heap.push(heapNow()); nextHeap += 1000; }
         if (g.state.tick - tick0 < ticks && now - t0 < maxSeconds * 1000) requestAnimationFrame(f); else done();
       };
@@ -253,6 +257,7 @@ async function measure(preset) {
       onePercentLowFps: 1000 / onePercentLowMs,
       p50Ms: q(0.5), p95Ms: q(0.95), p99Ms: q(0.99), worstMs: sorted.at(-1),
       drawCalls: calls / n, drawCallsMax: callsMax, triangles: tris / n, trianglesMax: trisMax,
+      dressingTriangles: dressing / n, dressingTrianglesMax: dressingMax,
       geometries: end.geometries, textures: end.textures, programs: end.programs,
       gpuMemoryMB: (geometryBytes + textureBytes) / 1e6,
       // Start and end are the live heap (after a full GC); the max and the GC drops are the samples taken during play.
@@ -279,7 +284,7 @@ for (const result of results) {
   console.log(`perf: ${relative(ROOT, out)}`);
   const m = result.metrics;
   console.log(`  ${result.preset} on ${result.backend}: ${m.ticks} ticks in ${m.seconds} s · fps ${m.fps} (1 % low ${m.onePercentLowFps}) · p50 ${m.p50Ms} ms · p95 ${m.p95Ms} ms · p99 ${m.p99Ms} ms · sim ${m.simTicksPerSecond} ticks/s`);
-  console.log(`  draw calls ${m.drawCalls} (max ${m.drawCallsMax}) · triangles ${m.triangles} (max ${m.trianglesMax}) · GPU memory ~${m.gpuMemoryMB} MB · heap ${m.heapStartMB} → ${m.heapEndMB} MB (${m.heapGrowthMB >= 0 ? "+" : ""}${m.heapGrowthMB}${m.heapGc ? ', live after GC' : ', NO forced GC: noisy'}), ${m.gcSpikes} GC drops`);
+  console.log(`  draw calls ${m.drawCalls} (max ${m.drawCallsMax}) · triangles ${m.triangles} (max ${m.trianglesMax}) + GPU dressing ${m.dressingTriangles} (max ${m.dressingTrianglesMax}) · GPU memory ~${m.gpuMemoryMB} MB · heap ${m.heapStartMB} → ${m.heapEndMB} MB (${m.heapGrowthMB >= 0 ? "+" : ""}${m.heapGrowthMB}${m.heapGc ? ', live after GC' : ', NO forced GC: noisy'}), ${m.gcSpikes} GC drops`);
   if (result.errors.length) console.log(`  page errors: ${result.errors.length} (${result.errors[0]})`);
   if (options.baseline) {
     const dir = join(ROOT, 'pipeline', 'baseline');

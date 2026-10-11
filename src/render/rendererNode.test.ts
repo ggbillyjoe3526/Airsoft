@@ -62,7 +62,7 @@ function fakeNode(name: string, log: string[], kind: 'webgpu' | 'webgl' = 'webgp
     samples: 4,
     get stats() {
       const { render, memory } = renderer.info;
-      return { calls: render.drawCalls, triangles: render.triangles, programs: memory.programs, geometries: memory.geometries, textures: memory.textures };
+      return { calls: render.drawCalls, triangles: render.triangles, dressingTriangles: 0, programs: memory.programs, geometries: memory.geometries, textures: memory.textures };
     },
     timing: [] as boolean[],
     frames: 0,
@@ -203,7 +203,7 @@ describe('the Renderer on the node path (W1)', () => {
 
   it('reads the draw counts and GPU time the same way the debug overlay reads WebGL’s', () => {
     const { r, node } = nodeRenderer();
-    expect({ ...r.stats }).toEqual({ calls: 7, triangles: 1234, programs: 3, geometries: 4, textures: 5 });
+    expect({ ...r.stats }).toEqual({ calls: 7, triangles: 1234, dressingTriangles: 0, programs: 3, geometries: 4, textures: 5 });
     expect(r.gpuMs).toBe(2.5);
     r.gpuTiming = true;
     r.render();

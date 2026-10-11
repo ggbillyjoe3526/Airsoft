@@ -128,7 +128,7 @@ export function baselineLagWarning(fileName, head, lag, maxLag) {
 }
 
 /** Metrics compared with the baseline; frame times only where the budget file says they are gated. */
-export const RELATIVE_METRICS = ['drawCalls', 'triangles', 'gpuMemoryMB'];
+export const RELATIVE_METRICS = ['drawCalls', 'triangles', 'dressingTriangles', 'gpuMemoryMB'];
 export const FRAME_METRICS = ['p95Ms', 'p99Ms'];
 /** How much worse than its baseline a metric may get (10 %). */
 export const RELATIVE_TOLERANCE = 0.1;

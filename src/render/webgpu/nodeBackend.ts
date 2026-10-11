@@ -64,7 +64,7 @@ export class NodeBackend {
   private reading = false;
   private lostListener: () => void = () => undefined;
   /** Filled by `stats`: one object, nothing allocated per read. */
-  private readonly drawStats: DrawStats = { calls: 0, triangles: 0, programs: 0, geometries: 0, textures: 0 };
+  private readonly drawStats: DrawStats = { calls: 0, triangles: 0, dressingTriangles: 0, programs: 0, geometries: 0, textures: 0 };
   /** The world materials' node twins (W2), installed in the renderer's node library. */
   private readonly world: WorldTwins;
   /** The particles, moved by compute passes (W5). */
@@ -141,6 +141,7 @@ export class NodeBackend {
     const { render, memory } = this.renderer.info;
     out.calls = render.drawCalls;
     out.triangles = render.triangles;
+    out.dressingTriangles = this.dressing.triangles;
     out.programs = memory.programs;
     out.geometries = memory.geometries;
     out.textures = memory.textures;

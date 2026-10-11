@@ -76,7 +76,7 @@ function fakeNode(name: string) {
     samples: 4,
     pictureRenderer: { name: `${name} pictures` },
     get stats() {
-      return { calls: 0, triangles: 0, programs: 0, geometries: 0, textures: 0 };
+      return { calls: 0, triangles: 0, dressingTriangles: 0, programs: 0, geometries: 0, textures: 0 };
     },
     next: null as unknown,
     stacks: [] as NodePostStack[],

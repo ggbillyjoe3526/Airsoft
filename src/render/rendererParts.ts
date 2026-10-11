@@ -77,6 +77,11 @@ export type DrawingRenderer = WebGPURenderer;
 export interface DrawStats {
   calls: number;
   triangles: number;
+  /**
+   * Of `triangles`, those of the GPU dressing (Woodland's grass and tree stand-ins, W5): Three counts an indirect draw
+   * at its cap, so this is every slot, not what the cull kept. The perf gate guards it on a line of its own (W6a).
+   */
+  dressingTriangles: number;
   programs: number;
   geometries: number;
   textures: number;

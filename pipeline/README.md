@@ -171,7 +171,13 @@ with it after the environment (`perf-laptop-webgpu-low.json`, baseline `laptop-w
 The matrix runs each combination once per back end listed in `perf-budget.json` (an entry's `backend`, `webgl` when
 absent; the log name ends `webgpu` for WebGPU, e.g. `woodland extraction medium webgpu`). Budgets are the preset's
 lines, then the map's, then `backends.<id>.presets.<preset>`, then `backends.<id>.maps.<map>.<preset>`; a later line
-wins. The WebGPU line there is a placeholder until it is set from measurements. Only the WebGL run writes `perf-<env>.json`.
+wins; none is set today, as both back ends hold the same lines. Only the WebGL run writes `perf-<env>.json`.
+
+**Triangles** (W6a): `triangles` is the scene's own; the GPU dressing (Woodland's grass and tree stand-ins on Medium
+and up, W5) is recorded apart as `dressingTriangles` (`DrawStats.dressingTriangles`, what Three counted for those two
+draws). Three counts an indirect draw from its instance count, so on WebGPU that is every slot, not what the cull kept
+(on the WebGL2 back end every slot really is drawn); each preset's `dressingTriangles` line is its caps plus 2 %
+(pinned by `render/webgpu/compute/gpuDressing.test.ts`). Both are in the relative check.
 
 **The WebGPU comparison** (WebGPU overhaul W2 to W5; `webgpu-compare.mjs`, rules in `webgpuCompare.mjs`): draws fixed
 camera views of every map, by day and by night where it has night, on Medium and High, with the WebGL path and with the

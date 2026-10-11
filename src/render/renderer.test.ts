@@ -309,7 +309,7 @@ function stubNode(calls: string[], targetName: (target: unknown) => string) {
     samples: 4,
     clustered: false,
     webglContext: null,
-    stats: { calls: 0, triangles: 0, programs: 0, geometries: 0, textures: 0 },
+    stats: { calls: 0, triangles: 0, dressingTriangles: 0, programs: 0, geometries: 0, textures: 0 },
     next: null as unknown,
     onLost: (listener: () => void) => void (lostListener = listener),
     setTiming: () => undefined,

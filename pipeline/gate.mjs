@@ -239,8 +239,8 @@ else if (!perfRequired) {
         const warning = baselineLagWarning(baselineName, baseline.head, baselineLag(baseline.head, (h) => git('rev-list', '--count', `${h}..HEAD`)), budgets.baselineMaxLag ?? 20);
         if (warning) warnings.push(warning);
       }
-      const { drawCalls, drawCallsMax, triangles, gpuMemoryMB, heapGrowthMB, p95Ms, p99Ms } = result.metrics;
-      summary = { ...summary, pass: r.ok && over.length === 0 && worse.length === 0, file: relative(ROOT, runFile), metrics: { drawCalls, drawCallsMax, triangles, gpuMemoryMB, heapGrowthMB, p95Ms, p99Ms }, ...(over.length ? { overBudget: over } : {}), ...(worse.length ? { worse } : {}), ...(baselineNote ? { reason: baselineNote } : {}), ...(r.ok ? {} : { evidence: tail(r.output, 10) }) };
+      const { drawCalls, drawCallsMax, triangles, dressingTriangles, gpuMemoryMB, heapGrowthMB, p95Ms, p99Ms } = result.metrics;
+      summary = { ...summary, pass: r.ok && over.length === 0 && worse.length === 0, file: relative(ROOT, runFile), metrics: { drawCalls, drawCallsMax, triangles, dressingTriangles, gpuMemoryMB, heapGrowthMB, p95Ms, p99Ms }, ...(over.length ? { overBudget: over } : {}), ...(worse.length ? { worse } : {}), ...(baselineNote ? { reason: baselineNote } : {}), ...(r.ok ? {} : { evidence: tail(r.output, 10) }) };
     } catch (e) {
       summary = { ...summary, pass: false, reason: `no readable perf run (${e.message})`, evidence: tail(r.output) };
     }
