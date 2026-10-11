@@ -25,29 +25,6 @@ acceptance:
 status: open
 attempts: 0
 
-## M87 · Bots stop clearing empty corners (playtest notes 15, 19)
-tier: core
-perf: required
-touches: src/ai/botBrain.ts, src/ai/botMovement.ts, src/ai/angles.ts, src/ai/perception.ts, src/config/bots.ts, src/ai/bot.ts, src/ai/botController.ts, src/ai/balance/
-contract: none
-acceptance:
-  1. Bots on both teams skip spots they have seen to be empty recently or that a teammate cleared; a test shows fewer visits to dead ends than today.
-  2. Built after the paused audit task M71 (which changes how bots hunt); the balance guards on every map and level stay in their bands.
-status: open
-attempts: 0
-
-## M88 · Woodland: hidden starts, a smaller height edge, bigger teams (playtest note 13)
-tier: core
-perf: required
-touches: src/map/woodland.ts, src/map/terrain.ts, src/map/maps.ts, src/newGamePicks.ts, src/config/teams.ts, src/config/matchRules.ts, src/config/dressing.ts, src/content/mapRules.ts, src/ui/menus/matchPanel.ts, src/ui/menus/playModel.ts, src/ui/menus/playView.ts, src/ai/balance/, pipeline/baseline/
-contract: none
-acceptance:
-  1. Neither team can see the other from its start: cover (a building, thick trees or a rise) hides each spawn.
-  2. The blue end's height edge at the start is reduced; Elimination and Attack / Defend stay within 35–65 % per end on Normal.
-  3. Owner's ruling (2026-10-06): Woodland takes the team sizes of note 13: 5v5 by default, 6v6 allowed, and only 5v5 and 6v6 offered there. Low holds its frame budget at 6v6.
-status: open
-attempts: 0
-
 ## M91 · Softer torch beams that cast shadows (playtest note 26)
 tier: core
 perf: required
