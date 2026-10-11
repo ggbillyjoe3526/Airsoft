@@ -7,12 +7,15 @@
  *
  *   node pipeline/webgpu-compare.mjs [--out <dir>] [--only depot,woodland] [--quality medium] [--views w2|w3|w4|w5|all]
  *                                    [--backend webgl|webgpu|all] [--noise] [--full] [--chromium /path]
- *                                    [--port 4186] [--post-views ground,sun,first-person,retro,glow]
+ *                                    [--port 4186] [--post-views ground,sun,first-person,retro,glow] [--reference <commit>]
  *
  * It builds the e2e bundle (pipeline/build-cached.mjs, the build with `window.airsoft` and `?forceWebGL`) and serves it
  * on port 4186 (or `--port`). Since W6a deleted the WebGL path, the WebGL pages are drawn by the e2e build of
  * webgpuCompare.mjs WEBGL_REFERENCE (the last commit that had it), made once in a git worktree in the system's temporary
- * folder and served on the next port. Each map, light and preset is one page per renderer: the picks saved as settings, a match started, the
+ * folder and served on the next port. `--reference <commit>` draws that commit's build instead (W6b): a later node-renderer
+ * commit, so a change that should draw nothing new is checked against the commit before it, picture for picture, where
+ * WEBGL_REFERENCE's content has since moved on (Woodland's layout since M88, the built-in replicas since RM4); its page
+ * then leaves the GPU grass and stand-ins out too. Each map, light and preset is one page per renderer: the picks saved as settings, a match started, the
  * simulation held still (Dev game speed 0) and the game's own frame loop stopped once the node renderer has compiled
  * what it draws. W2's views (`--views w2`) stand the camera where config/menuArt.ts STILL_CAMERA says (as the menus'
  * stills), hide the figures with their contact shadows and torch beams and draw one frame without the held replica.
@@ -114,9 +117,12 @@ for (const port of [PORT, PORT + 1]) {
  * The WebGL reference: WEBGL_REFERENCE's e2e build, in a worktree of its own sharing this checkout's packages (outside
  * the checkout, so no test run or type check here sees its sources).
  */
-const REFERENCE = join(tmpdir(), `airsoft-webgl-reference-${WEBGL_REFERENCE}`);
+/** `--reference <commit>`: a node-renderer commit drawn in WEBGL_REFERENCE's place (its pages without the GPU dressing too). */
+const referenceCommit = value('--reference', WEBGL_REFERENCE);
+const nodeReference = referenceCommit !== WEBGL_REFERENCE;
+const REFERENCE = join(tmpdir(), `airsoft-webgl-reference-${referenceCommit}`);
 if (!existsSync(join(REFERENCE, 'package.json'))) {
-  execFileSync('git', ['worktree', 'add', '--detach', REFERENCE, WEBGL_REFERENCE], { cwd: ROOT, stdio: 'inherit' });
+  execFileSync('git', ['worktree', 'add', '--detach', REFERENCE, referenceCommit], { cwd: ROOT, stdio: 'inherit' });
   symlinkSync(join(ROOT, 'node_modules'), join(REFERENCE, 'node_modules'));
 }
 execFileSync(process.execPath, [join(REFERENCE, 'pipeline', 'build-cached.mjs'), '--mode', 'e2e'], { cwd: REFERENCE, stdio: 'inherit' });
@@ -212,7 +218,7 @@ async function draw(scene, views, quality, renderer, withPost, dressing = false)
   const picks = { version: 1, map: scene.map, mode: 'elimination', [`lighting.${scene.map}`]: scene.light, 'dev.devContent': 'on', 'dev.enabled': true, ruleset: 'skirmish', renderer: node ? 'webgpu' : 'webgl' };
   await page.addInitScript((saved) => localStorage.setItem('airsoft.settings', JSON.stringify(saved)), picks);
   // W5: the node renderer's compute dressing is switched off by the page (NO_DRESSING) but on W5's own views.
-  await page.goto(`${node ? base : referenceBase}?nolock&seed=1&quality=${quality}${renderer === 'webgl' ? '&forceWebGL' : ''}${node && !dressing ? `&${NO_DRESSING}` : ''}`);
+  await page.goto(`${node ? base : referenceBase}?nolock&seed=1&quality=${quality}${renderer === 'webgl' ? '&forceWebGL' : ''}${(node || nodeReference) && !dressing ? `&${NO_DRESSING}` : ''}`);
   await page.waitForSelector('.menu-title-start', { timeout: 120_000 });
   const backend = await page.evaluate(() => globalThis.airsoft.renderer.backend);
   if (backend !== (node ? renderer : 'webgl')) throw new Error(`webgpu-compare: asked for ${renderer}, drawn with ${backend}`);
