@@ -6,8 +6,8 @@
  *
  *   node pipeline/perf-run.mjs [--env container|laptop|desktop|ci] [--preset low|medium|high|ultra|all] [--cpu N]
  *                              [--ticks 3600] [--warmup-ticks 120] [--max-seconds 300] [--baseline] [--no-build]
- *                              [--chromium /path] [--channel chrome|msedge] [--headless] [--map depot|woodland|neon]
- *                              [--mode elimination|extraction] [--viewport 1920x1080] [--port 4181]
+ *                              [--chromium /path] [--channel chrome|msedge] [--headless] [--map <map>] [--mode <mode>]
+ *                              [--viewport 1920x1080] [--port 4181]
  *                              [--renderer auto|webgl|webgpu] [--force-webgl]
  *
  * The e2e bundle is reused when the source hasn't changed since it was built (pipeline/build-cached.mjs).
@@ -22,13 +22,14 @@
  * hardware rendering (the owner's laptop); in a container they are noise and the gate ignores them (perf-budget.json
  * frameTimeGatedEnvs). Draw calls, triangles, memory and heap are real everywhere.
  *
- * `--map woodland` (M33i) plays Woodland instead (dev content: Dev settings > Dev content on, then the map) with the same
- * script, and names its files perf-<env>-woodland-<preset>.json (baseline <env>-woodland[-<preset>].json). `--map neon`
- * (M48) plays Neon Heights the same way.
- *
- * `--mode extraction` (M48) plays an Extraction run instead of Elimination (dev content too): a trio against the map's
- * home team, the cases and exits drawn, with the same script; its files carry `-extraction` after the map's name. On
- * Woodland it is the heaviest scene the game has (ten characters at night, plan section 7).
+ * `--map <map>` plays any map the game has, by its id in map/maps.ts or the short name perf-budget.json's `mapIds` gives
+ * it (`neon` for neonHeights), with the same script and Dev content on (the dev maps need it); its files are named by
+ * the short name: perf-<env>-woodland-<preset>.json (baseline <env>-woodland[-<preset>].json). `--mode <mode>` plays any
+ * of the game's modes (config/modes.ts MATCH_MODES), saved as the player's picks before the page loads (CT2: the maps
+ * and modes are the game's own lists, so a new one needs no change here); a map or mode the game doesn't offer stops
+ * the run. `--mode extraction` (M48) plays an Extraction run: a trio against the map's home team, the cases and exits
+ * drawn, with its own opening; its files carry `-extraction` after the map's name. On Woodland it is the heaviest scene
+ * the game has (ten characters at night, plan section 7).
  *
  * The gate (M76, audit CORE-03) runs one map, mode and preset at a time from perf-budget.json's `matrix` and reads
  * perf-<env><tag>-<preset>.json (pipeline/perfMatrix.mjs names the files); perf-<env>.json stays Depot Elimination's
@@ -85,10 +86,14 @@ const [viewWidth, viewHeight] = options.viewport.split('x').map(Number);
 if (!(viewWidth > 0 && viewHeight > 0)) throw new Error('--viewport must be WIDTHxHEIGHT, e.g. 3840x2160');
 /** The preview server's port: --port for a second run beside another worktree's (the default 4181 is refused when busy). */
 const PORT = Number(value('--port', '4181'));
-const MAPS = { depot: /Depot/i, woodland: /Woodland/i, neon: /Neon Heights/i };
-const MODES = ['elimination', 'extraction'];
+// The game's modes (config/modes.ts has only type imports, so Node reads it as it is); its maps are checked in the page.
+const { MATCH_MODES } = await import(pathToFileURL(join(ROOT, 'src', 'config', 'modes.ts')).href);
+const MODES = MATCH_MODES.map((m) => m.id);
 if (!MODES.includes(options.mode)) throw new Error(`--mode must be one of ${MODES.join(', ')}`);
-if (!(options.map in MAPS)) throw new Error(`--map must be one of ${Object.keys(MAPS).join(', ')}`);
+// A map by its short name (the files' and the matrix's) or its id in the game: options.map is the short name.
+const mapIds = budget.mapIds ?? {};
+options.map = Object.entries(mapIds).find(([, id]) => id === options.map)?.[0] ?? options.map;
+const gameMap = mapIds[options.map] ?? options.map;
 /** Depot's files keep their names (what the gate and the baselines read); another map's carry its name. */
 const mapTag = perfTag(options.map, options.mode);
 options.cpu = Number(value('--cpu', budget.cpuThrottle?.[options.env] ?? 1));
@@ -160,22 +165,24 @@ async function measure(preset) {
   page.on('console', (m) => { if (m.type() === 'error') errors.push(`console: ${m.text()}`); });
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: options.cpu });
-  // A fresh context each preset, so its storage is empty: the Renderer pick is the only setting saved.
-  if (rendererSettings) await page.addInitScript((text) => localStorage.setItem('airsoft.settings', text), JSON.stringify(rendererSettings));
+  // A fresh context each preset, so its storage is empty: the Renderer pick and, off Depot Elimination, the map and mode
+  // with Dev content on (the dev maps and modes need it) are the only settings saved.
+  const picks = options.map !== 'depot' || options.mode !== 'elimination' ? { version: 1, map: gameMap, mode: options.mode, 'dev.enabled': true, 'dev.devContent': 'on' } : null;
+  const saved = rendererSettings || picks ? { ...(rendererSettings ?? {}), ...(picks ?? {}), version: 1 } : null;
+  if (saved) await page.addInitScript((text) => localStorage.setItem('airsoft.settings', text), JSON.stringify(saved));
   await page.goto(urlFor(preset));
   await page.waitForSelector('.menu-title-start', { timeout: 60_000 });
   // The title's START opens the Match screen (G3, M100): the map and the mode are cards on it, Settings is on the top bar.
   await page.locator('.menu-title-start').click();
   const setup = page.locator('.menu-setup');
-  if (options.map !== 'depot' || options.mode !== 'elimination') {
-    // Dev content (Woodland, Neon Heights and Extraction are dev-tagged), then the map and the mode.
-    await page.locator('.menu-topbar').getByRole('button', { name: 'Settings' }).click();
-    const settings = page.locator('.menu-settings');
-    await settings.getByRole('checkbox', { name: 'Dev settings' }).check();
-    await settings.getByRole('group', { name: 'Dev content' }).getByRole('button', { name: 'On' }).click();
-    await page.locator('.menu-topbar').getByRole('button', { name: 'Match' }).click();
-    await setup.getByRole('group', { name: 'Map', exact: true }).getByRole('button', { name: MAPS[options.map] }).first().click();
-    if (options.mode === 'extraction') await setup.getByRole('group', { name: 'Mode', exact: true }).getByRole('button', { name: /Extraction/i }).click();
+  // The saved picks are what the Match screen starts: a dev map's data arrives a moment after the title shows. A map or
+  // mode the game doesn't have (or doesn't offer on that map) never becomes the pick.
+  const offered = await page
+    .waitForFunction(({ map, mode }) => { const p = globalThis.airsoft?.playedPicks?.(); return p?.map === map && p?.mode === mode; }, { map: gameMap, mode: options.mode }, { timeout: 60_000 })
+    .then(() => true, () => false);
+  if (!offered) {
+    await page.close();
+    throw new Error(`the game does not offer map "${gameMap}" in ${options.mode} (map/maps.ts MAPS, map/playableMode.ts)`);
   }
   await setup.getByRole('button', { name: 'Start match', exact: true }).click();
   await page.waitForFunction((t) => globalThis.airsoft?.state && globalThis.airsoft.state.tick >= t, options.warmupTicks, { timeout: 120_000 });

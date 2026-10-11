@@ -1,4 +1,4 @@
-import { AUDIO, type LoopId, type ReverbSpec, VOLUME, type VolumeChannel } from '../config/audio';
+import { AUDIO, type LoopId, type ReverbSpec, VOLUME, type BusChannel, type VolumeChannel } from '../config/audio';
 import { cues, SHOT_PROFILES, type SoundCue } from '../config/sounds';
 import { renderAmbienceBed } from './ambience';
 import { volumeGain, type Volumes } from './audioMix';
@@ -72,7 +72,12 @@ export class AudioEngine {
   private ctx: AudioContext | null = null;
   /** Making a context failed (or the engine is disposed): no retry on every Play. */
   private unavailable = false;
-  private readonly buses = new Map<VolumeChannel, GainNode>();
+  private readonly buses = new Map<BusChannel, GainNode>();
+  /**
+   * The matches' ambience levels (M86), held at the Ambience slider: the ambience plays through its match's world (its
+   * muffling and echo, so under the Effects slider too) rather than a bus of its own.
+   */
+  private readonly ambienceLevels = new Set<GainNode>();
   private readonly buffers = new Map<SoundCue, AudioBuffer[]>();
   private readonly muffled = new Map<SoundCue, AudioBuffer[]>();
   /** The echoes made so far: the yard's (AUDIO.reverb, the title screen's last step) and each played field's own (M69). */
@@ -152,8 +157,26 @@ export class AudioEngine {
   }
 
   /** The bus for `channel` (sounds go into effects or interface; both feed master). Null without a context. */
-  bus(channel: VolumeChannel): GainNode | null {
+  bus(channel: BusChannel): GainNode | null {
     return this.context() ? this.buses.get(channel)! : null;
+  }
+
+  /**
+   * A gain at the Ambience slider's level (M86) for a match's ambience to play through, eased with the slider from
+   * then on (setVolume) until `dropAmbienceLevel`. Null without a context.
+   */
+  ambienceLevel(): GainNode | null {
+    const ctx = this.context();
+    if (!ctx) return null;
+    const g = ctx.createGain();
+    g.gain.value = busGain('ambience', this.volumes.ambience);
+    this.ambienceLevels.add(g);
+    return g;
+  }
+
+  /** The match that asked for `g` (ambienceLevel) is over. */
+  dropAmbienceLevel(g: GainNode): void {
+    this.ambienceLevels.delete(g);
   }
 
   /**
@@ -304,8 +327,10 @@ export class AudioEngine {
   /** A volume slider moved (Settings → Audio): eases the bus to its new level. */
   setVolume(channel: VolumeChannel, position: number): void {
     this.volumes[channel] = position;
-    const bus = this.buses.get(channel);
-    if (this.ctx && bus) bus.gain.setTargetAtTime(busGain(channel, position), this.ctx.currentTime, VOLUME.smoothing);
+    if (!this.ctx) return;
+    const gain = busGain(channel, position);
+    if (channel === 'ambience') for (const g of this.ambienceLevels) g.gain.setTargetAtTime(gain, this.ctx.currentTime, VOLUME.smoothing);
+    else this.buses.get(channel)?.gain.setTargetAtTime(gain, this.ctx.currentTime, VOLUME.smoothing);
   }
 
   /**
@@ -315,13 +340,14 @@ export class AudioEngine {
    */
   preview(channel: VolumeChannel): void {
     const ctx = this.context();
-    const bus = this.buses.get(channel);
+    // The ambience has no bus (M86): its cue goes into the world's at the Ambience slider's level, as a match plays it.
+    const bus = this.buses.get(channel === 'ambience' ? 'effects' : channel);
     const variants = this.cueBuffers().get(AUDIO.volumePreview.cue);
     if (!ctx || !bus || !variants?.length) return;
     const src = ctx.createBufferSource();
     src.buffer = variants[0]!;
     const g = ctx.createGain();
-    g.gain.value = AUDIO.volumePreview.gain;
+    g.gain.value = AUDIO.volumePreview.gain * (channel === 'ambience' ? busGain('ambience', this.volumes.ambience) : 1);
     src.connect(g).connect(bus);
     this.previews++;
     let over = false;
@@ -395,6 +421,7 @@ export class AudioEngine {
     if (this.ctx) settle(this.ctx.close());
     this.ctx = null;
     this.buses.clear();
+    this.ambienceLevels.clear();
     this.buffers.clear();
     this.loops.clear();
     this.reverbs.clear();
@@ -427,7 +454,7 @@ export class AudioEngine {
     this.ducker = ctx.createGain();
     this.buses.get('effects')!.connect(this.ducker).connect(limiter).connect(master);
     this.buses.get('interface')!.connect(master);
-    for (const [ch, v] of Object.entries(this.volumes) as [VolumeChannel, number][]) this.buses.get(ch)!.gain.value = busGain(ch, v);
+    for (const [ch, bus] of this.buses) bus.gain.value = busGain(ch, this.volumes[ch]);
   }
 
   /**

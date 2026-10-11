@@ -35,7 +35,7 @@ export interface TutorialStep {
   goal: TutorialGoal;
   /** Opened on screen while this step shows, closed when the next one comes up (M80). */
   shows?: TutorialShowcase;
-  /** Played instead when the replica in hand can't aim down a sight (no optic fitted: iron sights out of the box). */
+  /** Played instead when the replica in hand can't aim down a sight (neither an optic nor iron sights; since M84 every replica has iron sights). */
   withoutOptic?: Omit<TutorialStep, 'withoutOptic'>;
 }
 

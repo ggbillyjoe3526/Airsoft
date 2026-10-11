@@ -54,6 +54,8 @@ What is new since 0.1 Dev 4. Each line points to the section with the full check
 - [ ] **Hit players walk off quickly** on every map, by a sensible route ([Rounds and matches](#rounds-and-matches)).
 - [ ] **Extraction's home team by level** and the 3-second grace when you come in (dev content,
   [Extraction](#extraction-dev-content)).
+- [ ] **Iron sights on every replica.** Right click aims down the sights with no optic fitted, tighter than the hip,
+  and Shift while aiming creeps slower ([Aiming and optics](#aiming-and-optics)).
 
 ### Your five calls, confirmed
 
@@ -127,17 +129,20 @@ The rifle holds 60 BBs and the pistol 18, each with 4 magazines a round. Nothing
 
 The rifle comes with flip-up iron sights; a red dot or a 2× scope is a part you fit in Loadout › Customise.
 
-- [ ] **Play with iron sights.** Small flip-up sights stand on the rails and holding right click does nothing:
-  aiming down sights needs an optic.
+- [ ] **Play with iron sights, and hold right click.** Small flip-up sights stand on the rails; the rifle comes up to
+  your eye, the view narrows a touch (less than the red dot) and the crosshair goes: the front post sits in the rear
+  ring. Do the AEG, the pistol and the Cyber pistol each line up straight, nothing blocking the view? (M84)
 - [ ] **Fit the red dot, then play.** It sits on the rifle and the iron sights fold flat under it.
 - [ ] **Hold right click.** The rifle comes up, the view narrows a little, the crosshair gives way to the red dot,
   and you move at a quiet walk (no sprint while aiming). Let go and it all goes back.
-- [ ] **Shoot while aiming.** BBs go where the dot is. Standing still is still what makes you accurate; aiming adds
-  none of its own.
+- [ ] **Shoot while aiming.** BBs go where the dot (or the front post) is. Aiming halves the spread, on top of standing
+  still (M84): at 25 to 35 m it should be clearly tighter, and from the hip up close should still feel fine.
+- [ ] **Hold Shift while aiming.** You creep slower than the aiming walk (1.4 m/s against 2.3). Does it feel steady,
+  not stuck?
 - [ ] **Move the mouse while aiming.** It turns at Settings › Controls › Aiming sensitivity (×0.80 of your mouse
   sensitivity at first, so the world moves across the screen as fast as from the hip).
 - [ ] **Reload, or switch to the pistol, while aiming.** The sight drops for the reload and comes back up if you
-  still hold right click. The pistol has no optic, so it never aims down sights.
+  still hold right click. The pistol has no optic, so it aims down its own iron sights.
 - [ ] **Fit the 2× scope and hold right click.** It comes up a little slower than the red dot; only a round eyepiece
   with a crosshair and a red centre dot shows (find it against a dark wall), twice as close. Turning feels the same
   across the eyepiece as with the red dot. Worth it on long lanes, and is the blind surround a fair cost?
@@ -764,11 +769,16 @@ Headphones help: direction (in front, behind, above) comes through best on them.
   way, quieter than any shot.
 - [ ] **The field.** A very quiet outdoor bed with no audible loop and now and then a small bird; barely there, never
   a hiss. Each field has its own echo. Effects turns it down with the rest.
+- [ ] **More going on round the field (M86).** Depot: now and then a crow far off and a dog a few gardens away, among
+  the birds. Woodland at night: a branch creaking between the owl's hoots. Neon Heights: pigeons by day and a small
+  car's "meep meep" a few streets off. Each is rare, quiet and far away: does any of it make you turn round, or sound
+  like a player?
 - [ ] **Getting hit.** The tick stands out: the world dips for a moment. While you walk off and wait, the field sounds
   muffled and quieter; the whistle stays clear and sits a little above the field.
 - [ ] **Pause mid-burst, then Resume.** No click either way: the sound fades out and back.
-- [ ] **Settings › Audio.** Master, Effects (replicas, steps, impacts) and Interface (hit tick, marker, whistle), each at
-  once and kept. Effects at 0 leaves only the interface cues.
+- [ ] **Settings › Audio.** Master, Effects (replicas, steps, impacts), Ambience (the field's background) and Interface
+  (hit tick, marker, whistle), each at once and kept. Ambience at 0 leaves the field silent but every step and shot
+  as loud as before; Effects at 0 leaves only the interface cues.
 - [ ] **Practice range.** The 50 m and 60 m plates still ring.
 - [ ] **Output devices.** On a 44.1 kHz or 96 kHz device (many USB headsets, HDMI receivers) shots sound as crisp as on
   48 kHz. F3 shows the audio latency (about 10 to 40 ms).

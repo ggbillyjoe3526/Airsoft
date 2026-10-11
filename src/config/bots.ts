@@ -515,7 +515,9 @@ export interface BotSkill {
   readonly aimErrorMovingDeg: number;
   /**
    * Extra aim error while tracking a target that moves across the view: the target's sideways speed
-   * (m/s) times this (s) gives metres off. Moving targets are harder to hit, as with real slow BBs.
+   * (m/s) times this (s) gives metres off. Moving targets are harder to hit, as with real slow BBs. Every level's grew
+   * by 11/9 with M85, when the hit volume took in the drawn shoulders: a strafing player kept the moment it buys
+   * (ai.test.ts, Normal at 4 m).
    */
   readonly aimErrorTracking: number;
   /** Fraction of the target's movement a bot leads by (BBs are slow; bots are imperfect at it). */
@@ -628,7 +630,7 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     aimSettleTime: 1.3,
     aimErrorStartMetres: 1.0,
     aimErrorMovingDeg: 2.0,
-    aimErrorTracking: 0.12,
+    aimErrorTracking: 0.147,
     leadFactor: 0.25,
     burst: [0.15, 0.35],
     burstPause: [0.45, 0.9],
@@ -657,7 +659,7 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     aimSettleTime: 1.0,
     aimErrorStartMetres: 0.75,
     aimErrorMovingDeg: 1.5,
-    aimErrorTracking: 0.09,
+    aimErrorTracking: 0.11,
     leadFactor: 0.5,
     burst: [0.2, 0.45],
     burstPause: [0.3, 0.65],
@@ -685,7 +687,7 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     aimSettleTime: 0.6,
     aimErrorStartMetres: 0.6,
     aimErrorMovingDeg: 1.2,
-    aimErrorTracking: 0.06,
+    aimErrorTracking: 0.073,
     leadFactor: 0.7,
     burst: [0.25, 0.55],
     burstPause: [0.2, 0.5],
@@ -720,7 +722,7 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     aimSettleTime: 0.5,
     aimErrorStartMetres: 0.5,
     aimErrorMovingDeg: 1.0,
-    aimErrorTracking: 0.05,
+    aimErrorTracking: 0.061,
     leadFactor: 0.85,
     burst: [0.15, 0.35],
     burstPause: [0.2, 0.4],

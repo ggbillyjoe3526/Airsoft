@@ -55,7 +55,7 @@ describe('M82: the saved choice survives a reload', () => {
     const s = new MemoryStorage();
     saveSetting('difficulty', 'hard', s);
     saveRarityView('replicas', v('rarity', ['common']), TIERS, s);
-    saveSetting('volume', 0.3, s);
+    saveSetting('sensitivity', 0.3, s);
     expect(loadRarityView('replicas', TIERS, s)).toEqual(v('rarity', ['common']));
     expect(loadSetting('difficulty', (r) => (typeof r === 'string' ? r : undefined), 'x', s)).toBe('hard');
   });

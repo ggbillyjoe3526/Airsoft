@@ -17,12 +17,21 @@ const SLOW_TESTS = ['src/ai/depotMatch*.test.ts', 'src/ai/*Match.pro*.test.ts', 
  */
 const BALANCE_MEASURES = ['src/ai/balance/*.balance.ts'];
 
+/**
+ * The content toolkit's report runners (CT1, src/content/report/): one item's rules, compatibility, spec test and balance
+ * run. Project `content`, which exists only when AIRSOFT_CONTENT is set: `node pipeline/content-check.mjs <item>` sets it
+ * and builds the report. The gate, CI and `vitest run` never run them; the checks themselves run in `fast`.
+ */
+const CONTENT_REPORTS = ['src/content/report/*.report.ts'];
+
 /** The build's environment variables, read without Node's types, which the project doesn't load. */
 const ENV = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
 /** True on a CI runner (the workflow's runner sets CI). */
 const ON_CI = Boolean(ENV.CI);
 /** True when pipeline/balance.mjs runs the balance figures. */
 const MEASURE_BALANCE = Boolean(ENV.AIRSOFT_BALANCE);
+/** True when pipeline/content-check.mjs runs a content report. */
+const CONTENT_REPORT = Boolean(ENV.AIRSOFT_CONTENT);
 
 /**
  * Checks every output chunk against its budget (config/chunkBudget.ts), so the game, three.js and Rapier chunks can't
@@ -199,6 +208,7 @@ export default defineConfig(async () => ({
       { extends: true, test: { name: 'fast', include: ['src/**/*.test.ts', 'pipeline/**/*.test.mjs'], exclude: SLOW_TESTS } },
       { extends: true, test: { name: 'slow', include: SLOW_TESTS } },
       ...(MEASURE_BALANCE ? [{ extends: true, test: { name: 'balance', include: BALANCE_MEASURES } }] : []),
+      ...(CONTENT_REPORT ? [{ extends: true, test: { name: 'content', include: CONTENT_REPORTS } }] : []),
     ],
   },
 }));

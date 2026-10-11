@@ -7,8 +7,11 @@ import { band, basis, ik, limbGeo, type ProfileStop, V } from './figureShapes';
 /**
  * Robot figures (G7, the concept's robots; Settings › Look › Robots): a shell chassis, light or dark by team, on dark
  * joints, with team panels on the limbs and a sensor head with a visor and a light line. Airsoft first, robot second:
- * a robot wears the same plate carrier in the team colour as the humans, so a team reads the same either way. Each
- * function adds one part's pieces to a builder in that part's own space, as figureHuman.ts does.
+ * a robot wears the same plate carrier in the team colour as the humans, so a team reads the same either way. Robots
+ * are a look the simulation never sees, so they share the human hit volume (sim/hitbox.ts) and are drawn inside its
+ * envelope, as the humans are (M85, render/figureHitVolume.test.ts): a waist of broad rings, ankle-high feet and the
+ * shoulder caps on the chest's corners, so a BB only knocks out what it is seen to touch. Each function adds one part's
+ * pieces to a builder in that part's own space, as figureHuman.ts does.
  */
 
 const F = FIGURE;
@@ -21,8 +24,11 @@ const GEAR: PartLook = { finish: FIN.fabric, edge: true };
 const TEAM: PartLook = { finish: FIN.robot };
 const CHROME: PartLook = { finish: FIN.chrome };
 
-/** A shell-plated limb from `a` to `b` (radius `ra` to `rb`) over a dark joint rod, a team panel down its front. */
-function robotLimb(b: PartBuilder, pal: FigurePalette, a: THREE.Vector3, to: THREE.Vector3, ra: number, rb: number, pole: THREE.Vector3, panel = true): THREE.Matrix4 {
+/**
+ * A shell-plated limb from `a` to `b` (radius `ra` to `rb`) over a dark joint rod, a team panel down its front; the shell
+ * runs from 12% of the way to `to1` of it (a shin's runs down into the foot).
+ */
+function robotLimb(b: PartBuilder, pal: FigurePalette, a: THREE.Vector3, to: THREE.Vector3, ra: number, rb: number, pole: THREE.Vector3, panel = true, to1 = 0.92): THREE.Matrix4 {
   const dir = to.clone().sub(a).normalize();
   const len = a.distanceTo(to);
   b.rod(R.joint, a, to, Math.min(ra, rb) * 0.55, JOINT, 6);
@@ -30,7 +36,8 @@ function robotLimb(b: PartBuilder, pal: FigurePalette, a: THREE.Vector3, to: THR
   const prof: readonly ProfileStop[] = [[0, ra * 0.92, ra * 0.88], [0.25, ra, ra * 0.95], [1, rb, rb * 0.94]];
   const from = a.clone().addScaledVector(dir, len * 0.12);
   const place = basis(dir, pole).setPosition(from);
-  b.add(limbGeo(len * 0.8, prof, sides, b.overhaul ? 4 : 1).applyMatrix4(place), pal.shell, SHELL, shadowLimb(len * 0.8, prof)?.applyMatrix4(place) ?? null);
+  const shell = len * (to1 - 0.12);
+  b.add(limbGeo(shell, prof, sides, b.overhaul ? 4 : 1).applyMatrix4(place), pal.shell, SHELL, shadowLimb(shell, prof)?.applyMatrix4(place) ?? null);
   const frame = basis(dir, pole).setPosition(a);
   if (panel) b.box(pal.main, ra * 0.9, len * 0.32, 0.012, 0, len * 0.45, ra * 0.97, TEAM, frame);
   return frame;
@@ -53,7 +60,7 @@ function piston(b: PartBuilder, a: THREE.Vector3, to: THREE.Vector3): void {
   b.rod(R.chrome, mid, to, 0.0065, CHROME, 6);
 }
 
-/** One leg in its own space, as humanLeg: shell thigh and shin, a knee hinge, a team knee plate, a plated foot. */
+/** One leg in its own space, as humanLeg: shell thigh and shin, a knee hinge, a team knee plate, a plated foot as high as a boot. */
 export function robotLeg(b: PartBuilder, pal: FigurePalette, side: number): void {
   const hip = V(0, 0, 0);
   const knee = V(0, -F.knee, -0.015);
@@ -61,14 +68,14 @@ export function robotLeg(b: PartBuilder, pal: FigurePalette, side: number): void
   const ankle = foot.clone().add(V(0, F.ankle, 0));
   const pole = V(side * 0.15, 0, -1);
   robotLimb(b, pal, hip, knee, 0.078, 0.06, pole);
-  robotLimb(b, pal, knee, ankle, 0.058, 0.044, pole, false);
+  robotLimb(b, pal, knee, ankle, 0.058, 0.048, pole, false, 1);
   hinge(b, knee, hip, ankle, 0.05, 0.1);
   b.sphere(R.joint, hip, 0.06, JOINT);
   // The knee plate in the team colour, and a calf piston.
   b.block(pal.main, 0.085, 0.11, 0.03, 0, -F.knee - 0.03, -0.075, TEAM);
   piston(b, knee.clone().add(V(0, -0.06, 0.05)), ankle.clone().add(V(0, 0.04, 0.04)));
-  // The foot: a sole plate, a hinged toe, a dark tread.
-  b.block(pal.shell, 0.115, 0.06, 0.2, 0, foot.y - 0.055, -0.01, SHELL);
+  // The foot: an ankle-high housing (the boot's hit volume reaches the shin), a hinged toe, a dark tread.
+  b.block(pal.shell, 0.115, 0.13, 0.2, 0, foot.y - 0.02, -0.01, SHELL);
   b.block(pal.shell, 0.105, 0.04, 0.09, 0, foot.y - 0.07, -0.16, SHELL, undefined, new THREE.Euler(0.08, 0, 0));
   b.box(R.joint, 0.125, 0.022, 0.31, 0, foot.y - 0.088, -0.05, JOINT);
   if (b.overhaul) hinge(b, ankle, knee, ankle.clone().add(V(0, 0, -0.2)), 0.034, 0.075);
@@ -80,10 +87,10 @@ export function robotLeg(b: PartBuilder, pal: FigurePalette, side: number): void
  */
 export function robotBody(b: PartBuilder, look: FigureLook, pal: FigurePalette, hy: number): void {
   const at = (y: number): THREE.Vector3 => V(0, y + hy, 0);
-  b.block(pal.shell, 0.3, 0.14, 0.2, 0, 0.95 + hy, 0, SHELL);
+  b.block(pal.shell, 0.32, 0.17, 0.2, 0, 0.965 + hy, 0, SHELL);
   b.box(pal.main, 0.14, 0.08, 0.01, 0, 0.95 + hy, -0.103, TEAM);
   b.rod(R.joint, at(0.98), at(1.25), 0.06, JOINT, b.overhaul ? 12 : 6);
-  for (const [y, r] of [[1.06, 0.105], [1.115, 0.1]] as const) b.cylinder(R.joint, r, 0.035, new THREE.Matrix4(), 0, y + hy, 0, JOINT, undefined, false);
+  for (const [y, r] of [[1.075, 0.15], [1.14, 0.16]] as const) b.cylinder(R.joint, r, 0.07, new THREE.Matrix4(), 0, y + hy, 0, JOINT, undefined, false);
   b.block(pal.shell, 0.38, 0.27, 0.24, 0, 1.36 + hy, 0, SHELL);
   b.block(pal.shell, 0.22, 0.05, 0.16, 0, 1.5 + hy, 0, SHELL);
   // The carrier: front and back plates and a cummerbund in the team colour, over the chest's lower half.
@@ -94,7 +101,7 @@ export function robotBody(b: PartBuilder, look: FigureLook, pal: FigurePalette, 
     const cast = band(0.26, 0.15, 0.022, 0.2, 2).rotateY((side * Math.PI) / 2).scale(1, 1, 0.68);
     b.addIn(new THREE.Matrix4(), cummerbund, 0, 1.26 + hy, 0, pal.main, TEAM, undefined, undefined, cast);
     b.box(G.gearDark, 0.06, 0.26, 0.27, side * 0.11, 1.38 + hy, 0, GEAR); // the straps over the shoulders
-    b.block(pal.shell, 0.12, 0.05, 0.14, side * 0.235, 1.5 + hy, 0, SHELL, undefined, new THREE.Euler(0, 0, -side * 0.35)); // shoulder caps
+    b.block(pal.shell, 0.1, 0.05, 0.13, side * 0.165, 1.475 + hy, 0, SHELL, undefined, new THREE.Euler(0, 0, -side * 0.35)); // shoulder caps
     b.box(pal.main, 0.11, 0.06, 0.012, side * 0.12, 1.44 + hy, -0.122, TEAM); // the chest's team panels
   }
   for (let i = 0; i < 3; i++) {

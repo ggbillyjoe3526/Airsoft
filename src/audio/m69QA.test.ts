@@ -110,9 +110,10 @@ describe('M69 QA acceptance 1 (AUD-09): the trim keeps what is audible, and the 
   it("keeps every cue's samples up to the fade exactly as before M69, on the title stream and on the map cues' own seeds", { timeout: 20_000 }, () => {
     const bank = renderSounds(RATE);
     const got: Record<string, string> = {};
-    for (const cue of Object.keys(SOUNDS) as SoundCue[]) got[cue] = beforeFade(isMapCue(cue) ? renderMapCue(cue, RATE) : bank.get(cue)!);
+    // Every cue there was at M69; cues added since (M86's calls) have tests of their own (ambienceM86.test.ts).
+    for (const cue of Object.keys(KEPT_AS_BEFORE) as SoundCue[]) got[cue] = beforeFade(isMapCue(cue) ? renderMapCue(cue, RATE) : bank.get(cue)!);
     expect(got).toEqual(KEPT_AS_BEFORE);
-    expect(Object.keys(got)).toHaveLength(TITLE_CUES.length + Object.keys(SOUNDS).filter((c) => isMapCue(c as SoundCue)).length);
+    for (const cue of Object.keys(KEPT_AS_BEFORE)) expect(Object.keys(SOUNDS), cue).toContain(cue);
   });
 
   it('does not cut a long quiet tail that is still above -60 dB of the cue: a slow decay runs its time out', () => {
@@ -206,7 +207,8 @@ describe('M69 QA acceptance 1 (AUD-09): the trim keeps what is audible, and the 
 describe('M69 QA acceptance 1 (AUD-08): the variant count is per recipe, and nothing else about the bank moved', () => {
   it('sets one variant for count.beep alone, and keeps SoundRecipe.variants out of every other recipe', () => {
     const own = (Object.keys(SOUNDS) as SoundCue[]).filter((c) => SOUNDS[c].variants !== undefined);
-    expect(own).toEqual(['count.beep']);
+    // M86's map calls keep three each for the map sounds' budget (woodlandSound.test.ts); every other cue as at M69.
+    expect(own).toEqual(['count.beep', 'ambience.creak', 'ambience.pigeon', 'ambience.horn']);
     expect(SOUNDS['count.beep'].variants).toBe(1);
   });
 

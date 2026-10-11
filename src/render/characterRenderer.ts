@@ -5,6 +5,7 @@ import { BAKED_LIGHT } from '../config/bake';
 import type { HitConfig } from '../config/hits';
 import type { DetailLevel } from '../config/render';
 import type { Character } from '../sim/character';
+import { legSwing } from '../sim/hitbox';
 import { length3, lerpAngle } from '../sim/vec';
 import { BARE_KIT, buildFigure, createCalloutTexture, disposeFigure, type Figure, type FigureKit, figureLeanRoll, setReceiveShadows } from './characterModels';
 import { type FigureModel, fadeModelMaterials } from './externalModels';
@@ -17,10 +18,6 @@ interface FigureState {
   figure: Figure;
   /** Per-figure copy of the shared material, so one figure can fade out on its own. */
   material: THREE.MeshStandardMaterial;
-  /** Walk-cycle phase (radians), advanced by distance walked. */
-  phase: number;
-  lastX: number;
-  lastZ: number;
   /** Seconds since this figure was last hit (flinch), and the BB's flight direction then (world x/z). */
   flinchAge: number;
   flinchX: number;
@@ -133,7 +130,7 @@ export class CharacterRenderer {
       const rifleTorch = torchFitted(c, false);
       const pistolTorch = torchFitted(c, true);
       const { figure, material } = this.build(i, { rifleSilencer: silencer, rifleTorch, pistolTorch });
-      this.figures.push({ figure, material, phase: 0, lastX: c.position.x, lastZ: c.position.z, flinchAge: FIGURE.flinch.time, flinchX: 0, flinchZ: 0, silencer, rifleTorch, pistolTorch, lift: 0, bounce: new THREE.Color(0, 0, 0) });
+      this.figures.push({ figure, material, flinchAge: FIGURE.flinch.time, flinchX: 0, flinchZ: 0, silencer, rifleTorch, pistolTorch, lift: 0, bounce: new THREE.Color(0, 0, 0) });
     }
   }
 
@@ -145,7 +142,7 @@ export class CharacterRenderer {
 
   /**
    * Player detail (QualitySettings.figureDetail, FA8): every figure is built again at the new level (a few milliseconds
-   * for six), keeping its walk phase and flinch. Nothing happens if the level is unchanged.
+   * for six), keeping its flinch. Nothing happens if the level is unchanged.
    */
   setDetail(level: DetailLevel): void {
     if (level === this.detail) return;
@@ -280,13 +277,8 @@ export class CharacterRenderer {
       const leaning = c.prevLean + (c.lean - c.prevLean) * alpha;
       f.upper.rotation.set(lean.x, 0, lean.z + figureLeanRoll(leaning, this.hits));
 
-      // Walk cycle from distance actually covered (teleports into the dead zone don't count).
-      const moved = Math.hypot(x - s.lastX, z - s.lastZ);
-      s.lastX = x;
-      s.lastZ = z;
-      if (moved < FIGURE.maxStride) s.phase += moved * FIGURE.stridesPerMetre * Math.PI * 2;
-      const walking = Math.hypot(c.velocity.x, c.velocity.z) > FIGURE.walkingSpeed;
-      const swing = walking ? Math.sin(s.phase) * FIGURE.legSwing : 0;
+      // The simulation's walk cycle (M85): the legs swing exactly as their hit volumes do.
+      const swing = legSwing(c.prevWalkCycle + (c.walkCycle - c.prevWalkCycle) * alpha, c, this.hits);
 
       const crouch = c.prevCrouchAmount + (c.crouchAmount - c.prevCrouchAmount) * alpha;
       const hip = FIGURE.hipHeight - crouch * FIGURE.crouchDrop;
