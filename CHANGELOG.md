@@ -85,6 +85,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M84** · Aimed fire is twice as tight as hip fire; holding Shift while aiming creeps slower than the aiming pace
 - **M97** · Hit marker setting, Off by default: the red X when your BB lands shows only when On; the hit tick sound is unchanged
 - **M83** · With Disable Armory on in Dev settings, the Armory is hidden from every menu and the tutorial instead of greyed out
+- **RM4** · Built-in models are back for replicas, parts, players, bots and menu pictures; the Blender models wait behind two Dev switches in Settings
 
 ### Fixed
 - **G11** · The team camo on players reads clearly on Medium and up: crisp dark and light blotches printed per pixel, on WebGL and WebGPU; Low keeps plain clothes

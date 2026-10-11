@@ -8,5 +8,7 @@ Bundled files that are not code. Greybox and procedural art come first, so there
   drawn. `render/externalModels.ts` and `config/assets.ts` load and describe it.
 - `models/replicas/`: replica models by replica id (`cyber.glb`, the Cyber Pistol's; see its `README.md`).
   `render/replicaFiles.ts` and `config/assets.ts` load and describe them.
+- Every model here is locked behind the Dev tab (RM4, owner 2026-10-11): the built-in models are drawn until "Disable
+  all models" (and, for the figure, "Disable figure models") is turned off there. `render/modelFiles.ts` loads them then.
 - Every external asset is recorded in `docs/ASSETS.md`; the how-to, sources and size budget are in `docs/CC0_ASSETS.md`.
   Only CC0 or clearly permissive licences.
