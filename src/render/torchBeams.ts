@@ -257,8 +257,12 @@ export class TorchBeams {
       spot.shadow.bias = S.bias;
       spot.shadow.normalBias = S.normalBias;
       if (quality.shadowRadius !== undefined) spot.shadow.radius = quality.shadowRadius;
-      // Drawn only while the torch is on (update).
+      // Drawn only while the torch is on (update), and once on its first frame, torch on or off: the node renderer
+      // makes the shadow map's depth texture when it is first drawn into, and makes it again then if a material had to
+      // make it first to sample it, freeing the one other draws still hold (WebGPU's "destroyed texture used in a
+      // submit": a frame or more lost). Drawn first, it is made once (the sun's map is drawn every frame).
       spot.shadow.autoUpdate = false;
+      spot.shadow.needsUpdate = true;
     }
     spot.name = 'torch-spot';
     this.object.add(spot, spot.target);
