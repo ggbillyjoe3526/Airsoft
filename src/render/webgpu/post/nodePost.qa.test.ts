@@ -2,17 +2,17 @@ import * as THREE from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { POST } from '../../../config/post';
 import { QUALITY, type QualityPreset } from '../../../config/render';
-import { PostStack } from '../../post/postStack';
-import { RetroFilter } from '../../retroFilterWebGL';
 import { CompileGate, type NodeRenderer } from './nodeKit';
 import { DirectOutput, directTarget } from './nodeOutput';
 import { NodePostStack } from './nodePostStack';
 import { NodeRetroFilter } from './nodeRetro';
+import { WEBGL_REFERENCE as WEBGL } from './webglReference';
 
 /**
  * W4 QA: what nodePost.test.ts leaves open. Each node pass against its WebGL pass on every preset (the uniforms they are
  * fed, and the config numbers they read), the compile gate's ordering, the targets freed on a resize, the passes'
- * allocation per frame, the late haze, and the node path's imports.
+ * allocation per frame, the late haze, and the node path's imports. WebGL's side is what its passes did, recorded before
+ * W6a deleted them (webglReference.ts).
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- the passes' fields are private; the tests read them. */
@@ -74,65 +74,55 @@ describe('each node pass is fed what its WebGL pass is, on every preset, frame a
   for (const preset of ['high', 'ultra'] as const) {
     for (const night of [false, true]) {
       it(`${preset} by ${night ? 'night' : 'day'}: the same matrices, jitter, texel and sun on the same camera`, () => {
-        const a = new PostStack(setup(preset), 96, 54);
+        const recorded = WEBGL.uniforms[`${preset} ${night ? 'night' : 'day'}`] as Record<string, number[]>[];
         const b = new NodePostStack(setup(preset), 96, 54, new DirectOutput());
-        a.setLight(SUN, night);
         b.setLight(SUN, night);
         const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial());
         mesh.updateMatrixWorld();
-        if (a.wantsReflective) {
-          a.setReflectiveSurfaces([{ mesh, strength: 0.6 }]);
-          b.setReflectiveSurfaces([{ mesh, strength: 0.6 }]);
-        }
-        const ca = camera();
+        if (b.wantsReflective) b.setReflectiveSurfaces([{ mesh, strength: 0.6 }]);
         const cb = camera();
-        const wa = quietRenderer();
         const wb = quietRenderer();
         const seen = new Set<string>();
-        const same = (what: string, node: unknown, webgl: unknown): void => {
+        let frame = 0;
+        const same = (what: string, node: unknown): void => {
           seen.add(what);
-          expect(numbers(node), `${preset} ${what}`).toEqual(numbers(webgl));
+          // `+ 0` turns -0 into 0: the recording (JSON) keeps no negative zero.
+          expect(numbers(node).map((v) => v + 0), `${preset} ${what}`).toEqual(recorded[frame]![what]);
         };
-        for (let frame = 0; frame < 3; frame++) {
-          nudge(ca, frame);
+        for (; frame < 3; frame++) {
           nudge(cb, frame);
-          a.render(wa.gl, new THREE.Scene(), ca);
           b.draw(wb.gl as NodeRenderer, new THREE.Scene(), cb);
 
           const ao = passOf(b, 'ao');
-          const ga = passOf(a, 'ao');
-          same('ao projection', ao.u.projection.value, ga.gtao.uniforms.cameraProjectionMatrix.value);
-          same('ao inverse projection', ao.u.inverseProjection.value, ga.gtao.uniforms.cameraProjectionMatrixInverse.value);
-          same('ao inverse projection (denoise)', ao.u.inverseProjection.value, ga.denoise.uniforms.cameraProjectionMatrixInverse.value);
-          same('ao resolution', ao.u.resolution.value, ga.gtao.uniforms.resolution.value);
-          same('ao resolution (denoise)', ao.u.resolution.value, ga.denoise.uniforms.resolution.value);
+          same('ao projection', ao.u.projection.value);
+          same('ao inverse projection', ao.u.inverseProjection.value);
+          same('ao inverse projection (denoise)', ao.u.inverseProjection.value);
+          same('ao resolution', ao.u.resolution.value);
+          same('ao resolution (denoise)', ao.u.resolution.value);
 
           const taa = passOf(b, 'taa').u;
-          const gt = passOf(a, 'taa').resolve.uniforms;
-          same('taa inverse view-projection', taa.inverseViewProjection.value, gt.inverseViewProjection.value);
-          same('taa previous view-projection', taa.previousViewProjection.value, gt.previousViewProjection.value);
-          same('taa jitter', taa.jitter.value, gt.jitter.value);
-          same('taa previous jitter', taa.previousJitter.value, gt.previousJitter.value);
-          same('taa texel', taa.texel.value, gt.texel.value);
-          same('taa has history', taa.hasHistory.value, gt.hasHistory.value);
+          same('taa inverse view-projection', taa.inverseViewProjection.value);
+          same('taa previous view-projection', taa.previousViewProjection.value);
+          same('taa jitter', taa.jitter.value);
+          same('taa previous jitter', taa.previousJitter.value);
+          same('taa texel', taa.texel.value);
+          same('taa has history', taa.hasHistory.value);
           expect(taa.hasHistory.value, 'the first frame has no history').toBe(frame === 0 ? 0 : 1);
 
           const shafts = passOf(b, 'lightShafts').u;
-          const gs = passOf(a, 'lightShafts');
-          same('shafts sun', shafts.sun.value, gs.maskMaterial.uniforms.sun.value);
-          same('shafts aspect', shafts.aspect.value, gs.maskMaterial.uniforms.aspect.value);
-          same('shafts near', shafts.near.value, gs.maskMaterial.uniforms.near.value);
-          same('shafts far', shafts.far.value, gs.maskMaterial.uniforms.far.value);
-          same('shafts strength', shafts.strength.value, gs.addMaterial.uniforms.strength.value);
+          same('shafts sun', shafts.sun.value);
+          same('shafts aspect', shafts.aspect.value);
+          same('shafts near', shafts.near.value);
+          same('shafts far', shafts.far.value);
+          same('shafts strength', shafts.strength.value);
           // The sun is in view, so the shafts really drew (a pass that skipped would match by leaving its uniforms be).
           expect(shafts.strength.value, 'shafts drawn').toBeGreaterThan(0);
 
           if (preset === 'ultra') {
-            same('lens seed', passOf(b, 'lens').seed.value, passOf(a, 'lens').material.uniforms.seed.value);
+            same('lens seed', passOf(b, 'lens').seed.value);
             const refl = passOf(b, 'reflections').u;
-            const gr = passOf(a, 'reflections').trace.uniforms;
-            same('reflections projection', refl.projection.value, gr.projection.value);
-            same('reflections inverse projection', refl.inverseProjection.value, gr.inverseProjection.value);
+            same('reflections projection', refl.projection.value);
+            same('reflections inverse projection', refl.inverseProjection.value);
           }
         }
         // The check ran on every quantity it names (a missing pass would throw above; this pins the list's length).
@@ -140,30 +130,25 @@ describe('each node pass is fed what its WebGL pass is, on every preset, frame a
         // The night's strength is the moon's, the day's the sun's (POST.lightShafts.strength), times the fade.
         const strength = passOf(b, 'lightShafts').u.strength.value;
         expect(strength).toBeLessThanOrEqual(night ? POST.lightShafts.strength.night : POST.lightShafts.strength.day);
-        a.dispose();
         b.dispose();
       });
     }
   }
 
   it('grains the lens at the same seed as WebGL’s every frame, and wraps at the same cycle', () => {
-    const a = new PostStack(setup('ultra'), 64, 36);
     const b = new NodePostStack(setup('ultra'), 64, 36, new DirectOutput());
-    const wa = quietRenderer();
     const wb = quietRenderer();
-    const ca = camera();
     const cb = camera();
     const seeds: number[] = [];
     for (let frame = 0; frame < POST.lens.grainCycle + 3; frame++) {
-      a.render(wa.gl, new THREE.Scene(), ca);
       b.draw(wb.gl as NodeRenderer, new THREE.Scene(), cb);
       const node = passOf(b, 'lens').seed.value as number;
-      expect(node, `frame ${frame}`).toBe(passOf(a, 'lens').material.uniforms.seed.value);
+      // WebGL's seed on every frame recorded (webglReference.ts).
+      expect(node, `frame ${frame}`).toBe((frame % POST.lens.grainCycle) * POST.lens.grainStride);
       seeds.push(node);
     }
     expect(seeds[1]).toBe(POST.lens.grainStride);
     expect(seeds[POST.lens.grainCycle]).toBe(0);
-    a.dispose();
     b.dispose();
   });
 });
@@ -226,11 +211,12 @@ describe('the node passes read the config numbers WebGL’s read (W4 criterion 4
       }
       (stack as unknown as { dispose(): void }).dispose();
     };
-    const webgl = readsOf(() => drive(() => new PostStack(setup('ultra'), 64, 36), (s, c) => s.render(quietRenderer().gl, new THREE.Scene(), c)));
     const node = readsOf(() => drive(() => new NodePostStack(setup('ultra'), 64, 36, new DirectOutput()), (s, c) => s.draw(quietRenderer().gl, new THREE.Scene(), c)));
     for (const text of Object.values(NODE_SOURCES)) for (const path of namedConfig(text)) node.add(path);
     const isNumber = (path: string): boolean => typeof path.split('.').reduce((o: any, k) => o?.[k], POST) === 'number';
-    const taken = [...webgl].filter(isNumber).sort();
+    // What WebGL's stack read, driven the same way (webglReference.ts); still numbers of POST.
+    const taken = [...WEBGL.configReads];
+    expect(taken.filter((p) => !isNumber(p))).toEqual([]);
     // A control: the stacks read the numbers the passes are built on, so the comparison below has something to compare.
     expect(taken).toEqual(expect.arrayContaining(['ao.radius', 'ao.denoise.lumaPhi', 'bloom.threshold', 'taa.history', 'taa.sharpen', 'lightShafts.decay', 'lightShafts.strength.night', 'lightShafts.strength.day', 'lens.fringe', 'lens.grain', 'lens.grainStride']));
     expect(taken.length).toBeGreaterThan(30);
@@ -238,13 +224,7 @@ describe('the node passes read the config numbers WebGL’s read (W4 criterion 4
   });
 
   it('finds the reflections’ numbers the same way (their pass draws only with a reflective mesh)', () => {
-    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial());
-    const webgl = readsOf(() => {
-      const s = new PostStack(setup('ultra'), 64, 36);
-      s.setReflectiveSurfaces([{ mesh, strength: 0.6 }]);
-      s.render(quietRenderer().gl, new THREE.Scene(), camera());
-      s.dispose();
-    });
+    const webgl = new Set<string>(WEBGL.configReads);
     const named = new Set([...Object.values(NODE_SOURCES)].flatMap((t) => [...namedConfig(t)]));
     const reflective = ['steps', 'maxDistance', 'thickness', 'refine', 'edgeFade', 'fresnelBase'].map((k) => `reflections.${k}`);
     // The WebGL pass takes its ray-walk numbers into its GLSL when it is made, so they are read there.
@@ -293,6 +273,23 @@ describe('the compile gate orders every free after the compiles under way (W4 cr
     expect(gate.busy).toBe(false);
     await later();
     expect(freed).toEqual(['a']);
+  });
+
+  it('settles `settled()` at once when idle, else once every compile under way has settled, even a failed one (W6a)', async () => {
+    const gate = new CompileGate();
+    let now = false;
+    void gate.settled().then(() => (now = true));
+    await later();
+    expect(now).toBe(true);
+    const compile = deferred();
+    gate.track(compile.promise).catch(() => undefined);
+    let after = false;
+    void gate.settled().then(() => (after = true));
+    await later();
+    expect(after).toBe(false);
+    compile.fail(new Error('lost'));
+    await later();
+    expect(after).toBe(true);
   });
 
   it('waits for all of several compiles, not the first to settle', async () => {
@@ -424,12 +421,9 @@ describe('the node targets are freed on a resize (W4 criterion 4)', () => {
   });
 
   it('WebGL’s own retro filter is sized the same way, for the pair to be the same picture', () => {
-    const a = new RetroFilter({ pixelSize: 8, levels: 6 }, true);
     const b = new NodeRetroFilter({ pixelSize: 8, levels: 6 });
-    a.resize(1000, 700, 1);
     b.resize(1000, 700, 1);
-    expect([b.renderTarget.width, b.renderTarget.height]).toEqual([a.renderTarget.width, a.renderTarget.height]);
-    a.dispose();
+    expect([b.renderTarget.width, b.renderTarget.height]).toEqual(WEBGL.retro.pixel8at1000x700);
     b.dispose();
   });
 });

@@ -114,8 +114,13 @@ test('Neon Heights (dev content, M34c) picked by Day (M34d) loads and plays: the
   const placed = () => page.evaluate(() => (window as unknown as Played).airsoft.state.characters.map((c) => c.position));
   const yards = await placed();
   expect(yards.length).toBeGreaterThanOrEqual(6);
-  expect(Math.min(...yards.map((p) => p.x))).toBeLessThan(-18);
-  expect(Math.max(...yards.map((p) => p.x))).toBeGreaterThan(18);
+  // The yards are read from the spawns the match was built with: the bots may already have set off by now, as far as
+  // the ticks a slow start ran (0.3 m on a busy machine, W6a), so their live places can stand inside -18.
+  const spawnXs = await page.evaluate(() =>
+    (window as unknown as { airsoft: { session: { setup: { map: { spawns: { position: { x: number } }[][] } } } } }).airsoft.session.setup.map.spawns.map((team) => team.map((p) => p.position.x)),
+  );
+  expect(Math.min(...spawnXs.flat())).toBeLessThan(-18);
+  expect(Math.max(...spawnXs.flat())).toBeGreaterThan(18);
   // Play on: the simulation runs two more seconds of game time, the bots set off from their yards, and nobody falls
   // off a floor (the lowest floor is the street at 0).
   const tick = () => page.evaluate(() => (window as unknown as Played).airsoft.state.tick);

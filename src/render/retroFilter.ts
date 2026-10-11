@@ -35,7 +35,7 @@ export function quantize(value: number, levels: number, t: number): number {
   return Math.min(steps, Math.floor(Math.min(1, Math.max(0, value)) * steps + t)) / steps;
 }
 
-/** What the Renderer holds of a retro filter, whichever renderer draws it (WebGL's in retroFilterWebGL.ts, the node renderer's since W4). */
+/** What the Renderer holds of a retro filter (the node renderer's, render/webgpu/post/nodeRetro.ts, W4). */
 export interface RetroView {
   setLook(look: RetroLook): void;
   resize(width: number, height: number, pixelRatio: number): void;

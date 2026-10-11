@@ -58,9 +58,12 @@ export function pictureKey(s: ItemSubject): string {
   return [s.replica.id, s.scheme, s.realistic ? 'real' : 'bold', s.part ?? '', fit, pictureSize(s).join('x')].join('|');
 }
 
-/** Draws a scene with a camera into an RGBA image `width` by `height`: linear floats, alpha premultiplied, bottom row first. */
+/**
+ * Draws a scene with a camera into an RGBA image `width` by `height`: linear floats, alpha premultiplied, bottom row
+ * first. The pixels come back from the GPU a little later (a read on the node renderer is never waited for in a frame).
+ */
 export interface PictureTarget {
-  draw(scene: THREE.Scene, camera: THREE.Camera, width: number, height: number): Float32Array;
+  draw(scene: THREE.Scene, camera: THREE.Camera, width: number, height: number): Promise<Float32Array>;
   /** Turns finished 8-bit RGBA rows (top row first) into an image URL. */
   encode(rgba: Uint8ClampedArray, width: number, height: number): string;
   dispose(): void;
@@ -79,7 +82,7 @@ const PICTURE_DETAIL: ReplicaDetail = { replica: 'high', hands: 'high' };
 export class ItemPictures {
   private readonly cache = new Map<string, Promise<string>>();
   /** Pictures waiting, oldest first: each its cache key and how it is drawn. */
-  private readonly queue: { key: string; draw: () => string; done: (url: string) => void; failed: (error: unknown) => void }[] = [];
+  private readonly queue: { key: string; draw: () => Promise<string>; done: (url: string) => void; failed: (error: unknown) => void }[] = [];
   private scheduled = false;
   private disposed = false;
   private forgotten = 0;
@@ -93,6 +96,11 @@ export class ItemPictures {
     private readonly files: () => ReplicaFiles = () => NO_REPLICA_FILES,
     /** The power-source models (RM3), loaded the first time one is pictured. */
     private readonly powerSources: PowerSourceLoader = NO_POWER_SOURCES,
+    /**
+     * Settles when the renderer is free to draw a picture: no match's warm-up compile under way (W6a, Renderer
+     * afterCompiles). A picture drawn during one waits on the GPU for all of it, inside its draw, holding the page.
+     */
+    private readonly idle: () => Promise<void> = () => Promise.resolve(),
   ) {
     const L = ITEM_PICTURE.light;
     const key = new THREE.DirectionalLight(L.key.colour, L.key.intensity);
@@ -121,7 +129,7 @@ export class ItemPictures {
     return found;
   }
 
-  private enqueue(key: string, draw: () => string): Promise<string> {
+  private enqueue(key: string, draw: () => Promise<string>): Promise<string> {
     const drawn = new Promise<string>((done, failed) => this.queue.push({ key, draw, done, failed }));
     this.wake();
     return drawn;
@@ -161,22 +169,34 @@ export class ItemPictures {
     this.schedule(() => this.drawNext());
   }
 
-  /** Draws the oldest waiting picture, then asks for another frame if more wait. */
-  private drawNext(): void {
-    this.scheduled = false;
+  /**
+   * Draws the oldest waiting picture, then, once its pixels are back, asks for another frame if more wait: one picture
+   * at a time, so a screen full of them never stalls a frame.
+   */
+  private async drawNext(): Promise<void> {
     const next = this.queue.shift();
-    if (!next || this.disposed) return;
+    if (!next || this.disposed) {
+      this.scheduled = false;
+      return;
+    }
+    // Never during a match's warm-up compile (W6a); freed meanwhile, it draws nothing.
+    await this.idle();
+    if (this.disposed) {
+      this.scheduled = false;
+      return;
+    }
     try {
-      next.done(next.draw());
+      next.done(await next.draw());
     } catch (error) {
-      // A picture that can't be drawn (a lost context) is dropped from the cache, so a later visit asks again.
+      // A picture that can't be drawn (a lost device) is dropped from the cache, so a later visit asks again.
       this.cache.delete(next.key);
       next.failed(error);
     }
+    this.scheduled = false;
     if (this.queue.length > 0) this.wake();
   }
 
-  private draw(subject: PictureSubject): string {
+  private async draw(subject: PictureSubject): Promise<string> {
     const [width, height] = pictureSize(subject);
     const models = buildReplicaModels([subject.replica], 0, false, PICTURE_DETAIL, { schemes: [subject.scheme], realistic: subject.realistic }, 'bare', undefined, this.files());
     const model = models.models.get(subject.replica.id)!;
@@ -185,7 +205,7 @@ export class ItemPictures {
       else fitParts(model, subject.fit ?? {});
       this.scene.add(model.group);
       frameItem(this.camera, visibleBox(model.group), width / height);
-      const pixels = this.target.draw(this.scene, this.camera, width, height);
+      const pixels = await this.target.draw(this.scene, this.camera, width, height);
       return this.target.encode(finishPixels(pixels, width, height), width, height);
     } finally {
       // Taken out even when the draw fails, so a later picture never draws this one's model too.
@@ -195,14 +215,14 @@ export class ItemPictures {
   }
 
   /** A power source on its own, its label in the subject's colour; the model is kept for its next picture. */
-  private drawPower(subject: PowerPictureSubject, model: PowerSourceModel): string {
+  private async drawPower(subject: PowerPictureSubject, model: PowerSourceModel): Promise<string> {
     const [width, height] = pictureSize(subject);
     const own = model.label?.color.getHex();
     try {
       if (model.label && subject.label !== undefined) model.label.color.setHex(subject.label);
       this.scene.add(model.group);
       frameItem(this.camera, visibleBox(model.group), width / height);
-      return this.target.encode(finishPixels(this.target.draw(this.scene, this.camera, width, height), width, height), width, height);
+      return this.target.encode(finishPixels(await this.target.draw(this.scene, this.camera, width, height), width, height), width, height);
     } finally {
       this.scene.remove(model.group);
       if (model.label && own !== undefined) model.label.color.setHex(own);
@@ -331,42 +351,82 @@ export function finishPixels(pixels: Float32Array, width: number, height: number
   return out;
 }
 
+/** What nodePictureTarget needs of the node renderer (a structural type: this module stays out of three/webgpu). */
+export interface PictureRenderer {
+  readonly backend: object;
+  getRenderTarget(): THREE.RenderTarget | null;
+  setRenderTarget(target: THREE.RenderTarget | null): void;
+  getClearColor(target: THREE.Color): THREE.Color;
+  getClearAlpha(): number;
+  setClearColor(colour: THREE.ColorRepresentation, alpha?: number): void;
+  clear(): void;
+  render(scene: THREE.Scene, camera: THREE.Camera): void;
+  readRenderTargetPixelsAsync(target: THREE.RenderTarget, x: number, y: number, width: number, height: number): Promise<ArrayBufferView>;
+}
+
+/** WebGPU pads each row of a texture read to a multiple of this many bytes. */
+const ROW_ALIGN = 256;
+
 /**
- * The real target: the game's WebGL renderer drawing into a multisampled float render target, read back and encoded by
- * a 2D canvas. The renderer's own state (its target, clear colour and alpha) is put back after each picture.
+ * Half-float RGBA rows read back from a render target (`data`, padded rows on WebGPU), as linear floats bottom row first:
+ * WebGPU reads a target top row first, WebGL2 bottom row first. Pure.
  */
-export function webglPictureTarget(gl: THREE.WebGLRenderer): PictureTarget {
-  let rt: THREE.WebGLRenderTarget | null = null;
+export function unpackPicturePixels(data: ArrayBufferView, width: number, height: number, topRowFirst: boolean): Float32Array {
+  const halves = data instanceof Uint16Array;
+  const values = data as Uint16Array | Float32Array;
+  const texel = halves ? 8 : 16;
+  const rowValues = values.length === width * height * 4 ? width * 4 : (Math.ceil((width * texel) / ROW_ALIGN) * ROW_ALIGN) / (texel / 4);
+  const out = new Float32Array(width * height * 4);
+  for (let y = 0; y < height; y++) {
+    const from = (topRowFirst ? height - 1 - y : y) * rowValues;
+    const to = y * width * 4;
+    for (let x = 0; x < width * 4; x++) {
+      const v = values[from + x]!;
+      out[to + x] = halves ? THREE.DataUtils.fromHalfFloat(v) : v;
+    }
+  }
+  return out;
+}
+
+/**
+ * The real target: the game's node renderer (WebGPU overhaul W6; on WebGPU or its WebGL2 back end) drawing into a
+ * multisampled half-float render target (WebGPU can't multisample 32-bit floats), read back without waiting in the
+ * frame, and encoded by a 2D canvas. The renderer's own state (its target, clear colour and alpha) is put back after
+ * each draw.
+ */
+export function nodePictureTarget(renderer: PictureRenderer): PictureTarget {
+  let rt: THREE.RenderTarget | null = null;
   const clear = new THREE.Color();
   const canvas = document.createElement('canvas');
   return {
-    draw(scene, camera, width, height) {
+    async draw(scene, camera, width, height) {
       if (!rt || rt.width !== width || rt.height !== height) {
         rt?.dispose();
-        rt = new THREE.WebGLRenderTarget(width, height, { type: THREE.FloatType, samples: ITEM_PICTURE.samples });
+        rt = new THREE.RenderTarget(width, height, { type: THREE.HalfFloatType, samples: ITEM_PICTURE.samples });
       }
-      const before = gl.getRenderTarget();
-      gl.getClearColor(clear);
-      const alpha = gl.getClearAlpha();
+      const target = rt;
+      const before = renderer.getRenderTarget();
+      renderer.getClearColor(clear);
+      const alpha = renderer.getClearAlpha();
       try {
-        gl.setRenderTarget(rt);
-        gl.setClearColor(0x000000, 0);
-        gl.clear();
-        gl.render(scene, camera);
-        const pixels = new Float32Array(width * height * 4);
-        gl.readRenderTargetPixels(rt, 0, 0, width, height, pixels);
-        // A lost context draws and reads nothing, which would be kept as a blank picture: failing, it is asked again (BP2).
-        if (gl.getContext().isContextLost()) throw new Error('The graphics context is lost');
-        return pixels;
+        renderer.setRenderTarget(target);
+        renderer.setClearColor(0x000000, 0);
+        renderer.clear();
+        renderer.render(scene, camera);
       } finally {
-        gl.setRenderTarget(before);
-        gl.setClearColor(clear, alpha);
+        renderer.setRenderTarget(before);
+        renderer.setClearColor(clear, alpha);
       }
+      // A lost device rejects the read: the picture fails, and is asked for again (BP2).
+      const data = await renderer.readRenderTargetPixelsAsync(target, 0, 0, width, height);
+      return unpackPicturePixels(data, width, height, (renderer.backend as { isWebGLBackend?: boolean }).isWebGLBackend !== true);
     },
     encode(rgba, width, height) {
       canvas.width = width;
       canvas.height = height;
-      const ctx = canvas.getContext('2d')!;
+      // Kept on the CPU (`willReadFrequently`): it is only written whole and encoded, and a GPU-backed canvas makes
+      // toDataURL wait in line behind whatever the GPU process is doing (W6a).
+      const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
       ctx.putImageData(new ImageData(rgba as Uint8ClampedArray<ArrayBuffer>, width, height), 0, 0);
       return canvas.toDataURL('image/png');
     },
@@ -378,9 +438,9 @@ export function webglPictureTarget(gl: THREE.WebGLRenderer): PictureTarget {
 }
 
 /**
- * A target that follows the game's renderer (graphics overhaul G3): the Renderer swaps its WebGL renderer when
- * anti-aliasing changes, so each picture is drawn with the one `current` returns now, and the render target made for an
- * earlier one is let go. `make` builds the target for one renderer (webglPictureTarget; a fake in the tests).
+ * A target that follows the game's renderer (graphics overhaul G3): the Renderer makes a new one when its device is
+ * lost, so each picture is drawn with the one `current` returns now, and the render target made for an earlier one is
+ * let go. `make` builds the target for one renderer (nodePictureTarget; a fake in the tests).
  */
 export function followingPictureTarget<R>(current: () => R, make: (gl: R) => PictureTarget): PictureTarget {
   let gl: R | null = null;

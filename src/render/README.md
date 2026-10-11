@@ -4,19 +4,20 @@ Three.js presentation, all procedural. It reads `GameState` and `state.events`, 
 and never writes the simulation.
 
 - `renderer.ts`: `Renderer` owns the scene, camera, quality (`setQuality`), lighting and environment, tone mapping,
-  field of view and zoom, the retro filter (WebGL's, `retroFilterWebGL.ts`, loads the first time it is turned on: Settings ›
-  Look › Retro look, kept out of the main chunk), `warmUp` and `warmShaders`. `mapMeshCache.ts` keeps the last map's meshes.
-  `rendererParts.ts` holds its helpers (field of view, tone mapping, idle warm-up, handing GPU resources to a new
-  renderer, the draw counts read the same on WebGL and the node renderer). The Renderer draws with WebGL or the node
-  renderer (`webgpu/nodeBackend.ts`) and recovers a lost device itself (`nodeLost`): a new device, or WebGL with the
-  post stack, retro filter and sheen back.
-- The node renderer (WebGPU overhaul W1; Graphics › Renderer, Auto by default): `rendererStart.ts` decides at load
-  which renderer draws, in a chunk of its own loaded at boot with the Renderer row (`ui/rendererRow.ts`). On Auto or
-  WebGPU, `webgpuProbe.ts` asks for an adapter first, and only when one is given (on Auto, not a software one) is
-  `webgpu/nodeBackend.ts` imported (with `three/webgpu`, never in the main chunk); with none, or on the WebGL pick, it
-  is WebGL as before. `nodeBackend.ts` makes `WebGPURenderer` (WebGL if no device can be made), reads the GPU time
-  from timestamp queries, compiles ahead and makes the replacement renderer when the device is lost. On that path
-  the world's materials draw as node twins of their GLSL patches (W2): `webgpu/worldTwins.ts` asks first, by program
+  field of view and zoom, the retro filter (the node renderer's, `webgpu/post/nodeRetro.ts`; Settings › Look › Retro look), `warmUp` and
+  `warmShaders`. `mapMeshCache.ts` keeps the last map's meshes. `rendererParts.ts` holds its helpers (field of view,
+  tone mapping, idle warm-up, handing GPU resources to a new renderer). The Renderer draws with the node renderer
+  (`webgpu/nodeBackend.ts`) and recovers a lost device itself (`nodeLost`): a new device, or the WebGL2 back end, with
+  the post stack, retro filter and sheen back.
+- The node renderer (WebGPU overhaul W1, the only renderer since W6a; Graphics › Renderer, Auto by default):
+  `rendererStart.ts` decides at load which back end draws, in a chunk of its own loaded at boot with the Renderer row
+  (`ui/rendererRow.ts`) and `webgpu/nodeBackend.ts` (with `three/webgpu`, never in the main chunk). On Auto or WebGPU,
+  `webgpuProbe.ts` asks for an adapter first, and only when one is given (on Auto, not a software one) is WebGPU
+  tried; with none, or on the WebGL pick, it is the WebGL2 back end. `nodeBackend.ts` makes `WebGPURenderer`, reads
+  the GPU time from timestamp queries, compiles ahead and makes the replacement renderer when the device is lost
+  (WebGPU a few times, then WebGL2). `webgpu/deferredFrees.ts` (W6a, WebGPU only) holds the uniform buffers Three
+  frees mid-frame (a draw rebuilt inside its pass) until the frame is submitted, so an earlier draw in the same pass
+  can't use a destroyed buffer. The world's materials draw as node twins of their GLSL patches (W2): `webgpu/worldTwins.ts` asks first, by program
   key, for a twin (its table lists each patch and twin); `webgpu/surfaceNodes.ts` (surfaces: weathering, per-pixel
   and vertex baked light, junk glow and neon flicker, the sky host), `webgpu/effectNodes.ts` (flames, smoke and steam,
   and the sized points' sprite materials), `webgpu/pointSprites.ts` (each sized Points drawn as one instanced sprite,
@@ -26,12 +27,13 @@ and never writes the simulation.
   `ClusteredLightsNode` with spot lights added, for the world only; the extra lights themselves are made by
   `lightPools.ts` when `Renderer.clusteredLights` says so) and `webgpu/webgpuCompat.ts` (fits
   what Chromium 141's WebGPU does differently, where a test on the device finds it: Three's string swizzle, and the
-  layer-by-layer write into the baked light's 3D grid). W4: `webgpu/post/` draws the frame as WebGL's does, with
-  the same draws: `nodePostStack.ts` is `post/postStack.ts`'s chain (`PostChain`) with each pass ported to TSL beside
-  it (`nodeAmbientOcclusion.ts`, `nodeReflections.ts`, `nodeLightShafts.ts`, `nodeTemporalAA.ts`, `nodeBloom.ts`,
+  layer-by-layer write into the baked light's 3D grid). W4: `webgpu/post/` draws the frame as the WebGL path did, with
+  the same draws (`webglReference.ts` holds what that path did, recorded before W6a deleted it): `nodePostStack.ts` is
+  `post/postStack.ts`'s chain (`PostChain`; the pure helpers in `post/postHelpers.ts`) with each pass in TSL
+  (`nodeAmbientOcclusion.ts`, `nodeReflections.ts`, `nodeLightShafts.ts`, `nodeTemporalAA.ts`, `nodeBloom.ts`,
   `nodeFinish.ts` for the output step and lens finish), `nodeRetro.ts` is the retro filter, and `nodeOutput.ts` tone-maps
-  each material as it draws where WebGL draws straight to the screen: Low's whole frame (the haze after the tone
-  mapping, as WebGL's), and the held replica, which draws into a target of its own that the stack's last pass lays on.
+  each material as it draws where the frame goes straight to the screen: Low's whole frame (the haze after the tone
+  mapping, as the WebGL path's), and the held replica, which draws into a target of its own that the stack's last pass lays on.
   A stack or retro filter frees its targets only once the renderer's warm-up compile is done (`nodeKit.ts` `CompileGate`).
   W5: `webgpu/compute/` runs compute passes. `particleTwins.ts` gives each particle pool a driver that its CPU module
   (`dustMotes.ts`, `fireflies.ts`, `smokePlumes.ts`, `impactPuffs.ts`, `impactGrit.ts`, registered in `gpuPools.ts`)
@@ -72,12 +74,11 @@ and never writes the simulation.
 - Surface textures: `proceduralTextures.ts` draws each at the quality's Texture detail, the city's flat finishes capped
   at 512² (`drawnSize`, M78), with `natureTextures.ts`, `cityTextures.ts` and `textureLibrary.ts`.
 - Pooled effects (nothing in flight uploads nothing): `impactPuffs.ts`, `bbRenderer.ts`, `dustMotes.ts`. The post stack
-  is `post/` (`postPlan.ts` picks passes per preset, `postHost.ts` makes and frees it, WebGL's or the node renderer's);
-  Low builds none.
+  is `post/` (`postPlan.ts` picks passes per preset, `postHost.ts` makes and frees the node renderer's); Low builds
+  none.
 - Quality: `gpuCheck.ts` rates the GPU, `qualityStepDown.ts` steps down on slow frames (never saved).
-  `Game.changeQuality` → `Renderer.setQuality` → `MatchSession.setQuality`. Changing antialiasing makes a new WebGL
-  context on a new canvas (the pointer lock is on the container, so it survives); on the node renderer it waits for
-  the next load.
+  `Game.changeQuality` → `Renderer.setQuality` → `MatchSession.setQuality`. Changing antialiasing waits for the next
+  load (`Renderer.antialiasPending`).
 - Tuning, in `config/`: `render.ts` (re-exports the `render*.ts` files), `graphics.ts`, `post.ts`, `look.ts`,
   `characters.ts`, `weathering.ts`. Tests: `renderer.test.ts`, `disposal.test.ts`, one per feature.
 - Rules: every graphical effect is an engine feature read from quality settings and map data, never map-exclusive

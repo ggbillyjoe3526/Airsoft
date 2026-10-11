@@ -126,6 +126,11 @@ export class CompileGate {
     return this.underWay.size > 0;
   }
 
+  /** Settles once no compile is under way (now, or after every one under way and any begun meanwhile has). */
+  settled(): Promise<void> {
+    return new Promise((done) => this.afterCompiles(done));
+  }
+
   /** Calls `free` now, or once every compile under way (and any begun meanwhile) has settled. */
   afterCompiles(free: () => void): void {
     if (this.underWay.size === 0) return free();

@@ -6,6 +6,8 @@ import { DEPOT } from '../../../map/depot';
 import type { MapData } from '../../../map/mapTypes';
 import { WOODLAND } from '../../../map/woodland';
 import { GpuDressing } from './gpuDressing';
+import budget from '../../../../pipeline/perf-budget.json';
+import { forestCount } from './forestLayout';
 import { grassLevels } from './grassLayout';
 
 /**
@@ -69,6 +71,56 @@ describe('GpuDressing', () => {
     dressing.frame(scene, camera, QUALITY.ultra);
     expect(compute).toHaveBeenCalledTimes(4);
     expect(render).toHaveBeenCalledTimes(2);
+  });
+
+  it("counts the triangles Three counts for its own draws each frame, every pass, and nothing else's (W6a)", () => {
+    const { dressing } = setup();
+    const { scene } = sceneOf(WOODLAND);
+    dressing.frame(scene, camera, QUALITY.medium);
+    const r = { info: { render: { triangles: 0 } } } as unknown as THREE.WebGLRenderer;
+    const grass = scene.getObjectByName('grass-gpu') as THREE.Mesh;
+    const forest = scene.getObjectByName('forest-gpu') as THREE.Mesh;
+    const drawn = (mesh: THREE.Mesh) => {
+      const g = mesh.geometry as THREE.InstancedBufferGeometry;
+      return ((g.index?.count ?? g.getAttribute('position').count) / 3) * g.instanceCount;
+    };
+    // What Three does round a draw: onBeforeRender, the backend draws it (and, on the WebGL2 back end, sometimes other
+    // objects first: none of theirs counts), onAfterRender.
+    const draw = (mesh: THREE.Mesh) => {
+      mesh.onBeforeRender(r, scene, camera, mesh.geometry, mesh.material as THREE.Material, null as never);
+      mesh.onAfterRender(r, scene, camera, mesh.geometry, mesh.material as THREE.Material, null as never);
+    };
+    draw(grass);
+    draw(forest);
+    draw(grass);
+    expect(drawn(grass)).toBe(125_856);
+    expect(drawn(forest)).toBe(1800);
+    expect(dressing.triangles).toBe(2 * 125_856 + 1800);
+    // A new frame starts from nothing.
+    dressing.frame(scene, camera, QUALITY.medium);
+    expect(dressing.triangles).toBe(0);
+    draw(forest);
+    expect(dressing.triangles).toBe(1800);
+  });
+
+  it("holds the perf gate's dressing lines just over Woodland's caps, as Three counts them (W6a)", () => {
+    const { dressing } = setup();
+    const { scene } = sceneOf(WOODLAND);
+    for (const tier of ['medium', 'high', 'ultra'] as const) {
+      dressing.rescan();
+      dressing.frame(scene, camera, QUALITY[tier]);
+      const triangles = (name: string) => {
+        const mesh = scene.getObjectByName(name) as THREE.Mesh;
+        const g = mesh.geometry;
+        return ((g.index?.count ?? g.getAttribute('position').count) / 3) * (g as THREE.InstancedBufferGeometry).instanceCount;
+      };
+      const caps = triangles('grass-gpu') + triangles('forest-gpu');
+      expect(dressing.counts).toEqual({ grass: grassLevels(tier).count, forest: forestCount(WOODLAND.dressing!.forest!.trees, tier) });
+      const line = budget.presets[tier].dressingTriangles;
+      expect(line, tier).toBeGreaterThanOrEqual(caps);
+      expect(line, tier).toBeLessThanOrEqual(caps * 1.05);
+    }
+    expect(budget.presets.low.dressingTriangles).toBe(0);
   });
 
   it('packs the kept blades into an indirect draw on WebGPU; on the WebGL2 back end draws every slot', () => {

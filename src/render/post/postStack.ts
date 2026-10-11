@@ -1,84 +1,26 @@
 import * as THREE from 'three';
-import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
-import { FullScreenQuad, type Pass } from 'three/examples/jsm/postprocessing/Pass.js';
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { POST } from '../../config/post';
-import { AmbientOcclusionPass } from './ambientOcclusionPass';
-import { LensPass } from './lensPass';
-import { LightShaftsPass } from './lightShaftsPass';
-import { fullScreenMaterial, type PostFrame, type PostPass, type PostRenderer } from './postPass';
+import { jitterProjection, jitterSequence } from './postHelpers';
+import type { PostFrame, PostPass, PostRenderer } from './postPass';
 import { type PostPassId, planNeedsDepth, type PostQuality, postPlan, sceneSamples } from './postPlan';
-import { ReflectionPass } from './reflectionPass';
-import { jitterProjection, jitterSequence, TemporalAAPass } from './temporalAAPass';
 
-/** What the stack is made for: the quality's post fields, and whether the context draws into half floats. */
+/** What the stack is made for: the quality's post fields, and whether the renderer draws into half floats. */
 export interface PostSetup {
   quality: PostQuality;
-  /** EXT_color_buffer_half_float or _float: the picture keeps its brightness past 1 until tone mapping (else 8 bits). */
+  /** The picture keeps its brightness past 1 until tone mapping (else 8 bits). The node renderer always can. */
   halfFloat: boolean;
 }
 
-/** One of Three's own passes (bloom, output) in the stack's terms. */
-class ThreePass implements PostPass {
-  /** Bloom blends onto what it reads (Three's `needsSwap` false); output draws out. */
-  readonly inPlace: boolean;
-
-  constructor(
-    readonly id: PostPassId,
-    private readonly pass: Pass,
-  ) {
-    this.inPlace = !pass.needsSwap;
-  }
-
-  render(gl: THREE.WebGLRenderer, _frame: PostFrame, read: THREE.WebGLRenderTarget, write: THREE.WebGLRenderTarget | null): boolean {
-    this.pass.renderToScreen = !this.inPlace && write === null;
-    // Three's passes draw onto the screen themselves when renderToScreen; `write` is otherwise their target (an
-    // in-place pass blends onto `read` and ignores it).
-    this.pass.render(gl, (write ?? read) as THREE.WebGLRenderTarget, read, 0, false);
-    return !this.inPlace;
-  }
-
-  setSize(width: number, height: number): void {
-    this.pass.setSize(width, height);
-  }
-
-  dispose(): void {
-    this.pass.dispose();
-  }
-}
-
-/** Three's bloom, also freeing its bright-pass material (its own dispose leaves that one, r186). */
-class Bloom extends UnrealBloomPass {
-  override dispose(): void {
-    super.dispose();
-    this.materialHighPassFilter.dispose();
-  }
-}
-
-/**
- * Three's bloom with its bright-pass on the brightest channel instead of luminance (POST.bloom: saturated neon glows,
- * the sunlit scene doesn't), fading in over POST.bloom.softness.
- */
-export function brightestChannelBloom(width: number, height: number): UnrealBloomPass {
-  const b = POST.bloom;
-  const pass = new Bloom(new THREE.Vector2(width, height), b.strength, b.radius, b.threshold);
-  const highPass = pass.materialHighPassFilter;
-  highPass.fragmentShader = highPass.fragmentShader.replace('luminance( texel.xyz )', 'max( texel.r, max( texel.g, texel.b ) )');
-  (pass.highPassUniforms as Record<string, THREE.IUniform>).smoothWidth!.value = b.softness;
-  return pass;
-}
-
-/** The reflective meshes a stack's reflections follow (render/post/reflectionPass.ts setSurfaces). */
+/** The reflective meshes a stack's reflections follow (render/webgpu/post/nodeReflections.ts setSurfaces). */
 interface Reflective {
   setSurfaces(surfaces: readonly { mesh: THREE.Mesh; strength: number }[]): void;
 }
 
 /**
  * The post stack's chain (G5), whatever draws it: the scene drawn into a target of its own (with a depth texture when a
- * pass reads it), then the plan's passes in order (render/post/postPlan.ts), the last onto the screen. WebGL's passes
- * are PostStack's (below); the node renderer's are render/webgpu/post/nodePostStack.ts's (W4), the same chain with
- * the same draws. Made by the Renderer for a quality, and disposed whole on a quality change, a lost context and the
- * antialiasing context swap; Low has none.
+ * pass reads it), then the plan's passes in order (render/post/postPlan.ts), the last onto the screen. The passes are
+ * render/webgpu/post/nodePostStack.ts's (W4; WebGL's GLSL passes went in W6). Made by the Renderer for a quality, and
+ * disposed whole on a quality change, a map change and a lost device; Low has none.
  */
 export abstract class PostChain<G extends PostRenderer<T>, T extends THREE.RenderTarget> {
   readonly plan: readonly PostPassId[];
@@ -131,7 +73,7 @@ export abstract class PostChain<G extends PostRenderer<T>, T extends THREE.Rende
   /** Draws the resolved picture in `from` into ping-pong target 0 and returns that target. */
   protected abstract copyOut(gl: G, from: T): T;
 
-  /** The reflective meshes in the scene (render/post/reflectionPass.ts findReflective); ignored without reflections. */
+  /** The reflective meshes in the scene (render/post/postHelpers.ts findReflective); ignored without reflections. */
   setReflectiveSurfaces(surfaces: readonly { mesh: THREE.Mesh; strength: number }[]): void {
     this.reflection?.setSurfaces(surfaces);
   }
@@ -226,53 +168,5 @@ export abstract class PostChain<G extends PostRenderer<T>, T extends THREE.Rende
   /** Ping-pong target `i`, made the first time it is drawn into. */
   protected target(i: 0 | 1): T {
     return (this.pingPong[i] ??= this.makeTarget(this.width, this.height, { type: this.type, depthBuffer: false }));
-  }
-}
-
-/** The post stack on WebGL (G5): the chain with WebGL's passes, Three's bloom and output among them. */
-export class PostStack extends PostChain<THREE.WebGLRenderer, THREE.WebGLRenderTarget> {
-  /** Copies the resolved multisampled scene out before an in-place pass (made the first time it is needed, BP2). */
-  private copy: { material: THREE.ShaderMaterial; quad: FullScreenQuad } | null = null;
-
-  protected makeTarget(width: number, height: number, options: THREE.RenderTargetOptions): THREE.WebGLRenderTarget {
-    return new THREE.WebGLRenderTarget(width, height, options);
-  }
-
-  override dispose(): void {
-    super.dispose();
-    this.copy?.material.dispose();
-    this.copy?.quad.dispose();
-    this.copy = null;
-  }
-
-  protected copyOut(gl: THREE.WebGLRenderer, from: THREE.WebGLRenderTarget): THREE.WebGLRenderTarget {
-    if (!this.copy) {
-      const material = fullScreenMaterial('uniform sampler2D tColour; varying vec2 vUv; void main() { gl_FragColor = texture2D(tColour, vUv); }', { tColour: { value: null } });
-      this.copy = { material, quad: new FullScreenQuad(material) };
-    }
-    const to = this.target(0);
-    this.copy.material.uniforms.tColour!.value = from.texture;
-    gl.setRenderTarget(to);
-    this.copy.quad.render(gl);
-    return to;
-  }
-
-  protected makePass(id: PostPassId, q: PostQuality, width: number, height: number): PostPass {
-    switch (id) {
-      case 'ao':
-        return new AmbientOcclusionPass(q.ambientOcclusion, width, height);
-      case 'reflections':
-        return new ReflectionPass(width, height);
-      case 'lightShafts':
-        return new LightShaftsPass(width, height, this.type);
-      case 'taa':
-        return new TemporalAAPass(width, height, this.type);
-      case 'bloom':
-        return new ThreePass(id, brightestChannelBloom(width, height));
-      case 'output':
-        return new ThreePass(id, new OutputPass());
-      case 'lens':
-        return new LensPass();
-    }
   }
 }

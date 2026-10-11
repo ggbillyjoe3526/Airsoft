@@ -8,7 +8,7 @@ import { ATMOSPHERE } from './render';
  */
 export const POST = {
   /**
-   * Ambient occlusion (Three.js's GTAO shader, render/post/ambientOcclusionPass.ts), worked out from the depth alone (the
+   * Ambient occlusion (Three.js's GTAO, render/webgpu/post/nodeAmbientOcclusion.ts), worked out from the depth alone (the
    * normals rebuilt from it, so the scene is drawn once): `radius` metres round each point, `samples` directions, then a
    * Poisson denoise of `denoise.samples` taps in `denoise.rings` rings `denoise.radius` pixels wide; blended in at
    * `intensity` (1 = the full occlusion).
@@ -34,7 +34,7 @@ export const POST = {
    */
   bloom: { strength: 0.5, radius: 0.5, threshold: 1, softness: 0.15 },
   /**
-   * Temporal antialiasing (render/post/temporalAAPass.ts): the projection is moved by a sub-pixel step from a Halton
+   * Temporal antialiasing (render/webgpu/post/nodeTemporalAA.ts): the projection is moved by a sub-pixel step from a Halton
    * (2, 3) sequence of `jitterSamples` each frame, and the last frames' picture, reprojected through the depth and the
    * previous view, is blended in at `history` (clipped to the colours round the pixel this frame, so a moving player
    * leaves no ghost), then sharpened by `sharpen` to make up for the blend's softening. A camera that moves more than
@@ -42,7 +42,7 @@ export const POST = {
    */
   taa: { jitterSamples: 8, history: 0.9, sharpen: 0.2, cutDistance: 3 },
   /**
-   * Light shafts (render/post/lightShaftsPass.ts): the sky's pixels within `sunRadius` (a share of the screen's height)
+   * Light shafts (render/webgpu/post/nodeLightShafts.ts): the sky's pixels within `sunRadius` (a share of the screen's height)
    * of the sun or moon, blurred along `samples` steps towards it over `length` of the way, each step weighing `decay`
    * of the last, at `resolution` of the screen, added back at `strength` (by Night the moon's). The pass is skipped while
    * the sun is behind you or further than `margin` screen-heights off the edge. A pixel is sky when its depth is past
@@ -59,7 +59,7 @@ export const POST = {
     skyFrom: ATMOSPHERE.skyRadius * 0.9,
   },
   /**
-   * Reflections (render/post/reflectionPass.ts): screen-space, only on reflective surfaces. A mesh is reflective when its
+   * Reflections (render/webgpu/post/nodeReflections.ts): screen-space, only on reflective surfaces. A mesh is reflective when its
    * `userData.reflective` is a strength above 0 (G8's puddles), or its name starts with one of `meshNames` (the map's
    * merged glass, render/mapMeshes.ts, at `glass`). The reflected ray walks `steps` steps of up to `maxDistance` metres
    * in all, takes a hit within `thickness` metres behind the depth, refines it `refine` times, and fades out over
@@ -77,7 +77,7 @@ export const POST = {
     fresnelBase: 0.08,
   },
   /**
-   * The lens finish (render/post/lensPass.ts): film grain strongest in the mid-tones, and colour fringing towards the
+   * The lens finish (render/webgpu/post/nodeFinish.ts): film grain strongest in the mid-tones, and colour fringing towards the
    * corners. The grain's pattern moves by `grainStride` pixels a frame and repeats after `grainCycle` frames.
    */
   lens: { grain: 0.028, fringe: 0.006, grainCycle: 997, grainStride: 7 },

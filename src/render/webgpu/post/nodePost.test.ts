@@ -6,18 +6,18 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { POST } from '../../../config/post';
 import { QUALITY, type QualityPreset } from '../../../config/render';
 import { ADDITIVE, MULTIPLY } from '../../post/postPass';
-import { PostStack } from '../../post/postStack';
-import { RetroFilter } from '../../retroFilterWebGL';
 import { denoiseDisk } from './nodeAmbientOcclusion';
 import { bloomKernel, bloomMipSizes } from './nodeBloom';
 import { CompileGate, type NodeRenderer } from './nodeKit';
 import { DirectOutput } from './nodeOutput';
 import { NodePostStack } from './nodePostStack';
 import { NodeRetroFilter } from './nodeRetro';
+import { WEBGL_REFERENCE as WEBGL } from './webglReference';
 
 /**
  * The node renderer's post stack and retro filter (W4) against WebGL's: the same plan, passes, targets, blends and
- * draws, pass for pass, each drawn on a stand-in renderer that logs where every draw goes.
+ * draws, pass for pass, each drawn on a stand-in renderer that logs where every draw goes. WebGL's side is what its
+ * stack did, recorded before W6a deleted it (webglReference.ts).
  */
 
 /** Every object of `kind` reachable from `root` through own properties, arrays and maps. */
@@ -75,7 +75,6 @@ function stubRenderer() {
 }
 
 const setup = (preset: QualityPreset) => ({ quality: QUALITY[preset], halfFloat: true });
-const webgl = (preset: QualityPreset, w = 64, h = 36) => new PostStack(setup(preset), w, h);
 const node = (preset: QualityPreset, w = 64, h = 36) => new NodePostStack(setup(preset), w, h, new DirectOutput());
 
 /** A camera looking at the sun, so the light shafts draw. */
@@ -89,33 +88,26 @@ describe('the node post stack matches WebGL’s, pass for pass (W4)', () => {
 
   it('makes the same plan, with the same passes in place or out, and the same scene target', () => {
     for (const preset of ['medium', 'high', 'ultra'] as const) {
-      const a = webgl(preset);
+      const a = WEBGL.stacks[preset];
       const b = node(preset);
       expect(b.plan, preset).toEqual(a.plan);
       const passes = (s: unknown) => (s as { passes: { id: string; inPlace: boolean }[] }).passes.map((p) => `${p.id}:${p.inPlace}`);
-      expect(passes(b), preset).toEqual(passes(a));
+      expect(passes(b), preset).toEqual(a.passes);
       expect(b.sceneTarget.samples, preset).toBe(a.sceneTarget.samples);
-      expect(b.sceneTarget.texture.type, preset).toBe(a.sceneTarget.texture.type);
-      expect(b.sceneTarget.depthTexture === null, preset).toBe(a.sceneTarget.depthTexture === null);
-      a.dispose();
+      expect(b.sceneTarget.texture.type, preset).toBe(a.sceneTarget.type);
+      expect(b.sceneTarget.depthTexture !== null, preset).toBe(a.sceneTarget.depth);
       b.dispose();
     }
   });
 
   it('draws the same draws into targets of the same sizes and types, with the same blends, on every preset', () => {
     for (const preset of ['medium', 'high', 'ultra'] as const) {
-      const a = webgl(preset);
       const b = node(preset);
-      const wa = stubRenderer();
       const wb = stubRenderer();
-      for (let frame = 0; frame < 2; frame++) {
-        a.render(wa.gl as unknown as THREE.WebGLRenderer, new THREE.Scene(), sunlit(a));
-        b.draw(wb.gl as unknown as NodeRenderer, new THREE.Scene(), sunlit(b));
-      }
+      for (let frame = 0; frame < 2; frame++) b.draw(wb.gl as unknown as NodeRenderer, new THREE.Scene(), sunlit(b));
       const shape = (d: Draw[]) => d.map((x) => `${x.what} ${x.into} ${x.blending}`);
-      expect(shape(wb.draws), preset).toEqual(shape(wa.draws));
+      expect(shape(wb.draws), preset).toEqual(WEBGL.stacks[preset].draws);
       expect(wb.draws.filter((d) => d.into === 'screen'), preset).toHaveLength(2);
-      a.dispose();
       b.dispose();
     }
   });
@@ -132,19 +124,14 @@ describe('the node post stack matches WebGL’s, pass for pass (W4)', () => {
 
   it('holds targets of the same sizes and types as WebGL’s, and resizes them alike', () => {
     for (const preset of ['medium', 'high', 'ultra'] as const) {
-      const a = webgl(preset);
       const b = node(preset);
-      const wa = stubRenderer();
       const wb = stubRenderer();
-      a.render(wa.gl as unknown as THREE.WebGLRenderer, new THREE.Scene(), sunlit(a));
       b.draw(wb.gl as unknown as NodeRenderer, new THREE.Scene(), sunlit(b));
       const sizes = (s: unknown) => [...reachable(s, THREE.RenderTarget)].map((t) => `${t.width}x${t.height}:${t.texture.type}`).sort();
-      // Bloom's targets are Three's own on WebGL: reached through its pass, as on the node path.
-      expect(sizes(b), preset).toEqual(sizes(a));
-      a.setSize(201, 99);
+      // Bloom's targets were Three's own on WebGL, reached through its pass, as on the node path.
+      expect(sizes(b), preset).toEqual(WEBGL.stacks[preset].targets);
       b.setSize(201, 99);
-      expect(sizes(b), preset).toEqual(sizes(a));
-      a.dispose();
+      expect(sizes(b), preset).toEqual(WEBGL.stacks[preset].targetsResized);
       b.dispose();
     }
   });
@@ -230,12 +217,11 @@ describe('each node pass against its WebGL counterpart (W4)', () => {
 describe('the node retro filter matches WebGL’s (W4)', () => {
   it('draws into a target sized, typed and filtered as WebGL’s, the world and the replica then one present', () => {
     const look = { pixelSize: 4, levels: 6 };
-    const a = new RetroFilter(look, true);
+    const a = WEBGL.retro.target;
     const b = new NodeRetroFilter(look);
-    a.resize(1280, 720, 1.5);
     b.resize(1280, 720, 1.5);
-    for (const k of ['width', 'height', 'depthBuffer'] as const) expect(b.renderTarget[k]).toBe(a.renderTarget[k]);
-    for (const k of ['type', 'minFilter', 'magFilter', 'generateMipmaps'] as const) expect(b.renderTarget.texture[k]).toBe(a.renderTarget.texture[k]);
+    for (const k of ['width', 'height', 'depthBuffer'] as const) expect(b.renderTarget[k], k).toBe(a[k]);
+    for (const k of ['type', 'minFilter', 'magFilter', 'generateMipmaps'] as const) expect(b.renderTarget.texture[k], k).toBe(a[k]);
     const { gl, draws } = stubRenderer();
     b.draw(gl as unknown as NodeRenderer, new THREE.Scene(), new THREE.PerspectiveCamera(), { scene: new THREE.Scene(), camera: new THREE.PerspectiveCamera() });
     expect(draws.map((d) => `${d.what} ${d.into}`)).toEqual([`scene ${b.renderTarget.width}x${b.renderTarget.height}:${THREE.HalfFloatType}`, `scene ${b.renderTarget.width}x${b.renderTarget.height}:${THREE.HalfFloatType}`, 'quad screen']);
@@ -244,7 +230,6 @@ describe('the node retro filter matches WebGL’s (W4)', () => {
     const freed = vi.spyOn(THREE.RenderTarget.prototype, 'dispose');
     b.dispose();
     expect(freed).toHaveBeenCalled();
-    a.dispose();
     vi.restoreAllMocks();
   });
 });

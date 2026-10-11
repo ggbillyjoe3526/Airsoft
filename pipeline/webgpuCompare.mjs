@@ -77,12 +77,18 @@ export function isFigureView(view) {
 }
 
 /**
- * The node renderer's back ends compared: its WebGL2 back end (`?forceWebGL`, any container) and WebGPU itself, where
- * the browser offers a device. `WEBGPU_ARGS` are the Chromium switches that give the container a WebGPU device
+ * The node renderer's back ends compared: its WebGL2 back end (`webgl`, `?forceWebGL`, any container) and WebGPU itself,
+ * where the browser offers a device. `WEBGPU_ARGS` are the Chromium switches that give the container a WebGPU device
  * (SwiftShader's Vulkan, a software adapter, which the WebGPU pick accepts and Auto does not); without them Chromium
  * reaches WebGPU only on a real GPU.
  */
-export const COMPARE_BACKENDS = ['webgpu-webgl2', 'webgpu'];
+export const COMPARE_BACKENDS = ['webgl', 'webgpu'];
+
+/**
+ * What every pair is held to since W6a deleted the WebGL path: Three's WebGLRenderer as the game drew with it at this
+ * commit (the last that had it), its e2e build made once in a worktree of its own (webgpu-compare.mjs).
+ */
+export const WEBGL_REFERENCE = 'b10c006';
 export const WEBGPU_ARGS = ['--enable-unsafe-webgpu', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--use-webgpu-adapter=swiftshader', '--disable-vulkan-surface'];
 
 /** The presets compared: Medium and High (Low draws no weathering or per-pixel baked light, and the gate's perf runs cover it). */
@@ -163,10 +169,22 @@ export function scorePixels(a, b, threshold) {
   return { madRgb: [mr, mg, mb], mad: (mr + mg + mb) / 3, over: over / d };
 }
 
-/** Whether a pair's score passes the bar, and if not why. */
-export function verdict(score, bar = COMPARE_BAR) {
+/**
+ * How a pair is judged (owner's rulings, DECISIONS 2026-10-09 W3 and 2026-10-10 W4). This tool's WebGPU device is always
+ * SwiftShader's software adapter, whose noise differs from its WebGL's: its pairs are judged on the pixel share only
+ * (`share`), and its retro filter views by eye (`eye`: the 8-colour palette turns sub-pixel noise into whole steps; the
+ * pair is saved and scored but cannot fail). Everything else holds the whole bar (`bar`).
+ */
+export function judgedBy(backend, view, post = false) {
+  if (backend !== 'webgpu') return 'bar';
+  return post && view === 'retro' ? 'eye' : 'share';
+}
+
+/** Whether a pair's score passes the bar under `judged` (judgedBy), and if not why. */
+export function verdict(score, bar = COMPARE_BAR, judged = 'bar') {
   const fails = [];
-  if (!(score.mad <= bar.mad)) fails.push(`mean difference ${score.mad.toFixed(2)} > ${bar.mad}`);
+  if (judged === 'eye') return { pass: true, fails };
+  if (judged === 'bar' && !(score.mad <= bar.mad)) fails.push(`mean difference ${score.mad.toFixed(2)} > ${bar.mad}`);
   if (!(score.over <= bar.over)) fails.push(`${(score.over * 100).toFixed(2)} % of pixels over ${bar.threshold} > ${(bar.over * 100).toFixed(1)} %`);
   return { pass: fails.length === 0, fails };
 }
@@ -175,7 +193,7 @@ export function verdict(score, bar = COMPARE_BAR) {
  * The file name of a pair's side-by-side picture: W2's names on the WebGL2 back end, `-webgpu` on WebGPU, and `post-`
  * before a post view's name (W4).
  */
-export function pairFile(scene, quality, view, backend = 'webgpu-webgl2', post = false) {
+export function pairFile(scene, quality, view, backend = 'webgl', post = false) {
   return `${scene.map}-${scene.light}-${quality}-${post ? 'post-' : ''}${view}${backend === 'webgpu' ? '-webgpu' : ''}.jpg`;
 }
 

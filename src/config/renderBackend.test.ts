@@ -12,7 +12,7 @@ describe('which renderer a visit draws with (W1)', () => {
     for (const c of RENDERER_CHOICES) expect(c.blurb.length, c.id).toBeGreaterThan(0);
   });
 
-  it('tries the node renderer on Auto and WebGPU, never on WebGL', () => {
+  it('asks for a WebGPU adapter on Auto and WebGPU, never on WebGL (W6: WebGL is the same renderer on WebGL2)', () => {
     expect(wantsWebGpu('auto')).toBe(true);
     expect(wantsWebGpu('webgpu')).toBe(true);
     expect(wantsWebGpu('webgl')).toBe(false);
@@ -26,10 +26,8 @@ describe('which renderer a visit draws with (W1)', () => {
     expect(rendererNote('webgpu', false, 'webgl')).toBe(pending);
     // Loaded wanting WebGPU and given it.
     expect(rendererNote('webgpu', true, 'webgpu')).toBe('');
-    expect(rendererNote('webgpu', true, 'webgpu-webgl2')).toBe('');
     expect(rendererNote('auto', true, 'webgpu')).toBe('');
     expect(rendererNote('webgl', true, 'webgpu')).toBe(pending);
-    expect(rendererNote('webgl', true, 'webgpu-webgl2')).toBe(pending);
     // Loaded wanting WebGPU, but no adapter: WebGL draws. Only the WebGPU pick says so (Auto falling back is Auto's job),
     // and going back to WebGL or Auto changes nothing.
     expect(rendererNote('webgpu', true, 'webgl')).toBe(fallback);

@@ -7,8 +7,7 @@
  *   node pipeline/perf-run.mjs [--env container|laptop|desktop|ci] [--preset low|medium|high|ultra|all] [--cpu N]
  *                              [--ticks 3600] [--warmup-ticks 120] [--max-seconds 300] [--baseline] [--no-build]
  *                              [--chromium /path] [--channel chrome|msedge] [--headless] [--map <map>] [--mode <mode>]
- *                              [--viewport 1920x1080] [--port 4181]
- *                              [--renderer auto|webgl|webgpu] [--force-webgl]
+ *                              [--viewport 1920x1080] [--port 4181] [--backend webgl|webgpu]
  *
  * The e2e bundle is reused when the source hasn't changed since it was built (pipeline/build-cached.mjs).
  *
@@ -41,20 +40,20 @@
  * `--env desktop` (G5) is the same on the owner's desktop PC, without CPU throttling: where the Ultra budget is measured.
  * `--viewport WxH` sets the page's size (default 1920x1080 at pixel ratio 1; 3840x2160 for 4K); the result records it.
  *
- * `--renderer` (WebGPU overhaul W1) sets Graphics › Renderer before the page loads: `auto` (the default, what a player
- * gets: WebGPU where the browser gives an adapter, WebGL otherwise, so WebGL in the container and on CI), `webgl` or
- * `webgpu`. `--force-webgl` puts the node renderer on its WebGL2 back end (`?forceWebGL`), the only way it runs in the
- * container. Every result records `renderer` (what was asked) and `backend` (what drew: webgl, webgpu or
- * webgpu-webgl2); a run the node renderer drew names its files with the back end after the environment
- * (perf-laptop-webgpu-low.json, perf-container-webgpu-webgl2-low.json), so the WebGL files and baselines the gate reads
- * are never overwritten. Draw calls are the renderer's draws either way (Renderer.stats: WebGL's `render.calls`, the
- * node renderer's `drawCalls`).
+ * `--backend webgl|webgpu` (WebGPU overhaul W6; default `webgl`) picks the node renderer's back end: `webgl` is its
+ * WebGL2 back end (Renderer pick saved as WebGL, `?forceWebGL`, the only way it runs in the container), `webgpu` is a
+ * WebGPU device (pick saved as WebGPU; in the container and on CI Chromium gets WEBGPU_ARGS, SwiftShader's Vulkan).
+ * After the match starts the page's `airsoft.renderer.backend` must be the asked one, or the run fails loudly. Every
+ * result records `backend`; a WebGPU run names its files with it after the environment (perf-laptop-webgpu-low.json,
+ * baseline laptop-webgpu.json), so the WebGL files and baselines are never overwritten. Draw calls are the node
+ * renderer's `drawCalls` (Renderer.stats).
  */
 import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { baselineFileName, perfTag, runFileName } from './perfMatrix.mjs';
+import { WEBGPU_ARGS } from './webgpuCompare.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'pipeline', 'out');
@@ -75,13 +74,11 @@ const options = {
   map: value('--map', 'depot'),
   mode: value('--mode', 'elimination'),
   viewport: value('--viewport', '1920x1080'),
-  renderer: value('--renderer', 'auto'),
-  forceWebGL: flag('--force-webgl'),
+  backend: value('--backend', 'webgl'),
 };
-if (!['auto', 'webgl', 'webgpu'].includes(options.renderer)) throw new Error('--renderer must be auto, webgl or webgpu');
-if (options.forceWebGL && options.renderer === 'webgl') throw new Error('--force-webgl needs --renderer auto or webgpu');
-/** The Renderer pick saved before the page loads (none for Auto: a fresh save's default). */
-const rendererSettings = options.renderer === 'auto' ? null : { version: 1, renderer: options.renderer };
+if (!['webgl', 'webgpu'].includes(options.backend)) throw new Error('--backend must be webgl or webgpu');
+/** The Renderer pick saved before the page loads: the asked back end (the two ids are the setting's values too). */
+const rendererSettings = { version: 1, renderer: options.backend };
 const [viewWidth, viewHeight] = options.viewport.split('x').map(Number);
 if (!(viewWidth > 0 && viewHeight > 0)) throw new Error('--viewport must be WIDTHxHEIGHT, e.g. 3840x2160');
 /** The preview server's port: --port for a second run beside another worktree's (the default 4181 is refused when busy). */
@@ -107,7 +104,8 @@ const laptop = options.env === 'laptop' || options.env === 'desktop';
 // `--expose-gc` gives the page `gc()`, so heap growth is measured between two full collections, not between whatever
 // garbage happened to be waiting at the first and last sample (that swung ±10 MB between runs of one head).
 const heapArgs = ['--enable-precise-memory-info', '--js-flags=--expose-gc'];
-const browserArgs = laptop ? heapArgs : ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', ...heapArgs];
+// WebGPU in the container and on CI needs the software adapter's switches (the laptop and the desktop have a real GPU).
+const browserArgs = laptop ? heapArgs : ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', ...(options.backend === 'webgpu' ? WEBGPU_ARGS : []), ...heapArgs];
 const channel = options.chromium ? undefined : value('--channel', laptop ? 'chrome' : undefined);
 
 mkdirSync(OUT, { recursive: true });
@@ -119,7 +117,7 @@ if (options.build || !existsSync(join(ROOT, 'dist-e2e', 'index.html'))) {
   console.log('perf: the e2e bundle');
   execFileSync('node', ['pipeline/build-cached.mjs', '--mode', 'e2e'], { cwd: ROOT, stdio: 'ignore' });
 }
-const urlFor = (preset) => `http://localhost:${PORT}/?nolock&seed=1&script=perf&quality=${preset}${options.forceWebGL ? '&forceWebGL' : ''}`;
+const urlFor = (preset) => `http://localhost:${PORT}/?nolock&seed=1&script=perf&quality=${preset}${options.backend === 'webgl' ? '&forceWebGL' : ''}`;
 // A server already on the port (another run's, left over) would be measured instead of this build: refuse.
 if (await fetch(urlFor(presets[0])).then(() => true, () => false)) {
   console.error(`perf: port ${PORT} is already serving something (a leftover perf server?); stop it and run again`);
@@ -167,9 +165,8 @@ async function measure(preset) {
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: options.cpu });
   // A fresh context each preset, so its storage is empty: the Renderer pick and, off Depot Elimination, the map and mode
   // with Dev content on (the dev maps and modes need it) are the only settings saved.
-  const picks = options.map !== 'depot' || options.mode !== 'elimination' ? { version: 1, map: gameMap, mode: options.mode, 'dev.enabled': true, 'dev.devContent': 'on' } : null;
-  const saved = rendererSettings || picks ? { ...(rendererSettings ?? {}), ...(picks ?? {}), version: 1 } : null;
-  if (saved) await page.addInitScript((text) => localStorage.setItem('airsoft.settings', text), JSON.stringify(saved));
+  const picks = options.map !== 'depot' || options.mode !== 'elimination' ? { map: gameMap, mode: options.mode, 'dev.enabled': true, 'dev.devContent': 'on' } : {};
+  await page.addInitScript((text) => localStorage.setItem('airsoft.settings', text), JSON.stringify({ ...rendererSettings, ...picks, version: 1 }));
   await page.goto(urlFor(preset));
   await page.waitForSelector('.menu-title-start', { timeout: 60_000 });
   // The title's START opens the Match screen (G3, M100): the map and the mode are cards on it, Settings is on the top bar.
@@ -184,11 +181,18 @@ async function measure(preset) {
     await page.close();
     throw new Error(`the game does not offer map "${gameMap}" in ${options.mode} (map/maps.ts MAPS, map/playableMode.ts)`);
   }
-  await setup.getByRole('button', { name: 'Start match', exact: true }).click();
+  // The click waits for the menu's page to answer: on a software WebGL2 adapter the menu's item pictures and the
+  // match's warm-up compile hold it for 20 s and more (W6a), past Playwright's 30 s default on a slow run.
+  await setup.getByRole('button', { name: 'Start match', exact: true }).click({ timeout: 120_000 });
   await page.waitForFunction((t) => globalThis.airsoft?.state && globalThis.airsoft.state.tick >= t, options.warmupTicks, { timeout: 120_000 });
   const backend = await page.evaluate(() => globalThis.airsoft.renderer.backend);
   console.log(`perf: match running (map ${options.map}, mode ${options.mode}, env ${options.env}, preset ${preset}, cpu ×${options.cpu}, drawn with ${backend}); measuring ${ticks} ticks from tick ${options.warmupTicks}`);
-  if (options.renderer === 'webgpu' && backend === 'webgl') console.warn('perf: WebGPU was picked but WebGL drew (no adapter: --force-webgl runs the node renderer on WebGL2)');
+  if (backend !== options.backend) {
+    console.error(`perf: asked for the ${options.backend} back end but ${backend} drew; no file written (WebGPU needs an adapter: WEBGPU_ARGS in the container, a real GPU elsewhere)`);
+    await browser.close();
+    server.kill();
+    process.exit(1);
+  }
 
   const sample = await page.evaluate(async ({ ticks, maxSeconds }) => {
     const g = globalThis.airsoft;
@@ -196,7 +200,7 @@ async function measure(preset) {
     const stats = () => g.renderer.stats;
     const frames = [];
     const heap = [];
-    let calls = 0, callsMax = 0, tris = 0, trisMax = 0;
+    let calls = 0, callsMax = 0, tris = 0, trisMax = 0, dressing = 0, dressingMax = 0;
     const tick0 = g.state.tick;
     const heapNow = () => performance.memory?.usedJSHeapSize ?? 0;
     // The live heap: what is left after full collections (twice, so objects freed by the first one's finalizers go too).
@@ -216,7 +220,11 @@ async function measure(preset) {
         last = now;
         const s = stats();
         calls += s.calls; callsMax = Math.max(callsMax, s.calls);
-        tris += s.triangles; trisMax = Math.max(trisMax, s.triangles);
+        // W6a: the GPU dressing's triangles (Woodland's grass and stand-ins, counted at their caps) apart from the
+        // scene's, each on its own budget line.
+        const d = s.dressingTriangles ?? 0;
+        tris += s.triangles - d; trisMax = Math.max(trisMax, s.triangles - d);
+        dressing += d; dressingMax = Math.max(dressingMax, d);
         if (now >= nextHeap) { heap.push(heapNow()); nextHeap += 1000; }
         if (g.state.tick - tick0 < ticks && now - t0 < maxSeconds * 1000) requestAnimationFrame(f); else done();
       };
@@ -256,6 +264,7 @@ async function measure(preset) {
       onePercentLowFps: 1000 / onePercentLowMs,
       p50Ms: q(0.5), p95Ms: q(0.95), p99Ms: q(0.99), worstMs: sorted.at(-1),
       drawCalls: calls / n, drawCallsMax: callsMax, triangles: tris / n, trianglesMax: trisMax,
+      dressingTriangles: dressing / n, dressingTrianglesMax: dressingMax,
       geometries: end.geometries, textures: end.textures, programs: end.programs,
       gpuMemoryMB: (geometryBytes + textureBytes) / 1e6,
       // Start and end are the live heap (after a full GC); the max and the GC drops are the samples taken during play.
@@ -266,7 +275,7 @@ async function measure(preset) {
     };
   }, { ticks, maxSeconds: options.maxSeconds });
   await page.close();
-  return { env: options.env, renderer: options.renderer, backend, map: options.map, mode: options.mode, preset, cpu: options.cpu, ticksWanted: ticks, warmupTicks: options.warmupTicks, head, when: new Date().toISOString(), seed: 1, viewport: `${options.viewport}@1`, metrics: sample, errors };
+  return { env: options.env, backend, map: options.map, mode: options.mode, preset, cpu: options.cpu, ticksWanted: ticks, warmupTicks: options.warmupTicks, head, when: new Date().toISOString(), seed: 1, viewport: `${options.viewport}@1`, metrics: sample, errors };
 }
 
 /** A run's baseline file: `<env>.json` for the budget preset (what the gate compares), `<env>-<preset>.json` otherwise. */
@@ -282,7 +291,7 @@ for (const result of results) {
   console.log(`perf: ${relative(ROOT, out)}`);
   const m = result.metrics;
   console.log(`  ${result.preset} on ${result.backend}: ${m.ticks} ticks in ${m.seconds} s · fps ${m.fps} (1 % low ${m.onePercentLowFps}) · p50 ${m.p50Ms} ms · p95 ${m.p95Ms} ms · p99 ${m.p99Ms} ms · sim ${m.simTicksPerSecond} ticks/s`);
-  console.log(`  draw calls ${m.drawCalls} (max ${m.drawCallsMax}) · triangles ${m.triangles} (max ${m.trianglesMax}) · GPU memory ~${m.gpuMemoryMB} MB · heap ${m.heapStartMB} → ${m.heapEndMB} MB (${m.heapGrowthMB >= 0 ? "+" : ""}${m.heapGrowthMB}${m.heapGc ? ', live after GC' : ', NO forced GC: noisy'}), ${m.gcSpikes} GC drops`);
+  console.log(`  draw calls ${m.drawCalls} (max ${m.drawCallsMax}) · triangles ${m.triangles} (max ${m.trianglesMax}) + GPU dressing ${m.dressingTriangles} (max ${m.dressingTrianglesMax}) · GPU memory ~${m.gpuMemoryMB} MB · heap ${m.heapStartMB} → ${m.heapEndMB} MB (${m.heapGrowthMB >= 0 ? "+" : ""}${m.heapGrowthMB}${m.heapGc ? ', live after GC' : ', NO forced GC: noisy'}), ${m.gcSpikes} GC drops`);
   if (result.errors.length) console.log(`  page errors: ${result.errors.length} (${result.errors[0]})`);
   if (options.baseline) {
     const dir = join(ROOT, 'pipeline', 'baseline');

@@ -3,7 +3,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { QUALITY, type QualitySettings, TONE_MAPPING } from '../config/render';
 import { Renderer } from './renderer';
 import { toneMappingOf } from './rendererParts';
-import { RetroFilter } from './retroFilterWebGL';
 import { postPlan } from './post/postPlan';
 import type { NodeBackend } from './webgpu/nodeBackend';
 import { DirectOutput } from './webgpu/post/nodeOutput';
@@ -13,7 +12,7 @@ import { NodeRetroFilter } from './webgpu/post/nodeRetro';
 /**
  * The Renderer on the node path (WebGPU overhaul W1): handed a node renderer by Game.create, it draws the same scene
  * through it, with its own post stack and retro filter (W4), its own prefiltered sky, its own GPU timer and its own
- * device-lost recovery. The node renderer is stood in for (render/webgpu/nodeBackend.test.ts covers the real one): what matters
+ * device-lost recovery (to WebGL2 when no new WebGPU device is given, W6a). The node renderer is stood in for (render/webgpu/nodeBackend.test.ts covers the real one): what matters
  * here is what the Renderer asks of it.
  */
 
@@ -25,7 +24,7 @@ const what = (scene: THREE.Scene, overlay: { scene: THREE.Scene } | undefined, d
   `${scene.name}${overlay ? ` and ${overlay.scene.name}` : ''} ${drawer === null ? 'straight' : drawer instanceof NodeRetroFilter ? 'through retro' : drawer instanceof NodePostStack ? 'through stack' : '?'}`;
 
 /** A node back end as the Renderer sees it, logging what it is asked. */
-function fakeNode(name: string, log: string[]) {
+function fakeNode(name: string, log: string[], kind: 'webgpu' | 'webgl' = 'webgpu') {
   const canvas = {
     className: '',
     replaceWith: (next: { name: string }) => void log.push(`${name} canvas replaced by ${next.name}`),
@@ -53,7 +52,7 @@ function fakeNode(name: string, log: string[]) {
     initTexture: () => undefined,
   };
   const node = {
-    kind: 'webgpu' as const,
+    kind,
     renderer,
     lost: false,
     gpuMs: 2.5,
@@ -61,10 +60,9 @@ function fakeNode(name: string, log: string[]) {
     maxAnisotropy: 16,
     timestamps: true,
     samples: 4,
-    pictureRenderer: { name: `${name} pictures` },
     get stats() {
       const { render, memory } = renderer.info;
-      return { calls: render.drawCalls, triangles: render.triangles, programs: memory.programs, geometries: memory.geometries, textures: memory.textures };
+      return { calls: render.drawCalls, triangles: render.triangles, dressingTriangles: 0, programs: memory.programs, geometries: memory.geometries, textures: memory.textures };
     },
     timing: [] as boolean[],
     frames: 0,
@@ -110,14 +108,13 @@ function fakeNode(name: string, log: string[]) {
   return node;
 }
 
-function nodeRenderer(quality: QualitySettings = QUALITY.high) {
+function nodeRenderer(quality: QualitySettings = QUALITY.high, kind: 'webgpu' | 'webgl' = 'webgpu') {
   vi.stubGlobal('window', { addEventListener: () => undefined, removeEventListener: () => undefined, devicePixelRatio: 1, innerWidth: 1280, innerHeight: 720 });
   const log: string[] = [];
-  const node = fakeNode('first', log);
-  const makeWebGL = vi.spyOn(Renderer.prototype as unknown as { makeWebGL: () => unknown }, 'makeWebGL');
+  const node = fakeNode('first', log, kind);
   const r = new Renderer({ appendChild: () => undefined, clientWidth: 1280, clientHeight: 720 } as unknown as HTMLElement, quality, node as unknown as NodeBackend);
   r.scene.name = 'world';
-  return { r, node, log, makeWebGL };
+  return { r, node, log };
 }
 
 describe('the Renderer on the node path (W1)', () => {
@@ -126,9 +123,8 @@ describe('the Renderer on the node path (W1)', () => {
     vi.unstubAllGlobals();
   });
 
-  it('draws with the node renderer it was handed, dressed with the game’s output settings, and makes no WebGL renderer', () => {
-    const { r, node, makeWebGL } = nodeRenderer();
-    expect(makeWebGL).not.toHaveBeenCalled();
+  it('draws with the node renderer it was handed, dressed with the game’s output settings', () => {
+    const { r, node } = nodeRenderer();
     expect(r.backend).toBe('webgpu');
     expect(r.renderer).toBe(node.renderer);
     const { mapping, exposure } = toneMappingOf(TONE_MAPPING.default);
@@ -207,7 +203,7 @@ describe('the Renderer on the node path (W1)', () => {
 
   it('reads the draw counts and GPU time the same way the debug overlay reads WebGL’s', () => {
     const { r, node } = nodeRenderer();
-    expect({ ...r.stats }).toEqual({ calls: 7, triangles: 1234, programs: 3, geometries: 4, textures: 5 });
+    expect({ ...r.stats }).toEqual({ calls: 7, triangles: 1234, dressingTriangles: 0, programs: 3, geometries: 4, textures: 5 });
     expect(r.gpuMs).toBe(2.5);
     r.gpuTiming = true;
     r.render();
@@ -225,7 +221,7 @@ describe('the Renderer on the node path (W1)', () => {
 
   it('leaves an antialiasing change to the next load', () => {
     const { r, log } = nodeRenderer(QUALITY.low);
-    expect(r.setQuality({ ...QUALITY.low, antialias: !QUALITY.low.antialias })).toBe(false);
+    r.setQuality({ ...QUALITY.low, antialias: !QUALITY.low.antialias });
     expect(r.antialiasPending).toBe(true);
     expect(log).toEqual([]);
   });
@@ -261,44 +257,41 @@ describe('the Renderer on the node path (W1)', () => {
     expect(r.renderer).toBe(next.renderer);
   });
 
-  it('falls back to WebGL when no new device can be made: a WebGL renderer takes the old canvas’s place and play goes on', async () => {
-    const { r, node, log, makeWebGL } = nodeRenderer();
+  it('falls back to WebGL2 when no new device can be made: the node renderer’s WebGL2 back end takes the old canvas’s place and play goes on', async () => {
+    const { r, node, log } = nodeRenderer();
     const told: boolean[] = [];
     r.onContextChange((lost) => told.push(lost));
-    const listened: string[] = [];
-    const glCanvas = { className: '', name: 'webgl', addEventListener: (type: string) => void listened.push(type), removeEventListener: () => undefined };
     r.setRetro({ pixelSize: 4, levels: 6 });
-    const nodeRetro = (r as unknown as { retro: NodeRetroFilter }).retro;
-    expect(nodeRetro).toBeInstanceOf(NodeRetroFilter);
-    const retroFreed = vi.spyOn(nodeRetro, 'dispose');
-    const gl = {
-      domElement: glCanvas,
-      info: { autoReset: true, reset: () => undefined, render: { calls: 0, triangles: 0 }, memory: { geometries: 0, textures: 0 }, programs: [] },
-      shadowMap: { enabled: false, type: 0 },
-      getPixelRatio: () => 1,
-      setPixelRatio: () => undefined,
-      setSize: () => undefined,
-      capabilities: { getMaxAnisotropy: () => 8 },
-      getContext: () => ({ getParameter: () => 0, SAMPLES: 0 }),
-      extensions: { has: () => true },
-    };
-    makeWebGL.mockImplementation(() => gl);
-    node.next = null;
+    const firstRetro = (r as unknown as { retro: NodeRetroFilter }).retro;
+    const retroFreed = vi.spyOn(firstRetro, 'dispose');
+    // NodeBackend.replacement gives the WebGL2 back end when WebGPU gives no new device (nodeBackend.test.ts).
+    const next = fakeNode('webgl2', log, 'webgl');
+    node.next = next;
     node.loseDevice();
     await new Promise((done) => setTimeout(done, 0));
-    expect(makeWebGL).toHaveBeenCalledWith(QUALITY.high.antialias);
-    expect(log).toEqual(['first canvas replaced by webgl', 'first disposed']);
+    expect(log).toEqual(['first canvas replaced by webgl2', 'first disposed']);
     expect(r.backend).toBe('webgl');
-    expect(r.renderer).toBe(gl);
-    expect(listened).toEqual(['webglcontextlost', 'webglcontextrestored']);
+    expect(r.renderer).toBe(next.renderer);
     expect(told).toEqual([true, false]);
-    // The node path's retro filter goes with its renderer and WebGL's takes its place; the row's note says what happened.
+    // The retro filter goes with its renderer and the new one's takes its place, for the look in use; the row's note
+    // says what happened.
     expect(retroFreed).toHaveBeenCalledOnce();
-    // WebGL's loads in a chunk of its own (W4), then is made for the look in use.
-    await vi.waitFor(() => expect((r as unknown as { retro: unknown }).retro).toBeInstanceOf(RetroFilter));
+    const retro = (r as unknown as { retro: unknown }).retro;
+    expect(retro).toBeInstanceOf(NodeRetroFilter);
+    expect(retro).not.toBe(firstRetro);
     expect(r.retroPixelAngle).toBeGreaterThan(0);
     expect(r.lostToWebGL).toBe(true);
-    expect(r.pictureRenderer).toBe(gl);
+    r.render();
+    expect(log.at(-1)).toBe('webgl2 draw world through retro');
+  });
+
+  it('says nothing of a fallback when a renderer that started on WebGL2 is replaced by another', async () => {
+    const { r, node, log } = nodeRenderer(QUALITY.high, 'webgl');
+    node.next = fakeNode('second', log, 'webgl');
+    node.loseDevice();
+    await new Promise((done) => setTimeout(done, 0));
+    expect(r.backend).toBe('webgl');
+    expect(r.lostToWebGL).toBe(false);
   });
 
   it('frees the node renderer with itself, and a recovery still on its way does nothing after', async () => {

@@ -1,16 +1,18 @@
 #!/usr/bin/env node
 /**
- * The WebGPU comparison (WebGPU overhaul W2 to W4): draws the same fixed camera views of every map, by day and by night
+ * The WebGPU comparison (WebGPU overhaul W2 to W6): draws the same fixed camera views of every map, by day and by night
  * where the map has night, once with the old WebGL path and once with the node renderer, scores each pair against the
  * bar in `webgpuCompare.mjs` and saves the pairs side by side (WebGL | node | difference) for the owner. Exits 1 when a
  * pair fails the bar. W2's and W3's views are drawn on Medium and High, W4's post views on Low, Medium, High and Ultra.
  *
  *   node pipeline/webgpu-compare.mjs [--out <dir>] [--only depot,woodland] [--quality medium] [--views w2|w3|w4|w5|all]
- *                                    [--backend webgpu-webgl2|webgpu|all] [--noise] [--full] [--chromium /path]
+ *                                    [--backend webgl|webgpu|all] [--noise] [--full] [--chromium /path]
  *                                    [--port 4186] [--post-views ground,sun,first-person,retro,glow]
  *
  * It builds the e2e bundle (pipeline/build-cached.mjs, the build with `window.airsoft` and `?forceWebGL`) and serves it
- * on port 4186 (or `--port`). Each map, light and preset is one page per renderer: the picks saved as settings, a match started, the
+ * on port 4186 (or `--port`). Since W6a deleted the WebGL path, the WebGL pages are drawn by the e2e build of
+ * webgpuCompare.mjs WEBGL_REFERENCE (the last commit that had it), made once in a git worktree in the system's temporary
+ * folder and served on the next port. Each map, light and preset is one page per renderer: the picks saved as settings, a match started, the
  * simulation held still (Dev game speed 0) and the game's own frame loop stopped once the node renderer has compiled
  * what it draws. W2's views (`--views w2`) stand the camera where config/menuArt.ts STILL_CAMERA says (as the menus'
  * stills), hide the figures with their contact shadows and torch beams and draw one frame without the held replica.
@@ -32,8 +34,9 @@
  * WebGPU device skips that back end and says so. PLAYWRIGHT_CHROMIUM picks the browser.
  */
 import { execFileSync, spawn } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
@@ -59,9 +62,11 @@ import {
   postViewsOf,
   sceneViews,
   scorePixels,
+  judgedBy,
   verdict,
   W5_QUALITIES,
   W5_SCENES,
+  WEBGL_REFERENCE,
   WEBGPU_ARGS,
 } from './webgpuCompare.mjs';
 
@@ -99,22 +104,35 @@ async function portFree(port) {
     probe.listen(port, '127.0.0.1');
   });
 }
-if (!(await portFree(PORT))) {
-  console.error(`webgpu-compare: port ${PORT} is busy; stop what serves it and run again`);
+for (const port of [PORT, PORT + 1]) {
+  if (await portFree(port)) continue;
+  console.error(`webgpu-compare: port ${port} is busy; stop what serves it and run again`);
   process.exit(2);
 }
 
+/**
+ * The WebGL reference: WEBGL_REFERENCE's e2e build, in a worktree of its own sharing this checkout's packages (outside
+ * the checkout, so no test run or type check here sees its sources).
+ */
+const REFERENCE = join(tmpdir(), `airsoft-webgl-reference-${WEBGL_REFERENCE}`);
+if (!existsSync(join(REFERENCE, 'package.json'))) {
+  execFileSync('git', ['worktree', 'add', '--detach', REFERENCE, WEBGL_REFERENCE], { cwd: ROOT, stdio: 'inherit' });
+  symlinkSync(join(ROOT, 'node_modules'), join(REFERENCE, 'node_modules'));
+}
+execFileSync(process.execPath, [join(REFERENCE, 'pipeline', 'build-cached.mjs'), '--mode', 'e2e'], { cwd: REFERENCE, stdio: 'inherit' });
 execFileSync(process.execPath, [join(ROOT, 'pipeline', 'build-cached.mjs'), '--mode', 'e2e'], { cwd: ROOT, stdio: 'inherit' });
-const server = spawn(process.execPath, [join(ROOT, 'node_modules', 'vite', 'bin', 'vite.js'), 'preview', '--outDir', 'dist-e2e', '--port', String(PORT), '--strictPort'], { cwd: ROOT, stdio: 'ignore' });
+const serve = (cwd, port) => spawn(process.execPath, [join(ROOT, 'node_modules', 'vite', 'bin', 'vite.js'), 'preview', '--outDir', 'dist-e2e', '--port', String(port), '--strictPort'], { cwd, stdio: 'ignore' });
+const servers = [serve(ROOT, PORT), serve(REFERENCE, PORT + 1)];
 const base = `http://localhost:${PORT}/`;
-for (let i = 0; i < 100 && !(await fetch(base).then((r) => r.ok, () => false)); i++) await new Promise((r) => setTimeout(r, 200));
+const referenceBase = `http://localhost:${PORT + 1}/`;
+for (const url of [base, referenceBase]) for (let i = 0; i < 100 && !(await fetch(url).then((r) => r.ok, () => false)); i++) await new Promise((r) => setTimeout(r, 200));
 
 const { chromium: browserType } = await import(pathToFileURL(join(ROOT, 'node_modules', '@playwright', 'test', 'index.mjs')).href);
 const launch = (extra) => browserType.launch({ ...(chromium ? { executablePath: chromium } : {}), args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', ...extra] });
 const browser = await launch([]);
 // WebGPU in a browser of its own, so the WebGL pages draw exactly as W2's did.
 const gpuBrowser = !noise && wantedBackends.includes('webgpu') ? await launch(WEBGPU_ARGS) : null;
-const backends = noise ? ['webgl'] : wantedBackends.filter((b) => b !== 'webgpu' || gpuBrowser);
+const backends = noise ? ['reference'] : wantedBackends.filter((b) => b !== 'webgpu' || gpuBrowser);
 const skipped = [];
 if (gpuBrowser && !(await hasWebGpu(gpuBrowser))) {
   backends.splice(backends.indexOf('webgpu'), 1);
@@ -129,24 +147,25 @@ try {
     for (const quality of qualities) {
       const views = viewsOf(scene, quality);
       if (views.length === 0) continue;
-      const left = await draw(scene, views, quality, 'webgl', full);
+      const left = await draw(scene, views, quality, 'reference', full);
       for (const backend of backends) {
         const right = await draw(scene, views, quality, backend, false);
         for (const view of views) {
           const a = left.frames[keyOf(view)];
           const b = right.frames[keyOf(view)];
           const scored = await compare(a.plain, b.plain, `${scene.map} ${scene.light}, ${quality}, ${view.post ? 'post ' : ''}${view.name}`, backend);
-          const v = verdict(scored.score);
+          const judged = judgedBy(backend, view.name, view.post);
+          const v = verdict(scored.score, COMPARE_BAR, judged);
           // W5: the node path draws no more than WebGL on every compared view (its compute dressing switched off).
           if (b.calls > a.calls) v.fails.push(`${b.calls} draws > WebGL's ${a.calls}`);
           v.pass = v.fails.length === 0;
           if (!v.pass) failed = true;
           const file = pairFile(scene, quality, view.name, backend, view.post);
           writeFileSync(join(OUT, file), scored.jpeg);
-          const entry = { map: scene.map, light: scene.light, quality, view: view.name, post: view.post, backend, file, ...round(scored.score), pass: v.pass, fails: v.fails, draws: { webgl: a.calls, node: b.calls } };
+          const entry = { map: scene.map, light: scene.light, quality, view: view.name, post: view.post, backend, file, ...round(scored.score), judged, pass: v.pass, fails: v.fails, draws: { webgl: a.calls, node: b.calls } };
           if (full && a.post) entry.withPost = round((await compare(a.post, b.plain, 'post', backend)).score);
           results.push(entry);
-          const tag = v.pass ? 'pass' : `FAIL (${v.fails.join('; ')})`;
+          const tag = v.pass ? (judged === 'bar' ? 'pass' : `pass (judged ${judged === 'eye' ? 'by eye' : 'on pixel share'})`) : `FAIL (${v.fails.join('; ')})`;
           console.log(`webgpu-compare: ${file}  mad ${entry.mad}  over ${(entry.over * 100).toFixed(2)} %  draws ${a.calls}/${b.calls}  ${tag}${entry.withPost ? `  (with WebGL's post: mad ${entry.withPost.mad}, over ${(entry.withPost.over * 100).toFixed(2)} %)` : ''}`);
         }
       }
@@ -159,7 +178,7 @@ try {
 } finally {
   await browser.close();
   await gpuBrowser?.close();
-  server.kill();
+  for (const server of servers) server.kill();
 }
 writeFileSync(join(OUT, noise ? 'noise.json' : 'scores.json'), `${JSON.stringify({ bar: COMPARE_BAR, viewport: COMPARE_VIEWPORT, noise, skipped, results }, null, 2)}\n`);
 console.log(`webgpu-compare: ${results.filter((r) => r.pass).length} of ${results.length} pairs pass (bar: mad ≤ ${COMPARE_BAR.mad}, ≤ ${COMPARE_BAR.over * 100} % of pixels over ${COMPARE_BAR.threshold}); pictures in ${OUT}`);
@@ -179,11 +198,11 @@ async function hasWebGpu(b) {
 }
 
 /**
- * One page: the map in its light on `quality`, drawn by `renderer` (`webgl`, or the node renderer on back end
- * `webgpu-webgl2` or `webgpu`); each of `views`' frames as a PNG data URL.
+ * One page: the map in its light on `quality`, drawn by `renderer` (`reference`: the WebGL path, WEBGL_REFERENCE's build;
+ * or the node renderer on back end `webgl` or `webgpu`); each of `views`' frames as a PNG data URL.
  */
 async function draw(scene, views, quality, renderer, withPost, dressing = false) {
-  const node = renderer !== 'webgl';
+  const node = renderer !== 'reference';
   const page = await (renderer === 'webgpu' ? gpuBrowser : browser).newPage({ viewport: COMPARE_VIEWPORT, deviceScaleFactor: 1 });
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -193,15 +212,17 @@ async function draw(scene, views, quality, renderer, withPost, dressing = false)
   const picks = { version: 1, map: scene.map, mode: 'elimination', [`lighting.${scene.map}`]: scene.light, 'dev.devContent': 'on', 'dev.enabled': true, ruleset: 'skirmish', renderer: node ? 'webgpu' : 'webgl' };
   await page.addInitScript((saved) => localStorage.setItem('airsoft.settings', JSON.stringify(saved)), picks);
   // W5: the node renderer's compute dressing is switched off by the page (NO_DRESSING) but on W5's own views.
-  await page.goto(`${base}?nolock&seed=1&quality=${quality}${renderer === 'webgpu-webgl2' ? '&forceWebGL' : ''}${node && !dressing ? `&${NO_DRESSING}` : ''}`);
+  await page.goto(`${node ? base : referenceBase}?nolock&seed=1&quality=${quality}${renderer === 'webgl' ? '&forceWebGL' : ''}${node && !dressing ? `&${NO_DRESSING}` : ''}`);
   await page.waitForSelector('.menu-title-start', { timeout: 120_000 });
   const backend = await page.evaluate(() => globalThis.airsoft.renderer.backend);
-  if (backend !== renderer) throw new Error(`webgpu-compare: asked for ${renderer}, drawn with ${backend}`);
+  if (backend !== (node ? renderer : 'webgl')) throw new Error(`webgpu-compare: asked for ${renderer}, drawn with ${backend}`);
   await page.locator('.menu-title-start').click();
   const setup = page.locator('.menu-setup');
   await setup.locator('.map-cards .choice-card.selected').waitFor({ timeout: 60_000 });
   await page.waitForFunction((map) => document.querySelector('.menu-setup .play-map-line')?.textContent?.toLowerCase().replace(/\s/g, '').startsWith(map.toLowerCase()), scene.map, { timeout: 60_000 });
-  await setup.getByRole('button', { name: 'Start match', exact: true }).click();
+  // The click waits for the menu's page to answer: on a software WebGL2 adapter the menu's item pictures and the
+  // match's warm-up compile hold it for 20 s and more (W6a), past Playwright's 30 s default on a slow run.
+  await setup.getByRole('button', { name: 'Start match', exact: true }).click({ timeout: 120_000 });
   await page.waitForFunction(() => globalThis.airsoft?.state && globalThis.airsoft.state.tick > 5, null, { timeout: 180_000 });
   // The simulation held still: the figures stay at their starts and nobody fires; the effects keep drawing.
   await page.evaluate(() => {
@@ -239,8 +260,10 @@ async function draw(scene, views, quality, renderer, withPost, dressing = false)
         const r = game.renderer;
         game.session.match.characters.object.visible = false;
         // What rides on the figures goes with them (W3's too): the contact shadows under their feet and the torch beams
-        // (the cones, the lit spots and your torch's real spot light), placed where each figure stood when the clock stopped.
-        for (const name of ['contact-shadows', 'torch-beams']) r.scene.traverse((o) => {
+        // (the cones, the lit spots and your torch's real spot light), placed where each figure stood when the clock stopped,
+        // and the dust their feet kicked up (W6a): whether a footfall fell before the clock stopped depends on how many ticks
+        // each page ran (20 or 40 under load), so it showed on one page only. It stays hidden in the figure views too.
+        for (const name of ['contact-shadows', 'torch-beams', 'kickedDust']) r.scene.traverse((o) => {
           if (o.name === name) o.visible = false;
         });
         const eye = (game.__eye ??= { position: r.camera.position.clone(), rotation: r.camera.rotation.clone() });
@@ -311,7 +334,7 @@ async function draw(scene, views, quality, renderer, withPost, dressing = false)
         if (own) {
           const q = { ...r.quality, ambientOcclusion: 0, reflections: false, lightShafts: false, temporalAA: false, bloom: true, lensFinish: false };
           const pr = r.renderer.getPixelRatio();
-          const setup = { quality: q, halfFloat: r.drawsHalfFloat() };
+          const setup = { quality: q, halfFloat: r.drawsHalfFloat?.() ?? true };
           plainStack = game.__plainStack ??= r.post.make ? r.post.make(setup, r.width * pr, r.height * pr) : new own.constructor(setup, r.width * pr, r.height * pr);
           plainStack.passes.splice(0, plainStack.passes.length, ...plainStack.passes.filter((p) => p.id === 'output'));
         }
@@ -500,7 +523,7 @@ async function draw(scene, views, quality, renderer, withPost, dressing = false)
         if (own) {
           const q = { ...r.quality, ambientOcclusion: 0, reflections: false, lightShafts: false, temporalAA: false, bloom: true, lensFinish: false };
           const pr = r.renderer.getPixelRatio();
-          const setup = { quality: q, halfFloat: r.drawsHalfFloat() };
+          const setup = { quality: q, halfFloat: r.drawsHalfFloat?.() ?? true };
           plainStack = game.__plainStack ??= r.post.make ? r.post.make(setup, r.width * pr, r.height * pr) : new own.constructor(setup, r.width * pr, r.height * pr);
           plainStack.passes.splice(0, plainStack.passes.length, ...plainStack.passes.filter((p) => p.id === 'output'));
         }

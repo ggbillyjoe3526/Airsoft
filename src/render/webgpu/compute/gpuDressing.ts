@@ -48,6 +48,18 @@ export class GpuDressing {
   private tier: GpuDressingTier | null = null;
   private dirty = true;
   private last = Number.NaN;
+  /** The triangles of both drawn this frame (`triangles`). */
+  private counted = 0;
+  /**
+   * Adds a draw of one of them as Three's info counts it (index or vertex count over 3, times the instance count). Not
+   * the info's change across the draw: Three can draw other objects between a mesh's `onBeforeRender` and its own draw
+   * (seen on the WebGL2 back end looking up at 5v5, W6a), which would count theirs as the dressing's.
+   */
+  private readonly countDraw = (_r: unknown, _s: unknown, _c: unknown, geometry: THREE.BufferGeometry): void => {
+    const vertices = geometry.index?.count ?? geometry.getAttribute('position')?.count ?? 0;
+    const instances = (geometry as THREE.InstancedBufferGeometry).instanceCount;
+    this.counted += (vertices / 3) * (Number.isFinite(instances) ? instances : 1);
+  };
 
   constructor(
     private readonly renderer: WebGPURenderer,
@@ -57,6 +69,14 @@ export class GpuDressing {
   /** The scene changed: the next frame looks for the map again. */
   rescan(): void {
     this.dirty = true;
+  }
+
+  /**
+   * The triangles Three counted for the grass and stand-ins since this frame began (every pass that drew them): their
+   * caps, as an indirect draw is counted from its instance count (the perf gate's `dressingTriangles`, W6a).
+   */
+  get triangles(): number {
+    return this.counted;
   }
 
   /** Blades and stand-ins drawn now (tests, the comparison's counts). */
@@ -69,6 +89,7 @@ export class GpuDressing {
    * `camera`; the grass sways while `motion` (the match's MotionScale through the Renderer: off under Reduced motion).
    */
   frame(scene: THREE.Scene, camera: THREE.Camera, quality: QualitySettings | null, motion = true): void {
+    this.counted = 0;
     if (OFF) return;
     if (this.dirty) {
       this.dirty = false;
@@ -113,13 +134,20 @@ export class GpuDressing {
     const grid = grass && map.terrain && colours ? buildGroundGrid(map) : null;
     if (grass && map.terrain && colours && grid) {
       this.grass = new GrassField(this.renderer, tier, map.terrain, grassMask(map, map.terrain, grid), colours, grass.height, this.webgpu);
+      this.count(this.grass.mesh);
       scene.add(this.grass.mesh);
     }
     const forest = map.dressing?.forest;
     if (forest) {
       const trees = placeForest(forestCount(forest.trees, tier), fieldOf(map), map.dressing?.skyline ?? []);
       this.forest = new ForestStandIns(this.renderer, trees, this.webgpu);
+      this.count(this.forest.mesh);
       scene.add(this.forest.mesh);
     }
+  }
+
+  /** Counts what Three counts for each of `mesh`'s draws. */
+  private count(mesh: THREE.Mesh): void {
+    mesh.onAfterRender = this.countDraw;
   }
 }

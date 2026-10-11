@@ -41,7 +41,7 @@ import { rendererName } from './render/gpuCheck';
 import { Renderer } from './render/renderer';
 import type { RendererBoot } from './render/rendererStart';
 import { matchSeed } from './matchFlow';
-import { nextSessionAction } from './core/sessionPlan';
+import { nextSessionAction, type SessionAction } from './core/sessionPlan';
 import { MatchSession } from './matchSession';
 import { type RangePose, RangeSession } from './rangeSession';
 import type { GameState } from './sim/state';
@@ -71,7 +71,7 @@ import type { SaveManager } from './save/saveManager';
 import { SAVE_TEXT } from './config/save';
 import { screenWhenStopped } from './ui/menus/menuNav';
 import { Menus } from './ui/menus/menus';
-import { followingPictureTarget, ItemPictures, webglPictureTarget } from './render/itemPictures';
+import { followingPictureTarget, ItemPictures, nodePictureTarget } from './render/itemPictures';
 import { kitSubjects } from './ui/menus/menuPictures';
 import { recordsView } from './ui/recordsView';
 import {
@@ -299,6 +299,8 @@ export class Game {
   private drawMs = 0;
   /** Set by dispose(): work still in flight (the dev maps' fetch) then does nothing. */
   private disposed = false;
+  /** Play asked for the lock and waits for the browser's answer before building (play). */
+  private askingLock = false;
   /** Up once the game has stopped on an error (crash); the loop never runs again. */
   private crashScreen: CrashScreen | null = null;
 
@@ -308,11 +310,11 @@ export class Game {
     const dev = activeDev(loadDevEnabled(), loadDevSettings());
     const devMaps = dev.devContent ? loadDevMaps() : null;
     const models = new ModelFiles();
-    // The renderer (W1): its start (render/rendererStart.ts, a small chunk of its own with the Renderer row) loads
-    // alongside the physics; on Auto or WebGPU it asks for an adapter, and only when one is given are `three/webgpu`
-    // loaded and its device made. On the WebGL pick, or if that chunk can't be had, WebGL as before.
+    // The renderer (W1, W6): its start (render/rendererStart.ts, a small chunk of its own with the Renderer row) loads
+    // alongside the physics with `three/webgpu`; on Auto or WebGPU it asks for an adapter first, and draws on WebGPU when
+    // one is given, else on WebGL2. A browser with neither can't play: the start-up pane says so.
     const choice = loadRendererChoice();
-    const starting = import('./render/rendererStart').then((m) => m.bootRenderer(choice, options.forceWebGL === true, options.qualitySettings.antialias), () => null);
+    const starting = import('./render/rendererStart').then((m) => m.bootRenderer(choice, options.forceWebGL === true, options.qualitySettings.antialias));
     const [, , , , start] = await Promise.all([initPhysics(), models.use(modelFilesInUse(dev)), devMaps, loadBakedLight(), starting]);
     const game = new Game(container, options, start);
     game.renderer.models = models;
@@ -322,17 +324,14 @@ export class Game {
   private constructor(
     private readonly container: HTMLElement,
     private readonly options: GameOptions,
-    /**
-     * What this visit draws with (render/rendererStart.ts): the node renderer, the adapter's name and the Renderer row's
-     * builder. Null if that chunk couldn't be had: WebGL, and no Renderer row.
-     */
-    private readonly rendering: RendererBoot | null,
+    /** What this visit draws with (render/rendererStart.ts): the node renderer, the adapter's name and the Renderer row's builder. */
+    private readonly rendering: RendererBoot,
   ) {
     this.qualityChoice = options.quality;
     this.quality = options.qualitySettings;
     this.autoQuality = options.automaticQuality;
     this.matchSeed = options.seed;
-    this.renderer = new Renderer(container, this.quality, rendering?.node);
+    this.renderer = new Renderer(container, this.quality, rendering.node);
     this.renderer.setFov(loadFov());
     this.renderer.setToneMapping(loadToneMapping());
     this.map = loadMap();
@@ -399,15 +398,16 @@ export class Game {
       };
     });
 
-    // The menus' pictures of replicas and parts (G3), drawn by whichever WebGL renderer the game has now.
-    // The power sources' models are Blender files too (RM4): pictured only while the Dev tab's model switches let the
-    // replicas' in, else their line drawings stay.
+    // The menus' pictures of replicas and parts (G3), drawn by the game's renderer (W6; a new one after a lost device),
+    // once a match's warm-up compile is done. The power sources' models are Blender files too (RM4): pictured only while
+    // the Dev tab's model switches let the replicas' in, else their line drawings stay.
     const powerSources = powerSourceLoader();
     this.pictures = new ItemPictures(
-      followingPictureTarget(() => this.renderer.pictureRenderer, webglPictureTarget),
+      followingPictureTarget(() => this.renderer.renderer, nodePictureTarget),
       undefined,
       () => this.renderer.replicaFiles,
       (file) => (this.renderer.models.inUse.gear ? powerSources(file) : Promise.resolve(null)),
+      () => this.renderer.afterCompiles(),
     );
     this.menus = new Menus(container, {
       pictures: this.pictures,
@@ -510,7 +510,7 @@ export class Game {
         frameRateCap: { initial: this.frameRateCap, onChange: (cap) => (this.frameRateCap = cap) },
         showFps: { initial: loadShowFps(), onChange: (on) => this.debug.setFpsReadout(on) },
         toneMapping: { initial: this.renderer.toneMappingId, onChange: (id) => this.renderer.setToneMapping(id) },
-        renderer: this.rendering && ((row) => this.rendering!.fillRow(row, this.renderer)),
+        renderer: (row) => this.rendering.fillRow(row, this.renderer),
       },
       audio: { initial: this.audio.volumes, onChange: (channel, v) => this.changeVolume(channel, v), onRelease: (channel) => this.audio.preview(channel) },
       crosshair: {
@@ -591,8 +591,9 @@ export class Game {
         if (locked) this.pointer.release();
         return;
       }
-      if (locked) this.resume();
-      else {
+      if (locked) {
+        if (!this.askingLock) this.resume();
+      } else {
         this.pause();
         this.relockAfterFullscreen();
       }
@@ -765,14 +766,14 @@ export class Game {
       this.autoQuality = false;
       this.stepDownTo = null;
     }
-    if (this.renderer.setQuality(settings)) this.session?.contextRestored();
+    this.renderer.setQuality(settings);
     this.session?.setQuality(settings);
   }
 
   /**
    * The automatic step-down (REN-03), after each frame drawn in play: frame times go to the watch while the game's own
-   * pick is in force; a step decided mid-round waits for the round to end (a new WebGL context compiles every shader,
-   * a hitch nobody wants mid-fight), then applies, unsaved, with a line on the HUD.
+   * pick is in force; a step decided mid-round waits for the round to end (a new preset compiles new pipelines, a
+   * hitch nobody wants mid-fight), then applies, unsaved, with a line on the HUD.
    */
   private watchFrameTimes(s: MatchSession | RangeSession, frameSeconds: number): void {
     if (!this.autoQuality || this.steppedDown) return;
@@ -972,9 +973,11 @@ export class Game {
   /**
    * Play on New game, Resume, Play Again. Before play has begun in a match, the match is built here from New game's
    * choices; a match left over from a lock request still pending (or refused) is reused if nothing changed since, and
-   * replaced otherwise. Runs in the click, so audio can be unlocked.
+   * replaced otherwise. Runs in the click: the lock is asked for first, and the session built once the browser has
+   * answered (`enter`).
    */
   private play(): void {
+    if (this.askingLock) return;
     const s = this.session;
     // What Play does is decided from these flags alone (core/sessionPlan.ts, audit CORE-05).
     const action = nextSessionAction({
@@ -987,6 +990,25 @@ export class Game {
       loadoutChanged: this.loadoutChanged,
     });
     if (action === 'none') return;
+    if (this.options.allowUnlocked) {
+      this.enter(action, s);
+      return;
+    }
+    // The lock is asked for before anything is built: the build and the first frames' compile can hold the page for
+    // seconds (the node renderer in software, W6a), and a first try refused (raw input not offered) would retry only
+    // once the page is free, past the click's user activation, and be refused. A lock granted meanwhile resumes nothing:
+    // the session it would resume is the one being replaced; `enter` resumes once it is built.
+    this.askingLock = true;
+    void this.pointer.request().finally(() => {
+      this.askingLock = false;
+      if (this.disposed) return;
+      this.enter(action, s);
+      if (this.pointer.locked) this.resume();
+    });
+  }
+
+  /** Builds or reuses the session `action` asks for (`s`, the session when Play was pressed) and unlocks its audio. */
+  private enter(action: Exclude<SessionAction, 'none'>, s: MatchSession | RangeSession | null): void {
     if (action === 'buildRange') {
       // The tutorial resumes at the step it was left at (audit POOL-14).
       this.openRange(undefined, this.tutorial ? loadTutorialStep() : undefined);
@@ -1038,9 +1060,7 @@ export class Game {
       this.unlockedPlay = true;
       this.pointer.setUnlockedButtons(true);
       this.resume();
-      return;
     }
-    void this.pointer.request();
   }
 
   /**
@@ -1072,7 +1092,7 @@ export class Game {
       return;
     }
     if (!s) {
-      // Nothing to play (should not happen: Play builds the match before asking for the lock); give the mouse back.
+      // Nothing to play (should not happen: Play resumes once its session is built); give the mouse back.
       this.pointer.release();
       return;
     }
@@ -1222,8 +1242,8 @@ export class Game {
       ['Pixel ratio', read(() => this.renderer.renderer.getPixelRatio())],
       ['Renderer', this.renderer.backend],
       ['GPU', read(() => {
-        const gl = this.renderer.renderer;
-        return 'isWebGPURenderer' in gl ? this.rendering?.adapterName || '-' : rendererName(gl.getContext());
+        const gl = this.renderer.webglContext;
+        return gl ? rendererName(gl) : this.rendering.adapterName || '-';
       })],
       ['Window', `${window.innerWidth} × ${window.innerHeight} at ${window.devicePixelRatio}`],
       ['Sim ticks/s', this.tickRate],

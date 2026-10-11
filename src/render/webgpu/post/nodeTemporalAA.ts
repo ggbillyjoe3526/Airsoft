@@ -13,7 +13,7 @@ const fromYCoCg = (c: AnyNode): AnyNode => vec3(c.x.add(c.y).sub(c.z), c.x.add(c
 const weightOf = (c: AnyNode): AnyNode => float(1).div(float(1).add(c.x));
 
 /**
- * Temporal antialiasing on the node path (W4): render/post/temporalAAPass.ts in TSL, the same resolve (this frame's
+ * Temporal antialiasing on the node path (W4): WebGL's GLSL pass (G5, deleted in W6) in TSL, the same resolve (this frame's
  * 3×3 colour box in YCoCg clipping the history, reprojected through the nearest depth and last frame's view) into the
  * same pair of history targets, then the same sharpen out. Three's `TRAANode` reads velocity from a second render
  * target (MRT) and blends differently, so this ports WebGL's; the stack jitters the projection for both alike.

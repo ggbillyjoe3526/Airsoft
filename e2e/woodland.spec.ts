@@ -146,10 +146,56 @@ type TorchView = {
     state: { tick: number; characters: { id: number; torchOn: boolean; armament: { active: number; parts: { light?: string | null }[] } }[] } | null;
     renderer: {
       scene: { traverse: (f: (o: { name: string; isPointLight?: boolean; isSpotLight?: boolean; intensity: number }) => void) => void };
-      renderer: { info: { programs: unknown[] | null } };
     };
   };
 };
+
+/**
+ * Counts the shader programs the node renderer builds from now on (its back end builds each through `createProgram`),
+ * in `programsBuilt` on the page. The renderer's own program count also falls as unused ones are let go, so a count
+ * before and after could hide a build (W6a).
+ */
+async function countProgramsBuilt(page: import('@playwright/test').Page): Promise<void> {
+  // The count starts once the match's warm-up compile is done: it builds over many frames (on a slow runner, or with the
+  // CPU slowed 4x, still hundreds of ticks into the match), so its shaders are built ahead of play, not while you play.
+  type Counted = {
+    programsBuilt?: number;
+    airsoft: {
+      pictures: { scene: object };
+      renderer: {
+        afterCompiles(): Promise<void>;
+        renderer: { backend: { createProgram: (...args: unknown[]) => unknown }; render: (scene: object, ...args: unknown[]) => unknown };
+      };
+    };
+  };
+  await page.evaluate(() => (window as unknown as Counted).airsoft.renderer.afterCompiles());
+  await page.evaluate(() => {
+    const w = window as unknown as Counted;
+    const renderer = w.airsoft.renderer.renderer;
+    const backend = renderer.backend;
+    // The menus' and HUD's item pictures draw through the game's renderer too (W6a), one at a time between frames: their
+    // studio's shaders are theirs, not the match's, so a draw of the pictures' scene isn't counted (a slow runner is still
+    // drawing them well into the match).
+    const studio = w.airsoft.pictures.scene;
+    const render = renderer.render;
+    let picturing = false;
+    renderer.render = function (this: unknown, scene: object, ...args: unknown[]) {
+      const was = picturing;
+      picturing = scene === studio;
+      try {
+        return render.call(this, scene, ...args);
+      } finally {
+        picturing = was;
+      }
+    };
+    const createProgram = backend.createProgram;
+    w.programsBuilt = 0;
+    backend.createProgram = function (this: unknown, ...args: unknown[]) {
+      if (!picturing) w.programsBuilt = (w.programsBuilt ?? 0) + 1;
+      return createProgram.apply(this, args);
+    };
+  });
+}
 
 /**
  * M33h QA: on Woodland with Dev content on, T switches your weapon torch (a starter, fitted by default), on Medium
@@ -175,7 +221,7 @@ test('Woodland: T switches your weapon torch, one real spot light in place of a 
           spotIntensity = o.intensity;
         }
       });
-      return { torchOn: g.state!.characters.find((c) => c.id === 0)!.torchOn, points, spots, spotIntensity, programs: g.renderer.renderer.info.programs?.length ?? 0 };
+      return { torchOn: g.state!.characters.find((c) => c.id === 0)!.torchOn, points, spots, spotIntensity, built: (window as unknown as { programsBuilt?: number }).programsBuilt ?? 0 };
     });
   await page.goto('/?nolock&seed=3&quality=medium');
   await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
@@ -195,6 +241,7 @@ test('Woodland: T switches your weapon torch, one real spot light in place of a 
   const carried = await page.evaluate(() => (window as unknown as TorchView).airsoft.state!.characters.map((c) => c.armament.parts[c.armament.active]?.light ?? null));
   expect(carried.length).toBeGreaterThan(1);
   expect(carried.every((l) => l === 'weaponTorch'), carried.join()).toBe(true);
+  await countProgramsBuilt(page);
   const off = await look();
   expect(off.torchOn).toBe(false); // off at spawn
   expect(off.spots).toBe(1);
@@ -208,7 +255,7 @@ test('Woodland: T switches your weapon torch, one real spot light in place of a 
   await expect.poll(async () => (await look()).spotIntensity, { timeout: 30_000 }).toBeGreaterThan(0);
   const on = await look();
   expect(on.points + on.spots).toBe(2);
-  expect(on.programs).toBe(off.programs);
+  expect(on.built).toBe(0);
 
   // Switching it off gets the same 30 s: a stall can come again on a busy machine (a 10 s wait failed there once).
   await page.keyboard.press('t');
@@ -264,25 +311,28 @@ type LookView = {
     renderer: {
       camera: { matrixWorld: { elements: number[] } };
       scene: { getObjectByName: (n: string) => { visible: boolean } | undefined };
-      renderer: { info: { programs: unknown[] | null; render: { calls: number; triangles: number } } };
+      /** One frame's draws (DrawStats, render/rendererParts.ts): the renderer's own counts are per render() call or cumulative. */
+      stats: { calls: number; triangles: number; dressingTriangles: number };
     };
   };
 };
 
-/** What a full turn of the view drew: the most calls and triangles in a frame, the programs before and after, and how far the camera turned. */
-type Spin = { calls: number; triangles: number; before: number; after: number; quadrants: number; widest: number; pitchSpan: number };
+/**
+ * What a full turn of the view drew: the most calls and triangles in a frame (the scene's, without the GPU dressing,
+ * which has a line of its own since W6a: `dressing`), the shader programs built meanwhile and how far the camera turned.
+ */
+type Spin = { calls: number; triangles: number; dressing: number; built: number; quadrants: number; widest: number; pitchSpan: number };
 
 /**
  * Turns your view a full circle over `frames` frames (and nods it up and down), through the input as the mouse does (a
  * character's own yaw is overwritten by the input each tick), reading each frame's draw calls and triangles, the shader
- * programs before and after, and the camera's actual direction: the compass quadrants it faced, the widest angle from
+ * programs built meanwhile, and the camera's actual direction: the compass quadrants it faced, the widest angle from
  * where it started (degrees) and the spread of its pitch (radians).
  */
 async function spinView(page: import('@playwright/test').Page, frames = 48): Promise<Spin> {
+  await countProgramsBuilt(page);
   return page.evaluate(async (frames) => {
     const g = (window as unknown as LookView).airsoft;
-    const info = g.renderer.renderer.info;
-    const programs = info.programs?.length ?? 0;
     const forward = (): [number, number, number] => {
       const e = g.renderer.camera.matrixWorld.elements;
       return [-e[8]!, -e[9]!, -e[10]!];
@@ -292,6 +342,7 @@ async function spinView(page: import('@playwright/test').Page, frames = 48): Pro
     const quadrants = new Set<number>();
     let calls = 0;
     let triangles = 0;
+    let dressing = 0;
     let widest = 0;
     let minY = Infinity;
     let maxY = -Infinity;
@@ -299,8 +350,10 @@ async function spinView(page: import('@playwright/test').Page, frames = 48): Pro
       g.input.yaw = startYaw + (i / frames) * Math.PI * 2;
       g.input.pitch = 0.35 * Math.sin((i / frames) * Math.PI * 4);
       await new Promise((r) => requestAnimationFrame(r));
-      calls = Math.max(calls, info.render.calls);
-      triangles = Math.max(triangles, info.render.triangles);
+      const stats = g.renderer.stats;
+      calls = Math.max(calls, stats.calls);
+      triangles = Math.max(triangles, stats.triangles - stats.dressingTriangles);
+      dressing = Math.max(dressing, stats.dressingTriangles);
       const f = forward();
       quadrants.add((f[0] >= 0 ? 1 : 0) + (f[2] >= 0 ? 2 : 0));
       const flat = Math.hypot(f[0], f[2]) * Math.hypot(start[0], start[2]) || 1;
@@ -308,7 +361,8 @@ async function spinView(page: import('@playwright/test').Page, frames = 48): Pro
       minY = Math.min(minY, f[1]);
       maxY = Math.max(maxY, f[1]);
     }
-    return { calls, triangles, before: programs, after: info.programs?.length ?? 0, quadrants: quadrants.size, widest, pitchSpan: Math.asin(Math.min(1, maxY)) - Math.asin(Math.max(-1, minY)) };
+    const built = (window as unknown as { programsBuilt?: number }).programsBuilt ?? 0;
+    return { calls, triangles, dressing, built, quadrants: quadrants.size, widest, pitchSpan: Math.asin(Math.min(1, maxY)) - Math.asin(Math.max(-1, minY)) };
   }, frames);
 }
 
@@ -359,24 +413,26 @@ test('Woodland on Low at 6v6: moon, stars and fires, within 100 draw calls and 1
   });
   expect(parts).toEqual([true, true, true, false]);
 
-  // Turn a full circle, reading what each frame draws and which shaders exist.
+  // Turn a full circle, reading what each frame draws and which shaders are built.
   const spin = await spinView(page);
   console.log(`Woodland Low spin: ${JSON.stringify(spin)}`);
   expectTurned(spin);
   expect(spin.calls).toBeLessThanOrEqual(100);
   expect(spin.triangles).toBeLessThanOrEqual(150_000);
-  expect(spin.after).toBe(spin.before);
+  expect(spin.dressing).toBe(0);
+  expect(spin.built).toBe(0);
   expect(errors).toEqual([]);
 });
 
 /**
- * M33i QA: Medium's ceiling (135 draw calls, 200k triangles) at the largest team size, 5v5, where the figures' share is
+ * M33i QA: Medium's ceiling (140 draw calls, 200k triangles) at the largest team size, 5v5, where the figures' share is
  * the largest: the moon, stars, flames and (Medium has dust motes) embers drawn, and no shader first built while you
  * turn round at the spawn. G5 raised the line from 120: Medium's bloom draws 14 full-screen passes (the bright-pass, two
  * blurs on each of five sizes, the mix, its blend onto the picture and the output), cheap on the CPU; the world's own
- * draws stay about 110. Still under the owner's ceiling of 150.
+ * draws stay about 110. W6a raised it to 140 with Woodland's Medium perf line (DECISIONS 2026-10-11): the grass and
+ * stand-ins' two draws and the built-in models' (RM4). Still under the owner's ceiling of 150.
  */
-test('Woodland on Medium at 5v5: within 135 draw calls and 200k triangles, embers on, no shader built mid-match', async ({ page }) => {
+test('Woodland on Medium at 5v5: within 140 draw calls and 200k triangles, embers on, no shader built mid-match', async ({ page }) => {
   test.setTimeout(300_000);
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
@@ -410,9 +466,12 @@ test('Woodland on Medium at 5v5: within 135 draw calls and 200k triangles, ember
   const spin = await spinView(page);
   console.log(`Woodland Medium 5v5 spin: ${JSON.stringify(spin)}`);
   expectTurned(spin);
-  expect(spin.calls).toBeLessThanOrEqual(135);
+  expect(spin.calls).toBeLessThanOrEqual(140);
   expect(spin.triangles).toBeLessThanOrEqual(200_000);
-  expect(spin.after).toBe(spin.before);
+  // The GPU dressing at its caps, on its own line (pipeline/perf-budget.json presets.medium.dressingTriangles, W6a).
+  expect(spin.dressing).toBeGreaterThan(0);
+  expect(spin.dressing).toBeLessThanOrEqual(130_000);
+  expect(spin.built).toBe(0);
   expect(errors).toEqual([]);
 });
 

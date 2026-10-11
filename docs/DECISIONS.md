@@ -166,6 +166,19 @@ replaces its line; the old one stays findable in the archive or in git.
   rule: on the owner's laptop and desktop, WebGPU is no slower than his WebGL baseline on any map, mode and preset, and
   Low still holds 60 fps at 1080p on the laptop. Until he says otherwise, Low runs on WebGPU too and a Renderer row
   (Auto, WebGPU, WebGL) joins `Settings › Graphics`. Milestones: `docs/ROADMAP.md`.
+- **WebGPU is the default renderer, not a Dev setting (owner, 2026-10-08).** A public Renderer row in
+  `Settings › Graphics` offers Auto, WebGPU and WebGL. Since W6 (2026-10-11) there is one renderer: WebGL means the node
+  renderer's WebGL2 back end, used when the browser has no WebGPU, the player picks it, or the GPU is lost and no new
+  device comes. The old WebGLRenderer and its GLSL post passes are gone.
+- **A software WebGPU adapter is judged on the look bar's pixel share only (2026-10-09, W3).** SwiftShader's WebGPU
+  differs from its WebGL in noise, not in what is drawn, so the container checks that at most 1 % of pixels differ by
+  more than 24; the mean is judged on hardware. The nearest fire's shadow, other players' torches as real lights and the
+  neon signs' coloured light stay out of the node renderer.
+- **On a software adapter the Dev retro filter's views are judged by eye (2026-10-10, W4).** Its 8-colour palette turns
+  sub-pixel noise into whole steps, so the numbers say nothing there.
+- **Woodland's triangle lines stayed as they were until the budgets split per renderer (owner, card, 2026-10-10, 15:18:
+  "Keep for now"; W5).** W6a kept them: the scene's own triangles hold the owner's lines on both back ends, and the
+  grass and stand-ins go on a line of their own (Performance budgets, below).
 - **The laser beam stays off on every preset (owner, 2026-10-05, 07:06).** A beam with no dot stops short of what it
   points at.
 - **Torches cast shadows on High and Ultra only; Low keeps today's beams (owner, 2026-10-06).** Keeps Low's 60 fps; an
@@ -218,7 +231,10 @@ replaces its line; the old one stays findable in the archive or in git.
   2026-10-04).** Nothing on the HUD; the dust rides it.
 - **BBs always ricochet; the Ricochets count setting only decides whether a ricochet knocks someone out, and it is off
   by default (owner, 2026-10-03 and 2026-10-04).** Fields differ, and a bounce knocking you out can feel unfair in a
-  game. Your own ricochets can hit you and, with the setting on, knock you out (owner, 2026-10-05, 07:06).
+  game. Your own ricochets can hit you and, with the setting on, knock you out (owner, 2026-10-05, 07:06). Bounces are
+  weaker since G12 (owner, decision card, 2026-10-10: "Bounced BBs lose more speed, so fewer of them knock players
+  out"): concrete gives back 0.3 of the speed into it and steel 0.41, three quarters of M20's values; the cap on the
+  share of hits that are ricochets stays 0.25 (`ai/depotMatchSupport.ts`), not raised.
 - **Accuracy depends on stance and movement, by one rule for bots and the player (2026-10-02).** Still and crouched is
   tightest; running, sprinting and the air are loosest. The aim locks on almost at once when you stop (owner,
   2026-10-03: "too slow and smooth", he wanted an "instant lock").
@@ -504,8 +520,18 @@ replaces its line; the old one stays findable in the archive or in git.
   growth ≤ 5 MB over 60 s; nothing more than 10 % worse than the baseline. His ceilings of 150 draw calls and 250k
   triangles stay on High. Dynamic resolution scaling is not in the budget (owner: no). Raising any line needs a decision
   line.
-- **Medium has map-scoped draw-call lines: Woodland 115 and Neon Heights 140 (owner, 2026-10-06, audit decision 4).**
-  The other Medium lines (200k triangles, memory, heap) and every Low line stay the presets'.
+- **Medium has map-scoped draw-call lines: Woodland 120 and Neon Heights 145 (owner, 2026-10-11, W6a; 115 and 140
+  since 2026-10-06, audit decision 4).** The other Medium lines (200k triangles, memory, heap) and every Low line stay
+  the presets'. Raised on the owner's card ("Raise a little"): with the old renderer gone, Woodland's GPU grass and
+  stand-ins cost 2 draws on Medium, and the built-in models back since RM4 about 5 on every map (Woodland Extraction
+  Medium 115.3 on WebGL2 and 116.5 on WebGPU; Neon Heights Extraction Medium 142 on WebGPU; main on the old renderer
+  113.3). The Woodland 5v5 spin check (`e2e/woodland.spec.ts`) goes from 135 to 140 with it.
+- **The GPU dressing's triangles have a line of their own; the scene keeps the owner's (2026-10-11, W6a).** Three counts
+  Woodland's grass and tree stand-ins at their caps (every blade slot, whatever the GPU cull keeps), which put Woodland's
+  node renderer at about 261k triangles on Medium against 200k, 375k on High and 637k on Ultra against 250k. The perf
+  harness records them apart (`dressingTriangles`), each preset's line being its caps plus 2 % (Medium 130k, High 290k,
+  Ultra 495k, Low 0); `triangles` is the rest of the scene and keeps its lines (Woodland Extraction Medium on WebGPU:
+  132k, max 140k, against 200k). No line was raised. Both back ends hold the same lines (`backends` is empty).
 - **Real light counts per quality are fixed: Low none, Medium 2, High 4 (owner rule, 2026-10-04).** Three.js rebuilds
   every lit shader when the count changes. Low holds 60 fps with no real lights.
 - **Frame times are judged only on hardware rendering (2026-10-04).** The cloud container draws with SwiftShader, so
@@ -524,7 +550,8 @@ replaces its line; the old one stays findable in the archive or in git.
   Bumped from 950 kB on 2026-10-10 (FP1):
   main's game chunk was 950.2 kB after G11 and G12, already over, and FP1's hand holds made it 951.1 (950.3 once W4
   moved WebGL's retro filter to a chunk of its own); the WebGPU overhaul's step 6 (the old renderer removed) is where it
-  should shrink again.
+  should shrink again. W6a (2026-10-11) took it from 1,007.1 to 982 kB (946 kB before main's M80, M82 and RM4); the
+  line stays 1,050 kB until W6b removes the world's GLSL patches, then drops back if the chunk has room.
 - **Production builds ship Brotli and gzip copies of their files (owner, 2026-10-04: Brotli now, `.wasm` later).**
 - **Level blocks collide as closed triangle meshes with `FIX_INTERNAL_EDGES`, not cuboids (2026-09-28).** Rapier's
   capsule controller sinks into any cuboid along its diagonals, and without the flag face-diagonal edges give ghost

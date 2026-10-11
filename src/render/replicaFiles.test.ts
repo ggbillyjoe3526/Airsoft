@@ -217,7 +217,7 @@ describe('the file model beside the built-in one (M101 gaps)', () => {
       const target = {
         draw(scene: THREE.Scene) {
           scene.traverseVisible((o) => o instanceof THREE.Mesh && meshes++);
-          return new Float32Array(4 * 4 * 4).fill(0.2);
+          return Promise.resolve(new Float32Array(4 * 4 * 4).fill(0.2));
         },
         encode: () => 'picture',
         dispose() {},

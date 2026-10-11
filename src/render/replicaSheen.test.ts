@@ -4,7 +4,7 @@ import { ENVIRONMENT, QUALITY } from '../config/render';
 import { skyColour } from './atmosphere';
 import { defaultEnvironmentLook, disposeEnvironmentScene, ReplicaSheen, type SheenTarget, skyEnvironmentScene, sunDirection } from './replicaSheen';
 
-/** A stand-in for the prefiltered target: no WebGL needed. */
+/** A stand-in for the prefiltered target: no GPU needed. */
 function fakeFactory() {
   const made: { texture: THREE.Texture; dispose: ReturnType<typeof vi.fn> }[] = [];
   const make = vi.fn((): SheenTarget => {
@@ -15,14 +15,12 @@ function fakeFactory() {
   return { make, made };
 }
 
-const gl = {} as THREE.WebGLRenderer;
-
 describe('ReplicaSheen (REN-06)', () => {
   it('prefilters once and shares the target between sessions while the setting is on', () => {
     const { make, made } = fakeFactory();
     const sheen = new ReplicaSheen(make);
-    const first = sheen.texture(gl, QUALITY.high.replicaSheen);
-    const again = sheen.texture(gl, QUALITY.high.replicaSheen);
+    const first = sheen.texture(QUALITY.high.replicaSheen);
+    const again = sheen.texture(QUALITY.high.replicaSheen);
     expect(first).toBe(made[0]!.texture);
     expect(again).toBe(first);
     expect(make).toHaveBeenCalledTimes(1);
@@ -31,35 +29,24 @@ describe('ReplicaSheen (REN-06)', () => {
   it('frees the target when the setting goes off (Low) and does not make it again while off', () => {
     const { make, made } = fakeFactory();
     const sheen = new ReplicaSheen(make);
-    sheen.texture(gl, true);
+    sheen.texture(true);
     sheen.trim(QUALITY.low.replicaSheen);
     expect(made[0]!.dispose).toHaveBeenCalledTimes(1);
-    expect(sheen.texture(gl, QUALITY.low.replicaSheen)).toBeNull();
+    expect(sheen.texture(QUALITY.low.replicaSheen)).toBeNull();
     sheen.trim(QUALITY.low.replicaSheen);
     expect(make).toHaveBeenCalledTimes(1);
     expect(made[0]!.dispose).toHaveBeenCalledTimes(1);
     // Back on: made afresh.
-    expect(sheen.texture(gl, true)).toBe(made[1]!.texture);
+    expect(sheen.texture(true)).toBe(made[1]!.texture);
   });
 
   it('keeps the target when the setting stays on', () => {
     const { make, made } = fakeFactory();
     const sheen = new ReplicaSheen(make);
-    sheen.texture(gl, true);
+    sheen.texture(true);
     sheen.trim(true);
     expect(made[0]!.dispose).not.toHaveBeenCalled();
-    expect(sheen.texture(gl, true)).toBe(made[0]!.texture);
-  });
-
-  it('after a lost context drops the target without freeing it on the new context, and makes it again', () => {
-    const { make, made } = fakeFactory();
-    const sheen = new ReplicaSheen(make);
-    sheen.texture(gl, true);
-    sheen.forget();
-    expect(made[0]!.dispose).not.toHaveBeenCalled();
-    expect(sheen.texture(gl, true)).toBe(made[1]!.texture);
-    sheen.dispose();
-    expect(made[1]!.dispose).toHaveBeenCalledTimes(1);
+    expect(sheen.texture(true)).toBe(made[0]!.texture);
   });
 });
 
@@ -110,14 +97,14 @@ describe('the environment map per sky (engine-level: a map with another sky gets
     const { make, made } = fakeFactory();
     const sheen = new ReplicaSheen(make);
     const day = defaultEnvironmentLook();
-    const first = sheen.texture(gl, true, day);
-    expect(sheen.texture(gl, true, defaultEnvironmentLook())).toBe(first);
+    const first = sheen.texture(true, day);
+    expect(sheen.texture(true, defaultEnvironmentLook())).toBe(first);
     expect(make).toHaveBeenCalledTimes(1);
     const night = { ...day, sky: { ...day.sky, zenith: 0x0b1530 } };
-    const second = sheen.texture(gl, true, night);
+    const second = sheen.texture(true, night);
     expect(second).not.toBe(first);
     expect(make).toHaveBeenCalledTimes(2);
     expect(made[0]!.dispose).toHaveBeenCalledTimes(1);
-    expect((make.mock.calls[1] as unknown[])[1]).toBe(night);
+    expect((make.mock.calls[1] as unknown[])[0]).toBe(night);
   });
 });

@@ -16,7 +16,7 @@ interface Proxy {
 }
 
 /**
- * Reflections on puddles and glass on the node path (W4): render/post/reflectionPass.ts in TSL, the same mask of the
+ * Reflections on puddles and glass on the node path (W4): WebGL's GLSL pass (G5, deleted in W6) in TSL, the same mask of the
  * reflective meshes (view normal and strength, hidden parts dropped against the scene's depth) and the same walk of
  * each masked pixel's reflected ray through the depth. Three/webgpu 0.186's `SSRNode` reads normals and metalness from
  * a second render target (MRT) on every pixel; the game's reflections are only on its few reflective meshes, so this

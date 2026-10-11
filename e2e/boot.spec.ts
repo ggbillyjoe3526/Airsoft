@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { renders } from './rendererRow';
 
 /**
  * Smoke test: the built game boots to the title screen with no map loaded, goes through New game (the Map, Match and
@@ -406,10 +407,10 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   // software a frame can take seconds early in a match (Chrome 153 there, where these steps were flaky with 10 s waits;
   // they never failed on Chromium 141 in the container): wait for frames to come, then give each key's result the same
   // CI-sized wait as the fire and reload steps below (keyWait).
-  type Drawn = { airsoft: { renderer: { renderer: { info: { render: { frame: number } } } } } };
-  const framesDrawn = () => page.evaluate(() => (window as unknown as Drawn).airsoft.renderer.renderer.info.render.frame);
-  const drawnAtStart = await framesDrawn();
-  await expect.poll(framesDrawn, { timeout: 60_000 }).toBeGreaterThan(drawnAtStart + 10);
+  // The node renderer counts render() calls, never reset (a frame makes one or more), so the count moving on by ten
+  // says the match is drawing; its `info.frame` only moves under its own animation loop, which the game doesn't use.
+  const drawnAtStart = await renders(page);
+  await expect.poll(() => renders(page), { timeout: 60_000 }).toBeGreaterThan(drawnAtStart + 10);
   const keyWait = { timeout: 30_000 };
   // Holding Tab shows the scoreboard with every player (M19); letting go hides it.
   const board = page.locator('.match-board');
@@ -519,15 +520,17 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await settings.getByRole('tab', { name: /Graphics/i }).click();
   const quality = settings.getByRole('group', { name: 'Quality' });
   const shadowsOn = () => page.evaluate(() => (window as unknown as { airsoft: { renderer: { renderer: { shadowMap: { enabled: boolean } } } } }).airsoft.renderer.renderer.shadowMap.enabled);
-  // Edge smoothing applies at once too (final alpha audit REN-04): the game's canvas gets a new, multisampled context.
-  const multisampled = () => page.evaluate(() => document.querySelector<HTMLCanvasElement>('canvas.game-canvas')!.getContext('webgl2')!.getContextAttributes()!.antialias);
+  // Edge smoothing (REN-04): the node renderer's multisampling is fixed for its life, so a change waits for the next
+  // load (the Graphics tab says so) and nothing else is pending (W6a: the old WebGL path's new context is gone).
+  type Smoothing = { airsoft: { renderer: { antialiased: boolean; antialiasPending: boolean } } };
+  const smoothing = () => page.evaluate(() => { const r = (window as unknown as Smoothing).airsoft.renderer; return { given: r.antialiased, pending: r.antialiasPending }; });
   await expect(quality.getByRole('button', { name: 'Low' })).toHaveAttribute('aria-pressed', 'true');
   expect(await shadowsOn()).toBe(false);
-  expect(await multisampled()).toBe(false);
+  expect(await smoothing()).toEqual({ given: false, pending: false });
   await quality.getByRole('button', { name: 'Medium' }).click();
   await expect(quality.getByRole('button', { name: 'Medium' })).toHaveAttribute('aria-pressed', 'true');
   expect(await shadowsOn()).toBe(true);
-  expect(await multisampled()).toBe(true);
+  expect(await smoothing()).toEqual({ given: false, pending: true });
   expect(await page.locator('canvas.game-canvas').count()).toBe(1);
   // The Custom rows are folded under a preset (M68, audit UI-09): opened here, a row moves the picker to Custom, and
   // setting it back finds Medium again.
@@ -543,7 +546,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await quality.getByRole('button', { name: 'Low' }).click();
   await expect(quality.getByRole('button', { name: 'Low' })).toHaveAttribute('aria-pressed', 'true');
   expect(await shadowsOn()).toBe(false);
-  expect(await multisampled()).toBe(false);
+  expect(await smoothing()).toEqual({ given: false, pending: false });
   // Team colours picked mid-match show from the next match, Play Again included (bug pass): back to Standard here.
   await settings.getByRole('tab', { name: /Accessibility/i }).click();
   await settings.getByRole('group', { name: 'Team colours' }).getByRole('button', { name: 'Standard' }).click();

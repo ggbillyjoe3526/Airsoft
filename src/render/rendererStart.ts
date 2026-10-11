@@ -4,19 +4,19 @@ import type { NodeBackend, NodeStart } from './webgpu/nodeBackend';
 import { probeWebGpu, type WebGpuProbe } from './webgpuProbe';
 
 /**
- * The renderer a visit starts with (WebGPU overhaul W1), in a small chunk of its own that Game.create loads alongside
+ * The renderer a visit starts with (WebGPU overhaul W1, W6), in a small chunk of its own that Game.create loads alongside
  * the physics on every visit (bootRenderer, with the Renderer row's builder), so none of it weighs on the main chunk.
- * The Renderer row on WebGL draws with WebGL at once: no probe, no import. On Auto (the default) or WebGPU the adapter probe runs first; only when it finds an adapter (on Auto, a
- * hardware one: a software WebGPU is far slower than WebGL on the same machine) or `?forceWebGL` asks for the WebGL2 back
- * end is the node renderer's chunk loaded (render/webgpu/nodeBackend.ts with `three/webgpu`, never in the main chunk),
- * so a browser without WebGPU never downloads it. No adapter, or a device that can't be made, falls back to WebGL
- * quietly: the same renderer, and the same draws, as before W1.
+ * One renderer draws every visit: the node renderer (render/webgpu/nodeBackend.ts with `three/webgpu`, a chunk of its
+ * own), on WebGPU or on its WebGL2 back end. On Auto (the default) or WebGPU the adapter probe runs first, and WebGPU
+ * draws when it finds an adapter (on Auto, a hardware one: a software WebGPU is far slower than WebGL2 on the same
+ * machine). The WebGL pick, `?forceWebGL`, no adapter, or a device that can't be made draw on WebGL2, quietly. Only a
+ * browser that gives neither throws: the game can't draw there, and the start-up pane says so.
  */
 
-/** What a visit draws with (Game.create): the back end, the node renderer when it isn't WebGL, and the adapter's name. */
+/** What a visit draws with (Game.create): the back end, the node renderer, and the adapter's name. */
 export interface StartingRenderer {
   backend: RenderBackend;
-  node: NodeBackend | null;
+  node: NodeBackend;
   /** The WebGPU adapter's name ('' when none was asked for or given). */
   adapterName: string;
 }
@@ -33,19 +33,21 @@ export async function startingRenderer(
   probe: () => Promise<WebGpuProbe> = probeWebGpu,
   load: () => Promise<NodeStart> = loadNodeStart,
 ): Promise<StartingRenderer> {
-  const webgl: StartingRenderer = { backend: 'webgl', node: null, adapterName: '' };
-  if (!wantsWebGpu(choice)) return webgl;
-  const found = forceWebGL ? null : await probe();
-  if (found) {
-    webgl.adapterName = found.name;
-    if (!found.available || (found.software && choice === 'auto')) return webgl;
+  // The chunk downloads while the probe asks for an adapter.
+  const loading = load();
+  const found = wantsWebGpu(choice) && !forceWebGL ? await probe() : null;
+  const adapterName = found?.name ?? '';
+  const start = await loading;
+  const onWebGpu = found !== null && found.available && !(found.software && choice === 'auto');
+  if (onWebGpu) {
+    // A device that can't be made (lost at boot, refused) falls through to WebGL2, as no adapter does.
+    const node = await start({ antialias, forceWebGL: false }).catch(() => null);
+    if (node) return { backend: node.kind, node, adapterName };
   }
-  try {
-    const node = await (await load())({ antialias, forceWebGL });
-    return { backend: node.kind, node, adapterName: webgl.adapterName };
-  } catch {
-    return webgl;
-  }
+  const node = await start({ antialias, forceWebGL: true }).catch((error: unknown) => {
+    throw new Error(`Neither WebGPU nor WebGL 2 could be started (${error instanceof Error ? error.message : String(error)})`);
+  });
+  return { backend: node.kind, node, adapterName };
 }
 
 /** What Game.create gets from this chunk: what the visit draws with, and the Renderer row's builder. */

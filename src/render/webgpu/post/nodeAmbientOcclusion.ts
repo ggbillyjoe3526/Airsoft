@@ -5,12 +5,12 @@ import { generateMagicSquareNoise } from 'three/examples/jsm/shaders/GTAOShader.
 import { generatePdSamplePointInitializer } from 'three/examples/jsm/shaders/PoissonDenoiseShader.js';
 import { POST } from '../../../config/post';
 import type { AmbientOcclusionScale } from '../../../config/render';
-import { denoiseNoise } from '../../post/ambientOcclusionPass';
+import { denoiseNoise } from '../../post/postHelpers';
 import { drawCleared, MULTIPLY, type PostFrame, type PostPass, scaled } from '../../post/postPass';
 import { type AnyNode, at, depthAt, fullScreen, type NodeRenderer, type NodeTarget, quad, slot, viewAt, vUv } from './nodeKit';
 
 /**
- * Ambient occlusion on the node path (W4): render/post/ambientOcclusionPass.ts in TSL. Three/webgpu 0.186's own
+ * Ambient occlusion on the node path (W4): WebGL's GLSL pass (G5, deleted in W6) in TSL. Three/webgpu 0.186's own
  * `GTAONode` is a later GTAO (a different horizon search with per-pixel jitter), and its `DenoiseNode` reads normals
  * from a buffer, so neither draws today's shade: this ports what WebGL draws, Three's `GTAOShader` (normals rebuilt
  * from the depth, 16 samples: 3 directions of 6 steps) and `PoissonDenoiseShader`, with the same noise textures, the

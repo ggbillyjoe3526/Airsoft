@@ -3,7 +3,7 @@
  * Pure functions over plain data, so pipeline/perfMatrix.test.mjs tests them; gate.mjs and perf-run.mjs import them.
  *
  * The matrix is `perf-budget.json` › `matrix`: every map in both modes on Low, and Extraction on Medium on the big maps
- * (Woodland, Neon Heights). A combination runs only when the diff touches a perf path that reaches it: a file scoped to
+ * (Woodland, Neon Heights), each per back end listed (an entry's `backend`, `webgl` when absent). A combination runs only when the diff touches a perf path that reaches it: a file scoped to
  * a map (its data, its own art) reaches that map's combinations, one scoped to a mode reaches that mode's on every map,
  * and every other perf path (the shared ones: rendering, simulation, bots, config, the pool …) reaches them all.
  */
@@ -52,8 +52,11 @@ export function perfScope(file) {
   return scope ? { ...(scope.map ? { map: scope.map } : {}), ...(scope.mode ? { mode: scope.mode } : {}) } : {};
 }
 
-/** A combination's name in the report and its log: `woodland extraction medium`. */
-export const runName = (run) => `${run.map} ${run.mode} ${run.preset}`;
+/**
+ * A combination's name in the report and its log: `woodland extraction medium`, with the back end after it when it is
+ * not WebGL: `woodland extraction medium webgpu`.
+ */
+export const runName = (run) => `${run.map} ${run.mode} ${run.preset}${run.backend && run.backend !== 'webgl' ? ` ${run.backend}` : ''}`;
 
 /**
  * The combinations the gate runs for a diff: each matrix entry some changed perf path reaches, in the matrix's order.
@@ -71,8 +74,9 @@ export function perfTag(map, mode) {
 }
 
 /**
- * What a run adds after the environment for the back end that drew it (WebGPU overhaul W1; the result's `backend`):
- * nothing for WebGL (every file the gate and the baselines read), `-webgpu` or `-webgpu-webgl2` for the node renderer.
+ * What a run adds after the environment for the back end that drew it (the result's `backend`; WebGPU overhaul W6: the
+ * two back ends are `webgl`, the node renderer's WebGL2 back end, and `webgpu`): nothing for `webgl` (every file the gate
+ * and the baselines read), `-webgpu` for WebGPU.
  */
 export function rendererTag(backend) {
   return backend === undefined || backend === 'webgl' ? '' : `-${backend}`;
@@ -92,9 +96,14 @@ export function baselineFileName(env, run, budgetPreset) {
   return run.preset === budgetPreset ? `${env}${tag}.json` : `${env}${tag}-${run.preset}.json`;
 }
 
-/** The budget for a map on a preset: the preset's lines, with the map's own lines (`maps.<map>.<preset>`) over them. */
-export function budgetFor(budgets, map, preset) {
-  return { ...(budgets.presets?.[preset] ?? {}), ...(budgets.maps?.[map]?.[preset] ?? {}) };
+/**
+ * The budget for a map on a preset and a back end: the preset's lines, then the map's own (`maps.<map>.<preset>`), then
+ * the back end's for the preset (`backends.<backend>.presets.<preset>`), then its for the map
+ * (`backends.<backend>.maps.<map>.<preset>`); a later line wins.
+ */
+export function budgetFor(budgets, map, preset, backend = 'webgl') {
+  const own = budgets.backends?.[backend];
+  return { ...(budgets.presets?.[preset] ?? {}), ...(budgets.maps?.[map]?.[preset] ?? {}), ...(own?.presets?.[preset] ?? {}), ...(own?.maps?.[map]?.[preset] ?? {}) };
 }
 
 /**
@@ -119,7 +128,7 @@ export function baselineLagWarning(fileName, head, lag, maxLag) {
 }
 
 /** Metrics compared with the baseline; frame times only where the budget file says they are gated. */
-export const RELATIVE_METRICS = ['drawCalls', 'triangles', 'gpuMemoryMB'];
+export const RELATIVE_METRICS = ['drawCalls', 'triangles', 'dressingTriangles', 'gpuMemoryMB'];
 export const FRAME_METRICS = ['p95Ms', 'p99Ms'];
 /** How much worse than its baseline a metric may get (10 %). */
 export const RELATIVE_TOLERANCE = 0.1;

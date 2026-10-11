@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { PostPassId } from './postPlan';
 
-/** What every pass may read about the frame being drawn (filled in place by PostStack each frame: nothing allocated). */
+/** What every pass may read about the frame being drawn (filled in place by PostChain each frame: nothing allocated). */
 export interface PostFrame {
   /** The main camera, jittered while the temporal blend is on (its projection is put back after the chain). */
   camera: THREE.PerspectiveCamera;
@@ -20,7 +20,7 @@ export interface PostFrame {
   index: number;
 }
 
-/** What a pass and the stack draw with: Three's WebGL renderer, or the node renderer (WebGPU overhaul W4). */
+/** What a pass and the stack draw with: the node renderer (WebGPU overhaul W4). */
 export interface PostRenderer<T> {
   autoClear: boolean;
   setRenderTarget(target: T | null): void;
@@ -32,36 +32,23 @@ export interface PostRenderer<T> {
  * bloom; `inPlace`, and it returns false) or into `write`, or onto the screen when `write` is null (it returns true).
  * Only `output` and `lens` are ever last, and they always draw out.
  */
-export interface PostPass<G = THREE.WebGLRenderer, T = THREE.WebGLRenderTarget> {
+export interface PostPass<G, T> {
   readonly id: PostPassId;
   /** Blends onto `read` rather than drawing out: the stack gives it no `write` and never the multisampled scene (BP2). */
   readonly inPlace: boolean;
   render(gl: G, frame: PostFrame, read: T, write: T | null): boolean;
   /** The drawing buffer's size in pixels. */
   setSize(width: number, height: number): void;
-  /** Forgets anything carried from earlier frames (the temporal history): a resize, a restored context, a cut. */
+  /** Forgets anything carried from earlier frames (the temporal history): a resize, a new device, a cut. */
   reset?(): void;
   dispose(): void;
 }
 
-/** The vertex shader every full-screen pass shares. */
-export const FULL_SCREEN_VERTEX = /* glsl */ `
-varying vec2 vUv;
-void main() {
-  vUv = uv;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-}`;
-
-/** A full-screen shader material: no depth, no blending unless asked. */
-export function fullScreenMaterial(fragmentShader: string, uniforms: Record<string, THREE.IUniform>, extra: Partial<THREE.ShaderMaterialParameters> = {}): THREE.ShaderMaterial {
-  return new THREE.ShaderMaterial({ vertexShader: FULL_SCREEN_VERTEX, fragmentShader, uniforms, depthTest: false, depthWrite: false, blending: THREE.NoBlending, ...extra });
-}
-
 /** Adds onto what is there (light shafts). */
-export const ADDITIVE: Partial<THREE.ShaderMaterialParameters> = { blending: THREE.AdditiveBlending, transparent: true };
+export const ADDITIVE: Partial<THREE.MaterialParameters> = { blending: THREE.AdditiveBlending, transparent: true };
 
 /** Multiplies what is there (ambient occlusion). */
-export const MULTIPLY: Partial<THREE.ShaderMaterialParameters> = {
+export const MULTIPLY: Partial<THREE.MaterialParameters> = {
   blending: THREE.CustomBlending,
   blendSrc: THREE.DstColorFactor,
   blendDst: THREE.ZeroFactor,
@@ -72,17 +59,12 @@ export const MULTIPLY: Partial<THREE.ShaderMaterialParameters> = {
   transparent: true,
 };
 
-/** A colour target for a pass, at `scale` of the drawing buffer. */
-export function colourTarget(width: number, height: number, type: THREE.TextureDataType, scale = 1): THREE.WebGLRenderTarget {
-  return new THREE.WebGLRenderTarget(scaled(width, scale), scaled(height, scale), { type, depthBuffer: false });
-}
-
 /** A size at `scale`, never below one pixel. */
 export function scaled(size: number, scale: number): number {
   return Math.max(1, Math.round(size * scale));
 }
 
-/** What drawCleared needs of a renderer (WebGL's or the node renderer's). */
+/** What drawCleared needs of a renderer. */
 export interface ClearingRenderer<T> {
   getClearColor(target: THREE.Color): THREE.Color;
   getClearAlpha(): number;
