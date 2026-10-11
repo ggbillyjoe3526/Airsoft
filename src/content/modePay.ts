@@ -29,10 +29,11 @@ export interface PlayedRounds {
 
 /**
  * An even match's decided rounds, on average, and the rounds its winner and loser win (sides each taking a round half the
- * time, to `winsNeeded` with a lead of `winBy`). Exact over every score line up to a cap far past any real match.
+ * time, to `winsNeeded` with a lead of `winBy`), over every score line up to a cap far past any real match: what it
+ * drops past the cap is under a ten-thousandth of a round.
  */
 export function evenMatchRounds(rules: Pick<PayRules, 'winsNeeded' | 'winBy'>): { decided: number; winner: number; loser: number } {
-  const cap = 4 * rules.winsNeeded + 20;
+  const cap = 4 * rules.winsNeeded + 40;
   let chance = new Map<string, number>([['0,0', 1]]);
   let decided = 0;
   let winner = 0;

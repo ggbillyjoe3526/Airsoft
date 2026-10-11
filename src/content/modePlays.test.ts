@@ -1,5 +1,4 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { MODE_PLAY_TEST } from '../config/contentRules';
 import { MATCH_MODES } from '../config/modes';
 import { initPhysics } from '../physics/physicsWorld';
 import { gameModeContext, hostMaps, type ModePairing, modePairings } from './modeChecks';
@@ -12,9 +11,7 @@ import { botsApart, botsCheck, pairingProblems, playsCheck } from './modePlayChe
  * plays them.
  */
 
-/** playsCheck's `seconds` is typed as MODE_PLAY_TEST.seconds' literal (its default under `as const`): cast to pass fewer. */
-const short = (seconds: number) => seconds as typeof MODE_PLAY_TEST.seconds;
-const SECONDS = short(15);
+const SECONDS = 15;
 const ctx = gameModeContext();
 const depot = ctx.maps.find((m) => m.entry.id === 'depot')!;
 
@@ -53,7 +50,7 @@ describe('the mode checks’ short matches', () => {
     const standard = grid('elimination').slice(0, 1);
     expect(pairingProblems('elimination', depot.data, standard[0]!, 1, 5)).toEqual([]);
     expect(pairingProblems('elimination', sunk, standard[0]!, 1, 5).join(' ')).toMatch(/fell through the floor/);
-    const r = playsCheck(MATCH_MODES[0]!, depot.entry, sunk, standard, 1, short(5));
+    const r = playsCheck(MATCH_MODES[0]!, depot.entry, sunk, standard, 1, 5);
     expect(r.verdict).toBe('fail');
     expect(r.says).toContain('fell');
   });

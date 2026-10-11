@@ -34,7 +34,7 @@ export function pairingProblems(mode: MatchMode, map: MapData, pairing: ModePair
 }
 
 /** Every pairing plays: the match starts with the teams it should, nobody falls through or is lost, nothing stops it. */
-export function playsCheck(mode: ModeEntry, entry: MapEntry, map: MapData, pairings: readonly ModePairing[], seed = 1, seconds = MODE_PLAY_TEST.seconds): CheckResult {
+export function playsCheck(mode: ModeEntry, entry: MapEntry, map: MapData, pairings: readonly ModePairing[], seed = 1, seconds: number = MODE_PLAY_TEST.seconds): CheckResult {
   const item = modeItem(mode);
   const bad: string[] = [];
   for (const p of pairings) {
@@ -79,7 +79,7 @@ export function botsApart(mode: MatchMode, map: MapData, teamSize: number, seed:
 }
 
 /** The bots play the mode their own way: not, step for step, as they play Elimination (a mode other than Elimination). */
-export function botsCheck(mode: ModeEntry, entry: MapEntry, map: MapData, seed = 1, seconds = MODE_PLAY_TEST.botSeconds): CheckResult {
+export function botsCheck(mode: ModeEntry, entry: MapEntry, map: MapData, seed = 1, seconds: number = MODE_PLAY_TEST.botSeconds): CheckResult {
   const item = modeItem(mode);
   if (mode.id === 'elimination') return result('compatibility', 'mode.bots', item, 'pass', 'The bots’ own mode: every other mode is measured against how they play it.');
   const apart = botsApart(mode.id, map, entry.teamSize.standard, seed, seconds);
