@@ -187,3 +187,104 @@ export const CONTENT_BALANCE_RUN = {
   seeds: 8,
   seconds: 300,
 } as const;
+
+/**
+ * The map standard (CT2; owner decision 6 of the plan, 2026-10-05): Depot's measured layout. A new map is held to these
+ * numbers unless MAP_EXCEPTIONS writes down why it differs. They are the numbers Depot's own layout tests hold
+ * (map/depot.test.ts), measured the same way over every map by src/content/mapLayout.ts.
+ */
+export const MAP_STANDARD = {
+  /** Lanes (bot routes end to end): Depot has three; fewer than `lanes` asks for a look, fewer than `minLanes` fails (no way round). */
+  lanes: 3,
+  minLanes: 2,
+  /** The longest clear eye line between two places a player can stand (m): Depot's 34 on its 50 × 32 m field. */
+  longestSightline: 34,
+  /** Everyone within this of one end's spawns is out of sight of everyone within it of the other's (m), standing or crouched. */
+  spawnYardRadius: 5,
+  /**
+   * Walk from each end's spawns to the middle of the field (the middle of its walkable ground): the longer walk may be
+   * this much longer than the shorter and pass (the plan's "about 15 %"), up to `walkSpreadWarn` asks for a look, more fails.
+   * Depot measures 3 %.
+   */
+  walkSpread: 0.15,
+  walkSpreadWarn: 0.25,
+  /** Attack / Defend: the attackers' walk to the flag is at least this many times the defenders' (Depot's rule; it measures 1.9). */
+  flagHeadStart: 1.6,
+  /** How far a spawn, dead-zone spot, lane point or flag may sit from the floor under it (m), plus a slope's rise over one nav cell. */
+  onFloor: 0.05,
+  /** How far a look-only block (MapData.decor) may stand proud of the floor it lies on (m): more would hide a gap a BB passes. */
+  decorProud: 0.05,
+  /**
+   * Floors and walls drawn edge to edge are grown a centimetre a side to meet (Neon Heights' SEAM), so neighbours overlap
+   * by up to 2 cm; two blocks overlapping by more than this every way stand inside each other (m).
+   */
+  seamSlack: 0.025,
+  /** The layout's measures sample a place to stand every this many metres, or coarser on a big field so each map costs about the same. */
+  sightSpacing: 0.5,
+  sightPoints: 6000,
+} as const;
+
+/** A colour reads as a team's when it is this saturated and within this many degrees of hue of a team colour (any set). */
+export const TEAM_COLOUR_RULE = { hueMarginDeg: 20, minSaturation: 0.3 } as const;
+
+/** A map's written-down differences from the standard, by map id: what differs and the owner's reason. */
+export interface MapException {
+  /** The longest clear eye line allowed on this map (m), and why. */
+  longestSightline?: { metres: number; reason: string };
+  /** Blocks left standing inside each other on purpose (as the check words them), and why. */
+  clashes?: { list: readonly string[]; reason: string };
+}
+
+export const MAP_EXCEPTIONS: Readonly<Record<string, MapException>> = {
+  woodland: {
+    longestSightline: {
+      metres: 141,
+      reason:
+        'corner to corner across the meadow and the Knoll, 140 m: the map is played at night, where the dark, not the ground, decides what anyone sees, and a BB does not carry that far (owner decision 11, 2026-10-05)',
+    },
+  },
+  neonHeights: {
+    clashes: {
+      list: [
+        'ramp at -13.90, 1.50, 9.00 and floor at -13.30, 2.85, 5.10 fill the same space',
+        'wall at -13.05, 2.10, 9.00 and floor at -13.30, 2.85, 5.10 fill the same space',
+        'floor at 9.50, 2.85, 5.35 and barrier at 11.30, 2.00, 7.63 fill the same space',
+        'floor at 12.15, 2.85, -1.50 and barrier at 11.30, 2.00, 7.63 fill the same space',
+      ],
+      reason:
+        "the Plaza stair runs on under its landing's floor and two walls rise through a floor's edge, out of sight; cutting them changes the bots' nav grid and how the map plays, so it waits for its own change (M55)",
+    },
+  },
+};
+
+/**
+ * The register of maps made public (the public gate, CT2): every map tagged `public` in map/maps.ts is here, with the
+ * date it went public or "before the toolkit". A public map with no entry fails the rules check.
+ */
+export const PUBLIC_MAPS: Readonly<Record<string, string>> = {
+  depot: 'before the toolkit',
+};
+
+/**
+ * The map balance run's watch (CT2, src/content/report/matchWatch.ts): a bot that stays within `leaveSpawnMetres` of its
+ * spawn through a round it was in play for at least `leaveSpawnSeconds` never left spawn (the audit's 8 m); one standing
+ * still (under `stuckSpeed` m/s) with nothing to do for over `stuckSeconds` is stuck (the audit's stall rule); anyone more
+ * than `fallMetres` under the lowest floor fell through.
+ */
+export const MAP_BALANCE_WATCH = {
+  leaveSpawnMetres: 8,
+  leaveSpawnSeconds: 20,
+  stuckSpeed: 0.3,
+  stuckSeconds: 5,
+  fallMetres: 0.5,
+} as const;
+
+/**
+ * The map balance run's bands for what the watch counts (src/content/report/mapBalance.report.ts), besides who wins
+ * and the rounds on time: the share of bots' rounds spent at spawn, stuck stretches per 10 bot-minutes. Measured on the
+ * shipped maps when CT2 landed (its record); a falling body always fails.
+ */
+export const MAP_BALANCE_BANDS = {
+  stayedAtSpawn: 0.05,
+  stuckPerTenMinutes: 1,
+} as const;

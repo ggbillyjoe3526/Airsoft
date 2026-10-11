@@ -1,7 +1,7 @@
 # Maps
 
-The rulebook and brief for a new map. Its checks come with toolkit part 2; until then a map is checked by its own tests
-and the owner's playtest. The steps are in `docs/content/README.md`.
+The rulebook, brief and checks for a new map (toolkit part 2, CT2). The steps are in `docs/content/README.md`; the
+command is `node pipeline/content-check.mjs map:<id>`.
 
 ## Rules
 
@@ -34,11 +34,15 @@ The questions Claude asks, with the default in brackets:
 5. **Look and sound.** (Greybox with its kind's colours and ambience.)
 6. **A sketch** for the owner to approve before the build, as Depot's rework had.
 
-## Checks (toolkit part 2)
+## Checks
 
-| Level | What will be checked |
+Every map in `src/map/maps.ts` gets levels 1 to 3's fast checks in every test run (`src/content/mapChecks.test.ts`), so
+a new map is checked the moment it is registered. The numbers are `MAP_STANDARD` in `src/config/contentRules.ts`, set
+from Depot's measured layout; a map that differs for a reason goes into `MAP_EXCEPTIONS` with the owner's word.
+
+| Level | What is checked |
 |---|---|
-| Rules | Registered and `dev`; everything on the floor; enough spawns and dead-zone spots; no block inside another; no team-colour paint; night and lights agree. |
-| Layout | Lanes; spawns can't see each other; the longest sightline; every lane walkable end to end; walk times within about 15 %; no gap a BB passes but a player can't see through; Extraction data gets today's Extraction checks. |
-| Spec test | The performance run at Low, Medium and High against the budget; an overhead view, the minimap and views from each spawn. |
-| Balance run | Every mode it offers, every level, day and night: each end wins 40 to 60 %, under 1 round in 10 runs out the clock, bots leave spawn, nobody gets stuck or falls through. |
+| Rules | Registered with a blurb and team sizes; `dev`, or `public` and in `PUBLIC_MAPS`; spawns and dead-zone spots for the largest team; every spawn, dead-zone spot, lane point and flag on walkable floor; ramps and ground 1:2 or gentler; the floor of last resort under everything; no block inside another (written-down exceptions only); nothing painted in a team colour (neon light is not paint); look-only blocks lying flat; night and lights agree. The modes it plays and its Extraction data are shown (Extraction data has its own tests over every map). |
+| Layout | Lanes (Depot's 3; 2 asks for a look, 1 fails); every lane walks end to end, from end 0 towards end 1; every spawn reaches the other end, the flag and the middle on foot; nobody near one end's spawns sees anyone near the other's, standing or crouched; the longest clear sightline (Depot's 34 m); each end's walk to the middle within 15 % (25 % asks for a look); the attackers walk at least 1.6 times as far to the flag as the defenders, and can't see it from their spawn; every block drawn inside its own box, so a BB never passes through what a player sees. The report sets the map's figures beside every other map's. |
+| Spec test | The perf gate measures the map (perf-budget.json's matrix); on demand, the perf run in Elimination on Low, Medium and High against its budget and baseline, and pictures: from above, the minimap, and the view from each end's spawns, per lighting. |
+| Balance run | On demand: every lighting and round mode it offers, every level, at its standard team size. Each end wins 40 to 60 % of decided rounds at Pro (35 to 65 % below, Audit 2 decision 3); under 1 round in 10 runs out the clock; under 1 bot in 20 never leaves spawn in a round; under 1 bot stuck with nothing to do per 10 bot-minutes; nobody falls through. Judged on a public map, mode and level; shown as figures otherwise. Extraction's sweep comes with the mode checks (part 3). |

@@ -60,8 +60,8 @@ const ROOF = 0.3;
  * The city's paint (M34f, sRGB): the concept's mint, magenta and cyan pastels on slate for the three buildings (Repair
  * Shop block, Arcade, Tower), amber for the walkways between them (the Walkway, the Sky Bridge), with magenta and teal
  * accents. The cyan stops at hue 183° (linear), 28° short of the High Contrast team blue. Each building one colour; the
- * city round the site slate; rooms pale; props their own. Nothing that reads as team blue or orange (mapMeshes.test.ts'
- * rule, checked in neonHeightsArt.test.ts).
+ * city round the site slate; rooms pale; props their own. Nothing that reads as team blue or orange (the map checks'
+ * rule, content/mapChecks.ts, also checked in neonHeightsArt.test.ts).
  */
 const PAINT = {
   slate: 0x7d8aa0,
@@ -807,8 +807,8 @@ function cut(b: MapBlock, x0: number, x1: number, y0: number, y1: number, z0: nu
  * keeps its shape and no two blocks fill one space. The block keeps its footprint and its foot, so the bots' cover
  * (ai/cover.ts) and night sight's roofs (map/nightSight.ts) read as before (neonHeightsArt.test.ts). A block that rises
  * above the floor stays whole: cut, its part above would stand on the floor as new cover and its strips would roof the
- * stair beside it at night, and cutting the floor round it instead changes the bots' nav grid (mapData.test.ts lists
- * these). Plan coordinates, before floors grow by SEAM.
+ * stair beside it at night, and cutting the floor round it instead changes the bots' nav grid (config/contentRules.ts
+ * MAP_EXCEPTIONS lists these). Plan coordinates, before floors grow by SEAM.
  */
 function seatFloors(blocks: readonly MapBlock[]): MapBlock[] {
   const floors = blocks.filter((b) => b.kind === 'floor');

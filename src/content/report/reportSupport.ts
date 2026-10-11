@@ -1,6 +1,7 @@
 import type * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
+import { type MapEntry, MAPS } from '../../map/maps';
 import type { Asset, Pool } from '../../pool/pool';
 import { prepareReplicaFile, type ReplicaFile, type ReplicaFiles } from '../../render/replicaFiles';
 
@@ -18,6 +19,21 @@ export function contentItem(pool: Pool, named: string | undefined = ENV.AIRSOFT_
   if (!named) return undefined;
   const want = named.trim().toLowerCase();
   return pool.assets.find((a) => a.id === want) ?? pool.assets.find((a) => a.name.toLowerCase() === want) ?? pool.assets.find((a) => a.key.toLowerCase() === want);
+}
+
+/** Whether `named` names a map ("map:woodland"), not a pool item. */
+export const namesMap = (named: string | undefined = ENV.AIRSOFT_CONTENT_ITEM): boolean => /^map:/i.test(named?.trim() ?? '');
+
+/**
+ * The map "map:<id or label>" names (any case, spaces ignored: "map:woodland", "map:Neon Heights"), every map for
+ * "map:all", or none.
+ */
+export function contentMaps(named: string | undefined = ENV.AIRSOFT_CONTENT_ITEM): MapEntry[] {
+  if (!named || !namesMap(named)) return [];
+  const want = named.trim().slice('map:'.length).replace(/\s+/g, '').toLowerCase();
+  if (want === 'all') return [...MAPS];
+  const m = MAPS.find((e) => e.id.toLowerCase() === want || e.label.replace(/\s+/g, '').toLowerCase() === want);
+  return m ? [m] : [];
 }
 
 /** A number from the environment, or `fallback`. */

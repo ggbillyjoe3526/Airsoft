@@ -1,6 +1,6 @@
 /**
  * Team identity. Sites mark teams with coloured tape or armbands; here it's Blue vs Orange. These
- * colours belong to the teams only: neutral props must never use them (checked in mapMeshes.test.ts).
+ * colours belong to the teams only: neutral props must never use them (checked on every map by content/mapChecks.ts).
  */
 export const TEAMS = [
   { name: 'Blue', color: 0x3d8bff },
@@ -16,7 +16,7 @@ export const cssColor = (c: number): string => `#${c.toString(16).padStart(6, '0
 /**
  * Settings → Accessibility (M18b): the team colours. Blue and orange already stay far apart for the common kinds of
  * colour blindness; High contrast also sets them far apart in lightness (light blue, dark orange), so they read even
- * with little colour vision at all. Its hues stay the teams' own (props never use them, mapMeshes.test.ts). Checked by simulation in colourVision.test.ts.
+ * with little colour vision at all. Its hues stay the teams' own (props never use them, content/mapChecks.ts). Checked by simulation in colourVision.test.ts.
  */
 export type TeamColourSetId = 'standard' | 'highContrast';
 

@@ -318,6 +318,12 @@ replaces its line; the old one stays findable in the archive or in git.
 - **The practice range is its own small map (2026-10-04).** Practice is the last mode on the Match screen, and the
   Tutorial shows on the title screen only on a clean save, with Replay tutorial in Settings (owner, 2026-10-07; replaces
   his 2026-10-04 rulings that put the range and an always-shown Tutorial button on the title screen).
+- **A map's checks measure it against Depot (2026-10-11, CT2; the standard is the owner's, 2026-10-05).** The numbers are
+  `MAP_STANDARD` and `MAP_BALANCE_BANDS` (`src/config/contentRules.ts`): 3 lanes (2 a look, 1 a fail), the longest
+  clear sightline 34 m, spawn yards 5 m round, each end's walk to the middle of the walkable ground within 15 % (25 % a
+  look). The flag is not held to 15 %: the attackers walk at least 1.6 times the defenders' way, Depot's own rule. Bots
+  that never leave spawn under 1 in 20, stuck under 1 per 10 bot-minutes. A map that differs for a reason goes into
+  `MAP_EXCEPTIONS` with the owner's word, as Woodland's 141 m sightline and Neon Heights's four block clashes did.
 
 ## Replicas, Loadout, Armory and economy
 

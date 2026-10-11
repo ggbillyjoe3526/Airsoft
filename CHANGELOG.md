@@ -130,6 +130,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **RM2** · Model files' magazine animation tracks are read, so an animation can slide a magazine (the Cyber Pistol's battery check)
 - **W5** · On WebGPU particles move on the graphics card; the WebGPU comparison adds Woodland's grass and stand-in views
 - **CT1** · Content toolkit part 1: rulebooks per content kind, and one command that checks a replica or part in four levels and writes a one-page report
+- **CT2** · Content toolkit part 2: a map check covers rules, layout against Depot, performance and bot balance; every test run checks every map
 
 ## 0.1 Dev 4 · 2026-10-06
 

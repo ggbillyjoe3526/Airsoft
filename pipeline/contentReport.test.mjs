@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseArgs } from './content-check.mjs';
-import { firstPersonSettings } from './content-pictures.mjs';
-import { balanceResults, balanceVerdict, censusRows, markdownToHtml, outcomeLine, reportHtml, reportMarkdown, sheetRows, specTables, worst } from './contentReport.mjs';
+import { firstPersonSettings, mapShotPictures } from './content-pictures.mjs';
+import { balanceResults, balanceVerdict, censusRows, layoutRows, mapReportMarkdown, markdownToHtml, outcomeLine, perfResult, reportHtml, reportMarkdown, sheetRows, specTables, worst } from './contentReport.mjs';
 
 /** A spec sheet as src/content/specSheet.ts writes it. */
 const sheet = (onTarget) => ({
@@ -108,6 +108,59 @@ describe('the content report', () => {
   });
 });
 
+/** Two maps' layouts as src/content/report/map.report.ts writes them. */
+const LAYOUTS = [
+  { id: 'depot', label: 'Depot', tag: 'public', teamSize: { standard: 3, max: 3 }, size: { x: 40.2, z: 38.4 }, lanes: 3, sightline: 33.46, middleWalk: [31.2, 30.3], middleSeconds: [7.43, 7.21], flagWalk: [39.4, 20.7], flagSeconds: [9.38, 4.93], modes: ['Elimination', 'Attack and Defend'], lightings: ['Day'] },
+  { id: 'yard', label: 'Yard', tag: 'dev', teamSize: { standard: 4, max: 5 }, size: { x: 60, z: 50 }, lanes: 2, sightline: null, middleWalk: [20, Number.POSITIVE_INFINITY], middleSeconds: [4.8, Number.POSITIVE_INFINITY], flagWalk: null, flagSeconds: null, modes: ['Elimination'], lightings: ['Day', 'Night'] },
+];
+const MAP_CONTENT = { kind: 'map', items: [{ id: 'map-yard', name: 'Yard', category: 'map', tag: 'dev', key: 'yard' }], layouts: LAYOUTS };
+const MAP_RESULTS = [
+  { level: 'rules', check: 'map.onFloor', item: 'Yard (yard)', verdict: 'pass', says: 'All 12 points stand on walkable floor.' },
+  { level: 'compatibility', check: 'map.middle', item: 'Yard (yard)', verdict: 'fail', says: 'End 1 cannot walk to the middle.' },
+  { level: 'balance', check: 'balance.share', item: 'Yard, Elimination, Pro: rounds end 0 won', verdict: 'info', says: '52 %' },
+];
+
+describe('the map report', () => {
+  it('lays every map’s layout side by side, with no way and no flag said in words', () => {
+    const rows = layoutRows(LAYOUTS);
+    expect(rows.map((r) => r[0])).toEqual(['Walkable ground', 'Players a side', 'Lanes', 'Longest clear sightline', 'Walk to the middle, end 0', 'Walk to the middle, end 1', 'Walk to the flag, attackers', 'Walk to the flag, defenders', 'Modes', 'Lighting', 'Tag']);
+    expect(rows[0]).toEqual(['Walkable ground', '40 × 38 m', '60 × 50 m']);
+    expect(rows[1]).toEqual(['Players a side', '3', '4 (up to 5)']);
+    expect(rows[3]).toEqual(['Longest clear sightline', '33.5 m', '–']);
+    expect(rows[5]).toEqual(['Walk to the middle, end 1', '30 m (7.2 s)', 'no way']);
+    expect(rows[6]).toEqual(['Walk to the flag, attackers', '39 m (9.4 s)', 'no flag']);
+  });
+
+  it('judges a perf run: page errors and over budget fail, worse than its last measure asks for a look', () => {
+    const run = { preset: 'low', metrics: { drawCalls: 51.4, triangles: 41526, gpuMemoryMB: 8.8, heapGrowthMB: 0.25 }, errors: [] };
+    const clean = { over: [], worse: [], note: 'no baseline pipeline/baseline/container-yard.json; relative check skipped' };
+    expect(perfResult('Yard', run, clean)).toEqual({ level: 'spec', check: 'map.perf', item: 'Yard, low', verdict: 'pass', says: '51 draw calls, 42k triangles, 9 MB of GPU memory, heap +0.3 MB; within budget (no baseline pipeline/baseline/container-yard.json; relative check skipped).' });
+    expect(perfResult('Yard', run, { over: [], worse: [{ metric: 'triangles', pct: 14 }] })).toMatchObject({ verdict: 'warn', says: expect.stringContaining('worse than its last measure: triangles +14 %') });
+    expect(perfResult('Yard', run, { over: [{ metric: 'drawCalls', now: 51.4, limit: 45 }], worse: [] })).toMatchObject({ verdict: 'fail', says: expect.stringContaining('over budget: drawCalls 51.4 (budget 45)') });
+    expect(perfResult('Yard', { ...run, errors: ['pageerror: boom'] }, clean)).toMatchObject({ verdict: 'fail', says: expect.stringContaining('the page had 1 error (pageerror: boom)') });
+  });
+
+  it('writes the page: level 2 is the layout, with this map first beside the others, and balance rows by sweep', () => {
+    const meta = { ...META, levels: ['rules', 'compatibility', 'spec', 'balance'] };
+    const md = mapReportMarkdown({ content: MAP_CONTENT, item: MAP_CONTENT.items[0], results: MAP_RESULTS, pictures: [{ file: 'yard-day-overhead.jpg', title: 'Yard by day: from above', ok: true }], meta });
+    expect(md).toMatch(/^# Content report: Yard \(map\)\n/);
+    expect(md).toContain('Map `yard`, tagged dev.');
+    expect(md).toContain('1. **Fail** (Layout, Yard (yard)): End 1 cannot walk to the middle.');
+    expect(md).toContain('## Layout');
+    expect(md).not.toContain('## Compatibility');
+    expect(md).toContain('|  | Yard | Depot |');
+    expect(md).toContain('| Yard, Elimination, Pro: rounds end 0 won | Figure | 52 % |');
+    expect(md).toContain('![Yard by day: from above](pictures/yard-day-overhead.jpg)');
+    const every = mapReportMarkdown({ content: { ...MAP_CONTENT, items: [MAP_CONTENT.items[0], { id: 'map-depot' }] }, item: { id: 'maps', name: 'Every map', key: '' }, results: [], meta: META });
+    expect(every).toContain('Every map (2).');
+    expect(every).toContain('|  | Depot | Yard |');
+  });
+
+  it('draws four pictures per map and lighting', () => {
+    expect(mapShotPictures({ file: 'yard-night', title: 'Yard by night' }).map((p) => p.file)).toEqual(['yard-night-overhead.jpg', 'yard-night-minimap.png', 'yard-night-end-0.jpg', 'yard-night-end-1.jpg']);
+  });
+});
+
 describe('the content check command', () => {
   it('runs levels 1 to 3 by default, adds the balance run on asking, and all four for the public gate', () => {
     expect(parseArgs(['000007'])).toMatchObject({ item: '000007', levels: ['rules', 'compatibility', 'spec'], pictures: true, publicGate: false });
@@ -124,6 +177,17 @@ describe('the content check command', () => {
     expect(() => parseArgs(['000007', '--seeds', '0'])).toThrow(/whole number/);
     expect(() => parseArgs(['000007', '--fast'])).toThrow(/unknown option --fast/);
     expect(() => parseArgs(['all', '--balance'])).toThrow(/one item/);
+    expect(() => parseArgs(['map:all', '--balance'])).toThrow(/one item, not "map:all"/);
+    expect(() => parseArgs(['000007', '--no-perf'])).toThrow(/for a map/);
+    expect(() => parseArgs(['map:depot', '--maps', 'neon'])).toThrow(/plays on itself/);
+  });
+
+  it('checks a map by "map:<id>": perf runs and pictures for one map, neither for every map', () => {
+    expect(parseArgs(['map:depot'])).toMatchObject({ item: 'map:depot', isMap: true, perf: true, pictures: true, env: 'container' });
+    expect(parseArgs(['map:depot', '--no-perf', '--env', 'laptop', '--balance'])).toMatchObject({ perf: false, env: 'laptop', levels: ['rules', 'compatibility', 'spec', 'balance'] });
+    expect(parseArgs(['map:depot', '--levels', 'rules,compatibility'])).toMatchObject({ perf: false });
+    expect(parseArgs(['map:all'])).toMatchObject({ isMap: true, perf: false, pictures: false });
+    expect(parseArgs(['000007'])).toMatchObject({ isMap: false });
   });
 
   it('starts a first-person picture with Dev content on and the item fitted', () => {
