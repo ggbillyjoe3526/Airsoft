@@ -9,7 +9,7 @@ import { RAMP_YARD, STACK_HOUSE, TEST_YARD } from '../map/testYard';
 import { RANGE_MAP } from '../map/range';
 import { vec3 } from '../sim/vec';
 import { type CheckResult, worstVerdict } from './checks';
-import { blockClashes, checkMap, flagCheck, gameMapContext, laneChecks, type MapContext, mapPerfCheck, mapRules, middleCheck, offTheFloor, readsAsTeam, routeCheck, seeThroughCheck, sightlineCheck, spawnSightCheck, tooSteep } from './mapChecks';
+import { blockClashes, checkMap, flagCheck, gameMapContext, laneChecks, type MapContext, mapFigures, mapPerfCheck, mapRules, middleCheck, offTheFloor, readsAsTeam, routeCheck, seeThroughCheck, sightlineCheck, spawnSightCheck, tooSteep } from './mapChecks';
 import { blockPieces } from '../render/mapMeshes';
 import { mapGeometry } from './mapLayout';
 
@@ -20,7 +20,7 @@ import { mapGeometry } from './mapLayout';
 
 const ctx = gameMapContext(MAPS.map((m) => m.id));
 const DEPOT_ENTRY = MAPS.find((m) => m.id === 'depot')!;
-/** A dev copy of Depot under a new id, so a fault test never touches the real entry's registers. */
+/** A dev copy of Depot's entry (its id kept, so the perf matrix finds it): a fault test never touches the real entry. */
 const TEST_ENTRY: MapEntry = { ...DEPOT_ENTRY, id: 'depot' as MapEntry['id'], tag: 'dev' };
 
 /** The verdict of check `check` among `results` (undefined when it didn't run). */
@@ -51,6 +51,12 @@ describe('the map checks on the game as it ships', () => {
       expect(tooSteep(map), map.name).toEqual([]);
       expect(blockClashes(map.blocks), map.name).toEqual([]);
     }
+  });
+
+  it('measure the longest sightlines in full, not to the coarse grid: Woodland’s corner to corner, Depot’s to its standard', () => {
+    // The fine measure the old Woodland test made (140.7 m, under its 141 m), which a 1.3 m grid alone misses by 4 m.
+    expect(mapFigures(mapData('woodland')).sightline!.metres).toBeGreaterThan(140);
+    expect(mapFigures(mapData('depot')).sightline!.metres).toBeGreaterThan(MAP_STANDARD.longestSightline - 1);
   });
 
   it('register every public map, and only maps the game has', () => {

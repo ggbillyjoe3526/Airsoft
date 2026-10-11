@@ -190,7 +190,7 @@ contract: none
 acceptance:
   1. Rules over every map in `MAPS` replace the hand lists (mapData.test, the Depot-only hue and see-through tests, per-map layout tests): registered and tagged, everything on the floor, room for the largest team, no block inside another, no team-colour paint, night and lights agree; each check fails on its fault.
   2. Layout, measured against Depot's standard: lanes, spawns can't see each other, the longest sightline, every lane walkable end to end, walk times to the middle within about 15 %, the flag's head start, nothing drawn where a BB passes through; the report shows the map beside every other map.
-  3. Spec test: `node pipeline/content-check.mjs map:<id>` runs the perf run on Low, Medium and High against the budget, reading maps and modes from the game, and draws the map from above, its minimap and each spawn's view.
+  3. Spec test: `node pipeline/content-check.mjs map:<id>` runs the perf run on Low, Medium and High against the budget, reading maps and modes from the game, and draws the map from above, its minimap and the view from each end's spawns.
   4. Balance run (`--balance`): every lighting and round mode the map offers at every level: each end 40 to 60 % at Pro (35 to 65 % below), under 1 round in 10 on time, bots leave spawn, nobody stuck or falling; dev maps, modes and levels shown, not judged.
   5. No game behaviour changes; every shipped map passes.
 status: open

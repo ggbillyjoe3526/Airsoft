@@ -12,9 +12,11 @@ they enforce are in `docs/content/`; the command that runs them and writes the r
   (every kit of parts a replica can wear, at its commonest and rarest tier, memoised per pool).
 - **Level 3.** `specSheet.ts` (the chrono and range table, from the game's own BB flight), `census.ts` (model cost
   and shot sound), `specChecks.ts` (their verdicts), `kits.ts` (a replica as it comes, and as carried).
-- **Maps (CT2).** `mapChecks.ts` (levels 1 to 3 over any `MapData`: `checkMap`, each check exported for its fault
-  test; `mapFigures` for the report) on `mapLayout.ts` (the map's nav grid and sight rays, memoised per map: stand
-  points, who sees whom, the longest sightline, walk fields and routes).
+- **Maps (CT2).** `mapChecks.ts` (`checkMap`: levels 1 to 3 over any `MapData`, every check re-exported for its
+  fault test) gathers `mapRules.ts` (level 1), `mapLayoutChecks.ts` (level 2, and `mapFigures` for the report) and the
+  perf gate check; `mapCheckSupport.ts` holds their context and wording. They measure on `mapLayout.ts` (the map's nav
+  grid and sight rays, memoised per map: stand points, who sees whom, the longest sightline stretched from a coarse
+  grid to its full length, walk fields and routes).
 - **Runners.** `report/map.report.ts` (a map's levels 1 to 3, every map's layout, the pictures, the perf runs and the
   balance plan), `report/mapBalance.report.ts` (its balance run, watched by `report/matchWatch.ts`),
   `report/item.report.ts` (levels 1 to 3, the pictures to draw and the balance plan) and

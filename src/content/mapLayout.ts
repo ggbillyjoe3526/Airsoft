@@ -125,6 +125,33 @@ export function longestSightline(geo: MapGeometry, points: readonly StandPoint[]
   return best;
 }
 
+/**
+ * A sightline found on a coarse grid of stand points, stretched to its full length: every walkable cell within `reach`
+ * of either end (on its floor) is tried against every one near the other, longest first, and the best clear pair
+ * becomes the new line; repeated until it stops growing (at most `rounds` times). A grid of spacing s can miss up to
+ * about 2s of a line's length; this finds it back without measuring the whole map at the nav grid's own cell.
+ */
+export function stretchSightline(geo: MapGeometry, line: Sightline, reach: number, rounds = 4): Sightline {
+  const cells = standPoints(geo, geo.nav.cell);
+  const near = (p: StandPoint): StandPoint[] => cells.filter((q) => Math.abs(q.x - p.x) <= reach && Math.abs(q.z - p.z) <= reach && Math.abs(q.y - p.y) < 1.5);
+  let best = line;
+  for (let round = 0; round < rounds; round++) {
+    const ends: [StandPoint[], StandPoint[]] = [near(best.from), near(best.to)];
+    const pairs: { a: StandPoint; b: StandPoint; d: number }[] = [];
+    for (const a of ends[0]) {
+      for (const b of ends[1]) {
+        const d = Math.hypot(a.x - b.x, a.z - b.z);
+        if (d > best.metres) pairs.push({ a, b, d });
+      }
+    }
+    pairs.sort((p, q) => q.d - p.d);
+    const found = pairs.find((p) => sees(geo, p.a, p.b));
+    if (!found) break;
+    best = { metres: found.d, from: found.a, to: found.b };
+  }
+  return best;
+}
+
 /** The places a player can stand within `radius` of any of `spawns` (an end's spawn yard), on a `spacing` grid. */
 export function spawnYard(geo: MapGeometry, spawns: readonly SpawnPoint[], radius: number, spacing: number): StandPoint[] {
   return standPoints(geo, spacing).filter((p) => spawns.some((s) => Math.hypot(p.x - s.position.x, p.z - s.position.z) <= radius && Math.abs(p.y - s.position.y) < 1.5));
