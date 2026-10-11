@@ -238,9 +238,14 @@ async function draw(scene, views, quality, renderer, withPost, dressing = false)
       for (let i = 0; i < 4; i++) game.session.daylight.follow(cam, 1);
       const flames = game.renderer.scene.getObjectByName('fire-flames');
       if (flames) {
-        const shader = { uniforms: {}, defines: {}, vertexShader: '', fragmentShader: '' };
-        flames.material.onBeforeCompile(shader, game.renderer.renderer);
-        shader.uniforms.fxTime.value = pinned;
+        // The fixtures' clock: the node patch the flames carry (W6b), or on the reference its GLSL patch's uniform.
+        const carried = game.renderer.node?.world?.patchOf?.(flames.material);
+        if (carried) carried.uniforms.fxTime.value = pinned;
+        else {
+          const shader = { uniforms: {}, defines: {}, vertexShader: '', fragmentShader: '' };
+          flames.material.onBeforeCompile(shader, game.renderer.renderer);
+          shader.uniforms.fxTime.value = pinned;
+        }
       }
       // The neon signs' flicker (G9) is left where each page's own loop stopped it: steady on, on both (W4's glow views
       // and bloom would show a sign caught dimmed on one page only).
