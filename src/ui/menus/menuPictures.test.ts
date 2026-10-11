@@ -60,6 +60,18 @@ describe('pictures never hold a screen up (G3, criterion 9)', () => {
     expect((slot.root.children[1] as HTMLImageElement).src).toBe('blob:fresh');
   });
 
+  it('asks again for the same subject once the source forgot its models (RM4 generation)', () => {
+    const asked: ItemSubject[] = [];
+    const source = { generation: 0, picture: (s: ItemSubject) => (asked.push(s), new Promise<string>(() => {})) } satisfies PictureSource;
+    const slot = new PictureSlot();
+    slot.show(source, subject('cobalt'), '<svg></svg>');
+    slot.show(source, subject('cobalt'), '<svg></svg>');
+    expect(asked).toHaveLength(1);
+    source.generation = 1;
+    slot.show(source, subject('cobalt'), '<svg></svg>');
+    expect(asked).toHaveLength(2);
+  });
+
   it('keeps the drawing when a picture cannot be made (a lost context), without an unhandled rejection', async () => {
     const slot = new PictureSlot();
     slot.show({ picture: () => Promise.reject(new Error('context lost')) }, subject('cobalt'), '<svg></svg>');

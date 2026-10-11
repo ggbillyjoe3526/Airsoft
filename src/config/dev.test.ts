@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { loadDevEnabled, loadDevSettings } from '../settings/dev';
 import { SETTINGS_KEY, SETTINGS_VERSION } from '../settings/storage';
-import { activeDev, DEV_DEFAULTS, DEV_ENTRIES, devCheating, devIntro, retroLookOf } from './dev';
+import { activeDev, DEV_DEFAULTS, DEV_ENTRIES, devCheating, devIntro, modelFilesInUse, retroLookOf } from './dev';
 
 /** A Storage holding one saved settings object. */
 function saved(fields: Record<string, unknown>): Storage {
@@ -138,5 +138,30 @@ describe('Retro pixel filter rows (M42)', () => {
       expect(loadDevSettings(saved({ 'dev.retroColours': bad })).retroColours, `colours ${String(bad)}`).toBe(6);
     }
     expect(loadDevSettings(saved({ 'dev.retroPixels': 'maybe' })).retroPixels).toBe(false);
+  });
+});
+
+describe('Model file switches (RM4)', () => {
+  it('are two switch rows, on by default and not cheats', () => {
+    for (const id of ['disableFigureModels', 'disableAllModels'] as const) {
+      expect(DEV_ENTRIES.find((e) => e.id === id)).toMatchObject({ kind: 'switch', cheat: false });
+      expect(DEV_DEFAULTS[id]).toBe(true);
+    }
+    expect(devCheating({ ...DEV_DEFAULTS, disableFigureModels: false, disableAllModels: false })).toBe(false);
+  });
+
+  it('lets in files by the truth table: gear needs all-models off, figures need both off', () => {
+    const f = (disableAllModels: boolean, disableFigureModels: boolean) => modelFilesInUse({ disableAllModels, disableFigureModels });
+    expect(f(true, true)).toEqual({ gear: false, figures: false });
+    expect(f(true, false)).toEqual({ gear: false, figures: false });
+    expect(f(false, true)).toEqual({ gear: true, figures: false });
+    expect(f(false, false)).toEqual({ gear: true, figures: true });
+    expect(modelFilesInUse(DEV_DEFAULTS)).toEqual({ gear: false, figures: false });
+  });
+
+  it('lets no file in when the Dev tab is hidden, whatever was picked', () => {
+    const picked = { ...DEV_DEFAULTS, disableAllModels: false, disableFigureModels: false };
+    expect(modelFilesInUse(activeDev(true, picked))).toEqual({ gear: true, figures: true });
+    expect(modelFilesInUse(activeDev(false, picked))).toEqual({ gear: false, figures: false });
   });
 });
