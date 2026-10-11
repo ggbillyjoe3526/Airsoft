@@ -10,6 +10,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Lean left and right with Q and E to peek round cover; leaning slows you to walking pace (M7b)
 - Accuracy by stance and movement: steadier crouched and still, worse walking, running or in the air; crouch-walking is
   slightly less accurate than standing still (M10, FA1)
+- Walking while aiming: hold Shift while aiming and you creep slower than the aiming pace (M84)
 
 ## Replicas and BBs
 
@@ -25,7 +26,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - BB weight from 0.20 to 0.30 g per replica, with the speed, reach and flight time shown (M17a, M26b)
 - Wind: a light breeze each match drifts BBs downwind; dust in the air drifts with it too (M30)
 - A limited set of magazines each round; a reload swaps in the fullest spare, no topping up (M8)
-- Optics: iron sights, a red dot or a 2× scope; aiming down sights with right click, at its own sensitivity (M12b, M17b)
+- Optics: iron sights on every replica, a red dot or a 2× scope on top; aiming down sights with right click, at its own sensitivity; aimed fire twice as tight as hip fire (M12b, M17b, M84)
 - Grips (vertical, angled) and magazines (hi-cap, low-cap, the pistol's extended one) trade handling for noise and sway
   (M17b)
 - A laser module and a choice of power source on the pistol, from the pool (M26b)
@@ -36,8 +37,10 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 
 ## Hits and elimination
 
-- One hit and you're out: a tick, a hit marker, hand up, walk to the dead zone, then spectate your team (Phase 1)
+- One hit and you're out: a tick, a hit marker (on or off in Settings, Off by default), hand up, walk to the dead zone, then spectate your team (Phase 1, M97)
+- Skip to next round from the spectator camera while you are out: the rest of the round plays out at once (M83)
 - Bots always call their hits (Phase 1)
+- BBs stop at the first body they hit; hit areas follow the drawn figure in every pose; a BB that hits a player already out knocks on the body (M85)
 - Friendly fire, on by default, as a match setting (Phase 1, M20)
 - Hit flinch, impact puffs that show at once and a crosshair that opens with your real spread (M3, M10, M28)
 
@@ -78,10 +81,11 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Extraction supply events: a Supply weekend every Friday to Sunday (+25 % FC, +50 % parts) and dated events from
   pool.md (Halloween night run 2026), by the device's clock; the Play screen says which is on under Extraction (M49)
 - 3v3 by default with a round clock; first to 5 rounds wins; a whistle starts each round (Phase 1)
+- Teams: Alpha (blue) and Beta (orange); Your team on the Match screen picks your side, and an Extraction run is always Alpha (M98)
 - Custom matches: rounds to win, round time, 1v1 to 3v3 (to 5v5 on maps with room, M33d), friendly fire, ricochets; only
   the standard match counts for the records (M20)
-- Rules: Skirmish, Tournament and Pro CQB (dev) and Custom; named rulesets keep their own records, Custom never counts
-  (M39)
+- Rules: Skirmish, Tournament and Pro CQB (dev) and Custom; Extraction offers Skirmish and Custom only; named rulesets keep their own
+  records, Custom never counts; a setting hidden for a mode is ignored (M39, M89)
 
 ## Maps
 
@@ -152,8 +156,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   its own seed (FA1)
 - Settings groups: Graphics (quality presets with Custom option, frame-rate limit), Display (fullscreen, field of view,
   tone mapping, show FPS), Audio, Controls (every action rebindable, mouse buttons and mouse wheel), Gameplay
-  (crosshair, HUD), Accessibility, Look (Robots, Realistic colours), Save file; a search box and a note on every row
-  (M15, M18a, M19, M24, FA2, FA5, G1, G3)
+  (crosshair, hit marker, HUD), Accessibility, Look (Robots, Realistic colours, Retro), Save file; a search box and a note on every row
+  (M15, M18a, M19, M24, FA2, FA5, G1, G3, M96, M97)
 - Save system: automatic saving in the browser, download to a JSON file, load from file with a side-by-side comparison,
   restore points (one per day), Undo the last load, Delete and start over; warns if storage is blocked or full, or if
   the save is from a newer version (M31)
@@ -163,7 +167,10 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   Backspace or Delete clears a binding (FA5)
 - HUD size slider (0.8–1.5) in Settings › Gameplay (FA5)
 - A hidden Dev group (tick Dev settings under the list): debug info, BB paths, game speed, bottomless magazines, ghost,
-  Disable Armory, Unlock all gear, Diagnostics Copy, Dev content switch, Retro pixels (M24, M26d, FA1, M35, M42)
+  Disable Armory (hides the Armory from every menu and the tutorial), Unlock all gear, Field Credits and Tokens on demand,
+  free case openings, time of day, bots hold fire, spectate any bot, bot intentions, end the round now, reset the save,
+  Diagnostics Copy, Dev content switch, Retro pixels (M24, M26d, FA1, M35, M42, M83, M90)
+- Dev switches Disable all models and Disable figure models (both on by default): turned off, they bring back the Blender replicas, parts and menu pictures, then the player and bot figures (RM4)
 - The build's version on the title screen (M24)
 
 ## HUD and match info
@@ -185,7 +192,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 
 - Follow me (F), Hold here (X), Regroup (V), and a wheel on hold Z with Team plan showing each order's key; a HUD line
   shows the order (M22, M23, FA5)
-- A minimap: the field, teammates always, the other team where last heard (M23)
+- A minimap: the field, teammates always, the other team where last heard; a setting picks Fixed (north up) or Rotating (M23, M83)
 - Minimap on multi-level maps shows the floor you stand on (floors below darker) and marks teammates on other floors
   with an up or down arrow (M34c)
 
@@ -196,9 +203,9 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Sounds you can locate by ear, muffled through walls and when eliminated; BB impacts sound by material; world sounds
   carry further (M13, FA6)
 - Getting hit and the round and match whistles briefly dip the rest of the mix (FA6)
-- Outdoor ambience with distant birds plays during play (FA6)
+- Outdoor ambience with distant birds plays during play (FA6); rare, distant crows, dogs, pigeons, a creaking branch and a car horn by map (M86)
 - Pause fades audio in 30 ms; hint when the browser blocks audio (FA6)
-- Master, effects and interface volume sliders (M13)
+- Master, effects, ambience and interface volume sliders; ambience turns only the field's background down (M13, M86)
 
 ## Graphics and art
 
@@ -254,7 +261,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - A practice range, from the title screen or the top bar's Range: steel plates that ring, figures that fall, at 10–60 m,
   with a readout of your last BB; figures stand at the same height as match characters (M21, FA1)
 - Range detail: chains, bands, brackets, a BB shelf and scuffed plates, with fewer draw calls than before (FA7)
-- A tutorial of ten coached steps on the range, with your own key bindings; skip and resume from pause (M16, FA10)
+- A tutorial of ten coached steps on the range, with your own key bindings; skip and resume from pause; Replay tutorial in Settings starts it again at once (M16, FA10, M97)
 
 ## Accessibility and comfort
 

@@ -7,8 +7,8 @@ import { copy } from './vec';
 
 /**
  * Hit calling, enforced by the game: a hit character stops, raises a hand and calls the hit, then walks
- * off to the dead zone at its end of the map along a navigation route. From the moment of the hit it can't shoot and
- * BBs pass through it. A walk-off that gets stuck or takes too long ends with the character leaving
+ * off to the dead zone at its end of the map along a navigation route. From the moment of the hit it can't shoot or be
+ * hit again; its body still stops BBs, so nobody is hit through it (M85). A walk-off that gets stuck or takes too long ends with the character leaving
  * the field (fading out where it stands) and reappearing in the dead zone.
  */
 

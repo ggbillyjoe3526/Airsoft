@@ -1,5 +1,5 @@
 import { EXIT_VISUALS } from '../config/render';
-import { MINIMAP } from '../config/minimap';
+import { DEFAULT_MINIMAP_ROTATING, MINIMAP } from '../config/minimap';
 import { cssColor } from '../config/teams';
 import type { Bush } from '../map/foliage';
 import type { MapBlock } from '../map/mapTypes';
@@ -90,6 +90,10 @@ export class Minimap {
   private visible = false;
   /** Whether the other team shows where heard (M23); off under rules that show teammates only (M39). */
   private heardShown = true;
+  /** Settings › HUD › Minimap (M83): turning with the view (today's), or fixed with the map's far end (-z) up. */
+  private rotating = DEFAULT_MINIMAP_ROTATING;
+  /** This frame's turn of the field (the view's yaw while rotating, else 0), read by every drawing below. */
+  private turn = 0;
 
   /**
    * `blocks`: the map's; `mine` / `theirs`: the two teams' HUD colours (CSS); `terrain`: the map's ground, if any;
@@ -142,6 +146,12 @@ export class Minimap {
     this.check.reset();
   }
 
+  /** Settings › HUD › Minimap (M83): true turns the field with the view (your arrow up), false keeps it fixed, -z up. */
+  setRotating(on: boolean): void {
+    this.rotating = on;
+    this.check.reset();
+  }
+
   /** The line under the panel: the map and the round ("Depot · Round 2"). */
   setCaption(text: string): void {
     if (text !== this.shownCaption) this.caption.textContent = this.shownCaption = text;
@@ -185,6 +195,7 @@ export class Minimap {
     const ctx = this.ctx;
     if (!ctx || !this.visible || !this.changed(f, heard)) return;
     this.draws++;
+    this.turn = this.rotating ? f.yaw : 0;
     const half = MINIMAP.size / 2;
     const rim = half - 3;
     const scale = rim / MINIMAP.viewRadius;
@@ -201,7 +212,7 @@ export class Minimap {
     if (field) {
       ctx.translate(half, half);
       ctx.scale(scale, scale);
-      ctx.rotate(f.yaw);
+      ctx.rotate(this.turn);
       ctx.translate(-f.x, -f.z);
       ctx.drawImage(field.canvas, field.x, field.z, field.width, field.depth);
     }
@@ -220,7 +231,7 @@ export class Minimap {
       if (!this.heardShown || Number.isNaN(h.at)) continue;
       const alpha = noiseAlpha(f.time - h.at);
       if (alpha <= 0) continue;
-      const p = toMinimap(f.yaw, f.x, f.z, h.x, h.z, scale, this.at);
+      const p = toMinimap(this.turn, f.x, f.z, h.x, h.z, scale, this.at);
       // Pinned only once its middle is off the map: a patch reaching past the edge is just clipped by it.
       const pinned = clampToSquare(p, rim);
       ctx.beginPath();
@@ -247,7 +258,7 @@ export class Minimap {
     for (let i = 0; i < f.exitCount; i++) this.drawExit(f, f.exits[i]!, scale, rim);
     if (f.hold) this.drawHold(f, scale, rim);
     for (let i = 0; i < f.count; i++) this.drawMate(f, f.mates[i]!, scale, rim);
-    this.drawYou();
+    this.drawYou(this.turn - f.yaw);
     ctx.restore();
   }
 
@@ -302,7 +313,7 @@ export class Minimap {
    */
   private drawMate(f: MinimapFrame, m: MinimapMate, scale: number, rim: number): void {
     const ctx = this.ctx!;
-    const p = toMinimap(f.yaw, f.x, f.z, m.x, m.z, scale, this.at);
+    const p = toMinimap(this.turn, f.x, f.z, m.x, m.z, scale, this.at);
     const pinned = clampToSquare(p, rim - 5);
     ctx.beginPath();
     ctx.arc(p.x, p.y, 4.5, 0, Math.PI * 2);
@@ -328,9 +339,11 @@ export class Minimap {
     ctx.globalAlpha = 1;
   }
 
-  /** You (or the player you watch) in the middle: an arrow pointing the way you look (always up). */
-  private drawYou(): void {
+  /** You (or the player you watch) in the middle: an arrow pointing the way you look (up on a rotating minimap). */
+  private drawYou(angle: number): void {
     const ctx = this.ctx!;
+    // Up the way you look: turned only on a fixed minimap (`angle` 0 on a rotating one).
+    if (angle !== 0) ctx.rotate(angle);
     ctx.beginPath();
     ctx.moveTo(0, -7);
     ctx.lineTo(5, 5);
@@ -347,7 +360,7 @@ export class Minimap {
   /** Where your teammates hold: a diamond in your team's colour, as over the field (ui/holdMarker.ts). */
   private drawHold(f: MinimapFrame, scale: number, rim: number): void {
     const ctx = this.ctx!;
-    const p = toMinimap(f.yaw, f.x, f.z, f.hold!.x, f.hold!.z, scale, this.at);
+    const p = toMinimap(this.turn, f.x, f.z, f.hold!.x, f.hold!.z, scale, this.at);
     clampToSquare(p, rim - 6);
     ctx.beginPath();
     ctx.moveTo(p.x, p.y - 6);
@@ -365,7 +378,7 @@ export class Minimap {
   /** An Extraction exit: a small square doorway, green while open, grey while it's a late exit still shut. */
   private drawExit(f: MinimapFrame, e: MinimapExit, scale: number, rim: number): void {
     const ctx = this.ctx!;
-    const p = toMinimap(f.yaw, f.x, f.z, e.x, e.z, scale, this.at);
+    const p = toMinimap(this.turn, f.x, f.z, e.x, e.z, scale, this.at);
     clampToSquare(p, rim - 7);
     ctx.beginPath();
     ctx.rect(p.x - 4, p.y - 5, 8, 10);
@@ -380,7 +393,7 @@ export class Minimap {
   /** Attack / Defend's flagpole: a small white flag. */
   private drawFlag(f: MinimapFrame, scale: number, rim: number): void {
     const ctx = this.ctx!;
-    const p = toMinimap(f.yaw, f.x, f.z, f.flag!.x, f.flag!.z, scale, this.at);
+    const p = toMinimap(this.turn, f.x, f.z, f.flag!.x, f.flag!.z, scale, this.at);
     clampToSquare(p, rim - 7);
     ctx.beginPath();
     ctx.moveTo(p.x - 3, p.y + 6);

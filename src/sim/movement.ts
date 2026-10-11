@@ -35,13 +35,16 @@ function approach(current: number, target: number, maxDelta: number): number {
 
 /**
  * Speed the character is aiming for given current stance and pace (walk / run / sprint). A lean slows
- * running smoothly down to walking pace, reached at cfg.leanQuietFrom of a full lean.
+ * running smoothly down to walking pace, reached at cfg.leanQuietFrom of a full lean; `walkHeld` while aiming down
+ * sights slows it below that (cfg.aimWalkScale).
  */
-function targetSpeed(c: Character, cfg: MovementConfig): number {
+function targetSpeed(c: Character, cfg: MovementConfig, walkHeld: boolean): number {
   let base = c.walking ? cfg.walkSpeed : c.sprinting ? cfg.sprintSpeed : cfg.runSpeed;
   const lean = Math.abs(c.lean);
   if (lean > 0 && !c.walking) base += (cfg.walkSpeed - base) * Math.min(1, lean / cfg.leanQuietFrom);
-  return base + (cfg.crouchSpeed - base) * c.crouchAmount;
+  const speed = base + (cfg.crouchSpeed - base) * c.crouchAmount;
+  // Walk held while aiming creeps below the aiming pace, crouched too (M84, the owner's playtest note 8).
+  return c.aiming && walkHeld ? speed * cfg.aimWalkScale : speed;
 }
 
 /** Applies one tick of movement intent, gravity and collision to a character. Pure apart from `mover`. */
@@ -81,7 +84,7 @@ export function stepMovement(
   }
   const sin = Math.sin(c.yaw);
   const cos = Math.cos(c.yaw);
-  const speed = targetSpeed(c, cfg);
+  const speed = targetSpeed(c, cfg, cmd.walk);
   const wishX = (-sin * f + cos * r) * speed;
   const wishZ = (-cos * f - sin * r) * speed;
   const hasInput = mag > cfg.inputDeadzone;

@@ -21,7 +21,7 @@ export interface PlayerCommand {
   /** Lean (held): -1 left, 1 right, 0 upright. */
   lean: number;
   jump: boolean;
-  /** Aim down sights (held): works only with an optic fitted to the replica in hand (sim/aiming.ts). */
+  /** Aim down sights (held): through the optic fitted to the replica in hand, or its iron sights (sim/aiming.ts). */
   aim: boolean;
   /** Trigger held. Semi-auto replicas fire on the press only. */
   fire: boolean;

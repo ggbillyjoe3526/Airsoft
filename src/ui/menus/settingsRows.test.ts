@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_CROSSHAIR, DEFAULT_HIT_FEED_MODE, DEFAULT_WHAT_GOT_YOU_MODE, HUD_OPACITY } from '../../config/matchInfo';
-import { DEFAULT_LOOK } from '../../config/look';
+import { DEFAULT_LOOK, DEFAULT_RETRO } from '../../config/look';
 import { DEFAULT_SOUND_CUE_COLOUR } from '../../config/accessibility';
 import { MemoryStorage } from '../../pool/testStorage';
 import { flushSettings, SETTINGS_KEY } from '../../settings/storage';
@@ -90,14 +90,26 @@ describe('every settings row keeps its saved key (G3, criterion 8)', () => {
     expect(savedKeys(rows)).toEqual(expect.arrayContaining(['reducedMotion', 'soundCueColour', 'soundCueSize', 'soundCues', 'teamColours']));
   });
 
-  it('saves the Audio sliders as volume.master, volume.effects and volume.interface', () => {
-    const rows = audioSettings({ initial: { master: 1, effects: 1, interface: 1 } as never, onChange: () => {} }) as unknown as FakeElement[];
-    expect(savedKeys(rows)).toEqual(['volume.effects', 'volume.interface', 'volume.master']);
+  it('saves the Audio sliders as volume.master, volume.effects and volume.interface, and M86\'s as volume.ambience', () => {
+    const rows = audioSettings({ initial: { master: 1, effects: 1, ambience: 1, interface: 1 } as never, onChange: () => {} }) as unknown as FakeElement[];
+    expect(savedKeys(rows)).toEqual(['volume.ambience', 'volume.effects', 'volume.interface', 'volume.master']);
   });
 
-  it('saves the Look rows as robots and realisticColours', () => {
-    const rows = lookSettings({ initial: DEFAULT_LOOK, onChange: () => {} }) as unknown as FakeElement[];
-    expect(savedKeys(rows)).toEqual(['realisticColours', 'robots']);
+  it('shows four sliders in order Master, Effects, Ambience, Interface, labelled "Ambience volume" third (M86)', () => {
+    const rows = audioSettings({ initial: { master: 1, effects: 1, ambience: 1, interface: 1 } as never, onChange: () => {} }) as unknown as FakeElement[];
+    expect(rows).toHaveLength(4);
+    const heads = rows.map((r) => r.text);
+    expect(heads[2]).toContain('Ambience volume');
+    expect(heads[0]).toContain('Master volume');
+    expect(heads[1]).toContain('Effects volume');
+    expect(heads[3]).toContain('Interface volume');
+    expect(savedKeys(rows)).toHaveLength(4);
+    expect(walk(rows[2]!).filter((n) => n.tag === 'input')).toHaveLength(1);
+  });
+
+  it('saves the Look rows as robots, realisticColours and the Retro look (M96) as retroLook, retroPixelSize and retroColours', () => {
+    const rows = lookSettings({ initial: DEFAULT_LOOK, onChange: () => {}, retro: { initial: { ...DEFAULT_RETRO }, onChange: () => {} } }) as unknown as FakeElement[];
+    expect(savedKeys(rows)).toEqual(['realisticColours', 'retroColours', 'retroLook', 'retroPixelSize', 'robots']);
   });
 
   it('saves the crosshair rows each under crosshair.<part>, so the saved crosshair survives the move to Gameplay', () => {
@@ -171,14 +183,14 @@ describe('a note on every settings row (G3, criterion 8)', () => {
         soundCueSize: { initial: 1, onChange: noop },
         soundCueColour: { initial: DEFAULT_SOUND_CUE_COLOUR, onChange: noop },
       }),
-      ...lookSettings({ initial: DEFAULT_LOOK, onChange: noop }),
+      ...lookSettings({ initial: DEFAULT_LOOK, onChange: noop, retro: { initial: { ...DEFAULT_RETRO }, onChange: noop } }),
     ] as unknown as FakeElement[];
     for (const r of rows) expect(note(r), label(r)).not.toBe('');
   });
 
   // BUG (criterion 8: "a note on every row"): audioSettings.ts SLIDERS.master.help is '', so Master volume has no note.
   it('gives every Audio slider a note, Master volume included', () => {
-    const rows = audioSettings({ initial: { master: 1, effects: 1, interface: 1 } as never, onChange: () => {} }) as unknown as FakeElement[];
+    const rows = audioSettings({ initial: { master: 1, effects: 1, ambience: 1, interface: 1 } as never, onChange: () => {} }) as unknown as FakeElement[];
     for (const r of rows) expect(note(r), label(r)).not.toBe('');
   });
 });

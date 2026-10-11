@@ -197,8 +197,9 @@ describe('M33j acceptance 4: every existing cue buffer is unchanged (Depot sound
 
   it("renders every title-screen cue sample for sample as before, in the same order, and no map cue with them", () => {
     const rendered = renderSounds(RATE);
-    expect([...rendered.keys()]).toEqual(Object.keys(BEFORE));
-    for (const [cue, variants] of rendered) expect(fingerprint(variants), cue).toBe(BEFORE[cue]);
+    // M86's yard calls (a crow, a dog) come last on the title stream, so every cue before them is as it was.
+    expect([...rendered.keys()]).toEqual([...Object.keys(BEFORE), 'ambience.crow', 'ambience.dog']);
+    for (const cue of Object.keys(BEFORE) as SoundCue[]) expect(fingerprint(rendered.get(cue)!), cue).toBe(BEFORE[cue]);
   });
 
   it("renders the yard's bed sample for sample as before", () => {
@@ -360,7 +361,7 @@ describe('M33j acceptance 2: the woods at night', () => {
   it('plays Woodland at night with the wind, the insects and the owl, a crackle at each camp fire and none at a lantern', () => {
     const scene = soundscapeOf(WOODLAND, true);
     expect(scene.ambience.beds.map((b) => b.loop)).toEqual(['pines', 'insects']);
-    expect(scene.ambience.call?.cue).toBe('ambience.owl');
+    expect(scene.ambience.calls[0]?.cue).toBe('ambience.owl');
     const fires = WOODLAND.lights!.filter((l) => l.kind === 'fire');
     expect(fires.length).toBeGreaterThan(0);
     expect(WOODLAND.lights!.some((l) => l.kind === 'lantern')).toBe(true);
@@ -372,7 +373,7 @@ describe('M33j acceptance 2: the woods at night', () => {
 
 describe('M33j acceptance 1: no daytime birds under a night preset, on any map', () => {
   it('has no birds in any ambience by night', () => {
-    for (const id of Object.keys(AMBIENCES) as AmbienceId[]) expect(AMBIENCES[id].night.call?.cue, id).not.toBe('ambience.bird');
+    for (const id of Object.keys(AMBIENCES) as AmbienceId[]) expect(AMBIENCES[id].night.calls.map((c) => c.cue), id).not.toContain('ambience.bird');
   });
 
   it('takes night from the lighting preset picked (never a map name): every map under every preset it offers', () => {
@@ -380,7 +381,7 @@ describe('M33j acceptance 1: no daytime birds under a night preset, on any map',
       for (const choice of lightingChoices(mapData(entry.id))) {
         const map = mapUnderLighting(mapData(entry.id), choice);
         const night = playsAtNight(mapData(entry.id), choice);
-        const call = soundscapeOf(map, night).ambience.call?.cue;
+        const call = soundscapeOf(map, night).ambience.calls[0]?.cue;
         if (night) expect(call, `${entry.id} by ${choice}`).not.toBe('ambience.bird');
         // By day a bird, except where the field's ambience has its own day call (M34g: the city's shop chime).
         else expect(call, `${entry.id} by ${choice}`).toBe(mapData(entry.id).ambience === 'city' ? 'ambience.chime' : 'ambience.bird');
@@ -390,9 +391,9 @@ describe('M33j acceptance 1: no daytime birds under a night preset, on any map',
 
   it('plays the city on Neon Heights (M34g): arcade bleeps by Night, the shop chime by Day; Depot is the yard by day, as before', () => {
     expect(soundscapeOf(NEON_HEIGHTS, true).ambience).toBe(AMBIENCES.city.night);
-    expect(soundscapeOf(NEON_HEIGHTS, true).ambience.call?.cue).toBe('ambience.arcade');
+    expect(soundscapeOf(NEON_HEIGHTS, true).ambience.calls[0]?.cue).toBe('ambience.arcade');
     expect(soundscapeOf(NEON_HEIGHTS, false).ambience).toBe(AMBIENCES.city.day);
-    expect(soundscapeOf(NEON_HEIGHTS, false).ambience.call?.cue).toBe('ambience.chime');
+    expect(soundscapeOf(NEON_HEIGHTS, false).ambience.calls[0]?.cue).toBe('ambience.chime');
     expect(soundscapeOf(DEPOT, false)).toEqual(YARD_BY_DAY);
   });
 });
@@ -416,7 +417,7 @@ describe('M33j acceptance 4: gameplay first, the ambience under BBs, footsteps a
     const [pines, insects] = AMBIENCES.woods.night.beds;
     expect(pines!.gain).toBeLessThanOrEqual(yard);
     expect(20 * Math.log10(insects!.gain / pines!.gain)).toBeLessThanOrEqual(-6 + 1e-9);
-    expect(AMBIENCES.woods.night.call!.level.gain).toBeLessThanOrEqual(AUDIO.levels.bird.gain);
+    expect(AMBIENCES.woods.night.calls[0]!.level.gain).toBeLessThanOrEqual(AUDIO.levels.bird.gain);
   });
 
   it("peaks a camp fire's crackle under 0.25 at its full-volume distance, and heard only within 12 m", () => {
@@ -445,17 +446,18 @@ describe('M33j acceptance 5: sounds render lazily, for the maps that use them', 
 
   it("asks for Neon Heights' own (M34g): traffic, drones and the chime by Day; traffic, neon and the arcade by Night; no ground steps", () => {
     const day = soundscapeOf(NEON_HEIGHTS, false);
-    expect(day.cues).toEqual(['ambience.chime']);
+    // With M86's pigeons by day and a car horn either way.
+    expect(day.cues).toEqual(['ambience.chime', 'ambience.pigeon', 'ambience.horn']);
     expect([...day.loops].sort()).toEqual(['drones', 'traffic']);
     const night = soundscapeOf(NEON_HEIGHTS, true);
-    expect(night.cues).toEqual(['ambience.arcade']);
+    expect(night.cues).toEqual(['ambience.arcade', 'ambience.horn']);
     expect([...night.loops].sort()).toEqual(['neon', 'traffic']);
   });
 
   it("asks for Woodland's own: a step for each ground it has, at each pace, the owl, the wind, the insects and the fire", () => {
     const scene = soundscapeOf(WOODLAND, true);
     const want = GROUND_SURFACES.flatMap((s) => FOOTSTEP_PACES.map((p) => cues.step(s, p)));
-    expect([...scene.cues].sort()).toEqual([...want, 'ambience.owl'].sort());
+    expect([...scene.cues].sort()).toEqual([...want, 'ambience.owl', 'ambience.creak'].sort());
     expect([...scene.loops].sort()).toEqual(['crackle', 'insects', 'pines']);
   });
 

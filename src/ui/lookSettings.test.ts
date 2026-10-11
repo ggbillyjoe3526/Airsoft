@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { DEFAULT_LOOK, type LookSettings } from '../config/look';
+import { DEFAULT_LOOK, DEFAULT_RETRO, type LookSettings, type RetroSettings } from '../config/look';
 import { SETTINGS_TABS } from '../config/menus';
 import { SETTINGS_KEY } from '../settings/storage';
 import { MemoryStorage } from '../pool/testStorage';
@@ -11,7 +11,8 @@ import { fakeDocument, type FakeElement } from './testSupport';
 function all(node: FakeElement, tag: string): FakeElement[] {
   return node.children.flatMap((c) => [...(c.tag === tag ? [c] : []), ...all(c, tag)]);
 }
-const rows = (initial: LookSettings, onChange: (l: LookSettings) => void): FakeElement[] => lookSettings({ initial, onChange }) as unknown as FakeElement[];
+const rows = (initial: LookSettings, onChange: (l: LookSettings) => void, retro: RetroSettings = DEFAULT_RETRO, onRetro: (r: RetroSettings) => void = () => {}): FakeElement[] =>
+  lookSettings({ initial, onChange, retro: { initial: retro, onChange: onRetro } }) as unknown as FakeElement[];
 const button = (row: FakeElement, label: string): FakeElement => all(row, 'button').find((b) => b.textContent === label)!;
 const pressed = (row: FakeElement): string[] => all(row, 'button').filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.textContent);
 const saved = (): Record<string, unknown> => JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}') as Record<string, unknown>;
@@ -32,9 +33,9 @@ describe('Settings › Look (G1 acceptance 3)', () => {
     expect(look).not.toHaveProperty('later', true);
   });
 
-  it('has two rows, Robots and Realistic colours, showing the defaults: Mixed (robots on) and Bold (realistic off)', () => {
+  it('has Robots and Realistic colours first, showing the defaults: Mixed (robots on) and Bold (realistic off)', () => {
     const r = rows(DEFAULT_LOOK, () => {});
-    expect(r).toHaveLength(2);
+    expect(r).toHaveLength(5);
     expect(all(r[0]!, 'span').some((s) => s.textContent === 'Robots')).toBe(true);
     expect(all(r[1]!, 'span').some((s) => s.textContent === 'Realistic colours')).toBe(true);
     expect(pressed(r[0]!)).toEqual(['Mixed']);
@@ -70,6 +71,38 @@ describe('Settings › Look (G1 acceptance 3)', () => {
     button(r[0]!, 'Humans only').click();
     button(r[1]!, 'Realistic').click();
     expect(loadLook()).toEqual({ robots: false, realisticColours: true });
+  });
+});
+
+describe('Settings › Look › Retro look (M96)', () => {
+  beforeEach(() => {
+    vi.stubGlobal('document', fakeDocument());
+    vi.stubGlobal('localStorage', new MemoryStorage());
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  const label = (row: FakeElement): string => all(row, 'span').find((s) => s.classList.contains('menu-row-label'))?.textContent ?? '';
+
+  it('follows Realistic colours: Retro look (Off by default), then its Pixel size and Colours sliders', () => {
+    const r = rows(DEFAULT_LOOK, () => {});
+    expect(r.slice(2).map(label)).toEqual(['Retro look', 'Pixel size', 'Colours']);
+    expect(pressed(r[2]!)).toEqual(['Off']);
+    type Slider = FakeElement & { value: string; min: string; max: string };
+    const [size, colours] = [all(r[3]!, 'input')[0] as Slider, all(r[4]!, 'input')[0] as Slider];
+    expect([size.value, size.min, size.max]).toEqual(['4', '2', '8']);
+    expect([colours.value, colours.min, colours.max]).toEqual(['6', '3', '8']);
+    expect(all(r[3]!, 'output')[0]!.textContent).toBe('4 px');
+    expect(all(r[4]!, 'output')[0]!.textContent).toBe('216');
+  });
+
+  it('saves the switch as retroLook and calls back at once with the sliders as they are', () => {
+    const seen: RetroSettings[] = [];
+    const r = rows(DEFAULT_LOOK, () => {}, { on: false, pixelSize: 6, colours: 4 }, (x) => seen.push(x));
+    button(r[2]!, 'On').click();
+    expect(saved().retroLook).toBe('on');
+    expect(seen).toEqual([{ on: true, pixelSize: 6, colours: 4 }]);
+    button(r[2]!, 'Off').click();
+    expect(seen.at(-1)).toEqual({ on: false, pixelSize: 6, colours: 4 });
   });
 });
 

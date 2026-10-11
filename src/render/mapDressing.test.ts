@@ -17,7 +17,7 @@ const BARE: MapData = { ...DEPOT };
 delete BARE.dressing;
 const layout = placeDressing(DEPOT);
 
-/** A colour "reads as a team" if it is saturated and within 20° of hue of any team colour of any set (mapMeshes.test.ts). */
+/** A colour "reads as a team" if it is saturated and within 20° of hue of any team colour of any set (config/contentRules.ts TEAM_COLOUR_RULE). */
 function readsAsTeam(c: THREE.Color): boolean {
   const hsl = { h: 0, s: 0, l: 0 };
   c.getHSL(hsl);

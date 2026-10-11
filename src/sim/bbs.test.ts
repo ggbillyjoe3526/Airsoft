@@ -120,7 +120,7 @@ describe('stepBBs hitting characters', () => {
   const noWall: WorldQuery = { raycastStatic: () => -1 };
   const deadZones = [[{ position: vec3(-30, 0, 0), yaw: 0 }], [{ position: vec3(30, 0, 0), yaw: 0 }]];
 
-  /** Shooter (team 0, id 1) at the origin; BB fired at chest height (1.2 m) towards -Z. */
+  /** Shooter (team 0, id 1) at the origin; BB fired at chest height (1.3 m) towards -Z. */
   function setup(targets: { id: number; team: number; z: number; x?: number; crouch?: number }[], hits: HitConfig = HITS) {
     const shooter = createCharacter(1, vec3(), 0, LOADOUT, 0);
     const characters = [shooter];
@@ -130,13 +130,13 @@ describe('stepBBs hitting characters', () => {
       characters.push(c);
     }
     const pool = createBBPool(4);
-    const bb = spawnBB(pool, shooter.id, vec3(0, 1.2, 0), vec3(0, 0, -1), 88, 0, 0.25e-3);
+    const bb = spawnBB(pool, shooter.id, vec3(0, 1.3, 0), vec3(0, 0, -1), 88, 0, 0.25e-3);
     const events: GameEvent[] = [];
     const bbTargets: BBTargets = { characters, hits, elimination: openFieldElimination(deadZones) };
     const run = (wall = noWall) => {
       for (let i = 0; i < 60 && bb.active; i++) stepBBs(pool, BALLISTICS, wall, KILL_Y, events, DT, bbTargets);
     };
-    return { characters, bb, events, run };
+    return { characters, bb, pool, events, run };
   }
 
   it('eliminates the first character in the path and reports who hit whom, from which direction', () => {
@@ -156,16 +156,49 @@ describe('stepBBs hitting characters', () => {
     expect(events.some((e) => e.type === 'bbImpact')).toBe(false);
   });
 
-  it('never hits the shooter, and passes through characters already hit', () => {
-    const { characters, run, events } = setup([
+  it('never hits the shooter, and stops on a body already hit, in every stage of the walk-off, with no second hit (M85)', () => {
+    for (const status of ['calling', 'walkingOff', 'leaving', 'out'] as const) {
+      const { characters, bb, run, events } = setup([
+        { id: 2, team: 1, z: -10 },
+        { id: 3, team: 1, z: -20 },
+      ]);
+      characters[1]!.status = status;
+      run();
+      expect(characters[0]!.status, status).toBe('alive');
+      expect(characters[2]!.status, `${status}: hit through the body in front`).toBe('alive');
+      expect(events.some((e) => e.type === 'characterHit' || e.type === 'ricochetTick'), status).toBe(false);
+      expect(bb.active, status).toBe(false);
+      expect(bb.position.z, status).toBeCloseTo(-10 + HITS.bodyRadius, 3);
+      expect(events.filter((e) => e.type === 'bbImpact'), status).toHaveLength(1);
+    }
+  });
+
+  it('stops on a teammate when friendly fire is off: no hit, and nobody behind them is hit through them (M85)', () => {
+    const { characters, bb, run, events } = setup(
+      [
+        { id: 2, team: 0, z: -10 },
+        { id: 3, team: 1, z: -20 },
+      ],
+      { ...HITS, friendlyFire: false },
+    );
+    run();
+    expect(characters[1]!.status).toBe('alive');
+    expect(characters[2]!.status).toBe('alive');
+    expect(bb.position.z).toBeCloseTo(-10 + HITS.bodyRadius, 3);
+    expect(events.map((e) => e.type)).toEqual(['bbImpact']);
+  });
+
+  it('in a cease-fire stops on the first body it reaches and knocks nobody out (M85)', () => {
+    const { characters, bb, pool, events } = setup([
       { id: 2, team: 1, z: -10 },
       { id: 3, team: 1, z: -20 },
     ]);
-    characters[1]!.status = 'walkingOff';
-    run();
-    expect(characters[0]!.status).toBe('alive');
-    expect(characters[2]!.status).toBe('calling');
-    expect(events.filter((e) => e.type === 'characterHit')).toHaveLength(1);
+    const targets: BBTargets = { characters, hits: HITS, elimination: openFieldElimination(deadZones), ceaseFire: true };
+    for (let i = 0; i < 60 && bb.active; i++) stepBBs(pool, BALLISTICS, noWall, KILL_Y, events, DT, targets);
+    expect(characters[1]!.status).toBe('alive');
+    expect(characters[2]!.status).toBe('alive');
+    expect(bb.position.z).toBeCloseTo(-10 + HITS.bodyRadius, 3);
+    expect(events.map((e) => e.type)).toEqual(['bbImpact']);
   });
 
   it('passes through a Ghost (the Dev settings, M24) and hits whoever is behind', () => {
@@ -251,7 +284,7 @@ describe('stepBBs hitting characters', () => {
   });
 
   it('flies over a crouched character that a standing one would have caught in the chest', () => {
-    // BB at 1.2 m: hits a standing target, passes over a fully crouched one (top 1.13 m).
+    // BB at 1.3 m: hits a standing target, passes over a fully crouched one (top 1.13 m).
     const standing = setup([{ id: 2, team: 1, z: -5 }]);
     standing.run();
     expect(standing.characters[1]!.status).toBe('calling');
@@ -275,18 +308,21 @@ describe('stepBBs hitting characters', () => {
     expect(a.deadZoneTarget).not.toEqual(b.deadZoneTarget);
   });
 
-  it('lets the second of two BBs reaching someone in the same tick fly on: they were already hit by the first', () => {
+  it('stops the second of two BBs reaching someone in the same tick on their body: one hit, nobody behind hit (M85)', () => {
     const shooter = createCharacter(1, vec3(), 0, LOADOUT, 0);
     const target = createCharacter(2, vec3(0, 0, -10), 0, LOADOUT, 1);
+    const behind = createCharacter(3, vec3(0, 0, -12), 0, LOADOUT, 1);
     const pool = createBBPool(4);
     const first = spawnBB(pool, 1, vec3(0, 1.2, -9), vec3(0, 0, -1), 88, 0, 0.25e-3);
     const second = spawnBB(pool, 1, vec3(0.05, 1.2, -9), vec3(0, 0, -1), 88, 0, 0.25e-3);
     const events: GameEvent[] = [];
-    stepBBs(pool, BALLISTICS, noWall, KILL_Y, events, DT, { characters: [shooter, target], hits: HITS, elimination: openFieldElimination(deadZones) });
+    stepBBs(pool, BALLISTICS, noWall, KILL_Y, events, DT, { characters: [shooter, target, behind], hits: HITS, elimination: openFieldElimination(deadZones) });
     expect(events.filter((e) => e.type === 'characterHit')).toHaveLength(1);
+    expect(events.filter((e) => e.type === 'bbImpact')).toHaveLength(1);
     expect(first.active).toBe(false);
-    expect(second.active).toBe(true);
-    expect(second.position.z).toBeLessThan(-10);
+    expect(second.active).toBe(false);
+    expect(second.position.z).toBeGreaterThan(-10);
+    expect(behind.status).toBe('alive');
   });
 
   it('hits a leaning character on the flank of the tilted torso (M-06)', () => {

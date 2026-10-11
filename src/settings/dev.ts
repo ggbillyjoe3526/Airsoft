@@ -34,6 +34,10 @@ export function loadDevSettings(storage = browserStorage()): DevSettings {
       const plain = DEV_DEFAULTS[e.id] ? 'on' : 'off';
       const earlier = EARLIER_FIELDS[e.id];
       d[e.id] = loadSetting(devField(e.id), onOff, earlier ? loadSetting(earlier, onOff, plain, storage) : plain, storage) === 'on';
+    } else if (e.kind === 'choice') {
+      // A choice saves its option's id (M90: Time of day); one this build doesn't list reads as the default.
+      const picked = loadSetting<string>(devField(e.id), oneOf(e.choices.map((c) => c.id)), DEV_DEFAULTS[e.id], storage);
+      (d as Record<typeof e.id, string>)[e.id] = picked;
     } else d[e.id] = loadSetting(devField(e.id), numberIn(e.min, e.max), DEV_DEFAULTS[e.id], storage);
   }
   return d;

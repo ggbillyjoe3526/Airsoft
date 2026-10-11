@@ -2,21 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { NAV } from '../config/nav';
 import { PHYSICS } from '../config/physics';
 import { BODY } from '../config/movement';
-import { buildNavGrid, createNavSearch, findPath, floorAt, isWalkableAt, nodeX, nodeZ } from '../nav/navGrid';
+import { buildNavGrid, createNavSearch, findPath, isWalkableAt } from '../nav/navGrid';
 import { buildLevelRay, castLevelRay } from '../sim/levelRay';
-import { createRng, rngNext } from '../sim/rng';
 import { type Vec3, vec3 } from '../sim/vec';
 import { mapData, mapEntry, teamSizeOn } from './maps';
 import { steepestSlope, terrainHeightAt, terrainMaxX, terrainMaxZ } from './terrain';
 import { WOODLAND, WOODLAND_LAYOUT } from './woodland';
 
-/** How far a map's points may sit from the floor under them (as map/mapData.test.ts). */
-const ON_FLOOR = 0.05;
-
 const nav = buildNavGrid(WOODLAND, NAV);
 const terrain = WOODLAND.terrain!;
 const flag = WOODLAND.flag!;
-const insideMap = (p: Vec3): boolean => Math.abs(p.x) <= WOODLAND_LAYOUT.halfX && Math.abs(p.z) <= WOODLAND_LAYOUT.halfZ;
 
 describe('Woodland: the ground (M33d, acceptance 1)', () => {
   it('has no slope steeper than a ramp, so every part of the field is walkable', () => {
@@ -67,35 +62,12 @@ describe('Woodland: the ground (M33d, acceptance 1)', () => {
   });
 });
 
+/**
+ * That every spawn, dead-zone spot, lane point and the flag stands on walkable ground, that the camps can't see each
+ * other, the longest sightline (141 m, MAP_EXCEPTIONS) and that every lane and spawn route can be walked are the content
+ * toolkit's map checks on every map (src/content/mapChecks.ts).
+ */
 describe('Woodland: spawns, dead zones and the flag (M33d, acceptance 1)', () => {
-  const points = [
-    ...WOODLAND.spawns.flat().map((s) => ['spawn', s.position] as const),
-    ...WOODLAND.deadZones.flat().map((s) => ['dead-zone spot', s.position] as const),
-    ['flag', flag] as const,
-  ];
-
-  it('puts all of them inside the map, on walkable ground, standing on the floor under them', () => {
-    expect(points.length).toBe(6 * 2 * 2 + 1);
-    for (const [what, p] of points) {
-      const at = `${what} at ${p.x.toFixed(2)}, ${p.y.toFixed(2)}, ${p.z.toFixed(2)}`;
-      expect(insideMap(p), `${at} inside`).toBe(true);
-      expect(isWalkableAt(nav, p.x, p.y, p.z), `${at} walkable`).toBe(true);
-      expect(Math.abs(p.y - floorAt(nav, p.x, p.y, p.z)), `${at} on the floor`).toBeLessThanOrEqual(ON_FLOOR);
-    }
-  });
-
-  it('keeps every lane point inside the map, walkable and on the ground', () => {
-    expect(WOODLAND.lanes).toHaveLength(3);
-    for (const lane of WOODLAND.lanes) {
-      for (const p of lane) {
-        expect(insideMap(p)).toBe(true);
-        expect(isWalkableAt(nav, p.x, p.y, p.z), `lane point ${p.x}, ${p.z}`).toBe(true);
-        // A lane point sits anywhere in its nav cell, so on a slope the cell's floor (taken at the centre) may differ a little.
-        expect(Math.abs(p.y - floorAt(nav, p.x, p.y, p.z))).toBeLessThanOrEqual(ON_FLOOR + PHYSICS.maxRampSlope * NAV.cell);
-      }
-    }
-  });
-
   it('has six spawns and six dead-zone spots a side (6v6, M88), each camp at its own end, facing down the field', () => {
     expect(WOODLAND.spawns[0]).toHaveLength(6);
     expect(WOODLAND.spawns[1]).toHaveLength(6);
@@ -106,25 +78,8 @@ describe('Woodland: spawns, dead zones and the flag (M33d, acceptance 1)', () =>
   });
 });
 
-describe('Woodland: the two camps cannot see each other (M33d, acceptance 1)', () => {
+describe('Woodland: the starts are hidden (M88, playtest note 13)', () => {
   const level = buildLevelRay(WOODLAND.blocks, PHYSICS.rayGridCell, terrain);
-
-  /** Whether a standing (or crouched) eye at `a` has a clear line to one at `b`. */
-  function sees(a: Vec3, b: Vec3, eye: number): boolean {
-    const from = vec3(a.x, a.y + eye, a.z);
-    const to = vec3(b.x, b.y + eye, b.z);
-    const dx = to.x - from.x;
-    const dy = to.y - from.y;
-    const dz = to.z - from.z;
-    const d = Math.hypot(dx, dy, dz);
-    return castLevelRay(level, from, vec3(dx / d, dy / d, dz / d), d) < 0;
-  }
-
-  it('has no clear sight line from any spawn of one camp to any spawn of the other, standing or crouched', () => {
-    for (const eye of [BODY.standEyeHeight, BODY.crouchEyeHeight]) {
-      for (const a of WOODLAND.spawns[0]) for (const b of WOODLAND.spawns[1]) expect(sees(a.position, b.position, eye), `eye ${eye} from ${a.position.z} to ${b.position.z}`).toBe(false);
-    }
-  });
 
   /**
    * The start (M88, playtest note 13: "as blue team the orange team are instantly visible in the distance"): anywhere
@@ -187,98 +142,6 @@ describe('Woodland: the two camps cannot see each other (M33d, acceptance 1)', (
       const hit = castLevelRay(level, from, vec3(dx / d, dy / d, dz / d), d);
       expect(hit).toBeGreaterThan(0);
       expect(from.x + (dx / d) * hit).toBeLessThan(crest.x + 1);
-    }
-  });
-
-  it('does see along an open line: the check is not blind (a spawn sees its camp-mates and the ray hits the Knoll between)', () => {
-    const [a, b] = WOODLAND.spawns[0];
-    expect(sees(a!.position, b!.position, BODY.standEyeHeight)).toBe(true);
-    // And the line really is blocked by the ground or cover, not by the ray missing the map.
-    const from = vec3(WOODLAND.spawns[0][2]!.position.x, WOODLAND.spawns[0][2]!.position.y + BODY.standEyeHeight, WOODLAND.spawns[0][2]!.position.z);
-    const target = WOODLAND.spawns[1][2]!.position;
-    const dx = target.x - from.x;
-    const dz = target.z - from.z;
-    const flat = Math.hypot(dx, dz);
-    const hit = castLevelRay(level, from, vec3(dx / flat, 0, dz / flat), flat);
-    expect(hit).toBeGreaterThan(0);
-    expect(hit).toBeLessThan(flat);
-  });
-});
-
-describe('Woodland: its longest sight line (M55, audit SIM-08)', () => {
-  /**
-   * The longest clear line from a standing eye to a standing eye over the field (m): corner to opposite corner across the
-   * meadow and the Knoll's east shoulder, 140.7 m measured. Intended (owner decision 11, 2026-10-05: the map is played at
-   * night, where the dark, not the ground, decides what anyone sees, and a BB doesn't carry that far). A change to the
-   * trees or the cover that opens a longer line fails here.
-   */
-  const LONGEST_LINE = 141;
-  /** ...and the long lines are there: the check is not blind. */
-  const MEADOW_LINE = 120;
-  /** Pairs of walkable nodes sampled over the whole field (a fixed seed)... */
-  const PAIRS = 40_000;
-  /** ...plus every pair between two opposite corners' nodes within this of the corner (m), where the longest lines are. */
-  const CORNER = 12;
-
-  it(`has no clear eye line longer than ${LONGEST_LINE} m, and the meadow's is over ${MEADOW_LINE} m`, { timeout: 30_000 }, () => {
-    const level = buildLevelRay(WOODLAND.blocks, PHYSICS.rayGridCell, terrain);
-    const walk: number[] = [];
-    for (let k = 0; k < nav.walkable.length; k++) if (nav.walkable[k] === 1) walk.push(k);
-    const from = vec3();
-    const dir = vec3();
-    let longest = 0;
-    const tryPair = (a: number, b: number): void => {
-      from.x = nodeX(nav, a);
-      from.z = nodeZ(nav, a);
-      from.y = terrainHeightAt(terrain, from.x, from.z)! + BODY.standEyeHeight;
-      dir.x = nodeX(nav, b) - from.x;
-      dir.z = nodeZ(nav, b) - from.z;
-      dir.y = terrainHeightAt(terrain, nodeX(nav, b), nodeZ(nav, b))! + BODY.standEyeHeight - from.y;
-      const d = Math.hypot(dir.x, dir.y, dir.z);
-      if (d <= longest) return;
-      dir.x /= d;
-      dir.y /= d;
-      dir.z /= d;
-      if (castLevelRay(level, from, dir, d) < 0) longest = d;
-    };
-    const rng = createRng(9);
-    for (let i = 0; i < PAIRS; i++) tryPair(walk[Math.floor(rngNext(rng) * walk.length)]!, walk[Math.floor(rngNext(rng) * walk.length)]!);
-    const maxX = terrainMaxX(terrain);
-    const maxZ = terrainMaxZ(terrain);
-    const near = (sx: number, sz: number): number[] => walk.filter((k) => sx * nodeX(nav, k) > maxX - CORNER && sz * nodeZ(nav, k) > maxZ - CORNER);
-    for (const [a, b] of [[near(-1, -1), near(1, 1)], [near(-1, 1), near(1, -1)]] as const) {
-      expect(a.length).toBeGreaterThan(0);
-      expect(b.length).toBeGreaterThan(0);
-      for (const i of a) for (const j of b) tryPair(i, j);
-    }
-    expect(longest).toBeLessThanOrEqual(LONGEST_LINE);
-    expect(longest).toBeGreaterThan(MEADOW_LINE);
-  });
-});
-
-describe('Woodland: the lanes are walkable (M33d, acceptance 1)', () => {
-  const search = createNavSearch(nav);
-
-  /** A nav path exists from `a` to `b` and ends where asked. */
-  function walkable(a: Vec3, b: Vec3): boolean {
-    const out: Vec3[] = [];
-    if (!findPath(nav, search, a, b, NAV.snap, out)) return false;
-    const last = out[out.length - 1]!;
-    return Math.hypot(last.x - b.x, last.z - b.z) < NAV.snap;
-  }
-
-  it('finds a path from every spawn of each camp to the flag, and between the camps', () => {
-    for (const end of [0, 1]) for (const s of WOODLAND.spawns[end]!) expect(walkable(s.position, flag), `end ${end} spawn at z ${s.position.z}`).toBe(true);
-    expect(walkable(WOODLAND.spawns[0][0]!.position, WOODLAND.spawns[1][4]!.position)).toBe(true);
-    expect(walkable(WOODLAND.spawns[1][0]!.position, WOODLAND.spawns[0][4]!.position)).toBe(true);
-  });
-
-  it('finds a path along each lane, point to point, from the camp at end 0 to the Knoll', () => {
-    for (const [i, lane] of WOODLAND.lanes.entries()) {
-      for (let k = 1; k < lane.length; k++) expect(walkable(lane[k - 1]!, lane[k]!), `lane ${i + 1} leg ${k}`).toBe(true);
-      expect(walkable(WOODLAND.spawns[0][2]!.position, lane[0]!), `lane ${i + 1} from the camp`).toBe(true);
-      expect(walkable(lane[0]!, flag), `lane ${i + 1} start to the flag`).toBe(true);
-      expect(walkable(lane[lane.length - 1]!, flag), `lane ${i + 1} end to the flag`).toBe(true);
     }
   });
 });

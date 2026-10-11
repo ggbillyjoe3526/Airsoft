@@ -178,8 +178,8 @@ describe('the rules shown on New game', () => {
     teamSize: 3,
     winsNeeded: 5,
     roundTime: 150,
-    playerTeam: 'Blue',
-    enemyTeam: 'Orange',
+    playerTeam: 'Alpha',
+    enemyTeam: 'Beta',
     raiseTime: 5,
     halfTimeAfter: 4,
     attackFirst: true,
@@ -191,7 +191,7 @@ describe('the rules shown on New game', () => {
 
   it('explain elimination: teams, the clock, the swap of ends and the win condition', () => {
     const text = describeRules(rules, 'elimination');
-    expect(text).toContain('3v3 with bots: you and 2 bot teammates (Blue) against Orange.');
+    expect(text).toContain('3v3 with bots: you and 2 bot teammates (Alpha) against Beta.');
     expect(text).toContain('2:30 on the clock');
     expect(text).toContain('You start at the east end; teams swap ends after round 4.');
     expect(text).toContain('First to 5 rounds wins');
@@ -207,12 +207,12 @@ describe('the rules shown on New game', () => {
 
   it('follow the Match pop-up: team size, rounds, the clock, friendly fire and ricochets (M20)', () => {
     const duel = describeRules({ ...rules, teamSize: 1, winsNeeded: 3, roundTime: 90, halfTimeAfter: 2 }, 'elimination');
-    expect(duel).toContain('1v1: you (Blue) against one Orange bot.');
+    expect(duel).toContain('1v1: you (Alpha) against one Beta bot.');
     expect(duel).toContain('1:30 on the clock');
     expect(duel).toContain('teams swap ends after round 2.');
     expect(duel).toContain('First to 3 rounds');
     expect(duel).not.toContain('Friendly fire'); // nobody to hit in a 1v1
-    expect(describeRules({ ...rules, teamSize: 2 }, 'elimination')).toContain('you and 1 bot teammate (Blue)');
+    expect(describeRules({ ...rules, teamSize: 2 }, 'elimination')).toContain('you and 1 bot teammate (Alpha)');
     expect(describeRules(rules, 'elimination')).toContain("Friendly fire counts. Ricochets don't count.");
     expect(describeRules({ ...rules, friendlyFire: false, ricochetsCount: true }, 'elimination')).toContain('Friendly fire is off. Ricochets count.');
   });
@@ -223,8 +223,8 @@ describe('the Rules picker on New game (M39)', () => {
     teamSize: 3,
     winsNeeded: 7,
     roundTime: 120,
-    playerTeam: 'Blue',
-    enemyTeam: 'Orange',
+    playerTeam: 'Alpha',
+    enemyTeam: 'Beta',
     raiseTime: 5,
     halfTimeAfter: 6,
     attackFirst: true,
@@ -250,10 +250,10 @@ describe('the Rules picker on New game (M39)', () => {
 
   it('hides Rounds to win and Round time in an Extraction run, and the overtime and time-out switches with them (M53, audit UI-01)', () => {
     const fields = Object.keys(DEFAULT_MATCH_RULES) as (keyof MatchRules)[];
-    expect(fields.filter((f) => offersRow('skirmish', f, true))).toEqual(['teamSize', 'friendlyFire', 'ricochetsCount']);
-    expect(fields.filter((f) => offersRow('custom', f, true))).toEqual(['teamSize', 'friendlyFire', 'ricochetsCount', 'heardOnMinimap', 'semiAutoOnly', 'realcap', 'factoryKit']);
+    expect(fields.filter((f) => offersRow('skirmish', f, 'extraction'))).toEqual(['teamSize', 'friendlyFire', 'ricochetsCount']);
+    expect(fields.filter((f) => offersRow('custom', f, 'extraction'))).toEqual(['teamSize', 'friendlyFire', 'ricochetsCount', 'heardOnMinimap', 'semiAutoOnly', 'realcap', 'factoryKit']);
     // Outside a run (or on a map with no Extraction, played as Elimination), the ruleset alone decides, as before.
-    for (const r of ['skirmish', 'tournament', 'proCqb', 'custom'] as const) for (const f of fields) expect(offersRow(r, f, false), `${r} ${f}`).toBe(offersSwitch(r, f));
+    for (const r of ['skirmish', 'tournament', 'proCqb', 'custom'] as const) for (const f of fields) expect(offersRow(r, f, 'elimination'), `${r} ${f}`).toBe(offersSwitch(r, f));
     // And the Match button under a run still names the switches it plays.
     expect(runRulesSummary({ ...DEFAULT_MATCH_RULES, semiAutoOnly: true, heardOnMinimap: false }, { baseOpponents: 2, runTime: 480 }, 'normal').detail).toBe(
       "One 8:00 run. Friendly fire on; ricochets don't count. Minimap: teammates only. Semi only.",
@@ -330,9 +330,9 @@ describe('HUD settings (M24)', () => {
 });
 
 describe('the summary when a match paid nothing (audit POOL-22)', () => {
-  it('says why: Dev settings changed the match, or the Armory is off; nothing when it paid', () => {
+  it('says why: Dev settings changed the match; nothing when it paid, nor with the Armory off (M83: gone from the menus)', () => {
     expect(unpaidLine(null, 'dev')).toBe(ARMORY_TEXT.unpaidDev);
-    expect(unpaidLine(null, 'off')).toBe(ARMORY_TEXT.unpaidOff);
+    expect(unpaidLine(null, 'off')).toBe('');
     expect(unpaidLine(null, 'devContent')).toBe(ARMORY_TEXT.unpaidDevContent);
     expect(ARMORY_TEXT.unpaidDevContent).not.toBe(ARMORY_TEXT.unpaidDev);
     expect(unpaidLine({ lines: [], multiplier: 1, total: 40 }, 'devContent')).toBe('');

@@ -166,7 +166,7 @@ describe('M53 QA: what an Extraction run reads of the Rules picker (audit UI-01)
     const read = fields.filter((f) => JSON.stringify(roundRulesFor(flipped(f))) !== base && f !== 'teamSize');
     expect([...RUN_IGNORES].sort()).toEqual(read.sort());
     // The squad size, friendly fire and ricochets still apply in a run.
-    for (const f of ['teamSize', 'friendlyFire', 'ricochetsCount'] as const) expect(offersRow('custom', f, true), f).toBe(true);
+    for (const f of ['teamSize', 'friendlyFire', 'ricochetsCount'] as const) expect(offersRow('custom', f, 'extraction'), f).toBe(true);
   });
 
   it('names every kit and minimap switch on the Match button in a run, in the match summary\'s order, and none of the round rules', () => {

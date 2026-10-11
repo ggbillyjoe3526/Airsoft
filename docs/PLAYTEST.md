@@ -54,6 +54,8 @@ What is new since 0.1 Dev 4. Each line points to the section with the full check
 - [ ] **Hit players walk off quickly** on every map, by a sensible route ([Rounds and matches](#rounds-and-matches)).
 - [ ] **Extraction's home team by level** and the 3-second grace when you come in (dev content,
   [Extraction](#extraction-dev-content)).
+- [ ] **Iron sights on every replica.** Right click aims down the sights with no optic fitted, tighter than the hip,
+  and Shift while aiming creeps slower ([Aiming and optics](#aiming-and-optics)).
 
 ### Your five calls, confirmed
 
@@ -127,17 +129,20 @@ The rifle holds 60 BBs and the pistol 18, each with 4 magazines a round. Nothing
 
 The rifle comes with flip-up iron sights; a red dot or a 2× scope is a part you fit in Loadout › Customise.
 
-- [ ] **Play with iron sights.** Small flip-up sights stand on the rails and holding right click does nothing:
-  aiming down sights needs an optic.
+- [ ] **Play with iron sights, and hold right click.** Small flip-up sights stand on the rails; the rifle comes up to
+  your eye, the view narrows a touch (less than the red dot) and the crosshair goes: the front post sits in the rear
+  ring. Do the AEG, the pistol and the Cyber pistol each line up straight, nothing blocking the view? (M84)
 - [ ] **Fit the red dot, then play.** It sits on the rifle and the iron sights fold flat under it.
 - [ ] **Hold right click.** The rifle comes up, the view narrows a little, the crosshair gives way to the red dot,
   and you move at a quiet walk (no sprint while aiming). Let go and it all goes back.
-- [ ] **Shoot while aiming.** BBs go where the dot is. Standing still is still what makes you accurate; aiming adds
-  none of its own.
+- [ ] **Shoot while aiming.** BBs go where the dot (or the front post) is. Aiming halves the spread, on top of standing
+  still (M84): at 25 to 35 m it should be clearly tighter, and from the hip up close should still feel fine.
+- [ ] **Hold Shift while aiming.** You creep slower than the aiming walk (1.4 m/s against 2.3). Does it feel steady,
+  not stuck?
 - [ ] **Move the mouse while aiming.** It turns at Settings › Controls › Aiming sensitivity (×0.80 of your mouse
   sensitivity at first, so the world moves across the screen as fast as from the hip).
 - [ ] **Reload, or switch to the pistol, while aiming.** The sight drops for the reload and comes back up if you
-  still hold right click. The pistol has no optic, so it never aims down sights.
+  still hold right click. The pistol has no optic, so it aims down its own iron sights.
 - [ ] **Fit the 2× scope and hold right click.** It comes up a little slower than the red dot; only a round eyepiece
   with a crosshair and a red centre dot shows (find it against a dark wall), twice as close. Turning feels the same
   across the eyepiece as with the red dot. Worth it on long lanes, and is the blind surround a fair cost?
@@ -307,7 +312,9 @@ Completely free: Field Credits (FC) come from playing, and nothing is ever sold.
   elsewhere or a choice closes it. Scrap 1 scraps the lower copy; fit the Common on Customise first, scrap it, and Customise shows the Rare fitted.
   Scrap all spares asks first and keeps your best copy of everything.
 - [ ] **Rarity odds.** The odds table has its caption, and each Rare-or-better copy lists what its tier adds.
-- [ ] **Settings › Dev › Disable Armory.** The Armory is greyed and won't open; a match pays nothing and says why.
+- [ ] **Settings › Dev › Disable Armory.** The Armory is gone from every menu (M83): not on the top bar, no FC or
+  Tokens there, no "Unlock more in the Armory" in Loadout or Customise, no FC line on the summary; a match pays
+  nothing. Untick the Dev box and it is all back.
   Turn it off: the next match pays.
 - [ ] **Settings › Dev › Unlock all gear.** The Loadout offers every replica and part at every tier and the match stays
   out of your records. Turn it off: your own picks are back.
@@ -316,9 +323,10 @@ Completely free: Field Credits (FC) come from playing, and nothing is ever sold.
 
 ## Bots
 
-You're on Blue with two bot teammates against three Orange bots by default.
+You're on Alpha (blue) with two bot teammates against three Beta (orange) bots by default; the Match screen's Your
+team puts you on Beta instead.
 
-- [ ] **Hit an Orange bot.** It raises its hand, walks off to the dead zone, and you get a clear sign of the hit.
+- [ ] **Hit a Beta bot.** It raises its hand, walks off to the dead zone, and you get a clear sign of the hit.
 - [ ] **Watch the bots for a few rounds** (spectate once you're out to see what they do unseen). They patrol, take
   cover, crouch behind crates and lean round corners. Note any bot stuck or walking into a wall.
 - [ ] **Two bots on one lane** hold side by side about a metre apart, never inside each other; bots passing bend
@@ -359,6 +367,12 @@ One BB hit puts anyone out. A round lasts up to 2:30 and the first team to 5 rou
 
 - [ ] **Get hit.** A sharp tick, a sign of where it came from, and your view walks off. Then you watch a teammate;
   left click (or your fire key) moves to the next one.
+- [ ] **Skip to next round** (M83). Out and spectating, the line under the view ends "Esc to skip the round"; Esc,
+  then **Skip to next round** on the pause menu: "Skipping the round…" shows for a second or few (the page keeps
+  drawing), then the next round starts with the score as it played out. On match point (either team one win away)
+  the button reads **Skip to the result** and may end on the summary; the result counts in Stats and pays FC as a
+  watched one. Not offered while you are in play or calling your hit, between rounds, in Extraction or on the
+  practice range. Same seed: skipping and watching a round give the same score (check with `?seed=`).
 - [ ] **Shoot a teammate (carefully).** Friendly fire counts, so they go out too. On purpose.
 - [ ] **Walk-offs.** Hit players walk all the way to their dead zone by a sensible route, promptly, on every map,
   even from the far end. Teammates in the dead zone stand on separate spots.
@@ -391,7 +405,7 @@ with a back door near the pole).
 - [ ] **Cover.** A pallet rack, a gabion barrier and a portable toilet are full cover. Crouched behind an IBC tank, a
   generator or the sandbags you're hidden; standing you can shoot over. BBs bounce off steel (the skip, racks, IBC
   cages, generators) and sink into sandbags and gabions.
-- [ ] **The east end** (Blue's start in Elimination) has no way out to the north road: the team leaves past the
+- [ ] **The east end** (Alpha's start in Elimination) has no way out to the north road: the team leaves past the
   wall's south end, so the dock and the Main Gate are about as far from both ends. Nobody gets stuck in the yard's
   north corner.
 - [ ] **Balance.** In Attack / Defend, does attacking or defending feel easier, and which lane do the bots pick? In
@@ -528,7 +542,7 @@ Neon Heights). While it is dev content a run keeps nothing and pays nothing; the
   cones and a sign, a marker with the distance and a square on the minimap. No exit stands next to your insertion.
   On slopes each ring, cone and sign stands on the ground.
 - [ ] **Counted out.** Stand in an open exit: a beep a second, "Counting you out · 9 … 1", then "Counted out · you made
-  it!". Step out at 5 and it starts again; an Orange bot in the ring pauses it.
+  it!". Step out at 5 and it starts again; a Beta bot in the ring pauses it.
 - [ ] **Respawn.** Hit once: back at the insertion, "Back in at the insertion · no respawn left". Hit again: "Out of
   the run".
 - [ ] **Coming in.** For 3 seconds after you come in, and after a respawn, BBs neither hit you nor leave your replica.
@@ -578,7 +592,7 @@ Defend: Depot, Woodland and Neon Heights (Day, then Night). Pro pays ×2 but cou
 
 - [ ] **Slow down.** Pro bots hold still aiming at corners and doorways and walk quietly towards where they heard you.
   Run past a corner and you lose; slice it a step at a time or peek short and step back, and you win.
-- [ ] **What got you.** After you're hit a card shows, for example, "Orange 2 · from your left · 14 m", whether that
+- [ ] **What got you.** After you're hit a card shows, for example, "Beta 2 · from your left · 14 m", whether that
   bot held the angle, how long you were in view and whether you moved. It makes sense every time, including a shot
   from behind and a ricochet.
 - [ ] **Tips.** Between rounds (and holding Tab) a Tip line sits under the board against Pro, a different one each
@@ -618,6 +632,16 @@ there maps each symptom to its numbers):
   map), 02 Mode as cards with **Practice last**, 03 Match rules. On the right, Your match: the map, Mode, Rules, Teams,
   your Loadout with Change, and **Start match**. Picking Practice hides the map and the rules, and the button reads
   **Start practice** (the range). Start loads the field with a short pause at most.
+- [ ] **Your team** (M98). In 03 Match, a Your team row: Alpha and Beta, each with its colour dot (light blue and dark
+  orange under Settings › Accessibility › High contrast), Alpha until you pick. Your match's Teams line starts with
+  your team ("Beta · Normal bots") and the rules text says "(Beta) against Alpha", Beta defends first and starts
+  Elimination at the west end. Leave the game and come back: still Beta. Pick Extraction: the row goes (the squad is
+  always Alpha).
+- [ ] **A match on Beta** (each mode, each map). You start at Beta's end with your teammates, wear the orange armband,
+  and the HUD is yours in orange: the YOU tag on the score bar's Beta side (Alpha stays on the left), teammate markers,
+  minimap dots, the order wheel and hold marker. Bot opponents are "Alpha 1…3" in the hit feed. At half-time you swap
+  ends (and in Attack / Defend go from defending to attacking). Squad orders reach your Beta teammates. The result,
+  the summary ("Beta (you) · …" first) and the records count your win or loss.
 - [ ] **Inter.** All menu and HUD text is one typeface, Inter; numbers (FC, Tokens, stats, scores) keep their width as
   they change; headings and labels are still in capitals.
 - [ ] **Pause (Esc).** Everything freezes, the mouse is freed, and a solid screen shows the round and score with
@@ -626,7 +650,7 @@ there maps each symptom to its numbers):
   you picked, from 0–0.
 - [ ] **The result screen.** MATCH OVER, YOU WIN! (or YOU LOSE) and the score, with Play again (same setup), New game,
   Summary and Quit.
-- [ ] **Pause and result text.** "Round 2 · Blue (you) 1 – 0 Orange · first to 5"; in Attack / Defend "you attack" or
+- [ ] **Pause and result text.** "Round 2 · Alpha (you) 1 – 0 Beta · first to 5"; in Attack / Defend "you attack" or
   "you defend"; at half-time "After round 4 · … you defend next".
 - [ ] **The look.** Every screen at 1280×720 and 1920×1080 is tidy: one type scale, buttons in capitals, pictures of
   maps, modes and replicas. Pointing at a button lifts it a little; Tab moves an orange focus ring round every control.
@@ -638,11 +662,11 @@ there maps each symptom to its numbers):
 
 ## HUD and match info
 
-- [ ] **Hit feed.** Each hit adds a line at the top right, newest on top: "Orange 2 called HIT · Blue 3" (who called
+- [ ] **Hit feed.** Each hit adds a line at the top right, newest on top: "Beta 2 called HIT · Alpha 3" (who called
   it, then whose BB), names in team colours with a thin bar in the shooter's colour. Lines about you say "You" and
   stand out; friendly fire says FRIENDLY and a ricochet RICOCHET, each with a small glyph. Lines fade after about six
   seconds and a new round clears them.
-- [ ] **Teammate markers.** A small name tag and a blue arrow over each teammate, also through walls; grey and "hit"
+- [ ] **Teammate markers.** A small name tag and an arrow in your team's colour (blue on Alpha) over each teammate, also through walls; grey and "hit"
   once hit, gone at the dead zone. Enemies never get one. Holding Tab hides every marker over the field. Helpful, or
   too much on screen?
 - [ ] **Hold Tab.** The scoreboard: hits, times hit, friendly hits, BBs fired, accuracy and time alive per player, your
@@ -657,6 +681,12 @@ there maps each symptom to its numbers):
 - [ ] **Crosshair** (Settings › Gameplay › Crosshair). Two previews (still, and opened as when moving), then Shape,
   Size, Thickness, Gap, Colour (no blue or orange: those are the teams'; a custom colour box at the end), Opacity,
   Spread (Static keeps the gap while moving) and Outline. In a match it looks the same and still opens as you move.
+- [ ] **Hit marker** (Settings › Gameplay › Crosshair, M97). Off by default: hit a bot and no red X flashes over the
+  crosshair, but the hit tick still sounds. On: the red X flashes as before (a teammate hit marks too). Flip it in
+  the pause menu mid-match: it applies at once, and the pick is kept next visit.
+- [ ] **Replay tutorial** (Settings › Gameplay › Tutorial, M97). From the title or the top bar it starts the
+  tutorial on the range at once, from its first step, even after you finished it. From the pause menu in a match it
+  asks first ("This leaves what you are playing now") and then leaves the match (not recorded) for the tutorial.
 - [ ] **HUD size** (Settings › Gameplay › HUD). 150 % makes the replica panel, score bar, minimap, hit feed,
   round messages, order wheel and teammate markers bigger with nothing overlapping at 1280×720; the crosshair
   keeps its size. On a 1440p or 4K screen without system scaling, 100 % is already larger than on 1080p.
@@ -691,9 +721,12 @@ there maps each symptom to its numbers):
   none. You keep walking with Z held; firing stops and needs a new pull after. Settings › Controls › Order wheel ›
   Click: point and click instead (that click fires no BB).
 - [ ] **The minimap.** A square map at the top left on a navy panel, "Depot · Round 2" under it, the way you look
-  always up, you the white arrow. Teammates are blue dots (pinned to the edge when off it), grey once hit. An opponent you hear shows as an orange patch roughly where
+  always up, you the white arrow. Teammates are dots in your team's colour (blue on Alpha; pinned to the edge when off it), grey once hit. An opponent you hear shows as a patch in theirs (orange on Alpha) roughly where
   (dashed for steps, a dot for a shot) for a few seconds; far sounds give wider patches; nothing for one you can't
   hear. A teammate whose marker would sit inside the minimap square has none there.
+- [ ] **Settings › Gameplay › HUD › Minimap** (M83). Rotating (the default) is the minimap above. Fixed: the map
+  stays still, north (the map's far end) up, and the white arrow turns as you look; teammates, heard patches, the
+  flag, exits and the hold spot stay where they are on the map. It applies at once mid-match and is kept.
 - [ ] **Floors.** On Neon Heights the minimap shows your floor (floors below darker) and marks teammates on other
   floors with an up or down arrow.
 - [ ] **A second screen.** Drag the window to a screen with other scaling mid-match (or zoom the browser), pause and
@@ -738,8 +771,20 @@ Settings has groups down the left (Graphics, Display, Audio, Controls, Gameplay,
   through you. With any of them on, the summary says Dev settings kept the match out of your records. Untick the box
   and Play again: everything is back to normal and the match counts. Diagnostics › Copy pastes a report starting
   "Airsoft diagnostics" with your GPU and settings.
-- [ ] **Retro pixels** (Dev). Chunky pixels and a small dithered palette, like a 1990s shooter; Pixel size and Colours
-  change it; the HUD and menus stay sharp.
+- [ ] **Dev playtesting aids** (M90). **+1,000 FC** and **+10 Tokens** fill the top bar's wallet at once (and stay
+  after a reload); **Free case openings** makes the Armory's Shot buttons read "Free" and take nothing. **Time of
+  day** Night on Depot (or Day on Woodland), then Start match: the map plays under that light, bots with torches at
+  night (the lighting may look rough where the map's bounce light was baked for the other time). **Bots hold fire**:
+  no bot shoots. **Spectate any bot**: in a match your view follows a bot while you stand still; your fire key moves
+  to the next, on either team (pair it with Ghost or Bots hold fire to stay in). **Bot intentions**: a small tag over
+  each bot in play ("Advancing", "Holding", "Fighting"; in Extraction its job first in yellow, "Guard"). **End the round now**
+  from the pause menu's Settings › Dev, then Resume: the round ends as on time. Each of those (not the wallet buttons
+  or free Shots) keeps the match out of your records. **Reset the save** asks first, then reloads as a new player;
+  Settings › Save › Undo brings it back.
+- [ ] **Settings › Look › Retro look** (M96; the Dev tab's Retro pixels before). Off by default; On gives chunky pixels
+  and a small dithered palette, like a 1990s shooter, at once; Pixel size and Colours change it; the HUD and menus
+  stay sharp. A save that had Retro pixels on in the Dev tab (with the Dev box ticked) opens with it on here, at the
+  same sliders, and the Dev tab no longer lists it.
 
 ## Sound
 
@@ -759,11 +804,16 @@ Headphones help: direction (in front, behind, above) comes through best on them.
   way, quieter than any shot.
 - [ ] **The field.** A very quiet outdoor bed with no audible loop and now and then a small bird; barely there, never
   a hiss. Each field has its own echo. Effects turns it down with the rest.
+- [ ] **More going on round the field (M86).** Depot: now and then a crow far off and a dog a few gardens away, among
+  the birds. Woodland at night: a branch creaking between the owl's hoots. Neon Heights: pigeons by day and a small
+  car's "meep meep" a few streets off. Each is rare, quiet and far away: does any of it make you turn round, or sound
+  like a player?
 - [ ] **Getting hit.** The tick stands out: the world dips for a moment. While you walk off and wait, the field sounds
   muffled and quieter; the whistle stays clear and sits a little above the field.
 - [ ] **Pause mid-burst, then Resume.** No click either way: the sound fades out and back.
-- [ ] **Settings › Audio.** Master, Effects (replicas, steps, impacts) and Interface (hit tick, marker, whistle), each at
-  once and kept. Effects at 0 leaves only the interface cues.
+- [ ] **Settings › Audio.** Master, Effects (replicas, steps, impacts), Ambience (the field's background) and Interface
+  (hit tick, marker, whistle), each at once and kept. Ambience at 0 leaves the field silent but every step and shot
+  as loud as before; Effects at 0 leaves only the interface cues.
 - [ ] **Practice range.** The 50 m and 60 m plates still ring.
 - [ ] **Output devices.** On a 44.1 kHz or 96 kHz device (many USB headsets, HDMI receivers) shots sound as crisp as on
   48 kHz. F3 shows the audio latency (about 10 to 40 ms).
@@ -880,7 +930,7 @@ Settings › Save file. Everything saves as it changes; nothing to press.
 
 Fixed in earlier bug passes; a bug pass checks they stay fixed.
 
-- [ ] **Hit a bot, press Esc and resume** (and after Play again): no hit marker or white flash replays.
+- [ ] **Hit a bot, press Esc and resume** (and after Play again; Hit marker On): no hit marker or white flash replays.
 - [ ] **At the start of each round** the replica in your hands stays still; it doesn't swing in from the side.
 - [ ] **Empty the AEG with the trigger held, press 2 then 1 while holding:** it clicks dry and starts a reload.
 - [ ] **Customise › Muzzle** with nothing fitted reads "Bots hear your shots from 22 m."; with a silencer "… from

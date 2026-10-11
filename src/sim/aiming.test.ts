@@ -4,6 +4,7 @@ import { FOOTSTEPS } from '../config/footsteps';
 import { HITS, ROUNDS } from '../config/hits';
 import { BODY, MOVEMENT } from '../config/movement';
 import { NAV } from '../config/nav';
+import { AIMING, OPTICS } from '../config/optics';
 import { LOADOUT } from '../config/replicas';
 import { stepAiming } from './aiming';
 import { fitOptics } from './armament';
@@ -61,90 +62,133 @@ describe('fitting an optic', () => {
   });
 });
 
-describe('aiming down sights (owner, 2026-10-03)', () => {
-  it('works only with an optic fitted to the replica in hand', () => {
+describe('aiming down sights (owner, 2026-10-06: every replica, M84)', () => {
+  it('works on every replica: down its iron sights with no optic fitted, or through the optic', () => {
+    for (const r of LOADOUT) expect(r.look.ironSight, r.id).toBeDefined();
     const c = createCharacter(0, vec3(), 0);
     const cmd = aimCommand();
-    stepAiming(c, cmd);
-    expect(c.aiming).toBe(false); // iron sights only: no aiming down sights
-    fitOptics(c.armament, ['redDot', null]);
-    stepAiming(c, cmd);
-    expect(c.aiming).toBe(true);
+    stepAiming(c, cmd, DT);
+    expect(c.aiming).toBe(true); // the rifle's iron sights
     c.armament.active = PISTOL;
-    stepAiming(c, cmd);
-    expect(c.aiming).toBe(false);
+    stepAiming(c, cmd, DT);
+    expect(c.aiming).toBe(true); // the pistol's
     c.armament.active = RIFLE;
-    stepAiming(c, createCommand());
+    fitOptics(c.armament, ['redDot', null]);
+    stepAiming(c, cmd, DT);
+    expect(c.aiming).toBe(true);
+    stepAiming(c, createCommand(), DT);
     expect(c.aiming).toBe(false); // button released
   });
 
   it('drops the sight while reloading or bringing the replica up', () => {
     const c = createCharacter(0, vec3(), 0);
-    fitOptics(c.armament, ['redDot', null]);
     c.armament.reload = 1;
-    stepAiming(c, aimCommand());
+    stepAiming(c, aimCommand(), DT);
     expect(c.aiming).toBe(false);
     c.armament.reload = 0;
     c.armament.draw = 0.2;
-    stepAiming(c, aimCommand());
+    stepAiming(c, aimCommand(), DT);
     expect(c.aiming).toBe(false);
   });
 
-  it('slows you to walking pace, quietly, even with sprint held, and an optic-less aim changes nothing', () => {
-    const run = (optic: boolean) => {
-      const state = createGameState(1, 16, ROUNDS);
-      const c = createCharacter(0, vec3(), 0);
-      if (optic) fitOptics(c.armament, ['redDot', null]);
-      state.characters.push(c);
+  it('raises the sight over the raise time, a scope slower, and lowers it again', () => {
+    const c = createCharacter(0, vec3(), 0);
+    const ticks = (until: () => boolean, cmd: PlayerCommand) => {
+      let n = 0;
+      while (!until() && n < 600) {
+        stepAiming(c, cmd, DT);
+        n++;
+      }
+      return n * DT;
+    };
+    expect(ticks(() => c.aimRaise >= 1, aimCommand())).toBeCloseTo(AIMING.raiseTime, 1);
+    expect(ticks(() => c.aimRaise <= 0, createCommand())).toBeCloseTo(AIMING.raiseTime, 1);
+    fitOptics(c.armament, ['scope2x', null]);
+    expect(ticks(() => c.aimRaise >= 1, aimCommand())).toBeCloseTo(AIMING.raiseTime * OPTICS.scope2x.raiseScale, 1);
+  });
+
+  /** You, holding `cmd` for 1.5 s on an open floor (an optic on the rifle if `optic`): your pace, footsteps and stance. */
+  const walkFor = (cmd: PlayerCommand, optic = false) => {
+    const state = createGameState(1, 16, ROUNDS);
+    const c = createCharacter(0, vec3(), 0);
+    if (optic) fitOptics(c.armament, ['redDot', null]);
+    state.characters.push(c);
+    const ctx = testContext();
+    const commands = new Map([[0, cmd]]);
+    let footsteps = 0;
+    for (let i = 0; i < 90; i++) {
+      stepSimulation(state, commands, ctx, DT);
+      footsteps += state.events.filter((e) => e.type === 'footstep').length;
+    }
+    return { c, footsteps, speed: Math.hypot(c.velocity.x, c.velocity.z) };
+  };
+
+  it('slows you to walking pace, quietly, even with sprint held, iron sights or optic', () => {
+    for (const optic of [false, true]) {
       const cmd = aimCommand();
       cmd.forward = 1;
       cmd.sprint = true;
-      const ctx = testContext();
-      const commands = new Map([[0, cmd]]);
-      let footsteps = 0;
-      for (let i = 0; i < 90; i++) {
-        stepSimulation(state, commands, ctx, DT);
-        footsteps += state.events.filter((e) => e.type === 'footstep').length;
-      }
-      return { c, footsteps, speed: Math.hypot(c.velocity.x, c.velocity.z) };
-    };
-    const aimed = run(true);
-    expect(aimed.c.aiming).toBe(true);
-    expect(aimed.c.sprinting).toBe(false);
-    expect(aimed.c.walking).toBe(true);
-    expect(aimed.speed).toBeCloseTo(MOVEMENT.walkSpeed, 3);
-    expect(aimed.footsteps).toBe(0);
-    const bare = run(false);
-    expect(bare.c.aiming).toBe(false);
-    expect(bare.c.sprinting).toBe(true);
-    expect(bare.speed).toBeCloseTo(MOVEMENT.sprintSpeed, 3);
+      const aimed = walkFor(cmd, optic);
+      expect(aimed.c.aiming).toBe(true);
+      expect(aimed.c.sprinting).toBe(false);
+      expect(aimed.c.walking).toBe(true);
+      expect(aimed.speed).toBeCloseTo(MOVEMENT.walkSpeed, 3);
+      expect(aimed.footsteps).toBe(0);
+    }
   });
 
-  it('gives no accuracy bonus of its own: standing still stays the accuracy rule', () => {
+  it('slows you below the aiming pace while walk (Shift) is held too, standing and crouched (owner\'s note 8)', () => {
+    for (const crouch of [false, true]) {
+      const aim = aimCommand();
+      aim.forward = 1;
+      aim.crouch = crouch;
+      const creep = aimCommand();
+      creep.forward = 1;
+      creep.crouch = crouch;
+      creep.walk = true;
+      const aimed = walkFor(aim).speed;
+      const slow = walkFor(creep);
+      expect(slow.speed, `crouched ${crouch}`).toBeCloseTo(aimed * MOVEMENT.aimWalkScale, 3);
+      expect(slow.speed).toBeLessThan(aimed - 0.5);
+      expect(slow.footsteps).toBe(0);
+    }
+    // Walk without aiming is the plain walk, as before.
+    const walk = createCommand();
+    walk.forward = 1;
+    walk.walk = true;
+    expect(walkFor(walk).speed).toBeCloseTo(MOVEMENT.walkSpeed, 3);
+  });
+
+  it('tightens the aim as the sight comes up; from the hip it stays as it was', () => {
     const state = createGameState(1, 16, ROUNDS);
     const aimer = createCharacter(0, vec3(), 0);
     const hip = createCharacter(1, vec3(5, 0, 0), 0);
-    fitOptics(aimer.armament, ['redDot', null]);
     state.characters.push(aimer, hip);
     const ctx = testContext();
     const commands = new Map([
       [0, aimCommand()],
       [1, createCommand()],
     ]);
+    stepSimulation(state, commands, ctx, DT);
+    // Part way up, part of the bonus.
+    expect(aimer.spreadScale).toBeLessThan(hip.spreadScale);
+    expect(aimer.spreadScale).toBeGreaterThan(hip.spreadScale * MOVEMENT.accuracy.aimed);
     for (let i = 0; i < 60; i++) stepSimulation(state, commands, ctx, DT);
-    expect(aimer.aiming).toBe(true);
-    expect(aimer.spreadScale).toBeCloseTo(hip.spreadScale, 9);
+    expect(aimer.aimRaise).toBe(1);
+    expect(aimer.spreadScale).toBeCloseTo(hip.spreadScale * MOVEMENT.accuracy.aimed, 6);
+    expect(hip.spreadScale).toBeCloseTo(MOVEMENT.accuracy.steady, 6); // the hip's own rule, unchanged
   });
 
   it('stops once you are hit', () => {
     const c = createCharacter(0, vec3(), 0);
-    fitOptics(c.armament, ['redDot', null]);
     c.aiming = true;
+    c.aimRaise = 1;
     const state = createGameState(1, 16, ROUNDS);
     state.characters.push(c);
     eliminate(c, 5, state.characters, openFieldElimination(DEAD_ZONES));
     const ctx = testContext();
     stepSimulation(state, new Map([[0, aimCommand()]]), ctx, DT);
     expect(c.aiming).toBe(false);
+    expect(c.aimRaise).toBe(0);
   });
 });

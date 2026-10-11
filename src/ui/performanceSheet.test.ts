@@ -23,7 +23,8 @@ describe('Performance sheet (M29)', () => {
     expect(find(rows, 'Muzzle speed').value).toMatch(/^88 m\/s \(31[5-9] fps\)$/);
     expect(find(rows, 'Rate of fire').value).toBe('13 BBs/s');
     expect(find(rows, 'Magazines').value).toBe('60 × 4 (240)');
-    expect(find(rows, 'Aim raise').value).toBe('no optic');
+    // Down its iron sights (M84).
+    expect(find(rows, 'Aim raise').value).toBe('0.15 s');
     expect(rows.every((r) => r.delta === '' && r.change === null)).toBe(true);
   });
 

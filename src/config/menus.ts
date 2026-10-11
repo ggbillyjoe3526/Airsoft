@@ -160,13 +160,16 @@ export const ARMORY_TEXT = {
   spare: 'Spare',
   /** A rarer copy of a replica you never picked goes straight into its Loadout slot. */
   nowEquipped: 'Now equipped',
-  /** Dev settings → Disable Armory (M26d). */
-  off: 'The Armory is switched off in the Dev settings.',
+  /** Dev settings › Free case openings (M90): the Shot buttons' price and the line under them. */
+  freeShot: 'Free',
+  freeShotNote: 'Free case openings are on in the Dev settings.',
   /** The match summary's line. */
   earned: 'Field Credits earned',
-  /** The summary's line for a match that paid nothing (audit POOL-22). */
+  /**
+   * The summary's line for a match that paid nothing (audit POOL-22). With the Armory off in the Dev settings there is
+   * none (M83: the Armory is gone from every menu, so are its Field Credits).
+   */
   unpaidDev: 'No Field Credits: Dev settings changed how this match played.',
-  unpaidOff: 'No Field Credits: the Armory is switched off in the Dev settings.',
   unpaidDevContent: 'No Field Credits: this match used content still being built.',
 } as const;
 
@@ -239,6 +242,14 @@ export const SETTINGS_TEXT = {
   keysHeading: 'Keys',
   crosshairHeading: 'Crosshair',
   hudHeading: 'HUD',
+  /** Gameplay › Tutorial (M97): play the tutorial again from its first step, finished or not. */
+  tutorialHeading: 'Tutorial',
+  replayTutorial: 'Replay tutorial',
+  replayTutorialHelp: 'Plays the tutorial on the practice range again from its first step, whether or not you finished it.',
+  /** Asked first when Settings was opened from the pause menu: starting it leaves what is being played. */
+  replayTutorialTitle: 'Replay the tutorial?',
+  replayTutorialLeave: 'This leaves what you are playing now. A match left before its end goes into no records.',
+  replayTutorialYes: 'Start tutorial',
   /** Under the Key Bindings: the mouse and the fixed keys. */
   fixedKeys: 'Wheel switches replica (a direction bound above does that instead) · Esc pauses and resumes · ` or F3 shows the debug info',
 } as const;

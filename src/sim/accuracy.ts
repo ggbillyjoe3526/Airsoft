@@ -4,7 +4,8 @@ import type { Character } from './character';
 /**
  * Accuracy by stance and movement: how much a character's current state scales its replica's spread
  * (cfg.accuracy). Holding still, and crouching above all, is steady, and the longer you hold still the
- * steadier it gets; moving, jumping and coming out of a sprint are not. Bots and the player follow the same rule.
+ * steadier it gets; moving, jumping and coming out of a sprint are not; the sight raised to your eye tightens it (M84).
+ * Bots and the player follow the same rule (bots fire from the hip).
  */
 
 /** Summed tick lengths drift below round numbers (6 × 1/60 < 0.1); this keeps the delay a whole number of ticks. */
@@ -28,7 +29,9 @@ export function targetSpreadScale(c: Character, cfg: MovementConfig): number {
   // Crouching steadies a still shooter fully, a moving one less (audit SIM-10).
   const moving = Math.min(1, Math.max(0, (speed - a.stillBelow) / (cfg.crouchSpeed - a.stillBelow)));
   const crouched = a.crouched + (a.crouchedMoving - a.crouched) * moving;
-  return move * (1 + (crouched - 1) * c.crouchAmount);
+  // The sight at your eye tightens the aim as it comes up (M84); from the hip it stays as it was.
+  const aimed = 1 + (a.aimed - 1) * c.aimRaise;
+  return move * (1 + (crouched - 1) * c.crouchAmount) * aimed;
 }
 
 /**

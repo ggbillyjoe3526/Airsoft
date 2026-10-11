@@ -1,3 +1,4 @@
+import type { MinimapTurn } from './config/minimap';
 import type { Group } from 'three';
 import { BotController } from './ai/botController';
 import { SquadFollow } from './ai/squadFollow';
@@ -28,9 +29,10 @@ import type { SupplyEvent } from './pool/supplyEvents';
 import { GAME_POOL } from './pool/gamePool';
 import { bbGlowFor, kitPaint, type PlayerKit } from './pool/loadoutModel';
 import type { LookSettings } from './config/look';
-import { SIM, SIM_DT } from './config/sim';
+import { SIM, SIM_DT, SKIP_ROUND } from './config/sim';
+import { idleCommand, type SkipOffer, skipEnds, skipOffer, skipTickCap, skipTickShown } from './matchFlow';
 import type { SquadCommand } from './config/squad';
-import { TEAMS, type TeamColours } from './config/teams';
+import type { TeamColours } from './config/teams';
 import { BuildTiming } from './core/buildTiming';
 import { caseSeed, runSeed } from './core/seed';
 import { figureCrowd, playerArms } from './render/figureMix';
@@ -58,6 +60,7 @@ import { createCommand, type PlayerCommand } from './sim/commands';
 import { isInPlay } from './sim/elimination';
 import { createRunContext, type ExtractionContext, type FoundItem, haulTotals, reserveSize, runFinds, runHaul } from './sim/extraction';
 import { placeTeams, startRun } from './sim/round';
+import { byTeam, rosterTeams } from './sim/roster';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
 import { partsUnder } from './sim/torch';
 import { createWind } from './sim/wind';
@@ -74,8 +77,8 @@ import { rosterNames, statsBlocks, type TeamBlock } from './ui/statsRows';
 const PLAYER_ID = 0;
 /** The colour figures glow in someone's torch beam (M33h): the torches' cool white. */
 const TORCH_LIFT_COLOUR = TORCHES.weaponTorch.colour;
-/** The team the player is on at the start (Blue); the other team is the opponents. */
-const PLAYER_TEAM = 0;
+/** An Extraction run's squad is Alpha (M98: the run has no "Your team" pick); the home team is Beta. */
+const RUN_SQUAD_TEAM = 0;
 
 /** What New game sets up, read when Play is pressed (M15b: nothing is loaded before that). */
 export interface MatchSetup {
@@ -120,6 +123,11 @@ export interface MatchSetup {
   supply?: SupplyEvent | null;
   /** The team colours picked on Settings → Accessibility (M18b): the figures, the flag and your armband. */
   teamColours: TeamColours;
+  /**
+   * The Match screen's "Your team" (M98, config/teams.ts teamOfPick): 0 Alpha, 1 Beta. An Extraction run ignores it
+   * (the squad is Alpha). Absent: Alpha.
+   */
+  playerTeam?: number;
   /** Settings → Look (G1): robots and Realistic colours. Absent: their defaults. */
   look?: LookSettings;
 }
@@ -234,7 +242,7 @@ export class MatchSession {
             squad: setup.rules.teamSize,
             seed: runSeed(seed),
             runner: PLAYER_ID,
-            squadTeam: PLAYER_TEAM,
+            squadTeam: RUN_SQUAD_TEAM,
             respawnAfter: hitRulesFor(setup.rules).callTime,
             spawnLift: PHYSICS.groundRestGap,
             // The run's cases (M44), filled from pool.md with the parts weighted towards what you don't own yet, richer
@@ -273,6 +281,7 @@ export class MatchSession {
       pole: map.flag,
       extraction: this.extraction,
     });
+    this.playerTeam = this.extraction ? RUN_SQUAD_TEAM : (setup.playerTeam ?? 0);
     this.player = this.spawnRoster(map, seed);
     this.fitPickedLoadout();
     this.commands.set(PLAYER_ID, this.playerCommand);
@@ -287,7 +296,6 @@ export class MatchSession {
     // The perf harness's player (`?script=perf`) plays the script for this mode: Extraction's opens a case (M64, UI-05).
     if (input.script) input.script = perfScriptFor(this.mode);
     input.restartScript();
-    // The player is always on Blue.
     // The torches (M33h), once everyone is kitted: your own takes one of the night lights on Medium and High.
     this.torches = new TorchBeams(this.state.characters, lighting, quality, this.physics, BODY, this.hits);
     renderer.scene.add(this.torches.object);
@@ -320,8 +328,15 @@ export class MatchSession {
     this.build.phase('shaders');
   }
 
+  /** Dev settings › Bots hold fire (M90). */
+  private botsHoldFire = false;
+  /** A Skip to next round under way (M83): the ticks run so far and the most it may run. */
+  private skip: { ticks: number; cap: number } | null = null;
+
   /** Extraction's run context (the insertion, the home team's starts, the exits); undefined in the other modes. */
   readonly extraction: ExtractionContext | undefined;
+  /** The team you play on (M98): the pick, or Alpha in an Extraction run. Everything about "your team" reads player.team. */
+  private readonly playerTeam: number;
   /** Extraction: your bot teammates follow you unless you order otherwise (ai/squadFollow.ts). */
   private readonly squadFollow = new SquadFollow();
 
@@ -337,17 +352,79 @@ export class MatchSession {
   advance(dt: number): number {
     const p = this.player;
     this.input.update(p.armament.active, this.loadout.length, this.combat.aimRaised, this.combat.aimSensitivityScale, canAimDownSights(p.armament));
+    // Skipping the round (M83): clicks, inspects and orders made meanwhile are dropped; the ticks run flat out.
+    if (this.skip) {
+      this.input.clearLatches();
+      return this.fastForward();
+    }
     if (this.match.spectating && this.input.takeClick()) this.match.nextSpectateTarget();
     if (this.input.takeInspect() && p.status === 'alive') this.combat.inspect();
     const order = this.input.takeOrder();
     if (order) this.giveOrder(order);
     const ticks = advanceStepper(this.stepper, dt);
+    // Dev settings › Spectate any bot (M90): while you watch a bot you stand still, and your clicks change who is watched.
+    const watching = this.match.watchingBots && p.status === 'alive';
     for (let i = 0; i < ticks; i++) {
-      this.input.fillCommand(this.playerCommand);
-      this.bots.think(this.state, SIM_DT);
-      stepSimulation(this.state, this.commands, this.ctx, SIM_DT);
-      this.afterTick();
+      if (watching) idleCommand(this.playerCommand, this.input.yaw, this.input.pitch);
+      else this.input.fillCommand(this.playerCommand);
+      this.tick(true);
     }
+    return ticks;
+  }
+
+  /**
+   * One simulation tick with the player's command already filled: the bots think, the simulation steps, and what
+   * follows each tick runs (`shown`: its presentation too). Watched play and a skipped round (M83) both run this, so a
+   * skip plays the round exactly as watching it would have.
+   */
+  private tick(shown: boolean): void {
+    this.bots.think(this.state, SIM_DT);
+    // Dev settings › Bots hold fire (M90): every bot's trigger stays up whatever its brain decided.
+    if (this.botsHoldFire) for (const b of this.bots.bots) this.commands.get(b.character.id)!.fire = false;
+    stepSimulation(this.state, this.commands, this.ctx, SIM_DT);
+    this.afterTick(shown);
+  }
+
+  /** Skip to next round (M83): what you can skip to now (matchFlow.ts skipOffer), or null; null while a skip runs. */
+  get skipOffer(): SkipOffer {
+    return this.skip ? null : skipOffer(this.state.round, this.rounds, this.player);
+  }
+
+  /** A skip is running: the rest of the round is being played out (the HUD says so). */
+  get skipping(): boolean {
+    return this.skip !== null;
+  }
+
+  /**
+   * Skip to next round (M83): from the next frame the rest of the round is simulated at once, as watched, until the next
+   * round starts or the match is decided; the records and the pay count it as any round. False where it isn't offered.
+   */
+  beginSkip(): boolean {
+    if (this.skipOffer === null) return false;
+    this.skip = { ticks: 0, cap: skipTickCap(this.rounds) };
+    return true;
+  }
+
+  /**
+   * One frame of a skip: ticks as fast as SKIP_ROUND's slice of the frame allows, the player's command left idle (you are
+   * out: nothing reads it). Ends on the tick the next round starts or the match is decided, or at the cap (a stall that
+   * should never come), after which play simply carries on as watched.
+   */
+  private fastForward(): number {
+    const skip = this.skip!;
+    const until = performance.now() + SKIP_ROUND.frameBudgetMs;
+    let ticks = 0;
+    do {
+      for (let i = 0; i < SKIP_ROUND.ticksPerCheck; i++) {
+        idleCommand(this.playerCommand, this.input.yaw, this.input.pitch);
+        this.tick(false);
+        ticks++;
+        if (skipEnds(this.state.events) || ++skip.ticks >= skip.cap) {
+          this.skip = null;
+          return ticks;
+        }
+      }
+    } while (performance.now() < until);
     return ticks;
   }
 
@@ -455,7 +532,10 @@ export class MatchSession {
     // The camera shows where BBs actually go: view pitch plus the replica's recoil kick.
     const pitch = this.input.pitch + this.player.armament.recoil;
     updateFirstPersonCamera(this.renderer.camera, this.player, BODY, this.hits, alpha, this.input.yaw, pitch, this.motion.leanRoll);
+    this.match.setSkipLabel(this.skip ? 'skipping' : this.skipOffer);
     const spectating = this.match.frame(this.renderer.camera, alpha, dt, this.input.yaw, boardHeld);
+    // Dev settings › Bot intentions (M90): a label over each bot, from where the camera is now.
+    this.match.showBotIntents(this.bots.bots, this.renderer.camera, alpha);
     // The torches from where the view is (M33h): yours from your eyes, or the watched player's.
     this.torches.update(this.renderer.camera, spectating ? this.match.watchedCharacter : this.player, !spectating, alpha);
     if (this.torches.active) this.match.setTorchLift(this.torches.lit, TORCH_LIFT_COLOUR);
@@ -512,9 +592,25 @@ export class MatchSession {
   setDevCheats(cheats: DevSettings): void {
     this.player.armament.bottomless = cheats.bottomlessMags;
     this.player.ghost = cheats.ghost;
+    this.botsHoldFire = cheats.botsHoldFire;
+    this.match.setWatchingBots(cheats.spectateBots);
+    this.match.setBotIntents(cheats.botIntent);
     // Before play begins (a match built by a Play whose mouse lock was refused) only what applies now counts (bug pass).
     if (!this.played) this.devAssisted = devCheating(cheats);
     else if (devCheating(cheats)) this.devAssisted = true;
+  }
+
+  /**
+   * Dev settings › End the round now (M90): the live round's clock (and any overtime) is run out, so the next tick ends
+   * it as on time, by the mode's own rule. The match stays out of the records. False with no live round.
+   */
+  endRoundNow(): boolean {
+    const r = this.state.round;
+    if (r.phase !== 'live') return false;
+    r.clock = 0;
+    r.overtime = this.rounds.flag.maxOvertime;
+    this.devAssisted = true;
+    return true;
   }
 
   /**
@@ -537,6 +633,16 @@ export class MatchSession {
   /** Settings → HUD → Hit feed (M24). */
   setHitFeedMode(mode: HitFeedMode): void {
     this.match.setHitFeedMode(mode);
+  }
+
+  /** Settings › HUD › Minimap (M83): turning with the view, or fixed north up. */
+  setMinimapTurn(turn: MinimapTurn): void {
+    this.match.setMinimapRotating(turn === 'rotating');
+  }
+
+  /** Settings › Gameplay › Hit marker (M97): the red X when your BB lands. */
+  setHitMarker(on: boolean): void {
+    this.match.setHitMarker(on);
   }
 
   /** Settings → HUD → What got you (M41): the card by this match's opponents (Auto: Pro only). */
@@ -564,7 +670,7 @@ export class MatchSession {
 
   /**
    * Creates both teams at the map's spawns for round 1 (each team at its end, see placeTeams): the local player
-   * plus bot teammates on Blue, and Orange bots. Returns the player.
+   * plus bot teammates on the picked team, then the other team's bots (sim/roster.ts). Returns the player.
    */
   private spawnRoster(map: MapData, seed: number): Character {
     const [size, opposing] = this.rosterSizes();
@@ -573,24 +679,22 @@ export class MatchSession {
         if (spawns.length < size) throw new Error(`Map ${map.name} needs ${size} spawns at end ${end}`);
       }
     }
-    let id = PLAYER_ID;
+    // You (id 0) and your teammates first, on the team you picked; then the other team (M98).
+    const teams = rosterTeams(this.playerTeam, size, opposing);
     // Bots roll only from what is offered: dev gear only with Dev content on (M35).
     const botPool = contentPool(GAME_POOL, this.setup.devContent);
     // Under the factory kit rule (M39) nobody rolls a kit: everyone carries LOADOUT as it comes.
     const rolls = BOT_LOADOUTS[this.setup.difficulty] === 'random' && !this.setup.rules.factoryKit;
     // Now and then, on a difficulty that rolls kits, one opponent carries a chase replica the player owns (M32).
-    const opponents = TEAMS.flatMap((_, team) => (team === PLAYER_TEAM ? [] : Array.from({ length: opposing }, (_, i) => PLAYER_ID + team * size + i)));
+    const opponents = teams.flatMap((team, id) => (team === this.playerTeam ? [] : [id]));
     const carrier = rolls ? chaseCarrier(botPool, this.setup.chaseOwned ?? [], seed, opponents) : null;
-    for (let team = 0; team < TEAMS.length; team++) {
+    for (const [id, team] of teams.entries()) {
       // You carry your kit; your teammates carry the default loadout as it comes, and so do the other team's bots unless
       // their difficulty rolls each one a kit of its own (M29b).
-      const rolled = team !== PLAYER_TEAM && rolls;
-      const members = team === PLAYER_TEAM ? size : opposing;
-      for (let i = 0; i < members; i++, id++) {
-        if (id === PLAYER_ID) this.state.characters.push(createCharacter(id, vec3(), 0, this.loadout, team));
-        else if (rolled) this.state.characters.push(this.underRules(chaseReady(kittedCharacter(id, team, randomKit(botPool, carriedLoadout(LOADOUT, id, carrier), botKitSeed(seed, id), BOT_PART_CHANCE[this.setup.difficulty])), carrier)));
-        else this.state.characters.push(createCharacter(id, vec3(), 0, this.botLoadout, team));
-      }
+      const rolled = team !== this.playerTeam && rolls;
+      if (id === PLAYER_ID) this.state.characters.push(createCharacter(id, vec3(), 0, this.loadout, team));
+      else if (rolled) this.state.characters.push(this.underRules(chaseReady(kittedCharacter(id, team, randomKit(botPool, carriedLoadout(LOADOUT, id, carrier), botKitSeed(seed, id), BOT_PART_CHANCE[this.setup.difficulty])), carrier)));
+      else this.state.characters.push(createCharacter(id, vec3(), 0, this.botLoadout, team));
     }
     // On a night field every bot carries the offered torch (M33h): by rule, never rolled, so seeded kits don't shift.
     // Not under the factory kit rule (M39): everyone carries LOADOUT as it comes.
@@ -607,16 +711,22 @@ export class MatchSession {
     return this.state.characters[0]!;
   }
 
-  /** Players per team, yours first: equal sides, or in Extraction your squad against the map's opponents in play. */
+  /** Players per team index (the scoreboard's pips): equal sides, or in Extraction your squad against the map's opponents in play. */
   private teamSizes(): [number, number] {
+    const [mine, theirs] = this.sidesInPlay();
+    return byTeam(this.playerTeam, mine, theirs);
+  }
+
+  /** Players in play on your side and on theirs. */
+  private sidesInPlay(): [number, number] {
     const size = this.setup.rules.teamSize;
     const x = this.setup.map.extraction;
     return this.mode === 'extraction' && x ? [size, homeTeamCap(x.baseOpponents, size, this.setup.difficulty)] : [size, size];
   }
 
-  /** Characters per team: the team sizes, and in Extraction the home team's reserve for the run's last part (M45). */
+  /** Characters on your side and on theirs: in Extraction the home team's reserve for the run's last part too (M45). */
   private rosterSizes(): [number, number] {
-    const [size, opposing] = this.teamSizes();
+    const [size, opposing] = this.sidesInPlay();
     return [size, opposing + (this.extraction ? reserveSize(this.extraction) : 0)];
   }
 
@@ -672,11 +782,17 @@ export class MatchSession {
   }
 
   /** Everything that reacts to a simulation tick's events. */
-  private afterTick(): void {
+  /**
+   * After each tick: the stats, what the bots saw, the round's start and end, the squad. `shown`: the presentation too
+   * (puffs, sounds, the hit feed and the banner); a skipped round (M83) shows only its end and the next round's start.
+   */
+  private afterTick(shown: boolean): void {
     this.stats.afterTick(this.state, SIM_DT);
     this.bots.observe(this.state);
-    this.combat.afterTick();
-    this.match.afterTick(this.input.yaw);
+    if (shown || skipTickShown(this.state.events)) {
+      this.combat.afterTick();
+      this.match.afterTick(this.input.yaw);
+    }
     for (const e of this.state.events) {
       if (e.type === 'roundStart') {
         this.input.resetView(this.player.spawnYaw);
@@ -694,5 +810,5 @@ export class MatchSession {
 
 /** Per team, the bots' tuning: your team's bots at the teammates' difficulty, the other team's at the opponents' (M20). */
 function teamBotConfigs(playerTeam: number, setup: MatchSetup): BotConfig[] {
-  return TEAMS.map((_, team) => botConfig(team === playerTeam ? setup.teammateDifficulty : setup.difficulty));
+  return byTeam(playerTeam, botConfig(setup.teammateDifficulty), botConfig(setup.difficulty));
 }

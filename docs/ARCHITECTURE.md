@@ -47,6 +47,7 @@ A task that adds, renames or moves a file keeps its folder's `README.md` current
 | `src/config/` | Every tunable number and data table | `replicas.ts`, `bots.ts`, `hits.ts`, `render.ts`, `controls.ts`, `dev.ts` |
 | `src/core/` | Loop and session plumbing: stepper, seeds, frame pacer, crash report | `fixedStepper.ts`, `seed.ts`, `sessionPlan.ts`, `crashReport.ts`, `framePacer.ts` |
 | `src/pool/` | The asset pool, the Loadout, the Armory economy, Extraction cases | `pool.ts`, `kit.ts`, `loadoutModel.ts`, `armory.ts`, `collection.ts`, `caches.ts` |
+| `src/content/` | The content checks: rules, compatibility, spec test and balance run for a new replica or part | `gameContent.ts`, `replicaChecks.ts`, `partChecks.ts`, `specSheet.ts`, `report/` |
 | `src/stats/` | Match stats, local records, settling a finished match | `matchStats.ts`, `records.ts`, `settleMatch.ts` |
 | `src/save/` | The save system: guarded storage, file format, migrations, tab lock | `saveFile.ts`, `stores.ts`, `guardedStorage.ts`, `saveManager.ts`, `tabLock.ts` |
 | `src/settings/` | The saved settings object and the Dev settings' saved values | `storage.ts`, `dev.ts` |
@@ -54,10 +55,10 @@ A task that adds, renames or moves a file keeps its folder's `README.md` current
 | `src/assets/` | Bundled fonts and the optional character model | `fonts/`, `models/characters/` |
 | `pool.md`, `stats.md` | Hand-edited tables the game and its tests read: assets and economy, replica and part numbers | read by `pool/poolFile.ts`, `config/statsFile.ts` |
 | `public/` | Static files: icon, manifest, menu stills (from `pipeline/map-stills.mjs`) | `menu/` |
-| `pipeline/` | Gates, perf runs, light bakes, build cache, task records: the task pipeline's scripts | `README.md`, `gate.mjs`, `perf-run.mjs`, `records.mjs`, `bake-light.mjs` |
+| `pipeline/` | Gates, perf runs, light bakes, build cache, task records, the content check: the task pipeline's scripts | `README.md`, `gate.mjs`, `perf-run.mjs`, `records.mjs`, `content-check.mjs` |
 | `e2e/` | Playwright smoke tests on the `e2e` build; `release.spec.ts` on `dist/` | `boot.spec.ts`, `crash.spec.ts`, `release.spec.ts` |
-| `docs/` | The plan, process, rulings, open issues, playtest guide, task records; history in `archive/` | `ROADMAP.md`, `PROCESS.md`, `DECISIONS.md`, `KNOWN_ISSUES.md`, `TASKS.md`, `records/` |
-| `.claude/` | Pipeline agents and skill, session hooks, shared settings | `agents/`, `skills/pipeline/SKILL.md`, `hooks/` |
+| `docs/` | The plan, process, rulings, open issues, playtest guide, task records, content rulebooks (`content/`); history in `archive/` | `ROADMAP.md`, `PROCESS.md`, `DECISIONS.md`, `KNOWN_ISSUES.md`, `TASKS.md`, `records/` |
+| `.claude/` | Pipeline agents, the pipeline and new-content skills, session hooks, shared settings | `agents/`, `skills/pipeline/SKILL.md`, `skills/new-content/SKILL.md`, `hooks/` |
 
 The root files in more detail:
 
@@ -70,6 +71,8 @@ The root files in more detail:
   simulation, the bots, and the combat and match presentation. `Game` builds it on Play and disposes it when the player
   leaves; Play Again builds a new one with its own seed (`matchFlow.ts` `matchSeed`). What Play does is the pure
   `core/sessionPlan.ts`. A decided match is recorded and paid once, the frame it is decided (`stats/settleMatch.ts`).
+  Skip to next round (M83) runs the same per-tick body as watched play flat out over a few frames, showing only the
+  round's end and the next start (`matchFlow.ts` `skipOffer`, `skipTickCap`; `config/sim.ts` `SKIP_ROUND`).
   Its `MatchSetup` carries New game's Match rules (`config/matchRules.ts`), a bot difficulty per team and the Rules
   picker's ruleset (`RULESETS`, laid over the match panel's picks by `playedPicks` in `newGamePicks.ts`).
 - **`RangeSession`** (`rangeSession.ts`) is the practice range: the player alone on `map/range.ts`, no bots and no
@@ -86,8 +89,9 @@ Maps are plain data (`map/mapTypes.ts`). One source builds both the Rapier colli
   clear between them.
 - **Ends.** Spawns and dead-zone spots per end of the map (0 west, 1 east) and bot lanes from end 0 to end 1.
   Teams do not own an end: `round.ts` (`teamEnd`, `placeTeams`) puts each team at an end at every round start and
-  swaps them at half-time. In Attack / Defend the attackers start at end 0; in Elimination Blue starts at
-  `RoundRules.eliminationFirstEnd` (the east on Depot). `Character.end` says where a character started, for its dead
+  swaps them at half-time. In Attack / Defend the attackers start at end 0; in Elimination Alpha starts at
+  `RoundRules.eliminationFirstEnd` (the east on Depot). The player is character 0 on the picked team, Alpha or Beta
+  (M98, `sim/roster.ts`): nothing reads team 0 as "yours". `Character.end` says where a character started, for its dead
   zone and its bot's lane direction.
 - **Flag.** Optionally one flagpole at end 1. A map without one is Elimination only.
 - **Extraction block.** Optional: insertions, exits, home-team starts, run time and base opponents; case spots (each
@@ -133,6 +137,9 @@ request. Each entry says where the contract lives, what it holds today and what 
     sight; without it cases open by reach alone.
   - `Character.grace` counts down a squad member's insertion grace: BBs neither hit it nor are hit by it, and a BB it
     stops reports `bbImpact`, no hit.
+  - Every body stops BBs (M85): a BB that reaches someone already hit, a teammate with friendly fire off, or anyone in
+    the cease-fire after a round is decided stops there and reports `bbImpact`, no hit; only a Ghost lets BBs through.
+    `Character.walkCycle` (and `prevWalkCycle`) is the legs' walk cycle, which the hit volume and the drawn legs share.
   - Events: `respawned`, `exitCount`, `exitOpened` and `runWarning` report the run; `caseNoise` (bots hear it),
     `caseOpened` and `caseDropped` report the cases; `returned` reports an opponent back in a wave; `torch` reports a
     weapon light switched on or off.
@@ -256,7 +263,7 @@ request. Each entry says where the contract lives, what it holds today and what 
   - `bakedLight`: the name of the map's probe file; look only. Each file is pinned to its map by
     `map/bakes/bakes.test.ts`, which names the bake command when they differ.
 
-  Pinned by `map/mapData.test.ts`, `nav/navGrid.test.ts`, `map/neonHeights.test.ts`, `map/extractionData.test.ts`,
+  Pinned by the content toolkit's map checks on every map (`content/mapChecks.test.ts`), `nav/navGrid.test.ts`, `map/neonHeights.test.ts`, `map/extractionData.test.ts`,
   `render/depotLook.test.ts` (a map using none of the woodland look's fields, M33i, builds as before),
   `render/cityLook.test.ts` and `map/neonHeightsArt.test.ts` (Neon Heights' boxes, materials and floors).
 

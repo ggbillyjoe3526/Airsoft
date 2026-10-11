@@ -8,6 +8,7 @@ import type { Switch } from './controls';
 import { BOT_GLOW_BBS } from './glowBBs';
 import { defaultScheme } from './schemes';
 import { HITS, type HitConfig, ROUNDS } from './hits';
+import type { MatchMode } from './modes';
 import { LOADOUT, REALCAP, replicaUnderRules } from './replicas';
 
 /**
@@ -246,11 +247,51 @@ export function offersSwitch(ruleset: RulesetId, field: keyof MatchRules): boole
 export const RUN_IGNORES: readonly (keyof MatchRules)[] = ['winsNeeded', 'roundTime', 'winByTwo', 'timeOutToMorePlayers'];
 
 /**
- * Whether the Match pop-up offers row `field` for the match as played (M53, audit UI-01): one `ruleset` leaves to you
- * (offersSwitch), and in an Extraction run (`run`) one the run reads.
+ * What fits each mode (M89, the owner's playtest note 18: "settings that go against that mode's philosophy" don't show):
+ * the rulesets it offers, and the Match rows it plays no part in. A mode as played (newGamePicks.ts playedPicks: a mode
+ * the map lacks plays as Elimination) shows only what fits it, and a saved pick that doesn't fit plays as the standard.
+ * - Elimination: everything; it is the match the rulesets were written for.
+ * - Attack and Defend: a round that runs out of time is the defenders' whatever the Time-out switch says.
+ * - Extraction: one run on its own clock (RUN_IGNORES), and no Tournament or Pro CQB: they are rules for a series of
+ *   rounds between two teams (first to 7, half-time, win by two), not for a run against the home team.
  */
-export function offersRow(ruleset: RulesetId, field: keyof MatchRules, run: boolean): boolean {
-  return offersSwitch(ruleset, field) && !(run && RUN_IGNORES.includes(field));
+export interface ModeFit {
+  /** The rulesets the Rules row offers in this mode. */
+  rulesets: readonly RulesetId[];
+  /** The Match rows this mode ignores, hidden while it is picked. */
+  ignores: readonly (keyof MatchRules)[];
+}
+
+export const MODE_FIT: Record<MatchMode, ModeFit> = {
+  elimination: { rulesets: ['skirmish', 'tournament', 'proCqb', 'custom'], ignores: [] },
+  attackDefend: { rulesets: ['skirmish', 'tournament', 'proCqb', 'custom'], ignores: ['timeOutToMorePlayers'] },
+  extraction: { rulesets: ['skirmish', 'custom'], ignores: RUN_IGNORES },
+};
+
+/** Whether `mode` offers `ruleset` (M89). */
+export function rulesetFits(mode: MatchMode, ruleset: RulesetId): boolean {
+  return MODE_FIT[mode].rulesets.includes(ruleset);
+}
+
+/**
+ * Whether the Match pop-up offers row `field` for the match as played (M53, M89): one `ruleset` leaves to you
+ * (offersSwitch) and `mode` (as played) reads.
+ */
+export function offersRow(ruleset: RulesetId, field: keyof MatchRules, mode: MatchMode): boolean {
+  return offersSwitch(ruleset, field) && !MODE_FIT[mode].ignores.includes(field);
+}
+
+/**
+ * The rules `mode` plays under `ruleset` (M89): `rules` with every row the mode ignores at the ruleset's standard, so a
+ * hidden row's saved pick plays no part (and doesn't keep a match out of the records).
+ */
+export function rulesForMode(mode: MatchMode, ruleset: RulesetId, rules: MatchRules): MatchRules {
+  const ignored = MODE_FIT[mode].ignores;
+  if (ignored.length === 0) return rules;
+  const std = standardRulesOf(ruleset);
+  const out = { ...rules };
+  for (const f of ignored) (out as Record<keyof MatchRules, unknown>)[f] = std[f];
+  return out;
 }
 
 /** The standard match of `ruleset` (DEFAULT_MATCH_RULES under its switches): what its records count. */
@@ -356,10 +397,11 @@ export function formatRoundTime(seconds: number): string {
  * New game's Match button: "3v3 · first to 5", and a line with the rest; the Rules picker's switches (M39) only when
  * they differ from Skirmish's, so the standard match reads as it always did.
  */
-export function matchRulesSummary(m: MatchRules): { value: string; detail: string } {
+export function matchRulesSummary(m: MatchRules, mode: MatchMode = 'elimination'): { value: string; detail: string } {
   const extra: string[] = [];
   if (m.winByTwo) extra.push('Win by two.');
-  if (m.timeOutToMorePlayers) extra.push('Time-out: more players left wins.');
+  // Attack and Defend's time-out is the defenders' whatever the switch (M89: MODE_FIT).
+  if (m.timeOutToMorePlayers && !MODE_FIT[mode].ignores.includes('timeOutToMorePlayers')) extra.push('Time-out: more players left wins.');
   return {
     value: `${m.teamSize}v${m.teamSize} · first to ${m.winsNeeded}`,
     detail: [`${formatRoundTime(m.roundTime)} rounds. Friendly fire ${m.friendlyFire ? 'on' : 'off'}; ricochets ${m.ricochetsCount ? 'count' : "don't count"}.`, ...extra, ...kitNotes(m)].join(' '),

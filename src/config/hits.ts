@@ -28,6 +28,38 @@ export interface HitConfig {
     /** Height of the pivot (the hips) above the feet when standing; crouching lowers it by crouchDrop. */
     pivotHeight: number;
   };
+  /**
+   * A player's chest volume (M85): a capsule `bodyRadius` round, its spheres' centres this high above the feet,
+   * standing; it rolls with a lean. `bodyBottom` and `bodyTop` are the practice range figures' (sim/rangeTargets.ts) and
+   * the shoulders' wall check for leaning (sim/lean.ts).
+   */
+  torsoBottom: number;
+  torsoTop: number;
+  /** The hips: two capsules side by side, `halfWidth` either side of the middle, spheres from `bottom` to `top`. */
+  hips: { bottom: number; top: number; halfWidth: number; radius: number };
+  /**
+   * The legs (M85): each swings about its hip (lean.pivotHeight, `hipSpread` to either side) on the walk cycle and is
+   * squashed towards the hips when crouching, as the drawn figure's are (config/characters.ts takes these numbers). A
+   * thigh, a shin and a boot capsule each. Heights are below the hip, standing; z is forward-negative, as the figure.
+   */
+  legs: {
+    hipSpread: number;
+    /** The thigh's top above the hip pivot, the knee and the ankle below it (metres), and the knee's z. */
+    hipLift: number;
+    knee: number;
+    kneeZ: number;
+    ankle: number;
+    thighRadius: number;
+    shinRadius: number;
+    /** The boot: its middle this far below the hip, from `heel` to `toe` (z) as a capsule of `radius`. */
+    boot: { drop: number; heel: number; toe: number; radius: number };
+    /** Walk cycle: leg swing at full stride (radians) and strides per metre walked, as the figures draw it. */
+    swing: number;
+    stridesPerMetre: number;
+    /** Legs swing only above this speed (m/s); more than `maxStride` (m) in one tick is a teleport, not a step. */
+    walkingSpeed: number;
+    maxStride: number;
+  };
 }
 
 /**
@@ -84,6 +116,33 @@ export const HITS: HitConfig = {
    * ~0.12 m; the legs stay put. The pivot is the drawn figure's hip height (config/characters.ts uses it).
    */
   lean: { maxAngle: 0.6, pivotHeight: 0.92 },
+  /**
+   * Measured against the drawn figure (render/figureHitVolume.test.ts, M85). The chest with its plate carrier, pouches
+   * and pack is about as deep as it is wide, so round, from the cummerbund (1.15 m) to the top of the plates (1.52 m).
+   * The hips and belt below are an oval, 0.34 m across and 0.22 m deep. Below them only the two legs are drawn, with a
+   * gap between: one round volume down to the boots (before M85) caught BBs on thin air from the side.
+   */
+  torsoBottom: 1.2,
+  torsoTop: 1.4,
+  hips: { bottom: 0.95, top: 1.05, halfWidth: 0.06, radius: 0.11 },
+  /**
+   * Measured against the drawn legs (render/figureHitVolume.test.ts): a thigh tapering from 0.094 m to 0.064 m, a shin
+   * about 0.055 m, the knee pad, and a boot 0.3 m long and 0.1 m tall (render/figureHuman.ts humanLeg).
+   */
+  legs: {
+    hipSpread: 0.095,
+    hipLift: 0.03,
+    knee: 0.44,
+    kneeZ: -0.015,
+    ankle: 0.78,
+    thighRadius: 0.085,
+    shinRadius: 0.062,
+    boot: { drop: 0.874, heel: 0.058, toe: -0.148, radius: 0.05 },
+    swing: 0.55,
+    stridesPerMetre: 0.75,
+    walkingSpeed: 0.2,
+    maxStride: 1,
+  },
 };
 
 /**
@@ -102,7 +161,7 @@ export const ROUNDS = {
   /** First to 5 is at most 9 decided rounds: swap ends after 4, so the decider is in the second half. */
   halfTimeAfter: 4,
   /**
-   * Elimination: Blue starts in the east. On Depot the east end wins a little over half the rounds in bot-only
+   * Elimination: Alpha starts in the east. On Depot the east end wins a little over half the rounds in bot-only
    * matches (54%, DECISIONS 2026-10-03), so the player's team plays its first rounds, the ones that teach the map, there.
    */
   eliminationFirstEnd: 1,
@@ -112,3 +171,13 @@ export const ROUNDS = {
   timeOutToMorePlayers: false,
   flag: FLAG,
 } as const;
+
+/**
+ * Settings › Gameplay › Hit marker (M97, owner's playtest note of 2026-10-07): the red X over the crosshair when your BB
+ * lands. Off by default (his call); the hit tick you hear plays either way.
+ */
+export const HIT_MARKER_CHOICES: readonly { id: 'on' | 'off'; label: string; blurb: string }[] = [
+  { id: 'off', label: 'Off', blurb: 'Only the tick you hear tells you a BB landed.' },
+  { id: 'on', label: 'On', blurb: 'A red X flashes over the crosshair as well as the tick.' },
+];
+export const DEFAULT_HIT_MARKER = false;

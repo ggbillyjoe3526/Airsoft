@@ -162,15 +162,15 @@ function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, de
   // aperture at the back, a post between protective ears at the front.
   const sightsUp = new ModelBuilder(detail);
   sightsUp.box('detail', -0.085, -0.062, 0.074, 0.084, 0.026);
-  if (sightsUp.high) {
-    sightsUp.profile('detail', [[-0.08, 0.084], [-0.066, 0.084], [-0.068, 0.094], [-0.078, 0.094]], 0.022, 0.003);
-    sightsUp.ringTube('metal', -0.0755, 0.004, 0.101, 0.0075, 0.001, 16);
-  } else sightsUp.profile('detail', [[-0.08, 0.084], [-0.066, 0.084], [-0.068, 0.112], [-0.078, 0.112]], 0.022, 0.003, [[[-0.0755, 0.098], [-0.0705, 0.098], [-0.0705, 0.104], [-0.0755, 0.104]]]);
+  // The aperture is a ring you look through down the bore (M84: aiming down the iron sights puts the front post in it,
+  // config/replicas.ts look.ironSight), at every detail.
+  sightsUp.profile('detail', [[-0.08, 0.084], [-0.066, 0.084], [-0.068, 0.094], [-0.078, 0.094]], 0.022, 0.003);
+  sightsUp.ringTube('metal', -0.0755, 0.004, 0.101, 0.0075, 0.0045, sightsUp.high ? 16 : 10);
   sightsUp.box('detail', 0.365, 0.39, 0.082, 0.092, 0.024);
   if (sightsUp.high) {
     sightsUp.box('metal', 0.376, 0.38, 0.092, 0.11, 0.003); // the post
     for (const side of [-1, 1]) sightsUp.box('detail', 0.37, 0.386, 0.092, 0.112, 0.003, side * 0.007); // its ears
-  } else sightsUp.profile('detail', [[0.37, 0.092], [0.386, 0.092], [0.381, 0.112], [0.375, 0.112]], 0.018, 0.002);
+  } else sightsUp.profile('detail', [[0.37, 0.092], [0.386, 0.092], [0.381, 0.108], [0.375, 0.108]], 0.018, 0.002); // its bevel tops it at the high post's 0.11
   const sightsDown = new ModelBuilder(detail);
   sightsDown.box('detail', -0.088, -0.054, 0.074, 0.082, 0.026);
   sightsDown.box('detail', 0.362, 0.396, 0.082, 0.089, 0.024);

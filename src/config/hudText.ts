@@ -14,4 +14,14 @@ export const HUD_TEXT = {
   run: 'Extraction',
   /** The minimap's caption: the map and the round. */
   where: (map: string, round: number) => (round > 0 ? `${map} · Round ${round}` : map),
+  /**
+   * Skip to next round (M83), on the spectating line once you are out: how to skip (Esc, then the pause menu's button),
+   * and the line while the rest of the round is played out.
+   */
+  skip: { round: 'Esc to skip the round', result: 'Esc to skip to the result', skipping: 'Skipping the round…' },
+  /** The pause menu's button, by what it skips to. */
+  skipButton: { round: 'Skip to next round', result: 'Skip to the result' },
 } as const;
+
+/** What the spectating line says about skipping the round (M83): how, that it is under way, or nothing. */
+export type SkipLabel = keyof typeof HUD_TEXT.skip | null;

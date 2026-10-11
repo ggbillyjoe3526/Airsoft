@@ -5,7 +5,7 @@
 
 import { type Difficulty, difficultyAtLeast } from './bots';
 
-/** The hit feed in the top-right corner, newest at the top (a screen reader hears "Orange 2 called HIT · Blue 1"). */
+/** The hit feed in the top-right corner, newest at the top (a screen reader hears "Beta 2 called HIT · Alpha 1"). */
 export const HIT_FEED = {
   /** Most lines shown at once; an older line is dropped when a new one comes in. */
   maxLines: 5,

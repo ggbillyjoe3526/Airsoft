@@ -54,6 +54,27 @@ export function mapUnderLighting(map: MapData, choice?: LightingPresetId | null)
   return played;
 }
 
+/** The maps already played under a forced preset (M90), kept as underLighting is so a replay reuses the meshes. */
+const underPreset = new WeakMap<MapData, Map<LightingPresetId, MapData>>();
+
+/**
+ * Dev settings › Time of day (M90): the map as it plays under `id` whether or not it offers it (any map can take any
+ * preset: config/render.ts LIGHTING_PRESETS), listed first with `night` set by it; the map's overrides for that preset
+ * still apply. A map that offers `id` plays it as its own pick would; one that already plays only `id` is itself.
+ */
+export function mapUnderPreset(map: MapData, id: LightingPresetId): MapData {
+  const offered = lightingChoices(map);
+  if (offered.includes(id)) return offered.length > 1 ? mapUnderLighting(map, id) : map;
+  let picks = underPreset.get(map);
+  if (!picks) underPreset.set(map, (picks = new Map()));
+  let played = picks.get(id);
+  if (!played) {
+    played = { ...map, night: LIGHTING_PRESETS[id].night, lighting: { ...map.lighting, presets: [id, ...offered] } };
+    picks.set(id, played);
+  }
+  return played;
+}
+
 /** What New game calls each preset. */
 export const LIGHTING_LABELS: Readonly<Record<LightingPresetId, string>> = { day: 'Day', night: 'Night' };
 

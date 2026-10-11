@@ -9,8 +9,8 @@ const RULES: MatchRulesText = {
   teamSize: 3,
   winsNeeded: 5,
   roundTime: 150,
-  playerTeam: 'Blue',
-  enemyTeam: 'Orange',
+  playerTeam: 'Alpha',
+  enemyTeam: 'Beta',
   raiseTime: 5,
   halfTimeAfter: 4,
   attackFirst: true,
@@ -25,8 +25,8 @@ const X: ExtractionData = { insertions: [], exits: [], opponentStarts: [], runTi
 describe('the Extraction rules shown on New game (M43)', () => {
   it('explain the squad, the home team, the clock, the stand, the late exit and the one respawn', () => {
     const text = describeRules(RULES, 'extraction', X);
-    expect(text).toContain('You and 2 bot teammates, who follow you (Blue)');
-    expect(text).toContain('against 5 Orange bots of the home team');
+    expect(text).toContain('You and 2 bot teammates, who follow you (Alpha)');
+    expect(text).toContain('against 5 Beta bots of the home team');
     expect(text).toContain('8:00 to get to an open exit');
     expect(text).toContain(`stand in it for ${EXTRACTION.extractTime} s`);
     expect(text).toContain('pauses the count');
@@ -35,21 +35,21 @@ describe('the Extraction rules shown on New game (M43)', () => {
   });
 
   it('follows the squad size: solo, one teammate, and the home team grows with it', () => {
-    expect(describeRules({ ...RULES, teamSize: 1 }, 'extraction', X)).toMatch(/^Solo: just you \(Blue\), against 3 Orange bots/);
+    expect(describeRules({ ...RULES, teamSize: 1 }, 'extraction', X)).toMatch(/^Solo: just you \(Alpha\), against 3 Beta bots/);
     const two = describeRules({ ...RULES, teamSize: 2 }, 'extraction', X);
     expect(two).toContain('You and 1 bot teammate, who follow you');
-    expect(two).toContain('against 4 Orange bots');
+    expect(two).toContain('against 4 Beta bots');
   });
 
   it("uses the map's run time and base opponents", () => {
     const text = describeRules(RULES, 'extraction', { ...X, runTime: 900, baseOpponents: 1 });
     expect(text).toContain('15:00 to get to an open exit');
-    expect(text).toContain('against 4 Orange bots');
+    expect(text).toContain('against 4 Beta bots');
   });
 
   it("matches Depot's own data", () => {
     const x = DEPOT.extraction!;
-    expect(describeRules({ ...RULES, teamSize: 2 }, 'extraction', x)).toContain(`against ${x.baseOpponents + 2} Orange bots`);
+    expect(describeRules({ ...RULES, teamSize: 2 }, 'extraction', x)).toContain(`against ${x.baseOpponents + 2} Beta bots`);
   });
 
   it('says hit opponents come back in waves on a map with regen points (M45), and not without', () => {

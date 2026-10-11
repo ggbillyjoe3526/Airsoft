@@ -16,7 +16,7 @@ import { el, menuButton } from './menuParts';
 
 /** What the end-of-match summary shows. */
 export interface MatchSummary {
-  /** "You win! · Blue 5 – 3 Orange". */
+  /** "You win! · Alpha 5 – 3 Beta". */
   result: string;
   /** Every player's numbers over the match, your team first. */
   blocks: TeamBlock[];
@@ -154,8 +154,9 @@ function creditsBlock(e: Earnings | null, unpaid: Unpaid | null): HTMLElement[] 
 
 /** The summary's line when a match paid nothing and why (audit POOL-22), or '' when it paid (or there is no reason). */
 export function unpaidLine(e: Earnings | null, unpaid: Unpaid | null): string {
-  if (e || !unpaid) return '';
-  return unpaid === 'off' ? ARMORY_TEXT.unpaidOff : unpaid === 'devContent' ? ARMORY_TEXT.unpaidDevContent : ARMORY_TEXT.unpaidDev;
+  // The Armory off (Dev settings, M83): it is gone from the menus, and no line names it or its Field Credits.
+  if (e || !unpaid || unpaid === 'off') return '';
+  return unpaid === 'devContent' ? ARMORY_TEXT.unpaidDevContent : ARMORY_TEXT.unpaidDev;
 }
 
 /** The records: a wins and losses grid (the mode and difficulty just played marked), then the bests. */
