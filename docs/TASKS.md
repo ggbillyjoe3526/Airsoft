@@ -52,7 +52,7 @@ attempts: 0
 ## M87 · Bots stop clearing empty corners (playtest notes 15, 19)
 tier: core
 perf: required
-touches: src/ai/botBrain.ts, src/ai/botMovement.ts, src/ai/angles.ts, src/ai/perception.ts, src/config/bots.ts
+touches: src/ai/botBrain.ts, src/ai/botMovement.ts, src/ai/angles.ts, src/ai/perception.ts, src/config/bots.ts, src/ai/bot.ts, src/ai/botController.ts, src/ai/balance/
 contract: none
 acceptance:
   1. Bots on both teams skip spots they have seen to be empty recently or that a teammate cleared; a test shows fewer visits to dead ends than today.
@@ -63,7 +63,7 @@ attempts: 0
 ## M88 · Woodland: hidden starts, a smaller height edge, bigger teams (playtest note 13)
 tier: core
 perf: required
-touches: src/map/woodland.ts, src/map/terrain.ts, src/map/maps.ts, src/newGamePicks.ts, src/config/teams.ts
+touches: src/map/woodland.ts, src/map/terrain.ts, src/map/maps.ts, src/newGamePicks.ts, src/config/teams.ts, src/config/matchRules.ts, src/config/dressing.ts, src/content/mapRules.ts, src/ui/menus/matchPanel.ts, src/ui/menus/playModel.ts, src/ui/menus/playView.ts, src/ai/balance/
 contract: none
 acceptance:
   1. Neither team can see the other from its start: cover (a building, thick trees or a rise) hides each spawn.

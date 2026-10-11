@@ -311,7 +311,7 @@ The owner sorted every feature in the game and on this roadmap into Keep (in Bet
 `docs/DECISIONS.md`.
 
 - **Public in 0.1** (after the owner's playtest, as before): Depot with Elimination, Attack / Defend and custom matches;
-  Easy, Normal and Hard; Woodland with night play, the weapon torch, glowing BBs and 4v4 / 5v5; Pro.
+  Easy, Normal and Hard; Woodland with night play, the weapon torch, glowing BBs and 5v5 / 6v6 (M88, owner 2026-10-06); Pro.
 - **Stays dev, public later:** Neon Heights (0.2, with its new look), Extraction (0.3, once balanced), the Tournament
   and Pro CQB rule sets (0.3, folded into the field rule presets), the Retro pixel filter (0.5, as a "Retro look"
   option; pulled forward to 0.1 Dev 5 on 2026-10-06, M96).
