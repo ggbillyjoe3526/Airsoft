@@ -312,7 +312,9 @@ Completely free: Field Credits (FC) come from playing, and nothing is ever sold.
   elsewhere or a choice closes it. Scrap 1 scraps the lower copy; fit the Common on Customise first, scrap it, and Customise shows the Rare fitted.
   Scrap all spares asks first and keeps your best copy of everything.
 - [ ] **Rarity odds.** The odds table has its caption, and each Rare-or-better copy lists what its tier adds.
-- [ ] **Settings › Dev › Disable Armory.** The Armory is greyed and won't open; a match pays nothing and says why.
+- [ ] **Settings › Dev › Disable Armory.** The Armory is gone from every menu (M83): not on the top bar, no FC or
+  Tokens there, no "Unlock more in the Armory" in Loadout or Customise, no FC line on the summary; a match pays
+  nothing. Untick the Dev box and it is all back.
   Turn it off: the next match pays.
 - [ ] **Settings › Dev › Unlock all gear.** The Loadout offers every replica and part at every tier and the match stays
   out of your records. Turn it off: your own picks are back.
@@ -361,6 +363,12 @@ One BB hit puts anyone out. A round lasts up to 2:30 and the first team to 5 rou
 
 - [ ] **Get hit.** A sharp tick, a sign of where it came from, and your view walks off. Then you watch a teammate;
   left click (or your fire key) moves to the next one.
+- [ ] **Skip to next round** (M83). Out and spectating, the line under the view ends "Esc to skip the round"; Esc,
+  then **Skip to next round** on the pause menu: "Skipping the round…" shows for a second or few (the page keeps
+  drawing), then the next round starts with the score as it played out. On match point (either team one win away)
+  the button reads **Skip to the result** and may end on the summary; the result counts in Stats and pays FC as a
+  watched one. Not offered while you are in play or calling your hit, between rounds, in Extraction or on the
+  practice range. Same seed: skipping and watching a round give the same score (check with `?seed=`).
 - [ ] **Shoot a teammate (carefully).** Friendly fire counts, so they go out too. On purpose.
 - [ ] **Walk-offs.** Hit players walk all the way to their dead zone by a sensible route, promptly, on every map,
   even from the far end. Teammates in the dead zone stand on separate spots.
@@ -664,6 +672,12 @@ there maps each symptom to its numbers):
 - [ ] **Crosshair** (Settings › Gameplay › Crosshair). Two previews (still, and opened as when moving), then Shape,
   Size, Thickness, Gap, Colour (no blue or orange: those are the teams'; a custom colour box at the end), Opacity,
   Spread (Static keeps the gap while moving) and Outline. In a match it looks the same and still opens as you move.
+- [ ] **Hit marker** (Settings › Gameplay › Crosshair, M97). Off by default: hit a bot and no red X flashes over the
+  crosshair, but the hit tick still sounds. On: the red X flashes as before (a teammate hit marks too). Flip it in
+  the pause menu mid-match: it applies at once, and the pick is kept next visit.
+- [ ] **Replay tutorial** (Settings › Gameplay › Tutorial, M97). From the title or the top bar it starts the
+  tutorial on the range at once, from its first step, even after you finished it. From the pause menu in a match it
+  asks first ("This leaves what you are playing now") and then leaves the match (not recorded) for the tutorial.
 - [ ] **HUD size** (Settings › Gameplay › HUD). 150 % makes the replica panel, score bar, minimap, hit feed,
   round messages, order wheel and teammate markers bigger with nothing overlapping at 1280×720; the crosshair
   keeps its size. On a 1440p or 4K screen without system scaling, 100 % is already larger than on 1080p.
@@ -701,6 +715,9 @@ there maps each symptom to its numbers):
   always up, you the white arrow. Teammates are dots in your team's colour (blue on Alpha; pinned to the edge when off it), grey once hit. An opponent you hear shows as a patch in theirs (orange on Alpha) roughly where
   (dashed for steps, a dot for a shot) for a few seconds; far sounds give wider patches; nothing for one you can't
   hear. A teammate whose marker would sit inside the minimap square has none there.
+- [ ] **Settings › Gameplay › HUD › Minimap** (M83). Rotating (the default) is the minimap above. Fixed: the map
+  stays still, north (the map's far end) up, and the white arrow turns as you look; teammates, heard patches, the
+  flag, exits and the hold spot stay where they are on the map. It applies at once mid-match and is kept.
 - [ ] **Floors.** On Neon Heights the minimap shows your floor (floors below darker) and marks teammates on other
   floors with an up or down arrow.
 - [ ] **A second screen.** Drag the window to a screen with other scaling mid-match (or zoom the browser), pause and
@@ -745,8 +762,20 @@ Settings has groups down the left (Graphics, Display, Audio, Controls, Gameplay,
   through you. With any of them on, the summary says Dev settings kept the match out of your records. Untick the box
   and Play again: everything is back to normal and the match counts. Diagnostics › Copy pastes a report starting
   "Airsoft diagnostics" with your GPU and settings.
-- [ ] **Retro pixels** (Dev). Chunky pixels and a small dithered palette, like a 1990s shooter; Pixel size and Colours
-  change it; the HUD and menus stay sharp.
+- [ ] **Dev playtesting aids** (M90). **+1,000 FC** and **+10 Tokens** fill the top bar's wallet at once (and stay
+  after a reload); **Free case openings** makes the Armory's Shot buttons read "Free" and take nothing. **Time of
+  day** Night on Depot (or Day on Woodland), then Start match: the map plays under that light, bots with torches at
+  night (the lighting may look rough where the map's bounce light was baked for the other time). **Bots hold fire**:
+  no bot shoots. **Spectate any bot**: in a match your view follows a bot while you stand still; your fire key moves
+  to the next, on either team (pair it with Ghost or Bots hold fire to stay in). **Bot intentions**: a small tag over
+  each bot in play ("Advancing", "Holding", "Fighting"; in Extraction its job first in yellow, "Guard"). **End the round now**
+  from the pause menu's Settings › Dev, then Resume: the round ends as on time. Each of those (not the wallet buttons
+  or free Shots) keeps the match out of your records. **Reset the save** asks first, then reloads as a new player;
+  Settings › Save › Undo brings it back.
+- [ ] **Settings › Look › Retro look** (M96; the Dev tab's Retro pixels before). Off by default; On gives chunky pixels
+  and a small dithered palette, like a 1990s shooter, at once; Pixel size and Colours change it; the HUD and menus
+  stay sharp. A save that had Retro pixels on in the Dev tab (with the Dev box ticked) opens with it on here, at the
+  same sliders, and the Dev tab no longer lists it.
 
 ## Sound
 
@@ -892,7 +921,7 @@ Settings › Save file. Everything saves as it changes; nothing to press.
 
 Fixed in earlier bug passes; a bug pass checks they stay fixed.
 
-- [ ] **Hit a bot, press Esc and resume** (and after Play again): no hit marker or white flash replays.
+- [ ] **Hit a bot, press Esc and resume** (and after Play again; Hit marker On): no hit marker or white flash replays.
 - [ ] **At the start of each round** the replica in your hands stays still; it doesn't swing in from the side.
 - [ ] **Empty the AEG with the trigger held, press 2 then 1 while holding:** it clicks dry and starts a reload.
 - [ ] **Customise › Muzzle** with nothing fitted reads "Bots hear your shots from 22 m."; with a silencer "… from

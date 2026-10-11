@@ -11,6 +11,11 @@ function watchable(c: Character): boolean {
   return isInPlay(c) || c.status === 'calling';
 }
 
+/** In play and not you (`this`: the camera): who can be watched. */
+function isOther(this: SpectatorCamera, c: Character): boolean {
+  return c !== this.selfCharacter && isInPlay(c);
+}
+
 /**
  * Over-the-shoulder camera for watching someone still in play after you've been hit. Prefers your
  * teammates; clicking cycles through everyone still in play. If nobody is left it watches your own
@@ -39,6 +44,11 @@ export class SpectatorCamera {
     private readonly query: WorldQuery,
   ) {}
 
+  /** You (for isOther). */
+  get selfCharacter(): Character {
+    return this.self;
+  }
+
   /** Who is being watched, or undefined if that player is no longer worth watching. */
   private target(): Character | undefined {
     if (this.targetId === this.self.id) return this.self;
@@ -49,10 +59,11 @@ export class SpectatorCamera {
   /** Makes sure someone is being watched: a teammate in play, else anyone in play, else yourself. */
   ensureTarget(): Character {
     const current = this.target();
-    if (current && (current !== this.self || !this.characters.some(isInPlay))) return current;
+    if (current && (current !== this.self || !this.characters.some(isOther, this))) return current;
     let pick: Character | undefined;
-    for (const c of this.characters) if (isInPlay(c) && c.team === this.self.team) pick ??= c;
-    for (const c of this.characters) if (isInPlay(c)) pick ??= c;
+    // Someone else: you yourself are in play only while Dev settings › Spectate any bot watches the bots (M90).
+    for (const c of this.characters) if (c !== this.self && isInPlay(c) && c.team === this.self.team) pick ??= c;
+    for (const c of this.characters) if (c !== this.self && isInPlay(c)) pick ??= c;
     pick ??= this.self;
     this.targetId = pick.id;
     this.placed = false;
@@ -61,7 +72,7 @@ export class SpectatorCamera {
 
   /** Switches to the next character in play. */
   next(): void {
-    const inPlay = this.characters.filter(isInPlay);
+    const inPlay = this.characters.filter(isOther, this);
     if (inPlay.length === 0) return;
     const i = inPlay.findIndex((c) => c.id === this.targetId);
     this.targetId = inPlay[(i + 1) % inPlay.length]!.id;

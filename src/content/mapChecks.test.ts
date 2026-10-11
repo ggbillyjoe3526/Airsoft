@@ -43,7 +43,8 @@ describe('the map checks on the game as it ships', () => {
     const flagged = results.filter((r) => r.verdict === 'fail' || r.verdict === 'warn').map((r) => `${r.check}: ${r.says}`);
     expect(flagged).toEqual([]);
     expect(new Set(results.map((r) => r.check)).size).toBeGreaterThanOrEqual(18);
-  });
+    // A whole map's checks (Woodland's sightlines and routes take a few seconds on a CI runner): over the 5 s default.
+  }, 30_000);
 
   it('keep the test fixtures on their floors, with walkable ramps and no block inside another', () => {
     for (const map of [RAMP_YARD, STACK_HOUSE]) expect(offTheFloor(mapGeometry(map)), map.name).toEqual([]);

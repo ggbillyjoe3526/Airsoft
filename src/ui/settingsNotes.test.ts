@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_CROSSHAIR } from '../config/matchInfo';
-import { DEFAULT_LOOK } from '../config/look';
+import { DEFAULT_LOOK, DEFAULT_RETRO } from '../config/look';
 import { MemoryStorage } from '../pool/testStorage';
 import { crosshairSettings } from './crosshairSettings';
 import { lookSettings } from './lookSettings';
@@ -48,6 +48,6 @@ describe('a note on every settings row (G3)', () => {
   });
 
   it('gives each Look row a note too', () => {
-    for (const { label, note } of notes(lookSettings({ initial: DEFAULT_LOOK, onChange: () => {} }) as unknown as FakeElement[])) expect(note, label).not.toBe('');
+    for (const { label, note } of notes(lookSettings({ initial: DEFAULT_LOOK, onChange: () => {}, retro: { initial: { ...DEFAULT_RETRO }, onChange: () => {} } }) as unknown as FakeElement[])) expect(note, label).not.toBe('');
   });
 });
