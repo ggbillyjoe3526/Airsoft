@@ -6,9 +6,9 @@
 
 | Date | Attempt | Worker model | build | tests | smoke | perf | scope | changelog | Critic | Retry reason | Wall time | Worker tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 2026-10-11 | 1 | Opus 5.5 (build thread) | ✓ 47 s | ✓ 563 s (gate 4) | ✓ 1243 s | ✓ 2115 s | ✓ | ✓ | 7/8 Accept (Opus) | – | ~11 h | QA (Sonnet) ~110k, changelog 2 × ~25k, critic (Opus) 96k |
+| 2026-10-11 | 1 | Opus 5.5 (build thread) | ✓ 45 s | ✓ 669 s | ✓ 1296 s (re-run) | ✓ 2088 s | ✓ | ✓ | 7/8 Accept (Opus) | – | ~11 h | QA (Sonnet) ~110k, changelog 2 × ~25k, critic (Opus) 96k |
 
-- **Attempt 1:** four gate runs, logs in `pipeline/runs/W6a/attempt-1/`.
+- **Attempt 1:** five gate runs, logs in `pipeline/runs/W6a/attempt-1/`.
   - Gate 1 (a20fa0f): three e2e checks still read the old renderer's counters (`info.render.calls` counts render() calls
     on the node renderer and is never reset; `info.programs` is the old renderer's), a Neon Heights WebGPU frame error,
     and Neon WebGL2 perf runs timing out on the Start click. All fixed: the specs read `Renderer.stats` and count the
@@ -27,6 +27,9 @@
     under main's old-renderer numbers: Elimination 42.5 draws against 43.7, Extraction 41.1 against 43.5.
   - Gate 3 (9cc2362): green but for `perfMatrix.test.mjs`, which pinned the old Neon line; gate 4 (tests only) green
     after that test followed it.
+  - Gate 5 (c36c732, main's M87, M88 and CT4 merged, Woodland's baselines re-recorded): green but for Neon Heights'
+    yard check, which read live places a bot had already left by 0.3 m (as in gate 1; it passes alone). It now reads
+    the spawns the match was built with; the whole browser suite then passed on 4a4bb83 (83 of 83, `smoke-rerun.log`).
 - **Critic** (Opus, 7/8 Accept): check 8 failed on `src/render/README.md` not naming `webgpu/deferredFrees.ts`; the
   line was added before the merge. Two doubts, not failures: `play()` now unlocks audio after the lock's answer,
   outside the click's transient activation (Chrome needs only sticky activation; the owner checks Firefox's sound),
