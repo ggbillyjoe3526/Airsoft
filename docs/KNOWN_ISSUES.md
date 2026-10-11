@@ -34,6 +34,7 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | With no replica owned for a slot (only by editing the save), the player carries one replica | document | Starters go to every collection. The tutorial then skips its switch-replica step. (M26b, FA10) |
 | The best-accuracy record doesn't say what kit it was set with | document | A Legendary AEG's tighter spread counts like factory gear (DECISIONS M26b accepts it). (audit POOL-21, FA10) |
 | Reload is refused when no spare is fuller than the loaded magazine | document | Deliberate (no topping up); the HUD notice and a pat sound explain it. Playtest whether players expect a swap. |
+| The Signal colours' orange furniture sits right against the Gas Pistol's orange tip, so with the orange tip setting on the tip hardly shows on it | playtest | The skin check measures them about 5 apart in colour (20 reads). Beta's bots carry Signal on their rifles, not pistols. A darker tip, or a ring between, would fix it if the owner minds. (CT4) |
 
 ## Movement and shooting
 
@@ -302,6 +303,8 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 
 | Issue | Class | Notes |
 |---|---|---|
+| The WebGPU twins' and particles' allocation tests count heap growth, which can run over their limit while the bot-match guards run beside them | can wait | Seen twice on the gate, never alone: `compute/particles.qa.test.ts:421` (CT3) and `worldTwins.qa.test.ts:251`, 290 KB against 128 KB (CT4); both passed on the re-run and 3 runs of 3 alone. Widen or isolate them if it recurs. |
+| A map's team-colour rule reads each block's tint, and a textured block's tint is white, so an orange or blue texture would pass it | can wait | The skin checks measure each map's colours as painted in the browser (`content-pictures.mjs` `measureMapPalettes`); the map check could use the same. (CT2, found in CT4) |
 | Dev › Time of day on a map that doesn't offer that time keeps the map's baked bounce light (G6) from its own time, so Woodland by day or Depot by night can look patchy | can wait | Dev-only and kept out of the records; the light itself is the preset's (`map/lightingChoice.ts` `mapUnderPreset`), no renderer change. (M90) |
 | Dev › Bot intentions makes a label's transform string when a bot's label moves on screen (as the teammate tags do) | can wait | Off by default and Dev-only; nothing is made while it is off. (M90) |
 | The owner's suggested Dev aid "skip to the last round" isn't built | can wait | Not in M90's brief; Skip to next round (M83) and End the round now (M90) cover most of it. (M90) |

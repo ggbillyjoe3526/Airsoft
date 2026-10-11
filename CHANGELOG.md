@@ -144,6 +144,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **CT1** · Content toolkit part 1: rulebooks per content kind, and one command that checks a replica or part in four levels and writes a one-page report
 - **CT2** · Content toolkit part 2: a map check covers rules, layout against Depot, performance and bot balance; every test run checks every map
 - **CT3** · Content toolkit part 3: mode checks cover rules, screens, bots, every host map and a browser match; balance runs now include Extraction
+- **CT4** · Content toolkit part 4: skin checks cover a colour scheme's rules, fit on every replica, team colours, texture budget, pictures and map colours
 
 ## 0.1 Dev 4 · 2026-10-06
 

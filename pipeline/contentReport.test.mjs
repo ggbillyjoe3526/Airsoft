@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseArgs } from './content-check.mjs';
 import { firstPersonSettings, mapShotPictures } from './content-pictures.mjs';
-import { balanceResults, balanceVerdict, censusRows, layoutRows, mapReportMarkdown, markdownToHtml, modeReportMarkdown, modeRows, outcomeLine, payResults, perfResult, reportHtml, reportMarkdown, runOrderResults, sheetRows, specTables, worst } from './contentReport.mjs';
+import { balanceResults, balanceVerdict, censusRows, layoutRows, mapReportMarkdown, markdownToHtml, modeReportMarkdown, modeRows, outcomeLine, payResults, perfResult, reportHtml, reportMarkdown, runOrderResults, sheetRows, paletteRows, skinReportMarkdown, skinRows, specTables, worst } from './contentReport.mjs';
 
 /** A spec sheet as src/content/specSheet.ts writes it. */
 const sheet = (onTarget) => ({
@@ -315,5 +315,55 @@ describe('the content check command for a mode', () => {
     expect(() => parseArgs(['map:depot', '--no-browser'])).toThrow(/--no-browser is for a mode/);
     expect(() => parseArgs(['mode:all', '--balance'])).toThrow(/one item, not "mode:all"/);
     expect(() => parseArgs(['mode:extraction', '--maps', 'depot'])).toThrow(/plays on every map that hosts it/);
+  });
+});
+
+/** Every skin as src/content/report/skin.report.ts lists it. */
+const SKINS = [
+  { id: 'cobalt', name: 'Cobalt', tag: 'public', family: 'Black', colours: { body: 0x24282f, furniture: 0x2f6fd6, detail: 0x30343b, accent: 0xf2f0ea, steel: 0x484d56 }, shows: [{ colour: 0x2f6fd6, share: 0.52 }, { colour: 0x24282f, share: 0.3 }, { colour: 0xf2f0ea, share: 0.04 }], bots: ['Alpha'] },
+  { id: 'acid', name: 'Acid', tag: 'public', family: 'Ranger green', colours: { body: 0x2a2e33, furniture: 0xb8e636, detail: 0x1e2125, accent: 0xb8e636, steel: 0x40454c }, shows: [{ colour: 0xb8e636, share: 0.6 }], bots: [] },
+];
+const SKIN_CONTENT = { items: [{ id: 'skin-acid', name: 'Acid', category: 'skin', tag: 'public', key: 'acid' }], skins: SKINS, readableShare: 0.1, pictures: [], maps: [] };
+const SKIN_RESULTS = [
+  { level: 'rules', check: 'skin.access', item: 'Acid (acid)', verdict: 'pass', says: 'Public (before the toolkit).' },
+  { level: 'compatibility', check: 'skin.orangeTip', item: 'Acid (acid)', verdict: 'warn', says: 'The tip hardly shows.' },
+  { level: 'spec', check: 'skin.map', item: 'Acid (acid) on Depot', verdict: 'pass', says: 'Stands out.' },
+];
+
+describe('the skin report', () => {
+  it('lays every skin side by side: what shows at a distance, and who carries it', () => {
+    expect(skinRows(SKINS, 0.1)[0]).toEqual(['Cobalt (`cobalt`)', 'public', 'Black', 'body #24282f, furniture #2f6fd6, detail #30343b, accent #f2f0ea, steel #484d56', '#2f6fd6 52 %, #24282f 30 %', "Alpha's bots"]);
+    expect(skinRows(SKINS, 0.1)[1].at(-1)).toBe('players only');
+  });
+
+  it('lists each map’s common colours, or why it was not measured', () => {
+    expect(paletteRows([{ label: 'Depot', buckets: [{ colour: 0x8a8a84, share: 0.41 }] }, { label: 'Woodland', buckets: [], error: 'timed out' }])).toEqual([['Depot', '#8a8a84 41 %'], ['Woodland', 'not measured (timed out)']]);
+  });
+
+  it('writes the page: Rules with the skins table, Fit, Spec test with the maps’ colours, and the pictures', () => {
+    const palettes = [{ map: 'depot', label: 'Depot', buckets: [{ colour: 0x8a8a84, share: 0.41 }] }];
+    const pictures = [{ file: 'acid-on-000002.png', title: 'On the AEG Rifle', ok: true }];
+    const md = skinReportMarkdown({ content: SKIN_CONTENT, item: SKIN_CONTENT.items[0], results: SKIN_RESULTS, pictures, palettes, meta: META });
+    expect(md).toMatch(/^# Content report: Acid \(skin\)\n/);
+    expect(md).toContain('Skin `acid`, tagged public.');
+    expect(md).toContain('1. **Look at this** (Fit, Acid (acid)): The tip hardly shows.');
+    for (const h of ['## Rules', '## Fit', '## Spec test', '### Beside the other skins', "### The maps' colours", '## Pictures']) expect(md).toContain(h);
+    // This skin first beside the others.
+    expect(md.indexOf('| Acid (`acid`)')).toBeLessThan(md.indexOf('| Cobalt (`cobalt`)'));
+    expect(md).toContain('| Depot | #8a8a84 41 % |');
+    expect(md).toContain('![On the AEG Rifle](pictures/acid-on-000002.png)');
+    const every = skinReportMarkdown({ content: { ...SKIN_CONTENT, items: [SKIN_CONTENT.items[0], { id: 'skin-cobalt' }] }, item: { id: 'skins', name: 'Every skin', key: '' }, results: [], meta: META });
+    expect(every).toContain('Every skin (2).');
+    expect(every).not.toContain("### The maps' colours");
+  });
+});
+
+describe('the content check command for a skin', () => {
+  it('checks a skin by "skin:<id>": pictures and the maps\' colours for one skin, neither for every skin', () => {
+    expect(parseArgs(['skin:cobalt'])).toMatchObject({ item: 'skin:cobalt', isSkin: true, isMode: false, isMap: false, browser: true, pictures: true, levels: ['rules', 'compatibility', 'spec'] });
+    expect(parseArgs(['skin:cobalt', '--no-browser', '--maps', 'depot'])).toMatchObject({ browser: false, maps: ['depot'] });
+    expect(parseArgs(['skin:all'])).toMatchObject({ isSkin: true, browser: false, pictures: false });
+    expect(() => parseArgs(['skin:all', '--balance'])).toThrow(/one item, not "skin:all"/);
+    expect(() => parseArgs(['skin:cobalt', '--no-perf'])).toThrow(/for a map or mode/);
   });
 });

@@ -346,15 +346,16 @@ export class CustomiseView {
 
   private readonly schemeSlots = new Map<SchemeId, PictureSlot>();
 
-  /** The eight schemes as pictures of this replica in each; under Realistic colours each shows its family. */
+  /** The schemes offered (CT4: dev ones with Dev content on) as pictures of this replica in each; under Realistic colours each shows its family. */
   private colourPanel(): HTMLElement[] {
     const realistic = this.opts.context.realistic();
+    const offered = this.opts.model.schemes();
     const head = el('div', 'customise-panel-head');
-    head.append(el('h3', 'customise-panel-title', `${GEAR_TEXT.colour} · ${GEAR_TEXT.schemes(SCHEME_IDS.length)}`), el('p', 'customise-panel-note', GEAR_TEXT.colourNote));
+    head.append(el('h3', 'customise-panel-title', `${GEAR_TEXT.colour} · ${GEAR_TEXT.schemes(offered.length)}`), el('p', 'customise-panel-note', GEAR_TEXT.colourNote));
     const group = el('div', 'scheme-grid');
     group.setAttribute('role', 'group');
     group.setAttribute('aria-label', GEAR_TEXT.colour);
-    for (const id of SCHEME_IDS) {
+    for (const id of offered) {
       const b = el('button', 'scheme-tile option-tile');
       b.type = 'button';
       b.dataset.scheme = id;
