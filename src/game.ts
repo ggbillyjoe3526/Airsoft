@@ -1024,6 +1024,7 @@ export class Game {
       kit: this.loadout.kit(),
       teamColours: TEAM_COLOUR_SETS[this.teamColours],
       look: this.look,
+      armory: !this.dev.disableArmory,
     }, this.options.seed, this.quality, this.audio, this.crosshair, pose, tutorialFrom);
     this.session.onTutorialStep = (step) => saveSetting('tutorialStep', step);
     this.session.combat.setReplicaPictures(this.pictures, kitSubjects(this.loadout.kit(), this.look.realisticColours));

@@ -52,7 +52,7 @@ attempts: 0
 ## M83 · Small menu and HUD options: skip a round, minimap turn, hidden Armory (playtest notes 6, 7, 25)
 tier: ui
 perf: skip
-touches: src/render/spectatorCamera.ts, src/matchFlow.ts, src/ui/minimap.ts, src/ui/minimapView.ts, src/config/minimap.ts, src/ui/hudSettings.ts, src/ui/menus/, src/config/dev.ts
+touches: src/render/spectatorCamera.ts, src/matchFlow.ts, src/ui/minimap.ts, src/ui/minimapView.ts, src/config/minimap.ts, src/ui/hudSettings.ts, src/ui/menus/, src/config/dev.ts, src/config/hudText.ts, src/config/menus.ts, src/config/sim.ts, src/config/tutorial.ts, src/game.ts, src/matchSession.ts, src/rangeSession.ts, src/render/matchPresentation.ts
 contract: none
 acceptance:
   1. The spectator camera offers "Skip to next round", which plays the rest of the round out at once and goes to the next.
@@ -133,7 +133,7 @@ attempts: 0
 ## M90 · More Dev settings for playtesting (playtest note 24)
 tier: ui
 perf: skip
-touches: src/config/dev.ts, src/ui/devSettings.ts, src/settings/dev.ts, src/pool/, src/save/, src/game.ts
+touches: src/config/dev.ts, src/ui/devSettings.ts, src/settings/dev.ts, src/pool/, src/save/, src/game.ts, src/config/menus.ts, src/map/lightingChoice.ts, src/matchSession.ts, src/render/matchPresentation.ts, src/style.css, src/ui/botIntentLabels.ts
 contract: none
 acceptance:
   1. Dev settings can give field credits and tokens on demand, so the Armory's cases can be tested without playing matches.
@@ -155,7 +155,7 @@ attempts: 0
 ## M96 · The Retro look goes public (owner's ruling on playtest note 2)
 tier: ui
 perf: skip
-touches: src/config/dev.ts, src/ui/devSettings.ts, src/ui/graphicsSettings.ts, src/ui/lookSettings.ts, src/render/retroFilter.ts, src/settings/, docs/PLAYTEST.md
+touches: src/config/dev.ts, src/ui/devSettings.ts, src/ui/graphicsSettings.ts, src/ui/lookSettings.ts, src/render/retroFilter.ts, src/settings/, docs/PLAYTEST.md, src/config/look.ts, src/game.ts
 contract: none
 acceptance:
   1. The Retro pixel filter (M42) leaves the Dev tab and becomes a public "Retro look" option with its Pixel size and Colours sliders, as soon as possible in 0.1 Dev 5 (owner, 2026-10-06: "I've tested it and I'm happy with it").
@@ -172,7 +172,7 @@ item 5, with the G4 HUD restyle); note 3 was a bug, fixed in BP2; note 2 is alre
 ## M97 · A Hit marker setting and Replay tutorial (playtest notes 1, 8)
 tier: ui
 perf: skip
-touches: src/ui/hitFeedback.ts, src/config/hits.ts, src/ui/hudSettings.ts, src/ui/crosshairSettings.ts, src/ui/menus/settingsScreen.ts, src/settings/, src/tutorial/, src/ui/menus/titleScreen.ts
+touches: src/ui/hitFeedback.ts, src/config/hits.ts, src/ui/hudSettings.ts, src/ui/crosshairSettings.ts, src/ui/menus/settingsScreen.ts, src/settings/, src/tutorial/, src/ui/menus/titleScreen.ts, src/config/menus.ts, src/game.ts, src/matchSession.ts, src/render/matchPresentation.ts
 contract: none
 acceptance:
   1. A "Hit marker" setting (On / Off, **Off by default**) in the settings group that holds the crosshair: Off shows no red X when the player's BB lands; On shows it as today. The hit tick sound is unchanged either way.
