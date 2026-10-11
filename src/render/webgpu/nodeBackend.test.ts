@@ -48,7 +48,7 @@ describe('making the node renderer (W1)', () => {
     stubInit();
     const gl2 = await NodeBackend.make(WEBGL2);
     expect(gl2.renderer).toBeInstanceOf(WebGPURenderer);
-    expect(gl2.kind).toBe('webgpu-webgl2');
+    expect(gl2.kind).toBe('webgl');
     expect(gl2.renderer.samples).toBe(0);
     const gpu = await NodeBackend.make({ antialias: true, forceWebGL: false });
     expect(gpu.kind).toBe('webgpu');
@@ -56,16 +56,17 @@ describe('making the node renderer (W1)', () => {
     expect(gpu.timestamps).toBe(false);
   });
 
-  it('refuses a WebGPU renderer Three fell back to WebGL2 with, unasked, and one whose device could not be made', async () => {
+  it('takes a renderer Three fell back to WebGL2 with, unasked, as WebGL2 (W6a), and refuses one whose device could not be made', async () => {
     stubInit(false, true);
     const disposed = vi.mocked(WebGPURenderer.prototype.dispose);
-    await expect(NodeBackend.make({ antialias: false, forceWebGL: false })).rejects.toThrow(/WebGPU device unavailable/);
-    expect(disposed).toHaveBeenCalledTimes(1);
+    const fellBack = await NodeBackend.make({ antialias: false, forceWebGL: false });
+    expect(fellBack.kind).toBe('webgl');
+    expect(disposed).not.toHaveBeenCalled();
     // A renderer whose init failed isn't disposed (Three's dispose would ask for init again, unhandled): vitest fails
     // the run on any unhandled rejection.
     vi.mocked(WebGPURenderer.prototype.init).mockRejectedValue(new Error('no device'));
     await expect(NodeBackend.make(WEBGL2)).rejects.toThrow('no device');
-    expect(disposed).toHaveBeenCalledTimes(1);
+    expect(disposed).not.toHaveBeenCalled();
   });
 });
 
@@ -115,6 +116,27 @@ describe('a lost device (W1)', () => {
     await vi.advanceTimersByTimeAsync(RENDER_BACKEND.recoverDelayMs * RENDER_BACKEND.recoverTries);
     expect(await cancelled).toBeNull();
     expect(dispose).toHaveBeenCalled();
+  });
+
+  it('falls back to WebGL2 when no new WebGPU device comes (W6a): the WebGPU tries first, then one on WebGL2', async () => {
+    vi.useFakeTimers();
+    stubInit();
+    const gpuOptions = { antialias: true, forceWebGL: false };
+    const node = await NodeBackend.make(gpuOptions);
+    const gl2 = await NodeBackend.make(WEBGL2);
+    const make = vi.fn((o: NodeBackendOptions) => (o.forceWebGL ? Promise.resolve(gl2) : Promise.reject(new Error('no device'))));
+    const asked = node.replacement(() => false, make);
+    await vi.advanceTimersByTimeAsync(RENDER_BACKEND.recoverDelayMs * (RENDER_BACKEND.recoverTries + 1));
+    expect(await asked).toBe(gl2);
+    expect(make.mock.calls.map(([o]) => o.forceWebGL)).toEqual([...Array.from({ length: RENDER_BACKEND.recoverTries }, () => false), true]);
+    expect(make).toHaveBeenLastCalledWith({ ...gpuOptions, forceWebGL: true });
+    // A WebGL2 renderer is replaced by WebGL2 alone (its tries are the same options).
+    const again = vi.fn((o: NodeBackendOptions) => Promise.reject(new Error(String(o.forceWebGL))));
+    const none = gl2.replacement(() => false, again);
+    await vi.advanceTimersByTimeAsync(RENDER_BACKEND.recoverDelayMs * (RENDER_BACKEND.recoverTries + 1));
+    expect(await none).toBeNull();
+    expect(again.mock.calls.every(([o]) => o.forceWebGL)).toBe(true);
+    expect(again).toHaveBeenCalledTimes(RENDER_BACKEND.recoverTries);
   });
 });
 
@@ -196,7 +218,7 @@ describe('the node renderer’s start (W1)', () => {
   it('makes the node renderer with the visit’s options: on ?forceWebGL, its WebGL2 back end', async () => {
     stubInit();
     const node = await startNode(WEBGL2);
-    expect(node.kind).toBe('webgpu-webgl2');
+    expect(node.kind).toBe('webgl');
     expect(node.renderer).toBeInstanceOf(WebGPURenderer);
     node.dispose();
   });

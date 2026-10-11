@@ -160,33 +160,38 @@ request. Each entry says where the contract lives, what it holds today and what 
     `graphics.<field>` store key, with no further contract change (`bakedLight` and `weathering` were added so).
 
   Pinned by `config/render.test.ts`, `config/graphics.test.ts`, `render/renderer.test.ts`.
-- **The renderer back end** (WebGPU overhaul W1; `config/renderBackend.ts`, `render/rendererStart.ts`). Graphics ›
-  Renderer picks Auto (the default), WebGPU or WebGL (owner, 2026-10-08: WebGPU is the default, behind no Dev
-  setting). `Game.create` loads `render/rendererStart.ts` (a small chunk with the adapter probe, the pick's rules and
-  texts and the Renderer row's builder) alongside the physics; the main chunk holds only the saved pick
-  (`config/rendererPick.ts`) and the empty row. On Auto or WebGPU it asks for a WebGPU adapter; only when one is given
-  (on Auto, a hardware one: a software adapter is slower than WebGL) does it load `render/webgpu/nodeBackend.ts` and
-  `three/webgpu` by a dynamic import (their own chunks, never the main one) and draw with `WebGPURenderer` on node
-  materials. No `navigator.gpu`, no adapter, or no device made is Three's `WebGLRenderer`,
-  quietly: the same renderer and draws as before W1, which is what the container, CI and every gate here run. The
-  WebGL pick never asks. `Renderer.backend` says what drew (`webgl`, `webgpu`, or `webgpu-webgl2` for the node
-  renderer on its WebGL2 back end under `?forceWebGL`), and `Renderer.stats` gives the draw counts read the same on
-  either. A pick applies from the next load. On the node path the world draws with node twins of its GLSL patches (W2,
+- **The renderer back end** (WebGPU overhaul W1, one renderer since W6a; `config/renderBackend.ts`,
+  `render/rendererStart.ts`). Graphics › Renderer picks Auto (the default), WebGPU or WebGL (owner, 2026-10-08: WebGPU
+  is the default, behind no Dev setting). `Game.create` loads `render/rendererStart.ts` (a small chunk with the adapter
+  probe, the pick's rules and texts and the Renderer row's builder), `render/webgpu/nodeBackend.ts` and `three/webgpu`
+  (their own chunks, never the main one) alongside the physics; the main chunk holds only the saved pick
+  (`config/rendererPick.ts`) and the empty row. The game draws with `WebGPURenderer` on node materials, always: on
+  Auto or WebGPU on a WebGPU device when the browser gives an adapter (on Auto, a hardware one: a software adapter is
+  slower than WebGL2) and a device, and on its WebGL2 back end otherwise (no `navigator.gpu`, no adapter, no device;
+  quietly) and on the WebGL pick, which never asks. The container, CI and every gate here draw on WebGL2 unless a run
+  asks for WebGPU. Three's `WebGLRenderer` path, its GLSL post passes and retro filter went in W6a; when neither back end
+  starts, the boot fails with the reason. `Renderer.backend` says what drew (`webgpu` or `webgl`, the WebGL2 back end;
+  `?forceWebGL` asks for it in the e2e build), and `Renderer.stats` gives the draw counts read the same on either. A
+  pick applies from the next load. The world draws with node twins of its GLSL patches (W2,
   `render/webgpu/worldTwins.ts`): Three's node library asks for a twin by the material's program key before building
   its own, and each twin reads the very uniform objects and config tuning its patch gives WebGL, per drawn object
   (`twinUniforms.ts`), so the two can't drift; sized points draw as instanced sprites (`pointSprites.ts`) and the
   prefiltered sky is made by the node renderer. Since W3 the figures' per-vertex finish has its twin
   (`figureNodes.ts`), the held replica reflects the same prefiltered sky, and on a real WebGPU device the night is lit
   by clustered lights (`nightLights.ts`, built on three/webgpu's Forward+ `ClusteredLightsNode`, with spot lights
-  added): every lamp and fire near the eye has a real light beside WebGL's fixed pool; WebGL and the node renderer's
-  WebGL2 back end keep the fixed pool alone. Where a browser's WebGPU differs from what Three expects (Chromium 141's
+  added): every lamp and fire near the eye has a real light beside the fixed pool; the WebGL2 back end keeps the fixed
+  pool alone. Where a browser's WebGPU differs from what Three expects (Chromium 141's
   swizzle member and its 3D-texture layer writes), `webgpuCompat.ts` tests the device and fits it. Since W4 every preset's post stack and the
-  retro filter draw as node passes (`render/webgpu/post/`), with WebGL's draws. `pipeline/webgpu-compare.mjs` scores both paths' pictures of the same views (W3: figures, first person and a
-  torch too, on both node back ends; W4: each preset's post views and the retro filter) against a pinned bar. A lost device (at boot or mid-match) is replaced by a new one, or by WebGL when none can be made:
-  the post stack, retro filter and sheen come back, `Renderer.lostToWebGL` is set and the row says so until the next
-  load. Pinned by `render/rendererStart.test.ts`, `render/rendererNode.test.ts`, `render/webgpu/nodeBackend.test.ts`,
+  retro filter draw as node passes (`render/webgpu/post/`), with the draws, targets and uniforms the WebGL path's had
+  (recorded from it before W6a deleted it: `render/webgpu/post/webglReference.ts`). `pipeline/webgpu-compare.mjs`
+  scores the node renderer's pictures of fixed views against the WebGL path's, drawn by the e2e build of its last commit
+  (W3: figures, first person and a torch too, on both back ends; W4: each preset's post views and the retro filter)
+  against a pinned bar. A lost device (at boot or mid-match) is replaced by a new one, or by the WebGL2 back end when
+  no WebGPU device can be made: the post stack, retro filter and sheen come back, `Renderer.lostToWebGL` is set and the
+  row says so until the next load. Pinned by `render/rendererStart.test.ts`, `render/rendererNode.test.ts`, `render/webgpu/nodeBackend.test.ts`,
   `render/webgpuFoundation.qa.test.ts`, `render/webgpu/worldTwins.test.ts`, `render/webgpu/figureTwins.test.ts`,
-  `render/webgpu/nightLights.test.ts`, `e2e/webgpu.spec.ts`, `e2e/webgpuWorld.spec.ts`, `e2e/webgpuLights.spec.ts`.
+  `render/webgpu/nightLights.test.ts`, `e2e/webgpu.spec.ts`, `e2e/webgpuDevice.spec.ts`, `e2e/webgpuWorld.spec.ts`,
+  `e2e/webgpuLights.spec.ts`.
 - **The settings store keys** (`settings/storage.ts`, `settings/dev.ts`). Saved under `airsoft.*` and versioned
   (`SETTINGS_VERSION` 1). Renaming a key needs a migration: one `case` in `migrate` (the per-setting keys of the first
   builds are its "version 0"). An object from a newer version is never read or overwritten. Fields are only ever

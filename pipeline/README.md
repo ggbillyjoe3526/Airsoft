@@ -136,13 +136,14 @@ baseline). **Frame-time gating is a manual owner step**: no automation runs `lap
 
 **The perf matrix** (M76, audit CORE-03; `perf-budget.json` › `matrix`): every map (Depot, Woodland, Neon Heights) in
 both modes (Elimination, Extraction) on Low, and Extraction on Medium on Woodland and Neon Heights (the heaviest
-scenes the game draws; Elimination there is the same field with fewer figures and no exits or cases). A combination
+scenes the game draws; Elimination there is the same field with fewer figures and no exits or cases), each on both back
+ends (W6: WebGL, then WebGPU). A combination
 runs only when the diff reaches it (`pipeline/perfMatrix.mjs`): a map's own files (`src/map/depot.ts`,
 `woodland.ts`, `neonHeights.ts`, the city's props and textures) reach that map's combinations, a map's Extraction data
 only its Extraction ones, Extraction's own code (`sim/extraction.ts`, `config/extraction.ts`, `ai/extraction*`, the
-exit and case renderers) every map's Extraction ones, and every other perf path all eight. Tests, test support (`testSupport.ts`, `src/ai/*Support.ts`) and the balance
+exit and case renderers) every map's Extraction ones, and every other perf path all of them (sixteen). Tests, test support (`testSupport.ts`, `src/ai/*Support.ts`) and the balance
 figures (`src/ai/balance/`) are not perf paths: they ship nothing. In the container a Low run
-takes about a minute and a half and a Medium one about four, so the whole matrix is about 20 minutes on top of the gate.
+takes about a minute and a half and a Medium one about four, so the WebGL half of the matrix is about 20 minutes on top of the gate.
 Budgets are `presets.<preset>` with `maps.<map>.<preset>` over them (owner decision 4 of audit 2: map-scoped Medium
 budgets for the big maps). `node pipeline/perf-run.mjs --map <map> --mode <mode> --preset <preset>` runs one by hand.
 
@@ -160,13 +161,17 @@ baseline's head is more than `baselineMaxLag` (20) commits behind HEAD, or not i
 `--preset all` runs Low, Medium, High and Ultra in turn (audit REN-15; Ultra since G5), so a change that makes High or
 Ultra dearer is seen too (`--preset ultra` alone for one). `--viewport WxH` sets the page's size (default 1920x1080).
 
-**The renderer** (WebGPU overhaul W1): `--renderer auto|webgl|webgpu` sets Graphics › Renderer before the page loads.
-`auto` is the default and what a player gets: WebGPU where the browser gives an adapter, WebGL otherwise (always WebGL
-in the container and on CI). `--force-webgl` puts the node renderer on its WebGL2 back end, how it runs in a container.
-Every result records `backend` (what drew: `webgl`, `webgpu` or `webgpu-webgl2`), and a run the node renderer drew
-names its files with it after the environment (`perf-laptop-webgpu-low.json`, baseline `laptop-webgpu.json`), beside
-the WebGL files the gate reads. On a machine with WebGPU, run the gate's laptop and desktop combinations with
-`--renderer webgl` by hand until the gate learns the back end (KNOWN_ISSUES).
+**The back end** (WebGPU overhaul W6): the game has one renderer, the node renderer, on a WebGPU device or on its own
+WebGL2 back end. `--backend webgl|webgpu` (default `webgl`) picks one: it saves Graphics › Renderer as that value before
+the page loads, and `webgl` adds `?forceWebGL`, the only way the node renderer runs in the container. `webgpu` in the
+container and on CI launches Chromium with `WEBGPU_ARGS` (`webgpuCompare.mjs`: SwiftShader's Vulkan, a software
+adapter, which only the WebGPU pick accepts). After the match starts the harness reads which back end drew; if it is not
+the one asked for, the run exits 1 and writes nothing. Every result records `backend`, and a WebGPU run names its files
+with it after the environment (`perf-laptop-webgpu-low.json`, baseline `laptop-webgpu.json`), beside the WebGL files.
+The matrix runs each combination once per back end listed in `perf-budget.json` (an entry's `backend`, `webgl` when
+absent; the log name ends `webgpu` for WebGPU, e.g. `woodland extraction medium webgpu`). Budgets are the preset's
+lines, then the map's, then `backends.<id>.presets.<preset>`, then `backends.<id>.maps.<map>.<preset>`; a later line
+wins. The WebGPU line there is a placeholder until it is set from measurements. Only the WebGL run writes `perf-<env>.json`.
 
 **The WebGPU comparison** (WebGPU overhaul W2 to W5; `webgpu-compare.mjs`, rules in `webgpuCompare.mjs`): draws fixed
 camera views of every map, by day and by night where it has night, on Medium and High, with the WebGL path and with the
@@ -175,6 +180,11 @@ the game clock stopped. W2's and W3's views keep only the post stack's output st
 sRGB; no bloom, AO or other pass), so what is compared is the materials. Each pair is scored (mean absolute difference per channel, and the share of pixels with a channel more than
 24 steps off) against the bar pinned in `webgpuCompare.mjs` and `webgpuCompare.test.mjs`, and saved side by side
 (WebGL, node, the difference ×4 with red over the threshold) with `scores.json`. Exits 1 when a pair fails. Port 4186.
+
+Since W6a the game has no WebGL path, so the WebGL side is the last commit that had one (`WEBGL_REFERENCE`, b10c006):
+the tool checks it out once as a git worktree in the system's temporary folder (with this clone's `node_modules`
+linked), builds it with `build-cached` and serves it on the next port. `--backend webgl` names the node renderer's
+WebGL2 back end (`?forceWebGL`), `webgpu` the WebGPU device, `all` both; `--noise` draws the reference against itself.
 
 W3 adds views with the figures drawn (`FIGURE_VIEWS`): first person on each map, everyone stood in rows near and far
 in each state (alive, calling a hit, out, leaving) by day and night, and a torch beam at night (yours and a
@@ -200,7 +210,7 @@ freeing the dressing gives back). A view fails when the grass's triangles pass t
 (`GRASS_TRIANGLES`) or the dressing adds more than two draws.
 
 ```
-PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium node pipeline/webgpu-compare.mjs --out <dir> [--only depot] [--quality high] [--views w2|w3|w4|w5|all] [--backend webgpu-webgl2|webgpu|all] [--full] [--noise] [--port 4186] [--post-views glow]
+PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium node pipeline/webgpu-compare.mjs --out <dir> [--only depot] [--quality high] [--views w2|w3|w4|w5|all] [--backend webgl|webgpu|all] [--full] [--noise] [--port 4186] [--post-views glow]
 ```
 
 `--full` also scores each view with WebGL's whole post stack (what a player sees today, for reference); `--noise`

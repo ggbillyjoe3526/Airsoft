@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import { ITEM_PICTURE } from '../config/itemPictures';
 import { AEG, CYBER_PISTOL, GAS_PISTOL } from '../config/replicas';
-import { finishPixels, fitParts, frameItem, ItemPictures, pictureKey, pictureSize, type PictureSubject, type PictureTarget, showOnly, toneMap, toSrgb8, visibleBox, webglPictureTarget } from './itemPictures';
+import { finishPixels, fitParts, frameItem, ItemPictures, pictureKey, pictureSize, type PictureSubject, type PictureTarget, showOnly, toneMap, toSrgb8, unpackPicturePixels, visibleBox, nodePictureTarget, type PictureRenderer } from './itemPictures';
 import { buildReplicaModels } from './replicaModels';
 
 const HIGH = { replica: 'high', hands: 'high' } as const;
@@ -17,7 +17,7 @@ function fakeTarget(): PictureTarget & { draws: { meshes: number; lights: number
       scene.traverseVisible((o) => o instanceof THREE.Mesh && meshes++);
       const lights = scene.children.filter((o) => o instanceof THREE.Light).length;
       t.draws.push({ meshes, lights, aspect: (camera as THREE.PerspectiveCamera).aspect, width, height });
-      return new Float32Array(width * height * 4).fill(0.2);
+      return Promise.resolve(new Float32Array(width * height * 4).fill(0.2));
     },
     encode(_rgba: Uint8ClampedArray, width: number, height: number) {
       return `picture:${t.draws.length}:${width}x${height}`;
@@ -29,15 +29,19 @@ function fakeTarget(): PictureTarget & { draws: { meshes: number; lights: number
   return t;
 }
 
-/** A scheduler the test runs by hand: each `frame()` runs the work queued for the next frame. */
-function manualFrames(): { schedule: (work: () => void) => void; frame: () => void; pending: () => number } {
+/**
+ * A scheduler the test runs by hand: each `frame()` runs the work queued for the next frame, then lets the picture's
+ * read come back (the node renderer reads pixels asynchronously, W6).
+ */
+function manualFrames(): { schedule: (work: () => void) => void; frame: () => Promise<void>; pending: () => number } {
   let queued: (() => void)[] = [];
   return {
     schedule: (work) => queued.push(work),
-    frame: () => {
+    frame: async () => {
       const now = queued;
       queued = [];
       for (const work of now) work();
+      await new Promise((done) => setTimeout(done, 0));
     },
     pending: () => queued.length,
   };
@@ -75,10 +79,10 @@ describe('item pictures (G2)', () => {
     expect(pictures.picture(rifle)).toBe(a);
     expect(target.draws).toHaveLength(0); // nothing drawn until a frame comes
     expect(frames.pending()).toBe(1);
-    frames.frame();
+    await frames.frame();
     expect(target.draws).toHaveLength(1);
     expect(pictures.waiting).toBe(1);
-    frames.frame();
+    await frames.frame();
     expect(target.draws).toHaveLength(2);
     expect(frames.pending()).toBe(0); // nothing left: no frame asked for
     await expect(a).resolves.toBe(`picture:1:${ITEM_PICTURE.sizes.wide.join('x')}`);
@@ -107,19 +111,20 @@ describe('item pictures (G2)', () => {
     const frames = manualFrames();
     const pictures = new ItemPictures(target, frames.schedule);
     const first = pictures.picture(rifle);
-    frames.frame();
-    await expect(first).rejects.toThrow('context lost');
+    const failed = expect(first).rejects.toThrow('context lost');
+    await frames.frame();
+    await failed;
     fail = false;
     const again = pictures.picture(rifle);
     expect(again).not.toBe(first);
-    frames.frame();
+    await frames.frame();
     await expect(again).resolves.toMatch(/^picture:/);
     // The failed draw's model left the scene: the retry draws what a clean first draw does.
     const clean = fakeTarget();
     const cleanFrames = manualFrames();
     const fresh = new ItemPictures(clean, cleanFrames.schedule);
     const once = fresh.picture(rifle);
-    cleanFrames.frame();
+    await cleanFrames.frame();
     await once;
     expect(target.draws.at(-1)!.meshes).toBe(clean.draws[0]!.meshes);
     fresh.dispose();
@@ -227,31 +232,66 @@ describe('item pictures (G2)', () => {
   });
 });
 
-describe('the WebGL picture target on a lost context (BP2)', () => {
-  it('fails the picture rather than handing back the blank pixels a lost context reads, and puts the target back', () => {
-    vi.stubGlobal('document', { createElement: () => ({}) });
-    let lost = false;
-    const into: (THREE.WebGLRenderTarget | null)[] = [];
-    const gl = {
+describe('the node renderer’s picture target (W6)', () => {
+  /** A renderer that records where it drew and hands back `read` for each picture. */
+  function fakeRenderer(read: () => Promise<ArrayBufferView>, webgl = false): PictureRenderer & { into: (THREE.RenderTarget | null)[] } {
+    const into: (THREE.RenderTarget | null)[] = [];
+    return {
+      into,
+      backend: webgl ? { isWebGLBackend: true } : {},
       getRenderTarget: () => null,
       getClearColor: (c: THREE.Color) => c,
       getClearAlpha: () => 1,
-      setRenderTarget: (t: THREE.WebGLRenderTarget | null) => void into.push(t),
+      setRenderTarget: (t: THREE.RenderTarget | null) => void into.push(t),
       setClearColor: () => undefined,
       clear: () => undefined,
       render: () => undefined,
-      readRenderTargetPixels: () => undefined,
-      getContext: () => ({ isContextLost: () => lost }),
-    } as unknown as THREE.WebGLRenderer;
-    const target = webglPictureTarget(gl);
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera();
-    expect(target.draw(scene, camera, 4, 2)).toHaveLength(4 * 2 * 4);
-    lost = true;
-    expect(() => target.draw(scene, camera, 4, 2)).toThrow('lost');
-    expect(into.at(-1)).toBeNull();
+      readRenderTargetPixelsAsync: () => read(),
+    };
+  }
+
+  it('draws into a multisampled half-float target, puts the canvas back, and reads the pixels back', async () => {
+    vi.stubGlobal('document', { createElement: () => ({}) });
+    const halves = new Uint16Array(4 * 2 * 4).fill(THREE.DataUtils.toHalfFloat(0.5));
+    const gl = fakeRenderer(() => Promise.resolve(halves), true);
+    const target = nodePictureTarget(gl);
+    const pixels = await target.draw(new THREE.Scene(), new THREE.PerspectiveCamera(), 4, 2);
+    expect(pixels).toHaveLength(4 * 2 * 4);
+    expect(pixels[0]).toBeCloseTo(0.5, 3);
+    const drawn = gl.into[0]!;
+    expect(drawn.texture.type).toBe(THREE.HalfFloatType);
+    expect(drawn.samples).toBe(ITEM_PICTURE.samples);
+    expect(gl.into.at(-1)).toBeNull();
     target.dispose();
     vi.unstubAllGlobals();
+  });
+
+  it('fails the picture when the read fails (a lost device), so it is asked for again, with the canvas put back (BP2)', async () => {
+    vi.stubGlobal('document', { createElement: () => ({}) });
+    const gl = fakeRenderer(() => Promise.reject(new Error('device lost')));
+    const target = nodePictureTarget(gl);
+    await expect(target.draw(new THREE.Scene(), new THREE.PerspectiveCamera(), 4, 2)).rejects.toThrow('device lost');
+    expect(gl.into.at(-1)).toBeNull();
+    target.dispose();
+    vi.unstubAllGlobals();
+  });
+
+  it('unpacks WebGPU’s padded, top-first rows and WebGL2’s tight, bottom-first ones to the same bottom-first floats', () => {
+    // 3 × 2 half-float RGBA: 24 bytes a row, padded to 256 on WebGPU (128 values a row).
+    const width = 3;
+    const height = 2;
+    const value = (row: number, x: number) => THREE.DataUtils.toHalfFloat(row + x / 100);
+    const tight = new Uint16Array(width * height * 4);
+    for (let y = 0; y < height; y++) for (let x = 0; x < width * 4; x++) tight[y * width * 4 + x] = value(y, x);
+    const padded = new Uint16Array(128 * (height - 1) + width * 4);
+    // WebGPU: the bottom row (row 0) comes last.
+    for (let y = 0; y < height; y++) for (let x = 0; x < width * 4; x++) padded[(height - 1 - y) * 128 + x] = value(y, x);
+    const gl2 = unpackPicturePixels(tight, width, height, false);
+    const gpu = unpackPicturePixels(padded, width, height, true);
+    expect(Array.from(gpu)).toEqual(Array.from(gl2));
+    expect(gl2[width * 4]).toBeCloseTo(1, 2);
+    // Floats as they are.
+    expect(Array.from(unpackPicturePixels(new Float32Array([1, 2, 3, 4]), 1, 1, true))).toEqual([1, 2, 3, 4]);
   });
 });
 
@@ -269,12 +309,12 @@ describe('item pictures after dispose (G2)', () => {
     const pictures = new ItemPictures(target, frames.schedule);
     const first = pictures.picture(rifle);
     const second = pictures.picture({ ...rifle, scheme: 'acid' });
-    frames.frame(); // one drawn, the next is asked for
+    await frames.frame(); // one drawn, the next is asked for
     expect(target.draws).toHaveLength(1);
     expect(frames.pending()).toBe(1);
     pictures.dispose();
     expect(pictures.waiting).toBe(0);
-    frames.frame(); // the frame that was already asked for finds nothing to do
+    await frames.frame(); // the frame that was already asked for finds nothing to do
     expect(target.draws).toHaveLength(1);
     expect(frames.pending()).toBe(0);
     await expect(first).resolves.toMatch(/^picture:1:/);
@@ -289,8 +329,8 @@ describe('item pictures after dispose (G2)', () => {
     pictures.dispose();
     const late = pictures.picture(rifle);
     expect(frames.pending()).toBe(0);
-    frames.frame();
-    frames.frame();
+    await frames.frame();
+    await frames.frame();
     expect(target.draws).toHaveLength(0);
     expect(await stillPending(late)).toBe(true);
   });

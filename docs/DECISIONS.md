@@ -166,6 +166,18 @@ replaces its line; the old one stays findable in the archive or in git.
   rule: on the owner's laptop and desktop, WebGPU is no slower than his WebGL baseline on any map, mode and preset, and
   Low still holds 60 fps at 1080p on the laptop. Until he says otherwise, Low runs on WebGPU too and a Renderer row
   (Auto, WebGPU, WebGL) joins `Settings › Graphics`. Milestones: `docs/ROADMAP.md`.
+- **WebGPU is the default renderer, not a Dev setting (owner, 2026-10-08).** A public Renderer row in
+  `Settings › Graphics` offers Auto, WebGPU and WebGL. Since W6 (2026-10-11) there is one renderer: WebGL means the node
+  renderer's WebGL2 back end, used when the browser has no WebGPU, the player picks it, or the GPU is lost and no new
+  device comes. The old WebGLRenderer and its GLSL post passes are gone.
+- **A software WebGPU adapter is judged on the look bar's pixel share only (2026-10-09, W3).** SwiftShader's WebGPU
+  differs from its WebGL in noise, not in what is drawn, so the container checks that at most 1 % of pixels differ by
+  more than 24; the mean is judged on hardware. The nearest fire's shadow, other players' torches as real lights and the
+  neon signs' coloured light stay out of the node renderer.
+- **On a software adapter the Dev retro filter's views are judged by eye (2026-10-10, W4).** Its 8-colour palette turns
+  sub-pixel noise into whole steps, so the numbers say nothing there.
+- **Woodland's triangle lines stayed as they were until the budgets split per renderer (owner, card, 2026-10-10, 15:18:
+  "Keep for now"; W5).**
 - **The laser beam stays off on every preset (owner, 2026-10-05, 07:06).** A beam with no dot stops short of what it
   points at.
 - **Torches cast shadows on High and Ultra only; Low keeps today's beams (owner, 2026-10-06).** Keeps Low's 60 fps; an
@@ -208,7 +220,10 @@ replaces its line; the old one stays findable in the archive or in git.
   2026-10-04).** Nothing on the HUD; the dust rides it.
 - **BBs always ricochet; the Ricochets count setting only decides whether a ricochet knocks someone out, and it is off
   by default (owner, 2026-10-03 and 2026-10-04).** Fields differ, and a bounce knocking you out can feel unfair in a
-  game. Your own ricochets can hit you and, with the setting on, knock you out (owner, 2026-10-05, 07:06).
+  game. Your own ricochets can hit you and, with the setting on, knock you out (owner, 2026-10-05, 07:06). Bounces are
+  weaker since G12 (owner, decision card, 2026-10-10: "Bounced BBs lose more speed, so fewer of them knock players
+  out"): concrete gives back 0.3 of the speed into it and steel 0.41, three quarters of M20's values; the cap on the
+  share of hits that are ricochets stays 0.25 (`ai/depotMatchSupport.ts`), not raised.
 - **Accuracy depends on stance and movement, by one rule for bots and the player (2026-10-02).** Still and crouched is
   tightest; running, sprinting and the air are loosest. The aim locks on almost at once when you stop (owner,
   2026-10-03: "too slow and smooth", he wanted an "instant lock").
@@ -468,7 +483,8 @@ replaces its line; the old one stays findable in the archive or in git.
   game chunk's default is 1,000 kB (warning from 90 %) and Rapier's 4,550 kB. Bumped from 950 kB on 2026-10-10 (FP1):
   main's game chunk was 950.2 kB after G11 and G12, already over, and FP1's hand holds made it 951.1 (950.3 once W4
   moved WebGL's retro filter to a chunk of its own); the WebGPU overhaul's step 6 (the old renderer removed) is where it
-  should shrink again.
+  should shrink again. W6a (2026-10-11) took it to 946 kB; the line stays 1,000 kB until W6b removes the world's GLSL
+  patches, then drops back if the chunk has room under 950.
 - **Production builds ship Brotli and gzip copies of their files (owner, 2026-10-04: Brotli now, `.wasm` later).**
 - **Level blocks collide as closed triangle meshes with `FIX_INTERNAL_EDGES`, not cuboids (2026-09-28).** Rapier's
   capsule controller sinks into any cuboid along its diagonals, and without the flag face-diagonal edges give ghost

@@ -225,7 +225,7 @@ else if (!perfRequired) {
   for (const combo of perfRuns) {
     const name = runName(combo);
     // --expose-gc for the harness's own process too (the page gets gc() from its own flags).
-    const r = run(`perf-${name.replaceAll(' ', '-')}`, 'node', ['--expose-gc', 'pipeline/perf-run.mjs', '--env', options.env, '--map', combo.map, '--mode', combo.mode, '--preset', combo.preset]);
+    const r = run(`perf-${name.replaceAll(' ', '-')}`, 'node', ['--expose-gc', 'pipeline/perf-run.mjs', '--env', options.env, '--map', combo.map, '--mode', combo.mode, '--preset', combo.preset, '--backend', combo.backend ?? 'webgl']);
     const runFile = join(OUT, runFileName(options.env, combo));
     let summary = { run: name, pass: r.ok, ms: r.ms, log: r.log };
     try {
@@ -234,7 +234,7 @@ else if (!perfRequired) {
       const baselineName = baselineFileName(options.env, combo, budgets.budgetPreset);
       const baselinePath = join(ROOT, 'pipeline', 'baseline', baselineName);
       const baseline = existsSync(baselinePath) ? JSON.parse(readFileSync(baselinePath, 'utf8')) : null;
-      const { over, worse, note: baselineNote } = judgeRun({ run: combo, metrics: result.metrics, budget: budgetFor(budgets, combo.map, combo.preset), baseline, baselineName, frameTimesGated });
+      const { over, worse, note: baselineNote } = judgeRun({ run: combo, metrics: result.metrics, budget: budgetFor(budgets, combo.map, combo.preset, combo.backend), baseline, baselineName, frameTimesGated });
       if (baseline) {
         const warning = baselineLagWarning(baselineName, baseline.head, baselineLag(baseline.head, (h) => git('rev-list', '--count', `${h}..HEAD`)), budgets.baselineMaxLag ?? 20);
         if (warning) warnings.push(warning);

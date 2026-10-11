@@ -4,8 +4,8 @@ import { TONE_MAPPING, type ToneMappingId } from '../config/render';
 
 /**
  * The Renderer's pure helpers (render/renderer.ts re-exports them): the field of view's maths, the tone mapping table,
- * the idle warm-up of the surface textures, and letting go of what a retiring renderer has drawn (an antialiasing swap,
- * a lost WebGPU device's replacement).
+ * the idle warm-up of the surface textures, and letting go of what a retiring renderer has drawn (a lost device's
+ * replacement).
  */
 
 const REFERENCE_ASPECT = 16 / 9;
@@ -61,24 +61,17 @@ export function warmSurfacesInIdle<Id>(ids: readonly Id[], draw: (id: Id) => THR
   idle(step);
 }
 
-/** A renderer's own record of each material (WebGLRenderer.properties): the uniforms it binds, its own textures among them. */
-export interface RendererProperties {
-  get(object: object): unknown;
-}
-
 /**
- * What `handOverRenderer` needs of the renderer it retires (a stub stands in for it in tests): a WebGL renderer, or a
- * lost node renderer (W1), which has no `properties` of this kind and frees its own context or device on dispose.
+ * What `handOverRenderer` needs of the renderer it retires (a stub stands in for it in tests): a lost node renderer
+ * (W1), which frees its own context or device on dispose.
  */
 export interface RetiringRenderer {
   readonly domElement: { replaceWith(next: HTMLCanvasElement): void };
-  readonly properties?: RendererProperties;
   dispose(): void;
-  forceContextLoss?(): void;
 }
 
-/** The renderer drawing the game: Three's WebGLRenderer, or the node renderer (WebGPU overhaul W1). */
-export type DrawingRenderer = THREE.WebGLRenderer | WebGPURenderer;
+/** The renderer drawing the game: the node renderer (WebGPU overhaul W1; the only one since W6). */
+export type DrawingRenderer = WebGPURenderer;
 
 /** This frame's draw calls and triangles, and the programs, geometries and textures held (the debug overlay). */
 export interface DrawStats {
@@ -89,25 +82,13 @@ export interface DrawStats {
   textures: number;
 }
 
-/** A WebGL renderer's counts (`info`: both passes, as Renderer.render counts them) into `out`, which is returned. */
-export function readWebGLStats(info: THREE.WebGLInfo, out: DrawStats): DrawStats {
-  out.calls = info.render.calls;
-  out.triangles = info.render.triangles;
-  out.programs = info.programs?.length ?? 0;
-  out.geometries = info.memory.geometries;
-  out.textures = info.memory.textures;
-  return out;
-}
-
 /**
- * Lets go of everything a WebGL renderer has seen under `root`: each geometry, material, texture (a material's maps and
- * a shader's texture uniforms, a scene's background and environment), instanced mesh and light shadow map is disposed,
- * which drops the renderer's GPU copy and the dispose listener it keeps on the object. With the renderer's `properties`,
- * the textures it binds to a material by itself go too (Three's shared DFG lookup table for standard materials, which
- * would otherwise keep every old renderer alive). Nothing on the CPU side is lost: the next renderer to draw them uploads
- * them again from their copies (a shadow map is made again).
+ * Lets go of everything a renderer has seen under `root`: each geometry, material, texture (a material's maps and a
+ * material's texture uniforms, a scene's background and environment), instanced mesh and light shadow map is disposed,
+ * which drops the renderer's GPU copy and the dispose listener it keeps on the object. Nothing on the CPU side is lost:
+ * the next renderer to draw them uploads them again from their copies (a shadow map is made again).
  */
-export function releaseGpuResources(root: THREE.Object3D, properties?: RendererProperties): void {
+export function releaseGpuResources(root: THREE.Object3D): void {
   if (root instanceof THREE.Scene) {
     disposeIfTexture(root.background);
     disposeIfTexture(root.environment);
@@ -116,7 +97,7 @@ export function releaseGpuResources(root: THREE.Object3D, properties?: RendererP
     if (o instanceof THREE.InstancedMesh) o.dispose();
     const { geometry, material } = o as Partial<THREE.Mesh>;
     geometry?.dispose();
-    if (material) for (const m of Array.isArray(material) ? material : [material]) releaseMaterial(m, properties);
+    if (material) for (const m of Array.isArray(material) ? material : [material]) releaseMaterial(m);
     const shadow = (o as Partial<THREE.DirectionalLight>).shadow;
     if (shadow?.map) {
       shadow.map.dispose();
@@ -125,10 +106,9 @@ export function releaseGpuResources(root: THREE.Object3D, properties?: RendererP
   });
 }
 
-function releaseMaterial(material: THREE.Material, properties: RendererProperties | undefined): void {
+function releaseMaterial(material: THREE.Material): void {
   for (const value of Object.values(material)) disposeIfTexture(value);
-  disposeUniformTextures((material as Partial<THREE.ShaderMaterial>).uniforms);
-  disposeUniformTextures((properties?.get(material) as { uniforms?: Record<string, THREE.IUniform> } | undefined)?.uniforms);
+  disposeUniformTextures((material as { uniforms?: Record<string, THREE.IUniform> }).uniforms);
   material.dispose();
 }
 
@@ -141,15 +121,13 @@ function disposeIfTexture(value: unknown): void {
 }
 
 /**
- * Antialiasing's context swap (REN-04, REN-24): `next` takes `old`'s place on the page, and `old` is freed with its
- * context. Three.js keeps a dispose listener (holding its renderer) on every geometry, material, texture, instanced mesh
- * and render target it has drawn, and never removes them on its own dispose(): without releasing `roots` first, every
- * swap would keep the old renderer, its lost context and its canvas alive for as long as the scene lives.
+ * A lost device's replacement (W1, REN-24): `next` takes `old`'s place on the page, and `old` is freed with its device.
+ * Three.js keeps a dispose listener (holding its renderer) on every geometry, material, texture, instanced mesh and
+ * render target it has drawn, and never removes them on its own dispose(): without releasing `roots` first, every swap
+ * would keep the old renderer, its lost device and its canvas alive for as long as the scene lives.
  */
 export function handOverRenderer(old: RetiringRenderer, next: { domElement: HTMLCanvasElement }, roots: readonly THREE.Object3D[]): void {
-  for (const root of roots) releaseGpuResources(root, old.properties);
+  for (const root of roots) releaseGpuResources(root);
   old.domElement.replaceWith(next.domElement);
   old.dispose();
-  // Frees the context at once rather than when the canvas is collected (REN-24): browsers cap live contexts.
-  old.forceContextLoss?.();
 }

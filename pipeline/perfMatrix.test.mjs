@@ -6,18 +6,28 @@ import { baselineFileName, baselineLag, baselineLagWarning, budgetFor, isPerfPat
 const budgets = JSON.parse(readFileSync('pipeline/perf-budget.json', 'utf8'));
 const matrix = budgets.matrix;
 const names = (files, opts) => selectPerfRuns(files, matrix, opts).map(runName);
+/** A list of WebGL combination names, then the same on WebGPU (the matrix lists the WebGL ones first). */
+const both = (list) => [...list, ...list.map((n) => `${n} webgpu`)];
+const webglRuns = matrix.filter((run) => (run.backend ?? 'webgl') === 'webgl');
 
 describe('the perf gate\'s matrix (perf-budget.json, M76, audit CORE-03)', () => {
   it('holds every map in both modes on Low and Extraction on Medium on the big maps', () => {
-    expect(matrix.map(runName).sort()).toEqual([
+    expect(webglRuns.map(runName).sort()).toEqual([
       'depot elimination low', 'depot extraction low',
       'neon elimination low', 'neon extraction low', 'neon extraction medium',
       'woodland elimination low', 'woodland extraction low', 'woodland extraction medium',
     ]);
   });
 
+  it('runs the same eight combinations on WebGPU, after the WebGL ones (WebGPU overhaul W6)', () => {
+    const gpu = matrix.filter((run) => run.backend === 'webgpu');
+    expect(gpu.map(({ map, mode, preset }) => ({ map, mode, preset }))).toEqual(webglRuns.map(({ map, mode, preset }) => ({ map, mode, preset })));
+    expect(matrix.map((run) => run.backend ?? 'webgl')).toEqual([...webglRuns.map(() => 'webgl'), ...gpu.map(() => 'webgpu')]);
+    expect(matrix.map(runName)).toEqual(both(webglRuns.map(runName)));
+  });
+
   it('has a committed container baseline for every combination, recorded on that map, mode and preset', () => {
-    for (const run of matrix) {
+    for (const run of webglRuns) {
       const path = join('pipeline', 'baseline', baselineFileName('container', run, budgets.budgetPreset));
       expect(existsSync(path), path).toBe(true);
       const baseline = JSON.parse(readFileSync(path, 'utf8'));
@@ -51,21 +61,21 @@ describe('which combinations a diff runs (pipeline/perfMatrix.mjs)', () => {
   });
 
   it('runs only a map\'s combinations for that map\'s own files', () => {
-    expect(names(['src/map/woodland.ts'])).toEqual(['woodland elimination low', 'woodland extraction low', 'woodland extraction medium']);
-    expect(names(['src/map/depot.ts'])).toEqual(['depot elimination low', 'depot extraction low']);
-    expect(names(['src/render/cityProps.ts', 'src/map/neonHeights.ts'])).toEqual(['neon elimination low', 'neon extraction low', 'neon extraction medium']);
+    expect(names(['src/map/woodland.ts'])).toEqual(both(['woodland elimination low', 'woodland extraction low', 'woodland extraction medium']));
+    expect(names(['src/map/depot.ts'])).toEqual(both(['depot elimination low', 'depot extraction low']));
+    expect(names(['src/render/cityProps.ts', 'src/map/neonHeights.ts'])).toEqual(both(['neon elimination low', 'neon extraction low', 'neon extraction medium']));
   });
 
   it('runs a map\'s Extraction combinations for its Extraction data, and every map\'s for Extraction\'s own code', () => {
-    expect(names(['src/map/woodlandExtraction.ts'])).toEqual(['woodland extraction low', 'woodland extraction medium']);
-    expect(names(['src/map/neonHeightsExtraction.ts'])).toEqual(['neon extraction low', 'neon extraction medium']);
-    expect(names(['src/sim/extraction.ts'])).toEqual(['depot extraction low', 'woodland extraction low', 'neon extraction low', 'woodland extraction medium', 'neon extraction medium']);
+    expect(names(['src/map/woodlandExtraction.ts'])).toEqual(both(['woodland extraction low', 'woodland extraction medium']));
+    expect(names(['src/map/neonHeightsExtraction.ts'])).toEqual(both(['neon extraction low', 'neon extraction medium']));
+    expect(names(['src/sim/extraction.ts'])).toEqual(both(['depot extraction low', 'woodland extraction low', 'neon extraction low', 'woodland extraction medium', 'neon extraction medium']));
     expect(perfScope('src/ai/extractionRoles.ts')).toEqual({ mode: 'extraction' });
     expect(perfScope('src/render/exitRenderer.ts')).toEqual({ mode: 'extraction' });
   });
 
   it('unions the scopes of several files, in the matrix\'s order', () => {
-    expect(names(['src/map/depot.ts', 'src/map/woodlandExtraction.ts'])).toEqual(['depot elimination low', 'depot extraction low', 'woodland extraction low', 'woodland extraction medium']);
+    expect(names(['src/map/depot.ts', 'src/map/woodlandExtraction.ts'])).toEqual(both(['depot elimination low', 'depot extraction low', 'woodland extraction low', 'woodland extraction medium']));
     expect(names(['src/map/depot.ts', 'src/render/renderer.ts'])).toEqual(matrix.map(runName));
   });
 
@@ -90,7 +100,12 @@ describe('each combination\'s files and budget', () => {
     expect(rendererTag(undefined)).toBe('');
     expect(rendererTag('webgl')).toBe('');
     expect(runFileName('container', { backend: 'webgl', map: 'depot', mode: 'elimination', preset: 'low' })).toBe('perf-container-low.json');
-    expect(runFileName('container', { backend: 'webgpu-webgl2', map: 'depot', mode: 'elimination', preset: 'low' })).toBe('perf-container-webgpu-webgl2-low.json');
+    expect(runFileName('container', { backend: 'webgpu', map: 'depot', mode: 'elimination', preset: 'low' })).toBe('perf-container-webgpu-low.json');
+    expect(rendererTag('webgpu')).toBe('-webgpu');
+    // Names carry the back end only when it is not WebGL, so the existing names stay.
+    expect(runName({ map: 'woodland', mode: 'extraction', preset: 'medium' })).toBe('woodland extraction medium');
+    expect(runName({ map: 'woodland', mode: 'extraction', preset: 'medium', backend: 'webgl' })).toBe('woodland extraction medium');
+    expect(runName({ map: 'woodland', mode: 'extraction', preset: 'medium', backend: 'webgpu' })).toBe('woodland extraction medium webgpu');
     expect(runFileName('laptop', { backend: 'webgpu', map: 'neon', mode: 'extraction', preset: 'high' })).toBe('perf-laptop-webgpu-neon-extraction-high.json');
     expect(baselineFileName('laptop', { backend: 'webgpu', map: 'depot', mode: 'elimination', preset: 'low' }, 'low')).toBe('laptop-webgpu.json');
     expect(baselineFileName('laptop', { backend: 'webgpu', map: 'woodland', mode: 'elimination', preset: 'ultra' }, 'low')).toBe('laptop-webgpu-woodland-ultra.json');
@@ -102,6 +117,13 @@ describe('each combination\'s files and budget', () => {
     expect(budgetFor(b, 'neon', 'low')).toEqual({ drawCalls: 100, triangles: 150000 });
     expect(budgetFor(b, 'depot', 'medium')).toEqual({ drawCalls: 120, triangles: 200000 });
     expect(budgetFor(b, 'depot', 'ultra')).toEqual({});
+    // The back end's lines come last: its presets' lines over the map's, its maps' lines over those (W6).
+    const g = { ...b, backends: { webgpu: { presets: { medium: { triangles: 250000 } }, maps: { neon: { medium: { drawCalls: 150 } } } } } };
+    expect(budgetFor(g, 'neon', 'medium')).toEqual({ drawCalls: 130, triangles: 200000 });
+    expect(budgetFor(g, 'neon', 'medium', 'webgl')).toEqual({ drawCalls: 130, triangles: 200000 });
+    expect(budgetFor(g, 'neon', 'medium', 'webgpu')).toEqual({ drawCalls: 150, triangles: 250000 });
+    expect(budgetFor(g, 'depot', 'medium', 'webgpu')).toEqual({ drawCalls: 120, triangles: 250000 });
+    expect(budgetFor(g, 'neon', 'low', 'webgpu')).toEqual({ drawCalls: 100, triangles: 150000 });
     // The real file scopes Medium for both big maps.
     expect(Object.keys(budgets.maps.woodland.medium).length).toBeGreaterThan(0);
     expect(Object.keys(budgets.maps.neon.medium).length).toBeGreaterThan(0);

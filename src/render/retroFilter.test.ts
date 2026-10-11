@@ -1,7 +1,5 @@
-import * as THREE from 'three';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { bayerThreshold, quantize, retroPixelAngle, retroTargetSize } from './retroFilter';
-import { RetroFilter } from './retroFilterWebGL';
 
 describe('retro pixel filter maths (M42)', () => {
   it('gives the width of one retro pixel as a tangent of the view, so BBs can be kept a couple of them wide', () => {
@@ -73,51 +71,5 @@ describe('retro pixel filter maths (M42)', () => {
     const cells = new Set<number>();
     for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) cells.add(quantize(0.5 / 5, 6, bayerThreshold(x, y)));
     expect(cells.size).toBe(2);
-  });
-});
-
-describe('RetroFilter', () => {
-  const look = { pixelSize: 4, levels: 6 };
-  const uniforms = (f: RetroFilter) => (f as unknown as { material: THREE.ShaderMaterial }).material.uniforms;
-
-  afterEach(() => vi.restoreAllMocks());
-
-  it('starts with the look, nearest filtering and no smoothing on its target', () => {
-    const f = new RetroFilter(look, true);
-    expect(f.renderTarget.texture.magFilter).toBe(THREE.NearestFilter);
-    expect(f.renderTarget.texture.minFilter).toBe(THREE.NearestFilter);
-    expect(f.renderTarget.texture.type).toBe(THREE.HalfFloatType);
-    expect(uniforms(f).uLevels!.value).toBe(6);
-    expect(uniforms(f).uPixel!.value).toBe(4);
-    f.dispose();
-    expect(new RetroFilter(look, false).renderTarget.texture.type).toBe(THREE.UnsignedByteType);
-  });
-
-  it('resizes its target and the shader to the page: a texel per retro pixel, a retro pixel being pixelSize × ratio device pixels', () => {
-    const f = new RetroFilter(look, true);
-    f.resize(1366, 768, 2);
-    expect([f.renderTarget.width, f.renderTarget.height]).toEqual([342, 192]);
-    const size = uniforms(f).uViewSize!.value as THREE.Vector2;
-    expect([size.x, size.y]).toEqual([342, 192]);
-    expect(uniforms(f).uPixel!.value).toBe(8);
-    // A new look takes effect with the next resize (the pixel size) and at once (the levels).
-    f.setLook({ pixelSize: 8, levels: 3 });
-    expect(uniforms(f).uLevels!.value).toBe(3);
-    f.resize(1366, 768, 1);
-    expect([f.renderTarget.width, f.renderTarget.height]).toEqual([171, 96]);
-    expect(uniforms(f).uPixel!.value).toBe(8);
-    f.dispose();
-  });
-
-  it('frees its target, material and geometry on dispose, once each', () => {
-    const f = new RetroFilter(look, true);
-    const inner = f as unknown as { material: THREE.ShaderMaterial; quad: THREE.Mesh };
-    const target = vi.spyOn(f.renderTarget, 'dispose');
-    const material = vi.spyOn(inner.material, 'dispose');
-    const geometry = vi.spyOn(inner.quad.geometry, 'dispose');
-    f.dispose();
-    expect(target).toHaveBeenCalledTimes(1);
-    expect(material).toHaveBeenCalledTimes(1);
-    expect(geometry).toHaveBeenCalledTimes(1);
   });
 });

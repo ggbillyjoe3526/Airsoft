@@ -46,7 +46,7 @@ export async function boot(page: Page, map: string, light: string, webgpu = fals
   await page.waitForSelector('.menu-title-start', { timeout: 60_000 });
   const backend: string = await page.evaluate(() => (window as Any).airsoft.renderer.backend);
   if (webgpu && backend !== 'webgpu') return null;
-  expect(backend).toBe(webgpu ? 'webgpu' : 'webgpu-webgl2');
+  expect(backend).toBe(webgpu ? 'webgpu' : 'webgl');
   await page.locator('.menu-title-start').click();
   const setup = page.locator('.menu-setup');
   await setup.locator('.map-cards .choice-card.selected').waitFor({ timeout: 60_000 });

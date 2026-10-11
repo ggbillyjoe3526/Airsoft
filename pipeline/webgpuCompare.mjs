@@ -77,12 +77,18 @@ export function isFigureView(view) {
 }
 
 /**
- * The node renderer's back ends compared: its WebGL2 back end (`?forceWebGL`, any container) and WebGPU itself, where
- * the browser offers a device. `WEBGPU_ARGS` are the Chromium switches that give the container a WebGPU device
+ * The node renderer's back ends compared: its WebGL2 back end (`webgl`, `?forceWebGL`, any container) and WebGPU itself,
+ * where the browser offers a device. `WEBGPU_ARGS` are the Chromium switches that give the container a WebGPU device
  * (SwiftShader's Vulkan, a software adapter, which the WebGPU pick accepts and Auto does not); without them Chromium
  * reaches WebGPU only on a real GPU.
  */
-export const COMPARE_BACKENDS = ['webgpu-webgl2', 'webgpu'];
+export const COMPARE_BACKENDS = ['webgl', 'webgpu'];
+
+/**
+ * What every pair is held to since W6a deleted the WebGL path: Three's WebGLRenderer as the game drew with it at this
+ * commit (the last that had it), its e2e build made once in a worktree of its own (webgpu-compare.mjs).
+ */
+export const WEBGL_REFERENCE = 'b10c006';
 export const WEBGPU_ARGS = ['--enable-unsafe-webgpu', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--use-webgpu-adapter=swiftshader', '--disable-vulkan-surface'];
 
 /** The presets compared: Medium and High (Low draws no weathering or per-pixel baked light, and the gate's perf runs cover it). */
@@ -175,7 +181,7 @@ export function verdict(score, bar = COMPARE_BAR) {
  * The file name of a pair's side-by-side picture: W2's names on the WebGL2 back end, `-webgpu` on WebGPU, and `post-`
  * before a post view's name (W4).
  */
-export function pairFile(scene, quality, view, backend = 'webgpu-webgl2', post = false) {
+export function pairFile(scene, quality, view, backend = 'webgl', post = false) {
   return `${scene.map}-${scene.light}-${quality}-${post ? 'post-' : ''}${view}${backend === 'webgpu' ? '-webgpu' : ''}.jpg`;
 }
 

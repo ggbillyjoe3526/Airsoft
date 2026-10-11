@@ -102,11 +102,11 @@ describe('the WebGPU figures, replicas and lights comparison (W3)', () => {
   });
 
   it('draws on both node back ends, real WebGPU through the software Vulkan adapter', () => {
-    expect(COMPARE_BACKENDS).toEqual(['webgpu-webgl2', 'webgpu']);
+    expect(COMPARE_BACKENDS).toEqual(['webgl', 'webgpu']);
     expect(WEBGPU_ARGS).toContain('--enable-unsafe-webgpu');
     expect(WEBGPU_ARGS).toContain('--use-webgpu-adapter=swiftshader');
     expect(pairFile(COMPARE_SCENES[2], 'medium', 'torch', 'webgpu')).toBe('neonHeights-night-medium-torch-webgpu.jpg');
-    expect(pairFile(COMPARE_SCENES[2], 'medium', 'torch', 'webgpu-webgl2')).toBe('neonHeights-night-medium-torch.jpg');
+    expect(pairFile(COMPARE_SCENES[2], 'medium', 'torch', 'webgl')).toBe('neonHeights-night-medium-torch.jpg');
   });
 });
 
@@ -132,7 +132,7 @@ describe('the WebGPU post stack and retro filter comparison (W4)', () => {
   });
 
   it('names a post view’s pair apart from W2’s and W3’s', () => {
-    expect(pairFile(COMPARE_SCENES[0], 'ultra', 'ground', 'webgpu-webgl2', true)).toBe('depot-day-ultra-post-ground.jpg');
+    expect(pairFile(COMPARE_SCENES[0], 'ultra', 'ground', 'webgl', true)).toBe('depot-day-ultra-post-ground.jpg');
     expect(pairFile(COMPARE_SCENES[2], 'low', 'retro', 'webgpu', true)).toBe('neonHeights-night-low-post-retro-webgpu.jpg');
     expect(pairFile(COMPARE_SCENES[0], 'high', 'ground')).toBe('depot-day-high-ground.jpg');
   });
@@ -162,7 +162,7 @@ describe("the WebGPU compute dressing's views (W5)", () => {
 
   it("names a W5 view's picture apart from the pairs (the node renderer's frame alone)", () => {
     expect(w5File(W5_SCENES[0], 'ultra', 'ground', 'webgpu')).toBe('woodland-night-ultra-w5-ground-webgpu.png');
-    expect(w5File(W5_SCENES[0], 'medium', 'fire', 'webgpu-webgl2')).toBe('woodland-night-medium-w5-fire.png');
+    expect(w5File(W5_SCENES[0], 'medium', 'fire', 'webgl')).toBe('woodland-night-medium-w5-fire.png');
   });
 
   it('draws each W5 page once per preset and back end, saves its views and scores their counts', async () => {
@@ -175,9 +175,9 @@ describe("the WebGPU compute dressing's views (W5)", () => {
     };
     const saved = [];
     const lines = [];
-    const entries = await drawW5Views({ draw, save: (file) => saved.push(file), log: (l) => lines.push(l), scenes: W5_SCENES, qualities: ['medium', 'high'], backends: ['webgpu-webgl2'] });
-    expect(calls).toEqual(['medium', 'high'].map((quality) => ({ views: W5_VIEWS, quality, backend: 'webgpu-webgl2', withPost: false, dressing: true })));
-    expect(saved).toEqual(['medium', 'high'].flatMap((q) => W5_VIEWS.map((v) => w5File(W5_SCENES[0], q, v, 'webgpu-webgl2'))));
+    const entries = await drawW5Views({ draw, save: (file) => saved.push(file), log: (l) => lines.push(l), scenes: W5_SCENES, qualities: ['medium', 'high'], backends: ['webgl'] });
+    expect(calls).toEqual(['medium', 'high'].map((quality) => ({ views: W5_VIEWS, quality, backend: 'webgl', withPost: false, dressing: true })));
+    expect(saved).toEqual(['medium', 'high'].flatMap((q) => W5_VIEWS.map((v) => w5File(W5_SCENES[0], q, v, 'webgl'))));
     expect(entries).toHaveLength(6);
     expect(entries[0]).toMatchObject({ map: 'woodland', quality: 'medium', w5: true, ceiling: GRASS_TRIANGLES.medium, pass: true, memory: { dressing: 11e6 } });
     // High's 300,000 grass triangles are over its ceiling.

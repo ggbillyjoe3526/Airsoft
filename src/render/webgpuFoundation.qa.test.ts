@@ -60,26 +60,28 @@ describe('three/webgpu stays out of the main chunk and out of an Auto visit with
   });
 });
 
-describe('an explicit WebGL pick never probes or loads, whatever else is asked (criterion 2)', () => {
-  it('ignores ?forceWebGL on the WebGL pick: no probe, no chunk, WebGL', async () => {
+describe('an explicit WebGL pick never probes, whatever else is asked (criterion 2)', () => {
+  const gl2 = { kind: 'webgl' } as NodeBackend;
+  it('ignores ?forceWebGL on the WebGL pick: no probe, WebGL2', async () => {
     const probe = vi.fn(() => Promise.resolve({ ...noWebGpu(), available: true }));
-    const load = vi.fn(() => Promise.resolve((() => Promise.reject(new Error('never'))) as NodeStart));
+    const start = vi.fn<NodeStart>(() => Promise.resolve(gl2));
     for (const force of [false, true]) {
-      expect(await startingRenderer('webgl', force, true, probe, load)).toEqual({ backend: 'webgl', node: null, adapterName: '' });
+      expect(await startingRenderer('webgl', force, true, probe, () => Promise.resolve(start))).toEqual({ backend: 'webgl', node: gl2, adapterName: '' });
     }
     expect(probe).not.toHaveBeenCalled();
-    expect(load).not.toHaveBeenCalled();
+    expect(start.mock.calls.every(([o]) => o.forceWebGL)).toBe(true);
   });
 
-  it('on WebGPU or Auto, an adapter that is found but whose node renderer throws (a device lost at boot) falls back to WebGL quietly, keeping the adapter’s name', async () => {
+  it('on WebGPU or Auto, an adapter that is found but whose device throws (lost at boot) falls back to WebGL2 quietly, keeping the adapter’s name', async () => {
     const error = vi.spyOn(console, 'error');
     const warn = vi.spyOn(console, 'warn');
+    const start: NodeStart = (o) => (o.forceWebGL ? Promise.resolve(gl2) : Promise.reject(new Error('device lost')));
     for (const choice of ['auto', 'webgpu'] as const) {
-      const start = await startingRenderer(choice, false, false, () => Promise.resolve({ ...noWebGpu(), available: true, name: 'qa gpu' }), () => Promise.resolve((() => Promise.reject(new Error('device lost'))) as NodeStart));
-      expect(start).toEqual({ backend: 'webgl', node: null, adapterName: 'qa gpu' });
+      const started = await startingRenderer(choice, false, false, () => Promise.resolve({ ...noWebGpu(), available: true, name: 'qa gpu' }), () => Promise.resolve(start));
+      expect(started).toEqual({ backend: 'webgl', node: gl2, adapterName: 'qa gpu' });
     }
-    // A chunk that fails to download (offline mid-boot) is no different.
-    expect((await startingRenderer('auto', false, false, () => Promise.resolve({ ...noWebGpu(), available: true }), () => Promise.reject(new Error('chunk 404')))).backend).toBe('webgl');
+    // A chunk that fails to download (offline mid-boot) fails the start: the game can't draw without it.
+    await expect(startingRenderer('auto', false, false, () => Promise.resolve({ ...noWebGpu(), available: true }), () => Promise.reject(new Error('chunk 404')))).rejects.toThrow('chunk 404');
     expect(error).not.toHaveBeenCalled();
     expect(warn).not.toHaveBeenCalled();
     vi.restoreAllMocks();
@@ -131,7 +133,7 @@ describe('the adapter probe on the failure modes a browser really has', () => {
 
 describe('the Renderer row’s note, over every combination (criterion 2)', () => {
   const picks: RendererChoice[] = ['auto', 'webgpu', 'webgl'];
-  const backends: RenderBackend[] = ['webgl', 'webgpu', 'webgpu-webgl2'];
+  const backends: RenderBackend[] = ['webgl', 'webgpu'];
 
   it('says the fallback line only when WebGPU was picked, this visit loaded wanting it, and WebGL draws', () => {
     for (const picked of picks) {
@@ -151,13 +153,11 @@ describe('the Renderer row’s note, over every combination (criterion 2)', () =
     expect(rendererNote('auto', true, 'webgl')).toBe('');
     expect(rendererNote('webgl', false, 'webgl')).toBe('');
     expect(rendererNote('webgpu', true, 'webgpu')).toBe('');
-    expect(rendererNote('webgpu', true, 'webgpu-webgl2')).toBe('');
     expect(rendererNote('auto', true, 'webgpu')).toBe('');
   });
 
   it('says a mid-session change applies from the next load: the visit never swaps live (WebGL picked while the node renderer runs, and the other way)', () => {
     expect(rendererNote('webgl', true, 'webgpu')).toBe(RENDER_BACKEND.text.pending);
-    expect(rendererNote('webgl', true, 'webgpu-webgl2')).toBe(RENDER_BACKEND.text.pending);
     expect(rendererNote('webgpu', false, 'webgl')).toBe(RENDER_BACKEND.text.pending);
     expect(rendererNote('auto', false, 'webgl')).toBe(RENDER_BACKEND.text.pending);
     // Put back to what the visit started with, the line goes.

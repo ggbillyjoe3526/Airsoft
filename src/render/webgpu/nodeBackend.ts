@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { WebGPURenderer } from 'three/webgpu';
 import { FRAME_TIMING, type RetroLook } from '../../config/render';
-import { RENDER_BACKEND } from '../../config/renderBackend';
+import { RENDER_BACKEND, type RenderBackend } from '../../config/renderBackend';
 import type { QualitySettings } from '../../config/render';
 import type { PostSetup } from '../post/postStack';
 import type { EnvironmentLook } from '../replicaSheen';
@@ -18,16 +18,15 @@ import { fitBrowser } from './webgpuCompat';
 import { WorldTwins } from './worldTwins';
 
 /**
- * The node renderer (WebGPU overhaul W1): Three's `WebGPURenderer`, on a WebGPU device or on its own WebGL2 back end.
- * This module and `three/webgpu` are loaded only by the dynamic import in render/rendererStart.ts, once the adapter probe
- * has found an adapter (Renderer on Auto or WebGPU) or `?forceWebGL` asks for the WebGL2 back end: neither is in the
- * main chunk, and a browser without WebGPU never downloads them.
+ * The game's renderer (WebGPU overhaul W1, the only one since W6): Three's `WebGPURenderer`, on a WebGPU device or on
+ * its own WebGL2 back end. This module and `three/webgpu` are loaded by the dynamic import in render/rendererStart.ts,
+ * alongside the physics at boot, in chunks of their own beside the main chunk.
  *
- * What the Renderer (render/renderer.ts) needs of it beyond the drawing calls both renderers share: the device made and
- * initialised before the first frame, a lost device reported (never logged as an error) and a new one made on request,
- * shaders compiled ahead at a map's load, GPU time from timestamp queries, the debug overlay's counts, the menus'
- * item pictures' own WebGL renderer, and everything let go on dispose. All of it is here, in this chunk, rather than in
- * the Renderer: the main chunk carries only the calls.
+ * What the Renderer (render/renderer.ts) needs of it beyond the drawing calls: the device made and initialised before
+ * the first frame, a lost device reported (never logged as an error) and a new one made on request (WebGL2 when no
+ * WebGPU device can be had), shaders compiled ahead at a map's load, GPU time from timestamp queries, the debug
+ * overlay's counts, and everything let go on dispose. All of it is here, in this chunk, rather than in the Renderer: the
+ * main chunk carries only the calls.
  *
  * The world's patched materials draw as their node twins (W2, render/webgpu/worldTwins.ts: the surfaces, dressing, sky
  * and the shader-moved effects, the sized points as sprites, the scene's environment map); every other material is drawn
@@ -41,7 +40,7 @@ const ignore = (): void => undefined;
 export interface NodeBackendOptions {
   /** Multisampled (4×) canvas: fixed for the renderer's life, as a WebGL context's is. */
   antialias: boolean;
-  /** The WebGL2 back end without asking for WebGPU (`?forceWebGL` on the dev server and the e2e build). */
+  /** The WebGL2 back end without asking for WebGPU: the WebGL pick, no adapter, or `?forceWebGL` (dev and e2e builds). */
   forceWebGL: boolean;
 }
 
@@ -56,7 +55,7 @@ export class NodeBackend {
   /** The device (or the WebGL2 context) is gone: nothing draws until a new renderer takes over (Renderer.nodeLost). */
   lost = false;
   /** The back end the renderer settled on: WebGPU, or its WebGL2 back end. */
-  readonly kind: 'webgpu' | 'webgpu-webgl2';
+  readonly kind: RenderBackend;
   /** The adapter offers timestamp queries ('timestamp-query'; EXT_disjoint_timer_query_webgl2 on the WebGL2 back end). */
   readonly timestamps: boolean;
   private timing = false;
@@ -66,8 +65,6 @@ export class NodeBackend {
   private lostListener: () => void = () => undefined;
   /** Filled by `stats`: one object, nothing allocated per read. */
   private readonly drawStats: DrawStats = { calls: 0, triangles: 0, programs: 0, geometries: 0, textures: 0 };
-  /** The menus' item pictures' own WebGL renderer (pictureRenderer), made when one is first drawn. */
-  private pictureGl: THREE.WebGLRenderer | null = null;
   /** The world materials' node twins (W2), installed in the renderer's node library. */
   private readonly world: WorldTwins;
   /** The particles, moved by compute passes (W5). */
@@ -89,7 +86,7 @@ export class NodeBackend {
     readonly renderer: WebGPURenderer,
     private readonly options: NodeBackendOptions,
   ) {
-    this.kind = (renderer.backend as { isWebGLBackend?: boolean }).isWebGLBackend ? 'webgpu-webgl2' : 'webgpu';
+    this.kind = (renderer.backend as { isWebGLBackend?: boolean }).isWebGLBackend ? 'webgl' : 'webgpu';
     this.timestamps = renderer.hasFeature('timestamp-query');
     followSwappedBuffers(renderer);
     this.particles = new ParticleTwins(renderer);
@@ -108,8 +105,8 @@ export class NodeBackend {
 
   /**
    * A node renderer on a canvas of its own, initialised (the device asked for), with the game's output settings set by
-   * the caller. Rejects when no device can be made; and when WebGPU was asked for but Three fell back to its WebGL2 back
-   * end, which W1 doesn't draw with unasked (the game's own WebGL renderer does, unchanged).
+   * the caller: on its WebGL2 back end when `forceWebGL`, else on WebGPU (or WebGL2, where Three falls back to it by
+   * itself). Rejects when neither can be made.
    */
   static async make(options: NodeBackendOptions): Promise<NodeBackend> {
     const renderer = new WebGPURenderer({ antialias: options.antialias, powerPreference: 'high-performance', forceWebGL: options.forceWebGL });
@@ -118,12 +115,7 @@ export class NodeBackend {
     await renderer.init();
     // Browsers whose WebGPU differs from what Three expects are fitted before the first frame (webgpuCompat.ts).
     await fitBrowser((renderer.backend as { device?: Parameters<typeof fitBrowser>[0] }).device);
-    const backend = new NodeBackend(renderer, options);
-    if (backend.kind === 'webgpu-webgl2' && !options.forceWebGL) {
-      backend.dispose();
-      throw new Error('WebGPU device unavailable');
-    }
-    return backend;
+    return new NodeBackend(renderer, options);
   }
 
   /** The canvas is really multisampled. */
@@ -155,12 +147,9 @@ export class NodeBackend {
     return out;
   }
 
-  /**
-   * The WebGL renderer the menus' item pictures are drawn with (render/itemPictures.ts reads WebGL render targets): a
-   * small one of their own, no canvas on the page, until W6 draws them with the node renderer.
-   */
-  get pictureRenderer(): THREE.WebGLRenderer {
-    return (this.pictureGl ??= new THREE.WebGLRenderer());
+  /** The WebGL2 back end's context (the diagnostics read its GPU's name from it); null on WebGPU. */
+  get webglContext(): WebGL2RenderingContext | null {
+    return (this.renderer.backend as { gl?: WebGL2RenderingContext }).gl ?? null;
   }
 
   /** The night is lit by clustered lights (W3): on a WebGPU device, not on the WebGL2 back end. */
@@ -231,13 +220,16 @@ export class NodeBackend {
 
   /**
    * A new renderer on a new canvas and device with the same options, after a loss: asked `RENDER_BACKEND.recoverTries`
-   * times, `recoverDelayMs` apart, until one is made or `cancelled()`; null when none is.
+   * times, `recoverDelayMs` apart, until one is made or `cancelled()`; then, for a lost WebGPU device, once on the WebGL2
+   * back end (Renderer.lostToWebGL). Null when none is.
    */
   async replacement(cancelled: () => boolean, make: (options: NodeBackendOptions) => Promise<NodeBackend> = NodeBackend.make): Promise<NodeBackend | null> {
-    for (let i = 0; i < RENDER_BACKEND.recoverTries; i++) {
+    const tries: NodeBackendOptions[] = Array.from({ length: RENDER_BACKEND.recoverTries }, () => this.options);
+    if (!this.options.forceWebGL) tries.push({ ...this.options, forceWebGL: true });
+    for (const options of tries) {
       await new Promise((done) => setTimeout(done, RENDER_BACKEND.recoverDelayMs));
       if (cancelled()) return null;
-      const next = await make(this.options).catch(() => null);
+      const next = await make(options).catch(() => null);
       if (next && cancelled()) next.dispose();
       else if (next) return next;
     }
@@ -285,7 +277,7 @@ export class NodeBackend {
     void this.compiles.track(done).catch(ignore);
   }
 
-  /** Frees the renderer, its canvas's context and (on WebGPU) its device, and the pictures' renderer. */
+  /** Frees the renderer, its canvas's context and (on WebGPU) its device. */
   dispose(): void {
     this.lostListener = () => undefined;
     this.timing = false;
@@ -295,9 +287,6 @@ export class NodeBackend {
     this.lighting?.dispose();
     this.output.dispose();
     this.renderer.dispose().catch(ignore);
-    this.pictureGl?.dispose();
-    this.pictureGl?.forceContextLoss();
-    this.pictureGl = null;
   }
 
   private track(on: boolean): void {
@@ -319,7 +308,7 @@ export class NodeBackend {
 export type NodeStart = (options: NodeBackendOptions) => Promise<NodeBackend>;
 
 /**
- * The node renderer for a visit whose probe found an adapter, or that forces the WebGL2 back end
- * (render/rendererStart.ts). Throws when no device can be made: the start falls back to WebGL.
+ * The node renderer for a visit (render/rendererStart.ts): on WebGPU, or on WebGL2 when `forceWebGL`. Rejects when no
+ * device can be made: the start then asks for WebGL2.
  */
 export const startNode: NodeStart = (options) => NodeBackend.make(options);

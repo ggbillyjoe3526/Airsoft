@@ -93,7 +93,7 @@ export class NodeOutputPass implements FinishingPass {
   }
 }
 
-/** The lens finish's grain hash (render/post/lensPass.ts `hash12`, Dave Hoskins' hash without sine). */
+/** The lens finish's grain hash (WebGL's lens pass's `hash12`, G5, Dave Hoskins' hash without sine). */
 const hash12 = (p: AnyNode): AnyNode => {
   const p3 = fract(vec3(p.x, p.y, p.x).mul(0.1031)).toVar();
   p3.addAssign(dot(p3, p3.yzx.add(33.33)));
@@ -101,7 +101,7 @@ const hash12 = (p: AnyNode): AnyNode => {
 };
 
 /**
- * The lens finish on the node path (W4): render/post/lensPass.ts in TSL, the same fringe and the same grain at the same
+ * The lens finish on the node path (W4): WebGL's GLSL lens pass (G5, deleted in W6) in TSL, the same fringe and the same grain at the same
  * pixels (GL's `gl_FragCoord`, rows from the bottom, so the pattern lands where WebGL's does). Last on Ultra, where it
  * also lays the held replica on.
  */

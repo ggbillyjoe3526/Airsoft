@@ -27,7 +27,7 @@ import { patchUniforms } from './twinUniforms';
  *
  * The GLSL post passes and the retro filter (W4) are not materials of the scene. The prefiltered sky is made here too,
  * with the node renderer's own prefilter: the scene's environment map (what Standard surfaces and figures reflect) and
- * the held replica's sheen (W3), one target for both, as the WebGL path's ReplicaSheen is.
+ * the held replica's sheen (W3), one target for both (ReplicaSheen).
  */
 
 export class WorldTwins {
@@ -35,7 +35,7 @@ export class WorldTwins {
   readonly sprites: PointSprites;
   /** The baked-light read's stand-in texture until an object's grid is read. */
   private readonly grid = emptyGrid();
-  /** The prefiltered sky per look, made with the node renderer (the WebGL path's is the Renderer's ReplicaSheen). */
+  /** The prefiltered sky per look, made with the node renderer. */
   private readonly sky: ReplicaSheen;
   /** Three's own conversion, given back on dispose. */
   private readonly own: WebGPURenderer['library']['fromMaterial'];
@@ -48,7 +48,7 @@ export class WorldTwins {
     const library = renderer.library;
     const own = (this.own = library.fromMaterial);
     library.fromMaterial = ((material: THREE.Material) => worldTwin(material, this.grid) ?? own.call(library, material)) as typeof own;
-    this.sky = new ReplicaSheen((_gl, look) => this.prefilter(look));
+    this.sky = new ReplicaSheen((look) => this.prefilter(look));
   }
 
   /**
@@ -56,7 +56,7 @@ export class WorldTwins {
    * and the held replica's sheen (Replica sheen, W3) both ask. Made on first want; freed by `trim` when neither wants it.
    */
   environment(on: boolean, look: EnvironmentLook): THREE.Texture | null {
-    return this.sky.texture(undefined as unknown as THREE.WebGLRenderer, on, look);
+    return this.sky.texture(on, look);
   }
 
   /** The settings changed: with neither the environment nor the sheen on (`on` false), the prefiltered sky is freed. */
@@ -71,7 +71,7 @@ export class WorldTwins {
     this.grid.dispose();
   }
 
-  /** The sky prefiltered as the WebGL path's (replicaSheen.ts prefilterSky), by the node renderer. */
+  /** The sky prefiltered by the node renderer: the environment scene (replicaSheen.ts) through its PMREM. */
   private prefilter(look: EnvironmentLook): { texture: THREE.Texture; dispose(): void } {
     const pmrem = new PMREMGenerator(this.renderer);
     const scene = skyEnvironmentScene(look);

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { NodeMaterial } from 'three/webgpu';
 import { tsl } from './tsl';
 import { POST } from '../../../config/post';
-import { type SunOnScreen, sunOnScreen } from '../../post/lightShaftsPass';
+import { type SunOnScreen, sunOnScreen } from '../../post/postHelpers';
 import { ADDITIVE, drawCleared, type PostFrame, type PostPass, scaled } from '../../post/postPass';
 import { at, depthAt, colourTarget, fullScreen, type NodeRenderer, type NodeTarget, quad, slot, vUv } from './nodeKit';
 
@@ -11,7 +11,7 @@ const { clamp, float, Fn, length, Loop, max, perspectiveDepthToViewZ, pow, textu
 const C = POST.lightShafts;
 
 /**
- * Light shafts on the node path (W4): render/post/lightShaftsPass.ts in TSL, the same three draws (the sky round the
+ * Light shafts on the node path (W4): WebGL's GLSL pass (G5, deleted in W6) in TSL, the same three draws (the sky round the
  * sun or moon masked by the depth, blurred towards it at half resolution, added back) at the same strengths. Three's
  * `GodraysNode` traces shadow maps through a volume instead (a different look and price), so this ports WebGL's.
  */

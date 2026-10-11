@@ -56,10 +56,10 @@ test('the release build boots, ignores the test flags and plays with the real po
   expect(errors).toEqual([]);
 });
 
-// W1 QA (WebGPU overhaul): the release build's side of the Renderer row. The row is public, `?forceWebGL` is a dev and e2e
-// flag the release build ignores, a browser with no adapter never downloads the node renderer, and a browser that gives an
-// adapter but no device loads it through the real chunk (under the page's CSP) and falls back to WebGL without an error.
-test('the release build shows the Renderer row, ignores ?forceWebGL, and falls back to WebGL quietly with or without an adapter', async ({ page, browser }) => {
+// W1 QA (WebGPU overhaul): the release build's side of the Renderer row. The row is public, and the node renderer is the
+// only one since W6a: its chunks load under the page's CSP whether the browser has no adapter (WebGL2 at once) or an
+// adapter that gives no device (WebGPU tried, then WebGL2), without an error.
+test('the release build shows the Renderer row and draws with the node renderer on WebGL2, with or without an adapter, quietly', async ({ page, browser }) => {
   test.setTimeout(120_000);
   const errors: string[] = [];
   const chunks: string[] = [];
@@ -73,8 +73,8 @@ test('the release build shows the Renderer row, ignores ?forceWebGL, and falls b
     });
   };
   watch(page);
-  // This browser has navigator.gpu but no adapter (SwiftShader); ?forceWebGL must not turn the node renderer on.
-  await page.goto('/?nolock&forceWebGL');
+  // This browser has navigator.gpu but no adapter (SwiftShader).
+  await page.goto('/?nolock');
   await page.waitForSelector('.menu-title-start', { timeout: 60_000 });
   await page.keyboard.press('Escape');
   const settings = page.locator('.menu-settings');
@@ -85,9 +85,10 @@ test('the release build shows the Renderer row, ignores ?forceWebGL, and falls b
   await expect(row.getByRole('button', { name: 'WebGPU' })).toBeVisible();
   await expect(row.getByRole('button', { name: 'WebGL' })).toBeVisible();
   await expect(page.locator('canvas.game-canvas')).toHaveCount(1);
-  expect(chunks).toEqual([]);
+  expect(chunks.length).toBeGreaterThan(0);
+  chunks.length = 0;
 
-  // An adapter that cannot give a device: the real chunk is fetched, tried and let go; WebGL draws; nothing is an error.
+  // An adapter that cannot give a device: WebGPU is tried and let go; WebGL2 draws; nothing is an error.
   const context = await browser.newContext();
   const second = await context.newPage();
   watch(second);

@@ -109,7 +109,7 @@ describe('ItemPictures with a power subject (RM3)', () => {
     return {
       draw: (_s, _c, w, h) => {
         labelSeen.push(label().color.getHex());
-        return new Float32Array(w * h * 4).fill(0.2);
+        return Promise.resolve(new Float32Array(w * h * 4).fill(0.2));
       },
       encode: (_r, w, h) => `p:${w}x${h}`,
       dispose() {},

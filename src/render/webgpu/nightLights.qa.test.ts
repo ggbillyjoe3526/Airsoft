@@ -162,11 +162,11 @@ describe('WebGL builds no extra light (W3 criterion 3)', () => {
     d.dispose();
   });
 
-  it('the Renderer on WebGL says the night is not clustered (and so does one with the WebGL2 back end)', () => {
+  it('the Renderer on the WebGL2 back end says the night is not clustered', () => {
     vi.stubGlobal('window', { addEventListener: () => undefined, removeEventListener: () => undefined, devicePixelRatio: 1, innerWidth: 1280, innerHeight: 720 });
     const gl = { domElement: new EventTarget(), info: { autoReset: true, reset: () => undefined }, shadowMap: { enabled: false }, autoClear: true, toneMapping: THREE.NoToneMapping, toneMappingExposure: 1, getContext: () => ({ getExtension: () => null }), getPixelRatio: () => 1, setPixelRatio: () => undefined, setSize: () => undefined, outputColorSpace: '' };
-    vi.spyOn(Renderer.prototype as unknown as { makeWebGL: () => unknown }, 'makeWebGL').mockReturnValue(gl);
-    const r = new Renderer({ appendChild: () => undefined, clientWidth: 1280, clientHeight: 720 } as unknown as HTMLElement, QUALITY.high);
+    const node = { renderer: gl, kind: 'webgl', clustered: false, lost: false, onLost: () => undefined } as unknown as NodeBackend;
+    const r = new Renderer({ appendChild: () => undefined, clientWidth: 1280, clientHeight: 720 } as unknown as HTMLElement, QUALITY.high, node);
     expect(r.backend).toBe('webgl');
     expect(r.clusteredLights).toBe(false);
     vi.unstubAllGlobals();
@@ -318,7 +318,7 @@ describe('which back end holds the clustered lights (W3 criterion 3)', () => {
 
     stub({ isWebGLBackend: true });
     const forced = await NodeBackend.make({ antialias: false, forceWebGL: true });
-    expect(forced.kind).toBe('webgpu-webgl2');
+    expect(forced.kind).toBe('webgl');
     expect(forced.clustered).toBe(false);
     expect(forced.renderer.lighting).not.toBeInstanceOf(NightLighting);
     forced.prepare(world);

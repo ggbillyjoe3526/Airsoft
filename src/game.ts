@@ -69,7 +69,7 @@ import type { SaveManager } from './save/saveManager';
 import { SAVE_TEXT } from './config/save';
 import { screenWhenStopped } from './ui/menus/menuNav';
 import { Menus } from './ui/menus/menus';
-import { followingPictureTarget, ItemPictures, webglPictureTarget } from './render/itemPictures';
+import { followingPictureTarget, ItemPictures, nodePictureTarget } from './render/itemPictures';
 import { kitSubjects } from './ui/menus/menuPictures';
 import { recordsView } from './ui/recordsView';
 import {
@@ -297,11 +297,11 @@ export class Game {
     // A figure model (M25a) loads alongside the physics; with none in the build this resolves at once. With Dev content
     // on, so do the dev maps (M50), so New game can show a dev map picked last time. The maps' baked light (G6) too.
     const devMaps = activeDev(loadDevEnabled(), loadDevSettings()).devContent ? loadDevMaps() : null;
-    // The renderer (W1): its start (render/rendererStart.ts, a small chunk of its own with the Renderer row) loads
-    // alongside the physics; on Auto or WebGPU it asks for an adapter, and only when one is given are `three/webgpu`
-    // loaded and its device made. On the WebGL pick, or if that chunk can't be had, WebGL as before.
+    // The renderer (W1, W6): its start (render/rendererStart.ts, a small chunk of its own with the Renderer row) loads
+    // alongside the physics with `three/webgpu`; on Auto or WebGPU it asks for an adapter first, and draws on WebGPU when
+    // one is given, else on WebGL2. A browser with neither can't play: the start-up pane says so.
     const choice = loadRendererChoice();
-    const starting = import('./render/rendererStart').then((m) => m.bootRenderer(choice, options.forceWebGL === true, options.qualitySettings.antialias), () => null);
+    const starting = import('./render/rendererStart').then((m) => m.bootRenderer(choice, options.forceWebGL === true, options.qualitySettings.antialias));
     const [, figureModel, replicaFiles, , , start] = await Promise.all([initPhysics(), loadFigureModel(), loadReplicaFiles(), devMaps, loadBakedLight(), starting]);
     const game = new Game(container, options, start);
     game.renderer.figureModel = figureModel;
@@ -312,17 +312,14 @@ export class Game {
   private constructor(
     private readonly container: HTMLElement,
     private readonly options: GameOptions,
-    /**
-     * What this visit draws with (render/rendererStart.ts): the node renderer, the adapter's name and the Renderer row's
-     * builder. Null if that chunk couldn't be had: WebGL, and no Renderer row.
-     */
-    private readonly rendering: RendererBoot | null,
+    /** What this visit draws with (render/rendererStart.ts): the node renderer, the adapter's name and the Renderer row's builder. */
+    private readonly rendering: RendererBoot,
   ) {
     this.qualityChoice = options.quality;
     this.quality = options.qualitySettings;
     this.autoQuality = options.automaticQuality;
     this.matchSeed = options.seed;
-    this.renderer = new Renderer(container, this.quality, rendering?.node);
+    this.renderer = new Renderer(container, this.quality, rendering.node);
     this.renderer.setFov(loadFov());
     this.renderer.setToneMapping(loadToneMapping());
     this.map = loadMap();
@@ -384,8 +381,8 @@ export class Game {
       };
     });
 
-    // The menus' pictures of replicas and parts (G3), drawn by whichever WebGL renderer the game has now.
-    this.pictures = new ItemPictures(followingPictureTarget(() => this.renderer.pictureRenderer, webglPictureTarget), undefined, () => this.renderer.replicaFiles, powerSourceLoader());
+    // The menus' pictures of replicas and parts (G3), drawn by the game's renderer (W6; a new one after a lost device).
+    this.pictures = new ItemPictures(followingPictureTarget(() => this.renderer.renderer, nodePictureTarget), undefined, () => this.renderer.replicaFiles, powerSourceLoader());
     this.menus = new Menus(container, {
       pictures: this.pictures,
       rules: {
@@ -477,7 +474,7 @@ export class Game {
         frameRateCap: { initial: this.frameRateCap, onChange: (cap) => (this.frameRateCap = cap) },
         showFps: { initial: loadShowFps(), onChange: (on) => this.debug.setFpsReadout(on) },
         toneMapping: { initial: this.renderer.toneMappingId, onChange: (id) => this.renderer.setToneMapping(id) },
-        renderer: this.rendering && ((row) => this.rendering!.fillRow(row, this.renderer)),
+        renderer: (row) => this.rendering.fillRow(row, this.renderer),
       },
       audio: { initial: this.audio.volumes, onChange: (channel, v) => this.changeVolume(channel, v), onRelease: (channel) => this.audio.preview(channel) },
       crosshair: { initial: this.crosshair, onChange: (c) => this.changeCrosshair(c) },
@@ -706,14 +703,14 @@ export class Game {
       this.autoQuality = false;
       this.stepDownTo = null;
     }
-    if (this.renderer.setQuality(settings)) this.session?.contextRestored();
+    this.renderer.setQuality(settings);
     this.session?.setQuality(settings);
   }
 
   /**
    * The automatic step-down (REN-03), after each frame drawn in play: frame times go to the watch while the game's own
-   * pick is in force; a step decided mid-round waits for the round to end (a new WebGL context compiles every shader,
-   * a hitch nobody wants mid-fight), then applies, unsaved, with a line on the HUD.
+   * pick is in force; a step decided mid-round waits for the round to end (a new preset compiles new pipelines, a
+   * hitch nobody wants mid-fight), then applies, unsaved, with a line on the HUD.
    */
   private watchFrameTimes(s: MatchSession | RangeSession, frameSeconds: number): void {
     if (!this.autoQuality || this.steppedDown) return;
@@ -1117,8 +1114,8 @@ export class Game {
       ['Pixel ratio', read(() => this.renderer.renderer.getPixelRatio())],
       ['Renderer', this.renderer.backend],
       ['GPU', read(() => {
-        const gl = this.renderer.renderer;
-        return 'isWebGPURenderer' in gl ? this.rendering?.adapterName || '-' : rendererName(gl.getContext());
+        const gl = this.renderer.webglContext;
+        return gl ? rendererName(gl) : this.rendering.adapterName || '-';
       })],
       ['Window', `${window.innerWidth} × ${window.innerHeight} at ${window.devicePixelRatio}`],
       ['Sim ticks/s', this.tickRate],

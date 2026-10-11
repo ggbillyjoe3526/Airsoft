@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ENVIRONMENT, LIGHTING, REPLICA_SHEEN } from '../config/render';
+import { ENVIRONMENT, LIGHTING } from '../config/render';
 import { DEFAULT_SKY, type SkyPalette, skyColour } from './atmosphere';
 
 /** What the sheen keeps on the GPU: a prefiltered render target (PMREMGenerator's output). */
@@ -72,22 +72,12 @@ export function disposeEnvironmentScene(scene: THREE.Scene): void {
   });
 }
 
-/** Prefilters a sky; the scene and the generator's own buffers are freed at once (audit L-02). */
-function prefilterSky(gl: THREE.WebGLRenderer, look: EnvironmentLook): SheenTarget {
-  const pmrem = new THREE.PMREMGenerator(gl);
-  const scene = skyEnvironmentScene(look);
-  const target = pmrem.fromScene(scene, REPLICA_SHEEN.blur);
-  disposeEnvironmentScene(scene);
-  pmrem.dispose();
-  return target;
-}
-
 /** The engine's daytime look, made once (ReplicaSheen's default). */
 const DEFAULT_LOOK = defaultEnvironmentLook();
 
 /**
- * The prefiltered sky (owned by the Renderer, audit REN-06): the held replica's sheen (Replica sheen) and the scene's
- * environment lighting (Environment lighting, F1) share it. It is prefiltered once per graphics context and look
+ * The prefiltered sky (audit REN-06): the held replica's sheen (Replica sheen) and the scene's environment lighting
+ * (Environment lighting, F1) share it. It is prefiltered once per renderer and look
  * (EnvironmentLook) and shared by every match and range on that sky, not rebuilt on each Play (380–520 ms in software);
  * asking with another look (a map with another sky) frees the old target and makes the new one. With both settings
  * off its 6.3 MB is freed at once (`trim`), as Low frees its shadow map.
@@ -96,28 +86,21 @@ export class ReplicaSheen {
   private target: SheenTarget | null = null;
   private key = '';
 
-  constructor(private readonly make: (gl: THREE.WebGLRenderer, look: EnvironmentLook) => SheenTarget = prefilterSky) {}
+  /** `make` prefilters a look's sky (the node renderer's PMREM, render/webgpu/worldTwins.ts). */
+  constructor(private readonly make: (look: EnvironmentLook) => SheenTarget) {}
 
   /** The prefiltered sky for `look`, made on first want or when the look changes; null while `on` is false. */
-  texture(gl: THREE.WebGLRenderer, on: boolean, look: EnvironmentLook = DEFAULT_LOOK): THREE.Texture | null {
+  texture(on: boolean, look: EnvironmentLook = DEFAULT_LOOK): THREE.Texture | null {
     if (!on) return null;
     const key = environmentKey(look);
     if (this.target && key !== this.key) this.dispose();
     this.key = key;
-    return (this.target ??= this.make(gl, look)).texture;
+    return (this.target ??= this.make(look)).texture;
   }
 
   /** The settings changed: off (neither wants it) frees the target (the next `texture(…, true)` makes it again). */
   trim(on: boolean): void {
     if (!on) this.dispose();
-  }
-
-  /**
-   * The context was lost and given back: the target's GL objects went with it, so it is dropped, not disposed (freeing
-   * them on the new context only logs WebGL warnings), and made again on the next want.
-   */
-  forget(): void {
-    this.target = null;
   }
 
   dispose(): void {

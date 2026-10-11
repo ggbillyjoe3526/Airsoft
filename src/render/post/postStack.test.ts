@@ -2,11 +2,12 @@ import * as THREE from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { POST } from '../../config/post';
 import { QUALITY, type QualityPreset } from '../../config/render';
-import { sunOnScreen } from './lightShaftsPass';
+import type { NodeRenderer } from '../webgpu/post/nodeKit';
+import { DirectOutput } from '../webgpu/post/nodeOutput';
+import { NodePostStack } from '../webgpu/post/nodePostStack';
+import bloomSource from '../webgpu/post/nodeBloom.ts?raw';
+import { findReflective, halton, jitterProjection, jitterSequence, reflectivity, sunOnScreen } from './postHelpers';
 import { planNeedsDepth, postPlan, sceneSamples } from './postPlan';
-import { brightestChannelBloom, PostStack } from './postStack';
-import { findReflective, reflectivity } from './reflectionPass';
-import { halton, jitterProjection, jitterSequence } from './temporalAAPass';
 
 describe('the post plan per preset (G5)', () => {
   it('builds no pass on Low, bloom on Medium, shade, shafts and TAA on High, everything on Ultra', () => {
@@ -44,29 +45,34 @@ function reachable<T>(root: unknown, kind: abstract new (...a: never[]) => T): S
   return found;
 }
 
-/** A stand-in WebGLRenderer: logs where each draw goes and what the camera's projection was for the scene. */
+/** A stand-in node renderer: logs where each draw goes and what the camera's projection was for the scene. */
 function stubGl() {
-  let target: THREE.WebGLRenderTarget | null = null;
-  const draws: { what: 'scene' | 'quad'; into: THREE.WebGLRenderTarget | null; projection: number[] }[] = [];
+  let target: THREE.RenderTarget | null = null;
+  const draws: { what: 'scene' | 'quad'; into: THREE.RenderTarget | null; projection: number[] }[] = [];
   const gl = {
     autoClear: true,
-    toneMapping: THREE.NeutralToneMapping,
+    toneMapping: THREE.NeutralToneMapping as THREE.ToneMapping,
     toneMappingExposure: 1,
-    outputColorSpace: THREE.SRGBColorSpace,
-    setRenderTarget: (t: THREE.WebGLRenderTarget | null) => void (target = t),
+    outputColorSpace: THREE.SRGBColorSpace as string,
+    coordinateSystem: THREE.WebGLCoordinateSystem,
+    samples: 4,
+    contextNode: { context: () => ({}) },
+    setRenderTarget: (t: THREE.RenderTarget | null) => void (target = t),
     getRenderTarget: () => target,
     getClearColor: (c: THREE.Color) => c,
     getClearAlpha: () => 1,
     setClearColor: () => undefined,
     clear: () => undefined,
+    clearDepth: () => undefined,
     render: (o: THREE.Object3D, camera: THREE.Camera) =>
       void draws.push({ what: o instanceof THREE.Scene ? 'scene' : 'quad', into: target, projection: [...camera.projectionMatrix.elements] }),
   };
-  return { gl: gl as unknown as THREE.WebGLRenderer, draws };
+  return { gl: gl as unknown as NodeRenderer, draws };
 }
 
-const stackFor = (preset: QualityPreset, w = 64, h = 36) => new PostStack({ quality: QUALITY[preset], halfFloat: true }, w, h);
+const stackFor = (preset: QualityPreset, w = 64, h = 36) => new NodePostStack({ quality: QUALITY[preset], halfFloat: true }, w, h, new DirectOutput());
 
+/** The post stack's own behaviour (G5), on the node renderer's stack since W6a deleted WebGL's. */
 describe('the post stack (G5)', () => {
   afterEach(() => vi.restoreAllMocks());
 
@@ -79,7 +85,7 @@ describe('the post stack (G5)', () => {
     expect(ultra.sceneTarget.depthTexture).toBeInstanceOf(THREE.DepthTexture);
     expect(ultra.sceneTarget.samples).toBe(0);
     expect(ultra.sceneTarget.texture.type).toBe(THREE.HalfFloatType);
-    expect(new PostStack({ quality: QUALITY.high, halfFloat: false }, 8, 8).sceneTarget.texture.type).toBe(THREE.UnsignedByteType);
+    expect(new NodePostStack({ quality: QUALITY.high, halfFloat: false }, 8, 8, new DirectOutput()).sceneTarget.texture.type).toBe(THREE.UnsignedByteType);
     medium.dispose();
     ultra.dispose();
   });
@@ -88,8 +94,8 @@ describe('the post stack (G5)', () => {
     for (const preset of ['medium', 'high', 'ultra'] as const) {
       const stack = stackFor(preset);
       const { gl } = stubGl();
-      stack.render(gl, new THREE.Scene(), new THREE.PerspectiveCamera()); // the ping-pong targets are made on first use
-      const targets = reachable(stack, THREE.WebGLRenderTarget);
+      stack.draw(gl, new THREE.Scene(), new THREE.PerspectiveCamera()); // the ping-pong targets are made on first use
+      const targets = reachable(stack, THREE.RenderTarget);
       const materials = reachable(stack, THREE.Material);
       // The noise textures and the depth texture (a render target's own texture goes with the target).
       const textures = [...reachable(stack, THREE.DataTexture), ...reachable(stack, THREE.DepthTexture)];
@@ -99,7 +105,7 @@ describe('the post stack (G5)', () => {
       });
       expect(targets.size, preset).toBeGreaterThan(1);
       const freed = new Set<unknown>();
-      vi.spyOn(THREE.WebGLRenderTarget.prototype, 'dispose').mockImplementation(function (this: unknown) {
+      vi.spyOn(THREE.RenderTarget.prototype, 'dispose').mockImplementation(function (this: unknown) {
         freed.add(this);
       });
       const freedMaterials = new Set<unknown>();
@@ -118,10 +124,10 @@ describe('the post stack (G5)', () => {
   it('resizes its targets with the drawing buffer, and the shade and shafts at their share of it', () => {
     const stack = stackFor('high', 64, 36);
     const { gl } = stubGl();
-    stack.render(gl, new THREE.Scene(), new THREE.PerspectiveCamera());
+    stack.draw(gl, new THREE.Scene(), new THREE.PerspectiveCamera());
     stack.setSize(200, 100);
     expect([stack.sceneTarget.width, stack.sceneTarget.height]).toEqual([200, 100]);
-    const sizes = [...reachable(stack, THREE.WebGLRenderTarget)].map((t) => `${t.width}x${t.height}`);
+    const sizes = [...reachable(stack, THREE.RenderTarget)].map((t) => `${t.width}x${t.height}`);
     expect(sizes).toContain('200x100');
     // High's ambient occlusion at half resolution; the light shafts at POST.lightShafts.resolution.
     expect(sizes).toContain('100x50');
@@ -134,7 +140,7 @@ describe('the post stack (G5)', () => {
     for (const preset of ['medium', 'high', 'ultra'] as const) {
       const stack = stackFor(preset);
       const { gl, draws } = stubGl();
-      stack.render(gl, new THREE.Scene(), new THREE.PerspectiveCamera());
+      stack.draw(gl, new THREE.Scene(), new THREE.PerspectiveCamera());
       expect(draws[0]!.what, preset).toBe('scene');
       expect(draws[0]!.into, preset).toBe(stack.sceneTarget);
       expect(draws.at(-1)!.into, preset).toBeNull();
@@ -149,8 +155,8 @@ describe('the post stack (G5)', () => {
     const plain = [...camera.projectionMatrix.elements];
     const high = stackFor('high');
     const { gl, draws } = stubGl();
-    high.render(gl, new THREE.Scene(), camera);
-    high.render(gl, new THREE.Scene(), camera);
+    high.draw(gl, new THREE.Scene(), camera);
+    high.draw(gl, new THREE.Scene(), camera);
     const scenes = draws.filter((d) => d.what === 'scene');
     expect(scenes[0]!.projection).not.toEqual(plain);
     expect(scenes[1]!.projection).not.toEqual(scenes[0]!.projection);
@@ -169,7 +175,7 @@ describe('the post stack (G5)', () => {
     // Medium has no TAA: no jitter.
     const medium = stackFor('medium');
     const m = stubGl();
-    medium.render(m.gl, new THREE.Scene(), camera);
+    medium.draw(m.gl, new THREE.Scene(), camera);
     expect(m.draws[0]!.projection).toEqual(plain);
     high.dispose();
     medium.dispose();
@@ -179,9 +185,9 @@ describe('the post stack (G5)', () => {
     // Shade with edge smoothing and no TAA: the scene is multisampled and the shade blends in place.
     const quality = { ...QUALITY.high, temporalAA: false, antialias: true };
     expect(sceneSamples(quality)).toBeGreaterThan(0);
-    const stack = new PostStack({ quality, halfFloat: true }, 64, 36);
+    const stack = new NodePostStack({ quality, halfFloat: true }, 64, 36, new DirectOutput());
     const { gl, draws } = stubGl();
-    stack.render(gl, new THREE.Scene(), new THREE.PerspectiveCamera());
+    stack.draw(gl, new THREE.Scene(), new THREE.PerspectiveCamera());
     expect(draws[0]!.into).toBe(stack.sceneTarget);
     expect(draws.slice(1).filter((d) => d.into === stack.sceneTarget)).toEqual([]);
     expect(draws.at(-1)!.into).toBeNull();
@@ -193,25 +199,22 @@ describe('the post stack (G5)', () => {
     const reset = vi.spyOn(stack, 'reset');
     const { gl } = stubGl();
     const camera = new THREE.PerspectiveCamera();
-    stack.render(gl, new THREE.Scene(), camera);
+    stack.draw(gl, new THREE.Scene(), camera);
     camera.position.x += POST.taa.cutDistance * 0.5;
-    stack.render(gl, new THREE.Scene(), camera);
+    stack.draw(gl, new THREE.Scene(), camera);
     expect(reset).not.toHaveBeenCalled();
     camera.position.z += POST.taa.cutDistance * 2;
-    stack.render(gl, new THREE.Scene(), camera);
+    stack.draw(gl, new THREE.Scene(), camera);
     expect(reset).toHaveBeenCalledTimes(1);
-    stack.render(gl, new THREE.Scene(), camera);
+    stack.draw(gl, new THREE.Scene(), camera);
     expect(reset).toHaveBeenCalledTimes(1);
     stack.dispose();
   });
 
   it('bright-passes bloom on the brightest channel, softened, so a saturated neon glows and the sunlit scene does not', () => {
-    const pass = brightestChannelBloom(64, 36);
-    expect(pass.materialHighPassFilter.fragmentShader).toContain('max( texel.r, max( texel.g, texel.b ) )');
-    expect(pass.materialHighPassFilter.fragmentShader).not.toContain('luminance( texel.xyz )');
-    expect((pass.highPassUniforms as Record<string, THREE.IUniform>).smoothWidth!.value).toBe(POST.bloom.softness);
-    expect(pass.threshold).toBe(POST.bloom.threshold);
-    pass.dispose();
+    expect(bloomSource).toContain('max(texel.r, max(texel.g, texel.b))');
+    expect(bloomSource).toContain('smoothstep(B.threshold, B.threshold + B.softness, v)');
+    expect(bloomSource).not.toMatch(/\bluminance\(/);
   });
 });
 
@@ -287,21 +290,21 @@ describe('reflections only on reflective surfaces (G5)', () => {
     const stack = stackFor('ultra');
     const { gl, draws } = stubGl();
     stack.setReflectiveSurfaces([]);
-    stack.render(gl, new THREE.Scene(), new THREE.PerspectiveCamera());
-    const mask = () => (stack as unknown as { reflection: { mask: THREE.WebGLRenderTarget | null } }).reflection.mask;
+    stack.draw(gl, new THREE.Scene(), new THREE.PerspectiveCamera());
+    const mask = () => (stack as unknown as { reflection: { mask: THREE.RenderTarget | null } }).reflection.mask;
     expect(mask()).toBeNull();
     // The reflections pass drew nothing: the same draws as the same stack without the pass.
-    const noRefl = new PostStack({ quality: { ...QUALITY.ultra, reflections: false }, halfFloat: true }, 64, 36);
+    const noRefl = new NodePostStack({ quality: { ...QUALITY.ultra, reflections: false }, halfFloat: true }, 64, 36, new DirectOutput());
     const other = stubGl();
-    noRefl.render(other.gl, new THREE.Scene(), new THREE.PerspectiveCamera());
+    noRefl.draw(other.gl, new THREE.Scene(), new THREE.PerspectiveCamera());
     expect(draws.length).toBe(other.draws.length);
     // With a puddle, a mask and its draws.
     const puddle = new THREE.Mesh(new THREE.PlaneGeometry());
     puddle.userData.reflective = 0.8;
     stack.setReflectiveSurfaces([{ mesh: puddle, strength: 0.8 }]);
-    expect(mask()).toBeInstanceOf(THREE.WebGLRenderTarget);
+    expect(mask()).toBeInstanceOf(THREE.RenderTarget);
     const again = stubGl();
-    stack.render(again.gl, new THREE.Scene(), new THREE.PerspectiveCamera());
+    stack.draw(again.gl, new THREE.Scene(), new THREE.PerspectiveCamera());
     expect(again.draws.length).toBe(other.draws.length + 2);
     stack.setReflectiveSurfaces([]);
     expect(mask()).toBeNull();
@@ -311,9 +314,9 @@ describe('reflections only on reflective surfaces (G5)', () => {
 });
 
 /** The reflection pass of a stack, and what it holds (private: the QA reaches in for the objects it must free). */
-const reflectionOf = (stack: PostStack) => (stack as unknown as { reflection: { mask: THREE.WebGLRenderTarget | null; proxies: { mesh: THREE.Mesh }[] } }).reflection;
-const taaOf = (stack: PostStack) =>
-  (stack as unknown as { passes: { id: string; valid?: boolean; resolve?: THREE.ShaderMaterial }[] }).passes.find((p) => p.id === 'taa')!;
+const reflectionOf = (stack: NodePostStack) => (stack as unknown as { reflection: { mask: THREE.RenderTarget | null; proxies: { mesh: THREE.Mesh }[] } }).reflection;
+const taaOf = (stack: NodePostStack) =>
+  (stack as unknown as { passes: { id: string; u: { hasHistory: { value: number } } }[] }).passes.find((p) => p.id === 'taa')!;
 
 describe('the reflection pass frees what it allocates (G5 QA)', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -321,7 +324,7 @@ describe('the reflection pass frees what it allocates (G5 QA)', () => {
   it('frees the mask and every stand-in material each time the surfaces change, so repeated toggles leak nothing, and all on dispose', () => {
     const freedTargets = new Set<unknown>();
     const freedMaterials = new Set<unknown>();
-    vi.spyOn(THREE.WebGLRenderTarget.prototype, 'dispose').mockImplementation(function (this: unknown) {
+    vi.spyOn(THREE.RenderTarget.prototype, 'dispose').mockImplementation(function (this: unknown) {
       freedTargets.add(this);
     });
     vi.spyOn(THREE.Material.prototype, 'dispose').mockImplementation(function (this: unknown) {
@@ -330,7 +333,7 @@ describe('the reflection pass frees what it allocates (G5 QA)', () => {
     const stack = stackFor('ultra');
     const geo = new THREE.PlaneGeometry();
     const puddle = (strength: number) => Object.assign(new THREE.Mesh(geo), { userData: { reflective: strength } });
-    const madeMasks = new Set<THREE.WebGLRenderTarget>();
+    const madeMasks = new Set<THREE.RenderTarget>();
     const madeMaterials = new Set<THREE.Material>();
     const take = () => {
       const r = reflectionOf(stack);
@@ -372,9 +375,9 @@ describe('the stack at awkward sizes (G5 QA)', () => {
         const stack = stackFor(preset, 64, 36);
         stack.setReflectiveSurfaces([{ mesh: puddle, strength: 0.6 }]);
         const { gl } = stubGl();
-        stack.render(gl, new THREE.Scene(), new THREE.PerspectiveCamera());
+        stack.draw(gl, new THREE.Scene(), new THREE.PerspectiveCamera());
         stack.setSize(w, h);
-        const sizes = [...reachable(stack, THREE.WebGLRenderTarget)].map((t) => [t.width, t.height] as const);
+        const sizes = [...reachable(stack, THREE.RenderTarget)].map((t) => [t.width, t.height] as const);
         for (const [tw, th] of sizes) {
           expect(Number.isInteger(tw) && Number.isInteger(th), `${preset} ${w}x${h}: ${tw}x${th}`).toBe(true);
           expect(tw, `${preset} ${w}x${h}`).toBeGreaterThanOrEqual(1);
@@ -396,9 +399,9 @@ describe('the stack at awkward sizes (G5 QA)', () => {
     const puddle = new THREE.Mesh(new THREE.PlaneGeometry());
     stack.setReflectiveSurfaces([{ mesh: puddle, strength: 0.6 }]);
     const { gl } = stubGl();
-    stack.render(gl, new THREE.Scene(), new THREE.PerspectiveCamera()); // makes the ping-pong targets
+    stack.draw(gl, new THREE.Scene(), new THREE.PerspectiveCamera()); // makes the ping-pong targets
     stack.setSize(320, 180);
-    const targets = [...reachable(stack, THREE.WebGLRenderTarget)];
+    const targets = [...reachable(stack, THREE.RenderTarget)];
     expect(targets.length).toBeGreaterThan(6);
     // The reflection mask follows (the window's size, not a share of it).
     expect([reflectionOf(stack).mask!.width, reflectionOf(stack).mask!.height]).toEqual([320, 180]);
@@ -410,7 +413,7 @@ describe('the stack at awkward sizes (G5 QA)', () => {
 
   it('does nothing for a size it already has (no target is made again)', () => {
     const stack = stackFor('ultra', 64, 36);
-    const resized = vi.spyOn(THREE.WebGLRenderTarget.prototype, 'setSize');
+    const resized = vi.spyOn(THREE.RenderTarget.prototype, 'setSize');
     stack.setSize(64, 36);
     expect(resized).not.toHaveBeenCalled();
     resized.mockRestore();
@@ -423,18 +426,18 @@ describe('the temporal blend across frames, a resize and a cut (G5 QA)', () => {
     const stack = stackFor('high');
     const { gl } = stubGl();
     const camera = new THREE.PerspectiveCamera();
-    const has = () => taaOf(stack).resolve!.uniforms.hasHistory!.value;
-    stack.render(gl, new THREE.Scene(), camera);
+    const has = () => taaOf(stack).u.hasHistory.value;
+    stack.draw(gl, new THREE.Scene(), camera);
     expect(has()).toBe(0);
-    stack.render(gl, new THREE.Scene(), camera);
+    stack.draw(gl, new THREE.Scene(), camera);
     expect(has()).toBe(1);
     stack.setSize(80, 45);
-    stack.render(gl, new THREE.Scene(), camera);
+    stack.draw(gl, new THREE.Scene(), camera);
     expect(has(), 'a history of the old size is never read').toBe(0);
-    stack.render(gl, new THREE.Scene(), camera);
+    stack.draw(gl, new THREE.Scene(), camera);
     expect(has()).toBe(1);
     stack.reset();
-    stack.render(gl, new THREE.Scene(), camera);
+    stack.draw(gl, new THREE.Scene(), camera);
     expect(has(), 'after a cut or a restored context').toBe(0);
     stack.dispose();
   });
@@ -446,7 +449,7 @@ describe('the temporal blend across frames, a resize and a cut (G5 QA)', () => {
     const stack = stackFor('high', 64, 36);
     const { gl, draws } = stubGl();
     for (let i = 0; i < POST.taa.jitterSamples * 2; i++) {
-      stack.render(gl, new THREE.Scene(), camera);
+      stack.draw(gl, new THREE.Scene(), camera);
       expect([...camera.projectionMatrix.elements], `frame ${i}: projection`).toEqual(plain);
       expect([...camera.projectionMatrixInverse.elements], `frame ${i}: inverse`).toEqual(plainInverse);
     }
