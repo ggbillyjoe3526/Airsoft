@@ -112,3 +112,17 @@ acceptance:
   2. With Dev settings on (Unlock all gear), every replica and part is available.
 status: open
 attempts: 0
+
+## CT4 · The content toolkit, part 4: skin checks
+tier: core
+perf: required
+touches: src/content/, src/config/schemes.ts, src/config/contentRules.ts, src/pool/loadoutModel.ts, src/ui/menus/customiseView.ts, src/render/replicaBuilder.ts, pipeline/content-check.mjs, pipeline/content-pictures.mjs, pipeline/contentReport.mjs, pipeline/contentReport.test.mjs, pipeline/README.md, docs/content/, docs/ARCHITECTURE.md, docs/DECISIONS.md, docs/KNOWN_ISSUES.md, .claude/skills/new-content/SKILL.md
+contract: none
+acceptance:
+  1. Rules: a skin (a replica colour scheme) has a Title Case name with no brand, a save-key id that is pinned once shipped, real colours, a Realistic colours family that exists, and a dev or public tag that Customise honours (a dev skin shows only with Dev content on); new players and bots wear public skins. Each check fails on its fault.
+  2. Fit: drawn on every replica it claims at Low and High (and from the Blender model files with "Disable all models" off), the orange tip still shows, Realistic colours turns it into its one family, and the kit's numbers are identical with and without it; nothing that decides play reads a skin's colours.
+  3. Spec test: `node pipeline/content-check.mjs skin:<id>` judges its colours against both team colours (every colour set) and each map's colours measured in the browser, its texture memory, and draws pictures on each replica it claims.
+  4. Balance: none (looks only), said in the report.
+  5. No game behaviour changes; every shipped skin passes.
+status: open
+attempts: 0

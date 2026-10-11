@@ -47,7 +47,7 @@ A task that adds, renames or moves a file keeps its folder's `README.md` current
 | `src/config/` | Every tunable number and data table | `replicas.ts`, `bots.ts`, `hits.ts`, `render.ts`, `controls.ts`, `dev.ts` |
 | `src/core/` | Loop and session plumbing: stepper, seeds, frame pacer, crash report | `fixedStepper.ts`, `seed.ts`, `sessionPlan.ts`, `crashReport.ts`, `framePacer.ts` |
 | `src/pool/` | The asset pool, the Loadout, the Armory economy, Extraction cases | `pool.ts`, `kit.ts`, `loadoutModel.ts`, `armory.ts`, `collection.ts`, `caches.ts` |
-| `src/content/` | The content checks: rules, compatibility, spec test and balance run for a new replica, part, map or mode | `gameContent.ts`, `replicaChecks.ts`, `partChecks.ts`, `mapChecks.ts`, `modeChecks.ts`, `specSheet.ts`, `report/` |
+| `src/content/` | The content checks: rules, compatibility, spec test and balance run for a new replica, part, map, mode or skin | `gameContent.ts`, `replicaChecks.ts`, `partChecks.ts`, `mapChecks.ts`, `modeChecks.ts`, `skinChecks.ts`, `specSheet.ts`, `report/` |
 | `src/stats/` | Match stats, local records, settling a finished match | `matchStats.ts`, `records.ts`, `settleMatch.ts` |
 | `src/save/` | The save system: guarded storage, file format, migrations, tab lock | `saveFile.ts`, `stores.ts`, `guardedStorage.ts`, `saveManager.ts`, `tabLock.ts` |
 | `src/settings/` | The saved settings object and the Dev settings' saved values | `storage.ts`, `dev.ts` |

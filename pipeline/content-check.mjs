@@ -6,11 +6,12 @@
  *   node pipeline/content-check.mjs <item|all> [options]      the item by pool ID, name or Key ("000007", "Red Dot")
  *   node pipeline/content-check.mjs map:<id|all> [options]    a map by its id or name (CT2: "map:depot", "map:Woodland")
  *   node pipeline/content-check.mjs mode:<id|all> [options]   a mode by its id or name (CT3: "mode:attackDefend")
+ *   node pipeline/content-check.mjs skin:<id|all> [options]   a skin (a replica colour scheme) by its id or name (CT4: "skin:cobalt")
  *
  *   --balance        also run level 4, the balance run (bot matches; minutes per map, one process per map in parallel)
  *   --public         the public gate: all four levels at full length, every warning listed for the owner's OK
  *   --levels a,b     only these levels (rules, compatibility, spec, balance)
- *   --maps a,b       the balance run on these maps only (by id: depot, woodland, neon)
+ *   --maps a,b       the balance run on these maps only (by id: depot, woodland, neon); a skin: its map colours on these only
  *   --seeds n        seeds per pairing (default config/contentRules.ts CONTENT_BALANCE_RUN)
  *   --seconds n      match length in seconds (the same default's)
  *   --no-pictures    skip the pictures (they need a browser and the e2e build)
@@ -18,7 +19,8 @@
  *   --no-perf        a map or mode: skip the spec test's perf runs (a map: Elimination on Low, Medium and High, about ten
  *                    minutes; a mode: Low on each map that hosts it, about a minute and a half each)
  *   --env e          a map or mode: the perf runs' environment (perf-run.mjs --env; default container)
- *   --no-browser     a mode: skip the spec test's short match in the browser (e2e/modeMatch.spec.ts, about a minute)
+ *   --no-browser     a mode: skip the spec test's short match in the browser (e2e/modeMatch.spec.ts, about a minute);
+ *                    a skin: skip measuring each map's colours in the browser (about a minute a map)
  *
  * A map's levels are its rules, its layout (shown as level 2), the spec test (the perf runs and pictures) and the balance
  * run: every lighting and mode it offers at every level, one process per lighting and mode in parallel. Every
@@ -27,9 +29,14 @@
  * own plan, on every map that hosts it), the spec test (a short match in the browser, the perf runs) and the balance
  * run on every map and lighting that hosts it at every level, with Elimination beside a round mode for its pay. Every
  * mode is in the report beside this one; "mode:all" checks levels 1 and 2 of every mode on its first public map.
+ * A skin's (CT4) are its rules, its fit (drawn on every replica it claims at Low and High, from the model files too; the
+ * orange tip; Realistic colours; the same numbers with it and without), the spec test (the team colours, texture memory,
+ * each map's colours measured in the browser, pictures on each replica) and no balance run (looks only). Every skin is
+ * in the report beside this one; "skin:all" checks levels 1 to 3 of every skin without the browser.
  *
  * Writes pipeline/out/content/<id>/report.md, report.html (one file, pictures inside), report.json and pictures/
- * (<id> is the item's, map-<id> for a map, maps for every map, mode-<id> for a mode, modes for every mode).
+ * (<id> is the item's, map-<id> for a map, maps for every map, mode-<id> for a mode, modes for every mode, skin-<id> for
+ * a skin, skins for every skin).
  * Exits 1 when a check fails or a runner could not run, else 0 (warnings are for the owner, not the exit code).
  */
 import { execFileSync, spawn } from 'node:child_process';
@@ -37,8 +44,8 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { measuresFrom, measuresNotRun } from './balanceReport.mjs';
-import { drawMapPictures, drawPictures, mapShotPictures } from './content-pictures.mjs';
-import { balanceResults, LEVELS, mapReportMarkdown, modeReportMarkdown, payResults, perfResult, reportHtml, reportMarkdown, runOrderResults, worst } from './contentReport.mjs';
+import { drawMapPictures, drawPictures, mapShotPictures, measureMapPalettes } from './content-pictures.mjs';
+import { balanceResults, LEVELS, mapReportMarkdown, modeReportMarkdown, payResults, perfResult, reportHtml, reportMarkdown, runOrderResults, skinReportMarkdown, worst } from './contentReport.mjs';
 import { baselineFileName, budgetFor, judgeRun, runFileName } from './perfMatrix.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -77,13 +84,14 @@ export function parseArgs(argv) {
   const bad = o.levels.filter((l) => !LEVELS.includes(l));
   if (bad.length > 0) throw new Error(`unknown level ${bad.join(', ')} (levels: ${LEVELS.join(', ')})`);
   for (const [name, n] of [['--seeds', o.seeds], ['--seconds', o.seconds]]) if (n !== undefined && !(Number.isInteger(n) && n > 0)) throw new Error(`${name} needs a whole number above 0`);
-  const every = o.item === 'all' || /^(map|mode):all$/i.test(o.item);
+  const every = o.item === 'all' || /^(map|mode|skin):all$/i.test(o.item);
   if (every && o.levels.includes('balance')) throw new Error(`the balance run takes one item, not "${o.item}"`);
   if (every) o.pictures = false;
   o.isMap = /^map:/i.test(o.item);
   o.isMode = /^mode:/i.test(o.item);
+  o.isSkin = /^skin:/i.test(o.item);
   if (!o.isMap && !o.isMode && (!o.perf || o.env !== 'container')) throw new Error('--no-perf and --env are for a map or mode (map:<id>, mode:<id>)');
-  if (!o.isMode && !o.browser) throw new Error('--no-browser is for a mode (mode:<id>)');
+  if (!o.isMode && !o.isSkin && !o.browser) throw new Error('--no-browser is for a mode or skin (mode:<id>, skin:<id>)');
   if ((o.isMap || o.isMode) && o.maps.length > 0) throw new Error(`--maps is for a replica or part; a ${o.isMap ? 'map plays on itself' : 'mode plays on every map that hosts it'}`);
   if (every || !o.levels.includes('spec')) {
     o.perf = false;
@@ -137,7 +145,7 @@ async function main() {
   try {
     o = parseArgs(process.argv.slice(2));
   } catch (e) {
-    console.error(`content-check: ${e.message}\n  usage: node pipeline/content-check.mjs <item|all|map:<id>|map:all|mode:<id>|mode:all> [--balance] [--public] [--levels a,b] [--maps a,b] [--seeds n] [--seconds n] [--no-pictures] [--url u] [--no-perf] [--env e] [--no-browser]`);
+    console.error(`content-check: ${e.message}\n  usage: node pipeline/content-check.mjs <item|all|map:<id>|map:all|mode:<id>|mode:all|skin:<id>|skin:all> [--balance] [--public] [--levels a,b] [--maps a,b] [--seeds n] [--seconds n] [--no-pictures] [--url u] [--no-perf] [--env e] [--no-browser]`);
     process.exit(2);
   }
   mkdirSync(ARTIFACTS, { recursive: true });
@@ -145,6 +153,7 @@ async function main() {
   const env = { AIRSOFT_CONTENT_ITEM: o.item, ...(o.seeds ? { AIRSOFT_CONTENT_SEEDS: String(o.seeds) } : {}), ...(o.seconds ? { AIRSOFT_CONTENT_SECONDS: String(o.seconds) } : {}) };
   if (o.isMap) return finish(await checkMapItem(o, env), started);
   if (o.isMode) return finish(await checkModeItem(o, env), started);
+  if (o.isSkin) return finish(await checkSkinItem(o, env), started);
 
   console.log(`content-check: ${o.item}: rules, compatibility and the spec test…`);
   const itemData = await runReport('src/content/report/item.report.ts', env, 'item');
@@ -382,6 +391,58 @@ async function checkModeItem(o, env) {
 
   const meta = { commit: commitOf(), when: `${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC`, levels: o.levels, publicGate: o.publicGate };
   writeReport({ outDir, pictureDir: join(outDir, 'pictures'), item, results, pictures: [], problems, meta, md: modeReportMarkdown({ content, item, results, meta }) });
+  return { item, results, problems, outDir };
+}
+
+/**
+ * A skin's content check (CT4): levels 1 to 3 from skin.report.ts, then the pictures and each map's colours in the
+ * browser (one after the other: they serve the build on the same port), judged by skinMaps.report.ts. Level 4 is none.
+ */
+async function checkSkinItem(o, env) {
+  console.log(`content-check: ${o.item}: rules, fit and the spec test…`);
+  const skinData = await runReport('src/content/report/skin.report.ts', env, 'skin');
+  const content = contentOf(skinData);
+  if (!content) {
+    const why = skinData.error ?? measuresNotRun(skinData, ROOT)[0]?.message ?? 'the skin report found nothing';
+    console.error(`content-check: ${why}`);
+    process.exit(1);
+  }
+  const item = content.items.length === 1 ? content.items[0] : { id: 'skins', name: 'Every skin', category: 'skin', tag: 'mixed', key: '' };
+  const results = content.results.filter((r) => o.levels.includes(r.level));
+  const problems = [];
+  const outDir = join(ROOT, 'pipeline', 'out', 'content', item.id);
+  rmSync(outDir, { recursive: true, force: true });
+  const pictureDir = join(outDir, 'pictures');
+  const spec = o.levels.includes('spec');
+
+  let pictures = [];
+  if (o.pictures && spec && content.pictures.length > 0) {
+    console.log(`content-check: drawing ${content.pictures.length} pictures…`);
+    pictures = await drawPictures(content.pictures, { outDir: pictureDir, url: o.url });
+    for (const p of pictures.filter((x) => !x.ok)) results.push({ level: 'spec', check: 'spec.picture', item: p.title, verdict: 'warn', says: `not drawn (${p.error}); look at it in the game instead.` });
+  }
+  let palettes = [];
+  if (o.browser && spec && content.items.length === 1) {
+    const maps = content.maps.filter((m) => o.maps.length === 0 || o.maps.includes(m.id));
+    if (maps.length === 0) problems.push(`no map is called ${o.maps.join(', ')} (maps: ${content.maps.map((m) => m.id).join(', ')})`);
+    console.log(`content-check: measuring the colours of ${maps.map((m) => m.label).join(', ')} in the browser…`);
+    palettes = await measureMapPalettes(maps.map((m) => ({ map: m.id, label: m.label, light: m.light })), { url: o.url });
+    for (const p of palettes.filter((x) => x.error)) results.push({ level: 'spec', check: 'skin.map', item: `${item.name} on ${p.label}`, verdict: 'warn', says: `${p.label}'s colours could not be measured (${p.error}); look at it in the game.` });
+    const measured = palettes.filter((p) => !p.error);
+    if (measured.length > 0) {
+      const file = join(ARTIFACTS, 'content-palettes.json');
+      writeFileSync(file, `${JSON.stringify(measured)}\n`);
+      const judged = contentOf(await runReport('src/content/report/skinMaps.report.ts', { ...env, AIRSOFT_CONTENT_PALETTES: file }, 'skin-maps'));
+      if (judged) {
+        results.push(...judged.results);
+        // The report shows each map's palette as judged (merged, its rare colours left out), not the raw buckets.
+        palettes = palettes.map((p) => judged.palettes?.find((j) => j.map === p.map) ?? p);
+      } else problems.push('the skin-on-map runner found nothing; its log is pipeline/out/qa-artifacts/content-skin-maps.log');
+    }
+  }
+
+  const meta = { commit: commitOf(), when: `${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC`, levels: o.levels, publicGate: o.publicGate };
+  writeReport({ outDir, pictureDir, item, results, pictures, problems, meta, md: skinReportMarkdown({ content, item, results, pictures, palettes, meta }) });
   return { item, results, problems, outDir };
 }
 

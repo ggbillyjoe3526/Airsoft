@@ -135,6 +135,7 @@ export function createMaterials(teamColor: number, detail: ReplicaDetail, speckl
   // Vertex colours only darken (a colour can't pass white), so flat faces sit at VERTEX_BASE and the material is that
   // much brighter: a flat face is its colour as before, a bevel or worn edge lighter.
   if (vertexColors) for (const mat of Object.values(materials)) if (mat instanceof THREE.MeshStandardMaterial && mat.vertexColors) brighten(mat);
+  nameMaterials(materials);
   return materials;
 }
 
@@ -186,7 +187,23 @@ export function paintedMaterials(base: Record<MaterialKey, THREE.Material>, deta
     const mat = out[key] as THREE.MeshStandardMaterial;
     if (mat.vertexColors) brighten(mat);
   }
+  nameMaterials(out);
   return out;
+}
+
+/**
+ * Names each material after its key (CT4): the skin checks (content/skinDraw.ts) read which part of a drawn model is
+ * in which of a scheme's colours by it, and a debugger shows it.
+ */
+function nameMaterials(materials: Record<MaterialKey, THREE.Material>): void {
+  for (const [key, mat] of Object.entries(materials)) mat.name = key;
+}
+
+/** A flat face's colour from a material's (`brighten` undone): what a scheme's colour is drawn as. */
+export function flatColour(mat: THREE.MeshStandardMaterial): number {
+  const c = mat.color.clone();
+  if (mat.vertexColors) c.multiplyScalar(VERTEX_BASE);
+  return c.getHex();
 }
 
 /**

@@ -338,6 +338,16 @@ replaces its line; the old one stays findable in the archive or in git.
   map, lighting and level (`MODE_PLAY_TEST`, `MODE_BALANCE_BANDS`). A mode drawn like another may let that mode's perf
   gate runs stand for it, with a reason (`MODE_PERF_STAND_INS`: Attack / Defend is Elimination with a flagpole). Ids in
   players' saves are pinned in `SHIPPED_MODE_IDS`.
+- **A skin's checks (2026-10-11, CT4; Claude's defaults, the owner may change any).** A skin is a replica colour scheme
+  and fits every replica that takes one (the Cyber Pistol keeps its own). The numbers are `SKIN_RULES`: its colours
+  cover at least 60 % of the replica; a colour counts at a distance when it is 10 % of a bot figure's replica; the
+  orange tip stands at least 20 apart in colour (CIEDE2000) from what is around it, and closer is a look, not a fail;
+  a skin blends into a map within 10 of its common colours (5 % of the surface or more, as painted before light), a
+  look only when bots carry it. A colour reading as a team's needs a reason in `TEAM_COLOUR_SKINS`: Cobalt, Signal and
+  Coral are the bots' own team colours, and Hazard (orange, players only) stays as it was before the toolkit. A dev
+  skin (`tag: 'dev'`) shows in Customise only with Dev content on, and a saved pick of it plays as the default
+  without. "Nothing that decides play reads a skin" is proved over the imports of the sim, bots, physics, nav and the
+  kit's numbers: only names that pass a scheme's id along may reach them.
 
 ## Replicas, Loadout, Armory and economy
 
