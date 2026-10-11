@@ -1,4 +1,5 @@
 import { DEFAULT_HIT_MARKER, HITS } from '../config/hits';
+import { HUD_TEXT, type SkipLabel } from '../config/hudText';
 import { restartAnimation } from './restartAnimation';
 import { isRoundStart, spokenRoundMessage } from './roundBanner';
 
@@ -22,6 +23,7 @@ export class HitFeedback {
   private spokenRound = '';
   private shownSpectating = '';
   private shownFireKey = '';
+  private shownSkip: SkipLabel = null;
   private shownRound = '';
   private shownOut = '';
   private shownCalling = false;
@@ -121,15 +123,19 @@ export class HitFeedback {
     this.out.classList.toggle('show', text !== '');
   }
 
-  /** Name of the player being watched, or '' when not spectating. */
-  setSpectating(name: string): void {
+  /**
+   * Name of the player being watched, or '' when not spectating. `skip` (M83): how to skip the rest of the round, or
+   * that it is being played out (said even with nobody left to watch).
+   */
+  setSpectating(name: string, skip: SkipLabel = null): void {
     // The fire key too: it can be rebound mid-match from the pause menu.
     const key = this.fireKey();
-    if (name === this.shownSpectating && key === this.shownFireKey) return;
+    if (name === this.shownSpectating && key === this.shownFireKey && skip === this.shownSkip) return;
     this.shownSpectating = name;
     this.shownFireKey = key;
-    this.spectating.textContent = name ? `Spectating ${name}${key ? ` · ${key} for next` : ''}` : '';
-    this.spectating.classList.toggle('show', name !== '');
+    this.shownSkip = skip;
+    this.spectating.textContent = spectatingText(name, key, skip);
+    this.spectating.classList.toggle('show', this.spectating.textContent !== '');
   }
 
   /**
@@ -162,3 +168,10 @@ export class HitFeedback {
   }
 }
 
+
+/** The spectating line (M83 adds the skip): "Spectating Blue 2 · Left click for next · Esc to skip the round". Pure. */
+export function spectatingText(name: string, fireKey: string, skip: SkipLabel): string {
+  if (skip === 'skipping') return HUD_TEXT.skip.skipping;
+  if (!name) return '';
+  return [`Spectating ${name}`, ...(fireKey ? [`${fireKey} for next`] : []), ...(skip ? [HUD_TEXT.skip[skip]] : [])].join(' · ');
+}

@@ -160,13 +160,13 @@ export const ARMORY_TEXT = {
   spare: 'Spare',
   /** A rarer copy of a replica you never picked goes straight into its Loadout slot. */
   nowEquipped: 'Now equipped',
-  /** Dev settings → Disable Armory (M26d). */
-  off: 'The Armory is switched off in the Dev settings.',
   /** The match summary's line. */
   earned: 'Field Credits earned',
-  /** The summary's line for a match that paid nothing (audit POOL-22). */
+  /**
+   * The summary's line for a match that paid nothing (audit POOL-22). With the Armory off in the Dev settings there is
+   * none (M83: the Armory is gone from every menu, so are its Field Credits).
+   */
   unpaidDev: 'No Field Credits: Dev settings changed how this match played.',
-  unpaidOff: 'No Field Credits: the Armory is switched off in the Dev settings.',
   unpaidDevContent: 'No Field Credits: this match used content still being built.',
 } as const;
 

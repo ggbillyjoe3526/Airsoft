@@ -95,6 +95,8 @@ export type SettingField =
   /** Settings → HUD (M24); the HUD's size (audit UI-04). */
   | 'scoreboardSize'
   | 'hitFeed'
+  /** Settings › HUD › Minimap (M83): 'rotating' or 'fixed'. */
+  | 'minimapTurn'
   /** Settings → HUD → What got you (M41): 'auto', 'on' or 'off'. */
   | 'whatGotYou'
   | 'hudSize'

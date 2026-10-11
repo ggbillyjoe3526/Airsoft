@@ -329,9 +329,9 @@ describe('HUD settings (M24)', () => {
 });
 
 describe('the summary when a match paid nothing (audit POOL-22)', () => {
-  it('says why: Dev settings changed the match, or the Armory is off; nothing when it paid', () => {
+  it('says why: Dev settings changed the match; nothing when it paid, nor with the Armory off (M83: gone from the menus)', () => {
     expect(unpaidLine(null, 'dev')).toBe(ARMORY_TEXT.unpaidDev);
-    expect(unpaidLine(null, 'off')).toBe(ARMORY_TEXT.unpaidOff);
+    expect(unpaidLine(null, 'off')).toBe('');
     expect(unpaidLine(null, 'devContent')).toBe(ARMORY_TEXT.unpaidDevContent);
     expect(ARMORY_TEXT.unpaidDevContent).not.toBe(ARMORY_TEXT.unpaidDev);
     expect(unpaidLine({ lines: [], multiplier: 1, total: 40 }, 'devContent')).toBe('');

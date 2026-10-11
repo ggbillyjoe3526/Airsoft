@@ -11,7 +11,7 @@ export interface DevSettings {
    * match uses, not by the switch, so it isn't a `cheat`).
    */
   devContent: boolean;
-  /** Turns the Armory off (M26d): its button greyed out on New game, and matches pay no Field Credits. */
+  /** Turns the Armory off (M26d): gone from every menu (M83), and matches pay no Field Credits. */
   disableArmory: boolean;
   /** Every asset in pool.md owned at every tier, for the Loadout (M26d); the collection itself is left as it is. */
   unlockAllGear: boolean;
@@ -57,7 +57,7 @@ export const DEV_ENTRIES: readonly DevEntry[] = [
     help: "Shows maps, modes, difficulties and gear still being built. Matches that use any of it don't go into your records or pay Field Credits.",
     cheat: false,
   },
-  { kind: 'switch', id: 'disableArmory', label: 'Disable Armory', help: 'Turns off every Armory mechanic and greys out the Armory in the menu.', cheat: false },
+  { kind: 'switch', id: 'disableArmory', label: 'Disable Armory', help: 'Turns off every Armory mechanic and takes the Armory out of the menus, Field Credits and Tokens too.', cheat: false },
   { kind: 'switch', id: 'unlockAllGear', label: 'Unlock all gear', help: 'Every replica and part in the pool, at every rarity it comes in, is yours to equip. Your own collection stays as it is.', cheat: true },
   { kind: 'switch', id: 'showDebug', label: 'Debug info', help: 'Frame rate, position and other numbers in the top-left corner.', cheat: false },
   { kind: 'switch', id: 'showBbPaths', label: 'BB paths', help: 'Draws the flight of every BB, to watch hop-up lift it and drop take over.', cheat: false },

@@ -1,3 +1,4 @@
+import type { MinimapTurn } from './config/minimap';
 import type { Group } from 'three';
 import { BotController } from './ai/botController';
 import { SquadFollow } from './ai/squadFollow';
@@ -28,7 +29,8 @@ import type { SupplyEvent } from './pool/supplyEvents';
 import { GAME_POOL } from './pool/gamePool';
 import { bbGlowFor, kitPaint, type PlayerKit } from './pool/loadoutModel';
 import type { LookSettings } from './config/look';
-import { SIM, SIM_DT } from './config/sim';
+import { SIM, SIM_DT, SKIP_ROUND } from './config/sim';
+import { idleCommand, type SkipOffer, skipEnds, skipOffer, skipTickCap, skipTickShown } from './matchFlow';
 import type { SquadCommand } from './config/squad';
 import { TEAMS, type TeamColours } from './config/teams';
 import { BuildTiming } from './core/buildTiming';
@@ -320,6 +322,9 @@ export class MatchSession {
     this.build.phase('shaders');
   }
 
+  /** A Skip to next round under way (M83): the ticks run so far and the most it may run. */
+  private skip: { ticks: number; cap: number } | null = null;
+
   /** Extraction's run context (the insertion, the home team's starts, the exits); undefined in the other modes. */
   readonly extraction: ExtractionContext | undefined;
   /** Extraction: your bot teammates follow you unless you order otherwise (ai/squadFollow.ts). */
@@ -337,6 +342,11 @@ export class MatchSession {
   advance(dt: number): number {
     const p = this.player;
     this.input.update(p.armament.active, this.loadout.length, this.combat.aimRaised, this.combat.aimSensitivityScale, canAimDownSights(p.armament));
+    // Skipping the round (M83): clicks, inspects and orders made meanwhile are dropped; the ticks run flat out.
+    if (this.skip) {
+      this.input.clearLatches();
+      return this.fastForward();
+    }
     if (this.match.spectating && this.input.takeClick()) this.match.nextSpectateTarget();
     if (this.input.takeInspect() && p.status === 'alive') this.combat.inspect();
     const order = this.input.takeOrder();
@@ -344,10 +354,62 @@ export class MatchSession {
     const ticks = advanceStepper(this.stepper, dt);
     for (let i = 0; i < ticks; i++) {
       this.input.fillCommand(this.playerCommand);
-      this.bots.think(this.state, SIM_DT);
-      stepSimulation(this.state, this.commands, this.ctx, SIM_DT);
-      this.afterTick();
+      this.tick(true);
     }
+    return ticks;
+  }
+
+  /**
+   * One simulation tick with the player's command already filled: the bots think, the simulation steps, and what
+   * follows each tick runs (`shown`: its presentation too). Watched play and a skipped round (M83) both run this, so a
+   * skip plays the round exactly as watching it would have.
+   */
+  private tick(shown: boolean): void {
+    this.bots.think(this.state, SIM_DT);
+    stepSimulation(this.state, this.commands, this.ctx, SIM_DT);
+    this.afterTick(shown);
+  }
+
+  /** Skip to next round (M83): what you can skip to now (matchFlow.ts skipOffer), or null; null while a skip runs. */
+  get skipOffer(): SkipOffer {
+    return this.skip ? null : skipOffer(this.state.round, this.rounds, this.player);
+  }
+
+  /** A skip is running: the rest of the round is being played out (the HUD says so). */
+  get skipping(): boolean {
+    return this.skip !== null;
+  }
+
+  /**
+   * Skip to next round (M83): from the next frame the rest of the round is simulated at once, as watched, until the next
+   * round starts or the match is decided; the records and the pay count it as any round. False where it isn't offered.
+   */
+  beginSkip(): boolean {
+    if (this.skipOffer === null) return false;
+    this.skip = { ticks: 0, cap: skipTickCap(this.rounds) };
+    return true;
+  }
+
+  /**
+   * One frame of a skip: ticks as fast as SKIP_ROUND's slice of the frame allows, the player's command left idle (you are
+   * out: nothing reads it). Ends on the tick the next round starts or the match is decided, or at the cap (a stall that
+   * should never come), after which play simply carries on as watched.
+   */
+  private fastForward(): number {
+    const skip = this.skip!;
+    const until = performance.now() + SKIP_ROUND.frameBudgetMs;
+    let ticks = 0;
+    do {
+      for (let i = 0; i < SKIP_ROUND.ticksPerCheck; i++) {
+        idleCommand(this.playerCommand, this.input.yaw, this.input.pitch);
+        this.tick(false);
+        ticks++;
+        if (skipEnds(this.state.events) || ++skip.ticks >= skip.cap) {
+          this.skip = null;
+          return ticks;
+        }
+      }
+    } while (performance.now() < until);
     return ticks;
   }
 
@@ -455,6 +517,7 @@ export class MatchSession {
     // The camera shows where BBs actually go: view pitch plus the replica's recoil kick.
     const pitch = this.input.pitch + this.player.armament.recoil;
     updateFirstPersonCamera(this.renderer.camera, this.player, BODY, this.hits, alpha, this.input.yaw, pitch, this.motion.leanRoll);
+    this.match.setSkipLabel(this.skip ? 'skipping' : this.skipOffer);
     const spectating = this.match.frame(this.renderer.camera, alpha, dt, this.input.yaw, boardHeld);
     // The torches from where the view is (M33h): yours from your eyes, or the watched player's.
     this.torches.update(this.renderer.camera, spectating ? this.match.watchedCharacter : this.player, !spectating, alpha);
@@ -537,6 +600,11 @@ export class MatchSession {
   /** Settings → HUD → Hit feed (M24). */
   setHitFeedMode(mode: HitFeedMode): void {
     this.match.setHitFeedMode(mode);
+  }
+
+  /** Settings › HUD › Minimap (M83): turning with the view, or fixed north up. */
+  setMinimapTurn(turn: MinimapTurn): void {
+    this.match.setMinimapRotating(turn === 'rotating');
   }
 
   /** Settings › Gameplay › Hit marker (M97): the red X when your BB lands. */
@@ -677,11 +745,17 @@ export class MatchSession {
   }
 
   /** Everything that reacts to a simulation tick's events. */
-  private afterTick(): void {
+  /**
+   * After each tick: the stats, what the bots saw, the round's start and end, the squad. `shown`: the presentation too
+   * (puffs, sounds, the hit feed and the banner); a skipped round (M83) shows only its end and the next round's start.
+   */
+  private afterTick(shown: boolean): void {
     this.stats.afterTick(this.state, SIM_DT);
     this.bots.observe(this.state);
-    this.combat.afterTick();
-    this.match.afterTick(this.input.yaw);
+    if (shown || skipTickShown(this.state.events)) {
+      this.combat.afterTick();
+      this.match.afterTick(this.input.yaw);
+    }
     for (const e of this.state.events) {
       if (e.type === 'roundStart') {
         this.input.resetView(this.player.spawnYaw);

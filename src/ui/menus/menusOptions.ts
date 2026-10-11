@@ -50,6 +50,8 @@ export interface MenusOptions {
    */
   onTutorial: () => void;
   tutorialDone: boolean;
+  /** The pause menu's Skip to next round (M83): the rest of the round played out at once, then play resumes. */
+  onSkipRound: () => void;
   /** Settings › Gameplay › Replay tutorial (M97): the tutorial from its first step, finished or not, leaving any match. */
   onReplayTutorial: () => void;
   /** The pause menu during the tutorial (audit POOL-14): skip the step under way, or the rest of it. */

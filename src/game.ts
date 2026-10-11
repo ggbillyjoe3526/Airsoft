@@ -50,6 +50,7 @@ import { loadRecords, noNews, type RecordNews, type Records, saveRecords } from 
 import { settleMatch } from './stats/settleMatch';
 import { loadCrosshair } from './ui/crosshair';
 import { loadHitMarker } from './ui/crosshairSettings';
+import { loadMinimapTurn } from './ui/hudSettings';
 import { CrashScreen } from './ui/crashScreen';
 import { DebugOverlay } from './ui/debugOverlay';
 import { onFullscreenChange, relockAfterFullscreen, toggleFullscreen } from './ui/fullscreen';
@@ -229,6 +230,8 @@ export class Game {
   private crosshair: CrosshairSettings = loadCrosshair();
   /** Settings › Gameplay › Hit marker (M97): off unless the player turned it on. */
   private hitMarker = loadHitMarker();
+  /** Settings › HUD › Minimap (M83): rotating, or fixed north up. */
+  private minimapTurn = loadMinimapTurn();
   /** The local records (M19), and what the last match finished changed in them. */
   private readonly records: Records = loadRecords(browserStorage());
   private recordNews: RecordNews = noNews();
@@ -449,6 +452,10 @@ export class Game {
         this.tutorial = true;
         this.play();
       },
+      // Skip to next round (M83): the skip runs from the next frame of play, so Resume takes the mouse as usual.
+      onSkipRound: () => {
+        if (this.session instanceof MatchSession && this.session.beginSkip()) this.play();
+      },
       onSkipTutorialStep: () => this.skipTutorial(false),
       onSkipTutorial: () => this.skipTutorial(true),
       map: { initial: this.map, onChange: (m) => ((this.map = m), (this.setupChanged = true), this.prefetchFieldSounds()) },
@@ -523,6 +530,7 @@ export class Game {
         hudOpacity: { initial: this.hudOpacity, onChange: (v) => ((this.hudOpacity = v), this.showHudLook()) },
         hitFeed: { initial: this.hitFeedMode, onChange: (m) => this.changeHitFeed(m) },
         whatGotYou: { initial: this.whatGotYouMode, onChange: (m) => this.changeWhatGotYou(m) },
+        minimapTurn: { initial: this.minimapTurn, onChange: (t) => ((this.minimapTurn = t), this.session instanceof MatchSession && this.session.setMinimapTurn(t)) },
       },
       dev: {
         initial: this.devPicked,
@@ -742,6 +750,8 @@ export class Game {
    */
   private watchFrameTimes(s: MatchSession | RangeSession, frameSeconds: number): void {
     if (!this.autoQuality || this.steppedDown) return;
+    // A skipped round (M83) spends each frame simulating on purpose: its frames say nothing about the graphics.
+    if (s instanceof MatchSession && s.skipping) return this.frameWatch.reset();
     if (this.stepDownTo === null) {
       const below = presetBelow(this.qualityChoice);
       if (below && this.frameWatch.add(frameSeconds * 1000, slowFrameMs(this.frameRateCap))) this.stepDownTo = below;
@@ -953,6 +963,7 @@ export class Game {
       this.session.setHitFeedMode(this.hitFeedMode);
       this.session.setWhatGotYouMode(this.whatGotYouMode);
       this.session.setHitMarker(this.hitMarker);
+      this.session.setMinimapTurn(this.minimapTurn);
       this.session.combat.setReplicaPictures(this.pictures, kitSubjects(this.loadout.kit(), this.look.realisticColours));
       this.applyDevTo(this.session);
       applyTeamCss(this.container, TEAM_COLOUR_SETS[this.teamColours]);
@@ -1052,7 +1063,7 @@ export class Game {
         haul: haulSummary(GAME_POOL, s.runFinds(), this.lastHaul),
       });
     } else {
-      this.menus.showPause(s.pauseLine(), this.matchSeed);
+      this.menus.showPause(s.pauseLine(), this.matchSeed, false, false, s.skipOffer);
     }
     s?.setPlaying(false);
     // The screen just shown starts without a hint: say again why the match was silent.

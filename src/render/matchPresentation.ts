@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { Action } from '../config/controls';
 import { EXTRACTION } from '../config/extraction';
-import { HUD_TEXT } from '../config/hudText';
+import { HUD_TEXT, type SkipLabel } from '../config/hudText';
 import type { HitConfig } from '../config/hits';
 import { type HitFeedMode, TEAMMATE_MARKERS } from '../config/matchInfo';
 import type { BodyConfig } from '../config/movement';
@@ -72,6 +72,8 @@ export class MatchPresentation {
   /** The "what got you" card (M41), whether it is on, and the record of the hit it words (the bots' controller fills it). */
   private readonly whatGotYou: WhatGotYouCard;
   private whatGotYouOn = false;
+  /** Skip to next round (M83): how to skip, that a skip is under way, or nothing. */
+  private skipLabel: SkipLabel = null;
   private hitFacts: HitFacts | null = null;
   /** Pro briefing tips for the board (M41): none unless the opponents are Pro. */
   private proTips = false;
@@ -261,6 +263,16 @@ export class MatchPresentation {
   setWhatGotYou(on: boolean): void {
     this.whatGotYouOn = on;
     if (!on) this.whatGotYou.clear();
+  }
+
+  /** Skip to next round (M83): what the spectating line says about skipping, set by the session each frame. */
+  setSkipLabel(label: SkipLabel): void {
+    this.skipLabel = label;
+  }
+
+  /** Settings › HUD › Minimap (M83; also called once as the match is built): turning with the view, or fixed north up. */
+  setMinimapRotating(on: boolean): void {
+    this.minimap.setRotating(on);
   }
 
   /** Settings › Gameplay › Hit marker (M97; also called once as the match is built). */
@@ -473,9 +485,9 @@ export class MatchPresentation {
     if (spectating) {
       watched = this.spectator.ensureTarget();
       this.spectator.place(camera, watched, alpha, dt);
-      this.feedback.setSpectating(watched === this.player ? '' : this.names.get(watched.id) ?? '');
+      this.feedback.setSpectating(watched === this.player ? '' : this.names.get(watched.id) ?? '', this.skipLabel);
     } else {
-      this.feedback.setSpectating('');
+      this.feedback.setSpectating('', this.skipLabel === 'skipping' ? 'skipping' : null);
     }
     this.watched = watched;
     // The camera is placed now (by the session, or the spectator above): its matrices are made once for every marker below.

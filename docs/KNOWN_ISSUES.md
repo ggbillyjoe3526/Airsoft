@@ -129,6 +129,8 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 
 | Issue | Class | Notes |
 |---|---|---|
+| Skip to next round shows nothing of the skipped stretch: no hit-feed lines, puffs or sounds for it, and an AEG motor loop sounding as the skip starts may hum until it ends | can wait | Only the round's end and the next start run the presentation (`matchFlow.ts` `skipTickShown`); the stats, records and pay see every tick. The skip is offered from the pause menu only (Esc), not by a key of its own, so it can't be pressed by accident while spectating. Not checked in the browser by the worker. (M83) |
+| With Disable Armory on, the tutorial's last step still says matches pay Field Credits to spend in the Armory | can wait | M83 took the Armory out of every menu; the coach's words are the tutorial's (`config/tutorial.ts`), not a menu. (M83) |
 | No pre-round freeze: everyone can move and fire from the round-start whistle | can wait | Spawns are hidden from each other (tested), so nobody can be shot at spawn. Revisit with playtesting. |
 | Bot-only Attack / Defend: about 1 round in 7 is won by raising the flag, the rest by wipe-outs; attackers win about half | can wait | Beta balance (raise time, defender holds, retakers). 107 captures in 736 rounds over 96 seeds (M11 Depot); attackers win 50 %, guard 38–67 %. A headless test guards both. (M10, M11) |
 | Attack / Defend: two defenders leave their posts as soon as the flag is tagged, so a human can bait them and flank | can wait | Playtest; a defender could wait to see the pole, or retake only past a few percent. |

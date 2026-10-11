@@ -70,6 +70,8 @@ The root files in more detail:
   simulation, the bots, and the combat and match presentation. `Game` builds it on Play and disposes it when the player
   leaves; Play Again builds a new one with its own seed (`matchFlow.ts` `matchSeed`). What Play does is the pure
   `core/sessionPlan.ts`. A decided match is recorded and paid once, the frame it is decided (`stats/settleMatch.ts`).
+  Skip to next round (M83) runs the same per-tick body as watched play flat out over a few frames, showing only the
+  round's end and the next start (`matchFlow.ts` `skipOffer`, `skipTickCap`; `config/sim.ts` `SKIP_ROUND`).
   Its `MatchSetup` carries New game's Match rules (`config/matchRules.ts`), a bot difficulty per team and the Rules
   picker's ruleset (`RULESETS`, laid over the match panel's picks by `playedPicks` in `newGamePicks.ts`).
 - **`RangeSession`** (`rangeSession.ts`) is the practice range: the player alone on `map/range.ts`, no bots and no

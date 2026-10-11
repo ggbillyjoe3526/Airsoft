@@ -364,12 +364,13 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   // M96: the Retro look left the Dev group for Settings › Look (checked below).
   const devPanel = settings.locator('#settings-panel-dev');
   await expect(devPanel.getByRole('group', { name: /Retro/ })).toHaveCount(0);
-  // M26d: Disable Armory greys out the top bar's Armory while it applies.
+  // M26d, M83: Disable Armory takes the Armory off the top bar (gone, not greyed out) while it applies.
   const armoryPlace = topBar.getByRole('button', { name: 'Armory' });
   await settings.getByRole('group', { name: 'Disable Armory' }).getByRole('button', { name: 'On' }).click();
-  await expect(armoryPlace).toBeDisabled();
+  await expect(armoryPlace).toBeHidden();
   await devBox.uncheck();
   await expect(page.locator('.debug-overlay')).toBeHidden();
+  await expect(armoryPlace).toBeVisible();
   await expect(armoryPlace).toBeEnabled();
   await expect(group(/^Dev/i)).toBeHidden();
   await expect(group(/Graphics/i)).toHaveAttribute('aria-selected', 'true');
