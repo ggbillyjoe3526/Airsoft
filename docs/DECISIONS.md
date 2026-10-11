@@ -550,8 +550,9 @@ replaces its line; the old one stays findable in the archive or in git.
   Bumped from 950 kB on 2026-10-10 (FP1):
   main's game chunk was 950.2 kB after G11 and G12, already over, and FP1's hand holds made it 951.1 (950.3 once W4
   moved WebGL's retro filter to a chunk of its own); the WebGPU overhaul's step 6 (the old renderer removed) is where it
-  should shrink again. W6a (2026-10-11) took it from 1,007.1 to 982 kB (946 kB before main's M80, M82 and RM4); the
-  line stays 1,050 kB until W6b removes the world's GLSL patches, then drops back if the chunk has room.
+  should shrink again. W6a (2026-10-11) took it from 1,007.1 to 982 kB (946 kB before main's M80, M82 and RM4), and
+  W6b (2026-10-11, the world's GLSL patches gone) to 975 kB, so the line is back at 1,000 kB (warning from 900): a
+  change that crosses it bumps it with a line here.
 - **Production builds ship Brotli and gzip copies of their files (owner, 2026-10-04: Brotli now, `.wasm` later).**
 - **Level blocks collide as closed triangle meshes with `FIX_INTERNAL_EDGES`, not cuboids (2026-09-28).** Rapier's
   capsule controller sinks into any cuboid along its diagonals, and without the flag face-diagonal edges give ghost
