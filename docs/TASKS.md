@@ -39,7 +39,7 @@ attempts: 0
 ## M88 · Woodland: hidden starts, a smaller height edge, bigger teams (playtest note 13)
 tier: core
 perf: required
-touches: src/map/woodland.ts, src/map/terrain.ts, src/map/maps.ts, src/newGamePicks.ts, src/config/teams.ts, src/config/matchRules.ts, src/config/dressing.ts, src/content/mapRules.ts, src/ui/menus/matchPanel.ts, src/ui/menus/playModel.ts, src/ui/menus/playView.ts, src/ai/balance/
+touches: src/map/woodland.ts, src/map/terrain.ts, src/map/maps.ts, src/newGamePicks.ts, src/config/teams.ts, src/config/matchRules.ts, src/config/dressing.ts, src/content/mapRules.ts, src/ui/menus/matchPanel.ts, src/ui/menus/playModel.ts, src/ui/menus/playView.ts, src/ai/balance/, pipeline/baseline/
 contract: none
 acceptance:
   1. Neither team can see the other from its start: cover (a building, thick trees or a rise) hides each spawn.
