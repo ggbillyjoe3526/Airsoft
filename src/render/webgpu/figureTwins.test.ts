@@ -82,10 +82,10 @@ describe('the figures, replicas, arms, hands and torch beams on the node path (W
         }
       }
     }
-    // The detailed figures' finish (one material per figure) and your sleeves' camo (G11), the beams' three light
-    // materials, and the plain rest.
+    // The detailed figures' finish (one material per figure) and your sleeves' camo (G11), the glare's and the lit
+    // spots' light materials (M91: the beam is a node material of its own, so carries no patch), and the plain rest.
     expect(seen.twinned).toBe(characters.length + 1);
-    expect(seen.own).toBe(3);
+    expect(seen.own).toBe(2);
     expect(seen.plain).toBeGreaterThan(10);
     for (const r of [figures, low]) r.dispose();
     held.dispose();

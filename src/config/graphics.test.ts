@@ -75,9 +75,10 @@ describe('the shadow rows', () => {
     }
   });
 
-  it('greys out the four shadow rows while Shadows is off, and only those', () => {
-    expect(GRAPHICS_ROWS.filter((r) => r.needs === 'shadows').map((r) => r.field)).toEqual(['shadowMapSize', 'shadowRadius', 'shadowFollowsView', 'figureShadows']);
-    expect(GRAPHICS_ROWS.filter((r) => !rowEnabled(r, QUALITY.low)).map((r) => r.field)).toEqual(['shadowMapSize', 'shadowRadius', 'shadowFollowsView', 'figureShadows']);
+  it('greys out the five shadow rows while Shadows is off, and only those (M91: Torch shadows)', () => {
+    const rows = ['shadowMapSize', 'shadowRadius', 'shadowFollowsView', 'figureShadows', 'torchShadows'];
+    expect(GRAPHICS_ROWS.filter((r) => r.needs === 'shadows').map((r) => r.field)).toEqual(rows);
+    expect(GRAPHICS_ROWS.filter((r) => !rowEnabled(r, QUALITY.low)).map((r) => r.field)).toEqual(rows);
     for (const r of GRAPHICS_ROWS) expect(rowEnabled(r, QUALITY.medium), r.field).toBe(true);
   });
 });

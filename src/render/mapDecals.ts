@@ -193,8 +193,11 @@ export function floorStains(map: MapData, size: number = D.atlasSize): DecalQuad
   return out;
 }
 
-/** True if a block other than `self` (and the floors) stands within `clearance` in front of the quad. */
-export function decalBlocked(q: DecalQuad, blocks: readonly MapBlock[], self: MapBlock, clearance: number): boolean {
+/**
+ * True if a block other than `self` (and the floors) stands within `clearance` in front of the quad, or it reaches into
+ * one of `clear`'s boxes (MapData.keepClear, M81: what another renderer draws on the wall).
+ */
+export function decalBlocked(q: DecalQuad, blocks: readonly MapBlock[], self: MapBlock, clearance: number, clear: MapData['keepClear'] = []): boolean {
   const r = rightOf(q.axis, q.sign);
   const lo = [0, 0, 0];
   const hi = [0, 0, 0];
@@ -205,13 +208,13 @@ export function decalBlocked(q: DecalQuad, blocks: readonly MapBlock[], self: Ma
   }
   if (q.sign > 0) hi[q.axis] = q.centre[q.axis]! + clearance;
   else lo[q.axis] = q.centre[q.axis]! - clearance;
-  return blocks.some((b) => {
-    if (b === self || b.kind === 'floor' || b.kind === 'ramp') return false;
+  const meets = (b: { center: MapBlock['center']; size: MapBlock['size'] }): boolean => {
     const s = [b.size.x / 2, b.size.y / 2, b.size.z / 2];
     const c = [b.center.x, b.center.y, b.center.z];
     for (let a = 0; a < 3; a++) if (c[a]! + s[a]! <= lo[a]! || c[a]! - s[a]! >= hi[a]!) return false;
     return true;
-  });
+  };
+  return blocks.some((b) => b !== self && b.kind !== 'floor' && b.kind !== 'ramp' && meets(b)) || (clear ?? []).some(meets);
 }
 
 /** Every sign the map gets, placed (pure: the tests read it). */
@@ -221,7 +224,7 @@ export function decalQuads(map: MapData, size: number = D.atlasSize): DecalQuad[
   const blocks = map.blocks;
   const clearance = 0.3;
   const add = (q: DecalQuad, self: MapBlock): boolean => {
-    if (decalBlocked(q, blocks, self, clearance)) return false;
+    if (decalBlocked(q, blocks, self, clearance, map.keepClear)) return false;
     out.push(q);
     return true;
   };

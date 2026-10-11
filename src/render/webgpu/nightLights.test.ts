@@ -200,15 +200,19 @@ describe('the night lit on clustered lights (W3 criterion 2)', () => {
     }
   });
 
-  it('shades your torch’s real spot in the clusters (no shadow, no projected map)', () => {
+  it('shades your torch’s real spot in the clusters (no shadow, no projected map); with Torch shadows it is Three’s own', () => {
     const c = createCharacter(0, vec3(0, 0, 0), 0, LOADOUT, 0);
     fitParts(c.armament, c.armament.parts.map((p) => ({ ...p, light: 'weaponTorch' as const })));
     c.torchOn = true;
     const ground: WorldQuery = { raycastStatic: (_o, _d, max) => Math.min(10, max) };
-    const b = new TorchBeams([c], woodland, QUALITY.high, ground, BODY, HITS);
-    const spot = b.spotLight!;
-    expect(spot).toBeInstanceOf(THREE.SpotLight);
-    expect(clusters(spot)).toBe(true);
-    b.dispose();
+    // Medium: no torch shadows, so the clusters shade it. High (M91): it casts shadows, so it keeps its shadow map.
+    for (const [q, clustered] of [[QUALITY.medium, true], [QUALITY.high, false]] as const) {
+      const b = new TorchBeams([c], woodland, q, ground, BODY, HITS);
+      const spot = b.spotLight!;
+      expect(spot).toBeInstanceOf(THREE.SpotLight);
+      expect(spot.castShadow, q.poolLights.toString()).toBe(!clustered);
+      expect(clusters(spot)).toBe(clustered);
+      b.dispose();
+    }
   });
 });

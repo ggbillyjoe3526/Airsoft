@@ -289,8 +289,9 @@ describe('config/render.ts keeps every name it had before the split (G5 QA)', ()
     const post = ['ambientOcclusion', 'bloom', 'temporalAA', 'lightShafts', 'reflections', 'lensFinish'];
     expect(Object.keys(low).filter((k) => post.includes(k)).sort()).toEqual([...post].sort());
     expect(post.map((f) => low[f as keyof typeof low])).toEqual([0, false, false, false, false, false]);
-    // 25 fields before G5, plus G6's two (bakedLight, weathering).
-    expect(Object.keys(low)).toHaveLength(25 + 2 + post.length);
+    // 25 fields before G5, plus G6's two (bakedLight, weathering) and M91's Torch shadows (off on Low).
+    expect(low.torchShadows).toBe(false);
+    expect(Object.keys(low)).toHaveLength(25 + 2 + 1 + post.length);
   });
 
   it('keeps each file under about 600 lines', () => {

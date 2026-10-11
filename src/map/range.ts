@@ -1,6 +1,7 @@
 import { RANGE } from '../config/range';
 import { vec3 } from '../sim/vec';
 import type { MapBlock, MapData } from './mapTypes';
+import { rangeBoardsClear, rangeDressing, rangeProps } from './rangeDressing';
 
 const FLOOR_THICKNESS = 0.5;
 const WALL_THICKNESS = 0.4;
@@ -30,12 +31,20 @@ function rangeBlocks(): MapBlock[] {
 
 const spawn = { position: vec3(0, 0, RANGE.spawnBack), yaw: 0 };
 
+/** The range's walls and floor, then its props (M81: map/rangeDressing.ts). */
+const BLOCKS: MapBlock[] = [...rangeBlocks(), ...rangeProps()];
+
 export const RANGE_MAP: MapData = {
   name: 'Practice range',
-  blocks: rangeBlocks(),
+  blocks: BLOCKS,
   killY: -10,
   // One spot, used for both ends: nobody else is on the range and no round is played on it.
   spawns: [[spawn], [spawn]],
   deadZones: [[spawn], [spawn]],
   lanes: [],
+  // M81: bounce light baked by `node pipeline/bake-light.mjs` (re-bake after any change to the blocks; a test says so),
+  // and the set dressing (look only: map/rangeDressing.ts), as Depot's (G6, G8).
+  bakedLight: { file: 'range' },
+  dressing: rangeDressing(BLOCKS),
+  keepClear: rangeBoardsClear(),
 };
