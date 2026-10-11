@@ -156,6 +156,15 @@ type TorchView = {
  * before and after could hide a build (W6a).
  */
 async function countProgramsBuilt(page: import('@playwright/test').Page): Promise<void> {
+  // The count starts once the match's warm-up compile is done (it builds over many frames: on a slow runner, or with the
+  // CPU slowed 4x, still hundreds of ticks into the match) and the item pictures, which draw through the game's renderer
+  // after it (W6a), are drawn: those shaders are built ahead of play, not while you play.
+  type Pictures = { airsoft: { renderer: { afterCompiles(): Promise<void> }; pictures: { queue: unknown[]; scheduled: boolean } } };
+  await page.evaluate(() => (window as unknown as Pictures).airsoft.renderer.afterCompiles());
+  await page.waitForFunction(() => {
+    const p = (window as unknown as Pictures).airsoft.pictures;
+    return p.queue.length === 0 && !p.scheduled;
+  }, null, { timeout: 120_000 });
   await page.evaluate(() => {
     type Counted = { programsBuilt?: number; airsoft: { renderer: { renderer: { backend: { createProgram: (...args: unknown[]) => unknown } } } } };
     const w = window as unknown as Counted;

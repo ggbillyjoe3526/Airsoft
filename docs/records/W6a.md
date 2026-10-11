@@ -61,6 +61,9 @@
 - **The dressing's triangles** were first read as the info's change across a draw; on the WebGL2 back end Three can
   draw other objects between a mesh's `onBeforeRender` and its own draw (seen looking up at 5v5: +12k). They are now
   counted from each draw's geometry, as Three's info counts them.
+- **CI's first run counted the warm-up's shaders** (Woodland's spins, 6 and 12 built): Three compiles a match's
+  shaders over many frames, and on the runner that was still going when the check began counting. The count now starts
+  once the warm-up and the item pictures are done (checked locally with the CPU slowed 4x).
 
 ## Decisions
 
@@ -92,6 +95,8 @@
   renames them.
 - Medium's draws sit close to the raised lines (Woodland 115 of 120, Neon Heights 140 of 145): RM4's built-in replicas
   draw part by part; merging a replica's static parts would win several back (Beta, performance).
+- A figure's HIT! sign builds its shader the first time anyone is hit (hidden objects aren't warmed; the old renderer
+  did the same). One small build per match (Beta, performance).
 
 ## Browser checks for the owner
 
