@@ -205,16 +205,3 @@ acceptance:
   2. With Dev settings on (Unlock all gear), every replica and part is available.
 status: open
 attempts: 0
-
-## RM4 · Blender models locked behind two Dev switches, code-built models by default (owner, 2026-10-11)
-tier: core
-perf: required
-touches: src/config/dev.ts, src/render/modelFiles.ts, src/render/renderer.ts, src/game.ts, src/render/itemPictures.ts, src/ui/menus/menuPictures.ts, e2e/replicaFiles.spec.ts, e2e/powerPictures.spec.ts, docs/
-contract: none
-acceptance:
-  1. The Dev tab has "Disable figure models" and "Disable all models", both on by default; with the Dev tab hidden they apply as on.
-  2. With "Disable all models" on, no Blender file is fetched: replicas, parts, figures and the menus' power-source pictures draw their code-built models (the power sources their line drawings).
-  3. With "Disable all models" off, the replica, part and power-source files return; the figure model (figure.glb, when the build has one) only with "Disable figure models" off too.
-  4. Changing either switch takes effect from the next match or range without a reload, and the menus' pictures redraw from the models now in use.
-status: open
-attempts: 0
