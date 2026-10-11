@@ -1,8 +1,10 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { REPLICA_RANGES } from '../config/contentRules';
 import type { ReplicaConfig } from '../config/replicas';
 import { GAME_POOL } from '../pool/gamePool';
 import type { Asset, Pool } from '../pool/pool';
+import { EMPTY_FIT } from '../pool/kit';
+import { LoadoutModel } from '../pool/loadoutModel';
 import { MemoryStorage } from '../pool/testStorage';
 import { assetRules, brandsIn, isTitleCase } from './assetRules';
 import { type CheckResult, worstVerdict } from './checks';
@@ -10,7 +12,7 @@ import type { ContentInputs } from './contentInputs';
 import { checkAllAssets, checkAsset, gameInputs } from './gameContent';
 import { kitGrid } from './kitGrid';
 import { partCompatibility, partRules } from './partChecks';
-import { replicaCompatibility, replicaRules } from './replicaChecks';
+import { replicaBotChecks, replicaCompatibility, replicaRules, replicaSaveCheck } from './replicaChecks';
 
 /**
  * The content toolkit's levels 1 and 2 (CT1): every asset the game ships passes them, and each check fails on the fault
@@ -19,6 +21,7 @@ import { replicaCompatibility, replicaRules } from './replicaChecks';
 
 beforeAll(() => vi.stubGlobal('localStorage', new MemoryStorage()));
 afterAll(() => vi.unstubAllGlobals());
+afterEach(() => vi.restoreAllMocks());
 
 const asset = (id: string): Asset => GAME_POOL.byId.get(id)!;
 const AEG = asset('000002');
@@ -161,5 +164,69 @@ describe('a part', () => {
   it('runs every level-1 and level-2 check through checkAsset', () => {
     const checks = new Set(checkAsset(gameInputs(), RED_DOT).map((r) => r.check));
     expect([...checks]).toEqual(expect.arrayContaining(['optic.name', 'optic.access', 'optic.key', 'optic.stats', 'optic.fits', 'optic.tradeOff', 'optic.model', 'optic.kits']));
+  });
+});
+
+describe('each check on its fault', () => {
+  const game = gameInputs();
+  const aegConfig = game.replicas.aeg!;
+  /** The game's inputs with the AEG's config changed. */
+  const aegAs = (change: Partial<ReplicaConfig>): ContentInputs => withAssets([], { replicas: { ...game.replicas, aeg: { ...aegConfig, ...change } } });
+  /** The game's inputs with a `stats.md` table missing a row. */
+  const statsWithout = (table: 'replicas' | 'grips', key: string): ContentInputs => {
+    const rows = { ...(game.stats[table] as Record<string, unknown>) };
+    delete rows[key];
+    return withAssets([], { stats: { ...game.stats, [table]: rows } });
+  };
+
+  it('replica.stats fails without its stats.md row', () => {
+    expect(verdictOf(replicaRules(statsWithout('replicas', 'aeg'), AEG), 'replica.stats')).toBe('fail');
+  });
+
+  it('replica.fireModes fails when it starts on a mode it does not have', () => {
+    expect(verdictOf(replicaRules(aegAs({ fireModes: ['semi'], defaultFireMode: 'auto' }), AEG), 'replica.fireModes')).toBe('fail');
+  });
+
+  it('replica.magazines fails when a magazine fits by tag but its config does not list it', () => {
+    expect(verdictOf(replicaCompatibility(aegAs({ magazines: ['standard'] }), AEG), 'replica.magazines')).toBe('fail');
+  });
+
+  it('replica.customise fails when the Loadout shows the wrong rows', () => {
+    vi.spyOn(LoadoutModel.prototype, 'hasSlot').mockImplementation((_id, slot) => slot !== 'optic');
+    expect(verdictOf(replicaCompatibility(game, AEG), 'replica.customise')).toBe('fail');
+  });
+
+  const { aimHold: _aimHold, ...noAimHold } = aegConfig.look;
+  it('replica.hold asks for a look when an optic fits but it has no aim hold', () => {
+    expect(verdictOf(replicaCompatibility(aegAs({ look: noAimHold }), AEG), 'replica.hold')).toBe('warn');
+  });
+
+  it('replica.bots fails when a bot carrying it shoots nothing', () => {
+    // With no Rarity table a bot carries the config as it is (botKit.ts rolledKit), here one that shoots 0 J.
+    const broken = aegAs({ muzzleEnergy: 0 });
+    expect(verdictOf(replicaBotChecks({ ...broken, pool: { ...broken.pool, tiers: [] } }, AEG), 'replica.bots')).toBe('fail');
+    expect(verdictOf(replicaBotChecks(game, AEG), 'replica.bots')).toBe('pass');
+  });
+
+  it('replica.save fails when a saved kit does not come back', () => {
+    vi.spyOn(LoadoutModel.prototype, 'fitOf').mockReturnValue(EMPTY_FIT);
+    expect(verdictOf(replicaSaveCheck(game, AEG), 'replica.save')).toBe('fail');
+  });
+
+  it('<part>.stats fails without its stats.md row', () => {
+    expect(verdictOf(partRules(statsWithout('grips', VERTICAL_GRIP.key), VERTICAL_GRIP), 'grip.stats')).toBe('fail');
+  });
+
+  it('<part>.kits fails when kits with the part break', () => {
+    const faulted = withAssets([]);
+    const pool: Pool = { ...faulted.pool, tiers: faulted.pool.tiers.map((t) => ({ ...t, bonus: 1.5 })) };
+    expect(verdictOf(partCompatibility({ ...faulted, pool }, asset('000012')), 'magazine.kits')).toBe('fail');
+  });
+
+  it('<part>.fits fails for a public part that fits only dev replicas, and asks for a look while it is dev', () => {
+    const devRifle = { ...AEG, id: '999008', name: 'Dev Rifle', tag: 'dev' as const, tags: [...AEG.tags, 'dev-rail'] };
+    const sight = { ...RED_DOT, id: '999009', name: 'Dev Sight', tags: ['dev-rail'] };
+    expect(verdictOf(partRules(withAssets([devRifle, { ...sight, tag: 'dev' }]), { ...sight, tag: 'dev' }), 'optic.fits')).toBe('warn');
+    expect(verdictOf(partRules(withAssets([devRifle, { ...sight, tag: 'public' }]), { ...sight, tag: 'public' }), 'optic.fits')).toBe('fail');
   });
 });

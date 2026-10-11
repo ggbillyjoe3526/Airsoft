@@ -49,7 +49,11 @@ export function partRules(inputs: ContentInputs, part: Asset): CheckResult[] {
   if (byId.length > 0) out.push(result('rules', `${kind}.fits`, item, 'warn', `It fits by naming a replica (${byId.join(', ')}), not by tag: say why in its brief, or give it a tag.`));
   const replicas = replicasFitting(inputs, part);
   if (replicas.length === 0) out.push(result('rules', `${kind}.fits`, item, 'fail', `It fits no replica (its Fits: ${part.tags.join(', ') || 'none'}).`));
-  else if (!replicas.some((r) => r.tag === 'public')) out.push(result('rules', `${kind}.fits`, item, 'warn', `It fits only replicas still in dev (${replicas.map((r) => r.name).join(', ')}).`));
+  else if (!replicas.some((r) => r.tag === 'public')) {
+    // A dev part may wait for its dev replica; a public one must fit a public replica (the rulebook's must).
+    const dev = replicas.map((r) => r.name).join(', ');
+    out.push(part.tag === 'public' ? result('rules', `${kind}.fits`, item, 'fail', `It is public but fits only replicas still in dev (${dev}).`) : result('rules', `${kind}.fits`, item, 'warn', `It fits only replicas still in dev (${dev}): it can go public with them.`));
+  }
   else if (byId.length === 0) out.push(result('rules', `${kind}.fits`, item, 'pass', `It fits by tag: ${replicas.map((r) => r.name).join(', ')}.`));
 
   const effects = inputs.effects(part);

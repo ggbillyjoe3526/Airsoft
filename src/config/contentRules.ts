@@ -96,7 +96,7 @@ export const BRAND_WORDS: readonly string[] = [
  */
 export const TRADE_OFF_EXCEPTIONS: Readonly<Record<string, string>> = {
   '000016': 'Tight-Bore Barrel: a quality part with no downside, the owner\'s call (2026-10-04: "a higher quality barrel could give better performance")',
-  '000015': '11.1 V LiPo Battery: a stronger battery, in the game before the toolkit (M29); its cost is the Shots it takes to find',
+  '000015': '11.1 V LiPo Battery: in the game before the toolkit (M29), kept as it is (DECISIONS); it empties a magazine sooner and is found only in Shots',
 };
 
 /**

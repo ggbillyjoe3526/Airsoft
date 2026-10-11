@@ -130,14 +130,14 @@ function workOutGrid(pool: Pool, replica: Asset, siteClass: string): GridResult 
     let rest = n;
     const tier = replicaTiers[rest % replicaTiers.length]!;
     rest = Math.floor(rest / replicaTiers.length);
-    for (let i = 0; i < options.length; i++) {
-      index[i] = rest % options[i]!.length;
-      rest = Math.floor(rest / options[i]!.length);
+    for (let slot = 0; slot < options.length; slot++) {
+      index[slot] = rest % options[slot]!.length;
+      rest = Math.floor(rest / options[slot]!.length);
     }
     const fit: ReplicaFit = { ...EMPTY_FIT };
     const fitted: { asset: Asset; tier: string }[] = [];
-    slots.forEach((s, i) => {
-      const pick = options[i]![index[i]!];
+    slots.forEach((s, slot) => {
+      const pick = options[slot]![index[slot]!];
       if (pick) {
         fit[s] = { asset: pick.asset.id, tier: pick.tier };
         fitted.push(pick);

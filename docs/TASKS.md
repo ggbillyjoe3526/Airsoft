@@ -17,7 +17,7 @@ first guesses; the build thread confirms them before it starts. The owner ruled 
 ## CT1 · Content toolkit part 1: rulebooks, replica and part checks, the report
 tier: core
 perf: skip
-touches: docs/content/, .claude/skills/new-content/, src/content/, src/config/contentRules.ts, src/config/README.md, src/pool/kit.ts, vite.config.ts, pipeline/content-check.mjs, pipeline/contentReport.mjs, pipeline/contentReport.test.mjs, pipeline/content-pictures.mjs, pipeline/README.md, docs/ARCHITECTURE.md, docs/ROADMAP.md, docs/KNOWN_ISSUES.md
+touches: docs/content/, .claude/skills/new-content/, src/content/, src/config/contentRules.ts, src/config/README.md, src/pool/kit.ts, vite.config.ts, pipeline/content-check.mjs, pipeline/contentReport.mjs, pipeline/contentReport.test.mjs, pipeline/content-pictures.mjs, pipeline/README.md, docs/ARCHITECTURE.md, docs/ROADMAP.md, docs/KNOWN_ISSUES.md, docs/DECISIONS.md
 contract: none
 acceptance:
   1. A rulebook and brief for every content type (replicas, parts, maps, modes, skins) in `docs/content/`, with the steps from ask to public, and the `new-content` skill that walks a thread through them.

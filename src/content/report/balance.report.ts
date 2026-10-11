@@ -16,7 +16,7 @@ import { type Asset, fits, isChase, tiersOf } from '../../pool/pool';
 import type { Character } from '../../sim/character';
 import { gameInputs } from '../gameContent';
 import { siteClassOf } from '../replicaChecks';
-import { asItComesFit } from '../kits';
+import { asItComesFit, slotOf } from '../kits';
 import { contentItem, ENV, envNumber } from './reportSupport';
 
 /**
@@ -50,7 +50,7 @@ function pairings(item: Asset): { ours: Side; theirs: Side; judged: boolean; aga
     const ours: Side = { name: item.name, item, fit: asItComesFit(GAME_POOL, item) };
     return rivals.map((r) => ({ ours, theirs: { name: r.name, item: r, fit: asItComesFit(GAME_POOL, r) }, judged: !ALLOWED_STRONGER[item.id], against: `the ${r.name}` }));
   }
-  const slot = ({ optic: 'optic', grip: 'grip', laser: 'laser', barrel: 'barrel', muzzle: 'muzzle', magazine: 'magazine', power: 'power', light: 'light' } as const)[item.category as 'optic'];
+  const slot = slotOf(item);
   if (!slot) return [];
   return GAME_POOL.assets
     .filter((a) => a.category === 'replica' && a.tag === 'public' && fits(item, a))

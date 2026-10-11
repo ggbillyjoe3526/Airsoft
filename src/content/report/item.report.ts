@@ -7,13 +7,12 @@ import { lightingChoices } from '../../map/lightingChoice';
 import { mapData, MAPS } from '../../map/maps';
 import { playableMode } from '../../map/playableMode';
 import { GAME_POOL } from '../../pool/gamePool';
-import type { FitSlot } from '../../pool/kit';
 import { type Asset, replicaOf, tiersOf } from '../../pool/pool';
 import { MemoryStorage } from '../../pool/testStorage';
 import { modelCensus, soundCensus } from '../census';
 import { drawTableOf, sceneName } from '../contentInputs';
 import { checkAsset, gameInputs } from '../gameContent';
-import { asItComesFit, carried } from '../kits';
+import { asItComesFit, carried, slotOf } from '../kits';
 import { replicasFitting } from '../partChecks';
 import { siteClassOf } from '../replicaChecks';
 import { partSpecChecks, replicaSpecChecks } from '../specChecks';
@@ -27,9 +26,6 @@ import { contentItem, ENV, nodeReplicaFiles, reportMeta } from './reportSupport'
  */
 
 afterAll(() => vi.unstubAllGlobals());
-
-/** The Customise slot a part goes in. */
-const SLOT_OF: Readonly<Record<string, FitSlot>> = { optic: 'optic', grip: 'grip', laser: 'laser', barrel: 'barrel', muzzle: 'muzzle', magazine: 'magazine', power: 'power', light: 'light' };
 
 describe('content report: rules, compatibility and the spec test', () => {
   it('checks the item', { timeout: 600_000 }, async (ctx) => {
@@ -61,7 +57,7 @@ describe('content report: rules, compatibility and the spec test', () => {
         results.push(...partSpecChecks(a, sceneName(a), on.map((r) => ({ replica: r.name, census: census.get(r.id)! }))));
         for (const r of on) {
           const base = asItComesFit(pool, r);
-          const fit = { ...base, [SLOT_OF[a.category]!]: { asset: a.id, tier: tiersOf(pool, a)[0]!.id } };
+          const fit = { ...base, [slotOf(a)!]: { asset: a.id, tier: tiersOf(pool, a)[0]!.id } };
           withParts.push({ part: a.id, replica: r.name, without: specSheet(carried(pool, r, base)), with: specSheet(carried(pool, r, fit)) });
         }
       }
@@ -74,7 +70,7 @@ describe('content report: rules, compatibility and the spec test', () => {
     for (const a of items) {
       const on = a.category === 'replica' ? [a] : replicasFitting(inputs, a);
       for (const [i, r] of on.entries()) {
-        const slot = SLOT_OF[a.category];
+        const slot = slotOf(a);
         const fit = slot && slot !== 'power' ? { [slot]: a.key } : {};
         const base = `${a.id}${r.id === a.id ? '' : `-on-${r.id}`}`;
         pictures.push({ file: `${base}.png`, title: r.id === a.id ? `The ${a.name}` : `On the ${r.name}`, replica: r.id, picture: { fit, scheme: defaultScheme(replicaOf(r)) } });

@@ -8,7 +8,7 @@ power source (later grenades and gear, owner, 2026-10-05). The steps are in `doc
 Must:
 
 - **Fits by tags.** It names the tags it fits (`top-rail`, `aeg-mag`, `rifle`), never one replica's ID, unless the
-  brief says why. It fits at least one replica.
+  brief says why. It fits at least one replica, and a public part a public one.
 - **Trades something.** The Vertical Grip handles better but steadies sprint shake less; the Long Barrel adds energy
   but is front-heavy. A part better at everything needs the owner's OK (`TRADE_OFF_EXCEPTIONS` in
   `src/config/contentRules.ts`). Optics, lasers and lights carry their cost in play (a narrow view, a dot that shows,
@@ -21,7 +21,8 @@ Must:
 
 Should:
 
-- **Fit a public replica.** A part that fits only dev replicas waits for them.
+- **Fit a public replica while dev.** A dev part that fits only dev replicas gets a warning: it goes public with
+  them.
 - **Improve something.** A part that improves nothing would never be fitted.
 
 ## Brief
@@ -41,7 +42,7 @@ The spec sheet shows the chrono and range table of each replica it fits without 
 
 | Level | What is checked |
 |---|---|
-| Rules | Its Key is in the code; `stats.md` has its row; it fits by tag and fits a replica (a public one, or a warning); it trades something; name and access. |
+| Rules | Its Key is in the code; `stats.md` has its row; it fits by tag and fits a replica (a public part a public one; a dev part may wait, with a warning); it trades something; name and access. |
 | Compatibility | Every replica it fits draws it; every kit with it, on every replica it fits, at the commonest and rarest tier, has sane numbers under the site limit (every combination of parts is tried, so two parts that clash are found). |
 | Spec test | The chrono and range table without and with it, on each replica it fits; its meshes and triangles on each. Pictures: fitted on each, and in first person. |
 | Balance run | Each public replica it fits, with it against without it, on every map, lighting, round mode and level: 40 to 60 % of decided rounds on public ones. A big swing means it is too strong or pointless. |

@@ -1,6 +1,6 @@
 import { handlingOf } from '../config/attachments';
 import type { ReplicaConfig } from '../config/replicas';
-import { EMPTY_FIT, kitSlot, type ReplicaFit } from '../pool/kit';
+import { EMPTY_FIT, FIT_CATEGORY, FIT_SLOTS, type FitSlot, kitSlot, type ReplicaFit } from '../pool/kit';
 import { type Asset, fits, type Pool, tiersOf } from '../pool/pool';
 
 /** The kits the spec test and the balance run compare (CT1): a replica as a player gets it, and as carried with a fit. */
@@ -17,4 +17,9 @@ export function carried(pool: Pool, replica: Asset, fit: ReplicaFit): ReplicaCon
   const slot = kitSlot(pool, { asset: replica.id, tier: tiersOf(pool, replica)[0]!.id }, fit);
   const h = handlingOf(slot.replica, slot.parts);
   return { ...slot.replica, magSize: h.magSize, mags: h.mags, reloadTime: h.reloadTime, drawTime: h.drawTime };
+}
+
+/** The Customise slot a part goes in (pool/kit.ts FIT_CATEGORY read backwards), or null for a replica or grenade. */
+export function slotOf(part: Asset): FitSlot | null {
+  return FIT_SLOTS.find((s) => FIT_CATEGORY[s] === part.category) ?? null;
 }
