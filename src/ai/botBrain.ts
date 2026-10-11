@@ -6,7 +6,7 @@ import { isInPlay } from '../sim/elimination';
 import { type Vec3, vec3 } from '../sim/vec';
 import { type Bot, type BotWorld, flagRole, pick, threatInMind, wantsFlag } from './bot';
 import { aimBot, lowOnBBs, reloadBot, shootBot } from './botCombat';
-import { enterFlagMode, keepApart, moveBot, startSearch } from './botMovement';
+import { enterFlagMode, glance, keepApart, moveBot, startSearch } from './botMovement';
 import { currentTarget, perceive } from './botSenses';
 import { stepBotTorch } from './botTorch';
 import { type CoverSearch, findCover, hidesFrom, leanSideToSee } from './cover';
@@ -312,6 +312,8 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
   const target = currentTarget(b, w);
   if (!target) b.targetVisible = false;
   b.coverCooldown -= dt;
+  // A look at one spot in view, for the team's hunt memory (M87): seen empty, nobody walks there to check it.
+  glance(b, w);
 
   chooseMode(b, w, target, dt);
   // With a threat in mind, or walking its lane in the enemy's half (M38, slicesCorners): walk and slice each corner

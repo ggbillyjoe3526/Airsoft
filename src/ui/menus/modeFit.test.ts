@@ -106,7 +106,7 @@ describe('M89: the Match section shows only what fits the mode', () => {
       const picks: NewGamePicks = { map: extraction.id, mode: mode.id, difficulty: 'normal', teammateDifficulty: 'normal', ruleset: 'custom', rules: { ...DEFAULT_MATCH_RULES } };
       const played = playedPicks(picks, true);
       const panel = panelFor(picks);
-      const shown: MatchShown = { played, devContent: true, run: played.mode === 'extraction', sizeMax: 6 };
+      const shown: MatchShown = { played, devContent: true, run: played.mode === 'extraction', sizeMin: 1, sizeMax: 6 };
       panel.refresh(shown);
       const root = panel.root as unknown as FakeElement;
       expect(buttons(root, 'Rules').map((b) => !b.hidden), mode.id).toEqual(RULESETS.map((r) => rulesetFits(played.mode, r.id)));

@@ -27,6 +27,9 @@ describe('a 3v3 bot match on Depot: the ends', () => {
     // M30 and FA1: 56% here (48 of 86), 45% over seeds 1-64 (152 of 336; 50% without FA4). With the east spawns 1.45 m
     // further back (FA4 attempt 2, SIM-13): 49% here (42 of 85), 48% over seeds 1-64 (166 of 343). Since every level
     // hunts the middle (M71, Audit 2; the audit read 58 % on seeds 1-8): 48% here (59 of 123), rounds shorter.
+    // M87 (2026-10-11, hunting bots check by eye and share it): 38.1 % (45 of 118); 42.9 % (45 of 105) just before.
+    // M87 lean-spot yield (2026-10-11: a bot at a lean spot walks aside for a teammate walking past):
+    // 52.3 % (58 of 111); 45.5 % (51 of 112) just before, after the M88 merge of main.
     reportMeasure(ctx, { label: "Depot, Normal, Elimination: the west end's share of the decided rounds", value: share(westWins, decided), of: decided, band: { min: 0.35, max: 0.6 }, detail: `${westWins} of ${decided} decided` });
   });
 });

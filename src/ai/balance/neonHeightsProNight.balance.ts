@@ -23,6 +23,10 @@ describe('a 4v4 Elimination match on Neon Heights by Night, both teams on Pro (M
     // test after any bot, layout or night-sight change. M71 (Audit 2: every level hunts the middle, Normal and up keep out of the light, bots step aside when pressed together, a
     // torch comes on only for a fight within 20 m or a search's last stretch): west 42.2 % (70 of 166), 4 of 172 on
     // time. M73 (the east's last mid-lane holds inside the bar's door line): 44.9 % (84 of 187), 1 of 188 on time.
+    // M87 (2026-10-11, hunting bots check by eye and share it): 47.4 % (82 of 173), 2 of 175 on time; 46.6 % just before.
+    // M87 lean-spot yield (2026-10-11: a bot at a lean spot walks aside for a teammate walking past):
+    // 40.4 % (69 of 171), 1 of 175 on time; seeds 33-64 46.0 % (91 of 198), so 43.4 % over 64 seeds. Just before, after
+    // the M88 merge of main: 44.8 % (77 of 172), and 49.5 % on seeds 33-64. The low edge to watch.
     reportTally(ctx, 'Neon Heights by Night, Pro, Elimination', tallyBalance(32, 300, botConfig('pro'), 'elimination', NIGHT, TEAM_SIZE), 'elimination');
   });
 });

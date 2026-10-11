@@ -18,9 +18,13 @@ import { playMatch } from './depotMatchSupport';
  * vi.mock of navGrid would not reach a controller module already loaded.)
  */
 
-const SECONDS = 60;
-/** Woodland and Neon Heights play 4v4. */
-const TEAM_SIZE = 4;
+/**
+ * Long enough for a search over budget to run. Woodland's come once a bot hunts, after its lanes: since its lanes lost
+ * the points at the fort's baffles (M88 QA, 2026-10-11) no search in its first 60 s runs past the budget (seeds 1-4).
+ */
+const SECONDS = { Woodland: 120, 'Neon Heights': 60 } as const;
+/** Neon Heights plays 4v4; Woodland is checked at its largest, 6v6 (M88), where the most bots search at once. */
+const TEAM_SIZE = { Woodland: 6, 'Neon Heights': 4 } as const;
 
 const proto = BotController.prototype as unknown as { planRoutes(): void };
 const realPlanRoutes = proto.planRoutes;
@@ -55,7 +59,7 @@ function count(s: NavSearch): void {
   });
 }
 
-function measure(map: MapData, seed: number) {
+function measure(map: MapData, seed: number, teamSize: number, seconds: number) {
   tally = { tick: 0, calls: 0, search: 0, generation: -1, longestSearch: 0 };
   const hooked = new WeakSet<object>();
   proto.planRoutes = function (this: { search: NavSearch }) {
@@ -67,7 +71,7 @@ function measure(map: MapData, seed: number) {
   };
   const out = { maxTick: 0, busyTicks: 0, ticks: 0, atBudget: 0 };
   try {
-    playMatch(SECONDS, seed, undefined, BOTS, 'elimination', ROUNDS, map, TEAM_SIZE, HITS, () => {
+    playMatch(seconds, seed, undefined, BOTS, 'elimination', ROUNDS, map, teamSize, HITS, () => {
       out.ticks++;
       out.maxTick = Math.max(out.maxTick, tally.tick);
       if (tally.tick > 0) out.busyTicks++;
@@ -87,17 +91,17 @@ afterAll(() => {
 describe.each([
   ['Woodland', WOODLAND],
   ['Neon Heights', NEON_HEIGHTS],
-])('bot route searches under a per-tick budget on %s (M74, acceptance 2)', (name, map) => {
+] as const)('bot route searches under a per-tick budget on %s (M74, acceptance 2)', (name, map) => {
   beforeAll(async () => {
     await initPhysics();
   });
 
-  it(`no tick of a ${SECONDS} s 4v4 expands more than NAV.searchBudget nodes in all, and searches longer than that carry over`, { timeout: 120_000 }, () => {
-    const seen = measure(map, 1);
+  it(`no tick of a ${SECONDS[name]} s ${TEAM_SIZE[name]}v${TEAM_SIZE[name]} expands more than NAV.searchBudget nodes in all, and searches longer than that carry over`, { timeout: 120_000 }, () => {
+    const seen = measure(map, 1, TEAM_SIZE[name], SECONDS[name]);
     console.log(`QA M74 probe ${name}: ${JSON.stringify(seen)}, stepRoute calls ${tally.calls}, longest search ${tally.longestSearch}`);
     expect(NAV.searchBudget).toBeGreaterThan(0);
     expect(Number.isFinite(NAV.searchBudget)).toBe(true);
-    expect(seen.ticks).toBe(SECONDS * 60);
+    expect(seen.ticks).toBe(SECONDS[name] * 60);
     expect(seen.busyTicks, 'the bots did search').toBeGreaterThan(10);
     expect(seen.maxTick).toBeLessThanOrEqual(NAV.searchBudget);
     // The probe bites: a search longer than one tick's budget ran (it carried over), and a tick spent its whole budget.

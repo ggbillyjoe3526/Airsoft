@@ -60,6 +60,9 @@ export const EXTRACTION_BALANCE: Readonly<Partial<Record<MapId, ExtractionBalanc
       // keeping 30 m from Woodland's insertion), seeds 1-48: Easy 54 % (26) and 45, Normal (the baseline, the base
       // plus the squad, owner 2026-10-06) 33 % (16) and 32, Hard 15 % (7) and 15, Pro 19 % (9) and 21: Easy, Normal and Hard in order again, measured below. Each band is
       // the figure ±15 points (extract) and ±20 FC a minute, floored at 0.
+      // M87 and M88 (2026-10-11, hunting bots check by eye and share it; Woodland's lanes; a bot at a lean spot walks aside
+      // for a teammate walking past), seeds 1-48: Easy 70.8 %, over its band within noise (±6.6); seeds 49-96 58.3 %, so
+      // 64.6 % over 96. Normal 37.5 %, Hard 18.8 %, Pro 16.7 % before the lean-spot yield.
       easy: { extract: [0.39, 0.69], fcPerMinute: [25, 65] },
       normal: { extract: [0.18, 0.48], fcPerMinute: [12, 52] },
       hard: { extract: [0, 0.3], fcPerMinute: [0, 35] },

@@ -1,6 +1,6 @@
 import { FLAG } from '../config/modes';
 import { inLight } from '../map/nightSight';
-import { dropOnLine, floorAt, isWalkableAt } from '../nav/navGrid';
+import { dropOnLine, floorAt, isWalkableAt, nodeAt } from '../nav/navGrid';
 import type { Character } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
 import { isInPlay } from '../sim/elimination';
@@ -8,7 +8,7 @@ import { rngNext } from '../sim/rng';
 import { type Vec3, vec3, wrapAngle } from '../sim/vec';
 import { type Bot, type BotWorld, flagRole, holdYaw, pick, recallHeardOther } from './bot';
 import { type CoverSearch, findCover, leanSideToSee } from './cover';
-import { bodyPoint, eyeOf, lineClear } from './perception';
+import { bodyPoint, eyeOf, lineClear, seesSpot } from './perception';
 import { followRoute, stepOnto, teammateSpots, wantRoute } from './routes';
 import { moveOrder } from './squadOrders';
 
@@ -24,6 +24,11 @@ const postEye = vec3();
 const chokeEye = vec3();
 const darkProbe = vec3();
 const newsSpot = vec3();
+const glanceSpot = vec3();
+
+/** The two steps of a low-discrepancy (R2) sequence: a bot's glances spread evenly over its view, with no dice (M87). */
+const GLANCE_ACROSS = 0.7548776662466927;
+const GLANCE_OUT = 0.5698402909980532;
 
 /** Cover searches by a lane point and round the pole (AI-02, AI-06): spots to peek from only (radius set per call). */
 const holdSearch: CoverSearch = { radius: 0, randomCandidates: 0, peekable: true };
@@ -55,7 +60,54 @@ function nextAdvanceGoal(b: Bot, w: BotWorld): Vec3 | undefined {
     return undefined;
   }
   b.hunting = true;
-  return w.huntPoint(b, b.huntGoal) ? b.huntGoal : undefined;
+  return pickHunt(b, w) ? b.huntGoal : undefined;
+}
+
+/** A new hunt goal from the team's memory (huntPoint), noting when it was picked (M87: see huntGoalChecked). */
+function pickHunt(b: Bot, w: BotWorld): boolean {
+  if (!w.huntPoint(b, b.huntGoal)) return false;
+  b.huntPickedAt = w.time;
+  return true;
+}
+
+/**
+ * Whether `b`'s hunt goal needs no visit (M87): its team checked its sector since the bot picked it, or the bot sees the
+ * spot empty from where it is, short of it (seesSpot; one ray, only within huntClearRange).
+ */
+function huntGoalDone(b: Bot, w: BotWorld): boolean {
+  // At most once a think (thinkInterval) after a pick, so a bot that keeps drawing spots in view doesn't search every tick.
+  if (w.time - b.huntPickedAt < w.cfg.thinkInterval) return false;
+  if (w.huntGoalChecked(b)) return true;
+  const p = b.character.position;
+  const d = Math.hypot(b.huntGoal.x - p.x, b.huntGoal.z - p.z);
+  if (d <= w.cfg.coverArrive || d > w.cfg.huntClearRange || !seesSpot(b.character, b.huntGoal, w.cfg.huntClearRange, w.query, w.cfg, w.body, w.hits, w.sight)) return false;
+  w.markVisited(b, b.huntGoal);
+  return true;
+}
+
+/**
+ * One glance (M87, playtest note 15: bots went to corners that were obviously empty): a spot inside the field of view
+ * and within huntClearRange (from the bot's own hunt sector out), the next of an even spread across the view with each
+ * call, checked for whether someone standing there would be seen (perception.ts seesSpot). Seen, its hunt sector counts
+ * as checked by the team, so nobody walks there to look. Allocates nothing.
+ */
+export function glance(b: Bot, w: BotWorld): void {
+  const range = w.cfg.huntClearRange;
+  if (range <= 0 || !w.live) return;
+  const me = b.character;
+  const n = ++b.glances;
+  const across = (n * GLANCE_ACROSS) % 1;
+  const out = (n * GLANCE_OUT) % 1;
+  const yaw = me.yaw + (across - 0.5) * w.cfg.fovDeg * DEG;
+  const near = Math.min(range, w.cfg.huntSectorSize);
+  // Even over the area of the view's slice, not bunched up close.
+  const d = near + (range - near) * Math.sqrt(out);
+  glanceSpot.x = me.position.x - Math.sin(yaw) * d;
+  glanceSpot.z = me.position.z - Math.cos(yaw) * d;
+  const node = nodeAt(w.nav, glanceSpot.x, me.position.y, glanceSpot.z);
+  if (node < 0 || w.nav.walkable[node] !== 1) return;
+  glanceSpot.y = w.nav.floorY[node]!;
+  if (seesSpot(me, glanceSpot, range, w.query, w.cfg, w.body, w.hits, w.sight)) w.markVisited(b, glanceSpot);
 }
 
 /**
@@ -103,7 +155,7 @@ function runGoal(b: Bot, w: BotWorld): Vec3 | undefined {
     b.newsTaken = w.squadNews(b.character.team, b.huntGoal);
     return b.huntGoal;
   }
-  return w.huntPoint(b, b.huntGoal) ? b.huntGoal : undefined;
+  return pickHunt(b, w) ? b.huntGoal : undefined;
 }
 
 /** The lead of `b`'s patrol pair while `b` keeps with it (M46): its partner, a patrol in play; else undefined. */
@@ -400,6 +452,12 @@ function advance(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number, atPost: bo
     wantRoute(b, b.laneGoal, cfg);
     return false;
   }
+  // Hunting, its goal checked meanwhile (M87): a teammate went there or saw it empty, or it sees it empty itself now.
+  // Off to the next, walking on while that route comes.
+  if (cfg.huntClearRange > 0 && b.hunting && b.role === 'none' && b.routeState === 'ok' && huntGoalDone(b, w) && pickHunt(b, w)) {
+    wantRoute(b, b.huntGoal, cfg);
+    return followRoute(b, w, dt, true);
+  }
   if (b.routeState === 'none' || b.routeState === 'failed') {
     if (b.routeState === 'failed') {
       // No way to the last goal (AI-07): wait a moment before asking for the next one, so a bot cut off from its goals
@@ -570,7 +628,10 @@ export function moveBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number, tar
         cmd.crouch = b.routeState === 'none' && b.coverPhase === 'down';
         return false;
       }
-      return b.routeState === 'none' && stepOnto(b, w, b.cover.position, cmd, dt);
+      // A teammate on its way round the same corner (a route rounds a corner just where a lean spot stands): it lets
+      // keepApart walk it aside rather than stepping straight back onto the spot, and steps back once they have passed
+      // (audit AI-01; the spacing guard's seed 1 after M87: a teammate pinned against the wall inside it).
+      return b.routeState === 'none' && !teammatePassing(b, w) && stepOnto(b, w, b.cover.position, cmd, dt);
     }
     case 'order':
       return moveOrder(b, w, cmd, dt);
@@ -622,6 +683,25 @@ function atPole(b: Bot, w: BotWorld): boolean {
   const p = b.character.position;
   const pole = w.round.flag.position;
   return Math.hypot(p.x - pole.x, p.z - pole.z) <= FLAG.radius;
+}
+
+/**
+ * True if a teammate walking past (moving faster than stuckSpeed) is within separationDistance of `b` on about its
+ * floor, where keepApart pushes them apart. Someone standing close (a teammate holding the next spot) doesn't count, so
+ * a bot never leaves its angle for them.
+ */
+function teammatePassing(b: Bot, w: BotWorld): boolean {
+  const me = b.character;
+  for (const c of w.characters) {
+    if (c !== me && Math.hypot(c.velocity.x, c.velocity.z) > w.cfg.stuckSpeed && near(me, c, w)) return true;
+  }
+  return false;
+}
+
+/** A teammate in play within separationDistance of `me` on about its floor. */
+function near(me: Character, o: Character, w: BotWorld): boolean {
+  if (o.team !== me.team || !isInPlay(o) || Math.abs(o.position.y - me.position.y) > w.body.height) return false;
+  return Math.hypot(me.position.x - o.position.x, me.position.z - o.position.z) < w.cfg.separationDistance;
 }
 
 /**

@@ -88,6 +88,11 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M83** · With Disable Armory on in Dev settings, the Armory is hidden from every menu and the tutorial instead of greyed out
 - **RM4** · Built-in models are back for replicas, parts, players, bots and menu pictures; the Blender models wait behind two Dev switches in Settings
 - **M80** · Tutorial opens the real scoreboard and order wheel, with plain-word cards in your keys; finishing opens Tutorial complete: Practice range or Menu
+- **M87** · Hunting bots check spots by eye, share what they have checked with their team and turn away from a goal their team has already checked
+- **M88** · Woodland (dev content): both teams start hidden behind cover (a new West Rise, thick trees); the blue end's height edge is smaller
+- **M88** · Woodland's lanes stop at two points in the fort, so the east team leaves it sooner
+- **M88** · Woodland takes 5v5 by default; 6v6 is allowed, and only 5v5 and 6v6 are offered there; Low keeps its frame rate at 6v6
+- **M87** · A bot holding a corner of cover steps aside while a teammate walks past, instead of standing inside them
 
 ### Fixed
 - **G11** · The team camo on players reads clearly on Medium and up: crisp dark and light blotches printed per pixel, on WebGL and WebGPU; Low keeps plain clothes

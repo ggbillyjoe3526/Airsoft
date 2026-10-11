@@ -4,15 +4,15 @@ import { WOODLAND } from '../map/woodland';
 import { initPhysics } from '../physics/physicsWorld';
 import { expectRoundsPlayed, tallyBalance } from './depotMatchSupport';
 
-/** Woodland plays 4v4 (M33d), at night with its bushes and every bot's torch, as the game plays it. */
-const TEAM_SIZE = 4;
+/** Woodland plays 5v5 (M88; 4v4 before), at night with its bushes and every bot's torch, as the game plays it. */
+const TEAM_SIZE = 5;
 /** Ten minutes of play per seed: several rounds, each long enough to be decided or run out its clock. */
 const SECONDS = 600;
 
 /** Enough seeds to catch bots that stop finding each other; who wins is measured on 8 (balance/woodlandLevels.balance.ts). */
 const SEEDS = 4;
 
-describe('a 4v4 Elimination match on Woodland below Pro (Audit 2 BAL-01, BAL-09)', () => {
+describe('a 5v5 Elimination match on Woodland below Pro (Audit 2 BAL-01, BAL-09)', () => {
   beforeAll(async () => {
     await initPhysics();
   });

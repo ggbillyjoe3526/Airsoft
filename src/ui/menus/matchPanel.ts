@@ -45,6 +45,8 @@ export interface MatchShown {
   run: boolean;
   /** The most players a side the map (and an Extraction run) has room for. */
   sizeMax: number;
+  /** The fewest players a side the map offers (Woodland 5, M88; 1 in an Extraction run). */
+  sizeMin: number;
 }
 
 /**
@@ -167,7 +169,7 @@ export class MatchPanel {
     for (const s of this.switchRows) s.row.hidden = !offersRow(shown.played.ruleset, s.field, shown.played.mode);
     // An Extraction run has no pick: the squad is Alpha (M98).
     this.teamRow.hidden = shown.run;
-    this.teamSize.limit((id) => Number(id) <= shown.sizeMax);
+    this.teamSize.limit((id) => Number(id) >= shown.sizeMin && Number(id) <= shown.sizeMax);
     // The teammates may have followed the opponents' level (M20): shown, not saved.
     this.opponents.show(raw.difficulty);
     this.teammates.show(raw.teammateDifficulty);

@@ -6,8 +6,8 @@ import { WOODLAND } from '../map/woodland';
 import { initPhysics } from '../physics/physicsWorld';
 import { expectGrounded, playMatch } from './depotMatchSupport';
 
-/** Woodland plays 4v4 (M33d); one seed and a few minutes of game time keep this file to a few seconds of wall time. */
-const TEAM_SIZE = 4;
+/** Woodland plays 5v5 or 6v6 (M88): this plays the larger, every spawn taken; one seed and a few minutes of game time keep this file to a few seconds of wall time. */
+const TEAM_SIZE = 6;
 const SECONDS = 200;
 /** A bot that is moving about stays further than this (m) from where it stood a moment ago. */
 const STILL_RADIUS = 1;
@@ -19,12 +19,12 @@ const LONGEST_STILL = 25;
 /** Attackers get at least this close (m) to the flag: through a gap of the fort, whose walls stand about 7 m out. */
 const WOODLAND_FORT_REACH = 8;
 
-describe('a 4v4 bot match on Woodland (M33d, acceptance 5)', () => {
+describe('a 6v6 bot match on Woodland (M33d, acceptance 5)', () => {
   beforeAll(async () => {
     await initPhysics();
   });
 
-  it.each(['elimination', 'attackDefend'] as MatchMode[])('plays %s: rounds finish, everyone leaves the camp, nobody stands stuck or falls off the field', { timeout: 40_000 }, (mode) => {
+  it.each(['elimination', 'attackDefend'] as MatchMode[])('plays %s: rounds finish, everyone leaves the camp, nobody stands stuck or falls off the field', { timeout: 60_000 }, (mode) => {
     const anchor = new Map<number, { x: number; z: number; since: number }>();
     let longestStill = 0;
     let closestToFlag = Number.POSITIVE_INFINITY;

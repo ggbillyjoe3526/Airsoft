@@ -34,7 +34,7 @@ const panel = (team?: NewGamePicks['team']) => {
   const root = p.root as unknown as FakeElement;
   const row = findAll(root, 'menu-row').find((r) => findAll(r, 'menu-row-label')[0]?.text === 'Your team')!;
   const buttons = findAll(row, 'picker-button');
-  const shown = (run: boolean): MatchShown => ({ played: picked, devContent: false, run, sizeMax: 5 });
+  const shown = (run: boolean): MatchShown => ({ played: picked, devContent: false, run, sizeMin: 1, sizeMax: 5 });
   return { p, row, buttons, set, shown, pressed: () => buttons.filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.textContent) };
 };
 

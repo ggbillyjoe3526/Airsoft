@@ -274,6 +274,10 @@ replaces its line; the old one stays findable in the archive or in git.
 - **Every level hunts the middle of the map; Normal, Hard and Pro keep out of the light at night; Easy stands where its
   lane says (owner, 2026-10-05, decisions 4 and 13).** Below Pro, both teams swept to the far end and passed each other,
   and rounds ran out of time (M71).
+- **Hunting bots check by eye, and a team shares what its bots checked (M87, owner's note 15, 2026-10-06).** A spot a
+  bot sees empty, or a teammate stood in, counts as checked for the level's `huntMemory` (Easy 20 s, Normal 40, Hard
+  50, Pro 60; `config/bots.ts`); older, it counts as never checked, so the middle keeps drawing the hunt. A bot that
+  sees its hunt spot empty turns off for the next before it gets there.
 - **Balance is measured by headless bot matches against bands (2026-09-28), in a report since token step 4 (owner,
   2026-10-06, token plan item 22; built 2026-10-08, TE4).** Who wins, who lands the first hit, how often the squad gets
   out of Extraction and the levels' order are figures in `src/ai/balance/`, judged by `node pipeline/balance.mjs`
@@ -313,7 +317,9 @@ replaces its line; the old one stays findable in the archive or in git.
   BBs (owner, 2026-10-04).** He picked it from five concepts: no prone yet, a gentle end-to-end slope, one much higher
   end with the flag. It plays 5v5 by default, allows 6v6 and offers only those two (owner, 2026-10-06; replaces 4v4 with
   Custom up to 5v5). Its long open lines are intended (owner decision 11, 2026-10-05); the longest clear line stays
-  under 141 m.
+  under 141 m. Its starts are hidden from each other: nobody within 8 m of one camp's spawns sees anyone within 8 m of
+  the other's, and the east end stands at most 2 m above the west at the start (owner's note 13, 2026-10-06; M88, the
+  West Rise; tested in `map/woodland.test.ts`).
 - **Neon Heights is the third field: a vertical futuristic city with Day and Night (owner, 2026-10-04).** The concept
   was approved with all twelve defaults: 46 × 30 m, three playable floors, roofs not playable, stairs only, open windows
   with a 1.2 m sill, 4v4, both modes and Night first.

@@ -41,7 +41,9 @@ it('keeps bots out of each other: two characters stand inside each other on unde
   // Measured 2026-10-04 (FA4), 180 s per seed: 0.15 / 0.18 / 0.21 % for seeds 1-3, from 5.80 / 8.00 / 3.45 % before
   // (bots sharing a lane point or a cover spot, nothing keeping them apart). M71 (every level hunts the middle): seed 2
   // read 0.78 %, two teammates who met in one fight strafing through each other; with a fight's sidestep turned to
-  // the side the push points, 0.27 / 0.10 / 0.27 %.
+  // the side the push points, 0.27 / 0.10 / 0.27 %. M87 (2026-10-11): seed 1 read 0.52 %, a bot at a lean spot stepping
+  // back onto its corner as a teammate's route rounded it; walked aside while a teammate walks past, 0.24 / 0.24 / 0.31 %
+  // (seeds 1-20: 0.15 %, from 0.27 %).
   for (const seed of [1, 2, 3]) {
     const { n, onTick } = overlapCounter();
     playMatch(180, seed, undefined, BOTS, 'elimination', ROUNDS, DEPOT, ROUNDS.teamSize, undefined, onTick);

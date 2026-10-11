@@ -21,11 +21,11 @@ function registered(entry: MapEntry, ctx: MapContext): CheckResult[] {
   const item = mapItem(entry);
   const out: CheckResult[] = [];
   const missing = [!entry.label.trim() && 'a label', !entry.blurb.trim() && 'a blurb'].filter(Boolean);
-  const { standard, max } = entry.teamSize;
+  const { min, standard, max } = entry.teamSize;
   if (missing.length > 0) out.push(result('rules', 'map.registered', item, 'fail', `Its entry in map/maps.ts has no ${missing.join(' or ')}.`));
-  else if (!(Number.isInteger(standard) && Number.isInteger(max) && standard >= 1 && standard <= max)) out.push(result('rules', 'map.registered', item, 'fail', `Its team sizes are wrong: ${standard} a side standard, ${max} at most.`));
+  else if (!([min, standard, max].every(Number.isInteger) && min >= 1 && min <= standard && standard <= max)) out.push(result('rules', 'map.registered', item, 'fail', `Its team sizes are wrong: ${min} a side at least, ${standard} standard, ${max} at most.`));
   else if (ctx.ids.filter((id) => id === entry.id).length > 1) out.push(result('rules', 'map.registered', item, 'fail', `Its id "${entry.id}" is used by another map too. Ids are save keys and never change.`));
-  else out.push(result('rules', 'map.registered', item, 'pass', `Registered as "${entry.id}": ${standard} a side standard, up to ${max}.`));
+  else out.push(result('rules', 'map.registered', item, 'pass', `Registered as "${entry.id}": ${standard} a side standard, ${min} to ${max}.`));
   if (entry.tag === 'dev') out.push(result('rules', 'map.access', item, 'pass', 'Tagged dev: only you see it, with Dev content on.'));
   else if (ctx.publicMaps[entry.id]) out.push(result('rules', 'map.access', item, 'pass', `Public (${ctx.publicMaps[entry.id]}).`));
   else out.push(result('rules', 'map.access', item, 'fail', 'Tagged public without going through the public gate. Tag it dev until it passes.'));

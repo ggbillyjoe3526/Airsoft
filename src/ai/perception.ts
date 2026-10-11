@@ -111,6 +111,37 @@ export function visiblePart(
   return 0;
 }
 
+/**
+ * Whether `viewer` would see someone standing at `spot` (a floor point) if anyone were there (M87, hunting by eye): no
+ * further than `range`, and at night no further than someone there could be made out (torches aside: a dark spot is not
+ * checked by a beam's chance); inside the field of view (unless very close); and a clear line from its eyes to a
+ * standing chest there, through no more than foliageSeeThrough of bush (someone could be hiding in one).
+ */
+export function seesSpot(
+  viewer: Character,
+  spot: Vec3,
+  range: number,
+  query: WorldQuery,
+  bots: BotBehaviour,
+  body: BodyConfig,
+  hits: HitConfig,
+  sight: SightConditions = OPEN_SIGHT,
+): boolean {
+  const dx = spot.x - viewer.position.x;
+  const dz = spot.z - viewer.position.z;
+  const dist = Math.hypot(dx, dz);
+  if (dist > range || (sight.night && dist > nightSightRange(sight.night, spot))) return false;
+  if (dist > bots.closeAwareness) {
+    const cos = (-Math.sin(viewer.yaw) * dx - Math.cos(viewer.yaw) * dz) / dist;
+    if (cos < Math.cos(((bots.fovDeg / 2) * Math.PI) / 180)) return false;
+  }
+  eyeOf(viewer, body, hits, eye);
+  point.x = spot.x;
+  point.y = spot.y + hitTop(0, hits) * bots.aimHeightFraction;
+  point.z = spot.z;
+  return sightClear(query, eye, point, dist > bots.closeAwareness ? sight.foliage : NO_FOLIAGE, bots.foliageSeeThrough);
+}
+
 /** How far `viewer` makes `target` out at night: by the light round the target, or by torchlight if that is further. */
 function nightRange(night: NightField, torches: TorchLight | null | undefined, viewer: Character, target: Character): number {
   const range = nightSightRange(night, target.position);

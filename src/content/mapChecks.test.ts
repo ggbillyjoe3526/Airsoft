@@ -69,7 +69,8 @@ describe('the map checks on the game as it ships', () => {
 describe('a map’s rules', () => {
   it('fail an entry with no blurb, team sizes the wrong way round, or an id used twice', () => {
     expect(verdictOf(mapRules({ ...TEST_ENTRY, blurb: ' ' }, DEPOT, ctx), 'map.registered')).toBe('fail');
-    expect(verdictOf(mapRules({ ...TEST_ENTRY, teamSize: { standard: 4, max: 3 } }, DEPOT, ctx), 'map.registered')).toBe('fail');
+    expect(verdictOf(mapRules({ ...TEST_ENTRY, teamSize: { min: 1, standard: 4, max: 3 } }, DEPOT, ctx), 'map.registered')).toBe('fail');
+    expect(verdictOf(mapRules({ ...TEST_ENTRY, teamSize: { min: 4, standard: 3, max: 3 } }, DEPOT, ctx), 'map.registered')).toBe('fail');
     expect(verdictOf(mapRules(TEST_ENTRY, DEPOT, { ...ctx, ids: ['depot', 'depot'] }), 'map.registered')).toBe('fail');
   });
 
@@ -81,7 +82,7 @@ describe('a map’s rules', () => {
   });
 
   it('fail a map without a spawn and a dead-zone spot per player for its largest team', () => {
-    expect(verdictOf(mapRules({ ...TEST_ENTRY, teamSize: { standard: 3, max: 4 } }, DEPOT, ctx), 'map.room')).toBe('fail');
+    expect(verdictOf(mapRules({ ...TEST_ENTRY, teamSize: { min: 1, standard: 3, max: 4 } }, DEPOT, ctx), 'map.room')).toBe('fail');
     expect(verdictOf(mapRules(TEST_ENTRY, depotWith({ deadZones: [DEPOT.deadZones[0].slice(1), DEPOT.deadZones[1]] }), ctx), 'map.room')).toBe('fail');
   });
 
