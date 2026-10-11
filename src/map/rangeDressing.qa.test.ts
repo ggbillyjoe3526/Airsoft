@@ -49,7 +49,8 @@ describe('M81: the distance boards stay clear (keepClear)', () => {
   });
 
   it('without keepClear the same map does put something on a board (so the box is what clears it)', () => {
-    const bare: MapData = { ...RANGE_MAP, keepClear: undefined };
+    const { keepClear: _drop, ...rest } = RANGE_MAP;
+    const bare: MapData = rest;
     const quads = [...decalQuads(bare), ...placeDressing(bare).decals];
     const hit = quads.some((q) => clear.some((c) => overlap(footprint(q), c)));
     // The roundel sat over the 30 m board before M81; if the placement ever changes so nothing lands, the box guards nothing and this says so.
