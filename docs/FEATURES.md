@@ -171,6 +171,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   Disable Armory (hides the Armory from every menu and the tutorial), Unlock all gear, Field Credits and Tokens on demand,
   free case openings, time of day, bots hold fire, spectate any bot, bot intentions, end the round now, reset the save,
   Diagnostics Copy, Dev content switch, Retro pixels (M24, M26d, FA1, M35, M42, M83, M90)
+- Dev switches Disable all models and Disable figure models (both on by default): turned off, they bring back the Blender replicas, parts and menu pictures, then the player and bot figures (RM4)
 - The build's version on the title screen (M24)
 
 ## HUD and match info

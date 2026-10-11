@@ -86,6 +86,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M84** · Aimed fire is twice as tight as hip fire; holding Shift while aiming creeps slower than the aiming pace
 - **M97** · Hit marker setting, Off by default: the red X when your BB lands shows only when On; the hit tick sound is unchanged
 - **M83** · With Disable Armory on in Dev settings, the Armory is hidden from every menu and the tutorial instead of greyed out
+- **RM4** · Built-in models are back for replicas, parts, players, bots and menu pictures; the Blender models wait behind two Dev switches in Settings
 - **M80** · Tutorial opens the real scoreboard and order wheel, with plain-word cards in your keys; finishing opens Tutorial complete: Practice range or Menu
 
 ### Fixed

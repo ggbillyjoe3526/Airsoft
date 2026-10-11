@@ -5,7 +5,7 @@ import { motionScale, type SoundCueColour, soundCueCss } from './config/accessib
 import type { VolumeChannel } from './config/audio';
 import { type LookSettings, type RetroSettings, retroLookOf } from './config/look';
 import type { Difficulty } from './config/bots';
-import { activeDev, DEV_ACTION_TEXT, DEV_GIFTS, type DevActionId, type DevSettings, devCheating } from './config/dev';
+import { activeDev, DEV_ACTION_TEXT, DEV_GIFTS, type DevActionId, type DevSettings, devCheating, modelFilesInUse } from './config/dev';
 import { PERF_SCRIPT } from './config/perfScript';
 import { ROUNDS } from './config/hits';
 import type { MatchRules, RulesetId } from './config/matchRules';
@@ -34,9 +34,8 @@ import type { MapData } from './map/mapTypes';
 import { initPhysics } from './physics/physicsWorld';
 import { awayWatch } from './core/awayWatch';
 import { loadBakedLight } from './render/bakedLight';
-import { loadFigureModel } from './render/externalModels';
+import { ModelFiles } from './render/modelFiles';
 import { powerSourceLoader } from './render/powerSourceModels';
-import { loadReplicaFiles } from './render/replicaFiles';
 import { FrameTimeWatch, presetBelow, slowFrameMs } from './render/qualityStepDown';
 import { rendererName } from './render/gpuCheck';
 import { Renderer } from './render/renderer';
@@ -304,18 +303,19 @@ export class Game {
   private crashScreen: CrashScreen | null = null;
 
   static async create(container: HTMLElement, options: GameOptions): Promise<Game> {
-    // A figure model (M25a) loads alongside the physics; with none in the build this resolves at once. With Dev content
-    // on, so do the dev maps (M50), so New game can show a dev map picked last time. The maps' baked light (G6) too.
-    const devMaps = activeDev(loadDevEnabled(), loadDevSettings()).devContent ? loadDevMaps() : null;
+    // The model files the Dev tab lets in (RM4: none by default) load alongside the physics. With Dev content on, so do
+    // the dev maps (M50), so New game can show a dev map picked last time. The maps' baked light (G6) too.
+    const dev = activeDev(loadDevEnabled(), loadDevSettings());
+    const devMaps = dev.devContent ? loadDevMaps() : null;
+    const models = new ModelFiles();
     // The renderer (W1): its start (render/rendererStart.ts, a small chunk of its own with the Renderer row) loads
     // alongside the physics; on Auto or WebGPU it asks for an adapter, and only when one is given are `three/webgpu`
     // loaded and its device made. On the WebGL pick, or if that chunk can't be had, WebGL as before.
     const choice = loadRendererChoice();
     const starting = import('./render/rendererStart').then((m) => m.bootRenderer(choice, options.forceWebGL === true, options.qualitySettings.antialias), () => null);
-    const [, figureModel, replicaFiles, , , start] = await Promise.all([initPhysics(), loadFigureModel(), loadReplicaFiles(), devMaps, loadBakedLight(), starting]);
+    const [, , , , start] = await Promise.all([initPhysics(), models.use(modelFilesInUse(dev)), devMaps, loadBakedLight(), starting]);
     const game = new Game(container, options, start);
-    game.renderer.figureModel = figureModel;
-    game.renderer.replicaFiles = replicaFiles;
+    game.renderer.models = models;
     return game;
   }
 
@@ -400,7 +400,15 @@ export class Game {
     });
 
     // The menus' pictures of replicas and parts (G3), drawn by whichever WebGL renderer the game has now.
-    this.pictures = new ItemPictures(followingPictureTarget(() => this.renderer.pictureRenderer, webglPictureTarget), undefined, () => this.renderer.replicaFiles, powerSourceLoader());
+    // The power sources' models are Blender files too (RM4): pictured only while the Dev tab's model switches let the
+    // replicas' in, else their line drawings stay.
+    const powerSources = powerSourceLoader();
+    this.pictures = new ItemPictures(
+      followingPictureTarget(() => this.renderer.pictureRenderer, webglPictureTarget),
+      undefined,
+      () => this.renderer.replicaFiles,
+      (file) => (this.renderer.models.inUse.gear ? powerSources(file) : Promise.resolve(null)),
+    );
     this.menus = new Menus(container, {
       pictures: this.pictures,
       rules: {
@@ -844,11 +852,25 @@ export class Game {
     // plays; the next Play rebuilds the match with it.
     if (this.dev.unlockAllGear !== before.unlockAllGear || this.dev.devContent !== before.devContent) this.loadoutChanged = this.setupChanged = true;
     if (this.dev.devContent !== before.devContent) this.prefetchFieldSounds();
+    if (this.dev.disableAllModels !== before.disableAllModels || this.dev.disableFigureModels !== before.disableFigureModels) this.useModelFiles();
     // Time of day (M90) changes the light the next match is built under, and its sounds.
     if (this.dev.timeOfDay !== before.timeOfDay) {
       this.setupChanged = true;
       this.prefetchFieldSounds();
     }
+  }
+
+  /**
+   * The model files the Dev tab's switches let in now (RM4), fetched if they aren't yet: the menus' pictures are drawn
+   * again from them, and the next match or range is built with them (one under way keeps what it was built with).
+   */
+  private useModelFiles(): void {
+    void this.renderer.models.use(modelFilesInUse(this.dev)).then((changed) => {
+      if (!changed || this.disposed) return;
+      this.pictures.forget();
+      this.loadoutChanged = this.setupChanged = true;
+      this.menus.refresh();
+    });
   }
 
   /**

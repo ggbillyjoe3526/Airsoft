@@ -65,7 +65,7 @@ and never writes the simulation.
 - Figures: `characterRenderer.ts`, `characterModels.ts`, `figureHuman.ts` / `figureRobot.ts`; `figureFinish.ts` (the
   per-vertex finish) and `figureCamo.ts` (the team camo printed per pixel on clothes and sleeves, G11). Replicas and hands:
   `replicaModels.ts` (the bodies and assembly), `replicaParts.ts` (optics, grips, magazines and the other fitted parts),
-  `replicaBuilder.ts` (the mesh builder both use), `replicaFiles.ts` (the Blender model files, M101, RM1) and `replicaRig.ts`
+  `replicaBuilder.ts` (the mesh builder both use), `replicaFiles.ts` (the Blender model files, M101, RM1; `modelFiles.ts` loads them, and the figure model, only while the Dev tab's model switches let them in, RM4) and `replicaRig.ts`
   (their moving parts, skinned and posed from the game's state, RM1; the Inspect key plays a file's Inspect clip, RM2), `replicaFinish.ts` (moulded speckle), `replicaSheen.ts` (the
   environment reflection), `replicaArms.ts` (the first-person arms), `handModels.ts`; `itemPictures.ts` draws them off
   screen for the menus, with the power sources from `powerSourceModels.ts` (the menus' battery, LiPo and gas bottle, RM3).
