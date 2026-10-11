@@ -5,6 +5,7 @@ import { decodeProbeFile, fromBase64 } from '../../render/probeFile';
 import { lightingPicked } from '../lightingChoice';
 import { MAPS, mapData, registerMaps } from '../maps';
 import { DEV_MAP_DATA } from '../devMaps';
+import { RANGE_MAP } from '../range';
 import { BAKE_COMMAND, BAKE_FILES, type BakeFileId, bakeFilePath } from './files';
 
 /**
@@ -20,11 +21,13 @@ async function gzipSize(text: string): Promise<number> {
   return (await new Response(stream).arrayBuffer()).byteLength;
 }
 
-const baked = MAPS.map((m) => mapData(m.id)).filter((map) => map.bakedLight);
+// The match maps, and the practice range (M81), which is no match map but is baked as Depot is.
+const baked = [...MAPS.map((m) => mapData(m.id)), RANGE_MAP].filter((map) => map.bakedLight);
 
 describe('the baked light files (G6)', () => {
-  it('Depot opts in; the night maps (Woodland, Neon Heights) opt out, lit by their lamps', () => {
+  it('Depot and the practice range opt in; the night maps (Woodland, Neon Heights) opt out, lit by their lamps', () => {
     expect(mapData('depot').bakedLight).toEqual({ file: 'depot' });
+    expect(RANGE_MAP.bakedLight).toEqual({ file: 'range' });
     for (const id of ['woodland', 'neonHeights'] as const) {
       const map = mapData(id);
       expect(map.bakedLight, id).toBeUndefined();

@@ -182,6 +182,14 @@ export const GRAPHICS_ROWS: readonly GraphicsRow[] = [
       { id: '8', label: 'Nearest 8', value: 8 },
     ],
   }),
+  choice({
+    field: 'torchShadows',
+    label: 'Torch shadows',
+    help: 'On a night field, your weapon torch casts shadows: a tree in its beam shades the ground behind it. Needs a night light.',
+    cost: 'GPU: small to medium, only while your torch is on',
+    needs: 'shadows',
+    options: onOff,
+  }),
   // G6: materials and baked lighting.
   choice({
     field: 'bakedLight',

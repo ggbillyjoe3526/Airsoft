@@ -269,6 +269,8 @@ request. Each entry says where the contract lives, what it holds today and what 
   - `decor`: look-only blocks, drawn but never collided, walked, seen through or heard.
   - `bakedLight`: the name of the map's probe file; look only. Each file is pinned to its map by
     `map/bakes/bakes.test.ts`, which names the bake command when they differ.
+  - `keepClear`: boxes no decal or wall mark is placed over; the range keeps its distance boards clear with them
+    (`map/rangeDressing.ts`, M81).
 
   Pinned by the content toolkit's map checks on every map (`content/mapChecks.test.ts`), `nav/navGrid.test.ts`, `map/neonHeights.test.ts`, `map/extractionData.test.ts`,
   `render/depotLook.test.ts` (a map using none of the woodland look's fields, M33i, builds as before),

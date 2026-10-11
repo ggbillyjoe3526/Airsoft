@@ -75,9 +75,9 @@ describe('the figures, replicas, arms, hands and torch beams on the node path (W
         seen.twinned++;
       }
     }
-    // The detailed figures' finish (one material per figure) and your sleeves' camo (G11), and the plain rest (the
-    // beams' three light materials among them: Three's node Basic never takes the environment).
-    expect(seen.twinned).toBe(characters.length + 1);
+    // The detailed figures' finish (one material per figure), your sleeves' camo (G11) and the soft beam (M91), and the
+    // plain rest (the glare's and the lit spots' light materials among them: Three's node Basic never takes the environment).
+    expect(seen.twinned).toBe(characters.length + 2);
     expect(seen.plain).toBeGreaterThan(10);
     for (const r of [figures, low]) r.dispose();
     held.dispose();

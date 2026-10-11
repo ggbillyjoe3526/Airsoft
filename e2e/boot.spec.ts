@@ -534,7 +534,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   expect(await page.locator('canvas.game-canvas').count()).toBe(1);
   // The Custom rows are folded under a preset (M68, audit UI-09): opened here, a row moves the picker to Custom, and
   // setting it back finds Medium again.
-  const shadows = settings.getByRole('group', { name: 'Shadows' });
+  const shadows = settings.getByRole('group', { name: 'Shadows', exact: true });
   await expect(shadows).toBeHidden();
   await settings.locator('summary', { hasText: 'Custom settings' }).click();
   await expect(shadows).toBeVisible();

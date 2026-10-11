@@ -363,18 +363,33 @@ export const LIGHTING_PRESETS: Readonly<Record<LightingPresetId, LightingPreset>
  * times as it points at you; seen from within `glareFromDeg` of its axis) and a lit disc where the beam lands
  * (`spotSegments` round, its brightness falling with the distance over the reach, `spotLift` off the surface, at least
  * `spotMinSize` m across). The lens is `lensForward` m ahead of the eye and `lensDown` below it. Your own torch on
- * Medium and High is one real spot light (no shadow: it sits by the eye, so its shadows would hide behind what casts
- * them), which takes one of the night lights (QualitySettings.poolLights), so the scene's real light count never changes.
+ * Medium and up is one real spot light, which takes one of the night lights (QualitySettings.poolLights), so the scene's
+ * real light count never changes; with Torch shadows (M91, High and Ultra) it casts them.
+ *
+ * M91 (playtest note 26: "almost white cones"): the beam reads as light in hazy air, not a solid cone. Its sides fade
+ * where you see them edge on (`coneEdge`: the brightness goes with how squarely you look through the cone, to that
+ * power, so the middle of the beam is brightest and its edges have no line), it fades in over `coneFadeIn` of its length
+ * from the lens, and fades out within `coneNear` m of your eyes (a beam swept past your face doesn't white out the
+ * screen). The lit disc has a brighter core the beam's width (`beamDeg`) inside a softer spill (`spotSpill` of the
+ * middle's brightness), and the real spot's edge is soft (`spotPenumbra`).
  */
 export const TORCH_BEAMS = {
   coneSegments: 14,
   coneShare: 0.6,
   /** The cone fades in over this share of its length from the lens, and out by its end. */
-  coneFadeIn: 0.04,
+  coneFadeIn: 0.15,
+  /** How quickly the cone's sides fade where they are seen edge on (a power of how squarely the view crosses them). */
+  coneEdge: 1.6,
+  /** The cone fades out between `to` and `from` m from the eyes (nothing nearer than `from`). */
+  coneNear: { from: 0.4, to: 2.5 },
   glareSize: 0.09,
   glareGrow: 4,
   glareFromDeg: 70,
   spotSegments: 16,
+  /** Rings of the lit disc, from its middle out: enough for the core and the spill to fade smoothly. */
+  spotRings: 6,
+  /** The spill round the core, as a share of the middle's brightness. */
+  spotSpill: 0.35,
   spotLift: 0.03,
   spotMinSize: 0.3,
   lensForward: 0.45,
@@ -387,6 +402,22 @@ export const TORCH_BEAMS = {
   hazeGain: 1.5,
   /** The real spot light's falloff (physical: 2). */
   decay: 2,
+  /** The real spot's soft edge: the share of its cone that fades from full to nothing (a hard edge is 0). */
+  spotPenumbra: 0.8,
+  /**
+   * Your own real spot in first person is where the torch is on the replica, not at your eyes: `ownRight` m to the right
+   * and `ownDown` m below the lens. A light at the eye hides every shadow behind what casts it; from the replica's rail,
+   * as with a real weapon light, the shadows show beside and below things.
+   */
+  ownRight: 0.16,
+  ownDown: 0.1,
+  /**
+   * Torch shadows (M91, QualitySettings.torchShadows): the shadow map's size (texels a side; the beam is narrow, so this
+   * is sharp), its near plane (m, past the replica), the depth bias and the normal bias (m). The bias is in the spot's
+   * perspective depth, not metres: the sun's -0.0004 shadowed everything the torch lit on the node renderer (measured on
+   * Woodland, 2026-10-11), -0.002 cleared the trunks and figures but not the grazing ground, -0.003 clears both.
+   */
+  shadow: { mapSize: 1024, near: 0.3, bias: -0.003, normalBias: 0.05 },
 } as const;
 
 /**

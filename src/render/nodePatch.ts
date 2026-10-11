@@ -4,10 +4,11 @@ import type * as THREE from 'three';
  * The node patch a world material carries (WebGPU overhaul W6b): what it draws beyond Three's own node material of its
  * type, and the uniforms that drawing reads. It is set where the material is made: the map surfaces and what rides on
  * them (render/surfaceShader.ts: the set dressing's junk and puddles, the sky host), the night sky's stars, the
- * fixtures' flames and embers, the smoke and steam, the fireflies, the dust motes, the figures' per-vertex finish and
- * your sleeves' camo. The node renderer reads it as it builds the material's program and makes the node material that
- * draws it (render/webgpu/worldTwins.ts); the sized points draw as sprites (render/webgpu/pointSprites.ts). Until W6b
- * each was a GLSL patch (`onBeforeCompile`) that the node renderer recognised by its program key.
+ * fixtures' flames and embers, the smoke and steam, the torches' soft beam, the fireflies, the dust motes, the figures'
+ * per-vertex finish and your sleeves' camo. The node renderer reads it as it builds the material's program and makes
+ * the node material that draws it (render/webgpu/worldTwins.ts); the sized points draw as sprites
+ * (render/webgpu/pointSprites.ts). Until W6b each was a GLSL patch (`onBeforeCompile`) that the node renderer
+ * recognised by its program key (the beam, M91, by its key alone).
  *
  * The material stays a plain Three material, so what sets its colour, maps, opacity or relief works as before. Its
  * program key names its patch, and every material with that key shares one node program: so a patch's numbers are
@@ -32,11 +33,12 @@ export type PointKind = 'stars' | 'embers' | 'fireflies' | 'motes';
 
 /**
  * The patches that need no recipe: the sized points (above), the fires' flames and lantern panes (sway and flicker on
- * the fixtures' clock, `fxTime`), the smoke and steam puffs (each instance's `puffAlpha`), the detailed figure's
+ * the fixtures' clock, `fxTime`), the smoke and steam puffs (each instance's `puffAlpha`), the torches' soft beam (M91:
+ * fading where the cone is seen edge on and near the eyes), the detailed figure's
  * per-vertex roughness, metalness and camo (render/figureFinish.ts) and your sleeves' camo all over
  * (render/figureCamo.ts).
  */
-export type PlainPatchKind = PointKind | 'flames' | 'smoke' | 'figure-finish' | 'sleeve-camo';
+export type PlainPatchKind = PointKind | 'flames' | 'smoke' | 'torch-beam' | 'figure-finish' | 'sleeve-camo';
 
 /** What a world material draws beyond Three's own. */
 export type NodePatch = { readonly kind: 'surface'; readonly recipe: SurfaceRecipe } | { readonly kind: PlainPatchKind };

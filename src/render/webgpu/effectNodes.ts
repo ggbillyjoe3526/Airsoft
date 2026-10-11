@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { MeshBasicNodeMaterial, type NodeBuilder, type NodeFrame, type NodeMaterial, PointsNodeMaterial } from 'three/webgpu';
 import {
+  abs,
   attribute,
   bufferAttribute,
   dynamicBufferAttribute,
@@ -16,6 +17,11 @@ import {
   screenDPR,
   sin,
   cos,
+  dot,
+  normalView,
+  positionView,
+  positionViewDirection,
+  pow,
   smoothstep,
   uniform,
   uv,
@@ -24,7 +30,7 @@ import {
   vec3,
   vec4,
 } from 'three/tsl';
-import { FIXTURES } from '../../config/render';
+import { FIXTURES, TORCH_BEAMS } from '../../config/render';
 import { PHASE } from '../lightFixtures';
 import { nodePatchOf, patchUniforms, type PointKind } from '../nodePatch';
 import { everyDraw, objectFloat } from './twinUniforms';
@@ -186,3 +192,17 @@ export function spriteTwin(points: THREE.Points, kind: PointKind, buffers: Share
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
+
+/**
+ * The torch beam (M91, render/torchBeams.ts beamMaterial): its strength scaled by how squarely the view crosses the
+ * cone's side, to TORCH_BEAMS.coneEdge (through the middle of the beam the path through its haze is longest, at its
+ * edges nothing, so the cone has no edge line), and faded out within `coneNear` of the eyes. Additive, as the plain
+ * material says: the opacity scales what it adds.
+ */
+export function beamTwin(plain: THREE.Material): MeshBasicNodeMaterial {
+  const twin = copyOnto(plain, new MeshBasicNodeMaterial());
+  const across = pow(abs(dot(normalView, positionViewDirection)), r(TORCH_BEAMS.coneEdge, 3));
+  const near = smoothstep(r(TORCH_BEAMS.coneNear.from, 3), r(TORCH_BEAMS.coneNear.to, 3), positionView.z.negate());
+  twin.opacityNode = across.mul(near);
+  return twin;
+}

@@ -42,6 +42,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M90** · More Dev settings for playtesting: Field Credits and Tokens on demand, free case openings, time of day, bots hold fire, spectate any bot, bot intentions, end the round now and reset the save
 - **M97** · Replay tutorial button in Settings starts the tutorial at once, whether or not you finished it
 - **M82** · Loadout replicas and Customise parts sort and filter by rarity tier, saved between sessions; what you carry or have fitted always shows
+- **M91** · Torch shadows setting, on for High and Ultra: your own torch casts shadows, so a tree or bot in its beam shades what is behind
 
 ### Changed
 - **M71** · Bots hunt the map's middle once their lane is swept (now all levels, not just Pro); Normal and Hard hold their posts out of lantern light at night (#133)
@@ -97,6 +98,9 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **W6a** · Menu pictures of replicas wait until the match's shaders are ready, so a match starts no slower
 - **W6a** · The game download is a little smaller: the main code file is 982 kB, down from 1,007 kB
 - **W6a** · Edge smoothing changes apply from the next load on every renderer, WebGPU and WebGL alike
+- **M91** · Night torch beams are soft and diffused: they fade in from the lens, edges melt away, the lit spot is soft-edged; Low keeps the old beams
+- **M81** · Practice range and tutorial in Depot's new look: baked light, post effects, props behind the firing line, a sandbag berm, dirt, puddles and sprays
+- **M81** · Beyond the range walls: wooded hills, treelines, site huts, a water tower and a power line; the distance boards stay clear of the sprays
 
 ### Fixed
 - **G11** · The team camo on players reads clearly on Medium and up: crisp dark and light blotches printed per pixel, on WebGL and WebGPU; Low keeps plain clothes
@@ -131,6 +135,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **W6a** · On WebGPU, Neon Heights on Low no longer drops one of a match's first frames to a graphics error
 - **W6a** · Play asks for the mouse before the match is built, so a slow start no longer fails with "The browser needs a moment before re-capturing the mouse"
 - **W6a** · The first dust puff, grit or kicked dust in a match no longer causes a small hitch: it is ready before the match starts
+- **M81** · The site roundel no longer covers the 30 m distance board on the practice range
 
 ### Internal
 - **G8** · Set dressing never collides or blocks sight: Depot's colliders, routes, cover and bot sight are tested identical with and without it (#136)

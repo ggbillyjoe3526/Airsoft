@@ -9,17 +9,20 @@ import { isInPlay } from '../sim/elimination';
 import { hitTop } from '../sim/hitbox';
 import { lightInHand, torchLit } from '../sim/torch';
 import { lerpAngle, vec3 } from '../sim/vec';
+import { carryNodePatch } from './nodePatch';
 
 /**
  * Weapon torches drawn (M33h), on any map whose lighting preset has a `torch.beam` above 0 (the night); the day builds
- * nothing. Everyone's lit torch but your own is three instanced draws for the whole match, with no real light: a cone
- * fading along the beam, a glare at the lens that grows as it points at the camera (depth tested, so walls hide it: this
- * is what gives the holder away), and a lit disc where the beam lands (a ray cast per lit torch per frame, along the
- * level's own ray). Your own torch on Medium and High is one real spot light, made with the match and only turned up
- * and down, so no shader is ever rebuilt by a switch; it takes one of the night lights (`reserved`), so the scene's
- * real light count is the quality's, torch or not. On Low your own torch draws a glow ahead and its lit disc. A figure
- * inside someone's beam, where no real light reaches it, glows a little (`lit`, read by the figures). Unlit, unfogged
- * and off the environment map, as the light pools are (M33f). Allocation-free per frame.
+ * nothing. Everyone's lit torch but your own is three instanced draws for the whole match, with no real light: a soft
+ * beam (M91: brightest down its middle, no edge line, fading near your eyes; config/render.ts TORCH_BEAMS), a glare at
+ * the lens that grows as it points at the camera (depth tested, so walls hide it: this is what gives the holder away),
+ * and a lit disc where the beam lands, a core inside a softer spill (a ray cast per lit torch per frame, along the
+ * level's own ray). Your own torch on Medium and up is one real spot light with a soft edge, made with the match and
+ * only turned up and down, so no shader is ever rebuilt by a switch; it takes one of the night lights (`reserved`), so
+ * the scene's real light count is the quality's, torch or not. With Torch shadows (M91, High and Ultra) it casts
+ * shadows, its shadow map drawn only while the torch is on. On Low your own torch draws a glow ahead and its lit disc.
+ * A figure inside someone's beam, where no real light reaches it, glows a little (`lit`, read by the figures). Unlit,
+ * unfogged and off the environment map, as the light pools are (M33f). Allocation-free per frame.
  */
 
 /** Whether any character carries a light on any replica: a match without one builds nothing for torches. */
@@ -27,24 +30,39 @@ function carriesTorch(characters: readonly Character[]): boolean {
   return characters.some((c) => c.armament.parts.some((p) => !!p.light));
 }
 
-/** Whether the match's own torch is a real spot light at `quality`: a night preset, someone carries a torch, Medium or High. */
+/** What the torch settings ask of the match's own torch: a real spot light, and whether it casts shadows. */
+export type TorchQuality = Pick<QualitySettings, 'poolLights'> & Partial<Pick<QualitySettings, 'shadows' | 'torchShadows' | 'shadowRadius'>>;
+
+/** Whether the match's own torch is a real spot light at `quality`: a night preset, someone carries a torch, Medium and up. */
 export function torchSpotWanted(preset: LightingPreset, quality: Pick<QualitySettings, 'poolLights'>, armed: boolean): boolean {
   return armed && preset.torch.beam > 0 && quality.poolLights > 0;
 }
 
-/** A unit cone along -Z, its tip at the origin and its open end a unit circle at z = -1, fading along its length. */
+/** Whether that real spot casts shadows (M91): Torch shadows on, with Shadows on (the renderer's shadow maps). */
+export function torchShadowsWanted(preset: LightingPreset, quality: TorchQuality, armed: boolean): boolean {
+  return torchSpotWanted(preset, quality, armed) && quality.torchShadows === true && quality.shadows === true;
+}
+
+/**
+ * A unit cone along -Z, its tip at the origin and its open end a unit circle at z = -1, fading along its length. Its
+ * normals are the cone's own, so the beam's material can fade the sides seen edge on (M91).
+ */
 function buildConeGeometry(segments: number = TORCH_BEAMS.coneSegments, fadeIn: number = TORCH_BEAMS.coneFadeIn): THREE.BufferGeometry {
   const rings = 6;
   const pos: number[] = [];
+  const nor: number[] = [];
   const col: number[] = [];
   const index: number[] = [];
   for (let r = 0; r <= rings; r++) {
     const t = r / rings;
-    // In over the first `fadeIn`, then out to nothing at the end.
-    const k = Math.min(1, t / Math.max(1e-6, fadeIn)) * (1 - t) * (1 - t);
+    // In over the first `fadeIn`, smoothly, then out to nothing at the end.
+    const u = Math.min(1, t / Math.max(1e-6, fadeIn));
+    const k = u * u * (3 - 2 * u) * (1 - t) * (1 - t);
     for (let s = 0; s <= segments; s++) {
       const a = (s / segments) * Math.PI * 2;
       pos.push(Math.cos(a) * t, Math.sin(a) * t, -t);
+      // The surface x² + y² = z² faces out along (cos a, sin a, 1) / √2 (the instance's scale is applied to it as to any normal).
+      nor.push(Math.cos(a) * Math.SQRT1_2, Math.sin(a) * Math.SQRT1_2, Math.SQRT1_2);
       col.push(k, k, k);
     }
   }
@@ -57,20 +75,33 @@ function buildConeGeometry(segments: number = TORCH_BEAMS.coneSegments, fadeIn: 
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
   g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
   g.setIndex(index);
   return g;
 }
 
-/** A unit disc facing +Z, bright in the middle and fading to nothing at its rim (a glare, a lit spot). */
-function buildSoftDisc(segments: number = TORCH_BEAMS.spotSegments): THREE.BufferGeometry {
+/** A glare's brightness `t` of the way out from its middle: fading smoothly to nothing at the rim. */
+const glareProfile = (t: number): number => (1 - t * t) * (1 - t * t);
+
+/**
+ * A lit spot's brightness `t` of the way out (M91): a core `core` of the radius wide (the beam's hotspot) over a softer
+ * spill (TORCH_BEAMS.spotSpill of the middle) that fades to nothing at the rim, 1 in the middle.
+ */
+export function spotProfile(t: number, core: number): number {
+  const spill = TORCH_BEAMS.spotSpill;
+  const c = Math.max(0, 1 - (t * t) / Math.max(1e-6, core * core));
+  return spill * glareProfile(t) + (1 - spill) * c * c;
+}
+
+/** A unit disc facing +Z, bright in the middle and fading to nothing at its rim by `profile` (a glare, a lit spot). */
+function buildSoftDisc(profile: (t: number) => number, rings: number, segments: number = TORCH_BEAMS.spotSegments): THREE.BufferGeometry {
   const pos: number[] = [0, 0, 0];
   const col: number[] = [1, 1, 1];
   const index: number[] = [];
-  const rings = 3;
   for (let r = 1; r <= rings; r++) {
     const t = r / rings;
-    const k = (1 - t * t) * (1 - t * t);
+    const k = profile(t);
     for (let s = 0; s < segments; s++) {
       const a = (s / segments) * Math.PI * 2;
       pos.push(Math.cos(a) * t, Math.sin(a) * t, 0);
@@ -97,6 +128,19 @@ function lightMaterial(side: THREE.Side): THREE.MeshBasicMaterial {
   const m = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side });
   m.fog = false;
   return m;
+}
+
+/**
+ * The beam's material (M91): additive, unlit, unfogged and writing no depth, like the others (node Basic never takes the
+ * scene's environment). Its node twin scales its strength by how squarely the view crosses the cone's side
+ * (TORCH_BEAMS.coneEdge; seen through the middle of the beam the path through its haze is longest, at its edges nothing)
+ * and fades it out close to the eyes (`coneNear`): the material carries that as its node patch (render/nodePatch.ts).
+ */
+export function beamMaterial(): THREE.MeshBasicMaterial {
+  const m = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+  m.fog = false;
+  m.name = 'torch-beam';
+  return carryNodePatch(m, { kind: 'torch-beam' });
 }
 
 /** An instanced draw for up to `capacity` torches, drawing none until update fills it (no draw call at count 0). */
@@ -126,6 +170,7 @@ const rayFrom = vec3();
 const rayDir = vec3();
 const surface: SurfaceHit = { normal: vec3(), material: 'concrete' };
 const normal = new THREE.Vector3();
+const right = new THREE.Vector3();
 
 export class TorchBeams {
   /** The beams' draws and the spot light: add to the scene once. Empty when the preset or the match has no torches. */
@@ -143,7 +188,7 @@ export class TorchBeams {
   constructor(
     private readonly characters: readonly Character[],
     private readonly preset: LightingPreset,
-    quality: Pick<QualitySettings, 'poolLights'>,
+    quality: TorchQuality,
     private readonly query: WorldQuery,
     private readonly body: BodyConfig,
     private readonly hits: HitConfig,
@@ -153,15 +198,17 @@ export class TorchBeams {
     this.active = preset.torch.beam > 0 && carriesTorch(characters);
     if (!this.active) return;
     const capacity = Math.max(1, characters.length);
-    this.cones = instanced('torch-cones', buildConeGeometry(), lightMaterial(THREE.DoubleSide), capacity);
-    const disc = buildSoftDisc();
-    this.glare = instanced('torch-glare', disc, lightMaterial(THREE.FrontSide), capacity);
+    this.cones = instanced('torch-cones', buildConeGeometry(), beamMaterial(), capacity);
+    this.glare = instanced('torch-glare', buildSoftDisc(glareProfile, 3), lightMaterial(THREE.FrontSide), capacity);
     // A disc lying on a surface is drawn over it, never into it.
     const spotMaterial = lightMaterial(THREE.FrontSide);
     spotMaterial.polygonOffset = true;
     spotMaterial.polygonOffsetFactor = -1;
     spotMaterial.polygonOffsetUnits = -4;
-    this.spots = instanced('torch-spots', disc.clone(), spotMaterial, capacity);
+    // The core is the beam's hotspot inside its spill (every torch in the match is the same kind today).
+    const light = TORCHES[this.firstLight()];
+    const core = Math.tan(THREE.MathUtils.degToRad(light.beamDeg / 2)) / Math.tan(THREE.MathUtils.degToRad(light.spillDeg / 2));
+    this.spots = instanced('torch-spots', buildSoftDisc((t) => spotProfile(t, core), TORCH_BEAMS.spotRings), spotMaterial, capacity);
     this.object.add(this.cones, this.glare, this.spots);
     this.setQuality(quality);
   }
@@ -171,25 +218,44 @@ export class TorchBeams {
     return this.spot ? 1 : 0;
   }
 
-  /** The real spot light on your torch (Medium and High), or null. Exposed for tests and the e2e checks. */
+  /** The real spot light on your torch (Medium and up), or null. Exposed for tests and the e2e checks. */
   get spotLight(): THREE.SpotLight | null {
     return this.spot;
   }
 
-  /** The night lights setting (QualitySettings.poolLights): your torch is a real spot light on any but 0 (Low). */
-  setQuality(quality: Pick<QualitySettings, 'poolLights'>): void {
+  /**
+   * The night lights setting (QualitySettings.poolLights): your torch is a real spot light on any but 0 (Low). With
+   * Torch shadows and Shadows on (M91) it casts shadows; a change to either makes the spot anew (a quality change
+   * rebuilds the lit shaders anyway), never a torch switch.
+   */
+  setQuality(quality: TorchQuality): void {
     const want = torchSpotWanted(this.preset, quality, this.active);
-    if (want === (this.spot !== null)) return;
+    const shadows = torchShadowsWanted(this.preset, quality, this.active);
+    if (want === (this.spot !== null) && (!this.spot || this.spot.castShadow === shadows)) {
+      if (this.spot && shadows && quality.shadowRadius !== undefined) this.spot.shadow.radius = quality.shadowRadius;
+      return;
+    }
     if (this.spot) {
       this.object.remove(this.spot, this.spot.target);
       this.spot.dispose();
       this.spot = null;
-      return;
     }
+    if (!want) return;
     // Every torch in the match is the same kind today: the first fitted one sets the spot's shape and colour.
     const light = TORCHES[this.firstLight()];
-    const spot = new THREE.SpotLight(light.colour, 0, light.reach, THREE.MathUtils.degToRad(light.spillDeg / 2), 1 - light.beamDeg / light.spillDeg, TORCH_BEAMS.decay);
-    spot.castShadow = false;
+    const spot = new THREE.SpotLight(light.colour, 0, light.reach, THREE.MathUtils.degToRad(light.spillDeg / 2), TORCH_BEAMS.spotPenumbra, TORCH_BEAMS.decay);
+    spot.castShadow = shadows;
+    if (shadows) {
+      const S = TORCH_BEAMS.shadow;
+      spot.shadow.mapSize.set(S.mapSize, S.mapSize);
+      spot.shadow.camera.near = S.near;
+      spot.shadow.camera.far = light.reach;
+      spot.shadow.bias = S.bias;
+      spot.shadow.normalBias = S.normalBias;
+      if (quality.shadowRadius !== undefined) spot.shadow.radius = quality.shadowRadius;
+      // Drawn only while the torch is on (update).
+      spot.shadow.autoUpdate = false;
+    }
     spot.name = 'torch-spot';
     this.object.add(spot, spot.target);
     this.spot = spot;
@@ -237,7 +303,13 @@ export class TorchBeams {
       if (real) {
         const s = this.spot!;
         s.position.copy(lens);
-        s.target.position.copy(lens).add(dir);
+        if (eyesOf) {
+          // From the replica's rail, right of and below the lens (TORCH_BEAMS.ownRight), so its shadows show.
+          right.setFromMatrixColumn(camera.matrixWorld, 0);
+          s.position.addScaledVector(right, TORCH_BEAMS.ownRight);
+          s.position.y -= TORCH_BEAMS.ownDown;
+        }
+        s.target.position.copy(s.position).add(dir);
         s.target.updateMatrixWorld();
         s.intensity = T.spot;
         spotOn = true;
@@ -281,7 +353,11 @@ export class TorchBeams {
       // Figures in this beam glow a little, where no real light reaches them.
       if (!real) this.lightFigures(c, tanSpill, light.reach, d);
     }
-    if (this.spot && !spotOn) this.spot.intensity = 0;
+    if (this.spot) {
+      if (!spotOn) this.spot.intensity = 0;
+      // Its shadow map is drawn only while it shines (M91).
+      if (this.spot.castShadow) this.spot.shadow.autoUpdate = spotOn;
+    }
     this.finish(cones, nCones);
     this.finish(glare, nGlare);
     this.finish(spots, nSpots);

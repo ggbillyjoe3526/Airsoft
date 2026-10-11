@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { type NodeMaterial, PMREMGenerator, type WebGPURenderer } from 'three/webgpu';
 import { disposeEnvironmentScene, type EnvironmentLook, ReplicaSheen, skyEnvironmentScene } from '../replicaSheen';
 import { REPLICA_SHEEN } from '../../config/render';
-import { copyOnto, flamesTwin, smokeTwin } from './effectNodes';
+import { beamTwin, copyOnto, flamesTwin, smokeTwin } from './effectNodes';
 import { figureTwin } from './figureNodes';
 import { PointSprites } from './pointSprites';
 import { type CarriedPatch, nodePatchOf } from '../nodePatch';
@@ -15,7 +15,7 @@ import { emptyGrid, SurfaceLambertTwin, SurfaceNodes, SurfaceStandardTwin } from
  * own uniforms per draw (twinUniforms.ts):
  *
  * - a surface patch (the map surfaces, the set dressing's junk and puddles, the sky host): surfaceNodes.ts;
- * - the flames and the smoke: effectNodes.ts flamesTwin and smokeTwin;
+ * - the flames, the smoke and the torches' soft beam (M91): effectNodes.ts flamesTwin, smokeTwin and beamTwin;
  * - the figures' per-vertex finish and your sleeves' camo: figureNodes.ts (W3);
  * - the sized points (stars, embers, fireflies, dust motes): sprites (pointSprites.ts), their Points left undrawn.
  *
@@ -104,6 +104,8 @@ export function worldTwin(material: THREE.Material, grid: THREE.Data3DTexture): 
       return flamesTwin(material);
     case 'smoke':
       return smokeTwin(material);
+    case 'torch-beam':
+      return beamTwin(material);
     case 'figure-finish':
     case 'sleeve-camo':
       return figureTwin(material);

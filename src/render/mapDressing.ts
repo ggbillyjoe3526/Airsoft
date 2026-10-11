@@ -258,7 +258,7 @@ function placeMarks(map: MapData, chance: { logos: number; walls: number }, rng:
       return Math.abs(t.centre[a] - q.centre[a]) < (t.width + q.width) / 2 && Math.abs(t.centre[1] - q.centre[1]) < (t.height + q.height) / 2;
     });
   const add = (q: DecalQuad, self: MapBlock): void => {
-    if (!decalBlocked(q, blocks, self, 0.3) && !overlaps(q)) out.decals.push(q);
+    if (!decalBlocked(q, blocks, self, 0.3, map.keepClear) && !overlaps(q)) out.decals.push(q);
   };
   for (const b of blocks) {
     if (b.kind === 'container') {

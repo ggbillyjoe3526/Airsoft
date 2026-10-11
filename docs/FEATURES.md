@@ -258,12 +258,14 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   held replicas too, with every night lamp near you lighting what stands by it on WebGPU (W3), and every preset's
   screen effects and the retro filter (W4); on WebGPU at Medium and up Woodland adds swaying grass on its meadows and
   a deep wood beyond the fence (W5)
+- Night torch beams are soft and diffused, with a soft-edged lit spot; Low keeps the old beams (M91)
+- Torch shadows (High and Ultra): your own torch casts shadows, so a tree or bot in its beam shades what is behind it; off on Low and Medium (M91)
 
 ## Practice range and tutorial
 
 - A practice range, from the title screen or the top bar's Range: steel plates that ring, figures that fall, at 10–60 m,
   with a readout of your last BB; figures stand at the same height as match characters (M21, FA1)
-- Range detail: chains, bands, brackets, a BB shelf and scuffed plates, with fewer draw calls than before (FA7)
+- Range in Depot's new look: baked light, post effects, props behind the firing line (portable toilet, replica rack, water tank, generator, crate bench), a sandbag berm at the backstop, dirt, litter, puddles and sprays, and wooded hills, treelines, site huts, a water tower and a power line beyond the walls; chains, bands and brackets on the plates (FA7, M81)
 - A tutorial of fifteen coached steps on the range, with your own key bindings and the real scoreboard and order wheel; finishing opens Tutorial complete with Practice range or Menu; skip and resume from pause; Replay tutorial in Settings starts it again at once (M16, FA10, M80, M97)
 
 ## Accessibility and comfort
