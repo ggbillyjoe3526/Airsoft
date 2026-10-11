@@ -33,7 +33,7 @@ export function playView(picked: NewGamePicks, opts: Pick<MenusOptions, 'rules' 
   // A map that offers Day and Night names the one picked (M34d).
   const lightLine = lightingChoices(mapData(map.id)).length > 1 ? ` · ${LIGHTING_LABELS[light]}` : '';
   const still = mapStillFile(map.id, light);
-  const match = run ? runRulesSummary(m, run, played.difficulty) : matchRulesSummary(m);
+  const match = run ? runRulesSummary(m, run, played.difficulty) : matchRulesSummary(m, played.mode);
   const opponents = difficultyLabel(played.difficulty);
   const mates = difficultyLabel(played.teammateDifficulty);
   const recorded = countsForRecords(m, played.difficulty, played.teammateDifficulty, played.ruleset);

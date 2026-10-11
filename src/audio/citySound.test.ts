@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AMBIENCES, type AmbienceId, AMBIENT_LOOPS, AUDIO, type LoopId } from '../config/audio';
+import { type AmbientCallSpec, type Ambience, AMBIENCES, type AmbienceId, AMBIENT_LOOPS, AUDIO, type LoopId } from '../config/audio';
 import { isMapCue, MAP_CUE_SEEDS, SOUNDS, type SoundCue, TITLE_CUES } from '../config/sounds';
 import { DEPOT } from '../map/depot';
 import { lightingChoices, mapUnderLighting, playsAtNight } from '../map/lightingChoice';
@@ -311,8 +311,8 @@ describe('M34g city acceptance 1 and 2: the city by day and by night, no louder 
     const night = AMBIENCES.city.night;
     expect(day.beds.map((b) => b.loop)).toEqual(['traffic', 'drones']);
     expect(night.beds.map((b) => b.loop)).toEqual(['traffic', 'neon']);
-    expect(day.call?.cue).toBe('ambience.chime');
-    expect(night.call?.cue).toBe('ambience.arcade');
+    expect(day.calls[0]?.cue).toBe('ambience.chime');
+    expect(night.calls[0]?.cue).toBe('ambience.arcade');
     expect(night.beds[0]!.gain).toBeLessThan(day.beds[0]!.gain);
   });
 
@@ -335,8 +335,8 @@ describe('M34g city acceptance 1 and 2: the city by day and by night, no louder 
     const L = AUDIO.levels;
     expect(L.chime.gain).toBeLessThanOrEqual(L.bird.gain);
     expect(L.arcade.gain).toBeLessThanOrEqual(L.bird.gain);
-    expect(AMBIENCES.city.day.call!.level).toBe(L.chime);
-    expect(AMBIENCES.city.night.call!.level).toBe(L.arcade);
+    expect(AMBIENCES.city.day.calls[0]!.level).toBe(L.chime);
+    expect(AMBIENCES.city.night.calls[0]!.level).toBe(L.arcade);
     const birds = renderSounds(RATE).get('ambience.bird')!;
     const birdPeak = Math.max(...birds.map(peakOf)) * L.bird.gain;
     for (const [cue, level] of [['ambience.chime', L.chime], ['ambience.arcade', L.arcade]] as const) {
@@ -345,25 +345,28 @@ describe('M34g city acceptance 1 and 2: the city by day and by night, no louder 
   });
 
   it('calls only now and then and well away: a chime every 12 to 28 s, bleeps every 9 to 22 s, 10 m or more off', () => {
-    for (const call of [AMBIENCES.city.day.call!, AMBIENCES.city.night.call!]) {
+    for (const call of [AMBIENCES.city.day.calls[0]!, AMBIENCES.city.night.calls[0]!]) {
       expect(call.every[0]).toBeGreaterThanOrEqual(8);
       expect(call.distance[0]).toBeGreaterThanOrEqual(10);
     }
   });
 
   it('has no bird in the city, by Day or by Night, in its calls or its cues', () => {
-    for (const time of ['day', 'night'] as const) expect(AMBIENCES.city[time].call?.cue, time).not.toBe('ambience.bird');
+    for (const time of ['day', 'night'] as const) expect(AMBIENCES.city[time].calls.map((c) => c.cue), time).not.toContain('ambience.bird');
     for (const night of [false, true]) {
       const scene = soundscapeOf(NEON_HEIGHTS, night);
       expect(scene.cues).not.toContain('ambience.bird');
-      expect(scene.ambience.call?.cue).toBe(night ? 'ambience.arcade' : 'ambience.chime');
+      expect(scene.ambience.calls[0]?.cue).toBe(night ? 'ambience.arcade' : 'ambience.chime');
     }
   });
 
   it("puts nothing of the city's into any other ambience, and the yard and woods keep their data as before M34g", () => {
     // JSON of each as it stood at 9d32c94 (the beds, call and the call's level, by day and night).
     // The echo each has since M69 (audit AUD-10) is left out of the JSON: the yard's is AUDIO.reverb as it always was.
-    const dataOf = (id: AmbienceId): string => hashOf(JSON.stringify(AMBIENCES[id], (key, value: unknown) => (key === 'reverb' ? undefined : value)));
+    // M86 added calls of other kinds to each (its own pins in audio.test.ts); the beds and the call each had stay as they were.
+    const m86 = ['ambience.crow', 'ambience.dog', 'ambience.creak', 'ambience.pigeon', 'ambience.horn'];
+    const asBefore = (a: Ambience): { beds: Ambience['beds']; call: AmbientCallSpec | null } => ({ beds: a.beds, call: a.calls.find((c) => !m86.includes(c.cue)) ?? null });
+    const dataOf = (id: AmbienceId): string => hashOf(JSON.stringify({ day: asBefore(AMBIENCES[id].day), night: asBefore(AMBIENCES[id].night) }));
     expect(dataOf('yard')).toBe('151064b2');
     expect(dataOf('woods')).toBe('76a25b03');
     expect(AMBIENCES.yard.day.reverb).toBe(AUDIO.reverb);
@@ -460,7 +463,8 @@ describe('M34g city acceptance 3: everything else sounds as before', () => {
 
   it('keeps the chime and the arcade off the title screen and last in SOUNDS, each with a seed of its own', () => {
     const all = Object.keys(SOUNDS) as SoundCue[];
-    expect(all.slice(-2)).toEqual([...CITY_CUES]);
+    // M86's map cues (the woods' creak, the city's pigeons and horn) come after them.
+    expect(all.slice(-5)).toEqual([...CITY_CUES, 'ambience.creak', 'ambience.pigeon', 'ambience.horn']);
     expect(all.slice(0, TITLE_CUES.length)).toEqual(TITLE_CUES);
     const title = renderSounds(RATE);
     for (const cue of CITY_CUES) {
@@ -478,14 +482,15 @@ describe('M34g city acceptance 3: everything else sounds as before', () => {
     expect(renderMapCue('ambience.chime', RATE)).toEqual(chime);
     const loopSeeds = (Object.values(AMBIENT_LOOPS) as { seed: number }[]).map((s) => s.seed);
     for (const cue of CITY_CUES) expect(loopSeeds).not.toContain(MAP_CUE_SEEDS[cue]);
-    // Nothing else in MAP_CUE_SEEDS moved: the same keys, the footsteps and owl first, the city's two last.
-    expect(Object.keys(MAP_CUE_SEEDS)).toEqual([...Object.keys(MAP_CUES_BEFORE), ...CITY_CUES]);
+    // Nothing else in MAP_CUE_SEEDS moved: the same keys, the footsteps and owl first, the city's two next, M86's last.
+    expect(Object.keys(MAP_CUE_SEEDS)).toEqual([...Object.keys(MAP_CUES_BEFORE), ...CITY_CUES, 'ambience.creak', 'ambience.pigeon', 'ambience.horn']);
   });
 });
 
 describe("M34g city acceptance 3: the city's soundscape asks only for its own cues and loops", () => {
-  const CITY_DAY = { cues: ['ambience.chime'], loops: ['drones', 'traffic'] };
-  const CITY_NIGHT = { cues: ['ambience.arcade'], loops: ['neon', 'traffic'] };
+  // With M86's pigeons by day and a car horn either way.
+  const CITY_DAY = { cues: ['ambience.chime', 'ambience.horn', 'ambience.pigeon'], loops: ['drones', 'traffic'] };
+  const CITY_NIGHT = { cues: ['ambience.arcade', 'ambience.horn'], loops: ['neon', 'traffic'] };
 
   it("asks Neon Heights, under every lighting preset it offers, for its own day or night set and nothing of the woods' or the yard's", () => {
     for (const choice of lightingChoices(NEON_HEIGHTS)) {

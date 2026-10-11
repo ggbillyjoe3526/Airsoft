@@ -125,6 +125,16 @@ export const AUDIO = {
     /** A shop door's chime down the street by day, an arcade cabinet's bleeps by night (M34g): never above a bird. */
     chime: { gain: 0.28, pitchSpread: 0.03 },
     arcade: { gain: 0.22, pitchSpread: 0.05 },
+    /**
+     * The fields' other one-off sounds (M86, the owner's playtest note 14: more varied, never distracting): a crow and
+     * a dog round the yard, a branch creaking in the woods, pigeons and a toy-like car horn down the street. Each under
+     * a bird's level, far off, and nowhere near a BB's tick or a footstep.
+     */
+    crow: { gain: 0.24, pitchSpread: 0.06 },
+    dog: { gain: 0.2, pitchSpread: 0.08 },
+    creak: { gain: 0.22, pitchSpread: 0.1 },
+    pigeon: { gain: 0.24, pitchSpread: 0.05 },
+    horn: { gain: 0.16, pitchSpread: 0.04 },
   },
   /**
    * An AEG's motor: the first shot after the trigger has rested this many fire-rate cycles gets the spin-up whine,
@@ -421,10 +431,13 @@ export interface ReverbSpec {
   readonly darkHz?: number;
 }
 
-/** A field's sound by day or by night: its beds, its calls (none at all: null) and its echo (M69, audit AUD-10). */
+/**
+ * A field's sound by day or by night: its beds, its calls (M86: several kinds, each on its own random gaps, so the field
+ * never repeats one sound on a beat) and its echo (M69, audit AUD-10).
+ */
 export interface Ambience {
   readonly beds: readonly AmbienceBed[];
-  readonly call: AmbientCallSpec | null;
+  readonly calls: readonly AmbientCallSpec[];
   readonly reverb: ReverbSpec;
 }
 
@@ -442,6 +455,14 @@ const BIRDS: AmbientCallSpec = {
 const OWL: AmbientCallSpec = { cue: 'ambience.owl', level: AUDIO.levels.owl, every: [25, 60], distance: [30, 50], height: 8, seed: 3374 };
 
 const YARD_BED: AmbienceBed = { loop: 'yard', gain: AUDIO.ambience.gain, width: AUDIO.ambience.width };
+/** The yard's other calls (M86): a crow far off now and then, and a dog a few gardens away, by day and by night. */
+const CROW: AmbientCallSpec = { cue: 'ambience.crow', level: AUDIO.levels.crow, every: [22, 50], distance: [30, 55], height: 10, seed: 3601 };
+const DOG: AmbientCallSpec = { cue: 'ambience.dog', level: AUDIO.levels.dog, every: [24, 55], distance: [40, 60], height: 0.6, seed: 3602 };
+/** A branch creaking in the woods' wind (M86). */
+const CREAK: AmbientCallSpec = { cue: 'ambience.creak', level: AUDIO.levels.creak, every: [14, 34], distance: [15, 35], height: 6, seed: 3603 };
+/** Pigeons on a ledge by day, and a toy-like car horn a few streets off by day and night (M86). */
+const PIGEON: AmbientCallSpec = { cue: 'ambience.pigeon', level: AUDIO.levels.pigeon, every: [15, 34], distance: [10, 26], height: 6, seed: 3604 };
+const HORN: AmbientCallSpec = { cue: 'ambience.horn', level: AUDIO.levels.horn, every: [28, 60], distance: [35, 60], height: 1, seed: 3605 };
 
 /**
  * The woods' echo (M69, audit AUD-10): long, faint and dark. Its tail runs 1.6 s but falls fast at first (no walls to
@@ -483,11 +504,14 @@ const ARCADE: AmbientCallSpec = { cue: 'ambience.arcade', level: AUDIO.levels.ar
  * engine's rule: no birds under a night preset, on any map.
  */
 export const AMBIENCES: Readonly<Record<AmbienceId, Readonly<Record<'day' | 'night', Ambience>>>> = {
-  yard: { day: { beds: [YARD_BED], call: BIRDS, reverb: AUDIO.reverb }, night: { beds: [YARD_BED], call: null, reverb: AUDIO.reverb } },
-  woods: { day: { beds: [PINES_BED], call: BIRDS, reverb: WOODS_ECHO }, night: { beds: [PINES_BED, INSECTS_BED], call: OWL, reverb: WOODS_ECHO } },
+  yard: {
+    day: { beds: [YARD_BED], calls: [BIRDS, CROW, DOG], reverb: AUDIO.reverb },
+    night: { beds: [YARD_BED], calls: [DOG], reverb: AUDIO.reverb },
+  },
+  woods: { day: { beds: [PINES_BED], calls: [BIRDS, CREAK], reverb: WOODS_ECHO }, night: { beds: [PINES_BED, INSECTS_BED], calls: [OWL, CREAK], reverb: WOODS_ECHO } },
   city: {
-    day: { beds: [TRAFFIC_BED, DRONES_BED], call: CHIME, reverb: CITY_ECHO },
-    night: { beds: [TRAFFIC_NIGHT_BED, NEON_BED], call: ARCADE, reverb: CITY_ECHO },
+    day: { beds: [TRAFFIC_BED, DRONES_BED], calls: [CHIME, PIGEON, HORN], reverb: CITY_ECHO },
+    night: { beds: [TRAFFIC_NIGHT_BED, NEON_BED], calls: [ARCADE, HORN], reverb: CITY_ECHO },
   },
 };
 
@@ -498,9 +522,14 @@ export const AMBIENCES: Readonly<Record<AmbienceId, Readonly<Record<'day' | 'nig
  */
 export const FIRE_SOUND = { loop: 'crackle' as LoopId, gain: 0.028, refDistance: 2, maxDistance: 12, rolloff: 1, panningModel: 'equalpower' as PanningModelType };
 
-/** The player's volume sliders (Settings → Audio): everything, sounds in the world, and the interface's cues. */
-export type VolumeChannel = 'master' | 'effects' | 'interface';
-export const VOLUME_CHANNELS: readonly VolumeChannel[] = ['master', 'effects', 'interface'];
+/**
+ * The player's volume sliders (Settings → Audio): everything, sounds in the world, the field's ambience within them
+ * (M86, the owner's playtest note 14) and the interface's cues.
+ */
+export type VolumeChannel = 'master' | 'effects' | 'ambience' | 'interface';
+export const VOLUME_CHANNELS: readonly VolumeChannel[] = ['master', 'effects', 'ambience', 'interface'];
+/** The channels with a bus of their own (audio/audioEngine.ts): the ambience plays through each match's world instead. */
+export type BusChannel = Exclude<VolumeChannel, 'ambience'>;
 
 export const VOLUME = {
   /** Slider range and step (0..1, shown as a percentage), and where each slider starts. */
@@ -508,7 +537,7 @@ export const VOLUME = {
   max: 1,
   step: 0.05,
   /** Full by default: the master slider's top is AUDIO.masterVolume, the level the game always played at. */
-  defaults: { master: 1, effects: 1, interface: 1 } satisfies Record<VolumeChannel, number>,
+  defaults: { master: 1, effects: 1, ambience: 1, interface: 1 } satisfies Record<VolumeChannel, number>,
   /** A slider's position is raised to this power for its gain, so each step sounds about as big as the last. */
   curve: 2,
   /** Volume changes ease in over this many seconds (no zipper noise while a slider moves). */

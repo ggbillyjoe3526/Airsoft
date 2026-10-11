@@ -319,7 +319,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await realistic.getByRole('button', { name: 'Bold' }).click();
   await expect.poll(savedLook).toMatchObject({ robots: 'on', realisticColours: 'off' });
   await group(/Audio/i).click();
-  await expect(settings.getByRole('slider', { name: /volume/i })).toHaveCount(3);
+  await expect(settings.getByRole('slider', { name: /volume/i })).toHaveCount(4);
   // The groups follow the tabs pattern (audit L-31): Arrow Down from Audio picks Controls, then Gameplay, and moves
   // the focus there.
   await page.keyboard.press('ArrowDown');
