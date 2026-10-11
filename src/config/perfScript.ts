@@ -5,7 +5,7 @@
  * view each round); a round ending mid-script only moves the player back to a spawn, which is fine for a benchmark.
  */
 import type { ScriptStep } from '../input/scriptedInput';
-import type { MatchMode } from './modes';
+import { type MatchMode, unknownMode } from './modes';
 
 export const PERF_SCRIPT: readonly ScriptStep[] = [
   { fromTick: 0 }, // stand at the spawn while everything settles
@@ -66,5 +66,13 @@ export const PERF_SCRIPT_EXTRACTION: readonly ScriptStep[] = [
 
 /** The script the perf harness plays in `mode` (Extraction has its own opening, the rest play PERF_SCRIPT). */
 export function perfScriptFor(mode: MatchMode): readonly ScriptStep[] {
-  return mode === 'extraction' ? PERF_SCRIPT_EXTRACTION : PERF_SCRIPT;
+  switch (mode) {
+    case 'elimination':
+    case 'attackDefend':
+      return PERF_SCRIPT;
+    case 'extraction':
+      return PERF_SCRIPT_EXTRACTION;
+    default:
+      return unknownMode(mode);
+  }
 }

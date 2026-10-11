@@ -1,9 +1,10 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { ALLOWED_STRONGER, CONTENT_BALANCE_BAND, CONTENT_BALANCE_RUN } from '../../config/contentRules';
 import { botConfig, DIFFICULTIES } from '../../config/bots';
-import { MATCH_MODES } from '../../config/modes';
+import { MATCH_MODES, unknownMode } from '../../config/modes';
 import { ROUNDS } from '../../config/hits';
 import { playMatch } from '../../ai/depotMatchSupport';
+import { playRun } from '../../ai/extractionRunSupport';
 import { type BalanceMeasure, reportMeasure, share } from '../../ai/balance/balanceSupport';
 import { lightingChoices, mapUnderLighting } from '../../map/lightingChoice';
 import { mapData, MAPS } from '../../map/maps';
@@ -22,9 +23,10 @@ import { contentItem, ENV, envNumber } from './reportSupport';
 /**
  * The content report's balance run (CT1, level 4): headless bot matches (ai/depotMatchSupport.ts playMatch) where one
  * team carries the item and the other the same kit without it, on every map AIRSOFT_CONTENT_MAP names (all of them when
- * unset), each lighting it offers, each round mode it hosts and every level. A replica plays against each ordinary
- * public replica of its class (a chase item is no rival); a part plays on each public replica it fits, against that
- * replica as it comes. The figures go to the report as balance measures (pipeline/balanceReport.mjs judges them): on
+ * unset), each lighting it offers, each mode it hosts and every level. Extraction (CT3) plays whole runs
+ * (ai/extractionRunSupport.ts playRun): the squad with the item, then with the rival kit, seed for seed. A replica plays
+ * against each ordinary public replica of its class (a chase item is no rival); a part plays on each public replica it
+ * fits, against that replica as it comes. The figures go to the report as balance measures (pipeline/balanceReport.mjs judges them): on
  * public maps, modes and levels they hold the owner's band (decision 1 of the plan: 40 to 60 %), on dev ones they are
  * information (decision 5), and an item allowed stronger is shown, never judged.
  */
@@ -88,8 +90,41 @@ describe('content report: the balance run', () => {
       for (const lighting of lightingChoices(data)) {
         const map = mapUnderLighting(data, lighting);
         const where = lightingChoices(data).length > 1 ? `${entry.label} (${lighting})` : entry.label;
-        for (const mode of MATCH_MODES.filter((m) => m.id !== 'extraction' && playableMode(data, m.id) === m.id)) {
+        for (const mode of MATCH_MODES.filter((m) => playableMode(data, m.id) === m.id)) {
           for (const level of DIFFICULTIES) {
+            const judged = pair.judged && entry.tag === 'public' && mode.tag === 'public' && level.tag === 'public';
+            const shown = judged ? '' : `; ${pair.judged ? 'dev content: shown, not judged' : 'allowed stronger: shown, not judged'}`;
+            switch (mode.id) {
+              case 'elimination':
+              case 'attackDefend':
+                break;
+              case 'extraction':
+                // A run (CT3): the squad carries the item, then the rival kit, over the same seeds; of the seeds where
+                // only one of the two got out, the item's share holds the band as a round mode's decided rounds do.
+                it(`plays ${pair.ours.name} against ${pair.theirs.name} on ${where}, ${mode.label}, ${level.label}: whole runs`, { timeout: 1_800_000 }, (ctx) => {
+                  const squad = (side: Side) => (id: number, team: number) => (team === 0 ? sideCharacter(side, id, team) : undefined);
+                  let ours = 0;
+                  let theirs = 0;
+                  let both = 0;
+                  for (let seed = 1; seed <= seeds; seed++) {
+                    const a = playRun({ seed, map, opponents: level.id, teammates: 'normal', carry: squad(pair.ours) }).reason === 'extracted';
+                    const b = playRun({ seed, map, opponents: level.id, teammates: 'normal', carry: squad(pair.theirs) }).reason === 'extracted';
+                    if (a && b) both++;
+                    else if (a) ours++;
+                    else if (b) theirs++;
+                  }
+                  reportMeasure(ctx, {
+                    label: `${where}, ${mode.label}, ${level.label}: ${pair.ours.name}, share of the runs only one kit got out of, against ${pair.against}`,
+                    value: share(ours, ours + theirs),
+                    of: ours + theirs,
+                    band: judged ? CONTENT_BALANCE_BAND : {},
+                    detail: `out with it alone ${ours}, with ${pair.against} alone ${theirs}, both ${both}, of ${seeds} seeds${shown}`,
+                  });
+                });
+                continue;
+              default:
+                unknownMode(mode.id);
+            }
             it(`plays ${pair.ours.name} against ${pair.theirs.name} on ${where}, ${mode.label}, ${level.label}`, { timeout: 1_800_000 }, (ctx) => {
               const teamSize = entry.teamSize.standard;
               let decided = 0;
@@ -114,14 +149,13 @@ describe('content report: the balance run', () => {
                   if (r.winner === 0) won++;
                 }
               }
-              const judged = pair.judged && entry.tag === 'public' && mode.tag === 'public' && level.tag === 'public';
               const label = `${where}, ${mode.label}, ${level.label}: ${pair.ours.name}`;
               const measure: BalanceMeasure = {
                 label: `${label}, share of decided rounds against ${pair.against}`,
                 value: share(won, decided),
                 of: decided,
                 band: judged ? CONTENT_BALANCE_BAND : {},
-                detail: `${won} of ${decided} decided, ${rounds - onTime} of ${rounds} ended before time, ${seeds} seeds × ${seconds} s${judged ? '' : `; ${pair.judged ? 'dev content: shown, not judged' : 'allowed stronger: shown, not judged'}`}`,
+                detail: `${won} of ${decided} decided, ${rounds - onTime} of ${rounds} ended before time, ${seeds} seeds × ${seconds} s${shown}`,
               };
               reportMeasure(ctx, measure);
               const [ours, theirs] = hitDistances as [number[], number[]];

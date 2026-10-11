@@ -5,6 +5,7 @@
  *
  *   node pipeline/content-check.mjs <item|all> [options]      the item by pool ID, name or Key ("000007", "Red Dot")
  *   node pipeline/content-check.mjs map:<id|all> [options]    a map by its id or name (CT2: "map:depot", "map:Woodland")
+ *   node pipeline/content-check.mjs mode:<id|all> [options]   a mode by its id or name (CT3: "mode:attackDefend")
  *
  *   --balance        also run level 4, the balance run (bot matches; minutes per map, one process per map in parallel)
  *   --public         the public gate: all four levels at full length, every warning listed for the owner's OK
@@ -14,15 +15,21 @@
  *   --seconds n      match length in seconds (the same default's)
  *   --no-pictures    skip the pictures (they need a browser and the e2e build)
  *   --url u          draw the pictures from a running e2e build instead of building and serving one
- *   --no-perf        a map: skip the spec test's perf runs (Elimination on Low, Medium and High, about ten minutes)
- *   --env e          a map: the perf runs' environment (perf-run.mjs --env; default container)
+ *   --no-perf        a map or mode: skip the spec test's perf runs (a map: Elimination on Low, Medium and High, about ten
+ *                    minutes; a mode: Low on each map that hosts it, about a minute and a half each)
+ *   --env e          a map or mode: the perf runs' environment (perf-run.mjs --env; default container)
+ *   --no-browser     a mode: skip the spec test's short match in the browser (e2e/modeMatch.spec.ts, about a minute)
  *
  * A map's levels are its rules, its layout (shown as level 2), the spec test (the perf runs and pictures) and the balance
- * run: every lighting and round mode it offers at every level, one process per lighting and mode in parallel. Every
+ * run: every lighting and mode it offers at every level, one process per lighting and mode in parallel. Every
  * map's layout is in the report beside this one's; "map:all" checks levels 1 to 3 of every map without perf or pictures.
+ * A mode's (CT3) are its rules, its fit (rulesets, match rows and a short headless match of each pairing, and its bots'
+ * own plan, on every map that hosts it), the spec test (a short match in the browser, the perf runs) and the balance
+ * run on every map and lighting that hosts it at every level, with Elimination beside a round mode for its pay. Every
+ * mode is in the report beside this one; "mode:all" checks levels 1 and 2 of every mode on its first public map.
  *
  * Writes pipeline/out/content/<id>/report.md, report.html (one file, pictures inside), report.json and pictures/
- * (<id> is the item's, map-<id> for a map, maps for every map).
+ * (<id> is the item's, map-<id> for a map, maps for every map, mode-<id> for a mode, modes for every mode).
  * Exits 1 when a check fails or a runner could not run, else 0 (warnings are for the owner, not the exit code).
  */
 import { execFileSync, spawn } from 'node:child_process';
@@ -31,7 +38,7 @@ import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { measuresFrom, measuresNotRun } from './balanceReport.mjs';
 import { drawMapPictures, drawPictures, mapShotPictures } from './content-pictures.mjs';
-import { balanceResults, LEVELS, mapReportMarkdown, perfResult, reportHtml, reportMarkdown, worst } from './contentReport.mjs';
+import { balanceResults, LEVELS, mapReportMarkdown, modeReportMarkdown, payResults, perfResult, reportHtml, reportMarkdown, runOrderResults, worst } from './contentReport.mjs';
 import { baselineFileName, budgetFor, judgeRun, runFileName } from './perfMatrix.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -39,7 +46,7 @@ const ARTIFACTS = join(ROOT, 'pipeline', 'out', 'qa-artifacts');
 
 /** The command line as options; throws with a usage line on a mistake. */
 export function parseArgs(argv) {
-  const o = { item: '', levels: ['rules', 'compatibility', 'spec'], balance: false, publicGate: false, maps: [], seeds: undefined, seconds: undefined, pictures: true, url: '', perf: true, env: 'container' };
+  const o = { item: '', levels: ['rules', 'compatibility', 'spec'], balance: false, publicGate: false, maps: [], seeds: undefined, seconds: undefined, pictures: true, url: '', perf: true, env: 'container', browser: true };
   let levelsGiven = false;
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -59,6 +66,7 @@ export function parseArgs(argv) {
     else if (a === '--seconds') o.seconds = Number(value());
     else if (a === '--url') o.url = value();
     else if (a === '--no-perf') o.perf = false;
+    else if (a === '--no-browser') o.browser = false;
     else if (a === '--env') o.env = value();
     else if (a.startsWith('--')) throw new Error(`unknown option ${a}`);
     else o.item = o.item ? `${o.item} ${a}` : a;
@@ -69,13 +77,18 @@ export function parseArgs(argv) {
   const bad = o.levels.filter((l) => !LEVELS.includes(l));
   if (bad.length > 0) throw new Error(`unknown level ${bad.join(', ')} (levels: ${LEVELS.join(', ')})`);
   for (const [name, n] of [['--seeds', o.seeds], ['--seconds', o.seconds]]) if (n !== undefined && !(Number.isInteger(n) && n > 0)) throw new Error(`${name} needs a whole number above 0`);
-  const every = o.item === 'all' || /^map:all$/i.test(o.item);
+  const every = o.item === 'all' || /^(map|mode):all$/i.test(o.item);
   if (every && o.levels.includes('balance')) throw new Error(`the balance run takes one item, not "${o.item}"`);
   if (every) o.pictures = false;
   o.isMap = /^map:/i.test(o.item);
-  if (!o.isMap && (!o.perf || o.env !== 'container')) throw new Error('--no-perf and --env are for a map (map:<id>)');
-  if (o.isMap && o.maps.length > 0) throw new Error('--maps is for a replica or part; a map plays on itself');
-  if (every || !o.levels.includes('spec')) o.perf = false;
+  o.isMode = /^mode:/i.test(o.item);
+  if (!o.isMap && !o.isMode && (!o.perf || o.env !== 'container')) throw new Error('--no-perf and --env are for a map or mode (map:<id>, mode:<id>)');
+  if (!o.isMode && !o.browser) throw new Error('--no-browser is for a mode (mode:<id>)');
+  if ((o.isMap || o.isMode) && o.maps.length > 0) throw new Error(`--maps is for a replica or part; a ${o.isMap ? 'map plays on itself' : 'mode plays on every map that hosts it'}`);
+  if (every || !o.levels.includes('spec')) {
+    o.perf = false;
+    o.browser = false;
+  }
   return o;
 }
 
@@ -124,13 +137,14 @@ async function main() {
   try {
     o = parseArgs(process.argv.slice(2));
   } catch (e) {
-    console.error(`content-check: ${e.message}\n  usage: node pipeline/content-check.mjs <item|all|map:<id>|map:all> [--balance] [--public] [--levels a,b] [--maps a,b] [--seeds n] [--seconds n] [--no-pictures] [--url u] [--no-perf] [--env e]`);
+    console.error(`content-check: ${e.message}\n  usage: node pipeline/content-check.mjs <item|all|map:<id>|map:all|mode:<id>|mode:all> [--balance] [--public] [--levels a,b] [--maps a,b] [--seeds n] [--seconds n] [--no-pictures] [--url u] [--no-perf] [--env e] [--no-browser]`);
     process.exit(2);
   }
   mkdirSync(ARTIFACTS, { recursive: true });
   const started = Date.now();
   const env = { AIRSOFT_CONTENT_ITEM: o.item, ...(o.seeds ? { AIRSOFT_CONTENT_SEEDS: String(o.seeds) } : {}), ...(o.seconds ? { AIRSOFT_CONTENT_SECONDS: String(o.seconds) } : {}) };
   if (o.isMap) return finish(await checkMapItem(o, env), started);
+  if (o.isMode) return finish(await checkModeItem(o, env), started);
 
   console.log(`content-check: ${o.item}: rules, compatibility and the spec test…`);
   const itemData = await runReport('src/content/report/item.report.ts', env, 'item');
@@ -179,16 +193,31 @@ function finish({ item, results, problems, outDir }, started) {
   process.exit(verdict === 'fail' || problems.length > 0 ? 1 : 0);
 }
 
-/** The balance run's results from its vitest reports, and any runner that could not run into `problems`. */
+/** Every value its tests put in their meta under `key` (vitest's JSON report). */
+function metasFrom(data, key) {
+  const out = [];
+  for (const file of data?.testResults ?? []) for (const t of file.assertionResults ?? []) if (t.meta?.[key]) out.push(t.meta[key]);
+  return out;
+}
+
+/**
+ * The balance run's results from its vitest reports, and any runner that could not run into `problems`: the figures,
+ * then (CT3) each mode's pay beside Elimination's and a run mode's levels in order, across the reports.
+ */
 function balanceFrom(balanceData, results, problems) {
+  const pays = [];
+  const runs = [];
   for (const data of balanceData) {
     if (data.error) {
       problems.push(data.error);
       continue;
     }
     results.push(...balanceResults(measuresFrom(data, ROOT)));
+    pays.push(...metasFrom(data, 'pay'));
+    runs.push(...metasFrom(data, 'runs'));
     for (const n of measuresNotRun(data, ROOT)) results.push({ level: 'balance', check: 'balance.run', item: n.test, verdict: 'fail', says: `did not run: ${n.message}` });
   }
+  results.push(...payResults(pays), ...runOrderResults(runs));
 }
 
 /** Runs a script under node; resolves to `{ ok, output }`. */
@@ -206,7 +235,7 @@ function runNode(args) {
  * The spec test's perf runs for a map (pipeline/perf-run.mjs, one preset after another), each judged as the gate judges
  * one (perfMatrix.mjs: the map's budget, its own baseline when there is one).
  */
-async function mapPerf(perf, label, o, problems) {
+async function mapPerf(perf, label, o, problems, check = 'map.perf') {
   const budgets = JSON.parse(readFileSync(join(ROOT, 'pipeline', 'perf-budget.json'), 'utf8'));
   const frameTimesGated = (budgets.frameTimeGatedEnvs ?? []).includes(o.env);
   const out = [];
@@ -218,7 +247,7 @@ async function mapPerf(perf, label, o, problems) {
     const file = join(ROOT, 'pipeline', 'out', runFileName(o.env, combo));
     rmSync(file, { force: true });
     const r = await runNode(['--expose-gc', 'pipeline/perf-run.mjs', '--env', o.env, '--map', perf.map, '--mode', perf.mode, '--preset', preset, '--port', '4185']);
-    const log = join(ARTIFACTS, `content-perf-${perf.map}-${preset}.log`);
+    const log = join(ARTIFACTS, `content-perf-${perf.map}-${perf.mode}-${preset}.log`);
     writeFileSync(log, r.output);
     let result = null;
     try {
@@ -235,7 +264,7 @@ async function mapPerf(perf, label, o, problems) {
     const baselinePath = join(ROOT, 'pipeline', 'baseline', baselineName);
     const baseline = existsSync(baselinePath) ? JSON.parse(readFileSync(baselinePath, 'utf8')) : null;
     const judged = judgeRun({ run: combo, metrics: result.metrics, budget: budgetFor(budgets, perf.map, preset), baseline, baselineName, frameTimesGated });
-    out.push(perfResult(label, { ...run, metrics: result.metrics, errors: result.errors }, judged));
+    out.push(perfResult(label, { ...run, metrics: result.metrics, errors: result.errors }, judged, check));
   }
   return out;
 }
@@ -275,6 +304,84 @@ async function checkMapItem(o, env) {
 
   const meta = { commit: commitOf(), when: `${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC`, levels: o.levels, publicGate: o.publicGate };
   writeReport({ outDir, pictureDir, item, results, pictures, problems, meta, md: mapReportMarkdown({ content, item, results, pictures, meta }) });
+  return { item, results, problems, outDir };
+}
+
+/**
+ * The spec test's short match in the browser (CT3, e2e/modeMatch.spec.ts) for `browser` (the mode and the map it plays
+ * on), through Playwright on the e2e build; resolves to its check result.
+ */
+function browserMatch(browser, label) {
+  const json = join(ARTIFACTS, `content-browser-${browser.mode}.json`);
+  const log = join(ARTIFACTS, `content-browser-${browser.mode}.log`);
+  rmSync(json, { force: true });
+  const item = `${label} on ${browser.mapLabel}, in the browser`;
+  return new Promise((resolve) => {
+    const child = spawn('npx', ['playwright', 'test', 'e2e/modeMatch.spec.ts', '--project', 'chromium', '--reporter=json'], {
+      cwd: ROOT,
+      env: { ...process.env, AIRSOFT_CONTENT_MODE: browser.mode, AIRSOFT_CONTENT_MAP_LABEL: browser.mapLabel, PLAYWRIGHT_JSON_OUTPUT_NAME: json },
+      shell: process.platform === 'win32',
+    });
+    let out = '';
+    child.stdout.on('data', (d) => (out += d));
+    child.stderr.on('data', (d) => (out += d));
+    child.on('close', () => {
+      writeFileSync(log, out);
+      let data = null;
+      try {
+        data = JSON.parse(readFileSync(json, 'utf8'));
+      } catch {
+        data = null;
+      }
+      const tests = (data?.suites ?? []).flatMap(function specs(s) {
+        return [...(s.specs ?? []), ...(s.suites ?? []).flatMap(specs)];
+      });
+      const failed = tests.filter((t) => !t.ok);
+      if (!data || tests.length === 0) resolve({ level: 'spec', check: 'mode.browser', item, verdict: 'fail', says: `did not run; its log is ${relative(ROOT, log)}.` });
+      else if (failed.length > 0) {
+        const error = failed[0].tests?.[0]?.results?.[0]?.error?.message ?? 'it failed';
+        resolve({ level: 'spec', check: 'mode.browser', item, verdict: 'fail', says: `${String(error).replace(/\x1b\[[0-9;]*m/g, '').split('\n')[0]} (log: ${relative(ROOT, log)}).` });
+      } else resolve({ level: 'spec', check: 'mode.browser', item, verdict: 'pass', says: `It started, a round ended each way, the end screen showed and nothing errored (${browser.play === 'run' ? 'a run lost on time, then one got out of' : 'a round won, a round lost, then the match'}).` });
+    });
+  });
+}
+
+/**
+ * A mode's content check (CT3): levels 1 and 2 (with their short headless matches) from mode.report.ts, then the balance
+ * run on every map and lighting that hosts it (Elimination beside a round mode, for its pay), the browser match and the
+ * perf runs.
+ */
+async function checkModeItem(o, env) {
+  console.log(`content-check: ${o.item}: rules, fit and the spec test…`);
+  const modeData = await runReport('src/content/report/mode.report.ts', env, 'mode');
+  const content = contentOf(modeData);
+  if (!content) {
+    const why = modeData.error ?? measuresNotRun(modeData, ROOT)[0]?.message ?? 'the mode report found nothing';
+    console.error(`content-check: ${why}`);
+    process.exit(1);
+  }
+  const item = content.items.length === 1 ? content.items[0] : { id: 'modes', name: 'Every mode', category: 'mode', tag: 'mixed', key: '' };
+  const results = content.results.filter((r) => o.levels.includes(r.level));
+  const problems = [];
+  const outDir = join(ROOT, 'pipeline', 'out', 'content', item.id);
+  rmSync(outDir, { recursive: true, force: true });
+
+  // The balance run: one process per map, lighting and mode (the mode, and Elimination beside a round mode), in parallel.
+  const plan = content.plan;
+  const modes = plan ? [plan.mode, ...(plan.reference ? [plan.reference] : [])] : [];
+  const sweeps = o.levels.includes('balance') && plan ? plan.maps.flatMap((m) => m.lightings.flatMap((light) => modes.map((mode) => ({ map: m.id, light, mode })))) : [];
+  if (sweeps.length > 0) console.log(`content-check: the balance run for ${plan.label}: ${sweeps.map((s) => `${s.map} ${s.light} ${s.mode}`).join(', ')} (one process each)…`);
+  const balanceRun = Promise.all(sweeps.map((s) => runReport('src/content/report/mapBalance.report.ts', { ...env, AIRSOFT_CONTENT_MAP: s.map, AIRSOFT_CONTENT_LIGHTING: s.light, AIRSOFT_CONTENT_MODE: s.mode }, `mode-balance-${s.map}-${s.light}-${s.mode}`)));
+  if (o.browser && content.browser) console.log(`content-check: a short match in the browser, ${item.name} on ${content.browser.mapLabel}…`);
+  const browserRun = o.browser && content.browser ? browserMatch(content.browser, item.name) : Promise.resolve(null);
+  const [balanceData, browser] = await Promise.all([balanceRun, browserRun]);
+  balanceFrom(balanceData, results, problems);
+  if (browser) results.push(browser);
+  // The perf runs last, on their own: frame counts and heap read cleaner without bot matches beside them.
+  if (o.perf) for (const p of content.perf) results.push(...(await mapPerf({ map: p.map, mode: p.mode, presets: [p.preset] }, `${item.name} on ${p.label}`, o, problems, 'mode.perf')));
+
+  const meta = { commit: commitOf(), when: `${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC`, levels: o.levels, publicGate: o.publicGate };
+  writeReport({ outDir, pictureDir: join(outDir, 'pictures'), item, results, pictures: [], problems, meta, md: modeReportMarkdown({ content, item, results, meta }) });
   return { item, results, problems, outDir };
 }
 

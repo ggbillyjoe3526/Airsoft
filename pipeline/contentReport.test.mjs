@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseArgs } from './content-check.mjs';
 import { firstPersonSettings, mapShotPictures } from './content-pictures.mjs';
-import { balanceResults, balanceVerdict, censusRows, layoutRows, mapReportMarkdown, markdownToHtml, outcomeLine, perfResult, reportHtml, reportMarkdown, sheetRows, specTables, worst } from './contentReport.mjs';
+import { balanceResults, balanceVerdict, censusRows, layoutRows, mapReportMarkdown, markdownToHtml, modeReportMarkdown, modeRows, outcomeLine, payResults, perfResult, reportHtml, reportMarkdown, runOrderResults, sheetRows, specTables, worst } from './contentReport.mjs';
 
 /** A spec sheet as src/content/specSheet.ts writes it. */
 const sheet = (onTarget) => ({
@@ -199,5 +199,121 @@ describe('the content check command', () => {
       'equip.dev.primary': '000002@common',
       'fit.dev.000002.optic': '000007@common',
     });
+  });
+});
+
+/** A balance sweep's pay meta as mapBalance.report.ts writes it (CT3). */
+const pay = (mode, fcPerMinute, extra = {}) => ({ map: 'depot', lighting: 'day', mode, level: 'normal', judged: true, label: `Depot, ${mode}, Normal`, fcPerMinute, noise: 0.05, band: { min: 0.75, max: 1.25 }, ...extra });
+/** An Extraction sweep's run meta: the share of runs got out of, at `level`, with the pairs of levels to keep in order. */
+const run = (level, extract, extra = {}) => ({ map: 'depot', lighting: 'day', mode: 'extraction', where: 'Depot by day', level, extract, se: 0.03, judged: true, harder: [['easy', 'normal'], ['normal', 'hard']], ...extra });
+
+const MODES = [
+  { id: 'elimination', label: 'Elimination', tag: 'public', play: 'rounds', needs: null, maps: ['Depot', 'Woodland'], rulesets: ['Skirmish', 'Custom'], hides: [] },
+  { id: 'extraction', label: 'Extraction', tag: 'dev', play: 'run', needs: 'extraction', maps: [], rulesets: ['Skirmish'], hides: ['Rounds to win', 'Round time'] },
+];
+const MODE_CONTENT = { items: [{ id: 'mode-extraction', name: 'Extraction', category: 'mode', tag: 'dev', key: 'extraction' }], modes: MODES, places: ['the briefing (ui/menus/rulesText.ts describeRules)', 'the round rules (sim/round.ts)'] };
+const MODE_RESULTS = [
+  { level: 'rules', check: 'mode.wiring', item: 'Extraction (extraction)', verdict: 'pass', says: '5 places answer for it.' },
+  { level: 'compatibility', check: 'mode.plays', item: 'Extraction (extraction)', verdict: 'fail', says: 'On Depot, 1 of 9 pairings went wrong.' },
+  { level: 'spec', check: 'mode.perf', item: 'Extraction on Depot, low', verdict: 'pass', says: 'within budget.' },
+];
+
+describe('the mode report', () => {
+  it('holds a mode’s pay a minute to its band beside Elimination’s', () => {
+    const elimination = pay('elimination', 100);
+    const verdict = (fc, extra) => payResults([elimination, pay('attackDefend', fc, extra)]).map((r) => r.verdict);
+    expect(verdict(110)).toEqual(['pass']);
+    // × 1.3, two standard errors of ± 0.09: outside, but within noise.
+    expect(verdict(130)).toEqual(['warn']);
+    expect(payResults([elimination, pay('attackDefend', 130)])[0].says).toContain('within noise');
+    expect(verdict(70)).toEqual(['warn']);
+    expect(verdict(200)).toEqual(['fail']);
+    expect(verdict(40)).toEqual(['fail']);
+    // Noiseless: just outside is a fault.
+    expect(payResults([{ ...elimination, noise: 0 }, pay('attackDefend', 130, { noise: 0 })]).map((r) => r.verdict)).toEqual(['fail']);
+    expect(verdict(200, { judged: false })).toEqual(['info']);
+    expect(payResults([elimination, pay('attackDefend', 200, { judged: false })])[0].says).toContain('not judged');
+  });
+
+  it('sets pay beside Elimination’s on the same map, lighting and level only, and adds nothing for Elimination alone', () => {
+    expect(payResults([pay('elimination', 100)])).toEqual([]);
+    expect(payResults([pay('elimination', 100), pay('attackDefend', 300, { lighting: 'night' })])).toEqual([]);
+    expect(payResults([pay('elimination', 100), pay('attackDefend', 300, { level: 'hard' })])).toEqual([]);
+    const r = payResults([pay('elimination', 100), pay('attackDefend', 110)])[0];
+    expect(r).toMatchObject({ level: 'balance', check: 'mode.pay', item: "Depot, attackDefend, Normal: pay against Elimination's" });
+    expect(r.says).toContain("110 FC a minute against Elimination's 100 (× 1.1; target × 0.75 to × 1.25)");
+  });
+
+  it('keeps a run mode’s levels in order: easier gets out at least as often', () => {
+    const verdicts = (runs) => runOrderResults(runs).map((r) => r.verdict);
+    expect(verdicts([run('easy', 0.6), run('normal', 0.5), run('hard', 0.4)])).toEqual(['pass', 'pass']);
+    expect(verdicts([run('easy', 0.5), run('normal', 0.5)])).toEqual(['pass']);
+    // The wrong way round by less than two standard errors (± 0.04 each side): a look.
+    expect(verdicts([run('easy', 0.5), run('normal', 0.55)])).toEqual(['warn']);
+    expect(runOrderResults([run('easy', 0.5), run('normal', 0.55)])[0].says).toContain('within noise');
+    expect(verdicts([run('easy', 0.3), run('normal', 0.6)])).toEqual(['fail']);
+    expect(verdicts([run('easy', 0.3, { judged: false }), run('normal', 0.6)])).toEqual(['info']);
+    expect(runOrderResults([run('easy', 0.6), run('normal', 0.5)])[0]).toMatchObject({ check: 'mode.levels', item: 'Depot by day, extraction: Easy easier to get out from than Normal', says: 'Easy 60 % against Normal 50 %.' });
+  });
+
+  it('pairs only runs on the same map and lighting', () => {
+    expect(runOrderResults([run('easy', 0.3), run('normal', 0.6, { lighting: 'night' })])).toEqual([]);
+    expect(runOrderResults([run('easy', 0.3), run('normal', 0.6, { map: 'woodland' })])).toEqual([]);
+  });
+
+  it('lays every mode side by side', () => {
+    expect(modeRows(MODES)).toEqual([
+      ['Played as', 'rounds', 'one run'],
+      ['Needs from a map', 'nothing', 'Extraction data'],
+      ['Maps that host it', 'Depot, Woodland', 'none'],
+      ['Rulesets', 'Skirmish, Custom', 'Skirmish'],
+      ['Match rows it hides', 'none', 'Rounds to win, Round time'],
+      ['Tag', 'public', 'dev'],
+    ]);
+    expect(modeRows([{ ...MODES[0], needs: 'flag' }])[1]).toEqual(['Needs from a map', 'a flagpole']);
+  });
+
+  it('writes the page: Rules with the modes table and the places, Fit, Spec test', () => {
+    const md = modeReportMarkdown({ content: MODE_CONTENT, item: MODE_CONTENT.items[0], results: MODE_RESULTS, meta: META });
+    expect(md).toMatch(/^# Content report: Extraction \(mode\)\n/);
+    expect(md).toContain('Mode `extraction`, tagged dev.');
+    expect(md).toContain('1. **Fail** (Fit, Extraction (extraction)): On Depot, 1 of 9 pairings went wrong.');
+    for (const h of ['## Rules', '## Fit', '## Spec test', '### Beside the other modes', '### Where a mode is answered for']) expect(md).toContain(h);
+    expect(md).not.toContain('## Compatibility');
+    expect(md.indexOf('## Rules')).toBeLessThan(md.indexOf('## Fit'));
+    expect(md.indexOf('## Fit')).toBeLessThan(md.indexOf('## Spec test'));
+    // This mode first beside the others.
+    expect(md).toContain('|  | Extraction | Elimination |');
+    expect(md).toContain('| Played as | one run | rounds |');
+    expect(md).toContain('- the briefing (ui/menus/rulesText.ts describeRules)');
+    expect(md).toContain('| mode.perf · Extraction on Depot, low | Pass | within budget. |');
+    const every = modeReportMarkdown({ content: { ...MODE_CONTENT, items: [MODE_CONTENT.items[0], { id: 'mode-elimination' }] }, item: { id: 'modes', name: 'Every mode', key: '' }, results: [], meta: META });
+    expect(every).toContain('Every mode (2).');
+    expect(every).toContain('### Beside the other modes');
+    expect(every).not.toContain('## Fit');
+  });
+
+  it('judges a mode’s perf run under its own check name', () => {
+    const r = { preset: 'low', metrics: { drawCalls: 51.4, triangles: 41526, gpuMemoryMB: 8.8, heapGrowthMB: 0.25 }, errors: [] };
+    expect(perfResult('Extraction on Depot', r, { over: [], worse: [] }, 'mode.perf')).toMatchObject({ level: 'spec', check: 'mode.perf', item: 'Extraction on Depot, low', verdict: 'pass' });
+    expect(perfResult('Extraction on Depot', { ...r, errors: ['pageerror: boom'] }, { over: [], worse: [] }, 'mode.perf')).toMatchObject({ check: 'mode.perf', verdict: 'fail' });
+  });
+});
+
+describe('the content check command for a mode', () => {
+  it('checks a mode by "mode:<id>": a browser match and perf runs for one mode, neither for every mode', () => {
+    expect(parseArgs(['mode:attackDefend'])).toMatchObject({ item: 'mode:attackDefend', isMode: true, isMap: false, perf: true, browser: true, levels: ['rules', 'compatibility', 'spec'] });
+    expect(parseArgs(['mode:attackDefend', '--no-browser'])).toMatchObject({ browser: false, perf: true });
+    expect(parseArgs(['mode:attackDefend', '--no-perf', '--balance'])).toMatchObject({ perf: false, browser: true, levels: ['rules', 'compatibility', 'spec', 'balance'] });
+    expect(parseArgs(['mode:attackDefend', '--levels', 'rules,compatibility'])).toMatchObject({ perf: false, browser: false });
+    expect(parseArgs(['mode:all'])).toMatchObject({ isMode: true, perf: false, browser: false, pictures: false });
+    expect(parseArgs(['000007'])).toMatchObject({ isMode: false });
+  });
+
+  it('refuses a mistake for a mode with a reason', () => {
+    expect(() => parseArgs(['000007', '--no-browser'])).toThrow(/--no-browser is for a mode/);
+    expect(() => parseArgs(['map:depot', '--no-browser'])).toThrow(/--no-browser is for a mode/);
+    expect(() => parseArgs(['mode:all', '--balance'])).toThrow(/one item, not "mode:all"/);
+    expect(() => parseArgs(['mode:extraction', '--maps', 'depot'])).toThrow(/plays on every map that hosts it/);
   });
 });
