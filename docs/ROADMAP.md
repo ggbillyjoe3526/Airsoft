@@ -46,7 +46,7 @@ pulled into Dev 5, and Dev 7 is folded away (its mode checks join the toolkit he
    the graphics work, item 5; tables below). Done so far: M86, M89 (2026-10-11).
 7. **The content toolkit, all four parts** (plan `plans/content-toolkit-concept.md`, approved with all defaults
    2026-10-05; about six to eight pull requests): 1 rulebooks and briefs, replica and attachment checks and the report
-   with pictures (CT1, done 2026-10-11: `docs/content/`, `node pipeline/content-check.mjs`); 2 map checks; 3 mode
+   with pictures (CT1, done 2026-10-11: `docs/content/`, `node pipeline/content-check.mjs`); 2 map checks (CT2, done 2026-10-11: `map:<id>`); 3 mode
    checks; 4 skin checks.
 8. **Bug pass BP3**, then the owner tags 0.1 Dev 5 and playtests it.
 
