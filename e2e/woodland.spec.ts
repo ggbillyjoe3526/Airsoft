@@ -263,13 +263,17 @@ type LookView = {
     renderer: {
       camera: { matrixWorld: { elements: number[] } };
       scene: { getObjectByName: (n: string) => { visible: boolean } | undefined };
-      renderer: { info: { programs: unknown[] | null; render: { calls: number; triangles: number } } };
+      /** One frame's draws (DrawStats, render/rendererParts.ts): the renderer's own counts are per render() call or cumulative. */
+      stats: { calls: number; triangles: number; dressingTriangles: number; programs: number };
     };
   };
 };
 
-/** What a full turn of the view drew: the most calls and triangles in a frame, the programs before and after, and how far the camera turned. */
-type Spin = { calls: number; triangles: number; before: number; after: number; quadrants: number; widest: number; pitchSpan: number };
+/**
+ * What a full turn of the view drew: the most calls and triangles in a frame (the scene's, without the GPU dressing,
+ * which has a line of its own since W6a: `dressing`), the programs before and after, and how far the camera turned.
+ */
+type Spin = { calls: number; triangles: number; dressing: number; before: number; after: number; quadrants: number; widest: number; pitchSpan: number };
 
 /**
  * Turns your view a full circle over `frames` frames (and nods it up and down), through the input as the mouse does (a
@@ -280,8 +284,7 @@ type Spin = { calls: number; triangles: number; before: number; after: number; q
 async function spinView(page: import('@playwright/test').Page, frames = 48): Promise<Spin> {
   return page.evaluate(async (frames) => {
     const g = (window as unknown as LookView).airsoft;
-    const info = g.renderer.renderer.info;
-    const programs = info.programs?.length ?? 0;
+    const programs = g.renderer.stats.programs;
     const forward = (): [number, number, number] => {
       const e = g.renderer.camera.matrixWorld.elements;
       return [-e[8]!, -e[9]!, -e[10]!];
@@ -291,6 +294,7 @@ async function spinView(page: import('@playwright/test').Page, frames = 48): Pro
     const quadrants = new Set<number>();
     let calls = 0;
     let triangles = 0;
+    let dressing = 0;
     let widest = 0;
     let minY = Infinity;
     let maxY = -Infinity;
@@ -298,8 +302,10 @@ async function spinView(page: import('@playwright/test').Page, frames = 48): Pro
       g.input.yaw = startYaw + (i / frames) * Math.PI * 2;
       g.input.pitch = 0.35 * Math.sin((i / frames) * Math.PI * 4);
       await new Promise((r) => requestAnimationFrame(r));
-      calls = Math.max(calls, info.render.calls);
-      triangles = Math.max(triangles, info.render.triangles);
+      const stats = g.renderer.stats;
+      calls = Math.max(calls, stats.calls);
+      triangles = Math.max(triangles, stats.triangles - stats.dressingTriangles);
+      dressing = Math.max(dressing, stats.dressingTriangles);
       const f = forward();
       quadrants.add((f[0] >= 0 ? 1 : 0) + (f[2] >= 0 ? 2 : 0));
       const flat = Math.hypot(f[0], f[2]) * Math.hypot(start[0], start[2]) || 1;
@@ -307,7 +313,7 @@ async function spinView(page: import('@playwright/test').Page, frames = 48): Pro
       minY = Math.min(minY, f[1]);
       maxY = Math.max(maxY, f[1]);
     }
-    return { calls, triangles, before: programs, after: info.programs?.length ?? 0, quadrants: quadrants.size, widest, pitchSpan: Math.asin(Math.min(1, maxY)) - Math.asin(Math.max(-1, minY)) };
+    return { calls, triangles, dressing, before: programs, after: g.renderer.stats.programs, quadrants: quadrants.size, widest, pitchSpan: Math.asin(Math.min(1, maxY)) - Math.asin(Math.max(-1, minY)) };
   }, frames);
 }
 
@@ -355,6 +361,7 @@ test('Woodland on Low: moon, stars and fires, within 100 draw calls and 150k tri
   expectTurned(spin);
   expect(spin.calls).toBeLessThanOrEqual(100);
   expect(spin.triangles).toBeLessThanOrEqual(150_000);
+  expect(spin.dressing).toBe(0);
   expect(spin.after).toBe(spin.before);
   expect(errors).toEqual([]);
 });
@@ -402,6 +409,9 @@ test('Woodland on Medium at 5v5: within 135 draw calls and 200k triangles, ember
   expectTurned(spin);
   expect(spin.calls).toBeLessThanOrEqual(135);
   expect(spin.triangles).toBeLessThanOrEqual(200_000);
+  // The GPU dressing at its caps, on its own line (pipeline/perf-budget.json presets.medium.dressingTriangles, W6a).
+  expect(spin.dressing).toBeGreaterThan(0);
+  expect(spin.dressing).toBeLessThanOrEqual(130_000);
   expect(spin.after).toBe(spin.before);
   expect(errors).toEqual([]);
 });
