@@ -34,7 +34,7 @@ export interface PlayView extends MatchShown {
   modeLabel: string;
   /** "Skirmish · 3v3 · first to 5". */
   rules: string;
-  /** "Normal bots", or "Hard / Normal bots". */
+  /** Your team and the bots: "Alpha · Normal bots", or "Beta · Hard / Normal bots" (an Extraction run: the bots only). */
   bots: string;
   /** The rules and why the match won't count, if it won't (setupNotes). */
   notes: string;

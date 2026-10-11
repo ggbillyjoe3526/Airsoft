@@ -37,6 +37,8 @@ export interface TutorialStep {
   shows?: TutorialShowcase;
   /** Played instead when the replica in hand can't aim down a sight (neither an optic nor iron sights; since M84 every replica has iron sights). */
   withoutOptic?: Omit<TutorialStep, 'withoutOptic'>;
+  /** Said after `text` only while the Armory is on (M83: with Disable Armory the tutorial never names it). */
+  armory?: string;
 }
 
 /**
@@ -141,10 +143,16 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
   {
     id: 'match',
     title: 'Winning a match',
-    text: 'Win a round by knocking out the whole other team. In Attack / Defend the attackers can also win by raising their flag at the other pole, and the defenders by holding it off until time runs out. The minimap shows your team and where you heard shots. Matches pay Field Credits (FC): spend them in the Armory on new gear.',
+    text: 'Win a round by knocking out the whole other team. In Attack / Defend the attackers can also win by raising their flag at the other pole, and the defenders by holding it off until time runs out. The minimap shows your team and where you heard shots.',
+    armory: 'Matches pay Field Credits: spend them in the Armory for new gear, free.',
     goal: { kind: 'read', seconds: 16 },
   },
 ];
+
+/** The steps as the coach says them: a step's Armory line joins its text only while the Armory is on (M83). Pure. */
+export function tutorialSteps(armory: boolean): readonly TutorialStep[] {
+  return TUTORIAL_STEPS.map((step) => (step.armory && armory ? { ...step, text: `${step.text} ${step.armory}` } : step));
+}
 
 export const TUTORIAL = {
   /** A finished step shows its tick for this long before the next one (s). */

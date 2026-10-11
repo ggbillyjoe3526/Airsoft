@@ -67,16 +67,22 @@ describe('the top bar (G3)', () => {
     expect(places(bar).filter((b) => !b.hidden).map((b) => b.getAttribute('aria-current'))).toEqual(['page']);
   });
 
-  it('shows the wallet, hides it with the Armory off, and then greys the Armory place out with the reason', () => {
+  it('shows the wallet, and with the Armory off hides it and takes the Armory place off the bar (M83: gone, not greyed)', () => {
     const bar = new TopBar(() => {}, () => {});
     const [fc, tokens] = fake(bar.root).children[2]!.children;
     const armory = places(bar)[MENU_TEXT.nav.findIndex((n) => n.id === 'armory')]!;
+    bar.show('setup', false);
     bar.setWallet({ fc: 1200, tokens: 3 }, false);
-    expect([fc!.hidden, tokens!.hidden, armory.disabled]).toEqual([false, false, false]);
+    expect([fc!.hidden, tokens!.hidden, armory.hidden, armory.disabled]).toEqual([false, false, false, false]);
     expect(fc!.textContent).toBe(MENU_TEXT.fc(1200));
     bar.setWallet(null, true);
-    expect([fc!.hidden, tokens!.hidden, armory.disabled]).toEqual([true, true, true]);
-    expect(fake(armory).title).not.toBe('');
+    expect([fc!.hidden, tokens!.hidden, armory.hidden, armory.disabled]).toEqual([true, true, true, false]);
+    expect(places(bar).filter((b) => !b.hidden).length).toBe(MENU_TEXT.nav.length - 1);
+    // Moving between screens keeps it gone; the Armory on again puts it back.
+    bar.show('settings', false);
+    expect(armory.hidden).toBe(true);
+    bar.setWallet({ fc: 1200, tokens: 3 }, false);
+    expect(armory.hidden).toBe(false);
   });
 });
 
@@ -127,7 +133,7 @@ describe('the Your match panel (G3, playView.ts)', () => {
     ...over,
   });
   const opts = (devContent: boolean) => ({
-    rules: { playerTeam: 'Blue', enemyTeam: 'Orange', raiseTime: 5, attackFirst: true, eliminationStartEnd: 1, attackDefendStartEnd: 0 },
+    rules: { raiseTime: 5 },
     dev: { devContent: () => devContent, devContentUsed: () => devContent, cheating: () => false },
     armory: { wallet: () => ({ fc: 0, tokens: 0 }) },
     loadout: { summary: () => ({ replicas: 'AEG Rifle · Gas Pistol', detail: '' }) },
@@ -155,6 +161,23 @@ describe('the Your match panel (G3, playView.ts)', () => {
     const label = (id: string) => DIFFICULTIES.find((d) => d.id === id)!.label;
     expect(playView(picks(), opts(false), () => 'day').bots).toContain(label('normal'));
     expect(playView(picks({ difficulty: 'hard' }), opts(false), () => 'day').bots).toContain(`${label('hard')} / ${label('normal')}`);
+  });
+
+  it('says your team beside the bots and in the rules, from where it starts (M98), and nothing of it in an Extraction run', () => {
+    const view = (over: Partial<NewGamePicks>) => playView(picks(over), opts(true), () => 'day');
+    expect(view({}).bots).toMatch(/^Alpha · /);
+    expect(view({}).notes).toContain('(Alpha) against Beta');
+    expect(view({ team: 'beta' }).bots).toMatch(/^Beta · /);
+    expect(view({ team: 'beta' }).notes).toContain('you and 2 bot teammates (Beta) against Alpha.');
+    // Alpha starts Elimination in the east and attacks first (config/hits.ts ROUNDS), so Beta starts in the west and defends.
+    expect(view({}).notes).toContain('You start at the east end');
+    expect(view({ team: 'beta' }).notes).toContain('You start at the west end');
+    expect(view({ mode: 'attackDefend' }).notes).toContain('Your team attacks first, from the west end');
+    expect(view({ mode: 'attackDefend', team: 'beta' }).notes).toContain('Your team defends first, from the east end');
+    const run = view({ mode: 'extraction', team: 'beta' });
+    expect(run.run).toBe(true);
+    expect(run.bots).not.toMatch(/Alpha|Beta/);
+    expect(run.notes).toContain('(Alpha), against');
   });
 });
 

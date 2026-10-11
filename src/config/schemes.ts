@@ -55,7 +55,7 @@ export const SCHEME_IDS: readonly SchemeId[] = ['cobalt', 'signal', 'acid', 'tea
 /** What a player's replica wears before they pick (William: a Cobalt rifle and a Ghost pistol). */
 export const DEFAULT_SCHEMES: Readonly<Record<ReplicaConfig['look']['model'], SchemeId>> = { rifle: 'cobalt', pistol: 'ghost' };
 
-/** What bots carry: their team's colour on the rifle, a plainer partner on the pistol. By team index (Blue, Orange). */
+/** What bots carry: their team's colour on the rifle, a plainer partner on the pistol. By team index (Alpha, Beta). */
 export const BOT_SCHEMES: readonly Readonly<Record<ReplicaConfig['look']['model'], SchemeId>>[] = [
   { rifle: 'cobalt', pistol: 'onyx' },
   { rifle: 'signal', pistol: 'coral' },

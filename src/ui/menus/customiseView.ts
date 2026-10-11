@@ -463,7 +463,7 @@ export class CustomiseView {
     this.arrangeFit(row.slot);
     const control = el('div', 'menu-row-control');
     control.append(tiles, list.empty, el('p', 'picker-blurb'), el('p', 'menu-readout fit-readout'));
-    if (choices.length === 0 && row.none !== null) control.append(el('p', 'menu-readout menu-faint', LOADOUT_TEXT.armoryHint));
+    if (choices.length === 0 && row.none !== null && this.opts.context.armoryShown?.() !== false) control.append(el('p', 'menu-readout menu-faint', LOADOUT_TEXT.armoryHint));
     const r = menuRow(row.label, '', control);
     r.classList.add('fit-row');
     return [head, r];

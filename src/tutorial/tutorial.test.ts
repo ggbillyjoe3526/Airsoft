@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TUTORIAL, TUTORIAL_STEPS } from '../config/tutorial';
+import { TUTORIAL, TUTORIAL_STEPS, tutorialSteps } from '../config/tutorial';
 import { BALLISTICS } from '../config/ballistics';
 import { AEG, LOADOUT } from '../config/replicas';
 import { ORDER_WHEEL } from '../config/squad';
@@ -299,5 +299,16 @@ describe('skipping and resuming the tutorial (audit POOL-14, POOL-16)', () => {
   it('leaves out the switch-replica step for a player carrying one replica', () => {
     expect(new TutorialTracker(TUTORIAL_STEPS, true, 0, 1).steps.map((s) => s.id)).not.toContain('secondary');
     expect(new TutorialTracker(TUTORIAL_STEPS, true, 0, 2).steps.map((s) => s.id)).toContain('secondary');
+  });
+});
+
+describe('M83: the tutorial names the Armory only while it is on', () => {
+  it('drops every Armory line with Disable Armory on and keeps the steps otherwise the same', () => {
+    const off = tutorialSteps(false);
+    const on = tutorialSteps(true);
+    expect(off.map((s) => s.id)).toEqual(TUTORIAL_STEPS.map((s) => s.id));
+    expect(off.some((s) => /Armory|Field Credits/.test(s.text))).toBe(false);
+    expect(on.some((s) => /Armory/.test(s.text))).toBe(true);
+    expect(on.find((s) => s.id === 'match')!.text.endsWith('for new gear, free.')).toBe(true);
   });
 });

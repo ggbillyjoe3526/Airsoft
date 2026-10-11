@@ -362,33 +362,34 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(group(/^Dev/i)).toHaveAttribute('aria-selected', 'true');
   await settings.getByRole('group', { name: 'Debug info' }).getByRole('button', { name: 'On' }).click();
   await expect(page.locator('.debug-overlay')).toBeVisible();
-  // M42: the Retro pixels switch (off) and its two sliders sit on the Dev group; the smoke run leaves the filter off.
-  const retro = settings.getByRole('group', { name: 'Retro pixels' });
-  await expect(retro).toBeVisible();
-  await expect(retro.getByRole('button', { name: 'Off' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(retro.getByRole('button', { name: 'On' })).toHaveAttribute('aria-pressed', 'false');
-  const retroPixelSize = settings.getByRole('slider', { name: 'Pixel size' });
-  const retroColours = settings.getByRole('slider', { name: 'Colours' });
-  await expect(retroPixelSize).toHaveValue('4');
-  await expect(retroColours).toHaveValue('6');
+  // M96: the Retro look left the Dev group for Settings › Look (checked below).
   const devPanel = settings.locator('#settings-panel-dev');
-  await expect(devPanel.getByText('4 px', { exact: true })).toBeVisible();
-  await expect(devPanel.getByText('216', { exact: true })).toBeVisible();
-  // M26d: Disable Armory greys out the top bar's Armory while it applies.
+  await expect(devPanel.getByRole('group', { name: /Retro/ })).toHaveCount(0);
+  // M26d, M83: Disable Armory takes the Armory off the top bar (gone, not greyed out) while it applies.
   const armoryPlace = topBar.getByRole('button', { name: 'Armory' });
   await settings.getByRole('group', { name: 'Disable Armory' }).getByRole('button', { name: 'On' }).click();
-  await expect(armoryPlace).toBeDisabled();
+  await expect(armoryPlace).toBeHidden();
   await devBox.uncheck();
   await expect(page.locator('.debug-overlay')).toBeHidden();
+  await expect(armoryPlace).toBeVisible();
   await expect(armoryPlace).toBeEnabled();
   await expect(group(/^Dev/i)).toBeHidden();
   await expect(group(/Graphics/i)).toHaveAttribute('aria-selected', 'true');
+  // M96: Settings › Look › Retro look, Off, its sliders at 4 px and 216 colours; the smoke run leaves the filter off.
+  await group(/^Look/i).click();
+  const lookPanel = settings.locator('#settings-panel-look');
+  const retro = lookPanel.getByRole('group', { name: 'Retro look' });
+  await expect(retro.getByRole('button', { name: 'Off' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(retro.getByRole('button', { name: 'On' })).toHaveAttribute('aria-pressed', 'false');
+  await expect(lookPanel.getByRole('slider', { name: 'Retro pixel size' })).toHaveValue('4');
+  await expect(lookPanel.getByRole('slider', { name: 'Retro colours' })).toHaveValue('6');
+  await expect(lookPanel.getByText('4 px', { exact: true })).toBeVisible();
+  await expect(lookPanel.getByText('216', { exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(setup).toBeVisible();
   await expect(setup.locator(':focus')).toHaveCount(1); // the keyboard is back on the Play screen
 
   const teamCss = () => page.evaluate(() => getComputedStyle(document.getElementById('app')!).getPropertyValue('--team-1').trim());
-  const standardOrange = await teamCss(); // the stylesheet's until a match applies the picked set
   await setup.getByRole('button', { name: 'Start match', exact: true }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 10_000 });
   expect(await matchLoaded()).toBe(true);
@@ -396,9 +397,10 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(page.locator('.hud-replica-name')).toHaveText(/AEG rifle/i);
   await expect(page.locator('.hud .hud-crosshair')).toHaveClass(/\bshape-circle\b/);
   // The match wears the High contrast colours on the HUD, and the sound cue ring is up.
-  const matchOrange = await teamCss();
-  expect(matchOrange).toMatch(/^#[0-9a-f]{6}$/);
-  expect(matchOrange).not.toBe(standardOrange);
+  // The menus already wear the picked set (M98: the Your team dots), and the match keeps it: High contrast's HUD orange.
+  const matchOrange = '#e0601a';
+  const standardOrange = '#ff8a2a';
+  expect(await teamCss()).toBe(matchOrange);
   await expect(page.locator('.sound-cues')).not.toHaveAttribute('hidden');
   // The keys below act on the frames after they're pressed, so the match must be drawing first. On a CI runner in
   // software a frame can take seconds early in a match (Chrome 153 there, where these steps were flaky with 10 s waits;

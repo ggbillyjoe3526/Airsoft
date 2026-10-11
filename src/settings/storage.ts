@@ -42,6 +42,8 @@ export type SettingField =
   | 'magazines'
   | 'matchKit'
   | 'mode'
+  /** The Match screen's "Your team" (M98): 'alpha' or 'beta' (config/teams.ts TEAM_PICKS). */
+  | 'playerTeam'
   | 'crouch'
   | 'aimMode'
   | 'sprintMode'
@@ -81,6 +83,8 @@ export type SettingField =
   | `equip.${string}`
   | `fit.${string}`
   | `crosshair.${string}`
+  /** Settings › Gameplay › Hit marker (M97): 'on' or 'off', off when nothing is saved. */
+  | 'hitMarker'
   /** Before M26 (read once by pool/oldPicks.ts): the rifle's optic and each replica's grip and magazine. */
   | 'optic'
   | `grip.${string}`
@@ -93,6 +97,8 @@ export type SettingField =
   /** Settings → HUD (M24); the HUD's size (audit UI-04). */
   | 'scoreboardSize'
   | 'hitFeed'
+  /** Settings › HUD › Minimap (M83): 'rotating' or 'fixed'. */
+  | 'minimapTurn'
   /** Settings → HUD → What got you (M41): 'auto', 'on' or 'off'. */
   | 'whatGotYou'
   | 'hudSize'
@@ -103,6 +109,10 @@ export type SettingField =
   /** Settings → Look (graphics overhaul G1): robots mixed in with humans, and replicas in realistic colours. */
   | 'robots'
   | 'realisticColours'
+  /** Settings › Look › Retro look (M96; the Dev tab's Retro pixels before, carried over by settings/retroLook.ts). */
+  | 'retroLook'
+  | 'retroPixelSize'
+  | 'retroColours'
   /** A replica asset's colour scheme (G1, config/schemes.ts), picked in Loadout › Customise. */
   | `scheme.${string}`
   /**

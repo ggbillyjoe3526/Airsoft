@@ -94,7 +94,7 @@ describe('M89: the Match section shows only what fits the mode', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   const panelFor = (picks: NewGamePicks): MatchPanel =>
-    new MatchPanel({ picks: () => picks, setRuleset: () => {}, setRules: () => {}, setDifficulty: () => {}, setTeammates: () => {} });
+    new MatchPanel({ picks: () => picks, setRuleset: () => {}, setRules: () => {}, setDifficulty: () => {}, setTeammates: () => {}, setTeam: () => {} });
   const buttons = (root: FakeElement, group: string): FakeElement[] => {
     const find = (n: FakeElement): FakeElement | undefined => (n.getAttribute('aria-label') === group ? n : n.children.map(find).find(Boolean));
     return find(root)!.children.filter((c) => c.tag === 'button');

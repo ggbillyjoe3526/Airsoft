@@ -48,7 +48,7 @@ import { frameRateCapFromSaved, GRAPHICS_ROWS, graphicsKey, parseStored, SHOW_FP
 import { FOV_SETTING, type FrameRateCap, type LightingPresetId, QUALITY_CHOICES, type QualityChoice, type QualitySettings, RENDER, TONE_MAPPING, type ToneMappingId } from '../../config/render';
 import { DEFAULT_RENDERER, RENDERER_IDS, type RendererChoice } from '../../config/rendererPick';
 import { DEFAULT_WHEEL_SELECT, WHEEL_SELECT_MODES, type WheelSelect } from '../../config/squad';
-import { DEFAULT_TEAM_COLOURS, TEAM_COLOUR_CHOICES, type TeamColourSetId } from '../../config/teams';
+import { DEFAULT_TEAM_COLOURS, DEFAULT_TEAM_PICK, TEAM_COLOUR_CHOICES, TEAM_PICKS, type TeamColourSetId, type TeamPickId } from '../../config/teams';
 import { lightingChoices, parseLightingPick } from '../../map/lightingChoice';
 import { DEFAULT_MAP, MAPS, type MapId, mapData, mapLoaded } from '../../map/maps';
 import { browserStorage, loadSetting, numberIn, oneOf } from '../../settings/storage';
@@ -254,6 +254,11 @@ export function effectiveReducedMotion(saved: boolean | null, system: boolean): 
  */
 export function motionClass(saved: boolean | null): 'reduced-motion' | 'full-motion' | null {
   return saved === null ? null : saved ? 'reduced-motion' : 'full-motion';
+}
+
+/** The Match screen's "Your team" (M98, saved as `playerTeam`: 'alpha' or 'beta'); Alpha until another is picked. */
+export function loadTeamPick(): TeamPickId {
+  return loadChoice('playerTeam', TEAM_PICKS, DEFAULT_TEAM_PICK);
 }
 
 /** The team colour set (Settings → Accessibility, M18b). */

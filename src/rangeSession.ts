@@ -38,7 +38,7 @@ import { createWind } from './sim/wind';
 import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
 import type { DevSettings } from './config/dev';
-import { TUTORIAL_STEPS } from './config/tutorial';
+import { tutorialSteps } from './config/tutorial';
 import { TutorialTracker, type TutorialView } from './tutorial/tutorial';
 import { CoachPanel } from './ui/coachPanel';
 import { TutorialShowcase } from './ui/tutorialShowcase';
@@ -47,7 +47,10 @@ import { type LastShot, lastShotText, RangeReadout } from './ui/rangeReadout';
 const PLAYER_ID = 0;
 
 /** What the range needs from New game's choices: the loadout (the match rules don't apply). */
-export type RangeSetup = Pick<MatchSetup, 'kit' | 'teamColours' | 'look'>;
+export type RangeSetup = Pick<MatchSetup, 'kit' | 'teamColours' | 'look'> & {
+  /** Whether the Armory is on (M83: off, the tutorial never names it); on when left out. */
+  armory?: boolean;
+};
 
 /** Where you stand and which way you face: kept when the range is rebuilt for a new loadout. */
 export interface RangePose {
@@ -179,7 +182,7 @@ export class RangeSession {
     this.readout = new RangeReadout(container);
     this.readout.set(lastShotText(null));
     if (tutorialFrom !== undefined) {
-      this.tutorial = new TutorialTracker(TUTORIAL_STEPS, canAimDownSights(this.player.armament), tutorialFrom, this.loadout.length);
+      this.tutorial = new TutorialTracker(tutorialSteps(setup.armory !== false), canAimDownSights(this.player.armament), tutorialFrom, this.loadout.length);
       this.coach = new CoachPanel(container, (action) => input.keyName(action));
       this.coach.show(this.tutorial);
       this.showcase = new TutorialShowcase(container, this.player.team, teamCss(this.player.team), (action) => input.keyName(action), () => input.wheelSelect);

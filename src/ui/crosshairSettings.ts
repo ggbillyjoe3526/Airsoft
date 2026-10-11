@@ -7,14 +7,22 @@ import {
   CROSSHAIR_SHAPES,
   type CrosshairSettings,
 } from '../config/matchInfo';
+import { DEFAULT_HIT_MARKER, HIT_MARKER_CHOICES } from '../config/hits';
 import { crosshairElement, hexColour, setCrosshairGap, styleCrosshair } from './crosshair';
-import { saveSetting, saveSettingSoon } from '../settings/storage';
+import { browserStorage, loadSetting, oneOf, saveSetting, saveSettingSoon } from '../settings/storage';
 import { el, menuRow, rangeControl } from './menus/menuParts';
 import { OptionPicker } from './optionPicker';
 
 export interface CrosshairSettingsOptions {
   initial: CrosshairSettings;
   onChange: (crosshair: CrosshairSettings) => void;
+  /** The Hit marker row (M97): the red X when your BB lands. No row without it. */
+  hitMarker?: { initial: boolean; onChange: (on: boolean) => void };
+}
+
+/** Whether the hit marker shows (Settings › Gameplay, M97): off on a clean save and on any save from before it. */
+export function loadHitMarker(storage = browserStorage()): boolean {
+  return loadSetting('hitMarker', oneOf(HIT_MARKER_CHOICES.map((c) => c.id)), DEFAULT_HIT_MARKER ? 'on' : 'off', storage) === 'on';
 }
 
 /**
@@ -71,7 +79,15 @@ export function crosshairSettings(opts: CrosshairSettingsOptions): HTMLDivElemen
     ),
     menuRow('Spread', 'Whether the crosshair opens as you move and fire.', new OptionPicker('Spread', CROSSHAIR_DYNAMIC, current.dynamic, 'crosshair.dynamic', (v) => change('dynamic', v)).root),
     menuRow('Outline', 'A thin dark edge round the crosshair.', new OptionPicker('Outline', CROSSHAIR_OUTLINES, current.outline, 'crosshair.outline', (v) => change('outline', v)).root),
+    ...hitMarkerRow(opts.hitMarker),
   ];
+}
+
+/** The Hit marker row (M97), saved as `hitMarker`: the tick you hear is the same either way. */
+function hitMarkerRow(opt: CrosshairSettingsOptions['hitMarker']): HTMLDivElement[] {
+  if (!opt) return [];
+  const picker = new OptionPicker('Hit marker', HIT_MARKER_CHOICES, opt.initial ? 'on' : 'off', 'hitMarker', (v) => opt.onChange(v === 'on'));
+  return [menuRow('Hit marker', 'A red X over the crosshair when your BB hits someone. The hit tick sounds either way.', picker.root)];
 }
 
 /**

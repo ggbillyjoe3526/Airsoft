@@ -8,7 +8,7 @@ import { accuracy, type PlayerStats } from '../stats/matchStats';
  * summary): a block per team, yours first, with a row per player. Pure, so it's tested without a page.
  */
 
-/** Display names by character id: "Blue 2", "Orange 1", and "You" for the player. */
+/** Display names by character id: "Alpha 2", "Beta 1", and "You" for the player. */
 export function rosterNames(characters: readonly Character[], playerId: number): Map<number, string> {
   const names = new Map<number, string>();
   const perTeam = [0, 0];
@@ -34,7 +34,7 @@ export interface StatsRow {
 
 export interface TeamBlock {
   team: number;
-  /** "Blue (you) · 3 rounds won". */
+  /** "Alpha (you) · 3 rounds won". */
   title: string;
   rows: StatsRow[];
 }

@@ -54,6 +54,8 @@ export class LoadoutScreen {
   private readonly gearView: HTMLDivElement;
   private readonly cards = new Map<GearSlot, CarriedCard>();
   private readonly grid: HTMLDivElement;
+  /** "Unlock more in the Armory": hidden while the Armory is off (M83). */
+  private readonly armoryNote: HTMLParagraphElement;
   private tiles: ReplicaTile[] = [];
   /** Sort and filter by rarity over the grid (M82), its choice saved; and the line shown when it hides every tile. */
   private rarityView: RarityView;
@@ -103,7 +105,8 @@ export class LoadoutScreen {
       this.arrangeGrid();
     });
     this.noneShown = el('p', 'loadout-note rarity-none', RARITY_TEXT.noneShown.replicas);
-    owned.append(this.rarityBar.root, this.grid, this.noneShown, el('p', 'loadout-note', GEAR_TEXT.unlockMore));
+    this.armoryNote = el('p', 'loadout-note', GEAR_TEXT.unlockMore);
+    owned.append(this.rarityBar.root, this.grid, this.noneShown, this.armoryNote);
 
     const aside = el('aside', 'loadout-selected menu-card');
     aside.setAttribute('aria-label', GEAR_TEXT.selected);
@@ -130,6 +133,8 @@ export class LoadoutScreen {
 
   /** Re-reads the loadout (after the Armory unlocked something, say) and shows the gear. */
   refresh(): void {
+    // The Armory off (Dev settings, M83): no line sends the player there.
+    this.armoryNote.hidden = this.opts.context.armoryShown?.() === false;
     this.closeView();
     this.buildGrid();
     this.update();

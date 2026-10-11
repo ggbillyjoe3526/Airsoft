@@ -33,6 +33,7 @@ const picks = (over: Partial<NewGamePicks> = {}, rules: Partial<NewGamePicks['ru
   mode: DEFAULT_MODE,
   difficulty: DEFAULT_DIFFICULTY,
   teammateDifficulty: DEFAULT_DIFFICULTY,
+  team: 'alpha',
   ruleset: DEFAULT_RULESET,
   rules: { ...DEFAULT_MATCH_RULES, ...rules },
   ...over,
@@ -349,5 +350,19 @@ describe('a dev map whose data has not arrived (M50)', () => {
     expect(fresh.playedPicks(picks({ map: 'neonHeights' }), true).map).toBe('neonHeights');
     // Dev content off still plays the default: loaded or not.
     expect(fresh.playedPicks(picks({ map: 'woodland' }), false).map).toBe(DEFAULT_MAP);
+  });
+});
+
+describe('Your team (M98)', () => {
+  it('plays the team as picked in Elimination and Attack / Defend, and an Extraction run as Alpha', () => {
+    for (const mode of ['elimination', 'attackDefend'] as const) {
+      expect(playedPicks(picks({ mode, team: 'beta' }), true).team, mode).toBe('beta');
+      expect(playedPicks(picks({ mode, team: 'alpha' }), true).team, mode).toBe('alpha');
+    }
+    const runMap = MAPS.find((m) => mapData(m.id).extraction)!.id;
+    expect(playedPicks(picks({ map: runMap, mode: 'extraction', team: 'beta' }), true).team).toBe('alpha');
+    // Absent (picks made before M98): Alpha.
+    const { team: _, ...old } = picks();
+    expect(playedPicks(old, true).team).toBe('alpha');
   });
 });
