@@ -30,8 +30,8 @@
     { "map": "neon", "mode": "extraction", "preset": "medium", "backend": "webgpu" }
   ],
   "maps": {
-    "woodland": { "medium": { "drawCalls": 115 } },
-    "neon": { "medium": { "drawCalls": 140 } }
+    "woodland": { "medium": { "drawCalls": 120 } },
+    "neon": { "medium": { "drawCalls": 145 } }
   },
   "backends": {},
   "mapIds": { "neon": "neonHeights" },

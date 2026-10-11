@@ -387,13 +387,14 @@ test('Woodland on Low: moon, stars and fires, within 100 draw calls and 150k tri
 });
 
 /**
- * M33i QA: Medium's ceiling (135 draw calls, 200k triangles) at the largest team size, 5v5, where the figures' share is
+ * M33i QA: Medium's ceiling (140 draw calls, 200k triangles) at the largest team size, 5v5, where the figures' share is
  * the largest: the moon, stars, flames and (Medium has dust motes) embers drawn, and no shader first built while you
  * turn round at the spawn. G5 raised the line from 120: Medium's bloom draws 14 full-screen passes (the bright-pass, two
  * blurs on each of five sizes, the mix, its blend onto the picture and the output), cheap on the CPU; the world's own
- * draws stay about 110. Still under the owner's ceiling of 150.
+ * draws stay about 110. W6a raised it to 140 with Woodland's Medium perf line (DECISIONS 2026-10-11): the grass and
+ * stand-ins' two draws and the built-in models' (RM4). Still under the owner's ceiling of 150.
  */
-test('Woodland on Medium at 5v5: within 135 draw calls and 200k triangles, embers on, no shader built mid-match', async ({ page }) => {
+test('Woodland on Medium at 5v5: within 140 draw calls and 200k triangles, embers on, no shader built mid-match', async ({ page }) => {
   test.setTimeout(300_000);
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
@@ -427,7 +428,7 @@ test('Woodland on Medium at 5v5: within 135 draw calls and 200k triangles, ember
   const spin = await spinView(page);
   console.log(`Woodland Medium 5v5 spin: ${JSON.stringify(spin)}`);
   expectTurned(spin);
-  expect(spin.calls).toBeLessThanOrEqual(135);
+  expect(spin.calls).toBeLessThanOrEqual(140);
   expect(spin.triangles).toBeLessThanOrEqual(200_000);
   // The GPU dressing at its caps, on its own line (pipeline/perf-budget.json presets.medium.dressingTriangles, W6a).
   expect(spin.dressing).toBeGreaterThan(0);

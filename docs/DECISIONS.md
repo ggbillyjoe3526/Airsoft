@@ -493,8 +493,12 @@ replaces its line; the old one stays findable in the archive or in git.
   growth ≤ 5 MB over 60 s; nothing more than 10 % worse than the baseline. His ceilings of 150 draw calls and 250k
   triangles stay on High. Dynamic resolution scaling is not in the budget (owner: no). Raising any line needs a decision
   line.
-- **Medium has map-scoped draw-call lines: Woodland 115 and Neon Heights 140 (owner, 2026-10-06, audit decision 4).**
-  The other Medium lines (200k triangles, memory, heap) and every Low line stay the presets'.
+- **Medium has map-scoped draw-call lines: Woodland 120 and Neon Heights 145 (owner, 2026-10-11, W6a; 115 and 140
+  since 2026-10-06, audit decision 4).** The other Medium lines (200k triangles, memory, heap) and every Low line stay
+  the presets'. Raised on the owner's card ("Raise a little"): with the old renderer gone, Woodland's GPU grass and
+  stand-ins cost 2 draws on Medium, and the built-in models back since RM4 about 5 on every map (Woodland Extraction
+  Medium 115.3 on WebGL2 and 116.5 on WebGPU; Neon Heights Extraction Medium 142 on WebGPU; main on the old renderer
+  113.3). The Woodland 5v5 spin check (`e2e/woodland.spec.ts`) goes from 135 to 140 with it.
 - **The GPU dressing's triangles have a line of their own; the scene keeps the owner's (2026-10-11, W6a).** Three counts
   Woodland's grass and tree stand-ins at their caps (every blade slot, whatever the GPU cull keeps), which put Woodland's
   node renderer at about 261k triangles on Medium against 200k, 375k on High and 637k on Ultra against 250k. The perf
