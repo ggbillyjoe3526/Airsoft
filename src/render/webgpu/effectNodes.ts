@@ -26,14 +26,16 @@ import {
 } from 'three/tsl';
 import { FIXTURES } from '../../config/render';
 import { PHASE } from '../lightFixtures';
-import { everyDraw, objectFloat, patchUniforms } from './twinUniforms';
+import { nodePatchOf, patchUniforms, type PointKind } from '../nodePatch';
+import { everyDraw, objectFloat } from './twinUniforms';
 
 /**
- * The node twins of the world's shader-moved effects (WebGPU overhaul W2): the fires' flames (render/lightFixtures.ts),
- * the chimney smoke and the vents' steam (render/smokePlumes.ts), and the materials of the point sprites that stand in
- * for the stars, embers, fireflies and dust motes on the node path (render/webgpu/pointSprites.ts: WebGPU draws a point
- * one pixel wide, so a sized point is a quad per point there). Each does what its GLSL does, with the same config
- * numbers (rounded as the GLSL writes them) and the patch's own uniforms: the fixtures' clock, the motes' size cap.
+ * The node materials of the world's shader-moved effects (WebGPU overhaul W2; their node patches, W6b): the fires'
+ * flames (render/lightFixtures.ts), the chimney smoke and the vents' steam (render/smokePlumes.ts), and the materials of
+ * the point sprites that stand in for the stars, embers, fireflies and dust motes (render/webgpu/pointSprites.ts: WebGPU
+ * draws a point one pixel wide, so a sized point is a quad per point). Each reads its config's numbers (rounded as the
+ * WebGL path's GLSL wrote them, so the pictures stay those it drew) and its patch's own uniforms: the fixtures' clock,
+ * the motes' size cap.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- TSL's node types don't follow its own swizzles and helpers. */
@@ -57,7 +59,7 @@ export class EffectTwin extends MeshBasicNodeMaterial {
   }
 }
 
-/** The flicker curve (lightFixtures.ts flicker and its GLSL fxFlicker) at seed `seed` and clock `t`. */
+/** The flicker curve (lightFixtures.ts flicker, the real pool light's) at seed `seed` and clock `t`. */
 function fxFlicker(seed: AnyNode, t: AnyNode): AnyNode {
   const { rates, weights } = F.flicker;
   let sum: AnyNode = float(0);
@@ -87,17 +89,12 @@ export function smokeTwin(plain: THREE.Material): EffectTwin {
   return twin;
 }
 
-/** The point clouds that become sprites on the node path, by their patch (program key, or the motes' size cap). */
-export type PointKind = 'stars' | 'embers' | 'fireflies' | 'motes';
+const POINT_KINDS: readonly string[] = ['stars', 'embers', 'fireflies', 'motes'] satisfies readonly PointKind[];
 
-/** What a Points' material is, or null for one with no twin (drawn by Three's node library, a pixel a point). */
+/** What a Points' material is, by the patch it carries, or null for one with no twin (drawn by Three's node library, a pixel a point). */
 export function pointKind(material: THREE.Material): PointKind | null {
-  const key = material.customProgramCacheKey();
-  if (key === 'night-sky-stars') return 'stars';
-  if (key === 'light-fixtures-embers') return 'embers';
-  if (key === 'fireflies') return 'fireflies';
-  if ('moteMaxSize' in patchUniforms(material)) return 'motes';
-  return null;
+  const kind = nodePatchOf(material)?.patch.kind;
+  return kind !== undefined && POINT_KINDS.includes(kind) ? (kind as PointKind) : null;
 }
 
 /** One of a sprite twin's per-point buffers: the Points' own array, read per instance, sent again when the CPU changes it. */

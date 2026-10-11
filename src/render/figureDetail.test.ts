@@ -9,6 +9,7 @@ import { vec3 } from '../sim/vec';
 import { BARE_KIT, buildFigure, disposeFigure, type Figure, type FigureDetail, type FigureKit, figureLooks, HUMAN_DRESS } from './characterModels';
 import { CharacterRenderer, rifleSilenced } from './characterRenderer';
 import { FINISH_ATTRIBUTE, hasVertexFinish, useVertexFinish } from './figureFinish';
+import { nodePatchOf } from './nodePatch';
 
 const meshesOf = (root: THREE.Object3D): THREE.Mesh[] => {
   const out: THREE.Mesh[] = [];
@@ -367,14 +368,9 @@ describe('the per-vertex finish material (FA8)', () => {
     expect(hasVertexFinish(a)).toBe(true);
     expect(hasVertexFinish(new THREE.MeshStandardMaterial())).toBe(false);
     expect(a.customProgramCacheKey()).toBe(b.customProgramCacheKey());
-    const shader = { vertexShader: THREE.ShaderLib.physical.vertexShader, fragmentShader: THREE.ShaderLib.physical.fragmentShader } as THREE.WebGLProgramParametersWithUniforms;
-    a.onBeforeCompile(shader, undefined as unknown as THREE.WebGLRenderer);
-    expect(shader.vertexShader).toContain(`attribute vec2 ${FINISH_ATTRIBUTE};`);
-    expect(shader.vertexShader).toContain('vFinish = finish;');
-    expect(shader.fragmentShader).toContain('float roughnessFactor = vFinish.x;');
-    expect(shader.fragmentShader).toContain('float metalnessFactor = vFinish.y;');
-    expect(shader.fragmentShader).not.toContain('#include <roughnessmap_fragment>');
-    expect(shader.fragmentShader).not.toContain('#include <metalnessmap_fragment>');
+    // The node patch reads the attribute where Three would read the material's numbers (render/webgpu/figureNodes.ts).
+    expect(nodePatchOf(a)?.patch).toEqual({ kind: 'figure-finish' });
+    expect(FINISH_ATTRIBUTE).toBe('finish');
   });
 
   it('switches every figure to the new detail and back, freeing the old ones', () => {

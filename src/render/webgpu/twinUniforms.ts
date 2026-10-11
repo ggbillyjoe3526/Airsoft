@@ -1,16 +1,16 @@
 import type * as THREE from 'three';
 import type { NodeFrame } from 'three/webgpu';
 import { texture3D, uniform } from 'three/tsl';
+import { patchUniforms } from '../nodePatch';
 
 /**
- * The uniforms a world material's GLSL patch is given, read by its node twin (WebGPU overhaul W2), so the two can never
- * drift: the twin is not handed copies of the patch's numbers, it reads the very objects the patch puts in the WebGL
- * program. They are found by running the material's own `onBeforeCompile` once on an empty shader (every world patch
- * only rewrites the strings and adds its uniforms, by reference where they are shared: the baked light's grid, the
- * fixtures' clock, the neon flicker, the plane's matrix, the motes' size cap), and kept per material.
+ * The uniforms a world material's node patch carries (render/nodePatch.ts), read by the node material that draws it
+ * (WebGPU overhaul W2, W6b): not copies of the patch's numbers but the very objects its owner writes, by reference where
+ * they are shared (the baked light's grid, the fixtures' clock, the neon flicker, the plane's matrix, the motes' size
+ * cap).
  *
  * Several plain materials share one node program (the node renderer keys its programs on the plain material's program
- * key, as WebGL does), so a twin never captures one material's values: each value is a node uniform set from the drawn
+ * key, which names the patch, not the material), so a twin never captures one material's values: each value is a node uniform set from the drawn
  * object's own material (`onObjectUpdate`), as WebGL gives each material its own uniforms. Three runs those updates only
  * for an object its material observer marks as holding nodes, and the observer looks at the plain material (the one
  * the object carries), which holds none: so every twin with such a uniform has its observer say so (`everyDraw`), and
@@ -26,23 +26,6 @@ import { texture3D, uniform } from 'three/tsl';
 export function everyDraw<T extends { hasNode: boolean }>(observer: T): T {
   observer.hasNode = true;
   return observer;
-}
-
-/** A material's patch uniforms by name (`shader.uniforms` after its onBeforeCompile). */
-export type PatchUniforms = Readonly<Record<string, THREE.IUniform>>;
-
-const found = new WeakMap<THREE.Material, PatchUniforms>();
-
-/** The uniforms `material`'s patch adds (none for an unpatched material), found once and kept. */
-export function patchUniforms(material: THREE.Material): PatchUniforms {
-  let u = found.get(material);
-  if (!u) {
-    const shader = { uniforms: {} as Record<string, THREE.IUniform>, vertexShader: '', fragmentShader: '', defines: {} };
-    material.onBeforeCompile(shader as unknown as THREE.WebGLProgramParametersWithUniforms, undefined as unknown as THREE.WebGLRenderer);
-    u = shader.uniforms;
-    found.set(material, u);
-  }
-  return u;
 }
 
 /** The value of patch uniform `name` of the drawn object's material, or `fallback` while it has none. */

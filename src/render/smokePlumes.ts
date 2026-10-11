@@ -3,6 +3,7 @@ import { DRESSING, STEAM } from '../config/dressing';
 import { createRng, rngNext } from '../sim/rng';
 import { GPU_POOLS } from './gpuPools';
 import { softDotTexture } from './softDot';
+import { carryNodePatch } from './nodePatch';
 
 /**
  * Chimney smoke (G8, DRESSING.smoke): soft puffs rising from each smoking chimney of the skyline on a loop, bent by
@@ -78,15 +79,8 @@ export class SmokePlumes {
     this.alphaAttribute = new THREE.InstancedBufferAttribute(this.alpha, 1).setUsage(THREE.DynamicDrawUsage);
     geo.setAttribute('puffAlpha', this.alphaAttribute);
     const material = new THREE.MeshBasicMaterial({ color: M.colour, map: this.sprite, transparent: true, opacity: M.opacity, depthWrite: false });
-    material.onBeforeCompile = (shader) => {
-      shader.vertexShader = shader.vertexShader
-        .replace('#include <common>', 'attribute float puffAlpha;\nvarying float vPuffAlpha;\n#include <common>')
-        .replace('#include <begin_vertex>', 'vPuffAlpha = puffAlpha;\n#include <begin_vertex>');
-      shader.fragmentShader = shader.fragmentShader
-        .replace('#include <common>', 'varying float vPuffAlpha;\n#include <common>')
-        .replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.a *= vPuffAlpha;');
-    };
-    material.customProgramCacheKey = () => 'smoke-plumes';
+    // Each puff's fade (`puffAlpha`, per instance) on the sprite's alpha.
+    carryNodePatch(material, { kind: 'smoke' });
     this.object = new THREE.InstancedMesh(geo, material, count);
     this.object.name = name;
     GPU_POOLS.set(this.object, this);

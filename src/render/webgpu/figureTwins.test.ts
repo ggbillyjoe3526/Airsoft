@@ -16,14 +16,14 @@ import { TorchBeams } from '../torchBeams';
 import { Viewmodel } from '../viewmodel';
 import { figureTwin } from './figureNodes';
 import { emptyGrid } from './surfaceNodes';
-import { patchUniforms } from './twinUniforms';
 import { clearSwizzle, fitBrowser, no3DAttachment, rejects3DLayerWrite, rejectsStringSwizzle } from './webgpuCompat';
 import { worldTwin } from './worldTwins';
+import { nodePatchOf, patchUniforms } from '../nodePatch';
 
 /**
- * W3: what draws the figures, replicas, arms, hands and torch beams on the node path. Every material they draw with is
- * either patched with a node twin (the figures' per-vertex finish) or carries no patch Three's node library would drop
- * (so Three's own conversion is the same material); the twin reads the same attribute the GLSL reads. The pictures are
+ * W3: what draws the figures, replicas, arms, hands and torch beams on the node path. Every material they draw with
+ * either carries a node patch with its twin (the figures' per-vertex finish, the sleeves' camo) or none (so Three's own
+ * conversion is the same material); the twin reads the same attribute the WebGL path's GLSL read. The pictures are
  * compared in the browser (pipeline/webgpu-compare.mjs, W3's figure views).
  */
 
@@ -40,10 +40,7 @@ function materialsOf(root: THREE.Object3D): THREE.Material[] {
   return [...out];
 }
 
-const patched = (m: THREE.Material): boolean => m.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile;
-
-/** The program keys whose patch Three's node materials need no twin for (W2: node Lambert and Basic never take the environment). */
-const OWN_BY_DESIGN = new Set(['without-environment']);
+const patched = (m: THREE.Material): boolean => nodePatchOf(m) !== null;
 
 function torchBearer(id: number, x: number, team: number): Character {
   const c = createCharacter(id, vec3(x, 0, -2 * id), 0, LOADOUT, team);
@@ -56,7 +53,7 @@ describe('the figures, replicas, arms, hands and torch beams on the node path (W
   const grid = emptyGrid();
   afterAll(() => grid.dispose());
 
-  it('every patched material they draw with has a twin, or is Three’s own by design; the rest carry no patch', () => {
+  it('every patched material they draw with has a twin; the rest carry no patch', () => {
     const night = resolveLighting(WOODLAND);
     const characters = [torchBearer(0, 0, 0), torchBearer(1, 2, 0), torchBearer(2, -2, 1), torchBearer(3, 4, 1)];
     const robots = { robots: [false, true, false, true], realistic: false };
@@ -67,32 +64,27 @@ describe('the figures, replicas, arms, hands and torch beams on the node path (W
     const torches = new TorchBeams(characters, night, { poolLights: 2 }, ground, BODY, HITS);
     const cam = new THREE.PerspectiveCamera();
     torches.update(cam, characters[0]!, true, 1);
-    const seen = { twinned: 0, own: 0, plain: 0 };
+    const seen = { twinned: 0, plain: 0 };
     for (const root of [figures.object, low.object, held.scene, torches.object]) {
       for (const m of materialsOf(root)) {
         if (!patched(m)) {
           seen.plain++;
           continue;
         }
-        const twin = worldTwin(m, grid);
-        if (twin) seen.twinned++;
-        else {
-          expect(OWN_BY_DESIGN.has(m.customProgramCacheKey()), `${m.type} ${m.customProgramCacheKey()}`).toBe(true);
-          seen.own++;
-        }
+        expect(worldTwin(m, grid), `${m.type} ${m.customProgramCacheKey()}`).not.toBeNull();
+        seen.twinned++;
       }
     }
-    // The detailed figures' finish (one material per figure) and your sleeves' camo (G11), the beams' three light
-    // materials, and the plain rest.
+    // The detailed figures' finish (one material per figure) and your sleeves' camo (G11), and the plain rest (the
+    // beams' three light materials among them: Three's node Basic never takes the environment).
     expect(seen.twinned).toBe(characters.length + 1);
-    expect(seen.own).toBe(3);
     expect(seen.plain).toBeGreaterThan(10);
     for (const r of [figures, low]) r.dispose();
     held.dispose();
     torches.dispose();
   });
 
-  it('the finish twin reads each vertex’s roughness and metalness from the attribute the GLSL reads, and copies the rest', () => {
+  it('the finish twin reads each vertex’s roughness and metalness from its attribute, and copies the rest', () => {
     const plain = useVertexFinish(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, metalness: 0, transparent: true, opacity: 0.4 }));
     plain.color.setRGB(0.5, 0.6, 0.7);
     plain.emissive.setRGB(0.1, 0, 0);
@@ -108,12 +100,12 @@ describe('the figures, replicas, arms, hands and torch beams on the node path (W
     expect(twin.opacity).toBe(0.4);
     expect(twin.color).toBe(plain.color);
     expect(twin.emissive).toBe(plain.emissive);
-    // The GLSL patch adds no uniforms: nothing per object to read (no everyDraw needed).
+    // The patch carries no uniforms: nothing per object to read (no everyDraw needed).
     expect(Object.keys(patchUniforms(plain))).toEqual([]);
     // Only the finish's key: a plain Standard or another patch gets no figure twin.
     expect(figureTwin(new THREE.MeshStandardMaterial())).toBeNull();
     expect(figureTwin(useVertexFinish(new THREE.MeshStandardMaterial()))).not.toBeNull();
-    // The camo (G11): the twin prints it on the colour, as the GLSL does after the vertex colours; the sleeves have one too.
+    // The camo (G11): the twin prints it on the colour, which Three multiplies by the vertex colours; the sleeves have one too.
     expect(twin.colorNode).not.toBeNull();
     const sleeve = useSleeveCamo(new THREE.MeshStandardMaterial({ vertexColors: true }));
     const sleeveTwin = worldTwin(sleeve, grid) as MeshStandardNodeMaterial;

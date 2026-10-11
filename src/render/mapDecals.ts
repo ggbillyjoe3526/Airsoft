@@ -3,7 +3,6 @@ import { SURFACES } from '../config/render';
 import { type StainKind, WEATHERING } from '../config/weathering';
 import type { MapBlock, MapData } from '../map/mapTypes';
 import { drawDressingCells } from './dressingAtlas';
-import { withoutEnvironment } from './surfaceMaterials';
 
 /**
  * Painted signs and stencils on the field (map detail; audit section 5, "Map props and surfaces"): one texture holding
@@ -565,18 +564,16 @@ export function buildMapDecals(map: MapData, atlas: () => THREE.Texture = drawDe
   geo.computeBoundingSphere();
   // Blended (G6): the stains fade at their edges; the texels with nothing on them are skipped. Vertex colours (G8): a
   // spray's paint over its white drawing; white everywhere else.
-  const material = withoutEnvironment(
-    new THREE.MeshLambertMaterial({
-      map: atlas(),
-      vertexColors: true,
-      transparent: true,
-      depthWrite: false,
-      alphaTest: D.alphaFloor,
-      polygonOffset: true,
-      polygonOffsetFactor: -1,
-      polygonOffsetUnits: -1,
-    }),
-  );
+  const material = new THREE.MeshLambertMaterial({
+    map: atlas(),
+    vertexColors: true,
+    transparent: true,
+    depthWrite: false,
+    alphaTest: D.alphaFloor,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -1,
+  });
   const mesh = new THREE.Mesh(geo, material);
   mesh.name = 'map-decals';
   mesh.receiveShadow = true;

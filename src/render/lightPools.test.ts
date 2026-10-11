@@ -18,6 +18,7 @@ import {
   poolLightReach,
   stepPoolLights,
 } from './lightPools';
+import { nodePatchOf } from './nodePatch';
 
 /** Three pools along x: at 0, 20 and 40 m, radius 5, on TEST_YARD's floor. */
 const POOLS: readonly MapLight[] = [0, 20, 40].map((x) => ({ position: vec3(x - 20, 1, 0), radius: 5, colour: 0xff9a4a }));
@@ -96,8 +97,8 @@ describe('light pools in the scene (M33f, acceptance 3)', () => {
       const mat = m.material as THREE.MeshBasicMaterial;
       expect(mat.blending).toBe(THREE.AdditiveBlending);
       expect(mat.depthWrite).toBe(false);
-      // Off the environment map, as the rest of the map (render/surfaceMaterials.ts).
-      expect(mat.customProgramCacheKey()).toBe('without-environment');
+      // Three's own Basic (off the environment map, as the rest of the map): no node patch.
+      expect(nodePatchOf(mat)).toBeNull();
     }
   });
 

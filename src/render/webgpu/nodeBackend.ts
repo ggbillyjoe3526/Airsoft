@@ -29,9 +29,10 @@ import { WorldTwins } from './worldTwins';
  * overlay's counts, and everything let go on dispose. All of it is here, in this chunk, rather than in the Renderer: the
  * main chunk carries only the calls.
  *
- * The world's patched materials draw as their node twins (W2, render/webgpu/worldTwins.ts: the surfaces, dressing, sky
- * and the shader-moved effects, the sized points as sprites, the scene's environment map); every other material is drawn
- * as Three's node library makes it from the built-in one (the figures' finish is W3's). The frame itself draws as
+ * The world's materials that carry a node patch (render/nodePatch.ts) draw as its node material (W2, W6b,
+ * render/webgpu/worldTwins.ts: the surfaces, dressing, sky, the shader-moved effects and the figures' finish, the sized
+ * points as sprites; it makes the scene's environment map too); every other material is drawn as Three's node library
+ * makes it from the built-in one. The frame itself draws as
  * WebGL's does (W4, render/webgpu/post/): through the post stack's or the retro filter's TSL ports, or on Low straight
  * onto the canvas with each material tone-mapped as it draws (nodeOutput.ts), with the same draws as WebGL.
  */

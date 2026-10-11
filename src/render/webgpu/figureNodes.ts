@@ -7,14 +7,14 @@ import { FINISH_ATTRIBUTE, hasVertexFinish } from '../figureFinish';
 import { copyOnto } from './effectNodes';
 
 /**
- * The node twins of the figures' per-vertex finish and the team camo (render/figureFinish.ts, FA8; render/figureCamo.ts,
- * G11; WebGPU overhaul W3). The detailed figure (Player detail High: Medium and up) is one vertex-coloured Standard
- * material whose GLSL patch reads each vertex's roughness and metalness from its `finish` attribute (vec2) where Three
- * would read the material's: matte fabric, a glossy goggle lens and helmet shell, steel barrels, in one draw; and prints
- * the camo per pixel where the vertex's `camo` attribute names a pattern. The twin reads the same attributes in the same
- * places (`roughnessNode`, `metalnessNode`, and the camo on the colour before Three multiplies the vertex colours in),
- * so Three's own clamping and geometry roughness follow as in the GLSL. Your first-person sleeves (Hand detail High)
- * print the camo all over: their twin is the plain Standard node material with the same colour.
+ * The node materials of the figures' per-vertex finish and the team camo (render/figureFinish.ts, FA8;
+ * render/figureCamo.ts, G11; WebGPU overhaul W3, carried as node patches since W6b). The detailed figure (Player detail
+ * High: Medium and up) is one vertex-coloured Standard material that reads each vertex's roughness and metalness from
+ * its `finish` attribute (vec2) where Three would read the material's: matte fabric, a glossy goggle lens and helmet
+ * shell, steel barrels, in one draw; and prints the camo per pixel where the vertex's `camo` attribute names a pattern.
+ * They sit in Three's own places (`roughnessNode`, `metalnessNode`, and the camo on the colour before Three multiplies
+ * the vertex colours in), so Three's own clamping and geometry roughness follow. Your first-person sleeves (Hand
+ * detail High) print the camo all over: the plain Standard node material with the same colour.
  *
  * Everything else a figure shows is the plain material's, read per drawn object from the material the figure carries
  * (its colour, emissive and opacity; Three's material observer sees them change): the team colours and both looks
@@ -26,7 +26,11 @@ import { copyOnto } from './effectNodes';
 /* eslint-disable @typescript-eslint/no-explicit-any -- TSL's node types don't follow its own swizzles and helpers. */
 type AnyNode = any;
 
-/** camoGlsl's camoTone: the colour multiplier at part position `p` for pattern `seed`, the same sums in the same order. */
+/**
+ * The colour multiplier at part position `p` (metres) for pattern `seed` (figureCamo.ts camoTone, with its blotches'
+ * edges blended over one pixel's change of the waves, so they stay crisp up close and melt into their average far away
+ * instead of shimmering; `fwidth` needs uniform control flow, which every caller keeps).
+ */
 function camoTone(p: AnyNode, seed: AnyNode): AnyNode {
   const C = FIGURE.camo;
   const s = p.mul(float(1 / C.scale));

@@ -5,6 +5,7 @@ import { type Terrain, terrainHeightAt } from '../map/terrain';
 import { createRng, rngNext } from '../sim/rng';
 import { GPU_POOLS } from './gpuPools';
 import { softDotTexture } from './softDot';
+import { carryNodePatch } from './nodePatch';
 
 /**
  * Fireflies over a wooded field at night (G9, MapDressing.fireflies): soft points hanging low round the bushes and over
@@ -75,15 +76,8 @@ export class Fireflies {
     // The sphere covers every fly's drift, so the whole swarm is culled as one.
     if (geo.boundingSphere) geo.boundingSphere.radius += F.drift + F.size;
     const material = new THREE.PointsMaterial({ size: F.size, map: this.sprite, vertexColors: true, transparent: true, depthWrite: false, sizeAttenuation: true, blending: THREE.AdditiveBlending });
-    material.onBeforeCompile = (shader) => {
-      shader.vertexShader = shader.vertexShader
-        .replace('#include <common>', 'attribute float flyAlpha;\nvarying float vFlyAlpha;\n#include <common>')
-        .replace('#include <begin_vertex>', 'vFlyAlpha = flyAlpha;\n#include <begin_vertex>');
-      shader.fragmentShader = shader.fragmentShader
-        .replace('#include <common>', 'varying float vFlyAlpha;\n#include <common>')
-        .replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.a *= vFlyAlpha;');
-    };
-    material.customProgramCacheKey = () => 'fireflies';
+    // Each fly's pulse (`flyAlpha`) on its alpha.
+    carryNodePatch(material, { kind: 'fireflies' });
     this.object = new THREE.Points(geo, material);
     this.object.name = 'fireflies';
     GPU_POOLS.set(this.object, this);

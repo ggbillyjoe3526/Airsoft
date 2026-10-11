@@ -9,6 +9,7 @@ import { addLighting } from '../lighting';
 import { buildMapMeshes, disposeMapMeshes, mapLookOf } from '../mapMeshes';
 import type { SurfaceTextures } from '../proceduralTextures';
 import { NodeBackend, type NodeBackendOptions, startNode } from './nodeBackend';
+import { nodePatchOf } from '../nodePatch';
 
 /**
  * The node renderer's back end (WebGPU overhaul W1) on a real `WebGPURenderer` from `three/webgpu`, with
@@ -230,7 +231,7 @@ describe('the node library draws every material the field is built with (W1)', (
     (Object.keys(SURFACES.worldSize) as SurfaceTextureId[]).map((id) => [id, { texture: new THREE.Texture() as THREE.CanvasTexture, worldSize: SURFACES.worldSize[id] }]),
   ) as SurfaceTextures;
 
-  it('has a node material for each, an onBeforeCompile patch left out, and none for a GLSL ShaderMaterial', () => {
+  it('has a node material for each, none patched in GLSL, and none for a GLSL ShaderMaterial', () => {
     vi.stubGlobal('document', { createElementNS: () => fakeCanvas(), createElement: () => ({ width: 0, height: 0, getContext: () => null }) });
     const renderer = new WebGPURenderer({ forceWebGL: true, canvas: fakeCanvas() });
     for (const quality of [QUALITY.low, QUALITY.ultra]) {
@@ -245,8 +246,9 @@ describe('the node library draws every material the field is built with (W1)', (
         if (m) for (const one of Array.isArray(m) ? m : [m]) materials.add(one);
       });
       expect(materials.size).toBeGreaterThan(3);
-      // Some are patched through onBeforeCompile on WebGL (surfaces, relief, the sky): the node path draws them plain.
-      expect([...materials].some((m) => m.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile)).toBe(true);
+      // No GLSL patch (W6b): what the surfaces add is the node patch they carry (render/nodePatch.ts), on Medium and up.
+      expect([...materials].some((m) => m.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile)).toBe(false);
+      expect([...materials].some((m) => nodePatchOf(m) !== null)).toBe(quality !== QUALITY.low);
       for (const m of materials) {
         const node = renderer.library.fromMaterial(m);
         expect(node, `${m.type} ${m.name}`).not.toBeNull();

@@ -3,8 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { FIGURE } from '../config/characters';
 import { LOADOUT } from '../config/replicas';
 import { buildFigure, disposeFigure, type Figure, HUMAN_DRESS } from './characterModels';
-import { CAMO_ATTRIBUTE, camoGlsl, camoTone, hasSleeveCamo, SLEEVE_CAMO_SEED, useSleeveCamo } from './figureCamo';
+import { CAMO_ATTRIBUTE, camoTone, hasSleeveCamo, useSleeveCamo } from './figureCamo';
 import { useVertexFinish } from './figureFinish';
+import { nodePatchOf } from './nodePatch';
 import { buildReplicaModels } from './replicaModels';
 
 /**
@@ -37,14 +38,6 @@ function shares(seed: number): Map<number, number> {
   return count;
 }
 
-/** A patched material's shaders, as Three hands them to onBeforeCompile. */
-function compiled(material: THREE.Material): { vertexShader: string; fragmentShader: string } {
-  const lib = THREE.ShaderLib.physical;
-  const shader = { uniforms: {}, defines: {}, vertexShader: lib.vertexShader, fragmentShader: lib.fragmentShader };
-  material.onBeforeCompile(shader as unknown as THREE.WebGLProgramParametersWithUniforms, undefined as unknown as THREE.WebGLRenderer);
-  return shader;
-}
-
 describe('the team camo (G11)', { timeout: 60_000 }, () => {
   it('prints three tones in clear blotches: each of the dark and light covers a fifth to two fifths, with real contrast', () => {
     const C = FIGURE.camo;
@@ -72,17 +65,11 @@ describe('the team camo (G11)', { timeout: 60_000 }, () => {
     expect(changes).toBeLessThanOrEqual(10);
   });
 
-  it('the figure patch prints it per pixel where the vertex names a pattern, blending its edges over a pixel', () => {
-    const { vertexShader, fragmentShader } = compiled(useVertexFinish(new THREE.MeshStandardMaterial()));
-    expect(vertexShader).toContain(`attribute float ${CAMO_ATTRIBUTE};`);
-    expect(vertexShader).toContain(`vCamo = vec4(position, ${CAMO_ATTRIBUTE});`);
-    expect(fragmentShader).toContain('float camoTone(vec3 p,float s)');
-    expect(fragmentShader).toContain('fwidth(n)');
-    expect(fragmentShader).toContain('diffuseColor.rgb*=mix(1.,camoTone(vCamo.xyz,vCamo.w),step(.5,vCamo.w));');
-    // After the vertex colours, so it multiplies them.
-    expect(fragmentShader.indexOf('camoTone(vCamo.xyz')).toBeGreaterThan(fragmentShader.indexOf('#include <color_fragment>'));
-    expect(camoGlsl()).toContain(String(FIGURE.camo.darkAt));
-    expect(camoGlsl()).toContain(String(FIGURE.camo.dark));
+  it('the figure patch prints it per pixel where the vertex names a pattern (drawn by render/webgpu/figureNodes.ts)', () => {
+    const m = useVertexFinish(new THREE.MeshStandardMaterial());
+    expect(nodePatchOf(m)?.patch).toEqual({ kind: 'figure-finish' });
+    expect(CAMO_ATTRIBUTE).toBe('camo');
+    m.dispose();
   });
 
   it('the detailed human wears it on its trousers, shirt and sleeves, a pattern of its own per look; not on gear', () => {
@@ -137,8 +124,7 @@ describe('the team camo (G11)', { timeout: 60_000 }, () => {
     expect(high.length).toBeGreaterThan(0);
     for (const m of high) expect(hasSleeveCamo(m)).toBe(true);
     for (const m of sleeves('low')) expect(hasSleeveCamo(m)).toBe(false);
-    const { fragmentShader } = compiled(useSleeveCamo(new THREE.MeshStandardMaterial()));
+    expect(nodePatchOf(useSleeveCamo(new THREE.MeshStandardMaterial()))?.patch).toEqual({ kind: 'sleeve-camo' });
     expect(FIGURE.camo.sleeve).toBeLessThan(1);
-    expect(fragmentShader).toContain(`camoTone(vCamoPos*${1 / FIGURE.camo.sleeve},${SLEEVE_CAMO_SEED.toFixed(1)})`);
   });
 });

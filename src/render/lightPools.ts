@@ -4,7 +4,6 @@ import { POOL_LIGHTS, type QualitySettings } from '../config/render';
 import type { MapData } from '../map/mapTypes';
 import { groundUnder, type MapLight } from '../map/nightSight';
 import { buildLightFixtures, flicker, flickerSeed } from './lightFixtures';
-import { withoutEnvironment } from './surfaceMaterials';
 
 /**
  * The light pools of a night field drawn (M33f): the camp fires and lanterns of MapData.lights (M33g), on any map that
@@ -143,7 +142,7 @@ function additive(m: THREE.MeshBasicMaterial): THREE.MeshBasicMaterial {
   m.blending = THREE.AdditiveBlending;
   m.depthWrite = false;
   m.fog = false;
-  return withoutEnvironment(m);
+  return m;
 }
 
 /** The ground light of every pool as one mesh, and where each pool's vertices are in it (to dim one under a real light). */

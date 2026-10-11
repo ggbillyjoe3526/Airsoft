@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { GROUND_LOOK, TERRAIN_LOOK } from '../config/render';
 import { GROUND_SURFACES, type GroundGrid } from '../map/groundSurfaces';
 import { type Terrain, terrainMesh, terrainRange } from '../map/terrain';
-import { withoutEnvironment } from './surfaceMaterials';
 
 /**
  * A map's ground drawn (M33i): its grid, the textured material, the tile's size (m) for the world UVs and its mean
@@ -79,7 +78,7 @@ export function buildTerrainMesh(t: Terrain, ground: GroundLook | null = null): 
     geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
   }
   geo.computeBoundingSphere();
-  const mesh = new THREE.Mesh(geo, ground?.material ?? withoutEnvironment(new THREE.MeshLambertMaterial({ vertexColors: true })));
+  const mesh = new THREE.Mesh(geo, ground?.material ?? new THREE.MeshLambertMaterial({ vertexColors: true }));
   mesh.name = 'map-terrain';
   mesh.receiveShadow = true;
   mesh.castShadow = false;

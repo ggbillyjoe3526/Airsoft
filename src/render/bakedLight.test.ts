@@ -11,6 +11,7 @@ import { buildMapMeshes, disposeMapMeshes, type MapLook, mapLookOf, mapNeedsRebu
 import { MapMeshCache } from './mapMeshCache';
 import type { ProbeGrid } from './probeGrid';
 import { CORE_SURFACES, type SurfaceTextures } from './proceduralTextures';
+import { nodePatchOf } from './nodePatch';
 
 /**
  * The baked bounce light in the game (G6): which maps have it, how each preset draws it, and Low's cost unchanged.
@@ -88,7 +89,7 @@ describe('Low: the baked light in the vertex colours, at no per-pixel cost (G6)'
     for (const m of meshes(lit)) {
       const mat = m.material as THREE.MeshLambertMaterial;
       expect(mat).toBeInstanceOf(THREE.MeshLambertMaterial);
-      expect(mat.customProgramCacheKey()).toBe('without-environment');
+      expect(nodePatchOf(mat)).toBeNull();
     }
     expect(lit.userData.probes).toBeUndefined();
   });

@@ -13,6 +13,7 @@ import { buildMapMeshes, disposeMapMeshes, type MapLook, mapLookOf, restyleMap }
 import { MapMeshCache } from './mapMeshCache';
 import type { ProbeGrid } from './probeGrid';
 import type { SurfaceTextures } from './proceduralTextures';
+import { nodePatchOf } from './nodePatch';
 
 /**
  * QA for the baked light's reach and cleanup (G6): which maps take it, that the maps that opt out are built as they were,
@@ -103,7 +104,7 @@ describe('Low’s baked light adds no shader, texture or draw call (G6 QA)', { t
     for (const [i, m] of meshes(lit).entries()) {
       const was = meshes(off)[i]!.material as THREE.MeshLambertMaterial;
       const mat = m.material as THREE.MeshLambertMaterial;
-      expect(mat.onBeforeCompile.toString()).toBe(was.onBeforeCompile.toString());
+      expect(nodePatchOf(mat)).toEqual(nodePatchOf(was));
       expect(mat.map).toBe(was.map);
       expect(mat.normalMap).toBeNull();
       expect(mat.type).toBe('MeshLambertMaterial');

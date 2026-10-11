@@ -9,7 +9,6 @@ import { isInPlay } from '../sim/elimination';
 import { hitTop } from '../sim/hitbox';
 import { lightInHand, torchLit } from '../sim/torch';
 import { lerpAngle, vec3 } from '../sim/vec';
-import { withoutEnvironment } from './surfaceMaterials';
 
 /**
  * Weapon torches drawn (M33h), on any map whose lighting preset has a `torch.beam` above 0 (the night); the day builds
@@ -97,7 +96,7 @@ function buildSoftDisc(segments: number = TORCH_BEAMS.spotSegments): THREE.Buffe
 function lightMaterial(side: THREE.Side): THREE.MeshBasicMaterial {
   const m = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side });
   m.fog = false;
-  return withoutEnvironment(m);
+  return m;
 }
 
 /** An instanced draw for up to `capacity` torches, drawing none until update fills it (no draw call at count 0). */

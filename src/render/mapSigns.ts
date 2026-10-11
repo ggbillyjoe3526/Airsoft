@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { SIGNS } from '../config/render';
 import type { MapData, MapSign } from '../map/mapTypes';
 import { propSigns } from './cityProps';
-import { withoutEnvironment } from './surfaceMaterials';
 
 /**
  * A map's signs and lit windows drawn (M34e, MapData.signs): one mesh of flat panels for all of them, on any map that has
@@ -90,9 +89,9 @@ function signMaterial(night: boolean): THREE.Material {
   if (night) {
     const m = new THREE.MeshBasicMaterial({ vertexColors: true });
     m.fog = false;
-    return withoutEnvironment(m);
+    return m;
   }
-  return withoutEnvironment(new THREE.MeshLambertMaterial({ vertexColors: true }));
+  return new THREE.MeshLambertMaterial({ vertexColors: true });
 }
 
 /** A map's signs in the scene, removed with the match's lighting. */

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { carryNodePatch, nodePatchOf } from './nodePatch';
 import type { SkylinePiece } from '../map/mapTypes';
 import { planeGeometry, planeReach } from './passingPlane';
 import { skylineLights } from './skyline';
@@ -50,31 +51,16 @@ export function tagged(g: THREE.BufferGeometry, part: number): THREE.BufferGeome
 }
 
 /**
- * Makes `mesh` (the ring, merged with its guests) their host: its material learns `skyPart` (on top of the patch it
- * already has), its culling sphere holds every pass of a plane `planeHeight` m up, and with a plane its uniforms are
- * in `mesh.userData.skyPlane`.
+ * Makes `mesh` (the ring, merged with its guests) their host: its material's node patch learns `skyPart` (on top of the
+ * surface patch it may already carry: render/webgpu/surfaceNodes.ts draws both), its culling sphere holds every pass of
+ * a plane `planeHeight` m up, and with a plane its uniforms are in `mesh.userData.skyPlane`.
  */
 export function hostSkyGuests(mesh: THREE.Mesh, planeHeight: number | null): void {
   const material = mesh.material as THREE.MeshLambertMaterial;
   const uniforms: SkyPlaneUniforms = { skyPlane: { value: new THREE.Matrix4() }, skyPlaneUp: { value: 0 } };
-  const before = material.onBeforeCompile;
-  const key = material.customProgramCacheKey();
-  material.onBeforeCompile = (shader, renderer) => {
-    before.call(material, shader, renderer);
-    shader.uniforms.skyPlane = uniforms.skyPlane;
-    shader.uniforms.skyPlaneUp = uniforms.skyPlaneUp;
-    shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', 'attribute float skyPart;\nuniform mat4 skyPlane;\nuniform float skyPlaneUp;\nvarying float vSkyPart;\n#include <common>')
-      // The ring's mesh sits at the world's origin, so the plane's own matrix places it in the world.
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvSkyPart = skyPart;\nif (skyPart > 1.5) transformed = (skyPlane * vec4(transformed * skyPlaneUp, 1.0)).xyz;');
-    shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', 'varying float vSkyPart;\n#include <common>')
-      // Lights and plane unlit: their own colour, as a MeshBasicMaterial draws it.
-      .replace('#include <opaque_fragment>', 'if (vSkyPart > 0.5) outgoingLight = diffuseColor.rgb;\n#include <opaque_fragment>')
-      // The plane is not fogged (it is high and small; fog would wash it out); the lights are, as before.
-      .replace('#include <fog_fragment>', 'vec3 skyUnfogged = gl_FragColor.rgb;\n#include <fog_fragment>\nif (vSkyPart > 1.5) gl_FragColor.rgb = skyUnfogged;');
-  };
-  material.customProgramCacheKey = () => `${key}:sky-host`;
+  const before = nodePatchOf(material);
+  const recipe = before?.patch.kind === 'surface' ? before.patch.recipe : { wear: false, probes: false, junk: null, skyHost: false };
+  carryNodePatch(material, { kind: 'surface', recipe: { ...recipe, skyHost: true } }, { ...before?.uniforms, ...uniforms });
   const geometry = mesh.geometry;
   if (!geometry.boundingSphere) geometry.computeBoundingSphere();
   if (planeHeight !== null) {

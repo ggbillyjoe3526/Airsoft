@@ -5,6 +5,7 @@ import { createRng, rngNext } from '../sim/rng';
 import { length3 } from '../sim/vec';
 import { GPU_POOLS } from './gpuPools';
 import { softDotTexture } from './softDot';
+import { carryNodePatch } from './nodePatch';
 
 /** Wraps `v` into 0..size. */
 const wrap = (v: number, size: number): number => v - Math.floor(v / size) * size;
@@ -95,13 +96,7 @@ export class DustMotes {
       vertexColors: true,
     });
     // Cap the point size: even a faded mote never covers more than a few pixels (at any pixel ratio: setPixelRatio).
-    material.onBeforeCompile = (shader) => {
-      shader.uniforms.moteMaxSize = this.maxSize;
-      shader.vertexShader = `uniform float moteMaxSize;\n${shader.vertexShader}`.replace(
-        '#include <logdepthbuf_vertex>',
-        'gl_PointSize = min(gl_PointSize, moteMaxSize);\n#include <logdepthbuf_vertex>',
-      );
-    };
+    carryNodePatch(material, { kind: 'motes' }, { moteMaxSize: this.maxSize });
     this.object = new THREE.Points(geo, material);
     this.object.name = 'dustMotes';
     GPU_POOLS.set(this.object, this);
