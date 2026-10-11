@@ -4,7 +4,7 @@ Every tunable number and data table, as exported constants with units in the com
 holds no magic numbers.
 
 - Simulation: `sim.ts`, `movement.ts`, `physics.ts`, `hits.ts` (`HITS`, `ROUNDS`), `ballistics.ts` (air, `spinPerHop`,
-  `WIND`), `footsteps.ts`, `modes.ts`, `extraction.ts`, `matchRules.ts` (match rules and `RULESETS`), `range.ts`.
+  `WIND`), `footsteps.ts`, `modes.ts`, `extraction.ts`, `matchRules.ts` (match rules, `RULESETS` and `MODE_FIT`, what fits each mode), `range.ts`.
 - Replicas and gear: `replicas.ts`, `attachments.ts` (grips, magazines, barrels, muzzles), `optics.ts`, `lasers.ts`,
   `torches.ts`; `schemes.ts`, `characters.ts`, `replicaFinish.ts` for how they look. `statsFile.ts` reads `stats.md` and
   `gameStats.ts` holds `GAME_STATS`; the modules above lay it over their built-in numbers (`withStats`, `overlay`).
