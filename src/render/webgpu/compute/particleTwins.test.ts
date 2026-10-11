@@ -97,6 +97,31 @@ describe('ParticleTwins', () => {
     expect(compute.mock.calls[1]![0]).toBe(batch);
   });
 
+  it("builds every pool's pass at the warm-up, the spawns' too, once each (no pipeline first built at a match's first puff, W6a)", () => {
+    const { twins, compute } = setup();
+    const p = pools();
+    twins.scan(p.scene);
+    twins.warm();
+    expect(compute).toHaveBeenCalledTimes(1);
+    expect(compute.mock.calls[0]![0]).toHaveLength(5);
+    // Warmed once: a second warm-up (the same match compiled again) dispatches nothing.
+    twins.warm();
+    expect(compute).toHaveBeenCalledTimes(1);
+    // A pool that comes later is warmed on its own.
+    const later = new ImpactPuffs(IMPACT_PUFFS);
+    p.scene.add(later.object);
+    twins.rescan();
+    twins.scan(p.scene);
+    twins.warm();
+    expect(compute).toHaveBeenCalledTimes(2);
+    expect(compute.mock.calls[1]![0]).toHaveLength(1);
+    // Nothing alive in the spawn pools: the warm-up's dispatch draws nothing.
+    for (const o of [p.puffs.object, p.grit.object]) {
+      const mesh = o.children.find((c) => c.name.endsWith('-gpu')) as THREE.Mesh;
+      expect((mesh.geometry as THREE.InstancedBufferGeometry).instanceCount).toBe(0);
+    }
+  });
+
   it('draws and dispatches nothing for a pool with nothing alive, and draws a spawn until its life is over', () => {
     const { twins, compute } = setup();
     const p = pools();

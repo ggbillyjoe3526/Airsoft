@@ -274,6 +274,7 @@ export class NodeBackend {
     if (this.lighting) this.lighting.world = scene;
     this.rescan();
     this.particles.scan(scene);
+    this.particles.warm();
     this.world.sprites.prepare(scene);
     // The map's grass and stand-ins (W5) are made now, so their pipelines compile with the rest.
     this.quality = quality;

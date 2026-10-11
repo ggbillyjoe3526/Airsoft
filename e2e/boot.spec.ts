@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { renders } from './rendererRow';
 
 /**
  * Smoke test: the built game boots to the title screen with no map loaded, goes through New game (the Map, Match and
@@ -404,10 +405,10 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   // software a frame can take seconds early in a match (Chrome 153 there, where these steps were flaky with 10 s waits;
   // they never failed on Chromium 141 in the container): wait for frames to come, then give each key's result the same
   // CI-sized wait as the fire and reload steps below (keyWait).
-  type Drawn = { airsoft: { renderer: { renderer: { info: { render: { frame: number } } } } } };
-  const framesDrawn = () => page.evaluate(() => (window as unknown as Drawn).airsoft.renderer.renderer.info.render.frame);
-  const drawnAtStart = await framesDrawn();
-  await expect.poll(framesDrawn, { timeout: 60_000 }).toBeGreaterThan(drawnAtStart + 10);
+  // The node renderer counts render() calls, never reset (a frame makes one or more), so the count moving on by ten
+  // says the match is drawing; its `info.frame` only moves under its own animation loop, which the game doesn't use.
+  const drawnAtStart = await renders(page);
+  await expect.poll(() => renders(page), { timeout: 60_000 }).toBeGreaterThan(drawnAtStart + 10);
   const keyWait = { timeout: 30_000 };
   // Holding Tab shows the scoreboard with every player (M19); letting go hides it.
   const board = page.locator('.match-board');

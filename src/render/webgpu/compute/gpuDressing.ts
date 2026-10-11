@@ -48,14 +48,17 @@ export class GpuDressing {
   private tier: GpuDressingTier | null = null;
   private dirty = true;
   private last = Number.NaN;
-  /** The triangles Three counted for both this frame (`triangles`), and its count before the draw under way. */
+  /** The triangles of both drawn this frame (`triangles`). */
   private counted = 0;
-  private before = 0;
-  private readonly countBefore = (renderer: THREE.WebGLRenderer | WebGPURenderer): void => {
-    this.before = (renderer as WebGPURenderer).info.render.triangles;
-  };
-  private readonly countAfter = (renderer: THREE.WebGLRenderer | WebGPURenderer): void => {
-    this.counted += (renderer as WebGPURenderer).info.render.triangles - this.before;
+  /**
+   * Adds a draw of one of them as Three's info counts it (index or vertex count over 3, times the instance count). Not
+   * the info's change across the draw: Three can draw other objects between a mesh's `onBeforeRender` and its own draw
+   * (seen on the WebGL2 back end looking up at 5v5, W6a), which would count theirs as the dressing's.
+   */
+  private readonly countDraw = (_r: unknown, _s: unknown, _c: unknown, geometry: THREE.BufferGeometry): void => {
+    const vertices = geometry.index?.count ?? geometry.getAttribute('position')?.count ?? 0;
+    const instances = (geometry as THREE.InstancedBufferGeometry).instanceCount;
+    this.counted += (vertices / 3) * (Number.isFinite(instances) ? instances : 1);
   };
 
   constructor(
@@ -143,9 +146,8 @@ export class GpuDressing {
     }
   }
 
-  /** Counts what Three counts for `mesh`'s draws: its info's triangles across each draw. */
+  /** Counts what Three counts for each of `mesh`'s draws. */
   private count(mesh: THREE.Mesh): void {
-    mesh.onBeforeRender = this.countBefore;
-    mesh.onAfterRender = this.countAfter;
+    mesh.onAfterRender = this.countDraw;
   }
 }

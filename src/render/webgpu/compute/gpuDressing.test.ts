@@ -77,25 +77,29 @@ describe('GpuDressing', () => {
     const { dressing } = setup();
     const { scene } = sceneOf(WOODLAND);
     dressing.frame(scene, camera, QUALITY.medium);
-    const info = { render: { triangles: 0 } };
-    const r = { info } as unknown as THREE.WebGLRenderer;
+    const r = { info: { render: { triangles: 0 } } } as unknown as THREE.WebGLRenderer;
     const grass = scene.getObjectByName('grass-gpu') as THREE.Mesh;
     const forest = scene.getObjectByName('forest-gpu') as THREE.Mesh;
-    // What Three does round a draw: onBeforeRender, the backend counts it into info, onAfterRender.
-    const draw = (mesh: THREE.Mesh | null, triangles: number) => {
-      mesh?.onBeforeRender(r, scene, camera, mesh.geometry, mesh.material as THREE.Material, null as never);
-      info.render.triangles += triangles;
-      mesh?.onAfterRender(r, scene, camera, mesh.geometry, mesh.material as THREE.Material, null as never);
+    const drawn = (mesh: THREE.Mesh) => {
+      const g = mesh.geometry as THREE.InstancedBufferGeometry;
+      return ((g.index?.count ?? g.getAttribute('position').count) / 3) * g.instanceCount;
     };
-    draw(null, 5000);
-    draw(grass, 125_856);
-    draw(forest, 1800);
-    draw(grass, 125_856);
+    // What Three does round a draw: onBeforeRender, the backend draws it (and, on the WebGL2 back end, sometimes other
+    // objects first: none of theirs counts), onAfterRender.
+    const draw = (mesh: THREE.Mesh) => {
+      mesh.onBeforeRender(r, scene, camera, mesh.geometry, mesh.material as THREE.Material, null as never);
+      mesh.onAfterRender(r, scene, camera, mesh.geometry, mesh.material as THREE.Material, null as never);
+    };
+    draw(grass);
+    draw(forest);
+    draw(grass);
+    expect(drawn(grass)).toBe(125_856);
+    expect(drawn(forest)).toBe(1800);
     expect(dressing.triangles).toBe(2 * 125_856 + 1800);
     // A new frame starts from nothing.
     dressing.frame(scene, camera, QUALITY.medium);
     expect(dressing.triangles).toBe(0);
-    draw(forest, 1800);
+    draw(forest);
     expect(dressing.triangles).toBe(1800);
   });
 

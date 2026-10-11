@@ -32,6 +32,7 @@ import { basicTwin, type Facing, facing, facingCorner, hangUnder, quads } from '
 
 /** One CPU module's GPU driver. */
 interface Driver {
+  readonly pass: ComputeNode; // the pool's pass
   /** Once a frame before the draws: the pass to dispatch this frame, or null when nothing moved. */
   frame(): ComputeNode | null;
   dispose(): void;
@@ -48,6 +49,7 @@ export class ParticleTwins {
   /** This frame's passes, reused: nothing allocated per frame. */
   private readonly batch: ComputeNode[] = [];
   private dirty = true;
+  private readonly warmed = new WeakSet<Driver>(); // the drivers whose pass `warm` built
 
   constructor(private readonly renderer: WebGPURenderer) {}
 
@@ -86,6 +88,13 @@ export class ParticleTwins {
     // Shrunk only when fewer pools move than last frame: the array keeps its store.
     if (batch.length !== n) batch.length = n;
     if (n > 0) void this.renderer.compute(batch);
+  }
+
+  /** Builds each new pool's pass at the warm-up compile, in one dispatch: a spawn pool's would else be built mid-match. */
+  warm(): void {
+    const fresh = this.list.filter((d) => !this.warmed.has(d));
+    for (const d of fresh) this.warmed.add(d);
+    if (fresh.length > 0) void this.renderer.compute(fresh.map((d) => d.pass));
   }
 
   /** How many pools have a driver (tests, the debug checks). */
@@ -164,7 +173,7 @@ class MotesDriver implements Driver {
   private readonly drift = uniform(new THREE.Vector3());
   private readonly eye = uniform(new THREE.Vector3());
   private readonly hangsLow = uniform(0);
-  private readonly pass: ComputeNode;
+  readonly pass: ComputeNode;
   private readonly seeds: Node;
   private readonly twin: PointTwin;
   private moved = false;
@@ -219,7 +228,7 @@ class FirefliesDriver implements Driver {
   private readonly drifts: Node;
   private readonly time = uniform(0);
   private readonly still = uniform(0);
-  private readonly pass: ComputeNode;
+  readonly pass: ComputeNode;
   private readonly twin: PointTwin;
   private moved = true;
   private motion = true;
@@ -280,7 +289,7 @@ class PlumesDriver implements Driver {
   private readonly time = uniform(0);
   private readonly wind = uniform(new THREE.Vector2());
   private readonly face: Facing = facing();
-  private readonly pass: ComputeNode;
+  readonly pass: ComputeNode;
   private readonly mesh: THREE.Mesh;
   private readonly unhang: () => void;
   private readonly unlisten: () => void;
@@ -381,7 +390,7 @@ abstract class SpawnDriver implements Driver {
   /** The storage buffers the CPU writes (sent again in the frame after a spawn). */
   protected abstract readonly records: readonly Node[];
   /** The pool's pass. */
-  protected abstract readonly pass: ComputeNode;
+  abstract readonly pass: ComputeNode;
 
   /** A spawn: slot `slot` is born now. */
   protected born(slot: number): void {
@@ -449,7 +458,7 @@ class PuffsDriver extends SpawnDriver {
   private readonly push: Node;
   private readonly tint: Node;
   private readonly drawn: Node;
-  protected readonly pass: ComputeNode;
+  readonly pass: ComputeNode;
   protected readonly records: readonly Node[];
 
   constructor(renderer: WebGPURenderer, private readonly owner: ImpactPuffs, gone: () => void) {
@@ -519,7 +528,7 @@ class GritDriver extends SpawnDriver {
   private readonly at: Node;
   private readonly flying: Node;
   private readonly dt = uniform(0);
-  protected readonly pass: ComputeNode;
+  readonly pass: ComputeNode;
   protected readonly records: readonly Node[];
 
   constructor(renderer: WebGPURenderer, private readonly owner: ImpactGrit, gone: () => void) {
