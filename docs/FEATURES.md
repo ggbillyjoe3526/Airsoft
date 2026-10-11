@@ -47,7 +47,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 ## Bots
 
 - Bots patrol lanes, spot, react with a human delay, shoot with inaccuracy, take cover, keep apart from teammates and
-  search (Phase 1, FA4)
+  search; hunters check spots by eye, share what their team has checked and turn away from a goal the team has already checked (Phase 1, FA4, M87)
 - Difficulty levels Easy, Normal and Hard, picked for your teammates and the other team separately; each changes
   reactions, aim and tactics (cover, flanking); all hunt the map's middle once their lane is swept; Normal and Hard hold
   their posts out of lantern light at night (M4a, M20, FA4, M71)
@@ -92,8 +92,10 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Depot: an asymmetric 50 × 32 m yard with Container Alley, the Office, a raised loading dock with ramps, site props and
   one flagpole; both ends about as far from the dock and the Main Gate (M1, M11, M25b, FA4)
 - Woodland: a 120 × 80 m field on a gentle slope up to the Knoll and its log fort, with three lanes (Pine Belt, Meadow,
-  Creek with the cabin), trees, boulders and logs; 4v4 by default, up to 5v5; dev content, playable with the Dev content
-  switch on, and its matches aren't recorded or paid (M33d, M35)
+  Creek with the cabin), trees, boulders and logs; both teams start hidden behind cover (a West Rise, thick trees), the
+  blue end's height edge is smaller, and the lanes stop at two points in the fort; 5v5 by default, 6v6 allowed, only 5v5
+  and 6v6 offered; dev content, playable with the Dev content switch on, and its matches aren't recorded or paid (M33d,
+  M35, M88)
 - Sloping ground (terrain) for maps: walkable slopes and hills, BBs stop in earth with no bounce; first used by Woodland
   (M33c)
 - Bushes on any map that lists them: bots can't see someone deep in or behind one, BBs and people pass through, drawn on
