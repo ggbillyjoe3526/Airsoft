@@ -410,7 +410,7 @@ type SoundView = {
   airsoft: {
     state: { tick: number } | null;
     audio: { ctx: { state: string } | null; buffers: Map<string, { length: number }[]>; loops: Map<string, { length: number }> };
-    session: { combat: { sfx: { bed: { loop: boolean; buffer: { length: number } }[]; scene: { fires: unknown[]; ambience: { call: { cue: string } | null } } } } };
+    session: { combat: { sfx: { bed: { loop: boolean; buffer: { length: number } }[]; scene: { fires: unknown[]; ambience: { calls: { cue: string }[] } } } } };
   };
 };
 
@@ -443,7 +443,7 @@ test('Woodland sounds like the woods at night: its beds, fires, owl and ground s
   const heard = await page.evaluate(() => {
     const { audio, session } = (window as unknown as SoundView).airsoft;
     const sfx = session.combat.sfx;
-    const mapCues = [...audio.buffers.keys()].filter((c) => /^step\.(grass|leaves|earth|gravel|wood)\./.test(c) || c === 'ambience.owl');
+    const mapCues = [...audio.buffers.keys()].filter((c) => /^step\.(grass|leaves|earth|gravel|wood)\./.test(c) || c === 'ambience.owl' || c === 'ambience.creak');
     const bytes = (n: number): number => n * 4;
     const cueBytes = mapCues.reduce((sum, c) => sum + audio.buffers.get(c)!.reduce((s, b) => s + bytes(b.length), 0), 0);
     const loopBytes = [...audio.loops.values()].reduce((sum, b) => sum + bytes(b.length), 0);
@@ -452,7 +452,7 @@ test('Woodland sounds like the woods at night: its beds, fires, owl and ground s
       loops: [...audio.loops.keys()].sort(),
       playing: sfx.bed.filter((s) => s.loop).length,
       fires: sfx.scene.fires.length,
-      call: sfx.scene.ambience.call?.cue ?? null,
+      calls: sfx.scene.ambience.calls.map((c) => c.cue),
       mapCues: mapCues.length,
       megabytes: (cueBytes + loopBytes) / 1e6,
     };
@@ -461,8 +461,9 @@ test('Woodland sounds like the woods at night: its beds, fires, owl and ground s
   expect(heard.loops).toEqual(['crackle', 'insects', 'pines']);
   expect(heard.fires).toBe(2);
   expect(heard.playing).toBe(4 + heard.fires);
-  expect(heard.call).toBe('ambience.owl');
-  expect(heard.mapCues).toBe(16);
+  // The owl and, since M86, a branch creaking in the wind.
+  expect(heard.calls).toEqual(['ambience.owl', 'ambience.creak']);
+  expect(heard.mapCues).toBe(17);
   expect(heard.megabytes).toBeLessThan(7.5);
   expect(errors).toEqual([]);
 });

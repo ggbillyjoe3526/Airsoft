@@ -3,7 +3,7 @@ import { FIGURE } from '../config/characters';
 import * as THREE from 'three';
 import { HITS } from '../config/hits';
 import { createCharacter } from '../sim/character';
-import { characterHitVolume, createHitVolume, type VerticalCapsule } from '../sim/hitbox';
+import { characterHitVolume, createHitVolume, inflateHitVolume, rayCharacter } from '../sim/hitbox';
 import { leanOffset } from '../sim/lean';
 import { vec3 } from '../sim/vec';
 import { figureLeanRoll } from './characterModels';
@@ -76,8 +76,7 @@ describe('figureLeanRoll', () => {
 });
 
 describe('a leaning figure and its hit volume', () => {
-  /** Distance from a point to a vertical capsule's surface (negative inside). */
-  const toCapsule = (p: THREE.Vector3, c: VerticalCapsule) => Math.hypot(p.x - c.x, p.y - Math.max(c.y0, Math.min(c.y1, p.y)), p.z - c.z) - c.r;
+  const up = vec3(0, 1, 0);
 
   it('keep the drawn torso inside the hit volume at any lean, so a BB on the visible body counts', () => {
     const volume = createHitVolume();
@@ -88,6 +87,7 @@ describe('a leaning figure and its hit volume', () => {
         c.lean = lean;
         c.crouchAmount = crouch;
         characterHitVolume(c, HITS, volume);
+        inflateHitVolume(volume, 0.02);
         const root = new THREE.Object3D();
         root.rotation.y = c.yaw;
         const upper = new THREE.Object3D();
@@ -98,8 +98,8 @@ describe('a leaning figure and its hit volume', () => {
         // Points down the middle of the torso and across the shoulders (in the upper body's own frame).
         for (const [x, y] of [[0, t.height * 0.5], [0, t.height], [t.width * 0.3, t.height * 0.85], [-t.width * 0.3, t.height * 0.85]] as const) {
           const p = new THREE.Vector3(x, t.bottom - FIGURE.hipHeight + y, 0).applyMatrix4(upper.matrixWorld);
-          const inside = Math.min(toCapsule(p, volume.body), toCapsule(p, volume.shoulder), toCapsule(p, volume.head));
-          expect(inside, `lean ${lean}, crouch ${crouch}, torso point (${x}, ${y})`).toBeLessThanOrEqual(0.02);
+          // A ray starting inside the volume (grown by 2 cm) meets it at once.
+          expect(rayCharacter(vec3(p.x, p.y, p.z), up, 1, volume), `lean ${lean}, crouch ${crouch}, torso point (${x}, ${y})`).toBe(0);
         }
       }
     }

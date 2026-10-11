@@ -10,6 +10,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Lean left and right with Q and E to peek round cover; leaning slows you to walking pace (M7b)
 - Accuracy by stance and movement: steadier crouched and still, worse walking, running or in the air; crouch-walking is
   slightly less accurate than standing still (M10, FA1)
+- Walking while aiming: hold Shift while aiming and you creep slower than the aiming pace (M84)
 
 ## Replicas and BBs
 
@@ -25,7 +26,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - BB weight from 0.20 to 0.30 g per replica, with the speed, reach and flight time shown (M17a, M26b)
 - Wind: a light breeze each match drifts BBs downwind; dust in the air drifts with it too (M30)
 - A limited set of magazines each round; a reload swaps in the fullest spare, no topping up (M8)
-- Optics: iron sights, a red dot or a 2× scope; aiming down sights with right click, at its own sensitivity (M12b, M17b)
+- Optics: iron sights on every replica, a red dot or a 2× scope on top; aiming down sights with right click, at its own sensitivity; aimed fire twice as tight as hip fire (M12b, M17b, M84)
 - Grips (vertical, angled) and magazines (hi-cap, low-cap, the pistol's extended one) trade handling for noise and sway
   (M17b)
 - A laser module and a choice of power source on the pistol, from the pool (M26b)
@@ -38,6 +39,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 
 - One hit and you're out: a tick, a hit marker, hand up, walk to the dead zone, then spectate your team (Phase 1)
 - Bots always call their hits (Phase 1)
+- BBs stop at the first body they hit; hit areas follow the drawn figure in every pose; a BB that hits a player already out knocks on the body (M85)
 - Friendly fire, on by default, as a match setting (Phase 1, M20)
 - Hit flinch, impact puffs that show at once and a crosshair that opens with your real spread (M3, M10, M28)
 
@@ -80,8 +82,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - 3v3 by default with a round clock; first to 5 rounds wins; a whistle starts each round (Phase 1)
 - Custom matches: rounds to win, round time, 1v1 to 3v3 (to 5v5 on maps with room, M33d), friendly fire, ricochets; only
   the standard match counts for the records (M20)
-- Rules: Skirmish, Tournament and Pro CQB (dev) and Custom; named rulesets keep their own records, Custom never counts
-  (M39)
+- Rules: Skirmish, Tournament and Pro CQB (dev) and Custom; Extraction offers Skirmish and Custom only; named rulesets keep their own
+  records, Custom never counts; a setting hidden for a mode is ignored (M39, M89)
 
 ## Maps
 
@@ -196,9 +198,9 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Sounds you can locate by ear, muffled through walls and when eliminated; BB impacts sound by material; world sounds
   carry further (M13, FA6)
 - Getting hit and the round and match whistles briefly dip the rest of the mix (FA6)
-- Outdoor ambience with distant birds plays during play (FA6)
+- Outdoor ambience with distant birds plays during play (FA6); rare, distant crows, dogs, pigeons, a creaking branch and a car horn by map (M86)
 - Pause fades audio in 30 ms; hint when the browser blocks audio (FA6)
-- Master, effects and interface volume sliders (M13)
+- Master, effects, ambience and interface volume sliders; ambience turns only the field's background down (M13, M86)
 
 ## Graphics and art
 

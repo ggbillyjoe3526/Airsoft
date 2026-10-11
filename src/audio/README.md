@@ -12,13 +12,15 @@ and never changes the simulation.
   one channel per other character (an HRTF panner that follows them, then muffling by two rays, `occlusion.ts`); one-off
   world sounds get a panner of their own.
 - `audioMix.ts`: buses master, effects (in-world, with the field's echo) and interface (hit tick, hit marker, whistle,
-  dry), set by Settings › Audio. The limiter and ducking sit on effects only.
+  dry), set by Settings › Audio. The limiter and ducking sit on effects only. The Ambience slider (M86) has no bus: each
+  match's ambience (beds, fires, calls) plays into its world through one gain the engine holds at the slider's level
+  (`AudioEngine.ambienceLevel`), so it is muffled and echoed like the rest, under Effects too.
 - `motor.ts` (an AEG winds up and down), `foley.ts` (crouch, stand and lean rustle; presentation only),
   `soundMaterials.ts` (BB impacts by block material), `whistle.ts`, `voiceLimit.ts`.
-- `ambience.ts` (seeded outdoor bed and birds) and `soundscape.ts` (pure: picks a field's ambience by day or night from
+- `ambience.ts` (seeded outdoor bed, and the calls: each kind of a field's calls on its own seeded gaps, M86) and `soundscape.ts` (pure: picks a field's ambience by day or night from
   its map data and the lighting preset's night flag).
 - Tuning: `config/audio.ts` (`AUDIO`, `AMBIENCES`, `AMBIENT_LOOPS`), `config/sounds.ts` (recipes, `MAP_CUE_SEEDS`). A
   field's own sounds stay within about 7 MB, and every map sound a page may keep within 12 MB.
 - Tests: `audio.test.ts`, `sfx.test.ts`, `voiceLimit.test.ts`, `woodlandSound.test.ts` (pins the title cues' stream and
-  samples), `citySound.test.ts`. `loopSeamSupport.ts` is test support: it measures how a loop closes where it wraps (the
+  samples), `citySound.test.ts`, `ambienceM86.test.ts`. `loopSeamSupport.ts` is test support: it measures how a loop closes where it wraps (the
   loop tests bound it by fixed percentiles of the loop's own); `loopSeamSupport.test.ts` shows it fails on a click.

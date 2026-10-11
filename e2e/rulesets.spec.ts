@@ -1,8 +1,8 @@
 import { expect, type Page, test } from '@playwright/test';
 
 /**
- * Audit 2 CORE-15: the dev content paths no other spec starts in a real browser. A Tournament Extraction run on Depot
- * with Retro pixels on, and a Pro CQB match against Pro opponents (whose "what got you" card is on by default). Each
+ * Audit 2 CORE-15: the dev content paths no other spec starts in a real browser. A Custom-rules Extraction run on Depot
+ * with Retro pixels on (Extraction offers Skirmish and Custom only, M89), and a Pro CQB match against Pro opponents (whose "what got you" card is on by default). Each
  * boots once, plays a few ticks and reads the match through the e2e build's `window.airsoft` (its diagnostics report
  * names the rules, the run and the retro look), with no console error.
  */
@@ -51,7 +51,7 @@ async function playAndWait(page: Page): Promise<void> {
   await expect.poll(() => page.evaluate(() => (window as unknown as Airsoft).airsoft.state?.tick ?? 0), { timeout: 60_000 }).toBeGreaterThan(10);
 }
 
-test('a Tournament Extraction run on Depot with Retro pixels on starts, and its report names the rules, the run and the look', async ({ page }) => {
+test('a Custom-rules Extraction run on Depot with Retro pixels on starts, and its report names the rules, the run and the look', async ({ page }) => {
   test.setTimeout(180_000);
   const errors: string[] = [];
   await newGameWithDevContent(page, errors, true);
@@ -59,7 +59,10 @@ test('a Tournament Extraction run on Depot with Retro pixels on starts, and its 
   const extraction = setup.getByRole('group', { name: 'Mode', exact: true }).getByRole('button', { name: /Extraction/i });
   await extraction.click();
   await expect(extraction).toHaveAttribute('aria-pressed', 'true');
-  await pickRules(page, 'Tournament');
+  // Tournament and Pro CQB don't fit a run (M89): the Rules row leaves them out.
+  const rules = setup.locator('.match-panel').getByRole('group', { name: 'Rules' });
+  await expect(rules.getByRole('button', { name: 'Tournament' })).toBeHidden();
+  await pickRules(page, 'Custom');
   await playAndWait(page);
 
   const seen = await page.evaluate(() => {
@@ -68,7 +71,7 @@ test('a Tournament Extraction run on Depot with Retro pixels on starts, and its 
   });
   expect(seen.mode).toBe('extraction');
   expect(seen.report).toContain('Map: Depot');
-  expect(seen.report).toContain('Rules: tournament');
+  expect(seen.report).toContain('Rules: custom');
   expect(seen.report).toMatch(/Run: running, exits open \d+\/\d+/);
   expect(seen.report).toMatch(/Retro pixels: \d+ px, \d+ levels/);
   expect(seen.retroAngle).toBeGreaterThan(0);

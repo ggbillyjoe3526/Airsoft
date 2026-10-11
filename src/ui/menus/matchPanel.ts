@@ -14,6 +14,7 @@ import {
   type RuleSwitch,
   RULESETS,
   type RulesetId,
+  rulesetFits,
   TEAM_SIZE_CHOICES,
   TIME_OUT_CHOICES,
   WINS_NEEDED_CHOICES,
@@ -46,13 +47,15 @@ export interface MatchShown {
 /**
  * The Play screen's Match section (M20, M39; G3 brought it out of its pop-up): the Rules row, then the rules the
  * ruleset leaves to you (rounds to win, round time, team size, friendly fire, ricochets, then the switches), then the
- * bots' difficulty for each side. A row shows only while the ruleset as played leaves its rule to you.
+ * bots' difficulty for each side. A row shows only while the ruleset as played leaves its rule to you and the mode
+ * reads it, and the Rules row offers only the rulesets that fit the mode (M89).
  */
 export class MatchPanel {
   readonly root: HTMLDivElement;
   private readonly switchRows: { field: keyof MatchRules; row: HTMLElement }[] = [];
   /** The pickers whose options may be dev content (M35), with the pick each shows as it plays. */
   private readonly tagged: { picker: OptionPicker<string>; played: (p: NewGamePicks) => string }[] = [];
+  private readonly rules: OptionPicker<RulesetId>;
   private readonly teamSize: OptionPicker<string>;
   private readonly opponents: OptionPicker<Difficulty>;
   private readonly teammates: OptionPicker<Difficulty>;
@@ -63,6 +66,7 @@ export class MatchPanel {
     const changed = (): void => model.setRules({ ...m });
     const p = model.picks();
     const rules = this.tag(new OptionPicker('Rules', RULESETS, p.ruleset, 'ruleset', (r) => model.setRuleset(r)), (q) => q.ruleset);
+    this.rules = rules;
     /** A two-way switch row for rule `field` (M39). */
     const toggle = <T extends string>(field: RuleSwitch, label: string, help: string, choices: readonly { id: T; label: string; blurb: string }[], save: Parameters<typeof saveSetting>[0], on: T, off: T): HTMLElement =>
       this.switchRow(
@@ -148,7 +152,9 @@ export class MatchPanel {
   /** The rows as the picks play: the ones the ruleset leaves to you, the sizes the map has room for, the dev options. */
   refresh(shown: MatchShown): void {
     const raw = this.model.picks();
-    for (const s of this.switchRows) s.row.hidden = !offersRow(shown.played.ruleset, s.field, shown.run);
+    // Only what fits the mode as played (M89): its rulesets, and the rows it reads.
+    this.rules.limit((r) => rulesetFits(shown.played.mode, r));
+    for (const s of this.switchRows) s.row.hidden = !offersRow(shown.played.ruleset, s.field, shown.played.mode);
     this.teamSize.limit((id) => Number(id) <= shown.sizeMax);
     // The teammates may have followed the opponents' level (M20): shown, not saved.
     this.opponents.show(raw.difficulty);

@@ -54,6 +54,12 @@ export interface Character {
   lean: number;
   /** Lean at the start of the last tick, for render interpolation. */
   prevLean: number;
+  /**
+   * The walk cycle's phase (radians, M85): grows with the ground covered (HITS.legs.stridesPerMetre), so the legs'
+   * hit volumes and the drawn legs swing together (sim/hitbox.ts legSwing). `prevWalkCycle` is last tick's, for drawing.
+   */
+  walkCycle: number;
+  prevWalkCycle: number;
   /** View angles at the start of the last tick, for render interpolation of turning. */
   prevYaw: number;
   prevPitch: number;
@@ -80,10 +86,12 @@ export interface Character {
   /** Seconds standing still on the ground so far (0 while moving or in the air); steadies the aim (sim/accuracy.ts). */
   stillTime: number;
   /**
-   * Aiming down the sights of the replica in hand (sim/aiming.ts): only with an optic fitted, and it slows you to
-   * walking pace. Bots never aim down sights.
+   * Aiming down the sights of the replica in hand (sim/aiming.ts): its iron sights or a fitted optic, and it slows you
+   * to walking pace. Bots never aim down sights.
    */
   aiming: boolean;
+  /** How far the sight is raised to the eye (0..1, sim/aiming.ts): the aimed accuracy eases in with it (M84). */
+  aimRaise: number;
   /** Holding the Use key this tick while in play (M44: opens a case in Extraction). Bots never use it. */
   using: boolean;
   /** Seconds left in which a sprint's or a jump's shake still settles slowly (sim/accuracy.ts); 0 = locks on fast. */
@@ -136,6 +144,8 @@ export function createCharacter(
     prevCrouchAmount: 0,
     lean: 0,
     prevLean: 0,
+    walkCycle: 0,
+    prevWalkCycle: 0,
     prevYaw: yaw,
     prevPitch: 0,
     grounded: false,
@@ -153,6 +163,7 @@ export function createCharacter(
     stillTime: 0,
     shakeCarry: 0,
     aiming: false,
+    aimRaise: 0,
     using: false,
     armament: createArmament(loadout),
     ghost: false,
@@ -204,6 +215,8 @@ export function respawnCharacter(c: Character): void {
   c.prevCrouchAmount = 0;
   c.lean = 0;
   c.prevLean = 0;
+  c.walkCycle = 0;
+  c.prevWalkCycle = 0;
   c.grounded = false;
   c.jumpCooldown = 0;
   c.jumpWanted = 0;
@@ -219,6 +232,7 @@ export function respawnCharacter(c: Character): void {
   c.stillTime = 0;
   c.shakeCarry = 0;
   c.aiming = false;
+  c.aimRaise = 0;
   c.torchOn = false;
   c.torchTime = 0;
   c.grace = 0;

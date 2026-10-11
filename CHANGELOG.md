@@ -33,6 +33,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **RM2** · Y inspects the replica in your hands: it turns side on as parts move, with clicks; firing, hits, reloads, sprinting or aiming stop it
 - **RM2** · AEG charging handle pulls back and the hop-up cover opens (3 s); pistols do a press or battery check (2 s); a shot leaves from the normal hold
 - **W5** · On WebGPU at Medium and up, Woodland's meadows grow swaying grass and a deep wood stands beyond the fence
+- **M86** · Rare, distant background sounds: a crow and a dog at Depot and the range, a creak in Woodland at night, pigeons and a car horn on Neon Heights
+- **M84** · Iron sights on every replica: right click lines the view up with the sights when no optic is fitted; a red dot or scope sits on top
 
 ### Changed
 - **M71** · Bots hunt the map's middle once their lane is swept (now all levels, not just Pro); Normal and Hard hold their posts out of lantern light at night (#133)
@@ -71,6 +73,10 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **G12** · BBs bounce off concrete and steel with less speed, so with Ricochets count on fewer bounced BBs knock players out (about a fifth of hits, down from about a quarter)
 - **W4** · On WebGPU the screen effects look as on WebGL on every preset (bloom, ambient occlusion, temporal smoothing, light shafts, reflections, grain)
 - **M101** · New Cyber Pistol model, drawn in Blender: a smoother white slab with chamfered edges, glow lines and core, in your hands and the menu pictures
+- **M86** · New Ambience slider in Settings › Audio, between Effects and Interface: turns the field's background down; Effects still turns the world down
+- **M89** · Match settings fit the mode: no Tournament or Pro CQB in Extraction (a saved pick plays as Skirmish), no Time-out in Attack and Defend
+- **M89** · A setting hidden for a mode no longer changes the match or keeps an Extraction run out of your records
+- **M84** · Aimed fire is twice as tight as hip fire; holding Shift while aiming creeps slower than the aiming pace
 
 ### Fixed
 - **G11** · The team camo on players reads clearly on Medium and up: crisp dark and light blotches printed per pixel, on WebGL and WebGPU; Low keeps plain clothes
@@ -99,6 +105,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **W4** · On WebGPU the Dev retro filter works, and at Low the far haze shades as on WebGL
 - **M101** · Bots and other players show the Cyber Pistol's own shape instead of a plain pistol
 - **RM3** · Item pictures in the menus fit their slots whole: the Armory's pictures and Customise's large replica picture are no longer cut off at the top and bottom
+- **M85** · BBs stop at the first body they hit; hit areas match the drawn figure in every pose; a BB that hits a player already out knocks on the body
 
 ### Internal
 - **G8** · Set dressing never collides or blocks sight: Depot's colliders, routes, cover and bot sight are tested identical with and without it (#136)
@@ -122,6 +129,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **RM1** · Replica parts live in their own model folder, with a file budget per replica
 - **RM2** · Model files' magazine animation tracks are read, so an animation can slide a magazine (the Cyber Pistol's battery check)
 - **W5** · On WebGPU particles move on the graphics card; the WebGPU comparison adds Woodland's grass and stand-in views
+- **CT1** · Content toolkit part 1: rulebooks per content kind, and one command that checks a replica or part in four levels and writes a one-page report
 
 ## 0.1 Dev 4 · 2026-10-06
 

@@ -29,7 +29,7 @@ function needs(ambience: Ambience, fires: readonly Vec3[], ground: GroundGrid | 
   const loops: LoopId[] = ambience.beds.map((b) => b.loop);
   if (fires.length > 0) loops.push(FIRE_SOUND.loop);
   const wanted: SoundCue[] = [];
-  if (ambience.call) wanted.push(ambience.call.cue);
+  for (const call of ambience.calls) wanted.push(call.cue);
   if (ground) {
     // Only the surfaces the grid holds: a map of grass and earth renders no gravel.
     const present = new Set(ground.surface);

@@ -201,7 +201,7 @@ export class AmbientCalls {
   private next: number;
 
   constructor(
-    private readonly spec: AmbientCallSpec,
+    readonly spec: AmbientCallSpec,
     seed: number = spec.seed,
   ) {
     this.rand = seededRandom(seed);

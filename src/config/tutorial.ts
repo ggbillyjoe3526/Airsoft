@@ -30,7 +30,7 @@ export interface TutorialStep {
   title: string;
   text: string;
   goal: TutorialGoal;
-  /** Played instead when the replica in hand can't aim down a sight (no optic fitted: iron sights out of the box). */
+  /** Played instead when the replica in hand can't aim down a sight (neither an optic nor iron sights; since M84 every replica has iron sights). */
   withoutOptic?: Omit<TutorialStep, 'withoutOptic'>;
   /** Said after `text` only while the Armory is on (M83: with Disable Armory the tutorial never names it). */
   armory?: string;
