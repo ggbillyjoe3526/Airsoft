@@ -14,6 +14,20 @@ Every block below carries note 19: tune on Normal, then check that Easy, Hard an
 first guesses; the build thread confirms them before it starts. The owner ruled on every conflict on 2026-10-06
 (ROADMAP, under the playtest table).
 
+## W6a · One renderer: the old WebGL path deleted, perf lines per back end (WebGPU overhaul step 6, part 1)
+tier: core
+perf: required
+touches: src/render/, src/config/post.ts, src/config/renderBackend.ts, src/game.ts, pipeline/
+contract: The renderer back end, QualitySettings
+acceptance:
+  1. The node renderer draws every preset and view (game, item pictures, retro); WebGL means its WebGL2 back end, used when the browser has no WebGPU, the player picks it, or a lost GPU gives no new device.
+  2. The old WebGLRenderer path, its GLSL post passes and its retro filter are deleted; the tests that compared against them read recorded values, and the picture compare draws against a build of the last commit that had them.
+  3. The perf harness and gate run each matrix entry on the back end it names, budgets take per back-end lines, and Woodland's node triangles are guarded by lines set from measurements on both back ends.
+  4. The container baselines are re-recorded for both back ends; Low gets no more expensive.
+  5. Chunks stay within their budgets; the owed DECISIONS lines (W3, W4, W5, G12, the Renderer row) are written.
+status: open
+attempts: 0
+
 ## M80 · The tutorial shows what it teaches (playtest note 1)
 tier: ui
 perf: skip
