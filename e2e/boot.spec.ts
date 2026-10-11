@@ -387,7 +387,6 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(setup.locator(':focus')).toHaveCount(1); // the keyboard is back on the Play screen
 
   const teamCss = () => page.evaluate(() => getComputedStyle(document.getElementById('app')!).getPropertyValue('--team-1').trim());
-  const standardOrange = await teamCss(); // the stylesheet's until a match applies the picked set
   await setup.getByRole('button', { name: 'Start match', exact: true }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 10_000 });
   expect(await matchLoaded()).toBe(true);
@@ -395,9 +394,8 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(page.locator('.hud-replica-name')).toHaveText(/AEG rifle/i);
   await expect(page.locator('.hud .hud-crosshair')).toHaveClass(/\bshape-circle\b/);
   // The match wears the High contrast colours on the HUD, and the sound cue ring is up.
-  const matchOrange = await teamCss();
-  expect(matchOrange).toMatch(/^#[0-9a-f]{6}$/);
-  expect(matchOrange).not.toBe(standardOrange);
+  // The menus already wear the picked set (M98: the Your team dots), and the match keeps it: High contrast's HUD orange.
+  expect(await teamCss()).toBe('#e0601a');
   await expect(page.locator('.sound-cues')).not.toHaveAttribute('hidden');
   // The keys below act on the frames after they're pressed, so the match must be drawing first. On a CI runner in
   // software a frame can take seconds early in a match (Chrome 153 there, where these steps were flaky with 10 s waits;
