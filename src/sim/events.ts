@@ -19,8 +19,11 @@ export type GameEvent =
   | { type: 'torch'; characterId: number; on: boolean }
   /** The fire selector moved to `mode`. */
   | { type: 'fireMode'; characterId: number; replicaId: string; mode: FireMode }
-  /** A BB hit level geometry; `ownerId` fired it. */
-  | { type: 'bbImpact'; position: Vec3; ownerId: number }
+  /**
+   * A BB hit level geometry; `ownerId` fired it. `bodyId` is set when it stopped on a body that couldn't be knocked out
+   * (M85: already hit, a teammate with friendly fire off, a cease-fire, a grace): a soft knock on that body, no dust.
+   */
+  | { type: 'bbImpact'; position: Vec3; ownerId: number; bodyId?: number }
   /** A character's footstep or landing, heard at its feet (walking and crouched moves are silent). */
   | { type: 'footstep'; characterId: number; kind: FootstepKind }
   /**

@@ -43,7 +43,7 @@ pulled into Dev 5, and Dev 7 is folded away (its mode checks join the toolkit he
 5. **Graphics** (the overhaul the owner pulled forward from 0.2 on 2026-10-05). G1–G3 and G5–G8 are merged. Left: G4,
    G9, WebGPU as a complete overhaul (W0–W6) and the map pictures (see Graphics below).
 6. **The owner's playtest notes:** the Dev 4 notes M80–M91 and M96, and the 2026-10-07 notes M97–M99 (M100 is part of
-   the graphics work, item 5; tables below). Done so far: M86, M89 (2026-10-11).
+   the graphics work, item 5; tables below). Done so far: M84, M85, M86, M89 (2026-10-11).
 7. **The content toolkit, all four parts** (plan `plans/content-toolkit-concept.md`, approved with all defaults
    2026-10-05; about six to eight pull requests): 1 rulebooks and briefs, replica and attachment checks and the report
    with pictures (CT1, done 2026-10-11: `docs/content/`, `node pipeline/content-check.mjs`); 2 map checks (CT2, done 2026-10-11: `map:<id>`); 3 mode
@@ -103,7 +103,7 @@ conflict with an earlier decision on 2026-10-06 (below the table and in `docs/DE
 | 5 | A 2–4x variable scope (mouse wheel while aiming) and a holographic sight | 0.1 Dev 6 (feature pick 15) |
 | 6 | Skip to the next round from the spectator camera | M83 (0.1 Dev 5) |
 | 7 | A setting for a fixed or rotating minimap | M83 (0.1 Dev 5) |
-| 8 | Walking (Shift) while aiming down sights slows you further | M84 (0.1 Dev 5) |
+| 8 | Walking (Shift) while aiming down sights slows you further | M84 (0.1 Dev 5): done (2026-10-11) |
 | 9 | The practice range and tutorial area in the new graphics | M81 (0.1 Dev 5, after G5 and G6; the graphics plan re-dresses only the three maps) |
 | 10 | Practice: moving targets, more target types, a timed high-score challenge (off by default) | M93 (0.1 Dev 6) |
 | 11 | Practice on any map with targets instead of bots; rename the range "Practice" | M94 (0.1 Dev 6) |
@@ -111,8 +111,8 @@ conflict with an earlier decision on 2026-10-06 (below the table and in `docs/DE
 | 13 | Woodland: too open, the far team visible from the start, the blue end's height edge; hidden starts; 5v5 default, 6v6, maybe Woodland only for 5v5 and 6v6 | M88 (0.1 Dev 5): 5v5 default, 6v6 allowed, Woodland only for those two (ruled 2026-10-06) |
 | 14 | More varied, less distracting ambience; an Ambience volume | M86 (0.1 Dev 5): done (2026-10-11) |
 | 15 | Bots on both teams check spots that are plainly empty (corners); refine on every level | M87 (0.1 Dev 5, after M71) |
-| 16 | Every replica aims down sights: iron sights without an optic; hip fire stays viable | M84 (0.1 Dev 5): iron sights now, beside scopes (ruled 2026-10-06; replaces his 0.1 Dev 3 note 3) |
-| 17 | BBs seem to pass through the nearer bot and hit the one behind; check, and tighten hit detection | M85 (0.1 Dev 5) |
+| 16 | Every replica aims down sights: iron sights without an optic; hip fire stays viable | M84 (0.1 Dev 5): iron sights now, beside scopes (ruled 2026-10-06; replaces his 0.1 Dev 3 note 3); done (2026-10-11) |
+| 17 | BBs seem to pass through the nearer bot and hit the one behind; check, and tighten hit detection | M85 (0.1 Dev 5): done (2026-10-11) |
 | 18 | Modes and match settings make sense together (no Tournament rules in Extraction) | M89 (0.1 Dev 5): done (2026-10-11) |
 | 19 | Normal difficulty is the baseline for all feedback; check every change on the other levels | Standing rule for M80–M95 |
 | 20 | Extraction loot looks like loot: crates and chests with a glow | 0.1 Dev 6, with the Extraction rework (feature pick 7) |

@@ -10,6 +10,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Lean left and right with Q and E to peek round cover; leaning slows you to walking pace (M7b)
 - Accuracy by stance and movement: steadier crouched and still, worse walking, running or in the air; crouch-walking is
   slightly less accurate than standing still (M10, FA1)
+- Walking while aiming: hold Shift while aiming and you creep slower than the aiming pace (M84)
 
 ## Replicas and BBs
 
@@ -25,7 +26,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - BB weight from 0.20 to 0.30 g per replica, with the speed, reach and flight time shown (M17a, M26b)
 - Wind: a light breeze each match drifts BBs downwind; dust in the air drifts with it too (M30)
 - A limited set of magazines each round; a reload swaps in the fullest spare, no topping up (M8)
-- Optics: iron sights, a red dot or a 2× scope; aiming down sights with right click, at its own sensitivity (M12b, M17b)
+- Optics: iron sights on every replica, a red dot or a 2× scope on top; aiming down sights with right click, at its own sensitivity; aimed fire twice as tight as hip fire (M12b, M17b, M84)
 - Grips (vertical, angled) and magazines (hi-cap, low-cap, the pistol's extended one) trade handling for noise and sway
   (M17b)
 - A laser module and a choice of power source on the pistol, from the pool (M26b)
@@ -38,6 +39,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 
 - One hit and you're out: a tick, a hit marker, hand up, walk to the dead zone, then spectate your team (Phase 1)
 - Bots always call their hits (Phase 1)
+- BBs stop at the first body they hit; hit areas follow the drawn figure in every pose; a BB that hits a player already out knocks on the body (M85)
 - Friendly fire, on by default, as a match setting (Phase 1, M20)
 - Hit flinch, impact puffs that show at once and a crosshair that opens with your real spread (M3, M10, M28)
 

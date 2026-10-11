@@ -14,6 +14,7 @@ import { createCommand, type PlayerCommand } from './commands';
 import { createEliminationContext, fillEliminatedCommand, isInPlay, isParked, planWalkOffRoutes, stepElimination } from './elimination';
 import type { ExtractionContext } from './extraction';
 import { stepFootsteps } from './footsteps';
+import { stepWalkCycle } from './hitbox';
 import { type CharacterMover, createMovementScratch, type MovementScratch, stepMovement } from './movement';
 import { leanedEye, stepLean } from './lean';
 import { refillSpares, stepRangeTargets } from './rangeTargets';
@@ -125,8 +126,9 @@ export function stepSimulation(
   ctx.targets.characters = state.characters;
   ctx.targets.rangeTargets = state.targets;
   // Once the round is decided it's a cease-fire, as after the end whistle at a site: nobody can fire,
-  // and BBs still in the air can't hit anyone.
+  // and BBs still in the air can't hit anyone (they still stop on whoever they reach, M85).
   const live = state.round.phase === 'live';
+  ctx.targets.ceaseFire = !live;
   // One walk-off route search a tick at most (M27): a victim hit last tick gets its route before it is stepped.
   planWalkOffRoutes(state.characters, ctx.targets.elimination);
 
@@ -134,6 +136,7 @@ export function stepSimulation(
     copy(c.prevPosition, c.position);
     c.prevCrouchAmount = c.crouchAmount;
     c.prevLean = c.lean;
+    c.prevWalkCycle = c.walkCycle;
     c.prevYaw = c.yaw;
     c.prevPitch = c.pitch;
     // Out and standing in the dead zone: only its clock runs (audit SIM-15).
@@ -148,11 +151,15 @@ export function stepSimulation(
       cmd.yaw = c.yaw;
       cmd.pitch = c.pitch;
     }
-    if (inPlay) stepAiming(c, cmd);
-    else c.aiming = false;
+    if (inPlay) stepAiming(c, cmd, dt);
+    else {
+      c.aiming = false;
+      c.aimRaise = 0;
+    }
     c.using = inPlay && live && cmd.use;
     stepMovement(c, cmd, ctx.movement, dt, ctx.mover, ctx.scratch);
     rescueIfOutOfWorld(c, ctx.killY);
+    stepWalkCycle(c, ctx.hits); // the legs' swing, for their hit volumes and the drawn figure (M85)
     stepLean(c, cmd, ctx.body, ctx.hits, ctx.movement, ctx.query, dt);
     stepAccuracy(c, ctx.movement, dt);
     if (!inPlay) {
@@ -175,7 +182,7 @@ export function stepSimulation(
   }
 
   if (ctx.wind) windAt(ctx.wind, state.time, state.wind);
-  stepBBs(state.bbs, ctx.ballistics, ctx.query, ctx.killY, state.events, dt, live ? ctx.targets : undefined, state.rng, state.wind);
+  stepBBs(state.bbs, ctx.ballistics, ctx.query, ctx.killY, state.events, dt, ctx.targets, state.rng, state.wind);
   if (ctx.practice) {
     stepRangeTargets(state.targets, dt);
     for (const c of state.characters) refillSpares(c.armament);

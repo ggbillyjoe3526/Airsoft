@@ -64,6 +64,11 @@ export interface MovementConfig {
   leanWallClearance: number;
   /** From this much of a full lean (0..1) you move at walking pace, quietly; less slows you part of the way. */
   leanQuietFrom: number;
+  /**
+   * Holding walk while aiming down sights (M84, owner's playtest note 8): the aiming pace (walkSpeed) times this, a
+   * slower, steadier creep.
+   */
+  aimWalkScale: number;
   /** How a shooter's stance and movement scale their replica's spread (see sim/accuracy.ts). */
   accuracy: AccuracyConfig;
 }
@@ -97,6 +102,11 @@ export interface AccuracyConfig {
   airSpreadDelay: number;
   /** Multiplier for being fully crouched and still (applied on top of the movement one). */
   crouched: number;
+  /**
+   * Multiplier with the sight raised to your eye (M84: iron sights or an optic), on top of the others: it eases in as
+   * the sight comes up (Character.aimRaise).
+   */
+  aimed: number;
   /**
    * The crouch multiplier once moving at crouchSpeed (blended from `crouched` by speed above stillBelow): crouching
    * steadies a still shooter much more than a moving one, so crouch-walking is never as accurate as standing still
@@ -161,6 +171,8 @@ export const MOVEMENT: MovementConfig = {
   leanTime: 0.18,
   leanWallClearance: 0.2,
   leanQuietFrom: 0.5,
+  // Shift while aiming creeps at 1.4 m/s, against 2.3 aimed or walking (owner's note 8: "the player should slow down").
+  aimWalkScale: 0.6,
   accuracy: {
     stillBelow: 0.4,
     // Owner's 0.1 Dev 3 playtest: standing still steadies to ×0.7, and walking with Shift costs ×1.15 (was 1.5).
@@ -178,6 +190,9 @@ export const MOVEMENT: MovementConfig = {
     // Audit SIM-10 (2026-10-04, playtest): ×0.9 at full crouch pace makes crouch-walking ×1.02, a hair worse than
     // standing still (×1.0) and still steadier than walking upright at that pace (×1.13); it was ×0.74.
     crouchedMoving: 0.9,
+    // M84 (owner's note 16): the sight at your eye halves the spread; the hip stays as it was and stays viable
+    // (measured against Normal bots in ai/aimedFire.test.ts; ×0.65 barely showed past a player's own aim error).
+    aimed: 0.5,
     settleTime: 0.15,
     carryTime: 0.25,
     lockTime: 0.015,
