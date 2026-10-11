@@ -18,10 +18,10 @@ describe('a dev skin in Customise (CT4)', () => {
   const original = SCHEMES.acid.tag;
   beforeEach(() => {
     vi.stubGlobal('localStorage', new MemoryStorage());
-    (SCHEMES.acid as { tag?: string }).tag = 'dev';
+    (SCHEMES.acid as { tag?: string | undefined }).tag = 'dev';
   });
   afterEach(() => {
-    (SCHEMES.acid as { tag?: string }).tag = original;
+    (SCHEMES.acid as { tag?: string | undefined }).tag = original;
   });
 
   it('offers a dev scheme only while Dev content is on, keeping the others in order', () => {
