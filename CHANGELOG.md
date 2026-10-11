@@ -77,6 +77,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M89** · Match settings fit the mode: no Tournament or Pro CQB in Extraction (a saved pick plays as Skirmish), no Time-out in Attack and Defend
 - **M89** · A setting hidden for a mode no longer changes the match or keeps an Extraction run out of your records
 - **M84** · Aimed fire is twice as tight as hip fire; holding Shift while aiming creeps slower than the aiming pace
+- **RM4** · Built-in models are back for replicas, parts, players, bots and menu pictures; the Blender models wait behind two Dev switches in Settings
 
 ### Fixed
 - **G11** · The team camo on players reads clearly on Medium and up: crisp dark and light blotches printed per pixel, on WebGL and WebGPU; Low keeps plain clothes

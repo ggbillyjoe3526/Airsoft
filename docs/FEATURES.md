@@ -166,6 +166,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - HUD size slider (0.8–1.5) in Settings › Gameplay (FA5)
 - A hidden Dev group (tick Dev settings under the list): debug info, BB paths, game speed, bottomless magazines, ghost,
   Disable Armory, Unlock all gear, Diagnostics Copy, Dev content switch, Retro pixels (M24, M26d, FA1, M35, M42)
+- Dev switches Disable all models and Disable figure models (both on by default): turned off, they bring back the Blender replicas, parts and menu pictures, then the player and bot figures (RM4)
 - The build's version on the title screen (M24)
 
 ## HUD and match info
