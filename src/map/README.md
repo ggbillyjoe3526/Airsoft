@@ -15,7 +15,8 @@ meshes. The format, coordinates and Extraction block are in `docs/ARCHITECTURE.m
 - `lightingChoice.ts` (the Day | Night pick, saved as `lighting.<map id>`), `nightSight.ts` and `torchLight.ts` (what
   bots make out in the dark), `bakes/` (baked light probe files, written by `node pipeline/bake-light.mjs`).
 - Tuning: `config/materials.ts` (block materials), `config/range.ts`, `config/bake.ts`, `config/dressing.ts`.
-- Tests: `mapData.test.ts` and one file per map; `bakes/bakes.test.ts` names the bake command when a probe file is
+- Tests: one file per map; the rules every map keeps (on the floor, ramps, blocks, team colours, sightlines, walk
+  times) are the content toolkit's map checks, `content/mapChecks.ts`; `bakes/bakes.test.ts` names the bake command when a probe file is
   stale. `testYard.ts` and `testSupport.ts` are test fixtures.
 - Changing it: `MapData` fields are only added, and optional. A new map is registered in `maps.ts` (or `devMaps.ts`)
   with a content tag. `src/testSetup.ts` registers every map before each unit test file.
