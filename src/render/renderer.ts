@@ -424,6 +424,14 @@ export class Renderer {
     this.node.compile(this.scene, this.camera, overlay, this.retro ?? this.postStack(), this.quality);
   }
 
+  /**
+   * Settles once the warm-up compile under way (if any) is done. The item pictures wait for it (W6a): a picture drawn
+   * meanwhile waits on the GPU for the whole match's pipelines inside its own draw, holding the page.
+   */
+  afterCompiles(): Promise<void> {
+    return this.node.afterCompiles();
+  }
+
   /** Lets go of `scene` as the overlay to release on a device swap (its match is over and has freed it, BP2). */
   forgetOverlay(scene: THREE.Scene): void {
     if (this.overlayScene === scene) this.overlayScene = null;

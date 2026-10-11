@@ -95,6 +95,11 @@ export class ItemPictures {
     private readonly files: () => ReplicaFiles = () => NO_REPLICA_FILES,
     /** The power-source models (RM3), loaded the first time one is pictured. */
     private readonly powerSources: PowerSourceLoader = NO_POWER_SOURCES,
+    /**
+     * Settles when the renderer is free to draw a picture: no match's warm-up compile under way (W6a, Renderer
+     * afterCompiles). A picture drawn during one waits on the GPU for all of it, inside its draw, holding the page.
+     */
+    private readonly idle: () => Promise<void> = () => Promise.resolve(),
   ) {
     const L = ITEM_PICTURE.light;
     const key = new THREE.DirectionalLight(L.key.colour, L.key.intensity);
@@ -153,6 +158,12 @@ export class ItemPictures {
   private async drawNext(): Promise<void> {
     const next = this.queue.shift();
     if (!next || this.disposed) {
+      this.scheduled = false;
+      return;
+    }
+    // Never during a match's warm-up compile (W6a); freed meanwhile, it draws nothing.
+    await this.idle();
+    if (this.disposed) {
       this.scheduled = false;
       return;
     }
@@ -395,7 +406,9 @@ export function nodePictureTarget(renderer: PictureRenderer): PictureTarget {
     encode(rgba, width, height) {
       canvas.width = width;
       canvas.height = height;
-      const ctx = canvas.getContext('2d')!;
+      // Kept on the CPU (`willReadFrequently`): it is only written whole and encoded, and a GPU-backed canvas makes
+      // toDataURL wait in line behind whatever the GPU process is doing (W6a).
+      const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
       ctx.putImageData(new ImageData(rgba as Uint8ClampedArray<ArrayBuffer>, width, height), 0, 0);
       return canvas.toDataURL('image/png');
     },

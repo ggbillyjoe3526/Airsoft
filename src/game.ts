@@ -382,7 +382,7 @@ export class Game {
     });
 
     // The menus' pictures of replicas and parts (G3), drawn by the game's renderer (W6; a new one after a lost device).
-    this.pictures = new ItemPictures(followingPictureTarget(() => this.renderer.renderer, nodePictureTarget), undefined, () => this.renderer.replicaFiles, powerSourceLoader());
+    this.pictures = new ItemPictures(followingPictureTarget(() => this.renderer.renderer, nodePictureTarget), undefined, () => this.renderer.replicaFiles, powerSourceLoader(), () => this.renderer.afterCompiles());
     this.menus = new Menus(container, {
       pictures: this.pictures,
       rules: {

@@ -1,5 +1,6 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import perfBudget from '../../pipeline/perf-budget.json';
+import perfRunSource from '../../pipeline/perf-run.mjs?raw';
 import { RENDER_BACKEND, wantsWebGpu, type RenderBackend } from '../config/renderBackend';
 
 // W6a QA: acceptance 1 and 2 (one renderer, the old WebGL path gone) and 3 (budgets per back end).
@@ -41,7 +42,7 @@ describe('the back end ids (W6a criterion 1)', () => {
   });
 
   it('names no third back end in the perf harness\'s choices', () => {
-    const run = readFileSync('pipeline/perf-run.mjs', 'utf8');
+    const run = perfRunSource;
     expect(run).toMatch(/\['webgl', 'webgpu'\]\.includes\(options\.backend\)/);
     expect(run).toMatch(/backend !== options\.backend/);
   });
@@ -73,7 +74,7 @@ describe('budgets take per back end lines (W6a criterion 3)', () => {
 
   it('leaves the real file\'s WebGL lines as the map and preset lines say, whatever the WebGPU lines are', async () => {
     const { budgetFor } = await load();
-    const real = JSON.parse(readFileSync('pipeline/perf-budget.json', 'utf8'));
+    const real = structuredClone(perfBudget);
     for (const map of ['depot', 'woodland', 'neon']) {
       for (const preset of ['low', 'medium', 'high', 'ultra']) {
         const withoutBackends = { ...real, backends: undefined };

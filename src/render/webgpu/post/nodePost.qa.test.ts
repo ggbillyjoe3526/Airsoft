@@ -275,6 +275,23 @@ describe('the compile gate orders every free after the compiles under way (W4 cr
     expect(freed).toEqual(['a']);
   });
 
+  it('settles `settled()` at once when idle, else once every compile under way has settled, even a failed one (W6a)', async () => {
+    const gate = new CompileGate();
+    let now = false;
+    void gate.settled().then(() => (now = true));
+    await later();
+    expect(now).toBe(true);
+    const compile = deferred();
+    gate.track(compile.promise).catch(() => undefined);
+    let after = false;
+    void gate.settled().then(() => (after = true));
+    await later();
+    expect(after).toBe(false);
+    compile.fail(new Error('lost'));
+    await later();
+    expect(after).toBe(true);
+  });
+
   it('waits for all of several compiles, not the first to settle', async () => {
     const gate = new CompileGate();
     const [one, two] = [deferred(), deferred()];

@@ -100,6 +100,28 @@ describe('item pictures (G2)', () => {
     expect(target.disposed).toBe(true);
   });
 
+  it("waits for a match's warm-up compile before drawing, and draws nothing if freed meanwhile (W6a)", async () => {
+    const target = fakeTarget();
+    const frames = manualFrames();
+    let compiled = (): void => undefined;
+    let compiling: Promise<void> = new Promise((done) => (compiled = done));
+    const pictures = new ItemPictures(target, frames.schedule, undefined, undefined, () => compiling);
+    const a = pictures.picture(rifle);
+    await frames.frame();
+    expect(target.draws).toHaveLength(0); // the frame came, the compile is still under way
+    compiled();
+    await new Promise((done) => setTimeout(done, 0));
+    expect(target.draws).toHaveLength(1);
+    await expect(a).resolves.toMatch(/^picture:1:/);
+    compiling = new Promise((done) => (compiled = done));
+    void pictures.picture({ ...rifle, scheme: 'acid' });
+    await frames.frame();
+    pictures.dispose();
+    compiled();
+    await new Promise((done) => setTimeout(done, 0));
+    expect(target.draws).toHaveLength(1);
+  });
+
   it('drops a picture that fails to draw, so a later ask tries again', async () => {
     const target = fakeTarget();
     let fail = true;

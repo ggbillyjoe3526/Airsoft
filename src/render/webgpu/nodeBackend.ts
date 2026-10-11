@@ -278,6 +278,11 @@ export class NodeBackend {
     void this.compiles.track(done).catch(ignore);
   }
 
+  /** Settles once no warm-up compile is under way (the item pictures wait for it, W6a). */
+  afterCompiles(): Promise<void> {
+    return this.compiles.settled();
+  }
+
   /** Frees the renderer, its canvas's context and (on WebGPU) its device. */
   dispose(): void {
     this.lostListener = () => undefined;
