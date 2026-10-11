@@ -320,9 +320,10 @@ function expectTurned(spin: Spin): void {
 
 /**
  * M33i QA: Woodland's look on Low (its 60 fps preset): the moon and stars, the camp fires' flames (no embers: Low has no
- * dust motes), within Low's 100 draw calls and 150k triangles, and no shader first built while you turn round.
+ * dust motes), within Low's 100 draw calls and 150k triangles, and no shader first built while you turn round. Since
+ * M88 at 6v6, the most figures Woodland plays, after checking the map sets 5v5 and offers only 5v5 and 6v6.
  */
-test('Woodland on Low: moon, stars and fires, within 100 draw calls and 150k triangles, no shader built mid-match', async ({ page }) => {
+test('Woodland on Low at 6v6: moon, stars and fires, within 100 draw calls and 150k triangles, no shader built mid-match', async ({ page }) => {
   test.setTimeout(240_000);
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
@@ -339,9 +340,17 @@ test('Woodland on Low: moon, stars and fires, within 100 draw calls and 150k tri
   await settings.getByRole('group', { name: 'Dev content' }).getByRole('button', { name: 'On' }).click();
   await page.keyboard.press('Escape');
   await setup.getByRole('group', { name: 'Map', exact: true }).getByRole('button', { name: /Woodland/i }).click();
+  // M88 (owner, 2026-10-06): picking Woodland sets 5v5 (4v4 before), and its Team size row offers 5v5 and 6v6 only.
+  await expect(setup.locator('.play-facts')).toContainText('5v5');
+  const sizes = setup.locator('.match-panel').getByRole('group', { name: 'Team size' });
+  await expect.poll(async () => (await sizes.locator('button.picker-button:visible').allTextContents()).map((t) => t.trim())).toEqual(['5v5', '6v6']);
+  // Low holds its frame budget at the largest Woodland plays, 6v6 (M88, acceptance 3).
+  await sizes.getByRole('button', { name: '6v6' }).click();
+  await expect(setup.locator('.play-facts')).toContainText('6v6');
   await setup.getByRole('button', { name: 'Start match', exact: true }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 20_000 });
   await expect.poll(() => page.evaluate(() => (window as unknown as LookView).airsoft.state?.tick ?? 0), { timeout: 60_000 }).toBeGreaterThan(10);
+  expect(await page.evaluate(() => (window as unknown as LookView).airsoft.state!.characters.length)).toBe(12);
 
   const parts = await page.evaluate(() => {
     const s = (window as unknown as LookView).airsoft.renderer.scene;
