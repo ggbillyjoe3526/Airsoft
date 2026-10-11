@@ -254,10 +254,17 @@
   box-shadow: 0 0 0 4px rgba(255, 107, 26, 0.22);
 }
 
+/* In the tile's flow above its words, as the item tiles (M99): the whole picture, clear of the name and the tick. */
 .option-tile > .pic-slot {
-  position: absolute;
-  inset: 0 0 30%;
+  flex: 1 0 auto;
+  min-height: 84px;
+  margin: calc(-1 * var(--sp-3)) calc(-1 * var(--sp-3)) var(--sp-1);
   background: none;
+}
+
+/* A colour scheme's tile shows the whole replica: its wide picture's own shape. */
+.scheme-tile > .pic-slot {
+  aspect-ratio: 2 / 1;
 }
 
 .option-none {
@@ -276,6 +283,8 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  /* Room for the tick (loadout.css). */
+  padding-right: 36px;
 }
 
 .option-name {
@@ -375,9 +384,11 @@
   border-color: var(--orange);
 }
 
+/* The replica in this colour family, whole, above its name (M99). */
 .family-tile .pic-slot {
-  position: absolute;
-  inset: 0 0 26%;
+  flex: 1 0 auto;
+  aspect-ratio: 2 / 1;
+  margin: -8px -10px 2px;
   background: none;
 }
 

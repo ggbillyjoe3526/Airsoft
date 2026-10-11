@@ -174,9 +174,14 @@
   box-shadow: 0 0 0 3px rgba(255, 107, 26, 0.22);
 }
 
+/*
+ * The picture in the tile's flow, above its words, edge to edge (M99): a replica's wide picture keeps its own 2:1 shape,
+ * so it shows whole, muzzle to stock, never under the name or the tick. A tall tile gives the picture the extra room.
+ */
 .item-tile .pic-slot {
-  position: absolute;
-  inset: 0 0 40%;
+  flex: 1 0 auto;
+  aspect-ratio: 2 / 1;
+  margin: calc(-1 * var(--sp-3)) calc(-1 * var(--sp-3)) var(--sp-1);
   background: none;
 }
 
@@ -213,10 +218,11 @@
   display: none;
 }
 
+/* The picked tile's tick, by its words at the foot (M99): over the picture's corner it hid a rifle's muzzle. */
 .option-tick {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  right: var(--sp-3);
+  bottom: calc(var(--sp-3) + 2px);
   display: none;
   place-items: center;
   width: 28px;
@@ -242,6 +248,11 @@
 
 .replica-tile {
   min-height: clamp(160px, 10.5vw, 200px);
+}
+
+/* Room for the tick beside the words. */
+.replica-tile :is(.item-words, .item-note) {
+  padding-right: 36px;
 }
 
 .loadout-note,

@@ -628,6 +628,9 @@ there maps each symptom to its numbers):
 - [ ] **The look.** Every screen at 1280×720 and 1920×1080 is tidy: one type scale, buttons in capitals, pictures of
   maps, modes and replicas. Pointing at a button lifts it a little; Tab moves an orange focus ring round every control.
   With reduced motion, screens and dialogs appear with no fade.
+- [ ] **Whole replicas (M99).** On the Loadout's Your replicas, Customise's colour tiles, the Armory's reveal and a
+  run's haul, every replica picture shows the whole replica, muzzle to stock, nothing under its name or the picked
+  tile's tick (now at the foot, by the words). Resize the window from 1280×720 up to full screen: still whole.
 - [ ] **The loading screen** (production build: `npm run build`, then `npm run preview`; DevTools › Network › Slow
   4G, cache off). The dark page with "AIRSOFT." and a thin orange bar shows at once with no white flash; the bar fills
   through "Loading physics…", "Starting physics…" and "Starting the game…", then the title appears.
