@@ -256,21 +256,21 @@ describe('the hit feed rows (G4 criterion 3)', () => {
   it('draws the shooter, a BB, who called it and a Hit tag, and says "<who> called HIT · <shooter>" to a screen reader', () => {
     const parent = new Counted('div');
     const feed = new HitFeed(parent as unknown as HTMLElement);
-    feed.add({ name: 'Orange 2', team: 1 }, { name: 'Blue 1', team: 0 }, false, true, 1);
+    feed.add({ name: 'Beta 2', team: 1 }, { name: 'Alpha 1', team: 0 }, false, true, 1);
     const line = findAll(parent, 'hit-feed-line')[0]!;
     expect(line.classList.contains('you')).toBe(true);
     const heard = line.children.find((c) => c.className === 'sr-only')!;
-    expect(heard.textContent).toBe('Orange 2 called HIT · Blue 1');
+    expect(heard.textContent).toBe('Beta 2 called HIT · Alpha 1');
     const seen = line.children.find((c) => c.className === 'hit-feed-row')!;
     expect(seen.getAttribute('aria-hidden')).toBe('true');
     expect(seen.children.map((c) => c.className)).toEqual(['hit-feed-name', 'hit-feed-bb', 'hit-feed-name', 'hit-feed-tag']);
-    expect([seen.children[0]!.textContent, seen.children[2]!.textContent, seen.children[3]!.textContent]).toEqual(['Blue 1', 'Orange 2', HIT_FEED.tag]);
+    expect([seen.children[0]!.textContent, seen.children[2]!.textContent, seen.children[3]!.textContent]).toEqual(['Alpha 1', 'Beta 2', HIT_FEED.tag]);
   });
 
   it('keeps the friendly tag after the row', () => {
     const parent = new Counted('div');
     const feed = new HitFeed(parent as unknown as HTMLElement);
-    feed.add({ name: 'Blue 2', team: 0 }, { name: 'Blue 3', team: 0 }, true, false, 1);
+    feed.add({ name: 'Alpha 2', team: 0 }, { name: 'Alpha 3', team: 0 }, true, false, 1);
     const line = findAll(parent, 'hit-feed-line')[0]!;
     expect(line.children.map((c) => c.tag)).toEqual(['span', 'span', 'em']);
     expect(line.children[2]!.textContent).toBe('friendly');

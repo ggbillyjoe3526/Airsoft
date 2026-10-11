@@ -2,7 +2,9 @@ import type { Difficulty } from '../../config/bots';
 import { EXTRACTION, homeTeamCap } from '../../config/extraction';
 import { formatRoundTime, type MatchRules, REALCAP_TEXT } from '../../config/matchRules';
 import { type MatchMode, unknownMode } from '../../config/modes';
+import { TEAMS } from '../../config/teams';
 import type { ExtractionData } from '../../map/mapTypes';
+import { type RoundRules, teamEnd } from '../../sim/round';
 
 /** What the New game screen needs to explain the match. */
 export interface MatchRulesText {
@@ -25,6 +27,20 @@ export interface MatchRulesText {
   opponents?: Difficulty;
   /** The Rules picker's switches (M39); absent, as the game always played. */
   switches?: Pick<MatchRules, 'winByTwo' | 'timeOutToMorePlayers' | 'heardOnMinimap' | 'semiAutoOnly' | 'realcap' | 'factoryKit'>;
+}
+
+/** The parts of the rules text that follow your team (M98): the teams' names, who attacks first and where you start. */
+export type SideText = Pick<MatchRulesText, 'playerTeam' | 'enemyTeam' | 'attackFirst' | 'eliminationStartEnd' | 'attackDefendStartEnd'>;
+
+/** The rules text's side for a player on `team` (0 Alpha, 1 Beta) under `rules` (sim/round.ts teamEnd for round 1). */
+export function sideText(team: number, rules: RoundRules): SideText {
+  return {
+    playerTeam: TEAMS[team]!.name,
+    enemyTeam: TEAMS[1 - team]!.name,
+    attackFirst: rules.flag.firstAttackers === team,
+    eliminationStartEnd: teamEnd(team, 'elimination', 1, rules),
+    attackDefendStartEnd: teamEnd(team, 'attackDefend', 1, rules),
+  };
 }
 
 /** A map end's name (0 is west, MapData.spawns). */

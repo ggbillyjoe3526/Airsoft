@@ -42,6 +42,8 @@ export type SettingField =
   | 'magazines'
   | 'matchKit'
   | 'mode'
+  /** The Match screen's "Your team" (M98): 'alpha' or 'beta' (config/teams.ts TEAM_PICKS). */
+  | 'playerTeam'
   | 'crouch'
   | 'aimMode'
   | 'sprintMode'

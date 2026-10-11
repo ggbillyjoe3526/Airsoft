@@ -13,7 +13,7 @@ export interface ResultText {
   result: string;
 }
 
-/** `Blue (you) 5 – 3 Orange`: your team first. */
+/** `Alpha (you) 5 – 3 Beta`: your team first. */
 function scoreText(r: RoundState, mine: number): string {
   const theirs = 1 - mine;
   return `${TEAMS[mine]!.name} (you) ${r.score[mine]} – ${r.score[theirs]} ${TEAMS[theirs]!.name}`;

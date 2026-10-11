@@ -14,8 +14,8 @@ const RULES: MatchRulesText = {
   teamSize: 3,
   winsNeeded: 5,
   roundTime: 150,
-  playerTeam: 'Blue',
-  enemyTeam: 'Orange',
+  playerTeam: 'Alpha',
+  enemyTeam: 'Beta',
   raiseTime: 5,
   halfTimeAfter: 4,
   attackFirst: true,
@@ -26,7 +26,7 @@ const RULES: MatchRulesText = {
 };
 const X: ExtractionData = { insertions: [], exits: [], opponentStarts: [], runTime: 480, baseOpponents: 2, cases: [], regens: [], regenDistance: 15 };
 const DIFFICULTIES = LEVEL_ROWS.map((d) => d.id);
-const bots = (text: string) => Number(/against (\d+) Orange bots/.exec(text)?.[1]);
+const bots = (text: string) => Number(/against (\d+) Beta bots/.exec(text)?.[1]);
 const home = (value: string) => Number(/· (\d+) in the home team/.exec(value)?.[1]);
 
 describe('M72 QA: the rules text and the Match button by level', () => {
@@ -40,7 +40,7 @@ describe('M72 QA: the rules text and the Match button by level', () => {
 
   it('never says fewer than 1 bot, for a solo run on a map with no base opponents at Normal', () => {
     const none: ExtractionData = { ...X, baseOpponents: 0 };
-    expect(describeRules({ ...RULES, teamSize: 1, opponents: 'normal' }, 'extraction', none)).toMatch(/^Solo: just you \(Blue\), against 1 Orange bots/);
+    expect(describeRules({ ...RULES, teamSize: 1, opponents: 'normal' }, 'extraction', none)).toMatch(/^Solo: just you \(Alpha\), against 1 Beta bots/);
     expect(home(runRulesSummary({ ...DEFAULT_MATCH_RULES, teamSize: 1 }, { baseOpponents: 0, runTime: 480 }, 'normal').value)).toBe(1);
   });
 

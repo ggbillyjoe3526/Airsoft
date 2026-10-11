@@ -87,8 +87,9 @@ Maps are plain data (`map/mapTypes.ts`). One source builds both the Rapier colli
   clear between them.
 - **Ends.** Spawns and dead-zone spots per end of the map (0 west, 1 east) and bot lanes from end 0 to end 1.
   Teams do not own an end: `round.ts` (`teamEnd`, `placeTeams`) puts each team at an end at every round start and
-  swaps them at half-time. In Attack / Defend the attackers start at end 0; in Elimination Blue starts at
-  `RoundRules.eliminationFirstEnd` (the east on Depot). `Character.end` says where a character started, for its dead
+  swaps them at half-time. In Attack / Defend the attackers start at end 0; in Elimination Alpha starts at
+  `RoundRules.eliminationFirstEnd` (the east on Depot). The player is character 0 on the picked team, Alpha or Beta
+  (M98, `sim/roster.ts`): nothing reads team 0 as "yours". `Character.end` says where a character started, for its dead
   zone and its bot's lane direction.
 - **Flag.** Optionally one flagpole at end 1. A map without one is Elimination only.
 - **Extraction block.** Optional: insertions, exits, home-team starts, run time and base opponents; case spots (each

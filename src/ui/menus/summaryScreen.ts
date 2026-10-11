@@ -16,7 +16,7 @@ import { el, menuButton } from './menuParts';
 
 /** What the end-of-match summary shows. */
 export interface MatchSummary {
-  /** "You win! · Blue 5 – 3 Orange". */
+  /** "You win! · Alpha 5 – 3 Beta". */
   result: string;
   /** Every player's numbers over the match, your team first. */
   blocks: TeamBlock[];

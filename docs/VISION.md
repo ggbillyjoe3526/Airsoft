@@ -35,6 +35,6 @@ Owner rulings (owner, 2026-10-01):
 ## Visual language
 
 - Bright daylight, warm concrete, painted breeze-block walls, plywood crates, coloured shipping containers.
-- Teams are **Blue** and **Orange** (armbands and vests), the way sites use coloured tape.
+- Teams are **Alpha** (blue) and **Beta** (orange) (armbands and vests), the way sites use coloured tape; you pick yours.
 - BBs are bright white or tracer dots with short streaks. Impacts make dust puffs, never blood.
 - The full look (palette, the four material families, edges, wear and light) is the art bible in [ART.md](ART.md).
