@@ -1,3 +1,4 @@
+import { HUD_TEXT, type SkipLabel } from '../../config/hudText';
 import type { MenuHint } from './chrome';
 import { PAUSE_ICONS } from './icons';
 import { el, hintLine, menuButton, setHint, withIcon } from './menuParts';
@@ -11,6 +12,8 @@ export interface PauseActions {
   /** The tutorial only (audit POOL-14): skip the step under way, or the rest of the tutorial. */
   onSkipStep: () => void;
   onSkipTutorial: () => void;
+  /** A match once you are out (M83): play the rest of the round out at once and go on to the next. */
+  onSkipRound: () => void;
 }
 
 /**
@@ -26,6 +29,7 @@ export class PauseScreen {
   private readonly loadout: HTMLButtonElement;
   private readonly skipStep: HTMLButtonElement;
   private readonly skipTutorial: HTMLButtonElement;
+  private readonly skipRound: HTMLButtonElement;
   private readonly seed: HTMLParagraphElement;
 
   constructor(actions: PauseActions) {
@@ -38,6 +42,9 @@ export class PauseScreen {
     this.loadout = withIcon(menuButton('Loadout', 'secondary', actions.onLoadout), PAUSE_ICONS.loadout);
     this.skipStep = menuButton('Skip step', 'secondary', actions.onSkipStep);
     this.skipTutorial = menuButton('Skip tutorial', 'secondary', actions.onSkipTutorial);
+    this.skipRound = menuButton(HUD_TEXT.skipButton.round, 'secondary', actions.onSkipRound);
+    this.skipRound.classList.add('menu-pause-skip');
+    this.skipRound.hidden = true;
     // The match's seed, small at the bottom, so a bug seen in play can be reported and replayed (bug pass).
     this.seed = el('p', 'menu-pause-seed');
     panel.append(
@@ -45,6 +52,7 @@ export class PauseScreen {
       this.status,
       resume,
       this.hint,
+      this.skipRound,
       this.loadout,
       this.skipStep,
       this.skipTutorial,
@@ -63,6 +71,15 @@ export class PauseScreen {
   setRange(range: boolean, tutorial = false): void {
     this.loadout.hidden = !range;
     this.skipStep.hidden = this.skipTutorial.hidden = !(range && tutorial);
+  }
+
+  /**
+   * Skip to next round (M83): shown in a match once you are out and spectating, named by what it skips to (the next
+   * round, or the result when this round could decide the match); hidden where it doesn't apply (null).
+   */
+  setSkip(offer: Exclude<SkipLabel, 'skipping'>): void {
+    this.skipRound.hidden = offer === null;
+    if (offer) this.skipRound.textContent = HUD_TEXT.skipButton[offer];
   }
 
   setStatus(text: string): void {

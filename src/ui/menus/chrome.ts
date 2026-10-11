@@ -1,4 +1,4 @@
-import { ARMORY_TEXT, MENU_TEXT } from '../../config/menus';
+import { MENU_TEXT } from '../../config/menus';
 import { BACKDROPS, MENU_ART_DIR } from '../../config/menuArt';
 import { MENU_ICONS, NAV_ICONS } from './icons';
 import { el } from './menuParts';
@@ -28,6 +28,10 @@ export class TopBar {
   private readonly markText: HTMLSpanElement;
   private readonly fc: HTMLSpanElement;
   private readonly tokens: HTMLSpanElement;
+  /** Dev settings › Disable Armory (M83, playtest note 25): the Armory's place is gone from the bar, not greyed out. */
+  private armoryOff = false;
+  private current: NavPlace | null = null;
+  private alone = false;
 
   constructor(onPlace: (place: NavPlace) => void, onMark: () => void) {
     this.root = el('header', 'menu-topbar');
@@ -60,28 +64,33 @@ export class TopBar {
    * (a match is under way), so only the current one shows, and the wordmark button reads Back.
    */
   show(current: NavPlace | null, alone: boolean): void {
+    this.current = current;
+    this.alone = alone;
     for (const [id, b] of this.places) {
       const on = id === current;
       b.classList.toggle('on', on);
       if (on) b.setAttribute('aria-current', 'page');
       else b.removeAttribute('aria-current');
-      b.hidden = alone && !on;
+      b.hidden = (alone && !on) || (id === 'armory' && this.armoryOff);
     }
     this.root.classList.toggle('alone', alone);
     this.markText.textContent = alone ? MENU_TEXT.back : MENU_TEXT.wordmark;
     this.mark.title = alone ? MENU_TEXT.back : MENU_TEXT.toTitle;
   }
 
-  /** The wallet: Field Credits and Tokens (null hides it: the Armory is off). `armoryOff` greys the Armory out. */
+  /**
+   * The wallet: Field Credits and Tokens (null hides it: the Armory is off). `armoryOff` takes the Armory's place off
+   * the bar altogether (M83: gone, not greyed out), and puts it back once the Armory is on again.
+   */
   setWallet(wallet: { fc: number; tokens: number } | null, armoryOff: boolean): void {
     this.fc.hidden = this.tokens.hidden = wallet === null;
     if (wallet) {
       this.fc.textContent = MENU_TEXT.fc(wallet.fc);
       this.tokens.textContent = MENU_TEXT.tokens(wallet.tokens);
     }
-    const armory = this.places.get('armory')!;
-    armory.disabled = armoryOff;
-    armory.title = armoryOff ? ARMORY_TEXT.off : '';
+    if (armoryOff === this.armoryOff) return;
+    this.armoryOff = armoryOff;
+    this.show(this.current, this.alone);
   }
 }
 
