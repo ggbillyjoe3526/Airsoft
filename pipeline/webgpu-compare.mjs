@@ -258,8 +258,10 @@ async function draw(scene, views, quality, renderer, withPost, dressing = false)
         const r = game.renderer;
         game.session.match.characters.object.visible = false;
         // What rides on the figures goes with them (W3's too): the contact shadows under their feet and the torch beams
-        // (the cones, the lit spots and your torch's real spot light), placed where each figure stood when the clock stopped.
-        for (const name of ['contact-shadows', 'torch-beams']) r.scene.traverse((o) => {
+        // (the cones, the lit spots and your torch's real spot light), placed where each figure stood when the clock stopped,
+        // and the dust their feet kicked up (W6a): whether a footfall fell before the clock stopped depends on how many ticks
+        // each page ran (20 or 40 under load), so it showed on one page only. It stays hidden in the figure views too.
+        for (const name of ['contact-shadows', 'torch-beams', 'kickedDust']) r.scene.traverse((o) => {
           if (o.name === name) o.visible = false;
         });
         const eye = (game.__eye ??= { position: r.camera.position.clone(), rotation: r.camera.rotation.clone() });
