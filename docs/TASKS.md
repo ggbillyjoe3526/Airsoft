@@ -146,20 +146,6 @@ acceptance:
 status: open
 attempts: 0
 
-## CT3 · The content toolkit, part 3: mode checks
-tier: core
-perf: required
-touches: src/content/, src/config/modes.ts, src/config/contentRules.ts, src/config/perfScript.ts, src/config/README.md, src/sim/round.ts, src/ai/botController.ts, src/ai/depotMatchSupport.ts, src/ai/extractionRunSupport.ts, src/ai/balance/, src/map/playableMode.ts, src/ui/roundBanner.ts, src/ui/matchStopText.ts, src/ui/menus/rulesText.ts, src/ui/scoreboard.ts, e2e/modeMatch.spec.ts, vite.config.ts, pipeline/content-check.mjs, pipeline/contentReport.mjs, pipeline/contentReport.test.mjs, pipeline/README.md, docs/content/, docs/ARCHITECTURE.md, docs/DECISIONS.md, .claude/skills/new-content/SKILL.md
-contract: none
-acceptance:
-  1. Rules: every place a mode must be wired answers for it (round rules, bots' plan, briefing, round banner, end screen, pay, records, menus, perf run); a new `MatchMode` fails to compile until each place answers; the briefing and banner don't say what Elimination says; ids are pinned; each map a mode lists has what it needs. Each check fails on its fault.
-  2. Fit: every ruleset, Custom match setting, team size and level a mode offers plays a short headless match on every map that hosts it, or the menu hides it; the bots play it their own way, not as Elimination.
-  3. Spec test: `node pipeline/content-check.mjs mode:<id>` plays a short match in the browser (it starts, a round ends both ways, the end screen shows, nothing errors) and the perf run on each map that hosts it.
-  4. Balance run (`--balance`): on every map it lists, every level: each side 40 to 60 % (35 to 65 % below Pro), rounds don't run out the clock, the objective decides some rounds, pay a minute in line with Elimination; Extraction in whole runs against its bands.
-  5. No game behaviour changes; every shipped mode passes.
-status: open
-attempts: 0
-
 **0.1 Dev 6 (confirmed with the roadmap, 2026-10-06).** M92–M95, the holster and the practice
 upgrades, come before the 26 features in `docs/ROADMAP.md` › 0.1 Dev 6, whose blocks are written when that build starts.
 
