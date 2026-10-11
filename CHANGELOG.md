@@ -38,7 +38,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M96** · Retro look goes public: Settings › Look offers Retro, and a Retro choice saved in Dev settings carries over
 - **M83** · Skip to next round from the spectator camera while you are out: the rest of the round plays out at once
 - **M83** · A minimap setting: Fixed (north up) or Rotating
-- **M90** · More hidden Dev settings for playtesting, starting with Field Credits and Tokens on demand
+- **M90** · More Dev settings for playtesting: Field Credits and Tokens on demand, free case openings, time of day, bots hold fire, spectate any bot, bot intentions, end the round now and reset the save
 - **M97** · Replay tutorial button in Settings starts the tutorial at once, whether or not you finished it
 
 ### Changed
