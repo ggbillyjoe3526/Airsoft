@@ -47,6 +47,7 @@ A task that adds, renames or moves a file keeps its folder's `README.md` current
 | `src/config/` | Every tunable number and data table | `replicas.ts`, `bots.ts`, `hits.ts`, `render.ts`, `controls.ts`, `dev.ts` |
 | `src/core/` | Loop and session plumbing: stepper, seeds, frame pacer, crash report | `fixedStepper.ts`, `seed.ts`, `sessionPlan.ts`, `crashReport.ts`, `framePacer.ts` |
 | `src/pool/` | The asset pool, the Loadout, the Armory economy, Extraction cases | `pool.ts`, `kit.ts`, `loadoutModel.ts`, `armory.ts`, `collection.ts`, `caches.ts` |
+| `src/content/` | The content checks: rules, compatibility, spec test and balance run for a new replica or part | `gameContent.ts`, `replicaChecks.ts`, `partChecks.ts`, `specSheet.ts`, `report/` |
 | `src/stats/` | Match stats, local records, settling a finished match | `matchStats.ts`, `records.ts`, `settleMatch.ts` |
 | `src/save/` | The save system: guarded storage, file format, migrations, tab lock | `saveFile.ts`, `stores.ts`, `guardedStorage.ts`, `saveManager.ts`, `tabLock.ts` |
 | `src/settings/` | The saved settings object and the Dev settings' saved values | `storage.ts`, `dev.ts` |
@@ -54,10 +55,10 @@ A task that adds, renames or moves a file keeps its folder's `README.md` current
 | `src/assets/` | Bundled fonts and the optional character model | `fonts/`, `models/characters/` |
 | `pool.md`, `stats.md` | Hand-edited tables the game and its tests read: assets and economy, replica and part numbers | read by `pool/poolFile.ts`, `config/statsFile.ts` |
 | `public/` | Static files: icon, manifest, menu stills (from `pipeline/map-stills.mjs`) | `menu/` |
-| `pipeline/` | Gates, perf runs, light bakes, build cache, task records: the task pipeline's scripts | `README.md`, `gate.mjs`, `perf-run.mjs`, `records.mjs`, `bake-light.mjs` |
+| `pipeline/` | Gates, perf runs, light bakes, build cache, task records, the content check: the task pipeline's scripts | `README.md`, `gate.mjs`, `perf-run.mjs`, `records.mjs`, `content-check.mjs` |
 | `e2e/` | Playwright smoke tests on the `e2e` build; `release.spec.ts` on `dist/` | `boot.spec.ts`, `crash.spec.ts`, `release.spec.ts` |
-| `docs/` | The plan, process, rulings, open issues, playtest guide, task records; history in `archive/` | `ROADMAP.md`, `PROCESS.md`, `DECISIONS.md`, `KNOWN_ISSUES.md`, `TASKS.md`, `records/` |
-| `.claude/` | Pipeline agents and skill, session hooks, shared settings | `agents/`, `skills/pipeline/SKILL.md`, `hooks/` |
+| `docs/` | The plan, process, rulings, open issues, playtest guide, task records, content rulebooks (`content/`); history in `archive/` | `ROADMAP.md`, `PROCESS.md`, `DECISIONS.md`, `KNOWN_ISSUES.md`, `TASKS.md`, `records/` |
+| `.claude/` | Pipeline agents, the pipeline and new-content skills, session hooks, shared settings | `agents/`, `skills/pipeline/SKILL.md`, `skills/new-content/SKILL.md`, `hooks/` |
 
 The root files in more detail:
 

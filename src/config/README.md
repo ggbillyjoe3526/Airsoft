@@ -16,7 +16,8 @@ holds no magic numbers.
   chunk) and `renderBackend.ts` (the row's texts and the back ends' tuning, read only by the lazy renderer chunks).
 - Sound, input and UI: `audio.ts`, `sounds.ts`, `controls.ts`, `menus.ts`, `menuArt.ts`, `minimap.ts`, `matchInfo.ts`, `hudText.ts` (the HUD's words),
   `teams.ts`, `tutorial.ts`, `accessibility.ts`, `itemPictures.ts`.
-- Content and saving: `content.ts` (public or dev tags), `dev.ts` (Dev settings), `save.ts`, `assets.ts`.
+- Content and saving: `content.ts` (public or dev tags), `contentRules.ts` (the content checks' ranges, budgets,
+  balance band and exception registers: `docs/content/README.md`), `dev.ts` (Dev settings), `save.ts`, `assets.ts`.
 - Build and pipeline: `buildVersion.ts` (the version comes from git through `vite.config.ts` and `.git_archival.txt`;
   nothing to bump), `chunkBudget.ts`, `page.ts`, `precompress.ts`, `perfScript.ts`, `crash.ts`, `loading.ts`.
 - Tests: `render.test.ts`, `graphics.test.ts`, `stats.test.ts`, `content.test.ts`, `dev.test.ts`, `botsTuning.test.ts`,

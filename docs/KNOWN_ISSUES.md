@@ -70,6 +70,7 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 
 | Issue | Class | Notes |
 |---|---|---|
+| Bots lead their shots and judge their friendly line by the default loadout's first replica, not the one they carry | can wait | `ai/botCombat.ts` `bbFlightTime` and the friendly-line spread read `BotWorld.loadout[0]`. Only matters for a carried replica whose BBs fly much slower or spread much wider than the AEG's; found building the content toolkit's balance run, which gives bots other replicas. (CT1) |
 | Bots switch their torch by mode and distance only: they don't turn it off to hide when a player is near, or point it to blind | playtest | M33h's first policy. Since M71 on for a fight within 20 m (`BOT_TORCH.fightReach`) and a search's last stretch, held 1.5 s; Easy keeps it on while moving. (M33h, M71) |
 | Bots only use the AEG, never switch to the pistol, and don't jump | can wait | Fine for Phase 1. |
 | Bots lead moving targets with the factory replica's muzzle speed, so a Hard bot on a stronger kit leads a touch too far | can wait | A few percent at most; the Cyber Pistol (89 m/s) leads as the AEG (88 m/s), within 1 %. (M29b, M32) |

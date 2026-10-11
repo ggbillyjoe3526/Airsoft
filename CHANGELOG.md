@@ -126,6 +126,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **RM1** · Replica parts live in their own model folder, with a file budget per replica
 - **RM2** · Model files' magazine animation tracks are read, so an animation can slide a magazine (the Cyber Pistol's battery check)
 - **W5** · On WebGPU particles move on the graphics card; the WebGPU comparison adds Woodland's grass and stand-in views
+- **CT1** · Content toolkit part 1: rulebooks per content kind, and one command that checks a replica or part in four levels and writes a one-page report
 
 ## 0.1 Dev 4 · 2026-10-06
 
