@@ -34,6 +34,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **RM2** · AEG charging handle pulls back and the hop-up cover opens (3 s); pistols do a press or battery check (2 s); a shot leaves from the normal hold
 - **W5** · On WebGPU at Medium and up, Woodland's meadows grow swaying grass and a deep wood stands beyond the fence
 - **M86** · Rare, distant background sounds: a crow and a dog at Depot and the range, a creak in Woodland at night, pigeons and a car horn on Neon Heights
+- **M98** · Two teams, Alpha (blue) and Beta (orange); Your team on the Match screen picks your side; an Extraction run is always Alpha
 
 ### Changed
 - **M71** · Bots hunt the map's middle once their lane is swept (now all levels, not just Pro); Normal and Hard hold their posts out of lantern light at night (#133)

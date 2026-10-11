@@ -78,6 +78,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Extraction supply events: a Supply weekend every Friday to Sunday (+25 % FC, +50 % parts) and dated events from
   pool.md (Halloween night run 2026), by the device's clock; the Play screen says which is on under Extraction (M49)
 - 3v3 by default with a round clock; first to 5 rounds wins; a whistle starts each round (Phase 1)
+- Teams: Alpha (blue) and Beta (orange); Your team on the Match screen picks your side, and an Extraction run is always Alpha (M98)
 - Custom matches: rounds to win, round time, 1v1 to 3v3 (to 5v5 on maps with room, M33d), friendly fire, ricochets; only
   the standard match counts for the records (M20)
 - Rules: Skirmish, Tournament and Pro CQB (dev) and Custom; Extraction offers Skirmish and Custom only; named rulesets keep their own
