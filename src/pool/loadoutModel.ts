@@ -1,7 +1,7 @@
 import { BOT_GLOW_BBS, bbsGlow, DEFAULT_GLOW_BBS, GLOW_BB_CHOICES, type GlowBBs } from '../config/glowBBs';
 import { HOP_UP, LOADOUT, type ReplicaConfig, validBbWeight } from '../config/replicas';
 import { DEFAULT_LOOK, type LookSettings } from '../config/look';
-import { defaultScheme, isSchemeId, type ReplicaPaint, type SchemeId } from '../config/schemes';
+import { defaultScheme, isSchemeId, offeredSchemes, type ReplicaPaint, type SchemeId } from '../config/schemes';
 import { loadSetting, numberIn, oneOf, saveSetting } from '../settings/storage';
 import { type Collection, inPool, type ItemRef, itemKey, parseItemKey } from './collection';
 import { isAvailable } from '../config/content';
@@ -51,6 +51,8 @@ export interface Ownership {
   owns(ref: ItemRef): boolean;
   /** Whether `asset` is offered at all (M35: dev gear only with Dev content on); every asset when absent. */
   offers?(asset: Asset): boolean;
+  /** Whether dev content is offered (M35's switch; CT4: a dev colour scheme shows only then); never when absent. */
+  devContent?(): boolean;
   /**
    * True while everything is unlocked (M26d): picks are then saved apart from the real ones (under `equip.dev.` and
    * `fit.dev.`), starting from them, so turning Unlock all gear off brings back the loadout the player owns.
@@ -72,6 +74,7 @@ export function gameOwnership(pool: Pool, collection: () => Collection, unlockAl
   return {
     owns: (ref) => (devContent() || !isDevItem(pool, ref)) && (unlockAll() ? inPool(pool, ref) : owned.owns(ref)),
     offers: (asset) => isAvailable(asset.tag, devContent()),
+    devContent,
     sandboxed: unlockAll,
   };
 }
@@ -251,11 +254,18 @@ export class LoadoutModel {
   /**
    * A replica asset's colour scheme (G1), or its default (a Cobalt rifle, a Ghost pistol). Cosmetic, so one pick per
    * asset whether or not everything is unlocked: a colour picked on borrowed gear is waiting when the player owns it.
+   * A dev scheme picked with Dev content on plays as the default while it is off (CT4), and comes back with it.
    */
   scheme(replicaId: string): SchemeId {
     const r = this.replicaConfig(replicaId);
     const fallback = r ? defaultScheme(r) : 'cobalt';
-    return loadSetting(`scheme.${replicaId}`, (raw) => (isSchemeId(raw) ? raw : undefined), fallback);
+    const offered = this.schemes();
+    return loadSetting(`scheme.${replicaId}`, (raw) => (isSchemeId(raw) && offered.includes(raw) ? raw : undefined), fallback);
+  }
+
+  /** The schemes Customise offers (CT4): the public ones, and the dev ones while Dev content is on. */
+  schemes(): SchemeId[] {
+    return offeredSchemes(this.ownership.devContent?.() ?? false);
   }
 
   setScheme(replicaId: string, scheme: SchemeId): void {

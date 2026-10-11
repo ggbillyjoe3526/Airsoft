@@ -1,3 +1,4 @@
+import { type ContentTag, isAvailable } from './content';
 import type { ReplicaConfig } from './replicas';
 
 /**
@@ -22,6 +23,11 @@ export interface Scheme {
   glow?: boolean;
   /** The plain family the Realistic colours setting turns this scheme into. */
   family: FamilyId;
+  /**
+   * Dev or public (CT4, the content toolkit's skin checks; docs/content/skins.md): a dev scheme shows in Customise only
+   * with Dev content on. Every scheme says which; the plain families have none (they are no skin).
+   */
+  tag?: ContentTag;
 }
 
 /** The eight bold schemes a player can pick. Ids are save keys: never rename one. */
@@ -31,14 +37,14 @@ export type SchemeId = 'cobalt' | 'signal' | 'acid' | 'teal' | 'hazard' | 'coral
 export type FamilyId = 'black' | 'grey' | 'ranger' | 'tan';
 
 export const SCHEMES: Readonly<Record<SchemeId, Scheme>> = {
-  cobalt: { name: 'Cobalt', body: 0x24282f, furniture: 0x2f6fd6, detail: 0x30343b, accent: 0xf2f0ea, steel: 0x484d56, family: 'black' },
-  signal: { name: 'Signal', body: 0xe8ebee, furniture: 0xff5a1f, detail: 0x2a2d33, accent: 0x2a2d33, steel: 0x484d56, family: 'tan' },
-  acid: { name: 'Acid', body: 0x2a2e33, furniture: 0xb8e636, detail: 0x1e2125, accent: 0xb8e636, steel: 0x40454c, family: 'ranger' },
-  teal: { name: 'Teal', body: 0x23272c, furniture: 0x22a196, detail: 0x2e3238, accent: 0xffb23a, steel: 0x484d56, family: 'ranger' },
-  hazard: { name: 'Hazard', body: 0x2a2d32, furniture: 0xf0b429, detail: 0x1f2226, accent: 0x1f2226, steel: 0x484d56, family: 'tan' },
-  coral: { name: 'Coral', body: 0xf1ece3, furniture: 0xff4f6d, detail: 0x34373e, accent: 0x34373e, steel: 0x50555d, family: 'tan' },
-  onyx: { name: 'Onyx', body: 0x1d1f23, furniture: 0x34383e, detail: 0x2a2d32, accent: 0x7d838c, steel: 0x40454c, family: 'black' },
-  ghost: { name: 'Ghost', body: 0xeef0f2, furniture: 0xc4c9cf, detail: 0x3a3e45, accent: 0x30f0ff, steel: 0x6a7079, glow: true, family: 'grey' },
+  cobalt: { name: 'Cobalt', body: 0x24282f, furniture: 0x2f6fd6, detail: 0x30343b, accent: 0xf2f0ea, steel: 0x484d56, family: 'black', tag: 'public' },
+  signal: { name: 'Signal', body: 0xe8ebee, furniture: 0xff5a1f, detail: 0x2a2d33, accent: 0x2a2d33, steel: 0x484d56, family: 'tan', tag: 'public' },
+  acid: { name: 'Acid', body: 0x2a2e33, furniture: 0xb8e636, detail: 0x1e2125, accent: 0xb8e636, steel: 0x40454c, family: 'ranger', tag: 'public' },
+  teal: { name: 'Teal', body: 0x23272c, furniture: 0x22a196, detail: 0x2e3238, accent: 0xffb23a, steel: 0x484d56, family: 'ranger', tag: 'public' },
+  hazard: { name: 'Hazard', body: 0x2a2d32, furniture: 0xf0b429, detail: 0x1f2226, accent: 0x1f2226, steel: 0x484d56, family: 'tan', tag: 'public' },
+  coral: { name: 'Coral', body: 0xf1ece3, furniture: 0xff4f6d, detail: 0x34373e, accent: 0x34373e, steel: 0x50555d, family: 'tan', tag: 'public' },
+  onyx: { name: 'Onyx', body: 0x1d1f23, furniture: 0x34383e, detail: 0x2a2d32, accent: 0x7d838c, steel: 0x40454c, family: 'black', tag: 'public' },
+  ghost: { name: 'Ghost', body: 0xeef0f2, furniture: 0xc4c9cf, detail: 0x3a3e45, accent: 0x30f0ff, steel: 0x6a7079, glow: true, family: 'grey', tag: 'public' },
 };
 
 /** The plain families, as schemes (their own family is themselves). Small metal parts match the family. */
@@ -99,6 +105,11 @@ export function hasFixedColours(replica: ReplicaConfig): boolean {
 export function schemeColours(id: SchemeId, realistic: boolean): Scheme {
   const scheme = SCHEMES[id];
   return realistic ? FAMILIES[scheme.family] : scheme;
+}
+
+/** The schemes Customise offers, in its order: the public ones, and the dev ones too while `devContent` (M35's switch). */
+export function offeredSchemes(devContent: boolean): SchemeId[] {
+  return SCHEME_IDS.filter((id) => isAvailable(SCHEMES[id].tag, devContent));
 }
 
 /** True for a saved value that is one of the eight schemes. */
