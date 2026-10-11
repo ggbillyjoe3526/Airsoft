@@ -41,7 +41,7 @@ import { rendererName } from './render/gpuCheck';
 import { Renderer } from './render/renderer';
 import type { RendererBoot } from './render/rendererStart';
 import { matchSeed } from './matchFlow';
-import { nextSessionAction } from './core/sessionPlan';
+import { nextSessionAction, type SessionAction } from './core/sessionPlan';
 import { MatchSession } from './matchSession';
 import { type RangePose, RangeSession } from './rangeSession';
 import type { GameState } from './sim/state';
@@ -299,6 +299,8 @@ export class Game {
   private drawMs = 0;
   /** Set by dispose(): work still in flight (the dev maps' fetch) then does nothing. */
   private disposed = false;
+  /** Play asked for the lock and waits for the browser's answer before building (play). */
+  private askingLock = false;
   /** Up once the game has stopped on an error (crash); the loop never runs again. */
   private crashScreen: CrashScreen | null = null;
 
@@ -589,8 +591,9 @@ export class Game {
         if (locked) this.pointer.release();
         return;
       }
-      if (locked) this.resume();
-      else {
+      if (locked) {
+        if (!this.askingLock) this.resume();
+      } else {
         this.pause();
         this.relockAfterFullscreen();
       }
@@ -970,9 +973,11 @@ export class Game {
   /**
    * Play on New game, Resume, Play Again. Before play has begun in a match, the match is built here from New game's
    * choices; a match left over from a lock request still pending (or refused) is reused if nothing changed since, and
-   * replaced otherwise. Runs in the click, so audio can be unlocked.
+   * replaced otherwise. Runs in the click: the lock is asked for first, and the session built once the browser has
+   * answered (`enter`).
    */
   private play(): void {
+    if (this.askingLock) return;
     const s = this.session;
     // What Play does is decided from these flags alone (core/sessionPlan.ts, audit CORE-05).
     const action = nextSessionAction({
@@ -985,6 +990,25 @@ export class Game {
       loadoutChanged: this.loadoutChanged,
     });
     if (action === 'none') return;
+    if (this.options.allowUnlocked) {
+      this.enter(action, s);
+      return;
+    }
+    // The lock is asked for before anything is built: the build and the first frames' compile can hold the page for
+    // seconds (the node renderer in software, W6a), and a first try refused (raw input not offered) would retry only
+    // once the page is free, past the click's user activation, and be refused. A lock granted meanwhile resumes nothing:
+    // the session it would resume is the one being replaced; `enter` resumes once it is built.
+    this.askingLock = true;
+    void this.pointer.request().finally(() => {
+      this.askingLock = false;
+      if (this.disposed) return;
+      this.enter(action, s);
+      if (this.pointer.locked) this.resume();
+    });
+  }
+
+  /** Builds or reuses the session `action` asks for (`s`, the session when Play was pressed) and unlocks its audio. */
+  private enter(action: Exclude<SessionAction, 'none'>, s: MatchSession | RangeSession | null): void {
     if (action === 'buildRange') {
       // The tutorial resumes at the step it was left at (audit POOL-14).
       this.openRange(undefined, this.tutorial ? loadTutorialStep() : undefined);
@@ -1036,9 +1060,7 @@ export class Game {
       this.unlockedPlay = true;
       this.pointer.setUnlockedButtons(true);
       this.resume();
-      return;
     }
-    void this.pointer.request();
   }
 
   /**
@@ -1070,7 +1092,7 @@ export class Game {
       return;
     }
     if (!s) {
-      // Nothing to play (should not happen: Play builds the match before asking for the lock); give the mouse back.
+      // Nothing to play (should not happen: Play resumes once its session is built); give the mouse back.
       this.pointer.release();
       return;
     }
