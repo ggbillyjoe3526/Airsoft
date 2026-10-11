@@ -17,7 +17,7 @@ first guesses; the build thread confirms them before it starts. The owner ruled 
 ## M81 · The practice range and tutorial area in the new look (playtest note 9)
 tier: ui
 perf: required
-touches: src/map/range.ts, src/map/testYard.ts, src/render/, src/rangeSession.ts
+touches: src/map/range.ts, src/map/rangeDressing.ts, src/map/mapTypes.ts, src/map/bakes/, src/map/testYard.ts, src/render/, src/rangeSession.ts, pipeline/bake-light.mjs
 contract: none
 acceptance:
   1. After graphics G5 and G6 merge, the range and tutorial area use the new materials, baked light and post stack on every preset, re-dressed in the art direction like Depot (G8).
@@ -28,7 +28,7 @@ attempts: 0
 ## M91 · Softer torch beams that cast shadows (playtest note 26)
 tier: core
 perf: required
-touches: src/render/torchBeams.ts, src/map/torchLight.ts, src/config/torches.ts, src/render/lighting.ts
+touches: src/render/torchBeams.ts, src/render/webgpu/effectNodes.ts, src/render/webgpu/worldTwins.ts, src/map/torchLight.ts, src/config/torches.ts, src/config/renderLighting.ts, src/config/renderQuality.ts, src/config/graphics.ts, src/render/lighting.ts
 contract: none
 acceptance:
   1. The beam is soft and diffused, not a bright white cone (built with or after graphics G5).
