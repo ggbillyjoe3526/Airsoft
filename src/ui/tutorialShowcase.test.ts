@@ -1,10 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ORDER_WHEEL } from '../config/squad';
 import { TEAMS } from '../config/teams';
 import { TUTORIAL } from '../config/tutorial';
-import { MatchBoard } from './matchBoard';
-import { OrderWheel } from './orderWheel';
-import { demoPick, sampleBoardBlocks, TutorialShowcase } from './tutorialShowcase';
+import type * as MatchBoardModule from './matchBoard';
+import type * as OrderWheelModule from './orderWheel';
+import type * as ShowcaseModule from './tutorialShowcase';
 
 vi.mock('./matchBoard');
 vi.mock('./orderWheel', async (importOriginal) => {
@@ -16,11 +16,26 @@ vi.mock('./orderWheel', async (importOriginal) => {
   }) };
 });
 
+let MatchBoard: typeof MatchBoardModule.MatchBoard;
+let OrderWheel: typeof OrderWheelModule.OrderWheel;
+let TutorialShowcase: typeof ShowcaseModule.TutorialShowcase;
+let demoPick: typeof ShowcaseModule.demoPick;
+let sampleBoardBlocks: typeof ShowcaseModule.sampleBoardBlocks;
 const board = () => vi.mocked(MatchBoard).mock.instances[0]!;
 const wheel = () => vi.mocked(OrderWheel).mock.instances[0]!;
 
 describe('what the tutorial opens on screen (M80)', () => {
-  let s: TutorialShowcase;
+  // Test files share a worker's modules (isolate: false): another file may already have loaded the showcase with the
+  // real board and wheel, so this file loads its own copies, with the mocks, and leaves a clean registry behind.
+  beforeAll(async () => {
+    vi.resetModules();
+    ({ MatchBoard } = await import('./matchBoard'));
+    ({ OrderWheel } = await import('./orderWheel'));
+    ({ TutorialShowcase, demoPick, sampleBoardBlocks } = await import('./tutorialShowcase'));
+  });
+  afterAll(() => vi.resetModules());
+
+  let s: ShowcaseModule.TutorialShowcase;
   beforeEach(() => {
     vi.mocked(MatchBoard).mockClear();
     vi.mocked(OrderWheel).mockClear();
