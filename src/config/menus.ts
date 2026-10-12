@@ -294,6 +294,9 @@ export const MENU_TEXT = {
   fc: (fc: number) => `${fc.toLocaleString('en-GB')} FC`,
   tokens: (n: number) => `${n} ${n === 1 ? 'Token' : 'Tokens'}`,
   dev: 'Dev',
+  /** By the play buttons when a screen's or the range's code, fetched on first use (IM1), didn't download. */
+  screenFailed: 'That screen didn’t download. Check the connection and try again.',
+  rangeFailed: 'Practice didn’t download. Check the connection and try again.',
   /** The buttons and keys the screens name (no key prompts are drawn along the bottom since M100). */
   hints: {
     back: 'Back',

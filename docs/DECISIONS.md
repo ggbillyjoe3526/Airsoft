@@ -579,7 +579,16 @@ replaces its line; the old one stays findable in the archive or in git.
   moved WebGL's retro filter to a chunk of its own); the WebGPU overhaul's step 6 (the old renderer removed) is where it
   should shrink again. W6a (2026-10-11) took it from 1,007.1 to 982 kB (946 kB before main's M80, M82 and RM4), and
   W6b (2026-10-11, the world's GLSL patches gone) to 975 kB, so the line is back at 1,000 kB (warning from 900): a
-  change that crosses it bumps it with a line here.
+  change that crosses it bumps it with a line here. At 985 kB on 2026-10-12, IM1 made room without a bump: the code
+  fetched on first use (below) took the start-up code to 893 kB. Since IM1 the game chunk is the `game` group
+  (`vite.config.ts`: every module `main.ts` reaches by static imports), so all start-up code is counted in one chunk.
+- **Menus stay smooth; what a menu opens is fetched on first use (owner, 2026-10-12; IM1).** "The UI should always
+  feel smooth and responsive. However, for entering tutorial, practice range, maps, matches you can add a loading
+  screen if it helps." The Loadout (with Customise), the Armory and Settings (`ui/menus/lazyScreens.ts`) and the
+  practice range with the tutorial (`rangeSession.ts`) are fetched the first time they are needed and preloaded in the
+  background once the title is up (`core/onDemand.ts`), so a menu never waits visibly; entering the range may wait for
+  its code with the start of play. A new screen reached only from a menu joins `lazyScreens.ts`; one on the way to
+  play (the title, the Match screen, pause, the summary and result) stays in the start-up code.
 - **Production builds ship Brotli and gzip copies of their files (owner, 2026-10-04: Brotli now, `.wasm` later).**
 - **Level blocks collide as closed triangle meshes with `FIX_INTERNAL_EDGES`, not cuboids (2026-09-28).** Rapier's
   capsule controller sinks into any cuboid along its diagonals, and without the flag face-diagonal edges give ghost

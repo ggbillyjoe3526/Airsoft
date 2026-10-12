@@ -1,10 +1,9 @@
 import { STATS } from '../../config/matchInfo';
-import { ARMORY_TEXT, HAUL_TEXT } from '../../config/menus';
+import { ARMORY_TEXT, HAUL_TEXT, MENU_TEXT } from '../../config/menus';
 import { type Dispensed, type Earnings, rarestFirst } from '../../pool/armory';
 import type { Pool } from '../../pool/pool';
 import type { ItemRef } from '../../pool/collection';
 import type { RecordsView } from '../recordsView';
-import { fcText } from './armoryScreen';
 import type { TeamBlock } from '../statsRows';
 import { haulWhat } from '../runStatus';
 import { StatsTable } from '../statsTable';
@@ -146,7 +145,7 @@ function creditsBlock(e: Earnings | null, unpaid: Unpaid | null): HTMLElement[] 
   if (none) return [el('p', 'menu-readout', none)];
   if (!e) return [];
   const head = el('p', 'summary-credits-total');
-  head.append(el('span', 'menu-kicker', ARMORY_TEXT.earned), el('strong', '', `+${fcText(e.total)}`));
+  head.append(el('span', 'menu-kicker', ARMORY_TEXT.earned), el('strong', '', `+${MENU_TEXT.fc(e.total)}`));
   const parts = e.lines.map((l) => `${l.label} ${l.fc}`);
   if (e.multiplier !== 1) parts.push(`difficulty ×${e.multiplier}`);
   return [head, el('p', 'menu-readout', parts.join(' · '))];

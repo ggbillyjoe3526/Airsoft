@@ -1,9 +1,9 @@
 import { DIFFICULTIES, type Difficulty } from '../config/bots';
 import { standardMatchText } from '../config/matchRules';
 import { isAvailable } from '../config/content';
+import { MENU_TEXT } from '../config/menus';
 import { MATCH_MODES, type MatchMode } from '../config/modes';
 import { noNews, type RecordNews, type Records, resultKey } from '../stats/records';
-import { fcText } from './menus/armoryScreen';
 import { formatTime } from './statsRows';
 
 /** How the records read on the summary screen: a wins and losses grid, then the bests. Pure, so it's tested without a page. */
@@ -69,7 +69,7 @@ export function recordsView(records: Records, news: RecordNews, difficulty: Diff
 /** Extraction's bests (M47): the biggest haul, extractions in a row, and the quickest one with a case's finds. Pure. */
 export function extractionBests(records: Records, news: RecordNews): RecordsView['bests'] {
   return [
-    { label: 'Best haul', value: records.bestHaul === null ? '–' : fcText(records.bestHaul), isNew: news.bestHaul },
+    { label: 'Best haul', value: records.bestHaul === null ? '–' : MENU_TEXT.fc(records.bestHaul), isNew: news.bestHaul },
     { label: 'Extractions in a row', value: `${records.extractionStreak} now · best ${records.bestExtractionStreak}`, isNew: news.bestExtractionStreak },
     {
       label: 'Fastest extraction with a case',
