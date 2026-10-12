@@ -1,11 +1,11 @@
 import * as THREE from 'three';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { MOVEMENT } from '../config/movement';
 import { RENDER } from '../config/render';
 import { AEG, CYBER_PISTOL, GAS_PISTOL } from '../config/replicas';
 import { createCharacter } from '../sim/character';
 import { vec3 } from '../sim/vec';
-import { heardReplicas, listenerAxes } from './combatPresentation';
+import { CombatPresentation, heardReplicas, listenerAxes } from './combatPresentation';
 
 const who = (id: number, loadout: Parameters<typeof createCharacter>[3]) => createCharacter(id, vec3(), 0, loadout, id === 0 ? 0 : 1);
 
@@ -84,5 +84,15 @@ describe("M53: the listener's ears follow the view (audit AUD-05)", () => {
     listenerAxes(cam, forward, up);
     expect(up.y).toBeCloseTo(Math.cos(MOVEMENT.maxPitch), 9);
     expect(forward.y).toBeCloseTo(-Math.sin(MOVEMENT.maxPitch), 9);
+  });
+});
+
+describe('a Skip to next round (BP3)', () => {
+  it('settles the AEG motors, so no wind-down owed plays into the next round', () => {
+    const settleMotors = vi.fn();
+    const c = Object.create(CombatPresentation.prototype) as CombatPresentation;
+    Object.assign(c, { sfx: { settleMotors } });
+    c.skipBegins();
+    expect(settleMotors).toHaveBeenCalledTimes(1);
   });
 });

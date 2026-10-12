@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { DRESSING } from '../config/dressing';
+import { BODY } from '../config/movement';
 import { DUST_MOTES } from '../config/render';
-import { DustMotes, moteHeightFade } from './dustMotes';
+import { DustMotes, moteFloor, moteHeightFade } from './dustMotes';
 
 /** QA for G8's map-tinted dust motes: the tint, the height fade, Reduced motion and putting the default back. */
 
@@ -13,6 +14,15 @@ const colour = (m: DustMotes): THREE.Color => (m.object.material as THREE.Points
 describe('G8 QA: map dust motes', () => {
   beforeAll(() => vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => null }) }));
   afterAll(() => vi.unstubAllGlobals());
+
+  it('measures the height over the ground under the eye, not over world y = 0: as low on the Knoll as in a yard (BP3)', () => {
+    const M = DRESSING.motes;
+    const raised = 6;
+    const floor = moteFloor(raised + BODY.standEyeHeight);
+    expect(floor).toBeCloseTo(raised, 9);
+    for (const h of [0, M.full, (M.full + M.none) / 2, M.none, M.none + 1]) expect(moteHeightFade(raised + h, floor)).toBeCloseTo(moteHeightFade(h, 0), 9);
+    expect(moteHeightFade(raised + 0.5, floor)).toBe(1);
+  });
 
   it('moteHeightFade is 1 up to `full`, 0 from `none`, and falls evenly between', () => {
     const M = DRESSING.motes;

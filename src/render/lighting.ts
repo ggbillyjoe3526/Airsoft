@@ -102,7 +102,8 @@ export interface Daylight {
   /**
    * How many of the night lights something else takes (M33h: your weapon torch's spot on Medium and High): the light
    * pools get that many fewer real lights, so the scene's count stays the setting's. Call before the first frame and
-   * after each setQuality (it is kept until changed).
+   * after each setQuality (it is kept until changed), and on a new renderer after a lost device: the pools ask again
+   * whether it draws on clustered lights (BP3).
    */
   reserveLights(n: number): void;
   /**
@@ -150,10 +151,11 @@ function applyNormalBias(sun: THREE.DirectionalLight): void {
  * Adds the map's light under `preset` (render/lightingPreset.ts resolveLighting; M33f), sized to the map: a sky fill, one
  * shadow-casting key light (the sun, or the moon at night), the world round it (render/atmosphere.ts: the sky dome, the
  * trees and clouds), the map's light pools (render/lightPools.ts; under a night preset only, M34e: by Day a lamp is off)
- * and its signs (render/mapSigns.ts: glowing by Night, painted by Day), and returns its handle. On WebGPU's clustered
- * lights (`clustered`, W3) every lamp near the eye has a real light; WebGL's lights are as before.
+ * and its signs (render/mapSigns.ts: glowing by Night, painted by Day), and returns its handle. While the renderer
+ * draws on WebGPU's clustered lights (`clustered`, W3) every lamp near the eye has a real light; WebGL's lights are as
+ * before.
  */
-export function addLighting(scene: THREE.Scene, map: MapData, quality: QualitySettings, preset: LightingPreset, clustered = false): Daylight {
+export function addLighting(scene: THREE.Scene, map: MapData, quality: QualitySettings, preset: LightingPreset, clustered: () => boolean = () => false): Daylight {
   const hemi = new THREE.HemisphereLight(preset.hemi.sky, preset.hemi.ground, preset.hemi.intensity);
 
   const sun = new THREE.DirectionalLight(preset.key.colour, preset.key.intensity);

@@ -1,5 +1,6 @@
 import { DUST_MOTES, IMPACT_GRIT, type PuffConfig } from '../../../config/render';
 import { DRESSING, FIREFLIES } from '../../../config/dressing';
+import { BODY } from '../../../config/movement';
 import type { PlumeConfig } from '../../smokePlumes';
 import { length3, type Ops, saturate, smoothstep, wrap } from './kernelOps';
 
@@ -40,7 +41,9 @@ export function moteKernel<T>(o: Ops<T>, base: V3<T>, phase: T, time: T, drift: 
   const edge = o.max(o.max(o.abs(dx), o.abs(dy)), o.abs(dz));
   const fade = o.mul(smoothstep(o, D.fadeNear, D.fadeFar, length3(o, dx, dy, dz)), o.sub(o.c(1), smoothstep(o, half - D.edgeFade, half, edge)));
   const M = DRESSING.motes;
-  const heightFade = saturate(o, o.div(o.sub(o.c(M.none), y), o.c(M.none - M.full)));
+  // Over the ground under the eye, as dustMotes.ts moteFloor (BP3).
+  const over = o.sub(y, o.sub(eye.y, o.c(BODY.standEyeHeight)));
+  const heightFade = saturate(o, o.div(o.sub(o.c(M.none), over), o.c(M.none - M.full)));
   return { x, y, z, w: o.mul(fade, o.add(o.sub(o.c(1), hangsLow), o.mul(hangsLow, heightFade))) };
 }
 

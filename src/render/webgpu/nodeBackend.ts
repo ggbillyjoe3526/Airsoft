@@ -97,7 +97,7 @@ export class NodeBackend {
     this.particles = new ParticleTwins(renderer);
     this.world = new WorldTwins(renderer, this.particles.claims);
     this.dressing = new GpuDressing(renderer, this.kind === 'webgpu');
-    this.lighting = this.kind === 'webgpu' ? new NightLighting() : null;
+    this.lighting = this.kind === 'webgpu' ? new NightLighting(renderer) : null;
     if (this.lighting) renderer.lighting = this.lighting;
     // Three's own handler logs the loss as an error and stops the renderer for good; the game recovers instead.
     renderer.onDeviceLost = () => {
@@ -202,8 +202,10 @@ export class NodeBackend {
    */
   draw(scene: THREE.Scene, camera: THREE.PerspectiveCamera, overlay: Overlay | undefined, drawer: object | null): void {
     this.dressing.frame(scene, camera, this.quality, this.motion);
-    if (drawer) (drawer as NodeFrameDrawer).draw(this.renderer, scene, camera, overlay);
-    else this.output.drawScreen(this.renderer, scene, camera, overlay);
+    if (drawer) {
+      this.output.standDown(this.renderer);
+      (drawer as NodeFrameDrawer).draw(this.renderer, scene, camera, overlay);
+    } else this.output.drawScreen(this.renderer, scene, camera, overlay);
   }
 
   /**
@@ -258,6 +260,7 @@ export class NodeBackend {
    */
   frameDone(): void {
     this.frees.flush();
+    this.lighting?.flush(this.renderer);
     if (!this.timing || this.reading || !this.timestamps || this.lost) return;
     if (++this.sinceRead < RENDER_BACKEND.timestampEvery) return;
     this.sinceRead = 0;
@@ -282,6 +285,9 @@ export class NodeBackend {
     this.dressing.frame(scene, camera, quality, this.motion);
     const r = this.renderer;
     // Each for the target and output step the frame draws it with (W4), so the pipelines match the frame's.
+    // The direct draw's output hook stays on between Low's frames, and is taken off for a stack or the retro filter
+    // (nodeOutput.ts), so a compile's draws, built after an await, are built for the context the frames draw with.
+    if (drawer) this.output.standDown(r);
     const done = drawer ? (drawer as NodeFrameDrawer).compile(r, scene, camera, overlay) : this.output.compile(r, scene, camera, overlay);
     void this.compiles.track(done).catch(ignore);
   }
@@ -293,12 +299,14 @@ export class NodeBackend {
 
   /** Frees the renderer, its canvas's context and (on WebGPU) its device. */
   dispose(): void {
+    // First: the post passes' frees held for a compile a lost device may never settle run now (BP3).
+    this.compiles.release();
     this.lostListener = () => undefined;
     this.timing = false;
     this.particles.dispose();
     this.dressing.dispose();
     this.world.dispose();
-    this.lighting?.dispose();
+    this.lighting?.dispose(this.renderer);
     this.output.dispose();
     this.frees.flush();
     this.renderer.dispose().catch(ignore);

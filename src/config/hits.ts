@@ -162,7 +162,9 @@ export const ROUNDS = {
   halfTimeAfter: 4,
   /**
    * Elimination: Alpha starts in the east. On Depot the east end wins a little over half the rounds in bot-only
-   * matches (54%, DECISIONS 2026-10-03), so the player's team plays its first rounds, the ones that teach the map, there.
+   * matches (54%, DECISIONS 2026-10-03), so Alpha plays its first rounds, the ones that teach the map, there. It goes by
+   * team, not by the player: since M98 a player who picks Beta starts in the west (the owner kept it so, 2026-10-12;
+   * DECISIONS).
    */
   eliminationFirstEnd: 1,
   /** The lead a team needs once it has `winsNeeded` round wins: 1, the first there wins (Win by two sets 2, M39). */

@@ -244,9 +244,11 @@ function poolLightCount(quality: Pick<QualitySettings, 'poolLights'>, reserved =
 
 /**
  * Adds `map`'s light pools to `scene` at `quality`'s Night lights, less `reserved` (M33h: taken by your torch's spot),
- * and on `clustered` lights (W3) one more for each pool; a map without pools gets nothing.
+ * and while the renderer draws on `clustered` lights (W3) one more for each pool; a map without pools gets nothing.
+ * `clustered` is asked at each setQuality, not once: after a lost WebGPU device the WebGL2 back end may take over
+ * mid-match, and the session's contextRestored drops the extra lamps then (BP3).
  */
-export function addLightPools(scene: THREE.Scene, map: MapData, quality: PoolQuality, reserved = 0, clustered = false): LightPools {
+export function addLightPools(scene: THREE.Scene, map: MapData, quality: PoolQuality, reserved = 0, clustered: () => boolean = () => false): LightPools {
   const pools = map.lights ?? [];
   if (pools.length === 0) return NO_LIGHT_POOLS;
   const glow = buildPoolGlow(pools);
@@ -285,7 +287,7 @@ export function addLightPools(scene: THREE.Scene, map: MapData, quality: PoolQua
   };
   const setQuality = (q: PoolQuality, reserve = 0): void => {
     if (q.dustMotes !== undefined) fixtures?.setEmbers(q.dustMotes > 0);
-    setOwn(clustered && q.poolLights > 0);
+    setOwn(clustered() && q.poolLights > 0);
     const count = poolLightCount(q, reserve);
     if (count === lights.length) return;
     dropLights();

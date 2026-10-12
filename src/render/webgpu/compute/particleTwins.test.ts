@@ -155,6 +155,81 @@ describe('ParticleTwins', () => {
     expect(p.grit.object.count).toBeGreaterThanOrEqual(IMPACT_GRIT.perImpact[0]);
   });
 
+  /**
+   * The grit pass's own memory of each chip's throw, as the GPU keeps it (the w of its `flying` buffer): the pass starts
+   * a chip again from its throw only when its record's birth differs. Returns the slots restarted by each dispatch.
+   */
+  function flightOf(compute: ReturnType<typeof vi.fn>, grit: ImpactGrit) {
+    const driver = grit.gpu as unknown as { pass: unknown; records: { value: { array: Float32Array } }[] };
+    const flying = (driver as unknown as { flying: { value: { array: Float32Array } } }).flying.value.array.filter((_, i) => i % 4 === 3);
+    const restarted: number[][] = [];
+    compute.mockImplementation((passes: unknown) => {
+      if (!(Array.isArray(passes) ? passes : [passes]).includes(driver.pass)) return;
+      const thrown = driver.records[0]!.value.array;
+      const now: number[] = [];
+      for (let i = 0; i < IMPACT_GRIT.max; i++) {
+        if (flying[i] === thrown[i * 4 + 3]) continue;
+        flying[i] = thrown[i * 4 + 3]!;
+        if (flying[i]! > -1e8) now.push(i);
+      }
+      restarted.push(now);
+    });
+    return restarted;
+  }
+
+  it('starts a chip thrown after a quiet spell from its own throw, though its birth equals an old one’s (BP3)', () => {
+    const { twins, compute } = setup();
+    const p = pools();
+    twins.scan(p.scene);
+    const restarted = flightOf(compute, p.grit);
+    const tint = new THREE.Color(1, 1, 1);
+    // The first burst is born at the clock's 0, and starts from its throw (not from a new buffer's zeros).
+    p.grit.spawn({ x: 0, y: 1, z: 0 }, tint, { x: 0, y: 1, z: 5 });
+    p.grit.update(1 / 60, camera);
+    twins.frame();
+    expect(restarted.flat()).toContain(0);
+    // Frames until the quiet spell puts the clock back to 0.
+    const clock = p.grit.gpu as unknown as { now: number };
+    for (let frame = 0; frame < 600; frame++) {
+      p.grit.update(1 / 60, camera);
+      twins.frame();
+      if (clock.now === 0) break;
+    }
+    expect(clock.now).toBe(0);
+    expect(p.grit.object.count).toBe(0);
+    // A quiet spell put the clock back to 0: the next burst, into the same slots, is born at 0 too.
+    (p.grit as unknown as { next: number }).next = 0;
+    restarted.length = 0;
+    p.grit.spawn({ x: 5, y: 1, z: 0 }, tint, { x: 0, y: 1, z: 5 });
+    p.grit.update(1 / 60, camera);
+    twins.frame();
+    const again = restarted.flat();
+    expect(again.length).toBeGreaterThanOrEqual(IMPACT_GRIT.perImpact[0]);
+    expect(again).toContain(0);
+  });
+
+  it('turning grit off lets go of the chips in the air on the GPU too: none comes back on when it is on again (BP3)', () => {
+    const { twins, compute } = setup();
+    const p = pools();
+    twins.scan(p.scene);
+    flightOf(compute, p.grit);
+    const tint = new THREE.Color(1, 1, 1);
+    p.grit.spawn({ x: 0, y: 1, z: 0 }, tint, { x: 0, y: 1, z: 5 });
+    p.grit.update(1 / 60, camera);
+    twins.frame();
+    expect(p.grit.object.count).toBeGreaterThan(0);
+    p.grit.setEnabled(false);
+    p.grit.setEnabled(true);
+    p.grit.update(1 / 60, camera);
+    twins.frame();
+    expect(p.grit.object.count).toBe(0);
+    const draw = p.grit.object.children[0] as THREE.Mesh<THREE.InstancedBufferGeometry>;
+    expect(draw.geometry.instanceCount).toBe(0);
+    const driver = p.grit.gpu as unknown as { records: { value: { array: Float32Array } }[] };
+    const thrown = driver.records[0]!.value.array;
+    for (let i = 0; i < IMPACT_GRIT.max; i++) expect(thrown[i * 4 + 3]).toBe(-1e9);
+  });
+
   it('frees every buffer and gives the modules back their own loop when it goes (a lost device)', () => {
     const { twins, freed } = setup();
     const p = pools();

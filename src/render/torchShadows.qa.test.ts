@@ -192,6 +192,22 @@ describe('M91b: the torch shadow map is drawn once on its first frame, torch on 
     b.dispose();
   });
 
+  it('a new renderer after a lost device draws the spot’s shadow on its first frame again; a spot with none is left (BP3)', () => {
+    const b = new TorchBeams([me()], night, QUALITY.high, ground, BODY, HITS);
+    const spot = b.spotLight!;
+    spot.shadow.needsUpdate = false; // the first renderer drew it
+    b.contextRestored();
+    expect(spot.shadow.needsUpdate).toBe(true);
+    b.dispose();
+    const plain = new TorchBeams([me()], night, QUALITY.medium, ground, BODY, HITS);
+    plain.contextRestored();
+    expect(plain.spotLight!.shadow.needsUpdate).toBe(false);
+    plain.dispose();
+    const low = new TorchBeams([me()], night, QUALITY.low, ground, BODY, HITS);
+    expect(() => low.contextRestored()).not.toThrow();
+    low.dispose();
+  });
+
   it('a Medium spot has no shadow to draw, and autoUpdate follows the torch once it is on', () => {
     const plain = new TorchBeams([me()], night, QUALITY.medium, ground, BODY, HITS);
     expect(plain.spotLight!.castShadow).toBe(false);

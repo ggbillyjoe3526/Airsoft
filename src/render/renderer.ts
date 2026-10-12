@@ -218,7 +218,8 @@ export class Renderer {
    * A lost device (a driver reset, the GPU taken by another app; audit W-01): `listener(true)` when it goes,
    * `listener(false)` when a new renderer draws (nodeLost). Every geometry and texture is uploaded again from its copy on
    * the next frame drawn, but render targets come back empty: whatever draws into one once must draw it again
-   * (CombatPresentation.contextRestored, audit L-02; shadow maps are redrawn every frame).
+   * (CombatPresentation.contextRestored, audit L-02; TorchBeams.contextRestored for the torch spot's shadow map, which
+   * is drawn only while the torch is on, BP3; the sun's is redrawn every frame).
    */
   onContextChange(listener: (lost: boolean) => void): void {
     this.contextListener = listener;
