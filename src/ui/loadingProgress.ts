@@ -1,11 +1,12 @@
 /**
- * The loading bar's real progress (audit CORE-10). The build names the physics chunk and its size in a <meta>
- * (vite.config.ts); before the game imports that chunk, main.ts downloads it here, counting the bytes as they arrive.
- * The import that follows is then answered by the browser's cache (a fresh copy, or a 304 for a host that says
- * `no-cache`), so nothing is downloaded twice. On the dev server there is no such <meta> and the bar skips the step.
+ * The loading bar's real progress (audit CORE-10). The build names the physics download, Rapier's WebAssembly (IM3),
+ * and its size in a <meta> (vite.config.ts); before the game starts Rapier, main.ts downloads it here, counting the
+ * bytes as they arrive. Rapier's own fetch of it that follows is then answered by the browser's cache (a fresh copy, or
+ * a 304 for a host that says `no-cache`), so nothing is downloaded twice. On the dev server there is no such <meta> and
+ * the bar skips the step.
  */
 
-/** The chunk to fetch: its URL (as written in the page) and its size in bytes, uncompressed. */
+/** The file to fetch: its URL (as written in the page) and its size in bytes, uncompressed. */
 export interface ChunkInfo {
   url: string;
   bytes: number;
@@ -37,16 +38,16 @@ export async function readWithProgress(body: ReadableStream<Uint8Array>, total: 
 }
 
 /**
- * Downloads `chunk` with progress. Never throws: if the fetch fails or has no body the game's own import loads the
- * chunk as it always did, just without the bar moving.
+ * Downloads `chunk` with progress. Never throws: if the fetch fails or has no body, Rapier's own fetch loads the file as
+ * it always does, just without the bar moving (and reports a real failure).
  */
 export async function prefetchWithProgress(chunk: ChunkInfo, onProgress: (share: number) => void, load: typeof fetch = fetch): Promise<void> {
   try {
-    // Same mode and credentials as the module import that follows, so the browser's cache answers it.
+    // Same mode and credentials as Rapier's own fetch that follows (fetch's defaults), so the browser's cache answers it.
     const response = await load(chunk.url, { credentials: 'same-origin' });
     if (!response.ok || !response.body) return;
     await readWithProgress(response.body, chunk.bytes, onProgress);
   } catch {
-    // The import reports a real failure.
+    // Rapier's own fetch reports a real failure.
   }
 }

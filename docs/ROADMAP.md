@@ -288,8 +288,8 @@ QoL, balance, refinement and polish. Its likely work, collected here so the Dev 
 
 - **Optimisation.** Profile, then fix. The "can wait" performance items in `docs/KNOWN_ISSUES.md` land here. The
   "60 FPS on an integrated-graphics laptop" target is unmeasured: the owner plays on a high-end desktop, so someone with
-  such a laptop compares the quality presets here. From the audit: a smaller Rapier download (D-01, a fixed decision,
-  the owner's call) and a lint / format tool if a second person joins (D-02).
+  such a laptop compares the quality presets here. From the audit: a lint / format tool if a second person joins
+  (D-02); the smaller Rapier download (D-01) was done early, on the owner's word (IM3, 2026-10-12).
 - **Balance.** Replicas, how many magazines each carries (4 × 60 AEG, 4 × 18 pistol today), bot difficulty levels, and
   Attack / Defend (about 1 bot round in 10 is won at the pole today; raise time, holds and retakes).
 - **Final tuning** of values that are first guesses today: footstep ranges, hop-up arcs, difficulty numbers.

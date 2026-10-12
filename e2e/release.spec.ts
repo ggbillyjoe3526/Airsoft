@@ -21,21 +21,25 @@ test('the release build boots, ignores the test flags and plays with the real po
   expect(await page.evaluate(() => 'airsoft' in window)).toBe(false);
   await expect(page.locator('meta[http-equiv="Content-Security-Policy"]')).toHaveCount(1);
 
-  // The physics chunk ships with Brotli and gzip copies beside it for a host that serves them (audit CORE-29). Vite's
-  // preview server labels a .br or .gz file with its Content-Encoding, so the browser unpacks it: the chunk's own bytes
-  // arrive, in well under half the transfer.
-  const meta = page.locator('meta[name="airsoft-physics-chunk"]');
-  const chunkUrl = new URL((await meta.getAttribute('content')) ?? '', page.url()).href;
+  // Rapier's WebAssembly is a plain file (IM3), served as application/wasm so the browser compiles it while it streams
+  // in, with Brotli and gzip copies beside it for a host that serves them (audit CORE-29). Vite's preview server labels
+  // a .br or .gz file with its Content-Encoding, so the browser unpacks it: the file's own bytes arrive, in well under
+  // half the transfer.
+  const meta = page.locator('meta[name="airsoft-physics-wasm"]');
+  const wasmUrl = new URL((await meta.getAttribute('content')) ?? '', page.url()).href;
   const bytes = Number(await meta.getAttribute('data-bytes'));
-  expect(chunkUrl).toMatch(/rapier-.*\.js$/);
-  const original = await (await page.request.get(chunkUrl)).body();
+  expect(wasmUrl).toMatch(/rapier_wasm3d_bg-.*\.wasm$/);
+  const plain = await page.request.get(wasmUrl);
+  expect(plain.headers()['content-type']).toBe('application/wasm');
+  const original = await plain.body();
   expect(original.byteLength).toBe(bytes);
+  expect([...original.subarray(0, 4)], 'a WebAssembly module').toEqual([0x00, 0x61, 0x73, 0x6d]);
   for (const [suffix, encoding] of [['.br', 'br'], ['.gz', 'gzip']] as const) {
-    const copy = await page.request.get(`${chunkUrl}${suffix}`);
-    expect(copy.ok(), `${chunkUrl}${suffix}`).toBe(true);
+    const copy = await page.request.get(`${wasmUrl}${suffix}`);
+    expect(copy.ok(), `${wasmUrl}${suffix}`).toBe(true);
     expect(copy.headers()['content-encoding']).toBe(encoding);
     expect(Number(copy.headers()['content-length'])).toBeLessThan(bytes / 2);
-    expect((await copy.body()).equals(original), `${suffix} unpacks to the chunk`).toBe(true);
+    expect((await copy.body()).equals(original), `${suffix} unpacks to the file`).toBe(true);
   }
 
   // Play asks for the pointer lock: `?nolock` is ignored, so the match starts only once the game holds it

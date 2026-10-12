@@ -1,10 +1,11 @@
 import type { HtmlTagDescriptor, Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 import { archivalDescribe, readmeRelease, versionLabel } from './src/config/buildVersion.ts';
-import { CHUNK_BUDGET, chunkVerdict } from './src/config/chunkBudget.ts';
+import { CHUNK_BUDGET, chunkVerdict, RAPIER_WASM_BUDGET } from './src/config/chunkBudget.ts';
 import { LOADING } from './src/config/loading.ts';
 import { CONTENT_SECURITY_POLICY } from './src/config/page.ts';
 import { PRECOMPRESS, precompressedCopies, precompressWanted } from './src/config/precompress.ts';
+import { plainWasmBundle, RAPIER_WASM } from './src/config/rapierWasm.ts';
 
 
 /** The headless bot-match guards (src/ai/depotMatchSupport.ts): most of the unit suite's time, project `slow`; the
@@ -35,8 +36,9 @@ const MEASURE_BALANCE = Boolean(ENV.AIRSOFT_BALANCE);
 const CONTENT_REPORT = Boolean(ENV.AIRSOFT_CONTENT);
 
 /**
- * Checks every output chunk against its budget (config/chunkBudget.ts), so the game, three.js and Rapier chunks can't
- * grow unnoticed: over budget fails the build on CI and warns locally (audit L-12); within 10 % of it warns (CORE-01).
+ * Checks every output chunk, and Rapier's WebAssembly, against its budget (config/chunkBudget.ts), so the game, three.js
+ * and Rapier can't grow unnoticed: over budget fails the build on CI and warns locally (audit L-12); within 10 % of it
+ * warns (CORE-01).
  */
 function chunkBudget(): Plugin {
   return {
@@ -44,18 +46,46 @@ function chunkBudget(): Plugin {
     apply: 'build',
     generateBundle(_options, bundle) {
       for (const file of Object.values(bundle)) {
-        if (file.type !== 'chunk') continue;
-        const verdict = chunkVerdict(file.name, file.fileName, new TextEncoder().encode(file.code).length);
-        if (verdict.level === 'over' && ON_CI) this.error(verdict.message);
-        else if (verdict.level !== 'ok') this.warn(verdict.message);
+        const verdict =
+          file.type === 'chunk'
+            ? chunkVerdict(file.name, file.fileName, new TextEncoder().encode(file.code).length)
+            : isRapierWasm(file)
+              ? chunkVerdict(RAPIER_WASM_BUDGET, file.fileName, file.source.length)
+              : null;
+        if (verdict?.level === 'over' && ON_CI) this.error(verdict.message);
+        else if (verdict && verdict.level !== 'ok') this.warn(verdict.message);
       }
     },
   };
 }
 
+/** Whether a build output is Rapier's WebAssembly, the asset the rewritten bundle fetches (rapierWasm()). */
+function isRapierWasm(file: { type: string; names?: readonly string[] }): boolean {
+  return file.type === 'asset' && (file.names ?? []).includes(RAPIER_WASM.file);
+}
+
 /**
- * Release extras for the built page (audit CORE-10, CORE-19): the CSP <meta> first in <head>, and a <meta> naming the
- * Rapier chunk and its size, so the loading screen can show its download as it arrives (ui/loadingProgress.ts).
+ * Rapier's WebAssembly as a plain file in every build (config/rapierWasm.ts, IM3): the compat bundle's `init()` fetches
+ * the package's `.wasm` instead of decoding its base64 copy. Not on the dev server, whose prebundled copy keeps the
+ * inlined one (a download size there doesn't matter).
+ */
+function rapierWasm(): Plugin {
+  return {
+    name: 'airsoft-rapier-wasm',
+    apply: 'build',
+    transform: {
+      filter: { id: RAPIER_WASM.module },
+      handler(code) {
+        return { code: plainWasmBundle(code), map: null };
+      },
+    },
+  };
+}
+
+/**
+ * Release extras for the built page (audit CORE-10, CORE-19): the CSP <meta> first in <head>, and a <meta> naming
+ * Rapier's WebAssembly and its size (IM3: the physics download, most of the game's bytes), so the loading screen can
+ * show its download as it arrives (ui/loadingProgress.ts).
  */
 function pageMeta(): Plugin {
   let base = './';
@@ -71,11 +101,14 @@ function pageMeta(): Plugin {
         const tags: HtmlTagDescriptor[] = [
           { tag: 'meta', attrs: { 'http-equiv': 'Content-Security-Policy', content: CONTENT_SECURITY_POLICY }, injectTo: 'head-prepend' },
         ];
-        const rapier = Object.values(ctx.bundle ?? {}).find((file) => file.type === 'chunk' && file.name === 'rapier');
-        if (rapier?.type === 'chunk') {
-          const bytes = new TextEncoder().encode(rapier.code).length;
-          tags.push({ tag: 'meta', attrs: { name: LOADING.chunkMeta, content: `${base}${rapier.fileName}`, 'data-bytes': String(bytes) }, injectTo: 'head' });
+        const wasm = Object.values(ctx.bundle ?? {}).find(isRapierWasm);
+        if (wasm?.type === 'asset') {
+          tags.push({ tag: 'meta', attrs: { name: LOADING.physicsMeta, content: `${base}${wasm.fileName}`, 'data-bytes': String(wasm.source.length) }, injectTo: 'head' });
         }
+        // Rapier's code (225 kB, 32 kB Brotli) downloads beside the game's own, so starting physics after the WebAssembly's
+        // download doesn't wait a round trip for it (IM3); the bar counts the WebAssembly, nearly all of the bytes.
+        const rapier = Object.values(ctx.bundle ?? {}).find((file) => file.type === 'chunk' && file.name === 'rapier');
+        if (rapier) tags.push({ tag: 'link', attrs: { rel: 'modulepreload', crossorigin: true, href: `${base}${rapier.fileName}` }, injectTo: 'head' });
         return tags;
       },
     },
@@ -164,7 +197,7 @@ export default defineConfig(async () => ({
   define: {
     __BUILD_VERSION__: JSON.stringify(await buildVersion()),
   },
-  plugins: [chunkBudget(), pageMeta(), precompress()],
+  plugins: [rapierWasm(), chunkBudget(), pageMeta(), precompress()],
   build: {
     target: 'es2022',
     // Source maps next to the chunks but not linked from them (audit CORE-11): players never download them, and a
@@ -190,8 +223,9 @@ export default defineConfig(async () => ({
         },
       },
     },
-    // Vite's single global limit is set just above the Rapier chunk; per-chunk budgets are enforced by chunkBudget().
-    chunkSizeWarningLimit: CHUNK_BUDGET.rapierKb,
+    // Vite's single global limit is the default budget, the largest any chunk has since Rapier's WebAssembly became a
+    // file of its own (IM3); per-chunk budgets are enforced by chunkBudget().
+    chunkSizeWarningLimit: CHUNK_BUDGET.defaultKb,
   },
   test: {
     environment: 'node',

@@ -64,14 +64,15 @@ export function blockCollider(b: MapBlock): Rapier.ColliderDesc {
 }
 
 /**
- * Rapier, once `initPhysics()` has loaded it. Imported on demand (audit CORE-10), so its 4 MB chunk is no part of the
- * page's first script: the game's own code runs first and the loading screen can show the chunk's download
- * (main.ts, ui/loadingProgress.ts).
+ * Rapier, once `initPhysics()` has loaded it. Imported on demand (audit CORE-10), so it is no part of the page's first
+ * script: the game's own code runs first and the loading screen can show the physics download (main.ts,
+ * ui/loadingProgress.ts). In a build its WebAssembly is a plain file that `init()` fetches (IM3, config/rapierWasm.ts);
+ * on the dev server and in the tests the package's inlined copy.
  */
 let RAPIER: typeof Rapier.default;
 let rapierReady: Promise<void> | null = null;
 
-/** Loads the Rapier module and its WASM once. */
+/** Loads the Rapier module and its WebAssembly once; rejects (a start-up failure, main.ts) if either can't load. */
 export function initPhysics(): Promise<void> {
   rapierReady ??= import('@dimforge/rapier3d-compat').then(async (module) => {
     RAPIER = module.default;

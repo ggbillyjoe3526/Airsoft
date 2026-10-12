@@ -38,9 +38,10 @@ async function main(): Promise<void> {
     LoadingScreen.find()?.remove();
     return;
   }
-  // The loading bar (audit CORE-10): the physics chunk's download as it arrives, then starting physics and the game.
+  // The loading bar (audit CORE-10): the physics download (Rapier's WebAssembly, IM3) as it arrives, then starting
+  // physics and the game.
   const loading = LoadingScreen.find();
-  const chunk = chunkInfo(document.querySelector(`meta[name="${LOADING.chunkMeta}"]`));
+  const chunk = chunkInfo(document.querySelector(`meta[name="${LOADING.physicsMeta}"]`));
   if (chunk) {
     loading?.show(0, LOADING.text.download);
     await prefetchWithProgress(chunk, (share) => loading?.show(share * LOADING.downloadShare, LOADING.text.download));

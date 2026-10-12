@@ -67,3 +67,17 @@ acceptance:
   2. With Dev settings on (Unlock all gear), every replica and part is available.
 status: open
 attempts: 0
+
+## IM3 · Rapier's WebAssembly as a plain file (tidy-up improvement 9)
+tier: core
+perf: required
+touches: vite.config.ts, src/config/rapierWasm.ts, src/config/chunkBudget.ts, src/config/precompress.ts, src/config/loading.ts, src/main.ts, src/ui/loadingProgress.ts, src/physics/physicsWorld.ts, CLAUDE.md
+contract: none
+acceptance:
+  1. The release build ships Rapier's WebAssembly as a plain `.wasm` file the browser compiles while it downloads, not as base64 inside the Rapier chunk; no new dependency, the same `@dimforge/rapier3d-compat` API.
+  2. The download is smaller: the physics bytes a player fetches fall by about 0.35 MB Brotli; the `.wasm` gets `.br` and `.gz` copies.
+  3. The loading bar still shows the physics download, nothing downloads twice, and a failed physics load still shows the start-up failure pane.
+  4. Start-up and first-frame time are no worse than main; every physics test, the boot test and the release build pass.
+  5. The chunk budget keeps Rapier pinned (its chunk and its `.wasm`); the owner's change to the fixed decision is in DECISIONS and CLAUDE.md §3.
+status: open
+attempts: 0
