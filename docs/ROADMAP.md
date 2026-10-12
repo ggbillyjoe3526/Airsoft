@@ -84,7 +84,7 @@ replaces G10 and its "only if the perf run shows a gain"; scope `plans/webgpu-ov
 | W4 | Post stack and retro filter |
 | W5 | Compute |
 | W6 | The switch, in two parts: W6a deletes the old renderer and its post passes and gives each renderer its own perf lines; W6b turns the world's GLSL patches into node patches; done (W6a and W6b, 2026-10-11) |
-| Map pictures | Last, from the new renderer |
+| W7 | The map pictures, from the new renderer on WebGPU; done (W7, 2026-10-12) |
 
 ### Playtest notes: 0.1 Dev 4
 
