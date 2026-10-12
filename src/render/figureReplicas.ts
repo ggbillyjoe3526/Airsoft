@@ -24,7 +24,7 @@ export type FigureReplicaColours = Pick<Scheme, 'body' | 'furniture' | 'detail' 
 export type FigureReplicaShape = readonly ReplicaFilePiece[];
 
 /** A file's shape on a figure, each piece in its role's colour. */
-function addShape(b: PartBuilder, m: THREE.Matrix4, colours: FigureReplicaColours, shape: FigureReplicaShape): void {
+export function addShape(b: PartBuilder, m: THREE.Matrix4, colours: FigureReplicaColours, shape: FigureReplicaShape): void {
   for (const p of shape) b.add(p.geometry.clone().applyMatrix4(m), colours[p.role], p.role === 'steel' ? STEEL : POLYMER);
 }
 
