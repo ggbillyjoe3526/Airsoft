@@ -1,8 +1,10 @@
 import * as THREE from 'three';
 import { DataTexture, FloatType, type Light, Lighting, LightsNode, type NodeBuilder, RGBAFormat } from 'three/webgpu';
 import { Break, Fn, getDistanceAttenuation, If, int, ivec2, Loop, positionView, smoothstep, textureLoad, vec4 } from 'three/tsl';
+import type { WebGPURenderer } from 'three/webgpu';
 import ClusteredLightsNode from 'three/examples/jsm/tsl/lighting/ClusteredLightsNode.js';
 import { CLUSTERED_LIGHTS } from '../../config/renderLighting';
+import { freeBuffer } from './compute/computeKit';
 
 /**
  * The night's lights on WebGPU (WebGPU overhaul W3): Forward+ clustered shading, from three/webgpu's own
@@ -34,12 +36,20 @@ type AnyNode = any;
 /** The parts of Three's clustered node this one reads and replaces (not in its type). */
 interface ClusteredInternals {
   _lightsTexture: DataTexture;
+  /** The clusters' light lists (a storage buffer), and the size the grid was made for. */
+  _lightIndexes: { value: THREE.BufferAttribute } | null;
+  _bufferSize: THREE.Vector2 | null;
   _zSliceRangesData: Float32Array;
   _zSliceRangesTexture: DataTexture;
   _lightsCount: { value: number };
   _cameraViewMatrix: AnyNode;
   getTile(i: AnyNode): AnyNode;
-  updateProgram(renderer: unknown): void;
+}
+
+/** What the grid is sized from: the target being drawn into, else the canvas. */
+interface Sizing {
+  getRenderTarget(): { width: number; height: number } | null;
+  getDrawingBufferSize(out: THREE.Vector2): THREE.Vector2;
 }
 
 /** Rows of a light's data: position and reach; colour × intensity and decay; spot direction and cone; penumbra. */
@@ -49,6 +59,7 @@ const OPEN = -2;
 
 const position = new THREE.Vector3();
 const target = new THREE.Vector3();
+const canvas = new THREE.Vector2();
 
 /** Whether `light` is shaded by the clusters: a point or spot light with no shadow and no projected map. */
 export function clusters(light: Light): boolean {
@@ -65,7 +76,11 @@ export class NightLightsNode extends ClusteredLightsNode {
   /** The clusters were last filled with no lights (updateBefore). */
   private empty = false;
 
-  constructor(private readonly capacity: number = CLUSTERED_LIGHTS.maxLights) {
+  constructor(
+    private readonly capacity: number = CLUSTERED_LIGHTS.maxLights,
+    /** Where a light-list buffer the grid has outgrown goes, to be freed after the frame (NightLighting.flush). */
+    private readonly retired: THREE.BufferAttribute[] = [],
+  ) {
     super(capacity, CLUSTERED_LIGHTS.tileSize, CLUSTERED_LIGHTS.zSlices, CLUSTERED_LIGHTS.perCluster);
     const own = this as unknown as ClusteredInternals;
     own._lightsTexture.dispose();
@@ -84,6 +99,37 @@ export class NightLightsNode extends ClusteredLightsNode {
       this.empty = true;
     } else this.empty = false;
     return super.updateBefore(frame);
+  }
+
+  /**
+   * The grid sized each frame (Three's updateBefore calls this) to what the world is drawn into: the retro look's small
+   * target, the stack's scene target or the canvas. Three's sizes it from the canvas, while a pixel finds its cluster
+   * by its place in the target it is drawn into, so under the retro look every pixel read the wrong clusters and the
+   * lamp pools and the torch's spot went missing (BP3). Shadow maps never get here: their material is unlit.
+   */
+  updateProgram(renderer: Sizing): void {
+    const into = renderer.getRenderTarget();
+    if (into) this.setSize(into.width, into.height);
+    else {
+      renderer.getDrawingBufferSize(canvas);
+      this.setSize(canvas.width, canvas.height);
+    }
+  }
+
+  /**
+   * A new grid. A light-list buffer it outgrows is retired, to be freed once the frame is submitted (BP3): Three makes a
+   * bigger one and leaves the old on the GPU (its own TODO), and a draw of this frame may still bind it.
+   */
+  create(width: number, height: number): void {
+    const own = this as unknown as ClusteredInternals;
+    const before = own._lightIndexes;
+    (ClusteredLightsNode.prototype as unknown as { create(w: number, h: number): void }).create.call(this, width, height);
+    if (before && before !== own._lightIndexes) this.retired.push(before.value);
+  }
+
+  /** The light-list buffer in use (for NightLighting to retire with the node), or null before the first grid. */
+  get lightLists(): THREE.BufferAttribute | null {
+    return (this as unknown as ClusteredInternals)._lightIndexes?.value ?? null;
   }
 
   /** The clustered lights (point and spot, no shadow, at most `capacity`) and Three's own (the rest). */
@@ -198,7 +244,9 @@ export class NightLightsNode extends ClusteredLightsNode {
   /** Three's own lights as usual, then the pixel's cluster's lights: point and spot, by the same formulas as Three's. */
   override setupLights(builder: NodeBuilder, lightNodes: AnyNode): void {
     const own = this as unknown as ClusteredInternals;
-    own.updateProgram(builder.renderer);
+    // A material built between frames (a warm-up compile's) takes the grid the frames draw with; only the first build
+    // makes one, sized for the target it is compiled into (BP3). The frame's resize rebuilds them, as on Three's.
+    if (own._bufferSize === null) this.updateProgram(builder.renderer as unknown as Sizing);
     const reflected = (builder.context as unknown as { reflectedLight: { directDiffuse: AnyNode; directSpecular: AnyNode } }).reflectedLight;
     reflected.directDiffuse.toStack();
     reflected.directSpecular.toStack();
@@ -233,6 +281,8 @@ export class NightLighting extends Lighting {
   private clustering = false;
   /** The clustered node made for the world (its textures and compute pass are freed with the renderer). */
   private made: NightLightsNode | null = null;
+  /** Light-list buffers let go (a grid outgrown, a map's node replaced), freed after the frame (flush). */
+  private readonly retired: THREE.BufferAttribute[] = [];
 
   override getNode(scene: THREE.Object3D): LightsNode {
     this.clustering = scene === this.world;
@@ -241,14 +291,32 @@ export class NightLighting extends Lighting {
 
   override createNode(lights: Light[] = []): LightsNode {
     if (!this.clustering) return new LightsNode().setLights(lights);
-    this.made?.dispose();
-    return (this.made = new NightLightsNode().setLights(lights));
+    this.retire();
+    return (this.made = new NightLightsNode(CLUSTERED_LIGHTS.maxLights, this.retired).setLights(lights));
   }
 
-  /** Frees the clustered node's textures and compute pass. */
-  dispose(): void {
-    this.made?.dispose();
+  /**
+   * After each frame's draws are submitted: frees the light-list buffers let go during it (BP3). Three frees no storage
+   * buffer of its own accord, and one freed before the submit would drop the frame.
+   */
+  flush(renderer: WebGPURenderer): void {
+    for (const buffer of this.retired) freeBuffer(renderer, buffer);
+    this.retired.length = 0;
+  }
+
+  /** Frees the clustered node's textures, compute pass and light lists. */
+  dispose(renderer: WebGPURenderer): void {
+    this.retire();
     this.made = null;
+    this.flush(renderer);
+  }
+
+  /** The node made for the world freed, its light lists retired. */
+  private retire(): void {
+    if (!this.made) return;
+    const lists = this.made.lightLists;
+    if (lists) this.retired.push(lists);
+    this.made.dispose();
   }
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { LightsNode } from 'three/webgpu';
+import { LightsNode, type WebGPURenderer } from 'three/webgpu';
 import { describe, expect, it, vi } from 'vitest';
 import { CLUSTERED_LIGHTS } from '../../config/renderLighting';
 import { HITS } from '../../config/hits';
@@ -144,8 +144,57 @@ describe('the clustered lights node (W3 criterion 2)', () => {
     expect(other).not.toBeInstanceOf(NightLightsNode);
     let freed = 0;
     (node as NightLightsNode & { _lightsTexture: THREE.Texture })._lightsTexture.addEventListener('dispose', () => freed++);
-    lighting.dispose();
+    lighting.dispose(buffers().renderer);
     expect(freed).toBe(1);
+  });
+
+  /** A stand-in renderer drawing into `into` (null: the canvas, 1280×720). */
+  const drawing = (into: { width: number; height: number } | null) => ({
+    getRenderTarget: () => into,
+    getDrawingBufferSize: (out: THREE.Vector2) => out.set(1280, 720),
+  });
+  /** A stand-in renderer whose GPU buffer store logs each buffer freed. */
+  const buffers = () => {
+    const freed: unknown[] = [];
+    return { freed, renderer: { _attributes: { delete: (a: unknown) => freed.push(a) } } as unknown as WebGPURenderer };
+  };
+  const grid = (node: NightLightsNode): number[] => (node as unknown as { _gridDimensions: { value: THREE.Vector2 } })._gridDimensions.value.toArray();
+
+  it('sizes its grid to the target the world is drawn into (the retro look’s quarter size), else the canvas (BP3)', () => {
+    const node = new NightLightsNode(4);
+    const tile = CLUSTERED_LIGHTS.tileSize;
+    const across = (px: number): number => Math.ceil(px / tile);
+    node.updateProgram(drawing(null));
+    expect(grid(node)).toEqual([across(1280), across(720)]);
+    // The retro look draws the world into a target a quarter of the canvas: the pixel finds its cluster there.
+    node.updateProgram(drawing({ width: 320, height: 180 }));
+    expect(grid(node)).toEqual([across(320), across(180)]);
+    // A build between frames (a warm-up compile's, no target set) keeps the grid the frames draw with.
+    node.setupLights({ renderer: drawing(null), context: { reflectedLight: { directDiffuse: { toStack() {} }, directSpecular: { toStack() {} } } } } as never, []);
+    expect(grid(node)).toEqual([across(320), across(180)]);
+    node.dispose();
+  });
+
+  it('frees the light lists a grid outgrows, and a replaced node’s, after the frame (BP3: Three leaves them on the GPU)', () => {
+    const lighting = new NightLighting();
+    const world = new THREE.Scene();
+    lighting.world = world;
+    const node = lighting.getNode(world) as NightLightsNode;
+    node.updateProgram(drawing({ width: 320, height: 180 }));
+    const small = node.lightLists;
+    node.updateProgram(drawing(null));
+    const big = node.lightLists;
+    expect(big).not.toBe(small);
+    // Back to the quarter size: the bigger lists serve it, nothing new is made or let go.
+    node.updateProgram(drawing({ width: 320, height: 180 }));
+    expect(node.lightLists).toBe(big);
+    const { freed, renderer } = buffers();
+    lighting.flush(renderer);
+    expect(freed).toEqual([small]);
+    lighting.flush(renderer);
+    expect(freed).toHaveLength(1);
+    lighting.dispose(renderer);
+    expect(freed).toEqual([small, big]);
   });
 });
 

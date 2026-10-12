@@ -258,6 +258,7 @@ export class NodeBackend {
    */
   frameDone(): void {
     this.frees.flush();
+    this.lighting?.flush(this.renderer);
     if (!this.timing || this.reading || !this.timestamps || this.lost) return;
     if (++this.sinceRead < RENDER_BACKEND.timestampEvery) return;
     this.sinceRead = 0;
@@ -298,7 +299,7 @@ export class NodeBackend {
     this.particles.dispose();
     this.dressing.dispose();
     this.world.dispose();
-    this.lighting?.dispose();
+    this.lighting?.dispose(this.renderer);
     this.output.dispose();
     this.frees.flush();
     this.renderer.dispose().catch(ignore);
