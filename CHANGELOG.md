@@ -211,6 +211,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **W7** · The menu pictures are drawn on WebGPU by default (WebGL with --backend webgl); the script checks the back end, waits for a settled frame and refuses a black picture
 - **BP3b** · WebGPU light and post buffers are freed when outgrown or when the renderer is disposed; an empty BB streak is not drawn
 - **BP3b** · The mode content check plays each map only at team sizes the game allows
+- **IM6** · Checks finish in about 10 minutes, not 25: browser tests run in four parallel jobs; current actions, Vite 8.3.4, Vitest 5.0.3, Playwright 1.64
 
 ## 0.1 Dev 4 · 2026-10-06
 
