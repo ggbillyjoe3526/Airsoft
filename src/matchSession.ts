@@ -198,6 +198,8 @@ export class MatchSession {
   private devAssisted = false;
   /** Play has begun in this match (since it was built): Dev help switched off before then doesn't count. */
   private played = false;
+  /** Dev settings › End the round now was used (M90): it counts whenever it was pressed, played or not (BP3). */
+  private devEndedRound = false;
   /**
    * How long each part of building this match took (audit CORE-33): `performance.measure` entries, and one line Game logs
    * with `?perf`. Started as the session is made, so it counts everything the constructor does.
@@ -405,6 +407,7 @@ export class MatchSession {
   beginSkip(): boolean {
     if (this.skipOffer === null) return false;
     this.skip = { ticks: 0, cap: skipTickCap(this.rounds) };
+    this.combat.skipBegins();
     return true;
   }
 
@@ -599,7 +602,8 @@ export class MatchSession {
     this.match.setWatchingBots(cheats.spectateBots);
     this.match.setBotIntents(cheats.botIntent);
     // Before play begins (a match built by a Play whose mouse lock was refused) only what applies now counts (bug pass).
-    if (!this.played) this.devAssisted = devCheating(cheats);
+    // A round ended from Dev settings stays counted however the switches are set afterwards (BP3).
+    if (!this.played) this.devAssisted = this.devEndedRound || devCheating(cheats);
     else if (devCheating(cheats)) this.devAssisted = true;
   }
 
@@ -612,6 +616,7 @@ export class MatchSession {
     if (r.phase !== 'live') return false;
     r.clock = 0;
     r.overtime = this.rounds.flag.maxOvertime;
+    this.devEndedRound = true;
     this.devAssisted = true;
     return true;
   }

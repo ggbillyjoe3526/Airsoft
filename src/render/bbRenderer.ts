@@ -238,6 +238,8 @@ export class BBRenderer {
     this.glow.count = glowing ? count : 0;
     const geo = this.trails.geometry;
     geo.setDrawRange(0, count * QUAD_INDICES);
+    // An empty draw range still costs a draw call (BP3): no streaks, no mesh.
+    this.trails.visible = count > 0;
     // Nothing in flight now or last frame: the buffers already say so (REN-22).
     if (count > 0 || this.lastCount > 0) {
       this.balls.instanceMatrix.needsUpdate = true;

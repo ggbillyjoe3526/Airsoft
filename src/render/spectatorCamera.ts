@@ -1,9 +1,11 @@
 import type * as THREE from 'three';
+import type { HitConfig } from '../config/hits';
 import type { BodyConfig } from '../config/movement';
 import { SPECTATOR } from '../config/render';
 import type { WorldQuery } from '../sim/armament';
 import { type Character, eyeHeight } from '../sim/character';
 import { isInPlay } from '../sim/elimination';
+import { leanOffset } from '../sim/lean';
 import { lerpAngle } from '../sim/vec';
 
 /** Worth watching: still in play, or calling a hit that just happened (so you see them call it). */
@@ -34,7 +36,9 @@ export class SpectatorCamera {
    * and the camera only changes once a tick at most. `castFor` is what the last cast was made from.
    */
   private reach = 0;
-  private readonly castFor = { id: -1, x: Number.NaN, y: Number.NaN, z: Number.NaN, yaw: Number.NaN, crouch: Number.NaN };
+  private readonly castFor = { id: -1, x: Number.NaN, y: Number.NaN, z: Number.NaN, yaw: Number.NaN, crouch: Number.NaN, lean: Number.NaN };
+  /** The watched player's lean, from the eye (BP3: the camera ignored a peek, so it looked past the corner it was round). */
+  private readonly leanAt = { x: 0, y: 0, z: 0 };
 
   constructor(
     private readonly characters: readonly Character[],
@@ -42,6 +46,8 @@ export class SpectatorCamera {
     private readonly self: Character,
     private readonly body: BodyConfig,
     private readonly query: WorldQuery,
+    /** The lean's pivot and angle; without it the camera leaves the lean out. */
+    private readonly hits?: HitConfig,
   ) {}
 
   /** You (for isOther). */
@@ -92,9 +98,16 @@ export class SpectatorCamera {
     h.x = c.prevPosition.x + (c.position.x - c.prevPosition.x) * alpha;
     h.y = c.prevPosition.y + (c.position.y - c.prevPosition.y) * alpha + eyeHeight(crouch, this.body);
     h.z = c.prevPosition.z + (c.position.z - c.prevPosition.z) * alpha;
+    // Round the corner they lean round, as their own view is (render/cameraRig.ts).
+    const yaw = lerpAngle(c.prevYaw, c.yaw, alpha);
+    if (this.hits) {
+      const l = leanOffset(eyeHeight(crouch, this.body), c.prevLean + (c.lean - c.prevLean) * alpha, crouch, yaw, this.hits, this.leanAt);
+      h.x += l.x;
+      h.y += l.y;
+      h.z += l.z;
+    }
 
     // Behind the target (it faces (-sin yaw, 0, -cos yaw)) and a little above, pulled in front of walls.
-    const yaw = lerpAngle(c.prevYaw, c.yaw, alpha);
     const backX = Math.sin(yaw);
     const backZ = Math.cos(yaw);
     const d = this.dir;
@@ -124,17 +137,26 @@ export class SpectatorCamera {
    */
   private wallReach(c: Character, len: number): number {
     const k = this.castFor;
-    if (k.id === c.id && k.x === c.position.x && k.y === c.position.y && k.z === c.position.z && k.yaw === c.yaw && k.crouch === c.crouchAmount) return this.reach;
+    if (k.id === c.id && k.x === c.position.x && k.y === c.position.y && k.z === c.position.z && k.yaw === c.yaw && k.crouch === c.crouchAmount && k.lean === c.lean) return this.reach;
     k.id = c.id;
     k.x = c.position.x;
     k.y = c.position.y;
     k.z = c.position.z;
     k.yaw = c.yaw;
     k.crouch = c.crouchAmount;
+    k.lean = c.lean;
     const from = this.castFrom;
+    const eye = eyeHeight(c.crouchAmount, this.body);
     from.x = c.position.x;
-    from.y = c.position.y + eyeHeight(c.crouchAmount, this.body);
+    from.y = c.position.y + eye;
     from.z = c.position.z;
+    // From the leaned eye, as `place` draws it.
+    if (this.hits) {
+      const l = leanOffset(eye, c.lean, c.crouchAmount, c.yaw, this.hits, this.leanAt);
+      from.x += l.x;
+      from.y += l.y;
+      from.z += l.z;
+    }
     const d = this.castDir;
     d.x = (Math.sin(c.yaw) * SPECTATOR.distance) / len;
     d.y = SPECTATOR.height / len;

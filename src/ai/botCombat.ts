@@ -23,10 +23,15 @@ const raisedPoint = vec3();
 const mateVolume: HitVolume = createHitVolume();
 const lastKnownHead = vec3();
 
-/** How long a bot's BB takes to fly `dist` metres (its primary replica, its factory BBs). */
-function bbFlightTime(w: BotWorld, dist: number): number {
-  const replica = w.loadout[0]!;
-  return flightTimeEstimate(dist, muzzleVelocity(replica), bbMass(replica), BALLISTICS);
+/**
+ * How long a bot's BB takes to fly `dist` metres: the replica in its hands, with the BBs it loads (BP3: it was the
+ * factory primary's, so a bot on its pistol, a rolled kit or heavier BBs led by the wrong time).
+ */
+function bbFlightTime(b: Bot, dist: number): number {
+  const a = b.character.armament;
+  const replica = a.replicas[a.active]!;
+  const grams = a.bbWeights[a.active] ?? replica.bbWeight;
+  return flightTimeEstimate(dist, muzzleVelocity(replica, grams), bbMass(replica, grams), BALLISTICS);
 }
 
 /**
@@ -43,7 +48,7 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
     // Aim at the part of the body it can see, leading the target by part of the BB's flight time (slowed by drag, M30).
     bodyPoint(target, w.hits, b.targetPart, aimPoint);
     const dist = length3(aimPoint.x - eye.x, aimPoint.y - eye.y, aimPoint.z - eye.z);
-    const flight = bbFlightTime(w, dist);
+    const flight = bbFlightTime(b, dist);
     aimPoint.x += target.velocity.x * flight * b.skill.leadFactor;
     aimPoint.z += target.velocity.z * flight * b.skill.leadFactor;
     lookAngles(eye.x, eye.y, eye.z, aimPoint.x, aimPoint.y, aimPoint.z, look);
@@ -163,12 +168,13 @@ function heldAngleLook(b: Bot, w: BotWorld, eye: Vec3, facingYaw: number, neares
 /**
  * True if a teammate stands in (or right next to) the line of fire within `dist` metres, or someone already hit stands
  * in it before the target (`toTarget` metres): a BB stops on any body (M85), so firing would only hit a teammate, or
- * shoot someone who is already out. Teammates count whether or not friendly fire is on, and when they are out of play
- * too: their bodies stop BBs either way.
+ * shoot someone who is already out. Before the target every teammate counts, in play or not, friendly fire on or off:
+ * their bodies stop BBs either way. Past it, only a teammate the BBs could knock out does (BP3).
  */
 function bodyInLine(b: Bot, w: BotWorld, from: Vec3, dir: Vec3, dist: number, toTarget: number): boolean {
   const me = b.character;
-  const stray = Math.tan(w.cfg.friendlySpreadSigmas * w.loadout[0]!.spreadDeg * DEG); // metres off the line per metre
+  const held = me.armament.replicas[me.armament.active]!;
+  const stray = Math.tan(w.cfg.friendlySpreadSigmas * held.spreadDeg * DEG); // metres off the line per metre
   const v = mateVolume;
   for (const mate of w.characters) {
     if (mate === me || mate.ghost) continue;
@@ -184,12 +190,15 @@ function bodyInLine(b: Bot, w: BotWorld, from: Vec3, dir: Vec3, dist: number, to
     // already past it, and the BBs met them half-way).
     const along = (mate.position.x - from.x) * dir.x + (mate.position.y - from.y) * dir.y + (mate.position.z - from.z) * dir.z;
     const reach = Math.min(Math.max(0, along), dist);
-    const flight = bbFlightTime(w, reach);
+    const flight = bbFlightTime(b, reach);
+    // Past the target only a teammate a BB could knock out matters (in play, friendly fire on); any other body there
+    // takes a miss harmlessly, so it holds no fire. Before the target every body would stop the BBs (BP3).
+    const harmed = isInPlay(mate) && w.hits.friendlyFire ? dist : toTarget;
     characterHitVolume(mate, w.hits, v);
     inflateHitVolume(v, w.cfg.friendlyMargin + reach * stray);
-    if (rayCharacter(from, dir, dist, v) >= 0) return true;
+    if (rayCharacter(from, dir, harmed, v) >= 0) return true;
     shiftHitVolume(v, mate.velocity.x * flight, mate.velocity.z * flight);
-    if (rayCharacter(from, dir, dist, v) >= 0) return true;
+    if (rayCharacter(from, dir, harmed, v) >= 0) return true;
   }
   return false;
 }

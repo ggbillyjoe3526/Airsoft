@@ -272,11 +272,13 @@ describe('the compatibility grid', () => {
     expect(short.rules.roundTime).toBe(ROUND_TIME_SETTING.min);
   });
 
-  it('plays a team size it offers above the standard on a map with room', () => {
+  it('plays a team size it offers above the standard on a map with room, and none under its smallest', () => {
     const woodland = MAPS.find((m) => m.id === 'woodland')!;
     const labels = modePairings('elimination', woodland, ctx.defaultRuleset, MODE_FIT.elimination.rulesets).map((p) => p.label);
-    expect(labels).toEqual(expect.arrayContaining(['1v1', '2v2', '3v3', `${woodland.teamSize.max}v${woodland.teamSize.max}`]));
+    expect(labels).toEqual(expect.arrayContaining([`${woodland.teamSize.max}v${woodland.teamSize.max}`]));
     expect(labels).not.toContain(`${woodland.teamSize.standard}v${woodland.teamSize.standard}`);
+    // Woodland is played 5v5 or 6v6 (M88): the game clamps a smaller pick up, so the grid never plays one (BP3).
+    for (let n = 1; n < woodland.teamSize.min; n++) expect(labels).not.toContain(`${n}v${n}`);
     expect(labels.filter((l) => /time-out/.test(l))).toHaveLength(1);
   });
 

@@ -95,7 +95,8 @@ export function rangeDressing(blocks: readonly MapBlock[]): MapDressing {
     ],
     motes: { tint: 0xd8d6cf },
     kickedDust: { tint: 0xb9b7b0, scale: 1 },
-    plane: { height: 180, every: 150 },
+    // 90 m up (BP3, was 180, past the sky dome's 200 m reach for most of its line).
+    plane: { height: 90, every: 150 },
   };
 }
 
