@@ -116,3 +116,20 @@ describe('the event log when several characters fire at once (IM7)', () => {
     expect(said(log)).toEqual(['Beta 3 fired 3 BBs over 0.3 s (aeg)', 'Alpha 1 fired 3 BBs over 0.3 s (aeg)', 'Beta 3 hit Alpha 1', 'Beta 3 fired (aeg)']);
   });
 });
+
+describe('the event log allocates nothing as it records (IM7)', () => {
+  it('reuses the same slot objects after the ring wraps, for events and for bot mode changes', () => {
+    const log = new EventLog(4);
+    const slots = [...(log as unknown as { slots: object[] }).slots];
+    const bot = { character: { id: 3 }, mode: 'patrol' };
+    log.watchBots(1, [bot] as never);
+    for (let t = 1; t <= 20; t++) {
+      log.record(t * 100, [{ type: 'roundStart', round: t }], PLAYER);
+      bot.mode = t % 2 ? 'attack' : 'patrol';
+      log.watchBots(t * 100 + 50, [bot] as never);
+    }
+    const after = (log as unknown as { slots: object[] }).slots;
+    expect(after).toHaveLength(4);
+    after.forEach((s, i) => expect(s).toBe(slots[i]));
+  });
+});
