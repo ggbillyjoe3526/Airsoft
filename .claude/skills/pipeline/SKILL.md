@@ -56,7 +56,8 @@ frontmatter) at the top of the prompt, the task content last. Tell every worker 
    known issues it left (each also a row in `docs/KNOWN_ISSUES.md`); `node pipeline/records.mjs --check` passes. Mark
    the task done where `docs/ROADMAP.md` lists it, and delete its block from `docs/TASKS.md` (no `done` blocks stay
    behind; CI's scope gate finds the block in the branch's history). Copy `pipeline/out/gate-report.json`,
-   `failures.md`, `critic.md` and the triaged summaries to the project's shared files under `pipeline/runs/<id>/attempt-<n>/`.
+   `failures.md`, `critic.md` and the triaged summaries to the project's shared files under `pipeline/runs/<id>/attempt-<n>/`,
+   never the raw `playwright.json`, `vitest.json` or logs (`docs/PROCESS.md` › Sessions).
 9. **Ship**: merge `origin/main` in, push once with the work and the records together (no separate status or records
    pushes, no PR title edits afterwards: each push or title edit re-runs CI and wakes the thread), open the PR (template in `pipeline/README.md`; its title starts with the
    task id, `<id>: …`, so CI runs the scope and changelog gates), subscribe to it, and once CI is green merge it (the
