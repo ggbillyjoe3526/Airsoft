@@ -14,11 +14,12 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 
 ## Replicas and BBs
 
-- An AEG rifle (single, burst or auto on the fire selector), a gas pistol and an electric Cyber Pistol, switched with
+- An AEG rifle (single, burst or auto on the fire selector), a GBB Pistol and an electric Cyber Pistol, switched with
   the wheel or keys (Phase 1, M12a, M32)
 - Cyber Pistol: electric semi, burst and auto; white slab with glowing cyan lines and magenta core, plain grey and unlit
   with Realistic colours; its model is drawn in Blender and shows on figures too; built-in battery, fits either gear slot
   (M32, G2, M101)
+- GBB Pistol: gas blowback semi-auto with the Gas Pistol's numbers; the slide kicks back on every shot and stays locked back on an empty magazine until a reload (RM7)
 - Replica colour schemes: eight two-tone colours (Cobalt, Signal, Acid, Teal, Hazard, Coral, Onyx, Ghost); rifles Cobalt
   and pistols Ghost until the Customise screen lets players pick one per replica (G1)
 - BBs are real projectiles: visible flight with air physics and drag, travel time, drop, and hop-up lift set by a dial
@@ -32,7 +33,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - A laser module and a choice of power source on the pistol, from the pool (M26b)
 - BBs can ricochet off concrete and steel; own ricochets can hit you; whether ricochets count as hits is a match
   setting, off by default (M20, FA12)
-- Inspect (Y, rebindable): the replica in your hands turns side on and its parts move; AEG, gas pistol and Cyber Pistol
+- Inspect (Y, rebindable): the replica in your hands turns side on and its parts move; AEG, GBB Pistol and Cyber Pistol
   each have their own check, and a shot ends it (RM2)
 
 ## Hits and elimination
