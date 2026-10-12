@@ -1,7 +1,7 @@
 import type { ExtractionRules } from '../config/extraction';
 import { type CaseFind, haulTotals, type RunState } from '../sim/extraction';
 import { formatRoundTime } from '../config/matchRules';
-import { fcText } from './menus/armoryScreen';
+import { MENU_TEXT } from '../config/menus';
 
 /** What the strip under the scoreboard says in Extraction: the line, how far the count is (0..1), and whether it warns. */
 export interface RunLine {
@@ -57,7 +57,7 @@ export function respawnNote(left: number): string {
 /** "85 FC and 2 parts", "1 part", "40 FC" (M44); '' for nothing. */
 export function haulWhat(h: { fc: number; items: readonly unknown[] }): string {
   const parts = h.items.length > 0 ? `${h.items.length} ${h.items.length === 1 ? 'part' : 'parts'}` : '';
-  const fc = h.fc > 0 ? fcText(h.fc) : '';
+  const fc = h.fc > 0 ? MENU_TEXT.fc(h.fc) : '';
   return fc && parts ? `${fc} and ${parts}` : fc || parts;
 }
 

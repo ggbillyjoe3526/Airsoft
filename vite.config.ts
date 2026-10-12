@@ -168,7 +168,7 @@ export default defineConfig(async () => ({
   build: {
     target: 'es2022',
     // Source maps next to the chunks but not linked from them (audit CORE-11): players never download them, and a
-    // crash report's stack (index-abc.js:1:48213) can be read against dist/assets/*.map in DevTools or with a
+    // crash report's stack (game-abc.js:1:48213) can be read against dist/assets/*.map in DevTools or with a
     // source-map tool. The chunk budgets count the code only.
     sourcemap: 'hidden' as const,
     rolldownOptions: {
@@ -186,6 +186,11 @@ export default defineConfig(async () => ({
             // pool.md and stats.md (read at start, M26a) in their own small chunk (M50, audit CORE-01): the owner's
             // table edits re-download it alone, and the game chunk's budget counts code.
             { name: 'tables', test: /\.md(\?raw)?$/ },
+            // The game's own start-up code, every module main.ts reaches by static imports (`$initial`), in one chunk the
+            // default budget counts (IM1). Without it, the code fetched on first use (ui/menus/lazyScreens.ts, the range)
+            // made the bundler move what it shares with start-up into small chunks of their own, so no chunk held all
+            // that start-up runs. The page's own entry chunk is left a stub that imports it.
+            { name: 'game', test: /[\\/]src[\\/]/, tags: ['$initial' as const] },
           ],
         },
       },

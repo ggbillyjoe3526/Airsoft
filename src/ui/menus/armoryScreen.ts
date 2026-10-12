@@ -49,14 +49,9 @@ export interface ArmoryOptions {
   freeShots?: () => boolean;
 }
 
-/** "1,600 FC". */
-export function fcText(fc: number): string {
-  return `${fc.toLocaleString('en-GB')} FC`;
-}
-
-function tokensText(n: number): string {
-  return `${n} ${n === 1 ? 'Token' : 'Tokens'}`;
-}
+/** "1,600 FC" and "2 Tokens", as the top bar's wallet says them. */
+const fcText = MENU_TEXT.fc;
+const tokensText = MENU_TEXT.tokens;
 
 /**
  * The Armory (M26c, beta): completely free. Field Credits earned in matches buy Tokens; a Token takes a Shot, which

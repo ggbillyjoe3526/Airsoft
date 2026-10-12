@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import poolText from '../../../pool.md?raw';
-import { ARMORY_TEXT } from '../../config/menus';
+import { ARMORY_TEXT, MENU_TEXT } from '../../config/menus';
 import { newCollection } from '../../pool/collection';
 import { loadPool } from '../../pool/pool';
-import { ArmoryScreen, fcText } from './armoryScreen';
+import { ArmoryScreen } from './armoryScreen';
 import { EventNode, type FakePage, stubMenuPage } from './menuTestSupport';
 
 /**
@@ -47,13 +47,13 @@ describe('scrapping with copies at several tiers (M100 QA)', () => {
     const pay = 3 * tier('common').scrapFc + tier('rare').scrapFc;
     expect(a.row()!.querySelector('.armory-row-spares')!.textContent).toBe('4 spares');
     a.rightClick();
-    expect(a.choices().map((b) => b.text)).toEqual([`Scrap 1 (+${fcText(tier('common').scrapFc)})`, `Scrap 4 (+${fcText(pay)})`]);
+    expect(a.choices().map((b) => b.text)).toEqual([`Scrap 1 (+${MENU_TEXT.fc(tier('common').scrapFc)})`, `Scrap 4 (+${MENU_TEXT.fc(pay)})`]);
   });
 
   it('Scrap 1 takes the commonest spare, not the rare one, and pays that tier\'s price', () => {
     const a = armory(owned);
     a.rightClick();
-    expect(a.choices()[0]!.getAttribute('aria-label')).toBe(`Scrap 1 Common ${A.name} for ${fcText(tier('common').scrapFc)}`);
+    expect(a.choices()[0]!.getAttribute('aria-label')).toBe(`Scrap 1 Common ${A.name} for ${MENU_TEXT.fc(tier('common').scrapFc)}`);
     a.choices()[0]!.click();
     expect(a.c.owned).toEqual({ [`${A.id}@common`]: 2, [`${A.id}@rare`]: 2 });
     expect(a.c.fc).toBe(tier('common').scrapFc);
@@ -70,14 +70,14 @@ describe('scrapping with copies at several tiers (M100 QA)', () => {
   it('a card whose only spares are above Common offers Scrap 1 of that tier', () => {
     const a = armory({ [`${A.id}@rare`]: 3 });
     a.rightClick();
-    expect(a.choices().map((b) => b.text)).toEqual([`Scrap 1 (+${fcText(tier('rare').scrapFc)})`, `Scrap 2 (+${fcText(2 * tier('rare').scrapFc)})`]);
+    expect(a.choices().map((b) => b.text)).toEqual([`Scrap 1 (+${MENU_TEXT.fc(tier('rare').scrapFc)})`, `Scrap 2 (+${MENU_TEXT.fc(2 * tier('rare').scrapFc)})`]);
     expect(a.choices()[0]!.getAttribute('aria-label')).toContain('Rare');
   });
 
   it('shows a big pay with its thousands comma, in the label and the name (10 spare Legendary)', () => {
     const a = armory({ [`${A.id}@legendary`]: 11 });
     a.rightClick();
-    const pay = fcText(10 * tier('legendary').scrapFc);
+    const pay = MENU_TEXT.fc(10 * tier('legendary').scrapFc);
     expect(pay).toMatch(/,/);
     expect(a.choices()[1]!.text).toBe(`Scrap 10 (+${pay})`);
     expect(a.choices()[1]!.getAttribute('aria-label')).toBe(`Scrap 10 spare ${A.name} for ${pay}`);
@@ -89,7 +89,7 @@ describe('scrapping with copies at several tiers (M100 QA)', () => {
     a.choices()[0]!.click();
     expect(a.row()!.querySelector('.armory-row-spares')!.textContent).toBe('3 spares');
     a.rightClick();
-    expect(a.choices().map((b) => b.text)).toEqual([`Scrap 1 (+${fcText(tier('common').scrapFc)})`, `Scrap 3 (+${fcText(3 * tier('common').scrapFc)})`]);
+    expect(a.choices().map((b) => b.text)).toEqual([`Scrap 1 (+${MENU_TEXT.fc(tier('common').scrapFc)})`, `Scrap 3 (+${MENU_TEXT.fc(3 * tier('common').scrapFc)})`]);
     a.choices()[1]!.click();
     expect(a.c.owned).toEqual({ [`${A.id}@common`]: 1 });
     expect(a.c.fc).toBe(4 * tier('common').scrapFc);
@@ -112,7 +112,7 @@ describe('the right card is scrapped when a second menu is opened without closin
     const a = armory({ [`${A.id}@common`]: 4, [`${B.id}@common`]: 2 });
     a.rightClick(A.id);
     a.rightClick(B.id);
-    expect(a.choices().map((x) => x.text)).toEqual([`Scrap 1 (+${fcText(tier('common').scrapFc)})`]);
+    expect(a.choices().map((x) => x.text)).toEqual([`Scrap 1 (+${MENU_TEXT.fc(tier('common').scrapFc)})`]);
     a.choices()[0]!.click();
     expect([a.c.owned[`${A.id}@common`], a.c.owned[`${B.id}@common`]]).toEqual([4, 1]);
   });
@@ -241,7 +241,7 @@ describe('the spare-count words (M100 QA)', () => {
     const a = armory({ [`${A.id}@common`]: 1, [`${A.id}@rare`]: 1 });
     expect(a.row()!.querySelector('.armory-row-spares')!.textContent).toBe('1 spare');
     a.rightClick();
-    expect(a.choices().map((b) => b.text)).toEqual([`Scrap 1 (+${fcText(tier('common').scrapFc)})`]);
+    expect(a.choices().map((b) => b.text)).toEqual([`Scrap 1 (+${MENU_TEXT.fc(tier('common').scrapFc)})`]);
     a.choices()[0]!.click();
     expect(a.c.owned).toEqual({ [`${A.id}@rare`]: 1 });
   });

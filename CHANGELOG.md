@@ -120,6 +120,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **RM7** · GBB Pistol look: slimmer slide flush with the frame, ejection port further back, one-piece trigger guard, shorter grip, low sights
 - **RM8** · Red dot, 2× scope, silencers and torches use new Blender models (Disable all models off): smaller, sit lower, aim follows them
 - **IM5** · Human and robot figure files are about half the size (4.2 and 4.5 MB down to 2.2 and 2.4 MB) and load faster, looking the same (Dev switches off)
+- **IM1** · The start-up game file is smaller (897 kB, was 990 kB): the Loadout, Armory, Settings and the practice range load in the background once the title shows
 
 ### Fixed
 - **G11** · The team camo on players reads clearly on Medium and up: crisp dark and light blotches printed per pixel, on WebGL and WebGPU; Low keeps plain clothes
@@ -220,6 +221,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **IM6** · Checks finish in about 10 minutes, not 25: browser tests run in four parallel jobs; current actions, Vite 8.3.4, Vitest 5.0.3, Playwright 1.64
 - **IM5** · New `tools/blender/bot-figure/pack.mjs` packs each Blender figure export losslessly; tests check the shipped figure files are packed
 - **IM4** · Type check and build use TypeScript 7: the type check takes about 3.5 s, not 19, and a full build about 19 s, not 35; the game is the same
+- **IM1** · Build's size limit for the game file raised to 1,250 kB, all start-up code counted in one game chunk; an OnDemand loader fetches screens on first use
 
 ## 0.1 Dev 4 · 2026-10-06
 
