@@ -153,9 +153,10 @@ export const AEG: ReplicaConfig = withStats({
     // The optic's axis is RIFLE_OPTIC.axisUp above the model's origin (render/replicaModels.ts); its back end about
     // 0.2 m in front of the eye, so the tube frames the view without filling it.
     aimHold: [0, -0.126, -0.205],
-    // The flip-up aperture (its hole's centre) at the back of the receiver rail and the front post's tip (the model file
-    // and the built-in model agree to a millimetre); the aperture a short cheek weld from the eye.
-    ironSight: { rear: [0.1005, 0.0755], front: [0.11, -0.378], eyeRelief: 0.16 },
+    // The flip-up aperture (its hole's centre) at the back of the receiver rail and the front post's tip, small and low
+    // (the owner, 2026-10-12): both on one line 1.45 cm over the rail, so the hold aims level. The built-in model's
+    // post stands on its shorter handguard, nearer the eye; at equal heights that leaves the hold the same.
+    ironSight: { rear: [0.088, 0.0693], front: [0.088, -0.4875], eyeRelief: 0.16 },
   },
 });
 
@@ -229,8 +230,8 @@ export const CYBER_PISTOL: ReplicaConfig = withStats({
     sound: 'cyber',
     suppressed: false,
     hold: { position: [0.09, -0.095, -0.45], yaw: 0.1 },
-    // One fin sight on top of the slab: its flat tip, back to front, sits on the aim point.
-    ironSight: { rear: [0.056, 0.046], front: [0.056, 0.03], eyeRelief: 0.36 },
+    // Small, low sights (the owner, 12 Oct 2026): a notch at the back of the rear housing, a post on the front block.
+    ironSight: { rear: [0.04, 0.0768], front: [0.04, -0.1038], eyeRelief: 0.33 },
   },
 });
 
