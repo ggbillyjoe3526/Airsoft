@@ -4,7 +4,7 @@
  * game itself, and writes them as small JPEGs into public/menu/ (what src/config/menuArt.ts lists). Run it again when
  * a map, its lighting or the renderer's look changes, and commit the pictures.
  *
- *   node pipeline/map-stills.mjs [--url http://localhost:5173/] [--quality high] [--only depot-day.jpg,...] [--chromium /path]
+ *   node pipeline/map-stills.mjs [--url http://localhost:5173/] [--quality high] [--backend webgpu|webgl] [--only depot-day.jpg,...] [--chromium /path]
  *
  * Without --url it builds the e2e bundle (pipeline/build-cached.mjs, the build with `window.airsoft`) and serves it on
  * port 4183. Each picture is one page: the map, its light and the mode saved as the player's picks (Dev content on, for
@@ -14,6 +14,10 @@
  * a view of Depot blurred once here, so no screen ever blurs live (the title has no picture).
  *
  * Software rendering (SwiftShader) draws the same picture as a GPU, only slower: PLAYWRIGHT_CHROMIUM picks the browser.
+ * The pictures are drawn on WebGPU (the back end most players get), through the container's SwiftShader Vulkan adapter
+ * (webgpuCompare.mjs WEBGPU_ARGS); `--backend webgl` draws them on the node renderer's WebGL2 back end instead. Each page
+ * checks the back end it was drawn with. The game's own loop stops before the still: frames are drawn from the stood
+ * camera until the node renderer has compiled everything in view and the post stack's temporal pass has settled.
  */
 import { execFileSync, spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -28,9 +32,15 @@ const value = (name, fallback) => (args.includes(name) ? args[args.indexOf(name)
 
 // config/menuArt.ts has no imports, so Node reads it as it is (types stripped).
 const art = await import(pathToFileURL(join(ROOT, 'src', 'config', 'menuArt.ts')).href);
-const { MAP_STILLS, MODE_STILLS, STILL_SIZE, BACKDROPS, STILL_CAMERA } = art;
+const { MAP_STILLS, MODE_STILLS, STILL_SIZE, BACKDROPS, STILL_CAMERA, STILL_SETTLE } = art;
+const { WEBGPU_ARGS } = await import(pathToFileURL(join(ROOT, 'pipeline', 'webgpuCompare.mjs')).href);
 
 const quality = value('--quality', 'high');
+const backend = value('--backend', 'webgpu');
+if (!['webgpu', 'webgl'].includes(backend)) {
+  console.error(`map-stills: --backend is webgpu or webgl, not ${backend}`);
+  process.exit(2);
+}
 const only = value('--only', '')?.split(',').filter(Boolean) ?? [];
 const chromium = value('--chromium', process.env.PLAYWRIGHT_CHROMIUM);
 let base = value('--url', '');
@@ -53,7 +63,7 @@ const shots = [
 const { chromium: browserType } = await import(pathToFileURL(join(ROOT, 'node_modules', '@playwright', 'test', 'index.mjs')).href);
 const browser = await browserType.launch({
   ...(chromium ? { executablePath: chromium } : {}),
-  args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
+  args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', ...(backend === 'webgpu' ? WEBGPU_ARGS : [])],
 });
 mkdirSync(OUT, { recursive: true });
 let failed = false;
@@ -64,7 +74,7 @@ try {
       const over = bytes.length > shot.budget;
       if (over) failed = true;
       writeFileSync(join(OUT, file), bytes);
-      console.log(`map-stills: ${file} ${(bytes.length / 1000).toFixed(1)} kB${over ? ' (over its budget)' : ''}`);
+      console.log(`map-stills: ${file} ${(bytes.length / 1000).toFixed(1)} kB on ${backend}${over ? ' (over its budget)' : ''}`);
     }
   }
 } finally {
@@ -77,22 +87,28 @@ if (failed) process.exit(1);
 async function draw(shot) {
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
   page.on('pageerror', (e) => console.error(`map-stills: page error: ${e.message}`));
-  // The picks as saved settings: the map in its light, the mode, a 3v3 on Skirmish, Dev content on.
-  const picks = { version: 1, map: shot.map, mode: shot.mode, [`lighting.${shot.map}`]: shot.light, 'dev.devContent': 'on', 'dev.enabled': true, ruleset: 'skirmish' };
+  // The picks as saved settings: the map in its light, the mode, a 3v3 on Skirmish, Dev content on, the back end.
+  const picks = { version: 1, map: shot.map, mode: shot.mode, [`lighting.${shot.map}`]: shot.light, 'dev.devContent': 'on', 'dev.enabled': true, ruleset: 'skirmish', renderer: backend };
   await page.addInitScript((saved) => localStorage.setItem('airsoft.settings', JSON.stringify(saved)), picks);
-  await page.goto(`${base}?nolock&seed=1&quality=${quality}`);
+  await page.goto(`${base}?nolock&seed=1&quality=${quality}${backend === 'webgl' ? '&forceWebGL' : ''}`);
   await page.waitForSelector('.menu-title-start', { timeout: 120_000 });
+  // A browser without a WebGPU device falls back to WebGL2 quietly: a still drawn on the wrong back end is refused.
+  const drawnWith = await page.evaluate(() => globalThis.airsoft.renderer.backend);
+  if (drawnWith !== backend) throw new Error(`map-stills: asked for ${backend}, drawn with ${drawnWith}`);
   // A dev map's data arrives after the title shows (map/maps.ts loadDevMaps): wait until the Match screen offers it.
   await page.locator('.menu-title-start').click();
   const setup = page.locator('.menu-setup');
   await setup.locator('.map-cards .choice-card.selected').waitFor({ timeout: 60_000 });
   await page.waitForFunction((map) => document.querySelector('.menu-setup .play-map-line')?.textContent?.toLowerCase().replace(/\s/g, '').startsWith(map.toLowerCase()), shot.map, { timeout: 60_000 });
-  await setup.getByRole('button', { name: 'Start match', exact: true }).click();
+  // On a software adapter the menu's pictures and the match's warm-up compile hold the click for 20 s and more (W6a).
+  await setup.getByRole('button', { name: 'Start match', exact: true }).click({ timeout: 120_000 });
   await page.waitForFunction(() => globalThis.airsoft?.state && globalThis.airsoft.state.tick > 30, null, { timeout: 180_000 });
   const camera = STILL_CAMERA[shot.view];
   const result = await page.evaluate(
-    ({ camera, view, width, height, q, blur }) => {
+    async ({ camera, view, width, height, q, blur, settle }) => {
       const game = globalThis.airsoft;
+      // The game's own loop stops: from here only this page's renders draw, from the stood camera.
+      cancelAnimationFrame(game.rafId);
       const state = game.state;
       const r = game.renderer;
       // Where the game put the camera this frame: the player's eye at their start.
@@ -123,8 +139,30 @@ async function draw(shot) {
         cam.position.y += camera.up;
         cam.rotation.set(eye.rotation.x - 0.05, eye.rotation.y, 0, 'YXZ');
       }
+      cam.updateMatrixWorld();
+      // Draw until the node renderer has compiled everything in view (its draw count holds still), then a few frames
+      // more for the post stack's temporal pass to settle on the stood camera, one per animation frame as the game's
+      // loop draws (the node renderer redraws its shadow maps once a frame).
+      const nextFrame = () => new Promise((done) => requestAnimationFrame(done));
+      let calls = -1;
+      for (let i = 0, still = 0; i < settle.maxFrames && still < settle.stillFrames; i++) {
+        await nextFrame();
+        r.render();
+        still = r.stats.calls === calls ? still + 1 : 0;
+        calls = r.stats.calls;
+        await new Promise((done) => setTimeout(done, settle.pauseMs));
+      }
+      for (let i = 0; i < settle.temporalFrames; i++) {
+        await nextFrame();
+        r.render();
+      }
+      // The canvas is read in the same task as its last render (a WebGPU canvas is cleared once presented), as a PNG:
+      // drawing a WebGPU canvas straight into a 2D one copies black on SwiftShader's adapter, its PNG holds the frame.
+      await nextFrame();
       r.render();
-      const canvas = r.renderer.domElement;
+      const frame = new Image();
+      frame.src = r.renderer.domElement.toDataURL('image/png');
+      await frame.decode();
       const shrink = (w, h, filter) => {
         const c = document.createElement('canvas');
         c.width = w;
@@ -133,18 +171,21 @@ async function draw(shot) {
         ctx.imageSmoothingQuality = 'high';
         if (filter) ctx.filter = filter;
         // The middle 16:9 of the frame, scaled to the picture's size.
-        const sh = Math.min(canvas.height, (canvas.width * 9) / 16);
+        const sh = Math.min(frame.naturalHeight, (frame.naturalWidth * 9) / 16);
         const sw = (sh * 16) / 9;
-        ctx.drawImage(canvas, (canvas.width - sw) / 2, (canvas.height - sh) / 2, sw, sh, 0, 0, w, h);
+        ctx.drawImage(frame, (frame.naturalWidth - sw) / 2, (frame.naturalHeight - sh) / 2, sw, sh, 0, 0, w, h);
         return c;
       };
       // The backdrop is drawn small and blurred once; the menus scale it up behind every screen but the title.
-      const main = shrink(width, height, blur ? `blur(${blur}px) saturate(1.1)` : '').toDataURL('image/jpeg', q);
-      return { main };
+      const still = shrink(width, height, blur ? `blur(${blur}px) saturate(1.1)` : '');
+      // A frame read back empty is all black (even a night still has lit pixels): refused rather than saved.
+      const lit = still.getContext('2d').getImageData(0, 0, still.width, still.height).data.some((v, i) => i % 4 !== 3 && v > 0);
+      return { main: still.toDataURL('image/jpeg', q), lit };
     },
-    { camera, view: shot.view, width: shot.width, height: shot.height, q: shot.quality, blur: shot.blur ?? 0 },
+    { camera, view: shot.view, width: shot.width, height: shot.height, q: shot.quality, blur: shot.blur ?? 0, settle: STILL_SETTLE },
   );
   await page.close();
+  if (!result.lit) throw new Error(`map-stills: ${shot.file} was read back black`);
   const bytes = (url) => Buffer.from(url.slice(url.indexOf(',') + 1), 'base64');
   return [[shot.file, bytes(result.main)]];
 }

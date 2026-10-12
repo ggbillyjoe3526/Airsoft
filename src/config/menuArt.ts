@@ -59,6 +59,13 @@ export const STILL_CAMERA: Readonly<Record<StillView, { back: number; up: number
   flag: { back: 9, up: 3.2, lookUp: 1.8, fov: 58 },
 };
 
+/**
+ * How a still's frame settles before it is taken (pipeline/map-stills.mjs): frames until the draw count holds for
+ * `stillFrames` in a row (the node renderer compiles what comes into view over a few frames; at most `maxFrames`, a
+ * pause of `pauseMs` after each), then `temporalFrames` for the post stack's temporal pass on the stood camera.
+ */
+export const STILL_SETTLE = { stillFrames: 3, maxFrames: 40, pauseMs: 150, temporalFrames: 8 } as const;
+
 /** The map still's file for a map in a light, or null when none was drawn. */
 export function mapStillFile(map: string, light: string): string | null {
   return MAP_STILLS.find((s) => s.map === map && s.light === light)?.file ?? MAP_STILLS.find((s) => s.map === map)?.file ?? null;
