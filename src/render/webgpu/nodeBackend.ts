@@ -97,7 +97,7 @@ export class NodeBackend {
     this.particles = new ParticleTwins(renderer);
     this.world = new WorldTwins(renderer, this.particles.claims);
     this.dressing = new GpuDressing(renderer, this.kind === 'webgpu');
-    this.lighting = this.kind === 'webgpu' ? new NightLighting() : null;
+    this.lighting = this.kind === 'webgpu' ? new NightLighting(renderer) : null;
     if (this.lighting) renderer.lighting = this.lighting;
     // Three's own handler logs the loss as an error and stops the renderer for good; the game recovers instead.
     renderer.onDeviceLost = () => {

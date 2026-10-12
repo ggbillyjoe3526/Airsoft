@@ -80,6 +80,8 @@ export class NightLightsNode extends ClusteredLightsNode {
     private readonly capacity: number = CLUSTERED_LIGHTS.maxLights,
     /** Where a light-list buffer the grid has outgrown goes, to be freed after the frame (NightLighting.flush). */
     private readonly retired: THREE.BufferAttribute[] = [],
+    /** The renderer, read for the target in force when the lights are set (setLights); none in a unit test. */
+    private readonly sizing: Sizing | null = null,
   ) {
     super(capacity, CLUSTERED_LIGHTS.tileSize, CLUSTERED_LIGHTS.zSlices, CLUSTERED_LIGHTS.perCluster);
     const own = this as unknown as ClusteredInternals;
@@ -118,7 +120,10 @@ export class NightLightsNode extends ClusteredLightsNode {
 
   /**
    * A new grid. A light-list buffer it outgrows is retired, to be freed once the frame is submitted (BP3): Three makes a
-   * bigger one and leaves the old on the GPU (its own TODO), and a draw of this frame may still bind it.
+   * bigger one and leaves the old on the GPU (its own TODO), and a draw of this frame may still bind it. No later draw
+   * does: the new grid comes with a new compute pass, whose cache key Three's `customCacheKey` adds to this node's, and
+   * every lit draw's key holds this node's (RenderObject.getDynamicCacheKey); a draw built against the old grid is
+   * rebuilt against the new lists before it next draws (RenderObjects.get).
    */
   create(width: number, height: number): void {
     const own = this as unknown as ClusteredInternals;
@@ -132,8 +137,14 @@ export class NightLightsNode extends ClusteredLightsNode {
     return (this as unknown as ClusteredInternals)._lightIndexes?.value ?? null;
   }
 
-  /** The clustered lights (point and spot, no shadow, at most `capacity`) and Three's own (the rest). */
+  /**
+   * The clustered lights (point and spot, no shadow, at most `capacity`) and Three's own (the rest). Three sets them as
+   * each draw or compile of the world begins, with its target in force: the first sizes the grid for that target, so a
+   * warm-up compile under the retro look builds for the frames' grid, not the canvas's (BP3: its builds run later, with
+   * no target set, and the first frame then rebuilt them all).
+   */
   override setLights(lights: Light[]): this {
+    if (this.sizing && (this as unknown as ClusteredInternals)._bufferSize === null) this.updateProgram(this.sizing);
     const clustered = this.clusteredLights;
     const material = this.materialLights;
     let c = 0;
@@ -244,8 +255,8 @@ export class NightLightsNode extends ClusteredLightsNode {
   /** Three's own lights as usual, then the pixel's cluster's lights: point and spot, by the same formulas as Three's. */
   override setupLights(builder: NodeBuilder, lightNodes: AnyNode): void {
     const own = this as unknown as ClusteredInternals;
-    // A material built between frames (a warm-up compile's) takes the grid the frames draw with; only the first build
-    // makes one, sized for the target it is compiled into (BP3). The frame's resize rebuilds them, as on Three's.
+    // A material built between frames (a warm-up compile's, with no target set) takes the grid in force, sized when
+    // the lights were set (BP3); a build with no grid yet makes one. A later grid change rebuilds it (create).
     if (own._bufferSize === null) this.updateProgram(builder.renderer as unknown as Sizing);
     const reflected = (builder.context as unknown as { reflectedLight: { directDiffuse: AnyNode; directSpecular: AnyNode } }).reflectedLight;
     reflected.directDiffuse.toStack();
@@ -284,6 +295,11 @@ export class NightLighting extends Lighting {
   /** Light-list buffers let go (a grid outgrown, a map's node replaced), freed after the frame (flush). */
   private readonly retired: THREE.BufferAttribute[] = [];
 
+  /** `sizing`: the renderer, whose target in force sizes the clusters' grid when the world's lights are first set. */
+  constructor(private readonly sizing: Sizing | null = null) {
+    super();
+  }
+
   override getNode(scene: THREE.Object3D): LightsNode {
     this.clustering = scene === this.world;
     return super.getNode(scene as THREE.Scene);
@@ -292,7 +308,7 @@ export class NightLighting extends Lighting {
   override createNode(lights: Light[] = []): LightsNode {
     if (!this.clustering) return new LightsNode().setLights(lights);
     this.retire();
-    return (this.made = new NightLightsNode(CLUSTERED_LIGHTS.maxLights, this.retired).setLights(lights));
+    return (this.made = new NightLightsNode(CLUSTERED_LIGHTS.maxLights, this.retired, this.sizing).setLights(lights));
   }
 
   /**

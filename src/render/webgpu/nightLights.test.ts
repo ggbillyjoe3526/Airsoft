@@ -196,6 +196,47 @@ describe('the clustered lights node (W3 criterion 2)', () => {
     lighting.dispose(renderer);
     expect(freed).toEqual([small, big]);
   });
+
+  it('changes its cache key with its grid, so no draw built against outgrown lists draws again once they are freed (BP3)', () => {
+    // Three keys each lit draw on the lights node's key, recomputed per draw (NodeManager.getCacheKey:
+    // lightsNode.getCacheKey(true)); a draw whose key moved is rebuilt before it draws (RenderObjects.get).
+    const node = new NightLightsNode(4);
+    node.updateProgram(drawing({ width: 320, height: 180 }));
+    const small = node.getCacheKey(true);
+    const lists = node.lightLists;
+    // The same grid each frame keeps the key: nothing is rebuilt.
+    node.updateProgram(drawing({ width: 320, height: 180 }));
+    expect(node.getCacheKey(true)).toBe(small);
+    // A bigger grid (the window grew) retires the lists and moves the key.
+    node.updateProgram(drawing(null));
+    expect(node.lightLists).not.toBe(lists);
+    expect(node.getCacheKey(true)).not.toBe(small);
+    // A smaller grid keeps the bigger lists but is a new grid all the same: the key moves again.
+    const big = node.getCacheKey(true);
+    node.updateProgram(drawing({ width: 320, height: 180 }));
+    expect(node.getCacheKey(true)).not.toBe(big);
+    node.dispose();
+  });
+
+  it('sizes its grid when the world’s lights are first set, for the target then in force (BP3: a warm-up compile)', () => {
+    // Three sets the lights as a compile begins, with its target set; its builds run later with none. The retro look
+    // compiles into its quarter-size target: the builds take that grid, not the canvas's.
+    let into: { width: number; height: number } | null = { width: 320, height: 180 };
+    const renderer = { getRenderTarget: () => into, getDrawingBufferSize: (out: THREE.Vector2) => out.set(1280, 720) };
+    const lighting = new NightLighting(renderer);
+    const world = new THREE.Scene();
+    lighting.world = world;
+    const node = lighting.getNode(world) as NightLightsNode;
+    const tile = CLUSTERED_LIGHTS.tileSize;
+    expect(grid(node)).toEqual([Math.ceil(320 / tile), Math.ceil(180 / tile)]);
+    into = null;
+    node.setLights([]);
+    node.setupLights({ renderer, context: { reflectedLight: { directDiffuse: { toStack() {} }, directSpecular: { toStack() {} } } } } as never, []);
+    expect(grid(node)).toEqual([Math.ceil(320 / tile), Math.ceil(180 / tile)]);
+    // Without a renderer to read (a unit test's node), nothing is sized until the first build or frame.
+    expect(grid(new NightLightsNode(4))).toEqual([0, 0]);
+    lighting.dispose(buffers().renderer);
+  });
 });
 
 describe('the night lit on clustered lights (W3 criterion 2)', () => {
