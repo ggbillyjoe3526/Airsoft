@@ -62,7 +62,7 @@ CORE-08). Value imports and re-exports count; `import type`, `export type` and d
 
 ```
 node pipeline/gate.mjs [--task M27[,M28]] [--quick] [--no-smoke] [--perf] [--env container|laptop|ci] [--base origin/main] [--ci]
-                       [--tests auto|all|fast|slow] [--shard k/n] [--only tests]
+                       [--tests auto|all|fast|slow] [--shard k/n] [--only tests|smoke]
 ```
 
 | Gate | Runs | Passes when |
@@ -118,10 +118,12 @@ builds; the smoke test's two servers and the perf harness then reuse what is the
 once. Two bundles stay necessary: the e2e one has the test hooks, the production one is what players get.
 
 **CI** (`.github/workflows/check.yml`) runs `--ci`: build, tests and smoke on every pull request and push to `main`,
-split across jobs since M50's audit (CORE-04): job `check` runs `--ci --tests fast` (the build, the fast project, the
-smoke test, scope and changelog) and the three `slow` jobs `--ci --tests slow --shard k/3 --only tests` (a third of
-the headless bot-match guards each, vitest's own sharding by file). `--tests all|fast|slow`, `--shard k/n` and
-`--only tests` work locally too; locally without them the gate runs `--tests auto` (above).
+split across jobs since M50's audit (CORE-04): job `check` runs `--ci --tests fast --no-smoke` (the build, the fast
+project, scope and changelog), the four `browser` jobs `--ci --only smoke --shard k/4` (a quarter of the smoke test
+each, Playwright's own sharding by file; their servers build both bundles, IM6) and the three `slow` jobs `--ci --tests
+slow --shard k/3 --only tests` (a third of the headless bot-match guards each, vitest's own sharding by file).
+`--tests all|fast|slow`, `--shard k/n` and `--only tests|smoke` work locally too; locally without them the gate runs
+`--tests auto` (above).
 On a pull request whose title starts with its task id(s) (`FA12: …`, `FA5 + FA9: …`), `--ci` reads the ids from the
 title (`GATE_PR_TITLE`) and also runs `scope` and `changelog`, diffing the merge commit against its first parent (the
 base it merges into). A title without an id, and a push to `main`, skip those two. **What runs only off CI:** the

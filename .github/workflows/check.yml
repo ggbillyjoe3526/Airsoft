@@ -1,8 +1,8 @@
 # Runs the project's own checks on every pull request and every push to main through the pipeline's gate script:
-# the production build with its type check, the unit tests, then the browser smoke test (pipeline/README.md). On a pull
-# request whose title starts with its task id(s) ("FA12: …", "FA5 + FA9: …") it also runs the scope and changelog gates
-# (audit CORE-08). What runs only on a worker's machine or the owner's: the perf gate (no baseline or GPU on a runner),
-# the frame-time budget (the owner's laptop, by hand) and the critic.
+# the production build with its type check, the unit tests and the browser smoke test (pipeline/README.md), split over
+# parallel jobs. On a pull request whose title starts with its task id(s) ("FA12: …", "FA5 + FA9: …") it also runs the
+# scope and changelog gates (audit CORE-08). What runs only on a worker's machine or the owner's: the perf gate (no
+# baseline or GPU on a runner), the frame-time budget (the owner's laptop, by hand) and the critic.
 name: Check
 
 on:
@@ -22,27 +22,61 @@ concurrency:
 permissions:
   contents: read
 
+# Three kinds of job run side by side (audit CORE-04, IM6): `check` (the build, the fast unit tests, scope and
+# changelog), `browser` (the smoke test in shares) and `slow` (the headless bot-match guards in shares). In one job the
+# smoke test alone took about 1,290 s by RM8 (2026-10-12, main 19d3858), so every check took about 25 minutes while the
+# other jobs sat idle after 2 to 4; split, the longest job is a few minutes.
 jobs:
-  # The build, the fast unit tests, the browser smoke test and the scope and changelog gates. The headless bot-match
-  # guards (vitest project `slow`) run beside it in the `slow` job's shards (audit CORE-04): measured 2026-10-05 in a
-  # 4-core container they are about 1,420 s of work (the longest file, Woodland's Extraction balance, 213 s), which in
-  # one job took the whole check towards its 30-minute limit. Split, each job is a few minutes; the limits are 20, but
-  # `check` is 35: by W5 (2026-10-10) its browser smoke alone took about 15 minutes on main and W5's WebGPU checks tipped
-  # the job past 20; by BP3 (2026-10-12) slow runners took the smoke to about 1,250 s and green runs ended at 24.5 of
-  # 25 minutes, one cut off in its cleanup.
+  # The build with its type check and chunk budgets, the fast unit tests (177 s on main 19d3858), and on a pull request
+  # the scope and changelog gates. No browser: the smoke test runs in the `browser` jobs.
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 20
     steps:
       # The whole history, so the scope gate can diff the pull request against its base and find the task block a
       # branch cleared before merging (pipeline/scope.mjs), and the tags with it, so the build's `git describe` names
       # the release it follows ("0.1 Dev 3+12 · abc1234") rather than "build abc1234" (audit CORE-10;
       # config/buildVersion.ts). fetch-depth 0 brings the tags already; fetch-tags says so where it can't be missed.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           fetch-tags: true
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # The pipeline's gate script (pipeline/README.md): the production build, the unit tests, and on a pull request
+      # the scope and changelog gates for the task ids its title starts with. Writes pipeline/out/gate-report.json with
+      # pass / fail per gate. A pull request is checked out as its merge commit, whose first parent is the base it would
+      # merge into.
+      - name: Gates
+        env:
+          GATE_PR_TITLE: ${{ github.event.pull_request.title }}
+        run: node pipeline/gate.mjs --ci --tests fast --no-smoke ${{ github.event_name == 'pull_request' && '--base HEAD^1' || '' }}
+      - name: Upload the gate report and the test report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: gate-report
+          path: pipeline/out/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # The browser smoke test (e2e/, Playwright in software rendering) in four shares of its files (playwright --shard,
+  # which splits by test count and keeps a file's tests together). Each share's two servers build the e2e bundle and the
+  # production one themselves (pipeline/build-cached.mjs, about a minute), so each starts without waiting for `check`.
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      # No smoke test reads the version label, so the default shallow checkout (no tags) is enough.
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -50,7 +84,7 @@ jobs:
       # Playwright's Chromium is cached per lockfile (the Playwright version pins the browser build).
       - name: Cache the Playwright browser
         id: playwright-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
@@ -65,19 +99,13 @@ jobs:
           else
             npx playwright install-deps chromium
           fi
-      # The pipeline's gate script (pipeline/README.md): the production build, the unit tests, the smoke test (which
-      # builds the e2e bundle once and loads the production build too), and on a pull request the scope and changelog
-      # gates for the task ids its title starts with. Writes pipeline/out/gate-report.json with pass / fail per gate.
-      # A pull request is checked out as its merge commit, whose first parent is the base it would merge into.
-      - name: Gates
-        env:
-          GATE_PR_TITLE: ${{ github.event.pull_request.title }}
-        run: node pipeline/gate.mjs --ci --tests fast ${{ github.event_name == 'pull_request' && '--base HEAD^1' || '' }}
-      - name: Upload the gate report, the test reports and the smoke test report (screenshot inside)
+      - name: Smoke test, share ${{ matrix.shard }} of 4
+        run: node pipeline/gate.mjs --ci --only smoke --shard ${{ matrix.shard }}/4
+      - name: Upload the gate report and the smoke test report (screenshots inside)
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: gate-report
+          name: gate-report-browser-${{ matrix.shard }}
           path: |
             pipeline/out/
             playwright-report/
@@ -88,6 +116,8 @@ jobs:
   # The headless bot-match guards (src/ai/depotMatch*.test.ts, the Pro, levels and Extraction balance guards), in three
   # shares of their files (vitest --shard): no build or browser, so each starts on its tests at once. Nothing here is
   # built, so the default shallow checkout (no tags) is enough: the version label only matters in `check`'s build.
+  # Measured 2026-10-05 in a 4-core container they are about 1,420 s of work (the longest file, Woodland's Extraction
+  # balance, 213 s); on main 19d3858 the three shares took 84 s, 88 s and 239 s.
   slow:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -96,8 +126,8 @@ jobs:
       matrix:
         shard: [1, 2, 3]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -106,7 +136,7 @@ jobs:
         run: node pipeline/gate.mjs --ci --tests slow --shard ${{ matrix.shard }}/3 --only tests
       - name: Upload the gate report and the test report
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: gate-report-slow-${{ matrix.shard }}
           path: pipeline/out/

@@ -91,6 +91,9 @@ release description:
   never a per-milestone progress line.
 - **Pausing.** When the owner says stop or usage is running out, commit and push the work in progress on its branch
   (never patch folders) and say where it stopped.
+- **Shared files stay lean** (owner, 2026-10-12 tidy-up: 1.1 GB down to 192 MB, most of it raw test dumps and PNG
+  concept pictures). Copy a run's reports there, never the raw `playwright.json`, `vitest.json` or logs. Save review
+  pictures as JPEG, not PNG. Once the work merges, keep the approved pictures and delete the rest of their folder.
 - **`docs/HANDOFF.md`** is a short "now": what is being built, what is next, what waits on the owner. The planning
   thread rewrites it once per batch (replace it, don't append). Engine facts live in `docs/ARCHITECTURE.md` and the
   folder READMEs, not there.
