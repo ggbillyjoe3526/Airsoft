@@ -115,6 +115,13 @@ export interface ReplicaFile {
    * …), each in the replica's space where it fits; empty without that file. A part a file lacks is drawn built-in.
    */
   parts: ReadonlyMap<string, readonly ReplicaFilePiece[]>;
+  /**
+   * Where the parts file marks them (RM8, REPLICA_FILE.partMarkers), by part name: how high an optic's sight line sits
+   * above the origin, and how far a torch moves from where it fits while the laser is fitted too. A part the file
+   * lacks, or doesn't mark, has none.
+   */
+  sightLines: ReadonlyMap<string, number>;
+  underLaser: ReadonlyMap<string, THREE.Vector3>;
   /** The file paints its own muzzle tip (a `Tip` material): no orange disc is added over it. */
   ownTip: boolean;
   /**
@@ -247,7 +254,7 @@ export function prepareReplicaFile(id: string, scene: THREE.Object3D, partsScene
   const figureHeld = figureNode ? pieces(figureNode, toScene, []) : [];
   const magazineBone = magazineNode?.parent instanceof THREE.Bone ? magazineNode.parent : null;
   const magazineFrame = magazineBone ? new THREE.Matrix4().multiplyMatrices(toScene, magazineBone.matrixWorld) : null;
-  const parts = partsScene ? partsOf(partsScene) : new Map<string, ReplicaFilePiece[]>();
+  const { parts, sightLines, underLaser } = partsScene ? partsOf(partsScene) : NO_PARTS;
   const held = triangles(body) + triangles(magazine) + triangles(flashHider) + triangles(rig?.file.pieces ?? []);
   const onFigure = triangles(figure);
   const heldBudget = budget(REPLICA_FILE.warnTriangles, id);
@@ -261,6 +268,8 @@ export function prepareReplicaFile(id: string, scene: THREE.Object3D, partsScene
     flashHider,
     rig: rig?.file ?? null,
     parts,
+    sightLines,
+    underLaser,
     ownTip: all.some((p) => p.key === 'orange'),
     figure,
     figureHeld,
@@ -354,23 +363,36 @@ function magazineMoves(scene: THREE.Object3D, toScene: THREE.Matrix4, clips: rea
 /** What the game names a moving part's bone: `rig_<the file's bone>` (three's track names can't take a colon). */
 export const RIG_PREFIX = 'rig_';
 
+/** A replica without a parts file: no parts, sight lines or torch moves. */
+const NO_PARTS: Pick<ReplicaFile, 'parts' | 'sightLines' | 'underLaser'> = { parts: new Map(), sightLines: new Map(), underLaser: new Map() };
+
 /**
  * A parts file's parts (RM1): each top-level object named `<kind>_<id>` ('optic_redDot', 'muzzle_silencer' …) is the
  * part `<kind>:<id>`, in the replica's space where it fits; its `<name>_Figure` copy (a figure's) is not drawn in the
- * hands, and its markers have no meshes.
+ * hands, and its markers have no meshes. Its `<name>_SightLine` and `<name>_UnderLaser` markers (RM8) are read too.
  */
-function partsOf(scene: THREE.Object3D): Map<string, ReplicaFilePiece[]> {
+function partsOf(scene: THREE.Object3D): Pick<ReplicaFile, 'parts' | 'sightLines' | 'underLaser'> {
   scene.updateMatrixWorld(true);
   const toScene = new THREE.Matrix4().copy(scene.matrixWorld).invert();
+  const at = (o: THREE.Object3D): THREE.Vector3 => o.getWorldPosition(new THREE.Vector3()).applyMatrix4(toScene);
+  const M = REPLICA_FILE.partMarkers;
   const parts = new Map<string, ReplicaFilePiece[]>();
+  const sightLines = new Map<string, number>();
+  const underLaser = new Map<string, THREE.Vector3>();
   for (const child of scene.children) {
     const match = /^([a-z]+)_([A-Za-z0-9]+)$/.exec(child.name);
     if (!match) continue;
     const figure = child.getObjectByName(`${child.name}_Figure`) ?? null;
     const list = pieces(child, toScene, [figure]);
-    if (list.length > 0) parts.set(`${match[1]}:${match[2]}`, list);
+    if (list.length === 0) continue;
+    const name = `${match[1]}:${match[2]}`;
+    parts.set(name, list);
+    const sight = child.getObjectByName(`${child.name}_${M.sightLine}`);
+    if (sight) sightLines.set(name, at(sight).y);
+    const under = child.getObjectByName(`${child.name}_${M.underLaser}`);
+    if (under) underLaser.set(name, at(under).sub(at(child)));
   }
-  return parts;
+  return { parts, sightLines, underLaser };
 }
 
 /**

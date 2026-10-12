@@ -4,7 +4,7 @@ import { type InspectCue, type InspectKey, type InspectPose, LIGHTING_PRESETS, t
 import type { FireMode, ReplicaConfig } from '../config/replicas';
 import type { ReplicaPaint } from '../config/schemes';
 import type { Armament } from '../sim/armament';
-import { type ArmStyle, buildReplicaModels, fitMuzzle, fitSupportHand, HUMAN_ARMS, LOW_DETAIL, type MagazinePart, type MuzzleMount, type ReplicaDetail, type ReplicaModels, type SupportHandPart } from './replicaModels';
+import { type ArmStyle, buildReplicaModels, fitLight, fitMuzzle, fitSupportHand, HUMAN_ARMS, type LightMount, LOW_DETAIL, type MagazinePart, type MuzzleMount, type ReplicaDetail, type ReplicaModels, type SupportHandPart } from './replicaModels';
 import { NO_REPLICA_FILES, type ReplicaFiles } from './replicaFiles';
 import type { ReplicaRig } from './replicaRig';
 
@@ -70,6 +70,16 @@ export function inspectPose(keys: readonly InspectKey[], share: number, weight: 
   return out;
 }
 
+/**
+ * Where a replica sits aiming down each optic that marks its own sight line (RM8, ReplicaModel.sightLines): its aim
+ * hold, raised or lowered so that line runs through the eye. Empty without an aim hold.
+ */
+function sightHolds(aimHold: ReplicaConfig['look']['aimHold'], sightLines: ReadonlyMap<string, number> | undefined): Map<string, readonly [number, number, number]> {
+  const holds = new Map<string, readonly [number, number, number]>();
+  if (aimHold) for (const [optic, line] of sightLines ?? []) holds.set(optic, [aimHold[0], -line, aimHold[2]]);
+  return holds;
+}
+
 type PartKind = 'optic' | 'grip' | 'magazine' | 'laser' | 'barrel' | 'muzzle' | 'light';
 const PART_KINDS: readonly string[] = ['optic', 'grip', 'magazine', 'laser', 'barrel', 'muzzle', 'light'];
 
@@ -108,6 +118,10 @@ export class Viewmodel {
     hold: ReplicaConfig['look']['hold'];
     /** Where it sits aiming down a fitted optic (replicas with an optic mount). */
     aimHold: ReplicaConfig['look']['aimHold'];
+    /** The same for each optic from its parts file that marks its own sight line (RM8), by optic id. */
+    sightHolds: ReadonlyMap<string, readonly [number, number, number]>;
+    /** The torch from its parts file, moved under the laser while both are fitted (RM8). */
+    light: LightMount | null;
     /** Where it sits aiming down its iron sights (M84, ironHold), and the pitch that lines them up; null without any. */
     ironHold: IronHold | null;
     /** The optics, grips and magazines it can be fitted with ('optic:<id>' …), each shown only while fitted. */
@@ -214,7 +228,7 @@ export class Viewmodel {
     this.inspectT = -1;
     this.inspectWeight = 0;
     for (const r of this.loadout) {
-      const { group: model, magazine, supportHand, muzzle, mount, rig } = replicas.models.get(r.id)!;
+      const { group: model, magazine, supportHand, muzzle, mount, rig, sightLines, light } = replicas.models.get(r.id)!;
       const inspect: InspectPose = VIEWMODEL.inspect.poses[r.look.viewmodel ?? r.look.model];
       model.position.set(...r.look.hold.position);
       model.rotation.y = r.look.hold.yaw;
@@ -225,6 +239,8 @@ export class Viewmodel {
         muzzle,
         hold: r.look.hold,
         aimHold: r.look.aimHold,
+        sightHolds: sightHolds(r.look.aimHold, sightLines),
+        light: light ?? null,
         ironHold: r.look.ironSight ? ironHold(r.look.ironSight) : null,
         parts: fittableParts(model),
         mount,
@@ -416,6 +432,7 @@ export class Viewmodel {
         if (p.kind === 'magazine' && p.object.visible) s.magBase = s.mag.bases.get(p.object);
       }
       fitMuzzle(s.mount, barrel, muzzle);
+      fitLight(s.light, parts?.laser ?? null);
       fitSupportHand(s.hand, parts?.grip ?? null);
       const fitted = optic != null;
       if (s.sightsUp) s.sightsUp.visible = !fitted;
@@ -424,8 +441,9 @@ export class Viewmodel {
     const slot = this.slots[armament.active]!;
     // Raising the sight: the replica comes in from its hip hold to the aiming hold, square to the view: the fitted
     // optic's, or with none its iron sights' (M84), tipped so the rear sight and the front post line up on the centre.
-    const irons = armament.optics[armament.active] == null ? slot.ironHold : null;
-    const aimAt = irons ? irons.position : slot.aimHold;
+    const sight = armament.optics[armament.active] ?? null;
+    const irons = sight == null ? slot.ironHold : null;
+    const aimAt = irons ? irons.position : ((sight != null ? slot.sightHolds.get(sight) : undefined) ?? slot.aimHold);
     const raised = aimAt ? smooth(aim) : 0;
     const h = slot.hold.position;
     const t = aimAt ?? h;

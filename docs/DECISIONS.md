@@ -224,6 +224,12 @@ replaces its line; the old one stays findable in the archive or in git.
 - **The figure files ship as Blender exports them (2026-10-12).** 4.2 and 4.5 MB, about 1.75 MB each over Brotli;
   repacking (meshopt, gltfpack) saved little over Brotli and gltfpack dropped the names the game reads. They are fetched
   only with the switches off, so the default download is unchanged (BF1).
+- **The attachments are redesigned lower and rounder (owner, 2026-10-12: "Perfect. Add them to the game."; RM8).** The
+  red dot is a 29 mm micro tube and the 2x scope a 10.8 cm prism scope (was 18), both on a sight line 3.05 cm over the
+  rail (0.104 m above the AEG's origin, was 0.126); a parts file's optic marks its own sight line and the aim follows
+  it, so the built-in optics keep theirs. The silencers are round with the same lengths, so muzzles stay put. The
+  pistol torch clips straight to the rail and, with the Red Laser fitted too, sits 1.6 cm lower under it (its
+  `UnderLaser` marker). Behind "Disable all models", like every Blender model.
 
 ## Gameplay and feel
 

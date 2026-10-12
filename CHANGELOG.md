@@ -115,6 +115,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **RM6** · AEG iron sights are half as tall and low: a ring at the back, a thin post at the front; the built-in rifle gets them too
 - **RM7** · The Gas Pistol is now the GBB Pistol: same stats, pool ID and parts, redesigned from the owner's reference photos
 - **RM7** · GBB Pistol look: slimmer slide flush with the frame, ejection port further back, one-piece trigger guard, shorter grip, low sights
+- **RM8** · Red dot, 2× scope, silencers and torches use new Blender models (Disable all models off): smaller, sit lower, aim follows them
 
 ### Fixed
 - **G11** · The team camo on players reads clearly on Medium and up: crisp dark and light blotches printed per pixel, on WebGL and WebGPU; Low keeps plain clothes
