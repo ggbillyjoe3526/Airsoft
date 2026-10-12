@@ -23,19 +23,6 @@ item 5, with the G4 HUD restyle); note 3 was a bug, fixed in BP2; note 2 is alre
 **0.1 Dev 6 (confirmed with the roadmap, 2026-10-06).** M92–M95, the holster and the practice
 upgrades, come before the 26 features in `docs/ROADMAP.md` › 0.1 Dev 6, whose blocks are written when that build starts.
 
-## BP3a · Bug pass 3: the HUD and the menus (0.1 Dev 5 item 8, owner's notes 2026-10-11)
-tier: core
-perf: skip
-touches: src/, e2e/, docs/, CHANGELOG.md
-contract: none
-acceptance:
-  1. At 1280×720, 1366×768 and 1920×1080, in every mode: the round message never sits under the HIT! stamp or the OUT tag; the Tab board and the round's table stay on screen and clear of the ammo panel (5v5 and Extraction too); New game's Start match and the summary's Continue are always on screen; a plain hit-feed line fits one row; the minimap's caption shows the whole name. Each is shown by a test or a browser check.
-  2. The UI review agent's findings on the HUD and menus are fixed with a test, or logged in `docs/KNOWN_ISSUES.md` with why.
-  3. The rows of `docs/KNOWN_ISSUES.md` › Menus, HUD and input (and any other row about the HUD or menus) are cross-checked: a row fixed here is deleted with a test or a browser check; a row left keeps its reason; a stale row is corrected.
-  4. No HUD text under 15 px (G4) is added, and every two-way On / Off choice in the menus reads Off then On.
-status: open
-attempts: 0
-
 ## M92 · Holster and two kinds of sprint (playtest note 3)
 tier: core
 perf: skip
