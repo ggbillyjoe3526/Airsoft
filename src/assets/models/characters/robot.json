@@ -1,0 +1,448 @@
+{
+ "figure": "bot_robot_v10",
+ "heightMetres": 1.75,
+ "facing": "+Z",
+ "fps": 30,
+ "clips": [
+  {
+   "name": "Idle",
+   "seconds": 2.0,
+   "frames": 60,
+   "loop": true,
+   "upperBodyOnly": false,
+   "speed": null
+  },
+  {
+   "name": "Run_F",
+   "seconds": 0.567,
+   "frames": 17,
+   "loop": true,
+   "upperBodyOnly": false,
+   "speed": 4.2
+  },
+  {
+   "name": "Run_B",
+   "seconds": 0.467,
+   "frames": 14,
+   "loop": true,
+   "upperBodyOnly": false,
+   "speed": 4.2
+  },
+  {
+   "name": "Run_L",
+   "seconds": 0.4,
+   "frames": 12,
+   "loop": true,
+   "upperBodyOnly": false,
+   "speed": 4.2
+  },
+  {
+   "name": "Run_R",
+   "seconds": 0.4,
+   "frames": 12,
+   "loop": true,
+   "upperBodyOnly": false,
+   "speed": 4.2
+  },
+  {
+   "name": "Walk_F",
+   "seconds": 0.6,
+   "frames": 18,
+   "loop": true,
+   "upperBodyOnly": false,
+   "speed": 2.3
+  },
+  {
+   "name": "Sprint",
+   "seconds": 0.5,
+   "frames": 15,
+   "loop": true,
+   "upperBodyOnly": false,
+   "speed": 6.3
+  },
+  {
+   "name": "CrouchIdle",
+   "seconds": 2.0,
+   "frames": 60,
+   "loop": true,
+   "upperBodyOnly": false,
+   "speed": null
+  },
+  {
+   "name": "CrouchWalk",
+   "seconds": 0.4,
+   "frames": 12,
+   "loop": true,
+   "upperBodyOnly": false,
+   "speed": 2.1
+  },
+  {
+   "name": "Jump",
+   "seconds": 1.0,
+   "frames": 30,
+   "loop": false,
+   "upperBodyOnly": false,
+   "speed": null
+  },
+  {
+   "name": "Rifle_Aim",
+   "seconds": 1.0,
+   "frames": 30,
+   "loop": true,
+   "upperBodyOnly": true,
+   "speed": null
+  },
+  {
+   "name": "Rifle_AimUp",
+   "seconds": 1.0,
+   "frames": 30,
+   "loop": true,
+   "upperBodyOnly": true,
+   "speed": null
+  },
+  {
+   "name": "Rifle_AimDown",
+   "seconds": 1.0,
+   "frames": 30,
+   "loop": true,
+   "upperBodyOnly": true,
+   "speed": null
+  },
+  {
+   "name": "Pistol_Aim",
+   "seconds": 1.0,
+   "frames": 30,
+   "loop": true,
+   "upperBodyOnly": true,
+   "speed": null
+  },
+  {
+   "name": "Pistol_AimUp",
+   "seconds": 1.0,
+   "frames": 30,
+   "loop": true,
+   "upperBodyOnly": true,
+   "speed": null
+  },
+  {
+   "name": "Pistol_AimDown",
+   "seconds": 1.0,
+   "frames": 30,
+   "loop": true,
+   "upperBodyOnly": true,
+   "speed": null
+  },
+  {
+   "name": "Rifle_Reload",
+   "seconds": 1.8,
+   "frames": 54,
+   "loop": false,
+   "upperBodyOnly": true,
+   "speed": null,
+   "fitTo": "reloadTime"
+  },
+  {
+   "name": "Pistol_Reload",
+   "seconds": 1.2,
+   "frames": 36,
+   "loop": false,
+   "upperBodyOnly": true,
+   "speed": null,
+   "fitTo": "reloadTime"
+  },
+  {
+   "name": "Switch",
+   "seconds": 0.6,
+   "frames": 18,
+   "loop": false,
+   "upperBodyOnly": true,
+   "speed": null,
+   "fitTo": "drawTime"
+  },
+  {
+   "name": "HitCall",
+   "seconds": 1.0,
+   "frames": 30,
+   "loop": false,
+   "upperBodyOnly": false,
+   "speed": null
+  },
+  {
+   "name": "WalkOff",
+   "seconds": 0.767,
+   "frames": 23,
+   "loop": true,
+   "upperBodyOnly": false,
+   "speed": 1.5
+  },
+  {
+   "name": "Rifle_Fire",
+   "seconds": 0.1,
+   "frames": 3,
+   "loop": false,
+   "upperBodyOnly": true,
+   "speed": null
+  },
+  {
+   "name": "Pistol_Fire",
+   "seconds": 0.1,
+   "frames": 3,
+   "loop": false,
+   "upperBodyOnly": true,
+   "speed": null
+  }
+ ],
+ "fitToNote": "Clips with fitTo are time-scaled to that replica stat (e.g. AEG drawTime 0.45 s, pistol 0.3 s; reloads 1.8 s and 1.2 s).",
+ "parts": [
+  "Body",
+  "Body_LOD1",
+  "Body_LOD2",
+  "Body_Neck",
+  "Body_Neck_LOD1",
+  "Body_Neck_LOD2",
+  "Head_Optic",
+  "Head_Optic_LOD1",
+  "Head_Optic_LOD2",
+  "Head_Sensor",
+  "Head_Sensor_LOD1",
+  "Head_Sensor_LOD2"
+ ],
+ "gripBones": [
+  "Grip_R",
+  "Grip_L"
+ ],
+ "firstPerson": {
+  "hide": [
+   "Body_Neck",
+   "Body_Neck_LOD1",
+   "Body_Neck_LOD2",
+   "Head_Optic",
+   "Head_Optic_LOD1",
+   "Head_Optic_LOD2",
+   "Head_Sensor",
+   "Head_Sensor_LOD1",
+   "Head_Sensor_LOD2"
+  ]
+ },
+ "teamMaterials": "tint materials whose names start with Team",
+ "replicaOnGrip": {
+  "rifle": [
+   [
+    0.80578,
+    0.38201,
+    -0.45253,
+    -0.03829
+   ],
+   [
+    -0.2159,
+    0.90104,
+    0.37619,
+    0.08034
+   ],
+   [
+    0.55146,
+    -0.20542,
+    0.80852,
+    0.05096
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ]
+  ],
+  "pistol": [
+   [
+    0.80578,
+    0.45079,
+    -0.38406,
+    -0.01912
+   ],
+   [
+    -0.2159,
+    0.8275,
+    0.5183,
+    0.07955
+   ],
+   [
+    0.55146,
+    -0.33472,
+    0.76411,
+    0.02629
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ]
+  ]
+ },
+ "replicaOnGripNote": "Row-major 4x4, Blender axes (X right, Y forward, Z up) in the Grip_R bone frame with its origin at the bone head: the replica glb (same axes, metres) placed by this matrix sits in the fist. The pistol clips (Pistol_*, Switch from 35%) hold the pistol, all others the AEG.",
+ "magazineInHand": {
+  "Rifle_Reload": {
+   "replica": "rifle",
+   "bone": "Hand_L",
+   "from": 0.3888888888888889,
+   "to": 0.5093,
+   "magazineOnBone": [
+    [
+     -0.4177,
+     -0.14988,
+     0.89614,
+     0.0746
+    ],
+    [
+     0.77341,
+     0.45896,
+     0.43726,
+     0.11229
+    ],
+    [
+     -0.47683,
+     0.87572,
+     -0.0758,
+     -0.06346
+    ],
+    [
+     0.0,
+     0.0,
+     -0.0,
+     1.0
+    ]
+   ],
+   "replicaMagazineHidden": [
+    0.09259,
+    0.5093
+   ],
+   "oldMagazine": {
+    "from": 0.09259,
+    "release": 0.18519,
+    "releaseVelocity": [
+     1.3145,
+     0.7192,
+     -1.5763
+    ],
+    "releaseSpin": [
+     -5.9641,
+     -5.1788,
+     -0.9147
+    ],
+    "magazineOnBone": [
+     [
+      -0.5993,
+      0.39442,
+      0.69661,
+      0.0746
+     ],
+     [
+      0.79999,
+      0.32694,
+      0.50312,
+      0.11229
+     ],
+     [
+      -0.02931,
+      0.8588,
+      -0.51147,
+      -0.06346
+     ],
+     [
+      -0.0,
+      -0.0,
+      -0.0,
+      1.0
+     ]
+    ],
+    "gravity": 9.81,
+    "lifetime": 3.0
+   }
+  },
+  "Pistol_Reload": {
+   "replica": "pistol",
+   "bone": "Hand_L",
+   "from": 0.4166666666666667,
+   "to": 0.5139,
+   "magazineOnBone": [
+    [
+     -0.42291,
+     0.8853,
+     0.19336,
+     0.04164
+    ],
+    [
+     0.80543,
+     0.46502,
+     -0.36748,
+     0.02067
+    ],
+    [
+     -0.41524,
+     0.00033,
+     -0.90971,
+     -0.13162
+    ],
+    [
+     -0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   ],
+   "replicaMagazineHidden": [
+    0.13889,
+    0.5139
+   ],
+   "oldMagazine": {
+    "from": 0.13889,
+    "release": 0.25,
+    "releaseVelocity": [
+     1.6706,
+     -0.0618,
+     -0.3014
+    ],
+    "releaseSpin": [
+     6.7945,
+     -3.6311,
+     -7.7433
+    ],
+    "magazineOnBone": [
+     [
+      -0.90828,
+      0.14292,
+      0.39318,
+      -0.00082
+     ],
+     [
+      0.17532,
+      0.98336,
+      0.04753,
+      0.06693
+     ],
+     [
+      -0.37985,
+      0.11211,
+      -0.91823,
+      -0.13673
+     ],
+     [
+      -0.0,
+      -0.0,
+      -0.0,
+      1.0
+     ]
+    ],
+    "gravity": 9.81,
+    "lifetime": 3.0
+   }
+  }
+ },
+ "magazineInHandNote": "Between from and to (fractions of the clip) show a copy of the replica's Magazine mesh on the bone: magazineOnBone is the replica magazine node's frame in the bone frame (row-major, Blender axes, origin at the bone head), as replicaOnGrip. From \"to\" on, the replica's own Reload clip shows its magazine in the same place. replicaMagazineHidden: between these fractions hide the replica's own magazine (the dropped one, which its Reload clip leaves hanging under the gun).",
+ "fireClips": {
+  "Rifle_Fire": "rifle",
+  "Pistol_Fire": "pistol"
+ },
+ "fireClipsNote": "One trigger press each (0.1 s, the same timing as the replicas' own Fire clips). Play additively per shot: AnimationUtils.makeClipAdditive(clip, 0) and blend over the aim clips.",
+ "oldMagazineNote": "oldMagazine: from \"from\" to \"release\" show a second copy of the replica's Magazine on the same bone with its own magazineOnBone (the old magazine being pulled out). At \"release\" detach it in place and let it fly: releaseVelocity (m/s) and releaseSpin (rad/s, axis times rate) are in the figure's space with Blender axes (three.js: x, z, -y), plus the figure's own movement; fall with gravity, stop on the ground lying on its side, remove after lifetime seconds. The replica's own magazine stays hidden over replicaMagazineHidden, so only one magazine is ever in view."
+}

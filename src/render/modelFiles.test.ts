@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { FigureModel } from './externalModels';
+import type { FigureRigs } from './figureRig';
 import { ModelFiles } from './modelFiles';
 import type { ReplicaFile, ReplicaFiles } from './replicaFiles';
 
@@ -17,7 +18,11 @@ function rig() {
   const gearResolvers: (() => void)[] = [];
   const loadFigure = vi.fn(() => new Promise<FigureModel | null>((r) => figResolvers.push(() => r(figure))));
   const loadReplicas = vi.fn(() => new Promise<ReplicaFiles>((r) => gearResolvers.push(() => r(files))));
-  return { models: new ModelFiles(loadFigure, loadReplicas), loadFigure, loadReplicas, figDisposed, fileDisposed, figure, files, figResolvers, gearResolvers };
+  // The rigged figures (BF1) land at once: the figure model's resolver paces the figure switch.
+  const rigsDisposed = vi.fn();
+  const rigs = { dispose: rigsDisposed } as unknown as FigureRigs;
+  const loadRigs = vi.fn(() => Promise.resolve(rigs));
+  return { models: new ModelFiles(loadFigure, loadReplicas, loadRigs), loadFigure, loadReplicas, loadRigs, rigs, rigsDisposed, figDisposed, fileDisposed, figure, files, figResolvers, gearResolvers };
 }
 
 describe('ModelFiles (RM4)', () => {
@@ -26,7 +31,9 @@ describe('ModelFiles (RM4)', () => {
     expect(await r.models.use(NONE)).toBe(false);
     expect(r.loadFigure).not.toHaveBeenCalled();
     expect(r.loadReplicas).not.toHaveBeenCalled();
+    expect(r.loadRigs).not.toHaveBeenCalled();
     expect(r.models.figureModel).toBeNull();
+    expect(r.models.figureRigs).toBeNull();
     expect(r.models.replicaFiles.size).toBe(0);
   });
 
@@ -42,12 +49,17 @@ describe('ModelFiles (RM4)', () => {
     expect(r.loadFigure).not.toHaveBeenCalled();
     expect(r.models.replicaFiles).toBe(r.files);
     expect(r.models.figureModel).toBeNull();
+    expect(r.models.figureRigs).toBeNull();
+    expect(r.loadRigs).not.toHaveBeenCalled();
     expect(await r.models.use(GEAR)).toBe(false);
 
     const both = r.models.use(BOTH);
     r.figResolvers[0]!();
     expect(await both).toBe(true);
     expect(r.models.figureModel).toBe(r.figure);
+    expect(r.models.figureRigs).toBe(r.rigs);
+    expect(await r.models.use(GEAR)).toBe(true);
+    expect(r.models.figureRigs).toBeNull();
     expect(await r.models.use(NONE)).toBe(true);
     expect(r.models.figureModel).toBeNull();
     expect(r.models.replicaFiles.size).toBe(0);
@@ -55,6 +67,7 @@ describe('ModelFiles (RM4)', () => {
     expect(await r.models.use(BOTH)).toBe(true);
     expect(r.loadFigure).toHaveBeenCalledTimes(1);
     expect(r.loadReplicas).toHaveBeenCalledTimes(1);
+    expect(r.loadRigs).toHaveBeenCalledTimes(1);
     expect(r.models.inUse).toEqual(BOTH);
   });
 
@@ -77,7 +90,9 @@ describe('ModelFiles (RM4)', () => {
     r.models.dispose();
     expect(r.figDisposed).toHaveBeenCalledTimes(1);
     expect(r.fileDisposed).toHaveBeenCalledTimes(1);
+    expect(r.rigsDisposed).toHaveBeenCalledTimes(1);
     expect(r.models.figureModel).toBeNull();
+    expect(r.models.figureRigs).toBeNull();
 
     const late = rig();
     const pending = late.models.use(BOTH);
@@ -87,6 +102,7 @@ describe('ModelFiles (RM4)', () => {
     expect(await pending).toBe(false);
     expect(late.figDisposed).toHaveBeenCalledTimes(1);
     expect(late.fileDisposed).toHaveBeenCalledTimes(1);
+    expect(late.rigsDisposed).toHaveBeenCalledTimes(1);
     expect(late.models.anyFigure).toBeNull();
   });
 });
