@@ -82,4 +82,4 @@ acceptance:
   6. With either switch on (the default) nothing new is fetched and the game looks and runs as before.
   7. The frame-time cost on Medium is measured and noted in the pull request.
 status: building
-attempts: 1
+attempts: 2
