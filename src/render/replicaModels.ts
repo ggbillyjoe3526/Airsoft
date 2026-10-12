@@ -92,6 +92,11 @@ export const AEG_VERTICAL_GRIP_POSE: HandPose = {
 
 /** The AEG's handguard (the rifle's own numbers, below): across ±halfWidth, from bottom to top, forward from → to. */
 export const AEG_HANDGUARD = { from: 0.15, to: 0.4, bottom: 0, top: 0.066, halfWidth: 0.029 } as const;
+/**
+ * The AEG's flip-up iron sights: the line the aperture's centre and the post's tip stand on (config/replicas.ts
+ * look.ironSight, the model file's too), and the tops of the receiver and handguard rails' teeth they clamp to.
+ */
+export const AEG_SIGHT = { line: 0.088, rearBase: 0.074, frontBase: AEG_HANDGUARD.top + 0.016 } as const;
 /** Support-hand fingers wrapped over the shooting hand. */
 const SUPPORT: FingerCurl = [1.0, 1.05, 0.6];
 
@@ -157,23 +162,21 @@ function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, de
   b.box('detail', -0.342, -0.292, -0.076, 0.062, 0.052);
   b.box('rubber', -0.358, -0.342, -0.07, 0.06, 0.05);
   b.box('accent', -0.29, -0.23, 0.054, 0.06, 0.0484);
-  // Flip-up iron sights: a rear aperture at the back of the receiver rail and a front post at the front of the
-  // handguard rail, standing up on the bare rifle and folded flat under a fitted optic. High: a steel ring with a 2 mm
-  // aperture at the back, a post between protective ears at the front.
+  // Flip-up iron sights, small and low (the owner, 2026-10-12): a rear aperture at the back of the receiver rail and a
+  // front post at the front of the handguard rail, standing up on the bare rifle and folded flat under a fitted optic.
+  const S = AEG_SIGHT;
   const sightsUp = new ModelBuilder(detail);
-  sightsUp.box('detail', -0.085, -0.062, 0.074, 0.084, 0.026);
+  sightsUp.box('detail', -0.082, -0.06, S.rearBase, S.rearBase + 0.0035, 0.022);
   // The aperture is a ring you look through down the bore (M84: aiming down the iron sights puts the front post in it,
-  // config/replicas.ts look.ironSight), at every detail.
-  sightsUp.profile('detail', [[-0.08, 0.084], [-0.066, 0.084], [-0.068, 0.094], [-0.078, 0.094]], 0.022, 0.003);
-  sightsUp.ringTube('metal', -0.0755, 0.004, 0.101, 0.0075, 0.0045, sightsUp.high ? 16 : 10);
-  sightsUp.box('detail', 0.365, 0.39, 0.082, 0.092, 0.024);
-  if (sightsUp.high) {
-    sightsUp.box('metal', 0.376, 0.38, 0.092, 0.11, 0.003); // the post
-    for (const side of [-1, 1]) sightsUp.box('detail', 0.37, 0.386, 0.092, 0.112, 0.003, side * 0.007); // its ears
-  } else sightsUp.profile('detail', [[0.37, 0.092], [0.386, 0.092], [0.381, 0.108], [0.375, 0.108]], 0.018, 0.002); // its bevel tops it at the high post's 0.11
+  // config/replicas.ts look.ironSight), at every detail; a thin leaf holds it up.
+  sightsUp.box('detail', -0.0715, -0.0685, S.rearBase + 0.0035, S.line - 0.0035, 0.01);
+  sightsUp.ringTube('metal', -0.0715, 0.003, S.line, 0.0045, 0.0024, sightsUp.high ? 16 : 10);
+  sightsUp.box('detail', 0.368, 0.388, S.frontBase, S.frontBase + 0.0025, 0.02);
+  sightsUp.box('metal', 0.3765, 0.3795, S.frontBase + 0.0025, S.line, 0.0028); // the post, its tip on the line
+  if (sightsUp.high) for (const side of [-1, 1]) sightsUp.box('detail', 0.375, 0.381, S.frontBase + 0.0025, S.line + 0.0022, 0.002, side * 0.005); // its ears
   const sightsDown = new ModelBuilder(detail);
-  sightsDown.box('detail', -0.088, -0.054, 0.074, 0.082, 0.026);
-  sightsDown.box('detail', 0.362, 0.396, 0.082, 0.089, 0.024);
+  sightsDown.box('detail', -0.084, -0.058, S.rearBase, S.rearBase + 0.0045, 0.022);
+  sightsDown.box('detail', 0.366, 0.39, S.frontBase, S.frontBase + 0.0035, 0.02);
 
   const support = new ModelBuilder(detail);
   const supportOnGrip = new ModelBuilder(detail);

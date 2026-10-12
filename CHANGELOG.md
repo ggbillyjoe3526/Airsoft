@@ -108,6 +108,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **RM5** · Cyber Pistol has small, low iron sights, a notch and a post with a tiny cyan dot, that line up on the centre when you aim
 - **RM5** · Cyber Pistol: only the dark slide kicks back and returns on each shot; its fire selector slides for Semi, Burst and Auto
 - **RM5** · The built-in Cyber, shown by default, gets the same low top and small sights in place of its fin; the redesign shows with Disable all models off
+- **RM6** · AEG Rifle has a new look: slotted handguard with full-length top rail, collapsible stock, new pistol grip and BB-window magazine, plain muzzle
+- **RM6** · AEG iron sights are half as tall and low: a ring at the back, a thin post at the front; the built-in rifle gets them too
 
 ### Fixed
 - **G11** · The team camo on players reads clearly on Medium and up: crisp dark and light blotches printed per pixel, on WebGL and WebGPU; Low keeps plain clothes
