@@ -48,6 +48,7 @@ import { FlagRenderer } from './flagRenderer';
 import type { ProbeGrid } from './probeGrid';
 import { projectMarker, type ScreenMarker } from './screenMarker';
 import { SpectatorCamera } from './spectatorCamera';
+import type { FigureRigs } from './figureRig';
 import { type FigureCrowd, HUMAN_CROWD } from './figureMix';
 
 /** The exit markers' colour (EXIT_VISUALS.openColor as CSS). */
@@ -168,10 +169,12 @@ export class MatchPresentation {
     crowd: FigureCrowd = HUMAN_CROWD,
     /** Replica models from files (M101, render/replicaFiles.ts), owned by the renderer: the figures' pistols take their shape. */
     replicaFiles: ReplicaFiles = NO_REPLICA_FILES,
+    /** The rigged figures (BF1, render/figureRig.ts), owned by the renderer, or null: drawn ahead of the figure model. */
+    figureRigs: FigureRigs | null = null,
   ) {
     this.keyName = keyName;
     // Each figure holds its own active replica (Armament.replicas): rifle or pistol pose.
-    this.characters = new CharacterRenderer(state.characters, teamColours.figures, hits, figureModel, figureDetail, crowd, replicaFiles);
+    this.characters = new CharacterRenderer(state.characters, teamColours.figures, hits, figureModel, figureDetail, crowd, replicaFiles, figureRigs);
     this.flag = new FlagRenderer(teamColours.figures, rules.flag.radius);
     scene.add(this.characters.object, this.flag.object);
     this.feedback = new HitFeedback(container, () => keyName('fire'));
@@ -375,7 +378,8 @@ export class MatchPresentation {
   afterTick(cameraYaw: number): void {
     let warned = false;
     for (const e of this.state.events) {
-      if (e.type === 'characterHit') {
+      if (e.type === 'shot') this.characters.fired(e.characterId);
+      else if (e.type === 'characterHit') {
         this.characters.flinch(e.victimId, e.direction);
         this.addFeedLine(e.victimId, e.shooterId, e.ricochet);
         if (e.victimId === this.player.id) {

@@ -1,10 +1,10 @@
 # Bot figure (Blender source)
 
-The realistic bot figures built in Blender for the owner's review: a human player figure and a bare robot. **Not in
-the game yet**: the owner approves the pictures first, and in the game they stay behind the Dev switches "Disable
-figure models" and "Disable all models" (#175). Pictures are in the project files (`concepts/bot-figure-v10-2026-10-12/`;
-earlier rounds in `concepts/bot-figure-v8-2026-10-11/`, `concepts/bot-figure-v6-2026-10-11/` and
-`concepts/bot-figure-v5-2026-10-10/`).
+The realistic bot figures built in Blender: a human player figure and a bare robot. The owner approved v10 on
+2026-10-12; the game draws it (BF1) from `src/assets/models/characters/human.glb` and `robot.glb` with their sidecars,
+behind the Dev switches "Disable figure models" and "Disable all models" (#175). Pictures are in the project files
+(`concepts/bot-figure-v10-2026-10-12/`; earlier rounds in `concepts/bot-figure-v8-2026-10-11/`,
+`concepts/bot-figure-v6-2026-10-11/` and `concepts/bot-figure-v5-2026-10-10/`).
 
 ## What is here
 
@@ -12,12 +12,12 @@ earlier rounds in `concepts/bot-figure-v8-2026-10-11/`, `concepts/bot-figure-v6-
   `bot_kit`, `bot2`-`bot4`, `bot_main`, `bot5`, `bot_final`, `bot6`-`bot16`, `bot_render`; then `session.py`
   (build, pose, render and export helpers) and `session16.py` (checking helpers: bake one clip, arm-in-torso and
   wrist metrics, finger solves on the real replicas and magazines, `export_v(kind, stem)`).
-- `v10/`: the current figures (12 Oct 2026): v6 plus the trigger finger, the reload that throws the old magazine and
-  the hand and arm fixes of bot15-bot16, 23 clips. `v8/`, `v7/` and `v6/`: the previous rounds.
-- `v5/`: the previous figures. `bot_human_v5.glb` (19,832 triangles, high-cut helmet head only) and `bot_robot_v5.glb`
-  (15,332, bare body with team-paint panels), each with LOD1/LOD2 meshes and 21 animation clips, plus
-  `*_animations.json` sidecars (clip lengths, loops, speeds, `fitTo` stats, first-person parts to hide, and
-  `replicaOnGrip`: where each replica glb sits on the `Grip_R` bone).
+- The current figures (v10, 12 Oct 2026; v6 plus the trigger finger, the reload that throws the old magazine and the
+  hand and arm fixes of bot15-bot16, 23 clips) are the game's `src/assets/models/characters/human.glb` (19,832
+  triangles, high-cut helmet head only) and `robot.glb` (17,092, bare body with team-paint panels), each with LOD1/LOD2
+  meshes, plus their sidecars (clip lengths, loops, speeds, `fitTo` stats, first-person parts to hide, `replicaOnGrip`:
+  where each replica glb sits on the `Grip_R` bone, and `magazineInHand`: the reloads' magazines). The earlier rounds
+  (v5 to v8) stay on the figure branch, `claude/project-thread-r4plsu`.
 
 ## Facts the game needs
 

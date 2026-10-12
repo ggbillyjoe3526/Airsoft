@@ -122,6 +122,16 @@ export interface ReplicaFile {
    * slide at the origin, the bore on the axis. Empty when the file has none (the built-in shape is drawn).
    */
   figure: readonly ReplicaFilePiece[];
+  /**
+   * The same cut-down model where the replica is, at its own size, in the replica's space: what a rigged figure (BF1,
+   * render/riggedFigure.ts) holds from afar. Empty when the file has none.
+   */
+  figureHeld: readonly ReplicaFilePiece[];
+  /**
+   * The frame of the bone the magazine hangs from, in the replica's space (the frame the figures' sidecars place a
+   * magazine in the hand by, BF1); null when the magazine hangs from no bone.
+   */
+  magazineFrame: THREE.Matrix4 | null;
   /** The centre of the muzzle's face, where BBs leave. */
   muzzle: THREE.Vector3;
   /** Where a weapon torch clamps on, when the file marks it (the built-in layout draws the torch either way). */
@@ -231,13 +241,16 @@ export function prepareReplicaFile(id: string, scene: THREE.Object3D, partsScene
       figure = pieces(figureNode, new THREE.Matrix4().makeTranslation(0, -muzzle.y, -back).multiply(toFigure), []);
     }
   }
+  const figureHeld = figureNode ? pieces(figureNode, toScene, []) : [];
+  const magazineBone = magazineNode?.parent instanceof THREE.Bone ? magazineNode.parent : null;
+  const magazineFrame = magazineBone ? new THREE.Matrix4().multiplyMatrices(toScene, magazineBone.matrixWorld) : null;
   const parts = partsScene ? partsOf(partsScene) : new Map<string, ReplicaFilePiece[]>();
   const held = triangles(body) + triangles(magazine) + triangles(flashHider) + triangles(rig?.file.pieces ?? []);
   const onFigure = triangles(figure);
   const heldBudget = budget(REPLICA_FILE.warnTriangles, id);
   if (held > heldBudget) console.warn(`The ${id} replica model has ${held} triangles in the hands, over its ${heldBudget} budget (docs/CC0_ASSETS.md).`);
   if (onFigure > REPLICA_FILE.warnFigureTriangles) console.warn(`The ${id} replica model's figure has ${onFigure} triangles, over its ${REPLICA_FILE.warnFigureTriangles} budget (docs/CC0_ASSETS.md).`);
-  const all = [...body, ...magazine, ...flashHider, ...figure, ...(rig?.file.pieces ?? []), ...[...parts.values()].flat()];
+  const all = [...body, ...magazine, ...flashHider, ...figure, ...figureHeld, ...(rig?.file.pieces ?? []), ...[...parts.values()].flat()];
   return {
     id,
     body,
@@ -247,6 +260,8 @@ export function prepareReplicaFile(id: string, scene: THREE.Object3D, partsScene
     parts,
     ownTip: all.some((p) => p.key === 'orange'),
     figure,
+    figureHeld,
+    magazineFrame,
     muzzle,
     torchMount: torchNode ? at(torchNode) : null,
     triangles: { held, figure: onFigure },
