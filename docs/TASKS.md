@@ -67,3 +67,15 @@ acceptance:
   2. With Dev settings on (Unlock all gear), every replica and part is available.
 status: open
 attempts: 0
+
+## IM1 · The main game file under its size limit (improvement 4, the owner's OK 2026-10-12)
+tier: ui
+perf: required
+touches: src/core/onDemand.ts, src/core/README.md, src/game.ts, src/ui/menus/menus.ts, src/ui/menus/lazyScreens.ts, src/ui/menus/armoryScreen.ts, src/ui/menus/summaryScreen.ts, src/ui/menus/README.md, src/ui/menus/css/, src/ui/runStatus.ts, src/ui/recordsView.ts, src/config/loading.ts, src/config/menus.ts, src/config/chunkBudget.ts
+contract: none
+acceptance:
+  1. The rarely opened screens (the Loadout with Customise, the Armory, Settings) and the practice range with the tutorial are fetched the first time they are needed, not at start-up, so the start-up game chunk sits below the build's warning line (90 % of its 1,000 kB budget); the budget is raised only if that is not enough, with a DECISIONS line.
+  2. The menus stay smooth (owner, 2026-10-12): that code is fetched in the background once the title is up, so opening a screen shows no pause; opened before it has arrived, the screen on show stays until it does (no flash), a later choice wins, and a failed download says so and is tried again on the next open.
+  3. Entering the range or the tutorial may wait for its code with the start of play (owner: a loading screen is fine there); a failed download leaves the menus up with a message.
+status: open
+attempts: 0
