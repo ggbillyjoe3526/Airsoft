@@ -141,3 +141,35 @@ describe('M80: the "Tutorial complete" pop-up', () => {
     expect(root.open).toBe(false);
   });
 });
+
+describe('BP3: pressing All keeps the keyboard\'s place', () => {
+  beforeEach(() => void stubMenuPage());
+  afterEach(() => vi.unstubAllGlobals());
+  type Fake = { children: Fake[]; className: string; hidden: boolean; click(): void; focus(): void };
+  const all = (r: Fake): Fake[] => [r, ...r.children.flatMap(all)];
+  const parts = (bar: RarityBar) => {
+    const els = all(bar.root as unknown as Fake).filter((e) => e.className.split(' ').includes('rarity-chip'));
+    return { allButton: els.find((e) => e.className.includes('rarity-all'))!, chips: els.filter((e) => !e.className.includes('rarity-all')) };
+  };
+  const page = () => (globalThis as unknown as { document: { activeElement: unknown } }).document;
+
+  it('moves the focus to the first tier chip when All, which hides itself, had it', () => {
+    const tiers = TIERS.map((id) => ({ id, label: id }));
+    const bar = new RarityBar('parts', tiers, v('kind', ['common', 'epic']), () => {});
+    const { allButton, chips } = parts(bar);
+    allButton.focus();
+    expect(page().activeElement).toBe(allButton);
+    allButton.click();
+    expect(allButton.hidden).toBe(true);
+    expect(page().activeElement).toBe(chips[0]);
+  });
+
+  it('leaves the focus where it is when All was pressed without it (a pointer click elsewhere)', () => {
+    const tiers = TIERS.map((id) => ({ id, label: id }));
+    const bar = new RarityBar('parts', tiers, v('kind', ['rare']), () => {});
+    const { allButton, chips } = parts(bar);
+    chips[3]!.focus();
+    allButton.click();
+    expect(page().activeElement).toBe(chips[3]);
+  });
+});
