@@ -32,7 +32,13 @@ const value = (name, fallback) => (args.includes(name) ? args[args.indexOf(name)
 
 // config/menuArt.ts has no imports, so Node reads it as it is (types stripped).
 const art = await import(pathToFileURL(join(ROOT, 'src', 'config', 'menuArt.ts')).href);
-const { MAP_STILLS, MODE_STILLS, STILL_SIZE, BACKDROPS, STILL_CAMERA, STILL_SETTLE } = art;
+const { MAP_STILLS, MODE_STILLS, STILL_SIZE, BACKDROPS, STILL_CAMERA } = art;
+/**
+ * How a still's frame settles before it is taken: frames until the draw count holds for `stillFrames` in a row (the
+ * node renderer compiles what comes into view over a few frames; at most `maxFrames`, a pause of `pauseMs` after each),
+ * then `temporalFrames` for the post stack's temporal pass on the stood camera (webgpu-compare.mjs settles the same way).
+ */
+const STILL_SETTLE = { stillFrames: 3, maxFrames: 40, pauseMs: 150, temporalFrames: 8 };
 const { WEBGPU_ARGS } = await import(pathToFileURL(join(ROOT, 'pipeline', 'webgpuCompare.mjs')).href);
 
 const quality = value('--quality', 'high');
