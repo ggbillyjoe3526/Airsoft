@@ -83,6 +83,17 @@ describe('the rigged figures in CharacterRenderer', () => {
     r.dispose();
   });
 
+  it('a new round clears the magazines thrown in the last one', () => {
+    const r = make(chars(), true);
+    const thrown = inside(r).thrown as unknown as { throw: (...a: unknown[]) => void; count: number };
+    const g = new THREE.BoxGeometry(0.03, 0.1, 0.05);
+    thrown.throw(g, new THREE.MeshBasicMaterial(), new THREE.Matrix4(), new THREE.Vector3(), new THREE.Vector3(), 9.8, 0, 5, false);
+    expect(thrown.count).toBe(1);
+    r.roundStarted();
+    expect(thrown.count).toBe(0);
+    r.dispose();
+  });
+
   it('fired reports the pistol when the active replica is the pistol', () => {
     const cs = chars();
     cs[0]!.armament.active = cs[0]!.armament.replicas.findIndex((x) => x.look.model === 'pistol');

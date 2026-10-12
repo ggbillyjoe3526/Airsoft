@@ -413,6 +413,7 @@ export class MatchPresentation {
         warned = true;
       } else if (e.type === 'roundStart') {
         this.roundStartedAt = this.state.time;
+        this.characters.roundStarted();
         this.minimap.setCaption(HUD_TEXT.where(this.mapName, this.extraction ? 0 : e.round));
         this.whatGotYou.clear();
         this.spectator.reset();

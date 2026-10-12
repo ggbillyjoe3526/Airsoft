@@ -87,6 +87,22 @@ describe('ThrownMagazines', () => {
     expect(mesh.position.y).toBeGreaterThan(0.3);
   });
 
+  it('reuses its meshes: a magazine thrown after one has gone is drawn with the same mesh, starting afresh', () => {
+    const t = new ThrownMagazines();
+    throwAt(t, box(1), mat(), { life: 0.5 });
+    const first = t.object.children[0];
+    for (let i = 0; i < 60; i++) t.update(1 / 60);
+    expect(t.count).toBe(0);
+    const g = box(2);
+    throwAt(t, g, mat(), { y: 3 });
+    const again = t.object.children[0] as THREE.Mesh;
+    expect(again).toBe(first);
+    expect(again.geometry).toBe(g);
+    expect(again.position.y).toBeCloseTo(3, 6);
+    t.update(1 / 60);
+    expect(again.position.y).toBeGreaterThan(3);
+  });
+
   it('holds at most FIGURE_RIG.thrownMagazines.max, the oldest going first', () => {
     const t = new ThrownMagazines();
     const max = FIGURE_RIG.thrownMagazines.max;

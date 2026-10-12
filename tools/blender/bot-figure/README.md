@@ -19,6 +19,28 @@ behind the Dev switches "Disable figure models" and "Disable all models" (#175).
   where each replica glb sits on the `Grip_R` bone, and `magazineInHand`: the reloads' magazines). The earlier rounds
   (v5 to v8) stay on the figure branch, `claude/project-thread-r4plsu`.
 
+## What each script does
+
+The scripts are layers, one per review round: each later one replaces some functions of the earlier ones in the same
+namespace, so all of them run, in order, to rebuild v10. Their names are the round they came from, and `load.py`
+keeps that order; renaming or merging them would mean re-checking the whole build in Blender, so they stay as made.
+Read the newest layer first when looking for a function: it is the one that wins.
+
+| Script | Round | What it adds or replaces |
+|---|---|---|
+| `bot_helpers` | v1 | Units, axes, mesh and material helpers |
+| `bot_body`, `bot_kit` | v1 | Body and clothes; plate carrier, pouches, belt, holster and the high-cut helmet head |
+| `bot2`, `bot3` | v2-v3 | Smooth body forms; sealed boots, soft carrier, belt holster and the clipping pass |
+| `bot4`, `bot_main`, `bot5`, `bot_final` | v3-v4 | One-piece glove; `build_all`; one-piece trousers; the final join and height |
+| `bot6`, `bot7` | v4 | Other heads (dropped in v5); the radio and pack as separate parts |
+| `bot8`, `bot9` | v4 | The robot on the same skeleton; UVs and the generated textures |
+| `bot10`, `bot11`, `bot12` | v4 | The skeleton and skin weights; the 21 clips; the neck cut for the first-person body |
+| `bot13` | v5 | One human head, the bare robot, hands fitted to the replicas |
+| `bot14` | v6 | Forearm twist and elbow bones, the arm solve, finger poses, the magazine reloads |
+| `bot15`, `bot16` | v7-v10 | Trigger finger, the thrown old magazine, the support hand, arms out of the torso, the pouch draw |
+| `bot_render` | all | Picture cameras and lights |
+| `session`, `session16` | v8-v10 | Build, pose, check and export helpers (`export_v`) |
+
 ## Facts the game needs
 
 - Metres, facing glTF +Z; human 1.73 m, robot 1.75 m to the top of its optic (`heightMetres` in the sidecar). Team colour: tint materials whose names start with `Team` (Alpha 0x3d8bff,

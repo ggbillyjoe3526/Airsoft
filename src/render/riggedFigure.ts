@@ -186,7 +186,7 @@ export class RiggedFigure {
     });
 
     this.parts = this.partsFor(false);
-    for (let lod = 0; lod < 3; lod++) this.lods.push(this.skinned(rig.geometry(lod, this.partsAt(lod, this.parts))));
+    for (let lod = 0; lod < 3; lod++) this.lods.push(this.skinned(rig.geometry(lod, this.parts)));
 
     this.mixer = new THREE.AnimationMixer(this.bones);
     POSE_CLIPS.forEach((_, slot) => {
@@ -333,11 +333,6 @@ export class RiggedFigure {
       ...(roles.pack && this.setup.pack && rig.parts.includes(roles.pack) ? [roles.pack] : []),
       ...(roles.radio && this.setup.radio && rig.parts.includes(roles.radio) ? [roles.radio] : []),
     ];
-  }
-
-  /** The parts the kind has at level `lod` (the radio has no LOD2). */
-  private partsAt(lod: number, parts: readonly string[]): readonly string[] {
-    return lod === 0 ? parts : parts.filter((p) => !(this.setup.rig.kind === 'human' && p === 'Kit_Radio' && lod > 1));
   }
 
   /** A mesh of `geometry` skinned to this figure's bones, in its materials. */

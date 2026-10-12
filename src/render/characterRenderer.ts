@@ -42,6 +42,9 @@ interface FigureState {
   kitSeen: unknown[];
 }
 
+/** Scratch for a fading rigged figure's materials (no allocation per frame). */
+const fading: THREE.Material[] = [];
+
 /** Scratch for the figures' baked light (no allocation per frame). */
 const probeSample: ProbeSample = { r: 0, g: 0, b: 0, vis: 1 };
 const probeShade = { r: 1, g: 1, b: 1 };
@@ -179,11 +182,18 @@ export class CharacterRenderer {
     }
   }
 
+  /** A new round: the magazines thrown in the last one are cleared away with the field. */
+  roundStarted(): void {
+    this.thrown.clear();
+  }
+
   /** Character `id` fired: a rigged figure's trigger finger presses (BF1; the built-in figures don't show it). */
   fired(id: number): void {
-    const i = this.characters.findIndex((c) => c.id === id);
-    const c = this.characters[i];
-    if (c) this.figures[i]?.rigged?.shot(holdsPistol(c));
+    if (!this.rigs) return;
+    for (let i = 0; i < this.characters.length; i++) {
+      const c = this.characters[i]!;
+      if (c.id === id) return this.figures[i]?.rigged?.shot(holdsPistol(c));
+    }
   }
 
   /** Figures shaded by walls and containers, or lit as if in full sun (QualitySettings.figureShadows, REN-07). */
@@ -457,7 +467,10 @@ export class CharacterRenderer {
     if (r.callout.visible && eye) placeCallout(r.callout, length3(x - eye.x, y + FIGURE.callout.height - eye.y, z - eye.z));
     if (opacity !== s.material.opacity) {
       const switched = s.material.transparent !== opacity < 1;
-      fadeModelMaterials([s.material, ...r.materials], opacity, switched);
+      fading.length = 0;
+      fading.push(s.material);
+      for (const m of r.materials) fading.push(m);
+      fadeModelMaterials(fading, opacity, switched);
     }
   }
 
