@@ -1,0 +1,129 @@
+# The play link (README › Play in your browser): https://ggbillyjoe3526.github.io/Airsoft/ plays the latest release,
+# built from its tag, with nothing to install (owner, 2026-10-12, task IM2). A new release tag publishes itself;
+# Actions › Play link › Run workflow publishes the newest release tag again, or the one typed in, for instance the first
+# time after Pages is switched on (Settings › Pages › Source: GitHub Actions).
+#
+# Every publish runs on the default branch. GitHub Pages' `github-pages` environment lets only that branch deploy unless
+# its rules are changed by hand, so a tag's own run builds nothing: it hands its tag to a run on the default branch
+# (workflow_dispatch is the one event the workflow's token may start a run with), and that run checks the tag out,
+# builds it and deploys it. A pull request that changes this file builds the newest release the same way, without
+# deploying, so the build half is proven before it merges.
+name: Play link
+
+on:
+  push:
+    tags: ['[0-9]*', 'v[0-9]*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The release tag to publish, such as 0.1-dev.5 (leave empty for the newest)
+        required: false
+        default: ''
+  pull_request:
+    paths: ['.github/workflows/pages.yml']
+
+permissions:
+  contents: read
+
+# One publish at a time, and none cut off halfway; a pull request's check makes way for its next push.
+concurrency:
+  group: play-link-${{ github.event_name == 'pull_request' && github.ref || 'publish' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  hand-over:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Publish ${{ github.ref_name }} from the default branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref "$DEFAULT_BRANCH" -f tag="$TAG"
+
+  build:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # The whole history and its tags: the release is checked out from them, and the build's `git describe` names it on
+      # the title screen (config/buildVersion.ts).
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      # A release tag is what config/buildVersion.ts › releaseName reads as one: 0.1-dev.5, 0.1-beta.1, 0.1.0 (and the
+      # old v0.1-alpha.3). The newest is the one made last.
+      - name: Check out the release
+        id: release
+        env:
+          WANTED: ${{ inputs.tag }}
+        run: |
+          release='^v?[0-9]+\.[0-9]+(\.[0-9]+)?(-(alpha|dev|beta)(\.[0-9]+)?)?$'
+          if [ -n "$WANTED" ]; then
+            tag="$WANTED"
+            if ! grep -Eq "$release" <<<"$tag"; then
+              echo "::error::The tag typed in is not a release tag (such as 0.1-dev.5)."
+              exit 1
+            fi
+          else
+            tag="$(git for-each-ref --sort=-creatordate --format='%(refname:short)' refs/tags | grep -Em1 "$release" || true)"
+          fi
+          if [ -z "$tag" ]; then
+            echo "::error::The repository has no release tag yet."
+            exit 1
+          fi
+          if ! git rev-parse -q --verify "refs/tags/$tag^{commit}" >/dev/null; then
+            echo "::error::There is no tag $tag."
+            exit 1
+          fi
+          git checkout -q --detach "refs/tags/$tag"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # The release build players get from the zip (README › Optional: the faster "release" version). Pages compresses
+      # with gzip on its own and never serves the build's Brotli and gzip copies, so they are left out (config/precompress.ts;
+      # a tag from before AIRSOFT_PRECOMPRESS writes them anyway, so they are deleted too), and so are the hidden source
+      # maps (README › Hosting).
+      - name: Build ${{ steps.release.outputs.tag }}
+        env:
+          AIRSOFT_PRECOMPRESS: '0'
+        run: |
+          npm run build
+          find dist \( -name '*.map' -o -name '*.br' -o -name '*.gz' \) -delete
+      # The title screen names the release itself ("Release 0.1 Dev 5" as its tooltip), not some commits after one.
+      - name: Check the build names the release
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          label="$(grep -rhoE 'Release [0-9][^"`]*' dist/assets/*.js | head -n 1 || true)"
+          if [ -z "$label" ]; then
+            echo "::error::The build of $TAG does not name a release on its title screen."
+            exit 1
+          fi
+          echo "Built $TAG: the title screen says \"${label#Release }\"." | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+
+  deploy:
+    if: github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { TUTORIAL, TUTORIAL_STEPS } from './config/tutorial';
 import { LOADOUT } from './config/replicas';
+import { EventLog } from './core/eventLog';
 import { RangeSession } from './rangeSession';
 import { createCharacter } from './sim/character';
 import { createRangeTargets } from './sim/rangeTargets';
@@ -26,7 +27,8 @@ function bare(from?: number | string) {
     readout: { setVisible: vi.fn(), set: vi.fn() },
     combat: { afterTick: vi.fn() },
     targets: { afterTick: vi.fn() },
-    state: { events: [], targets: createRangeTargets() },
+    eventLog: new EventLog(),
+    state: { tick: 0, events: [], targets: createRangeTargets() },
     player,
     tutorialView: { dt: DT, player, events: [], targets: [] },
     playing: true,

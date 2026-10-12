@@ -36,6 +36,7 @@ import type { TeamColours } from './config/teams';
 import { BuildTiming } from './core/buildTiming';
 import { caseSeed, runSeed } from './core/seed';
 import { figureCrowd, playerArms } from './render/figureMix';
+import { EventLog } from './core/eventLog';
 import { advanceStepper, createStepper, stepperAlpha } from './core/fixedStepper';
 import type { PlayerInput } from './input/playerInput';
 import type { MapData } from './map/mapTypes';
@@ -344,6 +345,9 @@ export class MatchSession {
   private readonly playerTeam: number;
   /** Extraction: your bot teammates follow you unless you order otherwise (ai/squadFollow.ts). */
   private readonly squadFollow = new SquadFollow();
+
+  /** The last shots, hits, rounds and bot mode changes, for a report (IM7). */
+  readonly eventLog = new EventLog();
 
   /** Characters in the match (for the debug overlay). */
   get characterCount(): number {
@@ -803,6 +807,8 @@ export class MatchSession {
   private afterTick(shown: boolean): void {
     this.stats.afterTick(this.state, SIM_DT);
     this.bots.observe(this.state);
+    this.eventLog.record(this.state.tick, this.state.events, this.player.id);
+    this.eventLog.watchBots(this.state.tick, this.bots.bots);
     if (shown || skipTickShown(this.state.events)) {
       this.combat.afterTick();
       this.match.afterTick(this.input.yaw);
