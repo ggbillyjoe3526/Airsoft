@@ -6,7 +6,8 @@ holds no magic numbers.
 - Simulation: `sim.ts`, `movement.ts`, `physics.ts`, `hits.ts` (`HITS`, `ROUNDS`), `ballistics.ts` (air, `spinPerHop`,
   `WIND`), `footsteps.ts`, `modes.ts` (`MATCH_MODES`, `MODE_SHAPES`, the never-check `unknownMode`), `extraction.ts`, `matchRules.ts` (match rules, `RULESETS` and `MODE_FIT`, what fits each mode), `range.ts`.
 - Replicas and gear: `replicas.ts`, `attachments.ts` (grips, magazines, barrels, muzzles), `optics.ts`, `lasers.ts`,
-  `torches.ts`; `schemes.ts`, `characters.ts`, `replicaFinish.ts` for how they look. `statsFile.ts` reads `stats.md` and
+  `torches.ts`; `schemes.ts`, `characters.ts`, `figureRig.ts` (the rigged Blender figures, BF1), `replicaFinish.ts` for
+  how they look. `statsFile.ts` reads `stats.md` and
   `gameStats.ts` holds `GAME_STATS`; the modules above lay it over their built-in numbers (`withStats`, `overlay`).
 - Bots: `bots.ts` (behaviour and difficulties), `squad.ts` (orders, order wheel), `nav.ts`.
 - Rendering: `render.ts` re-exports `renderQuality.ts`, `renderEffects.ts`, `renderLighting.ts`, `renderSurfaces.ts` and

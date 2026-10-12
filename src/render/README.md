@@ -66,7 +66,12 @@ and never writes the simulation.
   `probeFile.ts` (the file format, loaded in a chunk of its own), `bakedLight.ts`, read by the surfaces' node patch
   (`surfaceShader.ts`, which also weathers them).
 - Figures: `characterRenderer.ts`, `characterModels.ts`, `figureHuman.ts` / `figureRobot.ts`; `figureFinish.ts` (the
-  per-vertex finish) and `figureCamo.ts` (the team camo printed per pixel on clothes and sleeves, G11). Replicas and hands:
+  per-vertex finish) and `figureCamo.ts` (the team camo printed per pixel on clothes and sleeves, G11). The rigged Blender
+  human and robot (BF1, drawn only with the Dev tab's model switches off): `figureRig.ts` (a kind's files taken apart
+  into bones, merged meshes and clips), `figurePose.ts` (the pure blend of clips from the character's state),
+  `riggedFigure.ts` (one figure: skinned, posed, its replica on the grip bone, the reload's magazines, your
+  first-person body) and `thrownMagazines.ts` (the empty magazines thrown in reloads); `modelFiles.ts` imports
+  `figureRig.ts` on demand, so the four ride in their own chunk and the game's carries only their types. Replicas and hands:
   `replicaModels.ts` (the bodies and assembly), `replicaParts.ts` (optics, grips, magazines and the other fitted parts),
   `replicaBuilder.ts` (the mesh builder both use), `replicaFiles.ts` (the Blender model files, M101, RM1, and their parts' sight-line and under-laser markers, RM8; `modelFiles.ts` loads them, and the figure model, only while the Dev tab's model switches let them in, RM4) and `replicaRig.ts`
   (their moving parts, skinned and posed from the game's state, RM1; the Inspect key plays a file's Inspect clip, RM2; the built-in GBB Pistol's slide rides one too, and a GBB's slide locks back on an empty magazine, RM7), `replicaFinish.ts` (moulded speckle), `replicaSheen.ts` (the
