@@ -7,15 +7,21 @@ import type { DetailLevel } from '../config/render';
 import type { Character } from '../sim/character';
 import { legSwing } from '../sim/hitbox';
 import { length3, lerpAngle } from '../sim/vec';
-import { BARE_KIT, buildFigure, createCalloutTexture, disposeFigure, type Figure, type FigureKit, figureLeanRoll, setReceiveShadows } from './characterModels';
+import { BARE_KIT, buildFigure, createCalloutTexture, disposeFigure, type Figure, type FigureKit, figureLeanRoll, figureLooks, setReceiveShadows } from './characterModels';
 import { type FigureModel, fadeModelMaterials } from './externalModels';
 import { useVertexFinish } from './figureFinish';
 import { type FigureCrowd, figureDress, HUMAN_CROWD } from './figureMix';
+import type { FigureRigs } from './figureRig';
+import type { RiggedFigure, RiggedFrame } from './riggedFigure';
+import type { ThrownMagazines } from './thrownMagazines';
 import { NO_REPLICA_FILES, type ReplicaFiles } from './replicaFiles';
 import { type ProbeGrid, type ProbeSample, probeTint, sampleProbes } from './probeGrid';
 
 interface FigureState {
-  figure: Figure;
+  /** The built-in figure, or null when it is drawn as a rigged one (BF1). */
+  figure: Figure | null;
+  /** The rigged figure (BF1, render/riggedFigure.ts) it is drawn as when the Dev switches let them in, or null. */
+  rigged: RiggedFigure | null;
   /** Per-figure copy of the shared material, so one figure can fade out on its own. */
   material: THREE.MeshStandardMaterial;
   /** Seconds since this figure was last hit (flinch), and the BB's flight direction then (world x/z). */
@@ -31,17 +37,48 @@ interface FigureState {
   lift: number;
   /** The baked bounce light on it where it stands (G6; setBakedLight), added to the torch glow. */
   bounce: THREE.Color;
+  /** A rigged figure's replicas and fitted parts when it was built (riggedKit), and the loadout's entries they came from. */
+  kit: string;
+  kitSeen: unknown[];
 }
+
+/** Scratch for a fading rigged figure's materials (no allocation per frame). */
+const fading: THREE.Material[] = [];
 
 /** Scratch for the figures' baked light (no allocation per frame). */
 const probeSample: ProbeSample = { r: 0, g: 0, b: 0, vis: 1 };
 const probeShade = { r: 1, g: 1, b: 1 };
+const glowScratch = new THREE.Color();
 
 /** True if `c` carries a replica of the kind (`pistol` or not) with a weapon torch fitted (M33h). */
 export function torchFitted(c: Character, pistol: boolean): boolean {
   const a = c.armament;
   for (let i = 0; i < a.replicas.length; i++) if ((a.replicas[i]!.look.model === 'pistol') === pistol && a.parts[i]?.light) return true;
   return false;
+}
+
+/**
+ * What a rigged figure's replicas are built from (BF1): each replica and its fitted muzzle device, torch and magazine,
+ * which it shows at every detail. Called only when the loadout's arrays changed (fitParts between rounds).
+ */
+export function riggedKit(c: Character): string {
+  const a = c.armament;
+  return a.replicas.map((r, i) => `${r.id}/${a.parts[i]?.muzzle ?? ''}/${a.parts[i]?.light ?? ''}/${a.parts[i]?.magazine ?? ''}`).join(' ');
+}
+
+/** True when `c`'s replicas or fitted parts aren't the entries in `seen` (which then become them): no allocation. */
+function kitChanged(c: Character, seen: unknown[]): boolean {
+  const a = c.armament;
+  const n = a.replicas.length;
+  let changed = seen.length !== n * 2;
+  for (let i = 0; i < n && !changed; i++) changed = seen[i * 2] !== a.replicas[i] || seen[i * 2 + 1] !== a.parts[i];
+  if (!changed) return false;
+  seen.length = n * 2;
+  for (let i = 0; i < n; i++) {
+    seen[i * 2] = a.replicas[i];
+    seen[i * 2 + 1] = a.parts[i];
+  }
+  return true;
 }
 
 /** True if `c` carries a rifle (not a pistol) with a silencer fitted (M29b): the detailed figure shows it. */
@@ -110,6 +147,9 @@ export class CharacterRenderer {
   /** The map's baked light the figures read as they move (G6), or null; and the torch beams' colour (setTorchLift). */
   private probes: ProbeGrid | null = null;
   private readonly torchColour = new THREE.Color();
+  /** The empty magazines rigged figures throw away (BF1), with the rigs only. */
+  private readonly thrown: ThrownMagazines | null;
+  private readonly frame: RiggedFrame = { alpha: 0, dt: 0, eyeX: 0, eyeY: 0, eyeZ: 0, firstPerson: false, leanX: 0, leanZ: 0, castShadow: true };
 
   constructor(
     private readonly characters: readonly Character[],
@@ -123,14 +163,37 @@ export class CharacterRenderer {
     private readonly crowd: FigureCrowd = HUMAN_CROWD,
     /** Replica models from files (M101, render/replicaFiles.ts), owned by the renderer: a pistol with one shows its shape. */
     private readonly files: ReplicaFiles = NO_REPLICA_FILES,
+    /**
+     * The rigged human and robot figures (BF1, render/figureRig.ts), owned by the renderer (ModelFiles frees them), or
+     * null: with them every player is drawn rigged (the player's own figure as their first-person body), ahead of the
+     * figure model.
+     */
+    private readonly rigs: FigureRigs | null = null,
   ) {
+    this.thrown = rigs?.thrownMagazines() ?? null;
+    if (this.thrown) this.object.add(this.thrown.object);
     for (let i = 0; i < characters.length; i++) {
       const c = characters[i]!;
       const silencer = rifleSilenced(c);
       const rifleTorch = torchFitted(c, false);
       const pistolTorch = torchFitted(c, true);
-      const { figure, material } = this.build(i, { rifleSilencer: silencer, rifleTorch, pistolTorch });
-      this.figures.push({ figure, material, flinchAge: FIGURE.flinch.time, flinchX: 0, flinchZ: 0, silencer, rifleTorch, pistolTorch, lift: 0, bounce: new THREE.Color(0, 0, 0) });
+      const { figure, rigged, material } = this.build(i, { rifleSilencer: silencer, rifleTorch, pistolTorch });
+      this.figures.push({ figure, rigged, material, flinchAge: FIGURE.flinch.time, flinchX: 0, flinchZ: 0, silencer, rifleTorch, pistolTorch, lift: 0, bounce: new THREE.Color(0, 0, 0), kit: riggedKit(c), kitSeen: [] });
+      kitChanged(c, this.figures[i]!.kitSeen);
+    }
+  }
+
+  /** A new round: the magazines thrown in the last one are cleared away with the field. */
+  roundStarted(): void {
+    this.thrown?.clear();
+  }
+
+  /** Character `id` fired: a rigged figure's trigger finger presses (BF1; the built-in figures don't show it). */
+  fired(id: number): void {
+    if (!this.rigs) return;
+    for (let i = 0; i < this.characters.length; i++) {
+      const c = this.characters[i]!;
+      if (c.id === id) return this.figures[i]?.rigged?.shot(holdsPistol(c));
     }
   }
 
@@ -138,6 +201,7 @@ export class CharacterRenderer {
   setReceiveShadows(on: boolean): void {
     this.receiveShadows = on;
     setReceiveShadows(this.object, on);
+    for (const s of this.figures) s.rigged?.setReceiveShadows(on);
   }
 
   /**
@@ -152,6 +216,7 @@ export class CharacterRenderer {
       this.rebuild(i, rifleSilenced(c), torchFitted(c, false), torchFitted(c, true));
     }
     setReceiveShadows(this.object, this.receiveShadows);
+    for (const s of this.figures) s.rigged?.setReceiveShadows(this.receiveShadows);
   }
 
   /**
@@ -184,9 +249,10 @@ export class CharacterRenderer {
     }
   }
 
-  /** A figure's glow: the torch beams on it plus the bounce light. */
+  /** A figure's glow: the torch beams on it plus the bounce light (a rigged figure's own materials take it too). */
   private glow(s: FigureState): void {
     s.material.emissive.copy(this.torchColour).multiplyScalar(s.lift).add(s.bounce);
+    s.rigged?.light(s.material.color.r, s.material.color.g, s.material.color.b, glowScratch.copy(s.material.emissive));
   }
 
   /** A figure standing at (x, y, z) under the baked light: its colour scaled, its bounce glow set. */
@@ -202,11 +268,16 @@ export class CharacterRenderer {
   /** Figure `i` built again at the current detail with the parts it shows, keeping its walk and flinch. */
   private rebuild(i: number, silencer: boolean, rifleTorch: boolean, pistolTorch: boolean): void {
     const s = this.figures[i]!;
-    disposeFigure(s.figure);
+    if (s.figure) disposeFigure(s.figure);
+    s.rigged?.dispose();
     s.material.dispose();
-    const { figure, material } = this.build(i, { rifleSilencer: silencer, rifleTorch, pistolTorch });
+    const { figure, rigged, material } = this.build(i, { rifleSilencer: silencer, rifleTorch, pistolTorch });
     s.figure = figure;
+    s.rigged = rigged;
     s.material = material;
+    const c = this.characters[i]!;
+    s.kit = riggedKit(c);
+    kitChanged(c, s.kitSeen);
     s.silencer = silencer;
     s.rifleTorch = rifleTorch;
     s.pistolTorch = pistolTorch;
@@ -217,7 +288,7 @@ export class CharacterRenderer {
    * Character `i`'s figure at the current detail, added to the scene, with its own copy of the material: a human or a
    * robot as the crowd says, its replicas in its team's colours.
    */
-  private build(i: number, parts: FigureKit): { figure: Figure; material: THREE.MeshStandardMaterial } {
+  private build(i: number, parts: FigureKit): { figure: Figure | null; rigged: RiggedFigure | null; material: THREE.MeshStandardMaterial } {
     const c = this.characters[i]!;
     const high = this.detail === 'high';
     // The detailed figure reads each vertex's roughness and metalness (glossy goggles and shells, steel barrels).
@@ -225,9 +296,33 @@ export class CharacterRenderer {
     // A silencer shows on the detailed figure only (as before M33h); a torch at every detail.
     const kit: FigureKit = parts.rifleSilencer || parts.rifleTorch || parts.pistolTorch ? parts : BARE_KIT;
     const dress = figureDress(this.crowd, i, c.team, c.armament.replicas, this.files);
-    const figure = buildFigure(this.teamColors[c.team] ?? 0xffffff, material, this.calloutMaterial, c.id, this.model, FIGURE.detail[this.detail], kit, dress);
+    const team = this.teamColors[c.team] ?? 0xffffff;
+    if (this.rigs && this.thrown) {
+      // The rigged figure: the replicas' own models in the fist, fitted parts and all.
+      material.userData.authored = { opacity: 1, transparent: false };
+      const look = figureLooks(c.id);
+      const rigged = this.rigs.figure({
+        rig: dress.robot ? this.rigs.robot : this.rigs.human,
+        character: c,
+        id: c.id,
+        teamColour: team,
+        replicaMaterial: material,
+        rifleColours: dress.rifle,
+        pistolColours: dress.pistol,
+        files: this.files,
+        detail: this.detail,
+        pack: look.pack,
+        radio: look.radio,
+        thrown: this.thrown,
+        calloutMaterial: this.calloutMaterial,
+      });
+      rigged.setReceiveShadows(this.receiveShadows);
+      this.object.add(rigged.root);
+      return { figure: null, rigged, material };
+    }
+    const figure = buildFigure(team, material, this.calloutMaterial, c.id, this.model, FIGURE.detail[this.detail], kit, dress);
     this.object.add(figure.root);
-    return { figure, material };
+    return { figure, rigged: null, material };
   }
 
   /** Character `id` was hit by a BB flying along `direction`: its figure flinches. */
@@ -256,9 +351,20 @@ export class CharacterRenderer {
       const pistolTorch = torchFitted(c, true);
       if (silencer !== s.silencer || rifleTorch !== s.rifleTorch || pistolTorch !== s.pistolTorch) {
         this.rebuild(i, silencer, rifleTorch, pistolTorch);
-        setReceiveShadows(s.figure.root, this.receiveShadows);
+        if (s.figure) setReceiveShadows(s.figure.root, this.receiveShadows);
       }
-      const f = s.figure;
+      if (s.rigged && kitChanged(c, s.kitSeen)) {
+        const kit = riggedKit(c);
+        if (kit !== s.kit) {
+          s.kit = kit;
+          this.rebuild(i, silencer, rifleTorch, pistolTorch);
+        }
+      }
+      if (s.rigged) {
+        this.updateRigged(c, s, s.rigged, alpha, dt, hiddenId, eye);
+        continue;
+      }
+      const f = s.figure!;
       f.root.visible = c.id !== hiddenId;
       if (!f.root.visible) continue;
 
@@ -306,7 +412,7 @@ export class CharacterRenderer {
 
       // A walk-off that couldn't finish leaves the field: the figure fades out where it stands (the sim
       // then puts it in the dead zone) instead of visibly jumping there.
-      const opacity = c.status === 'leaving' ? Math.min(1, Math.max(0, 1 - c.statusTime / this.hits.vanishTime)) : 1;
+      const opacity = this.opacity(c);
       if (opacity !== s.material.opacity) {
         const fading = opacity < 1;
         const changed = s.material.transparent !== fading;
@@ -326,11 +432,56 @@ export class CharacterRenderer {
     }
   }
 
+  /** A figure's opacity: one that leaves the field fades out where it stands. */
+  private opacity(c: Character): number {
+    return c.status === 'leaving' ? Math.min(1, Math.max(0, 1 - c.statusTime / this.hits.vanishTime)) : 1;
+  }
+
+  /**
+   * A rigged figure's frame (BF1): placed, posed and faded as the built-in one is; your own (the camera's, `hiddenId`)
+   * is drawn as your first-person body. The thrown magazines fly on with the first figure.
+   */
+  private updateRigged(c: Character, s: FigureState, r: RiggedFigure, alpha: number, dt: number, hiddenId: number, eye?: { x: number; y: number; z: number }): void {
+    if (s === this.figures[0]) this.thrown?.update(dt);
+    const x = c.prevPosition.x + (c.position.x - c.prevPosition.x) * alpha;
+    const y = c.prevPosition.y + (c.position.y - c.prevPosition.y) * alpha;
+    const z = c.prevPosition.z + (c.position.z - c.prevPosition.z) * alpha;
+    if (this.probes) this.bakedLight(s, this.probes, x, y, z);
+    s.flinchAge += dt;
+    const yaw = lerpAngle(c.prevYaw, c.yaw, alpha);
+    const lean = flinchLean(s.flinchX, s.flinchZ, yaw, flinchEnvelope(s.flinchAge) * FIGURE.flinch.lean, this.lean);
+    const leaning = c.prevLean + (c.lean - c.prevLean) * alpha;
+    const opacity = this.opacity(c);
+    const f = this.frame;
+    f.alpha = alpha;
+    f.dt = dt;
+    f.eyeX = eye ? eye.x : x;
+    f.eyeY = eye ? eye.y : y + 1;
+    f.eyeZ = eye ? eye.z : z;
+    f.firstPerson = c.id === hiddenId;
+    f.leanX = lean.x;
+    f.leanZ = lean.z + figureLeanRoll(leaning, this.hits);
+    // Shadow maps ignore opacity: a fading figure would leave a solid shadow behind.
+    f.castShadow = opacity >= 1;
+    r.update(c, f);
+    r.callout.visible = c.status === 'calling' && !f.firstPerson;
+    if (r.callout.visible && eye) placeCallout(r.callout, length3(x - eye.x, y + FIGURE.callout.height - eye.y, z - eye.z));
+    if (opacity !== s.material.opacity) {
+      const switched = s.material.transparent !== opacity < 1;
+      fading.length = 0;
+      fading.push(s.material);
+      for (const m of r.materials) fading.push(m);
+      fadeModelMaterials(fading, opacity, switched);
+    }
+  }
+
   dispose(): void {
     for (const s of this.figures) {
-      disposeFigure(s.figure);
+      if (s.figure) disposeFigure(s.figure);
+      s.rigged?.dispose();
       s.material.dispose();
     }
+    this.thrown?.dispose();
     this.material.dispose();
     this.calloutMaterial.dispose();
     this.calloutTexture.dispose();

@@ -7,7 +7,7 @@
  *   node pipeline/perf-run.mjs [--env container|laptop|desktop|ci] [--preset low|medium|high|ultra|all] [--cpu N]
  *                              [--ticks 3600] [--warmup-ticks 120] [--max-seconds 300] [--baseline] [--no-build]
  *                              [--chromium /path] [--channel chrome|msedge] [--headless] [--map <map>] [--mode <mode>]
- *                              [--viewport 1920x1080] [--port 4181] [--backend webgl|webgpu]
+ *                              [--viewport 1920x1080] [--port 4181] [--backend webgl|webgpu] [--models]
  *
  * The e2e bundle is reused when the source hasn't changed since it was built (pipeline/build-cached.mjs).
  *
@@ -47,6 +47,12 @@
  * result records `backend`; a WebGPU run names its files with it after the environment (perf-laptop-webgpu-low.json,
  * baseline laptop-webgpu.json), so the WebGL files and baselines are never overwritten. Draw calls are the node
  * renderer's `drawCalls` (Renderer.stats).
+ *
+ * `--models` (BF1) plays with the Blender models let in: the Dev tab shown and its "Disable all models" and "Disable
+ * figure models" off (RM4, config/dev.ts), so the replicas and the rigged human and robot figures are drawn. Its files
+ * carry `-models` before the preset (perf-container-models-medium.json) and it writes no baseline: the gate measures
+ * the game as players get it, with the models locked. Every run records `figureMs`, the figures' drawing work per frame
+ * (CharacterRenderer.update, milliseconds of CPU): the number to compare with and without `--models`.
  */
 import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -75,8 +81,10 @@ const options = {
   mode: value('--mode', 'elimination'),
   viewport: value('--viewport', '1920x1080'),
   backend: value('--backend', 'webgl'),
+  models: flag('--models'),
 };
 if (!['webgl', 'webgpu'].includes(options.backend)) throw new Error('--backend must be webgl or webgpu');
+if (options.models && options.baseline) throw new Error('--models writes no baseline: the gate measures the game with the models locked');
 /** The Renderer pick saved before the page loads: the asked back end (the two ids are the setting's values too). */
 const rendererSettings = { version: 1, renderer: options.backend };
 const [viewWidth, viewHeight] = options.viewport.split('x').map(Number);
@@ -166,7 +174,8 @@ async function measure(preset) {
   // A fresh context each preset, so its storage is empty: the Renderer pick and, off Depot Elimination, the map and mode
   // with Dev content on (the dev maps and modes need it) are the only settings saved.
   const picks = options.map !== 'depot' || options.mode !== 'elimination' ? { map: gameMap, mode: options.mode, 'dev.enabled': true, 'dev.devContent': 'on' } : {};
-  await page.addInitScript((text) => localStorage.setItem('airsoft.settings', text), JSON.stringify({ ...rendererSettings, ...picks, version: 1 }));
+  const models = options.models ? { 'dev.enabled': true, 'dev.disableAllModels': 'off', 'dev.disableFigureModels': 'off' } : {};
+  await page.addInitScript((text) => localStorage.setItem('airsoft.settings', text), JSON.stringify({ ...rendererSettings, ...picks, ...models, version: 1 }));
   await page.goto(urlFor(preset));
   await page.waitForSelector('.menu-title-start', { timeout: 60_000 });
   // The title's START opens the Match screen (G3, M100): the map and the mode are cards on it, Settings is on the top bar.
@@ -202,6 +211,17 @@ async function measure(preset) {
     const heap = [];
     let calls = 0, callsMax = 0, tris = 0, trisMax = 0, dressing = 0, dressingMax = 0;
     const tick0 = g.state.tick;
+    // The figures' drawing work each frame (BF1): CharacterRenderer.update timed in place.
+    const figures = g.session?.match?.characters;
+    let figureMs = 0;
+    if (figures) {
+      const update = figures.update.bind(figures);
+      figures.update = (...a) => {
+        const t = performance.now();
+        update(...a);
+        figureMs += performance.now() - t;
+      };
+    }
     const heapNow = () => performance.memory?.usedJSHeapSize ?? 0;
     // The live heap: what is left after full collections (twice, so objects freed by the first one's finalizers go too).
     const heapGc = typeof globalThis.gc === 'function';
@@ -272,10 +292,11 @@ async function measure(preset) {
       gcSpikes,
       seconds: secs, ticks: g.state.tick - tick0, simTicksPerSecond: (g.state.tick - tick0) / secs,
       pixelRatio: g.renderer.renderer.getPixelRatio(), characters: g.session.characterCount,
+      figureMs: figureMs / n,
     };
   }, { ticks, maxSeconds: options.maxSeconds });
   await page.close();
-  return { env: options.env, backend, map: options.map, mode: options.mode, preset, cpu: options.cpu, ticksWanted: ticks, warmupTicks: options.warmupTicks, head, when: new Date().toISOString(), seed: 1, viewport: `${options.viewport}@1`, metrics: sample, errors };
+  return { env: options.env, backend, map: options.map, mode: options.mode, models: options.models, preset, cpu: options.cpu, ticksWanted: ticks, warmupTicks: options.warmupTicks, head, when: new Date().toISOString(), seed: 1, viewport: `${options.viewport}@1`, metrics: sample, errors };
 }
 
 /** A run's baseline file: `<env>.json` for the budget preset (what the gate compares), `<env>-<preset>.json` otherwise. */
@@ -284,13 +305,13 @@ const round = (v) => (typeof v === 'number' ? Math.round(v * 100) / 100 : v);
 for (const result of results) {
   for (const k of Object.keys(result.metrics)) result.metrics[k] = round(result.metrics[k]);
   const json = `${JSON.stringify(result, null, 2)}\n`;
-  const out = join(OUT, runFileName(options.env, result));
+  const out = join(OUT, options.models ? runFileName(options.env, result).replace(/-([a-z]+)\.json$/, '-models-$1.json') : runFileName(options.env, result));
   writeFileSync(out, json);
   // Depot Elimination's budget-preset run (or a single-preset one) also as perf-<env>.json, what the performance agent reads.
-  if (!mapTag && result.backend === 'webgl' && (result.preset === budget.budgetPreset || presets.length === 1)) writeFileSync(join(OUT, `perf-${options.env}.json`), json);
+  if (!mapTag && !options.models && result.backend === 'webgl' && (result.preset === budget.budgetPreset || presets.length === 1)) writeFileSync(join(OUT, `perf-${options.env}.json`), json);
   console.log(`perf: ${relative(ROOT, out)}`);
   const m = result.metrics;
-  console.log(`  ${result.preset} on ${result.backend}: ${m.ticks} ticks in ${m.seconds} s · fps ${m.fps} (1 % low ${m.onePercentLowFps}) · p50 ${m.p50Ms} ms · p95 ${m.p95Ms} ms · p99 ${m.p99Ms} ms · sim ${m.simTicksPerSecond} ticks/s`);
+  console.log(`  ${result.preset} on ${result.backend}: ${m.ticks} ticks in ${m.seconds} s · fps ${m.fps} (1 % low ${m.onePercentLowFps}) · p50 ${m.p50Ms} ms · p95 ${m.p95Ms} ms · p99 ${m.p99Ms} ms · sim ${m.simTicksPerSecond} ticks/s · figures ${m.figureMs} ms a frame${result.models ? ' (models in)' : ''}`);
   console.log(`  draw calls ${m.drawCalls} (max ${m.drawCallsMax}) · triangles ${m.triangles} (max ${m.trianglesMax}) + GPU dressing ${m.dressingTriangles} (max ${m.dressingTrianglesMax}) · GPU memory ~${m.gpuMemoryMB} MB · heap ${m.heapStartMB} → ${m.heapEndMB} MB (${m.heapGrowthMB >= 0 ? "+" : ""}${m.heapGrowthMB}${m.heapGc ? ', live after GC' : ', NO forced GC: noisy'}), ${m.gcSpikes} GC drops`);
   if (result.errors.length) console.log(`  page errors: ${result.errors.length} (${result.errors[0]})`);
   if (options.baseline) {
