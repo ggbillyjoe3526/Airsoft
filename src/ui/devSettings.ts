@@ -12,7 +12,7 @@ export interface DevSettingsOptions {
   /** The saved values, shown as picked. */
   initial: DevSettings;
   onChange: <K extends keyof DevSettings>(id: K, value: DevSettings[K]) => void;
-  /** The diagnostics report to copy or send (Game.diagnosticsInfo, audit CORE-32, IM7); no row without it. */
+  /** The diagnostics report to copy or send (Game.reportInfo, audit CORE-32, IM7); no row without it. */
   diagnostics?: () => ReportInfo;
   /**
    * The Dev buttons (M90, config/dev.ts DEV_ACTIONS): each runs once and says how it went for a moment (the button's

@@ -16,7 +16,7 @@ interface Entry {
 /**
  * The last console errors and warnings (IM7), for a report: a bug that doesn't crash the game leaves its trace here. A
  * ring of `capacity` entries; the same message again straight after only counts up, so a warning repeated every frame
- * costs no more than once and pushes nothing else out.
+ * takes no stack again and pushes nothing else out.
  */
 export class ErrorLog {
   private readonly entries: Entry[] = [];

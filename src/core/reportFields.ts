@@ -57,7 +57,7 @@ export function playerLine(p: ReportedPlayer): string {
   const a = p.armament;
   const doing = [
     p.status,
-    p.crouchAmount > 0.5 ? 'crouched' : 'standing',
+    p.crouchAmount > REPORT_LOG.crouchedAt ? 'crouched' : 'standing',
     ...(p.airborne ? ['in the air'] : []),
     ...(p.sprinting ? ['sprinting'] : []),
     ...(p.aiming ? ['aiming'] : []),

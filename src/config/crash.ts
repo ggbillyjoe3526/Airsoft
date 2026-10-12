@@ -60,6 +60,8 @@ export const REPORT_LOG = {
   frameSeconds: 10,
   /** A drawn frame slower than this (ms) counts as a hitch. */
   hitchMs: 50,
+  /** The player reads as crouched past this much of a crouch (Character.crouchAmount, 0 to 1). */
+  crouchedAt: 0.5,
 } as const;
 
 /**
