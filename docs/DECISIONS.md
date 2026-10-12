@@ -424,6 +424,10 @@ replaces its line; the old one stays findable in the archive or in git.
 - **Disable Armory and Unlock all gear are Dev switches (owner: the Armory "can be disabled in settings", 2026-10-04).**
   Disable Armory greys out the Armory and pays no FC (the collection is kept). Unlock all gear lends the Loadout every
   asset at every tier without touching the collection, and keeps the match out of the records and unpaid.
+- **The Cyber Pistol's redesign (owner, 2026-10-12).** Its shape comes from his three reference pictures, with no logo
+  or lettering copied (RM5). Small, subtle iron sights: a notch and a post. The grip joins the fixed frame. On a shot
+  only the dark grey slide kicks back and returns, though the replica is electric; the light grey shell and the
+  muzzle block never move. It stays compatible with every animation, attachment and figure.
 
 ## Menus, HUD, settings and accessibility
 

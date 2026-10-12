@@ -300,24 +300,28 @@ function buildPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean,
 /**
  * The Cyber Pistol (M32, the owner's design; G2 the concept's): a white slab of a pistol with light lines down both sides
  * and a core window that glow, over a dark frame and grip, the same on either team (CYBER_COLOURS; Realistic colours
- * turns it grey and unlit). A top fin sight, a dark muzzle with a ring of light. It sits in the hands like the Gas
+ * turns it grey and unlit). Small low iron sights, a dark muzzle with a ring of light. It sits in the hands like the Gas
  * Pistol (the same grip line and hold), so the hands and the figures' pistol pose fit it unchanged.
  */
 function buildCyberPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, detail: ReplicaDetail, arms: ArmBuilders | null): ReplicaModel {
   const b = new ModelBuilder(detail);
   const muzzle = CYBER_MUZZLE.barrelEnd;
-  // The slab over the barrel, chamfered nose and sloped back; the dust cover under it.
-  b.profile('cyberSlab', [[-0.09, -0.004], [0.098, -0.004], [0.104, 0.006], [0.104, 0.034], [0.098, 0.04], [-0.06, 0.044], [-0.09, 0.032]], 0.034, 0.004);
+  // The slab over the barrel, chamfered nose and sloped back (its top, rounded out by the bevel, at 0.0355 under the
+  // sights, as on the model file); the dust cover under it.
+  b.profile('cyberSlab', [[-0.09, -0.004], [0.098, -0.004], [0.104, 0.006], [0.104, 0.026], [0.099, 0.0315], [-0.08, 0.0315], [-0.09, 0.025]], 0.034, 0.004);
   b.box('cyberSlab', 0.06, 0.1, -0.03, -0.004, 0.028);
   // Light lines along both sides, the core window, a line down the back strap.
   b.box('cyberLine', -0.07, 0.1, 0.022, 0.025, 0.0354);
   b.box('cyberCore', 0.0, 0.05, 0.004, 0.014, 0.0354);
   b.profile('cyberLine', [[-0.083, -0.03], [-0.087, -0.03], [-0.106, -0.112], [-0.102, -0.112]], 0.012, 0.001);
-  // Frame: the squared trigger guard and the trigger, the raked grip; the top fin sight; the muzzle with its ring.
+  // Frame: the squared trigger guard and the trigger, the raked grip; the small iron sights; the muzzle with its ring.
   b.profile('polymer', [[-0.004, -0.004], [0.06, -0.004], [0.06, -0.048], [-0.01, -0.048]], 0.012, 0.004, [[[0.004, -0.012], [0.052, -0.012], [0.052, -0.04], [0.0, -0.04]]]);
   b.box('polymer', 0.014, 0.02, -0.034, -0.008, 0.005);
   b.worn(() => b.profile('polymer', [[-0.004, -0.004], [-0.08, -0.004], [-0.094, -0.012], [-0.08, -0.024], [-0.108, -0.13], [-0.054, -0.13], [-0.02, -0.014]], 0.032, 0.004));
-  b.profile('polymer', [[-0.05, 0.043], [-0.02, 0.042], [-0.03, 0.056], [-0.046, 0.056]], 0.008, 0.002);
+  // The iron sights (config/replicas.ts look.ironSight): a notch between two ears at the back, a post at the front.
+  b.box('polymer', -0.079, -0.067, 0.033, 0.0375, 0.0116);
+  for (const side of [-1, 1]) b.box('polymer', -0.079, -0.0745, 0.0365, 0.04, 0.0042, side * 0.0037);
+  b.box('polymer', 0.098, 0.1025, 0.033, 0.04, 0.0024);
   b.tube('polymer', 0.1, muzzle - 0.1 - 0.003, CYBER_MUZZLE.up, 0.009, 6);
   b.tube('cyberLine', muzzle - 0.003, 0.001, CYBER_MUZZLE.up, 0.0093, 6);
   b.tube(orangeTip ? 'orange' : 'polymer', muzzle - 0.002, 0.002, CYBER_MUZZLE.up, 0.0075, 12);
