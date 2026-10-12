@@ -105,3 +105,14 @@ describe('the event log (IM7)', () => {
     expect(said(log, 5)).toEqual(['round 3 started', 'round 4 started', 'round 5 started']);
   });
 });
+
+describe('the event log when several characters fire at once (IM7)', () => {
+  it("counts each character's shots up on its own line while they trade fire, until a hit ends the count", () => {
+    const log = new EventLog();
+    const shot = (id: number): GameEvent => ({ type: 'shot', characterId: id, replicaId: 'aeg', position: at });
+    for (let t = 0; t < 6; t++) log.record(100 + t * 4, [shot(t % 2 ? 1 : 3)], PLAYER);
+    log.record(130, [{ type: 'characterHit', victimId: 1, shooterId: 3, position: at, direction: at, ricochet: false }], PLAYER);
+    log.record(131, [shot(3)], PLAYER);
+    expect(said(log)).toEqual(['Beta 3 fired 3 BBs over 0.3 s (aeg)', 'Alpha 1 fired 3 BBs over 0.3 s (aeg)', 'Beta 3 hit Alpha 1', 'Beta 3 fired (aeg)']);
+  });
+});

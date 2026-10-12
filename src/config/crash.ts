@@ -54,6 +54,8 @@ export const REPORT_LOG = {
   burstTicks: 60,
   /** A bot's mode change within this many ticks of its last updates that line (a bot flapping between two modes). */
   flapTicks: 60,
+  /** How many lines back a shot or a mode change looks for its character's line to count up (past other shots and changes only). */
+  lookBack: 8,
   /** Seconds of play whose frame times a report sums up. */
   frameSeconds: 10,
   /** A drawn frame slower than this (ms) counts as a hitch. */

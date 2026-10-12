@@ -37,8 +37,8 @@ export interface NamedCharacter {
  * The last game events (IM7), for a report: "what happened just before" that players can't describe. Shots and hits for
  * everyone, the player's own reloads, draws, fire modes, dry fires and torch, bot mode changes, and the round's start
  * and end; the rest (footsteps, impacts, the flag's rope) would bury them. A ring of preallocated slots filled each tick
- * with no allocation; read only when a report is made. A burst of shots, or a bot flapping between modes, counts up one
- * line instead of filling the ring.
+ * with no allocation; read only when a report is made. A character's burst of shots, or a bot flapping between modes,
+ * counts up one line instead of filling the ring.
  */
 export class EventLog {
   private readonly slots: Slot[];
@@ -56,10 +56,10 @@ export class EventLog {
     for (const e of events) {
       switch (e.type) {
         case 'shot': {
-          const last = this.newest();
-          if (last && last.type === 'shot' && last.actor === e.characterId && last.word === e.replicaId && tick - last.lastTick <= REPORT_LOG.burstTicks) {
-            last.count++;
-            last.lastTick = tick;
+          const line = this.recent('shot', e.characterId, tick, REPORT_LOG.burstTicks);
+          if (line && line.word === e.replicaId) {
+            line.count++;
+            line.lastTick = tick;
           } else this.take('shot', tick, e.characterId, -1, false, e.replicaId);
           break;
         }
@@ -126,11 +126,11 @@ export class EventLog {
       if (was === bot.mode) continue;
       this.modes[i] = bot.mode;
       if (was === undefined) continue;
-      const last = this.newest();
-      if (last && last.type === 'botMode' && last.actor === bot.character.id && tick - last.lastTick <= REPORT_LOG.flapTicks) {
-        last.count++;
-        last.lastTick = tick;
-        last.word = bot.mode;
+      const line = this.recent('botMode', bot.character.id, tick, REPORT_LOG.flapTicks);
+      if (line) {
+        line.count++;
+        line.lastTick = tick;
+        line.word = bot.mode;
       } else {
         this.take('botMode', tick, bot.character.id, -1, false, bot.mode).from = was;
       }
@@ -150,8 +150,18 @@ export class EventLog {
     return out;
   }
 
-  private newest(): Slot | null {
-    return this.filled === 0 ? null : this.slots[(this.next - 1 + this.slots.length) % this.slots.length]!;
+  /**
+   * `actor`'s newest line of `type` that took a tick within `ticks` of `tick`, looking back past other shots and mode
+   * changes only (two players trading shots count up a line each; a hit or a round ends the count), or null.
+   */
+  private recent(type: 'shot' | 'botMode', actor: number, tick: number, ticks: number): Slot | null {
+    const n = this.slots.length;
+    for (let i = 1; i <= Math.min(this.filled, REPORT_LOG.lookBack); i++) {
+      const s = this.slots[(this.next - i + n) % n]!;
+      if (s.type !== 'shot' && s.type !== 'botMode') return null;
+      if (s.type === type && s.actor === actor) return tick - s.lastTick <= ticks ? s : null;
+    }
+    return null;
   }
 
   private take(type: Slot['type'], tick: number, actor: number, other: number, flag: boolean, word: string): Slot {

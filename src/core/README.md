@@ -11,4 +11,9 @@ Loop and session plumbing: small pure modules with no Three.js.
 - `framePacer.ts`: the frame-rate cap; it skips draws, never ticks. `awayWatch.ts`: a hidden tab or lost focus pauses.
 - `crashReport.ts`, `reportFields.ts`: the copyable crash report (seed, map, mode, tick, GPU, settings, stack), shown by
   `ui/crashScreen.ts`; Dev › Diagnostics copies the same fields. `buildTiming.ts`: match build phases (`?perf`).
+- What a report adds of the moments before it (IM7), each a fixed ring filled as things happen and read only when a
+  report is made: `errorLog.ts` (the console's last errors and warnings; `main.ts` taps the console at start-up),
+  `eventLog.ts` (the last shots, hits, rounds, the player's reloads and draws and bot mode changes; each session
+  records after every tick) and `frameWindow.ts` (frame times of the last 10 s of play). `bugIssue.ts`: Report a
+  Bug's GitHub new-issue address, the report cut to fit it.
 - Tuning: `config/sim.ts`, `config/crash.ts`. Tests: one `*.test.ts` per file.
