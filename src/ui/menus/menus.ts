@@ -212,7 +212,9 @@ export class Menus {
 
   dispose(): void {
     window.removeEventListener('keydown', this.onKeyDown);
+    // Nothing opens once the menus are gone, from the background fetch or a screen still being fetched.
     this.lazyScreens.cancelPreload();
+    this.asked++;
     this.settings?.dispose();
     for (const stop of this.stopScrollWatches) stop();
     this.stopScrollWatches.length = 0;
