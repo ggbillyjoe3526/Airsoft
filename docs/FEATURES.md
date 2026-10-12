@@ -178,6 +178,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   Diagnostics Copy, Dev content switch, Retro pixels (M24, M26d, FA1, M35, M42, M83, M90)
 - Dev switches Disable all models and Disable figure models (both on by default): turned off, they bring back the Blender replicas, parts and menu pictures, then the player and bot figures (RM4)
 - The build's version on the title screen (M24)
+- Screens fetched on first use: the Loadout, Armory and Settings, and the range, load in the background after the title; a failed download says so and tries again (IM1)
 
 ## HUD and match info
 
