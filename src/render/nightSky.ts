@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { type LightingPreset, NIGHT_SKY } from '../config/render';
 import { createRng, rngNext } from '../sim/rng';
-import { NO_ENVIRONMENT } from './surfaceMaterials';
+import { carryNodePatch } from './nodePatch';
 
 /**
  * The night sky (M33i): stars and the moon, on any preset whose `nightSky` asks for them (the night preset; the day's
@@ -96,18 +96,12 @@ export function moonGeometry(look: LightingPreset['nightSky'], towards: THREE.Ve
   return geo;
 }
 
-/** A sky material: vertex colours with alpha, unfogged, no depth writes, off the environment map. */
-function skyMaterial<M extends THREE.MeshBasicMaterial | THREE.PointsMaterial>(m: M, key: string, extra?: (shader: THREE.WebGLProgramParametersWithUniforms) => void): M {
+/** A sky material: vertex colours with alpha, unfogged, no depth writes (Three's node Basic and Points never take the environment). */
+function skyMaterial<M extends THREE.MeshBasicMaterial | THREE.PointsMaterial>(m: M): M {
   m.vertexColors = true;
   m.transparent = true;
   m.depthWrite = false;
   m.fog = false;
-  m.onBeforeCompile = (shader) => {
-    shader.vertexShader = NO_ENVIRONMENT + shader.vertexShader;
-    shader.fragmentShader = NO_ENVIRONMENT + shader.fragmentShader;
-    extra?.(shader);
-  };
-  m.customProgramCacheKey = () => `night-sky-${key}`;
   return m;
 }
 
@@ -125,16 +119,13 @@ export function buildNightSky(preset: Pick<LightingPreset, 'nightSky'>, towards:
     // Each star its own size in pixels (`starSize`), round and soft-edged.
     const stars = new THREE.Points(
       starGeometry(look.stars),
-      skyMaterial(new THREE.PointsMaterial({ size: 1, sizeAttenuation: false, blending: THREE.AdditiveBlending }), 'stars', (shader) => {
-        shader.vertexShader = `attribute float starSize;\n${shader.vertexShader}`.replace('gl_PointSize = size;', 'gl_PointSize = size * starSize;');
-        shader.fragmentShader = shader.fragmentShader.replace('#include <alphatest_fragment>', 'diffuseColor.a *= smoothstep(0.5, 0.2, length(gl_PointCoord - vec2(0.5)));\n#include <alphatest_fragment>');
-      }),
+      carryNodePatch(skyMaterial(new THREE.PointsMaterial({ size: 1, sizeAttenuation: false, blending: THREE.AdditiveBlending })), { kind: 'stars' }),
     );
     stars.name = 'night-stars';
     parts.push(stars);
   }
   if (look.moonSize > 0) {
-    const moon = new THREE.Mesh(moonGeometry(look, towards), skyMaterial(new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, forceSinglePass: true }), 'moon'));
+    const moon = new THREE.Mesh(moonGeometry(look, towards), skyMaterial(new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, forceSinglePass: true })));
     moon.name = 'night-moon';
     parts.push(moon);
   }

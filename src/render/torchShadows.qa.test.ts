@@ -9,7 +9,8 @@ import { fitParts, type WorldQuery } from '../sim/armament';
 import { type Character, createCharacter } from '../sim/character';
 import { vec3 } from '../sim/vec';
 import { resolveLighting } from './lightingPreset';
-import { beamMaterial, spotProfile, TORCH_BEAM_KEY, TorchBeams, torchShadowsWanted } from './torchBeams';
+import { nodePatchOf } from './nodePatch';
+import { beamMaterial, spotProfile, TorchBeams, torchShadowsWanted } from './torchBeams';
 import { worldTwin } from './webgpu/worldTwins';
 import { LIGHTING_PRESETS } from '../config/render';
 
@@ -123,7 +124,7 @@ describe('M91 acceptance 2: torch shadows on High and Ultra only, and only with 
 });
 
 describe('M91 acceptance 1: the soft beam', () => {
-  it('the cone has normals, and its material is the plain additive beam with the torch-beam key', () => {
+  it('the cone has normals, and its material is the plain additive beam carrying the torch-beam patch', () => {
     const b = new TorchBeams([me()], night, QUALITY.low, ground, BODY, HITS);
     const cones = b.object.getObjectByName('torch-cones') as THREE.InstancedMesh;
     const n = cones.geometry.getAttribute('normal');
@@ -131,7 +132,8 @@ describe('M91 acceptance 1: the soft beam', () => {
     expect(n.count).toBe(cones.geometry.getAttribute('position').count);
     for (let i = 0; i < n.count; i++) expect(Math.hypot(n.getX(i), n.getY(i), n.getZ(i))).toBeCloseTo(1, 5);
     const m = cones.material as THREE.MeshBasicMaterial;
-    expect(m.customProgramCacheKey()).toBe(TORCH_BEAM_KEY);
+    expect(nodePatchOf(m)?.patch).toEqual({ kind: 'torch-beam' });
+    expect(m.customProgramCacheKey()).toBe('torch-beam');
     expect(m.blending).toBe(THREE.AdditiveBlending);
     expect(m.depthWrite).toBe(false);
     b.dispose();

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { NodeFrame } from 'three/webgpu';
 import { describe, expect, it } from 'vitest';
 import { WEATHERING } from '../../config/weathering';
+import { carryNodePatch } from '../nodePatch';
 import { patchSurfaceMaterial } from '../surfaceShader';
 import { emptyGrid, type SurfaceLambertTwin } from './surfaceNodes';
 import { objectTexture3D } from './twinUniforms';
@@ -23,7 +24,7 @@ function grid(uploads: number): THREE.Data3DTexture {
 /** A frame whose drawn object's material carries `bakeTex` (or no probes at all). */
 function frameWith(bakeTex?: THREE.Data3DTexture): NodeFrame {
   const material = new THREE.MeshLambertMaterial();
-  if (bakeTex) material.onBeforeCompile = (shader) => void (shader.uniforms.bakeTex = { value: bakeTex });
+  if (bakeTex) carryNodePatch(material, { kind: 'surface', recipe: { wear: false, probes: true, junk: null, skyHost: false } }, { bakeTex: { value: bakeTex } });
   return { material } as unknown as NodeFrame;
 }
 const run = (node: unknown, frame: NodeFrame): void => (node as { update(f: NodeFrame): void }).update(frame);
@@ -84,7 +85,7 @@ describe('the baked light’s grid follows the drawn object (W3 criterion 1: Dep
 
 describe('a surface twin starts on its own material’s grid (W3: the first draws bind it)', () => {
   const surface = (tex: THREE.Data3DTexture | null, withProbes = true) =>
-    patchSurfaceMaterial(new THREE.MeshLambertMaterial(), { environment: false, wear: WEATHERING.shader.concrete, probes: withProbes && tex ? probes(tex) : null });
+    patchSurfaceMaterial(new THREE.MeshLambertMaterial(), { wear: WEATHERING.shader.concrete, probes: withProbes && tex ? probes(tex) : null });
   const startedOn = (twin: SurfaceLambertTwin | null) => (twin!.surface as unknown as { grid: THREE.Data3DTexture }).grid;
 
   it('reads the material’s bakeTex for a surface with probes, and the stand-in for one without', () => {
@@ -98,7 +99,7 @@ describe('a surface twin starts on its own material’s grid (W3: the first draw
     const stand = emptyGrid();
     const p = probes(grid(1));
     p.bakeTex.value = null as unknown as THREE.Data3DTexture;
-    const bare = patchSurfaceMaterial(new THREE.MeshLambertMaterial(), { environment: false, wear: WEATHERING.shader.concrete, probes: p });
+    const bare = patchSurfaceMaterial(new THREE.MeshLambertMaterial(), { wear: WEATHERING.shader.concrete, probes: p });
     expect(startedOn(worldTwin(bare, stand) as SurfaceLambertTwin)).toBe(stand);
   });
 });

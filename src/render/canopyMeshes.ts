@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { CANOPY } from '../config/render';
 import type { MapBlock } from '../map/mapTypes';
 import { type Terrain, terrainHeightAt } from '../map/terrain';
-import { withoutEnvironment } from './surfaceMaterials';
 
 /**
  * Tree crowns (M33i): one merged mesh over a map's `tree` blocks, built from their data alone (any map with trees gets
@@ -173,7 +172,7 @@ export function buildCanopyMesh(blocks: readonly MapBlock[], terrain: Terrain | 
   geo.setAttribute('color', new THREE.Float32BufferAttribute(colours, 3));
   geo.computeBoundingSphere();
   // As the tree ring round the field (render/atmosphere.ts): flat-shaded Lambert off the environment map, one shader.
-  const mesh = new THREE.Mesh(geo, withoutEnvironment(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true })));
+  const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
   mesh.name = 'map-canopy';
   mesh.castShadow = castShadow;
   mesh.receiveShadow = false;

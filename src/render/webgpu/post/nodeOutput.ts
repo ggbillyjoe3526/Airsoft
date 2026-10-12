@@ -20,8 +20,8 @@ import { type AnyNode, displayOf, type NodeRenderer, type NodeTarget } from './n
  */
 
 /**
- * A material that keeps some of its fragments out of the late haze (the sky host's plane, unfogged as its GLSL patch
- * draws it): given the haze's share, it returns the share it takes.
+ * A material that keeps some of its fragments out of the late haze (the sky host's plane, which its node patch draws
+ * unfogged): given the haze's share, it returns the share it takes.
  */
 export interface HoldsLateFog {
   lateFogShare(share: AnyNode): AnyNode;

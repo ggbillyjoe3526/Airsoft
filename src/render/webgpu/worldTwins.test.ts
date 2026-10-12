@@ -18,18 +18,18 @@ import { buildNightSky } from '../nightSky';
 import type { ProbeGrid } from '../probeGrid';
 import type { SurfaceTextures } from '../proceduralTextures';
 import { SmokePlumes, STEAM_PLUME } from '../smokePlumes';
+import { nodePatchOf, patchKey, patchUniforms } from '../nodePatch';
 import { patchSurfaceMaterial, type SurfacePatch } from '../surfaceShader';
-import { withoutEnvironment } from '../surfaceMaterials';
 import { flamesTwin, pointKind, smokeTwin } from './effectNodes';
 import { PointSprites } from './pointSprites';
-import { emptyGrid, SurfaceLambertTwin, surfaceRecipe, SurfaceStandardTwin } from './surfaceNodes';
-import { objectFloat, objectValue, patchUniforms } from './twinUniforms';
+import { emptyGrid, SurfaceLambertTwin, SurfaceStandardTwin } from './surfaceNodes';
+import { objectFloat, objectValue } from './twinUniforms';
 import { worldTwin, WorldTwins } from './worldTwins';
 
 /**
- * W2: the world materials' node twins. Every world material with a GLSL patch has a twin (or, for a sized point, a
- * sprite twin), each twin reads the patch's own uniform objects per drawn object, and its numbers are the config's as
- * the GLSL writes them. The pictures themselves are compared in the browser (pipeline/webgpu-compare.mjs).
+ * W2 (W6b): the world materials' node twins. Every world material that carries a node patch has a twin (or, for a
+ * sized point, a sprite twin), each twin reads the patch's own uniform objects per drawn object, and its numbers are the
+ * config's as the WebGL path's GLSL wrote them. The pictures themselves are compared in the browser (pipeline/webgpu-compare.mjs).
  */
 
 // The soft dots' canvases (smoke, motes) are stood in for: nothing is drawn here.
@@ -56,8 +56,8 @@ function materialsOf(root: THREE.Object3D): THREE.Material[] {
   return [...out];
 }
 
-/** Whether a material carries a GLSL patch. */
-const patched = (m: THREE.Material): boolean => m.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile;
+/** Whether a material carries a node patch. */
+const patched = (m: THREE.Material): boolean => nodePatchOf(m) !== null;
 
 /** A frame as a node uniform's object update sees it. */
 const frameOf = (material: THREE.Material): NodeFrame => ({ material }) as unknown as NodeFrame;
@@ -84,7 +84,7 @@ describe('every world patch has a node twin (W2 criterion 1)', () => {
     return g;
   };
 
-  it('on each map and preset, every patched map material is a twin or drawn by Three as it is by design', () => {
+  it('on each map and preset, every patched map material is a twin', () => {
     const grid = emptyGrid();
     const cases: [string, THREE.Object3D][] = [
       ['Depot Low', built(DEPOT, QUALITY.low, stubGrid())],
@@ -97,15 +97,14 @@ describe('every world patch has a node twin (W2 criterion 1)', () => {
       for (const m of materialsOf(root).filter(patched)) {
         const key = m.customProgramCacheKey();
         keys.add(key);
-        const twin = worldTwin(m, grid);
-        if (key === 'without-environment') expect(twin, `${name}: ${key}`).toBeNull();
-        else expect(twin, `${name}: ${key}`).not.toBeNull();
+        expect(worldTwin(m, grid), `${name}: ${key}`).not.toBeNull();
       }
     }
     // The families the maps draw: weathered surfaces with the baked light, the junk (and the city's neon), the puddles.
-    expect([...keys].some((k) => /^surface:noenv:wear:probes$/.test(k))).toBe(true);
+    expect(keys.has('surface:wear:probes')).toBe(true);
     expect([...keys].some((k) => k.endsWith(':dressing-junk-neon'))).toBe(true);
-    expect([...keys].some((k) => k.endsWith(':puddles'))).toBe(true);
+    const puddles = cases.map(([, root]) => root.getObjectByName('map-puddles') as THREE.Mesh | undefined).find((m) => m);
+    expect(nodePatchOf(puddles!.material as THREE.Material)?.patch).toEqual({ kind: 'surface', recipe: { wear: false, probes: true, junk: null, skyHost: false } });
     grid.dispose();
   });
 
@@ -114,7 +113,7 @@ describe('every world patch has a node twin (W2 criterion 1)', () => {
     const box = new THREE.Box3(new THREE.Vector3(-24, -0.5, -16), new THREE.Vector3(24, 8, 16));
     const atmosphere = addAtmosphere(scene, new THREE.Vector3(), new THREE.Vector3(0.4, 0.8, 0.3).normalize(), QUALITY.high, box, resolveLighting(NEON_HEIGHTS), NEON_HEIGHTS.dressing?.skyline, false, NEON_HEIGHTS.dressing?.plane);
     const ring = scene.getObjectByName('trees') as THREE.Mesh;
-    expect((ring.material as THREE.Material).customProgramCacheKey()).toBe('without-environment:sky-host');
+    expect((ring.material as THREE.Material).customProgramCacheKey()).toBe('surface:none:none:sky-host');
     expect(worldTwin(ring.material as THREE.Material, emptyGrid())).toBeInstanceOf(SurfaceLambertTwin);
     const fixtures = buildLightFixtures(WOODLAND, () => 0, true)!;
     const flames = fixtures.group.getObjectByName('fire-flames') as THREE.Mesh;
@@ -133,16 +132,17 @@ describe('every world patch has a node twin (W2 criterion 1)', () => {
     for (const d of [atmosphere, fixtures, smoke, steam, sky, motes, flies]) d.dispose();
   });
 
-  it('reads program keys as their patches write them', () => {
-    expect(surfaceRecipe('surface:noenv:wear:probes')).toEqual({ wear: true, probes: true, junk: null, skyHost: false });
-    expect(surfaceRecipe('surface:env:none:probes:puddles')).toEqual({ wear: false, probes: true, junk: null, skyHost: false });
-    expect(surfaceRecipe('surface:noenv:none:none:dressing-junk-neon')).toEqual({ wear: false, probes: false, junk: 'neon', skyHost: false });
-    expect(surfaceRecipe('surface:noenv:none:probes:dressing-junk')).toEqual({ wear: false, probes: true, junk: 'glow', skyHost: false });
-    expect(surfaceRecipe('without-environment:sky-host')).toEqual({ wear: false, probes: false, junk: null, skyHost: true });
-    // Nothing to add: Three's own node Lambert (which never takes the scene's environment) draws these.
-    expect(surfaceRecipe('without-environment')).toBeNull();
-    expect(surfaceRecipe('surface:env:none:none')).toBeNull();
-    expect(surfaceRecipe('fa8-vertex-finish')).toBeNull();
+  it('keys one program per patch: per kind, and per surface recipe', () => {
+    const recipe = { wear: true, probes: true, junk: null, skyHost: false } as const;
+    expect(patchKey({ kind: 'surface', recipe })).toBe('surface:wear:probes');
+    expect(patchKey({ kind: 'surface', recipe: { ...recipe, wear: false, junk: 'neon' } })).toBe('surface:none:probes:dressing-junk-neon');
+    expect(patchKey({ kind: 'surface', recipe: { ...recipe, probes: false, junk: 'glow' } })).toBe('surface:wear:none:dressing-junk');
+    expect(patchKey({ kind: 'surface', recipe: { wear: false, probes: false, junk: null, skyHost: true } })).toBe('surface:none:none:sky-host');
+    expect(patchKey({ kind: 'figure-finish' })).toBe('figure-finish');
+    // A material with no patch keeps Three's own key and is Three's own to draw.
+    const plain = new THREE.MeshLambertMaterial();
+    expect(nodePatchOf(plain)).toBeNull();
+    expect(worldTwin(plain, emptyGrid())).toBeNull();
   });
 });
 
@@ -152,22 +152,22 @@ describe('a twin reads its patch’s own uniforms, per drawn object (W2 criterio
     return { bakeTex: { value: tex }, bakeMin: { value: new THREE.Vector3(1, 2, 3) }, bakeSize: { value: new THREE.Vector3(4, 5, 6) }, bakeScale: { value: 2 }, bakeOcclusion: { value: 0.7 }, bakeBounce: { value: 0.5 }, bakeLift: { value: 0.3 } };
   };
 
-  it('finds the very objects the GLSL is given (the baked light by reference, the wear as the surface’s own values)', () => {
+  it('finds the very objects the patch carries (the baked light by reference, the wear as the surface’s own values)', () => {
     const p = probes();
-    const patch: SurfacePatch = { environment: false, wear: WEATHERING.shader.corrugated, probes: p };
+    const patch: SurfacePatch = { wear: WEATHERING.shader.corrugated, probes: p };
     const m = patchSurfaceMaterial(new THREE.MeshLambertMaterial(), patch);
     const u = patchUniforms(m);
     for (const name of Object.keys(p) as (keyof typeof p)[]) expect(u[name]).toBe(p[name]);
     expect(u.wearGrime!.value).toBe(WEATHERING.shader.corrugated.grime);
     expect(u.wearRust!.value).toBe(WEATHERING.shader.corrugated.rust);
-    // Found once and kept.
+    // The same object on every ask.
     expect(patchUniforms(m)).toBe(u);
   });
 
   it('two surfaces sharing one program read their own weathering, and a later map’s grid replaces the first', () => {
     const first = probes();
-    const concrete = patchSurfaceMaterial(new THREE.MeshLambertMaterial(), { environment: false, wear: WEATHERING.shader.concrete, probes: first });
-    const steel = patchSurfaceMaterial(new THREE.MeshLambertMaterial(), { environment: false, wear: WEATHERING.shader.corrugated, probes: first });
+    const concrete = patchSurfaceMaterial(new THREE.MeshLambertMaterial(), { wear: WEATHERING.shader.concrete, probes: first });
+    const steel = patchSurfaceMaterial(new THREE.MeshLambertMaterial(), { wear: WEATHERING.shader.corrugated, probes: first });
     expect(concrete.customProgramCacheKey()).toBe(steel.customProgramCacheKey());
     const grime = objectFloat('wearGrime');
     const rust = objectFloat('wearRust');
@@ -184,15 +184,15 @@ describe('a twin reads its patch’s own uniforms, per drawn object (W2 criterio
     first.bakeScale.value = 3;
     expect(read(steel)[2]).toBe(3);
     const second = probes();
-    const later = patchSurfaceMaterial(new THREE.MeshLambertMaterial(), { environment: false, wear: WEATHERING.shader.concrete, probes: second });
+    const later = patchSurfaceMaterial(new THREE.MeshLambertMaterial(), { wear: WEATHERING.shader.concrete, probes: second });
     read(later);
     expect(min.value).toBe(second.bakeMin.value);
   });
 
   it('makes a Lambert twin for Lambert surfaces and a Standard twin for steel and puddles, copying the plain settings', () => {
     const p = probes();
-    const lambert = patchSurfaceMaterial(new THREE.MeshLambertMaterial({ color: 0x336699, vertexColors: true }), { environment: false, wear: WEATHERING.shader.concrete, probes: p });
-    const standard = patchSurfaceMaterial(new THREE.MeshStandardMaterial({ roughness: 0.4, metalness: 0.8 }), { environment: true, wear: WEATHERING.shader.steelPlate, probes: null });
+    const lambert = patchSurfaceMaterial(new THREE.MeshLambertMaterial({ color: 0x336699, vertexColors: true }), { wear: WEATHERING.shader.concrete, probes: p });
+    const standard = patchSurfaceMaterial(new THREE.MeshStandardMaterial({ roughness: 0.4, metalness: 0.8 }), { wear: WEATHERING.shader.steelPlate, probes: null });
     const lt = worldTwin(lambert, emptyGrid()) as SurfaceLambertTwin;
     const st = worldTwin(standard, emptyGrid()) as SurfaceStandardTwin;
     expect(lt).toBeInstanceOf(SurfaceLambertTwin);
@@ -205,8 +205,8 @@ describe('a twin reads its patch’s own uniforms, per drawn object (W2 criterio
   });
 });
 
-describe('the effects’ twins use the GLSL’s numbers (W2 criterion 5)', () => {
-  it('the flames sway and flicker with the fixtures’ rates, weights and phases, rounded as the GLSL writes them', () => {
+describe('the effects’ twins use the WebGL path’s numbers (W2 criterion 5)', () => {
+  it('the flames sway and flicker with the fixtures’ rates, weights and phases, rounded as its GLSL wrote them', () => {
     const fixtures = buildLightFixtures(WOODLAND, () => 0, true)!;
     const plain = (fixtures.group.getObjectByName('fire-flames') as THREE.Mesh).material as THREE.MeshBasicMaterial;
     const twin = flamesTwin(plain);
@@ -299,9 +299,9 @@ describe('the node library asks for a twin first (W2)', () => {
     const own = (m: THREE.Material) => ({ own: m }) as never;
     const library = { fromMaterial: own };
     const twins = new WorldTwins({ library } as unknown as WebGPURenderer);
-    const surface = patchSurfaceMaterial(new THREE.MeshLambertMaterial(), { environment: false, wear: WEATHERING.shader.concrete, probes: null });
+    const surface = patchSurfaceMaterial(new THREE.MeshLambertMaterial(), { wear: WEATHERING.shader.concrete, probes: null });
     expect(library.fromMaterial(surface)).toBeInstanceOf(SurfaceLambertTwin);
-    const plain = withoutEnvironment(new THREE.MeshLambertMaterial());
+    const plain = new THREE.MeshLambertMaterial();
     expect(library.fromMaterial(plain)).toEqual({ own: plain });
     expect(twins.environment(false, { sky: LIGHTING_PRESETS.day.sky, sun: { x: 0, y: 1, z: 0 }, ground: 0 })).toBeNull();
     twins.dispose();

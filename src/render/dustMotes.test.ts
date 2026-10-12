@@ -2,6 +2,7 @@ import type * as THREE from 'three';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { DUST_MOTES } from '../config/render';
 import { DustMotes, moteFade, motePosition } from './dustMotes';
+import { nodePatchOf } from './nodePatch';
 
 describe('motePosition', () => {
   it('keeps every mote within half a box of the eye, wherever the eye goes and however far they drift', () => {
@@ -63,11 +64,10 @@ describe('DustMotes size cap', () => {
     expect(motes.maxPointSize).toBe(DUST_MOTES.maxPixels * 2);
     motes.setPixelRatio(0.8); // Low's render scale
     expect(motes.maxPointSize).toBeCloseTo(DUST_MOTES.maxPixels * 0.8, 9);
-    // The shader reads the same value as a uniform, not a constant baked into its source.
-    const shader = { uniforms: {} as Record<string, { value: number }>, vertexShader: '#include <logdepthbuf_vertex>', fragmentShader: '' };
-    (motes.object.material as THREE.PointsMaterial).onBeforeCompile(shader as never, undefined as never);
-    expect(shader.uniforms.moteMaxSize!.value).toBeCloseTo(DUST_MOTES.maxPixels * 0.8, 9);
-    expect(shader.vertexShader).toContain('min(gl_PointSize, moteMaxSize)');
+    // The node patch reads the same value as a uniform, not a constant baked into its program.
+    const carried = nodePatchOf(motes.object.material as THREE.PointsMaterial)!;
+    expect(carried.patch).toEqual({ kind: 'motes' });
+    expect(carried.uniforms.moteMaxSize!.value).toBeCloseTo(DUST_MOTES.maxPixels * 0.8, 9);
     motes.dispose();
   });
 });

@@ -11,10 +11,11 @@ import { WOODLAND } from '../map/woodland';
 import { buildCanopyMesh, crownOf } from './canopyMeshes';
 import { emptyBuffers, type Buffers } from './cuboidMesh';
 import { addLighting } from './lighting';
-import { buildLightFixtures, flameGeometry, flicker, flickerSeed } from './lightFixtures';
+import { buildLightFixtures, flameGeometry, flickerSeed } from './lightFixtures';
 import { buildMapMeshes, disposeMapMeshes, mapLookOf, texturesFor } from './mapMeshes';
 import { appendNatureShape, appendPebbles, isNatureKind, type NaturePaint } from './natureShapes';
 import { addSurfaceTextures, CORE_SURFACES, disposeSurfaceTextures, type SurfaceTextures } from './proceduralTextures';
+import { nodePatchOf } from './nodePatch';
 
 /**
  * M33i QA: the woodland look against its acceptance criteria, filling the gaps the worker's tests leave: every block of
@@ -254,22 +255,15 @@ describe('AC3: the night sky by preset, fires’ fixtures and their flicker', ()
     expect(NIGHT_SKY.radius).toBeLessThan(RENDER.far);
   });
 
-  it('flickers the flames in the shader with the same curve the real pool light uses (same rates, weights and phases)', () => {
+  it('flickers the flames on the fixtures’ own clock (the curve’s numbers: render/webgpu/worldTwins.test.ts)', () => {
     const fx = buildLightFixtures(WOODLAND, () => 0, true)!;
     const flames = fx.group.getObjectByName('fire-flames') as THREE.Mesh;
-    const shader = { uniforms: {} as Record<string, unknown>, vertexShader: '#include <begin_vertex>\n#include <color_vertex>', fragmentShader: '#include <alphatest_fragment>' };
-    (flames.material as THREE.Material).onBeforeCompile(shader as never, null as never);
-    const glsl = /float fxFlicker\(float seed\) \{ return (.*); \}/.exec(shader.vertexShader)![1]!;
-    const js = new Function('fxTime', 'seed', `return ${glsl.replace(/sin\(/g, 'Math.sin(')};`) as (t: number, s: number) => number;
-    for (let i = 0; i < 400; i++) {
-      const t = i * 0.137;
-      const seed = flickerSeed(i % 7);
-      expect(1 + FIXTURES.flicker.amount * js(t, seed)).toBeCloseTo(flicker(t, seed), 3);
-    }
-    // The flames brighten by it, and the clock is the fixtures' own (advanced each frame, one uniform).
-    expect(shader.vertexShader).toContain('vColor.rgb *= 1.0 + flicker.y * fxFlicker(flicker.x);');
+    const carried = nodePatchOf(flames.material as THREE.Material)!;
+    expect(carried.patch).toEqual({ kind: 'flames' });
+    // The clock is the fixtures' own (advanced each frame, one uniform).
     fx.advance(0.25);
-    expect((shader.uniforms.fxTime as { value: number }).value).toBeCloseTo(0.25, 9);
+    expect((carried.uniforms.fxTime as { value: number }).value).toBeCloseTo(0.25, 9);
+    expect(fx.time).toBeCloseTo(0.25, 9);
     fx.dispose();
   });
 

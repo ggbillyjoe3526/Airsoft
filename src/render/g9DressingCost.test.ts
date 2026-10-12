@@ -15,6 +15,7 @@ import { SKY_PART, type SkyPlaneUniforms } from './skyHost';
 import { buildMapMeshes, disposeMapMeshes, type MapLook, mapLookOf, texturesFor } from './mapMeshes';
 import { neonFlicker } from './neonDressing';
 import type { SurfaceTextures } from './proceduralTextures';
+import { nodePatchOf } from './nodePatch';
 
 /**
  * What G9's dressing costs on Woodland and Neon Heights (criteria 3 and 4): nothing at all on Low; on Medium and High
@@ -373,7 +374,7 @@ describe('G9: what the two maps’ dressing costs', { timeout: 30_000 }, () => {
     const simple = scene.getObjectByName('trees') as THREE.Mesh;
     expect(parts(simple)).toEqual([]);
     expect(simple.userData.skyPlane).toBeUndefined();
-    expect((simple.material as THREE.Material).customProgramCacheKey()).toBe('without-environment');
+    expect(nodePatchOf(simple.material as THREE.Material)).toBeNull();
     a.setQuality(QUALITY.high);
     expect(parts(scene.getObjectByName('trees'))).toEqual([SKY_PART.ring, SKY_PART.light, SKY_PART.plane]);
     a.dispose();

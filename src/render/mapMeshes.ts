@@ -20,7 +20,7 @@ import { placeDressing } from './mapDressing';
 import { appendNatureShape, appendPebbles, isNatureKind } from './natureShapes';
 import type { ProbeGrid } from './probeGrid';
 import { CORE_SURFACES, type ProceduralTexture, type SurfaceTextures, surfaceTexture } from './proceduralTextures';
-import { isSurfaceMaterial, setReliefMaps, type SurfaceMaterial, withoutEnvironment } from './surfaceMaterials';
+import { isSurfaceMaterial, setReliefMaps, type SurfaceMaterial } from './surfaceMaterials';
 import { releaseNormalMaps, usesNormalMaps } from './surfaceNormals';
 import { patchesShader, patchSurfaceMaterial, type ProbeUniforms, type SurfacePatch } from './surfaceShader';
 import { buildTerrainMesh } from './terrainMeshes';
@@ -724,16 +724,15 @@ export function mapNeedsRebuild(from: MapLook, to: MapLook): boolean {
  * The material for a merged surface mesh: its texture, with relief (a normal map worked out from it, or the texture
  * itself as a bump map) when surface relief is on. Painted surfaces are Lambert and never take the environment map
  * (the largest part of the screen; DECISIONS 2026-09-28); the steel tread plate is painted steel under environment
- * lighting (audit section 5, "Map props and surfaces"). With weathering or per-pixel baked light (G6) the shader takes
- * render/surfaceShader.ts's additions; without either it is exactly the shader before them (Low's).
+ * lighting (audit section 5, "Map props and surfaces"). With weathering or per-pixel baked light (G6) the material
+ * carries render/surfaceShader.ts's node patch; without either it is Three's own (Low's).
  */
 function surfaceMaterial(surface: ProceduralTexture, id: SurfaceTextureId, look: MapLook, probes: ProbeUniforms | null): SurfaceMaterial {
   const base = { map: surface.texture, vertexColors: true, bumpScale: SURFACES.relief[id] };
   const environment = look.steelSheen && id === 'steelPlate';
   const mat: SurfaceMaterial = environment ? new THREE.MeshStandardMaterial({ ...base, ...SURFACES.steelSheen }) : new THREE.MeshLambertMaterial(base);
-  const patch: SurfacePatch = { environment, wear: look.weathering ? WEATHERING.shader[id] : null, probes };
+  const patch: SurfacePatch = { wear: look.weathering ? WEATHERING.shader[id] : null, probes };
   if (patchesShader(patch)) patchSurfaceMaterial(mat, patch);
-  else if (!environment) withoutEnvironment(mat);
   setReliefMaps(mat, surface, look.relief, look.normalMaps);
   return mat;
 }

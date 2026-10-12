@@ -1,10 +1,11 @@
 import * as THREE from 'three';
-import { type PointKind, pointKind, type SharedBuffer, type SpriteSource, spriteTwin } from './effectNodes';
+import type { PointKind } from '../nodePatch';
+import { pointKind, type SharedBuffer, type SpriteSource, spriteTwin } from './effectNodes';
 
 /**
  * Sized points on the node path (WebGPU overhaul W2). WebGPU draws a point primitive one pixel wide (and Three's
  * WebGL2 back end does the same), so the stars, the fires' embers, the fireflies and the dust motes, each a
- * `THREE.Points` whose size the GLSL sets, would shrink to dots. Here each such Points gets a twin: a `THREE.Sprite`
+ * `THREE.Points` whose size its node patch sets, would shrink to dots. Here each such Points gets a twin: a `THREE.Sprite`
  * child drawing one camera-facing quad per point in one instanced draw (Three's own instanced-points path,
  * PointsNodeMaterial), reading the Points' own position, colour and per-point arrays per instance (no copy: the same
  * typed arrays, sent again in the frame the CPU changes them), while the Points itself leaves the camera's layers on

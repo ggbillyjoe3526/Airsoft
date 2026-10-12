@@ -217,8 +217,13 @@ freeing the dressing gives back). A view fails when the grass's triangles pass t
 (`GRASS_TRIANGLES`) or the dressing adds more than two draws.
 
 ```
-PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium node pipeline/webgpu-compare.mjs --out <dir> [--only depot] [--quality high] [--views w2|w3|w4|w5|all] [--backend webgl|webgpu|all] [--full] [--noise] [--port 4186] [--post-views glow]
+PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium node pipeline/webgpu-compare.mjs --out <dir> [--only depot] [--quality high] [--views w2|w3|w4|w5|all] [--backend webgl|webgpu|all] [--full] [--noise] [--port 4186] [--post-views glow] [--reference <commit>]
 ```
+
+`--reference <commit>` (W6b) draws a later node-renderer commit in the reference's place, both pages without the GPU
+dressing: a change that should draw nothing new is checked picture for picture against the commit before it (with
+`--backend webgl`). Use it where `WEBGL_REFERENCE`'s content has moved on: Woodland's layout (M88) and the figures and
+held replicas (RM4) no longer match b10c006, so those views fail against it whatever the renderer does.
 
 `--full` also scores each view with WebGL's whole post stack (what a player sees today, for reference); `--noise`
 draws WebGL against WebGL (the floor of the measurement).

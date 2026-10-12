@@ -8,10 +8,11 @@ import { createCharacter } from '../sim/character';
 import { vec3 } from '../sim/vec';
 import { buildFigure, disposeFigure, HUMAN_DRESS } from './characterModels';
 import { CharacterRenderer } from './characterRenderer';
-import { CAMO_ATTRIBUTE, camoGlsl, camoTone, hasSleeveCamo } from './figureCamo';
+import { CAMO_ATTRIBUTE, camoTone, hasSleeveCamo } from './figureCamo';
 import { hasVertexFinish, useVertexFinish } from './figureFinish';
 import { robotShell } from './figurePalette';
 import { buildForearm } from './handModels';
+import { nodePatchOf } from './nodePatch';
 import type { ArmStyle } from './replicaArms';
 import { buildReplicaModels } from './replicaModels';
 import type { ReplicaDetail } from './replicaBuilder';
@@ -27,7 +28,7 @@ afterAll(() => vi.unstubAllGlobals());
 
 const BLUE = 0x3d8bff;
 const TEAMS = [BLUE, 0xff8a2a];
-const patched = (m: THREE.Material): boolean => m.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile;
+const patched = (m: THREE.Material): boolean => nodePatchOf(m) !== null;
 
 function meshesOf(root: THREE.Object3D): THREE.Mesh[] {
   const out: THREE.Mesh[] = [];
@@ -190,7 +191,7 @@ describe('the camo and armband values are data (G11)', () => {
   const camo = FIGURE.camo as unknown as Record<string, number>;
   const armband = REPLICA_FINISH.armband as unknown as Record<string, number>;
 
-  it('the camo’s tones, thresholds and size come from FIGURE.camo: change it and the GLSL and the tones follow', () => {
+  it('the camo’s tones, thresholds and size come from FIGURE.camo: change it and the tones follow (the node patch: render/webgpu/figureCamoTwin.qa.test.ts)', () => {
     const before = { ...camo };
     const tones = (): Set<number> => {
       const out = new Set<number>();
@@ -201,9 +202,6 @@ describe('the camo and armband values are data (G11)', () => {
       expect([...tones()].sort()).toEqual([before.dark, 1, before.light].sort());
       Object.assign(camo, { dark: 0.41, light: 1.93, darkAt: 0.45, lightAt: -0.35, scale: 0.09 });
       expect([...tones()].sort()).toEqual([0.41, 1, 1.93].sort());
-      const glsl = camoGlsl();
-      for (const v of ['0.41', '1.93', '0.45', '-0.35']) expect(glsl).toContain(v);
-      expect(glsl).toContain(String(1 / 0.09));
     } finally {
       Object.assign(camo, before);
     }

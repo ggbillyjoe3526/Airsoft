@@ -159,12 +159,12 @@ export async function boot(page: Page, map: string, light: string, webgpu = fals
 /** Runs `fn` in the page with the helpers and the game's handle. */
 export const qa = <T>(page: Page, fn: (qa: Any, game: Any) => T | Promise<T>): Promise<T> => page.evaluate(`(${fn.toString()})(window.__qa, window.airsoft)`) as Promise<T>;
 
-/** What the scene draws and how: each patched material's verdict, each program key's twin, the sized Points, the sky. */
+/** What the scene draws and how: each material with a node patch (render/nodePatch.ts), each patch's twin, the sized Points, the sky. */
 export interface Coverage {
-  /** Patched materials drawn neither by a twin, by Three's own library by design, nor as a sprite twin's Points. */
+  /** Patched materials drawn neither by a twin nor as a sprite twin's Points. */
   unaccounted: string[];
   kinds: Record<string, number>;
-  /** Each program key of a mesh, and whether the node library gives its twin (a surface recipe, the flames' sway, the smoke's fade). */
+  /** Each patched mesh's program key, and whether the node library gives its twin (a surface recipe, the flames' sway, the smoke's fade). */
   keys: Record<string, boolean>;
   /** The visible sized Points: their layers and sprite children. */
   points: { name: string; mask: number; sprites: number }[];
@@ -184,16 +184,13 @@ export function coverage(page: Page): Promise<Coverage> {
     const points: { name: string; mask: number; sprites: number }[] = [];
     const seen = new Set();
     let computed = 0;
-    // What Three's own node library draws as it is by design: the moon and the plain Lambert off the environment need
-    // nothing added. The figures' per-vertex finish has its twin since W3.
-    const OWN = ['without-environment', 'night-sky-moon'];
     const isTwin = (twin: Any) => twin?.isNodeMaterial === true && (twin.surface != null || twin.positionNode != null || twin.opacityNode != null || twin.roughnessNode != null);
     r.scene.traverse((o: Any) => {
       if (o.isPoints && o.visible) {
         points.push({ name: o.name, mask: o.layers.mask, sprites: o.children.filter((c: Any) => c.isSprite).length });
         if (r.node?.particles.claims(o) && r.node.particles.ownerOf(o)?.gpu) computed++;
       }
-      if (o.isMesh && !Array.isArray(o.material) && !o.material.isNodeMaterial) {
+      if (o.isMesh && !Array.isArray(o.material) && !o.material.isNodeMaterial && r.node.world.patchOf(o.material)) {
         const key = o.material.customProgramCacheKey();
         if (!(key in keys)) keys[key] = isTwin(library.fromMaterial(o.material));
       }
@@ -201,15 +198,11 @@ export function coverage(page: Page): Promise<Coverage> {
       for (const m of materials) {
         if (seen.has(m)) continue;
         seen.add(m);
-        if (m.onBeforeCompile.toString().replace(/\s/g, '') === 'onBeforeCompile(){}' || m.onBeforeCompile.toString().replace(/\s/g, '').startsWith('onBeforeCompile(/*')) continue;
+        if (!r.node.world.patchOf(m)) continue;
         const label = `${o.type}:${o.name || '-'}:${m.customProgramCacheKey().slice(0, 40)}`;
         if (o.isPoints) {
           if (o.layers.mask === 0 && o.children.filter((child: Any) => child.isSprite).length === 1) kinds.sprites = (kinds.sprites ?? 0) + 1;
           else unaccounted.push(`${label} (a Points drawn as pixels)`);
-          continue;
-        }
-        if (OWN.includes(m.customProgramCacheKey())) {
-          kinds.threes = (kinds.threes ?? 0) + 1;
           continue;
         }
         if (isTwin(library.fromMaterial(m))) kinds.twins = (kinds.twins ?? 0) + 1;
@@ -254,9 +247,7 @@ export async function expectUploaded(page: Page, u: { mesh: string; name: string
       if (o.name === u.mesh && o.isMesh) mesh = o;
     });
     if (!mesh) return { error: `no ${u.mesh}` };
-    const shader = { uniforms: {} as Record<string, Any>, vertexShader: '', fragmentShader: '', defines: {} };
-    mesh.material.onBeforeCompile(shader);
-    const patch = shader.uniforms[u.name];
+    const patch = r.node.world.patchOf(mesh.material)?.uniforms[u.name];
     if (!patch) return { error: `no uniform ${u.name}` };
     // The drawn object's render object, caught as the renderer asks whether to refresh it.
     let ro: Any = null;

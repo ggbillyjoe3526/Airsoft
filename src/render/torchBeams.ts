@@ -9,7 +9,7 @@ import { isInPlay } from '../sim/elimination';
 import { hitTop } from '../sim/hitbox';
 import { lightInHand, torchLit } from '../sim/torch';
 import { lerpAngle, vec3 } from '../sim/vec';
-import { withoutEnvironment } from './surfaceMaterials';
+import { carryNodePatch } from './nodePatch';
 
 /**
  * Weapon torches drawn (M33h), on any map whose lighting preset has a `torch.beam` above 0 (the night); the day builds
@@ -127,24 +127,20 @@ function buildSoftDisc(profile: (t: number) => number, rings: number, segments: 
 function lightMaterial(side: THREE.Side): THREE.MeshBasicMaterial {
   const m = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side });
   m.fog = false;
-  return withoutEnvironment(m);
+  return m;
 }
-
-/** The beam material's program key: the node path draws it with its twin (render/webgpu/effectNodes.ts beamTwin). */
-export const TORCH_BEAM_KEY = 'torch-beam';
 
 /**
  * The beam's material (M91): additive, unlit, unfogged and writing no depth, like the others (node Basic never takes the
  * scene's environment). Its node twin scales its strength by how squarely the view crosses the cone's side
  * (TORCH_BEAMS.coneEdge; seen through the middle of the beam the path through its haze is longest, at its edges nothing)
- * and fades it out close to the eyes (`coneNear`).
+ * and fades it out close to the eyes (`coneNear`): the material carries that as its node patch (render/nodePatch.ts).
  */
 export function beamMaterial(): THREE.MeshBasicMaterial {
   const m = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
   m.fog = false;
   m.name = 'torch-beam';
-  m.customProgramCacheKey = () => TORCH_BEAM_KEY;
-  return m;
+  return carryNodePatch(m, { kind: 'torch-beam' });
 }
 
 /** An instanced draw for up to `capacity` torches, drawing none until update fills it (no draw call at count 0). */

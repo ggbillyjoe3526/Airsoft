@@ -2,34 +2,27 @@ import * as THREE from 'three';
 import { type NodeMaterial, PMREMGenerator, type WebGPURenderer } from 'three/webgpu';
 import { disposeEnvironmentScene, type EnvironmentLook, ReplicaSheen, skyEnvironmentScene } from '../replicaSheen';
 import { REPLICA_SHEEN } from '../../config/render';
-import { TORCH_BEAM_KEY } from '../torchBeams';
 import { beamTwin, copyOnto, flamesTwin, smokeTwin } from './effectNodes';
 import { figureTwin } from './figureNodes';
 import { PointSprites } from './pointSprites';
-import { emptyGrid, SurfaceLambertTwin, SurfaceNodes, surfaceRecipe, SurfaceStandardTwin } from './surfaceNodes';
-import { patchUniforms } from './twinUniforms';
+import { type CarriedPatch, nodePatchOf } from '../nodePatch';
+import { emptyGrid, SurfaceLambertTwin, SurfaceNodes, SurfaceStandardTwin } from './surfaceNodes';
 
 /**
- * The world's materials on the node path (WebGPU overhaul W2). Three's node library turns each plain material into a
- * node material as it builds its program, ignoring `onBeforeCompile`; here it is asked first for a twin. A material is
- * known by its program key (`customProgramCacheKey`, the same key WebGL compiles its patch under), so every world
- * patch has exactly one twin and every material sharing a WebGL program shares a node program:
+ * The world's materials on the node path (WebGPU overhaul W2; W6b). Three's node library turns each plain material into
+ * a node material as it builds its program; here it is asked first for the node material of the patch the material
+ * carries (render/nodePatch.ts). Every material sharing a patch's program key shares that node program, and reads its
+ * own uniforms per draw (twinUniforms.ts):
  *
- * | Program key | Patch | Twin |
- * |---|---|---|
- * | `surface:…` (+ `:puddles`, `:dressing-junk[-neon]`) | surfaceShader.ts, dressingMeshes.ts | surfaceNodes.ts |
- * | `without-environment:sky-host` | skyHost.ts | surfaceNodes.ts |
- * | `light-fixtures-flames` | lightFixtures.ts | effectNodes.ts flamesTwin |
- * | `smoke-plumes` | smokePlumes.ts (smoke and steam) | effectNodes.ts smokeTwin |
- * | `torch-beam` | torchBeams.ts (M91: no patch, the soft beam is the twin's alone) | effectNodes.ts beamTwin |
- * | `night-sky-stars`, `light-fixtures-embers`, `fireflies`, the motes' | nightSky.ts, lightFixtures.ts, fireflies.ts, dustMotes.ts | pointSprites.ts |
- * | `without-environment`, `night-sky-moon` | surfaceMaterials.ts, nightSky.ts | none: Three's own (node Lambert and Basic never take the scene's environment) |
- * | `fa8-vertex-finish` | figureFinish.ts (the detailed figures, and their camo since G11) | figureNodes.ts (W3) |
- * | `g11-sleeve-camo` | figureCamo.ts (your sleeves on Hand detail High) | figureNodes.ts |
+ * - a surface patch (the map surfaces, the set dressing's junk and puddles, the sky host): surfaceNodes.ts;
+ * - the flames, the smoke and the torches' soft beam (M91): effectNodes.ts flamesTwin, smokeTwin and beamTwin;
+ * - the figures' per-vertex finish and your sleeves' camo: figureNodes.ts (W3);
+ * - the sized points (stars, embers, fireflies, dust motes): sprites (pointSprites.ts), their Points left undrawn.
  *
- * The GLSL post passes and the retro filter (W4) are not materials of the scene. The prefiltered sky is made here too,
- * with the node renderer's own prefilter: the scene's environment map (what Standard surfaces and figures reflect) and
- * the held replica's sheen (W3), one target for both (ReplicaSheen).
+ * A material with no patch is Three's own (node Lambert and Basic never take the scene's environment). The post passes
+ * and the retro filter (W4) are not materials of the scene. The prefiltered sky is made here too, with the node
+ * renderer's own prefilter: the scene's environment map (what Standard surfaces and figures reflect) and the held
+ * replica's sheen (W3), one target for both (ReplicaSheen).
  */
 
 export class WorldTwins {
@@ -66,6 +59,11 @@ export class WorldTwins {
     this.sky.trim(on);
   }
 
+  /** The patch `material` carries, or null (the browser checks read what the scene draws, and set its uniforms). */
+  patchOf(material: THREE.Material): CarriedPatch | null {
+    return nodePatchOf(material);
+  }
+
   dispose(): void {
     this.renderer.library.fromMaterial = this.own;
     this.sprites.dispose();
@@ -85,22 +83,33 @@ export class WorldTwins {
 }
 
 /**
- * The node twin of a world material (a new one per build, as Three's library makes them), or null for one Three's
- * library draws as it is. `grid`: the baked-light stand-in texture.
+ * The node material of a world material's patch (a new one per build, as Three's library makes them), or null for one
+ * Three's library draws as it is (no patch, or a sized point's: its sprite draws it). `grid`: the baked-light stand-in.
  */
 export function worldTwin(material: THREE.Material, grid: THREE.Data3DTexture): NodeMaterial | null {
   if ((material as Partial<NodeMaterial>).isNodeMaterial) return null;
-  const key = material.customProgramCacheKey();
-  const recipe = surfaceRecipe(key);
-  if (recipe && (material instanceof THREE.MeshLambertMaterial || material instanceof THREE.MeshStandardMaterial)) {
-    const twin = copyOnto(material, material instanceof THREE.MeshStandardMaterial ? new SurfaceStandardTwin() : new SurfaceLambertTwin());
-    // The baked-light read starts on this material's own grid (its map's), so the first draws bind it (see objectTexture3D).
-    const own = recipe.probes ? (patchUniforms(material).bakeTex?.value as THREE.Data3DTexture | null | undefined) : null;
-    twin.surface = new SurfaceNodes(recipe, own ?? grid);
-    return twin;
+  const carried = nodePatchOf(material);
+  if (!carried) return null;
+  const { patch, uniforms } = carried;
+  switch (patch.kind) {
+    case 'surface': {
+      if (!(material instanceof THREE.MeshLambertMaterial || material instanceof THREE.MeshStandardMaterial)) return null;
+      const twin = copyOnto(material, material instanceof THREE.MeshStandardMaterial ? new SurfaceStandardTwin() : new SurfaceLambertTwin());
+      // The baked-light read starts on this material's own grid (its map's), so the first draws bind it (see objectTexture3D).
+      const own = patch.recipe.probes ? (uniforms.bakeTex?.value as THREE.Data3DTexture | null | undefined) : null;
+      twin.surface = new SurfaceNodes(patch.recipe, own ?? grid);
+      return twin;
+    }
+    case 'flames':
+      return flamesTwin(material);
+    case 'smoke':
+      return smokeTwin(material);
+    case 'torch-beam':
+      return beamTwin(material);
+    case 'figure-finish':
+    case 'sleeve-camo':
+      return figureTwin(material);
+    default:
+      return null;
   }
-  if (key === 'light-fixtures-flames') return flamesTwin(material);
-  if (key === 'smoke-plumes') return smokeTwin(material);
-  if (key === TORCH_BEAM_KEY) return beamTwin(material);
-  return figureTwin(material);
 }

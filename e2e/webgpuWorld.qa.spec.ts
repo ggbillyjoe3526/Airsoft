@@ -78,8 +78,8 @@ test.describe('Woodland at night on the node renderer', () => {
     );
   }
 
-  test('every patched material the scene draws is a twin, Three’s own by design, or a sprite twin’s Points; the flames are a twin; stars, embers and fireflies are sprites; the sky is prefiltered', async () => {
-    expectCoverage(await coverage(s.page()), { keys: ['light-fixtures-flames'], points: ['night-stars', 'fire-embers', 'fireflies'], surfaces: 2 });
+  test('every patched material the scene draws is a twin or a sprite twin’s Points; the flames are a twin; stars, embers and fireflies are sprites; the sky is prefiltered', async () => {
+    expectCoverage(await coverage(s.page()), { keys: ['flames'], points: ['night-stars', 'fire-embers', 'fireflies'], surfaces: 2 });
   });
 
   test('control: the flames are drawn at all (the fire view differs with and without them)', async () => {
@@ -356,8 +356,8 @@ test.describe('Neon Heights at night on the node renderer', () => {
       }
     });
 
-  test('every patched material the scene draws is a twin, Three’s own by design, or a sprite twin’s Points; the steam and the sky host are twins; the stars are sprites; the sky is prefiltered', async () => {
-    expectCoverage(await coverage(s.page()), { keys: ['smoke-plumes', 'without-environment:sky-host'], points: ['night-stars'], surfaces: 2 });
+  test('every patched material the scene draws is a twin or a sprite twin’s Points; the steam and the sky host are twins; the stars are sprites; the sky is prefiltered', async () => {
+    expectCoverage(await coverage(s.page()), { keys: ['smoke', 'surface:none:none:sky-host'], points: ['night-stars'], surfaces: 2 });
   });
 
   test('the steam moves frame to frame in the game’s own loop', async () => {

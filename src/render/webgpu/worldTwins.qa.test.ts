@@ -17,6 +17,7 @@ import { buildMapMeshes, disposeMapMeshes, type MapLook, mapLookOf, texturesFor 
 import { buildNightSky } from '../nightSky';
 import type { ProbeGrid } from '../probeGrid';
 import type { SurfaceTextures } from '../proceduralTextures';
+import { nodePatchOf } from '../nodePatch';
 import { patchSurfaceMaterial } from '../surfaceShader';
 import { WEATHERING } from '../../config/weathering';
 import { flamesTwin, pointKind } from './effectNodes';
@@ -47,8 +48,8 @@ function stubGrid(): ProbeGrid {
   return { version: BAKED_LIGHT.bake.version, preset: 'day', hash: 0, nx, ny, nz, origin: [-40, 0, -60], spacing: 2, scale: 1, data: new Uint8Array(nx * ny * nz * 4).fill(128) };
 }
 
-/** Whether a material carries a GLSL patch (an onBeforeCompile of its own). */
-const patched = (m: THREE.Material): boolean => m.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile;
+/** Whether a material carries a node patch (render/nodePatch.ts; until W6b, a GLSL patch of its own). */
+const patched = (m: THREE.Material): boolean => nodePatchOf(m) !== null;
 
 /** Every distinct material under `root`, with the object that draws it. */
 function drawn(root: THREE.Object3D): { object: THREE.Object3D; material: THREE.Material }[] {
@@ -79,8 +80,6 @@ const updating = (root: unknown): { update(f: NodeFrame): unknown; updateType: s
 // --- Coverage: every patched material of the maps, on every preset ------------------------------------------------------
 
 describe('W2 QA: every patched world material has a twin on every preset (acceptance 1)', () => {
-  /** What Three's own node library draws as it is by design (never takes the scene's environment, nothing to add). */
-  const THREES_OWN = new Set(['without-environment', 'night-sky-moon']);
   const MAPS: readonly [string, MapData][] = [
     ['Depot', DEPOT],
     ['Woodland', WOODLAND],
@@ -115,7 +114,7 @@ describe('W2 QA: every patched world material has a twin on every preset (accept
                 const key = material.customProgramCacheKey();
                 const where = `${name} ${preset}${probes ? ' +bake' : ''}${night ? ' night' : ' day'} ${object.name || object.type}: ${key.slice(0, 50)}`;
                 keys.add(key.slice(0, 50));
-                const ok = material instanceof THREE.PointsMaterial ? pointKind(material) !== null : THREES_OWN.has(key) || worldTwin(material, grid) !== null;
+                const ok = material instanceof THREE.PointsMaterial ? pointKind(material) !== null : worldTwin(material, grid) !== null;
                 if (!ok) unaccounted.push(where);
               }
             }
@@ -130,7 +129,7 @@ describe('W2 QA: every patched world material has a twin on every preset (accept
     }
     expect([...new Set(unaccounted)]).toEqual([]);
     // The sweep reached the families (a sweep that saw only the plain ones would pass for nothing).
-    for (const family of ['surface:noenv:wear:probes', 'surface:env:wear:probes', 'dressing-junk-neon', ':puddles', 'sky-host', 'light-fixtures-flames', 'smoke-plumes', 'fireflies', 'night-sky-stars', 'light-fixtures-embers']) {
+    for (const family of ['surface:wear:probes', 'surface:wear:none', 'dressing-junk-neon', 'sky-host', 'flames', 'smoke', 'fireflies', 'stars', 'embers']) {
       expect([...keys].some((k) => k.includes(family)), family).toBe(true);
     }
     grid.dispose();
@@ -240,7 +239,7 @@ describe('W2 QA: the twins’ per-frame paths allocate nothing (acceptance 5)', 
   it('the object-uniform reads (wear, baked light, neon flicker, the plane) allocate nothing after the first', async () => {
     const tex = new THREE.Data3DTexture(new Uint8Array(4), 1, 1, 1);
     const probes = { bakeTex: { value: tex }, bakeMin: { value: new THREE.Vector3() }, bakeSize: { value: new THREE.Vector3(1, 1, 1) }, bakeScale: { value: 1 }, bakeOcclusion: { value: 1 }, bakeBounce: { value: 1 }, bakeLift: { value: 0.1 } };
-    const material = patchSurfaceMaterial(new THREE.MeshLambertMaterial(), { environment: false, wear: WEATHERING.shader.concrete, probes });
+    const material = patchSurfaceMaterial(new THREE.MeshLambertMaterial(), { wear: WEATHERING.shader.concrete, probes });
     const nodes = [objectFloat('wearGrime'), objectFloat('bakeScale'), objectValue('bakeMin', new THREE.Vector3()), objectValue('skyPlane', new THREE.Matrix4()), objectTexture3D('bakeTex', emptyGrid(), new THREE.Vector3() as never)];
     const frame = { material } as unknown as NodeFrame;
     const step = (): void => {
@@ -386,7 +385,7 @@ describe('W2 QA: the library hook is installed once and given back whole', () =>
     const ownSecond = second.fromMaterial;
     const a = new WorldTwins({ library: first } as unknown as WebGPURenderer);
     const b = new WorldTwins({ library: second } as unknown as WebGPURenderer);
-    const surface = patchSurfaceMaterial(new THREE.MeshLambertMaterial(), { environment: false, wear: WEATHERING.shader.concrete, probes: null });
+    const surface = patchSurfaceMaterial(new THREE.MeshLambertMaterial(), { wear: WEATHERING.shader.concrete, probes: null });
     expect(first.fromMaterial(surface)).toBeInstanceOf(SurfaceLambertTwin);
     expect(second.fromMaterial(surface)).toBeInstanceOf(SurfaceLambertTwin);
     a.dispose();

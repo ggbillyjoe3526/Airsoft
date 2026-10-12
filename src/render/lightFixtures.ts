@@ -5,7 +5,7 @@ import type { MapLight } from '../map/nightSight';
 import { createRng, rngNext } from '../sim/rng';
 import { appendCuboid, type Buffers, PLAIN } from './cuboidMesh';
 import { appendNatureShape, appendRound, type NaturePaint } from './natureShapes';
-import { NO_ENVIRONMENT } from './surfaceMaterials';
+import { carryNodePatch } from './nodePatch';
 
 /**
  * What gives a map's light (M33i, MapLight.kind), on any map whose lights say: a camp fire (a ring of stones, charred
@@ -141,13 +141,6 @@ export interface LightFixtures {
 /** The shaders' clock wraps here (s), long before float precision matters. */
 const CLOCK_WRAP = 3600;
 
-/** The flicker curve in GLSL (fxFlicker(seed)), the same as `flicker`. */
-function flickerGlsl(): string {
-  const { rates, weights } = F.flicker;
-  const terms = rates.map((r, i) => `${weights[i]!.toFixed(4)} * sin(${r.toFixed(4)} * fxTime + ${PHASE[i]!.toFixed(4)} * seed)`).join(' + ');
-  return `float fxFlicker(float seed) { return ${terms}; }\n`;
-}
-
 /**
  * The flame cards of each fire and the panes of each lantern among `lights` (a map's, in order: each one's flicker seed is
  * its place): positions, RGBA colours and (seed, amount, sway).
@@ -280,9 +273,9 @@ export function buildLightFixtures(map: MapData, ground: GroundUnder, embers: bo
 }
 
 /**
- * Makes a flame or ember material: additive, no depth writes, unfogged, off the environment map, with the fixtures'
- * clock and the flicker (flames: brightness and sway by each vertex's `flicker` attribute; embers: rising from their foot
- * over their life, fading out, round).
+ * Makes a flame or ember material: additive, no depth writes, unfogged, with the fixtures' clock and the flicker as its
+ * node patch (render/webgpu/effectNodes.ts: flames sway and flicker by each vertex's `flicker` attribute; embers rise
+ * from their foot over their life, fade out and are round).
  */
 function fxMaterial<M extends THREE.MeshBasicMaterial | THREE.PointsMaterial>(m: M, clock: { value: number }, kind: 'flames' | 'embers'): M {
   m.transparent = true;
@@ -291,33 +284,6 @@ function fxMaterial<M extends THREE.MeshBasicMaterial | THREE.PointsMaterial>(m:
   m.fog = false;
   // One pass for both faces of a card (three.js otherwise draws a transparent two-sided mesh twice).
   m.forceSinglePass = true;
-  const E = F.embers;
-  const fl = F.fire.flames;
-  m.onBeforeCompile = (shader) => {
-    shader.uniforms.fxTime = clock;
-    const head = `${NO_ENVIRONMENT}uniform float fxTime;\n${flickerGlsl()}`;
-    if (kind === 'flames') {
-      shader.vertexShader = `${head}attribute vec3 flicker;\n${shader.vertexShader}`
-        .replace(
-          '#include <begin_vertex>',
-          `#include <begin_vertex>\ntransformed.x += flicker.z * sin(fxTime * ${fl.swayRates[0].toFixed(3)} + flicker.x * ${PHASE[1].toFixed(3)});\ntransformed.z += flicker.z * cos(fxTime * ${fl.swayRates[1].toFixed(3)} + flicker.x);`,
-        )
-        .replace('#include <color_vertex>', '#include <color_vertex>\nvColor.rgb *= 1.0 + flicker.y * fxFlicker(flicker.x);');
-      shader.fragmentShader = NO_ENVIRONMENT + shader.fragmentShader;
-      return;
-    }
-    shader.vertexShader = `${head}attribute vec4 ember;\nvarying float vEmber;\n${shader.vertexShader}`.replace(
-      '#include <begin_vertex>',
-      `#include <begin_vertex>
-float emberT = fract(fxTime / ${E.life.toFixed(3)} * ember.w + ember.x);
-transformed += vec3(ember.y * emberT * ${E.spread.toFixed(3)} + ${E.wobble.toFixed(3)} * sin(fxTime * ${E.wobbleRate.toFixed(3)} + ember.x * 6.2832), emberT * ${E.rise.toFixed(3)}, ember.z * emberT * ${E.spread.toFixed(3)});
-vEmber = (1.0 - emberT) * smoothstep(0.0, 0.08, emberT);`,
-    );
-    shader.fragmentShader = `${NO_ENVIRONMENT}varying float vEmber;\n${shader.fragmentShader}`.replace(
-      '#include <alphatest_fragment>',
-      'diffuseColor.a *= vEmber * smoothstep(0.5, 0.15, length(gl_PointCoord - vec2(0.5)));\n#include <alphatest_fragment>',
-    );
-  };
-  m.customProgramCacheKey = () => `light-fixtures-${kind}`;
+  carryNodePatch(m as THREE.Material, { kind }, { fxTime: clock });
   return m;
 }

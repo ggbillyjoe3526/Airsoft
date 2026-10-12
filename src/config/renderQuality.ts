@@ -65,7 +65,7 @@ export interface QualitySettings {
   /**
    * Environment lighting (audit section 5, F1): the game's own sky, prefiltered once, lights and reflects in players,
    * the flag, the range's targets and steel floors (scene.environment), and is the replica's sheen too (one map, 6.3 MB).
-   * The map's painted surfaces never take it (render/surfaceMaterials.ts withoutEnvironment): they are most of the screen.
+   * The map's painted surfaces never take it (Three's node Lambert never reads the scene's): they are most of the screen.
    */
   environment: boolean;
   /**

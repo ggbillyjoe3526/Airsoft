@@ -166,6 +166,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **CT4** · Content toolkit part 4: skin checks cover a colour scheme's rules, fit on every replica, team colours, texture budget, pictures and map colours
 - **W6a** · The perf checks run on both renderers with their own baselines; the grass and tree stand-ins' triangles have their own perf line
 - **W6a** · Medium draw-call budgets raised, Woodland 115 to 120 and Neon Heights 140 to 145: GPU grass costs two draws, built-in models five
+- **W6b** · The world's and figures' materials carry their own WebGPU shaders instead of the old WebGL code, so nothing looks different and the game download is about 7 kB smaller; the game chunk's budget is back at 1,000 kB
 
 ## 0.1 Dev 4 · 2026-10-06
 

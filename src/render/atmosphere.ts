@@ -7,7 +7,6 @@ import type { SkylinePiece } from '../map/mapTypes';
 import { buildNightSky } from './nightSky';
 import { hostSkyGuests, SKY_PART, type SkyGuests, skyGuests, tagged } from './skyHost';
 import { skylineClear, skylineGeometries } from './skyline';
-import { withoutEnvironment } from './surfaceMaterials';
 
 /**
  * The world round the field (M14; the visual overhaul, audit section 5 "Sky and trees"): a gradient sky dome with a
@@ -276,7 +275,7 @@ function buildTrees(level: TreeDetail, centre: THREE.Vector3, sun: THREE.Vector3
   for (const p of parts) p.dispose();
   if (!merged) throw new Error('no trees');
   // Flat-shaded Lambert, off the environment map (render/surfaceMaterials.ts): leaves are matte and far away.
-  const mesh = new THREE.Mesh(merged, withoutEnvironment(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true })));
+  const mesh = new THREE.Mesh(merged, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
   mesh.name = 'trees';
   mesh.matrixAutoUpdate = false;
   if (hosting) hostSkyGuests(mesh, guests.planeHeight);

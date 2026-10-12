@@ -8,7 +8,7 @@ import { DECAL_RENDER_ORDER } from './mapDecals';
 import type { DressingLayout, JunkPiece } from './mapDressing';
 import { neonParts } from './neonDressing';
 import { posterGeometries } from './streetDressing';
-import { applySurfacePatch, type ProbeUniforms, type SurfacePatch, surfacePatchKey } from './surfaceShader';
+import { patchSurfaceMaterial, type ProbeUniforms } from './surfaceShader';
 import { woodsGeometries } from './woodsDressing';
 
 /**
@@ -129,22 +129,8 @@ function stripGeometry(s: GlowStrip): THREE.BufferGeometry {
  * pixel when the map's surfaces have it (`probes`: render/surfaceShader.ts's patch, so the junk sits in the same light).
  */
 function junkMaterial(probes: ProbeUniforms | null, flicker: { value: THREE.Vector3 } | null): THREE.MeshLambertMaterial {
-  const material = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
-  const patch: SurfacePatch = { environment: false, wear: null, probes };
-  material.onBeforeCompile = (shader) => {
-    applySurfacePatch(shader, patch);
-    // G9: a flickering neon tube's glow follows its channel's level (1 for everything else).
-    const level = flicker ? 'flick < 0.5 ? 1.0 : flick < 1.5 ? neonFlicker.x : flick < 2.5 ? neonFlicker.y : neonFlicker.z' : '1.0';
-    if (flicker) shader.uniforms.neonFlicker = flicker;
-    shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', `attribute float glow;\n${flicker ? 'attribute float flick;\nuniform vec3 neonFlicker;\n' : ''}varying float vGlow;\n#include <common>`)
-      .replace('#include <begin_vertex>', `vGlow = glow * (${level});\n#include <begin_vertex>`);
-    shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', 'varying float vGlow;\n#include <common>')
-      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += vColor.rgb * vGlow;');
-  };
-  material.customProgramCacheKey = () => `${surfacePatchKey(patch)}:dressing-junk${flicker ? '-neon' : ''}`;
-  return material;
+  // G9: a flickering neon tube's glow follows its channel's level (1 for everything else).
+  return patchSurfaceMaterial(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }), { wear: null, probes }, { flicker });
 }
 
 /** A neon sign's parts painted as the junk's: the plate dark, the tubes glowing NEON.glow on the sign's channel. */
@@ -267,11 +253,7 @@ export function buildPuddleMesh(layout: DressingLayout, probes: ProbeUniforms | 
     polygonOffsetFactor: -2,
     polygonOffsetUnits: -2,
   });
-  if (probes) {
-    const patch: SurfacePatch = { environment: true, wear: null, probes };
-    material.onBeforeCompile = (shader) => applySurfacePatch(shader, patch);
-    material.customProgramCacheKey = () => `${surfacePatchKey(patch)}:puddles`;
-  }
+  if (probes) patchSurfaceMaterial(material, { wear: null, probes });
   const mesh = new THREE.Mesh(geo, material);
   mesh.name = 'map-puddles';
   mesh.userData.reflective = P.reflective;

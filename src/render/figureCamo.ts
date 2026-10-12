@@ -1,12 +1,12 @@
 import type * as THREE from 'three';
 import { FIGURE } from '../config/characters';
+import { carryNodePatch, nodePatchOf } from './nodePatch';
 
 /**
  * The team camo (G11): blotches printed per pixel on the detailed figure's clothes and on your first-person sleeves,
  * from the drawn part's own position (FIGURE.camo). The figure's material reads which vertices wear it from a `camo`
- * attribute (render/figureFinish.ts); the sleeves wear it all over (`useSleeveCamo`). The node renderer's twins build
- * the same sums (render/webgpu/figureNodes.ts), so the two renderers print one pattern. Low draws neither: its figures
- * and sleeves stay plain, at Low's cost.
+ * attribute (render/figureFinish.ts); the sleeves wear it all over (`useSleeveCamo`). Both node patches build the sums
+ * below in render/webgpu/figureNodes.ts. Low draws neither: its figures and sleeves stay plain, at Low's cost.
  */
 
 /** The vertex attribute (float) that says which pattern a vertex of the detailed figure wears: 0 none, else its seed. */
@@ -14,8 +14,6 @@ export const CAMO_ATTRIBUTE = 'camo';
 
 /** The pattern's seed on the first-person sleeves (any value at least 1 prints; this one reads well along a forearm). */
 export const SLEEVE_CAMO_SEED = 4;
-
-const PROGRAM_KEY = 'g11-sleeve-camo';
 
 /** The pattern's three crossed waves: per wave, its weights on (x, y, z) and on the seed (the phase). */
 export const CAMO_WAVES: readonly (readonly [x: number, y: number, z: number, seed: number])[] = [
@@ -29,26 +27,9 @@ export const CAMO_WARP_SEED = 2.3;
 /** The smallest blend width (in `n`) of a blotch's edge, so a flat stretch never divides by nothing. */
 export const CAMO_EDGE_MIN = 1e-4;
 
-/** A number as a GLSL float literal, exactly as written in config (so the GLSL and the node twin use one value). */
-const glsl = (v: number): string => (Number.isInteger(v) ? v.toFixed(1) : String(v));
-
 /**
- * The GLSL of `float camoTone(vec3 p,float s)`: the colour multiplier at part position `p` (metres) for pattern `s`, its
- * blotches' edges blended over one pixel's change of the waves (fwidth), so they stay crisp up close and melt into
- * their average far away instead of shimmering. Called in uniform control flow (fwidth needs it). Written tight: it
- * ships in the main chunk (G11).
- */
-export function camoGlsl(): string {
-  const C = FIGURE.camo;
-  const wave = ([x, y, z, k]: readonly number[]): string => `sin(dot(q,vec3(${x},${y},${z}))+s*${glsl(k!)})`;
-  const step = (at: number): string => `smoothstep(${glsl(at)}-e,${glsl(at)}+e,n)`;
-  return `
-float camoTone(vec3 p,float s){vec3 q=p*${glsl(1 / C.scale)};q+=${glsl(C.warp)}*sin(q.yzx*${glsl(CAMO_WARP_RATE)}+s*${glsl(CAMO_WARP_SEED)});float n=${CAMO_WAVES.map(wave).join('+')},e=max(fwidth(n),${glsl(CAMO_EDGE_MIN)});return mix(mix(1.,${glsl(C.light)},1.-${step(C.lightAt)}),${glsl(C.dark)},${step(C.darkAt)});}`;
-}
-
-/**
- * The pattern's tone at (x, y, z) for `seed`, with hard edges (camoGlsl less its edge blend): for tests and for reading
- * how much of a part each tone covers.
+ * The pattern's tone at (x, y, z) for `seed`, with hard edges (the node patch's sums less its edge blend, which spans
+ * one pixel's change of the waves): for tests and for reading how much of a part each tone covers.
  */
 export function camoTone(x: number, y: number, z: number, seed: number): number {
   const C = FIGURE.camo;
@@ -72,19 +53,10 @@ export function camoTone(x: number, y: number, z: number, seed: number): number 
  * position at FIGURE.camo.sleeve of the figures' size, after its colour and vertex colours. Every sleeve given it shares one program. Returns it.
  */
 export function useSleeveCamo<M extends THREE.MeshStandardMaterial>(material: M): M {
-  material.onBeforeCompile = (shader) => {
-    shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nvarying vec3 vCamoPos;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvCamoPos = position;');
-    shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', `#include <common>\nvarying vec3 vCamoPos;${camoGlsl()}`)
-      .replace('#include <color_fragment>', `#include <color_fragment>\ndiffuseColor.rgb*=camoTone(vCamoPos*${glsl(1 / FIGURE.camo.sleeve)},${glsl(SLEEVE_CAMO_SEED)});`);
-  };
-  material.customProgramCacheKey = () => PROGRAM_KEY;
-  return material;
+  return carryNodePatch(material, { kind: 'sleeve-camo' });
 }
 
 /** True if `material` prints the camo all over (useSleeveCamo). */
 export function hasSleeveCamo(material: THREE.Material): boolean {
-  return material.customProgramCacheKey() === PROGRAM_KEY;
+  return nodePatchOf(material)?.patch.kind === 'sleeve-camo';
 }

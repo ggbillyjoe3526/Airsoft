@@ -17,8 +17,9 @@ and never writes the simulation.
   the GPU time from timestamp queries, compiles ahead and makes the replacement renderer when the device is lost
   (WebGPU a few times, then WebGL2). `webgpu/deferredFrees.ts` (W6a, WebGPU only) holds the uniform buffers Three
   frees mid-frame (a draw rebuilt inside its pass) until the frame is submitted, so an earlier draw in the same pass
-  can't use a destroyed buffer. The world's materials draw as node twins of their GLSL patches (W2): `webgpu/worldTwins.ts` asks first, by program
-  key, for a twin (its table lists each patch and twin); `webgpu/surfaceNodes.ts` (surfaces: weathering, per-pixel
+  can't use a destroyed buffer. The world's materials carry node patches (`nodePatch.ts`, W6b; GLSL before it): what each draws beyond Three's own
+  material and the uniforms it reads, set where the material is made. `webgpu/worldTwins.ts` asks each material's patch
+  first for its node material (its doc lists each patch and where it is drawn); `webgpu/surfaceNodes.ts` (surfaces: weathering, per-pixel
   and vertex baked light, junk glow and neon flicker, the sky host), `webgpu/effectNodes.ts` (flames, smoke and steam,
   and the sized points' sprite materials), `webgpu/pointSprites.ts` (each sized Points drawn as one instanced sprite,
   since points draw one pixel wide there) and `webgpu/twinUniforms.ts` (the patch's own uniform objects, read per drawn
@@ -62,8 +63,8 @@ and never writes the simulation.
   skyline's lights and the plane ride the tree ring's draw call (`skyHost.ts`).
 - Light: `lighting.ts` (sun and sky fill; on High the shadow map follows the view), `lightingPreset.ts` (day or night),
   `atmosphere.ts`, `lightPools.ts`, `torchBeams.ts`. Baked bounce light: `lightBake.ts`, `probeGrid.ts`,
-  `probeFile.ts` (the file format, loaded in a chunk of its own), `bakedLight.ts`, read in `surfaceShader.ts` (which
-  also draws weathering).
+  `probeFile.ts` (the file format, loaded in a chunk of its own), `bakedLight.ts`, read by the surfaces' node patch
+  (`surfaceShader.ts`, which also weathers them).
 - Figures: `characterRenderer.ts`, `characterModels.ts`, `figureHuman.ts` / `figureRobot.ts`; `figureFinish.ts` (the
   per-vertex finish) and `figureCamo.ts` (the team camo printed per pixel on clothes and sleeves, G11). Replicas and hands:
   `replicaModels.ts` (the bodies and assembly), `replicaParts.ts` (optics, grips, magazines and the other fitted parts),

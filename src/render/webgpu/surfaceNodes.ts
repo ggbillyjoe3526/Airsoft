@@ -29,53 +29,24 @@ import {
   vertexColor,
 } from 'three/tsl';
 import { WEATHERING } from '../../config/weathering';
+import type { SurfaceRecipe } from '../nodePatch';
 import { everyDraw, objectFloat, objectTexture3D, objectValue } from './twinUniforms';
 
 /**
- * The node twins of the map surfaces' shader patch (render/surfaceShader.ts, G6) and of what rides on it: the set
+ * The node materials of the map surfaces' patch (render/surfaceShader.ts, G6) and of what rides on it: the set
  * dressing's junk mesh with its glow strips and neon flicker (render/dressingMeshes.ts, G8/G9), the puddles, and the
- * tree ring hosting the skyline's lights and the passing plane (render/skyHost.ts). WebGPU overhaul W2.
+ * tree ring hosting the skyline's lights and the passing plane (render/skyHost.ts). WebGPU overhaul W2; drawn from the
+ * patch each material carries since W6b (render/nodePatch.ts SurfaceRecipe).
  *
- * The same terms as the GLSL, in the same places of Three's own Lambert or Standard model: the weathering after the
- * texture and vertex colour (and on a Standard surface, the roughness it adds), the baked light after the light sum
- * (the sky fill dimmed by the probes' sky visibility, the bounce added), the junk's glow as emitted light, the sky host's
- * guests unlit and the plane moved and unfogged. Every number is the same config's (rounded as the GLSL writes it), and
- * every uniform is the patch's own object (render/webgpu/twinUniforms.ts). Relief (normal or bump maps), Low's
- * per-vertex baked light (in the vertex colours) and the rest of the plain material carry over as Three's node library
- * copies them.
+ * Each term sits in its place of Three's own Lambert or Standard model: the weathering after the texture and vertex
+ * colour (and on a Standard surface, the roughness it adds), the baked light after the light sum (the sky fill dimmed
+ * by the probes' sky visibility, the bounce added), the junk's glow as emitted light, the sky host's guests unlit and
+ * the plane moved and unfogged. Every number is the config's (rounded as the WebGL path's GLSL wrote it), and every
+ * uniform is the patch's own object (render/webgpu/twinUniforms.ts). Relief (normal or bump maps), Low's per-vertex
+ * baked light (in the vertex colours) and the rest of the plain material carry over as Three's node library copies them.
  */
 
-/** What a world material's program key says its patch draws (render/surfaceShader.ts surfacePatchKey and the suffixes). */
-export interface SurfaceRecipe {
-  /** World-space weathering (`wearGrime`, `wearRust`). */
-  wear: boolean;
-  /** The baked light read per pixel (the `bake*` uniforms). */
-  probes: boolean;
-  /** The junk mesh's glow (`glow` attribute), and the neon flicker channels (`flick`, `neonFlicker`) when `neon`. */
-  junk: 'glow' | 'neon' | null;
-  /** The tree ring as host of the sky's lights and plane (`skyPart`, `skyPlane`, `skyPlaneUp`). */
-  skyHost: boolean;
-}
-
-/**
- * Reads a world material's program key: a surface patch (`surface:<env>:<wear>:<probes>`) and the suffixes the junk,
- * the puddles and the sky host add (`:dressing-junk`, `:dressing-junk-neon`, `:puddles`, `:sky-host`). Null for a key
- * that needs no twin (a plain surface off the environment: Three's node library draws it as it is) or isn't a surface's.
- */
-export function surfaceRecipe(key: string): SurfaceRecipe | null {
-  const parts = key.split(':');
-  const surface = parts[0] === 'surface';
-  const recipe: SurfaceRecipe = {
-    wear: surface && parts[2] === 'wear',
-    probes: surface && parts[3] === 'probes',
-    junk: parts.includes('dressing-junk-neon') ? 'neon' : parts.includes('dressing-junk') ? 'glow' : null,
-    skyHost: parts.includes('sky-host'),
-  };
-  if (!surface && parts[0] !== 'without-environment') return null;
-  return recipe.wear || recipe.probes || recipe.junk || recipe.skyHost ? recipe : null;
-}
-
-/** A number as the GLSL writes it (`toFixed(3)`), so both programs use the same constant. */
+/** A number as the WebGL path's GLSL wrote it (`toFixed(3)`), so the surfaces draw as they did there. */
 const r3 = (x: number): number => Number(x.toFixed(3));
 const N = WEATHERING.noise;
 const M = WEATHERING.mix;
@@ -83,7 +54,7 @@ const M = WEATHERING.mix;
 /* eslint-disable @typescript-eslint/no-explicit-any -- TSL's node types don't follow its own swizzles and helpers. */
 type AnyNode = any;
 
-/** The concept's cheap 3D hash, value noise and three-octave sum (surfaceShader.ts wH, wN, wF). */
+/** The concept's cheap 3D hash, value noise and three-octave sum (wH, wN, wF). */
 const wH = Fn(([q]: [AnyNode]) => {
   const p: AnyNode = fract(q.mul(0.3183099).add(0.1)).mul(17.0).toVar();
   return fract(p.x.mul(p.y).mul(p.z).mul(p.x.add(p.y).add(p.z)));
@@ -127,7 +98,7 @@ export class SurfaceNodes {
     private readonly grid: THREE.Data3DTexture,
   ) {}
 
-  /** The sky host's plane: moved by its matrix and collapsed while it is down (skyHost.ts's begin_vertex line). */
+  /** The sky host's plane: moved by its matrix and collapsed while it is down (the plane's own matrix places it in the world: the ring sits at the origin). */
   position(base: AnyNode): AnyNode {
     if (!this.recipe.skyHost) return base;
     const part = attribute('skyPart', 'float');
@@ -136,7 +107,7 @@ export class SurfaceNodes {
     return select(part.greaterThan(1.5), plane.mul(vec4(base.mul(up), 1.0)).xyz, base);
   }
 
-  /** After the colour and vertex colours: the weathering (WEAR_GLSL), leaving the grime for the roughness. */
+  /** After the colour and vertex colours: the weathering, leaving the grime for the roughness. */
   diffuse(): void {
     if (!this.recipe.wear) return;
     const grime = objectFloat('wearGrime');
@@ -184,10 +155,10 @@ export class SurfaceNodes {
   }
 
   /**
-   * The lighting model with the baked light after its indirect light (PROBE_GLSL): the sky fill (and on a Standard
-   * surface the sky's reflection) scaled by the probes' sky visibility, and the bounce light added. The bounce takes the
-   * full base colour on Lambert and Standard alike: the GLSL reads `material.diffuseColor`, which Three (since r18x) keeps
-   * as the base colour, the metal's share taken off only in `material.diffuseContribution`.
+   * The lighting model with the baked light after its indirect light: the sky fill (and on a Standard surface the sky's
+   * reflection) scaled by the probes' sky visibility, and the bounce light added. The bounce takes the full base colour
+   * on Lambert and Standard alike, as the WebGL path did (its `material.diffuseColor`, which Three since r18x keeps as
+   * the base colour, the metal's share taken off only in `material.diffuseContribution`).
    */
   lightingModel<T extends LightingModel>(model: T): T {
     if (!this.recipe.probes) return model;

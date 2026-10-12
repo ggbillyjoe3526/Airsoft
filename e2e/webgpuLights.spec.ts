@@ -102,6 +102,6 @@ test('Neon Heights at night on WebGPU: clustered lights hold every lamp’s own 
   expect(changed.lit).toBeGreaterThan(200_000);
   expect(changed.changed).toBeGreaterThan(2000);
 
-  expectCoverage(await coverage(page), { keys: ['fa8-vertex-finish'], points: ['night-stars'], surfaces: 2 });
+  expectCoverage(await coverage(page), { keys: ['figure-finish'], points: ['night-stars'], surfaces: 2 });
   expect(errors()).toEqual([]);
 });

@@ -13,13 +13,13 @@ import { boot, coverage, expectCoverage, qa, VIEWPORT, watchErrors } from './web
 
 test.use({ viewport: VIEWPORT });
 
-test('a Depot day match on High: every patched material the scene draws is a twin, Three’s own by design, or a sprite twin’s Points; the figures’ finish is a twin and the held replica reflects the prefiltered sky', async ({ page }) => {
+test('a Depot day match on High: every patched material the scene draws is a twin or a sprite twin’s Points; the figures’ finish is a twin and the held replica reflects the prefiltered sky', async ({ page }) => {
   test.setTimeout(150_000);
   const errors = watchErrors(page);
   await boot(page, 'depot', 'day');
   // W3: the figures' per-vertex finish is a twin (no longer Three's own), and the replica sheen is the node renderer's
   // prefiltered sky, the same texture as the scene's environment.
-  expectCoverage(await coverage(page), { keys: ['smoke-plumes', 'fa8-vertex-finish'], points: [], surfaces: 2 });
+  expectCoverage(await coverage(page), { keys: ['smoke', 'figure-finish'], points: [], surfaces: 2 });
   const sheen = await qa(page, (_q, game) => {
     const held = game.session.combat.viewmodel.scene.environment;
     return { held: held?.isTexture === true, same: held === game.renderer.scene.environment, clustered: game.renderer.clusteredLights };

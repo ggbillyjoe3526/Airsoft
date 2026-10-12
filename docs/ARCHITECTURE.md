@@ -181,10 +181,10 @@ request. Each entry says where the contract lives, what it holds today and what 
   asks for WebGPU. Three's `WebGLRenderer` path, its GLSL post passes and retro filter went in W6a; when neither back end
   starts, the boot fails with the reason. `Renderer.backend` says what drew (`webgpu` or `webgl`, the WebGL2 back end;
   `?forceWebGL` asks for it in the e2e build), and `Renderer.stats` gives the draw counts read the same on either. A
-  pick applies from the next load. The world draws with node twins of its GLSL patches (W2,
-  `render/webgpu/worldTwins.ts`): Three's node library asks for a twin by the material's program key before building
-  its own, and each twin reads the very uniform objects and config tuning its patch gives WebGL, per drawn object
-  (`twinUniforms.ts`), so the two can't drift; sized points draw as instanced sprites (`pointSprites.ts`) and the
+  pick applies from the next load. Each world material that draws more than Three's own carries a node patch (W6b, `render/nodePatch.ts`;
+  they were GLSL patches the node renderer translated until then): what it draws and the uniform objects it reads,
+  set where the material is made. Three's node library asks the patch for its node material before building its own
+  (`render/webgpu/worldTwins.ts`), and that material reads the patch's uniforms per drawn object (`twinUniforms.ts`); sized points draw as instanced sprites (`pointSprites.ts`) and the
   prefiltered sky is made by the node renderer. Since W3 the figures' per-vertex finish has its twin
   (`figureNodes.ts`), the held replica reflects the same prefiltered sky, and on a real WebGPU device the night is lit
   by clustered lights (`nightLights.ts`, built on three/webgpu's Forward+ `ClusteredLightsNode`, with spot lights

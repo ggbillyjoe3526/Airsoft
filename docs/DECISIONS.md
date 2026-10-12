@@ -176,6 +176,10 @@ replaces its line; the old one stays findable in the archive or in git.
   neon signs' coloured light stay out of the node renderer.
 - **On a software adapter the Dev retro filter's views are judged by eye (2026-10-10, W4).** Its 8-colour palette turns
   sub-pixel noise into whole steps, so the numbers say nothing there.
+- **A change that should draw nothing new is checked against the commit before it (2026-10-11, W6b).** The WebGL
+  reference (b10c006) no longer matches Woodland or the figures, so `webgpu-compare.mjs --reference <commit>` draws the
+  commit before on both pages; a change that alters the look still checks Depot's and Neon Heights' world views against
+  b10c006, and the rest by eye.
 - **Woodland's triangle lines stayed as they were until the budgets split per renderer (owner, card, 2026-10-10, 15:18:
   "Keep for now"; W5).** W6a kept them: the scene's own triangles hold the owner's lines on both back ends, and the
   grass and stand-ins go on a line of their own (Performance budgets, below).
@@ -550,8 +554,9 @@ replaces its line; the old one stays findable in the archive or in git.
   Bumped from 950 kB on 2026-10-10 (FP1):
   main's game chunk was 950.2 kB after G11 and G12, already over, and FP1's hand holds made it 951.1 (950.3 once W4
   moved WebGL's retro filter to a chunk of its own); the WebGPU overhaul's step 6 (the old renderer removed) is where it
-  should shrink again. W6a (2026-10-11) took it from 1,007.1 to 982 kB (946 kB before main's M80, M82 and RM4); the
-  line stays 1,050 kB until W6b removes the world's GLSL patches, then drops back if the chunk has room.
+  should shrink again. W6a (2026-10-11) took it from 1,007.1 to 982 kB (946 kB before main's M80, M82 and RM4), and
+  W6b (2026-10-11, the world's GLSL patches gone) to 975 kB, so the line is back at 1,000 kB (warning from 900): a
+  change that crosses it bumps it with a line here.
 - **Production builds ship Brotli and gzip copies of their files (owner, 2026-10-04: Brotli now, `.wasm` later).**
 - **Level blocks collide as closed triangle meshes with `FIX_INTERNAL_EDGES`, not cuboids (2026-09-28).** Rapier's
   capsule controller sinks into any cuboid along its diagonals, and without the flag face-diagonal edges give ghost
