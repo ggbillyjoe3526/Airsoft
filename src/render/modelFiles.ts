@@ -1,6 +1,6 @@
 import type { ModelFilesInUse } from '../config/dev';
 import { type FigureModel, loadFigureModel } from './externalModels';
-import { type FigureRigs, loadFigureRigs } from './figureRig';
+import type { FigureRigs } from './figureRig';
 import { loadReplicaFiles, NO_REPLICA_FILES, type ReplicaFiles } from './replicaFiles';
 
 /**
@@ -25,7 +25,7 @@ export class ModelFiles {
   constructor(
     private readonly loadFigure: () => Promise<FigureModel | null> = () => loadFigureModel(),
     private readonly loadReplicas: () => Promise<ReplicaFiles> = () => loadReplicaFiles(),
-    private readonly loadRigs: () => Promise<FigureRigs | null> = () => loadFigureRigs(),
+    private readonly loadRigs: () => Promise<FigureRigs | null> = () => import('./figureRig').then((m) => m.loadFigureRigs()),
   ) {}
 
   /** Which files are drawn now (the last `use` to finish loading). */

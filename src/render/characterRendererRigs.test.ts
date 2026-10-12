@@ -6,6 +6,7 @@ import { type Character, createCharacter } from '../sim/character';
 import { vec3 } from '../sim/vec';
 import { CharacterRenderer } from './characterRenderer';
 import type { FigureCrowd } from './figureMix';
+import { figureRigs } from './figureRig';
 import type { RiggedFigure } from './riggedFigure';
 import { figureFilesForTests } from './testSupport';
 
@@ -18,14 +19,14 @@ const { rigs, files } = await figureFilesForTests();
 
 interface Inside {
   figures: { figure: unknown; rigged: RiggedFigure | null; material: THREE.MeshStandardMaterial }[];
-  thrown: { count: number; object: THREE.Object3D };
+  thrown: { count: number; object: THREE.Object3D } | null;
 }
 const inside = (r: CharacterRenderer): Inside => r as unknown as Inside;
 
 const MIXED: FigureCrowd = { robots: [false, true], realistic: false };
 
 function make(chars: Character[], withRigs: boolean, detail: 'low' | 'high' = 'low') {
-  return new CharacterRenderer(chars, [0x3d8bff, 0xff5a3d], HITS, null, detail, MIXED, files, withRigs ? { ...rigs, dispose: () => {} } : null);
+  return new CharacterRenderer(chars, [0x3d8bff, 0xff5a3d], HITS, null, detail, MIXED, files, withRigs ? figureRigs(rigs.human, rigs.robot, () => {}) : null);
 }
 const chars = (): Character[] => [createCharacter(0, vec3(0, 0, 0), 0), createCharacter(1, vec3(2, 0, 0), 0.5, undefined, 1)];
 const settle = (r: CharacterRenderer, n = 5): void => {
@@ -58,7 +59,7 @@ describe('the rigged figures in CharacterRenderer', () => {
     const r = make(chars(), false);
     const f = inside(r).figures;
     expect(f.every((s) => s.rigged === null && s.figure !== null)).toBe(true);
-    expect(r.object.children).not.toContain(inside(r).thrown.object);
+    expect(inside(r).thrown).toBeNull();
     settle(r);
     r.fired(0);
     r.dispose();
@@ -66,7 +67,7 @@ describe('the rigged figures in CharacterRenderer', () => {
 
   it('with the rigs the thrown-magazine group is part of the scene object', () => {
     const r = make(chars(), true);
-    expect(r.object.children).toContain(inside(r).thrown.object);
+    expect(r.object.children).toContain(inside(r).thrown!.object);
     r.dispose();
   });
 
@@ -190,6 +191,6 @@ describe('the rigged figures in CharacterRenderer', () => {
     for (const s of spies) expect(s).toHaveBeenCalled();
     for (const root of roots) expect(root.parent).toBeNull();
     expect(scene.children).toHaveLength(0);
-    expect(inside(r).thrown.count).toBe(0);
+    expect(inside(r).thrown!.count).toBe(0);
   });
 });

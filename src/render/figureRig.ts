@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { FIGURE_RIG, FIGURE_RIG_KINDS, type FigureRigKind } from '../config/figureRig';
 import { loadGltfScene } from './externalModels';
+import { RiggedFigure, type RiggedFigureSetup } from './riggedFigure';
+import { ThrownMagazines } from './thrownMagazines';
 import { BODY_CLIPS, FIRE_CLIPS, type MagazineTimes, POSE_CLIPS, POSE_SLOT, type PoseClipTable, type PoseHold } from './figurePose';
 
 /**
@@ -99,11 +101,23 @@ export interface FigureRig {
   dispose(): void;
 }
 
-/** Both kinds, loaded together. */
+/**
+ * Both kinds, loaded together, with the drawing that plays them: this module and the ones below it are loaded only
+ * when the Dev switches let the figures in (ModelFiles), so the game's own chunk doesn't carry them.
+ */
 export interface FigureRigs {
   readonly human: FigureRig;
   readonly robot: FigureRig;
+  /** One figure drawn from a rig (render/riggedFigure.ts). */
+  figure(setup: RiggedFigureSetup): RiggedFigure;
+  /** The thrown-away magazines of a match's figures (render/thrownMagazines.ts). */
+  thrownMagazines(): ThrownMagazines;
   dispose(): void;
+}
+
+/** Both kinds as FigureRigs, with `dispose` freeing them (or whatever the caller says, for shared test files). */
+export function figureRigs(human: FigureRig, robot: FigureRig, dispose: () => void): FigureRigs {
+  return { human, robot, figure: (setup) => new RiggedFigure(setup), thrownMagazines: () => new ThrownMagazines(), dispose };
 }
 
 /** The URLs of `kind`'s file and sidecar loader in this build, or null when it lacks either. */
@@ -132,14 +146,10 @@ export async function loadFigureRigs(): Promise<FigureRigs | null> {
     return null;
   }
   const [human, robot] = made as [FigureRig, FigureRig];
-  return {
-    human,
-    robot,
-    dispose: () => {
-      human.dispose();
-      robot.dispose();
-    },
-  };
+  return figureRigs(human, robot, () => {
+    human.dispose();
+    robot.dispose();
+  });
 }
 
 /** Sidecar rows (Blender axes) as a matrix. */

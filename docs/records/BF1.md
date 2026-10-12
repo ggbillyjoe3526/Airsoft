@@ -16,6 +16,7 @@
 - **The figure files ship as exported, loaded only with the switches off.** The default download and look stay as they were (also in DECISIONS).
 - **Levels of detail at 12 and 28 m on High, 6 and 16 m below.** The middle file is about a third of the triangles and reads the same at that range.
 - **Your own body sits 0.17 m behind the eyes, without its head, arms or replica.** The viewmodel already draws the arms and replica, and that distance keeps the camera out of the chest.
+- **The rigged drawing is its own chunk, loaded with the figure files.** The game chunk was 1 % over its 1,000 kB budget on CI with it inside, and the default game never draws it (963 kB without).
 - **At most 12 thrown magazines lie on the ground at once, pooled, and cleared at each new round.** The oldest goes first, so a long round never piles them up, and a throw allocates nothing.
 - **The replica swaps to the pistol 35 % into the switch clip.** That is the point the figure file's own note gives for the swap in the Blender move.
 

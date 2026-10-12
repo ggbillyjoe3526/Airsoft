@@ -6,6 +6,7 @@ import { characterHitVolume, createHitVolume, type HitVolume, inflateHitVolume, 
 import { vec3 } from '../sim/vec';
 import { CharacterRenderer } from './characterRenderer';
 import type { FigureCrowd } from './figureMix';
+import { figureRigs } from './figureRig';
 import type { RiggedFigure } from './riggedFigure';
 import { figureFilesForTests } from './testSupport';
 
@@ -86,7 +87,7 @@ const LIMITS: Readonly<Record<string, { missed: number; phantom: number }>> = {
 const ARM_BONE = /^(UpperArm|Forearm|ForearmTwist|Elbow|Hand|Grip|Thumb|Index|Middle|Ring|Pinky|Finger)/;
 
 const { rigs: kinds, files } = await figureFilesForTests();
-const rigs = { ...kinds, dispose: () => {} };
+const rigs = figureRigs(kinds.human, kinds.robot, () => {});
 
 interface Tally {
   body: number;

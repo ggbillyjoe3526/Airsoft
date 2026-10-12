@@ -12,8 +12,8 @@ import { type FigureModel, fadeModelMaterials } from './externalModels';
 import { useVertexFinish } from './figureFinish';
 import { type FigureCrowd, figureDress, HUMAN_CROWD } from './figureMix';
 import type { FigureRigs } from './figureRig';
-import { type RiggedFrame, RiggedFigure } from './riggedFigure';
-import { ThrownMagazines } from './thrownMagazines';
+import type { RiggedFigure, RiggedFrame } from './riggedFigure';
+import type { ThrownMagazines } from './thrownMagazines';
 import { NO_REPLICA_FILES, type ReplicaFiles } from './replicaFiles';
 import { type ProbeGrid, type ProbeSample, probeTint, sampleProbes } from './probeGrid';
 
@@ -147,8 +147,8 @@ export class CharacterRenderer {
   /** The map's baked light the figures read as they move (G6), or null; and the torch beams' colour (setTorchLift). */
   private probes: ProbeGrid | null = null;
   private readonly torchColour = new THREE.Color();
-  /** The empty magazines rigged figures throw away (BF1). */
-  private readonly thrown = new ThrownMagazines();
+  /** The empty magazines rigged figures throw away (BF1), with the rigs only. */
+  private readonly thrown: ThrownMagazines | null;
   private readonly frame: RiggedFrame = { alpha: 0, dt: 0, eyeX: 0, eyeY: 0, eyeZ: 0, firstPerson: false, leanX: 0, leanZ: 0, castShadow: true };
 
   constructor(
@@ -170,7 +170,8 @@ export class CharacterRenderer {
      */
     private readonly rigs: FigureRigs | null = null,
   ) {
-    if (rigs) this.object.add(this.thrown.object);
+    this.thrown = rigs?.thrownMagazines() ?? null;
+    if (this.thrown) this.object.add(this.thrown.object);
     for (let i = 0; i < characters.length; i++) {
       const c = characters[i]!;
       const silencer = rifleSilenced(c);
@@ -184,7 +185,7 @@ export class CharacterRenderer {
 
   /** A new round: the magazines thrown in the last one are cleared away with the field. */
   roundStarted(): void {
-    this.thrown.clear();
+    this.thrown?.clear();
   }
 
   /** Character `id` fired: a rigged figure's trigger finger presses (BF1; the built-in figures don't show it). */
@@ -296,11 +297,11 @@ export class CharacterRenderer {
     const kit: FigureKit = parts.rifleSilencer || parts.rifleTorch || parts.pistolTorch ? parts : BARE_KIT;
     const dress = figureDress(this.crowd, i, c.team, c.armament.replicas, this.files);
     const team = this.teamColors[c.team] ?? 0xffffff;
-    if (this.rigs) {
+    if (this.rigs && this.thrown) {
       // The rigged figure: the replicas' own models in the fist, fitted parts and all.
       material.userData.authored = { opacity: 1, transparent: false };
       const look = figureLooks(c.id);
-      const rigged = new RiggedFigure({
+      const rigged = this.rigs.figure({
         rig: dress.robot ? this.rigs.robot : this.rigs.human,
         character: c,
         id: c.id,
@@ -441,7 +442,7 @@ export class CharacterRenderer {
    * is drawn as your first-person body. The thrown magazines fly on with the first figure.
    */
   private updateRigged(c: Character, s: FigureState, r: RiggedFigure, alpha: number, dt: number, hiddenId: number, eye?: { x: number; y: number; z: number }): void {
-    if (s === this.figures[0]) this.thrown.update(dt);
+    if (s === this.figures[0]) this.thrown?.update(dt);
     const x = c.prevPosition.x + (c.position.x - c.prevPosition.x) * alpha;
     const y = c.prevPosition.y + (c.position.y - c.prevPosition.y) * alpha;
     const z = c.prevPosition.z + (c.position.z - c.prevPosition.z) * alpha;
@@ -480,7 +481,7 @@ export class CharacterRenderer {
       s.rigged?.dispose();
       s.material.dispose();
     }
-    this.thrown.dispose();
+    this.thrown?.dispose();
     this.material.dispose();
     this.calloutMaterial.dispose();
     this.calloutTexture.dispose();
