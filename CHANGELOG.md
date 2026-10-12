@@ -214,6 +214,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **BP3b** · The mode content check plays each map only at team sizes the game allows
 - **BF1** · The perf harness's --models option measures with the figures in, and every run records the figures' drawing time per frame
 - **IM6** · Checks finish in about 10 minutes, not 25: browser tests run in four parallel jobs; current actions, Vite 8.3.4, Vitest 5.0.3, Playwright 1.64
+- **IM4** · Type check and build use TypeScript 7: the type check takes about 3.5 s, not 19, and a full build about 19 s, not 35; the game is the same
 
 ## 0.1 Dev 4 · 2026-10-06
 
