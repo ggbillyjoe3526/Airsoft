@@ -18,8 +18,8 @@ export const CHUNK_BUDGET = {
    * 993.5, and the tutorial's scoreboard and order wheel showcase, its finish pop-up and the rarity bar took it to 1003.2.
    * Back to 1000 since W6b (DECISIONS 2026-10-11): the old renderer (W6a) and the world's GLSL (W6b) gone, it is 975.
    * 1250 since IM1 (owner, DECISIONS 2026-10-12): the Loadout, Armory and Settings screens and the range, fetched on
-   * first use, took it from 985 to 893, and the owner raised the line for room in Dev 6. The start-up code is the `game`
-   * chunk (vite.config.ts), the page's entry a stub.
+   * first use, took the start-up code from 990 (with BF1) to 897, and the owner raised the line for room in Dev 6. The
+   * start-up code is all in the `game` chunk (vite.config.ts), the page's entry a stub.
    */
   defaultKb: 1250,
   /**

@@ -606,11 +606,11 @@ replaces its line; the old one stays findable in the archive or in git.
   moved WebGL's retro filter to a chunk of its own); the WebGPU overhaul's step 6 (the old renderer removed) is where it
   should shrink again. W6a (2026-10-11) took it from 1,007.1 to 982 kB (946 kB before main's M80, M82 and RM4), and
   W6b (2026-10-11, the world's GLSL patches gone) to 975 kB, so the line is back at 1,000 kB (warning from 900): a
-  change that crosses it bumps it with a line here. Raised to 1,250 kB on 2026-10-12 (owner, IM1): main's game chunk
-  was 985 kB; the code fetched on first use (below) took the start-up code to 893 kB (71 %), and the owner asked why
-  1,000 and agreed 1,250 for room in Dev 6, a tripwire still (compressed, the chunk is about a third of its size). Since
-  IM1 the game chunk is the `game` group (`vite.config.ts`: every module `main.ts` reaches by static imports), so all
-  start-up code is counted in one chunk.
+  change that crosses it bumps it with a line here. Raised to 1,250 kB on 2026-10-12 (owner, IM1): main's start-up
+  code was 990 kB (the game chunk 964, and 26 kB the bundler had split beside it since BF1's figures); the code fetched
+  on first use (below) took it to 897 kB (72 %), and the owner asked why 1,000 and agreed 1,250 for room in Dev 6, a
+  tripwire still (compressed, the chunk is about a third of its size). Since IM1 the game chunk is the `game` group
+  (`vite.config.ts`: every module `main.ts` reaches by static imports), so all start-up code is counted in one chunk.
 - **Menus stay smooth; what a menu opens is fetched on first use (owner, 2026-10-12; IM1).** "The UI should always
   feel smooth and responsive. However, for entering tutorial, practice range, maps, matches you can add a loading
   screen if it helps." The Loadout (with Customise), the Armory and Settings (`ui/menus/lazyScreens.ts`) and the

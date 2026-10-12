@@ -116,7 +116,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **RM7** · The Gas Pistol is now the GBB Pistol: same stats, pool ID and parts, redesigned from the owner's reference photos
 - **RM7** · GBB Pistol look: slimmer slide flush with the frame, ejection port further back, one-piece trigger guard, shorter grip, low sights
 - **RM8** · Red dot, 2× scope, silencers and torches use new Blender models (Disable all models off): smaller, sit lower, aim follows them
-- **IM1** · The start-up game file is smaller (893 kB, was 985 kB): the Loadout, Armory, Settings and the practice range load in the background once the title shows
+- **IM1** · The start-up game file is smaller (897 kB, was 990 kB): the Loadout, Armory, Settings and the practice range load in the background once the title shows
 
 ### Fixed
 - **G11** · The team camo on players reads clearly on Medium and up: crisp dark and light blotches printed per pixel, on WebGL and WebGPU; Low keeps plain clothes
