@@ -232,7 +232,7 @@ wears off, and each match has a light breeze (calm to about 2 m/s) that pushes B
 Loadout (the title screen or the top bar). The slots are Primary, Secondary and Grenades (greyed: none yet); your
 replicas are listed with their tier. Right-click an equipped replica, or use Customise, to change its parts.
 
-- [ ] **Swap slots.** Put the Gas Pistol in Primary: the AEG rifle moves to Secondary. Any replica goes in either slot.
+- [ ] **Swap slots.** Put the GBB Pistol in Primary: the AEG rifle moves to Secondary. Any replica goes in either slot.
 - [ ] **Customise.** Colour first, then the optic, BB weight, hop-up, grip, laser, magazine, power source, barrel,
   muzzle and light, each offering only parts you own that fit. Skins say they come later. Esc goes back.
 - [ ] **Sort and filter by rarity (M82).** Over Your replicas: Sort Replica (as before) or Rarity (rarest first), and
@@ -290,7 +290,7 @@ Dev › Unlock all gear.
   Out of the box it stays on target to about 33 m.
 - [ ] **Its sound.** A quiet electronic chirp and a soft pop with no motor whine; an empty trigger blips; a reload
   ends in a two-note chime. Futuristic but still a toy?
-- [ ] **Leave the AEG at home.** Carry the Cyber Pistol and the Gas Pistol on Normal: the bots' AEG shots still sound.
+- [ ] **Leave the AEG at home.** Carry the Cyber Pistol and the GBB Pistol on Normal: the bots' AEG shots still sound.
 - [ ] **The Armory.** Its Chase line names the Cyber Pistol, Legendary only, 0.25 %, about 1 in 400. In your
   collection its row has one pip, Legendary. When one drops for real (about 130 Shots on average), its tile glows and
   the reveal says "Chase item: Cyber Pistol!".

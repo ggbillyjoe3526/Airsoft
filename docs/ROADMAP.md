@@ -198,7 +198,7 @@ Dev 6 comes after M92–M95 (the holster and the practice upgrades). The last tw
 | # | Feature | Was |
 |---|---|---|
 | 1 | Field rule presets (Skirmish, CQB, Speedsoft; Milsim once medic and pouches exist), plus fun house rules such as pistols only or one magazine a round; Tournament and Pro CQB fold in | 0.3 |
-| 14 | The gas pistol becomes a blowback pistol: the slide kicks and locks back on empty | 0.3 |
+| 14 | The gas pistol becomes a blowback pistol: the slide kicks and locks back on empty (**done**: the GBB Pistol, RM7) | 0.3 |
 | 15 | A 2–4x variable scope (mouse wheel while aiming) and a holographic sight (Dev 4 note 5) | 0.3 |
 | 16 | Gas cooling: rapid fire weakens gas replicas until they recover | 0.3 |
 | 17 | The chrono and field limits: a replica over the field's limit doesn't pass | 0.3 |
@@ -270,7 +270,7 @@ below.
 - **Unlocks never block fun.** Progression is earned by unlocking replicas and gear, never by levels. Since M26 (owner,
   2026-10-04) replicas and parts are assets in a pool (`pool.md`) unlocked in the Armory with Field Credits earned by
   playing: completely free, never bought with money, marked beta, and it can be switched off. The starting kit (AEG
-  Rifle, Gas Pistol, Standard Battery, Green Gas) is a full loadout, and BBs are always free.
+  Rifle, GBB Pistol, Standard Battery, Green Gas) is a full loadout, and BBs are always free.
 
 ## Beta: finishing 0.1 (not scheduled yet)
 
@@ -500,7 +500,7 @@ gas, spring; HPA if it comes), using the sound profiles from M13:
 | Platform | What sets it apart | Version |
 |---|---|---|
 | AEGs | Electric full-auto with a motor whirr; mid- or hi-cap mags | In the game |
-| GBB pistols | Blowback slide; the slide locks back on empty; gas mags (the gas pistol becomes this) | 0.1 Dev 6 |
+| GBB pistols | Blowback slide; the slide locks back on empty; gas mags (the gas pistol became the GBB Pistol, RM7) | In the game |
 | Spring sniper rifles | One shot per bolt cycle; high velocity and long reach; a loud crack | 0.1 Dev 6 |
 | DMRs | Semi-auto only; high velocity; a minimum engagement distance, as at real sites | 0.3 |
 | SMGs | Compact and quick to handle; high rate; short range | 0.4 |

@@ -30,7 +30,7 @@ describe("a returning player's M17b picks (M26b)", () => {
     expect(ownedCount(c, item('Angled Grip'))).toBe(0);
     expect(ownedCount(c, item('Extended Magazine'))).toBe(1);
     expect(model.fitOf(id('AEG Rifle'))).toMatchObject({ optic: item('2x Scope'), grip: item('Angled Grip', 'epic'), magazine: null });
-    expect(model.fitOf(id('Gas Pistol')).magazine).toEqual(item('Extended Magazine'));
+    expect(model.fitOf(id('GBB Pistol')).magazine).toEqual(item('Extended Magazine'));
     // Never again, even if the player later scraps or changes them.
     model.setFit(id('AEG Rifle'), 'optic', null);
     expect(carryOverOldPicks(model, c)).toBe(false);

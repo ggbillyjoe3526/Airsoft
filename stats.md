@@ -59,7 +59,7 @@ Stacked bonuses (a rare replica on a strong gas, say) stop at the limit, and the
 | Key | Name | Class | Energy (J) | BB (g) | Fire rate (BBs/s) | Magazine (BBs) | Magazines | Reload (s) | Draw (s) | Spread (°) | Recoil (°) |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | aeg | AEG Rifle | rifle | 0.97 | 0.25 | 13 | 60 | 4 | 1.8 | 0.45 | 0.45 | 0.18 |
-| pistol | Gas Pistol | pistol | 0.52 | 0.2 | 7 | 18 | 4 | 1.2 | 0.3 | 0.8 | 0.5 |
+| pistol | GBB Pistol | pistol | 0.52 | 0.2 | 7 | 18 | 4 | 1.2 | 0.3 | 0.8 | 0.5 |
 | cyber | Cyber Pistol | pistol | 0.93 | 0.25 | 13.03 | 50 | 3 | 1.294 | 0.329 | 0.353 | 0.06 |
 
 - **Fire rate.** BBs a second with the trigger held (auto, and within a burst), or the fastest you can click (semi).
@@ -134,7 +134,7 @@ barrel.
 
 ## Muzzle parts
 
-Screwed onto a replica tagged `muzzle-thread` in pool.md (the Gas Pistol and the AEG Rifle).
+Screwed onto a replica tagged `muzzle-thread` in pool.md (the GBB Pistol and the AEG Rifle).
 
 | Key | Name | Energy % | Handling (×) | Heard from (×) |
 |---|---|---|---|---|

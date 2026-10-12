@@ -419,6 +419,11 @@ replaces its line; the old one stays findable in the archive or in git.
 - **Disable Armory and Unlock all gear are Dev switches (owner: the Armory "can be disabled in settings", 2026-10-04).**
   Disable Armory greys out the Armory and pays no FC (the collection is kept). Unlock all gear lends the Loadout every
   asset at every tier without touching the collection, and keeps the match out of the records and unpaid.
+- **The Gas Pistol becomes the GBB Pistol, a blowback replica with the same numbers (owner, 2026-10-12).** Redesigned
+  from his six reference photos of a polymer pistol, with no logo, lettering or exact copy (RM7): a slimmer slide flush
+  with the frame, the ejection port further back, the trigger guard one piece with the frame, a shorter grip and small
+  low sights. Its slide kicks back over the still barrel on every shot and stays locked back on an empty magazine until
+  a reload (0.1 Dev 6 feature 14).
 
 ## Menus, HUD, settings and accessibility
 

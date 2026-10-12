@@ -49,7 +49,8 @@ describe('Replica detail (FA8, QualitySettings.replicaDetail)', () => {
     // G2's models, pinned so a change is seen; below the models before it (the rifle 10,844 at once, the pistol 7,944).
     // M84: the rifle's rear sight is a see-through ring (+28), so its iron sights line up.
     expect(drawn(low, 'aeg')).toBe(8536);
-    expect(drawn(low, 'pistol')).toBe(7096);
+    // RM7: the GBB Pistol's slimmer slide over a barrel and guide rod bared as it kicks back, a notched rear sight (+80).
+    expect(drawn(low, 'pistol')).toBe(7176);
     expect(drawn(low, 'aeg')).toBeLessThanOrEqual(10844);
     expect(drawn(low, 'pistol')).toBeLessThanOrEqual(7944);
     for (const r of LOADOUT) {

@@ -78,7 +78,7 @@ describe('the AEG and gas pistol model files (RM1)', () => {
     }
     // Pinned so a new export is seen.
     expect(aeg.triangles).toEqual({ held: 5558, figure: 244 });
-    expect(pistol.triangles).toEqual({ held: 1700, figure: 60 });
+    expect(pistol.triangles).toEqual({ held: 3190, figure: 180 }); // the GBB Pistol (RM7)
     aeg.dispose();
     pistol.dispose();
   });

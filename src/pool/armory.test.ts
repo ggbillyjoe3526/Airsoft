@@ -142,7 +142,7 @@ describe('Tokens and Shots (M26c)', () => {
 
   it('lift only the last item of a ten-Shot that drew nothing at the guaranteed tier', () => {
     // Rare can never come up by the odds, so every ten-Shot falls back on the guarantee.
-    const text = ['### Rarity', '| Tier | Odds % | Bonus % | Scrap FC |', '|---|---|---|---|', '| Common | 100 | 0 | 5 |', '| Rare | 0 | 6 | 20 |', '### Replicas', '| ID | Name | Key | Tags | Starter | In Shots |', '|---|---|---|---|---|---|', '| 000001 | Gas Pistol | pistol | pistol, gas | yes | yes |'].join('\n');
+    const text = ['### Rarity', '| Tier | Odds % | Bonus % | Scrap FC |', '|---|---|---|---|', '| Common | 100 | 0 | 5 |', '| Rare | 0 | 6 | 20 |', '### Replicas', '| ID | Name | Key | Tags | Starter | In Shots |', '|---|---|---|---|---|---|', '| 000001 | GBB Pistol | pistol | pistol, gas | yes | yes |'].join('\n');
     const rigged: Pool = loadPool(text);
     expect(rigged.economy.tenShotGuarantee).toBe('rare');
     const c = newCollection(rigged, 5);
@@ -157,7 +157,7 @@ describe('Tokens and Shots (M26c)', () => {
 
   it('normalise odds that do not add up to 100, as the warning in pool.md promises', () => {
     const text = (odds: [number, number]) =>
-      ['### Rarity', '| Tier | Odds % | Bonus % | Scrap FC |', '|---|---|---|---|', `| Common | ${odds[0]} | 0 | 5 |`, `| Rare | ${odds[1]} | 6 | 20 |`, '### Replicas', '| ID | Name | Key | Tags | Starter | In Shots |', '|---|---|---|---|---|---|', '| 000001 | Gas Pistol | pistol | pistol, gas | yes | yes |'].join('\n');
+      ['### Rarity', '| Tier | Odds % | Bonus % | Scrap FC |', '|---|---|---|---|', `| Common | ${odds[0]} | 0 | 5 |`, `| Rare | ${odds[1]} | 6 | 20 |`, '### Replicas', '| ID | Name | Key | Tags | Starter | In Shots |', '|---|---|---|---|---|---|', '| 000001 | GBB Pistol | pistol | pistol, gas | yes | yes |'].join('\n');
     const odd: Pool = loadPool(text([30, 30]));
     expect(tierChances(odd).map((t) => t.percent)).toEqual([50, 50]);
   });
@@ -189,7 +189,7 @@ function rigged(tiers: string[], extra: string[] = []): Pool {
       '### Replicas',
       '| ID | Name | Key | Tags | Starter | In Shots |',
       '|---|---|---|---|---|---|',
-      '| 000001 | Gas Pistol | pistol | pistol, gas, top-rail | yes | yes |',
+      '| 000001 | GBB Pistol | pistol | pistol, gas, top-rail | yes | yes |',
       '### Optics',
       '| ID | Name | Key | Fits | Starter | In Shots |',
       '|---|---|---|---|---|---|',
@@ -252,7 +252,7 @@ describe('pity (audit POOL-01)', () => {
 
 describe('duplicate protection (audit POOL-05)', () => {
   it('picks an asset not owned at the drawn tier twice as often as one owned, leaving the tier odds alone', () => {
-    // Common only: the Gas Pistol is owned at Common (a starter), the Red Dot never is (scrapped back after each Shot).
+    // Common only: the GBB Pistol is owned at Common (a starter), the Red Dot never is (scrapped back after each Shot).
     const p = rigged(['| Common | 100 | 0 | 5 |']);
     expect(p.economy.unownedWeight).toBe(2);
     const c = newCollection(p, 5);
@@ -269,7 +269,7 @@ describe('duplicate protection (audit POOL-05)', () => {
   });
 
   it('weights the asset of an item lifted by pity too, at its new tier', () => {
-    // Only pity can give an Epic here. Both assets are owned at Common (drawn evenly there); at Epic only the Gas Pistol.
+    // Only pity can give an Epic here. Both assets are owned at Common (drawn evenly there); at Epic only the GBB Pistol.
     const p = rigged(['| Common | 100 | 0 | 5 |', '| Epic | 0 | 12 | 80 |']);
     let dots = 0;
     const n = 3000;
@@ -542,7 +542,7 @@ describe('M32 acceptance 3: Shots and the chase item', () => {
     const text = [
       '### Rarity', '| Tier | Odds % | Bonus % | Scrap FC |', '|---|---|---|---|', '| Common | 100 | 0 | 5 |', '| Rare | 0 | 6 | 20 |', '| Legendary | 0 | 15 | 160 |',
       '### Replicas', '| ID | Name | Key | Tags | Starter | In Shots | Tiers | Drop % |', '|---|---|---|---|---|---|---|---|',
-      '| 000001 | Gas Pistol | pistol | pistol, gas | yes | yes | | |',
+      '| 000001 | GBB Pistol | pistol | pistol, gas | yes | yes | | |',
       '| 000019 | Cyber Pistol | cyber | pistol, built-in-power | no | yes | Legendary | 30 |',
     ].join('\n');
     const rigged = loadPool(text);

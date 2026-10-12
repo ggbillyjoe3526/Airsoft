@@ -12,7 +12,7 @@ import { speckleTextures } from './replicaFinish';
 import { AEG_GAS_BLOCK_END, AEG_MAGAZINES, AEG_MUZZLE, AEG_MUZZLE_DEVICES, AEG_PARTS, CYBER_MAGAZINES, CYBER_MUZZLE, CYBER_PARTS, type MuzzleDraw, type MuzzleLayout, type PartDraw, PISTOL_LASER_LENS, PISTOL_MAGAZINES, PISTOL_MUZZLE, PISTOL_MUZZLE_DEVICES, PISTOL_PARTS, REPLICA_PART_TABLES } from './replicaParts';
 import { coloursOf, createMaterials, LOW_DETAIL, type MaterialKey, ModelBuilder, PAINTED, paintedMaterials, type Pt, type ReplicaDetail } from './replicaBuilder';
 import { NO_REPLICA_FILES, type ReplicaFile, type ReplicaFilePiece, type ReplicaFiles } from './replicaFiles';
-import { ReplicaRig, withBone } from './replicaRig';
+import { ReplicaRig, slidingRig, withBone } from './replicaRig';
 import { REPLICA_FILE } from '../config/assets';
 
 // The public names that moved out with the split stay importable from here.
@@ -244,26 +244,44 @@ function pistolHands(b: ModelBuilder, support: ModelBuilder, detail: ReplicaDeta
 }
 
 /**
- * Polymer striker-fired gas pistol (G2: squarer, as the concept): an angular slide with top chamfers and the accent line
- * along both sides, a frame with a railed dust cover and a squared trigger guard, a rectangular grip at a steady rake
- * with a short beavertail. High: front and rear serrations, stippled grip panels and a thumb ledge.
+ * The built-in GBB Pistol's slide (RM7), as its model file's: how far it runs back over the still barrel, and the keys
+ * of its Fire (a shot: snapped back, full travel by the third frame, then home) and SlideLock (held back on an empty
+ * magazine) animations, each a share of the travel, a frame (1/60 s) apart.
+ */
+const PISTOL_SLIDE = { travel: 0.026, step: 1 / 60, clips: { Fire: [0, 0.4, 0.85, 1, 0.72, 0.36, 0.07, 0], SlideLock: [1, 1] } } as const;
+
+/**
+ * The GBB Pistol, built in (G2: squarer, as the concept; RM7: the slimmer slide and low sights of the owner's redesign,
+ * 2026-10-12): an angular slide with top chamfers and the accent line along both sides, a frame with a railed dust
+ * cover and a squared trigger guard, a rectangular grip at a steady rake with a short beavertail. The slide rides a bone
+ * in the body's own meshes, as a model file's moving parts do (no extra draw call): it kicks back over the still barrel
+ * on each shot and locks back on an empty magazine. High: front and rear serrations, stippled grip panels and a thumb
+ * ledge.
  */
 function buildPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, detail: ReplicaDetail, arms: ArmBuilders | null): ReplicaModel {
   const b = new ModelBuilder(detail);
-  // Slide, its accent line, the barrel hood in the ejection port, sights, muzzle.
-  b.profile('polymer', [[-0.09, 0.0], [0.1, 0.0], [0.1, 0.03], [0.092, 0.036], [-0.08, 0.036], [-0.09, 0.03]], 0.032, 0.003);
-  b.box('accent', -0.08, 0.094, 0.012, 0.016, 0.0332);
-  if (b.high) {
+  // The slide: its accent line, grooves and sights (the notch's top and the post's tip on config/replicas.ts
+  // look.ironSight's line).
+  const s = new ModelBuilder(detail);
+  s.profile('polymer', [[-0.088, -0.0025], [0.1, -0.0025], [0.1, 0.0225], [0.096, 0.0265], [-0.084, 0.0265], [-0.088, 0.0225]], 0.032, 0.003);
+  s.box('accent', -0.08, 0.094, 0.0025, 0.0055, 0.0332);
+  if (s.high) {
     // Seven grooves at the rear and four at the front, cut on both sides.
     for (const side of [-1, 1]) {
-      for (let i = 0; i < 7; i++) b.box('rubber', -0.083 + i * 0.0065, -0.08 + i * 0.0065, 0.018, 0.033, 0.0008, side * 0.0161);
-      for (let i = 0; i < 4; i++) b.box('rubber', 0.07 + i * 0.0065, 0.073 + i * 0.0065, 0.018, 0.033, 0.0008, side * 0.0161);
+      for (let i = 0; i < 7; i++) s.box('rubber', -0.083 + i * 0.0065, -0.08 + i * 0.0065, 0.0075, 0.0245, 0.0008, side * 0.0161);
+      for (let i = 0; i < 4; i++) s.box('rubber', 0.07 + i * 0.0065, 0.073 + i * 0.0065, 0.0075, 0.0245, 0.0008, side * 0.0161);
     }
-    b.box('laserLens', 0.0, 0.003, 0.0355, 0.037, 0.003); // loaded-chamber dot
-  } else for (let i = 0; i < 6; i++) b.box('rubber', -0.084 + i * 0.008, -0.081 + i * 0.008, 0.018, 0.033, 0.0325);
-  b.box('metal', 0.008, 0.044, 0.03, 0.0365, 0.018);
-  b.box('detail', -0.084, -0.072, 0.036, 0.045, 0.022); // rear sight
-  b.box('detail', 0.086, 0.094, 0.036, 0.043, 0.006); // front sight
+    s.box('laserLens', 0.019, 0.022, 0.0265, 0.0275, 0.003); // loaded-chamber dot, ahead of the port
+  } else for (let i = 0; i < 6; i++) s.box('rubber', -0.084 + i * 0.008, -0.081 + i * 0.008, 0.0075, 0.0245, 0.0325);
+  // The rear sight: a base and two ears either side of the notch; the front post.
+  s.box('detail', -0.084, -0.074, 0.0265, 0.0299, 0.013);
+  for (const side of [-1, 1]) s.box('detail', -0.084, -0.074, 0.0299, 0.0323, 0.0047, side * 0.00405);
+  s.box('detail', 0.087, 0.092, 0.0265, 0.032, 0.0034);
+  // Still under the slide: the barrel (bare when the slide is back), its hood in the ejection port, the guide rod, the
+  // muzzle.
+  b.tube('metal', 0.07, 0.0295, 0.015, 0.006, 10);
+  b.tube('metal', 0.07, 0.0295, 0.0045, 0.0028, 8);
+  b.box('metal', -0.0145, 0.0155, 0.02, 0.027, 0.018);
   b.tube(orangeTip ? 'orange' : 'rubber', 0.1, 0.004, 0.015, orangeTip ? 0.0095 : 0.006, 12);
   // Frame: the dust cover with an accessory rail, the squared trigger guard, the grip.
   b.profile('furniture', [[-0.085, 0.0], [0.096, 0.0], [0.096, -0.014], [0.038, -0.016], [-0.07, -0.016]], 0.03, 0.003);
@@ -281,6 +299,15 @@ function buildPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean,
   const support = new ModelBuilder(detail);
   if (arms) pistolHands(b, support, detail, arms);
   const group = b.build(m);
+  const slide = [...s.build(m).children] as THREE.Mesh[];
+  for (const mesh of slide) {
+    const g = withBone(mesh.geometry, 1);
+    mesh.geometry.dispose();
+    mesh.geometry = g;
+  }
+  group.add(...slide);
+  mergeTwins(group, slide, true);
+  const rig = new ReplicaRig(group, slidingRig('slide', PISTOL_SLIDE.travel, PISTOL_SLIDE.step, PISTOL_SLIDE.clips));
   for (const [name, draw] of Object.entries(PISTOL_PARTS)) group.add(drawnPart(draw, m, detail, name));
   group.getObjectByName('laser:redLaser')?.add(laserBeam(PISTOL_LASER_LENS));
   const magazine = magazinePart(PISTOL_MAGAZINES, m, detail, GRIP_DOWN, { extended: [0, -0.032, 0] });
@@ -291,7 +318,7 @@ function buildPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean,
   // A silencer screwed onto the threaded barrel (M29b), from the muzzle-device table.
   const mount = muzzleMount(PISTOL_MUZZLE, PISTOL_MUZZLE_DEVICES, m, detail, orangeTip);
   group.add(mount.group);
-  return { group, muzzle: mount.marker, magazine, supportHand, mount };
+  return { group, muzzle: mount.marker, magazine, supportHand, mount, rig };
 }
 
 /**
@@ -496,7 +523,7 @@ export interface ReplicaModel {
   magazine: MagazinePart;
   supportHand: SupportHandPart;
   mount: MuzzleMount;
-  /** The moving parts from its model file (RM1), posed by the viewmodel; absent on a built-in model. */
+  /** The moving parts from its model file (RM1), posed by the viewmodel; on a built-in model the GBB Pistol's slide only (RM7). */
   rig?: ReplicaRig | null;
 }
 
