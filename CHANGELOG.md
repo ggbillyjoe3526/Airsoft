@@ -101,6 +101,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M91** · Night torch beams are soft and diffused: they fade in from the lens, edges melt away, the lit spot is soft-edged; Low keeps the old beams
 - **M81** · Practice range and tutorial in Depot's new look: baked light, post effects, props behind the firing line, a sandbag berm, dirt, puddles and sprays
 - **M81** · Beyond the range walls: wooded hills, treelines, site huts, a water tower and a power line; the distance boards stay clear of the sprays
+- **W7** · Map cards, mode cards and the blurred menu backdrop are redrawn to match the current maps: Depot's weathered walls and dressing, Woodland's grass and distant trees, Neon Heights' signs and skyline, and the figures; same sizes
 
 ### Fixed
 - **G11** · The team camo on players reads clearly on Medium and up: crisp dark and light blotches printed per pixel, on WebGL and WebGPU; Low keeps plain clothes
@@ -167,6 +168,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **W6a** · The perf checks run on both renderers with their own baselines; the grass and tree stand-ins' triangles have their own perf line
 - **W6a** · Medium draw-call budgets raised, Woodland 115 to 120 and Neon Heights 140 to 145: GPU grass costs two draws, built-in models five
 - **W6b** · The world's and figures' materials carry their own WebGPU shaders instead of the old WebGL code, so nothing looks different and the game download is about 7 kB smaller; the game chunk's budget is back at 1,000 kB
+- **W7** · The menu pictures are drawn on WebGPU by default (WebGL with --backend webgl); the script checks the back end, waits for a settled frame and refuses a black picture
 
 ## 0.1 Dev 4 · 2026-10-06
 
