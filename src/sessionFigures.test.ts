@@ -26,4 +26,10 @@ describe('the sessions draw the Robots mix (G7)', () => {
     expect(source('./render/matchPresentation.ts')).toMatch(/new CharacterRenderer\([^;]*, crowd, replicaFiles, figureRigs\)/);
     expect(source('./render/combatPresentation.ts')).toMatch(/new Viewmodel\([^;]*, arms, renderer\.replicaFiles\)/);
   });
+
+  it('the match gives the hit rules the figures\' legs only when the rigs are drawn (IM8)', () => {
+    const match = source('./matchSession.ts');
+    expect(match).toMatch(/const figureLegs = renderer\.figureRigs\?\.human\.legs;/);
+    expect(match).toMatch(/this\.hits = figureLegs \? \{ \.\.\.hitRulesFor\(setup\.rules\), figureLegs \} : hitRulesFor\(setup\.rules\);/);
+  });
 });
