@@ -463,8 +463,11 @@ describe('the node passes allocate nothing per frame (W4 criterion 4)', () => {
    * this sums everything under `src/` (the step's own lambda included).
    */
   async function allocated(step: () => void, frames = 20_000): Promise<number> {
-    const by = await allocatedBy(step, frames);
-    return [...by.values()].reduce((a, b) => a + b, 0);
+    // The smaller of two samples: an allocation the code makes shows in both, while the optimiser throwing a frame
+    // away mid-sample (it boxes numbers until optimised again) shows in one. CI caught a pass that allocates nothing
+    // at 17 bytes a frame in one sample (BP3b, 2026-10-12).
+    const total = async (): Promise<number> => [...(await allocatedBy(step, frames)).values()].reduce((a, b) => a + b, 0);
+    return Math.min(await total(), await total());
   }
   async function allocatedBy(step: () => void, frames = 20_000): Promise<Map<string, number>> {
     const inspector = (await loadNode('inspector')) as { Session: new () => Session };
