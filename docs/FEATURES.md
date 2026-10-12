@@ -158,8 +158,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   M24, BP1, G3)
 - Replica, battery and gas bottle pictures on Loadout, Customise and Armory; Customise lists the parts down the left, Colour first, each option
   a picture tile beside the replica and its numbers (G3, RM3)
-- Error screen on a crash with the seed, a report, Reload and Copy Report buttons; Play Again starts a new match with
-  its own seed (FA1)
+- Error screen on a crash with the seed, a report, a note box, Reload, Copy Report and Report a Bug buttons; Play Again starts a new match with
+  its own seed (FA1, IM7)
 - Settings groups: Graphics (quality presets with Custom option, frame-rate limit), Display (fullscreen, field of view,
   tone mapping, show FPS), Audio, Controls (every action rebindable, mouse buttons and mouse wheel), Gameplay
   (crosshair, hit marker, HUD), Accessibility, Look (Robots, Realistic colours, Retro), Save file; a search box and a note on every row
