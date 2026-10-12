@@ -145,3 +145,29 @@ describe('records view (M19)', () => {
     expect(recordsView(r, news, 'hard', 'attackDefend').notCounted).toBe('');
   });
 });
+
+describe('statsBlocks leaves out the benched (BP3: Extraction\'s reserve until it joins)', () => {
+  const cs = roster();
+  const stats = (): PlayerStats => emptyStats();
+
+  it('lists a team without the characters marked in benched, by character id', () => {
+    const blocks = statsBlocks(cs, rosterNames(cs, 0), stats, [0, 0], cs[0]!, false, true, [false, false, false, true]);
+    expect(blocks[0]!.rows.map((r) => r.name)).toEqual(['You', 'Alpha 2']);
+    expect(blocks[1]!.rows.map((r) => r.name)).toEqual(['Beta 1']);
+  });
+
+  it('lists everyone when nobody is benched, or the array is left out or short', () => {
+    for (const benched of [undefined, [], [false], [false, false, false, false]]) {
+      const blocks = statsBlocks(cs, rosterNames(cs, 0), stats, [0, 0], cs[0]!, false, true, benched);
+      expect(blocks.map((b) => b.rows.length)).toEqual([2, 2]);
+    }
+  });
+
+  it('brings the character back once it is no longer benched', () => {
+    const benched = [false, false, false, true];
+    const names = rosterNames(cs, 0);
+    expect(statsBlocks(cs, names, stats, [0, 0], cs[0]!, false, true, benched)[1]!.rows).toHaveLength(1);
+    benched[3] = false;
+    expect(statsBlocks(cs, names, stats, [0, 0], cs[0]!, false, true, benched)[1]!.rows).toHaveLength(2);
+  });
+});

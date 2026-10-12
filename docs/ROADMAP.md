@@ -48,7 +48,8 @@ pulled into Dev 5, and Dev 7 is folded away (its mode checks join the toolkit he
    2026-10-05; about six to eight pull requests): 1 rulebooks and briefs, replica and attachment checks and the report
    with pictures (CT1, done 2026-10-11: `docs/content/`, `node pipeline/content-check.mjs`); 2 map checks (CT2, done 2026-10-11: `map:<id>`); 3 mode
    checks (CT3, done 2026-10-11: `mode:<id>`); 4 skin checks (CT4, done 2026-10-11: `skin:<id>`).
-8. **Bug pass BP3**, then the owner tags 0.1 Dev 5 and playtests it.
+8. **Bug pass BP3**, then the owner tags 0.1 Dev 5 and playtests it. In two parts: BP3a, the HUD and the menus (done
+   2026-10-12; `docs/records/BP3a.md`), and BP3b, gameplay, graphics, WebGPU and the rest of the KNOWN_ISSUES sweep.
 
 ### Audit 2: the last tasks
 

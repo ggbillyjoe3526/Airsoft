@@ -263,7 +263,6 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | Issue | Class | Notes |
 |---|---|---|
 | The spare-magazine gauges have no numeric mode | can wait | Beta UX/QoL (moved from M18 at M18b): low is striped and next has a caret, so they don't rely on colour. |
-| No test checks the crosshair gap maths' wiring (`hud.ts`, `combatPresentation.ts`) | can wait | Each piece is tested alone and the gap was browser-checked (8.5 px at 720p); `spreadScale` reaching the shot is tested (FA1). (M10) |
 | Every menu page scrolls in a 1280×720 window | can wait | Re-measured 2026-10-08 (BP2, after G3's redesign; page scroll in px): Armory 1809, Controls 1332, Gameplay 1137, Customise 1111, Loadout 1010, Dev 908, New game 545, Save file 445, Accessibility 306, Graphics 258, Display, Audio and Look 185 (the page's header and tabs alone pass 720). The title scrolls 141 with the software-drawing warning shown (container). The menu redesign (M100, Dev 5 item 5) rebuilds these screens; check it there. (M15, audit 2, FA5) |
 | New game still scrolls below ~900 × 600 (two tiles a row) | can wait | Below the desktop sizes the game targets; fits 1024×640, 1366×657 and up. (M15b) |
 | The menus have no size step for 4K at 100 % OS scaling: body text stays 15 px while the HUD grows to 1.5× | can wait | Decision 16: nothing now (most 4K desktops run 150–200 % scaling). In Beta, scale the type and control tokens from the window height like `hudScale`, and check 4K in a browser. (audit UI-12) |
