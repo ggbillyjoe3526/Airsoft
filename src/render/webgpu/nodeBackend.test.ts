@@ -9,6 +9,7 @@ import { addLighting } from '../lighting';
 import { buildMapMeshes, disposeMapMeshes, mapLookOf } from '../mapMeshes';
 import type { SurfaceTextures } from '../proceduralTextures';
 import { NodeBackend, type NodeBackendOptions, startNode } from './nodeBackend';
+import { CompileGate } from './post/nodeKit';
 import { nodePatchOf } from '../nodePatch';
 
 /**
@@ -212,9 +213,12 @@ describe('compiling ahead and letting go (W1)', () => {
     stubInit();
     const node = await NodeBackend.make(WEBGL2);
     const dispose = vi.mocked(WebGPURenderer.prototype.dispose).mockRejectedValue(new Error('already gone'));
+    const released = vi.spyOn(CompileGate.prototype, 'release');
     node.dispose();
     await new Promise((done) => setTimeout(done, 0));
     expect(dispose).toHaveBeenCalledTimes(1);
+    // The post passes' held frees run first (BP3: a lost device's compile may never settle).
+    expect(released.mock.invocationCallOrder[0]).toBeLessThan(dispose.mock.invocationCallOrder[0]!);
   });
 });
 

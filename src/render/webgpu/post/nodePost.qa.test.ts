@@ -339,6 +339,27 @@ describe('the compile gate orders every free after the compiles under way (W4 cr
     expect(gate.busy).toBe(false);
   });
 
+  it('runs every held free when let go (the renderer disposed: a lost device’s compile may never settle), then frees at once (BP3)', async () => {
+    const gate = new CompileGate();
+    const never = deferred();
+    gate.track(never.promise);
+    const freed: string[] = [];
+    gate.afterCompiles(() => freed.push('stack'));
+    gate.afterCompiles(() => freed.push('retro'));
+    await later();
+    expect(freed).toEqual([]);
+    gate.release();
+    expect(freed).toEqual(['stack', 'retro']);
+    expect(gate.busy).toBe(false);
+    gate.track(deferred().promise);
+    gate.afterCompiles(() => freed.push('next'));
+    expect(freed).toEqual(['stack', 'retro', 'next']);
+    // The compile settling late frees nothing twice.
+    never.done();
+    await later();
+    expect(freed).toEqual(['stack', 'retro', 'next']);
+  });
+
   it('is one gate for the stacks and retro filters of a renderer, and a stack made with none has its own', async () => {
     const compile = deferred();
     const gate = new CompileGate();

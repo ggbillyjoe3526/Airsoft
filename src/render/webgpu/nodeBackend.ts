@@ -299,6 +299,8 @@ export class NodeBackend {
 
   /** Frees the renderer, its canvas's context and (on WebGPU) its device. */
   dispose(): void {
+    // First: the post passes' frees held for a compile a lost device may never settle run now (BP3).
+    this.compiles.release();
     this.lostListener = () => undefined;
     this.timing = false;
     this.particles.dispose();
