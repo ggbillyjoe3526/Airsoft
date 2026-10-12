@@ -646,3 +646,8 @@ replaces its line; the old one stays findable in the archive or in git.
   Extraction cases and presentation effects each have one, so seeds that already replay still replay.
 - **Player-only preferences, such as toggles, live in the input layer (2026-10-03).** The simulation sees the same
   command it sees from a bot.
+- **TypeScript 7 checks the code, on the same strict settings (owner, 2026-10-12; IM4).** It replaces 5.9, kept on
+  2026-09-28 because 7 was then new. Same language and errors, on the native compiler: in a 4-core cloud container the
+  type check takes about 3.5 s instead of 18.7 s, and `npm run build` 19.4 s instead of 34.5 s (2026-10-12). Nothing
+  in the repository uses the compiler's JavaScript API, which 7 replaces with a new, unstable one (Vite and Vitest
+  strip types themselves). A setting a later TypeScript drops goes to the owner, never a looser `tsconfig.json`.
