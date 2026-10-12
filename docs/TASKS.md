@@ -8,8 +8,8 @@ commit, before its pull request merges (CI's scope gate finds the block in the b
 **The owner's 0.1 Dev 4 playtest notes (2026-10-06).** Recorded on his ask, not built yet; they follow the rest
 of the paused 0.1 Dev 5 work. His words and the per-item reasoning are in the project's shared
 files (`plans/playtest-feedback-0.1-dev-4.md`); `docs/ROADMAP.md` › Playtest notes: 0.1 Dev 4 maps all 26 notes. M80–M91
-and M96 are 0.1 Dev 5 fixes and changes, M92–M95 suggested 0.1 Dev 6 features. Notes 5, 20–23 went to 0.3 and 0.4; notes 5, 20, 22 and 23 are now
-0.1 Dev 6 (owner's feature picks, 2026-10-06, with Dev 7 folded into Dev 6 the same night; ROADMAP).
+and M96 are 0.1 Dev 5 fixes and changes, M92–M95 suggested 0.1 Dev 6 features. Notes 5 and 22 are now the Replica
+Update, notes 20, 21 and 23 the Modes Update (owner, 2026-10-12; ROADMAP).
 Every block below carries note 19: tune on Normal, then check that Easy, Hard and Pro still scale. `touches` are
 first guesses; the build thread confirms them before it starts. The owner ruled on every conflict on 2026-10-06
 (ROADMAP, under the playtest table).
@@ -21,7 +21,7 @@ item 5, with the G4 HUD restyle); note 3 was a bug, fixed in BP2; note 2 is alre
 (Settings › Controls › Aim button). Note 19 of the Dev 4 notes still applies.
 
 **0.1 Dev 6 (confirmed with the roadmap, 2026-10-06).** M92–M95, the holster and the practice
-upgrades, come before the 26 features in `docs/ROADMAP.md` › 0.1 Dev 6, whose blocks are written when that build starts.
+upgrades, come before the rest of `docs/ROADMAP.md` › 0.1 Dev 6, whose blocks are written when that build starts.
 
 ## M92 · Holster and two kinds of sprint (playtest note 3)
 tier: core

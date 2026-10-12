@@ -164,8 +164,8 @@ planned. Bot difficulty and Attack / Defend balance still need tuning from playt
 [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md).
 
 **Version names.** The game is built as **0.1**: Dev releases (0.1 Dev 1, 0.1 Dev 2 …) first, Beta releases (0.1 Beta 1
-…) once it is feature complete, then **0.1.0**, the first public release. More modes, maps, replicas and customisation
-come in later versions.
+…) once it is feature complete, then **0.1.0**, the first public release and the start of Early Access. Themed updates
+follow (the Replica, Modes, Maps and Progression Updates, and more), up to **1.0**, the full launch.
 
 **More.** Plans: [`docs/ROADMAP.md`](docs/ROADMAP.md). How to test: [`docs/PLAYTEST.md`](docs/PLAYTEST.md). Every change
 by release: [`CHANGELOG.md`](CHANGELOG.md) and [`docs/patch-notes/`](docs/patch-notes/). What the game has today:
