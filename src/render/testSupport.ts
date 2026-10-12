@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { FIGURE_RIG_KINDS, type FigureRigKind } from '../config/figureRig';
 import type { MapData } from '../map/mapTypes';
 import { type FigureRig, type FigureSidecar, prepareFigureRig } from './figureRig';
@@ -122,16 +123,19 @@ function withoutTextures(buf: Uint8Array): ArrayBuffer {
 }
 
 /** Node's fs, without its types (the project compiles for the browser). */
-async function readFile(path: URL): Promise<Uint8Array> {
+export async function readFile(path: URL): Promise<Uint8Array> {
   const nodeFs = 'node:fs';
   const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync(path: URL): Uint8Array };
   return readFileSync(path);
 }
 
-/** A model file under src/assets/models/, parsed as the game parses it (its clips on the scene), without its textures. */
-async function modelScene(path: string): Promise<THREE.Object3D> {
+/**
+ * A model file under src/assets/models/, parsed as the game parses it (its clips on the scene, meshopt decoded as
+ * render/externalModels.ts decodes it), without its textures.
+ */
+export async function modelScene(path: string): Promise<THREE.Object3D> {
   const buf = await readFile(new URL(`../assets/models/${path}`, import.meta.url));
-  const gltf = await new GLTFLoader().parseAsync(withoutTextures(buf), '');
+  const gltf = await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(withoutTextures(buf), '');
   gltf.scene.animations = gltf.animations;
   return gltf.scene;
 }
