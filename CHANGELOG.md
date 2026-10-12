@@ -43,6 +43,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M97** · Replay tutorial button in Settings starts the tutorial at once, whether or not you finished it
 - **M82** · Loadout replicas and Customise parts sort and filter by rarity tier, saved between sessions; what you carry or have fitted always shows
 - **M91** · Torch shadows setting, on for High and Ultra: your own torch casts shadows, so a tree or bot in its beam shades what is behind
+- **BF1** · Dev figure switches off: players and bots are rigged Blender humans and robots that run, crouch, aim, reload, switch to the pistol and call hits
 
 ### Changed
 - **M71** · Bots hunt the map's middle once their lane is swept (now all levels, not just Pro); Normal and Hard hold their posts out of lantern light at night (#133)
@@ -184,6 +185,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **W6a** · Medium draw-call budgets raised, Woodland 115 to 120 and Neon Heights 140 to 145: GPU grass costs two draws, built-in models five
 - **W6b** · The world's and figures' materials carry their own WebGPU shaders instead of the old WebGL code, so nothing looks different and the game download is about 7 kB smaller; the game chunk's budget is back at 1,000 kB
 - **W7** · The menu pictures are drawn on WebGPU by default (WebGL with --backend webgl); the script checks the back end, waits for a settled frame and refuses a black picture
+- **BF1** · The perf harness's --models option measures with the figures in, and every run records the figures' drawing time per frame
 
 ## 0.1 Dev 4 · 2026-10-06
 
