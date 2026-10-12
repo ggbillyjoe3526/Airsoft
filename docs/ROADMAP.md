@@ -224,6 +224,9 @@ Dev 6 comes after M92–M95 (the holster and the practice upgrades). The last tw
 | 2 | Medic mode: a hit player goes down and a teammate revives them before a bleed-out timer | 0.3 |
 | 7 | The Extraction rework from Dev 4 notes 20, 22 and 23 (solo, loot that looks like loot, hunting bots, no respawn; the duo / trio revive with medic) | 0.3 |
 
+**Replica redesigns** from the owner's reference pictures (owner, 2026-10-12), the models behind the Blender-model Dev
+switches: the AEG Rifle, whose small, low iron sights the built-in rifle gets too (RM6, done).
+
 **Maybe, to think about or leave for later** (they stay where they are on this roadmap):
 - Team Deathmatch (0.3), Domination (0.4), Capture the Flag (0.4).
 - The DMR (0.3), the SMG and shotgun (0.4; the owner wants them after the sniper).
