@@ -451,6 +451,22 @@ describe('the sound engine (M13)', () => {
     expect(ctx.sources).toHaveLength(9); // once
   });
 
+  it('drops a wind-down still owed when the motors are settled (a Skip to next round), so none plays later (BP3)', () => {
+    const { sfx, ctx, player, bot, characterOf } = setup();
+    const rate = LOADOUT[0]!.fireRate;
+    const tick = (n: number) => {
+      for (let i = 0; i < n; i++) sfx.afterTick([player, bot], PLAYER);
+    };
+    sfx.onEvent(shot(bot.id), PLAYER, characterOf);
+    const ticksToDown = Math.ceil((AUDIO.motor.spinDownAfterCycles / rate) * 60 - 1e-9);
+    tick(ticksToDown - 1); // the wind-down is owed, one tick from playing
+    sfx.settleMotors();
+    const before = ctx.sources.length;
+    tick(ticksToDown + 60);
+    expect(ctx.sources.some((src, i) => i >= before && plays(src, 'motor.spinDown'))).toBe(false);
+    expect(ctx.sources).toHaveLength(before);
+  });
+
   it('fades a wind-down already playing instead of cutting it with a click', () => {
     const { sfx, ctx, player, bot, characterOf } = setup();
     const rate = LOADOUT[0]!.fireRate;
