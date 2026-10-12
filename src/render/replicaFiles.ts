@@ -241,7 +241,7 @@ export function prepareReplicaFile(id: string, scene: THREE.Object3D, partsScene
       figure = pieces(figureNode, new THREE.Matrix4().makeTranslation(0, -muzzle.y, -back).multiply(toFigure), []);
     }
   }
-  const { parts, sightLines, underLaser } = partsScene ? partsOf(partsScene) : { parts: new Map<string, ReplicaFilePiece[]>(), sightLines: new Map<string, number>(), underLaser: new Map<string, THREE.Vector3>() };
+  const { parts, sightLines, underLaser } = partsScene ? partsOf(partsScene) : NO_PARTS;
   const held = triangles(body) + triangles(magazine) + triangles(flashHider) + triangles(rig?.file.pieces ?? []);
   const onFigure = triangles(figure);
   const heldBudget = budget(REPLICA_FILE.warnTriangles, id);
@@ -347,6 +347,9 @@ function magazineMoves(scene: THREE.Object3D, toScene: THREE.Matrix4, clips: rea
 
 /** What the game names a moving part's bone: `rig_<the file's bone>` (three's track names can't take a colon). */
 export const RIG_PREFIX = 'rig_';
+
+/** A replica without a parts file: no parts, sight lines or torch moves. */
+const NO_PARTS: Pick<ReplicaFile, 'parts' | 'sightLines' | 'underLaser'> = { parts: new Map(), sightLines: new Map(), underLaser: new Map() };
 
 /**
  * A parts file's parts (RM1): each top-level object named `<kind>_<id>` ('optic_redDot', 'muzzle_silencer' …) is the
