@@ -12,10 +12,10 @@ ends, time passes or small improvements pile up.
 |---|---|
 | 0.1 Dev 1, 0.1 Dev 2 … (`0.1-dev.1`, `0.1-dev.2` …) | **Dev**: building the game. Systems and content can be added, gameplay can change a lot, breaking changes are fine, not feature complete. Each build number is a full Dev release. |
 | 0.1 Beta 1, 0.1 Beta 2 … (`0.1-beta.1`, `0.1-beta.2` …) | **Beta**: starts when the owner calls the planned game feature complete. Bug fixes, balance, performance, stability, UX/QoL, polish, final tuning; no major new systems unless the owner approves. Open-ended number of builds. |
-| 0.1.0 (`0.1.0`) | First public release of the completed initial game, when the owner considers it a stable public product (not when a phase ends). |
+| 0.1.0 (`0.1.0`) | First public release, and the start of Early Access (owner, 2026-10-12): feature complete but light on content, released when the owner considers it a stable public product (not when a phase ends). |
 | 0.1.1, 0.1.2 … (`0.1.1` …) | Fixes, performance, balance, small UI/UX or accessibility improvements, minor tuning, small content additions, maintenance. |
-| 0.2, 0.3 … (`0.2.0` …, each with `.x` maintenance) | A substantially expanded or evolved product: major new systems or modes, a large content expansion across systems, a core-loop redesign. No feature-count threshold; contents are not predefined. |
-| 1.0 (`1.0.0`) | The release the owner considers fully mature and stable. |
+| 0.2, 0.3 … (`0.2.0` …, each with `.x` maintenance) | A themed update, a mini expansion (owner, 2026-10-12): the Replica, Modes, Maps and Progression Updates and any more he adds, in the order he picks. Each has its own Dev and Beta builds; the next one shipped takes the next number. |
+| 1.0 (`1.0.0`) | The full launch: the owner considers the game complete, and Early Access ends (owner, 2026-10-12). |
 
 - **Dev until feature complete.** The game stays in 0.1 Dev until the owner calls it feature complete (owner,
   2026-10-06); Beta then adds no features. Dev replaced the name Alpha (owner, 2026-10-05): the old `v0.1-alpha`
@@ -34,10 +34,12 @@ ends, time passes or small improvements pile up.
   stability, UX/QoL, polish and final tuning are Beta. During Dev, note Beta-type work in `docs/ROADMAP.md` › Beta or
   `docs/KNOWN_ISSUES.md`, unless it blocks Dev work.
 - **What 0.1 is.** The core game with strong foundations (owner, 2026-10-01): two replicas (AEG, gas pistol), Depot,
-  Elimination and Attack / Defend. The owner has since pulled more into 0.1: the Dev 5 plan and the Dev 6 feature picks
-  in `docs/ROADMAP.md`.
-- **Later versions.** The feature triage (owner, 2026-10-05) placed every later feature in a version
-  (`docs/ROADMAP.md` › After 0.1). Don't build them during 0.1 unless the owner pulled them in.
+  Elimination and Attack / Defend. The owner has since pulled more into 0.1: the Dev 5 plan and 0.1 Dev 6 in
+  `docs/ROADMAP.md`. 0.1 is feature complete; its content can be light (owner, 2026-10-12).
+- **Later versions.** Every later feature has a themed update (`docs/ROADMAP.md` › Early Access: the themed updates;
+  owner, 2026-10-05 and 2026-10-12). Don't build them during 0.1 unless the owner pulled them in. While 0.1 is in
+  Dev, a system it needs goes there; new content (replicas, attachments, items, modes, maps, things to earn) goes to
+  its update.
 - **Fun first.** Move on only when the previous part is actually fun. Validate before expanding.
 - **No multiplayer.** None is planned (owner, 2026-09-30; confirmed 2026-10-03: absolutely none). No networking code,
   servers or matchmaking.

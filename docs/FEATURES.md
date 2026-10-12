@@ -289,3 +289,4 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - `?seed=N`, `?quality=<preset>` and `?perf` in any build; `?nolock` and `?script=perf` on the dev server and in the
   smoke test's build (Phase 3, FA11b)
 - `npm run t` and `npm run t:all`: tests with dots and failures only (TE1)
+- Dev figure switches (Disable figure models, Disable all models): with both off, players and bots are the rigged Blender humans and robots (BF1)
