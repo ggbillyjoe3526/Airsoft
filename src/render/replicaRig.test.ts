@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { FIGURE } from '../config/characters';
 import { REPLICA_FILE } from '../config/assets';
 import { VIEWMODEL } from '../config/render';
-import { AEG, GAS_PISTOL, LOADOUT } from '../config/replicas';
+import { AEG, CYBER_PISTOL, GAS_PISTOL, LOADOUT } from '../config/replicas';
 import { createArmament, fitOptics } from '../sim/armament';
 import { HUMAN_CROWD, figureDress } from './figureMix';
 import { type FigureDetail, PartBuilder } from './figureParts';
@@ -167,6 +167,33 @@ describe('the moving parts (RM1)', () => {
     fitOptics(arm, ['redDot', null]);
     for (let t = 0; t < 1; t += dt) frame();
     expect(turned(sight, rest.sight)).toBeCloseTo(Math.PI / 2, 1);
+    vm.dispose();
+  });
+});
+
+describe('the Cyber Pistol\'s file (the 12 Oct 2026 redesign)', () => {
+  it('kicks its slide back on a shot and returns it, the rest of it still (the owner: only the slide moves)', async () => {
+    const files: ReplicaFiles = new Map([['cyber', prepareReplicaFile('cyber', await scene('../assets/models/replicas/cyber.glb'))]]);
+    const vm = new Viewmodel(16 / 9, 0x3a7bd5, [CYBER_PISTOL], LOW_DETAIL, null, HUMAN_ARMS, files);
+    const arm = createArmament([CYBER_PISTOL]);
+    const dt = 1 / 60;
+    const frame = (): void => vm.update(dt, 0, 0, 0, 4.2, 0, arm, false, 0);
+    let slide: THREE.Object3D | undefined;
+    vm.scene.traverse((o) => {
+      if (!slide && o.name === 'rig_slide') slide = o;
+    });
+    frame();
+    const rest = slide!.position.clone();
+    // Its move in the replica's space (the bone hangs from the root bone, turned to Blender's axes).
+    const moved = (): THREE.Vector3 => slide!.position.clone().sub(rest).applyQuaternion(slide!.parent!.quaternion);
+    vm.onShot();
+    frame();
+    frame();
+    // Straight back along the bore (+Z), 1.4 cm at its furthest.
+    expect(moved().z).toBeCloseTo(0.014, 4);
+    expect(Math.hypot(moved().x, moved().y)).toBeLessThan(1e-6);
+    for (let t = 0; t < 0.2; t += dt) frame();
+    expect(slide!.position.distanceTo(rest)).toBeLessThan(1e-6);
     vm.dispose();
   });
 });
