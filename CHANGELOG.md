@@ -47,6 +47,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **RM7** · Blowback shows on the built-in and Blender GBB Pistol models; the Blender laser, torch, silencer and extended magazine are refitted to it
 - **BF1** · Dev figure switches off: players and bots are rigged Blender humans and robots that run, crouch, aim, reload, switch to the pistol and call hits
 - **IM2** · Play in a browser at https://ggbillyjoe3526.github.io/Airsoft/, nothing to install; it runs the latest release with its own saves
+- **IM7** · Diagnostics and the crash screen take a note box and a Report a Bug button: it opens a GitHub issue with your note and the report filled in
+- **IM7** · Reports add the time, where you stood, 10 s of frame times, memory, the last 20 console errors and 30 game events; web addresses cut to file names
 
 ### Changed
 - **M71** · Bots hunt the map's middle once their lane is swept (now all levels, not just Pro); Normal and Hard hold their posts out of lantern light at night (#133)
