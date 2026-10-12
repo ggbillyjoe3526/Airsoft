@@ -4,6 +4,10 @@ import { expect, test, type Page } from '@playwright/test';
  * G9 QA: Woodland and Neon Heights re-dressed, through the real sessions (not the unit tests' hand-made call order).
  * Read through the e2e build's `window.airsoft`, no screenshot. Dev content has to be on for both maps.
  */
+// The tests' own 240 s limit, set before their fixtures: on a slow runner a fresh browser context alone has taken over
+// the 90 s default (CI, 2026-10-12), and a limit set inside a test's body comes too late for that.
+test.describe.configure({ timeout: 240_000 });
+
 type Obj = { name: string; visible: boolean; parent: Obj | null };
 type Game = { airsoft: { state: { tick: number } | null; renderer: { scene: { traverse: (f: (o: Obj) => void) => void } } } };
 
