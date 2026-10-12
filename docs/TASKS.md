@@ -23,6 +23,19 @@ item 5, with the G4 HUD restyle); note 3 was a bug, fixed in BP2; note 2 is alre
 **0.1 Dev 6 (confirmed with the roadmap, 2026-10-06).** M92–M95, the holster and the practice
 upgrades, come before the 26 features in `docs/ROADMAP.md` › 0.1 Dev 6, whose blocks are written when that build starts.
 
+## W7 · The menus' pictures from the node renderer (WebGPU overhaul, the map pictures)
+tier: core
+perf: skip
+touches: pipeline/map-stills.mjs, src/config/menuArt.ts, public/menu/
+contract: none
+acceptance:
+  1. Every menu picture (the four map stills, the three mode pictures and the backdrop) is redrawn by the node renderer on WebGPU, each page checking the back end it drew with, and each stays under its byte budget.
+  2. Each picture is drawn from a settled frame: everything in view compiled, the post stack's temporal pass settled, never a black read-back.
+  3. Woodland's still shows its GPU grass and tree stand-ins and the 5v5 layout; every view's camera (`STILL_CAMERA`) frames its map.
+  4. The owner sees every picture in the thread before the merge.
+status: open
+attempts: 0
+
 ## M92 · Holster and two kinds of sprint (playtest note 3)
 tier: core
 perf: skip
