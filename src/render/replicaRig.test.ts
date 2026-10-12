@@ -77,7 +77,7 @@ describe('the AEG and gas pistol model files (RM1)', () => {
       for (const clip of f.rig!.clips.values()) for (const t of clip.tracks) expect(t.name).not.toMatch(/magazine/i);
     }
     // Pinned so a new export is seen.
-    expect(aeg.triangles).toEqual({ held: 5558, figure: 244 });
+    expect(aeg.triangles).toEqual({ held: 8090, figure: 252 });
     expect(pistol.triangles).toEqual({ held: 1700, figure: 60 });
     aeg.dispose();
     pistol.dispose();
