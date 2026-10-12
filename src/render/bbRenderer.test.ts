@@ -367,3 +367,21 @@ describe('BBRenderer under the retro pixel filter (M42)', () => {
     r.dispose();
   });
 });
+
+describe('BBRenderer streak mesh (BP3b)', () => {
+  it('draws the streak mesh only while a BB is in flight (an empty draw range still costs a draw call)', () => {
+    const pool = createBBPool(2);
+    const r = new BBRenderer(pool, DT);
+    const trails = r.object.children[1] as THREE.Mesh;
+    r.update(0, { x: 0, y: 1.6, z: 0 });
+    expect(trails.visible).toBe(false);
+    const bb = spawnBB(pool, 0, vec3(0, 1.6, 0), vec3(0, 0, -1), 88, 0, 0.25e-3);
+    stepBBFlight(bb, BALLISTICS, DT);
+    r.update(0, { x: 0, y: 1.6, z: 0 });
+    expect(trails.visible).toBe(true);
+    bb.active = false;
+    r.update(0, { x: 0, y: 1.6, z: 0 });
+    expect(trails.visible).toBe(false);
+    r.dispose();
+  });
+});

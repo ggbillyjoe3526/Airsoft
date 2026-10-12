@@ -252,6 +252,11 @@ export class CombatPresentation {
     this.startWhistleOwed = false;
   }
 
+  /** A Skip to next round begins: no AEG wind-down still owed plays into the next round (BP3). */
+  skipBegins(): void {
+    this.sfx.settleMotors();
+  }
+
   setPlaying(playing: boolean): void {
     this.hud.setVisible(playing);
     this.sfx.setPaused(!playing);

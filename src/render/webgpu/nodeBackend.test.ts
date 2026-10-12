@@ -9,6 +9,7 @@ import { addLighting } from '../lighting';
 import { buildMapMeshes, disposeMapMeshes, mapLookOf } from '../mapMeshes';
 import type { SurfaceTextures } from '../proceduralTextures';
 import { NodeBackend, type NodeBackendOptions, startNode } from './nodeBackend';
+import { CompileGate } from './post/nodeKit';
 import { nodePatchOf } from '../nodePatch';
 
 /**
@@ -202,6 +203,9 @@ describe('compiling ahead and letting go (W1)', () => {
     node.compile(world, new THREE.PerspectiveCamera(), { scene: held, camera: new THREE.PerspectiveCamera() }, null);
     expect(compiled).toEqual([`world:${THREE.NoToneMapping}:true`, `held:${THREE.NoToneMapping}:true`]);
     expect(r.toneMapping).toBe(THREE.NeutralToneMapping);
+    // The output hook stays the context while Low draws (BP3: the compile builds after an await), until a stack draws.
+    expect(r.contextNode).not.toBe(plain);
+    node.draw(world, new THREE.PerspectiveCamera(), undefined, { draw: () => undefined });
     expect(r.contextNode).toBe(plain);
   });
 
@@ -209,9 +213,12 @@ describe('compiling ahead and letting go (W1)', () => {
     stubInit();
     const node = await NodeBackend.make(WEBGL2);
     const dispose = vi.mocked(WebGPURenderer.prototype.dispose).mockRejectedValue(new Error('already gone'));
+    const released = vi.spyOn(CompileGate.prototype, 'release');
     node.dispose();
     await new Promise((done) => setTimeout(done, 0));
     expect(dispose).toHaveBeenCalledTimes(1);
+    // The post passes' held frees run first (BP3: a lost device's compile may never settle).
+    expect(released.mock.invocationCallOrder[0]).toBeLessThan(dispose.mock.invocationCallOrder[0]!);
   });
 });
 

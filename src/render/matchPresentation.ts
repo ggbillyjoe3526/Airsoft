@@ -178,7 +178,7 @@ export class MatchPresentation {
     this.scoreboard = new Scoreboard(container, teamSizes, player.team);
     this.scoreboard.setAim(extraction ? HUD_TEXT.run : HUD_TEXT.firstTo(rules.winsNeeded, rules.winBy));
     this.marker = new FlagMarker(container);
-    this.spectator = new SpectatorCamera(state.characters, player, body, query);
+    this.spectator = new SpectatorCamera(state.characters, player, body, query, hits);
     this.names = rosterNames(state.characters, player.id);
     this.mates = state.characters.filter((c) => c.team === player.team && c !== player);
     this.intents = new BotIntentLabels(container);

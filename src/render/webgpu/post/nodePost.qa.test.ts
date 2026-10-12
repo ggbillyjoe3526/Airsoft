@@ -339,6 +339,27 @@ describe('the compile gate orders every free after the compiles under way (W4 cr
     expect(gate.busy).toBe(false);
   });
 
+  it('runs every held free when let go (the renderer disposed: a lost device’s compile may never settle), then frees at once (BP3)', async () => {
+    const gate = new CompileGate();
+    const never = deferred();
+    gate.track(never.promise);
+    const freed: string[] = [];
+    gate.afterCompiles(() => freed.push('stack'));
+    gate.afterCompiles(() => freed.push('retro'));
+    await later();
+    expect(freed).toEqual([]);
+    gate.release();
+    expect(freed).toEqual(['stack', 'retro']);
+    expect(gate.busy).toBe(false);
+    gate.track(deferred().promise);
+    gate.afterCompiles(() => freed.push('next'));
+    expect(freed).toEqual(['stack', 'retro', 'next']);
+    // The compile settling late frees nothing twice.
+    never.done();
+    await later();
+    expect(freed).toEqual(['stack', 'retro', 'next']);
+  });
+
   it('is one gate for the stacks and retro filters of a renderer, and a stack made with none has its own', async () => {
     const compile = deferred();
     const gate = new CompileGate();
@@ -442,8 +463,11 @@ describe('the node passes allocate nothing per frame (W4 criterion 4)', () => {
    * this sums everything under `src/` (the step's own lambda included).
    */
   async function allocated(step: () => void, frames = 20_000): Promise<number> {
-    const by = await allocatedBy(step, frames);
-    return [...by.values()].reduce((a, b) => a + b, 0);
+    // The smaller of two samples: an allocation the code makes shows in both, while the optimiser throwing a frame
+    // away mid-sample (it boxes numbers until optimised again) shows in one. CI caught a pass that allocates nothing
+    // at 17 bytes a frame in one sample (BP3b, 2026-10-12).
+    const total = async (): Promise<number> => [...(await allocatedBy(step, frames)).values()].reduce((a, b) => a + b, 0);
+    return Math.min(await total(), await total());
   }
   async function allocatedBy(step: () => void, frames = 20_000): Promise<Map<string, number>> {
     const inspector = (await loadNode('inspector')) as { Session: new () => Session };

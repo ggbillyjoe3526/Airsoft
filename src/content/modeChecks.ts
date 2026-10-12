@@ -99,9 +99,13 @@ export function modePairings(mode: MatchMode, map: Pick<MapEntry, 'teamSize'>, d
   const out: ModePairing[] = [standard];
   for (const r of rulesets.filter((r) => r !== defaultRuleset && r !== 'custom')) out.push({ ...standard, label: rulesetOf(r).label, ruleset: r, rules: under(r) });
   for (const d of DIFFICULTIES.filter((d) => d.id !== standard.level)) out.push({ ...standard, label: d.label, level: d.id });
-  // Every team size the map offers; a run's squad is squadSize of the pick, so one pick per squad it makes.
-  const picks = Array.from({ length: map.teamSize.max }, (_, i) => i + 1).filter((n) => n !== size);
-  const sizes = MODE_SHAPES[mode].play === 'run' ? picks.filter((n, i) => squadSize(n) !== squadSize(size) && picks.findIndex((m) => squadSize(m) === squadSize(n)) === i) : picks;
+  // Every team size the map offers (from its smallest: BP3, Woodland's 5 to 6 played 1v1 to 4v4 here, which the game
+  // never allows); a run ignores the smallest, as New game does (playedTeamSize), and its squad is squadSize of the
+  // pick, so one pick per squad it makes.
+  const run = MODE_SHAPES[mode].play === 'run';
+  const from = run ? 1 : map.teamSize.min;
+  const picks = Array.from({ length: map.teamSize.max - from + 1 }, (_, i) => i + from).filter((n) => n !== size);
+  const sizes = run ? picks.filter((n, i) => squadSize(n) !== squadSize(size) && picks.findIndex((m) => squadSize(m) === squadSize(n)) === i) : picks;
   if (offersRow(defaultRuleset, 'teamSize', mode)) for (const n of sizes) out.push({ ...standard, label: `${n}v${n}`, rules: under(defaultRuleset, { teamSize: n }) });
   // Every Rounds to win choice (the ruleset New game starts on offers the row, or Custom does).
   const winsRuleset = offersRow(defaultRuleset, 'winsNeeded', mode) ? defaultRuleset : offersRow('custom', 'winsNeeded', mode) && rulesets.includes('custom') ? 'custom' : null;
