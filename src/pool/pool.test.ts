@@ -22,7 +22,7 @@ function mini(extra: string): string {
     '### Replicas',
     '| ID | Name | Key | Tags | Starter | In Shots |',
     '|---|---|---|---|---|---|',
-    '| 000001 | Gas Pistol | pistol | pistol, gas | yes | yes |',
+    '| 000001 | GBB Pistol | pistol | pistol, gas | yes | yes |',
     extra,
   ].join('\n');
 }
@@ -33,18 +33,18 @@ describe('pool.md', () => {
   });
 
   it("holds the owner's assets with unique six-digit IDs, the first two as he numbered them", () => {
-    expect(byName('Gas Pistol').id).toBe('000001');
+    expect(byName('GBB Pistol').id).toBe('000001');
     expect(byName('AEG Rifle').id).toBe('000002');
     for (const name of ['Standard Battery', 'Green Gas', 'Red Laser', 'Vertical Grip', 'Red Dot', 'Red Gas']) expect(byName(name)).toBeDefined();
     expect(new Set(pool.assets.map((a) => a.id)).size).toBe(pool.assets.length);
   });
 
-  it('starts every player with the AEG Rifle, Gas Pistol, Standard Battery, Green Gas and the (dev) Weapon Torch, nothing else', () => {
-    expect(pool.assets.filter((a) => a.starter).map((a) => a.name).sort()).toEqual(['AEG Rifle', 'Gas Pistol', 'Green Gas', 'Standard Battery', 'Weapon Torch']);
+  it('starts every player with the AEG Rifle, GBB Pistol, Standard Battery, Green Gas and the (dev) Weapon Torch, nothing else', () => {
+    expect(pool.assets.filter((a) => a.starter).map((a) => a.name).sort()).toEqual(['AEG Rifle', 'GBB Pistol', 'Green Gas', 'Standard Battery', 'Weapon Torch']);
   });
 
   it('fits by tags: Green Gas on the pistol, the battery on the rifle, the laser on the pistol only', () => {
-    const pistol = byName('Gas Pistol');
+    const pistol = byName('GBB Pistol');
     const rifle = byName('AEG Rifle');
     expect(fits(byName('Green Gas'), pistol)).toBe(true);
     expect(fits(byName('Green Gas'), rifle)).toBe(false);
@@ -99,9 +99,9 @@ describe('reading pool.md', () => {
         ].join('\n'),
       ),
     );
-    expect(p.assets.map((a) => a.name)).toEqual(['Gas Pistol', 'Green Gas']);
+    expect(p.assets.map((a) => a.name)).toEqual(['GBB Pistol', 'Green Gas']);
     expect(p.errors.some((e) => /^line 14: Type must be battery, gas or spring/.test(e))).toBe(true);
-    expect(p.errors.some((e) => /^line 15: ID 000001 is already used by Gas Pistol/.test(e))).toBe(true);
+    expect(p.errors.some((e) => /^line 15: ID 000001 is already used by GBB Pistol/.test(e))).toBe(true);
     expect(p.errors.some((e) => /^line 16: Typo Gas fits "gsa", which no replica has/.test(e))).toBe(true);
     expect(p.errors.some((e) => /^line 17: ID must be six digits/.test(e))).toBe(true);
   });
@@ -178,7 +178,7 @@ describe('collection', () => {
     const c = newCollection(pool, 7);
     expect(ownedItems(c, pool).map((i) => `${pool.byId.get(i.asset)!.name}@${i.tier}`).sort()).toEqual([
       'AEG Rifle@common',
-      'Gas Pistol@common',
+      'GBB Pistol@common',
       'Green Gas@common',
       'Standard Battery@common',
       'Weapon Torch@common',
@@ -235,7 +235,7 @@ describe('pool.md, barrels and muzzle parts (M29b)', () => {
 
   it('tags the AEG for a swappable barrel and both replicas for a muzzle thread, and fits by those tags', () => {
     const aeg = byName('AEG Rifle');
-    const pistol = byName('Gas Pistol');
+    const pistol = byName('GBB Pistol');
     expect(aeg.tags).toEqual(expect.arrayContaining(['barrel-mount', 'muzzle-thread']));
     expect(pistol.tags).toContain('muzzle-thread');
     expect(pistol.tags).not.toContain('barrel-mount');
@@ -366,7 +366,7 @@ describe('pool.md, the Access column (M35)', () => {
 
   it('leaves a row with a bad Access word out and names its line, so a typo never makes a dev asset public', () => {
     const p = loadPool(rows('| 000002 | Green Gas | gas | gas | yes | yes | |', '| 000003 | Typo Gas | gas | gas | no | yes | devv |'));
-    expect(p.assets.map((a) => a.name)).toEqual(['Gas Pistol', 'Green Gas']);
+    expect(p.assets.map((a) => a.name)).toEqual(['GBB Pistol', 'Green Gas']);
     expect(rowErrors(p)).toHaveLength(1);
     expect(rowErrors(p)[0]).toMatch(/^line 14: Access must be public or dev, not "devv"/);
   });
@@ -379,7 +379,7 @@ describe('pool.md, the Access column (M35)', () => {
 
   it('keeps a dev asset out of Shots, even marked In Shots', () => {
     const p = loadPool(rows('| 000002 | Green Gas | gas | gas | yes | yes | |', '| 000003 | Dev Gas | gas | gas | no | yes | dev |'));
-    expect(shotAssets(p).map((a) => a.name)).toEqual(['Gas Pistol', 'Green Gas']);
+    expect(shotAssets(p).map((a) => a.name)).toEqual(['GBB Pistol', 'Green Gas']);
   });
 });
 
@@ -396,7 +396,7 @@ describe('M32 acceptance 1: the Cyber Pistol row and the Tiers and Drop % column
       '### Replicas',
       '| ID | Name | Key | Tags | Starter | In Shots | Tiers | Drop % |',
       '|---|---|---|---|---|---|---|---|',
-      '| 000001 | Gas Pistol | pistol | pistol, gas | yes | yes | | |',
+      '| 000001 | GBB Pistol | pistol | pistol, gas | yes | yes | | |',
       ...rows,
     ].join('\n');
   const FIRST_ROW_LINE = 11;
@@ -455,7 +455,7 @@ describe('M32 acceptance 1: the Cyber Pistol row and the Tiers and Drop % column
 
   it('reports a tier name not in the Rarity table with its line, and leaves that row out', () => {
     const p = loadPool(chaseText('| 000002 | Typo | aeg | rifle, electric | no | yes | Mythic | |', '| 000003 | Half | aeg | rifle, electric | no | yes | Legendary, Mythic | 1 |', '| 000004 | Fine | aeg | rifle, electric | no | yes | Legendary | 1 |'));
-    expect(p.assets.map((a) => a.name)).toEqual(['Gas Pistol', 'Fine']);
+    expect(p.assets.map((a) => a.name)).toEqual(['GBB Pistol', 'Fine']);
     const errors = rowErrors(p);
     expect(errors).toHaveLength(2);
     expect(errors[0]).toMatch(new RegExp(`^line ${FIRST_ROW_LINE}: .*Mythic`));
@@ -464,7 +464,7 @@ describe('M32 acceptance 1: the Cyber Pistol row and the Tiers and Drop % column
 
   it('reports a Drop % that is not a number from 0 to 100 with its line, and leaves that row out', () => {
     const p = loadPool(chaseText('| 000002 | Words | aeg | rifle, electric | no | yes | Legendary | lots |', '| 000003 | Over | aeg | rifle, electric | no | yes | Legendary | 150 |', '| 000004 | Under | aeg | rifle, electric | no | yes | Legendary | -1 |', '| 000005 | Fine | aeg | rifle, electric | no | yes | Legendary | 0.25 |'));
-    expect(p.assets.map((a) => a.name)).toEqual(['Gas Pistol', 'Fine']);
+    expect(p.assets.map((a) => a.name)).toEqual(['GBB Pistol', 'Fine']);
     const errors = rowErrors(p);
     expect(errors).toHaveLength(3);
     for (const [i, e] of errors.entries()) expect(e).toMatch(new RegExp(`^line ${FIRST_ROW_LINE + i}: .*Drop %`));
@@ -498,7 +498,7 @@ describe('pool.md, plausibility guards (M56, audit POOL-02, POOL-03, POOL-06)', 
    */
   it('pins every shipped pool ID to its asset', () => {
     expect(Object.fromEntries(pool.assets.map((a) => [a.id, a.name]))).toEqual({
-      '000001': 'Gas Pistol',
+      '000001': 'GBB Pistol',
       '000002': 'AEG Rifle',
       '000003': 'Standard Battery',
       '000004': 'Green Gas',

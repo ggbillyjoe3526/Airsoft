@@ -1392,7 +1392,7 @@ describe('M32 acceptance 7: the Cyber Pistol sounds its own in a match', () => {
     expect(plays(ctx.sources[2]!, 'magIn.cyber')).toBe(true);
   });
 
-  it("still gives an AEG its motor, and the Gas Pistol its pop, beside it", () => {
+  it("still gives an AEG its motor, and the GBB Pistol its pop, beside it", () => {
     const { sfx, ctx, bot, characterOf } = match([...LOADOUT, CYBER_PISTOL], LOADOUT);
     sfx.onEvent(shot(bot.id), PLAYER, characterOf);
     expect(ctx.sources).toHaveLength(2);

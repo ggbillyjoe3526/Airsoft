@@ -43,7 +43,7 @@ describe('item tiles draw what they hold (FA13: the top of each Loadout and Armo
 
   it('draws a replica by its model, a power source by its type and a part by its category', () => {
     expect(itemIcon(named('AEG Rifle'))).toBe(ITEM_ICONS.aeg);
-    expect(itemIcon(named('Gas Pistol'))).toBe(ITEM_ICONS.pistol);
+    expect(itemIcon(named('GBB Pistol'))).toBe(ITEM_ICONS.pistol);
     expect(itemIcon(named('Standard Battery'))).toBe(ITEM_ICONS.battery);
     expect(itemIcon(named('Green Gas'))).toBe(ITEM_ICONS.gas);
     expect(itemIcon(named('Red Dot'))).toBe(ITEM_ICONS.optic);

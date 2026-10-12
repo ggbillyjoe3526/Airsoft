@@ -24,9 +24,9 @@ import {
 const pool = GAME_POOL;
 const id = (name: string) => pool.assets.find((a) => a.name === name)!.id;
 const item = (name: string, tier = 'common'): ItemRef => ({ asset: id(name), tier });
-/** The AEG Rifle or Gas Pistol (Common, on its starter power) with these items fitted. */
+/** The AEG Rifle or GBB Pistol (Common, on its starter power) with these items fitted. */
 const aeg = (parts: Partial<ReplicaFit> = {}) => kitSlot(pool, item('AEG Rifle'), { ...EMPTY_FIT, power: item('Standard Battery'), ...parts });
-const pistol = (parts: Partial<ReplicaFit> = {}) => kitSlot(pool, item('Gas Pistol'), { ...EMPTY_FIT, power: item('Green Gas'), ...parts });
+const pistol = (parts: Partial<ReplicaFit> = {}) => kitSlot(pool, item('GBB Pistol'), { ...EMPTY_FIT, power: item('Green Gas'), ...parts });
 
 describe('hop-up readout', () => {
   it('shows the dial as a percentage', () => {
@@ -126,14 +126,14 @@ describe('Loadout tile on New game (M26b)', () => {
     const set = new Set(items.map((r) => itemKey(r.asset, r.tier)));
     return new LoadoutModel(pool, { owns: (r) => set.has(itemKey(r.asset, r.tier)) });
   };
-  const STARTERS = ['AEG Rifle', 'Gas Pistol', 'Standard Battery', 'Green Gas'].map((n) => item(n));
+  const STARTERS = ['AEG Rifle', 'GBB Pistol', 'Standard Battery', 'Green Gas'].map((n) => item(n));
 
   it('names each replica (with its tier unless Common), then the fitted parts, BB weights and hop-up dials', () => {
-    expect(loadoutTile(owning(STARTERS))).toEqual({ replicas: 'AEG Rifle\nGas Pistol', detail: `0.25 g / 0.20 g BBs · hop-up 65% / ${hopUpLabel(GAS_PISTOL.hopUpDial)}` });
+    expect(loadoutTile(owning(STARTERS))).toEqual({ replicas: 'AEG Rifle\nGBB Pistol', detail: `0.25 g / 0.20 g BBs · hop-up 65% / ${hopUpLabel(GAS_PISTOL.hopUpDial)}` });
     const model = owning([...STARTERS, item('AEG Rifle', 'epic'), item('Red Dot'), item('Red Laser', 'rare')]);
     model.setFit(id('AEG Rifle'), 'optic', item('Red Dot'));
-    model.setFit(id('Gas Pistol'), 'laser', item('Red Laser', 'rare'));
-    expect(loadoutTile(model)).toEqual({ replicas: 'AEG Rifle (Epic)\nGas Pistol', detail: `Red Dot · Red Laser · 0.25 g / 0.20 g BBs · hop-up 65% / ${hopUpLabel(GAS_PISTOL.hopUpDial)}` });
+    model.setFit(id('GBB Pistol'), 'laser', item('Red Laser', 'rare'));
+    expect(loadoutTile(model)).toEqual({ replicas: 'AEG Rifle (Epic)\nGBB Pistol', detail: `Red Dot · Red Laser · 0.25 g / 0.20 g BBs · hop-up 65% / ${hopUpLabel(GAS_PISTOL.hopUpDial)}` });
   });
 
   it('shows the factory setting for a missing dial or weight', () => {

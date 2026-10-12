@@ -43,6 +43,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M97** · Replay tutorial button in Settings starts the tutorial at once, whether or not you finished it
 - **M82** · Loadout replicas and Customise parts sort and filter by rarity tier, saved between sessions; what you carry or have fitted always shows
 - **M91** · Torch shadows setting, on for High and Ultra: your own torch casts shadows, so a tree or bot in its beam shades what is behind
+- **RM7** · GBB Pistol blowback: every shot kicks the slide back over the barrel and it snaps home; an empty magazine locks it back until a reload
+- **RM7** · Blowback shows on the built-in and Blender GBB Pistol models; the Blender laser, torch, silencer and extended magazine are refitted to it
 
 ### Changed
 - **M71** · Bots hunt the map's middle once their lane is swept (now all levels, not just Pro); Normal and Hard hold their posts out of lantern light at night (#133)
@@ -110,6 +112,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **RM5** · The built-in Cyber, shown by default, gets the same low top and small sights in place of its fin; the redesign shows with Disable all models off
 - **RM6** · AEG Rifle has a new look: slotted handguard with full-length top rail, collapsible stock, new pistol grip and BB-window magazine, plain muzzle
 - **RM6** · AEG iron sights are half as tall and low: a ring at the back, a thin post at the front; the built-in rifle gets them too
+- **RM7** · The Gas Pistol is now the GBB Pistol: same stats, pool ID and parts, redesigned from the owner's reference photos
+- **RM7** · GBB Pistol look: slimmer slide flush with the frame, ejection port further back, one-piece trigger guard, shorter grip, low sights
 - **RM8** · Red dot, 2× scope, silencers and torches use new Blender models (Disable all models off): smaller, sit lower, aim follows them
 
 ### Fixed

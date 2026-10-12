@@ -22,7 +22,7 @@ BBs are not pooled assets: every BB weight is free and unlimited, picked on the 
 
 ### Identifiers
 
-Every asset has a six-digit **ID**, given in the order assets were added: `000001` is the Gas Pistol, `000002` the AEG
+Every asset has a six-digit **ID**, given in the order assets were added: `000001` is the GBB Pistol, `000002` the AEG
 Rifle, and so on. The player's save remembers the ID, so:
 
 - **Never change or reuse an ID.** Renaming an asset (the Name column) is fine; its ID stays.
@@ -40,7 +40,7 @@ Compatibility works by **tags**, not by naming replicas, so a part is never tied
 - **Fits** (on a part) lists the tags the part needs. It fits every replica that has **any one** of them.
 - **By ID.** Fits can also name a replica by its ID (for example `000002`), for a part that goes on one replica only.
 
-So Green Gas (`Fits: gas`) works with the Gas Pistol today and with any gas replica added later, with no change to
+So Green Gas (`Fits: gas`) works with the GBB Pistol today and with any gas replica added later, with no change to
 Green Gas. To let the AEG Rifle take the Red Laser, either add `under-rail` to the Red Laser's Fits or add
 `pistol-rail` to the AEG Rifle's Tags. Tags are lower case, words joined with `-`, separated by commas.
 
@@ -269,7 +269,7 @@ Extras on top of Extraction (M49): while an event is on, every case a run places
 
 | ID | Name | Key | Tags | Starter | In Shots | Tiers | Drop % | Access |
 |---|---|---|---|---|---|---|---|---|
-| 000001 | Gas Pistol | pistol | pistol, gas, pistol-mag, pistol-rail, muzzle-thread | yes | yes | | | public |
+| 000001 | GBB Pistol | pistol | pistol, gas, pistol-mag, pistol-rail, muzzle-thread | yes | yes | | | public |
 | 000002 | AEG Rifle | aeg | rifle, electric, aeg-mag, top-rail, under-rail, barrel-mount, muzzle-thread | yes | yes | | | public |
 | 000019 | Cyber Pistol | cyber | pistol, built-in-power | no | yes | Legendary | 0.25 | public |
 
