@@ -21,7 +21,8 @@ behind the Dev switches "Disable figure models" and "Disable all models" (#175).
   The earlier rounds are not kept (owner's tidy-up, 2026-10-12); their pictures are.
 - `pack.mjs` (IM5): packs an export into the file the game ships, losslessly: drops the clip tracks the game drops at
   load anyway (a bone within 0.00001 of rest), stores the rest with meshopt's codec and re-deflates the PNGs, so the
-  file is about half the size and draws pixel for pixel the same.
+  file is about half the size and draws pixel for pixel the same. Its encoder is the `meshoptimizer` package npm
+  installs with `@types/three`; if that ever goes, `npm i --no-save meshoptimizer` before running it.
 - `check/`: `arms-check.mjs` (wrists, elbows, skin and snaps per clip) and `render/` (the picture page and its shooter).
 
 ## What each script does

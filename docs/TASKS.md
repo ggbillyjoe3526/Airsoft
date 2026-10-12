@@ -67,15 +67,3 @@ acceptance:
   2. With Dev settings on (Unlock all gear), every replica and part is available.
 status: open
 attempts: 0
-
-## IM5 · Smaller figure model files (improvement item 2, owner's ask, 2026-10-12)
-tier: core
-perf: required
-touches: src/assets/models/characters/, src/render/testSupport.ts, tools/blender/bot-figure/
-contract: none
-acceptance:
-  1. `human.glb` and `robot.glb` are smaller: meshopt-compressed, with the animation tracks that never leave rest dropped; every node, part, bone and clip name and every clip length the game and the sidecars read is kept.
-  2. No visible change: the game prepares the same geometry and plays the same poses from the new files as from Blender's exports, before and after pictures match, and the arms check reports the same.
-  3. Figure CPU time (`perf-run.mjs --models`) is no worse, and the figures stay behind the Dev switches "Disable figure models" and "Disable all models".
-status: open
-attempts: 0
