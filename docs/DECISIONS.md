@@ -176,6 +176,10 @@ replaces its line; the old one stays findable in the archive or in git.
   neon signs' coloured light stay out of the node renderer.
 - **On a software adapter the Dev retro filter's views are judged by eye (2026-10-10, W4).** Its 8-colour palette turns
   sub-pixel noise into whole steps, so the numbers say nothing there.
+- **A change that should draw nothing new is checked against the commit before it (2026-10-11, W6b).** The WebGL
+  reference (b10c006) no longer matches Woodland or the figures, so `webgpu-compare.mjs --reference <commit>` draws the
+  commit before on both pages; a change that alters the look still checks Depot's and Neon Heights' world views against
+  b10c006, and the rest by eye.
 - **Woodland's triangle lines stayed as they were until the budgets split per renderer (owner, card, 2026-10-10, 15:18:
   "Keep for now"; W5).** W6a kept them: the scene's own triangles hold the owner's lines on both back ends, and the
   grass and stand-ins go on a line of their own (Performance budgets, below).
