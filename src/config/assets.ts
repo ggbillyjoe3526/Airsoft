@@ -39,7 +39,7 @@ export const FIGURE_MODEL = {
  */
 export const REPLICA_FILE = {
   /** The nodes the game reads, by name. Only `body` and `muzzle` are needed; without the others the built-in ones are drawn. */
-  nodes: { body: 'Body', magazine: 'Magazine', figure: 'Figure', muzzle: 'Muzzle', torchMount: 'TorchMount', flashHider: 'FlashHider' },
+  nodes: { body: 'Body', magazine: 'Magazine', figure: 'Figure', muzzle: 'Muzzle', torchMount: 'TorchMount', flashHider: 'FlashHider', slideBack: 'SlideBack' },
   /**
    * The markers a parts file hangs from a part (empties named `<part>_<marker>`, RM8): an optic's sight line (aimed,
    * the replica is raised so it runs through the eye) and where a torch moves to while the laser is fitted too (both

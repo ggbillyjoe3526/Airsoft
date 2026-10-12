@@ -209,6 +209,7 @@ export function prepareReplicaFile(id: string, scene: THREE.Object3D, partsScene
   const figureNode = node(N.figure);
   const torchNode = node(N.torchMount);
   const flashHiderNode = node(N.flashHider);
+  const slideBackNode = node(N.slideBack);
 
   const toScene = new THREE.Matrix4().copy(scene.matrixWorld).invert();
   const at = (o: THREE.Object3D): THREE.Vector3 => o.getWorldPosition(new THREE.Vector3()).applyMatrix4(toScene);
@@ -222,8 +223,9 @@ export function prepareReplicaFile(id: string, scene: THREE.Object3D, partsScene
   const body = pieces(scene, toScene, [magazineNode, figureNode, flashHiderNode, ...(rig?.nodes ?? [])]);
   const magazine = magazineNode ? pieces(magazineNode, toScene, []) : [];
   const flashHider = flashHiderNode ? pieces(flashHiderNode, toScene, []) : [];
-  // The figures' frame: the pistol's (the back of the slide, the body's rearmost point at the bore's height or above,
-  // at the origin), or the rifle's (its butt at the origin, its muzzle FIGURE.rifle.length ahead); the bore on the axis.
+  // The figures' frame: the pistol's (the back of the slide at the origin: the file's `SlideBack` marker, else the
+  // body's rearmost point at the bore's height or above), or the rifle's (its butt at the origin, its muzzle
+  // FIGURE.rifle.length ahead); the bore on the axis.
   let figure: ReplicaFilePiece[] = [];
   if (figureNode) {
     const toFigure = new THREE.Matrix4().copy(figureNode.matrixWorld).invert();
@@ -233,8 +235,9 @@ export function prepareReplicaFile(id: string, scene: THREE.Object3D, partsScene
       const frame = new THREE.Matrix4().makeScale(scale, scale, scale).multiply(new THREE.Matrix4().makeTranslation(0, -muzzle.y, -butt)).multiply(toFigure);
       figure = pieces(figureNode, frame, []);
     } else {
-      // The slide may be a moving part (the gas pistol's), so it counts too.
-      const back = slideBack([...body, ...(rig?.file.pieces ?? [])], muzzle.y);
+      // The slide may be a moving part (the gas pistol's), so it counts too. A marker wins: a frame that reaches back
+      // past the slide (the Cyber Pistol's rear block) would otherwise sit the grip ahead of the figure's hand.
+      const back = slideBackNode ? at(slideBackNode).z : slideBack([...body, ...(rig?.file.pieces ?? [])], muzzle.y);
       figure = pieces(figureNode, new THREE.Matrix4().makeTranslation(0, -muzzle.y, -back).multiply(toFigure), []);
     }
   }
