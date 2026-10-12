@@ -104,6 +104,10 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **W7** · Map cards, mode cards and the blurred menu backdrop are redrawn to match the current maps: Depot's weathered walls and dressing, Woodland's grass and distant trees, Neon Heights' signs and skyline, and the figures; same sizes
 - **BP3a** · Settings' On / Off choices read Off then On
 - **BP3a** · Small HUD text is at least 15 px, as the menus' text already is
+- **RM5** · Cyber Pistol has a new look: a long white top with slanted vents, a dark slide with a pink core window, a hex plate and a toothed grip
+- **RM5** · Cyber Pistol has small, low iron sights, a notch and a post with a tiny cyan dot, that line up on the centre when you aim
+- **RM5** · Cyber Pistol: only the dark slide kicks back and returns on each shot; its fire selector slides for Semi, Burst and Auto
+- **RM5** · The built-in Cyber, shown by default, gets the same low top and small sights in place of its fin; the redesign shows with Disable all models off
 
 ### Fixed
 - **G11** · The team camo on players reads clearly on Medium and up: crisp dark and light blotches printed per pixel, on WebGL and WebGPU; Low keeps plain clothes
@@ -166,6 +170,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **BP3b** · On WebGPU, after a lost graphics device the torch's shadow comes back and the extra night lamps drop on the fallback
 - **BP3b** · On WebGPU turning impact grit off and on no longer leaves old chips flying
 - **BP3b** · Dust motes on Woodland's raised Knoll no longer thin out early
+- **RM5** · The Cyber Pistol's torch sits clear of the trigger guard instead of poking into it
 
 ### Internal
 - **G8** · Set dressing never collides or blocks sight: Depot's colliders, routes, cover and bot sight are tested identical with and without it (#136)
