@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { ITEM_PICTURE } from '../config/itemPictures';
 import type { ReplicaConfig } from '../config/replicas';
 import type { SchemeId } from '../config/schemes';
-import { buildReplicaModels, fitMuzzle, REPLICA_PART_TABLES, type ReplicaDetail, type ReplicaModel } from './replicaModels';
+import { buildReplicaModels, fitLight, fitMuzzle, REPLICA_PART_TABLES, type ReplicaDetail, type ReplicaModel } from './replicaModels';
 import { NO_POWER_SOURCES, type PowerSourceLoader, type PowerSourceModel } from './powerSourceModels';
 import { NO_REPLICA_FILES, type ReplicaFiles } from './replicaFiles';
 
@@ -245,7 +245,8 @@ export function partHost(part: string): keyof typeof REPLICA_PART_TABLES | null 
 
 /**
  * Shows the parts in `fit` (and the standard magazine, the bare muzzle's own device and the iron sights up when no optic
- * is fitted), and moves the muzzle device out to the fitted barrel's end, as the viewmodel does.
+ * is fitted), and moves the muzzle device out to the fitted barrel's end and a torch under a fitted laser, as the
+ * viewmodel does.
  */
 export function fitParts(model: ReplicaModel, fit: PictureFit): void {
   model.group.traverse((o) => {
@@ -260,6 +261,7 @@ export function fitParts(model: ReplicaModel, fit: PictureFit): void {
   if (up) up.visible = !optic;
   if (down) down.visible = optic;
   fitMuzzle(model.mount, fit.barrel ?? null, fit.muzzle ?? null);
+  fitLight(model.light, fit.laser ?? null);
 }
 
 /** Hides everything but the part named `name` ('kind:id'): an attachment's own picture. */

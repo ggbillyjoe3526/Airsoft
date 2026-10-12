@@ -462,7 +462,12 @@ function buildFromFile(file: ReplicaFile, table: FileTable): ReplicaBuild {
     }
     const mount = muzzleMount(layout, devices, m, detail, orangeTip);
     group.add(mount.group);
-    return { group, muzzle: mount.marker, magazine, supportHand, mount, rig };
+    // The parts file's own sight lines and torch move (RM8): only for parts it draws.
+    const sightLines = new Map<string, number>();
+    for (const [name, line] of file.sightLines) if (name.startsWith('optic:') && name in T.parts) sightLines.set(name.slice('optic:'.length), line);
+    const torch = Object.keys(T.parts).find((name) => name.startsWith('light:') && file.underLaser.has(name));
+    const light = torch ? { object: group.getObjectByName(torch)!, underLaser: file.underLaser.get(torch)! } : null;
+    return { group, muzzle: mount.marker, magazine, supportHand, mount, rig, sightLines, light };
   };
 }
 
@@ -498,6 +503,20 @@ export interface ReplicaModel {
   mount: MuzzleMount;
   /** The moving parts from its model file (RM1), posed by the viewmodel; absent on a built-in model. */
   rig?: ReplicaRig | null;
+  /**
+   * How high each optic from its parts file looks along the bore above the origin (RM8: the file's sight line), by
+   * optic id: aimed down it, the replica is raised so that line runs through the eye. An optic without one is aimed by
+   * the replica's aim hold (config/replicas.ts).
+   */
+  sightLines?: ReadonlyMap<string, number>;
+  /** The torch from its parts file, moved under the laser while both are fitted (RM8, fitLight); absent: the built-in torch, drawn under it already. */
+  light?: LightMount | null;
+}
+
+/** A torch that clips to the laser's rail (RM8): its part ('light:<id>') and where it moves while the laser is fitted too. */
+export interface LightMount {
+  object: THREE.Object3D;
+  underLaser: THREE.Vector3;
 }
 
 /** The muzzle mount (named 'muzzleMount'): the muzzle devices and the muzzle marker, moved out to the fitted barrel's end. */
@@ -745,6 +764,13 @@ export function fitMuzzle(mount: MuzzleMount, barrel: string | null, device: str
   const l = mount.layout;
   mount.group.position.z = -(l.barrelEnd + (barrel ? (l.extensions[barrel] ?? 0) : 0));
   mount.marker.position.z = -(l.tips[device ?? 'none'] ?? l.tips.none ?? 0);
+}
+
+/** Moves a torch from its parts file under the laser while `laser` is fitted, and back where it fits without (RM8). */
+export function fitLight(light: LightMount | null | undefined, laser: string | null): void {
+  if (!light) return;
+  if (laser) light.object.position.copy(light.underLaser);
+  else light.object.position.set(0, 0, 0);
 }
 
 /** Empty marker at the muzzle (forward, up) so presentation can start visual BBs there. */

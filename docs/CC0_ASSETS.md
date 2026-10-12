@@ -125,7 +125,9 @@ warning and the built-in model is drawn.
   The magazine is never a bone: the game moves it (and the hand holding it).
 - **Parts.** `replicaParts/<id>.glb`: one top-level object per part named `<kind>_<id>` (`optic_redDot`,
   `magazine_hiCap`, `muzzle_silencer` …), in the replica's space where it fits; a child `<name>_Figure` is ignored. A
-  part the file lacks is drawn built-in.
+  part the file lacks is drawn built-in. Two child empties are read (RM8): an optic's `<name>_SightLine` on its sight
+  line (aimed, the replica is raised so it runs through the eye) and a torch's `<name>_UnderLaser`, where the torch
+  moves while the laser is fitted too (both clip to the same rail).
 - **Materials,** by name: `CyberSlab`, `CyberFrame`, `CyberLine`, `CyberCore`, `CyberMetal`, or a replica material's own
   name (`polymer`, `furniture`, `detail`, `metal`, `rubber`, `stipple`, `accent`). Plain colours: the game draws in its own
   materials, so Realistic colours, the glow and the High finish apply. No textures needed.
