@@ -67,15 +67,3 @@ acceptance:
   2. With Dev settings on (Unlock all gear), every replica and part is available.
 status: open
 attempts: 0
-
-## IM6 · Faster CI: browser tests in parallel jobs, current actions and tools, lean shared files (tidy-up items 1, 8, 6)
-tier: ui
-perf: skip
-touches: .github/workflows/check.yml, pipeline/gate.mjs, pipeline/gate.test.mjs, pipeline/workflow.test.mjs, pipeline/README.md, package.json, package-lock.json, .claude/skills/pipeline/SKILL.md, docs/PROCESS.md
-contract: none
-acceptance:
-  1. CI runs the browser smoke test in parallel shares beside the build and unit tests (`gate.mjs --only smoke --shard k/n`), every test still runs exactly once, and a pull request's whole check takes about 10 minutes, not about 25.
-  2. CI's actions are on their current majors (no Node 20 warning); Vite, Vitest and Playwright take their patch and minor updates; build, every test and the smoke test pass.
-  3. The pipeline copies only run reports to the shared files, and review pictures are JPEG and pruned once their work merges (`docs/PROCESS.md` › Sessions, the pipeline skill's step 8).
-status: open
-attempts: 0
