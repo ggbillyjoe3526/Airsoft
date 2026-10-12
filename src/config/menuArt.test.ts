@@ -1,10 +1,16 @@
-import { createHash } from 'node:crypto';
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BACKDROPS, MAP_STILLS, MENU_ART_DIR, MODE_STILLS, STILL_SIZE } from './menuArt';
 
-const DIR = join(process.cwd(), 'public', MENU_ART_DIR);
+// Node's fs, without its types (the project compiles for the browser).
+const nodeFs = 'node:fs';
+const { existsSync, readdirSync, readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as {
+  existsSync(path: URL): boolean;
+  readdirSync(path: URL): string[];
+  readFileSync(path: URL): Uint8Array;
+};
+
+const DIR = new URL(`../../public/${MENU_ART_DIR}/`, import.meta.url);
+const at = (file: string): URL => new URL(file, DIR);
 
 /** A black 480x270 JPEG read back from a failed WebGPU canvas was about 1.5 kB; a real picture is 7 kB or more. */
 const MIN_BYTES = 4_000;
@@ -18,17 +24,21 @@ const ART: Art[] = [
 ];
 
 /** Width and height from the first SOF marker of a JPEG, or null when it isn't one. */
-function jpegSize(b: Buffer): { width: number; height: number } | null {
+function jpegSize(b: Uint8Array): { width: number; height: number } | null {
+  const u16 = (i: number): number => (b[i]! << 8) | b[i + 1]!;
   if (b[0] !== 0xff || b[1] !== 0xd8) return null;
   let i = 2;
   while (i + 9 < b.length) {
     if (b[i] !== 0xff) return null;
-    const m = b[i + 1];
-    if (m >= 0xc0 && m <= 0xcf && m !== 0xc4 && m !== 0xc8 && m !== 0xcc) return { height: b.readUInt16BE(i + 5), width: b.readUInt16BE(i + 7) };
-    i += 2 + b.readUInt16BE(i + 2);
+    const m = b[i + 1]!;
+    if (m >= 0xc0 && m <= 0xcf && m !== 0xc4 && m !== 0xc8 && m !== 0xcc) return { height: u16(i + 5), width: u16(i + 7) };
+    i += 2 + u16(i + 2);
   }
   return null;
 }
+
+/** The bytes as one string, to compare two files whole. */
+const bytesOf = (file: string): string => Array.from(readFileSync(at(file)), (v) => String.fromCharCode(v)).join('');
 
 describe('menu pictures', () => {
   it('lists every picture once', () => {
@@ -37,16 +47,16 @@ describe('menu pictures', () => {
   });
 
   describe.each(ART)('$file', (art) => {
-    const path = join(DIR, art.file);
+    const path = at(art.file);
     it('exists in public/menu', () => expect(existsSync(path)).toBe(true));
     it('is a JPEG of the listed size', () => expect(jpegSize(readFileSync(path))).toEqual({ width: art.width, height: art.height }));
-    it('is under its byte budget', () => expect(statSync(path).size).toBeLessThanOrEqual(art.maxBytes));
-    it('is not a blank frame (size floor)', () => expect(statSync(path).size).toBeGreaterThan(MIN_BYTES));
+    it('is under its byte budget', () => expect(readFileSync(path).length).toBeLessThanOrEqual(art.maxBytes));
+    it('is not a blank frame (size floor)', () => expect(readFileSync(path).length).toBeGreaterThan(MIN_BYTES));
   });
 
   it('has no two pictures byte-identical', () => {
-    const hashes = ART.map((a) => createHash('sha1').update(readFileSync(join(DIR, a.file))).digest('hex'));
-    expect(new Set(hashes).size).toBe(hashes.length);
+    const files = ART.map((a) => bytesOf(a.file));
+    expect(new Set(files).size).toBe(files.length);
   });
 
   it('ships no picture menuArt does not list', () => {
