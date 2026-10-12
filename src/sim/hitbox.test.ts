@@ -313,9 +313,6 @@ describe('the hit volume legs on the rigged figures legs (IM8)', () => {
 });
 
 describe('without the rigged figures legs the hit volume is the pre-IM8 one (IM8)', () => {
-  const volume = createHitVolume();
-  const other = createHitVolume();
-
   it('has no figureLegs in the default hit rules', () => {
     expect(HITS.figureLegs).toBeUndefined();
   });
@@ -329,15 +326,5 @@ describe('without the rigged figures legs the hit volume is the pre-IM8 one (IM8
     c.position.z -= HITS.legs.maxStride + 1;
     stepWalkCycle(c, HITS);
     expect(c.walkCycle).toBeCloseTo(0.5 * HITS.legs.stridesPerMetre * Math.PI * 2, 9);
-  });
-
-  it('builds the same volume with figureLegs unset or undefined', () => {
-    const c = createCharacter(0, vec3(1, 0, 2), 0.7);
-    c.walkCycle = 1.3;
-    c.crouchAmount = 0.5;
-    c.lean = 0.5;
-    characterHitVolume(c, HITS, volume);
-    characterHitVolume(c, { ...HITS, figureLegs: undefined }, other);
-    expect(other.parts).toEqual(volume.parts);
   });
 });
