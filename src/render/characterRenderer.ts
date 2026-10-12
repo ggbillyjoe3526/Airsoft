@@ -161,8 +161,9 @@ export class CharacterRenderer {
     /** Replica models from files (M101, render/replicaFiles.ts), owned by the renderer: a pistol with one shows its shape. */
     private readonly files: ReplicaFiles = NO_REPLICA_FILES,
     /**
-     * The rigged human and robot figures (BF1, render/figureRig.ts), owned by the renderer, or null: with them every
-     * player is drawn rigged (the player's own figure as their first-person body), ahead of the figure model.
+     * The rigged human and robot figures (BF1, render/figureRig.ts), owned by the renderer (ModelFiles frees them), or
+     * null: with them every player is drawn rigged (the player's own figure as their first-person body), ahead of the
+     * figure model.
      */
     private readonly rigs: FigureRigs | null = null,
   ) {
