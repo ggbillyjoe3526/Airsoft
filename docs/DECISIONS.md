@@ -213,6 +213,17 @@ replaces its line; the old one stays findable in the archive or in git.
   "Disable all models" keeps every built-in model (replicas, parts, figures, the menus' battery and gas pictures).
   With "Disable all models" off the Blender replicas, parts and power-source pictures return; the figure model then
   still needs "Disable figure models" off. The files stay in the build and are fetched only when let in.
+- **The Blender figures (owner, 2026-10-10; approved 2026-10-12: "happy with it for now").** The hands hold the
+  replica naturally, the trigger finger in the guard; humans wear the high-cut helmet head only; robots wear no vest,
+  holsters, magazines or accessories, their team shown by its colour on their highlights; the figure is also the
+  player's first-person body, without its head. A reload pulls the old magazine and throws it; bots drop it (owner,
+  2026-10-11). BF1 draws them with the Dev model switches off, ahead of a CC0 `figure.glb`.
+- **A rigged figure points its replica where the shot goes (2026-10-12).** The aim clips turn the replica through 55 %
+  of their ±60 degrees: the game blends them by the replica's pitch, leans the upper body for the rest and twists out
+  the rifle stance's 6 degrees, so a bot visibly aims at what it shoots (BF1).
+- **The figure files ship as Blender exports them (2026-10-12).** 4.2 and 4.5 MB, about 1.75 MB each over Brotli;
+  repacking (meshopt, gltfpack) saved little over Brotli and gltfpack dropped the names the game reads. They are fetched
+  only with the switches off, so the default download is unchanged (BF1).
 - **The attachments are redesigned lower and rounder (owner, 2026-10-12: "Perfect. Add them to the game."; RM8).** The
   red dot is a 29 mm micro tube and the 2x scope a 10.8 cm prism scope (was 18), both on a sight line 3.05 cm over the
   rail (0.104 m above the AEG's origin, was 0.126); a parts file's optic marks its own sight line and the aim follows
@@ -273,6 +284,11 @@ replaces its line; the old one stays findable in the archive or in git.
   and jump height (2026-09-28).** Crouched eyes (1.09 m) hide behind 1.2 m cover and standing eyes (1.66 m) shoot over
   it, a readable peek-and-duck rhythm. Crouch cover is unclimbable (tested), and vaulting stays parked (owner,
   2026-10-01; "Maybe", 2026-10-06).
+- **The Blender figures in the game (BF1) are part of 0.1 Dev 5 (owner, 2026-10-12: "This is for Dev 5").** They
+  merge before the Dev 5 tag, still behind the Dev switches.
+- **The rigged figures stay behind the Dev switches until they pass M85's hit-volume check (2026-10-12).** They don't
+  yet (crouched and walking, KNOWN_ISSUES › Figures and art); `render/riggedHitVolume.test.ts` measures them and holds
+  each pose to its numbers, so a change only brings them closer (BF1).
 
 ## Bots and balance
 

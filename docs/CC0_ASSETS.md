@@ -49,6 +49,8 @@ Poly Haven and Quaternius). A file reaches the repository one of two ways:
 
 ```
 src/assets/models/characters/figure.glb   the player and bot model (M25a, wired up)
+src/assets/models/characters/human.glb    the rigged Blender human and robot with their sidecars (BF1, wired up;
+                          robot.glb       drawn ahead of figure.glb, with the Dev model switches off)
 src/assets/models/replicas/<id>.glb       a replica's model, by replica id: aeg, pistol and cyber (M101, RM1, wired up)
 src/assets/models/replicaParts/<id>.glb   that replica's fittable parts, by replica id: aeg and pistol (RM1, wired up)
 src/assets/models/powerSources/<file>.glb the menus' battery, LiPo and gas bottle pictures (RM3, wired up)
@@ -197,5 +199,6 @@ taken), lets the game credit the authors anyway if it ever goes public, and make
 
 - **Props and surface textures from files.** Depot's props and textures are built in code (`src/render/mapMeshes.ts`,
   `src/render/proceduralTextures.ts`). Swapping one in means a small loader like the figure's, per kind of block.
-- **glTF animations** (walk cycle, hit call) for rigged models.
+- **glTF animations for a CC0 `figure.glb`.** The rigged Blender figures (BF1) play their own 23 clips; a dropped-in
+  `figure.glb` is still drawn without animation.
 - **Draco and KTX2 compression.**

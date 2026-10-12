@@ -14,6 +14,7 @@ import {
 import type { RenderBackend } from '../config/renderBackend';
 import type { MapData } from '../map/mapTypes';
 import type { FigureModel } from './externalModels';
+import type { FigureRigs } from './figureRig';
 import { ModelFiles } from './modelFiles';
 import type { ReplicaFiles } from './replicaFiles';
 import { environmentLookOf } from './lightingPreset';
@@ -105,6 +106,10 @@ export class Renderer {
   /** The figure model the next match draws its players with; null for the built-in figures. */
   get figureModel(): FigureModel | null {
     return this.models.figureModel;
+  }
+  /** The rigged figures (BF1) the next match draws its players with, ahead of the figure model; null for the others. */
+  get figureRigs(): FigureRigs | null {
+    return this.models.figureRigs;
   }
   /** The replica models from files the viewmodel, the menus' pictures and the figures draw from; none for the built-in ones. */
   get replicaFiles(): ReplicaFiles {

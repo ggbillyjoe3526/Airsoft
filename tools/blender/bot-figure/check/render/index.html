@@ -1,0 +1,48 @@
+<!doctype html><html><body style="margin:0;background:#9aa4ad"><script type="importmap">{"imports":{"three":"./three/build/three.module.js","three/addons/":"./three/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three'; import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+const W=900,H=900; const r=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true}); r.setSize(W,H); document.body.appendChild(r.domElement);
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0x9aa4ad);
+scene.add(new THREE.HemisphereLight(0xffffff,0x445566,1.6)); const d=new THREE.DirectionalLight(0xffffff,2.2); d.position.set(2,4,3); scene.add(d);
+const cam=new THREE.PerspectiveCamera(30,1,0.01,50);
+const L=new GLTFLoader(); const load=u=>new Promise(res=>L.load(u,res));
+const stems=new URLSearchParams(location.search).get('stems').split(',');
+const C=new THREE.Matrix4().set(1,0,0,0, 0,0,-1,0, 0,1,0,0, 0,0,0,1);
+const rows=a=>new THREE.Matrix4().set(...a.flat());
+const repG={rifle:await load('aeg.glb'), pistol:await load('pistol.glb')};
+const reps={}; for(const k in repG){ reps[k]=repG[k].scene; reps[k].traverse(o=>{ if(o.name==='Figure') o.visible=false; }); reps[k].userData.mixer=new THREE.AnimationMixer(reps[k]); }
+const magCopy={}, oldCopy={}; for(const k in repG){ let m; repG[k].scene.traverse(o=>{if(o.name==='magazine')m=o}); magCopy[k]=m.clone(true); magCopy[k].position.set(0,0,0); magCopy[k].matrixAutoUpdate=false; oldCopy[k]=m.clone(true); oldCopy[k].matrixAutoUpdate=false; }
+const figs={}, sides={}; for(const s of stems){ figs[s]=await load(s+'.glb'); sides[s]=await (await fetch(s+'_animations.json')).json(); }
+let cur=null;
+window.pose=(stem,clip,t,hold,repClip)=>{ if(cur) scene.remove(cur.scene); cur=figs[stem]; const side=sides[stem]; scene.add(cur.scene);
+  const mixer=new THREE.AnimationMixer(cur.scene); const c=cur.animations.find(a=>a.name===clip); const act=mixer.clipAction(c); act.setLoop(THREE.LoopOnce,1); act.clampWhenFinished=true; act.play(); mixer.setTime(Math.min(t,c.duration-1e-4));
+  const bone=n=>{let o; cur.scene.traverse(x=>{if(x.name===n)o=x}); return o};
+  for(const k in reps){ reps[k].parent?.remove(reps[k]); magCopy[k].parent?.remove(magCopy[k]); oldCopy[k].parent?.remove(oldCopy[k]); }
+  const rep=reps[hold]; rep.matrixAutoUpdate=false; rep.matrix.copy(rows(side.replicaOnGrip[hold]).multiply(C)); bone('Grip_R').add(rep);
+  const rm=rep.userData.mixer; rm.stopAllAction();
+  if(repClip){ const rc=repG[hold].animations.find(a=>a.name===repClip); const ra=rm.clipAction(rc); ra.setLoop(THREE.LoopOnce,1); ra.clampWhenFinished=true; ra.play(); rm.setTime(Math.min(rc.duration-1e-4, t/c.duration*rc.duration)); }
+  else rm.setTime(0);
+  const mih=(side.magazineInHand||{})[clip]; const u=t/c.duration;
+  if(mih && u>=mih.from && u<mih.to){ magCopy[hold].matrix.copy(rows(mih.magazineOnBone)); bone(mih.bone).add(magCopy[hold]); }
+  const om=mih&&mih.oldMagazine;
+  if(om && u>=om.from && u<om.release){ oldCopy[hold].matrix.copy(rows(om.magazineOnBone)); bone(mih.bone).add(oldCopy[hold]); }
+  else if(om && u>=om.release){ const dur=c.duration; mixer.setTime(om.release*dur); cur.scene.updateMatrixWorld(true);
+    const M0=bone(mih.bone).matrixWorld.clone().multiply(rows(om.magazineOnBone)); mixer.setTime(Math.min(t,dur-1e-4));
+    const p0=new THREE.Vector3(), q0=new THREE.Quaternion(), s0=new THREE.Vector3(); M0.decompose(p0,q0,s0);
+    const bv=om.releaseVelocity, v=new THREE.Vector3(bv[0],bv[2],-bv[1]); const bw=om.releaseSpin, w=new THREE.Vector3(bw[0],bw[2],-bw[1]);
+    const g=om.gravity, floor=0.02; let dt=(u-om.release)*dur;
+    const tl=(v.y+Math.sqrt(v.y*v.y+2*g*Math.max(0,p0.y-floor)))/g; dt=Math.min(dt,tl);
+    const p=p0.clone().addScaledVector(v,dt); p.y-=0.5*g*dt*dt;
+    const wl=w.length(), q=wl>1e-6? new THREE.Quaternion().setFromAxisAngle(w.clone().normalize(),wl*dt).multiply(q0) : q0;
+    oldCopy[hold].matrix.compose(p,q,s0); scene.add(oldCopy[hold]); }
+  { let rmag; rep.traverse(o=>{if(o.name==='magazine')rmag=o}); const h=mih&&mih.replicaMagazineHidden; if(rmag) rmag.visible=!(h && u>=h[0] && u<h[1]); }
+  cur.scene.traverse(o=>{ if(o.isMesh && !o.parent?.isBone) o.visible=!/LOD/.test(o.name); });
+  cur.scene.updateMatrixWorld(true); return c.duration; };
+window.shot=(target,dist,yaw,pitch,fov,hide)=>{ let p=new THREE.Vector3(); if(typeof target==='string'){ let o; cur.scene.traverse(x=>{if(x.name===target)o=x}); o.getWorldPosition(p);} else p.set(...target); if(hide&&hide.off) p.add(new THREE.Vector3(...hide.off));
+  cur.scene.traverse(o=>{ if(o.isMesh && hide && (hide.list||hide).some(h=>o.name.startsWith(h))) o.visible=false; });
+  cam.fov=fov||30; cam.updateProjectionMatrix(); const y=yaw*Math.PI/180, pt=pitch*Math.PI/180;
+  cam.position.set(p.x+dist*Math.cos(pt)*Math.sin(y), p.y+dist*Math.sin(pt), p.z+dist*Math.cos(pt)*Math.cos(y)); cam.lookAt(p); r.render(scene,cam);
+  cur.scene.traverse(o=>{ if(o.isMesh && !o.parent?.isBone) o.visible=!/LOD/.test(o.name); });
+  return r.domElement.toDataURL('image/jpeg',0.85); };
+window.ready=true;
+</script></body></html>
