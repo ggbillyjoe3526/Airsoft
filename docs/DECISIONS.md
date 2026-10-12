@@ -221,9 +221,12 @@ replaces its line; the old one stays findable in the archive or in git.
 - **A rigged figure points its replica where the shot goes (2026-10-12).** The aim clips turn the replica through 55 %
   of their ±60 degrees: the game blends them by the replica's pitch, leans the upper body for the rest and twists out
   the rifle stance's 6 degrees, so a bot visibly aims at what it shoots (BF1).
-- **The figure files ship as Blender exports them (2026-10-12).** 4.2 and 4.5 MB, about 1.75 MB each over Brotli;
-  repacking (meshopt, gltfpack) saved little over Brotli and gltfpack dropped the names the game reads. They are fetched
-  only with the switches off, so the default download is unchanged (BF1).
+- **The figure files are packed losslessly after each Blender export (owner, 2026-10-12: "Make all those 10 changes";
+  IM5).** `tools/blender/bot-figure/pack.mjs` drops the clip tracks the game drops at load anyway (a bone within
+  0.00001 of rest), stores the rest with meshopt's lossless codec and re-deflates the PNGs: 4.2 and 4.5 MB become 2.2
+  and 2.4 MB (gzip 2.0 to 1.5 and 1.7 MB) and parse in a third of the time, and the game draws them pixel for pixel the
+  same. No gltfpack: it renames and reorders what the game reads. Replaces BF1's "ship as exported"; the files are
+  still fetched only with the switches off, so the default download is unchanged.
 - **The attachments are redesigned lower and rounder (owner, 2026-10-12: "Perfect. Add them to the game."; RM8).** The
   red dot is a 29 mm micro tube and the 2x scope a 10.8 cm prism scope (was 18), both on a sight line 3.05 cm over the
   rail (0.104 m above the AEG's origin, was 0.126); a parts file's optic marks its own sight line and the aim follows

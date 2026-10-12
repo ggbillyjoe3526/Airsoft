@@ -9,6 +9,7 @@ globalThis.document = { createElementNS: () => new FakeImg() };
 const fs = await import('node:fs');
 const THREE = await import('three');
 const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
+const { MeshoptDecoder } = await import('three/examples/jsm/libs/meshopt_decoder.module.js');
 
 // Limits a natural arm stays inside (degrees, and the share of the rest thickness the skin keeps). wristTwist is the
 // turn left at the wrist joint itself (hand against the last forearm bone that deforms the skin); forearmTurn is the
@@ -24,7 +25,7 @@ function twistAboutY(q) {
   return ((a + 540) % 360) - 180;
 }
 
-new GLTFLoader().parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength), '', (g) => {
+new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength), '', (g) => {
   const scene = g.scene;
   const bones = {};
   scene.traverse((o) => { if (o.isBone) bones[o.name] = o; });

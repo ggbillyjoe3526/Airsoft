@@ -1,20 +1,21 @@
 <!doctype html><html><body style="margin:0;background:#9aa4ad"><script type="importmap">{"imports":{"three":"./three/build/three.module.js","three/addons/":"./three/examples/jsm/"}}</script>
 <script type="module">
-import * as THREE from 'three'; import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import * as THREE from 'three'; import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js'; import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 const W=900,H=900; const r=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true}); r.setSize(W,H); document.body.appendChild(r.domElement);
 const scene=new THREE.Scene(); scene.background=new THREE.Color(0x9aa4ad);
 scene.add(new THREE.HemisphereLight(0xffffff,0x445566,1.6)); const d=new THREE.DirectionalLight(0xffffff,2.2); d.position.set(2,4,3); scene.add(d);
 const cam=new THREE.PerspectiveCamera(30,1,0.01,50);
-const L=new GLTFLoader(); const load=u=>new Promise(res=>L.load(u,res));
+const L=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder); const load=u=>new Promise(res=>L.load(u,res));
 const stems=new URLSearchParams(location.search).get('stems').split(',');
 const C=new THREE.Matrix4().set(1,0,0,0, 0,0,-1,0, 0,1,0,0, 0,0,0,1);
 const rows=a=>new THREE.Matrix4().set(...a.flat());
 const repG={rifle:await load('aeg.glb'), pistol:await load('pistol.glb')};
 const reps={}; for(const k in repG){ reps[k]=repG[k].scene; reps[k].traverse(o=>{ if(o.name==='Figure') o.visible=false; }); reps[k].userData.mixer=new THREE.AnimationMixer(reps[k]); }
 const magCopy={}, oldCopy={}; for(const k in repG){ let m; repG[k].scene.traverse(o=>{if(o.name==='magazine')m=o}); magCopy[k]=m.clone(true); magCopy[k].position.set(0,0,0); magCopy[k].matrixAutoUpdate=false; oldCopy[k]=m.clone(true); oldCopy[k].matrixAutoUpdate=false; }
-const figs={}, sides={}; for(const s of stems){ figs[s]=await load(s+'.glb'); sides[s]=await (await fetch(s+'_animations.json')).json(); }
+const figs={}, sides={}; for(const s of stems){ figs[s]=await load(s+'.glb'); sides[s]=await (await fetch(s+'_animations.json')).json(); figs[s].scene.traverse(o=>{ o.userData.rest=[o.position.clone(),o.quaternion.clone(),o.scale.clone()]; }); }
 let cur=null;
 window.pose=(stem,clip,t,hold,repClip)=>{ if(cur) scene.remove(cur.scene); cur=figs[stem]; const side=sides[stem]; scene.add(cur.scene);
+  cur.scene.traverse(o=>{ const r=o.userData.rest; if(r){ o.position.copy(r[0]); o.quaternion.copy(r[1]); o.scale.copy(r[2]); } }); // packed files (pack.mjs) leave a still bone out of a clip
   const mixer=new THREE.AnimationMixer(cur.scene); const c=cur.animations.find(a=>a.name===clip); const act=mixer.clipAction(c); act.setLoop(THREE.LoopOnce,1); act.clampWhenFinished=true; act.play(); mixer.setTime(Math.min(t,c.duration-1e-4));
   const bone=n=>{let o; cur.scene.traverse(x=>{if(x.name===n)o=x}); return o};
   for(const k in reps){ reps[k].parent?.remove(reps[k]); magCopy[k].parent?.remove(magCopy[k]); oldCopy[k].parent?.remove(oldCopy[k]); }

@@ -16,8 +16,13 @@ behind the Dev switches "Disable figure models" and "Disable all models" (#175).
   hand and arm fixes of bot15-bot16, 23 clips) are the game's `src/assets/models/characters/human.glb` (19,832
   triangles, high-cut helmet head only) and `robot.glb` (17,092, bare body with team-paint panels), each with LOD1/LOD2
   meshes, plus their sidecars (clip lengths, loops, speeds, `fitTo` stats, first-person parts to hide, `replicaOnGrip`:
-  where each replica glb sits on the `Grip_R` bone, and `magazineInHand`: the reloads' magazines). The earlier rounds
-  (v5 to v8) stay on the figure branch, `claude/project-thread-r4plsu`.
+  where each replica glb sits on the `Grip_R` bone, and `magazineInHand`: the reloads' magazines). The game's files
+  are packed with `pack.mjs` (below); Blender's own exports of v10 are in the project files (`models/bot-human/v10/`).
+  The earlier rounds are not kept (owner's tidy-up, 2026-10-12); their pictures are.
+- `pack.mjs` (IM5): packs an export into the file the game ships, losslessly: drops the clip tracks the game drops at
+  load anyway (a bone within 0.00001 of rest), stores the rest with meshopt's codec and re-deflates the PNGs, so the
+  file is about half the size and draws pixel for pixel the same.
+- `check/`: `arms-check.mjs` (wrists, elbows, skin and snaps per clip) and `render/` (the picture page and its shooter).
 
 ## What each script does
 
@@ -60,6 +65,8 @@ Read the newest layer first when looking for a function: it is the one that wins
 3. Then `session16.py` the same way. `B = bpy.app.driver_namespace['bot']`; `B['export_v']('human', 'bot_human_v10')`
    (or `'robot'`) builds the figure with its own finger tables, exports the glb and sidecar and saves the .blend.
 4. Pictures: `B['proxies']()` then `B['figure_shots'](prefix, parts, head, first_person_parts)`.
+5. Pack each export for the game, from the repo root: `node tools/blender/bot-figure/pack.mjs bot_human_v10.glb
+   src/assets/models/characters/human.glb` (and `robot`), and copy the sidecar beside it as `human.json`.
 
 ## How the hands hold the replicas (bot13)
 
