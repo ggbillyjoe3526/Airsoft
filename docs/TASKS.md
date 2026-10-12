@@ -67,3 +67,15 @@ acceptance:
   2. With Dev settings on (Unlock all gear), every replica and part is available.
 status: open
 attempts: 0
+
+## IM2 · A play link on GitHub Pages (owner's ask, 2026-10-12)
+tier: ui
+perf: skip
+touches: .github/workflows/pages.yml, playwright.config.ts
+contract: none
+acceptance:
+  1. A new release tag publishes that release to https://ggbillyjoe3526.github.io/Airsoft/ with nothing else to click; Actions › Play link › Run workflow publishes the newest release (or one named) by hand.
+  2. The published game boots and plays from that sub-path under its security policy, and its title screen names the tag.
+  3. README offers the link as the first way to play, with the zip steps below it unchanged; the release checklist says to check the link after a tag.
+status: open
+attempts: 0
