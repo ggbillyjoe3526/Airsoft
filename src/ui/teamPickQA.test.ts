@@ -118,7 +118,7 @@ describe('the words of a match from Beta\'s side (M98 criterion 3)', () => {
     expect(pauseText(live, 1, ROUNDS)).toContain('Beta (you) 3 – 1 Alpha');
     expect(pauseText(live, 0, ROUNDS)).toContain('you attack');
     // Between rounds it names next round's job, which swaps at half-time.
-    const between = play('attackDefend', { number: ROUNDS.halfTimeAfter, phase: 'over', attackers: 0 });
+    const between = play('attackDefend', { number: ROUNDS.halfTimeAfter, phase: 'over', attackers: 0, winner: 0 });
     expect(pauseText(between, 1, ROUNDS)).toContain('you attack next');
     expect(pauseText(between, 0, ROUNDS)).toContain('you defend next');
   });

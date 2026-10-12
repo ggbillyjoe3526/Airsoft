@@ -181,12 +181,17 @@
   background: var(--menu-panel-hi);
 }
 
-/* Over the picture: a dark foot for the words. */
+/* Over the picture: a dark foot for the words, reaching up past the map's name (BP3: at 1280 px a light picture showed
+   through behind it), and a soft shadow on the name itself. */
 .map-cards .choice-card-pic::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(0deg, rgba(5, 10, 26, 0.95) 8%, rgba(5, 10, 26, 0) 55%);
+  background: linear-gradient(0deg, rgba(5, 10, 26, 0.95) 8%, rgba(5, 10, 26, 0.72) 50%, rgba(5, 10, 26, 0.3) 100%);
+}
+
+.map-cards .choice-name {
+  text-shadow: 0 1px 2px rgba(5, 10, 26, 0.9), 0 0 10px rgba(5, 10, 26, 0.8);
 }
 
 .map-cards .choice-card {
@@ -419,7 +424,8 @@
   top: 0;
   display: flex;
   flex-direction: column;
-  gap: clamp(6px, 0.9vh, 14px);
+  --aside-gap: clamp(6px, 0.9vh, 14px);
+  gap: var(--aside-gap);
   max-height: calc(100vh - var(--topbar-h) - 2 * var(--page-top));
   padding: var(--sp-5);
   /* A window too short for it all still reaches Play, by scrolling the panel. */
@@ -506,6 +512,26 @@
 
 .play-button {
   margin-top: var(--sp-2);
+}
+
+/* Start match stays at the panel's foot while the rest scrolls inside it (BP3: at 1280 x 720 the panel's content is
+   taller than the window, and Start match sat below its fold). */
+.play-aside > .play-button {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+}
+
+/* Under the stuck button, a strip of the panel's own colour over the panel's padding, so what scrolls on doesn't show
+   below it. It takes no room: in place it sits behind the button. */
+.play-aside::after {
+  content: '';
+  position: sticky;
+  bottom: calc(-1 * var(--sp-5));
+  flex: none;
+  height: var(--sp-5);
+  margin-top: calc(-1 * (var(--sp-5) + var(--aside-gap)));
+  background: rgb(12, 20, 42);
 }
 
 .play-aside .kit-card {

@@ -55,6 +55,7 @@ export function formatTime(seconds: number): string {
  * The table's blocks: your team, then the other, each player's numbers from `statsOf`, best hitters first (ties keep
  * the roster order). `markOut`: grey out the players hit this round (the live scoreboard). `run`: an Extraction run
  * (M43), one long round, so the teams are named for their side (your squad, the home team) instead of rounds won.
+ * `benched` (by character id): left out, Extraction's reserve until it joins the run (BP3: it showed as hit, 0:00 alive).
  */
 export function statsBlocks(
   characters: readonly Character[],
@@ -64,10 +65,11 @@ export function statsBlocks(
   player: Character,
   markOut: boolean,
   run = false,
+  benched: readonly boolean[] = [],
 ): TeamBlock[] {
   const order = [player.team, 1 - player.team];
   return order.map((team) => {
-    const members = characters.filter((c) => c.team === team);
+    const members = characters.filter((c) => c.team === team && benched[c.id] !== true);
     const sorted = members
       .map((c, i) => ({ c, s: statsOf(c.id), i }))
       .sort((a, b) => b.s.hits - a.s.hits || a.i - b.i);

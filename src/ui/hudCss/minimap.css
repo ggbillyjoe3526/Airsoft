@@ -27,12 +27,15 @@
   box-shadow: 0 0 0 2px rgba(150, 180, 255, 0.3);
 }
 
-/* "Depot · Round 2": one line under the minimap, on the same navy panel (--hud-panel, so HUD opacity moves both) and the
-   minimap's width, so it reads over any sky or wall. Its height is 26 px at size 1, which --minimap-caption in style.css
-   keeps room for. */
+/* "Depot · Round 2": one line under the minimap, on the same navy panel (--hud-panel, so HUD opacity moves both), so it
+   reads over any sky or wall. At least the minimap's width, and wider for a long name (BP3: "Woodland · Round 3" was cut
+   short at 1366 px) up to a limit clear of the score bar. Its height is 26 px at size 1, which --minimap-caption in
+   style.css keeps room for. */
 .minimap-caption {
   box-sizing: border-box;
-  width: var(--minimap-size);
+  width: max-content;
+  min-width: var(--minimap-size);
+  max-width: calc(var(--minimap-size) * 1.6);
   margin: 0;
   padding: calc(4px * var(--hud-scale, 1)) calc(10px * var(--hud-scale, 1));
   overflow: hidden;

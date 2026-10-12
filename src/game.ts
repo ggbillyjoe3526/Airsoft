@@ -455,15 +455,19 @@ export class Game {
       tutorialDone: loadTutorialDone(),
       // Replay tutorial (M97): from its first step, finished or not; from the pause menu it leaves what was under way.
       onReplayTutorial: () => {
-        if (this.started) this.leaveMatch();
+        const fromPause = this.started;
+        if (fromPause) this.leaveMatch();
         saveSetting('tutorialStep', '');
         this.practice = true;
         this.tutorial = true;
-        this.play();
+        // From the pause menu with the mouse lock refused, the tutorial's own pause menu replaces the one it left (BP3:
+        // the match's stayed up, Skip to next round and all).
+        this.play(fromPause ? () => this.showRangePause() : undefined);
       },
-      // Skip to next round (M83): the skip runs from the next frame of play, so Resume takes the mouse as usual.
+      // Skip to next round (M83): the skip runs from the next frame of play, so Resume takes the mouse as usual. A skip
+      // already begun whose play the browser refused (the mouse lock, just after Esc) is taken up by the next click (BP3).
       onSkipRound: () => {
-        if (this.session instanceof MatchSession && this.session.beginSkip()) this.play();
+        if (this.session instanceof MatchSession && (this.session.skipping || this.session.beginSkip())) this.play();
       },
       onSkipTutorialStep: () => this.skipTutorial(false),
       onSkipTutorial: () => this.skipTutorial(true),
@@ -976,7 +980,7 @@ export class Game {
    * replaced otherwise. Runs in the click: the lock is asked for first, and the session built once the browser has
    * answered (`enter`).
    */
-  private play(): void {
+  private play(onRefused?: () => void): void {
     if (this.askingLock) return;
     const s = this.session;
     // What Play does is decided from these flags alone (core/sessionPlan.ts, audit CORE-05).
@@ -1004,6 +1008,7 @@ export class Game {
       if (this.disposed) return;
       this.enter(action, s);
       if (this.pointer.locked) this.resume();
+      else onRefused?.();
     });
   }
 
@@ -1051,7 +1056,8 @@ export class Game {
       this.session.setWhatGotYouMode(this.whatGotYouMode);
       this.session.setHitMarker(this.hitMarker);
       this.session.setMinimapTurn(this.minimapTurn);
-      this.session.combat.setReplicaPictures(this.pictures, kitSubjects(this.loadout.kit(), this.look.realisticColours));
+      // The kit the match plays (a ruleset's factory kit, say), not the Loadout's (BP3).
+      this.session.combat.setReplicaPictures(this.pictures, kitSubjects(this.session.kit, this.look.realisticColours));
       this.applyDevTo(this.session);
       applyTeamCss(this.container, TEAM_COLOUR_SETS[this.teamColours]);
     }
@@ -1122,6 +1128,8 @@ export class Game {
     this.pointer.setUnlockedButtons(false);
     this.session?.dispose();
     this.session = null;
+    // Team colours changed from the pause menu waited for the match to end; the menus' swatches take them now (BP3).
+    applyTeamCss(this.container, TEAM_COLOUR_SETS[this.teamColours]);
   }
 
   private pause(): void {
@@ -1156,6 +1164,12 @@ export class Game {
     s?.setPlaying(false);
     // The screen just shown starts without a hint: say again why the match was silent.
     if (this.audioBlocked) this.menus.showHint(BROWSER_NOTES.audioBlocked);
+  }
+
+  /** The range's pause menu (the tutorial's, with its coaching), when the range is what's loaded. */
+  private showRangePause(): void {
+    const s = this.session;
+    if (s instanceof RangeSession) this.menus.showPause(s.status, this.options.seed, true, s.coaching);
   }
 
   /** The pause menu's Skip step or Skip tutorial (audit POOL-14): the range carries on, the pause menu says where. */

@@ -107,7 +107,12 @@ export class RarityBar {
       return chip;
     });
     this.all = this.button('rarity-chip rarity-all', RARITY_TEXT.all);
-    this.all.addEventListener('click', () => this.set({ sort: this.view.sort, hidden: new Set() }));
+    this.all.addEventListener('click', () => {
+      // All hides itself once every tier shows: keep the keyboard's place on the first chip (BP3: focus was lost).
+      const focused = document.activeElement === this.all;
+      this.set({ sort: this.view.sort, hidden: new Set() });
+      if (focused) this.chips[0]?.focus();
+    });
     this.hiddenNote = el('span', 'rarity-hidden');
     this.hiddenNote.setAttribute('aria-live', 'polite');
     show.append(...this.chips, this.all, this.hiddenNote);

@@ -1,7 +1,7 @@
 import { formatRoundTime } from '../config/matchRules';
 import { unknownMode } from '../config/modes';
 import { TEAMS } from '../config/teams';
-import { attackersInRound, type RoundRules, type RoundState } from '../sim/round';
+import { attackersInRound, roundDrawn, type RoundRules, type RoundState } from '../sim/round';
 
 /** The result screen's lines for a decided match (audit CORE-05: composed here, Game.pause only shows them). */
 export interface ResultText {
@@ -64,7 +64,8 @@ export function pauseText(r: RoundState, mine: number, rules: RoundRules): strin
       return roundsPauseText(r, mine, rules, '');
     case 'attackDefend': {
       const between = r.phase === 'over';
-      const attackers = between ? attackersInRound(r.number + 1, rules) : r.attackers;
+      // A drawn round is played again with the same sides (sim/round.ts), so no swap after it (BP3).
+      const attackers = between ? attackersInRound(roundDrawn(r) ? r.number : r.number + 1, rules) : r.attackers;
       return roundsPauseText(r, mine, rules, ` · attack / defend, you ${attackers === mine ? 'attack' : 'defend'}${between ? ' next' : ''}`);
     }
     case 'extraction':

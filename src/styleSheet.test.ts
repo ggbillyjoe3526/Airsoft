@@ -363,7 +363,8 @@ describe('the HUD\'s sheets (G4)', () => {
   });
 
   it('keep the round banner within the score bar\'s widest form, as the hit feed keeps clear of it, and under the HIT! stamp', () => {
-    const feedHalf = /(\d+)px \* var\(--sb-scale, 1\) \* var\(--sb-fit, 1\)/.exec(declared('.hit-feed', 'max-width')!)![1];
+    // The feed follows the bar as it is (--sb-half, BP3), falling back to its widest form, as the banner keeps to.
+    const feedHalf = /var\(--sb-half, (\d+)px\) \* var\(--sb-scale, 1\) \* var\(--sb-fit, 1\)/.exec(declared('.hit-feed', 'max-width')!)![1];
     expect(declared('.hitfx-round', 'max-width')).toContain(`${Number(feedHalf) * 2}px * var(--sb-scale, 1) * var(--sb-fit, 1)`);
     expect(declared('.hitfx-banner', 'z-index')).toBe('1');
   });
@@ -414,7 +415,9 @@ describe('layout polish before the screenshots (G4, M100)', () => {
   it('sets the minimap caption on the HUD\'s navy panel colour, which follows HUD opacity, in white text', () => {
     expect(declared('.minimap-caption', 'background')).toBe('var(--hud-panel)');
     expect(declared('.minimap-caption', 'color')).toBe('var(--hud-fg)');
-    expect(declared('.minimap-caption', 'width')).toBe('var(--minimap-size)');
+    // At least the minimap's width, wider for a long name up to a limit (BP3).
+    expect(declared('.minimap-caption', 'min-width')).toBe('var(--minimap-size)');
+    expect(declared('.minimap-caption', 'max-width')).toMatch(/^calc\(var\(--minimap-size\) \* [\d.]+\)$/);
   });
 
   it('keeps the fire-mode chips and the spare line in rows of their own: the spare line is a block under the chips', () => {

@@ -35,8 +35,11 @@ describe('the pause screen line', () => {
     const you = (attack: boolean) => (attack ? 'attack' : 'defend');
     expect(pauseText(round('attackDefend', { number: 2, attackers: first }), 0, ROUNDS)).toContain(`you ${you(first === 0)} ·`);
     // After the last round before half-time the roles swap for the next one.
-    const before = round('attackDefend', { number: ROUNDS.halfTimeAfter, phase: 'over', attackers: first });
-    expect(pauseText(before, 0, ROUNDS)).toBe(`After round ${ROUNDS.halfTimeAfter} · attack / defend, you ${you(first !== 0)} next · Alpha (you) 0 – 0 Beta · first to 5`);
+    const before = round('attackDefend', { number: ROUNDS.halfTimeAfter, phase: 'over', attackers: first, winner: 0, score: [1, 0] });
+    expect(pauseText(before, 0, ROUNDS)).toBe(`After round ${ROUNDS.halfTimeAfter} · attack / defend, you ${you(first !== 0)} next · Alpha (you) 1 – 0 Beta · first to 5`);
+    // A drawn round is played again (audit SIM-19), on the same sides, so the job doesn't swap (BP3).
+    const drawn = round('attackDefend', { number: ROUNDS.halfTimeAfter, phase: 'over', attackers: first, winner: -1 });
+    expect(pauseText(drawn, 0, ROUNDS)).toContain(`you ${you(first === 0)} next`);
   });
 });
 

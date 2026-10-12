@@ -76,6 +76,26 @@
   gap: var(--sp-4);
 }
 
+/* Continue stays on screen while the page scrolls (BP3: at 1280 x 720 the records pushed it below the fold), over the
+   page's fade at its foot, with a strip of the page's ground under it so the records don't show through below it. */
+.summary-aside > .menu-button-big {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+}
+
+/* The strip takes no room: in place it sits behind the button (which is taller); stuck, it fills the page's foot. */
+.summary-aside::after {
+  content: '';
+  position: sticky;
+  bottom: calc(-1 * var(--page-top));
+  z-index: 1;
+  flex: none;
+  height: var(--page-top);
+  margin-top: calc(-1 * (var(--page-top) + var(--sp-4)));
+  background: var(--menu-bg);
+}
+
 .summary-credits,
 .summary-haul,
 .summary-records {
@@ -101,6 +121,7 @@
 }
 
 .records-grid {
+  width: 100%;
   border-collapse: collapse;
   font-size: var(--fs-md);
   font-variant-numeric: tabular-nums;
@@ -112,9 +133,16 @@
   text-align: left;
 }
 
+/* The last column needs no room after it: a narrow panel (1280 px wide) keeps "Attack and Defend" inside its edge. */
+.records-grid th:last-child,
+.records-grid td:last-child {
+  padding-right: 0;
+}
+
 .records-grid thead th {
   font: 600 var(--fs-sm) var(--ui-display);
-  letter-spacing: var(--ls-wide);
+  letter-spacing: var(--ls-caps);
+  vertical-align: bottom;
   text-transform: uppercase;
   color: var(--menu-faint);
 }

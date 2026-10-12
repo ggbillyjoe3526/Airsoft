@@ -122,6 +122,11 @@
   opacity: 0.25;
 }
 
+/* Extraction's reserve: no pip until it joins the run's last part. */
+.sb-pips i.reserve {
+  display: none;
+}
+
 /* Rounds won: dark figures on a solid block in the team's colour (legible on every set's colours). */
 .sb-score {
   display: grid;
@@ -174,11 +179,26 @@
   align-items: center;
   gap: 10px;
   min-height: 30px;
+  /* No wider than the bar's widest form (Attack and Defend, about 730 px at size 1), which the minimap and the hit feed
+     keep clear of: a long Extraction line wraps instead (BP3: at 1280 px its exits ran over the minimap). */
+  max-width: 730px;
+  box-sizing: border-box;
   padding: 4px 22px;
   font: 600 15px/1.2 var(--ui-font);
   white-space: nowrap;
   background: var(--hud-panel);
   clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 10px 100%);
+}
+
+.sb-flag-text {
+  min-width: 0;
+  white-space: normal;
+  text-wrap: balance;
+}
+
+.sb-flag-bar,
+.sb-respawn {
+  flex: none;
 }
 
 .sb-flag[hidden] {

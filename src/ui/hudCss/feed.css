@@ -12,9 +12,9 @@
   align-items: flex-end;
   gap: 6px;
   /* Never under the score bar (bug pass: at 1024 px a friendly-fire line ran beneath it): the feed keeps to the right
-     of its widest form (Attack and Defend, about 730 px at size 1, scaled by --sb-scale and --sb-fit), before the HUD's
-     scale, and a long row wraps. */
-  max-width: calc((50% - var(--hud-edge-x) - 12px - 365px * var(--sb-scale, 1) * var(--sb-fit, 1)) / var(--hud-scale, 1));
+     of the bar as it is (--sb-half, half its width at size 1, set by ui/scoreboard.ts; before that its widest form,
+     Attack and Defend's, about 730 px), scaled by --sb-scale and --sb-fit, before the HUD's scale, and a long row wraps. */
+  max-width: calc((50% - var(--hud-edge-x) - 12px - var(--sb-half, 365px) * var(--sb-scale, 1) * var(--sb-fit, 1)) / var(--hud-scale, 1));
   font: 700 17px/1.2 var(--ui-font);
   color: var(--paper);
   pointer-events: none;
