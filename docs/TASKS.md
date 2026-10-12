@@ -67,3 +67,16 @@ acceptance:
   2. With Dev settings on (Unlock all gear), every replica and part is available.
 status: open
 attempts: 0
+
+## RM8 · Attachment redesigns: red dot, 2x scope, silencers, weapon torches (owner, 2026-10-12)
+tier: core
+perf: skip
+touches: src/assets/models/replicaParts/, src/render/replicaFiles.ts, src/render/replicaModels.ts, src/render/viewmodel.ts, src/render/itemPictures.ts, src/config/assets.ts, docs/CC0_ASSETS.md, docs/ASSETS.md
+contract: none
+acceptance:
+  1. The AEG's red dot, 2x scope, silencer and weapon torch and the gas pistol's silencer and torch are the redesigns the owner approved (2026-10-12: "Perfect. Add them to the game."), spliced into their parts files with every other part unchanged; the Cyber Pistol gets a parts file with its torch. Each file stays inside its parts budget (REPLICA_FILE.warnPartBytes).
+  2. Aiming down an optic from a parts file raises the replica so that optic's own sight line (its `SightLine` marker) runs through the eye; the built-in optics aim as before. The view's centre stays inside the new red dot's glass at the strongest kick.
+  3. With the Red Laser and the torch both fitted, a parts file's pistol torch sits under the laser (its `UnderLaser` marker), in the hands and on the menus' pictures; on its own it clips to the rail.
+  4. Behind "Disable all models" (RM4): with the switch on, the default, nothing a player sees changes.
+status: open
+attempts: 0
