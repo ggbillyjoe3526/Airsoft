@@ -153,6 +153,19 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **BP3a** · A drawn round's countdown is no longer read out every second; the pause line names the right job after a draw
 - **BP3a** · The Armory's rarity filter keeps keyboard focus when All hides
 - **BP3a** · Replay tutorial with a refused mouse lock shows the tutorial's pause menu
+- **BP3b** · Bots lead their shots and judge their aim by the replica in hand (a pistol out leads like a pistol), not their main replica
+- **BP3b** · With friendly fire off, a bot no longer holds fire for a teammate standing beyond its target
+- **BP3b** · Skip to next round no longer lets an AEG's wind-down sound play into the next round
+- **BP3b** · A round ended from Dev settings stays out of the records even if the switches are turned off afterwards
+- **BP3b** · Spectating shows the watched player's lean
+- **BP3b** · The passing plane fades in and out at the ends of its flight instead of blinking, stays in the sky and flies lower over Neon Heights and the range
+- **BP3b** · Neon Heights' blade signs stand out from their towers instead of lying flat
+- **BP3b** · On WebGPU the lamp pools and torch spot show again at night under the Retro look
+- **BP3b** · On WebGPU Low no longer builds the world twice on its first frames, so there is less of a hitch
+- **BP3b** · On WebGPU starting to spectate on Medium no longer stalls
+- **BP3b** · On WebGPU, after a lost graphics device the torch's shadow comes back and the extra night lamps drop on the fallback
+- **BP3b** · On WebGPU turning impact grit off and on no longer leaves old chips flying
+- **BP3b** · Dust motes on Woodland's raised Knoll no longer thin out early
 
 ### Internal
 - **G8** · Set dressing never collides or blocks sight: Depot's colliders, routes, cover and bot sight are tested identical with and without it (#136)
@@ -184,6 +197,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **W6a** · Medium draw-call budgets raised, Woodland 115 to 120 and Neon Heights 140 to 145: GPU grass costs two draws, built-in models five
 - **W6b** · The world's and figures' materials carry their own WebGPU shaders instead of the old WebGL code, so nothing looks different and the game download is about 7 kB smaller; the game chunk's budget is back at 1,000 kB
 - **W7** · The menu pictures are drawn on WebGPU by default (WebGL with --backend webgl); the script checks the back end, waits for a settled frame and refuses a black picture
+- **BP3b** · WebGPU light and post buffers are freed when outgrown or when the renderer is disposed; an empty BB streak is not drawn
+- **BP3b** · The mode content check plays each map only at team sizes the game allows
 
 ## 0.1 Dev 4 · 2026-10-06
 
