@@ -1,7 +1,8 @@
 # Character models
 
 - `human.glb`, `robot.glb` and their sidecars `human.json`, `robot.json`: the rigged Blender figures (BF1), made with
-  `tools/blender/bot-figure/` and approved by the owner on 2026-10-12. Each has LOD1 and LOD2 meshes and 23 clips; the
+  `tools/blender/bot-figure/` and approved by the owner on 2026-10-12, then packed with `tools/blender/bot-figure/pack.mjs`
+  (meshopt, losslessly; IM5). Each has LOD1 and LOD2 meshes and 23 clips; the
   sidecar gives the clips' lengths and paces, where the replicas sit on the `Grip_R` bone and where the magazines go in
   the reloads. The game draws them only with the Dev tab's "Disable figure models" and "Disable all models" both off
   (`config/figureRig.ts`, `render/figureRig.ts`), and fetches them only then.
