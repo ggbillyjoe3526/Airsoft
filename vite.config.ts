@@ -76,6 +76,7 @@ function rapierWasm(): Plugin {
     transform: {
       filter: { id: RAPIER_WASM.module },
       handler(code) {
+        // Nothing of the bundle moves (plainWasmBundle pads the swap and appends the import), so its map still holds.
         return { code: plainWasmBundle(code), map: null };
       },
     },

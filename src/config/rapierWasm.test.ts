@@ -27,14 +27,19 @@ describe("Rapier's plain WebAssembly (IM3)", () => {
     expect(bundle).not.toContain(RAPIER_WASM.urlName);
   });
 
-  it('drops the base64 copy and imports the file by URL, moving no line before the import', () => {
+  it('drops the base64 copy and imports the file by URL, moving nothing of the bundle', () => {
     const plain = plainWasmBundle(bundle);
     expect(plain).not.toContain('"AGFzbQ');
-    expect(plain).toContain(`module_or_path:${RAPIER_WASM.urlName}}`);
-    // The import is the last line, after every line of the bundle: a source map's line numbers still hold.
-    expect(plain.split('\n').indexOf(importLine)).toBe(bundle.split('\n').length);
+    expect(plain).toMatch(new RegExp(`module_or_path:${RAPIER_WASM.urlName} +\\}`));
+    // Every line and column of the bundle keeps its place, so the source map that says nothing moved is right: the swap
+    // is padded to the length it replaces, and the import is a line of its own after the last of the bundle's.
+    const [before, after] = [bundle.split('\n'), plain.split('\n')];
+    expect(after.slice(0, before.length).map((line) => line.length)).toEqual(before.map((line) => line.length));
+    const swapEnd = after[0]!.indexOf(RAPIER_WASM.urlName) + RAPIER_WASM.urlName.length;
+    const tail = after[0]!.slice(swapEnd).trimStart();
+    expect(before[0]!.endsWith(tail)).toBe(true);
+    expect(after.indexOf(importLine)).toBe(before.length);
     expect(plain.trimEnd().endsWith(importLine)).toBe(true);
-    expect(plain.length).toBeLessThan(bundle.length / 10);
   });
 
   it('refuses a bundle without exactly one inlined module, so an upgrade that changes it fails the build', () => {

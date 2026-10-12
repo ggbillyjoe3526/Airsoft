@@ -26,12 +26,15 @@ const INLINED_WASM = /(module_or_path:)[A-Za-z_$][\w$]*\.toByteArray\("AGFzbQ[A-
  * Rapier's bundle `code` with its inlined WebAssembly swapped for the plain file's URL, imported with Vite's `?url` (a
  * string, which wasm-bindgen fetches and compiles as it streams in). Throws unless the bundle has exactly one inlined
  * module, so a Rapier upgrade that changes the bundle's shape fails the build instead of shipping the base64 copy
- * again. The import goes on a line of its own after the bundle (imports are hoisted), so no line before it moves. Pure.
+ * again. Nothing of the bundle moves, so the build's source map needs no change: the URL's name is padded with spaces
+ * to the length of what it replaces (the minifier drops them), and the import goes on a line of its own after the
+ * bundle (imports are hoisted). Pure.
  */
 export function plainWasmBundle(code: string): string {
   const found = code.match(INLINED_WASM)?.length ?? 0;
   if (found !== 1) {
     throw new Error(`Rapier's bundle has ${found} inlined WebAssembly modules where 1 was expected (src/config/rapierWasm.ts): update the pattern for this Rapier version`);
   }
-  return `${code.replace(INLINED_WASM, `$1${RAPIER_WASM.urlName}`)}\nimport ${RAPIER_WASM.urlName} from './${RAPIER_WASM.file}?url';\n`;
+  const plain = code.replace(INLINED_WASM, (inlined, key: string) => `${key}${RAPIER_WASM.urlName}`.padEnd(inlined.length));
+  return `${plain}\nimport ${RAPIER_WASM.urlName} from './${RAPIER_WASM.file}?url';\n`;
 }
