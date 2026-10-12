@@ -144,7 +144,8 @@ export function figureLegCycleStep(c: Character, legs: FigureLegs, moved: number
   }
   const stride = sum > 1e-4 ? strides / sum : (legs.clips[LEG_SLOT.Run_F]?.stride ?? 0);
   if (stride <= 0) return 0;
-  const back = c.crouchAmount > 0.5 && step.forward < -0.1 * step.speed;
+  const B = FIGURE_RIG.backStep;
+  const back = c.crouchAmount > B.crouched && step.forward < -B.share * step.speed;
   return ((back ? -moved : moved) / stride) * Math.PI * 2;
 }
 

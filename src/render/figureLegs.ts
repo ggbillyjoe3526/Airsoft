@@ -129,5 +129,7 @@ export function figureLegsFrom(src: FigureLegSource): FigureLegs {
   mixer.stopAllAction();
   mixer.uncacheRoot(bones);
   skeleton.dispose();
+  // Never drawn, so nothing reached the GPU: the meshes' default materials go with them (the geometry is the rig's).
+  for (const mesh of meshes) (mesh.material as THREE.Material).dispose();
   return { clips };
 }

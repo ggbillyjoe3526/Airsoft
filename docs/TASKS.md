@@ -71,7 +71,7 @@ attempts: 0
 ## IM8 · The figures' crouch and walk moves match the hit volume (owner's ask, 2026-10-12)
 tier: core
 perf: required
-touches: src/config/hits.ts, src/sim/hitbox.ts, src/sim/figureLegs.ts, src/render/figureLegs.ts, src/render/figureRig.ts, src/render/figurePose.ts, src/render/riggedFigure.ts, src/render/characterRenderer.ts, src/matchSession.ts, src/assets/models/characters/, tools/blender/bot-figure/
+touches: src/config/hits.ts, src/config/figureRig.ts, src/sim/hitbox.ts, src/sim/figureLegs.ts, src/render/figureLegs.ts, src/render/figureRig.ts, src/render/figurePose.ts, src/render/riggedFigure.ts, src/render/characterRenderer.ts, src/matchSession.ts, src/assets/models/characters/, tools/blender/bot-figure/
 contract: none
 acceptance:
   1. With the rigged figures on, the hit volume's legs (thighs, shins, boots) stand on the figure's own leg joints from its clips, and the walk cycle steps at the clips' strides; with the Dev switches on (the default) the hit volume and the game are unchanged.

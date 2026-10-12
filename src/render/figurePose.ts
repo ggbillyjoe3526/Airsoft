@@ -266,7 +266,7 @@ export function stepPose(state: PoseState, input: PoseInput, dt: number, table: 
   if (gaitStride > 0) state.gait += travel / gaitStride;
   // The crouched walk was made walking ahead: it runs backwards when the step goes back.
   const crouchStride = stride(table, S.CrouchWalk);
-  if (crouchStride > 0) state.crouchStep += (input.forward < -0.1 * speed ? -travel : travel) / crouchStride;
+  if (crouchStride > 0) state.crouchStep += (input.forward < -FIGURE_RIG.backStep.share * speed ? -travel : travel) / crouchStride;
   const sprintStride = stride(table, S.Sprint);
   if (sprintStride > 0) state.sprint += travel / sprintStride;
   const offStride = stride(table, S.WalkOff);
