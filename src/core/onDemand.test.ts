@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { OnDemand } from './onDemand';
 
+// The spy on the fake setTimeout goes first, so the real one comes back: files share globals (isolate: false), and a
+// fake left behind hangs the next file's timers.
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
