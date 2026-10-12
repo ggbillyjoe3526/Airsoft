@@ -224,8 +224,8 @@ export const MOUSE = {
  * pointer speed and acceleration. Chrome and Edge honour it; Firefox ignores the request.
  */
 export const RAW_INPUT: readonly { id: Switch; label: string; blurb: string }[] = [
-  { id: 'on', label: 'On', blurb: 'The mouse as it moves, without the system’s acceleration (Chrome, Edge).' },
   { id: 'off', label: 'Off', blurb: 'The system’s pointer speed and acceleration, as on the desktop.' },
+  { id: 'on', label: 'On', blurb: 'The mouse as it moves, without the system’s acceleration (Chrome, Edge).' },
 ];
 
 export const DEFAULT_RAW_INPUT: Switch = 'on';

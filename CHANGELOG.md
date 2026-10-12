@@ -102,6 +102,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M81** · Practice range and tutorial in Depot's new look: baked light, post effects, props behind the firing line, a sandbag berm, dirt, puddles and sprays
 - **M81** · Beyond the range walls: wooded hills, treelines, site huts, a water tower and a power line; the distance boards stay clear of the sprays
 - **W7** · Map cards, mode cards and the blurred menu backdrop are redrawn to match the current maps: Depot's weathered walls and dressing, Woodland's grass and distant trees, Neon Heights' signs and skyline, and the figures; same sizes
+- **BP3a** · Settings' On / Off choices read Off then On
+- **BP3a** · Small HUD text is at least 15 px, as the menus' text already is
 
 ### Fixed
 - **G11** · The team camo on players reads clearly on Medium and up: crisp dark and light blotches printed per pixel, on WebGL and WebGPU; Low keeps plain clothes
@@ -138,6 +140,19 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **W6a** · The first dust puff, grit or kicked dust in a match no longer causes a small hitch: it is ready before the match starts
 - **M81** · The site roundel no longer covers the 30 m distance board on the practice range
 - **M91b** · On WebGPU at night on High and Ultra, switching on your weapon torch no longer freezes or garbles the picture once its shadows start; torch shadows show as on WebGL
+- **BP3a** · The round message sits clear of the HIT! stamp and waits while you call your hit
+- **BP3a** · The Tab scoreboard and the round's table fit 1280×720 and 1366×768 screens, 5v5 and Extraction too; they hide the ammo panel only when they would cover it
+- **BP3a** · New game's Start match and the summary's Continue stay on screen at 1280, 1366 and 1920 px
+- **BP3a** · Hit feed lines fit on one row beside the score bar; the minimap's caption shows the whole map name
+- **BP3a** · Extraction's long exit line wraps instead of running over the minimap
+- **BP3a** · Extraction's reserve has a scoreboard pip (hidden until it joins) and no longer shows as hit, 0:00 in the tables
+- **BP3a** · Settings tabs no longer jump 16 px; map card names read over light pictures
+- **BP3a** · Skip to next round works after the browser refuses the mouse
+- **BP3a** · The HUD's replica pictures follow the match's kit (a ruleset's factory kit)
+- **BP3a** · Team colours changed mid-match reach the menus when you quit
+- **BP3a** · A drawn round's countdown is no longer read out every second; the pause line names the right job after a draw
+- **BP3a** · The Armory's rarity filter keeps keyboard focus when All hides
+- **BP3a** · Replay tutorial with a refused mouse lock shows the tutorial's pause menu
 
 ### Internal
 - **G8** · Set dressing never collides or blocks sight: Depot's colliders, routes, cover and bot sight are tested identical with and without it (#136)

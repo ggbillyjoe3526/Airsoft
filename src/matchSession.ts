@@ -152,8 +152,11 @@ export class MatchSession {
   readonly match: MatchPresentation;
   readonly mode: MatchMode;
   private readonly loadout: readonly ReplicaConfig[];
-  /** The player's kit under the match's rules (M39 kitUnderRules: the factory kit, semi only, realcap), fitted each round. */
-  private readonly kit: PlayerKit;
+  /**
+   * The player's kit under the match's rules (M39 kitUnderRules: the factory kit, semi only, realcap), fitted each round;
+   * the HUD's replica pictures are drawn from it (BP3), not from the Loadout's own kit.
+   */
+  readonly kit: PlayerKit;
   /** The bots' factory loadout under the match's rules (LOADOUT itself when none apply). */
   private readonly botLoadout: readonly ReplicaConfig[];
   /** Every player's numbers for the match and the round (M19). */
@@ -510,7 +513,7 @@ export class MatchSession {
   /** Every player's numbers over the match, your team first, for the end-of-match summary. */
   summaryBlocks(): TeamBlock[] {
     const names = rosterNames(this.state.characters, this.player.id);
-    return statsBlocks(this.state.characters, names, (id) => this.stats.matchOf(id), this.state.round.score, this.player, false, this.extraction !== undefined);
+    return statsBlocks(this.state.characters, names, (id) => this.stats.matchOf(id), this.state.round.score, this.player, false, this.extraction !== undefined, this.state.round.run.reserve);
   }
 
   /** The result screen for the decided match (audit CORE-05): its lines and every player's numbers, for Game to show. */
@@ -711,9 +714,12 @@ export class MatchSession {
     return this.state.characters[0]!;
   }
 
-  /** Players per team index (the scoreboard's pips): equal sides, or in Extraction your squad against the map's opponents in play. */
+  /**
+   * Characters per team index (the scoreboard's pips): equal sides, or in Extraction your squad against the home team
+   * with its reserve (BP3: the reserve had no pip; the scoreboard hides it until it joins).
+   */
   private teamSizes(): [number, number] {
-    const [mine, theirs] = this.sidesInPlay();
+    const [mine, theirs] = this.rosterSizes();
     return byTeam(this.playerTeam, mine, theirs);
   }
 

@@ -32,6 +32,7 @@ export class Scoreboard {
   private shownLow = false;
   private shownOvertime = false;
   private shownAlive = -1;
+  private shownReserve = -1;
   private shownAttackers = -2;
   private shownPercent = -1;
   private shownStatus = '';
@@ -41,8 +42,10 @@ export class Scoreboard {
   private readonly shownRun = { status: '', second: -1, open: -1, warned: false, outcome: '', respawns: -1, carried: -1 };
   private readonly respawn: HTMLSpanElement;
   private readonly aim: HTMLSpanElement;
+  /** Publishes half the bar's width as it changes, so the hit feed keeps clear of the bar as it is, not its widest form. */
+  private readonly sizeWatch: ResizeObserver | null;
 
-  /** `teamSizes`: players per team (Extraction's sides differ). `playerTeam` is marked "you" so it's obvious which score is yours. */
+  /** `teamSizes`: characters per team (Extraction's sides differ, its reserve included). `playerTeam` is marked "you" so it's obvious which score is yours. */
   constructor(
     parent: HTMLElement,
     teamSizes: readonly number[],
@@ -70,6 +73,13 @@ export class Scoreboard {
     this.flagText = this.root.querySelector('.sb-flag-text') as HTMLSpanElement;
     this.respawn = this.root.querySelector('.sb-respawn') as HTMLSpanElement;
     this.aim = this.root.querySelector('.sb-aim') as HTMLSpanElement;
+    // BP3: the feed kept clear of Attack and Defend's bar in every mode, so at 1366 px its lines wrapped onto three rows.
+    // Only on a change of size (no layout read per frame); the bar's own scale is applied in the feed's CSS.
+    this.sizeWatch = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => {
+      const width = this.root.offsetWidth;
+      if (width > 0) parent.style.setProperty('--sb-half', `${width / 2}px`);
+    });
+    this.sizeWatch?.observe(this.root);
   }
 
   /** The line under the clock (G4): what wins the match ("First to 5"), or the run's aim in Extraction. Set once. */
@@ -103,19 +113,29 @@ export class Scoreboard {
     const low = seconds <= HUD.lowClockSeconds && (round.phase === 'live' || seconds === 0);
     if (low !== this.shownLow) this.clock.classList.toggle('low', (this.shownLow = low));
     if (!run) this.updateFlag(round);
-    // Pips: which players are still in play (one bit each), so the DOM is only touched on a change.
+    // Pips: which players are still in play (one bit each) and which wait as Extraction's reserve (hidden until they
+    // join, BP3), so the DOM is only touched on a change.
+    const reserve = round.run.reserve;
     let mask = 0;
-    for (let i = 0; i < characters.length; i++) if (isInPlay(characters[i]!)) mask |= 1 << i;
-    if (mask === this.shownAlive) return;
+    let waiting = 0;
+    for (let i = 0; i < characters.length; i++) {
+      if (isInPlay(characters[i]!)) mask |= 1 << i;
+      if (reserve[characters[i]!.id]) waiting |= 1 << i;
+    }
+    if (mask === this.shownAlive && waiting === this.shownReserve) return;
     this.shownAlive = mask;
+    this.shownReserve = waiting;
     const n = [0, 0];
     for (const c of characters) {
       const pip = this.pips[c.team]?.[n[c.team]!++];
       pip?.classList.toggle('out', !isInPlay(c));
+      pip?.classList.toggle('reserve', reserve[c.id] === true);
     }
   }
 
   dispose(): void {
+    this.sizeWatch?.disconnect();
+    this.root.parentElement?.style.removeProperty('--sb-half');
     this.root.remove();
   }
 

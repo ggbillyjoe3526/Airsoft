@@ -111,3 +111,24 @@ describe('the round banner\'s headline (G4)', () => {
     for (const text of others) expect(isRoundStart(text), text).toBe(false);
   });
 });
+
+describe('the banner after a drawn round (BP3)', () => {
+  it('reads "round N again in S" and the spoken form keeps the round and drops the countdown', () => {
+    for (const mode of ['elimination', 'attackDefend'] as const) {
+      const text = roundBanner(round(mode, { phase: 'over', winner: -1, reason: 'time', number: 3 }), 0, false, 4, ROUNDS);
+      expect(text).toMatch(/ · round 3 again in 4$/);
+      expect(spokenRoundMessage(text)).toMatch(/ · round 3 again$/);
+      expect(spokenRoundMessage(text)).not.toMatch(/\d+ again in|in 4/);
+    }
+  });
+
+  it('speaks the same words for every second of the countdown, so the live region stays quiet', () => {
+    const spoken = [4, 3, 2, 1].map((s) => spokenRoundMessage(roundBanner(round('elimination', { phase: 'over', winner: -1, reason: 'time', number: 2 }), 0, false, s, ROUNDS)));
+    expect(new Set(spoken).size).toBe(1);
+  });
+
+  it('still drops the countdown of the ordinary "next round in" message, and leaves other text alone', () => {
+    expect(spokenRoundMessage('Your team wins the round · next round in 3')).toBe('Your team wins the round');
+    expect(spokenRoundMessage('Round 2 · Attack')).toBe('Round 2 · Attack');
+  });
+});

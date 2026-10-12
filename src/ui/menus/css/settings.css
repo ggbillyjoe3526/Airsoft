@@ -222,7 +222,8 @@
   border: 1px solid var(--menu-line-soft);
 }
 
-.settings-tab-panel + .settings-tab-panel {
+/* A gap only between panels shown together: a hidden one before it gave every tab but the first a 16 px drop (BP3). */
+.settings-tab-panel:not([hidden]) ~ .settings-tab-panel:not([hidden]) {
   margin-top: var(--sp-4);
 }
 

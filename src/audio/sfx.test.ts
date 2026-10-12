@@ -2215,7 +2215,8 @@ describe('M65 QA (audit AUD-01): picks, Play, Dev content, the range and Quit ar
     expect(soundscapeOf({ ...WOODLAND }, true)).not.toBe(soundscapeOf(WOODLAND, true));
   });
 
-  it('every map cue and loop of every map, Day and Night, is bit-identical rendered ahead, finished at Play from halfway, or carried across a pick back and forth', () => {
+  // Renders every map's sounds several times: about 2 s alone, past the 5 s default beside the other suites (BP3).
+  it('every map cue and loop of every map, Day and Night, is bit-identical rendered ahead, finished at Play from halfway, or carried across a pick back and forth', { timeout: 15_000 }, () => {
     for (const entry of MAPS) {
       const choices = lightingChoices(mapData(entry.id));
       for (const pick of choices) {

@@ -67,7 +67,7 @@ export const SCOREBOARD_SIZE = {
   default: 1.3,
   /**
    * Half the score bar's width at size 1 in its widest form (Attack and Defend, 5v5: about 730 px, G4), px: the figure
-   * the hit feed keeps clear of (ui/hudCss/feed.css, `365px * var(--sb-scale)`).
+   * the hit feed keeps clear of until the bar has been measured (ui/hudCss/feed.css, `var(--sb-half, 365px)`, BP3).
    */
   halfWidth: 365,
   /** Room kept between the scoreboard and the screen's right edge for the hit feed, px (bug pass: never under it). */
@@ -220,8 +220,8 @@ export const CROSSHAIR_DYNAMIC: readonly { id: CrosshairDynamic; label: string; 
 ];
 
 export const CROSSHAIR_OUTLINES: readonly { id: CrosshairOutline; label: string; blurb: string }[] = [
-  { id: 'on', label: 'On', blurb: 'A thin dark edge keeps it readable on bright walls.' },
   { id: 'off', label: 'Off', blurb: '' },
+  { id: 'on', label: 'On', blurb: 'A thin dark edge keeps it readable on bright walls.' },
 ];
 
 /** Slider ranges (px). */

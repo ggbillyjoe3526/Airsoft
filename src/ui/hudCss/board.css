@@ -1,12 +1,15 @@
 /* The Tab scoreboard (M19; G4 look): the stats table (style.css .stats-table, the match summary's: each team under a
    bar in its colour with its score) on a solid navy panel cut at its top left, under the heading. Under the "HIT!"
-   call stamp (.hitfx-banner), so holding Tab while calling a hit doesn't hide it. */
+   call stamp (.hitfx-banner), so holding Tab while calling a hit doesn't hide it. In a match it fits the window (BP3,
+   ui/matchBoard.ts): tighter rows past eight players (.compact), a smaller scale (--board-fit, a share of the HUD's)
+   when it would still run off the foot, and the replica panel hidden while the board covers it (.board-covers-panel
+   on the container). */
 .match-board {
   position: absolute;
   left: 50%;
   top: calc(max(18%, calc(var(--hud-margin) + 44px + var(--sb-height) * var(--sb-scale, 1))) + 96px * var(--hud-scale, 1));
   translate: -50% 0;
-  scale: var(--hud-scale, 1);
+  scale: calc(var(--hud-scale, 1) * var(--board-fit, 1));
   transform-origin: 50% 0;
   width: min(780px, calc((100% - 32px) / var(--hud-scale, 1)));
   padding: 16px 20px 20px;
@@ -19,6 +22,27 @@
 
 .match-board[hidden] {
   display: none;
+}
+
+/* Many players (5v5 and up, an Extraction run): the rows close up so the board fits a 720 px window at the HUD's size. */
+.match-board.compact .stats-table td {
+  padding-top: 1px;
+  padding-bottom: 1px;
+}
+
+.match-board.compact .head-icon-box {
+  width: 1.4em;
+  height: 1.4em;
+}
+
+.match-board.compact .stats-team th {
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+
+/* The board over the replica panel in a small window: the panel goes while the board is up, rather than peek out. */
+.board-covers-panel .hud-replica {
+  visibility: hidden;
 }
 
 .match-board-heading {

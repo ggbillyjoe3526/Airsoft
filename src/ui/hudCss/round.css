@@ -2,12 +2,15 @@
    panel cut at its top left (as opaque as HUD opacity) with an orange bar down its left edge, the words in the HUD's
    heavy capitals. The capitals are text-transform only: the words stay as written, for the code and a screen reader.
    As a round starts, "Round 2" (with your job in flag mode) is its headline, larger (.start); the results and the
-   countdown between rounds keep a size that fits one line at 1280 px. Shown by .show alone, when the game says (its
-   timing is HUD.roundStartMessageTime, config/renderView.ts); the "HIT!" stamp sits over it (style.css). */
+   countdown between rounds keep a size that fits one line at 1280 px, and a longer one (half-time, a named winner)
+   wraps into two even lines rather than leave the countdown alone on the second. Shown by .show alone, when the game
+   says (its timing is HUD.roundStartMessageTime, config/renderView.ts); it waits while you call your hit, so it never
+   shows under the "HIT!" stamp (BP3, render/matchPresentation.ts). Its gap under the score bar grows with the HUD, as
+   the OUT tag in it does (BP3). */
 .hitfx-round {
   position: absolute;
   left: 50%;
-  top: calc(var(--hud-margin) + 32px + var(--sb-height) * var(--sb-scale, 1));
+  top: calc(var(--hud-margin) + 32px * var(--hud-scale, 1) + var(--sb-height) * var(--sb-scale, 1));
   translate: -50% 0;
   scale: var(--hud-scale, 1);
   transform-origin: 50% 0;
@@ -20,6 +23,7 @@
   letter-spacing: var(--ls-caps);
   text-transform: uppercase;
   text-align: center;
+  text-wrap: balance;
   color: var(--hud-fg);
   background: var(--hud-panel);
   box-shadow: inset 4px 0 0 var(--orange);

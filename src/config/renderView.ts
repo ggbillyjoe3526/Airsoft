@@ -79,6 +79,12 @@ export const HUD = {
    */
   crosshairSpreadSigmas: 2,
   crosshairGapStep: 0.5,
+  /**
+   * The Tab scoreboard and the round's table (ui/matchBoard.ts, BP3): past `compactRows` players they draw tighter
+   * rows (5v5 and up, an Extraction run), and they shrink to end `bottomGap` px above the window's foot rather than run
+   * off it, never below `minFit` of the HUD's size.
+   */
+  board: { compactRows: 8, bottomGap: 16, minFit: 0.6 },
 } as const;
 
 /**

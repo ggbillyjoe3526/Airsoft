@@ -89,9 +89,10 @@ export const TEAM_SIZE_CHOICES: readonly MatchChoice[] = [
   { id: '6', label: '6v6', blurb: 'You and five bot teammates against six bots.', tag: 'dev' },
 ];
 
+/** Off then On, as every switch in the menus reads (BP3). */
 export const FRIENDLY_FIRE_CHOICES: readonly { id: Switch; label: string; blurb: string }[] = [
-  { id: 'on', label: 'On', blurb: 'Your BBs knock out teammates too, as at a real site. Check your line.' },
   { id: 'off', label: 'Off', blurb: 'BBs pass your teammates by: only the other team can knock you out.' },
+  { id: 'on', label: 'On', blurb: 'Your BBs knock out teammates too, as at a real site. Check your line.' },
 ];
 
 export const RICOCHETS_COUNT_CHOICES: readonly { id: Switch; label: string; blurb: string }[] = [

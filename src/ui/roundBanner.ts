@@ -34,7 +34,7 @@ function roundsBanner(r: RoundState, playerTeam: number, showStart: boolean, sec
     else if (r.reason === 'time') result = mine ? "Time's up · your team had more players left" : `Time's up · ${winner} had more players left`;
     else result = mine ? 'Your team wins the round' : `Your team loses the round (${winner} wins)`;
     // A draw is played again (audit SIM-19): same round, same ends, so no half-time after it.
-    if (roundDrawn(r)) return `${result} · round ${r.number} again in ${secondsToNext}`;
+    if (roundDrawn(r)) return `${result} · round ${r.number}${AGAIN_IN}${secondsToNext}`;
     const halfTime = halfTimeAfterRound(r.number, rules) ? (flagMode ? ' · half-time, sides swap' : ' · half-time, ends swap') : '';
     return `${result}${halfTime}${NEXT_ROUND}${secondsToNext}`;
   }
@@ -72,9 +72,16 @@ export function isRoundStart(text: string): boolean {
 
 /** Before the countdown in the between-rounds message. */
 const NEXT_ROUND = ' · next round in ';
+/** Before the countdown after a drawn round, which is played again ("· round 3 again in 4"). */
+const AGAIN_IN = ' again in ';
 
-/** The round message as a screen reader says it (audit UI-15): without the countdown, which changes every second. */
+/**
+ * The round message as a screen reader says it (audit UI-15): without the countdown, which changes every second. After
+ * a draw the round is named and its countdown dropped too (BP3: it was read out again each second).
+ */
 export function spokenRoundMessage(text: string): string {
   const at = text.indexOf(NEXT_ROUND);
-  return at < 0 ? text : text.slice(0, at);
+  if (at >= 0) return text.slice(0, at);
+  const again = text.lastIndexOf(AGAIN_IN);
+  return again < 0 ? text : text.slice(0, again) + ' again';
 }
