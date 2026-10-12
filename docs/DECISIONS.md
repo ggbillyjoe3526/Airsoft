@@ -400,6 +400,11 @@ replaces its line; the old one stays findable in the archive or in git.
   item (0.25 %, owner approved) and stays inside the pistol class's 1.0 J chrono limit: rifle power with pistol
   handling, the tightest spread and almost no kick. It borrows its colours from his photo (mint, hot pink, black), never
   its logo, lettering or outline (CLAUDE.md §4).
+- **The AEG Rifle's redesign (owner, 2026-10-12).** Its long slotted handguard, collapsible stock, pistol grip and
+  magazine come from his seven reference photos, with no text or logo copied (RM6). Small, minimal iron sights that are
+  not tall or obstructive: a ring aperture and a post on one line 1.45 cm over the rail, on the model file and the
+  built-in rifle alike. It keeps the old length, grip, magazine, rails and mounts, so every animation, attachment, hand
+  pose and figure still fits.
 - **Loadout and Armory change only between matches, never from the pause menu (owner, 2026-10-03: "I don't want it in
   the pause menu").** The practice range's pause menu offers the Loadout, because a range has no match.
 - **`pool.md` (what exists: IDs, tags, rarity, economy) and `stats.md` (how it shoots) are hand-edited data the game
@@ -433,6 +438,10 @@ replaces its line; the old one stays findable in the archive or in git.
 - **Disable Armory and Unlock all gear are Dev switches (owner: the Armory "can be disabled in settings", 2026-10-04).**
   Disable Armory greys out the Armory and pays no FC (the collection is kept). Unlock all gear lends the Loadout every
   asset at every tier without touching the collection, and keeps the match out of the records and unpaid.
+- **The Cyber Pistol's redesign (owner, 2026-10-12).** Its shape comes from his three reference pictures, with no logo
+  or lettering copied (RM5). Small, subtle iron sights: a notch and a post. The grip joins the fixed frame. On a shot
+  only the dark grey slide kicks back and returns, though the replica is electric; the light grey shell and the
+  muzzle block never move. It stays compatible with every animation, attachment and figure.
 
 ## Menus, HUD, settings and accessibility
 

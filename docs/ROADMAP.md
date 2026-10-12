@@ -50,7 +50,10 @@ pulled into Dev 5, and Dev 7 is folded away (its mode checks join the toolkit he
    checks (CT3, done 2026-10-11: `mode:<id>`); 4 skin checks (CT4, done 2026-10-11: `skin:<id>`).
 8. **Bug pass BP3**, then the owner tags 0.1 Dev 5 and playtests it. In two parts: BP3a, the HUD and the menus (done
    2026-10-12; `docs/records/BP3a.md`), and BP3b, gameplay, graphics, WebGPU and the rest of the KNOWN_ISSUES sweep (done 2026-10-12;
-   `docs/records/BP3b.md`). All eight items are done: next, the owner tags 0.1 Dev 5.
+   `docs/records/BP3b.md`).
+9. **The Cyber Pistol redesign** (RM5, the owner's ask 2026-10-12, pulled into Dev 5 on his pick): the model redesigned
+   from his reference pictures, with small iron sights and a slide that kicks back on each shot (done 2026-10-12;
+   `docs/records/RM5.md`). All nine items are done: next, the owner tags 0.1 Dev 5.
 
 ### Audit 2: the last tasks
 
@@ -223,6 +226,9 @@ Dev 6 comes after M92–M95 (the holster and the practice upgrades). The last tw
 | 38 | An inventory: owned items in the menus, carried items on I in a match (with 7) | 0.3 |
 | 2 | Medic mode: a hit player goes down and a teammate revives them before a bleed-out timer | 0.3 |
 | 7 | The Extraction rework from Dev 4 notes 20, 22 and 23 (solo, loot that looks like loot, hunting bots, no respawn; the duo / trio revive with medic) | 0.3 |
+
+**Replica redesigns** from the owner's reference pictures (owner, 2026-10-12), the models behind the Blender-model Dev
+switches: the AEG Rifle, whose small, low iron sights the built-in rifle gets too (RM6, done).
 
 **Maybe, to think about or leave for later** (they stay where they are on this roadmap):
 - Team Deathmatch (0.3), Domination (0.4), Capture the Flag (0.4).

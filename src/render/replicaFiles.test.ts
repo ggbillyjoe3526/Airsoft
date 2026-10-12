@@ -51,13 +51,19 @@ describe('the replica model files (M101)', () => {
     expect(file.muzzle.y).toBeCloseTo(CYBER_MUZZLE.up, 4);
     expect(file.muzzle.z).toBeCloseTo(-CYBER_MUZZLE.barrelEnd, 4);
     expect(file.torchMount).not.toBeNull();
-    expect(new Set(file.body.map((p) => p.key))).toEqual(new Set(['cyberSlab', 'polymer', 'cyberLine', 'cyberCore', 'metal']));
+    expect(new Set(file.body.map((p) => p.key))).toEqual(new Set(['cyberSlab', 'polymer', 'cyberLine', 'metal']));
+    // The slide (steel, its core window and light slot on it) is the one part a shot moves: Fire kicks it back, the
+    // shell and the muzzle block stay still (the owner, 12 Oct 2026).
+    const slide = file.rig!.bones.findIndex((b) => b.name === 'slide');
+    expect(new Set(file.rig!.pieces.filter((p) => p.bone === slide).map((p) => p.key))).toEqual(new Set(['metal', 'cyberCore', 'cyberLine']));
+    expect(file.rig!.clips.get('Fire')!.tracks.map((t) => t.name).filter((n) => n.includes('slide'))).toHaveLength(1);
     expect(file.magazine.length).toBeGreaterThan(0);
     expect(file.figure.length).toBeGreaterThan(0);
     expect(file.triangles.held).toBeLessThanOrEqual(REPLICA_FILE.warnTriangles.default!);
     expect(file.triangles.figure).toBeLessThanOrEqual(REPLICA_FILE.warnFigureTriangles);
-    // Pinned so a new export is seen: 1,220 in the body, 132 in the magazine; 112 on a figure.
-    expect(file.triangles).toEqual({ held: 1352, figure: 112 });
+    // Pinned so a new export is seen: 1,984 in the body, 320 in the slide, trigger and selector, 384 in the magazine;
+    // 148 on a figure.
+    expect(file.triangles).toEqual({ held: 2688, figure: 148 });
     // Every piece is plain: positions and normals only, no index (the builders add UVs and colours as they need).
     for (const p of [...file.body, ...file.magazine, ...file.figure]) {
       expect(p.geometry.index).toBeNull();
@@ -70,11 +76,24 @@ describe('the replica model files (M101)', () => {
     const file = prepareReplicaFile('cyber', await cyberScene());
     const box = new THREE.Box3();
     for (const p of file.figure) box.union((p.geometry.computeBoundingBox(), p.geometry.boundingBox!));
-    // About 20 cm long, ahead of the origin (-Z), muzzle about FIGURE.pistol.length out; the grip hangs below the bore.
+    // About 20 cm long ahead of the origin (-Z), muzzle about FIGURE.pistol.length out, the rear block about 2.4 cm
+    // behind it (the file's SlideBack marker); the grip hangs below the bore.
     expect(box.min.z).toBeCloseTo(-0.204, 2);
-    expect(box.max.z).toBeLessThan(0.02);
+    expect(box.max.z).toBeLessThan(0.03);
     expect(box.max.y).toBeGreaterThan(0.02);
     expect(box.min.y).toBeLessThan(-0.14);
+    file.dispose();
+  });
+
+  it('puts the back of the slide at the SlideBack marker, else at the body\'s rearmost point at the bore\'s height or above', async () => {
+    const scene = await cyberScene();
+    scene.getObjectByName(REPLICA_FILE.nodes.slideBack)!.removeFromParent();
+    const file = prepareReplicaFile('cyber', scene);
+    const box = new THREE.Box3();
+    for (const p of file.figure) box.union((p.geometry.computeBoundingBox(), p.geometry.boundingBox!));
+    // Without the marker the rear block's back sits at the origin, so the whole pistol (and its grip) moves forward.
+    expect(box.max.z).toBeCloseTo(0, 3);
+    expect(box.min.z).toBeLessThan(-0.22);
     file.dispose();
   });
 
@@ -111,8 +130,8 @@ describe('a replica drawn from its file (M101)', () => {
     const model = models.models.get('cyber')!;
     // On Low the file's steel shares the detail material, as the built-in models' does.
     expect(new Set(bodyMeshes(model.group).map((m) => m.name))).toEqual(new Set(['cyberSlab', 'polymer', 'cyberLine', 'cyberCore', 'detail']));
-    expect(bodyMeshes(model.group).reduce((n, m) => n + trianglesOf(m), 0)).toBe(1220);
-    expect(trianglesOf(model.magazine.group.getObjectByName('magazine:standard')!)).toBe(132);
+    expect(bodyMeshes(model.group).reduce((n, m) => n + trianglesOf(m), 0)).toBe(2304);
+    expect(trianglesOf(model.magazine.group.getObjectByName('magazine:standard')!)).toBe(384);
     const slab = bodyMeshes(model.group).find((m) => m.name === 'cyberSlab')!.material as THREE.MeshStandardMaterial;
     expect(slab.color.getHex()).toBe(CYBER_COLOURS.bold.slab);
     model.group.updateMatrixWorld(true);
@@ -169,7 +188,7 @@ describe('a replica drawn from its file (M101)', () => {
       const shaped = new PartBuilder(detail);
       addPistol(shaped, new THREE.Matrix4(), dress.pistol, undefined, dress.pistolShape);
       const mesh = shaped.build(new THREE.MeshStandardMaterial());
-      expect(trianglesOf(mesh)).toBe(112);
+      expect(trianglesOf(mesh)).toBe(148);
       // The slab's white is on it.
       const colours = mesh.geometry.getAttribute('color');
       const slab = new THREE.Color(CYBER_COLOURS.bold.slab);

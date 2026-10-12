@@ -118,8 +118,10 @@ warning and the built-in model is drawn.
   hands are posed in code.
 - **Objects.** `Body` (needed), `Magazine` (drops out on a reload; without it the built-in one is drawn), `FlashHider`
   (shown while no muzzle device is fitted), `Figure` (the figures' cut-down version), and the empties `Muzzle` (needed:
-  the centre of the muzzle's face, where BBs leave) and `TorchMount`. A rifle's figure is scaled so its butt-to-muzzle
-  length is the figures' rifle length; a pistol's keeps its size, the back of the slide at the figures' grip.
+  the centre of the muzzle's face, where BBs leave), `TorchMount` and `SlideBack`. A rifle's figure is scaled so its
+  butt-to-muzzle length is the figures' rifle length; a pistol's keeps its size, the back of the slide at the figures'
+  grip: the `SlideBack` empty's depth, else the body's rearmost point at the bore's height or above (mark it when the
+  frame reaches back past the slide, as the Cyber Pistol's rear block does).
 - **Moving parts (RM1).** Objects the file's animations move hang from one bone (the armature's root) and are drawn in
   the body's own meshes, so they cost no draw call. The game poses them from its state, never on a clock: `Fire` (the
   trigger, each shot), `Selector` (safe at 0, semi at half its length, burst at three quarters, auto at the end),
