@@ -71,7 +71,7 @@ attempts: 0
 ## RM7 · The GBB Pistol replaces the Gas Pistol (owner's ask, 2026-10-12)
 tier: core
 perf: skip
-touches: src/assets/models/replicas/pistol.glb, src/assets/models/replicaParts/pistol.glb, src/config/replicas.ts, src/config/renderView.ts, src/render/replicaModels.ts, src/render/replicaRig.ts, src/render/viewmodel.ts, pool.md, stats.md
+touches: src/assets/models/replicas/pistol.glb, src/assets/models/replicaParts/pistol.glb, src/config/replicas.ts, src/config/renderView.ts, src/render/replicaModels.ts, src/render/replicaRig.ts, src/render/viewmodel.ts, pool.md, stats.md, pipeline/contentReport.test.mjs
 contract: the replica model file (docs/CC0_ASSETS.md › Replica models: a `SlideLock` animation, by addition)
 acceptance:
   1. The Gas Pistol is the GBB Pistol everywhere a player sees its name, with the same numbers (pool ID, stats, fits).
