@@ -1,16 +1,19 @@
 import { CRASH_TEXT, DIAGNOSTICS_TEXT } from '../config/crash';
+import { withNote } from '../core/bugIssue';
+import { crashReport, type ReportInfo } from '../core/crashReport';
 import { DEV_ACTION_TEXT, DEV_ACTIONS, DEV_ENTRIES, DEV_SWITCH_CHOICES, type DevAction, type DevActionId, type DevSettings } from '../config/dev';
 import { devField } from '../settings/dev';
+import { noteBox, reportBugLink } from './bugReport';
 import { copyText } from './clipboard';
-import { menuButton, menuRow, rangeControl } from './menus/menuParts';
+import { el, menuButton, menuRow, rangeControl } from './menus/menuParts';
 import { OptionPicker } from './optionPicker';
 
 export interface DevSettingsOptions {
   /** The saved values, shown as picked. */
   initial: DevSettings;
   onChange: <K extends keyof DevSettings>(id: K, value: DevSettings[K]) => void;
-  /** The diagnostics report to copy (Game.diagnostics, audit CORE-32); no row without it. */
-  diagnostics?: () => string;
+  /** The diagnostics report to copy or send (Game.reportInfo, audit CORE-32, IM7); no row without it. */
+  diagnostics?: () => ReportInfo;
   /**
    * The Dev buttons (M90, config/dev.ts DEV_ACTIONS): each runs once and says how it went for a moment (the button's
    * own words, `DEV_ACTION_TEXT`). No rows without it.
@@ -38,7 +41,7 @@ export function devSettings(opts: DevSettingsOptions): HTMLDivElement[] {
   const run = opts.actions;
   if (run) for (const a of DEV_ACTIONS) rows.push(menuRow(a.label, a.help, actionButton(a, run, opts.ask)));
   const diagnostics = opts.diagnostics;
-  if (diagnostics) rows.push(menuRow(DIAGNOSTICS_TEXT.label, DIAGNOSTICS_TEXT.help, diagnosticsButton(diagnostics)));
+  if (diagnostics) rows.push(menuRow(DIAGNOSTICS_TEXT.label, DIAGNOSTICS_TEXT.help, diagnosticsControls(diagnostics)));
   return rows;
 }
 
@@ -57,13 +60,21 @@ function actionButton(a: DevAction, run: (id: DevActionId) => string, ask: DevSe
   return button;
 }
 
-/** Copy diagnostics (audit CORE-32): the build, browser, graphics card, seed and settings, for a bug report. */
-function diagnosticsButton(report: () => string): HTMLButtonElement {
-  const button = menuButton(DIAGNOSTICS_TEXT.copy, 'secondary', () => {
-    void copyText(report()).then((ok) => {
-      button.textContent = ok ? CRASH_TEXT.copied : DIAGNOSTICS_TEXT.failed;
-      window.setTimeout(() => (button.textContent = DIAGNOSTICS_TEXT.copy), DIAGNOSTICS_TEXT.noteTime);
+/**
+ * Diagnostics (audit CORE-32, IM7): a note box, then Copy (the report with the note, for pasting anywhere) and Report a
+ * Bug (a GitHub issue filled in with them), and a line saying how it went.
+ */
+function diagnosticsControls(report: () => ReportInfo): HTMLDivElement {
+  const controls = el('div', 'menu-row-control bug-report');
+  const note = noteBox();
+  const status = el('p', 'bug-report-status');
+  status.setAttribute('aria-live', 'polite');
+  const copy = menuButton(DIAGNOSTICS_TEXT.copy, 'secondary', () => {
+    void copyText(crashReport(withNote(report(), note.value))).then((ok) => {
+      copy.textContent = ok ? CRASH_TEXT.copied : DIAGNOSTICS_TEXT.failed;
+      window.setTimeout(() => (copy.textContent = DIAGNOSTICS_TEXT.copy), DIAGNOSTICS_TEXT.noteTime);
     });
   });
-  return button;
+  controls.append(note, copy, reportBugLink(report, () => note.value, (text) => (status.textContent = text)), status);
+  return controls;
 }

@@ -158,8 +158,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   M24, BP1, G3)
 - Replica, battery and gas bottle pictures on Loadout, Customise and Armory; Customise lists the parts down the left, Colour first, each option
   a picture tile beside the replica and its numbers (G3, RM3)
-- Error screen on a crash with the seed, a report, Reload and Copy Report buttons; Play Again starts a new match with
-  its own seed (FA1)
+- Error screen on a crash with the seed, a report, a note box, Reload, Copy Report and Report a Bug buttons; Play Again starts a new match with
+  its own seed (FA1, IM7)
 - Settings groups: Graphics (quality presets with Custom option, frame-rate limit), Display (fullscreen, field of view,
   tone mapping, show FPS), Audio, Controls (every action rebindable, mouse buttons and mouse wheel), Gameplay
   (crosshair, hit marker, HUD), Accessibility, Look (Robots, Realistic colours, Retro), Save file; a search box and a note on every row
@@ -175,7 +175,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - A hidden Dev group (tick Dev settings under the list): debug info, BB paths, game speed, bottomless magazines, ghost,
   Disable Armory (hides the Armory from every menu and the tutorial), Unlock all gear, Field Credits and Tokens on demand,
   free case openings, time of day, bots hold fire, spectate any bot, bot intentions, end the round now, reset the save,
-  Diagnostics Copy, Dev content switch, Retro pixels (M24, M26d, FA1, M35, M42, M83, M90)
+  Diagnostics Copy and Report a Bug, Dev content switch, Retro pixels (M24, M26d, FA1, M35, M42, M83, M90, IM7)
 - Dev switches Disable all models and Disable figure models (both on by default): turned off, they bring back the Blender replicas, parts and menu pictures, then the player and bot figures (RM4)
 - The build's version on the title screen (M24)
 
@@ -289,3 +289,4 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   smoke test's build (Phase 3, FA11b)
 - `npm run t` and `npm run t:all`: tests with dots and failures only (TE1)
 - Dev figure switches (Disable figure models, Disable all models): with both off, players and bots are the rigged Blender humans and robots (BF1)
+- Bug reports: Diagnostics and the crash screen take a note and a Report a Bug button that opens a GitHub issue with the report filled in; long reports are cut and copied whole (IM7)

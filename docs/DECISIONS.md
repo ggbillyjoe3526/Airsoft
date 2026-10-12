@@ -23,23 +23,27 @@ replaces its line; the old one stays findable in the archive or in git.
 - **Friendly hits count (2026-09-30).** As at real sites; custom matches can switch it off (`HITS.friendlyFire`).
 - **Public in 0.1, after the owner's playtest: Depot's modes, Easy to Hard, Woodland (night play, the torch, glowing
   BBs) and Pro (feature triage, owner, 2026-10-05).** Every public map, mode and difficulty multiplies beta's balance
-  and bug work, so 0.1 ships the set that already plays well. Neon Heights stays dev until 0.2 and Extraction until 0.3;
-  `docs/ROADMAP.md` holds the current placement.
+  and bug work, so 0.1 ships the set that already plays well. Neon Heights stays dev until the Maps Update and
+  Extraction until the Modes Update; `docs/ROADMAP.md` holds the current placement.
 - **Cut features (owner, 2026-10-05).** Supply weekends and dated events; the Tone mapping choice in Graphics (the
   best-looking becomes everyone's); tracer BBs as an option (glowing BBs do it); Bomb and Intel grab; Free-for-all and
   the overshooting rule; cosmetic gear as its own system; a separate progression plan (the Armory is the progression).
-- **Kept features (owner, 2026-10-05).** Grenades (0.3) and skins (0.5) stay planned, with their Loadout placeholders
-  (the empty Grenades slot, the greyed Skins row). Suppressors get a sound of their own in 0.3. Capture the Flag stays a
-  possible mode in 0.4. Every deferred feature has a version; the owner can move any.
-- **26 features move into 0.1 from 0.2 to 0.5, Beta and new ideas (owner, 2026-10-06).** Smaller items on today's
-  systems (presets, the chrono, gas, sights, bot names and gear, skins) and bigger systems (medic, the Extraction
-  rework, grenades, rigs, the sniper, comms, weather, sound, foliage); all land in Dev 6. Claude placed them and the
-  owner can move any (list: `docs/ROADMAP.md`).
-- **Extraction (0.3): solo against bots, with more and more aggressive opponents, quicker and closer waves, a longer
-  extract timer and no respawn (owner, 2026-10-06).** Replaces his 2026-10-04 picks (a squad of three, one respawn) and
-  the paused "one opponent fewer on Normal".
-- **Battle royale (0.4, dev first) goes ahead as an experimental dev mode, the exception to the Free-for-all cut (owner,
-  2026-10-06).** His answers on loot, zone and pay are in `docs/ROADMAP.md`, under the 0.1 Dev 4 playtest table.
+- **Kept features (owner, 2026-10-05).** Grenades (the Replica Update) and skins (the Progression Update) stay planned,
+  with their Loadout placeholders (the empty Grenades slot, the greyed Skins row). Suppressors get a sound of their own
+  in the Replica Update. Capture the Flag stays a possible mode in the Modes Update. Every deferred feature has a
+  version; the owner can move any.
+- **0.1 Dev 6 holds the systems the game still needs; the content goes to the themed updates (owner, 2026-10-06 and
+  2026-10-12).** Of the 26 features he pulled into 0.1 on 2026-10-06, Dev 6 keeps the systems (bot names and gear,
+  auto difficulty, callouts, pings, asking for a magazine, resting on cover, foliage, noisy props, overtime, saved
+  loadouts, hiding the ammo counter), with vaulting added. The owner sent the optics and the sniper to the Replica
+  Update; Claude placed the rest (items, gas cooling, the chrono and the suppressor sound in the Replica Update;
+  presets, medic and the Extraction rework in the Modes Update; weather in the Maps Update; skins in the Progression
+  Update), and the owner can move any (list: `docs/ROADMAP.md`).
+- **Extraction (the Modes Update): solo against bots, with more and more aggressive opponents, quicker and closer
+  waves, a longer extract timer and no respawn (owner, 2026-10-06).** Replaces his 2026-10-04 picks (a squad of three,
+  one respawn) and the paused "one opponent fewer on Normal".
+- **Battle royale (the Modes Update, dev first) goes ahead as an experimental dev mode, the exception to the
+  Free-for-all cut (owner, 2026-10-06).** His answers on loot, zone and pay are in `docs/ROADMAP.md`, under the 0.1 Dev 4 playtest table.
 - **The code is MIT-licensed, copyright "ggbillyjoe3526" (owner, 2026-10-05).** The repository is public and free to
   read and copy; third-party assets keep their own licences (`docs/ASSETS.md`).
 
@@ -56,8 +60,7 @@ replaces its line; the old one stays findable in the archive or in git.
   builds or became maybes.
 - **Dev 5 order (owner, 2026-10-06).** Docs rewrite with token step 2, token step 3, token step 4, bug pass BP2,
   graphics, the playtest notes, the content toolkit (all four parts, mode checks included), bug pass BP3, then the tag.
-  Dev 7 is folded into Dev 6, which holds all 26 picked features after M92 to M95 and is the last planned Dev build
-  unless he adds more ("I want bigger builds"). The order is in `docs/ROADMAP.md`.
+  Dev 7 is folded into Dev 6 ("I want bigger builds"). The order is in `docs/ROADMAP.md`.
 - **Only full releases are tagged, and only the owner creates tags (owner, 2026-10-01).** No letter checkpoints.
   Playtests between releases use plain pushed commits.
 - **After the owner tags, the release checklist is due in the next pull request (owner, 2026-10-03).** Steps:
@@ -71,6 +74,12 @@ replaces its line; the old one stays findable in the archive or in git.
 - **The title screen's version comes from `git describe` as the game is built (2026-10-04).** There is no constant to
   bump. A zip without `.git` carries it in `.git_archival.txt`; a clone without tags reads the release from
   `README.md`'s download link plus "+?".
+- **The release path: 0.1 Dev 6, 0.1 Beta, then 0.1.0 opens Early Access to the public; themed updates follow; 1.0 is
+  the full launch (owner, 2026-10-12).** Dev 6 is the last planned Dev build, though he may add more. Early Access is
+  feature complete but light on content, and a new feature can still come in any update. The updates are mini
+  expansions: the Replica Update (replicas, attachments, items), the Modes Update, the Maps Update and the Progression
+  Update (challenges, badges), planned as 0.2 to 0.5, and more can follow. The owner picks their order; version numbers
+  always go up, so the next update shipped takes the next number (2026-10-12).
 
 ## How work runs
 
@@ -204,9 +213,9 @@ replaces its line; the old one stays findable in the archive or in git.
 - **Art is procedural today: canvas textures and geometry built in code (2026-10-04).** CC0 models and textures may
   replace parts later; each is recorded file by file in `docs/ASSETS.md`, even though CC0 needs no credit.
 - **Higher-detail models come later, after the WebGPU overhaul (owner, 2026-10-09: "I want to try improve characters
-  and all other models in the future but this will be later").** Figures, replicas and every other model; not in Dev 5
-  or Dev 6, no build planned yet; it widens the Blender art pass the owner placed in 0.3 on 2026-10-05
-  (`docs/ROADMAP.md` › 0.3: The armoury and the rules).
+  and all other models in the future but this will be later").** Figures, replicas and every other model. It widens
+  the Blender art pass the owner planned on 2026-10-05, now tied to no update (`docs/ROADMAP.md` › Not tied to an
+  update); the Blender models built in Dev 5 stay behind the Dev switches (below).
 - **The Blender models are locked behind the Dev tab, and the game draws its code-built models by default (owner,
   2026-10-11: "I'm not happy with the quality of figure models so blender models should be locked in dev settings").**
   Two Dev switches, both on by default (RM4, `config/dev.ts`): "Disable figure models" keeps the built-in figures and
@@ -285,13 +294,15 @@ replaces its line; the old one stays findable in the archive or in git.
   Turning it on moved Attack / Defend balance on Depot, so a change needs the owner's call.
 - **Cover heights: full cover is at least 2.4 m and crouch cover exactly 1.2 m; no walkable ledge sits between 0.15 m
   and jump height (2026-09-28).** Crouched eyes (1.09 m) hide behind 1.2 m cover and standing eyes (1.66 m) shoot over
-  it, a readable peek-and-duck rhythm. Crouch cover is unclimbable (tested), and vaulting stays parked (owner,
-  2026-10-01; "Maybe", 2026-10-06).
+  it, a readable peek-and-duck rhythm. Crouch cover is unclimbable (tested); vaulting (0.1 Dev 6) clears only lower
+  obstacles, 0.7 to 0.9 m (2026-10-12).
 - **The Blender figures in the game (BF1) are part of 0.1 Dev 5 (owner, 2026-10-12: "This is for Dev 5").** They
   merge before the Dev 5 tag, still behind the Dev switches.
 - **The rigged figures stay behind the Dev switches until they pass M85's hit-volume check (2026-10-12).** They don't
   yet (crouched and walking, KNOWN_ISSUES › Figures and art); `render/riggedHitVolume.test.ts` measures them and holds
   each pose to its numbers, so a change only brings them closer (BF1).
+- **Vaulting comes in 0.1 Dev 6; slide into cover is no for now (owner, 2026-10-12).** Vaulting goes over low
+  obstacles of 0.7 to 0.9 m, with a few added to the maps where they open a route; slide waits in `docs/IDEAS.md`.
 
 ## Bots and balance
 

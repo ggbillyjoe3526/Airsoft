@@ -12,6 +12,7 @@ import type { QualitySettings } from './config/render';
 import type { ReplicaConfig } from './config/replicas';
 import { SIM, SIM_DT } from './config/sim';
 import { teamCss } from './config/teams';
+import { EventLog } from './core/eventLog';
 import { advanceStepper, createStepper, stepperAlpha } from './core/fixedStepper';
 import type { PlayerInput } from './input/playerInput';
 import type { MatchSetup } from './matchSession';
@@ -253,6 +254,9 @@ export class RangeSession {
     return { x: this.player.position.x, z: this.player.position.z, yaw: this.input.yaw, pitch: this.input.pitch };
   }
 
+  /** Your last shots, target hits, reloads and draws, for a report (IM7). */
+  readonly eventLog = new EventLog();
+
   get characterCount(): number {
     return this.state.characters.length;
   }
@@ -372,6 +376,7 @@ export class RangeSession {
   }
 
   private afterTick(): void {
+    this.eventLog.record(this.state.tick, this.state.events, this.player.id);
     this.combat.afterTick();
     this.targets.afterTick(this.state.events);
     const t = this.tutorial;
