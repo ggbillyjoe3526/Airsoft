@@ -71,7 +71,7 @@ attempts: 0
 ## BF1 · Bot figures in the game behind the Dev switches
 tier: core
 perf: required
-touches: src/assets/models/characters/, src/assets/models/replicas/pistol.glb, src/assets/models/replicaParts/pistol.glb, src/config/figureRig.ts, src/render/figurePose.ts, src/render/figureRig.ts, src/render/riggedFigure.ts, src/render/thrownMagazines.ts, src/render/characterRenderer.ts, src/render/modelFiles.ts, src/render/renderer.ts, src/render/matchPresentation.ts, src/render/replicaFiles.ts, src/render/figureReplicas.ts, src/matchSession.ts, pipeline/perf-run.mjs, tools/blender/bot-figure/
+touches: src/assets/models/characters/, src/assets/models/replicas/pistol.glb, src/assets/models/replicaParts/pistol.glb, src/config/figureRig.ts, src/render/figurePose.ts, src/render/figureRig.ts, src/render/riggedFigure.ts, src/render/thrownMagazines.ts, src/render/characterRenderer.ts, src/render/modelFiles.ts, src/render/renderer.ts, src/render/matchPresentation.ts, src/render/replicaFiles.ts, src/render/figureReplicas.ts, src/render/testSupport.ts, src/matchSession.ts, pipeline/perf-run.mjs, tools/blender/bot-figure/
 contract: none (CharacterRenderer and ModelFiles gain the rigged figures by addition)
 acceptance:
   1. With the Dev tab's "Disable figure models" and "Disable all models" both off, every player and bot is drawn as the Blender human or robot figure (owner approved them, 2026-10-12), walking, running, sprinting, crouching, jumping, aiming with the view's pitch, calling the hit and walking off.
