@@ -115,6 +115,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **RM7** · The Gas Pistol is now the GBB Pistol: same stats, pool ID and parts, redesigned from the owner's reference photos
 - **RM7** · GBB Pistol look: slimmer slide flush with the frame, ejection port further back, one-piece trigger guard, shorter grip, low sights
 - **RM8** · Red dot, 2× scope, silencers and torches use new Blender models (Disable all models off): smaller, sit lower, aim follows them
+- **IM3** · Hosted builds download about 0.3 MB less and reach the title screen about 0.2 s sooner: the physics engine comes as its own file
 
 ### Fixed
 - **G11** · The team camo on players reads clearly on Medium and up: crisp dark and light blotches printed per pixel, on WebGL and WebGPU; Low keeps plain clothes
@@ -211,6 +212,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **W7** · The menu pictures are drawn on WebGPU by default (WebGL with --backend webgl); the script checks the back end, waits for a settled frame and refuses a black picture
 - **BP3b** · WebGPU light and post buffers are freed when outgrown or when the renderer is disposed; an empty BB streak is not drawn
 - **BP3b** · The mode content check plays each map only at team sizes the game allows
+- **IM3** · Build budgets for the physics engine's code (236 kB) and its WebAssembly file (3,240 kB) are set in the build checks
 
 ## 0.1 Dev 4 · 2026-10-06
 
