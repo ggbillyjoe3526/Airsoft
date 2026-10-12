@@ -45,7 +45,7 @@ A task that adds, renames or moves a file keeps its folder's `README.md` current
 | `src/audio/` | Web Audio: synthesised sounds, mix, 3D positioning, ambience | `audioEngine.ts`, `sfx.ts`, `dsp.ts`, `soundBank.ts`, `audioMix.ts` |
 | `src/ui/` | DOM HUD, overlays and settings tabs; the menus in `ui/menus/` | `hud.ts`, `scoreboard.ts`, `minimap.ts`, `debugOverlay.ts`, `menus/menus.ts` |
 | `src/config/` | Every tunable number and data table | `replicas.ts`, `bots.ts`, `hits.ts`, `render.ts`, `controls.ts`, `dev.ts` |
-| `src/core/` | Loop and session plumbing: stepper, seeds, frame pacer, crash report | `fixedStepper.ts`, `seed.ts`, `sessionPlan.ts`, `crashReport.ts`, `framePacer.ts` |
+| `src/core/` | Loop and session plumbing: stepper, seeds, frame pacer, crash and bug reports | `fixedStepper.ts`, `seed.ts`, `sessionPlan.ts`, `crashReport.ts`, `framePacer.ts` |
 | `src/pool/` | The asset pool, the Loadout, the Armory economy, Extraction cases | `pool.ts`, `kit.ts`, `loadoutModel.ts`, `armory.ts`, `collection.ts`, `caches.ts` |
 | `src/content/` | The content checks: rules, compatibility, spec test and balance run for a new replica, part, map, mode or skin | `gameContent.ts`, `replicaChecks.ts`, `partChecks.ts`, `mapChecks.ts`, `modeChecks.ts`, `skinChecks.ts`, `specSheet.ts`, `report/` |
 | `src/stats/` | Match stats, local records, settling a finished match | `matchStats.ts`, `records.ts`, `settleMatch.ts` |
@@ -62,9 +62,10 @@ A task that adds, renames or moves a file keeps its folder's `README.md` current
 
 The root files in more detail:
 
-- **`main.ts`** starts the save system first (a second tab waits behind a notice), then downloads and starts Rapier
-  behind the loading bar, reads the URL flags, probes the GPU and builds `Game`. An error before the game runs shows the
-  crash pane.
+- **`main.ts`** imports `consoleLog.ts` before anything else (the console's errors and warnings kept for the reports,
+  IM7), starts the save system (a second tab waits behind a notice), then downloads and starts Rapier behind the
+  loading bar, reads the URL flags, probes the GPU and builds `Game`. An error before the game runs shows the crash
+  pane.
 - **`Game`** (`game.ts`) is the composition root and main loop: the app that outlives matches (renderer, input, menus,
   debug overlay, audio engine) and New game's picks. No map is loaded on the title and New game screens.
 - **`MatchSession`** (`matchSession.ts`) is one match on one map: the field's meshes and lighting, physics, nav, the

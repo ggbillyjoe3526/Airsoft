@@ -6,7 +6,7 @@
  * this report; the critic runs only on a report where every gate passed.
  *
  *   node pipeline/gate.mjs [--task M27[,M28]] [--quick] [--no-smoke] [--perf] [--env container|laptop|ci] [--base origin/main] [--ci]
- *                          [--tests auto|all|fast|slow] [--shard k/n] [--only tests]
+ *                          [--tests auto|all|fast|slow] [--shard k/n] [--only tests|smoke]
  *
  * Gates: build (tsc + vite build with the chunk budgets), tests (vitest), smoke (playwright), perf (one perf-run.mjs
  * run per map, mode and preset of perf-budget.json's matrix that the diff reaches, pipeline/perfMatrix.mjs; --perf runs
@@ -21,7 +21,9 @@
  * With no task, scope and changelog are skipped. Exit code 1 when any gate fails.
  * CI splits the work across jobs (audit CORE-04): `--tests fast` runs the unit tests' fast project only, `--tests slow
  * --shard k/n` one share of the headless bot-match guards (vitest's own sharding, by file), and `--only tests` runs
- * the tests gate alone (no build, smoke, perf, scope or changelog). Off CI the default, `--tests auto`, runs the slow
+ * the tests gate alone (no build, smoke, perf, scope or changelog). `--only smoke --shard k/n` runs one share of the
+ * browser smoke test (Playwright's own sharding, by file; its servers build what they need), so the build and unit
+ * tests run beside it with `--no-smoke` (2026-10-12). Off CI the default, `--tests auto`, runs the slow
  * project only when the diff reaches one of its files (pipeline/testReach.mjs, token plan item 21); `--tests all` runs
  * both regardless. CI always runs every test.
  */
@@ -68,14 +70,18 @@ const options = {
    * fast project, plus the slow one when the diff reaches it (token plan item 21).
    */
   tests: value('--tests', testsDefault),
+  /** One share of the tests gate's files (vitest) and of the smoke gate's (Playwright), whichever of them run. */
   shard: value('--shard', null),
-  /** `--only tests`: just the tests gate (CI's slow-guard jobs); every other gate is skipped. */
+  /**
+   * `--only tests`: just the tests gate (CI's slow-guard jobs); `--only smoke`: just the smoke gate (CI's browser
+   * jobs). Every other gate is skipped.
+   */
   only: value('--only', null),
 };
 if (!['auto', 'all', 'fast', 'slow'].includes(options.tests)) throw new Error(`gate: --tests takes auto, all, fast or slow, not ${options.tests}`);
 const shardOk = (s) => { const m = /^(\d+)\/(\d+)$/.exec(s); return m !== null && Number(m[1]) >= 1 && Number(m[1]) <= Number(m[2]); };
 if (options.shard !== null && !shardOk(options.shard)) throw new Error(`gate: --shard takes k/n with 1 ≤ k ≤ n, not ${options.shard}`);
-if (options.only !== null && options.only !== 'tests') throw new Error(`gate: --only takes tests, not ${options.only}`);
+if (options.only !== null && !['tests', 'smoke'].includes(options.only)) throw new Error(`gate: --only takes tests or smoke, not ${options.only}`);
 const skipAllBut = (gate) => options.only !== null && options.only !== gate;
 
 mkdirSync(ARTIFACTS, { recursive: true });
@@ -166,7 +172,8 @@ function testProjects() {
 }
 
 // 2. tests: the unit suite, with its JSON report as the artifact.
-{
+if (skipAllBut('tests')) record('tests', { pass: null, reason: `skipped (--only ${options.only})` });
+else {
   const json = join(ARTIFACTS, 'vitest.json');
   const chosen = testProjects();
   const projects = chosen.projects === 'all' ? [] : ['--project', chosen.projects];
@@ -192,8 +199,9 @@ else if (!options.smoke) {
 } else {
   const json = join(ARTIFACTS, 'playwright.json');
   // playwright.config.ts writes the JSON report into qa-artifacts; its release server reuses the build step's dist/.
-  const r = run('smoke', 'npx', ['playwright', 'test'], PRECOMPRESS_ENV);
-  let summary = { pass: r.ok, ms: r.ms, log: r.log };
+  const shard = options.shard ? [`--shard=${options.shard}`] : [];
+  const r = run('smoke', 'npx', ['playwright', 'test', ...shard], PRECOMPRESS_ENV);
+  let summary = { pass: r.ok, ms: r.ms, log: r.log, ...(options.shard ? { shard: options.shard } : {}) };
   try {
     const data = JSON.parse(readFileSync(json, 'utf8'));
     // Each failing test's full title, project, place and the error's locator / expectation lines (smokeReport.mjs).

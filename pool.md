@@ -346,7 +346,7 @@ night field. No rarity tier improves it (stats.md's Lights table), so it comes a
 
 ### Grenades
 
-Grenades, smoke and flash bombs come in a later version (v0.3). The Loadout's Grenades slot waits for them.
+Grenades, smoke and flash bombs come in a later version (the Replica Update). The Loadout's Grenades slot waits for them.
 
 | ID | Name | Key | Fits | Starter | In Shots | Access |
 |---|---|---|---|---|---|---|

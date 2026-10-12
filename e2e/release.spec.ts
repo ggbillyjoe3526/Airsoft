@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * The release build itself (audit CORE-22, CORE-09): `dist/`, what players download, served as it is (playwright.config.ts
- * project `release`). Every other browser test loads the e2e build, which differs in `import.meta.env.MODE`, so this is
+ * The release build itself (audit CORE-22, CORE-09): `dist/`, what players download, served as it is from the play
+ * link's path, `/Airsoft/` (playwright.config.ts project `release`, IM2). Every other browser test loads the e2e build, which differs in `import.meta.env.MODE`, so this is
  * the one place a bug behind those branches, or a release-only chunk problem, would show. It is also the one path that
  * runs without `?nolock&seed=1`: the test flags in the address must do nothing here, Play takes the real pointer lock
  * (headless Chromium grants it), losing the lock pauses the game, and Resume takes it again. The game picks its own seed.
@@ -14,7 +14,7 @@ test('the release build boots, ignores the test flags and plays with the real po
   page.on('console', (msg) => {
     if (msg.type() === 'error') errors.push(`console: ${msg.text()}`);
   });
-  await page.goto('/?nolock&script=perf&quality=low');
+  await page.goto('./?nolock&script=perf&quality=low');
   await page.waitForSelector('.menu-title-start', { timeout: 60_000 });
   await expect(page.locator('#loading')).toHaveCount(0);
   // No console handle in a release build (main.ts), and its page carries the CSP.
@@ -78,7 +78,7 @@ test('the release build shows the Renderer row and draws with the node renderer 
   };
   watch(page);
   // This browser has navigator.gpu but no adapter (SwiftShader).
-  await page.goto('/?nolock');
+  await page.goto('./?nolock');
   await page.waitForSelector('.menu-title-start', { timeout: 60_000 });
   await page.keyboard.press('Escape');
   const settings = page.locator('.menu-settings');
@@ -105,7 +105,7 @@ test('the release build shows the Renderer row and draws with the node renderer 
     };
     Object.defineProperty(Navigator.prototype, 'gpu', { configurable: true, get: () => ({ requestAdapter: () => Promise.resolve(adapter), getPreferredCanvasFormat: () => 'bgra8unorm' }) });
   });
-  await second.goto('/?nolock');
+  await second.goto('./?nolock');
   await second.waitForSelector('.menu-title-start', { timeout: 60_000 });
   await expect(second.locator('canvas.game-canvas')).toHaveCount(1);
   expect(chunks.length).toBeGreaterThan(0);

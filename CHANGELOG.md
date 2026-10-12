@@ -46,6 +46,9 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **RM7** · GBB Pistol blowback: every shot kicks the slide back over the barrel and it snaps home; an empty magazine locks it back until a reload
 - **RM7** · Blowback shows on the built-in and Blender GBB Pistol models; the Blender laser, torch, silencer and extended magazine are refitted to it
 - **BF1** · Dev figure switches off: players and bots are rigged Blender humans and robots that run, crouch, aim, reload, switch to the pistol and call hits
+- **IM2** · Play in a browser at https://ggbillyjoe3526.github.io/Airsoft/, nothing to install; it runs the latest release with its own saves
+- **IM7** · Diagnostics and the crash screen take a note box and a Report a Bug button: it opens a GitHub issue with your note and the report filled in
+- **IM7** · Reports add the time, where you stood, 10 s of frame times, memory, the last 20 console errors and 30 game events; web addresses cut to file names
 
 ### Changed
 - **M71** · Bots hunt the map's middle once their lane is swept (now all levels, not just Pro); Normal and Hard hold their posts out of lantern light at night (#133)
@@ -116,6 +119,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **RM7** · The Gas Pistol is now the GBB Pistol: same stats, pool ID and parts, redesigned from the owner's reference photos
 - **RM7** · GBB Pistol look: slimmer slide flush with the frame, ejection port further back, one-piece trigger guard, shorter grip, low sights
 - **RM8** · Red dot, 2× scope, silencers and torches use new Blender models (Disable all models off): smaller, sit lower, aim follows them
+- **IM5** · Human and robot figure files are about half the size (4.2 and 4.5 MB down to 2.2 and 2.4 MB) and load faster, looking the same (Dev switches off)
 - **IM3** · Hosted builds download about 0.3 MB less and reach the title screen about 0.2 s sooner: the physics engine comes as its own file
 
 ### Fixed
@@ -214,6 +218,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **BP3b** · WebGPU light and post buffers are freed when outgrown or when the renderer is disposed; an empty BB streak is not drawn
 - **BP3b** · The mode content check plays each map only at team sizes the game allows
 - **BF1** · The perf harness's --models option measures with the figures in, and every run records the figures' drawing time per frame
+- **IM6** · Checks finish in about 10 minutes, not 25: browser tests run in four parallel jobs; current actions, Vite 8.3.4, Vitest 5.0.3, Playwright 1.64
+- **IM5** · New `tools/blender/bot-figure/pack.mjs` packs each Blender figure export losslessly; tests check the shipped figure files are packed
 - **IM3** · Build budgets for the physics engine's code (236 kB) and its WebAssembly file (3,240 kB) are set in the build checks
 
 ## 0.1 Dev 4 · 2026-10-06

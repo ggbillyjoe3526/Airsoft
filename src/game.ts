@@ -21,8 +21,10 @@ import { FRAME_TIMING, type FrameRateCap, type LightingPresetId, QUALITY, QUALIT
 import { FramePacer } from './core/framePacer';
 import { SIM } from './config/sim';
 import { applyTeamCss, DEFAULT_TEAM_PICK, TEAM_COLOUR_SETS, type TeamColourSetId, teamOfPick, type TeamPickId } from './config/teams';
-import { crashReport, type ReportField } from './core/crashReport';
-import { qualityLine, runReportLine } from './core/reportFields';
+import { crashReport, type ReportField, type ReportInfo } from './core/crashReport';
+import type { ErrorLog } from './core/errorLog';
+import { FrameWindow } from './core/frameWindow';
+import { clockText, framesLine, loadLine, memoryLine, playerLine, qualityLine, runReportLine } from './core/reportFields';
 import { KeyBindings } from './input/keyBindings';
 import { Keyboard } from './input/keyboard';
 import { browserKeyboardMap, watchKeyboardLayout } from './input/keyboardLayout';
@@ -151,6 +153,8 @@ export interface GameOptions {
    * WebGPU overhaul W1), it draws on its WebGL2 back end without asking for an adapter, so a container can run it.
    */
   forceWebGL?: boolean;
+  /** The console's recent errors and warnings since start-up (core/errorLog.ts, IM7), for the reports. */
+  errors: ErrorLog;
 }
 
 /**
@@ -297,6 +301,10 @@ export class Game {
   /** Smoothed milliseconds a frame in the simulation and in the draw (the CPU side), for the debug overlay (REN-17). */
   private simMs = 0;
   private drawMs = 0;
+  /** The frame times of the last seconds of play, for the reports (IM7). */
+  private readonly frameWindow = new FrameWindow();
+  /** When the loop started (performance.now()): the game was ready to play. */
+  private readyAt = 0;
   /** Set by dispose(): work still in flight (the dev maps' fetch) then does nothing. */
   private disposed = false;
   /** Play asked for the lock and waits for the browser's answer before building (play). */
@@ -568,7 +576,7 @@ export class Game {
         cheating: () => devCheating(this.dev),
         devContent: () => this.dev.devContent,
         devContentUsed: () => this.devContentUsed(this.playedPicks()),
-        diagnostics: () => this.diagnostics(),
+        diagnostics: () => this.reportInfo('Airsoft diagnostics'),
         actions: (id) => this.devAction(id),
       },
       save: options.save,
@@ -944,7 +952,7 @@ export class Game {
   }
 
   start(): void {
-    this.lastTime = performance.now();
+    this.lastTime = this.readyAt = performance.now();
     this.rafId = requestAnimationFrame(this.frame);
   }
 
@@ -1237,6 +1245,9 @@ export class Game {
     const r = match?.state.round;
     const stats = this.renderer.stats;
     return [
+      // When, in what language, and how long the page has been open (IM7).
+      ['Time', read(() => `${new Date().toISOString()}, page open ${clockText(performance.now() / 1000)}`)],
+      ['Language', read(() => navigator.language)],
       ['Seed', range ? this.options.seed : this.matchSeed],
       ['Map', read(() => (range ? 'range' : match ? match.setup.map.name : '-'))],
       ['Mode', read(() => (match ? `${match.mode}, ${match.setup.difficulty} (teammates ${match.setup.teammateDifficulty})` : range ? 'practice' : '-'))],
@@ -1246,7 +1257,11 @@ export class Game {
       ['Round', read(() => (r ? `${r.number} (${r.phase}), score ${r.score[0]}–${r.score[1]}, draws ${r.draws}` : '-'))],
       ...(match?.mode === 'extraction' && r ? [['Run', read(() => runReportLine(r.run))] as const] : []),
       ['Tick', read(() => s?.state.tick ?? '-')],
+      ['Match time', read(() => (s ? clockText(s.state.time) : '-'))],
       ['Screen', read(() => ((this.pointer.locked || this.unlockedPlay) && s ? 'in play' : `menus: ${this.menus.screen}`))],
+      // Where the player is, looks and what they're doing (IM7): a thread can go to the spot.
+      ['Player', read(() => (s ? playerLine(s.player) : '-'))],
+      ['Frames', read(() => framesLine(this.frameWindow.summary(), this.simMs, this.drawMs))],
       ['Quality', read(() => this.qualityText())],
       ['Retro pixels', read(() => {
         const look = retroLookOf(this.retro, this.scripted);
@@ -1262,6 +1277,8 @@ export class Game {
       ['Window', `${window.innerWidth} × ${window.innerHeight} at ${window.devicePixelRatio}`],
       ['Sim ticks/s', this.tickRate],
       ['Draw calls / triangles', read(() => `${stats.calls} / ${stats.triangles}`)],
+      ['Memory', read(() => memoryLine((performance as Performance & { memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number } }).memory, stats))],
+      ['Load', read(() => loadLine(performance.getEntriesByType('resource') as PerformanceResourceTiming[], mainScriptUrl(), pageLoadedAt(), this.readyAt))],
       ['Dev settings', this.devEnabled ? JSON.stringify(this.dev) : 'off'],
       // Pending slider writes (FA5's saveSettingSoon) go first, so the stored settings are the ones in use.
       ['Settings', read(() => {
@@ -1271,9 +1288,35 @@ export class Game {
     ];
   }
 
-  /** The diagnostics report (Settings → Dev → Copy diagnostics; audit CORE-32): the crash report's fields, no error. */
+  /**
+   * A report (audit CORE-04, CORE-32, IM7): the build and browser, the game's state, `error` for a crash, and the console's
+   * recent errors and the session's recent events. Never throws: whatever can't be read is left out.
+   */
+  private reportInfo(title: string, error?: unknown): ReportInfo {
+    const guarded = <T>(f: () => T, none: T): T => {
+      try {
+        return f();
+      } catch {
+        return none;
+      }
+    };
+    const s = this.session;
+    return {
+      title,
+      build: __BUILD_VERSION__.label,
+      userAgent: navigator.userAgent,
+      fields: guarded(() => this.reportFields(), []),
+      error,
+      lists: [
+        { label: 'Recent errors', entries: guarded(() => this.options.errors.lines(), []) },
+        { label: 'Recent events', entries: guarded(() => (s ? s.eventLog.lines(s.state.tick, s.state.characters, s.player.id) : []), []) },
+      ],
+    };
+  }
+
+  /** The diagnostics report as text (Settings → Dev → Diagnostics; audit CORE-32): the crash report's, with no error. */
   diagnostics(): string {
-    return crashReport({ title: 'Airsoft diagnostics', build: __BUILD_VERSION__.label, userAgent: navigator.userAgent, fields: this.reportFields() });
+    return crashReport(this.reportInfo('Airsoft diagnostics'));
   }
 
   /**
@@ -1282,13 +1325,9 @@ export class Game {
    * a report to copy. Each step is guarded: whatever broke may break them too. A later error only adds to the report.
    */
   crash(error: unknown): void {
+    // The report first, so its recent errors are the ones before this.
+    const report = this.reportInfo('Airsoft crash report', error);
     console.error(error);
-    let report: string;
-    try {
-      report = crashReport({ title: 'Airsoft crash report', build: __BUILD_VERSION__.label, userAgent: navigator.userAgent, fields: this.reportFields(), error });
-    } catch {
-      report = crashReport({ title: 'Airsoft crash report', build: __BUILD_VERSION__.label, userAgent: navigator.userAgent, fields: [], error });
-    }
     if (this.crashScreen) {
       this.crashScreen.append(report);
       return;
@@ -1380,8 +1419,20 @@ export class Game {
       const drawStart = performance.now();
       s.draw(frameSeconds, this.keyboard.isDown('scoreboard'));
       this.drawMs += (performance.now() - drawStart - this.drawMs) * FRAME_TIMING.smoothing;
+      this.frameWindow.add(frameSeconds * 1000);
       this.watchFrameTimes(s, frameSeconds);
     }
     this.debug.frame(frameSeconds);
   }
+}
+
+/** The page's own script (index.html's module), as Resource Timing names it: the main file of a load line (IM7). */
+function mainScriptUrl(): string {
+  return document.querySelector<HTMLScriptElement>('script[type="module"][src]')?.src ?? '';
+}
+
+/** When the page finished loading (ms after it opened), or 0 if the browser doesn't say. */
+function pageLoadedAt(): number {
+  const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+  return nav?.loadEventEnd ?? 0;
 }

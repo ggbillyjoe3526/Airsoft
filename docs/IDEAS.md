@@ -27,6 +27,8 @@ he raises them; don't propose them again before that:
 - A key to glance at your magazine (the option to hide the ammo counter is a yes).
 - Hand-made scenarios rated with stars.
 - A "good game" line-up after the match.
+- Slide into cover: a short sprint slide that ends crouched behind cover (owner, 2026-10-12; vaulting went to
+  0.1 Dev 6 instead).
 - Ray traced or path traced light (built as RT1 and scrapped by the owner, 2026-10-11: too much work for what it adds;
   the code is archived in the project's shared files, `archive/ray-tracing/`).
 

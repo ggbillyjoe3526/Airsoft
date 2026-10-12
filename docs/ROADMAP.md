@@ -9,8 +9,10 @@ in `docs/PROCESS.md`.
 - **Building 0.1 Dev 5.** The game stays in Dev until the owner calls it feature complete (owner, 2026-10-06). Beta then
   adds no features.
 - **Last tag:** `0.1-dev.4`, on 2026-10-06. The owner creates tags.
-- **Next:** the Dev 5 plan below. Items 1 to 3 (the docs rewrite and token steps 3 and 4) are done; next is bug pass
-  BP2.
+- **Next:** the owner tags 0.1 Dev 5 (the Dev 5 plan below), then [0.1 Dev 6](#01-dev-6-the-last-planned-dev-build).
+- **The release path** (owner, 2026-10-12): 0.1 Dev 6, 0.1 Beta, then 0.1.0 opens Early Access to the public. Themed
+  updates follow (Replica, Modes, Maps, Progression and any more), up to 1.0, the full launch. See
+  [Early Access](#early-access-the-themed-updates).
 - **Single player against bots.** There is no multiplayer, ever (owner, 2026-09-30, confirmed 2026-10-03).
 - **How work moves.** Every task goes through the pipeline and the critic, and lands as a pull request into `main`.
   Each pull request says which parts of the playtest guide (`docs/PLAYTEST.md`) to play. The owner's playtest notes set
@@ -33,7 +35,7 @@ versioning policy (what Dev and Beta mean, tag names, branches) is in `docs/PROC
 
 Confirmed by the owner on 2026-10-06: the token-efficiency steps and the docs rewrite come first, the content toolkit is
 pulled into Dev 5, and Dev 7 is folded away (its mode checks join the toolkit here, its features go to
-[0.1 Dev 6](#01-dev-6-the-feature-picks)). The order:
+[0.1 Dev 6](#01-dev-6-the-last-planned-dev-build)). The order:
 
 1. **Docs rewrite with token step 2** (TE2 below).
 2. **Token step 3** (TE3, a pipeline pull request). Done (2026-10-08).
@@ -101,9 +103,9 @@ replaces G10 and its "only if the perf run shows a gain"; scope `plans/webgpu-ov
 
 The owner's notes of 2026-10-06. Open: none of it is built yet. His words, the type and the reasoning per item are in
 the project's shared files (`plans/playtest-feedback-0.1-dev-4.md`). The tasks are blocks M80–M96 in `docs/TASKS.md`:
-M80–M91 and M96 are Dev 5 item 6, M92–M95 are in [0.1 Dev 6](#01-dev-6-the-feature-picks). **Normal difficulty is the
-baseline** for every change (note 19): tune on Normal, then check that Easy, Hard and Pro still scale. He ruled on every
-conflict with an earlier decision on 2026-10-06 (below the table and in `docs/DECISIONS.md`).
+M80–M91 and M96 are Dev 5 item 6, M92–M95 are in [0.1 Dev 6](#01-dev-6-the-last-planned-dev-build). **Normal
+difficulty is the baseline** for every change (note 19): tune on Normal, then check that Easy, Hard and Pro still
+scale. He ruled on every conflict with an earlier decision on 2026-10-06 (below the table and in `docs/DECISIONS.md`).
 
 | # | Note | Goes to |
 |---|---|---|
@@ -111,7 +113,7 @@ conflict with an earlier decision on 2026-10-06 (below the table and in `docs/DE
 | 2 | Keep the Retro filter | M96 (0.1 Dev 5): public as soon as possible (ruled 2026-10-06; was 0.5 in the triage); done (2026-10-11) |
 | 3 | Holster on 3 (1 primary, 2 secondary); sprinting holstered is faster but drawing to aim is slower; sprinting with the replica ready aims faster | M92 (0.1 Dev 6) |
 | 4 | Sort and filter replicas by rarity in the Loadout, and parts by rarity in Customise | M82 (0.1 Dev 5, after G3); done (2026-10-11) |
-| 5 | A 2–4x variable scope (mouse wheel while aiming) and a holographic sight | 0.1 Dev 6 (feature pick 15) |
+| 5 | A 2–4x variable scope (mouse wheel while aiming) and a holographic sight | The Replica Update (feature pick 15; moved from 0.1 Dev 6, 2026-10-12) |
 | 6 | Skip to the next round from the spectator camera | M83 (0.1 Dev 5); done (2026-10-11) |
 | 7 | A setting for a fixed or rotating minimap | M83 (0.1 Dev 5); done (2026-10-11) |
 | 8 | Walking (Shift) while aiming down sights slows you further | M84 (0.1 Dev 5): done (2026-10-11) |
@@ -126,10 +128,10 @@ conflict with an earlier decision on 2026-10-06 (below the table and in `docs/DE
 | 17 | BBs seem to pass through the nearer bot and hit the one behind; check, and tighten hit detection | M85 (0.1 Dev 5): done (2026-10-11) |
 | 18 | Modes and match settings make sense together (no Tournament rules in Extraction) | M89 (0.1 Dev 5): done (2026-10-11) |
 | 19 | Normal difficulty is the baseline for all feedback; check every change on the other levels | Standing rule for M80–M95 |
-| 20 | Extraction loot looks like loot: crates and chests with a glow | 0.1 Dev 6, with the Extraction rework (feature pick 7) |
-| 21 | Battle royale: pick a map and spawn point, a shrinking zone with a countdown outside it, start with nothing, weapons lie on the map as models, 10 players; experimental dev mode first | 0.4, dev first: an exception to the Free-for-all cut (ruled 2026-10-06); his answers below |
-| 22 | An inventory: owned items in the menus, carried items on I in a match; a small carry limit in Extraction; currency takes one slot | 0.1 Dev 6 (feature pick 38, with the Extraction rework) |
-| 23 | Extraction: solo against bots, more of them, quicker and closer waves, bots that hunt, guard and converge on an extraction, a longer extract timer, no respawn; a duo / trio revive later | 0.1 Dev 6, the Extraction rework (feature pick 7): replaces his 2026-10-04 picks (squad of 3, one respawn) and M72's idea of one opponent fewer on Normal (ruled 2026-10-06); the revive goes with Medic |
+| 20 | Extraction loot looks like loot: crates and chests with a glow | The Modes Update, with the Extraction rework (feature pick 7) |
+| 21 | Battle royale: pick a map and spawn point, a shrinking zone with a countdown outside it, start with nothing, weapons lie on the map as models, 10 players; experimental dev mode first | The Modes Update, dev first: an exception to the Free-for-all cut (ruled 2026-10-06); his answers below |
+| 22 | An inventory: owned items in the menus, carried items on I in a match; a small carry limit in Extraction; currency takes one slot | The Replica Update (feature pick 38, the inventory); the carry limit comes with the Extraction rework |
+| 23 | Extraction: solo against bots, more of them, quicker and closer waves, bots that hunt, guard and converge on an extraction, a longer extract timer, no respawn; a duo / trio revive later | The Modes Update, the Extraction rework (feature pick 7): replaces his 2026-10-04 picks (squad of 3, one respawn) and M72's idea of one opponent fewer on Normal (ruled 2026-10-06); the revive goes with Medic |
 | 24 | More Dev settings for playtesting, starting with field credits and tokens on demand | M90 (0.1 Dev 5); done (2026-10-11) |
 | 25 | With the Armory turned off in Dev, hide it instead of greying it | M83 (0.1 Dev 5); done (2026-10-11) |
 | 26 | Softer, diffused torch beams that cast shadows | M91 (0.1 Dev 5, with the graphics work): shadows on High and Ultra only, Low as today for 60 fps (ruled 2026-10-06); done (2026-10-11) |
@@ -192,73 +194,72 @@ Models and effort levels stay as they are.
 | TE4 | 8 fewer chat lines, 21 lighter local test run, 22 bot balance as a report | Dev 5 item 3 (approved 2026-10-06, 23:27 UTC) | Done |
 | Gradual | 26 split the largest files when a task already edits them | Ongoing | Open |
 
-## 0.1 Dev 6: the feature picks
+## 0.1 Dev 6: the last planned Dev build
 
-**Dev continues** (owner, 2026-10-06): more Dev builds add, tweak or remove features until he calls the game feature
-complete. Only then does Beta start, and Beta adds no features: bug fixes, QoL, balance, refinement and polish.
+Dev 6 is the last planned Dev build, though the owner may add more (owner, 2026-10-12). It holds the systems the game
+still needs to be feature complete; the content once planned here moved to its themed update
+([below](#what-moved-out-of-dev-6)). Beta then adds no features: bug fixes, QoL, balance, refinement and polish
+(owner, 2026-10-06).
 
-He picked from a list of 50 candidates (`plans/dev6-plus-feature-candidates.md` in the project files; numbers as in
-that list). Everything below is a yes. **Dev 7 is folded into Dev 6** (owner, 2026-10-06: "I want bigger builds";
-grenades and the spring sniper by name), so Dev 6 holds all 26 and is the last planned Dev build unless he adds more.
-Task blocks are written into `docs/TASKS.md` when the build starts.
+M92–M95, the holster and the practice upgrades, come first (their blocks are in `docs/TASKS.md`); the other blocks
+are written when the build starts. Numbers are from the owner's list of 50 candidates
+(`plans/dev6-plus-feature-candidates.md` in the project files).
 
-Dev 6 comes after M92–M95 (the holster and the practice upgrades). The last twelve rows were Dev 7.
-
-| # | Feature | Was |
+| # | Feature | Area |
 |---|---|---|
-| 1 | Field rule presets (Skirmish, CQB, Speedsoft; Milsim once medic and pouches exist), plus fun house rules such as pistols only or one magazine a round; Tournament and Pro CQB fold in | 0.3 |
-| 14 | The gas pistol becomes a blowback pistol: the slide kicks and locks back on empty (**done**: the GBB Pistol, RM7) | 0.3 |
-| 15 | A 2–4x variable scope (mouse wheel while aiming) and a holographic sight (Dev 4 note 5) | 0.3 |
-| 16 | Gas cooling: rapid fire weakens gas replicas until they recover | 0.3 |
-| 17 | The chrono and field limits: a replica over the field's limit doesn't pass | 0.3 |
-| 19 | Saved loadouts | Beta |
-| 20 | A suppressor sound of its own | 0.3 |
-| 21 | Bot names, personalities (rusher, anchor, flanker, careful) and loadouts | 0.4 |
-| 23 | Bots' gear keeps up with yours | Beta |
-| 35 | Replica skins and kit looks | 0.5 |
-| 40 | Rest your replica on cover (a ledge, crate or window) for steadier aim | New |
-| 45 | Overtime: when the clock runs out, a flag appears in the middle and the first team to touch it wins | New |
-| 46 | An option to hide the ammo counter (no mag-check key: owner) | New |
-| 48 | Auto difficulty as a Dev setting: bots get a little better when you win, a little easier when you lose | New |
-| 22 | Location callouts: named areas, and teammates calling "Contact, Dock!" or "Two left" | 0.4 |
-| 24 | Pings: mark a spot and bots act on it | 0.4 |
-| 43 | Ask a teammate for a magazine, from the comms wheel (owner) | New |
-| 44 | Bushes and leaves can stop or deflect BBs | New |
-| 41 | Noisy ground and props: gravel, cans, pallets and fences rattle, and bots hear it | New |
-| 31 | Weather: a general weather system, not only rain and fog (owner) | 0.4 |
-| 10 | Grenades, smoke and flash for the Grenades slot, used by bots too | 0.3 |
-| 11 | **A spring sniper rifle, the next replica.** Before building it, ask the owner how he wants it built and its specs (owner) | 0.3 |
-| 18 | Chest rigs and pouches: choose what you carry, such as another magazine or a grenade | 0.3 |
-| 38 | An inventory: owned items in the menus, carried items on I in a match (with 7) | 0.3 |
-| 2 | Medic mode: a hit player goes down and a teammate revives them before a bleed-out timer | 0.3 |
-| 7 | The Extraction rework from Dev 4 notes 20, 22 and 23 (solo, loot that looks like loot, hunting bots, no respawn; the duo / trio revive with medic) | 0.3 |
+| M92 | Holster on 3, and two kinds of sprint: holstered is faster, but drawing to aim takes longer | Movement |
+| M93 | Practice: moving targets, new target types and a timed challenge (off by default) | Practice |
+| M94 | Practice on any map, with targets instead of bots | Practice |
+| M95 | Practice with any replica you own, and everything with Dev on | Practice |
+| – | Vaulting over low obstacles (0.7–0.9 m), with a few added to the maps where they open a route; crouch cover stays peek-only (owner, 2026-10-12) | Movement |
+| 40 | Rest your replica on cover (a ledge, crate or window) for steadier aim | Movement |
+| 19 | Saved loadouts, picked from the Map pop-up as well as the Loadout screen | Loadout |
+| 21 | Bot names, personalities (rusher, anchor, flanker, careful) and loadouts | Bots |
+| 23 | Bots' gear keeps up with yours (audit POOL-24: a tier dial per difficulty, or higher tiers that trade) | Bots |
+| 48 | Auto difficulty as a Dev setting: bots get a little better when you win, a little easier when you lose | Bots |
+| 22 | Location callouts: named areas, and teammates calling "Contact, Dock!" or "Two left" (text first) | Team play |
+| 24 | Pings: mark a spot and bots act on it | Team play |
+| 43 | Ask a teammate for a magazine, from the comms wheel (owner) | Team play |
+| 44 | Bushes and leaves can stop or deflect BBs | World |
+| 41 | Noisy ground and props: gravel, cans, pallets and fences rattle, and bots hear it | World |
+| 45 | Overtime: when the clock runs out, a flag appears in the middle and the first team to touch it wins | Rounds |
+| 46 | An option to hide the ammo counter (no mag-check key: owner) | HUD |
 
-**Replica redesigns** from the owner's reference pictures (owner, 2026-10-12), the models behind the Blender-model Dev
-switches: the AEG Rifle, whose small, low iron sights the built-in rifle gets too (RM6, done).
+Built in Dev 5 instead: the blowback pistol (pick 14) is the GBB Pistol (RM7), and the AEG Rifle redesign (RM6) gave
+the built-in rifle its small, low iron sights.
 
-**Maybe, to think about or leave for later** (they stay where they are on this roadmap):
-- Team Deathmatch (0.3), Domination (0.4), Capture the Flag (0.4).
-- The DMR (0.3), the SMG and shotgun (0.4; the owner wants them after the sniper).
-- The changing speedsoft arena, a bigger new field, Day / Night on every map, Depot layouts, vaulting and slide into
-  cover (0.4).
-- Neon Heights public (0.2), challenges and badges and Armory milestones (0.5), briefing tips (was Beta).
-- Two new ideas in `docs/IDEAS.md` (clutch moments, match wagers).
+### What moved out of Dev 6
 
-**No for now** (listed in `docs/IDEAS.md` so they aren't proposed again; the owner may change his mind):
-- Bang-bang surrender or knife tag.
-- The dead rag, a light on hit players at night and a shouted "HIT!" (the hit system is good enough as it is).
-- Throwing a decoy.
-- A mag-check key.
-- Hand-made scenarios.
-- A "good game" line-up after the match.
+The owner moved content to the themed updates (owner, 2026-10-12). He named the optics and the sniper; Claude placed the
+rest, and the owner can move any back.
+
+| # | Feature | Goes to | Placed by |
+|---|---|---|---|
+| 15 | A 2–4x variable scope and a holographic sight | Replica Update | Owner |
+| 11 | The spring sniper rifle | Replica Update | Owner |
+| 10 | Grenades, smoke and flash | Replica Update | Claude: items |
+| 18 | Chest rigs and pouches | Replica Update | Claude: items |
+| 38 | The inventory | Replica Update | Claude: it holds the new items |
+| 16 | Gas cooling | Replica Update | Claude: how replicas behave |
+| 17 | The chrono and field limits | Replica Update | Claude: it matters once the sniper brings a higher limit |
+| 20 | A suppressor sound of its own | Replica Update | Claude: an attachment's sound |
+| 1 | Field rule presets and house rules | Modes Update | Claude: ways to play |
+| 2 | Medic | Modes Update | Claude: it changes how a match plays |
+| 7 | The Extraction rework | Modes Update | Claude: Extraction goes public there |
+| 31 | Weather | Maps Update | Claude: a map condition, beside Day and Night |
+| 35 | Replica skins and kit looks | Progression Update | Claude: rewards to earn |
+
+0.1 ships without them: the Loadout's Grenades slot and Skins row stay greyed ("Later") until their updates. Ideas the
+owner said no to for now, slide into cover among them (owner, 2026-10-12), are listed in `docs/IDEAS.md`.
 
 ## What 0.1 is
 
 The owner's definition (2026-10-01): 0.1 focuses on core gameplay and foundations. Later content builds on those
 foundations. The owner has since pulled more into 0.1: see the Dev 5 plan and 0.1 Dev 6 above, and the feature triage
-below.
+below. 0.1.0 opens Early Access (owner, 2026-10-12): feature complete, but light on content.
 
-- **Replicas:** the two that exist, the AEG rifle and the gas pistol. More platforms come later.
+- **Replicas:** the AEG Rifle and the GBB Pistol (the starting kit), and the Cyber Pistol from the Armory. More
+  platforms come with the Replica Update.
 - **Loadout** (owner, 2026-10-03): a primary and a secondary replica, BB weight, hop-up and a first set of attachments
   (optics, grips, magazines), picked before a match. Gear and more parts come with later versions.
 - **Match info and options** (owner, 2026-10-03): a hit feed, teammate markers, an end-of-match summary, crosshair
@@ -326,200 +327,154 @@ The owner sorted every feature in the game and on this roadmap into Keep (in Bet
 
 - **Public in 0.1** (after the owner's playtest, as before): Depot with Elimination, Attack / Defend and custom matches;
   Easy, Normal and Hard; Woodland with night play, the weapon torch, glowing BBs and 5v5 / 6v6 (M88, owner 2026-10-06); Pro.
-- **Stays dev, public later:** Neon Heights (0.2, with its new look), Extraction (0.3, once balanced), the Tournament
-  and Pro CQB rule sets (0.3, folded into the field rule presets), the Retro pixel filter (0.5, as a "Retro look"
-  option; pulled forward to 0.1 Dev 5 on 2026-10-06, M96).
+- **Stays dev, public later:** Neon Heights (the Maps Update, with its new look), Extraction (the Modes Update, once
+  reworked), the Tournament and Pro CQB rule sets (the Modes Update, folded into the field rule presets). The Retro
+  pixel filter, once 0.5, went public in 0.1 Dev 5 (M96).
 - **Cut:** supply weekends and events, the Tone mapping choice, tracer BBs as their own option (glowing BBs do it),
   Bomb, Intel grab, Free-for-all (battle royale is the owner's exception, 2026-10-06), the overshooting rule, gear that
   only changes looks as its own system (it joins kit looks), a separate progression plan (the Armory is the
   progression), and the ideas listed under Declined in `docs/IDEAS.md`.
 
-## Release: 0.1.0
+## 0.1.0: Early Access opens
 
-The first public release. The owner decides when the game is ready to be treated as a stable public product.
+The first public release (owner, 2026-10-12): the game is feature complete but light on content, and players get it as
+Early Access. The owner decides when it is ready. Small fixes after it are 0.1.1, 0.1.2 and so on.
 
-## After 0.1: later versions
+## Early Access: the themed updates
 
-Everything below is approved as a direction and deliberately not part of 0.1, except what the owner has pulled into
-0.1 Dev 5 and Dev 6 (marked "Now"). The owner decides what goes into each version and can move anything; each one must
-be a substantially bigger game (`docs/PROCESS.md › Versioning`). Within a version the work is again Dev (build), then
-Beta (balance, fixes, QoL, performance), then release. Every deferred feature has a version (feature triage, owner,
-2026-10-05): none is dropped by being left unplaced.
+After 0.1.0 the game grows through themed updates, each a mini expansion (owner, 2026-10-12):
 
-**The owner's third feature picks** (2026-10-04, from a researched list of 32; numbers as in that list) and where each
-went, updated by the feature triage (2026-10-05) and his Dev 6 picks (2026-10-06):
+| Update | What it adds |
+|---|---|
+| 0.2 · Replica Update | New replicas, attachments and items |
+| 0.3 · Modes Update | New modes and ways to play |
+| 0.4 · Maps Update | New maps and map conditions |
+| 0.5 · Progression Update | Challenges, badges and things to earn |
+| More updates | Any theme the owner wants |
 
-| # | Pick | Goes to |
-|---|---|---|
-| 1 | Prone, kept for a later map | 0.4, with a field built for it |
-| 2 | Location callouts | 0.1 Dev 6 |
-| 3 | Bot names, personalities and loadouts | 0.1 Dev 6 |
-| 4 | Field rules presets, for a later update | 0.1 Dev 6 |
-| 5 | Overshooting rule | Cut (triage: bots never overshoot, so it only punishes the player) |
-| 6 | Rubber-knife tag, maybe later | No for now (owner, 2026-10-06) |
-| 7 | Slide into cover, maybe later beside prone | Maybe, 0.4 |
-| 12–15 | Survival, Rush, Intel grab, Free-for-all (yes, later) | 0.3, 0.4, cut, cut (triage; battle royale is the Free-for-all exception, 0.4) |
-| 17 | The chrono enforces the field's limit (yes, later) | 0.1 Dev 6, with the chrono |
-| 18 | Saved loadouts | 0.1 Dev 6 |
-| 22 | A speedsoft arena that changes (yes, later) | Maybe, 0.4 |
-| 24 | Rain and fog (yes, later) | 0.1 Dev 6, as a general weather system |
-| 25 | More field ideas: hospital, trenches, quarry (yes, later) | Maybe, 0.4 |
-| 26 | Challenges and badges (yes, later) | Maybe, 0.5 |
-| 31 | Briefing tips | Maybe (owner, 2026-10-06) |
-| 8–11, 16, 19–21, 23, 27–30, 32 | Declined | Listed in IDEAS so they aren't proposed again |
+- **The owner picks the order.** Version numbers always go up, so whichever update ships next takes the next number:
+  if the Maps Update comes first, it is 0.2 (2026-10-12). The numbers above are the planned order.
+- **Each update is built like 0.1:** Dev builds, then Beta builds (balance, fixes, QoL, performance), then the release
+  (0.2 Dev 1, 0.2 Beta 1, 0.2.0).
+- **Early Access is feature complete but light on content.** The updates mostly add content, and a new feature can
+  still come in any update (owner, 2026-10-12).
+- **Every later feature has a place** (feature triage, owner, 2026-10-05): none is dropped by being left unplaced.
+  "From 0.1 Dev 6" marks the content moved out of Dev 6 on 2026-10-12.
+- **No real brand names or trademarked designs, ever** (CLAUDE.md §4).
 
-### 0.2: The graphics update
+### 0.2 · Replica Update: replicas, attachments and items
 
-- **Graphics overhaul.** Now 0.1 Dev 5 (owner, 2026-10-05: build now; see the Dev 5 plan; plan
-  `plans/graphics-overhaul-0.2.md` in the project files). A stylised look (Valorant first; blocky, near-modular figures
-  and replicas like Marathon; colour and light like Breath of the Wild; not realistic), an Ultra preset above High, a
-  frame-rate option (30 / 60 / 120 / 144 / 240 / Unlimited), a WebGPU renderer, real materials, contact shadows and
-  ambient occlusion, bloom and light beams, reflections, temporal anti-aliasing and a post-processing stack on Ultra,
-  and all three maps re-dressed. Low still holds 60 fps at 1080p on a laptop with built-in graphics. Player, bot,
-  replica and attachment models are built in code (no Blender, no borrowed packs) through the glTF loader (M25a). It
-  was planned for after 0.1.0 is stable.
-- **Neon Heights public.** Maybe (owner, 2026-10-06). It goes public with its new look, once its open map findings are
-  fixed (overlapping blocks, cases that open through walls, the east end winning first fights at night). (triage)
-- **Ground cover on terrain maps** (was in IDEAS; M33i plan): tufts of grass, ferns and leaf piles scattered from
-  `MapData.ground`'s grid, as instanced cards on Medium and up. Needs a cheaper figure or a culled instance pass first.
-- **Dead rag.** No for now (owner, 2026-10-06; in IDEAS). Hit players pull out a red dead rag, not just a raised hand
-  (was in IDEAS).
-- **A desktop download** (owner, 2026-10-05): the game in a desktop wrapper (Electron or Tauri, Steam), whenever the
-  owner wants one; 0.2 by default.
+- **The spring sniper rifle, the next replica** (from 0.1 Dev 6). One shot per bolt cycle, high velocity, long reach
+  and a loud crack. Before building it, ask the owner how he wants it built and its specs (owner, 2026-10-06).
+- **A 2–4x variable scope and a holographic sight** (from 0.1 Dev 6; Dev 4 note 5). The mouse wheel zooms while
+  aiming.
+- **Grenades, smoke and flash** (from 0.1 Dev 6). Airsoft-style throwables for the Loadout's Grenades slot: a CO2
+  sound grenade (a bang, no shrapnel), smoke for cover and a flash bomb, used by bots too. How each one knocks players
+  out or blinds them, and how many you carry, are designed when they come.
+- **Chest rigs, belts and pouches** (from 0.1 Dev 6). They decide what you carry, such as another magazine or a grenade
+  (owner, 2026-10-03). The Milsim rules need them.
+- **An inventory** (from 0.1 Dev 6; Dev 4 note 22). Owned items in the menus, carried items on I in a match. The
+  Extraction rework uses it for its carry limit, so it moves with Extraction if the Modes Update comes first.
+- **Gas cooling** (from 0.1 Dev 6). Gas cools in the magazine as it is used, so rapid fire lowers a gas replica's
+  muzzle velocity (shorter, droopier shots) until it recovers (owner, 2026-10-03).
+- **The chrono and field limits** (from 0.1 Dev 6). Check your loadout's muzzle velocity before a match; each field and
+  replica class has a limit, as at real sites, and a replica over it doesn't pass. Today's per-class limits (1.20 J
+  rifles, 1.00 J pistols) already cap the Armory's upgrades; the sniper and the DMR bring higher ones, and the DMR's
+  minimum engagement distance comes from here.
+- **A suppressor sound of its own** (from 0.1 Dev 6). The Silencer already makes shots duller and about half as loud;
+  this gives suppressed replicas their own sound.
+- **More parts:** receivers, handguards, stocks, more optics, muzzle devices, lasers, lights and bipods, pistol barrels
+  and more barrel lengths, and the parts the new types need. Free from the start, through the pool and the Armory.
+- **More replica types after the sniper** (the table below). Too many for one update, so a second Replica Update can
+  take the rest. Each type feels mechanically different, not like a damage model, and sounds like its power source
+  (electric, gas, spring), using the sound profiles from M13.
 
-### 0.3: The armoury and the rules
-
-- **Medic mode.** Now 0.1 Dev 6 (owner, 2026-10-06). A hit player goes down and calls for a medic, who can bring them
-  back before a bleed-out timer runs out (real events use 5–10 minutes; the game, seconds). Asked for on 2026-10-03;
-  moved from 0.2 on 2026-10-05.
-- **Team Deathmatch.** Maybe (owner, 2026-10-06). Respawn TDM: hit players walk back to their spawn and re-enter; the
-  team with the most hits when time runs out (or the first to N) wins. Elimination stays its own mode. 4v4 and 5v5
-  already exist for the maps with room. Moved from 0.2 on 2026-10-05.
-- **Survival** (owner, 2026-10-04: yes, may come later): you and your teammates hold a building against waves of bots
-  that grow each wave, as in Insurgency: Sandstorm's Survival. Needs bots that push, which they don't yet
-  (`docs/KNOWN_ISSUES.md`).
-- **Extraction public** (triage). Built (M43–M49) and kept dev until it is balanced. Audit 2 found every run is decided
-  by the first patrol fight and a third of the guards can't see the way in. The rework from his Dev 4 notes is now
-  0.1 Dev 6 (owner, 2026-10-06).
-- **Field rule presets.** Now 0.1 Dev 6 (owner, 2026-10-06). One picker beside Mode that sets a whole rule set the way
-  real sites do (owner, 2026-10-04): *Skirmish* (today's rules, the default), *CQB* (semi auto only, a bang rule),
-  *Speedsoft* (semi only, no minimum distance, short rounds) and *Milsim* (realcap 30-BB magazines, a BB allowance per
-  round, no hi-caps, a bleed-out instead of an instant out). The Tournament and Pro CQB sets built with Pro (M39) join
-  it here. Builds on M20's custom match settings; Milsim needs the pouches and the medic mode first.
-- **Bang-bang surrender or a rubber-knife tag.** No for now (owner, 2026-10-06; in IDEAS). It was in IDEAS (owner,
-  2026-10-04: maybe later; one of the two, not both): tag out an unaware enemy within about 3 m without shooting, as a
-  house-rule toggle; fits the CQB preset.
-- **New replica types, the first three** (the full list is below; one or two per version, each earning its place): a
-  blowback gas pistol (the gas pistol becomes it; 0.1 Dev 6), a spring sniper rifle (0.1 Dev 6; ask the owner how to
-  build it and its specs first) and a DMR (maybe), all owner, 2026-10-06.
-- **Weapon parts and gear that changes play:** receivers, handguards, stocks, more optics, muzzle devices, lasers,
-  lights and bipods, pistol barrels and more barrel lengths (from M29b), and the parts the new types need; chest rigs,
-  belts and pouches that decide what you carry, such as another magazine or a grenade (owner, 2026-10-03; rigs and
-  pouches now 0.1 Dev 6, owner, 2026-10-06). Free from the start, through the pool and the Armory.
-- **A suppressor sound of its own.** Now 0.1 Dev 6 (owner, 2026-10-06). Shots must be quieter with one (owner,
-  2026-10-05): the Silencer (M29b) already makes shots duller and about half as loud; this gives suppressed replicas
-  their own sound, built on the M9 groundwork.
-- **Chrono before a match.** Now 0.1 Dev 6 (owner, 2026-10-06). Kept (owner, 2026-10-03): check your loadout's muzzle
-  velocity.
-  - **The chrono enforces the field's limit** (owner, 2026-10-04): each field and replica class has a limit, as at real
-    sites (UK fields use about 1.3 J for full-auto and 2.5 J for DMRs and bolt-action rifles; US fields about 350–400
-    fps), and a replica over it doesn't pass. This caps the Armory's Power % batteries and gas so upgrades can't
-    snowball, and it is where the DMR's minimum engagement distance comes from.
-- **Gas simulation.** Now 0.1 Dev 6 (owner, 2026-10-06). Fast shooting means less power (owner, 2026-10-03). Gas cools
-  in the magazine as it is used, so rapid fire lowers a gas replica's muzzle velocity (shorter, droopier shots) until it
-  recovers.
-- **Grenades, smoke and flash bombs.** Now 0.1 Dev 6 (owner, 2026-10-06). Airsoft-style throwables (owner, 2026-10-03),
-  such as a CO2 sound grenade (a bang, no shrapnel), smoke for cover and a flash bomb, for the Loadout's Grenades slot.
-  How each one knocks players out or blinds them, how many you carry and how bots use them are designed when they come.
-- **Higher-detail models.** Later, not now (owner, 2026-10-05 and 2026-10-09). A separate art pass in Blender after the
-  code-built models of the graphics overhaul: better figures (humans and robots), replicas, attachments, props and set
-  dressing. It uses the headroom WebGPU gives (more detail on screen at once, richer materials), so it starts only once
-  the WebGPU overhaul is finished and is scoped then against its measured headroom. It keeps art direction v3
-  (stylised, blocky, not realistic), the download target (about 30 MB to start), Low's 60 fps at 1080p on a laptop and
-  the WebGL fallback. No build is planned for it yet.
-- **From the owner's 0.1 Dev 4 playtest** (2026-10-06, notes 5, 20, 22, 23; see the Dev 4 table above): a 2–4x variable
-  scope and a holographic sight, Extraction loot that looks like loot, an inventory (owned items in the menus, carried
-  items on I, a small carry limit in Extraction), and an Extraction rework (solo, more and harder opponents, no respawn;
-  ruled 2026-10-06 over his earlier Extraction picks). All four are now 0.1 Dev 6.
-
-### 0.4: More fields and ways to play
-
-- **New fields.** Maybe (owner, 2026-10-06). Each is built to the checklist: an abandoned hospital (multi-floor CQB), a
-  trench line with forts and a quarry (elevation) (owner, 2026-10-04), from the wider list: CQB warehouse, urban
-  streets, industrial site, outdoor village, milsim-style compound, indoor arena, speedsoft arena and mixed terrain.
-  Which, and in what order, is the owner's pick.
-- **A speedsoft arena that changes.** Maybe (owner, 2026-10-06). Its bunkers are re-placed from a seed each match, as
-  real speedsoft fields move their inflatables between events (owner, 2026-10-04); every layout still passes the field
-  checklist tests.
-- **Depot layouts.** Maybe (owner, 2026-10-06). Alternative cover layouts for Depot (was in IDEAS).
-- **Day and night on every map.** Maybe (owner, 2026-10-06). The Day / Night switch (M34d) for every map, not only those
-  built for both (owner, 2026-10-03).
-- **Rain and fog.** Now 0.1 Dev 6, as a general weather system, not only rain and fog (owner, 2026-10-06). Picked like
-  Day / Night. Rain masks footsteps and drops BBs a little sooner; fog shortens how far you can see. Asked for on
-  2026-10-04.
-- **Prone** (owner, 2026-10-04: kept for a later map): lie down behind low cover or in long grass: slow to get up, a
-  small target. Comes with a field built for it, and bots use it too.
-- **Slide into cover.** Maybe (owner, 2026-10-06). A short sprint slide that ends crouched behind a bunker, as
-  speedsoft players do (was in IDEAS; owner, 2026-10-04: maybe later, beside prone).
-- **Vaulting.** Maybe (owner, 2026-10-06). Over low obstacles of 0.7–0.9 m, with fields that have them (was in IDEAS;
-  owner, 2026-10-01).
-- **Rush** (owner, 2026-10-04): Attack / Defend in stages: attackers take point A, then the front moves to B, as
-  Battlefield's mode, which real fields recreate with timer boxes. Needs a field bigger than Depot.
-- **Domination.** Maybe (owner, 2026-10-06). Capture and hold physical locations. Moved from 0.2 on 2026-10-05.
-- **Capture the Flag.** Maybe (owner, 2026-10-06). Each team grabs the other's flag and carries it home; a carrier who
-  is hit drops it. Needs bots that carry, chase and return flags. A possible future mode (owner, 2026-10-05).
-- **Location callouts.** Now 0.1 Dev 6 (owner, 2026-10-06). Named areas on each field ("Dock", "Main Gate", "Back Lot")
-  shown under the minimap and in the hit feed, and bot teammates telling you what they know: "Contact, Dock!",
-  "Reloading", "Two left". Text first, a voice later. Asked for on 2026-10-04; moved from 0.2.
-- **A shouted "HIT!"** No for now (owner, 2026-10-06; in IDEAS). A voiced hit call (a CC0 recording) when someone is
-  hit, beside the callouts (was in IDEAS).
-- **Bot names, personalities and loadouts.** Now 0.1 Dev 6 (owner, 2026-10-06). Bots get names and a play style
-  (rusher, anchor, flanker, careful), like Counter-Strike's bot profiles, and carry real loadouts from the asset pool.
-  Today they're numbered and play alike (`docs/KNOWN_ISSUES.md`). Asked for on 2026-10-04; moved from 0.2.
-- **New replica types, the next three:** an SMG, a shotgun and a gas blowback rifle. SMG and shotgun: maybe, after the
-  sniper (owner, 2026-10-06).
-- **Team communication** (once the bots can follow it; pings and asking a teammate for a magazine from the comms wheel
-  are now 0.1 Dev 6, owner, 2026-10-06): an action wheel or menu, pings and hand signals, with bots that act on them.
-  Three orders and their wheel are already in (M22, M23). Waits on the bot AI; it can move.
-- **Battle royale** (owner's 0.1 Dev 4 playtest note 21, 2026-10-06): an experimental dev mode first: pick a map and a
-  spawn point, a shrinking zone, start with nothing and find gear, 10 players. The owner made it the exception to the
-  Free-for-all cut (2026-10-06); his answers are under the Dev 4 playtest table above.
-
-### 0.5: Kit, looks and progression
-
-- **Replica customisation and skins.** Now 0.1 Dev 6 (owner, 2026-10-06). The owner's "eventually skins" (2026-10-03;
-  the Loadout's Skins row from M17b): colour, furniture, optic, handguard, stock, grip, magazine, muzzle device, tape
-  and markings.
-- **Kit looks (outfit skins).** Now 0.1 Dev 6 (owner, 2026-10-06). Camouflage, plate carrier, pouches, helmet, goggles,
-  face protection, gloves, boots, backpacks, patches and armbands. Gear that only changes looks lives here, not as its
-  own system (triage).
-- **Challenges and badges.** Maybe (owner, 2026-10-06). Tasks that pay Field Credits ("win a round in under 45 s", "3
-  hits with the pistol", "win on Hard") and a badge list kept in the browser, like Counter-Strike: Condition Zero's Tour
-  of Duty tasks (owner, 2026-10-04). A daily challenge could come from a date seed (offline, no online board).
-- **Armory milestones.** Maybe (owner, 2026-10-06). Audit POOL-23, was in IDEAS: today everything is owned at some tier
-  in about 20 Shots, every asset at Rare or better in about 58, then a long tail of small tier gains with no
-  milestones. Ideas: completion on the Armory tile ("23 / 84 · 3 Legendary"), milestones in `pool.md` ("Every optic
-  owned → +1 Token"), more assets before tuning odds, Legendary 1 → 1.5 %, Easy ×0.5 → ×0.7.
-- **The Retro look:** moved to 0.1 Dev 5 (M96) by the owner on 2026-10-06.
-- **New replica types, the last:** an LMG (huge box mags, slow to move and aim, a bipod).
-- No real brand names or trademarked designs, ever (CLAUDE.md §4).
-
-### The replica types (for 0.3 to 0.5)
-
-Platforms that feel mechanically different, not like damage models. Each one sounds like its power source (electric,
-gas, spring; HPA if it comes), using the sound profiles from M13:
-
-| Platform | What sets it apart | Version |
+| Platform | What sets it apart | When |
 |---|---|---|
 | AEGs | Electric full-auto with a motor whirr; mid- or hi-cap mags | In the game |
 | GBB pistols | Blowback slide; the slide locks back on empty; gas mags (the gas pistol became the GBB Pistol, RM7) | In the game |
-| Spring sniper rifles | One shot per bolt cycle; high velocity and long reach; a loud crack | 0.1 Dev 6 |
-| DMRs | Semi-auto only; high velocity; a minimum engagement distance, as at real sites | 0.3 |
-| SMGs | Compact and quick to handle; high rate; short range | 0.4 |
-| Shotguns | Several BBs per shell; pump every shot; shells loaded one by one | 0.4 |
-| GBBRs | Gas blowback kick; the bolt locks back on empty; small gas mags that run out fast | 0.4 |
-| LMGs | Huge box mags; slow to move and aim; covering fire; a bipod | 0.5 |
+| Spring sniper rifles | One shot per bolt cycle; high velocity and long reach; a loud crack | Replica Update, next |
+| DMRs | Semi-auto only; high velocity; a minimum engagement distance, as at real sites | Maybe |
+| SMGs | Compact and quick to handle; high rate; short range | Maybe, after the sniper |
+| Shotguns | Several BBs per shell; pump every shot; shells loaded one by one | Maybe, after the sniper |
+| GBBRs | Gas blowback kick; the bolt locks back on empty; small gas mags that run out fast | Later |
+| LMGs | Huge box mags; slow to move and aim; covering fire; a bipod | Later |
 
-### Parked ideas
+### 0.3 · Modes Update: new modes and ways to play
+
+- **Extraction goes public, with its rework** (from 0.1 Dev 6; Dev 4 notes 20, 22 and 23). Built (M43–M49) and kept
+  dev until it is balanced. The rework: solo against more and more aggressive bots that hunt, guard and converge on the
+  extraction, quicker and closer waves, a longer extract timer, no respawn, loot that looks like loot (crates and chests
+  with a glow) and a small carry limit through the inventory.
+- **Medic** (from 0.1 Dev 6). A hit player goes down and calls for a medic, who brings them back before a bleed-out
+  timer runs out (real events use 5–10 minutes; the game, seconds). It brings the duo and trio revive to Extraction.
+- **Field rule presets and house rules** (from 0.1 Dev 6). One picker beside Mode sets a whole rule set the way real
+  sites do: Skirmish (today's rules, the default), CQB (semi auto only, a bang rule), Speedsoft (semi only, no minimum
+  distance, short rounds) and Milsim (realcap 30-BB magazines, a BB allowance per round, no hi-caps, a bleed-out
+  instead of an instant out; it needs medic and the pouches). The Tournament and Pro CQB sets (M39) fold in. House
+  rules such as pistols only or one magazine a round. Builds on M20's custom match settings.
+- **Battle royale,** an experimental dev mode first (Dev 4 note 21; the exception to the Free-for-all cut). Pick a map
+  and a spawn point, a shrinking zone, start with nothing and find gear, 10 players. The owner's answers are under the
+  Dev 4 playtest table above.
+- **Survival:** you and your teammates hold a building against waves of bots that grow each wave. Needs bots that push,
+  which they don't yet (`docs/KNOWN_ISSUES.md`).
+- **Rush:** Attack / Defend in stages: attackers take point A, then the front moves to B. Needs a field bigger than
+  Depot.
+- **Team Deathmatch** (maybe). Hit players walk back to their spawn and re-enter; the team with the most hits when time
+  runs out (or the first to N) wins. Elimination stays its own mode.
+- **Domination** (maybe). Capture and hold physical locations.
+- **Capture the Flag** (maybe). Each team grabs the other's flag and carries it home; a carrier who is hit drops it.
+  Needs bots that carry, chase and return flags.
+
+### 0.4 · Maps Update: new maps and map conditions
+
+- **New fields** (maybe). Each is built to the field checklist: an abandoned hospital (multi-floor CQB), a trench line
+  with forts and a quarry (elevation) first (owner, 2026-10-04); from the wider list, a CQB warehouse, urban streets, an
+  industrial site, a village, a milsim-style compound, an indoor arena, a speedsoft arena and mixed terrain. Which, and
+  in what order, is the owner's pick.
+- **Neon Heights goes public** with its new look, once its open map findings are fixed (overlapping blocks, cases that
+  open through walls, the east end winning first fights at night).
+- **Weather** (from 0.1 Dev 6). A general weather system, not only rain and fog, picked like Day / Night: rain masks
+  footsteps and drops BBs a little sooner; fog shortens how far you can see.
+- **Day and Night on every map** (maybe). The Day / Night switch (M34d) for every map, not only those built for both.
+- **Prone,** with a field built for it: lie down behind low cover or in long grass, slow to get up, a small target.
+  Bots use it too.
+- **A speedsoft arena that changes** (maybe). Its bunkers are re-placed from a seed each match, as real speedsoft fields
+  move their inflatables; every layout still passes the field checklist tests.
+- **Depot layouts** (maybe). Alternative cover layouts for Depot.
+- **Ground cover on terrain maps** (M33i plan): tufts of grass, ferns and leaf piles scattered from `MapData.ground`'s
+  grid, as instanced cards on Medium and up. Needs a cheaper figure or a culled instance pass first.
+
+### 0.5 · Progression Update: things to earn
+
+- **Challenges and badges** (the owner's example for this update). Tasks that pay Field Credits ("win a round in under
+  45 s", "3 hits with the pistol", "win on Hard") and a badge list kept in the browser, like Counter-Strike: Condition
+  Zero's Tour of Duty. A daily challenge could come from a date seed (offline, no online board).
+- **Armory milestones** (maybe; audit POOL-23). Today everything is owned at some tier in about 20 Shots, then a long
+  tail of small tier gains. Ideas: completion on the Armory tile ("23 / 84 · 3 Legendary"), milestones in `pool.md`
+  ("Every optic owned → +1 Token"), more assets before tuning odds.
+- **Replica skins and kit looks** (from 0.1 Dev 6). Skins: colour, furniture, tape and markings, filling the Loadout's
+  Skins row. Kit looks: camouflage, plate carrier, pouches, helmet, goggles, face protection, gloves, boots, backpacks,
+  patches and armbands. Gear that only changes looks lives here, not as its own system (triage).
+- Ideas that would fit here, not placed: clutch moments and match wagers (`docs/IDEAS.md`).
+
+### Not tied to an update
+
+These land in whichever update the owner likes:
+
+- **A desktop download** (owner, 2026-10-05): the game in a desktop wrapper (Electron or Tauri, Steam), whenever he
+  wants one.
+- **Higher-detail models** (owner, 2026-10-05 and 2026-10-09). A Blender art pass over figures, replicas, attachments,
+  props and set dressing, using the headroom WebGPU gives. It keeps art direction v3, the download target (about 30 MB
+  to start), Low's 60 fps at 1080p on a laptop and the WebGL fallback. The Blender figures, replicas and attachments
+  built in 0.1 Dev 5 stay behind the Dev switches until the owner is happy with them.
+- **Hand signals and more team calls,** with bots that act on them. Three orders and their wheel are in (M22, M23);
+  pings and asking for a magazine come in 0.1 Dev 6.
+
+## 1.0: the full launch
+
+When the owner considers the game complete: Early Access ends and the game is ready for everyone (owner, 2026-10-12).
+
+## Parked ideas
 
 Not approved yet; see `docs/IDEAS.md`. Ideas the feature triage cut are listed there under Declined.

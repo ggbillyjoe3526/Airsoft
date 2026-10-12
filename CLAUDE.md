@@ -71,7 +71,7 @@ These are defaults to prototype, not final. Tune them through play.
 - On hit: the player hears a distinct "tick" impact, sees a hit indicator, and their character raises a hand ("HIT!" callout).
 - Eliminated players become a visible **"dead" state**: hand raised, walking off to the dead zone, cannot shoot, and cannot be targeted. They can still spectate.
 - Prototype bots always call their hits honestly. Honesty is enforced by the game, not the player.
-- Later: a **medic mode** with a bleed-out timer, where a medic revives a hit player (owner, 2026-10-03: a future feature; 0.1 Dev 6 since 2026-10-06).
+- Later: a **medic mode** with a bleed-out timer, where a medic revives a hit player (owner, 2026-10-03: a future feature; the Modes Update since 2026-10-12).
 
 **Replicas (Phase 1 needs only two)**
 - **AEG rifle**: full auto, medium range, medium magazine.
@@ -93,7 +93,8 @@ The plan and build status: `docs/ROADMAP.md`. Versioning, branches, pull request
 bug pass: `docs/PROCESS.md` (grep the heading you need). The rules every session must keep:
 
 - **Dev now.** The game is in 0.1 Dev until the owner calls it feature complete; Beta adds no features. Names read
-  "0.1 Dev 5", "0.1 Beta 1" (no "v"); tags `0.1-dev.5`, `0.1-beta.1`, `0.1.0`.
+  "0.1 Dev 5", "0.1 Beta 1" (no "v"); tags `0.1-dev.5`, `0.1-beta.1`, `0.1.0`. 0.1.0 opens Early Access; themed updates
+  (Replica, Modes, Maps, Progression) follow up to 1.0, the full launch (`docs/ROADMAP.md`).
 - **The owner creates tags.** Don't create, rename or move them. After he tags, the release checklist in
   `docs/PROCESS.md` is due in the next pull request.
 - **Never push to `main`.** Every change is a pull request from a new branch made from the latest `main`. Pipeline

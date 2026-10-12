@@ -1254,6 +1254,43 @@ kbd {
   color: var(--menu-muted);
 }
 
+/* Report a Bug (IM7), on the crash pane and in Settings › Dev › Diagnostics: the note box, and the link that opens the
+   GitHub issue, looking like the menu button beside it. */
+.bug-note {
+  width: 100%;
+  min-height: 64px;
+  padding: var(--sp-2) var(--sp-3);
+  resize: vertical;
+  font: var(--fs-md) / 1.45 var(--ui-font);
+  color: var(--paper);
+  background: var(--menu-panel);
+  border: 1px solid var(--menu-line);
+  border-radius: var(--radius-md);
+}
+
+.bug-note::placeholder {
+  color: var(--menu-muted);
+}
+
+a.bug-report-link {
+  text-decoration: none;
+}
+
+.bug-report .bug-note,
+.bug-report-status {
+  flex: 1 1 100%;
+}
+
+.bug-report-status {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--menu-muted);
+}
+
+.bug-report-status:empty {
+  display: none;
+}
+
 /* The practice range's readout (M21): your last BB, top centre where a match shows its clock. */
 .range-readout {
   position: absolute;
