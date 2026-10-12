@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { DRESSING } from '../config/dressing';
+import { BODY } from '../config/movement';
 import { DUST_MOTES } from '../config/render';
 import { createRng, rngNext } from '../sim/rng';
 import { length3 } from '../sim/vec';
@@ -38,10 +39,19 @@ export function moteFade(distance: number, edge: number): number {
  * frame into a buffer made once. How many show is the quality preset's; reduced motion hides them. Each mote's alpha
  * (moteFade) keeps the ones right by the camera from turning into blurry blobs, and the shader caps the point size.
  */
-/** A map's motes' fade with height over the ground (G8, DRESSING.motes): 1 up to `full` m, 0 from `none` m. */
-export function moteHeightFade(y: number): number {
+/**
+ * A map's motes' fade with height over the ground at `floor` (G8, DRESSING.motes): 1 up to `full` m, 0 from `none` m.
+ * The floor is the eye's less a standing eye height (moteFloor): the ground under you, so the motes hang as low on a
+ * raised knoll as in a yard (BP3; from world y = 0 they thinned out early on Woodland's 6 m Knoll).
+ */
+export function moteHeightFade(y: number, floor = 0): number {
   const M = DRESSING.motes;
-  return Math.max(0, Math.min(1, (M.none - y) / (M.none - M.full)));
+  return Math.max(0, Math.min(1, (M.none - (y - floor)) / (M.none - M.full)));
+}
+
+/** The ground the motes measure their height from: under an eye at `eyeY`, as a standing player's (crouching shifts it a little). */
+export function moteFloor(eyeY: number): number {
+  return eyeY - BODY.standEyeHeight;
 }
 
 export class DustMotes {
@@ -150,6 +160,7 @@ export class DustMotes {
     drift.y = wrap(drift.y + (wind.y * D.windShare + D.breeze.y) * dt, D.box);
     drift.z = wrap(drift.z + (wind.z * D.windShare + D.breeze.z) * dt, D.box);
     if (this.gpu) return this.gpu.update(eye);
+    const floor = moteFloor(eye.y);
     for (let i = 0; i < this.count; i++) {
       const w = t * D.wanderRate + this.phase[i]!;
       const j = i * 3;
@@ -160,7 +171,7 @@ export class DustMotes {
       const dy = this.positions[j + 1]! - eye.y;
       const dz = this.positions[j + 2]! - eye.z;
       const fade = moteFade(length3(dx, dy, dz), Math.max(Math.abs(dx), Math.abs(dy), Math.abs(dz)));
-      this.alphas[i * 4 + 3] = this.hangsLow ? fade * moteHeightFade(this.positions[j + 1]!) : fade;
+      this.alphas[i * 4 + 3] = this.hangsLow ? fade * moteHeightFade(this.positions[j + 1]!, floor) : fade;
     }
     this.attribute.needsUpdate = true;
     this.alphaAttribute.needsUpdate = true;

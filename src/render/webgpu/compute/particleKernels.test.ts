@@ -24,12 +24,12 @@ beforeAll(() => vi.stubGlobal('document', { createElement: () => ({ width: 0, he
 afterAll(() => vi.unstubAllGlobals());
 
 describe('moteKernel', () => {
-  for (const hangs of [false, true]) {
-    it(`places and fades every mote as DustMotes.update does${hangs ? ' (a map dust that hangs low)' : ''}`, () => {
+  for (const [hangs, eyeY] of [[false, 1.7], [true, 1.7], [true, 7.7]] as const) {
+    it(`places and fades every mote as DustMotes.update does${hangs ? ` (a map dust that hangs low, the eye at ${eyeY} m)` : ''}`, () => {
       const motes = new DustMotes(DUST_MOTES.max);
       motes.setCount(DUST_MOTES.max);
       if (hangs) motes.setMapDust(0x8899aa);
-      const eye = { x: 3.2, y: 1.7, z: -14.5 };
+      const eye = { x: 3.2, y: eyeY, z: -14.5 };
       const wind = { x: 1.5, y: 0, z: -0.8 };
       for (let f = 0; f < 40; f++) motes.update(1 / 60, eye, wind);
       const pos = motes.object.geometry.getAttribute('position').array;
