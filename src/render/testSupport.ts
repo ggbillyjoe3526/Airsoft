@@ -123,7 +123,7 @@ function withoutTextures(buf: Uint8Array): ArrayBuffer {
 }
 
 /** Node's fs, without its types (the project compiles for the browser). */
-async function readFile(path: URL): Promise<Uint8Array> {
+export async function readFile(path: URL): Promise<Uint8Array> {
   const nodeFs = 'node:fs';
   const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync(path: URL): Uint8Array };
   return readFileSync(path);
@@ -133,7 +133,7 @@ async function readFile(path: URL): Promise<Uint8Array> {
  * A model file under src/assets/models/, parsed as the game parses it (its clips on the scene, meshopt decoded as
  * render/externalModels.ts decodes it), without its textures.
  */
-async function modelScene(path: string): Promise<THREE.Object3D> {
+export async function modelScene(path: string): Promise<THREE.Object3D> {
   const buf = await readFile(new URL(`../assets/models/${path}`, import.meta.url));
   const gltf = await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(withoutTextures(buf), '');
   gltf.scene.animations = gltf.animations;
