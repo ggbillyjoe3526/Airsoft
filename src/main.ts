@@ -1,3 +1,5 @@
+// First: the console's errors and warnings are kept for the reports from here on (IM7).
+import { startupLog as errors } from './consoleLog';
 import './style.css';
 import './ui/menus/menus.css';
 import './ui/hud.css';
@@ -5,7 +7,6 @@ import { CRASH_TEXT, WEBGL_ERROR } from './config/crash';
 import { TAB_LOCK } from './config/save';
 import { LOADING } from './config/loading';
 import { parseQuality, startingQuality } from './config/render';
-import { ErrorLog, tapConsole } from './core/errorLog';
 import { parseSeed, randomSeed } from './core/seed';
 import { Game } from './game';
 // Reads pool.md at start (M26a), so a row it can't read is reported in the console straight away.
@@ -21,15 +22,6 @@ import { startGuardedStorage } from './save/guardedStorage';
 import { SaveManager } from './save/saveManager';
 import { browserLockChannel, browserSaveLocks, TabLock } from './save/tabLock';
 import { flushSettings } from './settings/storage';
-
-/**
- * The console's errors and warnings from here on (IM7): every report lists the last of them. First, so a start-up
- * failure's report has what led to it. The browser keeps 250 files' load timings by default; the game loads more, and a
- * report's load line counts them.
- */
-const errors = new ErrorLog();
-tapConsole(errors);
-performance.setResourceTimingBufferSize?.(1000);
 
 /** The game once it has started; until then an error is a start-up failure. */
 let running: Game | null = null;

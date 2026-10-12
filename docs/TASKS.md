@@ -71,7 +71,7 @@ attempts: 0
 ## IM7 · Fuller bug reports, and Report a Bug (owner, 2026-10-12)
 tier: core
 perf: required
-touches: src/config/crash.ts, src/core/crashReport.ts, src/core/reportFields.ts, src/core/errorLog.ts, src/core/eventLog.ts, src/core/frameWindow.ts, src/core/bugIssue.ts, src/ui/bugReport.ts, src/ui/devSettings.ts, src/ui/crashScreen.ts, src/game.ts, src/main.ts, src/matchSession.ts, src/rangeSession.ts, src/style.css, src/ui/menus/css/controls.css
+touches: src/config/crash.ts, src/core/crashReport.ts, src/core/reportFields.ts, src/core/errorLog.ts, src/core/eventLog.ts, src/core/frameWindow.ts, src/core/bugIssue.ts, src/ui/bugReport.ts, src/ui/devSettings.ts, src/ui/crashScreen.ts, src/game.ts, src/main.ts, src/consoleLog.ts, src/matchSession.ts, src/rangeSession.ts, src/style.css, src/ui/menus/css/controls.css
 contract: none
 acceptance:
   1. The diagnostics and crash reports add: the time, the browser's language, the last 20 or so console errors and warnings with their first stack lines, frame timing (average and worst over the last 10 seconds of play, and how long the match has run), the player's position, view and state, the last 30 or so game events with their ticks, and memory and load (JS heap where the browser gives it, what the renderer holds, the main file and models from the cache or fresh, load times).

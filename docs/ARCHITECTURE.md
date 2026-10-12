@@ -62,9 +62,10 @@ A task that adds, renames or moves a file keeps its folder's `README.md` current
 
 The root files in more detail:
 
-- **`main.ts`** starts the save system first (a second tab waits behind a notice), then downloads and starts Rapier
-  behind the loading bar, reads the URL flags, probes the GPU and builds `Game`. An error before the game runs shows the
-  crash pane.
+- **`main.ts`** imports `consoleLog.ts` before anything else (the console's errors and warnings kept for the reports,
+  IM7), starts the save system (a second tab waits behind a notice), then downloads and starts Rapier behind the
+  loading bar, reads the URL flags, probes the GPU and builds `Game`. An error before the game runs shows the crash
+  pane.
 - **`Game`** (`game.ts`) is the composition root and main loop: the app that outlives matches (renderer, input, menus,
   debug overlay, audio engine) and New game's picks. No map is loaded on the title and New game screens.
 - **`MatchSession`** (`matchSession.ts`) is one match on one map: the field's meshes and lighting, physics, nav, the
