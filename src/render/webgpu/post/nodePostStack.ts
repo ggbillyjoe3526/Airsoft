@@ -100,8 +100,14 @@ export class NodePostStack extends PostChain<NodeRenderer, NodeTarget> implement
     gl.setRenderTarget(this.sceneTarget);
     const world = gl.compileAsync(scene, camera);
     gl.setRenderTarget(null);
-    const held = overlay ? this.output.compileInto(gl, this.overlayFor(gl), overlay, gl.toneMapping) : Promise.resolve();
-    return this.compiles.track(Promise.all([world, held]).then(() => undefined));
+    // The held replica is drawn into its target once, now, rather than compiled: Three builds a compile's draws after
+    // an await, by when the renderer's own context is back, so they were all built again for the output hook on the
+    // first frame (BP3). A real draw builds them under the hook, as each frame draws them.
+    if (overlay) {
+      this.output.drawInto(gl, this.overlayFor(gl), overlay, gl.toneMapping, this.keep);
+      gl.setRenderTarget(null);
+    }
+    return this.compiles.track(world);
   }
 
   override setSize(width: number, height: number): void {

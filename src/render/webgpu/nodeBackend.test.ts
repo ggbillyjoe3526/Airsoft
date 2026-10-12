@@ -202,6 +202,9 @@ describe('compiling ahead and letting go (W1)', () => {
     node.compile(world, new THREE.PerspectiveCamera(), { scene: held, camera: new THREE.PerspectiveCamera() }, null);
     expect(compiled).toEqual([`world:${THREE.NoToneMapping}:true`, `held:${THREE.NoToneMapping}:true`]);
     expect(r.toneMapping).toBe(THREE.NeutralToneMapping);
+    // The output hook stays the context while Low draws (BP3: the compile builds after an await), until a stack draws.
+    expect(r.contextNode).not.toBe(plain);
+    node.draw(world, new THREE.PerspectiveCamera(), undefined, { draw: () => undefined });
     expect(r.contextNode).toBe(plain);
   });
 

@@ -202,8 +202,10 @@ export class NodeBackend {
    */
   draw(scene: THREE.Scene, camera: THREE.PerspectiveCamera, overlay: Overlay | undefined, drawer: object | null): void {
     this.dressing.frame(scene, camera, this.quality, this.motion);
-    if (drawer) (drawer as NodeFrameDrawer).draw(this.renderer, scene, camera, overlay);
-    else this.output.drawScreen(this.renderer, scene, camera, overlay);
+    if (drawer) {
+      this.output.standDown(this.renderer);
+      (drawer as NodeFrameDrawer).draw(this.renderer, scene, camera, overlay);
+    } else this.output.drawScreen(this.renderer, scene, camera, overlay);
   }
 
   /**
@@ -283,6 +285,9 @@ export class NodeBackend {
     this.dressing.frame(scene, camera, quality, this.motion);
     const r = this.renderer;
     // Each for the target and output step the frame draws it with (W4), so the pipelines match the frame's.
+    // The direct draw's output hook stays on between Low's frames, and is taken off for a stack or the retro filter
+    // (nodeOutput.ts), so a compile's draws, built after an await, are built for the context the frames draw with.
+    if (drawer) this.output.standDown(r);
     const done = drawer ? (drawer as NodeFrameDrawer).compile(r, scene, camera, overlay) : this.output.compile(r, scene, camera, overlay);
     void this.compiles.track(done).catch(ignore);
   }
