@@ -7,7 +7,7 @@
 | Date | Attempt | Worker model | build | tests | smoke | perf | scope | changelog | Critic | Retry reason | Wall time | Worker tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 2026-10-12 | 1 | Opus 5.5 (build thread) | ✓ 38 s | ✓ 478 s | ✓ 911 s | ✓ 1872 s | ✓ | ✓ | 6/8 Retry (Opus) | Allocations per shot, fade and throw; the Blender scripts unexplained, magazines kept between rounds | ~3 h | QA 80k, changelog 28k, critic 108k |
-| 2026-10-12 | 2 | Opus 5.5 (build thread) | ROW2 | – | ~1 h | CRITIC2 |
+| 2026-10-12 | 2 | Opus 5.5 (build thread) | ✓ 39 s | ✓ 499 s | ✓ 900 s | ✓ 1763 s | ✓ | ✓ | 8/8 Accept (Opus) | – | ~1 h | critic ? |
 
 ## Decisions
 

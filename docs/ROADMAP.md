@@ -53,7 +53,10 @@ pulled into Dev 5, and Dev 7 is folded away (its mode checks join the toolkit he
    `docs/records/BP3b.md`).
 9. **The Cyber Pistol redesign** (RM5, the owner's ask 2026-10-12, pulled into Dev 5 on his pick): the model redesigned
    from his reference pictures, with small iron sights and a slide that kicks back on each shot (done 2026-10-12;
-   `docs/records/RM5.md`). All nine items are done: next, the owner tags 0.1 Dev 5.
+   `docs/records/RM5.md`).
+10. **The Blender figures in the game** (BF1, pulled into Dev 5 by the owner 2026-10-12): the rigged human and robot as
+   every player and bot, behind the Dev switches (done 2026-10-12; `docs/records/BF1.md`). All ten items are done:
+   next, the owner tags 0.1 Dev 5.
 
 ### Audit 2: the last tasks
 
