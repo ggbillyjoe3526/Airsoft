@@ -10,6 +10,12 @@ content** on. All changes: [`docs/patch-notes/0.1-dev.4.md`](docs/patch-notes/0.
 
 ---
 
+## Play in your browser
+
+Open **https://ggbillyjoe3526.github.io/Airsoft/** in Chrome, Firefox or Edge on a desktop computer, click **Start**,
+then **Play**. There is nothing to install, and the link always plays the latest release. Your progress and settings are
+saved in that browser, separately from a copy you run on your computer.
+
 ## Play it on your computer
 
 You need a desktop computer (Windows, Mac or Linux) and **Chrome, Firefox or Edge**. Setup takes about 5 minutes.
@@ -214,6 +220,10 @@ compress on their own instead, and GitHub Pages serves gzip only. On a server yo
 
 Hosts that ignore the copies still serve the plain files; uploading them costs only disk space. The source maps
 (`*.js.map`) can be left off a public upload.
+
+The play link is this build on GitHub Pages, served from `/Airsoft/`: each release tag builds and publishes itself, and
+**Actions › Play link › Run workflow** publishes the newest release again, or one typed in
+(`.github/workflows/pages.yml`). The release browser test serves `dist/` from the same path (`e2e/release.spec.ts`).
 
 ### URL flags and diagnostics
 

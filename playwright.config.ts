@@ -4,6 +4,12 @@ import { defineConfig, devices } from '@playwright/test';
 const PORT = 4180;
 /** Port for the release build's server (the `release` project); the perf harness has 4181. */
 const RELEASE_PORT = 4182;
+/**
+ * Where the release project serves `dist/`: the path GitHub Pages plays it from (README › Play in your browser, IM2), so
+ * a file the page asks for by an absolute path fails here as it would on the play link. The zip's `npm run preview` serves
+ * it from `/`, which relative paths reach just the same.
+ */
+const RELEASE_PATH = '/Airsoft/';
 
 /**
  * A Chromium other than Playwright's own, for containers where the browser is preinstalled (the cloud sessions keep
@@ -44,7 +50,7 @@ export default defineConfig({
     {
       name: 'release',
       testMatch: /release\.spec\.ts$/,
-      use: { ...devices['Desktop Chrome'], baseURL: `http://localhost:${RELEASE_PORT}`, launchOptions: SWIFTSHADER },
+      use: { ...devices['Desktop Chrome'], baseURL: `http://localhost:${RELEASE_PORT}${RELEASE_PATH}`, launchOptions: SWIFTSHADER },
     },
   ],
   webServer: [
@@ -55,8 +61,8 @@ export default defineConfig({
       timeout: 120_000,
     },
     {
-      command: `node pipeline/build-cached.mjs --mode production && npx vite preview --outDir dist --port ${RELEASE_PORT} --strictPort`,
-      url: `http://localhost:${RELEASE_PORT}`,
+      command: `node pipeline/build-cached.mjs --mode production && npx vite preview --outDir dist --base ${RELEASE_PATH} --port ${RELEASE_PORT} --strictPort`,
+      url: `http://localhost:${RELEASE_PORT}${RELEASE_PATH}`,
       reuseExistingServer: false,
       timeout: 180_000,
     },

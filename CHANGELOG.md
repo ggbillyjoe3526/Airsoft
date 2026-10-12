@@ -46,6 +46,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **RM7** · GBB Pistol blowback: every shot kicks the slide back over the barrel and it snaps home; an empty magazine locks it back until a reload
 - **RM7** · Blowback shows on the built-in and Blender GBB Pistol models; the Blender laser, torch, silencer and extended magazine are refitted to it
 - **BF1** · Dev figure switches off: players and bots are rigged Blender humans and robots that run, crouch, aim, reload, switch to the pistol and call hits
+- **IM2** · Play in a browser at https://ggbillyjoe3526.github.io/Airsoft/, nothing to install; it runs the latest release with its own saves
 
 ### Changed
 - **M71** · Bots hunt the map's middle once their lane is swept (now all levels, not just Pro); Normal and Hard hold their posts out of lantern light at night (#133)

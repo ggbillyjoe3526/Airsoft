@@ -63,6 +63,9 @@ release description:
 4. **The change records** (owner, 2026-10-04): run the changelog agent (`.claude/agents/changelog.md`) with
    `--release <tag>`. It closes the `Unreleased` section of `CHANGELOG.md` under the tag, writes the player-facing
    `docs/patch-notes/<tag>.md` and the README's "New since …" paragraph.
+5. **The play link** (IM2): the tag publishes itself to https://ggbillyjoe3526.github.io/Airsoft/
+   (`.github/workflows/pages.yml`). Check the title screen there names the new release; if it doesn't, the Play link
+   run in Actions says why, and **Run workflow** publishes it again.
 
 ## Pull requests and branches
 
