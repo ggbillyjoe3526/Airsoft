@@ -160,10 +160,13 @@ export const AEG: ReplicaConfig = withStats({
   },
 });
 
-/** Gas pistol: semi auto, shorter range, quick to handle, small magazine. Built-in numbers; stats.md's win (withStats). */
+/**
+ * GBB Pistol (the gas pistol, a blowback replica since RM7: the owner's redesign, 2026-10-12, same numbers): semi auto,
+ * shorter range, quick to handle, small magazine. Built-in numbers; stats.md's win (withStats).
+ */
 export const GAS_PISTOL: ReplicaConfig = withStats({
   id: 'pistol',
-  name: 'Gas Pistol',
+  name: 'GBB Pistol',
   power: 'gas',
   fireModes: ['semi'],
   defaultFireMode: 'semi',
@@ -186,8 +189,9 @@ export const GAS_PISTOL: ReplicaConfig = withStats({
     model: 'pistol',
     suppressed: false,
     hold: { position: [0.09, -0.095, -0.45], yaw: 0.1 },
-    // The rear sight's top at the back of the slide and the front post's tip, the pistol held out at arm's length.
-    ironSight: { rear: [0.045, 0.078], front: [0.0435, -0.09], eyeRelief: 0.36 },
+    // The rear notch's top at the back of the slide and the front post's tip, low on the slimmer slide (RM7; the model
+    // file marks the same two points), the pistol held out at arm's length.
+    ironSight: { rear: [0.0323, 0.079], front: [0.032, -0.0896], eyeRelief: 0.36 },
   },
 });
 
@@ -212,7 +216,7 @@ export const CYBER_PISTOL: ReplicaConfig = withStats({
   muzzleEnergy: 0.93,
   bbWeight: 0.25,
   // A weaker hop-up than the others (owner: "hop shouldn't be as important"): out of the box it keeps 0.25 g BBs on
-  // target to about 33 m, further than the Gas Pistol, short of the AEG's 39 m. Turned right up it reaches about 35 m
+  // target to about 33 m, further than the GBB Pistol, short of the AEG's 39 m. Turned right up it reaches about 35 m
   // (38 m on 0.20 g BBs), still short of what a tuned AEG reaches (about 41 m).
   hopUpMax: 0.17,
   hopUpDial: 0.95,

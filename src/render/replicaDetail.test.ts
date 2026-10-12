@@ -50,7 +50,8 @@ describe('Replica detail (FA8, QualitySettings.replicaDetail)', () => {
     // M84: the rifle's rear sight is a see-through ring (+28), so its iron sights line up. Its small, low sights
     // (the owner, 2026-10-12): a thin leaf and post in place of the tall blocks (-224).
     expect(drawn(low, 'aeg')).toBe(8312);
-    expect(drawn(low, 'pistol')).toBe(7096);
+    // RM7: the GBB Pistol's slimmer slide over a barrel and guide rod bared as it kicks back, a notched rear sight (+80).
+    expect(drawn(low, 'pistol')).toBe(7176);
     expect(drawn(low, 'aeg')).toBeLessThanOrEqual(10844);
     expect(drawn(low, 'pistol')).toBeLessThanOrEqual(7944);
     for (const r of LOADOUT) {

@@ -136,7 +136,7 @@ describe('the Your match panel (G3, playView.ts)', () => {
     rules: { raiseTime: 5 },
     dev: { devContent: () => devContent, devContentUsed: () => devContent, cheating: () => false },
     armory: { wallet: () => ({ fc: 0, tokens: 0 }) },
-    loadout: { summary: () => ({ replicas: 'AEG Rifle · Gas Pistol', detail: '' }) },
+    loadout: { summary: () => ({ replicas: 'AEG Rifle · GBB Pistol', detail: '' }) },
   }) as unknown as Parameters<typeof playView>[1];
 
   it("names the light only on a map that offers two, and shows that light's still", () => {

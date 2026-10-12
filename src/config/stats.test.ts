@@ -115,7 +115,7 @@ describe('stats.md (M29)', () => {
 
 /** Numbers as the game shipped them before stats.md (M29 acceptance 1: "the game's numbers as shipped are unchanged"). */
 describe('stats.md, acceptance 1: the numbers as shipped', () => {
-  it('gives the AEG Rifle and Gas Pistol the numbers they had before the file', () => {
+  it('gives the AEG Rifle and GBB Pistol the numbers they had before the file', () => {
     const num = (r: typeof AEG) => [r.muzzleEnergy, r.bbWeight, r.fireRate, r.magSize, r.mags, r.reloadTime, r.drawTime, r.spreadDeg, r.recoilDeg];
     expect(num(AEG)).toEqual([0.97, 0.25, 13, 60, 4, 1.8, 0.45, 0.45, 0.18]);
     expect(num(GAS_PISTOL)).toEqual([0.52, 0.2, 7, 18, 4, 1.2, 0.3, 0.8, 0.5]);
@@ -172,7 +172,7 @@ describe('stats.md, acceptance 1: a cell or column it cannot read keeps the buil
         '| Key | Name | Class | Energy (J) | BB (g) | Fire rate (BBs/s) | Magazine (BBs) | Magazines | Reload (s) | Draw (s) | Spread (°) |',
         '|---|---|---|---|---|---|---|---|---|---|---|',
         '| aeg | AEG Rifle | rifle | 1.1 | 0.28 | 15 | 30 | 5 | 2 | 0.5 | 0.4 |',
-        '| pistol | Gas Pistol | pistol | 0.6 | 0.2 | 8 | 20 | 3 | 1 | 0.2 | 0.7 |',
+        '| pistol | GBB Pistol | pistol | 0.6 | 0.2 | 8 | 20 | 3 | 1 | 0.2 | 0.7 |',
       ].join('\n'),
     );
     const file = loadStats(text);

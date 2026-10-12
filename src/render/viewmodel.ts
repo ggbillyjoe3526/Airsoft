@@ -364,7 +364,8 @@ export class Viewmodel {
   onShot(): void {
     this.kick = Math.min(VIEWMODEL.kickMax, this.kick + 1);
     this.dropInspect();
-    // The trigger: pulled from the start, or held back at the peak for a shot while it is still moving (full auto).
+    // The trigger (and a pistol's slide): pulled from the start, or held back at the peak for a shot while it is still
+    // moving (full auto).
     const s = this.slots[this.shownSlot];
     if (s?.parts3d) {
       const peak = VIEWMODEL.parts.firePeak * s.parts3d.duration('Fire');
@@ -473,7 +474,7 @@ export class Viewmodel {
     for (let i = 0; i < this.slots.length; i++) {
       const s = this.slots[i]!;
       s.parts3d?.set('Inspect', i === this.inspectSlot ? this.inspectT : 0);
-      if (s.parts3d) poseParts(s, s.parts3d, armament.modes[i], armament.optics[i] != null, s === slot ? reloadP : 0, dt);
+      if (s.parts3d) poseParts(s, s.parts3d, armament.modes[i], armament.optics[i] != null, s === slot ? reloadP : 0, armament.ammo[i]?.mag === 0, dt);
     }
     const R = VIEWMODEL.reload;
     slot.model.rotation.set(sightPitch + reloadDip * R.tilt + ip.tilt, holdYaw + reloadDip * R.turn + ip.turn, reloadDip * R.roll + ip.roll);
@@ -628,16 +629,19 @@ export function ironHold(sight: NonNullable<ReplicaConfig['look']['ironSight']>)
 }
 
 /**
- * Poses a replica's moving parts (RM1) from the game's state: the trigger after a shot, the fire selector at `mode`,
- * the iron sights folded while an optic is fitted, and the magazine release through the reload (`reloadP`, 0..1).
- * The selector and sights start where they belong, then turn when the setting changes.
+ * Poses a replica's moving parts (RM1) from the game's state: the trigger (and a pistol's slide) after a shot, the fire
+ * selector at `mode`, the iron sights folded while an optic is fitted, the magazine release through the reload
+ * (`reloadP`, 0..1), and a GBB's slide locked back while its magazine is `empty` (RM7: from the last shot's own kick,
+ * until a reload seats a full one). The selector and sights start where they belong, then turn when the setting changes.
  */
-function poseParts(s: { fire: number; selector: number; sights: number }, rig: ReplicaRig, mode: FireMode | undefined, optic: boolean, reloadP: number, dt: number): void {
+function poseParts(s: { fire: number; selector: number; sights: number }, rig: ReplicaRig, mode: FireMode | undefined, optic: boolean, reloadP: number, empty: boolean, dt: number): void {
   if (s.fire > 0) {
     s.fire += dt;
     if (s.fire >= rig.duration('Fire')) s.fire = 0;
   }
   rig.set('Fire', s.fire);
+  const kicked = s.fire <= 0 || s.fire >= VIEWMODEL.parts.firePeak * rig.duration('Fire');
+  rig.set('SlideLock', empty && kicked ? rig.duration('SlideLock') : 0);
   const selector = (mode ? VIEWMODEL.parts.selector[mode] : 0) * rig.duration('Selector');
   s.selector = s.selector < 0 ? selector : approach(s.selector, selector, dt);
   rig.set('Selector', s.selector);
