@@ -67,16 +67,3 @@ acceptance:
   2. With Dev settings on (Unlock all gear), every replica and part is available.
 status: open
 attempts: 0
-
-## RM5 · The Cyber Pistol redesign (owner's ask, 2026-10-12)
-tier: core
-perf: skip
-touches: src/assets/models/replicas/cyber.glb, src/config/assets.ts, src/config/replicas.ts, src/render/replicaFiles.ts, src/render/replicaModels.ts, src/render/replicaParts.ts
-contract: the replica model file (docs/CC0_ASSETS.md › Replica models: an optional `SlideBack` marker, by addition)
-acceptance:
-  1. The Cyber Pistol draws from the model the owner approved (his three reference pictures, no logo or lettering), within the file budgets (3,500 triangles held, 300 on a figure, 300 KB).
-  2. Small, subtle iron sights; aiming down them puts the post on the view's centre, with Blender models on and off.
-  3. The grip joins the fixed frame with no gap; on a shot only the dark grey slide kicks back and returns (the light grey shell and the muzzle block stay still); the trigger, fire selector, reload and inspect still play.
-  4. It works with every animation, attachment and figure: the weapon torch clears the trigger guard, and the figures' copy keeps its grip in the hand.
-status: open
-attempts: 0
