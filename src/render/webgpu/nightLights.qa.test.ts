@@ -43,7 +43,7 @@ describe('the lamps that get a light of their own (W3 criterion 2: within 16 m o
   /** Own light intensity with the eye `edge` metres from the pool's edge (the torch reserves the fixed lights: none shines on it). */
   const shining = (edge: number): number => {
     const scene = new THREE.Scene();
-    const p = addLightPools(scene, map, { poolLights: 2 }, 2, true);
+    const p = addLightPools(scene, map, { poolLights: 2 }, 2, () => true);
     p.follow(new THREE.Vector3(pool.position.x + pool.radius + edge, 1.6, pool.position.z), 1 / 60);
     const [own] = ownLights(scene);
     const value = own!.intensity;
@@ -67,7 +67,7 @@ describe('the lamps that get a light of their own (W3 criterion 2: within 16 m o
 
   it('measures from the pool’s edge, not its middle: standing inside the pool is full light', () => {
     const scene = new THREE.Scene();
-    const p = addLightPools(scene, map, { poolLights: 2 }, 2, true);
+    const p = addLightPools(scene, map, { poolLights: 2 }, 2, () => true);
     p.follow(new THREE.Vector3(pool.position.x + 1, 1.6, pool.position.z), 1 / 60);
     expect(ownLights(scene)[0]!.intensity).toBeCloseTo(full, 6);
     p.dispose();
@@ -75,7 +75,7 @@ describe('the lamps that get a light of their own (W3 criterion 2: within 16 m o
 
   it('follows the eye each frame: out of reach, then back in reach, the light comes back', () => {
     const scene = new THREE.Scene();
-    const p = addLightPools(scene, map, { poolLights: 2 }, 2, true);
+    const p = addLightPools(scene, map, { poolLights: 2 }, 2, () => true);
     const eye = new THREE.Vector3(pool.position.x + pool.radius + 40, 1.6, pool.position.z);
     p.follow(eye, 1 / 60);
     const [own] = ownLights(scene);
@@ -91,7 +91,7 @@ describe('the lamps that get a light of their own (W3 criterion 2: within 16 m o
 
   it('puts the light at the pool, in its colour and reach, one per pool, and keeps it dark (not removed) when far', () => {
     const scene = new THREE.Scene();
-    const p = addLightPools(scene, NEON_HEIGHTS, QUALITY.high, 1, true);
+    const p = addLightPools(scene, NEON_HEIGHTS, QUALITY.high, 1, () => true);
     p.follow(new THREE.Vector3(1000, 1.6, 1000), 1 / 60);
     const own = ownLights(scene);
     expect(own).toHaveLength(NEON_HEIGHTS.lights!.length);
@@ -106,7 +106,7 @@ describe('the lamps that get a light of their own (W3 criterion 2: within 16 m o
 
   it('is switched with Night lights while playing: a Low quality takes the own lights away, a higher one brings them back, dispose frees all', () => {
     const scene = new THREE.Scene();
-    const p = addLightPools(scene, NEON_HEIGHTS, QUALITY.high, 0, true);
+    const p = addLightPools(scene, NEON_HEIGHTS, QUALITY.high, 0, () => true);
     const count = NEON_HEIGHTS.lights!.length;
     expect(ownLights(scene)).toHaveLength(count);
     p.setQuality(QUALITY.low);
@@ -134,7 +134,7 @@ describe('WebGL builds no extra light (W3 criterion 3)', () => {
     for (const [id, q] of Object.entries(QUALITY)) {
       const make = (clustered?: boolean) => {
         const scene = new THREE.Scene();
-        const d = clustered === undefined ? addLighting(scene, map, q, night) : addLighting(scene, map, q, night, clustered);
+        const d = clustered === undefined ? addLighting(scene, map, q, night) : addLighting(scene, map, q, night, () => clustered);
         const eye = new THREE.PerspectiveCamera();
         eye.position.set(0, 1.6, 0);
         d.follow(eye, 1 / 60);
@@ -154,9 +154,23 @@ describe('WebGL builds no extra light (W3 criterion 3)', () => {
     }
   });
 
+  it('drops every pool’s own light when a WebGL2 renderer takes over after a lost device, at the next reserveLights (BP3)', () => {
+    const scene = new THREE.Scene();
+    let clustered = true;
+    const d = addLighting(scene, NEON_HEIGHTS, QUALITY.high, LIGHTING_PRESETS.night, () => clustered);
+    d.reserveLights(1);
+    expect(ownLights(scene)).toHaveLength(NEON_HEIGHTS.lights!.length);
+    const fixed = allLights(scene).filter((l) => l.name === 'pool-light').length;
+    clustered = false;
+    d.reserveLights(1); // the session's contextRestored
+    expect(ownLights(scene)).toHaveLength(0);
+    expect(allLights(scene).filter((l) => l.name === 'pool-light')).toHaveLength(fixed);
+    d.dispose();
+  });
+
   it('a Day map has no pools, clustered or not', () => {
     const scene = new THREE.Scene();
-    const d = addLighting(scene, NEON_HEIGHTS, QUALITY.high, LIGHTING_PRESETS.day, true);
+    const d = addLighting(scene, NEON_HEIGHTS, QUALITY.high, LIGHTING_PRESETS.day, () => true);
     expect(ownLights(scene)).toHaveLength(0);
     expect(allLights(scene).filter((l) => l.name.startsWith('pool'))).toHaveLength(0);
     d.dispose();
@@ -177,7 +191,7 @@ describe('every light fits the clusters (W3: capacity)', () => {
   it('the biggest night map’s pools, plus its sun, fill, torch and the nearest fixed lights, stay within CLUSTERED_LIGHTS.maxLights', () => {
     for (const map of [NEON_HEIGHTS, WOODLAND]) {
       const scene = new THREE.Scene();
-      const d = addLighting(scene, map, QUALITY.ultra, LIGHTING_PRESETS.night, true);
+      const d = addLighting(scene, map, QUALITY.ultra, LIGHTING_PRESETS.night, () => true);
       const clusterable = allLights(scene).filter((l) => (l as THREE.PointLight).isPointLight || (l as THREE.SpotLight).isSpotLight);
       // Plus the torch's spot, which takes one of them.
       expect(clusterable.length + 1).toBeLessThanOrEqual(CLUSTERED_LIGHTS.maxLights);

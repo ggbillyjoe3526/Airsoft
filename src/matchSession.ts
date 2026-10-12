@@ -232,7 +232,7 @@ export class MatchSession {
     const lighting = resolveLighting(map);
     this.lighting = lighting;
     renderer.setLighting(lighting);
-    this.daylight = addLighting(renderer.scene, map, quality, lighting, renderer.clusteredLights);
+    this.daylight = addLighting(renderer.scene, map, quality, lighting, () => renderer.clusteredLights);
     this.build.phase('lighting');
 
     this.physics = new PhysicsWorld(map, BODY, SIM_DT);
@@ -584,6 +584,9 @@ export class MatchSession {
   /** The graphics context is back after a loss: what was rendered once into a render target is rendered again. */
   contextRestored(): void {
     this.combat.contextRestored();
+    // A WebGL2 renderer after a lost WebGPU device draws no clustered lights: the pools drop their extra lamps (BP3).
+    this.daylight.reserveLights(this.torches.reserved);
+    this.torches.contextRestored();
   }
 
   /** On-screen sound cues turned on or off (also called once as the match is built). */

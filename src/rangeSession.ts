@@ -139,7 +139,7 @@ export class RangeSession {
     const lighting = resolveLighting(map);
     this.night = lighting.night;
     renderer.setLighting(lighting);
-    this.daylight = addLighting(renderer.scene, map, quality, lighting, renderer.clusteredLights);
+    this.daylight = addLighting(renderer.scene, map, quality, lighting, () => renderer.clusteredLights);
 
     this.physics = new PhysicsWorld(map, BODY, SIM_DT);
     const nav = buildNavGrid(map, NAV);
@@ -314,6 +314,9 @@ export class RangeSession {
   /** The graphics context is back after a loss: as MatchSession.contextRestored. */
   contextRestored(): void {
     this.combat.contextRestored();
+    // A WebGL2 renderer after a lost WebGPU device draws no clustered lights: the pools drop their extra lamps (BP3).
+    // The range has no torches, so nothing is reserved.
+    this.daylight.reserveLights(0);
   }
 
   setPlaying(playing: boolean): void {

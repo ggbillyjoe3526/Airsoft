@@ -17,6 +17,11 @@ import { type AnyNode, displayOf, type NodeRenderer, type NodeTarget } from './n
  * Three/webgpu 0.186's `DirectRenderPipeline` does the first; it fogs before the tone mapping, un-premultiplies each
  * fragment and draws the background colour as a sphere, so this is its closest equivalent with WebGL's order: a
  * renderer context whose `getOutput` hook tone-maps and encodes each fragment, then mixes in the haze.
+ *
+ * While Low's frame is the direct draw, the hook stays the renderer's context and the late haze the scene's fog node
+ * between frames too (`standDown` takes them off when a stack or the retro filter draws). A warm-up compile builds
+ * each draw after an await, and Three keys a draw on the context: with the hook put back after each frame, the
+ * compile built every draw but the first for the wrong context and the first frame built them all again (BP3).
  */
 
 /**
@@ -46,13 +51,15 @@ export class DirectOutput {
   private readonly lateFogs = new WeakMap<THREE.Fog, AnyNode>();
   /** The background colour encoded for the screen, as WebGL clears with it. */
   private readonly background = new THREE.Color();
-  /** What `enter` changed, for `leave` to put back. */
-  private readonly kept: { mapping: THREE.ToneMapping; colourSpace: string; context: AnyNode; background: THREE.Scene['background'] } = {
+  /** What `enter` changed for the frame, for `leave` to put back. */
+  private readonly kept: { mapping: THREE.ToneMapping; colourSpace: string; background: THREE.Scene['background'] } = {
     mapping: THREE.NoToneMapping,
     colourSpace: THREE.SRGBColorSpace,
-    context: null,
     background: null,
   };
+  /** The output hook is the renderer's context (Low's frame is the direct draw), and the scene given the late haze. */
+  private installed = false;
+  private fogged: SceneWithFogNode | null = null;
 
   /**
    * Draws `scene` (then `overlay` over it, after clearing the depth) straight onto the canvas with each material's
@@ -104,18 +111,22 @@ export class DirectOutput {
     return Promise.all([world, held]).then(() => undefined);
   }
 
-  /** Compiles `overlay` for drawInto into `target` ahead of its first frame (not waited for). */
-  compileInto(renderer: NodeRenderer, target: NodeTarget, overlay: { scene: THREE.Scene; camera: THREE.Camera }, mapping: THREE.ToneMapping): Promise<void> {
-    const context = renderer.contextNode;
-    renderer.contextNode = this.contextFor(renderer, mapping);
-    renderer.setRenderTarget(target);
-    const done = renderer.compileAsync(overlay.scene, overlay.camera);
-    renderer.setRenderTarget(null);
-    renderer.contextNode = context;
-    return done;
+  /**
+   * A stack or the retro filter draws the frame: the renderer's own context back, and the scene's own fog (each a
+   * no-op while the direct draw is not in use). Every frame, so the call costs a check.
+   */
+  standDown(renderer: NodeRenderer): void {
+    if (this.installed) {
+      renderer.contextNode = this.base;
+      this.installed = false;
+    }
+    this.unfog();
   }
 
+  /** Lets go of the hooks; the scene keeps no late haze (it may outlive this renderer: a lost device's replacement). */
   dispose(): void {
+    this.unfog();
+    this.installed = false;
     this.context = null;
     this.base = null;
     this.builtFor = null;
@@ -123,14 +134,15 @@ export class DirectOutput {
 
   /**
    * Sets the canvas to take each material's own output (no tone-mapping buffer, the late haze, the background encoded),
-   * keeping what it changes for `leave` (fields, not a closure: nothing allocated a frame).
+   * keeping what it changes for `leave` (fields, not a closure: nothing allocated a frame). The hook and the haze stay
+   * on after it (standDown).
    */
   private enter(renderer: NodeRenderer, scene: THREE.Scene): void {
     const kept = this.kept;
     kept.mapping = renderer.toneMapping;
     kept.colourSpace = renderer.outputColorSpace;
-    kept.context = renderer.contextNode;
     kept.background = scene.background;
+    if (this.fogged !== scene) this.unfog();
     if (scene.fog instanceof THREE.Fog) {
       const fog = scene.fog;
       const late = this.lateFog(fog);
@@ -139,24 +151,29 @@ export class DirectOutput {
       // WebGL hands an unlit colour drawn to the screen over encoded for it (getUnlitUniformColorSpace): the haze too.
       late.colour.value.copy(fog.color).convertLinearToSRGB();
       (scene as SceneWithFogNode).fogNode = late;
-    }
+      this.fogged = scene;
+    } else this.unfog();
     // WebGL clears with the background colour encoded for the screen; the node renderer clears with what it is given.
     if (kept.background instanceof THREE.Color) scene.background = this.background.copy(kept.background).convertLinearToSRGB();
     renderer.contextNode = this.contextFor(renderer, kept.mapping);
+    this.installed = true;
     renderer.toneMapping = THREE.NoToneMapping;
     renderer.outputColorSpace = THREE.ColorManagement.workingColorSpace;
   }
 
-  /** Puts back what `enter` changed. */
+  /** Puts back what `enter` changed for the frame (not the hook nor the haze: standDown). */
   private leave(renderer: NodeRenderer, scene: THREE.Scene): void {
     const kept = this.kept;
     renderer.toneMapping = kept.mapping;
     renderer.outputColorSpace = kept.colourSpace;
-    renderer.contextNode = kept.context;
     scene.background = kept.background;
-    (scene as SceneWithFogNode).fogNode = null;
-    kept.context = null;
     kept.background = null;
+  }
+
+  /** The scene given the late haze has its own fog again. */
+  private unfog(): void {
+    if (this.fogged) this.fogged.fogNode = null;
+    this.fogged = null;
   }
 
   /** The renderer context whose output hook tone-maps with `mapping` (made again when the tone mapping changes). */

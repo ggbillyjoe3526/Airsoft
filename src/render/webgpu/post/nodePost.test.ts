@@ -54,7 +54,7 @@ function stubRenderer() {
     outputColorSpace: THREE.SRGBColorSpace as string,
     coordinateSystem: THREE.WebGLCoordinateSystem,
     samples: 4,
-    contextNode: { context: () => ({}) },
+    contextNode: { context: (_extra?: object): object => ({}) },
     setRenderTarget: (t: THREE.RenderTarget | null) => void (target = t),
     getRenderTarget: () => target,
     getClearColor: (c: THREE.Color) => c,
@@ -160,7 +160,7 @@ describe('the node post stack matches WebGL’s, pass for pass (W4)', () => {
     }
   });
 
-  it('draws the held replica into a multisampled target of its own, one draw, laid on by the last pass', () => {
+  it('draws the held replica into a multisampled target of its own, one draw, laid on by the last pass, spectating too', () => {
     for (const preset of ['medium', 'ultra'] as const) {
       const b = node(preset);
       const { gl, draws } = stubRenderer();
@@ -172,9 +172,22 @@ describe('the node post stack matches WebGL’s, pass for pass (W4)', () => {
       expect(draws.filter((d) => d.what === 'scene')).toHaveLength(2);
       const last = b.passList.at(-1) as unknown as { finishing: { overlay: unknown } | null };
       expect(last.finishing?.overlay).toBe(held);
-      // Without a replica this frame, the last pass lays nothing on.
+      const material = (last as unknown as { quad: { material: unknown } }).quad.material;
+      // Without a replica (spectating), its target is cleared once and still laid on: the last pass keeps its material,
+      // so none is built mid-match (BP3).
+      const cleared: unknown[] = [];
+      const clear = vi.spyOn(gl, 'clear').mockImplementation(() => void (gl.getRenderTarget() === held && cleared.push(held)));
+      for (let frame = 0; frame < 3; frame++) {
+        b.draw(gl as unknown as NodeRenderer, new THREE.Scene(), sunlit(b));
+        expect(last.finishing?.overlay).toBe(held);
+        expect((last as unknown as { quad: { material: unknown } }).quad.material).toBe(material);
+      }
+      expect(cleared).toEqual([held]);
+      // The replica back, then gone again: cleared once more.
+      b.draw(gl as unknown as NodeRenderer, new THREE.Scene(), sunlit(b), overlay);
       b.draw(gl as unknown as NodeRenderer, new THREE.Scene(), sunlit(b));
-      expect(last.finishing?.overlay).toBeNull();
+      expect(cleared).toEqual([held, held]);
+      clear.mockRestore();
       b.dispose();
     }
   });
@@ -357,10 +370,96 @@ describe('Low’s frame straight onto the canvas (W4)', () => {
     out.drawScreen(gl as unknown as NodeRenderer, scene, new THREE.PerspectiveCamera());
     expect(fogNode).toBe(late);
     expect([late.near.value, late.far.value, late.colour.value.getHex(THREE.LinearSRGBColorSpace)]).toEqual([20, 140, 0x808080]);
+    // The late haze stays the scene's between Low's frames (a warm-up compile builds then, BP3), until a stack draws.
+    expect((scene as unknown as { fogNode: unknown }).fogNode).toBe(late);
+    out.standDown(gl as unknown as NodeRenderer);
     expect((scene as unknown as { fogNode: unknown }).fogNode).toBeNull();
     expect(scene.background).toBe(background);
     expect(gl.toneMapping).toBe(THREE.NeutralToneMapping);
     expect(gl.outputColorSpace).toBe(THREE.SRGBColorSpace);
+  });
+});
+
+describe('a warm-up compile builds each draw for the context the frames draw it with (BP3)', () => {
+  interface Seen {
+    scene: THREE.Object3D;
+    context: unknown;
+    fog: unknown;
+  }
+
+  /**
+   * A stand-in renderer whose compile builds each draw after an await, as Three 0.186's does (Renderer.compileAsync),
+   * logging the context and fog node it builds with; and whose frames log the same as they draw.
+   */
+  function building() {
+    const r = stubRenderer();
+    const base = { context: (extra?: object): object => ({ ...extra }) };
+    r.gl.contextNode = base;
+    const built: Seen[] = [];
+    const drawn: Seen[] = [];
+    const seen = (o: THREE.Object3D): Seen => ({ scene: o, context: r.gl.contextNode, fog: (o as { fogNode?: unknown }).fogNode ?? null });
+    const render = r.gl.render.bind(r.gl);
+    const gl = Object.assign(r.gl, {
+      compileAsync: (o: THREE.Object3D) => Promise.resolve().then(() => void built.push(seen(o))),
+      render(o: THREE.Object3D) {
+        if (o instanceof THREE.Scene) drawn.push(seen(o));
+        render(o);
+      },
+    });
+    return { gl: gl as unknown as NodeRenderer, base, built, drawn };
+  }
+
+  const foggy = (): THREE.Scene => {
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(0x1d2b46, 10, 100);
+    return scene;
+  };
+
+  it('Low: the world and the held replica build with the output hook and the late haze their frames draw with', async () => {
+    const { gl, base, built, drawn } = building();
+    const out = new DirectOutput();
+    const world = foggy();
+    const held = { scene: new THREE.Scene(), camera: new THREE.PerspectiveCamera() };
+    await out.compile(gl, world, new THREE.PerspectiveCamera(), held);
+    out.drawScreen(gl, world, new THREE.PerspectiveCamera(), held);
+    expect(built.map((b) => b.scene)).toEqual([world, held.scene]);
+    for (const b of built) {
+      const frame = drawn.find((d) => d.scene === b.scene)!;
+      expect(b.context, 'the context').toBe(frame.context);
+      expect(b.fog, 'the fog node').toBe(frame.fog);
+    }
+    expect(built[0]!.context).not.toBe(base);
+    expect((built[0]!.fog as { lateFog?: boolean }).lateFog).toBe(true);
+    // A stack takes over (a quality change): the renderer's own context and the scene's own fog are back.
+    out.standDown(gl);
+    expect(gl.contextNode).toBe(base);
+    expect((world as { fogNode?: unknown }).fogNode).toBeNull();
+  });
+
+  it('Medium and up: the world builds with the renderer’s own context, the held replica is drawn once with the hook', async () => {
+    const { gl, base, built, drawn } = building();
+    const out = new DirectOutput();
+    const world = foggy();
+    const held = { scene: new THREE.Scene(), camera: new THREE.PerspectiveCamera() };
+    // Low drew first, then the stack is made (a quality change), as NodeBackend does it.
+    out.drawScreen(gl, world, new THREE.PerspectiveCamera());
+    drawn.length = 0;
+    out.standDown(gl);
+    const b = new NodePostStack(setup('medium'), 64, 36, out);
+    await b.compile(gl, world, new THREE.PerspectiveCamera(), held);
+    expect(built.map((x) => x.scene), 'the replica is not compiled: it was drawn').toEqual([world]);
+    const warm = drawn.splice(0);
+    expect(warm.map((x) => x.scene)).toEqual([held.scene]);
+    b.draw(gl, world, new THREE.PerspectiveCamera(), held);
+    const frameWorld = drawn.find((d) => d.scene === world)!;
+    const frameHeld = drawn.find((d) => d.scene === held.scene)!;
+    expect(built[0]!.context).toBe(base);
+    expect(built[0]!.context).toBe(frameWorld.context);
+    expect(built[0]!.fog).toBe(frameWorld.fog);
+    expect(warm[0]!.context).toBe(frameHeld.context);
+    expect(warm[0]!.context).not.toBe(base);
+    expect(gl.contextNode).toBe(base);
+    b.dispose();
   });
 });
 
