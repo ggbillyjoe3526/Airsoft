@@ -116,6 +116,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **RM7** · The Gas Pistol is now the GBB Pistol: same stats, pool ID and parts, redesigned from the owner's reference photos
 - **RM7** · GBB Pistol look: slimmer slide flush with the frame, ejection port further back, one-piece trigger guard, shorter grip, low sights
 - **RM8** · Red dot, 2× scope, silencers and torches use new Blender models (Disable all models off): smaller, sit lower, aim follows them
+- **IM5** · Human and robot figure files are about half the size (4.2 and 4.5 MB down to 2.2 and 2.4 MB) and load faster, looking the same (Dev switches off)
 
 ### Fixed
 - **G11** · The team camo on players reads clearly on Medium and up: crisp dark and light blotches printed per pixel, on WebGL and WebGPU; Low keeps plain clothes
@@ -213,6 +214,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **BP3b** · WebGPU light and post buffers are freed when outgrown or when the renderer is disposed; an empty BB streak is not drawn
 - **BP3b** · The mode content check plays each map only at team sizes the game allows
 - **BF1** · The perf harness's --models option measures with the figures in, and every run records the figures' drawing time per frame
+- **IM5** · New `tools/blender/bot-figure/pack.mjs` packs each Blender figure export losslessly; tests check the shipped figure files are packed
 
 ## 0.1 Dev 4 · 2026-10-06
 
