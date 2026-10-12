@@ -67,3 +67,15 @@ acceptance:
   2. With Dev settings on (Unlock all gear), every replica and part is available.
 status: open
 attempts: 0
+
+## IM4 · TypeScript 7: a faster type check and build, same game (improvement 10)
+tier: ui
+perf: skip
+touches: package.json, package-lock.json
+contract: none
+acceptance:
+  1. TypeScript 7 replaces 5.9.3 and the type check passes with `tsconfig.json` unchanged: no strict setting loosened or removed, and no game code changed to get there.
+  2. The game's built files are the same as main's (every JavaScript file byte for byte); the unit tests and the browser smoke test pass.
+  3. The type check and `npm run build` are timed before and after on the same machine, and the pull request quotes both.
+status: open
+attempts: 0
