@@ -1,16 +1,28 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HUD } from '../config/renderView';
 import { FakeElement } from './testSupport';
-import { boardFitScale, boxesOverlap, MatchBoard } from './matchBoard';
+import { boardFitScale, boxesOverlap, type MatchBoard as Board } from './matchBoard';
 import type { TeamBlock } from './statsRows';
 
-// The table is not under test here (statsTable draws real <table> parts): a stand-in keeps the board's own work.
-vi.mock('./statsTable', () => ({
-  StatsTable: class {
-    readonly root = (globalThis as unknown as { document: Document }).document.createElement('table');
-    set(): void {}
-  },
-}));
+let MatchBoard: typeof Board;
+
+// The table is not under test here (statsTable draws real <table> parts): a stand-in keeps the board's own work. Test
+// files share a worker's modules (isolate: false), so a board another file already loaded holds the real table: this
+// file loads fresh copies with the stand-in, and resets the registry again when it ends (save/startGuardedStorage.test.ts).
+beforeAll(async () => {
+  vi.resetModules();
+  vi.doMock('./statsTable', () => ({
+    StatsTable: class {
+      readonly root = (globalThis as unknown as { document: Document }).document.createElement('table');
+      set(): void {}
+    },
+  }));
+  ({ MatchBoard } = await import('./matchBoard'));
+});
+afterAll(() => {
+  vi.doUnmock('./statsTable');
+  vi.resetModules();
+});
 
 /** BP3: the Tab scoreboard fits the window, packs its rows for a big roster and gets the replica panel out of its way. */
 
