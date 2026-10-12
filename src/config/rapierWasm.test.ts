@@ -18,7 +18,8 @@ const importLine = `import ${RAPIER_WASM.urlName} from './${RAPIER_WASM.file}?ur
 const scratch = mkdtempSync(`${tmpdir()}/airsoft-rapier-wasm-`);
 afterAll(() => rmSync(scratch, { recursive: true, force: true }));
 
-describe("Rapier's plain WebAssembly (IM3)", () => {
+// Compiling Rapier's WebAssembly takes a while on a loaded machine (as physics/levelRay.rapier.test.ts allows).
+describe("Rapier's plain WebAssembly (IM3)", { timeout: 15_000 }, () => {
   it('names the bundle and the file the installed package ships', () => {
     expect(RAPIER_WASM.module.test(`/repo/node_modules/@dimforge/rapier3d-compat/dist/rapier.mjs`)).toBe(true);
     expect(RAPIER_WASM.module.test(`C:\\repo\\node_modules\\@dimforge\\rapier3d-compat\\dist\\rapier.mjs`)).toBe(true);
@@ -54,7 +55,12 @@ describe("Rapier's plain WebAssembly (IM3)", () => {
     // In a browser wasm-bindgen fetches the URL and hands the Response to WebAssembly.instantiateStreaming. Here the import
     // is swapped for the Response that fetch would give, the file's bytes served as application/wasm.
     const response = `new Response(globalThis.airsoftRapierWasmBytes, { headers: { 'Content-Type': 'application/wasm' } })`;
-    const runnable = plainWasmBundle(bundle).replace(importLine, `const ${RAPIER_WASM.urlName} = ${response};`).replace(/^\/\/# sourceMappingURL=.*$/m, '');
+    // The swap's padding (4 MB of spaces) and the map comment are dropped, as the build's minifier does, so the module loads
+    // quickly here.
+    const runnable = plainWasmBundle(bundle)
+      .replace(importLine, `const ${RAPIER_WASM.urlName} = ${response};`)
+      .replace(new RegExp(`(module_or_path:${RAPIER_WASM.urlName}) +`), '$1')
+      .replace(/^\/\/# sourceMappingURL=.*$/m, '');
     const file = new URL(`file://${scratch}/rapier.mjs`);
     writeFileSync(file, runnable);
     (globalThis as { airsoftRapierWasmBytes?: Uint8Array }).airsoftRapierWasmBytes = wasm;
