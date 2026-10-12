@@ -36,6 +36,19 @@ acceptance:
 status: open
 attempts: 0
 
+## BP3b · Bug pass 3: gameplay, graphics, WebGPU and the KNOWN_ISSUES sweep (0.1 Dev 5 item 8)
+tier: core
+perf: required
+touches: src/, e2e/, docs/, CHANGELOG.md
+contract: none
+acceptance:
+  1. Every row of `docs/KNOWN_ISSUES.md` is cross-checked: a row fixed here is deleted with a test or a browser check that shows it; a row left keeps its reason; a stale row is corrected.
+  2. The code since `0.1-dev.4` is read by the gameplay, render and WebGPU review agents; every bug they find is fixed with a test, or logged in `docs/KNOWN_ISSUES.md` with why.
+  3. A scripted player starts every mode on every map (Depot, Woodland, Neon Heights by Day and Night), the practice range and the tutorial in the browser, changes the quality mid-match, quits and plays again, with no console or page error.
+  4. The perf harness runs every preset of the perf matrix within budget, and the balance report is run and copied to the run folder; a figure outside its band is fixed or logged.
+status: open
+attempts: 0
+
 ## M92 · Holster and two kinds of sprint (playtest note 3)
 tier: core
 perf: skip
