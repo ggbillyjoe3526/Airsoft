@@ -13,7 +13,8 @@ Main's start-up code was 990 kB against the 1,000 kB budget: the game chunk 964 
 bundler had split into two chunks beside it. With IM1 it is 897 kB, all of it in the `game` chunk; the page's entry is a
 0.7 kB stub. The Loadout, Armory and Settings chunk is 72 kB and the range's 25 kB. In a release build in the container
 the title was up at 1.2 s and both chunks had arrived by 1.9 s; Settings then opened within 50 ms (Playwright's round
-trips included). Merged main (BF1 #193, #194, #195) before attempt 2's gate.
+trips included). Merged main (BF1 #193, #194, #195) before attempt 2's gate, and IM6, IM2 and IM7 (#196 to #198)
+after the critic: with IM7's reports the game chunk is 910 kB (73 %).
 
 ## Decisions
 

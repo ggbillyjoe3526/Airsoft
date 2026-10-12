@@ -10,6 +10,12 @@ content** on. All changes: [`docs/patch-notes/0.1-dev.4.md`](docs/patch-notes/0.
 
 ---
 
+## Play in your browser
+
+Open **https://ggbillyjoe3526.github.io/Airsoft/** in Chrome, Firefox or Edge on a desktop computer, click **Start**,
+then **Play**. There is nothing to install, and the link always plays the latest release. Your progress and settings are
+saved in that browser, separately from a copy you run on your computer.
+
 ## Play it on your computer
 
 You need a desktop computer (Windows, Mac or Linux) and **Chrome, Firefox or Edge**. Setup takes about 5 minutes.
@@ -215,6 +221,10 @@ compress on their own instead, and GitHub Pages serves gzip only. On a server yo
 Hosts that ignore the copies still serve the plain files; uploading them costs only disk space. The source maps
 (`*.js.map`) can be left off a public upload.
 
+The play link is this build on GitHub Pages, served from `/Airsoft/`: each release tag builds and publishes itself, and
+**Actions › Play link › Run workflow** publishes the newest release again, or one typed in
+(`.github/workflows/pages.yml`). The release browser test serves `dist/` from the same path (`e2e/release.spec.ts`).
+
 ### URL flags and diagnostics
 
 | Flag | Builds | What it does |
@@ -227,10 +237,15 @@ Hosts that ignore the copies still serve the plain files; uploading them costs o
 
 On the dev server and in the smoke test's build (`npm run build:e2e`), `window.airsoft` exposes the running game; a
 release build has none of the dev and e2e flags. The debug overlay (`` ` `` or F3, or **Settings › Dev › Debug info**)
-shows the seed, preset, frame rate and draw calls; `]` shows BB paths. In any build, **Settings › Dev › Diagnostics ›
-Copy** puts the build, browser, graphics card, seed, match and settings on the clipboard for a bug report.
+shows the seed, preset, frame rate and draw calls; `]` shows BB paths. In any build, **Settings › Dev › Diagnostics**
+has a note box, **Copy** (the report on the clipboard) and **Report a Bug** (a new GitHub issue on this repository with
+the note as its title and the report filled in; a report too long for the address is cut to fit and copied whole to
+paste in). The report holds the build, browser, graphics card, seed, match and settings, the time and language, the
+player's position, view and state, frame times over the last 10 s of play, memory and load times, the last 20 console
+errors and warnings, and the last 30 game events. Web addresses in it are cut to their file names.
 
-A crash shows a "Something went wrong" pane with a report to copy (a failed start shows the same pane). Production
+A crash shows a "Something went wrong" pane with the same report, note box, Copy and Report a Bug (a failed start shows
+the same pane). Production
 builds write hidden source maps (`dist/assets/*.js.map`, not linked from the code), so a stack from a report can be read
 against the matching build in DevTools. The performance budget and baselines (`pipeline/perf-budget.json`,
 `pipeline/baseline/`) are described in `pipeline/README.md`.

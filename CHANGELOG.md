@@ -46,6 +46,9 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **RM7** · GBB Pistol blowback: every shot kicks the slide back over the barrel and it snaps home; an empty magazine locks it back until a reload
 - **RM7** · Blowback shows on the built-in and Blender GBB Pistol models; the Blender laser, torch, silencer and extended magazine are refitted to it
 - **BF1** · Dev figure switches off: players and bots are rigged Blender humans and robots that run, crouch, aim, reload, switch to the pistol and call hits
+- **IM2** · Play in a browser at https://ggbillyjoe3526.github.io/Airsoft/, nothing to install; it runs the latest release with its own saves
+- **IM7** · Diagnostics and the crash screen take a note box and a Report a Bug button: it opens a GitHub issue with your note and the report filled in
+- **IM7** · Reports add the time, where you stood, 10 s of frame times, memory, the last 20 console errors and 30 game events; web addresses cut to file names
 
 ### Changed
 - **M71** · Bots hunt the map's middle once their lane is swept (now all levels, not just Pro); Normal and Hard hold their posts out of lantern light at night (#133)
@@ -214,6 +217,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **BP3b** · WebGPU light and post buffers are freed when outgrown or when the renderer is disposed; an empty BB streak is not drawn
 - **BP3b** · The mode content check plays each map only at team sizes the game allows
 - **BF1** · The perf harness's --models option measures with the figures in, and every run records the figures' drawing time per frame
+- **IM6** · Checks finish in about 10 minutes, not 25: browser tests run in four parallel jobs; current actions, Vite 8.3.4, Vitest 5.0.3, Playwright 1.64
 - **IM1** · Build's size limit for the game file raised to 1,250 kB, all start-up code counted in one game chunk; an OnDemand loader fetches screens on first use
 
 ## 0.1 Dev 4 · 2026-10-06

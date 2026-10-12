@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { QUALITY, type QualityChoice, resolveQuality } from '../config/render';
 import { type CaseFind, createRunState, type RunCase, type RunExit, type RunState } from '../sim/extraction';
-import { qualityLine, runReportLine } from './reportFields';
+import { LOADOUT } from '../config/replicas';
+import { createCharacter } from '../sim/character';
+import { vec3 } from '../sim/vec';
+import { clockText, framesLine, type LoadedFile, loadLine, memoryLine, playerLine, qualityLine, runReportLine } from './reportFields';
 
 describe('qualityLine (the debug overlay and the crash report, audit CORE-02)', () => {
   it('gives the choice, the render scale, the shadow map and the textures of a preset', () => {
@@ -83,5 +86,56 @@ describe('runReportLine (an Extraction run in a crash report, audit CORE-02)', (
       outcome: 'extracted',
     });
     expect(runReportLine(state)).toBe('extracted, exits open 2/2 (late open), cases opened 1/2, carrying 2, waves 2');
+  });
+});
+
+describe('the report lines added for bug reports (IM7)', () => {
+  it('playerLine: where the player stands and looks, what they are doing and what they hold', () => {
+    const p = createCharacter(0, vec3(1.234, 0, -5.5), -Math.PI / 2, LOADOUT);
+    p.pitch = -0.1;
+    p.sprinting = true;
+    expect(playerLine(p)).toBe(`at 1.23, 0.00, -5.50 · looking 270° yaw, -6° pitch · alive, standing, sprinting · ${LOADOUT[0]!.id} ${p.armament.ammo[0]!.mag} in the magazine, ${p.armament.ammo[0]!.pouch.length} spare`);
+    p.sprinting = false;
+    p.crouchAmount = 1;
+    p.aiming = true;
+    p.armament.reload = 0.5;
+    p.status = 'calling';
+    expect(playerLine(p)).toContain('· calling, crouched, aiming, reloading ·');
+  });
+
+  it('clockText: minutes and seconds, hours past an hour', () => {
+    expect(clockText(0)).toBe('0:00');
+    expect(clockText(222.9)).toBe('3:42');
+    expect(clockText(3725)).toBe('1:02:05');
+  });
+
+  it('framesLine: the window, the frames, average (as fps too), worst and hitches, and the sim and draw costs', () => {
+    expect(framesLine({ seconds: 10, frames: 1200, avgMs: 8.33, worstMs: 41.25, hitches: 2 }, 1.234, 4.5)).toBe(
+      'last 10 s of play: 1200 frames, avg 8.3 ms (120 fps), worst 41.3 ms, 2 over 50 ms · sim 1.23 ms, draw 4.50 ms a frame',
+    );
+    expect(framesLine({ seconds: 0, frames: 0, avgMs: 0, worstMs: 0, hitches: 0 }, 0, 0)).toBe('no frames in play yet');
+  });
+
+  it("memoryLine: the JS heap where the browser gives it, and what the renderer holds", () => {
+    const held = { textures: 12, geometries: 340, programs: 25 };
+    expect(memoryLine({ usedJSHeapSize: 123_400_000, jsHeapSizeLimit: 4_294_000_000 }, held)).toBe('JS heap 123 MB of 4294 MB · 12 textures, 340 geometries, 25 shader programs');
+    expect(memoryLine(undefined, held)).toContain('JS heap not given by this browser');
+  });
+
+  it('loadLine: when the page and the game were ready, the main file, and per kind what came cached or fresh', () => {
+    const file = (name: string, transferSize: number, encodedBodySize: number, responseEnd: number): LoadedFile => ({ name, transferSize, encodedBodySize, responseEnd });
+    const main = 'https://x.test/assets/index-abc.js';
+    const files = [
+      file(main, 0, 340_000, 400),
+      file('https://x.test/assets/rapier-def.js', 1_500_300, 1_500_000, 900),
+      file('https://x.test/models/aeg.glb', 0, 200_000, 1200),
+      file('https://x.test/models/gbb.glb', 300, 150_000, 1300), // revalidated: headers only
+      file('https://x.test/models/robot.glb', 120_400, 120_000, 2500),
+      file('https://x.test/sounds/x.ogg', 10_000, 9_000, 100),
+    ];
+    expect(loadLine(files, main, 1500, 4200)).toBe(
+      'page 1.5 s, game 4.2 s · main file cached · code: 2 files, 1 cached, 1 fresh (1500 kB), last at 0.9 s · models: 3 files, 2 cached, 1 fresh (120 kB), last at 2.5 s · pictures: none',
+    );
+    expect(loadLine([file(main, 340_300, 340_000, 400)], main, 0, 0)).toContain('page -, game - · main file fresh (340 kB)');
   });
 });

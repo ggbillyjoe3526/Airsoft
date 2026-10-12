@@ -8,7 +8,7 @@ import { expect, test } from '@playwright/test';
 
 type Airsoft = { airsoft: { state: { tick: number } | null; session: { advance: (dt: number) => number } } };
 
-test('an error in play stops the game once, gives the controls back and shows a report to copy', async ({ page }) => {
+test('an error in play stops the game once, gives the controls back and shows a report to copy', async ({ page, context }) => {
   test.setTimeout(120_000);
   const pageErrors: string[] = [];
   page.on('pageerror', (err) => pageErrors.push(err.message));
@@ -48,6 +48,27 @@ test('an error in play stops the game once, gives the controls back and shows a 
   expect(report).toMatch(/^Rules: \S+/m);
   expect(report).toMatch(/^Lighting: \S+/m);
   expect(report).toMatch(/^Retro pixels: \S/m);
+
+  // IM7: the fuller report, a note box and Report a Bug.
+  for (const head of ['Time: ', 'Language: ', 'Player: at ', 'Frames: ', 'Memory: ', 'Load: ', 'Recent errors', 'Recent events']) {
+    expect(report, head).toContain(head);
+  }
+  const note = pane.getByRole('textbox', { name: 'What went wrong' });
+  await expect(note).toBeVisible();
+  await note.fill('the door stuck');
+  const send = pane.getByRole('link', { name: 'Report a Bug' });
+  await expect(send).toBeVisible();
+  // The issue page isn't loaded (no network needed): the new tab gets an empty answer.
+  await context.route('https://github.com/**', (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<title>issue</title>' }));
+  const popup = context.waitForEvent('page');
+  await send.click();
+  await (await popup).close();
+  const href = (await send.getAttribute('href')) ?? '';
+  expect(href.startsWith('https://github.com/ggbillyjoe3526/Airsoft/issues/new?')).toBe(true);
+  const issue = new URL(href).searchParams;
+  expect(issue.get('title')).toBe('Bug: the door stuck');
+  expect(issue.get('body')).toContain('the door stuck');
+  expect(issue.get('body')).toContain('Error: TypeError: test crash in advance');
 
   // Once: the loop stopped, so the error doesn't repeat every frame, and it never reached the page uncaught.
   await page.waitForTimeout(1500);

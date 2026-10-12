@@ -1,3 +1,5 @@
+// First: the console's errors and warnings are kept for the reports from here on (IM7).
+import { startupLog as errors } from './consoleLog';
 import './style.css';
 import './ui/menus/menus.css';
 import './ui/hud.css';
@@ -5,7 +7,6 @@ import { CRASH_TEXT, WEBGL_ERROR } from './config/crash';
 import { TAB_LOCK } from './config/save';
 import { LOADING } from './config/loading';
 import { parseQuality, startingQuality } from './config/render';
-import { crashReport } from './core/crashReport';
 import { parseSeed, randomSeed } from './core/seed';
 import { Game } from './game';
 // Reads pool.md at start (M26a), so a row it can't read is reported in the console straight away.
@@ -76,6 +77,7 @@ async function main(): Promise<void> {
     // ?forceWebGL: the node renderer (W1, when the Renderer row is on Auto or WebGPU) on its WebGL2 back end, for a
     // machine without WebGPU (the e2e spec's container). Dev server and the `e2e` build only.
     forceWebGL: (import.meta.env.DEV || import.meta.env.MODE === 'e2e') && params.has('forceWebGL'),
+    errors,
   });
   running = game;
   game.start();
@@ -148,8 +150,15 @@ function takeTookSave(): boolean {
  * screen stays and its line says why (FA9).
  */
 function bootFailure(error: unknown): void {
+  const report = {
+    title: 'Airsoft start-up report',
+    build: __BUILD_VERSION__.label,
+    userAgent: navigator.userAgent,
+    fields: [['Time', new Date().toISOString()], ['Language', navigator.language], ['Address', window.location.search || '-'], ['Seed', bootSeed]] as const,
+    error,
+    lists: [{ label: 'Recent errors', entries: errors.lines() }],
+  };
   console.error(error);
-  const report = crashReport({ title: 'Airsoft start-up report', build: __BUILD_VERSION__.label, userAgent: navigator.userAgent, fields: [['Address', window.location.search || '-'], ['Seed', bootSeed]], error });
   if (bootFailed) {
     bootFailed.append(report);
     return;
@@ -175,10 +184,12 @@ function bootFailure(error: unknown): void {
  * An error nobody caught, in an event handler or a promise (audit UI-02): the game stops and says so, as for an error in
  * its loop (Game.crash). Ignored: errors without an error object (a cross-origin script's "Script error.", Chrome's
  * benign "ResizeObserver loop" note) and a browser API's refusal (a DOMException: pointer lock, audio, clipboard,
- * fullscreen), which the game already handles where it asks.
+ * fullscreen), which the game already handles where it asks; a refusal still goes in the reports' recent errors.
  */
 function uncaught(error: unknown): void {
-  if (error === null || error === undefined || error instanceof DOMException) return;
+  if (error === null || error === undefined) return;
+  // Noted for a report all the same: a refusal can explain a bug (IM7).
+  if (error instanceof DOMException) return errors.add('error', ['Uncaught', error]);
   if (running) running.crash(error);
   else bootFailure(error);
 }

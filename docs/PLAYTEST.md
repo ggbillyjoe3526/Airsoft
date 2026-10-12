@@ -784,7 +784,10 @@ Settings has groups down the left (Graphics, Display, Audio, Controls, Gameplay,
   200 % slows and speeds the round (mouse look stays normal); Bottomless magazines never empties; Ghost lets BBs pass
   through you. With any of them on, the summary says Dev settings kept the match out of your records. Untick the box
   and Play again: everything is back to normal and the match counts. Diagnostics › Copy pastes a report starting
-  "Airsoft diagnostics" with your GPU and settings.
+  "Airsoft diagnostics" with your GPU and settings, where you stand ("Player: at …"), "Frames: last 10 s of play", and
+  "Recent events" naming shots, hits and bot changes from the last moments. Type a note in the box first: it is the
+  report's "Note:" line. **Report a Bug** opens a new GitHub issue on the game's page (sign in if asked) titled "Bug:"
+  and your note, with the report below it.
 - [ ] **Dev playtesting aids** (M90). **+1,000 FC** and **+10 Tokens** fill the top bar's wallet at once (and stay
   after a reload); **Free case openings** makes the Armory's Shot buttons read "Free" and take nothing. **Time of
   day** Night on Depot (or Day on Woodland), then Start match: the map plays under that light, bots with torches at

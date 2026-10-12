@@ -13,6 +13,7 @@ describe('the gate\'s flags (pipeline/gate.mjs, M51)', () => {
     [['--shard', '4/3'], '--shard takes'],
     [['--shard', '1/0'], '--shard takes'],
     [['--only', 'build'], '--only takes'],
+    [['--only', 'perf'], '--only takes'],
   ])('refuses %j', (args, message) => {
     const r = gate(...args);
     expect(r.status).not.toBe(0);
