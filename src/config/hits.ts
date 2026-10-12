@@ -60,6 +60,35 @@ export interface HitConfig {
     walkingSpeed: number;
     maxStride: number;
   };
+  /**
+   * The rigged figures' own legs (IM8), when a match draws them (the Dev switches off): with them the legs' hit volumes
+   * sit on the drawn legs' joints on every pose and the walk cycle steps at the figures' strides (sim/figureLegs.ts);
+   * without them (the built-in figures) the legs swing as `legs` says.
+   */
+  figureLegs?: FigureLegs;
+}
+
+/**
+ * The rigged figures' leg clips as plain numbers (IM8), read from the figure file as it loads (render/figureLegs.ts):
+ * where each leg's joints are, frame by frame, so the hit volume can put its legs where the figure draws them.
+ */
+export interface FigureLegs {
+  /** By slot, in sim/figureLegs.ts LEG_CLIPS' order. */
+  clips: readonly FigureLegClip[];
+}
+
+export interface FigureLegClip {
+  /** Seconds the clip lasts. */
+  seconds: number;
+  /** Metres one cycle covers (its pace times its length), or 0 for a clip played by time or held. */
+  stride: number;
+  /** Samples, evenly spread from the clip's start to its end (a cycle's last is its first again). */
+  frames: number;
+  /**
+   * Per sample, per leg (left, right), five points: the hip, knee and ankle joints and the ends of the boot's capsule
+   * (heel, toe), each x right, y up from the feet, z forward-negative (the figure's own frame, as HitConfig's heights).
+   */
+  points: Float32Array;
 }
 
 /**

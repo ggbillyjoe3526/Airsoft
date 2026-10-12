@@ -67,3 +67,16 @@ acceptance:
   2. With Dev settings on (Unlock all gear), every replica and part is available.
 status: open
 attempts: 0
+
+## IM8 · The figures' crouch and walk moves match the hit volume (owner's ask, 2026-10-12)
+tier: core
+perf: required
+touches: src/config/hits.ts, src/sim/hitbox.ts, src/sim/figureLegs.ts, src/render/figureLegs.ts, src/render/figureRig.ts, src/render/figurePose.ts, src/render/riggedFigure.ts, src/render/characterRenderer.ts, src/matchSession.ts, src/assets/models/characters/, tools/blender/bot-figure/
+contract: none
+acceptance:
+  1. With the rigged figures on, the hit volume's legs (thighs, shins, boots) stand on the figure's own leg joints from its clips, and the walk cycle steps at the clips' strides; with the Dev switches on (the default) the hit volume and the game are unchanged.
+  2. The figures' kneel and crouch walk lower the hips as far as the hit volume's crouch (0.62 m), so a crouched figure's head is under 1.2 m crouch cover; the hands still hold the replica, and a peek leans the upper body about the hit volume's pivot.
+  3. `riggedHitVolume.test.ts` passes with tighter per-pose limits than M85's, and measures walking, running, sprinting and crouch-walking poses too; the figures stay behind "Disable figure models" and "Disable all models".
+  4. The figures are rebuilt in a headless Blender in the cloud from the committed scripts (the rebuild makes the shipped files to the byte), packed as IM5 packs them; before and after pictures go to the owner.
+status: open
+attempts: 0

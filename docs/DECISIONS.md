@@ -299,8 +299,8 @@ replaces its line; the old one stays findable in the archive or in git.
 - **The Blender figures in the game (BF1) are part of 0.1 Dev 5 (owner, 2026-10-12: "This is for Dev 5").** They
   merge before the Dev 5 tag, still behind the Dev switches.
 - **The rigged figures stay behind the Dev switches until they pass M85's hit-volume check (2026-10-12).** They don't
-  yet (crouched and walking, KNOWN_ISSUES › Figures and art); `render/riggedHitVolume.test.ts` measures them and holds
-  each pose to its numbers, so a change only brings them closer (BF1).
+  yet (the volume's upper body is rounder than theirs, KNOWN_ISSUES › Figures and art); `render/riggedHitVolume.test.ts`
+  measures them and holds each pose to its numbers, so a change only brings them closer (BF1).
 - **Vaulting comes in 0.1 Dev 6; slide into cover is no for now (owner, 2026-10-12).** Vaulting goes over low
   obstacles of 0.7 to 0.9 m, with a few added to the maps where they open a route; slide waits in `docs/IDEAS.md`.
 

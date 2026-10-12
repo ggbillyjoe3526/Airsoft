@@ -34,7 +34,7 @@ function figure(kind: FigureRigKind, c: Character, thrown = new ThrownMagazines(
   return { f, thrown };
 }
 
-const frame = (over: Partial<RiggedFrame> = {}): RiggedFrame => ({ alpha: 1, dt: 1 / 60, eyeX: 0, eyeY: 1.6, eyeZ: 3, firstPerson: false, leanX: 0, leanZ: 0, castShadow: true, ...over });
+const frame = (over: Partial<RiggedFrame> = {}): RiggedFrame => ({ alpha: 1, dt: 1 / 60, eyeX: 0, eyeY: 1.6, eyeZ: 3, firstPerson: false, leanX: 0, leanZ: 0, peek: 0, peekPivot: 0.92, cycle: null, castShadow: true, ...over });
 
 const visibleMeshes = (root: THREE.Object3D): THREE.Mesh[] => {
   const out: THREE.Mesh[] = [];
@@ -157,6 +157,23 @@ describe('the rigged figures (BF1)', () => {
     f.update(c, frame());
     expect(f.root.position.z).toBeCloseTo(0, 6);
     f.dispose();
+  });
+
+  it('peeks by rolling the upper body about the hit volume pivot, as the hit volume does (IM8)', () => {
+    for (const kind of FIGURE_RIG_KINDS) {
+      const c = createCharacter(1, vec3(0, 0, 0), 0);
+      const { f } = figure(kind, c);
+      for (let i = 0; i < 30; i++) f.update(c, frame());
+      const upright = worldOf(f.root, 'Head');
+      for (const peek of [0.6, -0.6]) {
+        for (let i = 0; i < 30; i++) f.update(c, frame({ peek, leanZ: peek, peekPivot: 0.92 }));
+        // The head where a roll of `peek` about the figure's axis at the pivot takes it (facing -Z: about +Z).
+        const pivot = new THREE.Vector3(0, 0.92, 0);
+        const want = upright.clone().sub(pivot).applyAxisAngle(new THREE.Vector3(0, 0, 1), peek).add(pivot);
+        expect(worldOf(f.root, 'Head').distanceTo(want), `${kind} at ${peek}`).toBeLessThan(0.01);
+      }
+      f.dispose();
+    }
   });
 
   it('calls its hit with the hand up and the replica lowered, and draws farther figures lighter', () => {
