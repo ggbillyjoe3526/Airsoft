@@ -160,7 +160,7 @@ describe('the node post stack matches WebGL’s, pass for pass (W4)', () => {
     }
   });
 
-  it('draws the held replica into a multisampled target of its own, one draw, laid on by the last pass', () => {
+  it('draws the held replica into a multisampled target of its own, one draw, laid on by the last pass, spectating too', () => {
     for (const preset of ['medium', 'ultra'] as const) {
       const b = node(preset);
       const { gl, draws } = stubRenderer();
@@ -172,9 +172,22 @@ describe('the node post stack matches WebGL’s, pass for pass (W4)', () => {
       expect(draws.filter((d) => d.what === 'scene')).toHaveLength(2);
       const last = b.passList.at(-1) as unknown as { finishing: { overlay: unknown } | null };
       expect(last.finishing?.overlay).toBe(held);
-      // Without a replica this frame, the last pass lays nothing on.
+      const material = (last as unknown as { quad: { material: unknown } }).quad.material;
+      // Without a replica (spectating), its target is cleared once and still laid on: the last pass keeps its material,
+      // so none is built mid-match (BP3).
+      const cleared: unknown[] = [];
+      const clear = vi.spyOn(gl, 'clear').mockImplementation(() => void (gl.getRenderTarget() === held && cleared.push(held)));
+      for (let frame = 0; frame < 3; frame++) {
+        b.draw(gl as unknown as NodeRenderer, new THREE.Scene(), sunlit(b));
+        expect(last.finishing?.overlay).toBe(held);
+        expect((last as unknown as { quad: { material: unknown } }).quad.material).toBe(material);
+      }
+      expect(cleared).toEqual([held]);
+      // The replica back, then gone again: cleared once more.
+      b.draw(gl as unknown as NodeRenderer, new THREE.Scene(), sunlit(b), overlay);
       b.draw(gl as unknown as NodeRenderer, new THREE.Scene(), sunlit(b));
-      expect(last.finishing?.overlay).toBeNull();
+      expect(cleared).toEqual([held, held]);
+      clear.mockRestore();
       b.dispose();
     }
   });

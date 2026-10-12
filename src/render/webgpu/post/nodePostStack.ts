@@ -43,6 +43,8 @@ export class NodePostStack extends PostChain<NodeRenderer, NodeTarget> implement
   private readonly copyQuad = quad();
   /** The held replica's target (made the first frame one is drawn), and how the last pass finishes. */
   private overlayTarget: NodeTarget | null = null;
+  /** The held replica's target holds a replica (drawn into since it was last cleared). */
+  private overlayHeld = false;
   private readonly finishing: Finishing = { overlay: null, toneMapping: THREE.NoToneMapping };
   private readonly keep = new THREE.Color();
   constructor(
@@ -76,10 +78,15 @@ export class NodePostStack extends PostChain<NodeRenderer, NodeTarget> implement
     }
     const f = this.finishing;
     f.toneMapping = mapping;
-    f.overlay = null;
+    f.overlay = this.overlayTarget;
     if (overlay) {
       f.overlay = this.overlayFor(gl);
       this.output.drawInto(gl, f.overlay, overlay, mapping, this.keep);
+      this.overlayHeld = true;
+    } else if (this.overlayHeld) {
+      // No replica (spectating): its target is cleared once and still laid on, so the last pass keeps the one material
+      // it was built with rather than building the one without mid-match (BP3).
+      this.clearOverlay(gl);
     }
     for (let i = 0; i < this.passes.length; i++) {
       const pass = this.passes[i]!;
@@ -105,6 +112,7 @@ export class NodePostStack extends PostChain<NodeRenderer, NodeTarget> implement
     // first frame (BP3). A real draw builds them under the hook, as each frame draws them.
     if (overlay) {
       this.output.drawInto(gl, this.overlayFor(gl), overlay, gl.toneMapping, this.keep);
+      this.overlayHeld = true;
       gl.setRenderTarget(null);
     }
     return this.compiles.track(world);
@@ -113,6 +121,8 @@ export class NodePostStack extends PostChain<NodeRenderer, NodeTarget> implement
   override setSize(width: number, height: number): void {
     super.setSize(width, height);
     this.overlayTarget?.setSize(this.width, this.height);
+    // A resized target's contents are not to be trusted: cleared on the next frame without a replica.
+    if (this.overlayTarget) this.overlayHeld = true;
   }
 
   /** Frees the targets and materials, once no compile is under way on the renderer (CompileGate). */
@@ -162,6 +172,17 @@ export class NodePostStack extends PostChain<NodeRenderer, NodeTarget> implement
       case 'lens':
         return new NodeLensPass();
     }
+  }
+
+  /** Empties the held replica's target (a frame without one). */
+  private clearOverlay(gl: NodeRenderer): void {
+    gl.getClearColor(this.keep);
+    const alpha = gl.getClearAlpha();
+    gl.setRenderTarget(this.overlayTarget);
+    gl.setClearColor(0x000000, 0);
+    gl.clear();
+    gl.setClearColor(this.keep, alpha);
+    this.overlayHeld = false;
   }
 
   /** The held replica's target: 8-bit as the canvas, multisampled as the canvas, with a depth buffer of its own. */
