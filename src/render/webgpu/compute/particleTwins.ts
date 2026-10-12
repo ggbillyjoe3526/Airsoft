@@ -403,7 +403,7 @@ abstract class SpawnDriver implements Driver {
     this.now += dt;
     let alive = 0;
     for (let i = 0; i < this.births.length; i++) if (this.now - this.births[i]! - dt < this.lifetime) alive++;
-    if (alive === 0 && this.alive === 0 && this.now > this.lifetime) this.rebase();
+    if (alive === 0 && this.alive === 0 && this.now > this.lifetime) this.clear();
     this.alive = alive;
     this.clock.value = this.now;
     const p = camera.position;
@@ -423,19 +423,18 @@ abstract class SpawnDriver implements Driver {
     return this.pass;
   }
 
-  /**
-   * The clock back to 0 (nothing is alive). Every slot's birth is cleared on the GPU too, and sent with the next
-   * dispatch: a birth left there from before the lull would come back to life once the new clock passed it, replaying
-   * an old puff or burst after the next impact.
-   */
-  private rebase(): void {
+  /** The clock to 0 (a quiet spell, or grit off) and every birth cleared on the GPU too (else an old puff comes back as
+   * the clock passes it), in a dispatch of its own (BP3): grit restarts a chip only on a new birth, as the next (at 0). */
+  clear(): void {
     const record = this.records[0]!.value.array as Float32Array;
     for (let i = 0; i < this.births.length; i++) {
       this.births[i] = -1e9;
       this.writeBirth(record, i);
     }
-    this.sent = false;
     this.now = 0;
+    for (const r of this.records) r.value.needsUpdate = true;
+    this.sent = true;
+    void this.renderer.compute(this.pass);
   }
 
   /** Writes a slot's birth into its record (the w of the first vec4). */
@@ -540,7 +539,7 @@ class GritDriver extends SpawnDriver {
     this.look = instancedArray(n, 'vec4');
     this.start = instancedArray(n, 'float');
     this.at = instancedArray(n, 'vec4');
-    this.flying = instancedArray(n, 'vec4');
+    this.flying = instancedArray(new Float32Array(n * 4).fill(-1e9), 'vec4'); // no throw yet: one born at 0 starts (BP3)
     this.records = [this.thrown, this.speed, this.look, this.start];
     const { thrown, speed, at, flying } = this;
     this.pass = Fn(() => {

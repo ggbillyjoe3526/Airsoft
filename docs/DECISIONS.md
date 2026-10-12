@@ -327,6 +327,9 @@ replaces its line; the old one stays findable in the archive or in git.
   after `winsNeeded - 1` rounds, so the decider is always in the second half.
 - **Teams swap ends at half-time in both modes (owner, 2026-10-03).** Maps define spawns, dead zones and lanes per end,
   not per team, so an asymmetric map is fair; in Attack / Defend the attackers always start at end 0.
+- **Elimination's first end goes by team, not by the Your team pick (owner, 2026-10-12, BP3).** Alpha starts at the
+  east end, which wins a little over half of bot-only rounds on Depot; a player who picks Beta starts in the west, and
+  the ends swap at half-time as usual. Attack / Defend already follows the pick.
 - **Attack / Defend is the flag mode, named so Capture the Flag can be its own mode later (owner, 2026-10-01).** One
   team attacks a flagpole in the other's half. Standing within 1.6 m for 5 s raises the flag; defenders at the pole pull
   it down. A raised flag wins the round for the attackers, a time-out for the defenders. If attackers are working the

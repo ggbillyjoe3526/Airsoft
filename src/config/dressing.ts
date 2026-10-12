@@ -291,8 +291,22 @@ export const FIREFLIES = { size: 0.11, colour: '#d6ff7a', height: [0.3, 1.9] as 
  * render/skyHost.ts): `length` m long at the map's height, `speed` m/s along a seeded line through the sky over the
  * field, `path` m long (a 10 s crossing, so with Neon Heights' pass every 20 s, start to start, the sky is empty half
  * the time); unlit, in `day` or `night` colours with steady wingtip and beacon lights. Hidden under Reduced motion.
+ * Its line stays within `dome` of the sky dome's radius from the field's middle (BP3: past the dome, the dome hid it, so
+ * it blinked out and in at its ends), shortened where it must be, and it grows in and shrinks away over `ends` of each
+ * crossing instead of appearing whole.
  */
-export const PLANE = { length: 9, span: 9, speed: 26, path: 260, day: '#cfd3da', night: '#14151c', lights: { port: '#d94fc0', starboard: '#5aff8a', beacon: '#fffbe6' }, seed: 4421 };
+export const PLANE = {
+  length: 9,
+  span: 9,
+  speed: 26,
+  path: 260,
+  dome: 0.9,
+  ends: 0.08,
+  day: '#cfd3da',
+  night: '#14151c',
+  lights: { port: '#d94fc0', starboard: '#5aff8a', beacon: '#fffbe6' },
+  seed: 4421,
+};
 
 /**
  * Dust kicked up by feet (Impact grit, render/combatPresentation.ts): a low, faint puff at a sprinting footfall and a

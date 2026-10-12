@@ -284,7 +284,8 @@ function tower(p: Extract<SkylinePiece, { kind: 'tower' }>, w: number, d: number
   if (p.sign !== undefined) {
     const f = towerFace(p, w, d, centre);
     const s = blade(p, w, d, f);
-    out.push(f.alongX ? box(T.sign.width, T.sign.height, 0.25, s.x, s.y, s.z, hex(T.sign.plate)) : box(0.25, T.sign.height, T.sign.width, s.x, s.y, s.z, hex(T.sign.plate)));
+    // A blade stands out from the face: thin along it, wide away from it, as its lit panels are (BP3: it lay flat on the face).
+    out.push(f.alongX ? box(0.25, T.sign.height, T.sign.width, s.x, s.y, s.z, hex(T.sign.plate)) : box(T.sign.width, T.sign.height, 0.25, s.x, s.y, s.z, hex(T.sign.plate)));
   }
 }
 

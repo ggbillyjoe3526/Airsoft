@@ -136,7 +136,8 @@ export const NEON_HEIGHTS_DRESSING: MapDressing = {
   steam: STEAM.map((s) => ({ x: s.x, y: s.y, z: s.z })),
   skyline: SKYLINE.map((p) => ('points' in p ? p : { ...p, z: -p.z })),
   // A plane crossing the city's sky: a pass starts every twenty seconds and takes ten.
-  plane: { height: 130, every: 20 },
+  // 85 m up (BP3, was 130): high over the towers and inside the sky dome for the whole of its line.
+  plane: { height: 85, every: 20 },
   // The dust in the air and underfoot: city grey, a touch cool.
   motes: { tint: 0xc6cad4 },
   kickedDust: { tint: 0xb0b4bc, scale: 0.9 },

@@ -270,6 +270,7 @@ export interface BotWorld {
   angleFeatures(): AngleFeatures;
   body: BodyConfig;
   hits: HitConfig;
+  /** The factory loadout the world was built with. Aim no longer reads it: each bot leads and judges its line by the replica in its hands (BP3). */
   loadout: readonly ReplicaConfig[];
   /** The behaviour tuning every bot shares, whatever its level; each bot's skill is its own (`Bot.skill`). */
   cfg: BotBehaviour;

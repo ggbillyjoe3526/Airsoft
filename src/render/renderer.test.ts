@@ -404,10 +404,10 @@ describe('the shader warm-up (M63, audit REN-06)', () => {
     expect(glOf(r).getRenderTarget()).toBeNull();
   });
 
-  it('compiles the world for the stack’s target and the held replica for its own', () => {
+  it('compiles the world for the stack’s target and warms the held replica by drawing it into its own once (BP3)', () => {
     const { r, calls } = stubbedRenderer(QUALITY.high);
     r.warmShaders(replica());
-    expect(calls).toEqual(['compile world into the post target with the environment', 'compile replica into the replica target with none']);
+    expect(calls).toEqual(['compile world into the post target with the environment', 'render']);
   });
 
   it('with no post stack and the retro filter off, never moves the render target off the canvas', () => {
@@ -476,7 +476,6 @@ describe('the shader warm-up runs once per match build, never per frame (M63, au
       '/src/render/webgpu/nodeBackend.ts',
       `${post}nodeOutput.ts`,
       `${post}nodeOutput.ts`,
-      `${post}nodeOutput.ts`,
       `${post}nodePostStack.ts`,
       `${post}nodeRetro.ts`,
       `${post}nodeRetro.ts`,
@@ -488,7 +487,9 @@ describe('the shader warm-up runs once per match build, never per frame (M63, au
     expect(bodyOf(node, '  draw(')).not.toMatch(/compile/);
     const output = sources[`${post}nodeOutput.ts`]!;
     expect(bodyOf(output, '  compile(').split('.compileAsync(').length - 1).toBe(2);
-    expect(bodyOf(output, '  compileInto(').split('.compileAsync(').length - 1).toBe(1);
+    // The held replica on the stack's presets is warmed by one real draw into its target (BP3: a compile built it for
+    // the renderer's own context, after an await).
+    expect(bodyOf(sources[`${post}nodePostStack.ts`]!, '  compile(')).toMatch(/this\.output\.drawInto\(/);
     for (const file of ['nodePostStack.ts', 'nodeRetro.ts']) {
       const text = sources[`${post}${file}`]!;
       const signature = '(gl: NodeRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera, overlay?: Overlay)';

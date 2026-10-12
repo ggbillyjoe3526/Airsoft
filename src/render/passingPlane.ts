@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { PLANE } from '../config/dressing';
+import { ATMOSPHERE } from '../config/renderLighting';
 import { createRng, rngNext } from '../sim/rng';
 
 /**
@@ -82,8 +83,11 @@ export class PassingPlane {
       this.pass = n;
       this.setPath(n);
     }
-    this.at.lerpVectors(this.from, this.to, at / this.crossing);
+    const t = at / this.crossing;
+    this.at.lerpVectors(this.from, this.to, t);
     this.object.visible = true;
+    // Grows in from far off and shrinks away at the end of its line, rather than appearing and vanishing whole (BP3).
+    this.scale.setScalar(Math.min(1, t / P.ends, (1 - t) / P.ends));
     this.object.matrix.compose(this.at, this.quaternion, this.scale);
     this.object.matrixWorldNeedsUpdate = true;
   }
@@ -98,8 +102,11 @@ export class PassingPlane {
     const y = this.height * (0.85 + rngNext(rng) * 0.3);
     const mx = this.centre.x - dz * across;
     const mz = this.centre.z + dx * across;
-    this.from.set(mx - dx * (P.path / 2), y, mz - dz * (P.path / 2));
-    this.to.set(mx + dx * (P.path / 2), y, mz + dz * (P.path / 2));
+    // Both ends inside the sky dome (centred on the field's middle): beyond it the dome draws over the plane (BP3).
+    const reach = ATMOSPHERE.skyRadius * P.dome;
+    const half = Math.min(P.path / 2, Math.sqrt(Math.max(0, reach * reach - y * y - across * across)));
+    this.from.set(mx - dx * half, y, mz - dz * half);
+    this.to.set(mx + dx * half, y, mz + dz * half);
     // Its nose (own +x) along the heading.
     this.quaternion.setFromAxisAngle(UP, Math.atan2(-dz, dx));
   }

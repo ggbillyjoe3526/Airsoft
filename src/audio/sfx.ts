@@ -504,6 +504,15 @@ export class Sfx {
     this.spinDownsDue = 0;
   }
 
+  /**
+   * Forgets every AEG wind-down still due (BP3): the sound clock only runs on ticks that are shown, so one owed when a
+   * Skip to next round began would otherwise play a few ticks into the next round, from the shooter's place.
+   */
+  settleMotors(): void {
+    for (const m of this.motors.values()) m.spinDownDue = false;
+    this.spinDownsDue = 0;
+  }
+
   // ---- What plays ---------------------------------------------------------------------------
 
   /**

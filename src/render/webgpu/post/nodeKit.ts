@@ -112,6 +112,9 @@ export function colourTarget(width: number, height: number, type: THREE.TextureD
  */
 export class CompileGate {
   private readonly underWay = new Set<Promise<unknown>>();
+  /** The frees held for compiles under way, and whether the gate was let go (release). */
+  private readonly waiting = new Set<() => void>();
+  private released = false;
 
   /** `done`, counted as under way until it settles either way. */
   track<T>(done: Promise<T>): Promise<T> {
@@ -131,9 +134,24 @@ export class CompileGate {
     return new Promise((done) => this.afterCompiles(done));
   }
 
-  /** Calls `free` now, or once every compile under way (and any begun meanwhile) has settled. */
+  /** Calls `free` now, or once every compile under way (and any begun meanwhile) has settled, or the gate is let go. */
   afterCompiles(free: () => void): void {
-    if (this.underWay.size === 0) return free();
-    void Promise.allSettled([...this.underWay]).then(() => this.afterCompiles(free));
+    if (this.released || this.underWay.size === 0) return free();
+    this.waiting.add(free);
+    void Promise.allSettled([...this.underWay]).then(() => {
+      if (this.waiting.delete(free)) this.afterCompiles(free);
+    });
+  }
+
+  /**
+   * The renderer is going (its dispose, a lost device among the reasons): every free held is run now, and any asked
+   * for later runs at once. A compile begun on a lost device may never settle, which held its frees for good (BP3).
+   */
+  release(): void {
+    this.released = true;
+    this.underWay.clear();
+    const held = [...this.waiting];
+    this.waiting.clear();
+    for (const free of held) free();
   }
 }

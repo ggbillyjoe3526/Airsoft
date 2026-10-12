@@ -53,7 +53,7 @@ export function shooterSide(characters: readonly Character[], ownerId: number, f
 export class ImpactGrit {
   readonly object: THREE.InstancedMesh;
   /** On the node renderer (W5) a compute pass moves the chips (render/webgpu/compute/): each throw is handed to it, the loop skipped. */
-  declare gpu?: { spawn(slot: number, chip: Chip): void; update(dt: number, camera: THREE.Camera): void } | undefined;
+  declare gpu?: { spawn(slot: number, chip: Chip): void; update(dt: number, camera: THREE.Camera): void; clear(): void } | undefined;
   readonly chips: Chip[] = [];
   private next = 0;
   private enabled = false;
@@ -84,6 +84,8 @@ export class ImpactGrit {
     if (on) return;
     for (const c of this.chips) c.age = IMPACT_GRIT.lifetime;
     this.object.count = 0;
+    // The compute pass's chips too (BP3): their births stayed, and turning grit on again let them fly on.
+    this.gpu?.clear();
   }
 
   get active(): boolean {
