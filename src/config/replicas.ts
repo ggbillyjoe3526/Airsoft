@@ -225,8 +225,8 @@ export const CYBER_PISTOL: ReplicaConfig = withStats({
     sound: 'cyber',
     suppressed: false,
     hold: { position: [0.09, -0.095, -0.45], yaw: 0.1 },
-    // One fin sight on top of the slab: its flat tip, back to front, sits on the aim point.
-    ironSight: { rear: [0.056, 0.046], front: [0.056, 0.03], eyeRelief: 0.36 },
+    // Small, low sights (the owner, 12 Oct 2026): a notch at the back of the rear housing, a post on the front block.
+    ironSight: { rear: [0.04, 0.0768], front: [0.04, -0.1038], eyeRelief: 0.33 },
   },
 });
 

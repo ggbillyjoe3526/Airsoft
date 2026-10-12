@@ -39,7 +39,7 @@ export const FIGURE_MODEL = {
  */
 export const REPLICA_FILE = {
   /** The nodes the game reads, by name. Only `body` and `muzzle` are needed; without the others the built-in ones are drawn. */
-  nodes: { body: 'Body', magazine: 'Magazine', figure: 'Figure', muzzle: 'Muzzle', torchMount: 'TorchMount', flashHider: 'FlashHider' },
+  nodes: { body: 'Body', magazine: 'Magazine', figure: 'Figure', muzzle: 'Muzzle', torchMount: 'TorchMount', flashHider: 'FlashHider', slideBack: 'SlideBack' },
   /** The replicas drawn as rifles (RM1): the AEG's hands, holds and parts, and the figures' rifle frame. */
   rifles: ['aeg'] as readonly string[],
   /**

@@ -336,16 +336,17 @@ describe('the Cyber Pistol\'s model (M32; G2 the concept\'s)', () => {
     const blue = buildReplicaModels(WITH_CYBER, 0x3a7bd5, false);
     const red = buildReplicaModels(WITH_CYBER, 0xd54a3a, false);
     // Its own mesh, about as dear as the Gas Pistol's (7,096 at once on Low): pinned so a change to it is seen.
-    expect(drawn(blue, 'cyber')).toBe(6952);
+    expect(drawn(blue, 'cyber')).toBe(6868);
     const C = CYBER_COLOURS.bold;
     expect(mat(blue, 'cyberSlab').getHex()).toBe(C.slab);
     expect(mat(blue, 'polymer').getHex()).toBe(C.frame);
     // The lines and core glow in their colours (emissive), so they read in the dark.
     for (const [key, hex] of [['cyberLine', C.line], ['cyberCore', C.core]] as const) expect(emissive(blue, key)).toBe(hex);
     for (const key of ['cyberSlab', 'cyberLine', 'cyberCore', 'polymer']) expect(mat(red, key).getHex(), key).toBe(mat(blue, key).getHex());
-    // Slab-sided: it stands taller than the Gas Pistol's slide.
-    const box = (models: ReplicaModels, id: string) => new THREE.Box3().setFromObject(models.models.get(id)!.group.children.find((c) => c.name === (id === 'cyber' ? 'cyberSlab' : 'polymer'))!);
-    expect(box(blue, 'cyber').max.y).toBeGreaterThan(box(blue, 'pistol').max.y);
+    // Low-topped (the 12 Oct 2026 redesign): the slab stays under the sight line, so the small sights stand above it.
+    const slab = new THREE.Box3().setFromObject(blue.models.get('cyber')!.group.children.find((c) => c.name === 'cyberSlab')!);
+    expect(slab.max.y).toBeCloseTo(0.0355, 3);
+    expect(slab.max.y).toBeLessThan(CYBER_PISTOL.look.ironSight!.rear[0] - 0.004);
     blue.dispose();
     red.dispose();
   });
