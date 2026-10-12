@@ -96,7 +96,7 @@ export const AEG_HANDGUARD = { from: 0.15, to: 0.4, bottom: 0, top: 0.066, halfW
  * The AEG's flip-up iron sights: the line the aperture's centre and the post's tip stand on (config/replicas.ts
  * look.ironSight, the model file's too), and the tops of the receiver and handguard rails' teeth they clamp to.
  */
-const AEG_SIGHT = { line: 0.088, rearBase: 0.074, frontBase: AEG_HANDGUARD.top + 0.016 } as const;
+export const AEG_SIGHT = { line: 0.088, rearBase: 0.074, frontBase: AEG_HANDGUARD.top + 0.016 } as const;
 /** Support-hand fingers wrapped over the shooting hand. */
 const SUPPORT: FingerCurl = [1.0, 1.05, 0.6];
 

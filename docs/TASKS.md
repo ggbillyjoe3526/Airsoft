@@ -67,15 +67,3 @@ acceptance:
   2. With Dev settings on (Unlock all gear), every replica and part is available.
 status: open
 attempts: 0
-
-## RM6 · The AEG Rifle redesign (owner's ask, 2026-10-12)
-tier: core
-perf: skip
-touches: src/assets/models/replicas/aeg.glb, src/config/replicas.ts, src/render/replicaModels.ts
-contract: none (the replica model file keeps its nodes, bones, clips and mounts)
-acceptance:
-  1. The AEG Rifle draws from the model the owner approved (his seven reference photos, no text or logo), within the file budgets (9,000 triangles held, 300 on a figure, 400 KB).
-  2. Small, minimal iron sights, not tall or obstructive; aiming down them puts the post on the view's centre, with Blender models on and off.
-  3. It works with every animation (fire, selector, sights fold, reload, inspect), attachment, hand pose and figure.
-status: open
-attempts: 0

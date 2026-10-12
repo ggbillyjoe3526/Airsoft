@@ -3,7 +3,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { describe, expect, it } from 'vitest';
 import { AEG } from '../config/replicas';
 import { prepareReplicaFile, type ReplicaFile } from './replicaFiles';
-import { AEG_HANDGUARD, buildReplicaModels, LOW_DETAIL } from './replicaModels';
+import { AEG_HANDGUARD, AEG_SIGHT, buildReplicaModels, LOW_DETAIL } from './replicaModels';
 import { RIFLE_OPTIC } from './replicaParts';
 
 /** RM6: the redesigned AEG's iron sights stand small and low, and fold flat under an optic (file and built-in model). */
@@ -22,10 +22,10 @@ const sight = AEG.look.ironSight!;
 const LINE = sight.rear[0];
 /** The tallest a sight may stand over the rail (m): the owner's "small and low". */
 const TALLEST_OVER_RAIL = 0.02;
-/** The tops of the receiver rail (the rear sight stands on) and the handguard rail (the front post). */
 /** The underside of the red dot's hood: folded sights stay below it. */
 const UNDER_OPTIC = RIFLE_OPTIC.axisUp - RIFLE_OPTIC.outer;
-const RAIL = { rear: 0.074, front: AEG_HANDGUARD.top };
+/** The top of the receiver rail (the rear sight stands on) and of the handguard (the front post's). */
+const RAIL = { rear: AEG_SIGHT.rearBase, front: AEG_HANDGUARD.top };
 
 /** Highest point (model space, y) of the vertices the named bones carry, by the pose now. */
 function sightTops(root: THREE.Object3D, bones: string[]): Record<string, number> {
