@@ -104,6 +104,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **W7** · Map cards, mode cards and the blurred menu backdrop are redrawn to match the current maps: Depot's weathered walls and dressing, Woodland's grass and distant trees, Neon Heights' signs and skyline, and the figures; same sizes
 - **BP3a** · Settings' On / Off choices read Off then On
 - **BP3a** · Small HUD text is at least 15 px, as the menus' text already is
+- **RM6** · AEG Rifle has a new look: slotted handguard with full-length top rail, collapsible stock, new pistol grip and BB-window magazine, plain muzzle
+- **RM6** · AEG iron sights are half as tall and low: a ring at the back, a thin post at the front; the built-in rifle gets them too
 
 ### Fixed
 - **G11** · The team camo on players reads clearly on Medium and up: crisp dark and light blotches printed per pixel, on WebGL and WebGPU; Low keeps plain clothes
