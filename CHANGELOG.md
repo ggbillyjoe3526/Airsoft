@@ -104,6 +104,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **W7** · Map cards, mode cards and the blurred menu backdrop are redrawn to match the current maps: Depot's weathered walls and dressing, Woodland's grass and distant trees, Neon Heights' signs and skyline, and the figures; same sizes
 - **BP3a** · Settings' On / Off choices read Off then On
 - **BP3a** · Small HUD text is at least 15 px, as the menus' text already is
+- **RM8** · Red dot, 2× scope, silencers and torches use new Blender models (Disable all models off): smaller, sit lower, aim follows them
 
 ### Fixed
 - **G11** · The team camo on players reads clearly on Medium and up: crisp dark and light blotches printed per pixel, on WebGL and WebGPU; Low keeps plain clothes

@@ -237,6 +237,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   silencer hexagonal body (G2)
 - AEG and gas pistol drawn from Blender models, with fittable parts from Blender; in first person the AEG's trigger,
   fire selector, iron sights and magazine release move, and the pistol's trigger and magazine release (RM1)
+- Attachments from Blender models: a compact red dot and a short 2× scope sit lower over the rail and the aim follows
+  them, round silencers keep their length, and torches are smaller; the Cyber Pistol has a torch model (RM8)
 - Players as masked humans (high-cut or bump helmet, balaclava, visor; no bare faces) in team camo with a team-colour
   plate carrier, or robots in a light or dark shell by team, mixed on both teams when Look › Robots is on; their
   replicas in the team's colours (G7)
