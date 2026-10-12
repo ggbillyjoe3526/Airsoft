@@ -208,7 +208,7 @@ describe('the night lit on clustered lights (W3 criterion 2)', () => {
     for (const [q, want] of [[QUALITY.low, 0], [QUALITY.medium, pools.length], [QUALITY.high, pools.length]] as const) {
       const look = (clustered: boolean) => {
         const scene = new THREE.Scene();
-        const p = addLightPools(scene, NEON_HEIGHTS, q, 1, clustered);
+        const p = addLightPools(scene, NEON_HEIGHTS, q, 1, () => clustered);
         for (let i = 0; i < 4; i++) p.follow(eye, 1);
         const ground = scene.getObjectByName('pool-ground') as THREE.Mesh;
         const seen = {

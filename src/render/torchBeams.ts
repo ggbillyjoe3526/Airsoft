@@ -265,6 +265,14 @@ export class TorchBeams {
     this.spot = spot;
   }
 
+  /**
+   * A new renderer after a lost device: the spot's shadow map is drawn on its first frame again, as when the spot was
+   * made (see setQuality's note: the new renderer makes the map's depth texture afresh) (BP3).
+   */
+  contextRestored(): void {
+    if (this.spot?.castShadow) this.spot.shadow.needsUpdate = true;
+  }
+
   private firstLight(): keyof typeof TORCHES {
     for (const c of this.characters) for (const p of c.armament.parts) if (p.light) return p.light;
     return 'weaponTorch';
