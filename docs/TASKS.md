@@ -67,3 +67,17 @@ acceptance:
   2. With Dev settings on (Unlock all gear), every replica and part is available.
 status: open
 attempts: 0
+
+## IM7 · Fuller bug reports, and Report a Bug (owner, 2026-10-12)
+tier: core
+perf: required
+touches: src/config/crash.ts, src/core/crashReport.ts, src/core/reportFields.ts, src/core/errorLog.ts, src/core/eventLog.ts, src/core/frameWindow.ts, src/core/bugIssue.ts, src/ui/bugReport.ts, src/ui/devSettings.ts, src/ui/crashScreen.ts, src/game.ts, src/main.ts, src/matchSession.ts, src/rangeSession.ts, src/style.css, src/ui/menus/css/controls.css
+contract: none
+acceptance:
+  1. The diagnostics and crash reports add: the time, the browser's language, the last 20 or so console errors and warnings with their first stack lines, frame timing (average and worst over the last 10 seconds of play, and how long the match has run), the player's position, view and state, the last 30 or so game events with their ticks, and memory and load (JS heap where the browser gives it, what the renderer holds, the main file and models from the cache or fresh, load times).
+  2. A short note box beside the report: what the player types goes first in the report.
+  3. Copy stays; Report a Bug opens a new GitHub issue on the game's repository with the title and the report filled in, no token and no server. A report too long for the address is cut to fit (the oldest events and errors first) and the whole of it is copied to paste in.
+  4. Recording costs nothing a player can feel: fixed rings, no allocation per tick or frame; nothing personal beyond what the report held before (web addresses in stacks cut to their file names).
+  5. The crash pane's report gets the same fields, the note box and Report a Bug.
+status: open
+attempts: 0

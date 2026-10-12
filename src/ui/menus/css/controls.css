@@ -186,15 +186,16 @@
 
 /* Keyboard focus, one rule for every control (audit section 6, item 6): the orange ring, with a page-coloured gap
    under it so the ring reads on the orange buttons too. A cut-corner control draws it inside (its clip would hide it). */
-.menus :is(button, [role='tab'], input, select, a, summary, .gear-slot, .item-tile, .item-chip):focus-visible,
+.menus :is(button, [role='tab'], input, textarea, select, a, summary, .gear-slot, .item-tile, .item-chip):focus-visible,
 .menu-dialog :is(button, input):focus-visible,
-.crash-screen :is(button, textarea):focus-visible {
+.crash-screen :is(button, textarea, a):focus-visible {
   outline: 2px solid var(--orange);
   outline-offset: 2px;
   box-shadow: 0 0 0 4px var(--menu-bg);
 }
 
-.menus :is(.menu-button, .choice-card, .option-tile, .item-tile, .gear-slot, .customise-part, .settings-tab, .menu-nav-item):focus-visible {
+.menus :is(.menu-button, .choice-card, .option-tile, .item-tile, .gear-slot, .customise-part, .settings-tab, .menu-nav-item):focus-visible,
+.crash-screen .bug-report-link:focus-visible {
   outline-offset: -4px;
 }
 
