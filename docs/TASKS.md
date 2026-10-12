@@ -67,3 +67,16 @@ acceptance:
   2. With Dev settings on (Unlock all gear), every replica and part is available.
 status: open
 attempts: 0
+
+## RM7 · The GBB Pistol replaces the Gas Pistol (owner's ask, 2026-10-12)
+tier: core
+perf: skip
+touches: src/assets/models/replicas/pistol.glb, src/assets/models/replicaParts/pistol.glb, src/config/replicas.ts, src/config/renderView.ts, src/render/replicaModels.ts, src/render/replicaRig.ts, src/render/viewmodel.ts, pool.md, stats.md
+contract: the replica model file (docs/CC0_ASSETS.md › Replica models: a `SlideLock` animation, by addition)
+acceptance:
+  1. The Gas Pistol is the GBB Pistol everywhere a player sees its name, with the same numbers (pool ID, stats, fits).
+  2. It draws from the model the owner approved (his six reference photos, no logo or lettering), within the file budgets (3,500 triangles held, 300 on a figure, 300 KB); its laser, torch, silencer and extended magazine still fit.
+  3. Each shot kicks the slide back over the still barrel and home; on an empty magazine it stays locked back until a reload seats a full one, with Blender models on and off.
+  4. Aiming down its small low sights puts the front post on the view's centre, with Blender models on and off.
+status: open
+attempts: 0
