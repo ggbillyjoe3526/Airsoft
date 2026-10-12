@@ -124,9 +124,11 @@ warning and the built-in model is drawn.
   frame reaches back past the slide, as the Cyber Pistol's rear block does).
 - **Moving parts (RM1).** Objects the file's animations move hang from one bone (the armature's root) and are drawn in
   the body's own meshes, so they cost no draw call. The game poses them from its state, never on a clock: `Fire` (the
-  trigger, each shot), `Selector` (safe at 0, semi at half its length, burst at three quarters, auto at the end),
-  `SightsFold` (while an optic is fitted) and `Reload` (through the reload); `Inspect` and `Blowback` are kept for later.
-  The magazine is never a bone: the game moves it (and the hand holding it).
+  trigger, and a pistol's slide kicking back and home, each shot), `Selector` (safe at 0, semi at half its length,
+  burst at three quarters, auto at the end), `SightsFold` (while an optic is fitted), `Reload` (through the reload),
+  `Inspect` (on the Inspect key, RM2) and `SlideLock` (RM7: held at its end while the magazine is empty, a GBB's slide
+  caught back; put it after the others, as a later animation wins a part two of them move). The magazine is never a
+  bone: the game moves it (and the hand holding it).
 - **Parts.** `replicaParts/<id>.glb`: one top-level object per part named `<kind>_<id>` (`optic_redDot`,
   `magazine_hiCap`, `muzzle_silencer` …), in the replica's space where it fits; a child `<name>_Figure` is ignored. A
   part the file lacks is drawn built-in.

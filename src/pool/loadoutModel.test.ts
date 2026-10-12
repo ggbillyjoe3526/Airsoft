@@ -13,7 +13,7 @@ import { withTags } from './testSupport';
 const pool = GAME_POOL;
 const id = (name: string) => pool.assets.find((a) => a.name === name)!.id;
 const item = (name: string, tier = 'common'): ItemRef => ({ asset: id(name), tier });
-const STARTERS = ['AEG Rifle', 'Gas Pistol', 'Standard Battery', 'Green Gas'].map((n) => item(n));
+const STARTERS = ['AEG Rifle', 'GBB Pistol', 'Standard Battery', 'Green Gas'].map((n) => item(n));
 
 /** An ownership of exactly these items, which a test can change as it goes. */
 function owning(items: ItemRef[]): Ownership & { items: Set<string> } {
@@ -29,11 +29,11 @@ describe('Loadout model (M26b)', () => {
     vi.stubGlobal('localStorage', new MemoryStorage());
   });
 
-  it('starts a new player on the AEG Rifle and Gas Pistol with their starter power sources and nothing else fitted', () => {
+  it('starts a new player on the AEG Rifle and GBB Pistol with their starter power sources and nothing else fitted', () => {
     const model = new LoadoutModel(pool, owning(STARTERS));
-    expect(model.equipped()).toEqual([item('AEG Rifle'), item('Gas Pistol')]);
+    expect(model.equipped()).toEqual([item('AEG Rifle'), item('GBB Pistol')]);
     expect(model.fitOf(id('AEG Rifle'))).toEqual({ ...EMPTY_FIT, power: item('Standard Battery') });
-    expect(model.fitOf(id('Gas Pistol')).power).toEqual(item('Green Gas'));
+    expect(model.fitOf(id('GBB Pistol')).power).toEqual(item('Green Gas'));
     const kit = model.kit();
     expect(kit.slots.map((s) => s.replica.id)).toEqual([AEG.id, GAS_PISTOL.id]);
     expect(kit.hopUps).toEqual([AEG.hopUpDial, GAS_PISTOL.hopUpDial]);
@@ -41,17 +41,17 @@ describe('Loadout model (M26b)', () => {
   });
 
   it('lists owned copies rarest first and equips the best copy of each replica until the player picks', () => {
-    const model = new LoadoutModel(pool, owning([...STARTERS, item('AEG Rifle', 'epic'), item('Gas Pistol', 'rare')]));
-    expect(model.replicaChoices()).toEqual([item('Gas Pistol', 'rare'), item('Gas Pistol'), item('AEG Rifle', 'epic'), item('AEG Rifle')]);
-    expect(model.equipped()).toEqual([item('AEG Rifle', 'epic'), item('Gas Pistol', 'rare')]);
+    const model = new LoadoutModel(pool, owning([...STARTERS, item('AEG Rifle', 'epic'), item('GBB Pistol', 'rare')]));
+    expect(model.replicaChoices()).toEqual([item('GBB Pistol', 'rare'), item('GBB Pistol'), item('AEG Rifle', 'epic'), item('AEG Rifle')]);
+    expect(model.equipped()).toEqual([item('AEG Rifle', 'epic'), item('GBB Pistol', 'rare')]);
     model.equip('primary', item('AEG Rifle'));
     expect(model.equipped()[0]).toEqual(item('AEG Rifle'));
   });
 
   it('puts any replica in either slot, swapping rather than carrying one replica twice', () => {
     const model = new LoadoutModel(pool, owning(STARTERS));
-    model.equip('primary', item('Gas Pistol'));
-    expect(model.equipped()).toEqual([item('Gas Pistol'), item('AEG Rifle')]);
+    model.equip('primary', item('GBB Pistol'));
+    expect(model.equipped()).toEqual([item('GBB Pistol'), item('AEG Rifle')]);
     expect(model.kit().slots.map((s) => s.replica.id)).toEqual([GAS_PISTOL.id, AEG.id]);
   });
 
@@ -70,12 +70,12 @@ describe('Loadout model (M26b)', () => {
   it("offers only owned items that fit the replica's tags, and knows which slots a replica has at all", () => {
     const model = new LoadoutModel(pool, owning([...STARTERS, item('Red Dot'), item('Red Laser'), item('Black Gas', 'epic'), item('Extended Magazine')]));
     expect(model.fitChoices(id('AEG Rifle'), 'optic')).toEqual([item('Red Dot')]);
-    expect(model.fitChoices(id('Gas Pistol'), 'optic')).toEqual([]);
-    expect(model.fitChoices(id('Gas Pistol'), 'power')).toEqual([item('Green Gas'), item('Black Gas', 'epic')]);
+    expect(model.fitChoices(id('GBB Pistol'), 'optic')).toEqual([]);
+    expect(model.fitChoices(id('GBB Pistol'), 'power')).toEqual([item('Green Gas'), item('Black Gas', 'epic')]);
     expect(model.fitChoices(id('AEG Rifle'), 'power')).toEqual([item('Standard Battery')]);
-    expect(model.fitChoices(id('Gas Pistol'), 'magazine')).toEqual([item('Extended Magazine')]);
-    expect(model.hasSlot(id('Gas Pistol'), 'optic')).toBe(false);
-    expect(model.hasSlot(id('Gas Pistol'), 'laser')).toBe(true);
+    expect(model.fitChoices(id('GBB Pistol'), 'magazine')).toEqual([item('Extended Magazine')]);
+    expect(model.hasSlot(id('GBB Pistol'), 'optic')).toBe(false);
+    expect(model.hasSlot(id('GBB Pistol'), 'laser')).toBe(true);
     expect(model.hasSlot(id('AEG Rifle'), 'laser')).toBe(false);
     expect(model.hasSlot(id('AEG Rifle'), 'grip')).toBe(true);
   });
@@ -86,17 +86,17 @@ describe('Loadout model (M26b)', () => {
     model.setFit(id('AEG Rifle'), 'power', item('Black Gas'));
     expect(model.fitOf(id('AEG Rifle')).laser).toBeNull();
     expect(model.fitOf(id('AEG Rifle')).power).toEqual(item('Standard Battery'));
-    model.setFit(id('Gas Pistol'), 'power', null);
-    expect(model.fitOf(id('Gas Pistol')).power).toEqual(item('Green Gas'));
-    model.setFit(id('Gas Pistol'), 'power', item('Black Gas'));
+    model.setFit(id('GBB Pistol'), 'power', null);
+    expect(model.fitOf(id('GBB Pistol')).power).toEqual(item('Green Gas'));
+    model.setFit(id('GBB Pistol'), 'power', item('Black Gas'));
     expect(model.kit().slots[1]!.replica.muzzleEnergy).toBeCloseTo(GAS_PISTOL.muzzleEnergy * 1.2);
   });
 
   it('keeps each replica its own BB weight (any 0.01 g step from 0.20 to 0.30 g) and hop-up dial', () => {
     const model = new LoadoutModel(pool, owning(STARTERS));
     model.setBbWeight(id('AEG Rifle'), 0.3);
-    model.setBbWeight(id('Gas Pistol'), 0.305); // between steps: ignored
-    model.setHopUp(id('Gas Pistol'), 0.4);
+    model.setBbWeight(id('GBB Pistol'), 0.305); // between steps: ignored
+    model.setHopUp(id('GBB Pistol'), 0.4);
     expect(model.kit().bbWeights).toEqual([0.3, GAS_PISTOL.bbWeight]);
     expect(model.kit().hopUps).toEqual([AEG.hopUpDial, 0.4]);
   });
@@ -105,10 +105,10 @@ describe('Loadout model (M26b)', () => {
     it('starts the rifle Cobalt and the pistol Ghost, and keeps each replica its own pick in the kit', () => {
       const model = new LoadoutModel(pool, owning(STARTERS));
       expect(model.kit().schemes).toEqual(['cobalt', 'ghost']);
-      model.setScheme(id('Gas Pistol'), 'hazard');
-      expect(model.scheme(id('Gas Pistol'))).toBe('hazard');
+      model.setScheme(id('GBB Pistol'), 'hazard');
+      expect(model.scheme(id('GBB Pistol'))).toBe('hazard');
       expect(model.scheme(id('AEG Rifle'))).toBe('cobalt');
-      model.equip('primary', item('Gas Pistol'));
+      model.equip('primary', item('GBB Pistol'));
       expect(model.kit().schemes).toEqual(['hazard', 'cobalt']);
     });
 
@@ -118,7 +118,7 @@ describe('Loadout model (M26b)', () => {
       const stored = JSON.parse(localStorage.getItem('airsoft.settings')!) as Record<string, unknown>;
       expect(stored[`scheme.${id('AEG Rifle')}`]).toBe('teal');
       // A version 1 object from before G1 (no scheme keys), and one holding a value this build doesn't know.
-      localStorage.setItem('airsoft.settings', JSON.stringify({ version: 1, [`hopUp.${id('AEG Rifle')}`]: 0.5, [`scheme.${id('Gas Pistol')}`]: 'chrome' }));
+      localStorage.setItem('airsoft.settings', JSON.stringify({ version: 1, [`hopUp.${id('AEG Rifle')}`]: 0.5, [`scheme.${id('GBB Pistol')}`]: 'chrome' }));
       const later = new LoadoutModel(pool, owning(STARTERS));
       expect(later.kit().schemes).toEqual(['cobalt', 'ghost']);
       expect(later.hopUp(id('AEG Rifle'))).toBe(0.5);
@@ -141,12 +141,12 @@ describe('Loadout model (M26b)', () => {
     it('defaults every replica to At Night and keeps each replica its own choice', () => {
       const model = new LoadoutModel(pool, owning(STARTERS));
       expect(model.glowBBs(id('AEG Rifle'))).toBe('night');
-      expect(model.glowBBs(id('Gas Pistol'))).toBe('night');
+      expect(model.glowBBs(id('GBB Pistol'))).toBe('night');
       model.setGlowBBs(id('AEG Rifle'), 'always');
       expect(model.glowBBs(id('AEG Rifle'))).toBe('always');
-      expect(model.glowBBs(id('Gas Pistol'))).toBe('night');
-      model.setGlowBBs(id('Gas Pistol'), 'off');
-      expect(model.glowBBs(id('Gas Pistol'))).toBe('off');
+      expect(model.glowBBs(id('GBB Pistol'))).toBe('night');
+      model.setGlowBBs(id('GBB Pistol'), 'off');
+      expect(model.glowBBs(id('GBB Pistol'))).toBe('off');
       expect(model.glowBBs(id('AEG Rifle'))).toBe('always');
     });
 
@@ -181,28 +181,28 @@ describe('Loadout model (M26b)', () => {
     it("puts each slot's choice in the kit, following the slots when they swap", () => {
       const model = new LoadoutModel(pool, owning(STARTERS));
       model.setGlowBBs(id('AEG Rifle'), 'always');
-      model.setGlowBBs(id('Gas Pistol'), 'off');
+      model.setGlowBBs(id('GBB Pistol'), 'off');
       expect(model.kit().glowBBs).toEqual(['always', 'off']);
-      model.equip('primary', item('Gas Pistol'));
+      model.equip('primary', item('GBB Pistol'));
       expect(model.kit().glowBBs).toEqual(['off', 'always']);
     });
 
     it('resolves the kit against the field: yours by slot, the bots the default way', () => {
       const model = new LoadoutModel(pool, owning(STARTERS));
       model.setGlowBBs(id('AEG Rifle'), 'always');
-      model.setGlowBBs(id('Gas Pistol'), 'off');
+      model.setGlowBBs(id('GBB Pistol'), 'off');
       expect(bbGlowFor(model.kit(), false)).toEqual({ player: [true, false], others: false });
       expect(bbGlowFor(model.kit(), true)).toEqual({ player: [true, false], others: true });
       model.setGlowBBs(id('AEG Rifle'), 'night');
-      model.setGlowBBs(id('Gas Pistol'), 'night');
+      model.setGlowBBs(id('GBB Pistol'), 'night');
       expect(bbGlowFor(model.kit(), true)).toEqual({ player: [true, true], others: true });
       expect(bbGlowFor(model.kit(), false)).toEqual({ player: [false, false], others: false });
     });
   });
 
   it('carries nothing in a slot it owns no replica for', () => {
-    const model = new LoadoutModel(pool, owning([item('Gas Pistol')]));
-    expect(model.equipped()).toEqual([item('Gas Pistol'), null]);
+    const model = new LoadoutModel(pool, owning([item('GBB Pistol')]));
+    expect(model.equipped()).toEqual([item('GBB Pistol'), null]);
     expect(model.kit().slots).toHaveLength(1);
   });
 
@@ -238,7 +238,7 @@ describe('Loadout model (M26b)', () => {
   });
 
   describe('the replica as it comes and the site limit (M29)', () => {
-    const ALL = [...STARTERS, item('AEG Rifle', 'legendary'), item('Gas Pistol', 'legendary'), item('Black Gas', 'legendary'), item('11.1 V LiPo Battery'), item('Red Dot', 'legendary'), item('Red Laser', 'legendary'), item('Hi-Cap Magazine')];
+    const ALL = [...STARTERS, item('AEG Rifle', 'legendary'), item('GBB Pistol', 'legendary'), item('Black Gas', 'legendary'), item('11.1 V LiPo Battery'), item('Red Dot', 'legendary'), item('Red Laser', 'legendary'), item('Hi-Cap Magazine')];
 
     it('builds asItComes at the lowest tier on the starter power source, whatever the player owns, equips or fits', () => {
       const model = new LoadoutModel(pool, owning(ALL));
@@ -246,7 +246,7 @@ describe('Loadout model (M26b)', () => {
       model.setFit(id('AEG Rifle'), 'power', item('11.1 V LiPo Battery'));
       model.setFit(id('AEG Rifle'), 'optic', item('Red Dot', 'legendary'));
       model.setFit(id('AEG Rifle'), 'magazine', item('Hi-Cap Magazine'));
-      model.setFit(id('Gas Pistol'), 'power', item('Black Gas', 'legendary'));
+      model.setFit(id('GBB Pistol'), 'power', item('Black Gas', 'legendary'));
       const aeg = model.asItComes(id('AEG Rifle'));
       expect(aeg.replica).toEqual({ ...AEG, name: 'AEG Rifle' });
       expect(aeg.optic).toBeNull();
@@ -257,29 +257,29 @@ describe('Loadout model (M26b)', () => {
       const carried = model.slotKit(item('AEG Rifle', 'legendary'));
       expect(carried.replica.fireRate).toBeGreaterThan(aeg.replica.fireRate);
       expect(carried.replica.spreadDeg).toBeLessThan(aeg.replica.spreadDeg);
-      const pistol = model.asItComes(id('Gas Pistol'));
-      expect(pistol.replica).toEqual({ ...GAS_PISTOL, name: 'Gas Pistol' });
-      expect(model.slotKit(item('Gas Pistol')).replica.muzzleEnergy).toBeGreaterThan(pistol.replica.muzzleEnergy);
+      const pistol = model.asItComes(id('GBB Pistol'));
+      expect(pistol.replica).toEqual({ ...GAS_PISTOL, name: 'GBB Pistol' });
+      expect(model.slotKit(item('GBB Pistol')).replica.muzzleEnergy).toBeGreaterThan(pistol.replica.muzzleEnergy);
     });
 
     it("is the same slot the bots carry: the shared config's numbers", () => {
       const model = new LoadoutModel(pool, owning(STARTERS));
       expect(model.asItComes(id('AEG Rifle')).replica.muzzleEnergy).toBe(AEG.muzzleEnergy);
-      expect(model.asItComes(id('Gas Pistol')).replica.fireRate).toBe(GAS_PISTOL.fireRate);
+      expect(model.asItComes(id('GBB Pistol')).replica.fireRate).toBe(GAS_PISTOL.fireRate);
     });
 
     it('says capped only when the site limit stops the energy of that replica with its current fit', () => {
       const model = new LoadoutModel(pool, owning(ALL));
-      const legendaryPistol = item('Gas Pistol', 'legendary');
-      model.setFit(id('Gas Pistol'), 'power', item('Black Gas', 'legendary'));
+      const legendaryPistol = item('GBB Pistol', 'legendary');
+      model.setFit(id('GBB Pistol'), 'power', item('Black Gas', 'legendary'));
       expect(model.capped(legendaryPistol)).toBe(false); // 0.52 J · 1.075 · 1.275 is under 1.00 J as shipped
       const black = GAME_STATS.power[id('Black Gas')]!;
       const saved = { ...black };
       try {
         Object.assign(black, { energy: 2 }); // a looser file: the same fit now runs past the limit
         expect(model.capped(legendaryPistol)).toBe(true);
-        expect(model.capped(item('Gas Pistol'))).toBe(true);
-        model.setFit(id('Gas Pistol'), 'power', item('Green Gas'));
+        expect(model.capped(item('GBB Pistol'))).toBe(true);
+        model.setFit(id('GBB Pistol'), 'power', item('Green Gas'));
         expect(model.capped(legendaryPistol)).toBe(false); // the fit decides, not the replica
       } finally {
         Object.assign(black, saved);
@@ -291,12 +291,12 @@ describe('Loadout model (M26b)', () => {
 describe('Loadout model: barrels and muzzle parts (M29b)', () => {
   const PARTS = [...STARTERS, item('Tight-Bore Barrel'), item('Long Barrel', 'epic'), item('Silencer', 'rare')];
 
-  it('gives the AEG both rows and the Gas Pistol a muzzle only: its barrel is fixed', () => {
+  it('gives the AEG both rows and the GBB Pistol a muzzle only: its barrel is fixed', () => {
     const model = new LoadoutModel(pool, owning(STARTERS));
     expect(model.hasSlot(id('AEG Rifle'), 'barrel')).toBe(true);
     expect(model.hasSlot(id('AEG Rifle'), 'muzzle')).toBe(true);
-    expect(model.hasSlot(id('Gas Pistol'), 'barrel')).toBe(false);
-    expect(model.hasSlot(id('Gas Pistol'), 'muzzle')).toBe(true);
+    expect(model.hasSlot(id('GBB Pistol'), 'barrel')).toBe(false);
+    expect(model.hasSlot(id('GBB Pistol'), 'muzzle')).toBe(true);
   });
 
   it('offers only the barrels and silencer the player owns (none from the start), and the pistol only the silencer', () => {
@@ -305,20 +305,20 @@ describe('Loadout model: barrels and muzzle parts (M29b)', () => {
     const model = new LoadoutModel(pool, owning(PARTS));
     expect(model.fitChoices(id('AEG Rifle'), 'barrel').map((r) => r.asset).sort()).toEqual([id('Tight-Bore Barrel'), id('Long Barrel')].sort());
     expect(model.fitChoices(id('AEG Rifle'), 'muzzle')).toEqual([item('Silencer', 'rare')]);
-    expect(model.fitChoices(id('Gas Pistol'), 'barrel')).toEqual([]);
-    expect(model.fitChoices(id('Gas Pistol'), 'muzzle')).toEqual([item('Silencer', 'rare')]);
+    expect(model.fitChoices(id('GBB Pistol'), 'barrel')).toEqual([]);
+    expect(model.fitChoices(id('GBB Pistol'), 'muzzle')).toEqual([item('Silencer', 'rare')]);
   });
 
   it('carries the fitted barrel and silencer into the kit, and refuses a barrel on the pistol even if saved by hand', () => {
     const model = new LoadoutModel(pool, owning(PARTS));
     model.setFit(id('AEG Rifle'), 'barrel', item('Long Barrel', 'epic'));
     model.setFit(id('AEG Rifle'), 'muzzle', item('Silencer', 'rare'));
-    model.setFit(id('Gas Pistol'), 'barrel', item('Tight-Bore Barrel'));
-    model.setFit(id('Gas Pistol'), 'muzzle', item('Silencer', 'rare'));
+    model.setFit(id('GBB Pistol'), 'barrel', item('Tight-Bore Barrel'));
+    model.setFit(id('GBB Pistol'), 'muzzle', item('Silencer', 'rare'));
     const [rifle, pistol] = model.kit().slots;
     expect([rifle!.parts.barrel, rifle!.parts.muzzle]).toEqual(['long', 'silencer']);
     expect([pistol!.parts.barrel, pistol!.parts.muzzle]).toEqual([null, 'silencer']);
-    expect(model.fitOf(id('Gas Pistol')).barrel).toBeNull();
+    expect(model.fitOf(id('GBB Pistol')).barrel).toBeNull();
     // Falls back to nothing fitted when the part is no longer owned.
     const own = owning(PARTS);
     const m2 = new LoadoutModel(pool, own);
@@ -332,8 +332,8 @@ describe('Loadout model: barrels and muzzle parts (M29b)', () => {
     const model = new LoadoutModel(pool, gameOwnership(pool, () => newCollection(pool, 1), () => unlocked));
     expect(model.fitChoices(id('AEG Rifle'), 'barrel')).toHaveLength(2 * pool.tiers.length);
     expect(model.fitChoices(id('AEG Rifle'), 'muzzle')).toHaveLength(pool.tiers.length);
-    expect(model.fitChoices(id('Gas Pistol'), 'muzzle')).toHaveLength(pool.tiers.length);
-    expect(model.fitChoices(id('Gas Pistol'), 'barrel')).toEqual([]);
+    expect(model.fitChoices(id('GBB Pistol'), 'muzzle')).toHaveLength(pool.tiers.length);
+    expect(model.fitChoices(id('GBB Pistol'), 'barrel')).toEqual([]);
     unlocked = false;
     expect(model.fitChoices(id('AEG Rifle'), 'barrel')).toEqual([]);
   });
@@ -374,7 +374,7 @@ describe('Loadout model with dev gear (M35)', () => {
     vi.stubGlobal('localStorage', new MemoryStorage());
   });
 
-  const devPool = withTags(pool, { 'Red Dot': 'dev', 'Gas Pistol': 'dev' });
+  const devPool = withTags(pool, { 'Red Dot': 'dev', 'GBB Pistol': 'dev' });
   const devId = (name: string) => devPool.assets.find((a) => a.name === name)!.id;
   const dref = (name: string, tier = 'common'): ItemRef => ({ asset: devId(name), tier });
 
@@ -405,18 +405,18 @@ describe('Loadout model with dev gear (M35)', () => {
 
   it('offers an owned dev replica only while Dev content is on, and an equipped one plays as the default until then', () => {
     let devContent = true;
-    const c = collecting(dref('Gas Pistol', 'rare'));
+    const c = collecting(dref('GBB Pistol', 'rare'));
     const model = new LoadoutModel(devPool, gameOwnership(devPool, () => c, () => false, () => devContent));
-    expect(model.replicaChoices()).toContainEqual(dref('Gas Pistol', 'rare'));
-    model.equip('primary', dref('Gas Pistol', 'rare'));
-    expect(model.equipped()[0]).toEqual(dref('Gas Pistol', 'rare'));
+    expect(model.replicaChoices()).toContainEqual(dref('GBB Pistol', 'rare'));
+    model.equip('primary', dref('GBB Pistol', 'rare'));
+    expect(model.equipped()[0]).toEqual(dref('GBB Pistol', 'rare'));
     devContent = false;
-    expect(model.replicaChoices().map((r) => r.asset)).not.toContain(devId('Gas Pistol'));
+    expect(model.replicaChoices().map((r) => r.asset)).not.toContain(devId('GBB Pistol'));
     expect(model.replicaChoices().map((r) => r.asset)).toContain(devId('AEG Rifle'));
     expect(model.equipped()[0]).toEqual(dref('AEG Rifle'));
-    expect(model.equipped().map((r) => r?.asset)).not.toContain(devId('Gas Pistol'));
+    expect(model.equipped().map((r) => r?.asset)).not.toContain(devId('GBB Pistol'));
     devContent = true;
-    expect(model.equipped()[0]).toEqual(dref('Gas Pistol', 'rare')); // the same pick, back
+    expect(model.equipped()[0]).toEqual(dref('GBB Pistol', 'rare')); // the same pick, back
   });
 
   it('hides owned dev gear when no devContent switch is given (the default is off)', () => {
@@ -433,7 +433,7 @@ describe('Loadout model with dev gear (M35)', () => {
     // The rifle takes the Red Dot (dev) and the 2x Scope (public), at every tier.
     expect(model.fitChoices(aeg, 'optic').map((r) => r.asset)).not.toContain(devId('Red Dot'));
     expect(model.fitChoices(aeg, 'optic')).toHaveLength(tiers);
-    expect(model.replicaChoices().map((r) => r.asset)).not.toContain(devId('Gas Pistol'));
+    expect(model.replicaChoices().map((r) => r.asset)).not.toContain(devId('GBB Pistol'));
     // The rifle at every tier, and the Cyber Pistol (public) at Legendary only (M32).
     expect(model.replicaChoices()).toHaveLength(tiers + 1);
     devContent = true;
@@ -450,7 +450,7 @@ describe('Loadout slots and dev gear (M35 hasSlot)', () => {
 
   // The Red Laser is the only laser, and it fits the pistol: tagging it dev leaves the pistol's laser slot with dev parts only.
   const devPool = withTags(pool, { 'Red Laser': 'dev' });
-  const pistol = devPool.assets.find((a) => a.name === 'Gas Pistol')!.id;
+  const pistol = devPool.assets.find((a) => a.name === 'GBB Pistol')!.id;
   const aeg = devPool.assets.find((a) => a.name === 'AEG Rifle')!.id;
 
   it('has no slot for a part that is only dev while Dev content is off, and has it once on', () => {
@@ -541,7 +541,7 @@ describe('M32 acceptance 4: the Cyber Pistol only exists at Legendary', () => {
       expect(model.fitChoices(CYBER, slot), slot).toEqual([]);
     }
     // The other replicas keep theirs: a power source and a magazine for both.
-    for (const r of ['AEG Rifle', 'Gas Pistol']) {
+    for (const r of ['AEG Rifle', 'GBB Pistol']) {
       expect(model.hasSlot(id(r), 'power'), r).toBe(true);
       expect(model.hasSlot(id(r), 'magazine'), r).toBe(true);
     }

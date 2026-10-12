@@ -29,8 +29,8 @@ describe('the skin checks on the game as it ships', () => {
   it.each(SCHEME_IDS)('pass %s', (id) => {
     const results = checkSkin(skinOf(id), ctx);
     const attention = results.filter((r) => r.verdict === 'fail' || r.verdict === 'warn').map((r) => `${r.check}: ${r.says}`);
-    // Signal's orange furniture sits beside the Gas Pistol's orange tip (KNOWN_ISSUES › Look, CT4): the owner looks at it.
-    expect(attention).toEqual(id === 'signal' ? [expect.stringMatching(/^skin\.orangeTip: The orange tip is drawn, but on the Gas Pistol/)] : []);
+    // Signal's orange furniture sits beside the GBB Pistol's orange tip (KNOWN_ISSUES › Look, CT4): the owner looks at it.
+    expect(attention).toEqual(id === 'signal' ? [expect.stringMatching(/^skin\.orangeTip: The orange tip is drawn, but on the GBB Pistol/)] : []);
     expect(new Set(results.map((r) => r.check))).toEqual(
       new Set(['skin.registered', 'skin.family', 'skin.access', 'skin.id', 'skin.offered', 'skin.claims', 'skin.drawn', 'skin.orangeTip', 'skin.realistic', 'skin.numbers', 'skin.teams', 'skin.texture', 'skin.balance']),
     );

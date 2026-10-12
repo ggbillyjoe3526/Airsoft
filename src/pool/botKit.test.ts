@@ -117,7 +117,7 @@ describe('rolled bot kits and dev gear (M35)', () => {
       expect(rolled.kit).toEqual(randomKit(pool, LOADOUT, seed, 1));
       expect(rolledKit(pool, LOADOUT, seed)).toEqual(rolledKit(pool, LOADOUT, seed));
       const replicaItems = rolled.items.filter((r) => pool.byId.get(r.asset)!.category === 'replica');
-      expect(replicaItems.map((r) => pool.byId.get(r.asset)!.name).sort()).toEqual(['AEG Rifle', 'Gas Pistol']);
+      expect(replicaItems.map((r) => pool.byId.get(r.asset)!.name).sort()).toEqual(['AEG Rifle', 'GBB Pistol']);
       for (const r of rolled.items) expect(tierIds).toContain(r.tier);
       // At a part chance of 1 every slot a replica has a part for is filled, so the items list the power source and parts.
       expect(rolled.items.length).toBeGreaterThan(LOADOUT.length * 2);
@@ -144,11 +144,11 @@ describe('rolled bot kits and dev gear (M35)', () => {
   });
 
   it('never rolls a dev replica for a bot either', () => {
-    const devPool = withTags(pool, { 'Gas Pistol': 'dev' });
+    const devPool = withTags(pool, { 'GBB Pistol': 'dev' });
     const shown = contentPool(devPool, false);
     for (let seed = 1; seed <= 30; seed++) {
       const { items } = rolledKit(shown, LOADOUT, seed, 1);
-      expect(items.map((r) => r.asset)).not.toContain(devPool.assets.find((a) => a.name === 'Gas Pistol')!.id);
+      expect(items.map((r) => r.asset)).not.toContain(devPool.assets.find((a) => a.name === 'GBB Pistol')!.id);
     }
   });
 });
@@ -166,7 +166,7 @@ describe('whether a rolled kit may hold dev gear (M35 rolledKitMayHoldDev)', () 
   });
 
   it("is true when a LOADOUT replica's own row is dev", () => {
-    expect(rolledKitMayHoldDev(withTags(pool, { 'Gas Pistol': 'dev' }), LOADOUT)).toBe(true);
+    expect(rolledKitMayHoldDev(withTags(pool, { 'GBB Pistol': 'dev' }), LOADOUT)).toBe(true);
     expect(rolledKitMayHoldDev(withTags(pool, { 'AEG Rifle': 'dev' }), LOADOUT)).toBe(true);
   });
 

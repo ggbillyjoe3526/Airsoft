@@ -18,6 +18,22 @@ export function withBone(geometry: THREE.BufferGeometry, bone: number): THREE.Bu
   return g;
 }
 
+/**
+ * A built-in model's own rig (RM7, the GBB Pistol's slide): one bone, `name`, at rest where its shapes are drawn, and
+ * animations that slide it straight back along the bore (+Z), each key a share of `travel`, `step` seconds apart, in
+ * the order given (a later one wins the part, as in a file).
+ */
+export function slidingRig(name: string, travel: number, step: number, clips: Readonly<Record<string, readonly number[]>>): ReplicaFileRig {
+  const animations = new Map<string, THREE.AnimationClip>();
+  for (const [clip, keys] of Object.entries(clips)) {
+    const times = keys.map((_, i) => i * step);
+    const track = new THREE.VectorKeyframeTrack(`${RIG_PREFIX}${name}.position`, times, keys.flatMap((k) => [0, 0, k * travel]));
+    animations.set(clip, new THREE.AnimationClip(clip, times[times.length - 1] ?? 0, [track]));
+  }
+  const bone = { name, position: new THREE.Vector3(), quaternion: new THREE.Quaternion(), scale: new THREE.Vector3(1, 1, 1) };
+  return { root: new THREE.Matrix4(), bones: [bone], pieces: [], clips: animations, magazine: new Map() };
+}
+
 /** One animated property of one bone and how to read it at a time. */
 interface Channel {
   target: THREE.Vector3 | THREE.Quaternion;

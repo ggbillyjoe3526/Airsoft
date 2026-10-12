@@ -25,7 +25,6 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | Customise lists one chip per owned tier of a part, not one per asset with a tier menu | can wait | UI polish; scrapping lets a lower tier go once a rarer copy is owned. (audit POOL-05c, FA10) |
 | Sort and filter by rarity is on the Loadout's replicas and Customise's parts only, not the Armory's collection; a tile in a hidden tier you just swapped away from stays until the bar changes or the screen reopens | can wait | The owner asked for the Loadout and Customise (note 4). The tile stays on purpose, so nothing vanishes under the pointer. (M82) |
 | The Armory's reveal plays no sound | can wait | The Armory has no `AudioEngine`; a click per tile and an Epic+ cue need one. (audit POOL-11, FA10) |
-| The gas pistol model file's Blowback animation is not played | can wait | Blowback is a 0.1 Dev 6 feature. (RM1; the Inspect animations play on the Inspect key since RM2) |
 | The vertical grip's steady time assumes an instant stop after a sprint | can wait | Deceleration is ignored; the number barely moves. (M17b) |
 | The Cyber Pistol is the only chase item, so a chase row limited to tiers below the ten-Shot guarantee could never be lifted by it | document | Chase items come in the tiers `pool.md`'s Tiers column names; the guarantee lifts the commonest ordinary item. (M32) |
 | On Depot the rifle's BB weight shows only a little | document | On purpose (DECISIONS): a light BB leads to ~25 m, a heavy one carries further. Measured (M30 flight): 0.20–0.30 g stay within ~8 cm to 30 m; at 34 m 0.20 g is ~10 cm lower and ~25 ms later; on target to 36 / 39 / 41 / 41 m for 0.20 / 0.25 / 0.28 / 0.30 g. Widen it if the owner can't feel it. (M17a, FA12) |
@@ -34,7 +33,7 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | With no replica owned for a slot (only by editing the save), the player carries one replica | document | Starters go to every collection. The tutorial then skips its switch-replica step. (M26b, FA10) |
 | The best-accuracy record doesn't say what kit it was set with | document | A Legendary AEG's tighter spread counts like factory gear (DECISIONS M26b accepts it). (audit POOL-21, FA10) |
 | Reload is refused when no spare is fuller than the loaded magazine | document | Deliberate (no topping up); the HUD notice and a pat sound explain it. Playtest whether players expect a swap. |
-| The Signal colours' orange furniture sits right against the Gas Pistol's orange tip, so with the orange tip setting on the tip hardly shows on it | playtest | The skin check measures them about 5 apart in colour (20 reads). Beta's bots carry Signal on their rifles, not pistols. A darker tip, or a ring between, would fix it if the owner minds. (CT4) |
+| The Signal colours' orange furniture sits right against the GBB Pistol's orange tip, so with the orange tip setting on the tip hardly shows on it | playtest | The skin check measures them about 5 apart in colour (20 reads). Beta's bots carry Signal on their rifles, not pistols. A darker tip, or a ring between, would fix it if the owner minds. (CT4) |
 
 ## Movement and shooting
 

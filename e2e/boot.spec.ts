@@ -132,7 +132,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(page.locator('.setup-rules')).toContainText('2:30 rounds'); // the custom-rules note names the whole standard
   await match.getByRole('group', { name: 'Opponents' }).getByRole('button', { name: 'Normal' }).click();
 
-  // The Loadout screen (M26b; G3 look): three gear slots, the AEG Rifle and Gas Pistol equipped, Grenades empty.
+  // The Loadout screen (M26b; G3 look): three gear slots, the AEG Rifle and GBB Pistol equipped, Grenades empty.
   // Right-click the Primary slot to customise the rifle: fit the red dot and heavier BBs before the match.
   await setup.getByRole('button', { name: 'Change Loadout' }).click();
   const loadout = page.locator('.menu-loadout');
@@ -140,7 +140,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(loadout.locator('.gear-slot')).toHaveCount(3);
   const primary = loadout.getByRole('button', { name: /^Primary: AEG Rifle/ });
   await expect(primary).toHaveAttribute('aria-pressed', 'true');
-  await expect(loadout.getByRole('button', { name: /^Secondary: Gas Pistol/ })).toBeVisible();
+  await expect(loadout.getByRole('button', { name: /^Secondary: GBB Pistol/ })).toBeVisible();
   await expect(loadout.getByRole('button', { name: /^Grenades: Empty/ })).toBeVisible();
   await expect(primary.locator('.gear-stats')).toHaveText('0.97 J · 13 BBs/s · 60 BBs');
   await primary.click({ button: 'right' });
@@ -219,7 +219,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(partTab('Skins')).toHaveAttribute('aria-disabled', 'true'); // in a later version
   // The pistol has no top rail: its Optic part is greyed. Esc goes back to the gear like Back.
   await page.keyboard.press('Escape');
-  await loadout.getByRole('button', { name: /^Secondary: Gas Pistol/ }).click({ button: 'right' });
+  await loadout.getByRole('button', { name: /^Secondary: GBB Pistol/ }).click({ button: 'right' });
   await expect(partTab('Optic')).toHaveAttribute('aria-disabled', 'true');
   await page.keyboard.press('Escape');
   await page.keyboard.press('Escape'); // Esc on the gear is Back too
@@ -715,8 +715,8 @@ for (const withParts of [false, true]) {
     }
     // The pistol's barrel is fixed (a greyed row), and its muzzle is threaded: owned, it offers the silencer.
     await page.keyboard.press('Escape');
-    await loadout.getByRole('button', { name: /^Secondary: Gas Pistol/ }).click({ button: 'right' });
-    await expect(loadout.getByRole('heading', { name: /Customise: Gas Pistol/ })).toBeVisible();
+    await loadout.getByRole('button', { name: /^Secondary: GBB Pistol/ }).click({ button: 'right' });
+    await expect(loadout.getByRole('heading', { name: /Customise: GBB Pistol/ })).toBeVisible();
     await expect(partTab('Barrel')).toHaveAttribute('aria-disabled', 'true');
     await expect(partTab('Barrel')).toContainText('Fixed barrel');
     await expect(loadout.getByRole('group', { name: 'Barrel', exact: true })).toHaveCount(0);

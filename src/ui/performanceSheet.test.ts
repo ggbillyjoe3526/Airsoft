@@ -45,7 +45,7 @@ describe('Performance sheet (M29)', () => {
   });
 
   it('says a semi-only replica fires up to its rate, and a heavier BB is shown without a colour', () => {
-    const pistol = kitSlot(pool, item('Gas Pistol'), fit({ power: item('Green Gas') }));
+    const pistol = kitSlot(pool, item('GBB Pistol'), fit({ power: item('Green Gas') }));
     const p = sheetRows(performanceOf(pistol, 0.25, 0.55), performanceOf(pistol, 0.2, 0.55), HOP_UP.readoutRange);
     expect(find(p, 'Rate of fire').value).toBe('up to 7 BBs/s');
     expect(find(p, 'BB weight')).toMatchObject({ value: '0.25 g', change: null });
@@ -82,8 +82,8 @@ describe('Performance sheet, acceptance 5: every row, and the sliders', () => {
     expect(rowsOf(aeg(), aeg()).map((r) => r.label)).toEqual(LABELS);
   });
 
-  it('reads the Gas Pistol as it comes: 0.52 J, 72 m/s on 0.20 g which a chrono reads as about 237 fps', () => {
-    const pistol = kitSlot(pool, item('Gas Pistol'), fit({ power: item('Green Gas') }));
+  it('reads the GBB Pistol as it comes: 0.52 J, 72 m/s on 0.20 g which a chrono reads as about 237 fps', () => {
+    const pistol = kitSlot(pool, item('GBB Pistol'), fit({ power: item('Green Gas') }));
     const p = sheetRows(performanceOf(pistol, 0.2, 0.55), performanceOf(pistol, 0.2, 0.55), HOP_UP.readoutRange);
     expect(find(p, 'Energy').value).toBe('0.52 J');
     expect(find(p, 'Muzzle speed').value).toMatch(/^72 m\/s \(23[67] fps\)$/);
@@ -119,8 +119,8 @@ describe('Performance sheet, acceptance 5: every row, and the sliders', () => {
   });
 
   it('marks a stronger gas as more energy (better) with a worse recoil, against the replica as it comes', () => {
-    const come = kitSlot(pool, item('Gas Pistol'), fit({ power: item('Green Gas') }));
-    const black = kitSlot(pool, item('Gas Pistol'), fit({ power: item('Black Gas') }));
+    const come = kitSlot(pool, item('GBB Pistol'), fit({ power: item('Green Gas') }));
+    const black = kitSlot(pool, item('GBB Pistol'), fit({ power: item('Black Gas') }));
     const rows = sheetRows(performanceOf(black, 0.2, 0.55), performanceOf(come, 0.2, 0.55), HOP_UP.readoutRange);
     expect(find(rows, 'Energy')).toMatchObject({ value: '0.62 J', delta: '+20%', change: 'better' });
     expect(find(rows, 'Recoil')).toMatchObject({ value: '0.60°', delta: '+20%', change: 'worse' });
@@ -144,9 +144,9 @@ describe('Performance sheet, acceptance 5: every row, and the sliders', () => {
   it('says "site limit" on the energy of a kit the limit stopped, through the model, and not otherwise', () => {
     const strict = { ...GAME_STATS, power: { ...GAME_STATS.power, [id('Black Gas')]: { energy: 5, fireRate: 0, recoil: 0.2 } } };
     const black = fit({ power: item('Black Gas') });
-    const capped = energyCapped(pool, item('Gas Pistol'), black, strict);
-    const slot = kitSlot(pool, item('Gas Pistol'), black, strict);
-    const come = kitSlot(pool, item('Gas Pistol'), fit({ power: item('Green Gas') }));
+    const capped = energyCapped(pool, item('GBB Pistol'), black, strict);
+    const slot = kitSlot(pool, item('GBB Pistol'), black, strict);
+    const come = kitSlot(pool, item('GBB Pistol'), fit({ power: item('Green Gas') }));
     const rows = sheetRows(performanceOf(slot, 0.2, 0.55, capped), performanceOf(come, 0.2, 0.55), HOP_UP.readoutRange);
     expect(find(rows, 'Energy').value).toBe('1.00 J (site limit)');
     expect(find(rows, 'Energy').change).toBe('better');
@@ -171,14 +171,14 @@ describe('Performance sheet, acceptance 5: every row, and the sliders', () => {
 describe('Performance sheet, acceptance 6: the gear slot and the Armory line', () => {
   it('shows "energy · rate of fire · magazine" for each replica as it comes', () => {
     expect(gearLine(aeg(), 0.25)).toBe('0.97 J · 13 BBs/s · 60 BBs');
-    expect(gearLine(kitSlot(pool, item('Gas Pistol'), fit({ power: item('Green Gas') })), 0.2)).toBe('0.52 J · 7 BBs/s · 18 BBs');
+    expect(gearLine(kitSlot(pool, item('GBB Pistol'), fit({ power: item('Green Gas') })), 0.2)).toBe('0.52 J · 7 BBs/s · 18 BBs');
   });
 
   it("follows the gear: a tier, a power source, a magazine and the BB weight change the line", () => {
     expect(gearLine(aeg('common', { power: item('11.1 V LiPo Battery') }), 0.25)).toBe('0.97 J · 15 BBs/s · 60 BBs');
     expect(gearLine(aeg('common', { magazine: item('Hi-Cap Magazine') }), 0.25)).toBe('0.97 J · 13 BBs/s · 120 BBs');
-    expect(gearLine(kitSlot(pool, item('Gas Pistol'), fit({ power: item('Black Gas') })), 0.2)).toBe('0.62 J · 7 BBs/s · 18 BBs');
-    expect(gearLine(kitSlot(pool, item('Gas Pistol'), fit({ power: item('Green Gas'), magazine: item('Extended Magazine') })), 0.2)).toBe('0.52 J · 7 BBs/s · 27 BBs');
+    expect(gearLine(kitSlot(pool, item('GBB Pistol'), fit({ power: item('Black Gas') })), 0.2)).toBe('0.62 J · 7 BBs/s · 18 BBs');
+    expect(gearLine(kitSlot(pool, item('GBB Pistol'), fit({ power: item('Green Gas'), magazine: item('Extended Magazine') })), 0.2)).toBe('0.52 J · 7 BBs/s · 27 BBs');
     expect(gearLine(aeg(), 0.3)).not.toBe(gearLine(aeg(), 0.25));
   });
 

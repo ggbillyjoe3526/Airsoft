@@ -24,7 +24,7 @@ const sheet = (onTarget) => ({
 const CONTENT = {
   items: [{ id: '000007', name: 'Red Dot', category: 'optic', tag: 'public', key: 'redDot' }],
   sheets: [
-    { id: '000001', name: 'Gas Pistol', sheet: sheet(20) },
+    { id: '000001', name: 'GBB Pistol', sheet: sheet(20) },
     { id: '000002', name: 'AEG Rifle', sheet: sheet(39) },
   ],
   census: [{ id: '000002', name: 'AEG Rifle', replica: 'aeg', fromFile: true, low: { triangles: 11286, meshes: 13 }, high: { triangles: 11574, meshes: 18 }, parts: [] }],
@@ -73,7 +73,7 @@ describe('the content report', () => {
 
   it('shows a part on each replica without and with it, a replica beside the others, and every replica for "all"', () => {
     expect(specTables(CONTENT, CONTENT.items[0]).map((t) => [t.title, t.sheets.map((s) => s.name)])).toEqual([['On the AEG Rifle', ['Without it', 'With the Red Dot']]]);
-    expect(specTables(CONTENT, { id: '000002', name: 'AEG Rifle', category: 'replica' })[0].sheets.map((s) => s.name)).toEqual(['AEG Rifle', 'Gas Pistol']);
+    expect(specTables(CONTENT, { id: '000002', name: 'AEG Rifle', category: 'replica' })[0].sheets.map((s) => s.name)).toEqual(['AEG Rifle', 'GBB Pistol']);
     expect(specTables(CONTENT, { id: 'all' })[0].sheets).toHaveLength(2);
     expect(censusRows(CONTENT)).toEqual([['AEG Rifle', '11286 in 13 meshes', '11574 in 18 meshes', 'its model file']]);
   });

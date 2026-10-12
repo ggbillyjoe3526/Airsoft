@@ -181,7 +181,7 @@ describe('whether the opponents may carry dev gear and whether a match uses dev 
     expect(botsMayCarryDev(devPool, false, 'hard')).toBe(false);
     expect(botsMayCarryDev(devPool, true, 'easy')).toBe(false);
     expect(botsMayCarryDev(devPool, true, 'normal')).toBe(false);
-    expect(botsMayCarryDev(withTags(GAME_POOL, { 'Gas Pistol': 'dev' }), true, 'hard')).toBe(true);
+    expect(botsMayCarryDev(withTags(GAME_POOL, { 'GBB Pistol': 'dev' }), true, 'hard')).toBe(true);
   });
 
   it('says yes for a dev chase replica the player owns (M32: one opponent may carry it), with Dev content on, on hard', () => {
@@ -201,7 +201,7 @@ describe('whether the opponents may carry dev gear and whether a match uses dev 
   });
 
   it('uses no dev content when nothing is dev, whatever the kit, public difficulty or switch; Pro is dev (M36)', () => {
-    const kit = kitOf('AEG Rifle', 'Gas Pistol', 'Red Dot');
+    const kit = kitOf('AEG Rifle', 'GBB Pistol', 'Red Dot');
     for (const devContent of [false, true]) for (const d of DIFFICULTIES) {
       expect(matchUsesDev(picks({ difficulty: d.id }), kit, GAME_POOL, devContent)).toBe(d.id === 'pro');
     }

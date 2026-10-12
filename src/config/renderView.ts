@@ -174,10 +174,12 @@ export const VIEWMODEL = {
   },
   /**
    * The moving parts of a replica drawn from its model file (RM1, render/replicaRig.ts), posed from the file's
-   * animations. Fire: the trigger, from the start each shot, or back at `firePeak` (its share of the clip, the trigger
-   * fully pulled) for a shot while it is still moving, so full auto holds it back. Selector: how far into its clip each
-   * fire mode sits (safe at 0), turned at the clip's own speed. SightsFold: the iron sights fold down while an optic is
-   * fitted, at the clip's own speed. Reload follows the reload's progress.
+   * animations. Fire: the trigger (and a pistol's slide), from the start each shot, or back at `firePeak` (its share of
+   * the clip, the trigger fully pulled, the slide fully back) for a shot while it is still moving, so full auto holds it
+   * back. Selector: how far into its clip each fire mode sits (safe at 0), turned at the clip's own speed. SightsFold:
+   * the iron sights fold down while an optic is fitted, at the clip's own speed. Reload follows the reload's progress.
+   * SlideLock (RM7, the GBB Pistol): held at its end while the magazine is empty, once the last shot's Fire has passed
+   * `firePeak`, so the slide stays back until a reload seats a full magazine.
    */
   parts: {
     firePeak: 0.4,

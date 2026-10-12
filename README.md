@@ -154,7 +154,7 @@ Every action can be rebound under **Settings › Key Bindings**, mouse buttons a
 - **Maps.** Depot, a 50 × 32 m warehouse yard. Woodland and Neon Heights are in development.
 - **Modes.** Elimination and Attack / Defend, under Skirmish or Custom rules. Extraction, Tournament and Pro CQB are in
   development.
-- **Replicas.** AEG rifle, gas pistol and the rare Cyber Pistol, with optics, grips, barrels, a silencer, magazines and
+- **Replicas.** AEG rifle, GBB pistol and the rare Cyber Pistol, with optics, grips, barrels, a silencer, magazines and
   batteries.
 - **Bots.** Easy, Normal and Hard. Pro is in development.
 

@@ -444,6 +444,11 @@ replaces its line; the old one stays findable in the archive or in git.
   or lettering copied (RM5). Small, subtle iron sights: a notch and a post. The grip joins the fixed frame. On a shot
   only the dark grey slide kicks back and returns, though the replica is electric; the light grey shell and the
   muzzle block never move. It stays compatible with every animation, attachment and figure.
+- **The Gas Pistol becomes the GBB Pistol, a blowback replica with the same numbers (owner, 2026-10-12).** Redesigned
+  from his six reference photos of a polymer pistol, with no logo, lettering or exact copy (RM7): a slimmer slide flush
+  with the frame, the ejection port further back, the trigger guard one piece with the frame, a shorter grip and small
+  low sights. Its slide kicks back over the still barrel on every shot and stays locked back on an empty magazine until
+  a reload (0.1 Dev 6 feature 14).
 
 ## Menus, HUD, settings and accessibility
 
