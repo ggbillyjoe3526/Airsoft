@@ -56,7 +56,7 @@ import { type NoXp, settleMatch } from './stats/settleMatch';
 import { adaptedPicks, adaptiveNote, adaptiveSetup, settleAdaptive } from './adaptivePicks';
 import { loadCrosshair } from './ui/crosshair';
 import { loadHitMarker } from './ui/crosshairSettings';
-import { loadMinimapTurn } from './ui/hudSettings';
+import { loadCallouts, loadMinimapTurn } from './ui/hudSettings';
 import { CrashScreen } from './ui/crashScreen';
 import { DebugOverlay } from './ui/debugOverlay';
 import { onFullscreenChange, relockAfterFullscreen, toggleFullscreen } from './ui/fullscreen';
@@ -262,6 +262,8 @@ export class Game {
   private hitMarker = loadHitMarker();
   /** Settings › HUD › Minimap (M83): rotating, or fixed north up. */
   private minimapTurn = loadMinimapTurn();
+  /** Settings › HUD › Callouts (CL1): your bot teammates' calls in a match. */
+  private callouts = loadCallouts();
   /** The local records (M19), and what the last match finished changed in them. */
   private readonly records: Records = loadRecords(browserStorage());
   private recordNews: RecordNews = noNews();
@@ -582,6 +584,7 @@ export class Game {
         hitFeed: { initial: this.hitFeedMode, onChange: (m) => this.changeHitFeed(m) },
         whatGotYou: { initial: this.whatGotYouMode, onChange: (m) => this.changeWhatGotYou(m) },
         minimapTurn: { initial: this.minimapTurn, onChange: (t) => ((this.minimapTurn = t), this.session?.setMinimapTurn(t)) },
+        callouts: { initial: this.callouts, onChange: (m) => ((this.callouts = m), this.session instanceof MatchSession && this.session.setCallouts(m === 'on')) },
       },
       dev: {
         initial: this.devPicked,
@@ -1120,6 +1123,7 @@ export class Game {
       this.session.setWhatGotYouMode(this.whatGotYouMode);
       this.session.setHitMarker(this.hitMarker);
       this.session.setMinimapTurn(this.minimapTurn);
+      this.session.setCallouts(this.callouts === 'on');
       // The kit the match plays (a ruleset's factory kit, say), not the Loadout's (BP3).
       this.session.combat.setReplicaPictures(this.pictures, kitSubjects(this.session.kit, this.look.realisticColours));
       this.applyDevTo(this.session);

@@ -1,6 +1,6 @@
 import { VAULT_WALL_HEIGHT } from '../config/vault';
 import { type Vec3, vec3 } from '../sim/vec';
-import type { BlockFinish, BlockKind, MapBlock, MapData, MapSign, Overlook, RampRise, SpawnPoint } from './mapTypes';
+import type { BlockFinish, BlockKind, MapArea, MapBlock, MapData, MapSign, Overlook, RampRise, SpawnPoint } from './mapTypes';
 import { NEON_HEIGHTS_DRESSING } from './neonHeightsDressing';
 import { neonHeightsExtraction } from './neonHeightsExtraction';
 import type { MapLight } from './nightSight';
@@ -645,6 +645,42 @@ const OVERLOOKS: Overlook[] = [
   { name: 'Atrium', area: ATRIUM, from: [vec3(6.4, STOREY, 1.5), vec3(12.6, STOREY, 1.1), vec3(9.5, 2 * STOREY, 6.6), vec3(9.5, 2 * STOREY, -3.6)] },
 ];
 
+/**
+ * Named areas (CL1): what the bots call ("Contact, Sky Bridge!") and the minimap's caption shows, as plan rects. The first
+ * that holds a point names it: Level 2, then Level 1 (feet from half a storey up), then the street, so a room upstairs
+ * names the floor over the shop under it. A stair's lower half is the floor it leaves. Together they cover the field
+ * (map.areas, content rules).
+ */
+const LEVEL_1: readonly [number, number] = [STOREY / 2, 1.5 * STOREY];
+const LEVEL_2: readonly [number, number] = [1.5 * STOREY, Infinity];
+const AREAS: readonly { name: string; rect: Rect; floor?: readonly [number, number] }[] = [
+  { name: 'Sky Bridge', rect: SKY_BRIDGE, floor: LEVEL_2 },
+  { name: 'Studio', rect: BLOCK, floor: LEVEL_2 },
+  { name: 'Tower Level 2', rect: TOWER, floor: LEVEL_2 },
+  { name: 'Footbridge', rect: FOOTBRIDGE, floor: LEVEL_1 },
+  { name: 'Walkway', rect: WALKWAY, floor: LEVEL_1 },
+  { name: 'Walkway', rect: PLAZA_LANDING, floor: LEVEL_1 },
+  { name: 'Balcony', rect: BALCONY, floor: LEVEL_1 },
+  { name: 'Capsules', rect: ARCADE, floor: LEVEL_1 },
+  { name: 'Clinic', rect: BLOCK, floor: LEVEL_1 },
+  { name: 'Tower Level 1', rect: TOWER, floor: LEVEL_1 },
+  { name: 'Atrium', rect: ATRIUM },
+  { name: 'Bar', rect: [TOWER[0], ATRIUM[0], ATRIUM[2], ATRIUM[3]] },
+  { name: 'Store', rect: [ATRIUM[1], TOWER[1], ATRIUM[2], ATRIUM[3]] },
+  { name: 'Lobby', rect: [TOWER[0], TOWER[1], TOWER[2], ATRIUM[2]] },
+  { name: 'Back Hall', rect: [TOWER[0], TOWER[1], ATRIUM[3], TOWER[3]] },
+  { name: 'Arcade', rect: ARCADE },
+  { name: 'Repair Shop', rect: BLOCK },
+  { name: 'Noodle Alley', rect: [ARCADE[0], ARCADE[1], ARCADE[3], HALF_Z] },
+  { name: 'Lantern Lane', rect: [BLOCK[0], BLOCK[1], BLOCK[3], ARCADE[2]] },
+  { name: 'Plaza', rect: [ARCADE[0], BLOCK[0], -HALF_Z, ARCADE[2]] },
+  { name: 'West Yard', rect: [-HALF_X, ARCADE[0], -HALF_Z, HALF_Z] },
+  { name: 'Neon Avenue', rect: [ARCADE[1], TOWER[0], -HALF_Z, HALF_Z] },
+  { name: 'Drone Dock', rect: [TOWER[0], HALF_X, -HALF_Z, TOWER[2]] },
+  { name: 'Back Alley', rect: [TOWER[0], HALF_X, TOWER[3], HALF_Z] },
+  { name: 'East Yard', rect: [TOWER[1], HALF_X, TOWER[2], TOWER[3]] },
+];
+
 // ---------------------------------------------------------------------------------------------------------------------
 // Night light (M34e): lamps over the streets and in some rooms, neon signs, lit windows in the city round the site.
 
@@ -891,6 +927,7 @@ export const NEON_HEIGHTS: MapData = {
   extraction: neonHeightsExtraction({ toWorld, spawnToWorld, yards: SPAWNS }),
   // G9: the street's set dressing (look only: map/neonHeightsDressing.ts).
   dressing: NEON_HEIGHTS_DRESSING,
+  areas: AREAS.map((a): MapArea => (a.floor ? { name: a.name, box: rectToWorld(a.rect), floor: a.floor } : { name: a.name, box: rectToWorld(a.rect) })),
 };
 
 /** Layout facts the tests check against, in world coordinates, so they can't drift from the geometry. */

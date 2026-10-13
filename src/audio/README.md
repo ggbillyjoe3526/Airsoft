@@ -10,7 +10,8 @@ and never changes the simulation.
   render the cues and loops only some maps play.
 - `sfx.ts`: each match's `Sfx` builds only its own graph on the engine and disconnects it when the match goes. It keeps
   one channel per other character (an HRTF panner that follows them, then muffling by two rays, `occlusion.ts`); one-off
-  world sounds get a panner of their own.
+  world sounds get a panner of their own. A bot's callout keys a radio (`radioCall`, CL1): a teammate's click on the
+  interface bus, panned to where they are; an enemy's from them, only within 15 m.
 - `audioMix.ts`: buses master, effects (in-world, with the field's echo) and interface (hit tick, hit marker, whistle,
   dry), set by Settings › Audio. The limiter and ducking sit on effects only. The Ambience slider (M86) has no bus: each
   match's ambience (beds, fires, calls) plays into its world through one gain the engine holds at the slider's level
