@@ -127,6 +127,12 @@ export const AUDIO = {
     /** A teammate's radio answering a squad order (M22). */
     radioAck: { gain: 0.5, pitchSpread: 0.02 },
     /**
+     * A bot's callout (CL1), the same radio: a teammate's in your ear, a little under an order's answer since it comes far
+     * more often; an enemy's from where they stand (its distance and walls bring it down further).
+     */
+    radioCall: { gain: 0.35, pitchSpread: 0.04 },
+    radioCallEnemy: { gain: 0.6, pitchSpread: 0.04 },
+    /**
      * Extraction's exit count (M43): the timer box's beeps, on the interface bus. Its recipe is quiet (0.12), so the level
      * lifts it to about -16 dBFS at full volume (M53, audit AUD-04: it was -28.5, 18 dB under every other interface cue
      * and lost under the fight at the exit); audio.test.ts keeps every interface cue within 20 dB of the hit tick.

@@ -14,6 +14,9 @@ seeded per bot.
   senses, reaction, turning or aim); the habits no level has are read from `Bot.style` where they apply: `pushesIn`
   (rushers, with no run job and no squad order), `anchorHolding` (an anchor in Elimination short of the middle until its
   mark on the clock), Own lane (`teamPlan.ts takeOwnLanes`), Aims from cover (`botBrain.ts`, so it rests on cover).
+- `callouts.ts` (CL1): `CalloutDirector` puts what the bots just did into words for their team after each tick
+  (`callouts.md`: sightings, hits, reloads, noises, searches, holds, the flag), at the file's pace and one call a team at
+  a time. It reads the bots and the state and never writes either, so callouts never change how anyone plays.
 - `botBrain.ts`: the per-tick decision and mode choice (lane → fight → cover → search; also `order` and `flag`). It
   calls `botSenses.ts` (target choice, contacts, reaction), `botMovement.ts` (lane points, hunting, strafing, and one
   glance a tick into the view for the team's hunt memory, M87: a spot seen empty isn't walked to),

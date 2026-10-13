@@ -1,4 +1,5 @@
 import { AUDIO, CASE_OPEN_SOUND, caseWorkSound, FIRE_SOUND, matchOverBlastStart, REST_SOUND, type SoundLevel } from '../config/audio';
+import { CALLOUTS } from '../config/callouts';
 import type { ReplicaConfig } from '../config/replicas';
 import type { InspectCue } from '../config/render';
 import { SIM_DT } from '../config/sim';
@@ -139,6 +140,8 @@ export class Sfx {
   private readonly foleyLimit = new VoiceLimit(AUDIO.foley.maxPerWindow, AUDIO.foley.window);
   /** Where the listener is (distance culling of quiet sounds, and muffling). */
   private readonly listener = { x: 0, y: 0, z: 0 };
+  /** The way the listener looks, along the ground (a teammate's radio click is panned by it, radioCall). */
+  private readonly facing = { x: 0, z: -1 };
   private listenerPlaced = false;
   private readonly muffle: Muffle = { hz: 0, gain: 0 };
   private whistle: Whistle | null = null;
@@ -270,6 +273,11 @@ export class Sfx {
     this.listener.y = pos.y;
     this.listener.z = pos.z;
     this.listenerPlaced = true;
+    const flat = Math.hypot(forwardX, forwardZ);
+    if (flat > 1e-6) {
+      this.facing.x = forwardX / flat;
+      this.facing.z = forwardZ / flat;
+    }
     const l = this.ctx?.listener;
     if (!l) return;
     if (!l.positionX) {
@@ -479,6 +487,26 @@ export class Sfx {
   /** A teammate's radio keyed twice: the squad order you gave was heard (M22). */
   orderHeard(): void {
     if (this.ctx) this.play('radio.ack', this.ui!, AUDIO.levels.radioAck);
+  }
+
+  /**
+   * A bot's callout over the radio (CL1), the walkie-talkie's squelch as when an order is answered, with no voice: a
+   * teammate's (`teammate`) in your ear, panned towards where they stand; an enemy's from where they stand, as their
+   * other sounds are (muffled by walls), and only within CALLOUTS.enemyRadioRange.
+   */
+  radioCall(c: Character, teammate: boolean): void {
+    const ctx = this.ctx;
+    if (!ctx || !this.listenerPlaced) return;
+    if (!teammate) {
+      if (this.distanceTo(c.position) <= CALLOUTS.enemyRadioRange) this.play('radio.ack', this.channel(c).panner, AUDIO.levels.radioCallEnemy);
+      return;
+    }
+    const pan = ctx.createStereoPanner();
+    pan.pan.value = radioPan(this.listener, this.facing, c.position) * CALLOUTS.radioPan;
+    pan.connect(this.ui!);
+    const voice = this.play('radio.ack', pan, AUDIO.levels.radioCall);
+    if (voice) voice.src.addEventListener('ended', () => pan.disconnect());
+    else pan.disconnect();
   }
 
   /**
@@ -837,4 +865,17 @@ export class Sfx {
   private distanceTo(p: Vec3): number {
     return Math.hypot(p.x - this.listener.x, p.z - this.listener.z);
   }
+}
+
+/**
+ * Where `at` is from a listener at `from` looking along `facing` (unit, on the ground), as a stereo pan: -1 to the left,
+ * 1 to the right, 0 ahead, behind or at the listener (CL1: a teammate's radio click).
+ */
+export function radioPan(from: Readonly<{ x: number; z: number }>, facing: Readonly<{ x: number; z: number }>, at: Readonly<{ x: number; z: number }>): number {
+  const dx = at.x - from.x;
+  const dz = at.z - from.z;
+  const d = Math.hypot(dx, dz);
+  if (d < 1e-6) return 0;
+  // The listener's right along the ground: forward × up (three.js has y up).
+  return Math.max(-1, Math.min(1, (dx * -facing.z + dz * facing.x) / d));
 }

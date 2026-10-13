@@ -107,6 +107,8 @@ export type SettingField =
   | 'minimapTurn'
   /** Settings → HUD → What got you (M41): 'auto', 'on' or 'off'. */
   | 'whatGotYou'
+  /** Settings › HUD › Callouts (CL1): 'on' or 'off', on when nothing is saved. */
+  | 'callouts'
   | 'hudSize'
   /** Settings → HUD → HUD opacity (G4): how opaque the HUD's panels are, 0.5 to 1. */
   | 'hudOpacity'

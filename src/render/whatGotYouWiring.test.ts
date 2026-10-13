@@ -51,6 +51,7 @@ type SpyCard = InstanceType<typeof SpyCard>;
 vi.mock('../ui/whatGotYou', async (orig) => ({ ...(await orig<typeof import('../ui/whatGotYou')>()), WhatGotYouCard: SpyCard }));
 vi.mock('../ui/casePrompt');
 vi.mock('../ui/flagMarker');
+vi.mock('../ui/calloutFeed');
 vi.mock('../ui/hitFeed');
 vi.mock('../ui/hitFeedback');
 vi.mock('../ui/holdMarker');

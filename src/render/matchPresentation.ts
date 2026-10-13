@@ -13,7 +13,8 @@ import { type DetailLevel, EXIT_VISUALS, FLAG_VISUALS, HUD, type QualitySettings
 import { proTip } from '../config/tutorial';
 import { SQUAD_ORDERS, type SquadOrderKind, type WheelSelect } from '../config/squad';
 import { cssColor, teamCss, type TeamColours } from '../config/teams';
-import type { MapData } from '../map/mapTypes';
+import { areaAt } from '../map/areas';
+import type { MapArea, MapData } from '../map/mapTypes';
 import type { WorldQuery } from '../sim/armament';
 import { type Character, eyeHeight } from '../sim/character';
 import { type ExtractionContext, respawnsLeft } from '../sim/extraction';
@@ -24,6 +25,7 @@ import { type Vec3, wrapAngle } from '../sim/vec';
 import type { MatchStats } from '../stats/matchStats';
 import { CasePrompt } from '../ui/casePrompt';
 import { FlagMarker } from '../ui/flagMarker';
+import { CalloutFeed } from '../ui/calloutFeed';
 import { HitFeed } from '../ui/hitFeed';
 import { HitFeedback } from '../ui/hitFeedback';
 import { HoldMarker } from '../ui/holdMarker';
@@ -73,6 +75,8 @@ export class MatchPresentation {
   private readonly marker: FlagMarker;
   private readonly markerAt: ScreenMarker = { x: 0, y: 0, onScreen: false };
   private readonly feed: HitFeed;
+  /** Your bot teammates' callouts (CL1), bottom left. */
+  private readonly calloutFeed: CalloutFeed;
   private readonly board: MatchBoard;
   /** The "what got you" card (M41), whether it is on, and the record of the hit it words (the bots' controller fills it). */
   private readonly whatGotYou: WhatGotYouCard;
@@ -162,7 +166,7 @@ export class MatchPresentation {
     /** The team colours picked on Settings → Accessibility (the HUD's follow the container's CSS, see Game.play). */
     teamColours: TeamColours,
     /** The map's blocks, sloping ground, bushes and storeys, for the minimap's drawing of the field. */
-    field: Pick<MapData, 'blocks' | 'terrain' | 'foliage' | 'storeys'> & { name?: string },
+    field: Pick<MapData, 'blocks' | 'terrain' | 'foliage' | 'storeys' | 'areas'> & { name?: string },
     /** The figure model, if the build has one (M25a); null draws the built-in figures. */
     figureModel: FigureModel | null = null,
     /** Player detail (QualitySettings.figureDetail, FA8); setFigureDetail changes it. */
@@ -191,6 +195,7 @@ export class MatchPresentation {
     this.intents = new BotIntentLabels(container);
     this.mateMarkers = new TeammateMarkers(container, this.mates.map((c) => this.names.get(c.id) ?? ''), teamCss(player.team));
     this.feed = new HitFeed(container);
+    this.calloutFeed = new CalloutFeed(container);
     this.board = new MatchBoard(container, true);
     this.whatGotYou = new WhatGotYouCard(container);
     this.soundCues = new SoundCues(container);
@@ -198,6 +203,7 @@ export class MatchPresentation {
     this.holdMarker = new HoldMarker(container, teamCss(player.team));
     this.minimap = new Minimap(container, field.blocks, cssColor(teamColours.hud[player.team]!), cssColor(teamColours.hud[1 - player.team]!), field.terrain ?? null, field.foliage ?? [], field.storeys);
     this.mapName = field.name ?? '';
+    this.areas = field.areas ?? [];
     // The map and round under the minimap (G4); an Extraction run is one long round, so only the map.
     this.minimap.setCaption(HUD_TEXT.where(this.mapName, extraction ? 0 : state.round.number));
     const run = state.round.run;
@@ -232,6 +238,8 @@ export class MatchPresentation {
   private readonly keyName: (action: Action) => string;
   /** The map's name, for the minimap's caption (G4). */
   private readonly mapName: string;
+  /** The map's named areas (CL1): the one you stand in shows on the minimap. */
+  private readonly areas: readonly MapArea[];
   private wheelHintSelect: WheelSelect | '' = '';
   private wheelHintOn = false;
   private wheelHintText = '';
@@ -318,6 +326,7 @@ export class MatchPresentation {
     this.feedback.setVisible(playing);
     this.scoreboard.setVisible(playing);
     this.feed.setVisible(playing);
+    this.calloutFeed.setVisible(playing);
     this.soundCues.setVisible(playing);
     this.squadLine.setVisible(playing);
     this.minimap.setVisible(playing);
@@ -434,6 +443,7 @@ export class MatchPresentation {
         this.whatGotYou.clear();
         this.spectator.reset();
         this.feed.roundStarted(e.round);
+        this.calloutFeed.clear();
         this.soundCues.clear();
         this.squadLine.clear();
         this.heardPlayers.clear();
@@ -507,8 +517,10 @@ export class MatchPresentation {
     if (!this.playing) return;
     const f = this.minimapFrame;
     f.x = this.listener.x;
-    // The storey drawn: that of whoever's eyes the camera is at (yours, or the player you watch).
-    f.y = (this.watched ?? this.player).position.y;
+    // The storey drawn: that of whoever's eyes the camera is at (yours, or the player you watch), and the area named.
+    const at = (this.watched ?? this.player).position;
+    f.y = at.y;
+    this.minimap.setArea(areaAt(this.areas, at.x, at.y, at.z));
     f.z = this.listener.z;
     f.yaw = this.listener.yaw;
     f.time = this.state.time;
@@ -581,6 +593,7 @@ export class MatchPresentation {
     this.updateExitMarkers(camera, spectating);
     this.updateMateMarkers(camera, alpha, watched);
     this.feed.update(this.state.time);
+    this.calloutFeed.update(this.state.time);
     // The cues are placed for wherever the camera is (your eyes, or the player you watch), as the ears are.
     camera.getWorldDirection(this.viewDir);
     this.listener.x = camera.position.x;
@@ -615,6 +628,7 @@ export class MatchPresentation {
     this.scoreboard.dispose();
     this.marker.dispose();
     this.feed.dispose();
+    this.calloutFeed.dispose();
     this.board.dispose();
     this.whatGotYou.dispose();
     this.mateMarkers.dispose();
@@ -629,6 +643,16 @@ export class MatchPresentation {
     for (const c of this.state.characters) if (c.id === id) return c;
     return undefined;
   };
+
+  /** A teammate's callout (CL1): `speakerId`'s line in the callout feed, under their name. */
+  callout(speakerId: number, team: number, text: string): void {
+    this.calloutFeed.add(this.names.get(speakerId) ?? '', team, text, this.state.time);
+  }
+
+  /** Callouts turned off (Settings › HUD): the lines up now go. */
+  clearCallouts(): void {
+    this.calloutFeed.clear();
+  }
 
   /** A hit feed line for `victimId` calling a hit from `shooterId`'s BB. */
   private addFeedLine(victimId: number, shooterId: number, ricochet: boolean): void {

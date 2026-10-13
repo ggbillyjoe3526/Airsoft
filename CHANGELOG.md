@@ -42,6 +42,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **BG1** · Bots' figures show their gear: a red dot or scope on every rifle, and with Blender figures (Dev switches) grips, lasers and barrels too
 - **BG1** · Kits fit personality: rushers Support, Pointman or Cyber; anchors Marksman or Support; flankers Stealth or Pointman; careful Rifleman or Marksman
 - **AD1** · Adaptive difficulty, a Dev setting: the other team starts at your Opponents level and adapts to how you do; teammates and Extraction don't
+- **CL1** · Bot teammates call what they see and do in a text feed, bottom left, each with a radio click: "Contact, Dock!", "Reloading!" (Settings › HUD › Callouts)
+- **CL1** · Map places have names (Dock, Bay, Fort, Atrium, Sky Bridge and more), and the minimap shows the name of the area you stand in
 - **PT1** · Settings › Audio has a Power source volume slider under Effects for each replica's battery motor, gas and spring sounds
 - **PT1** · Settings › Gameplay › Crosshair has hit marker scale, thickness, outline and colour settings; the hit marker stays Off by default
 

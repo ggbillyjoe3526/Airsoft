@@ -1,7 +1,7 @@
 import { VAULT_WALL_HEIGHT } from '../config/vault';
 import { type Vec3, vec3 } from '../sim/vec';
 import { depotDressing } from './depotDressing';
-import type { BlockKind, CaseSpot, ExitZone, MapBlock, MapData, RampRise, SpawnPoint } from './mapTypes';
+import type { BlockKind, CaseSpot, ExitZone, MapArea, MapBlock, MapData, RampRise, SpawnPoint } from './mapTypes';
 
 /**
  * "Depot": a roofless warehouse yard, 50 × 32 m inside the walls, built around three lanes to one flagpole
@@ -394,6 +394,31 @@ const RUN_TIME = 480;
 const BASE_OPPONENTS = 2;
 
 /**
+ * Named areas (CL1): what the bots call ("Contact, Dock!") and the minimap's caption shows, as plan boxes [x0, x1, z0, z1].
+ * The first that holds a point names it, so the dock comes before the road beside it. Together they cover the field
+ * (map.areas, content rules); the Main Gate is its approach and the gap in the Bay's wall, the Alley the yard's east end.
+ */
+const AREAS: readonly (readonly [string, number, number, number, number])[] = [
+  ['Dock', DOCK_X0 - DOCK_RAMP_RUN, DOCK_X1 + DOCK_RAMP_RUN, DOCK_Z0, HALF_Z],
+  ['Dock road', DOCK_X0 - DOCK_RAMP_RUN, DOCK_X1 + DOCK_RAMP_RUN, DIVIDER_Z1, DOCK_Z0],
+  ['North Gate', 11.4, 18.2, DIVIDER_Z0, HALF_Z],
+  ['East yard', 18.2, HALF_X, 2.8, HALF_Z],
+  ['Back lot', 17.2, HALF_X, -HALF_Z, 2.8],
+  ['Stores', 9.0, 17.2, -HALF_Z, OFFICE_N0],
+  ['Hall', -0.8, 9.0, -HALF_Z, OFFICE_N0],
+  ['West room', OFFICE_W0, -0.8, -HALF_Z, OFFICE_N0],
+  ['Bay', 6.0, 18.2, OFFICE_N0, DIVIDER_Z0],
+  ['Main Gate', 1.0, 6.0, OFFICE_N0, DIVIDER_Z0],
+  ['Alley', -6.0, 1.0, OFFICE_N0, DIVIDER_Z0],
+  ['Crate yard', -17.3, -6.0, OFFICE_N0, DIVIDER_Z0],
+  ['Staging yard', -HALF_X, DOCK_X0 - DOCK_RAMP_RUN, DIVIDER_Z0, HALF_Z],
+  ['West yard', -HALF_X, -17.3, OFFICE_N0, DIVIDER_Z0],
+  ['Car park', -HALF_X, OFFICE_W0, -HALF_Z, OFFICE_N0],
+];
+/** A plan box in world coordinates (z negated, so its ends swap). */
+const areaToWorld = ([name, x0, x1, z0, z1]: readonly [string, number, number, number, number]): MapArea => ({ name, box: [x0, x1, -z1, -z0] });
+
+/**
  * Everything above is written in plan coordinates, as drawn on the approved sketch: x to the east, z to the
  * north. In the game's world north is -z (seen from above with east to the right, three.js has -z at the top),
  * so the map is built with z negated. In play the layout then matches the sketch, not its mirror image: from
@@ -437,6 +462,7 @@ export const DEPOT: MapData = {
   bakedLight: { file: 'depot' },
   // G8: the set dressing (look only: map/depotDressing.ts).
   dressing: depotDressing(BLOCKS),
+  areas: AREAS.map(areaToWorld),
 };
 
 /** Layout facts the tests check against (in world coordinates), exported so they can't drift from the geometry. */

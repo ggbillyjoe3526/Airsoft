@@ -432,6 +432,13 @@ replaces its line; the old one stays findable in the archive or in git.
   guards keep what must never happen (rounds played and settled, nobody stuck, falling or hit by a teammate, the rules
   of each mode). A change that moves a figure records its measure beside it. Owner ruling 2026-10-06 (M73): the Normal
   figures are judged at 45 to 55 %, the Pro ones at their usual 40 to 60 %.
+- **Bot callouts are text and a radio click, never voices, and never change play (2026-10-13, CL1).** A teammate's
+  call shows bottom left with the walkie-talkie click an order gets (no new sound to render), panned to where they
+  are; an enemy's is only its click, from them, within 15 m. The callouts read the bots and never write them, on a
+  random stream of their own, so seeds still replay. Hit players never talk: hit calling stays the raised hand.
+- **Callouts keep a slow, readable pace (2026-10-13, CL1).** A team says one call at a time, 1.5 s apart, a bot its own
+  4 s apart and the same enemy 10 s apart; the most urgent first, and a call kept waiting over 1.5 s is dropped. About
+  5 to 11 calls a team a minute in the headless matches. All of it, and every line, is in `callouts.md`.
 
 ## Maps and modes
 
@@ -637,6 +644,8 @@ replaces its line; the old one stays findable in the archive or in git.
   height like the HUD is a Beta task.
 - **The minimap shows teammates, and the other team only as patches where they were last heard ("approximate, from the
   last noise", owner, 2026-10-04).** A hit call removes that player's patch.
+- **The minimap names the area you stand in, top left on the map (2026-10-13, CL1).** The same names the bots call, so
+  "Contact, Dock!" means something by the second round. Every walkable spot on a map is in a named area.
 - **The order wheel is on Z (owner, 2026-10-04); Hold here is X, Regroup is V and Follow me is F.** Orders end when the
   player who gave them is hit and at each round start. A teammate's radio double-click confirms an order.
 - **Key bindings: a key belongs to one action, and taking a used key swaps the two (2026-09-30).** Esc, F5, F11, F12,
