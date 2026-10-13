@@ -69,7 +69,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   changes how it plays, never its senses, reaction or aim; set in bots.md (BN1)
 - In Attack / Defend defenders hold near the pole; one attacking bot raises the flag while the others guard it from
   cover (M5, FA4)
-- Bot kits: opponents on every difficulty carry kits from bot-kits.md by level (Easy mostly plain, Pro never plain,
+- Bot kits: opponents on every difficulty carry kits from bot-kits.md by level, leaning to personality (Easy mostly plain, Pro never plain,
   Cyber Pistols from Hard); a bot aims through its own scope or red dot, silenced bots are heard nearer, and bots'
   figures show their gear (BG1)
 

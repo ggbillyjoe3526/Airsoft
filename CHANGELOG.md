@@ -35,6 +35,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **BG1** · A bot aiming through a scope holds aim closer at range but settles later and is slower on close or crossing targets; a red dot is finer
 - **BG1** · Silenced bots are heard from nearer
 - **BG1** · Bots' figures show their gear: a red dot or scope on every rifle, and with Blender figures (Dev switches) grips, lasers and barrels too
+- **BG1** · Kits fit personality: rushers Support, Pointman or Cyber; anchors Marksman or Support; flankers Stealth or Pointman; careful Rifleman or Marksman
 
 ### Changed
 - **M94** · The practice range is now Practice: pause reads "Practice · Range" or "Practice · Depot", and the tutorial's last button says Practice
