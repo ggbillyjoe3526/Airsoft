@@ -1,13 +1,16 @@
 import type { MinimapTurn } from './config/minimap';
 import type { Group } from 'three';
+import { AdaptiveRun } from './ai/adaptiveRun';
 import { BotController } from './ai/botController';
+import { drawIdentities } from './ai/botRoster';
+import type { BotIdentity } from './ai/personality';
 import { SquadFollow } from './ai/squadFollow';
 import { lowCoverBlocks, tallCoverBlocks } from './ai/cover';
 import { sightConditionsOf } from './ai/perception';
 import type { SfxSetup } from './audio/sfx';
 import { FULL_MOTION, type MotionScale } from './config/accessibility';
 import { BALLISTICS, WIND } from './config/ballistics';
-import { BOT_BEHAVIOUR, BOT_LOADOUTS, BOT_PART_CHANCE, BOTS, type BotConfig, botConfig, type Difficulty, difficultyAtLeast } from './config/bots';
+import { BOT_BEHAVIOUR, BOTS, type BotConfig, botConfig, type Difficulty, difficultyAtLeast } from './config/bots';
 import { EXTRACTION, homeTeamCap } from './config/extraction';
 import { FOOTSTEPS } from './config/footsteps';
 import type { HitConfig, HitMarkerSettings } from './config/hits';
@@ -22,7 +25,8 @@ import { PHYSICS } from './config/physics';
 import { type LightingPreset, matchOverScreenDelay, type QualitySettings } from './config/render';
 import { LOADOUT, REALCAP, type ReplicaConfig, replicaUnderRules } from './config/replicas';
 import { TORCHES } from './config/torches';
-import { botKitSeed, botLight, carriedLoadout, chaseCarrier, chaseReady, fitBotLight, kittedCharacter, randomKit } from './pool/botKit';
+import { botKitSeed, botLight, fitBotLight, kittedBot, pickBotKit } from './pool/botKit';
+import { GAME_BOT_KITS } from './pool/gameBotKits';
 import { contentPool } from './pool/contentPool';
 import { rollRunCases } from './pool/caches';
 import type { SupplyEvent } from './pool/supplyEvents';
@@ -59,7 +63,7 @@ import { fitOptics, fitParts, setBbWeights, setHopUps } from './sim/armament';
 import { type Character, createCharacter, respawnCharacter } from './sim/character';
 import { createCommand, type PlayerCommand } from './sim/commands';
 import { isInPlay } from './sim/elimination';
-import { createRunContext, type ExtractionContext, type FoundItem, haulTotals, reserveSize, runFinds, runHaul } from './sim/extraction';
+import { createRunContext, type ExtractionContext, haulTotals, reserveSize, runFinds, runHaul } from './sim/extraction';
 import { placeTeams, startRun } from './sim/round';
 import { byTeam, rosterTeams } from './sim/roster';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
@@ -68,12 +72,12 @@ import { createWind } from './sim/wind';
 import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
 import { MatchStats } from './stats/matchStats';
-import { matchStanding, MatchTakes } from './stats/settleMatch';
+import { matchStanding, MatchTakes, type NoXp } from './stats/settleMatch';
 import { type MatchResult, runResultOf } from './stats/records';
-import type { MatchOutcome } from './pool/armory';
+import type { MatchOutcome } from './progress/xp';
 import type { NotCounted } from './ui/recordsView';
 import { pauseText, resultText, type ResultText } from './ui/matchStopText';
-import { rosterNames, statsBlocks, type TeamBlock } from './ui/statsRows';
+import { rosterNames, rosterTags, statsBlocks, type TeamBlock } from './ui/statsRows';
 
 const PLAYER_ID = 0;
 /** The colour figures glow in someone's torch beam (M33h): the torches' cool white. */
@@ -96,27 +100,17 @@ export interface MatchSetup {
    */
   rules: MatchRules;
   /**
-   * The player's kit from the Loadout screen (M26b): each gear slot's replica as carried (rarity, power source and laser
-   * worked in), its optic, parts, hop-up dial and BB weight. Bots carry config/replicas.ts LOADOUT as it comes.
+   * The player's kit from the Loadout screen (M26b): each gear slot's replica as carried (power source, laser and barrel
+   * worked in), its optic, parts, hop-up dial and BB weight. Bots carry kits of their own (bot-kits.md, BG1).
    */
   kit: PlayerKit;
-  /** Dev content is on (M35): bots may roll dev gear (config/content.ts). */
+  /** Dev content is on (M35): bots may carry dev gear (config/content.ts). */
   devContent: boolean;
   /**
    * The match uses dev content (M35, newGamePicks.ts matchUsesDev: its picks, the player's kit, or gear the opponents
-   * may roll): it stays out of the records and pays no Field Credits.
+   * may carry): it stays out of the records and gives no XP.
    */
   devContentUsed: boolean;
-  /**
-   * The chase replicas the player owns (pool asset ids, M32): on a difficulty that rolls kits, one opponent now and then
-   * carries one (pool/botKit.ts chaseCarrier). Absent: none.
-   */
-  chaseOwned?: readonly string[];
-  /**
-   * The collection's items (item key → copies, M44): an Extraction run's case parts are weighted towards what you
-   * don't own yet, as a Shot's are. Absent: as if you owned nothing.
-   */
-  owned?: Readonly<Record<string, number>>;
   /**
    * The supply event on as the match starts (M49, pool/supplyEvents.ts): an Extraction run's cases hold more while it
    * is on. Absent: none.
@@ -131,13 +125,26 @@ export interface MatchSetup {
   playerTeam?: number;
   /** Settings → Look (G1): robots and Realistic colours. Absent: their defaults. */
   look?: LookSettings;
+  /**
+   * Adaptive difficulty (AD1, the Dev tab): the rating the other team starts at, the highest on offer and the Opponents
+   * level it grew from; `difficulty` is then the level the rating plays as (ai/adaptiveSkill.ts levelAt). Absent, or in
+   * an Extraction run: the fixed levels.
+   */
+  adaptive?: AdaptiveSetup;
+}
+
+/** Adaptive difficulty's start for a match (MatchSetup.adaptive). */
+export interface AdaptiveSetup {
+  rating: number;
+  top: number;
+  from: Difficulty;
 }
 
 /** What an Extraction run found, for the summary (MatchSession.runFinds). */
 export interface RunFinds {
   extracted: boolean;
-  found: { fc: number; items: FoundItem[] };
-  out: { fc: number; items: FoundItem[] };
+  found: { xp: number };
+  out: { xp: number };
 }
 
 /**
@@ -202,6 +209,15 @@ export class MatchSession {
   /** Dev settings › End the round now was used (M90): it counts whenever it was pressed, played or not (BP3). */
   private devEndedRound = false;
   /**
+   * Adaptive difficulty (AD1): the other team's rating through this match, or null when it plays a fixed level. Its
+   * bots take the drifted skill after each round.
+   */
+  readonly adaptive: AdaptiveRun | null;
+  /** Dev help other than adaptive difficulty itself (as devAssisted): such a match doesn't move the saved rating. */
+  private otherDevHelp = false;
+  /** A character's team by id, for adaptive difficulty's hit counts. */
+  private readonly teamOf = (id: number): number | undefined => this.state.characters.find((c) => c.id === id)?.team;
+  /**
    * How long each part of building this match took (audit CORE-33): `performance.measure` entries, and one line Game logs
    * with `?perf`. Started as the session is made, so it counts everything the constructor does.
    */
@@ -253,7 +269,7 @@ export class MatchSession {
             spawnLift: PHYSICS.groundRestGap,
             // The run's cases (M44), filled from pool.md with the parts weighted towards what you don't own yet, richer
             // under a supply event (M49).
-            cases: rollRunCases(GAME_POOL, map.extraction.cases, setup.owned ?? {}, caseSeed(seed), setup.supply ?? null),
+            cases: rollRunCases(GAME_POOL, map.extraction.cases, caseSeed(seed), setup.supply ?? null),
             // The home team's waves (M45): as often as the opponents' difficulty says, out of the squad's sight.
             waveEvery: EXTRACTION.waveEvery[setup.difficulty],
             sight: { query: this.physics, body: BODY },
@@ -294,11 +310,12 @@ export class MatchSession {
     this.player = this.spawnRoster(map, seed);
     this.fitPickedLoadout();
     this.commands.set(PLAYER_ID, this.playerCommand);
+    this.adaptive = setup.adaptive && !this.extraction ? new AdaptiveRun(setup.adaptive.rating, setup.adaptive.top, setup.difficulty, this.player) : null;
     this.bots = new BotController(
       this.state,
       this.state.characters.filter((c) => c !== this.player),
       this.commands,
-      { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, lowCover: lowCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), tallCover: tallCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), sight: sightConditionsOf(map, this.lighting.night), body: BODY, hits: this.hits, loadout: this.botLoadout, cfg: BOTS, teamCfg: teamBotConfigs(this.player.team, setup), seed, insertionBerth: map.extraction?.insertionBerth },
+      { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, lowCover: lowCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), tallCover: tallCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), sight: sightConditionsOf(map, this.lighting.night), body: BODY, hits: this.hits, loadout: this.botLoadout, cfg: BOTS, teamCfg: teamBotConfigs(this.player.team, setup, this.adaptive), seed, insertionBerth: map.extraction?.insertionBerth, identities: this.identities },
     );
     this.build.phase('simulation and bots');
     input.resetView(this.player.spawnYaw);
@@ -321,6 +338,7 @@ export class MatchSession {
     this.stats = new MatchStats(this.state.characters);
     this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, this.teamSizes(), this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours, map, renderer.figureModel, quality.figureDetail, this.extraction, crowd, renderer.replicaFiles, renderer.figureRigs);
     this.match.setHitFacts(this.bots.lastHit);
+    this.match.setRoster(this.identities);
     // Pro briefing tips on the board between rounds, when the opponents are Pro (M41).
     this.match.setProTips(difficultyAtLeast(setup.difficulty, 'pro'));
     this.match.setFigureShadows(quality.figureShadows);
@@ -346,6 +364,8 @@ export class MatchSession {
   readonly extraction: ExtractionContext | undefined;
   /** The team you play on (M98): the pick, or Alpha in an Extraction run. Everything about "your team" reads player.team. */
   private readonly playerTeam: number;
+  /** Who each bot is this match (BN1): its roster name and personality, by character id, drawn from the seed. */
+  private identities: ReadonlyMap<number, BotIdentity> = new Map();
   /** Extraction: your bot teammates follow you unless you order otherwise (ai/squadFollow.ts). */
   private readonly squadFollow = new SquadFollow();
 
@@ -470,23 +490,23 @@ export class MatchSession {
     return { run: runResultOf(runHaul(this.state.round.run), this.rounds.roundTime - this.state.round.clock) };
   }
 
-  /** Whether this match pays Field Credits at all: not with Dev settings that change play (M24), nor with dev content (M35). */
-  get paysFieldCredits(): boolean {
-    return this.unpaidReason === null;
+  /** Whether this match gives XP at all (LV1): not with Dev settings that change play (M24), nor with dev content (M35). */
+  get givesXp(): boolean {
+    return this.noXpReason === null;
   }
 
-  /** Why it pays nothing: Dev settings that change play, dev content, or null when it pays. */
-  get unpaidReason(): 'dev' | 'devContent' | null {
-    return this.standing().unpaid;
+  /** Why it gives none: Dev settings that change play, dev content, or null when it gives XP. */
+  get noXpReason(): NoXp | null {
+    return this.standing().noXp;
   }
 
   /**
-   * The decided match for its Field Credits (M26c), once per match: custom rules pay too (scaled by pool.md), but a
-   * match played with Dev settings that change play (M24) pays nothing, so null then.
+   * The decided match for its XP (LV1), once per match: custom rules give XP too (scaled by levels.md), but a match
+   * played with Dev settings that change play (M24) gives none, so null then.
    */
   takeOutcome(): MatchOutcome | null {
     const r = this.state.round;
-    return this.takes.outcome(r.phase === 'matchOver', this.paysFieldCredits, () => ({
+    return this.takes.outcome(r.phase === 'matchOver', this.givesXp, () => ({
       won: r.matchWinner === this.player.team,
       // Rounds won with you in them (audit POOL-08), and the teammates' difficulty when you have any.
       roundsWon: this.stats.roundsContributed(this.player.id),
@@ -494,10 +514,9 @@ export class MatchSession {
       winsNeeded: this.rounds.winsNeeded,
       difficulty: this.setup.difficulty,
       ...(this.rounds.teamSize > 1 ? { teammateDifficulty: this.setup.teammateDifficulty } : {}),
-      // Custom rules pay no more than ×1.5 (M39): Pro's ×2 is for the named rulesets played as they are.
+      // Custom rules give no more than ×1.5 (M39): Pro's ×2 is for the named rulesets played as they are.
       ...(this.customRules ? { customRules: true } : {}),
-      // Extraction (M44): what you got out with goes into the collection with the pay, which is the haul's FC and your
-      // hits (M47).
+      // Extraction (M44): the run gives the XP you got out with and your hits (M47).
       ...(this.extraction ? { extraction: true } : {}),
       ...this.haulOutcome(),
     }));
@@ -507,7 +526,7 @@ export class MatchSession {
   private haulOutcome(): Pick<MatchOutcome, 'haul'> {
     if (!this.extraction) return {};
     const haul = haulTotals(runHaul(this.state.round.run));
-    return haul.fc > 0 || haul.items.length > 0 ? { haul } : {};
+    return haul.xp > 0 ? { haul } : {};
   }
 
   /**
@@ -522,8 +541,8 @@ export class MatchSession {
 
   /** Every player's numbers over the match, your team first, for the end-of-match summary. */
   summaryBlocks(): TeamBlock[] {
-    const names = rosterNames(this.state.characters, this.player.id);
-    return statsBlocks(this.state.characters, names, (id) => this.stats.matchOf(id), this.state.round.score, this.player, false, this.extraction !== undefined, this.state.round.run.reserve);
+    const names = rosterNames(this.state.characters, this.player.id, this.identities);
+    return statsBlocks(this.state.characters, names, (id) => this.stats.matchOf(id), this.state.round.score, this.player, false, this.extraction !== undefined, this.state.round.run.reserve, rosterTags(this.identities));
   }
 
   /** The result screen for the decided match (audit CORE-05): its lines and every player's numbers, for Game to show. */
@@ -616,6 +635,21 @@ export class MatchSession {
     // A round ended from Dev settings stays counted however the switches are set afterwards (BP3).
     if (!this.played) this.devAssisted = this.devEndedRound || devCheating(cheats);
     else if (devCheating(cheats)) this.devAssisted = true;
+    // The same, without adaptive difficulty itself: help that would teach it the wrong lesson (AD1).
+    const others = devCheating({ ...cheats, adaptiveDifficulty: false });
+    if (!this.played) this.otherDevHelp = this.devEndedRound || others;
+    else if (others) this.otherDevHelp = true;
+  }
+
+  /**
+   * Adaptive difficulty at the match's end (AD1): the rating it started at, and the next match's (null when other Dev
+   * help changed this one, so it learns nothing). Null when the match plays a fixed level or isn't decided.
+   */
+  adaptiveResult(): { start: number; next: number | null } | null {
+    const r = this.state.round;
+    if (!this.adaptive || r.phase !== 'matchOver') return null;
+    const helped = this.otherDevHelp || this.devEndedRound;
+    return { start: this.adaptive.start, next: helped ? null : this.adaptive.next(r.matchWinner === this.player.team) };
   }
 
   /**
@@ -700,22 +734,23 @@ export class MatchSession {
     }
     // You (id 0) and your teammates first, on the team you picked; then the other team (M98).
     const teams = rosterTeams(this.playerTeam, size, opposing);
-    // Bots roll only from what is offered: dev gear only with Dev content on (M35).
+    // Who the bots are (BN1): a roster name each, playing that name's personality, from the match's seed.
+    this.identities = drawIdentities(seed, teams.flatMap((team, id) => (id === PLAYER_ID ? [] : [{ id, team }])));
+    // Bots pick only from what is offered: dev gear only with Dev content on (M35).
     const botPool = contentPool(GAME_POOL, this.setup.devContent);
-    // Under the factory kit rule (M39) nobody rolls a kit: everyone carries LOADOUT as it comes.
-    const rolls = BOT_LOADOUTS[this.setup.difficulty] === 'random' && !this.setup.rules.factoryKit;
-    // Now and then, on a difficulty that rolls kits, one opponent carries a chase replica the player owns (M32).
-    const opponents = teams.flatMap((team, id) => (team === this.playerTeam ? [] : [id]));
-    const carrier = rolls ? chaseCarrier(botPool, this.setup.chaseOwned ?? [], seed, opponents) : null;
+    // Under the factory kit rule (M39) nobody carries a kit: everyone carries LOADOUT as it comes.
+    const kitted = !this.setup.rules.factoryKit;
     for (const [id, team] of teams.entries()) {
-      // You carry your kit; your teammates carry the default loadout as it comes, and so do the other team's bots unless
-      // their difficulty rolls each one a kit of its own (M29b).
-      const rolled = team !== this.playerTeam && rolls;
+      // You carry your kit; your teammates carry the default loadout as it comes (M29b), and each of the other team's
+      // bots picks its own kit from bot-kits.md by the difficulty's weights, leaning to the kits that suit its
+      // personality (BG1), seeded so a match replays them.
+      const personality = this.identities.get(id)?.personality ?? null;
+      const kit = id !== PLAYER_ID && team !== this.playerTeam && kitted ? pickBotKit(GAME_BOT_KITS, this.setup.difficulty, botPool, botKitSeed(seed, id), personality) : null;
       if (id === PLAYER_ID) this.state.characters.push(createCharacter(id, vec3(), 0, this.loadout, team));
-      else if (rolled) this.state.characters.push(this.underRules(chaseReady(kittedCharacter(id, team, randomKit(botPool, carriedLoadout(LOADOUT, id, carrier), botKitSeed(seed, id), BOT_PART_CHANCE[this.setup.difficulty])), carrier)));
+      else if (kit) this.state.characters.push(this.underRules(kittedBot(id, team, botPool, kit)));
       else this.state.characters.push(createCharacter(id, vec3(), 0, this.botLoadout, team));
     }
-    // On a night field every bot carries the offered torch (M33h): by rule, never rolled, so seeded kits don't shift.
+    // On a night field every bot carries the offered torch (M33h): by rule, never part of a kit, so seeded kits don't shift.
     // Not under the factory kit rule (M39): everyone carries LOADOUT as it comes.
     if (this.lighting.night && !this.setup.rules.factoryKit) {
       const light = botLight(botPool);
@@ -753,7 +788,7 @@ export class MatchSession {
   }
 
   /**
-   * A bot with a rolled kit under the match's replica rules (M39): each replica held on semi and/or on realcap
+   * A bot with a kit under the match's replica rules (M39): each replica held on semi and/or on realcap
    * magazines (the standard one fitted). Once, as the match is built; the bot itself when no rule applies.
    */
   private underRules(c: Character): Character {
@@ -762,7 +797,7 @@ export class MatchSession {
     const a = c.armament;
     for (let i = 0; i < a.replicas.length; i++) {
       a.replicas[i] = replicaUnderRules(a.replicas[i]!, rules);
-      // Semi only resets the selector; realcap alone keeps it (a chase carrier stays on auto, chaseReady).
+      // Semi only resets the selector; realcap alone keeps it (a kitted bot stays on auto, kittedBot).
       if (rules.semiAutoOnly) a.modes[i] = a.replicas[i]!.defaultFireMode;
     }
     if (rules.realcap) fitParts(a, a.parts.map((p) => ({ ...p, magazine: REALCAP.magazine })));
@@ -811,6 +846,8 @@ export class MatchSession {
   private afterTick(shown: boolean): void {
     this.stats.afterTick(this.state, SIM_DT);
     this.bots.observe(this.state);
+    // Adaptive difficulty (AD1): after a round, the other team plays the next a little sharper or gentler.
+    if (this.adaptive?.observe(this.state.events, this.teamOf)) this.bots.setTeamSkill(1 - this.player.team, this.adaptive.skill());
     this.eventLog.record(this.state.tick, this.state.events, this.player.id);
     this.eventLog.watchBots(this.state.tick, this.bots.bots);
     if (shown || skipTickShown(this.state.events)) {
@@ -832,7 +869,11 @@ export class MatchSession {
 
 }
 
-/** Per team, the bots' tuning: your team's bots at the teammates' difficulty, the other team's at the opponents' (M20). */
-function teamBotConfigs(playerTeam: number, setup: MatchSetup): BotConfig[] {
-  return byTeam(playerTeam, botConfig(setup.teammateDifficulty), botConfig(setup.difficulty));
+/**
+ * Per team, the bots' tuning: your team's bots at the teammates' difficulty, the other team's at the opponents' (M20),
+ * or at adaptive difficulty's skill (AD1). Your teammates never adapt.
+ */
+export function teamBotConfigs(playerTeam: number, setup: Pick<MatchSetup, 'difficulty' | 'teammateDifficulty'>, adaptive: AdaptiveRun | null): BotConfig[] {
+  const opponents = adaptive ? { ...BOT_BEHAVIOUR, ...adaptive.skill() } : botConfig(setup.difficulty);
+  return byTeam(playerTeam, botConfig(setup.teammateDifficulty), opponents);
 }

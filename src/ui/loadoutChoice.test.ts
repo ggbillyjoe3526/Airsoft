@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AEG, BB_WEIGHT, GAS_PISTOL, HOP_UP, muzzleEnergy, muzzleVelocity } from '../config/replicas';
-import { type ItemRef, itemKey } from '../pool/collection';
+import { type ItemRef, itemKey } from '../pool/item';
 import { GAME_POOL } from '../pool/gamePool';
 import { EMPTY_FIT, kitSlot, type ReplicaFit } from '../pool/kit';
 import { LoadoutModel } from '../pool/loadoutModel';
@@ -23,8 +23,8 @@ import {
 
 const pool = GAME_POOL;
 const id = (name: string) => pool.assets.find((a) => a.name === name)!.id;
-const item = (name: string, tier = 'common'): ItemRef => ({ asset: id(name), tier });
-/** The AEG Rifle or GBB Pistol (Common, on its starter power) with these items fitted. */
+const item = (name: string): ItemRef => ({ asset: id(name) });
+/** The AEG Rifle or GBB Pistol (on its starter power) with these items fitted. */
 const aeg = (parts: Partial<ReplicaFit> = {}) => kitSlot(pool, item('AEG Rifle'), { ...EMPTY_FIT, power: item('Standard Battery'), ...parts });
 const pistol = (parts: Partial<ReplicaFit> = {}) => kitSlot(pool, item('GBB Pistol'), { ...EMPTY_FIT, power: item('Green Gas'), ...parts });
 
@@ -83,10 +83,9 @@ describe('part readouts (M26b)', () => {
   it('says in numbers what a magazine does', () => {
     expect(magazineReadout(aeg())).toBe('60 BBs each, 4 carried (240 in all). Reload 1.8 s.');
     expect(magazineReadout(aeg({ magazine: item('Hi-Cap Magazine') }))).toBe('120 BBs each, 2 carried (240 in all). Reload 1.8 s.');
-    expect(magazineReadout(aeg({ magazine: item('Low-Cap Magazine') }))).toBe('30 BBs each, 5 carried (150 in all). Reload 1.4 s.');
+    // The Low-Cap holds what its Legendary copy did before LV1: a magazine more, a quicker reload and a quicker draw.
+    expect(magazineReadout(aeg({ magazine: item('Low-Cap Magazine') }))).toBe('30 BBs each, 6 carried (180 in all). Reload 1.4 s. Draw 0.41 s.');
     expect(magazineReadout(pistol({ magazine: item('Extended Magazine') }))).toBe('27 BBs each, 4 carried (108 in all). Reload 1.2 s. Draw 0.41 s.');
-    // A rarer magazine (and a rarer replica) reload quicker.
-    expect(magazineReadout(aeg({ magazine: item('Hi-Cap Magazine', 'legendary') }))).toBe('120 BBs each, 2 carried (240 in all). Reload 1.5 s.');
   });
 
   it("says how quickly the optic comes up with the replica's grip, or that iron sights fire from the hip", () => {
@@ -123,17 +122,17 @@ describe('Loadout tile on New game (M26b)', () => {
   });
 
   const owning = (items: ItemRef[]) => {
-    const set = new Set(items.map((r) => itemKey(r.asset, r.tier)));
-    return new LoadoutModel(pool, { owns: (r) => set.has(itemKey(r.asset, r.tier)) });
+    const set = new Set(items.map(itemKey));
+    return new LoadoutModel(pool, { owns: (r) => set.has(itemKey(r)) });
   };
   const STARTERS = ['AEG Rifle', 'GBB Pistol', 'Standard Battery', 'Green Gas'].map((n) => item(n));
 
-  it('names each replica (with its tier unless Common), then the fitted parts, BB weights and hop-up dials', () => {
+  it('names each replica (by name alone: LV1 has no tiers), then the fitted parts, BB weights and hop-up dials', () => {
     expect(loadoutTile(owning(STARTERS))).toEqual({ replicas: 'AEG Rifle\nGBB Pistol', detail: `0.25 g / 0.20 g BBs · hop-up 65% / ${hopUpLabel(GAS_PISTOL.hopUpDial)}` });
-    const model = owning([...STARTERS, item('AEG Rifle', 'epic'), item('Red Dot'), item('Red Laser', 'rare')]);
+    const model = owning([...STARTERS, item('Red Dot'), item('Red Laser')]);
     model.setFit(id('AEG Rifle'), 'optic', item('Red Dot'));
-    model.setFit(id('GBB Pistol'), 'laser', item('Red Laser', 'rare'));
-    expect(loadoutTile(model)).toEqual({ replicas: 'AEG Rifle (Epic)\nGBB Pistol', detail: `Red Dot · Red Laser · 0.25 g / 0.20 g BBs · hop-up 65% / ${hopUpLabel(GAS_PISTOL.hopUpDial)}` });
+    model.setFit(id('GBB Pistol'), 'laser', item('Red Laser'));
+    expect(loadoutTile(model)).toEqual({ replicas: 'AEG Rifle\nGBB Pistol', detail: `Red Dot · Red Laser · 0.25 g / 0.20 g BBs · hop-up 65% / ${hopUpLabel(GAS_PISTOL.hopUpDial)}` });
   });
 
   it('shows the factory setting for a missing dial or weight', () => {

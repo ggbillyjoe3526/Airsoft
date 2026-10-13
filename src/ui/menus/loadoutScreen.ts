@@ -1,11 +1,11 @@
 import { HOP_UP } from '../../config/replicas';
 import { GEAR_TEXT, LOADOUT_TEXT, MENU_TEXT } from '../../config/menus';
-import { SCHEMES, hasFixedColours, FAMILIES } from '../../config/schemes';
-import type { ItemRef } from '../../pool/collection';
+import { defaultScheme, SCHEMES, hasFixedColours, FAMILIES } from '../../config/schemes';
+import { type ItemRef, itemKey } from '../../pool/item';
 import { GEAR_SLOTS, type GearSlot, type LoadoutModel } from '../../pool/loadoutModel';
 import { type Asset, replicaOf } from '../../pool/pool';
 import type { SavedLoadouts } from '../../pool/savedLoadouts';
-import { gearLine, performanceOf, sheetRows, tierBlurb } from '../performanceSheet';
+import { gearLine, performanceOf, sheetRows } from '../performanceSheet';
 import { type MenuHint, optionTick, sectionHead } from './chrome';
 import { CustomiseView } from './customiseView';
 import { ITEM_ICONS, itemIcon, MENU_ICONS } from './icons';
@@ -13,7 +13,6 @@ import type { PictureContext } from './kitStrip';
 import { el, menuButton } from './menuParts';
 import { partSubject, PictureSlot, replicaSubject } from './menuPictures';
 import { perfRows, perfSheet } from './perfBars';
-import { arrangeByRarity, loadRarityView, RARITY_TEXT, RarityBar, type RarityView, saveRarityView } from './rarityFilter';
 import { SavedLoadoutsBar } from './savedLoadoutsBar';
 
 export { fixedValue, replicaSummary } from './customiseView';
@@ -27,19 +26,19 @@ export interface LoadoutOptions {
   onChange: () => void;
 }
 
-/** A carried replica's card: its slot's button (the picture, name, tier and stat line) and its Customise button. */
+/** A carried replica's card: its slot's button (the picture, name, colour and stat line) and its Customise button. */
 interface CarriedCard {
   root: HTMLDivElement;
   button: HTMLButtonElement;
   pic: PictureSlot;
   name: HTMLSpanElement;
-  tier: HTMLSpanElement;
+  colour: HTMLSpanElement;
   stats: HTMLSpanElement;
   chips: HTMLDivElement;
   customise: HTMLButtonElement;
 }
 
-/** A replica you own, as a tile in the grid. */
+/** A replica you have unlocked, as a tile in the grid. */
 interface ReplicaTile {
   ref: ItemRef;
   button: HTMLButtonElement;
@@ -49,8 +48,9 @@ interface ReplicaTile {
 
 /**
  * The Loadout screen (M26b; G3 layout): what you carry on the left (Primary and Secondary as big picture cards with
- * their fitted parts, then Grenades, empty until they arrive), the replicas you own in the middle (any goes in either
- * slot) and the selected slot's numbers on the right. Right-click an equipped replica, its Customise button or C opens
+ * their fitted parts, then Grenades, empty until they arrive), the replicas you have unlocked in the middle (any goes in
+ * either slot, LV1: the ones still to unlock after them, locked, with their levels) and the selected slot's numbers on
+ * the right. Right-click an equipped replica, its Customise button or C opens
  * Customise. A pick changes only the tiles it touches; nothing here redraws on its own.
  */
 export class LoadoutScreen {
@@ -58,17 +58,14 @@ export class LoadoutScreen {
   private readonly gearView: HTMLDivElement;
   private readonly cards = new Map<GearSlot, CarriedCard>();
   private readonly grid: HTMLDivElement;
-  /** "Unlock more in the Armory": hidden while the Armory is off (M83), or while everything is lent (M95). */
-  private readonly armoryNote: HTMLParagraphElement;
+  /** "Level up to unlock more": hidden while levelling is off (LV1), which lends everything anyway (M95). */
+  private readonly levelNote: HTMLParagraphElement;
   /** What the Loadout is for in Practice (M95), shown only when opened from there. */
   private readonly practiceNote: HTMLParagraphElement;
-  /** Dev settings › Unlock all gear lends everything (M95): said, so the borrowed picks are no surprise. */
+  /** Dev settings › Disable levelling lends everything (M95): said, so the borrowed picks are no surprise. */
   private readonly lentNote: HTMLParagraphElement;
   private tiles: ReplicaTile[] = [];
-  /** Sort and filter by rarity over the grid (M82), its choice saved; and the line shown when it hides every tile. */
-  private rarityView: RarityView;
-  private readonly rarityBar: RarityBar;
-  private readonly noneShown: HTMLParagraphElement;
+  private locked: HTMLElement[] = [];
   private readonly selectedName: HTMLHeadingElement;
   private readonly selectedLine: HTMLParagraphElement;
   private readonly sheet = perfSheet('loadout-perf');
@@ -106,19 +103,11 @@ export class LoadoutScreen {
     const owned = el('section', 'loadout-replicas');
     owned.append(sectionHead('02', GEAR_TEXT.replicas));
     this.grid = el('div', 'item-grid replica-grid');
-    const tiers = opts.model.pool.tiers;
-    this.rarityView = loadRarityView('replicas', tierIds(tiers));
-    this.rarityBar = new RarityBar('replicas', tiers, this.rarityView, (view) => {
-      this.rarityView = view;
-      saveRarityView('replicas', view, tierIds(tiers));
-      this.arrangeGrid();
-    });
-    this.noneShown = el('p', 'loadout-note rarity-none', RARITY_TEXT.noneShown.replicas);
-    this.armoryNote = el('p', 'loadout-note', GEAR_TEXT.unlockMore);
+    this.levelNote = el('p', 'loadout-note', GEAR_TEXT.unlockMore);
     this.practiceNote = el('p', 'loadout-note loadout-practice', GEAR_TEXT.practice);
     this.practiceNote.hidden = true;
     this.lentNote = el('p', 'loadout-note loadout-lent', GEAR_TEXT.lent);
-    owned.append(this.rarityBar.root, this.grid, this.noneShown, this.practiceNote, this.lentNote, this.armoryNote);
+    owned.append(this.grid, this.practiceNote, this.lentNote, this.levelNote);
 
     const aside = el('aside', 'loadout-selected menu-card');
     aside.setAttribute('aria-label', GEAR_TEXT.selected);
@@ -156,12 +145,9 @@ export class LoadoutScreen {
     this.refresh();
   }
 
-  /** Re-reads the loadout (after the Armory unlocked something, say) and shows the gear. */
+  /** Re-reads the loadout (after a level unlocked something, say) and shows the gear. */
   refresh(): void {
-    const lent = this.opts.model.lent();
-    this.lentNote.hidden = !lent;
-    // The Armory off (Dev settings, M83), or everything lent anyway: no line sends the player there.
-    this.armoryNote.hidden = lent || this.opts.context.armoryShown?.() === false;
+    this.lentNote.hidden = !this.opts.model.lent();
     this.closeView();
     this.buildGrid();
     this.update();
@@ -180,12 +166,12 @@ export class LoadoutScreen {
     button.type = 'button';
     const pic = new PictureSlot('carried-pic');
     const name = el('span', 'gear-name');
-    const tier = el('span', 'gear-tier');
+    const colour = el('span', 'gear-colour');
     const stats = el('span', 'gear-stats');
     const words = el('span', 'gear-words');
-    words.append(el('span', 'menu-kicker', LOADOUT_TEXT.slots[slot]), name, tier, stats);
+    words.append(el('span', 'menu-kicker', LOADOUT_TEXT.slots[slot]), name, colour, stats);
     const chips = el('div', 'part-chips');
-    button.append(pic.root, words, chips, el('span', 'tier-bar'));
+    button.append(pic.root, words, chips);
     button.addEventListener('click', () => this.select(slot));
     button.addEventListener('contextmenu', (e) => {
       e.preventDefault();
@@ -194,24 +180,25 @@ export class LoadoutScreen {
     const customise = menuButton(LOADOUT_TEXT.customise, 'primary', () => this.customise(slot));
     customise.classList.add('carried-customise');
     root.append(button, customise);
-    return { root, button, pic, name, tier, stats, chips, customise };
+    return { root, button, pic, name, colour, stats, chips, customise };
   }
 
-  /** The replicas you own, a tile each (made again only when what you own may have changed). */
+  /**
+   * The replicas you have unlocked, a tile each, then the ones still to unlock, locked, with their levels (LV1; none
+   * while levelling is off). Made again only when what you have may have changed.
+   */
   private buildGrid(): void {
     const m = this.opts.model;
     this.tiles = m.replicaChoices().map((ref) => {
       const asset = m.pool.byId.get(ref.asset)!;
       const button = el('button', 'item-tile replica-tile');
       button.type = 'button';
-      button.dataset.item = key(ref);
-      button.dataset.tier = ref.tier;
-      button.title = tierBlurb(m.pool, ref);
+      button.dataset.item = itemKey(ref);
       const pic = new PictureSlot('tile-pic');
       const note = el('span', 'item-note');
       const words = el('span', 'item-words');
-      words.append(el('span', 'item-name', asset.name), el('span', 'item-tier', this.tierLabel(ref)));
-      button.append(pic.root, words, note, el('span', 'tier-bar'), optionTick());
+      words.append(el('span', 'item-name', asset.name));
+      button.append(pic.root, words, note, optionTick());
       button.addEventListener('click', () => this.equip(ref));
       // Right-click customises the equipped replica only: a misplaced right-click never swaps what you carry.
       button.addEventListener('contextmenu', (e) => {
@@ -222,22 +209,11 @@ export class LoadoutScreen {
       });
       return { ref, button, pic, note };
     });
-    this.arrangeGrid();
-  }
-
-  /**
-   * The tiles in the rarity bar's order, those in a hidden tier left out (M82), except a replica you carry: it always
-   * shows. Run when the grid is built and when the bar changes, not on a pick, so a tile never vanishes from under the
-   * pointer.
-   */
-  private arrangeGrid(): void {
-    const m = this.opts.model;
-    const equipped = m.equipped();
-    const carried = (t: ReplicaTile) => equipped.some((r) => r && sameItem(r, t.ref));
-    const shown = arrangeByRarity(this.tiles, (t) => t.ref.tier, tierIds(m.pool.tiers), this.rarityView, carried);
-    this.grid.replaceChildren(...shown.map((t) => t.button));
-    this.rarityBar.setHiddenCount(this.tiles.length - shown.length);
-    this.noneShown.hidden = shown.length > 0;
+    const levelling = this.opts.context.levelling?.() !== false;
+    this.locked = levelling ? m.lockedReplicas().map(({ item, level }) => lockedTile(m.pool.byId.get(item.asset)!, level, this.opts.context)) : [];
+    // Levelling off, or everything lent anyway (M95): no line sends the player to level up.
+    this.levelNote.hidden = !levelling || m.lent();
+    this.grid.replaceChildren(...this.tiles.map((t) => t.button), ...this.locked);
   }
 
   private select(slot: GearSlot): void {
@@ -271,13 +247,11 @@ export class LoadoutScreen {
       card.root.classList.toggle('selected', on);
       const asset = ref ? m.pool.byId.get(ref.asset)! : null;
       setText(card.name, asset ? asset.name : LOADOUT_TEXT.empty);
-      const tier = ref ? this.tierLabel(ref) : '';
-      setText(card.tier, ref && asset ? `${tier}${hasFixedColours(replicaOf(asset)) ? '' : ` · ${this.schemeName(asset)}`}` : '');
+      const colour = asset && !hasFixedColours(replicaOf(asset)) ? this.schemeName(asset) : '';
+      setText(card.colour, colour);
       setText(card.stats, ref ? gearLine(m.slotKit(ref), m.bbWeight(ref.asset)) : '');
-      if (ref) card.root.dataset.tier = ref.tier;
-      else delete card.root.dataset.tier;
       card.root.classList.toggle('empty', !ref);
-      setAttr(card.button, 'aria-label', `${LOADOUT_TEXT.slots[slot]}: ${ref ? `${asset!.name}, ${tier}` : LOADOUT_TEXT.empty}`);
+      setAttr(card.button, 'aria-label', `${LOADOUT_TEXT.slots[slot]}: ${asset ? `${asset.name}${colour ? `, ${colour}` : ''}` : LOADOUT_TEXT.empty}`);
       card.customise.hidden = !ref;
       if (asset) setAttr(card.customise, 'aria-label', `${LOADOUT_TEXT.customise} ${asset.name}`);
       card.pic.show(this.opts.context.pictures, ref && asset ? replicaSubject(asset, m.scheme(asset.id), realistic, m.slotKit(ref)) : null, asset ? itemIcon(asset) : ITEM_ICONS.aeg);
@@ -329,9 +303,7 @@ export class LoadoutScreen {
     const asset = m.pool.byId.get(ref.asset)!;
     const base = replicaOf(asset);
     setText(this.selectedName, asset.name);
-    const tier = el('span', 'tier-text', this.tierLabel(ref));
-    tier.dataset.tier = ref.tier;
-    this.selectedLine.replaceChildren(tier, ` · ${GEAR_TEXT.asCarried}`);
+    setText(this.selectedLine, hasFixedColours(base) ? GEAR_TEXT.asCarried : `${this.schemeName(asset)} · ${GEAR_TEXT.asCarried}`);
     const factory = performanceOf(m.asItComes(asset.id), base.bbWeight, base.hopUpDial);
     const now = performanceOf(m.slotKit(ref), m.bbWeight(asset.id), m.hopUp(asset.id), m.capped(ref));
     this.sheet.rows.replaceChildren(...perfRows(sheetRows(now, factory, HOP_UP.readoutRange)));
@@ -366,26 +338,32 @@ export class LoadoutScreen {
     this.gearView.hidden = false;
   }
 
-  private tierLabel(ref: ItemRef): string {
-    return this.opts.model.pool.tiers.find((t) => t.id === ref.tier)?.label ?? ref.tier;
-  }
-
   private schemeName(asset: Asset): string {
     const scheme = this.opts.model.scheme(asset.id);
     return this.opts.context.realistic() ? FAMILIES[SCHEMES[scheme].family].name : SCHEMES[scheme].name;
   }
 }
 
-function tierIds(tiers: readonly { id: string }[]): string[] {
-  return tiers.map((t) => t.id);
-}
-
-function key(ref: ItemRef): string {
-  return `${ref.asset}@${ref.tier}`;
-}
-
 function sameItem(a: ItemRef, b: ItemRef): boolean {
-  return a.asset === b.asset && a.tier === b.tier;
+  return a.asset === b.asset;
+}
+
+/**
+ * A replica still to unlock (LV1): its picture, its name and the level that unlocks it, greyed and out of reach (no
+ * button: nothing to pick yet). The Armory shows the whole track.
+ */
+function lockedTile(asset: Asset, level: number, context: PictureContext): HTMLDivElement {
+  const tile = el('div', 'item-tile replica-tile is-locked');
+  tile.dataset.item = asset.id;
+  const pic = new PictureSlot('tile-pic');
+  pic.show(context.pictures, replicaSubject(asset, defaultScheme(replicaOf(asset)), context.realistic()), itemIcon(asset));
+  const lock = el('span', 'item-lock');
+  lock.setAttribute('aria-hidden', 'true');
+  lock.innerHTML = MENU_ICONS.lock;
+  const words = el('span', 'item-words');
+  words.append(el('span', 'item-name', asset.name));
+  tile.append(pic.root, words, el('span', 'item-note item-level', LOADOUT_TEXT.lockedAt(level)), lock);
+  return tile;
 }
 
 /** Sets a node's text only when it changes, so an unchanged tile isn't touched. */

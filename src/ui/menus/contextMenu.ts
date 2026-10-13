@@ -22,9 +22,10 @@ interface ChoiceButton {
 }
 
 /**
- * A small pop-up menu at the pointer (M100: the Armory's right-click to scrap). Built once, with its buttons, and shown
- * again for whatever is asked: `open` fills the labels and moves it, nothing is created per use and nothing runs per
- * frame. Its listeners on the page (a press outside, a scroll, a resize) are on only while it is open.
+ * A small pop-up menu at the pointer (M100; the saved loadouts' menus since SL1, the Armory's scrap before LV1). Built
+ * once, with its buttons, and shown again for whatever is asked: `open` fills the labels and moves it, nothing is
+ * created per use and nothing runs per frame. Its listeners on the page (a press outside, a scroll, a resize) are on
+ * only while it is open.
  *
  * It closes on Esc (the key stops here, so it never also goes Back), on a press outside it, when focus leaves it, on a
  * scroll or resize, and after a choice. The items are buttons with names; Up, Down, Home and End move between them. The

@@ -16,5 +16,5 @@ export function withAssets(pool: Pool, extra: readonly Asset[]): Pool {
 /** A dev optic whose Fits match no replica of the real pool (it needs a tag nothing has). */
 export function strayDevPart(pool: Pool): Asset {
   const optic = pool.assets.find((a) => a.category === 'optic')!;
-  return { ...optic, id: '999999', name: 'Stray Dev Optic', tags: ['no-such-rail'], starter: false, tag: 'dev' };
+  return { ...optic, id: '999999', name: 'Stray Dev Optic', tags: ['no-such-rail'], tag: 'dev' };
 }

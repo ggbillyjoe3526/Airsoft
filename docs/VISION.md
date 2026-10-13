@@ -25,7 +25,8 @@ Owner rulings (owner, 2026-10-01):
   and handle.
 - **Fields follow a checklist.** Cover, barricades, buildings, windows, doorways, choke points, flanking routes,
   objectives, dead zones and spawn areas.
-- **Unlocks never block fun.** Free from the start until progression exists, and progression is never level-based.
+- **Unlocks never block fun.** Everyone starts with a rifle and a pistol ready to play; levels add parts and replicas
+  for good, nothing is ever taken away and nothing is sold (owner, 2026-10-13).
 
 ## Tone
 

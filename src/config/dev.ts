@@ -1,3 +1,4 @@
+import { ADAPTIVE_TEXT } from './adaptiveDifficulty';
 import type { LightingPresetId } from './render';
 
 /**
@@ -9,13 +10,15 @@ import type { LightingPresetId } from './render';
 export interface DevSettings {
   /**
    * Content tagged dev (M35, config/content.ts): maps, modes, difficulties and gear still being built are offered,
-   * looking like the rest. A match that uses any of it stays out of the records and pays no FC (that is decided by what the
-   * match uses, not by the switch, so it isn't a `cheat`).
+   * looking like the rest. A match that uses any of it stays out of the records and gives no XP (that is decided by what
+   * the match uses, not by the switch, so it isn't a `cheat`).
    */
   devContent: boolean;
-  /** Turns the Armory off (M26d): gone from every menu (M83), and matches pay no Field Credits. */
-  disableArmory: boolean;
-  /** Every asset in pool.md owned at every tier, for the Loadout (M26d); the collection itself is left as it is. */
+  /**
+   * Disable levelling (M26d's Unlock all gear, LV1): every asset in pool.md unlocked for the Loadout, and matches give no
+   * XP (a `cheat`: they stay out of the records too). The player's own level and unlocks are left as they are. The id
+   * stays `unlockAllGear` so saved Dev settings keep it.
+   */
   unlockAllGear: boolean;
   /**
    * The figures drawn with the built-in ones, not the figure model file (RM4; owner, 2026-10-11): on by default, as
@@ -37,8 +40,6 @@ export interface DevSettings {
   ghost: boolean;
   /** The simulation's speed: 1 is normal, below it slow motion. */
   gameSpeed: number;
-  /** Armory Shots cost nothing (M90): the cases can be tried without earning the Field Credits. Changes no match. */
-  freeShots: boolean;
   /**
    * The light every map plays under (M90): its own pick ('map', the Match screen's Day or Night where it offers both),
    * or Day or Night on any map (config/render.ts LIGHTING_PRESETS: any map can take any preset). From the next match.
@@ -50,11 +51,16 @@ export interface DevSettings {
   spectateBots: boolean;
   /** A small label over each bot saying what its brain is doing (M90): fighting, holding, searching … Presentation only. */
   botIntent: boolean;
+  /**
+   * Adaptive difficulty (AD1, Dev 6 item 48; owner, 2026-10-06: "auto difficulty as a Dev setting"): in Elimination and
+   * Attack / Defend the other team's skill follows how you do (config/adaptiveDifficulty.ts). A `cheat`: its matches
+   * play no fixed level, so they stay out of the records.
+   */
+  adaptiveDifficulty: boolean;
 }
 
 export const DEV_DEFAULTS: Readonly<DevSettings> = {
   devContent: false,
-  disableArmory: false,
   unlockAllGear: false,
   disableFigureModels: true,
   disableAllModels: true,
@@ -63,11 +69,11 @@ export const DEV_DEFAULTS: Readonly<DevSettings> = {
   bottomlessMags: false,
   ghost: false,
   gameSpeed: 1,
-  freeShots: false,
   timeOfDay: 'map',
   botsHoldFire: false,
   spectateBots: false,
   botIntent: false,
+  adaptiveDifficulty: false,
 };
 
 type KeysOf<V> = { [K in keyof DevSettings]: DevSettings[K] extends V ? K : never }[keyof DevSettings];
@@ -87,11 +93,16 @@ export const DEV_ENTRIES: readonly DevEntry[] = [
     kind: 'switch',
     id: 'devContent',
     label: 'Dev content',
-    help: "Shows maps, modes, difficulties and gear still being built. Matches that use any of it don't go into your records or pay Field Credits.",
+    help: "Shows maps, modes, difficulties and gear still being built. Matches that use any of it don't go into your records or give XP.",
     cheat: false,
   },
-  { kind: 'switch', id: 'disableArmory', label: 'Disable Armory', help: 'Turns off every Armory mechanic and takes the Armory out of the menus, Field Credits and Tokens too.', cheat: false },
-  { kind: 'switch', id: 'unlockAllGear', label: 'Unlock all gear', help: 'Every replica and part in the pool, at every rarity it comes in, is yours to equip. Your own collection stays as it is.', cheat: true },
+  {
+    kind: 'switch',
+    id: 'unlockAllGear',
+    label: 'Disable levelling',
+    help: 'Every replica and part is unlocked to equip, and matches give no XP. Your own level and unlocks stay as they are and come back when you turn it off.',
+    cheat: true,
+  },
   {
     kind: 'switch',
     id: 'disableFigureModels',
@@ -120,6 +131,7 @@ export const DEV_ENTRIES: readonly DevEntry[] = [
     cheat: true,
   },
   { kind: 'switch', id: 'botIntent', label: 'Bot intentions', help: 'A small label over each bot in play says what it is doing: advancing, holding, fighting, searching …', cheat: true },
+  { kind: 'switch', id: 'adaptiveDifficulty', label: ADAPTIVE_TEXT.label, help: ADAPTIVE_TEXT.help, cheat: true },
   {
     kind: 'choice',
     id: 'timeOfDay',
@@ -132,14 +144,13 @@ export const DEV_ENTRIES: readonly DevEntry[] = [
       { id: 'night', label: 'Night', blurb: '' },
     ],
   },
-  { kind: 'switch', id: 'freeShots', label: 'Free case openings', help: 'Armory Shots cost no Tokens or Field Credits.', cheat: false },
 ];
 
 /**
  * The Dev tab's buttons (M90): each does something once, nothing saved. `cheat`: a match it acts on stays out of the
  * records (End the round now marks the match itself). `confirm`: asked first.
  */
-export type DevActionId = 'giveFc' | 'giveTokens' | 'endRound' | 'resetSave';
+export type DevActionId = 'giveXp' | 'levelUp' | 'resetLevel' | 'endRound' | 'resetSave';
 export interface DevAction {
   id: DevActionId;
   label: string;
@@ -148,12 +159,19 @@ export interface DevAction {
   confirm?: { title: string; question: string; yes: string };
 }
 
-/** What the gift buttons give each press (M90). */
-export const DEV_GIFTS = { fc: 1000, tokens: 10 } as const;
+/** What the XP button gives each press (M90, LV1). */
+export const DEV_GIFTS = { xp: 500 } as const;
 
 export const DEV_ACTIONS: readonly DevAction[] = [
-  { id: 'giveFc', label: 'Field Credits', help: `Adds ${DEV_GIFTS.fc.toLocaleString('en-GB')} FC to your wallet, for the Armory.`, button: `+${DEV_GIFTS.fc.toLocaleString('en-GB')} FC` },
-  { id: 'giveTokens', label: 'Tokens', help: `Adds ${DEV_GIFTS.tokens} Tokens to your wallet, for the Armory's Shots.`, button: `+${DEV_GIFTS.tokens} Tokens` },
+  { id: 'giveXp', label: 'XP', help: `Adds ${DEV_GIFTS.xp} XP to your level, unlocking what it reaches.`, button: `+${DEV_GIFTS.xp} XP` },
+  { id: 'levelUp', label: 'Next level', help: 'Adds the XP the next level takes, unlocking what it gives.', button: 'Level up' },
+  {
+    id: 'resetLevel',
+    label: 'Reset level',
+    help: 'Back to level 0 with the starting kit, to play the levels through again. The rest of the save stays.',
+    button: 'Reset level',
+    confirm: { title: 'Reset your level?', question: 'Your XP goes back to 0 and only the starting kit stays unlocked.', yes: 'Reset level' },
+  },
   {
     id: 'endRound',
     label: 'End the round now',
@@ -165,12 +183,12 @@ export const DEV_ACTIONS: readonly DevAction[] = [
     label: 'Reset the save',
     help: 'Deletes the save and starts the game as for a new player. Undo on the Save group brings it back.',
     button: 'Reset save',
-    confirm: { title: 'Reset the save?', question: 'Your settings, key bindings, Loadout, Armory collection and records go, and the game reloads fresh.', yes: 'Reset save' },
+    confirm: { title: 'Reset the save?', question: 'Your settings, key bindings, Loadout, level and records go, and the game reloads fresh.', yes: 'Reset save' },
   },
 ];
 
 /** What a Dev button says for a moment after it is pressed (M90). */
-export const DEV_ACTION_TEXT = { done: 'Done', noRound: 'No round under way', noteTime: 1600 } as const;
+export const DEV_ACTION_TEXT = { done: 'Done', noRound: 'No round under way', topLevel: 'At the top level', noteTime: 1600 } as const;
 
 /** The two Dev tab switches the game shows as On / Off. */
 export const DEV_SWITCH_CHOICES: readonly { id: 'on' | 'off'; label: string; blurb: string }[] = [

@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { BOT_PERSONALITIES } from '../config/botPersonalities';
 import { ORDER_WHEEL } from '../config/squad';
 import { TEAMS } from '../config/teams';
 import { TUTORIAL } from '../config/tutorial';
@@ -83,7 +84,11 @@ describe('what the tutorial opens on screen (M80)', () => {
     expect(blocks.map((b) => b.team)).toEqual([1, 0]);
     expect(blocks[0]!.title).toBe(`${TEAMS[1].name} (you) · ${TUTORIAL.sampleBoard.score[0]} rounds won`);
     expect(blocks[0]!.rows[0]!).toMatchObject({ name: 'You', you: true });
-    expect(blocks[1]!.rows.map((r) => r.name)).toEqual(TUTORIAL.sampleBoard.rows[1]!.map((_, i) => `${TEAMS[0].name} ${i + 1}`));
+    // The bots by roster name with their personality (BN1), as in a match: all different, each tagged.
+    const bots = blocks.flatMap((b) => b.rows).filter((r) => !r.you);
+    expect(new Set(bots.map((r) => r.name)).size).toBe(bots.length);
+    expect(bots.every((r) => BOT_PERSONALITIES.roster.some((e) => e.name === r.name) && r.tag !== '')).toBe(true);
+    expect(new Set(blocks[1]!.rows.map((r) => r.tag)).size).toBe(blocks[1]!.rows.length);
     // Some are out, so the board shows what a hit player looks like.
     expect(blocks.flatMap((b) => b.rows).some((r) => r.out)).toBe(true);
   });

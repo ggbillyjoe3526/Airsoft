@@ -15,15 +15,16 @@ import {
   TEAM_SIZE_CHOICES,
   WINS_NEEDED_CHOICES,
 } from './config/matchRules';
-import { matchEarnings } from './pool/armory';
+import { GAME_LEVELS } from './progress/gameLevels';
+import { matchXp } from './progress/xp';
 import { resultKey } from './stats/records';
 import { matchStanding } from './stats/settleMatch';
 import { DEFAULT_MODE, MATCH_MODES } from './config/modes';
 import { DEFAULT_MAP, MAPS, mapData } from './map/maps';
 import { botsMayCarryDev, matchUsesDev, type NewGamePicks, pickTags, picksUseDev, playedPicks, playedTeamSize } from './newGamePicks';
 import { EXTRACTION, squadSize } from './config/extraction';
-import { BOT_LOADOUTS } from './config/bots';
 import { LOADOUT } from './config/replicas';
+import { readBotKits } from './pool/botKit';
 import { GAME_POOL } from './pool/gamePool';
 import { assetOfReplica } from './pool/pool';
 import { strayDevPart, withAssets, withTags } from './pool/testSupport';
@@ -164,39 +165,36 @@ describe('New game picks and dev content (M35)', () => {
 });
 
 describe('whether the opponents may carry dev gear and whether a match uses dev content (M35)', () => {
-  const kitOf = (...names: string[]) => names.map((n) => ({ asset: GAME_POOL.assets.find((a) => a.name === n)!.id, tier: 'common' }));
+  const kitOf = (...names: string[]) => names.map((n) => ({ asset: GAME_POOL.assets.find((a) => a.name === n)!.id }));
   const devPool = withTags(GAME_POOL, { 'Red Dot': 'dev' });
   const strayPool = withAssets(GAME_POOL, [strayDevPart(GAME_POOL)]);
-
-  it('rolls the bots\' kits on hard and pro only (the premise of the rest)', () => {
-    expect(BOT_LOADOUTS).toEqual({ easy: 'factory', normal: 'factory', hard: 'random', pro: 'random' });
-  });
 
   it('says no for the real pool, on every difficulty, with Dev content off or on', () => {
     for (const devContent of [false, true]) for (const d of DIFFICULTIES) expect(botsMayCarryDev(GAME_POOL, devContent, d.id)).toBe(false);
   });
 
-  it('says yes only with Dev content on, on a difficulty that rolls kits, and dev gear a kit could hold', () => {
-    expect(botsMayCarryDev(devPool, true, 'hard')).toBe(true);
-    expect(botsMayCarryDev(devPool, false, 'hard')).toBe(false);
-    expect(botsMayCarryDev(devPool, true, 'easy')).toBe(false);
-    expect(botsMayCarryDev(devPool, true, 'normal')).toBe(false);
-    expect(botsMayCarryDev(withTags(GAME_POOL, { 'GBB Pistol': 'dev' }), true, 'hard')).toBe(true);
-  });
-
-  it('says yes for a dev chase replica the player owns (M32: one opponent may carry it), with Dev content on, on hard', () => {
-    const cyber = GAME_POOL.assets.find((a) => a.name === 'Cyber Pistol')!.id;
+  it('says yes only with Dev content on, when a kit bot-kits.md weights for the difficulty holds the dev gear (BG1)', () => {
+    // The Red Dot is in kits every difficulty picks.
+    for (const d of DIFFICULTIES) {
+      expect(botsMayCarryDev(devPool, true, d.id), d.label).toBe(true);
+      expect(botsMayCarryDev(devPool, false, d.id), d.label).toBe(false);
+    }
+    expect(botsMayCarryDev(withTags(GAME_POOL, { 'GBB Pistol': 'dev' }), true, 'easy')).toBe(true);
+    // The Cyber Pistol is only in the Cyber kit, which Easy and Normal never pick.
     const devCyber = withTags(GAME_POOL, { 'Cyber Pistol': 'dev' });
-    expect(botsMayCarryDev(devCyber, true, 'hard', [cyber])).toBe(true);
-    expect(botsMayCarryDev(devCyber, false, 'hard', [cyber])).toBe(false);
-    expect(botsMayCarryDev(devCyber, true, 'normal', [cyber])).toBe(false);
-    expect(botsMayCarryDev(devCyber, true, 'hard', [])).toBe(false);
-    expect(botsMayCarryDev(GAME_POOL, true, 'hard', [cyber])).toBe(false);
-    expect(matchUsesDev(picks({ difficulty: 'hard' }), [], devCyber, true, [cyber])).toBe(true);
-    expect(matchUsesDev(picks({ difficulty: 'hard' }), [], devCyber, true)).toBe(false);
+    expect(botsMayCarryDev(devCyber, true, 'hard')).toBe(true);
+    expect(botsMayCarryDev(devCyber, true, 'normal')).toBe(false);
+    expect(matchUsesDev(picks({ difficulty: 'hard' }), [], devCyber, true)).toBe(true);
+    expect(matchUsesDev(picks({ difficulty: 'normal' }), [], devCyber, true)).toBe(false);
   });
 
-  it('says no when the only dev asset fits no LOADOUT replica', () => {
+  it('reads the kits it is given', () => {
+    const table = readBotKits('| Kit | Primary | Primary parts | Secondary | Secondary parts | Easy | Normal | Hard | Pro |\n|---|---|---|---|---|---|---|---|---|\n| Dot | AEG Rifle | Red Dot | | | 0 | 0 | 1 | 0 |\n', GAME_POOL);
+    expect(botsMayCarryDev(devPool, true, 'hard', table)).toBe(true);
+    expect(botsMayCarryDev(devPool, true, 'easy', table)).toBe(false);
+  });
+
+  it('says no when the only dev asset is in no kit', () => {
     expect(botsMayCarryDev(strayPool, true, 'hard')).toBe(false);
   });
 
@@ -222,23 +220,23 @@ describe('whether the opponents may carry dev gear and whether a match uses dev 
     expect(matchUsesDev(picks(), kitOf('AEG Rifle'), devPool, false)).toBe(false);
   });
 
-  it("uses dev content when the opponents may roll dev gear, on hard with Dev content on only", () => {
+  it("uses dev content when the opponents may carry dev gear, with Dev content on only", () => {
     expect(matchUsesDev(picks({ difficulty: 'hard' }), [], devPool, true)).toBe(true);
     expect(matchUsesDev(picks({ difficulty: 'hard' }), [], devPool, false)).toBe(false);
-    expect(matchUsesDev(picks({ difficulty: 'normal' }), [], devPool, true)).toBe(false);
+    expect(matchUsesDev(picks({ difficulty: 'normal' }), [], devPool, true)).toBe(true);
     expect(matchUsesDev(picks({ difficulty: 'hard' }), [], strayPool, true)).toBe(false);
   });
 });
 
 describe('the replicas every bot carries (M35)', () => {
-  it('are public in pool.md: teammates and Easy or Normal opponents carry them whatever the Dev content switch says', () => {
+  it('are public in pool.md: teammates carry them whatever the Dev content switch says', () => {
     for (const r of LOADOUT) expect(assetOfReplica(GAME_POOL, r)?.tag).toBe('public');
   });
 });
 
-describe('the Rules picker and dev content, records and pay (M39)', () => {
-  const economy = GAME_POOL.economy;
-  /** What a match of these picks (as played) would do: count, pay and file where. */
+describe('the Rules picker and dev content, records and XP (M39, LV1)', () => {
+  const xpRules = GAME_LEVELS.xp;
+  /** What a match of these picks (as played) would do: count, give XP and file where. */
   function settle(p: NewGamePicks, devContent: boolean) {
     const played = playedPicks(p, devContent);
     const standing = matchStanding({
@@ -247,9 +245,9 @@ describe('the Rules picker and dev content, records and pay (M39)', () => {
       devContentUsed: matchUsesDev(played, [], GAME_POOL, devContent),
     });
     const customRules = !standardRules(played.ruleset, played.rules);
-    const pay = matchEarnings(economy, { won: true, roundsWon: 7, hits: 0, winsNeeded: played.rules.winsNeeded, difficulty: played.difficulty, teammateDifficulty: played.teammateDifficulty, ...(customRules ? { customRules } : {}) });
+    const xp = matchXp(xpRules, { won: true, roundsWon: 7, hits: 0, winsNeeded: played.rules.winsNeeded, difficulty: played.difficulty, teammateDifficulty: played.teammateDifficulty, ...(customRules ? { customRules } : {}) });
     const key = recordsKeyOf(played.ruleset);
-    return { played, standing, multiplier: pay.multiplier, cell: key === null ? null : resultKey(played.difficulty, played.mode, key) };
+    return { played, standing, multiplier: xp.multiplier, cell: key === null ? null : resultKey(played.difficulty, played.mode, key) };
   }
   const on = (ruleset: RulesetId, difficulty: 'easy' | 'normal' | 'hard' | 'pro' = 'normal', rules: Partial<MatchRules> = {}) =>
     picks({ ruleset, difficulty, teammateDifficulty: difficulty }, rules);
@@ -273,15 +271,15 @@ describe('the Rules picker and dev content, records and pay (M39)', () => {
     expect(playedPicks(s, true).rules).toEqual({ ...DEFAULT_MATCH_RULES, winsNeeded: 3 });
   });
 
-  it('keeps every match on Pro or a dev ruleset unpaid and out of the records while they are dev (M35)', () => {
+  it('keeps every match on Pro or a dev ruleset without XP and out of the records while they are dev (M35)', () => {
     for (const r of ['tournament', 'proCqb'] as const) {
-      expect(settle(on(r, 'hard'), true).standing).toEqual({ notCounted: 'devContent', unpaid: 'devContent' });
+      expect(settle(on(r, 'hard'), true).standing).toEqual({ notCounted: 'devContent', noXp: 'devContent' });
     }
-    expect(settle(on('skirmish', 'pro'), true).standing.unpaid).toBe('devContent');
-    expect(settle(on('custom', 'pro'), true).standing).toEqual({ notCounted: 'rules', unpaid: 'devContent' });
+    expect(settle(on('skirmish', 'pro'), true).standing.noXp).toBe('devContent');
+    expect(settle(on('custom', 'pro'), true).standing).toEqual({ notCounted: 'rules', noXp: 'devContent' });
   });
 
-  it('once public: named rulesets get their own cells on every level and pay ×2 on Pro; Custom on Pro pays ×1.5 and never counts', () => {
+  it('once public: named rulesets get their own cells on every level and give ×2 XP on Pro; Custom on Pro gives ×1.5 and never counts', () => {
     tagDev(DIFFICULTIES, 'pro', 'public');
     tagDev(TEAMMATE_DIFFICULTIES, 'pro', 'public');
     tagDev(RULESETS, 'tournament', 'public');
@@ -289,40 +287,40 @@ describe('the Rules picker and dev content, records and pay (M39)', () => {
     for (const d of ['easy', 'normal', 'hard', 'pro'] as const) {
       for (const r of ['tournament', 'proCqb'] as const) {
         const m = settle(on(r, d), false);
-        expect(m.standing).toEqual({ notCounted: '', unpaid: null });
+        expect(m.standing).toEqual({ notCounted: '', noXp: null });
         expect(m.cell).toBe(`${d}.elimination.${r}`);
-        expect(m.multiplier).toBe(economy.difficulty[d]);
+        expect(m.multiplier).toBe(xpRules.difficulty[d]);
       }
       // Skirmish files as it always did.
       expect(settle(on('skirmish', d), false).cell).toBe(`${d}.elimination`);
-      // Custom never counts and pays its level's rate, capped at ×1.5.
+      // Custom never counts and gives its level's rate, capped at ×1.5.
       const c = settle(on('custom', d), false);
-      expect(c.standing).toEqual({ notCounted: 'rules', unpaid: null });
-      expect(c.multiplier).toBe(Math.min(economy.difficulty[d], CUSTOM_RULES_PAY_CAP));
+      expect(c.standing).toEqual({ notCounted: 'rules', noXp: null });
+      expect(c.multiplier).toBe(Math.min(xpRules.difficulty[d], CUSTOM_RULES_PAY_CAP));
     }
     expect(settle(on('tournament', 'pro'), false).multiplier).toBe(2);
     expect(settle(on('proCqb', 'pro'), false).multiplier).toBe(2);
     expect(settle(on('custom', 'pro'), false).multiplier).toBe(1.5);
-    // A named ruleset with its team size changed is custom rules: not recorded, and paid as Custom on Pro.
+    // A named ruleset with its team size changed is custom rules: not recorded, and given XP as Custom on Pro.
     const small = settle(on('tournament', 'pro', { teamSize: 2 }), false);
     expect(small.standing.notCounted).toBe('rules');
     expect(small.multiplier).toBe(1.5);
   });
 
-  it('pays and records Easy, Normal and Hard Skirmish exactly as before M39', () => {
+  it('gives XP for and records Easy, Normal and Hard Skirmish exactly as before M39', () => {
     for (const d of ['easy', 'normal', 'hard'] as const) {
       const m = settle(on('skirmish', d), false);
-      expect(m.standing).toEqual({ notCounted: '', unpaid: null });
-      expect(m.multiplier).toBe(economy.difficulty[d]);
+      expect(m.standing).toEqual({ notCounted: '', noXp: null });
+      expect(m.multiplier).toBe(xpRules.difficulty[d]);
       const custom = settle(on('skirmish', d, { teamSize: 1 }), false);
       expect(custom.standing.notCounted).toBe('rules');
-      expect(custom.multiplier).toBe(economy.difficulty[d]);
+      expect(custom.multiplier).toBe(xpRules.difficulty[d]);
     }
   });
 
   it('leaves both kits out of the dev check under the factory kit rule: everyone carries LOADOUT as it comes', () => {
     const devPool = withTags(GAME_POOL, { 'Red Dot': 'dev' });
-    const kit = [{ asset: GAME_POOL.assets.find((a) => a.name === 'Red Dot')!.id, tier: 'common' }];
+    const kit = [{ asset: GAME_POOL.assets.find((a) => a.name === 'Red Dot')!.id }];
     expect(matchUsesDev(on('custom', 'hard'), kit, devPool, true)).toBe(true);
     expect(matchUsesDev(on('custom', 'hard', { factoryKit: true }), kit, devPool, true)).toBe(false);
   });

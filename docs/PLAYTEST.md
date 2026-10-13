@@ -56,6 +56,8 @@ What is new since 0.1 Dev 4. Each line points to the section with the full check
   [Extraction](#extraction-dev-content)).
 - [ ] **Iron sights on every replica.** Right click aims down the sights with no optic fitted, tighter than the hip,
   and Shift while aiming creeps slower ([Aiming and optics](#aiming-and-optics)).
+- [ ] **Levels in the Armory.** You start at level 0, matches give XP and each level up to 10 unlocks parts, the Cyber
+  Pistol last ([Levels and the Armory](#levels-and-the-armory)).
 
 ### Your five calls, confirmed
 
@@ -235,16 +237,16 @@ wears off, and each match has a light breeze (calm to about 2 m/s) that pushes B
 ## Loadout and Customise
 
 Loadout (the title screen or the top bar). The slots are Primary, Secondary and Grenades (greyed: none yet); your
-replicas are listed with their tier. Right-click an equipped replica, or use Customise, to change its parts.
+replicas are listed below, and one still to unlock is greyed with a lock and its level. Right-click an equipped
+replica, or use Customise, to change its parts. To try every part below before you have levelled, turn on Settings ›
+Dev › Disable levelling.
 
 - [ ] **Swap slots.** Put the GBB Pistol in Primary: the AEG rifle moves to Secondary. Any replica goes in either slot.
 - [ ] **Customise.** Colour first, then the optic, BB weight, hop-up, grip, laser, magazine, power source, barrel,
-  muzzle and light, each offering only parts you own that fit. Skins say they come later. Esc goes back.
-- [ ] **Sort and filter by rarity (M82).** Over Your replicas: Sort Replica (as before) or Rarity (rarest first), and
-  a chip per tier; click Common, Uncommon, Rare and Very Rare off to see only Epic and Legendary (what you carry still
-  shows; "3 hidden" says how many are left out; All brings them back). In Customise each part's options have the same
-  bar, one choice for every part. Leave and come back, or reload: both choices are kept. Is the bar easy to read and
-  out of the way?
+  muzzle and light, each offering the parts that fit. Skins say they come later. Esc goes back.
+- [ ] **Locked parts.** At a low level each part's options list the ones still to unlock after the ones you have, greyed
+  with a lock and "Level N" (the level that unlocks it), and they can't be picked. Under them: "Level up to unlock more:
+  the Armory shows what each level gives." With everything in a row unlocked, the line goes.
 - [ ] **BB weight.** 0.25 g on the rifle and 0.20 g on the pistol as they come. 0.28 g on the rifle leaves slower
   (about 84 m/s) and needs more hop: at about 75 % it stays on target to about 41 m. 0.20 g with the dial at 65 % is
   too much hop (far shots fly high and float); about 50 % flies flat.
@@ -255,10 +257,11 @@ replicas are listed with their tier. Right-click an equipped replica, or use Cus
   Angled: switching and raising the sight are a little quicker; after a sprint the crosshair stays wide a moment
   longer.
 - [ ] **Magazines.** Hi-cap: 120 BBs and one spare; a bot facing away hears its rattle and turns within about 7 m
-  (you hear it too, quieter: tolerable over a long walk?). Low-cap: 30 BBs, four spares, a quicker change. The
-  pistol's extended magazine: 27 BBs, slower to draw. Each part shows on the replica.
-- [ ] **Barrels and the silencer** (Settings › Dev › Unlock all gear, if you don't own them). The Tight-Bore Barrel:
-  spread −15 %, energy +3 %. The Long Barrel: energy +8 %, Draw and Aim raise +15 %, visibly longer. The Silencer (both
+  (you hear it too, quieter: tolerable over a long walk?). Low-cap: 30 BBs, five spares, a change 25 % quicker and a
+  draw 10 % quicker. Is it worth picking now? The pistol's extended magazine: 27 BBs, slower to draw. Each part shows on
+  the replica.
+- [ ] **Barrels and the silencer.** The Tight-Bore Barrel: spread −15 %, energy +3 %. The Long Barrel: energy +10 %,
+  spread −10 %, Draw and Aim raise +15 %, visibly longer: the reach pick, unlocked late. The Silencer (both
   replicas): energy −5 %, a slower draw, "Shots heard from" 22 m becomes 11 m; shots sound duller and quieter.
 - [ ] **Bots hear a silencer less.** On Normal, fire the silenced rifle from about 15 m behind a bot that can't see
   you: it doesn't turn (unsilenced it does). On the minimap, with sound cues on, a silenced bot shows only within half
@@ -267,26 +270,24 @@ replicas are listed with their tier. Right-click an equipped replica, or use Cus
   to 20 m, spread, recoil, magazines, reload, draw, aim raise and shots heard from. Change a part or drag the BB
   weight: each changed stat is marked better or worse with a percentage; a trade-off (the hi-cap's "120 × 2") isn't
   coloured. As it comes the AEG reads about 0.97 J, 13 BBs/s, 60 BBs; the pistol 0.52 J, 7 BBs/s, 18 BBs.
-- [ ] **Tiers.** With Unlock all gear, a Legendary AEG Rifle reads about 1.04 J, 14 BBs/s, spread −15 %; a Legendary
-  pistol on Legendary Black Gas about 0.71 J with recoil +20 %. The line under the replica's name says what its tier
-  adds ("Common: no tier bonus" otherwise).
 - [ ] **The 11.1 V LiPo battery** on the rifle: rate of fire +15 %, energy unchanged; it sounds and empties faster.
 - [ ] **Glowing BBs** (per replica): At Night (the default) glows only on night fields, Always or Off. A glowing BB is
   green, a little larger at range, with a longer streak.
-- [ ] **Light** (dev content, night fields). Every replica has a starter Light, switched with **T**. "No light" takes
-  the torch off. Known bug: on the AEG rifle the Light row won't take "No light" (bug pass BP2 fixes it).
-- [ ] **Your setup is kept.** Reload the page: every pick is still there. Bots carry their replicas as they come,
-  except Hard opponents (see [Bots](#bots)).
+- [ ] **Light** (dev content, night fields). Every replica has the Weapon Torch from level 0, switched with **T**. "No
+  light" takes the torch off. Known bug: on the AEG rifle the Light row won't take "No light" (bug pass BP2 fixes it).
+- [ ] **Your setup is kept.** Reload the page: every pick is still there. Your teammates carry their replicas as they
+  come; opponents carry kits of their own (see [Bots](#bots)).
 - [ ] **Edit `stats.md`.** Set the AEG's `Fire rate (BBs/s)` to 20 and run `npm run dev` again: the panel says
   20 BBs/s and every rifle fires faster. A typo (`2O`) shows in the browser console and `npm run test` names its
   line. Put it back.
 
 ## Cyber Pistol
 
-The chase replica: Legendary only, from the Armory at a 1 in 400 chance per item. To try it now, turn on Settings ›
-Dev › Unlock all gear.
+The level 10 reward, the last thing the levels unlock. To try it now, turn on Settings › Dev › Disable levelling, or
+press Settings › Dev › Level up until you reach 10.
 
-- [ ] **Equip it.** It is in the Loadout at Legendary only and goes in either slot.
+- [ ] **Equip it.** Below level 10 the Loadout shows it greyed with a lock and "Level 10". Once unlocked it goes in
+  either slot.
 - [ ] **Its look.** A white slab with glowing cyan lines and a magenta core, the same on either team. With Realistic
   colours it is plain grey and unlit. Does it read as rare and special?
 - [ ] **Customise.** Power source reads Built-in battery and the magazine "Its own, 50 BBs"; the optic, grip, laser,
@@ -296,40 +297,50 @@ Dev › Unlock all gear.
 - [ ] **Its sound.** A quiet electronic chirp and a soft pop with no motor whine; an empty trigger blips; a reload
   ends in a two-note chime. Futuristic but still a toy?
 - [ ] **Leave the AEG at home.** Carry the Cyber Pistol and the GBB Pistol on Normal: the bots' AEG shots still sound.
-- [ ] **The Armory.** Its Chase line names the Cyber Pistol, Legendary only, 0.25 %, about 1 in 400. In your
-  collection its row has one pip, Legendary. When one drops for real (about 130 Shots on average), its tile glows and
-  the reveal says "Chase item: Cyber Pistol!".
-- [ ] **Bots with it.** With it owned (or Unlock all gear on), about 1 Hard match in 20 has an opponent with it on
-  Auto. Never on Easy or Normal, never a teammate.
+- [ ] **The Armory.** Level 10's row holds the Cyber Pistol. Reaching it, the summary says "Level 10!" and
+  "Unlocked: Cyber Pistol".
+- [ ] **Bots with it.** With it unlocked (or Disable levelling on), about 1 Hard match in 20 has an opponent with it on
+  Auto. Never on Easy or Normal, never a teammate. The same goes for any replica a level above 0 unlocks.
 
-## Armory and Field Credits
+## Levels and the Armory
 
-Completely free: Field Credits (FC) come from playing, and nothing is ever sold.
+Completely free: finished matches give XP, each level up to 10 unlocks parts for good, and nothing is ever sold. What
+each level unlocks is in `levels.md` at the repository root; the Armory shows it in the game.
 
-- [ ] **Earn FC.** Win a standard match: the summary lists FC for the match, the win, the rounds and your hits; the
-  top bar shows the new total. A loss pays less; a round your team won while you were out without a hit pays nothing.
-  Hard opponents with Easy teammates show "difficulty ×0.5".
-- [ ] **Shots.** The buttons read "1 Shot · 160 FC" and "10 Shots · 1,600 FC". 10 Shots asks first, with the keyboard
-  on Cancel (Enter cancels). Holding Enter on 1 Shot takes exactly one.
-- [ ] **The reveal.** Each Shot gives three assets with their rarity; a first copy says New, a repeat Spare. After ten,
-  the tiles come in rarest first, an Epic or Legendary glowing in its colour, with a line like "1 Epic, 4 Rare,
-  25 others · 3 new". With reduced motion they appear at once.
-- [ ] **Pity.** "Epic or rarer within 20 more Shots" and "Legendary or rarer within 100 more Shots" count down a Shot
-  at a time and survive a reload.
-- [ ] **Your collection.** Under the balance and the odds, one column per kind (replicas, power sources, optics, grips,
-  and the rest), each with a heading. Every asset Shots can give, owned or not (dimmed), with a pip per tier and "N / 84 items".
-  Right-click an item (or focus it and press the Menu key or Shift+F10) for its Scrap 1 / Scrap N menu; Esc, a click
-  elsewhere or a choice closes it. Scrap 1 scraps the lower copy; fit the Common on Customise first, scrap it, and Customise shows the Rare fitted.
-  Scrap all spares asks first and keeps your best copy of everything.
-- [ ] **Rarity odds.** The odds table has its caption, and each Rare-or-better copy lists what its tier adds.
-- [ ] **Settings › Dev › Disable Armory.** The Armory is gone from every menu (M83): not on the top bar, no FC or
-  Tokens there, no "Unlock more in the Armory" in Loadout or Customise, no FC line on the summary; a match pays
-  nothing. Untick the Dev box and it is all back.
-  Turn it off: the next match pays.
-- [ ] **Settings › Dev › Unlock all gear.** The Loadout offers every replica and part at every tier and the match stays
-  out of your records. Turn it off: your own picks are back.
-- [ ] **A Dev-assisted match** (Bottomless magazines on, to the end): "No Field Credits: Dev settings changed how this
-  match played."
+- [ ] **Level 0 to start.** On a fresh save (a private window, or Settings › Save › Delete): the top bar reads "Lv 0"
+  with an empty bar. The Loadout offers the AEG Rifle and the GBB Pistol; Customise offers the Standard Battery, Green
+  Gas and the Weapon Torch, and every other part greyed with its level.
+- [ ] **The level badge.** On every screen after the title, "Lv N" with a thin XP bar at the far right of the top bar.
+  Point at it: "Level N, X XP to level N+1. Open the Armory". Click it: the Armory opens. From the pause menu it shows
+  but does nothing.
+- [ ] **The Armory.** Top bar › Armory. On the left your level "of 10", the XP bar ("120 / 300 XP"), how much to the
+  next level, the XP earned in all, and how XP is earned (every match 100, a win 100 more, each round won 20, each hit
+  10, then times the difficulty; the practice range and the tutorial give none). In the middle what the next level
+  unlocks. On the right every level from the starting kit to 10, each with its XP and its items' pictures, the reached
+  ones lit and marked Unlocked, the next marked Next. Easy to read at a glance?
+- [ ] **XP on the summary.** Win a standard first-to-5 match on Normal: "XP earned +N XP", then what gave it ("Match
+  played 100 · Match won 100 · 5 rounds won 100 · 3 hits on an opponent 30"), then "Level N: X / Y XP" over a bar. A
+  loss gives less; a round your team won while you were out without a hit gives nothing. Hard opponents with Easy
+  teammates add "difficulty ×0.5". The badge shows the new level.
+- [ ] **A level up.** Your first finished standard match takes you to level 1: the summary says "Level 1!" and
+  "Unlocked: Red Dot", and the Red Dot is in Customise's optics with no lock. Several levels at once list everything
+  they unlocked.
+- [ ] **No XP.** The practice range and the tutorial give none. A match with Dev content on and a dev map or mode:
+  "No XP: this match used content still being built." A match with a Dev aid (Bottomless magazines, to the end): "No
+  XP: Dev settings changed how this match played."
+- [ ] **Settings › Dev › Disable levelling.** The badge goes; the Armory says levelling is off and every level reads
+  Unlocked; the Loadout and Customise offer every replica and part with no locks. A match gives no XP and stays out of
+  your records. Turn it off: your own level, unlocks and picks are back.
+- [ ] **Dev XP buttons.** Settings › Dev: **+500 XP** adds 500 XP (the badge moves, and a level it reaches unlocks
+  its items); **Level up** adds exactly what the next level takes; at 10 it says "At the top level". **Reset level**
+  asks first, then puts you back at level 0 with the starting kit. Each survives a reload.
+- [ ] **At the cap.** At level 10 the Armory and the summary say "Top level reached. XP counts again when the level
+  cap goes up." and the bar is full.
+- [ ] **An old save.** Load a save downloaded before the levels came in (it had Field Credits and the Armory's items):
+  it loads at level 0 with the starting kit, your settings and records kept.
+- [ ] **Edit `levels.md`.** Swap the Red Dot (level 1) and the Silencer (level 4) and run `npm run dev` again: at
+  level 1 the Armory lists the Silencer and Customise offers it. A typo (`Silencr`) shows in the browser console and
+  `npm run test` names its line. Put it back.
 
 ## Bots
 
@@ -364,8 +375,22 @@ team puts you on Beta instead.
   Hard and Pro still punish a slow answer? Do Normal bots still feel a threat?
 - [ ] **Difficulty.** Easy should feel clearly weaker than Hard. Hard bots sometimes come at a spot from the side;
   Easy never. A change mid-match applies from the next round, and the screen says so.
-- [ ] **Hard opponents' kit.** Their rifles differ (faster, silenced, longer-ranged); Play again rolls new kits. Easy
-  and Normal opponents and your teammates carry replicas as they come.
+- [ ] **The bots' kits (BG1).** Opponents on every level carry kits from `bot-kits.md`: on Easy mostly as they come,
+  each level up more of them scoped, silenced or with a red dot, Pro never plain; now and then a Cyber Pistol from Hard
+  up. Spectate a few: a scope or red dot shows on their rifle, and a silenced bot is heard nearer. Your teammates carry
+  replicas as they come. Rushers and flankers lean to Pointman, Support and Stealth kits, anchors and careful bots to
+  scopes (the scoreboard shows each bot's personality). Does gear make Normal feel unfair, or Hard too easy? Change a
+  weight in `bot-kits.md` and say which.
+- [ ] **A scoped bot (BG1).** At 25 m and more it holds its aim on you closer than an iron-sight bot once it has
+  settled, but takes a little longer to settle; up close, or when you cross its view, it is slower to find you. Does a
+  scoped bot read differently from a plain one?
+- [ ] **Bot names and personalities (BN1).** Every bot has a name (Dash, Rook, Fox, Owl…) on the scoreboard, in the
+  hit feed, over your teammates' heads and on the "What got you" card, and the same name plays the same way every
+  match. Over a few rounds can you tell them apart? A **Rusher** is first through the gap and runs at where you were;
+  an **Anchor** holds one spot short of the middle, aiming over cover, until about a minute is left; a **Flanker**
+  takes a lane of its own and comes round the side; a **Careful** bot walks, clears each corner and watches where you
+  ducked. The scoreboard tags each bot's personality. Does any feel unfair, or too samey? (Edit `bots.md` to rename
+  them or retune a personality.)
 - [ ] **At night** (Woodland, Neon Heights by Night): Normal, Hard and Pro bots hold their posts out of lantern light
   when a dark spot is near. A bot switches its torch on for a fight within about 20 m and for the last stretch of a
   search (12 m from the spot on Normal, 20 m on Hard, 30 m on Pro): a beam far off across the field is rare. Easy
@@ -382,7 +407,7 @@ One BB hit puts anyone out. A round lasts up to 2:30 and the first team to 5 rou
   page keeps drawing), then "Click to play · Esc for the menu" holds the next round until you click (Esc again opens
   the pause menu, whose **Skip to next round** button still works). The next round starts with the score as it
   played out. On match point (either team one win away) the line and the button read **Skip to the result** and may
-  end on the summary; the result counts in Stats and pays FC as a watched one. Not offered while you are in play or
+  end on the summary; the result counts in Stats and gives XP as a watched one. Not offered while you are in play or
   calling your hit, between rounds, in Extraction or on the practice range. Same seed: skipping and watching a round
   give the same score (check with `?seed=`).
 - [ ] **Shoot a teammate (carefully).** Friendly fire counts, so they go out too. On purpose.
@@ -393,7 +418,7 @@ One BB hit puts anyone out. A round lasts up to 2:30 and the first team to 5 rou
 - [ ] **A drawn round** (both last players out together) replays the same round number; the summary counts it.
 - [ ] **Half-time.** The teams swap ends after round 4; the banner says so.
 - [ ] **Finish a match.** The Match summary comes first (see [HUD and match info](#hud-and-match-info)), then the
-  result screen. Finish, then go straight to Stats without pausing: the match is counted and paid at once.
+  result screen. Finish, then go straight to Stats without pausing: the match is counted and its XP given at once.
 - [ ] **Play again** shows a new seed in the F3 box; that seed in a new page replays the match's start.
 - [ ] **Quit, then Play again on the same map, a few times.** It starts almost at once each time and looks exactly
   like the first Play; after changing Map detail, the map shows the new detail.
@@ -511,7 +536,7 @@ Custom, which opens every row.
 - [ ] **Friendly fire off.** A BB at a teammate passes by; your bot teammates stop holding fire when you're in line.
 - [ ] **Tournament** (dev content): first to 7, win by two, 2:00 rounds, a time-out goes to the team with more
   players left, the minimap shows teammates only. **Pro CQB** adds semi only and real-cap magazines.
-- [ ] **Custom pays at most ×1.5** and never counts for records.
+- [ ] **Custom gives XP at most ×1.5** and never counts for records.
 
 ### Practice range
 
@@ -552,7 +577,7 @@ The Match screen's Practice card (the last mode), then Start practice.
 ### Extraction (dev content)
 
 Your squad against a home team on a timed run. Turn on Dev content, then Play › Mode › Extraction (Depot, Woodland or
-Neon Heights). While it is dev content a run keeps nothing and pays nothing; the summary says "Not kept".
+Neon Heights). While it is dev content a run gives no XP; the summary says "this run gives no XP".
 
 - [ ] **Play screen.** The Match line reads like "Squad of 3 · 5 in the home team" and "One 8:00 run"; the rules text
   explains the run. With Dev content off, Extraction isn't offered and a saved pick plays as Elimination.
@@ -569,12 +594,12 @@ Neon Heights). While it is dev content a run keeps nothing and pays nothing; the
 - [ ] **Cases.** An olive ammo can, a black field case with an orange band and a grey locker with a yellow band stand
   by cover, elsewhere each run. Walk up: "Hold G to open the field case". Holding G fills a bar (about 2 s for a can,
   4 for a field case, 7 for the locker) with a rummaging sound; let go and it starts again. The lid swings up and the
-  line says what it held ("+35 FC", "BB resupply · magazines topped up", "Rare Red Dot · +120 FC").
-- [ ] **Carrying.** The strip reads "Respawn ready · Carrying 155 FC and 1 part". Hit while carrying: "You dropped
+  line says what it held ("+35 XP" or "BB resupply · magazines topped up"; never a part: levels unlock those).
+- [ ] **Carrying.** The strip reads "Respawn ready · Carrying 155 XP". Hit while carrying: "You dropped
   what you carried where you were hit · go back for it", and a small bag lies where you fell; hold G on it to pick it
   all up. A resupply fills your spares.
-- [ ] **The haul.** Get out carrying finds: the summary's haul line lists them, parts as tiles in tier colours. Any
-  other end: "Lost: … Only what you get out with is yours."
+- [ ] **The haul.** Get out carrying finds: the summary's haul line says what you got out with ("You got out with
+  145 XP"). Any other end: "Lost: 145 XP. Only what you get out with counts."
 - [ ] **Noise.** Open the locker with a bot near: it comes to look.
 - [ ] **Guards.** Two guards by the locker in cover, watching the way in (one on Easy); sometimes one at a far field
   case. A guard you shoot at or pass close by chases you but never strays more than about 8 m from its case. At the
@@ -596,17 +621,18 @@ Neon Heights). While it is dev content a run keeps nothing and pays nothing; the
   Normal? (The bot runs say not much.)
 - [ ] **Neon Heights.** A 10-minute run against three to six; the locker is on Level 2, field cases upstairs, ammo cans
   on the street, every exit on the street at a corner of the site; waves come back on every floor.
-- [ ] **Supply events.** From Friday to Sunday the Mode card says "Supply weekend, until Sunday: cases hold +25 % Field
-  Credits and +50 % parts", and cases hold more. Set the computer's date to 30 October to 1 November 2026: it names
-  the Halloween night run (+50 % FC, +100 % parts). Change a row in `pool.md`'s Supply events table: the line follows.
-- [ ] **Pay and records** (only once the mode is public): the FC you get out with plus your hits, times the
-  difficulty; an Extraction column in your records and its own bests.
+- [ ] **Supply events.** From Friday to Sunday the Mode card says "Supply weekend, until Sunday: cases hold +25 %
+  XP", and cases hold more. Set the computer's date to 30 October to 1 November 2026: it names the Halloween night run
+  (+50 % XP). Change a row in `pool.md`'s Supply events table: the line follows.
+- [ ] **XP and records** (only once the mode is public): the XP you get out with plus your hits, times the
+  difficulty, with no match or round lines; an Extraction column in your records and its own bests.
 - [ ] **The Use key.** Settings › Controls › Keys has "Use: open a case (hold)"; rebind it and the prompt follows.
 
 ## Pro difficulty (dev content)
 
 Turn on Dev content, then Play › Match › Opponents › Pro. Play each map once in Elimination and once in Attack /
-Defend: Depot, Woodland and Neon Heights (Day, then Night). Pro pays ×2 but counts for nothing while it is dev content.
+Defend: Depot, Woodland and Neon Heights (Day, then Night). Pro gives XP ×2 but counts for nothing while it is dev
+content.
 
 - [ ] **Slow down.** Pro bots hold still aiming at corners and doorways and walk quietly towards where they heard you.
   Run past a corner and you lose; slice it a step at a time or peek short and step back, and you win.
@@ -638,14 +664,14 @@ there maps each symptom to its numbers):
   save (tutorial never finished, no match started) a **Tutorial** button under START, gone for good after the tutorial
   or your first match. The build ("0.1 Dev 5+N · …" on `main`, just the release name on a release download; hover it
   for how many commits after the release it is) sits small at the bottom left. Nothing else: no tip, no next match, no
-  FC or Tokens. No map is loaded behind the menus.
+  level badge. No map is loaded behind the menus.
 - [ ] **Keys.** On the title, Enter presses START, T starts the tutorial (while it is offered) and Esc opens
   Settings. No key prompts are drawn along the bottom of any screen; every screen works with the mouse alone (the
   Airsoft wordmark on the top bar goes back to the title) and the keys still work (Esc is Back, C customises, / searches
-  Settings, Space takes a Shot).
-- [ ] **The top bar** on every screen after the title: MATCH, LOADOUT, ARMORY, SETTINGS from the left, your FC and
-  Tokens on the far right, no version; the current place is marked. Opened from the pause menu, only the current place
-  shows and the wordmark reads Back.
+  Settings).
+- [ ] **The top bar** on every screen after the title: MATCH, LOADOUT, ARMORY, SETTINGS from the left, your level
+  ("Lv 3" and its XP bar) on the far right, no version; the current place is marked. Opened from the pause menu, only
+  the current place shows and the wordmark reads Back.
 - [ ] **The Match screen** (START). 01 Map as picture cards (a Day | Night switch on maps that have both, kept per
   map), 02 Mode as cards with **Practice last**, 03 Match rules. On the right, Your match: the map, Mode, Rules, Teams,
   your Loadout with Change, and **Start match**. Picking Practice hides the map and the rules, and the button reads
@@ -660,7 +686,7 @@ there maps each symptom to its numbers):
   minimap dots, the order wheel and hold marker. Bot opponents are "Alpha 1…3" in the hit feed. At half-time you swap
   ends (and in Attack / Defend go from defending to attacking). Squad orders reach your Beta teammates. The result,
   the summary ("Beta (you) · …" first) and the records count your win or loss.
-- [ ] **Inter.** All menu and HUD text is one typeface, Inter; numbers (FC, Tokens, stats, scores) keep their width as
+- [ ] **Inter.** All menu and HUD text is one typeface, Inter; numbers (XP, stats, scores) keep their width as
   they change; headings and labels are still in capitals.
 - [ ] **Pause (Esc).** Everything freezes, the mouse is freed, and a solid screen shows the round and score with
   Resume, Settings and Quit. Resume puts you back exactly where you were; so does Esc.
@@ -673,7 +699,7 @@ there maps each symptom to its numbers):
 - [ ] **The look.** Every screen at 1280×720 and 1920×1080 is tidy: one type scale, buttons in capitals, pictures of
   maps, modes and replicas. Pointing at a button lifts it a little; Tab moves an orange focus ring round every control.
   With reduced motion, screens and dialogs appear with no fade.
-- [ ] **Whole replicas (M99).** On the Loadout's Your replicas, Customise's colour tiles, the Armory's reveal and a
+- [ ] **Whole replicas (M99).** On the Loadout's Your replicas, Customise's colour tiles, the Armory's levels and a
   run's haul, every replica picture shows the whole replica, muzzle to stock, nothing under its name or the picked
   tile's tick (now at the foot, by the words). Resize the window from 1280×720 up to full screen: still whole.
 - [ ] **The loading screen** (production build: `npm run build`, then `npm run preview`; DevTools › Network › Slow
@@ -798,15 +824,15 @@ Settings has groups down the left (Graphics, Display, Audio, Controls, Gameplay,
   "Recent events" naming shots, hits and bot changes from the last moments. Type a note in the box first: it is the
   report's "Note:" line. **Report a Bug** opens a new GitHub issue on the game's page (sign in if asked) titled "Bug:"
   and your note, with the report below it.
-- [ ] **Dev playtesting aids** (M90). **+1,000 FC** and **+10 Tokens** fill the top bar's wallet at once (and stay
-  after a reload); **Free case openings** makes the Armory's Shot buttons read "Free" and take nothing. **Time of
+- [ ] **Dev playtesting aids** (M90). **+500 XP**, **Level up** and **Reset level** change your level at once (and
+  stay after a reload; [Levels and the Armory](#levels-and-the-armory)). **Time of
   day** Night on Depot (or Day on Woodland), then Start match: the map plays under that light, bots with torches at
   night (the lighting may look rough where the map's bounce light was baked for the other time). **Bots hold fire**:
   no bot shoots. **Spectate any bot**: in a match your view follows a bot while you stand still; your fire key moves
   to the next, on either team (pair it with Ghost or Bots hold fire to stay in). **Bot intentions**: a small tag over
   each bot in play ("Advancing", "Holding", "Fighting"; in Extraction its job first in yellow, "Guard"). **End the round now**
-  from the pause menu's Settings › Dev, then Resume: the round ends as on time. Each of those (not the wallet buttons
-  or free Shots) keeps the match out of your records. **Reset the save** asks first, then reloads as a new player;
+  from the pause menu's Settings › Dev, then Resume: the round ends as on time. Each of those (not the XP buttons)
+  keeps the match out of your records. **Reset the save** asks first, then reloads as a new player;
   Settings › Save › Undo brings it back.
 - [ ] **Settings › Look › Retro look** (M96; the Dev tab's Retro pixels before). Off by default; On gives chunky pixels
   and a small dithered palette, like a 1990s shooter, at once; Pixel size and Colours change it; the HUD and menus
@@ -913,13 +939,13 @@ Settings › Graphics › Quality: Low, Medium, High, Ultra or Custom.
 Settings › Save file. Everything saves as it changes; nothing to press.
 
 - [ ] **Saved automatically.** Change the field of view: the Save tab says "Last saved just now". Reload: your
-  settings, Loadout, Armory items, FC and records are as you left them.
+  settings, Loadout, level and records are as you left them.
 - [ ] **Download.** `airsoft-save-<today>.json` lands in Downloads, readable in a text editor (the game, version, date,
   a summary and the stores). The tab says "Last downloaded just now".
 - [ ] **Load in another browser** (or a private window). Load file (or drag the file onto the tab): both saves side by
   side; Replace reloads with yours. Undo brings back what was there.
 - [ ] **Clear and restore.** Clear the site's data and reload: a fresh game. Load your file: everything is back.
-- [ ] **An edited file.** Change `fc` in a download and load it: the pop-up warns it was changed and the button reads
+- [ ] **An edited file.** Change `xp` in a download and load it: the pop-up warns it was changed and the button reads
   Load anyway. Cancel changes nothing. Any other JSON or text file: "That file isn't an Airsoft save".
 - [ ] **Mid-match.** Download works; Load, Restore, Undo and Delete are greyed with "Leave the match to load a save."
 - [ ] **Restore points.** One per day you play (three at most); restoring shows the same side-by-side pop-up, and Undo
@@ -927,7 +953,7 @@ Settings › Save file. Everything saves as it changes; nothing to press.
 - [ ] **Delete.** It offers Download first; Delete reloads a fresh game (the tutorial tagged "New?" again); Undo brings
   it back.
 - [ ] **Two tabs.** A second tab shows "Airsoft is open in another tab" and waits; Play here moves the game to it.
-  Take a Shot in one, switch: nothing is lost.
+  Press Settings › Dev › +500 XP in one, switch: nothing is lost.
 - [ ] **Protect.** Chrome and Edge answer at once (often "said no for now" on a site you rarely visit); Firefox asks.
   Once allowed it reads Protected.
 - [ ] **Firefox and Edge.** Download, Load (button and drag and drop), the two-tab notice and Protect once in each.

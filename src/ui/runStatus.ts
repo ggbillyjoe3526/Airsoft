@@ -1,7 +1,7 @@
 import type { ExtractionRules } from '../config/extraction';
 import { type CaseFind, haulTotals, type RunState } from '../sim/extraction';
 import { formatRoundTime } from '../config/matchRules';
-import { MENU_TEXT } from '../config/menus';
+import { HAUL_TEXT } from '../config/menus';
 
 /** What the strip under the scoreboard says in Extraction: the line, how far the count is (0..1), and whether it warns. */
 export interface RunLine {
@@ -54,14 +54,12 @@ export function respawnNote(left: number): string {
   return left > 0 ? `Respawn ready` : 'No respawn left';
 }
 
-/** "85 FC and 2 parts", "1 part", "40 FC" (M44); '' for nothing. */
-export function haulWhat(h: { fc: number; items: readonly unknown[] }): string {
-  const parts = h.items.length > 0 ? `${h.items.length} ${h.items.length === 1 ? 'part' : 'parts'}` : '';
-  const fc = h.fc > 0 ? MENU_TEXT.fc(h.fc) : '';
-  return fc && parts ? `${fc} and ${parts}` : fc || parts;
+/** "85 XP" (M44, LV1); '' for nothing. */
+export function haulWhat(h: { xp: number }): string {
+  return h.xp > 0 ? HAUL_TEXT.xp(h.xp) : '';
 }
 
-/** The strip's note on what you carry (M44): "Carrying 85 FC and 1 part", or '' with nothing. */
+/** The strip's note on what you carry (M44): "Carrying 85 XP", or '' with nothing. */
 export function carriedNote(carried: readonly CaseFind[]): string {
   const what = haulWhat(haulTotals(carried));
   return what ? `Carrying ${what}` : '';

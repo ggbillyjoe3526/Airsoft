@@ -65,8 +65,8 @@ const NOBODY_HEARD: readonly HeardPlayer[] = [];
 
 /** What the range needs from New game's choices: the loadout (the match rules don't apply). */
 export type RangeSetup = Pick<MatchSetup, 'kit' | 'teamColours' | 'look'> & {
-  /** Whether the Armory is on (M83: off, the tutorial never names it); on when left out. */
-  armory?: boolean;
+  /** Whether levelling is on (LV1; off in the Dev settings, the tutorial never names it); on when left out. */
+  levelling?: boolean;
   /**
    * The map to practise on (M94), under the light it plays in: targets where the other team's bots would play
    * (map/practiceLayout.ts) and no bots. Left out: the range (the tutorial's always).
@@ -269,7 +269,7 @@ export class RangeSession {
     this.banner = new ChallengeBanner(container);
     this.showLine();
     if (tutorialFrom !== undefined) {
-      this.tutorial = new TutorialTracker(tutorialSteps(setup.armory !== false), canAimDownSights(this.player.armament), tutorialFrom, this.loadout.length);
+      this.tutorial = new TutorialTracker(tutorialSteps(setup.levelling !== false), canAimDownSights(this.player.armament), tutorialFrom, this.loadout.length);
       this.coach = new CoachPanel(container, (action) => input.keyName(action));
       this.coach.show(this.tutorial);
       this.showcase = new TutorialShowcase(container, this.player.team, teamCss(this.player.team), (action) => input.keyName(action), () => input.wheelSelect);

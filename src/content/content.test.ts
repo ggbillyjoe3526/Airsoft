@@ -1,4 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { MAGAZINES } from '../config/attachments';
 import { REPLICA_RANGES } from '../config/contentRules';
 import type { ReplicaConfig } from '../config/replicas';
 import { GAME_POOL } from '../pool/gamePool';
@@ -11,6 +12,7 @@ import { type CheckResult, worstVerdict } from './checks';
 import type { ContentInputs } from './contentInputs';
 import { checkAllAssets, checkAsset, gameInputs } from './gameContent';
 import { kitGrid } from './kitGrid';
+import { levelCheck } from './levelChecks';
 import { partCompatibility, partRules } from './partChecks';
 import { replicaBotChecks, replicaCompatibility, replicaRules, replicaSaveCheck } from './replicaChecks';
 
@@ -50,7 +52,7 @@ describe('the content checks on the game as it ships', () => {
     expect(results.length).toBeGreaterThan(GAME_POOL.assets.length * 3);
   });
 
-  it('try every kit the AEG can wear, at the commonest and rarest tier', () => {
+  it('try every kit the AEG can wear', () => {
     const grid = kitGrid(GAME_POOL, AEG, 'rifle');
     expect(grid.tried).toBe(grid.combinations);
     expect(grid.problems).toEqual([]);
@@ -163,7 +165,39 @@ describe('a part', () => {
 
   it('runs every level-1 and level-2 check through checkAsset', () => {
     const checks = new Set(checkAsset(gameInputs(), RED_DOT).map((r) => r.check));
-    expect([...checks]).toEqual(expect.arrayContaining(['optic.name', 'optic.access', 'optic.key', 'optic.stats', 'optic.fits', 'optic.tradeOff', 'optic.model', 'optic.kits']));
+    expect([...checks]).toEqual(expect.arrayContaining(['optic.name', 'optic.access', 'optic.key', 'optic.stats', 'optic.fits', 'optic.tradeOff', 'optic.model', 'optic.kits', 'item.level']));
+  });
+});
+
+describe('an item’s level (LV1, levels.md)', () => {
+  const game = gameInputs();
+
+  it('passes every shipped asset, each with the level levels.md unlocks it at', () => {
+    for (const a of GAME_POOL.assets) {
+      const [r] = levelCheck(game, a);
+      expect(r!.check).toBe('item.level');
+      expect(r!.verdict, a.name).toBe('pass');
+      const level = game.levels.unlockLevel.get(a.id)!;
+      expect(r!.says, a.name).toBe(level === 0 ? 'Every player starts with it (levels.md, level 0).' : `Unlocks at level ${level} (levels.md).`);
+    }
+    expect(levelCheck(game, asset('000019'))[0]!.says).toBe('Unlocks at level 10 (levels.md).');
+  });
+
+  it('fails an item no level unlocks, through checkAsset too, for a replica, a part and a grenade', () => {
+    const fresh = { ...RED_DOT, id: '999010', name: 'Unplaced Sight', tag: 'dev' as const };
+    const inputs = withAssets([fresh]);
+    expect(inputs.levels.unlockLevel.has(fresh.id)).toBe(false);
+    expect(verdictOf(levelCheck(inputs, fresh), 'item.level')).toBe('fail');
+    expect(verdictOf(checkAsset(inputs, fresh), 'item.level')).toBe('fail');
+    const noLevels = { ...game, levels: { ...game.levels, unlockLevel: new Map<string, number>() } };
+    expect(verdictOf(checkAsset(noLevels, AEG), 'item.level')).toBe('fail');
+    const grenade: Asset = { ...RED_DOT, id: '999011', name: 'Paint Grenade', category: 'grenade', key: '', tag: 'dev' };
+    expect(checkAsset(withAssets([grenade]), grenade).map((r) => [r.check, r.verdict])).toEqual([['item.level', 'fail']]);
+  });
+
+  it('reads the levels it is given, not the bundled file', () => {
+    const moved = { ...game, levels: { ...game.levels, unlockLevel: new Map([...game.levels.unlockLevel, [RED_DOT.id, 4]]) } };
+    expect(levelCheck(moved, RED_DOT)[0]!.says).toBe('Unlocks at level 4 (levels.md).');
   });
 });
 
@@ -202,10 +236,18 @@ describe('each check on its fault', () => {
   });
 
   it('replica.bots fails when a bot carrying it shoots nothing', () => {
-    // With no Rarity table a bot carries the config as it is (botKit.ts rolledKit), here one that shoots 0 J.
-    const broken = aegAs({ muzzleEnergy: 0 });
-    expect(verdictOf(replicaBotChecks({ ...broken, pool: { ...broken.pool, tiers: [] } }, AEG), 'replica.bots')).toBe('fail');
+    // As it comes a bot carries the config the inputs hold, here one that shoots 0 J.
+    expect(verdictOf(replicaBotChecks(aegAs({ muzzleEnergy: 0 }), AEG), 'replica.bots')).toBe('fail');
     expect(verdictOf(replicaBotChecks(game, AEG), 'replica.bots')).toBe('pass');
+  });
+
+  it('replica.bots warns when no kit in bot-kits.md weighted above 0 holds it (BG1), and only checks kits it is given', () => {
+    const noCyber = { ...game.botKits!, kits: game.botKits!.kits.filter((k) => k.name !== 'Cyber') };
+    const cyber = game.pool.assets.find((a) => a.name === 'Cyber Pistol')!;
+    expect(verdictOf(replicaBotChecks(game, cyber), 'replica.bots')).toBe('pass');
+    expect(verdictOf(replicaBotChecks({ ...game, botKits: noCyber }, cyber), 'replica.bots')).toBe('warn');
+    const { botKits: _botKits, ...unchecked } = game;
+    expect(verdictOf(replicaBotChecks(unchecked, cyber), 'replica.bots')).toBe('pass');
   });
 
   it('replica.save fails when a saved kit does not come back', () => {
@@ -218,9 +260,16 @@ describe('each check on its fault', () => {
   });
 
   it('<part>.kits fails when kits with the part break', () => {
+    // A Hi-Cap Magazine whose reload scale went negative (a faulted stats.md row), on a fresh pool so the grid is new.
     const faulted = withAssets([]);
-    const pool: Pool = { ...faulted.pool, tiers: faulted.pool.tiers.map((t) => ({ ...t, bonus: 1.5 })) };
-    expect(verdictOf(partCompatibility({ ...faulted, pool }, asset('000012')), 'magazine.kits')).toBe('fail');
+    const saved = { ...MAGAZINES.hiCap };
+    try {
+      Object.assign(MAGAZINES.hiCap, { reloadScale: -0.5 });
+      expect(verdictOf(partCompatibility({ ...faulted, pool: { ...faulted.pool } }, asset('000012')), 'magazine.kits')).toBe('fail');
+    } finally {
+      Object.assign(MAGAZINES.hiCap, saved);
+    }
+    expect(verdictOf(partCompatibility(gameInputs(), asset('000012')), 'magazine.kits')).toBe('pass');
   });
 
   it('<part>.fits fails for a public part that fits only dev replicas, and asks for a look while it is dev', () => {

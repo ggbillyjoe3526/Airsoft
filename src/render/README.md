@@ -74,8 +74,8 @@ and never writes the simulation.
   human and robot (BF1, drawn only with the Dev tab's model switches off): `figureRig.ts` (a kind's files taken apart
   into bones, merged meshes and clips, and `figureLegs.ts` reading the legs' clips out for the hit volume, IM8),
   `figurePose.ts` (the pure blend of clips from the character's state),
-  `riggedFigure.ts` (one figure: skinned, posed, its replica on the grip bone, the reload's magazines, your
-  first-person body) and `thrownMagazines.ts` (the empty magazines thrown in reloads); `modelFiles.ts` imports
+  `riggedFigure.ts` (one figure: skinned, posed, its replica on the grip bone with its fitted optic, grip, laser,
+  barrel and muzzle part, BG1, the reload's magazines, your first-person body) and `thrownMagazines.ts` (the empty magazines thrown in reloads); `modelFiles.ts` imports
   `figureRig.ts` on demand, so the four ride in their own chunk and the game's carries only their types. Replicas and hands:
   `replicaModels.ts` (the bodies and assembly), `replicaParts.ts` (optics, grips, magazines and the other fitted parts),
   `replicaBuilder.ts` (the mesh builder both use), `replicaFiles.ts` (the Blender model files, M101, RM1, and their parts' sight-line and under-laser markers, RM8; `modelFiles.ts` loads them, and the figure model, only while the Dev tab's model switches let them in, RM4) and `replicaRig.ts`

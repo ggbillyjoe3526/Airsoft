@@ -17,10 +17,8 @@ export interface SupplyEvent {
   /** The Key column: lower case words joined with -. */
   key: string;
   when: SupplyWhen;
-  /** What every case's Field Credits are scaled by (1.25 for 125 %). */
-  fc: number;
-  /** What every case's chance of a part is scaled by (capped at certain). */
-  parts: number;
+  /** What every case's XP is scaled by (1.25 for 125 %; LV1, in place of Field Credits). */
+  xp: number;
 }
 
 /** The weekdays as JavaScript's Date numbers them (Sunday 0). */
@@ -29,16 +27,16 @@ const WEEKDAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 
 const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const;
 const KEY_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-/** The most an event may scale a case's FC or part chance by (%): far beyond any sane value (a typo guard). */
+/** The most an event may scale a case's XP by (%): far beyond any sane value (a typo guard). */
 const MAX_PERCENT = 1000;
 /**
- * The least a non-zero FC % or Part % may be (M56, audit POOL-03, owner decision: 10 %): below it the cell is far likelier
+ * The least a non-zero XP % may be (M56, audit POOL-03, owner decision: 10 %): below it the cell is far likelier
  * a ratio typed where a percentage belongs (1.25 for 125 %, which would empty every case all weekend) than a real event.
  * 0 stays readable: an event that empties the cases on purpose.
  */
 const MIN_PERCENT = 10;
 /** The table's columns (M56, audit POOL-07): one missing is reported once, at the header, not on every row. */
-const COLUMNS = ['Supply event', 'Key', 'When', 'FC %', 'Part %'] as const;
+const COLUMNS = ['Supply event', 'Key', 'When', 'XP %'] as const;
 
 function cell(row: PoolRow, header: string): string {
   return row.cells[header] ?? '';
@@ -80,8 +78,7 @@ export function readSupplyEvents(t: PoolTable | undefined, fail: (line: number, 
     const name = cell(row, 'Supply event');
     const key = cell(row, 'Key').toLowerCase();
     const when = readWhen(cell(row, 'When'));
-    const fc = percent(row, 'FC %', problems);
-    const parts = percent(row, 'Part %', problems);
+    const xp = percent(row, 'XP %', problems);
     if (!name) problems.push('a supply event needs a name');
     if (!KEY_PATTERN.test(key)) problems.push(`Key must be lower case words joined with -, not "${cell(row, 'Key')}"`);
     else if (events.some((e) => e.key === key)) problems.push(`the Key ${key} is used twice`);
@@ -89,7 +86,7 @@ export function readSupplyEvents(t: PoolTable | undefined, fail: (line: number, 
     for (const m of problems) fail(row.line, m);
     if (problems.length > 0) continue;
     // Each undefined above has its message in `problems`.
-    events.push({ name, key, when: when!, fc: fc!, parts: parts! });
+    events.push({ name, key, when: when!, xp: xp! });
   }
   return events;
 }
@@ -131,18 +128,13 @@ export function activeSupplyEvent(events: readonly SupplyEvent[], now: Date): Su
 }
 
 /**
- * The case kinds as `event` fills them: Field Credits and the chance of a part scaled (whole credits, a chance capped
- * at certain); how many cases, where they stand and how they are heard are the table's. No event: the kinds as they
- * are. Cases are placed before they are filled, so on one seed an event changes what the cases hold, never which
- * cases stand where.
+ * The case kinds as `event` fills them: their XP scaled (whole numbers); how many cases, where they stand and how
+ * they are heard are the table's. No event: the kinds as they are. Cases are placed before they are filled, so on one
+ * seed an event changes what the cases hold, never which cases stand where.
  */
 export function kindsUnder(kinds: readonly CaseKind[], event: SupplyEvent | null): readonly CaseKind[] {
   if (!event) return kinds;
-  return kinds.map((k) => ({
-    ...k,
-    fc: { min: Math.round(k.fc.min * event.fc), max: Math.round(k.fc.max * event.fc) },
-    partChance: Math.min(1, k.partChance * event.parts),
-  }));
+  return kinds.map((k) => ({ ...k, xp: { min: Math.round(k.xp.min * event.xp), max: Math.round(k.xp.max * event.xp) } }));
 }
 
 /** When `event` ends: "until Sunday" or "until 1 Nov". */
@@ -159,9 +151,8 @@ function change(scale: number, what: string): string | null {
   return `${p > 0 ? '+' : '−'}${Math.abs(p)} % ${what}`;
 }
 
-/** The Mode pop-up's line for `event` (M49): "Supply weekend, until Sunday: cases hold +25 % Field Credits and +50 % parts." */
+/** The Mode pop-up's line for `event` (M49): "Supply weekend, until Sunday: cases hold +25 % XP." */
 export function supplyLine(event: SupplyEvent): string {
-  const changes = [change(event.fc, 'Field Credits'), change(event.parts, 'parts')].filter((c): c is string => c !== null);
-  const what = changes.length > 0 ? `cases hold ${changes.join(' and ')}` : 'cases as usual';
-  return `${event.name}, ${until(event)}: ${what}.`;
+  const xp = change(event.xp, 'XP');
+  return `${event.name}, ${until(event)}: ${xp ? `cases hold ${xp}` : 'cases as usual'}.`;
 }

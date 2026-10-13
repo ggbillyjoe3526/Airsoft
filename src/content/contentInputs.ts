@@ -1,6 +1,8 @@
 import type { ReplicaConfig } from '../config/replicas';
 import type { StatsFile } from '../config/statsFile';
+import type { BotKitTable } from '../pool/botKit';
 import type { Asset, Pool } from '../pool/pool';
+import type { LevelTable } from '../progress/levels';
 
 /**
  * Everything the rules and compatibility checks read (CT1), passed in so a test can hand them a pool or a table with a
@@ -27,6 +29,8 @@ export interface PartEffect {
 export interface ContentInputs {
   pool: Pool;
   stats: StatsFile;
+  /** The levels (levels.md, LV1): the level each item unlocks at. */
+  levels: LevelTable;
   /** The replica configs by Key (pool.ts REPLICA_KEYS). */
   replicas: Readonly<Record<string, ReplicaConfig>>;
   /** The model tables by table name (the replica's viewmodel, else 'pistol' or 'aeg'). */
@@ -37,6 +41,8 @@ export interface ContentInputs {
   partKeys: Readonly<Record<PartCategory, readonly string[]>>;
   /** What a part changes (its numbers, read from the game's configs). */
   effects(part: Asset): readonly PartEffect[];
+  /** The bots' kits (bot-kits.md, BG1): which replicas the other team brings. Absent: not checked. */
+  botKits?: BotKitTable;
 }
 
 /** The pool categories a replica's Customise slots take (pool/kit.ts FIT_CATEGORY), power sources included. */

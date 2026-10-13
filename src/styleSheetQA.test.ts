@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 /**
  * QA for M100's sheets, fonts and text (read from disk, as styleSheet.test.ts does): Inter really is the face in the
- * files and the rules, every character the screens print is one Inter has, and the pop-up menu's rules hold.
+ * files and the rules, every character the screens print is one Inter has, and the top bar's level badge (LV1) reads.
  */
 const nodeFs = 'node:' + 'fs';
 const nodeZlib = 'node:' + 'zlib';
@@ -190,29 +190,23 @@ describe('every character the screens print is in Inter (M100 QA)', () => {
   });
 });
 
-describe('the pop-up menu\'s rules (M100 QA)', () => {
-  const menu = rulesFor(menuSheet, '.context-menu').join(';');
-  const item = rulesFor(menuSheet, '.context-item').join(';');
+describe('the top bar\'s level badge (LV1, in place of M100\'s pop-up menu)', () => {
+  const chip = rulesFor(menuSheet, '.menu-chip').join(';');
+  const level = rulesFor(menuSheet, '.menu-chip-level').join(';');
 
-  it('is fixed in the window above every screen and the top bar, opaque, and sized so a long name or a narrow window cannot push it off', () => {
-    expect(menu).toMatch(/position:\s*fixed/);
-    const z = Number(/z-index:\s*(\d+)/.exec(menu)![1]);
-    const topbar = Number(/z-index:\s*(\d+)/.exec(rulesFor(menuSheet, '.menu-topbar').join(';'))![1]);
-    expect(z).toBeGreaterThan(topbar);
-    expect(menu).toMatch(/background:\s*var\(--menu-panel\)/);
-    expect(menu).toMatch(/max-width:\s*min\(\d+px,\s*calc\(100vw\s*-\s*\d+px\)\)/);
+  it('is a chip on the top bar\'s panel colour, one line of text that never wraps, with the bar under it', () => {
+    expect(chip).toMatch(/background:\s*var\(--menu-panel-hi\)/);
+    expect(chip).toMatch(/white-space:\s*nowrap/);
+    expect(level).toMatch(/flex-direction:\s*column/);
+    expect(level).toMatch(/cursor:\s*pointer/);
   });
 
-  it('is reached by the stylesheet\'s hidden rule, so hidden hides it despite its display:flex', () => {
-    expect(menu).toMatch(/display:\s*flex/);
+  it('is reached by the stylesheet\'s hidden rule, so hidden (levelling off) hides it despite its display:inline-flex', () => {
+    expect(chip).toMatch(/display:\s*inline-flex/);
     expect(menuSheet).toMatch(/\.menus \[hidden\]\s*\{\s*display:\s*none\s*!important/);
   });
 
-  it('has items a pointer and a finger can hit (40 px tall), in Inter, with a focus look as visible as the hover', () => {
-    expect(Number(/min-height:\s*(\d+)px/.exec(item)![1])).toBeGreaterThanOrEqual(36);
-    expect(item).toMatch(/font:\s*600 var\(--fs-md\)[^;]*var\(--ui-font\)/);
-    expect(menuSheet).toMatch(/\.context-item:hover,\s*\.context-item:focus-visible\s*\{[^}]*background:\s*var\(--menu-panel-hi\)/);
-    // The shared focus ring (an orange outline) still reaches it; only its offset moves inside the item.
+  it('is a button, so the shared focus ring (an orange outline) reaches it', () => {
     expect(menuSheet).toMatch(/\.menus :is\([^)]*button[^)]*\):focus-visible/);
   });
 });
@@ -234,10 +228,13 @@ describe('the small text of M100 reads on the navy (M100 QA)', () => {
     expect(contrast(token('--menu-faint'), token('--menu-bg'))).toBeGreaterThanOrEqual(4.5);
   });
 
-  it('has the spare count in acid, the pop-up\'s text and its title at 4.5:1 on their grounds', () => {
+  it('has the level badge\'s text and the Armory\'s level words at 4.5:1 on their grounds (LV1)', () => {
+    expect(rulesFor(menuSheet, '.menu-chip-level').join(';')).toMatch(/color:\s*var\(--paper\)/);
+    expect(contrast(token('--paper'), token('--menu-panel-hi'))).toBeGreaterThanOrEqual(4.5);
+    // The level's number and the next level's state in orange, the XP and the locked state muted, on the cards' navy.
+    expect(rulesFor(menuSheet, '.armory-level-n').join(';')).toMatch(/color:\s*var\(--orange-text\)/);
+    expect(rulesFor(menuSheet, '.armory-level-xp').join(';')).toMatch(/color:\s*var\(--menu-muted\)/);
+    for (const t of ['--orange-text', '--menu-muted', '--menu-soft', '--menu-good', '--paper']) expect(contrast(token(t), token('--menu-panel')), t).toBeGreaterThanOrEqual(4.5);
     expect(contrast(token('--menu-acid'), token('--menu-bg'))).toBeGreaterThanOrEqual(4.5);
-    expect(contrast(token('--paper'), token('--menu-panel'))).toBeGreaterThanOrEqual(4.5);
-    expect(contrast(token('--menu-muted'), token('--menu-panel'))).toBeGreaterThanOrEqual(4.5);
-    expect(rulesFor(menuSheet, '.context-menu-title').join(';')).toMatch(/color:\s*var\(--menu-muted\)/);
   });
 });

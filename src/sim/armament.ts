@@ -54,7 +54,7 @@ export function spareBBs(ammo: ReplicaAmmo): number {
 /** A character's replicas and what they're doing. Plain data. */
 export interface Armament {
   /**
-   * The replica in each loadout slot, as this character carries it (M26b): the player's replicas with their rarity,
+   * The replica in each loadout slot, as this character carries it (M26b): the player's replicas with their
    * power source and laser worked in (pool/kit.ts), the bots' as they come. Read these, never a shared list.
    */
   replicas: ReplicaConfig[];

@@ -1,5 +1,5 @@
 import { AUDIO } from '../config/audio';
-import type { BotConfig } from '../config/bots';
+import type { BotConfig, BotSkill } from '../config/bots';
 import type { HitConfig } from '../config/hits';
 import { WHAT_GOT_YOU } from '../config/matchInfo';
 import { FLAG, unknownMode } from '../config/modes';
@@ -26,7 +26,8 @@ import { thinkBot } from './botBrain';
 import type { CoverBlock } from './cover';
 import { bodyPoint, eyeOf, OPEN_SIGHT, type SightConditions, seesSpot } from './perception';
 import { endOrder, heldCentre, holdPoint, placeHold, startOrder } from './squadOrders';
-import { assignLanes, pickTeamPlan, shuffledLanes, type TeamPlan } from './teamPlan';
+import { anchorHolding, type BotIdentity, personalSkill } from './personality';
+import { assignLanes, pickTeamPlan, shuffledLanes, takeOwnLanes, type TeamPlan } from './teamPlan';
 
 /** Score of a sector nobody has visited this round: older than any real visit. */
 const NEVER = -1e6;
@@ -59,6 +60,11 @@ export interface BotControllerOptions {
   seed: number;
   /** Extraction: the map's insertion berth (ExtractionData.insertionBerth; absent, BOT_BEHAVIOUR.insertionBerth). */
   insertionBerth?: number | undefined;
+  /**
+   * Who each bot is (BN1), by character id: its name and personality (ai/botRoster.ts drawIdentities, as the match drew
+   * them). A bot without one plays its difficulty as it is; absent, every bot does (the unit tests' bots).
+   */
+  identities?: ReadonlyMap<number, BotIdentity> | undefined;
 }
 
 /**
@@ -92,8 +98,8 @@ export class BotController {
   /** The bot whose route search is open in `search`, carried over from an earlier tick (audit AI-04), and its goal. */
   private searching: Bot | undefined;
   private readonly searchGoal = vec3();
-  /** Per team, the tuning its bots play by (BotControllerOptions.teamCfg). */
-  private readonly teamCfg: readonly BotConfig[];
+  /** Per team, the tuning its bots play by (BotControllerOptions.teamCfg; a team's skill changes by setTeamSkill). */
+  private readonly teamCfg: BotConfig[];
   /** Hunt sectors: per team, the last time a player of that team stood in each sector. */
   private readonly sectorCols: number;
   private readonly sectorRows: number;
@@ -134,7 +140,7 @@ export class BotController {
     this.visited = [0, 1].map(() => new Float64Array(this.sectorCols * this.sectorRows).fill(Number.NEGATIVE_INFINITY));
 
     this.planRng = createRng(planSeed(opts.seed));
-    this.teamCfg = opts.teamCfg ?? [cfg, cfg];
+    this.teamCfg = [...(opts.teamCfg ?? [cfg, cfg])];
 
     this.world = {
       characters: state.characters,
@@ -173,13 +179,14 @@ export class BotController {
     // Routes over low obstacles where that pays (M102): the grid's vault links, found once per grid.
     vaultLinksOf(nav, opts.query, opts.body, MOVEMENT, cfg.vaultPrice);
     for (const c of botCharacters) {
-      this.bots.push(createBot(c, botSeed(opts.seed, c.id), cfg, this.cfgOf(c.team)));
+      this.bots.push(createBot(c, botSeed(opts.seed, c.id), cfg, this.cfgOf(c.team), opts.identities?.get(c.id)));
       this.botCharacters.add(c);
       commands.set(c.id, this.commandFor(c.id));
     }
     this.planRound();
-    // A team that holds angles needs the map's features (M40): worked out now, as the match loads, not mid-round.
-    if (this.teamCfg.some((t) => t.holdsAngles || t.slicesCorners)) this.angleFeatures();
+    // A bot that holds angles needs the map's features (M40): worked out now, as the match loads, not mid-round. Its
+    // level or its personality (BN1) may make it one.
+    if (this.bots.some((b) => b.skill.holdsAngles || b.skill.slicesCorners)) this.angleFeatures();
   }
 
   /** The map's angle features (M40), worked out on first use. */
@@ -196,6 +203,17 @@ export class BotController {
   /** The tuning `team`'s bots play by. */
   cfgOf(team: number): BotConfig {
     return this.teamCfg[team] ?? this.opts.cfg;
+  }
+
+  /**
+   * Adaptive difficulty (AD1, ai/adaptiveRun.ts), between rounds: `team`'s bots play at `skill` from now on, each with
+   * its personality laid over it again (BN1). Only its numbers may change; the switches stay the match's (a team that
+   * holds angles had its map features worked out as the match loaded).
+   */
+  setTeamSkill(team: number, skill: BotSkill): void {
+    const cfg = { ...this.cfgOf(team), ...skill };
+    this.teamCfg[team] = cfg;
+    for (const b of this.bots) if (b.character.team === team) b.skill = personalSkill(cfg, b.style);
   }
 
   private commandFor(id: number): PlayerCommand {
@@ -599,6 +617,9 @@ export class BotController {
       if (defending && plan === 'stack') plan = 'pair'; // three bots holding one lane point would stand in a heap
       this.plans[team] = plan;
       const lanes = assignLanes(plan, members.length, shuffledLanes(this.planRng, this.opts.lanes.length));
+      // A personality that keeps a lane of its own (BN1, the flanker) leaves a shared lane for the free one furthest from
+      // its team's. Not on defence: defenders hold the points they were dealt.
+      if (!defending) takeOwnLanes(members.map((b) => b.style.ownLane), lanes, this.opts.lanes);
       const onLane = new Map<number, number>();
       members.forEach((b, i) => {
         const lane = lanes[i]!;
@@ -614,6 +635,9 @@ export class BotController {
           points = forward || (shared && b.skill.teamPlay) ? 2 : 1;
         } else if (attacking) {
           points = this.pointsToMidfield(team, lane);
+        } else if (round.mode === 'elimination' && b.style.holdUntil !== null) {
+          // An anchor (BN1) walks its lane only to the last point short of the middle, and holds there (anchorHolding).
+          points = Math.max(1, this.pointsToMidfield(team, lane) - 1);
         }
         resetBot(b, lane, hold, cfg, points);
       });
@@ -699,8 +723,8 @@ export class BotController {
     let rear = Number.POSITIVE_INFINITY;
     for (const b of this.bots) {
       const c = b.character;
-      // Bots under a squad order go their own way: nobody waits for them.
-      if (c === me || c.team !== me.team || !isInPlay(c) || b.order !== 'none') continue;
+      // Bots under a squad order go their own way, and an anchor holds short of the middle (BN1): nobody waits for them.
+      if (c === me || c.team !== me.team || !isInPlay(c) || b.order !== 'none' || anchorHolding(b, this.world)) continue;
       rear = Math.min(rear, this.progress(c));
     }
     return this.progress(me) - rear > this.world.cfg.teamSpread;

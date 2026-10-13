@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SAVED_LOADOUTS, SAVED_TEXT } from '../../config/savedLoadouts';
-import { type ItemRef, itemKey } from '../../pool/collection';
+import type { ItemRef } from '../../pool/item';
 import { GAME_POOL } from '../../pool/gamePool';
 import { LoadoutModel, type Ownership } from '../../pool/loadoutModel';
 import { SavedLoadouts } from '../../pool/savedLoadouts';
@@ -17,13 +17,13 @@ import { EventNode, stubMenuPage } from './menuTestSupport';
  */
 const pool = GAME_POOL;
 const id = (name: string) => pool.assets.find((a) => a.name === name)!.id;
-const item = (name: string, tier = 'common'): ItemRef => ({ asset: id(name), tier });
+const item = (name: string): ItemRef => ({ asset: id(name) });
 const STARTERS = ['AEG Rifle', 'GBB Pistol', 'Standard Battery', 'Green Gas'].map((n) => item(n));
 const AEG = id('AEG Rifle');
 
 function owning(items: ItemRef[]): Ownership & { items: Set<string> } {
-  const set = new Set(items.map((r) => itemKey(r.asset, r.tier)));
-  return { items: set, owns: (r) => set.has(itemKey(r.asset, r.tier)) };
+  const set = new Set(items.map((r) => r.asset));
+  return { items: set, owns: (r) => set.has(r.asset) };
 }
 
 beforeEach(() => {
@@ -45,7 +45,7 @@ interface Rig {
   own: ReturnType<typeof owning>;
 }
 
-function rig(own = owning([...STARTERS, item('Red Dot'), item('Cyber Pistol', 'legendary')])): Rig {
+function rig(own = owning([...STARTERS, item('Red Dot'), item('Cyber Pistol')])): Rig {
   const storage = new MemoryStorage();
   const model = new LoadoutModel(pool, own);
   const saved = new SavedLoadouts(model, () => storage);
@@ -147,7 +147,7 @@ describe('criterion 2: an empty tab offers New loadout; keys 1 to 5 and a click 
     button(tabs(r)[1]!).click();
     input(tabs(r)[1]!).fire('keydown', { key: 'Enter' });
     // Slot 2 carries a Cyber Pistol in the primary slot; slot 1 keeps the AEG Rifle.
-    r.model.equip('primary', item('Cyber Pistol', 'legendary'));
+    r.model.equip('primary', item('Cyber Pistol'));
     r.screen.refresh();
     const kit2 = r.model.kit().slots.map((s) => s.replica.id);
     expect(carried(r).join('|')).toContain('Cyber Pistol');
@@ -244,7 +244,7 @@ describe('criterion 3: the tab menu, confirmations and rename', () => {
 
   it('Replace asks first and copies the loadout carried over the other only on confirm', () => {
     const r = twoLoadouts(); // current: slot 2 (a copy of 1)
-    r.model.equip('primary', item('Cyber Pistol', 'legendary'));
+    r.model.equip('primary', item('Cyber Pistol'));
     r.screen.refresh();
     const was = r.saved.view(0)!.replicas.map((a) => a?.name);
     menuFor(r, 0).choose(SAVED_TEXT.replace);
@@ -398,17 +398,17 @@ describe('criterion 4: the Match screen picks a saved loadout', () => {
 
 describe('criterion 5: locked gear is said in words', () => {
   it('counts what is locked on the tab and lists it, with what plays instead, under the tabs', () => {
-    const own = owning([...STARTERS, item('Red Dot'), item('Cyber Pistol', 'legendary')]);
+    const own = owning([...STARTERS, item('Red Dot'), item('Cyber Pistol')]);
     const r = rig(own);
     r.model.setFit(AEG, 'optic', item('Red Dot'));
-    r.model.equip('primary', item('Cyber Pistol', 'legendary'));
+    r.model.equip('primary', item('Cyber Pistol'));
     r.screen.refresh();
     const box = findAll(r.root, 'saved-locked')[0] as EventNode;
     expect(box.hidden).toBe(true);
     expect(part(tabs(r)[0]!, 'saved-tab-line').text).not.toContain('locked');
 
-    own.items.delete(itemKey(id('Red Dot'), 'common'));
-    own.items.delete(itemKey(id('Cyber Pistol'), 'legendary'));
+    own.items.delete(id('Red Dot'));
+    own.items.delete(id('Cyber Pistol'));
     r.screen.refresh();
     const line = part(tabs(r)[0]!, 'saved-tab-line').text;
     expect(line).toContain(SAVED_TEXT.locked(r.saved.view(0)!.missing.length));
@@ -423,8 +423,8 @@ describe('criterion 5: locked gear is said in words', () => {
     expect(items.some((t) => t.startsWith('Cyber Pistol (locked): ') && t.endsWith(' instead'))).toBe(true);
     expect(items).toContain('Red Dot (locked): nothing in its place');
 
-    own.items.add(itemKey(id('Red Dot'), 'common'));
-    own.items.add(itemKey(id('Cyber Pistol'), 'legendary'));
+    own.items.add(id('Red Dot'));
+    own.items.add(id('Cyber Pistol'));
     r.screen.refresh();
     expect(box.hidden).toBe(true);
     expect(part(tabs(r)[0]!, 'saved-tab-line').text).not.toContain('locked');
@@ -437,7 +437,7 @@ describe('criterion 5: locked gear is said in words', () => {
     input(tabs(r)[1]!).fire('keydown', { key: 'Enter' });
     r.model.setFit(AEG, 'optic', item('Red Dot'));
     key(r, '1');
-    own.items.delete(itemKey(id('Red Dot'), 'common'));
+    own.items.delete(id('Red Dot'));
     r.screen.refresh();
     expect(part(tabs(r)[1]!, 'saved-tab-line').text).toMatch(/1 locked$/);
     expect(part(tabs(r)[0]!, 'saved-tab-line').text).not.toContain('locked');
@@ -452,28 +452,34 @@ describe('criterion 5: locked gear is said in words', () => {
 
 describe('criterion 6: bots do not read the saved loadouts', () => {
   /** The bot code's source text, by path (Vite reads the files raw; no test files). */
-  const botSource = import.meta.glob(['../../ai/**/*.ts', '!../../ai/**/*.test.ts', '../../pool/botKit.ts', '../../pool/kit.ts', '../../config/bots.ts'], {
+  const botSource = import.meta.glob(['../../ai/**/*.ts', '!../../ai/**/*.test.ts', '../../pool/botKit.ts', '../../pool/gameBotKits.ts', '../../pool/kit.ts', '../../config/bots.ts'], {
     query: '?raw',
     import: 'default',
     eager: true,
   }) as Record<string, string>;
 
-  it('imports the saved loadouts nowhere in the bot code (src/ai, the bot kit, the kit and the bot config)', () => {
+  it('imports the saved loadouts nowhere in the bot code (src/ai, the bot kits, the kit and the bot config)', () => {
     const bot = Object.entries(botSource);
     expect(bot.length).toBeGreaterThan(10);
     const offenders = bot.filter(([, text]) => /savedLoadouts|SavedLoadouts|airsoft\.loadouts/.test(text)).map(([path]) => path);
     expect(offenders).toEqual([]);
   });
 
-  it('rolls the same bot kit before and after the player switches loadout', async () => {
-    const { rolledKit } = await import('../../pool/botKit');
+  it('picks the same bot kits before and after the player switches loadout', async () => {
+    const { botKitSeed, botKitSlots, pickBotKit } = await import('../../pool/botKit');
+    const { GAME_BOT_KITS } = await import('../../pool/gameBotKits');
     const r = rig();
-    const loadout = r.model.kit().slots.map((s) => s.replica);
-    const roll = () => JSON.stringify(rolledKit(pool, loadout, 1234));
+    const roll = () =>
+      JSON.stringify(
+        [3, 4, 5].map((id) => {
+          const kit = pickBotKit(GAME_BOT_KITS, 'hard', pool, botKitSeed(1234, id));
+          return kit ? botKitSlots(pool, kit) : null;
+        }),
+      );
     const before = roll();
     button(tabs(r)[1]!).click();
     input(tabs(r)[1]!).fire('keydown', { key: 'Enter' });
-    r.model.equip('primary', item('Cyber Pistol', 'legendary'));
+    r.model.equip('primary', item('Cyber Pistol'));
     expect(roll()).toBe(before);
   });
 });

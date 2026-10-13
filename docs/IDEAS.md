@@ -18,7 +18,7 @@ New ideas the owner wants to think about (owner, 2026-10-06). Roadmap items he m
 `docs/ROADMAP.md`.
 
 - **Clutch moments.** A "last one standing" banner and a clutch count in your records.
-- **Match wagers.** Stake some Field Credits on winning before a match for a bigger payout.
+- **Match wagers.** Stake some of a match's XP on winning it, for more XP if you do.
 - **A downside for the 11.1 V LiPo Battery.** It fires 15 % faster with no number made worse; a cost (more kick, a
   shorter battery life, or slower trigger response) would make it a real trade-off (owner, 2026-10-11: leave it for
   now).

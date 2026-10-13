@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { FIGURE } from '../config/characters';
+import type { OpticId } from '../config/optics';
 import type { Scheme } from '../config/schemes';
 import type { GripWrap } from './figureHands';
 import type { PartBuilder, PartLook } from './figureParts';
@@ -28,11 +29,15 @@ export function addShape(b: PartBuilder, m: THREE.Matrix4, colours: FigureReplic
   for (const p of shape) b.add(p.geometry.clone().applyMatrix4(m), colours[p.role], p.role === 'steel' ? STEEL : POLYMER);
 }
 
-/** The parts a figure shows on its replicas: a silencer on the rifle (M29b; Player detail `high` only), a weapon torch. */
+/**
+ * The parts a figure shows on its replicas: a silencer on the rifle (M29b; Player detail `high` only), a weapon torch,
+ * the rifle's optic (BG1).
+ */
 export interface FigureKit {
   rifleSilencer: boolean;
   rifleTorch?: boolean;
   pistolTorch?: boolean;
+  rifleOptic?: OpticId | null;
 }
 
 /** As every replica comes. */
@@ -89,11 +94,27 @@ function addTorch(b: PartBuilder, m: THREE.Matrix4, colours: FigureReplicaColour
 }
 
 /**
+ * A fitted optic over the rifle's receiver (BG1): its mount on the receiver's top and its tube along the bore, a 2x
+ * scope's with a wider objective at the front.
+ */
+function addOptic(b: PartBuilder, m: THREE.Matrix4, colours: FigureReplicaColours, optic: OpticId): void {
+  const O = FIGURE.optic;
+  const tube = O[optic];
+  const base = tube.height - tube.radius;
+  b.box(colours.detail, O.mount.w, base - O.top, O.mount.d, 0, (O.top + base) / 2, -O.at, POLYMER, m);
+  const along = new THREE.Euler(Math.PI / 2, 0, 0);
+  b.cylinder(colours.body, tube.radius, tube.length, m, 0, tube.height, -O.at, POLYMER, along);
+  if (optic !== 'scope2x') return;
+  const S = O.scope2x;
+  b.cylinder(colours.body, S.objective, S.objectiveLength, m, 0, S.height, -O.at - S.length / 2 - S.objectiveLength / 2, POLYMER, along);
+}
+
+/**
  * The rifle, its butt at the frame's origin and its muzzle FIGURE.rifle.length ahead: a hard-angled stock, the receiver
  * with its accent line, a raked grip, the magazine, a squared handguard with its own line, a gas block and the barrel.
  * Detailed: a top rail, a magwell, a cheek riser, the trigger guard and a flash hider, or a fitted silencer at the muzzle.
- * With `shape` (a model file's, RM1), that shape in place of the built-in one, at every detail (with its fitted torch
- * and, detailed, its silencer).
+ * A fitted torch and optic (BG1) at every detail. With `shape` (a model file's, RM1), that shape in place of the
+ * built-in one, at every detail (with its fitted torch and optic and, detailed, its silencer).
  */
 export function addRifle(b: PartBuilder, m: THREE.Matrix4, colours: FigureReplicaColours, kit: FigureKit = BARE_KIT, shape: FigureReplicaShape | null = null): void {
   const c = colours;
@@ -103,6 +124,7 @@ export function addRifle(b: PartBuilder, m: THREE.Matrix4, colours: FigureReplic
     addShape(b, m, c, shape);
     const T = FIGURE.torch;
     if (kit.rifleTorch) addTorch(b, m, c, T.rifleSide, 0, -T.rifleAt, T.size, T.length);
+    if (kit.rifleOptic) addOptic(b, m, c, kit.rifleOptic);
     if (b.overhaul && kit.rifleSilencer) b.cylinder(c.body, S.radius, S.length, m, 0, 0, -L + S.length / 2, POLYMER, new THREE.Euler(Math.PI / 2, 0, 0));
     return;
   }
@@ -120,6 +142,7 @@ export function addRifle(b: PartBuilder, m: THREE.Matrix4, colours: FigureReplic
   b.box(c.steel, 0.022, 0.022, 0.2, 0, 0, -(L - 0.1), STEEL, m);
   const T = FIGURE.torch;
   if (kit.rifleTorch) addTorch(b, m, c, T.rifleSide, 0, -T.rifleAt, T.size, T.length);
+  if (kit.rifleOptic) addOptic(b, m, c, kit.rifleOptic);
   if (!b.overhaul) return;
   b.box(c.detail, 0.024, 0.012, 0.3, 0, 0.048, -0.39, POLYMER, m); // top rail
   b.block(c.body, 0.05, 0.03, 0.08, 0, -0.05, -0.43, POLYMER, m); // magwell

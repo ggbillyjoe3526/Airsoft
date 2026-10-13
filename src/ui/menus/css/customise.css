@@ -294,9 +294,42 @@
   letter-spacing: 0.04em;
 }
 
-.option-line {
+.option-line,
+.option-note {
   font-size: var(--fs-sm);
   color: var(--menu-muted);
+}
+
+/* An option still to unlock (LV1): an option tile greyed, with a lock and the level that unlocks it; not a button. */
+.option-locked {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 150px;
+  padding: var(--sp-3);
+  overflow: hidden;
+  color: var(--menu-muted);
+  background: rgba(7, 13, 31, 0.7);
+  border: 1px dashed var(--menu-line-soft);
+}
+
+.option-locked > .pic-slot {
+  flex: 1 0 auto;
+  min-height: 84px;
+  margin: calc(-1 * var(--sp-3)) calc(-1 * var(--sp-3)) var(--sp-1);
+  background: none;
+  opacity: 0.4;
+  filter: grayscale(1);
+}
+
+.option-locked .option-name {
+  color: var(--menu-soft);
+}
+
+.option-locked .option-note {
+  font-weight: 700;
+  color: var(--orange-text);
 }
 
 .fit-readout:empty {

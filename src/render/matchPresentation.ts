@@ -4,6 +4,7 @@ import { EXTRACTION } from '../config/extraction';
 import { HUD_TEXT, type SkipLabel } from '../config/hudText';
 import { DEV_BOT_INTENT } from '../config/dev';
 import type { Bot } from '../ai/bot';
+import type { BotIdentity } from '../ai/personality';
 import { BotIntentLabels, botIntentText, botRoleText } from '../ui/botIntentLabels';
 import type { HitConfig, HitMarkerSettings } from '../config/hits';
 import { type HitFeedMode, TEAMMATE_MARKERS } from '../config/matchInfo';
@@ -36,7 +37,7 @@ import { runNews } from '../ui/runStatus';
 import { Scoreboard } from '../ui/scoreboard';
 import { type HeardSound, SoundCues, soundCueOf } from '../ui/soundCues';
 import { type OrderNotice, SquadOrderLine } from '../ui/squadOrderLine';
-import { rosterNames, statsBlocks } from '../ui/statsRows';
+import { rosterNames, rosterTags, statsBlocks } from '../ui/statsRows';
 import { TeammateMarkers } from '../ui/teammateMarkers';
 import { WhatGotYouCard, whatGotYouText } from '../ui/whatGotYou';
 import { CharacterRenderer } from './characterRenderer';
@@ -112,8 +113,11 @@ export class MatchPresentation {
   /** The player the camera follows while you spectate (the middle of the minimap), as of the last frame. */
   private watched: Character | undefined;
   private readonly viewDir = new THREE.Vector3();
-  /** Display names by character id ("Alpha 2", "You"). */
-  private readonly names: Map<number, string>;
+  /** Display names by character id ("Rook", "You"; "Alpha 2" for a bot without a roster name, BN1). */
+  private names: Map<number, string>;
+  /** Each bot's personality, by character id (BN1): its tag on the board and its card note ("{name} anchors: …"). */
+  private tags: ReadonlyMap<number, string> = new Map();
+  private cardNotes: ReadonlyMap<number, string> = new Map();
   private roundStartedAt = 0;
   /** World yaw the BB that hit you came from (see showHit), and when. */
   private hitFromYaw = 0;
@@ -298,6 +302,18 @@ export class MatchPresentation {
     this.proTips = on;
   }
 
+  /**
+   * Who the bots are (BN1, as the match drew them): their roster names wherever a name shows (the hit feed, the board,
+   * teammates' tags, spectating, the "what got you" card), and their personality on the board and the card. Called
+   * once as the match is built.
+   */
+  setRoster(identities: ReadonlyMap<number, BotIdentity>): void {
+    this.names = rosterNames(this.state.characters, this.player.id, identities);
+    this.tags = rosterTags(identities);
+    this.cardNotes = new Map([...identities].map(([id, who]) => [id, who.style.cardNote]));
+    this.mates.forEach((c, i) => this.mateMarkers.rename(i, this.names.get(c.id) ?? ''));
+  }
+
   setPlaying(playing: boolean): void {
     this.feedback.setVisible(playing);
     this.scoreboard.setVisible(playing);
@@ -388,7 +404,7 @@ export class MatchPresentation {
           this.feedback.showHit(wrapAngle(cameraYaw - this.hitFromYaw));
           const facts = this.hitFacts;
           if (this.whatGotYouOn && facts && facts.victimId === e.victimId && facts.time === this.state.time) {
-            this.whatGotYou.set(whatGotYouText(facts, this.names.get(e.shooterId) ?? 'Someone', cameraYaw));
+            this.whatGotYou.set(whatGotYouText(facts, this.names.get(e.shooterId) ?? 'Someone', cameraYaw, this.cardNotes.get(e.shooterId)));
           }
         } else if (e.shooterId === this.player.id) {
           const victim = this.state.characters.find((c) => c.id === e.victimId);
@@ -679,7 +695,7 @@ export class MatchPresentation {
     this.board.setTip(this.proTips ? proTip(r.number) : '');
     const heading = match ? (r.phase === 'matchOver' ? 'Match' : `Match so far · round ${r.number}`) : `Round ${r.number}`;
     const statsOf = match ? (id: number) => this.stats.matchOf(id) : (id: number) => this.stats.roundOf(id);
-    this.board.set(heading, statsBlocks(this.state.characters, this.names, statsOf, r.score, this.player, r.phase === 'live', this.extraction !== undefined, r.run.reserve));
+    this.board.set(heading, statsBlocks(this.state.characters, this.names, statsOf, r.score, this.player, r.phase === 'live', this.extraction !== undefined, r.run.reserve, this.tags));
   }
 
   /** What the board over the field shows: the match while the key is held or once decided, the round between rounds. */

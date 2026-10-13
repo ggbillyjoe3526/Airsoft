@@ -13,7 +13,7 @@ import { initPhysics } from '../../physics/physicsWorld';
 import { kittedCharacter } from '../../pool/botKit';
 import { GAME_POOL } from '../../pool/gamePool';
 import { kitSlot, type ReplicaFit } from '../../pool/kit';
-import { type Asset, fits, isChase, tiersOf } from '../../pool/pool';
+import { type Asset, fits } from '../../pool/pool';
 import type { Character } from '../../sim/character';
 import { gameInputs } from '../gameContent';
 import { siteClassOf } from '../replicaChecks';
@@ -25,7 +25,7 @@ import { contentItem, ENV, envNumber } from './reportSupport';
  * team carries the item and the other the same kit without it, on every map AIRSOFT_CONTENT_MAP names (all of them when
  * unset), each lighting it offers, each mode it hosts and every level. Extraction (CT3) plays whole runs
  * (ai/extractionRunSupport.ts playRun): the squad with the item, then with the rival kit, seed for seed. A replica plays
- * against each ordinary public replica of its class (a chase item is no rival); a part plays on each public replica it
+ * against each ordinary public replica of its class (an item allowed stronger is no rival); a part plays on each public replica it
  * fits, against that replica as it comes. The figures go to the report as balance measures (pipeline/balanceReport.mjs judges them): on
  * public maps, modes and levels they hold the owner's band (decision 1 of the plan: 40 to 60 %), on dev ones they are
  * information (decision 5), and an item allowed stronger is shown, never judged.
@@ -39,7 +39,7 @@ interface Side {
 }
 
 function sideCharacter(side: Side, id: number, team: number): Character {
-  const slot = kitSlot(GAME_POOL, { asset: side.item.id, tier: tiersOf(GAME_POOL, side.item)[0]!.id }, side.fit);
+  const slot = kitSlot(GAME_POOL, { asset: side.item.id }, side.fit);
   return kittedCharacter(id, team, [slot]);
 }
 
@@ -48,7 +48,7 @@ function pairings(item: Asset): { ours: Side; theirs: Side; judged: boolean; aga
   const inputs = gameInputs();
   if (item.category === 'replica') {
     const cls = siteClassOf(inputs, item);
-    const rivals = GAME_POOL.assets.filter((a) => a.category === 'replica' && a.id !== item.id && a.tag === 'public' && !isChase(a) && siteClassOf(inputs, a) === cls);
+    const rivals = GAME_POOL.assets.filter((a) => a.category === 'replica' && a.id !== item.id && a.tag === 'public' && !ALLOWED_STRONGER[a.id] && siteClassOf(inputs, a) === cls);
     const ours: Side = { name: item.name, item, fit: asItComesFit(GAME_POOL, item) };
     return rivals.map((r) => ({ ours, theirs: { name: r.name, item: r, fit: asItComesFit(GAME_POOL, r) }, judged: !ALLOWED_STRONGER[item.id], against: `the ${r.name}` }));
   }
@@ -58,7 +58,7 @@ function pairings(item: Asset): { ours: Side; theirs: Side; judged: boolean; aga
     .filter((a) => a.category === 'replica' && a.tag === 'public' && fits(item, a))
     .map((r) => {
       const base = asItComesFit(GAME_POOL, r);
-      const fit = { ...base, [slot]: { asset: item.id, tier: tiersOf(GAME_POOL, item)[0]!.id } };
+      const fit = { ...base, [slot]: { asset: item.id } };
       return { ours: { name: `${r.name} with the ${item.name}`, item: r, fit }, theirs: { name: `${r.name} without it`, item: r, fit: base }, judged: !ALLOWED_STRONGER[item.id], against: `the ${r.name} without it` };
     });
 }

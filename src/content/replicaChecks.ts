@@ -1,10 +1,13 @@
+import { DIFFICULTIES, type Difficulty } from '../config/bots';
 import { DESCRIPTIVE_TAGS, DRIVE_TAGS, RANGE_EXCEPTIONS, type RangedStat, REPLICA_RANGES, STAT_WORDS } from '../config/contentRules';
 import { cues } from '../config/sounds';
-import { botKitSeed, kittedCharacter, randomKit } from '../pool/botKit';
-import { type ItemRef, itemKey } from '../pool/collection';
+import { type BotKit, kittedBot } from '../pool/botKit';
+import { type ItemRef, itemKey } from '../pool/item';
 import { FIT_CATEGORY, FIT_SLOTS, type FitSlot } from '../pool/kit';
 import { LoadoutModel } from '../pool/loadoutModel';
-import { type Asset, fits, hasBuiltInPower, tiersOf } from '../pool/pool';
+import { type Asset, fits, hasBuiltInPower } from '../pool/pool';
+import { createCharacter } from '../sim/character';
+import { vec3 } from '../sim/vec';
 import { assetRules } from './assetRules';
 import { type CheckResult, itemName, num, result } from './checks';
 import { type ContentInputs, drawName, drawTableOf } from './contentInputs';
@@ -73,10 +76,9 @@ export function replicaRules(inputs: ContentInputs, replica: Asset): CheckResult
     else out.push(result('rules', 'replica.ranges', item, 'pass', 'Every number is inside the game\'s normal range for its class.'));
   }
 
-  // The site limit: as it comes (what bots carry) at every tier it comes in, never past it.
-  const over = tiersOf(inputs.pool, replica).filter((t) => r.muzzleEnergy * (1 + t.bonus * (inputs.stats.tierShares.replica.energy ?? 0)) > r.energyLimit + 1e-9);
-  if (over.length > 0) out.push(result('rules', 'replica.siteLimit', item, 'fail', `As it comes it shoots past its ${num(r.energyLimit)} J site limit at ${over.map((t) => t.label).join(', ')}.`));
-  else out.push(result('rules', 'replica.siteLimit', item, 'pass', `As it comes it stays under its ${num(r.energyLimit)} J site limit at every tier (${num(r.muzzleEnergy, 3)} J at its commonest).`));
+  // The site limit: as it comes (what bots carry), never past it.
+  if (r.muzzleEnergy > r.energyLimit + 1e-9) out.push(result('rules', 'replica.siteLimit', item, 'fail', `As it comes it shoots ${num(r.muzzleEnergy, 3)} J, past its ${num(r.energyLimit)} J site limit.`));
+  else out.push(result('rules', 'replica.siteLimit', item, 'pass', `As it comes it stays under its ${num(r.energyLimit)} J site limit (${num(r.muzzleEnergy, 3)} J).`));
   return out;
 }
 
@@ -108,7 +110,7 @@ export function replicaCompatibility(inputs: ContentInputs, replica: Asset): Che
   const power = parts.filter((p) => p.category === 'power');
   if (hasBuiltInPower(replica)) out.push(result('compatibility', 'replica.power', item, power.length === 0 ? 'pass' : 'fail', power.length === 0 ? 'Its battery is built in and no power source fits.' : `Its battery is built in, yet ${power.map((p) => p.name).join(', ')} fit.`));
   else if (power.length === 0) out.push(result('compatibility', 'replica.power', item, 'fail', 'No power source fits it, so it can never shoot.'));
-  else if (!power.some((p) => p.starter)) out.push(result('compatibility', 'replica.power', item, 'warn', `None of its power sources (${power.map((p) => p.name).join(', ')}) is a starter: a new player who gets it can't use it until they find one.`));
+  else if (!power.some((p) => (inputs.levels.unlockLevel.get(p.id) ?? Number.POSITIVE_INFINITY) <= (inputs.levels.unlockLevel.get(replica.id) ?? 0))) out.push(result('compatibility', 'replica.power', item, 'warn', `None of its power sources (${power.map((p) => p.name).join(', ')}) unlocks by its own level (levels.md): a player who unlocks it can't shoot it until a later level.`));
   else out.push(result('compatibility', 'replica.power', item, 'pass', `Power sources that fit: ${power.map((p) => p.name).join(', ')}.`));
 
   const unused = replica.tags.filter((t) => !DESCRIPTIVE_TAGS.includes(t) && !inputs.pool.assets.some((a) => a.category !== 'replica' && a.tags.includes(t)));
@@ -147,30 +149,34 @@ export function replicaCompatibility(inputs: ContentInputs, replica: Asset): Che
   return out;
 }
 
-/** Seeds the bots' kits are rolled on for the check: enough that each part that fits turns up. */
-const BOT_KIT_SEEDS = 24;
+/** No difficulty's weight: a kit made up for the check, never picked. */
+const UNWEIGHTED = Object.fromEntries(DIFFICULTIES.map((d) => [d.id, 0])) as Record<Difficulty, number>;
 
-/** Level 2, the bots: they can carry it, and Hard opponents' random kits fit its parts (every part, by chance 1). */
+/**
+ * Level 2, the bots (BG1): a bot can carry it as it comes and with each part that fits it (one at a time, as a kit in
+ * bot-kits.md would fit it), under its site limit; and some kit in bot-kits.md carries it, or the other team never
+ * brings it.
+ */
 export function replicaBotChecks(inputs: ContentInputs, replica: Asset): CheckResult[] {
   const item = itemName(replica);
   const r = inputs.replicas[replica.key];
   if (!r) return [];
-  const rolled = new Set<string>();
   const problems: string[] = [];
-  for (let seed = 1; seed <= BOT_KIT_SEEDS; seed++) {
-    const kit = randomKit(inputs.pool, [r], botKitSeed(seed, 1), 1);
-    const c = kittedCharacter(1, 1, kit);
-    const carried = c.armament.replicas[0];
-    if (!carried || carried.id !== r.id) problems.push('a bot given it carries something else');
-    else if (!(carried.muzzleEnergy > 0 && carried.muzzleEnergy <= carried.energyLimit + 1e-9)) problems.push(`a bot's kit shoots ${num(carried.muzzleEnergy, 3)} J`);
-    const parts = kit[0]!.parts;
-    for (const key of [kit[0]!.optic, parts.grip !== 'none' ? parts.grip : null, parts.laser, parts.barrel, parts.muzzle, parts.magazine !== r.magazines[0] ? parts.magazine : null]) if (key) rolled.add(key);
+  const fitting = partsFitting(inputs, replica).filter((p) => p.category !== 'light');
+  for (const part of [null, ...fitting]) {
+    // As it comes a bot carries the replica config the inputs hold; with a part, as the game kits it (pool/kit.ts).
+    const kit: BotKit = { name: item, slots: [{ replica: replica.id, parts: part ? [part.id] : [] }], suits: [], weights: UNWEIGHTED };
+    const carried = (part ? kittedBot(1, 1, inputs.pool, kit) : createCharacter(1, vec3(), 0, [r], 1)).armament.replicas[0];
+    const fitted = part ? ` with the ${part.name}` : '';
+    if (!carried || carried.id !== r.id) problems.push(`a bot given it${fitted} carries something else`);
+    else if (!(carried.muzzleEnergy > 0 && carried.muzzleEnergy <= carried.energyLimit + 1e-9)) problems.push(`a bot's${fitted} shoots ${num(carried.muzzleEnergy, 3)} J`);
   }
-  const rollable = partsFitting(inputs, replica).filter((p) => p.category !== 'power' && p.category !== 'light' && p.tag === 'public');
-  const never = rollable.filter((p) => !rolled.has(p.key));
   if (problems.length > 0) return [result('compatibility', 'replica.bots', item, 'fail', `Bots can't carry it: ${[...new Set(problems)].join('; ')}.`)];
-  if (never.length > 0) return [result('compatibility', 'replica.bots', item, 'warn', `Bots carry it, but in ${BOT_KIT_SEEDS} rolled kits these never turned up: ${never.map((p) => p.name).join(', ')}.`)];
-  return [result('compatibility', 'replica.bots', item, 'pass', rollable.length > 0 ? `Bots carry it, and Hard opponents' rolled kits fit every part that fits it (${rollable.length}, in ${BOT_KIT_SEEDS} kits).` : 'Bots carry it; no part is rolled onto it.')];
+  const carries = `Bots carry it as it comes and with each of the ${fitting.length} parts that fit it`;
+  if (!inputs.botKits) return [result('compatibility', 'replica.bots', item, 'pass', `${carries}.`)];
+  const kits = inputs.botKits.kits.filter((k) => k.slots.some((s) => s.replica === replica.id) && DIFFICULTIES.some((d) => k.weights[d.id] > 0));
+  if (kits.length === 0) return [result('compatibility', 'replica.bots', item, 'warn', `${carries}, but no kit in bot-kits.md weighted above 0 holds it: the other team never brings it.`)];
+  return [result('compatibility', 'replica.bots', item, 'pass', `${carries}; ${kits.length} kit${kits.length > 1 ? 's' : ''} in bot-kits.md hold${kits.length > 1 ? '' : 's'} it (${kits.map((k) => k.name).join(', ')}).`)];
 }
 
 /**
@@ -181,23 +187,19 @@ export function replicaSaveCheck(inputs: ContentInputs, replica: Asset): CheckRe
   const item = itemName(replica);
   const all = (ref: ItemRef): boolean => inputs.pool.byId.has(ref.asset);
   const owner = { owns: all };
-  const rarest = (a: Asset): ItemRef => {
-    const tiers = tiersOf(inputs.pool, a);
-    return { asset: a.id, tier: tiers[tiers.length - 1]!.id };
-  };
+  const ref = (a: Asset): ItemRef => ({ asset: a.id });
   const first = new LoadoutModel(inputs.pool, owner);
   const wanted: Partial<Record<FitSlot, string>> = {};
   for (const slot of FIT_SLOTS) {
     const part = partsFitting(inputs, replica).find((p) => p.category === FIT_CATEGORY[slot]);
     if (!part) continue;
-    const ref = rarest(part);
-    first.setFit(replica.id, slot, ref);
-    wanted[slot] = itemKey(ref.asset, ref.tier);
+    first.setFit(replica.id, slot, ref(part));
+    wanted[slot] = itemKey(ref(part));
   }
-  first.equip('primary', rarest(replica));
+  first.equip('primary', ref(replica));
   const back = new LoadoutModel(inputs.pool, owner);
   const fit = back.fitOf(replica.id);
-  const lost = (Object.keys(wanted) as FitSlot[]).filter((s) => (fit[s] ? itemKey(fit[s]!.asset, fit[s]!.tier) : null) !== wanted[s]);
+  const lost = (Object.keys(wanted) as FitSlot[]).filter((s) => (fit[s] ? itemKey(fit[s]!) : null) !== wanted[s]);
   const equipped = back.equipped()[0];
   if (lost.length > 0 || equipped?.asset !== replica.id) {
     return [result('compatibility', 'replica.save', item, 'fail', `A saved kit didn't come back: ${lost.length > 0 ? `the ${lost.join(', ')} slot${lost.length > 1 ? 's' : ''}` : 'the replica itself'}.`)];

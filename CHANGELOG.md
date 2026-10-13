@@ -24,12 +24,38 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **SL1** · Five saved loadout tabs on the Loadout: keys 1 to 5 or a click switch the whole kit you carry at once; your edits go to the current tab
 - **SL1** · Right-click a tab (or Menu, Shift+F10) to use, rename, duplicate, replace with yours or delete; the last loadout can't be deleted
 - **SL1** · Your match on the Match screen lists saved loadouts beside Change; gear a saved loadout can't use now shows as locked until it comes back
+- **BN1** · Bots have names (Dash, Rook, Fox, Owl and others) instead of "Alpha 2" or "Beta 1" on the scoreboard, hit feed, over teammates' heads and when spectating
+- **BN1** · Each bot has one of four personalities, shown on the scoreboard and the "What got you" card: Rusher, Anchor, Flanker or Careful
+- **BN1** · Rushers push in and run at where you were; Flankers take a lane of their own and come round the side; Careful bots clear each corner
+- **BN1** · Anchors hold a spot short of the middle in Elimination, aiming over cover with the replica rested, until about a minute is left
+- **BN1** · Personalities change how bots play, never how well they see, react or aim; names and personalities are edited in bots.md
+- **LV1** · Levels and XP replace the Armory's gacha: every match gives XP, you level up from 0 to 10, and each level unlocks parts for good (#207)
+- **LV1** · The Armory shows your level, XP to the next level, what it unlocks and every level's items; a level badge on the top bar opens it (#207)
+- **LV1** · The match summary shows the XP earned, its lines and any level-up with what it unlocked (#207)
+- **LV1** · Locked items show greyed in Loadout and Customise, with the level that unlocks them; the unlock table is `levels.md` (#207)
+- **LV1** · Dev tab: +500 XP, Level up and Reset level buttons (#207)
+- **BG1** · Opponents on every difficulty carry kits from bot-kits.md: Easy mostly plain, each level up more optics, grips and lasers
+- **BG1** · Pro bots are never plain, and now and then a Hard or Pro bot carries a Cyber Pistol; each bot keeps its kit on a replay
+- **BG1** · Your teammates keep plain replicas, as does everyone under the Factory kit house rule; what you have unlocked never changes the bots' gear
+- **BG1** · A bot aiming through a scope holds aim closer at range but settles later and is slower on close or crossing targets; a red dot is finer
+- **BG1** · Silenced bots are heard from nearer
+- **BG1** · Bots' figures show their gear: a red dot or scope on every rifle, and with Blender figures (Dev switches) grips, lasers and barrels too
+- **BG1** · Kits fit personality: rushers Support, Pointman or Cyber; anchors Marksman or Support; flankers Stealth or Pointman; careful Rifleman or Marksman
+- **AD1** · Adaptive difficulty, a Dev setting: the other team starts at your Opponents level and adapts to how you do; teammates and Extraction don't
 - **PT1** · Settings › Audio has a Power source volume slider under Effects for each replica's battery motor, gas and spring sounds
 - **PT1** · Settings › Gameplay › Crosshair has hit marker scale, thickness, outline and colour settings; the hit marker stays Off by default
 
 ### Changed
 - **M94** · The practice range is now Practice: pause reads "Practice · Range" or "Practice · Depot", and the tutorial's last button says Practice
-- **M95** · With Unlock all gear on, the Loadout says every replica and part is lent to try, and the range's first line names the Loadout key
+- **M95** · With Disable levelling on, the Loadout says every replica and part is lent to try, and the range's first line names the Loadout key
+- **LV1** · The Armory's gacha is gone: no Field Credits, Tokens, Shots, pity, rarity tiers, spares, scrapping or Disable Armory (#207)
+- **LV1** · Extraction cases hold XP instead of Field Credits; supply events give a % bonus to XP (#207)
+- **LV1** · Replicas and parts rebalanced without rarity: Low-Cap Magazine gets two more magazines, Long Barrel +10 % energy and 10 % tighter groups (#207)
+- **LV1** · Hard and Pro bots lose their small tier bonus; the Cyber Pistol keeps its old numbers (#207)
+- **LV1** · Unlock all gear is now Disable levelling, a cheat with no XP and no records (#207)
+- **LV1** · Save format 3: an older save loads at level 0 with its settings and records; old Armory items, Field Credits and Tokens don't carry over (#207)
+- **RM9** · With the Dev figure switches off, humans and bots use a new figure: gloved hands, four heads and team colour on the vest, armbands and bands
+- **BG1** · Hard and Pro's random gear roll and the Cyber Pistol carrier that needed you to have one are replaced by the bot kits
 - **PT1** · Shots are louder on every replica
 - **PT1** · The hit marker is a bold red X
 - **PT1** · The 2× scope works like the red dot: the replica stays in view and the world shows round it, with a fine crosshair and red dot in the eyepiece; still 2× zoom
@@ -39,7 +65,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 ### Fixed
 - **M92** · Bots firing on the move hold fire when a teammate is down the line, so they no longer hit teammates past the end of a wall
 - **M102** · Bots taking a lean spot or an Extraction guard post settle right on it, so their lean sees round the corner
-- **PT1** · Menu and HUD text stays inside its buttons and backgrounds at 1280×720, 1920×1080 and 2560×1440 (Match, saved loadout names, Armory, map Dev tags, replica chips)
+- **BN1** · Sprinting with the replica holstered over the top of a steep stair (Neon Heights) no longer lifts you off the ground for a moment
+- **PT1** · Menu and HUD text stays inside its buttons and backgrounds at 1280×720, 1920×1080 and 2560×1440 (Match, saved loadout names, map Dev tags, replica chips)
 - **PT1** · Glowing BBs have no halo: only the BB and its streak glow
 - **PT1** · Both 2× scope models have no gap between the glass and the body
 - **PT1** · The ammo count no longer overlaps the fire mode chip on the replica panel, however many rounds

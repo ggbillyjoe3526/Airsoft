@@ -26,6 +26,7 @@ import { type Vec3, vec3 } from '../sim/vec';
 import { createWind } from '../sim/wind';
 import { type Bot } from './bot';
 import { BotController } from './botController';
+import { drawIdentities } from './botRoster';
 import { lowCoverBlocks, tallCoverBlocks } from './cover';
 import { DT, fitNightTorches } from './depotMatchSupport';
 import { sightConditionsOf } from './perception';
@@ -61,6 +62,11 @@ export interface RunOptions {
   loadout?: readonly ReplicaConfig[];
   /** Who carries something else (playMatch's `carry`: the content toolkit's item balance run, CT3): its character, or undefined. */
   carry?: (id: number, team: number) => Character | undefined;
+  /**
+   * The bots play their roster personalities (default true, BN1); false plays every bot as its level is, for a test
+   * of a mechanism personalities leave alone whose seed a personality's fight would otherwise cut across.
+   */
+  personalities?: boolean;
 }
 
 /**
@@ -105,7 +111,7 @@ export function setUpRun(opts: RunOptions) {
   const rules = { ...ROUNDS, roundTime: x.runTime, winsNeeded: 1 };
   const physics = new PhysicsWorld(map, BODY, DT);
   const nav = buildNavGrid(map, NAV);
-  const cases = rollRunCases(GAME_POOL, x.cases, {}, caseSeed(seed));
+  const cases = rollRunCases(GAME_POOL, x.cases, caseSeed(seed));
   const run = createRunContext(x, {
     squad,
     seed: runSeed(seed),
@@ -169,6 +175,9 @@ export function setUpRun(opts: RunOptions) {
     teamCfg: [botConfig(teammates), botConfig(opponents)],
     seed,
     insertionBerth: x.insertionBerth,
+    // Each bot a roster name and personality, as a match draws them (BN1): the guards play the game as it ships. You
+    // have none, even when a bot plays your part (runnerBot).
+    identities: opts.personalities === false ? undefined : drawIdentities(seed, botCharacters.filter((c) => c !== you)),
   });
   const follow = new SquadFollow();
   const runner = opts.runnerBot ? new RunnerPlan(bots.bots.find((b) => b.character === you)!, opts.plan ?? RUNNER_PLAN) : undefined;
@@ -206,11 +215,11 @@ export function setUpRun(opts: RunOptions) {
   return { state, run, you, yours, bots, play, moveYou, hitYou, hitThem, physics, squad, dispose: () => physics.dispose() };
 }
 
-/** What a run came to: how it ended, after how long (s), and the Field Credits it got out with. */
+/** What a run came to: how it ended, after how long (s), and the XP it got out with (LV1). */
 export interface RunResult {
   reason: string;
   seconds: number;
-  fc: number;
+  xp: number;
   cases: number;
   /** Home-team bots hunting the squad when it ended (BAL-06). */
   hunters: number;
@@ -226,7 +235,7 @@ export function playRun(opts: RunOptions): RunResult {
   const result = {
     reason: r.state.round.reason,
     seconds: runTime - r.state.round.clock,
-    fc: extracted ? haulTotals(runHaul(run)).fc : 0,
+    xp: extracted ? haulTotals(runHaul(run)).xp : 0,
     cases: run.cases.filter((k) => k.open && !k.dropped).length,
     hunters: r.bots.bots.filter((b) => b.role === 'hunter').length,
   };
@@ -237,8 +246,8 @@ export function playRun(opts: RunOptions): RunResult {
 /** A home team's level measured over whole runs (the balance guards, M46, M48): how often the squad got out, and with what. */
 export interface RunMeasure {
   extract: number;
-  /** What the runs got out with over the minutes they lasted (Field Credits a minute). */
-  fcPerMinute: number;
+  /** What the runs got out with over the minutes they lasted (XP a minute). */
+  xpPerMinute: number;
   runs: RunResult[];
 }
 
@@ -252,7 +261,7 @@ export function measureRuns(map: MapData, opponents: Difficulty, seeds: number):
   const minutes = runs.reduce((sum, r) => sum + r.seconds, 0) / 60;
   return {
     extract: runs.filter((r) => r.reason === 'extracted').length / runs.length,
-    fcPerMinute: runs.reduce((sum, r) => sum + r.fc, 0) / minutes,
+    xpPerMinute: runs.reduce((sum, r) => sum + r.xp, 0) / minutes,
     runs,
   };
 }

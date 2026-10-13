@@ -172,6 +172,19 @@ export const FIGURE = {
    * square and `lensDepth` deep.
    */
   torch: { size: 0.032, length: 0.11, rifleSide: 0.045, rifleAt: 0.72, pistolBelow: 0.035, pistolLength: 0.07, pistolSize: 0.8, lensSize: 0.8, lensDepth: 0.008 },
+  /**
+   * A fitted optic on a figure's rifle (BG1), at every detail, so a bot carrying one reads as such: a block of a mount
+   * `mount` (width, height, depth) on the receiver's top (`top` over the bore) under its tube, centred `at` ahead of the
+   * butt. The red dot a short tube; the 2x scope a longer one with a wider objective lens housing at its front. Each
+   * tube's axis is `height` over the bore.
+   */
+  optic: {
+    at: 0.38,
+    top: 0.045,
+    mount: { w: 0.02, d: 0.035 },
+    redDot: { radius: 0.017, length: 0.05, height: 0.08 },
+    scope2x: { radius: 0.016, length: 0.12, height: 0.082, objective: 0.022, objectiveLength: 0.035 },
+  },
   headRadius: 0.11,
   /** The head is built in a frame at the base of the neck, this far below the head's centre. */
   neckBelowHead: 0.15,

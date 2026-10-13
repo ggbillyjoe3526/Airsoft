@@ -1,12 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 // @ts-expect-error the pipeline's plain-JS module has no declarations
 import { balanceResults } from '../../pipeline/contentReport.mjs';
+import { MAGAZINES } from '../config/attachments';
 import { GAME_STATS } from '../config/gameStats';
 import { REPLICA_RANGES } from '../config/contentRules';
 import { EMPTY_FIT, energyCapped, kitReplica, uncappedEnergy } from '../pool/kit';
 import { GAME_POOL } from '../pool/gamePool';
 import type { Pool } from '../pool/pool';
 import { replicaOf } from '../pool/pool';
+import { GAME_LEVELS } from '../progress/gameLevels';
 import { MemoryStorage } from '../pool/testStorage';
 import { gameInputs } from './gameContent';
 import { GRID_LIMIT, kitGrid, kitNumbers, slotChoices } from './kitGrid';
@@ -21,26 +23,35 @@ afterAll(() => vi.unstubAllGlobals());
 const AEG = GAME_POOL.byId.get('000002')!;
 const PISTOL = GAME_POOL.byId.get('000001')!;
 
-/** The game's pool with every tier's Bonus replaced by `bonus` (a faulted tier table). */
-const withBonus = (bonus: number): Pool => ({ ...GAME_POOL, tiers: GAME_POOL.tiers.map((t) => ({ ...t, bonus })) });
+/**
+ * `body` run on a fresh copy of the game's pool (its own grid) while the Hi-Cap Magazine's reload scale is negative (a
+ * faulted stats.md row), the magazine put back after.
+ */
+function withBrokenMagazine<T>(body: (pool: Pool) => T): T {
+  const saved = { ...MAGAZINES.hiCap };
+  try {
+    Object.assign(MAGAZINES.hiCap, { reloadScale: -0.5 });
+    return body({ ...GAME_POOL });
+  } finally {
+    Object.assign(MAGAZINES.hiCap, saved);
+  }
+}
 
 describe('the kit grid on a faulted pool', () => {
   it('finds nothing in the shipped pool', () => {
     expect(kitGrid(GAME_POOL, AEG, 'rifle').problems.filter((p) => p.severity === 'fail')).toEqual([]);
   });
 
-  it('finds a reload that broke when a tier Bonus is past 100 %, and says which kit', () => {
-    const pool = withBonus(1.5);
-    const grid = kitGrid(pool, AEG, 'rifle');
-    const broken = grid.problems.filter((p) => p.severity === 'fail');
+  it('finds a reload that broke when a magazine’s reload scale is negative, and says which kit', () => {
+    const broken = withBrokenMagazine((pool) => kitGrid(pool, AEG, 'rifle').problems.filter((p) => p.severity === 'fail'));
     expect(broken.length).toBeGreaterThan(0);
     expect(broken.some((p) => /reloadTime is -?[\d.]+: a number broke/.test(p.says))).toBe(true);
-    expect(broken[0]!.fit).toMatch(/AEG Rifle/);
+    expect(broken.every((p) => /AEG Rifle with .*Hi-Cap Magazine/.test(p.fit))).toBe(true);
+    expect(MAGAZINES.hiCap.reloadScale).toBeGreaterThan(0); // put back
   });
 
   it('turns that into a failing replica.kits check', () => {
-    const pool = withBonus(1.5);
-    const kits = replicaCompatibility(gameInputs(pool), AEG).find((r) => r.check === 'replica.kits')!;
+    const kits = withBrokenMagazine((pool) => replicaCompatibility(gameInputs(pool), AEG).find((r) => r.check === 'replica.kits')!);
     expect(kits.verdict).toBe('fail');
     expect(kits.says).toMatch(/break/);
   });
@@ -48,7 +59,7 @@ describe('the kit grid on a faulted pool', () => {
   it('is a new grid for a new pool, not the one worked out for the shipped pool', () => {
     const fresh = kitGrid(GAME_POOL, AEG, 'rifle');
     expect(kitGrid(GAME_POOL, AEG, 'rifle')).toBe(fresh);
-    expect(kitGrid(withBonus(1.5), AEG, 'rifle')).not.toBe(fresh);
+    expect(kitGrid({ ...GAME_POOL }, AEG, 'rifle')).not.toBe(fresh);
   });
 
   it('warns, without failing, when a stacked kit runs well past the class range', () => {
@@ -74,24 +85,22 @@ describe('the kit grid on a faulted pool', () => {
 describe('the kit helpers', () => {
   it('uncappedEnergy is the energy before the site limit, and energyCapped is its comparison with the limit', () => {
     const fit = asItComesFit(GAME_POOL, AEG);
-    const item = { asset: AEG.id, tier: 'common' };
+    const item = { asset: AEG.id };
     const base = replicaOf(AEG);
     expect(uncappedEnergy(GAME_POOL, item, EMPTY_FIT)).toBeCloseTo(base.muzzleEnergy, 9);
     for (const a of GAME_POOL.assets.filter((x) => x.category === 'replica')) {
-      for (const tier of GAME_POOL.tiers) {
-        const it = { asset: a.id, tier: tier.id };
-        for (const f of [EMPTY_FIT, asItComesFit(GAME_POOL, a)]) {
-          const u = uncappedEnergy(GAME_POOL, it, f);
-          expect(energyCapped(GAME_POOL, it, f)).toBe(u > replicaOf(a).energyLimit);
-          expect(kitReplica(GAME_POOL, it, f).muzzleEnergy).toBeCloseTo(Math.min(replicaOf(a).energyLimit, u), 9);
-        }
+      const it = { asset: a.id };
+      for (const f of [EMPTY_FIT, asItComesFit(GAME_POOL, a)]) {
+        const u = uncappedEnergy(GAME_POOL, it, f);
+        expect(energyCapped(GAME_POOL, it, f)).toBe(u > replicaOf(a).energyLimit);
+        expect(kitReplica(GAME_POOL, it, f).muzzleEnergy).toBeCloseTo(Math.min(replicaOf(a).energyLimit, u), 9);
       }
     }
     expect(fit.power).not.toBeNull();
   });
 
   it('uncappedEnergy reads the stats it is given, and energyCapped follows it', () => {
-    const item = { asset: AEG.id, tier: 'common' };
+    const item = { asset: AEG.id };
     const stats = { ...GAME_STATS, power: Object.fromEntries(Object.entries(GAME_STATS.power).map(([k, v]) => [k, { ...v, energy: 5 }])) };
     const fit = asItComesFit(GAME_POOL, AEG);
     expect(GAME_STATS.power[fit.power?.asset ?? '']).toBeDefined();
@@ -99,7 +108,7 @@ describe('the kit helpers', () => {
     expect(energyCapped(GAME_POOL, item, fit, stats)).toBe(true);
   });
 
-  it('asItComesFit gives a replica its starter power source and nothing else', () => {
+  it('asItComesFit gives a replica its level 0 power source and nothing else', () => {
     for (const a of [AEG, PISTOL]) {
       const fit = asItComesFit(GAME_POOL, a);
       for (const [slot, ref] of Object.entries(fit)) if (slot !== 'power') expect(ref).toBeNull();
@@ -108,21 +117,21 @@ describe('the kit helpers', () => {
         const power = GAME_POOL.byId.get(fit.power!.asset)!;
         expect(power.category).toBe('power');
         const fitting = GAME_POOL.assets.filter((x) => x.category === 'power' && x.tags.some((t) => a.tags.includes(t)));
-        if (fitting.some((x) => x.starter)) expect(power.starter).toBe(true);
-        expect(fit.power!.tier).toBe(GAME_POOL.tiers[0]!.id);
+        if (fitting.some((x) => GAME_LEVELS.unlockLevel.get(x.id) === 0)) expect(GAME_LEVELS.unlockLevel.get(power.id)).toBe(0);
+        expect(fit.power).toEqual({ asset: power.id });
       }
     }
   });
 
-  it('carried takes the part handling into the numbers, at the commonest tier', () => {
+  it('carried takes the part handling into the numbers', () => {
     const asIs = carried(GAME_POOL, AEG, asItComesFit(GAME_POOL, AEG));
     expect(asIs.name).toBe(AEG.name);
     const hiCap = GAME_POOL.assets.find((a) => a.category === 'magazine' && a.key === 'hiCap');
     expect(hiCap).toBeDefined();
     {
-      const withMag = carried(GAME_POOL, AEG, { ...asItComesFit(GAME_POOL, AEG), magazine: { asset: hiCap!.id, tier: GAME_POOL.tiers[0]!.id } });
+      const withMag = carried(GAME_POOL, AEG, { ...asItComesFit(GAME_POOL, AEG), magazine: { asset: hiCap!.id } });
       expect(withMag.magSize).toBeGreaterThan(asIs.magSize);
-      const n = kitNumbers(GAME_POOL, { asset: AEG.id, tier: GAME_POOL.tiers[0]!.id }, { ...asItComesFit(GAME_POOL, AEG), magazine: { asset: hiCap!.id, tier: GAME_POOL.tiers[0]!.id } });
+      const n = kitNumbers(GAME_POOL, { asset: AEG.id }, { ...asItComesFit(GAME_POOL, AEG), magazine: { asset: hiCap!.id } });
       expect(withMag.magSize).toBe(n.magSize);
       expect(withMag.reloadTime).toBeCloseTo(n.reloadTime, 9);
     }

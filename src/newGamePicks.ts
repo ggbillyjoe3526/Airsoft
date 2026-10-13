@@ -1,18 +1,18 @@
-import { BOT_LOADOUTS, DEFAULT_DIFFICULTY, DIFFICULTIES, type Difficulty, TEAMMATE_DIFFICULTIES } from './config/bots';
+import { DEFAULT_DIFFICULTY, DIFFICULTIES, type Difficulty, TEAMMATE_DIFFICULTIES } from './config/bots';
 import { availableChoice, type ContentTag, tagOf } from './config/content';
 import { squadSize } from './config/extraction';
 import { DEFAULT_MATCH_RULES, DEFAULT_RULESET, type MatchRules, RULESETS, type RulesetId, rulesetFits, rulesForMode, rulesUnder, TEAM_SIZE_CHOICES, WINS_NEEDED_CHOICES } from './config/matchRules';
 import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from './config/modes';
 import type { LightingPresetId } from './config/render';
-import { LOADOUT } from './config/replicas';
 import { DEFAULT_TEAM_PICK, type TeamPickId } from './config/teams';
 import { playsAtNight as nightOf } from './map/lightingChoice';
 import { DEFAULT_MAP, MAPS, type MapId, mapData, mapEntry, mapLoaded, teamSizeOn } from './map/maps';
 import { modeOffered } from './map/playableMode';
-import { botLight, rolledKitMayHoldDev } from './pool/botKit';
-import type { ItemRef } from './pool/collection';
+import { botLight, type BotKitTable, kitsMayHoldDev } from './pool/botKit';
+import type { ItemRef } from './pool/item';
 import { contentPool, itemsUseDev } from './pool/contentPool';
-import { type Pool, replicaOf } from './pool/pool';
+import { GAME_BOT_KITS } from './pool/gameBotKits';
+import type { Pool } from './pool/pool';
 
 /** New game's picks: the Map, Mode, Match (with its Rules row, M39) and Difficulty pop-ups. */
 export interface NewGamePicks {
@@ -89,24 +89,18 @@ export function pickTags(p: NewGamePicks): ContentTag[] {
   ];
 }
 
-/** Whether the picks (as played) use dev content: such a match stays out of the records and pays no Field Credits. */
+/** Whether the picks (as played) use dev content: such a match stays out of the records and gives no XP. */
 export function picksUseDev(p: NewGamePicks): boolean {
   return pickTags(p).includes('dev');
 }
 
 /**
- * Whether the opponents may carry dev gear (M35): only with Dev content on, on a difficulty that rolls their kits
- * (config/bots.ts BOT_LOADOUTS), when the pool has dev gear such a kit could hold: LOADOUT's replicas, or a chase
- * replica the player owns (`chaseOwned`, M32: one opponent now and then carries it). Counted whether or not a bot rolls
- * it, so New game can say so before the match. Teammates carry LOADOUT as it comes, which is public.
+ * Whether the opponents may carry dev gear (M35): only with Dev content on, when a kit the difficulty weights in
+ * bot-kits.md (`kits`, BG1) holds an asset `pool` tags dev. Counted whether or not a bot picks it, so New game can say
+ * so before the match. Teammates carry LOADOUT as it comes, which is public.
  */
-export function botsMayCarryDev(pool: Pool, devContent: boolean, difficulty: Difficulty, chaseOwned: readonly string[] = []): boolean {
-  if (!devContent || BOT_LOADOUTS[difficulty] !== 'random') return false;
-  const chase = chaseOwned.flatMap((id) => {
-    const asset = pool.byId.get(id);
-    return asset?.category === 'replica' ? [replicaOf(asset)] : [];
-  });
-  return rolledKitMayHoldDev(pool, [...LOADOUT, ...chase]);
+export function botsMayCarryDev(pool: Pool, devContent: boolean, difficulty: Difficulty, kits: BotKitTable = GAME_BOT_KITS): boolean {
+  return devContent && kitsMayHoldDev(kits, difficulty, pool);
 }
 
 /**
@@ -135,13 +129,13 @@ export function botsCarryDevLight(pool: Pool, devContent: boolean, night: boolea
 
 /**
  * Whether a match uses dev content (M35): its picks (as played), the player's kit (`kit`: the Loadout's items; a light
- * only at night, M33h) or the opponents' possible gear (`chaseOwned` as in botsMayCarryDev; the bots' torches at
- * night). Night is under the map's Day/Night pick `lighting` (M34d). Such a match stays out of the records and pays no
- * Field Credits. Under the factory kit rule (M39) everyone carries LOADOUT as it comes, torchless, so neither kit counts.
+ * only at night, M33h) or the opponents' possible gear (botsMayCarryDev; the bots' torches at night). Night is under
+ * the map's Day/Night pick `lighting` (M34d). Such a match stays out of the records and gives no XP. Under
+ * the factory kit rule (M39) everyone carries LOADOUT as it comes, torchless, so neither kit counts.
  */
-export function matchUsesDev(picks: NewGamePicks, kit: readonly (ItemRef | null)[], pool: Pool, devContent: boolean, chaseOwned: readonly string[] = [], lighting?: LightingPresetId | null): boolean {
+export function matchUsesDev(picks: NewGamePicks, kit: readonly (ItemRef | null)[], pool: Pool, devContent: boolean, lighting?: LightingPresetId | null): boolean {
   if (picksUseDev(picks)) return true;
   if (picks.rules.factoryKit) return false;
   const night = playsAtNight(picks.map, lighting);
-  return itemsUseDev(pool, usedItems(pool, kit, night)) || botsMayCarryDev(pool, devContent, picks.difficulty, chaseOwned) || botsCarryDevLight(pool, devContent, night);
+  return itemsUseDev(pool, usedItems(pool, kit, night)) || botsMayCarryDev(pool, devContent, picks.difficulty) || botsCarryDevLight(pool, devContent, night);
 }

@@ -58,7 +58,7 @@ export function hopUpReadout(replica: ReplicaConfig, dial: number, grams = repli
 }
 
 /**
- * One line under the optic: how quickly the fitted optic comes up to your eye with this replica's grip and tiers, e.g.
+ * One line under the optic: how quickly the fitted optic comes up to your eye with this replica's grip, e.g.
  * "Up to your eye in 0.30 s with the vertical grip.", or that iron sights fire from the hip.
  */
 export function opticReadout(slot: KitSlot): string {
@@ -146,19 +146,12 @@ export function loadoutSummary(kit: PlayerKit, names: readonly string[]): string
 }
 
 /**
- * New game's Loadout tile: each equipped replica on its own line (its tier after it unless Common), and the summary
- * line of the parts fitted that aren't how the replica comes, BB weights and hop-up dials.
+ * New game's Loadout tile: each equipped replica on its own line, and the summary line of the parts fitted that aren't how the replica comes, BB weights and hop-up dials.
  */
 export function loadoutTile(model: LoadoutModel): { replicas: string; detail: string } {
   const pool = model.pool;
-  const lowest = pool.tiers[0]?.id;
   const equipped = model.equipped().filter((r) => r !== null);
-  const replicas = equipped
-    .map((r) => {
-      const name = pool.byId.get(r.asset)!.name;
-      return r.tier === lowest ? name : `${name} (${pool.tiers.find((t) => t.id === r.tier)?.label ?? r.tier})`;
-    })
-    .join('\n');
+  const replicas = equipped.map((r) => pool.byId.get(r.asset)!.name).join('\n');
   const names: string[] = [];
   for (const r of equipped) {
     const fit = model.fitOf(r.asset);

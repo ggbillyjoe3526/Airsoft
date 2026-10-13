@@ -64,7 +64,7 @@ export class SaveDialog {
   }
 }
 
-/** This browser's save beside the other one: when, which version, FC, Tokens, items and matches. */
+/** This browser's save beside the other one: when, which version, level, XP, items unlocked and matches. */
 function compareTable(c: NonNullable<SaveQuestion['compare']>, now: Date): HTMLTableElement {
   const table = el('table', 'save-compare');
   const head = el('tr');
@@ -76,9 +76,9 @@ function compareTable(c: NonNullable<SaveQuestion['compare']>, now: Date): HTMLT
   const rows: [string, string, string][] = [
     [t.savedAt, savedAtText(c.current.savedAt, now), savedAtText(c.incoming.savedAt, now)],
     [t.build, c.current.build, c.incoming.build || '?'],
-    [t.fc, String(a.fc), String(b.fc)],
-    [t.tokens, String(a.tokens), String(b.tokens)],
-    [t.items, String(a.items), String(b.items)],
+    [t.level, String(a.level), String(b.level)],
+    [t.xp, String(a.xp), String(b.xp)],
+    [t.unlocked, String(a.unlocked), String(b.unlocked)],
     [t.matches, String(a.matches), String(b.matches)],
   ];
   for (const [label, left, right] of rows) {

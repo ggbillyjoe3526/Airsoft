@@ -10,8 +10,8 @@ import { expect, type Page, test } from '@playwright/test';
 type PictureCheck = { where: string; opaque: number; cut: number; covered: number };
 
 /** The tiles a picture sits in, and what is drawn over a tile's picture. */
-const TILE = '.item-tile, .gear-slot, .option-tile, .family-tile, .armory-row, .kit-card, .colour-other';
-const OVER = '.item-words, .item-name, .item-tier, .item-note, .item-kind, .tier-adds, .option-tick, .option-words, .option-name, .carried-customise';
+const TILE = '.item-tile, .gear-slot, .option-tile, .option-locked, .family-tile, .armory-item, .armory-next-item, .kit-card, .colour-other';
+const OVER = '.item-words, .item-name, .item-note, .item-kind, .item-lock, .armory-item-words, .option-tick, .option-words, .option-name, .option-lock, .carried-customise';
 
 /** Checks every drawn picture on screen. Pictures scrolled out of view aren't drawn wrong, so only the slot and tile clip. */
 function checkPictures(page: Page): Promise<PictureCheck[]> {
@@ -55,7 +55,7 @@ function checkPictures(page: Page): Promise<PictureCheck[]> {
             else if (over.some((q) => px >= q.left && px <= q.right && py >= q.top && py <= q.bottom)) covered++;
           }
         }
-        const name = tile.querySelector('.item-name, .option-name, .gear-name, .armory-row-name')?.textContent ?? '';
+        const name = tile.querySelector('.item-name, .option-name, .gear-name')?.textContent ?? '';
         out.push({ where: `${img.parentElement!.className.replace(/pic-slot|has-picture/g, '').trim()} ${name}`.trim(), opaque, cut, covered });
       }
       return out;
@@ -92,23 +92,20 @@ test('every replica picture shows the whole replica on the Loadout, Customise an
   page.on('console', (msg) => {
     if (msg.type() === 'error') errors.push(`console: ${msg.text()}`);
   });
-  // Every replica at a few tiers (a full "Your replicas" grid), and the FC for a Shot's reveal.
-  await page.addInitScript(() => {
-    const owned = { '000001@common': 1, '000002@common': 1, '000002@rare': 1, '000002@legendary': 1, '000001@epic': 1, '000019@legendary': 1, '000003@common': 1, '000004@common': 1 };
-    localStorage.setItem('airsoft.collection', JSON.stringify({ version: 1, owned, fc: 400, tokens: 1, seed: 1 }));
-  });
+  // A new player (LV1): the two starting replicas, and the Cyber Pistol greyed until level 10.
   await page.setViewportSize(SIZES[0]!);
   await page.goto('/?nolock&seed=1&quality=low');
   await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
   await page.locator('.menu-title-start').click();
   const topBar = page.locator('.menu-topbar');
 
-  // The Loadout: what you carry and "Your replicas", the picked one with its tick.
+  // The Loadout: what you carry and "Your replicas", the picked one with its tick, the locked one with its lock.
   await topBar.getByRole('button', { name: 'Loadout', exact: true }).click();
   const loadout = page.locator('.menu-loadout');
-  await expect(loadout.locator('.replica-tile')).toHaveCount(6);
+  await expect(loadout.locator('.replica-tile')).toHaveCount(3);
   await expect(loadout.locator('.replica-tile.selected')).toHaveCount(1);
-  await expectWholeAtEverySize(page, 'Loadout', 6 + 2);
+  await expect(loadout.locator('.replica-tile.is-locked')).toHaveText(/Cyber Pistol\s*Level 10/);
+  await expectWholeAtEverySize(page, 'Loadout', 3 + 2);
 
   // Customise: the replica large, and a tile per colour scheme, the picked one ticked.
   await loadout.getByRole('button', { name: /^Primary: AEG Rifle/ }).click({ button: 'right' });
@@ -116,11 +113,10 @@ test('every replica picture shows the whole replica on the Loadout, Customise an
   await expectWholeAtEverySize(page, 'Customise', 4);
   await page.keyboard.press('Escape');
 
-  // The Armory: the collection, and a Shot's reveal (the summary's haul draws the same tiles).
+  // The Armory (LV1): the next unlock's card and every level's items, the three replicas among them.
   await topBar.getByRole('button', { name: 'Armory', exact: true }).click();
   const armory = page.locator('.menu-armory');
-  await armory.getByRole('button', { name: /^1 Shot/ }).click();
-  await expect(armory.locator('.armory-reveal .item-tile')).toHaveCount(3);
+  await expect(armory.locator('.armory-item[data-kind="replica"]')).toHaveCount(3);
   await expectWholeAtEverySize(page, 'Armory', 3);
   expect(errors).toEqual([]);
 });

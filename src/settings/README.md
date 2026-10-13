@@ -6,10 +6,12 @@ The player's saved settings: one versioned object in the browser, plus the Dev s
   `flushSettings`, `migrate`. `browserStorage()` is the save system's guarded storage once it has started.
 - `dev.ts`: the Dev settings' values as `dev.<id>` (a switch is `'on'` / `'off'`, a choice its option's id), read back as `DevSettings`.
   `Game.dev` holds what applies (the defaults while the Dev settings box is unticked).
+- `adaptiveRating.ts`: adaptive difficulty's rating for the next match (AD1) as `adaptiveRating`, and the Opponents
+  level it grew from as `adaptiveFrom` (another level picked starts it again from that level).
 - `retroLook.ts`: Settings › Look › Retro look (M96) as `retroLook`, `retroPixelSize`, `retroColours`; a save from
   before reads the Dev tab's old `dev.retro*` keys, written under the new names once (`carryOverDevRetro`).
 - Rules: renaming a key needs a `case` in `migrate`; fields are only ever added, each read with a fallback; an object
   from a newer version is never read or overwritten. A new Dev setting goes in `config/dev.ts`, then `Game.applyDev`.
-- Other stores: key bindings (`input/keyBindings.ts`), records (`stats/records.ts`), the collection
-  (`pool/collection.ts`). All four are listed in `save/stores.ts`.
+- Other stores: key bindings (`input/keyBindings.ts`), records (`stats/records.ts`), the level progress
+  (`progress/progress.ts`). All four are listed in `save/stores.ts`.
 - Tests: `storage.test.ts`, `retroLook.test.ts`, `config/dev.test.ts`.
