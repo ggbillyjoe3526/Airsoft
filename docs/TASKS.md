@@ -34,20 +34,3 @@ acceptance:
   2. With Dev settings on (Unlock all gear), every replica and part is available.
 status: open
 attempts: 0
-
-
-## LV1 · Levelling up in place of the Armory's Shots (owner, 2026-10-13)
-tier: core
-perf: required
-touches: src/, pool.md, stats.md, levels.md, pipeline/, .claude/skills/new-content/SKILL.md
-contract: the save file format (format 2: the progress store in place of the collection), pool.md's format (no Rarity or economy tables), stats.md's format (no tier shares), the settings store keys (rarity.* and dev.disableArmory retired)
-acceptance:
-  1. The gacha is gone: no Field Credits, Tokens, Shots, rarity tiers, pity, spares or scrap in the game, the save or the data files; the Armory stays on the top bar.
-  2. Players start at level 0 with the starting kit; matches give XP, and levels up to a cap of 10 unlock attachments and the Cyber Pistol for good.
-  3. `levels.md` at the repository's root lists what each level unlocks and the XP rules, easy to read and edit by hand; the game reads it, and a mistake is reported with its line and never stops the game.
-  4. The Armory shows the player's level and XP, what they have unlocked, and what every level still to reach unlocks.
-  5. Settings › Dev › Disable levelling unlocks every replica and part.
-  6. Raising the cap and adding rewards (future replicas, attachments, skins) is adding rows to `levels.md`.
-  7. With rarity gone, every replica and part is rebalanced to one set of numbers, checked with the balance runs.
-status: open
-attempts: 0

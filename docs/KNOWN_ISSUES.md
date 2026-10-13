@@ -29,6 +29,7 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | The best-accuracy record doesn't say what kit it was set with | document | A Tight-Bore or Long Barrel's tighter spread counts like factory gear (DECISIONS M26b accepts it). (audit POOL-21, FA10) |
 | Reload is refused when no spare is fuller than the loaded magazine | document | Deliberate (no topping up); the HUD notice and a pat sound explain it. Playtest whether players expect a swap. |
 | The Signal colours' orange furniture sits right against the GBB Pistol's orange tip, so with the orange tip setting on the tip hardly shows on it | playtest | The skin check measures them about 5 apart in colour (20 reads). Beta's bots carry Signal on their rifles, not pistols. A darker tip, or a ring between, would fix it if the owner minds. (CT4) |
+| The Armory lights a level's items by your level, so an item `levels.md` moves up shows locked to a player who already has it | can wait | Only after a hand edit of `levels.md`. The player keeps it and the Loadout offers it (Ownership reads the unlocked list); the Armory's count is right, only the row's look is not. (LV1, critic) |
 
 ## Movement and shooting
 
