@@ -5,7 +5,7 @@ import { HUD_TEXT, type SkipLabel } from '../config/hudText';
 import { DEV_BOT_INTENT } from '../config/dev';
 import type { Bot } from '../ai/bot';
 import { BotIntentLabels, botIntentText, botRoleText } from '../ui/botIntentLabels';
-import type { HitConfig } from '../config/hits';
+import type { HitConfig, HitMarkerSettings } from '../config/hits';
 import { type HitFeedMode, TEAMMATE_MARKERS } from '../config/matchInfo';
 import type { BodyConfig } from '../config/movement';
 import { type DetailLevel, EXIT_VISUALS, FLAG_VISUALS, HUD, type QualitySettings } from '../config/render';
@@ -288,9 +288,9 @@ export class MatchPresentation {
     this.minimap.setRotating(on);
   }
 
-  /** Settings › Gameplay › Hit marker (M97; also called once as the match is built). */
-  setHitMarker(on: boolean): void {
-    this.feedback.setHitMarker(on);
+  /** Settings › Gameplay › Hit marker (M97) and its look (also called once as the match is built). */
+  setHitMarker(settings: HitMarkerSettings): void {
+    this.feedback.setHitMarker(settings);
   }
 
   /** Pro briefing tips on the board between rounds (M41): on when the opponents are Pro. */

@@ -89,6 +89,8 @@ export type SettingField =
   | `crosshair.${string}`
   /** Settings › Gameplay › Hit marker (M97): 'on' or 'off', off when nothing is saved. */
   | 'hitMarker'
+  /** Its look (the owner's 0.1 Dev 5 playtest, note 4): `hitMarker.scale`, `.thickness`, `.outline`, `.color`, `.customColor`. */
+  | `hitMarker.${string}`
   /** Before M26 (read once by pool/oldPicks.ts): the rifle's optic and each replica's grip and magazine. */
   | 'optic'
   | `grip.${string}`

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { type AmbientCallSpec, type Ambience, AMBIENCES, type AmbienceId, AMBIENT_LOOPS, AUDIO, type LoopId } from '../config/audio';
-import { isMapCue, MAP_CUE_SEEDS, SOUNDS, type SoundCue, TITLE_CUES } from '../config/sounds';
+import { isMapCue, isPowerPart, MAP_CUE_SEEDS, SOUNDS, type SoundCue, TITLE_CUES } from '../config/sounds';
 import { DEPOT } from '../map/depot';
 import { lightingChoices, mapUnderLighting, playsAtNight } from '../map/lightingChoice';
 import { MAPS, mapData } from '../map/maps';
@@ -465,7 +465,8 @@ describe('M34g city acceptance 3: everything else sounds as before', () => {
     const all = Object.keys(SOUNDS) as SoundCue[];
     // M86's map cues (the woods' creak, the city's pigeons and horn) come after them.
     expect(all.slice(-5)).toEqual([...CITY_CUES, 'ambience.creak', 'ambience.pigeon', 'ambience.horn']);
-    expect(all.slice(0, TITLE_CUES.length)).toEqual(TITLE_CUES);
+    // A shot's power part (the 0.1 Dev 5 playtest) sits by its shot in SOUNDS but is rendered with it, off the stream.
+    expect(all.filter((c) => !isPowerPart(c)).slice(0, TITLE_CUES.length)).toEqual(TITLE_CUES);
     const title = renderSounds(RATE);
     for (const cue of CITY_CUES) {
       expect(isMapCue(cue), cue).toBe(true);

@@ -241,7 +241,8 @@ describe('the draw from the holster (acceptance 2: it takes longer, with a draw 
       };
       const ready = firstShot(false);
       const holstered = firstShot(true);
-      expect(ready).toBeLessThan(Math.ceil(MOVEMENT.sprintFireLockout / DT) + 8);
+      // Ready, it fires at once (there is no lockout after a sprint since the owner's 0.1 Dev 5 note 9).
+      expect(ready).toBeLessThanOrEqual(2);
       expect(holstered).toBeGreaterThan(ready);
       expect(holstered * DT).toBeGreaterThanOrEqual(handling(slot).drawTime * HOLSTER.drawScale - 2 * DT);
     });

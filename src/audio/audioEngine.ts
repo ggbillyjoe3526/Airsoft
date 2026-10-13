@@ -174,6 +174,14 @@ export class AudioEngine {
     return g;
   }
 
+  /**
+   * The Power source slider's level as a gain (the owner's 0.1 Dev 5 playtest, note 2): a power source's sound (a shot's
+   * power part, an AEG's motor) is played at it as it starts.
+   */
+  powerLevel(): number {
+    return busGain('power', this.volumes.power);
+  }
+
   /** The match that asked for `g` (ambienceLevel) is over. */
   dropAmbienceLevel(g: GainNode): void {
     this.ambienceLevels.delete(g);
@@ -329,6 +337,8 @@ export class AudioEngine {
     this.volumes[channel] = position;
     if (!this.ctx) return;
     const gain = busGain(channel, position);
+    // The power sources' sounds take the slider's level as each starts (powerLevel): nothing held to ease.
+    if (channel === 'power') return;
     if (channel === 'ambience') for (const g of this.ambienceLevels) g.gain.setTargetAtTime(gain, this.ctx.currentTime, VOLUME.smoothing);
     else this.buses.get(channel)?.gain.setTargetAtTime(gain, this.ctx.currentTime, VOLUME.smoothing);
   }
@@ -340,14 +350,17 @@ export class AudioEngine {
    */
   preview(channel: VolumeChannel): void {
     const ctx = this.context();
-    // The ambience has no bus (M86): its cue goes into the world's at the Ambience slider's level, as a match plays it.
-    const bus = this.buses.get(channel === 'ambience' ? 'effects' : channel);
-    const variants = this.cueBuffers().get(AUDIO.volumePreview.cue);
+    // The ambience and the power sources have no bus (M86; the 0.1 Dev 5 playtest): their cue goes into the world's at
+    // the slider's level, as a match plays them; the power slider's is a gas pistol's pop and hiss.
+    const own = channel === 'ambience' || channel === 'power';
+    const bus = this.buses.get(own ? 'effects' : channel);
+    const cue = channel === 'power' ? AUDIO.volumePreview.power : AUDIO.volumePreview;
+    const variants = this.cueBuffers().get(cue.cue);
     if (!ctx || !bus || !variants?.length) return;
     const src = ctx.createBufferSource();
     src.buffer = variants[0]!;
     const g = ctx.createGain();
-    g.gain.value = AUDIO.volumePreview.gain * (channel === 'ambience' ? busGain('ambience', this.volumes.ambience) : 1);
+    g.gain.value = cue.gain * (own ? busGain(channel, this.volumes[channel]) : 1);
     src.connect(g).connect(bus);
     this.previews++;
     let over = false;

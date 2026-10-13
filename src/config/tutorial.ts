@@ -21,7 +21,7 @@ export type TutorialGoal =
   | { kind: 'read'; seconds: number }
   /** Change the fire mode (audit POOL-15). */
   | { kind: 'fireMode' }
-  /** Fire within `within` seconds of a sprint ending (audit POOL-15: the sprint lockout). */
+  /** Fire within `within` seconds of a sprint ending (audit POOL-15): a shot on the run doesn't count. */
   | { kind: 'sprintShot'; within: number };
 
 /** What a step opens on screen while it is up (M80): the hold-key scoreboard, or the order wheel, as a match shows them. */
@@ -110,7 +110,7 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
   {
     id: 'sprint',
     title: 'Sprint, then shoot',
-    text: 'Sprint with {sprint}, stop, and shoot with {fire} straight away. After a sprint your replica needs a short moment before it fires, so slow down before you run round a corner.',
+    text: 'Sprint with {sprint}, stop, and shoot with {fire} straight away. You can shoot on the run too, but your BBs fly wide, so stop or slow down for a shot that counts.',
     goal: { kind: 'sprintShot', within: 1.5 },
   },
   {

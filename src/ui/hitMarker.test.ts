@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { DEFAULT_HIT_MARKER } from '../config/hits';
+import { DEFAULT_HIT_MARKER, DEFAULT_HIT_MARKER_SETTINGS, HIT_MARKER_COLORS, HIT_MARKER_SHAPE, type HitMarkerSettings } from '../config/hits';
 import { DEFAULT_CROSSHAIR } from '../config/matchInfo';
 import { MemoryStorage } from '../pool/testStorage';
 import { SETTINGS_KEY, SETTINGS_VERSION } from '../settings/storage';
-import { crosshairSettings, loadHitMarker } from './crosshairSettings';
+import { crosshairSettings } from './crosshairSettings';
 import { HitFeedback } from './hitFeedback';
+import { hitMarkerCss, hitMarkerSize, loadHitMarker } from './hitMarkerLook';
 import { FakeElement } from './testSupport';
 
 /** Every element under `node` with the tag, depth first. */
@@ -36,12 +37,12 @@ class Node extends FakeElement {
 describe('the Hit marker setting (M97)', () => {
   it('is off on a clean save and on any save from before it; on or off as saved after', () => {
     expect(DEFAULT_HIT_MARKER).toBe(false);
-    expect(loadHitMarker(new MemoryStorage())).toBe(false);
-    expect(loadHitMarker(null)).toBe(false);
-    expect(loadHitMarker(saved({ quality: 'high', 'crosshair.shape': 'dot' }))).toBe(false);
-    expect(loadHitMarker(saved({ hitMarker: 'on' }))).toBe(true);
-    expect(loadHitMarker(saved({ hitMarker: 'off' }))).toBe(false);
-    expect(loadHitMarker(saved({ hitMarker: true }))).toBe(false);
+    expect(loadHitMarker(new MemoryStorage()).on).toBe(false);
+    expect(loadHitMarker(null).on).toBe(false);
+    expect(loadHitMarker(saved({ quality: 'high', 'crosshair.shape': 'dot' })).on).toBe(false);
+    expect(loadHitMarker(saved({ hitMarker: 'on' })).on).toBe(true);
+    expect(loadHitMarker(saved({ hitMarker: 'off' })).on).toBe(false);
+    expect(loadHitMarker(saved({ hitMarker: true })).on).toBe(false);
   });
 
   describe('its row', () => {
@@ -51,17 +52,67 @@ describe('the Hit marker setting (M97)', () => {
     });
     afterEach(() => vi.unstubAllGlobals());
 
-    it('is the last of the crosshair rows (the group that holds the crosshair), Off by default, saved as hitMarker', () => {
-      const seen: boolean[] = [];
-      const rows = crosshairSettings({ initial: { ...DEFAULT_CROSSHAIR }, onChange: () => {}, hitMarker: { initial: false, onChange: (on) => seen.push(on) } }) as unknown as FakeElement[];
-      const row = rows.at(-1)!;
-      expect(label(row)).toBe('Hit marker');
+    const rowsFor = (seen: HitMarkerSettings[]): FakeElement[] =>
+      crosshairSettings({ initial: { ...DEFAULT_CROSSHAIR }, onChange: () => {}, hitMarker: { initial: { ...DEFAULT_HIT_MARKER_SETTINGS }, onChange: (m) => seen.push(m) } }) as unknown as FakeElement[];
+
+    it('follow the crosshair\'s rows (the group that holds the crosshair): on or off, a preview, scale, thickness, outline, colour', () => {
+      const rows = rowsFor([]);
+      expect(rows.slice(-6).map(label)).toEqual(['Hit marker', 'Marker preview', 'Marker scale', 'Marker thickness', 'Marker outline', 'Marker colour']);
+      expect(rows.slice(0, -6).map(label)).not.toContain('Hit marker');
+    });
+
+    it('Off by default, saved as hitMarker', () => {
+      const seen: HitMarkerSettings[] = [];
+      const row = rowsFor(seen).find((r) => label(r) === 'Hit marker')!;
       expect(pressed(row)).toEqual(['Off']);
       all(row, 'button').find((b) => b.textContent === 'On')!.click();
-      expect(seen).toEqual([true]);
+      expect(seen.map((m) => m.on)).toEqual([true]);
       expect((JSON.parse(localStorage.getItem(SETTINGS_KEY)!) as Record<string, unknown>).hitMarker).toBe('on');
-      expect(loadHitMarker(localStorage)).toBe(true);
+      expect(loadHitMarker(localStorage).on).toBe(true);
     });
+
+    it('a bold red X with an outline unless changed; the outline and colour picks are saved and passed on whole', () => {
+      const seen: HitMarkerSettings[] = [];
+      const rows = rowsFor(seen);
+      const outline = rows.find((r) => label(r) === 'Marker outline')!;
+      const colour = rows.find((r) => label(r) === 'Marker colour')!;
+      expect(pressed(outline)).toEqual(['On']);
+      expect(pressed(colour)).toEqual(['Red']);
+      all(outline, 'button').find((b) => b.textContent === 'Off')!.click();
+      all(colour, 'button').find((b) => b.textContent === 'Yellow')!.click();
+      expect(seen.at(-1)).toMatchObject({ on: false, outline: 'off', color: 'yellow', scale: 1, thickness: 3 });
+      const back = loadHitMarker(localStorage);
+      expect(back.outline).toBe('off');
+      expect(back.color).toBe('yellow');
+    });
+  });
+});
+
+describe('the hit marker\'s look (the owner\'s 0.1 Dev 5 playtest, note 4)', () => {
+  it('starts red, outlined, 3 px thick and at 100%; much bigger and bolder than the old 9 by 2 px white X', () => {
+    expect(DEFAULT_HIT_MARKER_SETTINGS).toMatchObject({ scale: 1, thickness: 3, outline: 'on', color: 'red' });
+    expect(hitMarkerCss(DEFAULT_HIT_MARKER_SETTINGS)).toBe('#ff3b30');
+    expect(HIT_MARKER_SHAPE.arm).toBeGreaterThan(9);
+  });
+
+  it('loads each saved part on its own, and falls back part by part on anything out of range', () => {
+    const m = loadHitMarker(saved({ hitMarker: 'on', 'hitMarker.scale': 2, 'hitMarker.thickness': 5, 'hitMarker.color': 'custom', 'hitMarker.customColor': '#00FF80' }));
+    expect(m).toEqual({ on: true, scale: 2, thickness: 5, outline: 'on', color: 'custom', customColor: '#00ff80' });
+    expect(hitMarkerCss(m)).toBe('#00ff80');
+    const bad = loadHitMarker(saved({ 'hitMarker.scale': 9, 'hitMarker.thickness': 0, 'hitMarker.color': 'blue', 'hitMarker.customColor': 'red; x' }));
+    expect(bad).toEqual(DEFAULT_HIT_MARKER_SETTINGS);
+  });
+
+  it('scales the arms and the gap round the crosshair in whole pixels', () => {
+    expect(hitMarkerSize(1)).toEqual({ arm: HIT_MARKER_SHAPE.arm, gap: HIT_MARKER_SHAPE.gap });
+    expect(hitMarkerSize(2)).toEqual({ arm: HIT_MARKER_SHAPE.arm * 2, gap: HIT_MARKER_SHAPE.gap * 2 });
+    expect(hitMarkerSize(0.5)).toEqual({ arm: Math.round(HIT_MARKER_SHAPE.arm / 2), gap: Math.round(HIT_MARKER_SHAPE.gap / 2) });
+  });
+
+  it('leaves out the teams\' blue and orange, and cyan (a teammate hit shows it light blue)', () => {
+    const ids = HIT_MARKER_COLORS.map((c) => c.id);
+    expect(ids[0]).toBe('red');
+    for (const id of ['blue', 'orange', 'cyan']) expect(ids).not.toContain(id);
   });
 });
 
@@ -110,11 +161,11 @@ describe('HitFeedback and the Hit marker (M97)', () => {
 
   it('shows it as before when on, and turning it off takes one showing away', () => {
     const { feedback, marker } = make();
-    feedback.setHitMarker(true);
+    feedback.setHitMarker({ ...DEFAULT_HIT_MARKER_SETTINGS, on: true });
     feedback.showHitMarker(true);
     expect(marker.classes.has('show')).toBe(true);
     expect(marker.classes.has('friendly')).toBe(true);
-    feedback.setHitMarker(false);
+    feedback.setHitMarker({ ...DEFAULT_HIT_MARKER_SETTINGS, on: false });
     expect(marker.classes.has('show')).toBe(false);
     feedback.showHitMarker(false);
     expect(marker.classes.has('show')).toBe(false);

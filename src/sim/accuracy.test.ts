@@ -66,11 +66,11 @@ describe('accuracy by stance and movement', () => {
     c.velocity.x = MOVEMENT.sprintSpeed;
     stepAccuracy(c, MOVEMENT, DT);
     expect(c.spreadScale).toBe(A.sprint); // no ramp-up: the first shot after starting to move is already shaky
-    // Stop dead: still shaky just after the sprint (when the fire lockout ends)...
+    // Stop dead: still shaky a fifth of a second after the sprint...
     c.sprinting = false;
     c.velocity.x = 0;
     let t = 0;
-    while (t < MOVEMENT.sprintFireLockout - 1e-9) {
+    while (t < 0.2 - 1e-9) {
       stepAccuracy(c, MOVEMENT, DT);
       t += DT;
     }

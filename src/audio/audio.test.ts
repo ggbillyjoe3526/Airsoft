@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AMBIENCES, AUDIO, VOLUME } from '../config/audio';
 import { CYBER_PISTOL, LOADOUT } from '../config/replicas';
-import { cues, isMapCue, SHOT_PROFILES, SOUNDS, type SoundCue, TITLE_CUES } from '../config/sounds';
+import { cues, isMapCue, POWER_PARTS, SHOT_PROFILES, type ShotProfile, SOUNDS, type SoundCue, TITLE_CUES } from '../config/sounds';
 import { DEPOT } from '../map/depot';
 import type { MapBlock } from '../map/mapTypes';
 import { terrainHeightAt } from '../map/terrain';
@@ -11,7 +11,7 @@ import { vec3 } from '../sim/vec';
 import { saveSetting } from '../settings/storage';
 import { AmbientCalls, renderAmbienceBed } from './ambience';
 import { loadVolumes, volumeField, volumeGain } from './audioMix';
-import { recipeLength, renderRecipe, seededRandom, type SoundRecipe } from './dsp';
+import { recipeLength, renderRecipe, renderRecipeParts, seededRandom, type SoundRecipe } from './dsp';
 import { type FoleyMove, FoleyTracker } from './foley';
 import { measureSeam, seamFailures } from './loopSeamSupport';
 import { MotorSound } from './motor';
@@ -117,6 +117,47 @@ describe('sound synthesis (M13)', () => {
     expect(v0).not.toEqual(v1);
   });
 
+  it('renders a shot\'s power part in the same pass (0.1 Dev 5 playtest, note 2): the two add up to the shot, and the stream after it is untouched', () => {
+    const shot: SoundRecipe = {
+      layers: [
+        { kind: 'tone', wave: 'saw', attack: 0.004, decay: 0.05, gain: 0.2, hz: 200, power: true },
+        { kind: 'noise', attack: 0.001, decay: 0.03, gain: 0.3, filter: { type: 'bandpass', hz: 1500, q: 0.8 } },
+        { kind: 'noise', at: 0.01, attack: 0.002, decay: 0.08, gain: 0.1, filter: { type: 'highpass', hz: 3500, q: 0.5 }, power: true },
+      ],
+      pitchSpread: 0.04,
+      timeSpread: 0.08,
+      gainSpread: 0.1,
+    };
+    const whole: SoundRecipe = { ...shot, layers: shot.layers.map((l) => ({ ...l, power: false })) };
+    const next = SOUNDS['step.concrete.run'];
+    const a = seededRandom(11);
+    const parts = renderRecipeParts(shot, RATE, a);
+    const afterParts = renderRecipe(next, RATE, a);
+    const b = seededRandom(11);
+    const full = renderRecipe(whole, RATE, b);
+    const afterFull = renderRecipe(next, RATE, b);
+    expect(afterParts).toEqual(afterFull);
+    const tolerance = peak(full) * 2e-3; // each part's trimmed tail is under -60 dB of its peak
+    for (let i = 0; i < full.length; i++) {
+      const sum = (parts.main[i] ?? 0) + (parts.power![i] ?? 0);
+      expect(Math.abs(sum - full[i]!), `sample ${i}`).toBeLessThan(tolerance);
+    }
+    expect(renderRecipeParts(SOUNDS['step.concrete.run'], RATE, seededRandom(3)).power).toBeNull();
+  });
+
+  it('gives the AEG, the gas pistol and the spring a power part each, and the Cyber Pistol none', () => {
+    for (const p of SHOT_PROFILES) {
+      const hasPower = SOUNDS[cues.shot(p)].layers.some((l) => l.power);
+      expect(cues.power(p) !== null, p).toBe(hasPower);
+      expect(POWER_PARTS[cues.shot(p)] ?? null).toBe(cues.power(p));
+    }
+    expect(cues.power('cyber')).toBeNull();
+    for (const part of Object.values(POWER_PARTS)) {
+      expect(TITLE_CUES).not.toContain(part); // rendered with its shot, not from the stream
+      expect(rendered.get(part!)!.length).toBe(variantsOf(part!, 3));
+    }
+  });
+
   it("keeps the sounds small enough to render in the title screen's spare time (a budget in samples, not wall time)", () => {
     // Measured at M-09 (audit): 1,167,190 samples (4.7 MB) in all, the longest cue (steel's ring) 116,965. Counting
     // samples keeps the guard from flaking on a slow CI runner (audit L-11); rendering time follows the count.
@@ -128,7 +169,9 @@ describe('sound synthesis (M13)', () => {
       expect(samples, `${cue} is too long to render in one spare moment`).toBeLessThan(0.15 * 1e6);
       total += samples;
     }
-    expect(total, 'samples kept per sample rate').toBeLessThan(1.4e6);
+    // 1.5e6 since the 0.1 Dev 5 playtest (note 2): a shot's power part keeps its own tail (about 66,000 samples more, 0.3
+    // MB); the rendering is the same layers as before, so a spare moment's work is unchanged.
+    expect(total, 'samples kept per sample rate').toBeLessThan(1.5e6);
   });
 
   it('has a shot sound for every power source the replicas use', () => {
@@ -137,9 +180,18 @@ describe('sound synthesis (M13)', () => {
   });
 
   it('gives each power source its own character: a sharp gas pop, a spring that rings on', () => {
-    const gas = rendered.get('shot.gas')![0]!;
-    const electric = rendered.get('shot.electric')![0]!;
-    const spring = rendered.get('shot.spring')![0]!;
+    // A shot as heard: the shot and its power part (POWER_PARTS) together.
+    const heard = (p: ShotProfile): Float32Array => {
+      const shot = rendered.get(cues.shot(p))![0]!;
+      const power = rendered.get(cues.power(p)!)![0]!;
+      const out = new Float32Array(Math.max(shot.length, power.length));
+      out.set(shot);
+      for (let i = 0; i < power.length; i++) out[i] = out[i]! + power[i]!;
+      return out;
+    };
+    const gas = heard('gas');
+    const electric = heard('electric');
+    const spring = heard('spring');
     // The gas pop is brighter than the AEG's gearbox cycle.
     expect(brightness(gas)).toBeGreaterThan(brightness(electric));
     // The spring's twang carries on well after both have died away.

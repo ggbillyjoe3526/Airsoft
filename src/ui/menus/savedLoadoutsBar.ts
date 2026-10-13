@@ -88,6 +88,8 @@ export class SavedLoadoutsBar {
       tab.root.classList.toggle('is-current', !!v?.current);
       tab.root.classList.toggle('has-locked', (v?.missing.length ?? 0) > 0);
       setText(tab.name, v ? v.name : SAVED_TEXT.newLoadout);
+      // A name longer than the tab is cut with an ellipsis (saved.css): the whole name is the tip.
+      tab.name.title = v ? v.name : '';
       setText(tab.line, v ? carriesLine(v) : SAVED_TEXT.newNote);
       setText(tab.tag, v?.current ? SAVED_TEXT.current : '');
       setAttr(tab.button, 'aria-label', v ? SAVED_TEXT.tabName(i + 1, v.name, carriesLine(v), v.current, v.missing.length) : SAVED_TEXT.emptyTabName(i + 1));

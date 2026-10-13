@@ -85,8 +85,9 @@ Play › Mode Elimination on Depot, Match › Opponents Normal. Set the mouse se
 - [ ] **Look around with the mouse.** The view turns smoothly, with no jumps, and no drift once the mouse stops.
 - [ ] **Move with W A S D.** You run at a steady pace and hear your own footsteps.
 - [ ] **Hold Shift and move.** You walk slowly and your footsteps go silent.
-- [ ] **Hold Left Alt and run forward.** You sprint. Try to shoot while sprinting: nothing fires until a moment
-  after you stop.
+- [ ] **Hold Left Alt and run forward.** You sprint. Shoot while sprinting: it fires (the replica comes up from the
+  carry), but the BBs spread far wider than walking and the rifle climbs faster. Let go of the trigger and it drops
+  back into the carry a moment later. (Dev 5 playtest, note 9.)
 - [ ] **Press C.** You crouch and move slowly and silently without holding the key; C again stands you up. Crouch,
   then press Left Alt or Space: you stand up (Space only stands you up).
 - [ ] **Settings › Controls › Crouch key: Hold.** You crouch only while C is held. The game remembers your choice.
@@ -116,7 +117,7 @@ The rifle holds 60 BBs and the pistol 18, each with 4 magazines a round. Nothing
   starts a reload.
 - [ ] **Press 2, or turn the mouse wheel.** You switch to the pistol: one shot per click, holding doesn't keep
   firing. 1 switches back.
-- [ ] **Let go of sprint and click at once with the pistol.** The shot fires a moment later instead of being lost.
+- [ ] **Let go of sprint and click at once with the pistol.** The shot fires at once.
 - [ ] **Shoot at a far wall.** You see the BBs fly, take a moment to arrive and drop at long range; the pistol's
   drop sooner.
 - [ ] **Fire half a magazine, then press R.** A magazine swap plays (rifle 1.8 s, pistol 1.2 s). The small gauges
@@ -143,9 +144,12 @@ The rifle comes with flip-up iron sights; a red dot or a 2× scope is a part you
   sensitivity at first, so the world moves across the screen as fast as from the hip).
 - [ ] **Reload, or switch to the pistol, while aiming.** The sight drops for the reload and comes back up if you
   still hold right click. The pistol has no optic, so it aims down its own iron sights.
-- [ ] **Fit the 2× scope and hold right click.** It comes up a little slower than the red dot; only a round eyepiece
-  with a crosshair and a red centre dot shows (find it against a dark wall), twice as close. Turning feels the same
-  across the eyepiece as with the red dot. Worth it on long lanes, and is the blind surround a fair cost?
+- [ ] **Fit the 2× scope and hold right click.** It comes up a little slower than the red dot, and looks like it:
+  the rifle and the scope stay in view and the world shows clearly round them, twice as close. Through the scope's
+  rear glass you see the world, with a fine crosshair and a red centre dot (find it against a dark wall). Turning
+  feels the same as with the red dot. (Dev 5 playtest, note 5.)
+- [ ] **Look at the 2× scope from the hip, and in Loadout › Customise.** Each glass is dark glass over black: no
+  gap, and no view through the scope's body (Dev 5 playtest, note 6), with Dev › Disable all models on and off.
 - [ ] **Press Esc in a match.** The pause menu has no Loadout: parts are set between matches (on the range the pause
   menu does have one).
 
@@ -223,7 +227,8 @@ wears off, and each match has a light breeze (calm to about 2 m/s) that pushes B
   try every optic, grip and magazine: nothing floats or clips the hands.
 - [ ] **Gas puffs and impacts.** The pistol puffs a little gas at the muzzle and ejection port each shot; the rifle
   none. No flash, no casings. Impacts make pale dust on concrete, tan crumbs on wood, a grey puff on steel: soft puffs,
-  never sparks. On High a BB carries a soft warm glow and a wall hit throws a few chips back towards the shooter.
+  never sparks. No BB has a glow round it (a glowing BB is lit itself); on High a wall hit throws a few chips back
+  towards the shooter.
 - [ ] **Name tags.** Walk up to a teammate (1 to 2 m): the tag sits just above the head; at 30 m and more it still
   sits above it. Try a field of view of 80.
 
@@ -372,12 +377,14 @@ One BB hit puts anyone out. A round lasts up to 2:30 and the first team to 5 rou
 
 - [ ] **Get hit.** A sharp tick, a sign of where it came from, and your view walks off. Then you watch a teammate;
   left click (or your fire key) moves to the next one.
-- [ ] **Skip to next round** (M83). Out and spectating, the line under the view ends "Esc to skip the round"; Esc,
-  then **Skip to next round** on the pause menu: "Skipping the round…" shows for a second or few (the page keeps
-  drawing), then the next round starts with the score as it played out. On match point (either team one win away)
-  the button reads **Skip to the result** and may end on the summary; the result counts in Stats and pays FC as a
-  watched one. Not offered while you are in play or calling your hit, between rounds, in Extraction or on the
-  practice range. Same seed: skipping and watching a round give the same score (check with `?seed=`).
+- [ ] **Skip to next round** (M83). Out and spectating, the line under the view ends "Esc to skip the round"; Esc
+  skips at once with no pause menu (Dev 5 playtest, note 10): "Skipping the round…" shows for a second or few (the
+  page keeps drawing), then "Click to play · Esc for the menu" holds the next round until you click (Esc again opens
+  the pause menu, whose **Skip to next round** button still works). The next round starts with the score as it
+  played out. On match point (either team one win away) the line and the button read **Skip to the result** and may
+  end on the summary; the result counts in Stats and pays FC as a watched one. Not offered while you are in play or
+  calling your hit, between rounds, in Extraction or on the practice range. Same seed: skipping and watching a round
+  give the same score (check with `?seed=`).
 - [ ] **Shoot a teammate (carefully).** Friendly fire counts, so they go out too. On purpose.
 - [ ] **Walk-offs.** Hit players walk all the way to their dead zone by a sensible route, promptly, on every map,
   even from the far end. Teammates in the dead zone stand on separate spots.
@@ -696,8 +703,11 @@ there maps each symptom to its numbers):
   Size, Thickness, Gap, Colour (no blue or orange: those are the teams'; a custom colour box at the end), Opacity,
   Spread (Static keeps the gap while moving) and Outline. In a match it looks the same and still opens as you move.
 - [ ] **Hit marker** (Settings › Gameplay › Crosshair, M97). Off by default: hit a bot and no red X flashes over the
-  crosshair, but the hit tick still sounds. On: the red X flashes as before (a teammate hit marks too). Flip it in
-  the pause menu mid-match: it applies at once, and the pick is kept next visit.
+  crosshair, but the hit tick still sounds. On: a bold red X with a dark edge pops over the crosshair and fades (a
+  teammate hit marks it light blue). Flip it in the pause menu mid-match: it applies at once, and the pick is kept
+  next visit.
+- [ ] **Hit marker look** (Dev 5 playtest, note 4). Marker scale, thickness, outline and colour (a custom colour box
+  at the end) change the preview at once and the X in a match. Is the default easy to see on every map?
 - [ ] **Replay tutorial** (Settings › Gameplay › Tutorial, M97). From the title or the top bar it starts the
   tutorial on the range at once, from its first step, even after you finished it. From the pause menu in a match it
   asks first ("This leaves what you are playing now") and then leaves the match (not recorded) for the tutorial.
@@ -828,8 +838,10 @@ Headphones help: direction (in front, behind, above) comes through best on them.
 - [ ] **Getting hit.** The tick stands out: the world dips for a moment. While you walk off and wait, the field sounds
   muffled and quieter; the whistle stays clear and sits a little above the field.
 - [ ] **Pause mid-burst, then Resume.** No click either way: the sound fades out and back.
-- [ ] **Settings › Audio.** Master, Effects (replicas, steps, impacts), Ambience (the field's background) and Interface
-  (hit tick, marker, whistle), each at once and kept. Ambience at 0 leaves the field silent but every step and shot
+- [ ] **Settings › Audio.** Master, Effects (replicas, steps, impacts), Power source volume (each replica's motor,
+  gas and spring as it fires, yours and the bots'), Ambience (the field's background) and Interface (hit tick, marker,
+  whistle), each at once and kept. Power source at 0 leaves the shots' snap but no motor, gas or spring (Dev 5
+  playtest, note 2: shots are louder too). Ambience at 0 leaves the field silent but every step and shot
   as loud as before; Effects at 0 leaves only the interface cues.
 - [ ] **Practice range.** The 50 m and 60 m plates still ring.
 - [ ] **Output devices.** On a 44.1 kHz or 96 kHz device (many USB headsets, HDMI receivers) shots sound as crisp as on

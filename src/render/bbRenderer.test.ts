@@ -162,7 +162,7 @@ describe('BBRenderer', () => {
       expect(colorOf(r, 1).getHex()).toBe(0xffffff);
       expect(headColor(r, 0).getHex()).toBe(new THREE.Color(BB_VISUALS.glowInDark.trailColor).getHex());
       expect(headColor(r, 1).getHex()).toBe(new THREE.Color(BB_VISUALS.trailColor).getHex());
-      expect(r.object.children).toHaveLength(3); // still the balls, the streaks and FA8's halo: no mesh added
+      expect(r.object.children).toHaveLength(2); // still the balls and the streaks: no mesh added, no halo round the ball
       r.dispose();
     });
 

@@ -76,17 +76,15 @@ export function opticReadout(slot: KitSlot): string {
 const STEADY_MARGIN = 0.1;
 
 /**
- * One line under the grip, in numbers: how quickly the replica comes up after a switch, and after a sprint when it can
- * fire against when the aim is steady again (from the sim's own accuracy rule), e.g. "Brings the AEG Rifle up in
- * 0.45 s. After a sprint it can fire from 0.20 s, steady from 0.27 s."
+ * One line under the grip, in numbers: how quickly the replica comes up after a switch, and how soon after a sprint the
+ * aim is steady again (from the sim's own accuracy rule; it fires on the run, wide), e.g. "Brings the AEG Rifle up in
+ * 0.45 s. Steady again 0.27 s after a sprint."
  */
 export function gripReadout(slot: KitSlot): string {
   const c = createCharacter(0, vec3(), 0, [slot.replica]);
   fitParts(c.armament, [slot.parts]);
   const steady = timeToSteady(c, MOVEMENT, SIM_DT, STEADY_MARGIN);
-  const lockout = MOVEMENT.sprintFireLockout;
-  const after = steady <= lockout ? 'already steady' : `steady from ${steady.toFixed(2)} s`;
-  return `Brings the ${slot.replica.name} up in ${handlingOf(slot.replica, slot.parts).drawTime.toFixed(2)} s. After a sprint it can fire from ${lockout.toFixed(2)} s, ${after}.`;
+  return `Brings the ${slot.replica.name} up in ${handlingOf(slot.replica, slot.parts).drawTime.toFixed(2)} s. Steady again ${steady.toFixed(2)} s after a sprint.`;
 }
 
 /** One line under the magazine, in numbers, e.g. "60 BBs each, 4 carried (240 in all). Reload 1.8 s." */

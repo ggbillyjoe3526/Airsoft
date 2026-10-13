@@ -97,11 +97,15 @@ describe('render quality presets (final alpha audit section 4)', () => {
     expect(TONE_MAPPING.exposure.neutral).toBe(1);
   });
 
-  it('keeps every FA8 overhaul item off Low (today\'s meshes, no glow, grit or beam), and the laser beam off every preset', () => {
-    expect(QUALITY.low).toMatchObject({ figureDetail: 'low', replicaDetail: 'low', handDetail: 'low', bbGlow: false, impactGrit: false, laserBeam: false });
+  it('keeps every FA8 overhaul item off Low (today\'s meshes, no grit or beam), and the laser beam off every preset', () => {
+    expect(QUALITY.low).toMatchObject({ figureDetail: 'low', replicaDetail: 'low', handDetail: 'low', impactGrit: false, laserBeam: false });
     for (const p of ['medium', 'high'] as const) {
-      expect(QUALITY[p]).toMatchObject({ figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', bbGlow: true, impactGrit: true, laserBeam: false });
+      expect(QUALITY[p]).toMatchObject({ figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', impactGrit: true, laserBeam: false });
     }
+  });
+
+  it('has no BB glow row any more: no halo round a BB on any preset (the owner\'s 0.1 Dev 5 playtest, note 3)', () => {
+    for (const p of ['low', 'medium', 'high'] as const) expect(Object.keys(QUALITY[p])).not.toContain('bbGlow');
   });
 
   it('resolves a choice: a preset is its row whatever the custom fields; Custom is High overlaid with them (REN-20)', () => {
@@ -274,11 +278,11 @@ describe('config/render.ts keeps every name it had before the split (G5 QA)', ()
   });
 
   it('leaves every field Low, Medium and High had before G5 at the value it had (Low drawn exactly as before)', () => {
-    // The presets' values on main before G5, field by field; G5 only adds the post fields.
+    // The presets' values on main before G5, field by field (FA8's BB glow since taken away); G5 only adds the post fields.
     const BEFORE = {
-      low: { renderScale: 0.8, maxPixelRatio: 1, antialias: false, shadows: false, shadowMapSize: 1024, shadowRadius: 1, shadowFollowsView: false, figureShadows: false, surfaceRelief: false, textureSize: 256, anisotropy: 1, dustMotes: 0, replicaSheen: false, environment: false, normalMaps: false, mapDetail: false, trees: 1, clouds: false, figureDetail: 'low', replicaDetail: 'low', handDetail: 'low', bbGlow: false, impactGrit: false, laserBeam: false, poolLights: 0 },
-      medium: { renderScale: 1, maxPixelRatio: 1.25, antialias: true, shadows: true, shadowMapSize: 1024, shadowRadius: 1.5, shadowFollowsView: false, figureShadows: true, surfaceRelief: true, textureSize: 512, anisotropy: 4, dustMotes: 90, replicaSheen: true, environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', bbGlow: true, impactGrit: true, laserBeam: false, poolLights: 2 },
-      high: { renderScale: 1, maxPixelRatio: 1.5, antialias: true, shadows: true, shadowMapSize: 2048, shadowRadius: 2.5, shadowFollowsView: true, figureShadows: true, surfaceRelief: true, textureSize: 1024, anisotropy: 16, dustMotes: 180, replicaSheen: true, environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', bbGlow: true, impactGrit: true, laserBeam: false, poolLights: 4 },
+      low: { renderScale: 0.8, maxPixelRatio: 1, antialias: false, shadows: false, shadowMapSize: 1024, shadowRadius: 1, shadowFollowsView: false, figureShadows: false, surfaceRelief: false, textureSize: 256, anisotropy: 1, dustMotes: 0, replicaSheen: false, environment: false, normalMaps: false, mapDetail: false, trees: 1, clouds: false, figureDetail: 'low', replicaDetail: 'low', handDetail: 'low', impactGrit: false, laserBeam: false, poolLights: 0 },
+      medium: { renderScale: 1, maxPixelRatio: 1.25, antialias: true, shadows: true, shadowMapSize: 1024, shadowRadius: 1.5, shadowFollowsView: false, figureShadows: true, surfaceRelief: true, textureSize: 512, anisotropy: 4, dustMotes: 90, replicaSheen: true, environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', impactGrit: true, laserBeam: false, poolLights: 2 },
+      high: { renderScale: 1, maxPixelRatio: 1.5, antialias: true, shadows: true, shadowMapSize: 2048, shadowRadius: 2.5, shadowFollowsView: true, figureShadows: true, surfaceRelief: true, textureSize: 1024, anisotropy: 16, dustMotes: 180, replicaSheen: true, environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', impactGrit: true, laserBeam: false, poolLights: 4 },
     } as const;
     for (const p of ['low', 'medium', 'high'] as const) expect(renderBarrel.QUALITY[p], p).toMatchObject(BEFORE[p]);
     expect(renderBarrel.FRAME_RATE_CAPS.slice(0, 5)).toEqual([0, 30, 60, 120, 144]);
@@ -289,9 +293,10 @@ describe('config/render.ts keeps every name it had before the split (G5 QA)', ()
     const post = ['ambientOcclusion', 'bloom', 'temporalAA', 'lightShafts', 'reflections', 'lensFinish'];
     expect(Object.keys(low).filter((k) => post.includes(k)).sort()).toEqual([...post].sort());
     expect(post.map((f) => low[f as keyof typeof low])).toEqual([0, false, false, false, false, false]);
-    // 25 fields before G5, plus G6's two (bakedLight, weathering) and M91's Torch shadows (off on Low).
+    // 25 fields before G5, less FA8's BB glow (gone with the 0.1 Dev 5 playtest), plus G6's two (bakedLight, weathering)
+    // and M91's Torch shadows (off on Low).
     expect(low.torchShadows).toBe(false);
-    expect(Object.keys(low)).toHaveLength(25 + 2 + 1 + post.length);
+    expect(Object.keys(low)).toHaveLength(25 - 1 + 2 + 1 + post.length);
   });
 
   it('keeps each file under about 600 lines', () => {

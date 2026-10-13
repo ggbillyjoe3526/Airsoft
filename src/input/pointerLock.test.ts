@@ -115,6 +115,40 @@ describe('pointer lock requests', () => {
   });
 });
 
+describe('who let go of the mouse (the owner\'s 0.1 Dev 5 playtest, note 10)', () => {
+  /** The browser drops the lock, as it does on Esc, switching away, or exitPointerLock. */
+  function drop(doc: ReturnType<typeof fakeDocument>): void {
+    doc.pointerLockElement = null;
+    doc.dispatchEvent(new Event('pointerlockchange'));
+  }
+
+  it('says a drop was the game\'s own when release() asked for it, and the player\'s (Esc) otherwise', async () => {
+    const { lock, doc } = setup(['lock', 'lock']);
+    const drops: boolean[] = [];
+    lock.onChange((locked, released) => {
+      if (!locked) drops.push(released);
+    });
+    doc.exitPointerLock = () => drop(doc);
+    await lock.request();
+    lock.release();
+    await lock.request();
+    drop(doc); // Esc
+    expect(drops).toEqual([true, false]);
+  });
+
+  it('forgets a release() the browser answered without a drop, so a later Esc is still the player\'s', async () => {
+    const { lock, doc } = setup(['lock', 'lock']);
+    const drops: boolean[] = [];
+    lock.onChange((locked, released) => {
+      if (!locked) drops.push(released);
+    });
+    lock.release(); // not locked: nothing to let go
+    await lock.request();
+    drop(doc);
+    expect(drops).toEqual([false]);
+  });
+});
+
 describe('mouse buttons (M18)', () => {
   it('passes every button on by its binding code while locked, and lets go of them all when the lock ends', async () => {
     const { lock, log, doc } = setup(['lock']);

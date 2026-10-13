@@ -18,8 +18,11 @@ const F = REPLICA_FINISH;
  */
 export const RIFLE_OPTIC = { axisUp: 0.126, from: -0.005, length: 0.056, outer: 0.022, inner: 0.018 } as const;
 
-/** The 2× scope's body on the same axis (M17b): main tube, objective bell in front, eyepiece behind (metres). */
-export const RIFLE_SCOPE = { from: -0.01, length: 0.11, outer: 0.014, inner: 0.012, bellLength: 0.035, bellOuter: 0.022, eyeLength: 0.03 } as const;
+/**
+ * The 2× scope's body on the same axis (M17b): main tube, objective bell in front, eyepiece behind (metres); the bell's
+ * shoulder and how far into the eyepiece its glass sits (the 0.1 Dev 5 playtest, note 6).
+ */
+export const RIFLE_SCOPE = { from: -0.01, length: 0.11, outer: 0.014, inner: 0.012, bellLength: 0.035, bellOuter: 0.022, eyeLength: 0.03, shoulder: 0.003, ocularInset: 0.003 } as const;
 
 /**
  * Where a model's muzzle end is (M29b), forward from its origin (m): where its standard barrel ends and how high its bore
@@ -88,9 +91,21 @@ function scope2x(b: ModelBuilder): void {
   }
   b.ringTube('detail', sc.from, sc.length, o.axisUp, sc.outer, sc.inner);
   b.ringTube('detail', sc.from + sc.length, sc.bellLength, o.axisUp, sc.bellOuter, sc.bellOuter - 0.003);
+  // The bell's shoulder, closing the step from the tube out to the bell (the 0.1 Dev 5 playtest, note 6: it was open).
+  b.ringTube('detail', sc.from + sc.length, sc.shoulder, o.axisUp, sc.bellOuter - 0.002, sc.inner);
   b.ringTube('detail', sc.from - sc.eyeLength, sc.eyeLength, o.axisUp, sc.outer + 0.004, sc.inner);
   if (!b.high) b.box('detail', 0.03, 0.05, o.axisUp + sc.outer - 0.002, o.axisUp + sc.outer + 0.012, 0.016); // turret
-  b.tube('lens', sc.from + sc.length + sc.bellLength - 0.004, 0.002, o.axisUp, sc.bellOuter - 0.003, 24);
+  const objective = sc.from + sc.length + sc.bellLength - 0.004;
+  b.tube('lens', objective, 0.002, o.axisUp, sc.bellOuter - 0.003, 24);
+  // The eyepiece's glass (what aiming looks through: viewmodel.ts opens it to the world), and a dark core from it to the
+  // objective's, so each glass reads as glass over black rather than a view through the body (note 6). On Low the core
+  // is drawn with the body: no mesh more.
+  const ocular = sc.from - sc.eyeLength + sc.ocularInset;
+  b.tube('lens', ocular, 0.001, o.axisUp, sc.inner, 24);
+  const core = b.high ? 'rubber' : 'detail';
+  const tubeEnd = sc.from + sc.length + sc.shoulder;
+  b.tube(core, ocular + 0.0015, tubeEnd - ocular - 0.0015, o.axisUp, sc.inner - 0.0005, 24);
+  b.tube(core, tubeEnd, objective - 0.0005 - tubeEnd, o.axisUp, sc.bellOuter - 0.0055, 24);
   if (!b.high) return;
   // Turrets on top and on the right with their caps; a rubber eye cup; a dark inner tube in the bell, so the objective
   // reads as glass over black; scope rings round the tube with two screws a side.

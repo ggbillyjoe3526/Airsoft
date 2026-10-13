@@ -34,7 +34,7 @@ import { DustMotes } from './dustMotes';
 import { ImpactGrit, shooterSide } from './impactGrit';
 import { ImpactPuffs } from './impactPuffs';
 import type { Renderer } from './renderer';
-import { sprintCarry, Viewmodel } from './viewmodel';
+import { SprintCarry, Viewmodel } from './viewmodel';
 import type { ReplicaPaint } from '../config/schemes';
 import { type ArmStyle, HUMAN_ARMS } from './replicaModels';
 
@@ -115,6 +115,9 @@ export class CombatPresentation {
   private aimBlend = 0;
   /** The sight last raised (an optic, or iron sights, M84): switching away eases out of its zoom rather than snapping. */
   private aimSight: SightId = 'iron';
+  /** The held replica's sprint carry, and whether the player fired since the last frame (firing on the run raises it). */
+  private readonly sprintCarry = new SprintCarry();
+  private shotThisFrame = false;
 
   /** How far the player's optic is raised to their eye (0..1); the aiming sensitivity blends in with it. */
   get aimRaised(): number {
@@ -173,14 +176,13 @@ export class CombatPresentation {
 
   /**
    * A quality preset (Settings → Graphics, M14): how much dust drifts in the air, the held replica's sheen, and the
-   * visual overhaul's rows (FA8): replica and hand detail, the laser beam, the BBs' glow and impact grit.
+   * visual overhaul's rows (FA8): replica and hand detail, the laser beam and impact grit.
    */
   setQuality(quality: QualitySettings): void {
     this.quality = quality;
     this.motes.setCount(quality.dustMotes);
     this.viewmodel.setDetail({ replica: quality.replicaDetail, hands: quality.handDetail });
     this.viewmodel.setLaserBeam(quality.laserBeam);
-    this.bbs.setGlow(quality.bbGlow);
     this.grit.setEnabled(quality.impactGrit);
     this.dressing.setQuality(quality);
     if (quality.impactGrit && !this.rings) {
@@ -301,6 +303,7 @@ export class CombatPresentation {
     for (const e of this.state.events) {
       if (e.type === 'roundStart') {
         this.viewmodel.resetSway(); // the view snaps to the spawn yaw
+        this.sprintCarry.reset();
         this.aimBlend = 0; // a new round starts with the sight down
         this.renderer.setZoom(1);
         // A round set up behind the start or result screen gets its whistle when play starts.
@@ -338,7 +341,10 @@ export class CombatPresentation {
         this.hud.showNotice('No fuller magazine', HUD.noticeTime);
       }
       if (e.type === 'shot') {
-        if (e.characterId === this.player.id) this.viewmodel.onShot();
+        if (e.characterId === this.player.id) {
+          this.viewmodel.onShot();
+          this.shotThisFrame = true;
+        }
         const shooter = this.characterOf(e.characterId);
         // The drawn muzzle once per shot, for the BB and the gas breath both (audit REN-11).
         if (shooter && this.shooterMuzzle(shooter, this.muzzle)) {
@@ -353,7 +359,7 @@ export class CombatPresentation {
   /** Once per rendered frame, after the camera has been placed. `alpha` interpolates ticks. */
   frame(dt: number, alpha: number, yaw: number, pitch: number): void {
     this.bbs.setPixelAngle(this.renderer.retroPixelAngle);
-    this.bbs.update(alpha, this.renderer.camera.position, this.renderer.camera.quaternion);
+    this.bbs.update(alpha, this.renderer.camera.position);
     this.puffs.update(dt, this.renderer.camera);
     this.rings?.update(dt, this.renderer.camera);
     this.grit.update(dt, this.renderer.camera);
@@ -365,9 +371,13 @@ export class CombatPresentation {
     this.paths.update();
 
     const p = this.player;
-    const carried = p.sprinting || p.sprintLockout > 0;
+    // Carried in a sprint, unless the trigger is pulled: you can fire on the run (the owner's 0.1 Dev 5 note 9).
+    const shooting = p.armament.triggerWasDown || this.shotThisFrame;
+    this.shotThisFrame = false;
+    const carry = this.sprintCarry.update(dt, p.sprinting && p.status === 'alive', shooting);
+    const carried = carry > 0;
     // Aiming down sights: the sight comes up to your eye and the view narrows by the optic's zoom. Straight out of a
-    // sprint the replica is still carried (firing is locked out too), so it rises once that ends.
+    // sprint the replica is still carried, so it rises once it has come down.
     const aiming = p.aiming && p.status === 'alive' && !carried;
     // Every replica aims (M84): through its optic, or down its iron sights.
     const inHand: SightId = p.armament.optics[p.armament.active] ?? 'iron';
@@ -375,7 +385,6 @@ export class CombatPresentation {
     this.aimBlend = Math.max(0, Math.min(1, this.aimBlend + (aiming ? dt : -dt) / aimRaiseTime(p.armament)));
     this.renderer.setZoom(1 + (sightConfig(this.aimSight).zoom - 1) * this.aimBlend);
     this.viewmodel.setAspect(this.renderer.camera.aspect);
-    const carry = p.sprinting ? 1 : sprintCarry(p.sprintLockout, this.movement.sprintFireLockout);
     const light = lightInHand(p);
     this.viewmodel.setTorch(torchLit(p), light ? TORCHES[light].colour : TORCHES.weaponTorch.colour);
     // Resting on cover (M104): the replica settles and steadies, and "Rested" shows under the sight.

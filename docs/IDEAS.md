@@ -5,6 +5,13 @@ The parking lot for future features the owner hasn't placed in a version yet. Do
 New ideas go here until the owner places them. The feature triage (owner, 2026-10-05) emptied the list: every idea
 parked here was placed in a version on the roadmap (`docs/ROADMAP.md`, Beta and "After 0.1") or declined below.
 
+## Later, version not set
+
+Work the owner wants one day but hasn't placed in a version.
+
+- **Another UI redesign (owner, 2026-10-13).** "We're probably going to have to do another UI redesign at some point.
+  Maybe in a future Dev release or after 1.0." Nothing is built for it until he places it.
+
 ## Maybe
 
 New ideas the owner wants to think about (owner, 2026-10-06). Roadmap items he marked maybe stay in their place in

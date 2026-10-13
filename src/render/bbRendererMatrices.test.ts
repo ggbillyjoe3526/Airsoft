@@ -51,32 +51,9 @@ describe('BBRenderer writes the matrices Three would (M77 acceptance 3, REN-10)'
     r.dispose();
   });
 
-  it('a glow dot is makeRotationFromQuaternion(facing) scaled by s with the position set', () => {
-    const { r, positions } = scene();
-    r.setGlow(true);
-    const facing = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.3, -1.1, 0.2));
-    r.update(1, eye, facing);
-    const balls = r.object.children[0] as THREE.InstancedMesh;
-    const glow = r.object.children[2] as THREE.InstancedMesh;
-    expect(glow.count).toBe(3);
-    for (let i = 0; i < 3; i++) {
-      const s = new THREE.Vector3().setFromMatrixScale(matrixAt(balls, i)).x;
-      const want = new THREE.Matrix4().compose(positions[i]!, facing, new THREE.Vector3(s, s, s));
-      const got = matrixAt(glow, i).elements;
-      want.elements.forEach((v, k) => expect(got[k]!, `glow ${i} element ${k}`).toBeCloseTo(v, 4));
-      expect(got[3]).toBe(0);
-      expect(got[7]).toBe(0);
-      expect(got[11]).toBe(0);
-      expect(got[15]).toBe(1);
-    }
-    r.dispose();
-  });
-
   it('keeps writing right matrices over frames and slot reuse (a ball left a stale rotation in none)', () => {
     const { r } = scene();
-    r.setGlow(true);
-    r.update(1, eye, new THREE.Quaternion().setFromEuler(new THREE.Euler(1, 2, 3)));
-    r.setGlow(false);
+    r.update(1, eye);
     r.update(1, eye);
     const balls = r.object.children[0] as THREE.InstancedMesh;
     const m = matrixAt(balls, 0).elements;

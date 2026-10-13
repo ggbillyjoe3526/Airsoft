@@ -93,7 +93,6 @@ export function createSimContext(services: SimServices): SimContext {
       rng: createRng(0),
       query: services.query,
       events: [],
-      fireHoldOff: 0,
     },
     targets: {
       characters: [],
@@ -177,11 +176,9 @@ export function stepSimulation(
     m.yaw = c.yaw;
     m.pitch = c.pitch;
     m.spreadScale = c.spreadScale;
-    m.kickScale = 1 + (ctx.movement.rest.kick - 1) * c.coverRest;
-    const canFire = live && !c.sprinting && c.sprintLockout <= 0;
-    // A click just after a sprint is kept until the lockout ends (not one made while still sprinting).
-    armCtx.fireHoldOff = c.sprinting ? 0 : c.sprintLockout;
-    stepArmament(c.id, c.armament, cmd, m, canFire, armCtx, dt);
+    // Rested on cover the kick halves (M104); fired on the run it grows (the owner's 0.1 Dev 5 note 9), as the spread does.
+    m.kickScale = (1 + (ctx.movement.rest.kick - 1) * c.coverRest) * (c.sprinting ? ctx.movement.accuracy.sprintKick : 1);
+    stepArmament(c.id, c.armament, cmd, m, live, armCtx, dt);
     // After the armament: a switch this tick to a replica without a light puts the torch out (M33h).
     stepTorch(c, cmd, state.events, dt);
   }

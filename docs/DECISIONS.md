@@ -251,6 +251,9 @@ replaces its line; the old one stays findable in the archive or in git.
   2026-10-13: "Make sure the figure redesign notes it needs animations for this"). It waits on his photos and his
   Blender session: no thread starts it before he does. It brings the figures forward from the later higher-detail models
   (above), and they stay behind the Dev switches until he is happy with them.
+- **A BB has no glow round it; a glowing BB is lit itself (owner, 2026-10-13, Dev 5 playtest note 3).** FA8's soft
+  halo round every BB (and its Graphics quality field) is gone: a BB is its ball and its streak, and Glowing BBs keep
+  their lit green ball and longer streak. Bloom doesn't pick a BB up (it is never brighter than its colour).
 
 ## Gameplay and feel
 
@@ -328,6 +331,11 @@ replaces its line; the old one stays findable in the archive or in git.
   waist-high cover, and crouched at lower cover and window sills, on all three maps (`sim/coverRestMaps.test.ts`).
   Bots fire from the hip, so only the player rests for now; the figures' rest pose is a placeholder until the figure
   redesign (`docs/HANDOFF.md`).
+- **You can fire while sprinting, less accurately (owner, 2026-10-13, Dev 5 playtest note 9).** On the run the spread
+  is ×3.5 (walking ×1.15, running ×2.6) and each shot kicks 1.5 times as hard (`MOVEMENT.accuracy.sprint` and
+  `.sprintKick`); the 0.2 s lockout after a sprint is gone. The replica comes up out of the sprint carry in 0.06 s to
+  fire and stays up 0.35 s after the trigger is let go. A toggled sprint still ends on a fire press, which now fires at
+  once. Bots still stop sprinting to fight; whether bold bots spray on the run is for the bot personalities.
 
 ## Bots and balance
 
@@ -523,6 +531,11 @@ replaces its line; the old one stays findable in the archive or in git.
   matches too, so a replica tuned at the range goes into the next match, as at a real site; with Unlock all gear on the
   picks are the sandboxed ones (M26d), and your own come back when it is off. The owner can rule for a separate
   practice loadout instead.
+- **Aiming down the 2x scope looks like the red dot: the replica stays in view and the world shows round it (owner,
+  2026-10-13, Dev 5 playtest note 5).** The whole view zooms 2× (as before) and the scope's rear glass shows the world
+  (`render/eyepiece.ts`), with a fine crosshair and red dot over it; the dark surround that hid everything outside the
+  eyepiece (M17b) is gone, so the scope's cost is its slower raise alone. Each glass reads as glass over black at the
+  hip (a dark core in both scopes, note 6).
 
 ## Menus, HUD, settings and accessibility
 
@@ -556,6 +569,14 @@ replaces its line; the old one stays findable in the archive or in git.
 - **Key bindings: a key belongs to one action, and taking a used key swaps the two (2026-09-30).** Esc, F5, F11, F12,
   the browser navigation keys, PrintScreen, Pause and the debug keys (backtick, F3 and ]) can't be bound. Fire and the
   four move keys can never be left keyless.
+- **Esc while you are out skips the round at once, with no pause menu (owner, 2026-10-13, Dev 5 playtest note 10).**
+  The browser takes the mouse back on Esc, so the game holds after the skip with "Click to play · Esc for the menu": a
+  click plays on, Esc again opens the pause menu. Its Skip button stays.
+- **The hit marker is a bold red X with its own settings, still off by default (owner, 2026-10-13, Dev 5 playtest
+  note 4).** Settings › Gameplay › Crosshair: on or off, scale, thickness, outline and colour (red unless changed; blue
+  and orange left out as the teams'). Whether it starts on is his call.
+- **Another UI redesign is planned for later, its version not set (owner, 2026-10-13).** Maybe a future Dev release,
+  maybe after 1.0; parked in `docs/IDEAS.md` until he places it, with no redesign work before.
 
 ## Audio
 
@@ -574,6 +595,12 @@ replaces its line; the old one stays findable in the archive or in git.
   exception so far is trimming the silent tails (owner decision 19).
 - **Sound memory is budgeted: about 7 MB per field beyond the title bank, and 12 MB for every map sound together
   (2026-10-05).**
+- **Shots are louder and a replica's power source has its own slider (owner, 2026-10-13, Dev 5 playtest note 2).** Each
+  shot's power-source layers (an AEG's motor and gears, the gas pop and hiss, the spring's twang) play as their own
+  buffer, at Settings › Audio › Power source volume (under Effects), with the motor's wind-up and wind-down. Shots went
+  from 1 to 1.4 (+2.9 dB), the power part plays at 1.4 and the motor at 1.1 (from 0.8); footsteps went up 1 dB (0.54)
+  so a bot's sprint is still heard against your own shot (audit CORE-26). The three shot fingerprints changed for the
+  split; every other cue's buffer is the same.
 
 ## Save and settings storage
 

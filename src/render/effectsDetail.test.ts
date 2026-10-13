@@ -10,7 +10,7 @@ import { createCharacter } from '../sim/character';
 import { ImpactGrit, shooterSide } from './impactGrit';
 
 beforeAll(() => {
-  // The glow's soft dot is drawn on a canvas: stood in for (it draws nothing here).
+  // Soft dots are drawn on a canvas: stood in for (it draws nothing here).
   vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => null }) });
 });
 afterAll(() => vi.unstubAllGlobals());
@@ -19,41 +19,20 @@ const eye = { x: 0, y: 1.6, z: 0 };
 const camera = new THREE.PerspectiveCamera();
 camera.position.set(eye.x, eye.y, eye.z);
 
-function flying(n: number): { r: BBRenderer; glow: THREE.InstancedMesh; balls: THREE.InstancedMesh } {
+function flying(n: number): { r: BBRenderer; balls: THREE.InstancedMesh } {
   const pool = createBBPool(8);
   for (let i = 0; i < n; i++) spawnBB(pool, 1, vec3(i, 1.5, -10 - i * 5), vec3(0, 0, -1), 90, 0, 0.25e-3);
   const r = new BBRenderer(pool, 1 / 60);
-  return { r, balls: r.object.children[0] as THREE.InstancedMesh, glow: r.object.children[2] as THREE.InstancedMesh };
+  return { r, balls: r.object.children[0] as THREE.InstancedMesh };
 }
 
-describe('BB glow (FA8, QualitySettings.bbGlow)', () => {
-  it('draws nothing extra while off (Low), and a camera-facing glow at every BB while on', () => {
-    const { r, glow, balls } = flying(3);
-    r.update(0.5, eye, camera.quaternion);
+describe('BBs in flight (FA8; no halo since the owner\'s 0.1 Dev 5 playtest, note 3)', () => {
+  it('draws each BB as its ball and streak only: nothing round the ball, on any graphics preset', () => {
+    const { r, balls } = flying(3);
+    r.update(0.5, eye);
     expect(balls.count).toBe(3);
-    expect([glow.visible, glow.count]).toEqual([false, 0]);
-    expect((glow.material as THREE.MeshBasicMaterial).map).toBeNull(); // its texture isn't even made on Low
-    r.setGlow(true);
-    r.update(0.5, eye, camera.quaternion);
-    expect([glow.visible, glow.count]).toEqual([true, 3]);
-    const m = new THREE.Matrix4();
-    const [bp, gp, q, s] = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Quaternion(), new THREE.Vector3()];
-    for (let i = 0; i < 3; i++) {
-      balls.getMatrixAt(i, m);
-      bp.setFromMatrixPosition(m);
-      glow.getMatrixAt(i, m);
-      m.decompose(gp, q, s);
-      expect(gp.distanceTo(bp)).toBeLessThan(1e-9);
-      expect(q.angleTo(camera.quaternion)).toBeLessThan(1e-6);
-    }
-    // Added light, sharing the puffs' shader (a colour per instance, a soft-dot map).
-    const mat = glow.material as THREE.MeshBasicMaterial;
-    expect(mat.blending).toBe(THREE.AdditiveBlending);
-    expect(mat.map).not.toBeNull();
-    expect(glow.instanceColor).not.toBeNull();
-    r.setGlow(false);
-    r.update(0.5, eye, camera.quaternion);
-    expect([glow.visible, glow.count]).toEqual([false, 0]);
+    expect(r.object.children).toHaveLength(2); // the balls and the streaks; FA8's glow dots are gone
+    expect(r.object.children.every((c) => !(c instanceof THREE.InstancedMesh) || c === balls)).toBe(true);
     r.dispose();
   });
 
@@ -70,16 +49,6 @@ describe('BB glow (FA8, QualitySettings.bbGlow)', () => {
     expect(top).toBeCloseTo(new THREE.Color(BB_VISUALS.color).r, 6);
     expect(bottom).toBeCloseTo(new THREE.Color(BB_VISUALS.shadeColor).r, 6);
     r.dispose();
-  });
-
-  it('frees the glow with the rest', () => {
-    const { r, glow } = flying(1);
-    r.setGlow(true);
-    const map = (glow.material as THREE.MeshBasicMaterial).map!;
-    const freed: unknown[] = [];
-    for (const res of [glow.geometry, glow.material as THREE.Material, map]) res.addEventListener('dispose', () => freed.push(res));
-    r.dispose();
-    expect(freed).toHaveLength(3);
   });
 });
 

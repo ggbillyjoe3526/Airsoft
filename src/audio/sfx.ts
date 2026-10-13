@@ -53,6 +53,12 @@ interface ReplicaSound {
   shots: readonly AudioBuffer[];
   /** Muffled copies, for a shooter with a silencer fitted (M29b): the engine's, made once for every match. */
   muffled: readonly AudioBuffer[];
+  /**
+   * Its power source's part of each shot (the gas's pop and hiss, the spring's twang, the AEG's motor and gears; empty
+   * for the Cyber Pistol), played with it at the Power source slider (the owner's 0.1 Dev 5 playtest, note 2). A silencer
+   * leaves it be: it quiets the air leaving the barrel, not the gearbox or the gas valve.
+   */
+  power: readonly AudioBuffer[];
 }
 
 /** What every match's sound shares: the Game's audio engine (context, volume buses, every sound's buffers). */
@@ -247,7 +253,9 @@ export class Sfx {
       // A replica built suppressed always sounds muffled; one with a silencer fitted (M29b) chooses per shooter.
       const muffled = this.engine.muffledBuffers(cue);
       const shots = r.look.suppressed ? muffled : this.buffers.get(cue)!;
-      this.replicas.set(r.id, { profile, fireRate: r.fireRate, shots, muffled });
+      const powerCue = cues.power(profile);
+      const power = (powerCue && this.buffers.get(powerCue)) || [];
+      this.replicas.set(r.id, { profile, fireRate: r.fireRate, shots, muffled, power });
     }
   }
 
@@ -306,7 +314,7 @@ export class Sfx {
       if (!m.spinDownDue || this.simTime < m.motor.spinDownAt(m.fireRate)) continue;
       m.spinDownDue = false;
       this.spinDownsDue--;
-      m.spinDown = this.play('motor.spinDown', m.out, AUDIO.levels.motor);
+      m.spinDown = this.play('motor.spinDown', m.out, AUDIO.levels.motor, undefined, this.engine.powerLevel());
     }
     this.updateMuffling(characters, localId);
     this.updateOut(characters, localId);
@@ -547,6 +555,9 @@ export class Sfx {
     const shooter = characterOf(characterId)?.armament;
     const muffled = shooter?.handling[shooter.active]?.muffled ?? false;
     this.playBuffer(muffled ? r.muffled : r.shots, replicaId, out, L.shot);
+    // Its power source with it, at the Power source slider's level (the owner's 0.1 Dev 5 playtest, note 2).
+    const power = this.engine.powerLevel();
+    this.playBuffer(r.power, `${replicaId}.power`, out, L.power, undefined, power);
     if (r.profile !== 'electric') return;
     const fireRate = shooter?.replicas[shooter.active]?.fireRate ?? r.fireRate;
     let m = this.motors.get(characterId);
@@ -556,7 +567,7 @@ export class Sfx {
     }
     m.fireRate = fireRate;
     m.out = out;
-    if (m.motor.shot(this.simTime, fireRate)) this.play('motor.spinUp', out, L.motor);
+    if (m.motor.shot(this.simTime, fireRate)) this.play('motor.spinUp', out, L.motor, undefined, power);
     // A wind-down still sounding from the last pull fades out under the new one.
     if (m.spinDown) this.cancel(m.spinDown);
     m.spinDown = null;
@@ -625,13 +636,16 @@ export class Sfx {
   }
 
   /** Plays a variant of `cue` into `out` at `when` (audio clock; now if not given). */
-  private play(cue: SoundCue, out: AudioNode, level: Level, when?: number): Voice | null {
+  private play(cue: SoundCue, out: AudioNode, level: Level, when?: number, scale = 1): Voice | null {
     const variants = this.buffers.get(cue);
-    return variants ? this.playBuffer(variants, cue, out, level, when) : null;
+    return variants ? this.playBuffer(variants, cue, out, level, when, scale) : null;
   }
 
-  /** Plays one of `variants` (never the same one twice running) and disconnects its nodes when it ends. */
-  private playBuffer(variants: readonly AudioBuffer[], key: string, out: AudioNode, level: Level, when?: number): Voice | null {
+  /**
+   * Plays one of `variants` (never the same one twice running) at `level` times `scale` (a slider without a bus of its
+   * own: the power sources') and disconnects its nodes when it ends.
+   */
+  private playBuffer(variants: readonly AudioBuffer[], key: string, out: AudioNode, level: Level, when?: number, scale = 1): Voice | null {
     const ctx = this.ctx!;
     if (variants.length === 0) return null;
     const last = this.lastVariant.get(key) ?? -1;
@@ -642,7 +656,7 @@ export class Sfx {
     src.buffer = variants[i]!;
     src.playbackRate.value = jitter(level.pitchSpread);
     const g = ctx.createGain();
-    g.gain.value = level.gain;
+    g.gain.value = level.gain * scale;
     src.connect(g).connect(out);
     src.onended = () => {
       src.disconnect();

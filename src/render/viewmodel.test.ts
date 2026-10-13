@@ -7,7 +7,7 @@ import { FAMILIES, SCHEMES } from '../config/schemes';
 import { kitPaint } from '../pool/loadoutModel';
 import { createArmament, fitOptics, fitParts } from '../sim/armament';
 import { AEG_MUZZLE, buildReplicaModels, PISTOL_MUZZLE, RIFLE_OPTIC, RIFLE_SCOPE } from './replicaModels';
-import { magazineOut, magazineSwap, sprintCarry, Viewmodel } from './viewmodel';
+import { magazineOut, magazineSwap, SprintCarry, sprintCarry, Viewmodel } from './viewmodel';
 
 /** Each replica's typed model parts (replicaModels.ts), built apart from the viewmodel's: the same offsets. */
 const reference = buildReplicaModels(LOADOUT, 0x3a7bd5, VIEWMODEL.orangeTips);
@@ -328,31 +328,73 @@ describe('Viewmodel optic', () => {
 });
 
 describe('sprint carry', () => {
-  it('comes down over the post-sprint lockout and is gone before firing unlocks', () => {
+  it('comes down over its come-down time and is square to the view before it ends', () => {
     expect(sprintCarry(0.2, 0.2)).toBe(1);
     expect(sprintCarry(0.1, 0.2)).toBeGreaterThan(0);
     expect(sprintCarry(0.2 * VIEWMODEL.carrySquareAt, 0.2)).toBe(0);
     expect(sprintCarry(0, 0.2)).toBe(0);
-    expect(sprintCarry(0.1, 0)).toBe(0); // no lockout configured: never carried
+    expect(sprintCarry(0.1, 0)).toBe(0); // no come-down configured: never carried
+  });
+
+  it('holds the replica in the carry while sprinting, and brings it up to fire on the run (owner, 0.1 Dev 5 note 9)', () => {
+    const carry = new SprintCarry();
+    const dt = 1 / 60;
+    for (let i = 0; i < 30; i++) carry.update(dt, true, false);
+    expect(carry.value).toBe(1);
+    // The trigger pulled on the run: up within the raise time, not in one frame.
+    expect(carry.update(dt, true, true)).toBeGreaterThan(0);
+    const frames = Math.ceil(VIEWMODEL.sprintFireRaise / dt);
+    for (let i = 1; i < frames; i++) carry.update(dt, true, true);
+    expect(carry.value).toBe(0);
+    // Let go: it stays up a moment, then the carry takes it again.
+    for (let t = 0; t < VIEWMODEL.sprintFireHold - dt; t += dt) expect(carry.update(dt, true, false)).toBe(0);
+    for (let i = 0; i < 3; i++) carry.update(dt, true, false);
+    expect(carry.value).toBe(1);
+  });
+
+  it('comes down after a sprint, but a replica up to fire on the run stays up when the sprint ends', () => {
+    const dt = 1 / 60;
+    const carried = new SprintCarry();
+    for (let i = 0; i < 30; i++) carried.update(dt, true, false);
+    carried.update(dt, false, false);
+    expect(carried.value).toBeGreaterThan(0);
+    for (let t = 0; t < VIEWMODEL.carryOutTime; t += dt) carried.update(dt, false, false);
+    expect(carried.value).toBe(0);
+    const firing = new SprintCarry();
+    for (let i = 0; i < 30; i++) firing.update(dt, true, true);
+    for (let i = 0; i < 30; i++) expect(firing.update(dt, false, false)).toBe(0);
   });
 
   for (const [slot, replica] of LOADOUT.entries()) {
-    it(`${replica.id}: a shot straight out of a sprint leaves a replica back in its hold (level, at its hold yaw)`, () => {
-      const vm = new Viewmodel(16 / 9, 0x3a7bd5, LOADOUT);
+    it(`${replica.id}: a shot straight out of a sprint, or on the run, leaves a replica back in its hold (level, at its hold yaw)`, () => {
+      const level = (vm: Viewmodel): void => {
+        const markers: THREE.Object3D[] = [];
+        vm.scene.traverseVisible((o) => o.name === 'muzzle' && markers.push(o));
+        vm.scene.updateMatrixWorld(true);
+        const barrel = new THREE.Vector3(0, 0, -1).transformDirection(markers[0]!.matrixWorld);
+        expect(Math.abs(barrel.y)).toBeLessThan(1e-9);
+        expect(Math.atan2(-barrel.x, -barrel.z)).toBeCloseTo(replica.look.hold.yaw, 9);
+      };
       const arm = createArmament(LOADOUT);
       arm.active = slot;
       const dt = 1 / 60;
-      for (let i = 0; i < 60; i++) vm.update(dt, 0, 0, 6, 4.2, 1, arm, false, 0); // sprinting
-      const total = 0.2;
-      // The lockout runs down a tick a frame; the frame before firing unlocks still has a tick of it left.
-      for (let lockout = total; lockout > dt / 2; lockout -= dt) vm.update(dt, 0, 0, 3, 4.2, sprintCarry(lockout, total), arm, false, 0);
-      const markers: THREE.Object3D[] = [];
-      vm.scene.traverseVisible((o) => o.name === 'muzzle' && markers.push(o));
-      vm.scene.updateMatrixWorld(true);
-      const barrel = new THREE.Vector3(0, 0, -1).transformDirection(markers[0]!.matrixWorld);
-      expect(Math.abs(barrel.y)).toBeLessThan(1e-9);
-      expect(Math.atan2(-barrel.x, -barrel.z)).toBeCloseTo(replica.look.hold.yaw, 9);
-      vm.dispose();
+      const frames = (vm: Viewmodel, carry: SprintCarry, n: number, sprinting: boolean, shooting: boolean): void => {
+        for (let i = 0; i < n; i++) vm.update(dt, 0, 0, sprinting ? 6 : 3, 4.2, carry.update(dt, sprinting, shooting), arm, false, 0);
+      };
+      // Out of a sprint: square by the end of the come-down.
+      const out = new Viewmodel(16 / 9, 0x3a7bd5, LOADOUT);
+      const outCarry = new SprintCarry();
+      frames(out, outCarry, 60, true, false);
+      frames(out, outCarry, Math.round(VIEWMODEL.carryOutTime / dt), false, false);
+      level(out);
+      out.dispose();
+      // On the run: square once the raise is done.
+      const run = new Viewmodel(16 / 9, 0x3a7bd5, LOADOUT);
+      const runCarry = new SprintCarry();
+      frames(run, runCarry, 60, true, false);
+      frames(run, runCarry, Math.ceil(VIEWMODEL.sprintFireRaise / dt), true, true);
+      level(run);
+      run.dispose();
     });
   }
 });

@@ -33,8 +33,6 @@ export interface MovementConfig {
   jumpBuffer: number;
   /** Sprint only counts when forward input is at least this. */
   sprintMinForward: number;
-  /** Seconds after a sprint ends before the replica can fire (sprinting itself always blocks firing). */
-  sprintFireLockout: number;
   /** Seconds to go fully between standing and crouched (eye height blend). */
   crouchTransitionTime: number;
   /** At or above this crouch amount the character counts as crouched: no sprinting or jumping. */
@@ -130,8 +128,13 @@ export interface AccuracyConfig {
   /** At walking pace (walkSpeed) and at the normal pace (runSpeed); in between it blends linearly. */
   walk: number;
   run: number;
-  /** While sprinting (you can't fire, but the shake carries into the moments after). */
+  /**
+   * While sprinting: you can fire on the run (owner's 0.1 Dev 5 playtest, note 9), far wider than walking or running,
+   * and the shake carries into the moments after.
+   */
   sprint: number;
+  /** Each shot's kick is multiplied by this while sprinting: firing on the run climbs faster too. */
+  sprintKick: number;
   /** Off the ground (jumping, falling); the shake carries into the landing. */
   air: number;
   /**
@@ -201,7 +204,6 @@ export const MOVEMENT: MovementConfig = {
   jumpCooldown: 0.55,
   jumpBuffer: 0.1,
   sprintMinForward: 0.5,
-  sprintFireLockout: 0.2,
   crouchTransitionTime: 0.15,
   crouchedThreshold: 0.5,
   ceilingBlockFraction: 0.5,
@@ -224,7 +226,10 @@ export const MOVEMENT: MovementConfig = {
     steadyTime: 0.05,
     walk: 1.15,
     run: 2.6,
+    // Firing on the run (owner's 0.1 Dev 5 playtest, note 9): ×3.5, three times walking's spread and a third wider than
+    // running's, with half as much kick again, so a sprint-and-spray only lands close in.
     sprint: 3.5,
+    sprintKick: 1.5,
     air: 4.5,
     // 0.15 s (9 ticks): stepping down PHYSICS.maxWalkableLedge never counts as being in the air.
     airSpreadDelay: ledgeDropTime(PHYSICS.maxWalkableLedge, GRAVITY, SIM_DT),

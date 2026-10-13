@@ -106,6 +106,18 @@ describe('the replica panel (G4 criterion 4)', () => {
     expect(made.filter((e) => e.className === 'hud-mode')).toHaveLength(chips);
   });
 
+  it('tells the stylesheet how many digits the loaded count has, so a big count takes a smaller size beside the chips (Dev 5 playtest)', () => {
+    const { root, p } = panel();
+    const mag = root.querySelector('.hud-mag');
+    const armament = createArmament(LOADOUT);
+    for (const count of [60, 9, 120, 2000, 12000]) {
+      armament.ammo[armament.active]!.mag = count;
+      p.update(armament, LOADOUT, 1 / 60);
+      expect(mag.textContent).toBe(String(count));
+      expect(mag.getAttribute('data-digits')).toBe(String(String(count).length));
+    }
+  });
+
   it('says Holstered and fades while the replica is away (M92), and goes back when it is drawn', () => {
     const { root, p, main } = panel();
     const status = root.querySelector('.hud-status');

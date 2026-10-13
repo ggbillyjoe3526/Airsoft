@@ -19,10 +19,15 @@ export const HUD_TEXT = {
   /** The minimap's caption: the map and the round. */
   where: (map: string, round: number) => (round > 0 ? `${map} · Round ${round}` : map),
   /**
-   * Skip to next round (M83), on the spectating line once you are out: how to skip (Esc, then the pause menu's button),
-   * and the line while the rest of the round is played out.
+   * Skip to next round (M83), on the spectating line once you are out: how to skip (Esc skips at once, the owner's 0.1 Dev
+   * 5 playtest, note 10; the pause menu's button too), and the line while the rest of the round is played out.
    */
   skip: { round: 'Esc to skip the round', result: 'Esc to skip to the result', skipping: 'Skipping the round…' },
+  /**
+   * Esc skipped the round without the pause menu (the owner's 0.1 Dev 5 playtest, note 10): the browser took the mouse
+   * back, so a click takes it again and plays on; Esc again opens the menu.
+   */
+  playPrompt: 'Click to play · Esc for the menu',
   /** The pause menu's button, by what it skips to. */
   skipButton: { round: 'Skip to next round', result: 'Skip to the result' },
   /** The practice range's pause menu (M93): the timed challenge's switch, by whether it is on. */

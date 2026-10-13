@@ -131,8 +131,16 @@ export const VIEWMODEL = {
    */
   kickBack: 0.028,
   kickLift: 0.012,
-  /** The sprint carry is gone once this share of the post-sprint fire lockout is left (render/viewmodel.ts sprintCarry). */
+  /**
+   * After a sprint the replica comes down out of the carry over `carryOutTime` seconds, square to the view (and ready
+   * to aim) once `carrySquareAt` of it is left (render/viewmodel.ts sprintCarry). Firing on the run (the owner's 0.1
+   * Dev 5 note 9) brings it up out of the carry in `sprintFireRaise` seconds, and it stays up `sprintFireHold` seconds
+   * after the last shot before the carry takes it again.
+   */
+  carryOutTime: 0.2,
   carrySquareAt: 0.25,
+  sprintFireRaise: 0.06,
+  sprintFireHold: 0.35,
   /** Recoil kick never stacks beyond this many shots' worth. */
   kickMax: 1.5,
   /** How much of the mouse sway and walk bob goes away with the sight raised to your eye (0..1). */
@@ -152,6 +160,11 @@ export const VIEWMODEL = {
   /** Viewmodel camera clip planes (metres); the replica is always within arm's reach. */
   near: 0.01,
   far: 5,
+  /**
+   * How far past a scope's rear glass, looking in, the disc that opens it to the world sits (m, render/eyepiece.ts):
+   * behind the glass and before the dark core (0.5 mm or more past the glass on every scope).
+   */
+  eyepieceInset: 0.0002,
   /** How far the replica drops while drawing / sprinting (metres). */
   drawDrop: 0.22,
   sprintDrop: 0.06,

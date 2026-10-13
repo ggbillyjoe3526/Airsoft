@@ -61,11 +61,15 @@
   gap: 6px;
   padding: var(--sp-4);
   border: 1px solid var(--menu-line-soft);
+  /* The figure's own width is what its value is sized to (below). */
+  container-type: inline-size;
 }
 
+/* The wallet's number shrinks with its tile, so six digits and "FC" fit a half-width tile at 1280 px (they ran out of
+   it); a number too long even for that wraps rather than leaves the tile. */
 .armory-figure-value {
-  font: 800 clamp(26px, 1.9vw, 36px) / 1 var(--ui-display);
-  white-space: nowrap;
+  font: 800 max(16px, min(clamp(26px, 1.9vw, 36px), 15.5cqw)) / 1 var(--ui-display);
+  overflow-wrap: anywhere;
 }
 
 .armory-shots-title {

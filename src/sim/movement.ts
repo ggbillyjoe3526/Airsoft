@@ -73,8 +73,6 @@ export function stepMovement(
   const lean = Math.abs(c.lean);
   c.walking = (cmd.walk || c.aiming || lean >= cfg.leanQuietFrom) && !crouched;
   c.sprinting = cmd.sprint && !c.walking && (lean === 0 || cmd.lean === 0) && cmd.forward >= cfg.sprintMinForward && !crouched;
-  // The replica is carried, not aimed, while sprinting and for a moment after.
-  c.sprintLockout = c.sprinting ? cfg.sprintFireLockout : Math.max(0, c.sprintLockout - dt);
 
   // Wish direction on the ground plane. forward = (-sin, 0, -cos), right = (cos, 0, -sin).
   let f = cmd.forward;

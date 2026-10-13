@@ -4,9 +4,9 @@ import type { Character } from './character';
 /**
  * Accuracy by stance and movement: how much a character's current state scales its replica's spread
  * (cfg.accuracy). Holding still, and crouching above all, is steady, and the longer you hold still the
- * steadier it gets; moving, jumping and coming out of a sprint are not; the sight raised to your eye tightens it (M84),
- * and resting the replica on cover more (M104).
- * Bots and the player follow the same rule (bots fire from the hip).
+ * steadier it gets; moving, jumping, firing on the run in a sprint and coming out of one are not; the sight raised to
+ * your eye tightens it (M84), and resting the replica on cover more (M104).
+ * Bots and the player follow the same rule (bots fire from the hip, and stop sprinting to fight).
  */
 
 /** Summed tick lengths drift below round numbers (6 × 1/60 < 0.1); this keeps the delay a whole number of ticks. */

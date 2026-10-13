@@ -90,20 +90,21 @@ describe('every settings row keeps its saved key (G3, criterion 8)', () => {
     expect(savedKeys(rows)).toEqual(expect.arrayContaining(['reducedMotion', 'soundCueColour', 'soundCueSize', 'soundCues', 'teamColours']));
   });
 
-  it('saves the Audio sliders as volume.master, volume.effects and volume.interface, and M86\'s as volume.ambience', () => {
-    const rows = audioSettings({ initial: { master: 1, effects: 1, ambience: 1, interface: 1 } as never, onChange: () => {} }) as unknown as FakeElement[];
-    expect(savedKeys(rows)).toEqual(['volume.ambience', 'volume.effects', 'volume.interface', 'volume.master']);
+  it('saves the Audio sliders as volume.master, volume.effects and volume.interface, M86\'s as volume.ambience and the power source\'s as volume.power (Dev 5 playtest)', () => {
+    const rows = audioSettings({ initial: { master: 1, effects: 1, power: 1, ambience: 1, interface: 1 }, onChange: () => {} }) as unknown as FakeElement[];
+    expect(savedKeys(rows)).toEqual(['volume.ambience', 'volume.effects', 'volume.interface', 'volume.master', 'volume.power']);
   });
 
-  it('shows four sliders in order Master, Effects, Ambience, Interface, labelled "Ambience volume" third (M86)', () => {
-    const rows = audioSettings({ initial: { master: 1, effects: 1, ambience: 1, interface: 1 } as never, onChange: () => {} }) as unknown as FakeElement[];
-    expect(rows).toHaveLength(4);
+  it('shows five sliders in order Master, Effects, Power source, Ambience, Interface, labelled "Ambience volume" fourth (M86, Dev 5 playtest)', () => {
+    const rows = audioSettings({ initial: { master: 1, effects: 1, power: 1, ambience: 1, interface: 1 }, onChange: () => {} }) as unknown as FakeElement[];
+    expect(rows).toHaveLength(5);
     const heads = rows.map((r) => r.text);
-    expect(heads[2]).toContain('Ambience volume');
     expect(heads[0]).toContain('Master volume');
     expect(heads[1]).toContain('Effects volume');
-    expect(heads[3]).toContain('Interface volume');
-    expect(savedKeys(rows)).toHaveLength(4);
+    expect(heads[2]).toContain('Power source volume');
+    expect(heads[3]).toContain('Ambience volume');
+    expect(heads[4]).toContain('Interface volume');
+    expect(savedKeys(rows)).toHaveLength(5);
     expect(walk(rows[2]!).filter((n) => n.tag === 'input')).toHaveLength(1);
   });
 

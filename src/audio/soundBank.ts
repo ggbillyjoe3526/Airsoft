@@ -1,7 +1,7 @@
 import { AUDIO, type LoopId } from '../config/audio';
-import { MAP_CUE_SEEDS, SOUNDS, type SoundCue, TITLE_CUES } from '../config/sounds';
+import { MAP_CUE_SEEDS, POWER_PARTS, SOUNDS, type SoundCue, TITLE_CUES } from '../config/sounds';
 import { renderLoop } from './ambience';
-import { muffle, renderRecipe, seededRandom } from './dsp';
+import { muffle, renderRecipe, renderRecipeParts, seededRandom } from './dsp';
 
 /** Every sound, rendered: a few variants of each cue, as raw samples ready to copy into audio buffers. */
 export type RenderedSounds = ReadonlyMap<SoundCue, readonly Float32Array[]>;
@@ -30,12 +30,17 @@ export function* renderSoundsGradually(
   const out = new Map<SoundCue, Float32Array[]>();
   for (const cue of TITLE_CUES) {
     const list: Float32Array[] = [];
+    const powerCue = POWER_PARTS[cue];
+    const powerList: Float32Array[] = [];
     const keep = variantsOf(cue, variants);
     for (let v = 0; v < variants; v++) {
-      const samples = renderRecipe(SOUNDS[cue], sampleRate, rand);
-      if (v < keep) list.push(samples);
+      const { main, power } = renderRecipeParts(SOUNDS[cue], sampleRate, rand);
+      if (v < keep) list.push(main);
+      if (v < keep && power) powerList.push(power);
     }
     out.set(cue, list);
+    // A shot's power part (the owner's 0.1 Dev 5 playtest, note 2), from the same pass: its own cue.
+    if (powerCue) out.set(powerCue, powerList);
     yield;
   }
   return out;
