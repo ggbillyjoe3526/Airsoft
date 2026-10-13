@@ -44,7 +44,7 @@ licence travels beside them.
 ## Made by the project
 
 - **The menus' pictures** in `public/menu/` (G3) are the game's own frames. `pipeline/map-stills.mjs` renders each map
-  still (one per map and time of day), each mode's picture and the one pre-blurred backdrop (every screen but the title,
+  still (one per map and time of day, and the range's, drawn from Practice since M94), each mode's picture and the one pre-blurred backdrop (every screen but the title,
   which is plain navy drawn by the stylesheet) from the built game, and saves them as small JPEGs
   (`src/config/menuArt.ts` lists them and their byte budgets), drawn on WebGPU by the node renderer since W7
   (2026-10-12). Run it again when a map, its lighting or the renderer's look changes. No outside source; same licence as

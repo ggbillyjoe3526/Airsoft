@@ -6,6 +6,7 @@ import type { TeamPickId } from '../../config/teams';
 import type { GraphicsSettingsOptions } from '../graphicsSettings';
 import type { KeyBindings } from '../../input/keyBindings';
 import type { MapId } from '../../map/maps';
+import type { PracticePlaceId } from '../../map/practicePlaces';
 import type { AccessibilitySettingsOptions } from '../accessibilitySettings';
 import type { AudioSettingsOptions } from '../audioSettings';
 import type { ControlsSettingsOptions } from '../controlsSettings';
@@ -46,7 +47,7 @@ export interface MenusOptions {
   onPlay: () => void;
   /** The player leaves the match (Quit; New Game or Quit after it): it is unloaded. */
   onLeaveMatch: () => void;
-  /** Practice, the Match screen's last mode (M21, M100): open the range and play. */
+  /** Practice, the Match screen's last mode (M21, M100): open it on the picked place (M94) and play. */
   onRange: () => void;
   /**
    * The title screen's Tutorial (M16): the range with the coach. `tutorialDone`: it was played through before (the title
@@ -64,6 +65,8 @@ export interface MenusOptions {
   onSkipTutorialStep: () => void;
   onSkipTutorial: () => void;
   map: { initial: MapId; onChange: (m: MapId) => void };
+  /** Where Practice is played (M94): the range or a map, picked on the Match screen's Map cards while Practice is picked. */
+  practicePlace: { initial: PracticePlaceId; onChange: (p: PracticePlaceId) => void };
   /** Each map's Day or Night pick (M34d), on the maps that offer both. */
   lighting: { initial: Partial<Record<MapId, LightingPresetId>>; onChange: (m: MapId, light: LightingPresetId) => void };
   /** `supply`: the line under Extraction for the supply event on as the Play screen opens (M49), or null when none is. */

@@ -8,6 +8,7 @@ import { DEFAULT_TEAM_PICK, TEAMS, teamOfPick } from '../../config/teams';
 import type { LightingPresetId } from '../../config/render';
 import { LIGHTING_LABELS, lightingChoices } from '../../map/lightingChoice';
 import { type MapId, mapData, mapEntry } from '../../map/maps';
+import { DEFAULT_PRACTICE_PLACE, type PracticePlaceId, practiceMapId } from '../../map/practicePlaces';
 import { type NewGamePicks, playedPicks, playedTeamSize } from '../../newGamePicks';
 import { menuArt } from './chrome';
 import type { MenusOptions } from './menus';
@@ -21,7 +22,12 @@ import type { PlayView } from './setupScreen';
  */
 
 /** The match as it will play: dev content's picks play as their defaults while Dev content is off (M35). */
-export function playView(picked: NewGamePicks, opts: Pick<MenusOptions, 'rules' | 'dev' | 'armory' | 'loadout'>, lightingOf: (id: MapId) => LightingPresetId): PlayView {
+export function playView(
+  picked: NewGamePicks,
+  opts: Pick<MenusOptions, 'rules' | 'dev' | 'armory' | 'loadout'>,
+  lightingOf: (id: MapId) => LightingPresetId,
+  practicePlace: PracticePlaceId = DEFAULT_PRACTICE_PLACE,
+): PlayView {
   const devContent = opts.dev.devContent();
   const played = playedPicks(picked, devContent);
   // Each map offers as many players a side as it has room for (Depot up to 3v3, Woodland 5v5 or 6v6, M33, M88).
@@ -62,7 +68,25 @@ export function playView(picked: NewGamePicks, opts: Pick<MenusOptions, 'rules' 
     notes: setupNotes(rules, { recorded, cheating: opts.dev.cheating(), devContentUsed, ruleset: played.ruleset }),
     loadout: opts.loadout.summary(),
     pays: paid ? (played.ruleset === DEFAULT_RULESET || recordsKeyOf(played.ruleset) !== null ? PLAY_TEXT.pays : PLAY_TEXT.paysCapped(CUSTOM_RULES_PAY_CAP)) : '',
+    practice: practiceView(practicePlace, devContent, lightingOf),
   };
+}
+
+/**
+ * Where Practice will play, as the Match screen shows it while Practice is picked (M94): the map's name (and Day or
+ * Night where it offers both) and its picture, or the range's line and no picture (Practice's own art). A dev map plays
+ * as the range while Dev content is off, as a match's dev map plays as Depot.
+ */
+export function practiceView(place: PracticePlaceId, devContent: boolean, lightingOf: (id: MapId) => LightingPresetId): PlayView['practice'] {
+  const on = practiceMapId(place, devContent);
+  if (on === null) {
+    const still = mapStillFile('range', 'day');
+    return { mapLine: PLAY_TEXT.practice.mapLine, still: still ? menuArt(still) : null };
+  }
+  const light = lightingOf(on);
+  const lightLine = lightingChoices(mapData(on)).length > 1 ? ` · ${LIGHTING_LABELS[light]}` : '';
+  const still = mapStillFile(on, light);
+  return { mapLine: `${mapEntry(on).label}${lightLine}`, still: still ? menuArt(still) : null };
 }
 
 /**

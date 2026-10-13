@@ -103,13 +103,13 @@ describe('M80: the "Tutorial complete" pop-up', () => {
     return { d, root, calls, buttons: root.all('button') };
   };
 
-  it('is titled "Tutorial complete" and offers exactly Practice range and Menu', () => {
+  it('is titled "Tutorial complete" and offers exactly Practice and Menu (M94: the range renamed Practice)', () => {
     const { root, buttons } = make();
     expect(root.getAttribute('aria-label')).toBe('Tutorial complete');
     expect(root.text).toContain(TUTORIAL_COMPLETE_TEXT.title);
-    expect(buttons.map((b) => b.textContent)).toEqual(['Practice range', 'Menu']);
+    expect(buttons.map((b) => b.textContent)).toEqual(['Practice', 'Menu']);
   });
-  it('opens modal; Practice range and Menu each close it and do their one thing', () => {
+  it('opens modal; Practice and Menu each close it and do their one thing', () => {
     for (const [i, want] of [[0, 'practice'], [1, 'menu']] as const) {
       const { d, root, calls, buttons } = make();
       expect(root.open).toBe(false);

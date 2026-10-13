@@ -24,17 +24,6 @@ item 5, with the G4 HUD restyle); note 3 was a bug, fixed in BP2; note 2 is alre
 rest of `docs/ROADMAP.md` › 0.1 Dev 6, whose blocks are written when that build starts (M92, the holster, and M93,
 the practice targets, done 2026-10-13).
 
-## M94 · Practice on any map (playtest note 11)
-tier: core
-perf: required
-touches: src/rangeSession.ts, src/map/, src/sim/rangeTargets.ts, src/ui/menus/
-contract: none
-acceptance:
-  1. The practice range is renamed "Practice"; it offers the range and every playable map (Dev maps with Dev content on).
-  2. On a map, targets (M93's kinds) stand where bots would play, and there are no bots.
-status: open
-attempts: 0
-
 ## M95 · Practice with any unlocked replica (playtest note 12)
 tier: ui
 perf: skip

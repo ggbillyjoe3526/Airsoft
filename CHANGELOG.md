@@ -7,9 +7,14 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 ### Added
 - **M93** · Practice has moving targets: sliding figures, a swinging plate, small plates at 15 m and pop-up figures
 - **M93** · Practice has a Timed challenge, off by default (pause menu): 60 seconds on lit targets, best score kept
+- **M94** · Practice on any map: the Map cards offer the Range and each map (dev maps with Dev content on), in Day or Night; the match's map never changes
+- **M94** · Map practice has no bots: plates, pop-ups, sliders and swingers stand where bots would play; the timed challenge has a best per map and lights targets as you see them
 - **M92** · Press 3 to holster your replica (rebindable in Settings › Controls); 1 and 2 still pick primary and secondary
 - **M92** · Holstered, you sprint a little faster; drawing out of the holster is slower than raising from a sprint
 - **M92** · Bots holster on calm sprints through their own half and draw again on any threat
+
+### Changed
+- **M94** · The practice range is now Practice: pause reads "Practice · Range" or "Practice · Depot", and the tutorial's last button says Practice
 
 ### Fixed
 - **M92** · Bots firing on the move hold fire when a teammate is down the line, so they no longer hit teammates past the end of a wall
