@@ -5,7 +5,9 @@ The realistic bot figures built in Blender: a human player figure and a bare rob
 `src/assets/models/characters/human.glb` and `robot.glb` with their sidecars, behind the Dev switches "Disable figure
 models" and "Disable all models" (#175). Pictures are in the project files (`concepts/bot-figure-v10-2026-10-12/`, v11's
 crouch in `concepts/figure-moves-fix-2026-10-12/`; earlier rounds in `concepts/bot-figure-v8-2026-10-11/`,
-`concepts/bot-figure-v6-2026-10-11/` and `concepts/bot-figure-v5-2026-10-10/`).
+`concepts/bot-figure-v6-2026-10-11/` and `concepts/bot-figure-v5-2026-10-10/`). The owner redesigns the figures to look
+more realistic in 0.1 Dev 6, himself in his own Blender from his reference photos (`docs/DECISIONS.md` › Art
+direction and graphics); until then nobody reworks them here.
 
 ## What is here
 
