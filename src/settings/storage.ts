@@ -55,6 +55,8 @@ export type SettingField =
   | 'teamColours'
   | 'soundCues'
   | 'map'
+  /** Where Practice is played (M94): 'range' or a map id (map/practicePlaces.ts). */
+  | 'practicePlace'
   | 'fov'
   /** Settings → Graphics → Quality: a preset or 'custom' (config/render.ts QualityChoice). */
   | 'quality'

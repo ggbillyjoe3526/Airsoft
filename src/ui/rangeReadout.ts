@@ -1,20 +1,20 @@
-/** Before your first shot. */
-const RANGE_INTRO = 'Practice range · spare magazines refill · Esc for the Loadout';
+/** Before your first shot (M94: the range renamed Practice). */
+const RANGE_INTRO = 'Practice · spare magazines refill · Esc for the Loadout';
 
 /** What the practice range's readout shows about your last BB (M21). */
 export interface LastShot {
-  /** How far downrange of the firing line it landed (m), as the markers count. */
+  /** How far downrange of the firing line it landed (m), as the markers count; on a map (M94), how far from you. */
   distance: number;
-  /** The target it hit ("Steel", "Figure" …) and that target's marked distance, or null for a miss. */
+  /** The target it hit ("Steel", "Figure" …) and that target's marked distance (on a map, how far from you), or null for a miss. */
   target: { label: string; distance: number } | null;
-  /** It left the range (over a wall or the backstop) without landing anywhere. */
+  /** It left the range (over a wall or the backstop; on a map, off its edge) without landing anywhere. */
   lost?: boolean;
 }
 
 /** "Last BB: 31 m · hit Steel 30 m", "Last BB: 44 m · miss" or that it flew out; before the first shot, how the range works. */
 export function lastShotText(shot: LastShot | null): string {
   if (!shot) return RANGE_INTRO;
-  if (shot.lost) return 'Last BB: flew out of the range · aim lower or turn the hop-up down';
+  if (shot.lost) return 'Last BB: flew out of bounds · aim lower or turn the hop-up down';
   const d = `${Math.round(shot.distance)} m`;
   return shot.target ? `Last BB: ${d} · hit ${shot.target.label} ${shot.target.distance} m` : `Last BB: ${d} · miss`;
 }

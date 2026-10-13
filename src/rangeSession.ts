@@ -7,15 +7,19 @@ import type { CrosshairSettings } from './config/matchInfo';
 import { BODY, MOVEMENT } from './config/movement';
 import { NAV } from './config/nav';
 import { PHYSICS } from './config/physics';
+import { PRACTICE_SPOTS } from './config/practice';
 import { RANGE } from './config/range';
 import type { QualitySettings } from './config/render';
 import type { ReplicaConfig } from './config/replicas';
 import { SIM, SIM_DT } from './config/sim';
-import { teamCss } from './config/teams';
+import { cssColor, teamCss } from './config/teams';
+import type { MinimapTurn } from './config/minimap';
 import { EventLog } from './core/eventLog';
 import { advanceStepper, createStepper, stepperAlpha } from './core/fixedStepper';
 import type { PlayerInput } from './input/playerInput';
 import type { MatchSetup } from './matchSession';
+import type { MapData } from './map/mapTypes';
+import { practiceSpots } from './map/practiceSpots';
 import { RANGE_MAP } from './map/range';
 import { buildNavGrid } from './nav/navGrid';
 import { PhysicsWorld } from './physics/physicsWorld';
@@ -29,12 +33,13 @@ import { resolveLighting } from './render/lightingPreset';
 import { mapLookOf } from './render/mapMeshes';
 import type { ProbeGrid } from './render/probeGrid';
 import { RangeTargetsRenderer } from './render/rangeTargetsRenderer';
+import { TorchBeams } from './render/torchBeams';
 import type { Renderer } from './render/renderer';
 import { canAimDownSights } from './sim/aiming';
 import { fitOptics, fitParts, setBbWeights, setHopUps } from './sim/armament';
 import { type Character, createCharacter, respawnCharacter } from './sim/character';
 import { createCommand, type PlayerCommand } from './sim/commands';
-import { createRangeTargets } from './sim/rangeTargets';
+import { createRangeTargets, targetsAtSpots } from './sim/rangeTargets';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
 import { partsUnder } from './sim/torch';
 import { createWind } from './sim/wind';
@@ -44,31 +49,45 @@ import type { DevSettings } from './config/dev';
 import { tutorialSteps } from './config/tutorial';
 import { TutorialTracker, type TutorialView } from './tutorial/tutorial';
 import { CoachPanel } from './ui/coachPanel';
+import { Minimap, type MinimapFrame } from './ui/minimap';
+import type { HeardPlayer } from './ui/minimapView';
 import { TutorialShowcase } from './ui/tutorialShowcase';
 import { type LastShot, lastShotText, RangeReadout } from './ui/rangeReadout';
 
 const PLAYER_ID = 0;
 
+/** Practice has nobody to hear (M94): the minimap's heard players, always none. */
+const NOBODY_HEARD: readonly HeardPlayer[] = [];
+
 /** What the range needs from New game's choices: the loadout (the match rules don't apply). */
 export type RangeSetup = Pick<MatchSetup, 'kit' | 'teamColours' | 'look'> & {
   /** Whether the Armory is on (M83: off, the tutorial never names it); on when left out. */
   armory?: boolean;
+  /**
+   * The map to practise on (M94), under the light it plays in: targets where the other team's bots would play
+   * (map/practiceSpots.ts) and no bots. Left out: the range (the tutorial's always).
+   */
+  map?: MapData;
 };
 
 /** Where you stand and which way you face: kept when the range is rebuilt for a new loadout. */
 export interface RangePose {
   x: number;
+  /** The floor's height you stood over (M94: a map's upper storey); the start's when left out. */
+  y?: number;
   z: number;
   yaw: number;
   pitch: number;
 }
 
 /**
- * The practice range (M21): you alone on the range map with the targets, no rounds, the spare magazines always full,
- * and a readout of where your last BB landed. The tutorial (M16) runs here too, its coach in the readout's place
- * until the last step, then free practice. Built from the title screen's Practice range button and disposed when
- * you leave it; changing the loadout (from the pause menu) rebuilds it where you stood. The app around it (renderer,
- * input, menus) outlives it, as it does a match (see MatchSession, whose pieces it shares).
+ * Practice (M21; M94 renamed it from the practice range): you alone on the range map with the targets, no rounds, the
+ * spare magazines always full, and a readout of where your last BB landed. On a map (M94) the targets stand where the
+ * other team's bots would play, you start at your team's end, your torch lights the night and the minimap shows the
+ * field. The tutorial (M16) runs on the range, its coach in the readout's place until the last step, then free
+ * practice. Built from the Match screen's Practice and disposed when you leave it; changing the loadout (from the pause
+ * menu) rebuilds it where you stood. The app around it (renderer, input, menus) outlives it, as it does a match (see
+ * MatchSession, whose pieces it shares).
  */
 export class RangeSession {
   readonly state: GameState;
@@ -76,7 +95,14 @@ export class RangeSession {
   readonly combat: CombatPresentation;
   private readonly loadout: readonly ReplicaConfig[];
   private readonly physics: PhysicsWorld;
+  /** The range, or the map practised on (M94, RangeSetup.map). */
+  private readonly map: MapData;
   private readonly targets: RangeTargetsRenderer;
+  /** The weapon torches drawn (M33h; M94: yours, on a night map). */
+  private readonly torches: TorchBeams;
+  /** The map's minimap (M94), as in a match; null on the range, a corridor you see whole. */
+  private readonly minimap: Minimap | null;
+  private readonly minimapFrame: MinimapFrame = { x: 0, y: 0, z: 0, yaw: 0, mates: [], count: 0, hold: null, flag: null, exits: [], exitCount: 0, time: 0 };
   private readonly readout: RangeReadout;
   private readonly daylight: Daylight;
   /** The range's baked bounce light (M81, as Depot's: render/bakedLight.ts), or null before it loads. */
@@ -127,7 +153,9 @@ export class RangeSession {
     /** Run the tutorial (M16) from this step, by index or id (0: the start); leave out for free practice. */
     tutorialFrom?: number | string,
   ) {
-    const map = RANGE_MAP;
+    const map = setup.map ?? RANGE_MAP;
+    const onRange = map === RANGE_MAP;
+    this.map = map;
     this.loadout = setup.kit.slots.map((s) => s.replica);
     // The surface textures are the renderer's, shared by every session (audit L-04), and so are the last map's meshes,
     // kept between sessions (audit CORE-33): the same map again takes them back rather than building them.
@@ -145,7 +173,7 @@ export class RangeSession {
     this.physics = new PhysicsWorld(map, BODY, SIM_DT);
     const nav = buildNavGrid(map, NAV);
     this.state = createGameState(seed, BALLISTICS.maxBBs, ROUNDS);
-    this.state.targets = createRangeTargets();
+    this.state.targets = onRange ? createRangeTargets() : targetsAtSpots(practiceSpots(map, nav, this.physics, PRACTICE_SPOTS));
     this.ctx = createSimContext({
       mover: this.physics,
       query: this.physics,
@@ -163,8 +191,9 @@ export class RangeSession {
       rounds: ROUNDS,
       practice: true,
     });
+    // Where Alpha starts round 1 (map/practiceSpots.ts practiceStart): the range's one spot, or a map's end 0.
     const spawn = map.spawns[0][0]!;
-    const at = pose ? vec3(pose.x, spawn.position.y, pose.z) : spawn.position;
+    const at = pose ? vec3(pose.x, pose.y ?? spawn.position.y, pose.z) : spawn.position;
     this.player = createCharacter(PLAYER_ID, vec3(at.x, at.y + PHYSICS.groundRestGap, at.z), pose?.yaw ?? spawn.yaw, this.loadout, 0);
     this.tutorialView = { dt: SIM_DT, player: this.player, events: this.state.events, targets: this.state.targets };
     respawnCharacter(this.player);
@@ -177,6 +206,10 @@ export class RangeSession {
     input.ordersEnabled = false;
     if (pose) input.pitch = pose.pitch;
 
+    // Your torch on a night map (M94), as in a match (M33h); nothing by day.
+    this.torches = new TorchBeams(this.state.characters, lighting, quality, this.physics, BODY, HITS);
+    renderer.scene.add(this.torches.object);
+    this.daylight.reserveLights(this.torches.reserved);
     // On the range you are alone: a robot half the time when Settings › Look › Robots is on (G7), from the seed.
     const crowd = figureCrowd(seed, this.state.characters, setup.look);
     this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map, audio, (action) => input.keyName(action), crosshair, quality, HITS, bbGlowFor(setup.kit, map.night ?? false), seed, kitPaint(setup.kit, setup.look), playerArms(crowd, this.state.characters.indexOf(this.player), this.player.team));
@@ -184,10 +217,13 @@ export class RangeSession {
     this.combat.setLighting(lighting);
     this.combat.setMapGroup(group);
     this.combat.skipStartWhistle();
-    this.targets = new RangeTargetsRenderer(this.state.targets, HITS);
+    this.targets = new RangeTargetsRenderer(this.state.targets, HITS, onRange);
     this.targets.setReceiveShadows(quality.figureShadows);
     this.targets.setDetail(quality.mapDetail);
     renderer.scene.add(this.targets.object);
+    const hud = setup.teamColours.hud;
+    this.minimap = onRange ? null : new Minimap(container, map.blocks, cssColor(hud[this.player.team]!), cssColor(hud[1 - this.player.team]!), map.terrain ?? null, map.foliage ?? [], map.storeys);
+    this.minimap?.setCaption(map.name);
     this.readout = new RangeReadout(container);
     this.readout.set(lastShotText(null));
     if (tutorialFrom !== undefined) {
@@ -205,10 +241,15 @@ export class RangeSession {
     return t && t.goalIndex < t.steps.length ? t.goalIndex : undefined;
   }
 
-  /** "Tutorial · step 3 of 10", or "Practice range". */
+  /** "Tutorial · step 3 of 10", or "Practice · Depot" (M94: "Practice · Range" on the range). */
   get status(): string {
     const t = this.tutorial;
-    return t && !t.finished ? `Tutorial · step ${t.stepIndex + 1} of ${t.steps.length}: ${t.step!.title}` : 'Practice range';
+    return t && !t.finished ? `Tutorial · step ${t.stepIndex + 1} of ${t.steps.length}: ${t.step!.title}` : `Practice · ${this.map.name}`;
+  }
+
+  /** The map practised on (M94): the range, or the map Practice was opened on; rebuilt on the same one. */
+  get practiceMap(): MapData {
+    return this.map;
   }
 
   /** The tutorial is running (its coach up): the pause menu offers Skip step and Skip tutorial (audit POOL-14). */
@@ -251,7 +292,7 @@ export class RangeSession {
 
   /** Where you stand and look now, to rebuild the range there. */
   get pose(): RangePose {
-    return { x: this.player.position.x, z: this.player.position.z, yaw: this.input.yaw, pitch: this.input.pitch };
+    return { x: this.player.position.x, y: this.player.position.y, z: this.player.position.z, yaw: this.input.yaw, pitch: this.input.pitch };
   }
 
   /** Your last shots, target hits, reloads and draws, for a report (IM7). */
@@ -289,8 +330,28 @@ export class RangeSession {
     this.targets.update(dt);
     this.showcase?.frame(dt);
     this.combat.frame(dt, alpha, this.input.yaw, pitch);
+    this.torches.update(this.renderer.camera, this.player, true, alpha);
+    this.showMinimap();
     this.daylight.follow(this.renderer.camera, dt);
     this.combat.render(true);
+  }
+
+  /** Settings › HUD › Minimap (M83): turning with the view, or fixed north up (on a map, M94). */
+  setMinimapTurn(turn: MinimapTurn): void {
+    this.minimap?.setRotating(turn === 'rotating');
+  }
+
+  /** The minimap round where you stand, the way you look (M94): no teammates, no one heard. */
+  private showMinimap(): void {
+    if (!this.minimap || !this.playing) return;
+    const f = this.minimapFrame;
+    const eye = this.renderer.camera.position;
+    f.x = eye.x;
+    f.y = this.player.position.y;
+    f.z = eye.z;
+    f.yaw = this.input.yaw;
+    f.time = this.state.time;
+    this.minimap.update(f, NOBODY_HEARD);
   }
 
   setMotion(scale: MotionScale): void {
@@ -309,7 +370,9 @@ export class RangeSession {
   /** New quality settings (Settings → Graphics): as MatchSession.setQuality. */
   setQuality(quality: QualitySettings): void {
     this.daylight.setQuality(quality);
-    this.combat.setMapGroup(this.renderer.mapMeshes.restyle(this.renderer.surfaceTexturesFor(RANGE_MAP), mapLookOf(quality, this.probes)));
+    this.torches.setQuality(quality);
+    this.daylight.reserveLights(this.torches.reserved);
+    this.combat.setMapGroup(this.renderer.mapMeshes.restyle(this.renderer.surfaceTexturesFor(this.map), mapLookOf(quality, this.probes)));
     this.targets.setReceiveShadows(quality.figureShadows);
     this.targets.setDetail(quality.mapDetail);
     this.combat.setQuality(quality);
@@ -318,9 +381,10 @@ export class RangeSession {
   /** The graphics context is back after a loss: as MatchSession.contextRestored. */
   contextRestored(): void {
     this.combat.contextRestored();
-    // A WebGL2 renderer after a lost WebGPU device draws no clustered lights: the pools drop their extra lamps (BP3).
-    // The range has no torches, so nothing is reserved.
-    this.daylight.reserveLights(0);
+    // A WebGL2 renderer after a lost WebGPU device draws no clustered lights: the pools drop their extra lamps (BP3),
+    // keeping your torch's (a night map, M94).
+    this.daylight.reserveLights(this.torches.reserved);
+    this.torches.contextRestored();
   }
 
   setPlaying(playing: boolean): void {
@@ -328,6 +392,7 @@ export class RangeSession {
     this.combat.setPlaying(playing);
     const coaching = this.tutorial !== null && !this.tutorial.finished;
     this.readout.setVisible(playing && !coaching);
+    this.minimap?.setVisible(playing);
     this.coach?.setVisible(playing && coaching);
     this.showcase?.setVisible(playing && coaching);
     if (playing && coaching) this.coach!.show(this.tutorial!); // a key may have been rebound while paused
@@ -336,6 +401,8 @@ export class RangeSession {
   dispose(): void {
     this.combat.dispose();
     this.targets.dispose();
+    this.torches.dispose();
+    this.minimap?.dispose();
     this.readout.dispose();
     this.coach?.dispose();
     this.showcase?.dispose();
@@ -375,6 +442,16 @@ export class RangeSession {
     }
   }
 
+  /** How far a point is for the readout: downrange on the range, from where you stand on a map (M94). */
+  private howFar(p: { x: number; z: number }): number {
+    return this.map === RANGE_MAP ? downrange(p) : across(this.player.position, p);
+  }
+
+  /** Whether a lost BB was still over the field: in the range's walls, or above a map's floor of the world (M94). */
+  private inside(p: { x: number; y: number; z: number }): boolean {
+    return this.map === RANGE_MAP ? insideRange(p) : p.y >= this.map.killY;
+  }
+
   private afterTick(): void {
     this.eventLog.record(this.state.tick, this.state.events, this.player.id);
     this.combat.afterTick();
@@ -389,15 +466,17 @@ export class RangeSession {
       if (t.finished) this.completeDue = this.completePopup = true;
     }
     for (const e of this.state.events) {
-      // Your BB came down (a ricochet's last stop wins), hit a target, or flew out over a wall.
-      if (e.type === 'bbImpact' && e.ownerId === PLAYER_ID) this.lastShot = { distance: downrange(e.position), target: null };
+      // Your BB came down (a ricochet's last stop wins), hit a target, or flew out over a wall. On the range distances
+      // count downrange of the firing line, as its markers do; on a map (M94) from where you stand.
+      if (e.type === 'bbImpact' && e.ownerId === PLAYER_ID) this.lastShot = { distance: this.howFar(e.position), target: null };
       else if (e.type === 'bbLost' && e.ownerId === PLAYER_ID) {
-        // Out over a wall or the backstop; one that just ran out of time inside the range counts where it was.
-        this.lastShot = insideRange(e.position) ? { distance: downrange(e.position), target: null } : { distance: 0, target: null, lost: true };
+        // Out over a wall or the backstop (off a map: below it); one that just ran out of time in the air counts where it was.
+        this.lastShot = this.inside(e.position) ? { distance: this.howFar(e.position), target: null } : { distance: 0, target: null, lost: true };
       }
       else if (e.type === 'targetHit' && e.shooterId === PLAYER_ID) {
         const t = this.state.targets.find((x) => x.id === e.targetId);
-        this.lastShot = { distance: downrange(e.position), target: t ? { label: t.label, distance: t.distance } : null };
+        const marked = this.map === RANGE_MAP;
+        this.lastShot = { distance: this.howFar(e.position), target: t ? { label: t.label, distance: marked ? t.distance : Math.round(this.howFar(t.position)) } : null };
       } else continue;
       this.readout.set(lastShotText(this.lastShot));
       this.coach?.setShot(lastShotText(this.lastShot));
@@ -408,6 +487,11 @@ export class RangeSession {
 /** How far downrange of the firing line (m), the way the markers and target labels count. */
 function downrange(p: { z: number }): number {
   return Math.max(0, -p.z);
+}
+
+/** How far across the floor from you (m): Practice on a map (M94) has no firing line. */
+function across(from: { x: number; z: number }, p: { x: number; z: number }): number {
+  return Math.hypot(p.x - from.x, p.z - from.z);
 }
 
 /** Within the range's walls and backstop (at any height). */

@@ -107,11 +107,15 @@ const pivotM = new THREE.Matrix4();
 const partM = new THREE.Matrix4();
 const turnM = new THREE.Matrix4();
 
-/** One moving part of a target drawn as an instance: its pivot (world), its place relative to the pivot. */
+/**
+ * One moving part of a target drawn as an instance: its pivot (world), the target's turn to face its way (about the
+ * vertical, M94: none on the range), its place relative to the pivot.
+ */
 interface Part {
   mesh: THREE.InstancedMesh;
   index: number;
   pivot: THREE.Vector3;
+  facing: THREE.Matrix4;
   local: THREE.Matrix4;
 }
 
@@ -120,7 +124,8 @@ interface Part {
  * their posts, the distance lines and boards. Few draw calls whatever the number of targets (the range must fit the
  * presets' budgets, audit section 5): each kind of part is one instanced mesh (plates, chains, torsos, heads) whose
  * instances follow the targets' swing and fall, and everything that doesn't move is one merged mesh per material (the
- * posts, the lines, the boards on one atlas, Map detail's fittings and shelf).
+ * posts, the lines, the boards on one atlas, Map detail's fittings and shelf). Practice on a map (M94, `onRange` false)
+ * draws the targets alone, each on its floor and turned to face its way: the lines, boards and shelf are the range's.
  */
 export class RangeTargetsRenderer {
   readonly object = new THREE.Group();
@@ -144,6 +149,7 @@ export class RangeTargetsRenderer {
   constructor(
     private readonly targets: readonly RangeTarget[],
     hits: HitConfig,
+    onRange = true,
   ) {
     const steel = (this.steel = this.track(new THREE.MeshStandardMaterial({ color: V.steelColor, metalness: V.steelMetalness, roughness: V.steelRoughness })));
     const post = this.track(new THREE.MeshStandardMaterial({ color: V.postColor, roughness: 0.8 }));
@@ -184,31 +190,37 @@ export class RangeTargetsRenderer {
     let figure = 0;
     for (const t of targets) {
       const parts: Part[] = [];
+      // Turned about the vertical so the face looks along `t.face` (+z on the range, no turn); `at` is a point of the
+      // target's own frame (x across its face, y up from its floor, z out of its face) in the world.
+      const turn = Math.atan2(t.face.x, t.face.z);
+      const facing = new THREE.Matrix4().makeRotationY(turn);
+      const at = (x: number, y: number, z: number): [number, number, number] => [t.position.x + x * t.face.z + z * t.face.x, t.floor + y, t.position.z - x * t.face.x + z * t.face.z];
+      const turned = [0, turn, 0] as const;
       if (t.kind === 'steel') {
         // The plate hangs from the top of a post frame; it swings about the hanger.
         const top = t.position.y + RANGE.plateRadius + RANGE.postAbovePlate;
-        const upright = new THREE.BoxGeometry(RANGE.postWidth, top, RANGE.postWidth);
-        posts.push(placed(upright, t.position.x, top / 2, t.position.z - RANGE.postBehind));
+        const upright = new THREE.BoxGeometry(RANGE.postWidth, top - t.floor, RANGE.postWidth);
+        posts.push(placed(upright, ...at(0, (top - t.floor) / 2, -RANGE.postBehind), null, turned));
         upright.dispose();
         const pivot = new THREE.Vector3(t.position.x, top, t.position.z);
-        parts.push({ mesh: plateMesh, index: plate, pivot, local: new THREE.Matrix4().makeTranslation(0, t.position.y - top, 0) });
-        parts.push({ mesh: chainMesh, index: plate, pivot, local: new THREE.Matrix4() });
+        parts.push({ mesh: plateMesh, index: plate, pivot, facing, local: new THREE.Matrix4().makeTranslation(0, t.position.y - top, 0) });
+        parts.push({ mesh: chainMesh, index: plate, pivot, facing, local: new THREE.Matrix4() });
         plate++;
         // Detail: the plate on two short chains from an arm off the post's top, and a safety band on the post.
-        fittingParts.push(placed(armGeo, t.position.x, top + VD.armDepth / 2, t.position.z - RANGE.postBehind / 2, VD.metal));
-        fittingParts.push(placed(bandGeo, t.position.x, VD.band.at, t.position.z - RANGE.postBehind, VD.band.colour));
+        fittingParts.push(placed(armGeo, ...at(0, top - t.floor + VD.armDepth / 2, -RANGE.postBehind / 2), VD.metal, turned));
+        fittingParts.push(placed(bandGeo, ...at(0, VD.band.at, -RANGE.postBehind), VD.band.colour, turned));
       } else {
         // A plywood cut-out the size of a player's hit volume, standing or crouched, hinged at its feet.
         const drop = t.crouched ? hits.crouchDrop : 0;
         const bodyTop = hits.bodyTop - drop;
-        const pivot = new THREE.Vector3(t.position.x, 0, t.position.z);
+        const pivot = new THREE.Vector3(t.position.x, t.floor, t.position.z);
         const torso = new THREE.Matrix4().makeScale(1, bodyTop - hits.bodyBottom, 1).setPosition(0, (bodyTop + hits.bodyBottom) / 2, 0);
-        parts.push({ mesh: torsoMesh, index: figure, pivot, local: torso });
-        parts.push({ mesh: headMesh, index: figure, pivot, local: new THREE.Matrix4().makeTranslation(0, hits.headHeight - drop, 0) });
+        parts.push({ mesh: torsoMesh, index: figure, pivot, facing, local: torso });
+        parts.push({ mesh: headMesh, index: figure, pivot, facing, local: new THREE.Matrix4().makeTranslation(0, hits.headHeight - drop, 0) });
         figure++;
         // Detail: the hinge brackets the figure stands on.
         for (const side of [-1, 1]) {
-          fittingParts.push(placed(hingeGeo, t.position.x + side * (V.figureWidth / 2 - VD.hinge.inset), VD.hinge.height / 2, t.position.z, VD.metal));
+          fittingParts.push(placed(hingeGeo, ...at(side * (V.figureWidth / 2 - VD.hinge.inset), VD.hinge.height / 2, 0), VD.metal, turned));
         }
       }
       this.parts.push(parts);
@@ -216,12 +228,14 @@ export class RangeTargetsRenderer {
       this.drawnAngle.push(Number.NaN);
     }
     if (posts.length > 0) this.object.add(this.static('range-posts', merged(posts), post, false));
-    this.addShelf(fittingParts);
+    if (onRange) this.addShelf(fittingParts);
     for (const g of [armGeo, bandGeo, hingeGeo]) g.dispose();
-    const stands = this.static('range-fittings', merged(fittingParts), fittings, true);
-    this.object.add(stands);
-    this.detailParts.push(stands);
-    this.addMarkers();
+    if (fittingParts.length > 0) {
+      const stands = this.static('range-fittings', merged(fittingParts), fittings, true);
+      this.object.add(stands);
+      this.detailParts.push(stands);
+    }
+    if (onRange) this.addMarkers();
     this.setDetail(false);
     this.update(0);
   }
@@ -279,7 +293,7 @@ export class RangeTargetsRenderer {
       if (angle === this.drawnAngle[i]) continue;
       this.drawnAngle[i] = angle;
       for (const part of this.parts[i]!) {
-        pivotM.makeTranslation(part.pivot.x, part.pivot.y, part.pivot.z).multiply(turnM.makeRotationX(angle));
+        pivotM.makeTranslation(part.pivot.x, part.pivot.y, part.pivot.z).multiply(part.facing).multiply(turnM.makeRotationX(angle));
         part.mesh.setMatrixAt(part.index, partM.multiplyMatrices(pivotM, part.local));
         part.mesh.instanceMatrix.needsUpdate = true;
       }

@@ -34,6 +34,7 @@ import { PointerLock } from './input/pointerLock';
 import { lightingPicked, mapUnderLighting, mapUnderPreset, playsAtNight } from './map/lightingChoice';
 import { allMapsLoaded, loadDevMaps, type MapId, mapData } from './map/maps';
 import type { MapData } from './map/mapTypes';
+import { type PracticePlaceId, practiceMapId } from './map/practicePlaces';
 import { initPhysics } from './physics/physicsWorld';
 import { awayWatch } from './core/awayWatch';
 import { loadBakedLight } from './render/bakedLight';
@@ -90,6 +91,7 @@ import {
   loadInvertMouse,
   loadLightingPicks,
   loadMap,
+  loadPracticePlace,
   loadMatchRules,
   loadMode,
   loadMouseDpi,
@@ -220,6 +222,8 @@ export class Game {
   private unlockedPlay = false;
   /** New game's choices: the next Play builds the match from them. */
   private map: MapId;
+  /** Where Practice is played (M94): the range or a map, its own pick on the Match screen. */
+  private practicePlace: PracticePlaceId = loadPracticePlace();
   /** Each map's Day or Night pick (M34d). */
   private readonly lighting: Partial<Record<MapId, LightingPresetId>>;
   private mode: MatchMode;
@@ -489,6 +493,7 @@ export class Game {
       onSkipTutorialStep: () => this.skipTutorial(false),
       onSkipTutorial: () => this.skipTutorial(true),
       map: { initial: this.map, onChange: (m) => ((this.map = m), (this.setupChanged = true), this.prefetchFieldSounds()) },
+      practicePlace: { initial: this.practicePlace, onChange: (p) => (this.practicePlace = p) },
       lighting: { initial: this.lighting, onChange: (m, light) => ((this.lighting[m] = light), (this.setupChanged = true), this.prefetchFieldSounds()) },
       mode: {
         initial: this.mode,
@@ -569,7 +574,7 @@ export class Game {
         hudOpacity: { initial: this.hudOpacity, onChange: (v) => ((this.hudOpacity = v), this.showHudLook()) },
         hitFeed: { initial: this.hitFeedMode, onChange: (m) => this.changeHitFeed(m) },
         whatGotYou: { initial: this.whatGotYouMode, onChange: (m) => this.changeWhatGotYou(m) },
-        minimapTurn: { initial: this.minimapTurn, onChange: (t) => ((this.minimapTurn = t), this.session instanceof MatchSession && this.session.setMinimapTurn(t)) },
+        minimapTurn: { initial: this.minimapTurn, onChange: (t) => ((this.minimapTurn = t), this.session?.setMinimapTurn(t)) },
       },
       dev: {
         initial: this.devPicked,
@@ -1046,12 +1051,13 @@ export class Game {
   /** Builds or reuses the session `action` asks for (`s`, the session when Play was pressed) and unlocks its audio. */
   private enter(action: Exclude<SessionAction, 'none'>, s: MatchSession | RangeSession | null): void {
     if (action === 'buildRange') {
-      // The tutorial resumes at the step it was left at (audit POOL-14).
-      this.openRange(undefined, this.tutorial ? loadTutorialStep() : undefined);
+      // The tutorial resumes at the step it was left at (audit POOL-14), always on the range; Practice on its place (M94).
+      if (this.tutorial) this.openRange(undefined, loadTutorialStep());
+      else this.openRange(undefined, undefined, this.practiceMap());
     } else if (action === 'rebuildRange' && isRange(s)) {
-      // Back from the Loadout on the range's pause menu: the range again, with the new kit, where you stood (and at the
-      // same tutorial step).
-      this.openRange(s.pose, s.tutorialStep);
+      // Back from the Loadout on the range's pause menu: the range (or the map, M94) again, with the new kit, where you
+      // stood (and at the same tutorial step).
+      this.openRange(s.pose, s.tutorialStep, s.practiceMap);
     } else if (action === 'buildMatch') {
       this.session?.dispose();
       this.setupChanged = false;
@@ -1101,10 +1107,19 @@ export class Game {
   }
 
   /**
-   * Builds the practice range (M21) with the picked loadout, at `pose` if given (else behind the firing line), with the
-   * tutorial from step `tutorialFrom` if given (M16).
+   * The map Practice plays on (M94): its picked place under the map's Day or Night pick (as a match's, playedMap), or
+   * undefined for the range (also for a dev map while Dev content is off).
    */
-  private openRange(pose?: RangePose, tutorialFrom?: number | string): void {
+  private practiceMap(): MapData | undefined {
+    const id = practiceMapId(this.practicePlace, this.dev.devContent);
+    return id ? this.playedMap(id) : undefined;
+  }
+
+  /**
+   * Builds Practice (M21) with the picked loadout on `map` (M94; the range when left out), at `pose` if given (else at
+   * the start), with the tutorial from step `tutorialFrom` if given (M16).
+   */
+  private openRange(pose?: RangePose, tutorialFrom?: number | string, map?: MapData): void {
     const code = this.rangeCode.get();
     if (!code) throw new Error('The practice range was built before its code arrived (play fetches it)');
     this.session?.dispose();
@@ -1114,7 +1129,9 @@ export class Game {
       teamColours: TEAM_COLOUR_SETS[this.teamColours],
       look: this.look,
       armory: !this.dev.disableArmory,
+      ...(map ? { map } : {}),
     }, this.options.seed, this.quality, this.audio, this.crosshair, pose, tutorialFrom);
+    this.session.setMinimapTurn(this.minimapTurn);
     this.session.onTutorialStep = (step) => saveSetting('tutorialStep', step);
     this.session.combat.setReplicaPictures(this.pictures, kitSubjects(this.loadout.kit(), this.look.realisticColours));
     this.steppedDown = false;

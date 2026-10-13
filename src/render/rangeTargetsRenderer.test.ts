@@ -38,10 +38,10 @@ describe('practice range presentation (M21)', () => {
   });
 
   it('reads out where the last BB landed and what it hit', () => {
-    expect(lastShotText(null)).toContain('Practice range');
+    expect(lastShotText(null)).toContain('Practice ·');
     expect(lastShotText({ distance: 30.6, target: { label: 'Steel', distance: 30 } })).toBe('Last BB: 31 m · hit Steel 30 m');
     expect(lastShotText({ distance: 44.2, target: null })).toBe('Last BB: 44 m · miss');
-    expect(lastShotText({ distance: 0, target: null, lost: true })).toContain('flew out of the range');
+    expect(lastShotText({ distance: 0, target: null, lost: true })).toContain('flew out of bounds');
   });
 });
 

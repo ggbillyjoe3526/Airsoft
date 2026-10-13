@@ -8,6 +8,7 @@ import { DEFAULT_TEAM_PICK, TEAMS, teamOfPick } from '../../config/teams';
 import type { LightingPresetId } from '../../config/render';
 import { LIGHTING_LABELS, lightingChoices } from '../../map/lightingChoice';
 import { type MapId, mapData, mapEntry } from '../../map/maps';
+import { DEFAULT_PRACTICE_PLACE, type PracticePlaceId, practiceMapId } from '../../map/practicePlaces';
 import { type NewGamePicks, playedPicks, playedTeamSize } from '../../newGamePicks';
 import { menuArt } from './chrome';
 import type { MenusOptions } from './menus';
@@ -21,7 +22,12 @@ import type { PlayView } from './setupScreen';
  */
 
 /** The match as it will play: dev content's picks play as their defaults while Dev content is off (M35). */
-export function playView(picked: NewGamePicks, opts: Pick<MenusOptions, 'rules' | 'dev' | 'armory' | 'loadout'>, lightingOf: (id: MapId) => LightingPresetId): PlayView {
+export function playView(
+  picked: NewGamePicks,
+  opts: Pick<MenusOptions, 'rules' | 'dev' | 'armory' | 'loadout'>,
+  lightingOf: (id: MapId) => LightingPresetId,
+  practicePlace: PracticePlaceId = DEFAULT_PRACTICE_PLACE,
+): PlayView {
   const devContent = opts.dev.devContent();
   const played = playedPicks(picked, devContent);
   // Each map offers as many players a side as it has room for (Depot up to 3v3, Woodland 5v5 or 6v6, M33, M88).
@@ -36,6 +42,10 @@ export function playView(picked: NewGamePicks, opts: Pick<MenusOptions, 'rules' 
   // A map that offers Day and Night names the one picked (M34d).
   const lightLine = lightingChoices(mapData(map.id)).length > 1 ? ` · ${LIGHTING_LABELS[light]}` : '';
   const still = mapStillFile(map.id, light);
+  // Practice's place (M94): a dev map plays as the range while Dev content is off, as a match's map plays as Depot.
+  const practiceOn = practiceMapId(practicePlace, devContent);
+  const practiceLight = practiceOn ? lightingOf(practiceOn) : 'day';
+  const practiceStill = mapStillFile(practiceOn ?? 'range', practiceLight);
   const match = run ? runRulesSummary(m, run, played.difficulty) : matchRulesSummary(m, played.mode);
   const opponents = difficultyLabel(played.difficulty);
   const mates = difficultyLabel(played.teammateDifficulty);
@@ -62,6 +72,10 @@ export function playView(picked: NewGamePicks, opts: Pick<MenusOptions, 'rules' 
     notes: setupNotes(rules, { recorded, cheating: opts.dev.cheating(), devContentUsed, ruleset: played.ruleset }),
     loadout: opts.loadout.summary(),
     pays: paid ? (played.ruleset === DEFAULT_RULESET || recordsKeyOf(played.ruleset) !== null ? PLAY_TEXT.pays : PLAY_TEXT.paysCapped(CUSTOM_RULES_PAY_CAP)) : '',
+    practice: {
+      mapLine: practiceOn ? `${mapEntry(practiceOn).label}${lightingChoices(mapData(practiceOn)).length > 1 ? ` · ${LIGHTING_LABELS[practiceLight]}` : ''}` : PLAY_TEXT.practice.mapLine,
+      still: practiceStill ? menuArt(practiceStill) : null,
+    },
   };
 }
 
