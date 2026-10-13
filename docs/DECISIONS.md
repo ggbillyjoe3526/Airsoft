@@ -215,7 +215,8 @@ replaces its line; the old one stays findable in the archive or in git.
 - **Higher-detail models come later, after the WebGPU overhaul (owner, 2026-10-09: "I want to try improve characters
   and all other models in the future but this will be later").** Figures, replicas and every other model. It widens
   the Blender art pass the owner planned on 2026-10-05, now tied to no update (`docs/ROADMAP.md` › Not tied to an
-  update); the Blender models built in Dev 5 stay behind the Dev switches (below).
+  update); the Blender models built in Dev 5 stay behind the Dev switches (below). The figures come
+  forward to 0.1 Dev 6 (below).
 - **The Blender models are locked behind the Dev tab, and the game draws its code-built models by default (owner,
   2026-10-11: "I'm not happy with the quality of figure models so blender models should be locked in dev settings").**
   Two Dev switches, both on by default (RM4, `config/dev.ts`): "Disable figure models" keeps the built-in figures and
@@ -242,6 +243,11 @@ replaces its line; the old one stays findable in the archive or in git.
   it, so the built-in optics keep theirs. The silencers are round with the same lengths, so muzzles stay put. The
   pistol torch clips straight to the rail and, with the Red Laser fitted too, sits 1.6 cm lower under it (its
   `UnderLaser` marker). Behind "Disable all models", like every Blender model.
+- **The human and robot figures are redesigned to look more realistic in 0.1 Dev 6 (owner, 2026-10-13: "In dev 6 I
+  want to redesign the bot/player figures to be more realistic").** The owner does it himself at his PC, in his own
+  Blender through the port 9876 bridge, from reference photos he shares first. It waits on his photos and his Blender
+  session: no thread starts it before he does. It brings the figures forward from the later higher-detail models
+  (above), and they stay behind the Dev switches until he is happy with them.
 
 ## Gameplay and feel
 

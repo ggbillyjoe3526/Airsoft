@@ -225,6 +225,7 @@ are written when the build starts. Numbers are from the owner's list of 50 candi
 | 41 | Noisy ground and props: gravel, cans, pallets and fences rattle, and bots hear it | World |
 | 45 | Overtime: when the clock runs out, a flag appears in the middle and the first team to touch it wins | Rounds |
 | 46 | An option to hide the ammo counter (no mag-check key: owner) | HUD |
+| – | Figure redesign: more realistic human and robot figures, from the owner's reference photos, built in his Blender; waits for him (owner, 2026-10-13) | Art |
 
 Built in Dev 5 instead: the blowback pistol (pick 14) is the GBB Pistol (RM7), and the AEG Rifle redesign (RM6) gave
 the built-in rifle its small, low iron sights.
@@ -468,7 +469,8 @@ These land in whichever update the owner likes:
 - **Higher-detail models** (owner, 2026-10-05 and 2026-10-09). A Blender art pass over figures, replicas, attachments,
   props and set dressing, using the headroom WebGPU gives. It keeps art direction v3, the download target (about 30 MB
   to start), Low's 60 fps at 1080p on a laptop and the WebGL fallback. The Blender figures, replicas and attachments
-  built in 0.1 Dev 5 stay behind the Dev switches until the owner is happy with them.
+  built in 0.1 Dev 5 stay behind the Dev switches until the owner is happy with them. The figures come first, in
+  [0.1 Dev 6](#01-dev-6-the-last-planned-dev-build) (owner, 2026-10-13).
 - **Hand signals and more team calls,** with bots that act on them. Three orders and their wheel are in (M22, M23);
   pings and asking for a magazine come in 0.1 Dev 6.
 
