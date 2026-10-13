@@ -111,6 +111,14 @@ describe('the tutorial (M16)', () => {
     expect(t.showingDone).toBe(true);
     finishStep();
 
+    expectStep('vault');
+    tick([{ type: 'footstep', characterId: 0, kind: 'land' }]); // a jump's landing is no vault
+    tick([{ type: 'footstep', characterId: 3, kind: 'vault' }]); // not yours
+    expect(t.showingDone).toBe(false);
+    tick([{ type: 'footstep', characterId: 0, kind: 'vault' }]);
+    expect(t.showingDone).toBe(true);
+    finishStep();
+
     expectStep('secondary');
     const shot: GameEvent = { type: 'shot', characterId: 0, replicaId: 'x', position: vec3() };
     tick([shot, hit(steel.id)]); // still on the first replica

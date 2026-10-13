@@ -10,5 +10,8 @@ Walkability for bots and walk-offs: pure data and A*, no Three.js.
 - Every query takes a height (`nodeAt`, `floorAt`, `isWalkableAt`, `nearestWalkable`, `clearLine`, `dropOnLine`) and
   picks the highest floor at most `NODE_PICK_ABOVE` above it, so a balcony and the hall under it differ.
   `nearestWalkable` prefers a floor near that height, so a body on a dock's lip snaps to the dock, not the road (G11).
+- `vaultLinks.ts` (M102): where a body can vault a low obstacle (`sim/vault.ts` `planVault`), a link from the node
+  beside it to one past it, built once per grid (`NavGrid.vaults`). A search walks them only when asked
+  (`NavSearch.vaults`), each costing its length plus `BOT_BEHAVIOUR.vaultPrice`; `isVaultLeg` tells a route's vault legs.
 - Used by `ai/` and by `sim/elimination.ts` (walk-off routes and distance fields).
 - Tuning: `config/nav.ts`. Tests: `navGrid.test.ts`, `navGridField.test.ts`, `ai/stackHouse.nav.test.ts`.

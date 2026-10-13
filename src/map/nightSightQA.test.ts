@@ -205,13 +205,17 @@ describe("Woodland's light pools (acceptance 4)", () => {
     expect(lit / total).toBeLessThan(0.2);
   });
 
-  it('makes the range at a spot depend only on its light, canopy and roof: all four ranges occur on Woodland, ordered lit > open > indoor (M34e) > canopy', () => {
+  // Woodland has no roofs: until M102 the cabin's west window lintel was the one underside a night cell's centre fell
+  // under, and it went when that window became a low wall to vault. Indoors is Neon Heights' (neonHeightsNight.test.ts).
+  it('makes the range at a spot depend only on its light, canopy and roof: Woodland has the three outdoor ranges, ordered lit > open > canopy', () => {
     const field = buildNightField(WOODLAND, NIGHT_SIGHT)!;
     const seen = new Set<number>();
     for (let x = -halfX + 0.5; x < halfX; x += 2) {
       for (let z = -halfZ + 0.5; z < halfZ; z += 2) seen.add(nightSightRange(field, vec3(x, terrainHeightAt(WOODLAND.terrain!, x, z), z)));
     }
-    expect([...seen].sort((a, b) => b - a)).toEqual([NIGHT_SIGHT.lit, NIGHT_SIGHT.open, NIGHT_SIGHT.indoor, NIGHT_SIGHT.canopy]);
+    expect([...seen].sort((a, b) => b - a)).toEqual([NIGHT_SIGHT.lit, NIGHT_SIGHT.open, NIGHT_SIGHT.canopy]);
+    expect(NIGHT_SIGHT.open).toBeGreaterThan(NIGHT_SIGHT.indoor);
+    expect(NIGHT_SIGHT.indoor).toBeGreaterThan(NIGHT_SIGHT.canopy);
   });
 
   it('builds the canopy grid from the Woodland trunks: it is only where trees stand', () => {

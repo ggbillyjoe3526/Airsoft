@@ -3,8 +3,11 @@ import { rattles } from './armament';
 import type { Character } from './character';
 import type { GameEvent } from './events';
 
-/** How loud a footstep is: bots and sound treat each differently. `rattle`: a quiet move with a hi-cap magazine. */
-export type FootstepKind = 'run' | 'sprint' | 'land' | 'rattle';
+/**
+ * How loud a footstep is: bots and sound treat each differently. `rattle`: a quiet move with a hi-cap magazine; `vault`:
+ * hands and boots on an obstacle at the start of a vault (sim/vault.ts), heard as far as a landing.
+ */
+export type FootstepKind = 'run' | 'sprint' | 'land' | 'rattle' | 'vault';
 
 /**
  * After a character has moved this tick: counts the ground it covered and emits a footstep event

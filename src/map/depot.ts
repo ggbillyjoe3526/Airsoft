@@ -1,3 +1,4 @@
+import { VAULT_WALL_HEIGHT } from '../config/vault';
 import { type Vec3, vec3 } from '../sim/vec';
 import { depotDressing } from './depotDressing';
 import type { BlockKind, CaseSpot, ExitZone, MapBlock, MapData, RampRise, SpawnPoint } from './mapTypes';
@@ -21,10 +22,11 @@ import type { BlockKind, CaseSpot, ExitZone, MapBlock, MapData, RampRise, SpawnP
  * - 2 Container Alley (mid): the crate yard, a container across the centre, a ported barricade, then the Main
  *   Gate, watched from inside the Bay by two more barricades.
  * - 3 Office (south, z -16..-7.4): across the car park, in the west door, through three rooms whose doors
- *   never line up, and out of the hall's back door into the Bay about 7.5 m from the pole.
+ *   never line up, and out of the hall's back door into the Bay about 7.5 m from the pole. The hall's low north wall
+ *   (vaulted, M102) is a way between this lane and Container Alley.
  *
  * Cover heights: full (≥ 2.4 m) or crouch cover (1.2 m: hides a crouched player, a standing one can shoot
- * over). The dock's open edge is a 1.2 m drop (bots use the ramps). No line of sight between standable points
+ * over). One low wall (0.9 m, M102) is not cover but a way through: the hall's north wall, vaulted. The dock's open edge is a 1.2 m drop (bots use the ramps). No line of sight between standable points
  * is longer than 34 m, and the two spawn yards can't see each other. Layout rules are checked in depot.test.ts.
  *
  * Props (M25b, the owner's approved concept v2, 2026-10-04): most of M11's two-high crate stacks became single
@@ -108,6 +110,14 @@ function wall(x0: number, x1: number, z0: number, z1: number, y0 = 0, y1 = OFFIC
 /** Wall section with a window: sill below, lintel above. */
 function windowWall(x0: number, x1: number, z0: number, z1: number): MapBlock[] {
   return [wall(x0, x1, z0, z1, 0, WINDOW_SILL), wall(x0, x1, z0, z1, WINDOW_TOP, OFFICE_WALL_HEIGHT)];
+}
+
+/**
+ * Wall section broken down to a low wall you vault (M102, owner 2026-10-12: low obstacles where they open a route): no
+ * lintel, as a body vaulting it needs its full height clear over the top.
+ */
+function vaultWall(x0: number, x1: number, z0: number, z1: number): MapBlock {
+  return wall(x0, x1, z0, z1, 0, VAULT_WALL_HEIGHT);
 }
 
 function container(x0: number, x1: number, z0: number, z1: number, height = CONTAINER_HEIGHT): MapBlock {
@@ -242,10 +252,11 @@ const THE_BAY: MapBlock[] = [
 
 /** Lane 3, Office: x -8.4..17.4, z -16..-7.4. West room, the hall, and the stores. */
 const OFFICE: MapBlock[] = [
-  // North wall: the mid door, a window, the back door into the Bay, a window onto the Bay.
+  // North wall: the mid door, a low wall to vault (the hall's way out to Container Alley, M102), the back door into the
+  // Bay, a window onto the Bay.
   wall(OFFICE_W0, -4.4, OFFICE_N0, OFFICE_N1),
   wall(-3.0, 0.4, OFFICE_N0, OFFICE_N1),
-  ...windowWall(0.4, 2.0, OFFICE_N0, OFFICE_N1),
+  vaultWall(0.4, 2.0, OFFICE_N0, OFFICE_N1),
   wall(2.0, 6.4, OFFICE_N0, OFFICE_N1),
   wall(7.8, 12.4, OFFICE_N0, OFFICE_N1),
   ...windowWall(12.4, 14.0, OFFICE_N0, OFFICE_N1),

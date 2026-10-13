@@ -104,6 +104,9 @@ export const AUDIO = {
     step: { gain: 0.48, pitchSpread: 0.06 },
     /** Your own: quieter, but always played (they're how you judge your own pace and noise). */
     ownStep: { gain: 0.25, pitchSpread: 0.06 },
+    /** A vault's hands and kit on the obstacle (M102): louder than a step, as it carries further (BOT_BEHAVIOUR.footstepHearingVault); yours too. */
+    vault: { gain: 0.7, pitchSpread: 0.06 },
+    ownVault: { gain: 0.4, pitchSpread: 0.06 },
     foley: { gain: 0.8, pitchSpread: 0.08 },
     ownFoley: { gain: 0.45, pitchSpread: 0.08 },
     impact: { gain: 0.9, pitchSpread: 0.1 },

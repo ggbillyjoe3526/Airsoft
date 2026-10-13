@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BUG_REPORT, BUG_REPORT_TEXT } from '../config/crash';
 import type { ReportInfo } from '../core/crashReport';
 import { FakeElement } from './testSupport';
@@ -6,6 +6,10 @@ import { FakeElement } from './testSupport';
 const copyText = vi.fn<(text: string) => Promise<boolean>>();
 vi.mock('./clipboard', () => ({ copyText: (text: string) => copyText(text) }));
 
+// Test files share a worker's module cache (vite.config.ts, isolate: false): one run before this file (devSettings,
+// crashScreen) may have loaded bugReport with the real clipboard, whose copy throws here and never says anything. A
+// fresh copy takes the mock (M102 found the two copy tests failing whenever such a file ran first in the worker).
+vi.resetModules();
 const { noteBox, reportBugLink } = await import('./bugReport');
 
 function info(extra: string[] = []): ReportInfo {
@@ -14,10 +18,8 @@ function info(extra: string[] = []): ReportInfo {
 
 type Link = FakeElement & { href: string; target: string; rel: string };
 
-/** Time for the message while the bot-match guards load every core (vi.waitFor's own 1 s ran out), inside the test's 5 s. */
-const SAID = { timeout: 4_000 };
-
 describe('Report a Bug link (IM7)', () => {
+  afterAll(() => vi.resetModules());
   beforeEach(() => {
     vi.stubGlobal('document', { createElement: (tag: string) => new FakeElement(tag) });
     copyText.mockReset();
@@ -56,7 +58,7 @@ describe('Report a Bug link (IM7)', () => {
     const said: string[] = [];
     const link = reportBugLink(() => info(long), () => 'note', (t) => said.push(t)) as unknown as Link;
     link.click();
-    await vi.waitFor(() => expect(said).toEqual([BUG_REPORT_TEXT.openedCopied]), SAID);
+    await vi.waitFor(() => expect(said).toEqual([BUG_REPORT_TEXT.openedCopied]));
     expect(copyText).toHaveBeenCalledTimes(1);
     const whole = copyText.mock.calls[0]![0];
     expect(whole).toContain('Note: note');
@@ -71,7 +73,7 @@ describe('Report a Bug link (IM7)', () => {
     const long = Array.from({ length: 400 }, (_, i) => `tick ${i}: a long line to fill the address up quite a lot`);
     const link = reportBugLink(() => info(long), () => '', (t) => said.push(t)) as unknown as Link;
     link.click();
-    await vi.waitFor(() => expect(said).toEqual([BUG_REPORT_TEXT.openedNotCopied]), SAID);
+    await vi.waitFor(() => expect(said).toEqual([BUG_REPORT_TEXT.openedNotCopied]));
   });
 
   it('gives a note box labelled and limited in length', () => {

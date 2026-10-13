@@ -153,14 +153,15 @@ describe('G9: what the two maps’ dressing costs', { timeout: 30_000 }, () => {
    * Every mesh Depot builds on High, pinned from `origin/main` (the same probe run in a clean worktree of main): the
    * name, the vertices, the indices and a hash of the positions and the vertex colours. G9 touches the dressing engine
    * and the nature shapes, so this says Depot's dressing, props and ground come out of them unchanged, to the vertex.
+   * M102 re-pinned concrete, blockWall and corrugated for the office hall's window broken down to a low wall to vault.
    */
   const DEPOT_ON_MAIN = [
     'map-steelPlate v774 i1368 pca5bc22f cadc1818d',
-    'map-concrete v5582 i20460 pbb34821a c8e168e66',
-    'map-blockWall v6230 i18114 p74b2dedb c7fd54042',
+    'map-concrete v5534 i20388 p05e90a6a c0b273477',
+    'map-blockWall v6114 i17910 p4256894f c378765b0',
     'map-barrier v21140 i33372 p7dfc9152 cb57e0a41',
     'map-crate v6584 i9888 p5c1e59af c13f494d7',
-    'map-corrugated v24024 i46782 p54c857ef cefd4a3e4',
+    'map-corrugated v24024 i46782 p54c857ef ca8aa5b5e',
     'map-sandbag v1176 i1800 pa76b789d ca2e24669',
     'map-gabion v1006 i1728 p6264eebd c9424b872',
     'map-decals v1128 i1692 pdc0f84b5 c054cd98d',

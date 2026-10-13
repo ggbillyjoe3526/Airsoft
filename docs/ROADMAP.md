@@ -214,7 +214,7 @@ when their work starts. Numbers are from the owner's list of 50 candidates
 | M94 | Practice on any map, with targets instead of bots; done (2026-10-13, `docs/records/M94.md`) | Practice |
 | M95 | Practice with any replica you own, and everything with Dev on; done (2026-10-13, `docs/records/M95.md`) | Practice |
 | LV1 | Levelling in place of the Armory's gacha: matches give XP, levels 0 to 10 unlock the gear (`levels.md`), the Armory shows your level and what comes next, rarity gone and the gear rebalanced; done (2026-10-13, `docs/records/LV1.md`) | Progression |
-| – | Vaulting over low obstacles (0.7–0.9 m), with a few added to the maps where they open a route; crouch cover stays peek-only (owner, 2026-10-12) | Movement |
+| M102 | Vaulting over low obstacles (0.7–0.9 m), with a few added to the maps where they open a route; crouch cover stays peek-only (owner, 2026-10-12); vaults are loud (owner, 2026-10-13); done (2026-10-13, `docs/records/M102.md`) | Movement |
 | 40 | Rest your replica on cover (a ledge, crate or window) for steadier aim; done (2026-10-13, `docs/records/M104.md`) | Movement |
 | 19 | Saved loadouts, picked from the Match screen (once the Map pop-up) as well as the Loadout screen; done (2026-10-13, `docs/records/SL1.md`) | Loadout |
 | 21 | Bot names, personalities (rusher, anchor, flanker, careful) and loadouts | Bots |
