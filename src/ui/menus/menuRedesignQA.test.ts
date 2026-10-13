@@ -171,7 +171,9 @@ describe('the top bar (M100 QA)', () => {
     const bar = new TopBar(noop, noop);
     bar.setLevel({ level: 3, into: 50, next: 500, toNext: '450 XP to level 4' });
     const root = node(bar.root);
-    expect(root.children.map((c) => (c as EventNode).tag)).toEqual(['button', 'nav', 'div']);
+    // The third, Back to practice (M95), shows only on the Loadout opened from Practice.
+    expect(root.children.map((c) => (c as EventNode).tag)).toEqual(['button', 'nav', 'button', 'div']);
+    expect(root.children[2]!.hidden).toBe(true);
     expect(shown(root)).toEqual(['Airsoft', ...MENU_TEXT.nav.map((n) => n.label), 'Lv 3']);
     expect(shown(root).join(' ')).not.toMatch(/\bFC\b|Token/);
     expect(shown(root).join(' ')).not.toContain(__BUILD_VERSION__.label);

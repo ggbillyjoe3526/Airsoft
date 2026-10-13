@@ -200,6 +200,8 @@ export interface Muzzle {
   pitch: number;
   /** The shooter's stance and movement multiplier on the replica's spread (sim/accuracy.ts). */
   spreadScale: number;
+  /** The multiplier on each shot's kick: below 1 while the replica rests on cover (sim/coverRest.ts, M104). */
+  kickScale: number;
 }
 
 /** What a ray met (raycastSurface): the surface's unit normal, facing back along the ray, and what it is made of. */
@@ -418,7 +420,7 @@ function fire(characterId: number, a: Armament, replica: ReplicaConfig, muzzle: 
   // Sideways first, then up and down: the random stream's order as before audit SIM-09.
   const gx = rngGaussian(ctx.rng);
   spreadDirection(dir, muzzle.yaw, muzzle.pitch + a.recoil, replica.spreadDeg * muzzle.spreadScale * DEG, gx, rngGaussian(ctx.rng));
-  a.recoil = Math.min(RECOIL.maxDeg * DEG, a.recoil + replica.recoilDeg * DEG);
+  a.recoil = Math.min(RECOIL.maxDeg * DEG, a.recoil + replica.recoilDeg * muzzle.kickScale * DEG);
   ctx.events.push({ type: 'shot', characterId, replicaId: replica.id, position: vec3(muzzle.eye.x, muzzle.eye.y, muzzle.eye.z) });
 
   // The BB's path starts at the eye: its first step then catches cover right in front of the shooter

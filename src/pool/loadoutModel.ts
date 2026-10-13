@@ -165,6 +165,22 @@ export class LoadoutModel {
   }
 
   /**
+   * The gear slot the kit's `index`th replica is carried in (kit() leaves an empty slot out), e.g. the slot of the
+   * replica in hand on the range (M95); the first slot when there is no such replica.
+   */
+  gearSlotOf(index: number): GearSlot {
+    let n = -1;
+    const equipped = this.equipped();
+    for (let i = 0; i < equipped.length; i++) if (equipped[i] && ++n === index) return GEAR_SLOTS[i]!;
+    return GEAR_SLOTS[0]!;
+  }
+
+  /** Whether everything is lent (Dev settings › Disable levelling, M26d and LV1): the Loadout says so (M95). */
+  lent(): boolean {
+    return this.ownership.sandboxed?.() ?? false;
+  }
+
+  /**
    * Puts `ref` (an owned replica item) in `slot`. If the other slot holds the same replica, the two swap, so a replica
    * is never in both.
    */

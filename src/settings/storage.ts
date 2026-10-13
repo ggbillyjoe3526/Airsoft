@@ -20,7 +20,7 @@ export const SETTINGS_VERSION = 1;
  * What each setting is called in the stored object (`hopUp.<replica id>` and `bbWeight.<replica id>`: that replica's
  * hop-up dial and BB weight; `glowBBs.<replica id>`: its Glowing BBs choice; `scheme.<replica id>`: its colour scheme; `equip.<gear slot>`: the replica item in that Loadout slot and `fit.<asset id>.<fit slot>`:
  * the item fitted there (M26b, pool/loadoutModel.ts; `equip.dev.*` and `fit.dev.*` hold the picks made with Dev
- * settings → Unlock all gear, M26d); `volume.<channel>`: a volume slider on Settings → Audio;
+ * settings → Disable levelling, M26d and LV1); `volume.<channel>`: a volume slider on Settings → Audio;
  * `crosshair.<part>`: Settings → Crosshair).
  */
 export type SettingField =

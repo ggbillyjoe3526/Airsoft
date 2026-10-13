@@ -21,7 +21,7 @@ describe('the top bar (G3)', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   const places = (bar: TopBar): FakeElement[] => fake(bar.root).children[1]!.children;
-  const status = (bar: TopBar): FakeElement => fake(bar.root).children[2]!;
+  const status = (bar: TopBar): FakeElement => fake(bar.root).children.find((c) => c.className === 'menu-status')!;
   const badge = (bar: TopBar): FakeElement => status(bar).children[0]!;
 
   it('lists every place in order, marks only the current one, and calls back with the place clicked', () => {
@@ -38,7 +38,9 @@ describe('the top bar (G3)', () => {
 
   it('reads Match, Loadout, Armory, Settings from the left, then your level at the far right, with no version (M100, LV1)', () => {
     const bar = new TopBar(() => {}, () => {});
-    const [mark, nav, end] = fake(bar.root).children;
+    // Back to practice (M95, hidden off the Loadout from Practice) stands just before your level.
+    const [mark, nav, practice, end] = fake(bar.root).children;
+    expect(practice!.hidden).toBe(true);
     expect(mark!.tag).toBe('button'); // the wordmark is a way back, not a place
     expect(places(bar).map((b) => b.children.at(-1)!.textContent)).toEqual(['Match', 'Loadout', 'Armory', 'Settings']);
     expect(fake(bar.root).children.at(-1)).toBe(end);
@@ -169,7 +171,6 @@ describe('the Your match panel (G3, playView.ts)', () => {
   const opts = (devContent: boolean) => ({
     rules: { raiseTime: 5 },
     dev: { devContent: () => devContent, devContentUsed: () => devContent, cheating: () => false },
-    armory: { wallet: () => ({ fc: 0, tokens: 0 }) },
     loadout: { summary: () => ({ replicas: 'AEG Rifle · GBB Pistol', detail: '' }) },
   }) as unknown as Parameters<typeof playView>[1];
 

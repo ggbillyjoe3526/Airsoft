@@ -244,13 +244,14 @@ replaces its line; the old one stays findable in the archive or in git.
   it, so the built-in optics keep theirs. The silencers are round with the same lengths, so muzzles stay put. The
   pistol torch clips straight to the rail and, with the Red Laser fitted too, sits 1.6 cm lower under it (its
   `UnderLaser` marker). Behind "Disable all models", like every Blender model.
-- **The human and robot figures are redesigned to look more realistic in 0.1 Dev 6 (owner, 2026-10-13: "In dev 6 I
-  want to redesign the bot/player figures to be more realistic").** The owner does it himself at his PC, in his own
-  Blender through the port 9876 bridge, from reference photos he shares first. The same session makes the figures'
-  animations for Dev 6's new moves, such as vaulting (owner, 2026-10-13: "This will also give an opportunity to update
-  animations for anything new like vaulting"). It waits on his photos and his Blender session: no thread starts it
-  before he does. It brings the figures forward from the later higher-detail models (above), and they stay behind the
-  Dev switches until he is happy with them.
+- **The human and robot figures are redesigned to look more realistic in 0.1 Dev 6 (owner, 2026-10-13: "In dev 6 I want
+  to redesign the bot/player figures to be more realistic").** The owner does it himself at his PC, in his own Blender
+  through the port 9876 bridge, from reference photos he shares first. The same session makes the figures' animations
+  for Dev 6's new moves, such as vaulting (owner, 2026-10-13: "This will also give an opportunity to update animations
+  for anything new like vaulting"), and a rest-on-cover animation in place of M104's placeholder lean (owner,
+  2026-10-13: "Make sure the figure redesign notes it needs animations for this"). It waits on his photos and his
+  Blender session: no thread starts it before he does. It brings the figures forward from the later higher-detail models
+  (above), and they stay behind the Dev switches until he is happy with them.
 
 ## Gameplay and feel
 
@@ -321,6 +322,13 @@ replaces its line; the old one stays findable in the archive or in git.
   own (`HOLSTER.drawScale`: the rifle 0.81 s, the pistol 0.54 s), so a ready sprint is quicker to the first shot. A
   slot key, a fresh trigger pull, an aim press or a reload draws it. Bots follow the same rules through the same
   command, holstering only on a calm sprint through their own half (`ai/botHolster.ts`).
+- **Aiming at a ledge rests the replica on it, automatically and with no setting (M104, 2026-10-13).** Down the sights,
+  still, grounded and no more than slightly leaned, with a flat top 8 to 70 cm below the eye straight ahead and within
+  0.8 m (`MOVEMENT.rest`, `sim/coverRest.ts`), the spread takes ×0.65 on top of the stance and the kick halves; moving,
+  letting go of the aim, a reload, a lean or looking away lets go in 0.1 s. It works standing at crouch cover and
+  waist-high cover, and crouched at lower cover and window sills, on all three maps (`sim/coverRestMaps.test.ts`).
+  Bots fire from the hip, so only the player rests for now; the figures' rest pose is a placeholder until the figure
+  redesign (`docs/HANDOFF.md`).
 
 ## Bots and balance
 
@@ -512,6 +520,12 @@ replaces its line; the old one stays findable in the archive or in git.
   with the frame, the ejection port further back, the trigger guard one piece with the frame, a shorter grip and small
   low sights. Its slide kicks back over the still barrel on every shot and stays locked back on an empty magazine until
   a reload (0.1 Dev 6 feature 14).
+- **In Practice you change gear from play, and it is your one loadout (2026-10-13, M95).** The Loadout key (L, its own
+  binding) opens the Loadout there on the slot in your hands; L again or Back to practice returns you where you stood,
+  the new replica coming up. In a match the key does nothing. What you pick or customise in Practice is your loadout for
+  matches too, so a replica tuned at the range goes into the next match, as at a real site; with Disable levelling on
+  the picks are the sandboxed ones (M26d), and your own come back when it is off. The owner can rule for a separate
+  practice loadout instead.
 
 ## Menus, HUD, settings and accessibility
 

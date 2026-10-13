@@ -4,7 +4,8 @@ import type { Character } from './character';
 /**
  * Accuracy by stance and movement: how much a character's current state scales its replica's spread
  * (cfg.accuracy). Holding still, and crouching above all, is steady, and the longer you hold still the
- * steadier it gets; moving, jumping and coming out of a sprint are not; the sight raised to your eye tightens it (M84).
+ * steadier it gets; moving, jumping and coming out of a sprint are not; the sight raised to your eye tightens it (M84),
+ * and resting the replica on cover more (M104).
  * Bots and the player follow the same rule (bots fire from the hip).
  */
 
@@ -31,7 +32,9 @@ export function targetSpreadScale(c: Character, cfg: MovementConfig): number {
   const crouched = a.crouched + (a.crouchedMoving - a.crouched) * moving;
   // The sight at your eye tightens the aim as it comes up (M84); from the hip it stays as it was.
   const aimed = 1 + (a.aimed - 1) * c.aimRaise;
-  return move * (1 + (crouched - 1) * c.crouchAmount) * aimed;
+  // The replica settling on cover steadies it further (M104, sim/coverRest.ts).
+  const rested = 1 + (cfg.rest.spread - 1) * c.coverRest;
+  return move * (1 + (crouched - 1) * c.crouchAmount) * aimed * rested;
 }
 
 /**

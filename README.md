@@ -112,6 +112,8 @@ Then open **http://localhost:4173**.
   refills until the next round.
 - **Sound matters.** Running and sprinting are heard by you and the bots; walking (Shift) and moving crouched are
   silent. You can't shoot for a moment after a sprint.
+- **Rest on cover.** Aim down sights standing still at a crate, low wall, sandbags or window sill and your replica rests
+  on it: a steadier aim with half the kick, and **Rested** shows under the sight. Move or let go of the aim to come off.
 - **Loadout.** **Start › Loadout** (or Esc in a match) sets your replicas; right-click one to **Customise** it: optic,
   hop-up, BB weight, grips, barrels, a silencer, magazines and batteries. Every choice is a trade-off, shown in numbers.
 - **Levels and the Armory.** You start at level 0 with the GBB Pistol and the AEG Rifle. Finished matches give XP
@@ -152,6 +154,7 @@ Every action can be rebound under **Settings › Key Bindings**, mouse buttons a
 | G (hold) | Use: open a case in Extraction (dev content) |
 | T | Weapon torch on and off (dev content) |
 | Y | Inspect: turn the replica in hand over to look it over (the rifle's charging handle and hop-up dial, the pistol's press check) |
+| L | In Practice: the Loadout straight from play, on the slot in your hands; L again (or Back to practice) and you are back where you stood |
 | F10 | Fullscreen |
 | Left click while out | Watch the next player still in play |
 | Esc | Pause: Resume, Loadout, Settings or Quit |

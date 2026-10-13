@@ -54,8 +54,12 @@ export class LoadoutScreen {
   private readonly gearView: HTMLDivElement;
   private readonly cards = new Map<GearSlot, CarriedCard>();
   private readonly grid: HTMLDivElement;
-  /** "Level up to unlock more": hidden while levelling is off (LV1). */
+  /** "Level up to unlock more": hidden while levelling is off (LV1), which lends everything anyway (M95). */
   private readonly levelNote: HTMLParagraphElement;
+  /** What the Loadout is for in Practice (M95), shown only when opened from there. */
+  private readonly practiceNote: HTMLParagraphElement;
+  /** Dev settings › Disable levelling lends everything (M95): said, so the borrowed picks are no surprise. */
+  private readonly lentNote: HTMLParagraphElement;
   private tiles: ReplicaTile[] = [];
   private locked: HTMLElement[] = [];
   private readonly selectedName: HTMLHeadingElement;
@@ -95,7 +99,10 @@ export class LoadoutScreen {
     owned.append(sectionHead('02', GEAR_TEXT.replicas));
     this.grid = el('div', 'item-grid replica-grid');
     this.levelNote = el('p', 'loadout-note', GEAR_TEXT.unlockMore);
-    owned.append(this.grid, this.levelNote);
+    this.practiceNote = el('p', 'loadout-note loadout-practice', GEAR_TEXT.practice);
+    this.practiceNote.hidden = true;
+    this.lentNote = el('p', 'loadout-note loadout-lent', GEAR_TEXT.lent);
+    owned.append(this.grid, this.practiceNote, this.lentNote, this.levelNote);
 
     const aside = el('aside', 'loadout-selected menu-card');
     aside.setAttribute('aria-label', GEAR_TEXT.selected);
@@ -120,8 +127,19 @@ export class LoadoutScreen {
     return this.view?.hints ?? this.gearHints;
   }
 
+  /**
+   * Shows the gear as the Loadout opens (refresh), from Practice or not (M95: its line says what the Loadout is for there),
+   * with `slot` picked when given: in Practice the slot of the replica in hand, so a replica clicked goes into your hands.
+   */
+  open(practice: boolean, slot?: GearSlot): void {
+    this.practiceNote.hidden = !practice;
+    if (slot) this.selected = slot;
+    this.refresh();
+  }
+
   /** Re-reads the loadout (after a level unlocked something, say) and shows the gear. */
   refresh(): void {
+    this.lentNote.hidden = !this.opts.model.lent();
     this.closeView();
     this.buildGrid();
     this.update();
@@ -151,7 +169,6 @@ export class LoadoutScreen {
       e.preventDefault();
       this.customise(slot);
     });
-    if (slot === 'primary') button.dataset.autofocus = '';
     const customise = menuButton(LOADOUT_TEXT.customise, 'primary', () => this.customise(slot));
     customise.classList.add('carried-customise');
     root.append(button, customise);
@@ -186,7 +203,8 @@ export class LoadoutScreen {
     });
     const levelling = this.opts.context.levelling?.() !== false;
     this.locked = levelling ? m.lockedReplicas().map(({ item, level }) => lockedTile(m.pool.byId.get(item.asset)!, level, this.opts.context)) : [];
-    this.levelNote.hidden = !levelling;
+    // Levelling off, or everything lent anyway (M95): no line sends the player to level up.
+    this.levelNote.hidden = !levelling || m.lent();
     this.grid.replaceChildren(...this.tiles.map((t) => t.button), ...this.locked);
   }
 
@@ -215,6 +233,9 @@ export class LoadoutScreen {
       const on = slot === this.selected;
       card.button.classList.toggle('selected', on);
       setAttr(card.button, 'aria-pressed', String(on));
+      // The picked slot takes the keyboard focus as the screen opens (M95: in Practice, the replica in hand's).
+      if (on) card.button.dataset.autofocus = '';
+      else delete card.button.dataset.autofocus;
       card.root.classList.toggle('selected', on);
       const asset = ref ? m.pool.byId.get(ref.asset)! : null;
       setText(card.name, asset ? asset.name : LOADOUT_TEXT.empty);

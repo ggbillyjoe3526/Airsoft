@@ -22,8 +22,10 @@ choices to `src/game.ts`.
   pointing to the Armory; `itemTile.ts`, `kitStrip.ts`); `armoryScreen.ts` (the levelling screen: your level, the XP
   bar and how XP is earned, what the next level unlocks, and every level's items from `progress/track.ts`);
   `settingsScreen.ts` (groups with a search, a note on every row); `pauseScreen.ts` (with
-  `tutorialCompleteDialog.ts` over it when the tutorial ends: the practice range or the menu, M80); `summaryScreen.ts`
-  (the match's XP line by line, a level-up line with what it unlocked, the level bar, an Extraction haul);
+  `tutorialCompleteDialog.ts` over it when the tutorial ends: the practice range or the menu, M80; in Practice the
+  Loadout key opens the Loadout over it, `Menus.showPracticeLoadout`, on the slot in hand, with Back to practice on the
+  top bar and the key going back too, M95); `summaryScreen.ts` (the match's XP line by line, a level-up line with what
+  it unlocked, the level bar, an Extraction haul);
   `resultScreen.ts`.
 - Pictures: replica, part and scheme pictures come from `render/itemPictures.ts` via `menuPictures.ts`; map and mode
   stills are files in `public/menu/`, made by `pipeline/map-stills.mjs` (`config/menuArt.ts`); Practice's is drawn

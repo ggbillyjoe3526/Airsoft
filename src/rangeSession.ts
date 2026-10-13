@@ -89,6 +89,11 @@ export interface RangePose {
   z: number;
   yaw: number;
   pitch: number;
+  /** The kit slot in your hands, and the replica it held (its config id), M95: you hold that slot again. */
+  slot?: number;
+  held?: string | undefined;
+  /** The replica was in its holster (M92): it stays there, and the next draw brings up what the Loadout put in the slot. */
+  holstered?: boolean;
 }
 
 /**
@@ -235,6 +240,7 @@ export class RangeSession {
     this.state.characters.push(this.player);
     this.physics.addCharacter(this.player);
     this.fitPickedLoadout();
+    if (pose) this.takeUp(pose);
     this.commands.set(PLAYER_ID, this.playerCommand);
     input.resetView(yaw);
     // Nobody to order on the range: the order wheel's key does nothing.
@@ -350,10 +356,21 @@ export class RangeSession {
     return true;
   }
 
-  /** Where you stand and look now, to rebuild the range there. */
+  /** Where you stand and look now, and what you hold, to rebuild the range there. */
   get pose(): RangePose {
+    const a = this.player.armament;
     // The floor under you: a character stands PHYSICS.groundRestGap over it, and is built that far over `y` again.
-    return { x: this.player.position.x, y: this.player.position.y - PHYSICS.groundRestGap, z: this.player.position.z, yaw: this.input.yaw, pitch: this.input.pitch };
+    const p = this.player.position;
+    return {
+      x: p.x,
+      y: p.y - PHYSICS.groundRestGap,
+      z: p.z,
+      yaw: this.input.yaw,
+      pitch: this.input.pitch,
+      slot: a.active,
+      held: a.replicas[a.active]?.id,
+      holstered: a.holstered,
+    };
   }
 
   /** Your last shots, target hits, reloads and draws, for a report (IM7). */
@@ -455,6 +472,9 @@ export class RangeSession {
     this.combat.setPlaying(playing);
     const coaching = this.tutorial !== null && !this.tutorial.finished;
     this.readout.setVisible(playing && !coaching);
+    // Before the first shot the readout names the Loadout key (M95), which may have been rebound while paused; the timed
+    // challenge's line (M93) stays while it runs.
+    if (playing && this.challenge.phase === 'off') this.readout.set(this.shotText());
     this.minimap?.setVisible(playing);
     this.coach?.setVisible(playing && coaching);
     this.showcase?.setVisible(playing && coaching);
@@ -487,6 +507,22 @@ export class RangeSession {
     fitParts(this.player.armament, kit.slots.map((s) => partsUnder(s.parts, this.night)));
     setHopUps(this.player.armament, kit.hopUps);
     setBbWeights(this.player.armament, kit.bbWeights);
+  }
+
+  /**
+   * Back from the Loadout (M95): the same slot in your hands as before; a replica there you weren't holding comes up
+   * as after a switch, so the new pick reads at once. One holstered (M92) stays in the holster until you draw it.
+   */
+  private takeUp(pose: RangePose): void {
+    const a = this.player.armament;
+    if (pose.slot !== undefined && pose.slot < a.replicas.length) a.active = pose.slot;
+    if (pose.holstered) a.holstered = true;
+    else if (pose.held !== undefined && a.replicas[a.active]?.id !== pose.held) a.draw = a.drawTotal = a.handling[a.active]!.drawTime;
+  }
+
+  /** The readout's line: your last BB, or before the first how the range works and its Loadout key (M95). */
+  private shotText(): string {
+    return lastShotText(this.lastShot, this.input.keyName('loadout'));
   }
 
   /** The tutorial's step shown or still to do changed (a step done, or skipped). */
@@ -558,7 +594,7 @@ export class RangeSession {
         const marked = this.map === RANGE_MAP;
         this.lastShot = { distance: this.howFar(e.position), target: t ? { label: t.label, distance: marked ? t.distance : Math.round(this.howFar(t.position)) } : null };
       } else continue;
-      if (c.phase === 'off') this.readout.set(lastShotText(this.lastShot));
+      if (c.phase === 'off') this.readout.set(this.shotText());
       this.coach?.setShot(lastShotText(this.lastShot));
     }
     if (c.phase !== 'off') this.showLine();
@@ -573,7 +609,7 @@ export class RangeSession {
     const shown = this.challengeShown;
     if (c.phase === 'off') {
       shown.phase = null;
-      this.readout.set(lastShotText(this.lastShot));
+      this.readout.set(this.shotText());
       return;
     }
     const second = Math.ceil(c.clock);

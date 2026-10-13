@@ -258,6 +258,8 @@ export const MENU_TEXT = {
   /** The level badge on the top bar (LV1), and what it says to a screen reader. */
   level: (n: number) => `Lv ${n}`,
   levelLabel: (n: number, toNext: string) => `Level ${n}${toNext ? `, ${toNext}` : ''}. Open the Armory`,
+  /** The top bar's button on the Loadout opened from Practice (M95): straight back to practice, the kit as picked. */
+  backToPractice: 'Back to practice',
   dev: 'Dev',
   /** By the play buttons when a screen's or the range's code, fetched on first use (IM1), didn't download. */
   screenFailed: 'That screen didn’t download. Check the connection and try again.',
@@ -319,6 +321,10 @@ export const GEAR_TEXT = {
   selected: 'Selected',
   asCarried: 'as carried',
   unlockMore: 'Level up to unlock more: the Armory shows what each level gives.',
+  /** Under the replicas when the Loadout was opened from Practice (M95). */
+  practice: 'Practice: take any replica you own and customise it. What you carry here is your loadout for matches too.',
+  /** Under the replicas while Dev settings › Disable levelling lends everything (M26d, M95; LV1). */
+  lent: 'Disable levelling is on (Dev settings): every replica and part is yours to try. Your own loadout comes back when you turn it off.',
   /** The parts fitted, after the colour. */
   partsFitted: (n: number) => (n === 0 ? 'nothing fitted' : `${n} ${n === 1 ? 'part' : 'parts'} fitted`),
   breadcrumb: 'Loadout',

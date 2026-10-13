@@ -176,6 +176,35 @@ describe('the rigged figures (BF1)', () => {
     }
   });
 
+  it('leans over cover it rests on (M104, a placeholder pose) with the bore still on the shot, but not as your own body', () => {
+    for (const kind of FIGURE_RIG_KINDS) {
+      const c = createCharacter(1, vec3(0, 0, 0), 0);
+      const { f } = figure(kind, c);
+      for (let i = 0; i < 40; i++) f.update(c, frame());
+      const upright = worldOf(f.root, 'Head');
+      c.coverRest = 1;
+      for (let i = 0; i < 40; i++) f.update(c, frame());
+      const over = worldOf(f.root, 'Head');
+      // Forward (-Z) and a little down, by the spine's share of the lean.
+      expect(upright.z - over.z, kind).toBeGreaterThan(0.04);
+      expect(over.y, kind).toBeLessThan(upright.y);
+      expectAimed(f, c, 'held:rifle');
+      f.dispose();
+    }
+    // Your own body, drawn the same with the replica rested or not.
+    const own = [0, 1].map((rest) => {
+      const c = createCharacter(1, vec3(0, 0, 0), 0);
+      c.coverRest = rest;
+      const { f } = figure('human', c);
+      for (let i = 0; i < 40; i++) f.update(c, frame({ firstPerson: true }));
+      const at = [worldOf(f.root, 'Spine'), worldOf(f.root, 'Neck')];
+      f.dispose();
+      return at;
+    });
+    expect(own[1]![0]!.distanceTo(own[0]![0]!)).toBeLessThan(1e-6);
+    expect(own[1]![1]!.distanceTo(own[0]![1]!)).toBeLessThan(1e-6);
+  });
+
   it('calls its hit with the hand up and the replica lowered, and draws farther figures lighter', () => {
     const c = createCharacter(3, vec3(0, 0, 0), 0);
     const { f } = figure('human', c);

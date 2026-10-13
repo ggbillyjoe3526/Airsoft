@@ -302,6 +302,14 @@
   color: var(--menu-muted);
 }
 
+/* What the Loadout is for in Practice, and that Disable levelling lends everything (M95): read, not skimmed past. */
+.loadout-practice,
+.loadout-lent {
+  padding-left: 12px;
+  color: var(--paper);
+  border-left: 3px solid var(--orange);
+}
+
 .loadout-selected {
   position: sticky;
   top: 0;

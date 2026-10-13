@@ -12,6 +12,9 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M92** · Press 3 to holster your replica (rebindable in Settings › Controls); 1 and 2 still pick primary and secondary
 - **M92** · Holstered, you sprint a little faster; drawing out of the holster is slower than raising from a sprint
 - **M92** · Bots holster on calm sprints through their own half and draw again on any threat
+- **M95** · In Practice, L opens the Loadout on the replica in your hands; Back to practice or L returns you where you stood, with the new replica coming up
+- **M104** · Aim still at a crate, low wall, sandbags or window sill and the replica rests on it: steadier aim, half the kick, a "Rested" tag
+- **M104** · Rested aim sways less and the view dips as it settles; moving, reloading, leaning or looking away lets go at once
 - **LV1** · Levels and XP replace the Armory's gacha: every match gives XP, you level up from 0 to 10, and each level unlocks parts for good (#207)
 - **LV1** · The Armory shows your level, XP to the next level, what it unlocks and every level's items; a level badge on the top bar opens it (#207)
 - **LV1** · The match summary shows the XP earned, its lines and any level-up with what it unlocked (#207)
@@ -20,6 +23,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 
 ### Changed
 - **M94** · The practice range is now Practice: pause reads "Practice · Range" or "Practice · Depot", and the tutorial's last button says Practice
+- **M95** · With Disable levelling on, the Loadout says every replica and part is lent to try, and the range's first line names the Loadout key
 - **LV1** · The Armory's gacha is gone: no Field Credits, Tokens, Shots, pity, rarity tiers, spares, scrapping or Disable Armory (#207)
 - **LV1** · Extraction cases hold XP instead of Field Credits; supply events give a % bonus to XP (#207)
 - **LV1** · Replicas and parts rebalanced without rarity: Low-Cap Magazine gets two more magazines, Long Barrel +10 % energy and 10 % tighter groups (#207)

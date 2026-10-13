@@ -9,7 +9,8 @@ in `docs/PROCESS.md`.
 - **Building 0.1 Dev 6.** The game stays in Dev until the owner calls it feature complete (owner, 2026-10-06). Beta then
   adds no features.
 - **Last tag:** `0.1-dev.5`, on 2026-10-13. The owner creates tags.
-- **Next:** the owner playtests 0.1 Dev 5, and [0.1 Dev 6](#01-dev-6-the-last-planned-dev-build) starts with M92–M95.
+- **Next:** the owner playtests 0.1 Dev 5; [0.1 Dev 6](#01-dev-6-the-last-planned-dev-build) has M92–M95 done (2026-10-13)
+  and goes on with the rest of its list.
 - **The release path** (owner, 2026-10-12): 0.1 Dev 6, 0.1 Beta, then 0.1.0 opens Early Access to the public. Themed
   updates follow (Replica, Modes, Maps, Progression and any more), up to 1.0, the full launch. See
   [Early Access](#early-access-the-themed-updates).
@@ -121,7 +122,7 @@ scale. He ruled on every conflict with an earlier decision on 2026-10-06 (below 
 | 9 | The practice range and tutorial area in the new graphics | M81 (0.1 Dev 5, after G5 and G6; the graphics plan re-dresses only the three maps); done (2026-10-11) |
 | 10 | Practice: moving targets, more target types, a timed high-score challenge (off by default) | M93 (0.1 Dev 6); done (2026-10-13) |
 | 11 | Practice on any map with targets instead of bots; rename the range "Practice" | M94 (0.1 Dev 6); done (2026-10-13) |
-| 12 | Practice with any unlocked replica and Customise; everything with Dev on | M95 (0.1 Dev 6) |
+| 12 | Practice with any unlocked replica and Customise; everything with Dev on | M95 (0.1 Dev 6); done (2026-10-13) |
 | 13 | Woodland: too open, the far team visible from the start, the blue end's height edge; hidden starts; 5v5 default, 6v6, maybe Woodland only for 5v5 and 6v6 | M88 (0.1 Dev 5): 5v5 default, 6v6 allowed, Woodland only for those two (ruled 2026-10-06); done (2026-10-11) |
 | 14 | More varied, less distracting ambience; an Ambience volume | M86 (0.1 Dev 5): done (2026-10-11) |
 | 15 | Bots on both teams check spots that are plainly empty (corners); refine on every level | M87 (0.1 Dev 5, after M71); done (2026-10-11) |
@@ -202,8 +203,8 @@ still needs to be feature complete; the content once planned here moved to its t
 ([below](#what-moved-out-of-dev-6)). Beta then adds no features: bug fixes, QoL, balance, refinement and polish
 (owner, 2026-10-06).
 
-M92–M95, the holster and the practice upgrades, come first (their blocks are in `docs/TASKS.md`); the other blocks
-are written when the build starts. Numbers are from the owner's list of 50 candidates
+M92–M95, the holster and the practice upgrades, came first and are done (2026-10-13); the other blocks are written
+when their work starts. Numbers are from the owner's list of 50 candidates
 (`plans/dev6-plus-feature-candidates.md` in the project files).
 
 | # | Feature | Area |
@@ -211,10 +212,10 @@ are written when the build starts. Numbers are from the owner's list of 50 candi
 | M92 | Holster on 3, and two kinds of sprint: holstered is faster, but drawing to aim takes longer; done (2026-10-13, `docs/records/M92.md`) | Movement |
 | M93 | Practice: moving targets, new target types and a timed challenge (off by default); done (2026-10-13, `docs/records/M93.md`) | Practice |
 | M94 | Practice on any map, with targets instead of bots; done (2026-10-13, `docs/records/M94.md`) | Practice |
-| M95 | Practice with any replica you own, and everything with Dev on | Practice |
+| M95 | Practice with any replica you own, and everything with Dev on; done (2026-10-13, `docs/records/M95.md`) | Practice |
 | LV1 | Levelling in place of the Armory's gacha: matches give XP, levels 0 to 10 unlock the gear (`levels.md`), the Armory shows your level and what comes next, rarity gone and the gear rebalanced; done (2026-10-13, `docs/records/LV1.md`) | Progression |
 | – | Vaulting over low obstacles (0.7–0.9 m), with a few added to the maps where they open a route; crouch cover stays peek-only (owner, 2026-10-12) | Movement |
-| 40 | Rest your replica on cover (a ledge, crate or window) for steadier aim | Movement |
+| 40 | Rest your replica on cover (a ledge, crate or window) for steadier aim; done (2026-10-13, `docs/records/M104.md`) | Movement |
 | 19 | Saved loadouts, picked from the Map pop-up as well as the Loadout screen | Loadout |
 | 21 | Bot names, personalities (rusher, anchor, flanker, careful) and loadouts | Bots |
 | 23 | Bots' gear keeps up with yours (audit POOL-24: Easy and Normal bots carry factory gear while your levels add parts) | Bots |
@@ -226,7 +227,7 @@ are written when the build starts. Numbers are from the owner's list of 50 candi
 | 41 | Noisy ground and props: gravel, cans, pallets and fences rattle, and bots hear it | World |
 | 45 | Overtime: when the clock runs out, a flag appears in the middle and the first team to touch it wins | Rounds |
 | 46 | An option to hide the ammo counter (no mag-check key: owner) | HUD |
-| – | Figure redesign: more realistic human and robot figures, from the owner's reference photos, built in his Blender, with the figures' animations for Dev 6's new moves such as vaulting; waits for him (owner, 2026-10-13) | Art |
+| – | Figure redesign: more realistic human and robot figures, from the owner's reference photos, built in his Blender, with the figures' animations for Dev 6's new moves such as vaulting and resting on cover (M104 has only a placeholder lean); waits for him (owner, 2026-10-13) | Art |
 
 Built in Dev 5 instead: the blowback pistol (pick 14) is the GBB Pistol (RM7), and the AEG Rifle redesign (RM6) gave
 the built-in rifle its small, low iron sights.
