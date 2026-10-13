@@ -11,6 +11,7 @@ import { createBBPool } from './ballistics';
 import { type BBTargets, stepBBs } from './bbs';
 import { rescueIfOutOfWorld } from './character';
 import { createCommand, type PlayerCommand } from './commands';
+import { stepCoverRest } from './coverRest';
 import { createEliminationContext, fillEliminatedCommand, isInPlay, isParked, planWalkOffRoutes, stepElimination } from './elimination';
 import type { ExtractionContext } from './extraction';
 import { stepFootsteps } from './footsteps';
@@ -85,7 +86,7 @@ export function createSimContext(services: SimServices): SimContext {
     scratch: createMovementScratch(),
     idleCommand: createCommand(),
     eliminatedCommand: createCommand(),
-    muzzle: { eye: vec3(), yaw: 0, pitch: 0, spreadScale: 1 },
+    muzzle: { eye: vec3(), yaw: 0, pitch: 0, spreadScale: 1, kickScale: 1 },
     armament: {
       ballistics: services.ballistics,
       bbs: createBBPool(0), // replaced by the state's pool and RNG each tick
@@ -109,7 +110,7 @@ export function createSimContext(services: SimServices): SimContext {
  * its id; the player and bots are indistinguishable here. Characters without a command this tick
  * keep their view and stand still (gravity still applies); characters that have been hit follow the
  * hit-calling routine instead of their command; once out and standing in the dead zone they are only timed (isParked).
- * Order: move (and footsteps), then use replicas (BBs leave from the new
+ * Order: move (and footsteps), lean, rest on cover and settle the aim, then use replicas (BBs leave from the new
  * eye position), then fly BBs (hitting walls or characters), then round flow.
  */
 export function stepSimulation(
@@ -155,12 +156,15 @@ export function stepSimulation(
     else {
       c.aiming = false;
       c.aimRaise = 0;
+      c.coverRest = 0;
     }
     c.using = inPlay && live && cmd.use;
     stepMovement(c, cmd, ctx.movement, dt, ctx.mover, ctx.scratch);
     rescueIfOutOfWorld(c, ctx.killY);
     stepWalkCycle(c, ctx.hits); // the legs' swing, for their hit volumes and the drawn figure (M85)
     stepLean(c, cmd, ctx.body, ctx.hits, ctx.movement, ctx.query, dt);
+    // Resting on cover (M104) reads the stance this tick left; the spread reads the rest.
+    if (inPlay) stepCoverRest(c, ctx.body, ctx.movement.rest, ctx.movement.accuracy.stillBelow, ctx.query, dt);
     stepAccuracy(c, ctx.movement, dt);
     if (!inPlay) {
       stepElimination(c, ctx.hits, dt);
@@ -173,6 +177,7 @@ export function stepSimulation(
     m.yaw = c.yaw;
     m.pitch = c.pitch;
     m.spreadScale = c.spreadScale;
+    m.kickScale = 1 + (ctx.movement.rest.kick - 1) * c.coverRest;
     const canFire = live && !c.sprinting && c.sprintLockout <= 0;
     // A click just after a sprint is kept until the lockout ends (not one made while still sprinting).
     armCtx.fireHoldOff = c.sprinting ? 0 : c.sprintLockout;
