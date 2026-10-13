@@ -20,18 +20,5 @@ defaults per note are in the project's shared files (`plans/playtest-feedback-20
 item 5, with the G4 HUD restyle); note 3 was a bug, fixed in BP2; note 2 is already in the game
 (Settings › Controls › Aim button). Note 19 of the Dev 4 notes still applies.
 
-**0.1 Dev 6 (confirmed with the roadmap, 2026-10-06).** M94–M95, the rest of the practice upgrades, come before the
-rest of `docs/ROADMAP.md` › 0.1 Dev 6, whose blocks are written when that build starts (M92, the holster, and M93,
-the practice targets, done 2026-10-13).
-
-## M95 · Practice with any unlocked replica (playtest note 12)
-tier: ui
-perf: skip
-touches: src/rangeSession.ts, src/game.ts, src/ui/menus/loadoutScreen.ts, src/ui/menus/menus.ts, src/ui/menus/chrome.ts, src/ui/menus/css/, src/ui/rangeReadout.ts, src/pool/loadoutModel.ts, src/config/controls.ts, src/config/menus.ts
-contract: none
-acceptance:
-  1. In Practice the player picks any replica they own and can Customise it freely.
-  2. With Dev settings on (Unlock all gear), every replica and part is available.
-status: open
-attempts: 0
-
+**0.1 Dev 6 (confirmed with the roadmap, 2026-10-06).** M92–M95, the holster and the practice upgrades, are done
+(2026-10-13); the blocks for the rest of `docs/ROADMAP.md` › 0.1 Dev 6 are written when that work starts.
