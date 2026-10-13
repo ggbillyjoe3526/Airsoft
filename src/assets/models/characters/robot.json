@@ -1,6 +1,6 @@
 {
- "figure": "bot_robot_v10",
- "heightMetres": 1.75,
+ "figure": "bot_robot_v12",
+ "heightMetres": 1.74,
  "facing": "+Z",
  "fps": 30,
  "clips": [
@@ -190,6 +190,54 @@
    "loop": false,
    "upperBodyOnly": true,
    "speed": null
+  },
+  {
+   "name": "Rifle_Rest",
+   "seconds": 0.033,
+   "frames": 1,
+   "loop": true,
+   "upperBodyOnly": true,
+   "speed": null
+  },
+  {
+   "name": "Rifle_RestUp",
+   "seconds": 0.033,
+   "frames": 1,
+   "loop": true,
+   "upperBodyOnly": true,
+   "speed": null
+  },
+  {
+   "name": "Rifle_RestDown",
+   "seconds": 0.033,
+   "frames": 1,
+   "loop": true,
+   "upperBodyOnly": true,
+   "speed": null
+  },
+  {
+   "name": "Pistol_Rest",
+   "seconds": 0.033,
+   "frames": 1,
+   "loop": true,
+   "upperBodyOnly": true,
+   "speed": null
+  },
+  {
+   "name": "Pistol_RestUp",
+   "seconds": 0.033,
+   "frames": 1,
+   "loop": true,
+   "upperBodyOnly": true,
+   "speed": null
+  },
+  {
+   "name": "Pistol_RestDown",
+   "seconds": 0.033,
+   "frames": 1,
+   "loop": true,
+   "upperBodyOnly": true,
+   "speed": null
   }
  ],
  "fitToNote": "Clips with fitTo are time-scaled to that replica stat (e.g. AEG drawTime 0.45 s, pistol 0.3 s; reloads 1.8 s and 1.2 s).",
@@ -200,12 +248,12 @@
   "Body_Neck",
   "Body_Neck_LOD1",
   "Body_Neck_LOD2",
-  "Head_Optic",
-  "Head_Optic_LOD1",
-  "Head_Optic_LOD2",
-  "Head_Sensor",
-  "Head_Sensor_LOD1",
-  "Head_Sensor_LOD2"
+  "Head_Face",
+  "Head_Face_LOD1",
+  "Head_Face_LOD2",
+  "Head_Visor",
+  "Head_Visor_LOD1",
+  "Head_Visor_LOD2"
  ],
  "gripBones": [
   "Grip_R",
@@ -216,12 +264,12 @@
    "Body_Neck",
    "Body_Neck_LOD1",
    "Body_Neck_LOD2",
-   "Head_Optic",
-   "Head_Optic_LOD1",
-   "Head_Optic_LOD2",
-   "Head_Sensor",
-   "Head_Sensor_LOD1",
-   "Head_Sensor_LOD2"
+   "Head_Face",
+   "Head_Face_LOD1",
+   "Head_Face_LOD2",
+   "Head_Visor",
+   "Head_Visor_LOD1",
+   "Head_Visor_LOD2"
   ]
  },
  "teamMaterials": "tint materials whose names start with Team",

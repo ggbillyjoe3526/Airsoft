@@ -12,8 +12,9 @@ import { LEG_CLIPS, LEG_MODE, LEG_MODES, type LegBlend, legClipWeights, legDirec
  * don't slide (or, in a match whose hit volumes follow the figures' legs, at the simulation's walk cycle: IM8,
  * sim/figureLegs.ts, which weighs the legs' clips by the same rules). The upper body is the same clips' unless the figure is in play and not sprinting: then it aims (the
  * rifle's or the pistol's three clips blended by the view's pitch), reloads (the clip run by the reload's progress) or
- * switches replica (the Switch clip, run backwards from the pistol to the rifle); one trigger press plays on top for each
- * shot. Every blend eases in (FIGURE_RIG.blend), so nothing snaps.
+ * switches replica (the Switch clip, run backwards from the pistol to the rifle). The replica resting on cover blends
+ * the aim into the Rest clips, which lean it in over the cover (where the file has them); one trigger press plays on top
+ * for each shot. Every blend eases in (FIGURE_RIG.blend), so nothing snaps.
  */
 
 /**
@@ -31,6 +32,12 @@ export const POSE_CLIPS = [
   'Rifle_Reload',
   'Pistol_Reload',
   'Switch',
+  'Rifle_Rest',
+  'Rifle_RestUp',
+  'Rifle_RestDown',
+  'Pistol_Rest',
+  'Pistol_RestUp',
+  'Pistol_RestDown',
   'Rifle_Fire',
   'Pistol_Fire',
 ] as const;
@@ -40,9 +47,19 @@ export type PoseClip = (typeof POSE_CLIPS)[number];
 export const BODY_CLIPS = LEG_CLIPS.length;
 /** The last two slots are the trigger presses, played additively. */
 export const FIRE_CLIPS = 2;
+/**
+ * Clips a figure's file may lack (made with the figure redesign, Dev 6): their slots are then empty, with a length of 0
+ * in the clip table. A file without the Rest clips leans by FIGURE_RIG.rest instead (render/riggedFigure.ts).
+ */
+export const OPTIONAL_CLIPS: ReadonlySet<PoseClip> = new Set<PoseClip>(['Rifle_Rest', 'Rifle_RestUp', 'Rifle_RestDown', 'Pistol_Rest', 'Pistol_RestUp', 'Pistol_RestDown']);
 
 const S = Object.fromEntries(POSE_CLIPS.map((name, i) => [name, i])) as Record<PoseClip, number>;
 export const POSE_SLOT: Readonly<Record<PoseClip, number>> = S;
+
+/** Whether the clip table has `hold`'s Rest clips (the file had them). */
+export function hasRest(table: PoseClipTable, hold: PoseHold): boolean {
+  return len(table, hold === 'pistol' ? S.Pistol_Rest : S.Rifle_Rest) > 0;
+}
 
 /** A clip's length and, for a cycle, the pace it was made for (the sidecar's `seconds` and `speed`). */
 export interface PoseClipInfo {
@@ -79,6 +96,8 @@ export interface PoseInput {
   draw: { progress: number; from: PoseHold } | null;
   /** The player's own figure seen from the eyes: the upper body stays the legs' clips' (the arms aren't drawn). */
   firstPerson: boolean;
+  /** How settled the replica is on cover (0..1, Character.coverRest): the aim blends into the Rest clips by this much. */
+  rest: number;
   /**
    * The simulation's walk cycle (cycles, interpolated) when the match's hit volumes follow the figures' legs (IM8): every
    * cycle clip is played at it, so the drawn legs step with their hit volumes. Null: the figure steps its own cycles.
@@ -321,19 +340,29 @@ export function stepPose(state: PoseState, input: PoseInput, dt: number, table: 
   for (let i = BODY_CLIPS; i < POSE_CLIPS.length; i++) u[i] = 0;
   const rifleAim = overlay * aim * (1 - state.pistol);
   const pistolAim = overlay * aim * state.pistol;
-  u[S.Rifle_Aim] = rifleAim * level;
-  u[S.Rifle_AimUp] = rifleAim * up;
-  u[S.Rifle_AimDown] = rifleAim * down;
-  u[S.Pistol_Aim] = pistolAim * level;
-  u[S.Pistol_AimUp] = pistolAim * up;
-  u[S.Pistol_AimDown] = pistolAim * down;
+  // Resting on cover: each aim clip blends into its Rest clip (the same pitch, leaned in over the cover).
+  const rifleRest = hasRest(table, 'rifle') ? clamp01(input.rest) : 0;
+  const pistolRest = hasRest(table, 'pistol') ? clamp01(input.rest) : 0;
+  u[S.Rifle_Aim] = rifleAim * level * (1 - rifleRest);
+  u[S.Rifle_AimUp] = rifleAim * up * (1 - rifleRest);
+  u[S.Rifle_AimDown] = rifleAim * down * (1 - rifleRest);
+  u[S.Rifle_Rest] = rifleAim * level * rifleRest;
+  u[S.Rifle_RestUp] = rifleAim * up * rifleRest;
+  u[S.Rifle_RestDown] = rifleAim * down * rifleRest;
+  u[S.Pistol_Aim] = pistolAim * level * (1 - pistolRest);
+  u[S.Pistol_AimUp] = pistolAim * up * (1 - pistolRest);
+  u[S.Pistol_AimDown] = pistolAim * down * (1 - pistolRest);
+  u[S.Pistol_Rest] = pistolAim * level * pistolRest;
+  u[S.Pistol_RestUp] = pistolAim * up * pistolRest;
+  u[S.Pistol_RestDown] = pistolAim * down * pistolRest;
   const reloadSlot = state.reloadHold === 'pistol' ? S.Pistol_Reload : S.Rifle_Reload;
   u[reloadSlot] = overlay * reloadShare;
   t[reloadSlot] = state.reloadAt * len(table, reloadSlot) * LAST;
   u[S.Switch] = overlay * switchShare;
   t[S.Switch] = state.switchAt * len(table, S.Switch) * LAST;
-  // The aim clips are held poses: their first frame.
+  // The aim clips are held poses: their first frame (and so are the rests).
   for (let i = S.Rifle_Aim; i <= S.Pistol_AimDown; i++) t[i] = 0;
+  for (let i = S.Rifle_Rest; i <= S.Pistol_RestDown; i++) t[i] = 0;
 
   // A shot's trigger press, on top while it lasts (the aim layer must be in).
   state.fireAge += dt;

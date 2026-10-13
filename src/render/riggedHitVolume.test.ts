@@ -82,28 +82,28 @@ const TOLERANCE = 0.02;
 /**
  * The rigged figures do not pass M85's bar yet (at most 4 % of the drawn body missed and 3 % of the volume thin air,
  * past the rim): KNOWN_ISSUES › Figures and art. Since IM8 the volume's legs are the figures' own and their crouch is
- * as low as the volume's, so the drawn body is missed on 0-5 % of the grid on every pose; what is left is thin air:
- * the volume's head, chest and hips are the built-in human's, rounder than the Blender human (4-8 %) and the slimmer
- * robot (9-13 %), and upright while the figures lean into a run and a sprint (up to 18 %). They are drawn only with the
- * Dev switches off, and must reach M85's bar before they become the default (DECISIONS › Gameplay and feel). Until then
- * each pose is held to today's worst case over the human looks and the robot plus a point (measured 2026-10-12, IM8),
- * so a change can only bring them closer.
+ * as low as the volume's, so the drawn body is missed on 0-5 % of the grid on every pose; what is left is thin air: the
+ * volume's head, chest and hips are the built-in human's, rounder than the Blender human (4-8 %) and the robot (6-10 %;
+ * the v12 robot's armour fills more of it than v11's bare shell did), and upright while the figures lean into a run and
+ * a sprint (up to 16 %). They are drawn only with the Dev switches off, and must reach M85's bar before they become the
+ * default (DECISIONS › Gameplay and feel). Until then each pose is held to today's worst case over the human looks and
+ * the robot plus a point (measured 2026-10-13, the v12 robot), so a change can only bring them closer.
  */
 const LIMITS: Readonly<Record<string, { missed: number; phantom: number }>> = {
-  standing: { missed: 0.041, phantom: 0.114 },
-  crouched: { missed: 0.036, phantom: 0.113 },
-  'leaning left': { missed: 0.036, phantom: 0.101 },
-  'leaning right': { missed: 0.036, phantom: 0.111 },
-  'crouched, leaning': { missed: 0.032, phantom: 0.113 },
-  walking: { missed: 0.046, phantom: 0.134 },
-  'walking, heel down': { missed: 0.055, phantom: 0.134 },
-  running: { missed: 0.047, phantom: 0.142 },
-  sprinting: { missed: 0.057, phantom: 0.19 },
-  'crouch walking': { missed: 0.045, phantom: 0.13 },
-  'crouch walking, other foot': { missed: 0.054, phantom: 0.139 },
-  'calling the hit': { missed: 0.045, phantom: 0.114 },
-  'walking off': { missed: 0.039, phantom: 0.115 },
-  out: { missed: 0.042, phantom: 0.12 },
+  standing: { missed: 0.041, phantom: 0.072 },
+  crouched: { missed: 0.036, phantom: 0.089 },
+  'leaning left': { missed: 0.036, phantom: 0.076 },
+  'leaning right': { missed: 0.036, phantom: 0.085 },
+  'crouched, leaning': { missed: 0.032, phantom: 0.08 },
+  walking: { missed: 0.046, phantom: 0.095 },
+  'walking, heel down': { missed: 0.055, phantom: 0.102 },
+  running: { missed: 0.047, phantom: 0.112 },
+  sprinting: { missed: 0.057, phantom: 0.166 },
+  'crouch walking': { missed: 0.045, phantom: 0.108 },
+  'crouch walking, other foot': { missed: 0.054, phantom: 0.102 },
+  'calling the hit': { missed: 0.045, phantom: 0.081 },
+  'walking off': { missed: 0.039, phantom: 0.078 },
+  out: { missed: 0.042, phantom: 0.083 },
 };
 
 /** The bones whose vertices are arm (the shoulders' are the torso's): UpperArm and everything down to the fingertips. */

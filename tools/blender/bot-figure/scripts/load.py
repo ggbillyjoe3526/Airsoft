@@ -8,7 +8,8 @@ for fn in sorted(os.listdir(W)):
         t.write(open(os.path.join(W, fn), encoding='utf-8').read())
 B = bpy.app.driver_namespace['bot']
 B['ORDER'] = ['bot_helpers', 'bot_body', 'bot_kit', 'bot2', 'bot3', 'bot4', 'bot_main', 'bot5', 'bot_final', 'bot6',
-              'bot7', 'bot8', 'bot9', 'bot10', 'bot11', 'bot12', 'bot13', 'bot14', 'bot15', 'bot16', 'bot17', 'bot_render']
+              'bot7', 'bot8', 'bot9', 'bot10', 'bot11', 'bot12', 'bot13', 'bot14', 'bot15', 'bot16', 'bot17', 'bot18',
+              'bot19', 'bot_render']
 for n in B['ORDER']:
     if n + '.py' in bpy.data.texts:
         exec(bpy.data.texts[n + '.py'].as_string(), B)

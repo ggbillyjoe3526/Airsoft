@@ -32,7 +32,7 @@ export const FIGURE_RIG = {
   /** The parts in the files, by role (each has `_LOD1` and `_LOD2` copies, except where the file lacks one). */
   parts: {
     human: { body: ['Body', 'Kit'], head: ['Head_HighCut'], pack: 'Kit_Pack', radio: 'Kit_Radio' },
-    robot: { body: ['Body', 'Body_Neck'], head: ['Head_Optic', 'Head_Sensor'] },
+    robot: { body: ['Body', 'Body_Neck'], head: ['Head_Visor', 'Head_Face'] },
   },
   /** The pitch the AimUp and AimDown clips are posed at (bot11.py clip_aim: ±60 degrees); the aim blends between them. */
   aimPitch: 60 * DEG,
@@ -79,10 +79,11 @@ export const FIGURE_RIG = {
   /** Thrown-away magazines out at most (the oldest goes first); each lies for its sidecar lifetime. */
   thrownMagazines: { max: 12 },
   /**
-   * Resting on cover (M104), a placeholder until the figure redesign brings its own pose and clip (radians, at
-   * Character.coverRest 1): the aim is posed `lean` higher and the spine leaned `lean` forward, so the upper body leans
-   * over the cover by the share the aim clips don't turn (1 - aimReach, about 5°) while the bore stays on the shot. Not
-   * on your own first-person body, and not on the built-in figures, which stay on their hit volume.
+   * Resting on cover (M104) for a file without its own Rest clips (the figure redesign's, Dev 6: tools/blender/bot-figure
+   * bot18.py), radians at Character.coverRest 1: the aim is posed `lean` higher and the spine leaned `lean` forward, so
+   * the upper body leans over the cover by the share the aim clips don't turn (1 - aimReach, about 5°) while the bore
+   * stays on the shot. Not on your own first-person body, and not on the built-in figures, which stay on their hit
+   * volume.
    */
   rest: { lean: 0.2 },
 } as const;
