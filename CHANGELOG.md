@@ -34,6 +34,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **LV1** · The match summary shows the XP earned, its lines and any level-up with what it unlocked (#207)
 - **LV1** · Locked items show greyed in Loadout and Customise, with the level that unlocks them; the unlock table is `levels.md` (#207)
 - **LV1** · Dev tab: +500 XP, Level up and Reset level buttons (#207)
+- **CL1** · Bot teammates call what they see and do in a text feed, bottom left, each with a radio click: "Contact, Dock!", "Reloading!" (Settings › HUD › Callouts)
+- **CL1** · Map places have names (Dock, Bay, Fort, Atrium, Sky Bridge and more), and the minimap shows the name of the area you stand in
 
 ### Changed
 - **M94** · The practice range is now Practice: pause reads "Practice · Range" or "Practice · Depot", and the tutorial's last button says Practice
