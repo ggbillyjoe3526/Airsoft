@@ -26,7 +26,7 @@ item 5, with the G4 HUD restyle); note 3 was a bug, fixed in BP2; note 2 is alre
 ## BN1 · Bot names and personalities (Dev 6 item 21)
 tier: core
 perf: required
-touches: bots.md, src/config/botsFile.ts, src/config/botPersonalities.ts, src/config/bots.ts, src/ai/, src/matchSession.ts, src/render/matchPresentation.ts, src/ui/statsRows.ts, src/ui/statsTable.ts, src/ui/teammateMarkers.ts, src/ui/whatGotYou.ts, src/ui/tutorialShowcase.ts, src/style.css
+touches: bots.md, src/config/botsFile.ts, src/config/botPersonalities.ts, src/config/bots.ts, src/config/movement.ts, src/config/physics.ts, pipeline/baseline/container-neon-extraction.json, src/ai/, src/matchSession.ts, src/render/matchPresentation.ts, src/ui/statsRows.ts, src/ui/statsTable.ts, src/ui/teammateMarkers.ts, src/ui/whatGotYou.ts, src/ui/tutorialShowcase.ts, src/style.css
 contract: new `bots.md` format (docs/ARCHITECTURE.md › Contracts); none changed
 acceptance:
   1. Every bot has a name from a hand-edited roster (`bots.md`), shown wherever "Alpha 2" or "Beta 1" showed: the hit feed, the scoreboard and summary, teammates' name tags, spectating, the "What got you" card. Names are unique in a match and the same for a seed; with no roster the old names stay.
