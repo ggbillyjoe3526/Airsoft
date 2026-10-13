@@ -330,6 +330,31 @@
   margin-left: auto;
 }
 
+/* Back to practice (M95): on the Loadout opened from Practice, before the wallet; a primary sized for the bar, its key
+   cap in front of the label. */
+.menu-topbar .menu-topbar-practice {
+  margin-left: auto;
+  min-height: var(--control-lg);
+  padding: 0 var(--sp-5);
+  font-size: var(--fs-lg);
+  white-space: nowrap;
+}
+
+.menu-topbar-practice > svg.icon {
+  order: 2;
+}
+
+/* The button takes the free space before it, so the wallet stays at the far right. */
+.menu-topbar-practice:not([hidden]) + .menu-wallet {
+  margin-left: 0;
+}
+
+.menu-topbar .menu-topbar-practice kbd {
+  color: #fff;
+  background: rgba(0, 0, 0, 0.22);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
 .menu-chip {
   display: inline-flex;
   align-items: center;

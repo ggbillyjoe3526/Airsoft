@@ -12,11 +12,13 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M92** · Press 3 to holster your replica (rebindable in Settings › Controls); 1 and 2 still pick primary and secondary
 - **M92** · Holstered, you sprint a little faster; drawing out of the holster is slower than raising from a sprint
 - **M92** · Bots holster on calm sprints through their own half and draw again on any threat
+- **M95** · In Practice, L opens the Loadout on the replica in your hands; Back to practice or L returns you where you stood, with the new replica coming up
 - **M104** · Aim still at a crate, low wall, sandbags or window sill and the replica rests on it: steadier aim, half the kick, a "Rested" tag
 - **M104** · Rested aim sways less and the view dips as it settles; moving, reloading, leaning or looking away lets go at once
 
 ### Changed
 - **M94** · The practice range is now Practice: pause reads "Practice · Range" or "Practice · Depot", and the tutorial's last button says Practice
+- **M95** · With Unlock all gear on, the Loadout says every replica and part is lent to try, and the range's first line names the Loadout key
 
 ### Fixed
 - **M92** · Bots firing on the move hold fire when a teammate is down the line, so they no longer hit teammates past the end of a wall

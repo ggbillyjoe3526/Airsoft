@@ -510,6 +510,12 @@ replaces its line; the old one stays findable in the archive or in git.
   with the frame, the ejection port further back, the trigger guard one piece with the frame, a shorter grip and small
   low sights. Its slide kicks back over the still barrel on every shot and stays locked back on an empty magazine until
   a reload (0.1 Dev 6 feature 14).
+- **In Practice you change gear from play, and it is your one loadout (2026-10-13, M95).** The Loadout key (L, its own
+  binding) opens the Loadout there on the slot in your hands; L again or Back to practice returns you where you stood,
+  the new replica coming up. In a match the key does nothing. What you pick or customise in Practice is your loadout for
+  matches too, so a replica tuned at the range goes into the next match, as at a real site; with Unlock all gear on the
+  picks are the sandboxed ones (M26d), and your own come back when it is off. The owner can rule for a separate
+  practice loadout instead.
 
 ## Menus, HUD, settings and accessibility
 
