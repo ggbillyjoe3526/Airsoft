@@ -400,7 +400,7 @@ const BASE_OPPONENTS = 2;
  */
 const AREAS: readonly (readonly [string, number, number, number, number])[] = [
   ['Dock', DOCK_X0 - DOCK_RAMP_RUN, DOCK_X1 + DOCK_RAMP_RUN, DOCK_Z0, HALF_Z],
-  ['Dock Road', DOCK_X0 - DOCK_RAMP_RUN, DOCK_X1 + DOCK_RAMP_RUN, DIVIDER_Z1, DOCK_Z0],
+  ['Dock road', DOCK_X0 - DOCK_RAMP_RUN, DOCK_X1 + DOCK_RAMP_RUN, DIVIDER_Z1, DOCK_Z0],
   ['North Gate', 11.4, 18.2, DIVIDER_Z0, HALF_Z],
   ['East yard', 18.2, HALF_X, 2.8, HALF_Z],
   ['Back lot', 17.2, HALF_X, -HALF_Z, 2.8],

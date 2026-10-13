@@ -668,7 +668,7 @@ const AREAS: readonly { name: string; rect: Rect; floor?: readonly [number, numb
   { name: 'Bar', rect: [TOWER[0], ATRIUM[0], ATRIUM[2], ATRIUM[3]] },
   { name: 'Store', rect: [ATRIUM[1], TOWER[1], ATRIUM[2], ATRIUM[3]] },
   { name: 'Lobby', rect: [TOWER[0], TOWER[1], TOWER[2], ATRIUM[2]] },
-  { name: 'Back hall', rect: [TOWER[0], TOWER[1], ATRIUM[3], TOWER[3]] },
+  { name: 'Back Hall', rect: [TOWER[0], TOWER[1], ATRIUM[3], TOWER[3]] },
   { name: 'Arcade', rect: ARCADE },
   { name: 'Repair Shop', rect: BLOCK },
   { name: 'Noodle Alley', rect: [ARCADE[0], ARCADE[1], ARCADE[3], HALF_Z] },
