@@ -8,8 +8,9 @@ export interface VaultConfig {
   minHeight: number;
   maxHeight: number;
   /**
-   * The obstacle's top at most this far above the floor you land on: 1.2 m crouch cover is never vaulted, not even from
-   * a raised side such as a ramp beside it, and nothing takes you down off a balcony's edge.
+   * The obstacle's top at most this far above the floor you land on: only an obstacle low from both sides is vaulted, so
+   * 1.2 m crouch cover never is, not even from a raised side (a ramp beside it, the uphill side of a log on a slope), and
+   * nothing takes you down off a balcony's edge.
    */
   maxLandingHeight: number;
   /** The floor you land on at most this far above the one you take off from (the far side of a slope). */
@@ -58,7 +59,9 @@ const DEG = Math.PI / 180;
 export const VAULT: VaultConfig = {
   minHeight: 0.6,
   maxHeight: 0.95,
-  maxLandingHeight: 1.15,
+  // As high as a vault from this side (M102's critic: a crouch log on Woodland's Knoll was only 0.63 to 0.92 m over
+  // its uphill side, and 1.15 let a vault down its far side).
+  maxLandingHeight: 0.95,
   maxClimb: 0.3,
   maxDepth: 1.0,
   reach: 0.55,

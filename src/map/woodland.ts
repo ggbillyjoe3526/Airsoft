@@ -346,8 +346,10 @@ const APPROACH_COVER: MapBlock[] = [
   centred('log', 97, 60.9, 3, 0.9, CROUCH),
   centred('boulder', 92, 64.5, 2.4, 2, FULL),
   centred('boulder', 86.5, 68.9, 1.6, 1.4, CROUCH),
-  // Ends against the boulder beside it (M55, audit SIM-05: the two stood 0.2 m into each other).
-  centred('log', 103.6, 57.3, 0.9, 2.8, CROUCH),
+  // Across the slope, clear of the boulder beside it (M55, audit SIM-05: the two once stood 0.2 m into each other). It
+  // lay down the slope until M102: its top level, it stood 1.6 m over the ground at its low end and 0.6 m at its high
+  // end, where it was no cover and low enough to vault.
+  centred('log', 103.6, 57.3, 2.8, 0.9, CROUCH),
   centred('boulder', 102.6, 59.4, 1.6, 1.4, CROUCH),
   // Meadow, up the west face.
   centred('boulder', 76.5, 43.7, 1.6, 1.4, CROUCH),

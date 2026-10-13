@@ -321,8 +321,9 @@ replaces its line; the old one stays findable in the archive or in git.
   slot key, a fresh trigger pull, an aim press or a reload draws it. Bots follow the same rules through the same
   command, holstering only on a calm sprint through their own half (`ai/botHolster.ts`).
 - **Vaulting is Jump at a low obstacle, with no key of its own (M102, 2026-10-13).** Jump within reach of something
-  0.6 to 0.95 m over your floor (at most 1 m deep, a floor to land on, your full height clear over it), heading within
-  70° of where you look, vaults it; anywhere else Jump is a jump, as before. The Controls list calls it "Jump / vault"
+  0.6 to 0.95 m over your floor and at most 0.95 m over the floor past it (at most 1 m deep, your full height clear over
+  it), heading within 70° of where you look, vaults it: only what is low from both sides, so crouch cover never is, not
+  even from its uphill side on a slope. Anywhere else Jump is a jump, as before. The Controls list calls it "Jump / vault"
   and a prompt shows the key while a vault is there. A vault takes about 0.4 s, carries the replica and holds fire
   0.3 s after it; crouched, you can't vault (stand first). Values in `config/vault.ts`.
 - **Vaults are loud (owner, 2026-10-13: "Vaulting should create noise that makes enemies aware. Just like footsteps.

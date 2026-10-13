@@ -91,10 +91,13 @@ describe('planVault (M102)', () => {
     // A far floor 0.4 m higher than this one (more than maxClimb).
     const raised: MapBlock = { kind: 'floor', center: vec3(0, 0.15, -10), size: vec3(40, 0.5, 17.8) };
     expect(plan([FLOOR, raised, wall(0.85)])).toBe(false);
-    // A little lower on the far side is fine (the top is still within maxLandingHeight of it).
-    const lower: MapBlock = { kind: 'floor', center: vec3(0, -0.45, -10), size: vec3(40, 0.5, 17.8) };
+    // A little lower on the far side is fine while the top is still within maxLandingHeight of it, and not once it isn't
+    // (crouch cover on a slope, low only from its uphill side).
+    const lower: MapBlock = { kind: 'floor', center: vec3(0, -0.35, -10), size: vec3(40, 0.5, 17.8) };
     const near: MapBlock = { kind: 'floor', center: vec3(0, -0.25, 5), size: vec3(40, 0.5, 11.7) };
-    expect(plan([near, lower, wall(0.85)])).toBe(true);
+    expect(plan([near, lower, wall(0.8)])).toBe(true);
+    const downhill: MapBlock = { kind: 'floor', center: vec3(0, -0.55, -10), size: vec3(40, 0.5, 17.8) };
+    expect(plan([near, downhill, wall(0.8)]), 'top 1.1 m over the far floor').toBe(false);
   });
 
   it('never takes crouch cover from a raised side (a ramp or platform beside it)', () => {

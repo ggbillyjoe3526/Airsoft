@@ -10,7 +10,8 @@ import { type Vec3, vec3 } from './vec';
 
 /**
  * Vaulting (M102): Jump pressed at a low obstacle (a wall, barrier or crate whose top is `VaultConfig.minHeight` to
- * `maxHeight` over the floor, no deeper than `maxDepth`, with room to land on the far side) takes the body over it in
+ * `maxHeight` over the floor and at most `maxLandingHeight` over the one past it, no deeper than `maxDepth`, with room
+ * to land on the far side) takes the body over it in
  * one short, committed move instead of a jump. The body rises onto the top and crosses it on a path the character
  * controller follows (so it never passes through anything), then falls off the far side under gravity and lands as from
  * a jump. Meanwhile the replica is carried (no firing, aiming or reloading starts), the body tucks (a crouch: the eyes,

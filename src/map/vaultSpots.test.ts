@@ -147,6 +147,27 @@ describe('vault walls on the maps (M102)', () => {
         }
       });
 
+      // Nothing else on a match map is vaulted (owner, 2026-10-12: crouch cover stays peek-only): no crouch cover, not even
+      // a log on a slope, low from its uphill side (the critic's find on Woodland's Knoll, M102). The range's tables and
+      // props are no match's business.
+      if (map !== RANGE_MAP) {
+        it("links nothing else: every vault link on the map goes over its vault wall", () => {
+          const nav = buildNavGrid(map, NAV);
+          const links = buildVaultLinks(nav, rays(map), BODY, MOVEMENT, BOTS.vaultPrice);
+          const stray: string[] = [];
+          for (let k = 0; k + 1 < links.start.length; k++) {
+            for (let l = links.start[k]!; l < links.start[k + 1]!; l++) {
+              const mx = (nodeX(nav, k) + nodeX(nav, links.to[l]!)) / 2;
+              const mz = (nodeZ(nav, k) + nodeZ(nav, links.to[l]!)) / 2;
+              const over = spots.some(({ block: b }) => Math.abs(mx - b.center.x) <= b.size.x / 2 + NAV.cell && Math.abs(mz - b.center.z) <= b.size.z / 2 + NAV.cell);
+              if (!over) stray.push(`${mx.toFixed(1)},${mz.toFixed(1)}`);
+            }
+          }
+          expect(stray, 'links away from the vault wall').toEqual([]);
+          expect(links.to.length).toBeGreaterThan(0);
+        });
+      }
+
       it('is vaulted through Rapier both ways, walking up and pressing Jump, landing clear on the far side', () => {
         for (const { block, sides, way } of spots) {
           for (const s of [0, 1] as const) {

@@ -365,11 +365,12 @@ describe('G9 QA: the maps are exactly what main shipped, and dressing code write
   // its dressing, typed arrays included. If a G9 change moved a block, a lane, a spawn or a terrain vertex, one of
   // these changes. Woodland's re-pinned by M88, which moved its ground (the West Rise), its spawns and dead-zone spots
   // on purpose, and by M88 QA, which took a lane point out of the fort on each lane. All three re-pinned by M102, which
-  // broke a wall down to a low wall to vault on each (Depot's office, Woodland's cabin, the Capsules' front).
+  // broke a wall down to a low wall to vault on each (Depot's office, Woodland's cabin, the Capsules' front), and
+  // turned a Knoll log across the slope (Woodland).
   it('Woodland, Neon Heights and Depot have the data they had on main (blocks, lanes, spawns, terrain, bushes, extraction)', () => {
-    expect(fingerprint(WOODLAND, ['dressing'])).toBe('793e6bd6');
+    expect(fingerprint(WOODLAND, ['dressing'])).toBe('fd4f17c7');
     expect(fingerprint(NEON_HEIGHTS, ['dressing'])).toBe('5787f801');
-    expect(fingerprint(WOODLAND.blocks)).toBe('2c82fa4b');
+    expect(fingerprint(WOODLAND.blocks)).toBe('3ca7a570');
     expect(fingerprint(NEON_HEIGHTS.blocks)).toBe('549c4e58');
     // Depot's dressing too: "Depot draws exactly as it does on main".
     expect(fingerprint(DEPOT)).toBe('9fb8e2bb');

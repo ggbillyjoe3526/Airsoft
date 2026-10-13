@@ -264,19 +264,20 @@ const PINNED = {
   // on the trunks, logs and boulders, so bark's and stone's vertex colours are re-pinned (their vertices, positions and
   // UVs are untouched, and woodlandPlain, which draws no dressing, is exactly as before). M88: both re-pinned for the
   // West Rise and the lower east end (every block, tree and bush on the new ground; the logs there fall in more courses).
-  // M102: both re-pinned for the cabin's west window broken down to a low wall to vault (its sill lower, its lintel gone).
+  // M102: both re-pinned for the cabin's west window broken down to a low wall to vault (its sill lower, its lintel gone),
+  // and for a Knoll log turned across the slope (fewer courses of bark; the leaf drifts and moss around it fall anew).
   woodlandDetail: [
-    "map-bark v24353 i57528 c210d49c/6d0292df/cb07ee4d",
+    "map-bark v24319 i57456 26f1265e/9e9e478f/432e1a5a",
     "map-canopy v12360 i0 031f958f/811c9dc5/32f7476c",
-    "map-foliage v16800 i0 a789e54e/811c9dc5/5d0ab568",
+    "map-foliage v16800 i0 26aeffb2/811c9dc5/5d0ab568",
     "map-planks v6500 i12600 27873f91/9f349b8d/5691af2a",
-    "map-stone v12744 i13500 b79b51fc/dd536c62/3d21edc7",
+    "map-stone v12744 i13500 b79b51fc/dd536c62/0baf4c4f",
     "map-terrain v9801 i57600 4e80f9d2/006bce1d/4298d710",
   ],
   woodlandPlain: [
-    "map-bark v16737 i43248 c285f2e0/02d127a5/896b8e06",
+    "map-bark v16703 i43176 d570bf2e/447acc39/3cc5de82",
     "map-canopy v12360 i0 031f958f/811c9dc5/32f7476c",
-    "map-foliage v16800 i0 a789e54e/811c9dc5/5d0ab568",
+    "map-foliage v16800 i0 26aeffb2/811c9dc5/5d0ab568",
     "map-planks v1600 i3000 b1e0a709/eef7627d/cbf74e3d",
     "map-stone v11880 i11880 be9ecda0/c94609ce/01695e44",
     "map-terrain v9801 i57600 4e80f9d2/006bce1d/4298d710",
