@@ -41,6 +41,7 @@ const input = (over: Partial<PoseInput> = {}): PoseInput => ({
   reload: null,
   draw: null,
   firstPerson: false,
+  cycle: null,
   ...over,
 });
 
@@ -140,6 +141,16 @@ describe('legs: weights sum to 1 and follow the movement', () => {
     expect(run(input({ crouch: 1, forward: -1 }), 1).state.crouchStep).toBeLessThan(0);
     // A cycle's time never reaches the clip's end.
     for (const i of [S.Walk_F, S.Sprint, S.CrouchWalk, S.WalkOff]) expect(fwd.out.time[i]).toBeLessThan(TABLE[i]!.seconds);
+  });
+
+  it('plays every cycle at the simulation walk cycle when one is given, so the legs step with their hit volumes (IM8)', () => {
+    for (const cycle of [0.3, 7.6]) {
+      const { state, out } = run(input({ forward: 1.5, crouch: 0.5, cycle }), 1);
+      expect(state.gait).toBe(cycle);
+      for (const i of [S.Walk_F, S.Run_F, S.Run_L, S.Sprint, S.CrouchWalk, S.WalkOff]) {
+        expect(out.time[i]).toBeCloseTo((cycle - Math.floor(cycle)) * TABLE[i]!.seconds, 3);
+      }
+    }
   });
 
   it('the hit call clock runs only while calling and holds the clip’s last pose; poseRestartCall rewinds it', () => {

@@ -1,5 +1,6 @@
 import { FIGURE_RIG } from '../config/figureRig';
 import type { LifeStatus } from '../sim/character';
+import { LEG_CLIPS, LEG_MODE, LEG_MODES, type LegBlend, legClipWeights, legDirection, legMode, legRun } from '../sim/figureLegs';
 
 /**
  * What a rigged figure (BF1, render/riggedFigure.ts) plays each frame, worked out from its character as plain numbers:
@@ -8,26 +9,19 @@ import type { LifeStatus } from '../sim/character';
  *
  * The legs and the upper body are two layers. The legs blend standing, walking and running in four directions,
  * crouching, a jump, the sprint, the hit call and the walk-off, each clip's time stepped by the ground covered so feet
- * don't slide. The upper body is the same clips' unless the figure is in play and not sprinting: then it aims (the
+ * don't slide (or, in a match whose hit volumes follow the figures' legs, at the simulation's walk cycle: IM8,
+ * sim/figureLegs.ts, which weighs the legs' clips by the same rules). The upper body is the same clips' unless the figure is in play and not sprinting: then it aims (the
  * rifle's or the pistol's three clips blended by the view's pitch), reloads (the clip run by the reload's progress) or
  * switches replica (the Switch clip, run backwards from the pistol to the rifle); one trigger press plays on top for each
  * shot. Every blend eases in (FIGURE_RIG.blend), so nothing snaps.
  */
 
-/** The clips a figure plays, by slot (FigurePose arrays). The first twelve drive the legs and, unless overridden, the upper body. */
+/**
+ * The clips a figure plays, by slot (FigurePose arrays). The first twelve (sim/figureLegs.ts LEG_CLIPS) drive the legs
+ * and, unless overridden, the upper body.
+ */
 export const POSE_CLIPS = [
-  'Idle',
-  'Walk_F',
-  'Run_F',
-  'Run_B',
-  'Run_L',
-  'Run_R',
-  'Sprint',
-  'CrouchIdle',
-  'CrouchWalk',
-  'Jump',
-  'HitCall',
-  'WalkOff',
+  ...LEG_CLIPS,
   'Rifle_Aim',
   'Rifle_AimUp',
   'Rifle_AimDown',
@@ -43,7 +37,7 @@ export const POSE_CLIPS = [
 export type PoseClip = (typeof POSE_CLIPS)[number];
 
 /** Slots 0 to BODY_CLIPS - 1 are whole-body clips (legs and upper body); the rest drive the upper body only. */
-export const BODY_CLIPS = 12;
+export const BODY_CLIPS = LEG_CLIPS.length;
 /** The last two slots are the trigger presses, played additively. */
 export const FIRE_CLIPS = 2;
 
@@ -85,14 +79,15 @@ export interface PoseInput {
   draw: { progress: number; from: PoseHold } | null;
   /** The player's own figure seen from the eyes: the upper body stays the legs' clips' (the arms aren't drawn). */
   firstPerson: boolean;
+  /**
+   * The simulation's walk cycle (cycles, interpolated) when the match's hit volumes follow the figures' legs (IM8): every
+   * cycle clip is played at it, so the drawn legs step with their hit volumes. Null: the figure steps its own cycles.
+   */
+  cycle: number | null;
 }
 
-/** The legs' modes: walking and running (the gait), the sprint, the hit call, the walk-off. */
-const MODES = 4;
-const GAIT = 0;
-const SPRINT = 1;
-const CALL = 2;
-const WALK_OFF = 3;
+const MODES = LEG_MODES;
+const GAIT = LEG_MODE.gait;
 
 /** A figure's blends and cycles, carried from frame to frame (one per figure). */
 export interface PoseState {
@@ -185,6 +180,10 @@ export function createFigurePose(): FigurePose {
 }
 
 const ease = (dt: number, tau: number): number => (tau > 0 ? 1 - Math.exp(-dt / tau) : 1);
+/** The direction the step asks for, the eased one normalised, and the legs' blend (stepPose's scratch). */
+const want = new Float32Array(4);
+const dir = new Float32Array(4);
+const blend: LegBlend = { mode: dir, move: 0, dir, jump: 0, crouch: 0, run: 0 };
 const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
 const frac = (v: number): number => v - Math.floor(v);
 
@@ -229,57 +228,33 @@ export function stepPose(state: PoseState, input: PoseInput, dt: number, table: 
   const inPlay = alive || input.status === 'out';
 
   // The legs' mode: the hit call while calling, the walk-off while walking off or leaving, the sprint while sprinting.
-  const wantMode =
-    input.status === 'calling' ? CALL : input.status === 'walkingOff' || input.status === 'leaving' ? WALK_OFF : alive && input.sprinting && speed > FIGURE_RIG.stillBelow ? SPRINT : GAIT;
+  const wantMode = legMode(input.status, input.sprinting, speed);
   const km = ease(dt, B.mode);
   for (let m = 0; m < MODES; m++) state.mode[m]! += ((m === wantMode ? 1 : 0) - state.mode[m]!) * km;
 
   // Standing or moving, and which way: four clips' weights from the step's direction, eased.
   state.move += ((speed > FIGURE_RIG.stillBelow ? 1 : 0) - state.move) * ease(dt, B.move);
-  if (speed > FIGURE_RIG.stillBelow) {
-    const f = input.forward / speed;
-    const r = input.side / speed;
-    const want0 = Math.max(0, f);
-    const want1 = Math.max(0, -f);
-    const want2 = Math.max(0, -r);
-    const want3 = Math.max(0, r);
-    const sum = want0 + want1 + want2 + want3;
+  if (legDirection(input.forward, input.side, speed, want)) {
     const kd = ease(dt, B.direction);
-    state.dir[0]! += (want0 / sum - state.dir[0]!) * kd;
-    state.dir[1]! += (want1 / sum - state.dir[1]!) * kd;
-    state.dir[2]! += (want2 / sum - state.dir[2]!) * kd;
-    state.dir[3]! += (want3 / sum - state.dir[3]!) * kd;
+    for (let k = 0; k < 4; k++) state.dir[k]! += (want[k]! - state.dir[k]!) * kd;
   }
   const dirSum = state.dir[0]! + state.dir[1]! + state.dir[2]! + state.dir[3]! || 1;
-  const ahead = state.dir[0]! / dirSum;
-  const back = state.dir[1]! / dirSum;
-  const left = state.dir[2]! / dirSum;
-  const right = state.dir[3]! / dirSum;
+  for (let k = 0; k < 4; k++) dir[k] = state.dir[k]! / dirSum;
   state.jump += ((input.airborne && inPlay ? 1 : 0) - state.jump) * ease(dt, B.jump);
 
-  // Leg weights: the gait's own (standing, walking ahead, running four ways, crouched), then each mode's.
-  const crouch = clamp01(input.crouch);
-  const stand = 1 - crouch;
-  const run = clamp01((speed - FIGURE_RIG.walkSpeed) / (FIGURE_RIG.runSpeed - FIGURE_RIG.walkSpeed));
-  const move = state.move;
-  const ground = 1 - state.jump;
-  const gait = state.mode[GAIT]!;
+  // Leg weights (the rules the hit volume's legs share, sim/figureLegs.ts): the gait's own (standing, walking ahead,
+  // running four ways, crouched), then each mode's.
   const w = out.lower;
   w.fill(0);
-  w[S.Idle] = gait * ground * stand * (1 - move);
-  w[S.Walk_F] = gait * ground * stand * move * ahead * (1 - run);
-  w[S.Run_F] = gait * ground * stand * move * ahead * run;
-  w[S.Run_B] = gait * ground * stand * move * back;
-  w[S.Run_L] = gait * ground * stand * move * left;
-  w[S.Run_R] = gait * ground * stand * move * right;
-  w[S.CrouchIdle] = gait * ground * crouch * (1 - move);
-  w[S.CrouchWalk] = gait * ground * crouch * move;
-  w[S.Jump] = gait * state.jump;
-  w[S.Sprint] = state.mode[SPRINT]!;
-  w[S.HitCall] = state.mode[CALL]!;
-  w[S.WalkOff] = state.mode[WALK_OFF]!;
+  blend.mode = state.mode;
+  blend.move = state.move;
+  blend.jump = state.jump;
+  blend.crouch = input.crouch;
+  blend.run = legRun(speed);
+  legClipWeights(blend, w);
 
-  // The cycles step by the ground covered, so the feet keep their place: the walk and run at the stride of their blend.
+  // The cycles step by the ground covered, so the feet keep their place: the walk and run at the stride of their blend;
+  // or all of them at the simulation's walk cycle, which steps the same way (sim/figureLegs.ts figureLegCycleStep).
   const travel = speed * dt;
   const moving = w[S.Walk_F]! + w[S.Run_F]! + w[S.Run_B]! + w[S.Run_L]! + w[S.Run_R]!;
   let gaitStride = 0;
@@ -291,11 +266,12 @@ export function stepPose(state: PoseState, input: PoseInput, dt: number, table: 
   if (gaitStride > 0) state.gait += travel / gaitStride;
   // The crouched walk was made walking ahead: it runs backwards when the step goes back.
   const crouchStride = stride(table, S.CrouchWalk);
-  if (crouchStride > 0) state.crouchStep += (input.forward < -0.1 * speed ? -travel : travel) / crouchStride;
+  if (crouchStride > 0) state.crouchStep += (input.forward < -FIGURE_RIG.backStep.share * speed ? -travel : travel) / crouchStride;
   const sprintStride = stride(table, S.Sprint);
   if (sprintStride > 0) state.sprint += travel / sprintStride;
   const offStride = stride(table, S.WalkOff);
   if (offStride > 0) state.walkOff += travel / offStride;
+  if (input.cycle !== null) state.gait = state.crouchStep = state.sprint = state.walkOff = input.cycle;
   state.idle += dt;
   state.call = input.status === 'calling' ? state.call + dt : state.call;
 

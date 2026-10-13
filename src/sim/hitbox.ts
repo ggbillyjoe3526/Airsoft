@@ -1,5 +1,6 @@
 import type { HitConfig } from '../config/hits';
 import type { Character } from './character';
+import { figureLegCycleStep, figureLegPose, LEG_POINT, LEG_POINTS, LEG_SAMPLE } from './figureLegs';
 import { copy, type Vec3, vec3 } from './vec';
 
 /** An upright capsule: vertical axis at (x, z) from y0 to y1 (sphere centres), radius r. */
@@ -134,8 +135,10 @@ export function hitTop(crouchAmount: number, cfg: HitConfig): number {
  * shoulders, PART.chest), the hips as two side by side (an oval: they're narrower front to back than across), and each
  * leg's thigh, shin and boot. The head, chest and hips roll with a lean about the hip pivot (sim/lean.ts), as the drawn
  * upper body does, so only what pokes out past cover can be hit; the legs stay put, hang from the hips (squashed
- * towards them by a crouch, as the drawn legs are) and swing on the walk cycle (legSwing). Arms and replicas aren't
- * part of it (owner, DECISIONS 2026-10-01). `bound` holds all of it: a ray that misses the bound misses everything.
+ * towards them by a crouch, as the drawn legs are) and swing on the walk cycle (legSwing); in a match that draws the
+ * rigged figures they sit on those figures' leg joints instead (HitConfig.figureLegs, sim/figureLegs.ts; IM8,
+ * render/riggedHitVolume.test.ts measures it). Arms and replicas aren't part of it (owner, DECISIONS 2026-10-01).
+ * `bound` holds all of it: a ray that misses the bound misses everything.
  */
 export interface HitVolume {
   head: VerticalCapsule;
@@ -171,8 +174,10 @@ export function legSwing(cycle: number, c: Character, cfg: HitConfig): number {
  */
 export function stepWalkCycle(c: Character, cfg: HitConfig): void {
   const moved = Math.hypot(c.position.x - c.prevPosition.x, c.position.z - c.prevPosition.z);
+  if (moved >= cfg.legs.maxStride) return;
   // Never wrapped, so the drawn legs can interpolate from last tick's (a double keeps its precision for any match).
-  if (moved < cfg.legs.maxStride) c.walkCycle += moved * cfg.legs.stridesPerMetre * Math.PI * 2;
+  // With the rigged figures' legs, at their clips' strides (sim/figureLegs.ts).
+  c.walkCycle += cfg.figureLegs ? figureLegCycleStep(c, cfg.figureLegs, moved) : moved * cfg.legs.stridesPerMetre * Math.PI * 2;
 }
 
 /** The pose a volume is being built for (characterHitVolume): the figure's frame and its lean. */
@@ -205,6 +210,14 @@ function leg(y: number, z: number, squash: number, swing: number, hx: number, hi
 
 const pa = vec3();
 const pb = vec3();
+/** The rigged figures' legs this tick (sim/figureLegs.ts figureLegPose), when the hit rules carry them. */
+const legPoints = new Float32Array(LEG_SAMPLE);
+
+/** Point `point` (LEG_POINT) of leg `side` (0 left, 1 right) of legPoints, placed. */
+function legPoint(side: number, point: number, out: Vec3): Vec3 {
+  const k = (side * LEG_POINTS + point) * 3;
+  return place(legPoints[k]!, legPoints[k + 1]!, legPoints[k + 2]!, out);
+}
 
 function setSegment(s: SegmentCapsule, r: number): void {
   s.ax = pa.x;
@@ -248,6 +261,23 @@ export function characterHitVolume(c: Character, cfg: HitConfig, v: HitVolume): 
   }
 
   const L = cfg.legs;
+  if (cfg.figureLegs) {
+    figureLegPose(c, cfg.figureLegs, legPoints);
+    for (let side = 0; side < 2; side++) {
+      const first = side === 0 ? PART.thighL : PART.thighR;
+      legPoint(side, LEG_POINT.hip, pa);
+      legPoint(side, LEG_POINT.knee, pb);
+      setSegment(parts[first]!, L.thighRadius);
+      copy(pa, pb);
+      legPoint(side, LEG_POINT.ankle, pb);
+      setSegment(parts[first + 1]!, L.shinRadius);
+      legPoint(side, LEG_POINT.heel, pa);
+      legPoint(side, LEG_POINT.toe, pb);
+      setSegment(parts[first + 2]!, L.boot.radius);
+    }
+    boundHitVolume(v);
+    return;
+  }
   const hipY = frame.pivot;
   const squash = hipY / cfg.lean.pivotHeight;
   const swing = legSwing(c.walkCycle, c, cfg);

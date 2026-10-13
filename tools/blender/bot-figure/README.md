@@ -1,28 +1,34 @@
 # Bot figure (Blender source)
 
 The realistic bot figures built in Blender: a human player figure and a bare robot. The owner approved v10 on
-2026-10-12; the game draws it (BF1) from `src/assets/models/characters/human.glb` and `robot.glb` with their sidecars,
-behind the Dev switches "Disable figure models" and "Disable all models" (#175). Pictures are in the project files
-(`concepts/bot-figure-v10-2026-10-12/`; earlier rounds in `concepts/bot-figure-v8-2026-10-11/`,
+2026-10-12; v11 (IM8) lowers its kneel and crouch walk to the game's crouch. The game draws it (BF1) from
+`src/assets/models/characters/human.glb` and `robot.glb` with their sidecars, behind the Dev switches "Disable figure
+models" and "Disable all models" (#175). Pictures are in the project files (`concepts/bot-figure-v10-2026-10-12/`, v11's
+crouch in `concepts/figure-moves-fix-2026-10-12/`; earlier rounds in `concepts/bot-figure-v8-2026-10-11/`,
 `concepts/bot-figure-v6-2026-10-11/` and `concepts/bot-figure-v5-2026-10-10/`).
 
 ## What is here
 
 - `scripts/`: every script that builds the figures, in load order (`load.py` lists it): `bot_helpers`, `bot_body`,
-  `bot_kit`, `bot2`-`bot4`, `bot_main`, `bot5`, `bot_final`, `bot6`-`bot16`, `bot_render`; then `session.py`
+  `bot_kit`, `bot2`-`bot4`, `bot_main`, `bot5`, `bot_final`, `bot6`-`bot17`, `bot_render`; then `session.py`
   (build, pose, render and export helpers) and `session16.py` (checking helpers: bake one clip, arm-in-torso and
   wrist metrics, finger solves on the real replicas and magazines, `export_v(kind, stem)`).
-- The current figures (v10, 12 Oct 2026; v6 plus the trigger finger, the reload that throws the old magazine and the
-  hand and arm fixes of bot15-bot16, 23 clips) are the game's `src/assets/models/characters/human.glb` (19,832
-  triangles, high-cut helmet head only) and `robot.glb` (17,092, bare body with team-paint panels), each with LOD1/LOD2
-  meshes, plus their sidecars (clip lengths, loops, speeds, `fitTo` stats, first-person parts to hide, `replicaOnGrip`:
-  where each replica glb sits on the `Grip_R` bone, and `magazineInHand`: the reloads' magazines). The game's files
-  are packed with `pack.mjs` (below); Blender's own exports of v10 are in the project files (`models/bot-human/v10/`).
-  The earlier rounds are not kept (owner's tidy-up, 2026-10-12); their pictures are.
+- The current figures (v11, 12 Oct 2026: v10, which is v6 plus the trigger finger, the reload that throws the old
+  magazine and the hand and arm fixes of bot15-bot16, with bot17's `CrouchIdle` and `CrouchWalk`; 23 clips) are the
+  game's `src/assets/models/characters/human.glb` (19,832 triangles, high-cut helmet head only) and `robot.glb` (17,092,
+  bare body with team-paint panels), each with LOD1/LOD2 meshes, plus their sidecars (clip lengths, loops, speeds,
+  `fitTo` stats, first-person parts to hide, `replicaOnGrip`: where each replica glb sits on the `Grip_R` bone, and
+  `magazineInHand`: the reloads' magazines). The game's files are packed with `pack.mjs` (below); Blender's own exports
+  of v10 are in the project files (`models/bot-human/v10/`), and v11 is those with bot17's two clips spliced in (Rebuild
+  in the cloud). The earlier rounds are not kept (owner's tidy-up, 2026-10-12); their pictures are.
 - `pack.mjs` (IM5): packs an export into the file the game ships, losslessly: drops the clip tracks the game drops at
   load anyway (a bone within 0.00001 of rest), stores the rest with meshopt's codec and re-deflates the PNGs, so the
   file is about half the size and draws pixel for pixel the same. Its encoder is the `meshoptimizer` package npm
   installs with `@types/three`; if that ever goes, `npm i --no-save meshoptimizer` before running it.
+- `headless.py` (IM8): runs the scripts and `export_v` without Blender's window, on pip's `bpy` module (Rebuild in
+  the cloud).
+- `splice.mjs` (IM8): swaps named clips of an export for the same clips of another export of the same figure, by bone
+  name, leaving everything else in the file as it is.
 - `check/`: `arms-check.mjs` (wrists, elbows, skin and snaps per clip) and `render/` (the picture page and its shooter).
 
 ## What each script does
@@ -44,10 +50,16 @@ Read the newest layer first when looking for a function: it is the one that wins
 | `bot13` | v5 | One human head, the bare robot, hands fitted to the replicas |
 | `bot14` | v6 | Forearm twist and elbow bones, the arm solve, finger poses, the magazine reloads |
 | `bot15`, `bot16` | v7-v10 | Trigger finger, the thrown old magazine, the support hand, arms out of the torso, the pouch draw |
+| `bot17` | v11 | The kneel and the crouch walk as low as the game's crouch: the hips 0.62 m under standing (IM8) |
 | `bot_render` | all | Picture cameras and lights |
 | `session`, `session16` | v8-v10 | Build, pose, check and export helpers (`export_v`) |
 
 ## Facts the game needs
+
+- The crouch: the game lowers a crouched player's hit volume by 0.62 m above the hips (`HITS.crouchDrop`) and holds
+  the figure's upper body upright over its legs, so the kneel and the crouch walk lower the hips by the same 0.62 m
+  (`bot17.py`; `render/figureLegs.test.ts` checks it in the shipped files). With the figures drawn, the hit volume's
+  legs are the figures' own, read from the leg clips as the file loads (`render/figureLegs.ts`).
 
 - Metres, facing glTF +Z; human 1.73 m, robot 1.75 m to the top of its optic (`heightMetres` in the sidecar). Team colour: tint materials whose names start with `Team` (Alpha 0x3d8bff,
   Beta 0xff8a2a).
@@ -68,6 +80,20 @@ Read the newest layer first when looking for a function: it is the one that wins
 4. Pictures: `B['proxies']()` then `B['figure_shots'](prefix, parts, head, first_person_parts)`.
 5. Pack each export for the game, from the repo root: `node tools/blender/bot-figure/pack.mjs bot_human_v10.glb
    src/assets/models/characters/human.glb` (and `robot`), and copy the sidecar beside it as `human.json`.
+
+## Rebuild in the cloud (headless, IM8)
+
+Re-make a clip without the owner's Blender, then put it into the approved v10 export (a headless build reproduces the
+clips to about 0.000001 but not the meshes to the bit):
+
+1. A Python 3.11 virtual environment with `pip install bpy==5.0.0` (about 400 MB).
+2. A folder (`BF_HOME`) with `aeg_rifle.glb` and `gas_pistol.glb` and `work/mags.json`, from the project files
+   (`models/aeg-rifle/`, `models/gas-pistol/`, `models/bot-human/scripts-v4/`).
+3. `BF_HOME=<folder> python tools/blender/bot-figure/headless.py human bot_human_v11` (and `robot`): about 40 s each.
+4. `node tools/blender/bot-figure/splice.mjs <project files>/models/bot-human/v10/bot_human_v10.glb
+   <folder>/bot_human_v11.glb <folder>/bot_human_v11s.glb CrouchIdle,CrouchWalk`, then pack that file for the game
+   as in Rebuild step 5. The sidecar stays as it is while the clips' lengths, frames and speeds do (compare
+   `<folder>/bot_human_v11_animations.json`).
 
 ## How the hands hold the replicas (bot13)
 

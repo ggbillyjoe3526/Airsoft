@@ -68,7 +68,8 @@ and never writes the simulation.
 - Figures: `characterRenderer.ts`, `characterModels.ts`, `figureHuman.ts` / `figureRobot.ts`; `figureFinish.ts` (the
   per-vertex finish) and `figureCamo.ts` (the team camo printed per pixel on clothes and sleeves, G11). The rigged Blender
   human and robot (BF1, drawn only with the Dev tab's model switches off): `figureRig.ts` (a kind's files taken apart
-  into bones, merged meshes and clips), `figurePose.ts` (the pure blend of clips from the character's state),
+  into bones, merged meshes and clips, and `figureLegs.ts` reading the legs' clips out for the hit volume, IM8),
+  `figurePose.ts` (the pure blend of clips from the character's state),
   `riggedFigure.ts` (one figure: skinned, posed, its replica on the grip bone, the reload's magazines, your
   first-person body) and `thrownMagazines.ts` (the empty magazines thrown in reloads); `modelFiles.ts` imports
   `figureRig.ts` on demand, so the four ride in their own chunk and the game's carries only their types. Replicas and hands:

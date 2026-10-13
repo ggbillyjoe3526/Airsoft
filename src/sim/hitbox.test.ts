@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { FIGURE } from '../config/characters';
-import { HITS } from '../config/hits';
+import { type FigureLegClip, HITS } from '../config/hits';
 import { createCharacter } from './character';
+import { LEG_CLIPS, LEG_POINTS, LEG_SAMPLE } from './figureLegs';
 import { characterHitVolume, createHitVolume, hitTop, legSwing, PART, rayCapsule, rayCharacter, raySegmentCapsule, stepWalkCycle, type VerticalCapsule } from './hitbox';
 import { leanOffset } from './lean';
 import { createRng, rngNext } from './rng';
@@ -250,5 +251,80 @@ describe('the hit volume of a leaning character', () => {
     expect(shoot(c, headOut, headY)).toBeGreaterThan(0);
     // Still no higher than crouch cover: leaning around 1.2 m cover shows the head to the side, not above.
     expect(shoot(c, headOut, 1.2)).toBe(-1);
+  });
+});
+
+describe('the hit volume legs on the rigged figures legs (IM8)', () => {
+  // One clip pose for every clip and sample: the left leg's hip, knee, ankle, heel and toe (figure frame), the right
+  // leg's the same a little further forward.
+  const LEFT = [
+    [-0.1, 0.92, 0],
+    [-0.12, 0.5, -0.1],
+    [-0.1, 0.1, 0],
+    [-0.1, 0.05, 0.05],
+    [-0.1, 0.05, -0.15],
+  ];
+  const sample = new Float32Array(LEG_SAMPLE);
+  LEFT.forEach((p, k) => {
+    sample.set(p, k * 3);
+    sample.set([-p[0]!, p[1]!, p[2]! - 0.2], (LEG_POINTS + k) * 3);
+  });
+  const clip = (frames: number, stride: number): FigureLegClip => {
+    const points = new Float32Array(frames * LEG_SAMPLE);
+    for (let f = 0; f < frames; f++) points.set(sample, f * LEG_SAMPLE);
+    return { seconds: 0.5, stride, frames, points };
+  };
+  const hits = { ...HITS, figureLegs: { clips: LEG_CLIPS.map((_, i) => clip(i === 0 ? 1 : 16, 0.9)) } };
+  const volume = createHitVolume();
+
+  it('puts each leg capsule on the figure joints, turned and moved with the character', () => {
+    const c = createCharacter(0, vec3(3, 0.5, -2), Math.PI / 2);
+    characterHitVolume(c, hits, volume);
+    // Facing -x: the figure's right (+x) is world -z, its forward (-z) world -x.
+    const thigh = volume.parts[PART.thighL]!;
+    expect([thigh.ax, thigh.ay, thigh.az]).toEqual([expect.closeTo(3, 9), expect.closeTo(1.42, 6), expect.closeTo(-1.9, 6)]);
+    expect([thigh.bx, thigh.by, thigh.bz]).toEqual([expect.closeTo(2.9, 6), expect.closeTo(1, 6), expect.closeTo(-1.88, 6)]);
+    expect(thigh.r).toBe(HITS.legs.thighRadius);
+    const shinR = volume.parts[PART.shinR]!;
+    expect([shinR.bx, shinR.by, shinR.bz]).toEqual([expect.closeTo(2.8, 6), expect.closeTo(0.6, 6), expect.closeTo(-2.1, 6)]);
+    expect(shinR.r).toBe(HITS.legs.shinRadius);
+    const boot = volume.parts[PART.bootL]!;
+    expect([boot.ax, boot.az, boot.bx, boot.bz]).toEqual([expect.closeTo(3.05, 6), expect.closeTo(-1.9, 6), expect.closeTo(2.85, 6), expect.closeTo(-1.9, 6)]);
+    expect(boot.r).toBe(HITS.legs.boot.radius);
+  });
+
+  it('leaves the legs where the figure stands them through a lean, and crouched as the figure crouches them', () => {
+    const c = createCharacter(0, vec3(), 0);
+    characterHitVolume(c, hits, volume);
+    const upright = volume.parts.map((p) => ({ ...p }));
+    c.lean = 1;
+    c.crouchAmount = 1;
+    characterHitVolume(c, hits, volume);
+    for (const leg of [PART.thighL, PART.shinL, PART.bootL, PART.thighR, PART.shinR, PART.bootR]) expect(volume.parts[leg]).toEqual(upright[leg]);
+  });
+
+  it('steps the walk cycle at the clips stride', () => {
+    const c = createCharacter(0, vec3(), 0);
+    c.velocity.z = -2;
+    c.position.z = -0.45;
+    stepWalkCycle(c, hits);
+    expect(c.walkCycle).toBeCloseTo((0.45 / 0.9) * Math.PI * 2, 9);
+  });
+});
+
+describe('without the rigged figures legs the hit volume is the pre-IM8 one (IM8)', () => {
+  it('has no figureLegs in the default hit rules', () => {
+    expect(HITS.figureLegs).toBeUndefined();
+  });
+
+  it('steps the walk cycle by ground covered times strides per metre, as before', () => {
+    const c = createCharacter(0, vec3(), 0);
+    c.position.z = -0.5;
+    stepWalkCycle(c, HITS);
+    expect(c.walkCycle).toBeCloseTo(0.5 * HITS.legs.stridesPerMetre * Math.PI * 2, 9);
+    c.prevPosition.z = c.position.z;
+    c.position.z -= HITS.legs.maxStride + 1;
+    stepWalkCycle(c, HITS);
+    expect(c.walkCycle).toBeCloseTo(0.5 * HITS.legs.stridesPerMetre * Math.PI * 2, 9);
   });
 });
