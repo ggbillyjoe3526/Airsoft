@@ -14,7 +14,8 @@ meshes. The format, coordinates and Extraction block are in `docs/ARCHITECTURE.m
 - `surfaces.ts` (walkable heights), `terrain.ts` (heightfield), `foliage.ts` (bushes: concealment, not cover),
   `groundSurfaces.ts` (ground patches that footsteps and the terrain read).
 - Practice (M94): `practicePlaces.ts` (the range or a map, saved as `practicePlace`), `practiceSpots.ts` (where its
-  targets stand on a map, from the map's lanes, starts and overlooks; tuning `config/practice.ts`).
+  targets stand on a map, from the map's lanes, starts and overlooks) and `practiceLayout.ts` (which of the range's kinds
+  stands at each, and the timed challenge's START plate; tuning `config/practice.ts`).
 - `lightingChoice.ts` (the Day | Night pick, saved as `lighting.<map id>`), `nightSight.ts` and `torchLight.ts` (what
   bots make out in the dark), `bakes/` (baked light probe files, written by `node pipeline/bake-light.mjs`).
 - Tuning: `config/materials.ts` (block materials), `config/range.ts`, `config/practice.ts`, `config/bake.ts`,

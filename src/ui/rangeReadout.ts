@@ -65,21 +65,22 @@ function hitsText(n: number): string {
 
 /**
  * The readout's line while the timed challenge is on (M93), in place of the last BB's: what to do, the run under way
- * (time left, hits, the best), or the last run's score until the next starts. '' when it is off.
+ * (time left, hits, the best), or the last run's score until the next starts. '' when it is off. `onMap` (M94): Practice
+ * on a map, where a target lights only once you can see it, so the run is played moving up through the map.
  */
-export function challengeText(c: RangeChallenge): string {
+export function challengeText(c: RangeChallenge, onMap = false): string {
   const best = c.best > 0 ? `best ${c.best}` : 'no best yet';
   switch (c.phase) {
     case 'off':
       return '';
     case 'ready': {
       const last = c.last;
-      if (!last) return `Timed challenge · shoot the START plate to begin · ${best}`;
+      if (!last) return onMap ? `Timed challenge · shoot START, then move up: targets light orange as you see them · ${best}` : `Timed challenge · shoot the START plate to begin · ${best}`;
       const accuracy = last.shots > 0 ? ` · ${Math.round((100 * last.hits) / last.shots)} % accuracy` : '';
       return `Time! ${hitsText(last.hits)}${accuracy} · ${last.best ? 'new best!' : best} · shoot START to go again`;
     }
     case 'countdown':
-      return `Timed challenge · hit the orange targets · ${best}`;
+      return onMap ? `Timed challenge · move up: targets light orange as you see them · ${best}` : `Timed challenge · hit the orange targets · ${best}`;
     case 'running':
       return `${clockText(c.clock)} · ${hitsText(c.hits)} · ${best}`;
   }

@@ -18,7 +18,8 @@ const along = vec3();
  * Each spot's kind follows why a bot is there (config/practice.ts steelEvery): one behind low cover peeks over it (a
  * crouched pop-up and a crouched figure in turn), one at a window or balcony pops up, one on a lane's leg walks it (a
  * mover, where its track fits), and the rest stand, every `steelEvery`-th as steel (a plate, a small plate and a swinger
- * in turn, the swinger where its frame fits). Pure (reads the map, its nav grid and its colliders).
+ * in turn, the swinger where its frame fits) and the figures among them moving in turn (`figureMotions`). Pure (reads the
+ * map, its nav grid and its colliders).
  */
 export function practiceLayout(map: MapData, nav: NavGrid, query: WorldQuery, cfg: PracticeSpotsConfig): RangeTargetSpec[] {
   const L = cfg.labels;
@@ -27,6 +28,7 @@ export function practiceLayout(map: MapData, nav: NavGrid, query: WorldQuery, cf
   let movers = 0;
   let standing = 0;
   let steel = 0;
+  let figures = 0;
   for (const s of practiceSpots(map, nav, query, cfg)) {
     const p = s.position;
     const at = { x: p.x, y: p.y, z: p.z, yaw: Math.atan2(s.face.x, s.face.z), distance: Math.round(s.fromStart) };
@@ -36,9 +38,7 @@ export function practiceLayout(map: MapData, nav: NavGrid, query: WorldQuery, cf
     } else if (s.source === 'overlook') {
       out.push(targetSpec({ ...at, kind: 'figure', motion: 'popup', label: L.popup }));
     } else if (s.source === 'leg' && moverFits(s, nav, query, cfg)) {
-      const M = cfg.mover;
-      out.push(targetSpec({ ...at, y: p.y + RANGE.mover.trolleyHeight, kind: 'figure', motion: 'mover', track: M.track, speed: M.speeds[movers % M.speeds.length]!, phase: movers * M.phaseStep, label: L.mover }));
-      movers++;
+      out.push(mover(at, movers++, cfg));
     } else if (++standing % cfg.steelEvery === 0) {
       const y = p.y + RANGE.plateHeight;
       const turn = steel++ % 3;
@@ -46,7 +46,10 @@ export function practiceLayout(map: MapData, nav: NavGrid, query: WorldQuery, cf
       else if (turn === 2 && swingerFits(s, nav, query, cfg)) out.push(targetSpec({ ...at, y, kind: 'steel', motion: 'swinger', label: L.swinger }));
       else out.push(targetSpec({ ...at, y, kind: 'steel', label: L.steel }));
     } else {
-      out.push(targetSpec({ ...at, kind: 'figure', label: L.figure }));
+      const motion = cfg.figureMotions[figures++ % cfg.figureMotions.length]!;
+      if (motion === 'mover' && moverFits(s, nav, query, cfg)) out.push(mover(at, movers++, cfg));
+      else if (motion === 'still') out.push(targetSpec({ ...at, kind: 'figure', label: L.figure }));
+      else out.push(targetSpec({ ...at, kind: 'figure', motion: 'popup', label: L.popup }));
     }
   }
   const start = startPlate(map, nav, query, cfg);
@@ -77,6 +80,12 @@ export function startPlate(map: MapData, nav: NavGrid, query: WorldQuery, cfg: P
     }
   }
   return null;
+}
+
+/** The `n`th mover on the map, at `at` (its track's middle, on its trolley), at the next of the movers' speeds and phases. */
+function mover(at: { x: number; y: number; z: number; yaw: number; distance: number }, n: number, cfg: PracticeSpotsConfig): RangeTargetSpec {
+  const M = cfg.mover;
+  return targetSpec({ ...at, y: at.y + RANGE.mover.trolleyHeight, kind: 'figure', motion: 'mover', track: M.track, speed: M.speeds[n % M.speeds.length]!, phase: n * M.phaseStep, label: cfg.labels.mover });
 }
 
 /** Whether a mover's track fits at `s`: level floor under both ends, and nothing across its face along it. */

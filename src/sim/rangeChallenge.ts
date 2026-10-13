@@ -1,7 +1,10 @@
+import type { HitConfig } from '../config/hits';
 import { RANGE, RANGE_CHALLENGE } from '../config/range';
+import type { WorldQuery } from './armament';
 import type { GameEvent } from './events';
 import { knockDown, type RangeTarget, setPopupsAuto } from './rangeTargets';
 import { type RngState, rngNext } from './rng';
+import { type Vec3, vec3 } from './vec';
 
 /**
  * The practice range's timed challenge (M93, the owner's playtest note 10): off by default. On, the START plate stands
@@ -38,11 +41,13 @@ export interface RangeChallenge {
   last: ChallengeRun | null;
   /** This tick's cue, for sound and the HUD (null: none). */
   cue: ChallengeCue | null;
+  /** Seconds before the run looks again for a target in sight to light, after finding none (Practice on a map, M94). */
+  look: number;
 }
 
 /** The challenge, off, with the best score kept so far. */
 export function createChallenge(best: number): RangeChallenge {
-  return { phase: 'off', clock: 0, hits: 0, shots: 0, missed: 0, best, last: null, cue: null };
+  return { phase: 'off', clock: 0, hits: 0, shots: 0, missed: 0, best, last: null, cue: null, look: 0 };
 }
 
 /** The target's lit time when it lights: longer for a far one (the BB's flight), and a lying pop-up's rise on top. */
@@ -72,6 +77,28 @@ const candidates: number[] = [];
  * sight; null on the range, where any may.
  */
 export type ChallengeSight = ((t: RangeTarget) => boolean) | null;
+
+/** seesTarget's ray, reused. */
+const look = vec3();
+
+/**
+ * Whether target `t` is in plain sight from `eye` (M94, the challenge on a map): no further than `reach` (m), with nothing
+ * solid between the eye and the target's middle (a plate's centre, a figure's chest, standing or crouched, on its
+ * trolley if it has one). One ray, nothing allocated.
+ */
+export function seesTarget(eye: Vec3, t: RangeTarget, reach: number, query: WorldQuery, hits: HitConfig): boolean {
+  const y = t.kind === 'steel' ? t.position.y : t.position.y + (hits.bodyTop + hits.bodyBottom) / 2 - (t.crouched ? hits.crouchDrop : 0);
+  look.x = t.position.x - eye.x;
+  look.y = y - eye.y;
+  look.z = t.position.z - eye.z;
+  const len = Math.hypot(look.x, look.y, look.z);
+  if (len > reach) return false;
+  if (len < 1e-6) return true;
+  look.x /= len;
+  look.y /= len;
+  look.z /= len;
+  return query.raycastStatic(eye, look, len) < 0;
+}
 
 /** Lights one target chosen at random (from `rng`) among those that can light (and `sees` allows); false when none can. */
 function lightOne(targets: readonly RangeTarget[], rng: RngState, sees: ChallengeSight): boolean {
@@ -143,6 +170,7 @@ export function stepChallenge(c: RangeChallenge, targets: readonly RangeTarget[]
       c.hits = c.shots = c.missed = 0;
       c.last = null;
       c.cue = 'go';
+      c.look = 0;
       for (let i = 0; i < RANGE_CHALLENGE.litAtOnce; i++) lightOne(targets, rng, sees);
       return;
     }
@@ -174,7 +202,15 @@ function stepRun(c: RangeChallenge, targets: readonly RangeTarget[], events: rea
       }
     }
   }
-  for (; lit < RANGE_CHALLENGE.litAtOnce; lit++) if (!lightOne(targets, rng, sees)) break;
+  if (c.look > 0) c.look = Math.max(0, c.look - dt);
+  else {
+    for (; lit < RANGE_CHALLENGE.litAtOnce; lit++) {
+      if (lightOne(targets, rng, sees)) continue;
+      // None in sight: look again in a moment, not every tick (each look casts a ray per target).
+      if (sees) c.look = RANGE_CHALLENGE.lookAgain;
+      break;
+    }
+  }
   c.clock -= dt;
   if (c.clock > 0) return;
   // Time: the run's score is kept if it's the best, and the START plate stands for another go.

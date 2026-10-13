@@ -78,7 +78,7 @@ The root files in more detail:
   picker's ruleset (`RULESETS`, laid over the match panel's picks by `playedPicks` in `newGamePicks.ts`).
 - **`RangeSession`** (`rangeSession.ts`) is Practice: the player alone, no bots and no rounds, on `map/range.ts` (with
   the tutorial) or on any map (M94), whose targets stand where the other team's bots would play
-  (`map/practiceSpots.ts`). Changing the loadout from its pause menu rebuilds it where you stood.
+  (`map/practiceSpots.ts`, kinds by `map/practiceLayout.ts`). Changing the loadout from its pause menu rebuilds it where you stood.
 
 ## Map data
 

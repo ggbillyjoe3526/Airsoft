@@ -33,10 +33,15 @@ export const PRACTICE_SPOTS = {
    * The kinds (M93's) a spot gets (map/practiceLayout.ts): behind low cover, a crouched pop-up and a crouched figure in
    * turn; at a window or balcony (an overlook), a pop-up; on a lane's leg, where a bot walks, a mover where its track
    * fits; every `steelEvery`-th other one, near to far, steel (a plate, a small plate and a swinger in turn, the swinger
-   * where its frame fits, else a plate); the rest, standing figures. A plate rings, so a hit reads where a falling figure
-   * can't be seen.
+   * where its frame fits, else a plate); the rest, standing figures, moving as `figureMotions` says in turn. A plate
+   * rings, so a hit reads where a falling figure can't be seen.
    */
   steelEvery: 3,
+  /**
+   * The standing figures' motions in turn, near to far: half of them move, as on the range, where a bot holding that
+   * point would peek (a pop-up) or shift along it (a mover, a pop-up where its track doesn't fit).
+   */
+  figureMotions: ['still', 'popup', 'still', 'mover'],
   /** What the readout calls each kind (as the range's own targets are called, config/range.ts). */
   labels: {
     steel: 'Steel',
@@ -65,7 +70,12 @@ export const PRACTICE_SPOTS = {
    * this much either side of the way you face (rad), on a floor no more than `climb` (m) from your start's, in plain
    * sight from your eye as you stand there.
    */
-  start: { ahead: [5, 4, 6, 3], turns: [0, 0.35, -0.35, 0.7, -0.7], climb: 1 },
+  start: { ahead: [5, 4, 6, 3], turns: [0, 0.35, -0.35, 0.7, -0.7, 1.05, -1.05], climb: 1 },
+  /**
+   * The timed challenge on a map lights only targets in your sight (RangeSession), and none further than this (m): about
+   * the range's far plates, the most a replica reaches with holdover (config/range.ts distances).
+   */
+  sightReach: 50,
   /** How far up from the nav floor the real floor is looked for (m), and how far down. */
   floorProbeUp: 0.6,
   floorProbeDown: 1.6,

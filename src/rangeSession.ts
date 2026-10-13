@@ -39,7 +39,7 @@ import { canAimDownSights } from './sim/aiming';
 import { fitOptics, fitParts, setBbWeights, setHopUps } from './sim/armament';
 import { type Character, createCharacter, eyeHeight, respawnCharacter } from './sim/character';
 import { createCommand, type PlayerCommand } from './sim/commands';
-import { type ChallengePhase, type ChallengeRun, type ChallengeSight, createChallenge, type RangeChallenge, setChallengeOn, stepChallenge } from './sim/rangeChallenge';
+import { type ChallengePhase, type ChallengeRun, type ChallengeSight, createChallenge, type RangeChallenge, seesTarget, setChallengeOn, stepChallenge } from './sim/rangeChallenge';
 import { createRangeTargets, type RangeTarget } from './sim/rangeTargets';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
 import { partsUnder } from './sim/torch';
@@ -57,8 +57,8 @@ import { ChallengeBanner, challengeText, type LastShot, lastShotText, RangeReado
 
 const PLAYER_ID = 0;
 
-/** inSight's ray (M94), reused. */
-const SIGHT = { eye: vec3(), dir: vec3() };
+/** inSight's eye (M94), reused. */
+const SIGHT_EYE = vec3();
 
 /** Practice has nobody to hear (M94): the minimap's heard players, always none. */
 const NOBODY_HEARD: readonly HeardPlayer[] = [];
@@ -198,7 +198,8 @@ export class RangeSession {
     const nav = buildNavGrid(map, NAV);
     this.state = createGameState(seed, BALLISTICS.maxBBs, ROUNDS);
     // The range's own layout, or a map's: its targets where the other team's bots would play (M94).
-    this.state.targets = createRangeTargets(onRange ? rangeLayout() : practiceLayout(map, nav, this.physics, PRACTICE_SPOTS), this.state.rng);
+    const specs = onRange ? rangeLayout() : practiceLayout(map, nav, this.physics, PRACTICE_SPOTS);
+    this.state.targets = createRangeTargets(specs, this.state.rng);
     this.course = setup.course ?? RANGE_CHALLENGE.course;
     this.sight = onRange ? null : (t) => this.inSight(t);
     this.challenge = createChallenge(setup.challengeBest ?? 0);
@@ -222,17 +223,20 @@ export class RangeSession {
       rounds: ROUNDS,
       practice: true,
     });
-    // Where Alpha starts round 1 (map/practiceSpots.ts practiceStart): the range's one spot, or a map's end 0.
+    // Where Alpha starts round 1 (map/practiceSpots.ts practiceStart): the range's one spot, or a map's end 0. On a map
+    // you face the START plate's way (a character's yaw and the plate's match when they face each other), which may be
+    // turned a little from the spawn's to stand in plain sight; else the spawn's way.
     const spawn = map.spawns[0][0]!;
     const at = pose ? vec3(pose.x, pose.y ?? spawn.position.y, pose.z) : spawn.position;
-    this.player = createCharacter(PLAYER_ID, vec3(at.x, at.y + PHYSICS.groundRestGap, at.z), pose?.yaw ?? spawn.yaw, this.loadout, 0);
+    const yaw = pose?.yaw ?? (onRange ? undefined : specs.find((t) => t.start)?.yaw) ?? spawn.yaw;
+    this.player = createCharacter(PLAYER_ID, vec3(at.x, at.y + PHYSICS.groundRestGap, at.z), yaw, this.loadout, 0);
     this.tutorialView = { dt: SIM_DT, player: this.player, events: this.state.events, targets: this.state.targets };
     respawnCharacter(this.player);
     this.state.characters.push(this.player);
     this.physics.addCharacter(this.player);
     this.fitPickedLoadout();
     this.commands.set(PLAYER_ID, this.playerCommand);
-    input.resetView(pose?.yaw ?? spawn.yaw);
+    input.resetView(yaw);
     // Nobody to order on the range: the order wheel's key does nothing.
     input.ordersEnabled = false;
     if (pose) input.pitch = pose.pitch;
@@ -502,27 +506,14 @@ export class RangeSession {
     }
   }
 
-  /**
-   * Whether target `t` is in plain sight from your eye (M94): nothing solid between your eye and its middle (a plate's
-   * centre, a figure's chest, standing or crouched). Rays only, nothing allocated.
-   */
+  /** Whether target `t` is in your sight from where your eye is now (M94: the challenge on a map lights only those). */
   private inSight(t: RangeTarget): boolean {
     const p = this.player;
-    const eye = SIGHT.eye;
+    const eye = SIGHT_EYE;
     eye.x = p.position.x;
     eye.y = p.position.y + eyeHeight(p.crouchAmount, BODY);
     eye.z = p.position.z;
-    const aimY = t.kind === 'steel' ? t.position.y : t.position.y + (HITS.bodyTop + HITS.bodyBottom) / 2 - (t.crouched ? HITS.crouchDrop : 0);
-    const d = SIGHT.dir;
-    d.x = t.position.x - eye.x;
-    d.y = aimY - eye.y;
-    d.z = t.position.z - eye.z;
-    const len = Math.hypot(d.x, d.y, d.z);
-    if (len < 1e-6) return true;
-    d.x /= len;
-    d.y /= len;
-    d.z /= len;
-    return this.physics.raycastStatic(eye, d, len) < 0;
+    return seesTarget(eye, t, PRACTICE_SPOTS.sightReach, this.physics, HITS);
   }
 
   /** How far a point is for the readout: downrange on the range, from where you stand on a map (M94). */
@@ -591,7 +582,7 @@ export class RangeSession {
     shown.second = second;
     shown.hits = c.hits;
     shown.best = c.best;
-    this.readout.set(challengeText(c));
+    this.readout.set(challengeText(c, this.sight !== null));
   }
 }
 
