@@ -28,6 +28,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 ### Changed
 - **M94** · The practice range is now Practice: pause reads "Practice · Range" or "Practice · Depot", and the tutorial's last button says Practice
 - **M95** · With Unlock all gear on, the Loadout says every replica and part is lent to try, and the range's first line names the Loadout key
+- **RM9** · With the Dev figure switches off, humans and bots use a new figure: gloved hands, four heads and team colour on the vest, armbands and bands
 
 ### Fixed
 - **M92** · Bots firing on the move hold fire when a teammate is down the line, so they no longer hit teammates past the end of a wall
