@@ -4,9 +4,9 @@ import { fitOptics, fitParts } from '../sim/armament';
 import { type Character, createCharacter } from '../sim/character';
 import { createRng, rngNext } from '../sim/rng';
 import { vec3 } from '../sim/vec';
-import type { ItemRef } from './collection';
+import type { ItemRef } from './item';
 import { EMPTY_FIT, FIT_CATEGORY, FIT_SLOTS, type FitSlot, kitSlot, type KitSlot, type ReplicaFit } from './kit';
-import { type Asset, assetOfReplica, fits, type Pool, tiersOf } from './pool';
+import { type Asset, assetOfReplica, fits, type Pool } from './pool';
 import { missingColumns, readTables } from './poolFile';
 
 /**
@@ -211,9 +211,9 @@ export function pickBotKit(table: BotKitTable, difficulty: Difficulty, offered: 
   return kits[kits.length - 1]!;
 }
 
-/** The pool item a kit carries of asset `id`: the asset as it comes (its first tier). */
-function itemOf(pool: Pool, id: string): ItemRef {
-  return { asset: id, tier: tiersOf(pool, pool.byId.get(id)!)[0]?.id ?? '' };
+/** The pool item a kit carries of asset `id` (LV1: an item is its asset). */
+function itemOf(id: string): ItemRef {
+  return { asset: id };
 }
 
 /**
@@ -228,9 +228,9 @@ export function botKitSlots(pool: Pool, kit: BotKit): KitSlot[] {
     for (const part of slot.parts) {
       const asset = pool.byId.get(part);
       const s = asset ? SLOT_OF.get(asset.category) : undefined;
-      if (s) fit[s] = itemOf(pool, part);
+      if (s) fit[s] = itemOf(part);
     }
-    return [kitSlot(pool, itemOf(pool, slot.replica), fit)];
+    return [kitSlot(pool, itemOf(slot.replica), fit)];
   });
 }
 

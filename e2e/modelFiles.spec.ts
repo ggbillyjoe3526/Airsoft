@@ -23,8 +23,8 @@ test('the Armory power pictures appear only once "Disable all models" is turned 
   await page.goto('/?nolock&seed=3&quality=low');
   await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
   await page.locator('.menu-title-start').click();
-  const power = page.locator('.armory-kind[data-kind="power"] .pic-slot');
-  const pictured = page.locator('.armory-kind[data-kind="power"] .pic-slot.has-picture');
+  const power = page.locator('.armory-levels .armory-item[data-kind="power"] .pic-slot');
+  const pictured = page.locator('.armory-levels .armory-item[data-kind="power"] .pic-slot.has-picture');
   await page.getByRole('button', { name: 'Armory', exact: true }).first().click();
   await expect(power).toHaveCount(5);
   await power.last().scrollIntoViewIfNeeded();

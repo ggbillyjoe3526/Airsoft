@@ -310,13 +310,17 @@ describe('skipping and resuming the tutorial (audit POOL-14, POOL-16)', () => {
   });
 });
 
-describe('M83: the tutorial names the Armory only while it is on', () => {
-  it('drops every Armory line with Disable Armory on and keeps the steps otherwise the same', () => {
+describe('M83, LV1: the tutorial names levelling only while it is on', () => {
+  it('drops every levelling line with Disable levelling on and keeps the steps otherwise the same', () => {
     const off = tutorialSteps(false);
     const on = tutorialSteps(true);
     expect(off.map((s) => s.id)).toEqual(TUTORIAL_STEPS.map((s) => s.id));
-    expect(off.some((s) => /Armory|Field Credits/.test(s.text))).toBe(false);
+    expect(off.some((s) => /Armory|XP|level/.test(s.text))).toBe(false);
     expect(on.some((s) => /Armory/.test(s.text))).toBe(true);
-    expect(on.find((s) => s.id === 'match')!.text.endsWith('for new gear, free.')).toBe(true);
+    const match = on.find((s) => s.id === 'match')!;
+    expect(match.text).toContain('Matches give XP');
+    expect(match.text.endsWith('the Armory shows what comes next.')).toBe(true);
+    // The gacha's words are gone from every step, on or off (LV1).
+    expect(on.some((s) => /Field Credits|Tokens|\bFC\b/.test(s.text))).toBe(false);
   });
 });

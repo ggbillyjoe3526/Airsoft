@@ -68,9 +68,9 @@ export const REPLICA_RANGES: Readonly<Record<string, Readonly<Record<RangedStat,
 };
 
 /**
- * How far a fitted kit (every part and the rarest tier) may take a number past its class's normal range before the
- * compatibility grid warns: parts and tiers move numbers on purpose, so only a kit that runs well past the range (two
- * multipliers stacking) is shown.
+ * How far a fitted kit (every part) may take a number past its class's normal range before the compatibility grid
+ * warns: parts move numbers on purpose, so only a kit that runs well past the range (two multipliers stacking) is
+ * shown.
  */
 export const KIT_RANGE_SLACK = 0.25;
 
@@ -122,7 +122,7 @@ export const CONTENT_BALANCE_BAND: Range = { min: 0.4, max: 0.6 };
  * balance run shows their figures but never fails them.
  */
 export const ALLOWED_STRONGER: Readonly<Record<string, string>> = {
-  '000019': 'Cyber Pistol: a chase item, rifle-class power with pistol handling by design (owner, M32, 2026-10-04)',
+  '000019': 'Cyber Pistol: the level cap reward, rifle-class power with pistol handling by design (owner, M32, 2026-10-04; LV1, 2026-10-13)',
 };
 
 /**
@@ -334,7 +334,7 @@ export const MODE_PLAY_TEST = {
 /**
  * The mode balance run's own bands (CT3; src/content/report/mapBalance.report.ts), besides each side's share and the
  * rounds on time (the map run's): in a mode with an objective, the share of decided rounds the objective decides (a flag
- * raised, or held to the whistle), so it is not Elimination by another name; and its pay a minute against Elimination's
+ * raised, or held to the whistle), so it is not Elimination by another name; and its XP a minute against Elimination's
  * on the same map, lighting and level (`pay`: the ratio's band; the plan's "in line with the other modes").
  */
 export const MODE_BALANCE_BANDS = {

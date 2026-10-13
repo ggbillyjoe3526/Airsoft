@@ -33,7 +33,8 @@ The questions Claude asks, with the default in brackets:
 2. **Which slot.** Optic, grip, laser, magazine, barrel, muzzle, light, power source.
 3. **What it fits.** Which tags. (Every replica with that mount.)
 4. **What it improves and what it costs.** (One gain, one cost, both a few per cent to a few tens of per cent.)
-5. **Whether a higher tier improves it.** (Yes, by the tier scaling in `stats.md`.)
+5. **Which level unlocks it.** Its Name in a level's Unlocks in `levels.md`. (Plain gains early, trade-offs in the
+   middle, the strongest last, as `levels.md` › Levels orders them.)
 6. **Look.** (Greybox in the style of its slot's parts.)
 
 The spec sheet shows the chrono and range table of each replica it fits without and with it.
@@ -42,7 +43,7 @@ The spec sheet shows the chrono and range table of each replica it fits without 
 
 | Level | What is checked |
 |---|---|
-| Rules | Its Key is in the code; `stats.md` has its row; it fits by tag and fits a replica (a public part a public one; a dev part may wait, with a warning); it trades something; name and access. |
-| Compatibility | Every replica it fits draws it; every kit with it, on every replica it fits, at the commonest and rarest tier, has sane numbers under the site limit (every combination of parts is tried, so two parts that clash are found). |
+| Rules | Its Key is in the code; `stats.md` has its row; it fits by tag and fits a replica (a public part a public one; a dev part may wait, with a warning); it trades something; a level unlocks it; name and access. |
+| Compatibility | Every replica it fits draws it; every kit with it, on every replica it fits, has sane numbers under the site limit (every combination of parts is tried, so two parts that clash are found). |
 | Spec test | The chrono and range table without and with it, on each replica it fits; its meshes and triangles on each. Pictures: fitted on each, and in first person. |
 | Balance run | Each public replica it fits, with it against without it, on every map, lighting, round mode and level: 40 to 60 % of decided rounds on public ones. A big swing means it is too strong or pointless. |

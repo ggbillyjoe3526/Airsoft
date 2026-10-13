@@ -20,11 +20,11 @@ const RULES: RoundRules = { roundTime: RUN_TIME, resetDelay: 2, winsNeeded: 1, h
 const INSERTION: SpawnPoint[] = [0, 1, 2].map((z) => ({ position: vec3(-20, 0, z), yaw: -Math.PI / 2 }));
 const STARTS: SpawnPoint[] = [5, 10, 15, -5, 18].map((x) => ({ position: vec3(x, 0, 6), yaw: 0 }));
 
-/** Three cases: a field case with a part (4 s, heard 14 m), an ammo can with a resupply, a locker on a floor above. */
+/** Three cases: a field case with XP (4 s, heard 14 m), an ammo can with a resupply, a locker on a floor above. */
 const CASES: CaseSetup[] = [
-  { kind: 'field-case', name: 'Field case', position: vec3(-10, 0, 0), yaw: 0, openTime: 4, heard: 14, find: { fc: 60, resupply: false, item: { asset: '000004', tier: 'rare' } } },
-  { kind: 'ammo-can', name: 'Ammo can', position: vec3(-5, 0, 0), yaw: 0, openTime: 2, heard: 8, find: { fc: 0, resupply: true, item: null } },
-  { kind: 'locker', name: "Marshal's locker", position: vec3(-10, 3, 0), yaw: 0, openTime: 7, heard: 30, find: { fc: 120, resupply: false, item: { asset: '000005', tier: 'epic' } } },
+  { kind: 'field-case', name: 'Field case', position: vec3(-10, 0, 0), yaw: 0, openTime: 4, heard: 14, find: { xp: 60, resupply: false } },
+  { kind: 'ammo-can', name: 'Ammo can', position: vec3(-5, 0, 0), yaw: 0, openTime: 2, heard: 8, find: { xp: 0, resupply: true } },
+  { kind: 'locker', name: "Marshal's locker", position: vec3(-10, 3, 0), yaw: 0, openTime: 7, heard: 30, find: { xp: 120, resupply: false } },
 ];
 const X: ExtractionContext = {
   rules: EXTRACTION,
@@ -155,7 +155,7 @@ describe('Extraction cases (M44)', () => {
   });
 
   it('uses a resupply once: picking up what you dropped doesn’t top your magazines up again', () => {
-    const both: CaseSetup = { ...CASES[0]!, find: { fc: 30, resupply: true, item: null } };
+    const both: CaseSetup = { ...CASES[0]!, find: { xp: 30, resupply: true } };
     const ctx: RoundContext = { ...CTX, extraction: { ...X, cases: [both] } };
     const cs = squadAndHome();
     const round = createRoundState(RULES, 'extraction');
@@ -223,7 +223,7 @@ describe('Extraction cases (M44)', () => {
     standAt(you, 20, 0);
     play(EXTRACTION.extractTime + 0.5, round, cs, events);
     expect(round.reason).toBe('extracted');
-    expect(haulTotals(runHaul(round.run))).toEqual({ fc: 60, items: [CASES[0]!.find.item] });
+    expect(haulTotals(runHaul(round.run))).toEqual({ xp: 60 });
     expect(runFinds(round.run)).toEqual([CASES[0]!.find]);
   });
 
@@ -349,14 +349,14 @@ describe('Extraction cases (M44)', () => {
     play(4.1, second, again, []);
     standAt(me, -10, 0, 3);
     play(7.1, second, again, []);
-    expect(second.run.carried.map((f) => f.fc)).toEqual([60, 120]);
+    expect(second.run.carried.map((f) => f.xp)).toEqual([60, 120]);
     me.using = false;
     standAt(me, 0, 0);
     hit(me);
     play(DT, second, again, []);
     const dropped = second.run.cases.filter((k) => k.dropped);
     expect(dropped).toHaveLength(1);
-    expect(haulTotals(dropped[0]!.finds)).toEqual({ fc: 180, items: [CASES[0]!.find.item, CASES[2]!.find.item] });
+    expect(haulTotals(dropped[0]!.finds)).toEqual({ xp: 180 });
     expect(second.run.carried).toEqual([]);
   });
 

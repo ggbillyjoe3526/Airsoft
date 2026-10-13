@@ -29,6 +29,11 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **BN1** · Rushers push in and run at where you were; Flankers take a lane of their own and come round the side; Careful bots clear each corner
 - **BN1** · Anchors hold a spot short of the middle in Elimination, aiming over cover with the replica rested, until about a minute is left
 - **BN1** · Personalities change how bots play, never how well they see, react or aim; names and personalities are edited in bots.md
+- **LV1** · Levels and XP replace the Armory's gacha: every match gives XP, you level up from 0 to 10, and each level unlocks parts for good (#207)
+- **LV1** · The Armory shows your level, XP to the next level, what it unlocks and every level's items; a level badge on the top bar opens it (#207)
+- **LV1** · The match summary shows the XP earned, its lines and any level-up with what it unlocked (#207)
+- **LV1** · Locked items show greyed in Loadout and Customise, with the level that unlocks them; the unlock table is `levels.md` (#207)
+- **LV1** · Dev tab: +500 XP, Level up and Reset level buttons (#207)
 - **BG1** · Opponents on every difficulty carry kits from bot-kits.md: Easy mostly plain, each level up more optics, grips and lasers
 - **BG1** · Pro bots are never plain, and now and then a Hard or Pro bot carries a Cyber Pistol; each bot keeps its kit on a replay
 - **BG1** · Your teammates keep plain replicas, as does everyone under the Factory kit house rule; what you have unlocked never changes the bots' gear
@@ -39,8 +44,14 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 
 ### Changed
 - **M94** · The practice range is now Practice: pause reads "Practice · Range" or "Practice · Depot", and the tutorial's last button says Practice
-- **M95** · With Unlock all gear on, the Loadout says every replica and part is lent to try, and the range's first line names the Loadout key
-- **BG1** · Hard and Pro's random gear roll and the Cyber Pistol carrier that needed you to own one are replaced by the bot kits
+- **M95** · With Disable levelling on, the Loadout says every replica and part is lent to try, and the range's first line names the Loadout key
+- **LV1** · The Armory's gacha is gone: no Field Credits, Tokens, Shots, pity, rarity tiers, spares, scrapping or Disable Armory (#207)
+- **LV1** · Extraction cases hold XP instead of Field Credits; supply events give a % bonus to XP (#207)
+- **LV1** · Replicas and parts rebalanced without rarity: Low-Cap Magazine gets two more magazines, Long Barrel +10 % energy and 10 % tighter groups (#207)
+- **LV1** · Hard and Pro bots lose their small tier bonus; the Cyber Pistol keeps its old numbers (#207)
+- **LV1** · Unlock all gear is now Disable levelling, a cheat with no XP and no records (#207)
+- **LV1** · Save format 3: an older save loads at level 0 with its settings and records; old Armory items, Field Credits and Tokens don't carry over (#207)
+- **BG1** · Hard and Pro's random gear roll and the Cyber Pistol carrier that needed you to have one are replaced by the bot kits
 
 ### Fixed
 - **M92** · Bots firing on the move hold fire when a teammate is down the line, so they no longer hit teammates past the end of a wall

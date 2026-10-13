@@ -9,7 +9,7 @@ import { playsAtNight as nightOf } from './map/lightingChoice';
 import { DEFAULT_MAP, MAPS, type MapId, mapData, mapEntry, mapLoaded, teamSizeOn } from './map/maps';
 import { modeOffered } from './map/playableMode';
 import { botLight, type BotKitTable, kitsMayHoldDev } from './pool/botKit';
-import type { ItemRef } from './pool/collection';
+import type { ItemRef } from './pool/item';
 import { contentPool, itemsUseDev } from './pool/contentPool';
 import { GAME_BOT_KITS } from './pool/gameBotKits';
 import type { Pool } from './pool/pool';
@@ -89,7 +89,7 @@ export function pickTags(p: NewGamePicks): ContentTag[] {
   ];
 }
 
-/** Whether the picks (as played) use dev content: such a match stays out of the records and pays no Field Credits. */
+/** Whether the picks (as played) use dev content: such a match stays out of the records and gives no XP. */
 export function picksUseDev(p: NewGamePicks): boolean {
   return pickTags(p).includes('dev');
 }
@@ -130,7 +130,7 @@ export function botsCarryDevLight(pool: Pool, devContent: boolean, night: boolea
 /**
  * Whether a match uses dev content (M35): its picks (as played), the player's kit (`kit`: the Loadout's items; a light
  * only at night, M33h) or the opponents' possible gear (botsMayCarryDev; the bots' torches at night). Night is under
- * the map's Day/Night pick `lighting` (M34d). Such a match stays out of the records and pays no Field Credits. Under
+ * the map's Day/Night pick `lighting` (M34d). Such a match stays out of the records and gives no XP. Under
  * the factory kit rule (M39) everyone carries LOADOUT as it comes, torchless, so neither kit counts.
  */
 export function matchUsesDev(picks: NewGamePicks, kit: readonly (ItemRef | null)[], pool: Pool, devContent: boolean, lighting?: LightingPresetId | null): boolean {

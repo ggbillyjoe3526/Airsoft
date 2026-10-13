@@ -36,7 +36,7 @@ describe('qualityLine (the debug overlay and the crash report, audit CORE-02)', 
 });
 
 const exit = (name: string, over: Partial<RunExit> = {}): RunExit => ({ name, position: { x: 0, y: 0, z: 0 }, radius: 2, late: false, closed: false, open: true, ...over });
-const find: CaseFind = { fc: 10, resupply: false, item: null };
+const find: CaseFind = { xp: 10, resupply: false };
 const aCase = (over: Partial<RunCase> = {}): RunCase => ({
   kind: 'locker',
   name: 'Locker',

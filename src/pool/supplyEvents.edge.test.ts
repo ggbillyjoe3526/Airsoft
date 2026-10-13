@@ -8,7 +8,7 @@ import { activeSupplyEvent, isOn, kindsUnder, readWhen, type SupplyEvent, supply
 /** QA edge cases for M49 (the worker's own tests are in supplyEvents.test.ts). */
 const pool = loadPool(poolText);
 const at = (y: number, m: number, d: number, h = 12, min = 0, s = 0, ms = 0): Date => new Date(y, m - 1, d, h, min, s, ms);
-const event = (over: Partial<SupplyEvent>): SupplyEvent => ({ name: 'Test', key: 'test', when: { weekly: { from: 5, to: 0 } }, fc: 1, parts: 1, ...over });
+const event = (over: Partial<SupplyEvent>): SupplyEvent => ({ name: 'Test', key: 'test', when: { weekly: { from: 5, to: 0 } }, xp: 1, ...over });
 
 const SPOTS: CaseSpotLike[] = [
   ['locker', 'field-case'],
@@ -24,7 +24,7 @@ const SPOTS: CaseSpotLike[] = [
   ['ammo-can'],
 ].map((kinds, i) => ({ position: vec3(i * 3, 0, 0), yaw: 0, kinds }));
 
-const TABLE_HEAD = ['### Supply events', '| Supply event | Key | When | FC % | Part % |', '|---|---|---|---|---|'];
+const TABLE_HEAD = ['### Supply events', '| Supply event | Key | When | XP % |', '|---|---|---|---|'];
 /** A pool.md of just this table; the errors left are the table's own (the other tables are missing, which is not under test). */
 const own = (p: ReturnType<typeof loadPool>): ReturnType<typeof loadPool> => ({ ...p, errors: p.errors.filter((e) => !/^no "/.test(e)) });
 const withRows = (...rows: string[]) => own(loadPool([...TABLE_HEAD, ...rows].join('\n')));
@@ -50,10 +50,13 @@ describe('When text (M49 edge cases)', () => {
     expect(readWhen('2028-02-29')).toEqual({ dated: { from: '2028-02-29', to: '2028-02-29' } }); // a real leap day
   });
 
-  it('reads the odd spellings through pool.md too, with the Key lower-cased and the percents with or without a % sign', () => {
-    const p = withRows('| Odd | Odd-Key | SATURDAY  to  MONDAY | 125% | 150 % |');
+  it('reads the odd spellings through pool.md too, with the Key lower-cased and the percent with or without a % sign', () => {
+    const p = withRows('| Odd | Odd-Key | SATURDAY  to  MONDAY | 125% |', '| Spaced | spaced | Tuesday | 150 % |');
     expect(p.errors).toEqual([]);
-    expect(p.supplyEvents).toEqual([{ name: 'Odd', key: 'odd-key', when: { weekly: { from: 6, to: 1 } }, fc: 1.25, parts: 1.5 }]);
+    expect(p.supplyEvents).toEqual([
+      { name: 'Odd', key: 'odd-key', when: { weekly: { from: 6, to: 1 } }, xp: 1.25 },
+      { name: 'Spaced', key: 'spaced', when: { weekly: { from: 2, to: 2 } }, xp: 1.5 },
+    ]);
   });
 });
 
@@ -108,12 +111,12 @@ describe('which event applies (M49 edge cases)', () => {
   });
 
   it('applies the next row when the first one on a day is one that could not be read', () => {
-    const p = withRows('| Broken | broken | Funday | 200 | 200 |', '| Weekend | weekend | Friday to Sunday | 120 | 100 |');
+    const p = withRows('| Broken | broken | Funday | 200 |', '| Weekend | weekend | Friday to Sunday | 120 |');
     expect(activeSupplyEvent(p.supplyEvents, at(2026, 10, 10))?.key).toBe('weekend');
   });
 
   it('is off all week when no row is on, however many rows there are', () => {
-    const p = withRows('| Mid | mid | Tuesday to Wednesday | 120 | 100 |', '| Dated | dated | 2026-01-01 | 120 | 100 |');
+    const p = withRows('| Mid | mid | Tuesday to Wednesday | 120 |', '| Dated | dated | 2026-01-01 | 120 |');
     expect(WEEK.map((d) => activeSupplyEvent(p.supplyEvents, d)?.key ?? null)).toEqual([null, null, 'mid', 'mid', null, null, null]);
   });
 });
@@ -136,86 +139,67 @@ describe('no Supply events table, or a table with nothing readable (M49 edge cas
   });
 
   it('reads an event whose other columns are in another order, and drops one whose columns are missing', () => {
-    const swapped = own(loadPool(['### Supply events', '| Supply event | Part % | FC % | When | Key |', '|---|---|---|---|---|', '| Swapped | 150 | 125 | Friday | swap |'].join('\n')));
-    expect(swapped.supplyEvents.map((e) => [e.name, e.fc, e.parts])).toEqual([['Swapped', 1.25, 1.5]]);
+    const swapped = own(loadPool(['### Supply events', '| Supply event | XP % | When | Key |', '|---|---|---|---|', '| Swapped | 125 | Friday | swap |'].join('\n')));
+    expect(swapped.supplyEvents.map((e) => [e.name, e.xp])).toEqual([['Swapped', 1.25]]);
     const short = own(loadPool(['### Supply events', '| Supply event | Key | When |', '|---|---|---|', '| Short | short | Friday |'].join('\n')));
     expect(short.supplyEvents).toEqual([]);
-    expect(short.errors.some((e) => e.includes('FC %'))).toBe(true);
+    expect(short.errors.some((e) => e.includes('XP %'))).toBe(true);
   });
 });
 
-describe('percent columns (M49 edge cases)', () => {
+describe('the XP % column (M49 edge cases)', () => {
   it('rejects an empty, negative, text or oversized percent, naming the column', () => {
-    const p = withRows(
-      '| A | a | Monday | | 100 |',
-      '| B | b | Monday | 100 | -5 |',
-      '| C | c | Monday | lots | 100 |',
-      '| D | d | Monday | 100 | 1001 |',
-      '| E | e | Monday | 1000 | 0 |',
-    );
+    const p = withRows('| A | a | Monday | |', '| B | b | Monday | -5 |', '| C | c | Monday | lots |', '| D | d | Monday | 1001 |', '| E | e | Monday | 1000 |');
     expect(p.supplyEvents.map((e) => e.key)).toEqual(['e']);
-    expect(p.errors.filter((e) => e.includes('FC %')).length).toBe(2);
-    expect(p.errors.filter((e) => e.includes('Part %')).length).toBe(2);
+    expect(p.errors.filter((e) => e.includes('XP %')).length).toBe(4);
   });
 
   it('reads 0 % as an event that empties the cases, and says so on the pop-up', () => {
-    const p = withRows('| Drought | drought | Monday | 0 | 0 |');
+    const p = withRows('| Drought | drought | Monday | 0 |');
     expect(p.errors).toEqual([]);
     const [drought] = p.supplyEvents;
-    expect(drought).toMatchObject({ fc: 0, parts: 0 });
-    expect(supplyLine(drought!)).toBe('Drought, until Monday: cases hold −100 % Field Credits and −100 % parts.');
+    expect(drought).toMatchObject({ xp: 0 });
+    expect(supplyLine(drought!)).toBe('Drought, until Monday: cases hold −100 % XP.');
   });
 });
 
 describe('what an event does to the cases (M49 edge cases)', () => {
-  it('with 0 % FC and 0 % parts, every case holds no credits and no part, a resupply stays a resupply', () => {
-    const drought = event({ fc: 0, parts: 0 });
+  it('with 0 % XP, every case holds no XP, and a resupply stays a resupply', () => {
+    const drought = event({ xp: 0 });
     const kinds = kindsUnder(pool.caseKinds, drought);
-    for (const k of kinds) {
-      expect(k.fc).toEqual({ min: 0, max: 0 });
-      expect(k.partChance).toBe(0);
-    }
+    for (const k of kinds) expect(k.xp).toEqual({ min: 0, max: 0 });
     let resupplies = 0;
     for (let seed = 1; seed <= 100; seed++) {
-      const cases = rollRunCases(pool, SPOTS, {}, seed, drought);
+      const cases = rollRunCases(pool, SPOTS, seed, drought);
       expect(cases.length).toBeGreaterThan(0);
       for (const c of cases) {
-        expect(c.find.fc).toBe(0);
-        expect(c.find.item).toBeNull();
+        expect(c.find.xp).toBe(0);
         if (c.find.resupply) resupplies++;
       }
     }
     expect(resupplies).toBeGreaterThan(0); // ammo cans' BB resupply chance is untouched
   });
 
-  it('never lifts a part chance past certain, however big the multiplier, and never lifts a 0 chance', () => {
-    const huge = event({ parts: 10 });
-    const kinds = kindsUnder(pool.caseKinds, huge);
-    for (const k of kinds) {
-      const was = pool.caseKinds.find((o) => o.key === k.key)!;
-      expect(k.partChance).toBe(was.partChance === 0 ? 0 : 1);
-      expect(k.partChance).toBeLessThanOrEqual(1);
-    }
-    // Certain means every field case holds a part, over many seeds.
+  it('never turns a case into a resupply or out of one, however big the multiplier', () => {
+    const huge = event({ xp: 10 });
+    for (const k of kindsUnder(pool.caseKinds, huge)) expect(k.resupplyChance).toBe(pool.caseKinds.find((o) => o.key === k.key)!.resupplyChance);
     for (let seed = 1; seed <= 100; seed++) {
-      for (const c of rollRunCases(pool, SPOTS, {}, seed, huge)) {
-        if (c.kind === 'field-case' || c.kind === 'locker') expect(c.find.item, `${c.kind} seed ${seed}`).not.toBeNull();
-        else expect(c.find.item).toBeNull();
-      }
+      const plain = rollRunCases(pool, SPOTS, seed);
+      expect(rollRunCases(pool, SPOTS, seed, huge).map((c) => c.find.resupply)).toEqual(plain.map((c) => c.find.resupply));
     }
   });
 
   it('keeps the BB resupply chance and the case count, spots, open time and heard range under any event', () => {
-    const kinds = kindsUnder(pool.caseKinds, event({ fc: 3, parts: 3 }));
-    expect(kinds.map(({ fc, partChance, ...rest }) => rest)).toEqual(pool.caseKinds.map(({ fc, partChance, ...rest }) => rest));
+    const kinds = kindsUnder(pool.caseKinds, event({ xp: 3 }));
+    expect(kinds.map(({ xp, ...rest }) => rest)).toEqual(pool.caseKinds.map(({ xp, ...rest }) => rest));
   });
 
   it('places the same cases on the same spots on one seed under any event, even a 0 % or a huge one', () => {
-    const events = [event({ fc: 0, parts: 0 }), event({ fc: 10, parts: 10 }), ...pool.supplyEvents];
+    const events = [event({ xp: 0 }), event({ xp: 10 }), ...pool.supplyEvents];
     for (let seed = 1; seed <= 100; seed++) {
-      const plain = rollRunCases(pool, SPOTS, {}, seed);
+      const plain = rollRunCases(pool, SPOTS, seed);
       for (const e of events) {
-        const rich = rollRunCases(pool, SPOTS, {}, seed, e);
+        const rich = rollRunCases(pool, SPOTS, seed, e);
         expect(rich.map((c) => [c.kind, c.position, c.yaw])).toEqual(plain.map((c) => [c.kind, c.position, c.yaw]));
       }
     }
@@ -223,32 +207,34 @@ describe('what an event does to the cases (M49 edge cases)', () => {
 
   it('rolls the same run twice from one seed and event', () => {
     const weekend = pool.supplyEvents.find((e) => e.key === 'supply-weekend')!;
-    expect(rollRunCases(pool, SPOTS, {}, 77, weekend)).toEqual(rollRunCases(pool, SPOTS, {}, 77, weekend));
+    expect(rollRunCases(pool, SPOTS, 77, weekend)).toEqual(rollRunCases(pool, SPOTS, 77, weekend));
   });
 
-  it('rolls an event’s credits inside the scaled range, whole numbers, never below the plain minimum when it is richer', () => {
+  it('rolls an event’s XP inside the scaled range, whole numbers, never below the plain minimum when it is richer', () => {
     const weekend = pool.supplyEvents.find((e) => e.key === 'supply-weekend')!;
     const kinds = kindsUnder(pool.caseKinds, weekend);
     for (let seed = 1; seed <= 200; seed++) {
-      for (const c of rollRunCases(pool, SPOTS, {}, seed, weekend)) {
+      for (const c of rollRunCases(pool, SPOTS, seed, weekend)) {
         if (c.find.resupply) continue;
         const k = kinds.find((x) => x.key === c.kind)!;
-        expect(Number.isInteger(c.find.fc)).toBe(true);
-        expect(c.find.fc).toBeGreaterThanOrEqual(k.fc.min);
-        expect(c.find.fc).toBeLessThanOrEqual(k.fc.max);
+        const plain = pool.caseKinds.find((x) => x.key === c.kind)!;
+        expect(Number.isInteger(c.find.xp)).toBe(true);
+        expect(c.find.xp).toBeGreaterThanOrEqual(k.xp.min);
+        expect(c.find.xp).toBeGreaterThanOrEqual(plain.xp.min);
+        expect(c.find.xp).toBeLessThanOrEqual(k.xp.max);
       }
     }
   });
 
   it('keeps min at or under max for any multiplier, including fractions', () => {
-    for (const fc of [0, 0.01, 0.333, 0.5, 0.999, 1.005, 1.5, 2.5, 3.14159, 10]) {
-      for (const k of kindsUnder(pool.caseKinds, event({ fc }))) expect(k.fc.min, `${fc}`).toBeLessThanOrEqual(k.fc.max);
+    for (const xp of [0, 0.01, 0.333, 0.5, 0.999, 1.005, 1.5, 2.5, 3.14159, 10]) {
+      for (const k of kindsUnder(pool.caseKinds, event({ xp }))) expect(k.xp.min, `${xp}`).toBeLessThanOrEqual(k.xp.max);
     }
   });
 
   it('does not change the pool it was given', () => {
     const before = JSON.stringify(pool.caseKinds);
-    kindsUnder(pool.caseKinds, event({ fc: 2, parts: 2 }));
+    kindsUnder(pool.caseKinds, event({ xp: 2 }));
     expect(JSON.stringify(pool.caseKinds)).toBe(before);
   });
 });
@@ -256,17 +242,16 @@ describe('what an event does to the cases (M49 edge cases)', () => {
 describe('the pop-up line (M49 edge cases)', () => {
   it('names a one-day dated event and a one-day weekly event by when they end', () => {
     expect(supplyLine({ ...event({}), when: readWhen('2026-12-25')!, name: 'Xmas' })).toBe('Xmas, until 25 Dec: cases as usual.');
-    expect(supplyLine({ ...event({}), when: readWhen('Wednesday')!, name: 'Midweek', fc: 1.5 })).toBe('Midweek, until Wednesday: cases hold +50 % Field Credits.');
+    expect(supplyLine({ ...event({}), when: readWhen('Wednesday')!, name: 'Midweek', xp: 1.5 })).toBe('Midweek, until Wednesday: cases hold +50 % XP.');
   });
 
-  it('says only the part that changes', () => {
-    expect(supplyLine(event({ parts: 2 }))).toBe('Test, until Sunday: cases hold +100 % parts.');
-    expect(supplyLine(event({ fc: 0.5, parts: 1.5 }))).toBe('Test, until Sunday: cases hold −50 % Field Credits and +50 % parts.');
+  it('says a drop as a minus', () => {
+    expect(supplyLine(event({ xp: 0.5 }))).toBe('Test, until Sunday: cases hold −50 % XP.');
   });
 
   it('rounds a scale that is not a whole percent and calls a rounding-to-zero change "as usual"', () => {
-    expect(supplyLine(event({ fc: 1.004, parts: 1.0001 }))).toBe('Test, until Sunday: cases as usual.');
-    expect(supplyLine(event({ fc: 1.126 }))).toContain('+13 % Field Credits');
+    expect(supplyLine(event({ xp: 1.004 }))).toBe('Test, until Sunday: cases as usual.');
+    expect(supplyLine(event({ xp: 1.126 }))).toContain('+13 % XP');
   });
 });
 

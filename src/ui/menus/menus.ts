@@ -25,7 +25,7 @@ import type { MenusOptions } from './menusOptions';
 import { TitleScreen, tutorialOffered } from './titleScreen';
 import { TutorialCompleteDialog } from './tutorialCompleteDialog';
 
-export type { FixedRulesText, MenusOptions, MenuWallet } from './menusOptions';
+export type { FixedRulesText, MenuLevel, MenusOptions } from './menusOptions';
 
 /** A screen as the menus hold it: its page and the keys it answers to. */
 interface Screen {
@@ -128,7 +128,7 @@ export class Menus {
     this.realistic = opts.look.initial.realisticColours;
     this.tutorialDone = opts.tutorialDone;
     this.matchStarted = loadMatchStarted();
-    this.context = { pictures: opts.pictures, realistic: () => this.realistic, armoryShown: () => opts.armory.wallet() !== null };
+    this.context = { pictures: opts.pictures, realistic: () => this.realistic, levelling: () => !opts.armory.levellingOff() };
     this.topBar = new TopBar(
       (place) => this.navigate(place),
       () => this.fromMark(),
@@ -274,9 +274,10 @@ export class Menus {
     this.lazyScreens.preloadWhenIdle(LOADING.preloadWithinMs);
   }
 
-  /** The screens again, after something outside the menus changed what they show (a match paid Field Credits). */
+  /** The screens again, after something outside the menus changed what they show (a match gave XP). */
   refresh(): void {
     this.refreshViews();
+    if (this.current === 'armory') this.armory?.refresh();
   }
 
   // The screens, each built the first time it is needed.
@@ -332,19 +333,7 @@ export class Menus {
     if (!this.armory) {
       const a = this.opts.armory;
       const { ArmoryScreen } = this.fetched();
-      this.armory = new ArmoryScreen({
-        ...(a.freeShots ? { freeShots: a.freeShots } : {}),
-        pool: a.pool,
-        collection: a.collection,
-        equipped: a.equipped,
-        context: this.context,
-        // What the Armory gives can change the Loadout's picks and the wallet.
-        onChange: () => {
-          const reloaded = a.onChange();
-          this.refreshViews();
-          return reloaded;
-        },
-      });
+      this.armory = new ArmoryScreen({ pool: a.pool, levels: a.levels, progress: a.progress, levellingOff: a.levellingOff, devContent: a.devContent, context: this.context });
       this.add('armory', this.armory);
     }
     return this.armory;
@@ -541,8 +530,8 @@ export class Menus {
   private openLoadout(from: SettingsOrigin): void {
     this.whenFetched(() => {
       this.origins.loadout = from;
-      // What you own may have changed since it was last open (the Armory, M26c). From Practice's pause menu (M95) it
-      // says what it is for there and picks the slot of the replica in hand.
+      // What you have unlocked may have changed since it was last open (a match's XP, LV1). From Practice's pause menu
+      // (M95) it says what it is for there and picks the slot of the replica in hand.
       const practice = from === 'pause' && this.rangePause;
       this.loadoutScreen().open(practice, practice ? this.inHand : undefined);
       this.go('loadout');
@@ -555,7 +544,6 @@ export class Menus {
   }
 
   private openArmory(from: SettingsOrigin): void {
-    if (this.opts.armory.wallet() === null) return;
     this.whenFetched(() => {
       this.origins.armory = from;
       this.armoryScreen().refresh();
@@ -612,7 +600,7 @@ export class Menus {
    * Esc on the Play screen, the Loadout, the Armory or Settings acts as Back, on the title opens Settings, and on the
    * pause menu resumes like its Resume button (audit UI-09; a refused mouse lock shows the usual "click again" hint). A
    * pop-up closes itself on Esc, and Settings swallows the Esc that cancels a key binding or clears its search before it
-   * gets here. Any other key a screen's hints name (T Tutorial, C Customise, / Search, Space 1 Shot) does what they say.
+   * gets here. Any other key a screen's hints name (T Tutorial, C Customise, / Search) does what they say.
    */
   private readonly onKeyDown = (e: KeyboardEvent): void => {
     if (this.root.hidden || this.root.inert || this.dialogOpen()) return;
@@ -681,10 +669,9 @@ export class Menus {
     if (this.current === 'settings') this.settings?.closed();
   }
 
-  /** The Play screen, the title's next match and the wallet show what is picked and owned now. */
+  /** The Play screen, the title's next match and the level badge show what is picked and unlocked now. */
   private refreshViews(): void {
-    const wallet = this.opts.armory.wallet();
-    this.topBar.setWallet(wallet, wallet === null);
+    this.topBar.setLevel(this.opts.armory.level());
     this.setup?.refresh(this.playView());
   }
 

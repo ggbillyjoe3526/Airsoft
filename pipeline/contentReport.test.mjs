@@ -191,19 +191,19 @@ describe('the content check command', () => {
   });
 
   it('starts a first-person picture with Dev content on and the item fitted', () => {
-    expect(firstPersonSettings({ replica: '000002', tier: 'common', fit: { optic: '000007@common' } })).toEqual({
+    expect(firstPersonSettings({ replica: '000002', fit: { optic: '000007' } })).toEqual({
       version: 1,
       'dev.enabled': true,
       'dev.devContent': 'on',
       'dev.unlockAllGear': 'on',
-      'equip.dev.primary': '000002@common',
-      'fit.dev.000002.optic': '000007@common',
+      'equip.dev.primary': '000002',
+      'fit.dev.000002.optic': '000007',
     });
   });
 });
 
-/** A balance sweep's pay meta as mapBalance.report.ts writes it (CT3). */
-const pay = (mode, fcPerMinute, extra = {}) => ({ map: 'depot', lighting: 'day', mode, level: 'normal', judged: true, label: `Depot, ${mode}, Normal`, fcPerMinute, noise: 0.05, band: { min: 0.75, max: 1.25 }, ...extra });
+/** A balance sweep's pay meta as mapBalance.report.ts writes it (CT3; LV1: XP a minute). */
+const pay = (mode, xpPerMinute, extra = {}) => ({ map: 'depot', lighting: 'day', mode, level: 'normal', judged: true, label: `Depot, ${mode}, Normal`, xpPerMinute, noise: 0.05, band: { min: 0.75, max: 1.25 }, ...extra });
 /** An Extraction sweep's run meta: the share of runs got out of, at `level`, with the pairs of levels to keep in order. */
 const run = (level, extract, extra = {}) => ({ map: 'depot', lighting: 'day', mode: 'extraction', where: 'Depot by day', level, extract, se: 0.03, judged: true, harder: [['easy', 'normal'], ['normal', 'hard']], ...extra });
 
@@ -221,7 +221,7 @@ const MODE_RESULTS = [
 describe('the mode report', () => {
   it('holds a mode’s pay a minute to its band beside Elimination’s', () => {
     const elimination = pay('elimination', 100);
-    const verdict = (fc, extra) => payResults([elimination, pay('attackDefend', fc, extra)]).map((r) => r.verdict);
+    const verdict = (xp, extra) => payResults([elimination, pay('attackDefend', xp, extra)]).map((r) => r.verdict);
     expect(verdict(110)).toEqual(['pass']);
     // × 1.3, two standard errors of ± 0.09: outside, but within noise.
     expect(verdict(130)).toEqual(['warn']);
@@ -241,7 +241,11 @@ describe('the mode report', () => {
     expect(payResults([pay('elimination', 100), pay('attackDefend', 300, { level: 'hard' })])).toEqual([]);
     const r = payResults([pay('elimination', 100), pay('attackDefend', 110)])[0];
     expect(r).toMatchObject({ level: 'balance', check: 'mode.pay', item: "Depot, attackDefend, Normal: pay against Elimination's" });
-    expect(r.says).toContain("110 FC a minute against Elimination's 100 (× 1.1; target × 0.75 to × 1.25)");
+    expect(r.says).toContain("110 XP a minute against Elimination's 100 (× 1.1; target × 0.75 to × 1.25)");
+    // A sweep that still carries the old Field Credits figure has no XP to compare: no ratio, not a pass.
+    const old = payResults([{ ...pay('elimination', 100), xpPerMinute: undefined, fcPerMinute: 100 }, pay('attackDefend', 110)])[0];
+    expect(old.says).toContain('no ratio');
+    expect(old.verdict).toBe('fail');
   });
 
   it('keeps a run mode’s levels in order: easier gets out at least as often', () => {

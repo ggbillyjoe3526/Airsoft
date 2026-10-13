@@ -1,15 +1,13 @@
 import { createRng, rngNext, type RngState } from '../sim/rng';
 import type { CaseFind, CaseSetup } from '../sim/extraction';
 import type { Vec3 } from '../sim/vec';
-import { drawPart } from './armory';
-import { itemKey } from './collection';
 import type { Pool } from './pool';
 import { kindsUnder, type SupplyEvent } from './supplyEvents';
 import type { CaseKind, NumberRange } from './tables';
 
 /**
  * Extraction's cases (M44): pool.md's Caches table (one row per kind of case: how many a run places, how long one takes
- * to open, how far it is heard and what it holds) and the seeded roll that places a run's cases on a map's case spots
+ * to open, how far it is heard and the XP it holds) and the seeded roll that places a run's cases on a map's case spots
  * and fills them. The numbers are the owner's to tune in pool.md; the table is read, and the defaults for any the file
  * is missing are kept, in tables.ts.
  */
@@ -51,27 +49,20 @@ export function placeCases(kinds: readonly CaseKind[], spots: readonly CaseSpotL
   return out.sort((a, b) => a.spot - b.spot);
 }
 
-/**
- * What one case holds: its Field Credits (or a BB resupply instead, on its chance) and, on its chance, a part drawn
- * like a Shot's item (armory.ts drawPart: never dev gear, pity untouched). `drawn` keeps a run's parts apart for the
- * unowned weight, as a Shot's are.
- */
-export function rollFind(pool: Pool, kind: CaseKind, owned: Readonly<Record<string, number>>, drawn: Set<string>, rng: RngState): CaseFind {
+/** What one case holds (LV1): its XP, or a BB resupply instead, on its chance. Gear is never found: levels unlock it. */
+export function rollFind(kind: CaseKind, rng: RngState): CaseFind {
   const resupply = rngNext(rng) < kind.resupplyChance;
-  const fc = rollRange(kind.fc, rng);
-  const item = rngNext(rng) < kind.partChance ? drawPart(pool, owned, kind.partsFrom, drawn, rng) : null;
-  if (item) drawn.add(itemKey(item.asset, item.tier));
-  return { fc: resupply ? 0 : fc, resupply, item };
+  const xp = rollRange(kind.xp, rng);
+  return { xp: resupply ? 0 : xp, resupply };
 }
 
 /**
- * A run's cases (M44), from its seed: placed on the map's spots and filled from pool.md's Caches table, with the parts
- * weighted towards what `owned` (the collection's items) lacks, under the supply `event` on as the run starts (M49:
- * richer cases, the same ones in the same places). The same seed, collection and event give the same run. Pure.
+ * A run's cases (M44), from its seed: placed on the map's spots and filled from pool.md's Caches table, under the
+ * supply `event` on as the run starts (M49: richer cases, the same ones in the same places). The same seed and event
+ * give the same run. Pure.
  */
-export function rollRunCases(pool: Pool, spots: readonly CaseSpotLike[], owned: Readonly<Record<string, number>>, seed: number, event: SupplyEvent | null = null): CaseSetup[] {
+export function rollRunCases(pool: Pool, spots: readonly CaseSpotLike[], seed: number, event: SupplyEvent | null = null): CaseSetup[] {
   const rng = createRng(seed);
-  const drawn = new Set<string>();
   return placeCases(kindsUnder(pool.caseKinds, event), spots, rng).map(({ spot, kind }) => {
     const s = spots[spot]!;
     return {
@@ -81,7 +72,7 @@ export function rollRunCases(pool: Pool, spots: readonly CaseSpotLike[], owned: 
       yaw: s.yaw,
       openTime: kind.openTime,
       heard: kind.heard,
-      find: rollFind(pool, kind, owned, drawn, rng),
+      find: rollFind(kind, rng),
     };
   });
 }
