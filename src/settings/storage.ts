@@ -45,6 +45,8 @@ export type SettingField =
   /** The Match screen's "Your team" (M98): 'alpha' or 'beta' (config/teams.ts TEAM_PICKS). */
   | 'playerTeam'
   | 'crouch'
+  /** The practice range's timed challenge (M93): on or off (off by default). */
+  | 'practiceChallenge'
   | 'aimMode'
   | 'sprintMode'
   /** How the order wheel gives an order (M23): hover or click. */

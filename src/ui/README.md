@@ -7,8 +7,8 @@ game state and never write it. Tests use the fake DOM in `testSupport.ts` (no js
   `hitFeed.ts`, `hitFeedback.ts`, `soundCues.ts`, `teammateMarkers.ts`, `flagMarker.ts`, `flagStatus.ts`,
   `runStatus.ts`, `casePrompt.ts`, `whatGotYou.ts`, `squadOrderLine.ts`, `orderWheel.ts`.
 - Map and stats: `minimap.ts` (the field drawn once per match on a canvas) with `minimapView.ts` (teammates and heard
-  players), `matchBoard.ts` (Tab), `statsRows.ts` (pure) and `statsTable.ts`, `recordsView.ts`, `rangeReadout.ts`,
-  `performanceSheet.ts` (the Customise screen's Performance sheet).
+  players), `matchBoard.ts` (Tab), `statsRows.ts` (pure) and `statsTable.ts`, `recordsView.ts`, `rangeReadout.ts`
+  (Practice's line and the timed challenge's banner), `performanceSheet.ts` (the Customise screen's Performance sheet).
 - Settings tabs: one `*Settings.ts` per tab (graphics, audio, controls and `keySettings.ts`, hud, look, accessibility,
   crosshair, dev, save), shown by `menus/settingsScreen.ts`; `rendererRow.ts` builds Graphics' Renderer row (W1) in the
   lazy boot chunk. `optionPicker.ts` is the shared pop-up choice.

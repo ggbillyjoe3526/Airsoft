@@ -30,7 +30,12 @@ beforeAll(async () => {
       setDetail(): void {}
     },
   }));
-  vi.doMock('./ui/rangeReadout', () => ({ RangeReadout: class { set(): void {} setVisible(): void {} }, lastShotText: () => '' }));
+  vi.doMock('./ui/rangeReadout', () => ({
+    RangeReadout: class { set(): void {} setVisible(): void {} },
+    ChallengeBanner: class { cue(): void {} frame(): void {} dispose(): void {} },
+    lastShotText: () => '',
+    challengeText: () => '',
+  }));
   vi.doMock('./render/lighting', () => ({ addLighting: () => ({ reserveLights() {} }) }));
   vi.doMock('./render/figureMix', () => ({ figureCrowd: () => [], playerArms: () => undefined }));
   vi.doMock('./pool/loadoutModel', () => ({ bbGlowFor: () => ({ player: [], others: false }), kitPaint: () => ({}) }));

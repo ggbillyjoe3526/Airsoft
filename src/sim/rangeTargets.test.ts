@@ -27,26 +27,39 @@ const open: WorldQuery = { raycastStatic: () => -1 };
 describe('practice range targets (M21)', () => {
   it('lays out every lane at every distance, steel at chest height, figures on the floor', () => {
     const targets = createRangeTargets();
-    expect(targets).toHaveLength(RANGE.lanes.length * RANGE.distances.length);
+    // The lanes first (M93 adds the other targets and the START plate after them, so the lanes keep their ids).
+    const lanes = targets.slice(0, RANGE.lanes.length * RANGE.distances.length);
+    expect(targets).toHaveLength(lanes.length + RANGE.features.length + 1);
     expect(new Set(targets.map((t) => t.id)).size).toBe(targets.length);
-    for (const t of targets) {
+    for (const t of lanes) {
+      expect(t.motion).toBe('still');
       expect(t.position.z).toBe(-t.distance);
       expect(t.position.y).toBe(t.kind === 'steel' ? RANGE.plateHeight : 0);
-      expect(Math.abs(t.position.x)).toBeLessThan(RANGE.halfWidth - 1);
     }
+    for (const t of targets) expect(Math.abs(t.position.x)).toBeLessThan(RANGE.halfWidth - 1);
     expect(targets.filter((t) => t.crouched).every((t) => t.kind === 'figure')).toBe(true);
   });
 
-  it('never hides one target behind another from where you start', () => {
+  it('never hides one target behind another from where you start, moving or not (M93)', () => {
     const targets = createRangeTargets();
+    for (const t of targets) {
+      if (t.motion === 'popup') t.down = 0; // every pop-up standing at once
+      t.hidden = false; // the START plate too
+    }
     const eye = vec3(0, BODY.standEyeHeight, RANGE.spawnBack);
     const hit = { index: -1, at: 0, post: false };
-    for (const [i, t] of targets.entries()) {
-      // Aim at the middle of what can be hit: the plate's centre, a figure's chest (or a crouched one's).
-      const aim = vec3(t.position.x, t.kind === 'steel' ? t.position.y : t.crouched ? 0.7 : 1.2, t.position.z);
-      const d = unit(vec3(aim.x - eye.x, aim.y - eye.y, aim.z - eye.z));
-      firstRangeTargetHit(eye, d, 100, targets, HITS, hit);
-      expect(hit.index, `${t.label} ${t.distance} m`).toBe(i);
+    // Over two of the slowest cycles, every 0.1 s: movers along their tracks, swingers through their swing.
+    for (let time = 0; time < 2 * 6; time += 0.1) {
+      for (const [i, t] of targets.entries()) {
+        // Aim at the middle of what can be hit: the plate's centre, a figure's chest (or a crouched one's).
+        const aim = vec3(t.position.x, t.kind === 'steel' ? t.position.y : t.position.y + (t.crouched ? 0.7 : 1.2), t.position.z);
+        const d = unit(vec3(aim.x - eye.x, aim.y - eye.y, aim.z - eye.z));
+        firstRangeTargetHit(eye, d, 100, targets, HITS, hit);
+        expect(hit.index, `${t.label} ${t.distance} m at ${time.toFixed(1)} s`).toBe(i);
+        expect(hit.post, `${t.label} ${t.distance} m at ${time.toFixed(1)} s`).toBe(false);
+      }
+      stepRangeTargets(targets, 0.1);
+      for (const t of targets) if (t.motion === 'popup') t.down = 0;
     }
   });
 

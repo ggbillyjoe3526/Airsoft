@@ -143,7 +143,7 @@ describe('the plain title (M100 QA)', () => {
     const setup = new SetupScreen(model, { equipped: () => [] } as never, { pictures: null, realistic: () => false }, { onLoadout: noop, onBack: noop, onPlay: noop, onPractice: noop });
     const pool = loadPool(poolText);
     const armory = new ArmoryScreen({ pool: () => pool, collection: () => newCollection(pool, 1), equipped: () => [], onChange: () => false });
-    const pause = new PauseScreen({ onResume: noop, onLoadout: noop, onSettings: noop, onQuit: noop, onSkipStep: noop, onSkipTutorial: noop, onSkipRound: noop });
+    const pause = new PauseScreen({ onResume: noop, onLoadout: noop, onSettings: noop, onQuit: noop, onSkipStep: noop, onSkipTutorial: noop, onSkipRound: noop, onChallenge: noop });
     const result = new ResultScreen({ onPlayAgain: noop, onSummary: noop, onChangeSetup: noop, onTitle: noop });
     const bar = new TopBar(noop, noop);
     bar.setWallet({ fc: 100, tokens: 2 }, false);
@@ -229,7 +229,7 @@ describe('every screen can be left and used with the mouse, and the keys still w
   });
 
   it('the pause and result screens answer to no key of their own (Esc and Enter belong to the menus and the focused button)', () => {
-    const pause = new PauseScreen({ onResume: noop, onLoadout: noop, onSettings: noop, onQuit: noop, onSkipStep: noop, onSkipTutorial: noop, onSkipRound: noop });
+    const pause = new PauseScreen({ onResume: noop, onLoadout: noop, onSettings: noop, onQuit: noop, onSkipStep: noop, onSkipTutorial: noop, onSkipRound: noop, onChallenge: noop });
     const result = new ResultScreen({ onPlayAgain: noop, onSummary: noop, onChangeSetup: noop, onTitle: noop });
     expect([pause.hints, result.hints]).toEqual([[], []]);
     expect(buttons(node(pause.root))).toContain('Resume');

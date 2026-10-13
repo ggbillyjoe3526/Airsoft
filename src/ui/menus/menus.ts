@@ -148,27 +148,44 @@ export class Menus {
   /**
    * The pause menu, with `status` (round and score) under the heading; `range`: on the practice range (M21);
    * `tutorial`: its coach is running there (Skip step, Skip tutorial). `skip` (M83): you are out in a match, and the
-   * rest of the round can be skipped (to the next round, or to the result). `inHand` (M95): on the range, the gear slot
-   * of the replica in hand, which its Loadout picks.
+   * rest of the round can be skipped (to the next round, or to the result). `challenge` (M93): the practice range's timed
+   * challenge is on or off, or null where it isn't offered. `inHand` (M95): on the range, the gear slot of the replica in
+   * hand, which its Loadout picks.
    */
-  showPause(status: string, seed: number, range = false, tutorial = false, skip: 'round' | 'result' | null = null, inHand?: GearSlot): void {
+  showPause(
+    status: string,
+    seed: number,
+    range = false,
+    tutorial = false,
+    skip: 'round' | 'result' | null = null,
+    challenge: boolean | null = null,
+    inHand?: GearSlot,
+  ): void {
     const pause = this.pauseScreen();
     pause.setStatus(status);
     pause.setSeed(seed);
     pause.setRange(range, tutorial);
     pause.setSkip(skip);
+    pause.setChallenge(challenge);
     this.rangePause = range;
     this.inHand = range ? inHand : undefined;
     this.pauseShownAt = performance.now();
     this.go('pause');
   }
 
+  /** The pause menu already up, after its Timed challenge was switched (M93): its status line and the switch. */
+  updatePause(status: string, challenge: boolean | null): void {
+    const pause = this.pauseScreen();
+    pause.setStatus(status);
+    pause.setChallenge(challenge);
+  }
+
   /**
    * The Loadout key in Practice (M95): the Loadout straight from play, over the range's pause menu (its Back goes there),
    * with the slot of the replica in hand picked; Back to practice or the key again goes back to practice.
    */
-  showPracticeLoadout(status: string, seed: number, tutorial: boolean, inHand: GearSlot): void {
-    this.showPause(status, seed, true, tutorial, null, inHand);
+  showPracticeLoadout(status: string, seed: number, tutorial: boolean, inHand: GearSlot, challenge: boolean | null): void {
+    this.showPause(status, seed, true, tutorial, null, challenge, inHand);
     this.openLoadout('pause');
   }
 
@@ -361,6 +378,7 @@ export class Menus {
         onSkipStep: () => this.opts.onSkipTutorialStep(),
         onSkipTutorial: () => this.opts.onSkipTutorial(),
         onSkipRound: () => (this.showHint(''), this.opts.onSkipRound()),
+        onChallenge: () => this.opts.onToggleChallenge(),
       });
       this.add('pause', this.pause);
     }
