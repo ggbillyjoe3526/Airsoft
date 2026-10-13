@@ -51,6 +51,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **LV1** · Hard and Pro bots lose their small tier bonus; the Cyber Pistol keeps its old numbers (#207)
 - **LV1** · Unlock all gear is now Disable levelling, a cheat with no XP and no records (#207)
 - **LV1** · Save format 3: an older save loads at level 0 with its settings and records; old Armory items, Field Credits and Tokens don't carry over (#207)
+- **RM9** · With the Dev figure switches off, humans and bots use a new figure: gloved hands, four heads and team colour on the vest, armbands and bands
 - **BG1** · Hard and Pro's random gear roll and the Cyber Pistol carrier that needed you to have one are replaced by the bot kits
 
 ### Fixed

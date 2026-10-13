@@ -258,6 +258,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   replicas in the team's colours (G7)
 - Your first-person arms: dark gloves, team camo sleeves and armband, or robot arms when your player is a robot (G7)
 - An optional glTF player model dropped into the assets folder replaces the built-in figures (M25a)
+- Blender human figure, shown when the Dev figure switches are off: realistic body, gloved hands that grip the AEG and pistol, four heads (high-cut helmet, goggled cap, boonie hat, full-cut helmet) and team colour on the vest, armbands and bands (RM9)
 - Block surface finishes and paints (plaster, metal, glazed tiles, asphalt, paving); six city props (arcade cabinet,
   vending machine, market stall, planter, phone booth, delivery van); painted ground markings and plaster ceilings under
   raised floors; flat finishes at 512 × 512 on Medium, High and Ultra (M34f, M78)

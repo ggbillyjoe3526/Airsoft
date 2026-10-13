@@ -1,6 +1,6 @@
 {
- "figure": "bot_human_v10",
- "heightMetres": 1.73,
+ "figure": "bot_human_v12",
+ "heightMetres": 1.74,
  "facing": "+Z",
  "fps": 30,
  "clips": [
@@ -197,6 +197,15 @@
   "Body",
   "Body_LOD1",
   "Body_LOD2",
+  "Head_Boonie",
+  "Head_Boonie_LOD1",
+  "Head_Boonie_LOD2",
+  "Head_Cap",
+  "Head_Cap_LOD1",
+  "Head_Cap_LOD2",
+  "Head_FullCut",
+  "Head_FullCut_LOD1",
+  "Head_FullCut_LOD2",
   "Head_HighCut",
   "Head_HighCut_LOD1",
   "Head_HighCut_LOD2",
@@ -215,6 +224,15 @@
  ],
  "firstPerson": {
   "hide": [
+   "Head_Boonie",
+   "Head_Boonie_LOD1",
+   "Head_Boonie_LOD2",
+   "Head_Cap",
+   "Head_Cap_LOD1",
+   "Head_Cap_LOD2",
+   "Head_FullCut",
+   "Head_FullCut_LOD1",
+   "Head_FullCut_LOD2",
    "Head_HighCut",
    "Head_HighCut_LOD1",
    "Head_HighCut_LOD2"

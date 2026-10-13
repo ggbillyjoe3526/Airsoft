@@ -11,13 +11,25 @@ direction and graphics); until then nobody reworks them here. That session also 
 moves need: vaulting, and resting the replica on cover (M104; today a placeholder lean of the aim pose,
 `FIGURE_RIG.rest` in `src/config/figureRig.ts`).
 
+The human was redesigned first (v12, RM9, 13 Oct 2026, approved on its review pictures in
+`concepts/human-figure-redesign-2026-10-13/`): a new body and gloved hands from his reference photos, four heads the
+game picks per figure by its id, and the plate carrier and cummerbund in the team colour. It was built in his Blender
+by `bot20`-`bot22` on top of the earlier layers; the robot's redesign is the robot thread's own layers (`bot18`,
+`bot19`). The two share the skeleton, clip names and these scripts (`plans/bot-figure-handoff.md` in the project files).
+
 ## What is here
 
 - `scripts/`: every script that builds the figures, in load order (`load.py` lists it): `bot_helpers`, `bot_body`,
-  `bot_kit`, `bot2`-`bot4`, `bot_main`, `bot5`, `bot_final`, `bot6`-`bot17`, `bot_render`; then `session.py`
+  `bot_kit`, `bot2`-`bot4`, `bot_main`, `bot5`, `bot_final`, `bot6`-`bot22` (`bot18`, `bot19` are the robot
+  redesign's, skipped when absent), `bot_render`; then `session.py`
   (build, pose, render and export helpers) and `session16.py` (checking helpers: bake one clip, arm-in-torso and
-  wrist metrics, finger solves on the real replicas and magazines, `export_v(kind, stem)`).
-- The current figures (v11, 12 Oct 2026: v10, which is v6 plus the trigger finger, the reload that throws the old
+  wrist metrics, finger solves on the real replicas and magazines, `export_v(kind, stem)`). `review_v12.py` (not
+  part of the build) renders the v12 review pictures: turnaround, heads, hands on each replica, poses.
+- The current human is v12 (RM9): 19,966 triangles with its largest head (body and kit 17,468; heads high-cut
+  2,498, cap 1,652, boonie 1,228, full-cut 1,128), one atlas of three materials (`Outfit`, `TeamColour`, `Lens`),
+  1.74 m, the same 23 clips; 2.84 MB packed. Blender's export and .blend are in the project files
+  (`models/bot-human/v12/`).
+- The figures before it (v11, 12 Oct 2026: v10, which is v6 plus the trigger finger, the reload that throws the old
   magazine and the hand and arm fixes of bot15-bot16, with bot17's `CrouchIdle` and `CrouchWalk`; 23 clips) are the
   game's `src/assets/models/characters/human.glb` (19,832 triangles, high-cut helmet head only) and `robot.glb` (17,092,
   bare body with team-paint panels), each with LOD1/LOD2 meshes, plus their sidecars (clip lengths, loops, speeds,
@@ -55,6 +67,9 @@ Read the newest layer first when looking for a function: it is the one that wins
 | `bot14` | v6 | Forearm twist and elbow bones, the arm solve, finger poses, the magazine reloads |
 | `bot15`, `bot16` | v7-v10 | Trigger finger, the thrown old magazine, the support hand, arms out of the torso, the pouch draw |
 | `bot17` | v11 | The kneel and the crouch walk as low as the game's crouch: the hips 0.62 m under standing (IM8) |
+| `bot20` | v12 | The redesigned human: combat shirt and trousers, carrier and pouches, gloves rebuilt finger by finger (knuckles, pads, a knuckle guard), the high-cut head (RM9) |
+| `bot21` | v12 | The atlas bake, `finalise_v12` and `export_v12`; `TEAM_CARRIER` puts the carrier in the team colour |
+| `bot22` | v12 | The cap, boonie and full-cut heads on copies of the balaclava, cloth a hat hides dropped (`HEAD_ORDER`) |
 | `bot_render` | all | Picture cameras and lights |
 | `session`, `session16` | v8-v10 | Build, pose, check and export helpers (`export_v`) |
 
@@ -65,13 +80,15 @@ Read the newest layer first when looking for a function: it is the one that wins
   (`bot17.py`; `render/figureLegs.test.ts` checks it in the shipped files). With the figures drawn, the hit volume's
   legs are the figures' own, read from the leg clips as the file loads (`render/figureLegs.ts`).
 
-- Metres, facing glTF +Z; human 1.73 m, robot 1.75 m to the top of its optic (`heightMetres` in the sidecar). Team colour: tint materials whose names start with `Team` (Alpha 0x3d8bff,
+- Metres, facing glTF +Z; human 1.74 m (v12), robot 1.75 m to the top of its optic (`heightMetres` in the sidecar). Team colour: tint materials whose names start with `Team` (Alpha 0x3d8bff,
   Beta 0xff8a2a).
 - Replicas are the game's own `aeg.glb` / `pistol.glb` (X right, Y forward, Z up). Hang the held one on `Grip_R` with
   the sidecar's `replicaOnGrip` matrix (Blender axes, row-major). `Pistol_*` clips, and `Switch` from 35 %, hold the
   pistol; all other clips hold the AEG.
 - Upper-body clips (`upperBodyOnly`) are authored over a still pelvis: layer them over the legs' clip as they are.
-- First person: hide the parts listed under `firstPerson.hide` (the head) to see the body when looking down.
+- First person: hide the parts listed under `firstPerson.hide` (every head) to see the body when looking down.
+- Heads (v12): the human's head parts are listed in `parts.human.head` of `src/config/figureRig.ts`, in
+  `HEAD_ORDER`; a figure wears `head[id % 4]`.
 
 ## Rebuild (Blender 5.2)
 
@@ -81,6 +98,7 @@ Read the newest layer first when looking for a function: it is the one that wins
    `exec(..., bpy.app.driver_namespace['bot'])`.
 3. Then `session16.py` the same way. `B = bpy.app.driver_namespace['bot']`; `B['export_v']('human', 'bot_human_v10')`
    (or `'robot'`) builds the figure with its own finger tables, exports the glb and sidecar and saves the .blend.
+   The v12 human: `B['export_v12']('bot_human_v12')` (make sure `O['Rig'].animation_data` exists first).
 4. Pictures: `B['proxies']()` then `B['figure_shots'](prefix, parts, head, first_person_parts)`.
 5. Pack each export for the game, from the repo root: `node tools/blender/bot-figure/pack.mjs bot_human_v10.glb
    src/assets/models/characters/human.glb` (and `robot`), and copy the sidecar beside it as `human.json`.
