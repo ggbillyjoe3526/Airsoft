@@ -36,6 +36,11 @@ export const BOT_BEHAVIOUR = {
   footstepHearingLand: 12,
   footstepHearingRattle: 7,
   /**
+   * A vault's hands and kit on the obstacle (M102): louder than any step (owner, 2026-10-13: "Vaulting allows quick
+   * movement but at the cost of making noise"), and its landing is heard as well (`footstepHearingLand`).
+   */
+  footstepHearingVault: 18,
+  /**
    * Through walls (M22): a sound fully blocked from a bot carries only this fraction of its range, and half blocked
    * (low cover) halfway between. Judged by the same rays (ear to the source's knees and head) that muffle sounds for
    * the player (AUDIO.occlusion), so bots hear through walls no better than the player does.
@@ -195,8 +200,12 @@ export const BOT_BEHAVIOUR = {
   leanSpotStep: 0.225,
   /** Lean spots score as if they were this much closer (metres): you can lean out and shoot back. */
   leanCoverBonus: 1.5,
-  /** Walk right onto a lean spot, to within this distance (metres): a few centimetres decide the peek. */
-  leanSpotReach: 0.1,
+  /**
+   * Walk right onto a lean spot, to within this distance (metres): a few centimetres decide the peek. 0.1 until M102,
+   * when a walk's last few centimetres of coasting (ai/routes.ts stepOnto) left Woodland's lean guards 7 to 9 cm off
+   * their posts and some down to 64 % of their ticks seeing the way in (12 seeds); now 0 to 4 cm off and at least 92 %.
+   */
+  leanSpotReach: 0.03,
   /** ...and only from this close (metres): further off, the route brings the bot there first. */
   leanSpotApproachMax: 0.9,
   /** At a lean spot, the bot counts as there (to peek and fight from it) only within this distance (metres). */
@@ -248,6 +257,13 @@ export const BOT_BEHAVIOUR = {
   /** Walking slower than this (m/s) for `stuckTime` seconds along a route means blocked: re-plan. */
   stuckSpeed: 0.3,
   stuckTime: 1,
+  /**
+   * Vaulting (M102): a bot's route goes over a low obstacle (nav/vaultLinks.ts) only where that saves more than this
+   * many metres on foot (it is slower than its length, the replica is carried, and it is loud). A bot that got stuck on
+   * a vault leg plans without vaults for `vaultRetryDelay` seconds.
+   */
+  vaultPrice: 3,
+  vaultRetryDelay: 6,
   /** Re-plan a route to a moving goal when it has moved this far (metres). */
   replanDistance: 2.5,
   /** While fighting, sidestep for this long before switching direction (s). */

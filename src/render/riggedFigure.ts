@@ -150,6 +150,7 @@ export class RiggedFigure {
     reload: null,
     draw: null,
     firstPerson: false,
+    vaulting: false,
     cycle: null,
   };
   private readonly draw = { progress: 0, from: 'rifle' as PoseHold };
@@ -287,6 +288,7 @@ export class RiggedFigure {
     input.side = c.velocity.x * cos - c.velocity.z * sin;
     input.crouch = c.prevCrouchAmount + (c.crouchAmount - c.prevCrouchAmount) * a;
     input.sprinting = c.sprinting;
+    input.vaulting = c.vault.active;
     input.airborne = !c.grounded;
     input.airTime = c.airTime;
     // Resting on cover (M104), a placeholder until the figure redesign's own pose: the aim is posed `rest` higher and the

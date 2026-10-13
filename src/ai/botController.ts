@@ -3,12 +3,13 @@ import type { BotConfig } from '../config/bots';
 import type { HitConfig } from '../config/hits';
 import { WHAT_GOT_YOU } from '../config/matchInfo';
 import { FLAG, unknownMode } from '../config/modes';
-import type { BodyConfig } from '../config/movement';
+import { type BodyConfig, MOVEMENT } from '../config/movement';
 import { NAV } from '../config/nav';
 import type { ReplicaConfig } from '../config/replicas';
 import { SQUAD_ORDERS, type SquadOrderKind } from '../config/squad';
 import { botSeed, planSeed } from '../core/seed';
 import { beginRoute, cellX, cellZ, createNavSearch, endRoute, floorAt, type NavGrid, type NavSearch, stepRoute } from '../nav/navGrid';
+import { vaultLinksOf } from '../nav/vaultLinks';
 import { shotHeardScale, type WorldQuery } from '../sim/armament';
 import type { Character } from '../sim/character';
 import { createCommand, type PlayerCommand } from '../sim/commands';
@@ -169,6 +170,8 @@ export class BotController {
       live: true,
     };
     this.search = createNavSearch(nav);
+    // Routes over low obstacles where that pays (M102): the grid's vault links, found once per grid.
+    vaultLinksOf(nav, opts.query, opts.body, MOVEMENT, cfg.vaultPrice);
     for (const c of botCharacters) {
       this.bots.push(createBot(c, botSeed(opts.seed, c.id), cfg, this.cfgOf(c.team)));
       this.botCharacters.add(c);
@@ -439,7 +442,15 @@ export class BotController {
       } else if (e.type === 'footstep') {
         const walker = this.character(state, e.characterId);
         const range =
-          e.kind === 'sprint' ? cfg.footstepHearingSprint : e.kind === 'land' ? cfg.footstepHearingLand : e.kind === 'rattle' ? cfg.footstepHearingRattle : cfg.footstepHearingRun;
+          e.kind === 'sprint'
+            ? cfg.footstepHearingSprint
+            : e.kind === 'vault'
+              ? cfg.footstepHearingVault
+              : e.kind === 'land'
+                ? cfg.footstepHearingLand
+                : e.kind === 'rattle'
+                  ? cfg.footstepHearingRattle
+                  : cfg.footstepHearingRun;
         if (walker && isInPlay(walker)) this.hear(walker.team, walker.position, walker.position, time, walker.position, range, walker.id);
       } else if (e.type === 'returned') {
         // Extraction (M45): an opponent back in a wave sets out afresh from its regen point.
@@ -829,6 +840,8 @@ export class BotController {
       const b = this.bots[i]!;
       // A bot hit while it waited walks off on its own route (M74): no search for it.
       if (b.routeState !== 'wanted' || !isInPlay(b.character)) continue;
+      // Over low obstacles too (M102), unless this bot was lately held up at one.
+      this.search.vaults = this.world.time >= b.vaultsOffUntil;
       if (!beginRoute(this.opts.nav, this.search, b.character.position, b.routeGoal, this.opts.navSnap)) {
         this.routeDone(b, false);
         continue;

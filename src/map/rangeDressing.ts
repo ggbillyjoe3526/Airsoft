@@ -1,12 +1,13 @@
 import { RANGE, RANGE_VISUALS } from '../config/range';
+import { VAULT_WALL_HEIGHT, VAULT_WALL_MAX_DEPTH } from '../config/vault';
 import { vec3 } from '../sim/vec';
 import type { GlowStrip, MapBlock, MapDressing } from './mapTypes';
 
 /**
  * The practice range in the new look (M81, playtest note 9), dressed in the art direction Depot got in G8: an airsoft
  * site's range in the countryside. Its props stand behind the firing line, in the corners, where nobody shoots (a
- * portable toilet, the replica rack, a water tank, the generator, a crate bench) and a sandbag berm lies at the foot of
- * the backstop; they are blocks like any map's, so BBs stop on them. The dressing (MapData.dressing, render/mapDressing.ts)
+ * portable toilet, the replica rack, a water tank, the generator, a crate bench, a low sandbag wall to vault) and a
+ * sandbag berm lies at the foot of the backstop; they are blocks like any map's, so BBs stop on them. The dressing (MapData.dressing, render/mapDressing.ts)
  * adds dirt and junk at the walls' feet, litter, puddles, sprays and warning signs, small glow strips by the firing line,
  * and wooded hills, treelines, site huts, a water tower and a power line beyond the walls. World coordinates
  * (downrange is -z, the firing line runs across z = 0). Look only, but for the props: nothing else is read by play.
@@ -27,11 +28,16 @@ const CRATE = 1.2;
 const FULL_HEIGHT = 2 * CRATE;
 /** The sandbag berm at the backstop's foot: how deep it is from the backstop (m) and how high. */
 const BERM = { depth: 1.2, height: 0.9 };
+/**
+ * A low sandbag wall to vault (M102, the tutorial's vault step): its middle across and along the range and its length.
+ * Off to the right of where you start, with room on both sides, clear of the walk to the line and of the back props.
+ */
+const VAULT_BAGS = { x: 4.6, z: 3.4, length: 2.4 };
 
 /**
  * The range's props (M81), placed from config/range.ts: behind the firing line in the two back corners and along the
- * back wall (clear of where you start and of the walk to the line), and the berm across the backstop's foot (past the
- * farthest targets).
+ * back wall (clear of where you start and of the walk to the line), the berm across the backstop's foot (past the
+ * farthest targets), and a low sandbag wall to vault (M102).
  */
 export function rangeProps(): MapBlock[] {
   const w = RANGE.halfWidth;
@@ -47,6 +53,7 @@ export function rangeProps(): MapBlock[] {
     prop('generator', atRight(CRATE), atBack(CRATE) - CRATE - 0.3, CRATE, CRATE, CRATE),
     prop('crate', atRight(CRATE) - CRATE - 1.6, atBack(CRATE), 2 * CRATE, CRATE, 0.9),
     prop('sandbags', 0, -RANGE.backstop + BERM.depth / 2, 2 * w, BERM.depth, BERM.height),
+    prop('sandbags', VAULT_BAGS.x, VAULT_BAGS.z, VAULT_BAGS.length, VAULT_WALL_MAX_DEPTH, VAULT_WALL_HEIGHT),
   ];
 }
 
