@@ -330,7 +330,8 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await realistic.getByRole('button', { name: 'Bold' }).click();
   await expect.poll(savedLook).toMatchObject({ robots: 'on', realisticColours: 'off' });
   await group(/Audio/i).click();
-  await expect(settings.getByRole('slider', { name: /volume/i })).toHaveCount(4);
+  // Master, Effects, Power source (the owner's 0.1 Dev 5 playtest, note 2), Ambience and Interface.
+  await expect(settings.getByRole('slider', { name: /volume/i })).toHaveCount(5);
   // The groups follow the tabs pattern (audit L-31): Arrow Down from Audio picks Controls, then Gameplay, and moves
   // the focus there.
   await page.keyboard.press('ArrowDown');
@@ -361,8 +362,9 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(whatGotYou.getByRole('button')).toHaveText(['Auto', 'On', 'Off']);
   await expect(whatGotYou.getByRole('button', { name: 'Auto' })).toHaveAttribute('aria-pressed', 'true');
   // Crosshair (M19): a live preview, standing still and moving; the shape picked shows on both and in the match.
+  // The hit marker's preview (the owner's 0.1 Dev 5 playtest, note 4) draws your crosshair under its X: a third.
   const previews = settings.locator('.crosshair-preview .hud-crosshair');
-  await expect(previews).toHaveCount(2);
+  await expect(previews).toHaveCount(3);
   await settings.getByRole('button', { name: 'Circle' }).click();
   await expect(previews.first()).toHaveClass(/\bshape-circle\b/);
   // M24: the Dev group is hidden until its box is ticked; its settings apply only while it is (Debug info shows the panel).
