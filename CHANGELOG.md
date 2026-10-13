@@ -4,6 +4,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 
 ## Unreleased
 
+## 0.1 Dev 5 · 2026-10-13
+
 ### Added
 - **G1** · Replica colour schemes (Cobalt, Signal, Acid, Teal, Hazard, Coral, Onyx, Ghost): rifles Cobalt and pistols Ghost for now; Settings › Look: Robots (Mixed by default) and Realistic colours options (#125)
 - **G2** · Replicas rebuilt blockier, two-tone with stippled grips; red dot and silencer redesigned; Cyber Pistol white with cyan glow and magenta core, grey and unlit in Realistic mode (#126)

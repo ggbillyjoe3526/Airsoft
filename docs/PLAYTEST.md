@@ -629,7 +629,7 @@ there maps each symptom to its numbers):
 
 - [ ] **The title screen.** Only "AIRSOFT", the tagline "Call your hit. Go again." and a **START** button; on a clean
   save (tutorial never finished, no match started) a **Tutorial** button under START, gone for good after the tutorial
-  or your first match. The build ("0.1 Dev 4+N · …" on `main`, just the release name on a release download; hover it
+  or your first match. The build ("0.1 Dev 5+N · …" on `main`, just the release name on a release download; hover it
   for how many commits after the release it is) sits small at the bottom left. Nothing else: no tip, no next match, no
   FC or Tokens. No map is loaded behind the menus.
 - [ ] **Keys.** On the title, Enter presses START, T starts the tutorial (while it is offered) and Esc opens

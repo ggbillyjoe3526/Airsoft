@@ -6,10 +6,10 @@ in `docs/PROCESS.md`.
 
 ## Where we are
 
-- **Building 0.1 Dev 5.** The game stays in Dev until the owner calls it feature complete (owner, 2026-10-06). Beta then
+- **Building 0.1 Dev 6.** The game stays in Dev until the owner calls it feature complete (owner, 2026-10-06). Beta then
   adds no features.
-- **Last tag:** `0.1-dev.4`, on 2026-10-06. The owner creates tags.
-- **Next:** the owner tags 0.1 Dev 5 (the Dev 5 plan below), then [0.1 Dev 6](#01-dev-6-the-last-planned-dev-build).
+- **Last tag:** `0.1-dev.5`, on 2026-10-13. The owner creates tags.
+- **Next:** the owner playtests 0.1 Dev 5, and [0.1 Dev 6](#01-dev-6-the-last-planned-dev-build) starts with M92–M95.
 - **The release path** (owner, 2026-10-12): 0.1 Dev 6, 0.1 Beta, then 0.1.0 opens Early Access to the public. Themed
   updates follow (Replica, Modes, Maps, Progression and any more), up to 1.0, the full launch. See
   [Early Access](#early-access-the-themed-updates).
@@ -26,6 +26,7 @@ in `docs/PROCESS.md`.
 | 0.1 Dev 2 | 2026-10-01 | Elimination and Attack / Defend on Depot, with sound, difficulty levels and smarter bots | `0.1-dev.2` |
 | 0.1 Dev 3 | 2026-10-03 | Leaning, magazines and reloads, BB physics, movement and positioning, ramps and raised floors | `0.1-dev.3` |
 | 0.1 Dev 4 | 2026-10-06 | Loadout, Customise and Armory, new menus, fire modes and aiming down sights, real BB flight, a rebuilt Depot and a new look, new sounds; Woodland, Neon Heights, Extraction and Pro in development | `0.1-dev.4` (commit `63e6500`) |
+| 0.1 Dev 5 | 2026-10-13 | New menus and HUD, a play link in the browser, iron sights and Inspect, the GBB Pistol, new players and hands, Ultra and WebGPU, a dressed Depot, faster loading; Blender models in testing behind the Dev switches | `0.1-dev.5` (commit `6bbb680`) |
 
 Only full releases are tagged (owner, 2026-10-01): playtests in between are plain commits. Two checkpoint tags,
 `v0.1-alpha.2a` (commit `d8c4568`) and `v0.1-alpha.2b` (commit `08b37e3`), were removed after `0.1-dev.2`. The
@@ -60,8 +61,8 @@ pulled into Dev 5, and Dev 7 is folded away (its mode checks join the toolkit he
    2x scope, silencers and weapon torches remodelled lower, rounder and smaller in Blender, behind "Disable all models"
    (done 2026-10-12; `docs/records/RM8.md`).
 11. **The Blender figures in the game** (BF1, pulled into Dev 5 by the owner 2026-10-12): the rigged human and robot as
-   every player and bot, behind the Dev switches (done 2026-10-12; `docs/records/BF1.md`). All eleven items are done:
-   next, the owner tags 0.1 Dev 5.
+   every player and bot, behind the Dev switches (done 2026-10-12; `docs/records/BF1.md`). All eleven items are done,
+   and the owner tagged 0.1 Dev 5 on 2026-10-13.
 
 ### Audit 2: the last tasks
 
@@ -224,6 +225,7 @@ are written when the build starts. Numbers are from the owner's list of 50 candi
 | 41 | Noisy ground and props: gravel, cans, pallets and fences rattle, and bots hear it | World |
 | 45 | Overtime: when the clock runs out, a flag appears in the middle and the first team to touch it wins | Rounds |
 | 46 | An option to hide the ammo counter (no mag-check key: owner) | HUD |
+| – | Figure redesign: more realistic human and robot figures, from the owner's reference photos, built in his Blender, with the figures' animations for Dev 6's new moves such as vaulting; waits for him (owner, 2026-10-13) | Art |
 
 Built in Dev 5 instead: the blowback pistol (pick 14) is the GBB Pistol (RM7), and the AEG Rifle redesign (RM6) gave
 the built-in rifle its small, low iron sights.
@@ -467,7 +469,8 @@ These land in whichever update the owner likes:
 - **Higher-detail models** (owner, 2026-10-05 and 2026-10-09). A Blender art pass over figures, replicas, attachments,
   props and set dressing, using the headroom WebGPU gives. It keeps art direction v3, the download target (about 30 MB
   to start), Low's 60 fps at 1080p on a laptop and the WebGL fallback. The Blender figures, replicas and attachments
-  built in 0.1 Dev 5 stay behind the Dev switches until the owner is happy with them.
+  built in 0.1 Dev 5 stay behind the Dev switches until the owner is happy with them. The figures come first, in
+  [0.1 Dev 6](#01-dev-6-the-last-planned-dev-build) (owner, 2026-10-13).
 - **Hand signals and more team calls,** with bots that act on them. Three orders and their wheel are in (M22, M23);
   pings and asking for a magazine come in 0.1 Dev 6.
 
