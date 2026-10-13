@@ -15,9 +15,9 @@ each `src/` folder's `README.md`.
   his reference photos and a session in his Blender (`docs/DECISIONS.md` › Art direction and graphics).
 - **Gaps the figure redesign should close.** Resting on cover (M104) has only a placeholder third-person pose: the
   rigged figures behind the Dev switches lean their upper body about 5° over the cover (`FIGURE_RIG.rest`), and the
-  built-in figures don't change. A real rest pose or clip belongs in the redesign. Bots don't rest yet: they fire
-  from the hip, and letting them aim when they peek over cover is a balance change for the bot personalities item
-  (`docs/records/M104.md`).
+  built-in figures don't change. The redesign must bring a rest-on-cover animation (owner, 2026-10-13). Bots don't rest
+  yet: they fire from the hip, and letting them aim when they peek over cover is a balance change for the bot
+  personalities item (`docs/records/M104.md`).
 
 ## Where to look
 
