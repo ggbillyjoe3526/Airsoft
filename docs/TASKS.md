@@ -22,18 +22,3 @@ item 5, with the G4 HUD restyle); note 3 was a bug, fixed in BP2; note 2 is alre
 
 **0.1 Dev 6 (confirmed with the roadmap, 2026-10-06).** M92–M95, the holster and the practice upgrades, are done
 (2026-10-13); the blocks for the rest of `docs/ROADMAP.md` › 0.1 Dev 6 are written when that work starts.
-
-## RM9 · The human figure redesigned from the owner's references, with four heads (owner's ask, 2026-10-13)
-tier: core
-perf: required
-touches: src/assets/models/characters/, src/config/figureRig.ts, src/render/riggedHitVolume.test.ts, tools/blender/bot-figure/
-contract: none
-acceptance:
-  1. The human figure is rebuilt from the owner's reference pictures (body, gloved hands, gear): the hands hold both replicas naturally, and the owner approved the review sheets (turnaround, heads, hands, poses) before it entered the game.
-  2. Four heads (high-cut helmet, cap with goggles, boonie, full-cut helmet), one per figure picked by its id; first person hides every head.
-  3. Team colour reads from the plate carrier and cummerbund as well as the armbands, patches and helmet or hat bands (the owner's choice, 2026-10-13).
-  4. Budgets: at most 20,000 triangles per figure (body, kit and its largest head), each head at most 2,500, the packed file under 3.5 MB (packed with `pack.mjs`); the clip set and its names are unchanged.
-  5. `riggedHitVolume.test.ts` measures the human in every head and passes; the figures stay behind "Disable figure models" and "Disable all models", so the default game is unchanged.
-  6. The build scripts are committed (`bot20.py`–`bot22.py` in the load order, beside the robot thread's), and the shared handoff file says how the two threads' scripts load together.
-status: open
-attempts: 0
