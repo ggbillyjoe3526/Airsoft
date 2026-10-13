@@ -4,8 +4,8 @@ The content checks (the content toolkit): what makes a new replica, part, map, m
 they enforce are in `docs/content/`; the command that runs them and writes the report is `pipeline/content-check.mjs`.
 
 - **Inputs.** `contentInputs.ts` names everything a check reads (`ContentInputs`: the pool, `stats.md`, the replica
-  configs, the model tables, the sound cues, the code keys, a part's effects, the levels), so a test can hand in a fault.
-  `gameContent.ts` builds the game's own (`gameInputs`) and runs levels 1 and 2 (`checkAsset`, `checkAllAssets`).
+  configs, the model tables, the sound cues, the code keys, a part's effects, the levels), so a test can hand in a
+  fault. `gameContent.ts` builds the game's own (`gameInputs`) and runs levels 1 and 2 (`checkAsset`, `checkAllAssets`).
 - **Results.** `checks.ts`: a `CheckResult` is a level, a check name (`replica.model`), the item, a verdict (pass,
   warn, fail, info) and what was found in plain words.
 - **Levels 1 and 2.** `assetRules.ts` (name, brands, access), `replicaChecks.ts`, `partChecks.ts`, `levelChecks.ts`

@@ -6,11 +6,12 @@ choices to `src/game.ts`.
 - `menus.ts`: `Menus` (`go`, `setBlocked` makes the screens inert). Each screen is built the first time it opens and
   reused. The Loadout (with Customise), the Armory and Settings are also fetched then (IM1): `lazyScreens.ts` is their
   chunk, preloaded once the title is up (`preloadScreens`, `core/onDemand.ts`); opened before it has arrived, the screen
-  on show stays (`whenFetched`) and a later choice wins. A new screen reached only from a menu joins `lazyScreens.ts`. `menusOptions.ts` is what the menus are given; `playModel.ts` is the Match screen's picks (`PlayPicks`: each
-  change saved and reported). `chrome.ts` is the top bar (the wordmark is the way back; no version; `setLevel` shows "Lv N" and an XP bar
-  that opens the Armory, hidden while levelling is off) and the
-  backdrop: no picture on the title, the pre-blurred one elsewhere (nothing blurs live). No key prompts are drawn along the bottom (M100): a screen's `hints` are
-  only the keys it answers to (C, /, Space, T; Esc is handled by `Menus`).
+  on show stays (`whenFetched`) and a later choice wins. A new screen reached only from a menu joins `lazyScreens.ts`.
+  `menusOptions.ts` is what the menus are given; `playModel.ts` is the Match screen's picks (`PlayPicks`: each change
+  saved and reported). `chrome.ts` is the top bar (the wordmark is the way back; no version; `setLevel` shows "Lv N" and
+  an XP bar that opens the Armory, hidden while levelling is off) and the backdrop: no picture on the title, the
+  pre-blurred one elsewhere (nothing blurs live). No key prompts are drawn along the bottom (M100): a screen's `hints`
+  are only the keys it answers to (C, /, T; Esc is handled by `Menus`).
 - `menuNav.ts`: where Back goes and which menu opens when play stops (title, pause, summary, result). Leaving a match
   calls `onLeaveMatch`, which unloads it.
 - Screens: `titleScreen.ts` (plain: Airsoft, the tagline, START, the Tutorial on a clean save, the version at the

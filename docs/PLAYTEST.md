@@ -239,9 +239,9 @@ Dev › Disable levelling.
 - [ ] **Swap slots.** Put the GBB Pistol in Primary: the AEG rifle moves to Secondary. Any replica goes in either slot.
 - [ ] **Customise.** Colour first, then the optic, BB weight, hop-up, grip, laser, magazine, power source, barrel,
   muzzle and light, each offering the parts that fit. Skins say they come later. Esc goes back.
-- [ ] **Locked parts.** At a low level each part's options list the ones still to unlock after the ones you have,
-  greyed with a lock and "Level N" (the level that unlocks it), and they can't be picked. Under them: "Level up to unlock more: the
-  Armory shows what each level gives." With everything in a row unlocked, the line goes.
+- [ ] **Locked parts.** At a low level each part's options list the ones still to unlock after the ones you have, greyed
+  with a lock and "Level N" (the level that unlocks it), and they can't be picked. Under them: "Level up to unlock more:
+  the Armory shows what each level gives." With everything in a row unlocked, the line goes.
 - [ ] **BB weight.** 0.25 g on the rifle and 0.20 g on the pistol as they come. 0.28 g on the rifle leaves slower
   (about 84 m/s) and needs more hop: at about 75 % it stays on target to about 41 m. 0.20 g with the dial at 65 % is
   too much hop (far shots fly high and float); about 50 % flies flat.
@@ -268,8 +268,8 @@ Dev › Disable levelling.
 - [ ] **The 11.1 V LiPo battery** on the rifle: rate of fire +15 %, energy unchanged; it sounds and empties faster.
 - [ ] **Glowing BBs** (per replica): At Night (the default) glows only on night fields, Always or Off. A glowing BB is
   green, a little larger at range, with a longer streak.
-- [ ] **Light** (dev content, night fields). Every replica has the Weapon Torch from level 0, switched with **T**. "No light" takes
-  the torch off. Known bug: on the AEG rifle the Light row won't take "No light" (bug pass BP2 fixes it).
+- [ ] **Light** (dev content, night fields). Every replica has the Weapon Torch from level 0, switched with **T**. "No
+  light" takes the torch off. Known bug: on the AEG rifle the Light row won't take "No light" (bug pass BP2 fixes it).
 - [ ] **Your setup is kept.** Reload the page: every pick is still there. Bots carry their replicas as they come,
   except Hard opponents (see [Bots](#bots)).
 - [ ] **Edit `stats.md`.** Set the AEG's `Fire rate (BBs/s)` to 20 and run `npm run dev` again: the panel says
