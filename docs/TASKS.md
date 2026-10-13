@@ -34,23 +34,3 @@ acceptance:
   2. With Dev settings on (Unlock all gear), every replica and part is available.
 status: open
 attempts: 0
-
-
-## M104 · Rest your replica on cover (Dev 6 item 40)
-tier: core
-perf: required
-touches: src/sim/coverRest.ts, src/sim/character.ts, src/sim/simulation.ts, src/sim/armament.ts, src/sim/accuracy.ts, src/config/movement.ts, src/config/audio.ts, src/config/renderView.ts, src/config/hudText.ts, src/config/figureRig.ts, src/audio/foley.ts, src/audio/sfx.ts, src/render/viewmodel.ts, src/render/combatPresentation.ts, src/render/riggedFigure.ts, src/ui/hud.ts, src/style.css
-contract: GameState and state.events (`Character.coverRest`), stepSimulation (a rest phase between lean and accuracy)
-acceptance:
-  1. Aiming down sights while still, grounded and upright (standing or crouched) at a flat ledge between waist and
-     chest height straight ahead (a crate, low wall, window sill or sandbags) rests the replica on it; turning away,
-     moving, letting go of the aim, reloading or leaning lets go smoothly.
-  2. Resting is steadier: less spread and less kick, from numbers in config that the game and tests read.
-  3. The player sees and hears it: a "Rested" tag in the HUD's style, a settle dip and calmer sway in first person, and
-     a quiet settle sound; the rigged figures behind the Dev switches lean over the cover (a placeholder pose).
-  4. It works on Depot, Woodland and Neon Heights, measured over each map's walkable points; ramps and walls are no
-     ledge.
-  5. Bots follow the same rule through the same command (they fire from the hip, so they don't rest yet; the bot part
-     is described in the record and HANDOFF).
-status: open
-attempts: 0
