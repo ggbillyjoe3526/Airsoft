@@ -11,7 +11,8 @@ each `src/` folder's `README.md`.
 - **Next.** The owner playtests 0.1 Dev 5. 0.1 Dev 6 starts with M92–M95 (`docs/ROADMAP.md`). A later bug pass looks
   at the Blender models (owner, 2026-10-12).
 - **Waiting on the owner:** the laptop and desktop Ultra perf baselines, the Save checks in Firefox and Edge, and
-  playing Woodland and Neon Heights (`docs/PLAYTEST.md` › Only you can do these).
+  playing Woodland and Neon Heights (`docs/PLAYTEST.md` › Only you can do these). The Dev 6 figure redesign waits on
+  his reference photos and a session in his Blender (`docs/DECISIONS.md` › Art direction and graphics).
 
 ## Where to look
 
