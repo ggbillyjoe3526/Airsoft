@@ -22,6 +22,7 @@ import { stepTorch } from './torch';
 import { createRng } from './rng';
 import { type RoundContext, type RoundRules, stepRound } from './round';
 import type { GameState } from './state';
+import { stepVault, tryVault } from './vault';
 import { copy, type Vec3, vec3 } from './vec';
 import { type WindState, windAt } from './wind';
 
@@ -72,6 +73,8 @@ export interface SimContext extends SimServices {
   idleCommand: PlayerCommand;
   /** Command followed by characters that have been hit (they don't take orders from their controller). */
   eliminatedCommand: PlayerCommand;
+  /** Followed while vaulting (M102): the controller's view and nothing else (no firing, aiming, reloading or switching). */
+  vaultCommand: PlayerCommand;
   muzzle: Muzzle;
   /** Reused every tick; the state-dependent fields are filled in by stepSimulation. */
   armament: ArmamentContext;
@@ -85,6 +88,7 @@ export function createSimContext(services: SimServices): SimContext {
     scratch: createMovementScratch(),
     idleCommand: createCommand(),
     eliminatedCommand: createCommand(),
+    vaultCommand: createCommand(),
     muzzle: { eye: vec3(), yaw: 0, pitch: 0, spreadScale: 1 },
     armament: {
       ballistics: services.ballistics,
@@ -109,8 +113,8 @@ export function createSimContext(services: SimServices): SimContext {
  * its id; the player and bots are indistinguishable here. Characters without a command this tick
  * keep their view and stand still (gravity still applies); characters that have been hit follow the
  * hit-calling routine instead of their command; once out and standing in the dead zone they are only timed (isParked).
- * Order: move (and footsteps), then use replicas (BBs leave from the new
- * eye position), then fly BBs (hitting walls or characters), then round flow.
+ * Order: move (a vault's start and its tick in place of the movement step; then footsteps), then use replicas (BBs
+ * leave from the new eye position), then fly BBs (hitting walls or characters), then round flow.
  */
 export function stepSimulation(
   state: GameState,
@@ -151,13 +155,22 @@ export function stepSimulation(
       cmd.yaw = c.yaw;
       cmd.pitch = c.pitch;
     }
+    // A Jump press at a low obstacle vaults it instead (M102); while vaulting, only the view follows the command.
+    if (inPlay && !c.vault.active) tryVault(c, cmd, ctx.movement, ctx.body, ctx.query, state.events);
+    if (inPlay && c.vault.active) {
+      ctx.vaultCommand.yaw = cmd.yaw;
+      ctx.vaultCommand.pitch = cmd.pitch;
+      cmd = ctx.vaultCommand;
+    }
     if (inPlay) stepAiming(c, cmd, dt);
     else {
       c.aiming = false;
       c.aimRaise = 0;
     }
     c.using = inPlay && live && cmd.use;
-    stepMovement(c, cmd, ctx.movement, dt, ctx.mover, ctx.scratch);
+    // A vault under way finishes even if its vaulter is hit meanwhile (nobody is left hanging over the obstacle).
+    if (c.vault.active) stepVault(c, cmd, ctx.movement, dt, ctx.mover, ctx.scratch);
+    else stepMovement(c, cmd, ctx.movement, dt, ctx.mover, ctx.scratch);
     rescueIfOutOfWorld(c, ctx.killY);
     stepWalkCycle(c, ctx.hits); // the legs' swing, for their hit volumes and the drawn figure (M85)
     stepLean(c, cmd, ctx.body, ctx.hits, ctx.movement, ctx.query, dt);

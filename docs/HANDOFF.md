@@ -13,6 +13,9 @@ each `src/` folder's `README.md`.
 - **Waiting on the owner:** the laptop and desktop Ultra perf baselines, the Save checks in Firefox and Edge, and
   playing Woodland and Neon Heights (`docs/PLAYTEST.md` › Only you can do these). The Dev 6 figure redesign waits on
   his reference photos and a session in his Blender (`docs/DECISIONS.md` › Art direction and graphics).
+- **Animation gap: vaulting (M102).** The rigged figures (behind the Dev switches) have no vault clip: through a vault
+  they hold a placeholder, the vault's tuck as a crouch with the walk overlay off (`render/figurePose.ts`
+  `PoseInput.vaulting`). The figure redesign session makes the real clip; the built-in figures need none.
 
 ## Where to look
 

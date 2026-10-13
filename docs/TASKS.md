@@ -57,3 +57,16 @@ acceptance:
 status: open
 attempts: 0
 
+## M102 · Vaulting over low obstacles (0.1 Dev 6)
+tier: core
+perf: required
+touches: src/sim/, src/ai/, src/nav/, src/audio/, src/config/, src/map/, src/render/, src/ui/, src/tutorial/, src/matchSession.ts, src/rangeSession.ts, src/style.css
+contract: GameState and state.events (Character.vault, footstep kind vault), stepSimulation (the vault phase)
+acceptance:
+  1. Jump at a low obstacle (owner, 2026-10-12: 0.7 to 0.9 m) takes you over it in a short, committed move with a camera dip, a sound and no clipping; anywhere else Jump is a jump, and crouch cover and railings are never vaulted.
+  2. Depot, Woodland and Neon Heights each get a low wall where it opens a route, vaulted both ways.
+  3. A vault is loud: bots hear it from further than a sprinting step (owner, 2026-10-13).
+  4. Bots vault where it saves them a walk, through the same command as the player.
+  5. The tutorial and the controls teach it; the figures hold a placeholder pose behind the Dev switches (the animation gap noted in docs/HANDOFF.md). No slide.
+status: open
+attempts: 0

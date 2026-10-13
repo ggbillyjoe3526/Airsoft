@@ -1,6 +1,7 @@
 import type { BodyConfig } from '../config/movement';
 import { LOADOUT, type ReplicaConfig } from '../config/replicas';
 import { type Armament, createArmament } from './armament';
+import { cancelVault, createVaultState, type VaultState } from './vault';
 import { copy, type Vec3, vec3 } from './vec';
 
 /**
@@ -85,6 +86,8 @@ export interface Character {
   airTime: number;
   /** Seconds standing still on the ground so far (0 while moving or in the air); steadies the aim (sim/accuracy.ts). */
   stillTime: number;
+  /** A vault over a low obstacle (M102, sim/vault.ts): while `active` the body follows its path, not its command. */
+  vault: VaultState;
   /**
    * Aiming down the sights of the replica in hand (sim/aiming.ts): its iron sights or a fitted optic, and it slows you
    * to walking pace. Bots never aim down sights.
@@ -161,6 +164,7 @@ export function createCharacter(
     spreadScale: 1,
     airTime: 0,
     stillTime: 0,
+    vault: createVaultState(),
     shakeCarry: 0,
     aiming: false,
     aimRaise: 0,
@@ -194,6 +198,7 @@ export function rescueIfOutOfWorld(c: Character, killY: number): boolean {
   c.airborne = false;
   c.fallSpeed = 0;
   c.airTime = 0;
+  cancelVault(c);
   return true;
 }
 
@@ -230,6 +235,7 @@ export function respawnCharacter(c: Character): void {
   c.spreadScale = 1;
   c.airTime = 0;
   c.stillTime = 0;
+  cancelVault(c);
   c.shakeCarry = 0;
   c.aiming = false;
   c.aimRaise = 0;

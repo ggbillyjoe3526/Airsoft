@@ -69,7 +69,7 @@ export const REBINDABLE: readonly { action: Action; label: string }[] = [
   { action: 'crouch', label: 'Crouch' },
   { action: 'leanLeft', label: 'Lean left (hold)' },
   { action: 'leanRight', label: 'Lean right (hold)' },
-  { action: 'jump', label: 'Jump' },
+  { action: 'jump', label: 'Jump / vault' },
   { action: 'reload', label: 'Reload' },
   { action: 'fireMode', label: 'Fire mode' },
   { action: 'torch', label: 'Weapon torch' },

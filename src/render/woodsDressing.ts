@@ -12,7 +12,8 @@ import { boxHitsBlock, type ClearSpot, clearOfPlay, clearSpots, frontRect, junkR
  * geometry (woodsGeometries) joins the junk mesh (render/dressingMeshes.ts): no draw call of its own. Look only. The
  * fallen pieces keep G8's rules for loose junk (DRESSING.junk): no taller than `maxHeight`, against a face, on the
  * ground and under nothing, `openFront` of open ground in front, clear of every lane, spawn, dead zone, the flag and the
- * Extraction spots, `gap` from each other; and here also out of every bush, off the cabin's boards and never floating.
+ * Extraction spots, `gap` from each other; and here also out of every bush, off the cabin's boards, never floating, and
+ * with the face it lies against reaching down to it.
  */
 
 const W = WOODS;
@@ -151,6 +152,9 @@ function placeFallen(map: MapData, t: Terrain, chance: number, rng: RngState, sp
           if (ground === undefined) continue;
           normalAt(t, x, z, normal);
           const q: FallenPiece = { kind, x, y: ground - F.sink, z, axis, sign, along, out: depth, height, variant: uVariant, normal: [normal[0], normal[1], normal[2]] };
+          // The face behind it reaches down to its foot: on a steep slope a block's downhill face can stand clear of the
+          // ground a step out from it (M102 found one by a boulder, once a cabin wall changed the draws before it).
+          if (b.center.y - b.size.y / 2 > q.y + F.sink) continue;
           if (fallenFits(map, t, q, spots, out)) out.push(q);
         }
       }

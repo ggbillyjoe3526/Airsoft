@@ -61,6 +61,11 @@ export const HUD = {
   caseFoundTime: 2.6,
   caseDroppedTime: 6,
   /**
+   * Vaulting (M102): "Space to vault" under the crosshair while a Jump press would vault, kept up this long after
+   * (seconds) so it doesn't flicker at the edge of reach.
+   */
+  vaultPromptHold: 0.15,
+  /**
    * A progress bar (reload, case, count) runs on one CSS transition, so the page is told once, not per percent (M64,
    * audit UI-11). It starts the run again when the game's own progress is this many seconds off the transition's
    * (a long frame), and stands the bar when that progress has not moved for this long (a pause), so the bar never

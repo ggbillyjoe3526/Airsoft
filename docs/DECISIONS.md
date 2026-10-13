@@ -314,6 +314,14 @@ replaces its line; the old one stays findable in the archive or in git.
   strides; the head, chest and hips stay the built-in volume's, and with the figures off nothing changes.
 - **Vaulting comes in 0.1 Dev 6; slide into cover is no for now (owner, 2026-10-12).** Vaulting goes over low
   obstacles of 0.7 to 0.9 m, with a few added to the maps where they open a route; slide waits in `docs/IDEAS.md`.
+- **Vaulting is Jump at a low obstacle, with no key of its own (M102, 2026-10-13).** Jump within reach of something
+  0.6 to 0.95 m over your floor (at most 1 m deep, a floor to land on, your full height clear over it), heading within
+  70° of where you look, vaults it; anywhere else Jump is a jump, as before. The Controls list calls it "Jump / vault"
+  and a prompt shows the key while a vault is there. A vault takes about 0.4 s, carries the replica and holds fire
+  0.3 s after it; crouched, you can't vault (stand first). Values in `config/vault.ts`.
+- **Vaults are loud (owner, 2026-10-13: "Vaulting should create noise that makes enemies aware. Just like footsteps.
+  Vaulting allows quick movement but at the cost of making noise.").** A vault is the loudest step there is: bots hear
+  its hands and kit on the obstacle from 18 m (a sprint 16, a landing 12, a run 11), and its landing as well.
 
 ## Bots and balance
 
@@ -354,6 +362,13 @@ replaces its line; the old one stays findable in the archive or in git.
   figures are judged at 45 to 55 %, the Pro ones at their usual 40 to 60 %.
 
 ## Maps and modes
+
+- **The maps' vault walls are 0.9 m, at most 0.4 m deep, open above (M102, 2026-10-13).** The top of the owner's 0.7
+  to 0.9 m: over 0.85 m a plain jump rides over one time in nine (Rapier's capsule slides up the edge), over 0.9 m one
+  in thirty, and nobody stands on a wall thinner than a body. Not cover: a crouched player's eyes are over it. One per
+  map where it opens a route: Depot's office hall onto Container Alley (its window broken down), Woodland's cabin from
+  the west (its west window), the Capsules onto Neon Heights' balcony (a window); and a sandbag wall on the range for
+  the tutorial. A window keeps its lintel, so it is never vaulted: a vault needs the body's full height over the top.
 
 - **A match is first to 5 round wins by default, with 2:30 rounds (2026-09-30).** A drawn round, such as an Elimination
   time-out, is replayed in both modes (owner default, 2026-10-04), because a draw can't decide a match. Half-time comes

@@ -1,5 +1,6 @@
 import { PHYSICS } from './physics';
 import { SIM_DT } from './sim';
+import { VAULT, type VaultConfig } from './vault';
 
 /** Character movement tuning. Units: metres, seconds, radians. */
 export interface MovementConfig {
@@ -71,6 +72,8 @@ export interface MovementConfig {
   aimWalkScale: number;
   /** How a shooter's stance and movement scale their replica's spread (see sim/accuracy.ts). */
   accuracy: AccuracyConfig;
+  /** Vaulting over low obstacles (M102, sim/vault.ts). */
+  vault: VaultConfig;
 }
 
 /**
@@ -197,6 +200,7 @@ export const MOVEMENT: MovementConfig = {
     carryTime: 0.25,
     lockTime: 0.015,
   },
+  vault: VAULT,
 };
 
 export const BODY: BodyConfig = {

@@ -37,7 +37,7 @@ A task that adds, renames or moves a file keeps its folder's `README.md` current
 | `src/` (root) | The app that outlives matches; one match or range session at a time | `main.ts`, `game.ts`, `matchSession.ts`, `rangeSession.ts`, `matchFlow.ts`, `newGamePicks.ts` |
 | `src/sim/` | Gameplay rules, pure, fixed 60 Hz | `simulation.ts`, `state.ts`, `commands.ts`, `armament.ts`, `ballistics.ts`, `round.ts` |
 | `src/ai/` | Bots: senses, decisions, cover, squad orders, Extraction roles | `botController.ts`, `botBrain.ts`, `bot.ts`, `perception.ts`, `cover.ts`, `squadOrders.ts` |
-| `src/nav/` | The layered walkability grid, A* routes, walk-off fields | `navGrid.ts` |
+| `src/nav/` | The layered walkability grid, A* routes, walk-off fields, vault links | `navGrid.ts`, `vaultLinks.ts` |
 | `src/physics/` | Rapier: level collision and the character mover | `physicsWorld.ts` |
 | `src/map/` | Map data (blocks, spawns, lanes, flag, Extraction) and map helpers | `mapTypes.ts`, `maps.ts`, `depot.ts`, `woodland.ts`, `neonHeights.ts`, `range.ts` |
 | `src/input/` | Keyboard, pointer lock, key bindings, order wheel; builds the player's command | `playerInput.ts`, `keyBindings.ts`, `keyboard.ts`, `pointerLock.ts` |
@@ -146,11 +146,15 @@ request. Each entry says where the contract lives, what it holds today and what 
   - Events: `respawned`, `exitCount`, `exitOpened` and `runWarning` report the run; `caseNoise` (bots hear it),
     `caseOpened` and `caseDropped` report the cases; `returned` reports an opponent back in a wave; `torch` reports a
     weapon light switched on or off.
+  - `Character.vault` holds a vault over a low obstacle (`sim/vault.ts`, M102): its plan and how far through it is. A
+    `footstep` of kind `vault` reports one starting (the loudest step: bots hear it from `footstepHearingVault`).
 
   Pinned by `sim/simulation.test.ts`, `sim/extraction.test.ts`, `sim/extractionCases.test.ts`,
-  `sim/extractionWaves.test.ts`, `sim/torch.test.ts`.
+  `sim/extractionWaves.test.ts`, `sim/torch.test.ts`, `sim/vault.test.ts`.
 - **`stepSimulation(state, commands, ctx, dt)`** (`sim/simulation.ts`). The fixed 60 Hz step and the order of its
   phases (a parked out-of-play character goes straight to the elimination step); randomness only from `state.rng`.
+  A Jump press at a low obstacle starts a vault before the movement step (`tryVault`), and a vault in progress steps
+  in place of it (`stepVault`, through the same `CharacterMover`).
   Pinned by the `sim/*.test.ts` files and the `ai/depotMatch*.test.ts` guards.
 - **`WorldQuery` and `CharacterMover`** (`sim/armament.ts`, `sim/movement.ts`; implemented by
   `physics/physicsWorld.ts`). The ray and shape casts and the character controller the simulation sees; the

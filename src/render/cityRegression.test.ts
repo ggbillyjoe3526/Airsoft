@@ -237,11 +237,13 @@ const PINNED = {
     "steelPlate",
     "stone",
   ],
+  // M102: blockWall, concrete and corrugated re-pinned for the office hall's window broken down to a low wall to vault
+  // (its sill lower, its lintel gone; the wall's grime on the yard round it moves with it).
   depotDetail: [
     "map-barrier v21140 i33372 be34de09/b865b405/a0a6e726",
-    "map-blockWall v6230 i18114 83b89309/b1f87539/1988b810",
-    "map-concrete v5582 i20460 cfe7e0ad/1f665547/1c873578",
-    "map-corrugated v24024 i46782 bed07a37/6d466cf6/a30a3534",
+    "map-blockWall v6114 i17910 2c6d2af9/429d9275/420d19cd",
+    "map-concrete v5534 i20388 77e174ed/53fcc127/c61be2c1",
+    "map-corrugated v24024 i46782 bed07a37/6d466cf6/cb1b5a70",
     "map-crate v6584 i9888 5319f985/1f3f01e5/ebed566d",
     "map-gabion v1006 i1728 9c61cdad/08aafe6d/f8d30cd0",
     "map-sandbag v1176 i1800 2ad8ffe5/50ab9a2f/8417523d",
@@ -249,8 +251,8 @@ const PINNED = {
   ],
   depotPlain: [
     "map-barrier v7048 i11100 6a606e45/f70ebed9/2a2f32fd",
-    "map-blockWall v768 i1440 5fcd9225/87ed5e35/00fe670d",
-    "map-concrete v648 i972 7ee26e15/60069025/912a2d1d",
+    "map-blockWall v736 i1380 3e60fa45/9cc59b5d/9088be2d",
+    "map-concrete v624 i936 bf4da2f5/9d354d05/95c6bcb5",
     "map-corrugated v5304 i8676 9cf8d745/38c1ceb5/50205ed5",
     "map-crate v1816 i2748 5a190465/5d040585/d81344fd",
     "map-gabion v336 i576 e9818b05/f9af1401/1532e6b5",
@@ -262,8 +264,9 @@ const PINNED = {
   // on the trunks, logs and boulders, so bark's and stone's vertex colours are re-pinned (their vertices, positions and
   // UVs are untouched, and woodlandPlain, which draws no dressing, is exactly as before). M88: both re-pinned for the
   // West Rise and the lower east end (every block, tree and bush on the new ground; the logs there fall in more courses).
+  // M102: both re-pinned for the cabin's west window broken down to a low wall to vault (its sill lower, its lintel gone).
   woodlandDetail: [
-    "map-bark v24487 i57816 ed1bee6c/00bf0983/12f15259",
+    "map-bark v24353 i57528 c210d49c/6d0292df/cb07ee4d",
     "map-canopy v12360 i0 031f958f/811c9dc5/32f7476c",
     "map-foliage v16800 i0 a789e54e/811c9dc5/5d0ab568",
     "map-planks v6500 i12600 27873f91/9f349b8d/5691af2a",
@@ -271,7 +274,7 @@ const PINNED = {
     "map-terrain v9801 i57600 4e80f9d2/006bce1d/4298d710",
   ],
   woodlandPlain: [
-    "map-bark v16839 i43476 3737a830/cd45a029/e77cce1c",
+    "map-bark v16737 i43248 c285f2e0/02d127a5/896b8e06",
     "map-canopy v12360 i0 031f958f/811c9dc5/32f7476c",
     "map-foliage v16800 i0 a789e54e/811c9dc5/5d0ab568",
     "map-planks v1600 i3000 b1e0a709/eef7627d/cbf74e3d",

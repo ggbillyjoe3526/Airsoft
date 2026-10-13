@@ -63,7 +63,10 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
   }
   look.pitch = 0;
   const walkYaw = Math.atan2(-b.moveDir.x, -b.moveDir.z);
-  if (b.mode === 'search' && b.searchLookLeft > 0) {
+  if (walking && b.vaultLeg) {
+    // At a low obstacle on its route (M102): face the way over it, as nobody vaults without looking.
+    look.yaw = walkYaw;
+  } else if (b.mode === 'search' && b.searchLookLeft > 0) {
     // At the end of a search (AI-14): look round, one way then the other, from the way it arrived.
     const t = 1 - b.searchLookLeft / b.searchLookTime;
     look.yaw = b.searchLookYaw + Math.sin(2 * Math.PI * t) * cfg.searchLookDeg * DEG;

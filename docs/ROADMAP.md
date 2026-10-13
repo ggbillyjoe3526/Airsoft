@@ -212,7 +212,7 @@ are written when the build starts. Numbers are from the owner's list of 50 candi
 | M93 | Practice: moving targets, new target types and a timed challenge (off by default); done (2026-10-13, `docs/records/M93.md`) | Practice |
 | M94 | Practice on any map, with targets instead of bots | Practice |
 | M95 | Practice with any replica you own, and everything with Dev on | Practice |
-| – | Vaulting over low obstacles (0.7–0.9 m), with a few added to the maps where they open a route; crouch cover stays peek-only (owner, 2026-10-12) | Movement |
+| M102 | Vaulting over low obstacles (0.7–0.9 m), with a few added to the maps where they open a route; crouch cover stays peek-only (owner, 2026-10-12); vaults are loud (owner, 2026-10-13); done (2026-10-13, `docs/records/M102.md`) | Movement |
 | 40 | Rest your replica on cover (a ledge, crate or window) for steadier aim | Movement |
 | 19 | Saved loadouts, picked from the Map pop-up as well as the Loadout screen | Loadout |
 | 21 | Bot names, personalities (rusher, anchor, flanker, careful) and loadouts | Bots |

@@ -356,15 +356,17 @@ export class Sfx {
       case 'footstep': {
         const c = characterOf(e.characterId);
         if (!c) return;
-        // A hi-cap rattles on a quiet walk where no step is heard (M17b); it plays at a step's level, yours turned down.
-        const cue: SoundCue = e.kind === 'rattle' ? 'magRattle' : cues.step(surfaceUnder(this.blocks, c.position, this.scene.ground), e.kind);
+        // A hi-cap rattles on a quiet walk where no step is heard (M17b); it plays at a step's level, yours turned down. A
+        // vault's hands and kit (M102) play whatever the floor, louder than a step.
+        const vault = e.kind === 'vault';
+        const cue: SoundCue = e.kind === 'rattle' ? 'magRattle' : e.kind === 'vault' ? 'vault' : cues.step(surfaceUnder(this.blocks, c.position, this.scene.ground), e.kind);
         // Your own steps always play: they're how you judge your own pace and noise.
         if (c.id === localId) {
-          this.play(cue, this.self!, L.ownStep);
+          this.play(cue, this.self!, vault ? L.ownVault : L.ownStep);
           return;
         }
         if (this.distanceTo(c.position) > AUDIO.footsteps.maxDistance || !this.stepLimit.take(this.ctx.currentTime)) return;
-        this.play(cue, this.channel(c).panner, L.step);
+        this.play(cue, this.channel(c).panner, vault ? L.vault : L.step);
         return;
       }
       case 'characterHit': {
