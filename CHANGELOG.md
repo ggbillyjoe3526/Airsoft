@@ -7,8 +7,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 ### Added
 - **M93** · Practice has moving targets: sliding figures, a swinging plate, small plates at 15 m and pop-up figures
 - **M93** · Practice has a Timed challenge, off by default (pause menu): 60 seconds on lit targets, best score kept
-- **M94** · Practice on any map: with Practice picked, the Map cards offer the Range and each map (dev maps with Dev content on), in Day or Night
-- **M94** · Practice on a map has no bots: plates, figures, pop-ups, sliders and swingers stand where bots would play; minimap, torch at night, own challenge best
+- **M94** · Practice on any map: the Map cards offer the Range and each map (dev maps with Dev content on), in Day or Night; the match's map never changes
+- **M94** · Map practice has no bots: plates, pop-ups, sliders and swingers stand where bots would play; the timed challenge has a best per map and lights targets as you see them
 
 ### Changed
 - **M94** · The practice range is now Practice: pause reads "Practice · Range" or "Practice · Depot", and the tutorial's last button says Practice
