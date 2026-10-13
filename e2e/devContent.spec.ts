@@ -315,8 +315,8 @@ test('Extraction: the locker asks for G, opens while held, is carried out throug
   const haul = summary.locator('.summary-haul');
   await expect(haul).toContainText('The haul');
   await expect(haul).toContainText(`You got out with ${found.xp} XP, but this run gives no XP.`);
-  // The XP card says why: the run used content still being built.
-  await expect(summary.locator('.summary-xp')).toHaveText('No XP: this match used content still being built.');
+  // The XP card says why: Ghost (on above) is Dev help, named before the dev content when both apply (matchStanding).
+  await expect(summary.locator('.summary-xp')).toHaveText('No XP: Dev settings changed how this match played.');
   expect(errors, errors.join(' | ')).toEqual([]);
 });
 

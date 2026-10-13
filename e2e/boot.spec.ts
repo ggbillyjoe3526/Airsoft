@@ -251,7 +251,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(armory.locator('.armory-level-row[data-state="next"]')).toHaveCount(1);
   await page.keyboard.press('Escape');
   await expect(setup).toBeVisible();
-  await topBar.getByRole('button', { name: 'Armory' }).click();
+  await topBar.getByRole('button', { name: 'Armory', exact: true }).click();
   await expect(armory).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(setup).toBeVisible();
@@ -379,7 +379,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   const devPanel = settings.locator('#settings-panel-dev');
   await expect(devPanel.getByRole('group', { name: /Retro/ })).toHaveCount(0);
   // LV1: Disable levelling unlocks everything while it applies, so the level badge goes from the top bar; the Armory stays.
-  const armoryPlace = topBar.getByRole('button', { name: 'Armory' });
+  const armoryPlace = topBar.getByRole('button', { name: 'Armory', exact: true });
   await settings.getByRole('group', { name: 'Disable levelling' }).getByRole('button', { name: 'On' }).click();
   await expect(badge).toBeHidden();
   await expect(armoryPlace).toBeVisible();
@@ -921,7 +921,8 @@ test('the tutorial opens on the range with the coach', async ({ page }) => {
   await expect(page.locator('.menu-title .title-version')).toBeVisible();
   await tutorial.click();
   const coach = page.locator('.coach');
-  await expect(coach).toBeVisible();
+  // The range is built first (a loading screen is fine there, owner 2026-10-12), which a loaded runner takes past 5 s.
+  await expect(coach).toBeVisible({ timeout: 15_000 });
   await expect(coach).toContainText('Look around');
   await expect(coach).toContainText(/1 of \d+/);
   await expect(page.locator('.range-readout')).toBeHidden(); // the coach takes its place until the last step
