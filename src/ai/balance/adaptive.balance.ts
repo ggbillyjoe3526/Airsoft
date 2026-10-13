@@ -11,7 +11,10 @@ import { reportMeasure } from './balanceSupport';
  * Adaptive difficulty (AD1). Two measures:
  *
  * - **In between.** A bot's first hit on a player standing in the open at 5 and 10 m, at every half step from Easy to
- *   Pro: an in-between skill should land its first hit between the two levels around it (the band is theirs).
+ *   Pro: an in-between skill should land its first hit between the two levels around it (the band is theirs). The mean
+ *   time over the duels that hit, not the median: bursts and ticks make the median lumpy. Measured 2026-10-13 (AD1):
+ *   with medians over 60 seeds, Hard-Pro at 10 m read 0.925 s against Pro's 0.95 s; over 200 seeds the median was
+ *   Pro's own (0.917 s) while the mean ran Hard 1.23, 2.25 1.10, 2.5 0.95, 2.75 0.89, Pro 0.84 s.
  * - **It follows you.** Depot 3v3 bot matches where Alpha stands in for you at a fixed level and Beta adapts from Normal,
  *   round by round and match by match, as a real match does (character 0 is "you" for its hit counts): against Hard
  *   play Beta's rating should climb, against Easy play fall.
@@ -23,10 +26,10 @@ const CHAINS = 4;
 const MATCHES = 8;
 const MATCH_SECONDS = 150;
 
-const median = (xs: readonly number[]): number => {
-  const s = [...xs].sort((a, b) => a - b);
-  const m = Math.floor(s.length / 2);
-  return s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2;
+/** The mean of the finite times (the duels that hit), and how many those are. */
+const meanHit = (xs: readonly number[]): { mean: number; hit: number } => {
+  const hit = xs.filter(Number.isFinite);
+  return { mean: hit.length > 0 ? hit.reduce((s, x) => s + x, 0) / hit.length : Number.NaN, hit: hit.length };
 };
 
 const configAt = (rating: number): BotConfig => ({ ...BOT_BEHAVIOUR, ...skillAt(rating, levelAt(rating)) });
@@ -86,20 +89,21 @@ describe('adaptive difficulty (AD1)', () => {
 
   for (const dist of [5, 10] as const) {
     it(`measures the first hit at ${dist} m at every half step from Easy to Pro`, { timeout: 600_000 }, (ctx) => {
-      const medians = RATINGS.map((r) => {
+      const means = RATINGS.map((r) => {
         const times: number[] = [];
         for (let seed = 1; seed <= DUEL_SEEDS; seed++) times.push(duelFirstHit(configAt(r), dist, seed));
-        return median(times);
+        return meanHit(times);
       });
       RATINGS.forEach((r, i) => {
         if (Number.isInteger(r)) return;
+        const [below, at, above] = [means[i - 1]!, means[i]!, means[i + 1]!];
         // Between its neighbours: no quicker than the level above, no slower than the level below.
         reportMeasure(ctx, {
-          label: `Duel at ${dist} m, ${ratingWords(r)} (${r}), a player standing still: median time to the bot's first hit`,
-          value: medians[i]!,
-          band: { min: medians[i + 1]!, max: medians[i - 1]! },
+          label: `Duel at ${dist} m, ${ratingWords(r)} (${r}), a player standing still: mean time to the bot's first hit`,
+          value: at.mean,
+          band: { min: above.mean, max: below.mean },
           unit: 's',
-          detail: `${ratingWords(r - 0.5)} ${medians[i - 1]!.toFixed(2)} s, ${ratingWords(r + 0.5)} ${medians[i + 1]!.toFixed(2)} s; seeds 1-${DUEL_SEEDS}`,
+          detail: `${ratingWords(r - 0.5)} ${below.mean.toFixed(2)} s, ${ratingWords(r + 0.5)} ${above.mean.toFixed(2)} s; ${at.hit} of ${DUEL_SEEDS} hit within ${DUEL_SECONDS} s; seeds 1-${DUEL_SEEDS}`,
         });
       });
     });
