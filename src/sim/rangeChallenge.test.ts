@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RANGE, RANGE_CHALLENGE } from '../config/range';
+import { RANGE, RANGE_CHALLENGE, RANGE_VISUALS } from '../config/range';
 import type { GameEvent } from './events';
 import { createChallenge, setChallengeOn, stepChallenge } from './rangeChallenge';
 import { createRangeTargets, type RangeTarget, stepRangeTargets } from './rangeTargets';
@@ -138,6 +138,28 @@ describe('the timed challenge (M93)', () => {
     expect(c.last).toBeNull();
     expect(start.hidden).toBe(true);
     expect(targets.every((t) => t.lit === 0)).toBe(true);
+  });
+
+  it('pop-ups lying when a run ends, or when it is turned off, lie on: never drawn falling again', () => {
+    // Drawn flat (render/rangeTargetsRenderer.ts figureTilt): its fall done, its rise not begun.
+    const flat = (t: RangeTarget) => t.downFor - t.down >= RANGE_VISUALS.fallTime && t.down >= RANGE.riseTime;
+    const popups = (ts: RangeTarget[]) => ts.filter((t) => t.motion === 'popup');
+    const { c, start, tick, run, targets, rng } = range();
+    expect(popups(targets).every(flat)).toBe(true); // lying from the start, not falling
+    tick([hit(start)]);
+    run(RANGE_CHALLENGE.countdown + DT);
+    let lying = popups(targets).filter((t) => t.down >= RANGE.riseTime && t.lit <= 0);
+    expect(lying.length).toBeGreaterThan(0);
+    setChallengeOn(c, targets, false, rng);
+    expect(lying.every(flat)).toBe(true);
+    // And at the end of a run.
+    setChallengeOn(c, targets, true, rng);
+    tick([hit(start)]);
+    while (c.phase !== 'running' || c.clock > 2 * DT) tick();
+    lying = popups(targets).filter((t) => t.down >= RANGE.riseTime && t.lit <= 0);
+    while (c.phase === 'running') tick();
+    expect(c.last).not.toBeNull();
+    expect(lying.every(flat)).toBe(true);
   });
 
   it('plays the same from the same seed', () => {

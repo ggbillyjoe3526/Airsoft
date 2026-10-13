@@ -35,17 +35,6 @@ acceptance:
 status: open
 attempts: 0
 
-## M93 · Practice: moving targets, new target types, a timed challenge (playtest note 10)
-tier: core
-perf: skip
-touches: src/sim/rangeTargets.ts, src/sim/rangeChallenge.ts, src/sim/simulation.ts, src/sim/bbs.ts, src/render/rangeTargetsRenderer.ts, src/render/rangeTargetGear.ts, src/render/combatPresentation.ts, src/map/range.ts, src/rangeSession.ts, src/config/range.ts, src/config/audio.ts, src/config/hudText.ts, src/audio/sfx.ts, src/audio/whistle.ts, src/ui/rangeReadout.ts, src/ui/menus/pauseScreen.ts, src/ui/menus/menus.ts, src/ui/menus/menusOptions.ts, src/ui/menus/savedChoices.ts, src/stats/records.ts, src/settings/storage.ts, src/game.ts, src/style.css
-contract: none
-acceptance:
-  1. Moving targets and more target kinds (for example small, pop-up and swinging).
-  2. A timed challenge, off by default: hit as many targets as you can in a set time; the best score is kept.
-status: open
-attempts: 0
-
 ## M94 · Practice on any map (playtest note 11)
 tier: core
 perf: required

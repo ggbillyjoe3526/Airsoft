@@ -112,7 +112,11 @@ export function createRangeTargets(specs: readonly RangeTargetSpec[] = rangeLayo
     t.posts = targetPosts(t);
     placeTarget(t);
     copy(t.prevPosition, t.position);
-    if (t.motion === 'popup') t.down = t.downFor = roll(RANGE.popup.down, rng);
+    if (t.motion === 'popup') {
+      // Lying from the start, as if it went down a full spell ago (so it's drawn flat, not falling), for a random time.
+      t.down = roll(RANGE.popup.down, rng);
+      t.downFor = t.down + RANGE.figureDownTime;
+    }
     return t;
   });
 }
@@ -289,6 +293,16 @@ export function knockDown(target: RangeTarget, seconds: number): void {
 }
 
 /**
+ * A figure stays down `seconds` from now: one lying keeps lying (its spell runs on from where its fall began, so it
+ * isn't drawn falling again), one standing falls (knockDown).
+ */
+export function keepDown(target: RangeTarget, seconds: number): void {
+  if (target.down <= 0) return knockDown(target, seconds);
+  target.downFor += seconds - target.down;
+  target.down = seconds;
+}
+
+/**
  * Whether pop-ups stand and drop by themselves (`auto`, free practice) or only when lit (the timed challenge). Turned to
  * the challenge they lie down and wait; back to free practice, each rises after a random time from `rng`.
  */
@@ -296,7 +310,7 @@ export function setPopupsAuto(targets: readonly RangeTarget[], auto: boolean, rn
   for (const t of targets) {
     if (t.motion !== 'popup' || t.auto === auto) continue;
     t.auto = auto;
-    if (auto) knockDown(t, Math.max(t.down, roll(RANGE.popup.down, rng)));
+    if (auto) keepDown(t, Math.max(t.down, roll(RANGE.popup.down, rng)));
     else if (t.down <= 0) knockDown(t, RANGE.figureDownTime);
   }
 }
