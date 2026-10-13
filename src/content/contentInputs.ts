@@ -1,5 +1,6 @@
 import type { ReplicaConfig } from '../config/replicas';
 import type { StatsFile } from '../config/statsFile';
+import type { BotKitTable } from '../pool/botKit';
 import type { Asset, Pool } from '../pool/pool';
 
 /**
@@ -37,6 +38,8 @@ export interface ContentInputs {
   partKeys: Readonly<Record<PartCategory, readonly string[]>>;
   /** What a part changes (its numbers, read from the game's configs). */
   effects(part: Asset): readonly PartEffect[];
+  /** The bots' kits (bot-kits.md, BG1): which replicas the other team brings. Absent: not checked. */
+  botKits?: BotKitTable;
 }
 
 /** The pool categories a replica's Customise slots take (pool/kit.ts FIT_CATEGORY), power sources included. */

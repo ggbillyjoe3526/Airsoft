@@ -962,7 +962,7 @@ export class Game {
 
   /** Whether a match of `picks` with the Loadout as it is uses dev content (M35): it then won't count or pay. */
   private devContentUsed(picks: NewGamePicks): boolean {
-    return matchUsesDev(picks, this.equippedItems(), GAME_POOL, this.dev.devContent, this.loadout.ownedChase(), this.lighting[picks.map]);
+    return matchUsesDev(picks, this.equippedItems(), GAME_POOL, this.dev.devContent, this.lighting[picks.map]);
   }
 
   /** A new session takes the Dev settings in force (M24). */
@@ -1086,7 +1086,6 @@ export class Game {
         ruleset: picks.ruleset,
         rules: { ...picks.rules, teamSize: playedTeamSize(picks) },
         kit: this.loadout.kit(),
-        chaseOwned: this.loadout.ownedChase(),
         owned: { ...this.collection.owned },
         // The supply event on by the device's clock as Play is pressed (M49): the run keeps it to the end.
         supply: activeSupplyEvent(GAME_POOL.supplyEvents, new Date()),

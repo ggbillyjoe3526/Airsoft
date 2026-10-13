@@ -1,12 +1,13 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { BOT_LOADOUTS, DIFFICULTIES, type Difficulty } from '../config/bots';
+import { DIFFICULTIES, type Difficulty } from '../config/bots';
 import { DEFAULT_MATCH_RULES, DEFAULT_RULESET } from '../config/matchRules';
 import { DEFAULT_MODE } from '../config/modes';
 import { CYBER_PISTOL, LOADOUT } from '../config/replicas';
 import type { MapId } from '../map/maps';
 import { botsMayCarryDev, matchUsesDev, type NewGamePicks, playedPicks } from '../newGamePicks';
-import { rolledKitMayHoldDev } from './botKit';
+import { kitsMayHoldDev } from './botKit';
 import { type Collection, type ItemRef, itemKey, newCollection } from './collection';
+import { GAME_BOT_KITS } from './gameBotKits';
 import { GAME_POOL } from './gamePool';
 import { FIT_SLOTS } from './kit';
 import { gameOwnership, LoadoutModel } from './loadoutModel';
@@ -24,7 +25,7 @@ import { MemoryStorage } from './testStorage';
 afterAll(() => vi.unstubAllGlobals());
 
 const TORCH: ItemRef = { asset: '000020', tier: 'common' };
-/** The public levels (Pro is dev content itself, M38); Hard rolls each opponent a kit (BOT_LOADOUTS). */
+/** The public levels (Pro is dev content itself, M38); each picks its opponents' kits from bot-kits.md (BG1). */
 const LEVELS = DIFFICULTIES.filter((d) => d.tag === 'public').map((d) => d.id);
 const picks = (map: MapId, difficulty: Difficulty): NewGamePicks => ({ map, mode: DEFAULT_MODE, difficulty, teammateDifficulty: difficulty, ruleset: DEFAULT_RULESET, rules: { ...DEFAULT_MATCH_RULES } });
 
@@ -83,14 +84,13 @@ describe('Dev content off: no Light slot, no torch, Depot counts and pays (M33h 
 describe('Dev content on: Depot by day still counts and pays (M33h acceptance 1, fork "what counts as dev")', () => {
   beforeEach(() => vi.stubGlobal('localStorage', new MemoryStorage()));
 
-  it("fits the starter torch by default, yet Depot by day counts and pays at every difficulty, kits that roll included", () => {
+  it("fits the starter torch by default, yet Depot by day counts and pays at every difficulty, the bots' kits included", () => {
     const model = gameLoadout(newCollection(GAME_POOL, 4), { on: true });
     const items = equippedItems(model);
     expect(holdsTorch(items)).toBe(true);
-    // The torch is the only dev item in the pool and a light is never rolled, so a rolled kit (Hard, Pro) holds no dev gear.
-    expect(rolledKitMayHoldDev(GAME_POOL, LOADOUT)).toBe(false);
-    expect(LEVELS.some((d) => BOT_LOADOUTS[d] === 'random')).toBe(true);
+    // The torch is the only dev item in the pool and a light is never part of a kit, so no bot kit holds dev gear.
     for (const d of LEVELS) {
+      expect(kitsMayHoldDev(GAME_BOT_KITS, d, GAME_POOL), d).toBe(false);
       expect(botsMayCarryDev(GAME_POOL, true, d), d).toBe(false);
       expect(matchUsesDev(picks('depot', d), items, GAME_POOL, true), d).toBe(false);
       // With the torch taken off as well: the same.

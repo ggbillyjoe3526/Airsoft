@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { MagazineId } from '../config/attachments';
+import type { ReplicaConfig } from '../config/replicas';
 import { REPLICA_FINISH } from '../config/replicaFinish';
 import { type MaterialKey, ModelBuilder, type Pt, roundedRect } from './replicaBuilder';
 
@@ -39,6 +40,19 @@ export const AEG_MUZZLE = { barrelEnd: 0.565, up: 0.034, extensions: { long: 0.1
 export const PISTOL_MUZZLE = { barrelEnd: 0.104, up: 0.015, extensions: {}, tips: { none: 0, silencer: 0.1 } } satisfies MuzzleLayout;
 /** The Cyber Pistol's (M32): a longer slide, and nothing fits its muzzle. */
 export const CYBER_MUZZLE = { barrelEnd: 0.114, up: 0.015, extensions: {}, tips: { none: 0 } } satisfies MuzzleLayout;
+
+/** Each replica's muzzle layout by the part table it is drawn with (REPLICA_PART_TABLES' keys). */
+export const MUZZLE_LAYOUTS: Readonly<Record<'aeg' | 'pistol' | 'cyber', MuzzleLayout>> = { aeg: AEG_MUZZLE, pistol: PISTOL_MUZZLE, cyber: CYBER_MUZZLE };
+
+/** The part table replica `r` is drawn with: its own (`look.viewmodel`), else the pistol's or the AEG's by its kind. */
+export function partTableOf(r: ReplicaConfig): keyof typeof MUZZLE_LAYOUTS {
+  return r.look.viewmodel ?? (r.look.model === 'pistol' ? 'pistol' : 'aeg');
+}
+
+/** How much further out the fitted `barrel` puts replica `r`'s muzzle (metres; 0 as it comes, or one it doesn't take). */
+export function barrelReach(r: ReplicaConfig, barrel: string | null | undefined): number {
+  return barrel ? (MUZZLE_LAYOUTS[partTableOf(r)].extensions[barrel] ?? 0) : 0;
+}
 
 /**
  * Draws one fitted part (an optic, a grip, a magazine, the laser, a barrel) into its own builder. Every part the Loadout

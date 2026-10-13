@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, it, vi } from 'vitest';
+import kitsText from '../../bot-kits.md?raw';
 import { DEFAULT_DIFFICULTY } from '../config/bots';
 import { DEFAULT_MATCH_RULES, DEFAULT_RULESET } from '../config/matchRules';
 import { DEFAULT_MODE } from '../config/modes';
@@ -8,7 +9,7 @@ import type { MapId } from '../map/maps';
 import { botsCarryDevLight, matchUsesDev, type NewGamePicks, playsAtNight, usedItems } from '../newGamePicks';
 import { createCharacter } from '../sim/character';
 import { vec3 } from '../sim/vec';
-import { botLight, fitBotLight, randomKit } from './botKit';
+import { botKitSlots, botLight, fitBotLight, readBotKits } from './botKit';
 import { grantStarters, itemKey } from './collection';
 import { contentPool } from './contentPool';
 import { GAME_POOL } from './gamePool';
@@ -98,12 +99,14 @@ describe('the Weapon Torch in the pool (M33h)', () => {
     expect(plain.armament.parts.every((p) => !p.light)).toBe(true);
   });
 
-  it('leaves every seeded bot kit as it was (a light is never rolled)', () => {
+  it('leaves every bot kit as it was (a light is never part of a kit)', () => {
     const before = without(GAME_POOL, TORCH_ID);
-    for (const seed of [1, 7, 42, 1234, 99991]) {
-      const kit = randomKit(GAME_POOL, LOADOUT, seed, 1);
-      expect(kit).toEqual(randomKit(before, LOADOUT, seed, 1));
-      expect(kit.every((s) => !s.parts.light)).toBe(true);
+    const kits = readBotKits(kitsText, GAME_POOL);
+    expect(readBotKits(kitsText, before).kits).toEqual(kits.kits);
+    for (const k of kits.kits) {
+      const slots = botKitSlots(GAME_POOL, k);
+      expect(slots).toEqual(botKitSlots(before, k));
+      expect(slots.every((s) => !s.parts.light), k.name).toBe(true);
     }
   });
 });

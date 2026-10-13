@@ -1,10 +1,13 @@
+import { DIFFICULTIES, type Difficulty } from '../config/bots';
 import { DESCRIPTIVE_TAGS, DRIVE_TAGS, RANGE_EXCEPTIONS, type RangedStat, REPLICA_RANGES, STAT_WORDS } from '../config/contentRules';
 import { cues } from '../config/sounds';
-import { botKitSeed, kittedCharacter, randomKit } from '../pool/botKit';
+import { type BotKit, kittedBot } from '../pool/botKit';
 import { type ItemRef, itemKey } from '../pool/collection';
 import { FIT_CATEGORY, FIT_SLOTS, type FitSlot } from '../pool/kit';
 import { LoadoutModel } from '../pool/loadoutModel';
 import { type Asset, fits, hasBuiltInPower, tiersOf } from '../pool/pool';
+import { createCharacter } from '../sim/character';
+import { vec3 } from '../sim/vec';
 import { assetRules } from './assetRules';
 import { type CheckResult, itemName, num, result } from './checks';
 import { type ContentInputs, drawName, drawTableOf } from './contentInputs';
@@ -147,30 +150,34 @@ export function replicaCompatibility(inputs: ContentInputs, replica: Asset): Che
   return out;
 }
 
-/** Seeds the bots' kits are rolled on for the check: enough that each part that fits turns up. */
-const BOT_KIT_SEEDS = 24;
+/** No difficulty's weight: a kit made up for the check, never picked. */
+const UNWEIGHTED = Object.fromEntries(DIFFICULTIES.map((d) => [d.id, 0])) as Record<Difficulty, number>;
 
-/** Level 2, the bots: they can carry it, and Hard opponents' random kits fit its parts (every part, by chance 1). */
+/**
+ * Level 2, the bots (BG1): a bot can carry it as it comes and with each part that fits it (one at a time, as a kit in
+ * bot-kits.md would fit it), under its site limit; and some kit in bot-kits.md carries it, or the other team never
+ * brings it.
+ */
 export function replicaBotChecks(inputs: ContentInputs, replica: Asset): CheckResult[] {
   const item = itemName(replica);
   const r = inputs.replicas[replica.key];
   if (!r) return [];
-  const rolled = new Set<string>();
   const problems: string[] = [];
-  for (let seed = 1; seed <= BOT_KIT_SEEDS; seed++) {
-    const kit = randomKit(inputs.pool, [r], botKitSeed(seed, 1), 1);
-    const c = kittedCharacter(1, 1, kit);
-    const carried = c.armament.replicas[0];
-    if (!carried || carried.id !== r.id) problems.push('a bot given it carries something else');
-    else if (!(carried.muzzleEnergy > 0 && carried.muzzleEnergy <= carried.energyLimit + 1e-9)) problems.push(`a bot's kit shoots ${num(carried.muzzleEnergy, 3)} J`);
-    const parts = kit[0]!.parts;
-    for (const key of [kit[0]!.optic, parts.grip !== 'none' ? parts.grip : null, parts.laser, parts.barrel, parts.muzzle, parts.magazine !== r.magazines[0] ? parts.magazine : null]) if (key) rolled.add(key);
+  const fitting = partsFitting(inputs, replica).filter((p) => p.category !== 'light');
+  for (const part of [null, ...fitting]) {
+    // As it comes a bot carries the replica config the inputs hold; with a part, as the game kits it (pool/kit.ts).
+    const kit: BotKit = { name: item, slots: [{ replica: replica.id, parts: part ? [part.id] : [] }], weights: UNWEIGHTED };
+    const carried = (part ? kittedBot(1, 1, inputs.pool, kit) : createCharacter(1, vec3(), 0, [r], 1)).armament.replicas[0];
+    const fitted = part ? ` with the ${part.name}` : '';
+    if (!carried || carried.id !== r.id) problems.push(`a bot given it${fitted} carries something else`);
+    else if (!(carried.muzzleEnergy > 0 && carried.muzzleEnergy <= carried.energyLimit + 1e-9)) problems.push(`a bot's${fitted} shoots ${num(carried.muzzleEnergy, 3)} J`);
   }
-  const rollable = partsFitting(inputs, replica).filter((p) => p.category !== 'power' && p.category !== 'light' && p.tag === 'public');
-  const never = rollable.filter((p) => !rolled.has(p.key));
   if (problems.length > 0) return [result('compatibility', 'replica.bots', item, 'fail', `Bots can't carry it: ${[...new Set(problems)].join('; ')}.`)];
-  if (never.length > 0) return [result('compatibility', 'replica.bots', item, 'warn', `Bots carry it, but in ${BOT_KIT_SEEDS} rolled kits these never turned up: ${never.map((p) => p.name).join(', ')}.`)];
-  return [result('compatibility', 'replica.bots', item, 'pass', rollable.length > 0 ? `Bots carry it, and Hard opponents' rolled kits fit every part that fits it (${rollable.length}, in ${BOT_KIT_SEEDS} kits).` : 'Bots carry it; no part is rolled onto it.')];
+  const carries = `Bots carry it as it comes and with each of the ${fitting.length} parts that fit it`;
+  if (!inputs.botKits) return [result('compatibility', 'replica.bots', item, 'pass', `${carries}.`)];
+  const kits = inputs.botKits.kits.filter((k) => k.slots.some((s) => s.replica === replica.id) && DIFFICULTIES.some((d) => k.weights[d.id] > 0));
+  if (kits.length === 0) return [result('compatibility', 'replica.bots', item, 'warn', `${carries}, but no kit in bot-kits.md weighted above 0 holds it: the other team never brings it.`)];
+  return [result('compatibility', 'replica.bots', item, 'pass', `${carries}; ${kits.length} kit${kits.length > 1 ? 's' : ''} in bot-kits.md hold${kits.length > 1 ? '' : 's'} it (${kits.map((k) => k.name).join(', ')}).`)];
 }
 
 /**

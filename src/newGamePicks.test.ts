@@ -22,8 +22,8 @@ import { DEFAULT_MODE, MATCH_MODES } from './config/modes';
 import { DEFAULT_MAP, MAPS, mapData } from './map/maps';
 import { botsMayCarryDev, matchUsesDev, type NewGamePicks, pickTags, picksUseDev, playedPicks, playedTeamSize } from './newGamePicks';
 import { EXTRACTION, squadSize } from './config/extraction';
-import { BOT_LOADOUTS } from './config/bots';
 import { LOADOUT } from './config/replicas';
+import { readBotKits } from './pool/botKit';
 import { GAME_POOL } from './pool/gamePool';
 import { assetOfReplica } from './pool/pool';
 import { strayDevPart, withAssets, withTags } from './pool/testSupport';
@@ -168,35 +168,32 @@ describe('whether the opponents may carry dev gear and whether a match uses dev 
   const devPool = withTags(GAME_POOL, { 'Red Dot': 'dev' });
   const strayPool = withAssets(GAME_POOL, [strayDevPart(GAME_POOL)]);
 
-  it('rolls the bots\' kits on hard and pro only (the premise of the rest)', () => {
-    expect(BOT_LOADOUTS).toEqual({ easy: 'factory', normal: 'factory', hard: 'random', pro: 'random' });
-  });
-
   it('says no for the real pool, on every difficulty, with Dev content off or on', () => {
     for (const devContent of [false, true]) for (const d of DIFFICULTIES) expect(botsMayCarryDev(GAME_POOL, devContent, d.id)).toBe(false);
   });
 
-  it('says yes only with Dev content on, on a difficulty that rolls kits, and dev gear a kit could hold', () => {
-    expect(botsMayCarryDev(devPool, true, 'hard')).toBe(true);
-    expect(botsMayCarryDev(devPool, false, 'hard')).toBe(false);
-    expect(botsMayCarryDev(devPool, true, 'easy')).toBe(false);
-    expect(botsMayCarryDev(devPool, true, 'normal')).toBe(false);
-    expect(botsMayCarryDev(withTags(GAME_POOL, { 'GBB Pistol': 'dev' }), true, 'hard')).toBe(true);
-  });
-
-  it('says yes for a dev chase replica the player owns (M32: one opponent may carry it), with Dev content on, on hard', () => {
-    const cyber = GAME_POOL.assets.find((a) => a.name === 'Cyber Pistol')!.id;
+  it('says yes only with Dev content on, when a kit bot-kits.md weights for the difficulty holds the dev gear (BG1)', () => {
+    // The Red Dot is in kits every difficulty picks.
+    for (const d of DIFFICULTIES) {
+      expect(botsMayCarryDev(devPool, true, d.id), d.label).toBe(true);
+      expect(botsMayCarryDev(devPool, false, d.id), d.label).toBe(false);
+    }
+    expect(botsMayCarryDev(withTags(GAME_POOL, { 'GBB Pistol': 'dev' }), true, 'easy')).toBe(true);
+    // The Cyber Pistol is only in the Cyber kit, which Easy and Normal never pick.
     const devCyber = withTags(GAME_POOL, { 'Cyber Pistol': 'dev' });
-    expect(botsMayCarryDev(devCyber, true, 'hard', [cyber])).toBe(true);
-    expect(botsMayCarryDev(devCyber, false, 'hard', [cyber])).toBe(false);
-    expect(botsMayCarryDev(devCyber, true, 'normal', [cyber])).toBe(false);
-    expect(botsMayCarryDev(devCyber, true, 'hard', [])).toBe(false);
-    expect(botsMayCarryDev(GAME_POOL, true, 'hard', [cyber])).toBe(false);
-    expect(matchUsesDev(picks({ difficulty: 'hard' }), [], devCyber, true, [cyber])).toBe(true);
-    expect(matchUsesDev(picks({ difficulty: 'hard' }), [], devCyber, true)).toBe(false);
+    expect(botsMayCarryDev(devCyber, true, 'hard')).toBe(true);
+    expect(botsMayCarryDev(devCyber, true, 'normal')).toBe(false);
+    expect(matchUsesDev(picks({ difficulty: 'hard' }), [], devCyber, true)).toBe(true);
+    expect(matchUsesDev(picks({ difficulty: 'normal' }), [], devCyber, true)).toBe(false);
   });
 
-  it('says no when the only dev asset fits no LOADOUT replica', () => {
+  it('reads the kits it is given', () => {
+    const table = readBotKits('| Kit | Primary | Primary parts | Secondary | Secondary parts | Easy | Normal | Hard | Pro |\n|---|---|---|---|---|---|---|---|---|\n| Dot | AEG Rifle | Red Dot | | | 0 | 0 | 1 | 0 |\n', GAME_POOL);
+    expect(botsMayCarryDev(devPool, true, 'hard', table)).toBe(true);
+    expect(botsMayCarryDev(devPool, true, 'easy', table)).toBe(false);
+  });
+
+  it('says no when the only dev asset is in no kit', () => {
     expect(botsMayCarryDev(strayPool, true, 'hard')).toBe(false);
   });
 
@@ -222,16 +219,16 @@ describe('whether the opponents may carry dev gear and whether a match uses dev 
     expect(matchUsesDev(picks(), kitOf('AEG Rifle'), devPool, false)).toBe(false);
   });
 
-  it("uses dev content when the opponents may roll dev gear, on hard with Dev content on only", () => {
+  it("uses dev content when the opponents may carry dev gear, with Dev content on only", () => {
     expect(matchUsesDev(picks({ difficulty: 'hard' }), [], devPool, true)).toBe(true);
     expect(matchUsesDev(picks({ difficulty: 'hard' }), [], devPool, false)).toBe(false);
-    expect(matchUsesDev(picks({ difficulty: 'normal' }), [], devPool, true)).toBe(false);
+    expect(matchUsesDev(picks({ difficulty: 'normal' }), [], devPool, true)).toBe(true);
     expect(matchUsesDev(picks({ difficulty: 'hard' }), [], strayPool, true)).toBe(false);
   });
 });
 
 describe('the replicas every bot carries (M35)', () => {
-  it('are public in pool.md: teammates and Easy or Normal opponents carry them whatever the Dev content switch says', () => {
+  it('are public in pool.md: teammates carry them whatever the Dev content switch says', () => {
     for (const r of LOADOUT) expect(assetOfReplica(GAME_POOL, r)?.tag).toBe('public');
   });
 });

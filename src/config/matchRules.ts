@@ -40,7 +40,7 @@ export interface MatchRules {
   semiAutoOnly: boolean;
   /** Realcap: everyone's magazines hold at most REALCAP.magSize BBs and REALCAP.mags are carried. */
   realcap: boolean;
-  /** Everyone carries the factory loadout (config/replicas.ts LOADOUT as it comes): no Armory gear, no rolled bot kits. */
+  /** Everyone carries the factory loadout (config/replicas.ts LOADOUT as it comes): no Armory gear, no bot kits (bot-kits.md). */
   factoryKit: boolean;
   /**
    * Strict marshal: the overshooting rule counts double (one warning, then you sit the next round out). INERT: a

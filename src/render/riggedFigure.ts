@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { ReplicaParts } from '../config/attachments';
 import { FIGURE } from '../config/characters';
 import { FIGURE_RIG } from '../config/figureRig';
+import type { OpticId } from '../config/optics';
 import type { DetailLevel } from '../config/renderQuality';
 import type { ReplicaConfig } from '../config/replicas';
 import type { Character } from '../sim/character';
@@ -11,6 +12,7 @@ import { createFigurePose, createPoseState, type FigurePose, type MagazineShow, 
 import { addShape, type FigureReplicaColours, type FigureReplicaShape } from './figureReplicas';
 import type { FigureMagazines, FigureRig } from './figureRig';
 import type { ReplicaFiles } from './replicaFiles';
+import { barrelReach } from './replicaParts';
 import type { ThrownMagazines } from './thrownMagazines';
 
 /**
@@ -87,6 +89,14 @@ interface Held {
 }
 
 const IDENTITY = new THREE.Matrix4();
+/** No pieces: a part not fitted, or one the parts file lacks. */
+const NONE: FigureReplicaShape = [];
+
+/** A shape moved by `frame` before it is placed (the magazine in its bone's frame, a muzzle device out at a longer barrel's end). */
+interface Placed {
+  shape: FigureReplicaShape;
+  frame: THREE.Matrix4;
+}
 const UP = new THREE.Vector3(0, 1, 0);
 const q1 = new THREE.Quaternion();
 const q2 = new THREE.Quaternion();
@@ -444,10 +454,12 @@ export class RiggedFigure {
     const parts = this.partsOf(slot);
     const colours = hold === 'pistol' ? s.pistolColours : s.rifleColours;
     const detail = FIGURE.detail[s.detail];
-    const make = (shapes: readonly FigureReplicaShape[], frame: THREE.Matrix4 = IDENTITY): THREE.Mesh | null => {
+    // Each shape in the replica's space, or moved by its own frame first.
+    const make = (shapes: readonly (FigureReplicaShape | Placed)[]): THREE.Mesh | null => {
       const b = new PartBuilder(detail);
       let any = false;
-      for (const shape of shapes) {
+      for (const entry of shapes) {
+        const { shape, frame } = 'shape' in entry ? entry : { shape: entry, frame: IDENTITY };
         if (shape.length === 0) continue;
         addShape(b, frame, colours, shape);
         any = true;
@@ -457,19 +469,26 @@ export class RiggedFigure {
       held.made.push(mesh.geometry);
       return mesh;
     };
-    // Near: the whole model (its moving parts at rest), the fitted muzzle device or the bare flash hider, a fitted torch.
-    const muzzle = parts?.muzzle ? file.parts.get(`muzzle:${parts.muzzle}`) : undefined;
-    const light = parts?.light ? file.parts.get(`light:${parts.light}`) : undefined;
-    const magazinePart = parts?.magazine ? file.parts.get(`magazine:${parts.magazine}`) : undefined;
-    held.near = make([file.body, file.rig?.pieces ?? [], muzzle ?? file.flashHider, light ?? []]);
+    // A fitted part from the parts file, or nothing (a part the file lacks isn't shown).
+    const part = (kind: string, id: string | null | undefined): FigureReplicaShape => (id ? (file.parts.get(`${kind}:${id}`) ?? NONE) : NONE);
+    // Near: the whole model (its moving parts at rest), its fitted optic, grip, laser and barrel (BG1: bots carry them
+    // too), the fitted muzzle device or the bare flash hider out at the end of a longer barrel, and a fitted torch.
+    const muzzle = part('muzzle', parts?.muzzle);
+    const reach = replica ? barrelReach(replica, parts?.barrel) : 0;
+    const muzzleShape = muzzle.length > 0 ? muzzle : file.flashHider;
+    const muzzleAt = reach > 0 ? { shape: muzzleShape, frame: new THREE.Matrix4().makeTranslation(0, 0, -reach) } : muzzleShape;
+    const grip = parts?.grip && parts.grip !== 'none' ? parts.grip : null;
+    const fitted = [part('optic', this.opticOf(slot)), part('grip', grip), part('laser', parts?.laser), part('barrel', parts?.barrel)];
+    held.near = make([file.body, file.rig?.pieces ?? [], ...fitted, muzzleAt, part('light', parts?.light)]);
     held.far = make([file.figureHeld]);
-    const magazine = magazinePart ?? file.magazine;
+    const magazinePart = part('magazine', parts?.magazine);
+    const magazine = magazinePart.length > 0 ? magazinePart : file.magazine;
     held.magazine = make([magazine]);
     for (const m of [held.near, held.far, held.magazine]) if (m) holder.add(m);
     // The magazine in its bone's frame, as the sidecar places it on the hand.
     if (held.magazines && file.magazineFrame && magazine.length > 0) {
       const toBone = file.magazineFrame.clone().invert();
-      const copy = make([magazine], toBone);
+      const copy = make([{ shape: magazine, frame: toBone }]);
       if (copy) {
         held.handMagazine = copy.geometry;
         copy.matrixAutoUpdate = false;
@@ -509,6 +528,11 @@ export class RiggedFigure {
 
   private partsOf(slot: number): ReplicaParts | undefined {
     return this.setup.character.armament.parts[slot];
+  }
+
+  /** The optic fitted to the replica in loadout slot `slot` (BG1), or null. */
+  private opticOf(slot: number): OpticId | null {
+    return this.setup.character.armament.optics[slot] ?? null;
   }
 
   private freeHeld(h: Held): void {

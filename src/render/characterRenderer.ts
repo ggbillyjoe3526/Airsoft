@@ -3,6 +3,7 @@ import { FIGURE_MODEL } from '../config/assets';
 import { FIGURE } from '../config/characters';
 import { BAKED_LIGHT } from '../config/bake';
 import type { HitConfig } from '../config/hits';
+import type { OpticId } from '../config/optics';
 import type { DetailLevel } from '../config/render';
 import type { Character } from '../sim/character';
 import { legSwing } from '../sim/hitbox';
@@ -33,6 +34,8 @@ interface FigureState {
   /** Its rifle and its pistol had a weapon torch fitted when it was built (M33h; shown at every detail). */
   rifleTorch: boolean;
   pistolTorch: boolean;
+  /** The optic on its rifle when it was built (BG1; shown at every detail), or null. */
+  rifleOptic: OpticId | null;
   /** The glow it was last given from others' torch beams (M33h; setTorchLift), so an unchanged one isn't set again. */
   lift: number;
   /** The baked bounce light on it where it stands (G6; setBakedLight), added to the torch glow. */
@@ -60,27 +63,41 @@ export function torchFitted(c: Character, pistol: boolean): boolean {
 }
 
 /**
- * What a rigged figure's replicas are built from (BF1): each replica and its fitted muzzle device, torch and magazine,
- * which it shows at every detail. Called only when the loadout's arrays changed (fitParts between rounds).
+ * What a rigged figure's replicas are built from (BF1): each replica and its fitted optic, grip, laser, barrel (BG1),
+ * muzzle device, torch and magazine, which it shows at every detail. Called only when the loadout's entries changed
+ * (fitParts and fitOptics between rounds).
  */
 export function riggedKit(c: Character): string {
   const a = c.armament;
-  return a.replicas.map((r, i) => `${r.id}/${a.parts[i]?.muzzle ?? ''}/${a.parts[i]?.light ?? ''}/${a.parts[i]?.magazine ?? ''}`).join(' ');
+  return a.replicas
+    .map((r, i) => {
+      const p = a.parts[i];
+      return `${r.id}/${a.optics[i] ?? ''}/${p?.grip ?? ''}/${p?.laser ?? ''}/${p?.barrel ?? ''}/${p?.muzzle ?? ''}/${p?.light ?? ''}/${p?.magazine ?? ''}`;
+    })
+    .join(' ');
 }
 
-/** True when `c`'s replicas or fitted parts aren't the entries in `seen` (which then become them): no allocation. */
+/** True when `c`'s replicas, fitted parts or optics aren't the entries in `seen` (which then become them): no allocation. */
 function kitChanged(c: Character, seen: unknown[]): boolean {
   const a = c.armament;
   const n = a.replicas.length;
-  let changed = seen.length !== n * 2;
-  for (let i = 0; i < n && !changed; i++) changed = seen[i * 2] !== a.replicas[i] || seen[i * 2 + 1] !== a.parts[i];
+  let changed = seen.length !== n * 3;
+  for (let i = 0; i < n && !changed; i++) changed = seen[i * 3] !== a.replicas[i] || seen[i * 3 + 1] !== a.parts[i] || seen[i * 3 + 2] !== a.optics[i];
   if (!changed) return false;
-  seen.length = n * 2;
+  seen.length = n * 3;
   for (let i = 0; i < n; i++) {
-    seen[i * 2] = a.replicas[i];
-    seen[i * 2 + 1] = a.parts[i];
+    seen[i * 3] = a.replicas[i];
+    seen[i * 3 + 1] = a.parts[i];
+    seen[i * 3 + 2] = a.optics[i];
   }
   return true;
+}
+
+/** The optic fitted to `c`'s rifle (not a pistol), or null (BG1): its figure shows it. */
+export function rifleOptic(c: Character): OpticId | null {
+  const a = c.armament;
+  for (let i = 0; i < a.replicas.length; i++) if (a.replicas[i]!.look.model !== 'pistol' && a.optics[i]) return a.optics[i]!;
+  return null;
 }
 
 /** True if `c` carries a rifle (not a pistol) with a silencer fitted (M29b): the detailed figure shows it. */
@@ -179,8 +196,9 @@ export class CharacterRenderer {
       const silencer = rifleSilenced(c);
       const rifleTorch = torchFitted(c, false);
       const pistolTorch = torchFitted(c, true);
-      const { figure, rigged, material } = this.build(i, { rifleSilencer: silencer, rifleTorch, pistolTorch });
-      this.figures.push({ figure, rigged, material, flinchAge: FIGURE.flinch.time, flinchX: 0, flinchZ: 0, silencer, rifleTorch, pistolTorch, lift: 0, bounce: new THREE.Color(0, 0, 0), fromHolster: false, kit: riggedKit(c), kitSeen: [] });
+      const optic = rifleOptic(c);
+      const { figure, rigged, material } = this.build(i, { rifleSilencer: silencer, rifleTorch, pistolTorch, rifleOptic: optic });
+      this.figures.push({ figure, rigged, material, flinchAge: FIGURE.flinch.time, flinchX: 0, flinchZ: 0, silencer, rifleTorch, pistolTorch, rifleOptic: optic, lift: 0, bounce: new THREE.Color(0, 0, 0), fromHolster: false, kit: riggedKit(c), kitSeen: [] });
       kitChanged(c, this.figures[i]!.kitSeen);
     }
   }
@@ -215,7 +233,7 @@ export class CharacterRenderer {
     this.detail = level;
     for (let i = 0; i < this.characters.length; i++) {
       const c = this.characters[i]!;
-      this.rebuild(i, rifleSilenced(c), torchFitted(c, false), torchFitted(c, true));
+      this.rebuild(i, rifleSilenced(c), torchFitted(c, false), torchFitted(c, true), rifleOptic(c));
     }
     setReceiveShadows(this.object, this.receiveShadows);
     for (const s of this.figures) s.rigged?.setReceiveShadows(this.receiveShadows);
@@ -268,12 +286,12 @@ export class CharacterRenderer {
   }
 
   /** Figure `i` built again at the current detail with the parts it shows, keeping its walk and flinch. */
-  private rebuild(i: number, silencer: boolean, rifleTorch: boolean, pistolTorch: boolean): void {
+  private rebuild(i: number, silencer: boolean, rifleTorch: boolean, pistolTorch: boolean, optic: OpticId | null): void {
     const s = this.figures[i]!;
     if (s.figure) disposeFigure(s.figure);
     s.rigged?.dispose();
     s.material.dispose();
-    const { figure, rigged, material } = this.build(i, { rifleSilencer: silencer, rifleTorch, pistolTorch });
+    const { figure, rigged, material } = this.build(i, { rifleSilencer: silencer, rifleTorch, pistolTorch, rifleOptic: optic });
     s.figure = figure;
     s.rigged = rigged;
     s.material = material;
@@ -283,6 +301,7 @@ export class CharacterRenderer {
     s.silencer = silencer;
     s.rifleTorch = rifleTorch;
     s.pistolTorch = pistolTorch;
+    s.rifleOptic = optic;
     s.lift = 0;
   }
 
@@ -295,8 +314,8 @@ export class CharacterRenderer {
     const high = this.detail === 'high';
     // The detailed figure reads each vertex's roughness and metalness (glossy goggles and shells, steel barrels).
     const material = high ? useVertexFinish(this.material.clone()) : this.material.clone();
-    // A silencer shows on the detailed figure only (as before M33h); a torch at every detail.
-    const kit: FigureKit = parts.rifleSilencer || parts.rifleTorch || parts.pistolTorch ? parts : BARE_KIT;
+    // A silencer shows on the detailed figure only (as before M33h); a torch and an optic (BG1) at every detail.
+    const kit: FigureKit = parts.rifleSilencer || parts.rifleTorch || parts.pistolTorch || parts.rifleOptic ? parts : BARE_KIT;
     const dress = figureDress(this.crowd, i, c.team, c.armament.replicas, this.files);
     const team = this.teamColors[c.team] ?? 0xffffff;
     if (this.rigs && this.thrown) {
@@ -347,19 +366,20 @@ export class CharacterRenderer {
       const c = this.characters[i]!;
       const s = this.figures[i]!;
       // Parts are fitted between rounds (fitParts): a figure whose replicas gained or lost a part it shows is rebuilt (a
-      // silencer on the detailed figure only, a torch at every detail, M33h).
+      // silencer on the detailed figure only, a torch and an optic at every detail, M33h, BG1).
       const silencer = this.detail === 'high' ? rifleSilenced(c) : s.silencer;
       const rifleTorch = torchFitted(c, false);
       const pistolTorch = torchFitted(c, true);
-      if (silencer !== s.silencer || rifleTorch !== s.rifleTorch || pistolTorch !== s.pistolTorch) {
-        this.rebuild(i, silencer, rifleTorch, pistolTorch);
+      const optic = rifleOptic(c);
+      if (silencer !== s.silencer || rifleTorch !== s.rifleTorch || pistolTorch !== s.pistolTorch || optic !== s.rifleOptic) {
+        this.rebuild(i, silencer, rifleTorch, pistolTorch, optic);
         if (s.figure) setReceiveShadows(s.figure.root, this.receiveShadows);
       }
       if (s.rigged && kitChanged(c, s.kitSeen)) {
         const kit = riggedKit(c);
         if (kit !== s.kit) {
           s.kit = kit;
-          this.rebuild(i, silencer, rifleTorch, pistolTorch);
+          this.rebuild(i, silencer, rifleTorch, pistolTorch, optic);
         }
       }
       if (s.rigged) {

@@ -7,7 +7,7 @@ import { sightConditionsOf } from './ai/perception';
 import type { SfxSetup } from './audio/sfx';
 import { FULL_MOTION, type MotionScale } from './config/accessibility';
 import { BALLISTICS, WIND } from './config/ballistics';
-import { BOT_BEHAVIOUR, BOT_LOADOUTS, BOT_PART_CHANCE, BOTS, type BotConfig, botConfig, type Difficulty, difficultyAtLeast } from './config/bots';
+import { BOT_BEHAVIOUR, BOTS, type BotConfig, botConfig, type Difficulty, difficultyAtLeast } from './config/bots';
 import { EXTRACTION, homeTeamCap } from './config/extraction';
 import { FOOTSTEPS } from './config/footsteps';
 import type { HitConfig } from './config/hits';
@@ -22,7 +22,8 @@ import { PHYSICS } from './config/physics';
 import { type LightingPreset, matchOverScreenDelay, type QualitySettings } from './config/render';
 import { LOADOUT, REALCAP, type ReplicaConfig, replicaUnderRules } from './config/replicas';
 import { TORCHES } from './config/torches';
-import { botKitSeed, botLight, carriedLoadout, chaseCarrier, chaseReady, fitBotLight, kittedCharacter, randomKit } from './pool/botKit';
+import { botKitSeed, botLight, fitBotLight, kittedBot, pickBotKit } from './pool/botKit';
+import { GAME_BOT_KITS } from './pool/gameBotKits';
 import { contentPool } from './pool/contentPool';
 import { rollRunCases } from './pool/caches';
 import type { SupplyEvent } from './pool/supplyEvents';
@@ -97,21 +98,16 @@ export interface MatchSetup {
   rules: MatchRules;
   /**
    * The player's kit from the Loadout screen (M26b): each gear slot's replica as carried (rarity, power source and laser
-   * worked in), its optic, parts, hop-up dial and BB weight. Bots carry config/replicas.ts LOADOUT as it comes.
+   * worked in), its optic, parts, hop-up dial and BB weight. Bots carry kits of their own (bot-kits.md, BG1).
    */
   kit: PlayerKit;
-  /** Dev content is on (M35): bots may roll dev gear (config/content.ts). */
+  /** Dev content is on (M35): bots may carry dev gear (config/content.ts). */
   devContent: boolean;
   /**
    * The match uses dev content (M35, newGamePicks.ts matchUsesDev: its picks, the player's kit, or gear the opponents
-   * may roll): it stays out of the records and pays no Field Credits.
+   * may carry): it stays out of the records and pays no Field Credits.
    */
   devContentUsed: boolean;
-  /**
-   * The chase replicas the player owns (pool asset ids, M32): on a difficulty that rolls kits, one opponent now and then
-   * carries one (pool/botKit.ts chaseCarrier). Absent: none.
-   */
-  chaseOwned?: readonly string[];
   /**
    * The collection's items (item key → copies, M44): an Extraction run's case parts are weighted towards what you
    * don't own yet, as a Shot's are. Absent: as if you owned nothing.
@@ -699,22 +695,19 @@ export class MatchSession {
     }
     // You (id 0) and your teammates first, on the team you picked; then the other team (M98).
     const teams = rosterTeams(this.playerTeam, size, opposing);
-    // Bots roll only from what is offered: dev gear only with Dev content on (M35).
+    // Bots pick only from what is offered: dev gear only with Dev content on (M35).
     const botPool = contentPool(GAME_POOL, this.setup.devContent);
-    // Under the factory kit rule (M39) nobody rolls a kit: everyone carries LOADOUT as it comes.
-    const rolls = BOT_LOADOUTS[this.setup.difficulty] === 'random' && !this.setup.rules.factoryKit;
-    // Now and then, on a difficulty that rolls kits, one opponent carries a chase replica the player owns (M32).
-    const opponents = teams.flatMap((team, id) => (team === this.playerTeam ? [] : [id]));
-    const carrier = rolls ? chaseCarrier(botPool, this.setup.chaseOwned ?? [], seed, opponents) : null;
+    // Under the factory kit rule (M39) nobody carries a kit: everyone carries LOADOUT as it comes.
+    const kitted = !this.setup.rules.factoryKit;
     for (const [id, team] of teams.entries()) {
-      // You carry your kit; your teammates carry the default loadout as it comes, and so do the other team's bots unless
-      // their difficulty rolls each one a kit of its own (M29b).
-      const rolled = team !== this.playerTeam && rolls;
+      // You carry your kit; your teammates carry the default loadout as it comes (M29b), and each of the other team's
+      // bots picks its own kit from bot-kits.md by the difficulty's weights (BG1), seeded so a match replays them.
+      const kit = id !== PLAYER_ID && team !== this.playerTeam && kitted ? pickBotKit(GAME_BOT_KITS, this.setup.difficulty, botPool, botKitSeed(seed, id)) : null;
       if (id === PLAYER_ID) this.state.characters.push(createCharacter(id, vec3(), 0, this.loadout, team));
-      else if (rolled) this.state.characters.push(this.underRules(chaseReady(kittedCharacter(id, team, randomKit(botPool, carriedLoadout(LOADOUT, id, carrier), botKitSeed(seed, id), BOT_PART_CHANCE[this.setup.difficulty])), carrier)));
+      else if (kit) this.state.characters.push(this.underRules(kittedBot(id, team, botPool, kit)));
       else this.state.characters.push(createCharacter(id, vec3(), 0, this.botLoadout, team));
     }
-    // On a night field every bot carries the offered torch (M33h): by rule, never rolled, so seeded kits don't shift.
+    // On a night field every bot carries the offered torch (M33h): by rule, never part of a kit, so seeded kits don't shift.
     // Not under the factory kit rule (M39): everyone carries LOADOUT as it comes.
     if (this.lighting.night && !this.setup.rules.factoryKit) {
       const light = botLight(botPool);
@@ -752,7 +745,7 @@ export class MatchSession {
   }
 
   /**
-   * A bot with a rolled kit under the match's replica rules (M39): each replica held on semi and/or on realcap
+   * A bot with a kit under the match's replica rules (M39): each replica held on semi and/or on realcap
    * magazines (the standard one fitted). Once, as the match is built; the bot itself when no rule applies.
    */
   private underRules(c: Character): Character {
@@ -761,7 +754,7 @@ export class MatchSession {
     const a = c.armament;
     for (let i = 0; i < a.replicas.length; i++) {
       a.replicas[i] = replicaUnderRules(a.replicas[i]!, rules);
-      // Semi only resets the selector; realcap alone keeps it (a chase carrier stays on auto, chaseReady).
+      // Semi only resets the selector; realcap alone keeps it (a kitted bot stays on auto, kittedBot).
       if (rules.semiAutoOnly) a.modes[i] = a.replicas[i]!.defaultFireMode;
     }
     if (rules.realcap) fitParts(a, a.parts.map((p) => ({ ...p, magazine: REALCAP.magazine })));
