@@ -5,6 +5,7 @@ import type { LightingPresetId } from '../../config/render';
 import type { TeamPickId } from '../../config/teams';
 import { lightingPicked } from '../../map/lightingChoice';
 import { type MapId, mapData, mapEntry } from '../../map/maps';
+import { DEFAULT_PRACTICE_PLACE, type PracticePlaceId } from '../../map/practicePlaces';
 import type { NewGamePicks } from '../../newGamePicks';
 import { saveSetting } from '../../settings/storage';
 import type { PlayModel } from './setupScreen';
@@ -12,6 +13,8 @@ import type { PlayModel } from './setupScreen';
 /** What the picks report to the game, and the views to redraw after a change (the menus' own). */
 export interface PlayPicksHooks {
   onMap: (m: MapId) => void;
+  /** Where Practice is played (M94): the cards have saved it. */
+  onPracticePlace?: (p: PracticePlaceId) => void;
   onLight: (m: MapId, light: LightingPresetId) => void;
   onMode: (m: MatchMode) => void;
   onRuleset: (r: RulesetId) => void;
@@ -37,12 +40,25 @@ export class PlayPicks implements PlayModel {
     private readonly lightingPicks: Partial<Record<MapId, LightingPresetId>>,
     teammatesFollow: boolean,
     private readonly hooks: PlayPicksHooks,
+    private place: PracticePlaceId = DEFAULT_PRACTICE_PLACE,
   ) {
     this.teammatesFollow = teammatesFollow;
   }
 
   picks(): Readonly<NewGamePicks> {
     return this.picked;
+  }
+
+  /** Where Practice is played (M94): the range, or a map (as picked: a dev map stays picked while Dev content is off). */
+  practicePlace(): PracticePlaceId {
+    return this.place;
+  }
+
+  /** A place for Practice was picked (M94): kept apart from the match's map, so practising never changes the match. */
+  setPracticePlace(id: PracticePlaceId): void {
+    this.place = id;
+    this.hooks.onPracticePlace?.(id);
+    this.hooks.refresh();
   }
 
   /** The light `id` plays under (M34d): its saved pick if it offers it, else its first preset. */

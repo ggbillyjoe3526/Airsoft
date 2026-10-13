@@ -15,6 +15,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   takes longer; a fresh trigger pull, aim, reload or slot key draws it; bots holster the same way (M92)
 - Vault: Jump at a low wall about waist high (0.6 to 0.95 m) to go over it; vaults are loud (bots hear one from 18 m),
   and bots vault too where it saves them a walk (M102)
+- Rest on cover: aim still at a crate, low wall, sandbags or window sill and the replica rests on it for a steadier aim and
+  half the kick; moving, reloading or looking away lets go; player only, on Depot, Woodland and Neon Heights (M104)
 
 ## Replicas and BBs
 
@@ -150,6 +152,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   Epic or better within 20 Shots, a Legendary within 100); the catalogue shows all items by rarity tier (M26c, FA10)
 - Chase items: a Legendary-only replica with its own 0.25 % chance per Shot item, shown on the Armory's Chase line (M32)
 - Sort and filter by rarity: Loadout's replicas and Customise's parts sort by rarity and filter by tier, saved between sessions; what you carry or have fitted always shows (M82)
+- Saved loadouts: five tabs on the Loadout hold whole kits; keys 1 to 5 switch, edits go to the current tab, Unlock all gear keeps its own set (SL1)
 
 ## Menus and settings
 
@@ -271,12 +274,14 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Night torch beams are soft and diffused, with a soft-edged lit spot; Low keeps the old beams (M91)
 - Torch shadows (High and Ultra): your own torch casts shadows, so a tree or bot in its beam shades what is behind it; off on Low and Medium (M91)
 
-## Practice range and tutorial
+## Practice and tutorial
 
-- A practice range, from the title screen or the top bar's Range: steel plates that ring, figures that fall, at 10–60 m,
+- A practice range, picked as Practice (the last mode) on the Match screen: steel plates that ring, figures that fall, at 10–60 m,
   with a readout of your last BB; figures stand at the same height as match characters; moving targets (sliding figures, a swinging plate, pop-up figures) and an optional Timed challenge with a best score, off by default (M21, FA1, M93)
 - Range in Depot's new look: baked light, post effects, props behind the firing line (portable toilet, replica rack, water tank, generator, crate bench), a sandbag berm at the backstop, dirt, litter, puddles and sprays, and wooded hills, treelines, site huts, a water tower and a power line beyond the walls; chains, bands and brackets on the plates (FA7, M81)
-- A tutorial of fifteen coached steps on the range, with your own key bindings and the real scoreboard and order wheel; finishing opens Tutorial complete with Practice range or Menu; skip and resume from pause; Replay tutorial in Settings starts it again at once (M16, FA10, M80, M97)
+- A tutorial of fifteen coached steps on the range, with your own key bindings and the real scoreboard and order wheel; finishing opens Tutorial complete with Practice or Menu; skip and resume from pause; Replay tutorial in Settings starts it again at once (M16, FA10, M80, M97)
+- Practice on any map: the Range or any map (dev maps with Dev content on), picked on the Match screen's Map cards, never changing the match's map; on a map no bots, and plates, figures, pop-ups, sliders and swingers stand where the other team's bots would play, facing you; minimap and torch at night; the timed challenge has its own best per map, a START plate a few steps ahead, and targets light only once in your sight, within 50 m (M94)
+- In Practice, L opens the Loadout from play to try and customise any replica you own (everything with Unlock all gear); Back to practice returns you where you stood (M95)
 
 ## Accessibility and comfort
 

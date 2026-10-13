@@ -1,7 +1,7 @@
 import { MENU_TEXT } from '../../config/menus';
 import { BACKDROPS, MENU_ART_DIR } from '../../config/menuArt';
-import { MENU_ICONS, NAV_ICONS } from './icons';
-import { el } from './menuParts';
+import { MENU_ICONS, NAV_ICONS, PAUSE_ICONS } from './icons';
+import { el, menuButton, withIcon } from './menuParts';
 
 /**
  * The menus' frame (graphics overhaul G3, M100): the bar across the top of the screens you move between (Match, Loadout,
@@ -19,7 +19,8 @@ export function menuArt(file: string): string {
 
 /**
  * The top bar: the wordmark (a button back to the title; Back to the pause menu when opened from there), the places
- * (the current one marked) and the wallet at the far right. It carries no version: the title screen has it.
+ * (the current one marked) and the wallet at the far right, with Back to practice before it on the Loadout opened from
+ * Practice (M95). It carries no version: the title screen has it.
  */
 export class TopBar {
   readonly root: HTMLElement;
@@ -28,12 +29,15 @@ export class TopBar {
   private readonly markText: HTMLSpanElement;
   private readonly fc: HTMLSpanElement;
   private readonly tokens: HTMLSpanElement;
+  /** Back to practice (M95): shown only on the Loadout opened from Practice, with the key that does it too. */
+  private readonly practice: HTMLButtonElement;
+  private readonly practiceKey: HTMLElement;
   /** Dev settings › Disable Armory (M83, playtest note 25): the Armory's place is gone from the bar, not greyed out. */
   private armoryOff = false;
   private current: NavPlace | null = null;
   private alone = false;
 
-  constructor(onPlace: (place: NavPlace) => void, onMark: () => void) {
+  constructor(onPlace: (place: NavPlace) => void, onMark: () => void, onPractice: () => void = () => {}) {
     this.root = el('header', 'menu-topbar');
     this.mark = el('button', 'menu-mark');
     this.mark.type = 'button';
@@ -55,8 +59,17 @@ export class TopBar {
     const wallet = el('div', 'menu-wallet');
     this.fc = el('span', 'menu-chip menu-chip-fc');
     this.tokens = el('span', 'menu-chip menu-chip-tokens');
+    // Resume's play sign, after the label (the stylesheet orders it last).
+    this.practice = withIcon(menuButton(MENU_TEXT.backToPractice, 'primary', onPractice), PAUSE_ICONS.resume);
+    this.practice.classList.add('menu-topbar-practice');
+    // Named by its label alone; the key cap in front of it is for the eye.
+    this.practice.setAttribute('aria-label', MENU_TEXT.backToPractice);
+    this.practiceKey = el('kbd');
+    this.practiceKey.setAttribute('aria-hidden', 'true');
+    this.practice.prepend(this.practiceKey);
+    this.practice.hidden = true;
     wallet.append(this.fc, this.tokens);
-    this.root.append(this.mark, nav, wallet);
+    this.root.append(this.mark, nav, this.practice, wallet);
   }
 
   /**
@@ -76,6 +89,18 @@ export class TopBar {
     this.root.classList.toggle('alone', alone);
     this.markText.textContent = alone ? MENU_TEXT.back : MENU_TEXT.wordmark;
     this.mark.title = alone ? MENU_TEXT.back : MENU_TEXT.toTitle;
+  }
+
+  /**
+   * Back to practice (M95): shown on the Loadout opened from Practice (`key`: the name of the key that does it too, ''
+   * for none), hidden elsewhere (null).
+   */
+  setPractice(key: string | null): void {
+    this.practice.hidden = key === null;
+    if (key === null) return;
+    this.practiceKey.textContent = key;
+    this.practiceKey.hidden = key === '';
+    this.practice.title = key ? `${MENU_TEXT.backToPractice} (${key})` : MENU_TEXT.backToPractice;
   }
 
   /**

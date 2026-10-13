@@ -11,8 +11,8 @@ export interface TutorialCompleteActions {
 /** The pop-up's words (M80). */
 export const TUTORIAL_COMPLETE_TEXT = {
   title: 'Tutorial complete',
-  body: "Nice work: you know the basics. Keep practising here on the range, or go to the menu to pick a map and mode and start a match.",
-  practice: 'Practice range',
+  body: "Nice work: you know the basics. Keep practising here on the range, or go to the menu to pick a map and mode and start a match (Practice plays on any map too).",
+  practice: 'Practice',
   menu: 'Menu',
 } as const;
 

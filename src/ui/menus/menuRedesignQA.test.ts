@@ -139,7 +139,7 @@ describe('the plain title (M100 QA)', () => {
 
   it('no screen but the title shows the build\'s version', () => {
     const label = __BUILD_VERSION__.label;
-    const model = { picks: () => ({ map: 'depot', mode: 'elimination', difficulty: 'normal', teammateDifficulty: 'normal', ruleset: 'skirmish', rules: { ...DEFAULT_MATCH_RULES } }), lightingOf: () => 'day', supply: () => null, setMode: noop } as unknown as PlayModel;
+    const model = { picks: () => ({ map: 'depot', mode: 'elimination', difficulty: 'normal', teammateDifficulty: 'normal', ruleset: 'skirmish', rules: { ...DEFAULT_MATCH_RULES } }), lightingOf: () => 'day', supply: () => null, setMode: noop, practicePlace: () => 'range', setPracticePlace: noop } as unknown as PlayModel;
     const setup = new SetupScreen(model, { equipped: () => [] } as never, { pictures: null, realistic: () => false }, { onLoadout: noop, onBack: noop, onPlay: noop, onPractice: noop });
     const pool = loadPool(poolText);
     const armory = new ArmoryScreen({ pool: () => pool, collection: () => newCollection(pool, 1), equipped: () => [], onChange: () => false });
@@ -171,7 +171,9 @@ describe('the top bar (M100 QA)', () => {
     const bar = new TopBar(noop, noop);
     bar.setWallet({ fc: 100, tokens: 2 }, false);
     const root = node(bar.root);
-    expect(root.children.map((c) => (c as EventNode).tag)).toEqual(['button', 'nav', 'div']);
+    // The third, Back to practice (M95), shows only on the Loadout opened from Practice.
+    expect(root.children.map((c) => (c as EventNode).tag)).toEqual(['button', 'nav', 'button', 'div']);
+    expect(root.children[2]!.hidden).toBe(true);
     expect(shown(root)).toEqual(['Airsoft', ...MENU_TEXT.nav.map((n) => n.label), '100 FC', '2 Tokens']);
     expect(shown(root).join(' ')).not.toContain(__BUILD_VERSION__.label);
   });
@@ -237,12 +239,12 @@ describe('every screen can be left and used with the mouse, and the keys still w
 
 describe('Practice, the last mode of the Match screen (M100 QA)', () => {
   const view = (picks: unknown, devContent = false) =>
-    ({ played: picks, devContent, run: false, sizeMax: 3, sizeMin: 1, mapLine: 'Depot · Day', still: null, modeLabel: 'Elimination', rules: 'Skirmish · 3v3', bots: 'Normal bots', notes: 'a note', loadout: { replicas: 'AEG', detail: '' }, pays: 'Pays Field Credits' }) as unknown as PlayView;
+    ({ played: picks, devContent, run: false, sizeMax: 3, sizeMin: 1, mapLine: 'Depot · Day', still: null, modeLabel: 'Elimination', rules: 'Skirmish · 3v3', bots: 'Normal bots', notes: 'a note', loadout: { replicas: 'AEG', detail: '' }, pays: 'Pays Field Credits', practice: { mapLine: 'Range', still: null } }) as unknown as PlayView;
 
   function setup(mode = 'elimination') {
     const picks = { map: 'depot', mode, difficulty: 'normal', teammateDifficulty: 'normal', ruleset: 'skirmish', rules: { ...DEFAULT_MATCH_RULES } };
     const setMode = vi.fn((m: string) => void (picks.mode = m));
-    const model = { picks: () => picks, lightingOf: () => 'day', supply: () => null, setMode } as unknown as PlayModel;
+    const model = { picks: () => picks, lightingOf: () => 'day', supply: () => null, setMode, practicePlace: () => 'range', setPracticePlace: noop } as unknown as PlayModel;
     const ran: string[] = [];
     const screen = new SetupScreen(model, { equipped: () => [] } as never, { pictures: null, realistic: () => false }, { onLoadout: noop, onBack: noop, onPlay: () => ran.push('match'), onPractice: () => ran.push('practice') });
     screen.refresh(view(picks));
@@ -302,12 +304,12 @@ describe('Practice, the last mode of the Match screen (M100 QA)', () => {
     expect(s.ran).toEqual(['practice']);
   });
 
-  it('numbers the Mode section 01 while the Map section is gone, and 02 again with it back', () => {
+  it('keeps the Map section 01 and the Mode section 02 while Practice is picked (M94: the Map cards offer its places)', () => {
     const s = setup();
     const number = s.root.querySelectorAll('.menu-section-n').map((n) => n.text);
     expect(number).toEqual(['01', '02', '03']);
     s.card('Practice').click();
-    expect(s.root.querySelectorAll('.menu-section-n').map((n) => n.text)).toEqual(['01', '01', '03']);
+    expect(s.root.querySelectorAll('.menu-section-n').map((n) => n.text)).toEqual(['01', '02', '03']);
     s.card('Attack and Defend').click();
     expect(s.root.querySelectorAll('.menu-section-n').map((n) => n.text)).toEqual(['01', '02', '03']);
   });

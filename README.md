@@ -112,8 +112,12 @@ Then open **http://localhost:4173**.
   refills until the next round.
 - **Sound matters.** Running and sprinting are heard by you and the bots; walking (Shift) and moving crouched are
   silent. You can't shoot for a moment after a sprint.
+- **Rest on cover.** Aim down sights standing still at a crate, low wall, sandbags or window sill and your replica rests
+  on it: a steadier aim with half the kick, and **Rested** shows under the sight. Move or let go of the aim to come off.
 - **Loadout.** **Start › Loadout** (or Esc in a match) sets your replicas; right-click one to **Customise** it: optic,
   hop-up, BB weight, grips, barrels, a silencer, magazines and batteries. Every choice is a trade-off, shown in numbers.
+  Keep up to five **saved loadouts** (the tabs at the top, or keys 1 to 5): your changes go to the current one, and
+  right-click one to rename, duplicate, replace or delete it. The Match screen's **Your match** switches them too.
 - **Armory (beta, free).** Field Credits come from matches you take part in, more for a win. Spend them on Tokens, then
   take Shots, each a random draw of replicas and parts. An Epic or better is guaranteed within 20 Shots and a Legendary
   within 100. Nothing is ever sold.
@@ -123,7 +127,7 @@ Then open **http://localhost:4173**.
   minimap shows your teammates, and the other team where you last heard them.
 - **Dev content.** **Settings › Dev** (tick **Dev settings** under the list) has a **Dev content** switch for maps,
   modes and gear still being built. Matches that use them aren't recorded and pay no Field Credits.
-- **Your save** (settings, collection, records) lives in your browser. **Settings › Save** downloads it as a file and
+- **Your save** (settings, collection, records, saved loadouts) lives in your browser. **Settings › Save** downloads it as a file and
   loads it back, and keeps a restore point each day.
 
 ### Controls
@@ -149,6 +153,7 @@ Every action can be rebound under **Settings › Key Bindings**, mouse buttons a
 | G (hold) | Use: open a case in Extraction (dev content) |
 | T | Weapon torch on and off (dev content) |
 | Y | Inspect: turn the replica in hand over to look it over (the rifle's charging handle and hop-up dial, the pistol's press check) |
+| L | In Practice: the Loadout straight from play, on the slot in your hands; L again (or Back to practice) and you are back where you stood |
 | F10 | Fullscreen |
 | Left click while out | Watch the next player still in play |
 | Esc | Pause: Resume, Loadout, Settings or Quit |

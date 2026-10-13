@@ -23,7 +23,7 @@ function setup(query: WorldQuery = openSky) {
     events,
   };
   const a = createArmament(LOADOUT);
-  const muzzle: Muzzle = { eye: vec3(0, 1.6, 0), yaw: 0, pitch: 0, spreadScale: 1 };
+  const muzzle: Muzzle = { eye: vec3(0, 1.6, 0), yaw: 0, pitch: 0, spreadScale: 1, kickScale: 1 };
   const cmd = createCommand();
   /** Runs ticks, clearing one-shot inputs after the first. Returns all events. */
   const run = (ticks: number, setupCmd: (c: PlayerCommand, tick: number) => void = () => {}, canFire = true): GameEvent[] => {

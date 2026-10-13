@@ -4,6 +4,7 @@ import { SCHEMES, hasFixedColours, FAMILIES } from '../../config/schemes';
 import type { ItemRef } from '../../pool/collection';
 import { GEAR_SLOTS, type GearSlot, type LoadoutModel } from '../../pool/loadoutModel';
 import { type Asset, replicaOf } from '../../pool/pool';
+import type { SavedLoadouts } from '../../pool/savedLoadouts';
 import { gearLine, performanceOf, sheetRows, tierBlurb } from '../performanceSheet';
 import { type MenuHint, optionTick, sectionHead } from './chrome';
 import { CustomiseView } from './customiseView';
@@ -13,11 +14,14 @@ import { el, menuButton } from './menuParts';
 import { partSubject, PictureSlot, replicaSubject } from './menuPictures';
 import { perfRows, perfSheet } from './perfBars';
 import { arrangeByRarity, loadRarityView, RARITY_TEXT, RarityBar, type RarityView, saveRarityView } from './rarityFilter';
+import { SavedLoadoutsBar } from './savedLoadoutsBar';
 
 export { fixedValue, replicaSummary } from './customiseView';
 
 export interface LoadoutOptions {
   model: LoadoutModel;
+  /** The saved loadouts (SL1), as tabs along the top; the current one is the loadout below. */
+  saved: SavedLoadouts;
   context: PictureContext;
   /** Something on the loadout changed (it is already saved): the Play screen and the next Play follow it. */
   onChange: () => void;
@@ -54,8 +58,12 @@ export class LoadoutScreen {
   private readonly gearView: HTMLDivElement;
   private readonly cards = new Map<GearSlot, CarriedCard>();
   private readonly grid: HTMLDivElement;
-  /** "Unlock more in the Armory": hidden while the Armory is off (M83). */
+  /** "Unlock more in the Armory": hidden while the Armory is off (M83), or while everything is lent (M95). */
   private readonly armoryNote: HTMLParagraphElement;
+  /** What the Loadout is for in Practice (M95), shown only when opened from there. */
+  private readonly practiceNote: HTMLParagraphElement;
+  /** Dev settings › Unlock all gear lends everything (M95): said, so the borrowed picks are no surprise. */
+  private readonly lentNote: HTMLParagraphElement;
   private tiles: ReplicaTile[] = [];
   /** Sort and filter by rarity over the grid (M82), its choice saved; and the line shown when it hides every tile. */
   private rarityView: RarityView;
@@ -65,6 +73,7 @@ export class LoadoutScreen {
   private readonly selectedLine: HTMLParagraphElement;
   private readonly sheet = perfSheet('loadout-perf');
   private readonly customiseBox: HTMLDivElement;
+  private readonly savedBar: SavedLoadoutsBar;
   private readonly gearHints: readonly MenuHint[];
   private selected: GearSlot = 'primary';
   /** The Customise view while it is open, and the slot whose replica it customises. */
@@ -106,7 +115,10 @@ export class LoadoutScreen {
     });
     this.noneShown = el('p', 'loadout-note rarity-none', RARITY_TEXT.noneShown.replicas);
     this.armoryNote = el('p', 'loadout-note', GEAR_TEXT.unlockMore);
-    owned.append(this.rarityBar.root, this.grid, this.noneShown, this.armoryNote);
+    this.practiceNote = el('p', 'loadout-note loadout-practice', GEAR_TEXT.practice);
+    this.practiceNote.hidden = true;
+    this.lentNote = el('p', 'loadout-note loadout-lent', GEAR_TEXT.lent);
+    owned.append(this.rarityBar.root, this.grid, this.noneShown, this.practiceNote, this.lentNote, this.armoryNote);
 
     const aside = el('aside', 'loadout-selected menu-card');
     aside.setAttribute('aria-label', GEAR_TEXT.selected);
@@ -115,11 +127,14 @@ export class LoadoutScreen {
     this.sheet.root.classList.add('selected-sheet');
     aside.append(el('p', 'menu-kicker', GEAR_TEXT.selected), this.selectedName, this.selectedLine, this.sheet.root, el('p', 'gear-hint', LOADOUT_TEXT.rightClickHint));
 
-    this.gearView.append(carried, owned, aside);
+    // A switch of saved loadout changes everything carried: the game hears of it, and the gear shows the new one.
+    this.savedBar = new SavedLoadoutsBar({ saved: opts.saved, onSwitch: () => (this.opts.onChange(), this.update()) });
+    this.gearView.append(this.savedBar.root, carried, owned, aside);
     this.customiseBox = el('div', 'customise-box');
     this.customiseBox.hidden = true;
-    // C customises the selected replica (the Customise button and a right-click do it for the mouse); Esc is Back.
-    this.gearHints = [{ keys: ['C'], label: MENU_TEXT.hints.customise, run: () => this.customise(this.selected), code: 'KeyC' }];
+    // C customises the selected replica (the Customise button and a right-click do it for the mouse); 1 to 5 carry a
+    // saved loadout; Esc is Back.
+    this.gearHints = [{ keys: ['C'], label: MENU_TEXT.hints.customise, run: () => this.customise(this.selected), code: 'KeyC' }, ...this.savedBar.hints];
     this.root.append(el('h1', 'menu-heading sr-only', 'Loadout'), this.gearView, this.customiseBox);
     // Right-click means Customise here: never the browser's menu, even off a replica.
     this.root.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -131,10 +146,22 @@ export class LoadoutScreen {
     return this.view?.hints ?? this.gearHints;
   }
 
+  /**
+   * Shows the gear as the Loadout opens (refresh), from Practice or not (M95: its line says what the Loadout is for there),
+   * with `slot` picked when given: in Practice the slot of the replica in hand, so a replica clicked goes into your hands.
+   */
+  open(practice: boolean, slot?: GearSlot): void {
+    this.practiceNote.hidden = !practice;
+    if (slot) this.selected = slot;
+    this.refresh();
+  }
+
   /** Re-reads the loadout (after the Armory unlocked something, say) and shows the gear. */
   refresh(): void {
-    // The Armory off (Dev settings, M83): no line sends the player there.
-    this.armoryNote.hidden = this.opts.context.armoryShown?.() === false;
+    const lent = this.opts.model.lent();
+    this.lentNote.hidden = !lent;
+    // The Armory off (Dev settings, M83), or everything lent anyway: no line sends the player there.
+    this.armoryNote.hidden = lent || this.opts.context.armoryShown?.() === false;
     this.closeView();
     this.buildGrid();
     this.update();
@@ -164,7 +191,6 @@ export class LoadoutScreen {
       e.preventDefault();
       this.customise(slot);
     });
-    if (slot === 'primary') button.dataset.autofocus = '';
     const customise = menuButton(LOADOUT_TEXT.customise, 'primary', () => this.customise(slot));
     customise.classList.add('carried-customise');
     root.append(button, customise);
@@ -239,6 +265,9 @@ export class LoadoutScreen {
       const on = slot === this.selected;
       card.button.classList.toggle('selected', on);
       setAttr(card.button, 'aria-pressed', String(on));
+      // The picked slot takes the keyboard focus as the screen opens (M95: in Practice, the replica in hand's).
+      if (on) card.button.dataset.autofocus = '';
+      else delete card.button.dataset.autofocus;
       card.root.classList.toggle('selected', on);
       const asset = ref ? m.pool.byId.get(ref.asset)! : null;
       setText(card.name, asset ? asset.name : LOADOUT_TEXT.empty);
@@ -266,6 +295,7 @@ export class LoadoutScreen {
       t.pic.show(this.opts.context.pictures, replicaSubject(asset, m.scheme(asset.id), realistic, m.slotKit(t.ref)), itemIcon(asset));
     }
     this.updateSelected(current);
+    this.savedBar.update();
   }
 
   /** The parts fitted to a carried replica, as small pictures under its name. */

@@ -35,6 +35,7 @@ import { PointerLock } from './input/pointerLock';
 import { lightingPicked, mapUnderLighting, mapUnderPreset, playsAtNight } from './map/lightingChoice';
 import { allMapsLoaded, loadDevMaps, type MapId, mapData } from './map/maps';
 import type { MapData } from './map/mapTypes';
+import { type PracticePlaceId, practiceMapId } from './map/practicePlaces';
 import { initPhysics } from './physics/physicsWorld';
 import { awayWatch } from './core/awayWatch';
 import { loadBakedLight } from './render/bakedLight';
@@ -64,7 +65,7 @@ import { type Collection, type ItemRef, loadCollection, saveCollection, saveOrRe
 import { contentPool } from './pool/contentPool';
 import { GAME_POOL } from './pool/gamePool';
 import { matchUsesDev, type NewGamePicks, playedPicks, playedTeamSize } from './newGamePicks';
-import { collectionOwnership, gameOwnership, LoadoutModel } from './pool/loadoutModel';
+import { collectionOwnership, gameOwnership, type GearSlot, LoadoutModel } from './pool/loadoutModel';
 import { carryOverOldPicks } from './pool/oldPicks';
 import { activeSupplyEvent, supplyLine } from './pool/supplyEvents';
 import { type Dispensed, type Earnings, earn } from './pool/armory';
@@ -91,6 +92,7 @@ import {
   loadInvertMouse,
   loadLightingPicks,
   loadMap,
+  loadPracticePlace,
   loadMatchRules,
   loadMode,
   loadMouseDpi,
@@ -121,6 +123,12 @@ import {
   motionClass,
   systemReducedMotionQuery,
 } from './ui/menus/savedChoices';
+
+/** Where Practice plays (M94): a map, and the course its timed challenge's best is kept under. */
+interface PracticeAt {
+  map: MapData;
+  course: string;
+}
 
 const LOCK_REFUSED_HINT = 'The browser needs a moment before re-capturing the mouse. Click again.';
 
@@ -193,6 +201,8 @@ export class Game {
   private practice = false;
   /** ... with the tutorial's coach (the title's Tutorial button, M16). */
   private tutorial = false;
+  /** The Loadout key was pressed in Practice (M95): the pause that follows opens the Loadout over its pause menu. */
+  private loadoutDue = false;
   /** The loadout changed since the range was built: Resume rebuilds it with the new one. */
   private loadoutChanged = false;
   /**
@@ -222,6 +232,8 @@ export class Game {
   private unlockedPlay = false;
   /** New game's choices: the next Play builds the match from them. */
   private map: MapId;
+  /** Where Practice is played (M94): the range or a map, its own pick on the Match screen. */
+  private practicePlace: PracticePlaceId = loadPracticePlace();
   /** Each map's Day or Night pick (M34d). */
   private readonly lighting: Partial<Record<MapId, LightingPresetId>>;
   private mode: MatchMode;
@@ -492,6 +504,7 @@ export class Game {
       onSkipTutorialStep: () => this.skipTutorial(false),
       onSkipTutorial: () => this.skipTutorial(true),
       map: { initial: this.map, onChange: (m) => ((this.map = m), (this.setupChanged = true), this.prefetchFieldSounds()) },
+      practicePlace: { initial: this.practicePlace, onChange: (p) => (this.practicePlace = p) },
       lighting: { initial: this.lighting, onChange: (m, light) => ((this.lighting[m] = light), (this.setupChanged = true), this.prefetchFieldSounds()) },
       mode: {
         initial: this.mode,
@@ -572,7 +585,7 @@ export class Game {
         hudOpacity: { initial: this.hudOpacity, onChange: (v) => ((this.hudOpacity = v), this.showHudLook()) },
         hitFeed: { initial: this.hitFeedMode, onChange: (m) => this.changeHitFeed(m) },
         whatGotYou: { initial: this.whatGotYouMode, onChange: (m) => this.changeWhatGotYou(m) },
-        minimapTurn: { initial: this.minimapTurn, onChange: (t) => ((this.minimapTurn = t), this.session instanceof MatchSession && this.session.setMinimapTurn(t)) },
+        minimapTurn: { initial: this.minimapTurn, onChange: (t) => ((this.minimapTurn = t), this.session?.setMinimapTurn(t)) },
       },
       dev: {
         initial: this.devPicked,
@@ -1049,12 +1062,13 @@ export class Game {
   /** Builds or reuses the session `action` asks for (`s`, the session when Play was pressed) and unlocks its audio. */
   private enter(action: Exclude<SessionAction, 'none'>, s: MatchSession | RangeSession | null): void {
     if (action === 'buildRange') {
-      // The tutorial resumes at the step it was left at (audit POOL-14).
-      this.openRange(undefined, this.tutorial ? loadTutorialStep() : undefined);
+      // The tutorial resumes at the step it was left at (audit POOL-14), always on the range; Practice on its place (M94).
+      if (this.tutorial) this.openRange(undefined, loadTutorialStep());
+      else this.openRange(undefined, undefined, this.practicePlaceToPlay());
     } else if (action === 'rebuildRange' && isRange(s)) {
-      // Back from the Loadout on the range's pause menu: the range again, with the new kit, where you stood (and at the
-      // same tutorial step).
-      this.openRange(s.pose, s.tutorialStep);
+      // Back from the Loadout on the range's pause menu: the range (or the map, M94) again, with the new kit, where you
+      // stood (and at the same tutorial step).
+      this.openRange(s.pose, s.tutorialStep, { map: s.practiceMap, course: s.course });
     } else if (action === 'buildMatch') {
       this.session?.dispose();
       this.setupChanged = false;
@@ -1104,10 +1118,20 @@ export class Game {
   }
 
   /**
-   * Builds the practice range (M21) with the picked loadout, at `pose` if given (else behind the firing line), with the
-   * tutorial from step `tutorialFrom` if given (M16).
+   * Where Practice plays (M94): its picked map under the map's Day or Night pick (as a match's, playedMap), with the
+   * map's id as its timed challenge's course; undefined for the range (also for a dev map while Dev content is off).
    */
-  private openRange(pose?: RangePose, tutorialFrom?: number | string): void {
+  private practicePlaceToPlay(): PracticeAt | undefined {
+    const id = practiceMapId(this.practicePlace, this.dev.devContent);
+    return id ? { map: this.playedMap(id), course: id } : undefined;
+  }
+
+  /**
+   * Builds Practice (M21) with the picked loadout at `place` (M94; the range when left out), at `pose` if given (else at
+   * the start), with the tutorial from step `tutorialFrom` if given (M16).
+   */
+  private openRange(pose?: RangePose, tutorialFrom?: number | string, place?: PracticeAt): void {
+    const course = place?.course ?? RANGE_CHALLENGE.course;
     const code = this.rangeCode.get();
     if (!code) throw new Error('The practice range was built before its code arrived (play fetches it)');
     this.session?.dispose();
@@ -1117,13 +1141,15 @@ export class Game {
       teamColours: TEAM_COLOUR_SETS[this.teamColours],
       look: this.look,
       armory: !this.dev.disableArmory,
+      ...(place ? { map: place.map, course: place.course } : {}),
       challenge: loadPracticeChallenge(),
-      challengeBest: this.records.bestChallenge[RANGE_CHALLENGE.course] ?? 0,
+      challengeBest: this.records.bestChallenge[course] ?? 0,
     }, this.options.seed, this.quality, this.audio, this.crosshair, pose, tutorialFrom);
+    this.session.setMinimapTurn(this.minimapTurn);
     this.session.onTutorialStep = (step) => saveSetting('tutorialStep', step);
     // A timed challenge run that beats the best is kept at once (M93), like a match's records.
     this.session.onChallengeRun = (run) => {
-      if (addChallengeRun(this.records, RANGE_CHALLENGE.course, run.hits)) saveRecords(this.records, browserStorage());
+      if (addChallengeRun(this.records, course, run.hits)) saveRecords(this.records, browserStorage());
     };
     this.session.combat.setReplicaPictures(this.pictures, kitSubjects(this.loadout.kit(), this.look.realisticColours));
     this.steppedDown = false;
@@ -1149,8 +1175,12 @@ export class Game {
       this.matchesPlayed++;
     }
     this.started = true;
+    this.loadoutDue = false;
     // Time on the menus isn't a frame time.
     this.frameWatch.reset();
+    // Keys pressed on the menus aren't presses in play: the Loadout key that went back to practice would open it
+    // again (M95), Space on a focused Resume would jump.
+    this.keyboard.endFrame();
     this.keyboard.capturing = true;
     this.menus.hide();
     this.audioBlocked = false;
@@ -1181,10 +1211,14 @@ export class Game {
     const s = this.session;
     const r = s?.state.round;
     const screen = screenWhenStopped(this.started, r?.phase === 'matchOver');
+    const loadout = this.loadoutDue;
+    this.loadoutDue = false;
     if (this.started && isRange(s)) {
       // The tutorial just played to its end (M80): its pop-up, practice on or go to the menu, over the pause menu.
       if (s.takeTutorialComplete()) this.menus.showTutorialComplete(s.status, this.options.seed);
-      else this.menus.showPause(s.status, this.options.seed, true, s.coaching, null, s.challengeOffer);
+      // The Loadout key (M95): the Loadout over the pause menu, the slot of the replica in hand picked.
+      else if (loadout) this.menus.showPracticeLoadout(s.status, this.options.seed, s.coaching, this.inHand(s), s.challengeOffer);
+      else this.menus.showPause(s.status, this.options.seed, true, s.coaching, null, s.challengeOffer, this.inHand(s));
     } else if (!this.started || !(s instanceof MatchSession) || !r) {
       // Play never began (a lock that came late, after Back, and was given straight back): the menus are still up on
       // whichever screen the player went to, so they stay there.
@@ -1211,7 +1245,19 @@ export class Game {
   /** The range's pause menu (the tutorial's, with its coaching), when the range is what's loaded. */
   private showRangePause(): void {
     const s = this.session;
-    if (isRange(s)) this.menus.showPause(s.status, this.options.seed, true, s.coaching, null, s.challengeOffer);
+    if (isRange(s)) this.menus.showPause(s.status, this.options.seed, true, s.coaching, null, s.challengeOffer, this.inHand(s));
+  }
+
+  /** The gear slot of the replica in your hands on the range (M95): its Loadout picks that slot. */
+  private inHand(s: RangeSession): GearSlot {
+    return this.loadout.gearSlotOf(s.player.armament.active);
+  }
+
+  /** The Loadout key in Practice (M95): play stops as on Esc, and the pause that follows opens the Loadout. */
+  private openPracticeLoadout(): void {
+    if (!this.unlockedPlay && !this.pointer.locked) return;
+    this.loadoutDue = true;
+    this.stopPlay();
   }
 
   /** The range's pause menu's Timed challenge (M93): switched, remembered for the next visit, and the menu says so. */
@@ -1232,7 +1278,7 @@ export class Game {
     else s.skipTutorialStep();
     this.takeTutorialFinished(s);
     if (s.takeTutorialComplete()) this.menus.showTutorialComplete(s.status, this.options.seed);
-    else this.menus.showPause(s.status, this.options.seed, true, s.coaching, null, s.challengeOffer);
+    else this.menus.showPause(s.status, this.options.seed, true, s.coaching, null, s.challengeOffer, this.inHand(s));
   }
 
   /** The tutorial was played (or skipped) to its end: remembered, and the next one starts from the beginning. */
@@ -1440,6 +1486,10 @@ export class Game {
         } else {
           this.pointer.release();
         }
+      } else if (isRange(s) && this.keyboard.wasPressed('loadout')) {
+        // Practice only (M95): the Loadout straight from play. In a match the key does nothing, as the loadout changes
+        // only between matches (owner, 2026-10-03).
+        this.openPracticeLoadout();
       }
     }
     this.keyboard.endFrame();

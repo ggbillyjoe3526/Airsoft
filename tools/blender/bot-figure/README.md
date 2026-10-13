@@ -7,7 +7,9 @@ models" and "Disable all models" (#175). Pictures are in the project files (`con
 crouch in `concepts/figure-moves-fix-2026-10-12/`; earlier rounds in `concepts/bot-figure-v8-2026-10-11/`,
 `concepts/bot-figure-v6-2026-10-11/` and `concepts/bot-figure-v5-2026-10-10/`). The owner redesigns the figures to look
 more realistic in 0.1 Dev 6, himself in his own Blender from his reference photos (`docs/DECISIONS.md` › Art
-direction and graphics); until then nobody reworks them here.
+direction and graphics); until then nobody reworks them here. That session also makes the animations Dev 6's new
+moves need: vaulting, and resting the replica on cover (M104; today a placeholder lean of the aim pose,
+`FIGURE_RIG.rest` in `src/config/figureRig.ts`).
 
 ## What is here
 

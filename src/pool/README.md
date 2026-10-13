@@ -12,7 +12,11 @@ the game reads: a new asset is a row there, and a new behaviour (a Key) needs co
 - `loadoutModel.ts`: the player's loadout without a DOM (a replica per gear slot, what is fitted, BB weight, hop-up),
   saved in the settings store and read back against an `Ownership`. `kit.ts` turns a replica item and its fit into a
   `KitSlot` (power source, laser, tier shares and the energy limit applied). `Game` passes `loadout.kit()` to each
-  match.
+  match. `picks`, `usePicks` and `over` read and play a saved loadout's record, and `missing` lists its gear that
+  isn't available now (SL1).
+- `savedLoadouts.ts`: the saved loadouts (SL1), five named slots, one of them the loadout carried, saved as
+  `airsoft.loadouts`; Unlock all gear keeps a set of its own. No DOM: `ui/menus/savedLoadoutsBar.ts` and
+  `loadoutPicker.ts` show it.
 - `tables.ts`: what `pool.ts` reads that the files built on it also need (`tierId`, the Caches table's `CaseKind`s and
   `readCaseKinds`), below `pool.ts` so no two pool files import each other (`pipeline/cycles.mjs` checks).
 - `armory.ts`: pure rules over a `Collection`: `matchEarnings`, `buyTokens`, `takeShots`, `scrapSpares`.
@@ -20,7 +24,7 @@ the game reads: a new asset is a row there, and a new behaviour (a Key) needs co
   `contentPool.ts`: the pool as seen with Dev content on or off. `oldPicks.ts`: carries pre-pool picks over once.
 - Tuning: `pool.md` (economy, odds, scrap values) and `stats.md` (numbers, through `config/statsFile.ts`).
 - Tests: `pool.test.ts` (pins every shipped ID: IDs are save keys), `kit.test.ts`, `armory.test.ts`,
-  `loadoutModel.test.ts`, `caches.test.ts`, `contentPool.test.ts`.
+  `loadoutModel.test.ts`, `savedLoadouts.test.ts`, `caches.test.ts`, `contentPool.test.ts`.
 - Rules: `pool.md`'s format is a contract (`docs/ARCHITECTURE.md › Contracts`). Read `Armament.replicas` and
   `Armament.handling`, never `LOADOUT`. The Dev tab's Disable Armory and Unlock all gear are read in `Game`
   (`gameOwnership`, the Armory's wallet).

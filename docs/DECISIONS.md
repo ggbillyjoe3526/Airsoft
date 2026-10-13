@@ -243,13 +243,14 @@ replaces its line; the old one stays findable in the archive or in git.
   it, so the built-in optics keep theirs. The silencers are round with the same lengths, so muzzles stay put. The
   pistol torch clips straight to the rail and, with the Red Laser fitted too, sits 1.6 cm lower under it (its
   `UnderLaser` marker). Behind "Disable all models", like every Blender model.
-- **The human and robot figures are redesigned to look more realistic in 0.1 Dev 6 (owner, 2026-10-13: "In dev 6 I
-  want to redesign the bot/player figures to be more realistic").** The owner does it himself at his PC, in his own
-  Blender through the port 9876 bridge, from reference photos he shares first. The same session makes the figures'
-  animations for Dev 6's new moves, such as vaulting (owner, 2026-10-13: "This will also give an opportunity to update
-  animations for anything new like vaulting"). It waits on his photos and his Blender session: no thread starts it
-  before he does. It brings the figures forward from the later higher-detail models (above), and they stay behind the
-  Dev switches until he is happy with them.
+- **The human and robot figures are redesigned to look more realistic in 0.1 Dev 6 (owner, 2026-10-13: "In dev 6 I want
+  to redesign the bot/player figures to be more realistic").** The owner does it himself at his PC, in his own Blender
+  through the port 9876 bridge, from reference photos he shares first. The same session makes the figures' animations
+  for Dev 6's new moves, such as vaulting (owner, 2026-10-13: "This will also give an opportunity to update animations
+  for anything new like vaulting"), and a rest-on-cover animation in place of M104's placeholder lean (owner,
+  2026-10-13: "Make sure the figure redesign notes it needs animations for this"). It waits on his photos and his
+  Blender session: no thread starts it before he does. It brings the figures forward from the later higher-detail models
+  (above), and they stay behind the Dev switches until he is happy with them.
 
 ## Gameplay and feel
 
@@ -329,6 +330,13 @@ replaces its line; the old one stays findable in the archive or in git.
 - **Vaults are loud (owner, 2026-10-13: "Vaulting should create noise that makes enemies aware. Just like footsteps.
   Vaulting allows quick movement but at the cost of making noise.").** A vault is the loudest step there is: bots hear
   its hands and kit on the obstacle from 18 m (a sprint 16, a landing 12, a run 11), and its landing as well.
+- **Aiming at a ledge rests the replica on it, automatically and with no setting (M104, 2026-10-13).** Down the sights,
+  still, grounded and no more than slightly leaned, with a flat top 8 to 70 cm below the eye straight ahead and within
+  0.8 m (`MOVEMENT.rest`, `sim/coverRest.ts`), the spread takes ×0.65 on top of the stance and the kick halves; moving,
+  letting go of the aim, a reload, a lean or looking away lets go in 0.1 s. It works standing at crouch cover and
+  waist-high cover, and crouched at lower cover and window sills, on all three maps (`sim/coverRestMaps.test.ts`).
+  Bots fire from the hip, so only the player rests for now; the figures' rest pose is a placeholder until the figure
+  redesign (`docs/HANDOFF.md`).
 
 ## Bots and balance
 
@@ -454,6 +462,15 @@ replaces its line; the old one stays findable in the archive or in git.
   skin (`tag: 'dev'`) shows in Customise only with Dev content on, and a saved pick of it plays as the default
   without. "Nothing that decides play reads a skin" is proved over the imports of the sim, bots, physics, nav and the
   kit's numbers: only names that pass a scheme's id along may reach them.
+- **Practice plays on the range or any map, its place picked apart from the match's map (2026-10-13, M94; the owner's
+  playtest note 11).** On a map there are no bots: targets stand where the other team's bots would play, read from the
+  map's own data (lane points, points along the lanes' long legs, the other team's starts, Extraction's home starts,
+  the overlooks), so a new map gets them with no extra work. They are the range's kinds (M93's), picked by why a bot
+  is there: behind low cover a crouched figure or pop-up, at an overlook a pop-up, on a lane's leg a slider, the rest
+  standing figures (half of them moving) with every third one steel. A map has its own timed challenge best, its START
+  plate a few steps in front of where you start (you face it), and a run lights only targets in your sight within 50 m,
+  so it is played moving up through the map. The pick is saved as `practicePlace`; a dev map plays as the range while
+  Dev content is off. The range's card reads "Range", the mode "Practice".
 
 ## Replicas, Loadout, Armory and economy
 
@@ -470,6 +487,12 @@ replaces its line; the old one stays findable in the archive or in git.
   pose and figure still fits.
 - **Loadout and Armory change only between matches, never from the pause menu (owner, 2026-10-03: "I don't want it in
   the pause menu").** The practice range's pause menu offers the Loadout, because a range has no match.
+- **Five saved loadouts, and the one carried follows your edits (2026-10-13, SL1; the count is Claude's default, one
+  number in `config/savedLoadouts.ts`).** Every change on the Loadout and in Customise goes to the current saved
+  loadout, so there is no Save button and nothing to lose; Replace copies the one carried over another. Gear a saved
+  loadout holds that isn't available now stays picked: it plays as the default, shows as locked, and comes back with
+  the gear. Availability is the Loadout's own ownership check, so unlocks of any kind work the same. Unlock all gear
+  keeps a set of its own, as it keeps its own picks.
 - **`pool.md` (what exists: IDs, tags, rarity, economy) and `stats.md` (how it shoots) are hand-edited data the game
   reads (owner's picks, 2026-10-04).** A row the game can't read is skipped with a warning and fails its test. Item IDs
   are six digits, in the order assets are added; they are permanent and only added to. Tags (`gas`, `top-rail`) decide
@@ -510,6 +533,12 @@ replaces its line; the old one stays findable in the archive or in git.
   with the frame, the ejection port further back, the trigger guard one piece with the frame, a shorter grip and small
   low sights. Its slide kicks back over the still barrel on every shot and stays locked back on an empty magazine until
   a reload (0.1 Dev 6 feature 14).
+- **In Practice you change gear from play, and it is your one loadout (2026-10-13, M95).** The Loadout key (L, its own
+  binding) opens the Loadout there on the slot in your hands; L again or Back to practice returns you where you stood,
+  the new replica coming up. In a match the key does nothing. What you pick or customise in Practice is your loadout for
+  matches too, so a replica tuned at the range goes into the next match, as at a real site; with Unlock all gear on the
+  picks are the sandboxed ones (M26d), and your own come back when it is off. The owner can rule for a separate
+  practice loadout instead.
 
 ## Menus, HUD, settings and accessibility
 
@@ -565,8 +594,9 @@ replaces its line; the old one stays findable in the archive or in git.
 ## Save and settings storage
 
 - **Save keys and fields are permanent and only added to (2026-10-04).** Settings live in one versioned object,
-  `airsoft.settings`; the collection (`airsoft.collection`), the records (`airsoft.records`) and the key bindings keep
-  their own keys. A rename or retype is a migration step. The collection is progress, not a setting.
+  `airsoft.settings`; the collection (`airsoft.collection`), the records (`airsoft.records`), the saved loadouts
+  (`airsoft.loadouts`, SL1) and the key bindings keep their own keys. A rename or retype is a migration step. The
+  collection is progress, not a setting.
 - **A save is readable JSON with the stores as stored; an integer `SAVE_FORMAT` drives migrations (2026-10-04).** A
   store's version can't change without it (a test fails). Every store keeps fields it doesn't know. A format newer than
   the build is refused, and a store written by a newer build is never read or overwritten.

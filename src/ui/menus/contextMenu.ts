@@ -1,11 +1,24 @@
 import { type Box, placeMenu } from './menuPlacement';
 import { el } from './menuParts';
 
-/** One choice in the menu: the visible label, the name a screen reader reads (the label when absent), and what it does. */
+/**
+ * One choice in the menu: the visible label, the name a screen reader reads (the label when absent), and what it does;
+ * a smaller line under the label (`detail`) and a tick for the one in use (`current`) when a list of picks needs them
+ * (SL1: the saved loadouts).
+ */
 export interface ContextChoice {
   label: string;
   name?: string;
+  detail?: string;
+  current?: boolean;
   run: () => void;
+}
+
+/** A choice's button and its two lines, made once and filled for each use. */
+interface ChoiceButton {
+  button: HTMLButtonElement;
+  label: HTMLSpanElement;
+  detail: HTMLSpanElement;
 }
 
 /**
@@ -14,12 +27,13 @@ export interface ContextChoice {
  * frame. Its listeners on the page (a press outside, a scroll, a resize) are on only while it is open.
  *
  * It closes on Esc (the key stops here, so it never also goes Back), on a press outside it, when focus leaves it, on a
- * scroll or resize, and after a choice. The items are buttons with names; Up, Down, Home and End move between them.
+ * scroll or resize, and after a choice. The items are buttons with names; Up, Down, Home and End move between them. The
+ * keyboard starts on the current choice when one is marked, else the first.
  */
 export class ContextMenu {
   readonly root: HTMLDivElement;
   private readonly title: HTMLParagraphElement;
-  private readonly buttons: HTMLButtonElement[] = [];
+  private readonly buttons: ChoiceButton[] = [];
   private choices: readonly ContextChoice[] = [];
   private opener: HTMLElement | null = null;
   private opened = false;
@@ -57,18 +71,23 @@ export class ContextMenu {
     this.title.textContent = title;
     this.root.setAttribute('aria-label', title);
     while (this.buttons.length < choices.length) this.addButton();
-    this.buttons.forEach((b, i) => {
+    this.buttons.forEach(({ button, label, detail }, i) => {
       const choice = choices[i];
-      b.hidden = !choice;
+      button.hidden = !choice;
       if (!choice) return;
-      b.textContent = choice.label;
-      b.setAttribute('aria-label', choice.name ?? choice.label);
+      label.textContent = choice.label;
+      detail.textContent = choice.detail ?? '';
+      detail.hidden = !choice.detail;
+      button.classList.toggle('is-current', !!choice.current);
+      if (choice.current) button.setAttribute('aria-current', 'true');
+      else button.removeAttribute('aria-current');
+      button.setAttribute('aria-label', choice.name ?? choice.label);
     });
     this.root.hidden = false;
     this.place(x, y, avoid);
     if (!this.opened) this.listen(true);
     this.opened = true;
-    this.buttons[0]!.focus({ preventScroll: true });
+    (this.buttons[choices.findIndex((c) => c.current)] ?? this.buttons[0])!.button.focus({ preventScroll: true });
   }
 
   /** Hides the menu; the focus goes back to where it was opened from unless `restore` is false. */
@@ -86,12 +105,16 @@ export class ContextMenu {
     const i = this.buttons.length;
     const b = el('button', 'context-item');
     b.type = 'button';
+    const label = el('span', 'context-label');
+    const detail = el('span', 'context-detail');
+    detail.hidden = true;
+    b.append(label, detail);
     b.addEventListener('click', () => this.choose(i));
     // A held Enter must not choose again on the screen that replaces this one.
     b.addEventListener('keydown', (e) => {
       if (e.repeat) e.preventDefault();
     });
-    this.buttons.push(b);
+    this.buttons.push({ button: b, label, detail });
     this.root.append(b);
   }
 
@@ -123,7 +146,7 @@ export class ContextMenu {
       this.close(true);
       return;
     }
-    const shown = this.buttons.filter((b) => !b.hidden);
+    const shown = this.buttons.map((b) => b.button).filter((b) => !b.hidden);
     const at = shown.indexOf(document.activeElement as HTMLButtonElement);
     const to = e.key === 'ArrowDown' ? at + 1 : e.key === 'ArrowUp' ? at - 1 : e.key === 'Home' ? 0 : e.key === 'End' ? shown.length - 1 : null;
     if (to === null) return;

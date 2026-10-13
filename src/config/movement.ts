@@ -80,6 +80,39 @@ export interface MovementConfig {
   accuracy: AccuracyConfig;
   /** Vaulting over low obstacles (M102, sim/vault.ts). */
   vault: VaultConfig;
+  /** Resting the replica on cover while aiming (sim/coverRest.ts, M104). */
+  rest: RestConfig;
+}
+
+/**
+ * Resting the replica on cover (M104, the owner's Dev 6 pick 40): aiming down sights, still and upright, with a ledge
+ * in front at the right height (a crate, a low wall, a window sill, sandbags), the replica settles on it. Heights are
+ * below the eye, so one rule fits standing (chest-high cover) and crouching (waist-high cover).
+ */
+export interface RestConfig {
+  /** The cover's face must be within this of the body's centre, straight ahead (m): the support hand's reach. */
+  reach: number;
+  /**
+   * The cover's top must be at least `minDrop` and at most `maxDrop` below the eye (m): any higher and it blocks the
+   * sight line, any lower and the replica can't reach down to it.
+   */
+  minDrop: number;
+  maxDrop: number;
+  /** The top is looked for this far past the cover's face (m), so a thin wall's top is found too. */
+  inset: number;
+  /** The top's normal must be at least this upright (its y; 1 is level), so a ramp or a slope ahead is no ledge. */
+  minFlat: number;
+  /** The aim must be clear this far past the cover's face (m): never resting with the BBs' way blocked. */
+  clearAhead: number;
+  /** No rest while leaning further than this (0..1 of a full lean): the rest is upright, over the cover. */
+  maxLean: number;
+  /** Seconds to settle onto the cover (Character.coverRest easing to 1), and to come off it. */
+  settleTime: number;
+  releaseTime: number;
+  /** Fully settled, the spread is multiplied by this (on top of stance and aim, sim/accuracy.ts). */
+  spread: number;
+  /** Fully settled, each shot's kick is multiplied by this (sim/armament.ts). */
+  kick: number;
 }
 
 /**
@@ -210,6 +243,26 @@ export const MOVEMENT: MovementConfig = {
     lockTime: 0.015,
   },
   vault: VAULT,
+  rest: {
+    // A forearm's reach ahead of the body (its radius is 0.32): leaning in to a crate a step away still rests.
+    reach: 0.8,
+    // The sight line clears the top by at least 8 cm, and the top is at most 70 cm below the eye: standing, cover from
+    // 0.96 to 1.58 m high (waist to chest: Depot's 1.2 m crates, barriers and sandbags); crouched, from 0.39 to 1.01 m
+    // (Woodland's logs, Neon Heights' 1 m barriers). Measured on every map in sim/coverRestMaps.test.ts.
+    minDrop: 0.08,
+    maxDrop: 0.7,
+    inset: 0.03,
+    // About 18° at most: the steepest ramp a map may use (PHYSICS.maxRampSlope, 27°) is never a ledge.
+    minFlat: 0.95,
+    clearAhead: 0.5,
+    maxLean: 0.2,
+    settleTime: 0.15,
+    releaseTime: 0.1,
+    // As steady again as crouching (accuracy.crouched), and the two add up: crouched at a low wall is the steadiest.
+    spread: 0.65,
+    // Half the kick: full auto and quick semi stay on target (the AEG's climb 0.38° → 0.19° at its rate of fire).
+    kick: 0.5,
+  },
 };
 
 /**

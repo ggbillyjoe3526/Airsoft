@@ -290,6 +290,8 @@ export const MENU_TEXT = {
   /** The top bar's wordmark is a button back to the title; opened from the pause menu it is Back. */
   toTitle: 'Back to the title screen',
   back: 'Back',
+  /** The top bar's button on the Loadout opened from Practice (M95): straight back to practice, the kit as picked. */
+  backToPractice: 'Back to practice',
   /** The wallet on the top bar. */
   fc: (fc: number) => `${fc.toLocaleString('en-GB')} FC`,
   tokens: (n: number) => `${n} ${n === 1 ? 'Token' : 'Tokens'}`,
@@ -336,8 +338,9 @@ export const PLAY_TEXT = {
   /** Practice, the last mode card: the range, with no bots and no score. */
   practice: {
     label: 'Practice',
-    blurb: 'The range: targets to shoot at, no bots, no score.',
-    mapLine: 'Practice range',
+    blurb: 'The range or any map: targets to shoot at, no bots, no score.',
+    /** "Your match" while Practice is picked, before the place's own line is worked out (M94). */
+    mapLine: 'Range',
     rules: 'No score, no clock',
     teams: 'On your own',
   },
@@ -354,6 +357,10 @@ export const GEAR_TEXT = {
   selected: 'Selected',
   asCarried: 'as carried',
   unlockMore: 'Each copy has a rarity tier. Unlock more in the Armory, free for playing.',
+  /** Under the replicas when the Loadout was opened from Practice (M95). */
+  practice: 'Practice: take any replica you own and customise it. What you carry here is your loadout for matches too.',
+  /** Under the replicas while Dev settings › Unlock all gear lends everything (M26d, M95). */
+  lent: 'Unlock all gear is on (Dev settings): every replica and part is yours to try. Your own loadout comes back when you turn it off.',
   /** The parts fitted, after the tier and the colour. */
   partsFitted: (n: number) => (n === 0 ? 'nothing fitted' : `${n} ${n === 1 ? 'part' : 'parts'} fitted`),
   breadcrumb: 'Loadout',

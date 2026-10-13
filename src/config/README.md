@@ -4,7 +4,7 @@ Every tunable number and data table, as exported constants with units in the com
 holds no magic numbers.
 
 - Simulation: `sim.ts`, `movement.ts`, `vault.ts` (vaulting, and the maps' vault wall height), `physics.ts`, `hits.ts` (`HITS`, `ROUNDS`), `ballistics.ts` (air, `spinPerHop`,
-  `WIND`), `footsteps.ts`, `modes.ts` (`MATCH_MODES`, `MODE_SHAPES`, the never-check `unknownMode`), `extraction.ts`, `matchRules.ts` (match rules, `RULESETS` and `MODE_FIT`, what fits each mode), `range.ts`.
+  `WIND`), `footsteps.ts`, `modes.ts` (`MATCH_MODES`, `MODE_SHAPES`, the never-check `unknownMode`), `extraction.ts`, `matchRules.ts` (match rules, `RULESETS` and `MODE_FIT`, what fits each mode), `range.ts`, `practice.ts` (Practice on a map: where its targets stand and which kind, M94).
 - Replicas and gear: `replicas.ts`, `attachments.ts` (grips, magazines, barrels, muzzles), `optics.ts`, `lasers.ts`,
   `torches.ts`; `schemes.ts`, `characters.ts`, `figureRig.ts` (the rigged Blender figures, BF1), `replicaFinish.ts` for
   how they look. `statsFile.ts` reads `stats.md` and
@@ -15,7 +15,7 @@ holds no magic numbers.
   `bake.ts`, `dressing.ts`, `materials.ts`, `gpuDressing.ts` (W5: the node path's GPU grass and tree stand-ins, capped
   per preset). The Renderer row (W1): `rendererPick.ts` (the picks boot reads, in the main
   chunk) and `renderBackend.ts` (the row's texts and the back ends' tuning, read only by the lazy renderer chunks).
-- Sound, input and UI: `audio.ts`, `sounds.ts`, `controls.ts`, `menus.ts`, `menuArt.ts`, `minimap.ts`, `matchInfo.ts`, `hudText.ts` (the HUD's words),
+- Sound, input and UI: `audio.ts`, `sounds.ts`, `controls.ts`, `menus.ts`, `menuArt.ts`, `savedLoadouts.ts` (slot count and words, SL1), `minimap.ts`, `matchInfo.ts`, `hudText.ts` (the HUD's words),
   `teams.ts`, `tutorial.ts`, `accessibility.ts`, `itemPictures.ts`.
 - Content and saving: `content.ts` (public or dev tags), `contentRules.ts` (the content checks' ranges, budgets,
   balance band and exception registers: `docs/content/README.md`), `dev.ts` (Dev settings), `save.ts`, `assets.ts`.

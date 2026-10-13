@@ -5,7 +5,8 @@ The gameplay rules: plain data and pure functions, with no Three.js, no DOM and 
 - `simulation.ts`: `stepSimulation`, the fixed 60 Hz step and the order of its phases.
 - `state.ts`, `events.ts`, `commands.ts`, `character.ts`: `GameState`, `state.events`, `PlayerCommand`, `Character`.
 - `movement.ts`, `aiming.ts`, `lean.ts`, `accuracy.ts`, `footsteps.ts`: the per-tick stance rules. Lean is one geometry
-  (`HITS.lean`): eye, BB origin, hit volume, drawn figure and what bots see all use it.
+  (`HITS.lean`): eye, BB origin, hit volume, drawn figure and what bots see all use it. `coverRest.ts` (M104): aiming
+  still at a ledge rests the replica on it (`Character.coverRest`, `MOVEMENT.rest`), steadying the spread and the kick.
 - `vault.ts` (M102): Jump at a low obstacle vaults it. `planVault` reads the level's rays (height, depth, a floor to land
   on, the body's height clear over it), `tryVault` starts one in place of the jump (a `vault` footstep), `stepVault`
   moves the body along it through `CharacterMover` in place of the movement step. Tuning: `config/vault.ts`.
@@ -26,7 +27,8 @@ The gameplay rules: plain data and pure functions, with no Three.js, no DOM and 
   pole, and the Extraction run (exits, cases, waves, grace). `roster.ts`: who plays on which team (M98: the player,
   character 0, on the picked team, Alpha or Beta); nothing else may take the player's team to be team 0.
 - `rangeTargets.ts` (the practice range's targets, still and moving; `SimServices.practice` skips the round flow),
-  `rangeChallenge.ts` (Practice's timed challenge, stepped after the simulation by `RangeSession`), `torch.ts`,
+  `rangeChallenge.ts` (Practice's timed challenge, stepped after the simulation by `RangeSession`; on a map it lights
+  only targets in your sight, M94), `torch.ts`,
   `soundPath.ts` (wall rays for hearing), `hitFacts.ts` (the "what got you" card), `rng.ts`, `vec.ts`.
 - Tuning, in `config/`: `sim.ts`, `movement.ts`, `hits.ts`, `ballistics.ts`, `replicas.ts`, `modes.ts`, `extraction.ts`.
   Tests: `*.test.ts` beside each file; `testSupport.ts` has `OPEN_FIELD`, a 100 m empty floor.

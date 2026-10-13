@@ -78,4 +78,11 @@ export const FIGURE_RIG = {
   firstPerson: { back: 0.17, armScale: 1e-3 },
   /** Thrown-away magazines out at most (the oldest goes first); each lies for its sidecar lifetime. */
   thrownMagazines: { max: 12 },
+  /**
+   * Resting on cover (M104), a placeholder until the figure redesign brings its own pose and clip (radians, at
+   * Character.coverRest 1): the aim is posed `lean` higher and the spine leaned `lean` forward, so the upper body leans
+   * over the cover by the share the aim clips don't turn (1 - aimReach, about 5°) while the bore stays on the shot. Not
+   * on your own first-person body, and not on the built-in figures, which stay on their hit volume.
+   */
+  rest: { lean: 0.2 },
 } as const;

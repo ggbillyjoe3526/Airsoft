@@ -2,7 +2,7 @@ import { BOT_GLOW_BBS, bbsGlow, DEFAULT_GLOW_BBS, GLOW_BB_CHOICES, type GlowBBs 
 import { HOP_UP, LOADOUT, type ReplicaConfig, validBbWeight } from '../config/replicas';
 import { DEFAULT_LOOK, type LookSettings } from '../config/look';
 import { defaultScheme, isSchemeId, offeredSchemes, type ReplicaPaint, type SchemeId } from '../config/schemes';
-import { loadSetting, numberIn, oneOf, saveSetting } from '../settings/storage';
+import { loadSetting, numberIn, oneOf, saveSetting, type SettingField } from '../settings/storage';
 import { type Collection, inPool, type ItemRef, itemKey, parseItemKey } from './collection';
 import { isAvailable } from '../config/content';
 import { isDevItem } from './contentPool';
@@ -79,6 +79,48 @@ export function gameOwnership(pool: Pool, collection: () => Collection, unlockAl
   };
 }
 
+/**
+ * Where a LoadoutModel keeps its picks (SL1): the settings store for the loadout the player carries, or a saved
+ * loadout's own record (`recordPicks`), read by the same rules.
+ */
+export interface PickStore {
+  load<T>(field: SettingField, parse: (raw: unknown) => T | undefined, fallback: T): T;
+  save(field: SettingField, value: string | number): void;
+}
+
+const SETTINGS_PICKS: PickStore = {
+  load: (field, parse, fallback) => loadSetting(field, parse, fallback),
+  save: (field, value) => saveSetting(field, value),
+};
+
+/** A saved loadout's picks (SL1): setting fields and their values, as the settings store keeps them. */
+export type LoadoutPicks = Readonly<Record<string, string | number>>;
+
+/** A PickStore over a plain record (SL1): a saved loadout read, or written, as the loadout's own picks are. */
+export function recordPicks(record: Record<string, string | number>): PickStore {
+  return {
+    load: (field, parse, fallback) => {
+      if (!Object.hasOwn(record, field)) return fallback;
+      const v = parse(record[field]);
+      return v === undefined ? fallback : v;
+    },
+    save: (field, value) => {
+      record[field] = value;
+    },
+  };
+}
+
+/** Gear a loadout holds that isn't available now (SL1): it plays as `instead` until it is back. */
+export interface MissingPick {
+  /** The gear slot whose replica, or the fit slot whose part, it is. */
+  slot: GearSlot | FitSlot;
+  wanted: Asset;
+  /** What is carried or fitted in its place, or null: nothing. */
+  instead: Asset | null;
+  /** `dev`: dev gear while Dev content is off (M35); `locked`: not owned or unlocked. */
+  reason: 'locked' | 'dev';
+}
+
 const NONE = 'none';
 
 /** The two dials every replica has (never pooled). */
@@ -96,6 +138,7 @@ export class LoadoutModel {
   constructor(
     readonly pool: Pool,
     private readonly ownership: Ownership,
+    private readonly store: PickStore = SETTINGS_PICKS,
   ) {}
 
   /** Every item owned of the given assets, rarest tier first within each asset (pool order between assets). */
@@ -137,6 +180,25 @@ export class LoadoutModel {
       out.push(same ?? this.defaultReplica(LOADOUT[i], used));
     });
     return out;
+  }
+
+  /**
+   * The gear slot the kit's `index`th replica is carried in (kit() leaves an empty slot out), e.g. the slot of the
+   * replica in hand on the range (M95); the first slot when there is no such replica.
+   */
+  gearSlotOf(index: number): GearSlot {
+    let n = -1;
+    const equipped = this.equipped();
+    for (let i = 0; i < equipped.length; i++) if (equipped[i] && ++n === index) return GEAR_SLOTS[i]!;
+    return GEAR_SLOTS[0]!;
+  }
+
+  /**
+   * Whether everything is lent (Dev settings › Unlock all gear, M26d): the Loadout says so (M95), and the picks are then
+   * the Dev ones, kept apart from the real ones (so are the saved loadouts, SL1).
+   */
+  lent(): boolean {
+    return this.ownership.sandboxed?.() ?? false;
   }
 
   /**
@@ -206,7 +268,7 @@ export class LoadoutModel {
   }
 
   setHopUp(replicaId: string, dial: number): void {
-    saveSetting(this.dialField('hopUp', replicaId), dial);
+    this.store.save(this.dialField('hopUp', replicaId), dial);
   }
 
   /** A replica asset's BB weight (grams), or the one it comes set up for. */
@@ -217,7 +279,7 @@ export class LoadoutModel {
 
   setBbWeight(replicaId: string, grams: number): void {
     const g = validBbWeight(grams);
-    if (g !== undefined) saveSetting(this.dialField('bbWeight', replicaId), g);
+    if (g !== undefined) this.store.save(this.dialField('bbWeight', replicaId), g);
   }
 
   /**
@@ -225,7 +287,7 @@ export class LoadoutModel {
    * id before audit POOL-17 (`hopUp.aeg`), else the factory setting.
    */
   private readDial(kind: Dial, replicaId: string, r: ReplicaConfig, parse: (raw: unknown) => number | undefined, factory: number): number {
-    const read = (field: `${Dial}.${string}`, fallback: number): number => loadSetting(field, parse, fallback);
+    const read = (field: `${Dial}.${string}`, fallback: number): number => this.store.load(field, parse, fallback);
     const own = read(`${kind}.${replicaId}`, read(`${kind}.${r.id}`, factory));
     return this.ownership.sandboxed?.() ? read(`${kind}.dev.${replicaId}`, own) : own;
   }
@@ -243,12 +305,12 @@ export class LoadoutModel {
   /** A replica asset's Glowing BBs choice (M33b), or the default: on night fields only. */
   glowBBs(replicaId: string): GlowBBs {
     const parse = oneOf(GLOW_BB_CHOICES.map((c) => c.id));
-    const own = loadSetting(`glowBBs.${replicaId}`, parse, DEFAULT_GLOW_BBS);
-    return this.ownership.sandboxed?.() ? loadSetting(`glowBBs.dev.${replicaId}`, parse, own) : own;
+    const own = this.store.load(`glowBBs.${replicaId}`, parse, DEFAULT_GLOW_BBS);
+    return this.ownership.sandboxed?.() ? this.store.load(`glowBBs.dev.${replicaId}`, parse, own) : own;
   }
 
   setGlowBBs(replicaId: string, choice: GlowBBs): void {
-    saveSetting(this.glowField(replicaId), choice);
+    this.store.save(this.glowField(replicaId), choice);
   }
 
   /**
@@ -260,7 +322,7 @@ export class LoadoutModel {
     const r = this.replicaConfig(replicaId);
     const fallback = r ? defaultScheme(r) : 'cobalt';
     const offered = this.schemes();
-    return loadSetting(`scheme.${replicaId}`, (raw) => (isSchemeId(raw) && offered.includes(raw) ? raw : undefined), fallback);
+    return this.store.load(`scheme.${replicaId}`, (raw) => (isSchemeId(raw) && offered.includes(raw) ? raw : undefined), fallback);
   }
 
   /** The schemes Customise offers (CT4): the public ones, and the dev ones while Dev content is on. */
@@ -269,7 +331,7 @@ export class LoadoutModel {
   }
 
   setScheme(replicaId: string, scheme: SchemeId): void {
-    saveSetting(`scheme.${replicaId}`, scheme);
+    this.store.save(`scheme.${replicaId}`, scheme);
   }
 
   /** The kit slot for a replica item with its current fit: what the Customise screen's numbers describe. */
@@ -307,14 +369,130 @@ export class LoadoutModel {
     };
   }
 
+  /**
+   * The loadout as a saved loadout keeps it (SL1): each gear slot's replica and, for each replica in a slot (as picked
+   * and as carried), every fit slot's pick, its dials, Glowing BBs and colour scheme, under the fields the settings use.
+   * Gear picked but not available now is kept as picked (it plays as its default until it is back); a slot never picked
+   * is written as it plays, so the record alone gives the same loadout.
+   */
+  picks(): Record<string, string | number> {
+    const out: Record<string, string | number> = {};
+    const carried = this.equipped();
+    const replicas = new Set<string>();
+    GEAR_SLOTS.forEach((slot, i) => {
+      const picked = this.pickedItem(`equip.${slot}`);
+      const ref = picked && this.isReplica(picked) ? picked : (carried[i] ?? null);
+      if (ref) {
+        out[`equip.${slot}`] = itemKey(ref.asset, ref.tier);
+        replicas.add(ref.asset);
+      }
+      if (carried[i]) replicas.add(carried[i]!.asset);
+    });
+    for (const id of replicas) {
+      const fit = this.fitOf(id);
+      for (const slot of FIT_SLOTS) {
+        const raw = this.readPick(`fit.${id}.${slot}`);
+        const fitted = fit[slot];
+        out[`fit.${id}.${slot}`] = raw !== null && (raw === NONE || parseItemKey(raw)) ? raw : fitted ? itemKey(fitted.asset, fitted.tier) : NONE;
+      }
+      out[`hopUp.${id}`] = this.hopUp(id);
+      out[`bbWeight.${id}`] = this.bbWeight(id);
+      out[`glowBBs.${id}`] = this.glowBBs(id);
+      // A dev scheme stays picked while Dev content is off (CT4), as it does on the replica itself.
+      out[`scheme.${id}`] = this.store.load(`scheme.${id}`, (raw) => (isSchemeId(raw) ? raw : undefined), this.scheme(id));
+    }
+    return out;
+  }
+
+  /**
+   * Makes `picks` (a saved loadout, SL1) the loadout: each field saved as the player's own pick would be (into the Dev
+   * picks while everything is unlocked, M26d). A field it doesn't know, or a value that isn't a pick, is left out.
+   */
+  usePicks(picks: LoadoutPicks): void {
+    const hop = numberIn(HOP_UP.minDial, HOP_UP.maxDial);
+    const glow = oneOf(GLOW_BB_CHOICES.map((c) => c.id));
+    for (const [field, value] of Object.entries(picks)) {
+      const dot = field.indexOf('.');
+      const rest = field.slice(dot + 1);
+      const text = typeof value === 'string' ? value : null;
+      switch (field.slice(0, dot)) {
+        case 'equip':
+          if (GEAR_SLOTS.includes(rest as GearSlot) && text && parseItemKey(text)) this.savePick(`equip.${rest}`, text);
+          break;
+        case 'fit': {
+          const [id, slot, more] = rest.split('.');
+          if (id && !more && this.pool.byId.has(id) && FIT_SLOTS.includes(slot as FitSlot) && text && (text === NONE || parseItemKey(text))) this.savePick(`fit.${id}.${slot}`, text);
+          break;
+        }
+        case 'hopUp': {
+          const dial = hop(value);
+          if (this.replicaConfig(rest) && dial !== undefined) this.setHopUp(rest, dial);
+          break;
+        }
+        case 'bbWeight':
+          if (this.replicaConfig(rest) && typeof value === 'number') this.setBbWeight(rest, value);
+          break;
+        case 'glowBBs': {
+          const choice = glow(value);
+          if (this.replicaConfig(rest) && choice) this.setGlowBBs(rest, choice);
+          break;
+        }
+        case 'scheme':
+          if (this.replicaConfig(rest) && isSchemeId(value)) this.setScheme(rest, value);
+          break;
+      }
+    }
+  }
+
+  /**
+   * This loadout's rules over `picks` (SL1): a saved loadout as it would play now, against what is available now, through
+   * the same ownership check as the loadout itself. Its picks are its own: nothing it does is saved.
+   */
+  over(picks: LoadoutPicks): LoadoutModel {
+    return new LoadoutModel(this.pool, { ...this.ownership, sandboxed: () => false }, recordPicks({ ...picks }));
+  }
+
+  /**
+   * The gear picked that isn't available now (SL1): a gear slot's replica, then the parts fitted to each replica carried,
+   * each with what plays in its place. Only gear the pool still has and that still fits counts.
+   */
+  missing(): MissingPick[] {
+    const out: MissingPick[] = [];
+    const named = (ref: ItemRef | null | undefined): Asset | null => (ref ? (this.pool.byId.get(ref.asset) ?? null) : null);
+    const lost = (asset: Asset): boolean => !this.bestOwned(asset.id);
+    const reason = (asset: Asset): MissingPick['reason'] => (this.ownership.offers?.(asset) === false ? 'dev' : 'locked');
+    const carried = this.equipped();
+    GEAR_SLOTS.forEach((slot, i) => {
+      const picked = this.pickedItem(`equip.${slot}`);
+      const wanted = picked && this.isReplica(picked) ? named(picked) : null;
+      if (wanted && lost(wanted)) out.push({ slot, wanted, instead: named(carried[i]), reason: reason(wanted) });
+    });
+    for (const ref of carried) {
+      const replica = named(ref);
+      if (!replica) continue;
+      const fit = this.fitOf(replica.id);
+      for (const slot of FIT_SLOTS) {
+        const wanted = named(this.pickedItem(`fit.${replica.id}.${slot}`));
+        if (wanted && wanted.category === FIT_CATEGORY[slot] && fits(wanted, replica) && lost(wanted)) out.push({ slot, wanted, instead: named(fit[slot]), reason: reason(wanted) });
+      }
+    }
+    return out;
+  }
+
+  /** A saved pick as an item, whether or not it is available now; null when nothing (or "as it comes") is saved. */
+  private pickedItem(field: Pick): ItemRef | null {
+    const raw = this.readPick(field);
+    return raw && raw !== NONE ? parseItemKey(raw) : null;
+  }
+
   /** A saved pick (`equip.<slot>` or `fit.<asset>.<slot>`): the sandboxed one while everything is unlocked, else the real one. */
   private readPick(field: Pick): string | null {
-    const read = (f: `equip.${string}` | `fit.${string}`) => loadSetting<string | null>(f, (v) => (typeof v === 'string' ? v : undefined), null);
+    const read = (f: `equip.${string}` | `fit.${string}`) => this.store.load<string | null>(f, (v) => (typeof v === 'string' ? v : undefined), null);
     return (this.ownership.sandboxed?.() ? read(sandboxField(field)) : null) ?? read(field);
   }
 
   private savePick(field: Pick, value: string): void {
-    saveSetting(this.ownership.sandboxed?.() ? sandboxField(field) : field, value);
+    this.store.save(this.ownership.sandboxed?.() ? sandboxField(field) : field, value);
   }
 
   /** The rarest owned copy of an asset, or null. */

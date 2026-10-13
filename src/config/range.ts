@@ -291,6 +291,11 @@ export const RANGE_CHALLENGE = {
   litPerMetre: 0.04,
   /** A target that was just hit or went out waits this long (s) before it can light again. */
   rest: 1,
+  /**
+   * In Practice on a map, where only targets in your sight light (M94): with none in sight, the run looks again this
+   * often (s) rather than every tick, a ray per target each look.
+   */
+  lookAgain: 0.25,
   /** Where a best score is kept (stats/records.ts): the range's own; another place would keep its own. */
   course: 'range',
 } as const;

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { RANGE, RANGE_VISUALS } from '../config/range';
+import { RANGE, RANGE_VISUALS, targetSpec } from '../config/range';
 import { lastShotText } from '../ui/rangeReadout';
 import { createRangeTargets } from '../sim/rangeTargets';
 import { HITS } from '../config/hits';
@@ -38,10 +38,10 @@ describe('practice range presentation (M21)', () => {
   });
 
   it('reads out where the last BB landed and what it hit', () => {
-    expect(lastShotText(null)).toContain('Practice range');
+    expect(lastShotText(null)).toContain('Practice ·');
     expect(lastShotText({ distance: 30.6, target: { label: 'Steel', distance: 30 } })).toBe('Last BB: 31 m · hit Steel 30 m');
     expect(lastShotText({ distance: 44.2, target: null })).toBe('Last BB: 44 m · miss');
-    expect(lastShotText({ distance: 0, target: null, lost: true })).toContain('flew out of the range');
+    expect(lastShotText({ distance: 0, target: null, lost: true })).toContain('flew out of bounds');
   });
 });
 
@@ -132,6 +132,43 @@ describe('range targets with map detail (audit section 5)', () => {
     r.setDetail(false);
     expect(freed).toHaveBeenCalledTimes(paint.size);
     expect(visible()).toEqual(plain);
+    r.dispose();
+  });
+});
+
+describe('targets drawn on a map (M94)', () => {
+  it('draws no firing lines, distance boards or shelf off the range, and turns each target to face its way on its floor', () => {
+    vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => null }) });
+    const names = (r: RangeTargetsRenderer): string[] => r.object.children.map((o) => o.name).filter(Boolean);
+    const range = new RangeTargetsRenderer(createRangeTargets(), HITS);
+    expect(names(range)).toEqual(expect.arrayContaining(['range-lines', 'range-signs']));
+    range.dispose();
+
+    const targets = createRangeTargets([
+      targetSpec({ kind: 'steel', x: 10, y: 3 + RANGE.plateHeight, z: -4, yaw: Math.PI / 2, label: 'Steel', distance: 20 }),
+      targetSpec({ kind: 'figure', x: -6, y: 1.5, z: 8, yaw: Math.PI, label: 'Figure', distance: 12 }),
+    ]);
+    const r = new RangeTargetsRenderer(targets, HITS, false);
+    expect(names(r)).not.toContain('range-lines');
+    expect(names(r)).not.toContain('range-signs');
+    const [plates, , torsos] = r.object.children.filter((o): o is THREE.InstancedMesh => o instanceof THREE.InstancedMesh);
+    const m = new THREE.Matrix4();
+    const at = new THREE.Vector3();
+    const facing = new THREE.Vector3();
+    // The plate: at its centre, its face (+z in its own frame) turned to +x.
+    plates!.getMatrixAt(0, m);
+    expect(at.setFromMatrixPosition(m).distanceTo(new THREE.Vector3(10, 3 + RANGE.plateHeight, -4))).toBeLessThan(1e-6);
+    facing.set(0, 0, 1).transformDirection(m);
+    expect(facing.x).toBeCloseTo(1, 6);
+    expect(facing.z).toBeCloseTo(0, 6);
+    // The figure: its torso stands on its own floor, its front turned to -z.
+    torsos!.getMatrixAt(0, m);
+    at.setFromMatrixPosition(m);
+    expect(at.x).toBeCloseTo(-6, 6);
+    expect(at.y).toBeCloseTo(1.5 + (HITS.bodyTop + HITS.bodyBottom) / 2, 6);
+    expect(at.z).toBeCloseTo(8, 6);
+    facing.set(0, 0, 1).transformDirection(m);
+    expect(facing.z).toBeCloseTo(-1, 6);
     r.dispose();
   });
 });

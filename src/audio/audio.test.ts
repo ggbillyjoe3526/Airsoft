@@ -347,6 +347,34 @@ describe('crouch and lean rustle (M13)', () => {
     expect(heard).toEqual(['holster', 'holster']);
   });
 
+  it('knocks once as the replica starts to settle on cover (M104), not while it rests, and again only after it comes right off', () => {
+    const c = createCharacter(1, vec3(), 0, LOADOUT, 0);
+    const tracker = new FoleyTracker();
+    const heard: FoleyMove[] = [];
+    const tick = (rest: number): void => {
+      c.coverRest = rest;
+      tracker.update([c], (_, move) => heard.push(move));
+    };
+    tick(0);
+    expect(heard).toEqual([]);
+    tick(0.1);
+    tick(0.6);
+    tick(1);
+    tick(1);
+    expect(heard).toEqual(['rest']);
+    tick(0.5); // coming off part way and back: still the same rest
+    tick(1);
+    expect(heard).toEqual(['rest']);
+    tick(0); // right off: coming off is quiet
+    expect(heard).toEqual(['rest']);
+    tick(0.2);
+    expect(heard).toEqual(['rest', 'rest']);
+    c.status = 'calling';
+    tick(0);
+    tick(0.5);
+    expect(heard).toEqual(['rest', 'rest']);
+  });
+
   it('is quiet for a holster on someone who is out', () => {
     const c = createCharacter(1, vec3(), 0, LOADOUT, 0);
     c.status = 'walkingOff';

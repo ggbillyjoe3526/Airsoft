@@ -4,10 +4,12 @@ import { MENU_TEXT } from '../../config/menus';
 import type { QualityChoice, QualitySettings } from '../../config/render';
 import { OnDemand } from '../../core/onDemand';
 import type { NewGamePicks } from '../../newGamePicks';
+import { SavedLoadouts } from '../../pool/savedLoadouts';
 import { saveSetting } from '../../settings/storage';
 import type { ArmoryScreen } from './armoryScreen';
 import { Backdrop, type MenuHint, type NavPlace, TopBar } from './chrome';
 import type { PictureContext } from './kitStrip';
+import type { GearSlot } from '../../pool/loadoutModel';
 import type { LoadoutScreen } from './loadoutScreen';
 import { backTarget, escResumes, type MenuScreen, type SettingsOrigin } from './menuNav';
 import { el, watchScroll } from './menuParts';
@@ -71,6 +73,8 @@ export class Menus {
   private tutorialComplete?: TutorialCompleteDialog;
   /** The Match screen's picks as made (a dev pick stays; playedPicks says how they play), each change saved and reported. */
   private readonly model: PlayPicks;
+  /** The saved loadouts (SL1): tabs on the Loadout, a pick on the Match screen. */
+  private readonly saved: SavedLoadouts;
   private realistic: boolean;
   private tutorialDone: boolean;
   /** A first match was started, or the save already holds records: the title stops offering the Tutorial (M100). */
@@ -86,6 +90,12 @@ export class Menus {
   private readonly lastFocus = new Map<MenuScreen, HTMLElement>();
   /** When the pause menu last came up (performance.now()), so the Esc that brought it doesn't resume too. */
   private pauseShownAt = 0;
+  /**
+   * The pause menu is Practice's (M21), and the gear slot of the replica in hand there (M95): the Loadout opened from it
+   * picks that slot, offers Back to practice, and the Loadout key goes back too.
+   */
+  private rangePause = false;
+  private inHand: GearSlot | undefined;
 
   constructor(
     parent: HTMLElement,
@@ -103,6 +113,7 @@ export class Menus {
     };
     this.model = new PlayPicks(picked, { ...opts.lighting.initial }, opts.teammateDifficulty.follows, {
       onMap: (m) => opts.map.onChange(m),
+      onPracticePlace: (p) => opts.practicePlace.onChange(p),
       onLight: (m, light) => opts.lighting.onChange(m, light),
       onMode: (m) => opts.mode.onChange(m),
       onRuleset: (r) => opts.ruleset.onChange(r),
@@ -112,7 +123,8 @@ export class Menus {
       onTeam: (t) => opts.team.onChange(t),
       supply: opts.mode.supply,
       refresh: () => this.refreshViews(),
-    });
+    }, opts.practicePlace.initial);
+    this.saved = new SavedLoadouts(opts.loadout.model);
     this.realistic = opts.look.initial.realisticColours;
     this.tutorialDone = opts.tutorialDone;
     this.matchStarted = loadMatchStarted();
@@ -120,6 +132,7 @@ export class Menus {
     this.topBar = new TopBar(
       (place) => this.navigate(place),
       () => this.fromMark(),
+      () => this.play(),
     );
     this.topBar.root.hidden = true;
     this.root.append(this.backdrop.root, this.topBar.root);
@@ -141,15 +154,26 @@ export class Menus {
    * The pause menu, with `status` (round and score) under the heading; `range`: on the practice range (M21);
    * `tutorial`: its coach is running there (Skip step, Skip tutorial). `skip` (M83): you are out in a match, and the
    * rest of the round can be skipped (to the next round, or to the result). `challenge` (M93): the practice range's timed
-   * challenge is on or off, or null where it isn't offered.
+   * challenge is on or off, or null where it isn't offered. `inHand` (M95): on the range, the gear slot of the replica in
+   * hand, which its Loadout picks.
    */
-  showPause(status: string, seed: number, range = false, tutorial = false, skip: 'round' | 'result' | null = null, challenge: boolean | null = null): void {
+  showPause(
+    status: string,
+    seed: number,
+    range = false,
+    tutorial = false,
+    skip: 'round' | 'result' | null = null,
+    challenge: boolean | null = null,
+    inHand?: GearSlot,
+  ): void {
     const pause = this.pauseScreen();
     pause.setStatus(status);
     pause.setSeed(seed);
     pause.setRange(range, tutorial);
     pause.setSkip(skip);
     pause.setChallenge(challenge);
+    this.rangePause = range;
+    this.inHand = range ? inHand : undefined;
     this.pauseShownAt = performance.now();
     this.go('pause');
   }
@@ -159,6 +183,15 @@ export class Menus {
     const pause = this.pauseScreen();
     pause.setStatus(status);
     pause.setChallenge(challenge);
+  }
+
+  /**
+   * The Loadout key in Practice (M95): the Loadout straight from play, over the range's pause menu (its Back goes there),
+   * with the slot of the replica in hand picked; Back to practice or the key again goes back to practice.
+   */
+  showPracticeLoadout(status: string, seed: number, tutorial: boolean, inHand: GearSlot, challenge: boolean | null): void {
+    this.showPause(status, seed, true, tutorial, null, challenge, inHand);
+    this.openLoadout('pause');
   }
 
   /**
@@ -266,12 +299,19 @@ export class Menus {
 
   private setupScreen(): SetupScreen {
     if (!this.setup) {
-      this.setup = new SetupScreen(this.model, this.opts.loadout.model, this.context, {
-        onLoadout: () => this.openLoadout('setup'),
-        onBack: () => this.back(),
-        onPlay: () => this.startMatch(),
-        onPractice: () => this.openRange(this.opts.onRange),
-      });
+      this.setup = new SetupScreen(
+        this.model,
+        this.opts.loadout.model,
+        this.context,
+        {
+          onLoadout: () => this.openLoadout('setup'),
+          onBack: () => this.back(),
+          onPlay: () => this.startMatch(),
+          onPractice: () => this.openRange(this.opts.onRange),
+        },
+        // A saved loadout picked here is carried at once, as one picked on the Loadout.
+        { loadouts: this.saved, onPick: () => (this.opts.loadout.onChange(), this.refreshViews()) },
+      );
       this.add('setup', this.setup);
     }
     return this.setup;
@@ -282,7 +322,7 @@ export class Menus {
       const lo = this.opts.loadout;
       const { LoadoutScreen } = this.fetched();
       // Every loadout change also shows on the title's and the Play screen's kit.
-      this.loadout = new LoadoutScreen({ model: lo.model, context: this.context, onChange: () => (lo.onChange(), this.refreshViews()) });
+      this.loadout = new LoadoutScreen({ model: lo.model, saved: this.saved, context: this.context, onChange: () => (lo.onChange(), this.refreshViews()) });
       this.add('loadout', this.loadout);
     }
     return this.loadout;
@@ -501,10 +541,17 @@ export class Menus {
   private openLoadout(from: SettingsOrigin): void {
     this.whenFetched(() => {
       this.origins.loadout = from;
-      // What you own may have changed since it was last open (the Armory, M26c).
-      this.loadoutScreen().refresh();
+      // What you own may have changed since it was last open (the Armory, M26c). From Practice's pause menu (M95) it
+      // says what it is for there and picks the slot of the replica in hand.
+      const practice = from === 'pause' && this.rangePause;
+      this.loadoutScreen().open(practice, practice ? this.inHand : undefined);
       this.go('loadout');
     });
+  }
+
+  /** The Loadout is open from Practice (M95): Back to practice shows, and the Loadout key goes back to practice. */
+  private practiceLoadout(): boolean {
+    return this.current === 'loadout' && this.origins.loadout === 'pause' && this.rangePause;
   }
 
   private openArmory(from: SettingsOrigin): void {
@@ -554,6 +601,7 @@ export class Menus {
     // Opened from the pause menu (a match is under way), only the screen itself shows on the bar.
     const fromPause = (screen === 'settings' && this.origins.settings === 'pause') || (screen === 'loadout' && this.origins.loadout === 'pause');
     this.topBar.show(place, fromPause);
+    this.topBar.setPractice(this.practiceLoadout() ? this.opts.bindings.label('loadout') : null);
     this.backdrop.show(screen === 'title' ? 'title' : 'blurred', EVEN_BACKDROP.has(screen));
     // The screen's main button takes the keyboard focus, so Enter does the obvious thing (Play, Resume …).
     const previous = returning ? this.lastFocus.get(screen) : undefined;
@@ -569,7 +617,7 @@ export class Menus {
   private readonly onKeyDown = (e: KeyboardEvent): void => {
     if (this.root.hidden || this.root.inert || this.dialogOpen()) return;
     if (e.code !== 'Escape') {
-      this.hintKey(e);
+      if (!this.practiceKey(e)) this.hintKey(e);
       return;
     }
     if (escResumes(this.current, performance.now() - this.pauseShownAt, e.repeat, PAUSE_ESC_GUARD_MS)) {
@@ -591,6 +639,18 @@ export class Menus {
     e.preventDefault();
     this.back();
   };
+
+  /**
+   * The Loadout key on the Loadout opened from Practice (M95): back to practice, as the key opened it. A key press may
+   * take the mouse (Esc may not, so Esc stays Back to the pause menu). True when it was that key.
+   */
+  private practiceKey(e: KeyboardEvent): boolean {
+    if (!this.practiceLoadout() || e.repeat || e.ctrlKey || e.metaKey || e.altKey || typing(e.target)) return false;
+    if (this.opts.bindings.actionOf(e.code) !== 'loadout') return false;
+    e.preventDefault();
+    this.play();
+    return true;
+  }
 
   /** A key one of the screen's hints names: not while typing, with a modifier held, or as a held key repeats. */
   private hintKey(e: KeyboardEvent): void {
@@ -630,7 +690,7 @@ export class Menus {
 
   /** The match as it will play (playView.ts). */
   private playView(): PlayView {
-    return playView(this.model.picks(), this.opts, (id) => this.model.lightingOf(id));
+    return playView(this.model.picks(), this.opts, (id) => this.model.lightingOf(id), this.model.practicePlace());
   }
 }
 

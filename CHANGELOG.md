@@ -7,6 +7,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 ### Added
 - **M93** · Practice has moving targets: sliding figures, a swinging plate, small plates at 15 m and pop-up figures
 - **M93** · Practice has a Timed challenge, off by default (pause menu): 60 seconds on lit targets, best score kept
+- **M94** · Practice on any map: the Map cards offer the Range and each map (dev maps with Dev content on), in Day or Night; the match's map never changes
+- **M94** · Map practice has no bots: plates, pop-ups, sliders and swingers stand where bots would play; the timed challenge has a best per map and lights targets as you see them
 - **M92** · Press 3 to holster your replica (rebindable in Settings › Controls); 1 and 2 still pick primary and secondary
 - **M92** · Holstered, you sprint a little faster; drawing out of the holster is slower than raising from a sprint
 - **M92** · Bots holster on calm sprints through their own half and draw again on any threat
@@ -16,10 +18,23 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M102** · Bots vault too, where it saves them a walk
 - **M102** · Depot, Woodland and Neon Heights each get a low wall that opens a new route
 - **M102** · The tutorial has a new Vault step at a sandbag wall on the practice range
+- **M95** · In Practice, L opens the Loadout on the replica in your hands; Back to practice or L returns you where you stood, with the new replica coming up
+- **M104** · Aim still at a crate, low wall, sandbags or window sill and the replica rests on it: steadier aim, half the kick, a "Rested" tag
+- **M104** · Rested aim sways less and the view dips as it settles; moving, reloading, leaning or looking away lets go at once
+- **SL1** · Five saved loadout tabs on the Loadout: keys 1 to 5 or a click switch the whole kit you carry at once; your edits go to the current tab
+- **SL1** · Right-click a tab (or Menu, Shift+F10) to use, rename, duplicate, replace with yours or delete; the last loadout can't be deleted
+- **SL1** · Your match on the Match screen lists saved loadouts beside Change; gear a saved loadout can't use now shows as locked until it comes back
+
+### Changed
+- **M94** · The practice range is now Practice: pause reads "Practice · Range" or "Practice · Depot", and the tutorial's last button says Practice
+- **M95** · With Unlock all gear on, the Loadout says every replica and part is lent to try, and the range's first line names the Loadout key
 
 ### Fixed
 - **M92** · Bots firing on the move hold fire when a teammate is down the line, so they no longer hit teammates past the end of a wall
 - **M102** · Bots taking a lean spot or an Extraction guard post settle right on it, so their lean sees round the corner
+
+### Internal
+- **SL1** · Saved loadouts are part of save format 2 with their own store (airsoft.loadouts); the context menu's styles have their own sheet
 
 ## 0.1 Dev 5 · 2026-10-13
 

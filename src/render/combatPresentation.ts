@@ -389,6 +389,10 @@ export class CombatPresentation {
     const carry = p.sprinting || p.vault.active ? 1 : sprintCarry(p.sprintLockout, this.movement.sprintFireLockout);
     const light = lightInHand(p);
     this.viewmodel.setTorch(torchLit(p), light ? TORCHES[light].colour : TORCHES.weaponTorch.colour);
+    // Resting on cover (M104): the replica settles and steadies, and "Rested" shows under the sight.
+    const rest = p.status === 'alive' ? p.coverRest : 0;
+    this.viewmodel.setRest(rest, this.movement.rest.kick);
+    this.hud.setRested(rest >= HUD.restedFrom);
     this.viewmodel.update(dt, yaw, pitch, Math.hypot(p.velocity.x, p.velocity.z), this.movement.runSpeed, carry, p.armament, p.status === 'calling', this.aimBlend);
     // The shot spread right now (replica × stance and movement), as pixels on screen at the centre.
     const cam = this.renderer.camera;
