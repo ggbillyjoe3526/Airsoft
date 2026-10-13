@@ -34,6 +34,13 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **LV1** · The match summary shows the XP earned, its lines and any level-up with what it unlocked (#207)
 - **LV1** · Locked items show greyed in Loadout and Customise, with the level that unlocks them; the unlock table is `levels.md` (#207)
 - **LV1** · Dev tab: +500 XP, Level up and Reset level buttons (#207)
+- **BG1** · Opponents on every difficulty carry kits from bot-kits.md: Easy mostly plain, each level up more optics, grips and lasers
+- **BG1** · Pro bots are never plain, and now and then a Hard or Pro bot carries a Cyber Pistol; each bot keeps its kit on a replay
+- **BG1** · Your teammates keep plain replicas, as does everyone under the Factory kit house rule; what you have unlocked never changes the bots' gear
+- **BG1** · A bot aiming through a scope holds aim closer at range but settles later and is slower on close or crossing targets; a red dot is finer
+- **BG1** · Silenced bots are heard from nearer
+- **BG1** · Bots' figures show their gear: a red dot or scope on every rifle, and with Blender figures (Dev switches) grips, lasers and barrels too
+- **BG1** · Kits fit personality: rushers Support, Pointman or Cyber; anchors Marksman or Support; flankers Stealth or Pointman; careful Rifleman or Marksman
 
 ### Changed
 - **M94** · The practice range is now Practice: pause reads "Practice · Range" or "Practice · Depot", and the tutorial's last button says Practice
@@ -45,6 +52,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **LV1** · Unlock all gear is now Disable levelling, a cheat with no XP and no records (#207)
 - **LV1** · Save format 3: an older save loads at level 0 with its settings and records; old Armory items, Field Credits and Tokens don't carry over (#207)
 - **RM9** · With the Dev figure switches off, humans and bots use a new figure: gloved hands, four heads and team colour on the vest, armbands and bands
+- **BG1** · Hard and Pro's random gear roll and the Cyber Pistol carrier that needed you to have one are replaced by the bot kits
 
 ### Fixed
 - **M92** · Bots firing on the move hold fire when a teammate is down the line, so they no longer hit teammates past the end of a wall

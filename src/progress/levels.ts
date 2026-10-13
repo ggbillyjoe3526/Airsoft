@@ -232,8 +232,3 @@ export function standing(t: LevelTable, xp: number): LevelStanding {
 export function unlocksUpTo(t: LevelTable, level: number): string[] {
   return t.levels.filter((l) => l.level <= level).flatMap((l) => l.unlocks);
 }
-
-/** Of `ids` (pool asset ids), the ones a level above 0 unlocks: what the player earned by playing, not the starting kit. */
-export function earnedOf(t: LevelTable, ids: readonly string[]): string[] {
-  return ids.filter((id) => (t.unlockLevel.get(id) ?? 0) > 0);
-}

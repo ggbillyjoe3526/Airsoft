@@ -7,7 +7,7 @@ import type { PlayerCommand } from '../sim/commands';
 import { isInPlay } from '../sim/elimination';
 import { characterHitVolume, createHitVolume, type HitVolume, inflateHitVolume, rayCharacter, shiftHitVolume } from '../sim/hitbox';
 import { length3, type Vec3, vec3, wrapAngle } from '../sim/vec';
-import { aimErrorSize, aimFirstErrorSize, aimSettling, lookAngles, stepAim } from './aim';
+import { aimErrorSize, aimFirstErrorSize, aimSettling, lookAngles, sightAim, stepAim } from './aim';
 import { findHeldAngles, type HeldAngle } from './angles';
 import { type Bot, type BotWorld, holdYaw, pick, threatInMind } from './bot';
 import { hasReacted } from './botSenses';
@@ -26,7 +26,7 @@ const lastKnownHead = vec3();
 
 /**
  * How long a bot's BB takes to fly `dist` metres: the replica in its hands, with the BBs it loads (BP3: it was the
- * factory primary's, so a bot on its pistol, a rolled kit or heavier BBs led by the wrong time).
+ * factory primary's, so a bot on its pistol, a kit's parts or heavier BBs led by the wrong time).
  */
 function bbFlightTime(b: Bot, dist: number): number {
   const a = b.character.armament;
@@ -58,8 +58,10 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
     const sideways = (v.x * (aimPoint.z - eye.z) - v.z * (aimPoint.x - eye.x)) / Math.max(Math.hypot(aimPoint.x - eye.x, aimPoint.z - eye.z), 1e-3);
     const c = b.contact;
     const settling = aimSettling(w.time, c.acquiredAt, c.firstSeenAt, c.reactAt, cfg);
-    const first = aimFirstErrorSize(settling, dist, b.skill);
-    const error = aimErrorSize(settling, walking || cmd.right !== 0, dist, sideways, b.skill);
+    // Through the sight on the replica in hand (BG1): a scope aims finer at range but is slower to settle.
+    const sight = sightAim(me);
+    const first = aimFirstErrorSize(settling, dist, b.skill, sight);
+    const error = aimErrorSize(settling, walking || cmd.right !== 0, dist, sideways, b.skill, sight);
     return stepAim(b.aim, look.yaw, look.pitch, error - first, cfg, b.skill, b.rng, dt, first);
   }
   look.pitch = 0;

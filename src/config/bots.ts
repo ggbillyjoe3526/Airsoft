@@ -1,6 +1,7 @@
 import type { NightSightConfig } from '../map/nightSight';
 import type { ContentTag } from './content';
 import { MOVEMENT } from './movement';
+import type { SightId } from './optics';
 
 /**
  * Bot behaviour tuning shared by every difficulty level (the skill per level is BOT_SKILL below).
@@ -393,7 +394,7 @@ export const BOT_BEHAVIOUR = {
   // Hard: each is read only by a bot whose skill sets the flag named (holdsAngles, slicesCorners, teamPlay). The map
   // balance numbers at the end of this block (huntMiddleBias, darkSpot*) are shared since Audit 2 (huntsMiddle at every
   // level, keepsDark from Normal up). The rest of Pro's tuning: BOT_SKILL.pro (reaction, aim, holds),
-  // BOT_PART_CHANCE.pro (kit) and the Difficulty multiplier in pool.md (pay). What to turn when a map plays wrong (docs/PLAYTEST.md "Pro"):
+  // bot-kits.md's Pro column (kits, BG1) and the Difficulty multiplier in pool.md (pay). What to turn when a map plays wrong (docs/PLAYTEST.md "Pro"):
   //  - Pro never finds the corner you hide behind, or aims at the wrong gap: angle* (the ray fan and what counts as an edge).
   //  - A held corner is wrongly picked on bushes, trunks or stairs: angleBush*, anglePost*, angleGap*, angleLevel*, angleRamp*.
   //  - Slicing is too slow or too cautious near the enemy: sliceLeanDistance, then skill peekWatchTime.
@@ -795,23 +796,6 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
   },
 };
 
-/**
- * What the other team's bots carry, per difficulty (M29b, owner 2026-10-04): 'factory' is each replica as it comes;
- * 'random' rolls every bot its own compatible kit from the pool (pool/botKit.ts). Your teammates always carry factory.
- */
-export const BOT_LOADOUTS: Readonly<Record<Difficulty, 'factory' | 'random'>> = { easy: 'factory', normal: 'factory', hard: 'random', pro: 'random' };
-
-/**
- * How a random loadout is rolled: the chance each part slot (optic, grip, laser, barrel, muzzle, magazine) gets a part,
- * and (M32, owner 2026-10-04) the chance a match's opponents include one carrying a chase replica (one the player earned
- * by levelling, the Cyber Pistol at the cap; LV1) as their primary: only on a difficulty that rolls kits (Hard, and
- * any above it later), and only once the player has one (Disable levelling counts). 0.05: about 5 matches in 100.
- */
-export const RANDOM_LOADOUT = { partChance: 0.6, chaseChance: 0.05 } as const;
-
-/** That chance per difficulty that rolls kits (BOT_LOADOUTS): Hard's as above, Pro's higher (M36: better kitted; part of Pro tuning). */
-export const BOT_PART_CHANCE: Readonly<Record<Difficulty, number>> = { easy: 0, normal: 0, hard: RANDOM_LOADOUT.partChance, pro: 0.8 };
-
 /** The behaviour tuning every bot shares, whatever its level (BOT_BEHAVIOUR's shape). */
 export type BotBehaviour = Widen<typeof BOT_BEHAVIOUR>;
 
@@ -865,3 +849,38 @@ export const NIGHT_SIGHT: NightSightConfig = {
  * little it needed; Woodland Hard attackers won 28 % of Attack / Defend rounds with it at the beam's 40 m, 48 % at 20 m.
  */
 export const BOT_TORCH = { minHold: 1.5, fightReach: 20 } as const;
+
+/**
+ * How the sight on a bot's replica changes its aim (BG1, ai/aim.ts sightAim): bots fire from the hip, but they aim as
+ * a player looking through that sight would. Each number multiplies the difficulty's own (BotSkill): `settled` its
+ * settled error (aimErrorSettledDeg: a magnified picture is aimed finer), `settleTime` how long a new target's aim takes
+ * to settle (aimSettleTime: a heavier optic is slower to bring up, OPTICS raiseScale), `close` how far off its first aim
+ * can be up close (aimErrorStartMetres: through a narrow view a near target fills the eyepiece and is hard to find),
+ * and `tracking` its error on someone crossing its view (aimErrorTracking: a narrow view loses them). Its error while it
+ * moves stays the difficulty's (bots strafe as they fight, so a penalty there would cancel what the sight is for). A
+ * sight never changes what a bot sees or hears: difficulty is never different senses (DECISIONS). Iron sights are 1
+ * throughout. First guesses for the owner's playtest.
+ */
+export interface BotSightAim {
+  settled: number;
+  settleTime: number;
+  close: number;
+  tracking: number;
+}
+
+export const BOT_SIGHT_AIM: Readonly<Record<SightId, BotSightAim>> = {
+  iron: { settled: 1, settleTime: 1, close: 1, tracking: 1 },
+  // A clear dot to put on the target, no magnifier and no slower raise: a little finer, a little quicker.
+  redDot: { settled: 0.85, settleTime: 0.9, close: 1, tracking: 1 },
+  // Twice the picture: much finer at range and a little slower to bring up, but up close it is slow to find someone and
+  // it loses someone crossing its view.
+  scope2x: { settled: 0.6, settleTime: 1.1, close: 1.4, tracking: 1.5 },
+};
+
+/**
+ * How much more often a bot picks a kit in bot-kits.md whose Suits column names its personality than the other kits with
+ * Suits (BG1, with the bot personalities; pool/botKit.ts kitWeights). Kits with no Suits (the Factory) keep their chance,
+ * and a kit weighted 0 for the bot's level stays 0, so leaning never changes how often a level carries gear, nor brings
+ * a kit (or dev gear) a level wouldn't carry. A first guess for the owner's playtest.
+ */
+export const BOT_KIT_SUIT_LEAN = 3;

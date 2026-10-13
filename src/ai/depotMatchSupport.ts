@@ -83,7 +83,7 @@ export function playMatch(
   teamSize: number = ROUNDS.teamSize,
   hits: HitConfig = HITS,
   onTick: (state: GameState, bots: BotController) => void = () => {},
-  /** Who carries something other than the default loadout (a bot's rolled kit, M29b): its character, or undefined for the default. */
+  /** Who carries something other than the default loadout (a bot's kit, BG1): its character, or undefined for the default. */
   carry: (id: number, team: number) => Character | undefined = () => undefined,
   /** Every bot carries the weapon torch (fitNightTorches): by default on a night field, as the game fits it (M57, audit AI-02). */
   torches: boolean = map.night === true,

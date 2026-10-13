@@ -6,7 +6,7 @@ repository root is the plan the game reads; the owner edits it by hand. Pure apa
 - `levels.ts`: `loadLevels` reads `levels.md`'s Levels, XP and Difficulty tables against the pool into a `LevelTable`
   (each level's XP, running total and unlocks, the cap, each asset's level), listing what it can't read by line and
   never throwing. `levelOf`, `standing` (where an XP total stands: level, XP into it, what the next takes),
-  `unlocksUpTo`, `earnedOf` (the items above level 0); `DEFAULT_XP` fills a missing XP number.
+  `unlocksUpTo`; `DEFAULT_XP` fills a missing XP number.
 - `gameLevels.ts`: `GAME_LEVELS`, the bundled `levels.md` read once at start.
 - `xp.ts`: `matchXp`, a finished match's XP line by line (`XpEarned`) from a `MatchOutcome`: a shorter match gives
   less, a round sat out gives nothing, an Extraction run gives the XP it got out with, and the lower team difficulty

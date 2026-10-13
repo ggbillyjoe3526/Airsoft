@@ -9,7 +9,7 @@ import { MemoryStorage } from './testStorage';
 import { saveSetting } from '../settings/storage';
 import { withTags } from './testSupport';
 import { GAME_LEVELS } from '../progress/gameLevels';
-import { earnedOf, unlocksUpTo } from '../progress/levels';
+import { unlocksUpTo } from '../progress/levels';
 
 const pool = GAME_POOL;
 const id = (name: string) => pool.assets.find((a) => a.name === name)!.id;
@@ -489,15 +489,6 @@ describe('M32 acceptance 4: the Cyber Pistol, the level cap’s unlock (LV1)', (
     const off = gameOwnership(pool, unlocks(), () => false);
     expect(off.owns(cyber)).toBe(false);
     expect(off.lockedAt!(cyber)).toBe(GAME_LEVELS.cap);
-  });
-
-  it('counts as earned (what a bot may carry against you) once unlocked, and the level 0 replicas never do', () => {
-    const earned = (o: Ownership): string[] => earnedOf(GAME_LEVELS, new LoadoutModel(pool, o).replicaChoices().map((r) => r.asset));
-    expect(earned(owning(STARTERS))).toEqual([]);
-    expect(earned(owning([...STARTERS, cyber]))).toEqual([CYBER]);
-    expect(earned(gameOwnership(pool, unlocks(), () => false))).toEqual([]);
-    expect(earned(gameOwnership(pool, unlocks(), () => true))).toEqual([CYBER]);
-    expect(earned(gameOwnership(pool, unlocks(cyber), () => false))).toEqual([CYBER]);
   });
 
   it('takes it as it comes, with no power source: the spec numbers, whatever the player unlocked', () => {
