@@ -365,6 +365,19 @@ replaces its line; the old one stays findable in the archive or in git.
 - **On Hard and Pro, opponents roll their own random but compatible kits (owner, 2026-10-04: "the enemy bots can have
   their own random (but compatible) loadouts").** Seeded by the match seed, so a seed replays. Your teammates stay
   factory, so they don't outgun you by luck. BB weight and hop-up stay factory.
+- **Bots have names and personalities, read from `bots.md` (BN1, 2026-10-13; Claude's defaults, Dev 6 item 21).** Each
+  match every bot draws a made-up name off the roster, and a name always plays the same personality (rusher, anchor,
+  flanker, careful), so you learn who to watch; a team takes different personalities before any comes twice. A
+  personality changes how a bot plays (pauses, cover, pushing in, lanes, holding, bursts, corners), never how it sees,
+  hears, reacts, turns or aims: the level stays the level. The tables are the owner's to edit; a cell the game can't
+  read plays neutral. A run's jobs and your squad orders come first: guards, patrols and hunters work their jobs, and a
+  bot under your order does what you asked.
+- **Anchors aim from cover, so they rest on it; every other bot still fires from the hip (BN1, M104's open question).**
+  An anchor raises its sight when it stands still to fight, look over its cover or hold, with the player's aimed and
+  rested spread.
+- **What a personality carries belongs to the bot gear table, not to bots.md (BN1, Dev 6 item 23).** The roadmap's
+  "loadouts" for item 21 come with item 23's data-driven bot loadout table, which reads `Bot.personality`; bots.md
+  holds names and play only.
 - **In Attack / Defend one attacker raises the flag while the others guard the pole from cover (owner's call,
   2026-10-04).** A second raiser adds nothing: the rope goes up no faster.
 - **Every level hunts the middle of the map; Normal, Hard and Pro keep out of the light at night; Easy stands where its

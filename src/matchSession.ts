@@ -2,6 +2,8 @@ import type { MinimapTurn } from './config/minimap';
 import type { Group } from 'three';
 import { AdaptiveRun } from './ai/adaptiveRun';
 import { BotController } from './ai/botController';
+import { drawIdentities } from './ai/botRoster';
+import type { BotIdentity } from './ai/personality';
 import { SquadFollow } from './ai/squadFollow';
 import { lowCoverBlocks, tallCoverBlocks } from './ai/cover';
 import { sightConditionsOf } from './ai/perception';
@@ -74,7 +76,7 @@ import { type MatchResult, runResultOf } from './stats/records';
 import type { MatchOutcome } from './pool/armory';
 import type { NotCounted } from './ui/recordsView';
 import { pauseText, resultText, type ResultText } from './ui/matchStopText';
-import { rosterNames, statsBlocks, type TeamBlock } from './ui/statsRows';
+import { rosterNames, rosterTags, statsBlocks, type TeamBlock } from './ui/statsRows';
 
 const PLAYER_ID = 0;
 /** The colour figures glow in someone's torch beam (M33h): the torches' cool white. */
@@ -322,7 +324,7 @@ export class MatchSession {
       this.state,
       this.state.characters.filter((c) => c !== this.player),
       this.commands,
-      { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, lowCover: lowCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), tallCover: tallCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), sight: sightConditionsOf(map, this.lighting.night), body: BODY, hits: this.hits, loadout: this.botLoadout, cfg: BOTS, teamCfg: teamBotConfigs(this.player.team, setup, this.adaptive), seed, insertionBerth: map.extraction?.insertionBerth },
+      { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, lowCover: lowCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), tallCover: tallCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), sight: sightConditionsOf(map, this.lighting.night), body: BODY, hits: this.hits, loadout: this.botLoadout, cfg: BOTS, teamCfg: teamBotConfigs(this.player.team, setup, this.adaptive), seed, insertionBerth: map.extraction?.insertionBerth, identities: this.identities },
     );
     this.build.phase('simulation and bots');
     input.resetView(this.player.spawnYaw);
@@ -345,6 +347,7 @@ export class MatchSession {
     this.stats = new MatchStats(this.state.characters);
     this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, this.teamSizes(), this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours, map, renderer.figureModel, quality.figureDetail, this.extraction, crowd, renderer.replicaFiles, renderer.figureRigs);
     this.match.setHitFacts(this.bots.lastHit);
+    this.match.setRoster(this.identities);
     // Pro briefing tips on the board between rounds, when the opponents are Pro (M41).
     this.match.setProTips(difficultyAtLeast(setup.difficulty, 'pro'));
     this.match.setFigureShadows(quality.figureShadows);
@@ -370,6 +373,8 @@ export class MatchSession {
   readonly extraction: ExtractionContext | undefined;
   /** The team you play on (M98): the pick, or Alpha in an Extraction run. Everything about "your team" reads player.team. */
   private readonly playerTeam: number;
+  /** Who each bot is this match (BN1): its roster name and personality, by character id, drawn from the seed. */
+  private identities: ReadonlyMap<number, BotIdentity> = new Map();
   /** Extraction: your bot teammates follow you unless you order otherwise (ai/squadFollow.ts). */
   private readonly squadFollow = new SquadFollow();
 
@@ -546,8 +551,8 @@ export class MatchSession {
 
   /** Every player's numbers over the match, your team first, for the end-of-match summary. */
   summaryBlocks(): TeamBlock[] {
-    const names = rosterNames(this.state.characters, this.player.id);
-    return statsBlocks(this.state.characters, names, (id) => this.stats.matchOf(id), this.state.round.score, this.player, false, this.extraction !== undefined, this.state.round.run.reserve);
+    const names = rosterNames(this.state.characters, this.player.id, this.identities);
+    return statsBlocks(this.state.characters, names, (id) => this.stats.matchOf(id), this.state.round.score, this.player, false, this.extraction !== undefined, this.state.round.run.reserve, rosterTags(this.identities));
   }
 
   /** The result screen for the decided match (audit CORE-05): its lines and every player's numbers, for Game to show. */
@@ -739,6 +744,8 @@ export class MatchSession {
     }
     // You (id 0) and your teammates first, on the team you picked; then the other team (M98).
     const teams = rosterTeams(this.playerTeam, size, opposing);
+    // Who the bots are (BN1): a roster name each, playing that name's personality, from the match's seed.
+    this.identities = drawIdentities(seed, teams.flatMap((team, id) => (id === PLAYER_ID ? [] : [{ id, team }])));
     // Bots roll only from what is offered: dev gear only with Dev content on (M35).
     const botPool = contentPool(GAME_POOL, this.setup.devContent);
     // Under the factory kit rule (M39) nobody rolls a kit: everyone carries LOADOUT as it comes.

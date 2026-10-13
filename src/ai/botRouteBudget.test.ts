@@ -71,13 +71,16 @@ function measure(map: MapData, seed: number, teamSize: number, seconds: number) 
   };
   const out = { maxTick: 0, busyTicks: 0, ticks: 0, atBudget: 0 };
   try {
+    // Bots without personalities (BN1): this measures the route budget, and the probe needs searches longer than a
+    // tick's budget. On Woodland's seed 1 the neutral bots ran one of 12,419 nodes; with personalities drawn (anchors
+    // hold, rushers push) the longest was 6,857 and the probe had nothing to carry over.
     playMatch(seconds, seed, undefined, BOTS, 'elimination', ROUNDS, map, teamSize, HITS, () => {
       out.ticks++;
       out.maxTick = Math.max(out.maxTick, tally.tick);
       if (tally.tick > 0) out.busyTicks++;
       if (tally.tick >= NAV.searchBudget) out.atBudget++;
       tally.tick = 0;
-    });
+    }, undefined, undefined, new Map());
   } finally {
     proto.planRoutes = realPlanRoutes;
   }

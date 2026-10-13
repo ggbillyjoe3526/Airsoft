@@ -1,4 +1,5 @@
 import type { BotBehaviour, BotSkill } from '../config/bots';
+import { NEUTRAL_STYLE, type PersonalityStyle } from '../config/botsFile';
 import type { HitConfig } from '../config/hits';
 import type { BodyConfig } from '../config/movement';
 import type { ReplicaConfig } from '../config/replicas';
@@ -14,6 +15,7 @@ import { createHeldAngle, type HeldAngle } from './angles';
 import type { AngleFeatures } from './angleFeatures';
 import { type CoverBlock, type CoverSpot, createCoverSpot } from './cover';
 import type { SightConditions } from './perception';
+import { type BotIdentity, personalSkill } from './personality';
 
 /**
  * A bot's modes:
@@ -64,10 +66,15 @@ export interface Contact {
 export interface Bot {
   character: Character;
   /**
-   * How good this bot is: its team's difficulty level (M20). Everything else it is tuned by is `BotWorld.cfg`. Changed
-   * only between rounds, by adaptive difficulty (AD1, BotController.setTeamSkill).
+   * How good this bot is and its habits: its team's difficulty level (M20) with its personality laid over it (BN1,
+   * ai/personality.ts personalSkill). Everything else it is tuned by is `BotWorld.cfg`. Changed only between rounds, by
+   * adaptive difficulty (AD1, BotController.setTeamSkill), the personality laid over the new level again.
    */
   skill: BotSkill;
+  /** Its personality's key (bots.md: "rusher"), or '' without one. */
+  readonly personality: string;
+  /** What its personality changes besides the skill (BN1): pushing in, its own lane, holding, aiming from cover. */
+  readonly style: PersonalityStyle;
   rng: RngState;
   aim: AimState;
   mode: BotMode;
@@ -129,6 +136,11 @@ export interface Bot {
   holdCrouch: boolean;
   /** A guard at a lean post (M55, audit AI-01): the way it leans out while it holds there, chosen with holdCrouch. */
   holdLean: number;
+  /**
+   * How far (rad) a guard leaning out at its post turns as it sweeps: unlimited till its leaned eye loses the way in at
+   * a turn, then holdLeanSweepBackDeg short of that turn (BN1). Reset with holdLean on arrival.
+   */
+  holdSweepReach: number;
   /** Held angles (M37): the corners it aims at while holding (best first), how many, and when they were found (s). */
   heldAngles: HeldAngle[];
   heldAngleCount: number;
@@ -323,11 +335,17 @@ export interface BotWorld {
   live: boolean;
 }
 
-/** A bot for `character` playing at `skill`, with no lane until the controller plans the round (resetBot). */
-export function createBot(character: Character, seed: number, cfg: BotBehaviour, skill: BotSkill): Bot {
+/**
+ * A bot for `character` playing at `skill` as `identity`'s personality (none: the level as it is), with no lane until
+ * the controller plans the round (resetBot).
+ */
+export function createBot(character: Character, seed: number, cfg: BotBehaviour, skill: BotSkill, identity?: BotIdentity): Bot {
+  const style = identity?.style ?? NEUTRAL_STYLE;
   const bot: Bot = {
     character,
-    skill,
+    skill: personalSkill(skill, style),
+    personality: identity?.personality ?? '',
+    style,
     rng: createRng(seed),
     aim: createAim(character.yaw),
     mode: 'advance',
@@ -372,6 +390,7 @@ export function createBot(character: Character, seed: number, cfg: BotBehaviour,
     tradeTried: false,
     holdCrouch: false,
     holdLean: 0,
+    holdSweepReach: Number.POSITIVE_INFINITY,
     atPost: false,
     holdCover: false,
     holdSpot: createCoverSpot(),
@@ -470,8 +489,9 @@ export function resetBot(b: Bot, lane: number, startHold: number, cfg: BotBehavi
   b.retake = false;
   b.holdLeft = startHold;
   b.teamWait = 0;
-  // Moving in pairs (M38, teamPlay) starts at the spawn: of two on one lane, one sets off first.
-  b.waitForTeam = b.skill.teamPlay;
+  // Moving in pairs (M38, teamPlay) starts at the spawn: of two on one lane, one sets off first. Not for a personality
+  // that never waits for the team (BN1).
+  b.waitForTeam = b.skill.teamPlay && b.style.waitsForTeam;
   b.holding = false;
   b.heldAngleCount = 0;
   b.heldAnglesAt = Number.NEGATIVE_INFINITY;
