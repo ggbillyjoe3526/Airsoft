@@ -660,10 +660,245 @@ def leg_kit(sd, trousers, bones):
     return parts
 
 
+
+
+# --- the hands (owner's references, 2026-10-13): a tactical glove over an anatomical hand ----------------------------
+# Each finger is its own tube along its three bones: knuckles that stand proud at the joints, slimmer shafts between,
+# fleshy pads on the palm side, a rounded tip. The palm is a loft from the wrist to the knuckle line with the thumb's
+# ball (thenar) on its index side; a short cuff over the sleeve with a strap; a moulded knuckle guard. The fingers keep
+# v11's thicknesses (measured off its glove), which the replica grips were solved with.
+# Their skin is written here, not by the rules: each finger follows only its own bones (half and half at each joint),
+# so a finger never drags its neighbour when one points along the frame and the others curl round the grip.
+FINGER_R = {'Index': (0.0118, 0.0106, 0.0096), 'Middle': (0.0122, 0.0108, 0.0098),
+            'Ring': (0.0115, 0.0104, 0.0093), 'Pinky': (0.0102, 0.0093, 0.0082), 'Thumb': (0.0124, 0.0114, 0.0102)}
+FINGER_RINGS = [  # (bone 1-3, t along it, half width, back, palm side: shares of that bone's radius)
+    (1, -0.34, 1.0, 0.95, 0.95), (1, 0.0, 1.06, 1.03, 0.94), (1, 0.5, 0.93, 0.83, 0.96), (2, 0.0, 1.04, 0.97, 0.86),
+    (2, 0.5, 0.92, 0.80, 0.95), (3, 0.0, 1.02, 0.90, 0.86), (3, 0.45, 0.98, 0.76, 0.99), (3, 0.8, 0.92, 0.68, 0.92),
+    (3, 0.97, 0.62, 0.46, 0.64)]
+THUMB_RINGS = [(1, -0.3, 1.0, 0.95, 0.95), (1, 0.2, 1.0, 0.9, 0.98), (1, 0.65, 0.95, 0.86, 0.95)] + FINGER_RINGS[3:]
+PALM_RINGS = [  # (share of wrist -> knuckle line, half width, back, palm side, shift towards the index side)
+    (0.0, 0.0290, 0.0160, 0.0172, 0.0), (0.3, 0.0370, 0.0150, 0.0200, 0.002), (0.62, 0.0420, 0.0140, 0.0190, 0.001),
+    (0.86, 0.0440, 0.0135, 0.0160, 0.0), (1.0, 0.0432, 0.0124, 0.0134, 0.0), (1.1, 0.0350, 0.0080, 0.0090, 0.0)]
+HAND_SIDES = 12
+PALM_SIDES = 16
+
+
+def _xsect(c, D, L, w, hd, hp, n, e=2.3, bulge=None):
+    """n points round a finger or palm section: D up the back, L across; returns (points, how far each faces the
+    back: +1 back, -1 palm)."""
+    pts, dors = [], []
+    for i in range(n):
+        a = TAU * i / n
+        ca, sa = math.cos(a), math.sin(a)
+        h = hd if ca > 0 else hp
+        p = c + D * (h * se(ca, e)) + L * (w * se(sa, e))
+        if bulge:
+            p = p + bulge(ca, sa)
+        pts.append(p)
+        dors.append(ca)
+    return pts, dors
+
+
+def _tube_mesh(name, rings, material, pole=None, cap0=False):
+    """rings: [(points, dors, {bone: weight}, seg)]; a closed tube through them, ending in `pole` (a point, its
+    weights and seg) or open. Writes the skin, and the 'Dors' and 'Seg' data the glove's surface is drawn by."""
+    bm = bmesh.new()
+    vs, meta = [], []
+    for pts, dors, ws, seg in rings:
+        row = [bm.verts.new(p) for p in pts]
+        vs.append(row)
+        meta += [(ws, seg, d) for d in dors]
+    n = len(vs[0])
+    for j in range(len(vs) - 1):
+        for i in range(n):
+            k = (i + 1) % n
+            bm.faces.new((vs[j][i], vs[j][k], vs[j + 1][k], vs[j + 1][i]))
+    if pole is not None:
+        pp, pws, pseg = pole
+        pv = bm.verts.new(pp)
+        meta.append((pws, pseg, 0.0))
+        for i in range(n):
+            bm.faces.new((vs[-1][i], vs[-1][(i + 1) % n], pv))
+    if cap0:
+        bm.faces.new(vs[0][::-1])
+    o = finish(bm, name, material, True, 70, recalc=True)
+    me = o.data
+    groups = {}
+    for v in me.vertices:
+        ws, seg, d = meta[v.index]
+        for bn, w in ws.items():
+            if w <= 0:
+                continue
+            g = groups.get(bn) or o.vertex_groups.new(name=bn)
+            groups[bn] = g
+            g.add([v.index], w, 'REPLACE')
+    for nm, idx in (('Dors', 2), ('Seg', 1)):
+        a = me.attributes.get(nm) or me.attributes.new(nm, 'FLOAT', 'POINT')
+        for v in me.vertices:
+            a.data[v.index].value = meta[v.index][idx]
+    o['own_weights'] = True
+    return o
+
+
+def _h12_frame(sd, bones):
+    W = bones['Hand_' + sd][0]
+    heads = [bones['%s1_%s' % (f, sd)][0] for f in FINGER_NAMES]
+    K = sum(heads, Vector()) / 4
+    A = K - W
+    z = next(Vector(z) for n, par, h, t, z in skeleton_points() if n == 'Hand_' + sd)   # the back of the hand
+    D = (z - A.normalized() * z.dot(A.normalized())).normalized()
+    Lt = heads[0] - heads[3]
+    Lt = (Lt - A.normalized() * Lt.dot(A.normalized()) - D * Lt.dot(D)).normalized()
+    return W, K, A, D, Lt
+
+
+def _finger(name, sd, finger, bones, D0, rings=FINGER_RINGS):
+    R = FINGER_R[finger]
+    segs = [bones['%s%d_%s' % (finger, k, sd)] for k in (1, 2, 3)]
+    out = []
+    for k, t, fw, fd, fp in rings:
+        a, c = segs[k - 1]
+        ax = (c - a).normalized()
+        D = (D0 - ax * D0.dot(ax)).normalized()
+        L = ax.cross(D)
+        r = R[k - 1]
+        p = a + (c - a) * t
+        bn = '%s%d_%s' % (finger, k, sd)
+        if t < 0.0 and k == 1:                       # inside the palm: mostly the hand
+            f = max(0.0, 1.0 + t / 0.34)
+            ws = {'Hand_' + sd: 1.0 - 0.5 * f, bn: 0.5 * f}
+        elif t == 0.0:                               # a joint: half each side
+            prev = 'Hand_' + sd if k == 1 else '%s%d_%s' % (finger, k - 1, sd)
+            ws = {prev: 0.5, bn: 0.5}
+        else:
+            ws = {bn: 1.0}
+        pts, dors = _xsect(p, D, L, r * fw, r * fd, r * fp, HAND_SIDES)
+        out.append((pts, dors, ws, k + t))
+    a, c = segs[2]
+    ax = (c - a).normalized()
+    D = (D0 - ax * D0.dot(ax)).normalized()
+    tip = a + (c - a) * 1.06 - D * R[2] * 0.18
+    return _tube_mesh(name, out, S('Glove'), pole=(tip, {'%s3_%s' % (finger, sd): 1.0}, 4.0))
+
+
+def _palm(name, sd, bones):
+    W, K, A, D, Lt = _h12_frame(sd, bones)
+    rings = []
+    for s, w, hd, hp, sh in PALM_RINGS:
+        c = W + A * s + Lt * sh
+        th = math.exp(-((s - 0.4) / 0.24) ** 2)      # the ball of the thumb, on the palm's index side
+
+        def bulge(ca, sa, th=th):
+            return (Lt * 0.55 - D * 0.8) * (0.015 * th * max(0.0, -ca) * max(0.0, sa) ** 1.2)
+        pts, dors = _xsect(c, D, Lt, w, hd, hp, PALM_SIDES, e=2.4, bulge=bulge)
+        ws = {'Hand_' + sd: 0.6, 'Forearm_' + sd: 0.4} if s == 0.0 else {'Hand_' + sd: 1.0}
+        rings.append((pts, dors, ws, 0.0))
+    tip = W + A * 1.13
+    return _tube_mesh(name, rings, S('Glove'), pole=(tip, {'Hand_' + sd: 1.0}, 0.0))
+
+
+def _cuff(sd, bones, sleeve, palm):
+    """The glove's cuff over the sleeve's end, its turned edge, and the wrist strap with its pull tab."""
+    W, K, A, D, Lt = _h12_frame(sd, bones)
+    fa0, fa1 = bones['Forearm_' + sd]
+    back = (fa0 - fa1).normalized()
+    Dc = (D - back * D.dot(back)).normalized()
+    Lc = back.cross(Dc)
+    tree = bvh([sleeve])
+    ptree = bvh([palm])
+    rings = []
+    for u, extra in ((-0.006, 0.0022), (0.016, 0.0030), (0.038, 0.0036), (0.058, 0.0046)):
+        c = W + back * u
+        pts = []
+        for i in range(PALM_SIDES):
+            a = TAU * i / PALM_SIDES
+            d = Dc * math.cos(a) + Lc * math.sin(a)
+            r = 0.0
+            for t in (tree, ptree):
+                hit, n, fi, dist = t.ray_cast(c, d)
+                if hit is not None:
+                    r = max(r, (hit - c).length)
+            r = max(r, 0.024) + extra
+            pts.append(c + d * r)
+        ws = {'Hand_' + sd: 0.5, 'Forearm_' + sd: 0.5} if u < 0 else {'Forearm_' + sd: 1.0}
+        rings.append((pts, [math.cos(TAU * i / PALM_SIDES) for i in range(PALM_SIDES)], ws, -1.0))
+    # the edge turned in 2.5 mm
+    last = rings[-1][0]
+    c = W + back * 0.058
+    inner = [c + (p - c) * (1 - 0.0025 / (p - c).length) - back * 0.004 for p in last]
+    rings.append((inner, rings[-1][1], rings[-1][2], -1.0))
+    cuff = _tube_mesh('GloveCuff_' + sd, rings, S('Glove'))
+    # the strap round the wrist, 2 mm proud of the cuff, and its tab on the back of the wrist
+    ring = rings[1][0]
+    c = W + back * 0.016
+    pts = [c + (p - c) * (1 + 0.002 / (p - c).length) for p in ring]
+    strap = strip('CuffStrap_' + sd, pts, [back] * len(pts), 0.019, 0.0025, S('Elastic'), closed=True, out=c, sides=2)
+    tab = box('CuffStrapTab_' + sd, pts[0] + Dc * 0.003 + Lc * 0.006, (0.026, 0.005, 0.02), S('Elastic'),
+              basis=(Lc, Dc, back), bevel=0.0015)
+    for o in (strap, tab):
+        g = o.vertex_groups.new(name='Forearm_' + sd)
+        g.add([v.index for v in o.data.vertices], 1.0, 'REPLACE')
+        o['own_weights'] = True
+    return [cuff, strap, tab]
+
+
+def _knuckle_guard(sd, bones, under):
+    """A moulded guard over the knuckles: a raised ridge over each, on a plate across the back of the hand."""
+    W, K, A, D, Lt = _h12_frame(sd, bones)
+    tree = bvh(under)
+    xs = [(bones['%s1_%s' % (f, sd)][0] - K).dot(Lt) for f in FINGER_NAMES]
+    L = A.length
+
+    def F(u, v):
+        a = math.radians(-66 + 132 * u)
+        s = 0.8 + 0.24 * v
+        c = W + A * s
+        d = D * math.cos(a) + Lt * math.sin(a)
+        hit, n, i, dist = tree.ray_cast(c + d * 0.08, -d)     # from outside in: the outermost surface
+        base = hit if hit is not None else c + d * 0.013
+        x = (base - c).dot(Lt)
+        ridge = sum(math.exp(-((x - k) / 0.008) ** 2) for k in xs) * math.exp(-(((s - 0.99) * L) / 0.008) ** 2)
+        edge = smoothstep(0.0, 0.15, u) * smoothstep(1.0, 0.85, u) * smoothstep(0.0, 0.25, v) * smoothstep(1.0, 0.75, v)
+        return base + d * (0.0010 + 0.0016 * edge + 0.0034 * ridge * edge)
+    o = sheet('Knuckle_' + sd, F, 13, 5, S('Rubber'), thick=0.0022, out_from=W + A * 0.9 - D * 0.05, angle=50)
+    g = o.vertex_groups.new(name='Hand_' + sd)
+    g.add([v.index for v in o.data.vertices], 1.0, 'REPLACE')
+    o['own_weights'] = True
+    return o
+
+
+def hand_v12(sd, bones, sleeve):
+    W, K, A, D, Lt = _h12_frame(sd, bones)
+    palm = _palm('GlovePalm_' + sd, sd, bones)
+    fingers = [_finger('GloveFinger%d_%s' % (i, sd), sd, f, bones, D) for i, f in enumerate(FINGER_NAMES)]
+    Dt = (D * 0.45 + Lt * 0.9).normalized()           # the thumb's nail faces out from the index side
+    thumb = _finger('GloveThumb_' + sd, sd, 'Thumb', bones, Dt, rings=THUMB_RINGS)
+    parts = [palm] + fingers + [thumb]
+    parts += _cuff(sd, bones, sleeve, palm)
+    parts.append(_knuckle_guard(sd, bones, [palm] + fingers))
+    return parts
+
+
+# glove parts carry their own skin (above); the rules skin everything else
+if not getattr(weight_part, 'v12', False):
+    _weight_part_v11 = weight_part
+
+
+def weight_part(o, bones, kind):
+    if o.get('own_weights'):
+        return
+    return _weight_part_v11(o, bones, kind)
+
+
+weight_part.v12 = True
+B['hand_v12'] = hand_v12
+
+
 def body_v12(body):
     """v11's body re-dressed: its knee pads and cargo pockets replaced, the collar, pockets and elbow pads added."""
     O = bpy.data.objects
-    drop = [o for o in body if o.name.startswith(('KneePad_', 'KneeStrap', 'Cargo_', 'CargoFlap_'))]
+    drop = [o for o in body if o.name.startswith(('KneePad_', 'KneeStrap', 'Cargo_', 'CargoFlap_', 'Glove_',
+                                                   'Knuckle_', 'CuffStrap_'))]
     keep = [o for o in body if o not in drop]
     for o in drop:
         bpy.data.objects.remove(o, do_unlink=True)
@@ -673,6 +908,7 @@ def body_v12(body):
     for sd in 'LR':
         new += arm_kit(sd, O['Sleeve_' + sd], bones)
         new += leg_kit(sd, O['Trousers'], bones)
+        new += hand_v12(sd, bones, O['Sleeve_' + sd])
     return keep + new
 
 

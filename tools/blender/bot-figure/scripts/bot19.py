@@ -16,12 +16,12 @@ B = bpy.app.driver_namespace['bot']
 
 ATLAS = 2048                 # colour and normal; roughness/metal is half that
 ORM_SIZE = 1024
-AO_FLOOR = 0.5               # the darkest the baked occlusion makes the colour
+ATLAS_AO_FLOOR = 0.5               # the darkest the baked occlusion makes the colour
 AO_DISTANCE = 0.14
 BAKE_MARGIN = 8              # pixels the bakes bleed past each island
 UV_MARGIN = 0.0045           # between islands, as a share of the atlas
 # texel density weights: what the player sees close up gets more of the atlas (the first-person arms and gloves)
-UV_WEIGHT = {'glove': 1.9, 'arm': 1.45, 'kit': 1.15, 'head': 1.1, 'leg': 0.85, 'boot': 0.8}
+UV_WEIGHT = {'glove': 2.4, 'arm': 1.45, 'kit': 1.15, 'head': 1.1, 'leg': 0.85, 'boot': 0.8}
 TEAM_SURFACES = ('S_Team',)
 LENS_SURFACES = ('S_Lens',)
 DOCS = r'C:\Users\Billy\Documents\Airsoft models'        # the .blend, the exports and the atlas files
@@ -108,6 +108,9 @@ def cloth_attrs(parts):
     return parts
 
 
+PART_DATA = ('Along', 'Fold', 'Dors', 'Seg')      # per-vertex data the surfaces are drawn by (dropped before export)
+
+
 def uv_layers(parts):
     """Every part with the same two UV maps in the same order (joining matches them by place): 'UVMap', the atlas
     unwrap to come, then 'Detail'."""
@@ -133,6 +136,9 @@ def uv_layers(parts):
                     d.data[li].uv = ((c.x, c.y) if nz >= nx and nz >= ny else (c.y, c.z) if nx >= ny else (c.x, c.z))
         me.uv_layers.active = me.uv_layers['UVMap']
         me.uv_layers['UVMap'].active_render = True
+        for nm in PART_DATA:                     # joining keeps only what every part has: give each part all of it
+            if me.attributes.get(nm) is None:
+                me.attributes.new(nm, 'FLOAT', 'POINT')
     return parts
 
 
@@ -423,6 +429,33 @@ def _team(g, col, h):
     return g.mulc(col, g.math('ADD', 0.93, g.math('MULTIPLY', weave, 0.1))), g.math('ADD', h, weave)
 
 
+def surf_glove(m):
+    """The tactical glove (the owner's references): an olive stretch back, a coyote synthetic-suede palm, moulded
+    pads on the backs of the fingers, the seam down each side and a neoprene cuff. 'Dors' (+1 back, -1 palm) and
+    'Seg' (bone and place along it: 0 the palm, 1-4 a finger, -1 the cuff) come from the hand builder."""
+    g = G(m)
+    dors, seg = g.attr('Dors'), g.attr('Seg')
+    palmside = g.step(dors, -0.02, -0.14)
+    col = g.mixc(palmside, lin(0x4a4b36), lin(0x7a6a4e))
+    col = g.mulc(col, g.math('ADD', 0.93, g.math('MULTIPLY', g.noise(g.P, 160.0, 2.0, 0.6), 0.14)))
+    fr = g.math('FRACT', seg)
+    on = g.math('MULTIPLY', g.step(seg, 0.95, 1.05), g.step(seg, 2.95, 2.85))
+    pad = g.math('MULTIPLY', g.math('MULTIPLY', on, g.step(dors, 0.6, 0.75)),
+                 g.math('MULTIPLY', g.step(fr, 0.1, 0.2), g.step(fr, 0.82, 0.72)))
+    col = g.mixc(pad, col, lin(0x2e2d27))
+    tip = g.math('MULTIPLY', g.step(seg, 3.35, 3.5), g.step(dors, 0.0, -0.25))      # grip patches on the finger tips
+    col = g.mixc(g.math('MULTIPLY', tip, 0.8), col, lin(0x5e523e))
+    seam = g.step(g.math('ABSOLUTE', dors), 0.07, 0.035)
+    col = g.mixc(g.math('MULTIPLY', seam, 0.6), col, lin(0x2a271f))
+    cuff = g.step(seg, -0.4, -0.6)
+    col = g.mixc(cuff, col, lin(0x2c2d27))
+    h = g.math('ADD', g.math('MULTIPLY', pad, 1.0), g.math('MULTIPLY', g.noise(g.P, 600.0, 1.0, 0.5), 0.12))
+    h = g.math('SUBTRACT', h, g.math('MULTIPLY', seam, 0.5))
+    h = g.math('ADD', h, g.math('MULTIPLY', tip, 0.35))
+    rough = g.math('SUBTRACT', 0.88, g.math('MULTIPLY', pad, 0.25))
+    return g.finish(col, rough, 0.0, h, height_dist=0.0012)
+
+
 def surf_suede(m):
     return _plain(m, 0x6c5840, 0.95, mottle=0.22, mscale=24.0, grain=420.0, grain_amt=0.4, dust=0.3, hdist=0.0012)
 
@@ -445,7 +478,7 @@ SURF_BUILD = {
     'Leather': lambda m: _plain(m, 0x2b2926, 0.5, mottle=0.08, grain=200.0, grain_amt=0.4, bevel=0.003),
     'Suede': surf_suede,
     'Sole': lambda m: _plain(m, 0x2c2823, 0.85, mottle=0.1, dust=0.35),
-    'Glove': lambda m: _plain(m, 0x35362f, 0.75, mottle=0.12, grain=380.0, grain_amt=0.35),
+    'Glove': surf_glove,
     'GlovePalm': lambda m: _plain(m, 0x9a8565, 0.85, mottle=0.12, grain=380.0),
     'Pad': lambda m: _plain(m, 0x35342f, 0.8, mottle=0.1, bevel=0.003),
     'Team': lambda m: _plain(m, 0xe9e9e9, 0.85, mottle=0.06, extra=_team, hdist=0.0006),
@@ -535,13 +568,11 @@ def unwrap(objs):
     bpy.ops.object.mode_set(mode='OBJECT')
 
 
-def _image(name, size, non_color, float_buf=False):
+def _atlas_image(name, size, non_color, float_buf=False):
     im = bpy.data.images.get(name)
-    if im is not None and (im.size[0] != size or im.is_float != float_buf):
+    if im is not None:                          # a fresh buffer each build (the last one was saved out as a file)
         bpy.data.images.remove(im)
-        im = None
-    if im is None:
-        im = bpy.data.images.new(name, size, size, alpha=False, float_buffer=float_buf)
+    im = bpy.data.images.new(name, size, size, alpha=False, float_buffer=float_buf)
     im.colorspace_settings.name = 'Non-Color' if non_color else 'sRGB'
     return im
 
@@ -614,36 +645,36 @@ def bake_atlas(objs):
     assert not stray, 'parts without a source surface: %s' % stray
     out = {}
     try:
-        col = _image('Atlas_Col', ATLAS, False)
+        col = _atlas_image('Atlas_Col', ATLAS, False)
         _targets(mats, col)
         _emit(mats, 'T_col')
         _bake(objs, 'EMIT', 4)
-        rough = _image('Atlas_Rough', ATLAS, True)
+        rough = _atlas_image('Atlas_Rough', ATLAS, True)
         _targets(mats, rough)
         _emit(mats, 'T_rough')
         _bake(objs, 'EMIT', 4)
-        metal = _image('Atlas_Metal', ATLAS, True)
+        metal = _atlas_image('Atlas_Metal', ATLAS, True)
         _targets(mats, metal)
         _emit(mats, 'T_metal')
         _bake(objs, 'EMIT', 4)
         _emit(mats, None)
-        nrm = _image('Atlas_Nrm', ATLAS, True)
+        nrm = _atlas_image('Atlas_Nrm', ATLAS, True)
         _targets(mats, nrm)
         _bake(objs, 'NORMAL', 8, normal_space='TANGENT')
-        ao = _image('Atlas_AO', ATLAS, True)
+        ao = _atlas_image('Atlas_AO', ATLAS, True)
         _targets(mats, ao)
         _bake(objs, 'AO', 96)
         # colour × occlusion (with a floor, so creases read without going black)
         c = _px(col)
         a = _px(ao)[..., :1]
-        c[..., :3] *= AO_FLOOR + (1.0 - AO_FLOOR) * a
+        c[..., :3] *= ATLAS_AO_FLOOR + (1.0 - ATLAS_AO_FLOOR) * a
         col.pixels.foreach_set(c.ravel())
         # roughness and metal into one image the game reads (glTF: G roughness, B metal; R left white)
         r, mt = _px(rough), _px(metal)
         orm = np.ones_like(r)
         orm[..., 1] = r[..., 0]
         orm[..., 2] = mt[..., 0]
-        om = _image('Atlas_ORM', ATLAS, True)
+        om = _atlas_image('Atlas_ORM', ATLAS, True)
         om.pixels.foreach_set(orm.ravel())
         om.scale(ORM_SIZE, ORM_SIZE)
         out = {'col': col, 'nrm': nrm, 'orm': om, 'ao': ao}
@@ -745,7 +776,7 @@ def assign_final(objs, made):
         d = me.uv_layers.get('Detail')
         if d is not None:
             me.uv_layers.remove(d)
-        for nm in ('Along', 'Fold'):
+        for nm in PART_DATA:
             a = me.attributes.get(nm)
             if a is not None:
                 me.attributes.remove(a)
@@ -763,6 +794,21 @@ def dress_v12(meshes, stem='bot_human_v12'):
     made = final_materials({k: v[1] for k, v in files.items()})
     assign_final(meshes, made)
     return files
+
+
+# v11's wrist-strap fix reads the old 'Hard' texture: nothing to do on a v12 figure
+if not getattr(smooth_hand_hard, 'v12', False):
+    _smooth_hand_hard_v11 = smooth_hand_hard
+
+
+def smooth_hand_hard(objs, rig):
+    m = bpy.data.materials.get('Hard')
+    if m is None or not m.use_nodes or 'dress_nrm' not in m.node_tree.nodes:
+        return
+    return _smooth_hand_hard_v11(objs, rig)
+
+
+smooth_hand_hard.v12 = True
 
 
 # --- the build ------------------------------------------------------------------------------------------------------
