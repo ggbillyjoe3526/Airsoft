@@ -1,5 +1,10 @@
-/** Before your first shot. */
-const RANGE_INTRO = 'Practice range · spare magazines refill · Esc for the Loadout';
+/**
+ * Before your first shot: how the range works, and the key that opens the Loadout from play (M95), or Esc (its pause
+ * menu's Loadout) when that key is unbound.
+ */
+function rangeIntro(loadoutKey: string): string {
+  return `Practice range · spare magazines refill · ${loadoutKey || 'Esc'} for the Loadout`;
+}
 
 /** What the practice range's readout shows about your last BB (M21). */
 export interface LastShot {
@@ -11,9 +16,12 @@ export interface LastShot {
   lost?: boolean;
 }
 
-/** "Last BB: 31 m · hit Steel 30 m", "Last BB: 44 m · miss" or that it flew out; before the first shot, how the range works. */
-export function lastShotText(shot: LastShot | null): string {
-  if (!shot) return RANGE_INTRO;
+/**
+ * "Last BB: 31 m · hit Steel 30 m", "Last BB: 44 m · miss" or that it flew out; before the first shot, how the range works
+ * and `loadoutKey` (the name of the Loadout key, '' unbound; M95).
+ */
+export function lastShotText(shot: LastShot | null, loadoutKey = ''): string {
+  if (!shot) return rangeIntro(loadoutKey);
   if (shot.lost) return 'Last BB: flew out of the range · aim lower or turn the hop-up down';
   const d = `${Math.round(shot.distance)} m`;
   return shot.target ? `Last BB: ${d} · hit ${shot.target.label} ${shot.target.distance} m` : `Last BB: ${d} · miss`;

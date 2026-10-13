@@ -60,7 +60,7 @@ attempts: 0
 ## M95 · Practice with any unlocked replica (playtest note 12)
 tier: ui
 perf: skip
-touches: src/rangeSession.ts, src/ui/menus/loadoutScreen.ts, src/ui/loadoutChoice.ts, src/config/dev.ts
+touches: src/rangeSession.ts, src/game.ts, src/ui/menus/loadoutScreen.ts, src/ui/menus/menus.ts, src/ui/menus/chrome.ts, src/ui/menus/css/, src/ui/rangeReadout.ts, src/pool/loadoutModel.ts, src/config/controls.ts, src/config/menus.ts
 contract: none
 acceptance:
   1. In Practice the player picks any replica they own and can Customise it freely.

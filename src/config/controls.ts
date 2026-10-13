@@ -30,6 +30,11 @@ export const DEFAULT_BINDINGS = {
   inspect: ['KeyY'],
   /** Hold beside a case to open it (M44, Extraction). G: E leans and F is Follow me; T is kept for a weapon torch. */
   use: ['KeyG'],
+  /**
+   * In Practice, opens the Loadout straight from play, and on it goes back to practice (M95). L for Loadout, free
+   * until now; in a match it does nothing, as the loadout changes only between matches (owner, 2026-10-03).
+   */
+  loadout: ['KeyL'],
   slot1: ['Digit1'],
   slot2: ['Digit2'],
   /** Hold to see the match so far: everyone's hits, BBs fired, accuracy and time alive (M19). */
@@ -75,6 +80,7 @@ export const REBINDABLE: readonly { action: Action; label: string }[] = [
   { action: 'torch', label: 'Weapon torch' },
   { action: 'inspect', label: 'Inspect replica' },
   { action: 'use', label: 'Use: open a case (hold)' },
+  { action: 'loadout', label: 'Loadout (in Practice)' },
   { action: 'slot1', label: 'Rifle' },
   { action: 'slot2', label: 'Pistol' },
   { action: 'scoreboard', label: 'Scoreboard (hold)' },

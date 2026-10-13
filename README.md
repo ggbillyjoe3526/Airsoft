@@ -147,6 +147,7 @@ Every action can be rebound under **Settings › Key Bindings**, mouse buttons a
 | G (hold) | Use: open a case in Extraction (dev content) |
 | T | Weapon torch on and off (dev content) |
 | Y | Inspect: turn the replica in hand over to look it over (the rifle's charging handle and hop-up dial, the pistol's press check) |
+| L | In Practice: the Loadout straight from play, on the slot in your hands; L again (or Back to practice) and you are back where you stood |
 | F10 | Fullscreen |
 | Left click while out | Watch the next player still in play |
 | Esc | Pause: Resume, Loadout, Settings or Quit |

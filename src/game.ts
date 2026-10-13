@@ -63,7 +63,7 @@ import { type Collection, type ItemRef, loadCollection, saveCollection, saveOrRe
 import { contentPool } from './pool/contentPool';
 import { GAME_POOL } from './pool/gamePool';
 import { matchUsesDev, type NewGamePicks, playedPicks, playedTeamSize } from './newGamePicks';
-import { collectionOwnership, gameOwnership, LoadoutModel } from './pool/loadoutModel';
+import { collectionOwnership, gameOwnership, type GearSlot, LoadoutModel } from './pool/loadoutModel';
 import { carryOverOldPicks } from './pool/oldPicks';
 import { activeSupplyEvent, supplyLine } from './pool/supplyEvents';
 import { type Dispensed, type Earnings, earn } from './pool/armory';
@@ -191,6 +191,8 @@ export class Game {
   private practice = false;
   /** ... with the tutorial's coach (the title's Tutorial button, M16). */
   private tutorial = false;
+  /** The Loadout key was pressed in Practice (M95): the pause that follows opens the Loadout over its pause menu. */
+  private loadoutDue = false;
   /** The loadout changed since the range was built: Resume rebuilds it with the new one. */
   private loadoutChanged = false;
   /**
@@ -1140,8 +1142,12 @@ export class Game {
       this.matchesPlayed++;
     }
     this.started = true;
+    this.loadoutDue = false;
     // Time on the menus isn't a frame time.
     this.frameWatch.reset();
+    // Keys pressed on the menus aren't presses in play: the Loadout key that went back to practice would open it
+    // again (M95), Space on a focused Resume would jump.
+    this.keyboard.endFrame();
     this.keyboard.capturing = true;
     this.menus.hide();
     this.audioBlocked = false;
@@ -1172,10 +1178,14 @@ export class Game {
     const s = this.session;
     const r = s?.state.round;
     const screen = screenWhenStopped(this.started, r?.phase === 'matchOver');
+    const loadout = this.loadoutDue;
+    this.loadoutDue = false;
     if (this.started && isRange(s)) {
       // The tutorial just played to its end (M80): its pop-up, practice on or go to the menu, over the pause menu.
       if (s.takeTutorialComplete()) this.menus.showTutorialComplete(s.status, this.options.seed);
-      else this.menus.showPause(s.status, this.options.seed, true, s.coaching);
+      // The Loadout key (M95): the Loadout over the pause menu, the slot of the replica in hand picked.
+      else if (loadout) this.menus.showPracticeLoadout(s.status, this.options.seed, s.coaching, this.inHand(s));
+      else this.menus.showPause(s.status, this.options.seed, true, s.coaching, null, this.inHand(s));
     } else if (!this.started || !(s instanceof MatchSession) || !r) {
       // Play never began (a lock that came late, after Back, and was given straight back): the menus are still up on
       // whichever screen the player went to, so they stay there.
@@ -1202,7 +1212,19 @@ export class Game {
   /** The range's pause menu (the tutorial's, with its coaching), when the range is what's loaded. */
   private showRangePause(): void {
     const s = this.session;
-    if (isRange(s)) this.menus.showPause(s.status, this.options.seed, true, s.coaching);
+    if (isRange(s)) this.menus.showPause(s.status, this.options.seed, true, s.coaching, null, this.inHand(s));
+  }
+
+  /** The gear slot of the replica in your hands on the range (M95): its Loadout picks that slot. */
+  private inHand(s: RangeSession): GearSlot {
+    return this.loadout.gearSlotOf(s.player.armament.active);
+  }
+
+  /** The Loadout key in Practice (M95): play stops as on Esc, and the pause that follows opens the Loadout. */
+  private openPracticeLoadout(): void {
+    if (!this.unlockedPlay && !this.pointer.locked) return;
+    this.loadoutDue = true;
+    this.stopPlay();
   }
 
   /** The pause menu's Skip step or Skip tutorial (audit POOL-14): the range carries on, the pause menu says where. */
@@ -1213,7 +1235,7 @@ export class Game {
     else s.skipTutorialStep();
     this.takeTutorialFinished(s);
     if (s.takeTutorialComplete()) this.menus.showTutorialComplete(s.status, this.options.seed);
-    else this.menus.showPause(s.status, this.options.seed, true, s.coaching);
+    else this.menus.showPause(s.status, this.options.seed, true, s.coaching, null, this.inHand(s));
   }
 
   /** The tutorial was played (or skipped) to its end: remembered, and the next one starts from the beginning. */
@@ -1421,6 +1443,10 @@ export class Game {
         } else {
           this.pointer.release();
         }
+      } else if (isRange(s) && this.keyboard.wasPressed('loadout')) {
+        // Practice only (M95): the Loadout straight from play. In a match the key does nothing, as the loadout changes
+        // only between matches (owner, 2026-10-03).
+        this.openPracticeLoadout();
       }
     }
     this.keyboard.endFrame();

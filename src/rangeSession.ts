@@ -61,6 +61,9 @@ export interface RangePose {
   z: number;
   yaw: number;
   pitch: number;
+  /** The kit slot in your hands, and the replica it held (its config id), M95: you hold that slot again. */
+  slot?: number;
+  held?: string | undefined;
 }
 
 /**
@@ -171,6 +174,7 @@ export class RangeSession {
     this.state.characters.push(this.player);
     this.physics.addCharacter(this.player);
     this.fitPickedLoadout();
+    if (pose) this.takeUp(pose);
     this.commands.set(PLAYER_ID, this.playerCommand);
     input.resetView(pose?.yaw ?? spawn.yaw);
     // Nobody to order on the range: the order wheel's key does nothing.
@@ -189,7 +193,7 @@ export class RangeSession {
     this.targets.setDetail(quality.mapDetail);
     renderer.scene.add(this.targets.object);
     this.readout = new RangeReadout(container);
-    this.readout.set(lastShotText(null));
+    this.readout.set(this.shotText());
     if (tutorialFrom !== undefined) {
       this.tutorial = new TutorialTracker(tutorialSteps(setup.armory !== false), canAimDownSights(this.player.armament), tutorialFrom, this.loadout.length);
       this.coach = new CoachPanel(container, (action) => input.keyName(action));
@@ -249,9 +253,10 @@ export class RangeSession {
     return true;
   }
 
-  /** Where you stand and look now, to rebuild the range there. */
+  /** Where you stand and look now, and what you hold, to rebuild the range there. */
   get pose(): RangePose {
-    return { x: this.player.position.x, z: this.player.position.z, yaw: this.input.yaw, pitch: this.input.pitch };
+    const a = this.player.armament;
+    return { x: this.player.position.x, z: this.player.position.z, yaw: this.input.yaw, pitch: this.input.pitch, slot: a.active, held: a.replicas[a.active]?.id };
   }
 
   /** Your last shots, target hits, reloads and draws, for a report (IM7). */
@@ -328,6 +333,8 @@ export class RangeSession {
     this.combat.setPlaying(playing);
     const coaching = this.tutorial !== null && !this.tutorial.finished;
     this.readout.setVisible(playing && !coaching);
+    // Before the first shot the readout names the Loadout key (M95), which may have been rebound while paused.
+    if (playing) this.readout.set(this.shotText());
     this.coach?.setVisible(playing && coaching);
     this.showcase?.setVisible(playing && coaching);
     if (playing && coaching) this.coach!.show(this.tutorial!); // a key may have been rebound while paused
@@ -356,6 +363,21 @@ export class RangeSession {
     fitParts(this.player.armament, kit.slots.map((s) => partsUnder(s.parts, this.night)));
     setHopUps(this.player.armament, kit.hopUps);
     setBbWeights(this.player.armament, kit.bbWeights);
+  }
+
+  /**
+   * Back from the Loadout (M95): the same slot in your hands as before; a replica there you weren't holding comes up
+   * as after a switch, so the new pick reads at once.
+   */
+  private takeUp(pose: RangePose): void {
+    const a = this.player.armament;
+    if (pose.slot !== undefined && pose.slot < a.replicas.length) a.active = pose.slot;
+    if (pose.held !== undefined && a.replicas[a.active]?.id !== pose.held) a.draw = a.handling[a.active]!.drawTime;
+  }
+
+  /** The readout's line: your last BB, or before the first how the range works and its Loadout key (M95). */
+  private shotText(): string {
+    return lastShotText(this.lastShot, this.input.keyName('loadout'));
   }
 
   /** The tutorial's step shown or still to do changed (a step done, or skipped). */
@@ -399,7 +421,7 @@ export class RangeSession {
         const t = this.state.targets.find((x) => x.id === e.targetId);
         this.lastShot = { distance: downrange(e.position), target: t ? { label: t.label, distance: t.distance } : null };
       } else continue;
-      this.readout.set(lastShotText(this.lastShot));
+      this.readout.set(this.shotText());
       this.coach?.setShot(lastShotText(this.lastShot));
     }
   }

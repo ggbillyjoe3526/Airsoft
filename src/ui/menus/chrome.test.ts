@@ -21,7 +21,7 @@ describe('the top bar (G3)', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   const places = (bar: TopBar): FakeElement[] => fake(bar.root).children[1]!.children;
-  const wallet = (bar: TopBar): FakeElement => fake(bar.root).children[2]!;
+  const wallet = (bar: TopBar): FakeElement => fake(bar.root).children.find((c) => c.className === 'menu-wallet')!;
 
   it('lists every place in order, marks only the current one, and calls back with the place clicked', () => {
     const picked: string[] = [];
@@ -37,7 +37,9 @@ describe('the top bar (G3)', () => {
 
   it('reads Match, Loadout, Armory, Settings from the left, then the wallet (FC and Tokens only) at the far right, with no version (M100)', () => {
     const bar = new TopBar(() => {}, () => {});
-    const [mark, nav, end] = fake(bar.root).children;
+    // Back to practice (M95, hidden off the Loadout from Practice) stands just before the wallet.
+    const [mark, nav, practice, end] = fake(bar.root).children;
+    expect(practice!.hidden).toBe(true);
     expect(mark!.tag).toBe('button'); // the wordmark is a way back, not a place
     expect(places(bar).map((b) => b.children.at(-1)!.textContent)).toEqual(['Match', 'Loadout', 'Armory', 'Settings']);
     expect(fake(bar.root).children.at(-1)).toBe(end);
@@ -69,7 +71,7 @@ describe('the top bar (G3)', () => {
 
   it('shows the wallet, and with the Armory off hides it and takes the Armory place off the bar (M83: gone, not greyed)', () => {
     const bar = new TopBar(() => {}, () => {});
-    const [fc, tokens] = fake(bar.root).children[2]!.children;
+    const [fc, tokens] = wallet(bar).children;
     const armory = places(bar)[MENU_TEXT.nav.findIndex((n) => n.id === 'armory')]!;
     bar.show('setup', false);
     bar.setWallet({ fc: 1200, tokens: 3 }, false);

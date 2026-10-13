@@ -77,7 +77,8 @@ The root files in more detail:
   Its `MatchSetup` carries New game's Match rules (`config/matchRules.ts`), a bot difficulty per team and the Rules
   picker's ruleset (`RULESETS`, laid over the match panel's picks by `playedPicks` in `newGamePicks.ts`).
 - **`RangeSession`** (`rangeSession.ts`) is the practice range: the player alone on `map/range.ts`, no bots and no
-  rounds, with the tutorial. Changing the loadout from its pause menu rebuilds the range where you stood.
+  rounds, with the tutorial. Changing the loadout from its pause menu, or from the Loadout key in play (M95), rebuilds
+  the range where you stood, the same slot in your hands (`RangePose`).
 
 ## Map data
 
