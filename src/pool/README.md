@@ -29,8 +29,8 @@ level unlocks an asset is in `levels.md` (`src/progress/`).
 - Tuning: `pool.md` (assets, cases, supply events), `stats.md` (numbers, through `config/statsFile.ts`) and
   `bot-kits.md` (what the other team's bots carry).
 - Tests: `pool.test.ts` (pins every shipped ID: IDs are save keys), `kit.test.ts`, `loadoutModel.test.ts`,
-  `savedLoadouts.test.ts`, `botKit.test.ts`, `botKitTable.test.ts`, `caches.test.ts`, `supplyEvents.test.ts`,
-  `contentPool.test.ts`; `testStorage.ts` and `testSupport.ts` are their helpers.
+  `savedLoadouts.test.ts`, `botKit.test.ts`, `botKitTable.test.ts`, `botKitQA.test.ts`, `caches.test.ts`,
+  `supplyEvents.test.ts`, `contentPool.test.ts`; `testStorage.ts` and `testSupport.ts` are their helpers.
 - Rules: `pool.md`'s format is a contract (`docs/ARCHITECTURE.md › Contracts`). Read `Armament.replicas` and
   `Armament.handling`, never `LOADOUT`. The Dev tab's Disable levelling (`unlockAllGear`) is read in `Game`
   (`gameOwnership`).

@@ -762,8 +762,8 @@ replaces its line; the old one stays findable in the archive or in git.
   (2026-10-04).** A half-stepped simulation can't be trusted, so there is no resume.
 - **`?nolock` and `?script=perf` exist only on the dev server and the e2e build (2026-09-28, 2026-10-04).** A release
   build compiles `?nolock` away.
-- **A new random feature draws from its own seeded stream, never the simulation's (2026-10-04).** Wind, chase kits,
-  Extraction cases and presentation effects each have one, so seeds that already replay still replay.
+- **A new random feature draws from its own seeded stream, never the simulation's (2026-10-04).** Wind, the bots'
+  kits (BG1), Extraction cases and presentation effects each have one, so seeds that already replay still replay.
 - **Player-only preferences, such as toggles, live in the input layer (2026-10-03).** The simulation sees the same
   command it sees from a bot.
 - **TypeScript 7 checks the code, on the same strict settings (owner, 2026-10-12; IM4).** It replaces 5.9, kept on
