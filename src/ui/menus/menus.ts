@@ -103,6 +103,7 @@ export class Menus {
     };
     this.model = new PlayPicks(picked, { ...opts.lighting.initial }, opts.teammateDifficulty.follows, {
       onMap: (m) => opts.map.onChange(m),
+      onPracticePlace: (p) => opts.practicePlace.onChange(p),
       onLight: (m, light) => opts.lighting.onChange(m, light),
       onMode: (m) => opts.mode.onChange(m),
       onRuleset: (r) => opts.ruleset.onChange(r),
@@ -112,7 +113,7 @@ export class Menus {
       onTeam: (t) => opts.team.onChange(t),
       supply: opts.mode.supply,
       refresh: () => this.refreshViews(),
-    });
+    }, opts.practicePlace.initial);
     this.realistic = opts.look.initial.realisticColours;
     this.tutorialDone = opts.tutorialDone;
     this.matchStarted = loadMatchStarted();
@@ -630,7 +631,7 @@ export class Menus {
 
   /** The match as it will play (playView.ts). */
   private playView(): PlayView {
-    return playView(this.model.picks(), this.opts, (id) => this.model.lightingOf(id));
+    return playView(this.model.picks(), this.opts, (id) => this.model.lightingOf(id), this.model.practicePlace());
   }
 }
 

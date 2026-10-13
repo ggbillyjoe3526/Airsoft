@@ -76,8 +76,9 @@ The root files in more detail:
   round's end and the next start (`matchFlow.ts` `skipOffer`, `skipTickCap`; `config/sim.ts` `SKIP_ROUND`).
   Its `MatchSetup` carries New game's Match rules (`config/matchRules.ts`), a bot difficulty per team and the Rules
   picker's ruleset (`RULESETS`, laid over the match panel's picks by `playedPicks` in `newGamePicks.ts`).
-- **`RangeSession`** (`rangeSession.ts`) is the practice range: the player alone on `map/range.ts`, no bots and no
-  rounds, with the tutorial. Changing the loadout from its pause menu rebuilds the range where you stood.
+- **`RangeSession`** (`rangeSession.ts`) is Practice: the player alone, no bots and no rounds, on `map/range.ts` (with
+  the tutorial) or on any map (M94), whose targets stand where the other team's bots would play
+  (`map/practiceSpots.ts`, kinds by `map/practiceLayout.ts`). Changing the loadout from its pause menu rebuilds it where you stood.
 
 ## Map data
 

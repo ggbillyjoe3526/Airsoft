@@ -24,12 +24,16 @@ export interface StillShot {
   view: StillView;
 }
 
-/** One still per map and light offered, as the Play screen's map cards show them. */
+/**
+ * One still per map and light offered, as the Play screen's map cards show them, and one of the range, Practice's own
+ * place (M94): drawn from Practice, where you first stand on the range (map-stills.mjs).
+ */
 export const MAP_STILLS: readonly StillShot[] = [
   { file: 'depot-day.jpg', map: 'depot', light: 'day', view: 'overview' },
   { file: 'woodland-night.jpg', map: 'woodland', light: 'night', view: 'overview' },
   { file: 'neonHeights-night.jpg', map: 'neonHeights', light: 'night', view: 'aerial' },
   { file: 'neonHeights-day.jpg', map: 'neonHeights', light: 'day', view: 'aerial' },
+  { file: 'range-day.jpg', map: 'range', light: 'day', view: 'street' },
 ];
 
 /** The mode cards' pictures (by MatchMode): a moment that reads as the mode. */

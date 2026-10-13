@@ -35,7 +35,7 @@ const spawn = { position: vec3(0, 0, RANGE.spawnBack), yaw: 0 };
 const BLOCKS: MapBlock[] = [...rangeBlocks(), ...rangeProps()];
 
 export const RANGE_MAP: MapData = {
-  name: 'Practice range',
+  name: 'Range',
   blocks: BLOCKS,
   killY: -10,
   // One spot, used for both ends: nobody else is on the range and no round is played on it.
