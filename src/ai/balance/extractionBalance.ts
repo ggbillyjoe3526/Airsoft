@@ -5,15 +5,15 @@ import { initPhysics } from '../../physics/physicsWorld';
 import { measureRuns, type RunMeasure } from '../extractionRunSupport';
 import { reportMeasure, shareError } from './balanceSupport';
 
-/** Each level's bands: the share of runs the squad gets out of, and the Field Credits a minute they get out with. */
-export type ExtractionBands = Readonly<Record<Difficulty, { extract: readonly [number, number]; fcPerMinute: readonly [number, number] }>>;
+/** Each level's bands: the share of runs the squad gets out of, and the XP a minute they get out with. */
+export type ExtractionBands = Readonly<Record<Difficulty, { extract: readonly [number, number]; xpPerMinute: readonly [number, number] }>>;
 
 /** The levels a balance measure plays, easiest first. */
 const LEVELS = ['easy', 'normal', 'hard', 'pro'] as const;
 
 /**
  * Every map's Extraction balance figures (M46, M48; one support since M51, audit CORE-16; figures since TE4): whole
- * runs over seeds 1 to `seeds` by measureRuns at each level, each level's extract rate and FC a minute against its
+ * runs over seeds 1 to `seeds` by measureRuns at each level, each level's extract rate and XP a minute against its
  * bands, and for each pair in `harder` ([easier, harder]) how much more often the easier level's squad gets out (it
  * should, so the band is above nothing). That every run ends by the run's own rules is a guard
  * (`*Match.extractionRuns.test.ts`).
@@ -31,12 +31,12 @@ export function describeExtractionBalance(
     }, opts.timeoutMs);
 
     for (const level of LEVELS) {
-      it(`measures ${level}'s extract rate and FC a minute`, (ctx) => {
+      it(`measures ${level}'s extract rate and XP a minute`, (ctx) => {
         const m = measured.get(level)!;
         const band = opts.bands[level];
         const out = m.runs.filter((r) => r.reason === 'extracted').length;
         reportMeasure(ctx, { label: `${map.name}, Extraction, ${level} home team: the runs the squad gets out of`, value: m.extract, of: m.runs.length, band: { min: band.extract[0], max: band.extract[1] }, detail: `${out} of ${m.runs.length}` });
-        reportMeasure(ctx, { label: `${map.name}, Extraction, ${level} home team: what the squad gets out with`, value: m.fcPerMinute, band: { min: band.fcPerMinute[0], max: band.fcPerMinute[1] }, unit: 'FC a minute' });
+        reportMeasure(ctx, { label: `${map.name}, Extraction, ${level} home team: what the squad gets out with`, value: m.xpPerMinute, band: { min: band.xpPerMinute[0], max: band.xpPerMinute[1] }, unit: 'XP a minute' });
       });
     }
 

@@ -283,7 +283,7 @@ describe('regen points and the wave in the run', () => {
   });
 
   it('hands the sight it is given to the case check, so a case behind a wall stays shut (M55, QA)', () => {
-    const cases = [{ kind: 'field-case' as const, name: 'Field case', position: vec3(-10, 0, 0), yaw: 0, openTime: 1, heard: 0, find: { fc: 1, resupply: false, item: null } }];
+    const cases = [{ kind: 'field-case' as const, name: 'Field case', position: vec3(-10, 0, 0), yaw: 0, openTime: 1, heard: 0, find: { xp: 1, resupply: false } }];
     const sight = { query: NEVER_SEEN, body: BODY };
     expect(setup(1, undefined, { cases, sight }).sight).toBe(sight);
     expect(setup(1, undefined, { cases }).sight).toBeUndefined();

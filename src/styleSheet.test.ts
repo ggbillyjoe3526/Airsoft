@@ -162,6 +162,14 @@ describe('the dead rules are gone (M68, audit UI-10)', () => {
   it('has no .settings-reload or .armory-row-count rule', () => {
     expect(sheet).not.toMatch(/\.settings-reload|\.armory-row-count/);
   });
+
+  it("has no rule left from the Armory's gacha (LV1): tier colours, the wallet, the rarity bar, Shots, spares, the pop-up menu", () => {
+    expect(sheet).not.toMatch(/\[data-tier|--tier\b|\.tier-|-tier\b/);
+    expect(sheet).not.toMatch(/\.menu-wallet|\.menu-chip-fc|\.menu-chip-tokens/);
+    expect(sheet).not.toMatch(/\.rarity-/);
+    expect(sheet).not.toMatch(/\.armory-shot|\.armory-row-spares|\.armory-reveal|\.armory-kind|\.armory-owned|\.armory-scrap/);
+    expect(sheet).not.toMatch(/\.context-menu|\.summary-credits/);
+  });
 });
 
 describe('the Custom graphics disclosure (M68, audit UI-09)', () => {
@@ -404,10 +412,22 @@ describe('the font (M100: Inter replaces Barlow)', () => {
     expect(menuSheet).not.toMatch(/menu-hint-key|\.menu-hints|menu-build/);
   });
 
-  it('lays the Armory\'s collection out as one column per kind, under the other columns', () => {
-    expect(declared('.armory-list', 'grid-template-columns')).toMatch(/^repeat\(auto-fit, minmax\(\d+px, 1fr\)\)$/);
-    expect(declared('.armory-kind', 'flex-direction')).toBe('column');
-    expect(declared('.armory-owned', 'grid-column')).toBe('1 / -1');
+  it('lays the Armory out as your level over the next unlock on the left, and the level track beside them (LV1)', () => {
+    expect(declared('.armory-columns', 'grid-template-columns')).toMatch(/^clamp\(\d+px, [\d.]+vw, \d+px\) minmax\(0, 1fr\)$/);
+    expect([declared('.armory-left', 'grid-column'), declared('.armory-left', 'grid-row')]).toEqual(['1', '1']);
+    expect([declared('.armory-next', 'grid-column'), declared('.armory-next', 'grid-row')]).toEqual(['1', '2']);
+    expect([declared('.armory-track', 'grid-column'), declared('.armory-track', 'grid-row')]).toEqual(['2', '1 / span 2']);
+    expect(declared('.armory-levels', 'flex-direction')).toBe('column');
+    expect(declared('.armory-next-grid', 'grid-template-columns')).toMatch(/^repeat\(auto-fill, minmax\(\d+px, 1fr\)\)$/);
+    // In a narrow window the three cards stack: none keeps a row of its own.
+    expect(menuSheet).toMatch(/\.armory-left,\s*\.armory-next,\s*\.armory-track\s*\{[^}]*grid-row:\s*auto/);
+  });
+
+  it("marks each level row by its state: reached ones edged green, the next one in orange, locked ones dimmed (LV1)", () => {
+    expect(declared(".armory-level-row[data-state='unlocked']", 'border-left-color')).toBe('var(--menu-good)');
+    expect(declared(".armory-level-row[data-state='next']", 'border-left-color')).toBe('var(--orange)');
+    expect(declared(".armory-level-row[data-state='locked'] .armory-item > .pic-slot", 'filter')).toBe('grayscale(1)');
+    expect(declared(".armory-level-row[data-state='next'] .armory-level-state", 'color')).toBe('var(--orange-text)');
   });
 });
 
@@ -426,15 +446,36 @@ describe('layout polish before the screenshots (G4, M100)', () => {
     expect(declared('.hud-ammo', 'flex-direction')).toBeUndefined();
   });
 
-  it('keeps each Shot button\'s price and payment whole, one to a line', () => {
-    expect(declared('.item-chip.armory-shot', 'flex-direction')).toBe('column');
-    expect(declared('.item-chip.armory-shot .item-name,\n.item-chip.armory-shot .item-note', 'white-space')).toBe('nowrap');
+  it('fills the level bars (the top bar\'s and the Armory\'s) from the left by --xp, on a transform, not a width (LV1)', () => {
+    const fill = blockOf('.menu-level-bar i,\n.armory-xp i');
+    expect(fill, 'one rule for both fills').not.toBeNull();
+    expect(fill).toMatch(/transform:\s*scaleX\(var\(--xp(, 0)?\)\)/);
+    expect(fill).toMatch(/transform-origin:\s*left/);
+    expect(fill).not.toMatch(/width:\s*calc/);
+    expect(blockOf('.menu-level-bar,\n.armory-xp')).toMatch(/overflow:\s*hidden/);
+    expect(declared('.menu-status', 'margin-left')).toBe('auto');
+    expect(declared('.menu-chip-level', 'flex-direction')).toBe('column');
+    expect(declared('.menu-chip-level:disabled', 'cursor')).toBe('default');
   });
 
-  it('sets a collection card\'s spare count in acid, in text of 15 px or more', () => {
-    expect(declared('.armory-row-spares', 'color')).toBe('var(--menu-acid)');
-    expect(declared('.armory-row-spares', 'font')).toContain('var(--fs-sm)');
+  it('shows the summary\'s XP total and a level up in text of 15 px or more, the level up edged in orange (LV1)', () => {
+    expect(blockOf('.summary-xp-total strong')).not.toBeNull();
+    expect(declared('.summary-level-up', 'font-size')).toBe('var(--fs-lg)');
+    expect(declared('.summary-level-up', 'border-left')).toBe('4px solid var(--orange)');
+    expect(declared('.summary-level-up strong', 'color')).toBe('var(--orange-text)');
     expect(Number(/--fs-sm:\s*(\d+)px/.exec(menuSheet)?.[1])).toBeGreaterThanOrEqual(15);
+  });
+
+  it('greys what is still to unlock on the Loadout and Customise, with a lock in its corner and its level in orange (LV1)', () => {
+    expect(declared('.item-tile.is-locked', 'cursor')).toBe('default');
+    expect(declared('.item-tile.is-locked', 'border-style')).toBe('dashed');
+    expect(declared('.item-tile.is-locked .pic-slot', 'filter')).toBe('grayscale(1)');
+    expect(declared('.item-tile .item-level', 'color')).toBe('var(--orange-text)');
+    expect(declared('.item-lock,\n.option-lock', 'position')).toBe('absolute');
+    expect(declared('.option-locked', 'border')).toMatch(/dashed/);
+    expect(declared('.option-locked > .pic-slot', 'filter')).toBe('grayscale(1)');
+    expect(declared('.option-locked .option-note', 'color')).toBe('var(--orange-text)');
+    expect(blockOf('.option-line,\n.option-note')).not.toBeNull();
   });
 
   it('lays the Match rules out in as many columns as fit, so the page holds in a 1080 px window', () => {
@@ -443,6 +484,9 @@ describe('layout polish before the screenshots (G4, M100)', () => {
   });
 
   it('puts no backdrop blur on any of these', () => {
-    for (const rule of ['.minimap-caption', '.hud-replica', '.armory-row-spares', '.context-menu', '.menu-title-warning']) expect(blockOf(rule), rule).not.toMatch(/backdrop-filter/);
+    for (const rule of ['.minimap-caption', '.hud-replica', '.armory-level-row', '.menu-chip-level', '.summary-level-up', '.menu-title-warning']) {
+      expect(blockOf(rule), rule).not.toBeNull();
+      expect(blockOf(rule), rule).not.toMatch(/backdrop-filter/);
+    }
   });
 });

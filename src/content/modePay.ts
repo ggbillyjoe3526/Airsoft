@@ -1,11 +1,12 @@
 import type { Difficulty } from '../config/bots';
-import { matchEarnings } from '../pool/armory';
-import type { Economy } from '../pool/pool';
+import type { XpRules } from '../progress/levels';
+import { matchXp } from '../progress/xp';
 import { matchWon } from '../sim/round';
 
 /**
- * What a mode played in rounds pays a player a minute (CT3, the balance run's "pay in line with the other modes"): the
- * standard match a sweep's rounds stand for, priced as the game pays it (pool/armory.ts matchEarnings), over the minutes
+ * What a mode played in rounds gives a player in XP a minute (CT3, the balance run's "pay in line with the other modes";
+ * LV1: XP in place of Field Credits): the standard match a sweep's rounds stand for, priced as the game gives it
+ * (progress/xp.ts matchXp), over the minutes
  * that match takes, plus the player's share of the hits. Every round mode is priced the same way from its own rounds, so
  * two modes compare by how long their rounds run, how many are drawn and how many hits they see. Pure.
  */
@@ -60,15 +61,15 @@ export function evenMatchRounds(rules: Pick<PayRules, 'winsNeeded' | 'winBy'>): 
   return { decided, winner, loser };
 }
 
-/** Field Credits a minute for a player at `level` (teammates at the same) in the standard match `played` stands for. */
-export function roundsPayPerMinute(e: Economy, level: Difficulty, played: PlayedRounds, rules: PayRules): number {
+/** XP a minute for a player at `level` (teammates at the same) in the standard match `played` stands for. */
+export function roundsPayPerMinute(e: XpRules, level: Difficulty, played: PlayedRounds, rules: PayRules): number {
   if (played.rounds.length === 0 || played.seconds <= 0 || played.players <= 0) return Number.NaN;
   const even = evenMatchRounds(rules);
   const draws = played.rounds.filter((r) => r.winner < 0).length / played.rounds.length;
   if (draws >= 1) return Number.NaN;
   const roundSeconds = played.rounds.reduce((sum, r) => sum + r.seconds, 0) / played.rounds.length;
   const matchMinutes = ((even.decided / (1 - draws)) * (roundSeconds + rules.resetDelay)) / 60;
-  const pay = (won: boolean, roundsWon: number) => matchEarnings(e, { won, roundsWon, hits: 0, winsNeeded: rules.winsNeeded, difficulty: level, teammateDifficulty: level }).total;
+  const pay = (won: boolean, roundsWon: number) => matchXp(e, { won, roundsWon, hits: 0, winsNeeded: rules.winsNeeded, difficulty: level, teammateDifficulty: level }).total;
   const perMatch = (pay(true, even.winner) + pay(false, even.loser)) / 2;
   const multiplier = e.difficulty[level];
   const hitsPerMinute = played.hits / played.players / (played.seconds / 60);

@@ -15,7 +15,8 @@ import {
   TEAM_SIZE_CHOICES,
   WINS_NEEDED_CHOICES,
 } from './config/matchRules';
-import { matchEarnings } from './pool/armory';
+import { GAME_LEVELS } from './progress/gameLevels';
+import { matchXp } from './progress/xp';
 import { resultKey } from './stats/records';
 import { matchStanding } from './stats/settleMatch';
 import { DEFAULT_MODE, MATCH_MODES } from './config/modes';
@@ -164,7 +165,7 @@ describe('New game picks and dev content (M35)', () => {
 });
 
 describe('whether the opponents may carry dev gear and whether a match uses dev content (M35)', () => {
-  const kitOf = (...names: string[]) => names.map((n) => ({ asset: GAME_POOL.assets.find((a) => a.name === n)!.id, tier: 'common' }));
+  const kitOf = (...names: string[]) => names.map((n) => ({ asset: GAME_POOL.assets.find((a) => a.name === n)!.id }));
   const devPool = withTags(GAME_POOL, { 'Red Dot': 'dev' });
   const strayPool = withAssets(GAME_POOL, [strayDevPart(GAME_POOL)]);
 
@@ -236,9 +237,9 @@ describe('the replicas every bot carries (M35)', () => {
   });
 });
 
-describe('the Rules picker and dev content, records and pay (M39)', () => {
-  const economy = GAME_POOL.economy;
-  /** What a match of these picks (as played) would do: count, pay and file where. */
+describe('the Rules picker and dev content, records and XP (M39, LV1)', () => {
+  const xpRules = GAME_LEVELS.xp;
+  /** What a match of these picks (as played) would do: count, give XP and file where. */
   function settle(p: NewGamePicks, devContent: boolean) {
     const played = playedPicks(p, devContent);
     const standing = matchStanding({
@@ -247,9 +248,9 @@ describe('the Rules picker and dev content, records and pay (M39)', () => {
       devContentUsed: matchUsesDev(played, [], GAME_POOL, devContent),
     });
     const customRules = !standardRules(played.ruleset, played.rules);
-    const pay = matchEarnings(economy, { won: true, roundsWon: 7, hits: 0, winsNeeded: played.rules.winsNeeded, difficulty: played.difficulty, teammateDifficulty: played.teammateDifficulty, ...(customRules ? { customRules } : {}) });
+    const xp = matchXp(xpRules, { won: true, roundsWon: 7, hits: 0, winsNeeded: played.rules.winsNeeded, difficulty: played.difficulty, teammateDifficulty: played.teammateDifficulty, ...(customRules ? { customRules } : {}) });
     const key = recordsKeyOf(played.ruleset);
-    return { played, standing, multiplier: pay.multiplier, cell: key === null ? null : resultKey(played.difficulty, played.mode, key) };
+    return { played, standing, multiplier: xp.multiplier, cell: key === null ? null : resultKey(played.difficulty, played.mode, key) };
   }
   const on = (ruleset: RulesetId, difficulty: 'easy' | 'normal' | 'hard' | 'pro' = 'normal', rules: Partial<MatchRules> = {}) =>
     picks({ ruleset, difficulty, teammateDifficulty: difficulty }, rules);
@@ -273,15 +274,15 @@ describe('the Rules picker and dev content, records and pay (M39)', () => {
     expect(playedPicks(s, true).rules).toEqual({ ...DEFAULT_MATCH_RULES, winsNeeded: 3 });
   });
 
-  it('keeps every match on Pro or a dev ruleset unpaid and out of the records while they are dev (M35)', () => {
+  it('keeps every match on Pro or a dev ruleset without XP and out of the records while they are dev (M35)', () => {
     for (const r of ['tournament', 'proCqb'] as const) {
-      expect(settle(on(r, 'hard'), true).standing).toEqual({ notCounted: 'devContent', unpaid: 'devContent' });
+      expect(settle(on(r, 'hard'), true).standing).toEqual({ notCounted: 'devContent', noXp: 'devContent' });
     }
-    expect(settle(on('skirmish', 'pro'), true).standing.unpaid).toBe('devContent');
-    expect(settle(on('custom', 'pro'), true).standing).toEqual({ notCounted: 'rules', unpaid: 'devContent' });
+    expect(settle(on('skirmish', 'pro'), true).standing.noXp).toBe('devContent');
+    expect(settle(on('custom', 'pro'), true).standing).toEqual({ notCounted: 'rules', noXp: 'devContent' });
   });
 
-  it('once public: named rulesets get their own cells on every level and pay ×2 on Pro; Custom on Pro pays ×1.5 and never counts', () => {
+  it('once public: named rulesets get their own cells on every level and give ×2 XP on Pro; Custom on Pro gives ×1.5 and never counts', () => {
     tagDev(DIFFICULTIES, 'pro', 'public');
     tagDev(TEAMMATE_DIFFICULTIES, 'pro', 'public');
     tagDev(RULESETS, 'tournament', 'public');
@@ -289,40 +290,40 @@ describe('the Rules picker and dev content, records and pay (M39)', () => {
     for (const d of ['easy', 'normal', 'hard', 'pro'] as const) {
       for (const r of ['tournament', 'proCqb'] as const) {
         const m = settle(on(r, d), false);
-        expect(m.standing).toEqual({ notCounted: '', unpaid: null });
+        expect(m.standing).toEqual({ notCounted: '', noXp: null });
         expect(m.cell).toBe(`${d}.elimination.${r}`);
-        expect(m.multiplier).toBe(economy.difficulty[d]);
+        expect(m.multiplier).toBe(xpRules.difficulty[d]);
       }
       // Skirmish files as it always did.
       expect(settle(on('skirmish', d), false).cell).toBe(`${d}.elimination`);
-      // Custom never counts and pays its level's rate, capped at ×1.5.
+      // Custom never counts and gives its level's rate, capped at ×1.5.
       const c = settle(on('custom', d), false);
-      expect(c.standing).toEqual({ notCounted: 'rules', unpaid: null });
-      expect(c.multiplier).toBe(Math.min(economy.difficulty[d], CUSTOM_RULES_PAY_CAP));
+      expect(c.standing).toEqual({ notCounted: 'rules', noXp: null });
+      expect(c.multiplier).toBe(Math.min(xpRules.difficulty[d], CUSTOM_RULES_PAY_CAP));
     }
     expect(settle(on('tournament', 'pro'), false).multiplier).toBe(2);
     expect(settle(on('proCqb', 'pro'), false).multiplier).toBe(2);
     expect(settle(on('custom', 'pro'), false).multiplier).toBe(1.5);
-    // A named ruleset with its team size changed is custom rules: not recorded, and paid as Custom on Pro.
+    // A named ruleset with its team size changed is custom rules: not recorded, and given XP as Custom on Pro.
     const small = settle(on('tournament', 'pro', { teamSize: 2 }), false);
     expect(small.standing.notCounted).toBe('rules');
     expect(small.multiplier).toBe(1.5);
   });
 
-  it('pays and records Easy, Normal and Hard Skirmish exactly as before M39', () => {
+  it('gives XP for and records Easy, Normal and Hard Skirmish exactly as before M39', () => {
     for (const d of ['easy', 'normal', 'hard'] as const) {
       const m = settle(on('skirmish', d), false);
-      expect(m.standing).toEqual({ notCounted: '', unpaid: null });
-      expect(m.multiplier).toBe(economy.difficulty[d]);
+      expect(m.standing).toEqual({ notCounted: '', noXp: null });
+      expect(m.multiplier).toBe(xpRules.difficulty[d]);
       const custom = settle(on('skirmish', d, { teamSize: 1 }), false);
       expect(custom.standing.notCounted).toBe('rules');
-      expect(custom.multiplier).toBe(economy.difficulty[d]);
+      expect(custom.multiplier).toBe(xpRules.difficulty[d]);
     }
   });
 
   it('leaves both kits out of the dev check under the factory kit rule: everyone carries LOADOUT as it comes', () => {
     const devPool = withTags(GAME_POOL, { 'Red Dot': 'dev' });
-    const kit = [{ asset: GAME_POOL.assets.find((a) => a.name === 'Red Dot')!.id, tier: 'common' }];
+    const kit = [{ asset: GAME_POOL.assets.find((a) => a.name === 'Red Dot')!.id }];
     expect(matchUsesDev(on('custom', 'hard'), kit, devPool, true)).toBe(true);
     expect(matchUsesDev(on('custom', 'hard', { factoryKit: true }), kit, devPool, true)).toBe(false);
   });

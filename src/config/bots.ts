@@ -771,9 +771,9 @@ export const BOT_LOADOUTS: Readonly<Record<Difficulty, 'factory' | 'random'>> = 
 
 /**
  * How a random loadout is rolled: the chance each part slot (optic, grip, laser, barrel, muzzle, magazine) gets a part,
- * and (M32, owner 2026-10-04) the chance a match's opponents include one carrying a chase replica (the Cyber Pistol) as
- * their primary: only on a difficulty that rolls kits (Hard, and any above it later), and only once the player owns
- * one (Unlock all gear counts). 0.05: about 5 matches in 100.
+ * and (M32, owner 2026-10-04) the chance a match's opponents include one carrying a chase replica (one the player earned
+ * by levelling, the Cyber Pistol at the cap; LV1) as their primary: only on a difficulty that rolls kits (Hard, and
+ * any above it later), and only once the player has one (Disable levelling counts). 0.05: about 5 matches in 100.
  */
 export const RANDOM_LOADOUT = { partChance: 0.6, chaseChance: 0.05 } as const;
 

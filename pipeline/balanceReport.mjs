@@ -71,7 +71,7 @@ const isPercent = (m) => m.unit === undefined ? typeof m.of === 'number' : m.uni
 const pct = (v) => `${(100 * v).toFixed(1)}`;
 const num = (v) => String(Number(v.toPrecision(3)));
 
-/** A figure as the report shows it: `49.5 %`, `−1.2 points`, `43 FC a minute`, `1.02×`. */
+/** A figure as the report shows it: `49.5 %`, `−1.2 points`, `43 XP a minute`, `1.02×`. */
 export function formatValue(m) {
   if (!Number.isFinite(m.value)) return '–';
   if (m.unit === 'points') return `${m.value < 0 ? '−' : '+'}${pct(Math.abs(m.value))} points`;
@@ -79,7 +79,7 @@ export function formatValue(m) {
   return m.unit === '×' ? `${num(m.value)}×` : `${num(m.value)}${m.unit ? ` ${m.unit}` : ''}`;
 }
 
-/** A band as the report shows it: `40–60 %`, `≤ 10 %`, `≥ 0 points`, `20–60 FC a minute`. */
+/** A band as the report shows it: `40–60 %`, `≤ 10 %`, `≥ 0 points`, `20–60 XP a minute`. */
 export function formatBand(m) {
   const { min, max } = m.band ?? {};
   const show = (v) => (isPercent(m) ? pct(v).replace(/\.0$/, '') : num(v));

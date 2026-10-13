@@ -10,11 +10,11 @@ function saved(fields: Record<string, unknown>): Storage {
 }
 
 describe('Dev settings (M24)', () => {
-  it('has a row for every setting, and Unlock all gear (not Disable Armory) counting as Dev help', () => {
+  it('has a row for every setting, and Disable levelling (saved as unlockAllGear) counting as Dev help', () => {
     expect(DEV_ENTRIES.map((e) => e.id).sort()).toEqual(Object.keys(DEV_DEFAULTS).sort());
-    expect(DEV_ENTRIES.find((e) => e.id === 'disableArmory')).toMatchObject({ kind: 'switch', cheat: false });
-    // Free Legendary gear changes play (M26d): such a match pays no Field Credits and stays out of the records.
-    expect(DEV_ENTRIES.find((e) => e.id === 'unlockAllGear')).toMatchObject({ kind: 'switch', cheat: true });
+    // Every item unlocked changes play (M26d, LV1): such a match gives no XP and stays out of the records.
+    expect(DEV_ENTRIES.find((e) => e.id === 'unlockAllGear')).toMatchObject({ kind: 'switch', label: 'Disable levelling', cheat: true });
+    expect(DEV_ENTRIES.map((e) => e.id)).not.toContain('disableArmory');
     for (const e of DEV_ENTRIES) if (e.kind === 'range') expect(DEV_DEFAULTS[e.id]).toBeGreaterThanOrEqual(e.min);
   });
 
@@ -37,13 +37,13 @@ describe('Dev settings (M24)', () => {
 
   it('keeps a match out of the records only for settings that change play', () => {
     expect(devCheating(DEV_DEFAULTS)).toBe(false);
-    expect(devCheating({ ...DEV_DEFAULTS, showDebug: true, showBbPaths: true, disableArmory: true })).toBe(false);
+    expect(devCheating({ ...DEV_DEFAULTS, showDebug: true, showBbPaths: true })).toBe(false);
     expect(devCheating({ ...DEV_DEFAULTS, unlockAllGear: true })).toBe(true);
     expect(devCheating({ ...DEV_DEFAULTS, ghost: true })).toBe(true);
     expect(devCheating({ ...DEV_DEFAULTS, bottomlessMags: true })).toBe(true);
     expect(devCheating({ ...DEV_DEFAULTS, gameSpeed: 0.5 })).toBe(true);
     expect(devIntro()).toBe(
-      "For trying things out. With Unlock all gear, Game speed, Bottomless magazines, Ghost, Bots hold fire, Spectate any bot, Bot intentions or Time of day changed, matches don't go into your records.",
+      "For trying things out. With Disable levelling, Game speed, Bottomless magazines, Ghost, Bots hold fire, Spectate any bot, Bot intentions or Time of day changed, matches don't go into your records.",
     );
   });
 
@@ -56,7 +56,7 @@ describe('Dev settings (M24)', () => {
 
     it('does not count as cheating with it on, on its own or with the other harmless switches', () => {
       expect(devCheating({ ...DEV_DEFAULTS, devContent: true })).toBe(false);
-      expect(devCheating({ ...DEV_DEFAULTS, devContent: true, showDebug: true, disableArmory: true })).toBe(false);
+      expect(devCheating({ ...DEV_DEFAULTS, devContent: true, showDebug: true, showBbPaths: true })).toBe(false);
       expect(devCheating({ ...DEV_DEFAULTS, devContent: true, ghost: true })).toBe(true);
     });
 
@@ -103,14 +103,13 @@ describe('Retro pixels left the Dev tab (M96)', () => {
 describe('more Dev settings for playtesting (M90)', () => {
   const row = (id: string) => DEV_ENTRIES.find((e) => e.id === id)!;
 
-  it('adds Bots hold fire, Spectate any bot, Bot intentions and Time of day as cheats, Free case openings not', () => {
+  it('adds Bots hold fire, Spectate any bot, Bot intentions and Time of day as cheats; Free case openings went with the gacha (LV1)', () => {
     for (const id of ['botsHoldFire', 'spectateBots', 'botIntent', 'timeOfDay']) expect(row(id).cheat, id).toBe(true);
-    expect(row('freeShots')).toMatchObject({ kind: 'switch', label: 'Free case openings', cheat: false });
-    expect(DEV_DEFAULTS).toMatchObject({ botsHoldFire: false, spectateBots: false, botIntent: false, timeOfDay: 'map', freeShots: false });
+    expect(DEV_ENTRIES.map((e) => e.id)).not.toContain('freeShots');
+    expect(DEV_DEFAULTS).toMatchObject({ botsHoldFire: false, spectateBots: false, botIntent: false, timeOfDay: 'map' });
     for (const [id, v] of [['botsHoldFire', true], ['spectateBots', true], ['botIntent', true], ['timeOfDay', 'night']] as const) {
       expect(devCheating({ ...DEV_DEFAULTS, [id]: v }), id).toBe(true);
     }
-    expect(devCheating({ ...DEV_DEFAULTS, freeShots: true })).toBe(false);
   });
 
   it("offers Time of day as the map's own, Day or Night, saved as dev.timeOfDay; junk reads as the map's own", () => {
@@ -120,15 +119,17 @@ describe('more Dev settings for playtesting (M90)', () => {
     expect(loadDevSettings(saved({ 'dev.timeOfDay': 'night' })).timeOfDay).toBe('night');
     expect(loadDevSettings(saved({ 'dev.timeOfDay': 'day' })).timeOfDay).toBe('day');
     expect(loadDevSettings(saved({ 'dev.timeOfDay': 'dusk' })).timeOfDay).toBe('map');
-    expect(loadDevSettings(saved({ 'dev.botsHoldFire': 'on', 'dev.freeShots': 'on' }))).toEqual({ ...DEV_DEFAULTS, botsHoldFire: true, freeShots: true });
+    // An old save's dev.freeShots (the gacha's, gone in LV1) is read into nothing.
+    expect(loadDevSettings(saved({ 'dev.botsHoldFire': 'on', 'dev.freeShots': 'on' }))).toEqual({ ...DEV_DEFAULTS, botsHoldFire: true });
   });
 
-  it('has buttons to give FC and Tokens, end the round now and reset the save (that one asks first), saving nothing', () => {
-    expect(DEV_ACTIONS.map((a) => a.id)).toEqual(['giveFc', 'giveTokens', 'endRound', 'resetSave']);
-    expect(DEV_GIFTS.fc).toBeGreaterThanOrEqual(1000);
-    expect(DEV_GIFTS.tokens).toBeGreaterThanOrEqual(10);
-    expect(DEV_ACTIONS.find((a) => a.id === 'giveFc')!.button).toBe('+1,000 FC');
-    expect(DEV_ACTIONS.filter((a) => a.confirm).map((a) => a.id)).toEqual(['resetSave']);
+  it('has buttons to give XP, level up, reset the level, end the round now and reset the save (the resets ask first), saving nothing', () => {
+    expect(DEV_ACTIONS.map((a) => a.id)).toEqual(['giveXp', 'levelUp', 'resetLevel', 'endRound', 'resetSave']);
+    expect(DEV_GIFTS.xp).toBeGreaterThanOrEqual(500);
+    expect(DEV_ACTIONS.find((a) => a.id === 'giveXp')!.button).toBe(`+${DEV_GIFTS.xp} XP`);
+    expect(DEV_ACTIONS.find((a) => a.id === 'levelUp')!.button).toBe('Level up');
+    expect(DEV_ACTIONS.filter((a) => a.confirm).map((a) => a.id)).toEqual(['resetLevel', 'resetSave']);
+    expect(DEV_ACTIONS.find((a) => a.id === 'resetSave')!.confirm!.question).not.toMatch(/Armory collection/);
     expect(DEV_ACTIONS.find((a) => a.id === 'endRound')!.help).toMatch(/records/);
     for (const a of DEV_ACTIONS) expect(Object.keys(DEV_DEFAULTS), a.id).not.toContain(a.id);
   });

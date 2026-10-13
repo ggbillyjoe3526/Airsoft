@@ -7,7 +7,8 @@ choices to `src/game.ts`.
   reused. The Loadout (with Customise), the Armory and Settings are also fetched then (IM1): `lazyScreens.ts` is their
   chunk, preloaded once the title is up (`preloadScreens`, `core/onDemand.ts`); opened before it has arrived, the screen
   on show stays (`whenFetched`) and a later choice wins. A new screen reached only from a menu joins `lazyScreens.ts`. `menusOptions.ts` is what the menus are given; `playModel.ts` is the Match screen's picks (`PlayPicks`: each
-  change saved and reported). `chrome.ts` is the top bar (the wordmark is the way back; no version) and the
+  change saved and reported). `chrome.ts` is the top bar (the wordmark is the way back; no version; `setLevel` shows "Lv N" and an XP bar
+  that opens the Armory, hidden while levelling is off) and the
   backdrop: no picture on the title, the pre-blurred one elsewhere (nothing blurs live). No key prompts are drawn along the bottom (M100): a screen's `hints` are
   only the keys it answers to (C, /, Space, T; Esc is handled by `Menus`).
 - `menuNav.ts`: where Back goes and which menu opens when play stops (title, pause, summary, result). Leaving a match
@@ -16,10 +17,12 @@ choices to `src/game.ts`.
   foot; `tutorialOffered`); `setupScreen.ts` (the Match screen: Map and Mode as `choiceCards.ts` with Practice, the
   mode cards' last, an extra card that is never saved; `matchPanel.ts`, with Your team (M98: Alpha or Beta, hidden for an Extraction run); and a "Your match" text from
   `playView.ts`, whose rules text follows your team, `rulesText.ts` › `sideText`);
-  `loadoutScreen.ts` with `customiseView.ts` (both with `rarityFilter.ts`'s Sort / Show bar, M82: each list's choice
-  saved as `rarity.sort.<list>` and `rarity.hide.<list>`); `armoryScreen.ts` (the collection, a column per kind; a card's spares scrap from a right-click / Menu key / Shift+F10 menu, `contextMenu.ts`: built once, reused, listeners on the page only while open; `menuPlacement.ts` places it in the window, clear of the card's name);
+  `loadoutScreen.ts` with `customiseView.ts` (items still to unlock greyed with a lock and their level, and a line
+  pointing to the Armory; `itemTile.ts`, `kitStrip.ts`); `armoryScreen.ts` (the levelling screen: your level, the XP
+  bar and how XP is earned, what the next level unlocks, and every level's items from `progress/track.ts`);
   `settingsScreen.ts` (groups with a search, a note on every row); `pauseScreen.ts` (with
-  `tutorialCompleteDialog.ts` over it when the tutorial ends: the practice range or the menu, M80); `summaryScreen.ts`;
+  `tutorialCompleteDialog.ts` over it when the tutorial ends: the practice range or the menu, M80); `summaryScreen.ts`
+  (the match's XP line by line, a level-up line with what it unlocked, the level bar, an Extraction haul);
   `resultScreen.ts`.
 - Pictures: replica, part and scheme pictures come from `render/itemPictures.ts` via `menuPictures.ts`; map and mode
   stills are files in `public/menu/`, made by `pipeline/map-stills.mjs` (`config/menuArt.ts`); Practice's is drawn
@@ -28,5 +31,6 @@ choices to `src/game.ts`.
   Map, mode, difficulty and loadout are picked only on the Match screen, with no match loaded.
 - Styles: `menus.css` imports `css/`; the typeface is Inter (`css/fonts.css`, `src/assets/fonts/`). Tuning:
   `config/menus.ts`, `config/menuArt.ts`.
-- Tests: `menus.test.ts`, `menuRedesign.test.ts`, `teamPick.test.ts`, `choiceCards.test.ts`, `chrome.test.ts`, `contextMenu.test.ts`, `armoryScrapMenu.test.ts` (with `menuTestSupport.ts`), `settingsRows.test.ts`,
-  `rulesText.test.ts`, `modeFit.test.ts` (M89: what fits each mode), `rarityFilter.test.ts`.
+- Tests: `menus.test.ts`, `menuRedesign.test.ts`, `teamPick.test.ts`, `choiceCards.test.ts`, `chrome.test.ts`
+  (with `menuTestSupport.ts`), `settingsRows.test.ts`, `rulesText.test.ts`, `modeFit.test.ts` (M89: what fits each
+  mode), `summaryHaul.test.ts`.

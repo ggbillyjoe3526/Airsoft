@@ -26,8 +26,11 @@ import type { SettingsOptions } from './settingsScreen';
  */
 export type FixedRulesText = Omit<MatchRulesText, 'teamSize' | 'winsNeeded' | 'roundTime' | 'halfTimeAfter' | 'friendlyFire' | 'ricochetsCount' | 'switches' | keyof SideText>;
 
-/** The wallet the menus show: Field Credits and Tokens, or null while the Armory is switched off (Dev settings). */
-export type MenuWallet = { fc: number; tokens: number } | null;
+/**
+ * The player's level as the top bar shows it (LV1): the level, the XP into it, what the next one takes (null at the
+ * cap) and the line saying what is left ("150 XP to level 4", '' at the cap); null while levelling is off (Dev settings).
+ */
+export type MenuLevel = { level: number; into: number; next: number | null; toNext: string } | null;
 
 /** What the menus show and what they report back to the game. */
 export interface MenusOptions {
@@ -40,8 +43,8 @@ export interface MenusOptions {
   pictures: PictureSource | null;
   /** The Loadout screen's model and change hook, and the line the Play screen shows under your kit. */
   loadout: Omit<LoadoutOptions, 'onBack' | 'context'> & { summary: () => { replicas: string; detail: string } };
-  /** The Armory (M26c): its pool and the collection it changes, and the wallet on the top bar and the title. */
-  armory: Omit<ArmoryOptions, 'onBack' | 'context'> & { wallet: () => MenuWallet };
+  /** The Armory (LV1): the levels, the player's progress and the level on the top bar. */
+  armory: Omit<ArmoryOptions, 'context'> & { level: () => MenuLevel };
   /** Start (or resume) play: Start match, Resume, Play again. */
   onPlay: () => void;
   /** The player leaves the match (Quit; New Game or Quit after it): it is unloaded. */
@@ -90,7 +93,7 @@ export interface MenusOptions {
   /**
    * The Dev tab (M24); `cheating`: a Dev setting now in force keeps the next match out of the records. `devContent`:
    * dev content is offered (M35); `devContentUsed`: New game's picks, the Loadout or the opponents' possible gear use
-   * some, so the match won't count or pay.
+   * some, so the match won't count or give XP.
    */
   dev: SettingsOptions['dev'] & { cheating: () => boolean; devContent: () => boolean; devContentUsed: () => boolean };
   /** The save, for Settings → Save (M31). */

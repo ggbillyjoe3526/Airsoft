@@ -1,0 +1,55 @@
+import { type LevelStanding, type LevelTable, standing } from './levels';
+import type { Progress } from './progress';
+
+/**
+ * The level track as the Armory shows it (LV1): every level from 0 to the cap with what it unlocks, where the player
+ * stands, and what comes next. Pure: the screen draws it, the tests read it.
+ */
+
+/** A level's place on the track: reached, the next one to reach, or further on. */
+export type LevelState = 'unlocked' | 'next' | 'locked';
+
+export interface TrackLevel {
+  level: number;
+  /** XP from nothing to reach it. */
+  total: number;
+  /** What it unlocks that is offered (M35: dev items only with Dev content on), by pool asset id. */
+  items: readonly string[];
+  state: LevelState;
+}
+
+export interface Track {
+  standing: LevelStanding;
+  cap: number;
+  levels: readonly TrackLevel[];
+  /** The lowest level still to reach that unlocks something offered; null when there is none (or levelling is off). */
+  next: TrackLevel | null;
+  /** Offered items the player has, and how many offered items the levels unlock in all. */
+  unlocked: number;
+  total: number;
+  /** Levelling is off (Dev settings): everything counts as unlocked. */
+  off: boolean;
+}
+
+/**
+ * The track for `progress` against `t`. `offered`: whether an asset shows at all (the pool as offered now). `off`:
+ * levelling is off, so every level reads as unlocked and nothing is next.
+ */
+export function levelTrack(t: LevelTable, progress: Progress, offered: (id: string) => boolean, off: boolean): Track {
+  const s = standing(t, progress.xp);
+  const has = new Set(progress.unlocked);
+  const levels = t.levels.map((l): TrackLevel => {
+    const state: LevelState = off || l.level <= s.level ? 'unlocked' : l.level === s.level + 1 ? 'next' : 'locked';
+    return { level: l.level, total: l.total, items: l.unlocks.filter(offered), state };
+  });
+  const all = levels.flatMap((l) => l.items);
+  return {
+    standing: s,
+    cap: t.cap,
+    levels,
+    next: off ? null : (levels.find((l) => l.level > s.level && l.items.length > 0) ?? null),
+    unlocked: off ? all.length : all.filter((id) => has.has(id)).length,
+    total: all.length,
+    off,
+  };
+}

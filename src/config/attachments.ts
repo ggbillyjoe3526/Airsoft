@@ -81,14 +81,15 @@ export const MAGAZINES: Readonly<Record<MagazineId, MagazineConfig>> = overlay<M
     drawScale: 1,
     rattles: true,
   },
-  // Rifle: 30 BBs, one more carried (150 in all), and a quicker change.
+  // Rifle: 30 BBs, two more carried (180 in all), light: a quicker change and a quicker draw (LV1: it carried 150 for a
+  // 20 % quicker change alone, a pick nobody gained from).
   lowCap: {
     label: 'Low-Cap',
-    blurb: 'Half the BBs in each and one more carried: fewer BBs in all, but quicker to change. Silent.',
+    blurb: 'Half the BBs in each and two more carried: fewer BBs in all, but light, so quicker to change and to draw. Silent.',
     capacity: 0.5,
-    carried: 1,
-    reloadScale: 0.8,
-    drawScale: 1,
+    carried: 2,
+    reloadScale: 0.75,
+    drawScale: 0.9,
     rattles: false,
   },
   // Pistol: 27 BBs; the longer magazine snags as you draw.
@@ -126,8 +127,9 @@ export const BARRELS: Readonly<Record<BarrelId, BarrelConfig>> = overlay<BarrelC
     // A tight bore seals the BB better: it groups tighter and pushes a little harder. A quality part with no downside
     // (owner, 2026-10-04: "a higher quality barrel could give better performance").
     tightBore: { label: 'Tight-Bore Barrel', blurb: 'A precision inner barrel: tighter groups and a little more energy.', energy: 0.03, spreadScale: 0.85, handlingScale: 1 },
-    // A longer barrel gives the BB more push, paid for with a front-heavy replica.
-    long: { label: 'Long Barrel', blurb: 'More energy for a flatter, longer flight, but front-heavy: slower to bring up and to aim.', energy: 0.08, spreadScale: 1, handlingScale: 1.15 },
+    // A longer barrel gives the BB more push and a steadier line, paid for with a front-heavy replica (LV1: the reach
+    // pick, unlocked late, where it was the tight bore's weaker twin).
+    long: { label: 'Long Barrel', blurb: 'More energy for a flatter, longer flight and a little tighter, but front-heavy: slower to bring up and to aim.', energy: 0.1, spreadScale: 0.9, handlingScale: 1.15 },
   },
   GAME_STATS.barrels,
 ) as Record<BarrelId, BarrelConfig>;
@@ -168,19 +170,6 @@ export const MUZZLES: Readonly<Record<MuzzleId, MuzzleConfig>> = overlay<MuzzleC
   GAME_STATS.muzzles,
 ) as Record<MuzzleId, MuzzleConfig>;
 
-/**
- * Multipliers a part's rarity tier brings (M26b, pool/kit.ts), on top of what the parts themselves do: below 1 is
- * quicker or steadier.
- */
-export interface PartTune {
-  raiseScale: number;
-  shakeScale: number;
-  drawScale: number;
-  reloadScale: number;
-}
-
-export const NO_TUNE: PartTune = { raiseScale: 1, shakeScale: 1, drawScale: 1, reloadScale: 1 };
-
 /** The parts fitted to one replica. */
 export interface ReplicaParts {
   grip: GripId;
@@ -195,8 +184,6 @@ export interface ReplicaParts {
   muzzle?: MuzzleId | null;
   /** A weapon light (M33h, config/torches.ts), switched with the Weapon torch key. Null: none. */
   light?: LightId | null;
-  /** What the parts' rarity tiers add (M26b); none for bots. */
-  tune?: PartTune;
 }
 
 /** How a replica comes: no grip, its first (standard) magazine. Bots always carry this. */
@@ -217,7 +204,6 @@ export function partsFor(r: ReplicaConfig, parts: Partial<ReplicaParts>): Replic
     barrel: parts.barrel && parts.barrel in BARRELS ? parts.barrel : null,
     muzzle: parts.muzzle && parts.muzzle in MUZZLES ? parts.muzzle : null,
     light: isLightId(parts.light) ? parts.light : null,
-    tune: parts.tune ?? NO_TUNE,
   };
 }
 
@@ -243,17 +229,16 @@ export interface Handling {
 export function handlingOf(r: ReplicaConfig, parts: ReplicaParts): Handling {
   const grip = GRIPS[parts.grip];
   const mag = MAGAZINES[parts.magazine];
-  const tune = parts.tune ?? NO_TUNE;
   const muzzle = parts.muzzle ? MUZZLES[parts.muzzle] : undefined;
   // A front-heavy barrel or muzzle device is slower to bring up and to raise to your eye, like a heavier grip.
   const front = (parts.barrel ? BARRELS[parts.barrel].handlingScale : 1) * (muzzle?.handlingScale ?? 1);
   return {
     magSize: Math.max(1, Math.round(r.magSize * mag.capacity)),
     mags: Math.max(1, r.mags + mag.carried),
-    reloadTime: r.reloadTime * mag.reloadScale * tune.reloadScale,
-    drawTime: r.drawTime * mag.drawScale * grip.handlingScale * front * tune.drawScale,
-    raiseScale: grip.handlingScale * front * tune.raiseScale,
-    shakeScale: grip.shakeScale * tune.shakeScale,
+    reloadTime: r.reloadTime * mag.reloadScale,
+    drawTime: r.drawTime * mag.drawScale * grip.handlingScale * front,
+    raiseScale: grip.handlingScale * front,
+    shakeScale: grip.shakeScale,
     rattles: mag.rattles,
     heardScale: muzzle?.heardScale ?? 1,
     muffled: muzzle?.muffled ?? false,

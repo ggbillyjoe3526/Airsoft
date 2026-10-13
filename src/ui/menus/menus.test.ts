@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CROSSHAIR_COLORS, CROSSHAIR_SHAPES, HIT_FEED_MODES, HUD_SIZE, hudInsetX, hudScale, SCOREBOARD_SIZE, scoreboardScale } from '../../config/matchInfo';
 import { MINIMAP } from '../../config/minimap';
 import { ARMORY_TEXT, SETTINGS_LATER, SETTINGS_TABS } from '../../config/menus';
-import { unpaidLine } from './summaryScreen';
+import { noXpLine, type XpSummary } from './summaryScreen';
 import { CUSTOM_NOT_RECORDED_NOTE, DEV_CONTENT_NOTE, DEV_CONTENT_PAY_NOTE, DEV_NOT_RECORDED_NOTE, NOT_RECORDED_NOTE, notRecordedNote, setupNotes } from './playView';
 import { DEFAULT_MATCH_RULES, type MatchRules, offersRow, offersSwitch, REALCAP_TEXT, runRulesSummary, standardMatchText, standardRulesOf } from '../../config/matchRules';
 import { FOV_SETTING, QUALITY, QUALITY_CHOICES, RENDER } from '../../config/render';
@@ -329,25 +329,26 @@ describe('HUD settings (M24)', () => {
   });
 });
 
-describe('the summary when a match paid nothing (audit POOL-22)', () => {
-  it('says why: Dev settings changed the match; nothing when it paid, nor with the Armory off (M83: gone from the menus)', () => {
-    expect(unpaidLine(null, 'dev')).toBe(ARMORY_TEXT.unpaidDev);
-    expect(unpaidLine(null, 'off')).toBe('');
-    expect(unpaidLine(null, 'devContent')).toBe(ARMORY_TEXT.unpaidDevContent);
-    expect(ARMORY_TEXT.unpaidDevContent).not.toBe(ARMORY_TEXT.unpaidDev);
-    expect(unpaidLine({ lines: [], multiplier: 1, total: 40 }, 'devContent')).toBe('');
-    expect(unpaidLine(null, null)).toBe('');
-    expect(unpaidLine({ lines: [], multiplier: 1, total: 40 }, 'dev')).toBe('');
+describe('the summary when a match gave no XP (audit POOL-22, LV1)', () => {
+  it('says why: Dev settings changed the match, or it used dev content; nothing when it gave XP', () => {
+    const gave: XpSummary = { earned: { lines: [], multiplier: 1, total: 40 }, level: 1, into: 40, next: 300, levelUp: null };
+    expect(noXpLine(null, 'dev')).toBe(ARMORY_TEXT.noXpDev);
+    expect(noXpLine(null, 'devContent')).toBe(ARMORY_TEXT.noXpDevContent);
+    expect(ARMORY_TEXT.noXpDevContent).not.toBe(ARMORY_TEXT.noXpDev);
+    expect(noXpLine(gave, 'devContent')).toBe('');
+    expect(noXpLine(null, null)).toBe('');
+    expect(noXpLine(gave, 'dev')).toBe('');
   });
 });
 
 describe('New game notes on dev content (M35)', () => {
-  it('says what dev content costs in plain words, with no Dev tag, and the pay-only note adds what the records note lacks', () => {
+  it('says what dev content costs in plain words, with no Dev tag, and the XP-only note adds what the records note lacks', () => {
     expect(DEV_CONTENT_NOTE).toContain('content still being built');
     expect(DEV_CONTENT_NOTE).toContain('records');
-    expect(DEV_CONTENT_NOTE).toContain('Field Credits');
+    expect(DEV_CONTENT_NOTE).toContain('XP');
     expect(DEV_CONTENT_PAY_NOTE).toContain('content still being built');
-    expect(DEV_CONTENT_PAY_NOTE).toContain('Field Credits');
+    expect(DEV_CONTENT_PAY_NOTE).toContain('XP');
+    for (const note of [DEV_CONTENT_NOTE, DEV_CONTENT_PAY_NOTE]) expect(note).not.toMatch(/Field Credits|\bFC\b/);
     expect(DEV_CONTENT_PAY_NOTE).not.toContain('records');
     for (const note of [DEV_CONTENT_NOTE, DEV_CONTENT_PAY_NOTE]) expect(note).not.toMatch(/tagged|Dev\b/);
     // It follows a note that already says the match is not recorded, so it is not a repeat of either.
@@ -360,7 +361,7 @@ describe('New game notes on dev content (M35)', () => {
     const clean = { recorded: true, cheating: false, devContentUsed: false };
     expect(setupNotes('Rules.', clean)).toBe('Rules.');
     expect(setupNotes('Rules.', { ...clean, devContentUsed: true })).toBe(`Rules. ${DEV_CONTENT_NOTE}`);
-    // Custom rules or Dev settings already say it won't be recorded: dev content adds only that it won't pay.
+    // Custom rules or Dev settings already say it won't be recorded: dev content adds only that it gives no XP.
     expect(setupNotes('Rules.', { ...clean, recorded: false, devContentUsed: true })).toBe(`Rules. ${NOT_RECORDED_NOTE} ${DEV_CONTENT_PAY_NOTE}`);
     expect(setupNotes('Rules.', { ...clean, cheating: true, devContentUsed: true })).toBe(`Rules. ${DEV_NOT_RECORDED_NOTE} ${DEV_CONTENT_PAY_NOTE}`);
     expect(setupNotes('Rules.', { ...clean, recorded: false, cheating: true })).toBe(`Rules. ${NOT_RECORDED_NOTE}`);
@@ -369,7 +370,7 @@ describe('New game notes on dev content (M35)', () => {
 
 describe('M32 acceptance 5: the Cyber Pistol on Customise', () => {
   it('reads Built-in battery and its own 50-BB magazine, and greys the part rows', () => {
-    const kit = kitSlot(GAME_POOL, { asset: '000019', tier: 'legendary' }, EMPTY_FIT);
+    const kit = kitSlot(GAME_POOL, { asset: '000019' }, EMPTY_FIT);
     expect(fixedValue('power', kit)).toBe('Built-in battery');
     expect(fixedValue('magazine', kit)).toBe('Its own, 50 BBs');
     expect(fixedValue('barrel', kit)).toBe('Fixed barrel');

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * RM3: the Armory's collection pictures the power sources from their model files, and every picture fits its slot whole
+ * RM3: the Armory's level track (LV1) pictures the power sources from their model files, and every picture fits its slot whole
  * (before, a square picture overflowed a short slot and was cropped). Read from the page, no screenshot.
  */
 test('the power sources are pictured in the Armory, and no picture spills out of its slot', async ({ page }) => {
@@ -18,10 +18,10 @@ test('the power sources are pictured in the Armory, and no picture spills out of
   await page.locator('.menu-title-start').click();
   await page.getByRole('button', { name: 'Armory', exact: true }).first().click();
 
-  const power = page.locator('.armory-kind[data-kind="power"] .pic-slot');
+  const power = page.locator('.armory-levels .armory-item[data-kind="power"] .pic-slot');
   await expect(power).toHaveCount(5);
   await power.last().scrollIntoViewIfNeeded();
-  await expect.poll(() => page.locator('.armory-kind[data-kind="power"] .pic-slot.has-picture').count(), { timeout: 60_000 }).toBe(5);
+  await expect.poll(() => page.locator('.armory-levels .armory-item[data-kind="power"] .pic-slot.has-picture').count(), { timeout: 60_000 }).toBe(5);
 
   const spills = await page.evaluate(() =>
     [...document.querySelectorAll<HTMLElement>('.pic-slot.has-picture')]

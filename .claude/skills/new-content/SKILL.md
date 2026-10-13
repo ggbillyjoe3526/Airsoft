@@ -22,8 +22,9 @@ a default, and only results, blockers and decisions.
 4. **Task.** The build is a pipeline task (`.claude/skills/pipeline/SKILL.md`): a task block in `docs/TASKS.md`,
    branch from the latest `origin/main`.
 5. **Build** as `dev`: the `pool.md` row with the next free pool ID (000021 is `pool.md`'s example and stays free;
-   append the new ID to `pool.test.ts`'s pinned IDs), the `stats.md` row, the code key and config, the model (every
-   part that fits it, at Low and High), the sounds. Note any reason for a number outside its range, a part that fits by ID, or a part better at everything, and put it to the
+   append the new ID to `pool.test.ts`'s pinned IDs), the `stats.md` row, its Name in one level's Unlocks in
+   `levels.md` (the brief's level; a level above the cap is a new row under the last; items have no tiers), the code
+   key and config, the model (every part that fits it, at Low and High), the sounds. Note any reason for a number outside its range, a part that fits by ID, or a part better at everything, and put it to the
    owner: each goes into its register in `src/config/contentRules.ts` only with his OK.
 6. **Check.** `PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium node pipeline/content-check.mjs <id> --balance` (drop the
    variable outside a cloud container; a map is `map:<id>`, and its perf runs add about ten minutes; a mode is

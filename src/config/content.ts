@@ -1,8 +1,8 @@
 /**
  * Public and dev content (M35; owner, 2026-10-04): every map, mode, difficulty and pooled asset (replicas, parts,
- * power sources, items) carries one tag. Public content is there for everyone, the Armory's Shots included. Dev
+ * power sources, items) carries one tag. Public content is there for everyone, the levels' unlocks included. Dev
  * content is still being built: it isn't shown anywhere unless the Dev tab's Dev content switch is on (config/dev.ts),
- * and then it looks like the rest. A match that uses any of it stays out of the records and pays no Field Credits.
+ * and then it looks like the rest. A match that uses any of it stays out of the records and gives no XP.
  * Making something public is changing its tag: pool.md's Access column for gear, the `tag` beside it in its config for
  * the rest.
  */

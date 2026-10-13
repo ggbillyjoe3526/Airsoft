@@ -21,7 +21,8 @@ Must:
 1. **Name, and the plain family it becomes under Realistic colours.** (A plain made-up name; the nearest family.)
 2. **Which replicas.** (Every replica of one type.)
 3. **Colours and pattern.** (Two colours, away from both team colours.)
-4. **Rarity.** (Every tier.)
+4. **Level.** (None: colour schemes are free to everyone. Patterned skins join `levels.md`'s Unlocks with the
+   Progression Update.)
 
 ## Checks
 

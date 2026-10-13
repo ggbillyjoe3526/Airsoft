@@ -8,7 +8,7 @@ The save system: guarded browser storage, a readable save file, migrations and a
 - `saveManager.ts`: today's restore point, the Undo slot, load and delete, used by Settings › Save
   (`ui/saveSettings.ts`, `ui/saveDialog.ts`). `main.ts` starts the guarded storage first, then the lock, then this.
 - `saveFile.ts`: the file format and migrations, pure. `sha256.ts` makes its checksum. `stores.ts` lists the stores
-  (settings, key bindings, records, collection). `overStored.ts`: `storedIsNewer`, so a store never overwrites a newer
+  (settings, key bindings, records, progress). `overStored.ts`: `storedIsNewer`, so a store never overwrites a newer
   build's data. Stores keep the fields they don't know when they save.
 - Tuning: `config/save.ts`. Tests: `saveFile.test.ts`, `saveManager.test.ts`, `guardedStorage.test.ts`,
   `tabLock.test.ts`, `overStored.test.ts`.

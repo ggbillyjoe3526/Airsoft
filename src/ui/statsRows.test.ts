@@ -97,9 +97,9 @@ describe('records view (M19)', () => {
       { label: 'Extractions in a row', value: '0 now · best 0', isNew: false },
       { label: 'Fastest extraction with a case', value: '–', isNew: false },
     ]);
-    const news = addMatch(r, { difficulty: 'normal', mode: 'extraction', won: true, hits: 0, bbsFired: 0, run: { haulFc: 1250, finds: 2, seconds: 95.4 } });
+    const news = addMatch(r, { difficulty: 'normal', mode: 'extraction', won: true, hits: 0, bbsFired: 0, run: { haulXp: 1250, finds: 2, seconds: 95.4 } });
     expect(extractionBests(r, news)).toEqual([
-      { label: 'Best haul', value: '1,250 FC', isNew: true },
+      { label: 'Best haul', value: '1,250 XP', isNew: true },
       { label: 'Extractions in a row', value: '1 now · best 1', isNew: true },
       { label: 'Fastest extraction with a case', value: '1:35', isNew: true },
     ]);

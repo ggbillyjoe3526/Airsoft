@@ -227,13 +227,12 @@ test('with Dev content off there is no Light row, no torch in the match, and T d
 /**
  * Extraction's cases (M44, dev content like the mode): beside the marshal's locker the page asks for the Use key, holding
  * G opens it with a bar and a line of what it held, you carry the find, and standing in an exit counts you out. The run
- * is dev content, so the summary shows the haul but says it was not kept, and its part's tile wears its tier's rarity
- * colour (the Armory's). Ghost is on so a bot's BB cannot end the run while the locker (7 s, heard 30 m) is worked;
+ * is dev content, so the summary shows the haul but says it gives no XP (LV1: a case holds XP, never gear). Ghost is on so a bot's BB cannot end the run while the locker (7 s, heard 30 m) is worked;
  * the player is placed by the e2e build's `window.airsoft`, since walking there under SwiftShader would take minutes.
  */
 type Run = {
-  cases: { kind: string; name: string; open: boolean; position: { x: number; y: number; z: number }; finds: { fc: number; resupply: boolean; item: { asset: string; tier: string } | null }[] }[];
-  carried: { fc: number; item: { asset: string; tier: string } | null }[];
+  cases: { kind: string; name: string; open: boolean; position: { x: number; y: number; z: number }; finds: { xp: number; resupply: boolean }[] }[];
+  carried: { xp: number }[];
   exits: { open: boolean; position: { x: number; y: number; z: number } }[];
   outcome: string;
 };
@@ -290,16 +289,16 @@ test('Extraction: the locker asks for G, opens while held, is carried out throug
   const prompt = page.locator('.case-prompt');
   await expect(prompt).toContainText("Hold G to open the marshal's locker", { timeout: 30_000 });
 
-  // Hold G: the bar shows while it opens, and the locker's part comes out with you.
+  // Hold G: the bar shows while it opens, and the locker's XP comes out with you.
   await page.keyboard.down('g');
   await expect(prompt).toContainText("Opening the marshal's locker", { timeout: 30_000 });
   await expect(prompt.locator('.case-prompt-bar')).toBeVisible();
   await expect.poll(() => run((r, _you) => r.cases.find((k) => k.kind === 'locker')!.open), { timeout: 120_000 }).toBe(true);
   await page.keyboard.up('g');
   const found = await run((r) => r.cases.find((k) => k.kind === 'locker')!.finds[0]!);
-  expect(found.item).not.toBeNull();
+  expect(found.xp).toBeGreaterThan(0);
   expect(await run((r) => r.carried.length)).toBe(1);
-  await expect(prompt).toContainText(/\+\d+ FC/, { timeout: 30_000 });
+  await expect(prompt).toContainText(/\+\d+ XP/, { timeout: 30_000 });
 
   // Out through an exit: stand in an open one until you are counted out.
   await page.evaluate(() => {
@@ -315,16 +314,9 @@ test('Extraction: the locker asks for G, opens while held, is carried out throug
   expect(await run((r) => r.outcome)).toBe('extracted');
   const haul = summary.locator('.summary-haul');
   await expect(haul).toContainText('The haul');
-  await expect(haul).toContainText('Not kept: nothing from this run goes into your collection.');
-
-  // The part's tile carries its tier and wears that tier's colour, as an Armory tile does.
-  const tile = haul.locator('.armory-tile');
-  await expect(tile).toHaveCount(1);
-  await expect(tile).toContainText('Not kept');
-  expect(await tile.getAttribute('data-tier')).toBe(found.item!.tier);
-  const colours: Record<string, string> = { rare: 'rgb(79, 151, 255)', veryRare: 'rgb(164, 123, 255)', epic: 'rgb(255, 92, 157)', legendary: 'rgb(255, 194, 26)' };
-  const tierColour = await tile.locator('.item-tier').evaluate((n) => getComputedStyle(n).color);
-  expect(tierColour).toBe(colours[found.item!.tier]);
+  await expect(haul).toContainText(`You got out with ${found.xp} XP, but this run gives no XP.`);
+  // The XP card says why: the run used content still being built.
+  await expect(summary.locator('.summary-xp')).toHaveText('No XP: this match used content still being built.');
   expect(errors, errors.join(' | ')).toEqual([]);
 });
 

@@ -31,11 +31,11 @@ const fov = (page: Page) => page.evaluate(() => JSON.parse(localStorage.getItem(
 test('Settings → Save downloads the save and loads it back, with Undo', async ({ page }) => {
   test.setTimeout(120_000);
   const errors = watchErrors(page);
-  // A returning player's collection, saved once before the first load (not again on the reloads).
+  // A returning player's level (LV1), saved once before the first load (not again on the reloads).
   await page.addInitScript(() => {
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');
-    localStorage.setItem('airsoft.collection', JSON.stringify({ version: 1, owned: { '000001@common': 1, '000003@common': 2 }, fc: 400, tokens: 1, seed: 1, futureField: 'kept' }));
+    localStorage.setItem('airsoft.progress', JSON.stringify({ version: 1, xp: 400, unlocked: ['000001', '000002', '000003'], rev: 1, futureField: 'kept' }));
   });
   await page.goto('/?nolock&seed=1');
   let settings = await openSaveTab(page);
@@ -52,9 +52,9 @@ test('Settings → Save downloads the save and loads it back, with Undo', async 
   let text = '';
   for await (const chunk of stream as unknown as AsyncIterable<{ toString(): string }>) text += chunk.toString();
   const file = JSON.parse(text);
-  expect(file).toMatchObject({ game: 'Airsoft', format: 1, summary: { fc: 400, tokens: 1, items: 3 } });
+  expect(file).toMatchObject({ game: 'Airsoft', format: 2, summary: { level: 2, xp: 400, unlocked: 3 } });
   expect(file.stores.settings.fov).toBe(100);
-  expect(file.stores.collection.futureField).toBe('kept');
+  expect(file.stores.progress.futureField).toBe('kept');
   expect(file.checksum).toMatch(/^sha256:/);
   await expect(settings.getByText(/Last downloaded just now/)).toBeVisible();
 
@@ -80,12 +80,12 @@ test('Settings → Save downloads the save and loads it back, with Undo', async 
   await expect(settings.getByText('Nothing to undo.')).toBeVisible();
 
   // An edited file: a warning and "Load anyway"; Cancel leaves the save alone.
-  file.stores.collection.fc = 99999;
+  file.stores.progress.xp = 99999;
   await settings.locator('input[type="file"]').setInputFiles({ name: 'edited.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) });
   await expect(page.locator('.save-dialog')).toContainText('changed or damaged');
   await page.locator('.save-dialog').getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(page.locator('.save-dialog')).toBeHidden();
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('airsoft.collection')!).fc)).toBe(400);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('airsoft.progress')!).xp)).toBe(400);
 
   // Not a save at all: refused with a line on the tab.
   await settings.locator('input[type="file"]').setInputFiles({ name: 'notes.json', mimeType: 'application/json', buffer: Buffer.from('{"hello": 1}') });
@@ -124,22 +124,22 @@ async function seedOnce(page: Page, entries: Record<string, unknown>) {
   }, entries);
 }
 
-const collectionOf = (page: Page) => page.evaluate(() => JSON.parse(localStorage.getItem('airsoft.collection') ?? 'null') as { fc: number; futureField?: string } | null);
+const progressOf = (page: Page) => page.evaluate(() => JSON.parse(localStorage.getItem('airsoft.progress') ?? 'null') as { xp: number; futureField?: string } | null);
 
 /** A save file's text, for dropping or loading. */
 function saveText(extra: Record<string, unknown> = {}, stores: Record<string, unknown> = {}): string {
-  return JSON.stringify({ game: 'Airsoft', format: 1, build: 'v-test', savedAt: '2026-10-01T10:00:00.000Z', stores, ...extra });
+  return JSON.stringify({ game: 'Airsoft', format: 2, build: 'v-test', savedAt: '2026-10-01T10:00:00.000Z', stores, ...extra });
 }
 
 test('Delete save asks first, offers a download, starts fresh and Undo brings it back; Restore uses the day\'s restore point', async ({ page }) => {
   test.setTimeout(150_000);
   const errors = watchErrors(page);
-  await seedOnce(page, { 'airsoft.collection': { version: 1, owned: { '000001@common': 1 }, fc: 400, tokens: 1, seed: 1, futureField: 'kept' } });
+  await seedOnce(page, { 'airsoft.progress': { version: 1, xp: 400, unlocked: ['000001'], rev: 1, futureField: 'kept' } });
   await page.goto('/?nolock&seed=1');
   let settings = await openSaveTab(page);
 
   // The first start of the day kept a restore point of the save as it was.
-  const restoreButton = settings.getByRole('button', { name: /^Restore:.*400 FC/ });
+  const restoreButton = settings.getByRole('button', { name: /^Restore:.*400 XP/ });
   await expect(restoreButton).toBeVisible();
   await expect(settings.getByText('Nothing to undo.')).toBeVisible();
 
@@ -154,14 +154,14 @@ test('Delete save asks first, offers a download, starts fresh and Undo brings it
   // Cancel: nothing deleted.
   await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(dialog).toBeHidden();
-  expect((await collectionOf(page))?.fc).toBe(400);
+  expect((await progressOf(page))?.xp).toBe(400);
 
   // Delete: the game reloads as for a new player.
   await settings.getByRole('button', { name: 'Delete save', exact: true }).click();
   await Promise.all([page.waitForEvent('load'), dialog.getByRole('button', { name: 'Delete', exact: true }).click()]);
   settings = await openSaveTab(page);
-  const fresh = await collectionOf(page);
-  expect(fresh?.fc ?? 0).toBe(0);
+  const fresh = await progressOf(page);
+  expect(fresh?.xp ?? 0).toBe(0);
   expect(fresh?.futureField).toBeUndefined();
   await expect(settings.getByText('Brings back the save from before the delete.')).toBeVisible();
 
@@ -169,16 +169,16 @@ test('Delete save asks first, offers a download, starts fresh and Undo brings it
   await settings.getByRole('button', { name: 'Undo', exact: true }).click();
   await Promise.all([page.waitForEvent('load'), page.locator('.save-dialog').getByRole('button', { name: 'Undo' }).click()]);
   settings = await openSaveTab(page);
-  expect(await collectionOf(page)).toMatchObject({ fc: 400, tokens: 1, futureField: 'kept' });
+  expect(await progressOf(page)).toMatchObject({ xp: 400, futureField: 'kept' });
 
-  // Change the collection behind the game's back, then Restore the day's point: it comes back, and Undo notes the restore.
-  await page.evaluate(() => localStorage.setItem('airsoft.collection', JSON.stringify({ version: 1, owned: {}, fc: 999, tokens: 0, seed: 1 })));
-  await settings.getByRole('button', { name: /^Restore:.*400 FC/ }).click();
+  // Change the level behind the game's back, then Restore the day's point: it comes back, and Undo notes the restore.
+  await page.evaluate(() => localStorage.setItem('airsoft.progress', JSON.stringify({ version: 1, xp: 999, unlocked: [], rev: 50 })));
+  await settings.getByRole('button', { name: /^Restore:.*400 XP/ }).click();
   await expect(page.locator('.save-dialog')).toContainText('Restore this save?');
   await expect(page.locator('.save-dialog .save-compare')).toContainText('999');
   await Promise.all([page.waitForEvent('load'), page.locator('.save-dialog').getByRole('button', { name: 'Replace' }).click()]);
   settings = await openSaveTab(page);
-  expect((await collectionOf(page))?.fc).toBe(400);
+  expect((await progressOf(page))?.xp).toBe(400);
   await expect(settings.getByText('Brings back the save from before the last restore.')).toBeVisible();
   expect(errors()).toEqual([]);
 });
@@ -186,7 +186,7 @@ test('Delete save asks first, offers a download, starts fresh and Undo brings it
 test('a file that is too big, not a save, from a newer game or dropped on the page is handled on the Save tab', async ({ page }) => {
   test.setTimeout(120_000);
   const errors = watchErrors(page);
-  await seedOnce(page, { 'airsoft.collection': { version: 1, owned: {}, fc: 400, tokens: 0, seed: 1 } });
+  await seedOnce(page, { 'airsoft.progress': { version: 1, xp: 400, unlocked: [], rev: 1 } });
   await page.goto('/?nolock&seed=1');
   const settings = await openSaveTab(page);
   const input = settings.locator('input[type="file"]');
@@ -203,14 +203,14 @@ test('a file that is too big, not a save, from a newer game or dropped on the pa
   await expect(message).toContainText("isn't an Airsoft save (it can't be read)");
 
   // A newer format: told to update, nothing replaced.
-  await upload('future.json', saveText({ format: 2, build: 'v9-future' }));
+  await upload('future.json', saveText({ format: 3, build: 'v9-future' }));
   await expect(message).toContainText('newer version of the game (v9-future)');
   await expect(message).toContainText('Update the game');
   await expect(page.locator('.save-dialog')).toBeHidden();
-  expect((await collectionOf(page))?.fc).toBe(400);
+  expect((await progressOf(page))?.xp).toBe(400);
 
   // A good file dropped anywhere on the page while the Save tab shows opens the comparison.
-  const good = saveText({}, { collection: { version: 1, owned: { '000002@epic': 2 }, fc: 5, tokens: 0, seed: 1 } });
+  const good = saveText({}, { progress: { version: 1, xp: 5, unlocked: ['000002'], rev: 1 } });
   await page.evaluate((text) => {
     const data = new DataTransfer();
     data.items.add(new File([text], 'dropped.json', { type: 'application/json' }));
@@ -223,30 +223,30 @@ test('a file that is too big, not a save, from a newer game or dropped on the pa
   await expect(dialog).toContainText('changed or damaged');
   await expect(dialog.getByRole('button', { name: 'Load anyway' })).toBeVisible();
   await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
-  expect((await collectionOf(page))?.fc).toBe(400);
+  expect((await progressOf(page))?.xp).toBe(400);
   expect(errors()).toEqual([]);
 });
 
 test('Load anyway on a checksum mismatch replaces the save', async ({ page }) => {
   test.setTimeout(120_000);
   const errors = watchErrors(page);
-  await seedOnce(page, { 'airsoft.collection': { version: 1, owned: {}, fc: 400, tokens: 0, seed: 1 } });
+  await seedOnce(page, { 'airsoft.progress': { version: 1, xp: 400, unlocked: [], rev: 1 } });
   await page.goto('/?nolock&seed=1');
   const settings = await openSaveTab(page);
-  const edited = saveText({ checksum: 'sha256:0000' }, { collection: { version: 1, owned: {}, fc: 77, tokens: 0, seed: 1 } });
+  const edited = saveText({ checksum: 'sha256:0000' }, { progress: { version: 1, xp: 77, unlocked: [], rev: 1 } });
   await settings.locator('input[type="file"]').setInputFiles({ name: 'edited.json', mimeType: 'application/json', buffer: Buffer.from(edited) });
   const dialog = page.locator('.save-dialog');
   await expect(dialog).toContainText('changed or damaged');
   await expect(dialog.getByRole('button', { name: 'Replace', exact: true })).toHaveCount(0);
   await Promise.all([page.waitForEvent('load'), dialog.getByRole('button', { name: 'Load anyway' }).click()]);
-  expect((await collectionOf(page))?.fc).toBe(77);
+  expect((await progressOf(page))?.xp).toBe(77);
   expect(errors()).toEqual([]);
 });
 
 test('mid-match, the Save tab cannot load, restore, undo or delete, but still downloads', async ({ page }) => {
   test.setTimeout(150_000);
   const errors = watchErrors(page);
-  await seedOnce(page, { 'airsoft.collection': { version: 1, owned: { '000001@common': 1 }, fc: 400, tokens: 0, seed: 1 } });
+  await seedOnce(page, { 'airsoft.progress': { version: 1, xp: 400, unlocked: ['000001'], rev: 1 } });
   await page.goto('/?nolock&seed=1');
   await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
   await page.locator('.menu-title-start').click();
@@ -332,7 +332,7 @@ test('a browser save from a newer format is not overwritten: the title and Save 
   const errors = watchErrors(page);
   const newerMeta = { format: 99, build: 'v9-future', savedAt: null, downloadedAt: null };
   const newerSettings = { version: 1, fov: 70, laterField: 'kept' };
-  await seedOnce(page, { 'airsoft.save.meta': newerMeta, 'airsoft.settings': newerSettings, 'airsoft.collection': { version: 1, owned: {}, fc: 70, tokens: 0, seed: 1 } });
+  await seedOnce(page, { 'airsoft.save.meta': newerMeta, 'airsoft.settings': newerSettings, 'airsoft.progress': { version: 1, xp: 70, unlocked: [], rev: 1 } });
   await page.goto('/?nolock&seed=1');
   await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
   await expect(page.locator('.menu-title-warning')).toContainText('newer version (v9-future)');

@@ -1,11 +1,12 @@
 import { MENU_TEXT } from '../../config/menus';
+import type { MenuLevel } from './menusOptions';
 import { BACKDROPS, MENU_ART_DIR } from '../../config/menuArt';
 import { MENU_ICONS, NAV_ICONS } from './icons';
 import { el } from './menuParts';
 
 /**
  * The menus' frame (graphics overhaul G3, M100): the bar across the top of the screens you move between (Match, Loadout,
- * Armory, Settings, with the wallet on the far right), and the backdrop behind them all: one picture, blurred once when
+ * Armory, Settings, with your level on the far right, LV1), and the backdrop behind them all: one picture, blurred once when
  * it was made, never live. No key prompts are drawn along the bottom; the keys a screen answers to are its `hints`.
  */
 
@@ -19,19 +20,18 @@ export function menuArt(file: string): string {
 
 /**
  * The top bar: the wordmark (a button back to the title; Back to the pause menu when opened from there), the places
- * (the current one marked) and the wallet at the far right. It carries no version: the title screen has it.
+ * (the current one marked) and your level at the far right (LV1), a button to the Armory. It carries no version: the
+ * title screen has it.
  */
 export class TopBar {
   readonly root: HTMLElement;
   private readonly places = new Map<NavPlace, HTMLButtonElement>();
   private readonly mark: HTMLButtonElement;
   private readonly markText: HTMLSpanElement;
-  private readonly fc: HTMLSpanElement;
-  private readonly tokens: HTMLSpanElement;
-  /** Dev settings › Disable Armory (M83, playtest note 25): the Armory's place is gone from the bar, not greyed out. */
-  private armoryOff = false;
-  private current: NavPlace | null = null;
-  private alone = false;
+  /** The level badge (LV1): "Lv 3" over a bar of the XP into the next level. Hidden while levelling is off. */
+  private readonly level: HTMLButtonElement;
+  private readonly levelText: HTMLSpanElement;
+  private readonly levelBar: HTMLSpanElement;
 
   constructor(onPlace: (place: NavPlace) => void, onMark: () => void) {
     this.root = el('header', 'menu-topbar');
@@ -52,11 +52,17 @@ export class TopBar {
       nav.append(b);
       this.places.set(id, b);
     }
-    const wallet = el('div', 'menu-wallet');
-    this.fc = el('span', 'menu-chip menu-chip-fc');
-    this.tokens = el('span', 'menu-chip menu-chip-tokens');
-    wallet.append(this.fc, this.tokens);
-    this.root.append(this.mark, nav, wallet);
+    const status = el('div', 'menu-status');
+    this.level = el('button', 'menu-chip menu-chip-level');
+    this.level.type = 'button';
+    this.levelText = el('span', 'menu-level-text');
+    this.levelBar = el('span', 'menu-level-bar');
+    this.levelBar.setAttribute('aria-hidden', 'true');
+    this.levelBar.append(el('i'));
+    this.level.append(this.levelText, this.levelBar);
+    this.level.addEventListener('click', () => onPlace('armory'));
+    status.append(this.level);
+    this.root.append(this.mark, nav, status);
   }
 
   /**
@@ -64,33 +70,29 @@ export class TopBar {
    * (a match is under way), so only the current one shows, and the wordmark button reads Back.
    */
   show(current: NavPlace | null, alone: boolean): void {
-    this.current = current;
-    this.alone = alone;
     for (const [id, b] of this.places) {
       const on = id === current;
       b.classList.toggle('on', on);
       if (on) b.setAttribute('aria-current', 'page');
       else b.removeAttribute('aria-current');
-      b.hidden = (alone && !on) || (id === 'armory' && this.armoryOff);
+      b.hidden = alone && !on;
     }
+    // Opened from the pause menu, the badge stays (it says where you stand) but goes nowhere.
+    this.level.disabled = alone;
     this.root.classList.toggle('alone', alone);
     this.markText.textContent = alone ? MENU_TEXT.back : MENU_TEXT.wordmark;
     this.mark.title = alone ? MENU_TEXT.back : MENU_TEXT.toTitle;
   }
 
-  /**
-   * The wallet: Field Credits and Tokens (null hides it: the Armory is off). `armoryOff` takes the Armory's place off
-   * the bar altogether (M83: gone, not greyed out), and puts it back once the Armory is on again.
-   */
-  setWallet(wallet: { fc: number; tokens: number } | null, armoryOff: boolean): void {
-    this.fc.hidden = this.tokens.hidden = wallet === null;
-    if (wallet) {
-      this.fc.textContent = MENU_TEXT.fc(wallet.fc);
-      this.tokens.textContent = MENU_TEXT.tokens(wallet.tokens);
-    }
-    if (armoryOff === this.armoryOff) return;
-    this.armoryOff = armoryOff;
-    this.show(this.current, this.alone);
+  /** Your level (LV1): its number and the XP into the next one; null hides it (levelling is off in the Dev settings). */
+  setLevel(level: MenuLevel): void {
+    this.level.hidden = level === null;
+    if (!level) return;
+    this.levelText.textContent = MENU_TEXT.level(level.level);
+    // A full bar at the top level: there is nothing left to fill until the cap goes up.
+    this.levelBar.style.setProperty('--xp', String(level.next ? Math.min(1, level.into / level.next) : 1));
+    this.level.setAttribute('aria-label', MENU_TEXT.levelLabel(level.level, level.toNext));
+    this.level.title = this.level.getAttribute('aria-label') ?? '';
   }
 }
 

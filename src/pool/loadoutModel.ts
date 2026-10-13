@@ -3,17 +3,17 @@ import { HOP_UP, LOADOUT, type ReplicaConfig, validBbWeight } from '../config/re
 import { DEFAULT_LOOK, type LookSettings } from '../config/look';
 import { defaultScheme, isSchemeId, offeredSchemes, type ReplicaPaint, type SchemeId } from '../config/schemes';
 import { loadSetting, numberIn, oneOf, saveSetting } from '../settings/storage';
-import { type Collection, inPool, type ItemRef, itemKey, parseItemKey } from './collection';
 import { isAvailable } from '../config/content';
 import { isDevItem } from './contentPool';
+import { inPool, type ItemRef, itemKey, parseItemKey } from './item';
 import { EMPTY_FIT, energyCapped, FIT_CATEGORY, FIT_SLOTS, type FitSlot, type KitSlot, kitSlot, type ReplicaFit } from './kit';
-import { type Asset, fits, isChase, type Pool, replicaOf, tiersOf } from './pool';
+import { type Asset, fits, type Pool, replicaOf } from './pool';
 
 /**
- * The player's loadout (M26b): which owned replica is in each gear slot, what is fitted to each replica, and each
+ * The player's loadout (M26b): which unlocked replica is in each gear slot, what is fitted to each replica, and each
  * replica's BB weight and hop-up dial. Saved in the settings store as the player changes it; read back against what
- * they own now, so anything no longer owned (or no longer fitting, after a pool.md edit) falls back to a default.
- * No DOM: the Loadout screen shows it, the game builds each match's kit from it.
+ * they have unlocked now, so anything not unlocked (or no longer fitting, after a pool.md edit) falls back to a
+ * default. No DOM: the Loadout screen shows it, the game builds each match's kit from it.
  */
 
 /** The gear slots that hold a replica, top to bottom (the Grenades slot under them waits for grenades, v0.3). */
@@ -46,7 +46,7 @@ export function kitPaint(kit: PlayerKit, look: LookSettings = DEFAULT_LOOK): Rep
   return { schemes: kit.schemes, realistic: look.realisticColours };
 }
 
-/** What the player can equip: the collection's items, or (Dev settings, M26d) everything. */
+/** What the player can equip: the items their levels unlocked (LV1), or (Dev settings › Disable levelling) everything. */
 export interface Ownership {
   owns(ref: ItemRef): boolean;
   /** Whether `asset` is offered at all (M35: dev gear only with Dev content on); every asset when absent. */
@@ -54,25 +54,42 @@ export interface Ownership {
   /** Whether dev content is offered (M35's switch; CT4: a dev colour scheme shows only then); never when absent. */
   devContent?(): boolean;
   /**
-   * True while everything is unlocked (M26d): picks are then saved apart from the real ones (under `equip.dev.` and
-   * `fit.dev.`), starting from them, so turning Unlock all gear off brings back the loadout the player owns.
+   * The level that unlocks `ref` (levels.md, LV1) while the player hasn't got it, so the Loadout can show what is to
+   * come; null once it is theirs or when no level unlocks it. Never when absent.
+   */
+  lockedAt?(ref: ItemRef): number | null;
+  /**
+   * True while everything is unlocked (M26d, LV1: Disable levelling): picks are then saved apart from the real ones
+   * (under `equip.dev.` and `fit.dev.`), starting from them, so turning levelling back on brings back the loadout the
+   * player's levels gave them.
    */
   sandboxed?(): boolean;
 }
 
-export function collectionOwnership(collection: () => Collection): Ownership {
-  return { owns: (ref) => (collection().owned[itemKey(ref.asset, ref.tier)] ?? 0) > 0 };
+/** What the player's levels give them (LV1): the items unlocked, and the level that unlocks each item. */
+export interface Unlocks {
+  /** The pool asset ids unlocked (the player's progress). */
+  unlocked(): readonly string[];
+  /** The level that unlocks an asset (levels.md), or undefined when none does. */
+  levelOf(assetId: string): number | undefined;
+}
+
+/** The items in `unlocked` (pool asset ids). */
+export function unlockedOwnership(unlocked: () => readonly string[]): Ownership {
+  return { owns: (ref) => unlocked().includes(ref.asset) };
 }
 
 /**
- * The collection's items, or, while `unlockAll()` (Dev settings → Unlock all gear, M26d), every asset at every tier;
- * either way only public ones unless `devContent()` (M35): an owned dev item is then hidden, not lost, and a pick of it
- * falls back to a default until Dev content is on again.
+ * The unlocked items, or, while `unlockAll()` (Dev settings › Disable levelling, M26d), every asset; either way only
+ * public ones unless `devContent()` (M35): an unlocked dev item is then hidden, not lost, and a pick of it falls back
+ * to a default until Dev content is on again.
  */
-export function gameOwnership(pool: Pool, collection: () => Collection, unlockAll: () => boolean, devContent: () => boolean = () => false): Ownership {
-  const owned = collectionOwnership(collection);
+export function gameOwnership(pool: Pool, unlocks: Unlocks, unlockAll: () => boolean, devContent: () => boolean = () => false): Ownership {
+  const owned = unlockedOwnership(() => unlocks.unlocked());
+  const owns = (ref: ItemRef): boolean => (devContent() || !isDevItem(pool, ref)) && inPool(pool, ref) && (unlockAll() || owned.owns(ref));
   return {
-    owns: (ref) => (devContent() || !isDevItem(pool, ref)) && (unlockAll() ? inPool(pool, ref) : owned.owns(ref)),
+    owns,
+    lockedAt: (ref) => (owns(ref) || !inPool(pool, ref) ? null : (unlocks.levelOf(ref.asset) ?? null)),
     offers: (asset) => isAvailable(asset.tag, devContent()),
     devContent,
     sandboxed: unlockAll,
@@ -98,17 +115,9 @@ export class LoadoutModel {
     private readonly ownership: Ownership,
   ) {}
 
-  /** Every item owned of the given assets, rarest tier first within each asset (pool order between assets). */
+  /** Every unlocked item of the given assets, in pool order. */
   ownedItems(filter: (a: Asset) => boolean): ItemRef[] {
-    const out: ItemRef[] = [];
-    for (const a of this.pool.assets) {
-      if (!filter(a)) continue;
-      for (let t = this.pool.tiers.length - 1; t >= 0; t--) {
-        const ref = { asset: a.id, tier: this.pool.tiers[t]!.id };
-        if (this.ownership.owns(ref)) out.push(ref);
-      }
-    }
-    return out;
+    return this.pool.assets.filter((a) => filter(a) && this.ownership.owns({ asset: a.id })).map((a) => ({ asset: a.id }));
   }
 
   /** The replicas the player can put in a gear slot (any replica goes in either slot). */
@@ -117,11 +126,29 @@ export class LoadoutModel {
   }
 
   /**
-   * The chase replicas (M32) the player owns in any tier, by asset id (with Unlock all gear on: every one): what
-   * opponents on Hard may now and then carry.
+   * Offered items of the given assets the player hasn't unlocked yet (M35: dev gear only with Dev content on), each with
+   * the level that unlocks it, lowest level first (pool order within a level): what the Loadout shows locked.
    */
-  ownedChase(): string[] {
-    return this.pool.assets.filter((a) => a.category === 'replica' && isChase(a) && this.ownedItems((b) => b === a).length > 0).map((a) => a.id);
+  lockedItems(filter: (a: Asset) => boolean): { item: ItemRef; level: number }[] {
+    const out: { item: ItemRef; level: number }[] = [];
+    for (const a of this.pool.assets) {
+      if (!filter(a) || !(this.ownership.offers?.(a) ?? true)) continue;
+      const level = this.ownership.lockedAt?.({ asset: a.id }) ?? null;
+      if (level !== null) out.push({ item: { asset: a.id }, level });
+    }
+    return out.sort((x, y) => x.level - y.level);
+  }
+
+  /** The replicas still to unlock, with their levels (lockedItems). */
+  lockedReplicas(): { item: ItemRef; level: number }[] {
+    return this.lockedItems((a) => a.category === 'replica');
+  }
+
+  /** The items still to unlock that would go in `slot` on the replica asset `replicaId`, with their levels (lockedItems). */
+  lockedFitChoices(replicaId: string, slot: FitSlot): { item: ItemRef; level: number }[] {
+    const replica = this.pool.byId.get(replicaId);
+    if (!replica) return [];
+    return this.lockedItems((a) => a.category === FIT_CATEGORY[slot] && fits(a, replica));
   }
 
   /** The replica item in each gear slot (null only if the player owns no replica for it). */
@@ -132,9 +159,7 @@ export class LoadoutModel {
       const raw = this.readPick(`equip.${slot}`);
       const saved = raw ? parseItemKey(raw) : null;
       if (saved && this.isReplica(saved) && this.ownership.owns(saved) && !used.has(saved.asset)) return void out.push(saved);
-      // The picked copy scrapped (audit POOL-05: a lower tier goes once a rarer one is owned): the best copy left of it.
-      const same = saved && this.isReplica(saved) && !used.has(saved.asset) ? this.bestOwned(saved.asset) : null;
-      out.push(same ?? this.defaultReplica(LOADOUT[i], used));
+      out.push(this.defaultReplica(LOADOUT[i], used));
     });
     return out;
   }
@@ -147,11 +172,11 @@ export class LoadoutModel {
     const now = this.equipped();
     const i = GEAR_SLOTS.indexOf(slot);
     const other = now.findIndex((r, j) => j !== i && r?.asset === ref.asset);
-    if (other >= 0 && now[i]) this.savePick(`equip.${GEAR_SLOTS[other]!}`, itemKey(now[i]!.asset, now[i]!.tier));
-    this.savePick(`equip.${slot}`, itemKey(ref.asset, ref.tier));
+    if (other >= 0 && now[i]) this.savePick(`equip.${GEAR_SLOTS[other]!}`, itemKey(now[i]!));
+    this.savePick(`equip.${slot}`, itemKey(ref));
   }
 
-  /** What is fitted to the replica asset `replicaId`: each slot's item if still owned and fitting, else its default. */
+  /** What is fitted to the replica asset `replicaId`: each slot's item if still unlocked and fitting, else its default. */
   fitOf(replicaId: string): ReplicaFit {
     const replica = this.pool.byId.get(replicaId);
     const fit: ReplicaFit = { ...EMPTY_FIT };
@@ -162,38 +187,33 @@ export class LoadoutModel {
       // torch). A replica always needs a power source, so a saved "none" there still takes the default.
       if (raw === NONE && slot !== 'power') continue;
       const saved = raw && raw !== NONE ? parseItemKey(raw) : null;
-      if (saved && this.canFit(replica, slot, saved)) fit[slot] = saved;
-      else {
-        // A fitted copy scrapped (audit POOL-05): the best copy left of the same part, else the slot's default.
-        const same = saved ? this.bestOwned(saved.asset) : null;
-        fit[slot] = same && this.canFit(replica, slot, same) ? same : this.defaultFit(replica, slot);
-      }
+      fit[slot] = saved && this.canFit(replica, slot, saved) ? saved : this.defaultFit(replica, slot);
     }
     return fit;
   }
 
   /** Fits `ref` (or nothing: as it comes) to `replicaId`'s `slot`. */
   setFit(replicaId: string, slot: FitSlot, ref: ItemRef | null): void {
-    this.savePick(`fit.${replicaId}.${slot}`, ref ? itemKey(ref.asset, ref.tier) : NONE);
+    this.savePick(`fit.${replicaId}.${slot}`, ref ? itemKey(ref) : NONE);
   }
 
-  /** The owned items that can go in `slot` on the replica asset `replicaId`, rarest first. */
+  /** The unlocked items that can go in `slot` on the replica asset `replicaId`, in pool order. */
   fitChoices(replicaId: string, slot: FitSlot): ItemRef[] {
     const replica = this.pool.byId.get(replicaId);
     if (!replica) return [];
     return this.ownedItems((a) => a.category === FIT_CATEGORY[slot] && fits(a, replica));
   }
 
-  /** Any asset offered (owned or not; M35: dev gear only with Dev content on) fits `slot` on this replica: the slot exists for it. */
+  /** Any asset offered (unlocked or not; M35: dev gear only with Dev content on) fits `slot` on this replica: the slot exists for it. */
   hasSlot(replicaId: string, slot: FitSlot): boolean {
     const replica = this.pool.byId.get(replicaId);
     return !!replica && this.pool.assets.some((a) => a.category === FIT_CATEGORY[slot] && fits(a, replica) && (this.ownership.offers?.(a) ?? true));
   }
 
   /**
-   * Where the replica asset `replicaId`'s dial is saved (audit POOL-17): by asset id, whichever tier, so two pool.md
-   * rows sharing a Key keep their own; `hopUp.dev.<id>` while everything is unlocked, so a dial turned with borrowed
-   * gear doesn't stay on the real replica.
+   * Where the replica asset `replicaId`'s dial is saved (audit POOL-17): by asset id, so two pool.md rows sharing a Key
+   * keep their own; `hopUp.dev.<id>` while everything is unlocked, so a dial turned with borrowed gear doesn't stay on
+   * the real replica.
    */
   dialField(kind: Dial, replicaId: string): `${Dial}.${string}` {
     return this.ownership.sandboxed?.() ? `${kind}.dev.${replicaId}` : `${kind}.${replicaId}`;
@@ -253,7 +273,7 @@ export class LoadoutModel {
 
   /**
    * A replica asset's colour scheme (G1), or its default (a Cobalt rifle, a Ghost pistol). Cosmetic, so one pick per
-   * asset whether or not everything is unlocked: a colour picked on borrowed gear is waiting when the player owns it.
+   * asset whether or not everything is unlocked: a colour picked on borrowed gear is waiting when the player unlocks it.
    * A dev scheme picked with Dev content on plays as the default while it is off (CT4), and comes back with it.
    */
   scheme(replicaId: string): SchemeId {
@@ -278,16 +298,14 @@ export class LoadoutModel {
   }
 
   /**
-   * The replica asset `replicaId` as it comes (M29): at the lowest tier it comes in (Common, or Legendary for a chase
-   * replica, M32), no parts, on its starter power source (none for a battery built in). What the Loadout's Performance
-   * sheet compares against (and what bots carry).
+   * The replica asset `replicaId` as it comes (M29): no parts, on the first power source in pool.md that fits it (the
+   * standard one: none for a battery built in). What the Loadout's Performance sheet compares against (and what bots
+   * carry on Easy and Normal).
    */
   asItComes(replicaId: string): KitSlot {
     const replica = this.pool.byId.get(replicaId)!;
-    const power = this.pool.assets.find((a) => a.category === 'power' && a.starter && fits(a, replica));
-    const common = this.pool.tiers[0]!.id;
-    const lowest = tiersOf(this.pool, replica)[0]!.id;
-    return kitSlot(this.pool, { asset: replicaId, tier: lowest }, { ...EMPTY_FIT, power: power ? { asset: power.id, tier: common } : null });
+    const power = this.pool.assets.find((a) => a.category === 'power' && fits(a, replica));
+    return kitSlot(this.pool, { asset: replicaId }, { ...EMPTY_FIT, power: power ? { asset: power.id } : null });
   }
 
   /** True if the site limit stops the energy of `ref` with its current fit (the Performance sheet says so). */
@@ -317,25 +335,16 @@ export class LoadoutModel {
     saveSetting(this.ownership.sandboxed?.() ? sandboxField(field) : field, value);
   }
 
-  /** The rarest owned copy of an asset, or null. */
-  private bestOwned(assetId: string): ItemRef | null {
-    for (let t = this.pool.tiers.length - 1; t >= 0; t--) {
-      const ref = { asset: assetId, tier: this.pool.tiers[t]!.id };
-      if (this.ownership.owns(ref)) return ref;
-    }
-    return null;
-  }
-
   private isReplica(ref: ItemRef): boolean {
-    return this.pool.byId.get(ref.asset)?.category === 'replica' && this.pool.tiers.some((t) => t.id === ref.tier);
+    return this.pool.byId.get(ref.asset)?.category === 'replica';
   }
 
   private canFit(replica: Asset, slot: FitSlot, ref: ItemRef): boolean {
     const part = this.pool.byId.get(ref.asset);
-    return !!part && part.category === FIT_CATEGORY[slot] && fits(part, replica) && this.ownership.owns(ref) && this.pool.tiers.some((t) => t.id === ref.tier);
+    return !!part && part.category === FIT_CATEGORY[slot] && fits(part, replica) && this.ownership.owns(ref);
   }
 
-  /** The best owned copy of the replica `preferred` came as, else of any replica not in `used`. */
+  /** The unlocked replica `preferred` came as, else any unlocked replica not in `used`. */
   private defaultReplica(preferred: ReplicaConfig | undefined, used: Set<string | undefined>): ItemRef | null {
     const choices = this.replicaChoices().filter((r) => !used.has(r.asset));
     const same = choices.find((r) => preferred && replicaOf(this.pool.byId.get(r.asset)!).id === preferred.id);
@@ -343,13 +352,12 @@ export class LoadoutModel {
   }
 
   /**
-   * What a replica gets in a slot nothing was ever picked for: its best owned power source and light (M33h: a torch
-   * hidden in Customise is a mechanic nobody finds, and it starts each round off), a starter first, and in the other
-   * slots nothing (as it comes), so a new unlock is never fitted behind the player's back.
+   * What a replica gets in a slot nothing was ever picked for: its first unlocked power source and light in pool order
+   * (the standard one first; M33h: a torch hidden in Customise is a mechanic nobody finds, and it starts each round
+   * off), and in the other slots nothing (as it comes), so a new unlock is never fitted behind the player's back.
    */
   private defaultFit(replica: Asset, slot: FitSlot): ItemRef | null {
     if (slot !== 'power' && slot !== 'light') return null;
-    const choices = this.ownedItems((a) => a.category === FIT_CATEGORY[slot] && fits(a, replica));
-    return choices.find((r) => this.pool.byId.get(r.asset)!.starter) ?? choices[0] ?? null;
+    return this.ownedItems((a) => a.category === FIT_CATEGORY[slot] && fits(a, replica))[0] ?? null;
   }
 }

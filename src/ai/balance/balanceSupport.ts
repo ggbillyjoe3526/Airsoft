@@ -24,7 +24,7 @@ export interface BalanceMeasure {
   band: Band;
   /** One standard error, for a figure that is not a plain share (a difference of two shares). */
   se?: number;
-  /** `points` for a difference of two shares; `FC a minute` or `×` for a plain number; a share's is `%`. */
+  /** `points` for a difference of two shares; `XP a minute` or `×` for a plain number; a share's is `%`. */
   unit?: string;
   /** The counts behind the figure, for the report's reader: "108 of 218 decided, 1 on time". */
   detail?: string;
