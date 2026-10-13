@@ -279,7 +279,10 @@ export class RiggedFigure {
     input.sprinting = c.sprinting;
     input.airborne = !c.grounded;
     input.airTime = c.airTime;
-    input.pitch = c.prevPitch + (c.pitch - c.prevPitch) * a;
+    // Resting on cover (M104), a placeholder until the figure redesign's own pose: the aim is posed `rest` higher and the
+    // spine leaned `rest` forward, so the upper body leans over the cover while the bore stays on the shot.
+    const rest = f.firstPerson ? 0 : c.coverRest * FIGURE_RIG.rest.lean;
+    input.pitch = c.prevPitch + (c.pitch - c.prevPitch) * a + rest;
     input.hold = hold;
     const handling = arm.handling[arm.active];
     input.reload = arm.reload > 0 && handling && handling.reloadTime > 0 ? 1 - arm.reload / handling.reloadTime : null;
@@ -310,7 +313,7 @@ export class RiggedFigure {
     this.mixer.update(0);
     this.spineMixed.copy(this.spine.quaternion);
     const twist = pose.rifleAim * this.setup.rig.aimYaw.rifle + pose.pistolAim * this.setup.rig.aimYaw.pistol;
-    this.adjustSpine(pose.overlay, f.leanX + pose.pitchLean, f.leanZ, twist);
+    this.adjustSpine(pose.overlay, f.leanX + pose.pitchLean - rest, f.leanZ, twist);
     this.peekAbout(f.peek, f.peekPivot);
     if (f.firstPerson) for (const b of this.arms) b.scale.setScalar(FIGURE_RIG.firstPerson.armScale);
 

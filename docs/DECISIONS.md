@@ -320,6 +320,13 @@ replaces its line; the old one stays findable in the archive or in git.
   own (`HOLSTER.drawScale`: the rifle 0.81 s, the pistol 0.54 s), so a ready sprint is quicker to the first shot. A
   slot key, a fresh trigger pull, an aim press or a reload draws it. Bots follow the same rules through the same
   command, holstering only on a calm sprint through their own half (`ai/botHolster.ts`).
+- **Aiming at a ledge rests the replica on it, automatically and with no setting (M104, 2026-10-13).** Down the sights,
+  still, grounded and no more than slightly leaned, with a flat top 8 to 70 cm below the eye straight ahead and within
+  0.8 m (`MOVEMENT.rest`, `sim/coverRest.ts`), the spread takes ×0.65 on top of the stance and the kick halves; moving,
+  letting go of the aim, a reload, a lean or looking away lets go in 0.1 s. It works standing at crouch cover and
+  waist-high cover, and crouched at lower cover and window sills, on all three maps (`sim/coverRestMaps.test.ts`).
+  Bots fire from the hip, so only the player rests for now; the figures' rest pose is a placeholder until the figure
+  redesign (`docs/HANDOFF.md`).
 
 ## Bots and balance
 

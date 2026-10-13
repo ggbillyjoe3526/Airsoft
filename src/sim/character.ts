@@ -92,6 +92,11 @@ export interface Character {
   aiming: boolean;
   /** How far the sight is raised to the eye (0..1, sim/aiming.ts): the aimed accuracy eases in with it (M84). */
   aimRaise: number;
+  /**
+   * How settled the replica is on cover (0..1, sim/coverRest.ts, M104): it eases in while aiming still over a ledge,
+   * and the steadier spread and lighter kick ease in with it.
+   */
+  coverRest: number;
   /** Holding the Use key this tick while in play (M44: opens a case in Extraction). Bots never use it. */
   using: boolean;
   /** Seconds left in which a sprint's or a jump's shake still settles slowly (sim/accuracy.ts); 0 = locks on fast. */
@@ -164,6 +169,7 @@ export function createCharacter(
     shakeCarry: 0,
     aiming: false,
     aimRaise: 0,
+    coverRest: 0,
     using: false,
     armament: createArmament(loadout),
     ghost: false,
@@ -233,6 +239,7 @@ export function respawnCharacter(c: Character): void {
   c.shakeCarry = 0;
   c.aiming = false;
   c.aimRaise = 0;
+  c.coverRest = 0;
   c.torchOn = false;
   c.torchTime = 0;
   c.grace = 0;

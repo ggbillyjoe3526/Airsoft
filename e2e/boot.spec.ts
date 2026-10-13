@@ -925,7 +925,8 @@ test('the tutorial opens on the range with the coach', async ({ page }) => {
   await expect(page.locator('.menu-title .title-version')).toBeVisible();
   await tutorial.click();
   const coach = page.locator('.coach');
-  await expect(coach).toBeVisible();
+  // The range loads behind a loading screen; a click soon after the title can wait past the default 5 s in software.
+  await expect(coach).toBeVisible({ timeout: 30_000 });
   await expect(coach).toContainText('Look around');
   await expect(coach).toContainText(/1 of \d+/);
   await expect(page.locator('.range-readout')).toBeHidden(); // the coach takes its place until the last step
