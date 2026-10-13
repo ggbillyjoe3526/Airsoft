@@ -36,7 +36,7 @@ export interface BotKitSlot {
 export interface BotKit {
   name: string;
   slots: readonly BotKitSlot[];
-  /** The bot personalities (lower case) that lean towards it (BOT_KIT_SUIT_LEAN); empty: none. */
+  /** The bot personalities (lower case) that lean towards it (kitWeights); empty: none, and it keeps its chance. */
   suits: readonly string[];
   /** How likely a bot at each difficulty is to carry it, against the other kits (0: never). */
   weights: Readonly<Record<Difficulty, number>>;
@@ -171,24 +171,41 @@ export function kitsFor(table: BotKitTable, difficulty: Difficulty, offered: Poo
   return table.kits.filter((k) => k.weights[difficulty] > 0 && kitOffered(offered, k));
 }
 
-/** Kit `k`'s weight for a bot at `difficulty` with `personality`: leaned towards when the kit suits it. */
-export function kitWeight(k: BotKit, difficulty: Difficulty, personality: string | null = null): number {
-  return k.weights[difficulty] * (personality !== null && k.suits.includes(personality) ? BOT_KIT_SUIT_LEAN : 1);
+/**
+ * The weights a bot at `difficulty` with `personality` (null: none) picks `kits` by. A kit whose Suits name it weighs
+ * BOT_KIT_SUIT_LEAN times its weight against the other kits with Suits, and those kits together keep the weight the
+ * table gives them, so a kit with no Suits (the Factory) keeps its chance: the level decides how often a bot carries gear,
+ * its personality which. Without a personality, or one no kit suits, the table's weights as they are.
+ */
+export function kitWeights(kits: readonly BotKit[], difficulty: Difficulty, personality: string | null = null): number[] {
+  const weights = kits.map((k) => k.weights[difficulty]);
+  if (personality === null) return weights;
+  let total = 0;
+  let leaned = 0;
+  for (const [i, k] of kits.entries()) {
+    if (k.suits.length === 0) continue;
+    total += weights[i]!;
+    leaned += weights[i]! * (k.suits.includes(personality) ? BOT_KIT_SUIT_LEAN : 1);
+  }
+  if (leaned === total || leaned <= 0) return weights;
+  const scale = total / leaned;
+  return kits.map((k, i) => (k.suits.length === 0 ? weights[i]! : weights[i]! * (k.suits.includes(personality) ? BOT_KIT_SUIT_LEAN : 1) * scale));
 }
 
 /**
  * The kit a bot at `difficulty` carries, drawn by the weights from `seed` (botKitSeed: the match's seed and the bot's
- * id) among the kits `offered` has everything for, leaning towards those that suit its `personality` (kitWeight; null:
+ * id) among the kits `offered` has everything for, leaning towards those that suit its `personality` (kitWeights; null:
  * none); null (the replicas as they come) when there are none.
  */
 export function pickBotKit(table: BotKitTable, difficulty: Difficulty, offered: Pool, seed: number, personality: string | null = null): BotKit | null {
   const kits = kitsFor(table, difficulty, offered);
+  const weights = kitWeights(kits, difficulty, personality);
   let total = 0;
-  for (const k of kits) total += kitWeight(k, difficulty, personality);
+  for (const w of weights) total += w;
   if (total <= 0) return null;
   let left = rngNext(createRng(seed)) * total;
-  for (const k of kits) {
-    left -= kitWeight(k, difficulty, personality);
+  for (const [i, k] of kits.entries()) {
+    left -= weights[i]!;
     if (left < 0) return k;
   }
   return kits[kits.length - 1]!;

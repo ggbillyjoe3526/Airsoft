@@ -252,7 +252,8 @@ request. Each entry says where the contract lives, what it holds today and what 
   one table, `| Kit | Primary | Primary parts | Secondary | Secondary parts | Easy | Normal | Hard | Pro |`. Replicas
   and parts by pool.md Name or ID, parts comma-separated, one per slot and fitting their replica; a weapon torch is
   never listed (fitted by rule at night). An optional Suits column names the bot personalities that lean to a kit
-  (its weight × `BOT_KIT_SUIT_LEAN`; 0 stays 0). A weight per difficulty column (by `DIFFICULTIES` label), 0 or more,
+  (`kitWeights`: × `BOT_KIT_SUIT_LEAN` against the other kits with Suits, which keep their total; a kit without Suits
+  keeps its weight; 0 stays 0). A weight per difficulty column (by `DIFFICULTIES` label), 0 or more,
   empty 0. A row it can't read is left out with its line in `errors`; a missing column reads nothing. Each opponent
   picks with `pickBotKit` (seed `botKitSeed(match seed, id)`, its personality) from a `contentPool`; teammates and the factory kit rule carry
   `LOADOUT`; nothing of the player's collection or loadout enters. Pinned by `pool/botKitTable.test.ts`,

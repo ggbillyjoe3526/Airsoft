@@ -26,8 +26,9 @@ The kits are the bots' own: what you have unlocked never changes them.
   Fits), one per slot. Empty: the replica as it comes (its standard magazine, battery or gas, iron sights).
 - **Suits** lists the bot personalities that lean towards the kit (rusher, anchor, flanker, careful: the
   Personalities table in bots.md), separated by commas, or nothing. A bot whose personality is listed picks the kit 3
-  times as often as its weight says (`BOT_KIT_SUIT_LEAN` in `src/config/bots.ts`); a weight of 0 stays 0, so a
-  personality never brings a kit its difficulty wouldn't. The column may be left out.
+  times as often as the other kits with Suits (`BOT_KIT_SUIT_LEAN` in `src/config/bots.ts`). Kits with nothing in
+  Suits, such as the Factory, keep their chance, and a weight of 0 stays 0: the difficulty decides how often a bot
+  carries gear, its personality which. The column may be left out.
 - **Easy**, **Normal**, **Hard** and **Pro** are each difficulty's weight for the kit: how likely an opponent on that
   difficulty is to carry it, against the other kits in the same column. Each column here adds up to 100, so the weights
   read as a chance in 100, but they don't have to: a kit weighted 2 is picked twice as often as one weighted 1. 0 (or

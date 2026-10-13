@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import kitsText from '../../bot-kits.md?raw';
 import { BOT_PERSONALITIES } from '../config/botPersonalities';
 import { BOT_KIT_SUIT_LEAN, DIFFICULTIES, type Difficulty } from '../config/bots';
-import { type BotKitTable, botKitSeed, kitsFor, kitWeight, pickBotKit, readBotKits } from './botKit';
+import { type BotKitTable, botKitSeed, kitsFor, kitWeights, pickBotKit, readBotKits } from './botKit';
 import { contentPool } from './contentPool';
 import { GAME_POOL } from './gamePool';
 import { withTags } from './testSupport';
@@ -145,22 +145,33 @@ describe('kits that suit a personality (BG1, with the bot personalities)', () =>
     expect(readBotKits(`${SUITS_HEADER}| B | AEG Rifle | | | | sniper | 1 | 1 | 1 | 1 |\n`, pool).kits[0]!.suits).toEqual(['sniper']);
   });
 
-  it('picks a kit that suits the bot BOT_KIT_SUIT_LEAN times as often; a kit weighted 0 stays never', () => {
-    const t = suited('| Fast | AEG Rifle | | | | rusher | 1 | 0 | 1 | 1 |', '| Slow | AEG Rifle | Red Dot | | | | 1 | 0 | 1 | 1 |', '| Never | AEG Rifle | 2x Scope | | | rusher | 0 | 0 | 0 | 0 |');
-    const count = (personality: string | null): number => {
-      let fast = 0;
-      for (let bot = 1; bot <= 4000; bot++) {
-        const k = pickBotKit(t, 'easy', pool, botKitSeed(3, bot), personality);
-        expect(k?.name).not.toBe('Never');
-        if (k?.name === 'Fast') fast++;
+  it('picks a kit that suits the bot BOT_KIT_SUIT_LEAN times as often as the other kits with Suits; a kit without keeps its chance', () => {
+    const t = suited(
+      '| Fast | AEG Rifle | | | | rusher | 1 | 0 | 1 | 1 |',
+      '| Slow | AEG Rifle | Red Dot | | | anchor | 1 | 0 | 1 | 1 |',
+      '| Plain | AEG Rifle | | | | | 2 | 0 | 1 | 1 |',
+      '| Never | AEG Rifle | 2x Scope | | | rusher | 0 | 0 | 0 | 0 |',
+    );
+    const shares = (personality: string | null): Map<string, number> => {
+      const n = new Map<string, number>();
+      for (let bot = 1; bot <= 6000; bot++) {
+        const k = pickBotKit(t, 'easy', pool, botKitSeed(3, bot), personality)!.name;
+        n.set(k, (n.get(k) ?? 0) + 1 / 6000);
       }
-      return fast / 4000;
+      return n;
     };
-    expect(count(null)).toBeCloseTo(0.5, 1);
-    expect(count('anchor')).toBeCloseTo(0.5, 1);
-    expect(count('rusher')).toBeCloseTo(BOT_KIT_SUIT_LEAN / (BOT_KIT_SUIT_LEAN + 1), 1);
-    expect(kitWeight(t.kits[0]!, 'easy', 'rusher')).toBe(BOT_KIT_SUIT_LEAN);
-    expect(kitWeight(t.kits[0]!, 'normal', 'rusher')).toBe(0);
+    const plain = shares(null);
+    expect(plain.get('Fast')).toBeCloseTo(0.25, 1);
+    expect(plain.get('Plain')).toBeCloseTo(0.5, 1);
+    const rusher = shares('rusher');
+    // Fast and Slow keep their half between them, now 3 to 1; Plain keeps its half; Never stays never.
+    const fastShare = (BOT_KIT_SUIT_LEAN / (BOT_KIT_SUIT_LEAN + 1)) * 0.5;
+    expect(rusher.get('Fast')).toBeCloseTo(fastShare, 1);
+    expect(rusher.get('Plain')).toBeCloseTo(0.5, 1);
+    expect(rusher.has('Never')).toBe(false);
+    expect(kitWeights(t.kits, 'easy', 'rusher')).toEqual([1.5, 0.5, 2, 0]);
+    expect(kitWeights(t.kits, 'easy', 'careful')).toEqual([1, 1, 2, 0]);
+    expect(kitWeights(t.kits, 'normal', 'rusher')).toEqual([0, 0, 0, 0]);
     // The same seed and no personality picks as before personalities came.
     for (let bot = 1; bot <= 50; bot++) expect(pickBotKit(t, 'easy', pool, botKitSeed(3, bot))).toBe(pickBotKit(t, 'easy', pool, botKitSeed(3, bot), null));
   });

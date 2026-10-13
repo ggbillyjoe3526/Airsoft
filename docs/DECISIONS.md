@@ -386,8 +386,10 @@ replaces its line; the old one stays findable in the archive or in git.
 - **What a personality carries belongs to the bot gear table, not to bots.md (BN1, Dev 6 item 23).** The roadmap's
   "loadouts" for item 21 come with item 23's data-driven bot loadout table, which reads `Bot.personality`; bots.md
   holds names and play only. `bot-kits.md`'s Suits column names the personalities each kit suits, and a bot picks a
-  kit that suits it three times as often (BG1, `BOT_KIT_SUIT_LEAN`): rushers Support, Pointman and the Cyber Pistol,
-  anchors Marksman and Support, flankers Stealth and Pointman, careful bots Rifleman and Marksman.
+  kit that suits it three times as often as the other kits with Suits (BG1, `BOT_KIT_SUIT_LEAN`): rushers Support,
+  Pointman and the Cyber Pistol, anchors Marksman and Support, flankers Stealth and Pointman, careful bots Rifleman and
+  Marksman. The Factory kit, with no Suits, keeps its chance: the level decides how often a bot carries gear, its
+  personality which (with a plain lean Easy's factory share fell from 60 to about 45 in 100).
 - **In Attack / Defend one attacker raises the flag while the others guard the pole from cover (owner's call,
   2026-10-04).** A second raiser adds nothing: the rope goes up no faster.
 - **Every level hunts the middle of the map; Normal, Hard and Pro keep out of the light at night; Easy stands where its
