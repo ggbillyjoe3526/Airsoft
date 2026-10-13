@@ -47,10 +47,12 @@ def _arclen(pts):
 
 
 def sheet(name, F, nu, nv, material, wrap=False, thick=0.0, out_from=None, smooth=True, angle=50,
-          pole0=False, pole1=False, us=None, vs=None, mats=None):
+          pole0=False, pole1=False, us=None, vs=None, mats=None, skirt=0.0):
     """A grid surface F(u, v) (u, v in 0..1; u round the wrap when `wrap`). `thick` > 0 makes a closed slab that far
-    in along the surface normal (oriented away from `out_from` when given). `us`/`vs` override the sample spacing.
-    `mats(i, j)` may pick a material index per face (materials are `material` plus any appended later)."""
+    in along the surface normal (oriented away from `out_from` when given). `skirt` > 0 (not wrapped) instead turns
+    only the border that far in: a raised moulding on a surface, without the hidden back face. `us`/`vs` override the
+    sample spacing. `mats(i, j)` may pick a material index per face (materials are `material` plus any appended
+    later)."""
     us = us or [i / (nu if wrap else nu - 1) for i in range(nu)]
     vs = vs or [j / (nv - 1) for j in range(nv)]
     cols = len(us)
@@ -96,6 +98,17 @@ def sheet(name, F, nu, nv, material, wrap=False, thick=0.0, out_from=None, smoot
             for j in range(len(vs) - 1):
                 bm.faces.new((A[j][0], A[j + 1][0], Bv[j + 1][0], Bv[j][0]))
                 bm.faces.new((A[j][-1], Bv[j][-1], Bv[j + 1][-1], A[j + 1][-1]))
+    if skirt and not thick and not wrap:
+        rows = len(vs)
+        ring = ([(0, i) for i in range(cols)] + [(j, cols - 1) for j in range(1, rows)] +
+                [(rows - 1, i) for i in range(cols - 2, -1, -1)] + [(j, 0) for j in range(rows - 2, 0, -1)])
+        inner = []
+        for j, i in ring:
+            inner.append(bm.verts.new(P[j][i] - N[j][i] * skirt))
+            par.append((su[i], sv[j] - skirt))
+        for q in range(len(ring)):
+            (j0, i0), (j1, i1) = ring[q], ring[(q + 1) % len(ring)]
+            bm.faces.new((A[j0][i0], inner[q], inner[(q + 1) % len(ring)], A[j1][i1]))
     for flag, row in ((pole0, 0), (pole1, len(vs) - 1)):
         if flag and wrap:
             c = sum((p for p in P[row]), Vector()) / cols
@@ -347,12 +360,12 @@ def helmet_kit():
     # shock cords from beside the shroud back over the shell to the rails
     for sd, sg in (('L', 1), ('R', -1)):
         pts = []
-        for k in range(7):
-            t = k / 6
+        for k in range(5):
+            t = k / 4
             th = sg * d(12 + 66 * t)
             ph = d(44) + (rim_ph(th) - 0.17 - d(44)) * t * t + d(6) * math.sin(math.pi * t)
             pts.append(shell_pt(th, ph, 0.0062))
-        parts.append(cord('HelmetCord_' + sd, pts, 0.0021, S('Elastic'), segs=4, caps=False))
+        parts.append(cord('HelmetCord_' + sd, pts, 0.0021, S('Elastic'), segs=3, caps=False))
     # the counterweight pouch under the ID patch
     side, n, up = shell_basis(math.pi, d(92))
     parts.append(pillow('HelmetPouch', shell_pt(math.pi, d(92), 0.011), (0.066, 0.02, 0.032), S('Nylon'),
@@ -671,11 +684,17 @@ def leg_kit(sd, trousers, bones):
 # so a finger never drags its neighbour when one points along the frame and the others curl round the grip.
 FINGER_R = {'Index': (0.0118, 0.0106, 0.0096), 'Middle': (0.0122, 0.0108, 0.0098),
             'Ring': (0.0115, 0.0104, 0.0093), 'Pinky': (0.0102, 0.0093, 0.0082), 'Thumb': (0.0124, 0.0114, 0.0102)}
-FINGER_RINGS = [  # (bone 1-3, t along it, half width, back, palm side: shares of that bone's radius)
-    (1, -0.34, 1.0, 0.95, 0.95), (1, 0.0, 1.06, 1.03, 0.94), (1, 0.5, 0.93, 0.83, 0.96), (2, 0.0, 1.04, 0.97, 0.86),
-    (2, 0.5, 0.92, 0.80, 0.95), (3, 0.0, 1.02, 0.90, 0.86), (3, 0.45, 0.98, 0.76, 0.99), (3, 0.8, 0.92, 0.68, 0.92),
+FINGER_RINGS = [  # (bone 1-3, t along it, half width, back, palm side: shares of its radius[, drawn in: below])
+    (1, -0.4, 0.8, 0.66, 0.7, 0.25), (1, 0.0, 1.06, 1.03, 0.94), (1, 0.5, 0.93, 0.83, 0.96),
+    (2, -0.13, 1.06, 1.12, 0.84), (2, 0.13, 1.05, 1.08, 0.84), (2, 0.55, 0.92, 0.80, 0.95),
+    (3, -0.14, 1.03, 1.0, 0.85), (3, 0.14, 1.01, 0.94, 0.86), (3, 0.5, 0.98, 0.76, 0.99), (3, 0.8, 0.92, 0.68, 0.92),
     (3, 0.97, 0.62, 0.46, 0.64)]
-THUMB_RINGS = [(1, -0.3, 1.0, 0.95, 0.95), (1, 0.2, 1.0, 0.9, 0.98), (1, 0.65, 0.95, 0.86, 0.95)] + FINGER_RINGS[3:]
+JOINT_SPAN = 0.2     # rings this close to a finger joint (share of the bone) are shared with the bone before it
+# (the pair stands proud on the back, as a glove bunches over a knuckle: blended skin cuts a bent joint's corner, and a
+# curled finger round a grip would otherwise read as a sharp V)
+# each root ring is drawn in towards the palm's middle (6th value: share of the way) and slimmed, so every tube starts
+# inside the palm: the thumb's bone starts beside the palm, the index and pinky at its edges, and their open ends showed
+THUMB_RINGS = [(1, -0.3, 0.8, 0.76, 0.76, 0.45), (1, 0.2, 1.0, 0.9, 0.98), (1, 0.65, 0.95, 0.86, 0.95)] + FINGER_RINGS[3:]
 PALM_RINGS = [  # (share of wrist -> knuckle line, half width, back, palm side, shift towards the index side)
     (0.0, 0.0290, 0.0160, 0.0172, 0.0), (0.3, 0.0370, 0.0150, 0.0200, 0.002), (0.62, 0.0420, 0.0140, 0.0190, 0.001),
     (0.86, 0.0440, 0.0135, 0.0160, 0.0), (1.0, 0.0432, 0.0124, 0.0134, 0.0), (1.1, 0.0350, 0.0080, 0.0090, 0.0)]
@@ -756,20 +775,25 @@ def _finger(name, sd, finger, bones, D0, rings=FINGER_RINGS):
     R = FINGER_R[finger]
     segs = [bones['%s%d_%s' % (finger, k, sd)] for k in (1, 2, 3)]
     out = []
-    for k, t, fw, fd, fp in rings:
+    for k, t, fw, fd, fp, *inward in rings:
         a, c = segs[k - 1]
         ax = (c - a).normalized()
         D = (D0 - ax * D0.dot(ax)).normalized()
         L = ax.cross(D)
         r = R[k - 1]
         p = a + (c - a) * t
+        if inward:
+            W, K, A, _, _ = _h12_frame(sd, bones)
+            p = p.lerp(W + A * max(0.0, min(1.0, (p - W).dot(A) / A.length_squared)), inward[0])
         bn = '%s%d_%s' % (finger, k, sd)
         if t < 0.0 and k == 1:                       # inside the palm: mostly the hand
             f = max(0.0, 1.0 + t / 0.34)
             ws = {'Hand_' + sd: 1.0 - 0.5 * f, bn: 0.5 * f}
-        elif t == 0.0:                               # a joint: half each side
-            prev = 'Hand_' + sd if k == 1 else '%s%d_%s' % (finger, k - 1, sd)
-            ws = {prev: 0.5, bn: 0.5}
+        elif t == 0.0 and k == 1:                    # the knuckle: half the hand, half the finger
+            ws = {'Hand_' + sd: 0.5, bn: 0.5}
+        elif k > 1 and abs(t) < JOINT_SPAN:          # a pair of rings either side of a joint: graded, so it rounds
+            w = 0.5 + 0.5 * t / JOINT_SPAN
+            ws = {'%s%d_%s' % (finger, k - 1, sd): 1.0 - w, bn: w}
         else:
             ws = {bn: 1.0}
         pts, dors = _xsect(p, D, L, r * fw, r * fd, r * fp, HAND_SIDES)
@@ -834,7 +858,7 @@ def _cuff(sd, bones, sleeve, palm):
     pts = [c + (p - c) * (1 + 0.002 / (p - c).length) for p in ring]
     strap = strip('CuffStrap_' + sd, pts, [back] * len(pts), 0.019, 0.0025, S('Elastic'), closed=True, out=c, sides=2)
     tab = box('CuffStrapTab_' + sd, pts[0] + Dc * 0.003 + Lc * 0.006, (0.026, 0.005, 0.02), S('Elastic'),
-              basis=(Lc, Dc, back), bevel=0.0015)
+              basis=(Lc, Dc, back))
     for o in (strap, tab):
         g = o.vertex_groups.new(name='Forearm_' + sd)
         g.add([v.index for v in o.data.vertices], 1.0, 'REPLACE')
@@ -851,16 +875,16 @@ def _knuckle_guard(sd, bones, under):
 
     def F(u, v):
         a = math.radians(-66 + 132 * u)
-        s = 0.8 + 0.24 * v
+        s = 0.82 + 0.23 * v
         c = W + A * s
         d = D * math.cos(a) + Lt * math.sin(a)
         hit, n, i, dist = tree.ray_cast(c + d * 0.08, -d)     # from outside in: the outermost surface
         base = hit if hit is not None else c + d * 0.013
         x = (base - c).dot(Lt)
-        ridge = sum(math.exp(-((x - k) / 0.008) ** 2) for k in xs) * math.exp(-(((s - 0.99) * L) / 0.008) ** 2)
+        ridge = sum(math.exp(-((x - k) / 0.0058) ** 2) for k in xs) * math.exp(-(((s - 1.0) * L) / 0.007) ** 2)
         edge = smoothstep(0.0, 0.15, u) * smoothstep(1.0, 0.85, u) * smoothstep(0.0, 0.25, v) * smoothstep(1.0, 0.75, v)
-        return base + d * (0.0010 + 0.0016 * edge + 0.0034 * ridge * edge)
-    o = sheet('Knuckle_' + sd, F, 13, 5, S('Rubber'), thick=0.0022, out_from=W + A * 0.9 - D * 0.05, angle=50)
+        return base + d * (0.0012 + 0.0020 * edge + 0.0058 * ridge * edge)
+    o = sheet('Knuckle_' + sd, F, 13, 5, S('Rubber'), skirt=0.0030, out_from=W + A * 0.9 - D * 0.05, angle=50)
     g = o.vertex_groups.new(name='Hand_' + sd)
     g.add([v.index for v in o.data.vertices], 1.0, 'REPLACE')
     o['own_weights'] = True

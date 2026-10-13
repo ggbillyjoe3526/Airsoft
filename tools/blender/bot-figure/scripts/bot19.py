@@ -21,7 +21,7 @@ AO_DISTANCE = 0.14
 BAKE_MARGIN = 8              # pixels the bakes bleed past each island
 UV_MARGIN = 0.0045           # between islands, as a share of the atlas
 # texel density weights: what the player sees close up gets more of the atlas (the first-person arms and gloves)
-UV_WEIGHT = {'glove': 2.4, 'arm': 1.45, 'kit': 1.15, 'head': 1.1, 'leg': 0.85, 'boot': 0.8}
+UV_WEIGHT = {'glove': 2.4, 'arm': 1.45, 'kit': 1.15, 'head': 0.8, 'leg': 0.85, 'boot': 0.8}   # four heads share
 TEAM_SURFACES = ('S_Team',)
 LENS_SURFACES = ('S_Lens',)
 DOCS = r'C:\Users\Billy\Documents\Airsoft models'        # the .blend, the exports and the atlas files
@@ -83,8 +83,9 @@ def cloth_attrs(parts):
             a = me.attributes.get(nm)
             if a is not None:
                 me.attributes.remove(a)
-        A = me.attributes.new('Along', 'FLOAT', 'POINT')
-        Fd = me.attributes.new('Fold', 'FLOAT', 'POINT')
+        me.attributes.new('Along', 'FLOAT', 'POINT')
+        me.attributes.new('Fold', 'FLOAT', 'POINT')
+        A, Fd = me.attributes['Along'], me.attributes['Fold']     # (adding one can move the other's storage)
         nm = o.name
         side = _side(nm) or 'L'
         for v in me.vertices:
@@ -609,12 +610,12 @@ def _emit(mats, term):
         nt.links.new(em.outputs['Emission'], out.inputs['Surface'])
 
 
-def _bake(objs, kind, samples, **kw):
+def _bake(objs, kind, samples, clear=True, **kw):
     sc = bpy.context.scene
     sc.cycles.samples = samples
     sc.render.bake.margin = BAKE_MARGIN
     sc.render.bake.margin_type = 'EXTEND'
-    sc.render.bake.use_clear = True
+    sc.render.bake.use_clear = clear
     sc.render.bake.target = 'IMAGE_TEXTURES'
     _sel(objs)
     bpy.ops.object.bake(type=kind, **kw)
@@ -663,7 +664,14 @@ def bake_atlas(objs):
         _bake(objs, 'NORMAL', 8, normal_space='TANGENT')
         ao = _atlas_image('Atlas_AO', ATLAS, True)
         _targets(mats, ao)
-        _bake(objs, 'AO', 96)
+        # the heads share one place: each is baked with the body and kit only, so no head shades another
+        heads = [o for o in objs if o.name.startswith('Head_')]
+        for k, part in enumerate([[o for o in objs if o not in heads[1:]]] + [[h] for h in heads[1:]]):
+            for o in objs:
+                o.hide_render = not (o in part or o not in heads)
+            _bake(part, 'AO', 96, clear=(k == 0))
+        for o in objs:
+            o.hide_render = False
         # colour × occlusion (with a floor, so creases read without going black)
         c = _px(col)
         a = _px(ao)[..., :1]
@@ -813,17 +821,17 @@ smooth_hand_hard.v12 = True
 
 # --- the build ------------------------------------------------------------------------------------------------------
 def finalise_v12():
-    """The human (v12): Body, Kit, Kit_Radio, Kit_Pack, Head_HighCut and the Rig at v11's scale, so the skeleton,
-    clips and fits are unchanged."""
+    """The human (v12): Body, Kit, Kit_Radio, Kit_Pack, the four heads (bot20) and the Rig at v11's scale, so the
+    skeleton, clips and fits are unchanged."""
     O = bpy.data.objects
     b, k, h = build_all()
     s, m = _scale(b + k + h)
-    hv = head_v12(h, extra=[O['Gaiter']])
+    heads = heads_v12(h, O['Gaiter'])
     bv = body_v12(b)
     kit_v12(k)
     cloth_attrs(bv)
-    uv_layers(bv + k + hv)
-    out, rig = _assemble(bv, k, [('Head_HighCut', hv)], m)
+    uv_layers(bv + k + [o for _, ps in heads for o in ps])
+    out, rig = _assemble(bv, k, heads, m)
     return out + [rig], s
 
 
