@@ -295,7 +295,8 @@ export class RangeSession {
 
   /** Where you stand and look now, to rebuild the range there. */
   get pose(): RangePose {
-    return { x: this.player.position.x, y: this.player.position.y, z: this.player.position.z, yaw: this.input.yaw, pitch: this.input.pitch };
+    // The floor under you: a character stands PHYSICS.groundRestGap over it, and is built that far over `y` again.
+    return { x: this.player.position.x, y: this.player.position.y - PHYSICS.groundRestGap, z: this.player.position.z, yaw: this.input.yaw, pitch: this.input.pitch };
   }
 
   /** Your last shots, target hits, reloads and draws, for a report (IM7). */
