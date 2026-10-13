@@ -1,4 +1,4 @@
-import { DIFFICULTIES, type Difficulty } from '../config/bots';
+import { BOT_KIT_SUIT_LEAN, DIFFICULTIES, type Difficulty } from '../config/bots';
 import { isLightId, type LightId } from '../config/torches';
 import { fitOptics, fitParts } from '../sim/armament';
 import { type Character, createCharacter } from '../sim/character';
@@ -12,8 +12,9 @@ import { missingColumns, readTables } from './poolFile';
 /**
  * The bots' kits (BG1): bot-kits.md at the repository's root, the hand-edited table of what the other team's bots carry
  * and how often each difficulty picks each kit. Every opponent picks its own kit, seeded by the match's seed and its
- * id, so a match replays the same kits; what the player has unlocked never enters into it. Here the table is read, a
- * kit picked and a bot built carrying it, and on a night field every bot is given the torch the pool offers (M33h).
+ * id, so a match replays the same kits, leaning towards the kits that suit its personality; what the player has
+ * unlocked never enters into it. Here the table is read, a kit picked and a bot built carrying it, and on a night field
+ * every bot is given the torch the pool offers (M33h).
  * Pure.
  */
 
@@ -28,10 +29,15 @@ export interface BotKitSlot {
   parts: readonly string[];
 }
 
-/** A kit: its name, its replicas (the primary first, then the sidearm if it has one) and each difficulty's weight. */
+/**
+ * A kit: its name, its replicas (the primary first, then the sidearm if it has one), the personalities it suits and each
+ * difficulty's weight.
+ */
 export interface BotKit {
   name: string;
   slots: readonly BotKitSlot[];
+  /** The bot personalities (lower case) that lean towards it (BOT_KIT_SUIT_LEAN); empty: none. */
+  suits: readonly string[];
   /** How likely a bot at each difficulty is to carry it, against the other kits (0: never). */
   weights: Readonly<Record<Difficulty, number>>;
 }
@@ -43,8 +49,12 @@ export interface BotKitTable {
   errors: readonly string[];
 }
 
-/** The table's columns: the kit, its two replicas and their parts, then a weight per difficulty (by its label). */
+/**
+ * The table's columns: the kit, its two replicas and their parts, then a weight per difficulty (by its label). Suits, the
+ * personalities a kit suits, may be left out.
+ */
 const KIT = 'Kit';
+const SUITS = 'Suits';
 const SLOT_COLUMNS = [
   ['Primary', 'Primary parts'],
   ['Secondary', 'Secondary parts'],
@@ -82,6 +92,13 @@ function readSlot(pool: Pool, column: string, replicaCell: string, partsCell: st
   return { replica: replica.id, parts };
 }
 
+/** A Suits cell as personality names in lower case, or what is wrong with it (a name `known` doesn't list). */
+function readSuits(cell: string, known: readonly string[] | undefined): string[] | string {
+  const names = [...new Set(cell.split(',').map((p) => p.trim().toLowerCase()).filter((p) => p !== ''))];
+  const stray = known ? names.find((n) => !known.includes(n)) : undefined;
+  return stray === undefined ? names : `Suits "${stray}" isn't a bot personality`;
+}
+
 /** A weight cell: a number of 0 or more (empty: 0), or null when it isn't one. */
 function readWeight(cell: string): number | null {
   if (cell === '') return 0;
@@ -90,10 +107,11 @@ function readWeight(cell: string): number | null {
 }
 
 /**
- * The kits in bot-kits.md's text, read against `pool` (the full pool: dev assets are left to pickBotKit). Rows it can't
- * read are left out and listed in `errors` with their lines; so is the table when it lacks a column.
+ * The kits in bot-kits.md's text, read against `pool` (the full pool: dev assets are left to pickBotKit) and the bot
+ * personalities `personalities` (a Suits name it doesn't list is an error; absent: any name). Rows it can't read are
+ * left out and listed in `errors` with their lines; so is the table when it lacks a column.
  */
-export function readBotKits(text: string, pool: Pool): BotKitTable {
+export function readBotKits(text: string, pool: Pool, personalities?: readonly string[]): BotKitTable {
   const errors: string[] = [];
   const table = readTables(text).find((t) => t.headers.includes(KIT));
   if (!table) return { kits: [], errors: ['no table with a Kit column'] };
@@ -121,6 +139,8 @@ export function readBotKits(text: string, pool: Pool): BotKitTable {
       else if (slot) slots.push(slot);
     }
     if (!problem && cells[SLOT_COLUMNS[0][0]] === '') problem = 'no Primary';
+    const suits = readSuits(cells[SUITS] ?? '', personalities);
+    if (typeof suits === 'string') problem ??= suits;
     const weights = {} as Record<Difficulty, number>;
     for (const d of DIFFICULTIES) {
       const w = readWeight(cells[d.label]!);
@@ -131,7 +151,7 @@ export function readBotKits(text: string, pool: Pool): BotKitTable {
       errors.push(`${at}: ${problem}`);
       continue;
     }
-    kits.push({ name, slots, weights });
+    kits.push({ name, slots, suits: typeof suits === 'string' ? [] : suits, weights });
   }
   return { kits, errors };
 }
@@ -151,18 +171,24 @@ export function kitsFor(table: BotKitTable, difficulty: Difficulty, offered: Poo
   return table.kits.filter((k) => k.weights[difficulty] > 0 && kitOffered(offered, k));
 }
 
+/** Kit `k`'s weight for a bot at `difficulty` with `personality`: leaned towards when the kit suits it. */
+export function kitWeight(k: BotKit, difficulty: Difficulty, personality: string | null = null): number {
+  return k.weights[difficulty] * (personality !== null && k.suits.includes(personality) ? BOT_KIT_SUIT_LEAN : 1);
+}
+
 /**
  * The kit a bot at `difficulty` carries, drawn by the weights from `seed` (botKitSeed: the match's seed and the bot's
- * id) among the kits `offered` has everything for; null (the replicas as they come) when there are none.
+ * id) among the kits `offered` has everything for, leaning towards those that suit its `personality` (kitWeight; null:
+ * none); null (the replicas as they come) when there are none.
  */
-export function pickBotKit(table: BotKitTable, difficulty: Difficulty, offered: Pool, seed: number): BotKit | null {
+export function pickBotKit(table: BotKitTable, difficulty: Difficulty, offered: Pool, seed: number, personality: string | null = null): BotKit | null {
   const kits = kitsFor(table, difficulty, offered);
   let total = 0;
-  for (const k of kits) total += k.weights[difficulty];
+  for (const k of kits) total += kitWeight(k, difficulty, personality);
   if (total <= 0) return null;
   let left = rngNext(createRng(seed)) * total;
   for (const k of kits) {
-    left -= k.weights[difficulty];
+    left -= kitWeight(k, difficulty, personality);
     if (left < 0) return k;
   }
   return kits[kits.length - 1]!;

@@ -166,7 +166,7 @@ export function replicaBotChecks(inputs: ContentInputs, replica: Asset): CheckRe
   const fitting = partsFitting(inputs, replica).filter((p) => p.category !== 'light');
   for (const part of [null, ...fitting]) {
     // As it comes a bot carries the replica config the inputs hold; with a part, as the game kits it (pool/kit.ts).
-    const kit: BotKit = { name: item, slots: [{ replica: replica.id, parts: part ? [part.id] : [] }], weights: UNWEIGHTED };
+    const kit: BotKit = { name: item, slots: [{ replica: replica.id, parts: part ? [part.id] : [] }], suits: [], weights: UNWEIGHTED };
     const carried = (part ? kittedBot(1, 1, inputs.pool, kit) : createCharacter(1, vec3(), 0, [r], 1)).armament.replicas[0];
     const fitted = part ? ` with the ${part.name}` : '';
     if (!carried || carried.id !== r.id) problems.push(`a bot given it${fitted} carries something else`);

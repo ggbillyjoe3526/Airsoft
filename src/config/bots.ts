@@ -870,3 +870,10 @@ export const BOT_SIGHT_AIM: Readonly<Record<SightId, BotSightAim>> = {
   // it loses someone crossing its view.
   scope2x: { settled: 0.6, settleTime: 1.1, close: 1.4, tracking: 1.5 },
 };
+
+/**
+ * How much more often a bot picks a kit in bot-kits.md whose Suits column names its personality (BG1, with the bot
+ * personalities): its weight is multiplied by this. A kit weighted 0 for the bot's level stays 0, so leaning never
+ * brings a kit (or dev gear) a level wouldn't carry. A first guess for the owner's playtest.
+ */
+export const BOT_KIT_SUIT_LEAN = 3;

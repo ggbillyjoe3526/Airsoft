@@ -88,7 +88,7 @@ describe('a bot carrying its kit (BG1)', () => {
   });
 
   it('carries the primary alone when a kit has no secondary', () => {
-    const lone: BotKit = { name: 'Lone', slots: [{ replica: id('AEG Rifle'), parts: [id('Red Dot')] }], weights: { easy: 1, normal: 1, hard: 1, pro: 1 } };
+    const lone: BotKit = { name: 'Lone', slots: [{ replica: id('AEG Rifle'), parts: [id('Red Dot')] }], suits: [], weights: { easy: 1, normal: 1, hard: 1, pro: 1 } };
     const bot = kittedBot(4, 1, pool, lone);
     expect(bot.armament.replicas.map((r) => r.id)).toEqual([AEG.id]);
     expect(bot.armament.optics).toEqual(['redDot']);

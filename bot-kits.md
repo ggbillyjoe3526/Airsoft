@@ -24,6 +24,10 @@ The kits are the bots' own: what you have unlocked never changes them.
 - **Primary parts** and **Secondary parts** list what is fitted to each, by Name (or ID) in pool.md, separated by
   commas: optics, grips, lasers, barrels, muzzle parts, magazines and power sources. Each must fit its replica (pool.md's
   Fits), one per slot. Empty: the replica as it comes (its standard magazine, battery or gas, iron sights).
+- **Suits** lists the bot personalities that lean towards the kit (rusher, anchor, flanker, careful: the
+  Personalities table in bots.md), separated by commas, or nothing. A bot whose personality is listed picks the kit 3
+  times as often as its weight says (`BOT_KIT_SUIT_LEAN` in `src/config/bots.ts`); a weight of 0 stays 0, so a
+  personality never brings a kit its difficulty wouldn't. The column may be left out.
 - **Easy**, **Normal**, **Hard** and **Pro** are each difficulty's weight for the kit: how likely an opponent on that
   difficulty is to carry it, against the other kits in the same column. Each column here adds up to 100, so the weights
   read as a chance in 100, but they don't have to: a kit weighted 2 is picked twice as often as one weighted 1. 0 (or
@@ -34,16 +38,18 @@ The kits are the bots' own: what you have unlocked never changes them.
   hop-up stay as each replica comes. Grenades come later (the Replica Update).
 
 The kits are first guesses for the owner's playtest. Easy is mostly factory; each level up carries more and better
-matched gear; Pro never factory. The Cyber Pistol turns up now and then from Hard up.
+matched gear; Pro never factory. The Cyber Pistol turns up now and then from Hard up. Rushers lean to Support,
+Pointman and the Cyber Pistol, anchors to Marksman and Support, flankers to Stealth and Pointman, careful bots to
+Rifleman and Marksman.
 
 ## Kits
 
-| Kit | Primary | Primary parts | Secondary | Secondary parts | Easy | Normal | Hard | Pro |
-|---|---|---|---|---|---|---|---|---|
-| Factory | AEG Rifle | | GBB Pistol | | 60 | 30 | 10 | 0 |
-| Rifleman | AEG Rifle | Red Dot, Vertical Grip | GBB Pistol | | 20 | 25 | 20 | 15 |
-| Marksman | AEG Rifle | 2x Scope, Tight-Bore Barrel, Vertical Grip | GBB Pistol | Red Laser | 5 | 10 | 15 | 20 |
-| Support | AEG Rifle | Red Dot, Vertical Grip, Hi-Cap Magazine, 11.1 V LiPo Battery | GBB Pistol | Extended Magazine | 5 | 10 | 20 | 20 |
-| Stealth | AEG Rifle | Red Dot, Silencer, Low-Cap Magazine | GBB Pistol | Silencer | 5 | 10 | 15 | 20 |
-| Pointman | AEG Rifle | Red Dot, Angled Grip | GBB Pistol | Red Laser, Extended Magazine, Red Gas | 5 | 15 | 18 | 23 |
-| Cyber | Cyber Pistol | | GBB Pistol | Red Laser | 0 | 0 | 2 | 2 |
+| Kit | Primary | Primary parts | Secondary | Secondary parts | Suits | Easy | Normal | Hard | Pro |
+|---|---|---|---|---|---|---|---|---|---|
+| Factory | AEG Rifle | | GBB Pistol | | | 60 | 30 | 10 | 0 |
+| Rifleman | AEG Rifle | Red Dot, Vertical Grip | GBB Pistol | | careful | 20 | 25 | 20 | 15 |
+| Marksman | AEG Rifle | 2x Scope, Tight-Bore Barrel, Vertical Grip | GBB Pistol | Red Laser | anchor, careful | 5 | 10 | 15 | 20 |
+| Support | AEG Rifle | Red Dot, Vertical Grip, Hi-Cap Magazine, 11.1 V LiPo Battery | GBB Pistol | Extended Magazine | anchor, rusher | 5 | 10 | 20 | 20 |
+| Stealth | AEG Rifle | Red Dot, Silencer, Low-Cap Magazine | GBB Pistol | Silencer | flanker | 5 | 10 | 15 | 20 |
+| Pointman | AEG Rifle | Red Dot, Angled Grip | GBB Pistol | Red Laser, Extended Magazine, Red Gas | rusher, flanker | 5 | 15 | 18 | 23 |
+| Cyber | Cyber Pistol | | GBB Pistol | Red Laser | rusher | 0 | 0 | 2 | 2 |

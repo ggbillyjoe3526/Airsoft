@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import kitsText from '../../bot-kits.md?raw';
-import { DIFFICULTIES, type Difficulty } from '../config/bots';
-import { type BotKitTable, botKitSeed, kitsFor, pickBotKit, readBotKits } from './botKit';
+import { BOT_KIT_SUIT_LEAN, DIFFICULTIES, type Difficulty } from '../config/bots';
+import { type BotKitTable, botKitSeed, kitsFor, kitWeight, pickBotKit, readBotKits } from './botKit';
 import { contentPool } from './contentPool';
 import { GAME_POOL } from './gamePool';
 import { withTags } from './testSupport';
@@ -56,7 +56,7 @@ describe('reading bot kits (BG1)', () => {
   it('reads names in any case or IDs, an empty secondary as none and an empty weight as 0', () => {
     const t = table(`| Lone | aeg rifle | red dot, ${id('Vertical Grip')} | | | 1 | | 2.5 | 0 |`);
     expect(t.errors).toEqual([]);
-    expect(t.kits[0]).toEqual({ name: 'Lone', slots: [{ replica: id('AEG Rifle'), parts: [id('Red Dot'), id('Vertical Grip')] }], weights: { easy: 1, normal: 0, hard: 2.5, pro: 0 } });
+    expect(t.kits[0]).toEqual({ name: 'Lone', slots: [{ replica: id('AEG Rifle'), parts: [id('Red Dot'), id('Vertical Grip')] }], suits: [], weights: { easy: 1, normal: 0, hard: 2.5, pro: 0 } });
   });
 
   it('leaves out a row it cannot read and says why, with its line', () => {
@@ -120,5 +120,46 @@ describe('picking a bot kit (BG1)', () => {
     const devScope = withTags(pool, { 'Red Dot': 'dev' });
     expect(shares(t, 'easy', 200, contentPool(devScope, false)).get('Often')).toBe(1);
     expect(shares(t, 'easy', 2000, contentPool(devScope, true)).get('Rarely')).toBeGreaterThan(0.15);
+  });
+});
+
+describe('kits that suit a personality (BG1, with the bot personalities)', () => {
+  const PERSONALITIES = ['rusher', 'anchor', 'flanker', 'careful'];
+  const SUITS_HEADER = '| Kit | Primary | Primary parts | Secondary | Secondary parts | Suits | Easy | Normal | Hard | Pro |\n|---|---|---|---|---|---|---|---|---|---|\n';
+  const suited = (...rows: string[]) => readBotKits(`${SUITS_HEADER}${rows.join('\n')}\n`, pool, PERSONALITIES);
+
+  it('reads the shipped Suits against the four personalities, each personality suited by some kit', () => {
+    const shipped = readBotKits(kitsText, pool, PERSONALITIES);
+    expect(shipped.errors).toEqual([]);
+    for (const p of PERSONALITIES) expect(shipped.kits.some((k) => k.suits.includes(p)), p).toBe(true);
+    expect(shipped.kits.find((k) => k.name === 'Factory')!.suits).toEqual([]);
+  });
+
+  it('reads names in any case, once each, and says when one is no personality', () => {
+    const t = suited('| A | AEG Rifle | | | | Rusher, rusher ,ANCHOR | 1 | 1 | 1 | 1 |', '| B | AEG Rifle | | | | sniper | 1 | 1 | 1 | 1 |');
+    expect(t.kits.map((k) => [k.name, k.suits])).toEqual([['A', ['rusher', 'anchor']]]);
+    expect(t.errors).toEqual(['line 4: Suits "sniper" isn\'t a bot personality']);
+    // Without a list of personalities any name reads.
+    expect(readBotKits(`${SUITS_HEADER}| B | AEG Rifle | | | | sniper | 1 | 1 | 1 | 1 |\n`, pool).kits[0]!.suits).toEqual(['sniper']);
+  });
+
+  it('picks a kit that suits the bot BOT_KIT_SUIT_LEAN times as often; a kit weighted 0 stays never', () => {
+    const t = suited('| Fast | AEG Rifle | | | | rusher | 1 | 0 | 1 | 1 |', '| Slow | AEG Rifle | Red Dot | | | | 1 | 0 | 1 | 1 |', '| Never | AEG Rifle | 2x Scope | | | rusher | 0 | 0 | 0 | 0 |');
+    const count = (personality: string | null): number => {
+      let fast = 0;
+      for (let bot = 1; bot <= 4000; bot++) {
+        const k = pickBotKit(t, 'easy', pool, botKitSeed(3, bot), personality);
+        expect(k?.name).not.toBe('Never');
+        if (k?.name === 'Fast') fast++;
+      }
+      return fast / 4000;
+    };
+    expect(count(null)).toBeCloseTo(0.5, 1);
+    expect(count('anchor')).toBeCloseTo(0.5, 1);
+    expect(count('rusher')).toBeCloseTo(BOT_KIT_SUIT_LEAN / (BOT_KIT_SUIT_LEAN + 1), 1);
+    expect(kitWeight(t.kits[0]!, 'easy', 'rusher')).toBe(BOT_KIT_SUIT_LEAN);
+    expect(kitWeight(t.kits[0]!, 'normal', 'rusher')).toBe(0);
+    // The same seed and no personality picks as before personalities came.
+    for (let bot = 1; bot <= 50; bot++) expect(pickBotKit(t, 'easy', pool, botKitSeed(3, bot))).toBe(pickBotKit(t, 'easy', pool, botKitSeed(3, bot), null));
   });
 });
