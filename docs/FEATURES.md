@@ -63,6 +63,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   posts out of lantern light at night (M36, M37, M38, M40, M71)
 - Bots crouch-peek over low cover, lean round corners, move as a team on varied routes and walk when it pays (M4b, M10)
 - Bots hear shots, near misses, hit calls and footsteps, less through walls (M2, M22)
+- Bot names and personalities: each bot has a name and one of four personalities (Rusher, Anchor, Flanker, Careful) that
+  changes how it plays, never its senses, reaction or aim; set in bots.md (BN1)
 - In Attack / Defend defenders hold near the pole; one attacking bot raises the flag while the others guard it from
   cover (M5, FA4)
 
