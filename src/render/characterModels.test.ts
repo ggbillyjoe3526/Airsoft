@@ -80,19 +80,19 @@ describe('buildFigure (M14 art pass)', () => {
     return Math.min(g.drawRange.count, g.getAttribute('position').count) / 3;
   };
 
-  it('is six merged meshes on the one material given (four drawn at once), with vertex colours and no UVs', () => {
+  it('is seven merged meshes on the one material given (four drawn at once), with vertex colours and no UVs', () => {
     for (const id of [0, 1, 2, 3, 4, 5]) {
       const material = new THREE.MeshStandardMaterial();
       const figure = buildFigure(0x3d8bff, material, new THREE.SpriteMaterial(), id);
       const meshes = meshesOf(figure.root);
-      expect(meshes).toHaveLength(6); // two legs, body, arms with the rifle, arms with the pistol, hit pose
+      expect(meshes).toHaveLength(7); // two legs, body, arms with the rifle, arms with the pistol, hit pose, holstered (M92)
       for (const m of meshes) {
         expect(m.material).toBe(material);
         expect(m.geometry.getAttribute('color')).toBeDefined();
         expect(m.geometry.getAttribute('uv')).toBeUndefined();
       }
       const always = trianglesOf(figure.legL) + trianglesOf(figure.legR) + trianglesOf(figure.upper.children[0] as THREE.Mesh);
-      const arms = Math.max(trianglesOf(figure.aimRifle), trianglesOf(figure.aimPistol), trianglesOf(figure.hitPose));
+      const arms = Math.max(trianglesOf(figure.aimRifle), trianglesOf(figure.aimPistol), trianglesOf(figure.hitPose), trianglesOf(figure.holsterPose));
       expect(always + arms).toBeLessThan(TRIANGLE_BUDGET);
       disposeFigure(figure);
     }

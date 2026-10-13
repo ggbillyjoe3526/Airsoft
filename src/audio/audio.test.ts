@@ -325,6 +325,36 @@ describe('crouch and lean rustle (M13)', () => {
     expect(heard).toEqual(['crouch', 'stand', 'lean', 'lean']);
   });
 
+  it('rustles once on the tick the replica goes into the holster (M92), not while it stays away, and again for the next', () => {
+    const c = createCharacter(1, vec3(), 0, LOADOUT, 0);
+    const tracker = new FoleyTracker();
+    const heard: FoleyMove[] = [];
+    const tick = (holstered: boolean): void => {
+      c.armament.holstered = holstered;
+      tracker.update([c], (_, move) => heard.push(move));
+    };
+    tick(false);
+    expect(heard).toEqual([]);
+    tick(true);
+    expect(heard).toEqual(['holster']);
+    tick(true);
+    tick(true);
+    expect(heard).toEqual(['holster']);
+    tick(false); // drawing it is the simulation's draw event, not a rustle
+    expect(heard).toEqual(['holster']);
+    tick(true);
+    expect(heard).toEqual(['holster', 'holster']);
+  });
+
+  it('is quiet for a holster on someone who is out', () => {
+    const c = createCharacter(1, vec3(), 0, LOADOUT, 0);
+    c.status = 'walkingOff';
+    c.armament.holstered = true;
+    const heard: FoleyMove[] = [];
+    new FoleyTracker().update([c], (_, move) => heard.push(move));
+    expect(heard).toEqual([]);
+  });
+
   it('stays quiet for someone who is out', () => {
     const c = createCharacter(1, vec3(), 0, LOADOUT, 0);
     c.status = 'walkingOff';

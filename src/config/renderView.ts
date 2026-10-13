@@ -250,6 +250,12 @@ export const VIEWMODEL = {
   /** Pitch-down (radians) of the replica at the start of a draw. */
   drawTilt: 0.6,
   /**
+   * The holster (M92): put away, the replica drops `drop` metres (hitDrop's, which hides it for calling a hit) and
+   * pitches down `tilt` radians over `putAwayTime` seconds, a quick dip out of view (the simulation puts it away at
+   * once); drawn from the holster it rises from there over the whole draw.
+   */
+  holster: { drop: 0.5, tilt: 0.9, putAwayTime: 0.2 },
+  /**
    * Calling your hit: the replica drops out of view and your left hand rises to this spot (camera
    * space, metres) over `raiseTime` seconds.
    */

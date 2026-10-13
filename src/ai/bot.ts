@@ -170,6 +170,12 @@ export interface Bot {
   /** World direction (unit, horizontal) the bot walks this tick, while following a route. */
   moveDir: { x: number; z: number };
   stuckFor: number;
+  /**
+   * The holster (M92, ai/botHolster.ts): seconds sprinting without a break, and seconds since the sprint last ended
+   * (each 0 while the other counts).
+   */
+  sprintRun: number;
+  sprintGap: number;
   cover: CoverSpot;
   coverLeft: number;
   /** Time left before giving up on cover altogether (unreachable spot, endless reload...). */
@@ -374,6 +380,8 @@ export function createBot(character: Character, seed: number, cfg: BotBehaviour,
     routeState: 'none',
     moveDir: { x: 0, z: 0 },
     stuckFor: 0,
+    sprintRun: 0,
+    sprintGap: 0,
     cover: createCoverSpot(),
     coverLeft: 0,
     coverGiveUp: 0,
@@ -471,6 +479,8 @@ export function resetBot(b: Bot, lane: number, startHold: number, cfg: BotBehavi
   b.routeState = 'none';
   b.route.length = 0;
   b.stuckFor = 0;
+  b.sprintRun = 0;
+  b.sprintGap = 0;
   b.coverLeft = 0;
   b.coverCooldown = 0;
   b.fromCover = false;

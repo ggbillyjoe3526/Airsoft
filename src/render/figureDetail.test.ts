@@ -38,13 +38,13 @@ describe('Player detail (FA8, QualitySettings.figureDetail)', () => {
     }
   });
 
-  it('builds the detailed figure in the same six meshes (no extra draw call), every vertex with a finish, within budget', () => {
+  it('builds the detailed figure in the same seven meshes (no extra draw call), every vertex with a finish, within budget', () => {
     for (const id of [0, 1, 2, 3, 4, 5]) {
       const material = new THREE.MeshStandardMaterial();
       const low = buildFigure(0x3d8bff, material, new THREE.SpriteMaterial(), id);
       const high = buildFigure(0x3d8bff, material, new THREE.SpriteMaterial(), id, null, FIGURE.detail.high);
       const meshes = meshesOf(high.root);
-      expect(meshes).toHaveLength(6);
+      expect(meshes).toHaveLength(7);
       for (const m of meshes) {
         expect(m.material).toBe(material);
         const finish = m.geometry.getAttribute(FINISH_ATTRIBUTE);
@@ -287,7 +287,7 @@ describe('figure shadows, what the camera and the renderer see (M75, QA)', () =>
       fitParts(characters[0]!.armament, characters[0]!.armament.parts.map((p, i) => (i === rifle ? { ...p, muzzle: 'silencer' as const } : p)));
       r.update(1, 0.016, -1);
       const parts = meshesOf(r.object).filter((m) => m.castShadow);
-      expect(parts).toHaveLength(12);
+      expect(parts).toHaveLength(14);
       for (const m of parts) expect(shadowTris(m)).toBeLessThan(tris(m) / 2);
       r.dispose();
     } finally {

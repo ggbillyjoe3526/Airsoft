@@ -6,8 +6,8 @@ The gameplay rules: plain data and pure functions, with no Three.js, no DOM and 
 - `state.ts`, `events.ts`, `commands.ts`, `character.ts`: `GameState`, `state.events`, `PlayerCommand`, `Character`.
 - `movement.ts`, `aiming.ts`, `lean.ts`, `accuracy.ts`, `footsteps.ts`: the per-tick stance rules. Lean is one geometry
   (`HITS.lean`): eye, BB origin, hit volume, drawn figure and what bots see all use it.
-- `armament.ts`: fire, switch, reload by magazine swap, `WorldQuery`. `shotHeardScale` is the one place a shot's reach
-  is read (bots, minimap, sound cues).
+- `armament.ts`: fire, switch, holster (M92: put away for the faster sprint, drawn back slower), reload by magazine
+  swap, `WorldQuery`. `shotHeardScale` is the one place a shot's reach is read (bots, minimap, sound cues).
 - `ballistics.ts`, `air.ts`, `wind.ts`, `hopUp.ts`: BB flight. Gravity, drag by Reynolds number and Magnus lift from the
   hop-up's decaying backspin, one midpoint step a tick; `wind.ts` writes `GameState.wind` from the match seed. What
   leaves the muzzle (`muzzleVelocity`, `bbMass` in `config/replicas.ts`) is the boundary: flight only reads it.

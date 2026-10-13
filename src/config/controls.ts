@@ -32,6 +32,8 @@ export const DEFAULT_BINDINGS = {
   use: ['KeyG'],
   slot1: ['Digit1'],
   slot2: ['Digit2'],
+  /** Puts the replica in hand away for the faster sprint (M92, the owner's note 3: 1 primary, 2 secondary, 3 holster). */
+  holster: ['Digit3'],
   /** Hold to see the match so far: everyone's hits, BBs fired, accuracy and time alive (M19). */
   scoreboard: ['Tab'],
   /** Mouse buttons are codes too (`Mouse0` left … `Mouse4` the forward side button; see input/keyBindings.ts), so fire and aim rebind like any key (M18). */
@@ -77,6 +79,7 @@ export const REBINDABLE: readonly { action: Action; label: string }[] = [
   { action: 'use', label: 'Use: open a case (hold)' },
   { action: 'slot1', label: 'Rifle' },
   { action: 'slot2', label: 'Pistol' },
+  { action: 'holster', label: 'Holster' },
   { action: 'scoreboard', label: 'Scoreboard (hold)' },
   { action: 'orderWheel', label: 'Squad: order wheel (hold)' },
   { action: 'orderFollow', label: 'Squad: follow me' },
@@ -171,10 +174,13 @@ export const CROUCH_MODES: readonly { id: CrouchMode; label: string; blurb: stri
 
 export const DEFAULT_CROUCH_MODE: CrouchMode = 'toggle';
 
-/** The aim button: hold by default, as before M18. In toggle mode, sprinting or switching replicas lowers the sight. */
+/**
+ * The aim button: hold by default, as before M18. In toggle mode, sprinting, switching replicas or holstering lowers the
+ * sight.
+ */
 export const AIM_MODES: readonly { id: HoldMode; label: string; blurb: string }[] = [
   { id: 'hold', label: 'Hold', blurb: 'Aim while the button is held.' },
-  { id: 'toggle', label: 'Toggle', blurb: 'Press aim to raise the sight, press again to lower it. Sprinting or switching replicas lowers it too.' },
+  { id: 'toggle', label: 'Toggle', blurb: 'Press aim to raise the sight, press again to lower it. Sprinting, switching replicas or holstering lowers it too.' },
 ];
 
 export const DEFAULT_AIM_MODE: HoldMode = 'hold';

@@ -7,7 +7,13 @@ export interface MovementConfig {
   runSpeed: number;
   /** Walking (hold the walk key): slow and quiet, for sneaking and holding angles. */
   walkSpeed: number;
+  /** Sprinting with the replica in hand, ready to raise. */
   sprintSpeed: number;
+  /**
+   * Sprinting with the replica holstered (M92, the owner's playtest note 3): a little faster than `sprintSpeed`, paid
+   * for with the slower draw from the holster (HOLSTER.drawScale).
+   */
+  holsterSprintSpeed: number;
   crouchSpeed: number;
   /** Horizontal acceleration while grounded and pushing a direction (m/s^2). */
   groundAccel: number;
@@ -149,6 +155,9 @@ export const MOVEMENT: MovementConfig = {
   runSpeed: 4.2,
   walkSpeed: 2.3,
   sprintSpeed: 6.3,
+  // 8 % over the ready sprint (owner's note 3: "slightly faster"): about 2 m gained on a 25 m dash, for a draw 0.36 s
+  // slower than a switch (rifle) before the first shot.
+  holsterSprintSpeed: 6.8,
   crouchSpeed: 2.1,
   groundAccel: 45,
   groundDecel: 38,
@@ -198,6 +207,16 @@ export const MOVEMENT: MovementConfig = {
     lockTime: 0.015,
   },
 };
+
+/**
+ * The holster (M92, the owner's playtest note 3): key 3 puts the replica away for the faster sprint
+ * (MovementConfig.holsterSprintSpeed); drawing it again takes the replica's own draw time (Handling.drawTime) times
+ * `drawScale`, so a holstered player is slower to the first shot than one sprinting with the replica ready.
+ */
+export const HOLSTER = {
+  /** The rifle's 0.45 s draw becomes 0.81 s, the pistol's 0.3 s 0.54 s; parts that speed a draw speed this one too. */
+  drawScale: 1.8,
+} as const;
 
 export const BODY: BodyConfig = {
   radius: 0.32,

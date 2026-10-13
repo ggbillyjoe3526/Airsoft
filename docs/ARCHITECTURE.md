@@ -126,7 +126,9 @@ list; `pipeline/README.md`). A contract change is a plan step: the planning thre
 request. Each entry says where the contract lives, what it holds today and what pins it.
 
 - **`PlayerCommand`** (`sim/commands.ts`). One command per character per tick, with absolute view angles; the only way
-  input or bots drive the simulation. `toggleTorch` switches the weapon light in hand (`sim/torch.ts`).
+  input or bots drive the simulation. `toggleTorch` switches the weapon light in hand (`sim/torch.ts`); `holster` puts
+  the replica in hand away, and a slot in `switchTo`, a fresh trigger pull, aim press or reload draws it again (M92,
+  `sim/armament.ts`).
   Pinned by `sim/simulation.test.ts`, `input/playerInput.test.ts`.
 - **`GameState` and `state.events`** (`sim/state.ts`, `sim/events.ts`). Plain data with no Three.js or DOM. Events are
   the only channel to presentation and are cleared each tick. For Extraction:

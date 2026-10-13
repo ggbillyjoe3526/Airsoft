@@ -19,10 +19,10 @@ export function partsUnder(parts: ReplicaParts, night: boolean): ReplicaParts {
   return night || !parts.light ? parts : { ...parts, light: null };
 }
 
-/** The light fitted to the replica in `c`'s hands, or null. */
+/** The light fitted to the replica in `c`'s hands, or null (none in hand while it is holstered, M92: it goes out). */
 export function lightInHand(c: Character): LightId | null {
   const a = c.armament;
-  return a.parts[a.active]?.light ?? null;
+  return a.holstered ? null : (a.parts[a.active]?.light ?? null);
 }
 
 /** Whether `c`'s torch is lit right now: switched on, on the replica in hand, and in play. */

@@ -190,6 +190,14 @@ export const FIGURE = {
   /** Players out in the dead zone hold their replica pointing at the ground (radians of aim pitch). */
   outAimPitch: -0.9,
   /**
+   * Holstered (M92): the arms hang at the sides, the wrists `armDrop` below the shoulders and `armOut` outside them; the
+   * rifle is slung across the back, flat to it, its butt `buttX` right of the middle and `buttUp` above the shoulders,
+   * the muzzle down to the left `tilt` radians off straight down, `back` behind the figure's middle (`backPack` over a
+   * pack). Drawn from the holster, the aiming pose takes over `swapAt` of the way through the draw and rises from
+   * `drawPitch` to the view.
+   */
+  holster: { armDrop: 0.55, armOut: 0.05, buttX: 0.22, buttUp: 0.12, tilt: 0.52, back: 0.2, backPack: 0.27, swapAt: 0.5, drawPitch: -1.1 },
+  /**
    * Hit flinch: the upper body jolts the way the BB was travelling (radians of lean), snapping in over
    * `rise` seconds and easing back over `time`, just before the hand goes up.
    */
