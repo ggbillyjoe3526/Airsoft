@@ -1,20 +1,22 @@
-# Airsoft 0.1 Dev 4
+# Airsoft 0.1 Dev 5
 
 A browser-based, first-person team shooter built around recreational airsoft: visible BBs, one hit and you're out,
 call your hit and walk off. You play single-player against bots, on a desktop browser.
 
-**New since 0.1 Dev 3:** a fire selector and aiming down sights, a Loadout screen with parts and an Armory that pays
-Field Credits, custom matches, a practice range with a tutorial, squad orders, a minimap, and a new look and sound.
-Woodland, Neon Heights, Extraction and Pro bots are still in development and show only with **Settings › Dev › Dev
-content** on. All changes: [`docs/patch-notes/0.1-dev.4.md`](docs/patch-notes/0.1-dev.4.md).
+**New since 0.1 Dev 4:** a link to play in your browser, new menus and HUD in a navy and orange look, the GBB Pistol in
+place of the Gas Pistol, iron sights and an Inspect key, new players and gloved hands, an Ultra preset and WebGPU,
+Depot dressed up, and faster loading. The Blender models of the replicas, attachments and players are being tested and
+are off by default (**Settings › Dev**). Woodland, Neon Heights, Extraction and Pro bots are still in development and
+show only with **Settings › Dev › Dev content** on. All changes:
+[`docs/patch-notes/0.1-dev.5.md`](docs/patch-notes/0.1-dev.5.md).
 
 ---
 
 ## Play in your browser
 
-Open **https://ggbillyjoe3526.github.io/Airsoft/** in Chrome, Firefox or Edge on a desktop computer, click **Start**,
-then **Play**. There is nothing to install, and the link always plays the latest release. Your progress and settings are
-saved in that browser, separately from a copy you run on your computer.
+Open **https://ggbillyjoe3526.github.io/Airsoft/** in Chrome, Firefox or Edge on a desktop computer, click **START**,
+then **Start match**. There is nothing to install, and the link always plays the latest release. Your progress and
+settings are saved in that browser, separately from a copy you run on your computer.
 
 ## Play it on your computer
 
@@ -27,11 +29,11 @@ The game uses Node.js to run a small local web server; nothing is installed into
 
 ### 2. Download the game
 
-Download 0.1 Dev 4 as a ZIP file:
+Download 0.1 Dev 5 as a ZIP file:
 
-**https://github.com/ggbillyjoe3526/Airsoft/archive/refs/tags/0.1-dev.4.zip**
+**https://github.com/ggbillyjoe3526/Airsoft/archive/refs/tags/0.1-dev.5.zip**
 
-Unzip it somewhere easy to find, such as your Desktop. You get a folder called `Airsoft-0.1-dev.4`. Older versions are
+Unzip it somewhere easy to find, such as your Desktop. You get a folder called `Airsoft-0.1-dev.5`. Older versions are
 on the repository's **Releases / Tags** page.
 
 If that link doesn't work, open **https://github.com/ggbillyjoe3526/Airsoft**, click the green **Code** button, then
@@ -40,7 +42,7 @@ this guide. Use it the same way.
 
 ### 3. Open a terminal in that folder
 
-- **Windows:** open the unzipped folder (`Airsoft-0.1-dev.4`, or `Airsoft-main` if you used the Download ZIP button),
+- **Windows:** open the unzipped folder (`Airsoft-0.1-dev.5`, or `Airsoft-main` if you used the Download ZIP button),
   click the address bar at the top of the window, type `cmd` and press Enter.
 - **Mac:** right-click the unzipped folder and choose **New Terminal at Folder**.
 - **Linux:** right-click inside the folder and choose **Open in Terminal**.
@@ -59,7 +61,7 @@ second starts the game and prints an address.
 
 ### 5. Play
 
-Open **http://localhost:5173** in Chrome, Firefox or Edge, click **Start**, then **Play**.
+Open **http://localhost:5173** in Chrome, Firefox or Edge, click **START**, then **Start match**.
 
 To stop the game, go back to the terminal and press **Ctrl+C**. To play again later, repeat step 3 and run
 `npm run dev` (no need for `npm install` again).
@@ -155,19 +157,20 @@ Every action can be rebound under **Settings › Key Bindings**, mouse buttons a
 
 ---
 
-## What's in 0.1 Dev 4
+## What's in 0.1 Dev 5
 
 - **Maps.** Depot, a 50 × 32 m warehouse yard. Woodland and Neon Heights are in development.
-- **Modes.** Elimination and Attack / Defend, under Skirmish or Custom rules. Extraction, Tournament and Pro CQB are in
-  development.
-- **Replicas.** AEG rifle, GBB pistol and the rare Cyber Pistol, with optics, grips, barrels, a silencer, magazines and
-  batteries.
+- **Modes.** Elimination and Attack / Defend, under Skirmish or Custom rules, and Practice on the range. Extraction,
+  Tournament and Pro CQB are in development.
+- **Replicas.** AEG Rifle, GBB Pistol and the rare Cyber Pistol, each with iron sights, and optics, grips, barrels, a
+  silencer, magazines and batteries.
 - **Bots.** Easy, Normal and Hard. Pro is in development.
+- **Blender models.** New replicas, attachments and players, still being tested and off by default (**Settings › Dev**).
 
-**Not yet:** grenades, replica skins and voices for hit calls (marked Later in the menus), and downloaded art: all art
-so far is drawn in code and all sounds are synthesised. The game is single-player against bots; no multiplayer is
-planned. Bot difficulty and Attack / Defend balance still need tuning from playtesting. Known rough edges:
-[`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md).
+**Not yet:** grenades, replica skins and voices for hit calls (marked Later in the menus), and downloaded art: the art
+is drawn in code or made for the game in Blender, and all sounds are synthesised. The game is single-player against
+bots; no multiplayer is planned. Bot difficulty and Attack / Defend balance still need tuning from playtesting. Known
+rough edges: [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md).
 
 **Version names.** The game is built as **0.1**: Dev releases (0.1 Dev 1, 0.1 Dev 2 …) first, Beta releases (0.1 Beta 1
 …) once it is feature complete, then **0.1.0**, the first public release and the start of Early Access. Themed updates
