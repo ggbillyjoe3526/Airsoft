@@ -214,7 +214,7 @@ when their work starts. Numbers are from the owner's list of 50 candidates
 | M94 | Practice on any map, with targets instead of bots; done (2026-10-13, `docs/records/M94.md`) | Practice |
 | M95 | Practice with any replica you own, and everything with Dev on; done (2026-10-13, `docs/records/M95.md`) | Practice |
 | – | Vaulting over low obstacles (0.7–0.9 m), with a few added to the maps where they open a route; crouch cover stays peek-only (owner, 2026-10-12) | Movement |
-| 40 | Rest your replica on cover (a ledge, crate or window) for steadier aim | Movement |
+| 40 | Rest your replica on cover (a ledge, crate or window) for steadier aim; done (2026-10-13, `docs/records/M104.md`) | Movement |
 | 19 | Saved loadouts, picked from the Match screen (once the Map pop-up) as well as the Loadout screen; done (2026-10-13, `docs/records/SL1.md`) | Loadout |
 | 21 | Bot names, personalities (rusher, anchor, flanker, careful) and loadouts | Bots |
 | 23 | Bots' gear keeps up with yours (audit POOL-24: a tier dial per difficulty, or higher tiers that trade) | Bots |
@@ -226,7 +226,7 @@ when their work starts. Numbers are from the owner's list of 50 candidates
 | 41 | Noisy ground and props: gravel, cans, pallets and fences rattle, and bots hear it | World |
 | 45 | Overtime: when the clock runs out, a flag appears in the middle and the first team to touch it wins | Rounds |
 | 46 | An option to hide the ammo counter (no mag-check key: owner) | HUD |
-| – | Figure redesign: more realistic human and robot figures, from the owner's reference photos, built in his Blender, with the figures' animations for Dev 6's new moves such as vaulting; waits for him (owner, 2026-10-13) | Art |
+| – | Figure redesign: more realistic human and robot figures, from the owner's reference photos, built in his Blender, with the figures' animations for Dev 6's new moves such as vaulting and resting on cover (M104 has only a placeholder lean); waits for him (owner, 2026-10-13) | Art |
 
 Built in Dev 5 instead: the blowback pistol (pick 14) is the GBB Pistol (RM7), and the AEG Rifle redesign (RM6) gave
 the built-in rifle its small, low iron sights.

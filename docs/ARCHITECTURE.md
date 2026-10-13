@@ -147,15 +147,20 @@ request. Each entry says where the contract lives, what it holds today and what 
   - Every body stops BBs (M85): a BB that reaches someone already hit, a teammate with friendly fire off, or anyone in
     the cease-fire after a round is decided stops there and reports `bbImpact`, no hit; only a Ghost lets BBs through.
     `Character.walkCycle` (and `prevWalkCycle`) is the legs' walk cycle, which the hit volume and the drawn legs share.
+  - `Character.coverRest` (0 to 1, M104) is how far the replica has settled on cover (`sim/coverRest.ts`): it steadies
+    the spread and the kick, and presentation reads it for the HUD tag, the settle sound and the poses. It adds no
+    event.
   - Events: `respawned`, `exitCount`, `exitOpened` and `runWarning` report the run; `caseNoise` (bots hear it),
     `caseOpened` and `caseDropped` report the cases; `returned` reports an opponent back in a wave; `torch` reports a
     weapon light switched on or off.
 
   Pinned by `sim/simulation.test.ts`, `sim/extraction.test.ts`, `sim/extractionCases.test.ts`,
-  `sim/extractionWaves.test.ts`, `sim/torch.test.ts`.
+  `sim/extractionWaves.test.ts`, `sim/torch.test.ts`, `sim/coverRest.test.ts`.
 - **`stepSimulation(state, commands, ctx, dt)`** (`sim/simulation.ts`). The fixed 60 Hz step and the order of its
   phases (a parked out-of-play character goes straight to the elimination step); randomness only from `state.rng`.
-  Pinned by the `sim/*.test.ts` files and the `ai/depotMatch*.test.ts` guards.
+  Per character: aim, move, walk cycle, lean, rest on cover (M104: after the lean, so it reads the eye the tick left,
+  and before the accuracy, which reads the rest), accuracy, then footsteps, replicas and the torch; then BBs and the
+  round. Pinned by the `sim/*.test.ts` files and the `ai/depotMatch*.test.ts` guards.
 - **`WorldQuery` and `CharacterMover`** (`sim/armament.ts`, `sim/movement.ts`; implemented by
   `physics/physicsWorld.ts`). The ray and shape casts and the character controller the simulation sees; the
   simulation never calls Rapier. Pinned by `physics/physicsWorld.test.ts`.

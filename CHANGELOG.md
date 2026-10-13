@@ -13,6 +13,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M92** · Holstered, you sprint a little faster; drawing out of the holster is slower than raising from a sprint
 - **M92** · Bots holster on calm sprints through their own half and draw again on any threat
 - **M95** · In Practice, L opens the Loadout on the replica in your hands; Back to practice or L returns you where you stood, with the new replica coming up
+- **M104** · Aim still at a crate, low wall, sandbags or window sill and the replica rests on it: steadier aim, half the kick, a "Rested" tag
+- **M104** · Rested aim sways less and the view dips as it settles; moving, reloading, leaning or looking away lets go at once
 - **SL1** · Five saved loadout tabs on the Loadout: keys 1 to 5 or a click switch the whole kit you carry at once; your edits go to the current tab
 - **SL1** · Right-click a tab (or Menu, Shift+F10) to use, rename, duplicate, replace with yours or delete; the last loadout can't be deleted
 - **SL1** · Your match on the Match screen lists saved loadouts beside Change; gear a saved loadout can't use now shows as locked until it comes back

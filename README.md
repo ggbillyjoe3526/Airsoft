@@ -112,6 +112,8 @@ Then open **http://localhost:4173**.
   refills until the next round.
 - **Sound matters.** Running and sprinting are heard by you and the bots; walking (Shift) and moving crouched are
   silent. You can't shoot for a moment after a sprint.
+- **Rest on cover.** Aim down sights standing still at a crate, low wall, sandbags or window sill and your replica rests
+  on it: a steadier aim with half the kick, and **Rested** shows under the sight. Move or let go of the aim to come off.
 - **Loadout.** **Start › Loadout** (or Esc in a match) sets your replicas; right-click one to **Customise** it: optic,
   hop-up, BB weight, grips, barrels, a silencer, magazines and batteries. Every choice is a trade-off, shown in numbers.
   Keep up to five **saved loadouts** (the tabs at the top, or keys 1 to 5): your changes go to the current one, and

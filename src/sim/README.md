@@ -5,7 +5,8 @@ The gameplay rules: plain data and pure functions, with no Three.js, no DOM and 
 - `simulation.ts`: `stepSimulation`, the fixed 60 Hz step and the order of its phases.
 - `state.ts`, `events.ts`, `commands.ts`, `character.ts`: `GameState`, `state.events`, `PlayerCommand`, `Character`.
 - `movement.ts`, `aiming.ts`, `lean.ts`, `accuracy.ts`, `footsteps.ts`: the per-tick stance rules. Lean is one geometry
-  (`HITS.lean`): eye, BB origin, hit volume, drawn figure and what bots see all use it.
+  (`HITS.lean`): eye, BB origin, hit volume, drawn figure and what bots see all use it. `coverRest.ts` (M104): aiming
+  still at a ledge rests the replica on it (`Character.coverRest`, `MOVEMENT.rest`), steadying the spread and the kick.
 - `armament.ts`: fire, switch, holster (M92: put away for the faster sprint, drawn back slower), reload by magazine
   swap, `WorldQuery`. `shotHeardScale` is the one place a shot's reach is read (bots, minimap, sound cues).
 - `ballistics.ts`, `air.ts`, `wind.ts`, `hopUp.ts`: BB flight. Gravity, drag by Reynolds number and Magnus lift from the

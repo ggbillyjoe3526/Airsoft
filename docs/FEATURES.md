@@ -13,6 +13,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Walking while aiming: hold Shift while aiming and you creep slower than the aiming pace (M84)
 - Holster on 3 (1 and 2 pick primary and secondary): holstered you sprint faster (6.8 against 6.3 m/s) but the draw
   takes longer; a fresh trigger pull, aim, reload or slot key draws it; bots holster the same way (M92)
+- Rest on cover: aim still at a crate, low wall, sandbags or window sill and the replica rests on it for a steadier aim and
+  half the kick; moving, reloading or looking away lets go; player only, on Depot, Woodland and Neon Heights (M104)
 
 ## Replicas and BBs
 
