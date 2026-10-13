@@ -245,9 +245,11 @@ replaces its line; the old one stays findable in the archive or in git.
   `UnderLaser` marker). Behind "Disable all models", like every Blender model.
 - **The human and robot figures are redesigned to look more realistic in 0.1 Dev 6 (owner, 2026-10-13: "In dev 6 I
   want to redesign the bot/player figures to be more realistic").** The owner does it himself at his PC, in his own
-  Blender through the port 9876 bridge, from reference photos he shares first. It waits on his photos and his Blender
-  session: no thread starts it before he does. It brings the figures forward from the later higher-detail models
-  (above), and they stay behind the Dev switches until he is happy with them.
+  Blender through the port 9876 bridge, from reference photos he shares first. The same session makes the figures'
+  animations for Dev 6's new moves, such as vaulting (owner, 2026-10-13: "This will also give an opportunity to update
+  animations for anything new like vaulting"). It waits on his photos and his Blender session: no thread starts it
+  before he does. It brings the figures forward from the later higher-detail models (above), and they stay behind the
+  Dev switches until he is happy with them.
 
 ## Gameplay and feel
 
