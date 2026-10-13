@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BUG_REPORT, BUG_REPORT_TEXT } from '../config/crash';
 import type { ReportInfo } from '../core/crashReport';
 import { FakeElement } from './testSupport';
@@ -6,6 +6,10 @@ import { FakeElement } from './testSupport';
 const copyText = vi.fn<(text: string) => Promise<boolean>>();
 vi.mock('./clipboard', () => ({ copyText: (text: string) => copyText(text) }));
 
+// Test files share a worker's module cache (vite.config.ts, isolate: false): one run before this file (devSettings,
+// crashScreen) may have loaded bugReport with the real clipboard, whose copy throws here and never says anything. A
+// fresh copy takes the mock (M102 found the two copy tests failing whenever such a file ran first in the worker).
+vi.resetModules();
 const { noteBox, reportBugLink } = await import('./bugReport');
 
 function info(extra: string[] = []): ReportInfo {
@@ -15,6 +19,7 @@ function info(extra: string[] = []): ReportInfo {
 type Link = FakeElement & { href: string; target: string; rel: string };
 
 describe('Report a Bug link (IM7)', () => {
+  afterAll(() => vi.resetModules());
   beforeEach(() => {
     vi.stubGlobal('document', { createElement: (tag: string) => new FakeElement(tag) });
     copyText.mockReset();
