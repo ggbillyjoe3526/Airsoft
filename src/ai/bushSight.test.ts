@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { BOTS } from '../config/bots';
 import { HITS, ROUNDS } from '../config/hits';
-import { BODY } from '../config/movement';
+import { BODY, MOVEMENT } from '../config/movement';
 import { LOADOUT } from '../config/replicas';
 import { type Bush, foliageDepth } from '../map/foliage';
 import type { MapData } from '../map/mapTypes';
@@ -122,6 +122,9 @@ describe('bots in a headless match cannot see a player hiding in a bush (M33e, a
     let seenFar = 0;
     let seenNear = 0;
     let deepest = 0;
+    // When each bot last looked and saw the hider: a bot looks every thinkInterval and keeps what it saw till the next
+    // look, so a bot backing off after a close look (a careful one, BN1) is counted where it looked, not 0.1 s later.
+    const lookedAt = new Map<number, number>();
     const stats = playMatch(seconds, 5, HIDER, BOTS, 'elimination', { ...ROUNDS, eliminationFirstEnd: 0 }, field(foliage), 3, HITS, (state, controller) => {
       const hider = state.characters[0]!;
       if (hider.status !== 'alive' || state.round.phase !== 'live') return;
@@ -130,8 +133,12 @@ describe('bots in a headless match cannot see a player hiding in a bush (M33e, a
       if (Math.hypot(hider.position.x - HIDER.x, hider.position.z - HIDER.z) > HIDING.radius) return;
       for (const b of controller.bots) {
         if (!b.targetVisible || b.targetId !== hider.id) continue;
+        const seenAt = b.contact?.seenAt ?? Number.NaN;
+        if (lookedAt.get(b.character.id) === seenAt) continue; // still the last look's sighting
+        lookedAt.set(b.character.id, seenAt);
         const d = Math.hypot(b.character.position.x - hider.position.x, b.character.position.z - hider.position.z);
-        if (d > BOTS.closeAwareness) {
+        // The callback runs after the step, so a bot is up to one step on (at its fastest) from where it looked.
+        if (d > BOTS.closeAwareness + MOVEMENT.holsterSprintSpeed * DT) {
           seenFar++;
           // The bush's depth along the line to the hider's chest, from the bot's eyes.
           const eye = vec3();

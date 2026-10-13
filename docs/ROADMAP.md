@@ -216,8 +216,8 @@ when their work starts. Numbers are from the owner's list of 50 candidates
 | M102 | Vaulting over low obstacles (0.7–0.9 m), with a few added to the maps where they open a route; crouch cover stays peek-only (owner, 2026-10-12); vaults are loud (owner, 2026-10-13); done (2026-10-13, `docs/records/M102.md`) | Movement |
 | 40 | Rest your replica on cover (a ledge, crate or window) for steadier aim; done (2026-10-13, `docs/records/M104.md`) | Movement |
 | 19 | Saved loadouts, picked from the Match screen (once the Map pop-up) as well as the Loadout screen; done (2026-10-13, `docs/records/SL1.md`) | Loadout |
-| 21 | Bot names, personalities (rusher, anchor, flanker, careful) and loadouts | Bots |
-| 23 | Bots' gear keeps up with yours: kits per level from the hand-edited `bot-kits.md`, scopes and red dots change how bots aim, and their figures show it; done (2026-10-13, `docs/records/BG1.md`) | Bots |
+| 21 | Bot names, personalities (rusher, anchor, flanker, careful) and loadouts; names and personalities done (2026-10-13, `docs/records/BN1.md`), the loadouts with item 23 (2026-10-13, `docs/records/BG1.md`) | Bots |
+| 23 | Bots' gear keeps up with yours: kits per level from the hand-edited `bot-kits.md`, leaning to each bot's personality, scopes and red dots change how bots aim, and their figures show it; done (2026-10-13, `docs/records/BG1.md`) | Bots |
 | 48 | Auto difficulty as a Dev setting: bots get a little better when you win, a little easier when you lose | Bots |
 | 22 | Location callouts: named areas, and teammates calling "Contact, Dock!" or "Two left" (text first) | Team play |
 | 24 | Pings: mark a spot and bots act on it | Team play |

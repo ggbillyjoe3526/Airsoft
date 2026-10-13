@@ -107,6 +107,22 @@ describe('each bot its own kit (BG1)', () => {
   });
 });
 
+describe('kits by personality (BG1, with the bot personalities)', () => {
+  it('gives each personality more of the kits that suit it: rushers Pointman, anchors Marksman, flankers Stealth, careful bots Rifleman', () => {
+    const share = (personality: string | null, name: string): number => {
+      let n = 0;
+      for (let bot = 1; bot <= 3000; bot++) if (pickBotKit(shipped, 'hard', pool, botKitSeed(4, bot), personality)?.name === name) n++;
+      return n / 3000;
+    };
+    for (const [personality, name] of [['rusher', 'Pointman'], ['anchor', 'Marksman'], ['flanker', 'Stealth'], ['careful', 'Rifleman']] as const) {
+      expect(kit(name).suits, name).toContain(personality);
+      expect(share(personality, name), `${personality} ${name}`).toBeGreaterThan(share(null, name) * 1.5);
+    }
+    // A personality never brings a kit its level doesn't carry: no Easy rusher has the Cyber Pistol.
+    for (let bot = 1; bot <= 500; bot++) expect(pickBotKit(shipped, 'easy', pool, botKitSeed(4, bot), 'rusher')?.name).not.toBe('Cyber');
+  });
+});
+
 describe('whether the bots may carry dev gear (M35, BG1 kitsMayHoldDev)', () => {
   it("is false for the shipped files: the pool's only dev asset is the Weapon Torch, which no kit holds (bots carry it by rule at night)", () => {
     expect(pool.assets.filter((a) => a.tag === 'dev').map((a) => a.name)).toEqual(['Weapon Torch']);

@@ -19,6 +19,7 @@ import { createGameState, type GameState } from '../sim/state';
 import { OPEN_FIELD, OPEN_NAV } from '../sim/testSupport';
 import { type Vec3, vec3 } from '../sim/vec';
 import { BotController } from './botController';
+import type { BotIdentity } from './personality';
 import { type CoverBlock, lowCoverBlocks, tallCoverBlocks } from './cover';
 
 /**
@@ -98,6 +99,8 @@ export function duel(
   lowCover: readonly CoverBlock[] = [],
   tallCover: readonly CoverBlock[] = [],
   nav: NavGrid = OPEN_NAV,
+  /** Who the bot (id 1) is (BN1): absent, it plays its difficulty as it is. */
+  identities?: ReadonlyMap<number, BotIdentity>,
 ) {
   const state = createGameState(seed, 64, ROUNDS);
   const player = createCharacter(0, vec3(0, 0, 0), 0, LOADOUT, 0);
@@ -105,7 +108,7 @@ export function duel(
   bot.yaw = facing(bot.position, player.position);
   state.characters.push(player, bot);
   extra(state);
-  const world = playOnFloor(state, [bot], { query, cfg, seed, lowCover, tallCover, nav, lanes: OPEN_FIELD.lanes });
+  const world = playOnFloor(state, [bot], { query, cfg, seed, lowCover, tallCover, nav, lanes: OPEN_FIELD.lanes, identities });
   // The player stands still facing the bot.
   world.commands.get(0)!.yaw = facing(player.position, bot.position);
   return { state, player, bot, ...world };
@@ -155,7 +158,7 @@ function openDeadZoneFields(): Float32Array[] {
 function playOnFloor(
   state: GameState,
   botChars: Character[],
-  o: { query: WorldQuery; cfg: BotConfig; seed: number; lowCover: readonly CoverBlock[]; tallCover: readonly CoverBlock[]; nav: NavGrid; lanes: MapData['lanes'] },
+  o: { query: WorldQuery; cfg: BotConfig; seed: number; lowCover: readonly CoverBlock[]; tallCover: readonly CoverBlock[]; nav: NavGrid; lanes: MapData['lanes']; identities?: ReadonlyMap<number, BotIdentity> | undefined },
 ) {
   const ctx = createSimContext({
     mover: flatFloor,
@@ -185,6 +188,7 @@ function playOnFloor(
     loadout: LOADOUT,
     cfg: o.cfg,
     seed: o.seed,
+    identities: o.identities,
   });
   const run = (seconds: number, onTick: () => void = () => {}) => {
     for (let i = 0; i < seconds / DT; i++) {
@@ -198,8 +202,11 @@ function playOnFloor(
 }
 
 
-/** Orange bots on Depot against a Blue team (no physics needed: planning only). */
-export function depotBots(mode: MatchMode = 'elimination', query: WorldQuery = noWalls, cfg: BotConfig = BOTS) {
+/**
+ * Orange bots on Depot against a Blue team (no physics needed: planning only). `identities`: who the bots are (BN1, by
+ * character id 3 to 5); absent, they play their difficulty as it is.
+ */
+export function depotBots(mode: MatchMode = 'elimination', query: WorldQuery = noWalls, cfg: BotConfig = BOTS, identities?: ReadonlyMap<number, BotIdentity>) {
   const state = createGameState(4, 64, ROUNDS, mode, DEPOT.flag);
   for (let team = 0; team < 2; team++) {
     for (let i = 0; i < ROUNDS.teamSize; i++) {
@@ -221,6 +228,7 @@ export function depotBots(mode: MatchMode = 'elimination', query: WorldQuery = n
     loadout: LOADOUT,
     cfg,
     seed: 4,
+    identities,
   });
   return { state, bots, nav, commands };
 }

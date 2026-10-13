@@ -24,6 +24,11 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **SL1** · Five saved loadout tabs on the Loadout: keys 1 to 5 or a click switch the whole kit you carry at once; your edits go to the current tab
 - **SL1** · Right-click a tab (or Menu, Shift+F10) to use, rename, duplicate, replace with yours or delete; the last loadout can't be deleted
 - **SL1** · Your match on the Match screen lists saved loadouts beside Change; gear a saved loadout can't use now shows as locked until it comes back
+- **BN1** · Bots have names (Dash, Rook, Fox, Owl and others) instead of "Alpha 2" or "Beta 1" on the scoreboard, hit feed, over teammates' heads and when spectating
+- **BN1** · Each bot has one of four personalities, shown on the scoreboard and the "What got you" card: Rusher, Anchor, Flanker or Careful
+- **BN1** · Rushers push in and run at where you were; Flankers take a lane of their own and come round the side; Careful bots clear each corner
+- **BN1** · Anchors hold a spot short of the middle in Elimination, aiming over cover with the replica rested, until about a minute is left
+- **BN1** · Personalities change how bots play, never how well they see, react or aim; names and personalities are edited in bots.md
 - **BG1** · Opponents on every difficulty carry kits from bot-kits.md: Easy mostly plain, each level up more optics, grips and lasers
 - **BG1** · Pro bots are never plain, and now and then a Hard or Pro bot carries a Cyber Pistol; each bot keeps its kit on a replay
 - **BG1** · Your teammates keep plain replicas, as does everyone under the Factory kit house rule; what you have unlocked never changes the bots' gear
@@ -39,6 +44,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 ### Fixed
 - **M92** · Bots firing on the move hold fire when a teammate is down the line, so they no longer hit teammates past the end of a wall
 - **M102** · Bots taking a lean spot or an Extraction guard post settle right on it, so their lean sees round the corner
+- **BN1** · Sprinting with the replica holstered over the top of a steep stair (Neon Heights) no longer lifts you off the ground for a moment
 
 ### Internal
 - **SL1** · Saved loadouts are part of save format 2 with their own store (airsoft.loadouts); the context menu's styles have their own sheet

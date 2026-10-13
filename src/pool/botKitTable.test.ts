@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import kitsText from '../../bot-kits.md?raw';
+import { BOT_PERSONALITIES } from '../config/botPersonalities';
 import { BOT_KIT_SUIT_LEAN, DIFFICULTIES, type Difficulty } from '../config/bots';
 import { type BotKitTable, botKitSeed, kitsFor, kitWeight, pickBotKit, readBotKits } from './botKit';
 import { contentPool } from './contentPool';
@@ -124,11 +125,12 @@ describe('picking a bot kit (BG1)', () => {
 });
 
 describe('kits that suit a personality (BG1, with the bot personalities)', () => {
-  const PERSONALITIES = ['rusher', 'anchor', 'flanker', 'careful'];
+  const PERSONALITIES = [...BOT_PERSONALITIES.styles.keys()];
   const SUITS_HEADER = '| Kit | Primary | Primary parts | Secondary | Secondary parts | Suits | Easy | Normal | Hard | Pro |\n|---|---|---|---|---|---|---|---|---|---|\n';
   const suited = (...rows: string[]) => readBotKits(`${SUITS_HEADER}${rows.join('\n')}\n`, pool, PERSONALITIES);
 
-  it('reads the shipped Suits against the four personalities, each personality suited by some kit', () => {
+  it('reads the shipped Suits against bots.md\'s personalities, each personality suited by some kit', () => {
+    expect(PERSONALITIES).toEqual(['rusher', 'anchor', 'flanker', 'careful']);
     const shipped = readBotKits(kitsText, pool, PERSONALITIES);
     expect(shipped.errors).toEqual([]);
     for (const p of PERSONALITIES) expect(shipped.kits.some((k) => k.suits.includes(p)), p).toBe(true);

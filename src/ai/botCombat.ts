@@ -94,14 +94,21 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
     // the view slowly across it (AI-02) rather than stare one way. A guard (M46) faces the way into its case.
     const facing = holdYaw(b, w);
     look.yaw = facing;
-    // Pro (M37) aims at the corners someone would come round instead of sweeping.
-    if (b.holding && !(b.skill.holdsAngles && heldAngleLook(b, w, eye, facing, false))) {
+    // Pro (M37) aims at the corners someone would come round instead of sweeping; not leaning out at a guard's lean
+    // post, which was picked to see its way in (BN1: an anchor guard turned its leaned eye back behind the cover).
+    if (b.holding && !(b.skill.holdsAngles && b.holdLean === 0 && heldAngleLook(b, w, eye, facing, false))) {
       const sweep = Math.sin((2 * Math.PI * b.teamWait) / cfg.holdSweepPeriod) * cfg.holdSweepDeg * DEG;
       // Leaning out (a guard's lean post, M55): sweep only away from the lean's side. The lean follows the look, so
       // turning towards that side swings the leaned eye back behind the cover it leans past (M72: a Woodland locker
       // guard saw its way in for 69 % of its ticks). A lean of +1 is to the right and positive yaw turns left, so
       // holdLean × |sweep| always turns away from the lean.
-      look.yaw += b.holdLean !== 0 ? b.holdLean * Math.abs(sweep) : sweep;
+      // Settled at a lean post, a turn at which the leaned eye no longer sees the way in is as far as it sweeps from
+      // then on, a little short of it (BN1): where it stands on its post decides that, by centimetres.
+      if (b.holdLean !== 0 && b.teamWait >= cfg.holdCrouchDelay) {
+        const turned = Math.abs(wrapAngle(me.yaw - facing));
+        if (turned < b.holdSweepReach && !lineClear(w.query, eye, b.postWatch)) b.holdSweepReach = Math.max(0, turned - cfg.holdLeanSweepBackDeg * DEG);
+      }
+      look.yaw += b.holdLean !== 0 ? b.holdLean * Math.min(Math.abs(sweep), b.holdSweepReach) : sweep;
     }
   }
   stepAim(b.aim, look.yaw, look.pitch, 0, cfg, b.skill, b.rng, dt);

@@ -146,6 +146,12 @@ export const BOT_BEHAVIOUR = {
   holdSweepDeg: 35,
   holdSweepPeriod: 4,
   /**
+   * A guard leaning out at its post (M55) whose leaned eye loses its way in at some turn of that sweep sweeps no further
+   * than this many degrees short of that turn from then on (BN1: a Woodland locker guard standing 4 cm off its post
+   * lost the way in at the sweep's far end and saw it for 54 % of its ticks).
+   */
+  holdLeanSweepBackDeg: 4,
+  /**
    * At a lane point, a bot may first step into cover (its skill's holdCoverChance): the best spot within this radius
    * (metres) that hides it from a point this far (metres) towards the enemy side and that it can peek from.
    */

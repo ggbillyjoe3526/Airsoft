@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { drawIdentities } from './ai/botRoster';
 import { DIFFICULTIES, type Difficulty } from './config/bots';
 import { ROUNDS } from './config/hits';
 import { DEFAULT_MATCH_RULES, type MatchRules } from './config/matchRules';
@@ -61,17 +62,19 @@ const isFactory = (c: Character) => JSON.stringify([carried(c).replicas, carried
 describe('the match roster carries kits (BG1 criterion 2)', () => {
   const size = ROUNDS.teamSize;
 
-  it('gives each opponent the kit pickBotKit draws for the match seed and its id, and everyone else the replicas as they come', () => {
+  it('gives each opponent the kit pickBotKit draws for the match seed, its id and its personality, and everyone else the replicas as they come', () => {
     const seed = 7;
     const chars = roster({ difficulty: 'pro', seed });
     const botPool = contentPool(GAME_POOL, false);
+    // The personalities spawnRoster drew (BN1): the same draw over the same bots.
+    const identities = drawIdentities(seed, chars.filter((c) => c.id !== 0).map((c) => ({ id: c.id, team: c.team })));
     expect(chars.length).toBe(size * 2);
     for (const c of chars) {
       if (c.team === 0) {
         expect(carried(c).replicas, `friend ${c.id}`).toEqual(factory.replicas);
         expect(isFactory(c), `friend ${c.id}`).toBe(true);
       } else {
-        const kit = pickBotKit(GAME_BOT_KITS, 'pro', botPool, botKitSeed(seed, c.id))!;
+        const kit = pickBotKit(GAME_BOT_KITS, 'pro', botPool, botKitSeed(seed, c.id), identities.get(c.id)!.personality)!;
         expect(kit, `opponent ${c.id}`).not.toBeNull();
         expect(carried(c), `opponent ${c.id}`).toEqual(carried(kittedBot(c.id, 1, botPool, kit)));
       }

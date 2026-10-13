@@ -368,11 +368,26 @@ replaces its line; the old one stays findable in the archive or in git.
 - **A bot aims through the sight on its replica; gear never changes what it sees or hears (2026-10-13, BG1).** A 2x
   scope holds 40 % finer once settled but settles 10 % later, starts 40 % wider up close and loses a crossing target
   50 % more; a red dot is 15 % finer and 10 % quicker; iron sights are the level's own aim (`BOT_SIGHT_AIM`). Bots
-  fire from the hip while they strafe, so the error on the move stays the level's. A silencer, laser, barrel, magazine
+  fire from the hip while they strafe (anchors aim, BN1), so the error on the move stays the level's. A silencer, laser, barrel, magazine
   or power source works on a bot as on the player.
 - **Bots' figures show their kit (2026-10-13, BG1).** The built-in figures draw the rifle's optic at every detail, so a
   scoped bot reads at a glance; grips, lasers and barrels show on the rigged figures behind the Dev switches, where
   each replica's own model takes its fitted parts. No new model files.
+- **Bots have names and personalities, read from `bots.md` (BN1, 2026-10-13; Claude's defaults, Dev 6 item 21).** Each
+  match every bot draws a made-up name off the roster, and a name always plays the same personality (rusher, anchor,
+  flanker, careful), so you learn who to watch; a team takes different personalities before any comes twice. A
+  personality changes how a bot plays (pauses, cover, pushing in, lanes, holding, bursts, corners), never how it sees,
+  hears, reacts, turns or aims: the level stays the level. The tables are the owner's to edit; a cell the game can't
+  read plays neutral. A run's jobs and your squad orders come first: guards, patrols and hunters work their jobs, and a
+  bot under your order does what you asked.
+- **Anchors aim from cover, so they rest on it; every other bot still fires from the hip (BN1, M104's open question).**
+  An anchor raises its sight when it stands still to fight, look over its cover or hold, with the player's aimed and
+  rested spread.
+- **What a personality carries belongs to the bot gear table, not to bots.md (BN1, Dev 6 item 23).** The roadmap's
+  "loadouts" for item 21 come with item 23's data-driven bot loadout table, which reads `Bot.personality`; bots.md
+  holds names and play only. `bot-kits.md`'s Suits column names the personalities each kit suits, and a bot picks a
+  kit that suits it three times as often (BG1, `BOT_KIT_SUIT_LEAN`): rushers Support, Pointman and the Cyber Pistol,
+  anchors Marksman and Support, flankers Stealth and Pointman, careful bots Rifleman and Marksman.
 - **In Attack / Defend one attacker raises the flag while the others guard the pole from cover (owner's call,
   2026-10-04).** A second raiser adds nothing: the rope goes up no faster.
 - **Every level hunts the middle of the map; Normal, Hard and Pro keep out of the light at night; Easy stands where its

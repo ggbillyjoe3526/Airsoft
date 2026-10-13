@@ -362,11 +362,19 @@ team puts you on Beta instead.
 - [ ] **The bots' kits (BG1).** Opponents on every level carry kits from `bot-kits.md`: on Easy mostly as they come,
   each level up more of them scoped, silenced or with a red dot, Pro never plain; now and then a Cyber Pistol from Hard
   up. Spectate a few: a scope or red dot shows on their rifle, and a silenced bot is heard nearer. Your teammates carry
-  replicas as they come. Does gear make Normal feel unfair, or Hard too easy? Change a weight in `bot-kits.md` and
-  say which.
+  replicas as they come. Rushers and flankers lean to Pointman, Support and Stealth kits, anchors and careful bots to
+  scopes (the scoreboard shows each bot's personality). Does gear make Normal feel unfair, or Hard too easy? Change a
+  weight in `bot-kits.md` and say which.
 - [ ] **A scoped bot (BG1).** At 25 m and more it holds its aim on you closer than an iron-sight bot once it has
   settled, but takes a little longer to settle; up close, or when you cross its view, it is slower to find you. Does a
   scoped bot read differently from a plain one?
+- [ ] **Bot names and personalities (BN1).** Every bot has a name (Dash, Rook, Fox, Owl…) on the scoreboard, in the
+  hit feed, over your teammates' heads and on the "What got you" card, and the same name plays the same way every
+  match. Over a few rounds can you tell them apart? A **Rusher** is first through the gap and runs at where you were;
+  an **Anchor** holds one spot short of the middle, aiming over cover, until about a minute is left; a **Flanker**
+  takes a lane of its own and comes round the side; a **Careful** bot walks, clears each corner and watches where you
+  ducked. The scoreboard tags each bot's personality. Does any feel unfair, or too samey? (Edit `bots.md` to rename
+  them or retune a personality.)
 - [ ] **At night** (Woodland, Neon Heights by Night): Normal, Hard and Pro bots hold their posts out of lantern light
   when a dark spot is near. A bot switches its torch on for a fight within about 20 m and for the last stretch of a
   search (12 m from the spot on Normal, 20 m on Hard, 30 m on Pro): a beam far off across the field is rare. Easy
