@@ -176,6 +176,10 @@ export class Viewmodel {
   private readonly muzzleView = new THREE.Vector3();
   /** 0 = playing, 1 = hand fully raised calling a hit. */
   private hitBlend = 0;
+  /** The holster (M92): how far the replica is put away (0..1, over VIEWMODEL.holster.putAwayTime). */
+  private stow = 0;
+  /** The draw under way (or the next) comes out of the holster: the replica rises from out of view. */
+  private fromHolster = false;
   /** What's left of the bob, sway and kick (Settings → Accessibility → Reduced motion). */
   private motionScale: MotionScale = FULL_MOTION;
   /** The fitted laser's beam is drawn (QualitySettings.laserBeam, FA8). */
@@ -406,9 +410,16 @@ export class Viewmodel {
     callingHit: boolean,
     aim: number,
   ): void {
+    // The holster (M92): put away, the replica drops out of view and is hidden there; out of the holster it comes up
+    // from there over the longer draw (Armament.drawTotal).
+    const H = VIEWMODEL.holster;
+    if (armament.holstered) this.fromHolster = true;
+    else if (armament.draw <= 0) this.fromHolster = false;
+    this.stow = armament.holstered ? Math.min(1, this.stow + dt / H.putAwayTime) : 0;
+    const stowed = armament.holstered && this.stow >= 1;
     for (let i = 0; i < this.slots.length; i++) {
       const s = this.slots[i]!;
-      s.model.visible = i === armament.active;
+      s.model.visible = i === armament.active && !stowed;
       const optic = armament.optics[i] ?? null;
       const parts = armament.parts[i];
       const barrel = parts?.barrel ?? null;
@@ -487,7 +498,7 @@ export class Viewmodel {
     const reloadP = armament.reload > 0 ? 1 - armament.reload / handling.reloadTime : 0;
     const reloadDip = Math.sin(Math.PI * reloadP);
     // Anything the hands are doing (or about to) keeps an inspect from starting and ends one under way.
-    const busy = armament.reload > 0 || armament.draw > 0 || carry > 0 || callingHit || aim > 0;
+    const busy = armament.reload > 0 || armament.draw > 0 || armament.holstered || carry > 0 || callingHit || aim > 0;
     const ip = this.updateInspect(dt, armament.active, busy);
     for (let i = 0; i < this.slots.length; i++) {
       const s = this.slots[i]!;
@@ -514,7 +525,11 @@ export class Viewmodel {
     const handAt = slot.hand.group.position.copy(slot.hand.toMag);
     if (slot.magBase) handAt.add(slot.magBase);
     handAt.multiplyScalar(grab).addScaledVector(magAxis, magDistance * grab);
-    const drawP = handling.drawTime > 0 ? armament.draw / handling.drawTime : 0;
+    const drawTotal = armament.drawTotal > 0 ? armament.drawTotal : handling.drawTime;
+    const drawP = drawTotal > 0 ? armament.draw / drawTotal : 0;
+    // A switch's draw dips the replica a little; the holster's takes it right out of view (and brings it back up).
+    const away = armament.holstered ? smooth(this.stow) : this.fromHolster ? drawP : 0;
+    const dip = this.fromHolster ? 0 : drawP;
 
     const bob = VIEWMODEL.bobAmount * moving * motion * m.bob;
     this.hitBlend = Math.max(0, Math.min(1, this.hitBlend + (callingHit ? dt : -dt) / VIEWMODEL.raiseTime));
@@ -530,14 +545,15 @@ export class Viewmodel {
         ip.lift -
         Math.abs(Math.sin(this.bobPhase)) * bob +
         reloadDip * R.lift -
-        drawP * VIEWMODEL.drawDrop -
+        dip * VIEWMODEL.drawDrop -
+        away * H.drop -
         this.sprintBlend * VIEWMODEL.sprintDrop -
         raise * VIEWMODEL.hitDrop +
         kick * VIEWMODEL.kickLift,
       kick * VIEWMODEL.kickBack + ip.back,
     );
     // No pitch from the kick: the barrel stays parallel to the view (see VIEWMODEL.kickLift).
-    this.rig.rotation.set(-drawP * VIEWMODEL.drawTilt, this.sprintBlend * VIEWMODEL.sprintTilt, 0);
+    this.rig.rotation.set(-dip * VIEWMODEL.drawTilt - away * H.tilt, this.sprintBlend * VIEWMODEL.sprintTilt, 0);
   }
 
   /**

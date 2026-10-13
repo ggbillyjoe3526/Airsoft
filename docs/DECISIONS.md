@@ -306,6 +306,12 @@ replaces its line; the old one stays findable in the archive or in git.
   strides; the head, chest and hips stay the built-in volume's, and with the figures off nothing changes.
 - **Vaulting comes in 0.1 Dev 6; slide into cover is no for now (owner, 2026-10-12).** Vaulting goes over low
   obstacles of 0.7 to 0.9 m, with a few added to the maps where they open a route; slide waits in `docs/IDEAS.md`.
+- **3 holsters the replica (1 primary, 2 secondary, rebindable): sprinting holstered is faster, and the draw from the
+  holster slower (owner, 2026-10-06, playtest note 3; M92, 2026-10-13).** The holstered sprint is 6.8 m/s against
+  6.3 with the replica ready (`MOVEMENT.holsterSprintSpeed`), and a draw from the holster takes 1.8 times the replica's
+  own (`HOLSTER.drawScale`: the rifle 0.81 s, the pistol 0.54 s), so a ready sprint is quicker to the first shot. A
+  slot key, a fresh trigger pull, an aim press or a reload draws it. Bots follow the same rules through the same
+  command, holstering only on a calm sprint through their own half (`ai/botHolster.ts`).
 
 ## Bots and balance
 

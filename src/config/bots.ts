@@ -280,6 +280,15 @@ export const BOT_BEHAVIOUR = {
   /** Sprint along routes when nobody has been seen or heard for this long (s), if heading mostly forward. */
   sprintWhenCalmFor: 3,
   sprintForward: 0.9,
+  /**
+   * The holster (M92, ai/botHolster.ts): a bot puts its replica away for the faster sprint once it has sprinted
+   * `holsterAfter` seconds without a break in its own half, nobody seen or heard for `holsterCalmFor` seconds, and draws
+   * it again (the slower draw) at once on a threat or in the enemy's half, or `holsterDrawAfter` seconds after the sprint
+   * ends (a turn on the route doesn't draw it). Every level plays it the same way.
+   */
+  holsterCalmFor: 5,
+  holsterAfter: 1.5,
+  holsterDrawAfter: 0.5,
   // ---- Team play and routes -------------------------------------------------------------------
   /**
    * Each round a team picks a plan for its bots, by these weights: split (each on a different lane),

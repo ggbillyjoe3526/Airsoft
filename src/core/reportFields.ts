@@ -41,6 +41,7 @@ export interface ReportedPlayer {
     readonly active: number;
     readonly reload: number;
     readonly draw: number;
+    readonly holstered: boolean;
     readonly replicas: readonly { readonly id: string }[];
     readonly ammo: readonly { readonly mag: number; readonly pouch: readonly number[] }[];
   };
@@ -63,6 +64,7 @@ export function playerLine(p: ReportedPlayer): string {
     ...(p.aiming ? ['aiming'] : []),
     ...(a.reload > 0 ? ['reloading'] : []),
     ...(a.draw > 0 ? ['drawing'] : []),
+    ...(a.holstered ? ['holstered'] : []),
   ];
   const ammo = a.ammo[a.active];
   const held = `${a.replicas[a.active]?.id ?? '-'}${ammo ? ` ${ammo.mag} in the magazine, ${ammo.pouch.filter((m) => m > 0).length} spare` : ''}`;

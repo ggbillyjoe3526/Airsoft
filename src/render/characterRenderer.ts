@@ -37,6 +37,8 @@ interface FigureState {
   lift: number;
   /** The baked bounce light on it where it stands (G6; setBakedLight), added to the torch glow. */
   bounce: THREE.Color;
+  /** The draw under way (or the next) comes out of the holster (M92): the slung pose, then the aim rising from low. */
+  fromHolster: boolean;
   /** A rigged figure's replicas and fitted parts when it was built (riggedKit), and the loadout's entries they came from. */
   kit: string;
   kitSeen: unknown[];
@@ -178,7 +180,7 @@ export class CharacterRenderer {
       const rifleTorch = torchFitted(c, false);
       const pistolTorch = torchFitted(c, true);
       const { figure, rigged, material } = this.build(i, { rifleSilencer: silencer, rifleTorch, pistolTorch });
-      this.figures.push({ figure, rigged, material, flinchAge: FIGURE.flinch.time, flinchX: 0, flinchZ: 0, silencer, rifleTorch, pistolTorch, lift: 0, bounce: new THREE.Color(0, 0, 0), kit: riggedKit(c), kitSeen: [] });
+      this.figures.push({ figure, rigged, material, flinchAge: FIGURE.flinch.time, flinchX: 0, flinchZ: 0, silencer, rifleTorch, pistolTorch, lift: 0, bounce: new THREE.Color(0, 0, 0), fromHolster: false, kit: riggedKit(c), kitSeen: [] });
       kitChanged(c, this.figures[i]!.kitSeen);
     }
   }
@@ -399,13 +401,23 @@ export class CharacterRenderer {
       // A model drawn whole has no hips to bend: it sinks as far as the head does.
       if (f.whole) f.whole.scale.y = 1 - (crouch * FIGURE.crouchDrop) / FIGURE_MODEL.height;
 
-      // In play: aiming. Calling / walking off: hand up. Out in the dead zone: replica pointed at the ground.
+      // In play: aiming, or holstered (M92): the rifle slung, then out of the holster the aim rising from low over the
+      // second part of the draw. Calling / walking off: hand up. Out in the dead zone: replica pointed at the ground.
       const handUp = c.status === 'calling' || c.status === 'walkingOff' || c.status === 'leaving';
-      f.aim.visible = !handUp;
+      const arm = c.armament;
+      if (arm.holstered) s.fromHolster = true;
+      else if (arm.draw <= 0) s.fromHolster = false;
+      const H = FIGURE.holster;
+      const drawn = arm.holstered ? 0 : s.fromHolster && arm.drawTotal > 0 ? 1 - arm.draw / arm.drawTotal : 1;
+      const slung = !handUp && drawn < H.swapAt;
+      f.holsterPose.visible = slung;
+      f.aim.visible = !handUp && !slung;
       const pistol = holdsPistol(c);
       f.aimRifle.visible = !pistol;
       f.aimPistol.visible = pistol;
-      f.aim.rotation.x = c.status === 'out' ? FIGURE.outAimPitch : c.prevPitch + (c.pitch - c.prevPitch) * alpha;
+      const pitch = c.prevPitch + (c.pitch - c.prevPitch) * alpha;
+      const rise = THREE.MathUtils.smoothstep(drawn, H.swapAt, 1);
+      f.aim.rotation.x = c.status === 'out' ? FIGURE.outAimPitch : H.drawPitch + (pitch - H.drawPitch) * rise;
       f.hitPose.visible = handUp;
       f.callout.visible = c.status === 'calling';
       if (f.callout.visible && eye) placeCallout(f.callout, length3(x - eye.x, y + FIGURE.callout.height - eye.y, z - eye.z));

@@ -57,6 +57,9 @@ interface ReplicaSound {
 /** What every match's sound shares: the Game's audio engine (context, volume buses, every sound's buffers). */
 export type SfxSetup = AudioEngine;
 
+/** The rustle each body movement plays (audio/foley.ts). */
+const FOLEY_CUES: Readonly<Record<FoleyMove, SoundCue>> = { crouch: 'foley.crouch', stand: 'foley.stand', lean: 'foley.lean', holster: 'foley.holster' };
+
 /** Spreads the fires' start points round their loop (the golden ratio's fraction: never two alike). */
 const GOLDEN = 0.618034;
 
@@ -557,7 +560,7 @@ export class Sfx {
   }
 
   private foleyMove(c: Character, move: FoleyMove, localId: number): void {
-    const cue: SoundCue = move === 'crouch' ? 'foley.crouch' : move === 'stand' ? 'foley.stand' : 'foley.lean';
+    const cue = FOLEY_CUES[move];
     if (c.id === localId) {
       this.play(cue, this.self!, AUDIO.levels.ownFoley);
       return;
