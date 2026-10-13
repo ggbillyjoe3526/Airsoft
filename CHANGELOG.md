@@ -7,6 +7,21 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 ### Added
 - **M93** · Practice has moving targets: sliding figures, a swinging plate, small plates at 15 m and pop-up figures
 - **M93** · Practice has a Timed challenge, off by default (pause menu): 60 seconds on lit targets, best score kept
+- **LV1** · Levels and XP replace the Armory's gacha: every match gives XP, you level up from 0 to 10, and each level unlocks parts for good (#207)
+- **LV1** · The Armory shows your level, XP to the next level, what it unlocks and every level's items; a level badge on the top bar opens it (#207)
+- **LV1** · The match summary shows the XP earned, its lines and any level-up with what it unlocked (#207)
+- **LV1** · Locked items show greyed in Loadout and Customise, with the level that unlocks them; the unlock table is `levels.md` (#207)
+- **LV1** · Dev tab: +500 XP, Level up and Reset level buttons (#207)
+
+### Changed
+- **LV1** · Extraction cases hold XP instead of Field Credits; supply events give a % bonus to XP (#207)
+- **LV1** · Replicas and parts rebalanced without rarity: Low-Cap Magazine gets two more magazines, Long Barrel +10 % energy and 10 % tighter groups (#207)
+- **LV1** · Hard and Pro bots lose their small tier bonus; the Cyber Pistol keeps its old numbers (#207)
+- **LV1** · Unlock all gear is now Disable levelling, a cheat with no XP and no records (#207)
+- **LV1** · Save format 2: an old save loads at level 0 with its settings and records; old Armory items, Field Credits and Tokens don't carry over (#207)
+
+### Removed
+- **LV1** · The Armory's gacha is gone: no Field Credits, Tokens, Shots, pity, rarity tiers, spares, scrapping or Disable Armory (#207)
 
 ## 0.1 Dev 5 · 2026-10-13
 
