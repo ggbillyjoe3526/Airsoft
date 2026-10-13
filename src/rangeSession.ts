@@ -233,6 +233,9 @@ export class RangeSession {
       this.showcase = new TutorialShowcase(container, this.player.team, teamCss(this.player.team), (action) => input.keyName(action), () => input.wheelSelect);
       this.showcase.set(this.tutorial.step?.shows ?? null);
     }
+    // The scene is whole: its shaders are compiled now, as a match's are, not in the first frames (a map in Practice,
+    // M94, holds as many materials as its match).
+    this.combat.warmShaders();
   }
 
   /** The tutorial's step to rebuild the range at (undefined: free practice, or the tutorial is over). */
