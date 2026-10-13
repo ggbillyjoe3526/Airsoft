@@ -104,6 +104,8 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | Bots pay for moving twice: their own `aimErrorMovingDeg` plus the movement spread the player also has | document | Deliberate and measured (DECISIONS 2026-10-02); retune in Beta if moving bots feel too weak. (M10) |
 | Bots' "is it a wall?" test past the target is a heuristic (0.6 m higher, probed 0.2 m either side): a corner graze or a hit near a wall's top reads as low cover | document | Errs towards holding fire, never towards friendly hits. Crate and tall-wall cases are tested. |
 | Bots stand still to fight, so the steadier-when-still aim makes them up to 30 % tighter than in 0.1 Dev 3 | document | Headless guards still pass; the owner's playtest decides if Normal feels deadlier. If so, tune `steady` or the bots' aim error, not the player's rule. (M12a) |
+| Adaptive difficulty (Dev setting): every step and limit is a first guess (a clear win about a fifth of a level up, a loss a quarter down, rounds 0.04–0.05) | playtest | Tune through play on Normal in `config/adaptiveDifficulty.ts` (AD1). |
+| Adaptive difficulty: the Match screen's Opponents line names the level you picked, while the note under the rules says where the other team starts; from halfway to the next level it plays as that one (its holds, team play and kits) | playtest | The note is the only place it shows (AD1). Playtest whether it reads clearly enough. |
 
 ## Squad orders
 

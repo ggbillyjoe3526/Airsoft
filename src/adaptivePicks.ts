@@ -1,5 +1,5 @@
 import { levelAt, ratingWords, topRating } from './ai/adaptiveSkill';
-import { ADAPTIVE_TEXT } from './config/adaptiveDifficulty';
+import { ADAPTIVE, ADAPTIVE_TEXT } from './config/adaptiveDifficulty';
 import type { AdaptiveSetup } from './matchSession';
 import type { NewGamePicks } from './newGamePicks';
 import { loadAdaptiveRating, saveAdaptiveRating } from './settings/adaptiveRating';
@@ -30,9 +30,6 @@ export function adaptiveNote(on: boolean, picks: NewGamePicks, devContent: boole
   return setup ? ADAPTIVE_TEXT.matchNote(ratingWords(setup.rating)) : ADAPTIVE_TEXT.notInRun;
 }
 
-/** How far a rating must move to read as a step up or down on the summary (a rounding's worth). */
-const STEP = 0.005;
-
 /**
  * A decided adaptive match (MatchSession.adaptiveResult): the next match's rating saved, grown from Opponents level
  * `from`, and the summary's line; with other Dev help (no `next`) nothing saved, and a line saying so.
@@ -40,6 +37,7 @@ const STEP = 0.005;
 export function settleAdaptive(result: { start: number; next: number | null }, from: AdaptiveSetup['from'], storage = browserStorage()): string {
   if (result.next === null) return ADAPTIVE_TEXT.unchanged(ratingWords(result.start));
   saveAdaptiveRating(from, result.next, storage);
-  const change = result.next > result.start + STEP ? 'up' : result.next < result.start - STEP ? 'down' : 'same';
+  const step = ADAPTIVE.words.step;
+  const change = result.next > result.start + step ? 'up' : result.next < result.start - step ? 'down' : 'same';
   return ADAPTIVE_TEXT.next(ratingWords(result.next), change);
 }

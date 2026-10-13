@@ -35,9 +35,10 @@ export const ADAPTIVE = {
   /**
    * How far past a level (the fraction of the way to the next) the Match screen and the summary call it "a little
    * sharper", "between" the two, then "a little gentler" than the next. Below `sharper` it is the level itself, and from
-   * `level` on the next level itself.
+   * `level` on the next level itself. `step`: how far a match must move the rating for the summary to call it a step up
+   * or down rather than no change (a rounding's worth).
    */
-  words: { sharper: 0.15, between: 0.4, gentler: 0.6, level: 0.85 },
+  words: { sharper: 0.15, between: 0.4, gentler: 0.6, level: 0.85, step: 0.005 },
 } as const;
 
 /**
