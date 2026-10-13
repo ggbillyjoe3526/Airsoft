@@ -238,6 +238,14 @@
    "loop": true,
    "upperBodyOnly": true,
    "speed": null
+  },
+  {
+   "name": "Vault",
+   "seconds": 1.2,
+   "frames": 36,
+   "loop": false,
+   "upperBodyOnly": false,
+   "speed": null
   }
  ],
  "fitToNote": "Clips with fitTo are time-scaled to that replica stat (e.g. AEG drawTime 0.45 s, pistol 0.3 s; reloads 1.8 s and 1.2 s).",
@@ -363,13 +371,13 @@
     "release": 0.18519,
     "releaseVelocity": [
      1.3145,
-     0.7192,
-     -1.5763
+     0.7466,
+     -1.5635
     ],
     "releaseSpin": [
      -5.9641,
-     -5.1788,
-     -0.9147
+     -5.162,
+     -1.0049
     ],
     "magazineOnBone": [
      [
@@ -441,13 +449,13 @@
     "release": 0.25,
     "releaseVelocity": [
      1.6706,
-     -0.0618,
-     -0.3014
+     -0.0565,
+     -0.3024
     ],
     "releaseSpin": [
      6.7945,
-     -3.6311,
-     -7.7433
+     -3.4954,
+     -7.8054
     ],
     "magazineOnBone": [
      [

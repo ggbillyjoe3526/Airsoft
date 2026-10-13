@@ -59,9 +59,10 @@ export const FIGURE_RIG = {
   /**
    * How fast the blends settle (seconds to about two thirds of the way): between standing and moving, the direction of
    * the step, the legs' modes (walk and run, sprint, the hit call, the walk-off), the upper body's (aim, reload,
-   * switch), a jump, and the rifle's and the pistol's aim.
+   * switch), a jump, and the rifle's and the pistol's aim. A vault (about half a second) comes in and goes out at
+   * `vault`, and takes the aim's layer off as fast: the hit volume's legs follow it at once (sim/figureLegs.ts).
    */
-  blend: { move: 0.12, direction: 0.1, mode: 0.12, overlay: 0.08, jump: 0.06, hold: 0.06 },
+  blend: { move: 0.12, direction: 0.1, mode: 0.12, overlay: 0.08, jump: 0.06, hold: 0.06, vault: 0.03 },
   /** The Jump clip's span (seconds) played over the time in the air: the take-off is skipped, the landing is the clip's. */
   jump: { from: 0.25, to: 0.55 },
   /**
@@ -86,4 +87,10 @@ export const FIGURE_RIG = {
    * volume.
    */
   rest: { lean: 0.2 },
+  /**
+   * The Vault clip (M102, the figure redesign's: bot18.py), played by the vault's progress: its first `top` on the rise
+   * onto the top (bot18.py VAULT_TOP), the rest across it (sim/figureLegs.ts vaultClipShare). A file without it plays
+   * the legs' clips instead (the jump, tucked by the crouch).
+   */
+  vault: { top: 0.4 },
 } as const;

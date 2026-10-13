@@ -251,6 +251,12 @@ replaces its line; the old one stays findable in the archive or in git.
   2026-10-13: "Make sure the figure redesign notes it needs animations for this"). It waits on his photos and his
   Blender session: no thread starts it before he does. It brings the figures forward from the later higher-detail models
   (above), and they stay behind the Dev switches until he is happy with them.
+- **The robot is redesigned in a cloud Blender, from his reference pictures (owner, 2026-10-13: "if you can connect to a
+  cloud session of Blender then start now"; RM10).** His first review (2026-10-13): every robot wears the old "other
+  head" made over ("the robot could have a visor/headset/square 'headphones'"); the team-coloured shoulders are part of
+  the arm and don't stick out; no + symbol; "more mechanical and 'boxy'", with as much detail as the budgets allow. The
+  rest-on-cover and vault clips are shared by both figures (`tools/blender/bot-figure/scripts/bot18.py`); the human gets
+  them with its own redesign in his Blender.
 
 ## Gameplay and feel
 

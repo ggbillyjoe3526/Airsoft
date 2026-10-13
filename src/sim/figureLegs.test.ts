@@ -3,7 +3,8 @@ import { FIGURE_RIG } from '../config/figureRig';
 import type { FigureLegClip, FigureLegs } from '../config/hits';
 import { MOVEMENT } from '../config/movement';
 import { type Character, createCharacter } from './character';
-import { characterLegWeights, figureLegCycleStep, figureLegPose, LEG_CLIPS, LEG_MODE, LEG_POINT, LEG_POINTS, LEG_SAMPLE, LEG_SLOT, legDirection, legMode, legRun } from './figureLegs';
+import { characterLegWeights, figureLegCycleStep, figureLegPose, LEG_CLIPS, LEG_MODE, LEG_POINT, LEG_POINTS, LEG_SAMPLE, LEG_SLOT, legDirection, legMode, legRun, legsHaveVault, vaultClipShare } from './figureLegs';
+import { createVaultState } from './vault';
 import { vec3 } from './vec';
 
 /** A character standing on the ground, facing -z (yaw 0). */
@@ -30,9 +31,19 @@ function markedLegs(): FigureLegs {
   return { clips };
 }
 
+/** `time` seconds into a vault that rises onto the top for 0.2 s and is across it by 0.6 s. */
+function vaulting(time: number): Character {
+  const c = ahead(standing(), MOVEMENT.vault.minSpeed);
+  Object.assign(c.vault, { active: true, time, riseEnd: 0.2, end: 0.6, speed: MOVEMENT.vault.minSpeed });
+  c.grounded = false;
+  c.airTime = time;
+  c.crouchAmount = MOVEMENT.vault.tuck;
+  return c;
+}
+
 const weights = new Float32Array(LEG_CLIPS.length);
-const shares = (c: Character): Record<string, number> => {
-  characterLegWeights(c, weights);
+const shares = (c: Character, vaultClip = false): Record<string, number> => {
+  characterLegWeights(c, weights, vaultClip);
   return Object.fromEntries(LEG_CLIPS.map((n, i) => [n, weights[i]!]).filter(([, w]) => (w as number) > 1e-6));
 };
 
@@ -45,6 +56,27 @@ describe('the legs clips the rigged figures play (IM8)', () => {
     // A sprint held while standing still is no sprint; nor is one after the hit.
     expect(legMode('alive', true, 0)).toBe(LEG_MODE.gait);
     expect(legMode('out', true, MOVEMENT.sprintSpeed)).toBe(LEG_MODE.gait);
+  });
+
+  it('plays the vault while vaulting with a Vault clip, else the jump; never over the hit call', () => {
+    expect(legMode('alive', true, MOVEMENT.sprintSpeed, true)).toBe(LEG_MODE.vault);
+    expect(legMode('calling', false, 0, true)).toBe(LEG_MODE.call);
+    expect(legMode('out', false, 0, true)).toBe(LEG_MODE.gait);
+    expect(shares(vaulting(0.1), true)).toEqual({ Vault: 1 });
+    expect(shares(vaulting(0.1))).toEqual({ Jump: 1 });
+  });
+
+  it('runs the Vault clip by the vault: its first part over the rise onto the top, the rest across it', () => {
+    const v = { ...createVaultState(), riseEnd: 0.2, end: 0.6 };
+    const top = FIGURE_RIG.vault.top;
+    expect(vaultClipShare(v, 0)).toBe(0);
+    expect(vaultClipShare(v, 0.1)).toBeCloseTo(top / 2, 6);
+    expect(vaultClipShare(v, 0.2)).toBeCloseTo(top, 6);
+    expect(vaultClipShare(v, 0.4)).toBeCloseTo((top + 1) / 2, 6);
+    expect(vaultClipShare(v, 0.6)).toBeCloseTo(1, 6);
+    // Held at its ends either side (the figure reads it a tick back, between ticks).
+    expect(vaultClipShare(v, -0.01)).toBe(0);
+    expect(vaultClipShare(v, 0.7)).toBe(1);
   });
 
   it('splits a step into its four directions, and has none below the still speed', () => {
@@ -155,6 +187,16 @@ describe('the legs pose for the hit volume (IM8)', () => {
     c.grounded = false;
     c.airTime = 0.1;
     expect(pose(c)).toBeCloseTo(LEG_SLOT.Jump + (FIGURE_RIG.jump.from + 0.1) / 10, 4);
+  });
+
+  it('plays the Vault clip by the vault where the legs have one, else the jump', () => {
+    expect(legsHaveVault(legs)).toBe(true);
+    // Halfway up onto the top: half of the clip's rise share, between two of its 11 samples.
+    expect(pose(vaulting(0.1))).toBeCloseTo(LEG_SLOT.Vault + ((FIGURE_RIG.vault.top / 2) * 10) / 100, 4);
+    const none: FigureLegs = { clips: legs.clips.map((clip, slot) => (slot === LEG_SLOT.Vault ? { ...clip, frames: 0, points: new Float32Array(0) } : clip)) };
+    expect(legsHaveVault(none)).toBe(false);
+    figureLegPose(vaulting(0.1), none, out);
+    expect(out[0]).toBeCloseTo(LEG_SLOT.Jump + (FIGURE_RIG.jump.from + 0.1) / 10, 4);
   });
 
   it('blends clips by weight', () => {

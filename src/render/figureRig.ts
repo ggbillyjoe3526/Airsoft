@@ -3,7 +3,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { FIGURE_RIG, FIGURE_RIG_KINDS, type FigureRigKind } from '../config/figureRig';
 import type { FigureLegs } from '../config/hits';
 import { loadGltfScene } from './externalModels';
-import { figureLegsFrom } from './figureLegs';
+import { figureLegsFrom, legsWithSpares } from './figureLegs';
 import { RiggedFigure, type RiggedFigureSetup } from './riggedFigure';
 import { ThrownMagazines } from './thrownMagazines';
 import { BODY_CLIPS, FIRE_CLIPS, type MagazineTimes, OPTIONAL_CLIPS, POSE_CLIPS, POSE_SLOT, type PoseClipTable, type PoseHold } from './figurePose';
@@ -115,6 +115,11 @@ export interface FigureRig {
 export interface FigureRigs {
   readonly human: FigureRig;
   readonly robot: FigureRig;
+  /**
+   * The legs a match's hit volume takes (IM8, matchSession.ts): the human's, which the robot shares but for a couple of
+   * centimetres crouched, with any clip the human's file lacks (the Vault, until its redesign) from the robot's.
+   */
+  readonly legs: FigureLegs;
   /** One figure drawn from a rig (render/riggedFigure.ts). */
   figure(setup: RiggedFigureSetup): RiggedFigure;
   /** The thrown-away magazines of a match's figures (render/thrownMagazines.ts). */
@@ -124,7 +129,7 @@ export interface FigureRigs {
 
 /** Both kinds as FigureRigs, with `dispose` freeing them (or whatever the caller says, for shared test files). */
 export function figureRigs(human: FigureRig, robot: FigureRig, dispose: () => void): FigureRigs {
-  return { human, robot, figure: (setup) => new RiggedFigure(setup), thrownMagazines: () => new ThrownMagazines(), dispose };
+  return { human, robot, legs: legsWithSpares(human.legs, robot.legs), figure: (setup) => new RiggedFigure(setup), thrownMagazines: () => new ThrownMagazines(), dispose };
 }
 
 /** The URLs of `kind`'s file and sidecar loader in this build, or null when it lacks either. */

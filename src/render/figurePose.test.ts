@@ -7,6 +7,7 @@ import {
   FIRE_CLIPS,
   type FigurePose,
   hasRest,
+  hasVault,
   magazinesAt,
   type MagazineShow,
   type MagazineTimes,
@@ -44,6 +45,7 @@ const input = (over: Partial<PoseInput> = {}): PoseInput => ({
   draw: null,
   firstPerson: false,
   vaulting: false,
+  vaultAt: 0,
   rest: 0,
   cycle: null,
   ...over,
@@ -70,6 +72,7 @@ describe('legs: weights sum to 1 and follow the movement', () => {
     ['in the air', { airborne: true, airTime: 0.3 }],
     ['calling', { status: 'calling' }],
     ['walking off', { status: 'walkingOff', forward: 1.5 }],
+    ['vaulting', { vaulting: true, vaultAt: 0.5, airborne: true, airTime: 0.3, crouch: 0.6, forward: 4 }],
   ];
   for (const [name, over] of cases) {
     it(`${name}: lower weights sum to 1, and the upper body's too`, () => {
@@ -167,6 +170,42 @@ describe('legs: weights sum to 1 and follow the movement', () => {
     expect(state.call).toBe(0);
     run(input({ status: 'alive' }), 1, state, out);
     expect(state.call).toBe(0);
+  });
+});
+
+describe('the vault (M102)', () => {
+  const vault = { vaulting: true, airborne: true, airTime: 0.2, crouch: 0.6, forward: 4 };
+
+  it('plays the Vault clip on the whole body by the vault, coming in fast and taking the aim off as fast', () => {
+    expect(hasVault(TABLE)).toBe(true);
+    const { state, out } = run(input(), 1);
+    // A tenth of a second in (the hit volume's legs take it at once).
+    run(input({ ...vault, vaultAt: 0.25 }), 0.1, state, out);
+    expect(out.lower[S.Vault]).toBeGreaterThan(0.95);
+    expect(out.upper[S.Vault]).toBeCloseTo(out.lower[S.Vault]! * (1 - out.overlay), 5);
+    expect(out.overlay).toBeLessThan(0.05);
+    expect(out.time[S.Vault]).toBeCloseTo(0.25 * TABLE[S.Vault]!.seconds, 3);
+  });
+
+  it('holds where the vault left off while it eases out into the fall', () => {
+    const { state, out } = run(input({ ...vault, vaultAt: 1 }), 0.5);
+    stepPose(state, input({ airborne: true, airTime: 0.6, vaultAt: 0 }), DT, TABLE, out);
+    expect(out.time[S.Vault]).toBeCloseTo(TABLE[S.Vault]!.seconds, 3);
+    expect(out.lower[S.Vault]).toBeGreaterThan(0.5);
+    run(input({ airborne: true, airTime: 0.6 }), 0.5, state, out);
+    expect(out.lower[S.Vault]).toBeCloseTo(0, 3);
+    expect(out.lower[S.Jump]).toBeCloseTo(1, 3);
+  });
+
+  it('plays the legs clips for a file without the Vault clip', () => {
+    const none = TABLE.map((c, i) => (i === S.Vault ? { seconds: 0, speed: null } : c));
+    expect(hasVault(none)).toBe(false);
+    const state = createPoseState();
+    const out = createFigurePose();
+    for (let i = 0; i < 60; i++) stepPose(state, input({ ...vault, vaultAt: 0.5 }), DT, none, out);
+    expect(out.lower[S.Vault]).toBe(0);
+    expect(out.lower[S.Jump]).toBeCloseTo(1, 3);
+    expect(out.overlay).toBeCloseTo(0, 2);
   });
 });
 
