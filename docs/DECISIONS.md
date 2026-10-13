@@ -224,7 +224,8 @@ replaces its line; the old one stays findable in the archive or in git.
   With "Disable all models" off the Blender replicas, parts and power-source pictures return; the figure model then
   still needs "Disable figure models" off. The files stay in the build and are fetched only when let in.
 - **The Blender figures (owner, 2026-10-10; approved 2026-10-12: "happy with it for now").** The hands hold the
-  replica naturally, the trigger finger in the guard; humans wear the high-cut helmet head only; robots wear no vest,
+  replica naturally, the trigger finger in the guard; humans wore the high-cut helmet head only (four heads since
+  2026-10-13, below); robots wear no vest,
   holsters, magazines or accessories, their team shown by its colour on their highlights; the figure is also the
   player's first-person body, without its head. A reload pulls the old magazine and throws it; bots drop it (owner,
   2026-10-11). BF1 draws them with the Dev model switches off, ahead of a CC0 `figure.glb`.
@@ -251,6 +252,14 @@ replaces its line; the old one stays findable in the archive or in git.
   2026-10-13: "Make sure the figure redesign notes it needs animations for this"). It waits on his photos and his
   Blender session: no thread starts it before he does. It brings the figures forward from the later higher-detail models
   (above), and they stay behind the Dev switches until he is happy with them.
+- **The redesigned human has four heads and shows the team colour on its vest (owner, 2026-10-13: "create a few
+  different heads for the human model"; "go with the vests (and armbands/patches/helmet/hat) to show team colour. it's
+  much easier to read"; RM9).** A figure's id picks its head (`config/figureRig.ts`): the high-cut helmet with ear
+  defenders and a mesh mask, a cap with a headset and goggles, a boonie hat with a check scarf, or a full-cut helmet
+  with goggles; each wears eye protection and a team marker, and is at most 2,500 triangles. The plate carrier and
+  cummerbund are in the team colour, as on the built-in figures, with the armbands, patches and helmet or hat bands;
+  the camo stays. A human is at most 20,000 triangles with its largest head (19,966) and its packed file under 3.5 MB
+  (2.84). Built in his Blender (`bot20.py` to `bot22.py`), approved on review pictures before it entered the game.
 
 ## Gameplay and feel
 
