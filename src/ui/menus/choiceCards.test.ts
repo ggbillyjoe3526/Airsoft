@@ -193,8 +193,8 @@ describe('ChoiceCards notes (M49)', () => {
 
   it('shows a line on one card when set, takes it away with null, and ignores an id it does not have', () => {
     const c = new ChoiceCards<Id>('Mode', OPTIONS, 'normal', 'difficulty' as never, () => {});
-    c.setNote('normal', 'Supply weekend, until Sunday: cases hold +25 % Field Credits.');
-    expect([note(c, 'Normal').textContent, note(c, 'Normal').hidden]).toEqual(['Supply weekend, until Sunday: cases hold +25 % Field Credits.', false]);
+    c.setNote('normal', 'Supply weekend, until Sunday: cases hold +25 % XP.');
+    expect([note(c, 'Normal').textContent, note(c, 'Normal').hidden]).toEqual(['Supply weekend, until Sunday: cases hold +25 % XP.', false]);
     expect(note(c, 'Easy').hidden).toBe(true);
     c.setNote('normal', null);
     expect(note(c, 'Normal').hidden).toBe(true);

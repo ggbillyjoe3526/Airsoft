@@ -222,7 +222,7 @@ describe('every screen can be left and used with the mouse, and the keys still w
 
 describe('Practice, the last mode of the Match screen (M100 QA)', () => {
   const view = (picks: unknown, devContent = false) =>
-    ({ played: picks, devContent, run: false, sizeMax: 3, sizeMin: 1, mapLine: 'Depot · Day', still: null, modeLabel: 'Elimination', rules: 'Skirmish · 3v3', bots: 'Normal bots', notes: 'a note', loadout: { replicas: 'AEG', detail: '' }, pays: 'Pays Field Credits' }) as unknown as PlayView;
+    ({ played: picks, devContent, run: false, sizeMax: 3, sizeMin: 1, mapLine: 'Depot · Day', still: null, modeLabel: 'Elimination', rules: 'Skirmish · 3v3', bots: 'Normal bots', notes: 'a note', loadout: { replicas: 'AEG', detail: '' }, pays: 'Gives XP' }) as unknown as PlayView;
 
   function setup(mode = 'elimination') {
     const picks = { map: 'depot', mode, difficulty: 'normal', teammateDifficulty: 'normal', ruleset: 'skirmish', rules: { ...DEFAULT_MATCH_RULES } };

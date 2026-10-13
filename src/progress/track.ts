@@ -38,8 +38,11 @@ export interface Track {
 export function levelTrack(t: LevelTable, progress: Progress, offered: (id: string) => boolean, off: boolean): Track {
   const s = standing(t, progress.xp);
   const has = new Set(progress.unlocked);
+  // The next unlock is the lowest level still to reach with something offered, so a level whose items are all hidden
+  // (dev items, Dev content off) never reads as next while the next-unlock card shows a later one.
+  const nextLevel = off ? null : (t.levels.find((l) => l.level > s.level && l.unlocks.some(offered))?.level ?? null);
   const levels = t.levels.map((l): TrackLevel => {
-    const state: LevelState = off || l.level <= s.level ? 'unlocked' : l.level === s.level + 1 ? 'next' : 'locked';
+    const state: LevelState = off || l.level <= s.level ? 'unlocked' : l.level === nextLevel ? 'next' : 'locked';
     return { level: l.level, total: l.total, items: l.unlocks.filter(offered), state };
   });
   const all = levels.flatMap((l) => l.items);
@@ -47,7 +50,7 @@ export function levelTrack(t: LevelTable, progress: Progress, offered: (id: stri
     standing: s,
     cap: t.cap,
     levels,
-    next: off ? null : (levels.find((l) => l.level > s.level && l.items.length > 0) ?? null),
+    next: levels.find((l) => l.level === nextLevel) ?? null,
     unlocked: off ? all.length : all.filter((id) => has.has(id)).length,
     total: all.length,
     off,

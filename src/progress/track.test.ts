@@ -109,6 +109,8 @@ describe('the level track (LV1)', () => {
     const track = levelTrack(t, playerAt(0, t), offered, false);
     expect(track.levels[1]!.items).toEqual([]);
     expect(track.next!.level).toBe(2);
+    // The row marked next is the same level the next-unlock card shows.
+    expect(track.levels.map((l) => l.state)).toEqual(['unlocked', 'locked', 'next']);
     expect(levelTrack(t, playerAt(0, t), offeredBy(true), false).next!.level).toBe(1);
   });
 });
