@@ -322,7 +322,7 @@ export const GEAR_TEXT = {
   asCarried: 'as carried',
   unlockMore: 'Level up to unlock more: the Armory shows what each level gives.',
   /** Under the replicas when the Loadout was opened from Practice (M95). */
-  practice: 'Practice: take any replica you own and customise it. What you carry here is your loadout for matches too.',
+  practice: 'Practice: take any replica you have unlocked and customise it. What you carry here is your loadout for matches too.',
   /** Under the replicas while Dev settings › Disable levelling lends everything (M26d, M95; LV1). */
   lent: 'Disable levelling is on (Dev settings): every replica and part is yours to try. Your own loadout comes back when you turn it off.',
   /** The parts fitted, after the colour. */

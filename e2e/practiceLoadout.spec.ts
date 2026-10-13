@@ -48,7 +48,7 @@ test('the Loadout key in Practice swaps the replica in hand and goes back where 
   const loadout = page.locator('.menu-loadout');
   await expect(loadout).toBeVisible({ timeout: 10_000 });
   await expect(loadout.getByRole('button', { name: /^Secondary: GBB Pistol/ })).toHaveAttribute('aria-pressed', 'true');
-  await expect(loadout.getByText(/^Practice: take any replica you own/)).toBeVisible();
+  await expect(loadout.getByText(/^Practice: take any replica you have unlocked/)).toBeVisible();
   const back = page.locator('.menu-topbar').getByRole('button', { name: 'Back to practice' });
   await expect(back).toBeVisible();
   await expect(back.locator('kbd')).toHaveText('L');
