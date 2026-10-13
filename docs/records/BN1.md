@@ -14,6 +14,12 @@
   (the ground settle, below). Reports in `pipeline/runs/BN1/` (project files).
 - **Attempt 2** re-ran the gates but smoke, with the fast tests: it differs from attempt 1 by the re-recorded perf
   baseline and the task's touches alone; attempt 1 ran smoke and the slow guards green on the same code.
+- **After merging M102 (vaulting, #214)** all tests ran again: four thresholds that are sample sizes, not rates, moved
+  with personalities and were set from measures. The route budget probe (`botRouteBudget.test.ts`) and the hunt
+  re-pick (`huntMemory.qa.test.ts`) measure a mechanism and now play neutral bots (with personalities the longest
+  search was 6,857 nodes against the 8,000 budget, and the blind bots' longest stale walk 1.45 s). The Stack House
+  guard takes at least 4 rounds a match and 66 over its 12 (6.4 a match over seeds 1–24 with and without
+  personalities; seed 11 played 4), and its follow test counts more than 400 ticks (seed 3: 490, all near).
 
 ## Decisions
 
