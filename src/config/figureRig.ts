@@ -31,7 +31,12 @@ export const FIGURE_RIG = {
   bones: { hips: 'Hips', spine: 'Spine', grip: 'Grip_R', hand: 'Hand_L', arms: ['UpperArm_L', 'UpperArm_R'] as readonly string[] },
   /** The parts in the files, by role (each has `_LOD1` and `_LOD2` copies, except where the file lacks one). */
   parts: {
-    human: { body: ['Body', 'Kit'], head: ['Head_HighCut'], pack: 'Kit_Pack', radio: 'Kit_Radio' },
+    human: {
+      body: ['Body', 'Kit'],
+      head: ['Head_HighCut', 'Head_Cap', 'Head_Boonie', 'Head_FullCut'],
+      pack: 'Kit_Pack',
+      radio: 'Kit_Radio',
+    },
     robot: { body: ['Body', 'Body_Neck'], head: ['Head_Optic', 'Head_Sensor'] },
   },
   /** The pitch the AimUp and AimDown clips are posed at (bot11.py clip_aim: ±60 degrees); the aim blends between them. */
