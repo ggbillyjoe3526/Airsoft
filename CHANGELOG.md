@@ -24,17 +24,29 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **SL1** · Five saved loadout tabs on the Loadout: keys 1 to 5 or a click switch the whole kit you carry at once; your edits go to the current tab
 - **SL1** · Right-click a tab (or Menu, Shift+F10) to use, rename, duplicate, replace with yours or delete; the last loadout can't be deleted
 - **SL1** · Your match on the Match screen lists saved loadouts beside Change; gear a saved loadout can't use now shows as locked until it comes back
+- **PT1** · Settings › Audio has a Power source volume slider under Effects for each replica's battery motor, gas and spring sounds
+- **PT1** · Settings › Gameplay › Crosshair has hit marker scale, thickness, outline and colour settings; the hit marker stays Off by default
 
 ### Changed
 - **M94** · The practice range is now Practice: pause reads "Practice · Range" or "Practice · Depot", and the tutorial's last button says Practice
 - **M95** · With Unlock all gear on, the Loadout says every replica and part is lent to try, and the range's first line names the Loadout key
+- **PT1** · Shots are louder on every replica
+- **PT1** · The hit marker is a bold red X
+- **PT1** · The 2× scope works like the red dot: the replica stays in view and the world shows round it, with a fine crosshair and red dot in the eyepiece; still 2× zoom
+- **PT1** · You can fire while sprinting (Alt), less accurately than walking or running, with wider spread and more kick; the short lockout after a sprint is gone; bots still stop sprinting to fight
+- **PT1** · Esc while you are out skips the round at once, without opening the pause menu; click to play on, or Esc again for the menu
 
 ### Fixed
 - **M92** · Bots firing on the move hold fire when a teammate is down the line, so they no longer hit teammates past the end of a wall
 - **M102** · Bots taking a lean spot or an Extraction guard post settle right on it, so their lean sees round the corner
+- **PT1** · Menu and HUD text stays inside its buttons and backgrounds at 1280×720, 1920×1080 and 2560×1440 (Match, saved loadout names, Armory, map Dev tags, replica chips)
+- **PT1** · Glowing BBs have no halo: only the BB and its streak glow
+- **PT1** · Both 2× scope models have no gap between the glass and the body
+- **PT1** · The ammo count no longer overlaps the fire mode chip on the replica panel, however many rounds
 
 ### Internal
 - **SL1** · Saved loadouts are part of save format 2 with their own store (airsoft.loadouts); the context menu's styles have their own sheet
+- **PT1** · Docs: playtest fixes from the 0.1 Dev 5 notes recorded; the UI redesign is parked in IDEAS for a later version
 
 ## 0.1 Dev 5 · 2026-10-13
 
