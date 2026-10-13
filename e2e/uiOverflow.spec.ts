@@ -159,12 +159,12 @@ for (const [width, height] of [[1280, 720], [1920, 1080], [2560, 1440]] as const
     const errors: string[] = [];
     page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
     await page.setViewportSize({ width, height });
-    // A player with parts and a full wallet (a six-digit balance), Dev content on (the Dev tag, Woodland, Neon Heights'
-    // Day | Night switch and the Dev tab are all drawn), and the Dev tab's Unlock all gear (every slot offers something).
+    // A player part way up the levels (LV1: level 3, with a next unlock and the whole track drawn), Dev content on (the
+    // Dev tag, Woodland, Neon Heights' Day | Night switch and the Dev tab are all drawn), and the Dev tab's Disable
+    // levelling (every slot offers something).
     await page.addInitScript(() => {
       localStorage.setItem('airsoft.settings', JSON.stringify({ version: 1, 'dev.enabled': true, 'dev.devContent': 'on', 'dev.unlockAllGear': 'on' }));
-      const owned = ['000001', '000002', '000003', '000004'].map((id) => [`${id}@common`, 1]);
-      localStorage.setItem('airsoft.collection', JSON.stringify({ version: 1, owned: Object.fromEntries([...owned, ['000019@legendary', 1]]), fc: 123456, tokens: 99, seed: 1 }));
+      localStorage.setItem('airsoft.progress', JSON.stringify({ version: 1, xp: 1000, unlocked: [], rev: 1 }));
     });
     await page.goto('/?nolock&seed=1&quality=low');
     await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
@@ -185,7 +185,7 @@ for (const [width, height] of [[1280, 720], [1920, 1080], [2560, 1440]] as const
     await expectFits(page, 'Match screen, Practice');
     await mode.getByRole('button', { name: /Elimination/ }).first().click();
 
-    // Loadout with a saved loadout carrying a long name, and the slots; Armory with a six-digit balance.
+    // Loadout with a saved loadout carrying a long name, and the slots; the Armory's level, next unlock and track.
     await page.locator('.menu-nav-item', { hasText: 'Loadout' }).click();
     await expect(page.locator('.menu-loadout')).toBeVisible();
     await page.locator('.saved-tab.is-empty .saved-tab-button').first().click();
@@ -198,7 +198,7 @@ for (const [width, height] of [[1280, 720], [1920, 1080], [2560, 1440]] as const
       await expectFits(page, `Loadout, slot ${i}`);
     }
     await page.locator('.menu-nav-item', { hasText: 'Armory' }).click();
-    await expect(page.locator('.armory-figure-value').first()).toContainText('123,456');
+    await expect(page.locator('.menu-armory .armory-level')).toHaveText(/Level 3\s*of 10/);
     await expectFits(page, 'Armory');
 
     // Every Settings tab (the Dev tab too), its folded parts opened.
