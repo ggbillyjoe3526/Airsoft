@@ -488,11 +488,6 @@ replaces its line; the old one stays findable in the archive or in git.
   with the frame, the ejection port further back, the trigger guard one piece with the frame, a shorter grip and small
   low sights. Its slide kicks back over the still barrel on every shot and stays locked back on an empty magazine until
   a reload (0.1 Dev 6 feature 14).
-- **Levelling up in place of the Armory's Shots is recorded as an idea and is undecided (owner, 2026-10-13: "I haven't
-  fully tested the gacha system yet so need to decide first").** Matches would give XP and levels would unlock
-  replicas, attachments and skins, with a level cap of 10 at first. He decides after his Armory playtest, for 0.1 Dev 6
-  or a 0.1 Dev 7. Until then the Armory and the progression rulings stay in force, and no task builds levelling
-  (`docs/IDEAS.md` › Levelling up in place of the Armory's Shots).
 
 ## Menus, HUD, settings and accessibility
 

@@ -5,59 +5,6 @@ The parking lot for future features the owner hasn't placed in a version yet. Do
 New ideas go here until the owner places them. The feature triage (owner, 2026-10-05) emptied the list: every idea
 parked here was placed in a version on the roadmap (`docs/ROADMAP.md`, Beta and "After 0.1") or declined below.
 
-## Levelling up in place of the Armory's Shots
-
-The owner is thinking about replacing the Armory's gacha, Field Credits and Tokens spent on Shots, with plain levelling
-up (owner, 2026-10-13). It is undecided: he decides after he has played the Armory properly. If he picks it, it goes
-in 0.1 Dev 6 or a 0.1 Dev 7 added for it (`docs/ROADMAP.md` › 0.1 Dev 6). Nothing is built before he decides.
-
-### The idea
-
-- **Matches give XP.** Playing a match earns XP instead of Field Credits, and XP fills your level.
-- **Levels unlock things.** Each level, or every few levels, gives a reward: a replica, an attachment, a skin and so
-  on. His example: the Cyber Pistol at level 10.
-- **Everyone starts with the same kit.** The GBB Pistol and the AEG Rifle, with today's Standard Battery and Green Gas.
-- **The level cap starts at 10.** It goes up over time as new content comes in.
-
-### Open questions
-
-For the owner when he decides. Claude's suggestions are marked as such; none is a decision.
-
-1. **Replace or sit beside?** Does levelling replace the whole Armory (Field Credits, Tokens, Shots, Pity and
-   scrapping), or does some of it stay, such as Shots for skins later?
-2. **Rarity tiers.** Today every item comes in six tiers, Common to Legendary, and a higher tier handles up to 15 %
-   better (`pool.md` › Rarity). With levels, are the tiers dropped (one of each item), or are higher tiers rewards
-   too ("a Rare AEG Rifle at level 7")? Claude's suggestion: one of each item, so a level never makes your replica
-   better than the next player's.
-3. **What you already have.** What happens to the items in your collection, the Field Credits and Tokens you have
-   left and your Pity count? Claude's suggestion: keep every item you own, turn what you have left into XP at a fixed
-   rate so nobody loses progress, and start you at the level that XP reaches. Save fields are permanent
-   (`docs/DECISIONS.md` › Save and settings storage), so XP and your level are added beside the old ones.
-4. **Where XP comes from, and how much.** The simplest start is today's Field Credits table read as XP: 40 for a
-   match, 60 for a win, 10 a round won and 5 a hit, times the difficulty (Easy 0.5 to Pro 2), and nothing from the
-   range, the tutorial, dev content or a cheat (`pool.md` › Field Credits). A first-to-5 win on Normal pays 150 plus
-   the hits. Still open: how many matches a level takes, whether later levels take longer, and what Extraction's cases
-   and the Progression Update's challenges pay instead of Field Credits.
-5. **What each level gives.** Beyond the starting kit, 15 items can be won today: the Cyber Pistol, the LiPo battery,
-   Red and Black Gas and eleven attachments. Levels 2 to 10 are nine rewards, so some levels give two items, or some
-   items come in the starting kit. Skins are planned for the Progression Update, so until then the rewards are
-   replicas and attachments, unless skins come forward.
-6. **Raising the cap.** Each themed update could raise the cap with its own content, such as the Replica Update's
-   sniper and optics. What does XP do at the cap until it rises? Claude's suggestion: it keeps counting, so a raised
-   cap gives you the levels you have already earned.
-7. **What else changes.** The Armory screen becomes a levels and rewards screen; the top bar shows your level and XP
-   in place of Field Credits and Tokens; the Dev settings give XP and levels on demand in place of Field Credits and
-   Tokens (M90); Disable Armory and Unlock all gear need new meanings. 0.1 Dev 6's "Bots' gear keeps up with yours"
-   (item 23) is built around tiers, so it follows question 2. The Cyber Pistol stops being a 1-in-400 chase item.
-8. **Rulings it would replace.** "Progression is earned by unlocking replicas and gear, never by levels" (owner,
-   2026-10-01), the feature triage's "the Armory is the progression" (owner, 2026-10-05) and the Shots and Pity rulings
-   (owner, 2026-10-04), all in `docs/DECISIONS.md`. Levels that only unlock things, and never make you stronger, keep
-   the spirit of the first.
-9. **Where it lands.** 0.1 Dev 6, a 0.1 Dev 7, or the 0.5 Progression Update ("things to earn")? Claude's suggestion:
-   before 0.1.0, in Dev 6 or Dev 7. It changes how everything is earned, and making that change after Early Access
-   opens would rework public players' saves under them. The Progression Update then fills the levels: challenges that
-   pay XP, badges, and skins as rewards.
-
 ## Maybe
 
 New ideas the owner wants to think about (owner, 2026-10-06). Roadmap items he marked maybe stay in their place in
