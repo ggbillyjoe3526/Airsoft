@@ -6,7 +6,14 @@ seeded per bot.
 - `botController.ts`: `BotController` runs before each tick (`think` fills every bot's command, one route search a tick)
   and after it (`observe`: bots hear shots, near misses, hit calls and footsteps from `state.events`). `giveOrder` takes
   a player's squad order. Each round it deals a team's bots onto lanes by a plan (`teamPlan.ts`).
-- `bot.ts`: a bot's plain-data state (one contact record per enemy seen, `skill`, `role`, `post`, `patrol`).
+- `bot.ts`: a bot's plain-data state (one contact record per enemy seen, `skill`, `role`, `post`, `patrol`, and its
+  `personality` and `style`).
+- `botRoster.ts`, `personality.ts` (BN1): who the bots are. `drawIdentities` deals each bot a name off `bots.md`'s
+  roster (a team takes different personalities first; a stream of its own off the match's seed); the name always plays
+  its personality. `personalSkill` lays the personality over the level's `BotSkill` when the bot is made (never its
+  senses, reaction, turning or aim); the habits no level has are read from `Bot.style` where they apply: `pushesIn`
+  (rushers, with no run job and no squad order), `anchorHolding` (an anchor in Elimination short of the middle until its
+  mark on the clock), Own lane (`teamPlan.ts takeOwnLanes`), Aims from cover (`botBrain.ts`, so it rests on cover).
 - `botBrain.ts`: the per-tick decision and mode choice (lane → fight → cover → search; also `order` and `flag`). It
   calls `botSenses.ts` (target choice, contacts, reaction), `botMovement.ts` (lane points, hunting, strafing, and one
   glance a tick into the view for the team's hunt memory, M87: a spot seen empty isn't walked to),

@@ -53,7 +53,7 @@ A task that adds, renames or moves a file keeps its folder's `README.md` current
 | `src/settings/` | The saved settings object and the Dev settings' saved values | `storage.ts`, `dev.ts` |
 | `src/tutorial/` | The tutorial tracker | `tutorial.ts` |
 | `src/assets/` | Bundled fonts and the optional character model | `fonts/`, `models/characters/` |
-| `pool.md`, `stats.md` | Hand-edited tables the game and its tests read: assets and economy, replica and part numbers | read by `pool/poolFile.ts`, `config/statsFile.ts` |
+| `pool.md`, `stats.md`, `bots.md` | Hand-edited tables the game and its tests read: assets and economy, replica and part numbers, bot names and personalities | read by `pool/poolFile.ts`, `config/statsFile.ts`, `config/botsFile.ts` |
 | `public/` | Static files: icon, manifest, menu stills (from `pipeline/map-stills.mjs`) | `menu/` |
 | `pipeline/` | Gates, perf runs, light bakes, build cache, task records, the content check: the task pipeline's scripts | `README.md`, `gate.mjs`, `perf-run.mjs`, `records.mjs`, `content-check.mjs` |
 | `e2e/` | Playwright smoke tests on the `e2e` build; `release.spec.ts` on `dist/` | `boot.spec.ts`, `crash.spec.ts`, `release.spec.ts` |
@@ -247,6 +247,13 @@ request. Each entry says where the contract lives, what it holds today and what 
 - **`stats.md`'s format** (`config/statsFile.ts`). The hand-edited performance numbers the config modules lay over
   their built-in ones: replicas and parts by Key, power sources by pool ID, Barrels and Muzzle parts by Key, Lights by
   Key, Tier scaling and Site limits. Pinned by `config/stats.test.ts`.
+- **`bots.md`'s format** (`config/botsFile.ts`, BN1). The bots' names and personalities, found by their `##` headings:
+  Roster (Name, Personality: a made-up name of at most 12 letters, spaces, hyphens or apostrophes, unique, always
+  playing that personality), Personalities (Personality, Card note with `{name}`), How they move (scales × of the
+  level's BotSkill numbers, Flank chance + , Watch where you ducked a range or –), Habits (yes, no or –; Holds until
+  seconds left or –) and Kits (pool.md names, first choice first). A cell it can't read plays neutral and is reported
+  with its line; it never throws. A personality changes how a bot plays, never its senses, reaction, turning or aim
+  (`ai/personality.ts personalSkill`). Pinned by `config/botsFile.test.ts`.
 - **Content tags** (`config/content.ts`). Every map, mode, difficulty and ruleset (`tag` on `MAPS`, `MATCH_MODES`,
   `DIFFICULTIES`, `RULESETS`) and every pooled asset (`Asset.tag`, from pool.md's Access) is `public` or `dev`; Match
   panel choices may carry one too (untagged is public). `isAvailable(tag, devContent)` is the one check. `devContent`

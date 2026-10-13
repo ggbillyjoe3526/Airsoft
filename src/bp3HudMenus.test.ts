@@ -108,6 +108,6 @@ describe('BP3a: wiring of the presentation classes, pinned at the source', () =>
     expect(session).toMatch(/const \[mine, theirs\] = this\.rosterSizes\(\);\s*return byTeam\(this\.playerTeam, mine, theirs\)/);
     const match = sources['./render/matchPresentation.ts']!;
     expect(match).toMatch(/new MatchBoard\(container, true\)/);
-    expect(match).toMatch(/this\.extraction !== undefined, r\.run\.reserve\)/);
+    expect(match).toMatch(/this\.extraction !== undefined, r\.run\.reserve, this\.tags\)/);
   });
 });

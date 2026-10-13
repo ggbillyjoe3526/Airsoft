@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { BOT_PERSONALITIES } from '../config/botPersonalities';
 import { BOT_LOADOUTS, BOT_PART_CHANCE, RANDOM_LOADOUT } from '../config/bots';
 import { AEG, CYBER_PISTOL, GAS_PISTOL, LOADOUT } from '../config/replicas';
 import { createRng } from '../sim/rng';
@@ -107,6 +108,40 @@ describe('bot kits (M29b)', () => {
     respawnCharacter(bot);
     expect(fitted()).toEqual(expected);
     expect(bot.armament.replicas).toEqual(kit.map((s) => s.replica));
+  });
+});
+
+describe('a personality\'s kit (BN1, bots.md › Kits)', () => {
+  const nameOf = (id: string | undefined) => (id === undefined ? undefined : pool.byId.get(id)?.name);
+
+  it('puts the part a personality leans to in each slot that gets one, and keeps which slots get one', () => {
+    for (const [key, style] of BOT_PERSONALITIES.styles) {
+      for (let id = 1; id <= 12; id++) {
+        const plain = randomFit(pool, aeg, createRng(botKitSeed(3, id)), 0.5);
+        const leaned = randomFit(pool, aeg, createRng(botKitSeed(3, id)), 0.5, style.kit);
+        for (const slot of FIT_SLOTS) {
+          expect(leaned[slot] === null, `${key}, bot ${id}: ${slot}`).toBe(plain[slot] === null);
+          const options = pool.assets.filter((a) => a.category === FIT_CATEGORY[slot] && fits(a, aeg)).map((a) => a.name);
+          const first = style.kit.find((name) => options.includes(name));
+          if (leaned[slot] && first) expect(nameOf(leaned[slot]!.asset), `${key}, bot ${id}: ${slot}`).toBe(first);
+          // A slot it leans to nothing in is rolled as before.
+          if (leaned[slot] && !first) expect(leaned[slot]!.asset).toBe(plain[slot]!.asset);
+        }
+      }
+    }
+  });
+
+  it('kits an anchor with a scope and a rusher with a hi-cap on the rifle whenever those slots are filled', () => {
+    const kitOf = (key: string, id: number) => randomKit(pool, LOADOUT, botKitSeed(5, id), 1, BOT_PERSONALITIES.styles.get(key)!.kit);
+    for (let id = 1; id <= 6; id++) {
+      expect(kitOf('anchor', id)[0]!.optic, `anchor ${id}`).toBe('scope2x');
+      expect(kitOf('rusher', id)[0]!.parts.magazine, `rusher ${id}`).toBe('hiCap');
+      expect(kitOf('rusher', id)[1]!.parts.magazine, `rusher ${id}: the pistol`).toBe('extended');
+    }
+  });
+
+  it('rolls exactly as before with no leanings', () => {
+    expect(randomKit(pool, LOADOUT, botKitSeed(9, 2), 0.5, [])).toEqual(randomKit(pool, LOADOUT, botKitSeed(9, 2), 0.5));
   });
 });
 

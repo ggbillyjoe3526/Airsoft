@@ -25,9 +25,9 @@ const flat = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.
 const home = (bots: readonly Bot[]) => bots.filter((b) => b.character.team === 1);
 
 /** A run whose locker stands outside the insertion's berth (so it is guarded), from the first seed that has one. */
-function runWithGuardedLocker(opponents: Difficulty = 'normal', squad = 3) {
+function runWithGuardedLocker(opponents: Difficulty = 'normal', squad = 3, personalities = true) {
   for (let seed = 1; seed < 40; seed++) {
-    const r = setUpRun({ seed, opponents, squad, rules: SAME_SIZE_AT_EVERY_LEVEL });
+    const r = setUpRun({ seed, opponents, squad, rules: SAME_SIZE_AT_EVERY_LEVEL, personalities });
     const centre = r.run.insertion.reduce((s, p) => ({ x: s.x + p.position.x / r.run.insertion.length, z: s.z + p.position.z / r.run.insertion.length }), { x: 0, z: 0 });
     const locker = r.state.round.run.cases.findIndex((k) => k.kind === 'locker');
     if (locker >= 0 && flat(r.state.round.run.cases[locker]!.position, centre) >= cfg.insertionBerth) return { ...r, locker, centre };
@@ -407,7 +407,9 @@ describe('Extraction: the home team’s jobs (M46)', () => {
   });
 
   it('has your bot teammates cover you from close by, watching behind you, while you open a case', () => {
-    const r = runWithGuardedLocker('normal', 3);
+    // Your order's formation, which personalities leave alone (BN1, ai/personality.ts pushesIn): played without them, as
+    // with them this seed's rusher guard, on its way to its post, starts a fight with your teammates that this isn't about.
+    const r = runWithGuardedLocker('normal', 3, false);
     r.play(2);
     const run = r.state.round.run;
     // The shut case nearest you (by the insertion, where nobody guards).

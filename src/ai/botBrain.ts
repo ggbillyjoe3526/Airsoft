@@ -12,6 +12,7 @@ import { currentTarget, perceive } from './botSenses';
 import { stepBotTorch } from './botTorch';
 import { type CoverSearch, findCover, hidesFrom, leanSideToSee } from './cover';
 import { eyeOf } from './perception';
+import { anchorHolding, pushesIn } from './personality';
 import { teammateSpots, wantRoute } from './routes';
 
 /**
@@ -174,18 +175,20 @@ function chooseMode(b: Bot, w: BotWorld, target: Character | undefined, dt: numb
   // What the bot still remembers of an enemy it saw or heard (memoryTime). Attack / Defend defenders
   // only go after what is near their pole; anything further off they hold their post for, and keep
   // watching that way (aimBot looks at lastKnown) until it is old news.
-  // A guard in Extraction (M46) is leashed the same way to its case, within guardLeash.
+  // A guard in Extraction (M46) is leashed the same way to its case, within guardLeash, and an anchor holding short of
+  // the middle (BN1) to its lane point, as a defender to its pole.
   const fresh = threatInMind(b, w);
   const guarding = b.role === 'guard';
-  const defending = flagRole(b, w) === 'defend' || guarding;
-  const post = guarding ? w.round.run.cases[b.guardCase]!.position : w.round.flag.position;
+  const anchoring = anchorHolding(b, w);
+  const defending = flagRole(b, w) === 'defend' || guarding || anchoring;
+  const post = guarding ? w.round.run.cases[b.guardCase]!.position : anchoring ? b.laneGoal : w.round.flag.position;
   const leash = guarding ? cfg.guardLeash : cfg.defendSearchRadius;
   const watchFromPost = fresh && defending && Math.hypot(b.lastKnown.x - post.x, b.lastKnown.z - post.z) > leash;
   const remembered = fresh && !watchFromPost;
   if (seeing && target) {
-    // A fresh contact at range while on the move: get behind close crouch cover first, then peek. Not a hunter (M46):
-    // it pushes.
-    if ((b.mode === 'advance' || b.mode === 'search' || b.mode === 'order') && b.coverCooldown <= 0 && b.role !== 'hunter') {
+    // A fresh contact at range while on the move: get behind close crouch cover first, then peek. Not a hunter (M46) or
+    // a personality that pushes in (BN1): it pushes.
+    if ((b.mode === 'advance' || b.mode === 'search' || b.mode === 'order') && b.coverCooldown <= 0 && !pushesIn(b)) {
       const d = Math.hypot(target.position.x - me.position.x, target.position.z - me.position.z);
       contactSearch.radius = cfg.contactCoverRadius;
       if (d >= b.skill.contactCoverMinDistance && takeCover(b, w, target, 0, contactSearch)) {
@@ -213,8 +216,8 @@ function chooseMode(b: Bot, w: BotWorld, target: Character | undefined, dt: numb
   } else if (remembered) {
     if (b.mode !== 'search') {
       // Lost sight of someone still in play (M38): a bot with peekWatchTime first watches where they ducked out.
-      // A hunter (M46) goes straight after them.
-      if (b.mode === 'fight' && b.contact && b.skill.peekWatchTime[1] > 0 && b.role !== 'hunter') b.watchUntil = w.time + pick(b.rng, b.skill.peekWatchTime);
+      // A hunter (M46), or a bot that pushes in (BN1), goes straight after them.
+      if (b.mode === 'fight' && b.contact && b.skill.peekWatchTime[1] > 0 && !pushesIn(b)) b.watchUntil = w.time + pick(b.rng, b.skill.peekWatchTime);
       b.routeState = 'none';
       b.mode = 'search';
       startSearch(b, w);
@@ -290,7 +293,7 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
   cmd.crouch = false;
   cmd.lean = 0;
   cmd.jump = false;
-  cmd.aim = false; // bots aim from the hip and keep the fire mode their replica starts in
+  cmd.aim = false; // bots aim from the hip (but an anchor, below) and keep the fire mode their replica starts in
   cmd.cycleFireMode = false;
   cmd.fire = false;
   cmd.reload = false;
@@ -319,11 +322,12 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
 
   chooseMode(b, w, target, dt);
   // With a threat in mind, or walking its lane in the enemy's half (M38, slicesCorners): walk and slice each corner
-  // ahead. Hunting with nothing heard, trading a hit teammate or pushing late, it hurries.
+  // ahead. Hunting with nothing heard, trading a hit teammate or pushing late, it hurries; so does a hunter (M46), or a
+  // bot that pushes in (BN1). A run's home team has no lanes: a guard runs to its post (BN1: a careful guard walked).
   const trading = w.time - b.tradeAt < cfg.tradeTime;
-  const near = b.skill.slicesCorners && (threatInMind(b, w) || (!b.hunting && w.inEnemyHalf(b)));
-  const hunter = b.role === 'hunter';
-  b.careful = near && !trading && !hunter && (b.mode === 'advance' || b.mode === 'search') && !pushingLate(b, w);
+  const near = b.skill.slicesCorners && (threatInMind(b, w) || (!b.hunting && b.role === 'none' && w.inEnemyHalf(b)));
+  const pusher = pushesIn(b);
+  b.careful = near && !trading && !pusher && (b.mode === 'advance' || b.mode === 'search') && !pushingLate(b, w);
   // Steer clear of anyone close by, or step out of their way (AI-01).
   const moving = keepApart(b, w, moveBot(b, w, cmd, dt, target), cmd);
   // Holding a lane point or a post: crouch once settled, where crouched eyes still see the enemy side (AI-02).
@@ -347,16 +351,21 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
     // Hurrying to an order (regroup, keeping up) sprints even with a fight just over, and through the small turns of
     // following someone (a looser forward gate), so it doesn't flick between run and sprint at each one.
     const hurry = b.mode === 'order' && b.orderRush;
-    // A hunter (M46) runs at where the squad was, footsteps and all: it pushes. A patrol keeps to a run.
-    const going = (b.mode === 'advance' && b.role !== 'patrol') || b.mode === 'flag' || (hunter && b.mode === 'search');
-    cmd.sprint = hurry ? cmd.forward > SQUAD_ORDERS.sprintForward : going && (calm || hunter) && cmd.forward > cfg.sprintForward;
+    // A hunter (M46), or a bot that pushes in (BN1), runs at where someone was, footsteps and all. A patrol keeps to a
+    // run.
+    const going = (b.mode === 'advance' && b.role !== 'patrol') || b.mode === 'flag' || (pusher && b.mode === 'search');
+    cmd.sprint = hurry ? cmd.forward > SQUAD_ORDERS.sprintForward : going && (calm || pusher) && cmd.forward > cfg.sprintForward;
     // Closing in on where someone was seen or heard: walk, so footsteps don't give us away (not while trading, M38).
-    cmd.walk ||= b.mode === 'search' && !trading && !hunter && Math.hypot(b.lastKnown.x - me.position.x, b.lastKnown.z - me.position.z) < b.skill.searchWalkDistance;
+    cmd.walk ||= b.mode === 'search' && !trading && !pusher && Math.hypot(b.lastKnown.x - me.position.x, b.lastKnown.z - me.position.z) < b.skill.searchWalkDistance;
     if (b.careful) {
       cmd.walk = true;
       cmd.sprint = false;
     }
   }
+  // A personality that aims from cover (BN1, the anchor) raises its sight while it stands still to fight, look over
+  // its cover or hold: over a ledge or crate the replica settles on it (M104), as yours does. Never to draw a holstered
+  // replica: an aim press would (M92), and that is holsterBot's to decide.
+  if (b.style.aimsFromCover && !moving && !me.armament.holstered && (b.mode === 'fight' || (b.mode === 'cover' && b.coverPhase === 'peek') || b.holding)) cmd.aim = true;
   shootBot(b, w, target, myEye, aimAt, offAim, cmd, dt);
   reloadBot(b, w, cmd);
   holsterBot(b, w, cmd, dt);

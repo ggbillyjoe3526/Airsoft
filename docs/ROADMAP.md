@@ -216,7 +216,7 @@ when their work starts. Numbers are from the owner's list of 50 candidates
 | – | Vaulting over low obstacles (0.7–0.9 m), with a few added to the maps where they open a route; crouch cover stays peek-only (owner, 2026-10-12) | Movement |
 | 40 | Rest your replica on cover (a ledge, crate or window) for steadier aim; done (2026-10-13, `docs/records/M104.md`) | Movement |
 | 19 | Saved loadouts, picked from the Match screen (once the Map pop-up) as well as the Loadout screen; done (2026-10-13, `docs/records/SL1.md`) | Loadout |
-| 21 | Bot names, personalities (rusher, anchor, flanker, careful) and loadouts | Bots |
+| 21 | Bot names, personalities (rusher, anchor, flanker, careful) and loadouts; done (2026-10-13, `docs/records/BN1.md`) | Bots |
 | 23 | Bots' gear keeps up with yours (audit POOL-24: a tier dial per difficulty, or higher tiers that trade) | Bots |
 | 48 | Auto difficulty as a Dev setting: bots get a little better when you win, a little easier when you lose | Bots |
 | 22 | Location callouts: named areas, and teammates calling "Contact, Dock!" or "Two left" (text first) | Team play |
