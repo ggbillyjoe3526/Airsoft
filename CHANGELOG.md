@@ -24,6 +24,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **SL1** · Five saved loadout tabs on the Loadout: keys 1 to 5 or a click switch the whole kit you carry at once; your edits go to the current tab
 - **SL1** · Right-click a tab (or Menu, Shift+F10) to use, rename, duplicate, replace with yours or delete; the last loadout can't be deleted
 - **SL1** · Your match on the Match screen lists saved loadouts beside Change; gear a saved loadout can't use now shows as locked until it comes back
+- **AD1** · Adaptive difficulty, a Dev setting: the other team starts at your Opponents level and adapts to how you do; teammates and Extraction don't
 
 ### Changed
 - **M94** · The practice range is now Practice: pause reads "Practice · Range" or "Practice · Depot", and the tutorial's last button says Practice
