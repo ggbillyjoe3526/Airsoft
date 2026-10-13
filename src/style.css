@@ -1122,6 +1122,19 @@ kbd {
   fill: #0a1022;
 }
 
+/* A bot's personality after its name (BN1): small and quiet, so the name still leads; none for you. */
+.stats-tag {
+  margin-left: var(--sp-2);
+  font: 600 var(--fs-2xs) var(--ui-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--menu-faint);
+}
+
+.stats-tag:empty {
+  display: none;
+}
+
 /* Your line stands out: brighter, bold, with a bar in your team's colour. */
 .stats-team tr.you td {
   background: rgba(255, 255, 255, 0.1);

@@ -20,18 +20,20 @@ export function describeBearing(rel: number): string {
 }
 
 export interface WhatGotYouText {
-  /** "Beta 2 · from your left · 14 m". */
+  /** "Rook · from your left · 14 m". */
   where: string;
   /** What the card knows about how it happened, one short sentence each (none when all it can say is where). */
   notes: string[];
 }
 
 /**
- * The card's words for `facts`: `shooter` is the hit feed's name for who fired ("Beta 2"), `viewYaw` the yaw you were
- * looking along when it hit (the direction the BB came from is worked out against it). Only where it came from for
- * friendly fire; a ricochet says so, since where it came from is then not where it was fired.
+ * The card's words for `facts`: `shooter` is the hit feed's name for who fired ("Rook", or "Beta 2" without a roster),
+ * `viewYaw` the yaw you were looking along when it hit (the direction the BB came from is worked out against it).
+ * `style` is what the card says of how that bot plays (BN1: its personality's card note, `{name}` its name), last; ''
+ * for none. Only where it came from for friendly fire; a ricochet says so, since where it came from is then not where
+ * it was fired.
  */
-export function whatGotYouText(facts: HitFacts, shooter: string, viewYaw: number): WhatGotYouText {
+export function whatGotYouText(facts: HitFacts, shooter: string, viewYaw: number, style = ''): WhatGotYouText {
   const rel = wrapAngle(viewYaw - facts.yaw);
   const where = `${shooter} · from ${describeBearing(rel)} · ${Math.max(1, Math.round(facts.distance))} m`;
   if (facts.ricochet) return { where, notes: ['It bounced off something first.'] };
@@ -41,6 +43,7 @@ export function whatGotYouText(facts: HitFacts, shooter: string, viewYaw: number
   const stance = facts.moving ? 'on the move' : 'standing still';
   if (facts.inView !== null) notes.push(`You were in view ${facts.inView.toFixed(1)} s, ${stance}.`);
   else if (facts.held !== null) notes.push(`You were ${stance}.`);
+  if (style !== '') notes.push(style.replaceAll('{name}', shooter));
   return { where, notes };
 }
 

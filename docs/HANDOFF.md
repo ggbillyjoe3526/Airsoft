@@ -17,8 +17,8 @@ each `src/` folder's `README.md`.
   third-person poses on the rigged figures behind the Dev switches: through a vault they hold the vault's tuck as a
   crouch with the walk overlay off (`render/figurePose.ts` `PoseInput.vaulting`), and at rest they lean their upper body
   about 5° over the cover (`FIGURE_RIG.rest`); the built-in figures don't change. The redesign must bring vault and
-  rest-on-cover animations (owner, 2026-10-13). Bots don't rest yet: they fire from the hip, and letting them aim when
-  they peek over cover is a balance change for the bot personalities item (`docs/records/M104.md`).
+  rest-on-cover animations (owner, 2026-10-13). Of the bots, anchors rest on cover (they aim where they stand still to
+  fight or hold, BN1); the rest fire from the hip.
 
 ## Where to look
 

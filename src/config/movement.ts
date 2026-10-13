@@ -48,7 +48,9 @@ export interface MovementConfig {
   ceilingBlockFraction: number;
   /**
    * A standing character stays glued to ground up to this far below its feet (so it follows small
-   * drops such as stepping off a ledge). Larger drops become a fall.
+   * drops such as stepping off a ledge). Larger drops become a fall. Deeper than the fastest pace drops in a tick
+   * down the steepest ramp (the holstered sprint: 6.8 m/s × 1/60 s × 0.5 = 5.7 cm) plus the probe rounding the ramp's
+   * crest: at 6 cm that sprint left the ground for 0.3 s over the top of Neon Heights' stairs (BN1).
    */
   groundSettleDistance: number;
   /** Movement input magnitude below this is treated as no input. */
@@ -208,7 +210,7 @@ export const MOVEMENT: MovementConfig = {
   crouchTransitionTime: 0.15,
   crouchedThreshold: 0.5,
   ceilingBlockFraction: 0.5,
-  groundSettleDistance: 0.06,
+  groundSettleDistance: 0.07,
   inputDeadzone: 0.01,
   rampPace: 0,
   rampMaxRise: PHYSICS.maxRampSlope * 1.2,

@@ -6,6 +6,7 @@
 export class TeammateMarkers {
   private readonly markers: {
     root: HTMLDivElement;
+    label: HTMLSpanElement;
     x: number;
     y: number;
     visible: boolean;
@@ -23,8 +24,14 @@ export class TeammateMarkers {
       label.textContent = name;
       root.append(label, document.createElement('i'));
       parent.appendChild(root);
-      return { root, x: Number.NaN, y: Number.NaN, visible: false, hit: false };
+      return { root, label, x: Number.NaN, y: Number.NaN, visible: false, hit: false };
     });
+  }
+
+  /** Marker `i` labelled `name` instead (BN1: the bot's roster name, once the match has drawn it). */
+  rename(i: number, name: string): void {
+    const m = this.markers[i];
+    if (m && m.label.textContent !== name) m.label.textContent = name;
   }
 
   /** Marker `i` at (x, y) pixels (the tip, just over the head); `hit`: greyed out. */
