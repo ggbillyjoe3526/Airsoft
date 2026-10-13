@@ -22,22 +22,3 @@ item 5, with the G4 HUD restyle); note 3 was a bug, fixed in BP2; note 2 is alre
 
 **0.1 Dev 6 (confirmed with the roadmap, 2026-10-06).** M92–M95, the holster and the practice upgrades, are done
 (2026-10-13); the blocks for the rest of `docs/ROADMAP.md` › 0.1 Dev 6 are written when that work starts.
-
-## PT1 · The owner's 0.1 Dev 5 playtest fixes (ten notes, 2026-10-13)
-tier: core
-perf: required
-touches: pipeline/baseline/container-neon-extraction.json, pipeline/webgpu-compare.mjs, src/assets/models/replicaParts/aeg.glb, src/audio/audioEngine.ts, src/audio/dsp.ts, src/audio/sfx.ts, src/audio/soundBank.ts, src/config/audio.ts, src/config/graphics.ts, src/config/hits.ts, src/config/hudText.ts, src/config/movement.ts, src/config/optics.ts, src/config/renderEffects.ts, src/config/renderQuality.ts, src/config/renderView.ts, src/config/sounds.ts, src/config/tutorial.ts, src/config/vault.ts, src/core/escSkip.ts, src/game.ts, src/input/pointerLock.ts, src/matchSession.ts, src/render/bbRenderer.ts, src/render/combatPresentation.ts, src/render/eyepiece.ts, src/render/matchPresentation.ts, src/render/replicaParts.ts, src/render/viewmodel.ts, src/settings/storage.ts, src/sim/accuracy.ts, src/sim/armament.ts, src/sim/character.ts, src/sim/movement.ts, src/sim/simulation.ts, src/sim/vault.ts, src/style.css, src/ui/audioSettings.ts, src/ui/crosshairSettings.ts, src/ui/hitFeedback.ts, src/ui/hitMarkerLook.ts, src/ui/hud.ts, src/ui/hudCss/replica.css, src/ui/loadoutChoice.ts, src/ui/menus/choiceCards.ts, src/ui/menus/css/armory.css, src/ui/menus/css/play.css, src/ui/menus/css/saved.css, src/ui/menus/savedLoadoutsBar.ts, src/ui/playPrompt.ts, src/ui/replicaPanel.ts
-contract: QualitySettings and the settings store keys (bbGlow taken away with its row; graphics.bbGlow left unread)
-acceptance:
-  1. No menu or HUD text runs out of its button or background at 1280×720, 1920×1080 or 2560×1440 (note 1).
-  2. Shots are louder, and Settings › Audio has a Power source volume for the battery motor, gas and spring (note 2).
-  3. No BB draws a halo; a glowing BB is lit itself (note 3).
-  4. The hit marker is clearly visible, with scale, thickness, outline and colour settings (note 4).
-  5. Aiming down the 2x scope keeps the replica in view with the world round it, as the red dot does (note 5).
-  6. Neither 2x scope model shows a gap between glass and body (note 6).
-  7. Which arm models are drawn is reported to the owner; the Dev switch defaults stay as they are (note 7).
-  8. The ammo count never overlaps the replica panel's other parts (note 8).
-  9. You can fire while sprinting, less accurately than walking (note 9).
-  10. Esc while out skips the round without the pause menu (note 10).
-status: open
-attempts: 0
