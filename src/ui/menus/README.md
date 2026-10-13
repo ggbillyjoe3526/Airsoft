@@ -17,7 +17,8 @@ choices to `src/game.ts`.
   mode cards' last, an extra card that is never saved; `matchPanel.ts`, with Your team (M98: Alpha or Beta, hidden for an Extraction run); and a "Your match" text from
   `playView.ts`, whose rules text follows your team, `rulesText.ts` › `sideText`);
   `loadoutScreen.ts` with `customiseView.ts` (both with `rarityFilter.ts`'s Sort / Show bar, M82: each list's choice
-  saved as `rarity.sort.<list>` and `rarity.hide.<list>`); `armoryScreen.ts` (the collection, a column per kind; a card's spares scrap from a right-click / Menu key / Shift+F10 menu, `contextMenu.ts`: built once, reused, listeners on the page only while open; `menuPlacement.ts` places it in the window, clear of the card's name);
+  saved as `rarity.sort.<list>` and `rarity.hide.<list>`) and `savedLoadoutsBar.ts` (the saved loadouts' tabs, SL1;
+  the Match screen picks one with `loadoutPicker.ts`, on the shared `contextMenu.ts`); `armoryScreen.ts` (the collection, a column per kind; a card's spares scrap from a right-click / Menu key / Shift+F10 menu, `contextMenu.ts`: built once, reused, listeners on the page only while open; `menuPlacement.ts` places it in the window, clear of the card's name);
   `settingsScreen.ts` (groups with a search, a note on every row); `pauseScreen.ts` (with
   `tutorialCompleteDialog.ts` over it when the tutorial ends: the practice range or the menu, M80; in Practice the
   Loadout key opens the Loadout over it, `Menus.showPracticeLoadout`, on the slot in hand, with Back to practice on the

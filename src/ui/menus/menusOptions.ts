@@ -39,8 +39,11 @@ export interface MenusOptions {
    * show a drawing until each arrives. Null where there is none (a test): every item keeps its drawing.
    */
   pictures: PictureSource | null;
-  /** The Loadout screen's model and change hook, and the line the Play screen shows under your kit. */
-  loadout: Omit<LoadoutOptions, 'onBack' | 'context'> & { summary: () => { replicas: string; detail: string } };
+  /**
+   * The Loadout screen's model and change hook, and the line the Play screen shows under your kit (the menus make the
+   * saved loadouts from the model, SL1).
+   */
+  loadout: Omit<LoadoutOptions, 'onBack' | 'context' | 'saved'> & { summary: () => { replicas: string; detail: string } };
   /** The Armory (M26c): its pool and the collection it changes, and the wallet on the top bar and the title. */
   armory: Omit<ArmoryOptions, 'onBack' | 'context'> & { wallet: () => MenuWallet };
   /** Start (or resume) play: Start match, Resume, Play again. */

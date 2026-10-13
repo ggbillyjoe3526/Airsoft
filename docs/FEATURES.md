@@ -150,6 +150,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   Epic or better within 20 Shots, a Legendary within 100); the catalogue shows all items by rarity tier (M26c, FA10)
 - Chase items: a Legendary-only replica with its own 0.25 % chance per Shot item, shown on the Armory's Chase line (M32)
 - Sort and filter by rarity: Loadout's replicas and Customise's parts sort by rarity and filter by tier, saved between sessions; what you carry or have fitted always shows (M82)
+- Saved loadouts: five tabs on the Loadout hold whole kits; keys 1 to 5 switch, edits go to the current tab, Unlock all gear keeps its own set (SL1)
 
 ## Menus and settings
 

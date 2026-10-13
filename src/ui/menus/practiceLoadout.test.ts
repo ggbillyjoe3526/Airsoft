@@ -3,6 +3,7 @@ import { DEFAULT_BINDINGS, REBINDABLE } from '../../config/controls';
 import { GEAR_TEXT, MENU_TEXT } from '../../config/menus';
 import { GAME_POOL } from '../../pool/gamePool';
 import { GEAR_SLOTS, LoadoutModel, type Ownership } from '../../pool/loadoutModel';
+import { SavedLoadouts } from '../../pool/savedLoadouts';
 import { MemoryStorage } from '../../pool/testStorage';
 import { lastShotText } from '../rangeReadout';
 import { TopBar } from './chrome';
@@ -32,8 +33,10 @@ function lineShown(root: EventNode, line: string): boolean | null {
 
 const everything: Ownership = { owns: () => true };
 const lent: Ownership = { owns: () => true, sandboxed: () => true };
-const screen = (ownership: Ownership = everything): LoadoutScreen =>
-  new LoadoutScreen({ model: new LoadoutModel(GAME_POOL, ownership), context: { pictures: null, realistic: () => false }, onChange: () => {} });
+const screen = (ownership: Ownership = everything): LoadoutScreen => {
+  const model = new LoadoutModel(GAME_POOL, ownership);
+  return new LoadoutScreen({ model, saved: new SavedLoadouts(model), context: { pictures: null, realistic: () => false }, onChange: () => {} });
+};
 /** The carried cards' slot buttons, Primary then Secondary. */
 const slotButtons = (s: LoadoutScreen): EventNode[] => node(s.root).all('button').filter((b) => b.classList.contains('gear-slot') && !b.classList.contains('gear-grenades'));
 
@@ -87,7 +90,7 @@ describe('the Loadout opened from Practice (M95)', () => {
 
   it('puts a replica clicked into the picked slot: the one in hand', () => {
     const model = new LoadoutModel(GAME_POOL, everything);
-    const s = new LoadoutScreen({ model, context: { pictures: null, realistic: () => false }, onChange: () => {} });
+    const s = new LoadoutScreen({ model, saved: new SavedLoadouts(model), context: { pictures: null, realistic: () => false }, onChange: () => {} });
     s.open(true, 'secondary');
     const before = model.equipped();
     const other = node(s.root)

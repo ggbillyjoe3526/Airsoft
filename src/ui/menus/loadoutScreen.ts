@@ -4,6 +4,7 @@ import { SCHEMES, hasFixedColours, FAMILIES } from '../../config/schemes';
 import type { ItemRef } from '../../pool/collection';
 import { GEAR_SLOTS, type GearSlot, type LoadoutModel } from '../../pool/loadoutModel';
 import { type Asset, replicaOf } from '../../pool/pool';
+import type { SavedLoadouts } from '../../pool/savedLoadouts';
 import { gearLine, performanceOf, sheetRows, tierBlurb } from '../performanceSheet';
 import { type MenuHint, optionTick, sectionHead } from './chrome';
 import { CustomiseView } from './customiseView';
@@ -13,11 +14,14 @@ import { el, menuButton } from './menuParts';
 import { partSubject, PictureSlot, replicaSubject } from './menuPictures';
 import { perfRows, perfSheet } from './perfBars';
 import { arrangeByRarity, loadRarityView, RARITY_TEXT, RarityBar, type RarityView, saveRarityView } from './rarityFilter';
+import { SavedLoadoutsBar } from './savedLoadoutsBar';
 
 export { fixedValue, replicaSummary } from './customiseView';
 
 export interface LoadoutOptions {
   model: LoadoutModel;
+  /** The saved loadouts (SL1), as tabs along the top; the current one is the loadout below. */
+  saved: SavedLoadouts;
   context: PictureContext;
   /** Something on the loadout changed (it is already saved): the Play screen and the next Play follow it. */
   onChange: () => void;
@@ -69,6 +73,7 @@ export class LoadoutScreen {
   private readonly selectedLine: HTMLParagraphElement;
   private readonly sheet = perfSheet('loadout-perf');
   private readonly customiseBox: HTMLDivElement;
+  private readonly savedBar: SavedLoadoutsBar;
   private readonly gearHints: readonly MenuHint[];
   private selected: GearSlot = 'primary';
   /** The Customise view while it is open, and the slot whose replica it customises. */
@@ -122,11 +127,14 @@ export class LoadoutScreen {
     this.sheet.root.classList.add('selected-sheet');
     aside.append(el('p', 'menu-kicker', GEAR_TEXT.selected), this.selectedName, this.selectedLine, this.sheet.root, el('p', 'gear-hint', LOADOUT_TEXT.rightClickHint));
 
-    this.gearView.append(carried, owned, aside);
+    // A switch of saved loadout changes everything carried: the game hears of it, and the gear shows the new one.
+    this.savedBar = new SavedLoadoutsBar({ saved: opts.saved, onSwitch: () => (this.opts.onChange(), this.update()) });
+    this.gearView.append(this.savedBar.root, carried, owned, aside);
     this.customiseBox = el('div', 'customise-box');
     this.customiseBox.hidden = true;
-    // C customises the selected replica (the Customise button and a right-click do it for the mouse); Esc is Back.
-    this.gearHints = [{ keys: ['C'], label: MENU_TEXT.hints.customise, run: () => this.customise(this.selected), code: 'KeyC' }];
+    // C customises the selected replica (the Customise button and a right-click do it for the mouse); 1 to 5 carry a
+    // saved loadout; Esc is Back.
+    this.gearHints = [{ keys: ['C'], label: MENU_TEXT.hints.customise, run: () => this.customise(this.selected), code: 'KeyC' }, ...this.savedBar.hints];
     this.root.append(el('h1', 'menu-heading sr-only', 'Loadout'), this.gearView, this.customiseBox);
     // Right-click means Customise here: never the browser's menu, even off a replica.
     this.root.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -287,6 +295,7 @@ export class LoadoutScreen {
       t.pic.show(this.opts.context.pictures, replicaSubject(asset, m.scheme(asset.id), realistic, m.slotKit(t.ref)), itemIcon(asset));
     }
     this.updateSelected(current);
+    this.savedBar.update();
   }
 
   /** The parts fitted to a carried replica, as small pictures under its name. */

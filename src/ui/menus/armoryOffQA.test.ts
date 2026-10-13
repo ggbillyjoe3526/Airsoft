@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GEAR_TEXT } from '../../config/menus';
 import { GAME_POOL } from '../../pool/gamePool';
 import { LoadoutModel } from '../../pool/loadoutModel';
+import { SavedLoadouts } from '../../pool/savedLoadouts';
 import { LoadoutScreen } from './loadoutScreen';
 import { type EventNode, stubMenuPage } from './menuTestSupport';
 
@@ -23,7 +24,7 @@ describe('the Armory gone from the menus (M83): the Loadout', () => {
 
   const model = (): LoadoutModel => new LoadoutModel(GAME_POOL, { owns: () => true });
   const screen = (armoryShown?: () => boolean): LoadoutScreen =>
-    new LoadoutScreen({ model: model(), context: { pictures: null, realistic: () => false, ...(armoryShown ? { armoryShown } : {}) }, onChange: () => {} });
+    new LoadoutScreen({ model: model(), saved: new SavedLoadouts(model()), context: { pictures: null, realistic: () => false, ...(armoryShown ? { armoryShown } : {}) }, onChange: () => {} });
 
   it('sends the player to the Armory in its note while the Armory is on, or when nothing says either way', () => {
     for (const s of [screen(), screen(() => true)]) {
