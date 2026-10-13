@@ -145,7 +145,7 @@ Every action can be rebound under **Settings › Key Bindings**, mouse buttons a
 | Left Alt | Sprint (forward only; hold, or a toggle under **Settings › Controls**) |
 | C | Crouch: press to go down, again to stand (can be set to hold) |
 | Q / E (hold) | Lean left / right to peek round cover (slows you to a quiet walk) |
-| Space | Jump (a small hop) |
+| Space | Jump (a small hop); at a low wall (about waist high), vault over it: quick, but loud enough for anyone near to hear |
 | R | Reload (an empty trigger pull also reloads) |
 | 1 / 2 or mouse wheel | Switch between your primary and secondary replica |
 | Tab (hold) | Scoreboard |

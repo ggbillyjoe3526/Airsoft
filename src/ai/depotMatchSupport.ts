@@ -160,9 +160,12 @@ export function playMatch(
     /**
      * Longest run of ticks anyone in play spent off the ground during a live round, after the first half
      * second (spawning drops you onto the floor). Nobody here jumps, so any is a lost ground contact; one
-     * longer than accuracy.airSpreadDelay would spike that character's spread to the in-air value.
+     * longer than accuracy.airSpreadDelay would spike that character's spread to the in-air value. A bot's vault over a
+     * low obstacle (M102) and its fall off it are meant, and not counted.
      */
     longestAir: 0,
+    /** Vaults bots made (M102). */
+    vaults: 0,
     /** Lowest and highest anyone stood during live rounds (after the first half second). */
     minY: Number.POSITIVE_INFINITY,
     maxY: Number.NEGATIVE_INFINITY,
@@ -172,6 +175,8 @@ export function playMatch(
     walkOffs: [] as { fromY: number; to: Vec3 }[],
   };
   const airStreak = state.characters.map(() => 0);
+  /** Off the ground since a vault began (M102): until it lands. */
+  const vaulting = state.characters.map(() => false);
   const hitY = state.characters.map(() => 0);
   const lastStatus = state.characters.map((c) => c.status);
   let roundStart = 0;
@@ -203,11 +208,13 @@ export function playMatch(
         }
       }
       if (e.type === 'ricochetTick') stats.ricochetTicks++;
+      if (e.type === 'footstep' && e.kind === 'vault') stats.vaults++;
     }
     stats.maxFlag = Math.max(stats.maxFlag, state.round.flag.progress);
     if (state.round.phase === 'live' && state.time - roundStart > 0.5) {
       for (const [i, c] of state.characters.entries()) {
-        airStreak[i] = c.status === 'alive' && !c.grounded ? airStreak[i]! + 1 : 0;
+        vaulting[i] = c.vault.active || (vaulting[i]! && !c.grounded);
+        airStreak[i] = c.status === 'alive' && !c.grounded && !vaulting[i] ? airStreak[i]! + 1 : 0;
         stats.longestAir = Math.max(stats.longestAir, airStreak[i]!);
         stats.minY = Math.min(stats.minY, c.position.y);
         stats.maxY = Math.max(stats.maxY, c.position.y);

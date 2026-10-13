@@ -197,9 +197,9 @@ describe('M33j acceptance 4: every existing cue buffer is unchanged (Depot sound
 
   it("renders every title-screen cue sample for sample as before, in the same order, and no map cue with them", () => {
     const rendered = renderSounds(RATE);
-    // M86's yard calls (a crow, a dog), then M92's holster, come last on the title stream, so every cue before them is
-    // as it was.
-    expect([...rendered.keys()]).toEqual([...Object.keys(BEFORE), 'ambience.crow', 'ambience.dog', 'foley.holster']);
+    // M86's yard calls (a crow, a dog), then M92's holster and M102's vault, come last on the title stream, so every cue
+    // before them is as it was.
+    expect([...rendered.keys()]).toEqual([...Object.keys(BEFORE), 'ambience.crow', 'ambience.dog', 'foley.holster', 'vault']);
     for (const cue of Object.keys(BEFORE) as SoundCue[]) expect(fingerprint(rendered.get(cue)!), cue).toBe(BEFORE[cue]);
   });
 

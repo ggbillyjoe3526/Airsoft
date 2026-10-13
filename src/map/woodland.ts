@@ -1,3 +1,4 @@
+import { VAULT_WALL_HEIGHT } from '../config/vault';
 import { createRng, rngNext } from '../sim/rng';
 import { type Vec3, vec3 } from '../sim/vec';
 import type { Bush } from './foliage';
@@ -20,7 +21,7 @@ import { woodlandExtraction } from './woodlandExtraction';
  * - 2 Meadow (mid, z 25–62): open grass with boulders (crouch and full cover), a lone oak, two fallen trees and a
  *   woodpile. The fast, exposed way.
  * - 3 Creek (south): along the north bank of a dry stream bed 0.7 m below the field, past the hunter's cabin (two log
- *   rooms with doors and windows), then up a sunken track to the Knoll's south side.
+ *   rooms with doors, a window and a low west wall you vault), then up a sunken track to the Knoll's south side.
  * - The Knoll (x 86–116, z 30–64): a hill 3.8 m over the field's slope, its top +6.5 m, with a log fort around the
  *   flag (Attack / Defend). Its west face is the steepest slope on the map (about 1:2.3).
  * - End 0 camp (west, +1 m, behind the West Rise, a low ridge across the meadow) and end 1 camp (east, about +2.5 m,
@@ -261,7 +262,8 @@ const FORT: MapBlock[] = [
 
 /**
  * The hunter's cabin (x 62–70.4, z 18–26.4): log walls, two rooms joined by a doorway, a door on the north side, one
- * on the east (towards the track), and a window in the west and the south walls.
+ * on the east (towards the track), a window in the south wall, and the west wall broken down to a low wall you vault
+ * (M102): a way in from the west, and through the cabin to the track.
  */
 function cabin(): MapBlock[] {
   const x0 = 62;
@@ -281,9 +283,9 @@ function cabin(): MapBlock[] {
     wall(x0, 67.4, z0, z0 + t),
     ...sill(67.4, 68.8, z0, z0 + t),
     wall(68.8, x1, z0, z0 + t),
-    // West wall, with a window.
+    // West wall, with a low stretch to vault (no lintel: a body going over needs its full height clear).
     wall(x0, x0 + t, z0 + t, 21),
-    ...sill(x0, x0 + t, 21, 23),
+    standing('log', x0, x0 + t, 21, 23, VAULT_WALL_HEIGHT),
     wall(x0, x0 + t, 23, z1 - t),
     // East wall, with the door towards the track.
     wall(x1 - t, x1, z0 + t, 20.6),
@@ -344,8 +346,10 @@ const APPROACH_COVER: MapBlock[] = [
   centred('log', 97, 60.9, 3, 0.9, CROUCH),
   centred('boulder', 92, 64.5, 2.4, 2, FULL),
   centred('boulder', 86.5, 68.9, 1.6, 1.4, CROUCH),
-  // Ends against the boulder beside it (M55, audit SIM-05: the two stood 0.2 m into each other).
-  centred('log', 103.6, 57.3, 0.9, 2.8, CROUCH),
+  // Across the slope, clear of the boulder beside it (M55, audit SIM-05: the two once stood 0.2 m into each other). It
+  // lay down the slope until M102: its top level, it stood 1.6 m over the ground at its low end and 0.6 m at its high
+  // end, where it was no cover and low enough to vault.
+  centred('log', 103.6, 57.3, 2.8, 0.9, CROUCH),
   centred('boulder', 102.6, 59.4, 1.6, 1.4, CROUCH),
   // Meadow, up the west face.
   centred('boulder', 76.5, 43.7, 1.6, 1.4, CROUCH),

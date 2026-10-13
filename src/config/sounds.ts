@@ -53,6 +53,8 @@ export type SoundCue =
   | 'foley.holster'
   /** A hi-cap's loose BBs shaking with each step (M17b). */
   | 'magRattle'
+  /** A vault (M102): hands slapping onto the obstacle's top and the kit swinging over it. */
+  | 'vault'
   | `impact.${ImpactMaterial}`
   | 'bodyHit'
   /** A BB ringing a steel plate on the practice range (M21). */
@@ -538,7 +540,7 @@ export const SOUNDS: Readonly<Record<SoundCue, SoundRecipe>> = {
 
   /**
    * Putting the replica away (M92): the sling swinging it round, then a soft knock as it settles against the back. After
-   * the yard's calls, the title stream's last, so every earlier cue sounds as it did.
+   * the yard's calls, near the title stream's end (only the vault after it), so every earlier cue sounds as it did.
    */
   'foley.holster': {
     layers: [
@@ -546,6 +548,27 @@ export const SOUNDS: Readonly<Record<SoundCue, SoundRecipe>> = {
       { kind: 'modes', at: 0.11, gain: 0.25, modes: [{ hz: 420, decay: 0.05, gain: 1 }, { hz: 1150, decay: 0.03, gain: 0.4 }] },
     ],
     ...LOOSE,
+  },
+
+  /**
+   * A vault (M102): two palms slapping onto the top a beat apart (a soft thud with a flat smack), the magazines and
+   * buckles jolting, and the clothes swishing as the legs swing over. Played once as the vault starts; the boots' landing
+   * is the footstep's own. Last on the title stream, after the holster, so every cue before it renders as it did (as
+   * M86's calls); short (under 0.15 s) to fit the title screen's budget (audio.test.ts).
+   */
+  vault: {
+    layers: [
+      { kind: 'tone', wave: 'sine', attack: 0.002, decay: 0.05, gain: 0.26, hz: 170, hzTo: 70 },
+      { kind: 'noise', attack: 0.001, decay: 0.03, gain: 0.42, filter: { type: 'bandpass', hz: 1100, q: 0.9 } },
+      { kind: 'tone', wave: 'sine', at: 0.045, attack: 0.002, decay: 0.05, gain: 0.22, hz: 150, hzTo: 65 },
+      { kind: 'noise', at: 0.045, attack: 0.001, decay: 0.03, gain: 0.36, filter: { type: 'bandpass', hz: 950, q: 0.9 } },
+      { kind: 'noise', at: 0.06, attack: 0.004, decay: 0.05, gain: 0.16, filter: { type: 'bandpass', hz: 3200, q: 3.5 } },
+      { kind: 'modes', at: 0.07, gain: 0.07, modes: [{ hz: 2300, decay: 0.03, gain: 1 }, { hz: 4100, decay: 0.02, gain: 0.6 }] },
+      { kind: 'noise', at: 0.04, attack: 0.025, decay: 0.07, gain: 0.22, filter: { type: 'bandpass', hz: 1700, hzTo: 2600, q: 0.8 } },
+    ],
+    pitchSpread: LOOSE.pitchSpread,
+    timeSpread: 0.08,
+    gainSpread: LOOSE.gainSpread,
   },
 
   // ---- Only for the maps that use them (M33j: MAP_CUE_SEEDS) --------------------------------------

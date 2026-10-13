@@ -11,7 +11,8 @@ seeded per bot.
   calls `botSenses.ts` (target choice, contacts, reaction), `botMovement.ts` (lane points, hunting, strafing, and one
   glance a tick into the view for the team's hunt memory, M87: a spot seen empty isn't walked to),
   `routes.ts` (asking for and following a route, the last step onto a spot; a bot pushed off a leg walks back to it
-  rather than over a ledge, G11; shared with `squadOrders.ts`, so the two files don't import each other) and `botCombat.ts` (aim, bursts, reloads; bots lead a target with `flightTimeEstimate`); `botTorch.ts` handles weapon
+  rather than over a ledge, G11; a leg over a low obstacle sets `vaultLeg`, and the brain presses Jump at it, M102;
+  shared with `squadOrders.ts`, so the two files don't import each other) and `botCombat.ts` (aim, bursts, reloads; bots lead a target with `flightTimeEstimate`); `botTorch.ts` handles weapon
   lights at night, and `botHolster.ts` the holster (M92: put away on a calm sprint through its own half).
 - `perception.ts`, `aim.ts`, `cover.ts`: view cone and static ray casts; turn rate and aim error (a fresh contact's first aim starts wide
   to one side and settles from the trigger, G11); hidden spots, low
