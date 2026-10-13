@@ -13,6 +13,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Walking while aiming: hold Shift while aiming and you creep slower than the aiming pace (M84)
 - Holster on 3 (1 and 2 pick primary and secondary): holstered you sprint faster (6.8 against 6.3 m/s) but the draw
   takes longer; a fresh trigger pull, aim, reload or slot key draws it; bots holster the same way (M92)
+- Vault: Jump at a low wall about waist high (0.6 to 0.95 m) to go over it; vaults are loud (bots hear one from 18 m),
+  and bots vault too where it saves them a walk (M102)
 
 ## Replicas and BBs
 

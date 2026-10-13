@@ -10,9 +10,16 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M92** · Press 3 to holster your replica (rebindable in Settings › Controls); 1 and 2 still pick primary and secondary
 - **M92** · Holstered, you sprint a little faster; drawing out of the holster is slower than raising from a sprint
 - **M92** · Bots holster on calm sprints through their own half and draw again on any threat
+- **M102** · Jump at a low wall, about waist high, to vault over it: a quick move with a camera dip and its own sound
+- **M102** · A vault prompt shows under the crosshair when one is there; Controls lists the key as "Jump / vault"
+- **M102** · Vaults are loud: bots hear one from 18 m, further than a sprint, so vaulting costs you some stealth
+- **M102** · Bots vault too, where it saves them a walk
+- **M102** · Depot, Woodland and Neon Heights each get a low wall that opens a new route
+- **M102** · The tutorial has a new Vault step at a sandbag wall on the practice range
 
 ### Fixed
 - **M92** · Bots firing on the move hold fire when a teammate is down the line, so they no longer hit teammates past the end of a wall
+- **M102** · Bots taking a lean spot or an Extraction guard post settle right on it, so their lean sees round the corner
 
 ## 0.1 Dev 5 · 2026-10-13
 
