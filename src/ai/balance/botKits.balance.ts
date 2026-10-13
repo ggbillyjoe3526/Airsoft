@@ -19,8 +19,9 @@ beforeAll(async () => {
  * teammates carry it. The ends swap at half time, so Orange's share of the decided rounds is the kits' worth. The band
  * is the levels' end band: a kit helps, but never decides a match by itself (the player's gear grows the same way).
  * Each bot plays the personality the match draws it, so its kit leans as in a match. Measured 2026-10-13 on 32 seeds:
- * Easy 44.9 % (57 of 127; 31 of 96 bots carried parts), Normal 56.8 % (79 of 139; 69 of 96), Hard 52.7 % (89 of 169;
- * 87 of 96). Before the lean the same read 52.8, 52.0 and 55.8 %, and on 12 seeds 60.0, 45.7 and 60.0 %: noise.
+ * Easy 44.9 % (57 of 127; 31 of 96 bots carried parts), Normal 56.8 % (79 of 139; 69 of 96), Hard 52.9 % (91 of 172;
+ * 87 of 96), with LV1's tierless parts. Before the lean the same read 52.8, 52.0 and 55.8 %, and on 12 seeds 60.0, 45.7
+ * and 60.0 %: noise.
  */
 const SEEDS = 32;
 
