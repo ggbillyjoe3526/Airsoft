@@ -4,6 +4,13 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 
 ## Unreleased
 
+### Added
+- **M94** · Practice on any map: with Practice picked, the Map cards offer the Range and each map (dev maps with Dev content on), in Day or Night
+- **M94** · Practice on a map has no bots: steel and figures stand where bots would play, some crouched behind cover; minimap and torch at night
+
+### Changed
+- **M94** · The practice range is now Practice: pause reads "Practice · Range" or "Practice · Depot", and the tutorial's last button says Practice
+
 ## 0.1 Dev 5 · 2026-10-13
 
 ### Added
