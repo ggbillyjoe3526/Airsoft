@@ -35,17 +35,6 @@ acceptance:
 status: open
 attempts: 0
 
-## M94 · Practice on any map (playtest note 11)
-tier: core
-perf: required
-touches: src/rangeSession.ts, src/map/, src/sim/rangeTargets.ts, src/sim/rangeChallenge.ts, src/config/range.ts, src/ui/menus/, src/game.ts, src/config/practice.ts, src/config/menus.ts, src/config/menuArt.ts, src/render/rangeTargetsRenderer.ts, src/settings/storage.ts, src/ui/rangeReadout.ts, pipeline/map-stills.mjs, public/menu/range-day.jpg
-contract: none
-acceptance:
-  1. The practice range is renamed "Practice"; it offers the range and every playable map (Dev maps with Dev content on).
-  2. On a map, targets (M93's kinds) stand where bots would play, and there are no bots.
-status: open
-attempts: 0
-
 ## M95 · Practice with any unlocked replica (playtest note 12)
 tier: ui
 perf: skip
