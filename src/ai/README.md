@@ -33,7 +33,8 @@ seeded per bot.
 - Adaptive difficulty (AD1, a Dev setting): `adaptiveSkill.ts` is the arithmetic (a rating on the difficulty scale, 0
   Easy to 3 Pro; `skillAt` blends the numbers of the two levels around it and takes the switches from the level the
   match plays as; how a round and a match move it), `adaptiveRun.ts` one match's rating (it drifts a little after each
-  round; `MatchSession` hands the other team's bots the new skill through `BotController.setTeamSkill`). It layers over
+  round; `MatchSession` hands the other team's bots the new skill through `BotController.setTeamSkill`, which lays each
+  bot's personality over it again). It layers over
   `BOT_SKILL` and never changes it; tuning in `config/adaptiveDifficulty.ts`, the saved rating in
   `settings/adaptiveRating.ts`, the between-matches part in `src/adaptivePicks.ts`.
 - Tests: `ai.test.ts`, `botTactics.test.ts` and one file per behaviour. The match guards (`depotMatch.*`, `*Match.*`
