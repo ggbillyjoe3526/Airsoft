@@ -39,8 +39,8 @@ export interface TutorialStep {
   shows?: TutorialShowcase;
   /** Played instead when the replica in hand can't aim down a sight (neither an optic nor iron sights; since M84 every replica has iron sights). */
   withoutOptic?: Omit<TutorialStep, 'withoutOptic'>;
-  /** Said after `text` only while the Armory is on (M83: with Disable Armory the tutorial never names it). */
-  armory?: string;
+  /** Said after `text` only while levelling is on (LV1; M83: with it off in the Dev settings the tutorial never names it). */
+  levelling?: string;
 }
 
 /**
@@ -152,14 +152,14 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
     id: 'match',
     title: 'Winning a match',
     text: 'Win a round by knocking out the whole other team. In Attack / Defend the attackers can also win by raising their flag at the other pole, and the defenders by holding it off until time runs out. The minimap shows your team and where you heard shots.',
-    armory: 'Matches pay Field Credits: spend them in the Armory for new gear, free.',
+    levelling: 'Matches give XP: each level unlocks new gear, and the Armory shows what comes next.',
     goal: { kind: 'read', seconds: 16 },
   },
 ];
 
-/** The steps as the coach says them: a step's Armory line joins its text only while the Armory is on (M83). Pure. */
-export function tutorialSteps(armory: boolean): readonly TutorialStep[] {
-  return TUTORIAL_STEPS.map((step) => (step.armory && armory ? { ...step, text: `${step.text} ${step.armory}` } : step));
+/** The steps as the coach says them: a step's levelling line joins its text only while levelling is on (LV1). Pure. */
+export function tutorialSteps(levelling: boolean): readonly TutorialStep[] {
+  return TUTORIAL_STEPS.map((step) => (step.levelling && levelling ? { ...step, text: `${step.text} ${step.levelling}` } : step));
 }
 
 export const TUTORIAL = {

@@ -31,8 +31,8 @@ export const SAVED_TEXT = {
   locked: (n: number): string => `${n} locked`,
   /** Under the tabs, for the loadout carried: what it holds that isn't available, and what plays instead. */
   lockedHead: 'Not available, swapped for now',
-  missing: (wanted: string, dev: boolean, instead: string | null): string =>
-    `${wanted} (${dev ? 'dev gear: Dev content is off' : 'locked'}): ${instead ? `${instead} instead` : 'nothing in its place'}`,
+  missing: (wanted: string, dev: boolean, instead: string | null, level: number | null = null): string =>
+    `${wanted} (${dev ? 'dev gear: Dev content is off' : level !== null ? `unlocks at level ${level}` : 'locked'}): ${instead ? `${instead} instead` : 'nothing in its place'}`,
   onlyOne: 'Your only saved loadout: rename or change it instead.',
   full: `All ${SAVED_LOADOUTS.slots} slots are in use: delete one first.`,
   deleteTitle: (name: string): string => `Delete ${name}?`,

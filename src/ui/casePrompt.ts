@@ -1,15 +1,7 @@
 import { HUD } from '../config/render';
-import { GAME_POOL } from '../pool/gamePool';
-import type { Pool } from '../pool/pool';
-import { type CaseFind, type FoundItem, haulTotals, type RunCase, type RunState } from '../sim/extraction';
+import { type CaseFind, haulTotals, type RunCase, type RunState } from '../sim/extraction';
 import { haulWhat } from './runStatus';
 import { TimedFill } from './timedFill';
-
-/** "Rare Red Dot", from the pool (the asset id if the pool doesn't have it). */
-export function itemName(pool: Pool, item: FoundItem): string {
-  const tier = pool.tiers.find((t) => t.id === item.tier)?.label ?? item.tier;
-  return `${tier} ${pool.byId.get(item.asset)?.name ?? item.asset}`;
-}
 
 /** The case's name in a sentence: "the field case", "the marshal's locker". */
 function theCase(k: Pick<RunCase, 'name' | 'dropped'>): string {
@@ -27,15 +19,14 @@ export function openingLine(k: Pick<RunCase, 'name' | 'dropped'>): string {
 }
 
 /**
- * What an opened case held, for a moment (M44): "+35 FC", "BB resupply · magazines topped up", "Rare Red Dot · +120 FC";
- * for what you dropped, "Picked up 85 FC and 1 part".
+ * What an opened case held, for a moment (M44, LV1): "+35 XP" or "BB resupply · magazines topped up"; for what you
+ * dropped, "Picked up 85 XP".
  */
-export function foundLine(k: Pick<RunCase, 'dropped' | 'finds'>, pool: Pool = GAME_POOL): string {
+export function foundLine(k: Pick<RunCase, 'dropped' | 'finds'>): string {
   if (k.dropped) return `Picked up ${haulWhat(haulTotals(k.finds)) || 'nothing'}`;
   const parts: string[] = [];
   for (const f of k.finds as readonly CaseFind[]) {
-    if (f.item) parts.push(itemName(pool, f.item));
-    if (f.fc > 0) parts.push(`+${f.fc} FC`);
+    if (f.xp > 0) parts.push(`+${f.xp} XP`);
     if (f.resupply) parts.push('BB resupply · magazines topped up');
   }
   return parts.length > 0 ? parts.join(' · ') : 'Empty';

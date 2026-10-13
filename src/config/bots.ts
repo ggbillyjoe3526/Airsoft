@@ -145,6 +145,12 @@ export const BOT_BEHAVIOUR = {
   holdSweepDeg: 35,
   holdSweepPeriod: 4,
   /**
+   * A guard leaning out at its post (M55) whose leaned eye loses its way in at some turn of that sweep sweeps no further
+   * than this many degrees short of that turn from then on (BN1: a Woodland locker guard standing 4 cm off its post
+   * lost the way in at the sweep's far end and saw it for 54 % of its ticks).
+   */
+  holdLeanSweepBackDeg: 4,
+  /**
    * At a lane point, a bot may first step into cover (its skill's holdCoverChance): the best spot within this radius
    * (metres) that hides it from a point this far (metres) towards the enemy side and that it can peek from.
    */
@@ -797,9 +803,9 @@ export const BOT_LOADOUTS: Readonly<Record<Difficulty, 'factory' | 'random'>> = 
 
 /**
  * How a random loadout is rolled: the chance each part slot (optic, grip, laser, barrel, muzzle, magazine) gets a part,
- * and (M32, owner 2026-10-04) the chance a match's opponents include one carrying a chase replica (the Cyber Pistol) as
- * their primary: only on a difficulty that rolls kits (Hard, and any above it later), and only once the player owns
- * one (Unlock all gear counts). 0.05: about 5 matches in 100.
+ * and (M32, owner 2026-10-04) the chance a match's opponents include one carrying a chase replica (one the player earned
+ * by levelling, the Cyber Pistol at the cap; LV1) as their primary: only on a difficulty that rolls kits (Hard, and
+ * any above it later), and only once the player has one (Disable levelling counts). 0.05: about 5 matches in 100.
  */
 export const RANDOM_LOADOUT = { partChance: 0.6, chaseChance: 0.05 } as const;
 

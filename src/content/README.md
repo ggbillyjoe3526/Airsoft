@@ -4,12 +4,13 @@ The content checks (the content toolkit): what makes a new replica, part, map, m
 they enforce are in `docs/content/`; the command that runs them and writes the report is `pipeline/content-check.mjs`.
 
 - **Inputs.** `contentInputs.ts` names everything a check reads (`ContentInputs`: the pool, `stats.md`, the replica
-  configs, the model tables, the sound cues, the code keys, a part's effects), so a test can hand in a fault.
-  `gameContent.ts` builds the game's own (`gameInputs`) and runs levels 1 and 2 (`checkAsset`, `checkAllAssets`).
+  configs, the model tables, the sound cues, the code keys, a part's effects, the levels), so a test can hand in a
+  fault. `gameContent.ts` builds the game's own (`gameInputs`) and runs levels 1 and 2 (`checkAsset`, `checkAllAssets`).
 - **Results.** `checks.ts`: a `CheckResult` is a level, a check name (`replica.model`), the item, a verdict (pass,
   warn, fail, info) and what was found in plain words.
-- **Levels 1 and 2.** `assetRules.ts` (name, brands, access), `replicaChecks.ts`, `partChecks.ts`, and `kitGrid.ts`
-  (every kit of parts a replica can wear, at its commonest and rarest tier, memoised per pool).
+- **Levels 1 and 2.** `assetRules.ts` (name, brands, access), `replicaChecks.ts`, `partChecks.ts`, `levelChecks.ts`
+  (`item.level`: a row of `levels.md` unlocks the item, so players can get it) and `kitGrid.ts` (every kit of parts a
+  replica can wear, memoised per pool).
 - **Level 3.** `specSheet.ts` (the chrono and range table, from the game's own BB flight), `census.ts` (model cost
   and shot sound), `specChecks.ts` (their verdicts), `kits.ts` (a replica as it comes, and as carried).
 - **Maps (CT2).** `mapChecks.ts` (`checkMap`: levels 1 to 3 over any `MapData`, every check re-exported for its
@@ -22,7 +23,7 @@ they enforce are in `docs/content/`; the command that runs them and writes the r
   pinned ids, the wiring probes, the maps that host it) and the fit and perf gate checks; `modeCheckSupport.ts` holds
   their context (`gameModeContext`), the places a mode answers in (`GAME_PROBES`, `COMPILED_PLACES`) and wording.
   `modePlay.ts` plays a short headless match of any mode (a switch over `MatchMode`), `modePlayChecks.ts` judges it
-  (every pairing plays; the bots play it their own way) and `modePay.ts` prices a round mode's Field Credits a minute.
+  (every pairing plays; the bots play it their own way) and `modePay.ts` prices a round mode's XP a minute.
 - **Skins (CT4).** `skinChecks.ts` (`checkSkin`, `checkSkinList`: levels 1 to 3's fast checks over any skin, every
   check re-exported for its fault test) gathers `skinRules.ts` (level 1), `skinFit.ts` (level 2: drawn, the orange
   tip, Realistic colours, the kit's numbers, and `skin.looksOnly` over the play modules' imports), `skinSpec.ts` (the

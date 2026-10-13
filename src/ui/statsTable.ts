@@ -2,7 +2,7 @@ import { teamCss } from '../config/teams';
 import { headIcon } from './headIcon';
 import type { StatsRow, TeamBlock } from './statsRows';
 
-const COLUMNS: readonly { key: Exclude<keyof StatsRow, 'name' | 'you' | 'out'>; label: string; title: string }[] = [
+const COLUMNS: readonly { key: Exclude<keyof StatsRow, 'name' | 'tag' | 'you' | 'out'>; label: string; title: string }[] = [
   { key: 'hits', label: 'Hits', title: 'Opponents hit' },
   { key: 'timesHit', label: 'Times hit', title: 'Times this player was hit' },
   { key: 'friendlyHits', label: 'Friendly hits', title: 'Teammates hit (friendly fire counts)' },
@@ -20,8 +20,8 @@ export class StatsTable {
   readonly root: HTMLTableElement;
   private shape = '';
   private titles: HTMLTableCellElement[] = [];
-  /** Each player's row: its name (beside the head drawing, G3) and its number cells. */
-  private rows: { tr: HTMLTableRowElement; name: HTMLSpanElement; cells: HTMLTableCellElement[] }[][] = [];
+  /** Each player's row: its name (beside the head drawing, G3), its personality tag (BN1) and its number cells. */
+  private rows: { tr: HTMLTableRowElement; name: HTMLSpanElement; tag: HTMLSpanElement; cells: HTMLTableCellElement[] }[][] = [];
 
   constructor(className = '') {
     this.root = document.createElement('table');
@@ -36,10 +36,11 @@ export class StatsTable {
       setText(this.titles[b]!, block.title);
       for (let r = 0; r < block.rows.length; r++) {
         const row = block.rows[r]!;
-        const { tr, name, cells } = this.rows[b]![r]!;
+        const { tr, name, tag, cells } = this.rows[b]![r]!;
         if (tr.classList.contains('you') !== row.you) tr.classList.toggle('you', row.you);
         if (tr.classList.contains('out') !== row.out) tr.classList.toggle('out', row.out);
         setText(name, row.name);
+        setText(tag, row.tag);
         for (let i = 0; i < COLUMNS.length; i++) setText(cells[i]!, row[COLUMNS[i]!.key]);
       }
     }
@@ -72,9 +73,12 @@ export class StatsTable {
         const player = tr.insertCell();
         player.className = 'stats-player';
         const name = document.createElement('span');
-        player.append(headIcon(), name);
+        // The bot's personality after its name (BN1): how it plays, so you learn who to watch.
+        const tag = document.createElement('span');
+        tag.className = 'stats-tag';
+        player.append(headIcon(), name, tag);
         const cells = COLUMNS.map(() => tr.insertCell());
-        return { tr, name, cells };
+        return { tr, name, tag, cells };
       });
     });
   }

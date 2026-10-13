@@ -1,42 +1,30 @@
 import { describe, expect, it } from 'vitest';
-import { BARRELS, factoryParts, handlingOf, MUZZLES, NO_TUNE } from '../config/attachments';
+import { BARRELS, factoryParts, handlingOf, MAGAZINES, MUZZLES } from '../config/attachments';
 import { LASERS } from '../config/lasers';
 import { GAME_STATS } from '../config/gameStats';
 import { BALLISTICS } from '../config/ballistics';
 import { AEG, CYBER_PISTOL, GAS_PISTOL, HOP_UP } from '../config/replicas';
 import { bestHopUp, hopUpReach } from '../sim/hopUp';
-import type { ItemRef } from './collection';
+import type { ItemRef } from './item';
 import { GAME_POOL } from './gamePool';
-import { bonusOf, EMPTY_FIT, energyCapped, kitReplica, kitSlot, partTune, type ReplicaFit } from './kit';
+import { EMPTY_FIT, energyCapped, kitReplica, kitSlot, type ReplicaFit } from './kit';
 import { fits } from './pool';
 
 const pool = GAME_POOL;
 const id = (name: string) => pool.assets.find((a) => a.name === name)!.id;
-const item = (name: string, tier = 'common'): ItemRef => ({ asset: id(name), tier });
+const item = (name: string): ItemRef => ({ asset: id(name) });
 const fit = (parts: Partial<ReplicaFit>): ReplicaFit => ({ ...EMPTY_FIT, ...parts });
 const STARTER_AEG = fit({ power: item('Standard Battery') });
 const STARTER_PISTOL = fit({ power: item('Green Gas') });
 
 describe('kit (M26b)', () => {
-  it('leaves a Common replica on its starter power source exactly as it comes, under its pool name', () => {
+  it('leaves a replica on its starter power source exactly as it comes, under its pool name', () => {
     const r = kitReplica(pool, item('AEG Rifle'), STARTER_AEG);
     expect({ ...r, name: AEG.name }).toEqual(AEG);
     expect(r.name).toBe('AEG Rifle');
     const slot = kitSlot(pool, item('GBB Pistol'), STARTER_PISTOL);
     expect(slot.optic).toBeNull();
-    expect(slot.parts).toEqual({ grip: 'none', magazine: GAS_PISTOL.magazines[0], laser: null, barrel: null, muzzle: null, light: null, tune: NO_TUNE });
-  });
-
-  it("gives a rarer replica its tier's Bonus % off spread, reload and draw, and half of it on energy and rate of fire (M29)", () => {
-    const r = kitReplica(pool, item('AEG Rifle', 'legendary'), STARTER_AEG);
-    expect(bonusOf(pool, item('AEG Rifle', 'legendary'), 'spread')).toBeCloseTo(0.15);
-    expect(bonusOf(pool, item('AEG Rifle', 'legendary'), 'energy')).toBeCloseTo(0.075);
-    expect(r.spreadDeg).toBeCloseTo(AEG.spreadDeg * 0.85);
-    expect(r.reloadTime).toBeCloseTo(AEG.reloadTime * 0.85);
-    expect(r.drawTime).toBeCloseTo(AEG.drawTime * 0.85);
-    expect(r.muzzleEnergy).toBeCloseTo(AEG.muzzleEnergy * 1.075);
-    expect(r.fireRate).toBeCloseTo(AEG.fireRate * 1.075);
-    expect(r.recoilDeg).toBe(AEG.recoilDeg);
+    expect(slot.parts).toEqual({ grip: 'none', magazine: GAS_PISTOL.magazines[0], laser: null, barrel: null, muzzle: null, light: null });
   });
 
   it('makes a stronger gas shoot harder and kick harder at the same rate, and a battery set the rate of fire only (M29)', () => {
@@ -44,22 +32,20 @@ describe('kit (M26b)', () => {
     expect(black.muzzleEnergy).toBeCloseTo(GAS_PISTOL.muzzleEnergy * 1.2);
     expect(black.recoilDeg).toBeCloseTo(GAS_PISTOL.recoilDeg * 1.2);
     expect(black.fireRate).toBe(GAS_PISTOL.fireRate);
-    // A battery's tier improves its rate of fire by half its bonus (7.5% at Legendary), never the energy.
-    const battery = kitReplica(pool, item('AEG Rifle'), fit({ power: item('Standard Battery', 'legendary') }));
-    expect(battery.muzzleEnergy).toBe(AEG.muzzleEnergy);
-    expect(battery.fireRate).toBeCloseTo(AEG.fireRate * 1.075);
+    // The standard battery is the replica as it comes; the LiPo raises the rate of fire only.
+    const battery = kitReplica(pool, item('AEG Rifle'), fit({ power: item('Standard Battery') }));
+    expect([battery.muzzleEnergy, battery.fireRate]).toEqual([AEG.muzzleEnergy, AEG.fireRate]);
     const lipo = kitReplica(pool, item('AEG Rifle'), fit({ power: item('11.1 V LiPo Battery') }));
     expect(lipo.fireRate).toBeCloseTo(AEG.fireRate * 1.15);
     expect(lipo.muzzleEnergy).toBe(AEG.muzzleEnergy);
-    // A gas's tier improves its energy: a Legendary Red Gas is 10% + 7.5%.
-    const red = kitReplica(pool, item('GBB Pistol'), fit({ power: item('Red Gas', 'legendary') }));
-    expect(red.muzzleEnergy).toBeCloseTo(GAS_PISTOL.muzzleEnergy * 1.175);
+    const red = kitReplica(pool, item('GBB Pistol'), fit({ power: item('Red Gas') }));
+    expect(red.muzzleEnergy).toBeCloseTo(GAS_PISTOL.muzzleEnergy * 1.1);
   });
 
   it('stops stacked energy at the site limit, and says so (M29)', () => {
-    const pistol = item('GBB Pistol', 'legendary');
-    const black = fit({ power: item('Black Gas', 'legendary') });
-    expect(kitReplica(pool, pistol, black).muzzleEnergy).toBeCloseTo(GAS_PISTOL.muzzleEnergy * 1.075 * 1.275);
+    const pistol = item('GBB Pistol');
+    const black = fit({ power: item('Black Gas') });
+    expect(kitReplica(pool, pistol, black).muzzleEnergy).toBeCloseTo(GAS_PISTOL.muzzleEnergy * 1.2);
     expect(energyCapped(pool, pistol, black)).toBe(false);
     // A site that allows less: the same kit stops at its limit.
     const strict = { ...GAME_STATS, power: { ...GAME_STATS.power, [id('Black Gas')]: { energy: 1, fireRate: 0, recoil: 0 } } };
@@ -68,29 +54,13 @@ describe('kit (M26b)', () => {
     expect(energyCapped(pool, pistol, black, strict)).toBe(true);
   });
 
-  it('reads the tier shares from stats.md: a share of 0 leaves the stat as it comes', () => {
-    const flat = { ...GAME_STATS, tierShares: { ...GAME_STATS.tierShares, replica: { spread: 1 } } };
-    const r = kitReplica(pool, item('AEG Rifle', 'legendary'), STARTER_AEG, flat);
-    expect(r.spreadDeg).toBeCloseTo(AEG.spreadDeg * 0.85);
-    expect(r.reloadTime).toBe(AEG.reloadTime);
-    expect(r.muzzleEnergy).toBe(AEG.muzzleEnergy);
-  });
-
-  it("tightens the pistol's spread with the laser, more with a rarer one", () => {
+  it("tightens the pistol's spread with the laser", () => {
     const laser = kitReplica(pool, item('GBB Pistol'), fit({ power: item('Green Gas'), laser: item('Red Laser') }));
     expect(laser.spreadDeg).toBeCloseTo(GAS_PISTOL.spreadDeg * LASERS.redLaser.spreadScale);
-    const rare = kitReplica(pool, item('GBB Pistol'), fit({ power: item('Green Gas'), laser: item('Red Laser', 'legendary') }));
-    expect(rare.spreadDeg).toBeCloseTo(GAS_PISTOL.spreadDeg * LASERS.redLaser.spreadScale * 0.925);
     expect(kitSlot(pool, item('GBB Pistol'), fit({ laser: item('Red Laser') })).parts.laser).toBe('redLaser');
   });
 
-  it("turns a rarer optic, grip and magazine into handling: quicker raise, steadier grip, quicker reload", () => {
-    expect(partTune(pool, fit({ optic: item('Red Dot'), grip: item('Vertical Grip'), magazine: item('Hi-Cap Magazine') }))).toBe(NO_TUNE);
-    const tune = partTune(pool, fit({ optic: item('Red Dot', 'epic'), grip: item('Vertical Grip', 'legendary'), magazine: item('Hi-Cap Magazine', 'rare') }));
-    expect(tune.raiseScale).toBeCloseTo(0.88 * 0.925);
-    expect(tune.shakeScale).toBeCloseTo(0.925);
-    expect(tune.drawScale).toBeCloseTo(0.925);
-    expect(tune.reloadScale).toBeCloseTo(0.94);
+  it('fits an optic, grip and magazine as parts, by their keys', () => {
     const slot = kitSlot(pool, item('AEG Rifle'), fit({ power: item('Standard Battery'), optic: item('2x Scope'), grip: item('Angled Grip'), magazine: item('Low-Cap Magazine') }));
     expect([slot.optic, slot.parts.grip, slot.parts.magazine]).toEqual(['scope2x', 'angled', 'lowCap']);
   });
@@ -104,13 +74,13 @@ describe('kit (M26b)', () => {
 
 describe('kit, acceptance 4: the site limit', () => {
   const hugeGas = (energy: number) => ({ ...GAME_STATS, power: { ...GAME_STATS.power, [id('Black Gas')]: { energy, fireRate: 0, recoil: 0.2 } } });
-  const BLACK_PISTOL = fit({ power: item('Black Gas', 'legendary') });
+  const BLACK_PISTOL = fit({ power: item('Black Gas') });
 
   it('never lets the pistol leave the barrel above 1.00 J through kitReplica, however big the gas', () => {
     for (const energy of [1, 5, 100]) {
-      const r = kitReplica(pool, item('GBB Pistol', 'legendary'), BLACK_PISTOL, hugeGas(energy));
+      const r = kitReplica(pool, item('GBB Pistol'), BLACK_PISTOL, hugeGas(energy));
       expect(r.muzzleEnergy).toBe(1.0);
-      expect(energyCapped(pool, item('GBB Pistol', 'legendary'), BLACK_PISTOL, hugeGas(energy))).toBe(true);
+      expect(energyCapped(pool, item('GBB Pistol'), BLACK_PISTOL, hugeGas(energy))).toBe(true);
     }
     // Through kitSlot too (what the match and the Performance sheet read).
     expect(kitSlot(pool, item('GBB Pistol'), BLACK_PISTOL, hugeGas(100)).replica.muzzleEnergy).toBe(1.0);
@@ -118,17 +88,18 @@ describe('kit, acceptance 4: the site limit', () => {
 
   it("stops the rifle at its own class's 1.20 J, from a battery that is given energy too", () => {
     const boosted = { ...GAME_STATS, power: { ...GAME_STATS.power, [id('Standard Battery')]: { energy: 3, fireRate: 0, recoil: 0 } } };
-    const r = kitReplica(pool, item('AEG Rifle', 'legendary'), STARTER_AEG, boosted);
+    const r = kitReplica(pool, item('AEG Rifle'), STARTER_AEG, boosted);
     expect(r.muzzleEnergy).toBe(1.2);
     expect(r.muzzleEnergy).not.toBe(1.0);
-    expect(energyCapped(pool, item('AEG Rifle', 'legendary'), STARTER_AEG, boosted)).toBe(true);
+    expect(energyCapped(pool, item('AEG Rifle'), STARTER_AEG, boosted)).toBe(true);
   });
 
   it('is not capped as it comes, nor at the best of everything the pool holds, with the numbers as shipped', () => {
     expect(energyCapped(pool, item('AEG Rifle'), STARTER_AEG)).toBe(false);
     expect(energyCapped(pool, item('GBB Pistol'), STARTER_PISTOL)).toBe(false);
-    expect(energyCapped(pool, item('GBB Pistol', 'legendary'), BLACK_PISTOL)).toBe(false);
-    expect(energyCapped(pool, item('AEG Rifle', 'legendary'), fit({ power: item('11.1 V LiPo Battery', 'legendary') }))).toBe(false);
+    expect(energyCapped(pool, item('GBB Pistol'), BLACK_PISTOL)).toBe(false);
+    expect(energyCapped(pool, item('AEG Rifle'), fit({ power: item('11.1 V LiPo Battery') }))).toBe(false);
+    expect(energyCapped(pool, item('AEG Rifle'), fit({ power: item('11.1 V LiPo Battery'), barrel: item('Long Barrel') }))).toBe(false);
   });
 
   it('is not capped when the energy lands exactly on the limit, and is a hair past it', () => {
@@ -146,14 +117,14 @@ describe('kit, acceptance 4: the site limit', () => {
   });
 
   it('caps only the energy: the gas keeps its rate of fire and its extra kick when the site stops it', () => {
-    const r = kitReplica(pool, item('GBB Pistol', 'legendary'), BLACK_PISTOL, hugeGas(100));
+    const r = kitReplica(pool, item('GBB Pistol'), BLACK_PISTOL, hugeGas(100));
     expect(r.recoilDeg).toBeCloseTo(GAS_PISTOL.recoilDeg * 1.2);
-    expect(r.fireRate).toBeCloseTo(GAS_PISTOL.fireRate * 1.075);
+    expect(r.fireRate).toBe(GAS_PISTOL.fireRate);
   });
 });
 
 describe('kit, acceptance 3: a power source and the recoil', () => {
-  const recoilOf = (name: string, tierName = 'common') => kitReplica(pool, item('GBB Pistol'), fit({ power: item(name, tierName) })).recoilDeg;
+  const recoilOf = (name: string) => kitReplica(pool, item('GBB Pistol'), fit({ power: item(name) })).recoilDeg;
 
   it("follows the power source's Recoil %: Green none, Red +10 %, Black +20 %", () => {
     expect(recoilOf('Green Gas')).toBe(GAS_PISTOL.recoilDeg);
@@ -161,11 +132,10 @@ describe('kit, acceptance 3: a power source and the recoil', () => {
     expect(recoilOf('Black Gas')).toBeCloseTo(GAS_PISTOL.recoilDeg * 1.2);
   });
 
-  it("follows another Recoil % from the file, a negative one included, and a tier doesn't change it", () => {
+  it('follows another Recoil % from the file, a negative one included', () => {
     const calmer = { ...GAME_STATS, power: { ...GAME_STATS.power, [id('Black Gas')]: { energy: 0.2, fireRate: 0, recoil: -0.5 } } };
     expect(kitReplica(pool, item('GBB Pistol'), fit({ power: item('Black Gas') }), calmer).recoilDeg).toBeCloseTo(GAS_PISTOL.recoilDeg * 0.5);
-    expect(recoilOf('Black Gas', 'legendary')).toBeCloseTo(GAS_PISTOL.recoilDeg * 1.2);
-    expect(kitReplica(pool, item('GBB Pistol', 'legendary'), STARTER_PISTOL).recoilDeg).toBe(GAS_PISTOL.recoilDeg);
+    expect(kitReplica(pool, item('GBB Pistol'), STARTER_PISTOL).recoilDeg).toBe(GAS_PISTOL.recoilDeg);
   });
 
   it('keeps a battery off the energy and a gas off the rate of fire, and the LiPo off both the kick and the energy', () => {
@@ -176,11 +146,6 @@ describe('kit, acceptance 3: a power source and the recoil', () => {
     expect(red.fireRate).toBe(GAS_PISTOL.fireRate);
   });
 
-  it("adds a battery's tier to its Fire rate % (a Legendary LiPo is 15 % + 7.5 %) and a replica tier on top", () => {
-    const r = kitReplica(pool, item('AEG Rifle', 'legendary'), fit({ power: item('11.1 V LiPo Battery', 'legendary') }));
-    expect(r.fireRate).toBeCloseTo(AEG.fireRate * 1.075 * (1 + 0.15 + 0.075));
-  });
-
   it('reads an unpooled power source as no change (the stats file has no row for it)', () => {
     const none = { ...GAME_STATS, power: {} };
     const r = kitReplica(pool, item('GBB Pistol'), fit({ power: item('Black Gas') }), none);
@@ -188,44 +153,8 @@ describe('kit, acceptance 3: a power source and the recoil', () => {
   });
 });
 
-describe('kit, acceptance 2: what a tier improves, from the Tier scaling', () => {
-  it("gives each category only the stats listed for it, at its tier's Bonus times the share", () => {
-    const legendary = (name: string) => item(name, 'legendary');
-    expect(bonusOf(pool, legendary('AEG Rifle'), 'reload')).toBeCloseTo(0.15);
-    expect(bonusOf(pool, legendary('AEG Rifle'), 'draw')).toBeCloseTo(0.15);
-    expect(bonusOf(pool, legendary('AEG Rifle'), 'fireRate')).toBeCloseTo(0.075);
-    expect(bonusOf(pool, legendary('Standard Battery'), 'fireRate')).toBeCloseTo(0.075);
-    expect(bonusOf(pool, legendary('Standard Battery'), 'energy')).toBe(0);
-    expect(bonusOf(pool, legendary('Green Gas'), 'energy')).toBeCloseTo(0.075);
-    expect(bonusOf(pool, legendary('Green Gas'), 'fireRate')).toBe(0);
-    expect(bonusOf(pool, legendary('Red Dot'), 'raise')).toBeCloseTo(0.15);
-    expect(bonusOf(pool, legendary('Red Dot'), 'spread')).toBe(0);
-    expect(bonusOf(pool, legendary('Vertical Grip'), 'shake')).toBeCloseTo(0.075);
-    expect(bonusOf(pool, legendary('Red Laser'), 'spread')).toBeCloseTo(0.075);
-    expect(bonusOf(pool, legendary('Hi-Cap Magazine'), 'reload')).toBeCloseTo(0.15);
-    // Nothing at Common, and nothing for an empty slot.
-    expect(bonusOf(pool, item('AEG Rifle'), 'spread')).toBe(0);
-    expect(bonusOf(pool, null, 'spread')).toBe(0);
-  });
-
-  it('scales across every tier the pool lists, in proportion to its Bonus', () => {
-    for (const t of pool.tiers) {
-      const r = kitReplica(pool, item('AEG Rifle', t.id), STARTER_AEG);
-      expect(r.spreadDeg, t.id).toBeCloseTo(AEG.spreadDeg * (1 - t.bonus));
-      expect(r.muzzleEnergy, t.id).toBeCloseTo(AEG.muzzleEnergy * (1 + t.bonus / 2));
-      expect(r.fireRate, t.id).toBeCloseTo(AEG.fireRate * (1 + t.bonus / 2));
-    }
-  });
-
-  it('keeps a Legendary pistol on its starter gas under the site limit, as shipped', () => {
-    const r = kitReplica(pool, item('GBB Pistol', 'legendary'), STARTER_PISTOL);
-    expect(r.muzzleEnergy).toBeCloseTo(GAS_PISTOL.muzzleEnergy * 1.075);
-    expect(r.muzzleEnergy).toBeLessThanOrEqual(r.energyLimit);
-  });
-});
-
 describe('barrels and muzzle parts (M29b)', () => {
-  it('tightens spread with a Tight-Bore Barrel and adds a little energy; a Long Barrel adds more energy but handles slower', () => {
+  it('tightens spread with a Tight-Bore Barrel and adds a little energy; a Long Barrel adds more energy and a little tightness but handles slower', () => {
     const tight = kitSlot(pool, item('AEG Rifle'), fit({ ...STARTER_AEG, barrel: item('Tight-Bore Barrel') }));
     expect(tight.parts.barrel).toBe('tightBore');
     expect(tight.replica.spreadDeg).toBeCloseTo(AEG.spreadDeg * BARRELS.tightBore.spreadScale);
@@ -233,6 +162,8 @@ describe('barrels and muzzle parts (M29b)', () => {
     const long = kitSlot(pool, item('AEG Rifle'), fit({ ...STARTER_AEG, barrel: item('Long Barrel') }));
     expect(long.replica.muzzleEnergy).toBeCloseTo(AEG.muzzleEnergy * (1 + BARRELS.long.energy));
     expect(long.replica.muzzleEnergy).toBeGreaterThan(tight.replica.muzzleEnergy);
+    expect(long.replica.spreadDeg).toBeCloseTo(AEG.spreadDeg * BARRELS.long.spreadScale);
+    expect(long.replica.spreadDeg).toBeGreaterThan(tight.replica.spreadDeg);
     const stock = handlingOf(AEG, factoryParts(AEG));
     const h = handlingOf(long.replica, long.parts);
     expect(h.drawTime).toBeCloseTo(stock.drawTime * BARRELS.long.handlingScale);
@@ -263,26 +194,14 @@ describe('barrels and muzzle parts (M29b)', () => {
     expect(fits(asset('Silencer'), asset('GBB Pistol'))).toBe(true);
   });
 
-  it("scales a barrel's and a silencer's handling with their tier, and a barrel's spread", () => {
-    const common = kitSlot(pool, item('AEG Rifle'), fit({ ...STARTER_AEG, barrel: item('Tight-Bore Barrel'), muzzle: item('Silencer') }));
-    const legendary = kitSlot(pool, item('AEG Rifle'), fit({ ...STARTER_AEG, barrel: item('Tight-Bore Barrel', 'legendary'), muzzle: item('Silencer', 'legendary') }));
-    expect(legendary.replica.spreadDeg).toBeCloseTo(common.replica.spreadDeg * (1 - bonusOf(pool, item('Tight-Bore Barrel', 'legendary'), 'spread')));
-    const draw = (s: typeof common) => handlingOf(s.replica, s.parts).drawTime;
-    const barrelDraw = 1 - bonusOf(pool, item('Tight-Bore Barrel', 'legendary'), 'draw');
-    const muzzleDraw = 1 - bonusOf(pool, item('Silencer', 'legendary'), 'draw');
-    expect(draw(legendary)).toBeCloseTo(draw(common) * barrelDraw * muzzleDraw);
-    expect(barrelDraw).toBeLessThan(1);
-    expect(muzzleDraw).toBeLessThan(1);
-  });
 });
 
 describe('barrels and muzzle parts, acceptance 2: the site limit still holds (M29b)', () => {
-  it('stacks a barrel, a silencer and the replica tier on the energy, and stays under the AEG limit as shipped', () => {
-    const slot = kitSlot(pool, item('AEG Rifle', 'legendary'), fit({ ...STARTER_AEG, barrel: item('Long Barrel'), muzzle: item('Silencer') }));
-    const tier = 1 + bonusOf(pool, item('AEG Rifle', 'legendary'), 'energy');
-    expect(slot.replica.muzzleEnergy).toBeCloseTo(AEG.muzzleEnergy * tier * (1 + BARRELS.long.energy) * (1 + MUZZLES.silencer.energy));
+  it('stacks a barrel and a silencer on the energy, and stays under the AEG limit as shipped', () => {
+    const slot = kitSlot(pool, item('AEG Rifle'), fit({ ...STARTER_AEG, barrel: item('Long Barrel'), muzzle: item('Silencer') }));
+    expect(slot.replica.muzzleEnergy).toBeCloseTo(AEG.muzzleEnergy * (1 + BARRELS.long.energy) * (1 + MUZZLES.silencer.energy));
     expect(slot.replica.muzzleEnergy).toBeLessThanOrEqual(AEG.energyLimit);
-    expect(energyCapped(pool, item('AEG Rifle', 'legendary'), fit({ ...STARTER_AEG, barrel: item('Long Barrel') }))).toBe(false);
+    expect(energyCapped(pool, item('AEG Rifle'), fit({ ...STARTER_AEG, barrel: item('Long Barrel') }))).toBe(false);
   });
 
   it("caps a barrel's energy at the site limit, and says so, when a looser stats.md pushes it past", () => {
@@ -297,7 +216,7 @@ describe('barrels and muzzle parts, acceptance 2: the site limit still holds (M2
     } finally {
       Object.assign(BARRELS.long, saved);
     }
-    expect(kitReplica(pool, item('AEG Rifle'), fit({ ...STARTER_AEG, barrel: item('Long Barrel') })).muzzleEnergy).toBeCloseTo(AEG.muzzleEnergy * 1.08);
+    expect(kitReplica(pool, item('AEG Rifle'), fit({ ...STARTER_AEG, barrel: item('Long Barrel') })).muzzleEnergy).toBeCloseTo(AEG.muzzleEnergy * 1.1);
   });
 
   it('leaves a barrel the pistol cannot take out of the pistol, and never fits one the kit does not name', () => {
@@ -309,9 +228,26 @@ describe('barrels and muzzle parts, acceptance 2: the site limit still holds (M2
   });
 });
 
-describe('M32 acceptance 2: the Cyber Pistol as carried at Legendary', () => {
-  const legendary: ItemRef = { asset: '000019', tier: 'legendary' };
-  const cyber = kitReplica(pool, legendary, EMPTY_FIT);
+describe('the LV1 rebalance: the Low-Cap Magazine and the Long Barrel', () => {
+  it('carries the Low-Cap as half the BBs in each, two more magazines, a quicker change and a quicker draw', () => {
+    expect(MAGAZINES.lowCap).toMatchObject({ capacity: 0.5, carried: 2, reloadScale: 0.75, drawScale: 0.9 });
+    const slot = kitSlot(pool, item('AEG Rifle'), fit({ ...STARTER_AEG, magazine: item('Low-Cap Magazine') }));
+    const stock = handlingOf(AEG, factoryParts(AEG));
+    const h = handlingOf(slot.replica, slot.parts);
+    expect(h.magSize).toBe(Math.round(AEG.magSize * 0.5));
+    expect(h.mags).toBe(AEG.mags + 2);
+    expect(h.reloadTime).toBeCloseTo(stock.reloadTime * 0.75);
+    expect(h.drawTime).toBeCloseTo(stock.drawTime * 0.9);
+  });
+
+  it('gives the Long Barrel 10 % more energy, a 0.9 spread and slower handling', () => {
+    expect(BARRELS.long).toMatchObject({ energy: 0.1, spreadScale: 0.9, handlingScale: 1.15 });
+  });
+});
+
+describe('M32 acceptance 2: the Cyber Pistol as carried (LV1: its own numbers, the old Legendary ones)', () => {
+  const ref: ItemRef = { asset: '000019' };
+  const cyber = kitReplica(pool, ref, EMPTY_FIT);
 
   it('shoots 1.00 J on 0.25 g BBs, 14 a second, spread 0.30 degrees, kick 0.06 degrees', () => {
     expect(cyber.id).toBe('cyber');
@@ -337,19 +273,16 @@ describe('M32 acceptance 2: the Cyber Pistol as carried at Legendary', () => {
     expect(cyber.defaultFireMode).toBe('semi');
   });
 
-  it('is not held back by the pistol site limit: 1.00 J is the limit, and the Legendary one stays under it', () => {
+  it('is not held back by the pistol site limit: 1.00 J is the limit, and it stays on it', () => {
     expect(cyber.energyLimit).toBeCloseTo(1.0, 5);
     expect(cyber.muzzleEnergy).toBeLessThanOrEqual(cyber.energyLimit + 1e-9);
-    expect(energyCapped(pool, legendary, EMPTY_FIT)).toBe(false);
+    expect(energyCapped(pool, ref, EMPTY_FIT)).toBe(false);
   });
 
-  it('uses only its own magazine and carries the same on a stats.md row set for the Legendary bonus', () => {
+  it('uses only its own magazine and is carried exactly as its config (stats.md) has it: no tier lifts it', () => {
     expect(cyber.magazines).toEqual(['standard']);
-    // The Common-tier row is weaker than what the spec says, so the spec numbers do come from the Legendary bonus.
-    expect(CYBER_PISTOL.muzzleEnergy).toBeLessThan(cyber.muzzleEnergy);
-    expect(CYBER_PISTOL.spreadDeg).toBeGreaterThan(cyber.spreadDeg);
-    expect(CYBER_PISTOL.reloadTime).toBeGreaterThan(cyber.reloadTime);
-    expect(CYBER_PISTOL.fireRate).toBeLessThan(cyber.fireRate);
+    expect({ ...cyber, name: CYBER_PISTOL.name }).toEqual(CYBER_PISTOL);
+    expect([CYBER_PISTOL.muzzleEnergy, CYBER_PISTOL.fireRate, CYBER_PISTOL.spreadDeg, CYBER_PISTOL.reloadTime, CYBER_PISTOL.drawTime]).toEqual([1.0, 14, 0.3, 1.1, 0.28]);
   });
 
   it('stays on target to about 33 m out of the box on 0.25 g BBs', () => {

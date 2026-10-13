@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { HITS } from '../config/hits';
 import { DEPOT } from '../map/depot';
 import { initPhysics } from '../physics/physicsWorld';
+import { GAME_POOL } from '../pool/gamePool';
 import type { Character } from '../sim/character';
 import { isInPlay } from '../sim/elimination';
 import { haulTotals, regenClear, runHaul } from '../sim/extraction';
@@ -63,13 +64,16 @@ describe('Extraction on Depot, headless (M43)', () => {
     expect(noise).toBeGreaterThanOrEqual(Math.floor(locker.openTime));
     expect(locker.open).toBe(true);
     expect(run.carried).toEqual(locker.finds);
-    // The locker always holds a part, from Rare up (pool.md).
-    expect(['rare', 'veryRare', 'epic', 'legendary']).toContain(locker.finds[0]!.item!.tier);
+    // The locker always holds XP in its pool.md range, never a resupply (no supply event in this run).
+    const kind = GAME_POOL.caseKinds.find((k) => k.key === 'locker')!;
+    expect(locker.finds[0]!.resupply).toBe(false);
+    expect(locker.finds[0]!.xp).toBeGreaterThanOrEqual(kind.xp.min);
+    expect(locker.finds[0]!.xp).toBeLessThanOrEqual(kind.xp.max);
     r.yours.use = false;
     r.moveYou(run.exits.find((e) => e.open)!.position);
     r.play(r.run.rules.extractTime + 1);
     expect(r.state.round.reason).toBe('extracted');
-    expect(haulTotals(runHaul(run)).items).toEqual([locker.finds[0]!.item]);
+    expect(haulTotals(runHaul(run))).toEqual({ xp: locker.finds[0]!.xp });
     r.dispose();
   });
 

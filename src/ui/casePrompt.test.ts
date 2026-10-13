@@ -1,15 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_BINDINGS, REBINDABLE } from '../config/controls';
 import { HUD } from '../config/render';
-import { GAME_POOL } from '../pool/gamePool';
 import { type CaseFind, createRunState, type RunCase, type RunState } from '../sim/extraction';
 import { vec3 } from '../sim/vec';
 import { FakeElement, fakeDocument } from './testSupport';
-import { CasePrompt, DROPPED_LINE, foundLine, itemName, openingLine, promptLine } from './casePrompt';
+import { CasePrompt, DROPPED_LINE, foundLine, openingLine, promptLine } from './casePrompt';
 import { carriedNote, haulWhat } from './runStatus';
 
-const grip = GAME_POOL.assets.find((a) => a.category === 'grip')!;
-const part: CaseFind = { fc: 120, resupply: false, item: { asset: grip.id, tier: 'epic' } };
+const xpFind: CaseFind = { xp: 120, resupply: false };
 
 describe("Extraction's case prompt (M44)", () => {
   it('says which key opens the case beside you, and what is being opened', () => {
@@ -20,19 +18,21 @@ describe("Extraction's case prompt (M44)", () => {
     expect(openingLine({ name: 'Dropped case', dropped: true })).toBe('Picking up what you dropped');
   });
 
-  it('says what a case held: its part by tier and name, its FC, a resupply', () => {
-    expect(itemName(GAME_POOL, part.item!)).toBe(`Epic ${grip.name}`);
-    expect(foundLine({ dropped: false, finds: [part] })).toBe(`Epic ${grip.name} · +120 FC`);
-    expect(foundLine({ dropped: false, finds: [{ fc: 0, resupply: true, item: null }] })).toBe('BB resupply · magazines topped up');
-    expect(foundLine({ dropped: true, finds: [part, { fc: 30, resupply: false, item: null }] })).toBe('Picked up 150 FC and 1 part');
+  it('says what a case held: its XP or a resupply (LV1: never a part)', () => {
+    expect(foundLine({ dropped: false, finds: [xpFind] })).toBe('+120 XP');
+    expect(foundLine({ dropped: false, finds: [{ xp: 0, resupply: true }] })).toBe('BB resupply · magazines topped up');
+    expect(foundLine({ dropped: false, finds: [xpFind, { xp: 0, resupply: true }] })).toBe('+120 XP · BB resupply · magazines topped up');
+    expect(foundLine({ dropped: false, finds: [] })).toBe('Empty');
+    expect(foundLine({ dropped: true, finds: [xpFind, { xp: 30, resupply: false }] })).toBe('Picked up 150 XP');
+    expect(foundLine({ dropped: true, finds: [{ xp: 0, resupply: true }] })).toBe('Picked up nothing');
     expect(DROPPED_LINE).toMatch(/go back for it/);
   });
 
   it('shows what you carry beside the respawn note, and nothing when your hands are empty', () => {
     expect(carriedNote([])).toBe('');
-    expect(carriedNote([part, { fc: 25, resupply: false, item: null }])).toBe('Carrying 145 FC and 1 part');
-    expect(haulWhat({ fc: 0, items: [1, 2] })).toBe('2 parts');
-    expect(haulWhat({ fc: 1600, items: [] })).toBe('1,600 FC');
+    expect(carriedNote([xpFind, { xp: 25, resupply: false }])).toBe('Carrying 145 XP');
+    expect(haulWhat({ xp: 0 })).toBe('');
+    expect(haulWhat({ xp: 1600 })).toBe('1,600 XP');
   });
 
   it('opens cases on a key of its own, G by default, rebindable on Key Bindings', () => {
@@ -44,7 +44,7 @@ describe("Extraction's case prompt (M44)", () => {
 });
 
 describe('the case prompt on screen (M44)', () => {
-  const field: RunCase = { kind: 'field-case', name: 'Field case', position: vec3(), yaw: 0, openTime: 4, heard: 14, finds: [part], open: false, dropped: false };
+  const field: RunCase = { kind: 'field-case', name: 'Field case', position: vec3(), yaw: 0, openTime: 4, heard: 14, finds: [xpFind], open: false, dropped: false };
   const locker: RunCase = { ...field, kind: 'locker', name: "Marshal's locker", openTime: 7 };
   const runWith = (over: Partial<RunState>): RunState => ({ ...createRunState(), cases: [field, locker], ...over });
   let key = 'G';
@@ -110,9 +110,9 @@ describe('the case prompt on screen (M44)', () => {
     prompt.opened({ ...field, open: true }, 10);
     prompt.update(runWith({}), 10.1);
     expect(root.hidden).toBe(false);
-    expect(text()).toBe(`Epic ${grip.name} · +120 FC`);
+    expect(text()).toBe('+120 XP');
     prompt.update(runWith({ inReach: 1 }), 10 + HUD.caseFoundTime - 0.1);
-    expect(text()).toContain('Epic');
+    expect(text()).toBe('+120 XP');
     prompt.update(runWith({ inReach: 1 }), 10 + HUD.caseFoundTime + 0.1);
     expect(text()).toBe("Hold G to open the marshal's locker");
     prompt.dropped(20);
@@ -143,7 +143,7 @@ describe('the case prompt on screen (M44)', () => {
 describe('the case-opening bar when the opening stops, resumes, is paused or runs calm (QA, M64 UI-11)', () => {
   // The sim restarts an opening from nothing when the Use key is let go or the runner steps out of reach (stopOpening in
   // sim/extraction.ts), so the bar must too.
-  const field: RunCase = { kind: 'field-case', name: 'Field case', position: vec3(), yaw: 0, openTime: 4, heard: 14, finds: [part], open: false, dropped: false };
+  const field: RunCase = { kind: 'field-case', name: 'Field case', position: vec3(), yaw: 0, openTime: 4, heard: 14, finds: [xpFind], open: false, dropped: false };
   const runWith = (over: Partial<RunState>): RunState => ({ ...createRunState(), cases: [field], ...over });
   let prompt: CasePrompt;
   let root: FakeElement;

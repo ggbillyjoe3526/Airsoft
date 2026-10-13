@@ -49,8 +49,8 @@ describe('the skin checks on the game as it ships', () => {
     expect(offeredSchemes(false)).toEqual([...SCHEME_IDS]);
   });
 
-  it('find the one module of play that reaches the schemes, passing an id along', () => {
-    expect(ctx.playImports).toEqual([{ file: 'src/config/matchRules.ts', names: ['defaultScheme'] }]);
+  it('find no module of play that reaches the schemes (LV1: config/matchRules.ts was reached through the Armory, now gone)', () => {
+    expect(ctx.playImports).toEqual([]);
   });
 
   it('see what a figure shows: the furniture most, a thin accent line too little to read at a distance', () => {

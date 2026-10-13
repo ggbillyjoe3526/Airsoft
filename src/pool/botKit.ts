@@ -6,15 +6,14 @@ import { fitOptics, fitParts } from '../sim/armament';
 import { type Character, createCharacter } from '../sim/character';
 import { createRng, rngNext, type RngState } from '../sim/rng';
 import { vec3 } from '../sim/vec';
-import { drawTier } from './armory';
-import type { ItemRef } from './collection';
+import type { ItemRef } from './item';
 import { EMPTY_FIT, FIT_CATEGORY, FIT_SLOTS, kitSlot, type KitSlot, type ReplicaFit } from './kit';
-import { type Asset, assetOfReplica, fits, isChase, type Pool, replicaOf, tiersOf } from './pool';
+import { type Asset, assetOfReplica, fits, type Pool, replicaOf } from './pool';
 
 /**
  * A bot's own loadout (M29b): on a difficulty that rolls them (config/bots.ts BOT_LOADOUTS), each opponent carries its
- * replicas at a tier drawn by the Armory's odds, with a power source and, slot by slot, a part or none, every one of them
- * something that fits and at its own drawn tier. BB weight and hop-up stay as the replica comes. Seeded by the match's
+ * replicas with a power source and, slot by slot, a part or none, every one of them something that fits. Bots aren't
+ * levelled: they draw from every item there is. BB weight and hop-up stay as the replica comes. Seeded by the match's
  * seed and the bot's id, so a match replays the same kits. Pure.
  */
 
@@ -25,11 +24,6 @@ export function botKitSeed(seed: number, id: number): number {
 
 function pick<T>(list: readonly T[], rng: RngState): T | undefined {
   return list.length > 0 ? list[Math.min(list.length - 1, Math.floor(rngNext(rng) * list.length))] : undefined;
-}
-
-/** An item of `asset` at a tier drawn by the odds, among the tiers it comes in (a chase replica: Legendary, M32). */
-function drawItem(pool: Pool, asset: Asset, rng: RngState): ItemRef {
-  return { asset: asset.id, tier: drawTier(tiersOf(pool, asset), rng).id };
 }
 
 /**
@@ -45,8 +39,7 @@ export function randomFit(pool: Pool, replica: Asset, rng: RngState, partChance:
     // The roll is made whatever the options, so one slot's choices never shift the next slot's draws.
     const wanted = slot === 'power' || rngNext(rng) < partChance;
     const asset = pick(options, rng);
-    const item = asset ? drawItem(pool, asset, rng) : null;
-    fit[slot] = wanted ? item : null;
+    fit[slot] = wanted && asset ? { asset: asset.id } : null;
   }
   return fit;
 }
@@ -65,8 +58,8 @@ export function rolledKit(pool: Pool, loadout: readonly ReplicaConfig[], seed: n
   const items: ItemRef[] = [];
   const kit = loadout.map((replica) => {
     const asset = assetOfReplica(pool, replica);
-    if (!asset || pool.tiers.length === 0) return { replica, optic: null, parts: factoryParts(replica) };
-    const item = drawItem(pool, asset, rng);
+    if (!asset) return { replica, optic: null, parts: factoryParts(replica) };
+    const item = { asset: asset.id };
     const fit = randomFit(pool, asset, rng, partChance);
     items.push(item, ...Object.values(fit).filter((r): r is ItemRef => r !== null));
     return kitSlot(pool, item, fit);
@@ -119,12 +112,13 @@ export function kittedCharacter(id: number, team: number, kit: readonly KitSlot[
 }
 
 /**
- * Which opponent, if any, carries a chase replica this match (M32): with `chance` (RANDOM_LOADOUT.chaseChance), one of
- * `opponents` (bot ids), seeded by the match, carries one of the chase replicas in `owned` (pool asset ids: the ones
- * the player owns) as its primary. Its own random stream, so it never shifts the kits' rolls. Pure.
+ * Which opponent, if any, carries one of the player's earned replicas this match (M32; LV1: a replica a level above 0
+ * unlocked, the Cyber Pistol at the cap): with `chance` (RANDOM_LOADOUT.chaseChance), one of `opponents` (bot ids),
+ * seeded by the match, carries one of the replicas in `earned` (pool asset ids) as its primary. Its own random stream,
+ * so it never shifts the kits' rolls. Pure.
  */
-export function chaseCarrier(pool: Pool, owned: readonly string[], seed: number, opponents: readonly number[], chance: number = RANDOM_LOADOUT.chaseChance): { id: number; replica: ReplicaConfig } | null {
-  const chase = owned.map((id) => pool.byId.get(id)).filter((a): a is Asset => !!a && a.category === 'replica' && isChase(a));
+export function chaseCarrier(pool: Pool, earned: readonly string[], seed: number, opponents: readonly number[], chance: number = RANDOM_LOADOUT.chaseChance): { id: number; replica: ReplicaConfig } | null {
+  const chase = earned.map((id) => pool.byId.get(id)).filter((a): a is Asset => !!a && a.category === 'replica');
   if (chase.length === 0 || opponents.length === 0) return null;
   const rng = createRng((seed ^ 0x5eedc4a5) >>> 0);
   if (rngNext(rng) >= chance) return null;

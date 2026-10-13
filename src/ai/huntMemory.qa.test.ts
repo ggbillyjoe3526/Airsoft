@@ -134,6 +134,8 @@ describe('a hunting bot whose goal its team checked meanwhile turns to another (
     const since = new Map<number, number>();
     let checked: ((b: Bot) => boolean) | undefined;
     const out = { longest: 0, ticks: 0, hunting: 0 };
+    // Bots without personalities (BN1), passed last: this measures the hunt's re-pick, and with personalities drawn
+    // fewer bots hunt (anchors hold, rushers push in), so the blind bots' longest stale walk fell to 1.45 s on seed 1.
     playMatch(150, seed, undefined, BOTS, 'elimination', ROUNDS, WOODLAND, 5, HITS, (state, controller) => {
       const w = worldOf(controller);
       if (!checked) {
@@ -152,7 +154,7 @@ describe('a hunting bot whose goal its team checked meanwhile turns to another (
         since.set(b.character.id, t0);
         out.longest = Math.max(out.longest, state.time - t0);
       }
-    });
+    }, undefined, undefined, new Map());
     return out;
   }
 
