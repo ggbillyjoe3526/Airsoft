@@ -34,7 +34,7 @@ KIT_REMAT = (('PlateFront', 'Molle'), ('PlateBack', 'Molle'), ('Cummer', 'Laser'
              ('PackPatch', 'Team'), ('PackStrap', 'Webbing'), ('Pack', 'Nylon'), ('Belt', 'Nylon'),
              ('Buckle', 'Metal'), ('HolsterLoop', 'Polymer'), ('HolsterGuard', 'Polymer'), ('Holster', 'Polymer'),
              ('PistolGrip', 'Mag'), ('DumpPouch', 'Nylon'))
-TEAM_CARRIER = False         # True: the plate carrier and cummerbund in the team colour (as v11), not coyote
+TEAM_CARRIER = True          # the plate carrier and cummerbund in the team colour, as v11 (William, 13 Oct: easier to read)
 
 
 def kit_v12(kit):
