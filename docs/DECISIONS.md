@@ -400,6 +400,14 @@ replaces its line; the old one stays findable in the archive or in git.
 - **The practice range is its own small map (2026-10-04).** Practice is the last mode on the Match screen, and the
   Tutorial shows on the title screen only on a clean save, with Replay tutorial in Settings (owner, 2026-10-07; replaces
   his 2026-10-04 rulings that put the range and an always-shown Tutorial button on the title screen).
+- **Practice's moving targets and timed challenge (2026-10-13, M93, the owner's playtest note 10; Claude's defaults,
+  the owner may change any).** The range adds two figures on rails, a swinging plate, four small plates at 15 m and
+  four pop-ups (one crouched), each placed where nothing hides it from the spawn, moving or not (a test checks it).
+  Targets are placed from data with a facing (`RangeTargetSpec`), so a map can place them too (M94). The timed
+  challenge is off by default and switched in Practice's pause menu (saved): a START plate stands near the line; shoot
+  it, wait out a 3 s countdown, then hit as many orange-lit targets as you can in 60 s, two lit at a time, each for
+  3 s plus 0.04 s a metre (`RANGE_CHALLENGE`). The score is lit targets hit; the best is kept in the records per
+  course (`bestChallenge.range`), and the Tutorial never offers it.
 - **A map's checks measure it against Depot (2026-10-11, CT2; the standard is the owner's, 2026-10-05).** The numbers are
   `MAP_STANDARD` and `MAP_BALANCE_BANDS` (`src/config/contentRules.ts`): 3 lanes (2 a look, 1 a fail), the longest
   clear sightline 34 m, spawn yards 5 m round, each end's walk to the middle of the walkable ground within 15 % (25 % a

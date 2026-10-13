@@ -21,6 +21,8 @@ export const HUD_TEXT = {
   skip: { round: 'Esc to skip the round', result: 'Esc to skip to the result', skipping: 'Skipping the round…' },
   /** The pause menu's button, by what it skips to. */
   skipButton: { round: 'Skip to next round', result: 'Skip to the result' },
+  /** The practice range's pause menu (M93): the timed challenge's switch, by whether it is on. */
+  challengeButton: { on: 'Timed challenge: On', off: 'Timed challenge: Off' },
 } as const;
 
 /** What the spectating line says about skipping the round (M83): how, that it is under way, or nothing. */

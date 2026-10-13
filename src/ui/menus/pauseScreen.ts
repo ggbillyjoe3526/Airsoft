@@ -14,12 +14,15 @@ export interface PauseActions {
   onSkipTutorial: () => void;
   /** A match once you are out (M83): play the rest of the round out at once and go on to the next. */
   onSkipRound: () => void;
+  /** The practice range only (M93): turn the timed challenge on or off. */
+  onChallenge: () => void;
 }
 
 /**
  * Esc during a match: the score so far, then Resume, Settings and Quit (to the title screen). The loadout, mode and
  * difficulty change between matches, so they are not offered here (owner, 2026-10-03). On the practice range (M21)
- * there's no match: the Loadout is offered too, and you go back to the range with what you picked.
+ * there's no match: the Loadout is offered too, and you go back to the range with what you picked, and the timed
+ * challenge's switch (M93).
  */
 export class PauseScreen {
   readonly root: HTMLDivElement;
@@ -30,6 +33,7 @@ export class PauseScreen {
   private readonly skipStep: HTMLButtonElement;
   private readonly skipTutorial: HTMLButtonElement;
   private readonly skipRound: HTMLButtonElement;
+  private readonly challenge: HTMLButtonElement;
   private readonly seed: HTMLParagraphElement;
 
   constructor(actions: PauseActions) {
@@ -45,6 +49,8 @@ export class PauseScreen {
     this.skipRound = menuButton(HUD_TEXT.skipButton.round, 'secondary', actions.onSkipRound);
     this.skipRound.classList.add('menu-pause-skip');
     this.skipRound.hidden = true;
+    this.challenge = menuButton(HUD_TEXT.challengeButton.off, 'secondary', actions.onChallenge);
+    this.challenge.hidden = true;
     // The match's seed, small at the bottom, so a bug seen in play can be reported and replayed (bug pass).
     this.seed = el('p', 'menu-pause-seed');
     panel.append(
@@ -54,6 +60,7 @@ export class PauseScreen {
       this.hint,
       this.skipRound,
       this.loadout,
+      this.challenge,
       this.skipStep,
       this.skipTutorial,
       withIcon(menuButton('Settings', 'secondary', actions.onSettings), PAUSE_ICONS.settings),
@@ -71,6 +78,17 @@ export class PauseScreen {
   setRange(range: boolean, tutorial = false): void {
     this.loadout.hidden = !range;
     this.skipStep.hidden = this.skipTutorial.hidden = !(range && tutorial);
+  }
+
+  /**
+   * The timed challenge's switch (M93), on the practice range outside the tutorial: says whether it is on (and is a
+   * toggle button for a screen reader); hidden where it doesn't apply (null).
+   */
+  setChallenge(on: boolean | null): void {
+    this.challenge.hidden = on === null;
+    if (on === null) return;
+    this.challenge.textContent = HUD_TEXT.challengeButton[on ? 'on' : 'off'];
+    this.challenge.setAttribute('aria-pressed', String(on));
   }
 
   /**

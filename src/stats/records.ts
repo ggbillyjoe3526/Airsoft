@@ -38,6 +38,11 @@ export interface Records {
   extractionStreak: number;
   bestExtractionStreak: number;
   fastestExtraction: number | null;
+  /**
+   * The practice range's timed challenge (M93): the most lit targets hit in one run, by course (config/range.ts
+   * RANGE_CHALLENGE.course: 'range'). Saved beside the rest; a save from before M93 has none.
+   */
+  bestChallenge: Partial<Record<string, number>>;
 }
 
 /** A finished match, as the records see it. */
@@ -97,7 +102,7 @@ export interface RecordStore {
 }
 
 export function emptyRecords(): Records {
-  return { results: {}, bestAccuracy: null, streak: 0, bestStreak: 0, bestHaul: null, extractionStreak: 0, bestExtractionStreak: 0, fastestExtraction: null };
+  return { results: {}, bestAccuracy: null, streak: 0, bestStreak: 0, bestHaul: null, extractionStreak: 0, bestExtractionStreak: 0, fastestExtraction: null, bestChallenge: {} };
 }
 
 /** The records cell of a match: `${difficulty}.${mode}`, or with a named ruleset (M39) `${difficulty}.${mode}.${ruleset}`. */
@@ -111,6 +116,9 @@ const RESULT_KEY = /^[a-z][a-zA-Z0-9]*\.[a-z][a-zA-Z0-9]*$/;
 const RULESET_RESULT_KEY = /^[a-z][a-zA-Z0-9]*\.[a-z][a-zA-Z0-9]*\.[a-z][a-zA-Z0-9]*$/;
 /** Where the named rulesets' cells are saved (M39): beside `results`, which builds before M39 rewrite with what they know. */
 const RULESET_RESULTS_FIELD = 'rulesetResults';
+
+/** "range": a timed challenge course's id (M93), as RANGE_CHALLENGE.course names it. */
+const COURSE = /^[a-z][a-zA-Z0-9]*$/;
 
 const count = (v: unknown): number => (typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : 0);
 
@@ -137,6 +145,13 @@ export function loadRecords(store: RecordStore | null): Records {
     records.bestExtractionStreak = Math.max(count(r.bestExtractionStreak), records.extractionStreak);
     const fastest = r.fastestExtraction;
     if (typeof fastest === 'number' && Number.isFinite(fastest) && fastest > 0) records.fastestExtraction = fastest;
+    // The timed challenge's bests (M93): absent from older saves; a course this build doesn't know is kept.
+    const challenge = r.bestChallenge;
+    if (challenge && typeof challenge === 'object') {
+      for (const [course, best] of Object.entries(challenge as Record<string, unknown>)) {
+        if (COURSE.test(course) && count(best) > 0) records.bestChallenge[course] = count(best);
+      }
+    }
   } catch {
     // Unreadable: treated as nothing saved.
   }
@@ -199,6 +214,13 @@ export function addMatch(records: Records, m: MatchResult): RecordNews {
     }
   }
   return news;
+}
+
+/** A finished run of the timed challenge (M93) on `course` with `hits`: kept if it beats the best; true when it did. */
+export function addChallengeRun(records: Records, course: string, hits: number): boolean {
+  if (hits <= (records.bestChallenge[course] ?? 0)) return false;
+  records.bestChallenge[course] = hits;
+  return true;
 }
 
 /** An Extraction run's streak and bests (M47): a run you got out of extends the streak, any other ends it. */
