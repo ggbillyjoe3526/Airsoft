@@ -8,7 +8,7 @@ import { BODY, MOVEMENT } from './config/movement';
 import { NAV } from './config/nav';
 import { PHYSICS } from './config/physics';
 import { PRACTICE_SPOTS } from './config/practice';
-import { RANGE } from './config/range';
+import { RANGE, RANGE_CHALLENGE, rangeLayout } from './config/range';
 import type { QualitySettings } from './config/render';
 import type { ReplicaConfig } from './config/replicas';
 import { SIM, SIM_DT } from './config/sim';
@@ -19,7 +19,7 @@ import { advanceStepper, createStepper, stepperAlpha } from './core/fixedStepper
 import type { PlayerInput } from './input/playerInput';
 import type { MatchSetup } from './matchSession';
 import type { MapData } from './map/mapTypes';
-import { practiceSpots } from './map/practiceSpots';
+import { practiceLayout } from './map/practiceLayout';
 import { RANGE_MAP } from './map/range';
 import { buildNavGrid } from './nav/navGrid';
 import { PhysicsWorld } from './physics/physicsWorld';
@@ -37,9 +37,10 @@ import { TorchBeams } from './render/torchBeams';
 import type { Renderer } from './render/renderer';
 import { canAimDownSights } from './sim/aiming';
 import { fitOptics, fitParts, setBbWeights, setHopUps } from './sim/armament';
-import { type Character, createCharacter, respawnCharacter } from './sim/character';
+import { type Character, createCharacter, eyeHeight, respawnCharacter } from './sim/character';
 import { createCommand, type PlayerCommand } from './sim/commands';
-import { createRangeTargets, targetsAtSpots } from './sim/rangeTargets';
+import { type ChallengePhase, type ChallengeRun, type ChallengeSight, createChallenge, type RangeChallenge, setChallengeOn, stepChallenge } from './sim/rangeChallenge';
+import { createRangeTargets, type RangeTarget } from './sim/rangeTargets';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
 import { partsUnder } from './sim/torch';
 import { createWind } from './sim/wind';
@@ -52,9 +53,12 @@ import { CoachPanel } from './ui/coachPanel';
 import { Minimap, type MinimapFrame } from './ui/minimap';
 import type { HeardPlayer } from './ui/minimapView';
 import { TutorialShowcase } from './ui/tutorialShowcase';
-import { type LastShot, lastShotText, RangeReadout } from './ui/rangeReadout';
+import { ChallengeBanner, challengeText, type LastShot, lastShotText, RangeReadout } from './ui/rangeReadout';
 
 const PLAYER_ID = 0;
+
+/** inSight's ray (M94), reused. */
+const SIGHT = { eye: vec3(), dir: vec3() };
 
 /** Practice has nobody to hear (M94): the minimap's heard players, always none. */
 const NOBODY_HEARD: readonly HeardPlayer[] = [];
@@ -65,9 +69,16 @@ export type RangeSetup = Pick<MatchSetup, 'kit' | 'teamColours' | 'look'> & {
   armory?: boolean;
   /**
    * The map to practise on (M94), under the light it plays in: targets where the other team's bots would play
-   * (map/practiceSpots.ts) and no bots. Left out: the range (the tutorial's always).
+   * (map/practiceLayout.ts) and no bots. Left out: the range (the tutorial's always).
    */
   map?: MapData;
+  /**
+   * The timed challenge (M93): on as Practice opens (not in the tutorial), and the best score kept so far on its course,
+   * `course` (RANGE_CHALLENGE.course on the range, the map's id on a map, M94).
+   */
+  challenge?: boolean;
+  challengeBest?: number;
+  course?: string;
 };
 
 /** Where you stand and which way you face: kept when the range is rebuilt for a new loadout. */
@@ -115,6 +126,19 @@ export class RangeSession {
   private motion: MotionScale = FULL_MOTION;
   private readonly ctx: SimContext;
   private lastShot: LastShot | null = null;
+  /** The timed challenge (M93) and its big word over the middle of the screen. */
+  private readonly challenge: RangeChallenge;
+  /** The course the challenge's best is kept under (M94: the range's, or the map's id). */
+  readonly course: string;
+  /** Which targets the challenge may light (M94): on a map only those you can see; on the range any. */
+  private readonly sight: ChallengeSight;
+  /** Whether a START plate stands here, so the challenge can be played (M94: a map may have no room for one). */
+  private readonly hasChallenge: boolean;
+  private readonly banner: ChallengeBanner;
+  /** What the readout last showed of the challenge: its line is rebuilt only when one of these changes. */
+  private readonly challengeShown: { phase: ChallengePhase | null; second: number; hits: number; best: number } = { phase: null, second: -1, hits: -1, best: -1 };
+  /** Told each finished run of the timed challenge (M93), so the game can keep a new best. */
+  onChallengeRun: ((run: ChallengeRun) => void) | null = null;
   /** The tutorial (M16), when the range was opened for it, and its coach. */
   private tutorial: TutorialTracker | null = null;
   private coach: CoachPanel | null = null;
@@ -173,7 +197,14 @@ export class RangeSession {
     this.physics = new PhysicsWorld(map, BODY, SIM_DT);
     const nav = buildNavGrid(map, NAV);
     this.state = createGameState(seed, BALLISTICS.maxBBs, ROUNDS);
-    this.state.targets = onRange ? createRangeTargets() : targetsAtSpots(practiceSpots(map, nav, this.physics, PRACTICE_SPOTS));
+    // The range's own layout, or a map's: its targets where the other team's bots would play (M94).
+    this.state.targets = createRangeTargets(onRange ? rangeLayout() : practiceLayout(map, nav, this.physics, PRACTICE_SPOTS), this.state.rng);
+    this.course = setup.course ?? RANGE_CHALLENGE.course;
+    this.sight = onRange ? null : (t) => this.inSight(t);
+    this.challenge = createChallenge(setup.challengeBest ?? 0);
+    // A map with no room for the START plate in front of your start has no challenge (map/practiceLayout.ts startPlate).
+    this.hasChallenge = this.state.targets.some((t) => t.start);
+    if (setup.challenge && tutorialFrom === undefined && this.hasChallenge) setChallengeOn(this.challenge, this.state.targets, true, this.state.rng);
     this.ctx = createSimContext({
       mover: this.physics,
       query: this.physics,
@@ -225,7 +256,8 @@ export class RangeSession {
     this.minimap = onRange ? null : new Minimap(container, map.blocks, cssColor(hud[this.player.team]!), cssColor(hud[1 - this.player.team]!), map.terrain ?? null, map.foliage ?? [], map.storeys);
     this.minimap?.setCaption(map.name);
     this.readout = new RangeReadout(container);
-    this.readout.set(lastShotText(null));
+    this.banner = new ChallengeBanner(container);
+    this.showLine();
     if (tutorialFrom !== undefined) {
       this.tutorial = new TutorialTracker(tutorialSteps(setup.armory !== false), canAimDownSights(this.player.armament), tutorialFrom, this.loadout.length);
       this.coach = new CoachPanel(container, (action) => input.keyName(action));
@@ -244,15 +276,36 @@ export class RangeSession {
     return t && t.goalIndex < t.steps.length ? t.goalIndex : undefined;
   }
 
-  /** "Tutorial · step 3 of 10", or "Practice · Depot" (M94: "Practice · Range" on the range). */
+  /**
+   * "Tutorial · step 3 of 10", or "Practice · Depot" (M94: "Practice · Range" on the range), with the timed challenge's
+   * best when it is on (M93).
+   */
   get status(): string {
     const t = this.tutorial;
-    return t && !t.finished ? `Tutorial · step ${t.stepIndex + 1} of ${t.steps.length}: ${t.step!.title}` : `Practice · ${this.map.name}`;
+    if (t && !t.finished) return `Tutorial · step ${t.stepIndex + 1} of ${t.steps.length}: ${t.step!.title}`;
+    const c = this.challenge;
+    const where = `Practice · ${this.map.name}`;
+    return c.phase === 'off' ? where : `${where} · timed challenge · ${c.best > 0 ? `best ${c.best}` : 'no best yet'}`;
   }
 
   /** The map practised on (M94): the range, or the map Practice was opened on; rebuilt on the same one. */
   get practiceMap(): MapData {
     return this.map;
+  }
+
+  /**
+   * The timed challenge on the pause menu (M93): whether it is on, or null while the tutorial coaches or where no START
+   * plate stands (it isn't offered then).
+   */
+  get challengeOffer(): boolean | null {
+    return this.coaching || !this.hasChallenge ? null : this.challenge.phase !== 'off';
+  }
+
+  /** The pause menu's Timed challenge: on (the START plate stands) or off (free practice; a run under way is dropped). */
+  setChallenge(on: boolean): void {
+    if (this.challengeOffer === null) return;
+    setChallengeOn(this.challenge, this.state.targets, on, this.state.rng);
+    this.showLine();
   }
 
   /** The tutorial is running (its coach up): the pause menu offers Skip step and Skip tutorial (audit POOL-14). */
@@ -315,6 +368,7 @@ export class RangeSession {
     for (let i = 0; i < ticks; i++) {
       this.input.fillCommand(this.playerCommand);
       stepSimulation(this.state, this.commands, this.ctx, SIM_DT);
+      stepChallenge(this.challenge, this.state.targets, this.state.events, PLAYER_ID, SIM_DT, this.state.rng, this.sight);
       this.afterTick();
     }
     return ticks;
@@ -331,7 +385,8 @@ export class RangeSession {
     const alpha = stepperAlpha(this.stepper);
     const pitch = this.input.pitch + this.player.armament.recoil;
     updateFirstPersonCamera(this.renderer.camera, this.player, BODY, HITS, alpha, this.input.yaw, pitch, this.motion.leanRoll);
-    this.targets.update(dt);
+    this.targets.update(dt, alpha);
+    this.banner.frame(dt, this.challenge, this.playing);
     this.showcase?.frame(dt);
     this.combat.frame(dt, alpha, this.input.yaw, pitch);
     this.torches.update(this.renderer.camera, this.player, true, alpha);
@@ -408,6 +463,7 @@ export class RangeSession {
     this.torches.dispose();
     this.minimap?.dispose();
     this.readout.dispose();
+    this.banner.dispose();
     this.coach?.dispose();
     this.showcase?.dispose();
     // Out of the scene, kept by the renderer for the next session on this map (freed there, CORE-33).
@@ -446,6 +502,29 @@ export class RangeSession {
     }
   }
 
+  /**
+   * Whether target `t` is in plain sight from your eye (M94): nothing solid between your eye and its middle (a plate's
+   * centre, a figure's chest, standing or crouched). Rays only, nothing allocated.
+   */
+  private inSight(t: RangeTarget): boolean {
+    const p = this.player;
+    const eye = SIGHT.eye;
+    eye.x = p.position.x;
+    eye.y = p.position.y + eyeHeight(p.crouchAmount, BODY);
+    eye.z = p.position.z;
+    const aimY = t.kind === 'steel' ? t.position.y : t.position.y + (HITS.bodyTop + HITS.bodyBottom) / 2 - (t.crouched ? HITS.crouchDrop : 0);
+    const d = SIGHT.dir;
+    d.x = t.position.x - eye.x;
+    d.y = aimY - eye.y;
+    d.z = t.position.z - eye.z;
+    const len = Math.hypot(d.x, d.y, d.z);
+    if (len < 1e-6) return true;
+    d.x /= len;
+    d.y /= len;
+    d.z /= len;
+    return this.physics.raycastStatic(eye, d, len) < 0;
+  }
+
   /** How far a point is for the readout: downrange on the range, from where you stand on a map (M94). */
   private howFar(p: { x: number; z: number }): number {
     return this.map === RANGE_MAP ? downrange(p) : across(this.player.position, p);
@@ -469,6 +548,12 @@ export class RangeSession {
       this.tutorialMoved(t);
       if (t.finished) this.completeDue = this.completePopup = true;
     }
+    const c = this.challenge;
+    if (c.cue) {
+      this.combat.challengeCue(c.cue);
+      this.banner.cue(c.cue, c);
+      if (c.cue === 'time' && c.last) this.onChallengeRun?.(c.last);
+    }
     for (const e of this.state.events) {
       // Your BB came down (a ricochet's last stop wins), hit a target, or flew out over a wall. On the range distances
       // count downrange of the firing line, as its markers do; on a map (M94) from where you stand.
@@ -482,9 +567,31 @@ export class RangeSession {
         const marked = this.map === RANGE_MAP;
         this.lastShot = { distance: this.howFar(e.position), target: t ? { label: t.label, distance: marked ? t.distance : Math.round(this.howFar(t.position)) } : null };
       } else continue;
-      this.readout.set(lastShotText(this.lastShot));
+      if (c.phase === 'off') this.readout.set(lastShotText(this.lastShot));
       this.coach?.setShot(lastShotText(this.lastShot));
     }
+    if (c.phase !== 'off') this.showLine();
+  }
+
+  /**
+   * The readout's line: the last BB's in free practice, the timed challenge's while it is on (M93). The challenge's is
+   * rebuilt only when its phase, its second or its score changes, not every tick.
+   */
+  private showLine(): void {
+    const c = this.challenge;
+    const shown = this.challengeShown;
+    if (c.phase === 'off') {
+      shown.phase = null;
+      this.readout.set(lastShotText(this.lastShot));
+      return;
+    }
+    const second = Math.ceil(c.clock);
+    if (c.phase === shown.phase && second === shown.second && c.hits === shown.hits && c.best === shown.best) return;
+    shown.phase = c.phase;
+    shown.second = second;
+    shown.hits = c.hits;
+    shown.best = c.best;
+    this.readout.set(challengeText(c));
   }
 }
 

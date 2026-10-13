@@ -1,9 +1,8 @@
 import * as THREE from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { RANGE, RANGE_VISUALS } from '../config/range';
+import { RANGE, RANGE_VISUALS, targetSpec } from '../config/range';
 import { lastShotText } from '../ui/rangeReadout';
-import { createRangeTargets, targetsAtSpots } from '../sim/rangeTargets';
-import { vec3 } from '../sim/vec';
+import { createRangeTargets } from '../sim/rangeTargets';
 import { HITS } from '../config/hits';
 import { figureRotation, figureTilt, plateRotation, plateScuffs, plateSwing, RangeTargetsRenderer } from './rangeTargetsRenderer';
 
@@ -145,9 +144,9 @@ describe('targets drawn on a map (M94)', () => {
     expect(names(range)).toEqual(expect.arrayContaining(['range-lines', 'range-signs']));
     range.dispose();
 
-    const targets = targetsAtSpots([
-      { position: vec3(10, 3, -4), face: { x: 1, z: 0 }, crouched: false, steel: true, fromStart: 20 },
-      { position: vec3(-6, 1.5, 8), face: { x: 0, z: -1 }, crouched: false, steel: false, fromStart: 12 },
+    const targets = createRangeTargets([
+      targetSpec({ kind: 'steel', x: 10, y: 3 + RANGE.plateHeight, z: -4, yaw: Math.PI / 2, label: 'Steel', distance: 20 }),
+      targetSpec({ kind: 'figure', x: -6, y: 1.5, z: 8, yaw: Math.PI, label: 'Figure', distance: 12 }),
     ]);
     const r = new RangeTargetsRenderer(targets, HITS, false);
     expect(names(r)).not.toContain('range-lines');

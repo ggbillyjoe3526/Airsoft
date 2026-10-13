@@ -829,7 +829,7 @@ test('the practice range opens from the title screen and reads out the last BB',
   type RangeState = { targets: unknown[]; characters: { armament: { ammo: { mag: number; pouch: number[] }[]; handling: { magSize: number }[] } }[] };
   const state = () => page.evaluate(() => (window as unknown as { airsoft: { state: RangeState } }).airsoft.state);
   const s0 = await state();
-  expect(s0.targets).toHaveLength(18);
+  expect(s0.targets).toHaveLength(30); // 18 in the lanes, M93's 11 others and the timed challenge's START plate
   expect(s0.characters).toHaveLength(1); // you alone on the range
 
   // Fire down the middle: the BB lands somewhere downrange and the readout says how far.

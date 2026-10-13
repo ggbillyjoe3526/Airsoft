@@ -59,6 +59,8 @@ export interface MenusOptions {
   onSkipRound: () => void;
   /** Settings › Gameplay › Replay tutorial (M97): the tutorial from its first step, finished or not, leaving any match. */
   onReplayTutorial: () => void;
+  /** The practice range's pause menu (M93): turn the timed challenge on or off. */
+  onToggleChallenge: () => void;
   /** The pause menu during the tutorial (audit POOL-14): skip the step under way, or the rest of it. */
   onSkipTutorialStep: () => void;
   onSkipTutorial: () => void;

@@ -1,9 +1,27 @@
 import type { PracticeSpotsConfig } from '../config/practice';
 import { cellX, cellZ, nearestWalkable, type NavGrid, nodeAt } from '../nav/navGrid';
 import type { WorldQuery } from '../sim/armament';
-import type { TargetSpot } from '../sim/rangeTargets';
-import { vec3 } from '../sim/vec';
+import { type Vec3, vec3 } from '../sim/vec';
 import type { MapData, SpawnPoint } from './mapTypes';
+
+/**
+ * Why a bot would be at a spot (M94): a lane point it stops at, its team's start, a watch spot over a city floor (a
+ * window or balcony), or a point on a lane's leg it walks along.
+ */
+export type SpotSource = 'lane' | 'start' | 'overlook' | 'leg';
+
+/** A place a target stands in Practice on a map (M94), on the floor, facing its way (map/practiceLayout.ts gives it a kind). */
+export interface TargetSpot {
+  /** On the floor (m). */
+  position: Vec3;
+  /** The way it faces, a unit vector on the floor (x, z): never into a wall. */
+  face: { x: number; z: number };
+  /** Cover lower than its shoulders right in front of it: a bot there would crouch behind it. */
+  crouched: boolean;
+  source: SpotSource;
+  /** How far it is from your start (m), across the floor. */
+  fromStart: number;
+}
 
 /** A place a target may stand, before it is put on the floor: a point and the way it faces (x, z; any length). */
 interface Candidate {
@@ -12,6 +30,7 @@ interface Candidate {
   z: number;
   fx: number;
   fz: number;
+  source: SpotSource;
 }
 
 const down = vec3(0, -1, 0);
@@ -33,26 +52,26 @@ export function practiceStart(map: MapData): SpawnPoint {
  * 3. Extraction's home-team starts, where its bots start a run, facing your start;
  * 4. the watch spots over a city floor (MapData.overlooks: windows and balconies), facing the floor they watch;
  * 5. points along the lanes' long legs, where a bot walks between lane points.
- * Each is put on the walkable floor under it (or dropped), none near your start and none crowding another on its floor;
- * a figure with low cover right in front of it crouches behind it. Sorted near to far from your start, every
- * `steelEvery`-th standing one is a steel plate. Pure (reads the map, its nav grid and its colliders).
+ * Each is put on the walkable floor under it (or dropped), none near your start and none crowding another on its floor,
+ * and marked crouched where low cover is right in front of it. Sorted near to far from your start; map/practiceLayout.ts
+ * picks each one's kind. Pure (reads the map, its nav grid and its colliders).
  */
 export function practiceSpots(map: MapData, nav: NavGrid, query: WorldQuery, cfg: PracticeSpotsConfig): TargetSpot[] {
   const start = practiceStart(map).position;
   const candidates: Candidate[] = [];
-  const facing = (x: number, y: number, z: number, toX: number, toZ: number): Candidate => ({ x, y, z, fx: toX - x, fz: toZ - z });
-  const facingStart = (s: SpawnPoint): Candidate => facing(s.position.x, s.position.y, s.position.z, start.x, start.z);
+  const facing = (source: SpotSource, x: number, y: number, z: number, toX: number, toZ: number): Candidate => ({ x, y, z, fx: toX - x, fz: toZ - z, source });
+  const facingStart = (s: SpawnPoint): Candidate => facing('start', s.position.x, s.position.y, s.position.z, start.x, start.z);
   for (const lane of map.lanes) {
     lane.forEach((p, i) => {
       const back = i > 0 ? lane[i - 1]! : start;
-      candidates.push(facing(p.x, p.y, p.z, back.x, back.z));
+      candidates.push(facing('lane', p.x, p.y, p.z, back.x, back.z));
     });
   }
   for (const s of map.spawns[1]) candidates.push(facingStart(s));
   for (const s of map.extraction?.opponentStarts ?? []) candidates.push(facingStart(s));
   for (const o of map.overlooks ?? []) {
     const [x0, x1, z0, z1] = o.area;
-    for (const p of o.from) candidates.push(facing(p.x, p.y, p.z, (x0 + x1) / 2, (z0 + z1) / 2));
+    for (const p of o.from) candidates.push(facing('overlook', p.x, p.y, p.z, (x0 + x1) / 2, (z0 + z1) / 2));
   }
   for (const lane of map.lanes) {
     for (let i = 1; i < lane.length; i++) {
@@ -61,7 +80,7 @@ export function practiceSpots(map: MapData, nav: NavGrid, query: WorldQuery, cfg
       const steps = Math.floor(Math.hypot(b.x - a.x, b.z - a.z) / cfg.legStep);
       for (let k = 1; k < steps; k++) {
         const t = k / steps;
-        candidates.push(facing(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t, a.x, a.z));
+        candidates.push(facing('leg', a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t, a.x, a.z));
       }
     }
   }
@@ -76,12 +95,10 @@ export function practiceSpots(map: MapData, nav: NavGrid, query: WorldQuery, cfg
     if (!crowded) out.push(spot);
   }
   out.sort((a, b) => a.fromStart - b.fromStart);
-  let standing = 0;
-  for (const s of out) if (!s.crouched) s.steel = ++standing % cfg.steelEvery === 0;
   return out;
 }
 
-/** A candidate on the walkable floor under it, facing its way, crouched or steel; null when it can't stand there. */
+/** A candidate on the walkable floor under it, facing its way, crouched or not; null when it can't stand there. */
 function placed(c: Candidate, map: MapData, nav: NavGrid, query: WorldQuery, cfg: PracticeSpotsConfig, start: { x: number; z: number }): TargetSpot | null {
   let k = nodeAt(nav, c.x, c.y, c.z);
   let x = c.x;
@@ -101,7 +118,7 @@ function placed(c: Candidate, map: MapData, nav: NavGrid, query: WorldQuery, cfg
   const { fx, fz } = way;
   // Its way is open at head height (clearWay), so cover at waist height in front is cover it can crouch behind.
   const crouched = blocked(x, floor + cfg.lowRayHeight, z, fx, fz, cfg.coverReach, query);
-  return { position: vec3(x, floor, z), face: { x: fx, z: fz }, crouched, steel: false, fromStart: Math.hypot(x - start.x, z - start.z) };
+  return { position: vec3(x, floor, z), face: { x: fx, z: fz }, crouched, source: c.source, fromStart: Math.hypot(x - start.x, z - start.z) };
 }
 
 /**
@@ -130,7 +147,7 @@ function clearWay(x: number, y: number, z: number, fx: number, fz: number, sx: n
 }
 
 /** The floor's real height at (x, z) (a ramp or the terrain between nav cells' centres), from the nav floor `navY`. */
-function floorUnder(x: number, navY: number, z: number, query: WorldQuery, cfg: PracticeSpotsConfig): number {
+export function floorUnder(x: number, navY: number, z: number, query: WorldQuery, cfg: PracticeSpotsConfig): number {
   from.x = x;
   from.y = navY + cfg.floorProbeUp;
   from.z = z;
@@ -139,7 +156,7 @@ function floorUnder(x: number, navY: number, z: number, query: WorldQuery, cfg: 
 }
 
 /** Whether something solid is within `reach` of (x, y, z) along the floor direction (fx, fz). */
-function blocked(x: number, y: number, z: number, fx: number, fz: number, reach: number, query: WorldQuery): boolean {
+export function blocked(x: number, y: number, z: number, fx: number, fz: number, reach: number, query: WorldQuery): boolean {
   from.x = x;
   from.y = y;
   from.z = z;

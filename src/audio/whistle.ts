@@ -25,6 +25,34 @@ export class Whistle {
     }
   }
 
+  /**
+   * The practice range's shot timer (M93): one plain beep of `duration` seconds, now, on the same dry output (no warble:
+   * an electronic tone, not a whistle). Silenced by stopAll like a blast.
+   */
+  beep(duration: number): void {
+    const ctx = this.ctx;
+    const T = AUDIO.shotTimer;
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = T.pitch;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(T.volume, t + AUDIO.whistleAttack);
+    g.gain.setValueAtTime(T.volume, t + duration - AUDIO.whistleRelease);
+    g.gain.linearRampToValueAtTime(0, t + duration);
+    osc.connect(g).connect(this.out);
+    osc.start(t);
+    this.playing.push(osc);
+    osc.onended = () => {
+      const k = this.playing.indexOf(osc);
+      if (k >= 0) this.playing.splice(k, 1);
+      osc.disconnect();
+      g.disconnect();
+    };
+    osc.stop(t + duration + AUDIO.stopPadding);
+  }
+
   /** One blast of `duration` seconds, starting `delay` seconds from now. */
   blast(duration: number, delay: number): void {
     const ctx = this.ctx;

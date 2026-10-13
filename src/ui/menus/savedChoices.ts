@@ -285,6 +285,11 @@ export function loadSoundCues(): boolean {
   return loadChoice('soundCues', SOUND_CUE_CHOICES, 'off') === 'on';
 }
 
+/** Whether the practice range's timed challenge is on (M93): off until the player turns it on. */
+export function loadPracticeChallenge(): boolean {
+  return loadSetting('practiceChallenge', (raw) => (typeof raw === 'boolean' ? raw : undefined), false);
+}
+
 /** Whether the tutorial was played to the end (M16). */
 export function loadTutorialDone(): boolean {
   return loadSetting('tutorialDone', (raw) => (typeof raw === 'boolean' ? raw : undefined), false);

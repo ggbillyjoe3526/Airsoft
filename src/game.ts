@@ -19,6 +19,7 @@ import type { MatchMode } from './config/modes';
 import { MOVEMENT } from './config/movement';
 import { GRAPHICS_TEXT } from './config/graphics';
 import { FRAME_TIMING, type FrameRateCap, type LightingPresetId, QUALITY, QUALITY_CHOICES, QUALITY_STEP_DOWN, type QualityChoice, type QualityPreset, type QualitySettings } from './config/render';
+import { RANGE_CHALLENGE } from './config/range';
 import { FramePacer } from './core/framePacer';
 import { SIM } from './config/sim';
 import { applyTeamCss, DEFAULT_TEAM_PICK, TEAM_COLOUR_SETS, type TeamColourSetId, teamOfPick, type TeamPickId } from './config/teams';
@@ -50,7 +51,7 @@ import { nextSessionAction, type SessionAction } from './core/sessionPlan';
 import { MatchSession } from './matchSession';
 import type { RangePose, RangeSession } from './rangeSession';
 import type { GameState } from './sim/state';
-import { loadRecords, noNews, type RecordNews, type Records, saveRecords } from './stats/records';
+import { addChallengeRun, loadRecords, noNews, type RecordNews, type Records, saveRecords } from './stats/records';
 import { settleMatch } from './stats/settleMatch';
 import { loadCrosshair } from './ui/crosshair';
 import { loadHitMarker } from './ui/crosshairSettings';
@@ -114,6 +115,7 @@ import {
   loadTeammateDifficulty,
   loadTeamColours,
   loadTeamPick,
+  loadPracticeChallenge,
   loadTutorialDone,
   loadTutorialStep,
   loadWheelSelect,
@@ -121,6 +123,12 @@ import {
   motionClass,
   systemReducedMotionQuery,
 } from './ui/menus/savedChoices';
+
+/** Where Practice plays (M94): a map, and the course its timed challenge's best is kept under. */
+interface PracticeAt {
+  map: MapData;
+  course: string;
+}
 
 const LOCK_REFUSED_HINT = 'The browser needs a moment before re-capturing the mouse. Click again.';
 
@@ -490,6 +498,7 @@ export class Game {
       onSkipRound: () => {
         if (this.session instanceof MatchSession && (this.session.skipping || this.session.beginSkip())) this.play();
       },
+      onToggleChallenge: () => this.toggleChallenge(),
       onSkipTutorialStep: () => this.skipTutorial(false),
       onSkipTutorial: () => this.skipTutorial(true),
       map: { initial: this.map, onChange: (m) => ((this.map = m), (this.setupChanged = true), this.prefetchFieldSounds()) },
@@ -1053,11 +1062,11 @@ export class Game {
     if (action === 'buildRange') {
       // The tutorial resumes at the step it was left at (audit POOL-14), always on the range; Practice on its place (M94).
       if (this.tutorial) this.openRange(undefined, loadTutorialStep());
-      else this.openRange(undefined, undefined, this.practiceMap());
+      else this.openRange(undefined, undefined, this.practicePlaceToPlay());
     } else if (action === 'rebuildRange' && isRange(s)) {
       // Back from the Loadout on the range's pause menu: the range (or the map, M94) again, with the new kit, where you
       // stood (and at the same tutorial step).
-      this.openRange(s.pose, s.tutorialStep, s.practiceMap);
+      this.openRange(s.pose, s.tutorialStep, { map: s.practiceMap, course: s.course });
     } else if (action === 'buildMatch') {
       this.session?.dispose();
       this.setupChanged = false;
@@ -1107,19 +1116,20 @@ export class Game {
   }
 
   /**
-   * The map Practice plays on (M94): its picked place under the map's Day or Night pick (as a match's, playedMap), or
-   * undefined for the range (also for a dev map while Dev content is off).
+   * Where Practice plays (M94): its picked map under the map's Day or Night pick (as a match's, playedMap), with the
+   * map's id as its timed challenge's course; undefined for the range (also for a dev map while Dev content is off).
    */
-  private practiceMap(): MapData | undefined {
+  private practicePlaceToPlay(): PracticeAt | undefined {
     const id = practiceMapId(this.practicePlace, this.dev.devContent);
-    return id ? this.playedMap(id) : undefined;
+    return id ? { map: this.playedMap(id), course: id } : undefined;
   }
 
   /**
-   * Builds Practice (M21) with the picked loadout on `map` (M94; the range when left out), at `pose` if given (else at
+   * Builds Practice (M21) with the picked loadout at `place` (M94; the range when left out), at `pose` if given (else at
    * the start), with the tutorial from step `tutorialFrom` if given (M16).
    */
-  private openRange(pose?: RangePose, tutorialFrom?: number | string, map?: MapData): void {
+  private openRange(pose?: RangePose, tutorialFrom?: number | string, place?: PracticeAt): void {
+    const course = place?.course ?? RANGE_CHALLENGE.course;
     const code = this.rangeCode.get();
     if (!code) throw new Error('The practice range was built before its code arrived (play fetches it)');
     this.session?.dispose();
@@ -1129,10 +1139,16 @@ export class Game {
       teamColours: TEAM_COLOUR_SETS[this.teamColours],
       look: this.look,
       armory: !this.dev.disableArmory,
-      ...(map ? { map } : {}),
+      ...(place ? { map: place.map, course: place.course } : {}),
+      challenge: loadPracticeChallenge(),
+      challengeBest: this.records.bestChallenge[course] ?? 0,
     }, this.options.seed, this.quality, this.audio, this.crosshair, pose, tutorialFrom);
     this.session.setMinimapTurn(this.minimapTurn);
     this.session.onTutorialStep = (step) => saveSetting('tutorialStep', step);
+    // A timed challenge run that beats the best is kept at once (M93), like a match's records.
+    this.session.onChallengeRun = (run) => {
+      if (addChallengeRun(this.records, course, run.hits)) saveRecords(this.records, browserStorage());
+    };
     this.session.combat.setReplicaPictures(this.pictures, kitSubjects(this.loadout.kit(), this.look.realisticColours));
     this.steppedDown = false;
     this.session.setMotion(motionScale(this.motionReduced()));
@@ -1192,7 +1208,7 @@ export class Game {
     if (this.started && isRange(s)) {
       // The tutorial just played to its end (M80): its pop-up, practice on or go to the menu, over the pause menu.
       if (s.takeTutorialComplete()) this.menus.showTutorialComplete(s.status, this.options.seed);
-      else this.menus.showPause(s.status, this.options.seed, true, s.coaching);
+      else this.menus.showPause(s.status, this.options.seed, true, s.coaching, null, s.challengeOffer);
     } else if (!this.started || !(s instanceof MatchSession) || !r) {
       // Play never began (a lock that came late, after Back, and was given straight back): the menus are still up on
       // whichever screen the player went to, so they stay there.
@@ -1219,7 +1235,17 @@ export class Game {
   /** The range's pause menu (the tutorial's, with its coaching), when the range is what's loaded. */
   private showRangePause(): void {
     const s = this.session;
-    if (isRange(s)) this.menus.showPause(s.status, this.options.seed, true, s.coaching);
+    if (isRange(s)) this.menus.showPause(s.status, this.options.seed, true, s.coaching, null, s.challengeOffer);
+  }
+
+  /** The range's pause menu's Timed challenge (M93): switched, remembered for the next visit, and the menu says so. */
+  private toggleChallenge(): void {
+    const s = this.session;
+    if (!isRange(s) || s.challengeOffer === null) return;
+    const on = !s.challengeOffer;
+    s.setChallenge(on);
+    saveSetting('practiceChallenge', on);
+    this.menus.updatePause(s.status, s.challengeOffer);
   }
 
   /** The pause menu's Skip step or Skip tutorial (audit POOL-14): the range carries on, the pause menu says where. */
@@ -1230,7 +1256,7 @@ export class Game {
     else s.skipTutorialStep();
     this.takeTutorialFinished(s);
     if (s.takeTutorialComplete()) this.menus.showTutorialComplete(s.status, this.options.seed);
-    else this.menus.showPause(s.status, this.options.seed, true, s.coaching);
+    else this.menus.showPause(s.status, this.options.seed, true, s.coaching, null, s.challengeOffer);
   }
 
   /** The tutorial was played (or skipped) to its end: remembered, and the next one starts from the beginning. */

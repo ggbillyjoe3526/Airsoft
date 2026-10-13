@@ -184,7 +184,7 @@ export function stepSimulation(
   if (ctx.wind) windAt(ctx.wind, state.time, state.wind);
   stepBBs(state.bbs, ctx.ballistics, ctx.query, ctx.killY, state.events, dt, ctx.targets, state.rng, state.wind);
   if (ctx.practice) {
-    stepRangeTargets(state.targets, dt);
+    stepRangeTargets(state.targets, dt, state.rng);
     for (const c of state.characters) refillSpares(c.armament);
   } else {
     stepRound(state.round, state.characters, state.bbs, ctx.round, state.events, dt);

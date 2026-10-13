@@ -4,6 +4,7 @@ import { LOADOUT } from './config/replicas';
 import { EventLog } from './core/eventLog';
 import { RangeSession } from './rangeSession';
 import { createCharacter } from './sim/character';
+import { createChallenge } from './sim/rangeChallenge';
 import { createRangeTargets } from './sim/rangeTargets';
 import { vec3 } from './sim/vec';
 import { TutorialTracker } from './tutorial/tutorial';
@@ -37,6 +38,7 @@ function bare(from?: number | string) {
     tutorialFinishedSeen: false,
     completeDue: false,
     completePopup: false,
+    challenge: createChallenge(0),
   });
   const tick = () => (s as unknown as { afterTick(): void }).afterTick();
   return { s, t, tick, coach, showcase };

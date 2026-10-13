@@ -219,6 +219,12 @@ export const AUDIO = {
   /** Oscillators stop this long after a sound's end so the fade-out isn't clipped (s). */
   stopPadding: 0.02,
   roundOverWhistle: 0.8,
+  /**
+   * The practice range's shot timer (M93): the timed challenge's countdown beeps (`beep` long, one each second) and the
+   * long one that starts the run (`go`), a plain tone at `pitch` (Hz) as loud as `volume`. The run ends on the referee's
+   * long blast (roundOverWhistle).
+   */
+  shotTimer: { pitch: 3200, volume: 0.22, beep: 0.12, go: 0.45 },
   /** Round start: two short blasts, the second starting this many blast-lengths after the first. */
   roundStartWhistle: 0.14,
   roundStartWhistleGap: 1.6,

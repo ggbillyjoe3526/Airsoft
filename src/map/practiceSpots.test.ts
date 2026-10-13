@@ -1,12 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { NAV } from '../config/nav';
 import { PRACTICE_SPOTS } from '../config/practice';
-import { RANGE } from '../config/range';
 import { mapGeometry } from '../content/mapLayout';
 import { buildNavGrid, isWalkableAt } from '../nav/navGrid';
 import type { WorldQuery } from '../sim/armament';
 import { castLevelRay } from '../sim/levelRay';
-import { targetsAtSpots } from '../sim/rangeTargets';
 import { OPEN_FIELD } from '../sim/testSupport';
 import { vec3 } from '../sim/vec';
 import { DEPOT } from './depot';
@@ -74,12 +72,10 @@ describe.each([
     expect(towards / spots.length).toBeGreaterThan(0.75);
   });
 
-  it('sorts them near to far, makes every third standing one steel, and never a crouched one', () => {
+  it('sorts them near to far, and says why a bot would be at each', () => {
     for (let i = 1; i < spots.length; i++) expect(spots[i]!.fromStart).toBeGreaterThanOrEqual(spots[i - 1]!.fromStart);
-    const standing = spots.filter((s) => !s.crouched);
-    standing.forEach((s, i) => expect(s.steel).toBe((i + 1) % PRACTICE_SPOTS.steelEvery === 0));
-    expect(spots.filter((s) => s.crouched).every((s) => !s.steel)).toBe(true);
-    expect(standing.some((s) => s.steel)).toBe(true);
+    expect(new Set(spots.map((s) => s.source))).toContain('lane');
+    expect(spots.some((s) => s.source === 'overlook')).toBe((map.overlooks ?? []).length > 0);
   });
 
   it('crouches a figure only behind cover lower than its shoulders, right in front of it', () => {
@@ -141,28 +137,11 @@ describe('practice spots from map data (M94)', () => {
     const near = (x: number, z: number) => spots.find((s) => Math.hypot(s.position.x - x, s.position.z - z) < 0.6);
     const behindCrate = near(0, -10)!;
     expect(behindCrate.crouched).toBe(true);
-    expect(behindCrate.steel).toBe(false);
+    expect(behindCrate.source).toBe('lane');
     // (18, -12) would face back along its lane, into the wall: it faces your start (0, 20) instead, standing.
     const byWall = near(18, -12)!;
     expect(byWall.face.x).toBeCloseTo(-18 / Math.hypot(18, 32), 1);
     expect(byWall.face.z).toBeCloseTo(32 / Math.hypot(18, 32), 1);
     expect(byWall.crouched).toBe(false);
-  });
-
-  it('turns spots into targets: steel at plate height on its post, figures on the floor, distances from your start', () => {
-    const map = field({ lanes: [[vec3(10, 0, 0), vec3(10, 0, -20)]] });
-    const spots = practiceSpots(map, buildNavGrid(map, NAV), open, PRACTICE_SPOTS);
-    const targets = targetsAtSpots(spots);
-    expect(targets).toHaveLength(spots.length);
-    for (const [i, t] of targets.entries()) {
-      const s = spots[i]!;
-      expect(t.id).toBe(i);
-      expect(t.kind).toBe(s.steel ? 'steel' : 'figure');
-      expect(t.floor).toBe(s.position.y);
-      expect(t.position.y - t.floor).toBe(t.kind === 'steel' ? RANGE.plateHeight : 0);
-      expect(t.face).toEqual(s.face);
-      expect(t.distance).toBe(Math.round(s.fromStart));
-      expect(t.down).toBe(0);
-    }
   });
 });
