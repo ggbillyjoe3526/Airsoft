@@ -61,7 +61,7 @@ export class ReplicaPanel {
   /** The reload key the empty-magazine hint was last worded for, and that hint (rebuilt only when the key changes). */
   private hintKey: string | null = null;
   private emptyHint = '';
-  private readonly shown = { name: '', mag: -1, low: false, spareBBs: -1, spareMags: -1, status: '', reloadPct: -1 };
+  private readonly shown = { name: '', mag: -1, low: false, spareBBs: -1, spareMags: -1, status: '', reloadPct: -1, holstered: false };
 
   /** `root`: the HUD, holding REPLICA_PANEL_HTML. `keyName`: the reload key's name now, for the empty-magazine hint. */
   constructor(
@@ -127,8 +127,11 @@ export class ReplicaPanel {
     }
     if (reloading) this.reloadFill.follow(1 - armament.reload / handling.reloadTime, armament.reload);
 
+    // Holstered (M92): the panel fades and says so; nothing else about the replica is news while it is away.
+    if (s.holstered !== armament.holstered) this.panel.classList.toggle('holstered', (s.holstered = armament.holstered));
     let status = '';
-    if (reloading) status = HUD_TEXT.reloading;
+    if (armament.holstered) status = HUD_TEXT.holstered;
+    else if (reloading) status = HUD_TEXT.reloading;
     else if (this.noticeLeft > 0) status = this.noticeText;
     else if (ammo.mag === 0 && !canReload(ammo)) status = HUD_TEXT.outOfBBs;
     else if (ammo.mag === 0) status = this.emptyMagHint();

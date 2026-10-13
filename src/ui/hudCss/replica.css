@@ -21,6 +21,11 @@
   gap: 12px;
 }
 
+/* Holstered (M92): the replica put away is shown faded, the status line saying so. */
+.hud-replica-main.holstered {
+  opacity: 0.45;
+}
+
 /* The picture (ItemPictures, the game's own; the line drawing until it is drawn), bleeding into the panel's corner. */
 .hud-replica-pic {
   flex: none;

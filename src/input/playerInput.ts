@@ -15,12 +15,12 @@ const SPRINT_STOPPERS: readonly Action[] = ['crouch', 'aim', 'walk', 'fire'];
 
 /**
  * Turns keyboard/mouse state into PlayerCommands. View angles update every render frame for
- * responsiveness; one-shot actions (jump, reload, switch, fire selector, a trigger click) are latched until
+ * responsiveness; one-shot actions (jump, reload, switch, holster, fire selector, a trigger click) are latched until
  * a simulation tick consumes them, so none is lost or duplicated when frames and ticks don't line up.
  * Fire and aim are actions like any other, on whatever key or mouse button they're bound to (M18).
  * Crouch, aim and sprint each work while held or as a toggle (M18; crouch toggles by default):
  * - a toggled crouch stands up on a sprint or jump press;
- * - a toggled aim drops on a sprint press, a replica switch, or when the replica in hand has no sight;
+ * - a toggled aim drops on a sprint press, a replica switch, the holster key, or when the replica in hand has no sight;
  * - a toggled sprint stops when forward is let go, or on a crouch, aim, walk or fire press.
  * The mouse turns at `aimSensitivity` times the normal rate once the sight is up; `invertY` swaps up and down.
  *
@@ -72,6 +72,8 @@ export class PlayerInput {
   /** A squad order key pressed (M22), or an order picked on the wheel (M23), since the last takeOrder. */
   private orderLatch: SquadCommand | null = null;
   private switchLatch = -1;
+  /** The Holster key pressed since the last tick (M92); a slot key pressed after it draws instead. */
+  private holsterLatch = false;
   private readonly mouseDelta = { x: 0, y: 0 };
 
   /**
@@ -160,17 +162,25 @@ export class PlayerInput {
     }
     if (kb.wasPressed('fire') && !this.fireBlocked) this.fireLatch = true;
     const switchBefore = this.switchLatch;
-    if (kb.wasPressed('slot1')) this.switchLatch = 0;
-    if (kb.wasPressed('slot2')) this.switchLatch = 1;
+    // The holster key drops a switch asked for before it; a slot asked for with or after it draws instead (M92).
+    const holster = kb.wasPressed('holster');
+    if (holster) {
+      this.holsterLatch = true;
+      this.switchLatch = -1;
+    }
+    const slot = kb.wasPressed('slot2') ? 1 : kb.wasPressed('slot1') ? 0 : -1;
+    if (slot >= 0) this.switchLatch = slot;
     const cycle = this.pointer.consumeWheelSteps();
-    if (cycle !== 0 && slotCount > 1 && !this.wheel.open) {
+    const wheelSwitch = cycle !== 0 && slotCount > 1 && !this.wheel.open;
+    if (wheelSwitch) {
       const from = this.switchLatch >= 0 ? this.switchLatch : activeSlot;
       this.switchLatch = (((from + cycle) % slotCount) + slotCount) % slotCount;
     }
+    if (slot >= 0 || wheelSwitch) this.holsterLatch = false;
     const switching = this.switchLatch !== switchBefore && this.switchLatch !== activeSlot;
     if (this.aimModeValue === 'toggle') {
       if (kb.wasPressed('aim') && !this.aimBlocked) this.aimToggled = !this.aimToggled;
-      if (kb.wasPressed('sprint') || switching || !canAim) this.aimToggled = false;
+      if (kb.wasPressed('sprint') || switching || holster || !canAim) this.aimToggled = false;
     }
     if (this.sprintModeValue === 'toggle') {
       if (kb.wasPressed('sprint')) {
@@ -256,6 +266,7 @@ export class PlayerInput {
     cmd.aim = this.aimModeValue === 'toggle' ? this.aimToggled : kb.isDown('aim') && !this.aimBlocked;
     cmd.fire = !this.fireBlocked && (kb.isDown('fire') || this.fireLatch);
     cmd.switchTo = this.switchLatch;
+    cmd.holster = this.holsterLatch;
     cmd.cycleFireMode = this.fireModeLatch;
     cmd.toggleTorch = this.torchLatch;
     cmd.use = kb.isDown('use');
@@ -316,5 +327,6 @@ export class PlayerInput {
     this.inspectLatch = false;
     this.orderLatch = null;
     this.switchLatch = -1;
+    this.holsterLatch = false;
   }
 }

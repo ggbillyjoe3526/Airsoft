@@ -66,6 +66,7 @@ export function fillScriptedCommand(script: readonly ScriptStep[], tick: number,
   cmd.fire = step?.fire ?? false;
   cmd.reload = first && (step?.reload ?? false);
   cmd.switchTo = first ? (step?.switchTo ?? -1) : -1;
+  cmd.holster = false;
   cmd.cycleFireMode = false;
   cmd.toggleTorch = false;
   cmd.use = step?.use ?? false;
