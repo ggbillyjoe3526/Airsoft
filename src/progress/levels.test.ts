@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import levelsText from '../../levels.md?raw';
 import { GAME_POOL } from '../pool/gamePool';
 import { GAME_LEVELS } from './gameLevels';
-import { DEFAULT_XP, earnedOf, levelOf, loadLevels, standing, unlocksUpTo } from './levels';
+import { DEFAULT_XP, levelOf, loadLevels, standing, unlocksUpTo } from './levels';
 
 /** pool.md's id for `name`. */
 const id = (name: string): string => GAME_POOL.assets.find((a) => a.name === name)!.id;
@@ -165,9 +165,5 @@ describe('where XP stands (LV1)', () => {
 
   it('lists what levels 0 to n unlock, lowest first', () => {
     expect(names(unlocksUpTo(t, 1))).toEqual(['GBB Pistol', 'AEG Rifle', 'Standard Battery', 'Green Gas', 'Weapon Torch', 'Red Dot']);
-  });
-
-  it('counts the starting kit as not earned', () => {
-    expect(names(earnedOf(t, [id('GBB Pistol'), id('Cyber Pistol'), id('AEG Rifle')]))).toEqual(['Cyber Pistol']);
   });
 });

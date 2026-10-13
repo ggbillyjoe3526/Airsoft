@@ -2,7 +2,7 @@ import type { Character } from '../sim/character';
 import { isInPlay } from '../sim/elimination';
 import { vec3, wrapAngle } from '../sim/vec';
 import { type Bot, type BotWorld, type Contact, forgetTarget, lastSeenAt, pick, recallHeardOther } from './bot';
-import { freshAimError, lookAngles } from './aim';
+import { freshAimError, lookAngles, settleTime, sightAim } from './aim';
 import { bodyPoint, eyeOf, visiblePart } from './perception';
 
 const DEG = Math.PI / 180;
@@ -56,7 +56,7 @@ export function perceive(b: Bot, w: BotWorld): void {
     // Someone stepping out where the bot already aims (a held angle, M37) is answered sooner and with a steadier aim.
     const preAimed = aimedAt(b, w, best, bestPart);
     contact.reactAt = w.time + pick(b.rng, preAimed ? b.skill.preAimReactionTime : b.skill.reactionTime);
-    contact.acquiredAt = w.time - (preAimed ? b.skill.preAimSettled * b.skill.aimSettleTime : 0);
+    contact.acquiredAt = w.time - (preAimed ? b.skill.preAimSettled * settleTime(b.skill, sightAim(b.character)) : 0);
     contact.firstSeenAt = w.time;
     contact.held = b.skill.holdsAngles && b.holding && preAimed;
     freshAimError(b.aim, cfg, b.rng, true);

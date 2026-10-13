@@ -452,24 +452,30 @@ describe('criterion 5: locked gear is said in words', () => {
 
 describe('criterion 6: bots do not read the saved loadouts', () => {
   /** The bot code's source text, by path (Vite reads the files raw; no test files). */
-  const botSource = import.meta.glob(['../../ai/**/*.ts', '!../../ai/**/*.test.ts', '../../pool/botKit.ts', '../../pool/kit.ts', '../../config/bots.ts'], {
+  const botSource = import.meta.glob(['../../ai/**/*.ts', '!../../ai/**/*.test.ts', '../../pool/botKit.ts', '../../pool/gameBotKits.ts', '../../pool/kit.ts', '../../config/bots.ts'], {
     query: '?raw',
     import: 'default',
     eager: true,
   }) as Record<string, string>;
 
-  it('imports the saved loadouts nowhere in the bot code (src/ai, the bot kit, the kit and the bot config)', () => {
+  it('imports the saved loadouts nowhere in the bot code (src/ai, the bot kits, the kit and the bot config)', () => {
     const bot = Object.entries(botSource);
     expect(bot.length).toBeGreaterThan(10);
     const offenders = bot.filter(([, text]) => /savedLoadouts|SavedLoadouts|airsoft\.loadouts/.test(text)).map(([path]) => path);
     expect(offenders).toEqual([]);
   });
 
-  it('rolls the same bot kit before and after the player switches loadout', async () => {
-    const { rolledKit } = await import('../../pool/botKit');
+  it('picks the same bot kits before and after the player switches loadout', async () => {
+    const { botKitSeed, botKitSlots, pickBotKit } = await import('../../pool/botKit');
+    const { GAME_BOT_KITS } = await import('../../pool/gameBotKits');
     const r = rig();
-    const loadout = r.model.kit().slots.map((s) => s.replica);
-    const roll = () => JSON.stringify(rolledKit(pool, loadout, 1234));
+    const roll = () =>
+      JSON.stringify(
+        [3, 4, 5].map((id) => {
+          const kit = pickBotKit(GAME_BOT_KITS, 'hard', pool, botKitSeed(1234, id));
+          return kit ? botKitSlots(pool, kit) : null;
+        }),
+      );
     const before = roll();
     button(tabs(r)[1]!).click();
     input(tabs(r)[1]!).fire('keydown', { key: 'Enter' });

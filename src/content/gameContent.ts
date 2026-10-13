@@ -3,6 +3,7 @@ import { GAME_STATS } from '../config/gameStats';
 import { LASERS, type LaserId } from '../config/lasers';
 import { type OpticId, OPTICS } from '../config/optics';
 import { SOUNDS } from '../config/sounds';
+import { GAME_BOT_KITS } from '../pool/gameBotKits';
 import { GAME_POOL } from '../pool/gamePool';
 import { GAME_LEVELS } from '../progress/gameLevels';
 import { loadLevels } from '../progress/levels';
@@ -74,7 +75,7 @@ export function gameDrawTables(): Record<string, DrawTable> {
   return out;
 }
 
-/** The checks' inputs for `pool` (the game's by default) with the game's configs and tables. */
+/** The checks' inputs for `pool` (the game's by default) with the game's configs and tables, bot-kits.md's among them. */
 export function gameInputs(pool: Pool = GAME_POOL): ContentInputs {
   return {
     pool,
@@ -86,6 +87,7 @@ export function gameInputs(pool: Pool = GAME_POOL): ContentInputs {
     soundCues: new Set(Object.keys(SOUNDS)),
     partKeys: { optic: OPTIC_KEYS, grip: GRIP_KEYS, laser: LASER_KEYS, magazine: MAGAZINE_KEYS, barrel: BARREL_KEYS, muzzle: MUZZLE_KEYS, light: LIGHT_KEYS, power: [] },
     effects: gameEffects,
+    botKits: GAME_BOT_KITS,
   };
 }
 

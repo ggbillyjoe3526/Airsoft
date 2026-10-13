@@ -70,6 +70,9 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - In Attack / Defend defenders hold near the pole; one attacking bot raises the flag while the others guard it from
   cover (M5, FA4)
 - Adaptive difficulty (Dev setting): the other team gets a little sharper after you win and gentler after you lose, from your Opponents level (AD1)
+- Bot kits: opponents on every difficulty carry kits from bot-kits.md by level, leaning to personality (Easy mostly
+  plain, Pro never plain, Cyber Pistols from Hard); a bot aims through its own scope or red dot, silenced bots are
+  heard nearer, and bots' figures show their gear (BG1)
 
 ## Modes and matches
 
@@ -145,7 +148,6 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   harder; a site energy limit (M29a)
 - Barrel and Muzzle parts: a Tight-Bore Barrel and a Long Barrel for the AEG, a Silencer for both replicas that halves
   how far bots, the minimap and sound cues hear your shots (M29b)
-- On Hard, each opponent carries its own kit rolled from the pool by the match's seed (M29b)
 - Glowing BBs per replica in Customise: At Night (the default, glowing only on night fields), Always or Off; a glowing
   BB is green, a little larger at range and leaves a longer streak; bots load them on night fields (M33b)
 - Levels and XP: every match gives XP (match played, won, rounds won, hits); you level from 0 to 10, each level unlocks parts

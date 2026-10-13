@@ -64,7 +64,7 @@ import { GraphicsNotice } from './ui/graphicsNotice';
 import { loadoutTile } from './ui/loadoutChoice';
 import type { ItemRef } from './pool/item';
 import { GAME_LEVELS } from './progress/gameLevels';
-import { earnedOf, standing } from './progress/levels';
+import { standing } from './progress/levels';
 import { addXp, loadProgress, type Progress, resetProgress, saveProgress, syncProgress, xpToNext } from './progress/progress';
 import { contentPool } from './pool/contentPool';
 import { GAME_POOL } from './pool/gamePool';
@@ -962,15 +962,7 @@ export class Game {
 
   /** Whether a match of `picks` with the Loadout as it is uses dev content (M35): it then won't count or give XP. */
   private devContentUsed(picks: NewGamePicks): boolean {
-    return matchUsesDev(picks, this.equippedItems(), GAME_POOL, this.dev.devContent, this.earnedReplicas(), this.lighting[picks.map]);
-  }
-
-  /**
-   * The replicas the player earned by levelling (LV1: a level above 0 unlocked them; with levelling off, every such one
-   * offered): an opponent on Hard now and then carries one (M32).
-   */
-  private earnedReplicas(): string[] {
-    return earnedOf(GAME_LEVELS, this.loadout.replicaChoices().map((r) => r.asset));
+    return matchUsesDev(picks, this.equippedItems(), GAME_POOL, this.dev.devContent, this.lighting[picks.map]);
   }
 
   /** The progress, with another tab's newer save taken first (it is shared, so it changes in place). */
@@ -1111,7 +1103,6 @@ export class Game {
         ruleset: picks.ruleset,
         rules: { ...picks.rules, teamSize: playedTeamSize(picks) },
         kit: this.loadout.kit(),
-        earnedReplicas: this.earnedReplicas(),
         // The supply event on by the device's clock as Play is pressed (M49): the run keeps it to the end.
         supply: activeSupplyEvent(GAME_POOL.supplyEvents, new Date()),
         devContent: this.dev.devContent,
