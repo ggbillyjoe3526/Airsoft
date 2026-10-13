@@ -23,13 +23,13 @@ test('a Saturday shows the Supply weekend under Extraction on the Mode cards', a
   await page.clock.setFixedTime(new Date(2026, 9, 10, 15)); // Saturday 10 October 2026, local time
   await openMode(page);
   await expect(extraction(page).locator('.choice-note')).toBeVisible();
-  await expect(extraction(page).locator('.choice-note')).toHaveText('Supply weekend, until Sunday: cases hold +25 % Field Credits and +50 % parts.');
+  await expect(extraction(page).locator('.choice-note')).toHaveText('Supply weekend, until Sunday: cases hold +25 % XP.');
 });
 
 test('Halloween weekend shows the dated event in its place', async ({ page }) => {
   await page.clock.setFixedTime(new Date(2026, 9, 31, 15)); // Saturday 31 October 2026
   await openMode(page);
-  await expect(extraction(page).locator('.choice-note')).toHaveText('Halloween night run, until 1 Nov: cases hold +50 % Field Credits and +100 % parts.');
+  await expect(extraction(page).locator('.choice-note')).toHaveText('Halloween night run, until 1 Nov: cases hold +50 % XP.');
 });
 
 test('a Wednesday shows no event line', async ({ page }) => {

@@ -1,12 +1,13 @@
 # Stats: how every replica and part performs
 
-The performance numbers of every replica, power source and part: muzzle energy, BB weight, rate of fire, magazines,
-handling, and what a higher rarity tier improves. [pool.md](pool.md) is the register of what exists (IDs, names, tags,
-rarity odds and the economy); this file says how each of those things shoots and handles.
+The performance numbers of every replica, power source and part: muzzle energy, BB weight, rate of fire, magazines
+and handling. [pool.md](pool.md) is the register of what exists (IDs, names, tags) and [levels.md](levels.md) the level
+that unlocks each; this file says how each of those things shoots and handles. There is one of each item: what a row
+says is what everyone who has it gets.
 
 **The game reads this file**, the same way it reads pool.md: it is bundled into the build and parsed when the game
 starts (`src/config/statsFile.ts`, `src/config/gameStats.ts`). Change a number, run the game, and it changes, for bots
-too (they carry each replica as it comes, at Common). After editing, run `npm run test`: `src/config/stats.test.ts`
+too. After editing, run `npm run test`: `src/config/stats.test.ts`
 reads this file and fails with the line number of anything it can't understand. A cell the game can't read keeps its
 built-in number, with a warning in the browser console, so a typo never stops the game from starting.
 
@@ -40,17 +41,10 @@ What drives the replica, by type (pool.md's power source Type):
 - **Gas.** Sets the energy: a stronger gas pushes harder, and kicks harder too.
 - **Spring** (no spring replicas yet). Sets the energy.
 
-### Rarity tiers
-
-A tier's **Bonus %** (pool.md's Rarity table: 0 % at Common up to 15 % at Legendary) improves an item's stats. The
-**Tier scaling** table says which stats, and how much of the Bonus each one gets: `Replica · Energy · 50` means a
-Legendary replica (15 %) gets 7.5 % more energy. A stat not listed doesn't change with the tier. "Improves" always
-means the better way: more energy and rate of fire, less spread, quicker reload, draw and raise, a steadier aim.
-
 ### Site limits
 
 Like a real site's chrono, the energy a replica may leave the barrel with is capped by its **Class** (rifle or pistol).
-Stacked bonuses (a rare replica on a strong gas, say) stop at the limit, and the Loadout says so.
+Stacked parts (a strong gas with a long barrel, say) stop at the limit, and the Loadout says so.
 
 ---
 
@@ -60,15 +54,15 @@ Stacked bonuses (a rare replica on a strong gas, say) stop at the limit, and the
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | aeg | AEG Rifle | rifle | 0.97 | 0.25 | 13 | 60 | 4 | 1.8 | 0.45 | 0.45 | 0.18 |
 | pistol | GBB Pistol | pistol | 0.52 | 0.2 | 7 | 18 | 4 | 1.2 | 0.3 | 0.8 | 0.5 |
-| cyber | Cyber Pistol | pistol | 0.93 | 0.25 | 13.03 | 50 | 3 | 1.294 | 0.329 | 0.353 | 0.06 |
+| cyber | Cyber Pistol | pistol | 1.0 | 0.25 | 14 | 50 | 3 | 1.1 | 0.28 | 0.3 | 0.06 |
 
 - **Fire rate.** BBs a second with the trigger held (auto, and within a burst), or the fastest you can click (semi).
 - **Magazines.** Carried per round, the loaded one included.
 - **Spread.** The random scatter of the shots from the hip (degrees), before stance and movement.
 - **Recoil.** The upward kick of each shot (degrees). Light: these are toys, not firearms.
-- **Cyber Pistol** (M32). It only comes at Legendary (pool.md's Tiers column), so its row is set for the Legendary
-  bonus to land on what you get: 1.00 J (the pistol limit), 14 BBs/s, 0.30° spread, 50 BBs × 3, 1.1 s reload, 0.28 s
-  draw, 0.06° kick. Its battery is built in (no power source fits it), and nothing else fits it either.
+- **Cyber Pistol** (M32). The level cap's reward (levels.md): 1.00 J (the pistol limit), 14 BBs/s, 0.30° spread,
+  50 BBs × 3, 1.1 s reload, 0.28 s draw, 0.06° kick. Its battery is built in (no power source fits it), and nothing
+  else fits it either.
 
 ## Power sources
 
@@ -113,11 +107,14 @@ Each replica's standard magazine is how it comes (its Magazine and Magazines abo
 | Key | Name | Capacity (×) | Carried (+) | Reload (×) | Draw (×) | Rattles |
 |---|---|---|---|---|---|---|
 | hiCap | Hi-Cap Magazine | 2 | -2 | 1 | 1 | yes |
-| lowCap | Low-Cap Magazine | 0.5 | 1 | 0.8 | 1 | no |
+| lowCap | Low-Cap Magazine | 0.5 | 2 | 0.75 | 0.9 | no |
 | extended | Extended Magazine | 1.5 | 0 | 1 | 1.35 | no |
 
 - **Carried.** Magazines carried, added to the replica's own (at least one is always carried).
 - **Rattles.** The loose BBs rattle as you move, so bots close by hear you even walking.
+- **Which magazine.** On the rifle, the hi-cap carries as many BBs as the standard ones in fewer, rattling changes, and
+  the low-cap fewer BBs in all for a quick change and draw. On the pistol, the extended magazine carries half as many
+  again for a slower draw.
 
 ## Barrels
 
@@ -127,10 +124,12 @@ barrel.
 | Key | Name | Energy % | Spread (×) | Handling (×) |
 |---|---|---|---|---|
 | tightBore | Tight-Bore Barrel | 3 | 0.85 | 1 |
-| long | Long Barrel | 8 | 1 | 1.15 |
+| long | Long Barrel | 10 | 0.9 | 1.15 |
 
 - **Handling.** The time to bring the replica up after a switch and to raise a fitted optic (a long barrel is
   front-heavy).
+- **Which barrel.** The tight bore is the accuracy pick (tighter groups at no handling cost), the long barrel the reach
+  pick (the most energy, a little tighter, front-heavy).
 
 ## Muzzle parts
 
@@ -145,8 +144,8 @@ Screwed onto a replica tagged `muzzle-thread` in pool.md (the GBB Pistol and the
 
 ## Lights
 
-A weapon torch (M33h) on any replica it fits (pool.md's Lights table), switched with the Weapon torch key. No rarity
-tier improves it: a brighter torch is a new row.
+A weapon torch (M33h) on any replica it fits (pool.md's Lights table), switched with the Weapon torch key. A brighter
+torch is a new row.
 
 | Key | Name | Reach (m) | Beam (°) | Spill (°) |
 |---|---|---|---|---|
@@ -156,35 +155,6 @@ tier improves it: a brighter torch is a new row.
   a light pool lets them be seen).
 - **Beam.** The bright hotspot's full angle.
 - **Spill.** The dimmer cone round it, full angle. Anyone inside it within its reach is lit.
-
-## Tier scaling
-
-- **Categories:** Replica, Battery, Gas, Spring, Optic, Grip, Laser, Magazine, Barrel, Muzzle.
-- **Stats:** Energy, Fire rate, Spread, Reload, Draw, Raise, Shake.
-
-Which category takes which stat is in the table. A pairing the code has no use for is flagged, and the test fails.
-
-| Category | Stat | Share % |
-|---|---|---|
-| Replica | Spread | 100 |
-| Replica | Reload | 100 |
-| Replica | Draw | 100 |
-| Replica | Energy | 50 |
-| Replica | Fire rate | 50 |
-| Battery | Fire rate | 50 |
-| Gas | Energy | 50 |
-| Spring | Energy | 50 |
-| Optic | Raise | 100 |
-| Grip | Raise | 50 |
-| Grip | Draw | 50 |
-| Grip | Shake | 50 |
-| Laser | Spread | 50 |
-| Magazine | Reload | 100 |
-| Barrel | Spread | 50 |
-| Barrel | Draw | 50 |
-| Barrel | Raise | 50 |
-| Muzzle | Draw | 50 |
-| Muzzle | Raise | 50 |
 
 ## Site limits
 

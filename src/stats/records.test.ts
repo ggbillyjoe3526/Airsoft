@@ -139,13 +139,13 @@ describe('ruleset records (M39 criterion 4)', () => {
 });
 
 describe('Extraction records (M47)', () => {
-  const run = (over: Partial<MatchResult> = {}, haulFc = 120, finds = 2, seconds = 200): MatchResult => ({
+  const run = (over: Partial<MatchResult> = {}, haulXp = 120, finds = 2, seconds = 200): MatchResult => ({
     difficulty: 'normal',
     mode: 'extraction',
     won: true,
     hits: 0,
     bbsFired: 0,
-    run: { haulFc, finds, seconds },
+    run: { haulXp, finds, seconds },
     ...over,
   });
 
@@ -187,10 +187,9 @@ describe('Extraction records (M47)', () => {
 });
 
 describe('an Extraction run’s record from its haul (M47)', () => {
-  it('adds up the FC got out with and counts the finds (FC or a part), leaving a BB resupply out', () => {
-    const part = { asset: 'x', tier: 'rare' };
-    expect(runResultOf([{ fc: 40, resupply: false, item: null }, { fc: 0, resupply: false, item: part }, { fc: 0, resupply: true, item: null }], 123.5)).toEqual({ haulFc: 40, finds: 2, seconds: 123.5 });
-    expect(runResultOf([], 30)).toEqual({ haulFc: 0, finds: 0, seconds: 30 });
+  it('adds up the XP got out with and counts the finds that held XP, leaving a BB resupply out', () => {
+    expect(runResultOf([{ xp: 40, resupply: false }, { xp: 25, resupply: false }, { xp: 0, resupply: true }], 123.5)).toEqual({ haulXp: 65, finds: 2, seconds: 123.5 });
+    expect(runResultOf([], 30)).toEqual({ haulXp: 0, finds: 0, seconds: 30 });
   });
 });
 

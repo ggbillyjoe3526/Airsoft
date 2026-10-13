@@ -40,7 +40,7 @@ export interface MatchRules {
   semiAutoOnly: boolean;
   /** Realcap: everyone's magazines hold at most REALCAP.magSize BBs and REALCAP.mags are carried. */
   realcap: boolean;
-  /** Everyone carries the factory loadout (config/replicas.ts LOADOUT as it comes): no Armory gear, no rolled bot kits. */
+  /** Everyone carries the factory loadout (config/replicas.ts LOADOUT as it comes): no unlocked gear, no rolled bot kits. */
   factoryKit: boolean;
   /**
    * Strict marshal: the overshooting rule counts double (one warning, then you sit the next round out). INERT: a
@@ -57,9 +57,9 @@ export type RuleSwitch = { [K in keyof MatchRules]: MatchRules[K] extends boolea
 export const WIN_BY_TWO = 2;
 
 /**
- * Custom rules pay no more than this multiple (M39; owner, 2026-10-04: "Custom pays like Hard"): Pro's ×2 (pool.md) is
- * for the named rulesets played as they are. Easy, Normal and Hard pay at or under it, so their custom matches pay as
- * before.
+ * Custom rules give XP at no more than this multiple (M39; owner, 2026-10-04: "Custom pays like Hard"): Pro's ×2
+ * (levels.md) is for the named rulesets played as they are. Easy, Normal and Hard give at or under it, so their custom
+ * matches give as before.
  */
 export const CUSTOM_RULES_PAY_CAP = 1.5;
 
@@ -158,7 +158,7 @@ export const MAGAZINE_CHOICES: readonly MatchChoice<MagazineRule>[] = [
 
 export type KitRule = 'own' | 'factory';
 export const KIT_CHOICES: readonly MatchChoice<KitRule>[] = [
-  { id: 'own', label: 'Your kit', blurb: 'You carry your Loadout, Armory gear and all; Hard and Pro opponents roll their own.' },
+  { id: 'own', label: 'Your kit', blurb: 'You carry your Loadout, unlocked gear and all; Hard and Pro opponents roll their own.' },
   { id: 'factory', label: 'Factory', blurb: 'Everyone carries the factory rifle and pistol as they come: only skill counts.' },
 ];
 
@@ -218,7 +218,7 @@ export const RULESETS: readonly Ruleset[] = [
   {
     id: 'custom',
     label: 'Custom',
-    blurb: `Every switch is yours. Custom matches never go into the records, and pay no more than ×${CUSTOM_RULES_PAY_CAP}.`,
+    blurb: `Every switch is yours. Custom matches never go into the records, and give XP at no more than ×${CUSTOM_RULES_PAY_CAP}.`,
     fixed: {},
     records: null,
   },
@@ -302,7 +302,7 @@ export function standardRulesOf(ruleset: RulesetId): MatchRules {
 
 /**
  * Whether `rules` are `ruleset`'s standard match (M39): a ruleset with records, every rule as its standard has it.
- * Anything else is custom rules: never in the records, and paid no more than CUSTOM_RULES_PAY_CAP.
+ * Anything else is custom rules: never in the records, and XP at no more than CUSTOM_RULES_PAY_CAP.
  */
 export function standardRules(ruleset: RulesetId, rules: MatchRules): boolean {
   if (rulesetOf(ruleset).records === null) return false;

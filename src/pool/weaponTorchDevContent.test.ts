@@ -6,43 +6,46 @@ import { CYBER_PISTOL, LOADOUT } from '../config/replicas';
 import type { MapId } from '../map/maps';
 import { botsMayCarryDev, matchUsesDev, type NewGamePicks, playedPicks } from '../newGamePicks';
 import { rolledKitMayHoldDev } from './botKit';
-import { type Collection, type ItemRef, itemKey, newCollection } from './collection';
+import type { ItemRef } from './item';
 import { GAME_POOL } from './gamePool';
 import { FIT_SLOTS } from './kit';
 import { gameOwnership, LoadoutModel } from './loadoutModel';
 import { assetOfReplica } from './pool';
 import { MemoryStorage } from './testStorage';
+import { GAME_LEVELS } from '../progress/gameLevels';
+import { newProgress, type Progress } from '../progress/progress';
 
 /**
  * M33h QA, acceptance 1: the Weapon Torch as the game itself wires it (game.ts: LoadoutModel over the whole GAME_POOL
- * with gameOwnership, and matchUsesDev over the Loadout's equipped items). With Dev content off a save that owns the
- * torch (a starter, granted to every save) has no Light slot, no torch in its kit and Depot counts and pays at every
- * difficulty; with Dev content on, Depot by day still counts and pays, torch fitted or not, at every difficulty.
+ * with gameOwnership, and matchUsesDev over the Loadout's equipped items). With Dev content off a save that has the
+ * torch (level 0, given to every save) has no Light slot, no torch in its kit and Depot counts and gives XP at every
+ * difficulty; with Dev content on, Depot by day still counts and gives XP, torch fitted or not, at every difficulty.
  */
 
 // Test files share a worker (isolate: false): the stand-in storage goes with this file.
 afterAll(() => vi.unstubAllGlobals());
 
-const TORCH: ItemRef = { asset: '000020', tier: 'common' };
+const TORCH: ItemRef = { asset: '000020' };
 /** The public levels (Pro is dev content itself, M38); Hard rolls each opponent a kit (BOT_LOADOUTS). */
 const LEVELS = DIFFICULTIES.filter((d) => d.tag === 'public').map((d) => d.id);
 const picks = (map: MapId, difficulty: Difficulty): NewGamePicks => ({ map, mode: DEFAULT_MODE, difficulty, teammateDifficulty: difficulty, ruleset: DEFAULT_RULESET, rules: { ...DEFAULT_MATCH_RULES } });
 
-/** The game's Loadout (game.ts): the whole pool, owned through gameOwnership with the Dev content switch. */
-function gameLoadout(collection: Collection, dev: { on: boolean }): LoadoutModel {
-  return new LoadoutModel(GAME_POOL, gameOwnership(GAME_POOL, () => collection, () => false, () => dev.on));
+/** The game's Loadout (game.ts): the whole pool, owned through gameOwnership (the player's levels) with the Dev content switch. */
+function gameLoadout(progress: Progress, dev: { on: boolean }): LoadoutModel {
+  const unlocks = { unlocked: () => progress.unlocked, levelOf: (id: string) => GAME_LEVELS.unlockLevel.get(id) };
+  return new LoadoutModel(GAME_POOL, gameOwnership(GAME_POOL, unlocks, () => false, () => dev.on));
 }
 
 /** game.ts equippedItems: each gear slot's replica and everything fitted to it. */
 const equippedItems = (m: LoadoutModel): (ItemRef | null)[] => m.equipped().flatMap((r) => (r ? [r, ...Object.values(m.fitOf(r.asset))] : []));
 const holdsTorch = (items: readonly (ItemRef | null)[]): boolean => items.some((r) => r?.asset === TORCH.asset);
 
-describe('Dev content off: no Light slot, no torch, Depot counts and pays (M33h acceptance 1)', () => {
+describe('Dev content off: no Light slot, no torch, Depot counts and gives XP (M33h acceptance 1)', () => {
   beforeEach(() => vi.stubGlobal('localStorage', new MemoryStorage()));
 
-  it('hides an owned torch: no Light slot on any replica, nothing fitted even after a saved pick, no light in the kit', () => {
-    const save = newCollection(GAME_POOL, 1);
-    expect(save.owned[itemKey(TORCH.asset, TORCH.tier)]).toBe(1); // every save owns it (a starter)
+  it('hides an unlocked torch: no Light slot on any replica, nothing fitted even after a saved pick, no light in the kit', () => {
+    const save = newProgress(GAME_LEVELS);
+    expect(save.unlocked).toContain(TORCH.asset); // every save has it (level 0)
     const dev = { on: false };
     const model = gameLoadout(save, dev);
     for (const r of [...LOADOUT, CYBER_PISTOL]) {
@@ -62,16 +65,16 @@ describe('Dev content off: no Light slot, no torch, Depot counts and pays (M33h 
     expect(model.kit().slots[0]!.parts.light).toBe('weaponTorch');
   });
 
-  it('plays a dev map as Depot, so a Woodland pick with Dev content off counts and pays like Depot', () => {
+  it('plays a dev map as Depot, so a Woodland pick with Dev content off counts and gives XP like Depot', () => {
     for (const d of DIFFICULTIES.map((x) => x.id)) {
       const played = playedPicks(picks('woodland', d), false);
       expect(played.map).toBe('depot');
-      expect(matchUsesDev(played, equippedItems(gameLoadout(newCollection(GAME_POOL, 2), { on: false })), GAME_POOL, false), d).toBe(false);
+      expect(matchUsesDev(played, equippedItems(gameLoadout(newProgress(GAME_LEVELS), { on: false })), GAME_POOL, false), d).toBe(false);
     }
   });
 
-  it('counts and pays a Depot match at every difficulty, as before the torch', () => {
-    const model = gameLoadout(newCollection(GAME_POOL, 3), { on: false });
+  it('counts and gives XP a Depot match at every difficulty, as before the torch', () => {
+    const model = gameLoadout(newProgress(GAME_LEVELS), { on: false });
     // Every level as it plays with Dev content off (a Pro pick plays as the default).
     for (const d of DIFFICULTIES.map((x) => x.id)) {
       expect(matchUsesDev(playedPicks(picks('depot', d), false), equippedItems(model), GAME_POOL, false), d).toBe(false);
@@ -80,11 +83,11 @@ describe('Dev content off: no Light slot, no torch, Depot counts and pays (M33h 
   });
 });
 
-describe('Dev content on: Depot by day still counts and pays (M33h acceptance 1, fork "what counts as dev")', () => {
+describe('Dev content on: Depot by day still counts and gives XP (M33h acceptance 1, fork "what counts as dev")', () => {
   beforeEach(() => vi.stubGlobal('localStorage', new MemoryStorage()));
 
-  it("fits the starter torch by default, yet Depot by day counts and pays at every difficulty, kits that roll included", () => {
-    const model = gameLoadout(newCollection(GAME_POOL, 4), { on: true });
+  it("fits the level 0 torch by default, yet Depot by day counts and gives XP at every difficulty, kits that roll included", () => {
+    const model = gameLoadout(newProgress(GAME_LEVELS), { on: true });
     const items = equippedItems(model);
     expect(holdsTorch(items)).toBe(true);
     // The torch is the only dev item in the pool and a light is never rolled, so a rolled kit (Hard, Pro) holds no dev gear.
@@ -99,7 +102,7 @@ describe('Dev content on: Depot by day still counts and pays (M33h acceptance 1,
   });
 
   it('counts Woodland (a night field) as dev, whatever the kit', () => {
-    const items = equippedItems(gameLoadout(newCollection(GAME_POOL, 5), { on: true }));
+    const items = equippedItems(gameLoadout(newProgress(GAME_LEVELS), { on: true }));
     for (const d of LEVELS) expect(matchUsesDev(picks('woodland', d), items, GAME_POOL, true), d).toBe(true);
   });
 

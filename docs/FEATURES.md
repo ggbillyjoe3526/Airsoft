@@ -77,8 +77,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Extraction: your squad against a home team on an 8:00 run; exits counted out in 10 s, a late exit, one automatic
   respawn; home team size follows the difficulty (one more on Pro); a 3 s grace at insertion and respawn (BBs don't hit
   you or from you); dev content, Depot (M43, M72)
-- Extraction cases: ammo cans, field cases and a marshal's locker opened by holding Use (G), heard by bots; FC, BB
-  resupplies and parts, dropped when hit, kept only on extraction, shown on the summary in rarity colours (M44)
+- Extraction cases: ammo cans, field cases and a marshal's locker opened by holding Use (G), heard by bots; XP, BB
+  resupplies and parts, dropped when hit, kept only on extraction, shown on the summary (M44)
 - Extraction waves: hit opponents come back together every 75 s on Normal (100 Easy, 60 Hard and Pro) or once all are
   out, at regen points out of the squad's sight; one more for the last third (M45)
 - Extraction guards and hunters: two guards by the locker (one on Easy) who lean out and watch the way in; patrols in
@@ -140,28 +140,27 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - A Customise view per replica: optic, BB weight, hop-up, grip, laser, magazine, power source (M26b)
 - Every replica's and part's numbers in a hand-editable `stats.md`; a Performance sheet in Customise compares your setup
   with the replica as it comes (M29a)
-- Higher tiers add energy and rate of fire; batteries set the rate of fire (11.1 V LiPo battery); stronger gas kicks
+- Higher parts add energy and rate of fire; batteries set the rate of fire (11.1 V LiPo battery); stronger gas kicks
   harder; a site energy limit (M29a)
 - Barrel and Muzzle parts: a Tight-Bore Barrel and a Long Barrel for the AEG, a Silencer for both replicas that halves
   how far bots, the minimap and sound cues hear your shots (M29b)
 - On Hard, each opponent carries its own kit rolled from the pool by the match's seed (M29b)
 - Glowing BBs per replica in Customise: At Night (the default, glowing only on night fields), Always or Off; a glowing
   BB is green, a little larger at range and leaves a longer streak; bots load them on night fields (M33b)
-- The asset pool (`pool.md`): every item at a rarity tier with a small handling bonus; starters are yours from the start
-  (M26a)
+- Levels and XP: every match gives XP (match played, won, rounds won, hits); you level from 0 to 10, each level unlocks parts
+  for good, and the table is in `levels.md` (LV1)
+- Starters: the GBB Pistol and AEG Rifle, with battery and gas, are yours at level 0 (LV1)
 - Your collection is saved apart from the settings (M26a)
-- Armory, free to play: earn Field Credits (scaled by participation and match length), buy Tokens, draw with pity (an
-  Epic or better within 20 Shots, a Legendary within 100); the catalogue shows all items by rarity tier (M26c, FA10)
-- Chase items: a Legendary-only replica with its own 0.25 % chance per Shot item, shown on the Armory's Chase line (M32)
-- Sort and filter by rarity: Loadout's replicas and Customise's parts sort by rarity and filter by tier, saved between sessions; what you carry or have fitted always shows (M82)
-- Saved loadouts: five tabs on the Loadout hold whole kits; keys 1 to 5 switch, edits go to the current tab, Unlock all gear keeps its own set (SL1)
+- Armory: your level, XP to the next level, what the next level unlocks, how to earn XP, and every level's items
+  (unlocked, next, locked) (LV1)
+- Locked items show greyed in Loadout and Customise, with the level that unlocks them (LV1)
+- Saved loadouts: five tabs on the Loadout hold whole kits; keys 1 to 5 switch, edits go to the current tab, Disable levelling keeps its own set (SL1)
 
 ## Menus and settings
 
 - Menus in a navy and orange look in Inter type (G3, M100): a plain title on navy (wordmark, tagline, START, the Tutorial on a
-  clean save), then a top bar of Match, Loadout, Armory and Settings with your Field Credits and Tokens at the right;
-  no key strip, every screen works by mouse and the keys still work; Practice is the last mode on the Match screen; the Armory's collection scraps spares from a right-click menu
-- Play screen: map and mode picture cards (a Dev tag on maps still being built), the match rows and a Your match panel
+  clean save), then a top bar of Match, Loadout, Armory and Settings with your level badge at the right;
+  no key strip, every screen works by mouse and the keys still work; Practice is the last mode on the Match screen- Play screen: map and mode picture cards (a Dev tag on maps still being built), the match rows and a Your match panel
   on one page; no map is loaded until Play (M15, M15b, G3)
 - Title screen, pause, match summary and result screens; the pause screen shows the match's seed for bug reports (M15,
   M24, BP1, G3)
@@ -182,7 +181,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   Backspace or Delete clears a binding (FA5)
 - HUD size slider (0.8–1.5) in Settings › Gameplay (FA5)
 - A hidden Dev group (tick Dev settings under the list): debug info, BB paths, game speed, bottomless magazines, ghost,
-  Disable Armory (hides the Armory from every menu and the tutorial), Unlock all gear, Field Credits and Tokens on demand,
+  Disable levelling (unlocks every item; a cheat with no XP and no records), +500 XP, Level up and Reset level buttons,
   free case openings, time of day, bots hold fire, spectate any bot, bot intentions, end the round now, reset the save,
   Diagnostics Copy and Report a Bug, Dev content switch, Retro pixels (M24, M26d, FA1, M35, M42, M83, M90, IM7)
 - Dev switches Disable all models and Disable figure models (both on by default): turned off, they bring back the Blender replicas, parts and menu pictures, then the player and bot figures (RM4)
@@ -283,7 +282,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Range in Depot's new look: baked light, post effects, props behind the firing line (portable toilet, replica rack, water tank, generator, crate bench), a sandbag berm at the backstop, dirt, litter, puddles and sprays, and wooded hills, treelines, site huts, a water tower and a power line beyond the walls; chains, bands and brackets on the plates (FA7, M81)
 - A tutorial of fifteen coached steps on the range, with your own key bindings and the real scoreboard and order wheel; finishing opens Tutorial complete with Practice or Menu; skip and resume from pause; Replay tutorial in Settings starts it again at once (M16, FA10, M80, M97)
 - Practice on any map: the Range or any map (dev maps with Dev content on), picked on the Match screen's Map cards, never changing the match's map; on a map no bots, and plates, figures, pop-ups, sliders and swingers stand where the other team's bots would play, facing you; minimap and torch at night; the timed challenge has its own best per map, a START plate a few steps ahead, and targets light only once in your sight, within 50 m (M94)
-- In Practice, L opens the Loadout from play to try and customise any replica you own (everything with Unlock all gear); Back to practice returns you where you stood (M95)
+- In Practice, L opens the Loadout from play to try and customise any replica you own (everything with Disable levelling); Back to practice returns you where you stood (M95)
 
 ## Accessibility and comfort
 

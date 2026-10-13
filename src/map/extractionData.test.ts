@@ -138,7 +138,7 @@ describe('Extraction map data (M43)', () => {
       it('rolls every run one marshal’s locker and each other kind within its pool.md count, on distinct spots of the map (M44)', () => {
         const at = new Set(x.cases.map((c) => JSON.stringify(c.position)));
         for (let seed = 0; seed < 200; seed++) {
-          const run = rollRunCases(GAME_POOL, x.cases, {}, seed);
+          const run = rollRunCases(GAME_POOL, x.cases, seed);
           expect(run.filter((c) => c.kind === 'locker'), `seed ${seed}`).toHaveLength(1);
           for (const k of GAME_POOL.caseKinds) {
             const n = run.filter((c) => c.kind === k.key).length;

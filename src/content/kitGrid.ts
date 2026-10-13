@@ -1,13 +1,12 @@
 import { handlingOf } from '../config/attachments';
 import { KIT_RANGE_SLACK, REPLICA_RANGES } from '../config/contentRules';
-import type { ItemRef } from '../pool/collection';
+import type { ItemRef } from '../pool/item';
 import { EMPTY_FIT, FIT_CATEGORY, FIT_SLOTS, type FitSlot, kitSlot, type ReplicaFit, uncappedEnergy } from '../pool/kit';
-import { type Asset, fits, hasBuiltInPower, type Pool, tiersOf } from '../pool/pool';
+import { type Asset, fits, hasBuiltInPower, type Pool } from '../pool/pool';
 import { num } from './checks';
 
 /**
- * The compatibility grid (CT1): every combination of parts a replica can wear, at the commonest and the rarest tier of
- * every item, worked through the game's own kit maths (pool/kit.ts kitSlot, config/attachments.ts handlingOf). It
+ * The compatibility grid (CT1): every combination of parts a replica can wear, worked through the game's own kit maths (pool/kit.ts kitSlot, config/attachments.ts handlingOf). It
  * finds numbers that break (a zero or negative reload, an endless spread) or run away together, and energy past the
  * site limit. Pure.
  */
@@ -44,7 +43,7 @@ export interface KitNumbers {
 export interface GridProblem {
   /** The parts fitted (their pool IDs), for a part's own check to find the kits it is in. */
   parts: readonly string[];
-  /** The fit in words: "Rare AEG Rifle with Hi-Cap Magazine, Long Barrel". */
+  /** The fit in words: "AEG Rifle with Hi-Cap Magazine, Long Barrel". */
   fit: string;
   says: string;
   severity: 'fail' | 'warn';
@@ -69,13 +68,7 @@ export function slotChoices(pool: Pool, replica: Asset): Record<FitSlot, (Asset 
   return out;
 }
 
-/** `asset`'s commonest and rarest tier (one when it comes in one). */
-function tierEnds(pool: Pool, asset: Asset): string[] {
-  const tiers = tiersOf(pool, asset).map((t) => t.id);
-  return [...new Set([tiers[0]!, tiers[tiers.length - 1]!])];
-}
-
-/** The carried numbers of `replica` at `tier` with `fit`. */
+/** The carried numbers of `item` with `fit`. */
 export function kitNumbers(pool: Pool, item: ItemRef, fit: ReplicaFit): KitNumbers {
   const slot = kitSlot(pool, item, fit);
   const h = handlingOf(slot.replica, slot.parts);
@@ -112,10 +105,8 @@ export function kitGrid(pool: Pool, replica: Asset, siteClass: string): GridResu
 function workOutGrid(pool: Pool, replica: Asset, siteClass: string): GridResult {
   const choices = slotChoices(pool, replica);
   const slots = FIT_SLOTS.filter((s) => choices[s].length > 0);
-  const replicaTiers = tierEnds(pool, replica);
-  // Each part's tier choice: commonest and rarest ("the numbers combine at Common and Legendary").
-  const options = slots.map((s) => choices[s].flatMap((a) => (a ? tierEnds(pool, a).map((t) => ({ asset: a, tier: t })) : [null])));
-  let combinations = replicaTiers.length;
+  const options = slots.map((s) => choices[s]);
+  let combinations = 1;
   for (const o of options) combinations *= o.length;
   const tried = Math.min(combinations, GRID_LIMIT);
   const step = tried < combinations ? coprimeStep(combinations) : 1;
@@ -125,31 +116,27 @@ function workOutGrid(pool: Pool, replica: Asset, siteClass: string): GridResult 
   let strongest = { uncapped: 0, limit: Number.POSITIVE_INFINITY, fit: '' };
   const index = new Array<number>(options.length).fill(0);
   for (let i = 0; i < tried; i++) {
-    // Decode combination n: the replica's tier first, then each slot's choice.
-    const n = (i * step) % combinations;
-    let rest = n;
-    const tier = replicaTiers[rest % replicaTiers.length]!;
-    rest = Math.floor(rest / replicaTiers.length);
+    // Decode combination n: each slot's choice in turn.
+    let rest = (i * step) % combinations;
     for (let slot = 0; slot < options.length; slot++) {
       index[slot] = rest % options[slot]!.length;
       rest = Math.floor(rest / options[slot]!.length);
     }
     const fit: ReplicaFit = { ...EMPTY_FIT };
-    const fitted: { asset: Asset; tier: string }[] = [];
+    const fitted: Asset[] = [];
     slots.forEach((s, slot) => {
       const pick = options[slot]![index[slot]!];
       if (pick) {
-        fit[s] = { asset: pick.asset.id, tier: pick.tier };
+        fit[s] = { asset: pick.id };
         fitted.push(pick);
       }
     });
-    const item = { asset: replica.id, tier };
+    const item = { asset: replica.id };
     const k = kitNumbers(pool, item, fit);
-    const tierLabel = (t: string): string => pool.tiers.find((x) => x.id === t)?.label ?? t;
-    const words = `${tierLabel(tier)} ${replica.name}${fitted.length ? ` with ${fitted.map((f) => `${tierLabel(f.tier)} ${f.asset.name}`).join(', ')}` : ', as it comes'}`;
-    const parts = fitted.map((f) => f.asset.id);
+    const words = `${replica.name}${fitted.length ? ` with ${fitted.map((f) => f.name).join(', ')}` : ', as it comes'}`;
+    const parts = fitted.map((f) => f.id);
     const add = (severity: 'fail' | 'warn', says: string, key: string): void => {
-      // One problem of each kind per set of parts (the tiers repeat it).
+      // One problem of each kind per set of parts.
       const id = `${severity}|${key}|${parts.join(',')}`;
       if (seen.has(id)) return;
       seen.add(id);

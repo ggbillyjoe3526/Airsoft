@@ -1,4 +1,6 @@
 import { SAVE_GAME_ID, SAVE_FILE_PREFIX } from '../config/save';
+import { GAME_LEVELS } from '../progress/gameLevels';
+import { levelOf } from '../progress/levels';
 import { sha256 } from './sha256';
 import { SAVE_STORES, type StoreData, type StoreId } from './stores';
 
@@ -6,8 +8,8 @@ import { SAVE_STORES, type StoreData, type StoreId } from './stores';
  * The save file (M31): readable JSON a player can keep and load in any browser. Pure: no DOM, no storage.
  *
  * ```
- * { "game": "Airsoft", "format": 1, "build": "0.1 Dev 3+40 · abc1234", "savedAt": "2026-10-04T16:40:00.000Z",
- *   "summary": { "fc": 120, ... }, "stores": { "settings": {...}, "keyBindings": {...}, ... }, "checksum": "sha256:..." }
+ * { "game": "Airsoft", "format": 3, "build": "0.1 Dev 6+12 · abc1234", "savedAt": "2026-10-13T16:40:00.000Z",
+ *   "summary": { "level": 3, ... }, "stores": { "settings": {...}, "keyBindings": {...}, ... }, "checksum": "sha256:..." }
  * ```
  *
  * `format` is what migrations go by; `build` (the title screen's version, from git) and `savedAt` are for people.
@@ -22,12 +24,14 @@ import { SAVE_STORES, type StoreData, type StoreId } from './stores';
  * every store keeps fields it doesn't know when it saves (save/overStored.ts).
  */
 
-export const SAVE_FORMAT = 2;
+export const SAVE_FORMAT = 3;
 
 /** The stores' own versions each format carried (id → version), for the test that keeps SAVE_FORMAT honest. */
 export const STORES_BY_FORMAT: Readonly<Record<number, Readonly<Record<string, number>>>> = {
   1: { settings: 1, keyBindings: 0, records: 1, collection: 1 },
   2: { settings: 1, keyBindings: 0, records: 1, collection: 1, loadouts: 1 },
+  // LV1: levels in place of the Armory's collection.
+  3: { settings: 1, keyBindings: 0, records: 1, progress: 1, loadouts: 1 },
 };
 
 /**
@@ -37,6 +41,9 @@ export const STORES_BY_FORMAT: Readonly<Record<number, Readonly<Record<string, n
 export const MIGRATIONS: Readonly<Record<number, (stores: StoreData) => StoreData>> = {
   // Format 2 added the saved loadouts (SL1). A format 1 save has none: the game starts it with one, the loadout carried.
   1: (stores) => ({ ...stores, loadouts: null }),
+  // LV1 (owner, 2026-10-13): the Armory's collection (FC, Tokens, items) doesn't carry over into levels. Reading the
+  // file already left it out (it is no store now), so a format 2 save loads at level 0 with its starting kit.
+  2: (stores) => ({ ...stores, progress: null }),
 };
 
 /** What a save holds, read or about to be written. */
@@ -50,10 +57,11 @@ export interface SaveData {
 
 /** A save at a glance, for the comparison before a load and for anyone reading the file. */
 export interface SaveSummary {
-  fc: number;
-  tokens: number;
-  /** Copies owned in the Armory collection. */
-  items: number;
+  /** The level its XP reaches (levels.md), and the XP. */
+  level: number;
+  xp: number;
+  /** Items unlocked, the starting kit included. */
+  unlocked: number;
   /** Matches with a result (wins and losses, every difficulty and mode). */
   matches: number;
 }
@@ -135,13 +143,13 @@ function cleanStores(stores: Record<string, unknown>): StoreData {
 }
 
 export function summarize(stores: StoreData): SaveSummary {
-  const c = field(stores, 'collection');
-  let items = 0;
-  if (isObject(c.owned)) for (const n of Object.values(c.owned)) items += whole(n);
+  const p = field(stores, 'progress');
+  const xp = whole(p.xp);
+  const unlocked = Array.isArray(p.unlocked) ? p.unlocked.filter((id) => typeof id === 'string').length : 0;
   let matches = 0;
   const r = field(stores, 'records');
   if (isObject(r.results)) for (const wl of Object.values(r.results)) if (isObject(wl)) matches += whole(wl.wins) + whole(wl.losses);
-  return { fc: whole(c.fc), tokens: whole(c.tokens), items, matches };
+  return { level: levelOf(GAME_LEVELS, xp), xp, unlocked, matches };
 }
 
 /** Nothing saved in any store (a new player, or a deleted save). */

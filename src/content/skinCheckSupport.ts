@@ -4,7 +4,7 @@ import { BOT_SCHEMES, DEFAULT_SCHEMES, FAMILIES, type FamilyId, hasFixedColours,
 import { TEAM_COLOUR_SETS, TEAMS } from '../config/teams';
 import { GAME_POOL } from '../pool/gamePool';
 import { LoadoutModel } from '../pool/loadoutModel';
-import { type Pool, replicaOf, tiersOf } from '../pool/pool';
+import { type Pool, replicaOf } from '../pool/pool';
 import { MemoryStorage } from '../pool/testStorage';
 import { NO_REPLICA_FILES, type ReplicaFiles } from '../render/replicaFiles';
 
@@ -83,15 +83,14 @@ export function listWords(items: readonly string[]): string {
   return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
 }
 
-/** The player's kit with `replica` equipped (lowest tier, as it comes) in `skin`, its colour left out, as text. */
+/** The player's kit with `replica` equipped (as it comes) in `skin`, its colour left out, as text. */
 export function gameKitWith(pool: Pool, replica: string, skin: string): string {
   const g = globalThis as { localStorage?: Storage };
   const saved = Object.getOwnPropertyDescriptor(g, 'localStorage');
   Object.defineProperty(g, 'localStorage', { value: new MemoryStorage(), configurable: true, writable: true });
   try {
     const model = new LoadoutModel(pool, { owns: () => true, devContent: () => true });
-    const asset = pool.byId.get(replica)!;
-    model.equip('primary', { asset: replica, tier: tiersOf(pool, asset)[0]!.id });
+    model.equip('primary', { asset: replica });
     model.setScheme(replica, skin as SchemeId);
     const kit = model.kit();
     if (kit.schemes[0] !== skin) throw new Error(`the kit wears ${kit.schemes[0]}, not ${skin}`);

@@ -1,24 +1,31 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GAME_STATS } from '../config/gameStats';
 import { AEG, CYBER_PISTOL, GAS_PISTOL } from '../config/replicas';
-import { type ItemRef, itemKey } from './collection';
+import type { ItemRef } from './item';
 import { GAME_POOL } from './gamePool';
-import { bbGlowFor, collectionOwnership, gameOwnership, kitPaint, LoadoutModel, type Ownership } from './loadoutModel';
+import { bbGlowFor, gameOwnership, kitPaint, LoadoutModel, type Ownership, type Unlocks, unlockedOwnership } from './loadoutModel';
 import { EMPTY_FIT, FIT_SLOTS } from './kit';
-import { newCollection } from './collection';
 import { MemoryStorage } from './testStorage';
 import { saveSetting } from '../settings/storage';
 import { withTags } from './testSupport';
+import { GAME_LEVELS } from '../progress/gameLevels';
+import { earnedOf, unlocksUpTo } from '../progress/levels';
 
 const pool = GAME_POOL;
 const id = (name: string) => pool.assets.find((a) => a.name === name)!.id;
-const item = (name: string, tier = 'common'): ItemRef => ({ asset: id(name), tier });
+const item = (name: string): ItemRef => ({ asset: id(name) });
 const STARTERS = ['AEG Rifle', 'GBB Pistol', 'Standard Battery', 'Green Gas'].map((n) => item(n));
 
 /** An ownership of exactly these items, which a test can change as it goes. */
 function owning(items: ItemRef[]): Ownership & { items: Set<string> } {
-  const set = new Set(items.map((r) => itemKey(r.asset, r.tier)));
-  return { items: set, owns: (r) => set.has(itemKey(r.asset, r.tier)) };
+  const set = new Set(items.map((r) => r.asset));
+  return { items: set, owns: (r) => set.has(r.asset) };
+}
+
+/** A player's levels (LV1): level 0's kit plus the given items, levels.md placing each item; a test can add to `ids`. */
+function unlocks(...items: ItemRef[]): Unlocks & { ids: string[] } {
+  const ids = [...unlocksUpTo(GAME_LEVELS, 0), ...items.map((r) => r.asset)];
+  return { ids, unlocked: () => ids, levelOf: (asset) => GAME_LEVELS.unlockLevel.get(asset) };
 }
 
 // Test files share a worker (isolate: false): the stand-in storage goes with this file.
@@ -40,12 +47,12 @@ describe('Loadout model (M26b)', () => {
     expect(kit.bbWeights).toEqual([AEG.bbWeight, GAS_PISTOL.bbWeight]);
   });
 
-  it('lists owned copies rarest first and equips the best copy of each replica until the player picks', () => {
-    const model = new LoadoutModel(pool, owning([...STARTERS, item('AEG Rifle', 'epic'), item('GBB Pistol', 'rare')]));
-    expect(model.replicaChoices()).toEqual([item('GBB Pistol', 'rare'), item('GBB Pistol'), item('AEG Rifle', 'epic'), item('AEG Rifle')]);
-    expect(model.equipped()).toEqual([item('AEG Rifle', 'epic'), item('GBB Pistol', 'rare')]);
-    model.equip('primary', item('AEG Rifle'));
-    expect(model.equipped()[0]).toEqual(item('AEG Rifle'));
+  it('lists the unlocked replicas in pool order and equips the rifle and pistol until the player picks', () => {
+    const model = new LoadoutModel(pool, owning([...STARTERS, item('Cyber Pistol')]));
+    expect(model.replicaChoices()).toEqual([item('GBB Pistol'), item('AEG Rifle'), item('Cyber Pistol')]);
+    expect(model.equipped()).toEqual([item('AEG Rifle'), item('GBB Pistol')]);
+    model.equip('primary', item('Cyber Pistol'));
+    expect(model.equipped()).toEqual([item('Cyber Pistol'), item('GBB Pistol')]);
   });
 
   it('puts any replica in either slot, swapping rather than carrying one replica twice', () => {
@@ -56,22 +63,22 @@ describe('Loadout model (M26b)', () => {
   });
 
   it('falls back to a default for a saved replica or part the player no longer owns', () => {
-    const own = owning([...STARTERS, item('AEG Rifle', 'legendary'), item('Red Dot', 'rare')]);
+    const own = owning([...STARTERS, item('Cyber Pistol'), item('Red Dot')]);
     const model = new LoadoutModel(pool, own);
-    model.equip('primary', item('AEG Rifle', 'legendary'));
-    model.setFit(id('AEG Rifle'), 'optic', item('Red Dot', 'rare'));
-    expect(model.fitOf(id('AEG Rifle')).optic).toEqual(item('Red Dot', 'rare'));
-    own.items.delete(itemKey(id('AEG Rifle'), 'legendary'));
-    own.items.delete(itemKey(id('Red Dot'), 'rare'));
+    model.equip('primary', item('Cyber Pistol'));
+    model.setFit(id('AEG Rifle'), 'optic', item('Red Dot'));
+    expect(model.fitOf(id('AEG Rifle')).optic).toEqual(item('Red Dot'));
+    own.items.delete(id('Cyber Pistol'));
+    own.items.delete(id('Red Dot'));
     expect(model.equipped()[0]).toEqual(item('AEG Rifle'));
     expect(model.fitOf(id('AEG Rifle')).optic).toBeNull();
   });
 
   it("offers only owned items that fit the replica's tags, and knows which slots a replica has at all", () => {
-    const model = new LoadoutModel(pool, owning([...STARTERS, item('Red Dot'), item('Red Laser'), item('Black Gas', 'epic'), item('Extended Magazine')]));
+    const model = new LoadoutModel(pool, owning([...STARTERS, item('Red Dot'), item('Red Laser'), item('Black Gas'), item('Extended Magazine')]));
     expect(model.fitChoices(id('AEG Rifle'), 'optic')).toEqual([item('Red Dot')]);
     expect(model.fitChoices(id('GBB Pistol'), 'optic')).toEqual([]);
-    expect(model.fitChoices(id('GBB Pistol'), 'power')).toEqual([item('Green Gas'), item('Black Gas', 'epic')]);
+    expect(model.fitChoices(id('GBB Pistol'), 'power')).toEqual([item('Green Gas'), item('Black Gas')]);
     expect(model.fitChoices(id('AEG Rifle'), 'power')).toEqual([item('Standard Battery')]);
     expect(model.fitChoices(id('GBB Pistol'), 'magazine')).toEqual([item('Extended Magazine')]);
     expect(model.hasSlot(id('GBB Pistol'), 'optic')).toBe(false);
@@ -206,47 +213,48 @@ describe('Loadout model (M26b)', () => {
     expect(model.kit().slots).toHaveLength(1);
   });
 
-  it('offers every asset at every tier while Dev settings → Unlock all gear is on, and only the collection after (M26d)', () => {
+  it('offers every asset while Dev settings → Disable levelling is on, and only what the levels unlocked after (M26d)', () => {
     let unlocked = true;
-    const c = newCollection(pool, 1);
-    const model = new LoadoutModel(pool, gameOwnership(pool, () => c, () => unlocked));
-    expect(model.fitChoices(id('AEG Rifle'), 'optic')).toHaveLength(2 * pool.tiers.length);
-    expect(model.equipped()[0]).toEqual(item('AEG Rifle', 'legendary'));
-    expect(c.owned).toEqual(newCollection(pool, 1).owned); // the collection itself is untouched
+    const levels = unlocks();
+    const before = [...levels.ids];
+    const model = new LoadoutModel(pool, gameOwnership(pool, levels, () => unlocked));
+    expect(model.fitChoices(id('AEG Rifle'), 'optic')).toEqual([item('Red Dot'), item('2x Scope')]);
+    expect(model.replicaChoices()).toEqual([item('GBB Pistol'), item('AEG Rifle'), item('Cyber Pistol')]);
+    expect(model.equipped()[0]).toEqual(item('AEG Rifle'));
+    expect(levels.ids).toEqual(before); // the progress itself is untouched
     unlocked = false;
     expect(model.fitChoices(id('AEG Rifle'), 'optic')).toEqual([]);
-    expect(model.equipped()[0]).toEqual(item('AEG Rifle'));
+    expect(model.replicaChoices()).toEqual([item('GBB Pistol'), item('AEG Rifle')]);
   });
 
   it('keeps picks made with everything unlocked apart, so turning it off brings back the real loadout (M26d)', () => {
     let unlocked = false;
-    const c = newCollection(pool, 1);
-    c.owned[itemKey(id('Red Dot'), 'common')] = 1;
-    const model = new LoadoutModel(pool, gameOwnership(pool, () => c, () => unlocked));
+    const model = new LoadoutModel(pool, gameOwnership(pool, unlocks(item('Red Dot')), () => unlocked));
     const aeg = id('AEG Rifle');
     model.setFit(aeg, 'optic', item('Red Dot'));
     unlocked = true;
     expect(model.fitOf(aeg).optic).toEqual(item('Red Dot')); // starts from the real picks
-    model.equip('primary', item('AEG Rifle', 'legendary'));
-    model.setFit(aeg, 'optic', item('2x Scope', 'legendary'));
-    expect(model.fitOf(aeg).optic).toEqual(item('2x Scope', 'legendary'));
+    model.equip('primary', item('Cyber Pistol'));
+    model.setFit(aeg, 'optic', item('2x Scope'));
+    expect(model.fitOf(aeg).optic).toEqual(item('2x Scope'));
     unlocked = false;
     expect(model.equipped()[0]).toEqual(item('AEG Rifle'));
     expect(model.fitOf(aeg).optic).toEqual(item('Red Dot'));
     unlocked = true; // and the sandboxed picks are still there next time
-    expect(model.fitOf(aeg).optic).toEqual(item('2x Scope', 'legendary'));
+    expect(model.equipped()[0]).toEqual(item('Cyber Pistol'));
+    expect(model.fitOf(aeg).optic).toEqual(item('2x Scope'));
   });
 
   describe('the replica as it comes and the site limit (M29)', () => {
-    const ALL = [...STARTERS, item('AEG Rifle', 'legendary'), item('GBB Pistol', 'legendary'), item('Black Gas', 'legendary'), item('11.1 V LiPo Battery'), item('Red Dot', 'legendary'), item('Red Laser', 'legendary'), item('Hi-Cap Magazine')];
+    const ALL = [...STARTERS, item('Black Gas'), item('11.1 V LiPo Battery'), item('Red Dot'), item('Red Laser'), item('Hi-Cap Magazine'), item('Tight-Bore Barrel')];
 
-    it('builds asItComes at the lowest tier on the starter power source, whatever the player owns, equips or fits', () => {
+    it('builds asItComes on the starter power source, whatever the player unlocked, equips or fits', () => {
       const model = new LoadoutModel(pool, owning(ALL));
-      model.equip('primary', item('AEG Rifle', 'legendary'));
       model.setFit(id('AEG Rifle'), 'power', item('11.1 V LiPo Battery'));
-      model.setFit(id('AEG Rifle'), 'optic', item('Red Dot', 'legendary'));
+      model.setFit(id('AEG Rifle'), 'optic', item('Red Dot'));
       model.setFit(id('AEG Rifle'), 'magazine', item('Hi-Cap Magazine'));
-      model.setFit(id('GBB Pistol'), 'power', item('Black Gas', 'legendary'));
+      model.setFit(id('AEG Rifle'), 'barrel', item('Tight-Bore Barrel'));
+      model.setFit(id('GBB Pistol'), 'power', item('Black Gas'));
       const aeg = model.asItComes(id('AEG Rifle'));
       expect(aeg.replica).toEqual({ ...AEG, name: 'AEG Rifle' });
       expect(aeg.optic).toBeNull();
@@ -254,7 +262,7 @@ describe('Loadout model (M26b)', () => {
       expect(aeg.parts.laser).toBeNull();
       expect(aeg.parts.magazine).toBe(AEG.magazines[0]);
       // The player's own slot is better than it comes; the factory one is untouched by the picks.
-      const carried = model.slotKit(item('AEG Rifle', 'legendary'));
+      const carried = model.slotKit(item('AEG Rifle'));
       expect(carried.replica.fireRate).toBeGreaterThan(aeg.replica.fireRate);
       expect(carried.replica.spreadDeg).toBeLessThan(aeg.replica.spreadDeg);
       const pistol = model.asItComes(id('GBB Pistol'));
@@ -270,17 +278,17 @@ describe('Loadout model (M26b)', () => {
 
     it('says capped only when the site limit stops the energy of that replica with its current fit', () => {
       const model = new LoadoutModel(pool, owning(ALL));
-      const legendaryPistol = item('GBB Pistol', 'legendary');
-      model.setFit(id('GBB Pistol'), 'power', item('Black Gas', 'legendary'));
-      expect(model.capped(legendaryPistol)).toBe(false); // 0.52 J · 1.075 · 1.275 is under 1.00 J as shipped
+      const pistol = item('GBB Pistol');
+      model.setFit(id('GBB Pistol'), 'power', item('Black Gas'));
+      expect(model.capped(pistol)).toBe(false); // 0.52 J · 1.2 is under 1.00 J as shipped
       const black = GAME_STATS.power[id('Black Gas')]!;
       const saved = { ...black };
       try {
         Object.assign(black, { energy: 2 }); // a looser file: the same fit now runs past the limit
-        expect(model.capped(legendaryPistol)).toBe(true);
-        expect(model.capped(item('GBB Pistol'))).toBe(true);
+        expect(model.capped(pistol)).toBe(true);
+        expect(model.capped(item('AEG Rifle'))).toBe(false);
         model.setFit(id('GBB Pistol'), 'power', item('Green Gas'));
-        expect(model.capped(legendaryPistol)).toBe(false); // the fit decides, not the replica
+        expect(model.capped(pistol)).toBe(false); // the fit decides, not the replica
       } finally {
         Object.assign(black, saved);
       }
@@ -289,7 +297,7 @@ describe('Loadout model (M26b)', () => {
 });
 
 describe('Loadout model: barrels and muzzle parts (M29b)', () => {
-  const PARTS = [...STARTERS, item('Tight-Bore Barrel'), item('Long Barrel', 'epic'), item('Silencer', 'rare')];
+  const PARTS = [...STARTERS, item('Tight-Bore Barrel'), item('Long Barrel'), item('Silencer')];
 
   it('gives the AEG both rows and the GBB Pistol a muzzle only: its barrel is fixed', () => {
     const model = new LoadoutModel(pool, owning(STARTERS));
@@ -299,49 +307,49 @@ describe('Loadout model: barrels and muzzle parts (M29b)', () => {
     expect(model.hasSlot(id('GBB Pistol'), 'muzzle')).toBe(true);
   });
 
-  it('offers only the barrels and silencer the player owns (none from the start), and the pistol only the silencer', () => {
+  it('offers only the barrels and silencer the player unlocked (none from the start), and the pistol only the silencer', () => {
     expect(new LoadoutModel(pool, owning(STARTERS)).fitChoices(id('AEG Rifle'), 'barrel')).toEqual([]);
     expect(new LoadoutModel(pool, owning(STARTERS)).fitChoices(id('AEG Rifle'), 'muzzle')).toEqual([]);
     const model = new LoadoutModel(pool, owning(PARTS));
     expect(model.fitChoices(id('AEG Rifle'), 'barrel').map((r) => r.asset).sort()).toEqual([id('Tight-Bore Barrel'), id('Long Barrel')].sort());
-    expect(model.fitChoices(id('AEG Rifle'), 'muzzle')).toEqual([item('Silencer', 'rare')]);
+    expect(model.fitChoices(id('AEG Rifle'), 'muzzle')).toEqual([item('Silencer')]);
     expect(model.fitChoices(id('GBB Pistol'), 'barrel')).toEqual([]);
-    expect(model.fitChoices(id('GBB Pistol'), 'muzzle')).toEqual([item('Silencer', 'rare')]);
+    expect(model.fitChoices(id('GBB Pistol'), 'muzzle')).toEqual([item('Silencer')]);
   });
 
   it('carries the fitted barrel and silencer into the kit, and refuses a barrel on the pistol even if saved by hand', () => {
     const model = new LoadoutModel(pool, owning(PARTS));
-    model.setFit(id('AEG Rifle'), 'barrel', item('Long Barrel', 'epic'));
-    model.setFit(id('AEG Rifle'), 'muzzle', item('Silencer', 'rare'));
+    model.setFit(id('AEG Rifle'), 'barrel', item('Long Barrel'));
+    model.setFit(id('AEG Rifle'), 'muzzle', item('Silencer'));
     model.setFit(id('GBB Pistol'), 'barrel', item('Tight-Bore Barrel'));
-    model.setFit(id('GBB Pistol'), 'muzzle', item('Silencer', 'rare'));
+    model.setFit(id('GBB Pistol'), 'muzzle', item('Silencer'));
     const [rifle, pistol] = model.kit().slots;
     expect([rifle!.parts.barrel, rifle!.parts.muzzle]).toEqual(['long', 'silencer']);
     expect([pistol!.parts.barrel, pistol!.parts.muzzle]).toEqual([null, 'silencer']);
     expect(model.fitOf(id('GBB Pistol')).barrel).toBeNull();
-    // Falls back to nothing fitted when the part is no longer owned.
+    // Falls back to nothing fitted when the part is no longer unlocked.
     const own = owning(PARTS);
     const m2 = new LoadoutModel(pool, own);
-    m2.setFit(id('AEG Rifle'), 'muzzle', item('Silencer', 'rare'));
-    own.items.delete(itemKey(id('Silencer'), 'rare'));
+    m2.setFit(id('AEG Rifle'), 'muzzle', item('Silencer'));
+    own.items.delete(id('Silencer'));
     expect(m2.fitOf(id('AEG Rifle')).muzzle).toBeNull();
   });
 
-  it('offers every barrel and muzzle part at every tier with Unlock all gear, and none of them after', () => {
+  it('offers every barrel and muzzle part with Disable levelling, and none of them after', () => {
     let unlocked = true;
-    const model = new LoadoutModel(pool, gameOwnership(pool, () => newCollection(pool, 1), () => unlocked));
-    expect(model.fitChoices(id('AEG Rifle'), 'barrel')).toHaveLength(2 * pool.tiers.length);
-    expect(model.fitChoices(id('AEG Rifle'), 'muzzle')).toHaveLength(pool.tiers.length);
-    expect(model.fitChoices(id('GBB Pistol'), 'muzzle')).toHaveLength(pool.tiers.length);
+    const model = new LoadoutModel(pool, gameOwnership(pool, unlocks(), () => unlocked));
+    expect(model.fitChoices(id('AEG Rifle'), 'barrel')).toEqual([item('Tight-Bore Barrel'), item('Long Barrel')]);
+    expect(model.fitChoices(id('AEG Rifle'), 'muzzle')).toEqual([item('Silencer')]);
+    expect(model.fitChoices(id('GBB Pistol'), 'muzzle')).toEqual([item('Silencer')]);
     expect(model.fitChoices(id('GBB Pistol'), 'barrel')).toEqual([]);
     unlocked = false;
     expect(model.fitChoices(id('AEG Rifle'), 'barrel')).toEqual([]);
   });
 
-  it('keys the dials by replica asset, reads a dial saved by config id before, and sandboxes them under Unlock all gear (audit POOL-17)', () => {
+  it('keys the dials by replica asset, reads a dial saved by config id before, and sandboxes them under Disable levelling (audit POOL-17)', () => {
     saveSetting('hopUp.aeg', 0.7);
     let unlocked = false;
-    const model = new LoadoutModel(pool, gameOwnership(pool, () => newCollection(pool, 1), () => unlocked));
+    const model = new LoadoutModel(pool, gameOwnership(pool, unlocks(), () => unlocked));
     expect(model.hopUp(id('AEG Rifle'))).toBe(0.7);
     expect(model.dialField('hopUp', id('AEG Rifle'))).toBe(`hopUp.${id('AEG Rifle')}`);
     model.setHopUp(id('AEG Rifle'), 0.5);
@@ -356,17 +364,6 @@ describe('Loadout model: barrels and muzzle parts (M29b)', () => {
     expect(model.bbWeight(id('AEG Rifle'))).toBe(AEG.bbWeight);
   });
 
-  it('moves a pick to the best copy left of the same item when the picked copy is scrapped (audit POOL-05)', () => {
-    const own = owning([...STARTERS, item('AEG Rifle', 'rare'), item('Red Dot'), item('Red Dot', 'epic')]);
-    const model = new LoadoutModel(pool, own);
-    model.equip('primary', item('AEG Rifle'));
-    model.setFit(id('AEG Rifle'), 'optic', item('Red Dot'));
-    // The Common AEG and the Common Red Dot scrapped: the rarer copies take their places, not the defaults.
-    own.items.delete(itemKey(id('AEG Rifle'), 'common'));
-    own.items.delete(itemKey(id('Red Dot'), 'common'));
-    expect(model.equipped()[0]).toEqual(item('AEG Rifle', 'rare'));
-    expect(model.fitOf(id('AEG Rifle')).optic).toEqual(item('Red Dot', 'epic'));
-  });
 });
 
 describe('Loadout model with dev gear (M35)', () => {
@@ -376,70 +373,57 @@ describe('Loadout model with dev gear (M35)', () => {
 
   const devPool = withTags(pool, { 'Red Dot': 'dev', 'GBB Pistol': 'dev' });
   const devId = (name: string) => devPool.assets.find((a) => a.name === name)!.id;
-  const dref = (name: string, tier = 'common'): ItemRef => ({ asset: devId(name), tier });
+  const dref = (name: string): ItemRef => ({ asset: devId(name) });
 
-  /** A collection owning the starters plus the given items. */
-  function collecting(...items: ItemRef[]) {
-    const c = newCollection(devPool, 1);
-    for (const r of items) c.owned[itemKey(r.asset, r.tier)] = 1;
-    return c;
-  }
-
-  it('offers an owned dev part only while Dev content is on, and keeps the saved pick for when it comes back', () => {
+  it('offers an unlocked dev part only while Dev content is on, and keeps the saved pick for when it comes back', () => {
     let devContent = false;
-    const c = collecting(dref('Red Dot', 'rare'));
-    const model = new LoadoutModel(devPool, gameOwnership(devPool, () => c, () => false, () => devContent));
+    const levels = unlocks(dref('Red Dot'));
+    const model = new LoadoutModel(devPool, gameOwnership(devPool, levels, () => false, () => devContent));
     const aeg = devId('AEG Rifle');
     expect(model.fitChoices(aeg, 'optic')).toEqual([]);
     devContent = true;
-    expect(model.fitChoices(aeg, 'optic')).toEqual([dref('Red Dot', 'rare')]);
-    model.setFit(aeg, 'optic', dref('Red Dot', 'rare'));
-    expect(model.fitOf(aeg).optic).toEqual(dref('Red Dot', 'rare'));
+    expect(model.fitChoices(aeg, 'optic')).toEqual([dref('Red Dot')]);
+    model.setFit(aeg, 'optic', dref('Red Dot'));
+    expect(model.fitOf(aeg).optic).toEqual(dref('Red Dot'));
     devContent = false;
     expect(model.fitChoices(aeg, 'optic')).toEqual([]);
     expect(model.fitOf(aeg).optic).toBeNull(); // plays as the default (nothing)
     devContent = true;
-    expect(model.fitOf(aeg).optic).toEqual(dref('Red Dot', 'rare')); // the same saved pick is back
-    expect(c.owned[itemKey(devId('Red Dot'), 'rare')]).toBe(1); // never lost from the save
+    expect(model.fitOf(aeg).optic).toEqual(dref('Red Dot')); // the same saved pick is back
+    expect(levels.ids).toContain(devId('Red Dot')); // never lost from the save
   });
 
-  it('offers an owned dev replica only while Dev content is on, and an equipped one plays as the default until then', () => {
+  it('offers an unlocked dev replica only while Dev content is on, and an equipped one plays as the default until then', () => {
     let devContent = true;
-    const c = collecting(dref('GBB Pistol', 'rare'));
-    const model = new LoadoutModel(devPool, gameOwnership(devPool, () => c, () => false, () => devContent));
-    expect(model.replicaChoices()).toContainEqual(dref('GBB Pistol', 'rare'));
-    model.equip('primary', dref('GBB Pistol', 'rare'));
-    expect(model.equipped()[0]).toEqual(dref('GBB Pistol', 'rare'));
+    const model = new LoadoutModel(devPool, gameOwnership(devPool, unlocks(), () => false, () => devContent));
+    expect(model.replicaChoices()).toContainEqual(dref('GBB Pistol'));
+    model.equip('primary', dref('GBB Pistol'));
+    expect(model.equipped()[0]).toEqual(dref('GBB Pistol'));
     devContent = false;
     expect(model.replicaChoices().map((r) => r.asset)).not.toContain(devId('GBB Pistol'));
     expect(model.replicaChoices().map((r) => r.asset)).toContain(devId('AEG Rifle'));
     expect(model.equipped()[0]).toEqual(dref('AEG Rifle'));
     expect(model.equipped().map((r) => r?.asset)).not.toContain(devId('GBB Pistol'));
     devContent = true;
-    expect(model.equipped()[0]).toEqual(dref('GBB Pistol', 'rare')); // the same pick, back
+    expect(model.equipped()[0]).toEqual(dref('GBB Pistol')); // the same pick, back
   });
 
-  it('hides owned dev gear when no devContent switch is given (the default is off)', () => {
-    const c = collecting(dref('Red Dot', 'rare'));
-    const model = new LoadoutModel(devPool, gameOwnership(devPool, () => c, () => false));
+  it('hides unlocked dev gear when no devContent switch is given (the default is off)', () => {
+    const model = new LoadoutModel(devPool, gameOwnership(devPool, unlocks(dref('Red Dot')), () => false));
     expect(model.fitChoices(devId('AEG Rifle'), 'optic')).toEqual([]);
   });
 
-  it('lends no dev gear with Unlock all gear while Dev content is off, and all of it while on', () => {
+  it('lends no dev gear with Disable levelling while Dev content is off, and all of it while on', () => {
     let devContent = false;
-    const model = new LoadoutModel(devPool, gameOwnership(devPool, () => newCollection(devPool, 1), () => true, () => devContent));
+    const model = new LoadoutModel(devPool, gameOwnership(devPool, unlocks(), () => true, () => devContent));
     const aeg = devId('AEG Rifle');
-    const tiers = devPool.tiers.length;
-    // The rifle takes the Red Dot (dev) and the 2x Scope (public), at every tier.
-    expect(model.fitChoices(aeg, 'optic').map((r) => r.asset)).not.toContain(devId('Red Dot'));
-    expect(model.fitChoices(aeg, 'optic')).toHaveLength(tiers);
-    expect(model.replicaChoices().map((r) => r.asset)).not.toContain(devId('GBB Pistol'));
-    // The rifle at every tier, and the Cyber Pistol (public) at Legendary only (M32).
-    expect(model.replicaChoices()).toHaveLength(tiers + 1);
+    // The rifle takes the Red Dot (dev) and the 2x Scope (public).
+    expect(model.fitChoices(aeg, 'optic')).toEqual([dref('2x Scope')]);
+    // The rifle and the Cyber Pistol (public), not the dev GBB Pistol.
+    expect(model.replicaChoices()).toEqual([dref('AEG Rifle'), dref('Cyber Pistol')]);
     devContent = true;
-    expect(model.fitChoices(aeg, 'optic')).toHaveLength(2 * tiers);
-    expect(model.fitChoices(aeg, 'optic').map((r) => r.asset)).toContain(devId('Red Dot'));
-    expect(model.replicaChoices()).toHaveLength(2 * tiers + 1);
+    expect(model.fitChoices(aeg, 'optic')).toEqual([dref('Red Dot'), dref('2x Scope')]);
+    expect(model.replicaChoices()).toEqual([dref('GBB Pistol'), dref('AEG Rifle'), dref('Cyber Pistol')]);
   });
 });
 
@@ -455,7 +439,7 @@ describe('Loadout slots and dev gear (M35 hasSlot)', () => {
 
   it('has no slot for a part that is only dev while Dev content is off, and has it once on', () => {
     let devContent = false;
-    const model = new LoadoutModel(devPool, gameOwnership(devPool, () => newCollection(devPool, 1), () => false, () => devContent));
+    const model = new LoadoutModel(devPool, gameOwnership(devPool, unlocks(), () => false, () => devContent));
     expect(model.hasSlot(pistol, 'laser')).toBe(false);
     devContent = true;
     expect(model.hasSlot(pistol, 'laser')).toBe(true);
@@ -463,9 +447,9 @@ describe('Loadout slots and dev gear (M35 hasSlot)', () => {
     expect(model.hasSlot(pistol, 'laser')).toBe(false);
   });
 
-  it('does the same with Unlock all gear on, and still has the slots that have a public part', () => {
+  it('does the same with Disable levelling on, and still has the slots that have a public part', () => {
     let devContent = false;
-    const model = new LoadoutModel(devPool, gameOwnership(devPool, () => newCollection(devPool, 1), () => true, () => devContent));
+    const model = new LoadoutModel(devPool, gameOwnership(devPool, unlocks(), () => true, () => devContent));
     expect(model.hasSlot(pistol, 'laser')).toBe(false);
     expect(model.hasSlot(pistol, 'muzzle')).toBe(true);
     expect(model.hasSlot(aeg, 'optic')).toBe(true);
@@ -475,67 +459,63 @@ describe('Loadout slots and dev gear (M35 hasSlot)', () => {
 
   it('keeps a slot with at least one public part while Dev content is off', () => {
     const mixed = withTags(pool, { 'Red Dot': 'dev' }); // the 2x Scope stays public
-    const model = new LoadoutModel(mixed, gameOwnership(mixed, () => newCollection(mixed, 1), () => false, () => false));
+    const model = new LoadoutModel(mixed, gameOwnership(mixed, unlocks(), () => false, () => false));
     expect(model.hasSlot(aeg, 'optic')).toBe(true);
   });
 
-  it('has the slot with plain collection ownership, which offers no filter', () => {
-    const c = newCollection(devPool, 1);
-    const model = new LoadoutModel(devPool, collectionOwnership(() => c));
-    expect(collectionOwnership(() => c).offers).toBeUndefined();
+  it('has the slot with plain unlocked ownership, which offers no filter', () => {
+    const ids = unlocksUpTo(GAME_LEVELS, 0);
+    const model = new LoadoutModel(devPool, unlockedOwnership(() => ids));
+    expect(unlockedOwnership(() => ids).offers).toBeUndefined();
     expect(model.hasSlot(pistol, 'laser')).toBe(true);
     expect(new LoadoutModel(devPool, owning([])).hasSlot(pistol, 'laser')).toBe(true);
   });
 });
 
-describe('M32 acceptance 4: the Cyber Pistol only exists at Legendary', () => {
+describe('M32 acceptance 4: the Cyber Pistol, the level cap’s unlock (LV1)', () => {
   const CYBER = '000019';
-  const cyber = (tier = 'legendary'): ItemRef => ({ asset: CYBER, tier });
+  const cyber: ItemRef = { asset: CYBER };
 
   beforeEach(() => {
     vi.stubGlobal('localStorage', new MemoryStorage());
   });
 
-  it('is lent by Unlock all gear at Legendary only, and every other asset still at every tier', () => {
-    const c = newCollection(pool, 1);
-    const own = gameOwnership(pool, () => c, () => true);
-    expect(own.owns(cyber())).toBe(true);
-    for (const t of pool.tiers.filter((x) => x.id !== 'legendary')) expect(own.owns(cyber(t.id)), t.id).toBe(false);
-    for (const t of pool.tiers) expect(own.owns({ asset: id('AEG Rifle'), tier: t.id }), `AEG ${t.id}`).toBe(true);
+  it('is lent by Disable levelling, and not without it: a player below the cap does not have one', () => {
+    const own = gameOwnership(pool, unlocks(), () => true);
+    expect(own.owns(cyber)).toBe(true);
+    expect(own.lockedAt!(cyber)).toBeNull();
     const model = new LoadoutModel(pool, own);
-    expect(model.replicaChoices().filter((r) => r.asset === CYBER)).toEqual([cyber()]);
-    // Not lent without it: a player who has not found one does not have one.
-    const off = gameOwnership(pool, () => c, () => false);
-    expect(off.owns(cyber())).toBe(false);
+    expect(model.replicaChoices().filter((r) => r.asset === CYBER)).toEqual([cyber]);
+    const off = gameOwnership(pool, unlocks(), () => false);
+    expect(off.owns(cyber)).toBe(false);
+    expect(off.lockedAt!(cyber)).toBe(GAME_LEVELS.cap);
   });
 
-  it('lists the chase replicas the player owns at any tier (everything unlocked: every one), none by default', () => {
-    expect(new LoadoutModel(pool, owning(STARTERS)).ownedChase()).toEqual([]);
-    expect(new LoadoutModel(pool, owning([...STARTERS, cyber()])).ownedChase()).toEqual([CYBER]);
-    const c = newCollection(pool, 1);
-    expect(new LoadoutModel(pool, gameOwnership(pool, () => c, () => false)).ownedChase()).toEqual([]);
-    expect(new LoadoutModel(pool, gameOwnership(pool, () => c, () => true)).ownedChase()).toEqual([CYBER]);
-    // A chase replica only: not a part, not an ordinary replica.
-    expect(new LoadoutModel(pool, owning([...STARTERS, item('Red Dot', 'legendary')])).ownedChase()).toEqual([]);
+  it('counts as earned (what a bot may carry against you) once unlocked, and the level 0 replicas never do', () => {
+    const earned = (o: Ownership): string[] => earnedOf(GAME_LEVELS, new LoadoutModel(pool, o).replicaChoices().map((r) => r.asset));
+    expect(earned(owning(STARTERS))).toEqual([]);
+    expect(earned(owning([...STARTERS, cyber]))).toEqual([CYBER]);
+    expect(earned(gameOwnership(pool, unlocks(), () => false))).toEqual([]);
+    expect(earned(gameOwnership(pool, unlocks(), () => true))).toEqual([CYBER]);
+    expect(earned(gameOwnership(pool, unlocks(cyber), () => false))).toEqual([CYBER]);
   });
 
-  it('takes it as it comes at Legendary, with no power source: the spec numbers, whatever the player owns', () => {
-    const model = new LoadoutModel(pool, owning([...STARTERS, cyber()]));
+  it('takes it as it comes, with no power source: the spec numbers, whatever the player unlocked', () => {
+    const model = new LoadoutModel(pool, owning([...STARTERS, cyber]));
     const slot = model.asItComes(CYBER);
     expect(slot.replica.id).toBe(CYBER_PISTOL.id);
     expect(slot.replica.name).toBe('Cyber Pistol');
     expect(slot.replica.muzzleEnergy).toBeCloseTo(1.0, 2);
     expect(slot.replica.fireRate).toBeCloseTo(14, 1);
-    // Exactly what carrying the Legendary one with nothing fitted gives (and not the Common-tier numbers).
-    expect(slot.replica).toEqual(model.slotKit(cyber()).replica);
-    expect(slot.replica.muzzleEnergy).toBeGreaterThan(CYBER_PISTOL.muzzleEnergy);
+    // Exactly what carrying it with nothing fitted gives, and its config's own numbers.
+    expect(slot.replica).toEqual(model.slotKit(cyber).replica);
+    expect(slot.replica).toEqual({ ...CYBER_PISTOL, name: 'Cyber Pistol' });
     expect(slot.optic).toBeNull();
-    // The ordinary replicas are still as they come at Common.
     expect(model.asItComes(id('AEG Rifle')).replica).toEqual({ ...AEG, name: 'AEG Rifle' });
   });
 
   it('has no slot for any part or power source, and offers none, so Customise has nothing to pick', () => {
-    const model = new LoadoutModel(pool, gameOwnership(pool, () => newCollection(pool, 1), () => true));
+    const model = new LoadoutModel(pool, gameOwnership(pool, unlocks(), () => true));
     for (const slot of FIT_SLOTS) {
       expect(model.hasSlot(CYBER, slot), slot).toBe(false);
       expect(model.fitChoices(CYBER, slot), slot).toEqual([]);
@@ -547,13 +527,142 @@ describe('M32 acceptance 4: the Cyber Pistol only exists at Legendary', () => {
     }
   });
 
-  it('carries it in a gear slot like any replica, as its Legendary self on nothing fitted', () => {
-    const model = new LoadoutModel(pool, owning([...STARTERS, cyber()]));
-    model.equip('primary', cyber());
+  it('carries it in a gear slot like any replica, on nothing fitted', () => {
+    const model = new LoadoutModel(pool, owning([...STARTERS, cyber]));
+    model.equip('primary', cyber);
     const [primary, secondary] = model.kit().slots;
     expect(primary!.replica.id).toBe(CYBER_PISTOL.id);
     expect(primary!.replica.muzzleEnergy).toBeCloseTo(1.0, 2);
     expect(secondary!.replica.id).toBe(GAS_PISTOL.id);
     expect(model.fitOf(CYBER)).toEqual(EMPTY_FIT);
+  });
+});
+
+describe('Loadout model: what levels lock and unlock (LV1)', () => {
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', new MemoryStorage());
+  });
+
+  const at = (name: string, level: number) => ({ item: item(name), level });
+  const torch = item('Weapon Torch');
+
+  it('owns only what the levels unlocked, and says the level that unlocks the rest', () => {
+    const own = gameOwnership(pool, unlocks(), () => false);
+    for (const r of STARTERS) {
+      expect(own.owns(r), pool.byId.get(r.asset)!.name).toBe(true);
+      expect(own.lockedAt!(r)).toBeNull();
+    }
+    expect(own.owns(item('Red Dot'))).toBe(false);
+    expect(own.lockedAt!(item('Red Dot'))).toBe(1);
+    expect(own.lockedAt!(item('Long Barrel'))).toBe(9);
+    expect(own.lockedAt!(item('Cyber Pistol'))).toBe(10);
+    // Every pooled item the player lacks has the level levels.md gives it.
+    for (const a of pool.assets.filter((x) => !own.owns({ asset: x.id }) && x.tag === 'public')) {
+      expect(own.lockedAt!({ asset: a.id }), a.name).toBe(GAME_LEVELS.unlockLevel.get(a.id));
+    }
+  });
+
+  it('owns an item the moment it is unlocked, and no longer says it is locked', () => {
+    const levels = unlocks();
+    const own = gameOwnership(pool, levels, () => false);
+    expect(own.owns(item('Red Dot'))).toBe(false);
+    levels.ids.push(id('Red Dot'));
+    expect(own.owns(item('Red Dot'))).toBe(true);
+    expect(own.lockedAt!(item('Red Dot'))).toBeNull();
+  });
+
+  it('never owns or locks an item pool.md no longer lists, nor gives a level to one levels.md has none for', () => {
+    const levels = unlocks({ asset: '999998' });
+    const own = gameOwnership(pool, levels, () => false);
+    expect(own.owns({ asset: '999998' })).toBe(false);
+    expect(own.lockedAt!({ asset: '999998' })).toBeNull();
+    expect(own.lockedAt!({ asset: '999997' })).toBeNull();
+    const noLevel = gameOwnership(pool, { unlocked: () => [], levelOf: () => undefined }, () => false);
+    expect(noLevel.owns(item('Red Dot'))).toBe(false);
+    expect(noLevel.lockedAt!(item('Red Dot'))).toBeNull();
+  });
+
+  it('owns everything offered with Disable levelling, locks nothing, and is sandboxed', () => {
+    const own = gameOwnership(pool, unlocks(), () => true);
+    for (const a of pool.assets.filter((x) => x.tag === 'public')) {
+      expect(own.owns({ asset: a.id }), a.name).toBe(true);
+      expect(own.lockedAt!({ asset: a.id }), a.name).toBeNull();
+    }
+    expect(own.sandboxed!()).toBe(true);
+    expect(gameOwnership(pool, unlocks(), () => false).sandboxed!()).toBe(false);
+    const model = new LoadoutModel(pool, own);
+    expect(model.lockedReplicas()).toEqual([]);
+    for (const slot of FIT_SLOTS) expect(model.lockedFitChoices(id('AEG Rifle'), slot), slot).toEqual([]);
+  });
+
+  it('owns a dev item (the level 0 Weapon Torch) only with Dev content on, unlocked or with Disable levelling', () => {
+    let devContent = false;
+    for (const all of [false, true]) {
+      const own = gameOwnership(pool, unlocks(), () => all, () => devContent);
+      devContent = false;
+      expect(own.owns(torch), `all ${all}`).toBe(false);
+      expect(own.offers!(pool.byId.get(torch.asset)!)).toBe(false);
+      expect(own.devContent!()).toBe(false);
+      devContent = true;
+      expect(own.owns(torch), `all ${all}`).toBe(true);
+      expect(own.offers!(pool.byId.get(torch.asset)!)).toBe(true);
+    }
+    // Not unlocked and not lent: Dev content alone gives nothing.
+    const none = gameOwnership(pool, { unlocked: () => [], levelOf: (a) => GAME_LEVELS.unlockLevel.get(a) }, () => false, () => true);
+    expect(none.owns(torch)).toBe(false);
+    expect(none.lockedAt!(torch)).toBe(0);
+  });
+
+  it('lists the replicas still to unlock with their levels: the Cyber Pistol at the cap, none once it is unlocked', () => {
+    const levels = unlocks();
+    const model = new LoadoutModel(pool, gameOwnership(pool, levels, () => false));
+    expect(model.lockedReplicas()).toEqual([at('Cyber Pistol', 10)]);
+    levels.ids.push(id('Cyber Pistol'));
+    expect(model.lockedReplicas()).toEqual([]);
+  });
+
+  it("lists each slot's parts still to unlock, lowest level first, only those that fit the replica", () => {
+    const levels = unlocks();
+    const model = new LoadoutModel(pool, gameOwnership(pool, levels, () => false));
+    const aeg = id('AEG Rifle');
+    const pistol = id('GBB Pistol');
+    expect(model.lockedFitChoices(aeg, 'optic')).toEqual([at('Red Dot', 1), at('2x Scope', 7)]);
+    expect(model.lockedFitChoices(aeg, 'magazine')).toEqual([at('Hi-Cap Magazine', 3), at('Low-Cap Magazine', 6)]);
+    expect(model.lockedFitChoices(aeg, 'barrel')).toEqual([at('Tight-Bore Barrel', 5), at('Long Barrel', 9)]);
+    expect(model.lockedFitChoices(aeg, 'power')).toEqual([at('11.1 V LiPo Battery', 8)]);
+    expect(model.lockedFitChoices(pistol, 'power')).toEqual([at('Red Gas', 5), at('Black Gas', 9)]);
+    expect(model.lockedFitChoices(pistol, 'laser')).toEqual([at('Red Laser', 2)]);
+    expect(model.lockedFitChoices(aeg, 'laser')).toEqual([]);
+    expect(model.lockedFitChoices(pistol, 'barrel')).toEqual([]);
+    expect(model.lockedFitChoices(id('Cyber Pistol'), 'power')).toEqual([]);
+    expect(model.lockedFitChoices('999999', 'optic')).toEqual([]);
+    // Unlocking one moves it from the locked list to the choices.
+    levels.ids.push(id('Red Dot'));
+    expect(model.lockedFitChoices(aeg, 'optic')).toEqual([at('2x Scope', 7)]);
+    expect(model.fitChoices(aeg, 'optic')).toEqual([item('Red Dot')]);
+  });
+
+  it('locks nothing at or below the level reached: halfway up, only the higher levels are left', () => {
+    const ids = unlocksUpTo(GAME_LEVELS, 5);
+    const model = new LoadoutModel(pool, gameOwnership(pool, { unlocked: () => ids, levelOf: (a) => GAME_LEVELS.unlockLevel.get(a) }, () => false));
+    const locked = [...model.lockedReplicas(), ...FIT_SLOTS.flatMap((s) => [...model.lockedFitChoices(id('AEG Rifle'), s), ...model.lockedFitChoices(id('GBB Pistol'), s)])];
+    expect(locked.length).toBeGreaterThan(0);
+    for (const l of locked) expect(l.level, pool.byId.get(l.item.asset)!.name).toBeGreaterThan(5);
+    expect(model.fitChoices(id('AEG Rifle'), 'barrel')).toEqual([item('Tight-Bore Barrel')]);
+  });
+
+  it('keeps a locked dev part off the list while Dev content is off, and lists it at its level once on', () => {
+    let devContent = false;
+    const devPool = withTags(pool, { 'Red Dot': 'dev' });
+    const model = new LoadoutModel(devPool, gameOwnership(devPool, unlocks(), () => false, () => devContent));
+    expect(model.lockedFitChoices(id('AEG Rifle'), 'optic')).toEqual([at('2x Scope', 7)]);
+    devContent = true;
+    expect(model.lockedFitChoices(id('AEG Rifle'), 'optic')).toEqual([at('Red Dot', 1), at('2x Scope', 7)]);
+  });
+
+  it('locks nothing with an ownership that knows no levels (owns alone)', () => {
+    const model = new LoadoutModel(pool, owning(STARTERS));
+    expect(model.lockedReplicas()).toEqual([]);
+    expect(model.lockedFitChoices(id('AEG Rifle'), 'optic')).toEqual([]);
   });
 });

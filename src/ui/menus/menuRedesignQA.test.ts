@@ -4,13 +4,13 @@ import { RECORDS_KEY } from '../../config/matchInfo';
 import { DEFAULT_MATCH_RULES } from '../../config/matchRules';
 import { MENU_TEXT, PLAY_TEXT } from '../../config/menus';
 import { MATCH_MODES } from '../../config/modes';
-import { newCollection } from '../../pool/collection';
 import { loadPool } from '../../pool/pool';
 import { MemoryStorage } from '../../pool/testStorage';
+import { GAME_LEVELS } from '../../progress/gameLevels';
+import { newProgress } from '../../progress/progress';
 import { SETTINGS_KEY, saveSetting } from '../../settings/storage';
 import { ArmoryScreen } from './armoryScreen';
 import { TopBar } from './chrome';
-import { CATEGORY_LABELS } from './itemTile';
 import { EventNode, stubMenuPage } from './menuTestSupport';
 import { PauseScreen } from './pauseScreen';
 import { ResultScreen } from './resultScreen';
@@ -20,7 +20,7 @@ import { TitleScreen, tutorialOffered } from './titleScreen';
 
 /**
  * QA for menu redesign 2 (M100), on the fake DOM: the clean-save Tutorial logic, the plain title, the top bar, the
- * keys and the mouse on the screens, Practice as the last mode, and the collection's columns.
+ * keys and the mouse on the screens and Practice as the last mode. The Armory's level track: armoryScreen.test.ts (LV1).
  */
 beforeEach(() => {
   stubMenuPage();
@@ -142,11 +142,11 @@ describe('the plain title (M100 QA)', () => {
     const model = { picks: () => ({ map: 'depot', mode: 'elimination', difficulty: 'normal', teammateDifficulty: 'normal', ruleset: 'skirmish', rules: { ...DEFAULT_MATCH_RULES } }), lightingOf: () => 'day', supply: () => null, setMode: noop, practicePlace: () => 'range', setPracticePlace: noop } as unknown as PlayModel;
     const setup = new SetupScreen(model, { equipped: () => [] } as never, { pictures: null, realistic: () => false }, { onLoadout: noop, onBack: noop, onPlay: noop, onPractice: noop });
     const pool = loadPool(poolText);
-    const armory = new ArmoryScreen({ pool: () => pool, collection: () => newCollection(pool, 1), equipped: () => [], onChange: () => false });
+    const armory = new ArmoryScreen({ pool: () => pool, levels: GAME_LEVELS, progress: () => newProgress(GAME_LEVELS), levellingOff: () => false, devContent: () => false });
     const pause = new PauseScreen({ onResume: noop, onLoadout: noop, onSettings: noop, onQuit: noop, onSkipStep: noop, onSkipTutorial: noop, onSkipRound: noop, onChallenge: noop });
     const result = new ResultScreen({ onPlayAgain: noop, onSummary: noop, onChangeSetup: noop, onTitle: noop });
     const bar = new TopBar(noop, noop);
-    bar.setWallet({ fc: 100, tokens: 2 }, false);
+    bar.setLevel({ level: 1, into: 50, next: 300, toNext: '250 XP to level 2' });
     for (const root of [setup.root, armory.root, pause.root, result.root, bar.root]) {
       root.hidden = false;
       expect(shown(node(root)).join(' ')).not.toContain(label);
@@ -156,25 +156,26 @@ describe('the plain title (M100 QA)', () => {
 });
 
 describe('the top bar (M100 QA)', () => {
-  it('reads Tokens in the singular for one and the plural otherwise, FC with a thousands comma, and hides both with no wallet', () => {
+  it('reads the level as "Lv" and its number, from level 0 to the cap, and hides it with levelling off (LV1)', () => {
     const bar = new TopBar(noop, noop);
-    const chips = (): string[] => node(bar.root).querySelector('.menu-wallet')!.children.filter((c) => !c.hidden).map((c) => c.text);
-    bar.setWallet({ fc: 1600, tokens: 1 }, false);
-    expect(chips()).toEqual(['1,600 FC', '1 Token']);
-    bar.setWallet({ fc: 0, tokens: 0 }, false);
-    expect(chips()).toEqual(['0 FC', '0 Tokens']);
-    bar.setWallet(null, true);
+    const chips = (): string[] => node(bar.root).querySelector('.menu-status')!.children.filter((c) => !c.hidden).map((c) => c.text);
+    bar.setLevel({ level: 0, into: 0, next: 100, toNext: '100 XP to level 1' });
+    expect(chips()).toEqual(['Lv 0']);
+    bar.setLevel({ level: 10, into: 0, next: null, toNext: '' });
+    expect(chips()).toEqual(['Lv 10']);
+    bar.setLevel(null);
     expect(chips()).toEqual([]);
   });
 
-  it('has nothing but the wordmark button, the four places and the wallet (no version, no key, no hint)', () => {
+  it('has nothing but the wordmark button, the four places and the level (no version, no key, no hint, no wallet)', () => {
     const bar = new TopBar(noop, noop);
-    bar.setWallet({ fc: 100, tokens: 2 }, false);
+    bar.setLevel({ level: 3, into: 50, next: 500, toNext: '450 XP to level 4' });
     const root = node(bar.root);
     // The third, Back to practice (M95), shows only on the Loadout opened from Practice.
     expect(root.children.map((c) => (c as EventNode).tag)).toEqual(['button', 'nav', 'button', 'div']);
     expect(root.children[2]!.hidden).toBe(true);
-    expect(shown(root)).toEqual(['Airsoft', ...MENU_TEXT.nav.map((n) => n.label), '100 FC', '2 Tokens']);
+    expect(shown(root)).toEqual(['Airsoft', ...MENU_TEXT.nav.map((n) => n.label), 'Lv 3']);
+    expect(shown(root).join(' ')).not.toMatch(/\bFC\b|Token/);
     expect(shown(root).join(' ')).not.toContain(__BUILD_VERSION__.label);
   });
 });
@@ -188,12 +189,12 @@ describe('every screen can be left and used with the mouse, and the keys still w
     expect(MENU_TEXT.nav.map((n) => n.id)).toContain('settings');
   });
 
-  it('the top bar leads to every screen a person needs and the wordmark leads back, each by a click', () => {
+  it('the top bar leads to every screen a person needs and the wordmark leads back, each by a click (the level to the Armory too)', () => {
     const went: string[] = [];
     const bar = new TopBar((p) => went.push(p), () => went.push('mark'));
     const root = node(bar.root);
     for (const b of root.all('button')) b.click();
-    expect(went).toEqual(['mark', 'setup', 'loadout', 'armory', 'settings']);
+    expect(went).toEqual(['mark', 'setup', 'loadout', 'armory', 'settings', 'armory']);
   });
 
   it('a screen opened from the pause menu keeps only itself on the bar, and the wordmark button becomes Back', () => {
@@ -204,28 +205,12 @@ describe('every screen can be left and used with the mouse, and the keys still w
     expect(shown(node(bar.root))[0]).toBe('Back');
   });
 
-  it('the Armory\'s Space takes a Shot when one can be paid for, and does nothing, quietly, when it cannot', () => {
+  it('the Armory answers to no key of its own and has no button to press: it only shows the levels (LV1, the Shots gone)', () => {
     const pool = loadPool(poolText);
-    const make = (fc: number) => {
-      const c = newCollection(pool, 5);
-      c.fc = fc;
-      let changes = 0;
-      const screen = new ArmoryScreen({ pool: () => pool, collection: () => c, equipped: () => [], onChange: () => (changes++, false) });
-      return { c, screen, changes: () => changes };
-    };
-    const space = (s: ArmoryScreen) => s.hints.find((h) => h.code === 'Space')!;
-    const broke = make(0);
-    expect(() => space(broke.screen).run!()).not.toThrow();
-    expect([broke.changes(), Object.keys(broke.c.owned).length]).toEqual([0, Object.keys(newCollection(pool, 5).owned).length]);
-    const rich = make(1_000_000);
-    const before = rich.c.fc;
-    space(rich.screen).run!();
-    expect(rich.changes()).toBe(1);
-    expect(rich.c.fc).toBeLessThan(before);
-    // Space presses a focused button instead while a control has the keyboard.
-    expect(space(rich.screen).idle).toBe(true);
-    // The button it presses is on the screen for the mouse, named for the key.
-    expect(buttons(node(rich.screen.root)).some((t) => t.includes(MENU_TEXT.hints.shot))).toBe(true);
+    const screen = new ArmoryScreen({ pool: () => pool, levels: GAME_LEVELS, progress: () => newProgress(GAME_LEVELS), levellingOff: () => false, devContent: () => false });
+    expect(screen.hints).toEqual([]);
+    expect(node(screen.root).all('button')).toHaveLength(0);
+    expect(node(screen.root).querySelectorAll('[data-autofocus]').map((n) => n.tag)).toEqual(['h1']);
   });
 
   it('the pause and result screens answer to no key of their own (Esc and Enter belong to the menus and the focused button)', () => {
@@ -239,7 +224,7 @@ describe('every screen can be left and used with the mouse, and the keys still w
 
 describe('Practice, the last mode of the Match screen (M100 QA)', () => {
   const view = (picks: unknown, devContent = false) =>
-    ({ played: picks, devContent, run: false, sizeMax: 3, sizeMin: 1, mapLine: 'Depot · Day', still: null, modeLabel: 'Elimination', rules: 'Skirmish · 3v3', bots: 'Normal bots', notes: 'a note', loadout: { replicas: 'AEG', detail: '' }, pays: 'Pays Field Credits', practice: { mapLine: 'Range', still: null } }) as unknown as PlayView;
+    ({ played: picks, devContent, run: false, sizeMax: 3, sizeMin: 1, mapLine: 'Depot · Day', still: null, modeLabel: 'Elimination', rules: 'Skirmish · 3v3', bots: 'Normal bots', notes: 'a note', loadout: { replicas: 'AEG', detail: '' }, pays: 'Gives XP', practice: { mapLine: 'Range', still: null } }) as unknown as PlayView;
 
   function setup(mode = 'elimination') {
     const picks = { map: 'depot', mode, difficulty: 'normal', teammateDifficulty: 'normal', ruleset: 'skirmish', rules: { ...DEFAULT_MATCH_RULES } };
@@ -342,66 +327,5 @@ describe('Practice, the last mode of the Match screen (M100 QA)', () => {
     expect(s.line('play-button').text).toContain('Start match');
     s.line('play-button').click();
     expect(s.ran).toEqual(['match']);
-  });
-});
-
-describe('the collection in a column for each kind (M100 QA)', () => {
-  const pool = loadPool(poolText);
-  const armory = (owned: Record<string, number> = {}, assets = pool.assets) => {
-    const c = newCollection(pool, 2);
-    c.owned = { ...owned };
-    const screen = new ArmoryScreen({ pool: () => ({ ...pool, assets }), collection: () => c, equipped: () => [], onChange: () => false });
-    const root = node(screen.root);
-    return { root, kinds: () => root.querySelectorAll('.armory-kind') };
-  };
-  const categories = (assets: readonly { category: string; tag?: string }[]): string[] => [...new Set(assets.filter((a) => a.tag !== 'dev').map((a) => a.category))];
-
-  it('makes one column per kind the shop gives, in the pool\'s order, each headed by its name, and puts every card in its own kind\'s column', () => {
-    const a = armory();
-    const wanted = categories(pool.assets);
-    expect(a.kinds().map((k) => k.dataset.kind)).toEqual(wanted);
-    for (const k of a.kinds()) {
-      const kind = k.dataset.kind as keyof typeof CATEGORY_LABELS;
-      expect(k.querySelector('h3')!.text).toBe(CATEGORY_LABELS[kind]);
-      expect(k.getAttribute('aria-label')).toBe(CATEGORY_LABELS[kind]);
-      const cards = k.querySelectorAll('.armory-row').map((r) => r.querySelector('.armory-row-name')!.text);
-      const expected = pool.assets.filter((x) => x.category === kind && x.tag !== 'dev').map((x) => x.name);
-      expect(cards).toEqual(expected);
-    }
-  });
-
-  it('has a heading with words for every kind (never "undefined"), and no empty column', () => {
-    const a = armory();
-    for (const k of a.kinds()) {
-      expect(k.querySelector('h3')!.text).toMatch(/\S/);
-      expect(k.querySelector('h3')!.text).not.toMatch(/undefined/);
-      expect(k.querySelectorAll('.armory-row').length).toBeGreaterThan(0);
-    }
-    expect(a.root.querySelectorAll('.armory-row')).toHaveLength(a.kinds().reduce((n, k) => n + k.querySelectorAll('.armory-row').length, 0));
-  });
-
-  it('adds a column only for an item you own of a kind the shop does not give (a dev light), and then it is a column of its own', () => {
-    const dev = pool.assets.find((x) => x.tag === 'dev')!;
-    const without = armory().kinds().map((k) => k.dataset.kind);
-    expect(without).not.toContain(dev.category);
-    const withIt = armory({ [`${dev.id}@common`]: 1 }).kinds();
-    expect(withIt.map((k) => k.dataset.kind)).toContain(dev.category);
-    expect(withIt.find((k) => k.dataset.kind === dev.category)!.querySelectorAll('.armory-row')).toHaveLength(1);
-  });
-
-  it('keeps the scrap hint, the "best copy" note and Scrap all above the columns, and the columns in one list', () => {
-    const a = armory({ [`${pool.assets[0]!.id}@common`]: 3 });
-    const owned = a.root.querySelector('.armory-owned')!;
-    expect((owned.children as EventNode[]).map((c) => c.className)).toEqual(['loadout-replica-head', 'menu-readout armory-scrap-hint', 'menu-readout', 'armory-list']);
-    expect(owned.querySelectorAll('.armory-list')).toHaveLength(1);
-  });
-
-  // A pool whose assets are not grouped by kind (a new optic added after the grips in pool.md) draws that kind twice.
-  it('draws a kind once even when the pool lists its items apart (armoryScreen.renderOwned groups by kind, not by neighbours)', () => {
-    const optic = pool.assets.find((x) => x.category === 'optic' && x.tag !== 'dev')!;
-    const split = [...pool.assets.filter((x) => x !== optic)];
-    split.splice(3, 0, optic);
-    const kinds = armory({}, split).kinds().map((k) => k.dataset.kind);
-    expect(new Set(kinds).size).toBe(kinds.length);
   });
 });

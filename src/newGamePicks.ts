@@ -10,7 +10,7 @@ import { playsAtNight as nightOf } from './map/lightingChoice';
 import { DEFAULT_MAP, MAPS, type MapId, mapData, mapEntry, mapLoaded, teamSizeOn } from './map/maps';
 import { modeOffered } from './map/playableMode';
 import { botLight, rolledKitMayHoldDev } from './pool/botKit';
-import type { ItemRef } from './pool/collection';
+import type { ItemRef } from './pool/item';
 import { contentPool, itemsUseDev } from './pool/contentPool';
 import { type Pool, replicaOf } from './pool/pool';
 
@@ -89,24 +89,24 @@ export function pickTags(p: NewGamePicks): ContentTag[] {
   ];
 }
 
-/** Whether the picks (as played) use dev content: such a match stays out of the records and pays no Field Credits. */
+/** Whether the picks (as played) use dev content: such a match stays out of the records and gives no XP. */
 export function picksUseDev(p: NewGamePicks): boolean {
   return pickTags(p).includes('dev');
 }
 
 /**
  * Whether the opponents may carry dev gear (M35): only with Dev content on, on a difficulty that rolls their kits
- * (config/bots.ts BOT_LOADOUTS), when the pool has dev gear such a kit could hold: LOADOUT's replicas, or a chase
- * replica the player owns (`chaseOwned`, M32: one opponent now and then carries it). Counted whether or not a bot rolls
+ * (config/bots.ts BOT_LOADOUTS), when the pool has dev gear such a kit could hold: LOADOUT's replicas, or a replica
+ * the player earned by levelling (`earned`, M32, LV1: one opponent now and then carries it). Counted whether or not a bot rolls
  * it, so New game can say so before the match. Teammates carry LOADOUT as it comes, which is public.
  */
-export function botsMayCarryDev(pool: Pool, devContent: boolean, difficulty: Difficulty, chaseOwned: readonly string[] = []): boolean {
+export function botsMayCarryDev(pool: Pool, devContent: boolean, difficulty: Difficulty, earned: readonly string[] = []): boolean {
   if (!devContent || BOT_LOADOUTS[difficulty] !== 'random') return false;
-  const chase = chaseOwned.flatMap((id) => {
+  const carried = earned.flatMap((id) => {
     const asset = pool.byId.get(id);
     return asset?.category === 'replica' ? [replicaOf(asset)] : [];
   });
-  return rolledKitMayHoldDev(pool, [...LOADOUT, ...chase]);
+  return rolledKitMayHoldDev(pool, [...LOADOUT, ...carried]);
 }
 
 /**
@@ -135,13 +135,13 @@ export function botsCarryDevLight(pool: Pool, devContent: boolean, night: boolea
 
 /**
  * Whether a match uses dev content (M35): its picks (as played), the player's kit (`kit`: the Loadout's items; a light
- * only at night, M33h) or the opponents' possible gear (`chaseOwned` as in botsMayCarryDev; the bots' torches at
- * night). Night is under the map's Day/Night pick `lighting` (M34d). Such a match stays out of the records and pays no
- * Field Credits. Under the factory kit rule (M39) everyone carries LOADOUT as it comes, torchless, so neither kit counts.
+ * only at night, M33h) or the opponents' possible gear (`earned` as in botsMayCarryDev; the bots' torches at
+ * night). Night is under the map's Day/Night pick `lighting` (M34d). Such a match stays out of the records and gives no
+ * XP. Under the factory kit rule (M39) everyone carries LOADOUT as it comes, torchless, so neither kit counts.
  */
-export function matchUsesDev(picks: NewGamePicks, kit: readonly (ItemRef | null)[], pool: Pool, devContent: boolean, chaseOwned: readonly string[] = [], lighting?: LightingPresetId | null): boolean {
+export function matchUsesDev(picks: NewGamePicks, kit: readonly (ItemRef | null)[], pool: Pool, devContent: boolean, earned: readonly string[] = [], lighting?: LightingPresetId | null): boolean {
   if (picksUseDev(picks)) return true;
   if (picks.rules.factoryKit) return false;
   const night = playsAtNight(picks.map, lighting);
-  return itemsUseDev(pool, usedItems(pool, kit, night)) || botsMayCarryDev(pool, devContent, picks.difficulty, chaseOwned) || botsCarryDevLight(pool, devContent, night);
+  return itemsUseDev(pool, usedItems(pool, kit, night)) || botsMayCarryDev(pool, devContent, picks.difficulty, earned) || botsCarryDevLight(pool, devContent, night);
 }

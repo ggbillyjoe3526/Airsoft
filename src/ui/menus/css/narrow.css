@@ -67,8 +67,12 @@
   }
 
   .customise-side,
-  .settings-about {
+  .settings-about,
+  .armory-left,
+  .armory-next,
+  .armory-track {
     grid-column: auto;
+    grid-row: auto;
   }
 
   .settings-side {

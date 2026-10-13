@@ -30,7 +30,7 @@ export interface Records {
   streak: number;
   bestStreak: number;
   /**
-   * Extraction (M47): the most FC got out with in one run (null before a run with any), extractions in a row right now
+   * Extraction (M47): the most XP got out with in one run (Field Credits before LV1, the same numbers) (null before a run with any), extractions in a row right now
    * and the most ever, and the quickest extraction carrying at least one case's finds (seconds into the run; null before
    * one). Saved beside the rest; a save from before M47 has none and loads as empty ones.
    */
@@ -61,9 +61,9 @@ export interface MatchResult {
 
 /** An Extraction run, as the records see it (M47). */
 export interface RunResult {
-  /** FC got out with (0 when out or caught out). */
-  haulFc: number;
-  /** Finds (FC or a part, a case's) you got out with. */
+  /** XP got out with (0 when out or caught out). */
+  haulXp: number;
+  /** Finds (a case's XP) you got out with. */
   finds: number;
   /** Seconds from the start of the run to its end. */
   seconds: number;
@@ -71,13 +71,13 @@ export interface RunResult {
 
 /** An Extraction run's record from what you got out with (`runHaul`) and how long the run took (seconds). Pure. */
 export function runResultOf(haul: readonly CaseFind[], seconds: number): RunResult {
-  let haulFc = 0;
+  let haulXp = 0;
   let finds = 0;
   for (const f of haul) {
-    haulFc += f.fc;
-    if (f.fc > 0 || f.item) finds++;
+    haulXp += f.xp;
+    if (f.xp > 0) finds++;
   }
-  return { haulFc, finds, seconds };
+  return { haulXp, finds, seconds };
 }
 
 /** What a match changed, for the "new record" tags on the summary. */
@@ -229,8 +229,8 @@ function addRun(records: Records, run: RunResult, extracted: boolean, news: Reco
   news.bestExtractionStreak = records.extractionStreak > records.bestExtractionStreak;
   if (news.bestExtractionStreak) records.bestExtractionStreak = records.extractionStreak;
   if (!extracted) return;
-  if (run.haulFc > 0 && (records.bestHaul === null || run.haulFc > records.bestHaul)) {
-    records.bestHaul = run.haulFc;
+  if (run.haulXp > 0 && (records.bestHaul === null || run.haulXp > records.bestHaul)) {
+    records.bestHaul = run.haulXp;
     news.bestHaul = true;
   }
   if (run.finds > 0 && (records.fastestExtraction === null || run.seconds < records.fastestExtraction)) {

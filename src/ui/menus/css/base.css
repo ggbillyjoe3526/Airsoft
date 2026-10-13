@@ -28,7 +28,7 @@
   overflow: hidden;
   color: var(--paper);
   font: 500 var(--fs-md) / 1.4 var(--ui-font);
-  /* Inter's tabular figures: FC, Tokens, stats and scores keep their width as they change (M100). */
+  /* Inter's tabular figures: XP, levels, stats and scores keep their width as they change (M100). */
   font-variant-numeric: tabular-nums;
   background: var(--menu-bg);
   -webkit-font-smoothing: antialiased;
@@ -128,11 +128,6 @@
 .perf-title,
 .settings-about-title,
 .colour-real-title,
-.armory-shots-title,
-.tier-text,
-.gear-tier,
-.item-tier,
-.option-tier,
 .summary-result {
   font-family: var(--ui-display);
   text-transform: uppercase;
@@ -238,7 +233,7 @@
   content: none;
 }
 
-/* The top bar (M100): the wordmark, the places from the left (the current one underlined in orange), the wallet at the far right. */
+/* The top bar (M100): the wordmark, the places from the left (the current one underlined in orange), your level at the far right (LV1). */
 .menu-topbar {
   position: absolute;
   inset: 0 0 auto;
@@ -323,14 +318,14 @@
   opacity: 0.45;
 }
 
-.menu-wallet {
+.menu-status {
   display: flex;
   align-items: center;
   gap: 12px;
   margin-left: auto;
 }
 
-/* Back to practice (M95): on the Loadout opened from Practice, before the wallet; a primary sized for the bar, its key
+/* Back to practice (M95): on the Loadout opened from Practice, before your level; a primary sized for the bar, its key
    cap in front of the label. */
 .menu-topbar .menu-topbar-practice {
   margin-left: auto;
@@ -344,8 +339,8 @@
   order: 2;
 }
 
-/* The button takes the free space before it, so the wallet stays at the far right. */
-.menu-topbar-practice:not([hidden]) + .menu-wallet {
+/* The button takes the free space before it, so your level stays at the far right. */
+.menu-topbar-practice:not([hidden]) + .menu-status {
   margin-left: 0;
 }
 
@@ -368,16 +363,47 @@
   border: 1px solid var(--menu-line);
 }
 
-.menu-chip::before {
-  content: '';
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #ffc21a;
+/* Your level (LV1): "LV 3" over a thin bar of the XP into the next one; opens the Armory. */
+.menu-chip-level {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  min-width: 96px;
+  padding: 6px 14px 8px;
+  font-family: inherit;
+  color: var(--paper);
+  cursor: pointer;
 }
 
-.menu-chip-tokens::before {
-  background: #1fd6c4;
+.menu-chip-level:hover {
+  border-color: var(--menu-muted);
+}
+
+.menu-chip-level:disabled {
+  cursor: default;
+}
+
+.menu-level-text {
+  font-family: var(--ui-display);
+  text-transform: uppercase;
+}
+
+.menu-level-bar,
+.armory-xp {
+  position: relative;
+  display: block;
+  height: 4px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.menu-level-bar i,
+.armory-xp i {
+  position: absolute;
+  inset: 0;
+  background: var(--orange);
+  transform: scaleX(var(--xp, 0));
+  transform-origin: left;
 }
 
 /* Numbered section heads: "01 MAP" with a rule out to the right and a note after it. */
