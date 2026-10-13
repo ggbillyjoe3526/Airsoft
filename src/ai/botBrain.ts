@@ -1,8 +1,10 @@
+import { MOVEMENT } from '../config/movement';
 import { SQUAD_ORDERS } from '../config/squad';
 import { canReload } from '../sim/armament';
 import type { Character } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
 import { isInPlay } from '../sim/elimination';
+import { createVaultState, findVault } from '../sim/vault';
 import { type Vec3, vec3 } from '../sim/vec';
 import { type Bot, type BotWorld, flagRole, pick, threatInMind, wantsFlag } from './bot';
 import { aimBot, lowOnBBs, reloadBot, shootBot } from './botCombat';
@@ -24,6 +26,8 @@ import { teammateSpots, wantRoute } from './routes';
 const myEye = vec3();
 const aimAt = vec3();
 const threatEye = vec3();
+/** The vault a Jump press would make (M102): only asked whether there is one. */
+const vaultCheck = createVaultState();
 
 /** Narrowed cover search for a fresh contact: close cover to peek from only, no random tries (filled per call). */
 const contactSearch: CoverSearch = { radius: 0, randomCandidates: 0, peekable: true };
@@ -324,7 +328,8 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
   const near = b.skill.slicesCorners && (threatInMind(b, w) || (!b.hunting && w.inEnemyHalf(b)));
   const hunter = b.role === 'hunter';
   b.careful = near && !trading && !hunter && (b.mode === 'advance' || b.mode === 'search') && !pushingLate(b, w);
-  // Steer clear of anyone close by, or step out of their way (AI-01).
+  // Steer clear of anyone close by, or step out of their way (AI-01). A route's vault leg is the walk's own (followRoute).
+  b.vaultLeg = false;
   const moving = keepApart(b, w, moveBot(b, w, cmd, dt, target), cmd);
   // Holding a lane point or a post: crouch once settled, where crouched eyes still see the enemy side (AI-02).
   if (b.holding && b.holdCrouch && b.teamWait >= cfg.holdCrouchDelay) cmd.crouch = true;
@@ -356,6 +361,8 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
       cmd.walk = true;
       cmd.sprint = false;
     }
+    // A low obstacle on its route (M102): Jump once the vault is there, as the player's would be (the same rule).
+    if (b.vaultLeg) cmd.jump = findVault(me, cmd, MOVEMENT, w.body, w.query, vaultCheck);
   }
   shootBot(b, w, target, myEye, aimAt, offAim, cmd, dt);
   reloadBot(b, w, cmd);

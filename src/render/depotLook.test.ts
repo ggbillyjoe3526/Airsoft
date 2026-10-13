@@ -26,11 +26,13 @@ function hash(a: ArrayLike<number>): number {
 /** [name, casts shadow, vertices, indices, draw range (null: all), texture, then hashes of position, colour, uv, normal]. */
 type Row = [string, boolean, number, number, number | null, string, number, number, number, number];
 
+// M102: concrete, blockWall and (its grime) corrugated re-pinned for the office hall's window broken down to a low wall
+// to vault (its sill lower, its lintel gone).
 const PIN: Record<'plain' | 'detail', Row[]> = {
   plain: [
     ['map-steelPlate', true, 228, 336, null, 'steelPlate', 1687633717, 96722977, 2738363157, 2591861685],
-    ['map-concrete', true, 648, 972, 972, 'concrete', 2128768533, 2435460381, 1611042853, 3175850853],
-    ['map-blockWall', true, 768, 1440, null, 'blockWall', 1607307813, 16672525, 2280480309, 879862725],
+    ['map-concrete', true, 624, 936, 936, 'concrete', 3209536245, 2512829621, 2637516037, 3500041861],
+    ['map-blockWall', true, 736, 1380, null, 'blockWall', 1046542917, 2424880685, 2630196061, 4060191237],
     ['map-barrier', true, 7048, 11100, null, 'barrier', 1784704581, 707736317, 4144938713, 3048512101],
     ['map-crate', true, 1816, 2748, null, 'crate', 1511588965, 3625141501, 1560544645, 3011479333],
     ['map-corrugated', true, 5304, 8676, null, 'corrugated', 2633553733, 1344298709, 952225461, 3811663397],
@@ -39,11 +41,11 @@ const PIN: Record<'plain' | 'detail', Row[]> = {
   ],
   detail: [
     ['map-steelPlate', true, 774, 1368, 1032, 'steelPlate', 838859125, 3890357677, 1140776278, 1856083041],
-    ['map-concrete', true, 5582, 20460, 19416, 'concrete', 3488080045, 478623096, 526800199, 1656451013],
-    ['map-blockWall', true, 6230, 18114, 16674, 'blockWall', 2209911561, 428390416, 2985850169, 873620969],
+    ['map-concrete', true, 5534, 20388, 19380, 'concrete', 2011264237, 3323716289, 1409073447, 2652280837],
+    ['map-blockWall', true, 6114, 17910, 16530, 'blockWall', 745351929, 1108154829, 1117622901, 2375758465],
     ['map-barrier', true, 21140, 33372, 20760, 'barrier', 3191135753, 2695292710, 3093672965, 2646408605],
     ['map-crate', true, 6584, 9888, 5268, 'crate', 1394211205, 3958199917, 524222949, 3907965557],
-    ['map-corrugated', true, 24024, 46782, 37674, 'corrugated', 3201333815, 2735355188, 1833331958, 1580581405],
+    ['map-corrugated', true, 24024, 46782, 37674, 'corrugated', 3201333815, 3407567472, 1833331958, 1580581405],
     ['map-sandbag', true, 1176, 1800, 1368, 'sandbag', 718864357, 2216120893, 1353423407, 4156775293],
     ['map-gabion', true, 1006, 1728, 1152, 'gabion', 2623655341, 4174580944, 145423981, 3485225441],
   ],
