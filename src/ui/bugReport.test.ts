@@ -14,6 +14,9 @@ function info(extra: string[] = []): ReportInfo {
 
 type Link = FakeElement & { href: string; target: string; rel: string };
 
+/** Time for the message while the bot-match guards load every core (vi.waitFor's own 1 s ran out), inside the test's 5 s. */
+const SAID = { timeout: 4_000 };
+
 describe('Report a Bug link (IM7)', () => {
   beforeEach(() => {
     vi.stubGlobal('document', { createElement: (tag: string) => new FakeElement(tag) });
@@ -53,7 +56,7 @@ describe('Report a Bug link (IM7)', () => {
     const said: string[] = [];
     const link = reportBugLink(() => info(long), () => 'note', (t) => said.push(t)) as unknown as Link;
     link.click();
-    await vi.waitFor(() => expect(said).toEqual([BUG_REPORT_TEXT.openedCopied]));
+    await vi.waitFor(() => expect(said).toEqual([BUG_REPORT_TEXT.openedCopied]), SAID);
     expect(copyText).toHaveBeenCalledTimes(1);
     const whole = copyText.mock.calls[0]![0];
     expect(whole).toContain('Note: note');
@@ -68,7 +71,7 @@ describe('Report a Bug link (IM7)', () => {
     const long = Array.from({ length: 400 }, (_, i) => `tick ${i}: a long line to fill the address up quite a lot`);
     const link = reportBugLink(() => info(long), () => '', (t) => said.push(t)) as unknown as Link;
     link.click();
-    await vi.waitFor(() => expect(said).toEqual([BUG_REPORT_TEXT.openedNotCopied]));
+    await vi.waitFor(() => expect(said).toEqual([BUG_REPORT_TEXT.openedNotCopied]), SAID);
   });
 
   it('gives a note box labelled and limited in length', () => {
