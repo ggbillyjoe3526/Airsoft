@@ -56,6 +56,8 @@ What is new since 0.1 Dev 4. Each line points to the section with the full check
   [Extraction](#extraction-dev-content)).
 - [ ] **Iron sights on every replica.** Right click aims down the sights with no optic fitted, tighter than the hip,
   and Shift while aiming creeps slower ([Aiming and optics](#aiming-and-optics)).
+- [ ] **Levels in the Armory.** You start at level 0, matches give XP and each level up to 10 unlocks parts, the Cyber
+  Pistol last ([Levels and the Armory](#levels-and-the-armory)).
 
 ### Your five calls, confirmed
 
@@ -230,16 +232,16 @@ wears off, and each match has a light breeze (calm to about 2 m/s) that pushes B
 ## Loadout and Customise
 
 Loadout (the title screen or the top bar). The slots are Primary, Secondary and Grenades (greyed: none yet); your
-replicas are listed with their tier. Right-click an equipped replica, or use Customise, to change its parts.
+replicas are listed below, and one still to unlock is greyed with a lock and its level. Right-click an equipped
+replica, or use Customise, to change its parts. To try every part below before you have levelled, turn on Settings ›
+Dev › Disable levelling.
 
 - [ ] **Swap slots.** Put the GBB Pistol in Primary: the AEG rifle moves to Secondary. Any replica goes in either slot.
 - [ ] **Customise.** Colour first, then the optic, BB weight, hop-up, grip, laser, magazine, power source, barrel,
-  muzzle and light, each offering only parts you own that fit. Skins say they come later. Esc goes back.
-- [ ] **Sort and filter by rarity (M82).** Over Your replicas: Sort Replica (as before) or Rarity (rarest first), and
-  a chip per tier; click Common, Uncommon, Rare and Very Rare off to see only Epic and Legendary (what you carry still
-  shows; "3 hidden" says how many are left out; All brings them back). In Customise each part's options have the same
-  bar, one choice for every part. Leave and come back, or reload: both choices are kept. Is the bar easy to read and
-  out of the way?
+  muzzle and light, each offering the parts that fit. Skins say they come later. Esc goes back.
+- [ ] **Locked parts.** At a low level each part's options list the ones still to unlock after the ones you have,
+  greyed with a lock and "Level N" (the level that unlocks it), and they can't be picked. Under them: "Level up to unlock more: the
+  Armory shows what each level gives." With everything in a row unlocked, the line goes.
 - [ ] **BB weight.** 0.25 g on the rifle and 0.20 g on the pistol as they come. 0.28 g on the rifle leaves slower
   (about 84 m/s) and needs more hop: at about 75 % it stays on target to about 41 m. 0.20 g with the dial at 65 % is
   too much hop (far shots fly high and float); about 50 % flies flat.
@@ -250,10 +252,11 @@ replicas are listed with their tier. Right-click an equipped replica, or use Cus
   Angled: switching and raising the sight are a little quicker; after a sprint the crosshair stays wide a moment
   longer.
 - [ ] **Magazines.** Hi-cap: 120 BBs and one spare; a bot facing away hears its rattle and turns within about 7 m
-  (you hear it too, quieter: tolerable over a long walk?). Low-cap: 30 BBs, four spares, a quicker change. The
-  pistol's extended magazine: 27 BBs, slower to draw. Each part shows on the replica.
-- [ ] **Barrels and the silencer** (Settings › Dev › Unlock all gear, if you don't own them). The Tight-Bore Barrel:
-  spread −15 %, energy +3 %. The Long Barrel: energy +8 %, Draw and Aim raise +15 %, visibly longer. The Silencer (both
+  (you hear it too, quieter: tolerable over a long walk?). Low-cap: 30 BBs, five spares, a change 25 % quicker and a
+  draw 10 % quicker. Is it worth picking now? The pistol's extended magazine: 27 BBs, slower to draw. Each part shows on
+  the replica.
+- [ ] **Barrels and the silencer.** The Tight-Bore Barrel: spread −15 %, energy +3 %. The Long Barrel: energy +10 %,
+  spread −10 %, Draw and Aim raise +15 %, visibly longer: the reach pick, unlocked late. The Silencer (both
   replicas): energy −5 %, a slower draw, "Shots heard from" 22 m becomes 11 m; shots sound duller and quieter.
 - [ ] **Bots hear a silencer less.** On Normal, fire the silenced rifle from about 15 m behind a bot that can't see
   you: it doesn't turn (unsilenced it does). On the minimap, with sound cues on, a silenced bot shows only within half
@@ -262,13 +265,10 @@ replicas are listed with their tier. Right-click an equipped replica, or use Cus
   to 20 m, spread, recoil, magazines, reload, draw, aim raise and shots heard from. Change a part or drag the BB
   weight: each changed stat is marked better or worse with a percentage; a trade-off (the hi-cap's "120 × 2") isn't
   coloured. As it comes the AEG reads about 0.97 J, 13 BBs/s, 60 BBs; the pistol 0.52 J, 7 BBs/s, 18 BBs.
-- [ ] **Tiers.** With Unlock all gear, a Legendary AEG Rifle reads about 1.04 J, 14 BBs/s, spread −15 %; a Legendary
-  pistol on Legendary Black Gas about 0.71 J with recoil +20 %. The line under the replica's name says what its tier
-  adds ("Common: no tier bonus" otherwise).
 - [ ] **The 11.1 V LiPo battery** on the rifle: rate of fire +15 %, energy unchanged; it sounds and empties faster.
 - [ ] **Glowing BBs** (per replica): At Night (the default) glows only on night fields, Always or Off. A glowing BB is
   green, a little larger at range, with a longer streak.
-- [ ] **Light** (dev content, night fields). Every replica has a starter Light, switched with **T**. "No light" takes
+- [ ] **Light** (dev content, night fields). Every replica has the Weapon Torch from level 0, switched with **T**. "No light" takes
   the torch off. Known bug: on the AEG rifle the Light row won't take "No light" (bug pass BP2 fixes it).
 - [ ] **Your setup is kept.** Reload the page: every pick is still there. Bots carry their replicas as they come,
   except Hard opponents (see [Bots](#bots)).
@@ -278,10 +278,11 @@ replicas are listed with their tier. Right-click an equipped replica, or use Cus
 
 ## Cyber Pistol
 
-The chase replica: Legendary only, from the Armory at a 1 in 400 chance per item. To try it now, turn on Settings ›
-Dev › Unlock all gear.
+The level 10 reward, the last thing the levels unlock. To try it now, turn on Settings › Dev › Disable levelling, or
+press Settings › Dev › Level up until you reach 10.
 
-- [ ] **Equip it.** It is in the Loadout at Legendary only and goes in either slot.
+- [ ] **Equip it.** Below level 10 the Loadout shows it greyed with a lock and "Level 10". Once unlocked it goes in
+  either slot.
 - [ ] **Its look.** A white slab with glowing cyan lines and a magenta core, the same on either team. With Realistic
   colours it is plain grey and unlit. Does it read as rare and special?
 - [ ] **Customise.** Power source reads Built-in battery and the magazine "Its own, 50 BBs"; the optic, grip, laser,
@@ -291,40 +292,49 @@ Dev › Unlock all gear.
 - [ ] **Its sound.** A quiet electronic chirp and a soft pop with no motor whine; an empty trigger blips; a reload
   ends in a two-note chime. Futuristic but still a toy?
 - [ ] **Leave the AEG at home.** Carry the Cyber Pistol and the GBB Pistol on Normal: the bots' AEG shots still sound.
-- [ ] **The Armory.** Its Chase line names the Cyber Pistol, Legendary only, 0.25 %, about 1 in 400. In your
-  collection its row has one pip, Legendary. When one drops for real (about 130 Shots on average), its tile glows and
-  the reveal says "Chase item: Cyber Pistol!".
-- [ ] **Bots with it.** With it owned (or Unlock all gear on), about 1 Hard match in 20 has an opponent with it on
-  Auto. Never on Easy or Normal, never a teammate.
+- [ ] **The Armory.** Level 10's row holds the Cyber Pistol. Reaching it, the summary says "Level 10!" and
+  "Unlocked: Cyber Pistol".
+- [ ] **Bots with it.** With it unlocked (or Disable levelling on), about 1 Hard match in 20 has an opponent with it on
+  Auto. Never on Easy or Normal, never a teammate. The same goes for any replica a level above 0 unlocks.
 
-## Armory and Field Credits
+## Levels and the Armory
 
-Completely free: Field Credits (FC) come from playing, and nothing is ever sold.
+Completely free: finished matches give XP, each level up to 10 unlocks parts for good, and nothing is ever sold. What
+each level unlocks is in `levels.md` at the repository root; the Armory shows it in the game.
 
-- [ ] **Earn FC.** Win a standard match: the summary lists FC for the match, the win, the rounds and your hits; the
-  top bar shows the new total. A loss pays less; a round your team won while you were out without a hit pays nothing.
-  Hard opponents with Easy teammates show "difficulty ×0.5".
-- [ ] **Shots.** The buttons read "1 Shot · 160 FC" and "10 Shots · 1,600 FC". 10 Shots asks first, with the keyboard
-  on Cancel (Enter cancels). Holding Enter on 1 Shot takes exactly one.
-- [ ] **The reveal.** Each Shot gives three assets with their rarity; a first copy says New, a repeat Spare. After ten,
-  the tiles come in rarest first, an Epic or Legendary glowing in its colour, with a line like "1 Epic, 4 Rare,
-  25 others · 3 new". With reduced motion they appear at once.
-- [ ] **Pity.** "Epic or rarer within 20 more Shots" and "Legendary or rarer within 100 more Shots" count down a Shot
-  at a time and survive a reload.
-- [ ] **Your collection.** Under the balance and the odds, one column per kind (replicas, power sources, optics, grips,
-  and the rest), each with a heading. Every asset Shots can give, owned or not (dimmed), with a pip per tier and "N / 84 items".
-  Right-click an item (or focus it and press the Menu key or Shift+F10) for its Scrap 1 / Scrap N menu; Esc, a click
-  elsewhere or a choice closes it. Scrap 1 scraps the lower copy; fit the Common on Customise first, scrap it, and Customise shows the Rare fitted.
-  Scrap all spares asks first and keeps your best copy of everything.
-- [ ] **Rarity odds.** The odds table has its caption, and each Rare-or-better copy lists what its tier adds.
-- [ ] **Settings › Dev › Disable Armory.** The Armory is gone from every menu (M83): not on the top bar, no FC or
-  Tokens there, no "Unlock more in the Armory" in Loadout or Customise, no FC line on the summary; a match pays
-  nothing. Untick the Dev box and it is all back.
-  Turn it off: the next match pays.
-- [ ] **Settings › Dev › Unlock all gear.** The Loadout offers every replica and part at every tier and the match stays
-  out of your records. Turn it off: your own picks are back.
-- [ ] **A Dev-assisted match** (Bottomless magazines on, to the end): "No Field Credits: Dev settings changed how this
-  match played."
+- [ ] **Level 0 to start.** On a fresh save (a private window, or Settings › Save › Delete): the top bar reads "Lv 0"
+  with an empty bar. The Loadout offers the AEG Rifle and the GBB Pistol; Customise offers the Standard Battery, Green
+  Gas and the Weapon Torch, and every other part greyed with its level.
+- [ ] **The level badge.** On every screen after the title, "Lv N" with a thin XP bar at the far right of the top bar.
+  Point at it: "Level N, X XP to level N+1. Open the Armory". Click it: the Armory opens. From the pause menu it shows
+  but does nothing.
+- [ ] **The Armory.** Top bar › Armory. On the left your level "of 10", the XP bar ("120 / 300 XP"), how much to the
+  next level, the XP earned in all, and how XP is earned (every match 100, a win 100 more, each round won 20, each hit
+  10, then times the difficulty; the practice range and the tutorial give none). In the middle what the next level
+  unlocks. On the right every level from the starting kit to 10, each with its XP and its items' pictures, the reached
+  ones lit and marked Unlocked, the next marked Next. Easy to read at a glance?
+- [ ] **XP on the summary.** Win a standard first-to-5 match on Normal: "XP earned +N XP", then what gave it ("Match
+  played 100 · Match won 100 · 5 rounds won 100 · 3 hits on an opponent 30"), then "Level N: X / Y XP" over a bar. A
+  loss gives less; a round your team won while you were out without a hit gives nothing. Hard opponents with Easy
+  teammates add "difficulty ×0.5". The badge shows the new level.
+- [ ] **A level up.** Your first finished match takes you to level 1: the summary says "Level 1!" and "Unlocked: Red
+  Dot", and the Red Dot is in Customise's optics with no lock. Several levels at once list everything they unlocked.
+- [ ] **No XP.** The practice range and the tutorial give none. A match with Dev content on and a dev map or mode:
+  "No XP: this match used content still being built." A match with a Dev aid (Bottomless magazines, to the end): "No
+  XP: Dev settings changed how this match played."
+- [ ] **Settings › Dev › Disable levelling.** The badge goes; the Armory says levelling is off and every level reads
+  Unlocked; the Loadout and Customise offer every replica and part with no locks. A match gives no XP and stays out of
+  your records. Turn it off: your own level, unlocks and picks are back.
+- [ ] **Dev XP buttons.** Settings › Dev: **+500 XP** adds 500 XP (the badge moves, and a level it reaches unlocks
+  its items); **Level up** adds exactly what the next level takes; at 10 it says "At the top level". **Reset level**
+  asks first, then puts you back at level 0 with the starting kit. Each survives a reload.
+- [ ] **At the cap.** At level 10 the Armory and the summary say "Top level reached. XP counts again when the level
+  cap goes up." and the bar is full.
+- [ ] **An old save.** Load a save downloaded before the levels came in (it had Field Credits and the Armory's items):
+  it loads at level 0 with the starting kit, your settings and records kept.
+- [ ] **Edit `levels.md`.** Move the Silencer to level 1 and run `npm run dev` again: at level 1 the Armory lists it
+  and Customise offers it. A typo (`Silencr`) shows in the browser console and `npm run test` names its line. Put it
+  back.
 
 ## Bots
 
