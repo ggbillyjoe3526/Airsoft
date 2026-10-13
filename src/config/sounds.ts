@@ -46,10 +46,11 @@ export type SoundCue =
   | 'draw'
   | 'reloadRefused'
   | `step.${FloorSurface}.${FootstepPace}`
-  /** Kit and clothing moving: dropping into a crouch, standing up, leaning out. */
+  /** Kit and clothing moving: dropping into a crouch, standing up, leaning out, putting the replica away (M92). */
   | 'foley.crouch'
   | 'foley.stand'
   | 'foley.lean'
+  | 'foley.holster'
   /** A hi-cap's loose BBs shaking with each step (M17b). */
   | 'magRattle'
   /** A vault (M102): hands slapping onto the obstacle's top and the kit swinging over it. */
@@ -538,10 +539,22 @@ export const SOUNDS: Readonly<Record<SoundCue, SoundRecipe>> = {
   },
 
   /**
+   * Putting the replica away (M92): the sling swinging it round, then a soft knock as it settles against the back. After
+   * the yard's calls, near the title stream's end (only the vault after it), so every earlier cue sounds as it did.
+   */
+  'foley.holster': {
+    layers: [
+      { kind: 'noise', attack: 0.02, decay: 0.12, gain: 0.22, filter: { type: 'bandpass', hz: 2200, hzTo: 1400, q: 0.9 } },
+      { kind: 'modes', at: 0.11, gain: 0.25, modes: [{ hz: 420, decay: 0.05, gain: 1 }, { hz: 1150, decay: 0.03, gain: 0.4 }] },
+    ],
+    ...LOOSE,
+  },
+
+  /**
    * A vault (M102): two palms slapping onto the top a beat apart (a soft thud with a flat smack), the magazines and
    * buckles jolting, and the clothes swishing as the legs swing over. Played once as the vault starts; the boots' landing
-   * is the footstep's own. Last on the title stream, after the yard's calls, so every cue before it renders as it did
-   * (as M86's calls); short (under 0.15 s) to fit the title screen's budget (audio.test.ts).
+   * is the footstep's own. Last on the title stream, after the holster, so every cue before it renders as it did (as
+   * M86's calls); short (under 0.15 s) to fit the title screen's budget (audio.test.ts).
    */
   vault: {
     layers: [

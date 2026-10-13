@@ -119,7 +119,8 @@ describe('sound synthesis (M13)', () => {
 
   it("keeps the sounds small enough to render in the title screen's spare time (a budget in samples, not wall time)", () => {
     // Measured at M-09 (audit): 1,167,190 samples (4.7 MB) in all, the longest cue (steel's ring) 116,965. Counting
-    // samples keeps the guard from flaking on a slow CI runner (audit L-11); rendering time follows the count.
+    // samples keeps the guard from flaking on a slow CI runner (audit L-11); rendering time follows the count. Raised
+    // from 1.4e6 at M102: 1,428,901 (5.7 MB) with M92's holster and M102's vault; each cue still fits one spare moment.
     const all = renderSounds(RATE);
     let total = 0;
     for (const [cue, variants] of all) {
@@ -128,7 +129,7 @@ describe('sound synthesis (M13)', () => {
       expect(samples, `${cue} is too long to render in one spare moment`).toBeLessThan(0.15 * 1e6);
       total += samples;
     }
-    expect(total, 'samples kept per sample rate').toBeLessThan(1.4e6);
+    expect(total, 'samples kept per sample rate').toBeLessThan(1.5e6);
   });
 
   it('has a shot sound for every power source the replicas use', () => {
@@ -323,6 +324,36 @@ describe('crouch and lean rustle (M13)', () => {
     tick(0, 0);
     tick(0, -0.5); // out the other side
     expect(heard).toEqual(['crouch', 'stand', 'lean', 'lean']);
+  });
+
+  it('rustles once on the tick the replica goes into the holster (M92), not while it stays away, and again for the next', () => {
+    const c = createCharacter(1, vec3(), 0, LOADOUT, 0);
+    const tracker = new FoleyTracker();
+    const heard: FoleyMove[] = [];
+    const tick = (holstered: boolean): void => {
+      c.armament.holstered = holstered;
+      tracker.update([c], (_, move) => heard.push(move));
+    };
+    tick(false);
+    expect(heard).toEqual([]);
+    tick(true);
+    expect(heard).toEqual(['holster']);
+    tick(true);
+    tick(true);
+    expect(heard).toEqual(['holster']);
+    tick(false); // drawing it is the simulation's draw event, not a rustle
+    expect(heard).toEqual(['holster']);
+    tick(true);
+    expect(heard).toEqual(['holster', 'holster']);
+  });
+
+  it('is quiet for a holster on someone who is out', () => {
+    const c = createCharacter(1, vec3(), 0, LOADOUT, 0);
+    c.status = 'walkingOff';
+    c.armament.holstered = true;
+    const heard: FoleyMove[] = [];
+    new FoleyTracker().update([c], (_, move) => heard.push(move));
+    expect(heard).toEqual([]);
   });
 
   it('stays quiet for someone who is out', () => {

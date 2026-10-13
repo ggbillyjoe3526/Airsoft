@@ -20,6 +20,7 @@ const look = { yaw: 0, pitch: 0 };
 const aimLine = vec3();
 const standEye = vec3();
 const raisedPoint = vec3();
+const sidePoint = vec3();
 const mateVolume: HitVolume = createHitVolume();
 const lastKnownHead = vec3();
 
@@ -169,15 +170,25 @@ function heldAngleLook(b: Bot, w: BotWorld, eye: Vec3, facingYaw: number, neares
 }
 
 /**
+ * How far `b`'s BBs may stray off its aim line, in metres per metre flown: cfg.friendlySpreadSigmas of the spread it
+ * shoots with now, its replica's widened by moving, a landing or a sprint just ended (Character.spreadScale; M92: the
+ * replica's alone let a bot walking as it fired put BBs past a wall's end onto a teammate 20 m off).
+ */
+function strayPerMetre(b: Bot, w: BotWorld): number {
+  const me = b.character;
+  const held = me.armament.replicas[me.armament.active]!;
+  return Math.tan(w.cfg.friendlySpreadSigmas * held.spreadDeg * me.spreadScale * DEG);
+}
+
+/**
  * True if a teammate stands in (or right next to) the line of fire within `dist` metres, or someone already hit stands
  * in it before the target (`toTarget` metres): a BB stops on any body (M85), so firing would only hit a teammate, or
  * shoot someone who is already out. Before the target every teammate counts, in play or not, friendly fire on or off:
- * their bodies stop BBs either way. Past it, only a teammate the BBs could knock out does (BP3).
+ * their bodies stop BBs either way. Past it, only a teammate the BBs could knock out does (BP3). Each body counts
+ * `stray` metres wider per metre away (strayPerMetre).
  */
-function bodyInLine(b: Bot, w: BotWorld, from: Vec3, dir: Vec3, dist: number, toTarget: number): boolean {
+function bodyInLine(b: Bot, w: BotWorld, from: Vec3, dir: Vec3, dist: number, toTarget: number, stray: number): boolean {
   const me = b.character;
-  const held = me.armament.replicas[me.armament.active]!;
-  const stray = Math.tan(w.cfg.friendlySpreadSigmas * held.spreadDeg * DEG); // metres off the line per metre
   const v = mateVolume;
   for (const mate of w.characters) {
     if (mate === me || mate.ghost) continue;
@@ -218,25 +229,36 @@ function lineOfFireBlocked(b: Bot, w: BotWorld, eye: Vec3, aimPoint: Vec3, dir: 
   const wall = w.query.raycastStatic(eye, dir, dist + w.cfg.friendlyBeyondTarget);
   // The BB flies along the actual aim, not the line to the target: hold fire rather than shoot the wall beside you.
   if (wall >= 0 && wall < dist * w.cfg.aimWallFraction) return true;
-  return bodyInLine(b, w, eye, dir, friendlyReach(w, eye, dir, dist, wall), dist);
+  const stray = strayPerMetre(b, w);
+  return bodyInLine(b, w, eye, dir, friendlyReach(w, eye, dir, dist, wall, stray), dist, stray);
 }
 
 /**
  * How far along `dir` (unit) from `eye` a missed BB can still hit someone: cfg.friendlyBeyondTarget past
  * the target (`dist` metres away), or less if a wall is in the way (`hit`: where the line meets geometry
  * within that reach, or -1): cfg.friendlyPastWall past it (a line grazing a corner lets BBs by). Only a wall: what the
- * line meets must also stand cfg.friendlyWallClearance higher right there (BBs can sail over the top of low cover).
+ * line meets must also stand cfg.friendlyWallClearance higher right there (BBs can sail over the top of low cover),
+ * and as far to either side as the BBs stray by then (`stray` metres per metre, M92): BBs pass a wall's end or a post.
  */
-function friendlyReach(w: BotWorld, eye: Vec3, dir: Vec3, dist: number, hit: number): number {
+function friendlyReach(w: BotWorld, eye: Vec3, dir: Vec3, dist: number, hit: number, stray: number): number {
   const cfg = w.cfg;
   const reach = dist + cfg.friendlyBeyondTarget;
   if (hit < 0) return reach;
-  // Just before the point the line meets, raised: is the same surface there too?
+  // Just before the point the line meets, raised and to either side: is the same surface there too?
   const back = Math.min(hit, cfg.friendlyWallProbe);
   raisedPoint.x = eye.x + dir.x * (hit - back);
   raisedPoint.y = eye.y + dir.y * (hit - back) + cfg.friendlyWallClearance;
   raisedPoint.z = eye.z + dir.z * (hit - back);
-  return w.query.raycastStatic(raisedPoint, dir, back + cfg.friendlyWallProbe) >= 0 ? Math.min(reach, hit + cfg.friendlyPastWall) : reach;
+  if (w.query.raycastStatic(raisedPoint, dir, back + cfg.friendlyWallProbe) < 0) return reach;
+  const flat = Math.hypot(dir.x, dir.z);
+  const off = flat > 0 ? (stray * hit) / flat : 0;
+  for (let side = 1; side >= -1; side -= 2) {
+    sidePoint.x = raisedPoint.x + dir.z * off * side;
+    sidePoint.y = raisedPoint.y - cfg.friendlyWallClearance;
+    sidePoint.z = raisedPoint.z - dir.x * off * side;
+    if (w.query.raycastStatic(sidePoint, dir, back + cfg.friendlyWallProbe) < 0) return reach;
+  }
+  return Math.min(reach, hit + cfg.friendlyPastWall);
 }
 
 /** Bursts at the target from `eye` towards `aimPoint` once reacted and on aim, never with a teammate or cover in the way. */

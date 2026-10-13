@@ -112,7 +112,7 @@ scale. He ruled on every conflict with an earlier decision on 2026-10-06 (below 
 |---|---|---|
 | 1 | The tutorial shows the scoreboard and the comm wheel when it names them; plainer but complete wording; a finish pop-up offering the practice range or the menu | M80 (0.1 Dev 5); done (2026-10-11) |
 | 2 | Keep the Retro filter | M96 (0.1 Dev 5): public as soon as possible (ruled 2026-10-06; was 0.5 in the triage); done (2026-10-11) |
-| 3 | Holster on 3 (1 primary, 2 secondary); sprinting holstered is faster but drawing to aim is slower; sprinting with the replica ready aims faster | M92 (0.1 Dev 6) |
+| 3 | Holster on 3 (1 primary, 2 secondary); sprinting holstered is faster but drawing to aim is slower; sprinting with the replica ready aims faster | M92 (0.1 Dev 6); done (2026-10-13) |
 | 4 | Sort and filter replicas by rarity in the Loadout, and parts by rarity in Customise | M82 (0.1 Dev 5, after G3); done (2026-10-11) |
 | 5 | A 2–4x variable scope (mouse wheel while aiming) and a holographic sight | The Replica Update (feature pick 15; moved from 0.1 Dev 6, 2026-10-12) |
 | 6 | Skip to the next round from the spectator camera | M83 (0.1 Dev 5); done (2026-10-11) |
@@ -208,7 +208,7 @@ are written when the build starts. Numbers are from the owner's list of 50 candi
 
 | # | Feature | Area |
 |---|---|---|
-| M92 | Holster on 3, and two kinds of sprint: holstered is faster, but drawing to aim takes longer | Movement |
+| M92 | Holster on 3, and two kinds of sprint: holstered is faster, but drawing to aim takes longer; done (2026-10-13, `docs/records/M92.md`) | Movement |
 | M93 | Practice: moving targets, new target types and a timed challenge (off by default); done (2026-10-13, `docs/records/M93.md`) | Practice |
 | M94 | Practice on any map, with targets instead of bots | Practice |
 | M95 | Practice with any replica you own, and everything with Dev on | Practice |

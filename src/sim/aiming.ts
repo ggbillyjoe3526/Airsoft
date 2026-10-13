@@ -19,15 +19,16 @@ export function aimRaiseTime(a: Armament): number {
 
 /**
  * Aiming down sights (owner, 2026-10-06: every replica, through iron sights when no optic is fitted; M84), not while
- * reloading or bringing a replica up (the sight comes back up afterwards if the button is still held). Aiming slows you
+ * reloading, bringing a replica up or with it holstered (the sight comes back up afterwards if the button is still held;
+ * an aim press draws a holstered replica, M92, sim/armament.ts). Aiming slows you
  * to walking pace, quietly, and rules out sprinting, as the walk key does; holding walk as well slows you further
  * (sim/movement.ts). The sight comes up over aimRaiseTime (Character.aimRaise), and as it does the aim tightens
  * (MovementConfig.accuracy.aimed, sim/accuracy.ts). Call before the movement step, for characters in play.
  */
 export function stepAiming(c: Character, cmd: PlayerCommand, dt: number): void {
   const a = c.armament;
-  // Reload and draw are as the last tick left them: a reload started this tick drops the sight on the next one.
-  c.aiming = cmd.aim && canAimDownSights(a) && a.reload <= 0 && a.draw <= 0;
+  // Reload, draw and holster are as the last tick left them: a reload started this tick drops the sight on the next one.
+  c.aiming = cmd.aim && !a.holstered && canAimDownSights(a) && a.reload <= 0 && a.draw <= 0;
   const step = dt / aimRaiseTime(a);
   c.aimRaise = c.aiming ? Math.min(1, c.aimRaise + step) : Math.max(0, c.aimRaise - step);
 }

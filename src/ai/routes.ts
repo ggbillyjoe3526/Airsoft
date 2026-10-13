@@ -1,4 +1,5 @@
 import type { BotBehaviour } from '../config/bots';
+import { MOVEMENT } from '../config/movement';
 import { PHYSICS } from '../config/physics';
 import type { PlayerCommand } from '../sim/commands';
 import { isInPlay } from '../sim/elimination';
@@ -194,19 +195,31 @@ function ledgeOnWay(w: BotWorld, p: Vec3, to: Vec3): boolean {
 /**
  * The last few centimetres onto `spot` once its route is done, walking straight at it: a lean spot, where a few
  * centimetres decide whether a lean sees round the corner, or a guard's post (M55, audit AI-01). True while stepping
- * (direction in `b.moveDir`); false once within leanSpotReach, further off than leanSpotApproachMax, with a drop on
- * the way, or once blocked for stuckTime.
+ * (direction in `b.moveDir`) or coasting onto it (no push: `b.moveDir` zero); false once at rest within leanSpotReach,
+ * further off than leanSpotApproachMax, with a drop on the way, or once blocked for stuckTime.
  */
 export function stepOnto(b: Bot, w: BotWorld, spot: Vec3, cmd: PlayerCommand, dt: number): boolean {
   const cfg = w.cfg;
   const p = b.character.position;
+  const v = b.character.velocity;
   const dx = spot.x - p.x;
   const dz = spot.z - p.z;
   const d = Math.hypot(dx, dz);
-  if (d <= cfg.leanSpotReach || d > cfg.leanSpotApproachMax) return false;
+  if (d > cfg.leanSpotApproachMax) return false;
+  const speed = Math.hypot(v.x, v.z);
+  // Where it would come to rest with no push: a walk carries on a few centimetres, enough to slide a lean's sight line
+  // onto the corner it was picked to clear. It lets go short of the spot and coasts onto it, and counts as there (its
+  // lean chosen) only once still.
+  const coast = speed / (2 * MOVEMENT.groundDecel);
+  if (Math.hypot(dx - v.x * coast, dz - v.z * coast) <= cfg.leanSpotReach) {
+    if (speed < cfg.stuckSpeed) return false;
+    b.moveDir.x = 0;
+    b.moveDir.z = 0;
+    cmd.walk = true;
+    return true;
+  }
   // Blocked on the way (a teammate, or a corner the nav grid rounds off): it stops where it got to, as a route does.
   if (b.stuckFor > cfg.stuckTime) return false;
-  const speed = Math.hypot(b.character.velocity.x, b.character.velocity.z);
   b.stuckFor = speed < cfg.stuckSpeed ? b.stuckFor + dt : 0;
   const reach = Math.min(d, cfg.edgeLookahead) / d;
   if (dropOnLine(w.nav, p.x, p.y, p.z, p.x + dx * reach, p.z + dz * reach)) return false;

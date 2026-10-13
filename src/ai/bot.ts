@@ -177,6 +177,12 @@ export interface Bot {
   /** No vault in this bot's routes before this time (s): it got stuck on a vault leg (BOT_BEHAVIOUR.vaultRetryDelay). */
   vaultsOffUntil: number;
   stuckFor: number;
+  /**
+   * The holster (M92, ai/botHolster.ts): seconds sprinting without a break, and seconds since the sprint last ended
+   * (each 0 while the other counts).
+   */
+  sprintRun: number;
+  sprintGap: number;
   cover: CoverSpot;
   coverLeft: number;
   /** Time left before giving up on cover altogether (unreachable spot, endless reload...). */
@@ -383,6 +389,8 @@ export function createBot(character: Character, seed: number, cfg: BotBehaviour,
     vaultLeg: false,
     vaultsOffUntil: Number.NEGATIVE_INFINITY,
     stuckFor: 0,
+    sprintRun: 0,
+    sprintGap: 0,
     cover: createCoverSpot(),
     coverLeft: 0,
     coverGiveUp: 0,
@@ -482,6 +490,8 @@ export function resetBot(b: Bot, lane: number, startHold: number, cfg: BotBehavi
   b.vaultLeg = false;
   b.vaultsOffUntil = Number.NEGATIVE_INFINITY;
   b.stuckFor = 0;
+  b.sprintRun = 0;
+  b.sprintGap = 0;
   b.coverLeft = 0;
   b.coverCooldown = 0;
   b.fromCover = false;

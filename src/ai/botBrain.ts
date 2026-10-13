@@ -8,6 +8,7 @@ import { createVaultState, findVault } from '../sim/vault';
 import { type Vec3, vec3 } from '../sim/vec';
 import { type Bot, type BotWorld, flagRole, pick, threatInMind, wantsFlag } from './bot';
 import { aimBot, lowOnBBs, reloadBot, shootBot } from './botCombat';
+import { holsterBot } from './botHolster';
 import { enterFlagMode, glance, keepApart, moveBot, startSearch } from './botMovement';
 import { currentTarget, perceive } from './botSenses';
 import { stepBotTorch } from './botTorch';
@@ -297,7 +298,8 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
   cmd.cycleFireMode = false;
   cmd.fire = false;
   cmd.reload = false;
-  cmd.switchTo = 0; // bots use their primary
+  cmd.switchTo = 0; // bots use their primary (holsterBot may keep it away, M92)
+  cmd.holster = false;
   stepBotTorch(b, w, cmd); // M33h: night fields only (nothing by day)
   if (!isInPlay(me)) {
     b.mode = 'advance';
@@ -364,4 +366,5 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
   }
   shootBot(b, w, target, myEye, aimAt, offAim, cmd, dt);
   reloadBot(b, w, cmd);
+  holsterBot(b, w, cmd, dt);
 }

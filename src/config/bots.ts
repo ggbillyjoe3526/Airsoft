@@ -103,7 +103,8 @@ export const BOT_BEHAVIOUR = {
   friendlyMargin: 0.3,
   /**
    * ...widened with the distance to them by this many standard deviations of the replica's spread: a BB strays further
-   * from the aim line the further it flies, so a teammate 20 m down the line needs more room than one 2 m away.
+   * from the aim line the further it flies, so a teammate 20 m down the line needs more room than one 2 m away. The
+   * spread the bot shoots with now (M92): walking, it is wider (Character.spreadScale).
    */
   friendlySpreadSigmas: 2,
   /**
@@ -198,8 +199,12 @@ export const BOT_BEHAVIOUR = {
   leanSpotStep: 0.225,
   /** Lean spots score as if they were this much closer (metres): you can lean out and shoot back. */
   leanCoverBonus: 1.5,
-  /** Walk right onto a lean spot, to within this distance (metres): a few centimetres decide the peek. */
-  leanSpotReach: 0.1,
+  /**
+   * Walk right onto a lean spot, to within this distance (metres): a few centimetres decide the peek. 0.1 until M102,
+   * when a walk's last few centimetres of coasting (ai/routes.ts stepOnto) left Woodland's lean guards 7 to 9 cm off
+   * their posts and some down to 64 % of their ticks seeing the way in (12 seeds); now 0 to 4 cm off and at least 92 %.
+   */
+  leanSpotReach: 0.03,
   /** ...and only from this close (metres): further off, the route brings the bot there first. */
   leanSpotApproachMax: 0.9,
   /** At a lean spot, the bot counts as there (to peek and fight from it) only within this distance (metres). */
@@ -292,6 +297,15 @@ export const BOT_BEHAVIOUR = {
   /** Sprint along routes when nobody has been seen or heard for this long (s), if heading mostly forward. */
   sprintWhenCalmFor: 3,
   sprintForward: 0.9,
+  /**
+   * The holster (M92, ai/botHolster.ts): a bot puts its replica away for the faster sprint once it has sprinted
+   * `holsterAfter` seconds without a break in its own half, nobody seen or heard for `holsterCalmFor` seconds, and draws
+   * it again (the slower draw) at once on a threat or in the enemy's half, or `holsterDrawAfter` seconds after the sprint
+   * ends (a turn on the route doesn't draw it). Every level plays it the same way.
+   */
+  holsterCalmFor: 5,
+  holsterAfter: 1.5,
+  holsterDrawAfter: 0.5,
   // ---- Team play and routes -------------------------------------------------------------------
   /**
    * Each round a team picks a plan for its bots, by these weights: split (each on a different lane),

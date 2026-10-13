@@ -106,6 +106,28 @@ describe('the replica panel (G4 criterion 4)', () => {
     expect(made.filter((e) => e.className === 'hud-mode')).toHaveLength(chips);
   });
 
+  it('says Holstered and fades while the replica is away (M92), and goes back when it is drawn', () => {
+    const { root, p, main } = panel();
+    const status = root.querySelector('.hud-status');
+    const armament = createArmament(LOADOUT);
+    p.update(armament, LOADOUT, 1 / 60);
+    expect(status.textContent).not.toBe(HUD_TEXT.holstered);
+    expect(main.classList.contains('holstered')).toBe(false);
+    armament.holstered = true;
+    p.update(armament, LOADOUT, 1 / 60);
+    expect(HUD_TEXT.holstered).toBe('Holstered');
+    expect(status.textContent).toBe('Holstered');
+    expect(main.classList.contains('holstered')).toBe(true);
+    armament.reload = 0.5; // nothing else shows over it
+    p.update(armament, LOADOUT, 1 / 60);
+    expect(status.textContent).toBe('Holstered');
+    armament.holstered = false;
+    armament.reload = 0;
+    p.update(armament, LOADOUT, 1 / 60);
+    expect(main.classList.contains('holstered')).toBe(false);
+    expect(status.textContent).not.toBe('Holstered');
+  });
+
   it('reads the spare BBs and how many magazines still hold any, written only when they change', () => {
     const { p, spare } = panel();
     const armament = createArmament(LOADOUT);

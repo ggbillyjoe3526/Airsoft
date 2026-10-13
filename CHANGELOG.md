@@ -7,6 +7,12 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 ### Added
 - **M93** · Practice has moving targets: sliding figures, a swinging plate, small plates at 15 m and pop-up figures
 - **M93** · Practice has a Timed challenge, off by default (pause menu): 60 seconds on lit targets, best score kept
+- **M92** · Press 3 to holster your replica (rebindable in Settings › Controls); 1 and 2 still pick primary and secondary
+- **M92** · Holstered, you sprint a little faster; drawing out of the holster is slower than raising from a sprint
+- **M92** · Bots holster on calm sprints through their own half and draw again on any threat
+
+### Fixed
+- **M92** · Bots firing on the move hold fire when a teammate is down the line, so they no longer hit teammates past the end of a wall
 
 ## 0.1 Dev 5 · 2026-10-13
 

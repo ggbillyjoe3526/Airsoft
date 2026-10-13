@@ -314,6 +314,12 @@ replaces its line; the old one stays findable in the archive or in git.
   strides; the head, chest and hips stay the built-in volume's, and with the figures off nothing changes.
 - **Vaulting comes in 0.1 Dev 6; slide into cover is no for now (owner, 2026-10-12).** Vaulting goes over low
   obstacles of 0.7 to 0.9 m, with a few added to the maps where they open a route; slide waits in `docs/IDEAS.md`.
+- **3 holsters the replica (1 primary, 2 secondary, rebindable): sprinting holstered is faster, and the draw from the
+  holster slower (owner, 2026-10-06, playtest note 3; M92, 2026-10-13).** The holstered sprint is 6.8 m/s against
+  6.3 with the replica ready (`MOVEMENT.holsterSprintSpeed`), and a draw from the holster takes 1.8 times the replica's
+  own (`HOLSTER.drawScale`: the rifle 0.81 s, the pistol 0.54 s), so a ready sprint is quicker to the first shot. A
+  slot key, a fresh trigger pull, an aim press or a reload draws it. Bots follow the same rules through the same
+  command, holstering only on a calm sprint through their own half (`ai/botHolster.ts`).
 - **Vaulting is Jump at a low obstacle, with no key of its own (M102, 2026-10-13).** Jump within reach of something
   0.6 to 0.95 m over your floor (at most 1 m deep, a floor to land on, your full height clear over it), heading within
   70° of where you look, vaults it; anywhere else Jump is a jump, as before. The Controls list calls it "Jump / vault"
