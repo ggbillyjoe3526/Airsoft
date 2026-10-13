@@ -171,7 +171,9 @@ describe('the top bar (M100 QA)', () => {
     const bar = new TopBar(noop, noop);
     bar.setWallet({ fc: 100, tokens: 2 }, false);
     const root = node(bar.root);
-    expect(root.children.map((c) => (c as EventNode).tag)).toEqual(['button', 'nav', 'div']);
+    // The third, Back to practice (M95), shows only on the Loadout opened from Practice.
+    expect(root.children.map((c) => (c as EventNode).tag)).toEqual(['button', 'nav', 'button', 'div']);
+    expect(root.children[2]!.hidden).toBe(true);
     expect(shown(root)).toEqual(['Airsoft', ...MENU_TEXT.nav.map((n) => n.label), '100 FC', '2 Tokens']);
     expect(shown(root).join(' ')).not.toContain(__BUILD_VERSION__.label);
   });
