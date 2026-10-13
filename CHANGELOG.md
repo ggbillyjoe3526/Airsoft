@@ -124,6 +124,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **IM8** · Dev figures (Dev switches off) crouch lower: kneeling on the rear heel and crouch-walking knees out, so a crouched head sits under crouch cover
 - **IM8** · Dev figures (Dev switches off) step in time with their speed when they walk, run, sprint or crouch-walk, and BBs hit their legs as they move
 - **IM8** · Dev figures (Dev switches off) lean their upper body about the hit area's pivot when peeking, so the lean and the hit area move together
+- **IM3** · Hosted builds download about 0.3 MB less and reach the title screen about 0.2 s sooner: the physics engine comes as its own file
 
 ### Fixed
 - **G11** · The team camo on players reads clearly on Medium and up: crisp dark and light blotches printed per pixel, on WebGL and WebGPU; Low keeps plain clothes
@@ -226,6 +227,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **IM4** · Type check and build use TypeScript 7: the type check takes about 3.5 s, not 19, and a full build about 19 s, not 35; the game is the same
 - **IM1** · Build's size limit for the game file raised to 1,250 kB, all start-up code counted in one game chunk; an OnDemand loader fetches screens on first use
 - **IM8** · Headless Blender rebuilds the figures and splices re-made clips into the exports; new crouch layer; hit-volume test covers all movement speeds
+- **IM3** · Build budgets for the physics engine's code (236 kB) and its WebAssembly file (3,240 kB) are set in the build checks
 
 ## 0.1 Dev 4 · 2026-10-06
 

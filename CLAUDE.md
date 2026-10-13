@@ -28,7 +28,7 @@ These are decided. Do not revisit them without asking me.
 | Language | TypeScript (strict mode) |
 | Rendering | Three.js |
 | Build tool | Vite |
-| Physics / collision | Rapier (`@dimforge/rapier3d-compat`) |
+| Physics / collision | Rapier (`@dimforge/rapier3d-compat`), its WebAssembly shipped as a plain `.wasm` file (owner, 2026-10-12) |
 | Bot navigation | `recast-navigation` (navmesh) or a simple waypoint graph for the first map |
 | Audio | Web Audio API; procedurally generated sounds first, CC0 samples later |
 | Input | Pointer Lock API, keyboard + mouse |

@@ -5,10 +5,13 @@
  */
 export const CHUNK_BUDGET = {
   /**
-   * Rapier inlines its WASM, so it has its own: 4,333 kB measured at @dimforge/rapier3d-compat 0.21.0 plus about 5 %
-   * (DECISIONS 2026-10-04), so an upgrade that grows it is a deliberate bump.
+   * Rapier's code chunk (its classes and wasm-bindgen glue): 224.8 kB measured at @dimforge/rapier3d-compat 0.21.0
+   * with its WebAssembly as a plain file (IM3, config/rapierWasm.ts), plus about 5 %, so an upgrade that grows it is a
+   * deliberate bump. 4,550 kB until then, when the chunk carried the WebAssembly as base64 (DECISIONS 2026-10-04).
    */
-  rapierKb: 4550,
+  rapierKb: 236,
+  /** Rapier's WebAssembly, the plain file (an asset, checked under RAPIER_WASM_BUDGET): 3,082 kB at 0.21.0 plus about 5 %. */
+  rapierWasmKb: 3240,
   /**
    * Every other chunk. 900 since M50 (DECISIONS 2026-10-05): the game chunk was 794 of 800 kB after Extraction, and 743
    * with the dev maps and the pool and stats tables moved to chunks of their own. 950 since M75 (DECISIONS 2026-10-06):
@@ -29,18 +32,25 @@ export const CHUNK_BUDGET = {
   warnAt: 0.9,
 } as const;
 
+/** The name chunkVerdict() takes for Rapier's WebAssembly, an asset rather than a chunk (vite.config.ts). */
+export const RAPIER_WASM_BUDGET = 'rapier-wasm';
+
 /** What the build does with one chunk: nothing, warn that it is near its budget, or fail (warn off CI) as over it. */
 export interface ChunkVerdict {
   level: 'ok' | 'near' | 'over';
   message: string;
 }
 
-/** The verdict on chunk `name` (written as `fileName`) of `bytes` bytes. Pure. */
+/**
+ * The verdict on chunk `name` (written as `fileName`) of `bytes` bytes. Rapier's two budgets are pins set 5 % over the
+ * library as measured, so they never warn early. Pure.
+ */
 export function chunkVerdict(name: string, fileName: string, bytes: number, budget = CHUNK_BUDGET): ChunkVerdict {
   const kb = bytes / 1000;
-  const limit = name === 'rapier' ? budget.rapierKb : budget.defaultKb;
+  const pinned = name === 'rapier' ? budget.rapierKb : name === RAPIER_WASM_BUDGET ? budget.rapierWasmKb : null;
+  const limit = pinned ?? budget.defaultKb;
   const share = `${fileName} is ${kb.toFixed(0)} kB, ${Math.round((100 * kb) / limit)} % of its ${limit} kB budget (src/config/chunkBudget.ts)`;
   if (kb > limit) return { level: 'over', message: `${share}: over budget` };
-  if (name !== 'rapier' && kb >= limit * budget.warnAt) return { level: 'near', message: `${share}: near the budget` };
+  if (pinned === null && kb >= limit * budget.warnAt) return { level: 'near', message: `${share}: near the budget` };
   return { level: 'ok', message: share };
 }

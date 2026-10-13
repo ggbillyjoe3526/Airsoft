@@ -216,7 +216,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 
 ## Graphics and art
 
-- Dark loading screen with a progress bar for the physics module; favicon and web manifest (FA9)
+- Dark loading screen with a progress bar that follows the physics engine's download; favicon and web manifest (FA9, IM3)
 - Procedural daylight with a sky, haze and trees lit by the environment; field trees in None, Simple or Detailed with
   layered crowns and a hedge; clouds and sun disc on Medium and High; dressed Depot surfaces and props; figures in
   airsoft kit with team tape (M14, FA7)

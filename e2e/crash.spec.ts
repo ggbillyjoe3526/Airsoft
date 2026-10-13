@@ -103,3 +103,20 @@ test('a browser that gives no WebGL gets the start-up pane, with advice and a re
   expect(report).toContain('Seed: 3');
   expect(report).toContain('Error: ');
 });
+
+test('a physics download that fails gives the start-up pane naming the WebAssembly fetch, not a stuck loading bar (IM3)', async ({ page }) => {
+  let wasmRequests = 0;
+  await page.route(/rapier_wasm3d_bg-.*\.wasm$/, (route) => {
+    wasmRequests++;
+    return route.fulfill({ status: 404, contentType: 'text/plain', body: 'not found' });
+  });
+  await page.goto('/?seed=5');
+  const pane = page.locator('.crash-screen');
+  await expect(pane).toBeVisible({ timeout: 30_000 });
+  await expect(pane.getByRole('heading')).toHaveText(/The game couldn.t start/i);
+  await expect(page.locator('#loading')).toHaveCount(0);
+  await expect(page.locator('.menu-title-start')).toHaveCount(0);
+  expect(wasmRequests).toBeGreaterThan(0);
+  const report = await pane.getByRole('textbox', { name: 'Error report' }).inputValue();
+  expect(report).toMatch(/Error: .*failed to fetch Wasm: 404.*rapier_wasm3d_bg-.*\.wasm/i);
+});

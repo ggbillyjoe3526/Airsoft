@@ -56,23 +56,32 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(page.locator('#loading')).toHaveCount(0);
   await expect(page.locator('.menu-title-wordmark')).toBeVisible();
   // Release basics (audit CORE-19, FA9): the built page carries its Content-Security-Policy (a violation would be a
-  // console error above), an icon and a manifest. The loading bar showed the physics chunk's download (CORE-10): the
-  // chunk is fetched once with progress and the module import that follows is answered by the cache, not a second
-  // download (no modulepreload of it either).
+  // console error above), an icon and a manifest. The loading bar showed the physics download (CORE-10), Rapier's
+  // WebAssembly as a plain file (IM3): it is fetched once with progress and Rapier's own fetch that follows is answered
+  // by the cache, not a second download. Rapier's code chunk, no longer carrying the WebAssembly as base64, is preloaded
+  // beside the game's own code and downloads once.
   await expect(page.locator('meta[http-equiv="Content-Security-Policy"]')).toHaveAttribute('content', /'wasm-unsafe-eval'/);
   await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', /icon\.svg$/);
   await expect(page.locator('link[rel="manifest"]')).toHaveCount(1);
-  const physicsChunk = (await page.locator('meta[name="airsoft-physics-chunk"]').getAttribute('content')) ?? '';
-  expect(physicsChunk).toMatch(/rapier-.*\.js$/);
-  await expect(page.locator('link[rel="modulepreload"][href*="rapier-"]')).toHaveCount(0);
+  const physicsWasm = (await page.locator('meta[name="airsoft-physics-wasm"]').getAttribute('content')) ?? '';
+  expect(physicsWasm).toMatch(/rapier_wasm3d_bg-.*\.wasm$/);
+  await expect(page.locator('link[rel="modulepreload"][href*="rapier"]')).toHaveCount(1);
+  await expect(page.locator('link[rel="modulepreload"][href*="rapier"]')).toHaveAttribute('href', /rapier-.*\.js$/);
   expect(await page.evaluate(() => (window as unknown as { loadingMax: number }).loadingMax)).toBeGreaterThanOrEqual(85);
-  const chunkLoads = await page.evaluate(() =>
-    performance
-      .getEntriesByType('resource')
-      .filter((e) => /rapier-/.test(e.name))
-      .map((e) => (e as PerformanceResourceTiming).transferSize > (e as PerformanceResourceTiming).encodedBodySize / 2),
-  );
-  expect(chunkLoads.filter((full) => full)).toHaveLength(1);
+  const physicsLoads = (name: RegExp) =>
+    page.evaluate(
+      (source) =>
+        performance
+          .getEntriesByType('resource')
+          .filter((e) => new RegExp(source).test(e.name))
+          .map((e) => ({ full: (e as PerformanceResourceTiming).transferSize > (e as PerformanceResourceTiming).encodedBodySize / 2, bytes: (e as PerformanceResourceTiming).decodedBodySize })),
+      name.source,
+    );
+  const wasmLoads = await physicsLoads(/rapier_wasm3d_bg-.*\.wasm$/);
+  expect(wasmLoads.filter((load) => load.full)).toHaveLength(1);
+  const chunkLoads = await physicsLoads(/rapier-.*\.js$/);
+  expect(chunkLoads.filter((load) => load.full)).toHaveLength(1);
+  expect(chunkLoads[0]!.bytes).toBeLessThan(500_000);
   // SwiftShader is a software renderer: the title screen warns that the game will run slowly (M18b), and that it picked
   // Low for this visit as nothing was saved (audit M-02).
   await expect(page.locator('.menu-title-warning')).toContainText('without hardware acceleration');

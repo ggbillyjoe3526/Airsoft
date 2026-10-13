@@ -605,8 +605,9 @@ replaces its line; the old one stays findable in the archive or in git.
   the 1024² maps' whole size, not the difference. Screenshots match at play distances; pressed against a plaster wall
   its finest grain is a touch softer.
 - **Chunk size budgets fail the build on CI, and growth is a deliberate bump with a decision line (2026-10-04).** The
-  game chunk's default is 1,050 kB (warning from 90 %) and Rapier's 4,550 kB. Bumped from 1,000 kB on 2026-10-11 (M80,
-  M82): main's game chunk was 993.5 kB, and the tutorial's showcase and finish pop-up and the rarity bar made it 1,003.2.
+  game chunk's default is 1,050 kB (warning from 90 %); Rapier's chunk has 236 kB and its `.wasm` 3,240 kB, each its
+  measured size plus 5 % (IM3, 2026-10-12; 4,550 kB for the chunk with the WebAssembly inside before). Bumped from
+  1,000 kB on 2026-10-11 (M80, M82): main's game chunk was 993.5 kB, and the tutorial's showcase and finish pop-up and the rarity bar made it 1,003.2.
   Bumped from 950 kB on 2026-10-10 (FP1):
   main's game chunk was 950.2 kB after G11 and G12, already over, and FP1's hand holds made it 951.1 (950.3 once W4
   moved WebGL's retro filter to a chunk of its own); the WebGPU overhaul's step 6 (the old renderer removed) is where it
@@ -625,6 +626,13 @@ replaces its line; the old one stays findable in the archive or in git.
   its code with the start of play. A new screen reached only from a menu joins `lazyScreens.ts`; one on the way to
   play (the title, the Match screen, pause, the summary and result) stays in the start-up code.
 - **Production builds ship Brotli and gzip copies of their files (owner, 2026-10-04: Brotli now, `.wasm` later).**
+- **Rapier's WebAssembly ships as a plain `.wasm` file, not as base64 inside its chunk (owner, 2026-10-12, IM3; changes
+  the fixed decision in CLAUDE.md §3).** The build rewrites the one call where the compat bundle's `init()` decodes its
+  inlined copy, so it fetches the package's own `rapier_wasm3d_bg.wasm` instead (`src/config/rapierWasm.ts`): the
+  package, its API and every test stay the same, and the browser compiles the file as it streams in. The physics
+  download falls from 4,335 kB (1,196 kB Brotli) to 225 + 3,082 kB (32 + 852 kB Brotli). A Rapier upgrade whose bundle
+  no longer has that call fails the build rather than shipping the base64 again. The dev server and Vitest keep the
+  inlined copy, where size doesn't matter.
 - **Level blocks collide as closed triangle meshes with `FIX_INTERNAL_EDGES`, not cuboids (2026-09-28).** Rapier's
   capsule controller sinks into any cuboid along its diagonals, and without the flag face-diagonal edges give ghost
   contacts.

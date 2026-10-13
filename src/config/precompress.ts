@@ -1,17 +1,17 @@
 /**
  * Precompressed copies of the release build's files (audit CORE-29; owner, 2026-10-04: serve Brotli now, a separate
- * `.wasm` later). vite.config.ts writes `<file>.br` and `<file>.gz` next to every compressible file of the production
- * build, at the strongest settings, so a static host that serves precompressed files (README › Hosting) sends the Rapier
- * chunk as about 1.2 MB of Brotli or 1.6 MB of gzip instead of 4.3 MB, with no compression work per request. Build-time
- * only: the game never imports this.
+ * `.wasm` later, which IM3 made). vite.config.ts writes `<file>.br` and `<file>.gz` next to every compressible file of
+ * the production build, at the strongest settings, so a static host that serves precompressed files (README › Hosting)
+ * sends Rapier's WebAssembly as about 0.85 MB of Brotli or 1.2 MB of gzip instead of 3.1 MB, with no compression work
+ * per request. Build-time only: the game never imports this.
  */
 
-/** Which files are worth compressing: text (code, styles, the page, the icon, the manifest) and the glTF model. */
+/** Which files are worth compressing: text (code, styles, the page, the icon, the manifest), the glTF models and Rapier's WebAssembly. */
 export const PRECOMPRESS = {
-  pattern: /\.(js|mjs|css|html|svg|json|webmanifest|txt|glb)$/,
+  pattern: /\.(js|mjs|css|html|svg|json|webmanifest|txt|glb|wasm)$/,
   /** Smaller files gain too little to be worth the extra request headers and files. */
   minBytes: 1024,
-  /** Brotli's strongest level (11) and largest window (24): about 8 s for the Rapier chunk, once per release build. */
+  /** Brotli's strongest level (11) and largest window (24): several seconds for Rapier's WebAssembly, once per release build. */
   brotliQuality: 11,
   brotliWindowBits: 24,
   /** gzip's strongest level. */

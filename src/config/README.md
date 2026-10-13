@@ -20,7 +20,8 @@ holds no magic numbers.
 - Content and saving: `content.ts` (public or dev tags), `contentRules.ts` (the content checks' ranges, budgets,
   balance band and exception registers: `docs/content/README.md`), `dev.ts` (Dev settings), `save.ts`, `assets.ts`.
 - Build and pipeline: `buildVersion.ts` (the version comes from git through `vite.config.ts` and `.git_archival.txt`;
-  nothing to bump), `chunkBudget.ts`, `page.ts`, `precompress.ts`, `perfScript.ts`, `crash.ts`, `loading.ts`.
+  nothing to bump), `chunkBudget.ts`, `page.ts`, `precompress.ts`, `rapierWasm.ts` (Rapier's WebAssembly as a plain
+  file in builds, IM3), `perfScript.ts`, `crash.ts`, `loading.ts`.
 - Tests: `render.test.ts`, `graphics.test.ts`, `stats.test.ts`, `content.test.ts`, `dev.test.ts`, `botsTuning.test.ts`,
   `rulesets.test.ts`, `matchRules.test.ts`, `attachments.test.ts`.
 - Rules: a new Dev setting goes in `dev.ts`, then `Game.applyDev` reads it. A new replica or part number is a `stats.md`

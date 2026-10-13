@@ -2,7 +2,8 @@
 
 Rapier (`@dimforge/rapier3d-compat`): level collision and the character controller. The simulation never calls Rapier.
 
-- `physicsWorld.ts`: `initPhysics()` loads the WASM; `PhysicsWorld` implements the sim's `CharacterMover` and
+- `physicsWorld.ts`: `initPhysics()` loads the WASM (a plain `.wasm` file in a build, IM3: `config/rapierWasm.ts`; the
+  package's inlined copy on the dev server and in tests); `PhysicsWorld` implements the sim's `CharacterMover` and
   `WorldQuery`, built from a map's blocks.
 - Characters collide only with level geometry, never each other. Level blocks collide as closed triangle meshes, which
   avoids a Rapier capsule-vs-cuboid bug.

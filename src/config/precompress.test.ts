@@ -16,6 +16,15 @@ describe('precompressed copies of the release build (audit CORE-29)', () => {
     expect(shouldPrecompress(file('assets/tiny.js', PRECOMPRESS.minBytes - 1))).toBe(false);
   });
 
+  it('compresses Rapier\'s WebAssembly file (IM3) and writes both copies, but not a tiny .wasm', async () => {
+    const wasm = 'assets/rapier_wasm3d_bg-abc123.wasm';
+    expect(shouldPrecompress(file(wasm, 3_100_000))).toBe(true);
+    expect(shouldPrecompress(file(wasm + '.map', 4096))).toBe(false);
+    expect(shouldPrecompress(file('assets/tiny.wasm', PRECOMPRESS.minBytes - 1))).toBe(false);
+    const copies = await precompressedCopies([file(wasm, 4000)], halve);
+    expect(copies.map((c) => c.fileName).sort()).toEqual([wasm + '.br', wasm + '.gz']);
+  });
+
   it('writes a .br and a .gz next to each such file', async () => {
     const copies = await precompressedCopies([file('assets/rapier-abc.js', 4000), file('assets/rapier-abc.js.map', 4000), file('index.html', 2000)], halve);
     expect(copies.map((c) => [c.fileName, c.source.byteLength]).sort()).toEqual([

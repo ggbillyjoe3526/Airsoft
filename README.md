@@ -208,15 +208,17 @@ pointer lock (port 4182; `e2e/release.spec.ts`). Each build is made once per sou
 
 `npm run build` writes a static site to `dist/` with relative paths, so any static host serves it from any folder. Next
 to every compressible file it also writes a Brotli copy (`.br`) and a gzip copy (`.gz`) at the strongest settings (the
-physics chunk: 4.3 MB as is, about 1.2 MB Brotli, 1.6 MB gzip). A host that serves precompressed files sends the `.br`
-to a browser that accepts Brotli (all current Chrome, Firefox and Edge do over HTTPS) and the `.gz` to one that only
-takes gzip, with `Content-Encoding` set and the original file's `Content-Type`. Netlify, Cloudflare Pages and Vercel
-compress on their own instead, and GitHub Pages serves gzip only. On a server you run yourself:
+physics engine's WebAssembly, `rapier_wasm3d_bg-*.wasm`: 3.1 MB as is, about 0.85 MB Brotli, 1.2 MB gzip). The host
+should serve `.wasm` files as `application/wasm`, which most do, so the browser compiles it while it downloads. A host
+that serves precompressed files sends the `.br` to a browser that accepts Brotli (all current Chrome, Firefox and Edge
+do over HTTPS) and the `.gz` to one that only takes gzip, with `Content-Encoding` set and the original file's
+`Content-Type`. Netlify, Cloudflare Pages and Vercel compress on their own instead, and GitHub Pages serves gzip only.
+On a server you run yourself:
 
 - **nginx:** `brotli_static on;` (the `ngx_brotli` module) and `gzip_static on;` in the game's `location`.
 - **Caddy:** `file_server { precompressed br gzip }`.
 - **Apache:** `mod_rewrite` rules that serve `file.js.br` for `file.js` when `Accept-Encoding` has `br`, with
-  `AddEncoding br .br` and the `.js` type kept (the same for `.gz`).
+  `AddEncoding br .br` and the `.js` type kept (the same for `.gz`, and for `.wasm` with `application/wasm`).
 
 Hosts that ignore the copies still serve the plain files; uploading them costs only disk space. The source maps
 (`*.js.map`) can be left off a public upload.
