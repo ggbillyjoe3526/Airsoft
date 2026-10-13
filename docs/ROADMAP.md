@@ -213,11 +213,12 @@ when their work starts. Numbers are from the owner's list of 50 candidates
 | M93 | Practice: moving targets, new target types and a timed challenge (off by default); done (2026-10-13, `docs/records/M93.md`) | Practice |
 | M94 | Practice on any map, with targets instead of bots; done (2026-10-13, `docs/records/M94.md`) | Practice |
 | M95 | Practice with any replica you own, and everything with Dev on; done (2026-10-13, `docs/records/M95.md`) | Practice |
+| LV1 | Levelling in place of the Armory's gacha: matches give XP, levels 0 to 10 unlock the gear (`levels.md`), the Armory shows your level and what comes next, rarity gone and the gear rebalanced; done (2026-10-13, `docs/records/LV1.md`) | Progression |
 | M102 | Vaulting over low obstacles (0.7–0.9 m), with a few added to the maps where they open a route; crouch cover stays peek-only (owner, 2026-10-12); vaults are loud (owner, 2026-10-13); done (2026-10-13, `docs/records/M102.md`) | Movement |
 | 40 | Rest your replica on cover (a ledge, crate or window) for steadier aim; done (2026-10-13, `docs/records/M104.md`) | Movement |
 | 19 | Saved loadouts, picked from the Match screen (once the Map pop-up) as well as the Loadout screen; done (2026-10-13, `docs/records/SL1.md`) | Loadout |
-| 21 | Bot names, personalities (rusher, anchor, flanker, careful) and loadouts | Bots |
-| 23 | Bots' gear keeps up with yours (audit POOL-24: a tier dial per difficulty, or higher tiers that trade) | Bots |
+| 21 | Bot names, personalities (rusher, anchor, flanker, careful) and loadouts; names and personalities done (2026-10-13, `docs/records/BN1.md`), the loadouts come with item 23 | Bots |
+| 23 | Bots' gear keeps up with yours (audit POOL-24: Easy and Normal bots carry factory gear while your levels add parts) | Bots |
 | 48 | Auto difficulty as a Dev setting: bots get a little better when you win, a little easier when you lose | Bots |
 | 22 | Location callouts: named areas, and teammates calling "Contact, Dock!" or "Two left" (text first) | Team play |
 | 24 | Pings: mark a spot and bots act on it | Team play |
@@ -226,7 +227,7 @@ when their work starts. Numbers are from the owner's list of 50 candidates
 | 41 | Noisy ground and props: gravel, cans, pallets and fences rattle, and bots hear it | World |
 | 45 | Overtime: when the clock runs out, a flag appears in the middle and the first team to touch it wins | Rounds |
 | 46 | An option to hide the ammo counter (no mag-check key: owner) | HUD |
-| – | Figure redesign: more realistic human and robot figures, from the owner's reference photos, built in his Blender, with the figures' animations for Dev 6's new moves such as vaulting and resting on cover (M104 has only a placeholder lean); waits for him (owner, 2026-10-13) | Art |
+| – | Figure redesign: more realistic human and robot figures, from the owner's reference photos, built in his Blender, with the figures' animations for Dev 6's new moves such as vaulting and resting on cover (M104 has only a placeholder lean) (owner, 2026-10-13). The human is done, with four heads and a team-colour vest (2026-10-13, `docs/records/RM9.md`); the robot and the vault and rest-on-cover clips follow | Art |
 
 Built in Dev 5 instead: the blowback pistol (pick 14) is the GBB Pistol (RM7), and the AEG Rifle redesign (RM6) gave
 the built-in rifle its small, low iron sights.
@@ -261,7 +262,7 @@ The owner's definition (2026-10-01): 0.1 focuses on core gameplay and foundation
 foundations. The owner has since pulled more into 0.1: see the Dev 5 plan and 0.1 Dev 6 above, and the feature triage
 below. 0.1.0 opens Early Access (owner, 2026-10-12): feature complete, but light on content.
 
-- **Replicas:** the AEG Rifle and the GBB Pistol (the starting kit), and the Cyber Pistol from the Armory. More
+- **Replicas:** the AEG Rifle and the GBB Pistol (the starting kit), and the Cyber Pistol at level 10. More
   platforms come with the Replica Update.
 - **Loadout** (owner, 2026-10-03): a primary and a secondary replica, BB weight, hop-up and a first set of attachments
   (optics, grips, magazines), picked before a match. Gear and more parts come with later versions.
@@ -283,10 +284,10 @@ below. 0.1.0 opens Early Access (owner, 2026-10-12): feature complete, but light
 - **Fields are built from a checklist** (owner). Every field has cover, barricades, buildings, windows, doorways, choke
   points, flanking routes, objective locations, and dead zones / spawn areas. Layout rules are tested in code, as for
   Depot.
-- **Unlocks never block fun.** Progression is earned by unlocking replicas and gear, never by levels. Since M26 (owner,
-  2026-10-04) replicas and parts are assets in a pool (`pool.md`) unlocked in the Armory with Field Credits earned by
-  playing: completely free, never bought with money, marked beta, and it can be switched off. The starting kit (AEG
-  Rifle, GBB Pistol, Standard Battery, Green Gas) is a full loadout, and BBs are always free.
+- **Unlocks never block fun.** Progression is levels (owner, 2026-10-13): matches give XP, and each level unlocks
+  replicas and gear for good (`levels.md`), shown in the Armory. Completely free, never bought with money, and
+  `Settings › Dev › Disable levelling` unlocks everything. The starting kit (AEG Rifle, GBB Pistol, Standard Battery,
+  Green Gas) is a full loadout, and BBs are always free.
 
 ## Beta: finishing 0.1 (not scheduled yet)
 
@@ -318,9 +319,8 @@ QoL, balance, refinement and polish. Its likely work, collected here so the Dev 
     night games, so the walk-off reads in the dark and nobody shoots a player already out. Needed once Woodland is
     public.
   - **Bots' gear keeps up with yours** (0.1 Dev 6; audit POOL-24): the player's kit outgrows bots that carry factory
-    gear on Easy and Normal (Hard opponents already roll kits, M29b). Either a tier dial per difficulty (read from
-    `botConfig`), or higher tiers that trade rather than add (Legendary: tighter spread, a touch more recoil or a
-    slower draw). Decided after the owner's playtest.
+    gear on Easy and Normal (Hard opponents already roll kits, M29b), while your levels add parts. Perhaps Easy and
+    Normal bots roll a part or two too, read from `botConfig`. Decided after the owner's playtest.
 
 ## Feature triage
 
@@ -335,7 +335,7 @@ The owner sorted every feature in the game and on this roadmap into Keep (in Bet
   pixel filter, once 0.5, went public in 0.1 Dev 5 (M96).
 - **Cut:** supply weekends and events, the Tone mapping choice, tracer BBs as their own option (glowing BBs do it),
   Bomb, Intel grab, Free-for-all (battle royale is the owner's exception, 2026-10-06), the overshooting rule, gear that
-  only changes looks as its own system (it joins kit looks), a separate progression plan (the Armory is the
+  only changes looks as its own system (it joins kit looks), a separate progression plan (the levels are the
   progression), and the ideas listed under Declined in `docs/IDEAS.md`.
 
 ## 0.1.0: Early Access opens
@@ -382,12 +382,12 @@ After 0.1.0 the game grows through themed updates, each a mini expansion (owner,
   muzzle velocity (shorter, droopier shots) until it recovers (owner, 2026-10-03).
 - **The chrono and field limits** (from 0.1 Dev 6). Check your loadout's muzzle velocity before a match; each field and
   replica class has a limit, as at real sites, and a replica over it doesn't pass. Today's per-class limits (1.20 J
-  rifles, 1.00 J pistols) already cap the Armory's upgrades; the sniper and the DMR bring higher ones, and the DMR's
+  rifles, 1.00 J pistols) already cap what parts add; the sniper and the DMR bring higher ones, and the DMR's
   minimum engagement distance comes from here.
 - **A suppressor sound of its own** (from 0.1 Dev 6). The Silencer already makes shots duller and about half as loud;
   this gives suppressed replicas their own sound.
 - **More parts:** receivers, handguards, stocks, more optics, muzzle devices, lasers, lights and bipods, pistol barrels
-  and more barrel lengths, and the parts the new types need. Free from the start, through the pool and the Armory.
+  and more barrel lengths, and the parts the new types need. Free, through the pool and new levels in `levels.md`.
 - **More replica types after the sniper** (the table below). Too many for one update, so a second Replica Update can
   take the rest. Each type feels mechanically different, not like a damage model, and sounds like its power source
   (electric, gas, spring), using the sound profiles from M13.
@@ -450,12 +450,11 @@ After 0.1.0 the game grows through themed updates, each a mini expansion (owner,
 
 ### 0.5 · Progression Update: things to earn
 
-- **Challenges and badges** (the owner's example for this update). Tasks that pay Field Credits ("win a round in under
+- **Challenges and badges** (the owner's example for this update). Tasks that give XP ("win a round in under
   45 s", "3 hits with the pistol", "win on Hard") and a badge list kept in the browser, like Counter-Strike: Condition
   Zero's Tour of Duty. A daily challenge could come from a date seed (offline, no online board).
-- **Armory milestones** (maybe; audit POOL-23). Today everything is owned at some tier in about 20 Shots, then a long
-  tail of small tier gains. Ideas: completion on the Armory tile ("23 / 84 · 3 Legendary"), milestones in `pool.md`
-  ("Every optic owned → +1 Token"), more assets before tuning odds.
+- **A higher level cap** (owner, 2026-10-13). New levels in `levels.md` as content arrives, with the new replicas,
+  attachments and skins as their rewards.
 - **Replica skins and kit looks** (from 0.1 Dev 6). Skins: colour, furniture, tape and markings, filling the Loadout's
   Skins row. Kit looks: camouflage, plate carrier, pouches, helmet, goggles, face protection, gloves, boots, backpacks,
   patches and armbands. Gear that only changes looks lives here, not as its own system (triage).

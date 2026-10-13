@@ -1,8 +1,8 @@
 import { type PoolRow, type PoolTable, readTables } from '../pool/poolFile';
 
 /**
- * Reads stats.md (M29): the hand-edited performance numbers of every replica, power source and part, what a rarity
- * tier improves, and the site's energy limits. Pure text in, plain data out; the config modules lay these numbers over
+ * Reads stats.md (M29): the hand-edited performance numbers of every replica, power source and part, and the site's
+ * energy limits. Pure text in, plain data out; the config modules lay these numbers over
  * their built-in ones (config/gameStats.ts loads the bundled file). Never throws: a cell it can't read is left out (the
  * built-in number stays) and listed in `errors` with its line.
  */
@@ -30,42 +30,6 @@ export interface PowerStats {
 
 export const NO_POWER_STATS: PowerStats = { energy: 0, fireRate: 0, recoil: 0 };
 
-/** The categories a tier's Bonus % can improve: a power source by its type. */
-export type ScaledCategory = 'replica' | 'battery' | 'gas' | 'spring' | 'optic' | 'grip' | 'laser' | 'magazine' | 'barrel' | 'muzzle';
-/** The stats a tier can improve (always the better way: more energy and rate, less spread and time). */
-export type ScaledStat = 'energy' | 'fireRate' | 'spread' | 'reload' | 'draw' | 'raise' | 'shake';
-
-/** Share (0..1) of a tier's Bonus each stat of each category gets; a stat not listed gets none. */
-export type TierShares = Readonly<Record<ScaledCategory, Readonly<Partial<Record<ScaledStat, number>>>>>;
-
-/** Which stats each category can take a share of: the ones the code applies (anything else is flagged). */
-const SCALABLE: Readonly<Record<ScaledCategory, readonly ScaledStat[]>> = {
-  replica: ['energy', 'fireRate', 'spread', 'reload', 'draw'],
-  battery: ['energy', 'fireRate'],
-  gas: ['energy', 'fireRate'],
-  spring: ['energy', 'fireRate'],
-  optic: ['raise'],
-  grip: ['raise', 'draw', 'shake'],
-  laser: ['spread'],
-  magazine: ['reload'],
-  barrel: ['spread', 'draw', 'raise'],
-  muzzle: ['draw', 'raise'],
-};
-
-/** The shares as shipped, used when stats.md has no Tier scaling table at all (a stat its table leaves out gets 0). */
-export const DEFAULT_TIER_SHARES: TierShares = {
-  replica: { spread: 1, reload: 1, draw: 1, energy: 0.5, fireRate: 0.5 },
-  battery: { fireRate: 0.5 },
-  gas: { energy: 0.5 },
-  spring: { energy: 0.5 },
-  optic: { raise: 1 },
-  grip: { raise: 0.5, draw: 0.5, shake: 0.5 },
-  laser: { spread: 0.5 },
-  magazine: { reload: 1 },
-  barrel: { spread: 0.5, draw: 0.5, raise: 0.5 },
-  muzzle: { draw: 0.5, raise: 0.5 },
-};
-
 /** The site limits as shipped (J), by replica class. */
 export const DEFAULT_SITE_LIMITS: Readonly<Record<string, number>> = { rifle: 1.2, pistol: 1.0 };
 
@@ -81,9 +45,8 @@ export interface StatsFile {
   magazines: Readonly<Record<string, { capacity?: number; carried?: number; reloadScale?: number; drawScale?: number; rattles?: boolean }>>;
   barrels: Readonly<Record<string, { energy?: number; spreadScale?: number; handlingScale?: number }>>;
   muzzles: Readonly<Record<string, { energy?: number; handlingScale?: number; heardScale?: number }>>;
-  /** Weapon lights (M33h): no rarity tier improves them. */
+  /** Weapon lights (M33h). */
   lights: Readonly<Record<string, { reach?: number; beamDeg?: number; spillDeg?: number }>>;
-  tierShares: TierShares;
   /** Energy limit (J) by replica class. */
   siteLimits: Readonly<Record<string, number>>;
   /** What couldn't be read, each with its stats.md line ("line 12: …"). */
@@ -157,29 +120,6 @@ const LIGHT_COLUMNS: Readonly<Record<string, Column>> = {
   'Spill (°)': { field: 'spillDeg', kind: 'number', min: 1, max: 120 },
 };
 
-const CATEGORY_WORDS: Readonly<Record<string, ScaledCategory>> = {
-  replica: 'replica',
-  battery: 'battery',
-  gas: 'gas',
-  spring: 'spring',
-  optic: 'optic',
-  grip: 'grip',
-  laser: 'laser',
-  magazine: 'magazine',
-  barrel: 'barrel',
-  muzzle: 'muzzle',
-};
-
-const STAT_WORDS: Readonly<Record<string, ScaledStat>> = {
-  energy: 'energy',
-  'fire rate': 'fireRate',
-  spread: 'spread',
-  reload: 'reload',
-  draw: 'draw',
-  raise: 'raise',
-  shake: 'shake',
-};
-
 const ID_PATTERN = /^\d{6}$/;
 const KEY_PATTERN = /^[A-Za-z][A-Za-z0-9]*$/;
 const CLASS_PATTERN = /^[a-z]+(-[a-z]+)*$/;
@@ -239,44 +179,6 @@ function keyedRows(t: PoolTable | undefined, name: string, keyHeader: string, co
   return out;
 }
 
-function readShares(t: PoolTable | undefined, fail: Fail, errors: string[]): TierShares {
-  const shares: Record<ScaledCategory, Partial<Record<ScaledStat, number>>> = {
-    replica: {},
-    battery: {},
-    gas: {},
-    spring: {},
-    optic: {},
-    grip: {},
-    laser: {},
-    magazine: {},
-    barrel: {},
-    muzzle: {},
-  };
-  if (!t) {
-    errors.push('no "Tier scaling" table: using the built-in shares');
-    return DEFAULT_TIER_SHARES;
-  }
-  for (const row of t.rows) {
-    const category = CATEGORY_WORDS[cell(row, 'Category').toLowerCase()];
-    const stat = STAT_WORDS[cell(row, 'Stat').toLowerCase()];
-    if (!category) {
-      fail(row.line, `"${cell(row, 'Category')}" isn't a category (${Object.keys(CATEGORY_WORDS).join(', ')})`);
-      continue;
-    }
-    if (!stat || !SCALABLE[category].includes(stat)) {
-      fail(row.line, `${cell(row, 'Category')} tiers can't improve "${cell(row, 'Stat')}" (they can improve ${SCALABLE[category].map((s) => Object.keys(STAT_WORDS).find((w) => STAT_WORDS[w] === s)).join(', ')})`);
-      continue;
-    }
-    if (stat in shares[category]) {
-      fail(row.line, `${cell(row, 'Category')} · ${cell(row, 'Stat')} is listed twice`);
-      continue;
-    }
-    const v = readCell(row, 'Share %', { field: '', kind: 'percent', min: 0, max: 200 }, fail);
-    if (typeof v === 'number') shares[category][stat] = v;
-  }
-  return shares;
-}
-
 function readLimits(t: PoolTable | undefined, fail: Fail, errors: string[]): Record<string, number> {
   if (!t) return errors.push('no "Site limits" table: using the built-in limits'), { ...DEFAULT_SITE_LIMITS };
   const out: Record<string, number> = {};
@@ -313,7 +215,6 @@ export function loadStats(text: string): StatsFile {
     barrels: keyedRows(table('Barrels'), 'Barrels', 'Key', BARREL_COLUMNS, fail, errors) as StatsFile['barrels'],
     muzzles: keyedRows(table('Muzzle parts'), 'Muzzle parts', 'Key', MUZZLE_COLUMNS, fail, errors) as StatsFile['muzzles'],
     lights: keyedRows(table('Lights'), 'Lights', 'Key', LIGHT_COLUMNS, fail, errors) as StatsFile['lights'],
-    tierShares: readShares(table('Tier scaling'), fail, errors),
     siteLimits: readLimits(table('Site limits'), fail, errors),
     errors,
   };

@@ -99,15 +99,9 @@ const TOLERANCE = 0.02;
  * the v12 robot's armour fills more of it than v11's bare shell did), and upright while the figures lean into a run and
  * a sprint (up to 16 %). They are drawn only with the Dev switches off, and must reach M85's bar before they become the
  * default (DECISIONS › Gameplay and feel). Until then each pose is held to today's worst case over the human looks and
- * the robot plus a point (measured 2026-10-13, the v12 robot), so a change can only bring them closer. The vault has
- * the robot's own limit: its file has the Vault clip the volume's legs play (FigureRigs.legs), the human's not yet (its
- * redesign adds it), so the human vaults upright on the jump's clip while the volume tucks (about a third off).
+ * the robot plus a point (measured 2026-10-13, the v12 figures), so a change can only bring them closer.
  */
-interface Limit {
-  missed: number;
-  phantom: number;
-}
-const LIMITS: Readonly<Record<string, Limit & { robot?: Limit }>> = {
+const LIMITS: Readonly<Record<string, { missed: number; phantom: number }>> = {
   standing: { missed: 0.041, phantom: 0.08 },
   crouched: { missed: 0.036, phantom: 0.097 },
   'leaning left': { missed: 0.036, phantom: 0.079 },
@@ -122,8 +116,8 @@ const LIMITS: Readonly<Record<string, Limit & { robot?: Limit }>> = {
   'calling the hit': { missed: 0.045, phantom: 0.093 },
   'walking off': { missed: 0.039, phantom: 0.094 },
   out: { missed: 0.042, phantom: 0.096 },
-  vaulting: { missed: 0.34, phantom: 0.33, robot: { missed: 0.034, phantom: 0.086 } },
-  'vaulting, rising': { missed: 0.344, phantom: 0.325, robot: { missed: 0.086, phantom: 0.115 } },
+  vaulting: { missed: 0.056, phantom: 0.086 },
+  'vaulting, rising': { missed: 0.098, phantom: 0.115 },
 };
 
 /** The bones whose vertices are arm (the shoulders' are the torso's): UpperArm and everything down to the fingertips. */
@@ -280,10 +274,13 @@ describe('the hit volume against the rigged figures, on every pose (BF1, M85: no
   });
   afterAll(() => vi.unstubAllGlobals());
 
-  // The human with its pack and radio (look 0) and without (look 1), and the robot.
+  // The human in each of its four heads (the id picks one: high-cut helmet, cap, boonie, full-cut helmet), with its
+  // pack and radio and without, and the robot.
   const cases: { id: number; robot: boolean }[] = [
     { id: 0, robot: false },
     { id: 1, robot: false },
+    { id: 2, robot: false },
+    { id: 3, robot: false },
     { id: 0, robot: true },
   ];
   for (const { id, robot } of cases) {
@@ -294,7 +291,7 @@ describe('the hit volume against the rigged figures, on every pose (BF1, M85: no
         const t = measure(pose, id, robot);
         const missed = t.missed / t.body;
         const phantom = t.phantom / t.volume;
-        const limit = (robot && LIMITS[pose.name]!.robot) || LIMITS[pose.name]!;
+        const limit = LIMITS[pose.name]!;
         worst = Math.max(worst, missed / limit.missed, phantom / limit.phantom);
         rows.push(`${pose.name}: missed ${(100 * missed).toFixed(1)}%, thin air ${(100 * phantom).toFixed(1)}%`);
       }

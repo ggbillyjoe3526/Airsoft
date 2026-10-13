@@ -1,7 +1,7 @@
 import { DIFFICULTIES, type Difficulty } from '../config/bots';
 import { standardMatchText } from '../config/matchRules';
 import { isAvailable } from '../config/content';
-import { MENU_TEXT } from '../config/menus';
+import { HAUL_TEXT } from '../config/menus';
 import { MATCH_MODES, type MatchMode } from '../config/modes';
 import { noNews, type RecordNews, type Records, resultKey } from '../stats/records';
 import { formatTime } from './statsRows';
@@ -17,7 +17,7 @@ export interface RecordsView {
   notCounted: string;
 }
 
-/** After a match that used dev content (M35); the Field Credits line says it paid nothing. */
+/** After a match that used dev content (M35); the XP line says it gave none. */
 export const DEV_CONTENT_NOT_RECORDED = "This match used content still being built, so it isn't in your records.";
 
 /**
@@ -69,7 +69,7 @@ export function recordsView(records: Records, news: RecordNews, difficulty: Diff
 /** Extraction's bests (M47): the biggest haul, extractions in a row, and the quickest one with a case's finds. Pure. */
 export function extractionBests(records: Records, news: RecordNews): RecordsView['bests'] {
   return [
-    { label: 'Best haul', value: records.bestHaul === null ? '–' : MENU_TEXT.fc(records.bestHaul), isNew: news.bestHaul },
+    { label: 'Best haul', value: records.bestHaul === null ? '–' : HAUL_TEXT.xp(records.bestHaul), isNew: news.bestHaul },
     { label: 'Extractions in a row', value: `${records.extractionStreak} now · best ${records.bestExtractionStreak}`, isNew: news.bestExtractionStreak },
     {
       label: 'Fastest extraction with a case',

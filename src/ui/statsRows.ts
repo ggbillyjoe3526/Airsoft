@@ -8,19 +8,39 @@ import { accuracy, type PlayerStats } from '../stats/matchStats';
  * summary): a block per team, yours first, with a row per player. Pure, so it's tested without a page.
  */
 
-/** Display names by character id: "Alpha 2", "Beta 1", and "You" for the player. */
-export function rosterNames(characters: readonly Character[], playerId: number): Map<number, string> {
+/** Who a bot is (BN1, ai/personality.ts BotIdentity), as far as the tables need it: its name and its personality's label. */
+export interface RosterIdentity {
+  readonly name: string;
+  readonly style: { readonly label: string };
+}
+
+const NO_IDENTITIES: ReadonlyMap<number, RosterIdentity> = new Map();
+
+/**
+ * Display names by character id: each bot's roster name (BN1, bots.md) from `identities`, "You" for the player, and
+ * the team's numbered name ("Alpha 2", "Beta 1") for a bot without one.
+ */
+export function rosterNames(characters: readonly Character[], playerId: number, identities: ReadonlyMap<number, RosterIdentity> = NO_IDENTITIES): Map<number, string> {
   const names = new Map<number, string>();
   const perTeam = [0, 0];
   for (const c of characters) {
     const n = ++perTeam[c.team]!;
-    names.set(c.id, c.id === playerId ? 'You' : `${TEAMS[c.team]!.name} ${n}`);
+    names.set(c.id, c.id === playerId ? 'You' : (identities.get(c.id)?.name ?? `${TEAMS[c.team]!.name} ${n}`));
   }
   return names;
 }
 
+/** Each bot's personality as the tables tag it ("Rusher"), by character id; none for the player or a bot without one. */
+export function rosterTags(identities: ReadonlyMap<number, RosterIdentity>): Map<number, string> {
+  const tags = new Map<number, string>();
+  for (const [id, who] of identities) if (who.style.label !== '') tags.set(id, who.style.label);
+  return tags;
+}
+
 export interface StatsRow {
   name: string;
+  /** The bot's personality (BN1: "Rusher"), or '' (you, or a bot without one). */
+  tag: string;
   you: boolean;
   /** Hit this round (only marked while a round is live). */
   out: boolean;
@@ -66,6 +86,8 @@ export function statsBlocks(
   markOut: boolean,
   run = false,
   benched: readonly boolean[] = [],
+  /** Each bot's personality tag by character id (rosterTags, BN1). */
+  tags: ReadonlyMap<number, string> = new Map(),
 ): TeamBlock[] {
   const order = [player.team, 1 - player.team];
   return order.map((team) => {
@@ -80,6 +102,7 @@ export function statsBlocks(
       title: `${TEAMS[team]!.name}${team === player.team ? ' (you)' : ''} · ${side}`,
       rows: sorted.map(({ c, s }) => ({
         name: names.get(c.id) ?? '',
+        tag: tags.get(c.id) ?? '',
         you: c.id === player.id,
         out: markOut && !isInPlay(c),
         hits: String(s.hits),

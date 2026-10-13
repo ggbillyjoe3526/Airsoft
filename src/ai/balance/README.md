@@ -9,7 +9,7 @@ sets it and writes `pipeline/out/balance-report.md`, each figure judged against 
 - `balanceSupport.ts`: a figure (`BalanceMeasure`: label, value, the count it is a share of, band, unit), `reportMeasure`
   (into the test's `task.meta`, which vitest's JSON report carries), `reportTally` (a match tally's side or end share and
   its rounds on time), the bands (`PRO_BAND`, `LEVELS_BAND`, `ON_TIME_BAND`).
-- `extractionBalance.ts`: `describeExtractionBalance`, every map's Extraction figures at each level (get-out rate, FC a
+- `extractionBalance.ts`: `describeExtractionBalance`, every map's Extraction figures at each level (get-out rate, XP a
   minute, the levels' order).
 - `extractionBands.ts`: each map's Extraction bands, seeds and levels' order (`EXTRACTION_BALANCE`), shared by the
   `*Extraction.balance.ts` files and the content toolkit's mode and map balance run (CT3).

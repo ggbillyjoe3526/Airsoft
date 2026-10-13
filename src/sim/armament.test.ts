@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BALLISTICS } from '../config/ballistics';
+import { MAGAZINES } from '../config/attachments';
 import { AEG, GAS_PISTOL, hopUpLift, LOADOUT, muzzleVelocity, RECOIL, TRIGGER } from '../config/replicas';
 import { aimDirection, type ArmamentContext, createArmament, fitParts, type Muzzle, nextFireMode, nextSpare, rattles, setBbWeights, setHopUps, shotHeardScale, spreadDirection, stepArmament, type WorldQuery } from './armament';
 import { createCharacter, respawnCharacter } from './character';
@@ -538,8 +539,10 @@ describe('attachments on the armament (M17b)', () => {
     fitParts(a, [{ grip: 'none', magazine: 'lowCap' }, { grip: 'none', magazine: 'extended' }]);
     a.ammo[0]!.mag = 0;
     run(1, (c) => (c.reload = true));
-    expect(a.reload).toBeCloseTo(AEG.reloadTime * 0.8, 6);
-    run(Math.ceil((AEG.reloadTime * 0.8) / DT) + 1);
+    // The Low-Cap changes 25 % quicker (LV1, stats.md).
+    expect(a.reload).toBeCloseTo(AEG.reloadTime * MAGAZINES.lowCap.reloadScale, 6);
+    expect(MAGAZINES.lowCap.reloadScale).toBe(0.75);
+    run(Math.ceil((AEG.reloadTime * MAGAZINES.lowCap.reloadScale) / DT) + 1);
     expect(a.ammo[0]!.mag).toBe(30);
     run(1, (c) => (c.switchTo = 1));
     expect(a.draw).toBeGreaterThan(GAS_PISTOL.drawTime);

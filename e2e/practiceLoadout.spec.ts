@@ -4,7 +4,8 @@ import { expect, test } from '@playwright/test';
  * Practice with any replica (M95): in Practice the Loadout key (L) opens the Loadout straight from play, on the slot of
  * the replica in hand, saying what it is for there and offering Back to practice. A replica you own clicked goes into
  * your hands; L takes you back where you stood, on the same slot, the new replica coming up. With Dev settings ›
- * Unlock all gear on, every replica is on offer. `?nolock`, as the other browser tests (no mouse lock in automation).
+ * Disable levelling on (LV1; Unlock all gear before), every replica is on offer. `?nolock`, as the other browser tests
+ * (no mouse lock in automation).
  */
 type Armament = { active: number; draw: number; replicas: { id: string; name: string }[] };
 type Game = { airsoft: { state: { characters: { position: { x: number; z: number }; armament: Armament }[] }; input: { yaw: number } } };
@@ -16,11 +17,8 @@ test('the Loadout key in Practice swaps the replica in hand and goes back where 
   page.on('console', (msg) => {
     if (msg.type() === 'error') errors.push(`console: ${msg.text()}`);
   });
-  // A returning player who owns the Cyber Pistol (a Legendary chase replica) besides the starters.
-  await page.addInitScript(() => {
-    const owned = ['000001', '000002', '000003', '000004'].map((id) => [`${id}@common`, 1]);
-    localStorage.setItem('airsoft.collection', JSON.stringify({ version: 1, owned: Object.fromEntries([...owned, ['000019@legendary', 1]]), fc: 0, tokens: 0, seed: 1 }));
-  });
+  // A returning player at the level cap, so the Cyber Pistol (level 10, LV1) is theirs besides the starters.
+  await page.addInitScript(() => localStorage.setItem('airsoft.progress', JSON.stringify({ version: 1, xp: 6500, unlocked: [], rev: 1 })));
   // Low, so the range draws fast enough in software on a CI runner (as the other range tests).
   await page.goto('/?nolock&seed=1&quality=low');
   await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
@@ -50,7 +48,7 @@ test('the Loadout key in Practice swaps the replica in hand and goes back where 
   const loadout = page.locator('.menu-loadout');
   await expect(loadout).toBeVisible({ timeout: 10_000 });
   await expect(loadout.getByRole('button', { name: /^Secondary: GBB Pistol/ })).toHaveAttribute('aria-pressed', 'true');
-  await expect(loadout.getByText(/^Practice: take any replica you own/)).toBeVisible();
+  await expect(loadout.getByText(/^Practice: take any replica you have unlocked/)).toBeVisible();
   const back = page.locator('.menu-topbar').getByRole('button', { name: 'Back to practice' });
   await expect(back).toBeVisible();
   await expect(back.locator('kbd')).toHaveText('L');
@@ -85,19 +83,21 @@ test('the Loadout key in Practice swaps the replica in hand and goes back where 
   await expect(page.locator('.menus')).toBeHidden({ timeout: 10_000 });
   expect((await armament()).replicas[1]!.name).toBe('Cyber Pistol');
 
-  // Dev settings › Unlock all gear: every replica is on offer, and the Loadout says so.
+  // Dev settings › Disable levelling: every replica is on offer, and the Loadout says so.
   await page.keyboard.press('KeyL');
   await expect(loadout).toBeVisible({ timeout: 10_000 });
   await page.keyboard.press('Escape');
   await pause.getByRole('button', { name: 'Settings' }).click();
   const settings = page.locator('.menu-settings');
   await settings.getByRole('checkbox', { name: 'Dev settings' }).check();
-  await settings.getByRole('group', { name: 'Unlock all gear' }).getByRole('button', { name: 'On' }).click();
+  await settings.getByRole('group', { name: 'Disable levelling' }).getByRole('button', { name: 'On' }).click();
   await page.keyboard.press('Escape');
   await pause.getByRole('button', { name: 'Loadout' }).click();
-  await expect(loadout.getByText(/^Unlock all gear is on/)).toBeVisible();
+  await expect(loadout.getByText(/^Disable levelling is on/)).toBeVisible();
   await expect(loadout.locator('.replica-tile', { hasText: 'AEG Rifle' })).not.toHaveCount(0);
-  expect(await loadout.locator('.replica-tile').count()).toBeGreaterThan(3);
+  // One of each public replica (no rarity copies since LV1), none of them locked.
+  await expect(loadout.locator('.replica-tile')).toHaveCount(3);
+  await expect(loadout.locator('.replica-tile.is-locked')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 

@@ -46,14 +46,15 @@ A task that adds, renames or moves a file keeps its folder's `README.md` current
 | `src/ui/` | DOM HUD, overlays and settings tabs; the menus in `ui/menus/` | `hud.ts`, `scoreboard.ts`, `minimap.ts`, `debugOverlay.ts`, `menus/menus.ts` |
 | `src/config/` | Every tunable number and data table | `replicas.ts`, `bots.ts`, `hits.ts`, `render.ts`, `controls.ts`, `dev.ts` |
 | `src/core/` | Loop and session plumbing: stepper, seeds, frame pacer, crash and bug reports | `fixedStepper.ts`, `seed.ts`, `sessionPlan.ts`, `crashReport.ts`, `framePacer.ts` |
-| `src/pool/` | The asset pool, the Loadout, the Armory economy, Extraction cases | `pool.ts`, `kit.ts`, `loadoutModel.ts`, `armory.ts`, `collection.ts`, `caches.ts` |
+| `src/pool/` | The asset pool, the Loadout, bot kits, Extraction cases | `pool.ts`, `item.ts`, `kit.ts`, `loadoutModel.ts`, `botKit.ts`, `caches.ts` |
+| `src/progress/` | Levels, XP and the player's unlocks; the Armory's level track | `levels.ts`, `gameLevels.ts`, `xp.ts`, `progress.ts`, `track.ts` |
 | `src/content/` | The content checks: rules, compatibility, spec test and balance run for a new replica, part, map, mode or skin | `gameContent.ts`, `replicaChecks.ts`, `partChecks.ts`, `mapChecks.ts`, `modeChecks.ts`, `skinChecks.ts`, `specSheet.ts`, `report/` |
 | `src/stats/` | Match stats, local records, settling a finished match | `matchStats.ts`, `records.ts`, `settleMatch.ts` |
 | `src/save/` | The save system: guarded storage, file format, migrations, tab lock | `saveFile.ts`, `stores.ts`, `guardedStorage.ts`, `saveManager.ts`, `tabLock.ts` |
 | `src/settings/` | The saved settings object and the Dev settings' saved values | `storage.ts`, `dev.ts` |
 | `src/tutorial/` | The tutorial tracker | `tutorial.ts` |
 | `src/assets/` | Bundled fonts and the optional character model | `fonts/`, `models/characters/` |
-| `pool.md`, `stats.md` | Hand-edited tables the game and its tests read: assets and economy, replica and part numbers | read by `pool/poolFile.ts`, `config/statsFile.ts` |
+| `pool.md`, `stats.md`, `levels.md`, `bots.md` | Hand-edited tables the game and its tests read: assets and Extraction's cases, replica and part numbers, levels and XP, bot names and personalities | read by `pool/poolFile.ts`, `config/statsFile.ts`, `progress/levels.ts`, `config/botsFile.ts` |
 | `public/` | Static files: icon, manifest, menu stills (from `pipeline/map-stills.mjs`) | `menu/` |
 | `pipeline/` | Gates, perf runs, light bakes, build cache, task records, the content check: the task pipeline's scripts | `README.md`, `gate.mjs`, `perf-run.mjs`, `records.mjs`, `content-check.mjs` |
 | `e2e/` | Playwright smoke tests on the `e2e` build; `release.spec.ts` on `dist/` | `boot.spec.ts`, `crash.spec.ts`, `release.spec.ts` |
@@ -71,9 +72,10 @@ The root files in more detail:
 - **`MatchSession`** (`matchSession.ts`) is one match on one map: the field's meshes and lighting, physics, nav, the
   simulation, the bots, and the combat and match presentation. `Game` builds it on Play and disposes it when the player
   leaves; Play Again builds a new one with its own seed (`matchFlow.ts` `matchSeed`). What Play does is the pure
-  `core/sessionPlan.ts`. A decided match is recorded and paid once, the frame it is decided (`stats/settleMatch.ts`).
-  Skip to next round (M83) runs the same per-tick body as watched play flat out over a few frames, showing only the
-  round's end and the next start (`matchFlow.ts` `skipOffer`, `skipTickCap`; `config/sim.ts` `SKIP_ROUND`).
+  `core/sessionPlan.ts`. A decided match is recorded and its XP given once, the frame it is decided
+  (`stats/settleMatch.ts`). Skip to next round (M83) runs the same per-tick body as watched play flat out over a few
+  frames, showing only the round's end and the next start (`matchFlow.ts` `skipOffer`, `skipTickCap`; `config/sim.ts`
+  `SKIP_ROUND`).
   Its `MatchSetup` carries New game's Match rules (`config/matchRules.ts`), a bot difficulty per team and the Rules
   picker's ruleset (`RULESETS`, laid over the match panel's picks by `playedPicks` in `newGamePicks.ts`).
 - **`RangeSession`** (`rangeSession.ts`) is Practice: the player alone, no bots and no rounds, on `map/range.ts` (with
@@ -225,39 +227,66 @@ request. Each entry says where the contract lives, what it holds today and what 
   save system's guarded storage once it has started (same keys, same values). Pinned by `settings/storage.test.ts`.
 - **The save file format** (`save/saveFile.ts`). `{ game, format, build, savedAt, summary, stores, checksum }`, the
   stores as their own modules store them. A save from any earlier `format` loads (one `MIGRATIONS` step per format);
-  a later one is refused. `SAVE_FORMAT` goes up with any store's version or a new store (`STORES_BY_FORMAT`). In every
-  store module (the settings, the collection, the records) an object from a newer version is never read or
+  a later one is refused. `SAVE_FORMAT` goes up with any store's version or a new store (`STORES_BY_FORMAT`). Format 3
+  holds the settings, key bindings, records, progress and saved loadouts (format 2 added the saved loadouts, SL1); a
+  format 1 or 2 save (which held the old Armory's collection) loads at level 0, its collection dropped (owner,
+  2026-10-13). `SaveSummary` is `{ level, xp, unlocked, matches }`. In
+  every store module (the settings, the progress, the records) an object from a newer version is never read or
   overwritten (`save/overStored.ts` `storedIsNewer`). Pinned by `save/saveFile.test.ts`, `pool/pool.test.ts`,
   `stats/records.test.ts`.
+- **The progress store** (`progress/progress.ts`). `Progress { xp, unlocked, rev }` under `airsoft.progress`
+  (`PROGRESS_VERSION` 1). `unlocked` lists pool asset ids and is only ever added to, never worked out again from the
+  level: an item `levels.md` moves up stays with whoever has it, and one it moves down reaches everyone past that level
+  on the next load (`grantReached`). `rev` lets `syncProgress` and `saveProgress` keep another tab's newer save. Ids
+  `pool.md` no longer has stay in the save but are never offered. Pinned by `progress/progress.test.ts`.
+- **`levels.md`'s format** (`progress/levels.ts`). The hand-edited level plan the game reads against the pool
+  (`loadLevels`, never throws).
+  - A Levels table (`| Level | XP | Unlocks |`): levels from 0 with no gaps, the last row the cap. XP is what a level
+    takes on top of the one before (level 0 none). Unlocks names items by pool.md Name, comma separated; every pooled
+    item is in exactly one row.
+  - An XP table (`| Event | XP |`: Match played, Match won, Round won, Hit on an opponent) and a Difficulty multiplier
+    table (at least 0.1). A missing number falls back to `DEFAULT_XP`.
+  - The first unreadable Levels row ends the table there (no readable level 0 unlocks everything); an unknown name is
+    left out of its row alone. Each problem is listed with its line.
+  - What a match gives is `progress/xp.ts` `matchXp`: no XP for the practice range, the tutorial, or a match with dev
+    content or Dev settings that change play (`stats/settleMatch.ts` `matchStanding`, `NoXp`).
+
+  Pinned by `progress/levels.test.ts`, `progress/xp.test.ts`, `stats/settleMatch.test.ts`.
 - **`pool.md`'s format** (`pool/poolFile.ts`). The hand-edited asset register the game reads.
   - Power sources carry a Type, not a Power %; what they do is in `stats.md`.
-  - Tokens and Shots holds a Pity table (`| Guarantee | Shots |`) and an "Unowned item weight" row.
-  - Replicas have two optional columns, Tiers (the tiers an asset comes in) and Drop % (a chase item's own chance per
-    Shot item), and the `built-in-power` tag for a replica whose power source is fixed.
+  - An item is its asset id alone (`pool/item.ts` `ItemRef { asset }`); `parseItemKey` reads a legacy `ID@tier` key
+    and drops the tier. Which level unlocks an item is in `levels.md`, not here.
+  - Replicas may carry the `built-in-power` tag for a replica whose power source is fixed.
   - Every asset table has an Access column, `public` or `dev`: blank reads as public, any other word leaves the row
     out.
-  - A Caches table (`| Case | Key | Per run | Open s | Heard m | FC | BB resupply % | Part % | Parts from |`, read as
-    `Pool.caseKinds`). The Key is what map data's case spots name. A missing or unreadable table falls back to the
-    shipped rows.
-  - A Supply events table (`| Supply event | Key | When | FC % | Part % |`, read as `Pool.supplyEvents` by
+  - A Caches table (`| Case | Key | Per run | Open s | Heard m | XP | BB resupply % |`, read as `Pool.caseKinds`). A
+    case holds XP (a range) or a BB resupply, never parts (`CaseFind { xp, resupply }`). The Key is what map data's
+    case spots name. A missing or unreadable table falls back to the shipped rows.
+  - A Supply events table (`| Supply event | Key | When | XP % |`, read as `Pool.supplyEvents` by
     `pool/supplyEvents.ts`). When is two weekdays or two dates; the first row that applies wins; `MatchSetup.supply`
-    carries it into `rollRunCases`. No table means no events. FC % and Part % are 0 or 10 to 1000, and a missing column
-    is reported once, at the header.
+    carries it into `rollRunCases(pool, spots, seed, event?)`. No table means no events. XP % is 0 or 10 to 1000, and
+    a missing column is reported once, at the header.
   - A Lights table: category `light`, slot `light`, Fits by tag like the other parts.
-  - The Odds % never rise down the Rarity table, and a Difficulty multiplier is at least 0.1.
   - Every shipped ID is pinned to its asset in `pool/pool.test.ts` (IDs are save keys).
 
   Pinned by `pool/pool.test.ts`, `pool/caches.test.ts`.
 - **`stats.md`'s format** (`config/statsFile.ts`). The hand-edited performance numbers the config modules lay over
   their built-in ones: replicas and parts by Key, power sources by pool ID, Barrels and Muzzle parts by Key, Lights by
-  Key, Tier scaling and Site limits. Pinned by `config/stats.test.ts`.
+  Key, and Site limits, one row per item. Pinned by `config/stats.test.ts`.
+- **`bots.md`'s format** (`config/botsFile.ts`, BN1). The bots' names and personalities, found by their `##` headings:
+  Roster (Name, Personality: a made-up name of at most 12 letters, spaces, hyphens or apostrophes, unique, always
+  playing that personality), Personalities (Personality, Card note with `{name}`), How they move (scales × of the
+  level's BotSkill numbers, Flank chance + , Watch where you ducked a range or –) and Habits (yes, no or –; Holds until
+  seconds left or –). A cell it can't read plays neutral and is reported
+  with its line; it never throws. A personality changes how a bot plays, never its senses, reaction, turning or aim
+  (`ai/personality.ts personalSkill`). Pinned by `config/botsFile.test.ts`.
 - **Content tags** (`config/content.ts`). Every map, mode, difficulty and ruleset (`tag` on `MAPS`, `MATCH_MODES`,
   `DIFFICULTIES`, `RULESETS`) and every pooled asset (`Asset.tag`, from pool.md's Access) is `public` or `dev`; Match
   panel choices may carry one too (untagged is public). `isAvailable(tag, devContent)` is the one check. `devContent`
   is the Dev tab's Dev content switch (`dev.devContent`, applying only while Dev settings is ticked).
   - While it is off, dev content is shown nowhere (`contentPool`, `playedPicks`, `ChoiceCards` /
-    `OptionPicker.setDevContent`) and never drops from Shots (`dispensable`).
-  - A match using any of it stays out of the records and pays nothing (`matchStanding`, `NotCounted` 'devContent').
+    `OptionPicker.setDevContent`).
+  - A match using any of it stays out of the records and gives no XP (`matchStanding`, `NoXp` 'devContent').
     `MatchSetup.devContentUsed` comes from `matchUsesDev`: the match's picks, the player's kit, or dev gear the
     opponents may roll.
   - The dev maps' data is a chunk of its own (`map/devMaps.ts`), fetched by `loadDevMaps` once Dev content is on (at

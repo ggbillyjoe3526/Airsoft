@@ -21,7 +21,8 @@ describe('the top bar (G3)', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   const places = (bar: TopBar): FakeElement[] => fake(bar.root).children[1]!.children;
-  const wallet = (bar: TopBar): FakeElement => fake(bar.root).children.find((c) => c.className === 'menu-wallet')!;
+  const status = (bar: TopBar): FakeElement => fake(bar.root).children.find((c) => c.className === 'menu-status')!;
+  const badge = (bar: TopBar): FakeElement => status(bar).children[0]!;
 
   it('lists every place in order, marks only the current one, and calls back with the place clicked', () => {
     const picked: string[] = [];
@@ -35,20 +36,22 @@ describe('the top bar (G3)', () => {
     expect(picked).toEqual([MENU_TEXT.nav[0]!.id]);
   });
 
-  it('reads Match, Loadout, Armory, Settings from the left, then the wallet (FC and Tokens only) at the far right, with no version (M100)', () => {
+  it('reads Match, Loadout, Armory, Settings from the left, then your level at the far right, with no version (M100, LV1)', () => {
     const bar = new TopBar(() => {}, () => {});
-    // Back to practice (M95, hidden off the Loadout from Practice) stands just before the wallet.
+    // Back to practice (M95, hidden off the Loadout from Practice) stands just before your level.
     const [mark, nav, practice, end] = fake(bar.root).children;
     expect(practice!.hidden).toBe(true);
     expect(mark!.tag).toBe('button'); // the wordmark is a way back, not a place
     expect(places(bar).map((b) => b.children.at(-1)!.textContent)).toEqual(['Match', 'Loadout', 'Armory', 'Settings']);
     expect(fake(bar.root).children.at(-1)).toBe(end);
-    expect(end!.className).toBe('menu-wallet');
-    expect(wallet(bar).children.map((c) => c.className)).toEqual(['menu-chip menu-chip-fc', 'menu-chip menu-chip-tokens']);
+    expect(end!.className).toBe('menu-status');
+    expect(status(bar).children.map((c) => c.className)).toEqual(['menu-chip menu-chip-level']);
     expect(nav!.children).toHaveLength(4);
-    bar.setWallet({ fc: 1200, tokens: 3 }, false);
-    expect(wallet(bar).children.map((c) => c.textContent)).toEqual(['1,200 FC', '3 Tokens']);
+    bar.setLevel({ level: 3, into: 150, next: 600, toNext: '450 XP to level 4' });
+    expect(badge(bar).children[0]!.textContent).toBe('Lv 3');
     expect(fake(bar.root).children.some((c) => c.className.includes('menu-build'))).toBe(false);
+    // The gacha's wallet is gone (LV1): no Field Credits, no Tokens.
+    expect(fake(bar.root).children.some((c) => c.className.includes('menu-wallet'))).toBe(false);
   });
 
   it("makes the wordmark the way back: to the title, or Back to the pause menu when Settings or the Loadout came from there", () => {
@@ -69,22 +72,53 @@ describe('the top bar (G3)', () => {
     expect(places(bar).filter((b) => !b.hidden).map((b) => b.getAttribute('aria-current'))).toEqual(['page']);
   });
 
-  it('shows the wallet, and with the Armory off hides it and takes the Armory place off the bar (M83: gone, not greyed)', () => {
+  it('shows your level and the XP into the next one, says it to a screen reader, and opens the Armory when clicked (LV1)', () => {
+    const picked: string[] = [];
+    const bar = new TopBar((p) => picked.push(p), () => {});
+    const level = badge(bar);
+    const [text, track] = level.children;
+    bar.show('setup', false);
+    bar.setLevel({ level: 3, into: 150, next: 600, toNext: '450 XP to level 4' });
+    expect([level.tag, level.hidden, level.disabled]).toEqual(['button', false, false]);
+    expect(text!.textContent).toBe(MENU_TEXT.level(3));
+    expect(track!.getAttribute('aria-hidden')).toBe('true');
+    expect(track!.style['--xp']).toBe('0.25');
+    expect(level.getAttribute('aria-label')).toBe('Level 3, 450 XP to level 4. Open the Armory');
+    expect(fake(level).title).toBe(level.getAttribute('aria-label'));
+    level.click();
+    expect(picked).toEqual(['armory']);
+  });
+
+  it('fills the bar at the top level, where nothing is left to earn, and leaves out the XP still to go', () => {
     const bar = new TopBar(() => {}, () => {});
-    const [fc, tokens] = wallet(bar).children;
+    bar.setLevel({ level: 10, into: 0, next: null, toNext: '' });
+    const [text, track] = badge(bar).children;
+    expect(text!.textContent).toBe('Lv 10');
+    expect(track!.style['--xp']).toBe('1');
+    expect(badge(bar).getAttribute('aria-label')).toBe('Level 10. Open the Armory');
+    // More XP than the level takes (a cap raised later) never overfills it.
+    bar.setLevel({ level: 2, into: 900, next: 600, toNext: 'x' });
+    expect(track!.style['--xp']).toBe('1');
+  });
+
+  it('hides the level with levelling off (Dev settings) and keeps the Armory place on the bar', () => {
+    const bar = new TopBar(() => {}, () => {});
     const armory = places(bar)[MENU_TEXT.nav.findIndex((n) => n.id === 'armory')]!;
     bar.show('setup', false);
-    bar.setWallet({ fc: 1200, tokens: 3 }, false);
-    expect([fc!.hidden, tokens!.hidden, armory.hidden, armory.disabled]).toEqual([false, false, false, false]);
-    expect(fc!.textContent).toBe(MENU_TEXT.fc(1200));
-    bar.setWallet(null, true);
-    expect([fc!.hidden, tokens!.hidden, armory.hidden, armory.disabled]).toEqual([true, true, true, false]);
-    expect(places(bar).filter((b) => !b.hidden).length).toBe(MENU_TEXT.nav.length - 1);
-    // Moving between screens keeps it gone; the Armory on again puts it back.
+    bar.setLevel(null);
+    expect([badge(bar).hidden, armory.hidden, armory.disabled]).toEqual([true, false, false]);
+    expect(places(bar).filter((b) => !b.hidden).length).toBe(MENU_TEXT.nav.length);
+    bar.setLevel({ level: 1, into: 0, next: 300, toNext: '300 XP to level 2' });
+    expect(badge(bar).hidden).toBe(false);
+  });
+
+  it('keeps the level on the bar from the pause menu, where it goes nowhere', () => {
+    const bar = new TopBar(() => {}, () => {});
+    bar.setLevel({ level: 1, into: 0, next: 300, toNext: '300 XP to level 2' });
+    bar.show('settings', true);
+    expect([badge(bar).hidden, badge(bar).disabled]).toEqual([false, true]);
     bar.show('settings', false);
-    expect(armory.hidden).toBe(true);
-    bar.setWallet({ fc: 1200, tokens: 3 }, false);
-    expect(armory.hidden).toBe(false);
+    expect(badge(bar).disabled).toBe(false);
   });
 });
 
@@ -137,7 +171,6 @@ describe('the Your match panel (G3, playView.ts)', () => {
   const opts = (devContent: boolean) => ({
     rules: { raiseTime: 5 },
     dev: { devContent: () => devContent, devContentUsed: () => devContent, cheating: () => false },
-    armory: { wallet: () => ({ fc: 0, tokens: 0 }) },
     loadout: { summary: () => ({ replicas: 'AEG Rifle · GBB Pistol', detail: '' }) },
   }) as unknown as Parameters<typeof playView>[1];
 

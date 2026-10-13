@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import poolText from '../pool.md?raw';
 import { createBot } from './ai/bot';
 import { botConfig } from './config/bots';
 import { DEV_ACTIONS, DEV_DEFAULTS } from './config/dev';
@@ -10,9 +9,6 @@ import { DEPOT } from './map/depot';
 import { lightingChoices, lightingPicked, mapUnderLighting, mapUnderPreset, playsAtNight } from './map/lightingChoice';
 import { NEON_HEIGHTS } from './map/neonHeights';
 import { WOODLAND } from './map/woodland';
-import { takeShots } from './pool/armory';
-import { newCollection } from './pool/collection';
-import { loadPool } from './pool/pool';
 import { MemoryStorage } from './pool/testStorage';
 import { SpectatorCamera } from './render/spectatorCamera';
 import { SETTINGS_KEY } from './settings/storage';
@@ -23,28 +19,9 @@ import { devSettings } from './ui/devSettings';
 import { FakeElement } from './ui/testSupport';
 
 /**
- * M90: the Dev tab's playtesting aids that can be checked without a browser: the Armory's free Shots, the map under
- * any time of day, the spectator watching others while you are in play, the bots' intent wording and the tab's rows.
+ * M90: the Dev tab's playtesting aids that can be checked without a browser: the map under any time of day, the
+ * spectator watching others while you are in play, the bots' intent wording and the tab's rows.
  */
-
-describe('Free case openings (M90)', () => {
-  const pool = loadPool(poolText);
-
-  it('dispense as a paid Shot does, taking no Tokens or FC, even from an empty wallet', () => {
-    const c = newCollection(pool, 1);
-    expect(takeShots(pool, c, 1)).toBeNull();
-    const got = takeShots(pool, c, 10, 7, true)!;
-    expect(got.length).toBe(10 * pool.economy.assetsPerShot);
-    expect([c.tokens, c.fc]).toEqual([0, 0]);
-  });
-
-  it('draw the same items as paid Shots from the same state and entropy', () => {
-    const paid = newCollection(pool, 3);
-    paid.tokens = 1;
-    const free = newCollection(pool, 3);
-    expect(takeShots(pool, free, 1, 99, true)!.map((d) => d.item)).toEqual(takeShots(pool, paid, 1, 99)!.map((d) => d.item));
-  });
-});
 
 describe('Time of day on any map (M90)', () => {
   it('puts a day-only map (Depot) under Night, and a night-only one (Woodland) under Day', () => {
@@ -139,7 +116,7 @@ describe('the Dev tab rows for M90', () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  it('builds Time of day as a picker saving dev.timeOfDay, and a button per action that runs it (Reset asks first)', () => {
+  it('builds Time of day as a picker saving dev.timeOfDay, and a button per action that runs it (each Reset asks first)', () => {
     const changed: [string, unknown][] = [];
     const ran: string[] = [];
     const asked: string[] = [];
@@ -154,14 +131,16 @@ describe('the Dev tab rows for M90', () => {
     expect(changed).toEqual([['timeOfDay', 'night']]);
     expect((JSON.parse(localStorage.getItem(SETTINGS_KEY)!) as Record<string, unknown>)['dev.timeOfDay']).toBe('night');
     for (const a of DEV_ACTIONS) buttons.find((b) => b.textContent === a.button)!.click();
-    expect(ran).toEqual(['giveFc', 'giveTokens', 'endRound', 'resetSave']);
-    expect(asked).toEqual(['Reset the save?']);
+    expect(ran).toEqual(['giveXp', 'levelUp', 'resetLevel', 'endRound', 'resetSave']);
+    expect(asked).toEqual(['Reset your level?', 'Reset the save?']);
   });
 
   it('never resets without a pop-up to ask with', () => {
     const ran: string[] = [];
     const rows = devSettings({ initial: { ...DEV_DEFAULTS }, onChange: () => {}, actions: (id) => (ran.push(id), 'Done') }) as unknown as FakeElement[];
-    rows.flatMap((r) => all(r, 'button')).find((b) => b.textContent === 'Reset save')!.click();
+    const buttons = rows.flatMap((r) => all(r, 'button'));
+    buttons.find((b) => b.textContent === 'Reset save')!.click();
+    buttons.find((b) => b.textContent === 'Reset level')!.click();
     expect(ran).toEqual([]);
   });
 });

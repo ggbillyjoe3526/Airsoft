@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { COLLECTION_KEY, saveCollection } from '../pool/collection';
+import { GAME_LEVELS } from '../progress/gameLevels';
+import { addXp, loadProgress, PROGRESS_KEY, saveProgress } from '../progress/progress';
 import { MemoryStorage } from '../pool/testStorage';
 import { KeyBindings } from '../input/keyBindings';
 import { SETTINGS_KEY, saveSetting } from '../settings/storage';
@@ -39,12 +40,12 @@ describe('overStored: unknown fields survive a store\'s next save (M31)', () => 
     expect(JSON.parse(s.getItem(RECORDS_KEY)!)).toMatchObject({ version: 1, streak: 4, medals: ['gold'] });
   });
 
-  it('the collection keeps a field it does not know', () => {
+  it('the level progress keeps a field it does not know', () => {
     const s = new MemoryStorage();
-    s.setItem(COLLECTION_KEY, JSON.stringify({ version: 1, owned: {}, fc: 1, tokens: 0, seed: 1, cosmetics: { hat: 'red' } }));
-    saveCollection({ owned: { '000001@common': 1 }, fc: 50, tokens: 2, seed: 9 }, s);
-    // `rev` is the save's revision (FA10, audit POOL-02), raised by every save.
-    expect(JSON.parse(s.getItem(COLLECTION_KEY)!)).toEqual({ version: 1, owned: { '000001@common': 1 }, fc: 50, tokens: 2, seed: 9, rev: 1, cosmetics: { hat: 'red' } });
+    s.setItem(PROGRESS_KEY, JSON.stringify({ version: 1, xp: 1, unlocked: [], rev: 0, cosmetics: { hat: 'red' } }));
+    saveProgress({ xp: 50, unlocked: ['000001'], rev: 0 }, s);
+    // `rev` is the save's revision, raised by every save.
+    expect(JSON.parse(s.getItem(PROGRESS_KEY)!)).toEqual({ version: 1, xp: 50, unlocked: ['000001'], rev: 1, cosmetics: { hat: 'red' } });
   });
 
   it('key bindings keep an action a newer build added', () => {
@@ -65,12 +66,12 @@ describe('overStored: unknown fields survive a store\'s next save (M31)', () => 
   });
 
   it('a field carried in by a save file stays after the loaded save is played and saved again', () => {
-    // A file written by a newer build: an unknown field in the collection and in the key bindings.
+    // A file written by a newer build: an unknown field in the progress and in the key bindings.
     const file = saveFileText({
       format: SAVE_FORMAT,
       build: 'v9',
       savedAt: '2026-10-04T10:00:00.000Z',
-      stores: { collection: { version: 1, owned: {}, fc: 10, tokens: 0, seed: 1, futureField: 'kept' }, keyBindings: { hoverboard: ['KeyH'] } },
+      stores: { progress: { version: 1, xp: 10, unlocked: [], rev: 0, futureField: 'kept' }, keyBindings: { hoverboard: ['KeyH'] } },
     });
     const parsed = parseSaveText(file);
     expect(parsed.ok).toBe(true);
@@ -80,9 +81,11 @@ describe('overStored: unknown fields survive a store\'s next save (M31)', () => 
     const manager = new SaveManager({ storage: new GuardedStorage(backing), build: 'b', reload: () => undefined });
     manager.replace(parsed.save, 'load');
     const next = new GuardedStorage(backing);
-    saveCollection({ owned: {}, fc: 11, tokens: 0, seed: 1 }, next);
+    const p = loadProgress(GAME_LEVELS, next);
+    addXp(p, GAME_LEVELS, 1);
+    expect(saveProgress(p, next)).toBe(true);
     new KeyBindings(next).rebind('scoreboard', 'KeyX');
-    expect(JSON.parse(backing.getItem(COLLECTION_KEY)!)).toMatchObject({ fc: 11, futureField: 'kept' });
+    expect(JSON.parse(backing.getItem(PROGRESS_KEY)!)).toMatchObject({ xp: 11, futureField: 'kept' });
     expect(JSON.parse(backing.getItem('airsoft.keyBindings')!)).toMatchObject({ hoverboard: ['KeyH'], scoreboard: ['KeyX'] });
   });
 });

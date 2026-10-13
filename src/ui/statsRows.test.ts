@@ -7,7 +7,7 @@ import { vec3 } from '../sim/vec';
 import { emptyStats, type PlayerStats } from '../stats/matchStats';
 import { addMatch, emptyRecords, noNews } from '../stats/records';
 import { DEV_CONTENT_NOT_RECORDED, extractionBests, recordsView } from './recordsView';
-import { formatAccuracy, formatTime, rosterNames, statsBlocks } from './statsRows';
+import { formatAccuracy, formatTime, rosterNames, rosterTags, statsBlocks } from './statsRows';
 
 /** You (0) and Alpha 2 (1) against Beta 1 (2) and Beta 2 (3). */
 const roster = () => [0, 1, 2, 3].map((id) => createCharacter(id, vec3(), 0, LOADOUT, id < 2 ? 0 : 1));
@@ -50,6 +50,42 @@ describe('stats tables (M19)', () => {
     const out = (markOut: boolean) => statsBlocks(cs, names, () => emptyStats(), [0, 0], cs[0]!, markOut)[1]!.rows.map((r) => r.out);
     expect(out(true)).toEqual([true, false]);
     expect(out(false)).toEqual([false, false]);
+  });
+});
+
+describe('the bots\' names and personalities on the tables (BN1)', () => {
+  const who = (name: string, label: string) => ({ name, style: { label } });
+
+  it('names each bot by its roster name, keeps "You", and numbers a bot the roster had no name for', () => {
+    const cs = roster();
+    const identities = new Map([
+      [1, who('Rook', 'Anchor')],
+      [3, who('Dash', 'Rusher')],
+    ]);
+    expect([...rosterNames(cs, 0, identities).values()]).toEqual(['You', 'Rook', 'Beta 1', 'Dash']);
+  });
+
+  it('tags each bot\'s row with its personality, and nobody else\'s', () => {
+    const cs = roster();
+    const identities = new Map([
+      [1, who('Rook', 'Anchor')],
+      [2, who('Owl', 'Careful')],
+      [3, who('Nobody', '')],
+    ]);
+    const tags = rosterTags(identities);
+    expect([...tags]).toEqual([
+      [1, 'Anchor'],
+      [2, 'Careful'],
+    ]);
+    const blocks = statsBlocks(cs, rosterNames(cs, 0, identities), () => emptyStats(), [0, 0], cs[0]!, false, false, [], tags);
+    expect(blocks[0]!.rows.map((r) => [r.name, r.tag])).toEqual([
+      ['You', ''],
+      ['Rook', 'Anchor'],
+    ]);
+    expect(blocks[1]!.rows.map((r) => [r.name, r.tag])).toEqual([
+      ['Owl', 'Careful'],
+      ['Nobody', ''],
+    ]);
   });
 });
 
@@ -97,9 +133,9 @@ describe('records view (M19)', () => {
       { label: 'Extractions in a row', value: '0 now · best 0', isNew: false },
       { label: 'Fastest extraction with a case', value: '–', isNew: false },
     ]);
-    const news = addMatch(r, { difficulty: 'normal', mode: 'extraction', won: true, hits: 0, bbsFired: 0, run: { haulFc: 1250, finds: 2, seconds: 95.4 } });
+    const news = addMatch(r, { difficulty: 'normal', mode: 'extraction', won: true, hits: 0, bbsFired: 0, run: { haulXp: 1250, finds: 2, seconds: 95.4 } });
     expect(extractionBests(r, news)).toEqual([
-      { label: 'Best haul', value: '1,250 FC', isNew: true },
+      { label: 'Best haul', value: '1,250 XP', isNew: true },
       { label: 'Extractions in a row', value: '1 now · best 1', isNew: true },
       { label: 'Fastest extraction with a case', value: '1:35', isNew: true },
     ]);

@@ -13,7 +13,7 @@ import { mapData, MAPS } from '../../map/maps';
 import { playableMode } from '../../map/playableMode';
 import { buildNavGrid } from '../../nav/navGrid';
 import { initPhysics } from '../../physics/physicsWorld';
-import { GAME_POOL } from '../../pool/gamePool';
+import { GAME_LEVELS } from '../../progress/gameLevels';
 import { roundsPayNoise, roundsPayPerMinute } from '../modePay';
 import { addTallies, lowestFloor, watchMatch, type WatchTally } from './matchWatch';
 import { contentMaps, ENV, envNumber, namesMode, reportMeta } from './reportSupport';
@@ -106,9 +106,9 @@ describe('content report: the balance run on a map', () => {
               reportMeasure(ctx, { label: `${label}: anyone falling through the floor`, value: w.fell, unit: '', band: band({ max: 0 }), detail: `${w.fell} fell` });
               // Pay a minute: shown here, set beside Elimination's by content-check (pay in line, MODE_BALANCE_BANDS.pay).
               const sweep = { rounds: played, hits, players: 2 * entry.teamSize.standard, seconds: seeds * seconds };
-              const fcPerMinute = roundsPayPerMinute(GAME_POOL.economy, level.id, sweep, ROUNDS);
-              reportMeasure(ctx, { label: `${label}: Field Credits a minute in the standard match`, value: fcPerMinute, unit: 'FC a minute', band: {}, detail: `from ${rounds} rounds and ${hits} hits` });
-              reportMeta(ctx, 'pay', { map: entry.id, lighting, mode: mode.id, level: level.id, judged, label, fcPerMinute, noise: roundsPayNoise(sweep, ROUNDS), band: MODE_BALANCE_BANDS.pay });
+              const xpPerMinute = roundsPayPerMinute(GAME_LEVELS.xp, level.id, sweep, ROUNDS);
+              reportMeasure(ctx, { label: `${label}: XP a minute in the standard match`, value: xpPerMinute, unit: 'XP a minute', band: {}, detail: `from ${rounds} rounds and ${hits} hits` });
+              reportMeta(ctx, 'pay', { map: entry.id, lighting, mode: mode.id, level: level.id, judged, label, xpPerMinute, noise: roundsPayNoise(sweep, ROUNDS), band: MODE_BALANCE_BANDS.pay });
             });
             break;
           case 'extraction':
@@ -120,7 +120,7 @@ describe('content report: the balance run on a map', () => {
               const runs = `${seeds} runs, a bot runner with two Normal teammates${devNote}${target ? '' : `; ${entry.label} has no Extraction bands yet (ai/balance/extractionBands.ts)`}`;
               reportMeasure(ctx, { label: `${label}: runs the squad got out of`, value: m.extract, of: m.runs.length, band: band(target ? { min: target.extract[0], max: target.extract[1] } : {}), detail: `${out} of ${m.runs.length}; ${runs}` });
               reportMeasure(ctx, { label: `${label}: runs that ran out the clock`, value: share(onTime, m.runs.length), of: m.runs.length, band: band(ON_TIME_BAND), detail: `${onTime} of ${m.runs.length}` });
-              reportMeasure(ctx, { label: `${label}: Field Credits a minute the squad got out with`, value: m.fcPerMinute, unit: 'FC a minute', band: band(target ? { min: target.fcPerMinute[0], max: target.fcPerMinute[1] } : {}), detail: "a bot runner's haul: comparable between levels and builds, not with Elimination's pay" });
+              reportMeasure(ctx, { label: `${label}: XP a minute the squad got out with`, value: m.xpPerMinute, unit: 'XP a minute', band: band(target ? { min: target.xpPerMinute[0], max: target.xpPerMinute[1] } : {}), detail: "a bot runner's haul: comparable between levels and builds, not with Elimination's pay" });
               // Each harder home team harder to get out from: content-check sets the levels side by side (the map's own
               // pairs, ai/balance/extractionBands.ts, or each level against the next).
               const harder = EXTRACTION_BALANCE[entry.id]?.harder ?? DIFFICULTIES.slice(1).map((d, i) => [DIFFICULTIES[i]!.id, d.id] as const);

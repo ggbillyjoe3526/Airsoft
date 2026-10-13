@@ -7,7 +7,7 @@ import { BARRELS, GRIPS, MAGAZINES, MUZZLES } from './attachments';
 import { LASERS } from './lasers';
 import { OPTICS } from './optics';
 import { AEG, CYBER_PISTOL, GAS_PISTOL, withStats } from './replicas';
-import { DEFAULT_TIER_SHARES, loadStats, overlay } from './statsFile';
+import { loadStats, overlay } from './statsFile';
 
 const stats = loadStats(statsText);
 
@@ -98,13 +98,12 @@ describe('stats.md (M29)', () => {
     expect(file.errors.some((e) => /^line 5: ID must be six digits/.test(e))).toBe(true);
   });
 
-  it('flags a tier share the code has no use for, and falls back to the built-in shares without the table', () => {
-    const file = loadStats(mini('## Tier scaling\n| Category | Stat | Share % |\n|---|---|---|\n| Optic | Energy | 50 |\n| Replica | Spread | 80 |\n| Replica | Spread | 90 |'));
-    expect(file.errors.some((e) => e.startsWith('line 4: Optic tiers can\'t improve "Energy"'))).toBe(true);
-    expect(file.errors.some((e) => e.startsWith('line 6: Replica · Spread is listed twice'))).toBe(true);
-    expect(file.tierShares.replica).toEqual({ spread: 0.8 });
-    expect(loadStats('').tierShares).toBe(DEFAULT_TIER_SHARES);
-    expect(loadStats('').errors.some((e) => e.includes('"Tier scaling"'))).toBe(true);
+  it('reads no Tier scaling table (LV1: no rarity tiers): an old one is left alone, and none is asked for', () => {
+    const file = loadStats(mini(REPLICAS, '## Tier scaling\n| Category | Stat | Share % |\n|---|---|---|\n| Optic | Energy | 50 |'));
+    expect(file.errors.filter((e) => e.startsWith('line'))).toEqual([]);
+    expect('tierShares' in file).toBe(false);
+    expect(loadStats('').errors.some((e) => e.includes('Tier scaling'))).toBe(false);
+    expect(statsText).not.toMatch(/Tier scaling/);
   });
 
   it('overlays only the entries and fields the file names', () => {
@@ -122,13 +121,13 @@ describe('stats.md, acceptance 1: the numbers as shipped', () => {
     expect([AEG.energyLimit, GAS_PISTOL.energyLimit]).toEqual([1.2, 1.0]);
   });
 
-  it('gives the optics, grips, lasers and magazines the numbers they had', () => {
+  it('gives the optics, grips, lasers and magazines the numbers they had (LV1: the Low-Cap made lighter)', () => {
     expect([OPTICS.redDot.zoom, OPTICS.redDot.raiseScale, OPTICS.scope2x.zoom, OPTICS.scope2x.raiseScale]).toEqual([1.25, 1, 2, 1.6]);
     expect([GRIPS.vertical.handlingScale, GRIPS.vertical.shakeScale, GRIPS.angled.handlingScale, GRIPS.angled.shakeScale]).toEqual([1.25, 0.6, 0.8, 1.3]);
     expect(LASERS.redLaser.spreadScale).toBe(0.8);
     const m = (k: keyof typeof MAGAZINES) => [MAGAZINES[k].capacity, MAGAZINES[k].carried, MAGAZINES[k].reloadScale, MAGAZINES[k].drawScale, MAGAZINES[k].rattles];
     expect(m('hiCap')).toEqual([2, -2, 1, 1, true]);
-    expect(m('lowCap')).toEqual([0.5, 1, 0.8, 1, false]);
+    expect(m('lowCap')).toEqual([0.5, 2, 0.75, 0.9, false]);
     expect(m('extended')).toEqual([1.5, 0, 1, 1.35, false]);
     // Names and blurbs stay the code's: stats.md holds numbers only.
     expect(GRIPS.vertical.label).toBe('Vertical Grip');
@@ -148,13 +147,6 @@ describe('stats.md, acceptance 1: the numbers as shipped', () => {
       if (a.power!.type === 'gas') expect(p.fireRate, a.name).toBe(0);
     }
     expect(power('11.1 V LiPo Battery')).toEqual({ energy: 0, fireRate: 0.15, recoil: 0 });
-  });
-
-  it('ships the tier shares that make a Legendary replica 15 % tighter and 7.5 % stronger', () => {
-    expect(stats.tierShares).toEqual(DEFAULT_TIER_SHARES);
-    expect(stats.tierShares.replica).toEqual({ spread: 1, reload: 1, draw: 1, energy: 0.5, fireRate: 0.5 });
-    expect(stats.tierShares.battery).toEqual({ fireRate: 0.5 });
-    expect(stats.tierShares.gas).toEqual({ energy: 0.5 });
   });
 
   it('ships the site limits of a rifle (1.20 J) and a pistol (1.00 J)', () => {
@@ -189,7 +181,7 @@ describe('stats.md, acceptance 1: a cell or column it cannot read keeps the buil
   it('reports a missing table once and falls back to the built-in numbers, never throwing', () => {
     const none = loadStats('# nothing here');
     expect(() => loadStats('')).not.toThrow();
-    for (const name of ['Replicas', 'Power sources', 'Optics', 'Grips', 'Lasers', 'Magazines', 'Tier scaling', 'Site limits'])
+    for (const name of ['Replicas', 'Power sources', 'Optics', 'Grips', 'Lasers', 'Magazines', 'Site limits'])
       expect(none.errors.filter((e) => e.includes(`"${name}"`)), name).toHaveLength(1);
     expect(none.siteLimits).toEqual({ rifle: 1.2, pistol: 1.0 });
     // The config modules keep every number when the file gives none.
@@ -235,7 +227,7 @@ describe('stats.md, acceptance 1: a cell or column it cannot read keeps the buil
 });
 
 describe('stats.md, acceptance 7: bots carry each replica as it comes', () => {
-  it("gives a bot the stats.md replicas at Common, under the site limit, with the file's magazines", () => {
+  it("gives a bot the stats.md replicas, under the site limit, with the file's magazines", () => {
     const bot = createCharacter(1, { x: 0, y: 0, z: 0 }, 0);
     expect(bot.armament.replicas.map((r) => r.id)).toEqual(['aeg', 'pistol']);
     expect(bot.armament.replicas[0]!.muzzleEnergy).toBe(stats.replicas.aeg!.muzzleEnergy);
@@ -259,30 +251,18 @@ describe('stats.md, barrels and muzzle parts (M29b)', () => {
     expect(Object.keys(stats.muzzles)).toEqual(['silencer']);
   });
 
-  it('ships the numbers: Tight-Bore 3 % energy and 15 % tighter, Long 8 % energy and 15 % slower, Silencer -5 % energy, 10 % slower, heard from half as far', () => {
+  it('ships the numbers: Tight-Bore 3 % energy and 15 % tighter, Long 10 % energy, 10 % tighter and 15 % slower (LV1), Silencer -5 % energy, 10 % slower, heard from half as far', () => {
     expect(stats.barrels.tightBore).toEqual({ energy: 0.03, spreadScale: 0.85, handlingScale: 1 });
-    expect(stats.barrels.long).toEqual({ energy: 0.08, spreadScale: 1, handlingScale: 1.15 });
+    expect(stats.barrels.long).toEqual({ energy: 0.1, spreadScale: 0.9, handlingScale: 1.15 });
     expect(stats.muzzles.silencer).toEqual({ energy: -0.05, handlingScale: 1.1, heardScale: 0.5 });
   });
 
   it("is what the game's barrels and muzzle parts carry, and keeps the code's names and blurbs", () => {
     expect([BARRELS.tightBore.energy, BARRELS.tightBore.spreadScale, BARRELS.tightBore.handlingScale]).toEqual([0.03, 0.85, 1]);
-    expect([BARRELS.long.energy, BARRELS.long.spreadScale, BARRELS.long.handlingScale]).toEqual([0.08, 1, 1.15]);
+    expect([BARRELS.long.energy, BARRELS.long.spreadScale, BARRELS.long.handlingScale]).toEqual([0.1, 0.9, 1.15]);
     expect([MUZZLES.silencer.energy, MUZZLES.silencer.handlingScale, MUZZLES.silencer.heardScale]).toEqual([-0.05, 1.1, 0.5]);
     expect(MUZZLES.silencer.muffled).toBe(true);
     expect(BARRELS.long.label).toBe('Long Barrel');
-  });
-
-  it('ships the Tier scaling shares for a barrel (spread, draw, raise) and a muzzle part (draw, raise)', () => {
-    expect(stats.tierShares.barrel).toEqual({ spread: 0.5, draw: 0.5, raise: 0.5 });
-    expect(stats.tierShares.muzzle).toEqual({ draw: 0.5, raise: 0.5 });
-  });
-
-  it('flags a tier share for a stat a barrel or muzzle part cannot improve, and one listed twice, and keeps going', () => {
-    const file = loadStats(mini('## Tier scaling\n| Category | Stat | Share % |\n|---|---|---|\n| Barrel | Reload | 50 |\n| Muzzle | Spread | 50 |\n| Muzzle | Draw | 40 |\n| Muzzle | Draw | 30 |'));
-    expect(file.errors.filter((e) => /^line \d+: /.test(e))).toHaveLength(3);
-    expect(file.tierShares.muzzle).toEqual({ draw: 0.4 });
-    expect(file.tierShares.barrel).toEqual({});
   });
 
   it('reads a barrel and muzzle cell it can read and leaves the one it cannot, with its line', () => {
@@ -309,8 +289,6 @@ describe('stats.md, barrels and muzzle parts (M29b)', () => {
     for (const name of ['Barrels', 'Muzzle parts']) expect(none.errors.filter((e) => e.includes(`"${name}"`)), name).toHaveLength(1);
     expect(overlay(BARRELS, none.barrels)).toEqual(BARRELS);
     expect(overlay(MUZZLES, none.muzzles)).toEqual(MUZZLES);
-    expect(none.tierShares.barrel).toEqual({ spread: 0.5, draw: 0.5, raise: 0.5 });
-    expect(none.tierShares.muzzle).toEqual({ draw: 0.5, raise: 0.5 });
   });
 
   it('reports a missing column once, however many rows, and keeps the built-in number for it', () => {
@@ -332,14 +310,9 @@ describe('stats.md, M32: the Cyber Pistol row', () => {
     expect(stats.errors).toEqual([]);
   });
 
-  it('is set so that the Legendary tier, the only one it comes in, lands on the approved numbers', () => {
-    const legendary = DEFAULT_TIER_SHARES.replica;
-    const bonus = 0.15; // pool.md's Legendary Bonus %
-    expect(CYBER_PISTOL.muzzleEnergy * (1 + bonus * legendary.energy!)).toBeCloseTo(1.0, 2);
-    expect(CYBER_PISTOL.fireRate * (1 + bonus * legendary.fireRate!)).toBeCloseTo(14, 1);
-    expect(CYBER_PISTOL.spreadDeg * (1 - bonus * legendary.spread!)).toBeCloseTo(0.3, 2);
-    expect(CYBER_PISTOL.reloadTime * (1 - bonus * legendary.reload!)).toBeCloseTo(1.1, 2);
-    expect(CYBER_PISTOL.drawTime * (1 - bonus * legendary.draw!)).toBeCloseTo(0.28, 2);
-    expect(CYBER_PISTOL.recoilDeg).toBeCloseTo(0.06, 5);
+  it('holds the approved numbers itself (LV1: what the Legendary tier it only came in used to make of it)', () => {
+    const row = stats.replicas.cyber!;
+    expect([row.muzzleEnergy, row.fireRate, row.spreadDeg, row.reloadTime, row.drawTime, row.recoilDeg]).toEqual([1.0, 14, 0.3, 1.1, 0.28, 0.06]);
+    expect([CYBER_PISTOL.muzzleEnergy, CYBER_PISTOL.fireRate, CYBER_PISTOL.spreadDeg, CYBER_PISTOL.reloadTime, CYBER_PISTOL.drawTime, CYBER_PISTOL.recoilDeg]).toEqual([1.0, 14, 0.3, 1.1, 0.28, 0.06]);
   });
 });

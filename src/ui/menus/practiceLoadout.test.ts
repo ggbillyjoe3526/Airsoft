@@ -12,7 +12,8 @@ import { type EventNode, stubMenuPage } from './menuTestSupport';
 
 /**
  * Practice with any replica (M95) on the fake DOM: the Loadout key, the Loadout opened from Practice (its line, the slot
- * in hand picked, Back to practice on the top bar), Unlock all gear said on the Loadout, and the range's first line.
+ * in hand picked, Back to practice on the top bar), Disable levelling (LV1; Unlock all gear before) said on the Loadout,
+ * and the range's first line.
  */
 beforeEach(() => {
   stubMenuPage();
@@ -95,17 +96,16 @@ describe('the Loadout opened from Practice (M95)', () => {
     const before = model.equipped();
     const other = node(s.root)
       .all('button')
-      .find((b) => b.classList.contains('replica-tile') && !before.some((r) => r && `${r.asset}@${r.tier}` === b.dataset.item));
+      .find((b) => b.classList.contains('replica-tile') && !before.some((r) => r && r.asset === b.dataset.item));
     expect(other).toBeDefined();
     other!.click();
-    const [asset, tier] = other!.dataset.item!.split('@');
-    expect(model.equipped()[1]).toEqual({ asset, tier });
+    expect(model.equipped()[1]).toEqual({ asset: other!.dataset.item });
     expect(model.equipped()[0]).toEqual(before[0]);
   });
 });
 
-describe('Unlock all gear on the Loadout (M95)', () => {
-  it('says everything is lent, and drops the line that sends you to the Armory, only while it is on', () => {
+describe('Disable levelling on the Loadout (M95, LV1)', () => {
+  it('says everything is lent, and drops the line that sends you to level up, only while it is on', () => {
     const on = screen(lent);
     on.open(true);
     expect(lineShown(node(on.root), GEAR_TEXT.lent)).toBe(true);
@@ -116,7 +116,7 @@ describe('Unlock all gear on the Loadout (M95)', () => {
     expect(lineShown(node(off.root), GEAR_TEXT.unlockMore)).toBe(true);
   });
 
-  it('offers every replica in the pool at every tier it comes in', () => {
+  it('offers every replica in the pool', () => {
     const model = new LoadoutModel(GAME_POOL, lent);
     expect(model.lent()).toBe(true);
     const replicas = GAME_POOL.assets.filter((a) => a.category === 'replica');

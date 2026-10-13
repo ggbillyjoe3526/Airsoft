@@ -3,6 +3,7 @@ import { BODY, MOVEMENT } from '../config/movement';
 import { PHYSICS } from '../config/physics';
 import type { MapBlock, MapData } from '../map/mapTypes';
 import { DEPOT } from '../map/depot';
+import { NEON_HEIGHTS } from '../map/neonHeights';
 import { TEST_YARD, TEST_YARD_HALF_SIZE } from '../map/testYard';
 import { terrainHeightAt } from '../map/terrain';
 import { GENTLE_SLOPE, planeTerrain, SLOPE_YARD, terrainOnly } from '../map/testSupport';
@@ -362,15 +363,16 @@ describe('PhysicsWorld (Rapier)', () => {
     };
     const world = new PhysicsWorld(map, BODY, DT);
     const RAMP_PACE = { ...MOVEMENT, rampPace: 1 };
-    for (const pace of ['walk', 'run', 'sprint', 'crouch'] as const) {
+    for (const pace of ['walk', 'run', 'sprint', 'holstered sprint', 'crouch'] as const) {
       for (const up of [true, false]) {
         const c = createCharacter(0, vec3(up ? -2 : run + 2, (up ? 0 : 1) + REST, 0.3), up ? -Math.PI / 2 : Math.PI / 2);
+        c.armament.holstered = pace === 'holstered sprint';
         world.addCharacter(c);
         const cmd = createCommand();
         cmd.yaw = c.yaw;
         cmd.forward = 1;
         cmd.walk = pace === 'walk';
-        cmd.sprint = pace === 'sprint';
+        cmd.sprint = pace === 'sprint' || pace === 'holstered sprint';
         cmd.crouch = pace === 'crouch';
         let streak = 0;
         let longest = 0;
@@ -386,11 +388,74 @@ describe('PhysicsWorld (Rapier)', () => {
         expect(longest, label).toBe(0);
         // Up or down, the ramp keeps the pace with `rampPace` 1 (audit SIM-17: a sprint up the dock ramp lost a quarter
         // of it). The game ships with it at 0 until the owner's playtest (DECISIONS FA1), so the test sets it.
-        const full = pace === 'walk' ? MOVEMENT.walkSpeed : pace === 'sprint' ? MOVEMENT.sprintSpeed : pace === 'crouch' ? MOVEMENT.crouchSpeed : MOVEMENT.runSpeed;
+        const full = { walk: MOVEMENT.walkSpeed, run: MOVEMENT.runSpeed, sprint: MOVEMENT.sprintSpeed, 'holstered sprint': MOVEMENT.holsterSprintSpeed, crouch: MOVEMENT.crouchSpeed }[pace];
         expect(slowest, label).toBeGreaterThanOrEqual(0.95 * full);
         expect(c.position.y, label).toBeCloseTo((up ? 1 : 0) + REST, 2);
       }
     }
+    world.dispose();
+  });
+
+  it('keeps the ground settle deeper than the fastest pace drops in a tick on the steepest ramp (BN1)', () => {
+    // MOVEMENT.groundSettleDistance glues a character to the ground below it; a pace that drops further than that in
+    // one tick down a ramp leaves the ground at its crest (the holstered sprint, M92, did at 6 cm: see below).
+    const fastest = Math.max(MOVEMENT.sprintSpeed, MOVEMENT.holsterSprintSpeed);
+    expect(MOVEMENT.groundSettleDistance).toBeGreaterThan(fastest * DT * PHYSICS.maxRampSlope + 0.01);
+  });
+
+  it("holds the ground sprinting down Neon Heights' stair ramps at full pace, the replica holstered included (BN1)", () => {
+    // M92's holstered sprint (6.8 m/s) left the ground for a third of a second over the top of these ramps when the
+    // ground settle was 6 cm, and a bot's spread spiked (depotMatch.neonHeights.test.ts). Down each from its landing at
+    // full pace from the first tick, along its middle and near each side, from four points of a tick's travel back.
+    // The west stair's lower flight is left out: its landing overhangs the ramp, a 30 cm step (KNOWN_ISSUES › Maps).
+    const OVERHUNG = { x: -13.9, z: 9 };
+    const world = new PhysicsWorld(NEON_HEIGHTS, BODY, DT);
+    let id = 0;
+    let runs = 0;
+    for (const ramp of NEON_HEIGHTS.blocks) {
+      if (ramp.kind !== 'ramp' || !ramp.rise) continue;
+      if (Math.abs(ramp.center.x - OVERHUNG.x) < 0.05 && Math.abs(ramp.center.z - OVERHUNG.z) < 0.05) continue;
+      const alongX = ramp.rise === '+x' || ramp.rise === '-x';
+      const sign = ramp.rise === '+x' || ramp.rise === '+z' ? 1 : -1;
+      const half = (alongX ? ramp.size.x : ramp.size.z) / 2;
+      const across = (alongX ? ramp.size.z : ramp.size.x) / 2 - BODY.radius - 0.1;
+      const top = ramp.center.y + ramp.size.y / 2;
+      for (const pace of ['sprint', 'holstered sprint'] as const) {
+        const speed = pace === 'sprint' ? MOVEMENT.sprintSpeed : MOVEMENT.holsterSprintSpeed;
+        for (const side of [-1, 0, 1]) {
+          for (const phase of [0, 0.25, 0.5, 0.75]) {
+            // Half a metre and part of a tick back from the crest, on the landing, heading down the slope.
+            const back = 0.5 + phase * speed * DT;
+            const along = (alongX ? ramp.center.x : ramp.center.z) + sign * (half + back);
+            const offset = (alongX ? ramp.center.z : ramp.center.x) + side * across;
+            const c = createCharacter(id++, alongX ? vec3(along, top + REST, offset) : vec3(offset, top + REST, along), 0);
+            // Facing down the slope: yaw 0 faces -z and π/2 faces -x.
+            c.yaw = alongX ? (sign > 0 ? Math.PI / 2 : -Math.PI / 2) : sign > 0 ? 0 : Math.PI;
+            c.armament.holstered = pace === 'holstered sprint';
+            c.velocity.x = alongX ? -sign * speed : 0;
+            c.velocity.z = alongX ? 0 : -sign * speed;
+            world.addCharacter(c);
+            const cmd = createCommand();
+            cmd.yaw = c.yaw;
+            cmd.forward = 1;
+            cmd.sprint = true;
+            let streak = 0;
+            let longest = 0;
+            for (let t = 0; t < Math.ceil((2 * half + back) / (speed * DT)); t++) {
+              stepMovement(c, cmd, MOVEMENT, DT, world, scratch);
+              streak = c.grounded ? 0 : streak + 1;
+              longest = Math.max(longest, streak);
+            }
+            const label = `ramp ${ramp.rise} at (${ramp.center.x.toFixed(1)}, ${ramp.center.z.toFixed(1)}), ${pace}, side ${side}, phase ${phase}`;
+            expect(longest, label).toBe(0);
+            // It went down, to the foot or nearly.
+            expect(c.position.y, label).toBeLessThan(top - ramp.size.y + 0.5);
+            runs++;
+          }
+        }
+      }
+    }
+    expect(runs).toBe(6 * 2 * 3 * 4);
     world.dispose();
   });
 

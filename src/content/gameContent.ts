@@ -4,12 +4,16 @@ import { LASERS, type LaserId } from '../config/lasers';
 import { type OpticId, OPTICS } from '../config/optics';
 import { SOUNDS } from '../config/sounds';
 import { GAME_POOL } from '../pool/gamePool';
+import { GAME_LEVELS } from '../progress/gameLevels';
+import { loadLevels } from '../progress/levels';
+import levelsText from '../../levels.md?raw';
 import { BARREL_KEYS, GRIP_KEYS, LASER_KEYS, LIGHT_KEYS, MAGAZINE_KEYS, MUZZLE_KEYS, OPTIC_KEYS, REPLICA_KEYS } from '../pool/pool';
 import type { Asset, Pool } from '../pool/pool';
 import { REPLICA_PART_TABLES } from '../render/replicaParts';
 import { type CheckResult } from './checks';
 import { type ContentInputs, type DrawTable, effect, flagEffect, type PartEffect, shareEffect } from './contentInputs';
 import { partCompatibility, partRules } from './partChecks';
+import { levelCheck } from './levelChecks';
 import { replicaBotChecks, replicaCompatibility, replicaRules, replicaSaveCheck } from './replicaChecks';
 
 /**
@@ -75,6 +79,8 @@ export function gameInputs(pool: Pool = GAME_POOL): ContentInputs {
   return {
     pool,
     stats: GAME_STATS,
+    // Another pool (a check's test) reads levels.md against itself, so the levels name its own items.
+    levels: pool === GAME_POOL ? GAME_LEVELS : loadLevels(levelsText, pool),
     replicas: REPLICA_KEYS,
     drawTables: gameDrawTables(),
     soundCues: new Set(Object.keys(SOUNDS)),
@@ -88,9 +94,9 @@ export function gameInputs(pool: Pool = GAME_POOL): ContentInputs {
  * caller (the tests and the report runner stub one).
  */
 export function checkAsset(inputs: ContentInputs, asset: Asset): CheckResult[] {
-  if (asset.category === 'replica') return [...replicaRules(inputs, asset), ...replicaCompatibility(inputs, asset), ...replicaBotChecks(inputs, asset), ...replicaSaveCheck(inputs, asset)];
-  if (asset.category === 'grenade') return [];
-  return [...partRules(inputs, asset), ...partCompatibility(inputs, asset)];
+  if (asset.category === 'replica') return [...replicaRules(inputs, asset), ...levelCheck(inputs, asset), ...replicaCompatibility(inputs, asset), ...replicaBotChecks(inputs, asset), ...replicaSaveCheck(inputs, asset)];
+  if (asset.category === 'grenade') return levelCheck(inputs, asset);
+  return [...partRules(inputs, asset), ...levelCheck(inputs, asset), ...partCompatibility(inputs, asset)];
 }
 
 /** Levels 1 and 2 for every asset in the pool. */

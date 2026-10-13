@@ -1,5 +1,5 @@
 /*
- * The menus' controls (G3): tags, buttons, the keyboard focus ring, pictures and the tiers' colours.
+ * The menus' controls (G3): tags, buttons, the keyboard focus ring and pictures.
  */
 
 /* Tags: acid good news, pink dev content, orange, blue, gold. */
@@ -235,46 +235,4 @@
 
 .pic-slot.has-picture .pic-placeholder {
   display: none;
-}
-
-/* Rarity colours, common to rarest (pool.md's tiers; a tier added there shows grey until it gets one here) */
-[data-tier] {
-  --tier: #aab4c8;
-}
-
-[data-tier='uncommon'] {
-  --tier: #5ce08a;
-}
-
-[data-tier='rare'] {
-  --tier: #4f97ff;
-}
-
-[data-tier='veryRare'] {
-  --tier: #a47bff;
-}
-
-[data-tier='epic'] {
-  --tier: #ff5c9d;
-}
-
-[data-tier='legendary'] {
-  --tier: #ffc21a;
-}
-
-.tier-bar {
-  position: absolute;
-  inset: auto 0 0;
-  height: 4px;
-  background: var(--tier, var(--menu-line));
-}
-
-.tier-text,
-.gear-tier,
-.item-tier,
-.option-tier {
-  font-size: var(--fs-sm);
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  color: var(--tier, var(--menu-muted));
 }

@@ -24,14 +24,32 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **SL1** · Five saved loadout tabs on the Loadout: keys 1 to 5 or a click switch the whole kit you carry at once; your edits go to the current tab
 - **SL1** · Right-click a tab (or Menu, Shift+F10) to use, rename, duplicate, replace with yours or delete; the last loadout can't be deleted
 - **SL1** · Your match on the Match screen lists saved loadouts beside Change; gear a saved loadout can't use now shows as locked until it comes back
+- **BN1** · Bots have names (Dash, Rook, Fox, Owl and others) instead of "Alpha 2" or "Beta 1" on the scoreboard, hit feed, over teammates' heads and when spectating
+- **BN1** · Each bot has one of four personalities, shown on the scoreboard and the "What got you" card: Rusher, Anchor, Flanker or Careful
+- **BN1** · Rushers push in and run at where you were; Flankers take a lane of their own and come round the side; Careful bots clear each corner
+- **BN1** · Anchors hold a spot short of the middle in Elimination, aiming over cover with the replica rested, until about a minute is left
+- **BN1** · Personalities change how bots play, never how well they see, react or aim; names and personalities are edited in bots.md
+- **LV1** · Levels and XP replace the Armory's gacha: every match gives XP, you level up from 0 to 10, and each level unlocks parts for good (#207)
+- **LV1** · The Armory shows your level, XP to the next level, what it unlocks and every level's items; a level badge on the top bar opens it (#207)
+- **LV1** · The match summary shows the XP earned, its lines and any level-up with what it unlocked (#207)
+- **LV1** · Locked items show greyed in Loadout and Customise, with the level that unlocks them; the unlock table is `levels.md` (#207)
+- **LV1** · Dev tab: +500 XP, Level up and Reset level buttons (#207)
 
 ### Changed
 - **M94** · The practice range is now Practice: pause reads "Practice · Range" or "Practice · Depot", and the tutorial's last button says Practice
-- **M95** · With Unlock all gear on, the Loadout says every replica and part is lent to try, and the range's first line names the Loadout key
+- **M95** · With Disable levelling on, the Loadout says every replica and part is lent to try, and the range's first line names the Loadout key
+- **LV1** · The Armory's gacha is gone: no Field Credits, Tokens, Shots, pity, rarity tiers, spares, scrapping or Disable Armory (#207)
+- **LV1** · Extraction cases hold XP instead of Field Credits; supply events give a % bonus to XP (#207)
+- **LV1** · Replicas and parts rebalanced without rarity: Low-Cap Magazine gets two more magazines, Long Barrel +10 % energy and 10 % tighter groups (#207)
+- **LV1** · Hard and Pro bots lose their small tier bonus; the Cyber Pistol keeps its old numbers (#207)
+- **LV1** · Unlock all gear is now Disable levelling, a cheat with no XP and no records (#207)
+- **LV1** · Save format 3: an older save loads at level 0 with its settings and records; old Armory items, Field Credits and Tokens don't carry over (#207)
+- **RM9** · With the Dev figure switches off, humans and bots use a new figure: gloved hands, four heads and team colour on the vest, armbands and bands
 
 ### Fixed
 - **M92** · Bots firing on the move hold fire when a teammate is down the line, so they no longer hit teammates past the end of a wall
 - **M102** · Bots taking a lean spot or an Extraction guard post settle right on it, so their lean sees round the corner
+- **BN1** · Sprinting with the replica holstered over the top of a steep stair (Neon Heights) no longer lifts you off the ground for a moment
 
 ### Internal
 - **SL1** · Saved loadouts are part of save format 2 with their own store (airsoft.loadouts); the context menu's styles have their own sheet

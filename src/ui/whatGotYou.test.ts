@@ -89,6 +89,18 @@ describe('the card\'s words (M41)', () => {
     expect(whatGotYouText(facts({ ricochet: true, held: null, inView: null }), 'Beta 2', 0).notes).toEqual(['It bounced off something first.']);
   });
 
+  it('ends with how that bot plays, by its name (BN1), but not for friendly fire or a ricochet', () => {
+    const note = '{name} anchors: holds one spot short of the middle.';
+    expect(whatGotYouText(facts({ held: true, inView: 1, moving: false }), 'Rook', 0, note).notes).toEqual([
+      'Rook was holding that angle.',
+      'You were in view 1.0 s, standing still.',
+      'Rook anchors: holds one spot short of the middle.',
+    ]);
+    expect(whatGotYouText(facts({ friendly: true, held: null, inView: null }), 'Rook', 0, note).notes).toEqual([]);
+    expect(whatGotYouText(facts({ ricochet: true }), 'Rook', 0, note).notes).toEqual(['It bounced off something first.']);
+    expect(whatGotYouText(facts({ held: null, inView: null }), 'Beta 2', 0, '').notes).toEqual([]);
+  });
+
   it('leaves out what it does not know', () => {
     expect(whatGotYouText(facts({ held: null, inView: null }), 'Beta 2', 0).notes).toEqual([]);
     expect(whatGotYouText(facts({ held: false, inView: null, moving: true }), 'Beta 2', 0).notes).toEqual(['Beta 2 was not holding an angle.', 'You were on the move.']);

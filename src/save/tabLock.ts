@@ -1,7 +1,7 @@
 import { TAB_LOCK } from '../config/save';
 
 /**
- * One tab plays at a time (M31), so two tabs never write over each other's FC: tabs of the game talk on a
+ * One tab plays at a time (M31), so two tabs never write over each other's XP: tabs of the game talk on a
  * BroadcastChannel. A tab starting up asks whether another is playing; one is, so it waits behind a notice (Play here).
  * Play here asks the playing tab to let go: that tab writes what it holds, stops saving and shows the notice in turn,
  * and the new one reloads so it reads the save as just written.

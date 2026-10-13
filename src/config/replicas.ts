@@ -196,10 +196,10 @@ export const GAS_PISTOL: ReplicaConfig = withStats({
 });
 
 /**
- * Cyber Pistol (M32, owner's design 2026-10-04): an electric pistol with a battery built in, a chase replica that only
- * comes at Legendary (pool.md's Tiers and Drop % columns). Rifle-class power and reach close to the rifle's, with
- * pistol handling and almost no kick; no parts fit it. stats.md's row is set so the Legendary bonus lands on the spec:
- * 1.0 J, 14 BBs/s, 0.30° spread, 1.1 s reload, 0.28 s draw.
+ * Cyber Pistol (M32, owner's design 2026-10-04): an electric pistol with a battery built in, the reward at the level
+ * cap (levels.md, LV1). Rifle-class power and reach close to the rifle's, with pistol handling and almost no kick; no
+ * parts fit it. Its spec, as stats.md has it: 1.0 J, 14 BBs/s, 0.30° spread, 1.1 s reload, 0.28 s draw (LV1 folded in
+ * the Legendary bonus it used to come with, so it plays as it did).
  */
 export const CYBER_PISTOL: ReplicaConfig = withStats({
   id: 'cyber',
@@ -207,20 +207,20 @@ export const CYBER_PISTOL: ReplicaConfig = withStats({
   power: 'electric',
   fireModes: ['semi', 'burst', 'auto'],
   defaultFireMode: 'semi',
-  fireRate: 13.03,
+  fireRate: 14,
   magSize: 50,
   mags: 3,
-  reloadTime: 1.294,
-  drawTime: 0.329,
-  // ×1.075 at Legendary: 1.00 J on 0.25 g BBs, 89 m/s, the pistol class's limit.
-  muzzleEnergy: 0.93,
+  reloadTime: 1.1,
+  drawTime: 0.28,
+  // 1.00 J on 0.25 g BBs, 89 m/s, the pistol class's limit.
+  muzzleEnergy: 1.0,
   bbWeight: 0.25,
   // A weaker hop-up than the others (owner: "hop shouldn't be as important"): out of the box it keeps 0.25 g BBs on
   // target to about 33 m, further than the GBB Pistol, short of the AEG's 39 m. Turned right up it reaches about 35 m
   // (38 m on 0.20 g BBs), still short of what a tuned AEG reaches (about 41 m).
   hopUpMax: 0.17,
   hopUpDial: 0.95,
-  spreadDeg: 0.353,
+  spreadDeg: 0.3,
   recoilDeg: 0.06,
   magazines: ['standard'],
   siteClass: 'pistol',

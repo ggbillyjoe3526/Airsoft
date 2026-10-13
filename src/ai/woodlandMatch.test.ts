@@ -5,6 +5,7 @@ import type { MatchMode } from '../config/modes';
 import { WOODLAND } from '../map/woodland';
 import { initPhysics } from '../physics/physicsWorld';
 import { expectGrounded, playMatch } from './depotMatchSupport';
+import { anchorHolding } from './personality';
 
 /** Woodland plays 5v5 or 6v6 (M88): this plays the larger, every spawn taken; one seed and a few minutes of game time keep this file to a few seconds of wall time. */
 const TEAM_SIZE = 6;
@@ -29,12 +30,15 @@ describe('a 6v6 bot match on Woodland (M33d, acceptance 5)', () => {
     let longestStill = 0;
     let closestToFlag = Number.POSITIVE_INFINITY;
     const flag = WOODLAND.flag!;
-    const stats = playMatch(SECONDS, 1, undefined, BOTS, mode, ROUNDS, WOODLAND, TEAM_SIZE, HITS, (state) => {
+    const stats = playMatch(SECONDS, 1, undefined, BOTS, mode, ROUNDS, WOODLAND, TEAM_SIZE, HITS, (state, controller) => {
       for (const c of state.characters) {
         if (mode === 'attackDefend' && c.team === state.round.attackers && c.status === 'alive') closestToFlag = Math.min(closestToFlag, Math.hypot(c.position.x - flag.x, c.position.z - flag.z));
         const firing = state.events.some((e) => e.type === 'shot' && e.characterId === c.id);
-        // Defenders in Attack / Defend hold their ground by design; every other bot has somewhere to go.
-        const advancing = mode === 'elimination' || c.team === state.round.attackers;
+        // Defenders in Attack / Defend hold their ground by design, and so does an anchor holding short of the middle
+        // (BN1, bots.md › Holds until); every other bot has somewhere to go.
+        const bot = controller.bots.find((b) => b.character === c);
+        const holding = bot !== undefined && anchorHolding(bot, controller.worldForTests);
+        const advancing = !holding && (mode === 'elimination' || c.team === state.round.attackers);
         if (!advancing || firing || state.round.phase !== 'live' || c.status !== 'alive') {
           anchor.delete(c.id);
           continue;
