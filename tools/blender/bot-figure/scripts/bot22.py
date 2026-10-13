@@ -135,7 +135,7 @@ def cap_crown(tree):
     return F
 
 
-def head_cap(bal, gaiter):
+def head_cap_v12(bal, gaiter):
     d = math.radians
     tree = bvh(bal)
     gog = goggles(tree, 'Polymer', '_Cap')
@@ -202,7 +202,7 @@ def boonie_pt(th, s, dz=0.0):
     return Vector((x, y, z + dz))
 
 
-def head_boonie(bal, gaiter):
+def head_boonie_v12(bal, gaiter):
     d = math.radians
     tree = bvh(bal)
     top = 1.700
@@ -272,7 +272,7 @@ def _full_ph(th):
     return math.acos(max(-0.99, min(0.99, (z - HC.z) / HA[2])))
 
 
-def head_fullcut(bal, gaiter):
+def head_fullcut_v12(bal, gaiter):
     d = math.radians
     tree = bvh(bal)
     cols = 24
@@ -340,12 +340,12 @@ def heads_v12(old_head, gaiter):
     hv = head_v12(old_head, extra=[gaiter])
     bal = [o for o in hv if o.name.startswith('Balaclava')]
     made = {'Head_HighCut': hv,
-            'Head_Cap': head_cap(_bal_copy(bal, 'Cap'), gaiter),
-            'Head_Boonie': head_boonie(_bal_copy(bal, 'Boonie'), gaiter),
-            'Head_FullCut': head_fullcut(_bal_copy(bal, 'FullCut'), gaiter)}
+            'Head_Cap': head_cap_v12(_bal_copy(bal, 'Cap'), gaiter),
+            'Head_Boonie': head_boonie_v12(_bal_copy(bal, 'Boonie'), gaiter),
+            'Head_FullCut': head_fullcut_v12(_bal_copy(bal, 'FullCut'), gaiter)}
     return [(n, made[n]) for n in HEAD_ORDER]
 
 
-B.update(dict(heads_v12=heads_v12, goggles=goggles, head_cap=head_cap, head_boonie=head_boonie,
-              head_fullcut=head_fullcut, shemagh=shemagh, HEAD_ORDER=HEAD_ORDER))
+B.update(dict(heads_v12=heads_v12, goggles=goggles, head_cap_v12=head_cap_v12, head_boonie_v12=head_boonie_v12,
+              head_fullcut_v12=head_fullcut_v12, shemagh=shemagh, HEAD_ORDER=HEAD_ORDER))
 print('bot22 ready')
