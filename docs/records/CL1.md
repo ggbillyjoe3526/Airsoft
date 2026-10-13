@@ -25,7 +25,7 @@
 - **The area shows as a label on the minimap's top left, not in its caption.** The caption ("Depot · Round 2") stays as G4 pinned it; the label names where you stand, or the teammate you watch.
 - **The feed sits bottom left: 4 lines, each 6 s of play, fading over 0.6 s, cleared at a round's start, 16 px.** Narrow enough (30 % of the view at most) to stay clear of the "what got you" card.
 - **Settings › HUD › Callouts, On by default, saved as `callouts`.** Off hides the feed and stops every click at once; the bots still answer your orders with theirs.
-- **`bots.md` and `levels.md` join the build cache's inputs with `callouts.md`.** The cache missed both (BN1, LV1), so an edited table could reuse a stale build; two words on the line this task already edits.
+- **`bots.md`, `levels.md` and `bot-kits.md` join the build cache's inputs with `callouts.md`.** The cache missed them (BN1, LV1, BG1), so an edited table could reuse a stale build; three words on the line this task already edits.
 
 ## Known issues left
 

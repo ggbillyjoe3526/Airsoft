@@ -9,7 +9,8 @@ holds no magic numbers.
   `torches.ts`; `schemes.ts`, `characters.ts`, `figureRig.ts` (the rigged Blender figures, BF1), `replicaFinish.ts` for
   how they look. `statsFile.ts` reads `stats.md` and
   `gameStats.ts` holds `GAME_STATS`; the modules above lay it over their built-in numbers (`withStats`, `overlay`).
-- Bots: `bots.ts` (behaviour and difficulties), `squad.ts` (orders, order wheel), `nav.ts`. `botsFile.ts` reads
+- Bots: `bots.ts` (behaviour and difficulties), `adaptiveDifficulty.ts` (adaptive difficulty's steps, limits, weights
+  and words, and which skill numbers blend, AD1), `squad.ts` (orders, order wheel), `nav.ts`. `botsFile.ts` reads
   `bots.md` (BN1: the roster of names and what each personality changes) and `botPersonalities.ts` holds
   `BOT_PERSONALITIES`. `calloutsFile.ts` reads `callouts.md` (CL1: what the bots call and how often) and
   `calloutLines.ts` holds `CALLOUT_LINES`; `callouts.ts` has the feed's and radio click's numbers and the setting.

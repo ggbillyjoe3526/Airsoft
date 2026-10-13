@@ -9,7 +9,7 @@ import { CYBER_COLOURS, type ReplicaPaint } from '../config/schemes';
 import { LASERS } from '../config/lasers';
 import { TORCHES } from '../config/torches';
 import { speckleTextures } from './replicaFinish';
-import { AEG_GAS_BLOCK_END, AEG_MAGAZINES, AEG_MUZZLE, AEG_MUZZLE_DEVICES, AEG_PARTS, CYBER_MAGAZINES, CYBER_MUZZLE, CYBER_PARTS, type MuzzleDraw, type MuzzleLayout, type PartDraw, PISTOL_LASER_LENS, PISTOL_MAGAZINES, PISTOL_MUZZLE, PISTOL_MUZZLE_DEVICES, PISTOL_PARTS, REPLICA_PART_TABLES } from './replicaParts';
+import { AEG_GAS_BLOCK_END, AEG_MAGAZINES, AEG_MUZZLE, AEG_MUZZLE_DEVICES, AEG_PARTS, CYBER_MAGAZINES, CYBER_MUZZLE, CYBER_PARTS, type MuzzleDraw, type MuzzleLayout, type PartDraw, PISTOL_LASER_LENS, PISTOL_MAGAZINES, PISTOL_MUZZLE, PISTOL_MUZZLE_DEVICES, MUZZLE_LAYOUTS, PISTOL_PARTS, partTableOf, REPLICA_PART_TABLES } from './replicaParts';
 import { coloursOf, createMaterials, LOW_DETAIL, type MaterialKey, ModelBuilder, PAINTED, paintedMaterials, type Pt, type ReplicaDetail } from './replicaBuilder';
 import { NO_REPLICA_FILES, type ReplicaFile, type ReplicaFilePiece, type ReplicaFiles } from './replicaFiles';
 import { ReplicaRig, slidingRig, withBone } from './replicaRig';
@@ -381,7 +381,7 @@ type ReplicaBuild = (m: Record<MaterialKey, THREE.Material>, orangeTip: boolean,
  * The built-in muzzle layout of each replica a file can draw, by its part table (REPLICA_PART_TABLES): a pistol's
  * barrel ends where its file's `Muzzle` is; the rifle's `Muzzle` is the flash hider's tip, its barrel's end the layout's.
  */
-const FILE_LAYOUTS: Readonly<Record<FileTable, MuzzleLayout>> = { aeg: AEG_MUZZLE, pistol: PISTOL_MUZZLE, cyber: CYBER_MUZZLE };
+const FILE_LAYOUTS: Readonly<Record<FileTable, MuzzleLayout>> = MUZZLE_LAYOUTS;
 
 /** The part tables a file can draw a replica with. */
 type FileTable = keyof typeof REPLICA_PART_TABLES;
@@ -658,7 +658,7 @@ export function buildReplicaModels(
   const painted: THREE.Material[] = [];
   loadout.forEach((r, slot) => {
     const file = files.get(r.id);
-    const build: ReplicaBuild = file ? buildFromFile(file, r.look.viewmodel ?? (r.look.model === 'pistol' ? 'pistol' : 'aeg')) : r.look.viewmodel === 'cyber' ? buildCyberPistol : r.look.model === 'pistol' ? buildPistol : buildAeg;
+    const build: ReplicaBuild = file ? buildFromFile(file, partTableOf(r)) : r.look.viewmodel === 'cyber' ? buildCyberPistol : r.look.model === 'pistol' ? buildPistol : buildAeg;
     const own = coloursOf(r, slot, paint);
     const mats = own ? paintedMaterials(materials, detail, own.colours, own.cyber) : materials;
     for (const key of PAINTED) if (mats[key] !== materials[key]) painted.push(mats[key]);

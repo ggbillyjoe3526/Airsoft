@@ -1,3 +1,4 @@
+import { ADAPTIVE_TEXT } from '../../config/adaptiveDifficulty';
 import { STATS } from '../../config/matchInfo';
 import { ARMORY_TEXT, HAUL_TEXT } from '../../config/menus';
 import type { LevelUp } from '../../progress/progress';
@@ -25,6 +26,8 @@ export interface MatchSummary {
   noXp?: NoXp | null;
   /** Extraction's haul (M44); absent in the other modes. */
   haul?: HaulSummary | null;
+  /** What the match did to adaptive difficulty (AD1, adaptivePicks.ts settleAdaptive); absent at a fixed level. */
+  adaptive?: string | null;
 }
 
 /** A match's XP for the summary (LV1): its lines, your level after it, and what the levels it reached unlocked. */
@@ -69,6 +72,7 @@ export class SummaryScreen {
   private readonly records: HTMLDivElement;
   private readonly xp: HTMLDivElement;
   private readonly haul: HTMLDivElement;
+  private readonly adaptive: HTMLDivElement;
 
   constructor(onContinue: () => void) {
     this.root = el('div', 'menu-screen menu-page menu-summary');
@@ -80,6 +84,7 @@ export class SummaryScreen {
     this.records = el('div', 'summary-records menu-card');
     this.xp = el('div', 'summary-xp menu-card');
     this.haul = el('div', 'summary-haul menu-card');
+    this.adaptive = el('div', 'summary-adaptive menu-card');
     const main = el('section', 'summary-main menu-card');
     main.setAttribute('aria-label', SUMMARY_TEXT.players);
     main.append(this.table.root);
@@ -88,7 +93,7 @@ export class SummaryScreen {
     next.insertAdjacentHTML('beforeend', MENU_ICONS.arrowRight);
     next.dataset.autofocus = '';
     const aside = el('aside', 'summary-aside');
-    aside.append(this.xp, this.haul, this.records, next);
+    aside.append(this.xp, this.haul, this.adaptive, this.records, next);
     const layout = el('div', 'summary-layout');
     layout.append(main, aside);
     // Enter presses the focused Continue; no key of its own.
@@ -108,6 +113,8 @@ export class SummaryScreen {
     this.xp.hidden = xp.length === 0;
     this.haul.replaceChildren(...(summary.haul ? haulBlock(summary.haul) : []));
     this.haul.hidden = !summary.haul;
+    this.adaptive.replaceChildren(...(summary.adaptive ? adaptiveBlock(summary.adaptive) : []));
+    this.adaptive.hidden = !summary.adaptive;
   }
 }
 
@@ -161,6 +168,13 @@ function xpBlock(x: XpSummary | null, noXp: NoXp | null): HTMLElement[] {
   bar.append(el('i'));
   out.push(el('p', 'menu-readout summary-level', ARMORY_TEXT.levelLine(x.level, x.next === null ? ARMORY_TEXT.atCap : ARMORY_TEXT.xpInto(x.into, x.next))), bar);
   return out;
+}
+
+/** Adaptive difficulty's card (AD1): its name, then where the next match starts. */
+function adaptiveBlock(line: string): HTMLElement[] {
+  const head = el('p', 'summary-xp-total');
+  head.append(el('span', 'menu-kicker', ADAPTIVE_TEXT.title));
+  return [head, el('p', 'menu-readout', line)];
 }
 
 /** The summary's line when a match gave no XP and why (audit POOL-22), or '' when it gave some (or there is no reason). */

@@ -54,7 +54,7 @@ A task that adds, renames or moves a file keeps its folder's `README.md` current
 | `src/settings/` | The saved settings object and the Dev settings' saved values | `storage.ts`, `dev.ts` |
 | `src/tutorial/` | The tutorial tracker | `tutorial.ts` |
 | `src/assets/` | Bundled fonts and the optional character model | `fonts/`, `models/characters/` |
-| `pool.md`, `stats.md`, `levels.md`, `bots.md`, `callouts.md` | Hand-edited tables the game and its tests read: assets and Extraction's cases, replica and part numbers, levels and XP, bot names and personalities, the bots' callouts | read by `pool/poolFile.ts`, `config/statsFile.ts`, `progress/levels.ts`, `config/botsFile.ts`, `config/calloutsFile.ts` |
+| `pool.md`, `stats.md`, `levels.md`, `bots.md`, `bot-kits.md`, `callouts.md` | Hand-edited tables the game and its tests read: assets and Extraction's cases, replica and part numbers, levels and XP, bot names and personalities, the bots' kits, the bots' callouts | read by `pool/poolFile.ts`, `config/statsFile.ts`, `progress/levels.ts`, `config/botsFile.ts`, `pool/botKit.ts`, `config/calloutsFile.ts` |
 | `public/` | Static files: icon, manifest, menu stills (from `pipeline/map-stills.mjs`) | `menu/` |
 | `pipeline/` | Gates, perf runs, light bakes, build cache, task records, the content check: the task pipeline's scripts | `README.md`, `gate.mjs`, `perf-run.mjs`, `records.mjs`, `content-check.mjs` |
 | `e2e/` | Playwright smoke tests on the `e2e` build; `release.spec.ts` on `dist/` | `boot.spec.ts`, `crash.spec.ts`, `release.spec.ts` |
@@ -77,7 +77,10 @@ The root files in more detail:
   frames, showing only the round's end and the next start (`matchFlow.ts` `skipOffer`, `skipTickCap`; `config/sim.ts`
   `SKIP_ROUND`).
   Its `MatchSetup` carries New game's Match rules (`config/matchRules.ts`), a bot difficulty per team and the Rules
-  picker's ruleset (`RULESETS`, laid over the match panel's picks by `playedPicks` in `newGamePicks.ts`).
+  picker's ruleset (`RULESETS`, laid over the match panel's picks by `playedPicks` in `newGamePicks.ts`). With the Dev
+  tab's Adaptive difficulty on (AD1) it also carries the other team's starting rating (`adaptivePicks.ts`): the session
+  drifts it a little after each round (`ai/adaptiveRun.ts`), and `Game` saves the next match's when the match is
+  decided.
 - **`RangeSession`** (`rangeSession.ts`) is Practice: the player alone, no bots and no rounds, on `map/range.ts` (with
   the tutorial) or on any map (M94), whose targets stand where the other team's bots would play
   (`map/practiceSpots.ts`, kinds by `map/practiceLayout.ts`). Changing the loadout from its pause menu, or from the
@@ -270,6 +273,16 @@ request. Each entry says where the contract lives, what it holds today and what 
   - Every shipped ID is pinned to its asset in `pool/pool.test.ts` (IDs are save keys).
 
   Pinned by `pool/pool.test.ts`, `pool/caches.test.ts`.
+- **`bot-kits.md`'s format** (`pool/botKit.ts` `readBotKits`, BG1). The hand-edited kits the other team's bots carry:
+  one table, `| Kit | Primary | Primary parts | Secondary | Secondary parts | Easy | Normal | Hard | Pro |`. Replicas
+  and parts by pool.md Name or ID, parts comma-separated, one per slot and fitting their replica; a weapon torch is
+  never listed (fitted by rule at night). An optional Suits column names the bot personalities that lean to a kit
+  (`kitWeights`: × `BOT_KIT_SUIT_LEAN` against the other kits with Suits, which keep their total; a kit without Suits
+  keeps its weight; 0 stays 0). A weight per difficulty column (by `DIFFICULTIES` label), 0 or more,
+  empty 0. A row it can't read is left out with its line in `errors`; a missing column reads nothing. Each opponent
+  picks with `pickBotKit` (seed `botKitSeed(match seed, id)`, its personality) from a `contentPool`; teammates and the factory kit rule carry
+  `LOADOUT`; nothing of the player's collection or loadout enters. Pinned by `pool/botKitTable.test.ts`,
+  `pool/botKit.test.ts`.
 - **`stats.md`'s format** (`config/statsFile.ts`). The hand-edited performance numbers the config modules lay over
   their built-in ones: replicas and parts by Key, power sources by pool ID, Barrels and Muzzle parts by Key, Lights by
   Key, and Site limits, one row per item. Pinned by `config/stats.test.ts`.
@@ -293,8 +306,8 @@ request. Each entry says where the contract lives, what it holds today and what 
   - While it is off, dev content is shown nowhere (`contentPool`, `playedPicks`, `ChoiceCards` /
     `OptionPicker.setDevContent`).
   - A match using any of it stays out of the records and gives no XP (`matchStanding`, `NoXp` 'devContent').
-    `MatchSetup.devContentUsed` comes from `matchUsesDev`: the match's picks, the player's kit, or dev gear the
-    opponents may roll.
+    `MatchSetup.devContentUsed` comes from `matchUsesDev`: the match's picks, the player's kit, or dev gear a kit in
+    bot-kits.md the difficulty weights may bring (`kitsMayHoldDev`).
   - The dev maps' data is a chunk of its own (`map/devMaps.ts`), fetched by `loadDevMaps` once Dev content is on (at
     start when it was left on). `MapEntry` carries no data; `mapData(id)` reads what is loaded (the default map's for
     a dev map not loaded yet). Dev content applies only once the dev maps are in (`Game.devInForce`), so a dev map is

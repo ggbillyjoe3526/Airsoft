@@ -21,13 +21,16 @@ level unlocks an asset is in `levels.md` (`src/progress/`).
   `loadoutPicker.ts` show it.
 - `tables.ts`: what `pool.ts` reads that the files built on it also need (the Caches table's `CaseKind`s and
   `readCaseKinds`), below `pool.ts` so no two pool files import each other (`pipeline/cycles.mjs` checks).
-- `botKit.ts`: Hard opponents' seeded kits, and `chaseCarrier`: now and then an opponent carries a replica the player
-  earned above level 0. `caches.ts` and `supplyEvents.ts`: Extraction's cases (placing them and rolling their XP or BB
-  resupply) and supply events. `contentPool.ts`: the pool as seen with Dev content on or off.
-- Tuning: `pool.md` (assets, cases, supply events) and `stats.md` (numbers, through `config/statsFile.ts`).
+- `botKit.ts`: the bots' kits (BG1): reads `bot-kits.md`, picks each opponent's kit by its difficulty's weights
+  (seeded, leaning to its personality), builds the bot carrying it and fits the night torch by rule; `gameBotKits.ts`
+  reads the shipped file once.
+  `caches.ts` and `supplyEvents.ts`: Extraction's cases (placing them and rolling their XP or BB resupply) and supply
+  events. `contentPool.ts`: the pool as seen with Dev content on or off.
+- Tuning: `pool.md` (assets, cases, supply events), `stats.md` (numbers, through `config/statsFile.ts`) and
+  `bot-kits.md` (what the other team's bots carry).
 - Tests: `pool.test.ts` (pins every shipped ID: IDs are save keys), `kit.test.ts`, `loadoutModel.test.ts`,
-  `savedLoadouts.test.ts`, `botKit.test.ts`, `caches.test.ts`, `supplyEvents.test.ts`, `contentPool.test.ts`;
-  `testStorage.ts` and `testSupport.ts` are their helpers.
+  `savedLoadouts.test.ts`, `botKit.test.ts`, `botKitTable.test.ts`, `botKitQA.test.ts`, `caches.test.ts`,
+  `supplyEvents.test.ts`, `contentPool.test.ts`; `testStorage.ts` and `testSupport.ts` are their helpers.
 - Rules: `pool.md`'s format is a contract (`docs/ARCHITECTURE.md › Contracts`). Read `Armament.replicas` and
   `Armament.handling`, never `LOADOUT`. The Dev tab's Disable levelling (`unlockAllGear`) is read in `Game`
   (`gameOwnership`).
