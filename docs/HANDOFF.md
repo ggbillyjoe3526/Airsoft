@@ -12,7 +12,8 @@ each `src/` folder's `README.md`.
   at the Blender models (owner, 2026-10-12).
 - **Waiting on the owner:** the laptop and desktop Ultra perf baselines, the Save checks in Firefox and Edge, and
   playing Woodland and Neon Heights (`docs/PLAYTEST.md` › Only you can do these). The Dev 6 figure redesign waits on
-  his reference photos and a session in his Blender (`docs/DECISIONS.md` › Art direction and graphics).
+  his reference photos and a session in his Blender (`docs/DECISIONS.md` › Art direction and graphics). Levelling up
+  in place of the Armory's Shots waits on his Armory playtest (`docs/IDEAS.md`).
 
 ## Where to look
 

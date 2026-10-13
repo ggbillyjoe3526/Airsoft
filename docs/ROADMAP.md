@@ -230,6 +230,14 @@ are written when the build starts. Numbers are from the owner's list of 50 candi
 Built in Dev 5 instead: the blowback pistol (pick 14) is the GBB Pistol (RM7), and the AEG Rifle redesign (RM6) gave
 the built-in rifle its small, low iron sights.
 
+### Maybe: decide after the Armory playtest
+
+- **Levelling up in place of the Armory's Shots** (owner, 2026-10-13). Matches give XP, levels unlock replicas,
+  attachments and skins (the Cyber Pistol at level 10, say), everyone starts with the GBB Pistol and AEG Rifle, and the
+  level cap starts at 10 and rises with new content. The owner decides after he has played the Armory: Dev 6, a Dev 7
+  added for it, or not at all. The idea and its open questions: `docs/IDEAS.md` › Levelling up in place of the
+  Armory's Shots.
+
 ### What moved out of Dev 6
 
 The owner moved content to the themed updates (owner, 2026-10-12). He named the optics and the sniper; Claude placed the
@@ -458,6 +466,9 @@ After 0.1.0 the game grows through themed updates, each a mini expansion (owner,
 - **Replica skins and kit looks** (from 0.1 Dev 6). Skins: colour, furniture, tape and markings, filling the Loadout's
   Skins row. Kit looks: camouflage, plate carrier, pouches, helmet, goggles, face protection, gloves, boots, backpacks,
   patches and armbands. Gear that only changes looks lives here, not as its own system (triage).
+- **Levelling up** (undecided; owner, 2026-10-13). If the owner picks levelling in place of the Armory's Shots
+  ([0.1 Dev 6](#maybe-decide-after-the-armory-playtest)), this update could raise the level cap and fill the levels
+  with its challenges, badges and skins.
 - Ideas that would fit here, not placed: clutch moments and match wagers (`docs/IDEAS.md`).
 
 ### Not tied to an update
