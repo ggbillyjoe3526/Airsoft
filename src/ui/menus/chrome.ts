@@ -1,7 +1,7 @@
 import { MENU_TEXT } from '../../config/menus';
 import { BACKDROPS, MENU_ART_DIR } from '../../config/menuArt';
-import { MENU_ICONS, NAV_ICONS } from './icons';
-import { el, menuButton } from './menuParts';
+import { MENU_ICONS, NAV_ICONS, PAUSE_ICONS } from './icons';
+import { el, menuButton, withIcon } from './menuParts';
 
 /**
  * The menus' frame (graphics overhaul G3, M100): the bar across the top of the screens you move between (Match, Loadout,
@@ -59,7 +59,8 @@ export class TopBar {
     const wallet = el('div', 'menu-wallet');
     this.fc = el('span', 'menu-chip menu-chip-fc');
     this.tokens = el('span', 'menu-chip menu-chip-tokens');
-    this.practice = menuButton(MENU_TEXT.backToPractice, 'primary', onPractice, true);
+    // Resume's play sign, after the label (the stylesheet orders it last).
+    this.practice = withIcon(menuButton(MENU_TEXT.backToPractice, 'primary', onPractice), PAUSE_ICONS.resume);
     this.practice.classList.add('menu-topbar-practice');
     // Named by its label alone; the key cap in front of it is for the eye.
     this.practice.setAttribute('aria-label', MENU_TEXT.backToPractice);

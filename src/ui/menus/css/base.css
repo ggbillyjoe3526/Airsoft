@@ -337,6 +337,11 @@
   min-height: var(--control-lg);
   padding: 0 var(--sp-5);
   font-size: var(--fs-lg);
+  white-space: nowrap;
+}
+
+.menu-topbar-practice > svg.icon {
+  order: 2;
 }
 
 /* The button takes the free space before it, so the wallet stays at the far right. */
