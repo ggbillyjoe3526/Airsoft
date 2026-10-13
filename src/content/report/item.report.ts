@@ -7,7 +7,7 @@ import { lightingChoices } from '../../map/lightingChoice';
 import { mapData, MAPS } from '../../map/maps';
 import { playableMode } from '../../map/playableMode';
 import { GAME_POOL } from '../../pool/gamePool';
-import { type Asset, replicaOf, tiersOf } from '../../pool/pool';
+import { type Asset, replicaOf } from '../../pool/pool';
 import { MemoryStorage } from '../../pool/testStorage';
 import { modelCensus, soundCensus } from '../census';
 import { drawTableOf, sceneName } from '../contentInputs';
@@ -57,7 +57,7 @@ describe('content report: rules, compatibility and the spec test', () => {
         results.push(...partSpecChecks(a, sceneName(a), on.map((r) => ({ replica: r.name, census: census.get(r.id)! }))));
         for (const r of on) {
           const base = asItComesFit(pool, r);
-          const fit = { ...base, [slotOf(a)!]: { asset: a.id, tier: tiersOf(pool, a)[0]!.id } };
+          const fit = { ...base, [slotOf(a)!]: { asset: a.id } };
           withParts.push({ part: a.id, replica: r.name, without: specSheet(carried(pool, r, base)), with: specSheet(carried(pool, r, fit)) });
         }
       }
@@ -65,7 +65,6 @@ describe('content report: rules, compatibility and the spec test', () => {
 
     // The pictures to draw (pipeline/content-pictures.mjs): a replica on its own and in first person; a part on each
     // replica it fits, and in first person on the first of them.
-    const firstTier = (a: Asset): string => tiersOf(pool, a)[0]!.id;
     const pictures: unknown[] = [];
     for (const a of items) {
       const on = a.category === 'replica' ? [a] : replicasFitting(inputs, a);
@@ -75,8 +74,8 @@ describe('content report: rules, compatibility and the spec test', () => {
         const base = `${a.id}${r.id === a.id ? '' : `-on-${r.id}`}`;
         pictures.push({ file: `${base}.png`, title: r.id === a.id ? `The ${a.name}` : `On the ${r.name}`, replica: r.id, picture: { fit, scheme: defaultScheme(replicaOf(r)) } });
         if (i === 0) {
-          const held = slot ? { [slot]: `${a.id}@${firstTier(a)}` } : {};
-          pictures.push({ file: `${base}-first-person.jpg`, title: r.id === a.id ? `The ${a.name} in a match` : `On the ${r.name} in a match`, replica: r.id, tier: firstTier(r), firstPerson: { fit: held } });
+          const held = slot ? { [slot]: a.id } : {};
+          pictures.push({ file: `${base}-first-person.jpg`, title: r.id === a.id ? `The ${a.name} in a match` : `On the ${r.name} in a match`, replica: r.id, firstPerson: { fit: held } });
         }
       }
     }

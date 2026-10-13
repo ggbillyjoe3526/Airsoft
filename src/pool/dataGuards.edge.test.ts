@@ -3,17 +3,21 @@ import poolText from '../../pool.md?raw';
 import { RECORDS_KEY } from '../config/matchInfo';
 import { storedIsNewer } from '../save/overStored';
 import { addMatch, emptyRecords, loadRecords, saveRecords } from '../stats/records';
-import { COLLECTION_KEY, loadCollection, newCollection, saveCollection } from './collection';
-import { DEFAULT_ECONOMY, loadPool } from './pool';
+import levelsText from '../../levels.md?raw';
+import { DEFAULT_XP, loadLevels } from '../progress/levels';
+import { loadProgress, newProgress, PROGRESS_KEY, saveProgress } from '../progress/progress';
+import { loadPool } from './pool';
 import { MemoryStorage } from './testStorage';
 
 /** QA edge cases for M56 (the worker's own tests are in pool.test.ts, supplyEvents.test.ts and records.test.ts). */
 const shipped = loadPool(poolText);
+/** levels.md read against the shipped pool (LV1: the Difficulty multipliers moved there from pool.md). */
+const levelsOf = (text: string) => loadLevels(text, shipped);
+const levels = levelsOf(levelsText);
 
 /** The table's own errors: loadPool on a pool.md of one table also reports every other table as missing. */
 const own = (errors: readonly string[]): string[] => errors.filter((e) => !/^no "/.test(e));
-const events = (...rows: string[]) => loadPool(['### Supply events', '| Supply event | Key | When | FC % | Part % |', '|---|---|---|---|---|', ...rows].join('\n'));
-const tiers = (...rows: string[]) => loadPool(['### Rarity', '| Tier | Odds % | Bonus % | Scrap FC |', '|---|---|---|---|', ...rows].join('\n'));
+const events = (...rows: string[]) => loadPool(['### Supply events', '| Supply event | Key | When | XP % |', '|---|---|---|---|', ...rows].join('\n'));
 
 /** A store that records every write, to prove a refusal writes nothing at all. */
 class SpyStorage extends MemoryStorage {
@@ -25,73 +29,65 @@ class SpyStorage extends MemoryStorage {
 }
 
 describe('M56 acceptance 1: the shipped file and the guards\' edges', () => {
-  it('the shipped pool.md reads with no errors, and its Supply events and Rarity odds pass the new checks', () => {
+  it('the shipped pool.md reads with no errors, and its Supply events pass the new checks', () => {
     expect(shipped.errors).toEqual([]);
     expect(shipped.supplyEvents.length).toBeGreaterThan(0);
-    const odds = shipped.tiers.map((t) => t.odds);
-    expect(odds.every((o, i) => i === 0 || o <= odds[i - 1]!)).toBe(true);
+    for (const e of shipped.supplyEvents) expect(e.xp === 0 || e.xp >= 0.1, e.key).toBe(true);
   });
 
   it('Supply event percentages: 0, 10 and 1000 read; 9.99, 1001 and a negative do not; a trailing % is allowed', () => {
-    const ok = events('| A | a | Monday | 0 | 10 |', '| B | b | Tuesday | 1000 | 10% |');
+    const ok = events('| A | a | Monday | 0 |', '| B | b | Tuesday | 1000 |', '| C | c | Wednesday | 10% |');
     expect(own(ok.errors)).toEqual([]);
-    expect(ok.supplyEvents.map((e) => [e.key, e.fc, e.parts])).toEqual([
-      ['a', 0, 0.1],
-      ['b', 10, 0.1],
+    expect(ok.supplyEvents.map((e) => [e.key, e.xp])).toEqual([
+      ['a', 0],
+      ['b', 10],
+      ['c', 0.1],
     ]);
-    const bad = events('| C | c | Monday | 9.99 | 100 |', '| D | d | Tuesday | 100 | 1001 |', '| E | e | Wednesday | -5 | 100 |', '| F | f | Thursday | 0.5 | 100 |');
+    const bad = events('| C | c | Monday | 9.99 |', '| D | d | Tuesday | 1001 |', '| E | e | Wednesday | -5 |', '| F | f | Thursday | 0.5 |');
     expect(bad.supplyEvents).toEqual([]);
     expect(own(bad.errors)).toEqual([
-      expect.stringMatching(/^line 4: FC % is a percentage .*"9\.99" is under the least, 10/),
-      'line 5: Part % must be a percentage from 0 to 1000, not "1001"',
-      'line 6: FC % must be a percentage from 0 to 1000, not "-5"',
-      expect.stringMatching(/^line 7: FC % is a percentage .*"0\.5" is under the least, 10/),
+      expect.stringMatching(/^line 4: XP % is a percentage .*"9\.99" is under the least, 10/),
+      'line 5: XP % must be a percentage from 0 to 1000, not "1001"',
+      'line 6: XP % must be a percentage from 0 to 1000, not "-5"',
+      expect.stringMatching(/^line 7: XP % is a percentage .*"0\.5" is under the least, 10/),
     ]);
   });
 
-  it('a row with both percentages wrong reports each at its own line, and its good neighbours still read', () => {
-    const p = events('| A | a | Monday | 1.25 | 1.5 |', '| B | b | Tuesday | 100 | 100 |');
-    expect(own(p.errors).filter((e) => e.startsWith('line 4:')).map((e) => e.slice(8, 14))).toEqual(['FC % i', 'Part %']);
+  it('a row with a wrong percentage is reported at its own line, and its good neighbours still read', () => {
+    const p = events('| A | a | Monday | 1.25 |', '| B | b | Tuesday | 100 |');
+    expect(own(p.errors).filter((e) => e.startsWith('line 4:')).map((e) => e.slice(8, 14))).toEqual(['XP % i']);
     expect(p.supplyEvents.map((e) => e.key)).toEqual(['b']);
   });
 
   it('a row with a floor error is left out even when its other cells are fine, and a name or key slip is still reported with it', () => {
-    const p = events('| | Bad Key | Funday | 1.25 | 100 |');
+    const p = events('| | Bad Key | Funday | 1.25 |');
     expect(p.supplyEvents).toEqual([]);
     expect(own(p.errors).length).toBe(4);
   });
 
-  it('Difficulty: each of the four rows has the floor, 0.1 reads, a negative and a word do not; only the bad row falls back', () => {
+  it("Difficulty (levels.md since LV1): each of the four rows has the floor, 0.1 reads, a negative and a word do not; only the bad row falls back", () => {
+    expect(levels.errors).toEqual([]);
     for (const name of ['Easy', 'Normal', 'Hard', 'Pro']) {
       const row = new RegExp(`^\\| ${name} \\| [0-9.]+ \\|$`, 'm');
-      expect(row.test(poolText), name).toBe(true);
-      const zero = loadPool(poolText.replace(row, `| ${name} | 0 |`));
+      expect(row.test(levelsText), name).toBe(true);
+      const zero = levelsOf(levelsText.replace(row, `| ${name} | 0 |`));
       // The row's own error, then the table's "no row: using the built-in number" for it.
-      expect(zero.errors, name).toEqual([expect.stringMatching(/^line \d+: Multiplier must be a number of 0\.1 or more, not "0"$/), `"Difficulty" has no ${name.toLowerCase()} row (Multiplier): using the built-in number`]);
-      expect(loadPool(poolText.replace(row, `| ${name} | 0.1 |`)).errors, name).toEqual([]);
+      expect(zero.errors, name).toEqual([expect.stringMatching(/^line \d+: Multiplier must be a number from 0\.1 to 100, not "0"$/), `"Difficulty" has no ${name.toLowerCase()} row: using the built-in number`]);
+      expect(levelsOf(levelsText.replace(row, `| ${name} | 0.1 |`)).errors, name).toEqual([]);
     }
-    const p = loadPool(poolText.replace('| Hard | 1.5 |', '| Hard | -1 |').replace('| Pro | 2 |', '| Pro | fast |'));
+    const p = levelsOf(levelsText.replace('| Hard | 1.5 |', '| Hard | -1 |').replace('| Pro | 2 |', '| Pro | fast |'));
     expect(p.errors.filter((e) => e.startsWith('line '))).toHaveLength(2);
-    expect(p.economy.difficulty).toEqual({ ...DEFAULT_ECONOMY.difficulty, easy: 0.5, normal: 1 });
+    expect(p.xp.difficulty).toEqual({ ...DEFAULT_XP.difficulty, easy: 0.5, normal: 1 });
     // A value above the floor is read as written, not clamped.
-    expect(loadPool(poolText.replace('| Pro | 2 |', '| Pro | 0.11 |')).economy.difficulty.pro).toBe(0.11);
-  });
-
-  it('Rarity odds: equal neighbours are fine, one rise anywhere is reported once at the table header', () => {
-    expect(own(tiers('| Common | 50 | 0 | 5 |', '| Rare | 50 | 5 | 20 |').errors)).toEqual([]);
-    expect(own(tiers('| Common | 60 | 0 | 5 |', '| Rare | 10 | 5 | 20 |', '| Epic | 30 | 9 | 40 |').errors)).toEqual([
-      'line 2: Odds % may not rise down the table: a rarer tier is drawn less often',
-    ]);
-    // Falling by any amount is fine.
-    expect(own(tiers('| Common | 90 | 0 | 5 |', '| Rare | 7 | 5 | 20 |', '| Epic | 3 | 9 | 40 |').errors)).toEqual([]);
+    expect(levelsOf(levelsText.replace('| Pro | 2 |', '| Pro | 0.11 |')).xp.difficulty.pro).toBe(0.11);
   });
 });
 
 describe('M56 acceptance 2: the Supply events header', () => {
   it('a table with every column, in another order and with an extra one, still reads', () => {
-    const p = loadPool(['### Supply events', '| Supply event | Key | Part % | FC % | When | Note |', '|---|---|---|---|---|---|', '| A | a | 150 | 125 | Friday to Sunday | x |'].join('\n'));
+    const p = loadPool(['### Supply events', '| Supply event | Key | XP % | When | Note |', '|---|---|---|---|---|', '| A | a | 125 | Friday to Sunday | x |'].join('\n'));
     expect(own(p.errors)).toEqual([]);
-    expect(p.supplyEvents.map((e) => [e.key, e.fc, e.parts])).toEqual([['a', 1.25, 1.5]]);
+    expect(p.supplyEvents.map((e) => [e.key, e.xp])).toEqual([['a', 1.25]]);
   });
 
   it('a header with no rows is no error and no events', () => {
@@ -101,8 +97,8 @@ describe('M56 acceptance 2: the Supply events header', () => {
   });
 
   it('each single missing column gives exactly one error, at the header line, naming that column', () => {
-    const all = ['Supply event', 'Key', 'When', 'FC %', 'Part %'];
-    for (const gone of ['Key', 'FC %', 'Part %']) {
+    const all = ['Supply event', 'Key', 'When', 'XP %'];
+    for (const gone of ['Key', 'When', 'XP %']) {
       const heads = all.filter((h) => h !== gone);
       const p = loadPool(['### Supply events', `| ${heads.join(' | ')} |`, `|${heads.map(() => '---').join('|')}|`, `| ${heads.map(() => 'x').join(' | ')} |`, `| ${heads.map(() => 'y').join(' | ')} |`].join('\n'));
       expect(own(p.errors), gone).toEqual([expect.stringMatching(new RegExp(`^line 2: the Supply events table needs the columns .*; missing: ${gone}$`))]);
@@ -111,9 +107,9 @@ describe('M56 acceptance 2: the Supply events header', () => {
   });
 
   it('a table under the Supply events heading whose first column is something else is reported once, not read as no events', () => {
-    const p = loadPool(['### Supply events', '| Name | Key | When | FC % | Part % |', '|---|---|---|---|---|', '| A | a | Friday | 125 | 150 |'].join('\n'));
+    const p = loadPool(['### Supply events', '| Name | Key | When | XP % |', '|---|---|---|---|', '| A | a | Friday | 125 |'].join('\n'));
     expect(p.supplyEvents).toEqual([]);
-    expect(own(p.errors)).toEqual(['line 2: the Supply events table needs the columns Supply event, Key, When, FC %, Part %; missing: Supply event']);
+    expect(own(p.errors)).toEqual(['line 2: the Supply events table needs the columns Supply event, Key, When, XP %; missing: Supply event']);
   });
 });
 
@@ -142,41 +138,40 @@ describe('M56 acceptance 4: storedIsNewer', () => {
 });
 
 describe('M56 acceptance 4: a newer store is left alone, whatever its other fields hold', () => {
-  const newerCollection = JSON.stringify({ version: 3, owned: { '000007@legendary': 3 }, fc: 5000, tokens: 9, seed: 7, rev: 99, extra: { a: [1] } });
+  const newerProgress = JSON.stringify({ version: 3, xp: 5000, unlocked: ['000019'], rev: 99, extra: { a: [1] } });
 
-  it('saveCollection writes nothing at all (not one setItem) and leaves c.rev alone, even when the stored rev is lower than c.rev', () => {
+  it('saveProgress writes nothing at all (not one setItem) and leaves p.rev alone, even when the stored rev is lower than p.rev (LV1: the progress store)', () => {
     const s = new SpyStorage();
-    s.setItem(COLLECTION_KEY, JSON.stringify({ version: 2, rev: 0 }));
+    s.setItem(PROGRESS_KEY, JSON.stringify({ version: 2, rev: 0 }));
     s.writes = 0;
-    const c = newCollection(shipped, 1);
-    c.rev = 5;
-    c.fc = 123;
-    expect(saveCollection(c, s)).toBe(false);
+    const p = newProgress(levels);
+    p.rev = 5;
+    p.xp = 123;
+    expect(saveProgress(p, s)).toBe(false);
     expect(s.writes).toBe(0);
-    expect(c.rev).toBe(5);
-    expect(s.getItem(COLLECTION_KEY)).toBe(JSON.stringify({ version: 2, rev: 0 }));
+    expect(p.rev).toBe(5);
+    expect(s.getItem(PROGRESS_KEY)).toBe(JSON.stringify({ version: 2, rev: 0 }));
   });
 
-  it('saveCollection refuses repeatedly, and a newer store does not leak into loadCollection\'s result', () => {
+  it("saveProgress refuses repeatedly, and a newer store does not leak into loadProgress's result", () => {
     const s = new SpyStorage();
-    s.setItem(COLLECTION_KEY, newerCollection);
+    s.setItem(PROGRESS_KEY, newerProgress);
     s.writes = 0;
-    const c = loadCollection(shipped, 4, s);
-    expect(c.seed).toBe(4);
-    expect(c.rev ?? 0).toBe(0);
-    for (let i = 0; i < 3; i++) expect(saveCollection(c, s)).toBe(false);
+    const p = loadProgress(levels, s);
+    expect(p).toEqual(newProgress(levels));
+    for (let i = 0; i < 3; i++) expect(saveProgress(p, s)).toBe(false);
     expect(s.writes).toBe(0);
-    expect(s.getItem(COLLECTION_KEY)).toBe(newerCollection);
+    expect(s.getItem(PROGRESS_KEY)).toBe(newerProgress);
   });
 
-  it('a stored collection that is older, or of this version, is still saved over (the guard is not a blanket refusal)', () => {
+  it('a stored progress that is older, or of this version, is still saved over (the guard is not a blanket refusal)', () => {
     const s = new SpyStorage();
-    const c = newCollection(shipped, 1);
-    s.setItem(COLLECTION_KEY, JSON.stringify({ version: 1, rev: 0, fc: 3, extra: 'kept' }));
-    expect(saveCollection(c, s)).toBe(true);
-    expect(JSON.parse(s.getItem(COLLECTION_KEY)!)).toMatchObject({ version: 1, extra: 'kept' });
-    s.setItem(COLLECTION_KEY, JSON.stringify({ version: 0, fc: 3 }));
-    expect(saveCollection(c, s)).toBe(true);
+    const p = newProgress(levels);
+    s.setItem(PROGRESS_KEY, JSON.stringify({ version: 1, rev: 0, xp: 3, extra: 'kept' }));
+    expect(saveProgress(p, s)).toBe(true);
+    expect(JSON.parse(s.getItem(PROGRESS_KEY)!)).toMatchObject({ version: 1, extra: 'kept' });
+    s.setItem(PROGRESS_KEY, JSON.stringify({ version: 0, xp: 3 }));
+    expect(saveProgress(p, s)).toBe(true);
   });
 
   it('saveRecords writes nothing at all to a newer store, and the next load still plays on empty records', () => {

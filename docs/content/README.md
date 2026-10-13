@@ -10,8 +10,9 @@ through it.
 2. **Brief.** Claude asks the questions in that type's rulebook, offers a default for each, and writes a spec sheet from
    the answers for the owner to approve: the item's numbers beside the content already in the game, what it is good and
    bad at, its look and its sound.
-3. **Build.** Claude adds the rows to `pool.md` and `stats.md`, any code, the model and the sounds. New content is
-   always tagged `dev`, so only the owner sees it (Settings › Dev › Dev content).
+3. **Build.** Claude adds the rows to `pool.md` and `stats.md`, the item's Name to a level in `levels.md`, any code,
+   the model and the sounds. New content is always tagged `dev`, so only the owner sees it (Settings › Dev › Dev
+   content).
 4. **Check.** `node pipeline/content-check.mjs <item>` runs the checks, quickest first (below).
 5. **Report.** The command writes a one-page report in plain words, with pictures. The thread attaches it.
 6. **Playtest.** The owner tries it with Dev content on. When he says "make it public", the public gate runs and only
@@ -90,7 +91,7 @@ for modes, `skin-<id>` and `skins` for skins), `report.html` (one file, the pict
   acting.
 - **Overrides.** A failed balance check can be overridden by the owner with a reason. The reason goes into
   `docs/DECISIONS.md` and the item into `ALLOWED_STRONGER` (`src/config/contentRules.ts`): its figures are then shown
-  and never judged (the Cyber Pistol, a chase item, is the first).
+  and never judged (the Cyber Pistol, the level 10 reward, is the first).
 - **A map's balance** is each end's share instead: the end that starts west (the attackers in Attack / Defend) wins 40
   to 60 % at Pro and 35 to 65 % below it (Audit 2 decision 3), with bots leaving spawn and nobody stuck or falling.
 - **Extraction** plays whole runs, not rounds. A replica or part: the squad carries it, then the rival kit, over the

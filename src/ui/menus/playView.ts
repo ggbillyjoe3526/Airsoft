@@ -24,7 +24,7 @@ import type { PlayView } from './setupScreen';
 /** The match as it will play: dev content's picks play as their defaults while Dev content is off (M35). */
 export function playView(
   picked: NewGamePicks,
-  opts: Pick<MenusOptions, 'rules' | 'dev' | 'armory' | 'loadout'>,
+  opts: Pick<MenusOptions, 'rules' | 'dev' | 'loadout'>,
   lightingOf: (id: MapId) => LightingPresetId,
   practicePlace: PracticePlaceId = DEFAULT_PRACTICE_PLACE,
 ): PlayView {
@@ -52,7 +52,9 @@ export function playView(
   const rules = describeRules({ ...opts.rules, ...sideText(team, roundRules), ...m, halfTimeAfter: roundRules.halfTimeAfter, switches: m, opponents: played.difficulty }, played.mode, run);
   const levels = m.teamSize === 1 || played.difficulty === played.teammateDifficulty ? opponents : `${opponents} / ${mates}`;
   const devContentUsed = opts.dev.devContentUsed();
-  const paid = opts.armory.wallet() !== null && !devContentUsed;
+  // XP (LV1): none with Dev settings that change play (Disable levelling among them) or with dev content.
+  const cheating = opts.dev.cheating();
+  const paid = !cheating && !devContentUsed;
   return {
     played,
     devContent,
@@ -65,7 +67,7 @@ export function playView(
     rules: `${rulesetOf(played.ruleset).label} · ${match.value}`,
     // Your team first ("Beta · Hard / Normal bots"); a run's squad has no pick, so it says only the bots.
     bots: run ? PLAY_TEXT.botsLine(levels) : `${TEAMS[team]!.name} · ${PLAY_TEXT.botsLine(levels)}`,
-    notes: setupNotes(rules, { recorded, cheating: opts.dev.cheating(), devContentUsed, ruleset: played.ruleset, adaptive: opts.dev.adaptive?.() ?? null }),
+    notes: setupNotes(rules, { recorded, cheating, devContentUsed, ruleset: played.ruleset, adaptive: opts.dev.adaptive?.() ?? null }),
     loadout: opts.loadout.summary(),
     pays: paid ? (played.ruleset === DEFAULT_RULESET || recordsKeyOf(played.ruleset) !== null ? PLAY_TEXT.pays : PLAY_TEXT.paysCapped(CUSTOM_RULES_PAY_CAP)) : '',
     practice: practiceView(practicePlace, devContent, lightingOf),
@@ -104,15 +106,15 @@ export function setupNotes(rules: string, why: { recorded: boolean; cheating: bo
   return notes.join(' ');
 }
 
-/** Under New game's rules while Dev settings that change play are on (M24). */
-export const DEV_NOT_RECORDED_NOTE = "Dev settings are on, so this match won't go into your records.";
+/** Under New game's rules while Dev settings that change play are on (M24): no records, and no XP (LV1). */
+export const DEV_NOT_RECORDED_NOTE = "Dev settings are on, so this match won't go into your records or give XP.";
 
 /**
  * Under New game's rules when the picks, the Loadout or the opponents' possible gear use dev content (M35); the second
  * when another note already says the match won't be recorded.
  */
-export const DEV_CONTENT_NOTE = "This match uses content still being built, so it won't go into your records or pay Field Credits.";
-export const DEV_CONTENT_PAY_NOTE = "It uses content still being built, so it won't pay Field Credits either.";
+export const DEV_CONTENT_NOTE = "This match uses content still being built, so it won't go into your records or give XP.";
+export const DEV_CONTENT_PAY_NOTE = "It uses content still being built, so it won't give XP either.";
 
 /** Under New game's rules when the setup isn't the standard match. */
 export const NOT_RECORDED_NOTE = `This match won't go into your records, which count only the standard match: ${standardMatchText()}`;
@@ -125,7 +127,7 @@ export function notRecordedNote(ruleset: RulesetId): string {
 }
 
 /** Under New game's rules with the Custom ruleset (M39). */
-export const CUSTOM_NOT_RECORDED_NOTE = `Custom rules never go into your records, and pay no more than ×${CUSTOM_RULES_PAY_CAP}.`;
+export const CUSTOM_NOT_RECORDED_NOTE = `Custom rules never go into your records, and give XP at no more than ×${CUSTOM_RULES_PAY_CAP}.`;
 
 function difficultyLabel(d: Difficulty): string {
   return DIFFICULTIES.find((o) => o.id === d)?.label ?? d;

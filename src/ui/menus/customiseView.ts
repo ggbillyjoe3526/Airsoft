@@ -6,7 +6,7 @@ import { OPTIC_BLURBS } from '../../config/optics';
 import { BB_WEIGHT, type FireMode, HOP_UP, type PowerSource, type ReplicaConfig } from '../../config/replicas';
 import { FAMILIES, type FamilyId, hasFixedColours, SCHEME_IDS, SCHEMES, type SchemeId, schemeColours } from '../../config/schemes';
 import { TORCHES } from '../../config/torches';
-import type { ItemRef } from '../../pool/collection';
+import { type ItemRef, itemKey } from '../../pool/item';
 import type { FitSlot, KitSlot } from '../../pool/kit';
 import type { LoadoutModel } from '../../pool/loadoutModel';
 import { type Asset, hasBuiltInPower, replicaOf } from '../../pool/pool';
@@ -25,15 +25,14 @@ import {
   powerReadout,
 } from '../loadoutChoice';
 import { OptionPicker } from '../optionPicker';
-import { performanceOf, sheetRows, tierBlurb } from '../performanceSheet';
+import { performanceOf, sheetRows } from '../performanceSheet';
 import { type MenuHint, optionTick } from './chrome';
-import { itemIcon } from './icons';
+import { itemIcon, MENU_ICONS } from './icons';
 import type { PictureContext } from './kitStrip';
 import { tabAfterKey } from './menuNav';
 import { el, menuRow, rangeControl } from './menuParts';
 import { partSubject, PictureSlot, replicaSubject } from './menuPictures';
 import { perfRows, perfSheet } from './perfBars';
-import { arrangeByRarity, loadRarityView, RARITY_TEXT, RarityBar, type RarityView, saveRarityView } from './rarityFilter';
 
 const FIRE_MODE_WORDS: Readonly<Record<FireMode, string>> = { semi: 'semi', burst: 'burst', auto: 'auto' };
 const POWER_WORDS: Readonly<Record<PowerSource, string>> = { electric: 'Electric', gas: 'Gas' };
@@ -70,17 +69,6 @@ const FIT_ROWS: readonly { slot: FitSlot; label: string; none: string | null }[]
 ];
 
 type PartId = 'colour' | FitSlot | 'bbs' | 'skins';
-
-/** A part's option tiles (M82: arranged by the rarity bar): "as it comes" first, then each owned item that fits. */
-interface FitList {
-  head: HTMLElement;
-  group: HTMLElement;
-  none: HTMLElement | null;
-  tiles: { item: ItemRef; tile: HTMLButtonElement }[];
-  /** Shown when the hidden tiers leave none of the owned items. */
-  empty: HTMLParagraphElement;
-  hiddenCount: number;
-}
 
 /** One row of the part list: its tab, what it shows now, and its panel (made when first shown). */
 interface Part {
@@ -126,10 +114,6 @@ export class CustomiseView {
   private readonly perf = perfSheet('customise-perf');
   private readonly colourAside: HTMLElement;
   private current: PartId;
-  /** Sort and filter by rarity (M82): one choice for every part, saved; one bar, moved to the part panel shown. */
-  private partsView: RarityView;
-  private readonly partsBar: RarityBar;
-  private readonly fitLists = new Map<PartId, FitList>();
 
   constructor(
     private readonly opts: CustomiseOptions,
@@ -142,14 +126,6 @@ export class CustomiseView {
     this.grams = m.bbWeight(this.asset.id);
     this.dial = m.hopUp(this.asset.id);
     this.root = el('div', 'customise');
-    const tierIds = m.pool.tiers.map((t) => t.id);
-    this.partsView = loadRarityView('parts', tierIds);
-    this.partsBar = new RarityBar('parts', m.pool.tiers, this.partsView, (view) => {
-      this.partsView = view;
-      saveRarityView('parts', view, tierIds);
-      for (const id of this.fitLists.keys()) this.arrangeFit(id);
-      this.placeRarityBar();
-    });
 
     const crumbs = el('p', 'customise-crumbs');
     const toGear = el('button', 'customise-crumb', GEAR_TEXT.breadcrumb);
@@ -268,7 +244,6 @@ export class CustomiseView {
       }
       if (p.panel) p.panel.hidden = !on;
     }
-    this.placeRarityBar();
     const colour = id === 'colour';
     this.perf.root.hidden = colour;
     this.colourAside.hidden = !colour;
@@ -299,13 +274,9 @@ export class CustomiseView {
     const m = this.opts.model;
     const scheme = m.scheme(this.asset.id);
     const fitted = (['optic', 'grip', 'laser', 'barrel', 'muzzle', 'light'] as const).filter((k) => (k === 'optic' ? this.kit.optic : k === 'grip' ? this.kit.parts.grip !== 'none' : this.kit.parts[k])).length + (this.kit.parts.magazine !== 'standard' ? 1 : 0);
-    const tier = this.tierLabel();
-    this.titleLine.replaceChildren();
-    const tierWord = el('span', 'tier-text', tier);
-    tierWord.dataset.tier = this.ref.tier;
-    const colour = hasFixedColours(this.base) ? '' : ` · ${this.schemeName(scheme)}`;
-    this.titleLine.append(tierWord, `${colour} · ${GEAR_TEXT.partsFitted(fitted)}`);
-    this.summary.textContent = `${replicaSummary(this.kit.replica, this.kit.parts)}. ${tierBlurb(m.pool, this.ref)}`;
+    const colour = hasFixedColours(this.base) ? '' : `${this.schemeName(scheme)} · `;
+    this.titleLine.textContent = `${colour}${GEAR_TEXT.partsFitted(fitted)}`;
+    this.summary.textContent = `${replicaSummary(this.kit.replica, this.kit.parts)}.`;
     this.hero.show(this.opts.context.pictures, replicaSubject(this.asset, scheme, this.opts.context.realistic(), this.kit), itemIcon(this.asset));
   }
 
@@ -314,10 +285,6 @@ export class CustomiseView {
     const factory = performanceOf(m.asItComes(this.asset.id), this.base.bbWeight, this.base.hopUpDial);
     const now = performanceOf(this.kit, this.grams, this.dial, m.capped(this.ref));
     this.perf.rows.replaceChildren(...perfRows(sheetRows(now, factory, HOP_UP.readoutRange)));
-  }
-
-  private tierLabel(ref: ItemRef = this.ref): string {
-    return this.opts.model.pool.tiers.find((t) => t.id === ref.tier)?.label ?? ref.tier;
   }
 
   /** A scheme's name, or under Realistic colours its family's ("Cobalt" shows as "Black"). */
@@ -418,7 +385,7 @@ export class CustomiseView {
     p.pic!.show(this.opts.context.pictures, asset ? partSubject(asset, this.opts.context.realistic()) : null, asset ? itemIcon(asset) : '');
     if (!p.panel) return;
     for (const b of p.panel.querySelectorAll<HTMLButtonElement>('.option-tile')) {
-      const on = b.dataset.item === (item ? key(item) : `none:${row.slot}`);
+      const on = b.dataset.item === (item ? itemKey(item) : `none:${row.slot}`);
       b.classList.toggle('selected', on);
       b.setAttribute('aria-pressed', String(on));
     }
@@ -428,10 +395,14 @@ export class CustomiseView {
     if (readout) readout.textContent = row.slot === 'power' ? powerReadout(this.kit, this.grams) : this.fitReadout(row.slot);
   }
 
-  /** A part's options as picture tiles: "as it comes" first, then each item owned that fits, in its tier's colour. */
+  /**
+   * A part's options as picture tiles: "as it comes" first, then each unlocked item that fits, then (LV1) the ones still
+   * to unlock, greyed with their levels, and a line saying how to get them.
+   */
   private fitPanel(row: (typeof FIT_ROWS)[number]): HTMLElement[] {
     const m = this.opts.model;
     const choices = m.fitChoices(this.asset.id, row.slot);
+    const locked = this.opts.context.levelling?.() === false ? [] : m.lockedFitChoices(this.asset.id, row.slot);
     const count = choices.length + (row.none !== null ? 1 : 0);
     const head = el('div', 'customise-panel-head');
     head.append(el('h3', 'customise-panel-title', `${row.label} · ${GEAR_TEXT.options(count)}`));
@@ -442,58 +413,33 @@ export class CustomiseView {
       m.setFit(this.asset.id, row.slot, item);
       this.changed();
     };
-    const list: FitList = { head, group: tiles, none: null, tiles: [], empty: el('p', 'menu-readout menu-faint rarity-none', RARITY_TEXT.noneShown.parts), hiddenCount: 0 };
     if (row.none !== null) {
       const tile = optionTile(row.none, '', null);
       tile.dataset.item = `none:${row.slot}`;
       tile.addEventListener('click', () => pick(null));
-      list.none = tile;
+      tiles.append(tile);
     }
     for (const item of choices) {
       const asset = m.pool.byId.get(item.asset)!;
-      const slot = new PictureSlot('option-pic');
-      slot.show(this.opts.context.pictures, partSubject(asset, this.opts.context.realistic()), itemIcon(asset));
-      const tile = optionTile(asset.name, this.tierLabel(item), slot);
-      tile.dataset.item = key(item);
-      tile.dataset.tier = item.tier;
-      tile.title = tierBlurb(m.pool, item);
+      const tile = optionTile(asset.name, '', this.partPicture(asset));
+      tile.dataset.item = itemKey(item);
       tile.addEventListener('click', () => pick(item));
-      list.tiles.push({ item, tile });
+      tiles.append(tile);
     }
-    this.fitLists.set(row.slot, list);
-    this.arrangeFit(row.slot);
+    for (const { item, level } of locked) tiles.append(lockedOption(m.pool.byId.get(item.asset)!.name, level, this.partPicture(m.pool.byId.get(item.asset)!)));
     const control = el('div', 'menu-row-control');
-    control.append(tiles, list.empty, el('p', 'picker-blurb'), el('p', 'menu-readout fit-readout'));
-    if (choices.length === 0 && row.none !== null && this.opts.context.armoryShown?.() !== false) control.append(el('p', 'menu-readout menu-faint', LOADOUT_TEXT.armoryHint));
+    control.append(tiles, el('p', 'picker-blurb'), el('p', 'menu-readout fit-readout'));
+    if (locked.length > 0) control.append(el('p', 'menu-readout menu-faint', LOADOUT_TEXT.lockedHint));
     const r = menuRow(row.label, '', control);
     r.classList.add('fit-row');
     return [head, r];
   }
 
-  /**
-   * A part's tiles in the rarity bar's order, a hidden tier's left out (M82) except the one fitted, which always shows.
-   * Run when the panel is made and when the bar changes, not on a pick, so a tile never vanishes from under the pointer.
-   */
-  private arrangeFit(id: PartId): void {
-    const list = this.fitLists.get(id);
-    if (!list) return;
-    const fitted = this.opts.model.fitOf(this.asset.id)[id as FitSlot];
-    const tierIds = this.opts.model.pool.tiers.map((t) => t.id);
-    const shown = arrangeByRarity(list.tiles, (t) => t.item.tier, tierIds, this.partsView, (t) => !!fitted && key(t.item) === key(fitted));
-    list.group.replaceChildren(...(list.none ? [list.none] : []), ...shown.map((t) => t.tile));
-    list.hiddenCount = list.tiles.length - shown.length;
-    list.empty.hidden = shown.length > 0 || list.tiles.length === 0;
-  }
-
-  /** The rarity bar in the head of the part panel shown, when it has items to sort; else nowhere. */
-  private placeRarityBar(): void {
-    const list = this.fitLists.get(this.current);
-    if (!list || list.tiles.length === 0) {
-      this.partsBar.root.remove();
-      return;
-    }
-    if (this.partsBar.root.parentElement !== list.head) list.head.append(this.partsBar.root);
-    this.partsBar.setHiddenCount(list.hiddenCount);
+  /** A part's picture (G3), or its drawing. */
+  private partPicture(asset: Asset): PictureSlot {
+    const slot = new PictureSlot('option-pic');
+    slot.show(this.opts.context.pictures, partSubject(asset, this.opts.context.realistic()), itemIcon(asset));
+    return slot;
   }
 
   /** What the fitted item (or "as it comes") is, in a line. */
@@ -570,18 +516,26 @@ export class CustomiseView {
   }
 }
 
-function key(ref: ItemRef): string {
-  return `${ref.asset}@${ref.tier}`;
-}
-
-/** An option's tile: its picture (or "None"), its name and its tier. */
-function optionTile(name: string, tier: string, pic: PictureSlot | null): HTMLButtonElement {
+/** An option's tile: its picture (or "None"), its name and a note under it. */
+function optionTile(name: string, note: string, pic: PictureSlot | null): HTMLButtonElement {
   const tile = el('button', 'option-tile');
   tile.type = 'button';
   const words = el('span', 'option-words');
   words.append(el('span', 'option-name', name));
-  if (tier) words.append(el('span', 'option-tier', tier));
+  if (note) words.append(el('span', 'option-note', note));
   tile.append(pic?.root ?? el('span', 'option-none', GEAR_TEXT.none), words, optionTick());
+  return tile;
+}
+
+/** An option still to unlock (LV1): greyed, with a lock and the level that unlocks it; not a button, nothing to pick. */
+function lockedOption(name: string, level: number, pic: PictureSlot): HTMLDivElement {
+  const tile = el('div', 'option-locked');
+  const words = el('span', 'option-words');
+  words.append(el('span', 'option-name', name), el('span', 'option-note', LOADOUT_TEXT.lockedAt(level)));
+  const lock = el('span', 'option-lock');
+  lock.setAttribute('aria-hidden', 'true');
+  lock.innerHTML = MENU_ICONS.lock;
+  tile.append(pic.root, words, lock);
   return tile;
 }
 

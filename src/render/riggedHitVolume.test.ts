@@ -260,10 +260,13 @@ describe('the hit volume against the rigged figures, on every pose (BF1, M85: no
   });
   afterAll(() => vi.unstubAllGlobals());
 
-  // The human with its pack and radio (look 0) and without (look 1), and the robot.
+  // The human in each of its four heads (the id picks one: high-cut helmet, cap, boonie, full-cut helmet), with its
+  // pack and radio and without, and the robot.
   const cases: { id: number; robot: boolean }[] = [
     { id: 0, robot: false },
     { id: 1, robot: false },
+    { id: 2, robot: false },
+    { id: 3, robot: false },
     { id: 0, robot: true },
   ];
   for (const { id, robot } of cases) {

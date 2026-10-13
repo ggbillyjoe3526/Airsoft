@@ -35,7 +35,7 @@
   color: var(--menu-faint);
 }
 
-/* The match summary: the result over the tables, your Field Credits and records beside them. */
+/* The match summary: the result over the tables, your XP and records beside them. */
 .summary-head {
   display: flex;
   flex-direction: column;
@@ -96,7 +96,7 @@
   background: var(--menu-bg);
 }
 
-.summary-credits,
+.summary-xp,
 .summary-haul,
 .summary-adaptive,
 .summary-records {
@@ -106,7 +106,7 @@
   padding: var(--sp-5);
 }
 
-.summary-credits-total {
+.summary-xp-total {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -116,9 +116,27 @@
   font-variant-numeric: tabular-nums;
 }
 
-.summary-credits-total strong {
+.summary-xp-total strong {
   font: 800 clamp(34px, 2.6vw, 52px) / 1 var(--ui-display);
   color: var(--paper);
+}
+
+/* A level reached (LV1): the new level, then what it unlocked, edged in orange. */
+.summary-level-up {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: var(--fs-lg);
+  border-left: 4px solid var(--orange);
+}
+
+.summary-level-up strong {
+  font-family: var(--ui-display);
+  text-transform: uppercase;
+  color: var(--orange-text);
+}
+
+.summary-level {
+  margin: 0;
 }
 
 .records-grid {

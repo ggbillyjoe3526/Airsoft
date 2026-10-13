@@ -14,7 +14,7 @@ export function carriesLine(view: SavedLoadoutView): string {
 /**
  * The Match screen's pick of a saved loadout (SL1; the roadmap's "picked from the Map pop-up", now the Match screen's
  * Your match): a button naming the loadout carried, which opens the saved ones as a list (the shared ContextMenu, so it
- * closes and moves with the keyboard as the Armory's does) and, last, the way to the Loadout to manage them. A pick
+ * closes and moves with the keyboard as the tabs' menu does) and, last, the way to the Loadout to manage them. A pick
  * switches at once, as a tab on the Loadout does.
  */
 export class LoadoutPicker {

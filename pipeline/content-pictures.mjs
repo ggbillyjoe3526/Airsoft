@@ -17,9 +17,9 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = 4184;
 const SWIFTSHADER = ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'];
 
-/** The settings a first-person picture starts with: Dev content and Unlock all gear on, the item equipped. */
+/** The settings a first-person picture starts with: Dev content and Disable levelling on, the item equipped. */
 export function firstPersonSettings(subject) {
-  const picks = { version: 1, 'dev.enabled': true, 'dev.devContent': 'on', 'dev.unlockAllGear': 'on', 'equip.dev.primary': `${subject.replica}@${subject.tier}` };
+  const picks = { version: 1, 'dev.enabled': true, 'dev.devContent': 'on', 'dev.unlockAllGear': 'on', 'equip.dev.primary': subject.replica };
   for (const [slot, item] of Object.entries(subject.fit ?? {})) picks[`fit.dev.${subject.replica}.${slot}`] = item;
   return picks;
 }
@@ -35,7 +35,7 @@ async function serve() {
 
 /**
  * Draws `shots` into `outDir`: each `{ file, title, replica (pool ID), picture: { fit, scheme, realistic? } }` for a menu picture, or
- * `{ file, title, replica, tier, firstPerson: { fit } }` for one in a match (fit: slot → "ID@tier"). Returns
+ * `{ file, title, replica, firstPerson: { fit } }` for one in a match (fit: slot → pool ID). Returns
  * `{ file, title, ok, error? }` per shot, in order.
  */
 export async function drawPictures(shots, { outDir, url = '', chromium = process.env.PLAYWRIGHT_CHROMIUM } = {}) {
@@ -99,7 +99,7 @@ async function menuPictures(browser, base, shots, outDir) {
 async function firstPerson(browser, base, shot, outDir) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
   try {
-    await page.addInitScript((saved) => localStorage.setItem('airsoft.settings', JSON.stringify(saved)), firstPersonSettings({ replica: shot.replica, tier: shot.tier, fit: shot.firstPerson.fit }));
+    await page.addInitScript((saved) => localStorage.setItem('airsoft.settings', JSON.stringify(saved)), firstPersonSettings({ replica: shot.replica, fit: shot.firstPerson.fit }));
     await page.goto(`${base}?nolock&seed=1&quality=high`);
     await page.waitForSelector('.menu-title-start', { timeout: 120_000 });
     await page.locator('.menu-title-start').click();

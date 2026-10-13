@@ -18,8 +18,9 @@ replaces its line; the old one stays findable in the archive or in git.
   mechanically (loading, cycling, sound, handling), never in damage: one hit is one hit. Every field is built to a
   checklist: cover, barricades, buildings, windows, doorways, choke points, flanking routes, objectives, dead zones and
   spawn areas.
-- **Progression is earned by unlocking replicas and gear, never by levels (owner, 2026-10-01).** Rarity and parts are
-  small trade-offs, never a damage upgrade.
+- **Progression is levels: matches give XP, and each level unlocks replicas and gear for good (owner, 2026-10-13).**
+  It replaced the Armory's Shots and rarity tiers, and the 2026-10-01 rule of unlocks "never by levels". Parts are
+  trade-offs, never a damage upgrade.
 - **Friendly hits count (2026-09-30).** As at real sites; custom matches can switch it off (`HITS.friendlyFire`).
 - **Public in 0.1, after the owner's playtest: Depot's modes, Easy to Hard, Woodland (night play, the torch, glowing
   BBs) and Pro (feature triage, owner, 2026-10-05).** Every public map, mode and difficulty multiplies beta's balance
@@ -27,7 +28,7 @@ replaces its line; the old one stays findable in the archive or in git.
   Extraction until the Modes Update; `docs/ROADMAP.md` holds the current placement.
 - **Cut features (owner, 2026-10-05).** Supply weekends and dated events; the Tone mapping choice in Graphics (the
   best-looking becomes everyone's); tracer BBs as an option (glowing BBs do it); Bomb and Intel grab; Free-for-all and
-  the overshooting rule; cosmetic gear as its own system; a separate progression plan (the Armory is the progression).
+  the overshooting rule; cosmetic gear as its own system; a separate progression plan (the levels are the progression).
 - **Kept features (owner, 2026-10-05).** Grenades (the Replica Update) and skins (the Progression Update) stay planned,
   with their Loadout placeholders (the empty Grenades slot, the greyed Skins row). Suppressors get a sound of their own
   in the Replica Update. Capture the Flag stays a possible mode in the Modes Update. Every deferred feature has a
@@ -224,7 +225,8 @@ replaces its line; the old one stays findable in the archive or in git.
   With "Disable all models" off the Blender replicas, parts and power-source pictures return; the figure model then
   still needs "Disable figure models" off. The files stay in the build and are fetched only when let in.
 - **The Blender figures (owner, 2026-10-10; approved 2026-10-12: "happy with it for now").** The hands hold the
-  replica naturally, the trigger finger in the guard; humans wear the high-cut helmet head only; robots wear no vest,
+  replica naturally, the trigger finger in the guard; humans wore the high-cut helmet head only (four heads since
+  2026-10-13, below); robots wear no vest,
   holsters, magazines or accessories, their team shown by its colour on their highlights; the figure is also the
   player's first-person body, without its head. A reload pulls the old magazine and throws it; bots drop it (owner,
   2026-10-11). BF1 draws them with the Dev model switches off, ahead of a CC0 `figure.glb`.
@@ -251,6 +253,14 @@ replaces its line; the old one stays findable in the archive or in git.
   2026-10-13: "Make sure the figure redesign notes it needs animations for this"). It waits on his photos and his
   Blender session: no thread starts it before he does. It brings the figures forward from the later higher-detail models
   (above), and they stay behind the Dev switches until he is happy with them.
+- **The redesigned human has four heads and shows the team colour on its vest (owner, 2026-10-13: "create a few
+  different heads for the human model"; "go with the vests (and armbands/patches/helmet/hat) to show team colour. it's
+  much easier to read"; RM9).** A figure's id picks its head (`config/figureRig.ts`): the high-cut helmet with ear
+  defenders and a mesh mask, a cap with a headset and goggles, a boonie hat with a check scarf, or a full-cut helmet
+  with goggles; each wears eye protection and a team marker, and is at most 2,500 triangles. The plate carrier and
+  cummerbund are in the team colour, as on the built-in figures, with the armbands, patches and helmet or hat bands;
+  the camo stays. A human is at most 20,000 triangles with its largest head (19,966) and its packed file under 3.5 MB
+  (2.84). Built in his Blender (`bot20.py` to `bot22.py`), approved on review pictures before it entered the game.
 
 ## Gameplay and feel
 
@@ -351,7 +361,7 @@ replaces its line; the old one stays findable in the archive or in git.
 - **Adaptive difficulty is a Dev setting that layers over the fixed levels (owner, 2026-10-06: "auto difficulty as a
   Dev setting"; AD1, 2026-10-13).** It never changes a level's own numbers: the other team's skill is a rating between
   the levels whose numbers blend, with the switches of the level nearest it. Your teammates never adapt, Extraction
-  doesn't, and its matches stay out of the records and pay nothing, like the other Dev settings that change play. A
+  doesn't, and its matches stay out of the records and give no XP, like the other Dev settings that change play. A
   later change to a level's skill (bot gear) reaches it through `BOT_SKILL`, each bot's personality (BN1) lays over the
   adapted numbers as over a fixed level's, and a new skill field goes in one of its two lists
   (`config/adaptiveDifficulty.ts`).
@@ -492,34 +502,37 @@ replaces its line; the old one stays findable in the archive or in git.
   so it is played moving up through the map. The pick is saved as `practicePlace`; a dev map plays as the range while
   Dev content is off. The range's card reads "Range", the mode "Practice".
 
-## Replicas, Loadout, Armory and economy
+## Replicas, Loadout and levels
 
 - **The next replica is a spring sniper rifle, and the owner is asked how to build it and its specs before work starts
   (owner, 2026-10-06).** The SMG and shotgun come after it.
-- **The Cyber Pistol is the owner's own design and a chase item (owner, 2026-10-04).** It has its own chance per Shot
-  item (0.25 %, owner approved) and stays inside the pistol class's 1.0 J chrono limit: rifle power with pistol
-  handling, the tightest spread and almost no kick. It borrows its colours from his photo (mint, hot pink, black), never
+- **The Cyber Pistol is the owner's own design and the level cap's reward (owner, 2026-10-04; level 10 since
+  2026-10-13).** It stays inside the pistol class's 1.0 J chrono limit: rifle power with pistol handling, the tightest
+  spread and almost no kick. Hard and Pro opponents now and then carry it once you have it. It borrows its colours from his photo (mint, hot pink, black), never
   its logo, lettering or outline (CLAUDE.md §4).
 - **The AEG Rifle's redesign (owner, 2026-10-12).** Its long slotted handguard, collapsible stock, pistol grip and
   magazine come from his seven reference photos, with no text or logo copied (RM6). Small, minimal iron sights that are
   not tall or obstructive: a ring aperture and a post on one line 1.45 cm over the rail, on the model file and the
   built-in rifle alike. It keeps the old length, grip, magazine, rails and mounts, so every animation, attachment, hand
   pose and figure still fits.
-- **Loadout and Armory change only between matches, never from the pause menu (owner, 2026-10-03: "I don't want it in
+- **The Loadout and the Armory open only between matches, never from the pause menu (owner, 2026-10-03: "I don't want it in
   the pause menu").** The practice range's pause menu offers the Loadout, because a range has no match.
 - **Five saved loadouts, and the one carried follows your edits (2026-10-13, SL1; the count is Claude's default, one
   number in `config/savedLoadouts.ts`).** Every change on the Loadout and in Customise goes to the current saved
   loadout, so there is no Save button and nothing to lose; Replace copies the one carried over another. Gear a saved
-  loadout holds that isn't available now stays picked: it plays as the default, shows as locked, and comes back with
-  the gear. Availability is the Loadout's own ownership check, so unlocks of any kind work the same. Unlock all gear
-  keeps a set of its own, as it keeps its own picks.
-- **`pool.md` (what exists: IDs, tags, rarity, economy) and `stats.md` (how it shoots) are hand-edited data the game
-  reads (owner's picks, 2026-10-04).** A row the game can't read is skipped with a warning and fails its test. Item IDs
+  loadout holds that isn't available now stays picked: it plays as the default, shows as locked (with the level that
+  unlocks it, LV1), and comes back with the gear. Availability is the Loadout's own ownership check, so unlocks of any
+  kind work the same. Disable levelling keeps a set of its own, as it keeps its own picks.
+- **`pool.md` (what exists: IDs, tags, Extraction's cases), `stats.md` (how it shoots) and `levels.md` (what each
+  level unlocks, and the XP) are hand-edited data the game reads (owner's picks, 2026-10-04; levels.md 2026-10-13).** A row the game can't read is skipped with a warning and fails its test. Item IDs
   are six digits, in the order assets are added; they are permanent and only added to. Tags (`gas`, `top-rail`) decide
   what fits.
-- **Every customisable item is an asset at a rarity tier from pool.md's table (2026-10-04).** A higher tier improves
-  handling by its Bonus % (at most 15 % at Legendary) and adds energy and rate of fire at half of it (owner's pick).
-  Never damage.
+- **No rarity tiers: every item is one item, with one set of numbers (owner, 2026-10-13: "Good choice with removing
+  rarities. Make sure weapons are rebalanced spec wise").** The rebalance: the Cyber Pistol keeps the numbers it had at
+  Legendary, so it plays as before; the AEG Rifle and GBB Pistol were tuned at Common and stay; the Low-Cap Magazine
+  carries two more (180 BBs) and changes and draws quicker, since 150 BBs for a quicker change alone helped nobody; the
+  Long Barrel adds 10 % energy and groups 10 % tighter, the reach pick of level 9 where it was the Tight-Bore's weaker
+  twin. Hard and Pro bots lose the small tier bonus their rolled kits had.
 - **A battery sets the rate of fire, not the energy; stronger gas kicks harder; parts are trade-offs, never straight
   upgrades (owner's picks, 2026-10-04).** Red and Black Gas add +10 % and +20 % recoil; a Silencer, Long Barrel and
   Tight-Bore Barrel each trade something away.
@@ -531,19 +544,24 @@ replaces its line; the old one stays findable in the archive or in git.
 - **BB weight is a slider from 0.20 to 0.30 g in 0.01 g steps (the owner's range, 2026-10-04); hop-up is a dial per
   replica.** Both are set before a match, kept per replica, and bots use the factory settings. Weight is a small honest
   trade-off from the flight model, never an extra rule.
-- **The Loadout lists only what you own (owner, 2026-10-04); a new unlock is never fitted for you.** What the Armory can
-  give is on the Armory's own screen.
-- **Shots: an Epic or rarer within 20 Shots and a Legendary within 100, counted per tier across visits (owner,
-  2026-10-04).** Duplicate protection weights an unowned asset ×2 at its tier (owner). Tokens stay, and Shot buttons
-  show their FC price ("1 Shot · 160 FC").
-- **Economy numbers live in `pool.md` for the owner to tune (2026-10-04).** Field Credits pay per match, round won and
-  hit, scaled by match length and the lower of the opponents' and teammates' multipliers. Every match pays, custom rules
-  included, except the range, the tutorial and any match using dev content or a cheat, so none can farm FC.
-- **Rarer items still count for the records (2026-10-04).** Their bonuses are small and handling only; the owner can
-  rule otherwise once he has played the Armory.
-- **Disable Armory and Unlock all gear are Dev switches (owner: the Armory "can be disabled in settings", 2026-10-04).**
-  Disable Armory greys out the Armory and pays no FC (the collection is kept). Unlock all gear lends the Loadout every
-  asset at every tier without touching the collection, and keeps the match out of the records and unpaid.
+- **The Loadout and Customise offer what you have unlocked, and show what is still to unlock greyed, with the level
+  that unlocks it (2026-10-13).** A new unlock is never fitted for you (owner, 2026-10-04). The Armory shows the whole
+  track.
+- **Levels (owner, 2026-10-13).** Everyone starts at level 0 with the GBB Pistol, the AEG Rifle and their power
+  sources; the cap is 10, with the Cyber Pistol at the top. `levels.md` lists what each level unlocks, by name, for the
+  owner to edit. The cap goes up by adding rows under the last, with new content in them (replicas, attachments, skins).
+  Unlocks are never taken away: an item moved up stays with whoever has it, one moved down reaches everyone past it.
+- **XP numbers live in `levels.md` for the owner to tune (2026-10-13, carrying the Field Credits rules of 2026-10-04).**
+  XP for a match played, a match won, each round won and each hit, scaled by match length and multiplied by the lower
+  of the opponents' and teammates' difficulty (custom rules at most ×1.5). Every match gives XP, except the range, the
+  tutorial and any match using dev content or a cheat. The pace: about 250 XP a Normal match, level 10 after about 25.
+- **The Armory is where you see your level (owner, 2026-10-13).** Your level and XP, what the next level unlocks, and
+  every level with its items. It stays on the top bar; the level badge beside the places opens it too.
+- **Disable levelling is a Dev switch (owner, 2026-10-13).** It unlocks everything for the Loadout without touching
+  your level, and counts as a cheat: no XP, and the match stays out of the records. The Dev tab's XP buttons (+500 XP,
+  Level up, Reset level) test the levels. Disable Armory went with the gacha.
+- **Old Armory items, Field Credits and Tokens don't carry over (said to the owner, 2026-10-13).** Everyone starts the
+  levels at level 0; a save file from before loads at level 0 with its settings and records.
 - **The Cyber Pistol's redesign (owner, 2026-10-12).** Its shape comes from his three reference pictures, with no logo
   or lettering copied (RM5). Small, subtle iron sights: a notch and a post. The grip joins the fixed frame. On a shot
   only the dark grey slide kicks back and returns, though the replica is electric; the light grey shell and the
@@ -556,8 +574,8 @@ replaces its line; the old one stays findable in the archive or in git.
 - **In Practice you change gear from play, and it is your one loadout (2026-10-13, M95).** The Loadout key (L, its own
   binding) opens the Loadout there on the slot in your hands; L again or Back to practice returns you where you stood,
   the new replica coming up. In a match the key does nothing. What you pick or customise in Practice is your loadout for
-  matches too, so a replica tuned at the range goes into the next match, as at a real site; with Unlock all gear on the
-  picks are the sandboxed ones (M26d), and your own come back when it is off. The owner can rule for a separate
+  matches too, so a replica tuned at the range goes into the next match, as at a real site; with Disable levelling on
+  the picks are the sandboxed ones (M26d), and your own come back when it is off. The owner can rule for a separate
   practice loadout instead.
 
 ## Menus, HUD, settings and accessibility
@@ -614,9 +632,9 @@ replaces its line; the old one stays findable in the archive or in git.
 ## Save and settings storage
 
 - **Save keys and fields are permanent and only added to (2026-10-04).** Settings live in one versioned object,
-  `airsoft.settings`; the collection (`airsoft.collection`), the records (`airsoft.records`), the saved loadouts
-  (`airsoft.loadouts`, SL1) and the key bindings keep their own keys. A rename or retype is a migration step. The
-  collection is progress, not a setting.
+  `airsoft.settings`; the level progress (`airsoft.progress`), the records (`airsoft.records`), the saved loadouts
+  (`airsoft.loadouts`, SL1) and the key bindings keep their own keys. A rename or retype is a migration step. Progress
+  is not a setting.
 - **A save is readable JSON with the stores as stored; an integer `SAVE_FORMAT` drives migrations (2026-10-04).** A
   store's version can't change without it (a test fails). Every store keeps fields it doesn't know. A format newer than
   the build is refused, and a store written by a newer build is never read or overwritten.
@@ -624,7 +642,7 @@ replaces its line; the old one stays findable in the archive or in git.
   is kept for Undo, and the page reloads. A SHA-256 checksum is checked in code; there is no signature. Three restore
   points are kept, one per day the game opens.
 - **One tab plays at a time (2026-10-04).** An exclusive Web Lock, with BroadcastChannel as fallback; Play here hands
-  over. Two tabs could otherwise write over each other's FC.
+  over. Two tabs could otherwise write over each other's XP.
 - **Records count finished standard matches only (2026-10-04).** 3v3, first to 5, 2:30 rounds, friendly fire on,
   ricochets not counting, both teams at one difficulty. Quitting counts as nothing. A named ruleset files under its own
   cell.
@@ -637,15 +655,15 @@ replaces its line; the old one stays findable in the archive or in git.
   switch, Dev content (owner, 2026-10-04).** The owner wants Dev settings to be how new maps, weapons and features are
   tried before release. With the switch off, dev content is not visible at all, not even greyed out (owner, 18:57). With
   it on, it looks like the rest. Making content public means changing its tag.
-- **A match that uses dev content stays out of the records and pays no Field Credits (owner kept the defaults,
-  2026-10-04).** Dev gear never drops from Shots (try it with Unlock all gear). Bots carry it only with the switch on.
-  Owned dev gear stays in the save, hidden, and a dev pick plays as the default until the switch is back on. A match
+- **A match that uses dev content stays out of the records and gives no XP (owner kept the defaults, 2026-10-04).**
+  Dev gear is offered at its level only with the switch on (try it with Disable levelling). Bots carry it only with
+  the switch on. Unlocked dev gear stays in the save, hidden, and a dev pick plays as the default until the switch is back on. A match
   counts as using dev content when Hard opponents could roll dev gear.
 - **Woodland and Neon Heights stay dev content until the owner has playtested them; he makes each public himself (owner,
   2026-10-05, 07:04).** Woodland was dev from the start (owner, 2026-10-04, 18:10: "until the map is complete and I say
   so, this map is not accessible"). Its weapon torch stays dev until Woodland is public (owner, 2026-10-04, 18:56).
 - **Dev settings apply only while their box is ticked (owner asked, 2026-10-04).** Game speed, Bottomless magazines,
-  Ghost and Unlock all gear keep a match out of the records and unpaid, for the rest of that match. Debug info, BB paths
+  Ghost and Disable levelling keep a match out of the records and give no XP, for the rest of that match. Debug info, BB paths
   and Retro pixels change only what you see. One click reaches them and one click puts everything back.
 - **New replicas and parts go through the content toolkit (owner approved the concept with all eight defaults,
   2026-10-05).** `node pipeline/content-check.mjs` checks them (`docs/content/README.md`). A fail blocks going public;

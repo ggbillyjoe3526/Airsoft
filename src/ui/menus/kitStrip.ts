@@ -9,15 +9,15 @@ export interface PictureContext {
   pictures: PictureSource | null;
   realistic: () => boolean;
   /**
-   * Whether the Armory is on (M83): with Dev settings › Disable Armory it is gone from every menu, so the Loadout's and
-   * Customise's "Unlock more in the Armory" lines go too. On when not given.
+   * Whether levelling is on (LV1): with Dev settings › Disable levelling everything is unlocked, so the Loadout's and
+   * Customise's "Level up to unlock more" lines and locked items go. On when not given.
    */
-  armoryShown?: () => boolean;
+  levelling?: () => boolean;
 }
 
 /**
  * The replicas you carry, as pictures with their names (G3): on the title's "Your kit" and the Play screen's "Your
- * match". Each shows in its scheme with its parts fitted, edged in its tier's colour.
+ * match". Each shows in its scheme with its parts fitted.
  */
 export class KitStrip {
   readonly root: HTMLDivElement;
@@ -25,7 +25,7 @@ export class KitStrip {
     const root = el('div', 'kit-card');
     const pic = new PictureSlot('kit-pic');
     const name = el('span', 'kit-name');
-    root.append(pic.root, name, el('span', 'tier-bar'));
+    root.append(pic.root, name);
     return { root, pic, name };
   });
 
@@ -47,7 +47,6 @@ export class KitStrip {
       if (!ref) return;
       const asset = m.pool.byId.get(ref.asset)!;
       card.name.textContent = asset.name;
-      card.root.dataset.tier = ref.tier;
       card.root.title = `${LOADOUT_TEXT.slots[GEAR_SLOTS[i]!]}: ${asset.name}`;
       card.pic.show(this.context.pictures, replicaSubject(asset, m.scheme(asset.id), this.context.realistic(), m.slotKit(ref)), itemIcon(asset));
     });

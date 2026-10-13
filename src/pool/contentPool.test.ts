@@ -5,7 +5,7 @@ import { withTags } from './testSupport';
 
 const pool = GAME_POOL;
 const asset = (name: string) => pool.assets.find((a) => a.name === name)!;
-const ref = (name: string, tier = 'common') => ({ asset: asset(name).id, tier });
+const ref = (name: string) => ({ asset: asset(name).id });
 
 describe('the pool as the player and bots see it (M35)', () => {
   const mixed = withTags(pool, { 'Red Dot': 'dev', 'Red Laser': 'dev' });
@@ -20,8 +20,9 @@ describe('the pool as the player and bots see it (M35)', () => {
     expect(shown.byId.has(asset('Red Dot').id)).toBe(false);
     expect(shown.byId.has(asset('AEG Rifle').id)).toBe(true);
     expect(shown.byId.size).toBe(shown.assets.length);
-    expect(shown.tiers).toBe(mixed.tiers);
-    expect(shown.economy).toBe(mixed.economy);
+    // Extraction's tables are the pool's own, not copies.
+    expect(shown.caseKinds).toBe(mixed.caseKinds);
+    expect(shown.supplyEvents).toBe(mixed.supplyEvents);
   });
 
   it('is the same pool while Dev content is on, and when nothing in it is dev', () => {
@@ -33,9 +34,8 @@ describe('the pool as the player and bots see it (M35)', () => {
 
   it('knows an item of a dev asset, and not one of a public or unlisted asset', () => {
     expect(isDevItem(mixed, ref('Red Dot'))).toBe(true);
-    expect(isDevItem(mixed, ref('Red Dot', 'epic'))).toBe(true);
     expect(isDevItem(mixed, ref('AEG Rifle'))).toBe(false);
-    expect(isDevItem(mixed, { asset: '999999', tier: 'common' })).toBe(false);
+    expect(isDevItem(mixed, { asset: '999999' })).toBe(false);
   });
 
   it('says whether any item of a list is dev gear, ignoring empty slots', () => {

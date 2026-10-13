@@ -1,17 +1,9 @@
 import type { PoolRow, PoolTable } from './poolFile';
-import type { RarityTier } from './pool';
 
 /**
- * What pool.ts reads out of pool.md that the files built on it (caches.ts, armory.ts) also need: a tier's id from its
- * label, and the Caches table's case kinds. Below pool.ts, so no pool file imports another in a loop (M79, audit
- * CORE-08). Holds only types and pure readers.
+ * What pool.ts reads out of pool.md that the files built on it (caches.ts) also need: the Caches table's case kinds.
+ * Below pool.ts, so no pool file imports another in a loop (M79, audit CORE-08). Holds only types and pure readers.
  */
-
-/** "Very Rare" → "veryRare". */
-export function tierId(label: string): string {
-  const words = label.trim().toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
-  return words.map((w, i) => (i === 0 ? w : w[0]!.toUpperCase() + w.slice(1))).join('');
-}
 
 /** One kind of case, as pool.md's Caches table has it. */
 export interface CaseKind {
@@ -24,14 +16,10 @@ export interface CaseKind {
   openTime: number;
   /** How far its noise carries while it is opened (m). */
   heard: number;
-  /** Field Credits it holds (rolled in this range, whole numbers). */
-  fc: NumberRange;
-  /** Chance (0..1) that it holds a BB resupply instead of its Field Credits. */
+  /** XP it holds (rolled in this range, whole numbers; LV1, in place of Field Credits). */
+  xp: NumberRange;
+  /** Chance (0..1) that it holds a BB resupply instead of its XP. */
   resupplyChance: number;
-  /** Chance (0..1) that it also holds one part. */
-  partChance: number;
-  /** The commonest tier a part from it comes in (a tier id): the draw starts there. */
-  partsFrom: string;
 }
 
 export interface NumberRange {
@@ -41,14 +29,14 @@ export interface NumberRange {
 
 /** pool.md's Caches table as shipped (plan, section 4): used when the file has no readable rows. */
 export const DEFAULT_CASE_KINDS: readonly CaseKind[] = [
-  { key: 'ammo-can', name: 'Ammo can', count: { min: 4, max: 6 }, openTime: 2, heard: 8, fc: { min: 15, max: 40 }, resupplyChance: 0.4, partChance: 0, partsFrom: 'common' },
-  { key: 'field-case', name: 'Field case', count: { min: 2, max: 3 }, openTime: 4, heard: 14, fc: { min: 40, max: 80 }, resupplyChance: 0, partChance: 0.3, partsFrom: 'common' },
-  { key: 'locker', name: "Marshal's locker", count: { min: 1, max: 1 }, openTime: 7, heard: 30, fc: { min: 100, max: 150 }, resupplyChance: 0, partChance: 1, partsFrom: 'rare' },
+  { key: 'ammo-can', name: 'Ammo can', count: { min: 4, max: 6 }, openTime: 2, heard: 8, xp: { min: 15, max: 40 }, resupplyChance: 0.4 },
+  { key: 'field-case', name: 'Field case', count: { min: 2, max: 3 }, openTime: 4, heard: 14, xp: { min: 40, max: 80 }, resupplyChance: 0 },
+  { key: 'locker', name: "Marshal's locker", count: { min: 1, max: 1 }, openTime: 7, heard: 30, xp: { min: 100, max: 150 }, resupplyChance: 0 },
 ];
 
-/** The most of one kind a run places, and the most FC one case holds: far beyond any sane value (a typo guard). */
+/** The most of one kind a run places, and the most XP one case holds: far beyond any sane value (a typo guard). */
 const MAX_COUNT = 50;
-const MAX_FC = 100000;
+const MAX_XP = 100000;
 const MAX_SECONDS = 120;
 const MAX_HEARD = 200;
 const KEY_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
@@ -81,7 +69,7 @@ function numberCell(row: PoolRow, header: string, max: number, fail: (line: numb
  * pool.md's Caches table (M44). A row that can't be read is left out with its line in the errors; with no table, or
  * no readable row, the defaults are used (and said so), so Extraction always has cases.
  */
-export function readCaseKinds(t: PoolTable | undefined, tiers: readonly RarityTier[], fail: (line: number, m: string) => void, errors: string[]): CaseKind[] {
+export function readCaseKinds(t: PoolTable | undefined, fail: (line: number, m: string) => void, errors: string[]): CaseKind[] {
   if (!t) return errors.push('no "Caches" table: Extraction uses the cases as shipped'), [...DEFAULT_CASE_KINDS];
   const kinds: CaseKind[] = [];
   for (const row of t.rows) {
@@ -93,15 +81,11 @@ export function readCaseKinds(t: PoolTable | undefined, tiers: readonly RarityTi
     const count = rangeCell(row, 'Per run', MAX_COUNT, fail);
     const openTime = numberCell(row, 'Open s', MAX_SECONDS, fail);
     const heard = numberCell(row, 'Heard m', MAX_HEARD, fail);
-    const fc = rangeCell(row, 'FC', MAX_FC, fail);
+    const xp = rangeCell(row, 'XP', MAX_XP, fail);
     const resupply = numberCell(row, 'BB resupply %', 100, fail);
-    const part = numberCell(row, 'Part %', 100, fail);
-    const fromLabel = cell(row, 'Parts from');
-    const from = tiers.find((x) => x.id === tierId(fromLabel));
-    if (!from) fail(row.line, `Parts from must be a tier in the Rarity table, not "${fromLabel}"`);
     if (!name || !KEY_PATTERN.test(key) || kinds.some((k) => k.key === key)) continue;
-    if (!count || openTime === undefined || heard === undefined || !fc || resupply === undefined || part === undefined || !from) continue;
-    kinds.push({ key, name, count, openTime, heard, fc, resupplyChance: resupply / 100, partChance: part / 100, partsFrom: from.id });
+    if (!count || openTime === undefined || heard === undefined || !xp || resupply === undefined) continue;
+    kinds.push({ key, name, count, openTime, heard, xp, resupplyChance: resupply / 100 });
   }
   if (kinds.length === 0) return errors.push('the Caches table has no readable cases: Extraction uses the cases as shipped'), [...DEFAULT_CASE_KINDS];
   return kinds;
