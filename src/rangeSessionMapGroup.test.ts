@@ -18,6 +18,7 @@ beforeAll(async () => {
     CombatPresentation: class {
       setLighting(): void {}
       skipStartWhistle(): void {}
+      warmShaders(): void {}
       setMapGroup(group: unknown): void {
         handed.push(group);
       }
