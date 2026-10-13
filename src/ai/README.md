@@ -14,7 +14,7 @@ seeded per bot.
   rather than over a ledge, G11; shared with `squadOrders.ts`, so the two files don't import each other) and `botCombat.ts` (aim, bursts, reloads; bots lead a target with `flightTimeEstimate`); `botTorch.ts` handles weapon
   lights at night, and `botHolster.ts` the holster (M92: put away on a calm sprint through its own half).
 - `perception.ts`, `aim.ts`, `cover.ts`: view cone and static ray casts; turn rate and aim error (a fresh contact's first aim starts wide
-  to one side and settles from the trigger, G11); hidden spots, low
+  to one side and settles from the trigger, G11; the sight on the replica in hand scales it, `BOT_SIGHT_AIM`, BG1); hidden spots, low
   cover and wall corners (a bot leans out at a corner). `angles.ts`, `angleFeatures.ts`: held angles.
 - `squadOrders.ts`, `squadFollow.ts`: Follow me, Hold here, Regroup (default keys F, X, V, or the order wheel on Z); in
   Extraction the runner's bot teammates follow and cover. `extractionRoles.ts`: home-team guards, patrols and hunters.

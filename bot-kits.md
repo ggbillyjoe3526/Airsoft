@@ -19,7 +19,8 @@ The kits are the bots' own: what you have unlocked never changes them.
 
 - **Kit** is the kit's name, shown nowhere yet. Each name once.
 - **Primary** and **Secondary** are replicas, by their Name (or ID) in pool.md: the primary is the one a bot fights
-  with, the secondary its sidearm. Secondary may be left empty: the bot then carries the primary only.
+  with, the secondary its sidearm. Secondary may be left empty: the bot then carries the primary only. Bots don't draw
+  their sidearm yet (docs/KNOWN_ISSUES.md), so for now the secondary and its parts are carried, not used.
 - **Primary parts** and **Secondary parts** list what is fitted to each, by Name (or ID) in pool.md, separated by
   commas: optics, grips, lasers, barrels, muzzle parts, magazines and power sources. Each must fit its replica (pool.md's
   Fits), one per slot. Empty: the replica as it comes (its standard magazine, battery or gas, iron sights).

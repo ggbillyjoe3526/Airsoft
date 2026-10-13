@@ -347,9 +347,23 @@ replaces its line; the old one stays findable in the archive or in git.
   no gear is locked behind the hardest level. A "what got you" card exists on every difficulty and is on by default only
   on Pro.
 - **Difficulty is balanced with the maps; any map rework it needs is raised with the owner first (owner, 2026-10-04).**
-- **On Hard and Pro, opponents roll their own random but compatible kits (owner, 2026-10-04: "the enemy bots can have
-  their own random (but compatible) loadouts").** Seeded by the match seed, so a seed replays. Your teammates stay
-  factory, so they don't outgun you by luck. BB weight and hop-up stay factory.
+- **Opponents on every level carry kits from `bot-kits.md`, picked by each level's weights (2026-10-13, BG1; Dev 6 item
+  23, audit POOL-24).** It keeps the owner's 2026-10-04 wish, "the enemy bots can have their own random (but
+  compatible) loadouts", which gave Hard and Pro a random part per slot: each opponent still picks its own, seeded by
+  the match seed and its id, so a seed replays. Named kits that make sense (a scope with a tight-bore barrel, a
+  silencer with a low-cap magazine) replace the per-slot roll, and the owner edits what bots carry and how often in one
+  table. Easy is mostly factory, each level up carries more, Pro never factory; the weights are first guesses for his
+  playtest. Your teammates stay factory (owner, 2026-10-04), so they don't outgun you by luck. BB weight and hop-up stay
+  factory. What you have unlocked never changes a bot's kit: the Cyber Pistol is a kit of its own from Hard up, no
+  longer carried only once you own one (M32).
+- **A bot aims through the sight on its replica; gear never changes what it sees or hears (2026-10-13, BG1).** A 2x
+  scope holds 40 % finer once settled but settles 10 % later, starts 40 % wider up close and loses a crossing target
+  50 % more; a red dot is 15 % finer and 10 % quicker; iron sights are the level's own aim (`BOT_SIGHT_AIM`). Bots
+  fire from the hip while they strafe, so the error on the move stays the level's. A silencer, laser, barrel, magazine
+  or power source works on a bot as on the player.
+- **Bots' figures show their kit (2026-10-13, BG1).** The built-in figures draw the rifle's optic at every detail, so a
+  scoped bot reads at a glance; grips, lasers and barrels show on the rigged figures behind the Dev switches, where
+  each replica's own model takes its fitted parts. No new model files.
 - **In Attack / Defend one attacker raises the flag while the others guard the pole from cover (owner's call,
   2026-10-04).** A second raiser adds nothing: the rope goes up no faster.
 - **Every level hunts the middle of the map; Normal, Hard and Pro keep out of the light at night; Easy stands where its

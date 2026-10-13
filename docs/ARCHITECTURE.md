@@ -53,7 +53,7 @@ A task that adds, renames or moves a file keeps its folder's `README.md` current
 | `src/settings/` | The saved settings object and the Dev settings' saved values | `storage.ts`, `dev.ts` |
 | `src/tutorial/` | The tutorial tracker | `tutorial.ts` |
 | `src/assets/` | Bundled fonts and the optional character model | `fonts/`, `models/characters/` |
-| `pool.md`, `stats.md` | Hand-edited tables the game and its tests read: assets and economy, replica and part numbers | read by `pool/poolFile.ts`, `config/statsFile.ts` |
+| `pool.md`, `stats.md`, `bot-kits.md` | Hand-edited tables the game and its tests read: assets and economy, replica and part numbers, the bots' kits | read by `pool/poolFile.ts`, `config/statsFile.ts`, `pool/botKit.ts` |
 | `public/` | Static files: icon, manifest, menu stills (from `pipeline/map-stills.mjs`) | `menu/` |
 | `pipeline/` | Gates, perf runs, light bakes, build cache, task records, the content check: the task pipeline's scripts | `README.md`, `gate.mjs`, `perf-run.mjs`, `records.mjs`, `content-check.mjs` |
 | `e2e/` | Playwright smoke tests on the `e2e` build; `release.spec.ts` on `dist/` | `boot.spec.ts`, `crash.spec.ts`, `release.spec.ts` |
@@ -244,6 +244,14 @@ request. Each entry says where the contract lives, what it holds today and what 
   - Every shipped ID is pinned to its asset in `pool/pool.test.ts` (IDs are save keys).
 
   Pinned by `pool/pool.test.ts`, `pool/caches.test.ts`.
+- **`bot-kits.md`'s format** (`pool/botKit.ts` `readBotKits`, BG1). The hand-edited kits the other team's bots carry:
+  one table, `| Kit | Primary | Primary parts | Secondary | Secondary parts | Easy | Normal | Hard | Pro |`. Replicas
+  and parts by pool.md Name or ID, parts comma-separated, one per slot and fitting their replica; a weapon torch is
+  never listed (fitted by rule at night). A weight per difficulty column (by `DIFFICULTIES` label), 0 or more, empty
+  0. A row it can't read is left out with its line in `errors`; a missing column reads nothing. Each opponent picks
+  with `pickBotKit` (seed `botKitSeed(match seed, id)`) from a `contentPool`; teammates and the factory kit rule carry
+  `LOADOUT`; nothing of the player's collection or loadout enters. Pinned by `pool/botKitTable.test.ts`,
+  `pool/botKit.test.ts`.
 - **`stats.md`'s format** (`config/statsFile.ts`). The hand-edited performance numbers the config modules lay over
   their built-in ones: replicas and parts by Key, power sources by pool ID, Barrels and Muzzle parts by Key, Lights by
   Key, Tier scaling and Site limits. Pinned by `config/stats.test.ts`.
@@ -254,8 +262,8 @@ request. Each entry says where the contract lives, what it holds today and what 
   - While it is off, dev content is shown nowhere (`contentPool`, `playedPicks`, `ChoiceCards` /
     `OptionPicker.setDevContent`) and never drops from Shots (`dispensable`).
   - A match using any of it stays out of the records and pays nothing (`matchStanding`, `NotCounted` 'devContent').
-    `MatchSetup.devContentUsed` comes from `matchUsesDev`: the match's picks, the player's kit, or dev gear the
-    opponents may roll.
+    `MatchSetup.devContentUsed` comes from `matchUsesDev`: the match's picks, the player's kit, or dev gear a kit in
+    bot-kits.md the difficulty weights may bring (`kitsMayHoldDev`).
   - The dev maps' data is a chunk of its own (`map/devMaps.ts`), fetched by `loadDevMaps` once Dev content is on (at
     start when it was left on). `MapEntry` carries no data; `mapData(id)` reads what is loaded (the default map's for
     a dev map not loaded yet). Dev content applies only once the dev maps are in (`Game.devInForce`), so a dev map is

@@ -217,7 +217,7 @@ when their work starts. Numbers are from the owner's list of 50 candidates
 | 40 | Rest your replica on cover (a ledge, crate or window) for steadier aim; done (2026-10-13, `docs/records/M104.md`) | Movement |
 | 19 | Saved loadouts, picked from the Match screen (once the Map pop-up) as well as the Loadout screen; done (2026-10-13, `docs/records/SL1.md`) | Loadout |
 | 21 | Bot names, personalities (rusher, anchor, flanker, careful) and loadouts | Bots |
-| 23 | Bots' gear keeps up with yours (audit POOL-24: a tier dial per difficulty, or higher tiers that trade) | Bots |
+| 23 | Bots' gear keeps up with yours: kits per level from the hand-edited `bot-kits.md`, scopes and red dots change how bots aim, and their figures show it; done (2026-10-13, `docs/records/BG1.md`) | Bots |
 | 48 | Auto difficulty as a Dev setting: bots get a little better when you win, a little easier when you lose | Bots |
 | 22 | Location callouts: named areas, and teammates calling "Contact, Dock!" or "Two left" (text first) | Team play |
 | 24 | Pings: mark a spot and bots act on it | Team play |
@@ -317,10 +317,8 @@ QoL, balance, refinement and polish. Its likely work, collected here so the Dev 
   - **Hit players light up at night** (no for now): a hit player switches on a light as they call the hit, as at real
     night games, so the walk-off reads in the dark and nobody shoots a player already out. Needed once Woodland is
     public.
-  - **Bots' gear keeps up with yours** (0.1 Dev 6; audit POOL-24): the player's kit outgrows bots that carry factory
-    gear on Easy and Normal (Hard opponents already roll kits, M29b). Either a tier dial per difficulty (read from
-    `botConfig`), or higher tiers that trade rather than add (Legendary: tighter spread, a touch more recoil or a
-    slower draw). Decided after the owner's playtest.
+  - **Bots' gear keeps up with yours** (0.1 Dev 6; audit POOL-24): done as kits per level from `bot-kits.md` (BG1,
+    2026-10-13).
 
 ## Feature triage
 

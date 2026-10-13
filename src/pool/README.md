@@ -20,9 +20,12 @@ the game reads: a new asset is a row there, and a new behaviour (a Key) needs co
 - `tables.ts`: what `pool.ts` reads that the files built on it also need (`tierId`, the Caches table's `CaseKind`s and
   `readCaseKinds`), below `pool.ts` so no two pool files import each other (`pipeline/cycles.mjs` checks).
 - `armory.ts`: pure rules over a `Collection`: `matchEarnings`, `buyTokens`, `takeShots`, `scrapSpares`.
-- `botKit.ts`: Hard opponents' seeded kits. `caches.ts` and `supplyEvents.ts`: Extraction's cases (placing and rolling them) and supply events.
+- `botKit.ts`: the bots' kits (BG1): reads `bot-kits.md`, picks each opponent's kit by its difficulty's weights
+  (seeded), builds the bot carrying it and fits the night torch by rule; `gameBotKits.ts` reads the shipped file once.
+  `caches.ts` and `supplyEvents.ts`: Extraction's cases (placing and rolling them) and supply events.
   `contentPool.ts`: the pool as seen with Dev content on or off. `oldPicks.ts`: carries pre-pool picks over once.
-- Tuning: `pool.md` (economy, odds, scrap values) and `stats.md` (numbers, through `config/statsFile.ts`).
+- Tuning: `pool.md` (economy, odds, scrap values), `stats.md` (numbers, through `config/statsFile.ts`) and
+  `bot-kits.md` (what the other team's bots carry).
 - Tests: `pool.test.ts` (pins every shipped ID: IDs are save keys), `kit.test.ts`, `armory.test.ts`,
   `loadoutModel.test.ts`, `savedLoadouts.test.ts`, `caches.test.ts`, `contentPool.test.ts`.
 - Rules: `pool.md`'s format is a contract (`docs/ARCHITECTURE.md › Contracts`). Read `Armament.replicas` and
