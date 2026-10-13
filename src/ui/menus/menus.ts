@@ -1,11 +1,14 @@
 import { PAUSE_ESC_GUARD_MS } from '../../config/controls';
+import { LOADING } from '../../config/loading';
+import { MENU_TEXT } from '../../config/menus';
 import type { QualityChoice, QualitySettings } from '../../config/render';
+import { OnDemand } from '../../core/onDemand';
 import type { NewGamePicks } from '../../newGamePicks';
 import { saveSetting } from '../../settings/storage';
-import { ArmoryScreen } from './armoryScreen';
+import type { ArmoryScreen } from './armoryScreen';
 import { Backdrop, type MenuHint, type NavPlace, TopBar } from './chrome';
 import type { PictureContext } from './kitStrip';
-import { LoadoutScreen } from './loadoutScreen';
+import type { LoadoutScreen } from './loadoutScreen';
 import { backTarget, escResumes, type MenuScreen, type SettingsOrigin } from './menuNav';
 import { el, watchScroll } from './menuParts';
 import { PauseScreen } from './pauseScreen';
@@ -13,7 +16,7 @@ import { PlayPicks } from './playModel';
 import { loadMatchStarted } from './savedChoices';
 import { ResultScreen } from './resultScreen';
 import { playView } from './playView';
-import { SettingsScreen } from './settingsScreen';
+import type { SettingsScreen } from './settingsScreen';
 import { type PlayView, SetupScreen } from './setupScreen';
 import { type MatchSummary, SummaryScreen } from './summaryScreen';
 import type { MenusOptions } from './menusOptions';
@@ -28,6 +31,9 @@ interface Screen {
   readonly hints?: readonly MenuHint[];
 }
 
+/** The screens fetched the first time one opens (lazyScreens.ts, IM1). */
+type LazyScreens = typeof import('./lazyScreens');
+
 /** The screens with the top bar over them, each as the place it marks. */
 const TOP_BAR_PLACES: Partial<Record<MenuScreen, NavPlace>> = { setup: 'setup', loadout: 'loadout', armory: 'armory', settings: 'settings' };
 
@@ -39,7 +45,8 @@ const EVEN_BACKDROP: ReadonlySet<MenuScreen> = new Set(['loadout', 'armory', 'se
  * Loadout, the Armory and Settings under a shared top bar, the pause menu, and the match's end: the summary (M19) and the
  * result. One screen shows at a time over one backdrop picture; the game says which when play stops (showTitle /
  * showPause / showResult) and the buttons and the top bar move between the rest. Each screen is built the first time it
- * opens; nothing here runs per frame.
+ * opens; the Loadout, the Armory and Settings are also fetched then (IM1), preloaded once the title is up so that rarely
+ * waits. Nothing here runs per frame.
  */
 export class Menus {
   private readonly root: HTMLDivElement;
@@ -47,6 +54,10 @@ export class Menus {
   private readonly topBar: TopBar;
   private readonly context: PictureContext;
   private readonly built: Partial<Record<MenuScreen, Screen>> = {};
+  /** The Loadout's, the Armory's and Settings' code, fetched in the background once the title is up (IM1). */
+  private readonly lazyScreens = new OnDemand<LazyScreens>(() => import('./lazyScreens'));
+  /** Counts the screens asked for: one still being fetched opens only if nothing was asked for since (whenFetched). */
+  private asked = 0;
   /** Stops each built screen's scroll watch (menuParts.watchScroll); run by dispose (audit CORE-07). */
   private readonly stopScrollWatches: Array<() => void> = [];
   private title?: TitleScreen;
@@ -201,6 +212,9 @@ export class Menus {
 
   dispose(): void {
     window.removeEventListener('keydown', this.onKeyDown);
+    // Nothing opens once the menus are gone, from the background fetch or a screen still being fetched.
+    this.lazyScreens.cancelPreload();
+    this.asked++;
     this.settings?.dispose();
     for (const stop of this.stopScrollWatches) stop();
     this.stopScrollWatches.length = 0;
@@ -211,6 +225,11 @@ export class Menus {
   markTutorialDone(): void {
     this.tutorialDone = true;
     this.title?.setTutorialShown(this.tutorialOffered());
+  }
+
+  /** The title is up: the Loadout's, the Armory's and Settings' code is fetched in the background (IM1). */
+  preloadScreens(): void {
+    this.lazyScreens.preloadWhenIdle(LOADING.preloadWithinMs);
   }
 
   /** The screens again, after something outside the menus changed what they show (a match paid Field Credits). */
@@ -252,6 +271,7 @@ export class Menus {
   private loadoutScreen(): LoadoutScreen {
     if (!this.loadout) {
       const lo = this.opts.loadout;
+      const { LoadoutScreen } = this.fetched();
       // Every loadout change also shows on the title's and the Play screen's kit.
       this.loadout = new LoadoutScreen({ model: lo.model, context: this.context, onChange: () => (lo.onChange(), this.refreshViews()) });
       this.add('loadout', this.loadout);
@@ -262,6 +282,7 @@ export class Menus {
   private armoryScreen(): ArmoryScreen {
     if (!this.armory) {
       const a = this.opts.armory;
+      const { ArmoryScreen } = this.fetched();
       this.armory = new ArmoryScreen({
         ...(a.freeShots ? { freeShots: a.freeShots } : {}),
         pool: a.pool,
@@ -283,6 +304,7 @@ export class Menus {
   private settingsScreen(): SettingsScreen {
     if (!this.settings) {
       const o = this.opts;
+      const { SettingsScreen } = this.fetched();
       const s = (this.settings = new SettingsScreen({
         bindings: o.bindings,
         controls: o.controls,
@@ -344,6 +366,34 @@ export class Menus {
       this.add('result', this.result);
     }
     return this.result;
+  }
+
+  /** The fetched screens' code; only asked for once it has arrived (whenFetched). */
+  private fetched(): LazyScreens {
+    const screens = this.lazyScreens.get();
+    if (!screens) throw new Error('A menu screen was built before its code arrived (lazyScreens.ts)');
+    return screens;
+  }
+
+  /**
+   * Runs `open` (it shows the Loadout, the Armory or Settings) once their code is here (IM1): at once when it is, as after
+   * the background fetch, else when it arrives. Until then the screen on show stays, so nothing flashes, and a screen
+   * asked for meanwhile, Back or Play wins over it; a failed fetch says so by the play buttons, and the next open tries
+   * again.
+   */
+  private whenFetched(open: () => void): void {
+    if (this.lazyScreens.get()) return open();
+    const ask = ++this.asked;
+    this.root.setAttribute('aria-busy', 'true');
+    const current = (): boolean => {
+      if (ask !== this.asked) return false;
+      this.root.removeAttribute('aria-busy');
+      return true;
+    };
+    void this.lazyScreens.load().then(
+      () => current() && open(),
+      () => current() && this.showHint(MENU_TEXT.screenFailed),
+    );
   }
 
   private add(id: MenuScreen, screen: Screen): void {
@@ -439,23 +489,29 @@ export class Menus {
   }
 
   private openLoadout(from: SettingsOrigin): void {
-    this.origins.loadout = from;
-    // What you own may have changed since it was last open (the Armory, M26c).
-    this.loadoutScreen().refresh();
-    this.go('loadout');
+    this.whenFetched(() => {
+      this.origins.loadout = from;
+      // What you own may have changed since it was last open (the Armory, M26c).
+      this.loadoutScreen().refresh();
+      this.go('loadout');
+    });
   }
 
   private openArmory(from: SettingsOrigin): void {
     if (this.opts.armory.wallet() === null) return;
-    this.origins.armory = from;
-    this.armoryScreen().refresh();
-    this.go('armory');
+    this.whenFetched(() => {
+      this.origins.armory = from;
+      this.armoryScreen().refresh();
+      this.go('armory');
+    });
   }
 
   private openSettings(from: SettingsOrigin): void {
-    this.origins.settings = from;
-    this.settingsScreen().openFrom(from);
-    this.go('settings');
+    this.whenFetched(() => {
+      this.origins.settings = from;
+      this.settingsScreen().openFrom(from);
+      this.go('settings');
+    });
   }
 
   private target(): MenuScreen | null {
@@ -547,8 +603,10 @@ export class Menus {
     for (const d of this.root.querySelectorAll('dialog[open]')) (d as HTMLDialogElement).close();
   }
 
-  /** Tidies up the screen being left: closes a pop-up, stops waiting for a key press. */
+  /** Tidies up the screen being left: closes a pop-up, stops waiting for a key press or for a screen being fetched. */
   private leave(): void {
+    this.asked++;
+    this.root.removeAttribute('aria-busy');
     this.closeDialogs();
     if (this.current === 'settings') this.settings?.closed();
   }

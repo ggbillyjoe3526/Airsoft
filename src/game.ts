@@ -13,7 +13,8 @@ import { type CrosshairSettings, type HitFeedMode, hudInsetX, hudScale, scoreboa
 import { MINIMAP } from './config/minimap';
 import { FULLSCREEN_RELOCK_MS } from './config/controls';
 import { CRASH_TEXT } from './config/crash';
-import { BROWSER_NOTES } from './config/menus';
+import { LOADING } from './config/loading';
+import { BROWSER_NOTES, MENU_TEXT } from './config/menus';
 import type { MatchMode } from './config/modes';
 import { MOVEMENT } from './config/movement';
 import { GRAPHICS_TEXT } from './config/graphics';
@@ -43,9 +44,10 @@ import { rendererName } from './render/gpuCheck';
 import { Renderer } from './render/renderer';
 import type { RendererBoot } from './render/rendererStart';
 import { matchSeed } from './matchFlow';
+import { OnDemand } from './core/onDemand';
 import { nextSessionAction, type SessionAction } from './core/sessionPlan';
 import { MatchSession } from './matchSession';
-import { type RangePose, RangeSession } from './rangeSession';
+import type { RangePose, RangeSession } from './rangeSession';
 import type { GameState } from './sim/state';
 import { loadRecords, noNews, type RecordNews, type Records, saveRecords } from './stats/records';
 import { settleMatch } from './stats/settleMatch';
@@ -120,6 +122,11 @@ import {
 
 const LOCK_REFUSED_HINT = 'The browser needs a moment before re-capturing the mouse. Click again.';
 
+/** Whether `s` is the practice range: the one session that isn't a match (its class arrives on first use, IM1). */
+function isRange(s: MatchSession | RangeSession | null): s is RangeSession {
+  return s !== null && !(s instanceof MatchSession);
+}
+
 export interface GameOptions {
   /**
    * Dev/testing only: run without pointer lock (automated browsers can't lock the pointer).
@@ -178,6 +185,8 @@ export class Game {
   /** The match being played (or paused, or just decided); null on the title and New game screens. */
   /** The match in play, or the practice range (M21); null on the menus with nothing loaded. */
   private session: MatchSession | RangeSession | null = null;
+  /** The practice range's code (the tutorial's with it), fetched in the background once the title is up (IM1). */
+  private readonly rangeCode = new OnDemand<typeof import('./rangeSession')>(() => import('./rangeSession'));
   /** The next Play opens the practice range rather than a match (the title's Practice range button). */
   private practice = false;
   /** ... with the tutorial's coach (the title's Tutorial button, M16). */
@@ -383,8 +392,8 @@ export class Game {
       const p = s?.player;
       const drawn = this.renderer.stats;
       return {
-        seed: s instanceof RangeSession ? options.seed : this.matchSeed,
-        map: s instanceof RangeSession ? 'range' : this.playedPicks().map,
+        seed: isRange(s) ? options.seed : this.matchSeed,
+        map: isRange(s) ? 'range' : this.playedPicks().map,
         tick: s?.state.tick ?? '-',
         'sim ticks/s': this.tickRate,
         characters: s?.characterCount ?? 0,
@@ -954,11 +963,15 @@ export class Game {
   start(): void {
     this.lastTime = this.readyAt = performance.now();
     this.rafId = requestAnimationFrame(this.frame);
+    // The title is up: what it opens later is fetched in the background meanwhile (IM1).
+    this.menus.preloadScreens();
+    this.rangeCode.preloadWhenIdle(LOADING.preloadWithinMs);
   }
 
   dispose(): void {
     this.disposed = true;
     cancelAnimationFrame(this.rafId);
+    this.rangeCode.cancelPreload();
     this.stopWatchingAway();
     this.unwatchSave();
     // The audio engine's single blocked-context slot; the pointer's, the renderer's and the keyboard's own dispose() below clear theirs.
@@ -1002,7 +1015,9 @@ export class Game {
       loadoutChanged: this.loadoutChanged,
     });
     if (action === 'none') return;
-    if (this.options.allowUnlocked) {
+    // The range's code arrives with the start of play when the background fetch hasn't brought it yet (IM1).
+    const code = action === 'buildRange' && !this.rangeCode.get() ? this.rangeCode.load().then(() => true, () => false) : null;
+    if (this.options.allowUnlocked && !code) {
       this.enter(action, s);
       return;
     }
@@ -1011,10 +1026,18 @@ export class Game {
     // once the page is free, past the click's user activation, and be refused. A lock granted meanwhile resumes nothing:
     // the session it would resume is the one being replaced; `enter` resumes once it is built.
     this.askingLock = true;
-    void this.pointer.request().finally(() => {
+    const lock = this.options.allowUnlocked ? null : this.pointer.request();
+    void Promise.all([lock, code]).then(([, fetched]) => {
       this.askingLock = false;
       if (this.disposed) return;
+      if (fetched === false) {
+        // Nothing to play: the mouse goes back and the menus say why, Play trying the fetch again.
+        this.pointer.release();
+        this.menus.showHint(MENU_TEXT.rangeFailed);
+        return;
+      }
       this.enter(action, s);
+      if (this.options.allowUnlocked) return;
       if (this.pointer.locked) this.resume();
       else onRefused?.();
     });
@@ -1025,7 +1048,7 @@ export class Game {
     if (action === 'buildRange') {
       // The tutorial resumes at the step it was left at (audit POOL-14).
       this.openRange(undefined, this.tutorial ? loadTutorialStep() : undefined);
-    } else if (action === 'rebuildRange' && s instanceof RangeSession) {
+    } else if (action === 'rebuildRange' && isRange(s)) {
       // Back from the Loadout on the range's pause menu: the range again, with the new kit, where you stood (and at the
       // same tutorial step).
       this.openRange(s.pose, s.tutorialStep);
@@ -1082,9 +1105,11 @@ export class Game {
    * tutorial from step `tutorialFrom` if given (M16).
    */
   private openRange(pose?: RangePose, tutorialFrom?: number | string): void {
+    const code = this.rangeCode.get();
+    if (!code) throw new Error('The practice range was built before its code arrived (play fetches it)');
     this.session?.dispose();
     this.loadoutChanged = false;
-    this.session = new RangeSession(this.renderer, this.container, this.input, {
+    this.session = new code.RangeSession(this.renderer, this.container, this.input, {
       kit: this.loadout.kit(),
       teamColours: TEAM_COLOUR_SETS[this.teamColours],
       look: this.look,
@@ -1147,7 +1172,7 @@ export class Game {
     const s = this.session;
     const r = s?.state.round;
     const screen = screenWhenStopped(this.started, r?.phase === 'matchOver');
-    if (this.started && s instanceof RangeSession) {
+    if (this.started && isRange(s)) {
       // The tutorial just played to its end (M80): its pop-up, practice on or go to the menu, over the pause menu.
       if (s.takeTutorialComplete()) this.menus.showTutorialComplete(s.status, this.options.seed);
       else this.menus.showPause(s.status, this.options.seed, true, s.coaching);
@@ -1177,13 +1202,13 @@ export class Game {
   /** The range's pause menu (the tutorial's, with its coaching), when the range is what's loaded. */
   private showRangePause(): void {
     const s = this.session;
-    if (s instanceof RangeSession) this.menus.showPause(s.status, this.options.seed, true, s.coaching);
+    if (isRange(s)) this.menus.showPause(s.status, this.options.seed, true, s.coaching);
   }
 
   /** The pause menu's Skip step or Skip tutorial (audit POOL-14): the range carries on, the pause menu says where. */
   private skipTutorial(all: boolean): void {
     const s = this.session;
-    if (!(s instanceof RangeSession)) return;
+    if (!isRange(s)) return;
     if (all) s.endTutorial();
     else s.skipTutorialStep();
     this.takeTutorialFinished(s);
@@ -1240,7 +1265,7 @@ export class Game {
       }
     };
     const s = this.session;
-    const range = s instanceof RangeSession;
+    const range = isRange(s);
     const match = s instanceof MatchSession ? s : null;
     const r = match?.state.round;
     const stats = this.renderer.stats;
@@ -1386,7 +1411,7 @@ export class Game {
       this.ticksThisSecond += s.advance(dt * this.dev.gameSpeed);
       this.simMs += (performance.now() - simStart - this.simMs) * FRAME_TIMING.smoothing;
       if (s instanceof MatchSession) this.settleMatch(s);
-      if (s instanceof RangeSession) this.takeTutorialFinished(s);
+      if (isRange(s)) this.takeTutorialFinished(s);
       // A little after the match is decided, give the mouse back and show the result screen.
       if (s.takeResultDue()) {
         if (this.unlockedPlay) {

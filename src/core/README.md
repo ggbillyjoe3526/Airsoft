@@ -8,6 +8,8 @@ Loop and session plumbing: small pure modules with no Three.js.
 - `seed.ts`: the visit's seed (fresh each page load, or `?seed=N`) and the exact 32-bit derivation of the streams made
   from it (bot plans, each bot, runs, cases). `matchFlow.ts` at `src/` derives each match's seed.
 - `sessionPlan.ts`: what Play does (build a match or the range, rebuild the range, reuse what is loaded), pure.
+- `onDemand.ts`: code fetched the first time it is needed (IM1): the Loadout, Armory and Settings screens
+  (`ui/menus/lazyScreens.ts`) and the practice range (`rangeSession.ts`), preloaded once the page is idle after start-up.
 - `framePacer.ts`: the frame-rate cap; it skips draws, never ticks. `awayWatch.ts`: a hidden tab or lost focus pauses.
 - `crashReport.ts`, `reportFields.ts`: the copyable crash report (seed, map, mode, tick, GPU, settings, stack), shown by
   `ui/crashScreen.ts`; Dev › Diagnostics copies the same fields. `buildTiming.ts`: match build phases (`?perf`).

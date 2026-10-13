@@ -43,7 +43,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - One hit and you're out: a tick, a hit marker (on or off in Settings, Off by default), hand up, walk to the dead zone, then spectate your team (Phase 1, M97)
 - Skip to next round from the spectator camera while you are out: the rest of the round plays out at once (M83)
 - Bots always call their hits (Phase 1)
-- BBs stop at the first body they hit; hit areas follow the drawn figure in every pose; a BB that hits a player already out knocks on the body (M85)
+- BBs stop at the first body they hit; hit areas follow the drawn figure in every pose, and on Dev figures the legs follow their walk, run and crouch (M85, IM8); a BB that hits a player already out knocks on the body (M85)
 - Friendly fire, on by default, as a match setting (Phase 1, M20)
 - Hit flinch, impact puffs that show at once and a crosshair that opens with your real spread (M3, M10, M28)
 
@@ -178,6 +178,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   Diagnostics Copy and Report a Bug, Dev content switch, Retro pixels (M24, M26d, FA1, M35, M42, M83, M90, IM7)
 - Dev switches Disable all models and Disable figure models (both on by default): turned off, they bring back the Blender replicas, parts and menu pictures, then the player and bot figures (RM4)
 - The build's version on the title screen (M24)
+- Screens fetched on first use: the Loadout, Armory and Settings, and the range, load in the background after the title; a failed download says so and tries again (IM1)
 
 ## HUD and match info
 

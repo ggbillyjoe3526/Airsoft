@@ -29,6 +29,6 @@ describe('chunk budgets (audit L-12, CORE-01)', () => {
   });
 
   it('names the file, its size, the share and where the budget lives', () => {
-    expect(chunkVerdict('index', 'index-abc.js', 945_400).message).toBe('index-abc.js is 945 kB, 95 % of its 1000 kB budget (src/config/chunkBudget.ts): near the budget');
+    expect(chunkVerdict('game', 'game-abc.js', 1_187_000).message).toBe('game-abc.js is 1187 kB, 95 % of its 1250 kB budget (src/config/chunkBudget.ts): near the budget');
   });
 });

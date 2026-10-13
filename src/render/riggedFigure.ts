@@ -57,6 +57,14 @@ export interface RiggedFrame {
   /** The upper body's lean (the flinch and the peek), radians about the figure's own X and Z (it faces -Z). */
   leanX: number;
   leanZ: number;
+  /**
+   * The peek's share of `leanZ` and the height above the feet it rolls about: the hit volume's upper body rolls about
+   * the hips' pivot (sim/hitbox.ts, HITS.lean), lower than the model's spine joint, so the figure's does too (IM8).
+   */
+  peek: number;
+  peekPivot: number;
+  /** The simulation's walk cycle (cycles, interpolated) when the hit volume's legs follow the figures' (IM8), else null. */
+  cycle: number | null;
   castShadow: boolean;
 }
 
@@ -87,6 +95,7 @@ const lean = new THREE.Quaternion();
 const euler = new THREE.Euler();
 const v1 = new THREE.Vector3();
 const v2 = new THREE.Vector3();
+const v3 = new THREE.Vector3();
 const HOLDS: readonly PoseHold[] = ['rifle', 'pistol'];
 const shown: MagazineShow = { fresh: false, old: false, replicaHidden: false };
 /** A rough sphere round a figure in any pose (its arms up, a rifle out): the skinned meshes' frustum test, never recomputed. */
@@ -109,6 +118,8 @@ export class RiggedFigure {
   private readonly spine: THREE.Object3D;
   /** The spine as the mixer last left it (it writes a bone only when its value changes, so the lean is undone first). */
   private readonly spineMixed = new THREE.Quaternion();
+  /** The spine joint's place at rest (no clip moves it; the peek shifts it, IM8). */
+  private readonly spineRest = new THREE.Vector3();
   private readonly arms: THREE.Object3D[];
   private readonly grip: THREE.Object3D;
   private readonly hand: THREE.Object3D;
@@ -129,6 +140,7 @@ export class RiggedFigure {
     reload: null,
     draw: null,
     firstPerson: false,
+    cycle: null,
   };
   private readonly draw = { progress: 0, from: 'rifle' as PoseHold };
   private lastActive = -1;
@@ -164,6 +176,7 @@ export class RiggedFigure {
     this.hips = bone(FIGURE_RIG.bones.hips);
     this.spine = bone(FIGURE_RIG.bones.spine);
     this.spineMixed.copy(this.spine.quaternion);
+    this.spineRest.copy(this.spine.position);
     this.arms = FIGURE_RIG.bones.arms.map(bone);
     this.grip = bone(FIGURE_RIG.bones.grip);
     this.hand = bone(FIGURE_RIG.bones.hand);
@@ -276,6 +289,7 @@ export class RiggedFigure {
       input.draw = this.draw;
     } else input.draw = null;
     input.firstPerson = f.firstPerson;
+    input.cycle = f.cycle;
     const pose = stepPose(this.state, input, f.dt, this.setup.rig.table, this.pose);
 
     for (let i = 0; i < POSE_CLIPS.length; i++) {
@@ -295,6 +309,7 @@ export class RiggedFigure {
     this.spineMixed.copy(this.spine.quaternion);
     const twist = pose.rifleAim * this.setup.rig.aimYaw.rifle + pose.pistolAim * this.setup.rig.aimYaw.pistol;
     this.adjustSpine(pose.overlay, f.leanX + pose.pitchLean, f.leanZ, twist);
+    this.peekAbout(f.peek, f.peekPivot);
     if (f.firstPerson) for (const b of this.arms) b.scale.setScalar(FIGURE_RIG.firstPerson.armScale);
 
     // The level of detail by distance (a metre of give, so it doesn't flicker on the line).
@@ -365,8 +380,9 @@ export class RiggedFigure {
 
   /**
    * The upper body after the mixer: held upright as its clips were posed (they were made over a still pelvis, so a
-   * bobbing or crouched pelvis doesn't tip the aim), then leaned (the flinch, the peek and the aim's pitch past the clips)
-   * about the figure's own axes and twisted by `twist` (radians about the model's up) so the bore points ahead.
+   * bobbing or crouched pelvis doesn't tip the aim), twisted by `twist` (radians about the model's up) so the bore points
+   * ahead, then leaned (the flinch, the peek and the aim's pitch past the clips) about the figure's own axes: a peek
+   * rolls the twisted upper body as a whole (IM8), as the hit volume rolls, and a level bore stays on the shot.
    */
   private adjustSpine(overlay: number, leanX: number, leanZ: number, twist: number): void {
     const { rig } = this.setup;
@@ -378,11 +394,32 @@ export class RiggedFigure {
     }
     if (leanX !== 0 || leanZ !== 0 || twist !== 0) {
       // The model faces +Z (turned half round in the figure): the figure's X and Z lean are its -X and -Z.
-      lean.setFromEuler(euler.set(-leanX, twist, -leanZ, 'YXZ'));
+      // Euler 'ZXY': the twist first, then the pitch, then the roll.
+      lean.setFromEuler(euler.set(-leanX, twist, -leanZ, 'ZXY'));
       q3.copy(rig.aboveHips).multiply(hips);
       q1.copy(q3).invert().multiply(lean).multiply(q3);
       this.spine.quaternion.premultiply(q1);
     }
+  }
+
+  /**
+   * The peek rolls the upper body about the hit volume's pivot (`pivot` metres above the feet, on the figure's axis), as
+   * the volume's does, not about the model's spine joint above it: the spine joint goes where that roll takes it.
+   */
+  private peekAbout(peek: number, pivot: number): void {
+    const spine = this.spine;
+    spine.position.copy(this.spineRest);
+    if (peek === 0) return;
+    const parent = spine.parent!;
+    parent.updateWorldMatrix(true, false);
+    v1.copy(spine.position).applyMatrix4(parent.matrixWorld);
+    v2.set(0, pivot, 0).applyMatrix4(this.root.matrixWorld);
+    v3.set(0, 0, 1).transformDirection(this.root.matrixWorld);
+    q1.setFromAxisAngle(v3, peek);
+    // Where the joint goes (the pivot plus the roll of the joint's offset from it), less where it is: in the parent's frame.
+    v3.copy(v1).sub(v2).applyQuaternion(q1).add(v2).sub(v1);
+    parent.getWorldQuaternion(q1).invert();
+    spine.position.add(v3.applyQuaternion(q1));
   }
 
   /** The replica held as `hold`, built on the grip bone with its magazines on the hand. */

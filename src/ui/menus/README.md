@@ -4,7 +4,9 @@ Every screen before, between and after matches. `Menus` shows one screen at a ti
 choices to `src/game.ts`.
 
 - `menus.ts`: `Menus` (`go`, `setBlocked` makes the screens inert). Each screen is built the first time it opens and
-  reused. `menusOptions.ts` is what the menus are given; `playModel.ts` is the Match screen's picks (`PlayPicks`: each
+  reused. The Loadout (with Customise), the Armory and Settings are also fetched then (IM1): `lazyScreens.ts` is their
+  chunk, preloaded once the title is up (`preloadScreens`, `core/onDemand.ts`); opened before it has arrived, the screen
+  on show stays (`whenFetched`) and a later choice wins. A new screen reached only from a menu joins `lazyScreens.ts`. `menusOptions.ts` is what the menus are given; `playModel.ts` is the Match screen's picks (`PlayPicks`: each
   change saved and reported). `chrome.ts` is the top bar (the wordmark is the way back; no version) and the
   backdrop: no picture on the title, the pre-blurred one elsewhere (nothing blurs live). No key prompts are drawn along the bottom (M100): a screen's `hints` are
   only the keys it answers to (C, /, Space, T; Esc is handled by `Menus`).

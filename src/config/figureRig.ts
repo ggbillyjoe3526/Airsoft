@@ -65,6 +65,12 @@ export const FIGURE_RIG = {
   /** The Jump clip's span (seconds) played over the time in the air: the take-off is skipped, the landing is the clip's. */
   jump: { from: 0.25, to: 0.55 },
   /**
+   * A step goes back when its backward part is more than `share` of its speed: the crouched walk (made walking ahead)
+   * then runs backwards. With the figures' legs in the hit volume (IM8) the walk cycle itself does, once the crouch is
+   * more than `crouched` of the way down (sim/figureLegs.ts).
+   */
+  backStep: { share: 0.1, crouched: 0.5 },
+  /**
    * The first-person body (your own figure seen when you look down): the model drawn this far behind the eyes (metres)
    * so the camera is never inside the chest, with the head and arms left out (the hands and replica in view are the
    * first-person ones). The arms are folded into the shoulders by scaling their bones to `armScale`.

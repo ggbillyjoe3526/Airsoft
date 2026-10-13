@@ -299,8 +299,11 @@ replaces its line; the old one stays findable in the archive or in git.
 - **The Blender figures in the game (BF1) are part of 0.1 Dev 5 (owner, 2026-10-12: "This is for Dev 5").** They
   merge before the Dev 5 tag, still behind the Dev switches.
 - **The rigged figures stay behind the Dev switches until they pass M85's hit-volume check (2026-10-12).** They don't
-  yet (crouched and walking, KNOWN_ISSUES › Figures and art); `render/riggedHitVolume.test.ts` measures them and holds
-  each pose to its numbers, so a change only brings them closer (BF1).
+  yet (the volume's upper body is rounder than theirs, KNOWN_ISSUES › Figures and art); `render/riggedHitVolume.test.ts`
+  measures them and holds each pose to its numbers, so a change only brings them closer (BF1).
+- **With the rigged figures drawn, the hit volume's legs are the figures' own (owner, 2026-10-13: "Legs follow"; IM8).**
+  Their thighs, shins and boots stand on the figure's leg joints from its clips, and the walk cycle steps at the clips'
+  strides; the head, chest and hips stay the built-in volume's, and with the figures off nothing changes.
 - **Vaulting comes in 0.1 Dev 6; slide into cover is no for now (owner, 2026-10-12).** Vaulting goes over low
   obstacles of 0.7 to 0.9 m, with a few added to the maps where they open a route; slide waits in `docs/IDEAS.md`.
 
@@ -610,7 +613,18 @@ replaces its line; the old one stays findable in the archive or in git.
   moved WebGL's retro filter to a chunk of its own); the WebGPU overhaul's step 6 (the old renderer removed) is where it
   should shrink again. W6a (2026-10-11) took it from 1,007.1 to 982 kB (946 kB before main's M80, M82 and RM4), and
   W6b (2026-10-11, the world's GLSL patches gone) to 975 kB, so the line is back at 1,000 kB (warning from 900): a
-  change that crosses it bumps it with a line here.
+  change that crosses it bumps it with a line here. Raised to 1,250 kB on 2026-10-12 (owner, IM1): main's start-up
+  code was 990 kB (the game chunk 964, and 26 kB the bundler had split beside it since BF1's figures); the code fetched
+  on first use (below) took it to 897 kB (72 %), and the owner asked why 1,000 and agreed 1,250 for room in Dev 6, a
+  tripwire still (compressed, the chunk is about a third of its size). Since IM1 the game chunk is the `game` group
+  (`vite.config.ts`: every module `main.ts` reaches by static imports), so all start-up code is counted in one chunk.
+- **Menus stay smooth; what a menu opens is fetched on first use (owner, 2026-10-12; IM1).** "The UI should always
+  feel smooth and responsive. However, for entering tutorial, practice range, maps, matches you can add a loading
+  screen if it helps." The Loadout (with Customise), the Armory and Settings (`ui/menus/lazyScreens.ts`) and the
+  practice range with the tutorial (`rangeSession.ts`) are fetched the first time they are needed and preloaded in the
+  background once the title is up (`core/onDemand.ts`), so a menu never waits visibly; entering the range may wait for
+  its code with the start of play. A new screen reached only from a menu joins `lazyScreens.ts`; one on the way to
+  play (the title, the Match screen, pause, the summary and result) stays in the start-up code.
 - **Production builds ship Brotli and gzip copies of their files (owner, 2026-10-04: Brotli now, `.wasm` later).**
 - **Rapier's WebAssembly ships as a plain `.wasm` file, not as base64 inside its chunk (owner, 2026-10-12, IM3; changes
   the fixed decision in CLAUDE.md §3).** The build rewrites the one call where the compat bundle's `init()` decodes its
@@ -643,3 +657,8 @@ replaces its line; the old one stays findable in the archive or in git.
   Extraction cases and presentation effects each have one, so seeds that already replay still replay.
 - **Player-only preferences, such as toggles, live in the input layer (2026-10-03).** The simulation sees the same
   command it sees from a bot.
+- **TypeScript 7 checks the code, on the same strict settings (owner, 2026-10-12; IM4).** It replaces 5.9, kept on
+  2026-09-28 because 7 was then new. Same language and errors, on the native compiler: in a 4-core cloud container the
+  type check takes about 3.5 s instead of 18.7 s, and `npm run build` 19.4 s instead of 34.5 s (2026-10-12). Nothing
+  in the repository uses the compiler's JavaScript API, which 7 replaces with a new, unstable one (Vite and Vitest
+  strip types themselves). A setting a later TypeScript drops goes to the owner, never a looser `tsconfig.json`.

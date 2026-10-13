@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { HITS } from '../config/hits';
+import { HITS, type HitConfig } from '../config/hits';
+import { MOVEMENT } from '../config/movement';
 import { type Character, createCharacter } from '../sim/character';
 import { characterHitVolume, createHitVolume, type HitVolume, inflateHitVolume, rayCharacter } from '../sim/hitbox';
 import { vec3 } from '../sim/vec';
@@ -16,7 +17,8 @@ import { figureFilesForTests } from './testSupport';
  * parallel rays from eight sides, asked the same two things: does it touch the drawn body (arms, hands and the replica
  * don't count, DECISIONS 2026-10-01), and does the simulation count it. The skinned triangles are posed on the CPU and
  * laid on the grid (the rays of a side are parallel, so a ray touches a triangle when its grid point is inside the
- * triangle's outline): the same answer as casting each ray, in a fraction of the time on 20,000 triangles.
+ * triangle's outline): the same answer as casting each ray, in a fraction of the time on 20,000 triangles. The hit rules
+ * are a match's with the rigged figures: the volume's legs on the figures' own legs (HitConfig.figureLegs, IM8).
  */
 
 interface Pose {
@@ -24,11 +26,16 @@ interface Pose {
   set(c: Character): void;
 }
 
-/** Mid-stride: the walk cycle a quarter on, so the hit volume's legs are at full swing. */
-function walk(c: Character): void {
-  c.velocity.z = -2;
-  c.walkCycle = c.prevWalkCycle = Math.PI / 2;
-}
+/** Moving ahead at `speed` (m/s), `phase` (0..1) through the walk cycle, crouched by `crouch`. */
+const moving =
+  (speed: number, phase: number, crouch = 0) =>
+  (c: Character): void => {
+    c.velocity.z = -speed;
+    c.walkCycle = c.prevWalkCycle = phase * Math.PI * 2;
+    c.crouchAmount = c.prevCrouchAmount = crouch;
+  };
+/** Mid-stride: the walk cycle a quarter on, one foot passing the other. */
+const walk = moving(2, 0.25);
 
 const POSES: Pose[] = [
   { name: 'standing', set: () => {} },
@@ -43,6 +50,17 @@ const POSES: Pose[] = [
     },
   },
   { name: 'walking', set: walk },
+  { name: 'walking, heel down', set: moving(MOVEMENT.walkSpeed, 0) },
+  { name: 'running', set: moving(MOVEMENT.runSpeed, 0.25) },
+  {
+    name: 'sprinting',
+    set: (c) => {
+      moving(MOVEMENT.sprintSpeed, 0.25)(c);
+      c.sprinting = true;
+    },
+  },
+  { name: 'crouch walking', set: moving(MOVEMENT.crouchSpeed, 0.25, 1) },
+  { name: 'crouch walking, other foot', set: moving(MOVEMENT.crouchSpeed, 0.75, 1) },
   { name: 'calling the hit', set: (c) => (c.status = 'calling') },
   {
     name: 'walking off',
@@ -63,24 +81,29 @@ const RANGE = 4;
 const TOLERANCE = 0.02;
 /**
  * The rigged figures do not pass M85's bar yet (at most 4 % of the drawn body missed and 3 % of the volume thin air,
- * past the rim): KNOWN_ISSUES › Figures and art. Standing they are near it (the Blender body is a little wider at the
- * legs and the robot slimmer than the human envelope); crouched they kneel with the front shin out where the volume's
- * crouched legs go straight down, and walking their stride follows the clips while the volume's legs swing on the
- * simulation's walk cycle (0.75 strides a metre at any pace). They are drawn only with the Dev switches off, and must
- * reach M85's bar before they become the default (DECISIONS › Gameplay and feel). Until then each pose is held to
- * today's worst case over the human looks and the robot plus a point (measured 2026-10-12), so a change can only
- * bring them closer.
+ * past the rim): KNOWN_ISSUES › Figures and art. Since IM8 the volume's legs are the figures' own and their crouch is
+ * as low as the volume's, so the drawn body is missed on 0-5 % of the grid on every pose; what is left is thin air:
+ * the volume's head, chest and hips are the built-in human's, rounder than the Blender human (4-8 %) and the slimmer
+ * robot (9-13 %), and upright while the figures lean into a run and a sprint (up to 18 %). They are drawn only with the
+ * Dev switches off, and must reach M85's bar before they become the default (DECISIONS › Gameplay and feel). Until then
+ * each pose is held to today's worst case over the human looks and the robot plus a point (measured 2026-10-12, IM8),
+ * so a change can only bring them closer.
  */
 const LIMITS: Readonly<Record<string, { missed: number; phantom: number }>> = {
-  standing: { missed: 0.076, phantom: 0.167 },
-  crouched: { missed: 0.284, phantom: 0.194 },
-  'leaning left': { missed: 0.092, phantom: 0.215 },
-  'leaning right': { missed: 0.094, phantom: 0.165 },
-  'crouched, leaning': { missed: 0.353, phantom: 0.231 },
-  walking: { missed: 0.249, phantom: 0.333 },
-  'calling the hit': { missed: 0.073, phantom: 0.158 },
-  'walking off': { missed: 0.291, phantom: 0.335 },
-  out: { missed: 0.076, phantom: 0.174 },
+  standing: { missed: 0.041, phantom: 0.114 },
+  crouched: { missed: 0.036, phantom: 0.113 },
+  'leaning left': { missed: 0.036, phantom: 0.101 },
+  'leaning right': { missed: 0.036, phantom: 0.111 },
+  'crouched, leaning': { missed: 0.032, phantom: 0.113 },
+  walking: { missed: 0.046, phantom: 0.134 },
+  'walking, heel down': { missed: 0.055, phantom: 0.134 },
+  running: { missed: 0.047, phantom: 0.142 },
+  sprinting: { missed: 0.057, phantom: 0.19 },
+  'crouch walking': { missed: 0.045, phantom: 0.13 },
+  'crouch walking, other foot': { missed: 0.054, phantom: 0.139 },
+  'calling the hit': { missed: 0.045, phantom: 0.114 },
+  'walking off': { missed: 0.039, phantom: 0.115 },
+  out: { missed: 0.042, phantom: 0.12 },
 };
 
 /** The bones whose vertices are arm (the shoulders' are the torso's): UpperArm and everything down to the fingertips. */
@@ -88,6 +111,8 @@ const ARM_BONE = /^(UpperArm|Forearm|ForearmTwist|Elbow|Hand|Grip|Thumb|Index|Mi
 
 const { rigs: kinds, files } = await figureFilesForTests();
 const rigs = figureRigs(kinds.human, kinds.robot, () => {});
+/** A match's hit rules with the rigged figures (matchSession.ts): the volume's legs on theirs. */
+const hits: HitConfig = { ...HITS, figureLegs: kinds.human.legs };
 
 interface Tally {
   body: number;
@@ -98,7 +123,7 @@ interface Tally {
 
 const volumeOf = (c: Character, grow: number): HitVolume => {
   const v = createHitVolume();
-  characterHitVolume(c, HITS, v);
+  characterHitVolume(c, hits, v);
   inflateHitVolume(v, grow);
   return v;
 };
@@ -153,7 +178,7 @@ function measure(pose: Pose, id: number, robot: boolean): Tally {
   // On the ground, as the movement leaves a character standing (a new one starts in the air).
   c.grounded = true;
   const crowd: FigureCrowd = { robots: [robot], realistic: false };
-  const renderer = new CharacterRenderer([c], [0x3d8bff], HITS, null, 'high', crowd, files, rigs);
+  const renderer = new CharacterRenderer([c], [0x3d8bff], hits, null, 'high', crowd, files, rigs);
   pose.set(c);
   // Long enough for every blend to settle (the hit call's clip holds its last pose once played).
   for (let i = 0; i < 90; i++) {

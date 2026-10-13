@@ -20,8 +20,11 @@ export const CHUNK_BUDGET = {
    * budget, and FP1's hand holds took it to 951.1. 1050 since M80 and M82 (DECISIONS 2026-10-11): main's game chunk was
    * 993.5, and the tutorial's scoreboard and order wheel showcase, its finish pop-up and the rarity bar took it to 1003.2.
    * Back to 1000 since W6b (DECISIONS 2026-10-11): the old renderer (W6a) and the world's GLSL (W6b) gone, it is 975.
+   * 1250 since IM1 (owner, DECISIONS 2026-10-12): the Loadout, Armory and Settings screens and the range, fetched on
+   * first use, took the start-up code from 990 (with BF1) to 897, and the owner raised the line for room in Dev 6. The
+   * start-up code is all in the `game` chunk (vite.config.ts), the page's entry a stub.
    */
-  defaultKb: 1000,
+  defaultKb: 1250,
   /**
    * Share of the default budget at which the build warns, so the next approach is seen before a build fails (CORE-01).
    * Not Rapier's: its budget is a pin set 5 % over the library as measured.

@@ -149,7 +149,7 @@ export class CharacterRenderer {
   private readonly torchColour = new THREE.Color();
   /** The empty magazines rigged figures throw away (BF1), with the rigs only. */
   private readonly thrown: ThrownMagazines | null;
-  private readonly frame: RiggedFrame = { alpha: 0, dt: 0, eyeX: 0, eyeY: 0, eyeZ: 0, firstPerson: false, leanX: 0, leanZ: 0, castShadow: true };
+  private readonly frame: RiggedFrame = { alpha: 0, dt: 0, eyeX: 0, eyeY: 0, eyeZ: 0, firstPerson: false, leanX: 0, leanZ: 0, peek: 0, peekPivot: 0, cycle: null, castShadow: true };
 
   constructor(
     private readonly characters: readonly Character[],
@@ -459,8 +459,12 @@ export class CharacterRenderer {
     f.eyeY = eye ? eye.y : y + 1;
     f.eyeZ = eye ? eye.z : z;
     f.firstPerson = c.id === hiddenId;
+    f.peek = figureLeanRoll(leaning, this.hits);
     f.leanX = lean.x;
-    f.leanZ = lean.z + figureLeanRoll(leaning, this.hits);
+    f.leanZ = lean.z + f.peek;
+    f.peekPivot = this.hits.lean.pivotHeight - (c.prevCrouchAmount + (c.crouchAmount - c.prevCrouchAmount) * alpha) * this.hits.crouchDrop;
+    // With the figures' own legs in the hit volume (IM8), the legs step at the simulation's walk cycle.
+    f.cycle = this.hits.figureLegs ? (c.prevWalkCycle + (c.walkCycle - c.prevWalkCycle) * alpha) / (Math.PI * 2) : null;
     // Shadow maps ignore opacity: a fading figure would leave a solid shadow behind.
     f.castShadow = opacity >= 1;
     r.update(c, f);

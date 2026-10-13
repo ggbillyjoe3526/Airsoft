@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { FIGURE_RIG, FIGURE_RIG_KINDS, type FigureRigKind } from '../config/figureRig';
+import type { FigureLegs } from '../config/hits';
 import { loadGltfScene } from './externalModels';
+import { figureLegsFrom } from './figureLegs';
 import { RiggedFigure, type RiggedFigureSetup } from './riggedFigure';
 import { ThrownMagazines } from './thrownMagazines';
 import { BODY_CLIPS, FIRE_CLIPS, type MagazineTimes, POSE_CLIPS, POSE_SLOT, type PoseClipTable, type PoseHold } from './figurePose';
@@ -98,6 +100,8 @@ export interface FigureRig {
   aimYaw: Readonly<Record<PoseHold, number>>;
   /** Triangles at each level of detail, every part shown. */
   triangles: readonly number[];
+  /** Its legs' clips as plain numbers, for the hit volume (IM8, render/figureLegs.ts). */
+  legs: FigureLegs;
   dispose(): void;
 }
 
@@ -352,6 +356,10 @@ export function prepareFigureRig(kind: FigureRigKind, scene: THREE.Object3D, sid
   };
   const aimYaw = { rifle: boreYaw(POSE_SLOT.Rifle_Aim, replicaOnGrip.rifle), pistol: boreYaw(POSE_SLOT.Pistol_Aim, replicaOnGrip.pistol) };
 
+  const boneNames = skeleton.bones.map((b) => b.name);
+  const bindMatrix = first.bindMatrix.clone();
+  const legs = figureLegsFrom({ rig, boneNames, boneInverses: skeleton.boneInverses, bindMatrix, bodies: roles.body.flatMap((p) => (meshesOf.get(p) ?? []).map((m) => m.geometry)), lower, table });
+
   const triangles = [0, 1, 2].map((lod) => {
     const g = geometry(lod, parts.filter((p) => meshesOf.has(p + suffix(lod))));
     return (g.index?.count ?? g.getAttribute('position').count) / 3;
@@ -360,9 +368,9 @@ export function prepareFigureRig(kind: FigureRigKind, scene: THREE.Object3D, sid
   return {
     kind,
     rig,
-    boneNames: skeleton.bones.map((b) => b.name),
+    boneNames,
     boneInverses: skeleton.boneInverses,
-    bindMatrix: first.bindMatrix.clone(),
+    bindMatrix,
     materials,
     parts,
     geometry,
@@ -375,6 +383,7 @@ export function prepareFigureRig(kind: FigureRigKind, scene: THREE.Object3D, sid
     aboveHips,
     aimYaw,
     triangles,
+    legs,
     dispose: () => {
       for (const g of merged.values()) g.dispose();
       merged.clear();
