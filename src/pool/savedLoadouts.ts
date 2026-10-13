@@ -177,7 +177,7 @@ export class SavedLoadouts {
 
   /** The set in use: the real one, or while everything is unlocked the Dev one (made from the real one the first time). */
   private set(): LoadoutSet {
-    if (!this.model.sandboxed()) return this.real;
+    if (!this.model.lent()) return this.real;
     this.dev ??= { slots: this.real.slots.map((s) => (s ? { name: s.name, picks: { ...s.picks } } : null)), current: this.real.current };
     return this.dev;
   }

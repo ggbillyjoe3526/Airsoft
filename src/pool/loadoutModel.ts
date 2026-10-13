@@ -141,11 +141,6 @@ export class LoadoutModel {
     private readonly store: PickStore = SETTINGS_PICKS,
   ) {}
 
-  /** True while everything is unlocked (M26d): the picks are the Dev ones, kept apart from the real ones. */
-  sandboxed(): boolean {
-    return this.ownership.sandboxed?.() ?? false;
-  }
-
   /** Every item owned of the given assets, rarest tier first within each asset (pool order between assets). */
   ownedItems(filter: (a: Asset) => boolean): ItemRef[] {
     const out: ItemRef[] = [];
@@ -185,6 +180,25 @@ export class LoadoutModel {
       out.push(same ?? this.defaultReplica(LOADOUT[i], used));
     });
     return out;
+  }
+
+  /**
+   * The gear slot the kit's `index`th replica is carried in (kit() leaves an empty slot out), e.g. the slot of the
+   * replica in hand on the range (M95); the first slot when there is no such replica.
+   */
+  gearSlotOf(index: number): GearSlot {
+    let n = -1;
+    const equipped = this.equipped();
+    for (let i = 0; i < equipped.length; i++) if (equipped[i] && ++n === index) return GEAR_SLOTS[i]!;
+    return GEAR_SLOTS[0]!;
+  }
+
+  /**
+   * Whether everything is lent (Dev settings › Unlock all gear, M26d): the Loadout says so (M95), and the picks are then
+   * the Dev ones, kept apart from the real ones (so are the saved loadouts, SL1).
+   */
+  lent(): boolean {
+    return this.ownership.sandboxed?.() ?? false;
   }
 
   /**

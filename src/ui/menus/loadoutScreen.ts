@@ -58,8 +58,12 @@ export class LoadoutScreen {
   private readonly gearView: HTMLDivElement;
   private readonly cards = new Map<GearSlot, CarriedCard>();
   private readonly grid: HTMLDivElement;
-  /** "Unlock more in the Armory": hidden while the Armory is off (M83). */
+  /** "Unlock more in the Armory": hidden while the Armory is off (M83), or while everything is lent (M95). */
   private readonly armoryNote: HTMLParagraphElement;
+  /** What the Loadout is for in Practice (M95), shown only when opened from there. */
+  private readonly practiceNote: HTMLParagraphElement;
+  /** Dev settings › Unlock all gear lends everything (M95): said, so the borrowed picks are no surprise. */
+  private readonly lentNote: HTMLParagraphElement;
   private tiles: ReplicaTile[] = [];
   /** Sort and filter by rarity over the grid (M82), its choice saved; and the line shown when it hides every tile. */
   private rarityView: RarityView;
@@ -111,7 +115,10 @@ export class LoadoutScreen {
     });
     this.noneShown = el('p', 'loadout-note rarity-none', RARITY_TEXT.noneShown.replicas);
     this.armoryNote = el('p', 'loadout-note', GEAR_TEXT.unlockMore);
-    owned.append(this.rarityBar.root, this.grid, this.noneShown, this.armoryNote);
+    this.practiceNote = el('p', 'loadout-note loadout-practice', GEAR_TEXT.practice);
+    this.practiceNote.hidden = true;
+    this.lentNote = el('p', 'loadout-note loadout-lent', GEAR_TEXT.lent);
+    owned.append(this.rarityBar.root, this.grid, this.noneShown, this.practiceNote, this.lentNote, this.armoryNote);
 
     const aside = el('aside', 'loadout-selected menu-card');
     aside.setAttribute('aria-label', GEAR_TEXT.selected);
@@ -139,10 +146,22 @@ export class LoadoutScreen {
     return this.view?.hints ?? this.gearHints;
   }
 
+  /**
+   * Shows the gear as the Loadout opens (refresh), from Practice or not (M95: its line says what the Loadout is for there),
+   * with `slot` picked when given: in Practice the slot of the replica in hand, so a replica clicked goes into your hands.
+   */
+  open(practice: boolean, slot?: GearSlot): void {
+    this.practiceNote.hidden = !practice;
+    if (slot) this.selected = slot;
+    this.refresh();
+  }
+
   /** Re-reads the loadout (after the Armory unlocked something, say) and shows the gear. */
   refresh(): void {
-    // The Armory off (Dev settings, M83): no line sends the player there.
-    this.armoryNote.hidden = this.opts.context.armoryShown?.() === false;
+    const lent = this.opts.model.lent();
+    this.lentNote.hidden = !lent;
+    // The Armory off (Dev settings, M83), or everything lent anyway: no line sends the player there.
+    this.armoryNote.hidden = lent || this.opts.context.armoryShown?.() === false;
     this.closeView();
     this.buildGrid();
     this.update();
@@ -172,7 +191,6 @@ export class LoadoutScreen {
       e.preventDefault();
       this.customise(slot);
     });
-    if (slot === 'primary') button.dataset.autofocus = '';
     const customise = menuButton(LOADOUT_TEXT.customise, 'primary', () => this.customise(slot));
     customise.classList.add('carried-customise');
     root.append(button, customise);
@@ -247,6 +265,9 @@ export class LoadoutScreen {
       const on = slot === this.selected;
       card.button.classList.toggle('selected', on);
       setAttr(card.button, 'aria-pressed', String(on));
+      // The picked slot takes the keyboard focus as the screen opens (M95: in Practice, the replica in hand's).
+      if (on) card.button.dataset.autofocus = '';
+      else delete card.button.dataset.autofocus;
       card.root.classList.toggle('selected', on);
       const asset = ref ? m.pool.byId.get(ref.asset)! : null;
       setText(card.name, asset ? asset.name : LOADOUT_TEXT.empty);

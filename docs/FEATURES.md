@@ -276,6 +276,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Range in Depot's new look: baked light, post effects, props behind the firing line (portable toilet, replica rack, water tank, generator, crate bench), a sandbag berm at the backstop, dirt, litter, puddles and sprays, and wooded hills, treelines, site huts, a water tower and a power line beyond the walls; chains, bands and brackets on the plates (FA7, M81)
 - A tutorial of fifteen coached steps on the range, with your own key bindings and the real scoreboard and order wheel; finishing opens Tutorial complete with Practice or Menu; skip and resume from pause; Replay tutorial in Settings starts it again at once (M16, FA10, M80, M97)
 - Practice on any map: the Range or any map (dev maps with Dev content on), picked on the Match screen's Map cards, never changing the match's map; on a map no bots, and plates, figures, pop-ups, sliders and swingers stand where the other team's bots would play, facing you; minimap and torch at night; the timed challenge has its own best per map, a START plate a few steps ahead, and targets light only once in your sight, within 50 m (M94)
+- In Practice, L opens the Loadout from play to try and customise any replica you own (everything with Unlock all gear); Back to practice returns you where you stood (M95)
 
 ## Accessibility and comfort
 

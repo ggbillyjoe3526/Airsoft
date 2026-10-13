@@ -20,7 +20,9 @@ choices to `src/game.ts`.
   saved as `rarity.sort.<list>` and `rarity.hide.<list>`) and `savedLoadoutsBar.ts` (the saved loadouts' tabs, SL1;
   the Match screen picks one with `loadoutPicker.ts`, on the shared `contextMenu.ts`); `armoryScreen.ts` (the collection, a column per kind; a card's spares scrap from a right-click / Menu key / Shift+F10 menu, `contextMenu.ts`: built once, reused, listeners on the page only while open; `menuPlacement.ts` places it in the window, clear of the card's name);
   `settingsScreen.ts` (groups with a search, a note on every row); `pauseScreen.ts` (with
-  `tutorialCompleteDialog.ts` over it when the tutorial ends: the practice range or the menu, M80); `summaryScreen.ts`;
+  `tutorialCompleteDialog.ts` over it when the tutorial ends: the practice range or the menu, M80; in Practice the
+  Loadout key opens the Loadout over it, `Menus.showPracticeLoadout`, on the slot in hand, with Back to practice on the
+  top bar and the key going back too, M95); `summaryScreen.ts`;
   `resultScreen.ts`.
 - Pictures: replica, part and scheme pictures come from `render/itemPictures.ts` via `menuPictures.ts`; map and mode
   stills are files in `public/menu/`, made by `pipeline/map-stills.mjs` (`config/menuArt.ts`); Practice's is drawn
