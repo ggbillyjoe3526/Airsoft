@@ -1,5 +1,6 @@
 import type { MinimapTurn } from './config/minimap';
 import type { Group } from 'three';
+import { AdaptiveRun } from './ai/adaptiveRun';
 import { BotController } from './ai/botController';
 import { SquadFollow } from './ai/squadFollow';
 import { lowCoverBlocks, tallCoverBlocks } from './ai/cover';
@@ -131,6 +132,19 @@ export interface MatchSetup {
   playerTeam?: number;
   /** Settings → Look (G1): robots and Realistic colours. Absent: their defaults. */
   look?: LookSettings;
+  /**
+   * Adaptive difficulty (AD1, the Dev tab): the rating the other team starts at, the highest on offer and the Opponents
+   * level it grew from; `difficulty` is then the level the rating plays as (ai/adaptiveSkill.ts levelAt). Absent, or in
+   * an Extraction run: the fixed levels.
+   */
+  adaptive?: AdaptiveSetup;
+}
+
+/** Adaptive difficulty's start for a match (MatchSetup.adaptive). */
+export interface AdaptiveSetup {
+  rating: number;
+  top: number;
+  from: Difficulty;
 }
 
 /** What an Extraction run found, for the summary (MatchSession.runFinds). */
@@ -201,6 +215,15 @@ export class MatchSession {
   private played = false;
   /** Dev settings › End the round now was used (M90): it counts whenever it was pressed, played or not (BP3). */
   private devEndedRound = false;
+  /**
+   * Adaptive difficulty (AD1): the other team's rating through this match, or null when it plays a fixed level. Its
+   * bots take the drifted skill after each round.
+   */
+  readonly adaptive: AdaptiveRun | null;
+  /** Dev help other than adaptive difficulty itself (as devAssisted): such a match doesn't move the saved rating. */
+  private otherDevHelp = false;
+  /** A character's team by id, for adaptive difficulty's hit counts. */
+  private readonly teamOf = (id: number): number | undefined => this.state.characters.find((c) => c.id === id)?.team;
   /**
    * How long each part of building this match took (audit CORE-33): `performance.measure` entries, and one line Game logs
    * with `?perf`. Started as the session is made, so it counts everything the constructor does.
@@ -294,11 +317,12 @@ export class MatchSession {
     this.player = this.spawnRoster(map, seed);
     this.fitPickedLoadout();
     this.commands.set(PLAYER_ID, this.playerCommand);
+    this.adaptive = setup.adaptive && !this.extraction ? new AdaptiveRun(setup.adaptive.rating, setup.adaptive.top, setup.difficulty, this.player) : null;
     this.bots = new BotController(
       this.state,
       this.state.characters.filter((c) => c !== this.player),
       this.commands,
-      { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, lowCover: lowCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), tallCover: tallCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), sight: sightConditionsOf(map, this.lighting.night), body: BODY, hits: this.hits, loadout: this.botLoadout, cfg: BOTS, teamCfg: teamBotConfigs(this.player.team, setup), seed, insertionBerth: map.extraction?.insertionBerth },
+      { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, lowCover: lowCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), tallCover: tallCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), sight: sightConditionsOf(map, this.lighting.night), body: BODY, hits: this.hits, loadout: this.botLoadout, cfg: BOTS, teamCfg: teamBotConfigs(this.player.team, setup, this.adaptive), seed, insertionBerth: map.extraction?.insertionBerth },
     );
     this.build.phase('simulation and bots');
     input.resetView(this.player.spawnYaw);
@@ -616,6 +640,21 @@ export class MatchSession {
     // A round ended from Dev settings stays counted however the switches are set afterwards (BP3).
     if (!this.played) this.devAssisted = this.devEndedRound || devCheating(cheats);
     else if (devCheating(cheats)) this.devAssisted = true;
+    // The same, without adaptive difficulty itself: help that would teach it the wrong lesson (AD1).
+    const others = devCheating({ ...cheats, adaptiveDifficulty: false });
+    if (!this.played) this.otherDevHelp = this.devEndedRound || others;
+    else if (others) this.otherDevHelp = true;
+  }
+
+  /**
+   * Adaptive difficulty at the match's end (AD1): the rating it started at, and the next match's (null when other Dev
+   * help changed this one, so it learns nothing). Null when the match plays a fixed level or isn't decided.
+   */
+  adaptiveResult(): { start: number; next: number | null } | null {
+    const r = this.state.round;
+    if (!this.adaptive || r.phase !== 'matchOver') return null;
+    const helped = this.otherDevHelp || this.devEndedRound;
+    return { start: this.adaptive.start, next: helped ? null : this.adaptive.next(r.matchWinner === this.player.team) };
   }
 
   /**
@@ -811,6 +850,8 @@ export class MatchSession {
   private afterTick(shown: boolean): void {
     this.stats.afterTick(this.state, SIM_DT);
     this.bots.observe(this.state);
+    // Adaptive difficulty (AD1): after a round, the other team plays the next a little sharper or gentler.
+    if (this.adaptive?.observe(this.state.events, this.teamOf)) this.bots.setTeamSkill(1 - this.player.team, this.adaptive.skill());
     this.eventLog.record(this.state.tick, this.state.events, this.player.id);
     this.eventLog.watchBots(this.state.tick, this.bots.bots);
     if (shown || skipTickShown(this.state.events)) {
@@ -832,7 +873,11 @@ export class MatchSession {
 
 }
 
-/** Per team, the bots' tuning: your team's bots at the teammates' difficulty, the other team's at the opponents' (M20). */
-function teamBotConfigs(playerTeam: number, setup: MatchSetup): BotConfig[] {
-  return byTeam(playerTeam, botConfig(setup.teammateDifficulty), botConfig(setup.difficulty));
+/**
+ * Per team, the bots' tuning: your team's bots at the teammates' difficulty, the other team's at the opponents' (M20),
+ * or at adaptive difficulty's skill (AD1). Your teammates never adapt.
+ */
+export function teamBotConfigs(playerTeam: number, setup: Pick<MatchSetup, 'difficulty' | 'teammateDifficulty'>, adaptive: AdaptiveRun | null): BotConfig[] {
+  const opponents = adaptive ? { ...BOT_BEHAVIOUR, ...adaptive.skill() } : botConfig(setup.difficulty);
+  return byTeam(playerTeam, botConfig(setup.teammateDifficulty), opponents);
 }

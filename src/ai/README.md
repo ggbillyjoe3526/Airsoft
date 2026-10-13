@@ -23,6 +23,12 @@ seeded per bot.
   flag is off the bottom; attackers go to the pole from midfield and crouch by it. Nobody hunts.
 - Tuning: `config/bots.ts` (shared `BotWorld.cfg` plus one difficulty's `Bot.skill`; one `BotConfig` per team through
   `BotControllerOptions.teamCfg`), `config/squad.ts`.
+- Adaptive difficulty (AD1, a Dev setting): `adaptiveSkill.ts` is the arithmetic (a rating on the difficulty scale, 0
+  Easy to 3 Pro; `skillAt` blends the numbers of the two levels around it and takes the switches from the level the
+  match plays as; how a round and a match move it), `adaptiveRun.ts` one match's rating (it drifts a little after each
+  round; `MatchSession` hands the other team's bots the new skill through `BotController.setTeamSkill`). It layers over
+  `BOT_SKILL` and never changes it; tuning in `config/adaptiveDifficulty.ts`, the saved rating in
+  `settings/adaptiveRating.ts`, the between-matches part in `src/adaptivePicks.ts`.
 - Tests: `ai.test.ts`, `botTactics.test.ts` and one file per behaviour. The match guards (`depotMatch.*`, `*Match.*`
   over `depotMatchSupport.ts` and `extractionRunSupport.ts`) are the `slow` project: they check what must never happen
   (rounds played and settled, nobody stuck, falling or hit by a teammate, each mode's rules). They are seed-sensitive:

@@ -348,6 +348,12 @@ replaces its line; the old one stays findable in the archive or in git.
   hear alike. Opponents and teammates have separate difficulties (owner, 2026-10-03).
 - **Normal is the baseline (owner, 2026-10-06, playtest note 19).** Tune on Normal, then check that Easy, Hard and Pro
   still scale. Extraction wants more opponents, not fewer.
+- **Adaptive difficulty is a Dev setting that layers over the fixed levels (owner, 2026-10-06: "auto difficulty as a
+  Dev setting"; AD1, 2026-10-13).** It never changes a level's own numbers: the other team's skill is a rating between
+  the levels whose numbers blend, with the switches of the level nearest it. Your teammates never adapt, Extraction
+  doesn't, and its matches stay out of the records and pay nothing, like the other Dev settings that change play. A
+  later change to a level's skill (bot personalities, bot gear) reaches it through `BOT_SKILL`; a new skill field goes in
+  one of its two lists (`config/adaptiveDifficulty.ts`).
 - **Against Easy opponents, teammates play Normal (owner, 2026-10-05, 07:06).** Otherwise teammates follow the
   opponents' level. That default pair counts as the standard match for the records.
 - **Pro is careful, not twitchier (owner approved the plan and all fourteen defaults, 2026-10-04).** Pro bots hold and

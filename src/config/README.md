@@ -9,7 +9,8 @@ holds no magic numbers.
   `torches.ts`; `schemes.ts`, `characters.ts`, `figureRig.ts` (the rigged Blender figures, BF1), `replicaFinish.ts` for
   how they look. `statsFile.ts` reads `stats.md` and
   `gameStats.ts` holds `GAME_STATS`; the modules above lay it over their built-in numbers (`withStats`, `overlay`).
-- Bots: `bots.ts` (behaviour and difficulties), `squad.ts` (orders, order wheel), `nav.ts`.
+- Bots: `bots.ts` (behaviour and difficulties), `adaptiveDifficulty.ts` (adaptive difficulty's steps, limits, weights
+  and words, and which skill numbers blend, AD1), `squad.ts` (orders, order wheel), `nav.ts`.
 - Rendering: `render.ts` re-exports `renderQuality.ts`, `renderEffects.ts`, `renderLighting.ts`, `renderSurfaces.ts` and
   `renderView.ts`: import from `render.ts`. Also `graphics.ts` (the Custom rows), `post.ts`, `look.ts`, `weathering.ts`,
   `bake.ts`, `dressing.ts`, `materials.ts`, `gpuDressing.ts` (W5: the node path's GPU grass and tree stand-ins, capped

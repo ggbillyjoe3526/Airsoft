@@ -53,6 +53,7 @@ import type { RangePose, RangeSession } from './rangeSession';
 import type { GameState } from './sim/state';
 import { addChallengeRun, loadRecords, noNews, type RecordNews, type Records, saveRecords } from './stats/records';
 import { settleMatch } from './stats/settleMatch';
+import { adaptedPicks, adaptiveNote, adaptiveSetup, settleAdaptive } from './adaptivePicks';
 import { loadCrosshair } from './ui/crosshair';
 import { loadHitMarker } from './ui/crosshairSettings';
 import { loadMinimapTurn } from './ui/hudSettings';
@@ -268,6 +269,8 @@ export class Game {
   private lastHaul: Dispensed[] | null = null;
   /** Why the last match paid nothing, for the summary (audit POOL-22), or null when it paid. */
   private unpaidReason: Unpaid | null = null;
+  /** What the last match did to adaptive difficulty (AD1), for its summary, or null when it played a fixed level. */
+  private adaptiveLine: string | null = null;
   /** Reduced motion (Settings → Accessibility), kept across matches; null until the player picks (audit UI-07). */
   private reducedMotion = loadReducedMotion();
   /** The system's "reduce motion" setting, watched while the player has not picked (audit UI-07). */
@@ -601,6 +604,7 @@ export class Game {
         cheating: () => devCheating(this.dev),
         devContent: () => this.dev.devContent,
         devContentUsed: () => this.devContentUsed(this.playedPicks()),
+        adaptive: () => adaptiveNote(this.dev.adaptiveDifficulty, this.playedPicks(), this.dev.devContent),
         diagnostics: () => this.reportInfo('Airsoft diagnostics'),
         actions: (id) => this.devAction(id),
       },
@@ -1076,7 +1080,10 @@ export class Game {
       // would open with the same bot plans, round by round (bug pass). Play Again is a new match too (audit SIM-08).
       this.matchSeed = matchSeed(this.options.seed, this.matchesPlayed);
       this.matchCounted = false;
-      const picks = this.playedPicks();
+      const asPicked = this.playedPicks();
+      // Adaptive difficulty (AD1, the Dev tab): the other team starts at its saved rating, as the level nearest it.
+      const adaptive = adaptiveSetup(this.dev.adaptiveDifficulty, asPicked, this.dev.devContent);
+      const picks = adaptedPicks(asPicked, adaptive);
       this.session = new MatchSession(this.renderer, this.container, this.input, {
         // Under the map's Day or Night pick (M34d): the one lighting path, night sight and glowing BBs follow it.
         map: this.playedMap(picks.map),
@@ -1095,6 +1102,7 @@ export class Game {
         teamColours: TEAM_COLOUR_SETS[this.teamColours],
         playerTeam: teamOfPick(picks.team ?? DEFAULT_TEAM_PICK),
         look: this.look,
+        ...(adaptive ? { adaptive } : {}),
       }, this.matchSeed, this.quality, this.audio, this.crosshair);
       if (this.options.perfLog) console.info(this.session.build.line());
       this.steppedDown = false;
@@ -1233,6 +1241,7 @@ export class Game {
         fieldCredits: this.lastEarnings,
         unpaid: this.unpaidReason,
         haul: haulSummary(GAME_POOL, s.runFinds(), this.lastHaul),
+        adaptive: this.adaptiveLine,
       });
     } else {
       this.menus.showPause(s.pauseLine(), this.matchSeed, false, false, s.skipOffer);
@@ -1298,6 +1307,11 @@ export class Game {
     // Once per session, on the first frame the match is over: nothing is built on the frames after (CLAUDE.md §9).
     if (s.state.round.phase !== 'matchOver' || this.settledSession === s) return;
     this.settledSession = s;
+    // Adaptive difficulty (AD1) learns from the match, unless it was switched off since: the summary says how.
+    const adaptive = s.adaptiveResult();
+    this.adaptiveLine = adaptive && s.setup.adaptive && this.dev.adaptiveDifficulty ? settleAdaptive(adaptive, s.setup.adaptive.from) : null;
+    // The Match screen's note reads the new rating.
+    if (this.adaptiveLine) this.menus.refresh();
     syncCollection(this.collection, GAME_POOL);
     const settled = settleMatch(this.records, this.collection, s.takeMatchResult(), s.takeOutcome(), GAME_POOL.economy, this.dev.disableArmory);
     if (settled.news) {

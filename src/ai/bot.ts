@@ -63,8 +63,11 @@ export interface Contact {
 
 export interface Bot {
   character: Character;
-  /** How good this bot is: its team's difficulty level (M20). Everything else it is tuned by is `BotWorld.cfg`. */
-  readonly skill: BotSkill;
+  /**
+   * How good this bot is: its team's difficulty level (M20). Everything else it is tuned by is `BotWorld.cfg`. Changed
+   * only between rounds, by adaptive difficulty (AD1, BotController.setTeamSkill).
+   */
+  skill: BotSkill;
   rng: RngState;
   aim: AimState;
   mode: BotMode;

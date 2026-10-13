@@ -96,9 +96,10 @@ export interface MenusOptions {
   /**
    * The Dev tab (M24); `cheating`: a Dev setting now in force keeps the next match out of the records. `devContent`:
    * dev content is offered (M35); `devContentUsed`: New game's picks, the Loadout or the opponents' possible gear use
-   * some, so the match won't count or pay.
+   * some, so the match won't count or pay. `adaptive`: adaptive difficulty's note under the Match screen's rules (AD1),
+   * null with it off.
    */
-  dev: SettingsOptions['dev'] & { cheating: () => boolean; devContent: () => boolean; devContentUsed: () => boolean };
+  dev: SettingsOptions['dev'] & { cheating: () => boolean; devContent: () => boolean; devContentUsed: () => boolean; adaptive?: () => string | null };
   /** The save, for Settings → Save (M31). */
   save: SettingsOptions['save'];
 }

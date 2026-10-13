@@ -124,6 +124,12 @@ export type SettingField =
    * `rarity.sort.<list>` ('kind' or 'rarity') and `rarity.hide.<list>` (the hidden tier ids, comma-separated).
    */
   | `rarity.${string}`
+  /**
+   * Adaptive difficulty (AD1, settings/adaptiveRating.ts): the other team's skill rating for the next match, and the
+   * Opponents level it started from (another level picked starts it again from that one).
+   */
+  | 'adaptiveRating'
+  | 'adaptiveFrom'
   /** The Dev settings (M24, settings/dev.ts): `dev.enabled` and one per entry in config/dev.ts. */
   | `dev.${string}`;
 

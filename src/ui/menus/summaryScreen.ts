@@ -1,3 +1,4 @@
+import { ADAPTIVE_TEXT } from '../../config/adaptiveDifficulty';
 import { STATS } from '../../config/matchInfo';
 import { ARMORY_TEXT, HAUL_TEXT, MENU_TEXT } from '../../config/menus';
 import { type Dispensed, type Earnings, rarestFirst } from '../../pool/armory';
@@ -26,6 +27,8 @@ export interface MatchSummary {
   unpaid?: Unpaid | null;
   /** Extraction's haul (M44); absent in the other modes. */
   haul?: HaulSummary | null;
+  /** What the match did to adaptive difficulty (AD1, adaptivePicks.ts settleAdaptive); absent at a fixed level. */
+  adaptive?: string | null;
 }
 
 /** What an Extraction run found and what came of it, for the summary (M44). */
@@ -58,6 +61,7 @@ export class SummaryScreen {
   private readonly records: HTMLDivElement;
   private readonly credits: HTMLDivElement;
   private readonly haul: HTMLDivElement;
+  private readonly adaptive: HTMLDivElement;
 
   constructor(onContinue: () => void) {
     this.root = el('div', 'menu-screen menu-page menu-summary');
@@ -69,6 +73,7 @@ export class SummaryScreen {
     this.records = el('div', 'summary-records menu-card');
     this.credits = el('div', 'summary-credits menu-card');
     this.haul = el('div', 'summary-haul menu-card');
+    this.adaptive = el('div', 'summary-adaptive menu-card');
     const main = el('section', 'summary-main menu-card');
     main.setAttribute('aria-label', SUMMARY_TEXT.players);
     main.append(this.table.root);
@@ -77,7 +82,7 @@ export class SummaryScreen {
     next.insertAdjacentHTML('beforeend', MENU_ICONS.arrowRight);
     next.dataset.autofocus = '';
     const aside = el('aside', 'summary-aside');
-    aside.append(this.credits, this.haul, this.records, next);
+    aside.append(this.credits, this.haul, this.adaptive, this.records, next);
     const layout = el('div', 'summary-layout');
     layout.append(main, aside);
     // Enter presses the focused Continue; no key of its own.
@@ -97,6 +102,8 @@ export class SummaryScreen {
     this.credits.hidden = credits.length === 0;
     this.haul.replaceChildren(...(summary.haul ? haulBlock(summary.haul) : []));
     this.haul.hidden = !summary.haul;
+    this.adaptive.replaceChildren(...(summary.adaptive ? adaptiveBlock(summary.adaptive) : []));
+    this.adaptive.hidden = !summary.adaptive;
   }
 }
 
@@ -137,6 +144,13 @@ function haulBlock(h: HaulSummary): HTMLElement[] {
   });
   out.push(grid);
   return out;
+}
+
+/** Adaptive difficulty's card (AD1): its name, then where the next match starts. */
+function adaptiveBlock(line: string): HTMLElement[] {
+  const head = el('p', 'summary-credits-total');
+  head.append(el('span', 'menu-kicker', ADAPTIVE_TEXT.title));
+  return [head, el('p', 'menu-readout', line)];
 }
 
 /** "Field Credits earned +180 FC", then what paid them: "Match played 40 · Match won 60 … · Hard ×1.5". */

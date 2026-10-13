@@ -1,5 +1,5 @@
 import { AUDIO } from '../config/audio';
-import type { BotConfig } from '../config/bots';
+import type { BotConfig, BotSkill } from '../config/bots';
 import type { HitConfig } from '../config/hits';
 import { WHAT_GOT_YOU } from '../config/matchInfo';
 import { FLAG, unknownMode } from '../config/modes';
@@ -92,8 +92,8 @@ export class BotController {
   /** The bot whose route search is open in `search`, carried over from an earlier tick (audit AI-04), and its goal. */
   private searching: Bot | undefined;
   private readonly searchGoal = vec3();
-  /** Per team, the tuning its bots play by (BotControllerOptions.teamCfg). */
-  private readonly teamCfg: readonly BotConfig[];
+  /** Per team, the tuning its bots play by (BotControllerOptions.teamCfg; a team's skill changes by setTeamSkill). */
+  private readonly teamCfg: BotConfig[];
   /** Hunt sectors: per team, the last time a player of that team stood in each sector. */
   private readonly sectorCols: number;
   private readonly sectorRows: number;
@@ -134,7 +134,7 @@ export class BotController {
     this.visited = [0, 1].map(() => new Float64Array(this.sectorCols * this.sectorRows).fill(Number.NEGATIVE_INFINITY));
 
     this.planRng = createRng(planSeed(opts.seed));
-    this.teamCfg = opts.teamCfg ?? [cfg, cfg];
+    this.teamCfg = [...(opts.teamCfg ?? [cfg, cfg])];
 
     this.world = {
       characters: state.characters,
@@ -196,6 +196,17 @@ export class BotController {
   /** The tuning `team`'s bots play by. */
   cfgOf(team: number): BotConfig {
     return this.teamCfg[team] ?? this.opts.cfg;
+  }
+
+  /**
+   * Adaptive difficulty (AD1, ai/adaptiveRun.ts), between rounds: `team`'s bots play at `skill` from now on. Only its
+   * numbers may change; the switches stay the match's (a team that holds angles had its map features worked out as the
+   * match loaded).
+   */
+  setTeamSkill(team: number, skill: BotSkill): void {
+    const cfg = { ...this.cfgOf(team), ...skill };
+    this.teamCfg[team] = cfg;
+    for (const b of this.bots) if (b.character.team === team) b.skill = cfg;
   }
 
   private commandFor(id: number): PlayerCommand {
