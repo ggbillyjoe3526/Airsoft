@@ -67,7 +67,7 @@ export function playView(
     rules: `${rulesetOf(played.ruleset).label} · ${match.value}`,
     // Your team first ("Beta · Hard / Normal bots"); a run's squad has no pick, so it says only the bots.
     bots: run ? PLAY_TEXT.botsLine(levels) : `${TEAMS[team]!.name} · ${PLAY_TEXT.botsLine(levels)}`,
-    notes: setupNotes(rules, { recorded, cheating, devContentUsed, ruleset: played.ruleset }),
+    notes: setupNotes(rules, { recorded, cheating, devContentUsed, ruleset: played.ruleset, adaptive: opts.dev.adaptive?.() ?? null }),
     loadout: opts.loadout.summary(),
     pays: paid ? (played.ruleset === DEFAULT_RULESET || recordsKeyOf(played.ruleset) !== null ? PLAY_TEXT.pays : PLAY_TEXT.paysCapped(CUSTOM_RULES_PAY_CAP)) : '',
     practice: practiceView(practicePlace, devContent, lightingOf),
@@ -94,13 +94,15 @@ export function practiceView(place: PracticePlaceId, devContent: boolean, lighti
 /**
  * New game's text under its buttons: the rules, then why the match won't count, said before it is played: custom rules
  * (M20, not `recorded`), Dev settings that change play (M24, `cheating`), or dev content (M35, `devContentUsed`: in full,
- * or only that it won't pay when a note before it already says it won't be recorded). Pure.
+ * or only that it won't pay when a note before it already says it won't be recorded); last, where adaptive difficulty
+ * starts the other team (AD1, `adaptive`). Pure.
  */
-export function setupNotes(rules: string, why: { recorded: boolean; cheating: boolean; devContentUsed: boolean; ruleset?: RulesetId }): string {
+export function setupNotes(rules: string, why: { recorded: boolean; cheating: boolean; devContentUsed: boolean; ruleset?: RulesetId; adaptive?: string | null }): string {
   const notes = [rules];
   if (!why.recorded) notes.push(notRecordedNote(why.ruleset ?? DEFAULT_RULESET));
   else if (why.cheating) notes.push(DEV_NOT_RECORDED_NOTE);
   if (why.devContentUsed) notes.push(notes.length > 1 ? DEV_CONTENT_PAY_NOTE : DEV_CONTENT_NOTE);
+  if (why.adaptive) notes.push(why.adaptive);
   return notes.join(' ');
 }
 

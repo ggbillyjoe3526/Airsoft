@@ -41,6 +41,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **BG1** · Silenced bots are heard from nearer
 - **BG1** · Bots' figures show their gear: a red dot or scope on every rifle, and with Blender figures (Dev switches) grips, lasers and barrels too
 - **BG1** · Kits fit personality: rushers Support, Pointman or Cyber; anchors Marksman or Support; flankers Stealth or Pointman; careful Rifleman or Marksman
+- **AD1** · Adaptive difficulty, a Dev setting: the other team starts at your Opponents level and adapts to how you do; teammates and Extraction don't
 
 ### Changed
 - **M94** · The practice range is now Practice: pause reads "Practice · Range" or "Practice · Depot", and the tutorial's last button says Practice

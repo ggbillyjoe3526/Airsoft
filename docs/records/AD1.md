@@ -1,0 +1,29 @@
+# AD1 · Automatic difficulty that adapts to you (0.1 Dev 6)
+
+**Review:** 2 attempts · 8/8 · Accept (Opus)
+
+## Attempts
+
+| Date | Attempt | Worker model | build | tests | smoke | perf | scope | changelog | Critic | Retry reason | Wall time | Worker tokens |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 2026-10-13 | 1 | Opus 5.5 (build thread) | ✓ 24 s | ✓ 718 s | ✓ 1187 s | ✓ 2240 s | ✓ | ✓ | – stopped, not scored | Bot personalities (BN1) merged into main: `setTeamSkill` had to lay each bot's personality over the adapted level | ~2.5 h | QA (Sonnet) 58k, changelog (Haiku) 20k |
+| 2026-10-13 | 2 | Opus 5.5 (build thread) | ✓ 23 s | ✓ 705 s | ✓ 1162 s | ✓ 2226 s | ✓ | ✓ | 8/8 Accept (Opus) | – | ~2 h | critic (Opus) 85k |
+
+## Decisions
+
+- **One switch, Settings › Dev › Adaptive difficulty, off by default; the Opponents level you pick is where it starts, and the Match screen says where the other team starts this match.** The owner's pick was "auto difficulty as a Dev setting" (2026-10-06); a second Adaptive choice on the Opponents picker would have doubled what the picker means, so the picker keeps its four levels and the switch layers over them (also in DECISIONS).
+- **The other team's skill is a rating on the level scale (Easy 0, Normal 1, Hard 2, Pro 3), from Easy up to the highest level offered (Hard; Pro with Dev content on); between two levels the bots' numbers (reaction, turn rate, aim error and settle, lead, bursts, holds, flank chance, pre-aim, hunt memory) blend the two levels' own numbers.** The fixed levels' numbers in `BOT_SKILL` never change, so a later change to a level (bot personalities, bot gear) reaches adaptive play by itself; a test holds every skill field to exactly one of the two lists in `config/adaptiveDifficulty.ts`.
+- **The switches and whole numbers (holding angles, slicing corners, team play, torch, hunting the middle, keeping dark, locker guards, hunters) come from the level the match plays as, the one nearest its starting rating, for the whole match; that level is also the match's difficulty for the bots' kits, the records' label, "what got you" and the Pro tips.** A bot never starts holding angles or playing as a team halfway through a match.
+- **After a match played to the end, the next starts at this one's start plus the match's score times 0.2 (up) or 0.25 (down); a match scores half its result (won 1, lost -1) and half its rounds' mean score; a round scores 0.6 of its result and 0.4 of your own part (your hits on them, less 1 if they hit you, within -1 to 1).** A clear win is about a fifth of a level up; easing off faster than it climbs settles the rating where you win about 5 matches in 9, a little on your side (`ADAPTIVE.match`).
+- **Within a match, after each round the rating drifts by the round's score times 0.04 (up) or 0.05 (down), never more than 0.15 from where the match began, and the other team's bots take the new numbers at once (`BotController.setTeamSkill`).** Gentle enough that a match keeps its feel; the next match starts from the match's result, not from the drift.
+- **Your teammates never adapt; Extraction runs play the fixed Opponents level (the Match screen says so).** The switch is about the other team answering you, and an Extraction run's waves and locker guards are tuned per fixed level (also in DECISIONS).
+- **The switch counts as a Dev setting that changes play (`cheat`): adaptive matches stay out of the records and give no XP. The rating learns only from a match played to the end, with the switch still on and no other such Dev setting used and no round ended from the Dev tab; a helped match's summary says it is unchanged, and with the switch turned off by then the summary has no card.** Records compare like with like, and a match helped by a Dev setting says nothing about how you play (also in DECISIONS).
+- **The rating is saved with the Opponents level it started from (`adaptiveRating`, `adaptiveFrom` in the settings save); picking another Opponents level starts again from that level.** Picking a level is the clearest way to say "start me here".
+- **Words, not numbers, on the Match screen and the summary: "Normal", "Normal, a little sharper", "between Normal and Hard", "Hard, a little gentler"; the summary's card says "A step up", "A step down" or "No change" and where the next match starts.** Players read levels, not ratings (`ADAPTIVE.words`).
+- **Each bot's personality (BN1) lays over the adapted numbers as over a fixed level's: `setTeamSkill` re-applies `personalSkill` to every bot of the team.** Without it an adaptive team's rushers, anchors, flankers and careful bots would lose their habits after the first round (also in DECISIONS).
+- **Balance: 10 figures, all in band (`node pipeline/balance.mjs adaptive`, on `432e1e5` with personalities).** An in-between rating's mean first hit on a player standing in the open lands between its two neighbours' at 5 m (0.5: 1.88 s, Easy 2.28, Normal 1.50; 1.5: 1.30 s, Hard 1.03; 2.5: 0.82 s, Pro 0.72) and 10 m (2.33 s, 1.59 s, 0.97 s). The mean, not the median: over 200 seeds the 2.5 rating's median at 10 m read Pro's own (0.917 s) while the means ran Hard 1.23, 2.25 1.10, 2.5 0.95, 2.75 0.89, Pro 0.84 s. On Depot, Beta adapting from Normal against Alpha at Hard climbed to a mean 1.81 after 8 matches (Beta won 34 % of the last four matches' rounds), and against Alpha at Easy fell to 0.05 (65 %); before personalities 1.84 and 0.07. Reports in `pipeline/runs/AD1/` (project files).
+
+## Known issues left
+
+- Every step and limit is a first guess, to tune through play on Normal (KNOWN_ISSUES › Bot behaviour, playtest).
+- The Match screen's Opponents line names the level you picked while the note says where the other team starts, and from halfway to the next level it plays as that one (KNOWN_ISSUES › Bot behaviour, playtest).

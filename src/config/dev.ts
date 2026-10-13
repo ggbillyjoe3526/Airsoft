@@ -1,3 +1,4 @@
+import { ADAPTIVE_TEXT } from './adaptiveDifficulty';
 import type { LightingPresetId } from './render';
 
 /**
@@ -50,6 +51,12 @@ export interface DevSettings {
   spectateBots: boolean;
   /** A small label over each bot saying what its brain is doing (M90): fighting, holding, searching … Presentation only. */
   botIntent: boolean;
+  /**
+   * Adaptive difficulty (AD1, Dev 6 item 48; owner, 2026-10-06: "auto difficulty as a Dev setting"): in Elimination and
+   * Attack / Defend the other team's skill follows how you do (config/adaptiveDifficulty.ts). A `cheat`: its matches
+   * play no fixed level, so they stay out of the records.
+   */
+  adaptiveDifficulty: boolean;
 }
 
 export const DEV_DEFAULTS: Readonly<DevSettings> = {
@@ -66,6 +73,7 @@ export const DEV_DEFAULTS: Readonly<DevSettings> = {
   botsHoldFire: false,
   spectateBots: false,
   botIntent: false,
+  adaptiveDifficulty: false,
 };
 
 type KeysOf<V> = { [K in keyof DevSettings]: DevSettings[K] extends V ? K : never }[keyof DevSettings];
@@ -123,6 +131,7 @@ export const DEV_ENTRIES: readonly DevEntry[] = [
     cheat: true,
   },
   { kind: 'switch', id: 'botIntent', label: 'Bot intentions', help: 'A small label over each bot in play says what it is doing: advancing, holding, fighting, searching …', cheat: true },
+  { kind: 'switch', id: 'adaptiveDifficulty', label: ADAPTIVE_TEXT.label, help: ADAPTIVE_TEXT.help, cheat: true },
   {
     kind: 'choice',
     id: 'timeOfDay',

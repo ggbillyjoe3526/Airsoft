@@ -69,6 +69,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   changes how it plays, never its senses, reaction or aim; set in bots.md (BN1)
 - In Attack / Defend defenders hold near the pole; one attacking bot raises the flag while the others guard it from
   cover (M5, FA4)
+- Adaptive difficulty (Dev setting): the other team gets a little sharper after you win and gentler after you lose, from your Opponents level (AD1)
 - Bot kits: opponents on every difficulty carry kits from bot-kits.md by level, leaning to personality (Easy mostly
   plain, Pro never plain, Cyber Pistols from Hard); a bot aims through its own scope or red dot, silenced bots are
   heard nearer, and bots' figures show their gear (BG1)
@@ -184,7 +185,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - HUD size slider (0.8–1.5) in Settings › Gameplay (FA5)
 - A hidden Dev group (tick Dev settings under the list): debug info, BB paths, game speed, bottomless magazines, ghost,
   Disable levelling (unlocks every item; a cheat with no XP and no records), +500 XP, Level up and Reset level buttons,
-  free case openings, time of day, bots hold fire, spectate any bot, bot intentions, end the round now, reset the save,
+  free case openings, time of day, bots hold fire, spectate any bot, bot intentions, adaptive difficulty, end the round now, reset the save,
   Diagnostics Copy and Report a Bug, Dev content switch, Retro pixels (M24, M26d, FA1, M35, M42, M83, M90, IM7)
 - Dev switches Disable all models and Disable figure models (both on by default): turned off, they bring back the Blender replicas, parts and menu pictures, then the player and bot figures (RM4)
 - The build's version on the title screen (M24)

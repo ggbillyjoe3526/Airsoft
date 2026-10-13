@@ -119,6 +119,12 @@ export type SettingField =
   | 'retroColours'
   /** A replica asset's colour scheme (G1, config/schemes.ts), picked in Loadout › Customise. */
   | `scheme.${string}`
+  /**
+   * Adaptive difficulty (AD1, settings/adaptiveRating.ts): the other team's skill rating for the next match, and the
+   * Opponents level it started from (another level picked starts it again from that one).
+   */
+  | 'adaptiveRating'
+  | 'adaptiveFrom'
   /** The Dev settings (M24, settings/dev.ts): `dev.enabled` and one per entry in config/dev.ts. */
   | `dev.${string}`;
 
