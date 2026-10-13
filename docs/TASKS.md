@@ -26,7 +26,7 @@ upgrades, come before the rest of `docs/ROADMAP.md` › 0.1 Dev 6, whose blocks 
 ## M92 · Holster and two kinds of sprint (playtest note 3)
 tier: core
 perf: skip
-touches: src/sim/armament.ts, src/sim/movement.ts, src/sim/commands.ts, src/sim/aiming.ts, src/sim/torch.ts, src/sim/elimination.ts, src/input/playerInput.ts, src/input/scriptedInput.ts, src/config/controls.ts, src/config/movement.ts, src/config/bots.ts, src/config/characters.ts, src/config/renderView.ts, src/config/hudText.ts, src/config/sounds.ts, src/ai/bot.ts, src/ai/botBrain.ts, src/ai/botHolster.ts, src/ai/botCombat.ts, src/render/viewmodel.ts, src/render/characterModels.ts, src/render/characterRenderer.ts, src/render/riggedFigure.ts, src/ui/replicaPanel.ts, src/ui/hudCss/replica.css, src/audio/foley.ts, src/audio/sfx.ts, src/core/reportFields.ts
+touches: src/sim/armament.ts, src/sim/movement.ts, src/sim/commands.ts, src/sim/aiming.ts, src/sim/torch.ts, src/sim/elimination.ts, src/input/playerInput.ts, src/input/scriptedInput.ts, src/config/controls.ts, src/config/movement.ts, src/config/bots.ts, src/config/characters.ts, src/config/renderView.ts, src/config/hudText.ts, src/config/sounds.ts, src/ai/bot.ts, src/ai/botBrain.ts, src/ai/botHolster.ts, src/ai/botCombat.ts, src/render/viewmodel.ts, src/render/characterModels.ts, src/render/characterRenderer.ts, src/render/riggedFigure.ts, src/ui/replicaPanel.ts, src/ui/hudCss/replica.css, src/audio/foley.ts, src/audio/sfx.ts, src/core/reportFields.ts, pipeline/baseline/
 contract: PlayerCommand (a holster slot, by addition)
 acceptance:
   1. Key 3 holsters (1 primary, 2 secondary), rebindable.
