@@ -94,12 +94,13 @@ const TOLERANCE = 0.02;
 /**
  * The rigged figures do not pass M85's bar yet (at most 4 % of the drawn body missed and 3 % of the volume thin air,
  * past the rim): KNOWN_ISSUES › Figures and art. Since IM8 the volume's legs are the figures' own and their crouch is
- * as low as the volume's, so the drawn body is missed on 0-5 % of the grid on every pose; what is left is thin air: the
- * volume's head, chest and hips are the built-in human's, rounder than the Blender human (4-8 %) and the robot (7-11 %;
- * the v12 robot's armour fills more of it than v11's bare shell did), and upright while the figures lean into a run and
- * a sprint (up to 16 %). They are drawn only with the Dev switches off, and must reach M85's bar before they become the
- * default (DECISIONS › Gameplay and feel). Until then each pose is held to today's worst case over the human looks and
- * the robot plus a point (measured 2026-10-13, the v12 figures), so a change can only bring them closer.
+ * as low as the volume's, so the drawn body is missed on 0-5 % of the grid on every pose but a vault's rise (up to
+ * 9 %); what is left is thin air: the volume's head, chest and hips are the built-in human's, rounder than the Blender
+ * human (4-8 %) and the robot (7-11 %; the v12 robot's armour fills more of it than v11's bare shell did), and upright
+ * while the figures lean into a run and a sprint (up to 16 %). They are drawn only with the Dev switches off, and must
+ * reach M85's bar before they become the default (DECISIONS › Gameplay and feel). Until then each pose is held to
+ * today's worst case over the human looks and the robot plus a point (measured 2026-10-13, the v12 figures), so a
+ * change can only bring them closer.
  */
 const LIMITS: Readonly<Record<string, { missed: number; phantom: number }>> = {
   standing: { missed: 0.041, phantom: 0.08 },

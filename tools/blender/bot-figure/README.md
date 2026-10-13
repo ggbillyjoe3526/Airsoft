@@ -93,7 +93,7 @@ Read the newest layer first when looking for a function: it is the one that wins
 - The Rest clips (`Rifle_Rest`, `Rifle_RestUp`, `Rifle_RestDown` and the pistol's) are each aim clip leaned in over
   the cover, held at their first frame; the game blends the aim into them by how settled the rest is.
 
-- Metres, facing glTF +Z; human 1.74 m (v12), robot 1.75 m to the top of its optic (`heightMetres` in the sidecar). Team colour: tint materials whose names start with `Team` (Alpha 0x3d8bff,
+- Metres, facing glTF +Z; human 1.74 m (v12), robot 1.75 m to its highest point (`heightMetres` in the sidecar). Team colour: tint materials whose names start with `Team` (Alpha 0x3d8bff,
   Beta 0xff8a2a).
 - Replicas are the game's own `aeg.glb` / `pistol.glb` (X right, Y forward, Z up). Hang the held one on `Grip_R` with
   the sidecar's `replicaOnGrip` matrix (Blender axes, row-major). `Pistol_*` clips, and `Switch` from 35 %, hold the

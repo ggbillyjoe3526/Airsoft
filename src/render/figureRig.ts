@@ -117,7 +117,7 @@ export interface FigureRigs {
   readonly robot: FigureRig;
   /**
    * The legs a match's hit volume takes (IM8, matchSession.ts): the human's, which the robot shares but for a couple of
-   * centimetres crouched, with any clip the human's file lacks (the Vault, until its redesign) from the robot's.
+   * centimetres crouched, with any clip the human's file lacks from the robot's.
    */
   readonly legs: FigureLegs;
   /** One figure drawn from a rig (render/riggedFigure.ts). */
