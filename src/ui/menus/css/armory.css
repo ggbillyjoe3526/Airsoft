@@ -467,6 +467,27 @@
   box-shadow: none;
 }
 
+/* A choice's second line, and the one in use marked in orange (SL1: the saved loadouts). */
+.context-label,
+.context-detail {
+  display: block;
+}
+
+.context-detail {
+  margin-top: 2px;
+  font: 500 var(--fs-sm) / 1.3 var(--ui-font);
+  color: var(--menu-muted);
+}
+
+.context-item.is-current {
+  box-shadow: inset 3px 0 0 var(--orange);
+}
+
+.context-item.is-current .context-label::after {
+  content: ' ✓';
+  color: var(--orange-text);
+}
+
 .armory-row.is-unowned {
   color: var(--menu-faint);
 }

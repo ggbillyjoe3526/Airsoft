@@ -463,6 +463,12 @@ replaces its line; the old one stays findable in the archive or in git.
   pose and figure still fits.
 - **Loadout and Armory change only between matches, never from the pause menu (owner, 2026-10-03: "I don't want it in
   the pause menu").** The practice range's pause menu offers the Loadout, because a range has no match.
+- **Five saved loadouts, and the one carried follows your edits (2026-10-13, SL1; the count is Claude's default, one
+  number in `config/savedLoadouts.ts`).** Every change on the Loadout and in Customise goes to the current saved
+  loadout, so there is no Save button and nothing to lose; Replace copies the one carried over another. Gear a saved
+  loadout holds that isn't available now stays picked: it plays as the default, shows as locked, and comes back with
+  the gear. Availability is the Loadout's own ownership check, so unlocks of any kind work the same. Unlock all gear
+  keeps a set of its own, as it keeps its own picks.
 - **`pool.md` (what exists: IDs, tags, rarity, economy) and `stats.md` (how it shoots) are hand-edited data the game
   reads (owner's picks, 2026-10-04).** A row the game can't read is skipped with a warning and fails its test. Item IDs
   are six digits, in the order assets are added; they are permanent and only added to. Tags (`gas`, `top-rail`) decide
@@ -558,8 +564,9 @@ replaces its line; the old one stays findable in the archive or in git.
 ## Save and settings storage
 
 - **Save keys and fields are permanent and only added to (2026-10-04).** Settings live in one versioned object,
-  `airsoft.settings`; the collection (`airsoft.collection`), the records (`airsoft.records`) and the key bindings keep
-  their own keys. A rename or retype is a migration step. The collection is progress, not a setting.
+  `airsoft.settings`; the collection (`airsoft.collection`), the records (`airsoft.records`), the saved loadouts
+  (`airsoft.loadouts`, SL1) and the key bindings keep their own keys. A rename or retype is a migration step. The
+  collection is progress, not a setting.
 - **A save is readable JSON with the stores as stored; an integer `SAVE_FORMAT` drives migrations (2026-10-04).** A
   store's version can't change without it (a test fails). Every store keeps fields it doesn't know. A format newer than
   the build is refused, and a store written by a newer build is never read or overwritten.

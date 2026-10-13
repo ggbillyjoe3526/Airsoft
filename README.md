@@ -114,6 +114,8 @@ Then open **http://localhost:4173**.
   silent. You can't shoot for a moment after a sprint.
 - **Loadout.** **Start › Loadout** (or Esc in a match) sets your replicas; right-click one to **Customise** it: optic,
   hop-up, BB weight, grips, barrels, a silencer, magazines and batteries. Every choice is a trade-off, shown in numbers.
+  Keep up to five **saved loadouts** (the tabs at the top, or keys 1 to 5): your changes go to the current one, and
+  right-click one to rename, duplicate, replace or delete it. The Match screen's **Your match** switches them too.
 - **Armory (beta, free).** Field Credits come from matches you take part in, more for a win. Spend them on Tokens, then
   take Shots, each a random draw of replicas and parts. An Epic or better is guaranteed within 20 Shots and a Legendary
   within 100. Nothing is ever sold.
@@ -123,7 +125,7 @@ Then open **http://localhost:4173**.
   minimap shows your teammates, and the other team where you last heard them.
 - **Dev content.** **Settings › Dev** (tick **Dev settings** under the list) has a **Dev content** switch for maps,
   modes and gear still being built. Matches that use them aren't recorded and pay no Field Credits.
-- **Your save** (settings, collection, records) lives in your browser. **Settings › Save** downloads it as a file and
+- **Your save** (settings, collection, records, saved loadouts) lives in your browser. **Settings › Save** downloads it as a file and
   loads it back, and keeps a restore point each day.
 
 ### Controls

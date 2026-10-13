@@ -1,0 +1,252 @@
+/*
+ * Saved loadouts (SL1): the Loadout's tabs, one per slot, and the Match screen's pick beside Change.
+ */
+
+/* Saved loadouts (SL1): a tab per slot across the top of the Loadout, the one carried in orange. */
+.saved-loadouts {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.saved-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+.saved-head .menu-kicker {
+  margin: 0;
+}
+
+.saved-actions {
+  display: flex;
+  gap: var(--sp-1);
+}
+
+.saved-actions .menu-button[aria-disabled='true'],
+.saved-actions .menu-button[aria-disabled='true']:hover {
+  color: var(--menu-faint);
+  background: transparent;
+  cursor: default;
+}
+
+.saved-tabs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--sp-2);
+}
+
+.saved-tab {
+  position: relative;
+  min-width: 0;
+}
+
+.saved-tab-button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  min-height: 64px;
+  padding: var(--sp-2) var(--sp-4) var(--sp-2) var(--sp-3);
+  font: inherit;
+  color: var(--paper);
+  text-align: left;
+  background: rgba(14, 24, 52, 0.92);
+  border: 1px solid var(--menu-line-soft);
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%);
+  cursor: pointer;
+  transition: border-color var(--t-fast) var(--ease);
+}
+
+.saved-tab-button:hover {
+  border-color: var(--menu-muted);
+}
+
+.saved-tab.is-current .saved-tab-button {
+  border-color: var(--orange);
+  box-shadow: inset 0 0 0 1px var(--orange);
+}
+
+.saved-tab-key {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  font: 700 var(--fs-sm) / 1 var(--ui-display);
+  color: var(--menu-muted);
+  border: 1px solid var(--menu-line);
+}
+
+.saved-tab.is-current .saved-tab-key {
+  color: var(--ink);
+  background: var(--orange);
+  border-color: var(--orange);
+}
+
+.saved-tab-words {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* The name, then the Current tag at the far end, so the line under it keeps the tab's whole width. */
+.saved-tab-top {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.saved-tab-name,
+.saved-tab-line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.saved-tab-name {
+  flex: 0 1 auto;
+  min-width: 0;
+  font: 800 var(--fs-lg) / 1.15 var(--ui-display);
+  letter-spacing: var(--ls-tight);
+  text-transform: uppercase;
+}
+
+.saved-tab-line {
+  font-size: var(--fs-sm);
+  color: var(--menu-muted);
+}
+
+.saved-tab.has-locked .saved-tab-line {
+  color: var(--warning);
+}
+
+.saved-tab-tag {
+  flex: none;
+  margin-left: auto;
+  font: 700 var(--fs-xs) / 1 var(--ui-display);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  color: var(--orange-text);
+}
+
+.saved-tab-tag:empty {
+  display: none;
+}
+
+/* An empty slot: a dashed outline and "+ New loadout". */
+.saved-tab.is-empty .saved-tab-button {
+  background: rgba(7, 13, 31, 0.55);
+  border-style: dashed;
+}
+
+.saved-tab.is-empty .saved-tab-name {
+  color: var(--menu-muted);
+}
+
+.saved-tab.is-empty .saved-tab-name::before {
+  content: '+ ';
+}
+
+/* The name box, over the tab while the name is typed. */
+.saved-tab-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  padding: 0 var(--sp-4) 0 calc(var(--sp-3) * 2 + 28px);
+  font: 800 var(--fs-lg) / 1 var(--ui-display);
+  letter-spacing: var(--ls-tight);
+  color: var(--paper);
+  background: var(--menu-panel-hi);
+  border: 1px solid var(--orange);
+  outline: none;
+}
+
+.saved-tab.is-renaming .saved-tab-button {
+  visibility: hidden;
+}
+
+/* What the loadout carried holds that isn't available now, and what plays instead. */
+.saved-locked {
+  padding: var(--sp-2) var(--sp-3);
+  background: rgba(7, 13, 31, 0.6);
+  border-left: 3px solid var(--warning);
+}
+
+.saved-locked .menu-kicker {
+  margin: 0 0 var(--sp-1);
+  color: var(--warning);
+}
+
+.saved-locked-list {
+  margin: 0;
+  padding: 0;
+  font-size: var(--fs-md);
+  color: var(--menu-soft);
+  list-style: none;
+}
+
+.saved-hint {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--menu-faint);
+}
+
+/* The pick of a saved loadout beside Change (SL1): its name, a caret, a dot when some of its gear is locked now. */
+.play-loadout-head .menu-kicker,
+.play-loadout-head .menu-button {
+  flex: none;
+  margin: 0;
+}
+
+/* The name as typed, like the panel's other values (Elimination, Skirmish · 3v3), so a long one still fits. */
+.loadout-pick {
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: var(--control-xs);
+  margin-right: auto;
+  margin-left: var(--sp-3);
+  padding: 0 var(--sp-2);
+  font: 600 var(--fs-md) / 1 var(--ui-font);
+  color: var(--paper);
+  background: rgba(7, 13, 31, 0.6);
+  border: 1px solid var(--menu-line);
+  cursor: pointer;
+}
+
+.loadout-pick:hover {
+  border-color: var(--menu-muted);
+}
+
+.loadout-pick-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.loadout-pick svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+}
+
+.loadout-pick.has-locked::after {
+  content: '';
+  flex: none;
+  width: 8px;
+  height: 8px;
+  background: var(--warning);
+  border-radius: 50%;
+}

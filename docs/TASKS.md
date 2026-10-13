@@ -35,3 +35,17 @@ acceptance:
 status: open
 attempts: 0
 
+## SL1 · Saved loadouts (Dev 6 item 19)
+tier: ui
+perf: skip
+touches: src/pool/loadoutModel.ts, src/pool/savedLoadouts.ts, src/config/savedLoadouts.ts, src/save/saveFile.ts, src/save/stores.ts, src/ui/menus/savedLoadoutsBar.ts, src/ui/menus/loadoutPicker.ts, src/ui/menus/loadoutScreen.ts, src/ui/menus/setupScreen.ts, src/ui/menus/menus.ts, src/ui/menus/menusOptions.ts, src/ui/menus/contextMenu.ts, src/ui/menus/menus.css, src/ui/menus/css/
+contract: none
+acceptance:
+  1. The Loadout shows five saved loadout slots as tabs, the current one clearly marked; a tab (or keys 1 to 5) switches the loadout carried at once: replicas, parts, battery or gas, BB weight, hop-up, Glowing BBs and colours.
+  2. Changes on the Loadout and in Customise go to the current saved loadout; the others keep what they hold.
+  3. Rename, duplicate, replace with the loadout carried (overwrite) and delete, asking first before a delete or a replace; the last one can't be deleted, and deleting the current one carries the next.
+  4. The Match screen's Your match picks a saved loadout from a list (the current one marked) and opens the Loadout to manage them; its kit shows the pick at once.
+  5. Gear a saved loadout holds that isn't available now (not owned or unlocked, or dev gear with Dev content off) shows as locked with what plays in its place, plays as the defaults, and comes back when the gear does; availability is the Loadout's one ownership check.
+  6. Saved in their own store of the save file (format 2, with its migration): a format 1 save, or a browser without the store, starts with one saved loadout, the one carried. Unlock all gear keeps a set of its own; bots are unaffected.
+status: open
+attempts: 0

@@ -7,10 +7,12 @@ import { COMING_MAPS, COMING_SOON_TAG, DEFAULT_MAP, MAPS, type MapId, mapData, m
 import { modeOffered } from '../../map/playableMode';
 import { DEFAULT_PRACTICE_PLACE, PRACTICE_PLACES, type PracticePlaceId } from '../../map/practicePlaces';
 import type { LoadoutModel } from '../../pool/loadoutModel';
+import type { SavedLoadouts } from '../../pool/savedLoadouts';
 import { menuArt, type MenuHint, sectionHead } from './chrome';
 import { ChoiceCards } from './choiceCards';
 import { MENU_ICONS, MODE_ICONS, PRACTICE_ART } from './icons';
 import { KitStrip, type PictureContext } from './kitStrip';
+import { LoadoutPicker } from './loadoutPicker';
 import { type MatchModel, MatchPanel, type MatchShown } from './matchPanel';
 import { el, hintLine, menuButton, setHint } from './menuParts';
 
@@ -79,6 +81,8 @@ export class SetupScreen {
   private readonly facts: { mode: HTMLElement; rules: HTMLElement; teams: HTMLElement };
   private readonly loadoutLine: HTMLParagraphElement;
   private readonly kit: KitStrip;
+  /** The pick of a saved loadout beside Change (SL1); none when the screen is given no saved loadouts (a test). */
+  private readonly picker: LoadoutPicker | null;
   private readonly rules: HTMLParagraphElement;
   private readonly pays: HTMLParagraphElement;
   private readonly start: HTMLButtonElement;
@@ -96,6 +100,7 @@ export class SetupScreen {
     loadout: LoadoutModel,
     context: PictureContext,
     actions: SetupActions,
+    saved?: { loadouts: SavedLoadouts; onPick: () => void },
   ) {
     this.root = el('div', 'menu-screen menu-page menu-setup menu-hub');
     this.root.hidden = true;
@@ -191,7 +196,8 @@ export class SetupScreen {
     const loadoutHead = el('div', 'play-loadout-head');
     const change = menuButton(PLAY_TEXT.change, 'ghost', actions.onLoadout);
     change.setAttribute('aria-label', `${PLAY_TEXT.change} ${PLAY_TEXT.loadout}`);
-    loadoutHead.append(el('p', 'menu-kicker', PLAY_TEXT.loadout), change);
+    this.picker = saved ? new LoadoutPicker(saved.loadouts, saved.onPick, actions.onLoadout) : null;
+    loadoutHead.append(el('p', 'menu-kicker', PLAY_TEXT.loadout), ...(this.picker ? [this.picker.root] : []), change);
     this.kit = new KitStrip(loadout, context);
     this.loadoutLine = el('p', 'play-loadout-line');
     this.rules = el('p', 'setup-rules');
@@ -208,6 +214,7 @@ export class SetupScreen {
     // Esc is Back (the top bar's wordmark does it for the mouse).
     this.hints = [{ keys: ['Esc'], label: MENU_TEXT.hints.back, run: actions.onBack }];
     this.root.append(el('h1', 'menu-heading sr-only', PLAY_TEXT.heading), layout);
+    if (this.picker) this.root.append(this.picker.menu.root);
   }
 
   /**
@@ -271,6 +278,7 @@ export class SetupScreen {
     // The kit's cards name the replicas; the line says what is fitted (or names them, with nothing to add).
     this.loadoutLine.textContent = view.loadout.detail || view.loadout.replicas;
     this.kit.update();
+    this.picker?.update();
     this.rules.textContent = view.notes;
     this.pays.textContent = view.pays;
     this.pays.hidden = view.pays === '';

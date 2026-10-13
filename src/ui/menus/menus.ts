@@ -4,6 +4,7 @@ import { MENU_TEXT } from '../../config/menus';
 import type { QualityChoice, QualitySettings } from '../../config/render';
 import { OnDemand } from '../../core/onDemand';
 import type { NewGamePicks } from '../../newGamePicks';
+import { SavedLoadouts } from '../../pool/savedLoadouts';
 import { saveSetting } from '../../settings/storage';
 import type { ArmoryScreen } from './armoryScreen';
 import { Backdrop, type MenuHint, type NavPlace, TopBar } from './chrome';
@@ -71,6 +72,8 @@ export class Menus {
   private tutorialComplete?: TutorialCompleteDialog;
   /** The Match screen's picks as made (a dev pick stays; playedPicks says how they play), each change saved and reported. */
   private readonly model: PlayPicks;
+  /** The saved loadouts (SL1): tabs on the Loadout, a pick on the Match screen. */
+  private readonly saved: SavedLoadouts;
   private realistic: boolean;
   private tutorialDone: boolean;
   /** A first match was started, or the save already holds records: the title stops offering the Tutorial (M100). */
@@ -114,6 +117,7 @@ export class Menus {
       supply: opts.mode.supply,
       refresh: () => this.refreshViews(),
     }, opts.practicePlace.initial);
+    this.saved = new SavedLoadouts(opts.loadout.model);
     this.realistic = opts.look.initial.realisticColours;
     this.tutorialDone = opts.tutorialDone;
     this.matchStarted = loadMatchStarted();
@@ -267,12 +271,19 @@ export class Menus {
 
   private setupScreen(): SetupScreen {
     if (!this.setup) {
-      this.setup = new SetupScreen(this.model, this.opts.loadout.model, this.context, {
-        onLoadout: () => this.openLoadout('setup'),
-        onBack: () => this.back(),
-        onPlay: () => this.startMatch(),
-        onPractice: () => this.openRange(this.opts.onRange),
-      });
+      this.setup = new SetupScreen(
+        this.model,
+        this.opts.loadout.model,
+        this.context,
+        {
+          onLoadout: () => this.openLoadout('setup'),
+          onBack: () => this.back(),
+          onPlay: () => this.startMatch(),
+          onPractice: () => this.openRange(this.opts.onRange),
+        },
+        // A saved loadout picked here is carried at once, as one picked on the Loadout.
+        { loadouts: this.saved, onPick: () => (this.opts.loadout.onChange(), this.refreshViews()) },
+      );
       this.add('setup', this.setup);
     }
     return this.setup;
@@ -283,7 +294,7 @@ export class Menus {
       const lo = this.opts.loadout;
       const { LoadoutScreen } = this.fetched();
       // Every loadout change also shows on the title's and the Play screen's kit.
-      this.loadout = new LoadoutScreen({ model: lo.model, context: this.context, onChange: () => (lo.onChange(), this.refreshViews()) });
+      this.loadout = new LoadoutScreen({ model: lo.model, saved: this.saved, context: this.context, onChange: () => (lo.onChange(), this.refreshViews()) });
       this.add('loadout', this.loadout);
     }
     return this.loadout;

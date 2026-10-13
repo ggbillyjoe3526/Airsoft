@@ -22,18 +22,22 @@ import { SAVE_STORES, type StoreData, type StoreId } from './stores';
  * every store keeps fields it doesn't know when it saves (save/overStored.ts).
  */
 
-export const SAVE_FORMAT = 1;
+export const SAVE_FORMAT = 2;
 
 /** The stores' own versions each format carried (id → version), for the test that keeps SAVE_FORMAT honest. */
 export const STORES_BY_FORMAT: Readonly<Record<number, Readonly<Record<string, number>>>> = {
   1: { settings: 1, keyBindings: 0, records: 1, collection: 1 },
+  2: { settings: 1, keyBindings: 0, records: 1, collection: 1, loadouts: 1 },
 };
 
 /**
- * One step per format change: MIGRATIONS[n] turns format n's stores into format n + 1's. Empty while there is only
- * format 1; the first change adds `1: (stores) => ...`, the stores' own `migrate` (settings/storage.ts) doing the rest.
+ * One step per format change: MIGRATIONS[n] turns format n's stores into format n + 1's, the stores' own `migrate`
+ * (settings/storage.ts) doing the rest.
  */
-export const MIGRATIONS: Readonly<Record<number, (stores: StoreData) => StoreData>> = {};
+export const MIGRATIONS: Readonly<Record<number, (stores: StoreData) => StoreData>> = {
+  // Format 2 added the saved loadouts (SL1). A format 1 save has none: the game starts it with one, the loadout carried.
+  1: (stores) => ({ ...stores, loadouts: null }),
+};
 
 /** What a save holds, read or about to be written. */
 export interface SaveData {
