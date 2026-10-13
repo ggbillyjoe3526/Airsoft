@@ -124,7 +124,9 @@ Then open **http://localhost:4173**.
 - **Tutorial and Practice range.** The title screen's **Tutorial** teaches the basics in short coached steps (skip it,
   or resume it from the pause screen). **Practice range** puts you alone on a range with targets at 10 to 60 m.
 - **Squad orders and minimap.** Hold Z for the order wheel, or press F, X or V for Follow me, Hold here or Regroup. The
-  minimap shows your teammates, and the other team where you last heard them.
+  minimap shows your teammates, the other team where you last heard them, and the name of the area you're in.
+- **Callouts.** Your bot teammates call what they see and do ("Contact, Dock!", "Two left!") in the bottom left, with a
+  radio click. **Settings › HUD › Callouts** turns them off.
 - **Dev content.** **Settings › Dev** (tick **Dev settings** under the list) has a **Dev content** switch for maps,
   modes and gear still being built. Matches that use them aren't recorded and pay no Field Credits.
 - **Your save** (settings, collection, records, saved loadouts) lives in your browser. **Settings › Save** downloads it as a file and
@@ -284,6 +286,7 @@ pipeline      gate script, perf harness, agent scripts
 docs          design notes, roadmap, process, playtest guide
 pool.md       every item, its rarity and the economy (hand-editable)
 stats.md      how every replica and part performs (hand-editable)
+callouts.md   what the bots call and how often (hand-editable)
 ```
 
 See `CLAUDE.md` for the project guide and `docs/` for design notes. `docs/PLAYTEST.md` is the step-by-step playtest

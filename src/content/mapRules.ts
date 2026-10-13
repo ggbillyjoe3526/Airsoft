@@ -3,12 +3,13 @@ import { MAP_STANDARD, TEAM_COLOUR_RULE } from '../config/contentRules';
 import { MATCH_MODES } from '../config/modes';
 import { NAV } from '../config/nav';
 import { PHYSICS } from '../config/physics';
+import { AREA_NAME_MAX_LENGTH, areaAt } from '../map/areas';
 import { lightingChoices, playsAtNight } from '../map/lightingChoice';
 import type { MapEntry } from '../map/maps';
 import type { MapBlock, MapData } from '../map/mapTypes';
 import { modeOffered, playableMode } from '../map/playableMode';
 import { steepestSlope, terrainRange } from '../map/terrain';
-import { floorAt, isWalkableAt } from '../nav/navGrid';
+import { floorAt, isWalkableAt, nodeX, nodeZ } from '../nav/navGrid';
 import type { Vec3 } from '../sim/vec';
 import { type CheckResult, num, result } from './checks';
 import { type MapGeometry, mapGeometry } from './mapLayout';
@@ -196,6 +197,43 @@ function nightAndLights(entry: MapEntry, map: MapData): CheckResult {
   return result('rules', 'map.night', item, 'pass', `Played by ${choices.join(' or ')}${lights}; night and lights agree.`);
 }
 
+/**
+ * Named areas (CL1): each name short enough for a callout line and the minimap's caption, each box and floor range the
+ * right way round, every walkable spot inside one (or a bot's callout says no place), and every name somewhere walkable.
+ */
+function areas(entry: MapEntry, geo: MapGeometry): CheckResult {
+  const item = mapItem(entry);
+  const list = geo.map.areas ?? [];
+  if (list.length === 0) return result('rules', 'map.areas', item, 'warn', 'It names no areas: the bots’ callouts say no place, and the minimap shows only the map’s name.');
+  const bad: string[] = [];
+  for (const a of list) {
+    const [x0, x1, z0, z1] = a.box;
+    if (a.name.trim() === '' || a.name.length > AREA_NAME_MAX_LENGTH) bad.push(`"${a.name}" is ${a.name.trim() === '' ? 'empty' : `longer than ${AREA_NAME_MAX_LENGTH} letters`}`);
+    if (!(x0 < x1 && z0 < z1)) bad.push(`"${a.name}"'s box is the wrong way round`);
+    if (a.floor && !(a.floor[0] < a.floor[1])) bad.push(`"${a.name}"'s floors are the wrong way round`);
+  }
+  if (bad.length > 0) return result('rules', 'map.areas', item, 'fail', `Its named areas are wrong: ${bad.slice(0, 3).join('; ')}${bad.length > 3 ? `; and ${bad.length - 3} more` : ''}.`);
+  const nav = geo.nav;
+  const unnamed: string[] = [];
+  const used = new Set<string>();
+  let walkable = 0;
+  for (let k = 0; k < nav.walkable.length; k++) {
+    if (nav.walkable[k] !== 1) continue;
+    walkable++;
+    const x = nodeX(nav, k);
+    const y = nav.floorY[k]!;
+    const z = nodeZ(nav, k);
+    const name = areaAt(list, x, y, z);
+    if (name === '') unnamed.push(at({ x, y, z }));
+    else used.add(name);
+  }
+  if (unnamed.length > 0) return result('rules', 'map.areas', item, 'fail', `${plural(unnamed.length, 'walkable spot')} in no named area, so a callout there says no place: ${unnamed.slice(0, 4).join('; ')}${unnamed.length > 4 ? '; …' : ''}.`);
+  const names = [...new Set(list.map((a) => a.name))];
+  const never = names.filter((n) => !used.has(n));
+  if (never.length > 0) return result('rules', 'map.areas', item, 'warn', `Named areas nobody can stand in (${never.join(', ')}): fix their boxes, or the areas before them take every spot.`);
+  return result('rules', 'map.areas', item, 'pass', `${plural(names.length, 'named area')} cover all ${walkable} walkable spots.`);
+}
+
 /** The modes the map hosts (information): Attack / Defend needs its flag, Extraction its data. */
 function modes(entry: MapEntry, map: MapData): CheckResult[] {
   const item = mapItem(entry);
@@ -213,5 +251,5 @@ function modes(entry: MapEntry, map: MapData): CheckResult[] {
 /** Level 1 for one map. */
 export function mapRules(entry: MapEntry, map: MapData, ctx: MapContext = gameMapContext()): CheckResult[] {
   const geo = mapGeometry(map);
-  return [...registered(entry, ctx), room(entry, map), onFloor(entry, geo), ramps(entry, map), killFloor(entry, map), ...clashes(entry, map, ctx), teamColour(entry, map, ctx), lookOnly(entry, geo), nightAndLights(entry, map), ...modes(entry, map)];
+  return [...registered(entry, ctx), room(entry, map), onFloor(entry, geo), ramps(entry, map), killFloor(entry, map), ...clashes(entry, map, ctx), teamColour(entry, map, ctx), lookOnly(entry, geo), areas(entry, geo), nightAndLights(entry, map), ...modes(entry, map)];
 }

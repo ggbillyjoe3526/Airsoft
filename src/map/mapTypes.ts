@@ -192,6 +192,22 @@ export interface MapData {
    * the windows and balconies that overlook it. Map data for bots and for the layout tests.
    */
   overlooks?: Overlook[];
+  /**
+   * The field's named areas (CL1): what the bots' callouts say ("Contact, Dock!") and the minimap's caption shows where
+   * you stand. The first area that holds a point names it (map/areas.ts areaAt), so a room comes before the yard round
+   * it and an upper floor before the street under it. Absent: no names (the range).
+   */
+  areas?: readonly MapArea[];
+}
+
+/**
+ * A named part of the field (CL1): `box` is [x0, x1, z0, z1] in world coordinates; `floor`, when given, the floor heights
+ * it holds (from, inclusive, to, exclusive: someone's feet), for a map with storeys. Without it, any height.
+ */
+export interface MapArea {
+  name: string;
+  box: readonly [number, number, number, number];
+  floor?: readonly [number, number];
 }
 
 /**

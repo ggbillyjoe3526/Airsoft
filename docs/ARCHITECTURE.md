@@ -53,7 +53,7 @@ A task that adds, renames or moves a file keeps its folder's `README.md` current
 | `src/settings/` | The saved settings object and the Dev settings' saved values | `storage.ts`, `dev.ts` |
 | `src/tutorial/` | The tutorial tracker | `tutorial.ts` |
 | `src/assets/` | Bundled fonts and the optional character model | `fonts/`, `models/characters/` |
-| `pool.md`, `stats.md`, `bots.md` | Hand-edited tables the game and its tests read: assets and economy, replica and part numbers, bot names and personalities | read by `pool/poolFile.ts`, `config/statsFile.ts`, `config/botsFile.ts` |
+| `pool.md`, `stats.md`, `bots.md`, `callouts.md` | Hand-edited tables the game and its tests read: assets and economy, replica and part numbers, bot names and personalities, the bots' callouts | read by `pool/poolFile.ts`, `config/statsFile.ts`, `config/botsFile.ts`, `config/calloutsFile.ts` |
 | `public/` | Static files: icon, manifest, menu stills (from `pipeline/map-stills.mjs`) | `menu/` |
 | `pipeline/` | Gates, perf runs, light bakes, build cache, task records, the content check: the task pipeline's scripts | `README.md`, `gate.mjs`, `perf-run.mjs`, `records.mjs`, `content-check.mjs` |
 | `e2e/` | Playwright smoke tests on the `e2e` build; `release.spec.ts` on `dist/` | `boot.spec.ts`, `crash.spec.ts`, `release.spec.ts` |
@@ -258,6 +258,12 @@ request. Each entry says where the contract lives, what it holds today and what 
   seconds left or –). A cell it can't read plays neutral and is reported
   with its line; it never throws. A personality changes how a bot plays, never its senses, reaction, turning or aim
   (`ai/personality.ts personalSkill`). Pinned by `config/botsFile.test.ts`.
+- **`callouts.md`'s format** (`config/calloutsFile.ts`, CL1). What the bots call and how often, found by their `##`
+  headings: When they call (Event, Chance 0 to 1, Team gap (s); the row order is the urgency), Pace (four named
+  seconds), Personalities (Talks (×), one row per bots.md personality) and Lines (Event, Who: Any or a personality,
+  Line with `{area}`, `{count}` or `{left}` where the event fills them). An event without a row is never called; a
+  line it can't read is left out and reported with its line; it never throws. The callouts read the bots and the state
+  and never write either (`ai/callouts.ts`). Pinned by `config/calloutsFile.test.ts`, `ai/callouts.test.ts`.
 - **Content tags** (`config/content.ts`). Every map, mode, difficulty and ruleset (`tag` on `MAPS`, `MATCH_MODES`,
   `DIFFICULTIES`, `RULESETS`) and every pooled asset (`Asset.tag`, from pool.md's Access) is `public` or `dev`; Match
   panel choices may carry one too (untagged is public). `isAvailable(tag, devContent)` is the one check. `devContent`
@@ -292,6 +298,9 @@ request. Each entry says where the contract lives, what it holds today and what 
     `map/bakes/bakes.test.ts`, which names the bake command when they differ.
   - `keepClear`: boxes no decal or wall mark is placed over; the range keeps its distance boards clear with them
     (`map/rangeDressing.ts`, M81).
+  - `areas` (CL1): named places for the bots' callouts and the minimap's label, each a world box and optionally a
+    floor band; the first that holds a spot names it (`map/areas.ts`). The content check `map.areas` fails a walkable
+    spot outside every one.
 
   Pinned by the content toolkit's map checks on every map (`content/mapChecks.test.ts`), `nav/navGrid.test.ts`, `map/neonHeights.test.ts`, `map/extractionData.test.ts`,
   `render/depotLook.test.ts` (a map using none of the woodland look's fields, M33i, builds as before),

@@ -219,7 +219,7 @@ when their work starts. Numbers are from the owner's list of 50 candidates
 | 21 | Bot names, personalities (rusher, anchor, flanker, careful) and loadouts; names and personalities done (2026-10-13, `docs/records/BN1.md`), the loadouts come with item 23 | Bots |
 | 23 | Bots' gear keeps up with yours (audit POOL-24: a tier dial per difficulty, or higher tiers that trade) | Bots |
 | 48 | Auto difficulty as a Dev setting: bots get a little better when you win, a little easier when you lose | Bots |
-| 22 | Location callouts: named areas, and teammates calling "Contact, Dock!" or "Two left" (text first) | Team play |
+| 22 | Location callouts: named areas, and teammates calling "Contact, Dock!" or "Two left" (text first); done (2026-10-13, `docs/records/CL1.md`) | Team play |
 | 24 | Pings: mark a spot and bots act on it | Team play |
 | 43 | Ask a teammate for a magazine, from the comms wheel (owner) | Team play |
 | 44 | Bushes and leaves can stop or deflect BBs | World |

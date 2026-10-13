@@ -52,3 +52,27 @@
 .minimap-caption:empty {
   display: none;
 }
+
+/* The named area you stand in (CL1), over the panel's top left, as your teammates' callouts name it ("Dock"). Small and
+   in the corner, so it hides as little of the field as it can. */
+.minimap-area {
+  position: absolute;
+  top: calc(6px * var(--hud-scale, 1));
+  left: calc(6px * var(--hud-scale, 1));
+  max-width: calc(var(--minimap-size) - 12px * var(--hud-scale, 1));
+  margin: 0;
+  padding: calc(2px * var(--hud-scale, 1)) calc(7px * var(--hud-scale, 1));
+  overflow: hidden;
+  font: 700 calc(15px * var(--hud-scale, 1)) / 1.2 var(--ui-display);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--hud-fg);
+  background: var(--hud-panel);
+  border-radius: 4px;
+}
+
+.minimap-area:empty {
+  display: none;
+}

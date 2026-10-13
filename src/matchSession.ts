@@ -1,6 +1,7 @@
 import type { MinimapTurn } from './config/minimap';
 import type { Group } from 'three';
 import { BotController } from './ai/botController';
+import { CalloutDirector } from './ai/callouts';
 import { drawIdentities } from './ai/botRoster';
 import type { BotIdentity } from './ai/personality';
 import { SquadFollow } from './ai/squadFollow';
@@ -9,6 +10,7 @@ import { sightConditionsOf } from './ai/perception';
 import type { SfxSetup } from './audio/sfx';
 import { FULL_MOTION, type MotionScale } from './config/accessibility';
 import { BALLISTICS, WIND } from './config/ballistics';
+import { CALLOUT_LINES } from './config/calloutLines';
 import { BOT_BEHAVIOUR, BOT_LOADOUTS, BOT_PART_CHANCE, BOTS, type BotConfig, botConfig, type Difficulty, difficultyAtLeast } from './config/bots';
 import { EXTRACTION, homeTeamCap } from './config/extraction';
 import { FOOTSTEPS } from './config/footsteps';
@@ -167,6 +169,9 @@ export class MatchSession {
   private readonly physics: PhysicsWorld;
   private readonly nav: NavGrid;
   private readonly bots: BotController;
+  /** What the bots call to their team (CL1): read off them after each tick; shown and heard while `calloutsOn`. */
+  private readonly callouts: CalloutDirector;
+  private calloutsOn = true;
   private readonly daylight: Daylight;
   /** The map's light as resolved (M33f): a night preset gives the bots their torches and draws the beams (M33h). */
   private readonly lighting: LightingPreset;
@@ -302,6 +307,7 @@ export class MatchSession {
       this.commands,
       { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, lowCover: lowCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), tallCover: tallCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), sight: sightConditionsOf(map, this.lighting.night), body: BODY, hits: this.hits, loadout: this.botLoadout, cfg: BOTS, teamCfg: teamBotConfigs(this.player.team, setup), seed, insertionBerth: map.extraction?.insertionBerth, identities: this.identities },
     );
+    this.callouts = new CalloutDirector(CALLOUT_LINES, seed, map.areas ?? [], !this.extraction);
     this.build.phase('simulation and bots');
     input.resetView(this.player.spawnYaw);
     // The perf harness's player (`?script=perf`) plays the script for this mode: Extraction's opens a case (M64, UI-05).
@@ -659,6 +665,12 @@ export class MatchSession {
     this.match.setHitFeedMode(mode);
   }
 
+  /** Settings › HUD › Callouts (CL1): your teammates' calls in the feed with their radio clicks, and enemies' clicks. */
+  setCallouts(on: boolean): void {
+    this.calloutsOn = on;
+    if (!on) this.match.clearCallouts();
+  }
+
   /** Settings › HUD › Minimap (M83): turning with the view, or fixed north up. */
   setMinimapTurn(turn: MinimapTurn): void {
     this.match.setMinimapRotating(turn === 'rotating');
@@ -810,6 +822,19 @@ export class MatchSession {
     if (result !== 'none') this.combat.orderHeard();
   }
 
+  /** This tick's callouts (CL1): a teammate's in the feed and in your ear, an enemy's as a radio click if close by. */
+  private sayCallouts(): void {
+    const said = this.callouts;
+    for (let i = 0; i < said.saidCount; i++) {
+      const call = said.said[i]!;
+      const speaker = this.state.characters[call.speakerId];
+      if (!speaker || speaker.id !== call.speakerId) continue;
+      const mate = call.team === this.player.team;
+      if (mate) this.match.callout(call.speakerId, call.team, call.text);
+      this.combat.radioCall(speaker, mate);
+    }
+  }
+
   /** Everything that reacts to a simulation tick's events. */
   /**
    * After each tick: the stats, what the bots saw, the round's start and end, the squad. `shown`: the presentation too
@@ -818,11 +843,13 @@ export class MatchSession {
   private afterTick(shown: boolean): void {
     this.stats.afterTick(this.state, SIM_DT);
     this.bots.observe(this.state);
+    this.callouts.observe(this.state, this.bots.bots);
     this.eventLog.record(this.state.tick, this.state.events, this.player.id);
     this.eventLog.watchBots(this.state.tick, this.bots.bots);
     if (shown || skipTickShown(this.state.events)) {
       this.combat.afterTick();
       this.match.afterTick(this.input.yaw);
+      if (this.calloutsOn) this.sayCallouts();
     }
     for (const e of this.state.events) {
       if (e.type === 'roundStart') {
