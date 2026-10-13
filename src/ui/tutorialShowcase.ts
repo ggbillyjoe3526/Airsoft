@@ -1,3 +1,5 @@
+import { BOT_PERSONALITIES } from '../config/botPersonalities';
+import type { BotsFile } from '../config/botsFile';
 import type { Action } from '../config/controls';
 import { ORDER_WHEEL, type WheelSelect } from '../config/squad';
 import { TEAMS } from '../config/teams';
@@ -7,11 +9,26 @@ import { OrderWheel, wheelHint } from './orderWheel';
 import { formatAccuracy, formatTime, type TeamBlock } from './statsRows';
 
 /**
+ * The sample's `k`th bot as a match names it (BN1): a roster name from `file`, the personalities taken in turn so each
+ * team is a mix, with its personality's tag; the team's name and number when the roster has none.
+ */
+export function sampleBot(k: number, team: number, n: number, file: BotsFile = BOT_PERSONALITIES): { name: string; tag: string } {
+  const kinds = [...file.styles.keys()].filter((p) => file.roster.some((e) => e.personality === p));
+  if (kinds.length === 0) return { name: `${TEAMS[team]!.name} ${n}`, tag: '' };
+  const kind = kinds[k % kinds.length]!;
+  const names = file.roster.filter((e) => e.personality === kind);
+  const entry = names[Math.floor(k / kinds.length) % names.length]!;
+  return { name: entry.name, tag: file.styles.get(kind)!.label };
+}
+
+/**
  * The sample match the tutorial's scoreboard step shows (TUTORIAL.sampleBoard), in the blocks a match's board is drawn
- * from: your team first with you on top, players named as in a match ("You", then the team's name and number). Pure.
+ * from: your team first with you on top, players named as in a match ("You", then each bot's roster name and
+ * personality, BN1). Pure.
  */
 export function sampleBoardBlocks(playerTeam: number): TeamBlock[] {
   const sample = TUTORIAL.sampleBoard;
+  let k = 0;
   return [playerTeam, 1 - playerTeam].map((team, b) => {
     const won = sample.score[b] ?? 0;
     const rows = sample.rows[b] ?? [];
@@ -20,8 +37,10 @@ export function sampleBoardBlocks(playerTeam: number): TeamBlock[] {
       title: `${TEAMS[team]!.name}${b === 0 ? ' (you)' : ''} · ${won} ${won === 1 ? 'round' : 'rounds'} won`,
       rows: rows.map(([hits, timesHit, bbsFired, timeAlive, out], i) => {
         const you = b === 0 && i === 0;
+        const bot = you ? { name: 'You', tag: '' } : sampleBot(k++, team, i + 1);
         return {
-          name: you ? 'You' : `${TEAMS[team]!.name} ${i + 1}`,
+          name: bot.name,
+          tag: bot.tag,
           you,
           out,
           hits: String(hits),

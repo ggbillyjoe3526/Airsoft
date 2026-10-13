@@ -24,6 +24,8 @@ import { placeTeams, type RoundRules } from '../sim/round';
 import { createGameState, type GameState } from '../sim/state';
 import { type Vec3, vec3 } from '../sim/vec';
 import { BotController } from './botController';
+import { drawIdentities } from './botRoster';
+import type { BotIdentity } from './personality';
 import { lowCoverBlocks, tallCoverBlocks } from './cover';
 import { sightConditionsOf } from './perception';
 
@@ -85,6 +87,8 @@ export function playMatch(
   carry: (id: number, team: number) => Character | undefined = () => undefined,
   /** Every bot carries the weapon torch (fitNightTorches): by default on a night field, as the game fits it (M57, audit AI-02). */
   torches: boolean = map.night === true,
+  /** Who the bots are (BN1), by character id: by default a roster name and personality each, as a match draws them. */
+  identities?: ReadonlyMap<number, BotIdentity>,
 ) {
   const physics = new PhysicsWorld(map, BODY, DT);
   const nav = buildNavGrid(map, NAV);
@@ -137,6 +141,8 @@ export function playMatch(
     loadout: LOADOUT,
     cfg,
     seed,
+    // Each bot a roster name and personality, as a match draws them (BN1): the guards play the game as it ships.
+    identities: identities ?? drawIdentities(seed, botCharacters),
   });
 
   const stats = {

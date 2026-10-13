@@ -562,27 +562,31 @@ describe('defence and moving in pairs', () => {
     const leftWithPartnerMoving = (cfg: BotConfig) => {
       let departures = 0;
       let together = 0;
-      const wasHolding = new Map<Bot, boolean>();
       const moving = (o: Bot) => o.mode === 'advance' && !o.hunting && !o.holding && o.routeState === 'ok';
-      playMatch(90, 3, undefined, cfg, 'elimination', undefined, undefined, undefined, undefined, (_s, bots) => {
-        for (const b of bots.bots) {
-          const held = wasHolding.get(b) ?? false;
-          wasHolding.set(b, b.holding);
-          if (!held || b.holding || b.mode !== 'advance' || b.hunting || b.character.status !== 'alive') continue;
-          const p = b.character.position;
-          const partner = bots.bots.find(
-            (o) =>
-              o !== b &&
-              o.character.team === b.character.team &&
-              o.lane === b.lane &&
-              o.character.status === 'alive' &&
-              Math.hypot(o.character.position.x - p.x, o.character.position.z - p.z) <= BOTS.boundDistance,
-          );
-          if (!partner) continue;
-          departures++;
-          if (moving(partner)) together++;
-        }
-      });
+      // Two seeds (one before BN1): a rusher or a flanker doesn't wait for the team, so fewer bots' departures count.
+      for (const seed of [3, 4]) {
+        const wasHolding = new Map<Bot, boolean>();
+        playMatch(90, seed, undefined, cfg, 'elimination', undefined, undefined, undefined, undefined, (_s, bots) => {
+          for (const b of bots.bots) {
+            const held = wasHolding.get(b) ?? false;
+            wasHolding.set(b, b.holding);
+            // A personality that doesn't wait for the team (a rusher or a flanker, BN1) sets off when it likes.
+            if (!held || b.holding || b.mode !== 'advance' || b.hunting || b.character.status !== 'alive' || !b.style.waitsForTeam) continue;
+            const p = b.character.position;
+            const partner = bots.bots.find(
+              (o) =>
+                o !== b &&
+                o.character.team === b.character.team &&
+                o.lane === b.lane &&
+                o.character.status === 'alive' &&
+                Math.hypot(o.character.position.x - p.x, o.character.position.z - p.z) <= BOTS.boundDistance,
+            );
+            if (!partner) continue;
+            departures++;
+            if (moving(partner)) together++;
+          }
+        });
+      }
       return { departures, share: together / Math.max(1, departures) };
     };
     const pro = botConfig('pro');

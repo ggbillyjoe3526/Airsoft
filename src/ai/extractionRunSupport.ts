@@ -26,6 +26,7 @@ import { type Vec3, vec3 } from '../sim/vec';
 import { createWind } from '../sim/wind';
 import { type Bot } from './bot';
 import { BotController } from './botController';
+import { drawIdentities } from './botRoster';
 import { lowCoverBlocks, tallCoverBlocks } from './cover';
 import { DT, fitNightTorches } from './depotMatchSupport';
 import { sightConditionsOf } from './perception';
@@ -61,6 +62,11 @@ export interface RunOptions {
   loadout?: readonly ReplicaConfig[];
   /** Who carries something else (playMatch's `carry`: the content toolkit's item balance run, CT3): its character, or undefined. */
   carry?: (id: number, team: number) => Character | undefined;
+  /**
+   * The bots play their roster personalities (default true, BN1); false plays every bot as its level is, for a test
+   * of a mechanism personalities leave alone whose seed a personality's fight would otherwise cut across.
+   */
+  personalities?: boolean;
 }
 
 /**
@@ -169,6 +175,9 @@ export function setUpRun(opts: RunOptions) {
     teamCfg: [botConfig(teammates), botConfig(opponents)],
     seed,
     insertionBerth: x.insertionBerth,
+    // Each bot a roster name and personality, as a match draws them (BN1): the guards play the game as it ships. You
+    // have none, even when a bot plays your part (runnerBot).
+    identities: opts.personalities === false ? undefined : drawIdentities(seed, botCharacters.filter((c) => c !== you)),
   });
   const follow = new SquadFollow();
   const runner = opts.runnerBot ? new RunnerPlan(bots.bots.find((b) => b.character === you)!, opts.plan ?? RUNNER_PLAN) : undefined;
