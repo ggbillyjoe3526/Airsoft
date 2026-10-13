@@ -162,6 +162,7 @@ for (const mode of MATCH_MODES.filter((m) => !ONLY_MODE || m.id === ONLY_MODE)) 
  * ?nolock has no mouse look.
  */
 test('Rest on cover: aiming still at a crate shows the Rested tag, and letting go of the aim hides it', async ({ page }) => {
+  test.skip(ONLY_MODE !== undefined, "a mode's content check plays only its own short match");
   test.setTimeout(300_000);
   const errors: string[] = [];
   const elimination = MATCH_MODES.find((m) => m.id === 'elimination')!;
