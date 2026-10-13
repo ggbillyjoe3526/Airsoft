@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { LEG_CLIPS, LEG_SAMPLE } from '../sim/figureLegs';
-import type { FigureLegs } from '../sim/figureLegs';
+import type { FigureLegs } from '../config/hits';
 import { legsWithSpares } from './figureLegs';
 
 /** RM10: legsWithSpares on small made-up legs, the cases the shipped files do not reach. */

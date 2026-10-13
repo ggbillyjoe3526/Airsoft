@@ -64,7 +64,8 @@ describe('the robot clip set (acceptance 2 and 5)', () => {
   });
 
   it('has the rest clips as held single poses on the upper body, and the vault as a whole-body clip that plays once', () => {
-    const by = new Map(sidecar.clips.map((c) => [c.name, c]));
+    // The sidecar carries each clip's frame count too (the Blender export's), which FigureSidecar doesn't type.
+    const by = new Map(sidecar.clips.map((c) => [c.name, c as typeof c & { frames: number }]));
     for (const n of added.filter((a) => a !== 'Vault')) {
       expect(by.get(n)!.upperBodyOnly, n).toBe(true);
       expect(by.get(n)!.frames, n).toBe(1);
