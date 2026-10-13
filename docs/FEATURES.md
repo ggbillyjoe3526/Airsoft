@@ -11,6 +11,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Accuracy by stance and movement: steadier crouched and still, worse walking, running or in the air; crouch-walking is
   slightly less accurate than standing still (M10, FA1)
 - Walking while aiming: hold Shift while aiming and you creep slower than the aiming pace (M84)
+- Holster on 3 (1 and 2 pick primary and secondary): holstered you sprint faster (6.8 against 6.3 m/s) but draw takes longer; a fresh trigger pull, aim, reload or slot key draws it (M92)
 
 ## Replicas and BBs
 
