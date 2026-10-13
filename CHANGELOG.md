@@ -13,6 +13,9 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M92** · Holstered, you sprint a little faster; drawing out of the holster is slower than raising from a sprint
 - **M92** · Bots holster on calm sprints through their own half and draw again on any threat
 - **M95** · In Practice, L opens the Loadout on the replica in your hands; Back to practice or L returns you where you stood, with the new replica coming up
+- **SL1** · Five saved loadout tabs on the Loadout: keys 1 to 5 or a click switch the whole kit you carry at once; your edits go to the current tab
+- **SL1** · Right-click a tab (or Menu, Shift+F10) to use, rename, duplicate, replace with yours or delete; the last loadout can't be deleted
+- **SL1** · Your match on the Match screen lists saved loadouts beside Change; gear a saved loadout can't use now shows as locked until it comes back
 
 ### Changed
 - **M94** · The practice range is now Practice: pause reads "Practice · Range" or "Practice · Depot", and the tutorial's last button says Practice
@@ -20,6 +23,9 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 
 ### Fixed
 - **M92** · Bots firing on the move hold fire when a teammate is down the line, so they no longer hit teammates past the end of a wall
+
+### Internal
+- **SL1** · Saved loadouts are part of save format 2 with their own store (airsoft.loadouts); the context menu's styles have their own sheet
 
 ## 0.1 Dev 5 · 2026-10-13
 

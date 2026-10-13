@@ -52,7 +52,7 @@ test('Settings → Save downloads the save and loads it back, with Undo', async 
   let text = '';
   for await (const chunk of stream as unknown as AsyncIterable<{ toString(): string }>) text += chunk.toString();
   const file = JSON.parse(text);
-  expect(file).toMatchObject({ game: 'Airsoft', format: 1, summary: { fc: 400, tokens: 1, items: 3 } });
+  expect(file).toMatchObject({ game: 'Airsoft', format: 2, summary: { fc: 400, tokens: 1, items: 3 } });
   expect(file.stores.settings.fov).toBe(100);
   expect(file.stores.collection.futureField).toBe('kept');
   expect(file.checksum).toMatch(/^sha256:/);
@@ -203,7 +203,7 @@ test('a file that is too big, not a save, from a newer game or dropped on the pa
   await expect(message).toContainText("isn't an Airsoft save (it can't be read)");
 
   // A newer format: told to update, nothing replaced.
-  await upload('future.json', saveText({ format: 2, build: 'v9-future' }));
+  await upload('future.json', saveText({ format: 99, build: 'v9-future' }));
   await expect(message).toContainText('newer version of the game (v9-future)');
   await expect(message).toContainText('Update the game');
   await expect(page.locator('.save-dialog')).toBeHidden();

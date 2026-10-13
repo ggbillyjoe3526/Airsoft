@@ -769,15 +769,15 @@ test('the game boots to the title screen on High', async ({ page }) => {
   await card.scrollIntoViewIfNeeded();
   const fcBefore = await page.locator('.menu-chip-fc').innerText();
   await card.click({ button: 'right' });
-  await expect(page.locator('.context-menu .context-item')).toHaveCount(2);
+  await expect(page.locator('.context-menu:visible .context-item')).toHaveCount(2);
   await page.keyboard.press('Escape'); // closes the menu and stays on the Armory
-  await expect(page.locator('.context-menu')).toBeHidden();
+  await expect(page.locator('.context-menu:visible')).toHaveCount(0);
   await expect(armoryScreen).toBeVisible();
   await card.focus();
   await page.keyboard.press('Shift+F10'); // the keyboard opens the same menu
-  await expect(page.locator('.context-menu .context-item')).toHaveCount(2);
-  await page.locator('.context-menu').getByRole('button', { name: /^Scrap 1 Common / }).click();
-  await expect(page.locator('.context-menu')).toBeHidden();
+  await expect(page.locator('.context-menu:visible .context-item')).toHaveCount(2);
+  await page.locator('.context-menu:visible').getByRole('button', { name: /^Scrap 1 Common / }).click();
+  await expect(page.locator('.context-menu:visible')).toHaveCount(0);
   await expect(page.locator('.menu-chip-fc')).not.toHaveText(fcBefore);
   await page.locator('.menu-armory').getByRole('button', { name: /^10 Shots/ }).click();
   const ask = page.getByRole('dialog', { name: 'Take 10 Shots?' });
