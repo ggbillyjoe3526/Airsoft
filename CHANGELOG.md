@@ -4,6 +4,14 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 
 ## Unreleased
 
+### Added
+
+- **M95** · In Practice, L opens the Loadout on the replica in your hands; Back to practice or L returns you where you stood, with the new replica coming up
+
+### Changed
+
+- **M95** · With Unlock all gear on, the Loadout says every replica and part is lent to try, and the range's first line names the Loadout key
+
 ## 0.1 Dev 5 · 2026-10-13
 
 ### Added
