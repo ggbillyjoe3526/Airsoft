@@ -222,6 +222,15 @@ describe('sound synthesis (M13)', () => {
     }
   });
 
+  it('plays a shot, its power part and the AEG motor louder than before the 0.1 Dev 5 playtest (note 2: shots at 1, the motor at 0.8)', () => {
+    const L = AUDIO.levels;
+    const OLD = { shot: 1, motor: 0.8 };
+    const dB = (gain: number, old: number): number => 20 * Math.log10(gain / old);
+    expect(dB(L.shot.gain, OLD.shot), 'shot, dB up').toBeGreaterThanOrEqual(2.5);
+    expect(L.power.gain, 'power part as loud as the shot').toBe(L.shot.gain);
+    expect(dB(L.motor.gain, OLD.motor), 'motor, dB up').toBeGreaterThanOrEqual(2.5);
+  });
+
   it('plays every interface cue within 20 dB of the hit tick, the exit count beep at about -16 dBFS (M53, audit AUD-04)', () => {
     const L = AUDIO.levels;
     const dbfs = (cue: SoundCue, level: { gain: number }): number => 20 * Math.log10(Math.max(...rendered.get(cue)!.map(peak)) * level.gain * AUDIO.masterVolume);

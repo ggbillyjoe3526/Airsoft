@@ -992,3 +992,49 @@ test('the tutorial opens on the range with the coach', async ({ page }) => {
   await expect(page.locator('.menu-title').getByRole('button', { name: 'Tutorial', exact: true })).toBeHidden();
   expect(errors).toEqual([]);
 });
+
+/**
+ * Esc while out skips the round without the pause menu (the owner's 0.1 Dev 5 playtest, note 10). `?nolock` has no lock
+ * to lose, so the browser's drop is sent as the event it fires (`pointerlockchange` with nothing locked): the game
+ * sees a drop it did not ask for, as it does on Esc. Alive, that pauses as ever; out, it skips and the menu stays shut.
+ */
+test.describe('Esc and the lost mouse in a match (0.1 Dev 5 playtest, note 10)', () => {
+  type Esc = {
+    airsoft: {
+      escSkipAt: number;
+      session: { skipping: boolean; skipOffer: string | null };
+      state: { round: { phase: string }; characters: { status: string }[] };
+    };
+  };
+  async function inLiveRound(page: import('@playwright/test').Page): Promise<void> {
+    await page.goto('/?nolock&seed=1&quality=low');
+    await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
+    await page.locator('.menu-title-start').click();
+    await page.locator('.menu-setup').getByRole('button', { name: 'Start match', exact: true }).click();
+    await page.waitForSelector('.hud-replica', { state: 'visible', timeout: 60_000 });
+    await page.waitForFunction(() => (window as unknown as Esc).airsoft.state.round.phase === 'live', undefined, { timeout: 60_000 });
+  }
+  const dropTheLock = (page: import('@playwright/test').Page) => page.evaluate(() => document.dispatchEvent(new Event('pointerlockchange')));
+
+  test('alive, the mouse lost opens the pause menu as before', async ({ page }) => {
+    await inLiveRound(page);
+    await dropTheLock(page);
+    await expect(page.locator('.menu-pause')).toBeVisible({ timeout: 10_000 });
+    expect(await page.evaluate(() => (window as unknown as Esc).airsoft.session.skipping)).toBe(false);
+  });
+
+  test('out, it skips the round with the pause menu shut, and Esc again opens the menu', async ({ page }) => {
+    await inLiveRound(page);
+    await page.evaluate(() => {
+      (window as unknown as Esc).airsoft.state.characters[0]!.status = 'out';
+    });
+    await page.waitForFunction(() => (window as unknown as Esc).airsoft.session.skipOffer !== null, undefined, { timeout: 10_000 });
+    await dropTheLock(page);
+    await expect.poll(() => page.evaluate(() => (window as unknown as Esc).airsoft.session.skipping)).toBe(true);
+    await expect(page.locator('.menu-pause')).toBeHidden();
+    // Esc inside the guard (the one that let go of the mouse) does nothing; after it, Esc opens the menu.
+    await page.waitForFunction(() => performance.now() - (window as unknown as Esc).airsoft.escSkipAt > 1000);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.menu-pause')).toBeVisible({ timeout: 10_000 });
+  });
+});

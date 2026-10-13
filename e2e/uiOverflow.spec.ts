@@ -73,7 +73,10 @@ function overflowReport(): string[] {
     const fontSize = parseFloat(cs.fontSize) || 16;
     const lineHeight = parseFloat(cs.lineHeight) || fontSize * 1.2;
     // A text rectangle is the font's height, taller than a tight line box: allow what the line height cuts.
-    const slack = Math.max(TOL, (fontSize * 1.25 - lineHeight) / 2 + 1.5);
+    // The font's height and the line height are in layout pixels: a HUD panel scaled by its size setting (CSS scale) draws
+    // them larger, so what the line height cuts grows with it.
+    const drawn = e instanceof HTMLElement && e.offsetHeight > 0 ? Math.max(1, box.height / e.offsetHeight) : 1;
+    const slack = Math.max(TOL, ((fontSize * 1.25 - lineHeight) / 2 + 1.5) * drawn);
     const clipped = e.scrollWidth > e.clientWidth + 1 && cs.textOverflow === 'ellipsis';
     if (clipped) {
       // A cut name needs its full text as a tip.
@@ -149,95 +152,98 @@ async function expectFits(page: Page, where: string): Promise<void> {
   expect(found, `${where}: text out of its box`).toEqual([]);
 }
 
-test('no text runs out of its box at 1280 x 720 and the ammo panel touches nothing in a match', async ({ page }) => {
-  test.setTimeout(150_000);
-  const errors: string[] = [];
-  page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
-  await page.setViewportSize({ width: 1280, height: 720 });
-  // A player with parts and a full wallet (a six-digit balance), Dev content on (the Dev tag, Woodland, Neon Heights'
-  // Day | Night switch and the Dev tab are all drawn), and the Dev tab's Unlock all gear (every slot offers something).
-  await page.addInitScript(() => {
-    localStorage.setItem('airsoft.settings', JSON.stringify({ version: 1, 'dev.enabled': true, 'dev.devContent': 'on', 'dev.unlockAllGear': 'on' }));
-    const owned = ['000001', '000002', '000003', '000004'].map((id) => [`${id}@common`, 1]);
-    localStorage.setItem('airsoft.collection', JSON.stringify({ version: 1, owned: Object.fromEntries([...owned, ['000019@legendary', 1]]), fc: 123456, tokens: 99, seed: 1 }));
-  });
-  await page.goto('/?nolock&seed=1&quality=low');
-  await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
-  await expectFits(page, 'Title');
+// The three sizes the criterion names (1280 x 720 is the smallest the menus are made for).
+for (const [width, height] of [[1280, 720], [1920, 1080], [2560, 1440]] as const) {
+  test(`no text runs out of its box at ${width} x ${height} and the ammo panel touches nothing in a match`, async ({ page }) => {
+    test.setTimeout(150_000);
+    const errors: string[] = [];
+    page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
+    await page.setViewportSize({ width, height });
+    // A player with parts and a full wallet (a six-digit balance), Dev content on (the Dev tag, Woodland, Neon Heights'
+    // Day | Night switch and the Dev tab are all drawn), and the Dev tab's Unlock all gear (every slot offers something).
+    await page.addInitScript(() => {
+      localStorage.setItem('airsoft.settings', JSON.stringify({ version: 1, 'dev.enabled': true, 'dev.devContent': 'on', 'dev.unlockAllGear': 'on' }));
+      const owned = ['000001', '000002', '000003', '000004'].map((id) => [`${id}@common`, 1]);
+      localStorage.setItem('airsoft.collection', JSON.stringify({ version: 1, owned: Object.fromEntries([...owned, ['000019@legendary', 1]]), fc: 123456, tokens: 99, seed: 1 }));
+    });
+    await page.goto('/?nolock&seed=1&quality=low');
+    await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
+    await expectFits(page, 'Title');
 
-  // The Match screen: every mode card, the Custom rules and their pickers, then the Practice places.
-  await page.locator('.menu-title-start').click();
-  const setup = page.locator('.menu-setup');
-  await expect(setup).toBeVisible();
-  const mode = setup.getByRole('group', { name: 'Mode', exact: true });
-  for (const name of [/Attack and Defend/, /Extraction/, /Elimination/]) {
-    await mode.getByRole('button', { name }).first().click();
-    await expectFits(page, `Match screen, ${name}`);
-  }
-  await setup.getByRole('button', { name: /^Custom/ }).first().click();
-  await expectFits(page, 'Match screen, Custom rules');
-  await mode.getByRole('button', { name: /Practice/ }).first().click();
-  await expectFits(page, 'Match screen, Practice');
-  await mode.getByRole('button', { name: /Elimination/ }).first().click();
-
-  // Loadout with a saved loadout carrying a long name, and the slots; Armory with a six-digit balance.
-  await page.locator('.menu-nav-item', { hasText: 'Loadout' }).click();
-  await expect(page.locator('.menu-loadout')).toBeVisible();
-  await page.locator('.saved-tab.is-empty .saved-tab-button').first().click();
-  await page.keyboard.type('A very long loadout name indeed');
-  await page.keyboard.press('Enter');
-  await expectFits(page, 'Loadout');
-  const slots = page.locator('.gear-slot:not([aria-disabled="true"])');
-  for (let i = 0; i < Math.min(await slots.count(), 4); i++) {
-    await slots.nth(i).click();
-    await expectFits(page, `Loadout, slot ${i}`);
-  }
-  await page.locator('.menu-nav-item', { hasText: 'Armory' }).click();
-  await expect(page.locator('.armory-figure-value').first()).toContainText('123,456');
-  await expectFits(page, 'Armory');
-
-  // Every Settings tab (the Dev tab too), its folded parts opened.
-  await page.locator('.menu-nav-item', { hasText: 'Settings' }).click();
-  await page.waitForSelector('.settings-tab');
-  const tabs = await page.locator('.settings-tab:visible').evaluateAll((els) => els.map((e) => e.id));
-  expect(tabs.length, 'the Settings tabs, Dev among them').toBeGreaterThanOrEqual(9);
-  for (const id of tabs) {
-    await page.locator(`#${id}`).click();
-    await page.evaluate(() => document.querySelectorAll('details').forEach((d) => (d.open = true)));
-    await expectFits(page, `Settings, ${id}`);
-  }
-
-  // A match: the HUD, with the ammo count at two, three and four digits, at the HUD's three sizes (80 %, 100 %, 150 %).
-  await page.locator('.menu-mark').click();
-  await page.locator('.menu-title-start').click();
-  await setup.getByRole('button', { name: 'Start match', exact: true }).click();
-  await page.waitForSelector('.hud-replica', { state: 'visible', timeout: 60_000 });
-  await page.waitForTimeout(1000);
-  type Game = { airsoft: { hudSize: number; showHudLook: () => void; state: { characters: { armament: { active: number; ammo: { mag: number }[] } }[] } } };
-  for (const size of [1, 0.8, 1.5]) {
-    await page.evaluate((s) => {
-      const g = (window as unknown as Game).airsoft;
-      g.hudSize = s;
-      g.showHudLook();
-    }, size);
-    for (const mag of [60, 200, 1200, 12000]) {
-      await page.evaluate((m) => {
-        const a = (window as unknown as Game).airsoft.state.characters[0]!.armament;
-        a.ammo[a.active]!.mag = m;
-      }, mag);
-      await expect(page.locator('.hud-mag')).toHaveText(String(mag), { timeout: 10_000 });
-      expect(await page.evaluate(hudOverlaps), `HUD size ${size}, ${mag} BBs loaded`).toEqual([]);
+    // The Match screen: every mode card, the Custom rules and their pickers, then the Practice places.
+    await page.locator('.menu-title-start').click();
+    const setup = page.locator('.menu-setup');
+    await expect(setup).toBeVisible();
+    const mode = setup.getByRole('group', { name: 'Mode', exact: true });
+    for (const name of [/Attack and Defend/, /Extraction/, /Elimination/]) {
+      await mode.getByRole('button', { name }).first().click();
+      await expectFits(page, `Match screen, ${name}`);
     }
-    await expectFits(page, `HUD at size ${size}`);
-  }
+    await setup.getByRole('button', { name: /^Custom/ }).first().click();
+    await expectFits(page, 'Match screen, Custom rules');
+    await mode.getByRole('button', { name: /Practice/ }).first().click();
+    await expectFits(page, 'Match screen, Practice');
+    await mode.getByRole('button', { name: /Elimination/ }).first().click();
 
-  // The pause menu over the match (a hidden tab pauses it, as the smoke test does).
-  await page.evaluate(() => {
-    Object.defineProperty(document, 'hidden', { value: true, configurable: true });
-    document.dispatchEvent(new Event('visibilitychange'));
+    // Loadout with a saved loadout carrying a long name, and the slots; Armory with a six-digit balance.
+    await page.locator('.menu-nav-item', { hasText: 'Loadout' }).click();
+    await expect(page.locator('.menu-loadout')).toBeVisible();
+    await page.locator('.saved-tab.is-empty .saved-tab-button').first().click();
+    await page.keyboard.type('A very long loadout name indeed');
+    await page.keyboard.press('Enter');
+    await expectFits(page, 'Loadout');
+    const slots = page.locator('.gear-slot:not([aria-disabled="true"])');
+    for (let i = 0; i < Math.min(await slots.count(), 4); i++) {
+      await slots.nth(i).click();
+      await expectFits(page, `Loadout, slot ${i}`);
+    }
+    await page.locator('.menu-nav-item', { hasText: 'Armory' }).click();
+    await expect(page.locator('.armory-figure-value').first()).toContainText('123,456');
+    await expectFits(page, 'Armory');
+
+    // Every Settings tab (the Dev tab too), its folded parts opened.
+    await page.locator('.menu-nav-item', { hasText: 'Settings' }).click();
+    await page.waitForSelector('.settings-tab');
+    const tabs = await page.locator('.settings-tab:visible').evaluateAll((els) => els.map((e) => e.id));
+    expect(tabs.length, 'the Settings tabs, Dev among them').toBeGreaterThanOrEqual(9);
+    for (const id of tabs) {
+      await page.locator(`#${id}`).click();
+      await page.evaluate(() => document.querySelectorAll('details').forEach((d) => (d.open = true)));
+      await expectFits(page, `Settings, ${id}`);
+    }
+
+    // A match: the HUD, with the ammo count at two, three and four digits, at the HUD's three sizes (80 %, 100 %, 150 %).
+    await page.locator('.menu-mark').click();
+    await page.locator('.menu-title-start').click();
+    await setup.getByRole('button', { name: 'Start match', exact: true }).click();
+    await page.waitForSelector('.hud-replica', { state: 'visible', timeout: 60_000 });
+    await page.waitForTimeout(1000);
+    type Game = { airsoft: { hudSize: number; showHudLook: () => void; state: { characters: { armament: { active: number; ammo: { mag: number }[] } }[] } } };
+    for (const size of [1, 0.8, 1.5]) {
+      await page.evaluate((s) => {
+        const g = (window as unknown as Game).airsoft;
+        g.hudSize = s;
+        g.showHudLook();
+      }, size);
+      for (const mag of [60, 200, 1200, 12000]) {
+        await page.evaluate((m) => {
+          const a = (window as unknown as Game).airsoft.state.characters[0]!.armament;
+          a.ammo[a.active]!.mag = m;
+        }, mag);
+        await expect(page.locator('.hud-mag')).toHaveText(String(mag), { timeout: 10_000 });
+        expect(await page.evaluate(hudOverlaps), `HUD size ${size}, ${mag} BBs loaded`).toEqual([]);
+      }
+      await expectFits(page, `HUD at size ${size}`);
+    }
+
+    // The pause menu over the match (a hidden tab pauses it, as the smoke test does).
+    await page.evaluate(() => {
+      Object.defineProperty(document, 'hidden', { value: true, configurable: true });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    await expect(page.locator('.menu-pause')).toBeVisible({ timeout: 10_000 });
+    await expectFits(page, 'Pause');
+
+    expect(errors).toEqual([]);
   });
-  await expect(page.locator('.menu-pause')).toBeVisible({ timeout: 10_000 });
-  await expectFits(page, 'Pause');
-
-  expect(errors).toEqual([]);
-});
+}

@@ -5,7 +5,7 @@ import { MemoryStorage } from '../pool/testStorage';
 import { SETTINGS_KEY, SETTINGS_VERSION } from '../settings/storage';
 import { crosshairSettings } from './crosshairSettings';
 import { HitFeedback } from './hitFeedback';
-import { hitMarkerCss, hitMarkerSize, loadHitMarker } from './hitMarkerLook';
+import { hitMarkerCss, hitMarkerSize, loadHitMarker, styleHitMarker } from './hitMarkerLook';
 import { FakeElement } from './testSupport';
 
 /** Every element under `node` with the tag, depth first. */
@@ -107,6 +107,23 @@ describe('the hit marker\'s look (the owner\'s 0.1 Dev 5 playtest, note 4)', () 
     expect(hitMarkerSize(1)).toEqual({ arm: HIT_MARKER_SHAPE.arm, gap: HIT_MARKER_SHAPE.gap });
     expect(hitMarkerSize(2)).toEqual({ arm: HIT_MARKER_SHAPE.arm * 2, gap: HIT_MARKER_SHAPE.gap * 2 });
     expect(hitMarkerSize(0.5)).toEqual({ arm: Math.round(HIT_MARKER_SHAPE.arm / 2), gap: Math.round(HIT_MARKER_SHAPE.gap / 2) });
+  });
+
+  it('puts the chosen size, thickness, colour and outline on the marker element (what the stylesheet draws from)', () => {
+    const vars = new Map<string, string>();
+    const classes = new Set<string>();
+    const root = {
+      style: { setProperty: (k: string, v: string) => void vars.set(k, v) },
+      classList: { toggle: (c: string, on: boolean) => void (on ? classes.add(c) : classes.delete(c)) },
+    } as unknown as HTMLElement;
+    styleHitMarker(root, { ...DEFAULT_HIT_MARKER_SETTINGS, scale: 2, thickness: 5, outline: 'off', color: 'yellow' });
+    const yellow = HIT_MARKER_COLORS.find((c) => c.id === 'yellow')!.css;
+    expect(Object.fromEntries(vars)).toMatchObject({ '--hm-arm': `${HIT_MARKER_SHAPE.arm * 2}px`, '--hm-gap': `${HIT_MARKER_SHAPE.gap * 2}px`, '--hm-thick': '5px', '--hm-colour': yellow });
+    expect(classes.has('no-outline')).toBe(true);
+    styleHitMarker(root, DEFAULT_HIT_MARKER_SETTINGS);
+    expect(vars.get('--hm-colour')).toBe('#ff3b30');
+    expect(vars.get('--hm-thick')).toBe('3px');
+    expect(classes.has('no-outline')).toBe(false);
   });
 
   it('leaves out the teams\' blue and orange, and cyan (a teammate hit shows it light blue)', () => {
