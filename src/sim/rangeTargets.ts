@@ -58,6 +58,15 @@ export interface RangeTarget {
   start: boolean;
   /** Out of play (the START plate when the challenge isn't waiting for it): not drawn, and BBs fly through. */
   hidden: boolean;
+  /** Its stoppers (targetPosts), worked out once: BBs test them every tick. */
+  posts: readonly RangePost[];
+}
+
+/** One of a target's stoppers, in its own frame from its home (x across, z along its facing), standing up to `top`. */
+export interface RangePost {
+  x: number;
+  z: number;
+  top: number;
 }
 
 /** A random time in [a, b] from `rng`, or the middle without one. */
@@ -98,7 +107,9 @@ export function createRangeTargets(specs: readonly RangeTargetSpec[] = rangeLayo
       lit: 0,
       start: s.start,
       hidden: s.start,
+      posts: [],
     };
+    t.posts = targetPosts(t);
     placeTarget(t);
     copy(t.prevPosition, t.position);
     if (t.motion === 'popup') t.down = t.downFor = roll(RANGE.popup.down, rng);
@@ -192,7 +203,7 @@ export function rayRangeTarget(o: Vec3, d: Vec3, maxT: number, target: RangeTarg
  * Where a target's stoppers stand, in its own frame from its home (x across, z along its facing): a plate's post just
  * behind it, a swinger frame's two legs either side of its widest swing. Movers, pop-ups and figures have none.
  */
-export function targetPosts(t: RangeTarget): { x: number; z: number; top: number }[] {
+export function targetPosts(t: RangeTarget): RangePost[] {
   if (t.kind !== 'steel') return [];
   if (t.motion === 'swinger') {
     const S = RANGE.swinger;
@@ -210,7 +221,7 @@ function rayRangePost(o: Vec3, d: Vec3, maxT: number, target: RangeTarget): numb
   if (target.kind !== 'steel' || target.hidden) return -1;
   let best = -1;
   let reach = maxT;
-  for (const p of targetPosts(target)) {
+  for (const p of target.posts) {
     post.x = target.home.x + target.face.z * p.x + target.face.x * p.z;
     post.z = target.home.z - target.face.x * p.x + target.face.z * p.z;
     post.r = (target.motion === 'swinger' ? RANGE.swinger.frameWidth : RANGE.postWidth) / 2;

@@ -394,7 +394,7 @@ replaces its line; the old one stays findable in the archive or in git.
   his 2026-10-04 rulings that put the range and an always-shown Tutorial button on the title screen).
 - **Practice's moving targets and timed challenge (2026-10-13, M93, the owner's playtest note 10; Claude's defaults,
   the owner may change any).** The range adds two figures on rails, a swinging plate, four small plates at 15 m and
-  five pop-ups (one crouched), each placed where nothing hides it from the spawn, moving or not (a test checks it).
+  four pop-ups (one crouched), each placed where nothing hides it from the spawn, moving or not (a test checks it).
   Targets are placed from data with a facing (`RangeTargetSpec`), so a map can place them too (M94). The timed
   challenge is off by default and switched in Practice's pause menu (saved): a START plate stands near the line; shoot
   it, wait out a 3 s countdown, then hit as many orange-lit targets as you can in 60 s, two lit at a time, each for

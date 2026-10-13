@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { RANGE, RANGE_VISUALS } from '../config/range';
-import { type RangeTarget, targetPosts } from '../sim/rangeTargets';
+import type { RangeTarget } from '../sim/rangeTargets';
 
 const V = RANGE_VISUALS;
 const VD = V.detail;
@@ -47,7 +47,8 @@ export interface TargetGear {
 /**
  * Every target's fixed gear: a plate's post (M21) and, with Map detail, the arm its chains hang from and a safety band;
  * a figure's hinge brackets (detail); M93's moving targets' gear, always shown: a pop-up's motor box beside its hinge,
- * a mover's rails and end stops along its track, a swinger's frame (two legs and a crossbar over the pivot).
+ * a mover's rails and end stops along its track, a swinger's frame (two legs and a crossbar over the pivot). Not the
+ * START plate's: it stands only while the timed challenge is on (the renderer draws its stand with it).
  */
 export function targetGear(targets: readonly RangeTarget[]): TargetGear {
   const posts: THREE.BufferGeometry[] = [];
@@ -58,8 +59,10 @@ export function targetGear(targets: readonly RangeTarget[]): TargetGear {
   const box = new THREE.BoxGeometry(1, 1, 1);
   const sized = (w: number, h: number, d: number): THREE.BufferGeometry => box.clone().scale(w, h, d);
   for (const t of targets) {
+    // The START plate's stand is drawn with it (the renderer's), so it goes when the plate does.
+    if (t.start) continue;
     if (t.kind === 'steel') {
-      const legs = targetPosts(t);
+      const legs = t.posts;
       const width = t.motion === 'swinger' ? RANGE.swinger.frameWidth : RANGE.postWidth;
       for (const p of legs) {
         const height = p.top - t.floor;

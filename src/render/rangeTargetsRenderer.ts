@@ -174,6 +174,8 @@ export class RangeTargetsRenderer {
     const trolleyMesh = this.instanced(boxGeo, post, count((t) => t.motion === 'mover'), true);
     const armMesh = this.instanced(boxGeo, post, count((t) => t.motion === 'swinger'), true);
     const faceMesh = this.instanced(faceGeo, face, count((t) => t.start), false);
+    // The START plate's stand (its post and the arm its chains hang from) goes with it, so it's drawn as moving parts.
+    const standMesh = this.instanced(boxGeo, post, 2 * count((t) => t.start), true);
     const plateTwin = this.twin(plateGeo, lit, plates);
     const torsoTwin = this.twin(torsoGeo, lit, figures);
     const headTwin = this.twin(headGeo, lit, figures);
@@ -201,7 +203,15 @@ export class RangeTargetsRenderer {
           const hang = t.radius + RANGE.postAbovePlate;
           parts.push(part(plateMesh, 'body', sized.clone().setPosition(0, -hang, 0), plateTwin));
           parts.push(part(chainMesh, 'body', new THREE.Matrix4().makeScale(scale, 1, 1)));
-          if (t.start) parts.push(part(faceMesh, 'body', new THREE.Matrix4().makeTranslation(0, -hang, V.plateThickness / 2 + V.start.lift)));
+          if (t.start) {
+            parts.push(part(faceMesh, 'body', new THREE.Matrix4().makeTranslation(0, -hang, V.plateThickness / 2 + V.start.lift)));
+            const p = t.posts[0]!;
+            const height = p.top - t.floor;
+            const w = RANGE.postWidth;
+            parts.push(part(standMesh, 'carrier', new THREE.Matrix4().makeScale(w, height, w).setPosition(p.x, t.floor + height / 2 - t.home.y, p.z)));
+            const arm = new THREE.Matrix4().makeScale(2 * VD.chainSpread + w, VD.armDepth, -p.z + w / 2);
+            parts.push(part(standMesh, 'carrier', arm.setPosition(p.x, p.top + VD.armDepth / 2 - t.home.y, p.z / 2)));
+          }
         }
       } else {
         // A plywood cut-out the size of a player's hit volume, standing or crouched, hinged at its feet (a mover's on its
