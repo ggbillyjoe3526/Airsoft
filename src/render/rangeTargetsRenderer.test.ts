@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { RANGE, RANGE_VISUALS } from '../config/range';
 import { lastShotText } from '../ui/rangeReadout';
-import { createRangeTargets } from '../sim/rangeTargets';
+import { createRangeTargets, targetsAtSpots } from '../sim/rangeTargets';
+import { vec3 } from '../sim/vec';
 import { HITS } from '../config/hits';
 import { figureRotation, figureTilt, plateRotation, plateScuffs, plateSwing, RangeTargetsRenderer } from './rangeTargetsRenderer';
 
@@ -132,6 +133,43 @@ describe('range targets with map detail (audit section 5)', () => {
     r.setDetail(false);
     expect(freed).toHaveBeenCalledTimes(paint.size);
     expect(visible()).toEqual(plain);
+    r.dispose();
+  });
+});
+
+describe('targets drawn on a map (M94)', () => {
+  it('draws no firing lines, distance boards or shelf off the range, and turns each target to face its way on its floor', () => {
+    vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => null }) });
+    const names = (r: RangeTargetsRenderer): string[] => r.object.children.map((o) => o.name).filter(Boolean);
+    const range = new RangeTargetsRenderer(createRangeTargets(), HITS);
+    expect(names(range)).toEqual(expect.arrayContaining(['range-lines', 'range-signs']));
+    range.dispose();
+
+    const targets = targetsAtSpots([
+      { position: vec3(10, 3, -4), face: { x: 1, z: 0 }, crouched: false, steel: true, fromStart: 20 },
+      { position: vec3(-6, 1.5, 8), face: { x: 0, z: -1 }, crouched: false, steel: false, fromStart: 12 },
+    ]);
+    const r = new RangeTargetsRenderer(targets, HITS, false);
+    expect(names(r)).not.toContain('range-lines');
+    expect(names(r)).not.toContain('range-signs');
+    const [plates, , torsos] = r.object.children.filter((o): o is THREE.InstancedMesh => o instanceof THREE.InstancedMesh);
+    const m = new THREE.Matrix4();
+    const at = new THREE.Vector3();
+    const facing = new THREE.Vector3();
+    // The plate: at its centre, its face (+z in its own frame) turned to +x.
+    plates!.getMatrixAt(0, m);
+    expect(at.setFromMatrixPosition(m).distanceTo(new THREE.Vector3(10, 3 + RANGE.plateHeight, -4))).toBeLessThan(1e-6);
+    facing.set(0, 0, 1).transformDirection(m);
+    expect(facing.x).toBeCloseTo(1, 6);
+    expect(facing.z).toBeCloseTo(0, 6);
+    // The figure: its torso stands on its own floor, its front turned to -z.
+    torsos!.getMatrixAt(0, m);
+    at.setFromMatrixPosition(m);
+    expect(at.x).toBeCloseTo(-6, 6);
+    expect(at.y).toBeCloseTo(1.5 + (HITS.bodyTop + HITS.bodyBottom) / 2, 6);
+    expect(at.z).toBeCloseTo(8, 6);
+    facing.set(0, 0, 1).transformDirection(m);
+    expect(facing.z).toBeCloseTo(-1, 6);
     r.dispose();
   });
 });

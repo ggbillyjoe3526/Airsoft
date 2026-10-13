@@ -96,19 +96,37 @@ function placed(c: Candidate, map: MapData, nav: NavGrid, query: WorldQuery, cfg
   // Not at your start: every start of your end keeps its clearing (the spawn yard).
   if (map.spawns[0].some((s) => Math.hypot(s.position.x - x, s.position.z - z) < cfg.clearOfStart)) return null;
   const floor = floorUnder(x, nav.floorY[k]!, z, query, cfg);
-  let fx = c.fx;
-  let fz = c.fz;
-  let len = Math.hypot(fx, fz);
-  // A spot whose way is a wall right in front (a lane's last point in a corner) faces your start instead.
-  if (len < 1e-6 || blocked(x, floor + cfg.highRayHeight, z, fx / len, fz / len, cfg.coverReach, query)) {
-    fx = start.x - x;
-    fz = start.z - z;
-    len = Math.hypot(fx, fz) || 1;
-  }
-  fx /= len;
-  fz /= len;
-  const crouched = blocked(x, floor + cfg.lowRayHeight, z, fx, fz, cfg.coverReach, query) && !blocked(x, floor + cfg.highRayHeight, z, fx, fz, cfg.coverReach, query);
+  const way = clearWay(x, floor + cfg.highRayHeight, z, c.fx, c.fz, start.x - x, start.z - z, cfg, query);
+  if (!way) return null;
+  const { fx, fz } = way;
+  // Its way is open at head height (clearWay), so cover at waist height in front is cover it can crouch behind.
+  const crouched = blocked(x, floor + cfg.lowRayHeight, z, fx, fz, cfg.coverReach, query);
   return { position: vec3(x, floor, z), face: { x: fx, z: fz }, crouched, steel: false, fromStart: Math.hypot(x - start.x, z - start.z) };
+}
+
+/**
+ * The way a target at (x, y, z) faces: `fx, fz` (its spot's way) unless a wall is right in front (a lane's last point in a
+ * corner), else towards your start (`sx, sz`), else the open way nearest that, from `cfg.turns` ways round; null when it
+ * is walled in every way. A plate rings only from its face side, so it never faces a wall.
+ */
+function clearWay(x: number, y: number, z: number, fx: number, fz: number, sx: number, sz: number, cfg: PracticeSpotsConfig, query: WorldQuery): { fx: number; fz: number } | null {
+  for (const [wx, wz] of [
+    [fx, fz],
+    [sx, sz],
+  ] as const) {
+    const len = Math.hypot(wx, wz);
+    if (len > 1e-6 && !blocked(x, y, z, wx / len, wz / len, cfg.coverReach, query)) return { fx: wx / len, fz: wz / len };
+  }
+  const toStart = Math.atan2(sx, sz);
+  for (let k = 1; k < cfg.turns; k++) {
+    // 1, -1, 2, -2, ... steps either side of your start's way.
+    const step = Math.ceil(k / 2) * (k % 2 === 1 ? 1 : -1);
+    const a = toStart + (step * 2 * Math.PI) / cfg.turns;
+    const wx = Math.sin(a);
+    const wz = Math.cos(a);
+    if (!blocked(x, y, z, wx, wz, cfg.coverReach, query)) return { fx: wx, fz: wz };
+  }
+  return null;
 }
 
 /** The floor's real height at (x, z) (a ramp or the terrain between nav cells' centres), from the nav floor `navY`. */

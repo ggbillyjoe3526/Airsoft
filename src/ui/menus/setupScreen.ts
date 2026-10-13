@@ -144,7 +144,7 @@ export class SetupScreen {
         },
       },
     });
-    this.places.root.classList.add('map-cards', 'practice-places');
+    this.places.root.classList.add('practice-places');
     this.places.root.hidden = true;
     this.modes = new ChoiceCards(PLAY_TEXT.mode, MATCH_MODES, model.picks().mode, 'mode', (m) => model.setMode(m), {
       fallback: DEFAULT_MODE,

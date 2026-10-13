@@ -42,10 +42,6 @@ export function playView(
   // A map that offers Day and Night names the one picked (M34d).
   const lightLine = lightingChoices(mapData(map.id)).length > 1 ? ` · ${LIGHTING_LABELS[light]}` : '';
   const still = mapStillFile(map.id, light);
-  // Practice's place (M94): a dev map plays as the range while Dev content is off, as a match's map plays as Depot.
-  const practiceOn = practiceMapId(practicePlace, devContent);
-  const practiceLight = practiceOn ? lightingOf(practiceOn) : 'day';
-  const practiceStill = mapStillFile(practiceOn ?? 'range', practiceLight);
   const match = run ? runRulesSummary(m, run, played.difficulty) : matchRulesSummary(m, played.mode);
   const opponents = difficultyLabel(played.difficulty);
   const mates = difficultyLabel(played.teammateDifficulty);
@@ -72,11 +68,25 @@ export function playView(
     notes: setupNotes(rules, { recorded, cheating: opts.dev.cheating(), devContentUsed, ruleset: played.ruleset }),
     loadout: opts.loadout.summary(),
     pays: paid ? (played.ruleset === DEFAULT_RULESET || recordsKeyOf(played.ruleset) !== null ? PLAY_TEXT.pays : PLAY_TEXT.paysCapped(CUSTOM_RULES_PAY_CAP)) : '',
-    practice: {
-      mapLine: practiceOn ? `${mapEntry(practiceOn).label}${lightingChoices(mapData(practiceOn)).length > 1 ? ` · ${LIGHTING_LABELS[practiceLight]}` : ''}` : PLAY_TEXT.practice.mapLine,
-      still: practiceStill ? menuArt(practiceStill) : null,
-    },
+    practice: practiceView(practicePlace, devContent, lightingOf),
   };
+}
+
+/**
+ * Where Practice will play, as the Match screen shows it while Practice is picked (M94): the map's name (and Day or
+ * Night where it offers both) and its picture, or the range's line and no picture (Practice's own art). A dev map plays
+ * as the range while Dev content is off, as a match's dev map plays as Depot.
+ */
+export function practiceView(place: PracticePlaceId, devContent: boolean, lightingOf: (id: MapId) => LightingPresetId): PlayView['practice'] {
+  const on = practiceMapId(place, devContent);
+  if (on === null) {
+    const still = mapStillFile('range', 'day');
+    return { mapLine: PLAY_TEXT.practice.mapLine, still: still ? menuArt(still) : null };
+  }
+  const light = lightingOf(on);
+  const lightLine = lightingChoices(mapData(on)).length > 1 ? ` · ${LIGHTING_LABELS[light]}` : '';
+  const still = mapStillFile(on, light);
+  return { mapLine: `${mapEntry(on).label}${lightLine}`, still: still ? menuArt(still) : null };
 }
 
 /**

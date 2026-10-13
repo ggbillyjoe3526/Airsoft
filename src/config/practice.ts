@@ -25,6 +25,11 @@ export const PRACTICE_SPOTS = {
   lowRayHeight: 0.7,
   highRayHeight: 1.45,
   /**
+   * A target that would face a wall within `coverReach` faces your start instead; walled that way too, it faces the open
+   * way nearest your start's, of this many ways round (and is left out if walled in every way).
+   */
+  turns: 16,
+  /**
    * Every `steelEvery`-th standing target, counted near to far, is a steel plate (the rest are figures, as bots are): a
    * plate rings when hit, so you hear a hit where you can't see a figure fall, at every range.
    */

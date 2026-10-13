@@ -12,7 +12,7 @@ import { createCharacter } from './character';
 import { characterHitVolume, createHitVolume, hitTop, rayCharacter } from './hitbox';
 import { stepBBs } from './bbs';
 import type { GameEvent } from './events';
-import { createRangeTargets, firstRangeTargetHit, rayRangeTarget, refillSpares, stepRangeTargets } from './rangeTargets';
+import { createRangeTargets, firstRangeTargetHit, rayRangeTarget, refillSpares, stepRangeTargets, targetsAtSpots } from './rangeTargets';
 import { openFieldElimination } from './testSupport';
 import { type Vec3, vec3 } from './vec';
 
@@ -132,5 +132,56 @@ describe('practice range targets (M21)', () => {
     refillSpares(a);
     expect(a.ammo[0]!.mag).toBe(3);
     for (const [i, ammo] of a.ammo.entries()) expect(ammo.pouch.every((m) => m === a.handling[i]!.magSize)).toBe(true);
+  });
+});
+
+describe('targets stood on a map (M94)', () => {
+  /** A plate on a floor 3 m up at (10, 3, -4), turned to face +x (east), and a figure beside it facing -x. */
+  const targets = targetsAtSpots([
+    { position: vec3(10, 3, -4), face: { x: 1, z: 0 }, crouched: false, steel: true, fromStart: 20.4 },
+    { position: vec3(14, 3, -4), face: { x: -1, z: 0 }, crouched: false, steel: false, fromStart: 24 },
+  ]);
+  const plate = targets[0]!;
+  const figure = targets[1]!;
+
+  it('rings a turned plate only from the side it faces, inside the plate', () => {
+    const p = plate.position;
+    expect(p.y).toBe(3 + RANGE.plateHeight);
+    expect(plate.floor).toBe(3);
+    expect(plate.distance).toBe(20);
+    expect(rayRangeTarget(vec3(p.x + 5, p.y, p.z), vec3(-1, 0, 0), 10, plate, HITS)).toBeCloseTo(5, 6);
+    expect(rayRangeTarget(vec3(p.x - 5, p.y, p.z), vec3(1, 0, 0), 10, plate, HITS)).toBe(-1); // from behind
+    expect(rayRangeTarget(vec3(p.x + 5, p.y, p.z + RANGE.plateRadius + 0.01), vec3(-1, 0, 0), 10, plate, HITS)).toBe(-1); // beside it
+    // From in front and off to one side, at a slant: still the plate.
+    const o = vec3(p.x + 4, p.y, p.z + 3);
+    const d = unit(vec3(p.x - o.x, 0, p.z - o.z));
+    expect(rayRangeTarget(o, d, 10, plate, HITS)).toBeCloseTo(5, 6);
+  });
+
+  it("puts a turned plate's post behind it, from its floor up: a BB there is a miss", () => {
+    const p = plate.position;
+    const hit = { index: -1, at: 0, post: false };
+    // Level, along the plate's face, under the plate: the post is RANGE.postBehind behind it (-x), standing on its floor.
+    firstRangeTargetHit(vec3(p.x + 5, 3.3, p.z), vec3(-1, 0, 0), 10, [plate], HITS, hit);
+    expect(hit.post).toBe(true);
+    expect(hit.at).toBeCloseTo(5 + RANGE.postBehind - RANGE.postWidth / 2, 2);
+    // Below its floor there's no post.
+    firstRangeTargetHit(vec3(p.x + 5, 2.9, p.z), vec3(-1, 0, 0), 10, [plate], HITS, hit);
+    expect(hit.index).toBe(-1);
+  });
+
+  it("knocks a figure down from any side, hit at a player's height above its own floor", () => {
+    const p = figure.position;
+    expect(p.y).toBe(3);
+    expect(rayRangeTarget(vec3(p.x - 5, 4.2, p.z), vec3(1, 0, 0), 10, figure, HITS)).toBeGreaterThan(4.5);
+    expect(rayRangeTarget(vec3(p.x + 5, 4.2, p.z), vec3(-1, 0, 0), 10, figure, HITS)).toBeGreaterThan(4.5);
+    expect(rayRangeTarget(vec3(p.x - 5, 3 + hitTop(0, HITS) + 0.05, p.z), vec3(1, 0, 0), 10, figure, HITS)).toBe(-1); // over its head
+  });
+
+  it('stands the range just as before: plates face the firing line (+z) from the floor', () => {
+    for (const t of createRangeTargets()) {
+      expect(t.face).toEqual({ x: 0, z: 1 });
+      expect(t.floor).toBe(0);
+    }
   });
 });
