@@ -15,6 +15,9 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **M95** · In Practice, L opens the Loadout on the replica in your hands; Back to practice or L returns you where you stood, with the new replica coming up
 - **M104** · Aim still at a crate, low wall, sandbags or window sill and the replica rests on it: steadier aim, half the kick, a "Rested" tag
 - **M104** · Rested aim sways less and the view dips as it settles; moving, reloading, leaning or looking away lets go at once
+- **SL1** · Five saved loadout tabs on the Loadout: keys 1 to 5 or a click switch the whole kit you carry at once; your edits go to the current tab
+- **SL1** · Right-click a tab (or Menu, Shift+F10) to use, rename, duplicate, replace with yours or delete; the last loadout can't be deleted
+- **SL1** · Your match on the Match screen lists saved loadouts beside Change; gear a saved loadout can't use now shows as locked until it comes back
 - **LV1** · Levels and XP replace the Armory's gacha: every match gives XP, you level up from 0 to 10, and each level unlocks parts for good (#207)
 - **LV1** · The Armory shows your level, XP to the next level, what it unlocks and every level's items; a level badge on the top bar opens it (#207)
 - **LV1** · The match summary shows the XP earned, its lines and any level-up with what it unlocked (#207)
@@ -29,10 +32,13 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **LV1** · Replicas and parts rebalanced without rarity: Low-Cap Magazine gets two more magazines, Long Barrel +10 % energy and 10 % tighter groups (#207)
 - **LV1** · Hard and Pro bots lose their small tier bonus; the Cyber Pistol keeps its old numbers (#207)
 - **LV1** · Unlock all gear is now Disable levelling, a cheat with no XP and no records (#207)
-- **LV1** · Save format 2: an old save loads at level 0 with its settings and records; old Armory items, Field Credits and Tokens don't carry over (#207)
+- **LV1** · Save format 3: an older save loads at level 0 with its settings and records; old Armory items, Field Credits and Tokens don't carry over (#207)
 
 ### Fixed
 - **M92** · Bots firing on the move hold fire when a teammate is down the line, so they no longer hit teammates past the end of a wall
+
+### Internal
+- **SL1** · Saved loadouts are part of save format 2 with their own store (airsoft.loadouts); the context menu's styles have their own sheet
 
 ## 0.1 Dev 5 · 2026-10-13
 

@@ -216,7 +216,7 @@ when their work starts. Numbers are from the owner's list of 50 candidates
 | LV1 | Levelling in place of the Armory's gacha: matches give XP, levels 0 to 10 unlock the gear (`levels.md`), the Armory shows your level and what comes next, rarity gone and the gear rebalanced; done (2026-10-13, `docs/records/LV1.md`) | Progression |
 | – | Vaulting over low obstacles (0.7–0.9 m), with a few added to the maps where they open a route; crouch cover stays peek-only (owner, 2026-10-12) | Movement |
 | 40 | Rest your replica on cover (a ledge, crate or window) for steadier aim; done (2026-10-13, `docs/records/M104.md`) | Movement |
-| 19 | Saved loadouts, picked from the Map pop-up as well as the Loadout screen | Loadout |
+| 19 | Saved loadouts, picked from the Match screen (once the Map pop-up) as well as the Loadout screen; done (2026-10-13, `docs/records/SL1.md`) | Loadout |
 | 21 | Bot names, personalities (rusher, anchor, flanker, careful) and loadouts | Bots |
 | 23 | Bots' gear keeps up with yours (audit POOL-24: Easy and Normal bots carry factory gear while your levels add parts) | Bots |
 | 48 | Auto difficulty as a Dev setting: bots get a little better when you win, a little easier when you lose | Bots |

@@ -1,0 +1,172 @@
+import { type Box, placeMenu } from './menuPlacement';
+import { el } from './menuParts';
+
+/**
+ * One choice in the menu: the visible label, the name a screen reader reads (the label when absent), and what it does;
+ * a smaller line under the label (`detail`) and a tick for the one in use (`current`) when a list of picks needs them
+ * (SL1: the saved loadouts).
+ */
+export interface ContextChoice {
+  label: string;
+  name?: string;
+  detail?: string;
+  current?: boolean;
+  run: () => void;
+}
+
+/** A choice's button and its two lines, made once and filled for each use. */
+interface ChoiceButton {
+  button: HTMLButtonElement;
+  label: HTMLSpanElement;
+  detail: HTMLSpanElement;
+}
+
+/**
+ * A small pop-up menu at the pointer (M100; the saved loadouts' menus since SL1, the Armory's scrap before LV1). Built
+ * once, with its buttons, and shown again for whatever is asked: `open` fills the labels and moves it, nothing is
+ * created per use and nothing runs per frame. Its listeners on the page (a press outside, a scroll, a resize) are on
+ * only while it is open.
+ *
+ * It closes on Esc (the key stops here, so it never also goes Back), on a press outside it, when focus leaves it, on a
+ * scroll or resize, and after a choice. The items are buttons with names; Up, Down, Home and End move between them. The
+ * keyboard starts on the current choice when one is marked, else the first.
+ */
+export class ContextMenu {
+  readonly root: HTMLDivElement;
+  private readonly title: HTMLParagraphElement;
+  private readonly buttons: ChoiceButton[] = [];
+  private choices: readonly ContextChoice[] = [];
+  private opener: HTMLElement | null = null;
+  private opened = false;
+
+  constructor() {
+    this.root = el('div', 'context-menu');
+    this.root.hidden = true;
+    this.root.setAttribute('role', 'group');
+    // Focusable itself (never by Tab): Safari and Firefox on a Mac send the focus to the nearest focusable ancestor of a pressed
+    // button, not to the button. Without this it blurs to nothing, focusout closes the menu, and the click never lands.
+    this.root.tabIndex = -1;
+    this.title = el('p', 'context-menu-title');
+    this.root.append(this.title);
+    // The browser's own menu has no place on top of this one.
+    this.root.addEventListener('contextmenu', (e) => e.preventDefault());
+    this.root.addEventListener('keydown', (e) => this.onKey(e));
+    this.root.addEventListener('focusout', (e) => {
+      if (this.opened && !this.root.contains(e.relatedTarget as Node | null)) this.close(false);
+    });
+  }
+
+  get isOpen(): boolean {
+    return this.opened;
+  }
+
+  /**
+   * Shows `choices` under `title` with its corner at (`x`, `y`) in the window, flipped to stay inside it and clear of
+   * every box `avoid` gives (the card's own name: see ui/menus/menuPlacement.ts); the keyboard goes to the first.
+   * `returnTo` gets the focus back if the menu is dismissed (Esc) without a choice.
+   */
+  open(title: string, choices: readonly ContextChoice[], x: number, y: number, returnTo: HTMLElement | null = null, avoid: readonly Box[] = []): void {
+    if (choices.length === 0) return;
+    this.choices = choices;
+    this.opener = returnTo;
+    this.title.textContent = title;
+    this.root.setAttribute('aria-label', title);
+    while (this.buttons.length < choices.length) this.addButton();
+    this.buttons.forEach(({ button, label, detail }, i) => {
+      const choice = choices[i];
+      button.hidden = !choice;
+      if (!choice) return;
+      label.textContent = choice.label;
+      detail.textContent = choice.detail ?? '';
+      detail.hidden = !choice.detail;
+      button.classList.toggle('is-current', !!choice.current);
+      if (choice.current) button.setAttribute('aria-current', 'true');
+      else button.removeAttribute('aria-current');
+      button.setAttribute('aria-label', choice.name ?? choice.label);
+    });
+    this.root.hidden = false;
+    this.place(x, y, avoid);
+    if (!this.opened) this.listen(true);
+    this.opened = true;
+    (this.buttons[choices.findIndex((c) => c.current)] ?? this.buttons[0])!.button.focus({ preventScroll: true });
+  }
+
+  /** Hides the menu; the focus goes back to where it was opened from unless `restore` is false. */
+  close(restore = true): void {
+    if (!this.opened) return;
+    this.opened = false;
+    this.listen(false);
+    this.root.hidden = true;
+    const back = this.opener;
+    this.opener = null;
+    if (restore) back?.focus({ preventScroll: true });
+  }
+
+  private addButton(): void {
+    const i = this.buttons.length;
+    const b = el('button', 'context-item');
+    b.type = 'button';
+    const label = el('span', 'context-label');
+    const detail = el('span', 'context-detail');
+    detail.hidden = true;
+    b.append(label, detail);
+    b.addEventListener('click', () => this.choose(i));
+    // A held Enter must not choose again on the screen that replaces this one.
+    b.addEventListener('keydown', (e) => {
+      if (e.repeat) e.preventDefault();
+    });
+    this.buttons.push({ button: b, label, detail });
+    this.root.append(b);
+  }
+
+  /** The menu closes first (the screen redraws and takes the focus itself), then the choice runs. */
+  private choose(i: number): void {
+    const choice = this.choices[i];
+    this.close(false);
+    choice?.run();
+  }
+
+  /** Puts the corner at the pointer, flipped and moved so it stays in the window and off the boxes to avoid. */
+  private place(x: number, y: number, avoid: readonly Box[]): void {
+    const win = document.defaultView;
+    this.root.style.left = `${Math.round(x)}px`;
+    this.root.style.top = `${Math.round(y)}px`;
+    if (!win) return;
+    const r = this.root.getBoundingClientRect();
+    if (r.width === 0 && r.height === 0) return;
+    const at = placeMenu(x, y, r.width, r.height, win.innerWidth, win.innerHeight, avoid);
+    this.root.style.left = `${Math.round(at.left)}px`;
+    this.root.style.top = `${Math.round(at.top)}px`;
+  }
+
+  private onKey(e: KeyboardEvent): void {
+    if (e.key === 'Escape') {
+      // Esc closes this and nothing else: the menus' own Esc (Back) never sees it.
+      e.preventDefault();
+      e.stopPropagation();
+      this.close(true);
+      return;
+    }
+    const shown = this.buttons.map((b) => b.button).filter((b) => !b.hidden);
+    const at = shown.indexOf(document.activeElement as HTMLButtonElement);
+    const to = e.key === 'ArrowDown' ? at + 1 : e.key === 'ArrowUp' ? at - 1 : e.key === 'Home' ? 0 : e.key === 'End' ? shown.length - 1 : null;
+    if (to === null) return;
+    e.preventDefault();
+    shown[(to + shown.length) % shown.length]?.focus({ preventScroll: true });
+  }
+
+  private readonly onPress = (e: Event): void => {
+    if (!this.root.contains(e.target as Node | null)) this.close(false);
+  };
+  private readonly onAway = (): void => this.close(false);
+
+  /** The page-wide listeners, on while the menu is open only. A scroll anywhere (it is fixed in the window) closes it. */
+  private listen(on: boolean): void {
+    const doc = document;
+    const act = on ? 'addEventListener' : 'removeEventListener';
+    doc[act]('pointerdown', this.onPress, true);
+    doc[act]('scroll', this.onAway, true);
+    doc.defaultView?.[act]('resize', this.onAway);
+    doc.defaultView?.[act]('blur', this.onAway);
+  }
+}

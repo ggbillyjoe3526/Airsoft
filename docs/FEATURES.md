@@ -150,6 +150,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Armory: your level, XP to the next level, what the next level unlocks, how to earn XP, and every level's items
   (unlocked, next, locked) (LV1)
 - Locked items show greyed in Loadout and Customise, with the level that unlocks them (LV1)
+- Saved loadouts: five tabs on the Loadout hold whole kits; keys 1 to 5 switch, edits go to the current tab, Disable levelling keeps its own set (SL1)
 
 ## Menus and settings
 

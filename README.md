@@ -116,6 +116,8 @@ Then open **http://localhost:4173**.
   on it: a steadier aim with half the kick, and **Rested** shows under the sight. Move or let go of the aim to come off.
 - **Loadout.** **Start › Loadout** (or Esc in a match) sets your replicas; right-click one to **Customise** it: optic,
   hop-up, BB weight, grips, barrels, a silencer, magazines and batteries. Every choice is a trade-off, shown in numbers.
+  Keep up to five **saved loadouts** (the tabs at the top, or keys 1 to 5): your changes go to the current one, and
+  right-click one to rename, duplicate, replace or delete it. The Match screen's **Your match** switches them too.
 - **Levels and the Armory.** You start at level 0 with the GBB Pistol and the AEG Rifle. Finished matches give XP
   (more for a win, each round won and each hit, scaled by the difficulty) and each level, up to 10, unlocks parts for
   good, with the Cyber Pistol at level 10. The top bar shows your level; click it, or **Armory** beside **Loadout**,
@@ -128,7 +130,7 @@ Then open **http://localhost:4173**.
 - **Dev content.** **Settings › Dev** (tick **Dev settings** under the list) has a **Dev content** switch for maps,
   modes and gear still being built, and **Disable levelling**, which unlocks every replica and part. Matches that use
   either aren't recorded and give no XP.
-- **Your save** (settings, level, records) lives in your browser. **Settings › Save** downloads it as a file and
+- **Your save** (settings, level, records, saved loadouts) lives in your browser. **Settings › Save** downloads it as a file and
   loads it back, and keeps a restore point each day.
 
 ### Controls

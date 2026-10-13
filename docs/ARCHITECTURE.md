@@ -223,9 +223,10 @@ request. Each entry says where the contract lives, what it holds today and what 
   save system's guarded storage once it has started (same keys, same values). Pinned by `settings/storage.test.ts`.
 - **The save file format** (`save/saveFile.ts`). `{ game, format, build, savedAt, summary, stores, checksum }`, the
   stores as their own modules store them. A save from any earlier `format` loads (one `MIGRATIONS` step per format);
-  a later one is refused. `SAVE_FORMAT` goes up with any store's version or a new store (`STORES_BY_FORMAT`). Format 2
-  holds the settings, key bindings, records and progress; a format 1 save (which held the old Armory's collection)
-  loads at level 0, its collection dropped (owner, 2026-10-13). `SaveSummary` is `{ level, xp, unlocked, matches }`. In
+  a later one is refused. `SAVE_FORMAT` goes up with any store's version or a new store (`STORES_BY_FORMAT`). Format 3
+  holds the settings, key bindings, records, progress and saved loadouts (format 2 added the saved loadouts, SL1); a
+  format 1 or 2 save (which held the old Armory's collection) loads at level 0, its collection dropped (owner,
+  2026-10-13). `SaveSummary` is `{ level, xp, unlocked, matches }`. In
   every store module (the settings, the progress, the records) an object from a newer version is never read or
   overwritten (`save/overStored.ts` `storedIsNewer`). Pinned by `save/saveFile.test.ts`, `pool/pool.test.ts`,
   `stats/records.test.ts`.

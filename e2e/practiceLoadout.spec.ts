@@ -113,3 +113,41 @@ test('the Loadout key does nothing in a match', async ({ page }) => {
   await expect(page.locator('.menus')).toBeHidden();
   await expect(page.locator('.menu-loadout')).toBeHidden();
 });
+
+test('saved loadouts: a new loadout on the Loadout, key 1 back, and the Match screen picker names and switches them (SL1)', async ({ page }) => {
+  test.setTimeout(120_000);
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
+  await page.goto('/?nolock&seed=1&quality=low');
+  await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
+  await page.locator('.menu-title-start').click();
+  const setup = page.locator('.menu-setup');
+  const pick = setup.locator('.loadout-pick');
+  await expect(pick).toHaveAttribute('aria-label', 'Saved loadout: Loadout 1. Pick another');
+  await setup.getByRole('button', { name: /^Change/ }).click();
+  const loadout = page.locator('.menu-loadout');
+  await expect(loadout.locator('.saved-tab')).toHaveCount(5);
+  await expect(loadout.locator('.saved-tab.is-current .saved-tab-name')).toHaveText('Loadout 1');
+  // An empty tab starts a new loadout and asks its name.
+  await loadout.locator('.saved-tab.is-empty .saved-tab-button').first().click();
+  const box = loadout.locator('.saved-tab-input:visible');
+  await expect(box).toBeFocused();
+  await box.fill('Long range');
+  await box.press('Enter');
+  await expect(loadout.locator('.saved-tab.is-current .saved-tab-name')).toHaveText('Long range');
+  // Key 1 carries the first loadout again.
+  await page.keyboard.press('Digit1');
+  await expect(loadout.locator('.saved-tab.is-current .saved-tab-name')).toHaveText('Loadout 1');
+  await expect(loadout.locator('.saved-tab.is-current .saved-tab-tag')).toHaveText('Current');
+  // The Match screen's pick lists both, and a pick switches.
+  await page.keyboard.press('Escape'); // Back
+  await expect(pick).toBeVisible();
+  await pick.click();
+  const list = page.locator('.context-menu:visible');
+  await expect(list.getByRole('button', { name: /^Long range/ })).toBeVisible();
+  await expect(list.getByRole('button', { name: /^Manage loadouts/ })).toBeVisible();
+  await list.getByRole('button', { name: /^Long range/ }).click();
+  await expect(pick).toHaveAttribute('aria-label', 'Saved loadout: Long range. Pick another');
+  await expect(pick.locator('.loadout-pick-name')).toHaveText('Long range');
+  expect(errors).toEqual([]);
+});

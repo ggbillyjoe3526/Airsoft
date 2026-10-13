@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PROGRESS_VERSION } from '../progress/progress';
+import { SAVED_LOADOUTS_VERSION } from '../pool/savedLoadouts';
 import { SETTINGS_VERSION } from '../settings/storage';
 import { RECORDS_VERSION } from '../stats/records';
 import { canonicalJson, checksum, MIGRATIONS, migrateStores, parseSaveText, SAVE_FORMAT, type SaveData, saveFileName, saveFileText, STORES_BY_FORMAT, summarize } from './saveFile';
@@ -14,6 +15,7 @@ const save: SaveData = {
     keyBindings: { fire: ['Mouse0'] },
     records: { version: 1, results: { 'normal.elimination': { wins: 3, losses: 2 }, 'hard.attackDefend': { wins: 1, losses: 0 } }, bestAccuracy: 0.3, streak: 1, bestStreak: 2 },
     progress: { version: 1, xp: 120, unlocked: ['000001', '000002', '000003'], rev: 3 },
+    loadouts: { version: 1, slots: [{ name: 'CQB', picks: { 'equip.primary': '000002' } }, null, null, null, null], current: 0 },
   },
 };
 
@@ -35,7 +37,7 @@ describe('save file (M31)', () => {
 
   it('keeps a reformatted file valid (keys reordered, spacing changed)', () => {
     const file = JSON.parse(saveFileText(save));
-    const reordered = { checksum: file.checksum, stores: { progress: file.stores.progress, records: file.stores.records, keyBindings: file.stores.keyBindings, settings: file.stores.settings }, format: file.format, game: file.game };
+    const reordered = { checksum: file.checksum, stores: { loadouts: file.stores.loadouts, progress: file.stores.progress, records: file.stores.records, keyBindings: file.stores.keyBindings, settings: file.stores.settings }, format: file.format, game: file.game };
     const parsed = parseSaveText(JSON.stringify(reordered));
     expect(parsed.ok && parsed.checksumOk).toBe(true);
   });
@@ -64,10 +66,10 @@ describe('save file (M31)', () => {
   it('reads stores that are missing or not objects as nothing saved (their defaults)', () => {
     const parsed = parseSaveText(JSON.stringify({ game: 'Airsoft', format: SAVE_FORMAT, stores: { settings: { version: 1 }, records: 'junk', progress: [1], mystery: { a: 1 } } }));
     expect(parsed.ok).toBe(true);
-    if (parsed.ok) expect(parsed.save.stores).toEqual({ settings: { version: 1 }, keyBindings: null, records: null, progress: null });
+    if (parsed.ok) expect(parsed.save.stores).toEqual({ settings: { version: 1 }, keyBindings: null, records: null, progress: null, loadouts: null });
   });
 
-  it('loads a format 1 save (the Armory\'s collection) at level 0, with its other stores intact (LV1)', () => {
+  it('loads a format 1 save (the Armory\'s collection, before saved loadouts) at level 0 with no saved loadouts, its other stores intact (LV1, SL1)', () => {
     const stores = {
       settings: { version: 1, fov: 95, 'equip.primary': '000001@common' },
       keyBindings: { fire: ['Mouse0'] },
@@ -79,8 +81,24 @@ describe('save file (M31)', () => {
     if (!parsed.ok) return;
     expect(parsed.checksumOk).toBe(true);
     expect(parsed.save.format).toBe(SAVE_FORMAT);
-    expect(parsed.save.stores).toEqual({ settings: stores.settings, keyBindings: stores.keyBindings, records: stores.records, progress: null });
+    expect(parsed.save.stores).toEqual({ settings: stores.settings, keyBindings: stores.keyBindings, records: stores.records, progress: null, loadouts: null });
     expect(summarize(parsed.save.stores)).toEqual({ level: 0, xp: 0, unlocked: 0, matches: 5 });
+  });
+
+  it('loads a format 2 save (SL1\'s saved loadouts beside the collection) at level 0, its saved loadouts kept (LV1)', () => {
+    const stores = {
+      settings: { version: 1 },
+      keyBindings: null,
+      records: null,
+      collection: { version: 1, owned: { '000001@common': 1 }, fc: 50, tokens: 0, seed: 7 },
+      loadouts: { version: 1, slots: [{ name: 'CQB', picks: { 'equip.primary': '000002@epic' } }, null, null, null, null], current: 0 },
+    };
+    const parsed = parseSaveText(JSON.stringify({ game: 'Airsoft', format: 2, build: '0.1 Dev 6', stores, checksum: checksum(2, stores) }));
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.checksumOk).toBe(true);
+    expect(parsed.save.format).toBe(SAVE_FORMAT);
+    expect(parsed.save.stores).toEqual({ settings: stores.settings, keyBindings: null, records: null, progress: null, loadouts: stores.loadouts });
   });
 
   it('walks an old format up one step at a time, and refuses a gap', () => {
@@ -103,7 +121,7 @@ describe('save file (M31)', () => {
     // Fails when a store's own version goes up (or a store is added) without SAVE_FORMAT and STORES_BY_FORMAT following.
     const now = Object.fromEntries(SAVE_STORES.map((s) => [s.id, s.version]));
     expect(STORES_BY_FORMAT[SAVE_FORMAT]).toEqual(now);
-    expect(now).toEqual({ settings: SETTINGS_VERSION, keyBindings: 0, records: RECORDS_VERSION, progress: PROGRESS_VERSION });
+    expect(now).toEqual({ settings: SETTINGS_VERSION, keyBindings: 0, records: RECORDS_VERSION, progress: PROGRESS_VERSION, loadouts: SAVED_LOADOUTS_VERSION });
     // And every format before this one has its migration step.
     for (let f = 1; f < SAVE_FORMAT; f++) {
       expect(STORES_BY_FORMAT[f]).toBeDefined();

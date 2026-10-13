@@ -19,8 +19,10 @@ choices to `src/game.ts`.
   mode cards' last, an extra card that is never saved; `matchPanel.ts`, with Your team (M98: Alpha or Beta, hidden for an Extraction run); and a "Your match" text from
   `playView.ts`, whose rules text follows your team, `rulesText.ts` › `sideText`);
   `loadoutScreen.ts` with `customiseView.ts` (items still to unlock greyed with a lock and their level, and a line
-  pointing to the Armory; `itemTile.ts`, `kitStrip.ts`); `armoryScreen.ts` (the levelling screen: your level, the XP
-  bar and how XP is earned, what the next level unlocks, and every level's items from `progress/track.ts`);
+  pointing to the Armory; `itemTile.ts`, `kitStrip.ts`) and `savedLoadoutsBar.ts` (the saved loadouts' tabs, SL1; the
+  Match screen picks one with `loadoutPicker.ts`, both on `contextMenu.ts`: built once, reused, listeners on the page
+  only while open, `menuPlacement.ts` placing it in the window); `armoryScreen.ts` (the levelling screen: your level,
+  the XP bar and how XP is earned, what the next level unlocks, and every level's items from `progress/track.ts`);
   `settingsScreen.ts` (groups with a search, a note on every row); `pauseScreen.ts` (with
   `tutorialCompleteDialog.ts` over it when the tutorial ends: the practice range or the menu, M80; in Practice the
   Loadout key opens the Loadout over it, `Menus.showPracticeLoadout`, on the slot in hand, with Back to practice on the

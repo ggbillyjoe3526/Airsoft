@@ -42,8 +42,11 @@ export interface MenusOptions {
    * show a drawing until each arrives. Null where there is none (a test): every item keeps its drawing.
    */
   pictures: PictureSource | null;
-  /** The Loadout screen's model and change hook, and the line the Play screen shows under your kit. */
-  loadout: Omit<LoadoutOptions, 'onBack' | 'context'> & { summary: () => { replicas: string; detail: string } };
+  /**
+   * The Loadout screen's model and change hook, and the line the Play screen shows under your kit (the menus make the
+   * saved loadouts from the model, SL1).
+   */
+  loadout: Omit<LoadoutOptions, 'onBack' | 'context' | 'saved'> & { summary: () => { replicas: string; detail: string } };
   /** The Armory (LV1): the levels, the player's progress and the level on the top bar. */
   armory: Omit<ArmoryOptions, 'context'> & { level: () => MenuLevel };
   /** Start (or resume) play: Start match, Resume, Play again. */

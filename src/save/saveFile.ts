@@ -24,13 +24,14 @@ import { SAVE_STORES, type StoreData, type StoreId } from './stores';
  * every store keeps fields it doesn't know when it saves (save/overStored.ts).
  */
 
-export const SAVE_FORMAT = 2;
+export const SAVE_FORMAT = 3;
 
 /** The stores' own versions each format carried (id → version), for the test that keeps SAVE_FORMAT honest. */
 export const STORES_BY_FORMAT: Readonly<Record<number, Readonly<Record<string, number>>>> = {
   1: { settings: 1, keyBindings: 0, records: 1, collection: 1 },
+  2: { settings: 1, keyBindings: 0, records: 1, collection: 1, loadouts: 1 },
   // LV1: levels in place of the Armory's collection.
-  2: { settings: 1, keyBindings: 0, records: 1, progress: 1 },
+  3: { settings: 1, keyBindings: 0, records: 1, progress: 1, loadouts: 1 },
 };
 
 /**
@@ -38,9 +39,11 @@ export const STORES_BY_FORMAT: Readonly<Record<number, Readonly<Record<string, n
  * (settings/storage.ts) doing the rest.
  */
 export const MIGRATIONS: Readonly<Record<number, (stores: StoreData) => StoreData>> = {
+  // Format 2 added the saved loadouts (SL1). A format 1 save has none: the game starts it with one, the loadout carried.
+  1: (stores) => ({ ...stores, loadouts: null }),
   // LV1 (owner, 2026-10-13): the Armory's collection (FC, Tokens, items) doesn't carry over into levels. Reading the
-  // file already left it out (it is no store now), so a format 1 save loads at level 0 with its starting kit.
-  1: (stores) => ({ ...stores, progress: null }),
+  // file already left it out (it is no store now), so a format 2 save loads at level 0 with its starting kit.
+  2: (stores) => ({ ...stores, progress: null }),
 };
 
 /** What a save holds, read or about to be written. */

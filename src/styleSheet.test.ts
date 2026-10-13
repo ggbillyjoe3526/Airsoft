@@ -163,12 +163,13 @@ describe('the dead rules are gone (M68, audit UI-10)', () => {
     expect(sheet).not.toMatch(/\.settings-reload|\.armory-row-count/);
   });
 
-  it("has no rule left from the Armory's gacha (LV1): tier colours, the wallet, the rarity bar, Shots, spares, the pop-up menu", () => {
+  it("has no rule left from the Armory's gacha (LV1): tier colours, the wallet, the rarity bar, Shots, spares, credits", () => {
     expect(sheet).not.toMatch(/\[data-tier|--tier\b|\.tier-|-tier\b/);
     expect(sheet).not.toMatch(/\.menu-wallet|\.menu-chip-fc|\.menu-chip-tokens/);
     expect(sheet).not.toMatch(/\.rarity-/);
     expect(sheet).not.toMatch(/\.armory-shot|\.armory-row-spares|\.armory-reveal|\.armory-kind|\.armory-owned|\.armory-scrap/);
-    expect(sheet).not.toMatch(/\.context-menu|\.summary-credits/);
+    // The pop-up menu stays: the saved loadouts use it (SL1, css/context.css).
+    expect(sheet).not.toMatch(/\.summary-credits/);
   });
 });
 

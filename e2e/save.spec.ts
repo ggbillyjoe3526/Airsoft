@@ -52,7 +52,7 @@ test('Settings → Save downloads the save and loads it back, with Undo', async 
   let text = '';
   for await (const chunk of stream as unknown as AsyncIterable<{ toString(): string }>) text += chunk.toString();
   const file = JSON.parse(text);
-  expect(file).toMatchObject({ game: 'Airsoft', format: 2, summary: { level: 2, xp: 400, unlocked: 3 } });
+  expect(file).toMatchObject({ game: 'Airsoft', format: 3, summary: { level: 2, xp: 400, unlocked: 3 } });
   expect(file.stores.settings.fov).toBe(100);
   expect(file.stores.progress.futureField).toBe('kept');
   expect(file.checksum).toMatch(/^sha256:/);
@@ -128,7 +128,7 @@ const progressOf = (page: Page) => page.evaluate(() => JSON.parse(localStorage.g
 
 /** A save file's text, for dropping or loading. */
 function saveText(extra: Record<string, unknown> = {}, stores: Record<string, unknown> = {}): string {
-  return JSON.stringify({ game: 'Airsoft', format: 2, build: 'v-test', savedAt: '2026-10-01T10:00:00.000Z', stores, ...extra });
+  return JSON.stringify({ game: 'Airsoft', format: 3, build: 'v-test', savedAt: '2026-10-01T10:00:00.000Z', stores, ...extra });
 }
 
 test('Delete save asks first, offers a download, starts fresh and Undo brings it back; Restore uses the day\'s restore point', async ({ page }) => {
@@ -203,7 +203,7 @@ test('a file that is too big, not a save, from a newer game or dropped on the pa
   await expect(message).toContainText("isn't an Airsoft save (it can't be read)");
 
   // A newer format: told to update, nothing replaced.
-  await upload('future.json', saveText({ format: 3, build: 'v9-future' }));
+  await upload('future.json', saveText({ format: 99, build: 'v9-future' }));
   await expect(message).toContainText('newer version of the game (v9-future)');
   await expect(message).toContainText('Update the game');
   await expect(page.locator('.save-dialog')).toBeHidden();
