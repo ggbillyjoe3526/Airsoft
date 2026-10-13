@@ -227,6 +227,12 @@ export interface ArmamentContext {
   rng: RngState;
   query: WorldQuery;
   events: GameEvent[];
+  /**
+   * Seconds until the shooter may fire again after a vault (Character.fireLockout; 0 or absent: none). A semi or burst
+   * press made then is kept that much longer, so it fires when the lockout ends instead of expiring first (audit SIM-03:
+   * the press buffer is shorter than the lockout).
+   */
+  fireHoldOff?: number;
 }
 
 const DEG = Math.PI / 180;
@@ -263,8 +269,8 @@ export function spreadDirection(out: Vec3, yaw: number, pitch: number, spread: n
 
 /**
  * One tick of replica handling for one character: switching, reloading, firing and recoil.
- * `canFire` is false while the character can't shoot (out, or the round not under way). Sprinting fires, wider and
- * with more kick (the muzzle's spreadScale and kickScale; the owner's 0.1 Dev 5 note 9).
+ * `canFire` is false while the character can't shoot (out, the round not under way, or through a vault and the moment
+ * after). Sprinting fires, wider and with more kick (the muzzle's spreadScale and kickScale; the owner's 0.1 Dev 5 note 9).
  */
 export function stepArmament(
   characterId: number,
@@ -355,7 +361,7 @@ export function stepArmament(
   a.triggerWasDown = cmd.fire;
   if (!cmd.fire) a.dryFiredThisPull = false;
   // Semi-auto and burst presses are buffered briefly so a click during the cooldown still fires when ready.
-  if (pressed) a.pendingPress = TRIGGER.pressBuffer;
+  if (pressed) a.pendingPress = TRIGGER.pressBuffer + (ctx.fireHoldOff ?? 0);
   // A burst runs to the end once started (one pull, several BBs), unless the replica can't fire.
   if (a.burstShotsLeft > 0 && (!canFire || a.draw > 0 || a.reload > 0)) a.burstShotsLeft = 0;
   if (mode === 'burst') {

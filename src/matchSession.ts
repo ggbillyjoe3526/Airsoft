@@ -558,7 +558,8 @@ export class MatchSession {
     this.match.showSquadOrder(order, holding ? this.holdSpot : null, this.renderer.camera, dt);
     this.match.showOrderWheel(this.input.wheelOpen, this.input.wheelPointer, order, this.input.wheelSelect);
     this.match.showMinimap(holding ? this.holdSpot : null);
-    this.combat.frame(dt, alpha, this.input.yaw, pitch);
+    // The vault prompt (M102) only from your own eyes.
+    this.combat.frame(dt, alpha, this.input.yaw, pitch, spectating ? undefined : this.playerCommand);
     // High's shadow map follows the view (REN-08), the spectator's too.
     this.daylight.follow(this.renderer.camera, dt);
     this.combat.render(!spectating);

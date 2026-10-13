@@ -9,7 +9,7 @@ import type { HitConfig } from '../config/hits';
 import type { CrosshairSettings } from '../config/matchInfo';
 import { BB_VISUALS, DUST_MOTES, GAS_PUFFS, HIT_PUFFS, HUD, IMPACT_DUST, IMPACT_PUFFS, IMPACT_RINGS, type LightingPreset, type QualitySettings } from '../config/render';
 import type { ImpactMaterial } from '../config/sounds';
-import type { MovementConfig } from '../config/movement';
+import { BODY, type MovementConfig } from '../config/movement';
 import { AIMING, type SightId, sightConfig } from '../config/optics';
 import type { ReplicaConfig } from '../config/replicas';
 import { TORCHES } from '../config/torches';
@@ -18,11 +18,14 @@ import { aimRaiseTime } from '../sim/aiming';
 import type { WorldQuery } from '../sim/armament';
 import type { BB } from '../sim/ballistics';
 import type { Character } from '../sim/character';
+import type { PlayerCommand } from '../sim/commands';
 import type { ChallengeCue } from '../sim/rangeChallenge';
 import type { GameState } from '../sim/state';
 import { lightInHand, torchLit } from '../sim/torch';
+import { createVaultState, findVault } from '../sim/vault';
 import { length3 } from '../sim/vec';
 import { Hud } from '../ui/hud';
+import { VaultPrompt } from '../ui/vaultPrompt';
 import type { PictureSource } from '../ui/menus/menuPictures';
 import type { PictureSubject } from './itemPictures';
 import { BBPathsDebug } from './bbPathsDebug';
@@ -96,6 +99,9 @@ export class CombatPresentation {
   private readonly paths: BBPathsDebug;
   private readonly viewmodel: Viewmodel;
   private readonly hud: Hud;
+  /** "Space to vault" while a Jump press would vault (M102), and the vault that press would make (reused). */
+  private readonly vaultPrompt: VaultPrompt;
+  private readonly vaultCheck = createVaultState();
   private readonly sfx: Sfx;
   private readonly forward = new THREE.Vector3();
   private readonly up = new THREE.Vector3();
@@ -170,6 +176,7 @@ export class CombatPresentation {
     this.overlay = { scene: this.viewmodel.scene, camera: this.viewmodel.camera };
     this.viewmodel.onInspectSound = (cue, replicaId) => this.sfx.inspect(cue, replicaId);
     this.hud = new Hud(container, keyName, crosshair);
+    this.vaultPrompt = new VaultPrompt(container, () => keyName('jump'));
     this.quality = quality;
     this.setQuality(quality);
   }
@@ -262,6 +269,7 @@ export class CombatPresentation {
 
   setPlaying(playing: boolean): void {
     this.hud.setVisible(playing);
+    if (!playing) this.vaultPrompt.update(false, false, Infinity);
     this.sfx.setPaused(!playing);
     this.playing = playing;
     if (playing && this.startWhistleOwed) this.startWhistleOwed = !this.sfx.roundStartWhistle();
@@ -356,8 +364,11 @@ export class CombatPresentation {
     }
   }
 
-  /** Once per rendered frame, after the camera has been placed. `alpha` interpolates ticks. */
-  frame(dt: number, alpha: number, yaw: number, pitch: number): void {
+  /**
+   * Once per rendered frame, after the camera has been placed. `alpha` interpolates ticks. `command`: the player's
+   * latest, for the vault prompt (the way a Jump press would vault goes with the movement keys).
+   */
+  frame(dt: number, alpha: number, yaw: number, pitch: number, command?: Readonly<PlayerCommand>): void {
     this.bbs.setPixelAngle(this.renderer.retroPixelAngle);
     this.bbs.update(alpha, this.renderer.camera.position);
     this.puffs.update(dt, this.renderer.camera);
@@ -371,13 +382,15 @@ export class CombatPresentation {
     this.paths.update();
 
     const p = this.player;
-    // Carried in a sprint, unless the trigger is pulled: you can fire on the run (the owner's 0.1 Dev 5 note 9).
-    const shooting = p.armament.triggerWasDown || this.shotThisFrame;
+    // Carried in a sprint, unless the trigger is pulled: you can fire on the run (the owner's 0.1 Dev 5 note 9). Carried
+    // through a vault too (M102), whatever the trigger: no shot leaves until a moment after it.
+    const vaulting = p.vault.active;
+    const shooting = !vaulting && (p.armament.triggerWasDown || this.shotThisFrame);
     this.shotThisFrame = false;
-    const carry = this.sprintCarry.update(dt, p.sprinting && p.status === 'alive', shooting);
-    const carried = carry > 0;
+    const carry = this.sprintCarry.update(dt, (p.sprinting || vaulting) && p.status === 'alive', shooting);
+    const carried = carry > 0 || p.fireLockout > 0;
     // Aiming down sights: the sight comes up to your eye and the view narrows by the optic's zoom. Straight out of a
-    // sprint the replica is still carried, so it rises once it has come down.
+    // sprint or a vault the replica is still carried (after a vault firing is locked out too), so it rises once that ends.
     const aiming = p.aiming && p.status === 'alive' && !carried;
     // Every replica aims (M84): through its optic, or down its iron sights.
     const inHand: SightId = p.armament.optics[p.armament.active] ?? 'iron';
@@ -399,6 +412,8 @@ export class CombatPresentation {
     const sight = this.aimBlend >= AIMING.reticleFrom ? inHand : null;
     this.viewmodel.setScoped(sight !== null && sightConfig(sight).scope);
     this.hud.update(p.armament, this.loadout, p.status === 'alive', Math.tan(spread) * focalPx, sight, dt);
+    const canVault = this.playing && command !== undefined && p.status === 'alive' && findVault(p, command, this.movement, BODY, this.query, this.vaultCheck);
+    this.vaultPrompt.update(canVault, p.vault.active, dt);
 
     listenerAxes(cam, this.forward, this.up);
     this.listenerPos.x = cam.position.x;
@@ -432,6 +447,7 @@ export class CombatPresentation {
     this.renderer.forgetOverlay(this.overlay.scene);
     this.viewmodel.dispose();
     this.hud.dispose();
+    this.vaultPrompt.dispose();
     this.sfx.dispose();
   }
 

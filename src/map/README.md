@@ -8,7 +8,8 @@ meshes. The format, coordinates and Extraction block are in `docs/ARCHITECTURE.m
 - `depot.ts` (plan coordinates turned to world ones), `woodland.ts` (terrain, bushes, night), `neonHeights.ts` (city,
   storeys, signs), `range.ts` (the practice range, built from `config/range.ts`). Set dressing, one file per map, read
   only by `render/mapDressing.ts`: `depotDressing.ts`, `woodlandDressing.ts`, `neonHeightsDressing.ts`, and the range's
-  `rangeDressing.ts` (M81: also its props and the wall kept clear round its distance boards).
+  `rangeDressing.ts` (M81: also its props and the wall kept clear round its distance boards). Each has one low wall
+  built to be vaulted (M102, `config/vault.ts` `VAULT_WALL_HEIGHT`), checked by `vaultSpots.test.ts`.
 - `woodlandExtraction.ts`, `neonHeightsExtraction.ts` and the shared `extractionBlock.ts`: each map's Extraction block.
   `playableMode.ts` falls back to Elimination where a mode's data is missing.
 - `surfaces.ts` (walkable heights), `terrain.ts` (heightfield), `foliage.ts` (bushes: concealment, not cover),

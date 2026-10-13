@@ -3,6 +3,7 @@ import { HITS, ROUNDS } from '../config/hits';
 import { BOTS } from '../config/bots';
 import { NAV } from '../config/nav';
 import { PHYSICS } from '../config/physics';
+import { VAULT_WALL_HEIGHT } from '../config/vault';
 import { expectGrounded, playMatch } from '../ai/depotMatchSupport';
 import { buildNavGrid, floorAt, isWalkableAt, nodeAt, nodeX, nodeZ, stepNode } from '../nav/navGrid';
 import { initPhysics } from '../physics/physicsWorld';
@@ -183,8 +184,9 @@ describe('Neon Heights map data (M34c)', () => {
     expect(probe(2.2), 'under the lintel').toBe(-1);
     expect(probe(2.5), 'over the lintel').toBeGreaterThan(0);
     // Every window on the map has the same sill: the wall pieces standing on a storey's floor with the gap over them
-    // (short, thin and not a Sky Bridge side) are all 1.2 m high.
-    const sills = map.blocks.filter((b) => b.kind === 'wall' && map.storeys!.some((h) => near(bottom(b), h)) && b.size.y < 2 && b.size.y > 0.5 && Math.max(b.size.x, b.size.z) < 3 && Math.min(b.size.x, b.size.z) < 0.5);
+    // (short, thin and not a Sky Bridge side) are all 1.2 m high. The Capsules' low wall you vault (M102) is not a window:
+    // vaultSpots.test.ts checks it.
+    const sills = map.blocks.filter((b) => b.kind === 'wall' && map.storeys!.some((h) => near(bottom(b), h)) && b.size.y < 2 && b.size.y > 0.5 && !near(b.size.y, VAULT_WALL_HEIGHT) && Math.max(b.size.x, b.size.z) < 3 && Math.min(b.size.x, b.size.z) < 0.5);
     expect(sills.length, 'windows exist above the street').toBeGreaterThanOrEqual(10);
     for (const s of sills) expect(s.size.y, `sill at (${s.center.x}, ${s.center.y}, ${s.center.z})`).toBeCloseTo(1.2, 6);
   });

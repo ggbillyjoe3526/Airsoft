@@ -324,6 +324,15 @@ replaces its line; the old one stays findable in the archive or in git.
   own (`HOLSTER.drawScale`: the rifle 0.81 s, the pistol 0.54 s), so a ready sprint is quicker to the first shot. A
   slot key, a fresh trigger pull, an aim press or a reload draws it. Bots follow the same rules through the same
   command, holstering only on a calm sprint through their own half (`ai/botHolster.ts`).
+- **Vaulting is Jump at a low obstacle, with no key of its own (M102, 2026-10-13).** Jump within reach of something
+  0.6 to 0.95 m over your floor and at most 0.95 m over the floor past it (at most 1 m deep, your full height clear over
+  it), heading within 70° of where you look, vaults it: only what is low from both sides, so crouch cover never is, not
+  even from its uphill side on a slope. Anywhere else Jump is a jump, as before. The Controls list calls it "Jump / vault"
+  and a prompt shows the key while a vault is there. A vault takes about 0.4 s, carries the replica and holds fire
+  0.3 s after it; crouched, you can't vault (stand first). Values in `config/vault.ts`.
+- **Vaults are loud (owner, 2026-10-13: "Vaulting should create noise that makes enemies aware. Just like footsteps.
+  Vaulting allows quick movement but at the cost of making noise.").** A vault is the loudest step there is: bots hear
+  its hands and kit on the obstacle from 18 m (a sprint 16, a landing 12, a run 11), and its landing as well.
 - **Aiming at a ledge rests the replica on it, automatically and with no setting (M104, 2026-10-13).** Down the sights,
   still, grounded and no more than slightly leaned, with a flat top 8 to 70 cm below the eye straight ahead and within
   0.8 m (`MOVEMENT.rest`, `sim/coverRest.ts`), the spread takes ×0.65 on top of the stance and the kick halves; moving,
@@ -335,7 +344,8 @@ replaces its line; the old one stays findable in the archive or in git.
   is ×3.5 (walking ×1.15, running ×2.6) and each shot kicks 1.5 times as hard (`MOVEMENT.accuracy.sprint` and
   `.sprintKick`); the 0.2 s lockout after a sprint is gone. The replica comes up out of the sprint carry in 0.06 s to
   fire and stays up 0.35 s after the trigger is let go. A toggled sprint still ends on a fire press, which now fires at
-  once. Bots still stop sprinting to fight; whether bold bots spray on the run is for the bot personalities.
+  once. A vault still carries the replica, with no shot until 0.3 s after it (M102). Bots still stop sprinting to
+  fight; whether bold bots spray on the run is for the bot personalities.
 
 ## Bots and balance
 
@@ -376,6 +386,13 @@ replaces its line; the old one stays findable in the archive or in git.
   figures are judged at 45 to 55 %, the Pro ones at their usual 40 to 60 %.
 
 ## Maps and modes
+
+- **The maps' vault walls are 0.9 m, at most 0.4 m deep, open above (M102, 2026-10-13).** The top of the owner's 0.7
+  to 0.9 m: over 0.85 m a plain jump rides over one time in nine (Rapier's capsule slides up the edge), over 0.9 m one
+  in thirty, and nobody stands on a wall thinner than a body. Not cover: a crouched player's eyes are over it. One per
+  map where it opens a route: Depot's office hall onto Container Alley (its window broken down), Woodland's cabin from
+  the west (its west window), the Capsules onto Neon Heights' balcony (a window); and a sandbag wall on the range for
+  the tutorial. A window keeps its lintel, so it is never vaulted: a vault needs the body's full height over the top.
 
 - **A match is first to 5 round wins by default, with 2:30 rounds (2026-09-30).** A drawn round, such as an Elimination
   time-out, is replayed in both modes (owner default, 2026-10-04), because a draw can't decide a match. Half-time comes

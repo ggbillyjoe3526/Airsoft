@@ -22,7 +22,9 @@ export type TutorialGoal =
   /** Change the fire mode (audit POOL-15). */
   | { kind: 'fireMode' }
   /** Fire within `within` seconds of a sprint ending (audit POOL-15): a shot on the run doesn't count. */
-  | { kind: 'sprintShot'; within: number };
+  | { kind: 'sprintShot'; within: number }
+  /** Vault over a low obstacle (M102: the range's low sandbag wall). */
+  | { kind: 'vault' };
 
 /** What a step opens on screen while it is up (M80): the hold-key scoreboard, or the order wheel, as a match shows them. */
 export type TutorialShowcase = 'scoreboard' | 'orderWheel';
@@ -112,6 +114,12 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
     title: 'Sprint, then shoot',
     text: 'Sprint with {sprint}, stop, and shoot with {fire} straight away. You can shoot on the run too, but your BBs fly wide, so stop or slow down for a shot that counts.',
     goal: { kind: 'sprintShot', within: 1.5 },
+  },
+  {
+    id: 'vault',
+    title: 'Vault',
+    text: 'Go up to the low sandbag wall behind the firing line and press {jump} at it to vault over. Vaulting takes you over low walls fast, but it is loud: anyone near hears you.',
+    goal: { kind: 'vault' },
   },
   {
     id: 'secondary',

@@ -1,6 +1,7 @@
 import type { BodyConfig } from '../config/movement';
 import { LOADOUT, type ReplicaConfig } from '../config/replicas';
 import { type Armament, createArmament } from './armament';
+import { cancelVault, createVaultState, type VaultState } from './vault';
 import { copy, type Vec3, vec3 } from './vec';
 
 /**
@@ -77,12 +78,19 @@ export interface Character {
   /** In the air since the last tick on the ground, and the fastest it fell meanwhile (m/s), for landing sounds. */
   airborne: boolean;
   fallSpeed: number;
+  /**
+   * Seconds until the replica can be fired again after a vault (0 = ready): it is carried through the vault and comes up
+   * a moment after (M102, VaultConfig.fireLockout). A sprint has none since the owner's 0.1 Dev 5 playtest (note 9).
+   */
+  fireLockout: number;
   /** How much stance and movement scale the replica's spread right now (1 = standing still; see sim/accuracy.ts). */
   spreadScale: number;
   /** Seconds off the ground so far (0 while grounded); a jump starts it at the in-air spread delay (sim/accuracy.ts). */
   airTime: number;
   /** Seconds standing still on the ground so far (0 while moving or in the air); steadies the aim (sim/accuracy.ts). */
   stillTime: number;
+  /** A vault over a low obstacle (M102, sim/vault.ts): while `active` the body follows its path, not its command. */
+  vault: VaultState;
   /**
    * Aiming down the sights of the replica in hand (sim/aiming.ts): its iron sights or a fitted optic, and it slows you
    * to walking pace. Bots never aim down sights.
@@ -160,9 +168,11 @@ export function createCharacter(
     stepDistance: 0,
     airborne: false,
     fallSpeed: 0,
+    fireLockout: 0,
     spreadScale: 1,
     airTime: 0,
     stillTime: 0,
+    vault: createVaultState(),
     shakeCarry: 0,
     aiming: false,
     aimRaise: 0,
@@ -197,6 +207,7 @@ export function rescueIfOutOfWorld(c: Character, killY: number): boolean {
   c.airborne = false;
   c.fallSpeed = 0;
   c.airTime = 0;
+  cancelVault(c);
   return true;
 }
 
@@ -229,9 +240,11 @@ export function respawnCharacter(c: Character): void {
   c.stepDistance = 0;
   c.airborne = false;
   c.fallSpeed = 0;
+  c.fireLockout = 0;
   c.spreadScale = 1;
   c.airTime = 0;
   c.stillTime = 0;
+  cancelVault(c);
   c.shakeCarry = 0;
   c.aiming = false;
   c.aimRaise = 0;
