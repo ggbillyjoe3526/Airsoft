@@ -98,7 +98,8 @@ export const BOT_BEHAVIOUR = {
   friendlyMargin: 0.3,
   /**
    * ...widened with the distance to them by this many standard deviations of the replica's spread: a BB strays further
-   * from the aim line the further it flies, so a teammate 20 m down the line needs more room than one 2 m away.
+   * from the aim line the further it flies, so a teammate 20 m down the line needs more room than one 2 m away. The
+   * spread the bot shoots with now (M92): walking, it is wider (Character.spreadScale).
    */
   friendlySpreadSigmas: 2,
   /**
