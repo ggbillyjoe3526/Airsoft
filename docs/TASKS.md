@@ -26,8 +26,8 @@ item 5, with the G4 HUD restyle); note 3 was a bug, fixed in BP2; note 2 is alre
 ## BG1 · Bots' gear keeps up with yours
 tier: core
 perf: required
-touches: bot-kits.md, src/ai/balance/botKits.balance.ts, src/pool/botKit.ts, src/pool/gameBotKits.ts, src/pool/kit.ts, src/matchSession.ts, src/newGamePicks.ts, src/game.ts, src/config/bots.ts, src/config/characters.ts, src/config/matchRules.ts, src/ai/aim.ts, src/ai/botCombat.ts, src/ai/botSenses.ts, src/ai/depotMatchSupport.ts, src/content/contentInputs.ts, src/content/gameContent.ts, src/content/replicaChecks.ts, src/render/characterRenderer.ts, src/render/figureReplicas.ts, src/render/replicaModels.ts, src/render/replicaParts.ts, src/render/riggedFigure.ts
-contract: bot-kits.md's format (new), MatchSetup (chaseOwned goes)
+touches: bot-kits.md, src/ai/balance/botKits.balance.ts, src/pool/botKit.ts, src/pool/gameBotKits.ts, src/pool/kit.ts, src/matchSession.ts, src/newGamePicks.ts, src/game.ts, src/config/bots.ts, src/config/characters.ts, src/config/matchRules.ts, src/ai/aim.ts, src/ai/botCombat.ts, src/ai/botSenses.ts, src/ai/depotMatchSupport.ts, src/content/contentInputs.ts, src/content/gameContent.ts, src/content/replicaChecks.ts, src/render/characterRenderer.ts, src/render/figureReplicas.ts, src/render/replicaModels.ts, src/render/replicaParts.ts, src/render/riggedFigure.ts, src/progress/levels.ts
+contract: bot-kits.md's format (new), MatchSetup (the earned-replica carrier goes: `earnedReplicas`, before LV1 `chaseOwned`)
 acceptance:
   1. `bot-kits.md` at the root lists named kits: a primary and a secondary replica, each with its parts and power
      source by pool.md Name or ID, and a weight per difficulty. The game reads it at start; a row it can't read is

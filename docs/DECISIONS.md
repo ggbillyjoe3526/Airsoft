@@ -365,7 +365,7 @@ replaces its line; the old one stays findable in the archive or in git.
   table. Easy is mostly factory, each level up carries more, Pro never factory; the weights are first guesses for his
   playtest. Your teammates stay factory (owner, 2026-10-04), so they don't outgun you by luck. BB weight and hop-up stay
   factory. What you have unlocked never changes a bot's kit: the Cyber Pistol is a kit of its own from Hard up, no
-  longer carried only once you own one (M32).
+  longer carried only once you have one (M32; earned by levelling after LV1).
 - **A bot aims through the sight on its replica; gear never changes what it sees or hears (2026-10-13, BG1).** A 2x
   scope holds 40 % finer once settled but settles 10 % later, starts 40 % wider up close and loses a crossing target
   50 % more; a red dot is 15 % finer and 10 % quicker; iron sights are the level's own aim (`BOT_SIGHT_AIM`). Bots
