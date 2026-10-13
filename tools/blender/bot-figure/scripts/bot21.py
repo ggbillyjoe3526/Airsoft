@@ -1,5 +1,5 @@
 # --- v12 (Dev 6): the realistic human's surfaces, baked into one texture atlas -------------------------------------
-# Every part is modelled in a source surface (S_Camo, S_Nylon, ...: bot18). Each source surface here is a procedural
+# Every part is modelled in a source surface (S_Camo, S_Nylon, ...: bot20). Each source surface here is a procedural
 # Cycles material: its colour (an original multi-terrain camouflage, coyote nylon, MOLLE webbing, steel mesh ...),
 # roughness, metal and relief (cloth folds where the joints bend, rounded edges on the hard kit, webbing, stitching).
 # dress_v12 unwraps the whole figure into one atlas, bakes those into three images (colour with the ambient
@@ -821,7 +821,7 @@ smooth_hand_hard.v12 = True
 
 # --- the build ------------------------------------------------------------------------------------------------------
 def finalise_v12():
-    """The human (v12): Body, Kit, Kit_Radio, Kit_Pack, the four heads (bot20) and the Rig at v11's scale, so the
+    """The human (v12): Body, Kit, Kit_Radio, Kit_Pack, the four heads (bot22) and the Rig at v11's scale, so the
     skeleton, clips and fits are unchanged."""
     O = bpy.data.objects
     b, k, h = build_all()
@@ -869,4 +869,4 @@ def export_v12(stem='bot_human_v12'):
 B.update(dict(kit_v12=kit_v12, cloth_attrs=cloth_attrs, uv_layers=uv_layers, build_surfaces=build_surfaces,
               unwrap=unwrap, bake_atlas=bake_atlas, dress_v12=dress_v12, finalise_v12=finalise_v12,
               build_human_full_v12=build_human_full_v12, export_v12=export_v12))
-print('bot19 ready')
+print('bot21 ready')
