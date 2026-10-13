@@ -47,6 +47,24 @@ def _outermost(tree, c, d, reach=0.3):
     return hit
 
 
+def _drop_covered(bal, shells, margin=0.012):
+    """Delete the balaclava faces a hat or helmet hides: each corner, and the point `margin` below it, lies under the
+    shell seen from inside the head. Saves triangles, and no cloth pokes through between the shell's samples."""
+    tree = bvh(shells)
+
+    def under(p):
+        d = p - HEAD_IN
+        return tree.ray_cast(HEAD_IN, d.normalized(), 0.3)[0] is not None
+    for o in bal:
+        bm = bmesh.new()
+        bm.from_mesh(o.data)
+        hid = {v for v in bm.verts if under(v.co) and under(v.co - Vector((0.0, 0.0, margin)))}
+        bmesh.ops.delete(bm, geom=[f for f in bm.faces if all(v in hid for v in f.verts)], context='FACES')
+        bm.to_mesh(o.data)
+        bm.free()
+        o.data.update()
+
+
 # --- full-seal goggles: a lens, a frame that seals onto the face, a strap round the head (under any hat or helmet) ---
 GOG_C = Vector((0.0, 0.004, 1.603))
 
@@ -95,12 +113,12 @@ def goggles(tree, frame='Rubber', tag=''):
 # --- Head_Cap ---------------------------------------------------------------------------------------------------------
 CAP_C = Vector((0.0, 0.004, 1.600))      # the crown: a dome round this, its radii across, front, back and up
 CAP_R = (0.091, 0.112, 0.118, 0.093)
-CAP_RIM = [(0, 1.630), (40, 1.627), (75, 1.614), (100, 1.608), (140, 1.600), (180, 1.597)]   # its edge's height
+CAP_RIM = [(0, 1.640), (40, 1.636), (75, 1.618), (100, 1.608), (140, 1.600), (180, 1.597)]   # its edge's height
 
 
 def cap_crown(tree):
-    """The crown at (u round from the front, v from the top to the edge): a rounded dome, kept 4 mm clear of the
-    balaclava."""
+    """The crown at (u round from the front, v from the top to the edge): a rounded dome, kept 6 mm clear of the
+    balaclava (its flat faces cut inside their corners)."""
     rx, rf, rb, rz = CAP_R
 
     def F(u, v):
@@ -111,8 +129,8 @@ def cap_crown(tree):
                             rz * math.cos(ph)))
         dr = (p - HEAD_IN).normalized()
         hit, n, i, dist = tree.ray_cast(HEAD_IN, dr)
-        if hit is not None and (p - HEAD_IN).length < dist + 0.004:
-            p = HEAD_IN + dr * (dist + 0.004)
+        if hit is not None and (p - HEAD_IN).length < dist + 0.006:
+            p = HEAD_IN + dr * (dist + 0.006)
         return p
     return F
 
@@ -120,12 +138,11 @@ def cap_crown(tree):
 def head_cap(bal, gaiter):
     d = math.radians
     tree = bvh(bal)
-    F = cap_crown(tree)
+    gog = goggles(tree, 'Polymer', '_Cap')
+    F = cap_crown(bvh(bal + gog[2:]))             # clear of the goggle strap too, which runs under it
     crown = sheet('CapCrown', F, 20, 0, S('Canvas'), wrap=True, out_from=HEAD_IN, pole0=True,
                   vs=[0.06, 0.3, 0.55, 0.76, 0.91, 1.0], angle=55)
-    top = F(0.0, 0.0).lerp(F(0.5, 0.0), 0.5)
-    parts = [crown, cyl('CapButton', top - Vector((0, 0, 0.002)), top + Vector((0, 0, 0.003)), 0.0055, S('Canvas'),
-                        segs=6)]
+    parts = [crown]
 
     def brim(u, v):                               # the peak: arched, a little down at its sides
         a = d(-56 + 112 * u)
@@ -133,7 +150,7 @@ def head_cap(bal, gaiter):
         out = Vector((math.sin(a) * 0.55, -math.cos(a), 0.0)).normalized()
         p0 = F((a / TAU) % 1.0, 1.0) - out * 0.003          # its root just inside the crown
         L = 0.002 + 0.072 * max(0.0, 1 - s ** 2.2) ** 0.6
-        return p0 + out * (L * v) - Vector((0, 0, 0.016 * s * s * v + 0.008 * v))
+        return p0 + out * (L * v) - Vector((0, 0, 0.008 * s * s * v + 0.006 * v ** 1.5))   # clear over the goggles
     parts.append(sheet('CapBrim', brim, 11, 3, S('Canvas'), thick=0.0035,
                        out_from=Vector((0.0, -0.12, 1.75)), angle=40))
     # the team patch on the crown's front
@@ -161,8 +178,10 @@ def head_cap(bal, gaiter):
     parts.append(strip('HeadsetBand', pts, [Vector((0, 1, 0))] * len(pts), 0.020, 0.005, S('Rubber'),
                        out=Vector((0.0, CUP_C.y, 1.56)), angle=40))
     parts += boom_mic()
-    parts += goggles(tree, 'Polymer', '_Cap')
+    parts += gog
     parts += mesh_mask(bvh(bal + [gaiter]))
+    _drop_covered(bal, [crown])
+    _drop_covered(gog[2:], [crown], margin=0.0)   # the strap where the crown hides it
     return bal + parts
 
 
@@ -216,6 +235,7 @@ def head_boonie(bal, gaiter):
                        out_from=Vector((0.0, 0.006, 1.80)), angle=45))
     parts += glasses(tree)
     parts += shemagh(bvh(bal + [gaiter]))
+    _drop_covered(bal, parts[:1])
     return bal + parts
 
 
@@ -288,20 +308,23 @@ def head_fullcut(bal, gaiter):
                      basis=(side, n, up)))
     parts += chin_straps(tree)
     parts += goggles(tree, 'Rubber', '_FullCut')
+    _drop_covered(bal, [sh])
     return bal + parts
 
 
 # --- the new surfaces (bot19 bakes them with the rest) ---------------------------------------------------------------
 def surf_shemagh(m):
-    """Sand cotton woven with a brown check: 7 mm bands every 22 mm both ways (the Detail UV is in metres)."""
+    """Sand cotton woven with a brown check: 5 mm bands every 18 mm both ways, darker where they cross (the Detail UV
+    is in metres)."""
     g = G(m)
     col = g.mulc(lin(0xb5a079), g.math('ADD', 0.92, g.math('MULTIPLY', g.noise(g.P, 40.0, 2.0, 0.6), 0.16)))
-    lines = None
+    bands = []
     for w in (g.U, g.V):
-        f = g.math('FRACT', g.math('DIVIDE', w, 0.022))
-        ln = g.math('MULTIPLY', g.step(f, 0.0, 0.06), g.step(f, 0.36, 0.3))
-        lines = ln if lines is None else g.math('MAXIMUM', lines, ln)
-    col = g.mixc(g.math('MULTIPLY', lines, 0.85), col, lin(0x4b3a29))
+        f = g.math('FRACT', g.math('DIVIDE', w, 0.018))
+        bands.append(g.math('MULTIPLY', g.step(f, 0.0, 0.05), g.step(f, 0.33, 0.28)))
+    lines = g.math('ADD', g.math('MULTIPLY', g.math('MAXIMUM', bands[0], bands[1]), 0.6),
+                   g.math('MULTIPLY', g.math('MULTIPLY', bands[0], bands[1]), 0.35))
+    col = g.mixc(lines, col, lin(0x4b3a29))
     h = g.math('ADD', g.math('MULTIPLY', g.noise(g.P, 500.0, 1.0, 0.5), 0.25), g.math('MULTIPLY', lines, 0.4))
     h = g.math('ADD', h, g.math('MULTIPLY', g.noise(g.P, 45.0, 2.0, 0.6), 1.2))       # loose folds
     return g.finish(col, 0.95, 0.0, h, height_dist=0.002)
