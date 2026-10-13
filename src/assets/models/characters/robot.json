@@ -1,6 +1,6 @@
 {
  "figure": "bot_robot_v12",
- "heightMetres": 1.74,
+ "heightMetres": 1.75,
  "facing": "+Z",
  "fps": 30,
  "clips": [
@@ -248,12 +248,9 @@
   "Body_Neck",
   "Body_Neck_LOD1",
   "Body_Neck_LOD2",
-  "Head_Face",
-  "Head_Face_LOD1",
-  "Head_Face_LOD2",
-  "Head_Visor",
-  "Head_Visor_LOD1",
-  "Head_Visor_LOD2"
+  "Head_Headset",
+  "Head_Headset_LOD1",
+  "Head_Headset_LOD2"
  ],
  "gripBones": [
   "Grip_R",
@@ -264,12 +261,9 @@
    "Body_Neck",
    "Body_Neck_LOD1",
    "Body_Neck_LOD2",
-   "Head_Face",
-   "Head_Face_LOD1",
-   "Head_Face_LOD2",
-   "Head_Visor",
-   "Head_Visor_LOD1",
-   "Head_Visor_LOD2"
+   "Head_Headset",
+   "Head_Headset_LOD1",
+   "Head_Headset_LOD2"
   ]
  },
  "teamMaterials": "tint materials whose names start with Team",

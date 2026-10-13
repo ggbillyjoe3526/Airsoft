@@ -32,7 +32,7 @@ export const FIGURE_RIG = {
   /** The parts in the files, by role (each has `_LOD1` and `_LOD2` copies, except where the file lacks one). */
   parts: {
     human: { body: ['Body', 'Kit'], head: ['Head_HighCut'], pack: 'Kit_Pack', radio: 'Kit_Radio' },
-    robot: { body: ['Body', 'Body_Neck'], head: ['Head_Visor', 'Head_Face'] },
+    robot: { body: ['Body', 'Body_Neck'], head: ['Head_Headset'] },
   },
   /** The pitch the AimUp and AimDown clips are posed at (bot11.py clip_aim: ±60 degrees); the aim blends between them. */
   aimPitch: 60 * DEG,
