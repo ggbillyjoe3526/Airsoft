@@ -282,6 +282,7 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | The crosshair shows the spread only, not the recoil kick | document | Recoil is light on toy-like replicas; revisit in the Phase 4 HUD pass. (M10) |
 | The round's table shows by itself for the four seconds between rounds and covers the middle of the screen | document | A first guess from the roadmap. The owner's playtest decides whether it should wait for Tab. (M19) |
 | Dev settings' Ghost: bots still see you and shoot at you (their BBs pass through) | document | Deliberate: for walking the field under fire, not for hiding. (M24) |
+| On the Match screen, a map card with Day and Night buttons (Neon Heights) has them and its Dev tag over the map's name | can wait | Seen at 1280 and 1600 px wide on main before M94, on the match's Map cards and on Practice's alike: the buttons sit at the card's top-left with the tag, where the name is. Move them clear of the words, as the Night tag sits bottom-right. Dev content only. (M94) |
 
 ## Save and browsers
 

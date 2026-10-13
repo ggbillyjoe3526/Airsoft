@@ -49,7 +49,7 @@ attempts: 0
 ## M94 · Practice on any map (playtest note 11)
 tier: core
 perf: required
-touches: src/rangeSession.ts, src/map/, src/sim/rangeTargets.ts, src/ui/menus/
+touches: src/rangeSession.ts, src/map/, src/sim/rangeTargets.ts, src/ui/menus/, src/game.ts, src/config/practice.ts, src/config/menus.ts, src/config/menuArt.ts, src/render/rangeTargetsRenderer.ts, src/settings/storage.ts, src/ui/rangeReadout.ts, pipeline/map-stills.mjs, public/menu/range-day.jpg
 contract: none
 acceptance:
   1. The practice range is renamed "Practice"; it offers the range and every playable map (Dev maps with Dev content on).

@@ -416,6 +416,12 @@ replaces its line; the old one stays findable in the archive or in git.
   skin (`tag: 'dev'`) shows in Customise only with Dev content on, and a saved pick of it plays as the default
   without. "Nothing that decides play reads a skin" is proved over the imports of the sim, bots, physics, nav and the
   kit's numbers: only names that pass a scheme's id along may reach them.
+- **Practice plays on the range or any map, its place picked apart from the match's map (2026-10-13, M94; the owner's
+  playtest note 11).** On a map there are no bots: targets stand where the other team's bots would play, read from the
+  map's own data (lane points, points along the lanes' long legs, the other team's starts, Extraction's home starts,
+  the overlooks), so a new map gets them with no extra work. Each target has a facing and a floor (`RangeTarget`, plain
+  data), so later kinds stand on maps too. The pick is saved as `practicePlace`; a dev map plays as the range while Dev
+  content is off. The range's card reads "Range", the mode "Practice".
 
 ## Replicas, Loadout, Armory and economy
 
