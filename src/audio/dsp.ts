@@ -23,6 +23,8 @@ interface LayerTiming {
   decay: number;
   /** Peak level (linear). */
   gain: number;
+  /** The replica's power source (battery motor, gas, spring): rendered into the recipe's power part (renderRecipeParts). */
+  power?: boolean;
 }
 
 /** Filtered noise: puffs of air, hiss, scuffs, rustle. */
@@ -50,6 +52,8 @@ export interface ModesLayer {
   at?: number;
   gain: number;
   modes: readonly { hz: number; decay: number; gain: number }[];
+  /** As LayerTiming's: a power-source layer. */
+  power?: boolean;
 }
 
 export type Layer = NoiseLayer | ToneLayer | ModesLayer;
@@ -278,14 +282,30 @@ function renderLayer(layer: Layer, out: Float32Array, sampleRate: number, pitch:
  * so the same seed gives the same sound. The result never peaks above PEAK_LIMIT and fades out at its end, END_FADE
  * samples after its last sample above TAIL_FLOOR of its peak (M69, audit AUD-09): the buffer is sized for the longest
  * variant and each layer for its own -60 dB, so a quiet layer's long decay left a silent tail (16 % of the bank).
- * Every sample before the fade is what it was.
+ * Every sample before the fade is what it was. A recipe's power-source layers are left out (renderRecipeParts).
  */
 export function renderRecipe(recipe: SoundRecipe, sampleRate: number, rand: () => number): Float32Array {
+  return renderRecipeParts(recipe, sampleRate, rand).main;
+}
+
+/**
+ * Renders one variant of `recipe` as renderRecipe does, its power-source layers (`power`: a replica's battery motor, gas
+ * or spring, played at their own slider, the owner's 0.1 Dev 5 playtest, note 2) apart from the rest: `power` is null
+ * for a recipe without any. Both parts take the same draws from `rand` in the same order as one buffer would, so
+ * splitting a recipe changes no other sound rendered after it from the same stream.
+ */
+export function renderRecipeParts(recipe: SoundRecipe, sampleRate: number, rand: () => number): { main: Float32Array; power: Float32Array | null } {
   const pitch = spreadFactor(rand, recipe.pitchSpread);
   const time = spreadFactor(rand, recipe.timeSpread);
-  const out = new Float32Array(Math.ceil(recipeLength(recipe) * sampleRate) + END_FADE);
-  for (const layer of recipe.layers) renderLayer(layer, out, sampleRate, pitch, time, spreadFactor(rand, recipe.gainSpread), rand);
-  const drive = recipe.drive ?? 0;
+  const size = Math.ceil(recipeLength(recipe) * sampleRate) + END_FADE;
+  const out = new Float32Array(size);
+  const power = recipe.layers.some((l) => l.power) ? new Float32Array(size) : null;
+  for (const layer of recipe.layers) renderLayer(layer, layer.power ? power! : out, sampleRate, pitch, time, spreadFactor(rand, recipe.gainSpread), rand);
+  return { main: finishRender(out, recipe.drive ?? 0), power: power && finishRender(power, recipe.drive ?? 0) };
+}
+
+/** The drive, the peak limit and the trimmed, faded end (renderRecipe) of a part rendered into `out`. */
+function finishRender(out: Float32Array, drive: number): Float32Array {
   if (drive > 0) {
     // tanh saturation, scaled so a quiet signal keeps its level and only the peaks round off.
     const k = 1 + drive;

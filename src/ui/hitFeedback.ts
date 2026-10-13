@@ -1,5 +1,6 @@
-import { DEFAULT_HIT_MARKER, HITS } from '../config/hits';
+import { DEFAULT_HIT_MARKER, HITS, type HitMarkerSettings } from '../config/hits';
 import { HUD_TEXT, type SkipLabel } from '../config/hudText';
+import { styleHitMarker } from './hitMarkerLook';
 import { restartAnimation } from './restartAnimation';
 import { isRoundStart, spokenRoundMessage } from './roundBanner';
 
@@ -28,7 +29,7 @@ export class HitFeedback {
   private shownOut = '';
   private shownCalling = false;
   private shownAngle = Number.NaN;
-  /** Settings › Gameplay › Hit marker (M97): whether your BB landing shows the red X (the tick sounds either way). */
+  /** Settings › Gameplay › Hit marker (M97): whether your BB landing shows the X (the tick sounds either way). */
   private markerOn = DEFAULT_HIT_MARKER;
 
   /** `fireKey` names the key or button the player has on fire now (the spectating label's "… for next"). */
@@ -74,10 +75,14 @@ export class HitFeedback {
     }
   }
 
-  /** The Hit marker setting (M97): off, a landed BB shows no X; one showing now goes at once. */
-  setHitMarker(on: boolean): void {
-    this.markerOn = on;
-    if (!on) this.marker.classList.remove('show');
+  /**
+   * The Hit marker settings (M97; its look, the owner's 0.1 Dev 5 playtest, note 4): off, a landed BB shows no X and one
+   * showing now goes at once; on, the X takes the size, thickness, outline and colour set.
+   */
+  setHitMarker(settings: HitMarkerSettings): void {
+    this.markerOn = settings.on;
+    styleHitMarker(this.marker, settings);
+    if (!settings.on) this.marker.classList.remove('show');
   }
 
   /** Your BB hit someone. `friendly` marks a teammate (friendly fire counts, as at a real site). Nothing with the Hit marker off. */

@@ -196,7 +196,25 @@
 
 :is(.map-cards, .practice-places) .choice-card {
   aspect-ratio: 3 / 1;
-  min-height: 0;
+  /* The 3:1 shape is the card's least: a narrow window makes it too short for its name and two lines of words, so it
+     grows to them instead (they were cut off at 1280 px), clear of the Dev tag and the Day | Night switch above. `clip`,
+     not `hidden`: a scroll container's least height is nothing, a clipping box's is its content's. */
+  min-height: auto;
+  min-width: 0;
+  overflow: clip;
+}
+
+/* A Dev tag takes a row at the card's top-left; a Day | Night switch (a sibling over the picture) another above it. */
+:is(.map-cards, .practice-places) .choice-card.has-dev-tag {
+  padding-top: 42px;
+}
+
+:is(.map-cards, .practice-places) .choice-card-wrap.has-variants > .choice-card {
+  padding-top: 52px;
+}
+
+:is(.map-cards, .practice-places) .choice-card-wrap.has-variants > .choice-card.has-dev-tag {
+  padding-top: 82px;
 }
 
 .choice-text {
@@ -212,6 +230,8 @@
   font-weight: 800;
   line-height: 1;
   letter-spacing: 0.04em;
+  /* A single long word breaks rather than run out of the card, the last resort (the mode cards below size to fit). */
+  overflow-wrap: break-word;
 }
 
 .choice-blurb {
@@ -306,9 +326,24 @@
   top: calc(50% - 17px);
 }
 
-/* On a mode card the tag sits top-right, left of the tick a picked card shows. */
+/* The mode cards' words have 153 px at 1280 px: "Elimination" at the full 22 px was 156. */
+.mode-cards .choice-name {
+  font-size: clamp(20px, 1.5vw, 30px);
+}
+
+/* On a mode card the tag and the tick a picked card shows sit over the picture, apart from the words: the card is narrow
+   enough at 1280 px that either at the top right of the words ran into a name or its lines. */
 .mode-cards .choice-card-tags {
-  inset: 14px 54px auto auto;
+  inset: auto auto 10px 10px;
+}
+
+.mode-cards .choice-card-tags .tag-pill {
+  background: rgba(5, 10, 26, 0.85);
+}
+
+.mode-cards .choice-tick {
+  right: auto;
+  left: 10px;
 }
 
 .choice-card.soon {
@@ -330,7 +365,7 @@
 }
 
 .choice-card-wrap.has-variants .choice-card-tags {
-  top: 58px;
+  top: 50px;
 }
 
 .choice-variant {
@@ -390,13 +425,20 @@
 }
 
 .match-panel .picker-row {
-  display: grid;
-  grid-auto-columns: minmax(0, 1fr);
-  grid-auto-flow: column;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+/* Equal shares while the words fit, the widest label's own width when it doesn't, and a second row when even that
+   doesn't (Tournament and "More players left" ran out of their buttons in equal columns at 1280 px). */
+.match-panel .picker-button {
+  flex: 1 1 0;
 }
 
 .match-rules-row .picker-button {
   min-height: 56px;
+  /* Tighter sides: four rulesets, Tournament the longest, fit one row in the 570 px the row has at 1280 px. */
+  padding-inline: var(--sp-3);
 }
 
 /* The Rules row is one line: its label and note on the left, the two rulesets filling the rest. */
@@ -532,6 +574,10 @@
   height: var(--sp-5);
   margin-top: calc(-1 * (var(--sp-5) + var(--aside-gap)));
   background: rgb(12, 20, 42);
+}
+
+.play-aside .menu-button-big {
+  padding-inline: clamp(16px, 1.6vw, 32px);
 }
 
 .play-aside .kit-card {

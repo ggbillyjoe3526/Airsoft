@@ -44,8 +44,11 @@
   height: 84%;
 }
 
+/* The words take what the picture and the count leave (flex 1, min-width 0) and never run under the count: the chips wrap
+   to a second row before they would touch it, and the name gives way with an ellipsis. */
 .hud-replica-words {
   display: flex;
+  flex: 1 1 0;
   flex-direction: column;
   gap: 6px;
   min-width: 0;
@@ -62,11 +65,13 @@
 
 .hud-modes {
   display: flex;
-  gap: 4px;
+  flex-wrap: wrap;
+  gap: 4px 3px;
 }
 
 .hud-mode {
-  padding: 3px 6px 2px;
+  flex: none;
+  padding: 3px 5px 2px;
   font: 700 15px/1 var(--ui-display);
   letter-spacing: var(--ls-caps);
   text-transform: uppercase;
@@ -87,6 +92,20 @@
 .hud-mag {
   font: 800 60px/0.9 var(--ui-display);
   font-variant-numeric: tabular-nums;
+}
+
+/* Three to five digits (a high-capacity magazine, a big Dev count) take a smaller size, so the count stays about as wide
+   as two digits at full size and the words beside it keep their room (ui/replicaPanel.ts sets data-digits). */
+.hud-mag[data-digits='3'] {
+  font-size: 42px;
+}
+
+.hud-mag[data-digits='4'] {
+  font-size: 32px;
+}
+
+.hud-mag[data-digits='5'] {
+  font-size: 26px;
 }
 
 .hud-mag.low {

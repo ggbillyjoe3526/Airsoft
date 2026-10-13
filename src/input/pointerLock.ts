@@ -38,7 +38,9 @@ export class PointerLock {
   rawInput = true;
   private raw: RawInputStatus = 'unknown';
   private readonly rawListeners = new Set<(status: RawInputStatus) => void>();
-  private readonly changeListeners = new Set<(locked: boolean) => void>();
+  private readonly changeListeners = new Set<(locked: boolean, released: boolean) => void>();
+  /** release() asked the browser to let go and the lock hasn't dropped yet: the drop is the game's, not the player's Esc. */
+  private letGo = false;
   private readonly errorListeners = new Set<() => void>();
   /** request() calls under way: a first try may fail and the second succeed, so errors wait for their outcome. */
   private requesting = 0;
@@ -122,10 +124,16 @@ export class PointerLock {
 
   /** Gives the mouse back (e.g. to click a button on the match result screen). */
   release(): void {
-    if (this.locked) document.exitPointerLock();
+    if (!this.locked) return;
+    this.letGo = true;
+    document.exitPointerLock();
   }
 
-  onChange(fn: (locked: boolean) => void): void {
+  /**
+   * Calls `fn` as the lock is taken or dropped. `released`: the drop came from release() (the game gave the mouse
+   * back), not from the player (Esc) or the browser (switching away, fullscreen changing).
+   */
+  onChange(fn: (locked: boolean, released: boolean) => void): void {
     this.changeListeners.add(fn);
   }
 
@@ -167,11 +175,13 @@ export class PointerLock {
 
   private readonly onLockChange = (): void => {
     const locked = this.locked;
+    const released = !locked && this.letGo;
+    this.letGo = false;
     this.dx = 0;
     this.dy = 0;
     this.skipNextMove = locked;
     if (!locked) this.releaseButtons();
-    for (const fn of this.changeListeners) fn(locked);
+    for (const fn of this.changeListeners) fn(locked, released);
   };
 
   private readonly onLockError = (): void => {

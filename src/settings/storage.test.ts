@@ -101,6 +101,13 @@ describe('settings migration and the Custom graphics fields (final alpha audit s
     expect(loadSavedQuality(s)).toBeNull();
   });
 
+  it('leaves a taken-away row\'s saved key unread: BB glow (the owner\'s 0.1 Dev 5 playtest, note 3)', () => {
+    const s = memoryStorage({ [SETTINGS_KEY]: JSON.stringify({ version: 1, quality: 'custom', 'graphics.bbGlow': 'on', 'graphics.shadows': 'off' }) });
+    expect(loadSavedQuality(s)).toBe('custom');
+    expect(loadCustomQuality(s)).toEqual({ shadows: false });
+    expect(resolveQuality('custom', loadCustomQuality(s))).not.toHaveProperty('bbGlow');
+  });
+
   it('keeps the Custom rows through the store\'s one migrate path, and drops them with a newer build\'s object', () => {
     const s = memoryStorage({ [SETTINGS_KEY]: JSON.stringify({ version: 1, quality: 'custom', 'graphics.renderScale': 60 }), 'airsoft.mode': 'attackDefend' });
     saveSetting('graphics.shadows', 'off', s);

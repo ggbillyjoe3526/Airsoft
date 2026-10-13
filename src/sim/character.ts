@@ -78,8 +78,11 @@ export interface Character {
   /** In the air since the last tick on the ground, and the fastest it fell meanwhile (m/s), for landing sounds. */
   airborne: boolean;
   fallSpeed: number;
-  /** Seconds until the replica can be fired again after sprinting (0 = ready). */
-  sprintLockout: number;
+  /**
+   * Seconds until the replica can be fired again after a vault (0 = ready): it is carried through the vault and comes up
+   * a moment after (M102, VaultConfig.fireLockout). A sprint has none since the owner's 0.1 Dev 5 playtest (note 9).
+   */
+  fireLockout: number;
   /** How much stance and movement scale the replica's spread right now (1 = standing still; see sim/accuracy.ts). */
   spreadScale: number;
   /** Seconds off the ground so far (0 while grounded); a jump starts it at the in-air spread delay (sim/accuracy.ts). */
@@ -165,7 +168,7 @@ export function createCharacter(
     stepDistance: 0,
     airborne: false,
     fallSpeed: 0,
-    sprintLockout: 0,
+    fireLockout: 0,
     spreadScale: 1,
     airTime: 0,
     stillTime: 0,
@@ -237,7 +240,7 @@ export function respawnCharacter(c: Character): void {
   c.stepDistance = 0;
   c.airborne = false;
   c.fallSpeed = 0;
-  c.sprintLockout = 0;
+  c.fireLockout = 0;
   c.spreadScale = 1;
   c.airTime = 0;
   c.stillTime = 0;

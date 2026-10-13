@@ -11,7 +11,9 @@ import { ROUNDS } from './config/hits';
 import type { MatchRules, RulesetId } from './config/matchRules';
 import { type CrosshairSettings, type HitFeedMode, hudInsetX, hudScale, scoreboardScale, type WhatGotYouMode } from './config/matchInfo';
 import { MINIMAP } from './config/minimap';
-import { FULLSCREEN_RELOCK_MS } from './config/controls';
+import { FULLSCREEN_RELOCK_MS, PAUSE_ESC_GUARD_MS } from './config/controls';
+import { HUD_TEXT } from './config/hudText';
+import { escOpensMenu, escSkips } from './core/escSkip';
 import { CRASH_TEXT } from './config/crash';
 import { LOADING } from './config/loading';
 import { ARMORY_TEXT, BROWSER_NOTES, MENU_TEXT } from './config/menus';
@@ -55,12 +57,13 @@ import { addChallengeRun, loadRecords, noNews, type RecordNews, type Records, sa
 import { type NoXp, settleMatch } from './stats/settleMatch';
 import { adaptedPicks, adaptiveNote, adaptiveSetup, settleAdaptive } from './adaptivePicks';
 import { loadCrosshair } from './ui/crosshair';
-import { loadHitMarker } from './ui/crosshairSettings';
+import { loadHitMarker } from './ui/hitMarkerLook';
 import { loadCallouts, loadMinimapTurn } from './ui/hudSettings';
 import { CrashScreen } from './ui/crashScreen';
 import { DebugOverlay } from './ui/debugOverlay';
 import { onFullscreenChange, relockAfterFullscreen, toggleFullscreen } from './ui/fullscreen';
 import { GraphicsNotice } from './ui/graphicsNotice';
+import { PlayPrompt } from './ui/playPrompt';
 import { loadoutTile } from './ui/loadoutChoice';
 import type { ItemRef } from './pool/item';
 import { GAME_LEVELS } from './progress/gameLevels';
@@ -193,6 +196,8 @@ export class Game {
   private readonly pictures: ItemPictures;
   /** Over everything while the graphics context is lost (M18b). */
   private readonly graphicsNotice: GraphicsNotice;
+  /** Esc skipped the round (core/escSkip.ts): click to play on, Esc for the menu. */
+  private readonly playPrompt: PlayPrompt;
   /** True while the graphics context is lost: nothing can be drawn, so play can't start or resume. */
   private graphicsLost = false;
   /** The match being played (or paused, or just decided); null on the title and New game screens. */
@@ -337,6 +342,13 @@ export class Game {
   private disposed = false;
   /** Play asked for the lock and waits for the browser's answer before building (play). */
   private askingLock = false;
+  /**
+   * Esc skipped the round (core/escSkip.ts, the owner's 0.1 Dev 5 playtest, note 10): the browser took the mouse back and
+   * the skip plays on without it, until a click takes it again (resume) or Esc again opens the menu. `escSkipAt`: when
+   * it began (performance.now()).
+   */
+  private escSkip = false;
+  private escSkipAt = 0;
   /** Up once the game has stopped on an error (crash); the loop never runs again. */
   private crashScreen: CrashScreen | null = null;
 
@@ -551,7 +563,7 @@ export class Game {
       crosshair: {
         initial: this.crosshair,
         onChange: (c) => this.changeCrosshair(c),
-        hitMarker: { initial: this.hitMarker, onChange: (on) => ((this.hitMarker = on), this.session instanceof MatchSession && this.session.setHitMarker(on)) },
+        hitMarker: { initial: this.hitMarker, onChange: (m) => ((this.hitMarker = m), this.session instanceof MatchSession && this.session.setHitMarker(m)) },
       },
       accessibility: {
         reducedMotion: { initial: this.motionReduced(), onChange: (on) => this.changeReducedMotion(on), follow: (show) => (this.showSystemMotion = show) },
@@ -616,13 +628,16 @@ export class Game {
     this.showTitleWarning();
     this.unwatchSave = options.save.onChange(() => this.showTitleWarning());
     this.graphicsNotice = new GraphicsNotice(container, BROWSER_NOTES.graphicsLost);
+    this.playPrompt = new PlayPrompt(container, HUD_TEXT.playPrompt);
+    container.addEventListener('mousedown', this.clickToPlay);
+    window.addEventListener('keydown', this.escSkipKey);
     this.renderer.onContextChange((lost) => this.graphicsContextChanged(lost));
     this.stopWatchingAway = awayWatch({ doc: document, win: window }, this.goneAway);
     this.audio.onBlocked = () => {
       this.audioBlocked = true;
       this.menus.showHint(BROWSER_NOTES.audioBlocked);
     };
-    this.pointer.onChange((locked) => {
+    this.pointer.onChange((locked, released) => {
       // Stopped on an error: the crash pane stays on top and nothing resumes; a lock granted late is given back.
       if (this.crashScreen) {
         if (locked) this.pointer.release();
@@ -630,6 +645,8 @@ export class Game {
       }
       if (locked) {
         if (!this.askingLock) this.resume();
+      } else if (this.escSkipDrop(released)) {
+        this.startEscSkip();
       } else {
         this.pause();
         this.relockAfterFullscreen();
@@ -638,7 +655,8 @@ export class Game {
     this.unwatchFullscreen = onFullscreenChange(() => this.relockAfterFullscreen());
     // Slider changes wait a moment before they are written (settings/storage.ts saveSettingSoon): write them as the page goes.
     window.addEventListener('pagehide', this.flushSettings);
-    this.pointer.onError(() => this.menus.showHint(LOCK_REFUSED_HINT));
+    // Refused while the round skips without the mouse: the prompt over the field says so, not the hidden menus.
+    this.pointer.onError(() => (this.escSkip ? this.playPrompt.show(LOCK_REFUSED_HINT) : this.menus.showHint(LOCK_REFUSED_HINT)));
     this.audio.warmUp();
     this.prefetchFieldSounds();
     this.renderer.warmUp();
@@ -678,6 +696,55 @@ export class Game {
   };
 
   private readonly flushSettings = (): void => flushSettings();
+
+  /** The mouse lock dropped (not the game's own release): whether it was Esc to skip the round (core/escSkip.ts). */
+  private escSkipDrop(released: boolean): boolean {
+    const s = this.session;
+    if (!this.started || !(s instanceof MatchSession) || this.graphicsLost || this.yielded || this.askingLock) return false;
+    return escSkips({
+      released,
+      skippable: s.skipping || s.skipOffer !== null,
+      focused: document.visibilityState === 'visible' && document.hasFocus(),
+      msSinceFullscreenKey: performance.now() - this.fullscreenKeyAt,
+      fullscreenWindowMs: FULLSCREEN_RELOCK_MS,
+    });
+  }
+
+  /**
+   * Esc skipped the round (core/escSkip.ts): the skip begins, or the one running carries on, without the mouse. Keys
+   * wait for play, as on the pause menu, and the prompt says how to play on.
+   */
+  private startEscSkip(): void {
+    const s = this.session;
+    if (s instanceof MatchSession && !s.skipping) s.beginSkip();
+    this.escSkip = true;
+    this.escSkipAt = performance.now();
+    this.keyboard.capturing = false;
+    this.keyboard.releaseAll();
+    this.input.clearLatches();
+    this.playPrompt.show();
+  }
+
+  /** The skip without the mouse is over: the mouse was taken again, play stopped, or the match was left. */
+  private endEscSkip(): void {
+    this.escSkip = false;
+    this.playPrompt.hide();
+  }
+
+  /** A click on the field while the round skips without the mouse takes the mouse again, and play goes on (resume). */
+  private readonly clickToPlay = (e: MouseEvent): void => {
+    if (!this.escSkip || e.button !== 0) return;
+    e.preventDefault();
+    void this.pointer.request();
+  };
+
+  /** Esc again while the round skips without the mouse opens the pause menu (Resume carries on with the skip). */
+  private readonly escSkipKey = (e: KeyboardEvent): void => {
+    if (!this.escSkip || !escOpensMenu(e.code, e.repeat, performance.now() - this.escSkipAt, PAUSE_ESC_GUARD_MS)) return;
+    e.preventDefault();
+    this.endEscSkip();
+    this.pause();
+  };
 
   /**
    * The page entered or left fullscreen, or the mouse lock dropped: just after the Fullscreen key in play, the lock is
@@ -738,7 +805,10 @@ export class Game {
 
   /** Stops play as if the player had pressed Esc: the mouse is given back, and the pause menu comes up. */
   private stopPlay(): void {
-    if (this.unlockedPlay) {
+    if (this.escSkip) {
+      this.endEscSkip();
+      this.pause();
+    } else if (this.unlockedPlay) {
       this.unlockedPlay = false;
       this.pointer.setUnlockedButtons(false);
       this.pause();
@@ -1015,6 +1085,9 @@ export class Game {
     this.unwatchFullscreen();
     this.unwatchLayout();
     flushSettings();
+    this.container.removeEventListener('mousedown', this.clickToPlay);
+    window.removeEventListener('keydown', this.escSkipKey);
+    this.playPrompt.dispose();
     this.graphicsNotice.dispose();
     this.session?.dispose();
     this.session = null;
@@ -1179,6 +1252,7 @@ export class Game {
   }
 
   private resume(): void {
+    this.endEscSkip();
     const s = this.session;
     // A mouse lock granted after the graphics context was lost (the lock was still pending): nothing can be drawn.
     if (this.graphicsLost) {
@@ -1217,6 +1291,7 @@ export class Game {
     this.practice = false;
     this.tutorial = false;
     this.unlockedPlay = false;
+    this.endEscSkip();
     this.pointer.setUnlockedButtons(false);
     this.session?.dispose();
     this.session = null;
@@ -1377,7 +1452,7 @@ export class Game {
       ...(match?.mode === 'extraction' && r ? [['Run', read(() => runReportLine(r.run))] as const] : []),
       ['Tick', read(() => s?.state.tick ?? '-')],
       ['Match time', read(() => (s ? clockText(s.state.time) : '-'))],
-      ['Screen', read(() => ((this.pointer.locked || this.unlockedPlay) && s ? 'in play' : `menus: ${this.menus.screen}`))],
+      ['Screen', read(() => ((this.pointer.locked || this.unlockedPlay || this.escSkip) && s ? 'in play' : `menus: ${this.menus.screen}`))],
       // Where the player is, looks and what they're doing (IM7): a thread can go to the spot.
       ['Player', read(() => (s ? playerLine(s.player) : '-'))],
       ['Frames', read(() => framesLine(this.frameWindow.summary(), this.simMs, this.drawMs))],
@@ -1456,6 +1531,7 @@ export class Game {
       () => (this.keyboard.capturing = false),
       () => this.keyboard.releaseAll(),
       () => this.pointer.setUnlockedButtons(false),
+      () => this.endEscSkip(),
       () => this.pointer.release(),
       () => this.session?.setPlaying(false),
       () => this.audio.setRunning(false),
@@ -1490,7 +1566,7 @@ export class Game {
     this.lastTime = now;
 
     const s = this.session;
-    const running = (this.pointer.locked || this.unlockedPlay) && s !== null;
+    const running = (this.pointer.locked || this.unlockedPlay || this.escSkip) && s !== null;
     if (running) {
       // Only while playing: on the pause screen F3 belongs to the browser (find bar).
       if (this.keyboard.wasPressed('debugOverlay')) this.debug.toggle();
@@ -1502,7 +1578,10 @@ export class Game {
       }
       // The Dev settings' Game speed (M24) runs the simulation slower or faster than the clock.
       const simStart = performance.now();
-      this.ticksThisSecond += s.advance(dt * this.dev.gameSpeed);
+      // Esc skipped the round without the mouse (core/escSkip.ts): once the next round is up it waits for the click that
+      // takes the mouse again, or it would start without you; a match decided plays on to its result screen.
+      const held = this.escSkip && s instanceof MatchSession && !s.skipping && s.state.round.phase !== 'matchOver';
+      if (!held) this.ticksThisSecond += s.advance(dt * this.dev.gameSpeed);
       this.simMs += (performance.now() - simStart - this.simMs) * FRAME_TIMING.smoothing;
       if (s instanceof MatchSession) this.settleMatch(s);
       if (isRange(s)) this.takeTutorialFinished(s);
@@ -1511,6 +1590,9 @@ export class Game {
         if (this.unlockedPlay) {
           this.unlockedPlay = false;
           this.pointer.setUnlockedButtons(false);
+          this.pause();
+        } else if (this.escSkip) {
+          this.endEscSkip();
           this.pause();
         } else {
           this.pointer.release();

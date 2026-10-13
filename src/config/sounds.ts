@@ -16,6 +16,12 @@ export type ShotProfile = 'electric' | 'gas' | 'spring' | 'cyber';
 /** Every shot profile, for the audio tests that walk them all (test only). */
 export const SHOT_PROFILES: readonly ShotProfile[] = ['electric', 'gas', 'spring', 'cyber'];
 
+/**
+ * A power source whose sound in a shot plays at the Power source slider (the owner's 0.1 Dev 5 playtest, note 2): an
+ * AEG's battery-driven motor and gears, a gas pistol's pop and hiss, a spring's twang. The Cyber Pistol has none apart.
+ */
+export type PowerSource = 'electric' | 'gas' | 'spring';
+
 /** What a floor or ramp block is underfoot (MapBlock.surface; without one, concrete). */
 export type BlockSurface = 'concrete' | 'metal';
 
@@ -34,6 +40,11 @@ export const FOOTSTEP_PACES: readonly FootstepPace[] = ['run', 'sprint', 'land']
 
 export type SoundCue =
   | `shot.${ShotProfile}`
+  /**
+   * A shot's power-source layers (layers marked `power`), rendered with the shot from its recipe (POWER_PARTS) and played
+   * with it at the Power source slider.
+   */
+  | `power.${PowerSource}`
   /** An AEG's motor winding up on the first shot of a trigger pull, and winding down after the last. */
   | 'motor.spinUp'
   | 'motor.spinDown'
@@ -193,48 +204,70 @@ function rustle(fromHz: number, toHz: number, gain: number, decay: number): Soun
   };
 }
 
+/*
+ * The shots with a power part (POWER_PARTS: layers marked `power`, the owner's 0.1 Dev 5 playtest, note 2), here so
+ * SOUNDS can hold both the shot and its power part's own recipe (powerPart).
+ */
+
+/**
+ * A shot's power part as a recipe of its own: its `power` layers, unmarked. It says what the part holds and how long it
+ * can run; the bank renders the part with its shot (renderRecipeParts), never from this.
+ */
+function powerPart(shot: SoundRecipe): SoundRecipe {
+  return { ...shot, layers: shot.layers.filter((l) => l.power).map((l) => ({ ...l, power: false })) };
+}
+
+/**
+ * AEG, one gearbox cycle: the motor and gears whirring, the piston slamming forward into the head (a plastic
+ * slap with a little body), the air puff through the barrel and the BB's small "tsk" as it leaves.
+ */
+const SHOT_ELECTRIC: SoundRecipe = {
+  layers: [
+    // The battery-driven motor and gears (its power part, POWER_PARTS).
+    { kind: 'tone', wave: 'saw', attack: 0.004, decay: 0.09, gain: 0.14, hz: 205, hzTo: 175, filter: { type: 'lowpass', hz: 1700, q: 0.8 }, power: true },
+    { kind: 'tone', wave: 'square', attack: 0.004, decay: 0.06, gain: 0.045, hz: 620, hzTo: 560, filter: { type: 'lowpass', hz: 2600, q: 0.7 }, power: true },
+    { kind: 'tone', wave: 'sine', at: 0.012, attack: 0.002, decay: 0.07, gain: 0.52, hz: 130, hzTo: 58 },
+    { kind: 'modes', at: 0.012, gain: 0.42, modes: [{ hz: 185, decay: 0.05, gain: 0.8 }, { hz: 430, decay: 0.035, gain: 0.55 }, { hz: 1150, decay: 0.022, gain: 0.35 }, { hz: 2700, decay: 0.012, gain: 0.2 }] },
+    { kind: 'noise', at: 0.013, attack: 0.002, decay: 0.055, gain: 0.62, filter: { type: 'bandpass', hz: 1500, hzTo: 650, q: 0.8 } },
+    { kind: 'noise', at: 0.016, attack: 0.0005, decay: 0.014, gain: 0.25, filter: { type: 'highpass', hz: 4800, q: 0.7 } },
+  ],
+  ...TIGHT,
+  drive: 0.6,
+};
+
+/** Gas pistol: a sharp pop of gas with a short hiss after it, the slide clacking back and slamming home. */
+const SHOT_GAS: SoundRecipe = {
+  layers: [
+    // The gas's pop (and its hiss, the last layer): its power part (POWER_PARTS).
+    { kind: 'noise', attack: 0.0006, decay: 0.035, gain: 0.75, filter: { type: 'highpass', hz: 1500, q: 0.7 }, power: true },
+    { kind: 'noise', attack: 0.001, decay: 0.05, gain: 0.4, filter: { type: 'bandpass', hz: 900, q: 1 }, power: true },
+    { kind: 'tone', wave: 'sine', attack: 0.001, decay: 0.07, gain: 0.42, hz: 165, hzTo: 70 },
+    { kind: 'modes', at: 0.004, gain: 0.42, modes: [{ hz: 1350, decay: 0.03, gain: 0.8 }, { hz: 2900, decay: 0.02, gain: 0.5 }, { hz: 5200, decay: 0.012, gain: 0.3 }] },
+    { kind: 'modes', at: 0.042, gain: 0.38, modes: [{ hz: 1100, decay: 0.035, gain: 0.8 }, { hz: 2450, decay: 0.022, gain: 0.5 }, { hz: 4300, decay: 0.012, gain: 0.25 }] },
+    { kind: 'noise', at: 0.01, attack: 0.01, decay: 0.14, gain: 0.1, filter: { type: 'highpass', hz: 3500, q: 0.5 }, power: true },
+  ],
+  ...TIGHT,
+  drive: 0.5,
+};
+
+/** Spring piston: a deep thump as the piston lands, a crack of air and the spring twanging on after it. */
+const SHOT_SPRING: SoundRecipe = {
+  layers: [
+    { kind: 'tone', wave: 'sine', attack: 0.002, decay: 0.1, gain: 0.55, hz: 110, hzTo: 48 },
+    { kind: 'noise', attack: 0.002, decay: 0.05, gain: 0.4, filter: { type: 'lowpass', hz: 900, q: 0.8 } },
+    { kind: 'noise', at: 0.006, attack: 0.0006, decay: 0.03, gain: 0.5, filter: { type: 'bandpass', hz: 2200, q: 0.9 } },
+    // The spring twanging on: its power part (POWER_PARTS).
+    { kind: 'modes', at: 0.002, gain: 0.24, modes: [{ hz: 190, decay: 0.35, gain: 0.8 }, { hz: 437, decay: 0.28, gain: 0.55 }, { hz: 701, decay: 0.22, gain: 0.4 }, { hz: 1130, decay: 0.15, gain: 0.3 }], power: true },
+  ],
+  ...TIGHT,
+  drive: 0.5,
+};
+
 export const SOUNDS: Readonly<Record<SoundCue, SoundRecipe>> = {
   // ---- Shots ---------------------------------------------------------------------------------
-  /**
-   * AEG, one gearbox cycle: the motor and gears whirring, the piston slamming forward into the head (a plastic
-   * slap with a little body), the air puff through the barrel and the BB's small "tsk" as it leaves.
-   */
-  'shot.electric': {
-    layers: [
-      { kind: 'tone', wave: 'saw', attack: 0.004, decay: 0.09, gain: 0.14, hz: 205, hzTo: 175, filter: { type: 'lowpass', hz: 1700, q: 0.8 } },
-      { kind: 'tone', wave: 'square', attack: 0.004, decay: 0.06, gain: 0.045, hz: 620, hzTo: 560, filter: { type: 'lowpass', hz: 2600, q: 0.7 } },
-      { kind: 'tone', wave: 'sine', at: 0.012, attack: 0.002, decay: 0.07, gain: 0.52, hz: 130, hzTo: 58 },
-      { kind: 'modes', at: 0.012, gain: 0.42, modes: [{ hz: 185, decay: 0.05, gain: 0.8 }, { hz: 430, decay: 0.035, gain: 0.55 }, { hz: 1150, decay: 0.022, gain: 0.35 }, { hz: 2700, decay: 0.012, gain: 0.2 }] },
-      { kind: 'noise', at: 0.013, attack: 0.002, decay: 0.055, gain: 0.62, filter: { type: 'bandpass', hz: 1500, hzTo: 650, q: 0.8 } },
-      { kind: 'noise', at: 0.016, attack: 0.0005, decay: 0.014, gain: 0.25, filter: { type: 'highpass', hz: 4800, q: 0.7 } },
-    ],
-    ...TIGHT,
-    drive: 0.6,
-  },
-  /** Gas pistol: a sharp pop of gas with a short hiss after it, the slide clacking back and slamming home. */
-  'shot.gas': {
-    layers: [
-      { kind: 'noise', attack: 0.0006, decay: 0.035, gain: 0.75, filter: { type: 'highpass', hz: 1500, q: 0.7 } },
-      { kind: 'noise', attack: 0.001, decay: 0.05, gain: 0.4, filter: { type: 'bandpass', hz: 900, q: 1 } },
-      { kind: 'tone', wave: 'sine', attack: 0.001, decay: 0.07, gain: 0.42, hz: 165, hzTo: 70 },
-      { kind: 'modes', at: 0.004, gain: 0.42, modes: [{ hz: 1350, decay: 0.03, gain: 0.8 }, { hz: 2900, decay: 0.02, gain: 0.5 }, { hz: 5200, decay: 0.012, gain: 0.3 }] },
-      { kind: 'modes', at: 0.042, gain: 0.38, modes: [{ hz: 1100, decay: 0.035, gain: 0.8 }, { hz: 2450, decay: 0.022, gain: 0.5 }, { hz: 4300, decay: 0.012, gain: 0.25 }] },
-      { kind: 'noise', at: 0.01, attack: 0.01, decay: 0.14, gain: 0.1, filter: { type: 'highpass', hz: 3500, q: 0.5 } },
-    ],
-    ...TIGHT,
-    drive: 0.5,
-  },
-  /** Spring piston: a deep thump as the piston lands, a crack of air and the spring twanging on after it. */
-  'shot.spring': {
-    layers: [
-      { kind: 'tone', wave: 'sine', attack: 0.002, decay: 0.1, gain: 0.55, hz: 110, hzTo: 48 },
-      { kind: 'noise', attack: 0.002, decay: 0.05, gain: 0.4, filter: { type: 'lowpass', hz: 900, q: 0.8 } },
-      { kind: 'noise', at: 0.006, attack: 0.0006, decay: 0.03, gain: 0.5, filter: { type: 'bandpass', hz: 2200, q: 0.9 } },
-      { kind: 'modes', at: 0.002, gain: 0.24, modes: [{ hz: 190, decay: 0.35, gain: 0.8 }, { hz: 437, decay: 0.28, gain: 0.55 }, { hz: 701, decay: 0.22, gain: 0.4 }, { hz: 1130, decay: 0.15, gain: 0.3 }] },
-    ],
-    ...TIGHT,
-    drive: 0.5,
-  },
+  'shot.electric': SHOT_ELECTRIC,
+  'shot.gas': SHOT_GAS,
+  'shot.spring': SHOT_SPRING,
   /**
    * Cyber Pistol (M32): futuristic and quiet but satisfying. A quick rising electronic chirp, a soft rounded pop with a
    * puff of air, a bright click on top and a faint shimmer after it. Quieter than the AEG's gearbox, no motor.
@@ -251,6 +284,10 @@ export const SOUNDS: Readonly<Record<SoundCue, SoundRecipe>> = {
     ...TIGHT,
     drive: 0.3,
   },
+  // A shot's power part (POWER_PARTS): rendered with its shot, never on its own (and never on the title stream).
+  'power.electric': powerPart(SHOT_ELECTRIC),
+  'power.gas': powerPart(SHOT_GAS),
+  'power.spring': powerPart(SHOT_SPRING),
   'motor.spinUp': {
     layers: [{ kind: 'tone', wave: 'saw', attack: 0.006, decay: 0.07, gain: 0.22, hz: 85, hzTo: 205, glide: 0.04, filter: { type: 'lowpass', hz: 1500, q: 0.8 } }],
     ...TIGHT,
@@ -670,6 +707,23 @@ export const SOUNDS: Readonly<Record<SoundCue, SoundRecipe>> = {
 };
 
 /**
+ * Each shot with power-source layers (`power`) and the cue its power part plays as (the owner's 0.1 Dev 5 playtest, note
+ * 2: their own volume slider). The bank renders both parts in one pass of the shot's recipe (renderRecipeParts), so the
+ * shared stream and every other cue sound as before; the power cues' own entries in SOUNDS (powerPart) are never
+ * rendered.
+ */
+export const POWER_PARTS: Readonly<Partial<Record<SoundCue, SoundCue>>> = {
+  'shot.electric': 'power.electric',
+  'shot.gas': 'power.gas',
+  'shot.spring': 'power.spring',
+};
+
+/** Whether `cue` is a shot's power part (POWER_PARTS), rendered with its shot. */
+export function isPowerPart(cue: SoundCue): boolean {
+  return cue.startsWith('power.');
+}
+
+/**
  * The cues only some maps play (M33j): the ground's footsteps, the woods' owl and the city's chime and bleeps (M34g). They come last in SOUNDS and are never
  * rendered on the title screen: a map that plays them has them rendered as it loads (AudioEngine.prepare), each from
  * its own seed here, not the stream the title screen's cues share in table order, so adding one leaves every other
@@ -704,12 +758,17 @@ export function isMapCue(cue: SoundCue): boolean {
   return MAP_CUE_SEEDS[cue] !== undefined;
 }
 
-/** The cues the title screen renders for every match, in table order (they share one seeded stream). */
-export const TITLE_CUES: readonly SoundCue[] = (Object.keys(SOUNDS) as SoundCue[]).filter((c) => !isMapCue(c));
+/**
+ * The cues the title screen renders for every match, in table order (they share one seeded stream); a shot's power part
+ * comes with its shot (POWER_PARTS).
+ */
+export const TITLE_CUES: readonly SoundCue[] = (Object.keys(SOUNDS) as SoundCue[]).filter((c) => !isMapCue(c) && !isPowerPart(c));
 
 /** The cue each kind of shot, mechanism, step or impact plays. */
 export const cues = {
   shot: (p: ShotProfile): SoundCue => `shot.${p}`,
+  /** The shot's power part (POWER_PARTS), or null for a profile without one (the Cyber Pistol). */
+  power: (p: ShotProfile): SoundCue | null => POWER_PARTS[`shot.${p}`] ?? null,
   dryFire: (p: ShotProfile): SoundCue => `dryFire.${p}`,
   magOut: (p: ShotProfile): SoundCue => `magOut.${p}`,
   magIn: (p: ShotProfile): SoundCue => `magIn.${p}`,

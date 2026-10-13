@@ -458,7 +458,6 @@ async function draw(scene, views, quality, renderer, withPost, dressing = false)
           c.statusTime = statusTime;
           c.sprinting = false;
           c.aiming = false;
-          c.sprintLockout = 0;
           c.torchOn = false;
           c.armament.draw = 0;
           c.armament.reload = 0;

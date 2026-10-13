@@ -98,20 +98,27 @@
 /* The name, then the Current tag at the far end, so the line under it keeps the tab's whole width. */
 .saved-tab-top {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: var(--sp-2);
+  gap: 0 var(--sp-2);
   min-width: 0;
 }
 
-.saved-tab-name,
-.saved-tab-line {
+/* The name keeps its own width (the Current tag wraps under it before it shortens it); only a name longer than the tab
+   cuts with an ellipsis, in full as the tab's tip. The line under it wraps. */
+.saved-tab-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.saved-tab-line {
+  overflow-wrap: anywhere;
+}
+
 .saved-tab-name {
   flex: 0 1 auto;
+  max-width: 100%;
   min-width: 0;
   font: 800 var(--fs-lg) / 1.15 var(--ui-display);
   letter-spacing: var(--ls-tight);
@@ -198,7 +205,13 @@
   color: var(--menu-faint);
 }
 
-/* The pick of a saved loadout beside Change (SL1): its name, a caret, a dot when some of its gear is locked now. */
+/* The pick of a saved loadout beside Change (SL1): its name, a caret, a dot when some of its gear is locked now. In the
+   Match screen's narrow panel the three don't fit a row, so Change drops under (the name was cut to "Lo…"). */
+.play-loadout-head {
+  flex-wrap: wrap;
+  gap: var(--sp-1) 0;
+}
+
 .play-loadout-head .menu-kicker,
 .play-loadout-head .menu-button {
   flex: none;
@@ -211,7 +224,9 @@
   flex: 0 1 auto;
   align-items: center;
   gap: 6px;
-  min-width: 0;
+  /* At least "Loadout 1" (the longest default name); a longer one of the player's cuts with an ellipsis, in full as the tip. */
+  min-width: min(100%, 8.5em);
+  max-width: 100%;
   min-height: var(--control-xs);
   margin-right: auto;
   margin-left: var(--sp-3);

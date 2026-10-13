@@ -95,7 +95,6 @@ describe('movement', () => {
     );
     expect(walker.walking).toBe(true);
     expect(walker.sprinting).toBe(false);
-    expect(walker.sprintLockout).toBe(0);
     expect(horizontalSpeed(walker)).toBeCloseTo(MOVEMENT.walkSpeed, 3);
     expect(MOVEMENT.walkSpeed).toBeLessThan(MOVEMENT.runSpeed);
   });
@@ -147,21 +146,6 @@ describe('movement', () => {
       expect(c.sprinting).toBe(false);
       expect(horizontalSpeed(c)).toBeLessThanOrEqual(MOVEMENT.runSpeed + 1e-9);
     }
-  });
-
-  it('keeps the replica down while sprinting and briefly after', () => {
-    const c = createCharacter(0, vec3(), 0);
-    const cmd = command((k) => {
-      k.forward = 1;
-      k.sprint = true;
-    });
-    step(c, cmd, 30);
-    expect(c.sprintLockout).toBe(MOVEMENT.sprintFireLockout);
-    cmd.sprint = false;
-    step(c, cmd, 1);
-    expect(c.sprintLockout).toBeGreaterThan(0);
-    step(c, cmd, Math.ceil(MOVEMENT.sprintFireLockout / DT));
-    expect(c.sprintLockout).toBe(0);
   });
 
   it('stops quickly when input is released', () => {

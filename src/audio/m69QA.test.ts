@@ -42,9 +42,11 @@ describe('M69 QA acceptance 1 (AUD-09): the trim keeps what is audible, and the 
    * pin the new buffers whole, these tie them to the old ones.
    */
   const KEPT_AS_BEFORE: Readonly<Record<string, string>> = {
-    'shot.electric': 'dbbf2458',
-    'shot.gas': '57f99d36',
-    'shot.spring': '9bcc539a',
+    // Re-baked by the 0.1 Dev 5 playtest (note 2): the power source's layers now render into the shot's power part
+    // (POWER_PARTS) in the same pass, so only these three changed.
+    'shot.electric': '00a1e247',
+    'shot.gas': '5d9c71c1',
+    'shot.spring': '34555f7e',
     'shot.cyber': 'a228a93d',
     'motor.spinUp': 'bee7ef1e',
     'motor.spinDown': 'f62b9b07',

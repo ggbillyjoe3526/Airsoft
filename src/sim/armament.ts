@@ -228,9 +228,9 @@ export interface ArmamentContext {
   query: WorldQuery;
   events: GameEvent[];
   /**
-   * Seconds until the shooter may fire again after a sprint (the post-sprint lockout; 0 or absent: none). A semi or
-   * burst press made then is kept that much longer, so it fires when the lockout ends instead of expiring first
-   * (audit SIM-03: the press buffer is shorter than the lockout).
+   * Seconds until the shooter may fire again after a vault (Character.fireLockout; 0 or absent: none). A semi or burst
+   * press made then is kept that much longer, so it fires when the lockout ends instead of expiring first (audit SIM-03:
+   * the press buffer is shorter than the lockout).
    */
   fireHoldOff?: number;
 }
@@ -269,7 +269,8 @@ export function spreadDirection(out: Vec3, yaw: number, pitch: number, spread: n
 
 /**
  * One tick of replica handling for one character: switching, reloading, firing and recoil.
- * `canFire` is false while sprinting (or just after) — the replica is carried, not aimed.
+ * `canFire` is false while the character can't shoot (out, the round not under way, or through a vault and the moment
+ * after). Sprinting fires, wider and with more kick (the muzzle's spreadScale and kickScale; the owner's 0.1 Dev 5 note 9).
  */
 export function stepArmament(
   characterId: number,

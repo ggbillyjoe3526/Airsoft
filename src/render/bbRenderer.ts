@@ -2,13 +2,10 @@ import * as THREE from 'three';
 import { BB_VISUALS, RETRO } from '../config/render';
 import type { BB, BBPool } from '../sim/ballistics';
 import { length3 } from '../sim/vec';
-import { softDotTexture } from './softDot';
 
 /** Vertices and indices of one streak: a quad, two corners at the head and two at the tail. */
 const QUAD_VERTICES = 4;
 const QUAD_INDICES = 6;
-/** The glow's soft dot is drawn this much wider than its radius (as the puffs', impactPuffs.ts). */
-const SOFT_EDGE = 1.4;
 const WHITE = new THREE.Color(0xffffff);
 
 /**
@@ -35,17 +32,11 @@ function twoToneBall(): THREE.SphereGeometry {
  * buffer, sized to the pool, so nothing is allocated per frame). Each streak is a quad facing the camera, as wide on
  * screen at its head and its tail (BB_VISUALS.trailAngularWidth, audit REN-19), not a one-device-pixel line. Glowing
  * BBs (M33b, setGlowInDark) share both: a per-instance and per-vertex colour, a larger minimum size and a longer streak.
+ * Nothing is drawn round a ball: a glowing BB is lit itself, with no halo (the owner's 0.1 Dev 5 playtest, note 3).
  */
 export class BBRenderer {
   readonly object = new THREE.Group();
   private readonly balls: THREE.InstancedMesh;
-  /** A soft warm glow round each ball (QualitySettings.bbGlow, FA8): camera-facing dots, added. Hidden while off. */
-  private readonly glow: THREE.InstancedMesh;
-  /** The glow's soft dot, drawn the first time the glow is turned on. */
-  private glowDot: THREE.CanvasTexture | null = null;
-  private glowOn = false;
-  /** The glow dots' turn this frame, to face the camera (`facing` as a matrix, made once a frame). */
-  private readonly facingBasis = new THREE.Matrix4();
   private readonly trails: THREE.Mesh;
   private readonly trailPositions: Float32Array;
   /**
@@ -85,18 +76,6 @@ export class BBRenderer {
     this.balls.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(n * 3).fill(1), 3).setUsage(THREE.DynamicDrawUsage);
     this.balls.count = 0;
     this.balls.frustumCulled = false;
-    const G = BB_VISUALS.glow;
-    const glowSize = BB_VISUALS.radius * 2 * G.scale * SOFT_EDGE;
-    this.glow = new THREE.InstancedMesh(
-      new THREE.PlaneGeometry(glowSize, glowSize),
-      new THREE.MeshBasicMaterial({ color: G.color, transparent: true, opacity: G.opacity, blending: THREE.AdditiveBlending, depthWrite: false }),
-      n,
-    );
-    // A colour per instance (all white), so the glow shares the puffs' shader program rather than adding one.
-    for (let i = 0; i < n; i++) this.glow.setColorAt(i, WHITE);
-    this.glow.count = 0;
-    this.glow.frustumCulled = false;
-    this.glow.visible = false;
 
     this.trailPositions = new Float32Array(n * QUAD_VERTICES * 3);
     // Bright at the BB (corners 0, 1), fading to black (invisible with additive blending) at the tail (2, 3); the head's
@@ -126,20 +105,7 @@ export class BBRenderer {
       }),
     );
     this.trails.frustumCulled = false;
-    this.object.add(this.balls, this.trails, this.glow);
-  }
-
-  /** The glow round each BB on or off (QualitySettings.bbGlow, FA8). */
-  setGlow(on: boolean): void {
-    if (on && !this.glowDot) {
-      this.glowDot = softDotTexture();
-      const material = this.glow.material as THREE.MeshBasicMaterial;
-      material.map = this.glowDot;
-      material.needsUpdate = true;
-    }
-    this.glowOn = on;
-    this.glow.visible = on;
-    if (!on) this.glow.count = 0;
+    this.object.add(this.balls, this.trails);
   }
 
   /**
@@ -151,12 +117,8 @@ export class BBRenderer {
     this.pixelAngle = angle;
   }
 
-  /**
-   * `alpha` interpolates between the last two simulation ticks; `camera` is the eye. `facing` (the camera's rotation)
-   * turns the glow's dots to face it; without it there is no glow this frame.
-   */
-  update(alpha: number, camera: { x: number; y: number; z: number }, facing?: THREE.Quaternion): void {
-    const glowing = this.glowOn && facing !== undefined;
+  /** `alpha` interpolates between the last two simulation ticks; `camera` is the eye. */
+  update(alpha: number, camera: { x: number; y: number; z: number }): void {
     let count = 0;
     const bbs = this.pool.bbs;
     const tc = this.trailColors;
@@ -167,11 +129,8 @@ export class BBRenderer {
     this.trailHalfAngle = Math.max(BB_VISUALS.trailAngularWidth, this.pixelAngle * RETRO.trailMinPixels) / 2;
     // Each instance's matrix is written straight into its buffer (no Matrix4 per BB, nothing boxed; REN-10). A ball's is
     // a uniform scale and a move, so only those six numbers are written: the rest keep the identity InstancedMesh
-    // starts every instance with, as nothing else writes them. A glow dot's is the camera's turn, scaled, and a move.
+    // starts every instance with, as nothing else writes them.
     const ballMatrices = this.balls.instanceMatrix.array as Float32Array;
-    const glowMatrices = this.glow.instanceMatrix.array as Float32Array;
-    const turn = this.facingBasis.elements;
-    if (glowing) this.facingBasis.makeRotationFromQuaternion(facing);
     const ends = this.ends;
     for (let i = 0; i < bbs.length; i++) {
       const bb = bbs[i]!;
@@ -214,12 +173,6 @@ export class BBRenderer {
       ballMatrices[m + 13] = y;
       ballMatrices[m + 14] = z;
       this.balls.setColorAt(count, luminous ? this.glowInDarkColor : WHITE);
-      if (glowing) {
-        for (let k = 0; k < 11; k++) glowMatrices[m + k] = turn[k]! * s; // the turn's 3×3, scaled; its zeros stay zero
-        glowMatrices[m + 12] = x;
-        glowMatrices[m + 13] = y;
-        glowMatrices[m + 14] = z;
-      }
       const o = count * QUAD_VERTICES * 3;
       const head = luminous ? this.glowInDarkTrailHead : this.trailHead;
       tc[o] = tc[o + 3] = head.r;
@@ -235,7 +188,6 @@ export class BBRenderer {
       count++;
     }
     this.balls.count = count;
-    this.glow.count = glowing ? count : 0;
     const geo = this.trails.geometry;
     geo.setDrawRange(0, count * QUAD_INDICES);
     // An empty draw range still costs a draw call (BP3): no streaks, no mesh.
@@ -244,7 +196,6 @@ export class BBRenderer {
     if (count > 0 || this.lastCount > 0) {
       this.balls.instanceMatrix.needsUpdate = true;
       this.balls.instanceColor!.needsUpdate = true;
-      if (glowing) this.glow.instanceMatrix.needsUpdate = true;
       (geo.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
       (geo.getAttribute('color') as THREE.BufferAttribute).needsUpdate = true;
     }
@@ -331,10 +282,6 @@ export class BBRenderer {
     this.balls.geometry.dispose();
     (this.balls.material as THREE.Material).dispose();
     this.balls.dispose();
-    this.glow.geometry.dispose();
-    (this.glow.material as THREE.Material).dispose();
-    this.glow.dispose();
-    this.glowDot?.dispose();
     this.trails.geometry.dispose();
     (this.trails.material as THREE.Material).dispose();
     this.object.removeFromParent();

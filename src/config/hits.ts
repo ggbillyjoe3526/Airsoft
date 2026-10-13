@@ -209,6 +209,67 @@ export const ROUNDS = {
  */
 export const HIT_MARKER_CHOICES: readonly { id: 'on' | 'off'; label: string; blurb: string }[] = [
   { id: 'off', label: 'Off', blurb: 'Only the tick you hear tells you a BB landed.' },
-  { id: 'on', label: 'On', blurb: 'A red X flashes over the crosshair as well as the tick.' },
+  { id: 'on', label: 'On', blurb: 'An X flashes over the crosshair as well as the tick.' },
 ];
 export const DEFAULT_HIT_MARKER = false;
+
+export type HitMarkerColor = 'red' | 'white' | 'yellow' | 'green' | 'pink' | 'custom';
+
+/**
+ * The hit marker as the player set it up (the owner's 0.1 Dev 5 playtest, note 4: it has to be much more visible, and
+ * set up like the crosshair). Saved as `hitMarker` (on or off) and `hitMarker.<field>`.
+ */
+export interface HitMarkerSettings {
+  on: boolean;
+  /** Its size against the standard one (1 = 100%): the arms' length and the gap they leave round the crosshair. */
+  scale: number;
+  /** The arms' width (px). */
+  thickness: number;
+  outline: 'on' | 'off';
+  color: HitMarkerColor;
+  /** The colour when `color` is `custom` (#rrggbb, from the colour box). */
+  customColor: string;
+}
+
+/** A clean save's hit marker: off (M97), and once on a bold red X with a dark edge that reads on any wall. */
+export const DEFAULT_HIT_MARKER_SETTINGS: HitMarkerSettings = {
+  on: DEFAULT_HIT_MARKER,
+  scale: 1,
+  thickness: 3,
+  outline: 'on',
+  color: 'red',
+  customColor: '#ff3b30',
+};
+
+/**
+ * The hit marker's shape at 100% (px): each of the X's four arms is `arm` long and starts `gap` out from the centre
+ * along its diagonal, clear of the standard crosshair. `scale` multiplies both.
+ */
+export const HIT_MARKER_SHAPE = { arm: 12, gap: 7 } as const;
+
+/** Slider ranges: the scale (1 = 100%) and the thickness (px). */
+export const HIT_MARKER_RANGES = {
+  scale: { min: 0.5, max: 2.5, step: 0.1 },
+  thickness: { min: 1, max: 6, step: 1 },
+} as const;
+
+/**
+ * Colours the hit marker can take. Red first (it has always been the red X); blue and orange are left out (the teams'
+ * colours), and so is cyan: a BB that hits a teammate shows the marker light blue (HIT_MARKER_FRIENDLY).
+ */
+export const HIT_MARKER_COLORS: readonly { id: HitMarkerColor; label: string; blurb: string; css: string }[] = [
+  { id: 'red', label: 'Red', blurb: '', css: '#ff3b30' },
+  { id: 'white', label: 'White', blurb: '', css: '#ffffff' },
+  { id: 'yellow', label: 'Yellow', blurb: '', css: '#ffe94a' },
+  { id: 'green', label: 'Green', blurb: '', css: '#5cff6e' },
+  { id: 'pink', label: 'Pink', blurb: '', css: '#ff6ee6' },
+  { id: 'custom', label: 'Custom', blurb: 'The colour in the box: click it to pick any.', css: '' },
+];
+
+/** The marker's colour when your BB hits a teammate (friendly fire counts, as at a real site). */
+export const HIT_MARKER_FRIENDLY = '#7fd0ff';
+
+export const HIT_MARKER_OUTLINES: readonly { id: 'on' | 'off'; label: string; blurb: string }[] = [
+  { id: 'off', label: 'Off', blurb: '' },
+  { id: 'on', label: 'On', blurb: 'A dark edge keeps it readable on bright walls and sky.' },
+];

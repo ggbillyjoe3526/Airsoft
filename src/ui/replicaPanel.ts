@@ -109,7 +109,11 @@ export class ReplicaPanel {
       this.chips[mode]?.classList.add('on');
       this.shownMode = mode;
     }
-    if (s.mag !== ammo.mag) this.mag.textContent = String((s.mag = ammo.mag));
+    if (s.mag !== ammo.mag) {
+      this.mag.textContent = String((s.mag = ammo.mag));
+      // The count's size follows its digits (replica.css), so a big count never runs into the words beside it.
+      this.mag.setAttribute('data-digits', String(this.mag.textContent.length));
+    }
     // Compared on its own: switching replicas can change it with the count unchanged.
     const low = isLowAmmo(ammo.mag, handling.magSize);
     if (s.low !== low) this.mag.classList.toggle('low', (s.low = low));

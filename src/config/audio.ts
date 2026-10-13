@@ -97,11 +97,20 @@ export const AUDIO = {
   synthSeed: 1301,
   /** Playback level of each kind of sound, and how far its pitch varies per play (± fraction). */
   levels: {
-    shot: { gain: 1, pitchSpread: 0.03 },
-    motor: { gain: 0.8, pitchSpread: 0.02 },
+    /**
+     * A shot, and its power part (the battery-driven motor's whir, the gas's pop and hiss, the spring's twang) at the
+     * Power source slider: both louder since the owner's 0.1 Dev 5 playtest (note 2), +2.9 dB from 1, and the AEG's
+     * motor winding up and down with them (from 0.8).
+     */
+    shot: { gain: 1.4, pitchSpread: 0.03 },
+    power: { gain: 1.4, pitchSpread: 0.03 },
+    motor: { gain: 1.1, pitchSpread: 0.02 },
     mechanism: { gain: 0.8, pitchSpread: 0.04 },
-    /** Other players' footsteps. */
-    step: { gain: 0.48, pitchSpread: 0.06 },
+    /**
+     * Other players' footsteps: 1 dB up (from 0.48) with the shots' lift in the 0.1 Dev 5 playtest, so a bot's sprint is
+     * still heard within 28 dB of your own shot at 20 m (audit CORE-26).
+     */
+    step: { gain: 0.54, pitchSpread: 0.06 },
     /** Your own: quieter, but always played (they're how you judge your own pace and noise). */
     ownStep: { gain: 0.25, pitchSpread: 0.06 },
     /** A vault's hands and kit on the obstacle (M102): louder than a step, as it carries further (BOT_BEHAVIOUR.footstepHearingVault); yours too. */
@@ -267,7 +276,7 @@ export const AUDIO = {
    * Letting go of a volume slider plays this short dry cue through the bus it sets (audit L-17), so the level can be
    * judged from the pause menu or the title screen.
    */
-  volumePreview: { cue: 'hitMarker' as SoundCue, gain: 0.55 },
+  volumePreview: { cue: 'hitMarker' as SoundCue, gain: 0.55, power: { cue: 'power.gas' as SoundCue, gain: 1 } },
 } as const;
 
 /** A playback level and per-play pitch spread (AUDIO.levels). */
@@ -544,13 +553,17 @@ export const AMBIENCES: Readonly<Record<AmbienceId, Readonly<Record<'day' | 'nig
 export const FIRE_SOUND = { loop: 'crackle' as LoopId, gain: 0.028, refDistance: 2, maxDistance: 12, rolloff: 1, panningModel: 'equalpower' as PanningModelType };
 
 /**
- * The player's volume sliders (Settings → Audio): everything, sounds in the world, the field's ambience within them
- * (M86, the owner's playtest note 14) and the interface's cues.
+ * The player's volume sliders (Settings → Audio): everything, sounds in the world, the replicas' power sources within
+ * them (the battery-driven motor, the gas, the spring; the owner's 0.1 Dev 5 playtest, note 2), the field's ambience
+ * within them (M86, the owner's playtest note 14) and the interface's cues.
  */
-export type VolumeChannel = 'master' | 'effects' | 'ambience' | 'interface';
-export const VOLUME_CHANNELS: readonly VolumeChannel[] = ['master', 'effects', 'ambience', 'interface'];
-/** The channels with a bus of their own (audio/audioEngine.ts): the ambience plays through each match's world instead. */
-export type BusChannel = Exclude<VolumeChannel, 'ambience'>;
+export type VolumeChannel = 'master' | 'effects' | 'power' | 'ambience' | 'interface';
+export const VOLUME_CHANNELS: readonly VolumeChannel[] = ['master', 'effects', 'power', 'ambience', 'interface'];
+/**
+ * The channels with a bus of their own (audio/audioEngine.ts): the ambience plays through each match's world instead,
+ * and the power sources' sounds are set at the slider's level as each one starts (they last a fraction of a second).
+ */
+export type BusChannel = Exclude<VolumeChannel, 'ambience' | 'power'>;
 
 export const VOLUME = {
   /** Slider range and step (0..1, shown as a percentage), and where each slider starts. */
@@ -558,7 +571,7 @@ export const VOLUME = {
   max: 1,
   step: 0.05,
   /** Full by default: the master slider's top is AUDIO.masterVolume, the level the game always played at. */
-  defaults: { master: 1, effects: 1, ambience: 1, interface: 1 } satisfies Record<VolumeChannel, number>,
+  defaults: { master: 1, effects: 1, power: 1, ambience: 1, interface: 1 } satisfies Record<VolumeChannel, number>,
   /** A slider's position is raised to this power for its gain, so each step sounds about as big as the last. */
   curve: 2,
   /** Volume changes ease in over this many seconds (no zipper noise while a slider moves). */

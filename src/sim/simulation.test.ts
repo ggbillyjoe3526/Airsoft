@@ -4,7 +4,7 @@ import { FOOTSTEPS } from '../config/footsteps';
 import { BODY, MOVEMENT } from '../config/movement';
 import { HITS, ROUNDS } from '../config/hits';
 import { NAV } from '../config/nav';
-import { LOADOUT, TRIGGER } from '../config/replicas';
+import { LOADOUT } from '../config/replicas';
 import { RANGE } from '../config/range';
 import { createCharacter, eyeHeight, respawnCharacter } from './character';
 import { createCommand, type PlayerCommand } from './commands';
@@ -147,34 +147,60 @@ describe('stepSimulation', () => {
     expect(c.pitch).toBeCloseTo(-0.2, 9);
   });
 
-  it('does not fire while sprinting or in the post-sprint lockout, then fires again', () => {
+  it('fires while sprinting, wider and with more kick than running or walking (owner, 0.1 Dev 5 note 9)', () => {
     const state = createGameState(1, 16, ROUNDS);
     const c = createCharacter(0, vec3(), 0);
     state.characters.push(c);
     const cmd = createCommand();
     cmd.forward = 1;
     cmd.sprint = true;
-    cmd.fire = true;
     const ctx = testContext(floor, KILL_Y);
-    const shots = () => state.events.filter((e) => e.type === 'shot').length;
+    for (let i = 0; i < 30; i++) stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+    expect(c.sprinting).toBe(true);
+    // The trigger pulled on the run fires on that very tick.
+    cmd.fire = true;
+    stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+    expect(state.events.filter((e) => e.type === 'shot')).toHaveLength(1);
+    expect(c.sprinting).toBe(true);
+    // Its spread is the sprint's, far over walking's and running's, and each shot kicks harder.
+    const A = MOVEMENT.accuracy;
+    expect(ctx.muzzle.spreadScale).toBe(A.sprint);
+    expect(A.sprint).toBeGreaterThan(A.run);
+    expect(A.run).toBeGreaterThan(A.walk);
+    expect(ctx.muzzle.kickScale).toBe(A.sprintKick);
+    expect(A.sprintKick).toBeGreaterThan(1);
+    // Full auto keeps firing on the run.
     let fired = 0;
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 30; i++) {
       stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
-      fired += shots();
+      fired += state.events.filter((e) => e.type === 'shot').length;
     }
     expect(c.sprinting).toBe(true);
-    expect(fired).toBe(0);
-    // Stop sprinting but keep the trigger held: still locked out for a moment.
+    expect(fired).toBeGreaterThan(3);
+    // Out of the sprint, the kick is back to normal.
     cmd.sprint = false;
     cmd.forward = 0;
     stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
-    expect(c.sprintLockout).toBeGreaterThan(0);
-    expect(shots()).toBe(0);
-    for (let i = 0; i < 90 && fired === 0; i++) {
-      stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
-      fired += shots();
-    }
-    expect(fired).toBeGreaterThan(0);
+    expect(c.sprinting).toBe(false);
+    expect(ctx.muzzle.kickScale).toBe(1);
+  });
+
+  it('climbs further firing a burst on the run than walking (the sprint kick)', () => {
+    const climb = (sprint: boolean): number => {
+      const state = createGameState(1, 16, ROUNDS);
+      const c = createCharacter(0, vec3(), 0);
+      state.characters.push(c);
+      const cmd = createCommand();
+      cmd.forward = 1;
+      cmd.sprint = sprint;
+      cmd.walk = !sprint;
+      const ctx = testContext(floor, KILL_Y);
+      for (let i = 0; i < 30; i++) stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+      cmd.fire = true;
+      for (let i = 0; i < 12; i++) stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+      return c.armament.recoil;
+    };
+    expect(climb(true)).toBeGreaterThan(climb(false) * 1.2);
   });
 
   it("hands each tick's spreadScale to the muzzle that fires the shot (KNOWN_ISSUES accuracy wiring)", () => {
@@ -194,7 +220,7 @@ describe('stepSimulation', () => {
     expect(ctx.muzzle.spreadScale).toBeGreaterThan(still);
   });
 
-  it('fires a semi click made in the first moment after a sprint once the lockout ends, exactly once (audit SIM-03)', () => {
+  it('fires a semi click made on the first tick after a sprint at once, exactly once', () => {
     const state = createGameState(1, 16, ROUNDS);
     const c = createCharacter(0, vec3(), 0);
     c.armament.modes[c.armament.active] = 'semi';
@@ -205,16 +231,14 @@ describe('stepSimulation', () => {
     const ctx = testContext(floor, KILL_Y);
     for (let i = 0; i < 30; i++) stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
     expect(c.sprinting).toBe(true);
-    // Let go of sprint and click on the first lockout tick (one tick of trigger).
+    // Let go of sprint and click on the first tick after it (one tick of trigger).
     cmd.sprint = false;
     cmd.forward = 0;
     cmd.fire = true;
     stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
     expect(c.sprinting).toBe(false);
-    expect(c.sprintLockout).toBeGreaterThan(TRIGGER.pressBuffer); // the lockout outlasts the plain press buffer
-    expect(state.events.filter((e) => e.type === 'shot')).toHaveLength(0);
+    let shots = state.events.filter((e) => e.type === 'shot').length;
     cmd.fire = false;
-    let shots = 0;
     for (let i = 0; i < 60; i++) {
       stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
       shots += state.events.filter((e) => e.type === 'shot').length;
@@ -222,7 +246,7 @@ describe('stepSimulation', () => {
     expect(shots).toBe(1);
   });
 
-  it('still drops a click made while sprinting, as before (the sprint itself is a choice; KNOWN_ISSUES)', () => {
+  it('fires a semi click made while sprinting, exactly once', () => {
     const state = createGameState(1, 16, ROUNDS);
     const c = createCharacter(0, vec3(), 0);
     c.armament.modes[c.armament.active] = 'semi';
@@ -234,15 +258,16 @@ describe('stepSimulation', () => {
     for (let i = 0; i < 30; i++) stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
     cmd.fire = true;
     stepSimulation(state, new Map([[0, cmd]]), ctx, DT); // clicked while still sprinting
+    expect(c.sprinting).toBe(true);
+    let shots = state.events.filter((e) => e.type === 'shot').length;
     cmd.fire = false;
     cmd.sprint = false;
     cmd.forward = 0;
-    let shots = 0;
     for (let i = 0; i < 60; i++) {
       stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
       shots += state.events.filter((e) => e.type === 'shot').length;
     }
-    expect(shots).toBe(0);
+    expect(shots).toBe(1);
   });
 
   it('leans while Q / E is held, records the previous lean for smooth rendering, and fires from the leaned eye', () => {

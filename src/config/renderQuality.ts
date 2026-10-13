@@ -96,8 +96,6 @@ export interface QualitySettings {
   replicaDetail: DetailLevel;
   /** The first-person gloves and sleeves (row 18): `high` adds knuckle pads, wrist straps, joint seams and sleeve folds. */
   handDetail: DetailLevel;
-  /** A soft warm glow round every BB in flight (row 19), so a BB at 25 m is a warm dot, not a grey pixel. */
-  bbGlow: boolean;
   /** Impact grit (row 20): a BB hitting a surface throws a few chips of it and a faint ring of dust round the puff. */
   impactGrit: boolean;
   /** A faint beam from the laser module's lens (row 23): off on every preset (a toy cue; real ones are invisible by day). */
@@ -167,19 +165,19 @@ export type TreeDetail = 0 | 1 | 2;
  */
 export const QUALITY: Record<QualityPreset, QualitySettings> = {
   low: { renderScale: 0.8, maxPixelRatio: 1, antialias: false, shadows: false, shadowMapSize: 1024, shadowRadius: 1, shadowFollowsView: false, figureShadows: false, surfaceRelief: false, textureSize: 256, anisotropy: 1, dustMotes: 0, replicaSheen: false,
-    environment: false, normalMaps: false, mapDetail: false, trees: 1, clouds: false, figureDetail: 'low', replicaDetail: 'low', handDetail: 'low', bbGlow: false, impactGrit: false, laserBeam: false, poolLights: 0, torchShadows: false,
+    environment: false, normalMaps: false, mapDetail: false, trees: 1, clouds: false, figureDetail: 'low', replicaDetail: 'low', handDetail: 'low', impactGrit: false, laserBeam: false, poolLights: 0, torchShadows: false,
     bakedLight: 'vertex', weathering: false,
     ambientOcclusion: 0, bloom: false, temporalAA: false, lightShafts: false, reflections: false, lensFinish: false },
   medium: { renderScale: 1, maxPixelRatio: 1.25, antialias: true, shadows: true, shadowMapSize: 1024, shadowRadius: 1.5, shadowFollowsView: false, figureShadows: true, surfaceRelief: true, textureSize: 512, anisotropy: 4, dustMotes: 90, replicaSheen: true,
-    environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', bbGlow: true, impactGrit: true, laserBeam: false, poolLights: 2, torchShadows: false,
+    environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', impactGrit: true, laserBeam: false, poolLights: 2, torchShadows: false,
     bakedLight: 'pixel', weathering: true,
     ambientOcclusion: 0, bloom: true, temporalAA: false, lightShafts: false, reflections: false, lensFinish: false },
   high: { renderScale: 1, maxPixelRatio: 1.5, antialias: true, shadows: true, shadowMapSize: 2048, shadowRadius: 2.5, shadowFollowsView: true, figureShadows: true, surfaceRelief: true, textureSize: 1024, anisotropy: 16, dustMotes: 180, replicaSheen: true,
-    environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', bbGlow: true, impactGrit: true, laserBeam: false, poolLights: 4, torchShadows: true,
+    environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', impactGrit: true, laserBeam: false, poolLights: 4, torchShadows: true,
     bakedLight: 'pixel', weathering: true,
     ambientOcclusion: 0.5, bloom: true, temporalAA: true, lightShafts: true, reflections: false, lensFinish: false },
   ultra: { renderScale: 1, maxPixelRatio: 2, antialias: true, shadows: true, shadowMapSize: 4096, shadowRadius: 4, shadowFollowsView: true, figureShadows: true, surfaceRelief: true, textureSize: 1024, anisotropy: 16, dustMotes: 300, replicaSheen: true,
-    environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', bbGlow: true, impactGrit: true, laserBeam: false, poolLights: 8, torchShadows: true,
+    environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', impactGrit: true, laserBeam: false, poolLights: 8, torchShadows: true,
     bakedLight: 'pixel', weathering: true,
     ambientOcclusion: 1, bloom: true, temporalAA: true, lightShafts: true, reflections: true, lensFinish: true },
 };
