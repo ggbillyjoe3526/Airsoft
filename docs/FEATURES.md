@@ -67,6 +67,9 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Bots hear shots, near misses, hit calls and footsteps, less through walls (M2, M22)
 - In Attack / Defend defenders hold near the pole; one attacking bot raises the flag while the others guard it from
   cover (M5, FA4)
+- Bot kits: opponents on every difficulty carry kits from bot-kits.md by level (Easy mostly plain, Pro never plain,
+  Cyber Pistols from Hard); a bot aims through its own scope or red dot, silenced bots are heard nearer, and bots'
+  figures show their gear (BG1)
 
 ## Modes and matches
 
@@ -142,7 +145,6 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   harder; a site energy limit (M29a)
 - Barrel and Muzzle parts: a Tight-Bore Barrel and a Long Barrel for the AEG, a Silencer for both replicas that halves
   how far bots, the minimap and sound cues hear your shots (M29b)
-- On Hard, each opponent carries its own kit rolled from the pool by the match's seed (M29b)
 - Glowing BBs per replica in Customise: At Night (the default, glowing only on night fields), Always or Off; a glowing
   BB is green, a little larger at range and leaves a longer streak; bots load them on night fields (M33b)
 - The asset pool (`pool.md`): every item at a rarity tier with a small handling bonus; starters are yours from the start

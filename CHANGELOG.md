@@ -24,10 +24,17 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **SL1** · Five saved loadout tabs on the Loadout: keys 1 to 5 or a click switch the whole kit you carry at once; your edits go to the current tab
 - **SL1** · Right-click a tab (or Menu, Shift+F10) to use, rename, duplicate, replace with yours or delete; the last loadout can't be deleted
 - **SL1** · Your match on the Match screen lists saved loadouts beside Change; gear a saved loadout can't use now shows as locked until it comes back
+- **BG1** · Opponents on every difficulty carry kits from bot-kits.md: Easy mostly plain, each level up more optics, grips and lasers
+- **BG1** · Pro bots are never plain, and now and then a Hard or Pro bot carries a Cyber Pistol; each bot keeps its kit on a replay
+- **BG1** · Your teammates keep plain replicas, as does everyone under the Factory kit house rule; what you have unlocked never changes the bots' gear
+- **BG1** · A bot aiming through a scope holds aim closer at range but settles later and is slower on close or crossing targets; a red dot is finer
+- **BG1** · Silenced bots are heard from nearer
+- **BG1** · Bots' figures show their gear: a red dot or scope on every rifle, and with Blender figures (Dev switches) grips, lasers and barrels too
 
 ### Changed
 - **M94** · The practice range is now Practice: pause reads "Practice · Range" or "Practice · Depot", and the tutorial's last button says Practice
 - **M95** · With Unlock all gear on, the Loadout says every replica and part is lent to try, and the range's first line names the Loadout key
+- **BG1** · Hard and Pro's random gear roll and the Cyber Pistol carrier that needed you to own one are replaced by the bot kits
 
 ### Fixed
 - **M92** · Bots firing on the move hold fire when a teammate is down the line, so they no longer hit teammates past the end of a wall
