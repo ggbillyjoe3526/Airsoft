@@ -7,12 +7,12 @@
  *   node pipeline/build-cached.mjs [--mode production|e2e] [--force]
  *
  * "The same source" is a hash of everything the bundle is made from (src/ without its tests, public/, index.html,
- * pool.md, stats.md, bots.md, callouts.md, the Vite, TypeScript and npm files), the mode, `git describe` (the title
- * screen's version) and, for the production build, whether it writes the .br/.gz copies (AIRSOFT_PRECOMPRESS=0 leaves
- * them out: the gate's --quick build, audit CORE-11), so a build without them is never reused where the release smoke
- * test needs them; kept in pipeline/out/build-<mode>.json with the output's index.html time, so a build made by hand in
- * between is never mistaken for it. The gate's build step forces a build (it is the type check) and leaves the stamp;
- * the smoke test's servers and the perf harness then reuse what is there.
+ * pool.md, stats.md, levels.md, bots.md, callouts.md, the Vite, TypeScript and npm files), the mode, `git describe`
+ * (the title screen's version) and, for the production build, whether it writes the .br/.gz copies
+ * (AIRSOFT_PRECOMPRESS=0 leaves them out: the gate's --quick build, audit CORE-11), so a build without them is never
+ * reused where the release smoke test needs them; kept in pipeline/out/build-<mode>.json with the output's index.html
+ * time, so a build made by hand in between is never mistaken for it. The gate's build step forces a build (it is the
+ * type check) and leaves the stamp; the smoke test's servers and the perf harness then reuse what is there.
  */
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -37,7 +37,7 @@ if (!build) {
 }
 
 /** Files the bundle is made from, as git sees them (tracked and new, not ignored). */
-const ROOT_FILES = new Set(['index.html', 'pool.md', 'stats.md', 'bots.md', 'callouts.md', 'vite.config.ts', 'tsconfig.json', 'package.json', 'package-lock.json']);
+const ROOT_FILES = new Set(['index.html', 'pool.md', 'stats.md', 'levels.md', 'bots.md', 'callouts.md', 'vite.config.ts', 'tsconfig.json', 'package.json', 'package-lock.json']);
 const isInput = (f) => ROOT_FILES.has(f) || f.startsWith('public/') || (f.startsWith('src/') && !f.endsWith('.test.ts'));
 
 const git = (...a) => {

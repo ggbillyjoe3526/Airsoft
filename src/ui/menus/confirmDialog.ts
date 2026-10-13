@@ -1,7 +1,7 @@
 import { closeButton, el, menuButton } from './menuParts';
 
 /**
- * A pop-up that asks before a big or irreversible step (audit POOL-03: ten Shots, scrapping every spare). The keyboard
+ * A pop-up that asks before a big or irreversible step (audit POOL-03; a Dev button's reset, say). The keyboard
  * starts on Cancel, so a held Enter that opened it can't also confirm it; Esc, × or a click outside cancels.
  */
 export class ConfirmDialog {
@@ -52,8 +52,8 @@ export class ConfirmDialog {
 }
 
 /**
- * A held key repeats keydown, and a button clicks on every repeated Enter or Space: a spend button ignores the repeats
- * (audit POOL-03), so holding Enter takes one Shot, not every Shot the FC cover.
+ * A held key repeats keydown, and a button clicks on every repeated Enter or Space: a button that acts once ignores the
+ * repeats (audit POOL-03), so holding Enter presses it once.
  */
 export function noKeyRepeat(button: HTMLButtonElement): HTMLButtonElement {
   button.addEventListener('keydown', (e) => {

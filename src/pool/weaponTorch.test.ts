@@ -9,19 +9,20 @@ import { botsCarryDevLight, matchUsesDev, type NewGamePicks, playsAtNight, usedI
 import { createCharacter } from '../sim/character';
 import { vec3 } from '../sim/vec';
 import { botLight, fitBotLight, randomKit } from './botKit';
-import { grantStarters, itemKey } from './collection';
 import { contentPool } from './contentPool';
 import { GAME_POOL } from './gamePool';
 import { FIT_SLOTS } from './kit';
 import { LoadoutModel } from './loadoutModel';
 import { MemoryStorage } from './testStorage';
 import { assetOfReplica, type Pool } from './pool';
+import { GAME_LEVELS } from '../progress/gameLevels';
+import { grantReached, type Progress } from '../progress/progress';
 
 // Test files share a worker (isolate: false): the stand-in storage goes with this file.
 afterAll(() => vi.unstubAllGlobals());
 
 const TORCH_ID = '000020';
-const torchRef = { asset: TORCH_ID, tier: 'common' };
+const torchRef = { asset: TORCH_ID };
 const picks = (map: MapId): NewGamePicks => ({ map, mode: DEFAULT_MODE, difficulty: DEFAULT_DIFFICULTY, teammateDifficulty: DEFAULT_DIFFICULTY, ruleset: DEFAULT_RULESET, rules: { ...DEFAULT_MATCH_RULES } });
 const without = (pool: Pool, id: string): Pool => {
   const assets = pool.assets.filter((a) => a.id !== id);
@@ -29,10 +30,11 @@ const without = (pool: Pool, id: string): Pool => {
 };
 
 describe('the Weapon Torch in the pool (M33h)', () => {
-  it("is pool.md's 000020: a dev light, a starter never in Shots, Common only, fitting all three replicas", () => {
+  it("is pool.md's 000020: a dev light in the level 0 kit, fitting all three replicas", () => {
     const torch = GAME_POOL.byId.get(TORCH_ID)!;
     expect(GAME_POOL.errors).toEqual([]);
-    expect(torch).toMatchObject({ name: 'Weapon Torch', category: 'light', key: 'weaponTorch', starter: true, inShots: false, tag: 'dev', tiers: ['common'] });
+    expect(torch).toMatchObject({ name: 'Weapon Torch', category: 'light', key: 'weaponTorch', tag: 'dev' });
+    expect(GAME_LEVELS.unlockLevel.get(TORCH_ID)).toBe(0);
     expect(TORCHES[torch.key as 'weaponTorch'].reach).toBe(40);
     expect(FIT_SLOTS.at(-1)).toBe('light');
     for (const r of [...LOADOUT, CYBER_PISTOL]) {
@@ -41,11 +43,11 @@ describe('the Weapon Torch in the pool (M33h)', () => {
     }
   });
 
-  it('reaches an existing save as a starter', () => {
-    const old = { owned: { [itemKey('000001', 'common')]: 1 }, fc: 120, tokens: 0, seed: 1, pity: {}, rev: 3 };
-    grantStarters(old, GAME_POOL);
-    expect(old.owned[itemKey(TORCH_ID, 'common')]).toBe(1);
-    expect(old.fc).toBe(120);
+  it('reaches an existing save as part of the level 0 kit, its XP untouched', () => {
+    const old: Progress = { xp: 120, unlocked: ['000001'], rev: 3 };
+    expect(grantReached(old, GAME_LEVELS)).toContain(TORCH_ID);
+    expect(old.unlocked).toContain(TORCH_ID);
+    expect(old.xp).toBe(120);
   });
 
   it('is gone with Dev content off: no light in the pool, so no bot carries one', () => {
@@ -55,9 +57,9 @@ describe('the Weapon Torch in the pool (M33h)', () => {
     expect(botLight(contentPool(GAME_POOL, true))).toBe('weaponTorch');
   });
 
-  it('gives the Loadout a Light slot only with Dev content on, the owned starter torch fitted by default', () => {
+  it('gives the Loadout a Light slot only with Dev content on, the level 0 torch fitted by default', () => {
     vi.stubGlobal('localStorage', new MemoryStorage());
-    const owns = { owns: (r: { tier: string }) => r.tier === 'common' };
+    const owns = { owns: () => true };
     const rifle = GAME_POOL.assets.find((a) => a.name === 'AEG Rifle')!.id;
     expect(new LoadoutModel(contentPool(GAME_POOL, false), owns).hasSlot(rifle, 'light')).toBe(false);
     const dev = new LoadoutModel(contentPool(GAME_POOL, true), owns);
@@ -67,12 +69,12 @@ describe('the Weapon Torch in the pool (M33h)', () => {
 
   it('takes "No light" on every replica, saved across a reload and kept out of the match kit (BP2)', () => {
     vi.stubGlobal('localStorage', new MemoryStorage());
-    const owns = { owns: (r: { tier: string }) => r.tier === 'common' || r.tier === 'legendary' }; // the Cyber Pistol is Legendary
+    const owns = { owns: () => true };
     const pool = contentPool(GAME_POOL, true);
     const model = new LoadoutModel(pool, owns);
     for (const r of [...LOADOUT, CYBER_PISTOL]) {
       const replica = assetOfReplica(pool, r)!.id;
-      const ref = { asset: replica, tier: r === CYBER_PISTOL ? 'legendary' : 'common' };
+      const ref = { asset: replica };
       const power = model.fitOf(replica).power;
       expect(model.fitOf(replica).light?.asset, r.id).toBe(TORCH_ID);
       expect(model.slotKit(ref).parts.light, r.id).toBe('weaponTorch');

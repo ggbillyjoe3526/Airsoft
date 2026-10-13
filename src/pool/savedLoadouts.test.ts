@@ -1,23 +1,29 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SAVED_LOADOUTS } from '../config/savedLoadouts';
-import { type ItemRef, itemKey, newCollection } from './collection';
+import { GAME_LEVELS } from '../progress/gameLevels';
 import { GAME_POOL } from './gamePool';
-import { gameOwnership, LoadoutModel, type Ownership } from './loadoutModel';
+import { type ItemRef } from './item';
+import { gameOwnership, LoadoutModel, type Ownership, type Unlocks } from './loadoutModel';
 import { cleanName, copyName, SAVED_LOADOUTS_KEY, SAVED_LOADOUTS_VERSION, SavedLoadouts } from './savedLoadouts';
 import { MemoryStorage } from './testStorage';
 import { withTags } from './testSupport';
 
 const pool = GAME_POOL;
 const id = (name: string) => pool.assets.find((a) => a.name === name)!.id;
-const item = (name: string, tier = 'common'): ItemRef => ({ asset: id(name), tier });
+const item = (name: string): ItemRef => ({ asset: id(name) });
 const STARTERS = ['AEG Rifle', 'GBB Pistol', 'Standard Battery', 'Green Gas'].map((n) => item(n));
 const AEG = id('AEG Rifle');
 const PISTOL = id('GBB Pistol');
 
 /** An ownership of exactly these items, which a test can change as it goes. */
 function owning(items: ItemRef[]): Ownership & { items: Set<string> } {
-  const set = new Set(items.map((r) => itemKey(r.asset, r.tier)));
-  return { items: set, owns: (r) => set.has(itemKey(r.asset, r.tier)) };
+  const set = new Set(items.map((r) => r.asset));
+  return { items: set, owns: (r) => set.has(r.asset) };
+}
+
+/** The levels' unlocks (LV1) of exactly these items, each at its levels.md level. */
+function unlocking(items: ItemRef[]): Unlocks {
+  return { unlocked: () => items.map((r) => r.asset), levelOf: (asset) => GAME_LEVELS.unlockLevel.get(asset) };
 }
 
 // Test files share a worker (isolate: false): the stand-in storage goes with this file.
@@ -76,11 +82,11 @@ describe('Saved loadouts (SL1)', () => {
   });
 
   it('carries every pick on a switch: replicas, parts, battery and gas, BB weight, hop-up, Glowing BBs and colours', () => {
-    const own = owning([...STARTERS, item('Black Gas'), item('Red Laser'), item('11.1 V LiPo Battery'), item('Red Dot'), item('Cyber Pistol', 'legendary')]);
+    const own = owning([...STARTERS, item('Black Gas'), item('Red Laser'), item('11.1 V LiPo Battery'), item('Red Dot'), item('Cyber Pistol')]);
     const { model, saved } = setUp(own);
     const before = model.kit();
     saved.create(1);
-    model.equip('primary', item('Cyber Pistol', 'legendary'));
+    model.equip('primary', item('Cyber Pistol'));
     model.equip('secondary', item('GBB Pistol'));
     model.setFit(PISTOL, 'power', item('Black Gas'));
     model.setFit(PISTOL, 'laser', item('Red Laser'));
@@ -188,18 +194,18 @@ describe('Saved loadouts (SL1)', () => {
   });
 
   it("keeps gear that isn't available now as picked: it plays as the default, shows what plays instead, and comes back", () => {
-    const own = owning([...STARTERS, item('Red Dot'), item('Cyber Pistol', 'legendary')]);
+    const own = owning([...STARTERS, item('Red Dot'), item('Cyber Pistol')]);
     const { model, saved } = setUp(own);
     model.setFit(AEG, 'optic', item('Red Dot'));
     saved.create(1);
-    model.equip('primary', item('Cyber Pistol', 'legendary'));
+    model.equip('primary', item('Cyber Pistol'));
     model.equip('secondary', item('AEG Rifle'));
     saved.use(0);
-    own.items.delete(itemKey(id('Red Dot'), 'common'));
-    own.items.delete(itemKey(id('Cyber Pistol'), 'legendary'));
+    own.items.delete(id('Red Dot'));
+    own.items.delete(id('Cyber Pistol'));
 
     const zero = saved.view(0)!;
-    expect(zero.missing).toEqual([{ slot: 'optic', wanted: pool.byId.get(id('Red Dot')), instead: null, reason: 'locked' }]);
+    expect(zero.missing).toEqual([{ slot: 'optic', wanted: pool.byId.get(id('Red Dot')), instead: null, reason: 'locked', level: null }]);
     expect(model.fitOf(AEG).optic).toBeNull(); // plays as the default
     const one = saved.view(1)!;
     // Slot 1 began as a copy of slot 0, so its rifle has the Red Dot too.
@@ -215,23 +221,21 @@ describe('Saved loadouts (SL1)', () => {
     expect(saved.view(1)!.missing).toHaveLength(2);
     expect(saved.view(0)!.missing).toHaveLength(1);
 
-    own.items.add(itemKey(id('Red Dot'), 'common'));
-    own.items.add(itemKey(id('Cyber Pistol'), 'legendary'));
+    own.items.add(id('Red Dot'));
+    own.items.add(id('Cyber Pistol'));
     expect(model.fitOf(AEG).optic).toEqual(item('Red Dot'));
     expect(saved.view(0)!.missing).toEqual([]);
     expect(saved.view(1)!.replicas[0]?.name).toBe('Cyber Pistol');
     saved.use(1);
-    expect(model.equipped()[0]).toEqual(item('Cyber Pistol', 'legendary'));
+    expect(model.equipped()[0]).toEqual(item('Cyber Pistol'));
   });
 
   it('marks dev gear with Dev content off as dev, not locked (the one ownership check decides both)', () => {
     const devPool = withTags(pool, { 'Red Dot': 'dev' });
-    const c = newCollection(devPool, 1);
-    c.owned[itemKey(id('Red Dot'), 'rare')] = 1;
     let devContent = true;
-    const model = new LoadoutModel(devPool, gameOwnership(devPool, () => c, () => false, () => devContent));
+    const model = new LoadoutModel(devPool, gameOwnership(devPool, unlocking([...STARTERS, item('Red Dot')]), () => false, () => devContent));
     const saved = new SavedLoadouts(model, () => storage);
-    model.setFit(AEG, 'optic', item('Red Dot', 'rare'));
+    model.setFit(AEG, 'optic', item('Red Dot'));
     expect(saved.view(0)!.missing).toEqual([]);
     devContent = false;
     expect(saved.view(0)!.missing.map((m) => [m.wanted.name, m.reason])).toEqual([['Red Dot', 'dev']]);
@@ -239,11 +243,20 @@ describe('Saved loadouts (SL1)', () => {
     expect(saved.view(0)!.missing).toEqual([]);
   });
 
+  it('says the level that unlocks a locked pick (LV1), and nothing once it is unlocked', () => {
+    const items = [...STARTERS];
+    const levels: Unlocks = { unlocked: () => items.map((r) => r.asset), levelOf: (asset) => GAME_LEVELS.unlockLevel.get(asset) };
+    const model = new LoadoutModel(pool, gameOwnership(pool, levels, () => false));
+    // A saved loadout holding the Cyber Pistol: a player below level 10 is told which level brings it back.
+    const picks = { ...model.picks(), 'equip.primary': id('Cyber Pistol') };
+    expect(model.over(picks).missing().map((m) => [m.wanted.name, m.reason, m.level])).toEqual([['Cyber Pistol', 'locked', 10]]);
+    items.push(item('Cyber Pistol'));
+    expect(model.over(picks).missing()).toEqual([]);
+  });
+
   it('keeps a set of its own while everything is unlocked, so turning it off brings back the real loadouts', () => {
     let unlocked = false;
-    const c = newCollection(pool, 1);
-    c.owned[itemKey(id('Red Dot'), 'common')] = 1;
-    const model = new LoadoutModel(pool, gameOwnership(pool, () => c, () => unlocked));
+    const model = new LoadoutModel(pool, gameOwnership(pool, unlocking([...STARTERS, item('Red Dot')]), () => unlocked));
     const saved = new SavedLoadouts(model, () => storage);
     model.setFit(AEG, 'optic', item('Red Dot'));
     saved.create(1);
@@ -253,7 +266,7 @@ describe('Saved loadouts (SL1)', () => {
     unlocked = true;
     expect(names(saved)).toEqual(['Loadout 1', 'Real', null, null, null]); // starts from the real set
     saved.create(2);
-    model.setFit(AEG, 'optic', item('2x Scope', 'legendary'));
+    model.setFit(AEG, 'optic', item('2x Scope'));
     saved.rename(0, 'Dev zero');
     saved.remove(1);
     expect(names(saved)).toEqual(['Dev zero', null, 'Loadout 3', null, null]);
@@ -265,7 +278,7 @@ describe('Saved loadouts (SL1)', () => {
     unlocked = true;
     expect(names(saved)).toEqual(['Dev zero', null, 'Loadout 3', null, null]);
     expect(saved.current()).toBe(2);
-    expect(model.fitOf(AEG).optic).toEqual(item('2x Scope', 'legendary'));
+    expect(model.fitOf(AEG).optic).toEqual(item('2x Scope'));
     expect(stored()).toHaveProperty('dev');
   });
 
@@ -273,7 +286,7 @@ describe('Saved loadouts (SL1)', () => {
     storage.setItem(SAVED_LOADOUTS_KEY, '{not json');
     expect(names(setUp().saved)).toEqual(['Loadout 1', null, null, null, null]);
 
-    const odd = { version: 1, slots: [{ name: 42, picks: { 'equip.primary': itemKey(AEG, 'common'), weird: { a: 1 }, other: null } }, 'nope', null, { name: 'B' }, { name: 'C', picks: {} }, { name: 'Sixth', picks: {} }], current: 9 };
+    const odd = { version: 1, slots: [{ name: 42, picks: { 'equip.primary': AEG, weird: { a: 1 }, other: null } }, 'nope', null, { name: 'B' }, { name: 'C', picks: {} }, { name: 'Sixth', picks: {} }], current: 9 };
     storage.setItem(SAVED_LOADOUTS_KEY, JSON.stringify(odd));
     const { saved } = setUp();
     // Slot 0 named by its place; 1 and 3 unreadable; 5 beyond the slots; the one carried put in the first free slot.
@@ -311,9 +324,9 @@ describe('Loadout model over saved picks (SL1)', () => {
   it('writes every slot of each replica carried, so the record alone gives the same loadout', () => {
     const model = new LoadoutModel(pool, owning(STARTERS));
     const picks = model.picks();
-    expect(picks['equip.primary']).toBe(itemKey(AEG, 'common'));
+    expect(picks['equip.primary']).toBe(AEG);
     expect(picks[`fit.${AEG}.optic`]).toBe('none');
-    expect(picks[`fit.${AEG}.power`]).toBe(itemKey(id('Standard Battery'), 'common'));
+    expect(picks[`fit.${AEG}.power`]).toBe(id('Standard Battery'));
     expect(picks[`hopUp.${PISTOL}`]).toBe(model.hopUp(PISTOL));
     expect(picks[`scheme.${AEG}`]).toBe('cobalt');
     expect(model.over(picks).kit()).toEqual(model.kit());
@@ -335,7 +348,7 @@ describe('Loadout model over saved picks (SL1)', () => {
     const model = new LoadoutModel(pool, owning(STARTERS));
     const before = model.picks();
     model.usePicks({
-      'equip.tertiary': itemKey(AEG, 'common'),
+      'equip.tertiary': AEG,
       'equip.primary': 'not a key',
       [`fit.${AEG}.optic.more`]: 'none',
       [`fit.${AEG}.wings`]: 'none',

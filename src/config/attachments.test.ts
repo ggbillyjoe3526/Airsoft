@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { factoryParts, GRIPS, type GripId, handlingOf, MAGAZINES, type MagazineId, NO_TUNE, partsFor } from './attachments';
+import { factoryParts, GRIPS, type GripId, handlingOf, MAGAZINES, type MagazineId, partsFor } from './attachments';
 import { AEG, GAS_PISTOL, LOADOUT } from './replicas';
 
 describe('attachments', () => {
@@ -11,7 +11,7 @@ describe('attachments', () => {
   });
 
   it("keep only parts the game knows; which replica takes what is pool.md's call (M26b)", () => {
-    expect(partsFor(GAS_PISTOL, { magazine: 'extended', laser: 'redLaser' })).toEqual({ grip: 'none', magazine: 'extended', laser: 'redLaser', barrel: null, muzzle: null, light: null, tune: NO_TUNE });
+    expect(partsFor(GAS_PISTOL, { magazine: 'extended', laser: 'redLaser' })).toEqual({ grip: 'none', magazine: 'extended', laser: 'redLaser', barrel: null, muzzle: null, light: null });
     expect(partsFor(AEG, { grip: 'angled', magazine: 'hiCap' })).toMatchObject({ grip: 'angled', magazine: 'hiCap', laser: null });
     expect(partsFor(AEG, { grip: 'bogus' as GripId, magazine: 'bogus' as MagazineId })).toMatchObject(factoryParts(AEG));
   });
@@ -36,7 +36,7 @@ describe('attachments', () => {
     }
   });
 
-  it("matches the roadmap's first guesses: hi-cap more per magazine but fewer carried, low-cap one more carried, extended slower to draw", () => {
+  it("matches the roadmap's first guesses: hi-cap more per magazine but fewer carried, low-cap two more carried and lighter (LV1), extended slower to draw", () => {
     const std = handlingOf(AEG, factoryParts(AEG));
     const hi = handlingOf(AEG, { grip: 'none', magazine: 'hiCap' });
     expect(hi.magSize).toBeGreaterThan(std.magSize);
@@ -44,7 +44,11 @@ describe('attachments', () => {
     expect(hi.rattles).toBe(true);
     const low = handlingOf(AEG, { grip: 'none', magazine: 'lowCap' });
     expect(low.magSize).toBeLessThan(std.magSize);
-    expect(low.mags).toBe(std.mags + 1);
+    expect(low.mags).toBe(std.mags + 2);
+    // Fewer BBs in all for a quicker change and draw.
+    expect(low.magSize * low.mags).toBeLessThan(std.magSize * std.mags);
+    expect(low.reloadTime).toBeCloseTo(std.reloadTime * 0.75);
+    expect(low.drawTime).toBeCloseTo(std.drawTime * 0.9);
     expect(low.rattles).toBe(false);
     const ext = handlingOf(GAS_PISTOL, { grip: 'none', magazine: 'extended' });
     expect(ext.magSize).toBeGreaterThan(GAS_PISTOL.magSize);

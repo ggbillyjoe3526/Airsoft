@@ -44,7 +44,7 @@ export const DOWNLOAD_URL_LIFETIME_MS = 10_000;
 /** The Save tab's text. */
 export const SAVE_TEXT = {
   statusLabel: 'Saved automatically',
-  statusHelp: 'Settings, key bindings, Loadout, Armory and records save as they change. Nothing to press.',
+  statusHelp: 'Settings, key bindings, Loadout, level and records save as they change. Nothing to press.',
   savedNever: 'Nothing saved yet',
   savedAgo: (ago: string) => `Last saved ${ago}`,
   downloadLabel: 'Download save',
@@ -73,7 +73,7 @@ export const SAVE_TEXT = {
   protectRefused: 'The browser said no for now (Chrome and Edge decide by how often you play). Download a save to be safe.',
   protectUnsupported: 'This browser can\'t do this. Download a save to be safe.',
   deleteLabel: 'Delete save and start over',
-  deleteHelp: 'Removes your settings, key bindings, Loadout, Armory and records from this browser. You can undo it.',
+  deleteHelp: 'Removes your settings, key bindings, Loadout, level and records from this browser. You can undo it.',
   deleteButton: 'Delete save',
   /** Problems, on the Save tab and the title screen. */
   blocked: 'This browser isn\'t keeping your save (storage is blocked or full). Download your save before closing the game.',
@@ -85,7 +85,7 @@ export const SAVE_TEXT = {
   confirmRestoreTitle: 'Restore this save?',
   confirmUndoTitle: 'Undo?',
   confirmDeleteTitle: 'Delete your save?',
-  confirmDeleteBody: 'Your settings, key bindings, Loadout, Armory collection and records go, and the game starts fresh. Undo on the Save tab brings them back.',
+  confirmDeleteBody: 'Your settings, key bindings, Loadout, level and records go, and the game starts fresh at level 0. Undo on the Save tab brings them back.',
   current: 'This browser',
   incoming: (from: 'file' | 'restore' | 'undo') => (from === 'file' ? 'The file' : from === 'restore' ? 'Restore point' : 'Before'),
   replaceButton: 'Replace',
@@ -109,9 +109,9 @@ export const SAVE_TEXT = {
   compare: {
     savedAt: 'Saved',
     build: 'Version',
-    fc: 'Field Credits',
-    tokens: 'Tokens',
-    items: 'Items',
+    level: 'Level',
+    xp: 'XP',
+    unlocked: 'Items unlocked',
     matches: 'Matches played',
   },
   undoWhat: { load: 'the last load', restore: 'the last restore', delete: 'the delete' },

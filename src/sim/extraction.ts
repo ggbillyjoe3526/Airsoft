@@ -37,20 +37,13 @@ export interface RunExit {
   open: boolean;
 }
 
-/** A part found in a case (M44): a pool asset id and its rarity tier id, as the collection stores them. */
-export interface FoundItem {
-  asset: string;
-  tier: string;
-}
-
 /**
- * What a case holds (M44, rolled from pool.md's Caches table by pool/caches.ts): Field Credits, a BB resupply (used
- * the moment it is opened: the runner's spare magazines are topped up) and at most one part.
+ * What a case holds (M44, rolled from pool.md's Caches table by pool/caches.ts): XP (LV1), or a BB resupply (used the
+ * moment it is opened: the runner's spare magazines are topped up). Never gear: levels unlock it.
  */
 export interface CaseFind {
-  fc: number;
+  xp: number;
   resupply: boolean;
-  item: FoundItem | null;
 }
 
 /** A case placed for the run: its kind (pool.md's Key), where it stands, how it opens and what it holds. */
@@ -559,19 +552,15 @@ export function runHaul(run: RunState): readonly CaseFind[] {
 /** Everything the runner found this run (each placed case they opened; a BB resupply aside), kept or not. */
 export function runFinds(run: RunState): CaseFind[] {
   const out: CaseFind[] = [];
-  for (const k of run.cases) if (k.open && !k.dropped) for (const f of k.finds) if (f.fc > 0 || f.item) out.push(f);
+  for (const k of run.cases) if (k.open && !k.dropped) for (const f of k.finds) if (f.xp > 0) out.push(f);
   return out;
 }
 
-/** The haul's Field Credits and parts, in the order they were found. */
-export function haulTotals(finds: readonly CaseFind[]): { fc: number; items: FoundItem[] } {
-  let fc = 0;
-  const items: FoundItem[] = [];
-  for (const f of finds) {
-    fc += f.fc;
-    if (f.item) items.push(f.item);
-  }
-  return { fc, items };
+/** The haul's XP (LV1). */
+export function haulTotals(finds: readonly CaseFind[]): { xp: number } {
+  let xp = 0;
+  for (const f of finds) xp += f.xp;
+  return { xp };
 }
 
 function stopOpening(run: RunState): void {
@@ -640,7 +629,7 @@ function stepCases(run: RunState, runner: Character, rules: ExtractionRules, sig
   for (const f of k.finds) {
     // A resupply was used where it was found; what you dropped holds only what you carried.
     if (f.resupply && !k.dropped) refillSpares(runner.armament);
-    if (f.fc > 0 || f.item) run.carried.push(f);
+    if (f.xp > 0) run.carried.push(f);
   }
   stopOpening(run);
   run.inReach = -1;

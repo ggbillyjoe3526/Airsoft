@@ -4,7 +4,7 @@ import { renders } from './rendererRow';
 /**
  * Smoke test: the built game boots to the title screen with no map loaded, goes through New game (the Map, Match and
  * Difficulty pop-ups, a 2v2 picked, the Loadout and Settings screens, a crosshair picked) and starts a match with a 2x scope, an
- * angled grip, a hi-cap and 0.28 g BBs (owned through a saved collection), holds Tab for the scoreboard, fires, reloads, moves the fire selector, aims
+ * angled grip, a hi-cap and 0.28 g BBs (unlocked through a saved level 7), holds Tab for the scoreboard, fires, reloads, moves the fire selector, aims
  * down the scope, switches the graphics quality to Medium and back to Low mid-match, ends the match (summary, result, Play
  * Again) and keeps running without a page error.
  *
@@ -26,11 +26,11 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   });
   const errorList = () => (errors.length > 0 ? errors.join(' | ') : 'none');
 
-  // Armory unlocks (M26c) a new player wouldn't have: the red dot, the 2x scope, a Rare angled grip and a hi-cap, besides
-  // the starters. Saved before the page loads, as a returning player's collection.
+  // Level unlocks (LV1) a new player wouldn't have: the red dot, the 2x scope, the angled grip and the hi-cap come with
+  // level 7 (3,400 XP; levels.md). Saved before the page loads, as a returning player's progress: 3,500 XP, the unlocks
+  // left for the game to add as it reads them.
   await page.addInitScript(() => {
-    const owned = ['000001', '000002', '000003', '000004', '000007', '000010', '000012'].map((id) => [`${id}@common`, 1]);
-    localStorage.setItem('airsoft.collection', JSON.stringify({ version: 1, owned: Object.fromEntries([...owned, ['000011@rare', 1]]), fc: 400, tokens: 0, seed: 1 }));
+    localStorage.setItem('airsoft.progress', JSON.stringify({ version: 1, xp: 3500, unlocked: [], rev: 1 }));
   });
   // The loading bar (audit CORE-10): the furthest it got, read as the page changes it.
   await page.addInitScript(() => {
@@ -96,7 +96,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   const setup = page.locator('.menu-setup');
   await expect(setup).toBeVisible();
   await expect(page.locator('.setup-rules')).not.toBeEmpty();
-  // The top bar (G3) shows the place on screen and the wallet.
+  // The top bar (G3) shows the place on screen and your level (LV1).
   const topBar = page.locator('.menu-topbar');
   await expect(topBar.getByRole('button', { name: 'Match', exact: true })).toHaveAttribute('aria-current', 'page');
 
@@ -204,7 +204,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(loadoutLine).toContainText('Red Dot');
   await expect(loadoutLine).toContainText('0.28 g / 0.20 g BBs');
 
-  // Attachments: the 2x scope, a Rare angled grip and a hi-cap on the rifle, each with its numbers under it.
+  // Attachments: the 2x scope, the angled grip and a hi-cap on the rifle, each with its numbers under it.
   await setup.getByRole('button', { name: 'Change Loadout' }).click();
   await loadout.getByRole('button', { name: /^Customise AEG Rifle/ }).click();
   await partTab('Optic').click();
@@ -213,7 +213,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   const rifleGrip = loadout.getByRole('group', { name: 'Grip' });
   await expect(rifleGrip.getByRole('button', { name: /No Grip/ })).toHaveAttribute('aria-pressed', 'true');
   await rifleGrip.getByRole('button', { name: /Angled Grip/ }).click();
-  await expect(rifleGrip.getByRole('button', { name: /Angled Grip/ })).toContainText('Rare');
+  await expect(rifleGrip.getByRole('button', { name: /Angled Grip/ })).toHaveAttribute('aria-pressed', 'true');
   // The numbers themselves are the unit tests' (loadoutChoice.test.ts); here only that they show (audit L-10).
   await expect(loadout.getByText(/Brings the AEG Rifle up in [\d.]+ s/)).toBeVisible();
   // The optic's line names the grip that steadies it: on the Optic part, where it belongs (G3: one part at a time).
@@ -235,23 +235,26 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(setup).toBeVisible();
   await expect(loadoutLine).toContainText('2x Scope · Angled Grip · Hi-Cap Magazine');
 
-  // The Armory (M26c), on the top bar with the wallet: beta and free. The saved 400 FC buy a Token (160 FC), and a Shot
-  // dispenses three assets into the collection.
-  const wallet = topBar.locator('.menu-chip-fc');
-  await expect(wallet).toContainText('400 FC');
-  await topBar.getByRole('button', { name: 'Armory' }).click();
+  // The Armory (LV1): your level on the top bar opens it. Level 7 of 10, 100 of level 8's 900 XP, the LiPo battery next,
+  // and every level on the track with its state.
+  const badge = topBar.locator('.menu-chip-level');
+  await expect(badge).toHaveText(/Lv 7/);
+  await badge.click();
   const armory = page.locator('.menu-armory');
   await expect(armory).toBeVisible();
-  await expect(armory.locator('.menu-heading .beta-tag')).toHaveText(/beta/i);
-  await expect(armory.getByText(/^Completely free/).first()).toBeVisible();
-  await armory.getByRole('button', { name: /^Buy 1 Token/ }).click();
-  await expect(armory.locator('.armory-balance')).toContainText('240 FC');
-  await armory.getByRole('button', { name: /^1 Shot/ }).click();
-  await expect(armory.locator('.armory-reveal .item-tile')).toHaveCount(3);
-  await expect(armory.locator('.armory-balance')).toContainText('240 FC'); // paid with the Token
+  await expect(armory.locator('.armory-level')).toHaveText(/Level 7\s*of 10/);
+  await expect(armory.locator('.armory-xp-line')).toHaveText('100 / 900 XP');
+  await expect(armory.locator('.armory-next')).toContainText('Level 8');
+  await expect(armory.locator('.armory-next-item')).toContainText(['11.1 V LiPo Battery']);
+  await expect(armory.locator('.armory-level-row')).toHaveCount(11);
+  await expect(armory.locator('.armory-level-row[data-state="unlocked"]')).toHaveCount(8);
+  await expect(armory.locator('.armory-level-row[data-state="next"]')).toHaveCount(1);
   await page.keyboard.press('Escape');
   await expect(setup).toBeVisible();
-  await expect(wallet).toContainText('240 FC');
+  await topBar.getByRole('button', { name: 'Armory', exact: true }).click();
+  await expect(armory).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(setup).toBeVisible();
 
   // Settings (G3): the groups down the left, opening on Graphics; Esc works as Back and returns to the Play screen.
   await topBar.getByRole('button', { name: 'Settings' }).click();
@@ -375,13 +378,14 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   // M96: the Retro look left the Dev group for Settings › Look (checked below).
   const devPanel = settings.locator('#settings-panel-dev');
   await expect(devPanel.getByRole('group', { name: /Retro/ })).toHaveCount(0);
-  // M26d, M83: Disable Armory takes the Armory off the top bar (gone, not greyed out) while it applies.
-  const armoryPlace = topBar.getByRole('button', { name: 'Armory' });
-  await settings.getByRole('group', { name: 'Disable Armory' }).getByRole('button', { name: 'On' }).click();
-  await expect(armoryPlace).toBeHidden();
+  // LV1: Disable levelling unlocks everything while it applies, so the level badge goes from the top bar; the Armory stays.
+  const armoryPlace = topBar.getByRole('button', { name: 'Armory', exact: true });
+  await settings.getByRole('group', { name: 'Disable levelling' }).getByRole('button', { name: 'On' }).click();
+  await expect(badge).toBeHidden();
+  await expect(armoryPlace).toBeVisible();
   await devBox.uncheck();
   await expect(page.locator('.debug-overlay')).toBeHidden();
-  await expect(armoryPlace).toBeVisible();
+  await expect(badge).toBeVisible();
   await expect(armoryPlace).toBeEnabled();
   await expect(group(/^Dev/i)).toBeHidden();
   await expect(group(/Graphics/i)).toHaveAttribute('aria-selected', 'true');
@@ -646,8 +650,8 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(summary.locator('.summary-result')).toContainText('You win!');
   await expect(summary.locator('.records-not-counted')).toContainText('Custom rules');
   await expect(summary.locator('.records-grid td').first()).toHaveText('–');
-  // Custom rules still pay Field Credits (M26c), scaled to the shorter match.
-  await expect(summary.locator('.summary-credits')).toContainText(/Field Credits earned\s*\+\d+ FC/i);
+  // Custom rules still give XP (LV1), scaled to the shorter match.
+  await expect(summary.locator('.summary-xp')).toContainText(/XP earned\s*\+\d+ XP/i);
   await summary.getByRole('button', { name: 'Continue' }).click();
   const result = page.locator('.menu-result');
   await expect(result).toBeVisible();
@@ -673,11 +677,10 @@ for (const withParts of [false, true]) {
     page.on('console', (msg) => {
       if (msg.type() === 'error') errors.push(`console: ${msg.text()}`);
     });
-    // The Tight-Bore Barrel (000016), Long Barrel (000017) and Silencer (000018) come from Shots: saved as a returning
-    // player's collection, or left out for a new player.
+    // The Silencer (level 4), Tight-Bore Barrel (level 5) and Long Barrel (level 9) come with levels (LV1): a returning
+    // player at level 9 (5,300 XP, levels.md) has them; a new player at level 0 sees them locked.
     await page.addInitScript((extra) => {
-      const ids = ['000001', '000002', '000003', '000004', ...(extra ? ['000016', '000017', '000018'] : [])];
-      localStorage.setItem('airsoft.collection', JSON.stringify({ version: 1, owned: Object.fromEntries(ids.map((id) => [`${id}@common`, 1])), fc: 0, tokens: 0, seed: 1 }));
+      localStorage.setItem('airsoft.progress', JSON.stringify({ version: 1, xp: extra ? 5300 : 0, unlocked: [], rev: 1 }));
     }, withParts);
     await page.goto('/?nolock&seed=1&quality=low');
     await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
@@ -697,22 +700,25 @@ for (const withParts of [false, true]) {
     await expect(barrel.getByRole('button', { name: /Standard/ })).toHaveAttribute('aria-pressed', 'true');
     await expect(heardFrom).toHaveText(/^22 m/);
     if (!withParts) {
-      // Nothing is offered that the player does not own; the Armory hint says where to get them.
+      // Nothing still locked can be picked: the barrels show greyed with the level that unlocks each, and a line says how.
       await expect(barrel.getByRole('button')).toHaveCount(1);
-      await expect(loadout.locator('.menu-row', { has: page.getByRole('group', { name: 'Barrel', exact: true }) }).getByText('Unlock more in the Armory.')).toBeVisible();
+      await expect(barrel.locator('.option-locked')).toHaveText([/Tight-Bore Barrel\s*Level 5/, /Long Barrel\s*Level 9/]);
+      const levelUpLine = 'Level up to unlock more: the Armory shows what each level gives.';
+      await expect(loadout.locator('.menu-row', { has: page.getByRole('group', { name: 'Barrel', exact: true }) }).getByText(levelUpLine)).toBeVisible();
       await partTab('Muzzle').click();
       await expect(muzzle.getByRole('button', { name: /None/ })).toHaveAttribute('aria-pressed', 'true');
       await expect(muzzle.getByRole('button')).toHaveCount(1);
-      await expect(loadout.locator('.menu-row', { has: page.getByRole('group', { name: 'Muzzle', exact: true }) }).getByText('Unlock more in the Armory.')).toBeVisible();
+      await expect(muzzle.locator('.option-locked')).toHaveText([/Silencer\s*Level 4/]);
+      await expect(loadout.locator('.menu-row', { has: page.getByRole('group', { name: 'Muzzle', exact: true }) }).getByText(levelUpLine)).toBeVisible();
     } else {
       await expect(barrel.getByRole('button')).toHaveCount(3);
       await expect(barrel.getByRole('button', { name: /Tight-Bore Barrel/ })).toBeVisible();
       await barrel.getByRole('button', { name: /Long Barrel/ }).click();
       await expect(barrel.getByRole('button', { name: /Long Barrel/ })).toHaveAttribute('aria-pressed', 'true');
       await expect(loadout.locator('.menu-row', { has: page.getByRole('group', { name: 'Barrel', exact: true }) }).getByText(/Brings it up in [\d.]+ s\./)).toBeVisible();
-      // A long barrel is front-heavy: a slower draw is marked worse, the extra energy better.
+      // A long barrel is front-heavy: a slower draw is marked worse, the extra energy better (LV1: +10 %).
       await expect(sheet.locator('dt', { hasText: /^Draw$/ }).locator('xpath=following-sibling::dd[1]').locator('.perf-delta.perf-worse')).toHaveText(/^\+15%/);
-      await expect(sheet.locator('dt', { hasText: /^Energy$/ }).locator('xpath=following-sibling::dd[1]').locator('.perf-delta.perf-better')).toHaveText(/^\+8%/);
+      await expect(sheet.locator('dt', { hasText: /^Energy$/ }).locator('xpath=following-sibling::dd[1]').locator('.perf-delta.perf-better')).toHaveText(/^\+10%/);
       // The silencer halves how far shots are heard, which the sheet marks as better, and says it to the player.
       await partTab('Muzzle').click();
       await expect(muzzle.getByRole('button', { name: /None/ })).toHaveAttribute('aria-pressed', 'true');
@@ -743,9 +749,8 @@ test('the game boots to the title screen on High', async ({ page }) => {
   page.on('console', (msg) => {
     if (msg.type() === 'error') errors.push(`console: ${msg.text()}`);
   });
-  // FC enough for Ten Shots, saved before the game reads the collection (the bug-pass check below opens its pop-up).
-  // Three copies of one item besides: two spares for the Armory's right-click scrap menu (M100).
-  await page.addInitScript(() => localStorage.setItem('airsoft.collection', JSON.stringify({ version: 1, owned: { '000001@common': 3 }, fc: 2000, tokens: 0, seed: 1 })));
+  // A saved level so the Armory below has a track to draw on High.
+  await page.addInitScript(() => localStorage.setItem('airsoft.progress', JSON.stringify({ version: 1, xp: 1000, unlocked: [], rev: 1 })));
   await page.goto('/?nolock&seed=1&quality=high');
   await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
   // The title is plain navy (M100): no picture of the map or anything else behind it.
@@ -757,31 +762,22 @@ test('the game boots to the title screen on High', async ({ page }) => {
   await expect(page.locator('.menu-title-warning')).not.toContainText('set to Low');
   const shadows = await page.evaluate(() => (window as unknown as { airsoft: { renderer: { renderer: { shadowMap: { enabled: boolean } } } } }).airsoft.renderer.renderer.shadowMap.enabled);
   expect(shadows).toBe(true);
-  // A pop-up open when the graphics context is lost closes, so the notice isn't under it (bug pass): the Armory's Ten
-  // Shots asks first.
+  // The Armory (LV1) draws on High: level 3 of 10, the next unlock, the track.
   await page.locator('.menu-title-start').click();
   await page.locator('.menu-topbar').getByRole('button', { name: 'Armory', exact: true }).click();
-  // The collection has no Scrap buttons: a hint says to right-click an item, and the menu scraps its spares (M100).
   const armoryScreen = page.locator('.menu-armory');
-  await expect(armoryScreen.getByText('Right-click an item to scrap its spares.')).toBeVisible();
-  await expect(armoryScreen.getByRole('button', { name: /^Scrap (1|\d+) / })).toHaveCount(0);
-  const card = armoryScreen.locator('.armory-row[data-action="spares-000001"]');
-  await card.scrollIntoViewIfNeeded();
-  const fcBefore = await page.locator('.menu-chip-fc').innerText();
-  await card.click({ button: 'right' });
-  await expect(page.locator('.context-menu:visible .context-item')).toHaveCount(2);
-  await page.keyboard.press('Escape'); // closes the menu and stays on the Armory
-  await expect(page.locator('.context-menu:visible')).toHaveCount(0);
-  await expect(armoryScreen).toBeVisible();
-  await card.focus();
-  await page.keyboard.press('Shift+F10'); // the keyboard opens the same menu
-  await expect(page.locator('.context-menu:visible .context-item')).toHaveCount(2);
-  await page.locator('.context-menu:visible').getByRole('button', { name: /^Scrap 1 Common / }).click();
-  await expect(page.locator('.context-menu:visible')).toHaveCount(0);
-  await expect(page.locator('.menu-chip-fc')).not.toHaveText(fcBefore);
-  await page.locator('.menu-armory').getByRole('button', { name: /^10 Shots/ }).click();
-  const ask = page.getByRole('dialog', { name: 'Take 10 Shots?' });
-  await expect(ask).toBeVisible();
+  await expect(armoryScreen.locator('.armory-level')).toHaveText(/Level 3\s*of 10/);
+  await expect(armoryScreen.locator('.armory-next-item').first()).toBeVisible();
+  await expect(armoryScreen.locator('.armory-level-row')).toHaveCount(11);
+  // A pop-up open when the graphics context is lost closes, so the notice isn't under it (bug pass): Delete save asks
+  // first.
+  await page.keyboard.press('Escape');
+  await page.locator('.menu-topbar').getByRole('button', { name: 'Settings', exact: true }).click();
+  const settings = page.locator('.menu-settings');
+  await settings.getByRole('tab', { name: /Save/ }).click();
+  await settings.getByRole('button', { name: 'Delete save', exact: true }).click();
+  const ask = page.locator('.save-dialog');
+  await expect(ask).toContainText('Delete your save?');
   await page.evaluate(() => {
     const lose = document.querySelector('canvas')!.getContext('webgl2')!.getExtension('WEBGL_lose_context')!;
     (window as unknown as { lose: WEBGL_lose_context }).lose = lose;

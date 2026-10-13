@@ -18,8 +18,8 @@ export interface FakeEvent {
 }
 
 /**
- * The fake DOM with what the Armory and the context menu also use (dataset, selectors, contains, events a test can fire,
- * a focus that moves `document.activeElement`), for tests of the right-click scrap menu (M100).
+ * The fake DOM with what the menus' dialogs also use (dataset, selectors, contains, events a test can fire, a focus that
+ * moves `document.activeElement`).
  */
 export class EventNode extends FakeElement {
   dataset: Record<string, string> = {};

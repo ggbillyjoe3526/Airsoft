@@ -14,7 +14,7 @@ import { MINIMAP } from './config/minimap';
 import { FULLSCREEN_RELOCK_MS } from './config/controls';
 import { CRASH_TEXT } from './config/crash';
 import { LOADING } from './config/loading';
-import { BROWSER_NOTES, MENU_TEXT } from './config/menus';
+import { ARMORY_TEXT, BROWSER_NOTES, MENU_TEXT } from './config/menus';
 import type { MatchMode } from './config/modes';
 import { MOVEMENT } from './config/movement';
 import { GRAPHICS_TEXT } from './config/graphics';
@@ -52,7 +52,7 @@ import { MatchSession } from './matchSession';
 import type { RangePose, RangeSession } from './rangeSession';
 import type { GameState } from './sim/state';
 import { addChallengeRun, loadRecords, noNews, type RecordNews, type Records, saveRecords } from './stats/records';
-import { settleMatch } from './stats/settleMatch';
+import { type NoXp, settleMatch } from './stats/settleMatch';
 import { loadCrosshair } from './ui/crosshair';
 import { loadHitMarker } from './ui/crosshairSettings';
 import { loadCallouts, loadMinimapTurn } from './ui/hudSettings';
@@ -61,15 +61,17 @@ import { DebugOverlay } from './ui/debugOverlay';
 import { onFullscreenChange, relockAfterFullscreen, toggleFullscreen } from './ui/fullscreen';
 import { GraphicsNotice } from './ui/graphicsNotice';
 import { loadoutTile } from './ui/loadoutChoice';
-import { type Collection, type ItemRef, loadCollection, saveCollection, saveOrReload, syncCollection } from './pool/collection';
+import type { ItemRef } from './pool/item';
+import { GAME_LEVELS } from './progress/gameLevels';
+import { earnedOf, standing } from './progress/levels';
+import { addXp, loadProgress, type Progress, resetProgress, saveProgress, syncProgress, xpToNext } from './progress/progress';
 import { contentPool } from './pool/contentPool';
 import { GAME_POOL } from './pool/gamePool';
 import { matchUsesDev, type NewGamePicks, playedPicks, playedTeamSize } from './newGamePicks';
-import { collectionOwnership, gameOwnership, type GearSlot, LoadoutModel } from './pool/loadoutModel';
-import { carryOverOldPicks } from './pool/oldPicks';
+import { gameOwnership, type GearSlot, LoadoutModel } from './pool/loadoutModel';
 import { activeSupplyEvent, supplyLine } from './pool/supplyEvents';
-import { type Dispensed, type Earnings, earn } from './pool/armory';
-import { haulSummary, type Unpaid } from './ui/menus/summaryScreen';
+import { haulSummary, type XpSummary, xpSummary } from './ui/menus/summaryScreen';
+import type { MenuLevel } from './ui/menus/menusOptions';
 import { loadDevEnabled, loadDevSettings } from './settings/dev';
 import { carryOverDevRetro, loadRetroSettings } from './settings/retroLook';
 import { browserStorage, flushSettings, SETTINGS_KEY, saveSetting } from './settings/storage';
@@ -220,7 +222,7 @@ export class Game {
   private matchCounted = false;
   /** The seed of the match loaded (the URL's or the visit's for the first match; see play). */
   private matchSeed: number;
-  /** The match session already recorded and paid (settleMatch runs once per session). */
+  /** The match session already recorded and given its XP (settleMatch runs once per session). */
   private settledSession: MatchSession | null = null;
   private rafId = 0;
   private lastTime = 0;
@@ -245,8 +247,8 @@ export class Game {
   /** The Match pop-up's rules (M20), and its Rules row's ruleset (M39). */
   private matchRules: MatchRules;
   private ruleset: RulesetId;
-  /** What the player owns from the asset pool (M26a), and their loadout built from it (M26b). */
-  private readonly collection: Collection;
+  /** The player's level progress (LV1): XP and what it unlocked; and their loadout built from it (M26b). */
+  private readonly progress: Progress;
   private readonly loadout: LoadoutModel;
   /**
    * The audio context, volume buses and synthesised sounds, kept across matches (each match's Sfx plays through
@@ -264,12 +266,10 @@ export class Game {
   /** The local records (M19), and what the last match finished changed in them. */
   private readonly records: Records = loadRecords(browserStorage());
   private recordNews: RecordNews = noNews();
-  /** What the last match paid in Field Credits (M26c), for its summary. */
-  private lastEarnings: Earnings | null = null;
-  /** The last Extraction haul's parts as they went into the collection (M44), or null when it kept nothing. */
-  private lastHaul: Dispensed[] | null = null;
-  /** Why the last match paid nothing, for the summary (audit POOL-22), or null when it paid. */
-  private unpaidReason: Unpaid | null = null;
+  /** What the last match gave in XP and where it left the player's level (LV1), for its summary. */
+  private lastXp: XpSummary | null = null;
+  /** Why the last match gave no XP, for the summary (audit POOL-22), or null when it gave some. */
+  private noXpReason: NoXp | null = null;
   /** Reduced motion (Settings → Accessibility), kept across matches; null until the player picks (audit UI-07). */
   private reducedMotion = loadReducedMotion();
   /** The system's "reduce motion" setting, watched while the player has not picked (audit UI-07). */
@@ -377,10 +377,9 @@ export class Game {
     applyTeamCss(container, TEAM_COLOUR_SETS[this.teamColours]);
     this.matchRules = loadMatchRules();
     this.ruleset = loadRuleset();
-    this.collection = loadCollection(GAME_POOL, options.seed);
-    this.loadout = new LoadoutModel(GAME_POOL, gameOwnership(GAME_POOL, () => this.collection, () => this.dev.unlockAllGear, () => this.dev.devContent));
-    // Against what is really owned, so the picks land in the real loadout even with Unlock all gear on (M26d).
-    carryOverOldPicks(new LoadoutModel(GAME_POOL, collectionOwnership(() => this.collection)), this.collection, saveCollection);
+    this.progress = loadProgress(GAME_LEVELS);
+    const unlocks = { unlocked: () => this.progress.unlocked, levelOf: (id: string) => GAME_LEVELS.unlockLevel.get(id) };
+    this.loadout = new LoadoutModel(GAME_POOL, gameOwnership(GAME_POOL, unlocks, () => this.dev.unlockAllGear, () => this.dev.devContent));
 
     this.bindings = new KeyBindings(browserStorage());
     this.keyboard = new Keyboard(window, this.bindings);
@@ -454,20 +453,14 @@ export class Game {
         summary: () => loadoutTile(this.loadout),
       },
       armory: {
-        // Dev gear shows in the collection only with Dev content on (M35); Shots never give it either way.
+        // Dev gear shows on the level track only with Dev content on (M35).
         pool: () => contentPool(GAME_POOL, this.dev.devContent),
-        // Another tab's save since this one read it is taken first, so a Shot here never undoes it (audit POOL-02).
-        collection: () => (syncCollection(this.collection, GAME_POOL), this.collection),
-        equipped: () => this.equippedItems(),
-        onChange: () => {
-          const reloaded = saveOrReload(this.collection, GAME_POOL);
-          this.loadoutChanged = this.setupChanged = true;
-          return reloaded;
-        },
-        // Dev settings › Free case openings (M90).
-        freeShots: () => this.dev.freeShots,
-        // Off in the Dev settings: no wallet, and the Armory is gone from the menus (M83).
-        wallet: () => (this.dev.disableArmory ? null : { fc: this.collection.fc, tokens: this.collection.tokens }),
+        levels: GAME_LEVELS,
+        // Another tab's XP since this one read it is taken first (audit POOL-02).
+        progress: () => this.syncedProgress(),
+        levellingOff: () => this.dev.unlockAllGear,
+        devContent: () => this.dev.devContent,
+        level: () => this.menuLevel(),
       },
       onPlay: () => {
         // Before play begins this is New game's Play: a match, even after a Practice range whose mouse lock was refused.
@@ -889,7 +882,7 @@ export class Game {
     if (this.dev.showDebug !== before.showDebug) this.debug.setVisible(this.dev.showDebug);
     if (this.dev.showBbPaths !== before.showBbPaths) this.session?.combat.setBbPaths(this.dev.showBbPaths);
     this.session?.setDevCheats(this.dev);
-    // Unlock all gear and Dev content (M35) change what the Loadout offers and carries, and Dev content what New game
+    // Disable levelling and Dev content (M35) change what the Loadout offers and carries, and Dev content what New game
     // plays; the next Play rebuilds the match with it.
     if (this.dev.unlockAllGear !== before.unlockAllGear || this.dev.devContent !== before.devContent) this.loadoutChanged = this.setupChanged = true;
     if (this.dev.devContent !== before.devContent) this.prefetchFieldSounds();
@@ -915,16 +908,19 @@ export class Game {
   }
 
   /**
-   * A Dev button (M90): gifts go into the collection (another tab's newer save read first, as the Armory does), End the
+   * A Dev button (M90): XP, a level or a reset go into the progress (another tab's newer save read first, LV1), End the
    * round now runs the loaded match's clock out (that match then stays out of the records), Reset the save deletes it
    * (kept for Undo) and reloads. Returns what the button says for a moment.
    */
   private devAction(id: DevActionId): string {
-    if (id === 'giveFc' || id === 'giveTokens') {
-      syncCollection(this.collection, GAME_POOL);
-      if (id === 'giveFc') earn(this.collection, DEV_GIFTS.fc);
-      else this.collection.tokens += DEV_GIFTS.tokens;
-      saveOrReload(this.collection, GAME_POOL);
+    if (id === 'giveXp' || id === 'levelUp' || id === 'resetLevel') {
+      const p = this.syncedProgress();
+      const left = xpToNext(p, GAME_LEVELS);
+      if (id === 'levelUp' && left === 0) return DEV_ACTION_TEXT.topLevel;
+      if (id === 'resetLevel') resetProgress(p, GAME_LEVELS);
+      else addXp(p, GAME_LEVELS, id === 'giveXp' ? DEV_GIFTS.xp : left);
+      saveProgress(p);
+      this.loadoutChanged = this.setupChanged = true;
       this.menus.refresh();
       return DEV_ACTION_TEXT.done;
     }
@@ -963,9 +959,31 @@ export class Game {
     return this.loadout.equipped().flatMap((r) => (r ? [r, ...Object.values(this.loadout.fitOf(r.asset))] : []));
   }
 
-  /** Whether a match of `picks` with the Loadout as it is uses dev content (M35): it then won't count or pay. */
+  /** Whether a match of `picks` with the Loadout as it is uses dev content (M35): it then won't count or give XP. */
   private devContentUsed(picks: NewGamePicks): boolean {
-    return matchUsesDev(picks, this.equippedItems(), GAME_POOL, this.dev.devContent, this.loadout.ownedChase(), this.lighting[picks.map]);
+    return matchUsesDev(picks, this.equippedItems(), GAME_POOL, this.dev.devContent, this.earnedReplicas(), this.lighting[picks.map]);
+  }
+
+  /**
+   * The replicas the player earned by levelling (LV1: a level above 0 unlocked them; with levelling off, every such one
+   * offered): an opponent on Hard now and then carries one (M32).
+   */
+  private earnedReplicas(): string[] {
+    return earnedOf(GAME_LEVELS, this.loadout.replicaChoices().map((r) => r.asset));
+  }
+
+  /** The progress, with another tab's newer save taken first (it is shared, so it changes in place). */
+  private syncedProgress(): Progress {
+    // Another tab's level may have unlocked something: the Loadout and the next match follow it.
+    if (syncProgress(this.progress, GAME_LEVELS)) this.loadoutChanged = this.setupChanged = true;
+    return this.progress;
+  }
+
+  /** The level badge on the top bar (LV1); none while levelling is off. */
+  private menuLevel(): MenuLevel {
+    if (this.dev.unlockAllGear) return null;
+    const s = standing(GAME_LEVELS, this.progress.xp);
+    return { level: s.level, into: s.into, next: s.next, toNext: s.next === null ? '' : ARMORY_TEXT.toNext(s.next - s.into, s.level + 1) };
   }
 
   /** A new session takes the Dev settings in force (M24). */
@@ -1089,8 +1107,7 @@ export class Game {
         ruleset: picks.ruleset,
         rules: { ...picks.rules, teamSize: playedTeamSize(picks) },
         kit: this.loadout.kit(),
-        chaseOwned: this.loadout.ownedChase(),
-        owned: { ...this.collection.owned },
+        earnedReplicas: this.earnedReplicas(),
         // The supply event on by the device's clock as Play is pressed (M49): the run keeps it to the end.
         supply: activeSupplyEvent(GAME_POOL.supplyEvents, new Date()),
         devContent: this.dev.devContent,
@@ -1144,7 +1161,7 @@ export class Game {
       kit: this.loadout.kit(),
       teamColours: TEAM_COLOUR_SETS[this.teamColours],
       look: this.look,
-      armory: !this.dev.disableArmory,
+      levelling: !this.dev.unlockAllGear,
       ...(place ? { map: place.map, course: place.course } : {}),
       challenge: loadPracticeChallenge(),
       challengeBest: this.records.bestChallenge[course] ?? 0,
@@ -1234,9 +1251,9 @@ export class Game {
         result: view.result,
         blocks: view.summaryBlocks,
         records: recordsView(this.records, this.recordNews, s.setup.difficulty, s.mode, s.notCountedReason),
-        fieldCredits: this.lastEarnings,
-        unpaid: this.unpaidReason,
-        haul: haulSummary(GAME_POOL, s.runFinds(), this.lastHaul),
+        xp: this.lastXp,
+        noXp: this.noXpReason,
+        haul: haulSummary(s.runFinds(), this.lastXp !== null),
       });
     } else {
       this.menus.showPause(s.pauseLine(), this.matchSeed, false, false, s.skipOffer);
@@ -1294,30 +1311,33 @@ export class Game {
   }
 
   /**
-   * A decided match goes into the records and pays its Field Credits as soon as it is decided (audit CORE-06), not when
-   * the mouse is given back for the result screen: a tab closed in between, or a browser that never reports the lock's
+   * A decided match goes into the records and gives its XP as soon as it is decided (audit CORE-06; LV1), not when the
+   * mouse is given back for the result screen: a tab closed in between, or a browser that never reports the lock's
    * release, lost it. Once per match (the session's take latches); the result screen only shows what this saved.
    */
   private settleMatch(s: MatchSession): void {
     // Once per session, on the first frame the match is over: nothing is built on the frames after (CLAUDE.md §9).
     if (s.state.round.phase !== 'matchOver' || this.settledSession === s) return;
     this.settledSession = s;
-    syncCollection(this.collection, GAME_POOL);
-    const settled = settleMatch(this.records, this.collection, s.takeMatchResult(), s.takeOutcome(), GAME_POOL.economy, this.dev.disableArmory);
+    const settled = settleMatch(this.records, this.syncedProgress(), GAME_LEVELS, s.takeMatchResult(), s.takeOutcome());
     if (settled.news) {
       this.recordNews = settled.news;
       saveRecords(this.records, browserStorage());
     }
-    this.lastHaul = settled.haul;
-    if (settled.pay) {
-      this.lastEarnings = settled.pay;
-      this.unpaidReason = null;
-      saveCollection(this.collection);
+    if (settled.xp) {
+      // What a level gave is named as the menus offer it: an item still being built stays unnamed with Dev content off.
+      const offered = contentPool(GAME_POOL, this.dev.devContent);
+      const up = settled.levelUp && { ...settled.levelUp, unlocked: settled.levelUp.unlocked.filter((id) => offered.byId.has(id)) };
+      this.lastXp = xpSummary(settled.xp, up, standing(GAME_LEVELS, this.progress.xp), (id) => offered.byId.get(id)!.name);
+      this.noXpReason = null;
+      saveProgress(this.progress);
+      // What the levels unlocked is in the Loadout from the next look at it, and in the next match's kit choices.
+      if (settled.levelUp && settled.levelUp.unlocked.length > 0) this.loadoutChanged = this.setupChanged = true;
       this.menus.refresh();
-    } else if (!s.paysFieldCredits || this.dev.disableArmory) {
-      // Not paid (Dev settings, or the Armory off): the summary says why (audit POOL-22), not what an earlier match paid.
-      this.lastEarnings = null;
-      this.unpaidReason = this.dev.disableArmory ? 'off' : (s.unpaidReason ?? 'dev');
+    } else if (!s.givesXp) {
+      // No XP (Dev settings, dev content): the summary says why (audit POOL-22), not what an earlier match gave.
+      this.lastXp = null;
+      this.noXpReason = s.noXpReason ?? 'dev';
     }
   }
 

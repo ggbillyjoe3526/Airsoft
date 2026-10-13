@@ -63,7 +63,7 @@ import { fitOptics, fitParts, setBbWeights, setHopUps } from './sim/armament';
 import { type Character, createCharacter, respawnCharacter } from './sim/character';
 import { createCommand, type PlayerCommand } from './sim/commands';
 import { isInPlay } from './sim/elimination';
-import { createRunContext, type ExtractionContext, type FoundItem, haulTotals, reserveSize, runFinds, runHaul } from './sim/extraction';
+import { createRunContext, type ExtractionContext, haulTotals, reserveSize, runFinds, runHaul } from './sim/extraction';
 import { placeTeams, startRun } from './sim/round';
 import { byTeam, rosterTeams } from './sim/roster';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
@@ -72,9 +72,9 @@ import { createWind } from './sim/wind';
 import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
 import { MatchStats } from './stats/matchStats';
-import { matchStanding, MatchTakes } from './stats/settleMatch';
+import { matchStanding, MatchTakes, type NoXp } from './stats/settleMatch';
 import { type MatchResult, runResultOf } from './stats/records';
-import type { MatchOutcome } from './pool/armory';
+import type { MatchOutcome } from './progress/xp';
 import type { NotCounted } from './ui/recordsView';
 import { pauseText, resultText, type ResultText } from './ui/matchStopText';
 import { rosterNames, rosterTags, statsBlocks, type TeamBlock } from './ui/statsRows';
@@ -100,7 +100,7 @@ export interface MatchSetup {
    */
   rules: MatchRules;
   /**
-   * The player's kit from the Loadout screen (M26b): each gear slot's replica as carried (rarity, power source and laser
+   * The player's kit from the Loadout screen (M26b): each gear slot's replica as carried (power source, laser and barrel
    * worked in), its optic, parts, hop-up dial and BB weight. Bots carry config/replicas.ts LOADOUT as it comes.
    */
   kit: PlayerKit;
@@ -108,19 +108,15 @@ export interface MatchSetup {
   devContent: boolean;
   /**
    * The match uses dev content (M35, newGamePicks.ts matchUsesDev: its picks, the player's kit, or gear the opponents
-   * may roll): it stays out of the records and pays no Field Credits.
+   * may roll): it stays out of the records and gives no XP.
    */
   devContentUsed: boolean;
   /**
-   * The chase replicas the player owns (pool asset ids, M32): on a difficulty that rolls kits, one opponent now and then
-   * carries one (pool/botKit.ts chaseCarrier). Absent: none.
+   * The replicas the player earned by levelling (pool asset ids, M32; LV1: unlocked above level 0, the Cyber Pistol at
+   * the cap): on a difficulty that rolls kits, one opponent now and then carries one (pool/botKit.ts chaseCarrier).
+   * Absent: none.
    */
-  chaseOwned?: readonly string[];
-  /**
-   * The collection's items (item key → copies, M44): an Extraction run's case parts are weighted towards what you
-   * don't own yet, as a Shot's are. Absent: as if you owned nothing.
-   */
-  owned?: Readonly<Record<string, number>>;
+  earnedReplicas?: readonly string[];
   /**
    * The supply event on as the match starts (M49, pool/supplyEvents.ts): an Extraction run's cases hold more while it
    * is on. Absent: none.
@@ -140,8 +136,8 @@ export interface MatchSetup {
 /** What an Extraction run found, for the summary (MatchSession.runFinds). */
 export interface RunFinds {
   extracted: boolean;
-  found: { fc: number; items: FoundItem[] };
-  out: { fc: number; items: FoundItem[] };
+  found: { xp: number };
+  out: { xp: number };
 }
 
 /**
@@ -260,7 +256,7 @@ export class MatchSession {
             spawnLift: PHYSICS.groundRestGap,
             // The run's cases (M44), filled from pool.md with the parts weighted towards what you don't own yet, richer
             // under a supply event (M49).
-            cases: rollRunCases(GAME_POOL, map.extraction.cases, setup.owned ?? {}, caseSeed(seed), setup.supply ?? null),
+            cases: rollRunCases(GAME_POOL, map.extraction.cases, caseSeed(seed), setup.supply ?? null),
             // The home team's waves (M45): as often as the opponents' difficulty says, out of the squad's sight.
             waveEvery: EXTRACTION.waveEvery[setup.difficulty],
             sight: { query: this.physics, body: BODY },
@@ -481,23 +477,23 @@ export class MatchSession {
     return { run: runResultOf(runHaul(this.state.round.run), this.rounds.roundTime - this.state.round.clock) };
   }
 
-  /** Whether this match pays Field Credits at all: not with Dev settings that change play (M24), nor with dev content (M35). */
-  get paysFieldCredits(): boolean {
-    return this.unpaidReason === null;
+  /** Whether this match gives XP at all (LV1): not with Dev settings that change play (M24), nor with dev content (M35). */
+  get givesXp(): boolean {
+    return this.noXpReason === null;
   }
 
-  /** Why it pays nothing: Dev settings that change play, dev content, or null when it pays. */
-  get unpaidReason(): 'dev' | 'devContent' | null {
-    return this.standing().unpaid;
+  /** Why it gives none: Dev settings that change play, dev content, or null when it gives XP. */
+  get noXpReason(): NoXp | null {
+    return this.standing().noXp;
   }
 
   /**
-   * The decided match for its Field Credits (M26c), once per match: custom rules pay too (scaled by pool.md), but a
-   * match played with Dev settings that change play (M24) pays nothing, so null then.
+   * The decided match for its XP (LV1), once per match: custom rules give XP too (scaled by levels.md), but a match
+   * played with Dev settings that change play (M24) gives none, so null then.
    */
   takeOutcome(): MatchOutcome | null {
     const r = this.state.round;
-    return this.takes.outcome(r.phase === 'matchOver', this.paysFieldCredits, () => ({
+    return this.takes.outcome(r.phase === 'matchOver', this.givesXp, () => ({
       won: r.matchWinner === this.player.team,
       // Rounds won with you in them (audit POOL-08), and the teammates' difficulty when you have any.
       roundsWon: this.stats.roundsContributed(this.player.id),
@@ -505,10 +501,9 @@ export class MatchSession {
       winsNeeded: this.rounds.winsNeeded,
       difficulty: this.setup.difficulty,
       ...(this.rounds.teamSize > 1 ? { teammateDifficulty: this.setup.teammateDifficulty } : {}),
-      // Custom rules pay no more than ×1.5 (M39): Pro's ×2 is for the named rulesets played as they are.
+      // Custom rules give no more than ×1.5 (M39): Pro's ×2 is for the named rulesets played as they are.
       ...(this.customRules ? { customRules: true } : {}),
-      // Extraction (M44): what you got out with goes into the collection with the pay, which is the haul's FC and your
-      // hits (M47).
+      // Extraction (M44): the run gives the XP you got out with and your hits (M47).
       ...(this.extraction ? { extraction: true } : {}),
       ...this.haulOutcome(),
     }));
@@ -518,7 +513,7 @@ export class MatchSession {
   private haulOutcome(): Pick<MatchOutcome, 'haul'> {
     if (!this.extraction) return {};
     const haul = haulTotals(runHaul(this.state.round.run));
-    return haul.fc > 0 || haul.items.length > 0 ? { haul } : {};
+    return haul.xp > 0 ? { haul } : {};
   }
 
   /**
@@ -723,9 +718,9 @@ export class MatchSession {
     const botPool = contentPool(GAME_POOL, this.setup.devContent);
     // Under the factory kit rule (M39) nobody rolls a kit: everyone carries LOADOUT as it comes.
     const rolls = BOT_LOADOUTS[this.setup.difficulty] === 'random' && !this.setup.rules.factoryKit;
-    // Now and then, on a difficulty that rolls kits, one opponent carries a chase replica the player owns (M32).
+    // Now and then, on a difficulty that rolls kits, one opponent carries a replica the player earned (M32, LV1).
     const opponents = teams.flatMap((team, id) => (team === this.playerTeam ? [] : [id]));
-    const carrier = rolls ? chaseCarrier(botPool, this.setup.chaseOwned ?? [], seed, opponents) : null;
+    const carrier = rolls ? chaseCarrier(botPool, this.setup.earnedReplicas ?? [], seed, opponents) : null;
     for (const [id, team] of teams.entries()) {
       // You carry your kit; your teammates carry the default loadout as it comes, and so do the other team's bots unless
       // their difficulty rolls each one a kit of its own (M29b).

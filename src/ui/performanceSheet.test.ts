@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { GAME_STATS } from '../config/gameStats';
 import { HOP_UP } from '../config/replicas';
-import type { ItemRef } from '../pool/collection';
+import type { ItemRef } from '../pool/item';
 import { GAME_POOL } from '../pool/gamePool';
 import { EMPTY_FIT, energyCapped, kitSlot, type ReplicaFit } from '../pool/kit';
-import { gearLine, performanceOf, sheetRows, tierBlurb, tierLine } from './performanceSheet';
+import { gearLine, performanceOf, sheetRows } from './performanceSheet';
 
 const pool = GAME_POOL;
 const id = (name: string) => pool.assets.find((a) => a.name === name)!.id;
-const item = (name: string, tier = 'common'): ItemRef => ({ asset: id(name), tier });
+const item = (name: string): ItemRef => ({ asset: id(name) });
 const fit = (parts: Partial<ReplicaFit>): ReplicaFit => ({ ...EMPTY_FIT, ...parts });
-const aeg = (tier = 'common', parts: Partial<ReplicaFit> = {}) => kitSlot(pool, item('AEG Rifle', tier), fit({ power: item('Standard Battery'), ...parts }));
+const aeg = (parts: Partial<ReplicaFit> = {}) => kitSlot(pool, item('AEG Rifle'), fit({ power: item('Standard Battery'), ...parts }));
 const rowsOf = (now: ReturnType<typeof aeg>, factory: ReturnType<typeof aeg>, grams = 0.25, dial = 0.65) =>
   sheetRows(performanceOf(now, grams, dial), performanceOf(factory, 0.25, 0.65), HOP_UP.readoutRange);
 const find = (rows: ReturnType<typeof rowsOf>, label: string) => rows.find((r) => r.label === label)!;
@@ -28,18 +28,26 @@ describe('Performance sheet (M29)', () => {
     expect(rows.every((r) => r.delta === '' && r.change === null)).toBe(true);
   });
 
-  it('marks what a Legendary copy improves as better, with its percentage', () => {
-    const rows = rowsOf(aeg('legendary'), aeg());
-    expect(find(rows, 'Energy')).toMatchObject({ value: '1.04 J', delta: '+7.5%', change: 'better' });
-    expect(find(rows, 'Rate of fire')).toMatchObject({ value: '14 BBs/s', delta: '+7.5%', change: 'better' });
+  it('marks what a part improves as better, with its percentage (LV1: an item has no tier, so a copy is never better)', () => {
+    const rows = rowsOf(aeg({ barrel: item('Tight-Bore Barrel') }), aeg());
     expect(find(rows, 'Spread')).toMatchObject({ delta: '−15%', change: 'better' });
-    expect(find(rows, 'Reload')).toMatchObject({ delta: '−15%', change: 'better' });
+    expect(find(rows, 'Energy')).toMatchObject({ delta: '+3%', change: 'better' });
     // More energy flies flatter and arrives sooner.
     expect(find(rows, 'Time to 20 m').change).toBe('better');
   });
 
+  it("reads the Cyber Pistol with the numbers its Legendary copy had (LV1's rebalance)", () => {
+    const cyber = kitSlot(pool, item('Cyber Pistol'), EMPTY_FIT);
+    const rows = sheetRows(performanceOf(cyber, 0.2, 0.55), performanceOf(cyber, 0.2, 0.55), HOP_UP.readoutRange);
+    expect(find(rows, 'Rate of fire').value).toMatch(/14 BBs\/s$/);
+    expect(find(rows, 'Spread').value).toBe('0.30°');
+    expect(find(rows, 'Reload').value).toBe('1.10 s');
+    expect(find(rows, 'Draw').value).toBe('0.28 s');
+    expect(rows.every((r) => r.delta === '' && r.change === null)).toBe(true);
+  });
+
   it('marks a trade-off both ways: the vertical grip draws slower, the hi-cap is neither', () => {
-    const rows = rowsOf(aeg('common', { grip: item('Vertical Grip'), magazine: item('Hi-Cap Magazine') }), aeg());
+    const rows = rowsOf(aeg({ grip: item('Vertical Grip'), magazine: item('Hi-Cap Magazine') }), aeg());
     expect(find(rows, 'Draw').change).toBe('worse');
     expect(find(rows, 'Magazines')).toMatchObject({ value: '120 × 2 (240)', change: null });
   });
@@ -58,21 +66,10 @@ describe('Performance sheet (M29)', () => {
   });
 
   it('puts energy, rate of fire and magazine on the gear slot', () => {
-    expect(gearLine(aeg('legendary'), 0.25)).toBe('1.04 J · 14 BBs/s · 60 BBs');
+    expect(gearLine(aeg(), 0.25)).toBe('0.97 J · 13 BBs/s · 60 BBs');
+    expect(gearLine(aeg({ magazine: item('Hi-Cap Magazine') }), 0.25)).toBe('0.97 J · 13 BBs/s · 120 BBs');
   });
 
-  it("says what a tier adds in the Armory, by the item's category, and nothing at Common", () => {
-    expect(tierLine(pool, item('AEG Rifle', 'legendary'))).toBe('+7.5% energy · +7.5% rate of fire · −15% spread · −15% reload · −15% draw');
-    expect(tierLine(pool, item('Standard Battery', 'legendary'))).toBe('+7.5% rate of fire');
-    expect(tierLine(pool, item('Red Gas', 'epic'))).toBe('+6% energy');
-    expect(tierLine(pool, item('Vertical Grip', 'rare'))).toBe('−3% draw · −3% aim raise · −3% sprint shake');
-    expect(tierLine(pool, item('AEG Rifle'))).toBe('');
-  });
-
-  it('says what a tier means on the Loadout, Common included (audit POOL-10)', () => {
-    expect(tierBlurb(pool, item('Standard Battery', 'legendary'))).toBe('Legendary: +7.5% rate of fire');
-    expect(tierBlurb(pool, item('AEG Rifle'))).toBe('Common: no tier bonus');
-  });
 });
 
 describe('Performance sheet, acceptance 5: every row, and the sliders', () => {
@@ -128,15 +125,15 @@ describe('Performance sheet, acceptance 5: every row, and the sliders', () => {
   });
 
   it('marks a LiPo battery as +15 % rate of fire and nothing else', () => {
-    const rows = rowsOf(aeg('common', { power: item('11.1 V LiPo Battery') }), aeg());
+    const rows = rowsOf(aeg({ power: item('11.1 V LiPo Battery') }), aeg());
     expect(find(rows, 'Rate of fire')).toMatchObject({ value: '15 BBs/s', delta: '+15%', change: 'better' });
     expect(find(rows, 'Energy')).toMatchObject({ delta: '', change: null });
     expect(find(rows, 'Recoil')).toMatchObject({ delta: '', change: null });
   });
 
   it('shows a fitted optic as its raise time, and a scope as slower than the red dot', () => {
-    const dot = find(rowsOf(aeg('common', { optic: item('Red Dot') }), aeg()), 'Aim raise');
-    const scope = find(rowsOf(aeg('common', { optic: item('2x Scope') }), aeg()), 'Aim raise');
+    const dot = find(rowsOf(aeg({ optic: item('Red Dot') }), aeg()), 'Aim raise');
+    const scope = find(rowsOf(aeg({ optic: item('2x Scope') }), aeg()), 'Aim raise');
     expect(dot.value).toMatch(/^\d\.\d{2} s$/);
     expect(Number.parseFloat(scope.value)).toBeGreaterThan(Number.parseFloat(dot.value));
   });
@@ -168,41 +165,24 @@ describe('Performance sheet, acceptance 5: every row, and the sliders', () => {
   });
 });
 
-describe('Performance sheet, acceptance 6: the gear slot and the Armory line', () => {
+describe('Performance sheet, acceptance 6: the gear slot', () => {
   it('shows "energy · rate of fire · magazine" for each replica as it comes', () => {
     expect(gearLine(aeg(), 0.25)).toBe('0.97 J · 13 BBs/s · 60 BBs');
     expect(gearLine(kitSlot(pool, item('GBB Pistol'), fit({ power: item('Green Gas') })), 0.2)).toBe('0.52 J · 7 BBs/s · 18 BBs');
   });
 
-  it("follows the gear: a tier, a power source, a magazine and the BB weight change the line", () => {
-    expect(gearLine(aeg('common', { power: item('11.1 V LiPo Battery') }), 0.25)).toBe('0.97 J · 15 BBs/s · 60 BBs');
-    expect(gearLine(aeg('common', { magazine: item('Hi-Cap Magazine') }), 0.25)).toBe('0.97 J · 13 BBs/s · 120 BBs');
+  it("follows the gear: a power source, a magazine and the BB weight change the line", () => {
+    expect(gearLine(aeg({ power: item('11.1 V LiPo Battery') }), 0.25)).toBe('0.97 J · 15 BBs/s · 60 BBs');
+    expect(gearLine(aeg({ magazine: item('Hi-Cap Magazine') }), 0.25)).toBe('0.97 J · 13 BBs/s · 120 BBs');
     expect(gearLine(kitSlot(pool, item('GBB Pistol'), fit({ power: item('Black Gas') })), 0.2)).toBe('0.62 J · 7 BBs/s · 18 BBs');
     expect(gearLine(kitSlot(pool, item('GBB Pistol'), fit({ power: item('Green Gas'), magazine: item('Extended Magazine') })), 0.2)).toBe('0.52 J · 7 BBs/s · 27 BBs');
     expect(gearLine(aeg(), 0.3)).not.toBe(gearLine(aeg(), 0.25));
-  });
-
-  it('names what each category of tier adds in the Armory, the same words at every tier above Common', () => {
-    expect(tierLine(pool, item('Red Dot', 'legendary'))).toBe('−15% aim raise');
-    expect(tierLine(pool, item('Red Laser', 'legendary'))).toBe('−7.5% spread');
-    expect(tierLine(pool, item('Hi-Cap Magazine', 'rare'))).toBe('−6% reload');
-    expect(tierLine(pool, item('Green Gas', 'legendary'))).toBe('+7.5% energy');
-    expect(tierLine(pool, item('AEG Rifle', 'rare'))).toBe('+3% energy · +3% rate of fire · −6% spread · −6% reload · −6% draw');
-    // Nothing improves a grenade or a light (M33h; the torch comes at Common only).
-    for (const a of pool.assets.filter((x) => x.category !== 'grenade' && x.category !== 'light')) {
-      expect(tierLine(pool, { asset: a.id, tier: 'common' }), a.name).toBe('');
-      expect(tierLine(pool, { asset: a.id, tier: 'legendary' }), a.name).not.toBe('');
-    }
-  });
-
-  it('says nothing for an item that is not in the pool', () => {
-    expect(tierLine(pool, { asset: '999999', tier: 'legendary' })).toBe('');
   });
 });
 
 describe('Performance sheet, barrels and muzzle parts (M29b)', () => {
   it('shows how far shots are heard, and a silencer halving it as better, with its energy cost as worse', () => {
-    const rows = rowsOf(aeg('common', { muzzle: item('Silencer') }), aeg());
+    const rows = rowsOf(aeg({ muzzle: item('Silencer') }), aeg());
     expect(find(rowsOf(aeg(), aeg()), 'Shots heard from').value).toBe('22 m');
     expect(find(rows, 'Shots heard from')).toMatchObject({ value: '11 m', delta: '−50%', change: 'better' });
     expect(find(rows, 'Energy')).toMatchObject({ delta: '−5%', change: 'worse' });
@@ -210,11 +190,12 @@ describe('Performance sheet, barrels and muzzle parts (M29b)', () => {
   });
 
   it('marks a Tight-Bore Barrel tighter and stronger, and a Long Barrel stronger but slower to draw', () => {
-    const tight = rowsOf(aeg('common', { barrel: item('Tight-Bore Barrel') }), aeg());
+    const tight = rowsOf(aeg({ barrel: item('Tight-Bore Barrel') }), aeg());
     expect(find(tight, 'Spread')).toMatchObject({ delta: '−15%', change: 'better' });
     expect(find(tight, 'Energy')).toMatchObject({ delta: '+3%', change: 'better' });
-    const long = rowsOf(aeg('common', { barrel: item('Long Barrel') }), aeg());
-    expect(find(long, 'Energy')).toMatchObject({ delta: '+8%', change: 'better' });
+    const long = rowsOf(aeg({ barrel: item('Long Barrel') }), aeg());
+    expect(find(long, 'Energy')).toMatchObject({ delta: '+10%', change: 'better' });
+    expect(find(long, 'Spread')).toMatchObject({ delta: '−10%', change: 'better' });
     expect(find(long, 'Draw')).toMatchObject({ delta: '+15%', change: 'worse' });
   });
 });

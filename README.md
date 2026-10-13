@@ -118,9 +118,11 @@ Then open **http://localhost:4173**.
   hop-up, BB weight, grips, barrels, a silencer, magazines and batteries. Every choice is a trade-off, shown in numbers.
   Keep up to five **saved loadouts** (the tabs at the top, or keys 1 to 5): your changes go to the current one, and
   right-click one to rename, duplicate, replace or delete it. The Match screen's **Your match** switches them too.
-- **Armory (beta, free).** Field Credits come from matches you take part in, more for a win. Spend them on Tokens, then
-  take Shots, each a random draw of replicas and parts. An Epic or better is guaranteed within 20 Shots and a Legendary
-  within 100. Nothing is ever sold.
+- **Levels and the Armory.** You start at level 0 with the GBB Pistol and the AEG Rifle. Finished matches give XP
+  (more for a win, each round won and each hit, scaled by the difficulty) and each level, up to 10, unlocks parts for
+  good, with the Cyber Pistol at level 10. The top bar shows your level; click it, or **Armory** beside **Loadout**,
+  to see what you have unlocked and what each level gives. Items still to unlock show in the Loadout greyed, with
+  their level. Nothing is ever sold. The levels are in [levels.md](levels.md), which you can edit.
 - **Tutorial and Practice range.** The title screen's **Tutorial** teaches the basics in short coached steps (skip it,
   or resume it from the pause screen). **Practice range** puts you alone on a range with targets at 10 to 60 m.
 - **Squad orders and minimap.** Hold Z for the order wheel, or press F, X or V for Follow me, Hold here or Regroup. The
@@ -128,8 +130,9 @@ Then open **http://localhost:4173**.
 - **Callouts.** Your bot teammates call what they see and do ("Contact, Dock!", "Two left!") in the bottom left, with a
   radio click. **Settings › HUD › Callouts** turns them off.
 - **Dev content.** **Settings › Dev** (tick **Dev settings** under the list) has a **Dev content** switch for maps,
-  modes and gear still being built. Matches that use them aren't recorded and pay no Field Credits.
-- **Your save** (settings, collection, records, saved loadouts) lives in your browser. **Settings › Save** downloads it as a file and
+  modes and gear still being built, and **Disable levelling**, which unlocks every replica and part. Matches that use
+  either aren't recorded and give no XP.
+- **Your save** (settings, level, records, saved loadouts) lives in your browser. **Settings › Save** downloads it as a file and
   loads it back, and keeps a restore point each day.
 
 ### Controls
@@ -273,7 +276,8 @@ src/input     keyboard, mouse and pointer lock → commands
 src/map       map data (Depot, Woodland, Neon Heights), lighting, foliage
 src/nav       walkability grid and route finding
 src/physics   Rapier wrapper: level collision, character controller, ray casts
-src/pool      the asset pool, collection, Armory, bot kits, supply events
+src/pool      the asset pool, the Loadout's model, bot kits, Extraction cases, supply events
+src/progress  levels, XP and what the player has unlocked
 src/render    Three.js presentation: maps, replicas, characters, BBs, effects, cameras
 src/save      guarded storage, save file, restore points, tab lock
 src/sim       pure simulation: plain-data state, fixed 60 Hz tick, commands, BBs, hits, rounds
@@ -284,7 +288,8 @@ src/ui        menus, HUD, scoreboard, minimap, hit feedback, debug overlay
 e2e           browser tests (Playwright)
 pipeline      gate script, perf harness, agent scripts
 docs          design notes, roadmap, process, playtest guide
-pool.md       every item, its rarity and the economy (hand-editable)
+pool.md       every item, Extraction's cases and supply events (hand-editable)
+levels.md     what each level unlocks, the XP it takes and what a match gives (hand-editable)
 stats.md      how every replica and part performs (hand-editable)
 callouts.md   what the bots call and how often (hand-editable)
 ```

@@ -4,14 +4,11 @@ import { BOT_BEHAVIOUR } from '../config/bots';
 import { PERFORMANCE_BARS, PERFORMANCE_SHEET } from '../config/menus';
 import { AIMING, IRON_SIGHTS, OPTICS } from '../config/optics';
 import { BB_WEIGHT, muzzleEnergy, muzzleVelocity } from '../config/replicas';
-import type { ScaledStat } from '../config/statsFile';
-import type { ItemRef } from '../pool/collection';
-import { bonusOf, type KitSlot, scaledCategory } from '../pool/kit';
-import type { Pool } from '../pool/pool';
+import type { KitSlot } from '../pool/kit';
 import { flightTime, hopUpReach } from '../sim/hopUp';
 
 /**
- * The Loadout's Performance sheet (M29): a replica's numbers as carried (its tier, power source and parts, the BB weight
+ * The Loadout's Performance sheet (M29): a replica's numbers as carried (its power source and parts, the BB weight
  * and hop-up picked), each against the same replica as it comes. Pure: the Customise screen draws the rows.
  */
 
@@ -142,37 +139,4 @@ export function sheetRows(now: Performance, factory: Performance, readoutRange: 
 export function gearLine(slot: KitSlot, grams: number): string {
   const r = slot.replica;
   return `${muzzleEnergy(r, grams).toFixed(2)} J · ${rate(r.fireRate)} BBs/s · ${handlingOf(r, slot.parts).magSize} BBs`;
-}
-
-/** How the Armory names what a tier improves, in the order it lists them, and which way each goes. */
-const TIER_WORDS: readonly { stat: ScaledStat; word: string; sign: '+' | '−' }[] = [
-  { stat: 'energy', word: 'energy', sign: '+' },
-  { stat: 'fireRate', word: 'rate of fire', sign: '+' },
-  { stat: 'spread', word: 'spread', sign: '−' },
-  { stat: 'reload', word: 'reload', sign: '−' },
-  { stat: 'draw', word: 'draw', sign: '−' },
-  { stat: 'raise', word: 'aim raise', sign: '−' },
-  { stat: 'shake', word: 'sprint shake', sign: '−' },
-];
-
-/**
- * What an item's tier means, in a line for the Loadout (audit POOL-10): "Legendary: −15% spread · …", or
- * "Common: no tier bonus".
- */
-export function tierBlurb(pool: Pool, ref: ItemRef): string {
-  const label = pool.tiers.find((t) => t.id === ref.tier)?.label ?? ref.tier;
-  return `${label}: ${tierLine(pool, ref) || 'no tier bonus'}`;
-}
-
-/**
- * What an item's tier adds (stats.md's Tier scaling times its tier's Bonus), for the Armory, e.g. "+7.5% energy ·
- * +7.5% rate of fire · −15% spread · −15% reload · −15% draw"; '' for a tier that adds nothing (Common).
- */
-export function tierLine(pool: Pool, ref: ItemRef): string {
-  const asset = pool.byId.get(ref.asset);
-  if (!asset || !scaledCategory(asset)) return '';
-  return TIER_WORDS.flatMap(({ stat, word, sign }) => {
-    const pct = Math.round(bonusOf(pool, ref, stat) * 1000) / 10;
-    return pct > 0 ? [`${sign}${pct}% ${word}`] : [];
-  }).join(' · ');
 }

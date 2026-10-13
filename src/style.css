@@ -55,7 +55,7 @@
   --menu-soft: #d6def2;
   --menu-muted: #b4c0dc;
   --menu-faint: #8592b3;
-  /* Accents: blue for information, acid for good news, the tiers' colours below (menus.css). */
+  /* Accents: blue for information, acid for good news. */
   --menu-blue: #79b0ff;
   --menu-acid: #c8ff2e;
   --menu-good: #5ce08a;
@@ -829,13 +829,9 @@ kbd {
   background: var(--paper);
 }
 
-/* The haul on the match summary (M44): its line, then the parts as the Armory reveals them */
+/* The haul on the match summary (M44): its heading and its line */
 .summary-haul:empty {
   display: none;
-}
-
-.summary-haul .armory-reveal-grid {
-  margin-top: 8px;
 }
 
 /* The order wheel (M23): the orders round the middle of the screen while its key is held */

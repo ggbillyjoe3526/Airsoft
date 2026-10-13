@@ -285,7 +285,7 @@ const LEVEL_NAMES = { easy: 'Easy', normal: 'Normal', hard: 'Hard', pro: 'Pro' }
 const pct = (x) => `${n(100 * x, 0)} %`;
 
 /**
- * Pay in line (CT3): each sweep's Field Credits a minute (the balance runner's `pay` meta) beside Elimination's on the
+ * Pay in line (CT3): each sweep's XP a minute (the balance runner's `pay` meta) beside Elimination's on the
  * same map, lighting and level, as a ratio held to its band (`band`, config/contentRules.ts MODE_BALANCE_BANDS.pay). A
  * sweep with no Elimination beside it, or Elimination's own, adds nothing; one not judged (dev content) is a figure. Outside
  * the band by less than two standard errors (each side's `noise`, modePay.ts roundsPayNoise) asks for a look.
@@ -295,8 +295,8 @@ export function payResults(pays) {
   for (const p of pays.filter((x) => x.mode !== 'elimination')) {
     const ref = pays.find((x) => x.mode === 'elimination' && x.map === p.map && x.lighting === p.lighting && x.level === p.level);
     if (!ref) continue;
-    const ratio = ref.fcPerMinute > 0 ? p.fcPerMinute / ref.fcPerMinute : Number.NaN;
-    const figures = `${n(p.fcPerMinute, 0)} FC a minute against Elimination's ${n(ref.fcPerMinute, 0)} (${Number.isFinite(ratio) ? `× ${n(ratio)}` : 'no ratio'}; target × ${n(p.band.min)} to × ${n(p.band.max)})`;
+    const ratio = ref.xpPerMinute > 0 ? p.xpPerMinute / ref.xpPerMinute : Number.NaN;
+    const figures = `${n(p.xpPerMinute, 0)} XP a minute against Elimination's ${n(ref.xpPerMinute, 0)} (${Number.isFinite(ratio) ? `× ${n(ratio)}` : 'no ratio'}; target × ${n(p.band.min)} to × ${n(p.band.max)})`;
     const inBand = Number.isFinite(ratio) && ratio >= p.band.min && ratio <= p.band.max;
     // Two standard errors of the ratio, from each side's own (a share of its pay): outside by less asks for more seeds.
     const se = Number.isFinite(ratio) ? ratio * Math.hypot(p.noise || 0, ref.noise || 0) : 0;
