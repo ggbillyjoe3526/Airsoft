@@ -38,6 +38,19 @@ export interface NavGrid {
   headroom: number;
   /** A route end snaps to a floor further below it than this only when none nearer its height is in reach (G11). */
   snapDrop: number;
+  /**
+   * Vaults (M102, nav/vaultLinks.ts): links from a node in front of a low obstacle to the node past it, which a route
+   * search takes only when asked (NavSearch.vaults: bots' routes, never a walk-off or a walk time). Absent until built.
+   */
+  vaults?: VaultLinks;
+}
+
+/** A grid's vault links, by node they start from: node k's are start[k] .. start[k + 1] - 1. */
+export interface VaultLinks {
+  start: Int32Array;
+  /** The node each link lands on, and what taking it costs a search (cells: its length and a vault's price). */
+  to: Int32Array;
+  cost: Float32Array;
 }
 
 export interface NavGridConfig {
@@ -471,6 +484,8 @@ export interface NavSearch {
   startNode: number;
   goalNode: number;
   nodes: number[];
+  /** Searches take the grid's vault links (NavGrid.vaults, M102): bots' routes, when the bot may vault. */
+  vaults: boolean;
 }
 
 export function createNavSearch(grid: NavGrid): NavSearch {
@@ -491,6 +506,7 @@ export function createNavSearch(grid: NavGrid): NavSearch {
     startNode: -1,
     goalNode: -1,
     nodes: [],
+    vaults: false,
   };
 }
 
@@ -738,7 +754,8 @@ function pushStart(s: NavSearch, a: number): void {
 
 /**
  * 8-neighbour A* over nodes without corner cutting (octile heuristic towards s.goalNode; none and run to the end when
- * it is -1), carrying on the open search in `s` for at most `budget` expansions. Fills s.g and s.from.
+ * it is -1), and the grid's vault links when `s.vaults` (each costs at least its length, so the heuristic still holds),
+ * carrying on the open search in `s` for at most `budget` expansions. Fills s.g and s.from.
  */
 function expand(g: NavGrid, s: NavSearch, budget: number): SearchStep {
   const gen = s.generation;
@@ -752,6 +769,7 @@ function expand(g: NavGrid, s: NavSearch, budget: number): SearchStep {
   const bi = bc % cols;
   const bj = (bc - bi) / cols;
   const h = b >= 0 ? 1 : 0;
+  const links = s.vaults ? g.vaults : undefined;
   let size = s.size;
   let spent = 0;
 
@@ -825,6 +843,37 @@ function expand(g: NavGrid, s: NavSearch, budget: number): SearchStep {
       const dj = Math.abs(nj - bj);
       const f = ng + h * (di > dj ? di + (SQRT2 - 1) * dj : dj + (SQRT2 - 1) * di);
       // Push and sift up.
+      let i = size++;
+      while (i > 0) {
+        const p = (i - 1) >> 1;
+        if (heapF[p]! <= f) break;
+        heap[i] = heap[p]!;
+        heapF[i] = heapF[p]!;
+        i = p;
+      }
+      heap[i] = n;
+      heapF[i] = f;
+    }
+    // Over a low obstacle (M102): each vault link from here, at its price.
+    if (!links) continue;
+    for (let l = links.start[c]!, end = links.start[c + 1]!; l < end; l++) {
+      const n = links.to[l]!;
+      if (s.closed[n] === gen) continue;
+      const ng = gc + links.cost[l]!;
+      if (s.stamp[n] === gen && s.g[n]! <= ng) continue;
+      s.stamp[n] = gen;
+      s.g[n] = ng;
+      s.from[n] = c;
+      if (size >= heap.length) {
+        growHeap(s, size);
+        heap = s.heap;
+        heapF = s.heapF;
+      }
+      const nc = g.nodeCell[n]!;
+      const ni = nc % cols;
+      const di = Math.abs(ni - bi);
+      const dj = Math.abs((nc - ni) / cols - bj);
+      const f = ng + h * (di > dj ? di + (SQRT2 - 1) * dj : dj + (SQRT2 - 1) * di);
       let i = size++;
       while (i > 0) {
         const p = (i - 1) >> 1;

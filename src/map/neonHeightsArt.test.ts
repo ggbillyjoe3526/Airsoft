@@ -51,7 +51,8 @@ describe('Neon Heights art (M34f)', () => {
     // Pinned from main before M34f (2026-10-05, 4780b4a): 281 blocks, the street one slab. Re-pinned for M55 (audit
     // SIM-04): 297 blocks, the same space filled without two blocks in one place (walls stop under the floors laid
     // into them, the Sky Bridge ends at the Tower's wall, planters stand against walls); the nav grid below is as it was.
-    expect(playFingerprint(NEON_HEIGHTS.blocks)).toBe('297:9333f1ea');
+    // Re-pinned for M102: 296, a Capsules window broken down to a low wall to vault (its lintel gone, the sill 0.9 m).
+    expect(playFingerprint(NEON_HEIGHTS.blocks)).toBe('296:13c8cae2');
   });
 
   it('gives the bots exactly the same nav grid as before its art', () => {
@@ -64,10 +65,11 @@ describe('Neon Heights art (M34f)', () => {
     // A wall rising through a floor's edge, cut at the floor, would put its part over the floor on the bots' cover list
     // and its strip beside the floor would roof the cells next to it at night (the Plaza stair's foot): such walls stay
     // whole (seatFloors). The cover lists, pinned after M55: main's (a9c45dd), but for the planters butted against walls,
-    // the Sky Bridge's sides ending at the Tower and the stairwell's south wall starting past its west wall.
+    // the Sky Bridge's sides ending at the Tower and the stairwell's south wall starting past its west wall. M102: one
+    // window sill fewer (the Capsules' low wall you vault is under a crouched player's eyes, so not cover).
     const nav = buildNavGrid(NEON_HEIGHTS, NAV);
     const cover = [...lowCoverBlocks(NEON_HEIGHTS.blocks, nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), ...tallCoverBlocks(NEON_HEIGHTS.blocks, nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap)];
-    expect(`${cover.length}:${fnv(cover.map((c) => [c.x, c.z, c.halfX, c.halfZ].join(',')).join('|'))}`).toBe('180:0a302f02');
+    expect(`${cover.length}:${fnv(cover.map((c) => [c.x, c.z, c.halfX, c.halfZ].join(',')).join('|'))}`).toBe('179:b551e99c');
     // Whether night sight counts each nav node indoors, pinned from main before M55 (2026-10-05, a9c45dd).
     const field = buildNightField(mapUnderLighting(NEON_HEIGHTS, 'night'), NIGHT_SIGHT, true)!;
     let roofed = '';
@@ -82,7 +84,7 @@ describe('Neon Heights art (M34f)', () => {
     // Measured on main before M55 (2026-10-05, claude/audit2-fixes-1padgo, 281 blocks): 2644.2 m³ of the solid blocks' union
     // on a 0.2 m grid over the map's plan; M55's 297 blocks measure the same, but for a 0.1 m sliver of a planter at the
     // grand stair's foot (0.13 m³ on a 0.1 m grid). Cutting a wall under a floor, or a strip beside it, and losing it
-    // is 3 to 5 m³.
+    // is 3 to 5 m³. M102 broke a Capsules window down to a low wall to vault: 0.8 m³ less (its lintel, 0.3 m off its sill).
     const CELL = 0.2;
     let volume = 0;
     for (let x = -23.6 + CELL / 2; x < 23.6; x += CELL) {
@@ -101,7 +103,7 @@ describe('Neon Heights art (M34f)', () => {
         }
       }
     }
-    expect(Math.abs(volume - 2644.2)).toBeLessThan(0.5);
+    expect(Math.abs(volume - 2643.4)).toBeLessThan(0.5);
   });
 
   it('is a city: every wall, floor and rail finished, the street paving with an asphalt road, no site toilet or container left', () => {

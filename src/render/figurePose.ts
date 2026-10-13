@@ -10,7 +10,7 @@ import { LEG_CLIPS, LEG_MODE, LEG_MODES, type LegBlend, legClipWeights, legDirec
  * The legs and the upper body are two layers. The legs blend standing, walking and running in four directions,
  * crouching, a jump, the sprint, the hit call and the walk-off, each clip's time stepped by the ground covered so feet
  * don't slide (or, in a match whose hit volumes follow the figures' legs, at the simulation's walk cycle: IM8,
- * sim/figureLegs.ts, which weighs the legs' clips by the same rules). The upper body is the same clips' unless the figure is in play and not sprinting: then it aims (the
+ * sim/figureLegs.ts, which weighs the legs' clips by the same rules). The upper body is the same clips' unless the figure is in play and not sprinting or vaulting: then it aims (the
  * rifle's or the pistol's three clips blended by the view's pitch), reloads (the clip run by the reload's progress) or
  * switches replica (the Switch clip, run backwards from the pistol to the rifle). The replica resting on cover blends
  * the aim into the Rest clips, which lean it in over the cover (where the file has them); one trigger press plays on top
@@ -98,6 +98,11 @@ export interface PoseInput {
   firstPerson: boolean;
   /** How settled the replica is on cover (0..1, Character.coverRest): the aim blends into the Rest clips by this much. */
   rest: number;
+  /**
+   * Vaulting (M102): the whole body plays the legs' clips (the jump, tucked by the crouch), the replica carried. A
+   * placeholder until the figures get a vault clip of their own (docs/HANDOFF.md).
+   */
+  vaulting: boolean;
   /**
    * The simulation's walk cycle (cycles, interpolated) when the match's hit volumes follow the figures' legs (IM8): every
    * cycle clip is played at it, so the drawn legs step with their hit volumes. Null: the figure steps its own cycles.
@@ -305,8 +310,8 @@ export function stepPose(state: PoseState, input: PoseInput, dt: number, table: 
   t[S.Jump] = Math.min(J.to, J.from + Math.max(0, input.airTime));
   t[S.HitCall] = Math.min(state.call, len(table, S.HitCall) * LAST);
 
-  // The upper layer: in play (not out), not sprinting, and not your own first-person body.
-  const overlayOn = alive && wantMode === GAIT && !input.firstPerson;
+  // The upper layer: in play (not out), not sprinting or vaulting, and not your own first-person body.
+  const overlayOn = alive && wantMode === GAIT && !input.vaulting && !input.firstPerson;
   state.overlay += ((overlayOn ? 1 : 0) - state.overlay) * ease(dt, B.mode);
   const ko = ease(dt, B.overlay);
   const reloading = input.reload !== null;

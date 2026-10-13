@@ -158,6 +158,8 @@ export class TutorialTracker {
         return v.events.some((e) => e.type === 'reloadEnd' && e.characterId === p.id);
       case 'fireMode':
         return v.events.some((e) => e.type === 'fireMode' && e.characterId === p.id);
+      case 'vault':
+        return v.events.some((e) => e.type === 'footstep' && e.kind === 'vault' && e.characterId === p.id);
       case 'sprintShot':
         if (p.sprinting) {
           this.sprinted = true;

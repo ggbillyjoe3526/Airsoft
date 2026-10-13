@@ -52,8 +52,8 @@ describe("Neon Heights' dressing changes nothing in play (G9)", () => {
 
   it('has a dressing, and keeps its blocks in their exact order (the art test pins them)', () => {
     expect(NEON_HEIGHTS.dressing).toBeDefined();
-    // The pin of neonHeightsArt.test.ts: the same 297 blocks in the same order, so the colliders are built as before.
-    expect(playFingerprint(NEON_HEIGHTS.blocks)).toBe('297:9333f1ea');
+    // The pin of neonHeightsArt.test.ts: the same 296 blocks in the same order, so the colliders are built as before.
+    expect(playFingerprint(NEON_HEIGHTS.blocks)).toBe('296:13c8cae2');
     expect(NEON_HEIGHTS.blocks).toBe(BARE.blocks);
     expect(NEON_HEIGHTS.decor).toBe(BARE.decor);
     expect(NEON_HEIGHTS.lanes).toBe(BARE.lanes);

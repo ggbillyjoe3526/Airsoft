@@ -140,6 +140,7 @@ export class RiggedFigure {
     reload: null,
     draw: null,
     firstPerson: false,
+    vaulting: false,
     rest: 0,
     cycle: null,
   };
@@ -278,6 +279,7 @@ export class RiggedFigure {
     input.side = c.velocity.x * cos - c.velocity.z * sin;
     input.crouch = c.prevCrouchAmount + (c.crouchAmount - c.prevCrouchAmount) * a;
     input.sprinting = c.sprinting;
+    input.vaulting = c.vault.active;
     input.airborne = !c.grounded;
     input.airTime = c.airTime;
     // Resting on cover (M104): the Rest clips lean the aim in over it. A file without them leans by FIGURE_RIG.rest: the

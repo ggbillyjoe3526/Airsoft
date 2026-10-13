@@ -4,6 +4,7 @@ import { FLAG } from '../config/modes';
 import { BODY, MOVEMENT } from '../config/movement';
 import { NAV } from '../config/nav';
 import { PHYSICS } from '../config/physics';
+import { VAULT_WALL_HEIGHT, VAULT_WALL_MAX_DEPTH } from '../config/vault';
 import { buildNavGrid, canStep, cellX, cellZ, createNavSearch, findPath, floorAt, isWalkableAt, type NavGrid, nearestWalkable, nodeAt, stepNode } from '../nav/navGrid';
 import { initPhysics, PhysicsWorld } from '../physics/physicsWorld';
 import { createCharacter } from '../sim/character';
@@ -245,8 +246,11 @@ describe('Depot map', () => {
   it('uses only cover that is unclimbable, and low cover that hides a crouched player', () => {
     expect(CROUCHED_EYE).toBeLessThan(DEPOT_LAYOUT.crouchCoverHeight - CROUCH_HIDE_MARGIN);
     expect(STANDING_EYE).toBeGreaterThan(DEPOT_LAYOUT.crouchCoverHeight);
-    // The dock's open edge too: you can jump down from it, not up onto it.
-    for (const b of [...cover.filter((c) => Math.abs(bottom(c) - baseOf(c)) < EPS), dock]) {
+    // The dock's open edge too: you can jump down from it, not up onto it. A low wall built to be vaulted (M102) is
+    // neither cover nor a ledge: too thin to stand on (vaultSpots.test.ts checks it is vaulted both ways).
+    const vaultWall = (b: MapBlock): boolean =>
+      Math.abs(top(b) - baseOf(b) - VAULT_WALL_HEIGHT) < EPS && Math.min(b.size.x, b.size.z) <= VAULT_WALL_MAX_DEPTH + EPS;
+    for (const b of [...cover.filter((c) => Math.abs(bottom(c) - baseOf(c)) < EPS && !vaultWall(c)), dock]) {
       const h = top(b) - baseOf(b);
       const where = `${b.kind} at ${JSON.stringify(b.center)} is ${h} m tall`;
       expect(h <= PHYSICS.maxWalkableLedge || h >= MIN_UNCLIMBABLE_HEIGHT, where).toBe(true);

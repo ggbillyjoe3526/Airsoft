@@ -5,7 +5,8 @@ game state and never write it. Tests use the fake DOM in `testSupport.ts` (no js
 
 - In-match HUD: `hud.ts` (crosshair, replica panel), `ammoStatus.ts`, `crosshair.ts`, `scoreboard.ts`, `roundBanner.ts`,
   `hitFeed.ts`, `hitFeedback.ts`, `soundCues.ts`, `teammateMarkers.ts`, `flagMarker.ts`, `flagStatus.ts`,
-  `runStatus.ts`, `casePrompt.ts`, `whatGotYou.ts`, `squadOrderLine.ts`, `orderWheel.ts`.
+  `runStatus.ts`, `casePrompt.ts`, `whatGotYou.ts`, `squadOrderLine.ts`, `orderWheel.ts`, `vaultPrompt.ts` (the key to
+  vault while a vault is there, M102).
 - Map and stats: `minimap.ts` (the field drawn once per match on a canvas) with `minimapView.ts` (teammates and heard
   players), `matchBoard.ts` (Tab), `statsRows.ts` (pure) and `statsTable.ts`, `recordsView.ts`, `rangeReadout.ts`
   (Practice's line and the timed challenge's banner), `performanceSheet.ts` (the Customise screen's Performance sheet).

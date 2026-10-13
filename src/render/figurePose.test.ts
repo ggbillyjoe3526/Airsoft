@@ -43,6 +43,7 @@ const input = (over: Partial<PoseInput> = {}): PoseInput => ({
   reload: null,
   draw: null,
   firstPerson: false,
+  vaulting: false,
   rest: 0,
   cycle: null,
   ...over,
@@ -185,6 +186,7 @@ describe('upper body: the aim layer', () => {
     ['calling', { status: 'calling' }],
     ['walking off', { status: 'walkingOff' }],
     ['in first person', { firstPerson: true }],
+    ['vaulting', { vaulting: true, airborne: true, airTime: 0.2, crouch: 0.6, forward: 4 }],
   ];
   for (const [name, over] of off) {
     it(`is off while ${name}: the upper body plays the legs' clips`, () => {
