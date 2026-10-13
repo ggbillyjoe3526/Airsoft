@@ -296,6 +296,11 @@ export class CombatPresentation {
     this.sfx.orderHeard();
   }
 
+  /** A bot's callout over the radio (CL1): a teammate's in your ear, an enemy's from where they stand if close. */
+  radioCall(speaker: Character, teammate: boolean): void {
+    this.sfx.radioCall(speaker, teammate);
+  }
+
   /** The practice range's timed challenge (M93): the countdown's beeps, the start's long one, the end's whistle. */
   challengeCue(cue: ChallengeCue): void {
     this.sfx.challengeCue(cue);

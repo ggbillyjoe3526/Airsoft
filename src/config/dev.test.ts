@@ -43,7 +43,7 @@ describe('Dev settings (M24)', () => {
     expect(devCheating({ ...DEV_DEFAULTS, bottomlessMags: true })).toBe(true);
     expect(devCheating({ ...DEV_DEFAULTS, gameSpeed: 0.5 })).toBe(true);
     expect(devIntro()).toBe(
-      "For trying things out. With Disable levelling, Game speed, Bottomless magazines, Ghost, Bots hold fire, Spectate any bot, Bot intentions or Time of day changed, matches don't go into your records.",
+      "For trying things out. With Disable levelling, Game speed, Bottomless magazines, Ghost, Bots hold fire, Spectate any bot, Bot intentions, Adaptive difficulty or Time of day changed, matches don't go into your records.",
     );
   });
 

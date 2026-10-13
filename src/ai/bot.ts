@@ -67,9 +67,10 @@ export interface Bot {
   character: Character;
   /**
    * How good this bot is and its habits: its team's difficulty level (M20) with its personality laid over it (BN1,
-   * ai/personality.ts personalSkill). Everything else it is tuned by is `BotWorld.cfg`.
+   * ai/personality.ts personalSkill). Everything else it is tuned by is `BotWorld.cfg`. Changed only between rounds, by
+   * adaptive difficulty (AD1, BotController.setTeamSkill), the personality laid over the new level again.
    */
-  readonly skill: BotSkill;
+  skill: BotSkill;
   /** Its personality's key (bots.md: "rusher"), or '' without one. */
   readonly personality: string;
   /** What its personality changes besides the skill (BN1): pushing in, its own lane, holding, aiming from cover. */

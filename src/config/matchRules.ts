@@ -40,7 +40,7 @@ export interface MatchRules {
   semiAutoOnly: boolean;
   /** Realcap: everyone's magazines hold at most REALCAP.magSize BBs and REALCAP.mags are carried. */
   realcap: boolean;
-  /** Everyone carries the factory loadout (config/replicas.ts LOADOUT as it comes): no unlocked gear, no rolled bot kits. */
+  /** Everyone carries the factory loadout (config/replicas.ts LOADOUT as it comes): no unlocked gear, no bot kits (bot-kits.md). */
   factoryKit: boolean;
   /**
    * Strict marshal: the overshooting rule counts double (one warning, then you sit the next round out). INERT: a
@@ -158,7 +158,7 @@ export const MAGAZINE_CHOICES: readonly MatchChoice<MagazineRule>[] = [
 
 export type KitRule = 'own' | 'factory';
 export const KIT_CHOICES: readonly MatchChoice<KitRule>[] = [
-  { id: 'own', label: 'Your kit', blurb: 'You carry your Loadout, unlocked gear and all; Hard and Pro opponents roll their own.' },
+  { id: 'own', label: 'Your kit', blurb: 'You carry your Loadout, unlocked gear and all; opponents carry their own kits.' },
   { id: 'factory', label: 'Factory', blurb: 'Everyone carries the factory rifle and pistol as they come: only skill counts.' },
 ];
 

@@ -71,9 +71,12 @@ const NO_DASH: readonly number[] = [];
 export class Minimap {
   private readonly frame: HTMLDivElement;
   private readonly caption: HTMLParagraphElement;
+  /** The named area you stand in (CL1), over the panel's top left: what your teammates' callouts call it. */
+  private readonly area: HTMLParagraphElement;
   private readonly root: HTMLCanvasElement;
   private readonly check = new FrameCheck();
   private shownCaption = '';
+  private shownArea = '';
   /** Frames actually drawn (the others were the same as the last): for the tests. */
   draws = 0;
   private readonly ctx: CanvasRenderingContext2D | null;
@@ -119,7 +122,9 @@ export class Minimap {
     this.root.className = 'minimap';
     this.caption = document.createElement('p');
     this.caption.className = 'minimap-caption';
-    this.frame.append(this.root, this.caption);
+    this.area = document.createElement('p');
+    this.area.className = 'minimap-area';
+    this.frame.append(this.root, this.caption, this.area);
     this.ctx = this.root.getContext('2d');
     this.storeys = storeys.length > 1 ? storeys : [];
     this.fields = this.storeys.length > 0 ? this.storeys.map((_, i) => drawField(blocks, terrain, foliage, this.storeys, i)) : [drawField(blocks, terrain, foliage)];
@@ -155,6 +160,11 @@ export class Minimap {
   /** The line under the panel: the map and the round ("Depot · Round 2"). */
   setCaption(text: string): void {
     if (text !== this.shownCaption) this.caption.textContent = this.shownCaption = text;
+  }
+
+  /** The named area you stand in (CL1, map/areas.ts), '' for none: set every frame, written only when it changes. */
+  setArea(text: string): void {
+    if (text !== this.shownArea) this.area.textContent = this.shownArea = text;
   }
 
   /**

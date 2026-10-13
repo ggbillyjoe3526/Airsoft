@@ -1,4 +1,5 @@
 import { HIT_FEED_MODES, type HitFeedMode, HUD_OPACITY, HUD_SIZE, SCOREBOARD_SIZE, WHAT_GOT_YOU_MODES, type WhatGotYouMode } from '../config/matchInfo';
+import { CALLOUT_CHOICES, type CalloutsMode, DEFAULT_CALLOUTS } from '../config/callouts';
 import { DEFAULT_MINIMAP_TURN, MINIMAP_TURN_CHOICES, type MinimapTurn } from '../config/minimap';
 import { browserStorage, loadSetting, oneOf } from '../settings/storage';
 import { menuRow, rangeControl } from './menus/menuParts';
@@ -16,11 +17,18 @@ export interface HudSettingsOptions {
   whatGotYou: { initial: WhatGotYouMode; onChange: (mode: WhatGotYouMode) => void };
   /** Whether the minimap turns with the view or stays north up (M83). No row without it. */
   minimapTurn?: { initial: MinimapTurn; onChange: (turn: MinimapTurn) => void };
+  /** Your teammates' callouts (CL1). No row without it. */
+  callouts?: { initial: CalloutsMode; onChange: (mode: CalloutsMode) => void };
 }
 
 /** Settings › HUD › Minimap (M83): Rotating (as it always was) unless the player picked Fixed. */
 export function loadMinimapTurn(storage = browserStorage()): MinimapTurn {
   return loadSetting('minimapTurn', oneOf(MINIMAP_TURN_CHOICES.map((c) => c.id)), DEFAULT_MINIMAP_TURN, storage);
+}
+
+/** Settings › HUD › Callouts (CL1): on unless the player turned them off. */
+export function loadCallouts(storage = browserStorage()): CalloutsMode {
+  return loadSetting('callouts', oneOf(CALLOUT_CHOICES.map((c) => c.id)), DEFAULT_CALLOUTS, storage);
 }
 
 /** The HUD tab's rows (Settings → HUD, M24), each saved and applied as it changes. */
@@ -49,6 +57,9 @@ export function hudSettings(opts: HudSettingsOptions): HTMLDivElement[] {
     ),
     ...(opts.minimapTurn
       ? [menuRow('Minimap', 'Turning with you, so the way you look is up, or fixed north up with your arrow turning.', new OptionPicker('Minimap', MINIMAP_TURN_CHOICES, opts.minimapTurn.initial, 'minimapTurn', opts.minimapTurn.onChange).root)]
+      : []),
+    ...(opts.callouts
+      ? [menuRow('Callouts', 'Your bot teammates calling what they see and do ("Contact, Dock!", "Two left"), bottom left.', new OptionPicker('Callouts', CALLOUT_CHOICES, opts.callouts.initial, 'callouts', opts.callouts.onChange).root)]
       : []),
   ];
 }

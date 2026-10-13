@@ -22,7 +22,7 @@ export interface KitStats {
 
 /**
  * The customisable places on a replica, besides its BB weight and hop-up (which aren't pooled). The weapon light (M33h)
- * comes last: bots' rolled kits skip it (pool/botKit.ts), so the slots before it draw as they did.
+ * comes last. A bot kit never fits one: bots carry it by rule on a night field (pool/botKit.ts botLight).
  */
 export type FitSlot = 'optic' | 'grip' | 'laser' | 'barrel' | 'muzzle' | 'magazine' | 'power' | 'light';
 export const FIT_SLOTS: readonly FitSlot[] = ['optic', 'grip', 'laser', 'barrel', 'muzzle', 'magazine', 'power', 'light'];

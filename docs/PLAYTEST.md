@@ -270,8 +270,8 @@ Dev › Disable levelling.
   green, a little larger at range, with a longer streak.
 - [ ] **Light** (dev content, night fields). Every replica has the Weapon Torch from level 0, switched with **T**. "No
   light" takes the torch off. Known bug: on the AEG rifle the Light row won't take "No light" (bug pass BP2 fixes it).
-- [ ] **Your setup is kept.** Reload the page: every pick is still there. Bots carry their replicas as they come,
-  except Hard opponents (see [Bots](#bots)).
+- [ ] **Your setup is kept.** Reload the page: every pick is still there. Your teammates carry their replicas as they
+  come; opponents carry kits of their own (see [Bots](#bots)).
 - [ ] **Edit `stats.md`.** Set the AEG's `Fire rate (BBs/s)` to 20 and run `npm run dev` again: the panel says
   20 BBs/s and every rifle fires faster. A typo (`2O`) shows in the browser console and `npm run test` names its
   line. Put it back.
@@ -370,8 +370,15 @@ team puts you on Beta instead.
   Hard and Pro still punish a slow answer? Do Normal bots still feel a threat?
 - [ ] **Difficulty.** Easy should feel clearly weaker than Hard. Hard bots sometimes come at a spot from the side;
   Easy never. A change mid-match applies from the next round, and the screen says so.
-- [ ] **Hard opponents' kit.** Their rifles differ (faster, silenced, longer-ranged); Play again rolls new kits. Easy
-  and Normal opponents and your teammates carry replicas as they come.
+- [ ] **The bots' kits (BG1).** Opponents on every level carry kits from `bot-kits.md`: on Easy mostly as they come,
+  each level up more of them scoped, silenced or with a red dot, Pro never plain; now and then a Cyber Pistol from Hard
+  up. Spectate a few: a scope or red dot shows on their rifle, and a silenced bot is heard nearer. Your teammates carry
+  replicas as they come. Rushers and flankers lean to Pointman, Support and Stealth kits, anchors and careful bots to
+  scopes (the scoreboard shows each bot's personality). Does gear make Normal feel unfair, or Hard too easy? Change a
+  weight in `bot-kits.md` and say which.
+- [ ] **A scoped bot (BG1).** At 25 m and more it holds its aim on you closer than an iron-sight bot once it has
+  settled, but takes a little longer to settle; up close, or when you cross its view, it is slower to find you. Does a
+  scoped bot read differently from a plain one?
 - [ ] **Bot names and personalities (BN1).** Every bot has a name (Dash, Rook, Fox, Owl…) on the scoreboard, in the
   hit feed, over your teammates' heads and on the "What got you" card, and the same name plays the same way every
   match. Over a few rounds can you tell them apart? A **Rusher** is first through the gap and runs at where you were;

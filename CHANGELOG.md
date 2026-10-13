@@ -34,6 +34,16 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **LV1** · The match summary shows the XP earned, its lines and any level-up with what it unlocked (#207)
 - **LV1** · Locked items show greyed in Loadout and Customise, with the level that unlocks them; the unlock table is `levels.md` (#207)
 - **LV1** · Dev tab: +500 XP, Level up and Reset level buttons (#207)
+- **BG1** · Opponents on every difficulty carry kits from bot-kits.md: Easy mostly plain, each level up more optics, grips and lasers
+- **BG1** · Pro bots are never plain, and now and then a Hard or Pro bot carries a Cyber Pistol; each bot keeps its kit on a replay
+- **BG1** · Your teammates keep plain replicas, as does everyone under the Factory kit house rule; what you have unlocked never changes the bots' gear
+- **BG1** · A bot aiming through a scope holds aim closer at range but settles later and is slower on close or crossing targets; a red dot is finer
+- **BG1** · Silenced bots are heard from nearer
+- **BG1** · Bots' figures show their gear: a red dot or scope on every rifle, and with Blender figures (Dev switches) grips, lasers and barrels too
+- **BG1** · Kits fit personality: rushers Support, Pointman or Cyber; anchors Marksman or Support; flankers Stealth or Pointman; careful Rifleman or Marksman
+- **AD1** · Adaptive difficulty, a Dev setting: the other team starts at your Opponents level and adapts to how you do; teammates and Extraction don't
+- **CL1** · Bot teammates call what they see and do in a text feed, bottom left, each with a radio click: "Contact, Dock!", "Reloading!" (Settings › HUD › Callouts)
+- **CL1** · Map places have names (Dock, Bay, Fort, Atrium, Sky Bridge and more), and the minimap shows the name of the area you stand in
 
 ### Changed
 - **M94** · The practice range is now Practice: pause reads "Practice · Range" or "Practice · Depot", and the tutorial's last button says Practice
@@ -49,6 +59,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **RM10** · Robots get boxier, mechanical limbs with pistons, bolts and plates, a white suit, team shoulder caps flush with the arm, no plus marks
 - **RM10** · Both Dev figures rest the replica on cover (rifle and pistol, level, up or down) and vault low walls in their own animations
 - **RM10** · A vaulting figure's hit area follows its legs over the wall
+- **BG1** · Hard and Pro's random gear roll and the Cyber Pistol carrier that needed you to have one are replaced by the bot kits
 
 ### Fixed
 - **M92** · Bots firing on the move hold fire when a teammate is down the line, so they no longer hit teammates past the end of a wall

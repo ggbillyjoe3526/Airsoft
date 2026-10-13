@@ -14,6 +14,7 @@ meshes. The format, coordinates and Extraction block are in `docs/ARCHITECTURE.m
   `playableMode.ts` falls back to Elimination where a mode's data is missing.
 - `surfaces.ts` (walkable heights), `terrain.ts` (heightfield), `foliage.ts` (bushes: concealment, not cover),
   `groundSurfaces.ts` (ground patches that footsteps and the terrain read).
+- `areas.ts` (CL1): `areaAt`, the named area at a spot (`MapData.areas`), for the bots' callouts and the minimap's label.
 - Practice (M94): `practicePlaces.ts` (the range or a map, saved as `practicePlace`), `practiceSpots.ts` (where its
   targets stand on a map, from the map's lanes, starts and overlooks) and `practiceLayout.ts` (which of the range's kinds
   stands at each, and the timed challenge's START plate; tuning `config/practice.ts`).

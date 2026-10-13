@@ -3,7 +3,7 @@ import { createRng, rngNext } from '../sim/rng';
 import { type Vec3, vec3 } from '../sim/vec';
 import type { Bush } from './foliage';
 import type { MapLight } from './nightSight';
-import type { BlockKind, GroundPatch, MapBlock, MapData, MapGround, SpawnPoint } from './mapTypes';
+import type { BlockKind, GroundPatch, MapArea, MapBlock, MapData, MapGround, SpawnPoint } from './mapTypes';
 import { buildTerrain, type Terrain, terrainHeightAt } from './terrain';
 import { WOODLAND_DRESSING } from './woodlandDressing';
 import { woodlandExtraction } from './woodlandExtraction';
@@ -567,6 +567,29 @@ const SPAWNS: [SpawnPoint[], SpawnPoint[]] = [END0_SPAWNS.map(spawnAt), END1_SPA
 const COVER: MapBlock[] = [...END0_CAMP, ...END1_CAMP, ...FORT, ...cabin(), ...BOULDERS, ...LOGS, ...APPROACH_COVER, OAK];
 const BLOCKS: MapBlock[] = [...fence(), ...COVER, ...woods(LANE_POINTS, COVER)];
 
+/**
+ * Named areas (CL1): what the bots call ("Contact, Oak!") and the minimap's caption shows, as plan boxes [x0, x1, z0, z1].
+ * The first that holds a point names it, so the fort comes before the Knoll round it and the cabin before the creek.
+ * Together they cover the field (map.areas, content rules).
+ */
+const AREAS: readonly (readonly [string, number, number, number, number])[] = [
+  ['Fort', 94, 109, 39, 55],
+  ['Cabin', 61, 72, 17, 28],
+  ['Woodpile', 34, 47, 61, 68],
+  ['Oak', 50, 60, 38, 50],
+  ['Sunken track', 72, 95, 20, 37],
+  ['West camp', 0, 13, 0, SIZE_Z],
+  ['East camp', 111, SIZE_X, 0, SIZE_Z],
+  ['Knoll', 86, 111, 25, 64],
+  ['North shoulder', 86, 111, 64, SIZE_Z],
+  ['West pines', 13, 55, 62, SIZE_Z],
+  ['East pines', 55, 86, 62, SIZE_Z],
+  ['West Rise', 13, 30, 25, 62],
+  ['West meadow', 30, 58, 25, 62],
+  ['East meadow', 58, 86, 25, 62],
+  ['Creek', 13, 111, 0, 25],
+];
+
 export const WOODLAND: MapData = {
   name: 'Woodland',
   blocks: BLOCKS,
@@ -588,6 +611,7 @@ export const WOODLAND: MapData = {
   extraction: woodlandExtraction({ onGround, spawnAt, westCamp: SPAWNS[0] }),
   // G9: the woods' set dressing (look only: map/woodlandDressing.ts).
   dressing: WOODLAND_DRESSING,
+  areas: AREAS.map(([name, x0, x1, z0, z1]): MapArea => ({ name, box: [worldX(x0), worldX(x1), worldZ(z1), worldZ(z0)] })),
 };
 
 /** Layout facts the tests check against (world coordinates), exported so they can't drift from the geometry. */

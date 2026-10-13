@@ -1,4 +1,5 @@
-import type { BotBehaviour, BotSkill } from '../config/bots';
+import { BOT_SIGHT_AIM, type BotBehaviour, type BotSightAim, type BotSkill } from '../config/bots';
+import type { Character } from '../sim/character';
 import { type RngState, rngNext } from '../sim/rng';
 import { wrapAngle } from '../sim/vec';
 
@@ -27,18 +28,33 @@ export function createAim(yaw: number): AimState {
   return { yaw, pitch: 0, errYaw: 0, errPitch: 0, goalErrYaw: 0, goalErrPitch: 0, wanderLeft: 0, firstYaw: 0, firstPitch: 0 };
 }
 
+/** Iron sights: the difficulty's own aim (BOT_SIGHT_AIM.iron). */
+const IRON = BOT_SIGHT_AIM.iron;
+
+/** How the sight on `c`'s replica in hand changes its aim (BG1): its fitted optic's, or iron sights'. */
+export function sightAim(c: Character): BotSightAim {
+  const a = c.armament;
+  return BOT_SIGHT_AIM[a.optics[a.active] ?? 'iron'];
+}
+
+/** Seconds a new target's aim takes to settle for `skill` through `sight` (aimSettleTime, BG1). */
+export function settleTime(skill: BotSkill, sight: BotSightAim = IRON): number {
+  return skill.aimSettleTime * sight.settleTime;
+}
+
 /**
  * Aim error size (radians) `sinceAcquired` seconds after picking up a target `dist` metres away that
  * moves across the view at `sideways` m/s: starts large and settles over aimSettleTime; worse while the
  * bot moves or the target does. The starting error is never smaller than aimErrorStartMetres off the
- * target, so up close the first BBs can miss.
+ * target, so up close the first BBs can miss. `sight` scales the settling, that floor up close and the settled
+ * and tracking errors (BOT_SIGHT_AIM, BG1).
  */
-export function aimErrorSize(sinceAcquired: number, moving: boolean, dist: number, sideways: number, skill: BotSkill): number {
-  const t = Math.min(1, Math.max(0, sinceAcquired / skill.aimSettleTime));
+export function aimErrorSize(sinceAcquired: number, moving: boolean, dist: number, sideways: number, skill: BotSkill, sight: BotSightAim = IRON): number {
+  const t = Math.min(1, Math.max(0, sinceAcquired / settleTime(skill, sight)));
   const d = Math.max(dist, 1e-3);
-  const start = Math.max(skill.aimErrorStartDeg * DEG, Math.atan2(skill.aimErrorStartMetres, d));
-  const settled = skill.aimErrorSettledDeg * DEG;
-  const tracking = Math.atan2(Math.abs(sideways) * skill.aimErrorTracking, d);
+  const start = Math.max(skill.aimErrorStartDeg * DEG, Math.atan2(skill.aimErrorStartMetres * sight.close, d));
+  const settled = skill.aimErrorSettledDeg * sight.settled * DEG;
+  const tracking = Math.atan2(Math.abs(sideways) * skill.aimErrorTracking * sight.tracking, d);
   return start + (settled - start) * t + (moving ? skill.aimErrorMovingDeg * DEG : 0) + tracking;
 }
 
@@ -46,10 +62,10 @@ export function aimErrorSize(sinceAcquired: number, moving: boolean, dist: numbe
  * The part of aimErrorSize that settles (radians): the starting error over the settled one, gone after aimSettleTime.
  * It is the first aim's (AimState.firstYaw, off to one side, G11); the rest, settled, moving and tracking, wanders.
  */
-export function aimFirstErrorSize(sinceAcquired: number, dist: number, skill: BotSkill): number {
-  const t = Math.min(1, Math.max(0, sinceAcquired / skill.aimSettleTime));
-  const start = Math.max(skill.aimErrorStartDeg * DEG, Math.atan2(skill.aimErrorStartMetres, Math.max(dist, 1e-3)));
-  return Math.max(0, start - skill.aimErrorSettledDeg * DEG) * (1 - t);
+export function aimFirstErrorSize(sinceAcquired: number, dist: number, skill: BotSkill, sight: BotSightAim = IRON): number {
+  const t = Math.min(1, Math.max(0, sinceAcquired / settleTime(skill, sight)));
+  const start = Math.max(skill.aimErrorStartDeg * DEG, Math.atan2(skill.aimErrorStartMetres * sight.close, Math.max(dist, 1e-3)));
+  return Math.max(0, start - skill.aimErrorSettledDeg * sight.settled * DEG) * (1 - t);
 }
 
 /**

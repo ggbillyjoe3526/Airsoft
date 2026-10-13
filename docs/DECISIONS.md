@@ -365,6 +365,13 @@ replaces its line; the old one stays findable in the archive or in git.
   hear alike. Opponents and teammates have separate difficulties (owner, 2026-10-03).
 - **Normal is the baseline (owner, 2026-10-06, playtest note 19).** Tune on Normal, then check that Easy, Hard and Pro
   still scale. Extraction wants more opponents, not fewer.
+- **Adaptive difficulty is a Dev setting that layers over the fixed levels (owner, 2026-10-06: "auto difficulty as a
+  Dev setting"; AD1, 2026-10-13).** It never changes a level's own numbers: the other team's skill is a rating between
+  the levels whose numbers blend, with the switches of the level nearest it. Your teammates never adapt, Extraction
+  doesn't, and its matches stay out of the records and give no XP, like the other Dev settings that change play. A
+  later change to a level's skill (bot gear) reaches it through `BOT_SKILL`, each bot's personality (BN1) lays over the
+  adapted numbers as over a fixed level's, and a new skill field goes in one of its two lists
+  (`config/adaptiveDifficulty.ts`).
 - **Against Easy opponents, teammates play Normal (owner, 2026-10-05, 07:06).** Otherwise teammates follow the
   opponents' level. That default pair counts as the standard match for the records.
 - **Pro is careful, not twitchier (owner approved the plan and all fourteen defaults, 2026-10-04).** Pro bots hold and
@@ -373,9 +380,23 @@ replaces its line; the old one stays findable in the archive or in git.
   no gear is locked behind the hardest level. A "what got you" card exists on every difficulty and is on by default only
   on Pro.
 - **Difficulty is balanced with the maps; any map rework it needs is raised with the owner first (owner, 2026-10-04).**
-- **On Hard and Pro, opponents roll their own random but compatible kits (owner, 2026-10-04: "the enemy bots can have
-  their own random (but compatible) loadouts").** Seeded by the match seed, so a seed replays. Your teammates stay
-  factory, so they don't outgun you by luck. BB weight and hop-up stay factory.
+- **Opponents on every level carry kits from `bot-kits.md`, picked by each level's weights (2026-10-13, BG1; Dev 6 item
+  23, audit POOL-24).** It keeps the owner's 2026-10-04 wish, "the enemy bots can have their own random (but
+  compatible) loadouts", which gave Hard and Pro a random part per slot: each opponent still picks its own, seeded by
+  the match seed and its id, so a seed replays. Named kits that make sense (a scope with a tight-bore barrel, a
+  silencer with a low-cap magazine) replace the per-slot roll, and the owner edits what bots carry and how often in one
+  table. Easy is mostly factory, each level up carries more, Pro never factory; the weights are first guesses for his
+  playtest. Your teammates stay factory (owner, 2026-10-04), so they don't outgun you by luck. BB weight and hop-up stay
+  factory. What you have unlocked never changes a bot's kit: the Cyber Pistol is a kit of its own from Hard up, no
+  longer carried only once you have one (M32; earned by levelling after LV1).
+- **A bot aims through the sight on its replica; gear never changes what it sees or hears (2026-10-13, BG1).** A 2x
+  scope holds 40 % finer once settled but settles 10 % later, starts 40 % wider up close and loses a crossing target
+  50 % more; a red dot is 15 % finer and 10 % quicker; iron sights are the level's own aim (`BOT_SIGHT_AIM`). Bots
+  fire from the hip while they strafe (anchors aim, BN1), so the error on the move stays the level's. A silencer, laser, barrel, magazine
+  or power source works on a bot as on the player.
+- **Bots' figures show their kit (2026-10-13, BG1).** The built-in figures draw the rifle's optic at every detail, so a
+  scoped bot reads at a glance; grips, lasers and barrels show on the rigged figures behind the Dev switches, where
+  each replica's own model takes its fitted parts. No new model files.
 - **Bots have names and personalities, read from `bots.md` (BN1, 2026-10-13; Claude's defaults, Dev 6 item 21).** Each
   match every bot draws a made-up name off the roster, and a name always plays the same personality (rusher, anchor,
   flanker, careful), so you learn who to watch; a team takes different personalities before any comes twice. A
@@ -388,7 +409,11 @@ replaces its line; the old one stays findable in the archive or in git.
   rested spread.
 - **What a personality carries belongs to the bot gear table, not to bots.md (BN1, Dev 6 item 23).** The roadmap's
   "loadouts" for item 21 come with item 23's data-driven bot loadout table, which reads `Bot.personality`; bots.md
-  holds names and play only.
+  holds names and play only. `bot-kits.md`'s Suits column names the personalities each kit suits, and a bot picks a
+  kit that suits it three times as often as the other kits with Suits (BG1, `BOT_KIT_SUIT_LEAN`): rushers Support,
+  Pointman and the Cyber Pistol, anchors Marksman and Support, flankers Stealth and Pointman, careful bots Rifleman and
+  Marksman. The Factory kit, with no Suits, keeps its chance: the level decides how often a bot carries gear, its
+  personality which (with a plain lean Easy's factory share fell from 60 to about 45 in 100).
 - **In Attack / Defend one attacker raises the flag while the others guard the pole from cover (owner's call,
   2026-10-04).** A second raiser adds nothing: the rope goes up no faster.
 - **Every level hunts the middle of the map; Normal, Hard and Pro keep out of the light at night; Easy stands where its
@@ -405,6 +430,13 @@ replaces its line; the old one stays findable in the archive or in git.
   guards keep what must never happen (rounds played and settled, nobody stuck, falling or hit by a teammate, the rules
   of each mode). A change that moves a figure records its measure beside it. Owner ruling 2026-10-06 (M73): the Normal
   figures are judged at 45 to 55 %, the Pro ones at their usual 40 to 60 %.
+- **Bot callouts are text and a radio click, never voices, and never change play (2026-10-13, CL1).** A teammate's
+  call shows bottom left with the walkie-talkie click an order gets (no new sound to render), panned to where they
+  are; an enemy's is only its click, from them, within 15 m. The callouts read the bots and never write them, on a
+  random stream of their own, so seeds still replay. Hit players never talk: hit calling stays the raised hand.
+- **Callouts keep a slow, readable pace (2026-10-13, CL1).** A team says one call at a time, 1.5 s apart, a bot its own
+  4 s apart and the same enemy 10 s apart; the most urgent first, and a call kept waiting over 1.5 s is dropped. About
+  5 to 11 calls a team a minute in the headless matches. All of it, and every line, is in `callouts.md`.
 
 ## Maps and modes
 
@@ -605,6 +637,8 @@ replaces its line; the old one stays findable in the archive or in git.
   height like the HUD is a Beta task.
 - **The minimap shows teammates, and the other team only as patches where they were last heard ("approximate, from the
   last noise", owner, 2026-10-04).** A hit call removes that player's patch.
+- **The minimap names the area you stand in, top left on the map (2026-10-13, CL1).** The same names the bots call, so
+  "Contact, Dock!" means something by the second round. Every walkable spot on a map is in a named area.
 - **The order wheel is on Z (owner, 2026-10-04); Hold here is X, Regroup is V and Follow me is F.** Orders end when the
   player who gave them is hit and at each round start. A teammate's radio double-click confirms an order.
 - **Key bindings: a key belongs to one action, and taking a used key swaps the two (2026-09-30).** Esc, F5, F11, F12,
@@ -658,7 +692,8 @@ replaces its line; the old one stays findable in the archive or in git.
 - **A match that uses dev content stays out of the records and gives no XP (owner kept the defaults, 2026-10-04).**
   Dev gear is offered at its level only with the switch on (try it with Disable levelling). Bots carry it only with
   the switch on. Unlocked dev gear stays in the save, hidden, and a dev pick plays as the default until the switch is back on. A match
-  counts as using dev content when Hard opponents could roll dev gear.
+  counts as using dev content when an opponent's kit could hold dev gear (BG1: a kit in `bot-kits.md` the difficulty
+  weights).
 - **Woodland and Neon Heights stay dev content until the owner has playtested them; he makes each public himself (owner,
   2026-10-05, 07:04).** Woodland was dev from the start (owner, 2026-10-04, 18:10: "until the map is complete and I say
   so, this map is not accessible"). Its weapon torch stays dev until Woodland is public (owner, 2026-10-04, 18:56).
@@ -759,8 +794,8 @@ replaces its line; the old one stays findable in the archive or in git.
   (2026-10-04).** A half-stepped simulation can't be trusted, so there is no resume.
 - **`?nolock` and `?script=perf` exist only on the dev server and the e2e build (2026-09-28, 2026-10-04).** A release
   build compiles `?nolock` away.
-- **A new random feature draws from its own seeded stream, never the simulation's (2026-10-04).** Wind, chase kits,
-  Extraction cases and presentation effects each have one, so seeds that already replay still replay.
+- **A new random feature draws from its own seeded stream, never the simulation's (2026-10-04).** Wind, the bots'
+  kits (BG1), Extraction cases and presentation effects each have one, so seeds that already replay still replay.
 - **Player-only preferences, such as toggles, live in the input layer (2026-10-03).** The simulation sees the same
   command it sees from a bot.
 - **TypeScript 7 checks the code, on the same strict settings (owner, 2026-10-12; IM4).** It replaces 5.9, kept on

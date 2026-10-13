@@ -236,12 +236,18 @@ describe('each check on its fault', () => {
   });
 
   it('replica.bots fails when a bot carrying it shoots nothing', () => {
-    // With no pool row for it a bot carries the config as it is (botKit.ts rolledKit), here one that shoots 0 J.
-    const broken = aegAs({ muzzleEnergy: 0 });
-    const assets = broken.pool.assets.filter((a) => a.key !== 'aeg');
-    const rowless: Pool = { ...broken.pool, assets, byId: new Map(assets.map((a) => [a.id, a])) };
-    expect(verdictOf(replicaBotChecks({ ...broken, pool: rowless }, AEG), 'replica.bots')).toBe('fail');
+    // As it comes a bot carries the config the inputs hold, here one that shoots 0 J.
+    expect(verdictOf(replicaBotChecks(aegAs({ muzzleEnergy: 0 }), AEG), 'replica.bots')).toBe('fail');
     expect(verdictOf(replicaBotChecks(game, AEG), 'replica.bots')).toBe('pass');
+  });
+
+  it('replica.bots warns when no kit in bot-kits.md weighted above 0 holds it (BG1), and only checks kits it is given', () => {
+    const noCyber = { ...game.botKits!, kits: game.botKits!.kits.filter((k) => k.name !== 'Cyber') };
+    const cyber = game.pool.assets.find((a) => a.name === 'Cyber Pistol')!;
+    expect(verdictOf(replicaBotChecks(game, cyber), 'replica.bots')).toBe('pass');
+    expect(verdictOf(replicaBotChecks({ ...game, botKits: noCyber }, cyber), 'replica.bots')).toBe('warn');
+    const { botKits: _botKits, ...unchecked } = game;
+    expect(verdictOf(replicaBotChecks(unchecked, cyber), 'replica.bots')).toBe('pass');
   });
 
   it('replica.save fails when a saved kit does not come back', () => {

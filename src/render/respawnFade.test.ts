@@ -18,6 +18,7 @@ import type { MatchPresentation as MatchPresentationClass } from './matchPresent
 vi.mock('../ui/whatGotYou');
 vi.mock('../ui/casePrompt');
 vi.mock('../ui/flagMarker');
+vi.mock('../ui/calloutFeed');
 vi.mock('../ui/hitFeed');
 vi.mock('../ui/hitFeedback');
 vi.mock('../ui/holdMarker');
