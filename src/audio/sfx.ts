@@ -59,6 +59,8 @@ interface ReplicaSound {
    * leaves it be: it quiets the air leaving the barrel, not the gearbox or the gas valve.
    */
   power: readonly AudioBuffer[];
+  /** The power part's variant key (`<replica>.power`), made once here rather than on every shot. */
+  powerKey: string;
 }
 
 /** What every match's sound shares: the Game's audio engine (context, volume buses, every sound's buffers). */
@@ -255,7 +257,7 @@ export class Sfx {
       const shots = r.look.suppressed ? muffled : this.buffers.get(cue)!;
       const powerCue = cues.power(profile);
       const power = (powerCue && this.buffers.get(powerCue)) || [];
-      this.replicas.set(r.id, { profile, fireRate: r.fireRate, shots, muffled, power });
+      this.replicas.set(r.id, { profile, fireRate: r.fireRate, shots, muffled, power, powerKey: `${r.id}.power` });
     }
   }
 
@@ -559,7 +561,7 @@ export class Sfx {
     this.playBuffer(muffled ? r.muffled : r.shots, replicaId, out, L.shot);
     // Its power source with it, at the Power source slider's level (the owner's 0.1 Dev 5 playtest, note 2).
     const power = this.engine.powerLevel();
-    this.playBuffer(r.power, `${replicaId}.power`, out, L.power, undefined, power);
+    this.playBuffer(r.power, r.powerKey, out, L.power, undefined, power);
     if (r.profile !== 'electric') return;
     const fireRate = shooter?.replicas[shooter.active]?.fireRate ?? r.fireRate;
     let m = this.motors.get(characterId);

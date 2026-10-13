@@ -181,6 +181,8 @@ request. Each entry says where the contract lives, what it holds today and what 
     renderer an antialiasing change waits for the next load).
   - Fields are added, never renamed. A new field takes a value on every preset, a row in `config/graphics.ts` and a
     `graphics.<field>` store key, with no further contract change (`bakedLight` and `weathering` were added so).
+  - A field whose effect the game no longer draws is taken out with its row; its saved `graphics.<field>` key is left
+    unread and never used again (`bbGlow`, PT1: the owner took the BB halo away in his Dev 5 playtest).
 
   Pinned by `config/render.test.ts`, `config/graphics.test.ts`, `render/renderer.test.ts`.
 - **The renderer back end** (WebGPU overhaul W1, one renderer since W6a; `config/renderBackend.ts`,
@@ -218,7 +220,8 @@ request. Each entry says where the contract lives, what it holds today and what 
 - **The settings store keys** (`settings/storage.ts`, `settings/dev.ts`). Saved under `airsoft.*` and versioned
   (`SETTINGS_VERSION` 1). Renaming a key needs a migration: one `case` in `migrate` (the per-setting keys of the first
   builds are its "version 0"). An object from a newer version is never read or overwritten. Fields are only ever
-  added, each read with a fallback, so version 1 stands: `quality` holds a `QualityChoice`; `graphics.<field>` holds a
+  added, each read with a fallback, so version 1 stands (a Custom row taken away leaves its key unread, as
+  `graphics.bbGlow` since PT1): `quality` holds a `QualityChoice`; `graphics.<field>` holds a
   Custom row (an option id or a slider position); `frameRateCap` (Unlimited, 30, 60, 120, 144 or 240; an older number
   reads as the nearest) and `showFps` are the two Graphics rows outside the presets; `renderer` (`auto`, `webgpu` or
   `webgl`, W1) is the Renderer row. `browserStorage()` returns the
