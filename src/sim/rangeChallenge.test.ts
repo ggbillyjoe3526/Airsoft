@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { RANGE, RANGE_CHALLENGE, RANGE_VISUALS } from '../config/range';
+import { HITS } from '../config/hits';
+import { RANGE, RANGE_CHALLENGE, RANGE_VISUALS, targetSpec } from '../config/range';
+import type { WorldQuery } from './armament';
 import type { GameEvent } from './events';
-import { createChallenge, setChallengeOn, stepChallenge } from './rangeChallenge';
+import { createChallenge, seesTarget, setChallengeOn, stepChallenge } from './rangeChallenge';
 import { createRangeTargets, type RangeTarget, stepRangeTargets } from './rangeTargets';
 import { createRng } from './rng';
 import { vec3 } from './vec';
@@ -170,5 +172,79 @@ describe('the timed challenge (M93)', () => {
       return targets.map((t) => Math.round(t.lit * 100));
     };
     expect(lights()).toEqual(lights());
+  });
+});
+
+describe('the timed challenge on a map (M94)', () => {
+  /** The range's targets, the challenge on and started, with a sight rule that counts its looks. */
+  function sighted(sees: (t: RangeTarget) => boolean) {
+    const rng = createRng(7);
+    const targets = createRangeTargets(undefined, rng);
+    const c = createChallenge(0);
+    setChallengeOn(c, targets, true, rng);
+    let looks = 0;
+    const sight = (t: RangeTarget) => {
+      looks++;
+      return sees(t);
+    };
+    const tick = (events: GameEvent[] = []) => {
+      stepRangeTargets(targets, DT, rng);
+      stepChallenge(c, targets, events, PLAYER, DT, rng, sight);
+    };
+    tick([hit(targets.find((t) => t.start)!)]);
+    for (let i = 0; i < Math.round(RANGE_CHALLENGE.countdown / DT) + 1; i++) tick();
+    return { c, targets, tick, looks: () => looks };
+  }
+
+  it('lights only targets in your sight', () => {
+    const { c, targets, tick } = sighted((t) => t.kind === 'steel');
+    expect(c.phase).toBe('running');
+    for (let i = 0; i < Math.round(20 / DT); i++) {
+      tick();
+      for (const t of targets) if (t.lit > 0) expect(t.kind).toBe('steel');
+    }
+    expect(c.missed).toBeGreaterThan(0); // they did light, and went out unhit
+  });
+
+  it('with nothing in sight, lights nothing and looks again only every so often, not every tick', () => {
+    const { c, targets, tick, looks } = sighted(() => false);
+    const before = looks();
+    const ticks = Math.round(2 / DT);
+    for (let i = 0; i < ticks; i++) tick();
+    expect(c.phase).toBe('running');
+    expect(targets.some((t) => t.lit > 0)).toBe(false);
+    const perLook = targets.filter((t) => !t.start).length;
+    expect(looks() - before).toBeLessThanOrEqual(perLook * Math.ceil(2 / RANGE_CHALLENGE.lookAgain + 1));
+  });
+});
+
+describe('which targets are in your sight (M94)', () => {
+  const [plate, figure, crouched] = createRangeTargets([
+    targetSpec({ kind: 'steel', x: 0, y: RANGE.plateHeight, z: -20, label: 'Steel', distance: 20 }),
+    targetSpec({ kind: 'figure', x: 4, y: 0, z: -20, label: 'Figure', distance: 20 }),
+    targetSpec({ kind: 'figure', x: -4, y: 0, z: -20, crouched: true, label: 'Crouched figure', distance: 20 }),
+  ]);
+  const eye = vec3(0, 1.6, 0);
+  const open: WorldQuery = { raycastStatic: () => -1 };
+
+  it('sees a target in the open within reach, not past it', () => {
+    for (const t of [plate!, figure!, crouched!]) {
+      expect(seesTarget(eye, t, 50, open, HITS)).toBe(true);
+      expect(seesTarget(eye, t, 15, open, HITS)).toBe(false);
+    }
+  });
+
+  it('looks at its middle: a plate’s centre, a figure’s chest, lower when it crouches; a wall in the way hides it', () => {
+    const aims: number[] = [];
+    const wall: WorldQuery = {
+      raycastStatic: (o, d, max) => {
+        aims.push(o.y + d.y * max);
+        return max / 2;
+      },
+    };
+    for (const t of [plate!, figure!, crouched!]) expect(seesTarget(eye, t, 50, wall, HITS)).toBe(false);
+    expect(aims[0]).toBeCloseTo(RANGE.plateHeight, 6);
+    expect(aims[1]).toBeCloseTo((HITS.bodyTop + HITS.bodyBottom) / 2, 6);
+    expect(aims[2]).toBeCloseTo((HITS.bodyTop + HITS.bodyBottom) / 2 - HITS.crouchDrop, 6);
   });
 });

@@ -72,15 +72,15 @@ describe('masked heads (G7: no bare faces)', { timeout: 60_000 }, () => {
 });
 
 describe('the rig is as before, for humans and robots (G7)', { timeout: 60_000 }, () => {
-  it('is six merged meshes on one material, four drawn at once, its holds ending at the muzzles', () => {
+  it('is seven merged meshes on one material, four drawn at once, its holds ending at the muzzles', () => {
     for (const robot of [false, true]) {
       for (const detail of ['low', 'high'] as const) {
         const material = new THREE.MeshStandardMaterial();
         const f = buildFigure(0x3d8bff, material, new THREE.SpriteMaterial(), 2, null, FIGURE.detail[detail], undefined, { ...HUMAN_DRESS, robot });
         const meshes = meshesOf(f.root);
-        expect(meshes).toHaveLength(6);
+        expect(meshes).toHaveLength(7);
         for (const m of meshes) expect(m.material).toBe(material);
-        expect([f.aimRifle.visible, f.aimPistol.visible, f.hitPose.visible].filter(Boolean)).toHaveLength(1);
+        expect([f.aimRifle.visible, f.aimPistol.visible, f.hitPose.visible, f.holsterPose.visible].filter(Boolean)).toHaveLength(1);
         const rifle = new THREE.Box3().setFromBufferAttribute((f.aimRifle as THREE.Mesh).geometry.getAttribute('position') as THREE.BufferAttribute);
         const pistol = new THREE.Box3().setFromBufferAttribute((f.aimPistol as THREE.Mesh).geometry.getAttribute('position') as THREE.BufferAttribute);
         expect(rifle.min.z).toBeCloseTo(FIGURE.rifle.butt - FIGURE.rifle.length, 4);
@@ -104,8 +104,8 @@ describe('the rig is as before, for humans and robots (G7)', { timeout: 60_000 }
     const material = new THREE.MeshStandardMaterial();
     const f = buildFigure(0x3d8bff, material, new THREE.SpriteMaterial(), 0, model, undefined, undefined, { ...HUMAN_DRESS, robot: true });
     const meshes = meshesOf(f.root);
-    // The model, plus the built rifle hold, pistol hold and hit pose: no built-in legs or body.
-    expect(meshes.filter((m) => m.material === material)).toHaveLength(3);
+    // The model, plus the built rifle hold, pistol hold, hit pose and holstered pose (M92): no built-in legs or body.
+    expect(meshes.filter((m) => m.material === material)).toHaveLength(4);
     expect(meshes.filter((m) => m.material !== material).length).toBeGreaterThan(0);
     disposeFigure(f);
     model.dispose();
@@ -116,7 +116,7 @@ describe('what the figures cost (G7)', { timeout: 60_000 }, () => {
   /** Low's triangles per part before G7 (the cheapest look's body): none may grow. */
   const BEFORE = { leg: 424, body: 1392, rifle: 1064, pistol: 824, hit: 1028 };
 
-  it('keeps every Low part, human and robot, within what it was before, in the same six meshes', () => {
+  it('keeps every Low part, human and robot, within what it was before, in the same seven meshes', () => {
     for (const robot of [false, true]) {
       for (const id of [0, 1, 2, 3, 4, 5]) {
         const f = build(0x3d8bff, id, robot);
@@ -126,7 +126,9 @@ describe('what the figures cost (G7)', { timeout: 60_000 }, () => {
         expect(tris(f.aimRifle)).toBeLessThanOrEqual(BEFORE.rifle);
         expect(tris(f.aimPistol)).toBeLessThanOrEqual(BEFORE.pistol);
         expect(tris(f.hitPose)).toBeLessThanOrEqual(BEFORE.hit);
-        expect(meshesOf(f.root)).toHaveLength(6);
+        // Holstered (M92, new): no dearer than the hit pose, the other with the rifle and both arms.
+        expect(tris(f.holsterPose)).toBeLessThanOrEqual(BEFORE.hit);
+        expect(meshesOf(f.root)).toHaveLength(7);
         disposeFigure(f);
       }
     }

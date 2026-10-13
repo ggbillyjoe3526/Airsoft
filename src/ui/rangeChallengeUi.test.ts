@@ -167,3 +167,20 @@ describe('the pause screen\'s Timed challenge button (M93)', () => {
     expect(onChallenge).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('the challenge line on a map (M94)', () => {
+  const at = (over: Partial<RangeChallenge>): RangeChallenge => ({ ...createChallenge(0), ...over });
+
+  it('tells you to move up, since a target lights only once you see it; the run and its score read as on the range', () => {
+    for (const phase of ['ready', 'countdown'] as const) {
+      const t = challengeText(at({ phase, best: 4 }), true);
+      expect(t).toContain('move up');
+      expect(t).toContain('as you see them');
+      expect(t).toContain('best 4');
+      expect(challengeText(at({ phase }))).not.toContain('move up');
+    }
+    for (const over of [{ phase: 'running', clock: 42, hits: 1, best: 5 }, { phase: 'ready', last: { hits: 9, shots: 12, missed: 2, best: true } }] as const) {
+      expect(challengeText(at(over), true)).toBe(challengeText(at(over)));
+    }
+  });
+});

@@ -98,7 +98,8 @@ export const BOT_BEHAVIOUR = {
   friendlyMargin: 0.3,
   /**
    * ...widened with the distance to them by this many standard deviations of the replica's spread: a BB strays further
-   * from the aim line the further it flies, so a teammate 20 m down the line needs more room than one 2 m away.
+   * from the aim line the further it flies, so a teammate 20 m down the line needs more room than one 2 m away. The
+   * spread the bot shoots with now (M92): walking, it is wider (Character.spreadScale).
    */
   friendlySpreadSigmas: 2,
   /**
@@ -280,6 +281,15 @@ export const BOT_BEHAVIOUR = {
   /** Sprint along routes when nobody has been seen or heard for this long (s), if heading mostly forward. */
   sprintWhenCalmFor: 3,
   sprintForward: 0.9,
+  /**
+   * The holster (M92, ai/botHolster.ts): a bot puts its replica away for the faster sprint once it has sprinted
+   * `holsterAfter` seconds without a break in its own half, nobody seen or heard for `holsterCalmFor` seconds, and draws
+   * it again (the slower draw) at once on a threat or in the enemy's half, or `holsterDrawAfter` seconds after the sprint
+   * ends (a turn on the route doesn't draw it). Every level plays it the same way.
+   */
+  holsterCalmFor: 5,
+  holsterAfter: 1.5,
+  holsterDrawAfter: 0.5,
   // ---- Team play and routes -------------------------------------------------------------------
   /**
    * Each round a team picks a plan for its bots, by these weights: split (each on a different lane),

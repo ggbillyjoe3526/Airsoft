@@ -116,8 +116,8 @@ describe('the weapon torch modelled (M33h, acceptance 5)', () => {
     const bare = build();
     const rifle = build({ rifleSilencer: false, rifleTorch: true });
     const pistol = build({ rifleSilencer: false, pistolTorch: true });
-    // The rifle is built twice (in the hands, and slung while the pistol is out; one shows at a time).
-    expect(trianglesOf(rifle.root) - trianglesOf(bare.root)).toBe(2 * 24);
+    // The rifle is built three times (in the hands, hanging in the hit pose, slung while holstered; one shows at a time).
+    expect(trianglesOf(rifle.root) - trianglesOf(bare.root)).toBe(3 * 24);
     expect(trianglesOf(pistol.root) - trianglesOf(bare.root)).toBe(24);
     for (const f of [bare, rifle, pistol]) disposeFigure(f);
   });

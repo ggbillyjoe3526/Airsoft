@@ -338,8 +338,9 @@ export const PLAY_TEXT = {
   /** Practice, the last mode card: the range, with no bots and no score. */
   practice: {
     label: 'Practice',
-    blurb: 'The range: targets to shoot at, no bots, no score.',
-    mapLine: 'Practice range',
+    blurb: 'The range or any map: targets to shoot at, no bots, no score.',
+    /** "Your match" while Practice is picked, before the place's own line is worked out (M94). */
+    mapLine: 'Range',
     rules: 'No score, no clock',
     teams: 'On your own',
   },

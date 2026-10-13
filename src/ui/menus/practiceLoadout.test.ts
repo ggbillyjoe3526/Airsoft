@@ -48,8 +48,8 @@ describe('the Loadout key (M95)', () => {
 
 describe('the range readout before the first shot (M95)', () => {
   it('names the Loadout key, or Esc when it has none', () => {
-    expect(lastShotText(null, 'L')).toBe('Practice range · spare magazines refill · L for the Loadout');
-    expect(lastShotText(null, '')).toBe('Practice range · spare magazines refill · Esc for the Loadout');
+    expect(lastShotText(null, 'L')).toBe('Practice · spare magazines refill · L for the Loadout');
+    expect(lastShotText(null, '')).toBe('Practice · spare magazines refill · Esc for the Loadout');
     expect(lastShotText(null)).toContain('Esc for the Loadout');
   });
 

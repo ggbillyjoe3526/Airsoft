@@ -26,8 +26,16 @@ export interface PlayerCommand {
   /** Trigger held. Semi-auto replicas fire on the press only. */
   fire: boolean;
   reload: boolean;
-  /** Loadout slot to switch to, or -1 for no switch. */
+  /**
+   * Loadout slot to switch to, or -1 for no switch. With the replica holstered, any slot (the one put away too) draws
+   * it, the slower draw from the holster (sim/armament.ts).
+   */
   switchTo: number;
+  /**
+   * Put the replica in hand away (one-shot; M92, the holster): nothing to fire or aim, a faster sprint, and a slower
+   * draw (sim/armament.ts, sim/movement.ts). A slot in `switchTo`, or a fresh trigger pull, aim or reload, draws it.
+   */
+  holster: boolean;
   /** Step the active replica's fire selector to its next mode (one-shot). */
   cycleFireMode: boolean;
   /** Switch the weapon torch on the replica in hand on or off (one-shot; M33h, sim/torch.ts). */
@@ -51,6 +59,7 @@ export function createCommand(): PlayerCommand {
     fire: false,
     reload: false,
     switchTo: -1,
+    holster: false,
     cycleFireMode: false,
     toggleTorch: false,
     use: false,

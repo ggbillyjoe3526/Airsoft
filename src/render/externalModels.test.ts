@@ -202,8 +202,8 @@ describe('buildFigure with a figure model', () => {
     figure.root.traverse((o) => {
       if (o instanceof THREE.Mesh) meshes.push(o);
     });
-    // The model, plus the rifle hold, the pistol hold and the hit pose: no built-in legs or body.
-    expect(meshes.filter((m) => m.material === material)).toHaveLength(3);
+    // The model, plus the rifle hold, the pistol hold, the hit pose and the holstered pose (M92): no built-in legs or body.
+    expect(meshes.filter((m) => m.material === material)).toHaveLength(4);
     expect(meshes.filter((m) => m.material !== material)).toHaveLength(1);
     model.dispose();
   });

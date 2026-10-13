@@ -43,6 +43,20 @@ describe('M95: back from the Loadout, the range keeps the slot in hand', () => {
     expect(a.active).toBe(1);
     expect(a.draw).toBe(a.handling[1]!.drawTime);
     expect(a.draw).toBeGreaterThan(0);
+    // The draw's length too, which the hands and the figure show its progress against (M92).
+    expect(a.drawTotal).toBe(a.draw);
+  });
+
+  it('a replica in its holster (M92) stays there, with no draw, until you draw it', () => {
+    const { s, a, takeUp } = bare(1);
+    a.holstered = true;
+    expect(s.pose.holstered).toBe(true);
+    a.holstered = false;
+    a.draw = 0;
+    takeUp(pose({ slot: 1, held: 'some-other-replica', holstered: true }));
+    expect(a.active).toBe(1);
+    expect(a.holstered).toBe(true);
+    expect(a.draw).toBe(0);
   });
 
   it('a slot past the kit is ignored (the hand stays where it was)', () => {

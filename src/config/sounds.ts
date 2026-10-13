@@ -46,10 +46,11 @@ export type SoundCue =
   | 'draw'
   | 'reloadRefused'
   | `step.${FloorSurface}.${FootstepPace}`
-  /** Kit and clothing moving: dropping into a crouch, standing up, leaning out. */
+  /** Kit and clothing moving: dropping into a crouch, standing up, leaning out, putting the replica away (M92). */
   | 'foley.crouch'
   | 'foley.stand'
   | 'foley.lean'
+  | 'foley.holster'
   /** A hi-cap's loose BBs shaking with each step (M17b). */
   | 'magRattle'
   | `impact.${ImpactMaterial}`
@@ -533,6 +534,18 @@ export const SOUNDS: Readonly<Record<SoundCue, SoundRecipe>> = {
     pitchSpread: 0.08,
     timeSpread: 0.12,
     gainSpread: 0.12,
+  },
+
+  /**
+   * Putting the replica away (M92): the sling swinging it round, then a soft knock as it settles against the back. After
+   * the yard's calls, the title stream's last, so every earlier cue sounds as it did.
+   */
+  'foley.holster': {
+    layers: [
+      { kind: 'noise', attack: 0.02, decay: 0.12, gain: 0.22, filter: { type: 'bandpass', hz: 2200, hzTo: 1400, q: 0.9 } },
+      { kind: 'modes', at: 0.11, gain: 0.25, modes: [{ hz: 420, decay: 0.05, gain: 1 }, { hz: 1150, decay: 0.03, gain: 0.4 }] },
+    ],
+    ...LOOSE,
   },
 
   // ---- Only for the maps that use them (M33j: MAP_CUE_SEEDS) --------------------------------------

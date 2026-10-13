@@ -421,10 +421,11 @@ describe('the shader warm-up (M63, audit REN-06)', () => {
 
 /**
  * Where the warm-up is called from (M63, audit REN-06): MatchSession needs a page to build (its HUD), so this reads the
- * sources. One call in the whole game, at the end of MatchSession's constructor after the last thing it adds to the
- * scene; no frame path, and not the range, calls it; and nothing but the warm-up compiles.
+ * sources. One call per session build, at the end of MatchSession's constructor and (since M94: Practice plays on any
+ * map, a match's worth of materials) RangeSession's, after the last thing each adds to the scene; no frame path calls
+ * it; and nothing but the warm-up compiles.
  */
-describe('the shader warm-up runs once per match build, never per frame (M63, audit REN-06, QA)', () => {
+describe('the shader warm-up runs once per session build, never per frame (M63, audit REN-06, QA; M94)', () => {
   const sources = import.meta.glob<string>(['/src/**/*.ts', '!/src/**/*.test.ts', '!/src/**/testSupport.ts', '!/src/**/*Support.ts', '!/src/**/*.d.ts'], { query: '?raw', import: 'default', eager: true });
   /** The body of the block opened by the first `{` at or after `from` (braces balanced). */
   const block = (text: string, from: number): string => {
@@ -443,11 +444,11 @@ describe('the shader warm-up runs once per match build, never per frame (M63, au
     return block(text, text.indexOf('{\n', at));
   };
 
-  it('is called once in the game, from MatchSession’s constructor, after the scene is whole', () => {
+  it('is called once per session, from MatchSession’s and RangeSession’s constructors, after the scene is whole', () => {
     expect(Object.keys(sources).length).toBeGreaterThan(100);
     const callers = Object.entries(sources).flatMap(([file, text]) => [...text.matchAll(/\.warmShaders\(/g)].map(() => file));
-    // CombatPresentation.warmShaders hands over to Renderer.warmShaders: that and MatchSession's are the two calls.
-    expect(callers.sort()).toEqual(['/src/matchSession.ts', '/src/render/combatPresentation.ts']);
+    // CombatPresentation.warmShaders hands over to Renderer.warmShaders: that and the two sessions' are the three calls.
+    expect(callers.sort()).toEqual(['/src/matchSession.ts', '/src/rangeSession.ts', '/src/render/combatPresentation.ts']);
     const ctor = bodyOf(sources['/src/matchSession.ts']!, '  constructor(');
     const call = ctor.indexOf('this.combat.warmShaders()');
     expect(call).toBeGreaterThan(0);
@@ -462,7 +463,17 @@ describe('the shader warm-up runs once per match build, never per frame (M63, au
     const combat = sources['/src/render/combatPresentation.ts']!;
     expect(bodyOf(combat, '  render(firstPerson')).not.toMatch(/warmShaders|compile/);
     expect(bodyOf(combat, '  warmShaders(')).toMatch(/this\.renderer\.warmShaders\(this\.overlay\)/);
-    expect(sources['/src/rangeSession.ts']).not.toMatch(/warmShaders|compile\(/);
+    // Practice (M94): its last call too, after its map, torch beams and targets are in the scene.
+    const range = bodyOf(sources['/src/rangeSession.ts']!, '  constructor(');
+    const rangeCall = range.indexOf('this.combat.warmShaders()');
+    expect(rangeCall).toBeGreaterThan(0);
+    expect(range.split('warmShaders(').length - 1).toBe(1);
+    for (const built of ['this.combat = new CombatPresentation', 'renderer.scene.add(group)', 'renderer.scene.add(this.torches.object)', 'renderer.scene.add(this.targets.object)']) {
+      expect(range.indexOf(built), built).toBeGreaterThan(0);
+      expect(range.indexOf(built), built).toBeLessThan(rangeCall);
+    }
+    expect(range.slice(rangeCall)).not.toMatch(/scene\.add\(/);
+    expect(sources['/src/rangeSession.ts']).not.toMatch(/compile\(/);
   });
 
   it('compiles nowhere but in Renderer.warmShaders: not in Renderer.render, nor anywhere else', () => {

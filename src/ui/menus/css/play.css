@@ -183,18 +183,18 @@
 
 /* Over the picture: a dark foot for the words, reaching up past the map's name (BP3: at 1280 px a light picture showed
    through behind it), and a soft shadow on the name itself. */
-.map-cards .choice-card-pic::after {
+:is(.map-cards, .practice-places) .choice-card-pic::after {
   content: '';
   position: absolute;
   inset: 0;
   background: linear-gradient(0deg, rgba(5, 10, 26, 0.95) 8%, rgba(5, 10, 26, 0.72) 50%, rgba(5, 10, 26, 0.3) 100%);
 }
 
-.map-cards .choice-name {
+:is(.map-cards, .practice-places) .choice-name {
   text-shadow: 0 1px 2px rgba(5, 10, 26, 0.9), 0 0 10px rgba(5, 10, 26, 0.8);
 }
 
-.map-cards .choice-card {
+:is(.map-cards, .practice-places) .choice-card {
   aspect-ratio: 3 / 1;
   min-height: 0;
 }
@@ -237,13 +237,13 @@
   pointer-events: none;
 }
 
-.map-cards .choice-card-tags .tag-blue {
+:is(.map-cards, .practice-places) .choice-card-tags .tag-blue {
   position: absolute;
   right: 0;
   bottom: 0;
 }
 
-.map-cards .choice-text {
+:is(.map-cards, .practice-places) .choice-text {
   padding-right: 72px;
 }
 

@@ -51,6 +51,7 @@ import { DEFAULT_WHEEL_SELECT, WHEEL_SELECT_MODES, type WheelSelect } from '../.
 import { DEFAULT_TEAM_COLOURS, DEFAULT_TEAM_PICK, TEAM_COLOUR_CHOICES, TEAM_PICKS, type TeamColourSetId, type TeamPickId } from '../../config/teams';
 import { lightingChoices, parseLightingPick } from '../../map/lightingChoice';
 import { DEFAULT_MAP, MAPS, type MapId, mapData, mapLoaded } from '../../map/maps';
+import { DEFAULT_PRACTICE_PLACE, PRACTICE_PLACES, type PracticePlaceId } from '../../map/practicePlaces';
 import { browserStorage, loadSetting, numberIn, oneOf } from '../../settings/storage';
 import { loadChoice } from '../optionPicker';
 
@@ -146,6 +147,11 @@ export function loadMouseDpi(): number {
 /** The map picked on New game. */
 export function loadMap(): MapId {
   return loadChoice('map', MAPS, DEFAULT_MAP);
+}
+
+/** Where Practice is played (M94): the range, or a map. */
+export function loadPracticePlace(): PracticePlaceId {
+  return loadChoice('practicePlace', PRACTICE_PLACES, DEFAULT_PRACTICE_PLACE);
 }
 
 /**
