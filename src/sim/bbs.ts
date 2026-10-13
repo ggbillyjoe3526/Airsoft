@@ -144,7 +144,7 @@ export function stepBBs(
             events.push({ type: 'bbImpact', position: vec3(bb.position.x, bb.position.y, bb.position.z), ownerId: bb.ownerId });
             continue;
           }
-          hitRangeTarget(target);
+          hitRangeTarget(target, rng);
           events.push({ type: 'targetHit', targetId: target.id, kind: target.kind, shooterId: bb.ownerId, position: vec3(bb.position.x, bb.position.y, bb.position.z), ricochet: bb.bounces > 0 });
           continue;
         }

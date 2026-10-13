@@ -1,10 +1,10 @@
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { HitConfig } from '../config/hits';
 import { RANGE, RANGE_VISUALS } from '../config/range';
 import type { GameEvent } from '../sim/events';
-import type { RangeTarget } from '../sim/rangeTargets';
+import { type RangeTarget, swingAngle } from '../sim/rangeTargets';
 import { createRng, rngNext } from '../sim/rng';
+import { merged, placed, targetGear } from './rangeTargetGear';
 
 const V = RANGE_VISUALS;
 const VD = V.detail;
@@ -19,29 +19,6 @@ function canvasTexture(w: number, h: number, draw: (g: CanvasRenderingContext2D)
   const tex = new THREE.CanvasTexture(canvas);
   if (colour) tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
-}
-
-/** A copy of `geo` turned by `turn` (Euler, radians) and moved to (x, y, z), painted `colour` (for a merged mesh). */
-function placed(geo: THREE.BufferGeometry, x: number, y: number, z: number, colour: number | null = null, turn: readonly [number, number, number] = [0, 0, 0]): THREE.BufferGeometry {
-  const g = geo.clone();
-  g.applyMatrix4(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(...turn)));
-  g.translate(x, y, z);
-  if (colour !== null) {
-    const c = new THREE.Color(colour);
-    const n = g.getAttribute('position').count;
-    const colours = new Float32Array(n * 3);
-    for (let i = 0; i < n; i++) colours.set([c.r, c.g, c.b], i * 3);
-    g.setAttribute('color', new THREE.BufferAttribute(colours, 3));
-  }
-  return g;
-}
-
-/** One geometry from several (build time only): the parts are disposed. */
-function merged(parts: THREE.BufferGeometry[]): THREE.BufferGeometry {
-  const geo = mergeGeometries(parts);
-  for (const p of parts) p.dispose();
-  if (!geo) throw new Error('range detail: parts do not merge');
-  return geo;
 }
 
 /**
@@ -64,12 +41,12 @@ export function plateScuffs(seed: number): { x: number; y: number; r: number }[]
 }
 
 /**
- * How far back a figure lies (rad) with `down` seconds left before it stands up (0: standing): it falls over
- * V.fallTime, lies there, and comes back up over the last V.riseTime.
+ * How far back a figure lies (rad) with `down` seconds left before it stands up (0: standing), of a spell down `downFor`
+ * long (M93: a pop-up's varies): it falls over V.fallTime, lies there, and comes back up over the last V.riseTime.
  */
-export function figureTilt(down: number): number {
+export function figureTilt(down: number, downFor: number = RANGE.figureDownTime): number {
   if (down <= 0) return 0;
-  const fallen = Math.min(1, (RANGE.figureDownTime - down) / V.fallTime);
+  const fallen = Math.min(1, Math.max(0, downFor - down) / V.fallTime);
   const rising = Math.min(1, down / V.riseTime);
   return V.downAngle * Math.min(fallen, rising);
 }
@@ -85,15 +62,10 @@ export function plateRotation(t: number): number {
 }
 
 /** A figure's hinge turn about x (rad): negative, since the figure stands above its hinge and falls back. */
-export function figureRotation(down: number): number {
-  return -figureTilt(down);
+export function figureRotation(down: number, downFor: number = RANGE.figureDownTime): number {
+  return -figureTilt(down, downFor);
 }
 
-/**
- * The practice range's targets (M21): steel plates on posts that swing back when hit, plywood figures that fall back
- * on their hinge and stand up again, and the distance markers (a painted line across the floor and a board on each
- * wall at every distance). Reads the targets' state and the tick's events; never writes.
- */
 /**
  * A board's texture v (0..1 up the board) in the distance boards' atlas of `count` rows, board `row` from the top (the
  * canvas runs downwards and the texture is flipped, so the top row is the top of v). Exported for the tests.
@@ -103,34 +75,52 @@ function signRow(v: number, row: number, count: number): number {
 }
 
 /** Scratch for the per-frame instance matrices (allocation-free). */
-const pivotM = new THREE.Matrix4();
+const bodyM = new THREE.Matrix4();
+const carrierM = new THREE.Matrix4();
 const partM = new THREE.Matrix4();
 const turnM = new THREE.Matrix4();
+/** Draws nothing: a hidden target's instances, and a lit target's own (its lit twin is drawn instead). */
+const NONE = new THREE.Matrix4().makeScale(0, 0, 0);
 
-/** One moving part of a target drawn as an instance: its pivot (world), its place relative to the pivot. */
+/**
+ * One moving part of a target drawn as an instance: which mesh and instance, what it rides on (the target's `body`, the
+ * plate or figure that swings or falls; or its `carrier`, a mover's trolley or a swinger's arm) and its place there.
+ * `twin`: the index in `twins` of the lit copy drawn in its place while the target is lit (the timed challenge, M93), or
+ * -1 for a part that stays as it is (a chain, a trolley, an arm).
+ */
 interface Part {
   mesh: THREE.InstancedMesh;
   index: number;
-  pivot: THREE.Vector3;
+  rides: 'body' | 'carrier';
   local: THREE.Matrix4;
+  twin: number;
 }
 
 /**
  * The practice range's targets: steel plates on hangers that swing when hit, plywood figures on hinges that fall back,
- * their posts, the distance lines and boards. Few draw calls whatever the number of targets (the range must fit the
- * presets' budgets, audit section 5): each kind of part is one instanced mesh (plates, chains, torsos, heads) whose
- * instances follow the targets' swing and fall, and everything that doesn't move is one merged mesh per material (the
- * posts, the lines, the boards on one atlas, Map detail's fittings and shelf).
+ * and M93's pop-ups, movers on their trolleys and rails, swingers on their arms and frames, small steel and the
+ * challenge's START plate; their posts, the distance lines and boards. Few draw calls whatever the number of targets (the
+ * range must fit the presets' budgets, audit section 5): each kind of part is one instanced mesh (plates, chains, torsos,
+ * heads, trolleys, arms) whose instances follow the targets' motion, swing and fall, a lit target's plate or figure is
+ * drawn by a lit twin of its mesh, and everything that doesn't move is one merged mesh per material (the posts and gear,
+ * the lines, the boards on one atlas, Map detail's fittings and shelf). Reads the targets' state and the tick's events;
+ * never writes.
  */
 export class RangeTargetsRenderer {
   readonly object = new THREE.Group();
   /** Per target: seconds since a steel plate was last hit (Infinity: still). */
   private readonly swingT: number[] = [];
-  /** Per target: the angle its instances were last drawn at (NaN: never). */
+  /** Per target: the angle, lit and hidden state and cycle clock its instances were last drawn with (NaN: never). */
   private readonly drawnAngle: number[] = [];
+  private readonly drawnLit: boolean[] = [];
+  private readonly drawnHidden: boolean[] = [];
+  private readonly drawnClock: number[] = [];
   /** Per target: its moving parts. */
   private readonly parts: Part[][] = [];
   private readonly movers: THREE.InstancedMesh[] = [];
+  /** The lit twins (M93), and how many instances each draws this frame. */
+  private readonly twins: THREE.InstancedMesh[] = [];
+  private readonly twinDrawn: number[] = [];
   private readonly geometries: THREE.BufferGeometry[] = [];
   private readonly materials: THREE.Material[] = [];
   private readonly textures: THREE.Texture[] = [];
@@ -149,6 +139,8 @@ export class RangeTargetsRenderer {
     const post = this.track(new THREE.MeshStandardMaterial({ color: V.postColor, roughness: 0.8 }));
     const ply = (this.ply = this.track(new THREE.MeshStandardMaterial({ color: V.figureColor, roughness: V.figureRoughness })));
     const plyHead = (this.plyHead = this.track(new THREE.MeshStandardMaterial({ color: V.figureColor, roughness: V.figureRoughness })));
+    // A lit target (M93) in the challenge's colour, glowing a little so it reads at any distance.
+    const lit = this.track(new THREE.MeshStandardMaterial({ color: V.litColour, emissive: V.litColour, emissiveIntensity: V.litGlow, roughness: V.litRoughness }));
     // Map detail's parts: each plate's two short chains (instanced with the plates), and every static fitting (the arms
     // the chains hang from, the safety bands, the figures' hinge brackets, the shelf) as one vertex-coloured mesh.
     const metal = this.track(new THREE.MeshStandardMaterial({ color: VD.metal, metalness: 0.7, roughness: 0.4 }));
@@ -160,64 +152,82 @@ export class RangeTargetsRenderer {
       for (let k = 0; k < VD.links; k++) links.push(placed(linkGeo, side * VD.chainSpread, -(k + 0.5) * step, 0, null, [0, k % 2 === 0 ? 0 : Math.PI / 2, Math.PI / 2]));
     }
     linkGeo.dispose();
-    const armGeo = new THREE.BoxGeometry(2 * VD.chainSpread + RANGE.postWidth, VD.armDepth, RANGE.postBehind + RANGE.postWidth / 2);
-    const bandGeo = new THREE.BoxGeometry(RANGE.postWidth * 1.15, VD.band.height, RANGE.postWidth * 1.15);
-    const hingeGeo = new THREE.BoxGeometry(VD.hinge.width, VD.hinge.height, VD.hinge.depth);
     const plateGeo = this.trackGeo(new THREE.CylinderGeometry(RANGE.plateRadius, RANGE.plateRadius, V.plateThickness, V.plateSegments));
     plateGeo.rotateX(Math.PI / 2); // face the firing line (+z)
     const headGeo = this.trackGeo(new THREE.CylinderGeometry(hits.headRadius, hits.headRadius, V.figureThickness, 16));
     headGeo.rotateX(Math.PI / 2);
-    // A torso 1 m tall, scaled to a standing or crouched figure by its instance.
+    // A torso 1 m tall, scaled to a standing or crouched figure by its instance; trolleys and arms likewise from a unit box.
     const torsoGeo = this.trackGeo(new THREE.BoxGeometry(V.figureWidth, 1, V.figureThickness));
+    const boxGeo = this.trackGeo(new THREE.BoxGeometry(1, 1, 1));
+    // The START plate's painted face (M93): a disc just in front of its plate.
+    const faceGeo = this.trackGeo(new THREE.CircleGeometry(RANGE.plateRadius * V.start.inset, V.plateSegments));
+    const face = this.track(new THREE.MeshStandardMaterial({ map: this.startFace(), roughness: V.start.roughness }));
 
-    const plates = targets.filter((t) => t.kind === 'steel').length;
-    const figures = targets.length - plates;
+    const count = (f: (t: RangeTarget) => boolean): number => targets.filter(f).length;
+    const plates = count((t) => t.kind === 'steel');
+    const chained = count((t) => t.kind === 'steel' && t.motion !== 'swinger');
+    const figures = count((t) => t.kind === 'figure');
     const plateMesh = this.instanced(plateGeo, steel, plates, true);
-    const chainMesh = this.instanced(this.trackGeo(merged(links)), metal, plates, false);
+    const chainMesh = this.instanced(this.trackGeo(merged(links)), metal, chained, false);
     const torsoMesh = this.instanced(torsoGeo, ply, figures, true);
     const headMesh = this.instanced(headGeo, plyHead, figures, true);
+    const trolleyMesh = this.instanced(boxGeo, post, count((t) => t.motion === 'mover'), true);
+    const armMesh = this.instanced(boxGeo, post, count((t) => t.motion === 'swinger'), true);
+    const faceMesh = this.instanced(faceGeo, face, count((t) => t.start), false);
+    const plateTwin = this.twin(plateGeo, lit, plates);
+    const torsoTwin = this.twin(torsoGeo, lit, figures);
+    const headTwin = this.twin(headGeo, lit, figures);
     this.detailParts.push(chainMesh);
 
-    const posts: THREE.BufferGeometry[] = [];
-    const fittingParts: THREE.BufferGeometry[] = [];
-    let plate = 0;
-    let figure = 0;
+    const next = new Map<THREE.InstancedMesh, number>();
+    const part = (mesh: THREE.InstancedMesh, rides: Part['rides'], local: THREE.Matrix4, twin = -1): Part => {
+      const index = next.get(mesh) ?? 0;
+      next.set(mesh, index + 1);
+      return { mesh, index, rides, local, twin };
+    };
     for (const t of targets) {
       const parts: Part[] = [];
       if (t.kind === 'steel') {
-        // The plate hangs from the top of a post frame; it swings about the hanger.
-        const top = t.position.y + RANGE.plateRadius + RANGE.postAbovePlate;
-        const upright = new THREE.BoxGeometry(RANGE.postWidth, top, RANGE.postWidth);
-        posts.push(placed(upright, t.position.x, top / 2, t.position.z - RANGE.postBehind));
-        upright.dispose();
-        const pivot = new THREE.Vector3(t.position.x, top, t.position.z);
-        parts.push({ mesh: plateMesh, index: plate, pivot, local: new THREE.Matrix4().makeTranslation(0, t.position.y - top, 0) });
-        parts.push({ mesh: chainMesh, index: plate, pivot, local: new THREE.Matrix4() });
-        plate++;
-        // Detail: the plate on two short chains from an arm off the post's top, and a safety band on the post.
-        fittingParts.push(placed(armGeo, t.position.x, top + VD.armDepth / 2, t.position.z - RANGE.postBehind / 2, VD.metal));
-        fittingParts.push(placed(bandGeo, t.position.x, VD.band.at, t.position.z - RANGE.postBehind, VD.band.colour));
+        // A plate scaled to its radius (M93: small steel). A still plate hangs from the top of its post on two chains and
+        // swings about the hanger; a swinger's is bolted to the end of its arm.
+        const scale = t.radius / RANGE.plateRadius;
+        const sized = new THREE.Matrix4().makeScale(scale, scale, 1);
+        if (t.motion === 'swinger') {
+          const G = V.gear;
+          const arm = RANGE.swinger.arm;
+          parts.push(part(armMesh, 'carrier', new THREE.Matrix4().makeScale(G.arm, arm, G.arm).setPosition(0, -arm / 2, -(V.plateThickness + G.arm) / 2)));
+          parts.push(part(plateMesh, 'body', sized, plateTwin));
+        } else {
+          const hang = t.radius + RANGE.postAbovePlate;
+          parts.push(part(plateMesh, 'body', sized.clone().setPosition(0, -hang, 0), plateTwin));
+          parts.push(part(chainMesh, 'body', new THREE.Matrix4().makeScale(scale, 1, 1)));
+          if (t.start) parts.push(part(faceMesh, 'body', new THREE.Matrix4().makeTranslation(0, -hang, V.plateThickness / 2 + V.start.lift)));
+        }
       } else {
-        // A plywood cut-out the size of a player's hit volume, standing or crouched, hinged at its feet.
+        // A plywood cut-out the size of a player's hit volume, standing or crouched, hinged at its feet (a mover's on its
+        // trolley, which runs under it).
         const drop = t.crouched ? hits.crouchDrop : 0;
         const bodyTop = hits.bodyTop - drop;
-        const pivot = new THREE.Vector3(t.position.x, 0, t.position.z);
         const torso = new THREE.Matrix4().makeScale(1, bodyTop - hits.bodyBottom, 1).setPosition(0, (bodyTop + hits.bodyBottom) / 2, 0);
-        parts.push({ mesh: torsoMesh, index: figure, pivot, local: torso });
-        parts.push({ mesh: headMesh, index: figure, pivot, local: new THREE.Matrix4().makeTranslation(0, hits.headHeight - drop, 0) });
-        figure++;
-        // Detail: the hinge brackets the figure stands on.
-        for (const side of [-1, 1]) {
-          fittingParts.push(placed(hingeGeo, t.position.x + side * (V.figureWidth / 2 - VD.hinge.inset), VD.hinge.height / 2, t.position.z, VD.metal));
+        parts.push(part(torsoMesh, 'body', torso, torsoTwin));
+        parts.push(part(headMesh, 'body', new THREE.Matrix4().makeTranslation(0, hits.headHeight - drop, 0), headTwin));
+        if (t.motion === 'mover') {
+          const T = V.gear.trolley;
+          const h = RANGE.mover.trolleyHeight;
+          parts.push(part(trolleyMesh, 'carrier', new THREE.Matrix4().makeScale(T.width, h, T.depth).setPosition(0, -h / 2, 0)));
         }
       }
       this.parts.push(parts);
       this.swingT.push(Number.POSITIVE_INFINITY);
       this.drawnAngle.push(Number.NaN);
+      this.drawnLit.push(false);
+      this.drawnHidden.push(false);
+      this.drawnClock.push(Number.NaN);
     }
-    if (posts.length > 0) this.object.add(this.static('range-posts', merged(posts), post, false));
+    const gear = targetGear(targets);
+    if (gear.posts.length > 0) this.object.add(this.static('range-posts', merged(gear.posts), post, false));
+    const fittingParts = gear.fittings;
     this.addShelf(fittingParts);
-    for (const g of [armGeo, bandGeo, hingeGeo]) g.dispose();
     const stands = this.static('range-fittings', merged(fittingParts), fittings, true);
     this.object.add(stands);
     this.detailParts.push(stands);
@@ -265,25 +275,70 @@ export class RangeTargetsRenderer {
     }
   }
 
-  /** Once per frame: figures follow their time down, plates swing and settle; only targets that moved are uploaded. */
-  update(dt: number): void {
+  /**
+   * Once per frame, `alpha` of the way from the last tick to the next: figures follow their time down, plates swing and
+   * settle, movers and swingers move on, and lit targets (M93) are drawn by the lit twins; only targets that moved or
+   * changed are uploaded.
+   */
+  update(dt: number, alpha = 1): void {
+    this.twinDrawn.fill(0);
     for (let i = 0; i < this.targets.length; i++) {
       const t = this.targets[i]!;
       let angle: number;
-      if (t.kind === 'figure') {
-        angle = figureRotation(t.down);
-      } else {
+      if (t.kind === 'figure') angle = figureRotation(t.down, t.downFor);
+      else {
         const s = (this.swingT[i]! += dt);
-        angle = Number.isFinite(s) ? plateRotation(s) : 0;
+        angle = Number.isFinite(s) && t.motion !== 'swinger' ? plateRotation(s) : 0;
       }
-      if (angle === this.drawnAngle[i]) continue;
+      const lit = t.lit > 0 && !t.hidden;
+      // Where a mover or swinger is in its cycle, as drawn (between its last two ticks); the rest never change it.
+      const clock = t.prevClock + (t.clock - t.prevClock) * alpha;
+      // A lit target is drawn every frame: the lit twins are filled afresh each time.
+      if (!lit && angle === this.drawnAngle[i] && lit === this.drawnLit[i] && t.hidden === this.drawnHidden[i] && clock === this.drawnClock[i]) continue;
       this.drawnAngle[i] = angle;
+      this.drawnLit[i] = lit;
+      this.drawnHidden[i] = t.hidden;
+      this.drawnClock[i] = clock;
+      this.place(t, angle, clock, alpha);
       for (const part of this.parts[i]!) {
-        pivotM.makeTranslation(part.pivot.x, part.pivot.y, part.pivot.z).multiply(turnM.makeRotationX(angle));
-        part.mesh.setMatrixAt(part.index, partM.multiplyMatrices(pivotM, part.local));
+        const m = part.rides === 'body' ? bodyM : carrierM;
+        partM.multiplyMatrices(m, part.local);
+        const twinned = lit && part.twin >= 0;
+        if (twinned) {
+          const twin = this.twins[part.twin]!;
+          twin.setMatrixAt(this.twinDrawn[part.twin]!++, partM);
+          twin.instanceMatrix.needsUpdate = true;
+        }
+        part.mesh.setMatrixAt(part.index, t.hidden || twinned ? NONE : partM);
         part.mesh.instanceMatrix.needsUpdate = true;
       }
     }
+    for (let k = 0; k < this.twins.length; k++) this.twins[k]!.count = this.twinDrawn[k]!;
+  }
+
+  /**
+   * Sets bodyM and carrierM for target `t` drawn `alpha` of the way between its last two ticks (a swinger at `clock` in
+   * its swing), its plate swung or figure fallen by `angle` about its hinge's x. A still plate's body hangs from its
+   * hanger over it; a figure's stands on its hinge at its feet (a mover's carrier is its trolley there); a swinger's
+   * carrier is its arm from the pivot, its body the plate at the arm's end.
+   */
+  private place(t: RangeTarget, angle: number, clock: number, alpha: number): void {
+    if (t.motion === 'swinger') {
+      // The pivot over the plate's lowest point, turned to face its yaw, the arm swung about its own z.
+      carrierM.makeTranslation(t.home.x, t.home.y + RANGE.swinger.arm, t.home.z).multiply(turnM.makeRotationY(t.yaw)).multiply(turnM.makeRotationZ(swingAngle(clock)));
+      bodyM.copy(carrierM).multiply(turnM.makeTranslation(0, -RANGE.swinger.arm, 0));
+      return;
+    }
+    // Where it is between its last two ticks (a mover runs on; the rest stay put).
+    const p = t.position;
+    const q = t.prevPosition;
+    const x = q.x + (p.x - q.x) * alpha;
+    const y = q.y + (p.y - q.y) * alpha;
+    const z = q.z + (p.z - q.z) * alpha;
+    carrierM.makeTranslation(x, y, z).multiply(turnM.makeRotationY(t.yaw));
+    // A plate hangs from its hanger over it; a figure stands on its hinge at its feet.
+    const hang = t.kind === 'steel' ? t.radius + RANGE.postAbovePlate : 0;
+    bodyM.makeTranslation(x, y + hang, z).multiply(turnM.makeRotationY(t.yaw)).multiply(turnM.makeRotationX(angle));
   }
 
   dispose(): void {
@@ -303,6 +358,15 @@ export class RangeTargetsRenderer {
     this.movers.push(mesh);
     this.object.add(mesh);
     return mesh;
+  }
+
+  /** A lit twin of a moving mesh (M93): room for `capacity` instances, none drawn until a target lights. Its index. */
+  private twin(geo: THREE.BufferGeometry, mat: THREE.Material, capacity: number): number {
+    const mesh = this.instanced(geo, mat, capacity, true);
+    mesh.count = 0;
+    this.twins.push(mesh);
+    this.twinDrawn.push(0);
+    return this.twins.length - 1;
   }
 
   /** A merged mesh of parts that never move. */
@@ -425,6 +489,23 @@ export class RangeTargetsRenderer {
     });
     this.textures.push(steel, steelRough, ply, head);
     return { steel, steelRough, ply, head };
+  }
+
+  /** The START plate's face (M93): safety orange with the word in white, read from the line. */
+  private startFace(): THREE.Texture {
+    const S = V.start;
+    const n = S.textureSize;
+    const tex = canvasTexture(n, n, (g) => {
+      g.fillStyle = S.paint;
+      g.fillRect(0, 0, n, n);
+      g.fillStyle = S.ink;
+      g.font = `bold ${Math.round(n * S.font)}px sans-serif`;
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText('START', n / 2, n / 2 + n * S.drop);
+    });
+    this.textures.push(tex);
+    return tex;
   }
 
   /** The distance boards' atlas: one 256 × 128 board per text, top to bottom (signRow maps a board's UVs to its row). */

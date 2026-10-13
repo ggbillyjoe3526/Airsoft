@@ -7,7 +7,7 @@ import type { CrosshairSettings } from './config/matchInfo';
 import { BODY, MOVEMENT } from './config/movement';
 import { NAV } from './config/nav';
 import { PHYSICS } from './config/physics';
-import { RANGE } from './config/range';
+import { RANGE, rangeLayout } from './config/range';
 import type { QualitySettings } from './config/render';
 import type { ReplicaConfig } from './config/replicas';
 import { SIM, SIM_DT } from './config/sim';
@@ -34,6 +34,7 @@ import { canAimDownSights } from './sim/aiming';
 import { fitOptics, fitParts, setBbWeights, setHopUps } from './sim/armament';
 import { type Character, createCharacter, respawnCharacter } from './sim/character';
 import { createCommand, type PlayerCommand } from './sim/commands';
+import { type ChallengePhase, type ChallengeRun, createChallenge, type RangeChallenge, setChallengeOn, stepChallenge } from './sim/rangeChallenge';
 import { createRangeTargets } from './sim/rangeTargets';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
 import { partsUnder } from './sim/torch';
@@ -45,7 +46,7 @@ import { tutorialSteps } from './config/tutorial';
 import { TutorialTracker, type TutorialView } from './tutorial/tutorial';
 import { CoachPanel } from './ui/coachPanel';
 import { TutorialShowcase } from './ui/tutorialShowcase';
-import { type LastShot, lastShotText, RangeReadout } from './ui/rangeReadout';
+import { ChallengeBanner, challengeText, type LastShot, lastShotText, RangeReadout } from './ui/rangeReadout';
 
 const PLAYER_ID = 0;
 
@@ -53,6 +54,9 @@ const PLAYER_ID = 0;
 export type RangeSetup = Pick<MatchSetup, 'kit' | 'teamColours' | 'look'> & {
   /** Whether the Armory is on (M83: off, the tutorial never names it); on when left out. */
   armory?: boolean;
+  /** The timed challenge (M93): on as the range opens (not in the tutorial), and the best score kept so far. */
+  challenge?: boolean;
+  challengeBest?: number;
 };
 
 /** Where you stand and which way you face: kept when the range is rebuilt for a new loadout. */
@@ -89,6 +93,13 @@ export class RangeSession {
   private motion: MotionScale = FULL_MOTION;
   private readonly ctx: SimContext;
   private lastShot: LastShot | null = null;
+  /** The timed challenge (M93) and its big word over the middle of the screen. */
+  private readonly challenge: RangeChallenge;
+  private readonly banner: ChallengeBanner;
+  /** What the readout last showed of the challenge: its line is rebuilt only when one of these changes. */
+  private readonly challengeShown: { phase: ChallengePhase | null; second: number; hits: number; best: number } = { phase: null, second: -1, hits: -1, best: -1 };
+  /** Told each finished run of the timed challenge (M93), so the game can keep a new best. */
+  onChallengeRun: ((run: ChallengeRun) => void) | null = null;
   /** The tutorial (M16), when the range was opened for it, and its coach. */
   private tutorial: TutorialTracker | null = null;
   private coach: CoachPanel | null = null;
@@ -145,7 +156,9 @@ export class RangeSession {
     this.physics = new PhysicsWorld(map, BODY, SIM_DT);
     const nav = buildNavGrid(map, NAV);
     this.state = createGameState(seed, BALLISTICS.maxBBs, ROUNDS);
-    this.state.targets = createRangeTargets();
+    this.state.targets = createRangeTargets(rangeLayout(), this.state.rng);
+    this.challenge = createChallenge(setup.challengeBest ?? 0);
+    if (setup.challenge && tutorialFrom === undefined) setChallengeOn(this.challenge, this.state.targets, true, this.state.rng);
     this.ctx = createSimContext({
       mover: this.physics,
       query: this.physics,
@@ -189,7 +202,8 @@ export class RangeSession {
     this.targets.setDetail(quality.mapDetail);
     renderer.scene.add(this.targets.object);
     this.readout = new RangeReadout(container);
-    this.readout.set(lastShotText(null));
+    this.banner = new ChallengeBanner(container);
+    this.showLine();
     if (tutorialFrom !== undefined) {
       this.tutorial = new TutorialTracker(tutorialSteps(setup.armory !== false), canAimDownSights(this.player.armament), tutorialFrom, this.loadout.length);
       this.coach = new CoachPanel(container, (action) => input.keyName(action));
@@ -205,10 +219,27 @@ export class RangeSession {
     return t && t.goalIndex < t.steps.length ? t.goalIndex : undefined;
   }
 
-  /** "Tutorial · step 3 of 10", or "Practice range". */
+  /** "Tutorial · step 3 of 10", or "Practice range" (with the timed challenge's best when it is on, M93). */
   get status(): string {
     const t = this.tutorial;
-    return t && !t.finished ? `Tutorial · step ${t.stepIndex + 1} of ${t.steps.length}: ${t.step!.title}` : 'Practice range';
+    if (t && !t.finished) return `Tutorial · step ${t.stepIndex + 1} of ${t.steps.length}: ${t.step!.title}`;
+    const c = this.challenge;
+    return c.phase === 'off' ? 'Practice range' : `Practice range · timed challenge · ${c.best > 0 ? `best ${c.best}` : 'no best yet'}`;
+  }
+
+  /**
+   * The timed challenge on the pause menu (M93): whether it is on, or null while the tutorial coaches (it isn't offered
+   * then).
+   */
+  get challengeOffer(): boolean | null {
+    return this.coaching ? null : this.challenge.phase !== 'off';
+  }
+
+  /** The pause menu's Timed challenge: on (the START plate stands) or off (free practice; a run under way is dropped). */
+  setChallenge(on: boolean): void {
+    if (this.coaching) return;
+    setChallengeOn(this.challenge, this.state.targets, on, this.state.rng);
+    this.showLine();
   }
 
   /** The tutorial is running (its coach up): the pause menu offers Skip step and Skip tutorial (audit POOL-14). */
@@ -270,6 +301,7 @@ export class RangeSession {
     for (let i = 0; i < ticks; i++) {
       this.input.fillCommand(this.playerCommand);
       stepSimulation(this.state, this.commands, this.ctx, SIM_DT);
+      stepChallenge(this.challenge, this.state.targets, this.state.events, PLAYER_ID, SIM_DT, this.state.rng);
       this.afterTick();
     }
     return ticks;
@@ -286,7 +318,8 @@ export class RangeSession {
     const alpha = stepperAlpha(this.stepper);
     const pitch = this.input.pitch + this.player.armament.recoil;
     updateFirstPersonCamera(this.renderer.camera, this.player, BODY, HITS, alpha, this.input.yaw, pitch, this.motion.leanRoll);
-    this.targets.update(dt);
+    this.targets.update(dt, alpha);
+    this.banner.frame(dt, this.challenge, this.playing);
     this.showcase?.frame(dt);
     this.combat.frame(dt, alpha, this.input.yaw, pitch);
     this.daylight.follow(this.renderer.camera, dt);
@@ -337,6 +370,7 @@ export class RangeSession {
     this.combat.dispose();
     this.targets.dispose();
     this.readout.dispose();
+    this.banner.dispose();
     this.coach?.dispose();
     this.showcase?.dispose();
     // Out of the scene, kept by the renderer for the next session on this map (freed there, CORE-33).
@@ -388,6 +422,12 @@ export class RangeSession {
       this.tutorialMoved(t);
       if (t.finished) this.completeDue = this.completePopup = true;
     }
+    const c = this.challenge;
+    if (c.cue) {
+      this.combat.challengeCue(c.cue);
+      this.banner.cue(c.cue, c);
+      if (c.cue === 'time' && c.last) this.onChallengeRun?.(c.last);
+    }
     for (const e of this.state.events) {
       // Your BB came down (a ricochet's last stop wins), hit a target, or flew out over a wall.
       if (e.type === 'bbImpact' && e.ownerId === PLAYER_ID) this.lastShot = { distance: downrange(e.position), target: null };
@@ -399,9 +439,31 @@ export class RangeSession {
         const t = this.state.targets.find((x) => x.id === e.targetId);
         this.lastShot = { distance: downrange(e.position), target: t ? { label: t.label, distance: t.distance } : null };
       } else continue;
-      this.readout.set(lastShotText(this.lastShot));
+      if (c.phase === 'off') this.readout.set(lastShotText(this.lastShot));
       this.coach?.setShot(lastShotText(this.lastShot));
     }
+    if (c.phase !== 'off') this.showLine();
+  }
+
+  /**
+   * The readout's line: the last BB's in free practice, the timed challenge's while it is on (M93). The challenge's is
+   * rebuilt only when its phase, its second or its score changes, not every tick.
+   */
+  private showLine(): void {
+    const c = this.challenge;
+    const shown = this.challengeShown;
+    if (c.phase === 'off') {
+      shown.phase = null;
+      this.readout.set(lastShotText(this.lastShot));
+      return;
+    }
+    const second = Math.ceil(c.clock);
+    if (c.phase === shown.phase && second === shown.second && c.hits === shown.hits && c.best === shown.best) return;
+    shown.phase = c.phase;
+    shown.second = second;
+    shown.hits = c.hits;
+    shown.best = c.best;
+    this.readout.set(challengeText(c));
   }
 }
 

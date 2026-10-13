@@ -51,6 +51,9 @@ and never writes the simulation.
 - `matchPresentation.ts`: other players, hit feedback, spectator camera, round banner, scoreboard, flag.
   `combatPresentation.ts`: after each tick it consumes `state.events`; each frame it draws the BBs, puffs, the held
   replica (a second render pass) and the HUD. Also `cameraRig.ts`, `viewmodel.ts`.
+- The practice range's targets: `rangeTargetsRenderer.ts` (instanced plates, figures and the START plate, moved by the
+  sim's data; a lit challenge target draws through an orange twin), `rangeTargetGear.ts` (the posts, swinger frames,
+  mover rails and pop-up motor boxes, merged once).
 - The field: `mapMeshes.ts` turns blocks into pieces merged per texture by `cuboidMesh.ts`. Look-only data is drawn by
   `mapSigns.ts`, `mapDecals.ts`, `dressingMeshes.ts`, `cityProps.ts`, `natureShapes.ts`, `canopyMeshes.ts`,
   `terrainMeshes.ts`, `foliageMeshes.ts`. Textures: `proceduralTextures.ts`, `textureLibrary.ts`.

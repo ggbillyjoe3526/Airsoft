@@ -18,6 +18,7 @@ import { aimRaiseTime } from '../sim/aiming';
 import type { WorldQuery } from '../sim/armament';
 import type { BB } from '../sim/ballistics';
 import type { Character } from '../sim/character';
+import type { ChallengeCue } from '../sim/rangeChallenge';
 import type { GameState } from '../sim/state';
 import { lightInHand, torchLit } from '../sim/torch';
 import { length3 } from '../sim/vec';
@@ -285,6 +286,11 @@ export class CombatPresentation {
   /** A teammate's radio answers a squad order (M22). */
   orderHeard(): void {
     this.sfx.orderHeard();
+  }
+
+  /** The practice range's timed challenge (M93): the countdown's beeps, the start's long one, the end's whistle. */
+  challengeCue(cue: ChallengeCue): void {
+    this.sfx.challengeCue(cue);
   }
 
   /** Call after every simulation tick, while that tick's events are still in the state. */

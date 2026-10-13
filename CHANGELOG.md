@@ -4,6 +4,10 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 
 ## Unreleased
 
+### Added
+- **M93** · Practice has moving targets: sliding figures, a swinging plate, small plates at 15 m and pop-up figures
+- **M93** · Practice has a Timed challenge, off by default (pause menu): 60 seconds on lit targets, best score kept
+
 ## 0.1 Dev 5 · 2026-10-13
 
 ### Added

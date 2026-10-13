@@ -270,7 +270,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 ## Practice range and tutorial
 
 - A practice range, from the title screen or the top bar's Range: steel plates that ring, figures that fall, at 10–60 m,
-  with a readout of your last BB; figures stand at the same height as match characters (M21, FA1)
+  with a readout of your last BB; figures stand at the same height as match characters; moving targets (sliding figures, a swinging plate, pop-up figures) and an optional Timed challenge with a best score, off by default (M21, FA1, M93)
 - Range in Depot's new look: baked light, post effects, props behind the firing line (portable toilet, replica rack, water tank, generator, crate bench), a sandbag berm at the backstop, dirt, litter, puddles and sprays, and wooded hills, treelines, site huts, a water tower and a power line beyond the walls; chains, bands and brackets on the plates (FA7, M81)
 - A tutorial of fifteen coached steps on the range, with your own key bindings and the real scoreboard and order wheel; finishing opens Tutorial complete with Practice range or Menu; skip and resume from pause; Replay tutorial in Settings starts it again at once (M16, FA10, M80, M97)
 
