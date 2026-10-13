@@ -183,6 +183,13 @@ export interface Bot {
   routeState: 'none' | 'wanted' | 'ok' | 'failed';
   /** World direction (unit, horizontal) the bot walks this tick, while following a route. */
   moveDir: { x: number; z: number };
+  /**
+   * The leg it walks this tick goes over a low obstacle (M102, nav/vaultLinks.ts): it faces the way and presses Jump
+   * once a vault is there (botBrain). Set by followRoute each tick it walks one.
+   */
+  vaultLeg: boolean;
+  /** No vault in this bot's routes before this time (s): it got stuck on a vault leg (BOT_BEHAVIOUR.vaultRetryDelay). */
+  vaultsOffUntil: number;
   stuckFor: number;
   /**
    * The holster (M92, ai/botHolster.ts): seconds sprinting without a break, and seconds since the sprint last ended
@@ -400,6 +407,8 @@ export function createBot(character: Character, seed: number, cfg: BotBehaviour,
     routeGoal: vec3(),
     routeState: 'none',
     moveDir: { x: 0, z: 0 },
+    vaultLeg: false,
+    vaultsOffUntil: Number.NEGATIVE_INFINITY,
     stuckFor: 0,
     sprintRun: 0,
     sprintGap: 0,
@@ -500,6 +509,8 @@ export function resetBot(b: Bot, lane: number, startHold: number, cfg: BotBehavi
   b.routeRetryAt = Number.NEGATIVE_INFINITY;
   b.routeState = 'none';
   b.route.length = 0;
+  b.vaultLeg = false;
+  b.vaultsOffUntil = Number.NEGATIVE_INFINITY;
   b.stuckFor = 0;
   b.sprintRun = 0;
   b.sprintGap = 0;

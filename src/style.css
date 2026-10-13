@@ -763,6 +763,30 @@ kbd {
   }
 }
 
+/* Vaulting (M102): "Space to vault" under the crosshair while a Jump press would vault; below the case prompt's place */
+.vault-prompt {
+  position: absolute;
+  left: 50%;
+  top: 64%;
+  translate: -50% 0;
+  scale: var(--hud-scale, 1);
+  padding: 3px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--hud-panel);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  color: var(--paper);
+  text-shadow: var(--hud-shadow);
+  pointer-events: none;
+  z-index: 11;
+}
+
+.vault-prompt[hidden] {
+  display: none;
+}
+
 /* Extraction's case prompt (M44): under the crosshair, "Hold G to open the field case", then a bar while you hold it */
 .case-prompt {
   position: absolute;

@@ -13,10 +13,12 @@ each `src/` folder's `README.md`.
 - **Waiting on the owner:** the laptop and desktop Ultra perf baselines, the Save checks in Firefox and Edge, and
   playing Woodland and Neon Heights (`docs/PLAYTEST.md` › Only you can do these). The Dev 6 figure redesign waits on
   his reference photos and a session in his Blender (`docs/DECISIONS.md` › Art direction and graphics).
-- **Gaps the figure redesign should close.** Resting on cover (M104) has only a placeholder third-person pose: the
-  rigged figures behind the Dev switches lean their upper body about 5° over the cover (`FIGURE_RIG.rest`), and the
-  built-in figures don't change. The redesign must bring a rest-on-cover animation (owner, 2026-10-13). Of the bots,
-  anchors rest on cover (they aim where they stand still to fight or hold, BN1); the rest fire from the hip.
+- **Gaps the figure redesign should close.** Vaulting (M102) and resting on cover (M104) have only placeholder
+  third-person poses on the rigged figures behind the Dev switches: through a vault they hold the vault's tuck as a
+  crouch with the walk overlay off (`render/figurePose.ts` `PoseInput.vaulting`), and at rest they lean their upper body
+  about 5° over the cover (`FIGURE_RIG.rest`); the built-in figures don't change. The redesign must bring vault and
+  rest-on-cover animations (owner, 2026-10-13). Of the bots, anchors rest on cover (they aim where they stand still to
+  fight or hold, BN1); the rest fire from the hip.
 
 ## Where to look
 

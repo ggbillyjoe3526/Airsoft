@@ -1,3 +1,4 @@
+import { VAULT_WALL_HEIGHT } from '../config/vault';
 import { type Vec3, vec3 } from '../sim/vec';
 import type { BlockFinish, BlockKind, MapBlock, MapData, MapSign, Overlook, RampRise, SpawnPoint } from './mapTypes';
 import { NEON_HEIGHTS_DRESSING } from './neonHeightsDressing';
@@ -129,6 +130,11 @@ interface Opening {
 }
 const door = (a: number, b: number): Opening => ({ a, b, lo: 0, hi: DOOR_HEIGHT });
 const window = (a: number, b: number): Opening => ({ a, b, lo: WINDOW_SILL, hi: WINDOW_TOP });
+/**
+ * A low wall you vault (M102) in place of a window: open to the storey's top, as a body going over needs its full height
+ * clear over it (a lintel at a window's 2.3 m would stop it).
+ */
+const vaultGap = (a: number, b: number): Opening => ({ a, b, lo: VAULT_WALL_HEIGHT, hi: STOREY });
 
 /**
  * One storey of wall (floor `y0` up to the next floor, 3 m), running along `axis` from `from` to `to`, `t0..t1` across,
@@ -240,9 +246,10 @@ function arcade(): MapBlock[] {
   const [x0, x1, z0, z1] = ARCADE;
   const s = ARCADE_STAIR;
   return [
-    // Walls, two storeys: street (the arcade) and Level 1 (the Capsules).
+    // Walls, two storeys: street (the arcade) and Level 1 (the Capsules), whose front onto the balcony has a window, a
+    // low wall to vault out over (M102: the quick way to the balcony's open end and the drop to the avenue) and a door.
     ...wallAlongZ(x0, x0 + WALL, z0, z1, [[door(0.4, 2)], []]),
-    ...wallAlongZ(x1 - WALL, x1, z0, z1, [[door(5.2, 6.6)], [window(0, 2), window(3, 5), door(7, 8.4)]]),
+    ...wallAlongZ(x1 - WALL, x1, z0, z1, [[door(5.2, 6.6)], [window(0, 2), vaultGap(3, 5), door(7, 8.4)]]),
     ...wallAlongX(z1 - WALL, z1, x0 + WALL, x1 - WALL, [[door(-9, -7.6)], [window(-12, -10.4), window(-7, -5.4)]]),
     ...wallAlongX(z0, z0 + WALL, x0 + WALL, x1 - WALL, [[door(-12, -10.6)], [door(FOOTBRIDGE[0] + 0.2, FOOTBRIDGE[1] - 0.2)]]),
     // The stair: a corridor along the west wall, entered from the south by the street door; at the top the Capsules'
@@ -705,11 +712,13 @@ const NEON_SIGNS: MapSign[] = [
 ];
 
 /**
- * Neon trim (M34f): a thin strip along the top of the Arcade's and the Tower's avenue faces, over their Level 1 windows,
- * and along the outside of the Sky Bridge's sides.
+ * Neon trim (M34f): a thin strip along the top of the Arcade's and the Tower's avenue faces, over their Level 1 windows
+ * (the Arcade's in two, either side of the low wall you vault, which is open to the roof: M102), and along the outside of
+ * the Sky Bridge's sides.
  */
 const TRIMS: MapSign[] = [
-  sign(-3.5, 5.85, 4, 11.6, 0.1, '+x', NEON.magenta),
+  sign(-3.5, 5.85, 0.55, 4.7, 0.1, '+x', NEON.magenta),
+  sign(-3.5, 5.85, 7.45, 4.7, 0.1, '+x', NEON.magenta),
   sign(4, 5.85, 0.5, 20.6, 0.1, '-x', NEON.cyan),
   sign((SKY_BRIDGE[0] + SKY_BRIDGE[1]) / 2, 2 * STOREY + 0.9, SKY_BRIDGE[2] - RAIL_THICKNESS, SKY_BRIDGE[1] - SKY_BRIDGE[0] - 0.4, 0.08, '-z', NEON.cyan),
   sign((SKY_BRIDGE[0] + SKY_BRIDGE[1]) / 2, 2 * STOREY + 0.9, SKY_BRIDGE[3] + RAIL_THICKNESS, SKY_BRIDGE[1] - SKY_BRIDGE[0] - 0.4, 0.08, '+z', NEON.cyan),

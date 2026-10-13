@@ -3,7 +3,7 @@
 Every tunable number and data table, as exported constants with units in the comments. Gameplay code reads them here and
 holds no magic numbers.
 
-- Simulation: `sim.ts`, `movement.ts`, `physics.ts`, `hits.ts` (`HITS`, `ROUNDS`), `ballistics.ts` (air, `spinPerHop`,
+- Simulation: `sim.ts`, `movement.ts`, `vault.ts` (vaulting, and the maps' vault wall height), `physics.ts`, `hits.ts` (`HITS`, `ROUNDS`), `ballistics.ts` (air, `spinPerHop`,
   `WIND`), `footsteps.ts`, `modes.ts` (`MATCH_MODES`, `MODE_SHAPES`, the never-check `unknownMode`), `extraction.ts`, `matchRules.ts` (match rules, `RULESETS` and `MODE_FIT`, what fits each mode), `range.ts`, `practice.ts` (Practice on a map: where its targets stand and which kind, M94).
 - Replicas and gear: `replicas.ts`, `attachments.ts` (grips, magazines, barrels, muzzles), `optics.ts`, `lasers.ts`,
   `torches.ts`; `schemes.ts`, `characters.ts`, `figureRig.ts` (the rigged Blender figures, BF1), `replicaFinish.ts` for
