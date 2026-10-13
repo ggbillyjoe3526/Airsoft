@@ -15,10 +15,11 @@ the leg reader poses free their default materials.
 
 ## Decisions
 
-- **The hit volume's legs are the figures' own ("Legs follow", recommended on the owner's card).** No clip can make a knee bend fit the
-  volume's straight, swinging legs: crouched and walking, the misses were mostly the legs. With the figures drawn,
-  the volume's thighs, shins and boots sit on the clip's joints, sampled 30 times a second from the figure file as it
-  loads; the head, chest and hips stay the built-in volume's, so cover and crouch rules are unchanged.
+- **The hit volume's legs are the figures' own (the owner's pick, "Legs follow"; `docs/DECISIONS.md`).** No clip can
+  make a knee bend fit the volume's straight, swinging legs: crouched and walking, the misses were mostly the legs.
+  With the figures drawn, the volume's thighs, shins and boots sit on the clip's joints, sampled 30 times a second from
+  the figure file as it loads; the head, chest and hips stay the built-in volume's, so cover and crouch rules are
+  unchanged.
 - **The walk cycle steps at the figures' strides, and their cycle clips play at it.** The volume and the drawn legs then
   share one clock, so a planted foot is where the volume's boot is and the feet don't slide.
 - **One set of legs for both kinds: the human's.** The robot's legs differ by a couple of centimetres crouched; the

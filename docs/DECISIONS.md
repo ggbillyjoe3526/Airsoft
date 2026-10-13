@@ -301,6 +301,9 @@ replaces its line; the old one stays findable in the archive or in git.
 - **The rigged figures stay behind the Dev switches until they pass M85's hit-volume check (2026-10-12).** They don't
   yet (the volume's upper body is rounder than theirs, KNOWN_ISSUES › Figures and art); `render/riggedHitVolume.test.ts`
   measures them and holds each pose to its numbers, so a change only brings them closer (BF1).
+- **With the rigged figures drawn, the hit volume's legs are the figures' own (owner, 2026-10-13: "Legs follow"; IM8).**
+  Their thighs, shins and boots stand on the figure's leg joints from its clips, and the walk cycle steps at the clips'
+  strides; the head, chest and hips stay the built-in volume's, and with the figures off nothing changes.
 - **Vaulting comes in 0.1 Dev 6; slide into cover is no for now (owner, 2026-10-12).** Vaulting goes over low
   obstacles of 0.7 to 0.9 m, with a few added to the maps where they open a route; slide waits in `docs/IDEAS.md`.
 
