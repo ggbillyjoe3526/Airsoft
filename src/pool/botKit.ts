@@ -35,56 +35,39 @@ function drawItem(pool: Pool, asset: Asset, rng: RngState): ItemRef {
 /**
  * A random fit for replica asset `replica`: a power source always (when one fits), each other slot a part or none. The
  * light (M33h) is never rolled: bots carry one by rule on a night field (botLight), and skipping it before any draw
- * keeps every seeded kit as it was. `leanings` (BN1, a personality's bots.md › Kits, by pool.md name): a slot that gets
- * a part gets the first of these that fits it, if any does, in place of the one drawn.
+ * keeps every seeded kit as it was.
  */
-export function randomFit(pool: Pool, replica: Asset, rng: RngState, partChance: number = RANDOM_LOADOUT.partChance, leanings: readonly string[] = []): ReplicaFit {
+export function randomFit(pool: Pool, replica: Asset, rng: RngState, partChance: number = RANDOM_LOADOUT.partChance): ReplicaFit {
   const fit: ReplicaFit = { ...EMPTY_FIT };
   for (const slot of FIT_SLOTS) {
     if (slot === 'light') continue;
     const options = pool.assets.filter((a) => a.category === FIT_CATEGORY[slot] && fits(a, replica));
     // The roll is made whatever the options, so one slot's choices never shift the next slot's draws.
     const wanted = slot === 'power' || rngNext(rng) < partChance;
-    const drawn = pick(options, rng);
-    const asset = (leanings.length > 0 ? leanedTo(options, leanings) : undefined) ?? drawn;
+    const asset = pick(options, rng);
     const item = asset ? drawItem(pool, asset, rng) : null;
     fit[slot] = wanted ? item : null;
   }
   return fit;
 }
 
-/** The first of `leanings` (pool.md names) among `options`, or undefined. */
-function leanedTo(options: readonly Asset[], leanings: readonly string[]): Asset | undefined {
-  for (const name of leanings) {
-    const a = options.find((o) => o.name === name);
-    if (a) return a;
-  }
-  return undefined;
-}
-
 /**
  * A rolled kit for `loadout` (the replicas a bot carries, by slot), seeded `seed`. A replica the pool has no row for is
- * carried as it comes, with its factory parts. `leanings`: the parts the bot's personality leans to (randomFit, BN1).
+ * carried as it comes, with its factory parts.
  */
-export function randomKit(pool: Pool, loadout: readonly ReplicaConfig[], seed: number, partChance: number = RANDOM_LOADOUT.partChance, leanings: readonly string[] = []): KitSlot[] {
-  return rolledKit(pool, loadout, seed, partChance, leanings).kit;
+export function randomKit(pool: Pool, loadout: readonly ReplicaConfig[], seed: number, partChance: number = RANDOM_LOADOUT.partChance): KitSlot[] {
+  return rolledKit(pool, loadout, seed, partChance).kit;
 }
 
 /** randomKit, with the pool items it rolled (each replica and part). */
-export function rolledKit(
-  pool: Pool,
-  loadout: readonly ReplicaConfig[],
-  seed: number,
-  partChance: number = RANDOM_LOADOUT.partChance,
-  leanings: readonly string[] = [],
-): { kit: KitSlot[]; items: ItemRef[] } {
+export function rolledKit(pool: Pool, loadout: readonly ReplicaConfig[], seed: number, partChance: number = RANDOM_LOADOUT.partChance): { kit: KitSlot[]; items: ItemRef[] } {
   const rng = createRng(seed);
   const items: ItemRef[] = [];
   const kit = loadout.map((replica) => {
     const asset = assetOfReplica(pool, replica);
     if (!asset || pool.tiers.length === 0) return { replica, optic: null, parts: factoryParts(replica) };
     const item = drawItem(pool, asset, rng);
-    const fit = randomFit(pool, asset, rng, partChance, leanings);
+    const fit = randomFit(pool, asset, rng, partChance);
     items.push(item, ...Object.values(fit).filter((r): r is ItemRef => r !== null));
     return kitSlot(pool, item, fit);
   });

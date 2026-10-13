@@ -1,7 +1,8 @@
 # Bots: names and personalities
 
-Who the bots are and how each kind plays: every bot's name and personality, what each personality changes, and the
-kit each one leans to on Hard and Pro. Read it to add a name, or to make a personality play differently.
+Who the bots are and how each kind plays: every bot's name and personality, and what each personality changes. Read
+it to add a name, or to make a personality play differently. What each personality carries comes with the bot gear
+table (Dev 6 item 23), not here.
 
 **The game reads this file**, as it reads [pool.md](pool.md) and [stats.md](stats.md): it is bundled into the build
 and parsed when the game starts (`src/config/botsFile.ts`, `src/config/botPersonalities.ts`). Change a name or a
@@ -53,9 +54,6 @@ A personality changes how a bot plays, never how well: its reaction, turning and
 - **Holds angles.** Holding still, it aims at the corners and doorways someone would step out of.
 - **Slices corners.** Near the enemy it walks and aims at each corner as it opens, and tops up its magazine from
   cover.
-- **Leans to.** On Hard and Pro, where the other team's bots roll their own kits, each part it rolls is the first
-  one in this list that fits that slot of its replica (pool.md names), or a random one when none does. Your teammates
-  and Easy and Normal bots carry their replicas as they come.
 
 ## Roster
 
@@ -120,12 +118,3 @@ A personality changes how a bot plays, never how well: its reaction, turning and
 | Anchor | no | yes | no | 60 | yes | yes | – |
 | Flanker | no | no | yes | – | no | – | – |
 | Careful | no | yes | no | – | no | – | yes |
-
-## Kits
-
-| Personality | Leans to |
-|---|---|
-| Rusher | 11.1 V LiPo Battery, Red Gas, Hi-Cap Magazine, Extended Magazine, Angled Grip |
-| Anchor | 2x Scope, Long Barrel, Vertical Grip, Black Gas |
-| Flanker | Silencer, Low-Cap Magazine, Red Dot, Angled Grip |
-| Careful | Red Dot, Tight-Bore Barrel, Vertical Grip, Red Laser, Low-Cap Magazine |

@@ -361,6 +361,13 @@ team puts you on Beta instead.
   Easy never. A change mid-match applies from the next round, and the screen says so.
 - [ ] **Hard opponents' kit.** Their rifles differ (faster, silenced, longer-ranged); Play again rolls new kits. Easy
   and Normal opponents and your teammates carry replicas as they come.
+- [ ] **Bot names and personalities (BN1).** Every bot has a name (Dash, Rook, Fox, Owl…) on the scoreboard, in the
+  hit feed, over your teammates' heads and on the "What got you" card, and the same name plays the same way every
+  match. Over a few rounds can you tell them apart? A **Rusher** is first through the gap and runs at where you were;
+  an **Anchor** holds one spot short of the middle, aiming over cover, until about a minute is left; a **Flanker**
+  takes a lane of its own and comes round the side; a **Careful** bot walks, clears each corner and watches where you
+  ducked. The scoreboard tags each bot's personality. Does any feel unfair, or too samey? (Edit `bots.md` to rename
+  them or retune a personality.)
 - [ ] **At night** (Woodland, Neon Heights by Night): Normal, Hard and Pro bots hold their posts out of lantern light
   when a dark spot is near. A bot switches its torch on for a fight within about 20 m and for the last stretch of a
   search (12 m from the spot on Normal, 20 m on Hard, 30 m on Pro): a beam far off across the field is rare. Easy

@@ -250,8 +250,8 @@ request. Each entry says where the contract lives, what it holds today and what 
 - **`bots.md`'s format** (`config/botsFile.ts`, BN1). The bots' names and personalities, found by their `##` headings:
   Roster (Name, Personality: a made-up name of at most 12 letters, spaces, hyphens or apostrophes, unique, always
   playing that personality), Personalities (Personality, Card note with `{name}`), How they move (scales × of the
-  level's BotSkill numbers, Flank chance + , Watch where you ducked a range or –), Habits (yes, no or –; Holds until
-  seconds left or –) and Kits (pool.md names, first choice first). A cell it can't read plays neutral and is reported
+  level's BotSkill numbers, Flank chance + , Watch where you ducked a range or –) and Habits (yes, no or –; Holds until
+  seconds left or –). A cell it can't read plays neutral and is reported
   with its line; it never throws. A personality changes how a bot plays, never its senses, reaction, turning or aim
   (`ai/personality.ts personalSkill`). Pinned by `config/botsFile.test.ts`.
 - **Content tags** (`config/content.ts`). Every map, mode, difficulty and ruleset (`tag` on `MAPS`, `MATCH_MODES`,

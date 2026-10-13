@@ -23,17 +23,17 @@ item 5, with the G4 HUD restyle); note 3 was a bug, fixed in BP2; note 2 is alre
 **0.1 Dev 6 (confirmed with the roadmap, 2026-10-06).** M92–M95, the holster and the practice upgrades, are done
 (2026-10-13); the blocks for the rest of `docs/ROADMAP.md` › 0.1 Dev 6 are written when that work starts.
 
-## BN1 · Bot names, personalities and kits (Dev 6 item 21)
+## BN1 · Bot names and personalities (Dev 6 item 21)
 tier: core
 perf: required
-touches: bots.md, src/config/botsFile.ts, src/config/botPersonalities.ts, src/config/bots.ts, src/ai/, src/pool/botKit.ts, src/matchSession.ts, src/render/matchPresentation.ts, src/ui/statsRows.ts, src/ui/statsTable.ts, src/ui/teammateMarkers.ts, src/ui/whatGotYou.ts, src/ui/tutorialShowcase.ts, src/style.css
+touches: bots.md, src/config/botsFile.ts, src/config/botPersonalities.ts, src/config/bots.ts, src/ai/, src/matchSession.ts, src/render/matchPresentation.ts, src/ui/statsRows.ts, src/ui/statsTable.ts, src/ui/teammateMarkers.ts, src/ui/whatGotYou.ts, src/ui/tutorialShowcase.ts, src/style.css
 contract: new `bots.md` format (docs/ARCHITECTURE.md › Contracts); none changed
 acceptance:
   1. Every bot has a name from a hand-edited roster (`bots.md`), shown wherever "Alpha 2" or "Beta 1" showed: the hit feed, the scoreboard and summary, teammates' name tags, spectating, the "What got you" card. Names are unique in a match and the same for a seed; with no roster the old names stay.
   2. Each name always plays one personality (rusher, anchor, flanker, careful), so a player learns who to watch; a team gets different personalities while there are enough.
   3. The personalities play differently where a player can see it, and never with a different reaction, turn rate or aim than their difficulty: the rusher pushes in and doesn't wait or take cover on contact; the anchor holds a spot short of the middle in Elimination until late in the round, aiming down its sights (resting on cover, M104); the flanker takes a lane of its own and flanks searches; the careful one walks, slices corners and watches where you ducked.
   4. The numbers and habits are tables in `bots.md`, read at start; a test fails on any cell it can't read, and an unreadable cell plays neutral.
-  5. On Hard and Pro the opponents' rolled kits lean to their personality (`bots.md` › Kits); teammates and Easy and Normal opponents stay factory (DECISIONS).
+  5. Kits are untouched: what each personality carries comes with the bot gear table (Dev 6 item 23, its own thread), which reads `Bot.personality`; this task changes no kit roll.
   6. The scoreboard and the "What got you" card say each bot's personality.
   7. The bot-match guards play with personalities and pass; the balance figures are measured and recorded.
 status: open

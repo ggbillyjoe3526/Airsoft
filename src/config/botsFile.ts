@@ -7,7 +7,7 @@ import { missingColumns, type PoolRow, type PoolTable, readTables } from '../poo
  */
 
 /**
- * What a personality changes about how a bot plays (bots.md › How they move, Habits and Kits). The scales multiply the
+ * What a personality changes about how a bot plays (bots.md › How they move and Habits). The scales multiply the
  * difficulty's BotSkill numbers (config/bots.ts), `flankChance` adds to its chance; ai/personality.ts applies them.
  */
 export interface PersonalityStyle {
@@ -43,8 +43,6 @@ export interface PersonalityStyle {
   /** BotSkill.holdsAngles and slicesCorners in their place, or null to keep the difficulty's. */
   readonly holdsAngles: boolean | null;
   readonly slicesCorners: boolean | null;
-  /** The parts it leans to on a rolled kit, by pool.md name, first choice first (pool/botKit.ts randomFit). */
-  readonly kit: readonly string[];
 }
 
 /** A personality that changes nothing: what an unreadable cell, or a bot without a personality, plays. */
@@ -66,7 +64,6 @@ export const NEUTRAL_STYLE: PersonalityStyle = {
   aimsFromCover: false,
   holdsAngles: null,
   slicesCorners: null,
-  kit: [],
 };
 
 /** One name on the roster and the personality it always plays (its key in `BotsFile.styles`). */
@@ -213,12 +210,6 @@ export function loadBotsFile(text: string): BotsFile {
       if (v === undefined) fail(row.line, `${header}: "${row.cells[header]}" is not yes, no or –`);
       else style[field] = v;
     }
-  });
-
-  // Kits: the parts each leans to, by pool.md name (pool/botKit.ts resolves them; botsFile.test.ts checks them).
-  eachRow(required(tables, 'Kits', ['Personality', 'Leans to'], fail), styles, fail, (row, style) => {
-    const cell = row.cells['Leans to']!.trim();
-    style.kit = isNone(cell) ? [] : cell.split(',').map((s) => s.trim()).filter((s) => s !== '');
   });
 
   // Roster: unique made-up names, each playing a personality the file describes.

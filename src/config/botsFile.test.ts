@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import botsText from '../../bots.md?raw';
-import { GAME_POOL } from '../pool/gamePool';
 import { loadBotsFile, NAME_MAX_LENGTH, NEUTRAL_STYLE } from './botsFile';
 
 /**
@@ -33,11 +32,6 @@ function mini(edit: (text: string) => string = (t) => t): string {
       '| Personality | Pushes in | Waits for the team | Own lane | Holds until (s left) | Aims from cover | Holds angles | Slices corners |',
       '|---|---|---|---|---|---|---|---|',
       '| Rusher | yes | no | no | 45 | no | – | yes |',
-      '',
-      '## Kits',
-      '| Personality | Leans to |',
-      '|---|---|',
-      '| Rusher | Red Gas, Angled Grip |',
     ].join('\n'),
   );
 }
@@ -68,17 +62,9 @@ describe('bots.md as shipped (BN1)', () => {
   });
 
   it('makes the four play differently from each other', () => {
-    const shapes = [...bots.styles.values()].map((s) => JSON.stringify({ ...s, label: '', cardNote: '', kit: [] }));
+    const shapes = [...bots.styles.values()].map((s) => JSON.stringify({ ...s, label: '', cardNote: '' }));
     expect(new Set(shapes).size).toBe(shapes.length);
-    for (const s of bots.styles.values()) expect(s, s.label).not.toEqual({ ...NEUTRAL_STYLE, label: s.label, cardNote: s.cardNote, kit: s.kit });
-  });
-
-  it('names only parts pool.md has under Kits', () => {
-    const names = new Set(GAME_POOL.assets.map((a) => a.name));
-    for (const s of bots.styles.values()) {
-      expect(s.kit.length, s.label).toBeGreaterThan(0);
-      for (const part of s.kit) expect(names.has(part), `${s.label}: ${part}`).toBe(true);
-    }
+    for (const s of bots.styles.values()) expect(s, s.label).not.toEqual({ ...NEUTRAL_STYLE, label: s.label, cardNote: s.cardNote });
   });
 });
 
@@ -108,7 +94,6 @@ describe('reading bots.md (BN1)', () => {
       aimsFromCover: false,
       holdsAngles: null,
       slicesCorners: true,
-      kit: ['Red Gas', 'Angled Grip'],
     });
   });
 
@@ -134,7 +119,7 @@ describe('reading bots.md (BN1)', () => {
   });
 
   it('plays a personality a table leaves out neutral there, and says so', () => {
-    const f = loadBotsFile(mini((t) => t.replace('| Rusher | yes | no | no | 45 | no | – | yes |\n', '')));
+    const f = loadBotsFile(mini((t) => t.replace('\n| Rusher | yes | no | no | 45 | no | – | yes |', '')));
     expect(f.errors).toHaveLength(1);
     expect(f.errors[0]).toMatch(/Habits: no row for rusher, so it plays neutral there$/);
     const s = f.styles.get('rusher')!;
@@ -145,10 +130,10 @@ describe('reading bots.md (BN1)', () => {
   });
 
   it('reports a missing table, and reads the rest', () => {
-    const f = loadBotsFile(mini((t) => t.replace('## Kits', '## Gear')));
-    expect(f.errors).toEqual(['bots.md:1: no "Kits" table (a "## Kits" heading over it)']);
-    expect(f.styles.get('rusher')!.kit).toEqual([]);
-    expect(f.styles.get('rusher')!.pushesIn).toBe(true);
+    const f = loadBotsFile(mini((t) => t.replace('## Habits', '## Ways')));
+    expect(f.errors).toEqual(['bots.md:1: no "Habits" table (a "## Habits" heading over it)']);
+    expect(f.styles.get('rusher')!.pushesIn).toBe(false);
+    expect(f.styles.get('rusher')!.holdTime).toBe(0.3);
   });
 
   it('leaves out a roster name that is too long, not a name, twice, or of a personality nobody described', () => {

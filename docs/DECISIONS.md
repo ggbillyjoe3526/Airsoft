@@ -360,9 +360,9 @@ replaces its line; the old one stays findable in the archive or in git.
 - **Anchors aim from cover, so they rest on it; every other bot still fires from the hip (BN1, M104's open question).**
   An anchor raises its sight when it stands still to fight, look over its cover or hold, with the player's aimed and
   rested spread.
-- **A personality's kit leanings apply only where kits are rolled (BN1).** On Hard and Pro an opponent's rolled kit puts
-  the part its personality likes (bots.md › Kits) in a slot that gets a part; teammates and Easy and Normal bots stay
-  factory.
+- **What a personality carries belongs to the bot gear table, not to bots.md (BN1, Dev 6 item 23).** The roadmap's
+  "loadouts" for item 21 come with item 23's data-driven bot loadout table, which reads `Bot.personality`; bots.md
+  holds names and play only.
 - **In Attack / Defend one attacker raises the flag while the others guard the pole from cover (owner's call,
   2026-10-04).** A second raiser adds nothing: the rope goes up no faster.
 - **Every level hunts the middle of the map; Normal, Hard and Pro keep out of the light at night; Easy stands where its

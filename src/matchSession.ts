@@ -715,13 +715,10 @@ export class MatchSession {
     const carrier = rolls ? chaseCarrier(botPool, this.setup.chaseOwned ?? [], seed, opponents) : null;
     for (const [id, team] of teams.entries()) {
       // You carry your kit; your teammates carry the default loadout as it comes, and so do the other team's bots unless
-      // their difficulty rolls each one a kit of its own (M29b), leaning to the parts its personality likes (BN1).
+      // their difficulty rolls each one a kit of its own (M29b).
       const rolled = team !== this.playerTeam && rolls;
       if (id === PLAYER_ID) this.state.characters.push(createCharacter(id, vec3(), 0, this.loadout, team));
-      else if (rolled) {
-        const kit = randomKit(botPool, carriedLoadout(LOADOUT, id, carrier), botKitSeed(seed, id), BOT_PART_CHANCE[this.setup.difficulty], this.identities.get(id)?.style.kit);
-        this.state.characters.push(this.underRules(chaseReady(kittedCharacter(id, team, kit), carrier)));
-      }
+      else if (rolled) this.state.characters.push(this.underRules(chaseReady(kittedCharacter(id, team, randomKit(botPool, carriedLoadout(LOADOUT, id, carrier), botKitSeed(seed, id), BOT_PART_CHANCE[this.setup.difficulty])), carrier)));
       else this.state.characters.push(createCharacter(id, vec3(), 0, this.botLoadout, team));
     }
     // On a night field every bot carries the offered torch (M33h): by rule, never rolled, so seeded kits don't shift.
