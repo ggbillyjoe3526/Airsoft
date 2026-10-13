@@ -20,31 +20,9 @@ defaults per note are in the project's shared files (`plans/playtest-feedback-20
 item 5, with the G4 HUD restyle); note 3 was a bug, fixed in BP2; note 2 is already in the game
 (Settings › Controls › Aim button). Note 19 of the Dev 4 notes still applies.
 
-**0.1 Dev 6 (confirmed with the roadmap, 2026-10-06).** M92–M95, the holster and the practice
-upgrades, come before the rest of `docs/ROADMAP.md` › 0.1 Dev 6, whose blocks are written when that build starts.
-
-## M92 · Holster and two kinds of sprint (playtest note 3)
-tier: core
-perf: skip
-touches: src/sim/armament.ts, src/sim/movement.ts, src/sim/commands.ts, src/sim/aiming.ts, src/input/keyBindings.ts, src/config/controls.ts, src/config/movement.ts, src/render/handPoses.ts
-contract: PlayerCommand (a holster slot, by addition)
-acceptance:
-  1. Key 3 holsters (1 primary, 2 secondary), rebindable.
-  2. Sprinting holstered is a little faster than sprinting with a replica; drawing to aim from holstered takes longer (with a draw animation) than raising from a ready sprint.
-  3. Bots use the same rules through the same commands.
-status: open
-attempts: 0
-
-## M94 · Practice on any map (playtest note 11)
-tier: core
-perf: required
-touches: src/rangeSession.ts, src/map/, src/sim/rangeTargets.ts, src/ui/menus/
-contract: none
-acceptance:
-  1. The practice range is renamed "Practice"; it offers the range and every playable map (Dev maps with Dev content on).
-  2. On a map, targets (M93's kinds) stand where bots would play, and there are no bots.
-status: open
-attempts: 0
+**0.1 Dev 6 (confirmed with the roadmap, 2026-10-06).** M94–M95, the rest of the practice upgrades, come before the
+rest of `docs/ROADMAP.md` › 0.1 Dev 6, whose blocks are written when that build starts (M92, the holster, and M93,
+the practice targets, done 2026-10-13).
 
 ## M95 · Practice with any unlocked replica (playtest note 12)
 tier: ui

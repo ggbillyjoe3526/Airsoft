@@ -79,6 +79,8 @@ export interface Figure {
   aimPistol: THREE.Object3D;
   /** Hit-calling pose: one hand raised high, replica held muzzle-down. */
   hitPose: THREE.Object3D;
+  /** Holstered (M92): the arms at the sides, the rifle slung across the back. */
+  holsterPose: THREE.Object3D;
   callout: THREE.Sprite;
   /** This figure's own copies of a figure model's materials (none for a built-in figure): they fade with it. */
   modelMaterials: THREE.Material[];
@@ -191,6 +193,10 @@ export function buildFigure(
   const hitPose = fromModel('hitPose', V(0, F.hipHeight, 0)) ?? builtHitPose(an, pal, material, hy, detail, kit, dress.rifle, dress.rifleShape ?? null);
   hitPose.visible = false;
   upper.add(hitPose);
+  // Built in even for a figure model, which has no holstered part of its own.
+  const holsterPose = builtHolsterPose(an, pal, material, hy, detail, kit, dress.rifle, dress.rifleShape ?? null, look.pack);
+  holsterPose.visible = false;
+  upper.add(holsterPose);
 
   const callout = new THREE.Sprite(calloutMaterial);
   callout.scale.set(F.callout.width, F.callout.width * F.callout.aspect, 1);
@@ -201,7 +207,7 @@ export function buildFigure(
   const whole = model?.whole ? new THREE.Group().add(instanceModelPart(model.whole, teamColor, modelMaterials)) : null;
   if (whole) root.add(whole);
   root.add(legL, legR, upper, callout);
-  return { root, upper, legL, legR, aim, aimRifle, aimPistol, hitPose, callout, modelMaterials, whole };
+  return { root, upper, legL, legR, aim, aimRifle, aimPistol, hitPose, holsterPose, callout, modelMaterials, whole };
 }
 
 /** The arms with the rifle shouldered on the right, in aim-group space (the shoulder line): its hands on its grips. */
@@ -256,6 +262,31 @@ function builtHitPose(an: Anatomy, pal: FigurePalette, material: THREE.Material,
     [1, { wrist, out: up }, V(1, 0, 0.3)],
     [-1, left, V(-0.9, -0.2, 0.4)],
   ]);
+  return b.build(material);
+}
+
+/**
+ * Holstered (M92), in upper-body space: the arms hanging at the sides with open hands, the rifle slung flat across the
+ * back, its butt over the right shoulder blade and its muzzle down to the left (further out over a pack).
+ */
+function builtHolsterPose(an: Anatomy, pal: FigurePalette, material: THREE.Material, hy: number, detail: FigureDetail, kit: FigureKit, colours: FigureReplicaColours, shape: FigureReplicaShape | null, pack: boolean): THREE.Mesh {
+  const F = FIGURE;
+  const H = F.holster;
+  const b = new PartBuilder(detail);
+  const top = F.shoulderHeight + hy;
+  // The rifle's own axes (x right, y up, z from muzzle to butt) laid on the back: its right side faces out behind.
+  const butt = V(Math.sin(H.tilt), Math.cos(H.tilt), 0);
+  const m = new THREE.Matrix4().makeBasis(V(0, 0, 1), V(butt.y, -butt.x, 0), butt).setPosition(H.buttX, top + H.buttUp, pack ? H.backPack : H.back);
+  addRifle(b, m, colours, kit, shape);
+  const style = an.hand(pal);
+  const down = V(0, -1, 0);
+  const hang = (side: number): readonly [number, Hand, THREE.Vector3] => {
+    const wrist = V(side * (F.shoulderSpread + H.armOut), top - H.armDrop, 0);
+    openHand(b, wrist, down, V(-side, 0, 0), style, side);
+    // Elbows back, the way hanging arms bend.
+    return [side, { wrist, out: down }, V(side * 0.3, 0, 1)];
+  };
+  arms(b, an, pal, top, [hang(1), hang(-1)]);
   return b.build(material);
 }
 

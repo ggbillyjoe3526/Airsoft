@@ -818,7 +818,7 @@ test('the practice range opens from the title screen and reads out the last BB',
   await page.locator('.menu-setup').getByRole('button', { name: 'Start practice', exact: true }).click();
   const readout = page.locator('.range-readout');
   await expect(readout).toBeVisible();
-  await expect(readout).toContainText('Practice range');
+  await expect(readout).toContainText('Practice ·');
   type Lit = { airsoft: { renderer: { scene: { children: { isDirectionalLight?: boolean; castShadow: boolean }[] } } } };
   const sunCastsShadow = () => page.evaluate(() => (window as unknown as Lit).airsoft.renderer.scene.children.find((o) => o.isDirectionalLight)!.castShadow);
   expect(await sunCastsShadow()).toBe(false);
@@ -890,7 +890,7 @@ test('the practice range opens from the title screen and reads out the last BB',
   await page.locator('.menu-topbar').getByRole('button', { name: 'Back', exact: true }).click();
   await pauseMenu.getByRole('button', { name: 'Resume' }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 10_000 });
-  await expect(readout).toContainText('Practice range'); // a new range: no last shot yet
+  await expect(readout).toContainText('Practice ·'); // a new range: no last shot yet
   const after = await page.evaluate(() => {
     const game = (window as unknown as Aim & { airsoft: { state: { characters: { armament: { bbWeights: number[] } }[] } } }).airsoft;
     return { ...game.state.characters[0]!.position, yaw: game.input.yaw, pitch: game.input.pitch, bb: game.state.characters[0]!.armament.bbWeights[0] };
@@ -970,13 +970,13 @@ test('the tutorial opens on the range with the coach', async ({ page }) => {
   await jumpTo('match');
   await expect(page.locator('.order-wheel-item').first()).toBeHidden();
 
-  // The last card read to its end: the "Tutorial complete" pop-up, with the practice range or the menu (M80). Practice
-  // range: the coach gives way to the range readout, and the title stops offering the button.
+  // The last card read to its end: the "Tutorial complete" pop-up, with Practice (the range) or the menu (M80).
+  // Practice: the coach gives way to the range readout, and the title stops offering the button.
   await jumpTo('match', 0.1);
   const done = page.getByRole('dialog', { name: 'Tutorial complete' });
   await expect(done).toBeVisible({ timeout: 10_000 });
-  await expect(done.getByRole('button')).toHaveText(['Practice range', 'Menu']);
-  await done.getByRole('button', { name: 'Practice range' }).click();
+  await expect(done.getByRole('button')).toHaveText(['Practice', 'Menu']);
+  await done.getByRole('button', { name: 'Practice', exact: true }).click();
   await expect(done).toBeHidden();
   await expect(page.locator('.range-readout')).toBeVisible({ timeout: 10_000 });
   await expect(coach).toBeHidden();

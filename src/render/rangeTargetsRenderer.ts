@@ -103,8 +103,9 @@ interface Part {
  * range must fit the presets' budgets, audit section 5): each kind of part is one instanced mesh (plates, chains, torsos,
  * heads, trolleys, arms) whose instances follow the targets' motion, swing and fall, a lit target's plate or figure is
  * drawn by a lit twin of its mesh, and everything that doesn't move is one merged mesh per material (the posts and gear,
- * the lines, the boards on one atlas, Map detail's fittings and shelf). Reads the targets' state and the tick's events;
- * never writes.
+ * the lines, the boards on one atlas, Map detail's fittings and shelf). Practice on a map (M94, `onRange` false) draws
+ * the same targets, each turned its own way on its own floor, with no lines, boards or shelf. Reads the targets' state
+ * and the tick's events; never writes.
  */
 export class RangeTargetsRenderer {
   readonly object = new THREE.Group();
@@ -134,6 +135,8 @@ export class RangeTargetsRenderer {
   constructor(
     private readonly targets: readonly RangeTarget[],
     hits: HitConfig,
+    /** On the range: its firing lines, distance boards and BB shelf too (M94: not on a map, which has none of them). */
+    onRange = true,
   ) {
     const steel = (this.steel = this.track(new THREE.MeshStandardMaterial({ color: V.steelColor, metalness: V.steelMetalness, roughness: V.steelRoughness })));
     const post = this.track(new THREE.MeshStandardMaterial({ color: V.postColor, roughness: 0.8 }));
@@ -237,11 +240,13 @@ export class RangeTargetsRenderer {
     const gear = targetGear(targets);
     if (gear.posts.length > 0) this.object.add(this.static('range-posts', merged(gear.posts), post, false));
     const fittingParts = gear.fittings;
-    this.addShelf(fittingParts);
-    const stands = this.static('range-fittings', merged(fittingParts), fittings, true);
-    this.object.add(stands);
-    this.detailParts.push(stands);
-    this.addMarkers();
+    if (onRange) this.addShelf(fittingParts);
+    if (fittingParts.length > 0) {
+      const stands = this.static('range-fittings', merged(fittingParts), fittings, true);
+      this.object.add(stands);
+      this.detailParts.push(stands);
+    }
+    if (onRange) this.addMarkers();
     this.setDetail(false);
     this.update(0);
   }

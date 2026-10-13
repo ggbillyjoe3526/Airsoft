@@ -62,7 +62,7 @@ if (!base) {
 /** Every picture to draw: the blurred backdrop first, then the stills and the modes. */
 const shots = [
   { ...BACKDROPS.blurred, mode: 'elimination', budget: BACKDROPS.blurred.maxBytes },
-  ...MAP_STILLS.map((s) => ({ ...s, mode: 'elimination', width: STILL_SIZE.width, height: STILL_SIZE.height, quality: STILL_SIZE.quality, budget: STILL_SIZE.maxBytes })),
+  ...MAP_STILLS.map((s) => ({ ...s, mode: s.map === 'range' ? 'practice' : 'elimination', width: STILL_SIZE.width, height: STILL_SIZE.height, quality: STILL_SIZE.quality, budget: STILL_SIZE.maxBytes })),
   ...Object.entries(MODE_STILLS).map(([mode, s]) => ({ ...s, mode, width: STILL_SIZE.width, height: STILL_SIZE.height, quality: STILL_SIZE.quality, budget: STILL_SIZE.maxBytes })),
 ].filter((s) => only.length === 0 || only.includes(s.file));
 
@@ -93,8 +93,12 @@ if (failed) process.exit(1);
 async function draw(shot) {
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
   page.on('pageerror', (e) => console.error(`map-stills: page error: ${e.message}`));
-  // The picks as saved settings: the map in its light, the mode, a 3v3 on Skirmish, Dev content on, the back end.
-  const picks = { version: 1, map: shot.map, mode: shot.mode, [`lighting.${shot.map}`]: shot.light, 'dev.devContent': 'on', 'dev.enabled': true, ruleset: 'skirmish', renderer: backend };
+  // The picks as saved settings: the map in its light, the mode, a 3v3 on Skirmish, Dev content on, the back end. The
+  // range is Practice's own place (M94): Practice there, picked on the Match screen below.
+  const practice = shot.mode === 'practice';
+  const picks = practice
+    ? { version: 1, practicePlace: shot.map, 'dev.devContent': 'on', 'dev.enabled': true, renderer: backend }
+    : { version: 1, map: shot.map, mode: shot.mode, [`lighting.${shot.map}`]: shot.light, 'dev.devContent': 'on', 'dev.enabled': true, ruleset: 'skirmish', renderer: backend };
   await page.addInitScript((saved) => localStorage.setItem('airsoft.settings', JSON.stringify(saved)), picks);
   await page.goto(`${base}?nolock&seed=1&quality=${quality}${backend === 'webgl' ? '&forceWebGL' : ''}`);
   await page.waitForSelector('.menu-title-start', { timeout: 120_000 });
@@ -105,9 +109,10 @@ async function draw(shot) {
   await page.locator('.menu-title-start').click();
   const setup = page.locator('.menu-setup');
   await setup.locator('.map-cards .choice-card.selected').waitFor({ timeout: 60_000 });
+  if (practice) await setup.getByRole('group', { name: 'Mode', exact: true }).getByRole('button', { name: /Practice/ }).click();
   await page.waitForFunction((map) => document.querySelector('.menu-setup .play-map-line')?.textContent?.toLowerCase().replace(/\s/g, '').startsWith(map.toLowerCase()), shot.map, { timeout: 60_000 });
   // On a software adapter the menu's pictures and the match's warm-up compile hold the click for 20 s and more (W6a).
-  await setup.getByRole('button', { name: 'Start match', exact: true }).click({ timeout: 120_000 });
+  await setup.getByRole('button', { name: practice ? 'Start practice' : 'Start match', exact: true }).click({ timeout: 120_000 });
   await page.waitForFunction(() => globalThis.airsoft?.state && globalThis.airsoft.state.tick > 30, null, { timeout: 180_000 });
   const camera = STILL_CAMERA[shot.view];
   const result = await page.evaluate(
@@ -125,7 +130,8 @@ async function draw(shot) {
         return { x: sum.x / own.length, y: sum.y / own.length, z: sum.z / own.length };
       };
       const blue = centre(0);
-      const orange = centre(1);
+      // Practice has no other team: the street view, the only one it is drawn with, needs none.
+      const orange = state.characters.some((c) => c.team === 1) ? centre(1) : blue;
       // The flag view looks at the pole; the others across the field from Blue's start to Orange's.
       const target = view === 'flag' ? state.round.flag.position : view === 'overview' || view === 'aerial' ? { x: (blue.x + orange.x) / 2, y: (blue.y + orange.y) / 2, z: (blue.z + orange.z) / 2 } : orange;
       // Facing from Blue's start towards what it looks at, `back` metres behind Blue's start (or the pole, for the flag).

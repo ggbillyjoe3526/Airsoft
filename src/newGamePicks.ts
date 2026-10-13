@@ -89,7 +89,7 @@ export function pickTags(p: NewGamePicks): ContentTag[] {
   ];
 }
 
-/** Whether the picks (as played) use dev content: such a match stays out of the records and pays no Field Credits. */
+/** Whether the picks (as played) use dev content: such a match stays out of the records and gives no XP. */
 export function picksUseDev(p: NewGamePicks): boolean {
   return pickTags(p).includes('dev');
 }

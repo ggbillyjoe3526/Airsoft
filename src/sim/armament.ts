@@ -1,5 +1,6 @@
 import { factoryParts, type Handling, handlingOf, partsFor, type ReplicaParts } from '../config/attachments';
 import type { BallisticsConfig } from '../config/ballistics';
+import { HOLSTER } from '../config/movement';
 import type { OpticId } from '../config/optics';
 import type { ReplicaConfig } from '../config/replicas';
 import type { ImpactMaterial } from '../config/sounds';
@@ -53,7 +54,7 @@ export function spareBBs(ammo: ReplicaAmmo): number {
 /** A character's replicas and what they're doing. Plain data. */
 export interface Armament {
   /**
-   * The replica in each loadout slot, as this character carries it (M26b): the player's replicas with their rarity,
+   * The replica in each loadout slot, as this character carries it (M26b): the player's replicas with their
    * power source and laser worked in (pool/kit.ts), the bots' as they come. Read these, never a shared list.
    */
   replicas: ReplicaConfig[];
@@ -63,8 +64,18 @@ export interface Armament {
   cooldown: number;
   /** Seconds left on the current reload, 0 when not reloading. */
   reload: number;
-  /** Seconds left bringing the active replica up after a switch. */
+  /** Seconds left bringing the active replica up after a switch, or out of the holster. */
   draw: number;
+  /**
+   * Seconds the draw under way takes in all: the replica's draw time, or HOLSTER.drawScale times it from the holster
+   * (M92). Presentation shows the draw's progress as `draw / drawTotal`.
+   */
+  drawTotal: number;
+  /**
+   * The replica is put away (M92, PlayerCommand.holster): nothing in hand fires, aims, reloads or switches its selector.
+   * `active` is the replica a fresh trigger pull, aim or reload draws; a slot in the command draws that one.
+   */
+  holstered: boolean;
   /** Seconds left to honour a semi-auto trigger press that came in while the replica wasn't ready. */
   pendingPress: number;
   /** A reload pressed while the replica was still coming up: it starts once the draw is over (bug pass). */
@@ -73,6 +84,8 @@ export interface Armament {
   dryFiredThisPull: boolean;
   /** Trigger state last tick, for semi-auto press detection. */
   triggerWasDown: boolean;
+  /** Aim held last tick: a press, not a held button, draws a holstered replica (M92). */
+  aimWasDown: boolean;
   /** Shots never use up the magazine: the Dev settings' Bottomless magazines (M24). Kept between rounds. */
   bottomless: boolean;
   /** Current upward aim kick from recoil (radians). */
@@ -109,10 +122,13 @@ export function createArmament(loadout: readonly ReplicaConfig[], parts: readonl
     cooldown: 0,
     reload: 0,
     draw: 0,
+    drawTotal: 0,
+    holstered: false,
     pendingPress: 0,
     reloadQueued: false,
     dryFiredThisPull: false,
     triggerWasDown: false,
+    aimWasDown: false,
     bottomless: false,
     recoil: 0,
     modes: loadout.map((r) => r.defaultFireMode),
@@ -290,18 +306,33 @@ export function stepArmament(
     }
   }
 
-  // Switching cancels a reload (the magazine you were swapping stays as it was).
-  if (cmd.switchTo >= 0 && cmd.switchTo < a.replicas.length && cmd.switchTo !== a.active) {
-    a.active = cmd.switchTo;
+  // The holster (M92): putting the replica away cancels a reload and a draw, as a switch does. Holstered, a slot in the
+  // command draws that replica, and a fresh trigger pull, aim press or reload the one put away, taking HOLSTER.drawScale
+  // times its draw; a reload pressed for it starts once it is up (reloadQueued, below).
+  const slot = cmd.switchTo >= 0 && cmd.switchTo < a.replicas.length ? cmd.switchTo : -1;
+  if (cmd.holster && !a.holstered) {
+    a.holstered = true;
     a.reload = 0;
-    replica = a.replicas[a.active]!;
-    ammo = a.ammo[a.active]!;
-    a.draw = a.handling[a.active]!.drawTime;
-    a.dryFiredThisPull = false; // a dry click on the other replica doesn't count for this one
+    a.draw = 0;
+    a.pendingPress = 0;
     a.burstShotsLeft = 0;
-    a.reloadQueued = false; // a reload asked for on the other replica
-    ctx.events.push({ type: 'draw', characterId, replicaId: replica.id });
+    a.reloadQueued = false;
+  } else if (a.holstered) {
+    const press = (cmd.fire && !a.triggerWasDown) || (cmd.aim && !a.aimWasDown) || cmd.reload;
+    if (slot >= 0 || press) drawReplica(characterId, a, slot >= 0 ? slot : a.active, HOLSTER.drawScale, ctx);
+  } else if (slot >= 0 && slot !== a.active) {
+    // Switching cancels a reload (the magazine you were swapping stays as it was).
+    drawReplica(characterId, a, slot, 1, ctx);
   }
+  a.aimWasDown = cmd.aim;
+  if (a.holstered) {
+    // Nothing in hand: the trigger and the aim are only tracked, so one held as the replica went away doesn't draw it.
+    a.triggerWasDown = cmd.fire;
+    if (!cmd.fire) a.dryFiredThisPull = false;
+    return;
+  }
+  replica = a.replicas[a.active]!;
+  ammo = a.ammo[a.active]!;
 
   // The fire selector: steps through the replica's modes (a single-mode replica has nothing to change).
   if (cmd.cycleFireMode && replica.fireModes.length > 1) {
@@ -360,6 +391,22 @@ export function stepArmament(
   if (!a.bottomless) ammo.mag--;
   a.cooldown += 1 / replica.fireRate;
   fire(characterId, a, replica, muzzle, ctx);
+}
+
+/**
+ * Brings the replica in `slot` up, out of the holster or in place of the one in hand: `scale` times its draw time (1 for
+ * a switch, HOLSTER.drawScale from the holster). Cancels a reload and a burst under way, and a reload queued for the
+ * replica before (a reload asked for in the same command is queued again by the caller).
+ */
+function drawReplica(characterId: number, a: Armament, slot: number, scale: number, ctx: ArmamentContext): void {
+  a.active = slot;
+  a.holstered = false;
+  a.reload = 0;
+  a.draw = a.drawTotal = a.handling[slot]!.drawTime * scale;
+  a.dryFiredThisPull = false; // a dry click on the other replica doesn't count for this one
+  a.burstShotsLeft = 0;
+  a.reloadQueued = false; // a reload asked for on the other replica
+  ctx.events.push({ type: 'draw', characterId, replicaId: a.replicas[slot]!.id });
 }
 
 function startReload(characterId: number, a: Armament, replica: ReplicaConfig, ctx: ArmamentContext): void {

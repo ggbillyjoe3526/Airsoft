@@ -283,8 +283,10 @@ export class RiggedFigure {
     input.hold = hold;
     const handling = arm.handling[arm.active];
     input.reload = arm.reload > 0 && handling && handling.reloadTime > 0 ? 1 - arm.reload / handling.reloadTime : null;
-    if (this.drawFrom && handling && handling.drawTime > 0) {
-      this.draw.progress = 1 - arm.draw / handling.drawTime;
+    // Out of the holster the draw takes longer (M92, Armament.drawTotal). No holstered pose yet: KNOWN_ISSUES.
+    const drawTotal = arm.drawTotal > 0 ? arm.drawTotal : (handling?.drawTime ?? 0);
+    if (this.drawFrom && drawTotal > 0) {
+      this.draw.progress = 1 - arm.draw / drawTotal;
       this.draw.from = this.drawFrom;
       input.draw = this.draw;
     } else input.draw = null;

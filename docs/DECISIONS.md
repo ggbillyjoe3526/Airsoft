@@ -315,6 +315,12 @@ replaces its line; the old one stays findable in the archive or in git.
   strides; the head, chest and hips stay the built-in volume's, and with the figures off nothing changes.
 - **Vaulting comes in 0.1 Dev 6; slide into cover is no for now (owner, 2026-10-12).** Vaulting goes over low
   obstacles of 0.7 to 0.9 m, with a few added to the maps where they open a route; slide waits in `docs/IDEAS.md`.
+- **3 holsters the replica (1 primary, 2 secondary, rebindable): sprinting holstered is faster, and the draw from the
+  holster slower (owner, 2026-10-06, playtest note 3; M92, 2026-10-13).** The holstered sprint is 6.8 m/s against
+  6.3 with the replica ready (`MOVEMENT.holsterSprintSpeed`), and a draw from the holster takes 1.8 times the replica's
+  own (`HOLSTER.drawScale`: the rifle 0.81 s, the pistol 0.54 s), so a ready sprint is quicker to the first shot. A
+  slot key, a fresh trigger pull, an aim press or a reload draws it. Bots follow the same rules through the same
+  command, holstering only on a calm sprint through their own half (`ai/botHolster.ts`).
 
 ## Bots and balance
 
@@ -433,6 +439,15 @@ replaces its line; the old one stays findable in the archive or in git.
   skin (`tag: 'dev'`) shows in Customise only with Dev content on, and a saved pick of it plays as the default
   without. "Nothing that decides play reads a skin" is proved over the imports of the sim, bots, physics, nav and the
   kit's numbers: only names that pass a scheme's id along may reach them.
+- **Practice plays on the range or any map, its place picked apart from the match's map (2026-10-13, M94; the owner's
+  playtest note 11).** On a map there are no bots: targets stand where the other team's bots would play, read from the
+  map's own data (lane points, points along the lanes' long legs, the other team's starts, Extraction's home starts,
+  the overlooks), so a new map gets them with no extra work. They are the range's kinds (M93's), picked by why a bot
+  is there: behind low cover a crouched figure or pop-up, at an overlook a pop-up, on a lane's leg a slider, the rest
+  standing figures (half of them moving) with every third one steel. A map has its own timed challenge best, its START
+  plate a few steps in front of where you start (you face it), and a run lights only targets in your sight within 50 m,
+  so it is played moving up through the map. The pick is saved as `practicePlace`; a dev map plays as the range while
+  Dev content is off. The range's card reads "Range", the mode "Practice".
 
 ## Replicas, Loadout and levels
 

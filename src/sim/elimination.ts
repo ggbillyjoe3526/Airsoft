@@ -128,6 +128,7 @@ export function fillEliminatedCommand(c: Character, cfg: HitConfig, out: PlayerC
   out.fire = false;
   out.reload = false;
   out.switchTo = -1;
+  out.holster = false;
   // Every field, so a reused command (a test, a replay) never leaves a hit character leaning, aiming or cycling its
   // selector (audit SIM-11).
   out.lean = 0;

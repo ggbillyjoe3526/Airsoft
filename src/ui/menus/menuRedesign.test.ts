@@ -146,6 +146,8 @@ describe('Practice is the last mode on the Match screen (M100)', () => {
       lightingOf: () => 'day',
       supply: () => null,
       setMode: () => {},
+      practicePlace: () => 'range',
+      setPracticePlace: () => {},
     } as unknown as PlayModel;
     const loadout = { equipped: () => [] } as never;
     const ran: string[] = [];
@@ -179,8 +181,9 @@ describe('Practice is the last mode on the Match screen (M100)', () => {
     expect(card('Practice').getAttribute('aria-pressed')).toBe('true');
     expect(card('Elimination').getAttribute('aria-pressed')).toBe('false');
     expect(startLabel()).toBe('Start practice');
-    // Nothing for the map or the rules to say about a range.
-    expect(findAll(root, 'play-section').filter((s) => s.hidden)).toHaveLength(2);
+    // Nothing for the rules to say about Practice; the Map section stays, offering Practice's places (M94).
+    expect(findAll(root, 'play-section').filter((s) => s.hidden)).toHaveLength(1);
+    expect(findAll(root, 'practice-places')[0]!.hidden).toBe(false);
     start.click();
     expect(ran).toEqual(['practice']);
     expect(localStorage.getItem(SETTINGS_KEY)).toBeNull();
