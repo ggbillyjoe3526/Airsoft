@@ -27,7 +27,7 @@ const MAP = ENV.AIRSOFT_CONTENT_MAP_LABEL ?? 'Depot';
 const round = (page: Page): Promise<Round> => page.evaluate(() => (window as unknown as Airsoft).airsoft.state.round);
 
 /** Boots the e2e build, turns on what the match needs (Dev content for a dev mode or map, Ghost), picks the map and mode. */
-async function startMatch(page: Page, errors: string[], mode: (typeof MATCH_MODES)[number], ghost: boolean): Promise<void> {
+async function startMatch(page: Page, errors: string[], mode: (typeof MATCH_MODES)[number], ghost: boolean, map = MAP): Promise<void> {
   page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
   page.on('console', (msg) => {
     if (msg.type() === 'error') errors.push(`console: ${msg.text()}`);
@@ -45,7 +45,7 @@ async function startMatch(page: Page, errors: string[], mode: (typeof MATCH_MODE
   if (ghost) await settings.getByRole('group', { name: 'Ghost' }).getByRole('button', { name: 'On' }).click();
   await page.keyboard.press('Escape');
   await expect(setup).toBeVisible();
-  const mapButton = setup.getByRole('group', { name: 'Map', exact: true }).getByRole('button', { name: new RegExp(MAP, 'i') });
+  const mapButton = setup.getByRole('group', { name: 'Map', exact: true }).getByRole('button', { name: new RegExp(map, 'i') });
   await mapButton.click();
   await expect(mapButton).toHaveAttribute('aria-pressed', 'true');
   const modeButton = setup.getByRole('group', { name: 'Mode', exact: true }).getByRole('button', { name: new RegExp(mode.label, 'i') });
@@ -153,3 +153,41 @@ for (const mode of MATCH_MODES.filter((m) => !ONLY_MODE || m.id === ONLY_MODE)) 
     expect(errors, errors.join(' | ')).toEqual([]);
   });
 }
+
+/**
+ * Resting on cover (M104): the player is put still on Depot's floor at (-10, -15.6) facing +x, where a 1.2 m crate stands
+ * a step ahead (found with sim/coverRest.ts restTop, standing eye); the sight goes up with the right mouse button (the
+ * default aim, held), and the HUD's "Rested" tag shows once the replica has settled on it, then hides when the aim is let go.
+ * Ghost is on so no bot hits the player meanwhile; `input.resetView` (the Game's private PlayerInput) sets the yaw, since
+ * ?nolock has no mouse look.
+ */
+test('Rest on cover: aiming still at a crate shows the Rested tag, and letting go of the aim hides it', async ({ page }) => {
+  test.setTimeout(300_000);
+  const errors: string[] = [];
+  const elimination = MATCH_MODES.find((m) => m.id === 'elimination')!;
+  await startMatch(page, errors, elimination, true, 'Depot');
+  await expect.poll(async () => (await round(page)).phase, { timeout: 60_000 }).toBe('live');
+  const tag = page.locator('.hud-rest');
+  await expect(tag).toBeHidden(); // not resting while walking about
+  // Stand the player at the crate, held still (re-placed each poll: the round start or a bot order may move it).
+  const place = () =>
+    page.evaluate(() => {
+      const game = (window as unknown as { airsoft: { state: { characters: Character[] }; input: { resetView(yaw: number): void } } }).airsoft;
+      const you = game.state.characters.find((c) => c.id === 0)!;
+      Object.assign(you.position, { x: -10, y: 0, z: -15.6 });
+      game.input.resetView(Math.PI / 2);
+    });
+  await place();
+  await page.mouse.move(400, 300);
+  await page.mouse.down({ button: 'right' });
+  await expect
+    .poll(async () => {
+      await place();
+      return tag.isVisible();
+    }, { timeout: 60_000 })
+    .toBe(true);
+  await expect(tag).toHaveText('Rested');
+  await page.mouse.up({ button: 'right' });
+  await expect(tag).toBeHidden({ timeout: 30_000 });
+  expect(errors, errors.join(' | ')).toEqual([]);
+});
