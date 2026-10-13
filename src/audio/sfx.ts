@@ -6,6 +6,7 @@ import { cues, type ImpactMaterial, type ShotProfile, type SoundCue } from '../c
 import type { MapBlock } from '../map/mapTypes';
 import type { Character } from '../sim/character';
 import type { GameEvent } from '../sim/events';
+import type { ChallengeCue } from '../sim/rangeChallenge';
 import { vec3, type Vec3 } from '../sim/vec';
 import { AmbientCalls } from './ambience';
 import type { AudioEngine } from './audioEngine';
@@ -466,6 +467,21 @@ export class Sfx {
   /** A teammate's radio keyed twice: the squad order you gave was heard (M22). */
   orderHeard(): void {
     if (this.ctx) this.play('radio.ack', this.ui!, AUDIO.levels.radioAck);
+  }
+
+  /**
+   * The practice range's timed challenge (M93): a short shot-timer beep for each second of the countdown, a long one as
+   * the run starts, and the referee's long blast when time is up.
+   */
+  challengeCue(cue: ChallengeCue): void {
+    const w = this.whistle;
+    if (!this.ctx || !w) return;
+    if (cue === 'count') w.beep(AUDIO.shotTimer.beep);
+    else if (cue === 'go') w.beep(AUDIO.shotTimer.go);
+    else {
+      w.blast(AUDIO.roundOverWhistle, 0);
+      this.engine.duck(AUDIO.duck.whistle);
+    }
   }
 
   /** The two short blasts that start a round. False if audio isn't unlocked yet (nothing played). */

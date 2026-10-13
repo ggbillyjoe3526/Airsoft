@@ -1315,6 +1315,31 @@ a.bug-report-link {
   display: none;
 }
 
+/* The timed challenge's big word (M93): the countdown's seconds, GO! and TIME!, a third of the way down, clear of the
+   crosshair, in the round banner's look (a navy panel cut at its top left with an orange bar, the HUD's heavy
+   capitals; text-transform only, so the words stay as written for a screen reader). */
+.range-challenge {
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  translate: -50% -50%;
+  padding: 12px 40px 11px 46px;
+  font: 800 56px/1 var(--ui-display);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--hud-fg);
+  background: var(--hud-panel);
+  box-shadow: inset 6px 0 0 var(--orange);
+  clip-path: polygon(var(--hud-cut-lg) 0, 100% 0, 100% 100%, 0 100%, 0 var(--hud-cut-lg));
+  pointer-events: none;
+  z-index: 10;
+}
+
+.range-challenge[hidden] {
+  display: none;
+}
+
 /* The tutorial's coach (M16): top centre on the range, in place of the readout until the last step. */
 .coach {
   position: absolute;
@@ -1398,6 +1423,7 @@ a.bug-report-link {
   .case-prompt,
   .coach,
   .range-readout,
+  .range-challenge,
   .crosshair-preview,
   .crosshair-swatch,
   .team-swatch,

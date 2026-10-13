@@ -22,8 +22,9 @@ The gameplay rules: plain data and pure functions, with no Three.js, no DOM and 
 - `round.ts`, `flag.ts`, `extraction.ts`: the match mode, round clock, score, `restartMatch(mode)`, who attacks, the
   pole, and the Extraction run (exits, cases, waves, grace). `roster.ts`: who plays on which team (M98: the player,
   character 0, on the picked team, Alpha or Beta); nothing else may take the player's team to be team 0.
-- `rangeTargets.ts` (the practice range; `SimServices.practice` skips the round flow), `torch.ts`, `soundPath.ts` (wall
-  rays for hearing), `hitFacts.ts` (the "what got you" card), `rng.ts`, `vec.ts`.
+- `rangeTargets.ts` (the practice range's targets, still and moving; `SimServices.practice` skips the round flow),
+  `rangeChallenge.ts` (Practice's timed challenge, stepped after the simulation by `RangeSession`), `torch.ts`,
+  `soundPath.ts` (wall rays for hearing), `hitFacts.ts` (the "what got you" card), `rng.ts`, `vec.ts`.
 - Tuning, in `config/`: `sim.ts`, `movement.ts`, `hits.ts`, `ballistics.ts`, `replicas.ts`, `modes.ts`, `extraction.ts`.
   Tests: `*.test.ts` beside each file; `testSupport.ts` has `OPEN_FIELD`, a 100 m empty floor.
 - Changing it: `stepSimulation`'s phase order, `PlayerCommand`, `GameState` and `state.events` are contracts

@@ -20,19 +20,9 @@ defaults per note are in the project's shared files (`plans/playtest-feedback-20
 item 5, with the G4 HUD restyle); note 3 was a bug, fixed in BP2; note 2 is already in the game
 (Settings › Controls › Aim button). Note 19 of the Dev 4 notes still applies.
 
-**0.1 Dev 6 (confirmed with the roadmap, 2026-10-06).** M93–M95, the practice upgrades, come before the rest of
-`docs/ROADMAP.md` › 0.1 Dev 6, whose blocks are written when that build starts (M92, the holster, done 2026-10-13).
-
-## M93 · Practice: moving targets, new target types, a timed challenge (playtest note 10)
-tier: core
-perf: skip
-touches: src/sim/rangeTargets.ts, src/render/rangeTargetsRenderer.ts, src/map/range.ts, src/rangeSession.ts, src/config/range.ts, src/ui/rangeReadout.ts
-contract: none
-acceptance:
-  1. Moving targets and more target kinds (for example small, pop-up and swinging).
-  2. A timed challenge, off by default: hit as many targets as you can in a set time; the best score is kept.
-status: open
-attempts: 0
+**0.1 Dev 6 (confirmed with the roadmap, 2026-10-06).** M94–M95, the rest of the practice upgrades, come before the
+rest of `docs/ROADMAP.md` › 0.1 Dev 6, whose blocks are written when that build starts (M92, the holster, and M93,
+the practice targets, done 2026-10-13).
 
 ## M94 · Practice on any map (playtest note 11)
 tier: core
