@@ -70,5 +70,6 @@ export function fillScriptedCommand(script: readonly ScriptStep[], tick: number,
   cmd.cycleFireMode = false;
   cmd.toggleTorch = false;
   cmd.use = step?.use ?? false;
+  cmd.tossMag = -1;
   return newYaw;
 }

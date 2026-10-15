@@ -154,6 +154,7 @@ export class PlayerInput {
     if (kb.wasPressed('orderHold')) this.latchOrder('hold', false);
     if (kb.wasPressed('orderRegroup')) this.latchOrder('regroup', false);
     if (kb.wasPressed('ping') && !this.wheel.open) this.pingLatch = true;
+    if (kb.wasPressed('askMag')) this.latchOrder('mag', false);
     if (this.crouchModeValue === 'toggle') {
       if (kb.wasPressed('crouch')) this.crouchToggled = !this.crouchToggled;
       // Sprinting or jumping stands you up; that press only stands you up (the jump comes on the next one).
@@ -273,6 +274,8 @@ export class PlayerInput {
     cmd.cycleFireMode = this.fireModeLatch;
     cmd.toggleTorch = this.torchLatch;
     cmd.use = kb.isDown('use');
+    // A toss is the session's to name (MatchSession, src/magHandoff.ts): never from the keys straight.
+    cmd.tossMag = -1;
     this.clearOneShots();
   }
 

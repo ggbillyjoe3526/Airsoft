@@ -453,11 +453,14 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   const wheel = page.locator('.order-wheel');
   await page.keyboard.down('z');
   await expect(wheel.locator('.order-wheel-item').first()).toBeVisible(keyWait);
-  // Each direct order shows its key (FA5, UI-03); the Team Plan has none.
-  await expect(wheel.locator('.order-wheel-item')).toHaveText([/^Follow Me/, /^Hold Here/, /^Regroup/, 'Team Plan']);
-  await expect(wheel.locator('.order-wheel-key')).toHaveText(['F', 'X', 'V']);
+  // Each direct order shows its key (FA5, UI-03); the Team Plan has none. MG1: the fifth, Need a Mag, is H.
+  await expect(wheel.locator('.order-wheel-item')).toHaveText([/^Follow Me/, /^Hold Here/, /^Regroup/, 'Team Plan', /^Need a Mag/]);
+  await expect(wheel.locator('.order-wheel-key')).toHaveText(['F', 'X', 'V', 'H']);
   await page.keyboard.up('z');
   await expect(wheel).toHaveAttribute('hidden', '', keyWait);
+  // MG1: H with a full pouch only says why nothing happens, on the line under the crosshair (out of a live round, why not now).
+  await page.keyboard.press('h');
+  await expect(page.locator('.mag-prompt')).toHaveText(/^(You still have a full spare mag|Mags wait for the next round)$/i, keyWait);
   // Squad orders (M22): F has the bot teammates follow you and the HUD says so; F again sends them back to the plan.
   // Orders are taken only in a live round with you and a teammate in play (else the line says why for a moment).
   // The line is read out, not shown (G4): a status region off the screen, empty while they play the team plan.
@@ -969,7 +972,7 @@ test('the tutorial opens on the range with the coach', async ({ page }) => {
   await expect(page.locator('.match-board tr.you')).toContainText('You');
   await jumpTo('orderWheel');
   // The wheel's root is a point in the middle of the screen (no size): its orders are what show.
-  await expect(page.locator('.order-wheel-item')).toHaveCount(4);
+  await expect(page.locator('.order-wheel-item')).toHaveCount(5);
   await expect(page.locator('.order-wheel-item').first()).toBeVisible();
   await expect(page.locator('.order-wheel-hint')).toContainText(/order|give/);
   await expect(page.locator('.match-board')).toBeHidden();

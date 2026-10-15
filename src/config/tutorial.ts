@@ -144,8 +144,8 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
     id: 'orderWheel',
     title: 'Order wheel',
     // The orders' names are ORDER_WHEEL's labels (config/squad.ts); tutorial.test.ts fails when one is renamed.
-    text: "This is the order wheel. In a match, hold {orderWheel} to open it, move the mouse onto an order and let go to give it to your bot teammates: Follow Me, Hold Here or Regroup. Team Plan sends them back to the team's own plan. The key under an order gives it without the wheel.",
-    goal: { kind: 'read', seconds: 14 },
+    text: "This is the order wheel. In a match, hold {orderWheel} to open it, move the mouse onto an order and let go to give it to your bot teammates: Follow Me, Hold Here or Regroup. Team Plan sends them back to the team's own plan, and Need a Mag asks the nearest for a magazine when you run low. The key under an order gives it without the wheel.",
+    goal: { kind: 'read', seconds: 18 },
     shows: 'orderWheel',
   },
   {

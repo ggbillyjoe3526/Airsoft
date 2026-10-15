@@ -75,8 +75,11 @@ export const SQUAD_ORDERS = {
   noticeTime: 2,
 } as const;
 
-/** What the order wheel (M23) gives: one of the orders, or `cancel`, back to the team plan. */
-export type SquadCommand = SquadOrderKind | 'cancel';
+/**
+ * What the order wheel (M23) gives: one of the orders, `cancel`, back to the team plan, or `mag` (MG1), as the Mag key:
+ * asking for a magazine, or tossing one to a teammate who asked you (src/magHandoff.ts).
+ */
+export type SquadCommand = SquadOrderKind | 'cancel' | 'mag';
 
 /**
  * How an order on the wheel is picked (Settings → Controls, M23): `hover` points at it and lets go of the wheel key;
@@ -102,6 +105,8 @@ export const ORDER_WHEEL = {
     { command: 'hold', label: 'Hold Here' },
     { command: 'regroup', label: 'Regroup' },
     { command: 'cancel', label: 'Team Plan' },
+    // Its label turns to Toss a Mag while a teammate who asked you is in reach (config/magShare.ts MAG_WHEEL_LABELS).
+    { command: 'mag', label: 'Need a Mag' },
   ] as readonly { command: SquadCommand; label: string }[],
   /** Pixels the wheel's pointer moves per mouse count, times the mouse sensitivity. */
   pointerGain: 0.5,

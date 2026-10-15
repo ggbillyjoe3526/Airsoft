@@ -52,6 +52,14 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **PG1** · Bot teammates go to check a ping or watch it, each in their own way; one answers in the callout feed ("On it, Dock." or "Eyes on Dock.")
 - **PG1** · A teammate calling "Contact" sometimes marks that enemy for you
 - **PG1** · Settings › HUD › Ping markers (On by default) hides the markers; pings still reach your teammates
+- **MG1** · Low on BBs, press H or Need a Mag on the order wheel (Z): the nearest bot teammate with a spare walks over and tosses you a magazine
+- **MG1** · You see the magazine arc into your hands and hear it land; the line under the crosshair reads "+1 mag from Dash · 60 BBs"
+- **MG1** · Bot teammates ask for a mag too ("Dash needs a mag · 12 m"); once in reach, H or Toss a Mag on the wheel tosses them one
+- **MG1** · Bots ask and toss to each other on both teams, the same at every difficulty; a bot never gives away its last full spare
+- **MG1** · A magazine only fits its own kind: a rifle's for a rifle, a pistol's for a pistol; no BBs are made, they move between pouches
+- **MG1** · New callouts in each personality's voice: "Need a mag!", "Mag coming!", "Thanks for the mag!" (in callouts.md)
+- **MG1** · Settings › HUD › Mag hand-off (On by default) hides the prompt and the tags; H and the callouts still work
+- **MG1** · Dev settings › Bots run low on BBs (off by default): 8 s into each round one bot per team is down to its last magazine
 
 ### Changed
 - **M94** · The practice range is now Practice: pause reads "Practice · Range" or "Practice · Depot", and the tutorial's last button says Practice

@@ -22,4 +22,3 @@ item 5, with the G4 HUD restyle); note 3 was a bug, fixed in BP2; note 2 is alre
 
 **0.1 Dev 6 (confirmed with the roadmap, 2026-10-06).** M92–M95, the holster and the practice upgrades, are done
 (2026-10-13); the blocks for the rest of `docs/ROADMAP.md` › 0.1 Dev 6 are written when that work starts.
-

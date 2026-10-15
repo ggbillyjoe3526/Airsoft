@@ -68,8 +68,11 @@ const EVENT_INDEX: ReadonlyMap<CalloutEvent, number> = new Map(CALLOUT_EVENTS.ma
  * doesn't hold one back. The answers to a ping (PG1) are picked a speaker the same way.
  */
 const TEAM_EVENTS: ReadonlySet<CalloutEvent> = new Set(['down', 'lastOne', 'tagged', 'raising', 'flag', 'pingGoing', 'pingWatching']);
-/** The answers to a player's ping (PG1): a personality's Talks (×) never makes them less likely. */
-const ANSWERS: ReadonlySet<CalloutEvent> = new Set(['pingGoing', 'pingWatching']);
+/**
+ * The answers to a player's ping (PG1), and the asks and answers for a magazine (MG1): a personality's Talks (×) never
+ * makes them less likely.
+ */
+const ANSWERS: ReadonlySet<CalloutEvent> = new Set(['pingGoing', 'pingWatching', 'needMag', 'magComing']);
 /** The events that say how many are left: a newer one makes any still waiting out of date. */
 const COUNTS: ReadonlySet<CalloutEvent> = new Set(['down', 'lastOne', 'tagged']);
 /** Salts the match seed so the callouts' generator never runs in step with another. */
@@ -103,6 +106,9 @@ export class CalloutDirector {
   private lastMode: BotMode[] = [];
   private wasAtPost: boolean[] = [];
   private heldCalled: boolean[] = [];
+  /** Per bot: the start of the last ask for a magazine, and of the last one it set off to bring, it called (MG1). */
+  private askedAt = new Float64Array(0);
+  private bringAt = new Float64Array(0);
   /** Per bot and character (bot × characters + character): the start of the last sighting looked at. */
   private firstSeen = new Float64Array(0);
   private characters = 0;
@@ -167,6 +173,8 @@ export class CalloutDirector {
     this.lastMode = bots.map((b) => b.mode);
     this.wasAtPost = bots.map((b) => b.atPost);
     this.heldCalled = bots.map(() => false);
+    this.askedAt = new Float64Array(bots.length).fill(Number.NEGATIVE_INFINITY);
+    this.bringAt = new Float64Array(bots.length).fill(Number.NEGATIVE_INFINITY);
     for (const t of this.teams) t.enemyAt = new Float64Array(n).fill(Number.NEGATIVE_INFINITY);
   }
 
@@ -184,9 +192,11 @@ export class CalloutDirector {
     }
     this.saidAt.fill(Number.NEGATIVE_INFINITY);
     this.heldCalled.fill(false);
+    this.askedAt.fill(Number.NEGATIVE_INFINITY);
+    this.bringAt.fill(Number.NEGATIVE_INFINITY);
   }
 
-  /** What this tick's events give to call: hits, reloads, the flag going up. */
+  /** What this tick's events give to call: hits, reloads, the flag going up, a magazine caught. */
   private onEvent(e: GameEvent, state: GameState, bots: readonly Bot[]): void {
     const chars = state.characters;
     if (e.type === 'characterHit') {
@@ -212,6 +222,10 @@ export class CalloutDirector {
       const b = bots[i];
       if (!b || !isInPlay(b.character)) return;
       if (this.now - Math.max(b.lastThreatAt, lastSeenAt(b)) <= CALLOUTS.reloadThreat) this.offer(b.character.team, 'reloading', i, bots, '', 0, 0, -1);
+    } else if (e.type === 'magCaught') {
+      const i = botOf(bots, e.toId);
+      const b = bots[i];
+      if (b && isInPlay(b.character) && e.bbs > 0) this.offer(b.character.team, 'magThanks', i, bots, '', 0, 0, -1);
     } else if (e.type === 'flagRope' && e.raising) {
       const attackers = state.round.attackers;
       if (attackers < 0) return;
@@ -249,7 +263,10 @@ export class CalloutDirector {
     if (speaker >= 0) this.offer(team, going ? 'pingGoing' : 'pingWatching', speaker, bots, this.areaOf(bots[speaker]!.pingSpot), 0, 0, -1);
   }
 
-  /** What bot `i` is doing now that it calls: a fresh sighting, a noise, a search setting off, a hold settled. */
+  /**
+   * What bot `i` is doing now that it calls: a fresh sighting, a noise, a search setting off, a hold settled, an ask for
+   * a magazine or setting off to bring one (MG1, ai/magShare.ts).
+   */
   private watch(i: number, state: GameState, bots: readonly Bot[]): void {
     const b = bots[i]!;
     const me = b.character;
@@ -279,6 +296,17 @@ export class CalloutDirector {
     }
     // Setting off to where someone was; not to a ping, which the team's answer to it already said (PG1).
     if (b.mode === 'search' && this.lastMode[i] !== 'search' && !onPingSpot(b)) this.offer(t, pushesIn(b) ? 'pushing' : b.flanking ? 'flanking' : 'checking', i, bots, this.areaOf(b.lastKnown), 0, 0, -1);
+    // Asking for a magazine, or setting off to bring one (MG1): each ask and each job once, as soon as the pace lets the
+    // bot speak (its own gap, the team's, nothing else waiting) while it still asks or brings it, so neither waits in the
+    // queue to be dropped: an ask often comes just after its "Reloading", and its answer in the same tick as the ask.
+    if (b.magAskAt > this.askedAt[i]! && this.paceAllows(i, bots)) {
+      this.askedAt[i] = b.magAskAt;
+      this.offer(t, 'needMag', i, bots, '', 0, 0, -1);
+    }
+    if (b.magFor && b.magForAt > this.bringAt[i]! && this.paceAllows(i, bots)) {
+      this.bringAt[i] = b.magForAt;
+      this.offer(t, 'magComing', i, bots, '', 0, 0, -1);
+    }
     // Settled at the spot it holds: once a round, whether it says so or not.
     if (b.atPost && !this.wasAtPost[i] && !this.heldCalled[i]) {
       this.heldCalled[i] = true;
@@ -321,6 +349,14 @@ export class CalloutDirector {
       }
     }
     if (speaker >= 0) this.offer(team, event, speaker, bots, area, count, left, -1);
+  }
+
+  /** Bot `i` may speak now (maySpeak), and its team is outside Pace's team gap with no call waiting. */
+  private paceAllows(i: number, bots: readonly Bot[]): boolean {
+    const talk = this.teams[bots[i]!.character.team]!;
+    if (!this.maySpeak(i, bots) || this.now - talk.saidAt < this.file.pace.teamGap) return false;
+    for (const p of talk.queue) if (p.until >= this.now) return false;
+    return true;
   }
 
   /** Bot `i` is in play and outside its own gap. */

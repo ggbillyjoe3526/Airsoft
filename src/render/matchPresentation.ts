@@ -33,6 +33,7 @@ import { HoldMarker } from '../ui/holdMarker';
 import { MatchBoard } from '../ui/matchBoard';
 import { Minimap, type MinimapFrame } from '../ui/minimap';
 import { HeardPlayers } from '../ui/minimapView';
+import { MagPrompt, type MagView } from '../ui/magPrompt';
 import { OrderWheel, wheelHint } from '../ui/orderWheel';
 import { pingAlpha, PingMarkers, type ShownPing, type ShownPingKind } from '../ui/pingMarkers';
 import { restartAnimation } from '../ui/restartAnimation';
@@ -123,6 +124,8 @@ export class MatchPresentation {
   private readonly minimapFrame: MinimapFrame;
   private readonly listener = { x: 0, z: 0, yaw: 0 };
   private readonly orderWheel: OrderWheel;
+  /** The magazine hand-off's line under the crosshair (MG1, src/magHandoff.ts). */
+  private readonly magPrompt: MagPrompt;
   /** The player the camera follows while you spectate (the middle of the minimap), as of the last frame. */
   private watched: Character | undefined;
   private readonly viewDir = new THREE.Vector3();
@@ -231,6 +234,7 @@ export class MatchPresentation {
       time: 0,
     };
     this.orderWheel = new OrderWheel(container, teamCss(player.team), keyName);
+    this.magPrompt = new MagPrompt(container, teamCss(player.team));
     if (extraction) {
       this.exits = new ExitRenderer(run, field.terrain ?? null);
       scene.add(this.exits.object);
@@ -252,6 +256,8 @@ export class MatchPresentation {
   private readonly areas: readonly MapArea[];
   private wheelHintSelect: WheelSelect | '' = '';
   private wheelHintOn = false;
+  /** The order wheel is open this frame: the hand-off's line gives way to it (its Mag item says the same). */
+  private wheelOpen = false;
   private wheelHintText = '';
 
   /** Figures and the flag's cloth shaded by walls and containers (QualitySettings.figureShadows, REN-07). */
@@ -344,6 +350,7 @@ export class MatchPresentation {
     this.playing = playing;
     if (!playing) {
       this.orderWheel.hide();
+      this.magPrompt.show('', false);
       // The wheel key may be rebound on the pause menu: the hint names it afresh.
       this.wheelHintSelect = '';
       this.marker.hide();
@@ -505,8 +512,9 @@ export class MatchPresentation {
    * Once per frame, after `frame`: the order wheel (M23) while its key is held. `pointer`: the wheel's pointer and the
    * order it's on (input/playerInput.ts), `current`: the order in force, `select`: how an order is given.
    */
-  showOrderWheel(open: boolean, pointer: { readonly x: number; readonly y: number; readonly pick: number }, current: SquadOrderKind | 'none', select: WheelSelect): void {
-    if (!open || !this.playing) {
+  showOrderWheel(open: boolean, pointer: { readonly x: number; readonly y: number; readonly pick: number }, current: SquadOrderKind | 'none', select: WheelSelect, mag: string): void {
+    this.wheelOpen = open && this.playing;
+    if (!this.wheelOpen) {
       this.orderWheel.hide();
       return;
     }
@@ -517,7 +525,25 @@ export class MatchPresentation {
       this.wheelHintOn = on;
       this.wheelHintText = wheelHint(select, pointer.pick, this.keyName('orderWheel'));
     }
-    this.orderWheel.update(true, pointer.pick, pointer.x, pointer.y, current, this.wheelHintText);
+    this.orderWheel.update(true, pointer.pick, pointer.x, pointer.y, current, this.wheelHintText, mag);
+  }
+
+  /**
+   * Once per frame, after `frame`: the magazine hand-off (MG1) as `view` says, its line under the crosshair and the mag
+   * tag on the teammates asking you or bringing you one. Neither while you spectate or a menu or the scoreboard is up,
+   * nor with Settings › HUD › Mag hand-off off; the line not while the order wheel is open (call showOrderWheel first).
+   */
+  showMagHandoff(view: Readonly<MagView>): void {
+    const on = this.playing && !this.spectating && !this.boardUp;
+    const line = on && !this.wheelOpen;
+    this.magPrompt.show(line ? view.line : '', line && view.toss);
+    const tags = on && this.magPrompt.enabled;
+    for (let i = 0; i < this.mates.length; i++) this.mateMarkers.setMag(i, tags && view.mates.includes(this.mates[i]!.id));
+  }
+
+  /** Settings › HUD › Mag hand-off: false hides its line and tags (the hand-off goes on; the callouts still say it). */
+  setMagPrompts(on: boolean): void {
+    this.magPrompt.setShown(on);
   }
 
   /** The other team where heard on the minimap (M23), or teammates only (the Rules picker's minimap switch, M39). */
@@ -655,6 +681,7 @@ export class MatchPresentation {
     this.squadLine.dispose();
     this.holdMarker.dispose();
     this.pingMarkers.dispose();
+    this.magPrompt.dispose();
     this.minimap.dispose();
     this.orderWheel.dispose();
   }

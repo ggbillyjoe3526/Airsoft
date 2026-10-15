@@ -311,7 +311,17 @@ replaces its line; the old one stays findable in the archive or in git.
   walk key a clear purpose. Players walking off after a hit make no bot-audible noise.
 - **Limited ammunition means a set of magazines (owner, 2026-10-01).** A reload swaps in the fullest spare and keeps the
   old magazine as it is, with no topping up; nothing refills during a round. An empty trigger pull clicks dry and
-  reloads at once.
+  reloads at once. A teammate's tossed magazine (MG1, below) moves BBs from their pouch to yours and never makes any.
+- **A teammate can toss you a magazine when you run low, and you them (2026-10-15, MG1, the owner's Dev 6 item 43;
+  Claude's defaults, any can change).** Low means less than one full spare left for the replica in hand. A magazine
+  fits by its replica's class in `stats.md` (a rifle's for a rifle, a pistol's for a pistol), so mixed kits share
+  without a table of which replica takes which. The toss reaches 6 m, needs a clear line, flies 0.3 s plus 0.05 s a
+  metre to the catcher's chest wherever they move, and its BBs fill the catcher's emptiest spares. It is lost if the
+  catcher is hit or the round is decided while it flies. A toss takes only what the catcher's emptiest spare has room
+  for; any that no longer fit when it lands (two landing together) go with it. One in the air to you counts as one
+  coming: pressing again before it lands asks nobody. All the numbers are in `config/magShare.ts`.
+- **A bot never gives away its last full spare of the replica it fights with (2026-10-15, MG1).** `keepMags`: giving
+  must not make the giver the next one to ask. Its unused sidearm it gives freely.
 - **Fire modes follow the real-world type each replica is modelled on, with a selector key (B, rebindable) (owner,
   2026-10-03).** A Glock-style pistol is semi only; an AR-pattern AEG has single, 3-round burst and full auto. Names
   stay generic (CLAUDE.md §4).
@@ -456,6 +466,20 @@ replaces its line; the old one stays findable in the archive or in git.
   one that set off, else "Watching your ping": always said (Talks never lowers it), after a hit's call and before every
   other, and its Checking is not called as well. A teammate calling Contact may mark the enemy for you (35 %, a team's
   marks 12 s apart) on the callouts' own random stream, so marks change neither what is said nor how anyone plays.
+- **Bots ask the nearest teammate within 30 m for a magazine, and bring one when asked (2026-10-15, MG1).** A bot
+  asking a bot waits where it is while the giver comes to it; a bot asking you walks to you and waits by you. Fights and
+  cover come first, then bringing one, then a squad order, then waiting for one. A bot asks again no sooner than 20 s
+  after an ask ends, and an ask lapses after 15 s. The same at every difficulty, and for both teams.
+- **Bots with factory magazines rarely run low, so Dev settings › Bots run low on BBs shows the bot side (2026-10-15,
+  MG1).** In headless matches bots fired 15 to 61 BBs a round out of the AEG's 240, so none ran low on Normal pace, and
+  only one bot-round in nine Realcap matches (30 × 3), with no teammate in reach. A bot with a Hi-Cap magazine (the
+  Support kit: one 120-BB spare) is low after its first reload and asks; only the other team carries kits (your
+  teammates stay plain), so you mostly hear theirs. The switch (a cheat, off) puts one bot of each team on its last
+  magazine 8 s into each round, once the teams have spread out: at the whistle teammates stand within a toss, so the
+  giver's walk over would not show. Smaller bot pouches or more bot fire to make it common is his call.
+- **The mag calls keep the callouts' pace (2026-10-15, MG1).** "Need a mag", "Mag coming" and "Thanks for the mag" wait
+  for the bot's own 4 s gap and the team's 1.5 s gap and are then said once, so a call never jumps the queue or is
+  dropped for waiting. Talks never lowers the ask or the answer (like a ping's answer); it scales the thanks.
 
 ## Maps and modes
 
@@ -669,6 +693,14 @@ replaces its line; the old one stays findable in the archive or in git.
   off, teammates mark nothing (a mark goes with its call).
 - **The order wheel is on Z (owner, 2026-10-04); Hold here is X, Regroup is V and Follow me is F.** Orders end when the
   player who gave them is hit and at each round start. A teammate's radio double-click confirms an order.
+- **Asking for a magazine is H and the order wheel's fifth item, Need a Mag (2026-10-15, MG1).** One press does what
+  fits now: toss one to the nearest teammate asking you if they are in reach, else ask if you are low, else say why
+  not. While a toss is in reach the item reads Toss a Mag. Five items sit 72° apart, Need a Mag upper left; the wheel's
+  radius is unchanged. H was unbound; it is rebindable like every order.
+- **Settings › HUD › Mag hand-off is On by default (2026-10-15, MG1).** One line under the crosshair (who needs one and
+  how far, whose is on its way, a toss you can make underlined in your team's colour, a 5 s hint to ask each time you
+  run low) and a "· mag" tag on the teammate's name. The line gives way to the open order wheel, whose Mag item says the
+  same. Off hides the line and tags only; the key and the bots' calls still work.
 - **Key bindings: a key belongs to one action, and taking a used key swaps the two (2026-09-30).** Esc, F5, F11, F12,
   the browser navigation keys, PrintScreen, Pause and the debug keys (backtick, F3 and ]) can't be bound. Fire and the
   four move keys can never be left keyless.

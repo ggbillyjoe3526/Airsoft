@@ -12,7 +12,8 @@ and never changes the simulation.
   one channel per other character (an HRTF panner that follows them, then muffling by two rays, `occlusion.ts`); one-off
   world sounds get a panner of their own. A bot's callout keys a radio (`radioCall`, CL1): a teammate's click on the
   interface bus, panned to where they are; an enemy's from them, only within 15 m. Your ping gives a soft pip
-  (`pingPlaced`, PG1), a short tone on the whistle's output (`AUDIO.pingPip`).
+  (`pingPlaced`, PG1), a short tone on the whistle's output (`AUDIO.pingPip`). A tossed magazine swishes from the
+  thrower (`magToss`) and slaps into the catcher's hands (`magCatch`, MG1).
 - `audioMix.ts`: buses master, effects (in-world, with the field's echo) and interface (hit tick, hit marker, whistle,
   dry), set by Settings › Audio. The limiter and ducking sit on effects only. The Ambience slider (M86) has no bus: each
   match's ambience (beds, fires, calls) plays into its world through one gain the engine holds at the slider's level

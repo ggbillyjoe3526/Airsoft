@@ -26,6 +26,7 @@ import { createVaultState, findVault } from '../sim/vault';
 import { length3 } from '../sim/vec';
 import { Hud } from '../ui/hud';
 import { VaultPrompt } from '../ui/vaultPrompt';
+import { MagTossRenderer } from './magTosses';
 import type { PictureSource } from '../ui/menus/menuPictures';
 import type { PictureSubject } from './itemPictures';
 import { BBPathsDebug } from './bbPathsDebug';
@@ -102,6 +103,8 @@ export class CombatPresentation {
   /** "Space to vault" while a Jump press would vault (M102), and the vault that press would make (reused). */
   private readonly vaultPrompt: VaultPrompt;
   private readonly vaultCheck = createVaultState();
+  /** The magazines teammates toss each other (MG1). */
+  private readonly magTosses: MagTossRenderer;
   private readonly sfx: Sfx;
   private readonly forward = new THREE.Vector3();
   private readonly up = new THREE.Vector3();
@@ -170,7 +173,8 @@ export class CombatPresentation {
     this.sfx = new Sfx(heardReplicas(loadout, state.characters), field.blocks, query, audio, seed);
     this.bbs = new BBRenderer(state.bbs, tickSeconds);
     this.paths = new BBPathsDebug(state.bbs);
-    renderer.scene.add(this.bbs.object, this.puffs.object, this.grit.object, this.hitPuffs.object, this.gasPuffs.object, this.motes.object, this.paths.object);
+    this.magTosses = new MagTossRenderer(state.magTosses, state.characters, { query, body: BODY, hits }, tickSeconds);
+    renderer.scene.add(this.magTosses.object, this.bbs.object, this.puffs.object, this.grit.object, this.hitPuffs.object, this.gasPuffs.object, this.motes.object, this.paths.object);
     for (const [material, dust] of Object.entries(IMPACT_DUST)) this.dustTints.set(material as ImpactMaterial, new THREE.Color(dust.tint));
     this.motes.setMapDust(field.dressing?.motes?.tint ?? null);
     this.dressing = new DressingEffects(renderer.scene, field);
@@ -383,6 +387,7 @@ export class CombatPresentation {
   frame(dt: number, alpha: number, yaw: number, pitch: number, command?: Readonly<PlayerCommand>): void {
     this.bbs.setPixelAngle(this.renderer.retroPixelAngle);
     this.bbs.update(alpha, this.renderer.camera.position);
+    this.magTosses.update(alpha);
     this.puffs.update(dt, this.renderer.camera);
     this.rings?.update(dt, this.renderer.camera);
     this.grit.update(dt, this.renderer.camera);
@@ -447,6 +452,7 @@ export class CombatPresentation {
 
   dispose(): void {
     this.bbs.dispose();
+    this.magTosses.dispose();
     this.puffs.dispose();
     this.rings?.dispose();
     this.grit.dispose();

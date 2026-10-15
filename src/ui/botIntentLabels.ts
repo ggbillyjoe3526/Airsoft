@@ -14,6 +14,7 @@ const MODE_TEXT: Readonly<Record<BotMode, string>> = {
   search: 'Searching',
   flag: 'Working the flag',
   order: 'Following an order',
+  mag: 'Mag hand-off',
 };
 
 /** Extraction's jobs (M46), said before what the bot is doing; nothing for 'none' (the other modes, the squad). */

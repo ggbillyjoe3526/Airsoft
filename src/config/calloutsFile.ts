@@ -23,7 +23,10 @@ export type CalloutEvent =
   | 'raising'
   | 'flag'
   | 'pingGoing'
-  | 'pingWatching';
+  | 'pingWatching'
+  | 'needMag'
+  | 'magComing'
+  | 'magThanks';
 
 /** What a line may fill in: the named area, how many were seen, how many are left. */
 export type CalloutFill = 'area' | 'count' | 'left';
@@ -45,6 +48,9 @@ export const CALLOUT_EVENTS: readonly { readonly id: CalloutEvent; readonly name
   { id: 'flag', name: 'Flag', fills: [] },
   { id: 'pingGoing', name: 'Going to your ping', fills: ['area'] },
   { id: 'pingWatching', name: 'Watching your ping', fills: ['area'] },
+  { id: 'needMag', name: 'Need a mag', fills: [] },
+  { id: 'magComing', name: 'Mag coming', fills: [] },
+  { id: 'magThanks', name: 'Thanks for the mag', fills: [] },
 ];
 
 /** When an event is called (callouts.md › When they call). */

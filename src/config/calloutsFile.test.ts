@@ -96,6 +96,33 @@ describe('the shipped callouts.md', () => {
   });
 });
 
+describe('the shipped callouts.md: the magazine hand-off (MG1)', () => {
+  const MAG_EVENTS = ['needMag', 'magComing', 'magThanks'] as const;
+
+  it('has lines for Need a mag, Mag coming and Thanks for the mag, none past the 48 characters of a feed line', () => {
+    for (const id of MAG_EVENTS) {
+      const lines = CALLOUT_LINES.lines[id];
+      expect(lines.length, id).toBeGreaterThan(0);
+      for (const l of lines) {
+        expect(l.text.length, l.text).toBeLessThanOrEqual(CALLOUT_LINE_MAX);
+        expect(l.text, l.text).not.toMatch(/[{}]/); // they fill nothing
+      }
+    }
+  });
+
+  it("gives every personality's voice a line for each, besides the Any ones", () => {
+    for (const id of MAG_EVENTS) {
+      for (const key of BOT_PERSONALITIES.styles.keys()) expect(CALLOUT_LINES.lines[id].some((l) => l.who === key), `${id} / ${key}`).toBe(true);
+    }
+  });
+
+  it('asks and answers on every ask (chance 1), and thanks most of the time', () => {
+    expect(CALLOUT_LINES.rules.needMag.chance).toBe(1);
+    expect(CALLOUT_LINES.rules.magComing.chance).toBe(1);
+    expect(CALLOUT_LINES.rules.magThanks.chance).toBeGreaterThan(0);
+  });
+});
+
 describe('reading callouts.md', () => {
   it('reads chances, gaps, pace, talks and lines, the row order the priority', () => {
     const read = loadCalloutsFile(file(), PEOPLE);

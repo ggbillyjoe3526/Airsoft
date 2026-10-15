@@ -1,0 +1,35 @@
+/* The magazine hand-off (MG1, ui/magPrompt.ts): one line under the crosshair, below the vault prompt's place, on the
+   HUD's navy (--hud-panel, so HUD opacity moves it) and in its size. A toss the Mag key makes now has a bar in your
+   team's colour; the rest (who needs one, whose is on its way, the hint to ask, a notice) are plain. */
+.mag-prompt {
+  position: absolute;
+  left: 50%;
+  top: 69%;
+  translate: -50% 0;
+  scale: var(--hud-scale, 1);
+  padding: 4px 12px;
+  border-radius: 4px;
+  background: var(--hud-panel);
+  font: 600 15px/1.25 var(--ui-font);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--paper);
+  text-shadow: var(--hud-shadow);
+  pointer-events: none;
+  z-index: 11;
+}
+
+.mag-prompt[hidden] {
+  display: none;
+}
+
+.mag-prompt.toss {
+  box-shadow: inset 0 -3px 0 var(--team, var(--orange));
+  font-weight: 700;
+}
+
+/* The tag on a teammate asking you for a magazine, or bringing you one: after their name over their head. */
+.mate-marker.mag span::after {
+  content: ' · mag';
+}

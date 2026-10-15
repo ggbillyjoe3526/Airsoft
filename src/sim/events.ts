@@ -62,7 +62,13 @@ export type GameEvent =
   /** Extraction: case `case` was opened, its finds now carried (a BB resupply used). */
   | { type: 'caseOpened'; characterId: number; case: number; kind: string; position: Vec3 }
   /** Extraction: the runner was hit carrying finds; they lie in case `case` where they fell. */
-  | { type: 'caseDropped'; characterId: number; case: number };
+  | { type: 'caseDropped'; characterId: number; case: number }
+  /** A magazine left `fromId`'s hand for teammate `toId` (MG1, sim/magShare.ts), `bbs` taken out of a spare of `replicaId`. */
+  | { type: 'magToss'; fromId: number; toId: number; bbs: number; replicaId: string }
+  /** `toId` caught the magazine `fromId` tossed: `bbs` went into its spares for `replicaId`. */
+  | { type: 'magCaught'; fromId: number; toId: number; bbs: number; replicaId: string }
+  /** The magazine `fromId` tossed `toId` was lost: the catcher was out of play when it landed, or the round was decided. */
+  | { type: 'magLost'; fromId: number; toId: number };
 
 /**
  * Why a round (in Extraction, the run) ended. Extraction: 'extracted' (counted out at an exit), 'out' (hit with no

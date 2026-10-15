@@ -27,6 +27,7 @@ import type { CoverBlock } from './cover';
 import { bodyPoint, eyeOf, OPEN_SIGHT, type SightConditions, seesSpot } from './perception';
 import { endOrder, heldCentre, holdPoint, placeHold, startOrder } from './squadOrders';
 import { anchorHolding, type BotIdentity, personalSkill } from './personality';
+import { MagShare, type MagAskResult } from './magShare';
 import { aimPing, type Ping, pingSight, takePing } from './pings';
 import { assignLanes, pickTeamPlan, shuffledLanes, takeOwnLanes, type TeamPlan } from './teamPlan';
 
@@ -127,6 +128,8 @@ export class BotController {
   private readonly planRng: RngState;
   /** Per team, this round's plan. */
   readonly plans: TeamPlan[] = ['split', 'split'];
+  /** The magazine hand-off (MG1, ai/magShare.ts): who asks whom, and who brings one. */
+  readonly mags: MagShare;
   /** Extraction (M46): the home team's jobs in the run; undefined in the other modes. */
   private run: RunRoles | undefined;
 
@@ -187,6 +190,7 @@ export class BotController {
       this.botCharacters.add(c);
       commands.set(c.id, this.commandFor(c.id));
     }
+    this.mags = new MagShare(this.bots);
     this.planRound();
     // A bot that holds angles needs the map's features (M40): worked out now, as the match loads, not mid-round. Its
     // level or its personality (BN1) may make it one.
@@ -244,6 +248,7 @@ export class BotController {
     this.pickRetakers();
     this.pickRaiser();
     this.run?.update(this.bots, w);
+    this.mags.update(w);
     // Each bot decides with its own team's skill (Bot.skill, set at creation); w.cfg is the shared behaviour.
     for (const b of this.bots) thinkBot(b, w, this.commandFor(b.character.id), dt);
   }
@@ -298,6 +303,22 @@ export class BotController {
     w.time = time;
     for (const b of this.bots) if (b.character !== leader && b.character.team === leader.team) takePing(b, out, w);
     return true;
+  }
+
+  /**
+   * `asker` (a player, MG1) asks for a magazine at simulation time `time`: the nearest bot teammate with one to spare
+   * brings it (ai/magShare.ts MagShare.ask, which says what came of it).
+   */
+  askForMag(asker: Character, time: number, live: boolean): MagAskResult {
+    const w = this.world;
+    w.time = time;
+    w.live = live;
+    return this.mags.ask(asker, w);
+  }
+
+  /** The bot teammate an ask for a magazine from `asker` (a player) would go to now, or undefined (MG1: the HUD's hint). */
+  magGiverFor(asker: Character): Character | undefined {
+    return this.mags.giverFor(asker, this.world);
   }
 
   /** The order `leader`'s bot teammates are carrying out ('none': they play the team plan). */
@@ -517,6 +538,7 @@ export class BotController {
         }
       }
     }
+    this.mags.observe(state.events, state.characters, time);
   }
 
   /**

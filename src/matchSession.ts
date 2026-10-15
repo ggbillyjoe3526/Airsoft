@@ -18,6 +18,7 @@ import { EXTRACTION, homeTeamCap } from './config/extraction';
 import { FOOTSTEPS } from './config/footsteps';
 import type { HitConfig, HitMarkerSettings } from './config/hits';
 import { type DevSettings, devCheating } from './config/dev';
+import { MAG_SHARE } from './config/magShare';
 import { type CrosshairSettings, type HitFeedMode, type WhatGotYouMode, whatGotYouShown } from './config/matchInfo';
 import { countsForRecords, hitRulesFor, kitUnderRules, type MatchRules, recordsKeyOf, roundRulesFor, type RulesetId, standardRules } from './config/matchRules';
 import type { MatchMode } from './config/modes';
@@ -82,6 +83,7 @@ import type { MatchOutcome } from './progress/xp';
 import type { NotCounted } from './ui/recordsView';
 import { pauseText, resultText, type ResultText } from './ui/matchStopText';
 import { rosterNames, rosterTags, statsBlocks, type TeamBlock } from './ui/statsRows';
+import { MagHandoff, putOnLastMag } from './magHandoff';
 
 const PLAYER_ID = 0;
 /** The colour figures glow in someone's torch beam (M33h): the torches' cool white. */
@@ -178,6 +180,8 @@ export class MatchSession {
   private readonly bots: BotController;
   /** What the bots call to their team (CL1): read off them after each tick; shown and heard while `calloutsOn`. */
   private readonly callouts: CalloutDirector;
+  /** Your side of the magazine hand-off (MG1): the Mag key, the toss it names, the HUD's line. */
+  private readonly mags: MagHandoff;
   private calloutsOn = true;
   /** Your last ping (PG1), and when you placed it: one at a time, at most one per PINGS.minGap. */
   private readonly playerPing = createPing();
@@ -355,6 +359,8 @@ export class MatchSession {
     // A rigged figure's BBs leave its own replica's muzzle (BP4).
     this.combat.setRiggedMuzzle((c, out) => this.match.riggedMuzzle(c, out));
     this.match.setRoster(this.identities);
+    const names = rosterNames(this.state.characters, this.player.id, this.identities);
+    this.mags = new MagHandoff(this.player, this.bots, this.ctx, (id) => names.get(id) ?? '', () => input.keyName('askMag'));
     // Pro briefing tips on the board between rounds, when the opponents are Pro (M41).
     this.match.setProTips(difficultyAtLeast(setup.difficulty, 'pro'));
     this.match.setFigureShadows(quality.figureShadows);
@@ -373,6 +379,13 @@ export class MatchSession {
 
   /** Dev settings › Bots hold fire (M90). */
   private botsHoldFire = false;
+  /** Dev settings › Bots run low on BBs (MG1). */
+  private botsRunLow = false;
+  /**
+   * When this round's bots run low with that switch on (simulation time, MAG_SHARE.devLowAfter after the round starts;
+   * infinite once done). Round 1 starts with the match at time 0, with no roundStart event.
+   */
+  private runLowAt: number = MAG_SHARE.devLowAfter;
   /** A Skip to next round under way (M83): the ticks run so far and the most it may run. */
   private skip: { ticks: number; cap: number } | null = null;
 
@@ -416,6 +429,7 @@ export class MatchSession {
     for (let i = 0; i < ticks; i++) {
       if (watching) idleCommand(this.playerCommand, this.input.yaw, this.input.pitch);
       else this.input.fillCommand(this.playerCommand);
+      this.mags.fill(this.playerCommand);
       this.tick(true);
     }
     return ticks;
@@ -592,7 +606,9 @@ export class MatchSession {
     const holding = this.bots.holdSpot(this.player, this.holdSpot);
     const order = this.bots.orderOf(this.player);
     this.match.showSquadOrder(order, holding ? this.holdSpot : null, this.renderer.camera, dt);
-    this.match.showOrderWheel(this.input.wheelOpen, this.input.wheelPointer, order, this.input.wheelSelect);
+    const mag = this.mags.frame(this.state.time, this.state.round.phase === 'live' && !this.match.watchingBots);
+    this.match.showOrderWheel(this.input.wheelOpen, this.input.wheelPointer, order, this.input.wheelSelect, mag.wheel);
+    this.match.showMagHandoff(mag);
     this.match.showMinimap(holding ? this.holdSpot : null);
     // The vault prompt (M102) only from your own eyes.
     this.combat.frame(dt, alpha, this.input.yaw, pitch, spectating ? undefined : this.playerCommand);
@@ -646,6 +662,7 @@ export class MatchSession {
     this.player.armament.bottomless = cheats.bottomlessMags;
     this.player.ghost = cheats.ghost;
     this.botsHoldFire = cheats.botsHoldFire;
+    this.botsRunLow = cheats.botsRunLow;
     this.match.setWatchingBots(cheats.spectateBots);
     this.match.setBotIntents(cheats.botIntent);
     // Before play begins (a match built by a Play whose mouse lock was refused) only what applies now counts (bug pass).
@@ -656,6 +673,13 @@ export class MatchSession {
     const others = devCheating({ ...cheats, adaptiveDifficulty: false });
     if (!this.played) this.otherDevHelp = this.devEndedRound || others;
     else if (others) this.otherDevHelp = true;
+  }
+
+  /** Dev settings › Bots run low on BBs (MG1): once a round, MAG_SHARE.devLowAfter in, one bot a team on its last magazine. */
+  private runBotsLow(): void {
+    if (this.state.time < this.runLowAt) return;
+    this.runLowAt = Number.POSITIVE_INFINITY;
+    if (this.botsRunLow && this.state.round.phase === 'live') putOnLastMag(this.bots.bots, this.state.round.number);
   }
 
   /**
@@ -714,6 +738,11 @@ export class MatchSession {
   /** Settings › HUD › Ping markers (PG1): yours and your teammates' marks shown, or not (the pings go on). */
   setPingMarkers(on: boolean): void {
     this.match.setPingMarkers(on);
+  }
+
+  /** Settings › HUD › Mag hand-off (MG1): its line under the crosshair and the tags on your teammates, or not. */
+  setMagPrompts(on: boolean): void {
+    this.match.setMagPrompts(on);
   }
 
   /** Settings › HUD › Minimap (M83): turning with the view, or fixed north up. */
@@ -850,6 +879,11 @@ export class MatchSession {
    * or between rounds, it does nothing but say so.
    */
   private giveOrder(order: SquadCommand): void {
+    // The Mag key's, or the wheel's Need a Mag (MG1): its own notices, not the orders' (src/magHandoff.ts).
+    if (order === 'mag') {
+      this.mags.press(this.state.time, this.state.round.phase === 'live' && !this.match.watchingBots);
+      return;
+    }
     if (!isInPlay(this.player) || this.state.round.phase !== 'live') {
       this.match.orderGiven('none', 'notNow');
       return;
@@ -908,6 +942,7 @@ export class MatchSession {
   private afterTick(shown: boolean): void {
     this.stats.afterTick(this.state, SIM_DT);
     this.bots.observe(this.state);
+    this.mags.observe(this.state.events, this.state.time, this.state.round.phase === 'live');
     this.callouts.observe(this.state, this.bots.bots);
     // Adaptive difficulty (AD1): after a round, the other team plays the next a little sharper or gentler.
     if (this.adaptive?.observe(this.state.events, this.teamOf)) this.bots.setTeamSkill(1 - this.player.team, this.adaptive.skill());
@@ -922,11 +957,13 @@ export class MatchSession {
       if (e.type === 'roundStart') {
         this.input.resetView(this.player.spawnYaw);
         this.fitPickedLoadout();
+        this.runLowAt = this.state.time + MAG_SHARE.devLowAfter;
       }
       if (e.type === 'matchOver') this.matchOverAt = this.state.time;
       // Back at the insertion after a hit (Extraction): looking the way its spawn faces.
       if (e.type === 'respawned' && e.characterId === this.player.id) this.input.resetView(this.player.spawnYaw);
     }
+    this.runBotsLow();
     // Extraction: your bot teammates follow you unless you order otherwise (ai/squadFollow.ts).
     if (this.extraction) this.squadFollow.update(this.bots, this.player, this.state.characters, this.state.events, this.state.round.phase === 'live');
   }

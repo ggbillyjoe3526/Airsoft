@@ -9,6 +9,7 @@ import { type Vec3, vec3 } from '../sim/vec';
 import { type Bot, type BotWorld, flagRole, pick, threatInMind, wantsFlag } from './bot';
 import { aimBot, lowOnBBs, reloadBot, shootBot } from './botCombat';
 import { holsterBot } from './botHolster';
+import { asking } from './magShare';
 import { enterFlagMode, glance, keepApart, moveBot, startSearch } from './botMovement';
 import { currentTarget, perceive } from './botSenses';
 import { stepBotTorch } from './botTorch';
@@ -203,6 +204,9 @@ function chooseMode(b: Bot, w: BotWorld, target: Character | undefined, dt: numb
     // A new fight looks afresh whether a hunter's push keeps its target in sight (BP2): never the last fight's look.
     if (b.mode !== 'fight') b.pushLookFor = -1;
     b.mode = 'fight';
+  } else if (b.magFor) {
+    // Bringing a teammate who asked a magazine (MG1, ai/magShare.ts) comes before a squad order: it is over in moments.
+    enterMagMode(b, fresh);
   } else if (b.order !== 'none') {
     // A squad order (M22) comes before the team plan: the pole, chasing noises and the lane. A noise still turns its
     // head (aimBot watches lastKnown) until it is old news.
@@ -215,6 +219,9 @@ function chooseMode(b: Bot, w: BotWorld, target: Character | undefined, dt: numb
   } else if (wantsFlag(b, w)) {
     // Attack / Defend: the pole comes before chasing noises.
     if (b.mode !== 'flag') enterFlagMode(b, w);
+  } else if (asking(b)) {
+    // Low on BBs, it asked a teammate for a magazine (MG1): it waits for it, or goes over to the player it asked.
+    enterMagMode(b, fresh);
   } else if (fresh && (tradeHit(b, w) || reloadFromCover(b, w))) {
     return;
   } else if (remembered) {
@@ -248,6 +255,16 @@ function chooseMode(b: Bot, w: BotWorld, target: Character | undefined, dt: numb
     b.waitForTeam = false;
     b.holdCover = false;
   }
+}
+
+/** Into the magazine hand-off's mode (MG1); a noise still turns its head (aimBot watches lastKnown) until it is old news. */
+function enterMagMode(b: Bot, fresh: boolean): void {
+  if (b.mode !== 'mag') {
+    b.mode = 'mag';
+    b.routeState = 'none';
+    b.route.length = 0;
+  }
+  if (!fresh) b.hasLastKnown = false;
 }
 
 /** A teammate's hit call heard moments ago (M38, teamPlay): head for a spot to peek where it came from, once per call. */
@@ -303,6 +320,7 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
   cmd.reload = false;
   cmd.switchTo = 0; // bots use their primary (holsterBot may keep it away, M92)
   cmd.holster = false;
+  cmd.tossMag = -1; // the mag hand-off sets it, at a teammate it brings one to (MG1)
   stepBotTorch(b, w, cmd); // M33h: night fields only (nothing by day)
   if (!isInPlay(me)) {
     b.mode = 'advance';
@@ -355,7 +373,7 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
     const calm = w.time - b.lastThreatAt > cfg.sprintWhenCalmFor;
     // Hurrying to an order (regroup, keeping up) sprints even with a fight just over, and through the small turns of
     // following someone (a looser forward gate), so it doesn't flick between run and sprint at each one.
-    const hurry = b.mode === 'order' && b.orderRush;
+    const hurry = (b.mode === 'order' && b.orderRush) || (b.mode === 'mag' && b.magRush);
     // A hunter (M46), or a bot that pushes in (BN1), runs at where someone was, footsteps and all. A patrol keeps to a
     // run.
     const going = (b.mode === 'advance' && b.role !== 'patrol') || b.mode === 'flag' || (pusher && b.mode === 'search');

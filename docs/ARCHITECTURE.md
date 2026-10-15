@@ -75,7 +75,8 @@ The root files in more detail:
   `core/sessionPlan.ts`. A decided match is recorded and its XP given once, the frame it is decided
   (`stats/settleMatch.ts`). Skip to next round (M83) runs the same per-tick body as watched play flat out over a few
   frames, showing only the round's end and the next start (`matchFlow.ts` `skipOffer`, `skipTickCap`; `config/sim.ts`
-  `SKIP_ROUND`).
+  `SKIP_ROUND`). Your side of a magazine hand-off (MG1: the Mag key and the wheel's Mag item, the toss it puts in
+  your command, the HUD's line) is `magHandoff.ts`'s `MagHandoff`.
   Its `MatchSetup` carries New game's Match rules (`config/matchRules.ts`), a bot difficulty per team and the Rules
   picker's ruleset (`RULESETS`, laid over the match panel's picks by `playedPicks` in `newGamePicks.ts`). With the Dev
   tab's Adaptive difficulty on (AD1) it also carries the other team's starting rating (`adaptivePicks.ts`): the session
@@ -134,8 +135,10 @@ request. Each entry says where the contract lives, what it holds today and what 
 - **`PlayerCommand`** (`sim/commands.ts`). One command per character per tick, with absolute view angles; the only way
   input or bots drive the simulation. `toggleTorch` switches the weapon light in hand (`sim/torch.ts`); `holster` puts
   the replica in hand away, and a slot in `switchTo`, a fresh trigger pull, aim press or reload draws it again (M92,
-  `sim/armament.ts`).
-  Pinned by `sim/simulation.test.ts`, `input/playerInput.test.ts`.
+  `sim/armament.ts`). `tossMag` names a teammate (a character id, -1 none) to toss a magazine to (MG1,
+  `sim/magShare.ts`): the bots set it when they bring one, MatchSession when your Mag key tosses one, never the keys
+  straight.
+  Pinned by `sim/simulation.test.ts`, `input/playerInput.test.ts`, `sim/magShare.test.ts`.
 - **`GameState` and `state.events`** (`sim/state.ts`, `sim/events.ts`). Plain data with no Three.js or DOM. Events are
   the only channel to presentation and are cleared each tick. For Extraction:
   - `RoundState.run` holds the run (`sim/extraction.ts`): exits, respawns used, the exit count, its outcome, the
@@ -160,15 +163,22 @@ request. Each entry says where the contract lives, what it holds today and what 
     weapon light switched on or off.
   - `Character.vault` holds a vault over a low obstacle (`sim/vault.ts`, M102): its plan and how far through it is. A
     `footstep` of kind `vault` reports one starting (the loudest step: bots hear it from `footstepHearingVault`).
+  - `GameState.magTosses` holds the magazines in the air (MG1, `sim/magShare.ts`; MAG_SHARE.maxTosses slots, made
+    once): who threw it to whom, the catcher's loadout slot, its BBs, the replica it came from, its age and flight and
+    where it left the hand. `magToss` reports one leaving a hand (its BBs already out of the thrower's spare),
+    `magCaught` one landing (with the BBs that went into the catcher's spares) and `magLost` one lost (the catcher out
+    of play, or the round decided while it flew). No BB is ever made.
 
   Pinned by `sim/simulation.test.ts`, `sim/extraction.test.ts`, `sim/extractionCases.test.ts`,
-  `sim/extractionWaves.test.ts`, `sim/torch.test.ts`, `sim/coverRest.test.ts`, `sim/vault.test.ts`.
+  `sim/extractionWaves.test.ts`, `sim/torch.test.ts`, `sim/coverRest.test.ts`, `sim/vault.test.ts`,
+  `sim/magShare.test.ts`.
 - **`stepSimulation(state, commands, ctx, dt)`** (`sim/simulation.ts`). The fixed 60 Hz step and the order of its
   phases (a parked out-of-play character goes straight to the elimination step); randomness only from `state.rng`.
   Per character: aim, move, walk cycle, lean, rest on cover (M104: after the lean, so it reads the eye the tick left,
-  and before the accuracy, which reads the rest), accuracy, then footsteps, replicas and the torch; then BBs and the
-  round. A Jump press at a low obstacle starts a vault before the aim (`tryVault`, M102), and a vault in progress steps
-  in place of the move (`stepVault`, through the same `CharacterMover`). Pinned by the `sim/*.test.ts` files and the
+  and before the accuracy, which reads the rest), accuracy, then footsteps, replicas, the torch and a magazine toss
+  (MG1, while the round is live); then BBs, the magazines in the air (they land or are lost) and the round. A Jump
+  press at a low obstacle starts a vault before the aim (`tryVault`, M102), and a vault in progress steps in place of
+  the move (`stepVault`, through the same `CharacterMover`). Pinned by the `sim/*.test.ts` files and the
   `ai/depotMatch*.test.ts` guards.
 - **`WorldQuery` and `CharacterMover`** (`sim/armament.ts`, `sim/movement.ts`; implemented by
   `physics/physicsWorld.ts`). The ray and shape casts and the character controller the simulation sees; the
@@ -229,8 +239,8 @@ request. Each entry says where the contract lives, what it holds today and what 
   `graphics.bbGlow` since PT1): `quality` holds a `QualityChoice`; `graphics.<field>` holds a
   Custom row (an option id or a slider position); `frameRateCap` (Unlimited, 30, 60, 120, 144 or 240; an older number
   reads as the nearest) and `showFps` are the two Graphics rows outside the presets; `renderer` (`auto`, `webgpu` or
-  `webgl`, W1) is the Renderer row; `callouts` and `pingMarkers` (CL1, PG1) are `on` or `off`. `browserStorage()` returns the
-  save system's guarded storage once it has started (same keys, same values). Pinned by `settings/storage.test.ts`.
+  `webgl`, W1) is the Renderer row; `callouts`, `pingMarkers` and `magPrompts` (CL1, PG1, MG1) are `on` or `off`.
+  `browserStorage()` returns the save system's guarded storage once it has started (same keys, same values). Pinned by `settings/storage.test.ts`.
 - **The save file format** (`save/saveFile.ts`). `{ game, format, build, savedAt, summary, stores, checksum }`, the
   stores as their own modules store them. A save from any earlier `format` loads (one `MIGRATIONS` step per format);
   a later one is refused. `SAVE_FORMAT` goes up with any store's version or a new store (`STORES_BY_FORMAT`). Format 3
@@ -300,8 +310,8 @@ request. Each entry says where the contract lives, what it holds today and what 
   headings: When they call (Event, Chance 0 to 1, Team gap (s); the row order is the urgency), Pace (four named
   seconds), Marks (Rule, Value: the chance a Contact call marks its enemy and the team's seconds between marks, PG1),
   Personalities (Talks (×), one row per bots.md personality; never lowers the ping answers, Going to your ping and
-  Watching your ping) and Lines (Event, Who: Any or a personality, Line with `{area}`, `{count}` or `{left}` where the
-  event fills them). An event without a row is never called; a line it can't read is left out and reported with its
+  Watching your ping, nor a magazine's ask and answer, Need a mag and Mag coming, MG1) and Lines (Event, Who: Any or a
+  personality, Line with `{area}`, `{count}` or `{left}` where the event fills them). An event without a row is never called; a line it can't read is left out and reported with its
   line; it never throws. The callouts read the bots and the state and never write either (`ai/callouts.ts`); a mark
   is presentation only, on its own random stream. Pinned by `config/calloutsFile.test.ts`, `ai/callouts.test.ts`.
 - **Content tags** (`config/content.ts`). Every map, mode, difficulty and ruleset (`tag` on `MAPS`, `MATCH_MODES`,

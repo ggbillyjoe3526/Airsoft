@@ -47,6 +47,11 @@ export interface DevSettings {
   timeOfDay: 'map' | LightingPresetId;
   /** Bots never pull the trigger (M90): walk a map, or watch them move, without being shot. */
   botsHoldFire: boolean;
+  /**
+   * Each round, MAG_SHARE.devLowAfter in, one bot a team is down to its last magazine (MG1), so the magazine hand-off
+   * can be watched: bots fire a magazine or less a round, and rarely run low otherwise.
+   */
+  botsRunLow: boolean;
   /** Watch any bot while you are still in play (M90): you stand where you are and the fire key moves to the next. */
   spectateBots: boolean;
   /** A small label over each bot saying what its brain is doing (M90): fighting, holding, searching … Presentation only. */
@@ -71,6 +76,7 @@ export const DEV_DEFAULTS: Readonly<DevSettings> = {
   gameSpeed: 1,
   timeOfDay: 'map',
   botsHoldFire: false,
+  botsRunLow: false,
   spectateBots: false,
   botIntent: false,
   adaptiveDifficulty: false,
@@ -123,6 +129,13 @@ export const DEV_ENTRIES: readonly DevEntry[] = [
   { kind: 'switch', id: 'bottomlessMags', label: 'Bottomless magazines', help: 'Your magazines never run dry.', cheat: true },
   { kind: 'switch', id: 'ghost', label: 'Ghost', help: 'BBs pass straight through you. The bots still shoot at you.', cheat: true },
   { kind: 'switch', id: 'botsHoldFire', label: 'Bots hold fire', help: 'No bot pulls its trigger: walk the map or watch them move without being shot.', cheat: true },
+  {
+    kind: 'switch',
+    id: 'botsRunLow',
+    label: 'Bots run low on BBs',
+    help: 'Each round, a few seconds in, one bot on each team is down to its last magazine, to watch the magazine hand-off: it asks the nearest teammate, maybe you, for one.',
+    cheat: true,
+  },
   {
     kind: 'switch',
     id: 'spectateBots',

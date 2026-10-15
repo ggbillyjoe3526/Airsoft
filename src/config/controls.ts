@@ -59,6 +59,11 @@ export const DEFAULT_BINDINGS = {
    * ping without taking a hand off the keys. A mouse without one binds a key in Settings › Key Bindings.
    */
   ping: ['Mouse1'],
+  /**
+   * A magazine (MG1, config/magShare.ts): tosses one to a teammate asking you once they are in reach, else asks the
+   * nearest with one to spare when you run low. H for hand-off, free until now; the order wheel has it too.
+   */
+  askMag: ['KeyH'],
   /** Fullscreen on and off while playing (M18b). F11 is the browser's own and would leave the page's fullscreen; F10 is free once the game takes it. */
   fullscreen: ['F10'],
   debugOverlay: ['Backquote', 'F3'],
@@ -97,6 +102,7 @@ export const REBINDABLE: readonly { action: Action; label: string }[] = [
   { action: 'orderHold', label: 'Squad: hold here' },
   { action: 'orderRegroup', label: 'Squad: regroup' },
   { action: 'ping', label: 'Squad: ping a spot' },
+  { action: 'askMag', label: 'Squad: ask for a mag / toss one' },
   { action: 'fullscreen', label: 'Fullscreen' },
 ];
 

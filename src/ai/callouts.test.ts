@@ -35,6 +35,9 @@ const LINES: Record<CalloutEvent, string> = {
   flag: 'Flag!',
   pingGoing: 'Going to {area}.',
   pingWatching: 'Watching {area}.',
+  needMag: 'Need a mag!',
+  magComing: 'Mag coming!',
+  magThanks: 'Thanks for the mag!',
 };
 
 interface Setup {
@@ -49,7 +52,7 @@ interface Setup {
 
 /** A callouts.md with every event (in the shipped order of urgency), always called unless `chance` says otherwise. */
 function calloutsText(s: Setup = {}): string {
-  const order: CalloutEvent[] = ['lastOne', 'down', 'tagged', 'pingGoing', 'pingWatching', 'flag', 'raising', 'contacts', 'contact', 'reloading', 'heard', 'pushing', 'flanking', 'checking', 'holding'];
+  const order: CalloutEvent[] = ['lastOne', 'down', 'tagged', 'pingGoing', 'pingWatching', 'needMag', 'magComing', 'flag', 'raising', 'contacts', 'contact', 'reloading', 'magThanks', 'heard', 'pushing', 'flanking', 'checking', 'holding'];
   const name = (id: CalloutEvent) => CALLOUT_EVENTS.find((e) => e.id === id)!.name;
   const p = { bot: 4, team: 1.5, enemy: 10, wait: 1.5, ...s.pace };
   return [
@@ -479,5 +482,52 @@ describe('PG1: marking a sighting for your team', () => {
     };
     expect(script(1)).toEqual(script(0));
     expect(script(0).length).toBeGreaterThan(3);
+  });
+});
+
+describe('MG1: asking for a magazine, and answering', () => {
+  it('a bot calls its ask, the one bringing it answers, and the catcher thanks them, each once', () => {
+    const r = rig();
+    const [asker, giver] = r.bots as [Bot, Bot];
+    asker.magAskAt = r.state.time;
+    asker.magFrom = giver.character;
+    giver.magFor = asker.character;
+    giver.magForAt = r.state.time;
+    // The ask first (higher in When they call); the answer waits out the team's gap.
+    expect(r.tick()).toEqual(['0: Need a mag!']);
+    const later = r.run(1.6);
+    expect(later).toEqual(['1: Mag coming!']);
+    expect(r.run(6)).toEqual([]); // each once, though the ask and the job stand
+    const caught: GameEvent = { type: 'magCaught', fromId: 1, toId: 0, bbs: 60, replicaId: 'aeg' };
+    expect(r.tick(caught)).toEqual(['0: Thanks for the mag!']);
+  });
+
+  it("waits for the bot's own gap rather than dropping the ask, while it still asks", () => {
+    const r = rig({ chance: { reloading: 1 } });
+    const [asker, giver] = r.bots as [Bot, Bot];
+    asker.lastThreatAt = r.state.time;
+    expect(r.tick({ type: 'reloadStart', characterId: 0, replicaId: 'aeg' })).toEqual(['0: Reloading!']);
+    asker.magAskAt = r.state.time;
+    asker.magFrom = giver.character;
+    const said = r.run(4.2);
+    expect(said).toEqual(['0: Need a mag!']);
+  });
+
+  it('never thanks for a magazine that brought no BBs, nor from a bot out of play', () => {
+    const r = rig();
+    expect(r.tick({ type: 'magCaught', fromId: 1, toId: 0, bbs: 0, replicaId: 'aeg' })).toEqual([]);
+    r.state.characters[0]!.status = 'calling';
+    expect(r.tick({ type: 'magCaught', fromId: 1, toId: 0, bbs: 60, replicaId: 'aeg' })).toEqual([]);
+  });
+
+  it("asks and answers whatever a bot's Talks (×), which still scales the thanks", () => {
+    const r = rig({ talks: { rusher: 0.01, careful: 0.01 }, chance: { magThanks: 1 } });
+    const [asker, giver] = r.bots as [Bot, Bot];
+    asker.magAskAt = r.state.time;
+    asker.magFrom = giver.character;
+    expect(r.tick()).toEqual(['0: Need a mag!']);
+    r.run(5);
+    const thanks = r.tick({ type: 'magCaught', fromId: 1, toId: 0, bbs: 60, replicaId: 'aeg' });
+    expect(thanks).toEqual([]);
   });
 });
