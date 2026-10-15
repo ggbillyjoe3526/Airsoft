@@ -317,8 +317,9 @@ replaces its line; the old one stays findable in the archive or in git.
   fits by its replica's class in `stats.md` (a rifle's for a rifle, a pistol's for a pistol), so mixed kits share
   without a table of which replica takes which. The toss reaches 6 m, needs a clear line, flies 0.3 s plus 0.05 s a
   metre to the catcher's chest wherever they move, and its BBs fill the catcher's emptiest spares. It is lost if the
-  catcher is hit or the round is decided while it flies. A toss takes only what fits, so no BB is ever thrown away.
-  All the numbers are in `config/magShare.ts`.
+  catcher is hit or the round is decided while it flies. A toss takes only what the catcher's emptiest spare has room
+  for; any that no longer fit when it lands (two landing together) go with it. One in the air to you counts as one
+  coming: pressing again before it lands asks nobody. All the numbers are in `config/magShare.ts`.
 - **A bot never gives away its last full spare of the replica it fights with (2026-10-15, MG1).** `keepMags`: giving
   must not make the giver the next one to ask. Its unused sidearm it gives freely.
 - **Fire modes follow the real-world type each replica is modelled on, with a selector key (B, rebindable) (owner,

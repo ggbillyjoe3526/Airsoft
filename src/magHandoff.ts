@@ -31,7 +31,8 @@ export function putOnLastMag(bots: readonly Bot[], round: number): void {
  * (sim/magShare.ts) and who brings one the bots' (ai/magShare.ts); this only decides what a press means now:
  *
  * 1. A teammate asking you is in reach (canTossTo): the nearest gets a magazine on the next tick.
- * 2. Else, low on BBs: you ask (BotController.askForMag), no sooner than MAG_SHARE.playerAskGap after your last ask ended.
+ * 2. Else, low on BBs: you ask (BotController.askForMag), no sooner than MAG_SHARE.playerAskGap after your last ask ended
+ *    and never while one is coming (a bot bringing it, or the magazine in the air).
  * 3. Else a notice: who asks you is too far (or no magazine of yours fits theirs), or you aren't low.
  *
  * Out of play or between rounds a press only says so.
@@ -43,8 +44,9 @@ export class MagHandoff {
   private noticeUntil = Number.NEGATIVE_INFINITY;
   /** Your ask has a bot bringing one; when it last ended (playerAskGap). */
   private asked = false;
-  /** Magazines in the air to you now (a toss counts as coming until it lands or is lost). */
+  /** Magazines in the air to you now (a toss counts as coming until it lands or is lost), and who threw the last. */
   private inAir = 0;
+  private airFrom = -1;
   private askEnded = Number.NEGATIVE_INFINITY;
   /** Low on BBs last tick, and until when the hint to ask shows (MAG_SHARE.askHintTime, once each time you run low). */
   private wasLow = false;
@@ -73,6 +75,8 @@ export class MagHandoff {
       return;
     }
     if (lowOnMags(me.armament)) {
+      // One in the air to you is one coming: no second ask before it lands (the critic's MG1 find).
+      if (this.inAir > 0) return this.say('already', { name: this.nameOf(this.airFrom) }, time);
       if (time - this.askEnded < MAG_SHARE.playerAskGap) return this.say('wait', {}, time);
       const result = this.bots.askForMag(me, time, live);
       if (result === 'asked') {
@@ -104,8 +108,10 @@ export class MagHandoff {
       else if (e.type === 'magToss' && e.fromId === me) this.say('tossed', { name: this.nameOf(e.toId) }, time);
       else if (e.type === 'magCaught' && e.toId === me) this.say('caught', { name: this.nameOf(e.fromId), bbs: e.bbs }, time);
       else if (e.type === 'magLost' && (e.toId === me || e.fromId === me)) this.say('lost', {}, time);
-      if (e.type === 'magToss' && e.toId === me) this.inAir++;
-      else if ((e.type === 'magCaught' || e.type === 'magLost') && e.toId === me) this.inAir = Math.max(0, this.inAir - 1);
+      if (e.type === 'magToss' && e.toId === me) {
+        this.inAir++;
+        this.airFrom = e.fromId;
+      } else if ((e.type === 'magCaught' || e.type === 'magLost') && e.toId === me) this.inAir = Math.max(0, this.inAir - 1);
     }
     const bringing = this.bots.mags.bringing(this.player) !== undefined || this.inAir > 0;
     if (this.asked && !bringing) {
@@ -134,6 +140,8 @@ export class MagHandoff {
     for (const b of this.bots.bots) if (this.asksMe(b)) v.mates.push(b.character.id);
     const bringer = this.bots.mags.bringing(me);
     if (bringer) v.mates.push(bringer.character.id);
+    // Its thrower keeps the tag while the magazine flies.
+    else if (this.inAir > 0 && this.airFrom >= 0) v.mates.push(this.airFrom);
     if (asker && canTossTo(me, asker.character, this.world, pick)) {
       v.wheel = MAG_WHEEL_LABELS.toss;
       if (notice) return this.shown(v);
@@ -144,7 +152,8 @@ export class MagHandoff {
       const p = asker.character.position;
       v.line = this.lineOf('needs', asker.character.id, Math.round(Math.hypot(p.x - me.position.x, p.z - me.position.z)));
     } else if (bringer) v.line = this.lineOf('bringing', bringer.character.id, 0);
-    else if (time < this.hintUntil && this.inAir === 0 && lowOnMags(me.armament) && this.bots.magGiverFor(me)) v.line = this.lineOf('ask', -1, 0);
+    else if (this.inAir > 0 && this.airFrom >= 0) v.line = this.lineOf('bringing', this.airFrom, 0);
+    else if (time < this.hintUntil && lowOnMags(me.armament) && this.bots.magGiverFor(me)) v.line = this.lineOf('ask', -1, 0);
     return this.shown(v);
   }
 
@@ -202,6 +211,7 @@ export class MagHandoff {
     this.asked = false;
     this.askEnded = Number.NEGATIVE_INFINITY;
     this.inAir = 0;
+    this.airFrom = -1;
     this.wasLow = false;
     this.hintUntil = Number.NEGATIVE_INFINITY;
   }

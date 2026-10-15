@@ -156,6 +156,27 @@ describe('MG1: you ask a teammate for a magazine', () => {
     f.physics.dispose();
   });
 
+  it('counts one in the air as one coming: a press during the flight asks nobody, and the line names the thrower', () => {
+    const f = field();
+    empty(f.you);
+    const before = f.total();
+    f.mags.press(f.state.time, f.live());
+    for (let i = 0; i < 6 / DT && !f.events.some((e) => e.type === 'magToss'); i++) f.run(DT);
+    expect(kinds(f.events)).toEqual(['magToss']);
+    // In the air: still low, nobody bringing one, but the thrower keeps the line and the tag.
+    expect(lowOnMags(f.you.armament)).toBe(true);
+    expect(f.bots.mags.bringing(f.you)).toBeUndefined();
+    expect(f.mags.frame(f.state.time, true).line).toBe('Bot 1 is bringing you a mag');
+    expect(f.mags.frame(f.state.time, true).mates).toEqual([1]);
+    f.mags.press(f.state.time, f.live());
+    expect(f.bots.mags.bringing(f.you)).toBeUndefined();
+    expect(f.mags.frame(f.state.time, true).line).toBe('Bot 1 is already bringing you one');
+    f.run(2);
+    expect(kinds(f.events)).toEqual(['magToss', 'magCaught']);
+    expect(f.total()).toBe(before);
+    f.physics.dispose();
+  });
+
   it('hints once, when you run low with a teammate near who has one to spare', () => {
     const f = field();
     expect(f.mags.frame(f.state.time, true).line).toBe('');
