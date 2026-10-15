@@ -159,3 +159,14 @@ describe('Model file switches (RM4)', () => {
     expect(modelFilesInUse(activeDev(false, picked))).toEqual({ gear: false, figures: false });
   });
 });
+
+describe('Bots start low on BBs (MG1)', () => {
+  it('is a switch row labelled as a cheat, off by default, read as saved and junk as off', () => {
+    expect(DEV_DEFAULTS.botsStartLow).toBe(false);
+    expect(DEV_ENTRIES.find((e) => e.id === 'botsStartLow')).toMatchObject({ kind: 'switch', label: 'Bots start low on BBs', cheat: true });
+    expect(devCheating({ ...DEV_DEFAULTS, botsStartLow: true })).toBe(true);
+    expect(loadDevSettings(saved({ 'dev.botsStartLow': 'on' })).botsStartLow).toBe(true);
+    expect(loadDevSettings(saved({ 'dev.botsStartLow': 'yes' })).botsStartLow).toBe(false);
+    expect(activeDev(false, { ...DEV_DEFAULTS, botsStartLow: true }).botsStartLow).toBe(false);
+  });
+});

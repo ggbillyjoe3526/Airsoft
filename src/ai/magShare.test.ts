@@ -1,6 +1,6 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { BALLISTICS } from '../config/ballistics';
-import { BOTS } from '../config/bots';
+import { BOTS, botConfig, type Difficulty } from '../config/bots';
 import { FOOTSTEPS } from '../config/footsteps';
 import { HITS, ROUNDS } from '../config/hits';
 import { MAG_SHARE, MAG_WHEEL_LABELS } from '../config/magShare';
@@ -19,6 +19,7 @@ import { createSimContext, stepSimulation } from '../sim/simulation';
 import { createGameState } from '../sim/state';
 import { OPEN_FIELD, OPEN_NAV } from '../sim/testSupport';
 import { type Vec3, vec3 } from '../sim/vec';
+import { magLine } from '../ui/magPrompt';
 import { BotController } from './botController';
 import { asking, hasMagFor } from './magShare';
 
@@ -28,6 +29,12 @@ import { asking, hasMagFor } from './magShare';
  * who comes, the toss and the catch, and your side of it (src/magHandoff.ts): the key, the HUD's line, the notices.
  */
 
+// Passes magLine through, counting its calls: the HUD line must be made only when it changes, not each frame.
+vi.mock('../ui/magPrompt', async (orig) => {
+  const m = await orig<typeof import('../ui/magPrompt')>();
+  return { ...m, magLine: vi.fn(m.magLine) };
+});
+
 const DT = 1 / 60;
 
 beforeAll(async () => {
@@ -35,7 +42,7 @@ beforeAll(async () => {
 });
 
 /** Where everyone stands (you first); Orange (id 3) far off unless a test moves it. */
-function field(at: readonly Vec3[] = [vec3(-30, 0, 20), vec3(-18, 0, 20), vec3(-30, 0, 45), vec3(40, 0, -40)]) {
+function field(at: readonly Vec3[] = [vec3(-30, 0, 20), vec3(-18, 0, 20), vec3(-30, 0, 45), vec3(40, 0, -40)], level?: Difficulty) {
   const physics = new PhysicsWorld(OPEN_FIELD, BODY, DT);
   const state = createGameState(5, BALLISTICS.maxBBs, ROUNDS);
   const ctx = createSimContext({
@@ -73,7 +80,7 @@ function field(at: readonly Vec3[] = [vec3(-30, 0, 20), vec3(-18, 0, 20), vec3(-
     hits: HITS,
     loadout: LOADOUT,
     // Nobody fights: the hand-off alone (Orange is far off and out of sight anyway).
-    cfg: { ...BOTS, viewDistance: 20 },
+    cfg: { ...(level ? botConfig(level) : BOTS), viewDistance: 20 },
     seed: 5,
   });
   const names = new Map([...state.characters].map((c) => [c.id, c === you ? 'You' : `Bot ${c.id}`]));
@@ -233,6 +240,78 @@ describe('MG1: Dev settings › Bots start low on BBs', () => {
     startOnLastMag(f.bots.bots, 1);
     const low = f.bots.bots.filter((b) => lowOnMags(b.character.armament)).map((b) => b.character.id);
     expect(low).toEqual([2, 3]);
+    f.physics.dispose();
+  });
+});
+
+describe('MG1: the same hand-off at every difficulty', () => {
+  for (const level of ['easy', 'hard', 'pro'] as const) {
+    it(`${level}: a bot teammate comes over for your ask and tosses it, and one that asks you is answered`, () => {
+      const f = field(undefined, level);
+      empty(f.you);
+      const before = f.total();
+      f.mags.press(f.state.time, f.live());
+      expect(f.bots.mags.bringing(f.you)?.character.id).toBe(1);
+      for (let i = 0; i < 8 / DT && !f.events.some((e) => e.type === 'magCaught'); i++) f.run(DT);
+      expect(kinds(f.events)).toEqual(['magToss', 'magCaught']);
+      expect(f.total()).toBe(before);
+      expect(lowOnMags(f.you.armament)).toBe(false);
+      f.physics.dispose();
+    });
+  }
+});
+
+describe('MG1: what comes first in a bot, and what after', () => {
+  it('bringing a magazine comes before a squad order; asking for one waits behind it', () => {
+    const f = field([vec3(-30, 0, 20), vec3(-18, 0, 20), vec3(10, 0, 45), vec3(40, 0, -40)]);
+    const giver = f.bot(1);
+    giver.order = 'hold';
+    empty(f.you);
+    f.mags.press(f.state.time, f.live());
+    f.run(0.1);
+    expect(giver.mode).toBe('mag');
+    expect(giver.order).toBe('hold'); // the order stands; it is back to it afterwards
+    f.physics.dispose();
+  });
+
+  it('a bot that asks while under a squad order carries on with the order, and goes on asking', () => {
+    const f = field([vec3(-30, 0, 20), vec3(-18, 0, 20), vec3(-8, 0, 20), vec3(40, 0, -40)]);
+    const asker = f.bot(2);
+    asker.order = 'hold';
+    empty(asker.character);
+    f.run(0.2);
+    expect(asking(asker)).toBe(true);
+    expect(asker.magFrom).toBe(f.bot(1).character);
+    expect(asker.mode).toBe('order');
+    f.physics.dispose();
+  });
+
+  it('a fight comes first: a bot in sight of an enemy fights while the job waits', () => {
+    const f = field([vec3(-30, 0, 20), vec3(-18, 0, 20), vec3(-30, 0, 45), vec3(-18, 0, 10)]);
+    const giver = f.bot(1);
+    empty(f.you);
+    f.mags.press(f.state.time, f.live());
+    expect(f.bots.mags.bringing(f.you)).toBe(giver);
+    f.run(0.4);
+    expect(giver.mode).toBe('fight');
+    f.physics.dispose();
+  });
+});
+
+describe('MG1: the HUD line allocates nothing while it stands', () => {
+  it('makes a line once for a stretch of frames, and the same view object each time', () => {
+    const f = field([vec3(-30, 0, 20), vec3(-18, 0, 20), vec3(10, 0, 45), vec3(40, 0, -40)]);
+    empty(f.bot(1).character);
+    f.run(0.1); // Bot 1 asks you
+    const view = f.mags.frame(f.state.time, true);
+    expect(view.line).toMatch(/needs a mag/);
+    const made = vi.mocked(magLine).mock.calls.length;
+    for (let i = 0; i < 120; i++) {
+      const v = f.mags.frame(f.state.time, true);
+      expect(v).toBe(view);
+      expect(v.mates).toBe(view.mates);
+    }
+    expect(vi.mocked(magLine).mock.calls.length).toBe(made);
     f.physics.dispose();
   });
 });

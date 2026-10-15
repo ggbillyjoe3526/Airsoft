@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { MAG_SHARE, MAG_WHEEL_LABELS } from '../config/magShare';
+import { DEFAULT_MAG_PROMPTS, MAG_SHARE, MAG_WHEEL_LABELS } from '../config/magShare';
+import { loadSetting, oneOf, saveSetting, SETTINGS_KEY } from '../settings/storage';
+import { loadMagPrompts } from './hudSettings';
 import { ORDER_WHEEL } from '../config/squad';
 import { MagPrompt, magLine } from './magPrompt';
 import { ORDER_KEYS, OrderWheel } from './orderWheel';
@@ -74,5 +76,27 @@ describe('the hand-off on the HUD (MG1)', () => {
     expect(parent.children.map((c) => c.classList.contains('mag'))).toEqual([false, true]);
     tags.setMag(1, false);
     expect(parent.children[1]!.classList.contains('mag')).toBe(false);
+  });
+});
+
+describe('Settings › HUD › Mag hand-off (MG1)', () => {
+  /** A Storage backed by a Map. */
+  function memory(): Storage {
+    const m = new Map<string, string>();
+    return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, String(v)), removeItem: (k: string) => void m.delete(k) } as unknown as Storage;
+  }
+
+  it('is on unless saved off, under the key magPrompts, and junk reads as the default', () => {
+    const s = memory();
+    expect(DEFAULT_MAG_PROMPTS).toBe('on');
+    expect(loadMagPrompts(s)).toBe('on');
+    saveSetting('magPrompts', 'off', s);
+    expect(loadMagPrompts(s)).toBe('off');
+    expect(JSON.parse(s.getItem(SETTINGS_KEY)!).magPrompts).toBe('off');
+    saveSetting('magPrompts', 'on', s);
+    expect(loadMagPrompts(s)).toBe('on');
+    saveSetting('magPrompts', 'sideways', s);
+    expect(loadMagPrompts(s)).toBe('on');
+    expect(loadSetting('magPrompts', oneOf(['on', 'off']), 'on', s)).toBe('on');
   });
 });
