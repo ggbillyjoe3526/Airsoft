@@ -216,6 +216,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Minimap on multi-level maps shows the floor you stand on (floors below darker) and marks teammates on other floors
   with an up or down arrow (M34c)
 - Pings: middle mouse marks a spot for your team, bot teammates go to it or watch it, and Ping markers hides the marks (PG1)
+- Ask for a mag: H or the order wheel asks the nearest teammate for a magazine when you run low, or tosses one to a teammate who asked; bots ask each other too, and Mag hand-off hides the prompt (MG1)
 
 ## Audio
 
@@ -309,4 +310,5 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   smoke test's build (Phase 3, FA11b)
 - `npm run t` and `npm run t:all`: tests with dots and failures only (TE1)
 - Dev figure switches (Disable figure models, Disable all models): with both off, players and bots are the rigged Blender humans and robots (BF1)
+- Dev settings › Bots run low on BBs: 8 s into each round one bot per team is down to its last magazine, to watch the hand-off (MG1)
 - Bug reports: Diagnostics and the crash screen take a note and a Report a Bug button that opens a GitHub issue with the report filled in; long reports are cut and copied whole (IM7)
