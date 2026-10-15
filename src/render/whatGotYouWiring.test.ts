@@ -55,6 +55,7 @@ vi.mock('../ui/calloutFeed');
 vi.mock('../ui/hitFeed');
 vi.mock('../ui/hitFeedback');
 vi.mock('../ui/holdMarker');
+vi.mock('../ui/pingMarkers', async (orig) => ({ ...(await orig<typeof import('../ui/pingMarkers')>()), PingMarkers: class { pings = []; markersShown = true; place() {} setShown() {} show() {} hide() {} hideAll() {} clear() {} dispose() {} } }));
 vi.mock('../ui/matchBoard');
 vi.mock('../ui/minimap');
 vi.mock('../ui/minimapView');

@@ -446,6 +446,16 @@ replaces its line; the old one stays findable in the archive or in git.
 - **Callouts keep a slow, readable pace (2026-10-13, CL1).** A team says one call at a time, 1.5 s apart, a bot its own
   4 s apart and the same enemy 10 s apart; the most urgent first, and a call kept waiting over 1.5 s is dropped. About
   5 to 11 calls a team a minute in the headless matches. All of it, and every line, is in `callouts.md`.
+- **A ping marks a spot or an enemy for your team, and your bot teammates play it their way (2026-10-15, PG1; Claude's
+  defaults, any can change).** The Ping key marks where the crosshair meets the field within 120 m. An enemy under it
+  counts only if the bots' own sight rules let you see them (not in a bush, not in the dark), so a ping never finds the
+  hidden. Teammates take it as a noise heard exactly there: a rusher runs, a flanker may go round, a careful bot walks
+  in, an anchor or defender far off watches from its post, one under your order keeps it; one in a fight ignores it.
+  They keep it in mind 20 s (`pingMemory`), past their usual 6 s.
+- **One teammate answers each ping, and some sightings come back marked (2026-10-15, PG1).** "Going to your ping" from
+  one that set off, else "Watching your ping": always said (Talks never lowers it), after a hit's call and before every
+  other, and its Checking is not called as well. A teammate calling Contact may mark the enemy for you (35 %, a team's
+  marks 12 s apart) on the callouts' own random stream, so marks change neither what is said nor how anyone plays.
 
 ## Maps and modes
 
@@ -653,6 +663,10 @@ replaces its line; the old one stays findable in the archive or in git.
   last noise", owner, 2026-10-04).** A hit call removes that player's patch.
 - **The minimap names the area you stand in, top left on the map (2026-10-13, CL1).** The same names the bots call, so
   "Contact, Dock!" means something by the second round. Every walkable spot on a map is in a named area.
+- **Ping is the middle mouse button, and Settings › HUD › Ping markers is On by default (2026-10-15, PG1).** One ping
+  each, 8 s on screen with its distance, on the minimap too; a contact is a diamond in the other team's colour, so it
+  reads without colour. Off hides the markers only: pings still reach your teammates and are answered. With Callouts
+  off, teammates mark nothing (a mark goes with its call).
 - **The order wheel is on Z (owner, 2026-10-04); Hold here is X, Regroup is V and Follow me is F.** Orders end when the
   player who gave them is hit and at each round start. A teammate's radio double-click confirms an order.
 - **Key bindings: a key belongs to one action, and taking a used key swaps the two (2026-09-30).** Esc, F5, F11, F12,

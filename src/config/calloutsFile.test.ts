@@ -30,6 +30,13 @@ function file(lines = '| Contact | Any | Contact, {area}! |', when = '| Contact 
     '| The same enemy again after | 10 |',
     '| A call waits at most | 1.5 |',
     '',
+    '## Marks',
+    '',
+    '| Rule | Value |',
+    '|---|---|',
+    '| A sighting is marked (chance) | 0.35 |',
+    "| The team's marks apart (s) | 12 |",
+    '',
     '## Personalities',
     '',
     '| Personality | Talks (×) |',
@@ -68,11 +75,24 @@ describe('the shipped callouts.md', () => {
     expect(r.down.priority).toBeLessThan(r.contact.priority);
     expect(r.contacts.priority).toBeLessThan(r.contact.priority);
     expect(r.contact.priority).toBeLessThan(r.checking.priority);
+    // The answers to your ping (PG1) after every hit's call, before every other.
+    expect(Math.max(r.lastOne.priority, r.down.priority, r.tagged.priority)).toBeLessThan(r.pingGoing.priority);
+    expect(r.pingGoing.priority).toBeLessThan(r.pingWatching.priority);
+    for (const e of CALLOUT_EVENTS) if (!['lastOne', 'down', 'tagged', 'pingGoing', 'pingWatching'].includes(e.id)) expect(r.pingWatching.priority, e.name).toBeLessThan(r[e.id].priority);
   });
 
   it('has a line for a bot that has no area to name, for every event that can come without one', () => {
     // Last one names a place only when the team saw them lately; the others always have one on a named map.
     expect(CALLOUT_LINES.lines.lastOne.some((l) => l.who === '' && !l.needsArea)).toBe(true);
+    // A ping (PG1) can be anywhere, outside every named area too, and is always answered.
+    expect(CALLOUT_LINES.lines.pingGoing.some((l) => l.who === '' && !l.needsArea)).toBe(true);
+    expect(CALLOUT_LINES.lines.pingWatching.some((l) => l.who === '' && !l.needsArea)).toBe(true);
+  });
+
+  it('marks some sightings for the team (PG1), and never every one', () => {
+    expect(CALLOUT_LINES.marks.chance).toBeGreaterThan(0);
+    expect(CALLOUT_LINES.marks.chance).toBeLessThan(1);
+    expect(CALLOUT_LINES.marks.gap).toBeGreaterThan(CALLOUT_LINES.pace.teamGap);
   });
 });
 
@@ -117,6 +137,21 @@ describe('reading callouts.md', () => {
     expect(read.errors.join('\n')).toMatch(/a brace with nothing to fill in/);
     expect(read.errors.join('\n')).toMatch(/is too long \(49 characters/);
     expect(read.errors.join('\n')).toMatch(/Who: "Sniper" is not Any or a personality/);
+  });
+
+  it('reads the Marks table (PG1), and reports a bad, unknown, doubled or missing rule, keeping its fallback', () => {
+    expect(loadCalloutsFile(file(), PEOPLE).marks).toEqual({ chance: 0.35, gap: 12 });
+    const bad = loadCalloutsFile(file().replace('| A sighting is marked (chance) | 0.35 |', '| A sighting is marked (chance) | 1.5 |\n| Marked twice | 1 |'), PEOPLE);
+    expect(bad.marks.chance).toBe(0.35);
+    expect(bad.errors.join('\n')).toMatch(/A sighting is marked \(chance\): "1\.5" is not/);
+    expect(bad.errors.join('\n')).toMatch(/"Marked twice" is not a marks rule/);
+    expect(bad.errors.join('\n')).toMatch(/Marks: no row for A sighting is marked \(chance\), so it is 0\.35/);
+    const twice = loadCalloutsFile(file().replace("| The team's marks apart (s) | 12 |", "| The team's marks apart (s) | 12 |\n| The team's marks apart (s) | 3 |"), PEOPLE);
+    expect(twice.marks.gap).toBe(12);
+    expect(besidesMissing(twice.errors)).toHaveLength(1);
+    const none = loadCalloutsFile(file().replace(/## Marks[\s\S]*?## Personalities/, '## Personalities'), PEOPLE);
+    expect(none.marks).toEqual({ chance: 0.35, gap: 12 });
+    expect(none.errors.some((e) => /no "Marks" table/.test(e))).toBe(true);
   });
 
   it('reports a personality bots.md has that the file leaves out (it talks × 1), and one bots.md lacks', () => {

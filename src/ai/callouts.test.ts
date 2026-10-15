@@ -33,6 +33,8 @@ const LINES: Record<CalloutEvent, string> = {
   holding: 'Holding {area}.',
   raising: 'Raising!',
   flag: 'Flag!',
+  pingGoing: 'Going to {area}.',
+  pingWatching: 'Watching {area}.',
 };
 
 interface Setup {
@@ -40,12 +42,14 @@ interface Setup {
   gap?: Partial<Record<CalloutEvent, number>>;
   pace?: { bot?: number; team?: number; enemy?: number; wait?: number };
   talks?: { rusher?: number; careful?: number };
+  /** The Marks table (PG1): no marks unless a test asks. */
+  marks?: { chance?: number; gap?: number };
   extra?: string;
 }
 
 /** A callouts.md with every event (in the shipped order of urgency), always called unless `chance` says otherwise. */
 function calloutsText(s: Setup = {}): string {
-  const order: CalloutEvent[] = ['lastOne', 'down', 'tagged', 'flag', 'raising', 'contacts', 'contact', 'reloading', 'heard', 'pushing', 'flanking', 'checking', 'holding'];
+  const order: CalloutEvent[] = ['lastOne', 'down', 'tagged', 'pingGoing', 'pingWatching', 'flag', 'raising', 'contacts', 'contact', 'reloading', 'heard', 'pushing', 'flanking', 'checking', 'holding'];
   const name = (id: CalloutEvent) => CALLOUT_EVENTS.find((e) => e.id === id)!.name;
   const p = { bot: 4, team: 1.5, enemy: 10, wait: 1.5, ...s.pace };
   return [
@@ -61,6 +65,12 @@ function calloutsText(s: Setup = {}): string {
     `| The team's calls apart | ${p.team} |`,
     `| The same enemy again after | ${p.enemy} |`,
     `| A call waits at most | ${p.wait} |`,
+    '',
+    '## Marks',
+    '| Rule | Value |',
+    '|---|---|',
+    `| A sighting is marked (chance) | ${s.marks?.chance ?? 0} |`,
+    `| The team's marks apart (s) | ${s.marks?.gap ?? 12} |`,
     '',
     '## Personalities',
     '| Personality | Talks (×) |',
@@ -372,5 +382,102 @@ describe('CL1: callouts never change play', () => {
     r.director.observe(r.state, r.bots);
     const after = JSON.stringify({ chars: r.state.characters, bots: r.bots.map((b) => ({ ...b, contacts: [...b.contacts], character: b.character.id })), round: r.state.round });
     expect(after).toBe(before);
+  });
+});
+
+describe('PG1: answering your ping', () => {
+  /** Bots `who` of team 0 took a ping to `at` this tick (ai/pings.ts takePing), `going` ones setting off to look. */
+  const pinged = (r: ReturnType<typeof rig>, who: number[], at = DOCK, going: number[] = []): void => {
+    for (const i of who) {
+      const b = r.bots[i]!;
+      b.pingAt = r.state.time;
+      b.pingSpot = vec3(at.x, 0, at.z);
+      b.lastKnown = vec3(at.x, 0, at.z);
+      b.hasLastKnown = true;
+      b.mode = going.includes(i) ? 'search' : 'advance';
+    }
+  };
+
+  it('has one teammate answer: one going to look first, nearest to the spot first; else the nearest watching', () => {
+    const r = rig();
+    r.bots[0]!.character.position.x = 8; // nearer the Dock, but not going
+    pinged(r, [0, 1], DOCK, [1]);
+    expect(r.tick()).toEqual(['1: Going to Dock.']);
+    // One answer per ping, and its Checking is not called as well.
+    expect(r.run(5)).toEqual([]);
+    const s = rig();
+    s.bots[1]!.character.position.x = 8;
+    pinged(s, [0, 1], BAY);
+    expect(s.tick()).toEqual(['1: Watching Bay.']);
+    expect(s.run(5)).toEqual([]);
+  });
+
+  it('answers each new ping, whatever Talks (×) says, by a bot of the team that took it', () => {
+    const r = rig({ talks: { rusher: 0.1, careful: 0.1 } });
+    const said: string[] = [];
+    for (let k = 0; k < 6; k++) {
+      pinged(r, [0, 1], k % 2 ? DOCK : BAY);
+      said.push(...r.run(2));
+    }
+    expect(said).toHaveLength(6);
+    const t = rig();
+    t.bots[2]!.pingAt = t.state.time;
+    t.bots[2]!.pingSpot = vec3(DOCK.x, 0, DOCK.z);
+    expect(t.tick()).toEqual(['2: Watching Dock.']);
+  });
+
+  it('comes after a hit\'s call, and before the rest', () => {
+    const r = rig({ pace: { team: 1 } });
+    pinged(r, [0, 1], DOCK);
+    r.sees(0, 3, BAY);
+    expect(r.tick(r.hit(2, 0))).toEqual(['0: Last one!']);
+    const next = r.run(1.2);
+    expect(next[0]).toMatch(/Watching Dock\.$/);
+  });
+
+  it('says nothing for a ping a hit teammate took, or between rounds', () => {
+    const r = rig();
+    pinged(r, [0]);
+    r.state.characters[0]!.status = 'calling';
+    expect(r.run(2)).toEqual([]);
+    const s = rig();
+    s.state.round.phase = 'over';
+    pinged(s, [0, 1]);
+    expect(s.run(2)).toEqual([]);
+  });
+});
+
+describe('PG1: marking a sighting for your team', () => {
+  const marks = (r: ReturnType<typeof rig>) => r.director.said.slice(0, r.director.saidCount).map((c) => c.markId);
+
+  it('marks the enemy a Contact calls at the Marks chance, once in its gap, only while the caller still sees them', () => {
+    const r = rig({ marks: { chance: 1, gap: 12 } });
+    r.sees(0, 2, DOCK);
+    expect(r.tick()).toEqual(['0: Contact, Dock!']);
+    expect(marks(r)).toEqual([2]);
+    r.run(5);
+    r.sees(1, 3, BAY);
+    expect(r.tick()).toEqual(['1: Contact, Bay!']);
+    expect(marks(r)).toEqual([-1]); // within the team's gap
+    const never = rig({ marks: { chance: 0 } });
+    never.sees(0, 2, DOCK);
+    never.tick();
+    expect(marks(never)).toEqual([-1]);
+  });
+
+  it('never changes what is said', () => {
+    const script = (chance: number) => {
+      const r = rig({ marks: { chance, gap: 0 } });
+      const out: string[] = [];
+      for (let k = 0; k < 6; k++) {
+        r.sees(k % 2, 2 + (k % 2), k % 3 ? DOCK : BAY);
+        out.push(...r.run(3));
+        r.loses(k % 2, 2 + (k % 2));
+        out.push(...r.run(8));
+      }
+      return out;
+    };
+    expect(script(1)).toEqual(script(0));
+    expect(script(0).length).toBeGreaterThan(3);
   });
 });

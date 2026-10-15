@@ -30,6 +30,16 @@ describe('KeyBindings', () => {
     expect(REBINDABLE.some((r) => r.action === 'torch')).toBe(true);
   });
 
+  it('pings on the middle mouse button by default, a button no other action has, and it can be rebound (PG1)', () => {
+    const b = new KeyBindings(null);
+    expect(b.codes('ping')).toEqual(['Mouse1']);
+    expect(b.actionOf('Mouse1')).toBe('ping');
+    expect(describeKeys(b.codes('ping'))).toBe('Middle mouse');
+    expect(REBINDABLE.some((r) => r.action === 'ping')).toBe(true);
+    expect(b.rebind('ping', 'KeyJ')).toBe(true);
+    expect(b.codes('ping')).toEqual(['KeyJ']);
+  });
+
   it('holds the scoreboard on Tab by default, and it can be rebound (M19)', () => {
     const b = new KeyBindings(null);
     expect(b.codes('scoreboard')).toEqual(['Tab']);

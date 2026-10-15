@@ -16,7 +16,11 @@ seeded per bot.
   mark on the clock), Own lane (`teamPlan.ts takeOwnLanes`), Aims from cover (`botBrain.ts`, so it rests on cover).
 - `callouts.ts` (CL1): `CalloutDirector` puts what the bots just did into words for their team after each tick
   (`callouts.md`: sightings, hits, reloads, noises, searches, holds, the flag), at the file's pace and one call a team at
-  a time. It reads the bots and the state and never writes either, so callouts never change how anyone plays.
+  a time. It reads the bots and the state and never writes either, so callouts never change how anyone plays. It also
+  has one teammate answer a ping (Going to / Watching your ping) and marks some sightings for the team (PG1).
+- `pings.ts` (PG1): `aimPing` finds what a player's ping marks (the floor where the view meets the field, or an enemy
+  under the crosshair the bots' sight rules let them see), and `takePing` hands it to a bot teammate as a noise heard
+  exactly there (`BotController.ping`), kept in mind `pingMemory` (`bot.ts pingInMind`).
 - `botBrain.ts`: the per-tick decision and mode choice (lane → fight → cover → search; also `order` and `flag`). It
   calls `botSenses.ts` (target choice, contacts, reaction), `botMovement.ts` (lane points, hunting, strafing, and one
   glance a tick into the view for the team's hunt memory, M87: a spot seen empty isn't walked to),

@@ -129,6 +129,9 @@ Then open **http://localhost:4173**.
   minimap shows your teammates, the other team where you last heard them, and the name of the area you're in.
 - **Callouts.** Your bot teammates call what they see and do ("Contact, Dock!", "Two left!") in the bottom left, with a
   radio click. **Settings › HUD › Callouts** turns them off.
+- **Pings.** Press the middle mouse button to ping where you look: a marker with its distance for your team, and your
+  bot teammates go to check it or watch it, and say so. Ping an enemy you can see and it is marked as a contact; your
+  teammates sometimes mark the enemies they call for you. **Settings › HUD › Ping markers** hides the markers.
 - **Dev content.** **Settings › Dev** (tick **Dev settings** under the list) has a **Dev content** switch for maps,
   modes and gear still being built, and **Disable levelling**, which unlocks every replica and part. Matches that use
   either aren't recorded and give no XP.
@@ -155,6 +158,7 @@ Every action can be rebound under **Settings › Key Bindings**, mouse buttons a
 | 1 / 2 or mouse wheel | Switch between your primary and secondary replica |
 | Tab (hold) | Scoreboard |
 | Z (hold), F, X, V | Squad order wheel; Follow me, Hold here, Regroup (press again to cancel) |
+| Middle mouse | Ping where you look (or an enemy you can see) for your team |
 | G (hold) | Use: open a case in Extraction (dev content) |
 | T | Weapon torch on and off (dev content) |
 | Y | Inspect: turn the replica in hand over to look it over (the rifle's charging handle and hop-up dial, the pistol's press check) |

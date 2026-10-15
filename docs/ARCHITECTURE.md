@@ -229,7 +229,7 @@ request. Each entry says where the contract lives, what it holds today and what 
   `graphics.bbGlow` since PT1): `quality` holds a `QualityChoice`; `graphics.<field>` holds a
   Custom row (an option id or a slider position); `frameRateCap` (Unlimited, 30, 60, 120, 144 or 240; an older number
   reads as the nearest) and `showFps` are the two Graphics rows outside the presets; `renderer` (`auto`, `webgpu` or
-  `webgl`, W1) is the Renderer row. `browserStorage()` returns the
+  `webgl`, W1) is the Renderer row; `callouts` and `pingMarkers` (CL1, PG1) are `on` or `off`. `browserStorage()` returns the
   save system's guarded storage once it has started (same keys, same values). Pinned by `settings/storage.test.ts`.
 - **The save file format** (`save/saveFile.ts`). `{ game, format, build, savedAt, summary, stores, checksum }`, the
   stores as their own modules store them. A save from any earlier `format` loads (one `MIGRATIONS` step per format);
@@ -298,10 +298,12 @@ request. Each entry says where the contract lives, what it holds today and what 
   (`ai/personality.ts personalSkill`). Pinned by `config/botsFile.test.ts`.
 - **`callouts.md`'s format** (`config/calloutsFile.ts`, CL1). What the bots call and how often, found by their `##`
   headings: When they call (Event, Chance 0 to 1, Team gap (s); the row order is the urgency), Pace (four named
-  seconds), Personalities (Talks (×), one row per bots.md personality) and Lines (Event, Who: Any or a personality,
-  Line with `{area}`, `{count}` or `{left}` where the event fills them). An event without a row is never called; a
-  line it can't read is left out and reported with its line; it never throws. The callouts read the bots and the state
-  and never write either (`ai/callouts.ts`). Pinned by `config/calloutsFile.test.ts`, `ai/callouts.test.ts`.
+  seconds), Marks (Rule, Value: the chance a Contact call marks its enemy and the team's seconds between marks, PG1),
+  Personalities (Talks (×), one row per bots.md personality; never lowers the ping answers, Going to your ping and
+  Watching your ping) and Lines (Event, Who: Any or a personality, Line with `{area}`, `{count}` or `{left}` where the
+  event fills them). An event without a row is never called; a line it can't read is left out and reported with its
+  line; it never throws. The callouts read the bots and the state and never write either (`ai/callouts.ts`); a mark
+  is presentation only, on its own random stream. Pinned by `config/calloutsFile.test.ts`, `ai/callouts.test.ts`.
 - **Content tags** (`config/content.ts`). Every map, mode, difficulty and ruleset (`tag` on `MAPS`, `MATCH_MODES`,
   `DIFFICULTIES`, `RULESETS`) and every pooled asset (`Asset.tag`, from pool.md's Access) is `public` or `dev`; Match
   panel choices may carry one too (untagged is public). `isAvailable(tag, devContent)` is the one check. `devContent`

@@ -1,5 +1,5 @@
 import { AUDIO } from '../config/audio';
-import type { BotConfig, BotSkill } from '../config/bots';
+import type { BotBehaviour, BotConfig, BotSkill } from '../config/bots';
 import type { HitConfig } from '../config/hits';
 import { WHAT_GOT_YOU } from '../config/matchInfo';
 import { FLAG, unknownMode } from '../config/modes';
@@ -27,6 +27,7 @@ import type { CoverBlock } from './cover';
 import { bodyPoint, eyeOf, OPEN_SIGHT, type SightConditions, seesSpot } from './perception';
 import { endOrder, heldCentre, holdPoint, placeHold, startOrder } from './squadOrders';
 import { anchorHolding, type BotIdentity, personalSkill } from './personality';
+import { aimPing, type Ping, pingSight, takePing } from './pings';
 import { assignLanes, pickTeamPlan, shuffledLanes, takeOwnLanes, type TeamPlan } from './teamPlan';
 
 /** Score of a sector nobody has visited this round: older than any real visit. */
@@ -98,6 +99,8 @@ export class BotController {
   /** The bot whose route search is open in `search`, carried over from an earlier tick (audit AI-04), and its goal. */
   private searching: Bot | undefined;
   private readonly searchGoal = vec3();
+  /** What a player's eyes see an enemy by when they ping (PG1, ai/pings.ts pingSight): the bots' rules, as far as a ping reaches. */
+  private readonly pingSight: BotBehaviour;
   /** Per team, the tuning its bots play by (BotControllerOptions.teamCfg; a team's skill changes by setTeamSkill). */
   private readonly teamCfg: BotConfig[];
   /** Hunt sectors: per team, the last time a player of that team stood in each sector. */
@@ -141,6 +144,7 @@ export class BotController {
 
     this.planRng = createRng(planSeed(opts.seed));
     this.teamCfg = [...(opts.teamCfg ?? [cfg, cfg])];
+    this.pingSight = pingSight(cfg);
 
     this.world = {
       characters: state.characters,
@@ -281,6 +285,19 @@ export class BotController {
     if (kind === 'hold') placeHold(team, leader, point, w);
     this.given.set(leader, { kind, ownSpot: kind === 'hold' && !point });
     return kind;
+  }
+
+  /**
+   * A ping from `leader` (a player, PG1) at simulation time `time`: where their view (`yaw`, `pitch`) points goes into
+   * `out` (ai/pings.ts aimPing), and their bot teammates in play take it (takePing: a bot fighting or in cover doesn't).
+   * False if the view meets nothing within reach, or the leader is out of play: nobody hears of it.
+   */
+  ping(leader: Character, yaw: number, pitch: number, time: number, out: Ping): boolean {
+    const w = this.world;
+    if (!isInPlay(leader) || !aimPing(leader, yaw, pitch, w, this.pingSight, out)) return false;
+    w.time = time;
+    for (const b of this.bots) if (b.character !== leader && b.character.team === leader.team) takePing(b, out, w);
+    return true;
   }
 
   /** The order `leader`'s bot teammates are carrying out ('none': they play the team plan). */
