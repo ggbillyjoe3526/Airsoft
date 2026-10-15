@@ -192,3 +192,74 @@ test('Rest on cover: aiming still at a crate shows the Rested tag, and letting g
   await expect(tag).toBeHidden({ timeout: 30_000 });
   expect(errors, errors.join(' | ')).toEqual([]);
 });
+
+/**
+ * Elimination's overtime flag (OT1, Dev 6 item 45): the clock run out on a level round puts the flag up; the banner says
+ * "Overtime · touch the flag", the scoreboard's clock counts the overtime down under "Overtime" with the strip's line, and
+ * a hand on the flag (the player put at its foot) wins the round, the banner saying so. Ghost is on so nobody hits the player.
+ */
+test('Overtime: a level time-out puts the flag up with its banner, clock and strip, and touching it wins the round', async ({ page }) => {
+  test.skip(ONLY_MODE !== undefined, "a mode's content check plays only its own short match");
+  test.setTimeout(300_000);
+  const errors: string[] = [];
+  const elimination = MATCH_MODES.find((m) => m.id === 'elimination')!;
+  await startMatch(page, errors, elimination, true, 'Depot');
+  type OvertimeRound = Round & { overtimeFlag: { up: boolean; left: number; position: { x: number; y: number; z: number } } };
+  const flagState = () => page.evaluate(() => (window as unknown as Airsoft).airsoft.state.round as unknown as OvertimeRound);
+  // The banner is a moment's headline: catch it in the page as the flag goes up, with the clock and strip beside it.
+  await page.evaluate(() => {
+    const w = window as unknown as { __seen?: { banner: string; clock: string; aim: string; strip: string } };
+    const game = (window as unknown as Airsoft).airsoft;
+    const text = (s: string) => document.querySelector(s)?.textContent ?? '';
+    const tick = () => {
+      const r = game.state.round as unknown as OvertimeRound;
+      if (r.overtimeFlag.up && r.phase === 'live' && !w.__seen && text('.hitfx-round').startsWith('Overtime')) {
+        w.__seen = { banner: text('.hitfx-round'), clock: text('.sb-clock'), aim: text('.sb-aim'), strip: text('.sb-flag-text') };
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+  // A level round (everyone in play) whose clock is about to run out.
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() => {
+          const r = (window as unknown as Airsoft).airsoft.state.round as unknown as OvertimeRound;
+          if (r.phase !== 'live') return r.phase;
+          if (r.overtimeFlag.up) return 'up';
+          r.clock = 0.05;
+          return 'live';
+        }),
+      { timeout: 60_000 },
+    )
+    .toBe('up');
+  const up = await flagState();
+  expect(up.overtimeFlag.left).toBeGreaterThan(0);
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __seen?: unknown }).__seen !== undefined), { timeout: 60_000 }).toBe(true);
+  const seen = await page.evaluate(() => (window as unknown as { __seen: { banner: string; clock: string; aim: string; strip: string } }).__seen);
+  expect(seen.banner).toBe('Overtime · touch the flag');
+  expect(seen.clock).toMatch(/^0:\d\d$/);
+  expect(seen.aim).toBe('Overtime');
+  expect(seen.strip).toMatch(/^(Overtime · first hand on the flag wins|Both teams at the flag · nobody takes it)$/);
+  // The player puts a hand on it (re-placed each poll): the round is theirs, or a bot's if one got there first.
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() => {
+          const s = (window as unknown as Airsoft).airsoft.state;
+          const r = s.round as unknown as OvertimeRound;
+          if (r.phase !== 'live') return r.reason;
+          const you = s.characters.find((c) => c.id === 0)!;
+          Object.assign(you.position, r.overtimeFlag.position);
+          return 'live';
+        }),
+      { timeout: 60_000 },
+    )
+    .toBe('overtimeFlag');
+  await expect(page.locator('.hitfx-round')).toHaveText(/(Flag touched · your team wins the round|Beta touched the flag · your team loses the round)/);
+  expect((await flagState()).overtimeFlag.up, 'the flag stays up through the pause').toBe(true);
+  await nextRound(page);
+  expect((await flagState()).overtimeFlag.up, 'and is down for the next round').toBe(false);
+  expect(errors, errors.join(' | ')).toEqual([]);
+});
