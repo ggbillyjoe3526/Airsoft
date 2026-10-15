@@ -1,7 +1,8 @@
 import { AMBIENCES, type Ambience, FIRE_SOUND, type LoopId, type ReverbSpec } from '../config/audio';
+import { NOISE } from '../config/noise';
 import { cues, FOOTSTEP_PACES, isMapCue, type SoundCue } from '../config/sounds';
-import { buildGroundGrid, GROUND_SURFACES, type GroundGrid } from '../map/groundSurfaces';
-import type { MapData } from '../map/mapTypes';
+import { GROUND_SURFACES, type GroundGrid, groundGridOf } from '../map/groundSurfaces';
+import type { MapBlock, MapData } from '../map/mapTypes';
 import type { Vec3 } from '../sim/vec';
 
 /**
@@ -24,8 +25,11 @@ export interface Soundscape {
   readonly reverb: ReverbSpec;
 }
 
-/** The ambience's map cues, loops and echo, plus the fire's crackle if there is a fire. */
-function needs(ambience: Ambience, fires: readonly Vec3[], ground: GroundGrid | null): Pick<Soundscape, 'cues' | 'loops' | 'reverb'> {
+/**
+ * The ambience's map cues, loops and echo, plus the fire's crackle if there is a fire, and the sound of each kind of noisy
+ * prop among `blocks` (NP1: a map with no skip renders no boom).
+ */
+function needs(ambience: Ambience, fires: readonly Vec3[], ground: GroundGrid | null, blocks: readonly MapBlock[]): Pick<Soundscape, 'cues' | 'loops' | 'reverb'> {
   const loops: LoopId[] = ambience.beds.map((b) => b.loop);
   if (fires.length > 0) loops.push(FIRE_SOUND.loop);
   const wanted: SoundCue[] = [];
@@ -35,11 +39,15 @@ function needs(ambience: Ambience, fires: readonly Vec3[], ground: GroundGrid | 
     const present = new Set(ground.surface);
     for (const id of present) for (const pace of FOOTSTEP_PACES) wanted.push(cues.step(GROUND_SURFACES[id]!, pace));
   }
-  return { cues: wanted.filter(isMapCue), loops: [...new Set(loops)], reverb: ambience.reverb };
+  for (const b of blocks) {
+    const noise = NOISE.props[b.kind];
+    if (noise) wanted.push(cues.prop(noise.sound));
+  }
+  return { cues: [...new Set(wanted)].filter(isMapCue), loops: [...new Set(loops)], reverb: ambience.reverb };
 }
 
 /** The soundscape of a field with no data for it, by day: the yard, with its birds (Depot, the range). */
-export const YARD_BY_DAY: Soundscape = { ambience: AMBIENCES.yard.day, ground: null, fires: [], ...needs(AMBIENCES.yard.day, [], null) };
+export const YARD_BY_DAY: Soundscape = { ambience: AMBIENCES.yard.day, ground: null, fires: [], ...needs(AMBIENCES.yard.day, [], null, []) };
 
 /**
  * Each map's soundscapes worked out so far, by day and at night (M65, audit AUD-01): New game's spare time works out the
@@ -60,9 +68,9 @@ export function soundscapeOf(map: MapData, night: boolean): Soundscape {
   let scene = held[when];
   if (!scene) {
     const ambience = AMBIENCES[map.ambience ?? 'yard'][when];
-    const ground = map.terrain ? buildGroundGrid(map) : null;
+    const ground = map.terrain ? groundGridOf(map) : null;
     const fires = night ? (map.lights ?? []).filter((l) => l.kind === 'fire').map((l) => l.position) : [];
-    held[when] = scene = { ambience, ground, fires, ...needs(ambience, fires, ground) };
+    held[when] = scene = { ambience, ground, fires, ...needs(ambience, fires, ground, map.blocks) };
   }
   return scene;
 }

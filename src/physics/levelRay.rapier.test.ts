@@ -3,6 +3,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { BALLISTICS } from '../config/ballistics';
 import { blockMaterial } from '../config/materials';
 import { BODY } from '../config/movement';
+import { NOISE } from '../config/noise';
 import { AEG, hopUpLift } from '../config/replicas';
 import type { ImpactMaterial } from '../config/sounds';
 import { DEPOT } from '../map/depot';
@@ -12,8 +13,10 @@ import { RANGE_MAP } from '../map/range';
 import { WOODLAND } from '../map/woodland';
 import { SLOPE_YARD } from '../map/testSupport';
 import { terrainHeightAt, terrainMesh } from '../map/terrain';
+import { surfaceUnder } from '../map/underfoot';
 import type { SurfaceHit, WorldQuery } from '../sim/armament';
 import { createBBPool, spawnBB } from '../sim/ballistics';
+import { noisyPropsOf } from '../sim/propNoise';
 import { stepBBs } from '../sim/bbs';
 import type { GameEvent } from '../sim/events';
 import { createRng, type RngState, rngNext } from '../sim/rng';
@@ -49,6 +52,8 @@ function rapierQuery(map: MapData): Required<WorldQuery> & { free(): void } {
   };
   return {
     foliage: map.foliage ?? [],
+    noisyProps: noisyPropsOf(map.blocks, NOISE.props),
+    surfaceUnder: (feet) => surfaceUnder(map.blocks, feet),
     raycastStatic(o, d, max) {
       const hit = world.castRay(aim(o, d), max, true);
       return hit ? hit.timeOfImpact : -1;

@@ -1,14 +1,19 @@
 import type * as Rapier from '@dimforge/rapier3d-compat';
 import type { BodyConfig } from '../config/movement';
+import { NOISE } from '../config/noise';
 import { PHYSICS } from '../config/physics';
+import type { FloorSurface } from '../config/sounds';
 import type { Bush } from '../map/foliage';
+import { type GroundGrid, groundGridOf } from '../map/groundSurfaces';
 import type { MapBlock, MapData } from '../map/mapTypes';
+import { surfaceUnder } from '../map/underfoot';
 import { RAMP_FACES, rampCorners } from '../map/surfaces';
 import { terrainMesh } from '../map/terrain';
 import type { SurfaceHit } from '../sim/armament';
 import type { Character } from '../sim/character';
 import { buildLevelRay, castLevelRay, type LevelRay } from '../sim/levelRay';
 import type { CharacterMover } from '../sim/movement';
+import { type NoisyProp, noisyPropsOf } from '../sim/propNoise';
 import { type Vec3, vec3 } from '../sim/vec';
 
 /** Collision group bits (Rapier packs membership in the high 16 bits, filter in the low 16). */
@@ -113,6 +118,11 @@ export class PhysicsWorld implements CharacterMover {
   private readonly level: LevelRay;
   /** The map's bushes (WorldQuery.foliage): BBs push into their leaves (Dev 6 item 44); nothing here collides with them. */
   readonly foliage: readonly Bush[];
+  /** The map's noisy props (WorldQuery.noisyProps, NP1): a run into one, or a BB ringing off one, sounds it. */
+  readonly noisyProps: readonly NoisyProp[];
+  /** The level's blocks and its ground grid (the soundscape's, shared), for what is underfoot (surfaceUnder). */
+  private readonly blocks: readonly MapBlock[];
+  private readonly ground: GroundGrid | null;
 
   /** Call `initPhysics()` first. */
   constructor(
@@ -139,6 +149,9 @@ export class PhysicsWorld implements CharacterMover {
     }
     this.level = buildLevelRay(map.blocks, PHYSICS.rayGridCell, map.terrain ?? null);
     this.foliage = map.foliage ?? [];
+    this.noisyProps = noisyPropsOf(map.blocks, NOISE.props);
+    this.blocks = map.blocks;
+    this.ground = map.terrain ? groundGridOf(map) : null;
 
     this.controller = this.world.createCharacterController(PHYSICS.controllerOffset);
     this.controller.setUp({ x: 0, y: 1, z: 0 });
@@ -149,6 +162,11 @@ export class PhysicsWorld implements CharacterMover {
 
     // Builds the query acceleration structures for the static level.
     this.world.step();
+  }
+
+  /** What is underfoot at `feet` (WorldQuery.surfaceUnder, NP1): what a step sounds on, so noisy ground carries further. */
+  surfaceUnder(feet: Vec3): FloorSurface {
+    return surfaceUnder(this.blocks, feet, this.ground);
   }
 
   addCharacter(c: Character): void {

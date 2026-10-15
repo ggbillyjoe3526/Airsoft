@@ -9,6 +9,7 @@ import { type EliminationContext, eliminate, isInPlay } from './elimination';
 import type { GameEvent } from './events';
 import { characterHitVolume, createHitVolume, type HitVolume, rayCharacter } from './hitbox';
 import { deflectInLeaves } from './leaves';
+import { type PropNoiseContext, ringProp } from './propNoise';
 import { firstRangeTargetHit, hitRangeTarget, type RangeTarget, type RangeTargetHit } from './rangeTargets';
 import { ricochet } from './ricochet';
 import type { RngState } from './rng';
@@ -102,7 +103,8 @@ function knocksOut(body: Character, ownerId: number, t: BBTargets): boolean {
  * ricochets (HitConfig.ricochetsCount); otherwise it ticks them and stops (ricochetTick event), and they play on. On the
  * practice range a BB also stops at the first target it reaches (targetHit event, M21). BBs that fall out of the world
  * or get too old are removed (bbLost event). A BB never hits whoever fired it until it has bounced. `rng` scatters
- * bounces (the simulation's seeded stream); `wind` (m/s) drifts every BB (M30).
+ * bounces (the simulation's seeded stream); `wind` (m/s) drifts every BB (M30). With `noise` (NP1), a BB that lands hard
+ * on a prop that rings (a skip, a container) rings it (sim/propNoise.ts ringProp).
  */
 export function stepBBs(
   pool: BBPool,
@@ -114,6 +116,7 @@ export function stepBBs(
   targets?: BBTargets,
   rng?: RngState,
   wind?: Readonly<Vec3>,
+  noise?: PropNoiseContext,
 ): void {
   let prepared = false;
   const air = airModel(cfg);
@@ -218,6 +221,7 @@ export function stepBBs(
         bb.position.y = bb.prevPosition.y + segmentDir.y * t;
         bb.position.z = bb.prevPosition.z + segmentDir.z * t;
         events.push({ type: 'bbImpact', position: vec3(bb.position.x, bb.position.y, bb.position.z), ownerId: bb.ownerId });
+        if (noise) ringProp(bb.position, length3(bb.velocity.x, bb.velocity.y, bb.velocity.z), bb.ownerId, noise);
         // A bounce flies on from the surface next tick: the rest of this tick's travel is dropped, so a ricochet
         // arrives at most one tick (1/60 s) late, which nobody can see at these speeds.
         if (query.raycastSurface && ricochet(bb, surface, cfg.ricochet, rng)) continue;

@@ -63,6 +63,9 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **FO1** · Bushes stop BBs: one that goes 0.6 m into the leaves stops there; one clipping an edge flies on, thrown off its line and slower
 - **FO1** · A BB in the leaves makes a soft rustle and knocks a few leaves down; a planter's shrubs on Neon Heights rustle too
 - **FO1** · Firing from deep inside a bush shows "Leaves in the way · step clear to shoot"
+- **NP1** · Running into a prop makes noise: skips, containers and vans boom, racks and stalls rattle, crates and fences knock; bots hear 13 to 20 m
+- **NP1** · Sprinting on Woodland's creek gravel or steel ramps and stairs is louder: bots hear it a third further; walking stays silent
+- **NP1** · A BB pinging off a skip, container, van, generator or IBC makes an idle bot turn to look there; a bot in a fight never does
 
 ### Changed
 - **M94** · The practice range is now Practice: pause reads "Practice · Range" or "Practice · Depot", and the tutorial's last button says Practice

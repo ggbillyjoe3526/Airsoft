@@ -3,12 +3,13 @@ import type { BallisticsConfig } from '../config/ballistics';
 import { HOLSTER } from '../config/movement';
 import type { OpticId } from '../config/optics';
 import type { ReplicaConfig } from '../config/replicas';
-import type { ImpactMaterial } from '../config/sounds';
+import type { FloorSurface, ImpactMaterial } from '../config/sounds';
 import { bbMass, type FireMode, HOP_UP, hopUpLift, muzzleVelocity, RECOIL, TRIGGER, validBbWeight } from '../config/replicas';
 import type { Bush } from '../map/foliage';
 import { type BBPool, spawnBB } from './ballistics';
 import type { PlayerCommand } from './commands';
 import type { GameEvent } from './events';
+import type { NoisyProp } from './propNoise';
 import { type RngState, rngGaussian } from './rng';
 import { type Vec3, vec3 } from './vec';
 
@@ -225,6 +226,16 @@ export interface WorldQuery {
    * thrown off there (Dev 6 item 44, sim/bbs.ts), and the bots won't shoot through them (ai/botCombat.ts). Absent: none.
    */
   readonly foliage?: readonly Bush[];
+  /**
+   * The map's noisy props (NP1, sim/propNoise.ts): running into one, or a BB ringing off one, makes a noise. Absent:
+   * none.
+   */
+  readonly noisyProps?: readonly NoisyProp[];
+  /**
+   * What the ground is under `feet` (NP1; map/underfoot.ts surfaceUnder): steps on noisy ground carry further. Absent:
+   * the world can't tell, and steps carry as on concrete.
+   */
+  surfaceUnder?(feet: Vec3): FloorSurface;
 }
 
 export interface ArmamentContext {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { type AmbientCallSpec, type Ambience, AMBIENCES, type AmbienceId, AMBIENT_LOOPS, AUDIO, type LoopId } from '../config/audio';
-import { isMapCue, isPowerPart, MAP_CUE_SEEDS, SOUNDS, type SoundCue, TITLE_CUES } from '../config/sounds';
+import { PROP_SOUNDS } from '../config/noise';
+import { cues, isMapCue, isPowerPart, MAP_CUE_SEEDS, SOUNDS, type SoundCue, TITLE_CUES } from '../config/sounds';
 import { DEPOT } from '../map/depot';
 import { lightingChoices, mapUnderLighting, playsAtNight } from '../map/lightingChoice';
 import { MAPS, mapData } from '../map/maps';
@@ -10,7 +11,7 @@ import { vec3 } from '../sim/vec';
 import { renderLoop } from './ambience';
 import { measureSeam, seamFailures } from './loopSeamSupport';
 import { renderMapCue, renderSounds } from './soundBank';
-import { surfaceUnder } from './soundMaterials';
+import { surfaceUnder } from '../map/underfoot';
 import { soundscapeOf } from './soundscape';
 
 /**
@@ -463,8 +464,9 @@ describe('M34g city acceptance 3: everything else sounds as before', () => {
 
   it('keeps the chime and the arcade off the title screen and last in SOUNDS, each with a seed of its own', () => {
     const all = Object.keys(SOUNDS) as SoundCue[];
-    // M86's map cues (the woods' creak, the city's pigeons and horn) come after them.
-    expect(all.slice(-5)).toEqual([...CITY_CUES, 'ambience.creak', 'ambience.pigeon', 'ambience.horn']);
+    // M86's map cues (the woods' creak, the city's pigeons and horn) come after them, then NP1's props' knocks.
+    const PROPS = PROP_SOUNDS.map(cues.prop);
+    expect(all.slice(-5 - PROPS.length)).toEqual([...CITY_CUES, 'ambience.creak', 'ambience.pigeon', 'ambience.horn', ...PROPS]);
     // A shot's power part (the 0.1 Dev 5 playtest) sits by its shot in SOUNDS but is rendered with it, off the stream.
     expect(all.filter((c) => !isPowerPart(c)).slice(0, TITLE_CUES.length)).toEqual(TITLE_CUES);
     const title = renderSounds(RATE);
@@ -483,15 +485,18 @@ describe('M34g city acceptance 3: everything else sounds as before', () => {
     expect(renderMapCue('ambience.chime', RATE)).toEqual(chime);
     const loopSeeds = (Object.values(AMBIENT_LOOPS) as { seed: number }[]).map((s) => s.seed);
     for (const cue of CITY_CUES) expect(loopSeeds).not.toContain(MAP_CUE_SEEDS[cue]);
-    // Nothing else in MAP_CUE_SEEDS moved: the same keys, the footsteps and owl first, the city's two next, M86's last.
-    expect(Object.keys(MAP_CUE_SEEDS)).toEqual([...Object.keys(MAP_CUES_BEFORE), ...CITY_CUES, 'ambience.creak', 'ambience.pigeon', 'ambience.horn']);
+    // Nothing else in MAP_CUE_SEEDS moved: the same keys, the footsteps and owl first, the city's two next, M86's, NP1's last.
+    expect(Object.keys(MAP_CUE_SEEDS)).toEqual([...Object.keys(MAP_CUES_BEFORE), ...CITY_CUES, 'ambience.creak', 'ambience.pigeon', 'ambience.horn', ...PROPS]);
   });
 });
 
 describe("M34g city acceptance 3: the city's soundscape asks only for its own cues and loops", () => {
-  // With M86's pigeons by day and a car horn either way.
-  const CITY_DAY = { cues: ['ambience.chime', 'ambience.horn', 'ambience.pigeon'], loops: ['drones', 'traffic'] };
-  const CITY_NIGHT = { cues: ['ambience.arcade', 'ambience.horn'], loops: ['neon', 'traffic'] };
+  // With M86's pigeons by day and a car horn either way, and (NP1) the knocks of the city's noisy props: the van and the
+  // skip's steel, the vending machines', stalls' and racks' rattle, the phone booths' glass, the cabinets' plastic and the
+  // crates' and pallets' wood, by day and night alike.
+  const CITY_PROPS = ['prop.glass', 'prop.plastic', 'prop.rattle', 'prop.steel', 'prop.wood'];
+  const CITY_DAY = { cues: ['ambience.chime', 'ambience.horn', 'ambience.pigeon', ...CITY_PROPS], loops: ['drones', 'traffic'] };
+  const CITY_NIGHT = { cues: ['ambience.arcade', 'ambience.horn', ...CITY_PROPS], loops: ['neon', 'traffic'] };
 
   it("asks Neon Heights, under every lighting preset it offers, for its own day or night set and nothing of the woods' or the yard's", () => {
     for (const choice of lightingChoices(NEON_HEIGHTS)) {

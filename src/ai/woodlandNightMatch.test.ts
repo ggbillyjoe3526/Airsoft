@@ -7,7 +7,7 @@ import type { MapData } from '../map/mapTypes';
 import { isInPlay } from '../sim/elimination';
 import type { playMatch as PlayMatch } from './depotMatchSupport';
 
-// Count the night fields built: the canopy grid must be made once as a match loads, never while it runs.
+// Count the night fields built: the canopy grid must be made as a match loads (once per use), never while it runs.
 vi.mock('../map/nightSight', async (importOriginal) => {
   const real = await importOriginal<typeof import('../map/nightSight')>();
   return { ...real, buildNightField: vi.fn(real.buildNightField) };
@@ -99,11 +99,14 @@ describe('a 5v5 bot match on Woodland at night (M33g, acceptances 1, 2 and 5)', 
     expect(visibleBeyond, 'no bot ever had a target in view beyond that target\'s night range').toBe(0);
     expect(hiddenByDark, 'the dark hides enemies from bots in play').toBeGreaterThan(0);
     expect(seenDark + seenLit, 'bots do still see each other').toBeGreaterThan(0);
-    // The grid is made as the match loads (once, by playMatch's controller) and nothing rebuilds it while it plays.
-    expect(buildsAtFirstTick).toBe(1);
-    expect(build.mock.calls.length).toBe(1);
-    expect(build.mock.calls[0]![0]).toBe(WOODLAND);
-    expect(build.mock.calls[0]![1]).toBe(NIGHT_SIGHT);
+    // The grid is made as the match loads (once for the bots' sight, by playMatch's controller, and once for the ground
+    // underfoot, by the physics world's ground grid: NP1, steps on gravel carry) and nothing rebuilds it while it plays.
+    expect(buildsAtFirstTick).toBe(2);
+    expect(build.mock.calls.length).toBe(2);
+    for (const call of build.mock.calls) {
+      expect(call[0]).toBe(WOODLAND);
+      expect(call[1]).toBe(NIGHT_SIGHT);
+    }
     expect(sightChanged).toBe(false);
     // Bots still play: rounds end, BBs fly and hit.
     expect(stats.rounds).toBeGreaterThanOrEqual(1);

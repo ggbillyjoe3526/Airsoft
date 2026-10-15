@@ -12,7 +12,7 @@ import { vec3 } from '../sim/vec';
 import { renderAmbienceBed, renderLoop } from './ambience';
 import { measureSeam, seamFailures } from './loopSeamSupport';
 import { renderMapCue, renderSounds } from './soundBank';
-import { surfaceUnder } from './soundMaterials';
+import { surfaceUnder } from '../map/underfoot';
 import { soundscapeOf, YARD_BY_DAY } from './soundscape';
 
 /** M33j: the woodland sounds. Pure synthesis and data; the match's nodes are tested in sfx.test.ts. */
@@ -392,12 +392,12 @@ describe('M33j acceptance 1: no daytime birds under a night preset, on any map',
     }
   });
 
-  it('plays the city on Neon Heights (M34g): arcade bleeps by Night, the shop chime by Day; Depot is the yard by day, as before', () => {
+  it("plays the city on Neon Heights (M34g): arcade bleeps by Night, the shop chime by Day; Depot is the yard by day, as before, with its props' knocks (NP1)", () => {
     expect(soundscapeOf(NEON_HEIGHTS, true).ambience).toBe(AMBIENCES.city.night);
     expect(soundscapeOf(NEON_HEIGHTS, true).ambience.calls[0]?.cue).toBe('ambience.arcade');
     expect(soundscapeOf(NEON_HEIGHTS, false).ambience).toBe(AMBIENCES.city.day);
     expect(soundscapeOf(NEON_HEIGHTS, false).ambience.calls[0]?.cue).toBe('ambience.chime');
-    expect(soundscapeOf(DEPOT, false)).toEqual(YARD_BY_DAY);
+    expect({ ...soundscapeOf(DEPOT, false), cues: [] }).toEqual(YARD_BY_DAY);
   });
 });
 
@@ -442,26 +442,33 @@ describe('M33j acceptance 4: gameplay first, the ambience under BBs, footsteps a
 });
 
 describe('M33j acceptance 5: sounds render lazily, for the maps that use them', () => {
-  it('asks nothing more of Depot than the title screen renders', () => {
+  it("asks nothing more of Depot than the title screen renders, but its noisy props' knocks (NP1)", () => {
     const scene = soundscapeOf(DEPOT, false);
-    expect(scene.cues).toEqual([]);
+    // The skips' and containers' steel, the generators' and IBCs' clank, the racks' rattle, the crates' and pallets' wood,
+    // the site toilets' plastic.
+    expect([...scene.cues].sort()).toEqual(['prop.clank', 'prop.plastic', 'prop.rattle', 'prop.steel', 'prop.wood']);
     expect(scene.loops).toEqual(['yard']);
   });
 
   it("asks for Neon Heights' own (M34g): traffic, drones and the chime by Day; traffic, neon and the arcade by Night; no ground steps", () => {
     const day = soundscapeOf(NEON_HEIGHTS, false);
-    // With M86's pigeons by day and a car horn either way.
-    expect(day.cues).toEqual(['ambience.chime', 'ambience.pigeon', 'ambience.horn']);
+    // With M86's pigeons by day and a car horn either way, then (NP1) its noisy props' knocks, the same by day and night.
+    const props = ['prop.glass', 'prop.plastic', 'prop.rattle', 'prop.steel', 'prop.wood'];
+    const isProp = (c: SoundCue): boolean => c.startsWith('prop.');
+    expect(day.cues.filter((c) => !isProp(c))).toEqual(['ambience.chime', 'ambience.pigeon', 'ambience.horn']);
+    expect(day.cues.filter(isProp).sort()).toEqual(props);
     expect([...day.loops].sort()).toEqual(['drones', 'traffic']);
     const night = soundscapeOf(NEON_HEIGHTS, true);
-    expect(night.cues).toEqual(['ambience.arcade', 'ambience.horn']);
+    expect(night.cues.filter((c) => !isProp(c))).toEqual(['ambience.arcade', 'ambience.horn']);
+    expect(night.cues.filter(isProp).sort()).toEqual(props);
     expect([...night.loops].sort()).toEqual(['neon', 'traffic']);
   });
 
   it("asks for Woodland's own: a step for each ground it has, at each pace, the owl, the wind, the insects and the fire", () => {
     const scene = soundscapeOf(WOODLAND, true);
     const want = GROUND_SURFACES.flatMap((s) => FOOTSTEP_PACES.map((p) => cues.step(s, p)));
-    expect([...scene.cues].sort()).toEqual([...want, 'ambience.owl', 'ambience.creak'].sort());
+    // And (NP1) its board fence's knock.
+    expect([...scene.cues].sort()).toEqual([...want, 'ambience.owl', 'ambience.creak', 'prop.wood'].sort());
     expect([...scene.loops].sort()).toEqual(['crackle', 'insects', 'pines']);
   });
 

@@ -24,6 +24,11 @@ export interface GameState {
   wind: Vec3;
   /** Magazines tossed to a teammate and still in the air (MG1, sim/magShare.ts): a fixed pool, `active` the ones out. */
   magTosses: MagToss[];
+  /**
+   * When each of the map's noisy props (WorldQuery.noisyProps, by index) can next make a noise (s, as `time`; NP1,
+   * sim/propNoise.ts): grown to one per prop on the first tick.
+   */
+  propQuiet: number[];
 }
 
 /** A fresh game in `mode` (flag mode needs the map's flagpole). */
@@ -39,5 +44,6 @@ export function createGameState(seed: number, maxBBs: number, rules: RoundRules,
     targets: [],
     wind: vec3(),
     magTosses: createMagTosses(),
+    propQuiet: [],
   };
 }

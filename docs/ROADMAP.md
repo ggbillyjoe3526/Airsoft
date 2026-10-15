@@ -224,7 +224,7 @@ when their work starts. Numbers are from the owner's list of 50 candidates
 | 24 | Pings: mark a spot and bots act on it: the Ping key (middle mouse) marks a spot or an enemy you see for your team, bot teammates go to look or watch it by personality and answer, and they mark some sightings for you; done (2026-10-15, `docs/records/PG1.md`) | Team play |
 | 43 | Ask a teammate for a magazine, from the comms wheel (owner); done (2026-10-15, `docs/records/MG1.md`) | Team play |
 | 44 | Bushes and leaves can stop or deflect BBs: 0.6 m of leaves stops a BB, an edge throws it off and slows it, bots hold fire through thick bush (Easy doesn't); done (2026-10-15, `docs/records/FO1.md`) | World |
-| 41 | Noisy ground and props: gravel, cans, pallets and fences rattle, and bots hear it | World |
+| 41 | Noisy ground and props: running into skips, crates, racks and fences knocks them and bots hear it, a BB off steel draws a look, gravel and steel steps carry further; done (2026-10-15, `docs/records/NP1.md`) | World |
 | 45 | Overtime: when the clock runs out, a flag appears in the middle and the first team to touch it wins | Rounds |
 | 46 | An option to hide the ammo counter (no mag-check key: owner) | HUD |
 | PT1 | The owner's Dev 5 playtest fixes (2026-10-13): text kept inside its buttons, louder shots and a Power source volume, no BB halo, a bolder hit marker with its own settings, the 2x scope like the red dot and without its gap, the ammo count clear of the panel, firing on the run, Esc skips the round; done (2026-10-13, `docs/records/PT1.md`) | Polish |

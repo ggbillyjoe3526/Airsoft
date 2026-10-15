@@ -1,5 +1,5 @@
 import type { FootstepConfig } from '../config/footsteps';
-import { rattles } from './armament';
+import { rattles, type WorldQuery } from './armament';
 import type { Character } from './character';
 import type { GameEvent } from './events';
 
@@ -13,9 +13,10 @@ export type FootstepKind = 'run' | 'sprint' | 'land' | 'rattle' | 'vault';
  * After a character has moved this tick: counts the ground it covered and emits a footstep event
  * every stride while running or sprinting, and a landing event when it comes down hard. Walking and
  * moving crouched make no footsteps, but a magazine that rattles (a hi-cap, config/attachments.ts) is heard every
- * stride even then. Pure; uses the character's own step state.
+ * stride even then. A run, sprint or landing says what it came down on when `query` can tell (WorldQuery.surfaceUnder,
+ * NP1: noisy ground carries further). Pure; uses the character's own step state.
  */
-export function stepFootsteps(c: Character, cfg: FootstepConfig, events: GameEvent[]): void {
+export function stepFootsteps(c: Character, cfg: FootstepConfig, events: GameEvent[], query?: WorldQuery): void {
   if (!c.grounded) {
     c.fallSpeed = Math.max(c.fallSpeed, -c.velocity.y);
     c.airborne = true;
@@ -26,7 +27,7 @@ export function stepFootsteps(c: Character, cfg: FootstepConfig, events: GameEve
     const landed = c.fallSpeed >= cfg.landMinSpeed;
     c.fallSpeed = 0;
     if (landed) {
-      events.push({ type: 'footstep', characterId: c.id, kind: 'land' });
+      events.push({ type: 'footstep', characterId: c.id, kind: 'land', surface: query?.surfaceUnder?.(c.position) });
       c.stepDistance = 0;
       return;
     }
@@ -37,6 +38,7 @@ export function stepFootsteps(c: Character, cfg: FootstepConfig, events: GameEve
   const stride = c.sprinting ? cfg.strideSprint : cfg.strideRun;
   if (c.stepDistance >= stride) {
     c.stepDistance %= stride;
-    events.push({ type: 'footstep', characterId: c.id, kind: quiet ? 'rattle' : c.sprinting ? 'sprint' : 'run' });
+    if (quiet) events.push({ type: 'footstep', characterId: c.id, kind: 'rattle' });
+    else events.push({ type: 'footstep', characterId: c.id, kind: c.sprinting ? 'sprint' : 'run', surface: query?.surfaceUnder?.(c.position) });
   }
 }

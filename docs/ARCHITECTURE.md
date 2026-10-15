@@ -172,22 +172,34 @@ request. Each entry says where the contract lives, what it holds today and what 
     At `BALLISTICS.leaves.stopDepth` it stops there and reports `bbImpact` with `leaves: true`; one that comes out of
     a bush having crossed less is thrown off and slowed and reports `bbLeaves` (presentation's rustle and leaves).
     Bushes come from `WorldQuery.foliage`; a world without it flies BBs as before.
+  - `GameState.propQuiet` is, per noisy prop (`WorldQuery.noisyProps`, by index), the time until which it makes no
+    noise (NP1, `sim/propNoise.ts`; grown once to one slot per prop). `propNoise` reports a noisy prop sounding: run
+    into (`shot: false`, from its face; bots hear it to the prop's `bumped` range, from the one who hit it) or rung by a
+    BB landing hard on steel (`shot: true`, where the BB stopped; heard only by idle bots, to its `shot` range).
+    `footstep.surface` (optional) is the ground a run, sprint or landing came down on (`WorldQuery.surfaceUnder`), which
+    the bots, the audio and the sound cues read for how far it carries (`NOISE.ground`).
 
   Pinned by `sim/simulation.test.ts`, `sim/extraction.test.ts`, `sim/extractionCases.test.ts`,
   `sim/extractionWaves.test.ts`, `sim/torch.test.ts`, `sim/coverRest.test.ts`, `sim/vault.test.ts`,
-  `sim/magShare.test.ts`, `sim/bbsLeaves.test.ts`.
+  `sim/magShare.test.ts`, `sim/bbsLeaves.test.ts`, `sim/propNoise.test.ts`, `sim/propNoisePhysics.test.ts`.
 - **`stepSimulation(state, commands, ctx, dt)`** (`sim/simulation.ts`). The fixed 60 Hz step and the order of its
   phases (a parked out-of-play character goes straight to the elimination step); randomness only from `state.rng`.
   Per character: aim, move, walk cycle, lean, rest on cover (M104: after the lean, so it reads the eye the tick left,
   and before the accuracy, which reads the rest), accuracy, then footsteps, replicas, the torch and a magazine toss
-  (MG1, while the round is live); then BBs, the magazines in the air (they land or are lost) and the round. A Jump
+  (MG1, while the round is live); then BBs, the magazines in the air (they land or are lost) and the round. A character
+  in play whose move ran hard into a noisy prop knocks it right after the move (`stepPropBump`, NP1; not during a
+  vault), and a BB stopped on a ringing prop rings it in the BB step (`ringProp`, through `stepBBs`' `noise` context,
+  `SimContext.propNoise`). A Jump
   press at a low obstacle starts a vault before the aim (`tryVault`, M102), and a vault in progress steps in place of
   the move (`stepVault`, through the same `CharacterMover`). Pinned by the `sim/*.test.ts` files and the
   `ai/depotMatch*.test.ts` guards.
 - **`WorldQuery` and `CharacterMover`** (`sim/armament.ts`, `sim/movement.ts`; implemented by
   `physics/physicsWorld.ts`). The ray and shape casts and the character controller the simulation sees; the
   simulation never calls Rapier. `WorldQuery.foliage` (optional, FO1) is the map's bushes, read by the BBs and by the
-  bots' check for leaves in their line of fire. Pinned by `physics/physicsWorld.test.ts`.
+  bots' check for leaves in their line of fire. `WorldQuery.noisyProps` (optional, NP1) lists the map's noisy props
+  (`sim/propNoise.ts noisyPropsOf`, from `NOISE.props`), and `WorldQuery.surfaceUnder` (optional, NP1) names the ground
+  under a pair of feet (`map/underfoot.ts`, the same answer the audio plays); a world without them makes no prop noise
+  and steps carry as on concrete. Pinned by `physics/physicsWorld.test.ts`, `physics/levelRay.rapier.test.ts`.
 - **`MatchSession.advance(dt)` / `draw(dt)` / `afterTick()`** (`matchSession.ts`). Simulation first, presentation
   after. `afterTick` (private, run after every tick) is where stats, the HUD and sound read the tick's events;
   `draw` also takes `boardHeld`. Pinned by the smoke test.

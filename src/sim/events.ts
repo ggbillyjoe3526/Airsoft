@@ -1,5 +1,7 @@
 import type { RangeTargetKind } from '../config/range';
 import type { FireMode } from '../config/replicas';
+import type { FloorSurface } from '../config/sounds';
+import type { BlockKind } from '../map/mapTypes';
 import type { FootstepKind } from './footsteps';
 import type { Vec3 } from './vec';
 
@@ -27,8 +29,18 @@ export type GameEvent =
   | { type: 'bbImpact'; position: Vec3; ownerId: number; bodyId?: number; leaves?: true }
   /** A BB came out through the edge of a bush and flew on, thrown off its line (Dev 6 item 44): a brush of leaves there. */
   | { type: 'bbLeaves'; position: Vec3; ownerId: number }
-  /** A character's footstep or landing, heard at its feet (walking and crouched moves are silent). */
-  | { type: 'footstep'; characterId: number; kind: FootstepKind }
+  /**
+   * A character's footstep or landing, heard at its feet (walking and crouched moves are silent). `surface`: what a run,
+   * sprint or landing came down on (WorldQuery.surfaceUnder; absent where the world can't tell, or for a hi-cap's
+   * rattle and a vault): steps on noisy ground carry further (NP1, NOISE.ground).
+   */
+  | { type: 'footstep'; characterId: number; kind: FootstepKind; surface?: FloorSurface | undefined }
+  /**
+   * A noisy prop made a noise (NP1, sim/propNoise.ts): `characterId` ran into it, or (`shot`) a BB of theirs rang off it.
+   * `prop` is its index in WorldQuery.noisyProps, `kind` its block kind, `position` where on it; the other team's bots
+   * within `range` m hear it (walls muffling it), and only those with no fresher news turn to a BB's ring.
+   */
+  | { type: 'propNoise'; characterId: number; prop: number; kind: BlockKind; position: Vec3; range: number; shot: boolean }
   /**
    * A BB hit a character: they are eliminated and start calling their hit. `direction` is the BB's flight direction;
    * `ricochet`: it had bounced off something first (only when the match counts ricochets).

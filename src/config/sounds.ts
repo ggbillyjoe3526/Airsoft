@@ -1,5 +1,6 @@
 import type { SoundRecipe } from '../audio/dsp';
 import type { GroundSurface } from '../map/mapTypes';
+import type { PropSound } from './noise';
 
 /**
  * Every sound effect as a recipe (audio/dsp.ts): layers of filtered noise, gliding tones and struck resonances,
@@ -95,7 +96,9 @@ export type SoundCue =
   | 'ambience.dog'
   | 'ambience.creak'
   | 'ambience.pigeon'
-  | 'ambience.horn';
+  | 'ambience.horn'
+  /** Someone running into a noisy prop (NP1, config/noise.ts): a skip's boom, a rack's rattle, a crate's knock. */
+  | `prop.${PropSound}`;
 
 /** Typical spreads: shots and mechanisms vary a little, steps and impacts more. */
 const TIGHT = { pitchSpread: 0.04, timeSpread: 0.08, gainSpread: 0.1 } as const;
@@ -742,6 +745,89 @@ export const SOUNDS: Readonly<Record<SoundCue, SoundRecipe>> = {
     gainSpread: 0.1,
     variants: 3,
   },
+
+  // ---- Noisy props (NP1): map cues for the maps that have the prop, short (under 0.35 s) with three variants each -----
+  /**
+   * A body running into a big steel box (a skip, a container, the van): the dull thump of the hit, the box's low boom and
+   * its panels ringing on a moment. Toy-like: a hollow "bonnng", never a crash.
+   */
+  'prop.steel': {
+    layers: [
+      { kind: 'noise', attack: 0.001, decay: 0.05, gain: 0.45, filter: { type: 'lowpass', hz: 900, q: 0.8 } },
+      { kind: 'tone', wave: 'sine', attack: 0.002, decay: 0.26, gain: 0.32, hz: 88, hzTo: 72 },
+      { kind: 'modes', at: 0.002, gain: 0.2, modes: [{ hz: 182, decay: 0.28, gain: 1 }, { hz: 417, decay: 0.2, gain: 0.6 }, { hz: 763, decay: 0.14, gain: 0.4 }, { hz: 1340, decay: 0.08, gain: 0.25 }] },
+      click(0, 2600, 0.18, 0.01),
+    ],
+    drive: 0.3,
+    ...LOOSE,
+    variants: 3,
+  },
+  /** Smaller steel knocked (a generator's housing, an IBC's cage): a bright clank, then the frame chattering. */
+  'prop.clank': {
+    layers: [
+      { kind: 'noise', attack: 0.001, decay: 0.035, gain: 0.4, filter: { type: 'lowpass', hz: 1200, q: 0.8 } },
+      { kind: 'modes', gain: 0.2, modes: [{ hz: 523, decay: 0.18, gain: 1 }, { hz: 1187, decay: 0.12, gain: 0.6 }, { hz: 2351, decay: 0.08, gain: 0.35 }, { hz: 3904, decay: 0.05, gain: 0.2 }] },
+      click(0, 3000, 0.2, 0.006),
+      click(0.035, 3600, 0.12, 0.005),
+      click(0.07, 2800, 0.08, 0.005),
+    ],
+    ...LOOSE,
+    variants: 3,
+  },
+  /**
+   * Loose things shaken (a rack's stock, a stall's pans, the cans in a vending machine): a hollow thud and a quick
+   * scatter of knocks and ticks settling.
+   */
+  'prop.rattle': {
+    layers: [
+      { kind: 'noise', attack: 0.001, decay: 0.05, gain: 0.38, filter: { type: 'lowpass', hz: 700, q: 0.8 } },
+      { kind: 'modes', gain: 0.12, modes: [{ hz: 241, decay: 0.08, gain: 1 }, { hz: 612, decay: 0.05, gain: 0.5 }] },
+      click(0.012, 3200, 0.16, 0.006),
+      click(0.03, 4100, 0.13, 0.005),
+      click(0.052, 2700, 0.14, 0.006),
+      click(0.077, 3700, 0.1, 0.005),
+      click(0.104, 3000, 0.08, 0.005),
+      click(0.135, 4400, 0.06, 0.004),
+      { kind: 'noise', at: 0.008, attack: 0.01, decay: 0.12, gain: 0.07, filter: { type: 'bandpass', hz: 2500, q: 1.2 } },
+    ],
+    ...LOOSE,
+    variants: 3,
+  },
+  /** Timber knocked (a crate, a pallet load, a board fence): a hollow wooden knock and a board's short creak. */
+  'prop.wood': {
+    layers: [
+      { kind: 'noise', attack: 0.001, decay: 0.045, gain: 0.42, filter: { type: 'lowpass', hz: 800, q: 0.8 } },
+      { kind: 'modes', gain: 0.22, modes: [{ hz: 163, decay: 0.09, gain: 1 }, { hz: 389, decay: 0.06, gain: 0.6 }, { hz: 877, decay: 0.035, gain: 0.35 }, { hz: 1910, decay: 0.02, gain: 0.2 }] },
+      click(0, 1800, 0.18, 0.008),
+      { kind: 'tone', wave: 'saw', at: 0.04, attack: 0.012, decay: 0.08, gain: 0.04, hz: 210, hzTo: 165, filter: { type: 'bandpass', hz: 900, q: 2.5 } },
+    ],
+    ...LOOSE,
+    variants: 3,
+  },
+  /** Hollow moulded plastic knocked (a site toilet, an arcade cabinet): a round, comic "bonk" as the shell flexes. */
+  'prop.plastic': {
+    layers: [
+      { kind: 'noise', attack: 0.001, decay: 0.04, gain: 0.38, filter: { type: 'lowpass', hz: 1000, q: 0.8 } },
+      { kind: 'modes', gain: 0.24, modes: [{ hz: 131, decay: 0.16, gain: 1 }, { hz: 293, decay: 0.1, gain: 0.55 }, { hz: 641, decay: 0.05, gain: 0.3 }] },
+      { kind: 'tone', wave: 'sine', attack: 0.003, decay: 0.16, gain: 0.1, hz: 112, hzTo: 96 },
+      click(0, 2200, 0.12, 0.006),
+    ],
+    ...LOOSE,
+    variants: 3,
+  },
+  /** A phone booth knocked: the frame's thud and its panes chattering, glassy and bright. */
+  'prop.glass': {
+    layers: [
+      { kind: 'noise', attack: 0.001, decay: 0.04, gain: 0.34, filter: { type: 'lowpass', hz: 900, q: 0.8 } },
+      { kind: 'modes', gain: 0.12, modes: [{ hz: 322, decay: 0.07, gain: 1 }, { hz: 781, decay: 0.04, gain: 0.5 }] },
+      { kind: 'modes', at: 0.004, gain: 0.1, modes: [{ hz: 2117, decay: 0.12, gain: 1 }, { hz: 3483, decay: 0.08, gain: 0.6 }, { hz: 5210, decay: 0.05, gain: 0.35 }] },
+      click(0.02, 5500, 0.1, 0.004),
+      click(0.045, 6300, 0.08, 0.004),
+      click(0.07, 5000, 0.06, 0.004),
+    ],
+    ...LOOSE,
+    variants: 3,
+  },
 };
 
 /**
@@ -789,6 +875,12 @@ export const MAP_CUE_SEEDS: Readonly<Partial<Record<SoundCue, number>>> = {
   'ambience.creak': 3613,
   'ambience.pigeon': 3614,
   'ambience.horn': 3615,
+  'prop.steel': 3711,
+  'prop.clank': 3712,
+  'prop.rattle': 3713,
+  'prop.wood': 3714,
+  'prop.plastic': 3715,
+  'prop.glass': 3716,
 };
 
 /** Whether `cue` is rendered only for a map that plays it (MAP_CUE_SEEDS). */
@@ -812,4 +904,5 @@ export const cues = {
   magIn: (p: ShotProfile): SoundCue => `magIn.${p}`,
   step: (s: FloorSurface, pace: FootstepPace): SoundCue => `step.${s}.${pace}`,
   impact: (m: ImpactMaterial): SoundCue => `impact.${m}`,
+  prop: (s: PropSound): SoundCue => `prop.${s}`,
 };

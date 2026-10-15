@@ -14,7 +14,9 @@ meshes. The format, coordinates and Extraction block are in `docs/ARCHITECTURE.m
   `playableMode.ts` falls back to Elimination where a mode's data is missing.
 - `surfaces.ts` (walkable heights), `terrain.ts` (heightfield), `foliage.ts` (bushes: they hide you and stop BBs deep in, FO1;
   `firstLeaves` finds a BB's way through one, `leafSurface` where the leaves it knocks out show),
-  `groundSurfaces.ts` (ground patches that footsteps and the terrain read).
+  `groundSurfaces.ts` (ground patches that footsteps and the terrain read; `groundGridOf` builds each map's grid once),
+  `underfoot.ts` (`surfaceUnder`: the ground under a pair of feet, the one answer the audio plays and the simulation's
+  `WorldQuery.surfaceUnder` gives the bots, NP1).
 - `areas.ts` (CL1): `areaAt`, the named area at a spot (`MapData.areas`), for the bots' callouts and the minimap's label.
 - Practice (M94): `practicePlaces.ts` (the range or a map, saved as `practicePlace`), `practiceSpots.ts` (where its
   targets stand on a map, from the map's lanes, starts and overlooks) and `practiceLayout.ts` (which of the range's kinds

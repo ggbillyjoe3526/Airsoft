@@ -3,7 +3,8 @@ import { AMBIENCES, AUDIO, type LoopId, matchOverBlastStart, type ReverbSpec } f
 import { LIGHTING_PRESETS, type LightingPresetId } from '../config/render';
 import { SIM_DT } from '../config/sim';
 import { CYBER_PISTOL, LOADOUT } from '../config/replicas';
-import { isMapCue, MAP_CUE_SEEDS, type SoundCue, SOUNDS } from '../config/sounds';
+import { NOISE } from '../config/noise';
+import { cues, isMapCue, MAP_CUE_SEEDS, type SoundCue, SOUNDS } from '../config/sounds';
 import type { MapBlock } from '../map/mapTypes';
 import { type Character, createCharacter } from '../sim/character';
 import type { GameEvent } from '../sim/events';
@@ -1644,7 +1645,7 @@ describe('M33j QA: the map sounds render only for the fields that play them, and
   }
   const isMapCueName = (c: string): boolean => /^step\.(grass|leaves|earth|gravel|wood)\./.test(c) || /^ambience\.(owl|chime|arcade)$/.test(c);
 
-  it('renders nothing beyond the title screen for Depot: not a buffer more', () => {
+  it("renders nothing beyond the title screen for Depot but its noisy props' sounds (NP1): not a buffer more", () => {
     const engine = engineFor();
     // The title screen: every title cue, the yard's bed and the echo.
     engine.cueBuffers();
@@ -1657,7 +1658,11 @@ describe('M33j QA: the map sounds render only for the fields that play them, and
     for (let t = 0; t < Math.round(10 / SIM_DT); t++) m.sfx.afterTick(m.all, PLAYER);
     m.sfx.onEvent(step(m.bot.id), PLAYER, m.characterOf);
     m.sfx.dispose();
-    expect(ctx.buffersMade).toBe(titleBuffers);
+    // Since NP1 the yard's skips, racks, crates and the rest have a knock each, rendered as the match loads: those alone.
+    const props = soundscapeOf(DEPOT, false).cues;
+    expect(props.length).toBeGreaterThan(0);
+    expect(props.every((c) => c.startsWith('prop.'))).toBe(true);
+    expect(ctx.buffersMade).toBe(titleBuffers + props.reduce((n, c) => n + variantsOf(c), 0));
     expect([...engine.cueBuffers().keys()].some(isMapCueName)).toBe(false);
   });
 
@@ -2345,14 +2350,18 @@ describe('M65 QA (audit AUD-01): picks, Play, Dev content, the range and Quit ar
     expect(woods.cues.every((cue) => engine.cueBuffers().has(cue))).toBe(true);
     const ctx = FakeContext.last;
     // Dev content off: New game plays the default map (newGamePicks.ts playedPicks), whose field Game prefetches.
-    engine.prefetch(() => prefetched(DEFAULT_MAP, undefined));
+    const yard = prefetched(DEFAULT_MAP, undefined);
+    // Its own cues (NP1: its noisy props' knocks) are all it renders ahead, those the woods had already made kept.
+    const fresh = yard.cues.filter((cue) => !engine.cueBuffers().has(cue));
+    engine.prefetch(() => yard);
     const stepped = totalSteps();
     const made = ctx.buffersMade;
     runOut(spare);
-    expect(totalSteps()).toBe(stepped);
-    expect(ctx.buffersMade).toBe(made);
+    const owed = fresh.reduce((n, cue) => n + variantsOf(cue), 0);
+    expect(totalSteps()).toBe(stepped + owed);
+    expect(ctx.buffersMade).toBe(made + owed);
     expect(begun.has(secondLoop!)).toBe(false);
-    expect([...engine.cueBuffers().keys()].some(isMapCue)).toBe(false);
+    expect([...engine.cueBuffers().keys()].filter(isMapCue).sort()).toEqual([...yard.cues].sort());
     // The half-rendered loop was let go of too: a Woodland match later renders it afresh, with the same samples.
     engine.loop(firstLoop!);
     expect(begun.get(firstLoop!)).toBe(2);
@@ -2369,12 +2378,14 @@ describe('M65 QA (audit AUD-01): picks, Play, Dev content, the range and Quit ar
     range.unlock();
     range.setPaused(false);
     expect(runOut(spare)).toBeLessThanOrEqual(1);
-    expect(totalSteps()).toBe(0);
+    // The range's own (NP1: its props' knocks), rendered as it opened, and nothing of the city's.
+    const own = soundscapeOf(RANGE_MAP, resolveLighting(RANGE_MAP).night).cues.reduce((n, cue) => n + variantsOf(cue), 0);
+    expect(totalSteps()).toBe(own);
     // Paused (the menus are up): it carries on; played again: not a step more, and no moment asked for.
     range.setPaused(true);
     for (let m = 0; m < 6; m++) spare.run();
     const stepped = totalSteps();
-    expect(stepped).toBeGreaterThan(0);
+    expect(stepped).toBeGreaterThan(own);
     range.setPaused(false);
     expect(runOut(spare)).toBeLessThanOrEqual(1);
     expect(totalSteps()).toBe(stepped);
@@ -2819,11 +2830,13 @@ describe('M69 QA (audit AUD-10): the yard keeps its echo exactly, the fields the
     runOut(spare);
     expect(engine['reverbs'].has(woods)).toBe(true);
     const made = FakeContext.last.buffersMade;
+    // Depot's own cues (NP1: its props' knocks; one buffer each here) are all it makes: none for an echo.
+    const fresh = soundscapeOf(DEPOT, false).cues.filter((cue) => !engine.cueBuffers().has(cue));
     engine.prefetch(() => soundscapeOf(DEPOT, false));
     runOut(spare);
     expect(engine['reverbs'].has(woods)).toBe(false);
     expect([...engine['reverbs'].keys()]).toEqual([AUDIO.reverb]);
-    expect(FakeContext.last.buffersMade).toBe(made);
+    expect(FakeContext.last.buffersMade).toBe(made + fresh.length);
   });
 
   it('puts the yard back when the scene changes to Depot after the graph is built, and survives a scene set after dispose', () => {
@@ -2952,5 +2965,94 @@ describe('M86: an Ambience volume of its own', () => {
     expect(downstream(src!).has(engine.bus('effects'))).toBe(true);
     src!.end();
     expect(ctx.state).toBe('suspended');
+  });
+});
+
+// ---- NP1: noisy props and noisy ground ------------------------------------------------------------------------------
+
+describe('NP1: a noisy prop sounds where it was run into, and noisy ground carries a step further', () => {
+  beforeEach(() => {
+    FakeContext.made = 0;
+    FakeContext.rate = 48000;
+    vi.stubGlobal('AudioContext', FakeContext);
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  /** One block of every noisy kind, so the field's soundscape renders every prop's sound. */
+  const PROPS_FIELD = { ...DEPOT, blocks: [...FLOOR, ...(Object.keys(NOISE.props) as MapBlock['kind'][]).map((kind, i) => ({ kind, center: vec3(i * 3, 0.5, -30), size: vec3(1, 1, 1) }))] };
+
+  /** A match's Sfx on PROPS_FIELD (its scene set as CombatPresentation sets it), the listener at the origin facing -z. */
+  function propsMatch() {
+    const engine = engineFor();
+    const player = createCharacter(PLAYER, vec3(0, 0, 0), 0, LOADOUT, 0);
+    const bot = createCharacter(1, vec3(6, 0, 0), 0, LOADOUT, 1);
+    const all = [player, bot];
+    const sfx = new Sfx(LOADOUT, FLOOR, OPEN, engine);
+    sfx.setScene(soundscapeOf(PROPS_FIELD, false));
+    sfx.unlock();
+    sfx.setListener(vec3(0, 1.6, 0), 0, 0, -1);
+    return { sfx, ctx: FakeContext.last, engine, player, bot, characterOf: (id: number) => all.find((c) => c.id === id) };
+  }
+  const knock = (characterId: number, kind: MapBlock['kind'], at = vec3(5, 0.9, -3), shot = false): GameEvent => ({ type: 'propNoise', characterId, prop: 0, kind, position: at, range: 10, shot });
+
+  it("plays each noisy prop's own sound, from the spot it was hit, at its level, whoever hit it", () => {
+    const { sfx, ctx, engine, bot, characterOf } = propsMatch();
+    for (const [kind, noise] of Object.entries(NOISE.props) as [MapBlock['kind'], NonNullable<(typeof NOISE.props)[MapBlock['kind']]>][]) {
+      const before = ctx.sources.length;
+      sfx.onEvent(knock(bot.id, kind), PLAYER, characterOf);
+      const src = ctx.sources[before];
+      expect(src, kind).toBeDefined();
+      expect(playsOf(engine, src!, cues.prop(noise.sound)), kind).toBe(true);
+      expect(([...src!.outputs][0] as FakeGain).gain.value).toBe(AUDIO.levels.propBump.gain);
+      const panner = ctx.panners.at(-1)!;
+      expect(panner.panningModel).toBe(AUDIO.spatial.oneShotPanningModel);
+      expect([panner.positionX.value, panner.positionY.value, panner.positionZ.value]).toEqual([5, 0.9, -3]);
+    }
+    // Your own run into a skip too: you hear where you hit it.
+    const before = ctx.sources.length;
+    sfx.onEvent(knock(PLAYER, 'skip', vec3(0, 0.9, -0.5)), PLAYER, characterOf);
+    expect(playsOf(engine, ctx.sources[before]!, 'prop.steel')).toBe(true);
+  });
+
+  it("plays a BB's ring as the BB's own tick (CombatPresentation's impact), nothing of its own, and nothing out of earshot", () => {
+    const { sfx, ctx, bot, characterOf } = propsMatch();
+    sfx.onEvent(knock(bot.id, 'skip', vec3(5, 1, -3), true), PLAYER, characterOf);
+    expect(ctx.sources).toHaveLength(0);
+    sfx.onEvent(knock(bot.id, 'skip', vec3(0, 0.9, -(AUDIO.propNoise.maxDistance + 0.5))), PLAYER, characterOf);
+    expect(ctx.sources).toHaveLength(0);
+    sfx.onEvent(knock(bot.id, 'skip', vec3(0, 0.9, -(AUDIO.propNoise.maxDistance - 0.5))), PLAYER, characterOf);
+    expect(ctx.sources).toHaveLength(1);
+    // Further than a step is heard: a run into a prop carries past the run's own steps.
+    expect(AUDIO.propNoise.maxDistance).toBeGreaterThan(AUDIO.footsteps.maxDistance);
+  });
+
+  it('plays a step on steel plate louder by NOISE.ground, and from further off; on concrete as before', () => {
+    const { sfx, ctx, engine, bot, characterOf } = propsMatch();
+    const carry = NOISE.ground.metal;
+    const run = (surface: 'metal' | 'concrete'): GameEvent => ({ type: 'footstep', characterId: bot.id, kind: 'run', surface });
+    sfx.onEvent(run('concrete'), PLAYER, characterOf);
+    sfx.onEvent(run('metal'), PLAYER, characterOf);
+    const [plain, plate] = ctx.sources;
+    expect(playsOf(engine, plain!, 'step.concrete.run')).toBe(true);
+    expect(playsOf(engine, plate!, 'step.metal.run')).toBe(true);
+    const gainOf = (s: FakeSource) => ([...s.outputs][0] as FakeGain).gain.value;
+    expect(gainOf(plain!)).toBe(AUDIO.levels.step.gain);
+    expect(gainOf(plate!)).toBeCloseTo(AUDIO.levels.step.gain * carry, 12);
+    // Past a step's earshot, within the plate's.
+    bot.position.x = AUDIO.footsteps.maxDistance + 1;
+    const n = ctx.sources.length;
+    sfx.onEvent(run('concrete'), PLAYER, characterOf);
+    expect(ctx.sources).toHaveLength(n);
+    ctx.currentTime += 1;
+    sfx.onEvent(run('metal'), PLAYER, characterOf);
+    expect(ctx.sources).toHaveLength(n + 1);
+    // Your own steps too: louder on the plate, so you know you're being heard.
+    ctx.currentTime += 1;
+    sfx.onEvent({ type: 'footstep', characterId: PLAYER, kind: 'run', surface: 'metal' }, PLAYER, characterOf);
+    expect(gainOf(ctx.sources.at(-1)!)).toBeCloseTo(AUDIO.levels.ownStep.gain * carry, 12);
   });
 });

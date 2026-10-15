@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AMBIENT_LOOPS, AUDIO } from '../config/audio';
-import { isMapCue, SOUNDS, type SoundCue, TITLE_CUES } from '../config/sounds';
+import { PROP_SOUNDS } from '../config/noise';
+import { cues, isMapCue, SOUNDS, type SoundCue, TITLE_CUES } from '../config/sounds';
 import { recipeLength, renderRecipe, seededRandom, type SoundRecipe } from './dsp';
 import { renderLoop } from './ambience';
 import { finish, renderMapCue, renderSounds, variantsOf } from './soundBank';
@@ -209,8 +210,9 @@ describe('M69 QA acceptance 1 (AUD-09): the trim keeps what is audible, and the 
 describe('M69 QA acceptance 1 (AUD-08): the variant count is per recipe, and nothing else about the bank moved', () => {
   it('sets one variant for count.beep alone, and keeps SoundRecipe.variants out of every other recipe', () => {
     const own = (Object.keys(SOUNDS) as SoundCue[]).filter((c) => SOUNDS[c].variants !== undefined);
-    // M86's map calls keep three each for the map sounds' budget (woodlandSound.test.ts); every other cue as at M69.
-    expect(own).toEqual(['count.beep', 'ambience.creak', 'ambience.pigeon', 'ambience.horn']);
+    // M86's map calls and NP1's props' knocks keep three each for the map sounds' budget (woodlandSound.test.ts); every
+    // other cue as at M69.
+    expect(own).toEqual(['count.beep', 'ambience.creak', 'ambience.pigeon', 'ambience.horn', ...PROP_SOUNDS.map(cues.prop)]);
     expect(SOUNDS['count.beep'].variants).toBe(1);
   });
 

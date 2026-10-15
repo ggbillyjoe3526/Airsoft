@@ -27,6 +27,10 @@ The gameplay rules: plain data and pure functions, with no Three.js, no DOM and 
   allocation-free slab test that answers Rapier's static ray casts. `leaves.ts` (FO1): a BB that runs into a bush
   (`WorldQuery.foliage`) stops once it has crossed `stopDepth` of leaves (`BB.leaf`), and one out of an edge is thrown
   off and slowed by how much it crossed.
+- `propNoise.ts` (NP1): noisy props. `stepPropBump` (after the move) knocks the noisy prop a run or sprint hit hard
+  (`propNoise` from its face), `ringProp` (from `bbs.ts`) rings steel a BB lands on fast; each prop at most once per
+  `NOISE.quiet` (`GameState.propQuiet`). `footsteps.ts` puts the ground underfoot on a step (`WorldQuery.surfaceUnder`)
+  so the bots and the audio read how far it carries. Tuning: `config/noise.ts`.
 - `elimination.ts`: hit calling, alive → calling → walkingOff → out (`leaving` for a walk-off that gets stuck). A hit
   character follows a built-in command and can't fire or be hit.
 - `round.ts`, `flag.ts`, `extraction.ts`: the match mode, round clock, score, `restartMatch(mode)`, who attacks, the
