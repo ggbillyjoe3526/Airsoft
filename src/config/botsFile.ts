@@ -43,6 +43,11 @@ export interface PersonalityStyle {
   /** BotSkill.holdsAngles and slicesCorners in their place, or null to keep the difficulty's. */
   readonly holdsAngles: boolean | null;
   readonly slicesCorners: boolean | null;
+  /**
+   * Elimination's overtime flag (Dev 6 item 45): holds cover by it, aiming at it, for this long (s) before going in for
+   * the touch (ai/personality.ts overtimeWatching); null goes straight for it.
+   */
+  readonly overtimeWatch: number | null;
 }
 
 /** A personality that changes nothing: what an unreadable cell, or a bot without a personality, plays. */
@@ -64,6 +69,7 @@ export const NEUTRAL_STYLE: PersonalityStyle = {
   aimsFromCover: false,
   holdsAngles: null,
   slicesCorners: null,
+  overtimeWatch: null,
 };
 
 /** One name on the roster and the personality it always plays (its key in `BotsFile.styles`). */
@@ -112,6 +118,8 @@ const HOLD_HEADER = 'Holds until (s left)';
 const ANGLES_HEADER = 'Holds angles';
 const CORNERS_HEADER = 'Slices corners';
 const HABIT_HEADERS = ['Personality', ...HABIT_COLUMNS.map((c) => c.header), HOLD_HEADER, ANGLES_HEADER, CORNERS_HEADER];
+/** Optional (Dev 6 item 45): a Habits table without it watches nothing first, as before it. */
+const WATCH_FLAG_HEADER = 'Watches the flag first (s)';
 
 /** The cell for "nothing here": an en dash, a hyphen or empty. */
 const isNone = (s: string): boolean => s === '' || s === '–' || s === '-' || s === '—';
@@ -209,6 +217,12 @@ export function loadBotsFile(text: string): BotsFile {
       const v = triState(row.cells[header]!);
       if (v === undefined) fail(row.line, `${header}: "${row.cells[header]}" is not yes, no or –`);
       else style[field] = v;
+    }
+    const watchFlag = row.cells[WATCH_FLAG_HEADER]?.trim() ?? '';
+    if (!isNone(watchFlag)) {
+      const s = numberOf(watchFlag);
+      if (Number.isFinite(s) && s >= 0 && s <= 60) style.overtimeWatch = s;
+      else fail(row.line, `${WATCH_FLAG_HEADER}: "${watchFlag}" is not seconds from 0 to 60, or –`);
     }
   });
 

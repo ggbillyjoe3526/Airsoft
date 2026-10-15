@@ -3,7 +3,7 @@ import { deriveSeed } from './core/seed';
 import type { Character } from './sim/character';
 import { createCommand, type PlayerCommand } from './sim/commands';
 import type { GameEvent } from './sim/events';
-import { matchWon, type RoundRules, type RoundState } from './sim/round';
+import { longestOvertime, matchWon, type RoundRules, type RoundState } from './sim/round';
 
 /**
  * The seed of the match played `matchesPlayed`-th this visit (from 0): the visit's seed for the first, so `?seed=N`
@@ -42,7 +42,7 @@ function winDecides(score: readonly [number, number], team: number, rules: Round
 
 /** The most ticks a skip runs before it gives up (SKIP_ROUND): the longest the rest of a round and the pause after it can take. */
 export function skipTickCap(rules: RoundRules): number {
-  return Math.ceil((rules.roundTime + rules.flag.maxOvertime + rules.resetDelay + SKIP_ROUND.spareSeconds) / SIM_DT);
+  return Math.ceil((rules.roundTime + longestOvertime(rules) + rules.resetDelay + SKIP_ROUND.spareSeconds) / SIM_DT);
 }
 
 /** A skip ends on the tick the next round starts, or the match is decided. */

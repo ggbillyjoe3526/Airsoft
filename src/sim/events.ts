@@ -53,8 +53,8 @@ export type GameEvent =
   /** A BB hit a practice range target (M21; sim/rangeTargets.ts). `ricochet`: it had bounced on the way. */
   | { type: 'targetHit'; targetId: number; kind: RangeTargetKind; shooterId: number; position: Vec3; ricochet: boolean }
   /**
-   * A round ended: `winner` is the team that won it, or -1 for a draw (elimination: time ran out, or
-   * both teams out at once). In flag mode the attackers win by raising the flag ('captured') and the
+   * A round ended: `winner` is the team that won it, or -1 for a draw (elimination: time ran out with nobody taking the
+   * overtime flag, or both teams out at once). In flag mode the attackers win by raising the flag ('captured') and the
    * defenders when time runs out.
    */
   | { type: 'roundOver'; winner: number; reason: RoundEndReason }
@@ -62,6 +62,11 @@ export type GameEvent =
   | { type: 'roundStart'; round: number }
   /** The flag passed another notch of its rope, going up (`raising`) or being pulled down. */
   | { type: 'flagRope'; position: Vec3; raising: boolean }
+  /**
+   * Elimination (Dev 6 item 45): the clock ran out with the teams level and the overtime flag went up at `position`: the
+   * first team to touch it wins the round (sim/overtimeFlag.ts).
+   */
+  | { type: 'overtime'; position: Vec3 }
   /** Extraction (M43): a hit squad member is back at the insertion, with `respawnsLeft` more this run. */
   | { type: 'respawned'; characterId: number; respawnsLeft: number }
   /** Extraction (M45): a hit opponent back in play in a wave, at a regen point out of the squad's sight. */
@@ -86,7 +91,8 @@ export type GameEvent =
   | { type: 'magLost'; fromId: number; toId: number };
 
 /**
- * Why a round (in Extraction, the run) ended. Extraction: 'extracted' (counted out at an exit), 'out' (hit with no
- * respawn left) or 'time' (caught out when time ran out).
+ * Why a round (in Extraction, the run) ended. Elimination: 'overtimeFlag' (a team touched the overtime flag first, Dev 6
+ * item 45). Extraction: 'extracted' (counted out at an exit), 'out' (hit with no respawn left) or 'time' (caught out when
+ * time ran out).
  */
-export type RoundEndReason = 'eliminated' | 'time' | 'captured' | 'extracted' | 'out';
+export type RoundEndReason = 'eliminated' | 'time' | 'captured' | 'overtimeFlag' | 'extracted' | 'out';

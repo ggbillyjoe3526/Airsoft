@@ -4,6 +4,7 @@ import { HITS, ROUNDS } from '../config/hits';
 import type { MatchMode } from '../config/modes';
 import { WOODLAND } from '../map/woodland';
 import { initPhysics } from '../physics/physicsWorld';
+import { longestOvertime } from '../sim/round';
 import { expectGrounded, playMatch } from './depotMatchSupport';
 import { anchorHolding } from './personality';
 
@@ -48,9 +49,9 @@ describe('a 6v6 bot match on Woodland (M33d, acceptance 5)', () => {
         else longestStill = Math.max(longestStill, state.time - a.since);
       }
     });
-    // At least one round was played to its end, inside the round clock (plus overtime).
+    // At least one round was played to its end, inside the round clock (plus overtime: the flag's, or Elimination's overtime flag).
     expect(stats.rounds, mode).toBeGreaterThanOrEqual(1);
-    for (const r of stats.results) expect(r.length, mode).toBeLessThanOrEqual(ROUNDS.roundTime + ROUNDS.flag.maxOvertime + 0.1);
+    for (const r of stats.results) expect(r.length, mode).toBeLessThanOrEqual(ROUNDS.roundTime + longestOvertime(ROUNDS) + 0.1);
     // They fought: BBs flew and hit someone.
     expect(stats.shots, mode).toBeGreaterThan(50);
     expect(stats.hits, mode).toBeGreaterThan(0);

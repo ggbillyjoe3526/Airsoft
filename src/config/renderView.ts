@@ -61,6 +61,8 @@ export const HUD = {
   leavesNoticeNear: 2,
   /** How long "Round N" stays up after a round starts (seconds). */
   roundStartMessageTime: 1.8,
+  /** How long "Overtime · touch the flag" stays up after Elimination's overtime flag goes up (seconds; Dev 6 item 45). */
+  overtimeMessageTime: 2.4,
   /** Extraction (M43): how long the banner says you're back in, after a respawn (seconds). */
   respawnMessageTime: 2.4,
   /** Extraction (M53, audit UI-02): how long the banner says a late exit opened, or that a minute is left (seconds). */
@@ -433,6 +435,20 @@ export const FLAG_VISUALS = {
     hem: 0.08,
     design: { width: 256, height: 168, stripe: '#d6d6d6', roundel: '#ffffff', ring: '#cfcfcf', bb: '#3a3d40' },
   },
+  /**
+   * Elimination's overtime flag (Dev 6 item 45), drawn on the same pole: a chequered cloth (`overtimeChecks` squares
+   * across, `overtimeDark` and white; white tints it) that is white until a team touches the flag, then that team's
+   * colour; its ring at the touch's reach (OVERTIME.reach), neutral, the contested colour while both teams are at it, then
+   * the winner's. As it goes up it pops out of the ground and its cloth runs up the pole in `overtimeRise` seconds.
+   */
+  overtimeChecks: 6,
+  overtimeDark: '#26282c',
+  overtimeCloth: 0xffffff,
+  overtimeRise: 0.8,
+  /** Its rise starts from this fraction of its height, not 0 (a flattened mesh has no normals to light). */
+  overtimeRiseFrom: 0.02,
+  /** The overtime flag's screen marker and the scoreboard strip's bar (CSS): the chequered cloth's white. */
+  overtimeCss: '#f4f1e8',
   /** Screen marker over the pole: anchor height (metres), and kept this far in from the screen edge (px). */
   markerHeight: 3.7,
   markerEdge: 36,

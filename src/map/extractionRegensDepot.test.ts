@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { EXTRACTION } from '../config/extraction';
 import { HITS } from '../config/hits';
-import { FLAG } from '../config/modes';
+import { FLAG, OVERTIME } from '../config/modes';
 import { BODY } from '../config/movement';
 import { NAV } from '../config/nav';
 import { PHYSICS } from '../config/physics';
@@ -107,7 +107,7 @@ describe('Depot regen points against random squads (M45)', () => {
   });
 
   it('brings every returner of a run in at a free regen point, out of the squad\u2019s sight, with the squad wherever it stands then', () => {
-    const rules: RoundRules = { roundTime: 480, resetDelay: 2, winsNeeded: 1, halfTimeAfter: 1, eliminationFirstEnd: 0, flag: FLAG, winBy: 1, timeOutToMorePlayers: false };
+    const rules: RoundRules = { roundTime: 480, resetDelay: 2, winsNeeded: 1, halfTimeAfter: 1, eliminationFirstEnd: 0, flag: FLAG, winBy: 1, timeOutToMorePlayers: false, overtime: OVERTIME };
     const rng = createRng(4503);
     const squadSize = 2;
     const x = createRunContext(X, { squad: squadSize, seed: 11, runner: 0, squadTeam: 0, respawnAfter: HITS.callTime, spawnLift: LIFT, waveEvery: 15, sight: { query: physics, body: BODY }, deadZones: DEPOT.deadZones });

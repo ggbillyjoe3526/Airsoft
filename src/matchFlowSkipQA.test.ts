@@ -5,7 +5,7 @@ import { MATCH_MODES } from './config/modes';
 import { DT, playMatch } from './ai/depotMatchSupport';
 import { skipEnds, skipOffer, skipTickCap, skipTickShown } from './matchFlow';
 import type { GameEvent } from './sim/events';
-import type { RoundRules } from './sim/round';
+import { longestOvertime, type RoundRules } from './sim/round';
 
 const rules = ROUNDS as unknown as RoundRules;
 
@@ -73,6 +73,6 @@ describe('Skip to next round against a played round (M83)', () => {
     expect(boundaryShown).toBeGreaterThan(0);
     expect(suppressed, 'the skipped stretch had BB traffic, none of it presented').toBeGreaterThan(0);
     // A skip is never longer than the longest round and its pause (the cap's own premise).
-    expect(longest * DT).toBeLessThan((rules.roundTime + rules.flag.maxOvertime + rules.resetDelay) + 1);
+    expect(longest * DT).toBeLessThan((rules.roundTime + longestOvertime(rules) + rules.resetDelay) + 1);
   }, 120_000);
 });

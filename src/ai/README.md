@@ -42,6 +42,9 @@ seeded per bot.
   Extraction the runner's bot teammates follow and cover. `extractionRoles.ts`: home-team guards, patrols and hunters.
 - In Attack / Defend defenders hold the first one or two lane points and the two nearest the pole run to it once the
   flag is off the bottom; attackers go to the pole from midfield and crouch by it. Nobody hunts.
+- Elimination's overtime flag (OT1) uses flag mode too: on the `overtime` event each bot draws its reaction
+  (`overtimeReaction`) and whether it flanks (`flankChance`), then runs to the flag's foot; a personality with Watches
+  the flag first (`personality.ts overtimeWatching`) guards it from cover for its seconds before going in.
 - Tuning: `config/bots.ts` (shared `BotWorld.cfg` plus one difficulty's `Bot.skill`; one `BotConfig` per team through
   `BotControllerOptions.teamCfg`), `config/squad.ts`.
 - Adaptive difficulty (AD1, a Dev setting): `adaptiveSkill.ts` is the arithmetic (a rating on the difficulty scale, 0

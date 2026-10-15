@@ -468,6 +468,13 @@ export class BotController {
         for (const v of this.visited) v.fill(Number.NEGATIVE_INFINITY);
         this.given.clear(); // resetBot ends every bot's order
         this.planRound();
+      } else if (e.type === 'overtime') {
+        // Elimination's overtime flag is up (Dev 6 item 45): each bot goes for it once it has taken in the whistle (its
+        // skill's overtimeReaction), and draws now whether it goes round the side (its flankChance).
+        for (const b of this.bots) {
+          b.overtimeAt = time + pick(b.rng, b.skill.overtimeReaction);
+          b.overtimeFlank = rngNext(b.rng) < b.skill.flankChance;
+        }
       } else if (e.type === 'shot') {
         const shooter = this.character(state, e.characterId);
         // A silencer (M29b) shortens how far the shot carries.

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Difficulty } from '../config/bots';
 import { EXTRACTION } from '../config/extraction';
 import { HITS } from '../config/hits';
-import { FLAG } from '../config/modes';
+import { FLAG, OVERTIME } from '../config/modes';
 import { BODY } from '../config/movement';
 import { LOADOUT } from '../config/replicas';
 import type { ExtractionData, SpawnPoint } from '../map/mapTypes';
@@ -23,7 +23,7 @@ import { type Vec3, vec3 } from './vec';
 
 const DT = 1 / 60;
 const RUN_TIME = 480;
-const RULES: RoundRules = { roundTime: RUN_TIME, resetDelay: 2, winsNeeded: 1, halfTimeAfter: 1, eliminationFirstEnd: 0, flag: FLAG, winBy: 1, timeOutToMorePlayers: false };
+const RULES: RoundRules = { roundTime: RUN_TIME, resetDelay: 2, winsNeeded: 1, halfTimeAfter: 1, eliminationFirstEnd: 0, flag: FLAG, winBy: 1, timeOutToMorePlayers: false, overtime: OVERTIME };
 const spot = (x: number, z: number, y = 0): SpawnPoint => ({ position: vec3(x, y, z), yaw: 0 });
 const INSERTION: SpawnPoint[] = [0, 1, 2].map((z) => spot(-20, z));
 /** Home dead zone spots (end 1), and the other end's. */

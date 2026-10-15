@@ -69,7 +69,7 @@ import { type Character, createCharacter, respawnCharacter } from './sim/charact
 import { createCommand, type PlayerCommand } from './sim/commands';
 import { isInPlay } from './sim/elimination';
 import { createRunContext, type ExtractionContext, haulTotals, reserveSize, runFinds, runHaul } from './sim/extraction';
-import { placeTeams, startRun } from './sim/round';
+import { placeTeams, runOutRound, startRun } from './sim/round';
 import { byTeam, rosterTeams } from './sim/roster';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
 import { partsUnder } from './sim/torch';
@@ -321,6 +321,7 @@ export class MatchSession {
       navSnap: NAV.snap,
       rounds: this.rounds,
       pole: map.flag,
+      overtimeFlag: map.overtimeFlag,
       extraction: this.extraction,
     });
     this.playerTeam = this.extraction ? RUN_SQUAD_TEAM : (setup.playerTeam ?? 0);
@@ -694,14 +695,14 @@ export class MatchSession {
   }
 
   /**
-   * Dev settings › End the round now (M90): the live round's clock (and any overtime) is run out, so the next tick ends
-   * it as on time, by the mode's own rule. The match stays out of the records. False with no live round.
+   * Dev settings › End the round now (M90): the live round's clock (and any overtime, the flag's or Elimination's overtime
+   * flag) is run out, so the next tick ends it as on time, by the mode's own rule. The match stays out of the records.
+   * False with no live round.
    */
   endRoundNow(): boolean {
     const r = this.state.round;
     if (r.phase !== 'live') return false;
-    r.clock = 0;
-    r.overtime = this.rounds.flag.maxOvertime;
+    runOutRound(r, this.rounds);
     this.devEndedRound = true;
     this.devAssisted = true;
     return true;

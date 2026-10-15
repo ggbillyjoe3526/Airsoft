@@ -42,7 +42,7 @@ describe('FlagRenderer.setDetail', () => {
 
   it('swaps in the finial, rope and cleat and the finer painted cloth with map detail, and back', () => {
     vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => null }) });
-    const flag = new FlagRenderer([0x2f6fd6, 0xf07a22], 2);
+    const flag = new FlagRenderer([0x2f6fd6, 0xf07a22], 2, 1);
     flag.object.visible = true;
     const meshes = (): THREE.Mesh[] => {
       const list: THREE.Mesh[] = [];
@@ -66,7 +66,7 @@ describe('FlagRenderer.setDetail', () => {
 
 describe('FlagRenderer.setEnvironmentLit', () => {
   it('keeps the pole’s old paint without Environment lighting (Low) and brushes it to metal with it', () => {
-    const flag = new FlagRenderer([0x2f6fd6, 0xf07a22], 2);
+    const flag = new FlagRenderer([0x2f6fd6, 0xf07a22], 2, 1);
     const pole = flag.object.children.find((o) => o instanceof THREE.Mesh && o.geometry instanceof THREE.CylinderGeometry && o.position.y === F.poleHeight / 2) as THREE.Mesh;
     const mat = pole.material as THREE.MeshStandardMaterial;
     expect([mat.metalness, mat.roughness]).toEqual([0.3, 0.5]);

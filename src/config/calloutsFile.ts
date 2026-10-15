@@ -22,6 +22,7 @@ export type CalloutEvent =
   | 'holding'
   | 'raising'
   | 'flag'
+  | 'overtime'
   | 'pingGoing'
   | 'pingWatching'
   | 'needMag'
@@ -46,6 +47,7 @@ export const CALLOUT_EVENTS: readonly { readonly id: CalloutEvent; readonly name
   { id: 'holding', name: 'Holding', fills: ['area'] },
   { id: 'raising', name: 'Raising', fills: [] },
   { id: 'flag', name: 'Flag', fills: [] },
+  { id: 'overtime', name: 'Overtime', fills: ['area'] },
   { id: 'pingGoing', name: 'Going to your ping', fills: ['area'] },
   { id: 'pingWatching', name: 'Watching your ping', fills: ['area'] },
   { id: 'needMag', name: 'Need a mag', fills: [] },

@@ -460,6 +460,13 @@ export class Sfx {
       case 'roundStart':
         this.roundStartWhistle();
         return;
+      case 'overtime': {
+        // Elimination's overtime flag is up (Dev 6 item 45): three quick blasts, go for it.
+        const o = AUDIO.overtimeWhistle;
+        for (let i = 0; i < o.blasts; i++) this.whistle?.blast(o.length, i * o.length * o.gap);
+        this.engine.duck(AUDIO.duck.whistle);
+        return;
+      }
       case 'runWarning':
         // Extraction (M43): one long blast, a minute to go.
         this.whistle?.blast(AUDIO.roundOverWhistle, 0);

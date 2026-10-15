@@ -35,7 +35,10 @@ export interface MinimapFrame {
   /** Teammates in play or walking off (`count` of `mates` are used). */
   mates: MinimapMate[];
   count: number;
-  /** Where your teammates hold (null if they don't hold a spot), and in Attack / Defend the flagpole (null otherwise). */
+  /**
+   * Where your teammates hold (null if they don't hold a spot), and in Attack / Defend the flagpole, in Elimination the
+   * overtime flag while it is up (OT1; null otherwise).
+   */
   hold: { x: number; z: number } | null;
   flag: { x: number; z: number } | null;
   /** Extraction (M43): the exits drawn (`exitCount` of `exits`), open ones green, a late one still shut grey. */
@@ -457,7 +460,7 @@ export class Minimap {
     ctx.stroke();
   }
 
-  /** Attack / Defend's flagpole: a small white flag. */
+  /** Attack / Defend's flagpole, or Elimination's overtime flag (OT1): a small white flag. */
   private drawFlag(f: MinimapFrame, scale: number, rim: number): void {
     const ctx = this.ctx!;
     const p = toMinimap(this.turn, f.x, f.z, f.flag!.x, f.flag!.z, scale, this.at);

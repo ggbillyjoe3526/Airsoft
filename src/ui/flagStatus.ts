@@ -1,4 +1,5 @@
 import type { FlagStatus } from '../sim/flag';
+import type { OvertimeFlagState } from '../sim/overtimeFlag';
 
 /** What the flag strip under the scoreboard says, from your side: the line, and whether it's a warning. */
 export interface FlagLine {
@@ -24,4 +25,14 @@ export function flagLine(attacking: boolean, status: FlagStatus, progress: numbe
   if (status === 'raising') return { text: `Their flag is going up! · ${pct}`, urgent: true };
   if (status === 'lowering') return { text: `Pulling their flag down · ${pct}`, urgent: false };
   return { text: progress > 0 ? `Their flag is ${pct} up · pull it down` : 'Defend · keep their flag off your pole', urgent: progress > 0 };
+}
+
+/**
+ * Elimination's overtime flag (Dev 6 item 45): the strip's line while it is up. Between rounds (`live` false) the banner
+ * says who touched it, so the strip says nothing.
+ */
+export function overtimeLine(status: OvertimeFlagState['status'], live: boolean): FlagLine {
+  if (!live) return { text: '', urgent: false };
+  if (status === 'contested') return { text: 'Both teams at the flag · nobody takes it', urgent: false };
+  return { text: 'Overtime · first hand on the flag wins', urgent: false };
 }

@@ -399,6 +399,22 @@ export const BOT_BEHAVIOUR = {
    * the rest hold their posts.
    */
   retakers: 2,
+  // ---- Elimination's overtime flag (Dev 6 item 45) ------------------------------------------------------------------
+  /**
+   * When the flag goes up, each bot goes for it after its skill's overtimeReaction, straight to its foot (a touch wins:
+   * no rope, no spot beside it). A personality that watches the flag first (bots.md › Habits) holds cover by it as the
+   * attackers' guards hold the pole (flagGuardRadius, flagGuardThreatDistance), aiming at it; with overtimeGoBy seconds
+   * of the overtime left or less, every watcher goes in, whatever its watch.
+   */
+  overtimeGoBy: 10,
+  /**
+   * A bot whose flank roll (the skill's flankChance, once per overtime) comes up, at least overtimeFlankMinDistance
+   * (metres) from the flag, goes round by a point overtimeFlankOffset (metres) to one side of the straight way and
+   * overtimeFlankBack (metres) short of the flag first, so it comes at the flag from the side.
+   */
+  overtimeFlankMinDistance: 15,
+  overtimeFlankOffset: 6,
+  overtimeFlankBack: 6,
 
   // ---- Pro tuning (M37, M38, M40; Pro's skill is BOT_SKILL.pro below) --------------------------------------
   // Every number only Pro uses, in one place for the owner's playtest on each map. Nothing here changes Easy, Normal or
@@ -587,7 +603,10 @@ export interface BotSkill {
   readonly contactCoverMinDistance: number;
   /** Walk (silent) for the last this-many metres to where someone was seen or heard. */
   readonly searchWalkDistance: number;
-  /** Chance a search of a far spot goes round to one side of it first (see flankOffset). */
+  /**
+   * Chance a search of a far spot goes round to one side of it first (see flankOffset); in Elimination's overtime, the
+   * chance it goes for the flag round the side (see overtimeFlankOffset).
+   */
   readonly flankChance: number;
   // Held angles (M37): Pro holds and pre-aims the corners someone would come round; the levels below don't.
   /** Holding still, aim at the corners and doorways someone would step out of (see angleFanDeg). */
@@ -606,6 +625,11 @@ export interface BotSkill {
   readonly slicesCorners: boolean;
   /** Having lost sight of someone, how long it stays and watches where they were before going after them (s). */
   readonly peekWatchTime: readonly [number, number];
+  /**
+   * Elimination's overtime flag (Dev 6 item 45): how long after it goes up the bot heads for it (s). Easy is slow to see
+   * what the whistle means; Pro is off at once.
+   */
+  readonly overtimeReaction: readonly [number, number];
   /** Trades a hit teammate, moves in pairs, sets crossfires on defence and pushes late when behind (see tradeTime…). */
   readonly teamPlay: boolean;
   /**
@@ -709,6 +733,7 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     preAimSettled: 0,
     slicesCorners: false,
     peekWatchTime: [0, 0],
+    overtimeReaction: [1.2, 2.4],
     teamPlay: false,
     torchOnTheMove: true,
     firesIntoLeaves: true,
@@ -740,6 +765,7 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     preAimSettled: 0,
     slicesCorners: false,
     peekWatchTime: [0, 0],
+    overtimeReaction: [0.5, 1.2],
     teamPlay: false,
     huntsMiddle: true,
     huntMemory: 40,
@@ -769,6 +795,7 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     preAimSettled: 0,
     slicesCorners: false,
     peekWatchTime: [0, 0],
+    overtimeReaction: [0.3, 0.7],
     teamPlay: false,
     huntsMiddle: true,
     huntMemory: 50,
@@ -805,6 +832,7 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     preAimSettled: 0.5,
     slicesCorners: true,
     peekWatchTime: [1.5, 3],
+    overtimeReaction: [0.2, 0.5],
     teamPlay: true,
     huntsMiddle: true,
     huntMemory: 60,

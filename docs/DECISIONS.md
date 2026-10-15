@@ -520,6 +520,18 @@ replaces its line; the old one stays findable in the archive or in git.
   team attacks a flagpole in the other's half. Standing within 1.6 m for 5 s raises the flag; defenders at the pole pull
   it down. A raised flag wins the round for the attackers, a time-out for the defenders. If attackers are working the
   rope at the buzzer, overtime lasts at most 15 s. The pole is visual only: no collider, and BBs pass through.
+- **Elimination's overtime flag: a time-out with nobody ahead puts a flag up near the middle, and the first team to
+  touch it wins the round (2026-10-15, OT1, the owner's Dev 6 item 45; Claude's defaults, any can change).** "Nobody
+  ahead" is every time-out under the Draw rule (now called Overtime flag) and a level one under More players left. The
+  flag stands at the map's `overtimeFlag` spot, which each end reaches about equally fast (within 15 %, a map check):
+  Depot in front of the Main Gate (30 m from each end), Woodland in the east meadow (58 m), Neon Heights on Neon Avenue
+  (29 m). A touch is a hand on it, no hold: anyone in play within 1 m of its foot, on its floor (`OVERTIME`); both teams
+  at it hold each other off. A wipe-out still wins at once. Untouched after 30 s (Woodland's walk is 14 s at a run),
+  the time-out rule decides, a draw played again by default; never in Attack / Defend or Extraction, and a map with no
+  spot plays as before. Bots go for it after a reaction that scales with the level (Easy 1.2 to 2.4 s, Normal 0.5 to
+  1.2, Hard 0.3 to 0.7, Pro 0.2 to 0.5); anchors watch it from cover for 12 s first and careful bots for 5 (bots.md ›
+  Habits), unless last of their team or with 10 s left; a flanker may go round the side. The Rules picker's old
+  Overtime row (win by two) is now called Win by two.
 - **Team Deathmatch, when it comes, is respawn TDM: hit players walk back and re-enter (owner, 2026-10-01).**
   Elimination stays its own mode. An easy introduction where you are never out for long.
 - **Rule sets: Skirmish, Tournament, Pro CQB and Custom (owner approved the plan, 2026-10-04).** Skirmish is today's

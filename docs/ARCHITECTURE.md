@@ -103,6 +103,8 @@ Maps are plain data (`map/mapTypes.ts`). One source builds both the Rapier colli
   (M98, `sim/roster.ts`): nothing reads team 0 as "yours". `Character.end` says where a character started, for its dead
   zone and its bot's lane direction.
 - **Flag.** Optionally one flagpole at end 1. A map without one is Elimination only.
+- **Overtime flag.** Optionally `overtimeFlag`, Elimination's overtime flag spot near the middle (OT1): each end walks
+  there about equally fast (the content check `map.overtimeFlag`). A map without one plays a time-out as before.
 - **Extraction block.** Optional: insertions, exits, home-team starts, run time and base opponents; case spots (each
   names the kinds of case it suits); the home team's regen points and how far from the squad they must be; optionally
   `insertionBerth`, the metres the home team's bots keep from the insertion at the start (Woodland 30). Woodland's and
@@ -178,8 +180,14 @@ request. Each entry says where the contract lives, what it holds today and what 
     BB landing hard on steel (`shot: true`, where the BB stopped; heard only by idle bots, to its `shot` range).
     `footstep.surface` (optional) is the ground a run, sprint or landing came down on (`WorldQuery.surfaceUnder`), which
     the bots, the audio and the sound cues read for how far it carries (`NOISE.ground`).
+  - `RoundState.overtimeFlag` is Elimination's overtime flag (OT1, `sim/overtimeFlag.ts`): whether it is up, its foot,
+    its seconds left and whether both teams are at it (`contested`). It goes up when an Elimination clock runs out with
+    the time-out rule giving nobody the round, on a map with `SimServices.overtimeFlag` (`RoundContext.overtimeFlag`),
+    and stays up through the pause after the round. `overtime` reports it going up (where); a team touching it first
+    ends the round with `RoundEndReason` `overtimeFlag`; untouched, its time out ends it as `time`. `RoundRules.overtime`
+    holds its time and reach (`OVERTIME`); `runOutRound` (Dev settings › End the round now) runs it out too.
 
-  Pinned by `sim/simulation.test.ts`, `sim/extraction.test.ts`, `sim/extractionCases.test.ts`,
+  Pinned by `sim/simulation.test.ts`, `sim/overtimeFlag.test.ts`, `sim/extraction.test.ts`, `sim/extractionCases.test.ts`,
   `sim/extractionWaves.test.ts`, `sim/torch.test.ts`, `sim/coverRest.test.ts`, `sim/vault.test.ts`,
   `sim/magShare.test.ts`, `sim/bbsLeaves.test.ts`, `sim/propNoise.test.ts`, `sim/propNoisePhysics.test.ts`.
 - **`stepSimulation(state, commands, ctx, dt)`** (`sim/simulation.ts`). The fixed 60 Hz step and the order of its
@@ -320,7 +328,7 @@ request. Each entry says where the contract lives, what it holds today and what 
   Roster (Name, Personality: a made-up name of at most 12 letters, spaces, hyphens or apostrophes, unique, always
   playing that personality), Personalities (Personality, Card note with `{name}`), How they move (scales × of the
   level's BotSkill numbers, Flank chance + , Watch where you ducked a range or –) and Habits (yes, no or –; Holds until
-  seconds left or –). A cell it can't read plays neutral and is reported
+  seconds left or –; Watches the flag first, seconds or –, an optional column, OT1). A cell it can't read plays neutral and is reported
   with its line; it never throws. A personality changes how a bot plays, never its senses, reaction, turning or aim
   (`ai/personality.ts personalSkill`). Pinned by `config/botsFile.test.ts`.
 - **`callouts.md`'s format** (`config/calloutsFile.ts`, CL1). What the bots call and how often, found by their `##`
@@ -328,7 +336,7 @@ request. Each entry says where the contract lives, what it holds today and what 
   seconds), Marks (Rule, Value: the chance a Contact call marks its enemy and the team's seconds between marks, PG1),
   Personalities (Talks (×), one row per bots.md personality; never lowers the ping answers, Going to your ping and
   Watching your ping, nor a magazine's ask and answer, Need a mag and Mag coming, MG1) and Lines (Event, Who: Any or a
-  personality, Line with `{area}`, `{count}` or `{left}` where the event fills them). An event without a row is never called; a line it can't read is left out and reported with its
+  personality, Line with `{area}`, `{count}` or `{left}` where the event fills them; OT1 added the Overtime event). An event without a row is never called; a line it can't read is left out and reported with its
   line; it never throws. The callouts read the bots and the state and never write either (`ai/callouts.ts`); a mark
   is presentation only, on its own random stream. Pinned by `config/calloutsFile.test.ts`, `ai/callouts.test.ts`.
 - **Content tags** (`config/content.ts`). Every map, mode, difficulty and ruleset (`tag` on `MAPS`, `MATCH_MODES`,
@@ -368,6 +376,7 @@ request. Each entry says where the contract lives, what it holds today and what 
   - `areas` (CL1): named places for the bots' callouts and the minimap's label, each a world box and optionally a
     floor band; the first that holds a spot names it (`map/areas.ts`). The content check `map.areas` fails a walkable
     spot outside every one.
+  - `overtimeFlag` (OT1): Elimination's overtime flag spot (see Map data › Overtime flag).
 
   Pinned by the content toolkit's map checks on every map (`content/mapChecks.test.ts`), `nav/navGrid.test.ts`, `map/neonHeights.test.ts`, `map/extractionData.test.ts`,
   `render/depotLook.test.ts` (a map using none of the woodland look's fields, M33i, builds as before),

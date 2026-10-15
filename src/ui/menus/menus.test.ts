@@ -237,7 +237,7 @@ describe('the Rules picker on New game (M39)', () => {
   it('reads as before with Skirmish\'s switches, and spells out the ones a ruleset turns on', () => {
     expect(describeRules({ ...rules, switches: DEFAULT_MATCH_RULES }, 'elimination')).toBe(describeRules(rules, 'elimination'));
     const pro = describeRules({ ...rules, switches: standardRulesOf('proCqb') }, 'elimination');
-    expect(pro).toContain('if time runs out the team with more players left wins it, a draw if level');
+    expect(pro).toContain("if time runs out the team with more players left wins it; level, a flag goes up near the middle and the first team to touch it in 30 s wins the round, or it's a draw");
     expect(pro).toContain('First to 7 rounds wins the match, by two clear: level at 6 all, play on until one team is two ahead.');
     expect(pro).toContain("Every replica fires semi only, bots' too.");
     expect(pro).toContain(`Realcap magazines for everyone: ${REALCAP_TEXT}.`);

@@ -12,7 +12,7 @@ describe('FlagRenderer colours (M77 acceptance 3, REN-10)', () => {
   afterEach(() => vi.restoreAllMocks());
 
   it('sets a cloth and ring colour only when it changes, not every frame', () => {
-    const flag = new FlagRenderer([0x2f6fd6, 0xf07a22], 2);
+    const flag = new FlagRenderer([0x2f6fd6, 0xf07a22], 2, 1);
     const set = vi.spyOn(THREE.Color.prototype, 'setHex');
     flag.update(round(0, 'idle'), 0);
     const first = set.mock.calls.length;
@@ -34,7 +34,7 @@ describe('FlagRenderer colours (M77 acceptance 3, REN-10)', () => {
   });
 
   it('really paints the colour it was given (the skip loses nothing)', () => {
-    const flag = new FlagRenderer([0x2f6fd6, 0xf07a22], 2);
+    const flag = new FlagRenderer([0x2f6fd6, 0xf07a22], 2, 1);
     const colours = (): number[] => {
       const out: number[] = [];
       flag.object.traverse((o) => {

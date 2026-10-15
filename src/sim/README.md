@@ -34,7 +34,8 @@ The gameplay rules: plain data and pure functions, with no Three.js, no DOM and 
 - `elimination.ts`: hit calling, alive → calling → walkingOff → out (`leaving` for a walk-off that gets stuck). A hit
   character follows a built-in command and can't fire or be hit.
 - `round.ts`, `flag.ts`, `extraction.ts`: the match mode, round clock, score, `restartMatch(mode)`, who attacks, the
-  pole, and the Extraction run (exits, cases, waves, grace). `roster.ts`: who plays on which team (M98: the player,
+  pole, and the Extraction run (exits, cases, waves, grace). `overtimeFlag.ts` (OT1): Elimination's overtime flag, up
+  after a time-out nobody wins; the first team to touch it takes the round. `roster.ts`: who plays on which team (M98: the player,
   character 0, on the picked team, Alpha or Beta); nothing else may take the player's team to be team 0.
 - `rangeTargets.ts` (the practice range's targets, still and moving; `SimServices.practice` skips the round flow),
   `rangeChallenge.ts` (Practice's timed challenge, stepped after the simulation by `RangeSession`; on a map it lights

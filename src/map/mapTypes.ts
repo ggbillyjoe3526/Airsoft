@@ -113,6 +113,12 @@ export interface MapData {
    */
   flag?: Vec3;
   /**
+   * Elimination's overtime flag (Dev 6 item 45): the floor point near the middle where a flag goes up when a round's
+   * clock runs out level; the first team to touch it wins the round. Somewhere open, out of the bushes, that both ends
+   * walk to in about the same time (the content check map.overtimeFlag). Absent: a level time-out is a draw at once.
+   */
+  overtimeFlag?: Vec3;
+  /**
    * The field is played at night (M33): glowing BBs by default (config/glowBBs.ts), bots see less far in the dark
    * (map/nightSight.ts), and later night lighting. Absent or false: daylight.
    */

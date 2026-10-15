@@ -1,6 +1,8 @@
 import { MAP_STANDARD } from '../config/contentRules';
+import { OVERTIME } from '../config/modes';
 import { MOVEMENT } from '../config/movement';
 import type { MapEntry } from '../map/maps';
+import { foliageDepth } from '../map/foliage';
 import type { MapData } from '../map/mapTypes';
 import { nearestWalkable, nodeAt, nodeX, nodeZ } from '../nav/navGrid';
 import { CANOPY } from '../config/renderSurfaces';
@@ -209,6 +211,34 @@ export function flagCheck(entry: MapEntry, map: MapData): CheckResult | null {
   return result('compatibility', 'map.flag', item, 'pass', `${says} (at least ${MAP_STANDARD.flagHeadStart}), and it is out of sight of the attackers' spawn.`);
 }
 
+/** The overtime flag's bush test starts this far over its foot (metres): ground cover at the foot hides nothing. */
+const FLAG_FOOT_CLEAR = 0.1;
+
+/**
+ * Elimination's overtime flag (Dev 6 item 45): where a flag goes up when a round runs out level, and the first team to
+ * touch it wins. Fair as the middle is (each end's walk from its spawns within MAP_STANDARD.walkSpread; past it a look,
+ * past walkSpreadWarn a failure), close enough that both ends get there within the overtime at a run (else a look), and
+ * out of the bushes, where nobody would see it. Without one a level time-out is a draw at once: a look, not a failure.
+ */
+
+export function overtimeFlagCheck(entry: MapEntry, map: MapData): CheckResult {
+  const item = mapItem(entry);
+  const spot = map.overtimeFlag;
+  if (!spot) return result('compatibility', 'map.overtimeFlag', item, 'warn', 'It has no overtime flag: an Elimination round that runs out of time level is a draw at once.');
+  // Any leaves on the pole from just off the ground to a standing player's eyes hide it.
+  if (map.foliage && foliageDepth(map.foliage, vec3(spot.x, spot.y + FLAG_FOOT_CLEAR, spot.z), vec3(spot.x, spot.y + STANDING_EYE, spot.z)) > 0) {
+    return result('compatibility', 'map.overtimeFlag', item, 'fail', `The overtime flag at ${at(spot)} stands in a bush, where nobody sees it.`);
+  }
+  const [a, b] = endWalks(mapGeometry(map), spot);
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return result('compatibility', 'map.overtimeFlag', item, 'fail', `An end can't walk to the overtime flag at ${at(spot)}.`);
+  const spread = Math.abs(a - b) / Math.min(a, b);
+  const says = `From its spawns, end 0 walks ${walkWords(a)} to the overtime flag and end 1 ${walkWords(b)}: ${num(spread * 100, 0)} % apart`;
+  if (spread > MAP_STANDARD.walkSpreadWarn) return result('compatibility', 'map.overtimeFlag', item, 'fail', `${says}, more than ${MAP_STANDARD.walkSpreadWarn * 100} %. One end gets there first.`);
+  if (spread > MAP_STANDARD.walkSpread) return result('compatibility', 'map.overtimeFlag', item, 'warn', `${says}, past the standard ${MAP_STANDARD.walkSpread * 100} %. Worth a look in play.`);
+  if (runSeconds(Math.max(a, b)) > OVERTIME.time) return result('compatibility', 'map.overtimeFlag', item, 'warn', `${says}, longer than the overtime's ${OVERTIME.time} s at a run.`);
+  return result('compatibility', 'map.overtimeFlag', item, 'pass', `${says} (within the standard ${MAP_STANDARD.walkSpread * 100} %), inside the overtime's ${OVERTIME.time} s.`);
+}
+
 /**
  * What you see is what stops a BB: every block is drawn inside its own box (render/mapMeshes.ts blockPieces, plain and
  * with map detail), so nothing drawn hangs out where a BB passes but a player cannot see through. Look-only blocks
@@ -238,5 +268,5 @@ export function seeThroughCheck(entry: MapEntry, map: MapData, pieces: typeof bl
 /** Level 2 for one map: its layout, measured against Depot's. */
 export function mapLayoutChecks(entry: MapEntry, map: MapData, ctx: MapContext = gameMapContext()): CheckResult[] {
   const flag = flagCheck(entry, map);
-  return [...laneChecks(entry, map), routeCheck(entry, map), spawnSightCheck(entry, map), sightlineCheck(entry, map, ctx), middleCheck(entry, map), ...(flag ? [flag] : []), seeThroughCheck(entry, map)];
+  return [...laneChecks(entry, map), routeCheck(entry, map), spawnSightCheck(entry, map), sightlineCheck(entry, map, ctx), middleCheck(entry, map), ...(flag ? [flag] : []), overtimeFlagCheck(entry, map), seeThroughCheck(entry, map)];
 }

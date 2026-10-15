@@ -100,7 +100,7 @@ describe('disposal', () => {
     });
     for (const detail of [false, true]) {
       expectClean('FlagRenderer', (scene) => {
-        const r = new FlagRenderer(colours, 2);
+        const r = new FlagRenderer(colours, 2, 1);
         r.setDetail(detail);
         scene.add(r.object);
         return () => r.dispose();

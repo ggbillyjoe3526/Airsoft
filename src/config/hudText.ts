@@ -16,6 +16,8 @@ export const HUD_TEXT = {
   firstTo: (wins: number, by = 1) => (by > 1 ? `First to ${wins}, by ${by}` : `First to ${wins}`),
   /** Under the clock in Extraction (no round score): the run itself. */
   run: 'Extraction',
+  /** Under the clock while Elimination's overtime flag is up (Dev 6 item 45): the clock is the overtime's. */
+  overtime: 'Overtime',
   /** The minimap's caption: the map and the round. */
   where: (map: string, round: number) => (round > 0 ? `${map} · Round ${round}` : map),
   /**

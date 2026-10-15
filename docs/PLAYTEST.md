@@ -431,6 +431,18 @@ One BB hit puts anyone out. A round lasts up to 2:30 and the first team to 5 rou
 - [ ] **End a round.** A banner says who won, the score updates and the next round starts by itself. The first round
   of a fresh page load starts with the referee's two short whistle blasts.
 - [ ] **A drawn round** (both last players out together) replays the same round number; the summary counts it.
+- [ ] **Overtime flag (OT1).** In Elimination, hide until the clock runs out with both teams still in (Round
+  time 1:30 is quickest). Three quick whistle blasts, "Overtime · touch the flag" across the middle, and a chequered
+  flag pops up near the middle: in front of Depot's Main Gate, in Woodland's east meadow, on Neon Heights' Neon Avenue.
+  The clock counts 0:30 down in red with "Overtime" under it, the strip says "first hand on the flag wins", the
+  marker shows the flag's distance and the minimap marks it. Run and touch it (stand within about a metre): your team
+  wins the round, the flag and its ring turn your colour, and the banner says "Flag touched". Try once more letting a
+  bot get there first, once with both teams at it (the ring turns yellow, "Both teams at the flag", nobody wins), and
+  once leaving it alone: after 30 s, "Nobody touched the flag · draw" and the round is played again. Bots should head
+  for it within a second or two on Normal, slower on Easy; anchors and careful bots first watch it from cover nearby,
+  flankers may come round the side, and a teammate calls "Flag's up". Does 30 s feel right on each map? Custom ›
+  Time-out › More players left: a time-out with your team ahead wins at once, no flag. Attack / Defend has no overtime
+  flag.
 - [ ] **Half-time.** The teams swap ends after round 4; the banner says so.
 - [ ] **Finish a match.** The Match summary comes first (see [HUD and match info](#hud-and-match-info)), then the
   result screen. Finish, then go straight to Stats without pausing: the match is counted and its XP given at once.
@@ -545,7 +557,7 @@ Play › Match. The Rules row comes first: Skirmish (the standard match), Tourna
 Custom, which opens every row.
 
 - [ ] **The rows.** Rounds to win (3, 5, 7, 10), Round time (1:30 to 5:00), Team size (1v1 to 3v3; 4v4 and 5v5 on
-  Neon Heights, 5v5 and 6v6 only on Woodland, with Dev content), Opponents, Teammates, Friendly fire and Ricochets count; Custom adds Overtime, Time-out,
+  Neon Heights, 5v5 and 6v6 only on Woodland, with Dev content), Opponents, Teammates, Friendly fire and Ricochets count; Custom adds Win by two, Time-out,
   Minimap, Fire modes, Magazines and Kit. Each change shows in Your match at once and is kept after a reload.
 - [ ] **A 1v1 and a 2v2.** No teammate (or one) against one bot (or two); the scoreboard and the pips match. Do rounds
   feel too long or too quick at that size?

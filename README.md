@@ -98,7 +98,8 @@ Then open **http://localhost:4173**.
 - **Goal.** On the New game screen (**Start**) pick a map, a mode and the bot difficulty, then **Play**. The first team
   to win 5 rounds takes the match; **Match** changes the rules (rounds to win, round time, 1v1 to 3v3, friendly fire,
   ricochets).
-  - **Elimination.** Knock out every player on the other team. If the clock runs out, the round is a draw.
+  - **Elimination.** Knock out every player on the other team. If the clock runs out, a flag goes up near the middle:
+    the first team to touch it wins the round; nobody in 30 s, and the round is a draw.
   - **Attack / Defend.** Attackers stand inside the painted ring round the defenders' pole for 5 s to raise their flag;
     defenders at the pole pull it down. Defenders win when the clock runs out (up to 15 s of overtime if attackers are
     still at the pole), and knocking out the other team wins in either role. Your team attacks first; sides swap after

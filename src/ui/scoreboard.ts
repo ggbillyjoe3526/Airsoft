@@ -1,4 +1,5 @@
-import { HUD } from '../config/render';
+import { FLAG_VISUALS, HUD } from '../config/render';
+import { HUD_TEXT } from '../config/hudText';
 import { TEAMS, teamCss } from '../config/teams';
 import type { Character } from '../sim/character';
 import { isInPlay } from '../sim/elimination';
@@ -6,7 +7,7 @@ import type { RoundState } from '../sim/round';
 import type { ExtractionRules } from '../config/extraction';
 import { unknownMode } from '../config/modes';
 import { carriedNote, respawnNote, runLine } from './runStatus';
-import { flagLine } from './flagStatus';
+import { flagLine, overtimeLine } from './flagStatus';
 import { TimedFill } from './timedFill';
 
 /**
@@ -14,7 +15,8 @@ import { TimedFill } from './timedFill';
  * won on a block in its colour, and the round clock between them with what wins the match under it. In flag mode each
  * team is tagged ATK or DEF and a strip underneath shows how far up the attackers' flag is and what that means for you.
  * In Extraction (M43) there are no scores: the clock is the run's, and the strip says where you can get out, or how the
- * count is going, beside whether your respawn is spent.
+ * count is going, beside whether your respawn is spent. In Elimination's overtime (Dev 6 item 45) the clock counts the
+ * overtime down, in red, with "Overtime" under it, and the strip says what wins it, its bar filling as its time runs out.
  * The DOM is only touched when a shown value changes.
  */
 export class Scoreboard {
@@ -38,6 +40,12 @@ export class Scoreboard {
   private shownStatus = '';
   private shownLive = false;
   private shownUrgent = false;
+  /** Elimination's overtime flag (Dev 6 item 45): whether the board shows it, and its strip's state as last built. */
+  private shownFlagUp = false;
+  private shownOvertimeStatus = '';
+  /** What wins the match (setAim), shown under the clock but in overtime; and the overtime's full time (setOvertime). */
+  private aimText = '';
+  private overtimeTime = 0;
   /** Extraction: what the strip was last built from (see updateRun). */
   private readonly shownRun = { status: '', second: -1, open: -1, warned: false, outcome: '', respawns: -1, carried: -1 };
   private readonly respawn: HTMLSpanElement;
@@ -84,7 +92,13 @@ export class Scoreboard {
 
   /** The line under the clock (G4): what wins the match ("First to 5"), or the run's aim in Extraction. Set once. */
   setAim(text: string): void {
-    this.aim.textContent = text;
+    this.aimText = text;
+    if (!this.shownFlagUp) this.aim.textContent = text;
+  }
+
+  /** Elimination's overtime flag's full time (RoundRules.overtime.time, s): the strip's bar fills over it. Set once. */
+  setOvertime(seconds: number): void {
+    this.overtimeTime = seconds;
   }
 
   setVisible(visible: boolean): void {
@@ -101,7 +115,9 @@ export class Scoreboard {
       const s = round.score[t]!;
       if (s !== this.shownScore[t]) this.scores[t]!.textContent = String((this.shownScore[t] = s));
     }
-    const seconds = Math.ceil(round.clock);
+    // Elimination's overtime flag up (Dev 6 item 45): the clock is the overtime's, "Overtime" under it.
+    const flagUp = round.overtimeFlag.up;
+    const seconds = Math.ceil(flagUp ? round.overtimeFlag.left : round.clock);
     // Attack / Defend overtime (time's up but the attackers are still at the rope): "OT" instead of 0:00.
     const overtime = round.phase === 'live' && round.overtime > 0;
     if (seconds !== this.shownSeconds || overtime !== this.shownOvertime) {
@@ -109,8 +125,10 @@ export class Scoreboard {
       this.shownOvertime = overtime;
       this.clock.textContent = overtime ? 'OT' : `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
     }
-    // Red while time is running out, and at 0:00 after a time-out; not during a pause after a wipe-out.
-    const low = seconds <= HUD.lowClockSeconds && (round.phase === 'live' || seconds === 0);
+    if (flagUp !== this.shownFlagUp) this.aim.textContent = (this.shownFlagUp = flagUp) ? HUD_TEXT.overtime : this.aimText;
+    // Red while time is running out (all through the overtime flag's), and at 0:00 after a time-out; not during a pause
+    // after a wipe-out or a touch.
+    const low = (flagUp || seconds <= HUD.lowClockSeconds) && (round.phase === 'live' || seconds === 0);
     if (low !== this.shownLow) this.clock.classList.toggle('low', (this.shownLow = low));
     if (!run) this.updateFlag(round);
     // Pips: which players are still in play (one bit each) and which wait as Extraction's reserve (hidden until they
@@ -196,7 +214,10 @@ export class Scoreboard {
       for (let t = 0; t < 2; t++) this.roles[t]!.textContent = attackers < 0 ? '' : t === attackers ? 'ATK' : 'DEF';
       if (attackers >= 0) this.flag.style.setProperty('--flag', teamCss(attackers));
     }
-    if (attackers < 0) return;
+    if (attackers < 0) {
+      if (round.mode === 'elimination') this.updateOvertime(round);
+      return;
+    }
     const percent = Math.floor(round.flag.progress * 100);
     const status = round.flag.status;
     const live = round.phase === 'live';
@@ -206,6 +227,30 @@ export class Scoreboard {
     this.shownLive = live;
     this.flagFill.hold(round.flag.progress);
     const line = flagLine(attackers === this.playerTeam, status, round.flag.progress, live);
+    this.flagText.textContent = line.text;
+    if (line.urgent !== this.shownUrgent) this.flag.classList.toggle('urgent', (this.shownUrgent = line.urgent));
+  }
+
+  /**
+   * Elimination (Dev 6 item 45): the strip while the overtime flag is up, its bar filling to full as the overtime's time
+   * runs out (one transition, TimedFill), its line rebuilt only when the flag's state or the round's phase changes.
+   */
+  private updateOvertime(round: RoundState): void {
+    const flag = round.overtimeFlag;
+    if (flag.up === this.flag.hidden) {
+      this.flag.hidden = !flag.up;
+      this.shownOvertimeStatus = '';
+      if (flag.up) this.flag.style.setProperty('--flag', FLAG_VISUALS.overtimeCss);
+    }
+    if (!flag.up) return;
+    const live = round.phase === 'live';
+    const gone = this.overtimeTime > 0 ? 1 - flag.left / this.overtimeTime : 1;
+    if (live) this.flagFill.follow(gone, flag.left);
+    else this.flagFill.hold(gone);
+    const status = live ? flag.status : 'over';
+    if (status === this.shownOvertimeStatus) return;
+    this.shownOvertimeStatus = status;
+    const line = overtimeLine(flag.status, live);
     this.flagText.textContent = line.text;
     if (line.urgent !== this.shownUrgent) this.flag.classList.toggle('urgent', (this.shownUrgent = line.urgent));
   }
