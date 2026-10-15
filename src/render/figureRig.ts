@@ -3,10 +3,10 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { FIGURE_RIG, FIGURE_RIG_KINDS, type FigureRigKind } from '../config/figureRig';
 import type { FigureLegs } from '../config/hits';
 import { loadGltfScene } from './externalModels';
-import { figureLegsFrom } from './figureLegs';
+import { figureLegsFrom, legsWithSpares } from './figureLegs';
 import { RiggedFigure, type RiggedFigureSetup } from './riggedFigure';
 import { ThrownMagazines } from './thrownMagazines';
-import { BODY_CLIPS, FIRE_CLIPS, type MagazineTimes, POSE_CLIPS, POSE_SLOT, type PoseClipTable, type PoseHold } from './figurePose';
+import { BODY_CLIPS, FIRE_CLIPS, type MagazineTimes, OPTIONAL_CLIPS, POSE_CLIPS, POSE_SLOT, type PoseClipTable, type PoseHold } from './figurePose';
 
 /**
  * The rigged bot figures from Blender (BF1; config/figureRig.ts): each kind's file and sidecar loaded once, taken apart
@@ -80,7 +80,10 @@ export interface FigureRig {
    * once per set and kept. A part a level lacks (the radio has no LOD2) is left out there.
    */
   geometry(lod: number, names: readonly string[]): THREE.BufferGeometry;
-  /** Per clip slot (figurePose.ts POSE_CLIPS): the legs' tracks and the upper body's, or null where there are none. */
+  /**
+   * Per clip slot (figurePose.ts POSE_CLIPS): the legs' tracks and the upper body's, or null where there are none (or
+   * the file lacks an optional clip: OPTIONAL_CLIPS).
+   */
   lower: readonly (THREE.AnimationClip | null)[];
   upper: readonly (THREE.AnimationClip | null)[];
   /** The slots' lengths and paces. */
@@ -112,6 +115,11 @@ export interface FigureRig {
 export interface FigureRigs {
   readonly human: FigureRig;
   readonly robot: FigureRig;
+  /**
+   * The legs a match's hit volume takes (IM8, matchSession.ts): the human's, which the robot shares but for a couple of
+   * centimetres crouched, with any clip the human's file lacks from the robot's.
+   */
+  readonly legs: FigureLegs;
   /** One figure drawn from a rig (render/riggedFigure.ts). */
   figure(setup: RiggedFigureSetup): RiggedFigure;
   /** The thrown-away magazines of a match's figures (render/thrownMagazines.ts). */
@@ -121,7 +129,7 @@ export interface FigureRigs {
 
 /** Both kinds as FigureRigs, with `dispose` freeing them (or whatever the caller says, for shared test files). */
 export function figureRigs(human: FigureRig, robot: FigureRig, dispose: () => void): FigureRigs {
-  return { human, robot, figure: (setup) => new RiggedFigure(setup), thrownMagazines: () => new ThrownMagazines(), dispose };
+  return { human, robot, legs: legsWithSpares(human.legs, robot.legs), figure: (setup) => new RiggedFigure(setup), thrownMagazines: () => new ThrownMagazines(), dispose };
 }
 
 /** The URLs of `kind`'s file and sidecar loader in this build, or null when it lacks either. */
@@ -265,7 +273,7 @@ export function prepareFigureRig(kind: FigureRigKind, scene: THREE.Object3D, sid
 
   // The clips, by slot: tracks at their bone's rest value are dropped (the mixer leaves an undriven bone at rest, so
   // nothing changes, at a third of the work); the whole-body clips split into legs and upper body; the trigger presses
-  // made additive on their first frame.
+  // made additive on their first frame. A file without an optional clip leaves its slot empty.
   const lowerBones = new Set(FIGURE_RIG.lowerBones);
   const clipOf = new Map(scene.animations.map((c) => [c.name, c] as const));
   const infoOf = new Map(sidecar.clips.map((c) => [c.name, c] as const));
@@ -275,6 +283,12 @@ export function prepareFigureRig(kind: FigureRigKind, scene: THREE.Object3D, sid
   const table: { seconds: number; speed: number | null }[] = [];
   POSE_CLIPS.forEach((name, slot) => {
     const clip = clipOf.get(name);
+    if (!clip && OPTIONAL_CLIPS.has(name)) {
+      table.push({ seconds: 0, speed: null });
+      lower.push(null);
+      upper.push(null);
+      return;
+    }
     if (!clip) throw new Error(`the ${kind} figure has no "${name}" clip`);
     const info = infoOf.get(name);
     table.push({ seconds: info?.seconds ?? clip.duration, speed: info?.speed ?? null });

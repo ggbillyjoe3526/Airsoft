@@ -253,6 +253,13 @@ replaces its line; the old one stays findable in the archive or in git.
   2026-10-13: "Make sure the figure redesign notes it needs animations for this"). It waits on his photos and his
   Blender session: no thread starts it before he does. It brings the figures forward from the later higher-detail models
   (above), and they stay behind the Dev switches until he is happy with them.
+- **The robot is redesigned in a cloud Blender, from his reference pictures (owner, 2026-10-13: "if you can connect to a
+  cloud session of Blender then start now"; RM10).** His first review (2026-10-13): every robot wears the old "other
+  head" made over ("the robot could have a visor/headset/square 'headphones'"); the team-coloured shoulders are part of
+  the arm and don't stick out; no + symbol; "more mechanical and 'boxy'", with as much detail as the budgets allow.
+  Approved on the second round of pictures ("perfect. add to the game."), with "make sure the bot has the animations for
+  vaulting/resting on cover etc": the rest-on-cover and vault clips are shared by both figures
+  (`tools/blender/bot-figure/scripts/bot18.py`), and the human's are spliced into its approved RM9 export.
 - **A BB has no glow round it; a glowing BB is lit itself (owner, 2026-10-13, Dev 5 playtest note 3).** FA8's soft
   halo round every BB (and its Graphics quality field) is gone: a BB is its ball and its streak, and Glowing BBs keep
   their lit green ball and longer streak. Bloom doesn't pick a BB up (it is never brighter than its colour).

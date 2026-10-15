@@ -37,6 +37,15 @@ const moving =
 /** Mid-stride: the walk cycle a quarter on, one foot passing the other. */
 const walk = moving(2, 0.25);
 
+/** `time` seconds into a vault that rises onto the top for 0.2 s and is across it by 0.5 s, at the vault's speed. */
+function vaultingAt(c: Character, time: number): void {
+  Object.assign(c.vault, { active: true, time, riseEnd: 0.2, end: 0.5, speed: MOVEMENT.vault.minSpeed });
+  c.velocity.z = -MOVEMENT.vault.minSpeed;
+  c.grounded = false;
+  c.airTime = time;
+  c.crouchAmount = c.prevCrouchAmount = MOVEMENT.vault.tuck;
+}
+
 const POSES: Pose[] = [
   { name: 'standing', set: () => {} },
   { name: 'crouched', set: (c) => (c.crouchAmount = c.prevCrouchAmount = 1) },
@@ -70,6 +79,9 @@ const POSES: Pose[] = [
     },
   },
   { name: 'out', set: (c) => (c.status = 'out') },
+  // Over low cover (M102), halfway across the top and halfway up onto it: tucked by the vault (VaultConfig.tuck).
+  { name: 'vaulting', set: (c) => vaultingAt(c, 0.35) },
+  { name: 'vaulting, rising', set: (c) => vaultingAt(c, 0.1) },
 ];
 
 /** M85's grid (render/figureHitVolume.test.ts): spacing, reach either side and up, the sides, the rim. */
@@ -82,28 +94,31 @@ const TOLERANCE = 0.02;
 /**
  * The rigged figures do not pass M85's bar yet (at most 4 % of the drawn body missed and 3 % of the volume thin air,
  * past the rim): KNOWN_ISSUES › Figures and art. Since IM8 the volume's legs are the figures' own and their crouch is
- * as low as the volume's, so the drawn body is missed on 0-5 % of the grid on every pose; what is left is thin air:
- * the volume's head, chest and hips are the built-in human's, rounder than the Blender human (4-8 %) and the slimmer
- * robot (9-13 %), and upright while the figures lean into a run and a sprint (up to 18 %). They are drawn only with the
- * Dev switches off, and must reach M85's bar before they become the default (DECISIONS › Gameplay and feel). Until then
- * each pose is held to today's worst case over the human looks and the robot plus a point (measured 2026-10-12, IM8),
- * so a change can only bring them closer.
+ * as low as the volume's, so the drawn body is missed on 0-5 % of the grid on every pose but a vault's rise (up to
+ * 9 %); what is left is thin air: the volume's head, chest and hips are the built-in human's, rounder than the Blender
+ * human (4-8 %) and the robot (7-11 %; the v12 robot's armour fills more of it than v11's bare shell did), and upright
+ * while the figures lean into a run and a sprint (up to 16 %). They are drawn only with the Dev switches off, and must
+ * reach M85's bar before they become the default (DECISIONS › Gameplay and feel). Until then each pose is held to
+ * today's worst case over the human looks and the robot plus a point (measured 2026-10-13, the v12 figures), so a
+ * change can only bring them closer.
  */
 const LIMITS: Readonly<Record<string, { missed: number; phantom: number }>> = {
-  standing: { missed: 0.041, phantom: 0.114 },
-  crouched: { missed: 0.036, phantom: 0.113 },
-  'leaning left': { missed: 0.036, phantom: 0.101 },
-  'leaning right': { missed: 0.036, phantom: 0.111 },
-  'crouched, leaning': { missed: 0.032, phantom: 0.113 },
-  walking: { missed: 0.046, phantom: 0.134 },
-  'walking, heel down': { missed: 0.055, phantom: 0.134 },
-  running: { missed: 0.047, phantom: 0.142 },
-  sprinting: { missed: 0.057, phantom: 0.19 },
-  'crouch walking': { missed: 0.045, phantom: 0.13 },
-  'crouch walking, other foot': { missed: 0.054, phantom: 0.139 },
-  'calling the hit': { missed: 0.045, phantom: 0.114 },
-  'walking off': { missed: 0.039, phantom: 0.115 },
-  out: { missed: 0.042, phantom: 0.12 },
+  standing: { missed: 0.041, phantom: 0.08 },
+  crouched: { missed: 0.036, phantom: 0.097 },
+  'leaning left': { missed: 0.036, phantom: 0.079 },
+  'leaning right': { missed: 0.036, phantom: 0.085 },
+  'crouched, leaning': { missed: 0.032, phantom: 0.086 },
+  walking: { missed: 0.046, phantom: 0.104 },
+  'walking, heel down': { missed: 0.055, phantom: 0.115 },
+  running: { missed: 0.047, phantom: 0.124 },
+  sprinting: { missed: 0.057, phantom: 0.169 },
+  'crouch walking': { missed: 0.045, phantom: 0.124 },
+  'crouch walking, other foot': { missed: 0.054, phantom: 0.118 },
+  'calling the hit': { missed: 0.045, phantom: 0.093 },
+  'walking off': { missed: 0.039, phantom: 0.094 },
+  out: { missed: 0.042, phantom: 0.096 },
+  vaulting: { missed: 0.056, phantom: 0.086 },
+  'vaulting, rising': { missed: 0.098, phantom: 0.115 },
 };
 
 /** The bones whose vertices are arm (the shoulders' are the torso's): UpperArm and everything down to the fingertips. */
@@ -112,7 +127,7 @@ const ARM_BONE = /^(UpperArm|Forearm|ForearmTwist|Elbow|Hand|Grip|Thumb|Index|Mi
 const { rigs: kinds, files } = await figureFilesForTests();
 const rigs = figureRigs(kinds.human, kinds.robot, () => {});
 /** A match's hit rules with the rigged figures (matchSession.ts): the volume's legs on theirs. */
-const hits: HitConfig = { ...HITS, figureLegs: kinds.human.legs };
+const hits: HitConfig = { ...HITS, figureLegs: rigs.legs };
 
 interface Tally {
   body: number;

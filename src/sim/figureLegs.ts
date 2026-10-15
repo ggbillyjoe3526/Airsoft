@@ -1,6 +1,7 @@
 import { FIGURE_RIG } from '../config/figureRig';
 import type { FigureLegs } from '../config/hits';
 import type { Character, LifeStatus } from './character';
+import type { VaultState } from './vault';
 
 /**
  * The rigged figures' legs in the simulation (IM8). The Blender figures walk, crouch and kneel on real legs that bend at
@@ -11,11 +12,12 @@ import type { Character, LifeStatus } from './character';
  * walk cycle, which then steps at the clips' own strides so the drawn feet don't slide.
  *
  * The figure eases between its clips (FIGURE_RIG.blend, about a tenth of a second); the hit volume takes the blend the
- * character's state asks for at once, so the two part only while a stride starts, stops or turns.
+ * character's state asks for at once, so the two part only while a stride starts, stops or turns. A vault plays the
+ * Vault clip where the legs have one (the figure redesign's, Dev 6); otherwise the jump, as the figure does.
  */
 
-/** The legs' clips, by slot: the first twelve of the figure's (render/figurePose.ts POSE_CLIPS), in the same order. */
-export const LEG_CLIPS = ['Idle', 'Walk_F', 'Run_F', 'Run_B', 'Run_L', 'Run_R', 'Sprint', 'CrouchIdle', 'CrouchWalk', 'Jump', 'HitCall', 'WalkOff'] as const;
+/** The legs' clips, by slot: the first thirteen of the figure's (render/figurePose.ts POSE_CLIPS), in the same order. */
+export const LEG_CLIPS = ['Idle', 'Walk_F', 'Run_F', 'Run_B', 'Run_L', 'Run_R', 'Sprint', 'CrouchIdle', 'CrouchWalk', 'Jump', 'HitCall', 'WalkOff', 'Vault'] as const;
 export type LegClip = (typeof LEG_CLIPS)[number];
 export const LEG_SLOT = Object.fromEntries(LEG_CLIPS.map((name, i) => [name, i])) as Readonly<Record<LegClip, number>>;
 
@@ -28,15 +30,33 @@ export const LEG_POINTS = 5;
 /** Numbers in one sample: two legs (left, right) of LEG_POINTS points of three. */
 export const LEG_SAMPLE = 2 * LEG_POINTS * 3;
 
-/** The legs' modes: walking and running (the gait), the sprint, the hit call, the walk-off. */
-export const LEG_MODES = 4;
-export const LEG_MODE = { gait: 0, sprint: 1, call: 2, walkOff: 3 } as const;
+/** The legs' modes: walking and running (the gait), the sprint, the hit call, the walk-off, the vault. */
+export const LEG_MODES = 5;
+export const LEG_MODE = { gait: 0, sprint: 1, call: 2, walkOff: 3, vault: 4 } as const;
 
-/** The legs' mode for a character's state: the hit call while calling, the walk-off while walking off or leaving, the sprint while sprinting. */
-export function legMode(status: LifeStatus, sprinting: boolean, speed: number): number {
+/**
+ * The legs' mode for a character's state: the hit call while calling, the walk-off while walking off or leaving, the
+ * vault while vaulting (`vaulting`: with a Vault clip to play), the sprint while sprinting.
+ */
+export function legMode(status: LifeStatus, sprinting: boolean, speed: number, vaulting = false): number {
   if (status === 'calling') return LEG_MODE.call;
   if (status === 'walkingOff' || status === 'leaving') return LEG_MODE.walkOff;
+  if (status === 'alive' && vaulting) return LEG_MODE.vault;
   return status === 'alive' && sprinting && speed > FIGURE_RIG.stillBelow ? LEG_MODE.sprint : LEG_MODE.gait;
+}
+
+const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
+
+/**
+ * Where in the Vault clip (0..1) vault `v` is `time` seconds from its start: the clip's first FIGURE_RIG.vault.top over
+ * the rise onto the top, the rest across it to the hand-over to the fall (sim/vault.ts), so the hop keeps to the body's
+ * path whatever the obstacle's height and depth.
+ */
+export function vaultClipShare(v: Readonly<VaultState>, time: number): number {
+  const top = FIGURE_RIG.vault.top;
+  if (time < v.riseEnd) return clamp01((top * time) / v.riseEnd);
+  const span = v.end - v.riseEnd;
+  return span > 0 ? clamp01(top + ((1 - top) * (time - v.riseEnd)) / span) : 1;
 }
 
 /**
@@ -57,8 +77,6 @@ export function legDirection(forward: number, side: number, speed: number, out: 
   return true;
 }
 
-const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
-
 /** The run's share of the walk-to-run blend at `speed` (m/s): 0 at the walking pace and below, 1 at the normal pace. */
 export function legRun(speed: number): number {
   return clamp01((speed - FIGURE_RIG.walkSpeed) / (FIGURE_RIG.runSpeed - FIGURE_RIG.walkSpeed));
@@ -76,8 +94,9 @@ export interface LegBlend {
 
 /**
  * The legs' clip weights (slots 0 to LEG_CLIPS.length - 1 of `out`) for blend `b`: standing, walking ahead and running
- * four ways, crouched still or walking, and the jump within the gait; the sprint, the hit call and the walk-off as their
- * modes' shares. The figure passes its eased blend, the hit volume the one the character's state asks for.
+ * four ways, crouched still or walking, and the jump within the gait; the sprint, the hit call, the walk-off and the
+ * vault as their modes' shares. The figure passes its eased blend, the hit volume the one the character's state asks
+ * for.
  */
 export function legClipWeights(b: LegBlend, out: Float32Array): void {
   const S = LEG_SLOT;
@@ -98,6 +117,7 @@ export function legClipWeights(b: LegBlend, out: Float32Array): void {
   out[S.Sprint] = b.mode[LEG_MODE.sprint]!;
   out[S.HitCall] = b.mode[LEG_MODE.call]!;
   out[S.WalkOff] = b.mode[LEG_MODE.walkOff]!;
+  out[S.Vault] = b.mode[LEG_MODE.vault]!;
 }
 
 const blend = { mode: new Float32Array(LEG_MODES), move: 0, dir: new Float32Array(4), jump: 0, crouch: 0, run: 0 };
@@ -113,11 +133,16 @@ function stepOf(c: Character): void {
   step.speed = Math.hypot(c.velocity.x, c.velocity.z);
 }
 
-/** The legs' clip weights for `c` as its state stands (no easing), into `out`. */
-export function characterLegWeights(c: Character, out: Float32Array): void {
+/** Whether `legs` has a Vault clip (a file made before the figure redesign has none). */
+export function legsHaveVault(legs: FigureLegs): boolean {
+  return (legs.clips[LEG_SLOT.Vault]?.frames ?? 0) > 0;
+}
+
+/** The legs' clip weights for `c` as its state stands (no easing), into `out`; `vaultClip`: a vault plays the Vault clip. */
+export function characterLegWeights(c: Character, out: Float32Array, vaultClip = false): void {
   stepOf(c);
   blend.mode.fill(0);
-  blend.mode[legMode(c.status, c.sprinting, step.speed)] = 1;
+  blend.mode[legMode(c.status, c.sprinting, step.speed, vaultClip && c.vault.active)] = 1;
   blend.move = legDirection(step.forward, step.side, step.speed, blend.dir) ? 1 : 0;
   blend.jump = !c.grounded && (c.status === 'alive' || c.status === 'out') ? 1 : 0;
   blend.crouch = c.crouchAmount;
@@ -131,7 +156,7 @@ export function characterLegWeights(c: Character, out: Float32Array): void {
  * steps back (the crouched walk was made walking ahead).
  */
 export function figureLegCycleStep(c: Character, legs: FigureLegs, moved: number): number {
-  characterLegWeights(c, weights);
+  characterLegWeights(c, weights, legsHaveVault(legs));
   let sum = 0;
   let strides = 0;
   for (const i of CYCLES) {
@@ -164,6 +189,7 @@ function shareOf(c: Character, slot: number, seconds: number): number {
     return Math.min(J.to, J.from + Math.max(0, c.airTime)) / seconds;
   }
   if (slot === LEG_SLOT.HitCall) return Math.min(c.statusTime / seconds, LAST);
+  if (slot === LEG_SLOT.Vault) return vaultClipShare(c.vault, c.vault.time);
   return 0;
 }
 
@@ -172,7 +198,7 @@ function shareOf(c: Character, slot: number, seconds: number): number {
  * each at its place in the clip (between two of its samples), blended by weight. Allocation-free.
  */
 export function figureLegPose(c: Character, legs: FigureLegs, out: Float32Array): void {
-  characterLegWeights(c, weights);
+  characterLegWeights(c, weights, legsHaveVault(legs));
   out.fill(0, 0, LEG_SAMPLE);
   let total = 0;
   for (let slot = 0; slot < LEG_CLIPS.length; slot++) {

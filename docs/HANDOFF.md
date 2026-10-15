@@ -11,14 +11,11 @@ each `src/` folder's `README.md`.
 - **Next.** The owner playtests 0.1 Dev 5. 0.1 Dev 6 starts with M92–M95 (`docs/ROADMAP.md`). A later bug pass looks
   at the Blender models (owner, 2026-10-12).
 - **Waiting on the owner:** the laptop and desktop Ultra perf baselines, the Save checks in Firefox and Edge, and
-  playing Woodland and Neon Heights (`docs/PLAYTEST.md` › Only you can do these). The Dev 6 figure redesign waits on
-  his reference photos and a session in his Blender (`docs/DECISIONS.md` › Art direction and graphics).
-- **Gaps the figure redesign should close.** Vaulting (M102) and resting on cover (M104) have only placeholder
-  third-person poses on the rigged figures behind the Dev switches: through a vault they hold the vault's tuck as a
-  crouch with the walk overlay off (`render/figurePose.ts` `PoseInput.vaulting`), and at rest they lean their upper body
-  about 5° over the cover (`FIGURE_RIG.rest`); the built-in figures don't change. The redesign must bring vault and
-  rest-on-cover animations (owner, 2026-10-13). Of the bots, anchors rest on cover (they aim where they stand still to
-  fight or hold, BN1); the rest fire from the hip.
+  playing Woodland and Neon Heights (`docs/PLAYTEST.md` › Only you can do these).
+- **Vault and rest-on-cover clips.** Both rigged figures behind the Dev switches have their own (shared in
+  `tools/blender/bot-figure/scripts/bot18.py`: the robot's built with it in RM10, the human's spliced into its RM9
+  export); a figure file without them falls back to the old placeholders. The built-in figures don't change. Of the
+  bots, anchors rest on cover (they aim where they stand still to fight or hold, BN1); the rest fire from the hip.
 
 ## Where to look
 

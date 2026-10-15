@@ -57,6 +57,10 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **LV1** · Unlock all gear is now Disable levelling, a cheat with no XP and no records (#207)
 - **LV1** · Save format 3: an older save loads at level 0 with its settings and records; old Armory items, Field Credits and Tokens don't carry over (#207)
 - **RM9** · With the Dev figure switches off, humans and bots use a new figure: gloved hands, four heads and team colour on the vest, armbands and bands
+- **RM10** · With the Dev figure switches off, robots keep their sensor head, made over with a wraparound visor, team-coloured light line, square headphones, mic and antenna
+- **RM10** · Robots get boxier, mechanical limbs with pistons, bolts and plates, a white suit, team shoulder caps flush with the arm, no plus marks
+- **RM10** · Both Dev figures rest the replica on cover (rifle and pistol, level, up or down) and vault low walls in their own animations
+- **RM10** · A vaulting figure's hit area follows its legs over the wall
 - **BG1** · Hard and Pro's random gear roll and the Cyber Pistol carrier that needed you to have one are replaced by the bot kits
 - **PT1** · Shots are louder on every replica
 - **PT1** · The hit marker is a bold red X

@@ -5,10 +5,12 @@ import { FIGURE_RIG } from '../config/figureRig';
 import type { OpticId } from '../config/optics';
 import type { DetailLevel } from '../config/renderQuality';
 import type { ReplicaConfig } from '../config/replicas';
+import { SIM_DT } from '../config/sim';
 import type { Character } from '../sim/character';
+import { vaultClipShare } from '../sim/figureLegs';
 import { lerpAngle } from '../sim/vec';
 import { PartBuilder } from './figureParts';
-import { createFigurePose, createPoseState, type FigurePose, type MagazineShow, magazinesAt, POSE_CLIPS, type PoseHold, type PoseInput, type PoseState, poseRestartCall, poseShot, releasedBetween, stepPose } from './figurePose';
+import { createFigurePose, createPoseState, type FigurePose, hasRest, type MagazineShow, magazinesAt, POSE_CLIPS, type PoseHold, type PoseInput, type PoseState, poseRestartCall, poseShot, releasedBetween, stepPose } from './figurePose';
 import { addShape, type FigureReplicaColours, type FigureReplicaShape } from './figureReplicas';
 import type { FigureMagazines, FigureRig } from './figureRig';
 import type { ReplicaFiles } from './replicaFiles';
@@ -151,6 +153,8 @@ export class RiggedFigure {
     draw: null,
     firstPerson: false,
     vaulting: false,
+    vaultAt: 0,
+    rest: 0,
     cycle: null,
   };
   private readonly draw = { progress: 0, from: 'rifle' as PoseHold };
@@ -289,11 +293,14 @@ export class RiggedFigure {
     input.crouch = c.prevCrouchAmount + (c.crouchAmount - c.prevCrouchAmount) * a;
     input.sprinting = c.sprinting;
     input.vaulting = c.vault.active;
+    // The Vault clip by the vault's progress, `a` of the way through the tick (as the view's dip: sim/vault.ts).
+    input.vaultAt = c.vault.active ? vaultClipShare(c.vault, c.vault.time - SIM_DT * (1 - a)) : 0;
     input.airborne = !c.grounded;
     input.airTime = c.airTime;
-    // Resting on cover (M104), a placeholder until the figure redesign's own pose: the aim is posed `rest` higher and the
-    // spine leaned `rest` forward, so the upper body leans over the cover while the bore stays on the shot.
-    const rest = f.firstPerson ? 0 : c.coverRest * FIGURE_RIG.rest.lean;
+    // Resting on cover (M104): the Rest clips lean the aim in over it. A file without them leans by FIGURE_RIG.rest: the
+    // aim posed `rest` higher and the spine leaned `rest` forward, so the bore stays on the shot. Not your own body.
+    input.rest = f.firstPerson ? 0 : c.coverRest;
+    const rest = hasRest(this.setup.rig.table, hold) ? 0 : input.rest * FIGURE_RIG.rest.lean;
     input.pitch = c.prevPitch + (c.pitch - c.prevPitch) * a + rest;
     input.hold = hold;
     const handling = arm.handling[arm.active];

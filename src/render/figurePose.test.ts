@@ -4,7 +4,10 @@ import {
   BODY_CLIPS,
   createFigurePose,
   createPoseState,
+  FIRE_CLIPS,
   type FigurePose,
+  hasRest,
+  hasVault,
   magazinesAt,
   type MagazineShow,
   type MagazineTimes,
@@ -42,6 +45,8 @@ const input = (over: Partial<PoseInput> = {}): PoseInput => ({
   draw: null,
   firstPerson: false,
   vaulting: false,
+  vaultAt: 0,
+  rest: 0,
   cycle: null,
   ...over,
 });
@@ -67,12 +72,14 @@ describe('legs: weights sum to 1 and follow the movement', () => {
     ['in the air', { airborne: true, airTime: 0.3 }],
     ['calling', { status: 'calling' }],
     ['walking off', { status: 'walkingOff', forward: 1.5 }],
+    ['vaulting', { vaulting: true, vaultAt: 0.5, airborne: true, airTime: 0.3, crouch: 0.6, forward: 4 }],
   ];
   for (const [name, over] of cases) {
     it(`${name}: lower weights sum to 1, and the upper body's too`, () => {
       const { out } = run(input(over));
       expect(sum(out.lower, 0, BODY_CLIPS)).toBeCloseTo(1, 4);
-      expect(sum(out.upper, 0, BODY_CLIPS) + sum(out.upper, BODY_CLIPS, POSE_CLIPS.length - 2)).toBeCloseTo(1, 3);
+      // (the trigger presses are additive, on top)
+      expect(sum(out.upper, 0, BODY_CLIPS) + sum(out.upper, BODY_CLIPS, POSE_CLIPS.length - FIRE_CLIPS)).toBeCloseTo(1, 3);
     });
   }
 
@@ -166,6 +173,42 @@ describe('legs: weights sum to 1 and follow the movement', () => {
   });
 });
 
+describe('the vault (M102)', () => {
+  const vault = { vaulting: true, airborne: true, airTime: 0.2, crouch: 0.6, forward: 4 };
+
+  it('plays the Vault clip on the whole body by the vault, coming in fast and taking the aim off as fast', () => {
+    expect(hasVault(TABLE)).toBe(true);
+    const { state, out } = run(input(), 1);
+    // A tenth of a second in (the hit volume's legs take it at once).
+    run(input({ ...vault, vaultAt: 0.25 }), 0.1, state, out);
+    expect(out.lower[S.Vault]).toBeGreaterThan(0.95);
+    expect(out.upper[S.Vault]).toBeCloseTo(out.lower[S.Vault]! * (1 - out.overlay), 5);
+    expect(out.overlay).toBeLessThan(0.05);
+    expect(out.time[S.Vault]).toBeCloseTo(0.25 * TABLE[S.Vault]!.seconds, 3);
+  });
+
+  it('holds where the vault left off while it eases out into the fall', () => {
+    const { state, out } = run(input({ ...vault, vaultAt: 1 }), 0.5);
+    stepPose(state, input({ airborne: true, airTime: 0.6, vaultAt: 0 }), DT, TABLE, out);
+    expect(out.time[S.Vault]).toBeCloseTo(TABLE[S.Vault]!.seconds, 3);
+    expect(out.lower[S.Vault]).toBeGreaterThan(0.5);
+    run(input({ airborne: true, airTime: 0.6 }), 0.5, state, out);
+    expect(out.lower[S.Vault]).toBeCloseTo(0, 3);
+    expect(out.lower[S.Jump]).toBeCloseTo(1, 3);
+  });
+
+  it('plays the legs clips for a file without the Vault clip', () => {
+    const none = TABLE.map((c, i) => (i === S.Vault ? { seconds: 0, speed: null } : c));
+    expect(hasVault(none)).toBe(false);
+    const state = createPoseState();
+    const out = createFigurePose();
+    for (let i = 0; i < 60; i++) stepPose(state, input({ ...vault, vaultAt: 0.5 }), DT, none, out);
+    expect(out.lower[S.Vault]).toBe(0);
+    expect(out.lower[S.Jump]).toBeCloseTo(1, 3);
+    expect(out.overlay).toBeCloseTo(0, 2);
+  });
+});
+
 describe('upper body: the aim layer', () => {
   it('is on for a figure in play and aims with the rifle clips by default', () => {
     const { out } = run(input());
@@ -224,6 +267,48 @@ describe('upper body: the aim layer', () => {
   it('the aim clips are held poses at their first frame', () => {
     const { out } = run(input({ forward: 1.5 }), 1);
     for (let i = S.Rifle_Aim; i <= S.Pistol_AimDown; i++) expect(out.time[i]).toBe(0);
+  });
+});
+
+describe('upper body: resting on cover (M104)', () => {
+  const aims = (o: FigurePose, kind: 'Rifle' | 'Pistol') => [o.upper[S[`${kind}_Aim`]]!, o.upper[S[`${kind}_AimUp`]]!, o.upper[S[`${kind}_AimDown`]]!];
+  const rests = (o: FigurePose, kind: 'Rifle' | 'Pistol') => [o.upper[S[`${kind}_Rest`]]!, o.upper[S[`${kind}_RestUp`]]!, o.upper[S[`${kind}_RestDown`]]!];
+  const total = (a: number[]) => a.reduce((x, y) => x + y, 0);
+
+  it('blends each aim clip into its Rest clip at the same pitch, by how settled the replica is, at their first frame', () => {
+    const half = run(input({ rest: 0.5, pitch: 0.3 })).out;
+    expect(total(aims(half, 'Rifle'))).toBeCloseTo(0.5, 3);
+    expect(total(rests(half, 'Rifle'))).toBeCloseTo(0.5, 3);
+    for (let k = 0; k < 3; k++) expect(rests(half, 'Rifle')[k]).toBeCloseTo(aims(half, 'Rifle')[k]!, 4);
+    expect(total(rests(half, 'Pistol'))).toBeCloseTo(0, 3);
+    for (let i = S.Rifle_Rest; i <= S.Pistol_RestDown; i++) expect(half.time[i]).toBe(0);
+    const pistol = run(input({ rest: 1, hold: 'pistol' })).out;
+    expect(total(rests(pistol, 'Pistol'))).toBeCloseTo(1, 3);
+    expect(total(aims(pistol, 'Pistol'))).toBeCloseTo(0, 3);
+    expect(total(rests(pistol, 'Rifle'))).toBeCloseTo(0, 3);
+  });
+
+  it('keeps the aim whole for a file without Rest clips (it leans by FIGURE_RIG.rest instead)', () => {
+    expect(hasRest(TABLE, 'rifle')).toBe(true);
+    const none = TABLE.map((c, i) => (i >= S.Rifle_Rest && i <= S.Pistol_RestDown ? { seconds: 0, speed: null } : c));
+    expect(hasRest(none, 'rifle')).toBe(false);
+    expect(hasRest(none, 'pistol')).toBe(false);
+    const state = createPoseState();
+    const out = createFigurePose();
+    for (let i = 0; i < 180; i++) stepPose(state, input({ rest: 1 }), DT, none, out);
+    expect(total(aims(out, 'Rifle'))).toBeCloseTo(1, 3);
+    expect(total(rests(out, 'Rifle'))).toBe(0);
+  });
+
+  it('does not rest without the aim: reloading, sprinting, out, or as your own body', () => {
+    const rested = (over: Partial<PoseInput>) => {
+      const { out } = run(input({ rest: 1, ...over }));
+      return total(rests(out, 'Rifle')) + total(rests(out, 'Pistol'));
+    };
+    expect(rested({ reload: 0.4 })).toBeCloseTo(0, 3);
+    expect(rested({ forward: 6, sprinting: true })).toBeCloseTo(0, 3);
+    expect(rested({ status: 'out' })).toBeCloseTo(0, 3);
+    expect(rested({ firstPerson: true })).toBeCloseTo(0, 3);
   });
 });
 

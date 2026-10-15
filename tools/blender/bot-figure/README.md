@@ -5,11 +5,12 @@ The realistic bot figures built in Blender: a human player figure and a bare rob
 `src/assets/models/characters/human.glb` and `robot.glb` with their sidecars, behind the Dev switches "Disable figure
 models" and "Disable all models" (#175). Pictures are in the project files (`concepts/bot-figure-v10-2026-10-12/`, v11's
 crouch in `concepts/figure-moves-fix-2026-10-12/`; earlier rounds in `concepts/bot-figure-v8-2026-10-11/`,
-`concepts/bot-figure-v6-2026-10-11/` and `concepts/bot-figure-v5-2026-10-10/`). The owner redesigns the figures to look
-more realistic in 0.1 Dev 6, himself in his own Blender from his reference photos (`docs/DECISIONS.md` › Art
-direction and graphics); until then nobody reworks them here. That session also makes the animations Dev 6's new
-moves need: vaulting, and resting the replica on cover (M104; today a placeholder lean of the aim pose,
-`FIGURE_RIG.rest` in `src/config/figureRig.ts`).
+`concepts/bot-figure-v6-2026-10-11/` and `concepts/bot-figure-v5-2026-10-10/`). The figures are redesigned to look
+more realistic in 0.1 Dev 6 from the owner's reference photos (`docs/DECISIONS.md` › Art direction and graphics): the
+human (v12, RM9) in his own Blender, the robot (v12, RM10) in a cloud Blender, pictures in
+`concepts/robot-figure-redesign-2026-10-13/`. The clips both share for Dev 6's new moves, resting on cover (M104) and the
+vault (M102), are `bot18`'s; a file without them plays today's placeholders (`FIGURE_RIG.rest`, and the jump through a
+vault, in `src/config/figureRig.ts`).
 
 The human was redesigned first (v12, RM9, 13 Oct 2026, approved on its review pictures in
 `concepts/human-figure-redesign-2026-10-13/`): a new body and gloved hands from his reference photos, four heads the
@@ -20,21 +21,23 @@ by `bot20`-`bot22` on top of the earlier layers; the robot's redesign is the rob
 ## What is here
 
 - `scripts/`: every script that builds the figures, in load order (`load.py` lists it): `bot_helpers`, `bot_body`,
-  `bot_kit`, `bot2`-`bot4`, `bot_main`, `bot5`, `bot_final`, `bot6`-`bot22` (`bot18`, `bot19` are the robot
-  redesign's, skipped when absent), `bot_render`; then `session.py`
+  `bot_kit`, `bot2`-`bot4`, `bot_main`, `bot5`, `bot_final`, `bot6`-`bot22` (`bot18` and `bot19` are the robot
+  redesign's, `bot20`-`bot22` the human's), `bot_render`; then `session.py`
   (build, pose, render and export helpers) and `session16.py` (checking helpers: bake one clip, arm-in-torso and
   wrist metrics, finger solves on the real replicas and magazines, `export_v(kind, stem)`). `review_v12.py` (not
   part of the build) renders the v12 review pictures: turnaround, heads, hands on each replica, poses.
-- The current human is v12 (RM9): 19,966 triangles with its largest head (body and kit 17,468; heads high-cut
+- The current figures are the game's `src/assets/models/characters/human.glb` and `robot.glb`, each with LOD1/LOD2
+  meshes. The human is v12 (RM9): 19,966 triangles with its largest head (body and kit 17,468; heads high-cut
   2,498, cap 1,652, boonie 1,228, full-cut 1,128), one atlas of three materials (`Outfit`, `TeamColour`, `Lens`),
-  1.74 m, the same 23 clips; 2.84 MB packed. Blender's export and .blend are in the project files
-  (`models/bot-human/v12/`).
-- The figures before it (v11, 12 Oct 2026: v10, which is v6 plus the trigger finger, the reload that throws the old
-  magazine and the hand and arm fixes of bot15-bot16, with bot17's `CrouchIdle` and `CrouchWalk`; 23 clips) are the
-  game's `src/assets/models/characters/human.glb` (19,832 triangles, high-cut helmet head only) and `robot.glb` (17,092,
-  bare body with team-paint panels), each with LOD1/LOD2 meshes, plus their sidecars (clip lengths, loops, speeds,
+  1.74 m; v11's 23 clips with `bot18`'s six Rest clips and the Vault spliced in (RM10), 30 in all; 2.93 MB packed.
+  Blender's export and .blend are in the project files (`models/bot-human/v12/`). The robot is v12 (RM10, 13 Oct
+  2026): `bot19` on v11's skeleton, built whole in the cloud with `bot18`'s clips; 30 clips; 19,308 triangles, its
+  headset head 2,374. Each has a sidecar (clip lengths, loops, speeds,
   `fitTo` stats, first-person parts to hide, `replicaOnGrip`: where each replica glb sits on the `Grip_R` bone, and
-  `magazineInHand`: the reloads' magazines). The game's files are packed with `pack.mjs` (below); Blender's own exports
+  `magazineInHand`: the reloads' magazines). The game's files are packed with `pack.mjs` (below).
+- The figures before them (v11, 12 Oct 2026: v10, which is v6 plus the trigger finger, the reload that throws the old
+  magazine and the hand and arm fixes of bot15-bot16, with bot17's `CrouchIdle` and `CrouchWalk`; 23 clips; the human
+  19,832 triangles with the high-cut helmet head only, the robot 17,092 with team-paint panels): Blender's own exports
   of v10 are in the project files (`models/bot-human/v10/`), and v11 is those with bot17's two clips spliced in (Rebuild
   in the cloud). The earlier rounds are not kept (owner's tidy-up, 2026-10-12); their pictures are.
 - `pack.mjs` (IM5): packs an export into the file the game ships, losslessly: drops the clip tracks the game drops at
@@ -67,6 +70,8 @@ Read the newest layer first when looking for a function: it is the one that wins
 | `bot14` | v6 | Forearm twist and elbow bones, the arm solve, finger poses, the magazine reloads |
 | `bot15`, `bot16` | v7-v10 | Trigger finger, the thrown old magazine, the support hand, arms out of the torso, the pouch draw |
 | `bot17` | v11 | The kneel and the crouch walk as low as the game's crouch: the hips 0.62 m under standing (IM8) |
+| `bot18` | v12 | Clips only, for either figure: the six Rest clips (resting on cover, M104) and the Vault (M102) |
+| `bot19` | v12 | The robot made over: boxy armour, the headset head for all, flush team shoulders, one grey material |
 | `bot20` | v12 | The redesigned human: combat shirt and trousers, carrier and pouches, gloves rebuilt finger by finger (knuckles, pads, a knuckle guard), the high-cut head (RM9) |
 | `bot21` | v12 | The atlas bake, `finalise_v12` and `export_v12`; `TEAM_CARRIER` puts the carrier in the team colour |
 | `bot22` | v12 | The cap, boonie and full-cut heads on copies of the balaclava, cloth a hat hides dropped (`HEAD_ORDER`) |
@@ -79,8 +84,16 @@ Read the newest layer first when looking for a function: it is the one that wins
   the figure's upper body upright over its legs, so the kneel and the crouch walk lower the hips by the same 0.62 m
   (`bot17.py`; `render/figureLegs.test.ts` checks it in the shipped files). With the figures drawn, the hit volume's
   legs are the figures' own, read from the leg clips as the file loads (`render/figureLegs.ts`).
+- The vault: the game lifts the body straight up onto the top in a crouch (0.6 of the way down), its feet just clear
+  of it, and slides it across (`src/sim/vault.ts`). The Vault clip is played by the vault's progress, not by time: its
+  first 40 % on the rise, the rest across (`VAULT_TOP`, `FIGURE_RIG.vault.top`), so it is a tucked hop in the body's
+  own frame with the hips near the crouched hit volume's; the fall off the far side plays the Jump from its tuck. The
+  bake lifts any frame whose boots would go under the root (`bot12` floor fix), so the feet always pass over the top.
+  The match's hit-volume legs are the human's, any clip its file lacks taken from the robot's.
+- The Rest clips (`Rifle_Rest`, `Rifle_RestUp`, `Rifle_RestDown` and the pistol's) are each aim clip leaned in over
+  the cover, held at their first frame; the game blends the aim into them by how settled the rest is.
 
-- Metres, facing glTF +Z; human 1.74 m (v12), robot 1.75 m to the top of its optic (`heightMetres` in the sidecar). Team colour: tint materials whose names start with `Team` (Alpha 0x3d8bff,
+- Metres, facing glTF +Z; human 1.74 m (v12), robot 1.75 m to its highest point (`heightMetres` in the sidecar). Team colour: tint materials whose names start with `Team` (Alpha 0x3d8bff,
   Beta 0xff8a2a).
 - Replicas are the game's own `aeg.glb` / `pistol.glb` (X right, Y forward, Z up). Hang the held one on `Grip_R` with
   the sidecar's `replicaOnGrip` matrix (Blender axes, row-major). `Pistol_*` clips, and `Switch` from 35 %, hold the
@@ -105,8 +118,12 @@ Read the newest layer first when looking for a function: it is the one that wins
 
 ## Rebuild in the cloud (headless, IM8)
 
-Re-make a clip without the owner's Blender, then put it into the approved v10 export (a headless build reproduces the
-clips to about 0.000001 but not the meshes to the bit):
+The robot (v12) is built whole in the cloud: steps 1 and 2 below, then `BF_HOME=<folder> python
+tools/blender/bot-figure/headless.py robot bot_robot_v12` (about 30 s), pack it as in Rebuild step 5 and copy
+`bot_robot_v12_animations.json` beside it as `robot.json`.
+
+For the human, re-make a clip without the owner's Blender, then put it into the approved v10 export (a headless build
+reproduces the clips to about 0.000001 but not the meshes to the bit):
 
 1. A Python 3.11 virtual environment with `pip install bpy==5.0.0` (about 400 MB).
 2. A folder (`BF_HOME`) with `aeg_rifle.glb` and `gas_pistol.glb` and `work/mags.json`, from the project files
@@ -186,4 +203,6 @@ step). In a scratch folder: symlink `three` to the repo's `node_modules/three`, 
 `out/` folder. Copy `shoot.mjs` into the repo root (so it finds playwright), run
 `node shoot.mjs bot_human_v10,bot_robot_v10 jobs.json` from the scratch folder, then delete the copy. A job:
 `{"name":"aim","stem":"bot_human_v10","clip":"Rifle_Aim","t":0.3,"hold":"rifle","rep":null,
-"views":[{"n":"a","target":"Hand_R","dist":0.5,"yaw":45,"pitch":-30}]}` (yaw 0 is in front of the figure).
+"views":[{"n":"a","target":"Hand_R","dist":0.5,"yaw":45,"pitch":-30}]}` (yaw 0 is in front of the figure). A job's
+optional `extra` places the figure and adds grey boxes, for a move over cover: `{"root":[x,y,z],
+"boxes":[[cx,cy,cz,sx,sy,sz]]}` (metres, the page's axes: y up, the figure facing +z).

@@ -10,6 +10,7 @@ import type { PoseClipTable } from './figurePose';
  * hip, knee and ankle joints and the ends of its boot's capsule written down in the figure's own frame (x right, y up
  * from the feet, z forward-negative). The boot's ends are found on the figure's own boots, standing, and ride on the
  * foot and toe bones from there. The idles are read at their first frame (they barely move), as the hit volume holds them.
+ * A clip the file lacks (an optional one, render/figurePose.ts OPTIONAL_CLIPS) has no samples.
  */
 
 /** The clips' frame rate (the Blender bake, tools/blender/bot-figure/scripts/bot11.py FPS). */
@@ -110,7 +111,7 @@ export function figureLegsFrom(src: FigureLegSource): FigureLegs {
   const clips: FigureLegClip[] = LEG_CLIPS.map((_, slot) => {
     const info = src.table[slot];
     const seconds = info?.seconds ?? 0;
-    const frames = HELD.has(slot) ? 1 : Math.max(1, Math.round(seconds * FPS)) + 1;
+    const frames = seconds <= 0 ? 0 : HELD.has(slot) ? 1 : Math.max(1, Math.round(seconds * FPS)) + 1;
     const points = new Float32Array(frames * LEG_SAMPLE);
     for (let f = 0; f < frames; f++) {
       poseAt(slot, frames > 1 ? (seconds * f) / (frames - 1) : 0);
@@ -132,4 +133,12 @@ export function figureLegsFrom(src: FigureLegSource): FigureLegs {
   // Never drawn, so nothing reached the GPU: the meshes' default materials go with them (the geometry is the rig's).
   for (const mesh of meshes) (mesh.material as THREE.Material).dispose();
   return { clips };
+}
+
+/**
+ * A match's legs for the hit volume from two figures' (the human's and the robot's, which share the rig and the leg
+ * clips): `main`'s, each clip it lacks (an optional one, made with the figure redesign) taken from `spare`.
+ */
+export function legsWithSpares(main: FigureLegs, spare: FigureLegs): FigureLegs {
+  return { clips: main.clips.map((clip, slot) => (clip.frames > 0 ? clip : (spare.clips[slot] ?? clip))) };
 }

@@ -3,7 +3,9 @@
 // a full rebuild, which would re-make the meshes too (pip bpy's builds don't reproduce v10's meshes to the bit).
 //   node tools/blender/bot-figure/splice.mjs base.glb donor.glb out.glb CrouchIdle,CrouchWalk
 // Both files are unpacked Blender exports (pack.mjs runs after this). Each named clip of the donor replaces the base's
-// clip of that name in place (same slot in the file's clip order), its tracks retargeted to the base's bones by name.
+// clip of that name in place (same slot in the file's clip order), or is added after the base's clips when it has none
+// (a new clip, such as the figure redesign's Rest clips and Vault: add its entry to the sidecar too), its tracks
+// retargeted to the base's bones by name.
 // The base's old key data stays in the binary chunk unused: pack.mjs keeps only what the file uses.
 import { readFileSync, writeFileSync } from 'node:fs';
 
@@ -54,7 +56,7 @@ function copyAccessor(index) {
 for (const name of names.split(',')) {
   const at = base.json.animations.findIndex((a) => a.name === name);
   const from = donor.json.animations.find((a) => a.name === name);
-  if (at < 0 || !from) throw new Error(`no clip "${name}" in ${at < 0 ? baseFile : donorFile}`);
+  if (!from) throw new Error(`no clip "${name}" in ${donorFile}`);
   const inputs = new Map();
   const samplers = [];
   const channels = from.channels.map((c) => {
@@ -66,6 +68,11 @@ for (const name of names.split(',')) {
     samplers.push({ input: inputs.get(s.input), output: copyAccessor(s.output), interpolation: s.interpolation });
     return { sampler: samplers.length - 1, target: { node, path: c.target.path } };
   });
+  if (at < 0) {
+    base.json.animations.push({ name, channels, samplers });
+    console.log(`${name}: added, ${channels.length} tracks`);
+    continue;
+  }
   const old = base.json.animations[at];
   base.json.animations[at] = { ...old, channels, samplers };
   console.log(`${name}: ${old.channels.length} tracks -> ${channels.length}`);
