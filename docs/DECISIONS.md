@@ -739,6 +739,14 @@ replaces its line; the old one stays findable in the archive or in git.
   how far, whose is on its way, a toss you can make underlined in your team's colour, a 5 s hint to ask each time you
   run low) and a "· mag" tag on the teammate's name. The line gives way to the open order wheel, whose Mag item says the
   same. Off hides the line and tags only; the key and the bots' calls still work.
+- **Settings › Gameplay › HUD › Ammo counter is On by default; Off hides the BB counts, not the magazines (2026-10-15,
+  AC1, Dev 6 item 46).** Off takes away the loaded count and the "/ N · M spare" line; each spare magazine keeps its
+  bar, full while it holds any BBs and hollow once empty, with no fill level, low stripes or mark on the next one: on a
+  field you feel how many magazines your pouches hold and which are empty, never how full. That hollow bar is the only
+  "magazine changed" cue kept; the reload bar, the Empty, Last magazine and Out of BBs lines, the dry-fire click and
+  the Mag key's Low on BBs hint stay, so the game stays playable. A caught magazine's notice drops its BB count. It
+  applies in matches, Practice and the tutorial, whose Reload step then says to keep count yourself. No mag-check key
+  (owner, 2026-10-06).
 - **Key bindings: a key belongs to one action, and taking a used key swaps the two (2026-09-30).** Esc, F5, F11, F12,
   the browser navigation keys, PrintScreen, Pause and the debug keys (backtick, F3 and ]) can't be bound. Fire and the
   four move keys can never be left keyless.

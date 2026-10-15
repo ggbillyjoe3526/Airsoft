@@ -54,6 +54,8 @@ export class MagHandoff {
   readonly view: MagView = { line: '', toss: false, wheel: MAG_WHEEL_LABELS.ask, mates: [] };
   /** The last line lineOf made, and what it was made of (`words` null: none). */
   private readonly cache: { words: MagWords | null; id: number; m: number; line: string } = { words: null, id: -1, m: 0, line: '' };
+  /** Settings › HUD › Ammo counter (AC1): off, a caught magazine's notice leaves out how many BBs came. */
+  private counts = true;
 
   constructor(
     private readonly player: Character,
@@ -100,13 +102,18 @@ export class MagHandoff {
     this.tossTo = -1;
   }
 
+  /** The ammo counter shown or not (Settings › HUD, AC1): the caught notice names the BBs only while it is. */
+  setCounts(shown: boolean): void {
+    this.counts = shown;
+  }
+
   /** After each tick (and BotController.observe), while its events are in the state: your tosses and catches. */
   observe(events: readonly GameEvent[], time: number, live: boolean): void {
     const me = this.player.id;
     for (const e of events) {
       if (e.type === 'roundStart') this.reset();
       else if (e.type === 'magToss' && e.fromId === me) this.say('tossed', { name: this.nameOf(e.toId) }, time);
-      else if (e.type === 'magCaught' && e.toId === me) this.say('caught', { name: this.nameOf(e.fromId), bbs: e.bbs }, time);
+      else if (e.type === 'magCaught' && e.toId === me) this.say(this.counts ? 'caught' : 'caughtUncounted', { name: this.nameOf(e.fromId), bbs: e.bbs }, time);
       else if (e.type === 'magLost' && (e.toId === me || e.fromId === me)) this.say('lost', {}, time);
       if (e.type === 'magToss' && e.toId === me) {
         this.inAir++;

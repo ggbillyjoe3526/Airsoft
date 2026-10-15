@@ -746,6 +746,12 @@ export class MatchSession {
     this.match.setMagPrompts(on);
   }
 
+  /** Settings › HUD › Ammo counter (AC1): the replica panel's BB counts, and a caught magazine's, shown or not. */
+  setAmmoCounter(shown: boolean): void {
+    this.combat.setAmmoCounter(shown);
+    this.mags.setCounts(shown);
+  }
+
   /** Settings › HUD › Minimap (M83): turning with the view, or fixed north up. */
   setMinimapTurn(turn: MinimapTurn): void {
     this.match.setMinimapRotating(turn === 'rotating');

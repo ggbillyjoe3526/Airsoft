@@ -41,6 +41,8 @@ export interface TutorialStep {
   withoutOptic?: Omit<TutorialStep, 'withoutOptic'>;
   /** Said after `text` only while levelling is on (LV1; M83: with it off in the Dev settings the tutorial never names it). */
   levelling?: string;
+  /** Said instead of `text` while the ammo counter is off (Settings › HUD, AC1), so the step never points at a count the HUD doesn't show. */
+  countHidden?: string;
 }
 
 /**
@@ -77,6 +79,7 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
     id: 'reload',
     title: 'Reload',
     text: 'Shoot a few BBs, then press {reload} to swap in a fresh magazine: you always get your fullest spare. In a match spare magazines only refill at the next round, so watch your count.',
+    countHidden: "Shoot a few BBs, then press {reload} to swap in a fresh magazine: you always get your fullest spare. Your ammo counter is off, so keep count yourself: an empty replica only clicks or whirs. In a match spares only refill at the next round, and a spare's bar goes hollow once it's empty.",
     goal: { kind: 'reload' },
   },
   {
@@ -157,9 +160,18 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
   },
 ];
 
-/** The steps as the coach says them: a step's levelling line joins its text only while levelling is on (LV1). Pure. */
+/** The steps as the coach says them: a step's levelling line joins its text (either one) only while levelling is on (LV1). Pure. */
 export function tutorialSteps(levelling: boolean): readonly TutorialStep[] {
-  return TUTORIAL_STEPS.map((step) => (step.levelling && levelling ? { ...step, text: `${step.text} ${step.levelling}` } : step));
+  return TUTORIAL_STEPS.map((step) => {
+    if (!step.levelling || !levelling) return step;
+    const text = `${step.text} ${step.levelling}`;
+    return step.countHidden ? { ...step, text, countHidden: `${step.countHidden} ${step.levelling}` } : { ...step, text };
+  });
+}
+
+/** What the coach says for `step`: its `countHidden` text while the ammo counter is off (AC1), else its text. Pure. */
+export function coachText(step: TutorialStep, ammoCounter: boolean): string {
+  return !ammoCounter && step.countHidden ? step.countHidden : step.text;
 }
 
 export const TUTORIAL = {

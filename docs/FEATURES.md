@@ -203,6 +203,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Crosshair with the spread gap; shape, size, thickness, gap, outline, colour, opacity and static gap option from
   Settings (Phase 1, M19, FA5)
 - Ammo and magazine gauges; the empty-magazine hint names your reload key (Phase 1, M8)
+- Ammo counter option (Settings › Gameplay › HUD, On by default): Off hides the BB counts, leaving each spare magazine full or hollow (AC1)
 - Round clock, score, round banners worded from your side (Phase 1)
 - Hit feed with team colour bars, teammate markers, the scoreboard on Tab, round stats between rounds (M19, FA9)
 - HUD in the menus' look (G4): a score bar with slanted pips, score blocks and the match's aim under the clock; a framed

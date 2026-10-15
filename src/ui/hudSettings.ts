@@ -1,4 +1,15 @@
-import { HIT_FEED_MODES, type HitFeedMode, HUD_OPACITY, HUD_SIZE, SCOREBOARD_SIZE, WHAT_GOT_YOU_MODES, type WhatGotYouMode } from '../config/matchInfo';
+import {
+  AMMO_COUNTER_CHOICES,
+  type AmmoCounterMode,
+  DEFAULT_AMMO_COUNTER,
+  HIT_FEED_MODES,
+  type HitFeedMode,
+  HUD_OPACITY,
+  HUD_SIZE,
+  SCOREBOARD_SIZE,
+  WHAT_GOT_YOU_MODES,
+  type WhatGotYouMode,
+} from '../config/matchInfo';
 import { CALLOUT_CHOICES, type CalloutsMode, DEFAULT_CALLOUTS } from '../config/callouts';
 import { DEFAULT_MAG_PROMPTS, MAG_PROMPT_CHOICES, type MagPromptsMode } from '../config/magShare';
 import { DEFAULT_MINIMAP_TURN, MINIMAP_TURN_CHOICES, type MinimapTurn } from '../config/minimap';
@@ -25,6 +36,8 @@ export interface HudSettingsOptions {
   pingMarkers?: { initial: PingMarkersMode; onChange: (mode: PingMarkersMode) => void };
   /** The magazine hand-off's line and tags (MG1). No row without it. */
   magPrompts?: { initial: MagPromptsMode; onChange: (mode: MagPromptsMode) => void };
+  /** The replica panel's BB counts (AC1). No row without it. */
+  ammoCounter?: { initial: AmmoCounterMode; onChange: (mode: AmmoCounterMode) => void };
 }
 
 /** Settings › HUD › Minimap (M83): Rotating (as it always was) unless the player picked Fixed. */
@@ -45,6 +58,11 @@ export function loadPingMarkers(storage = browserStorage()): PingMarkersMode {
 /** Settings › HUD › Mag hand-off (MG1): on unless the player turned it off. */
 export function loadMagPrompts(storage = browserStorage()): MagPromptsMode {
   return loadSetting('magPrompts', oneOf(MAG_PROMPT_CHOICES.map((c) => c.id)), DEFAULT_MAG_PROMPTS, storage);
+}
+
+/** Settings › HUD › Ammo counter (AC1): on unless the player turned it off. */
+export function loadAmmoCounter(storage = browserStorage()): AmmoCounterMode {
+  return loadSetting('ammoCounter', oneOf(AMMO_COUNTER_CHOICES.map((c) => c.id)), DEFAULT_AMMO_COUNTER, storage);
 }
 
 /** The HUD tab's rows (Settings → HUD, M24), each saved and applied as it changes. */
@@ -82,6 +100,9 @@ export function hudSettings(opts: HudSettingsOptions): HTMLDivElement[] {
       : []),
     ...(opts.magPrompts
       ? [menuRow('Mag hand-off', 'Asking a teammate for a magazine and tossing one (the Mag key): the line under the crosshair and the tag over the teammate.', new OptionPicker('Mag hand-off', MAG_PROMPT_CHOICES, opts.magPrompts.initial, 'magPrompts', opts.magPrompts.onChange).root)]
+      : []),
+    ...(opts.ammoCounter
+      ? [menuRow('Ammo counter', 'The BB counts on the replica panel, bottom right. Off, you keep count yourself, as on a real field.', new OptionPicker('Ammo counter', AMMO_COUNTER_CHOICES, opts.ammoCounter.initial, 'ammoCounter', opts.ammoCounter.onChange).root)]
       : []),
   ];
 }

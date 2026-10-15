@@ -264,7 +264,7 @@ request. Each entry says where the contract lives, what it holds today and what 
   `graphics.bbGlow` since PT1): `quality` holds a `QualityChoice`; `graphics.<field>` holds a
   Custom row (an option id or a slider position); `frameRateCap` (Unlimited, 30, 60, 120, 144 or 240; an older number
   reads as the nearest) and `showFps` are the two Graphics rows outside the presets; `renderer` (`auto`, `webgpu` or
-  `webgl`, W1) is the Renderer row; `callouts`, `pingMarkers` and `magPrompts` (CL1, PG1, MG1) are `on` or `off`.
+  `webgl`, W1) is the Renderer row; `callouts`, `pingMarkers`, `magPrompts` and `ammoCounter` (CL1, PG1, MG1, AC1) are `on` or `off`.
   `browserStorage()` returns the save system's guarded storage once it has started (same keys, same values). Pinned by `settings/storage.test.ts`.
 - **The save file format** (`save/saveFile.ts`). `{ game, format, build, savedAt, summary, stores, checksum }`, the
   stores as their own modules store them. A save from any earlier `format` loads (one `MIGRATIONS` step per format);

@@ -125,6 +125,14 @@
   color: var(--menu-muted);
 }
 
+/* Ammo counter off (Settings › HUD, AC1): no loaded count and no spare line; the bars stay, each full while its magazine
+   holds any BBs and hollow once empty (ui/replicaPanel.ts), so the panel tells you how many magazines you carry, never
+   how full. */
+.hud-replica.no-count .hud-ammo,
+.hud-replica.no-count .hud-spare {
+  display: none;
+}
+
 /* A bar per spare magazine, filled to its BBs (the width the panel sets); the one a reload takes in acid with a caret
    under it (a shape, so colour isn't the only cue). */
 .hud-mags {

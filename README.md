@@ -136,6 +136,8 @@ Then open **http://localhost:4173**.
 - **Asking for a magazine.** Low on BBs, press H (or Need a Mag on the order wheel): the nearest teammate with one to
   spare comes over and tosses you one. When a teammate asks you, get close and press H to toss them one. Bots ask each
   other too. **Settings › HUD › Mag hand-off** hides the line under the crosshair.
+- **Count your own BBs.** **Settings › Gameplay › HUD › Ammo counter** Off hides the BB counts, as on a real field: the
+  magazine bars only show which spares still hold BBs, an empty replica clicks, and reloading works as ever.
 - **Dev content.** **Settings › Dev** (tick **Dev settings** under the list) has a **Dev content** switch for maps,
   modes and gear still being built, and **Disable levelling**, which unlocks every replica and part. Matches that use
   either aren't recorded and give no XP.

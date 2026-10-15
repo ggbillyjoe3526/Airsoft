@@ -416,6 +416,13 @@ export class RangeSession {
     this.combat.render(true);
   }
 
+  /** Settings › HUD › Ammo counter (AC1): the replica panel's BB counts, and the tutorial's words for them, shown or not. */
+  setAmmoCounter(shown: boolean): void {
+    this.combat.setAmmoCounter(shown);
+    this.coach?.setAmmoCounter(shown);
+    if (this.coaching) this.coach!.show(this.tutorial!);
+  }
+
   /** Settings › HUD › Minimap (M83): turning with the view, or fixed north up (on a map, M94). */
   setMinimapTurn(turn: MinimapTurn): void {
     this.minimap?.setRotating(turn === 'rotating');

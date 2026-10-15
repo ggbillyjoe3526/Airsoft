@@ -260,6 +260,11 @@ export class CombatPresentation {
     this.hud.setCrosshair(crosshair);
   }
 
+  /** Settings › HUD › Ammo counter (AC1): the replica panel's BB counts shown, or not. */
+  setAmmoCounter(shown: boolean): void {
+    this.hud.setAmmoCounter(shown);
+  }
+
   /** The carried replicas' pictures on the HUD's replica panel (graphics overhaul G4), by slot. */
   setReplicaPictures(source: PictureSource | null, subjects: readonly (PictureSubject | null)[]): void {
     this.hud.setPictures(source, subjects);
