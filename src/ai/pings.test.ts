@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { BALLISTICS } from '../config/ballistics';
+import { BOT_PERSONALITIES } from '../config/botPersonalities';
 import { BOT_BEHAVIOUR, BOT_SKILL, BOTS } from '../config/bots';
 import { FOOTSTEPS } from '../config/footsteps';
 import { HITS, ROUNDS } from '../config/hits';
@@ -21,6 +22,7 @@ import { type Vec3, vec3 } from '../sim/vec';
 import { type BotWorld, createBot, pingInMind } from './bot';
 import { BotController } from './botController';
 import { bodyPoint, eyeOf } from './perception';
+import type { BotIdentity } from './personality';
 import { createPing, takePing } from './pings';
 
 const DT = 1 / 60;
@@ -38,6 +40,8 @@ interface PingSetup {
   /** More of the map: walls, and bushes that hide people from the bots' sight rules. */
   blocks?: MapBlock[];
   foliage?: Bush[];
+  /** Personalities of your two teammates (ids 1 and 2), by bots.md key. */
+  personalities?: readonly [string, string];
 }
 
 /**
@@ -86,6 +90,7 @@ function field(s: PingSetup = {}) {
     loadout: LOADOUT,
     cfg: { ...BOTS, viewDistance: 20 },
     seed: 5,
+    ...(s.personalities ? { identities: new Map<number, BotIdentity>(s.personalities.map((key, i) => [i + 1, { name: key, personality: key, style: BOT_PERSONALITIES.styles.get(key)! }])) } : {}),
   });
   const mates = bots.bots.filter((b) => b.character.team === 0);
   const run = (seconds: number) => {
@@ -110,7 +115,7 @@ function field(s: PingSetup = {}) {
     const dz = point.z - eye.z;
     return pingAt(Math.atan2(-dx, -dz), Math.atan2(dy, Math.hypot(dx, dz)));
   };
-  return { state, you, orange, bots, mates, run, ping, pingAt, pingToward, nav, physics };
+  return { state, you, orange, bots, mates, commands, run, ping, pingAt, pingToward, nav, physics };
 }
 
 const flat = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -262,5 +267,34 @@ describe('PG1: takePing and pingInMind', () => {
     expect(pingInMind(b, world(3 + BOT_BEHAVIOUR.pingMemory))).toBe(false);
     b.lastKnown.x += 1; // a noise heard elsewhere
     expect(pingInMind(b, world(4))).toBe(false);
+  });
+});
+
+describe('PG1: a ping is acted on as the bot\'s personality plays a noise (acceptance 3, QA)', () => {
+  /** Seconds each of the two teammates sprinted in the first `seconds` after a ping 28 m off. */
+  function sprinted(personalities: readonly [string, string], seconds: number): [number, number] {
+    const f = field({ personalities });
+    expect(f.pingAt(EAST, -Math.atan2(1.6, 28))).toBe(true);
+    const out: [number, number] = [0, 0];
+    for (let i = 0; i < seconds / DT; i++) {
+      f.run(DT);
+      f.mates.forEach((b, k) => {
+        if (f.commands.get(b.character.id)!.sprint) out[k]! += DT;
+      });
+    }
+    f.physics.dispose();
+    return out;
+  }
+
+  it('has a rusher run to the ping while a careful bot does not run it down', () => {
+    const [rusher, careful] = sprinted(['rusher', 'careful'], 4);
+    expect(careful).toBeLessThan(rusher / 2);
+    expect(rusher).toBeGreaterThan(0.5);
+  });
+
+  it('is the same for the same seed and ping: the bots\' commands repeat', () => {
+    const a = sprinted(['rusher', 'careful'], 2);
+    const b = sprinted(['rusher', 'careful'], 2);
+    expect(b).toEqual(a);
   });
 });
