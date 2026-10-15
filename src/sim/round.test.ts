@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FLAG } from '../config/modes';
+import { FLAG, OVERTIME } from '../config/modes';
 import { LOADOUT } from '../config/replicas';
 import { createBBPool, spawnBB } from './ballistics';
 import { type Character, createCharacter } from './character';
@@ -9,7 +9,7 @@ import { attackersInRound, createRoundState, matchWon, placeTeams, type RoundCon
 import { vec3 } from './vec';
 
 const DT = 1 / 60;
-const RULES: RoundRules = { roundTime: 10, resetDelay: 2, winsNeeded: 3, winBy: 1, timeOutToMorePlayers: false, halfTimeAfter: 2, eliminationFirstEnd: 0, flag: { ...FLAG, firstAttackers: 0 } };
+const RULES: RoundRules = { roundTime: 10, resetDelay: 2, winsNeeded: 3, winBy: 1, timeOutToMorePlayers: false, halfTimeAfter: 2, eliminationFirstEnd: 0, flag: { ...FLAG, firstAttackers: 0 }, overtime: OVERTIME };
 /** The pole, on the east side: end 1, where the defenders start. */
 const POLE = vec3(10, 0, 0);
 /** Two spawns at each end: west (end 0) and east (end 1). */

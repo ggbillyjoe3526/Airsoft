@@ -138,7 +138,7 @@ export class MatchPresentation {
   /** World yaw the BB that hit you came from (see showHit), and when. */
   private hitFromYaw = 0;
   /** What the round message on screen was built from, so its text is only rebuilt when that changes. */
-  private readonly shownRound = { phase: '', winner: -2, seconds: -1, number: -1, start: false, mode: '', respawned: false, newsAt: -1, calling: false };
+  private readonly shownRound = { phase: '', winner: -2, seconds: -1, number: -1, start: false, overtime: false, mode: '', respawned: false, newsAt: -1, calling: false };
   private outLabelFor = Number.NaN;
   private outLabelText = '';
   /** False while the start/pause screen or the result screen is up: the pole marker stays hidden then. */
@@ -195,11 +195,12 @@ export class MatchPresentation {
     this.keyName = keyName;
     // Each figure holds its own active replica (Armament.replicas): rifle or pistol pose.
     this.characters = new CharacterRenderer(state.characters, teamColours.figures, hits, figureModel, figureDetail, crowd, replicaFiles, figureRigs);
-    this.flag = new FlagRenderer(teamColours.figures, rules.flag.radius);
+    this.flag = new FlagRenderer(teamColours.figures, rules.flag.radius, rules.overtime.reach);
     scene.add(this.characters.object, this.flag.object);
     this.feedback = new HitFeedback(container, () => keyName('fire'));
     this.scoreboard = new Scoreboard(container, teamSizes, player.team);
     this.scoreboard.setAim(extraction ? HUD_TEXT.run : HUD_TEXT.firstTo(rules.winsNeeded, rules.winBy));
+    this.scoreboard.setOvertime(rules.overtime.time);
     this.marker = new FlagMarker(container);
     this.spectator = new SpectatorCamera(state.characters, player, body, query, hits);
     this.names = rosterNames(state.characters, player.id);
@@ -554,7 +555,7 @@ export class MatchPresentation {
   /**
    * Once per frame, after `frame`: the minimap (M23), round wherever the camera is (your eyes, or the player you
    * watch), with your teammates, where you last heard the other team, where your teammates hold (`hold`, or null) and
-   * in Attack / Defend the flagpole.
+   * in Attack / Defend the flagpole (in Elimination, the overtime flag while it is up).
    */
   showMinimap(hold: Vec3 | null): void {
     if (!this.playing) return;
@@ -579,7 +580,7 @@ export class MatchPresentation {
     f.hold = hold;
     f.pings = this.pingMarkers.markersShown ? this.pingMarkers.pings : NO_PINGS;
     const r = this.state.round;
-    f.flag = this.flag.object.visible && r.mode === 'attackDefend' ? r.flag.position : null;
+    f.flag = !this.flag.object.visible ? null : r.mode === 'attackDefend' ? r.flag.position : r.overtimeFlag.up ? r.overtimeFlag.position : null;
     f.exitCount = 0;
     if (this.extraction) {
       for (const e of r.run.exits) {
@@ -813,12 +814,14 @@ export class MatchPresentation {
 
   /**
    * Flag mode: the marker over the pole (pinned to the screen edge when it's out of view), in the colour
-   * of the team whose flag it is. Hidden between rounds and while you are close to the pole yourself.
+   * of the team whose flag it is. In Elimination, over the overtime flag while it is up (Dev 6 item 45), in its cloth's
+   * white. Hidden between rounds and while you are close to the pole yourself.
    */
   private updateMarker(camera: THREE.PerspectiveCamera, spectating: boolean): void {
     const r = this.state.round;
     const p = this.player.position;
-    const pole = r.flag.position;
+    const overtime = r.mode !== 'attackDefend';
+    const pole = overtime ? r.overtimeFlag.position : r.flag.position;
     const metres = Math.hypot(pole.x - p.x, pole.z - p.z);
     const near = !spectating && metres <= FLAG_VISUALS.markerHideWithin;
     if (!this.playing || !this.flag.object.visible || r.phase !== 'live' || near || this.boardUp) {
@@ -827,7 +830,7 @@ export class MatchPresentation {
     }
     const m = projectMarker(this.flag.markerAnchor, camera, this.view.width, this.view.height, FLAG_VISUALS.markerEdge, this.markerAt);
     const from = camera.position;
-    this.marker.show(m.x, m.y, Math.hypot(pole.x - from.x, pole.z - from.z), teamCss(r.attackers), !m.onScreen);
+    this.marker.show(m.x, m.y, Math.hypot(pole.x - from.x, pole.z - from.z), overtime ? FLAG_VISUALS.overtimeCss : teamCss(r.attackers), !m.onScreen);
   }
 
   /**
@@ -873,13 +876,15 @@ export class MatchPresentation {
   private updateRoundMessage(calling: boolean): void {
     const r = this.state.round;
     const showStart = r.phase === 'live' && this.state.time - this.roundStartedAt < HUD.roundStartMessageTime;
+    // Elimination's overtime flag just went up (Dev 6 item 45): how long it has been up is its time gone.
+    const showOvertime = r.phase === 'live' && r.overtimeFlag.up && this.rules.overtime.time - r.overtimeFlag.left < HUD.overtimeMessageTime;
     // Extraction: for a moment after you're back from a hit, the banner says how many respawns you have left.
     const respawned = r.phase === 'live' && this.state.time - this.respawnedAt < HUD.respawnMessageTime;
     // And for a moment after the run's news (M53, audit UI-02), unless it is saying you're back in.
     const newsAt = r.phase === 'live' && this.state.time - this.runNewsAt < HUD.runNewsTime ? this.runNewsAt : -1;
     const seconds = Math.max(1, Math.ceil(r.timer));
     const shown = this.shownRound;
-    if (shown.phase === r.phase && shown.winner === r.winner && shown.seconds === seconds && shown.number === r.number && shown.start === showStart && shown.mode === r.mode && shown.respawned === respawned && shown.newsAt === newsAt && shown.calling === calling) return;
+    if (shown.phase === r.phase && shown.winner === r.winner && shown.seconds === seconds && shown.number === r.number && shown.start === showStart && shown.overtime === showOvertime && shown.mode === r.mode && shown.respawned === respawned && shown.newsAt === newsAt && shown.calling === calling) return;
     shown.calling = calling;
     shown.respawned = respawned;
     shown.newsAt = newsAt;
@@ -888,8 +893,9 @@ export class MatchPresentation {
     shown.seconds = seconds;
     shown.number = r.number;
     shown.start = showStart;
+    shown.overtime = showOvertime;
     shown.mode = r.mode;
     if (calling) this.feedback.setRoundMessage('');
-    else this.feedback.setRoundMessage(respawned ? respawnBanner(this.runInfo.respawnsLeft) : newsAt >= 0 ? this.runNewsText : roundBanner(r, this.player.team, showStart, seconds, this.rules));
+    else this.feedback.setRoundMessage(respawned ? respawnBanner(this.runInfo.respawnsLeft) : newsAt >= 0 ? this.runNewsText : roundBanner(r, this.player.team, showStart, seconds, this.rules, showOvertime));
   }
 }

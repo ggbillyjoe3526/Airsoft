@@ -1,7 +1,7 @@
 import type { Difficulty } from '../../config/bots';
 import { EXTRACTION, homeTeamCap } from '../../config/extraction';
 import { formatRoundTime, type MatchRules, REALCAP_TEXT } from '../../config/matchRules';
-import { type MatchMode, unknownMode } from '../../config/modes';
+import { type MatchMode, OVERTIME, unknownMode } from '../../config/modes';
 import { TEAMS } from '../../config/teams';
 import type { ExtractionData } from '../../map/mapTypes';
 import { type RoundRules, teamEnd } from '../../sim/round';
@@ -113,6 +113,11 @@ function describeRounds(r: MatchRulesText, mode: 'elimination' | 'attackDefend')
   const ricochets = r.ricochetsCount ? ' Ricochets count.' : " Ricochets don't count.";
   const sw = r.switches;
   const winBy = sw?.winByTwo ? `, by two clear: level at ${r.winsNeeded - 1} all, play on until one team is two ahead` : '';
+  // Elimination's overtime flag (Dev 6 item 45).
+  const flag = `a flag goes up near the middle and the first team to touch it in ${OVERTIME.time} s wins the round`;
+  const timeOut = sw?.timeOutToMorePlayers
+    ? `the team with more players left wins it; level, ${flag}, or else the team with more players left then (a draw if still level)`
+    : `${flag}, or it's a draw`;
   const end = `First to ${r.winsNeeded} rounds wins the match${winBy}. One hit and you're out.${fire}${ricochets}${switchSentences(sw)}`;
   if (mode === 'attackDefend') {
     return (
@@ -125,7 +130,7 @@ function describeRounds(r: MatchRulesText, mode: 'elimination' | 'attackDefend')
   }
   return (
     teams +
-    `Knock out the whole other team to win a round (${minutes}:${seconds} on the clock; if time runs out ${sw?.timeOutToMorePlayers ? 'the team with more players left wins it, a draw if level' : "it's a draw"}). ` +
+    `Knock out the whole other team to win a round (${minutes}:${seconds} on the clock; if time runs out ${timeOut}). ` +
     `You start at the ${END_NAMES[r.eliminationStartEnd === 0 ? 0 : 1]} end; teams swap ends after round ${r.halfTimeAfter}. ` +
     end
   );

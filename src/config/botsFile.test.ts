@@ -94,6 +94,7 @@ describe('reading bots.md (BN1)', () => {
       aimsFromCover: false,
       holdsAngles: null,
       slicesCorners: true,
+      overtimeWatch: null, // its column left out: nobody watches the overtime flag first
     });
   });
 

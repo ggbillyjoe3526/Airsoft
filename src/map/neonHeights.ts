@@ -424,6 +424,11 @@ const TOWER_STAIRWELL_SOUTH = 1.7;
 const GRAND_STAIR: Rect = [6.3, 6.3 + STAIR_RUN, -9.7, -7.7];
 /** The flag: on the atrium floor, under the galleries. */
 const POLE = vec3(9.5, 0, 1.5);
+/**
+ * The overtime flag (Dev 6 item 45): out on Neon Avenue in the middle of the street, open to the sky and the windows
+ * over it, about 29 m from each end's spawns (content check map.overtimeFlag).
+ */
+const OVERTIME_FLAG = vec3(1.6, 0, -0.2);
 
 function tower(): MapBlock[] {
   const [x0, x1, z0, z1] = TOWER;
@@ -912,6 +917,7 @@ export const NEON_HEIGHTS: MapData = {
   deadZones: [WEST_DEAD_ZONE.map(spawnToWorld), EAST_DEAD_ZONE.map(spawnToWorld)],
   lanes: LANES.map((lane) => lane.map(toWorld)),
   flag: toWorld(POLE),
+  overtimeFlag: toWorld(OVERTIME_FLAG),
   storeys: [0, STOREY, 2 * STOREY],
   overlooks: OVERLOOKS.map((o) => ({ name: o.name, area: rectToWorld(o.area), from: o.from.map(toWorld) })),
   // Day or Night, picked on the map's option in the Map pop-up (M34d), Night the first time (the owner's default 10).

@@ -6,7 +6,7 @@ import { idleCommand, skipEnds, skipOffer, skipTickCap, skipTickShown } from './
 import { type Character, createCharacter } from './sim/character';
 import { createCommand } from './sim/commands';
 import type { GameEvent } from './sim/events';
-import { createRoundState, type RoundRules } from './sim/round';
+import { createRoundState, longestOvertime, type RoundRules } from './sim/round';
 import { spectatingText } from './ui/hitFeedback';
 import { type EventNode, stubMenuPage } from './ui/menus/menuTestSupport';
 import { PauseScreen } from './ui/menus/pauseScreen';
@@ -77,7 +77,7 @@ describe('Skip to next round: how it runs (M83)', () => {
 
   it('gives up only after the longest the rest of a round and the pause after it can take, plus a margin', () => {
     const cap = skipTickCap(rules);
-    const longest = (rules.roundTime + rules.flag.maxOvertime + rules.resetDelay) / SIM_DT;
+    const longest = (rules.roundTime + longestOvertime(rules) + rules.resetDelay) / SIM_DT;
     expect(cap).toBeGreaterThan(longest);
     expect(cap).toBeLessThanOrEqual(longest + Math.ceil(SKIP_ROUND.spareSeconds / SIM_DT) + 1);
     // A custom round time (M39) moves the cap with it.

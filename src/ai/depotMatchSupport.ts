@@ -110,6 +110,7 @@ export function playMatch(
     navSnap: NAV.snap,
     rounds: rules,
     pole: map.flag,
+    overtimeFlag: map.overtimeFlag,
   });
   let id = 0;
   for (let team = 0; team < 2; team++) {

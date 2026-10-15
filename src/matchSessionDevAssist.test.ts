@@ -18,7 +18,7 @@ function bare(played: boolean) {
   Object.assign(s, {
     player: { armament: { bottomless: false }, ghost: false },
     match: { setWatchingBots: vi.fn(), setBotIntents: vi.fn() },
-    state: { round: { phase: 'live', clock: 100, overtime: 0 } },
+    state: { round: { phase: 'live', clock: 100, overtime: 0, overtimeFlag: { left: ROUNDS.overtime.time } } },
     rounds: ROUNDS,
     setup: { devContentUsed: false },
     standardRules: true,

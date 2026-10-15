@@ -67,7 +67,7 @@ const EVENT_INDEX: ReadonlyMap<CalloutEvent, number> = new Map(CALLOUT_EVENTS.ma
  * The events any teammate may say (the nearest to where it happened), not only the bot it happened to: its own gap
  * doesn't hold one back. The answers to a ping (PG1) are picked a speaker the same way.
  */
-const TEAM_EVENTS: ReadonlySet<CalloutEvent> = new Set(['down', 'lastOne', 'tagged', 'raising', 'flag', 'pingGoing', 'pingWatching']);
+const TEAM_EVENTS: ReadonlySet<CalloutEvent> = new Set(['down', 'lastOne', 'tagged', 'raising', 'flag', 'overtime', 'pingGoing', 'pingWatching']);
 /**
  * The answers to a player's ping (PG1), and the asks and answers for a magazine (MG1): a personality's Talks (×) never
  * makes them less likely.
@@ -231,6 +231,10 @@ export class CalloutDirector {
       if (attackers < 0) return;
       this.offerFromTeam(attackers, 'raising', -1, e.position, bots, '', 0, 0);
       this.offerFromTeam(1 - attackers, 'flag', -1, e.position, bots, '', 0, 0);
+    } else if (e.type === 'overtime') {
+      // Elimination's overtime flag went up (Dev 6 item 45): on each team, the bot nearest it says so.
+      const area = this.areaOf(e.position);
+      for (let t = 0; t < 2; t++) this.offerFromTeam(t, 'overtime', -1, e.position, bots, area, 0, 0);
     }
   }
 

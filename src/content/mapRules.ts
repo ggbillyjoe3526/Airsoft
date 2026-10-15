@@ -44,13 +44,14 @@ function room(entry: MapEntry, map: MapData): CheckResult {
   return result('rules', 'map.room', mapItem(entry), 'pass', `${plural(max, 'spawn')} and dead-zone spots at each end, for up to ${max} a side.`);
 }
 
-/** Every point play stands someone on: spawns, dead-zone spots, lane points and the flag. */
+/** Every point play stands someone on: spawns, dead-zone spots, lane points, the flag and the overtime flag. */
 export function mapPoints(map: MapData): { what: string; p: Vec3 }[] {
   return [
     ...map.spawns.flatMap((end, e) => end.map((s, i) => ({ what: `end ${e} spawn ${i + 1}`, p: s.position }))),
     ...map.deadZones.flatMap((end, e) => end.map((s, i) => ({ what: `end ${e} dead-zone spot ${i + 1}`, p: s.position }))),
     ...map.lanes.flatMap((lane, l) => lane.map((p, i) => ({ what: `lane ${l + 1} point ${i + 1}`, p }))),
     ...(map.flag ? [{ what: 'the flag', p: map.flag }] : []),
+    ...(map.overtimeFlag ? [{ what: 'the overtime flag', p: map.overtimeFlag }] : []),
   ];
 }
 
@@ -71,7 +72,7 @@ export function offTheFloor(geo: MapGeometry): string[] {
 function onFloor(entry: MapEntry, geo: MapGeometry): CheckResult {
   const off = offTheFloor(geo);
   if (off.length > 0) return result('rules', 'map.onFloor', mapItem(entry), 'fail', `${off.slice(0, 4).join('; ')}${off.length > 4 ? `; and ${off.length - 4} more` : ''}.`);
-  return result('rules', 'map.onFloor', mapItem(entry), 'pass', `All ${mapPoints(geo.map).length} spawns, dead-zone spots, lane points and flag stand on walkable floor.`);
+  return result('rules', 'map.onFloor', mapItem(entry), 'pass', `All ${mapPoints(geo.map).length} spawns, dead-zone spots, lane points and flags stand on walkable floor.`);
 }
 
 /** The ramps steeper than the physics walks, in words, and the terrain's steepest slope if it is too steep. */

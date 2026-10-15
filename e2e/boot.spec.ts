@@ -119,13 +119,13 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(rulesGroup.getByRole('button', { name: 'Skirmish' })).toHaveAttribute('aria-pressed', 'true');
   await expect(rulesGroup.getByRole('button', { name: 'Tournament' })).toBeHidden();
   await expect(rulesGroup.getByRole('button', { name: 'Pro CQB' })).toBeHidden();
-  await expect(match.getByRole('group', { name: 'Overtime' })).toBeHidden();
+  await expect(match.getByRole('group', { name: 'Win by two' })).toBeHidden();
   await rulesGroup.getByRole('button', { name: 'Custom' }).click();
-  await expect(match.getByRole('group', { name: 'Overtime' })).toBeVisible();
+  await expect(match.getByRole('group', { name: 'Win by two' })).toBeVisible();
   await expect(match.getByRole('group', { name: 'Fire modes' })).toBeVisible();
   await expect(page.locator('.setup-rules')).toContainText('never go into your records'); // Custom never goes into the records, and says so
   await rulesGroup.getByRole('button', { name: 'Skirmish' }).click();
-  await expect(match.getByRole('group', { name: 'Overtime' })).toBeHidden();
+  await expect(match.getByRole('group', { name: 'Win by two' })).toBeHidden();
   await match.getByRole('group', { name: 'Team size' }).getByRole('button', { name: '2v2' }).click();
   await match.getByRole('group', { name: 'Rounds to win' }).getByRole('button', { name: '3' }).click();
   await expect(facts).toContainText('2v2 · first to 3');

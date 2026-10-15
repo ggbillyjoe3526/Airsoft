@@ -37,7 +37,8 @@ A personality changes how a bot plays, never how well: its reaction, turning and
   fighting; nearer, it fights where it is.
 - **Walk the last (×).** Closing in on where someone was seen or heard, it walks (quietly) for the last this-many
   metres.
-- **Flank chance (+).** The chance a search of a far spot goes round to one side first.
+- **Flank chance (+).** The chance a search of a far spot goes round to one side first; in overtime, the chance it
+  goes for the flag round the side.
 - **Burst (×) and Burst pause (×).** How long it holds the trigger, and how long it waits between bursts.
 - **Watch where you ducked (s).** Having lost sight of you, how long it keeps watching the spot before coming after
   you.
@@ -54,6 +55,9 @@ A personality changes how a bot plays, never how well: its reaction, turning and
 - **Holds angles.** Holding still, it aims at the corners and doorways someone would step out of.
 - **Slices corners.** Near the enemy it walks and aims at each corner as it opens, and tops up its magazine from
   cover.
+- **Watches the flag first (s).** In Elimination's overtime it first holds cover near the flag for this long, aiming at
+  it, before it goes in to touch it; it goes at once when it is the last of its team in play, and every bot goes in
+  for the overtime's last seconds. – goes straight for the flag. The column can be left out: then nobody watches first.
 
 ## Roster
 
@@ -112,9 +116,9 @@ A personality changes how a bot plays, never how well: its reaction, turning and
 
 ## Habits
 
-| Personality | Pushes in | Waits for the team | Own lane | Holds until (s left) | Aims from cover | Holds angles | Slices corners |
-|---|---|---|---|---|---|---|---|
-| Rusher | yes | no | no | – | no | – | – |
-| Anchor | no | yes | no | 60 | yes | yes | – |
-| Flanker | no | no | yes | – | no | – | – |
-| Careful | no | yes | no | – | no | – | yes |
+| Personality | Pushes in | Waits for the team | Own lane | Holds until (s left) | Aims from cover | Holds angles | Slices corners | Watches the flag first (s) |
+|---|---|---|---|---|---|---|---|---|
+| Rusher | yes | no | no | – | no | – | – | – |
+| Anchor | no | yes | no | 60 | yes | yes | – | 12 |
+| Flanker | no | no | yes | – | no | – | – | – |
+| Careful | no | yes | no | – | no | – | yes | 5 |

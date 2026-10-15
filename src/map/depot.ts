@@ -319,6 +319,12 @@ const LANES: Vec3[][] = [
 const POLE = vec3(11.5, 0, -1.0);
 
 /**
+ * The overtime flag (Dev 6 item 45): in front of the Main Gate, between the alley's centre container and the Bay's wall,
+ * where Container Alley meets the gate. Each end's spawns walk 30.2 m there (content check map.overtimeFlag).
+ */
+const OVERTIME_FLAG = vec3(2.0, 0, -1.6);
+
+/**
  * Extraction (M43), in plan coordinates like the rest. The squad goes in at either spawn yard; the exits are the yard's
  * four corner gates, and the two by the insertion's yard stay closed for the run (EXTRACTION.minExitDistance), so a
  * run from the west leaves by the back lot or, late, the North Gate road, and one from the east by the car park or,
@@ -445,6 +451,7 @@ export const DEPOT: MapData = {
   deadZones: [WEST_DEAD_ZONE.map(spawnToWorld), EAST_DEAD_ZONE.map(spawnToWorld)],
   lanes: LANES.map((lane) => lane.map(toWorld)),
   flag: toWorld(POLE),
+  overtimeFlag: toWorld(OVERTIME_FLAG),
   extraction: {
     runTime: RUN_TIME,
     baseOpponents: BASE_OPPONENTS,

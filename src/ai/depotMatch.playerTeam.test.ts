@@ -64,6 +64,7 @@ function playAs(team: number, mode: TeamMode, seed: number) {
     navSnap: NAV.snap,
     rounds: RULES,
     pole: map.flag,
+    overtimeFlag: map.overtimeFlag,
   });
   for (const [id, t] of rosterTeams(team, size, size).entries()) state.characters.push(createCharacter(id, vec3(), 0, LOADOUT, t));
   placeTeams(state.round, state.characters, ctx.round);

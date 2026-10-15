@@ -1,4 +1,4 @@
-import { FLAG } from './modes';
+import { FLAG, OVERTIME } from './modes';
 
 export interface HitConfig {
   bodyRadius: number;
@@ -181,7 +181,7 @@ export const HITS: HitConfig = {
 export const ROUNDS = {
   /** Players per team, including the local player on team 0. */
   teamSize: 3,
-  /** Round length (s). Elimination: a round that runs out of time is a draw (nobody scores). Flag: the defenders win it. */
+  /** Round length (s). Elimination: a round that runs out of time level goes to overtime. Flag: the defenders win it. */
   roundTime: 150,
   /** Seconds between a round ending and everyone respawning. */
   resetDelay: 4,
@@ -198,9 +198,13 @@ export const ROUNDS = {
   eliminationFirstEnd: 1,
   /** The lead a team needs once it has `winsNeeded` round wins: 1, the first there wins (Win by two sets 2, M39). */
   winBy: 1,
-  /** Elimination: a round that runs out of time is a draw, played again (the Rules picker can give it to the side with more players left, M39). */
+  /**
+   * Elimination: a round that runs out of time level goes to overtime (the overtime flag, Dev 6 item 45), and is a draw,
+   * played again, if nobody touches it (the Rules picker can give a time-out to the side with more players left, M39).
+   */
   timeOutToMorePlayers: false,
   flag: FLAG,
+  overtime: OVERTIME,
 } as const;
 
 /**

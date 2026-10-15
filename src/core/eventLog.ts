@@ -91,6 +91,9 @@ export class EventLog {
         case 'roundOver':
           this.take(e.type, tick, -1, e.winner, false, e.reason);
           break;
+        case 'overtime':
+          this.take(e.type, tick, -1, -1, false, '');
+          break;
         case 'matchOver':
           this.take(e.type, tick, -1, e.winner, false, '');
           break;
@@ -220,6 +223,8 @@ function describe(s: Slot, who: (id: number) => string): string {
       return `round ${s.other} started`;
     case 'roundOver':
       return `round over: ${teamWon(s.other)} (${s.word})`;
+    case 'overtime':
+      return 'overtime: the flag went up';
     case 'matchOver':
       return `match over: ${teamWon(s.other)}`;
     case 'respawned':

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { EXTRACTION } from '../config/extraction';
 import { HITS } from '../config/hits';
-import { FLAG } from '../config/modes';
+import { FLAG, OVERTIME } from '../config/modes';
 import { BODY } from '../config/movement';
 import { LOADOUT } from '../config/replicas';
 import type { SpawnPoint } from '../map/mapTypes';
@@ -16,7 +16,7 @@ import { vec3 } from './vec';
 
 const DT = 1 / 60;
 const RUN_TIME = 240;
-const RULES: RoundRules = { roundTime: RUN_TIME, resetDelay: 2, winsNeeded: 1, halfTimeAfter: 1, eliminationFirstEnd: 0, flag: FLAG, winBy: 1, timeOutToMorePlayers: false };
+const RULES: RoundRules = { roundTime: RUN_TIME, resetDelay: 2, winsNeeded: 1, halfTimeAfter: 1, eliminationFirstEnd: 0, flag: FLAG, winBy: 1, timeOutToMorePlayers: false, overtime: OVERTIME };
 const INSERTION: SpawnPoint[] = [0, 1, 2].map((z) => ({ position: vec3(-20, 0, z), yaw: -Math.PI / 2 }));
 const STARTS: SpawnPoint[] = [5, 10, 15, -5, 18].map((x) => ({ position: vec3(x, 0, 6), yaw: 0 }));
 

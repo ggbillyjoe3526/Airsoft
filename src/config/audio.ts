@@ -267,6 +267,11 @@ export const AUDIO = {
   roundStartWhistle: 0.14,
   roundStartWhistleGap: 1.6,
   /**
+   * Elimination's overtime flag going up (Dev 6 item 45): the referee's three short blasts, each `length` seconds and
+   * starting `gap` blast-lengths after the one before, quicker than a round's start so the two are never mistaken.
+   */
+  overtimeWhistle: { blasts: 3, length: 0.12, gap: 1.5 },
+  /**
    * A late exit opening in Extraction (M53, audit AUD-12): this many of the exit count's beeps, `gap` seconds apart, on
    * the interface bus and with no dip, so a player facing the other way hears that the plan can change.
    */

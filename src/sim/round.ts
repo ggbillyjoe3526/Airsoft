@@ -1,4 +1,4 @@
-import { type FlagRules, type MatchMode, unknownMode } from '../config/modes';
+import { type FlagRules, type MatchMode, type OvertimeRules, unknownMode } from '../config/modes';
 import type { SpawnPoint } from '../map/mapTypes';
 import type { BBPool } from './ballistics';
 import { type Character, respawnCharacter } from './character';
@@ -6,11 +6,15 @@ import { isInPlay } from './elimination';
 import type { GameEvent, RoundEndReason } from './events';
 import { createRunState, type ExtractionContext, placeRun, resetRun, type RunState, stepRun } from './extraction';
 import { createFlagState, type FlagState, resetFlag, stepFlag } from './flag';
-import type { Vec3 } from './vec';
+import { createOvertimeFlag, type OvertimeFlagState, raiseOvertimeFlag, resetOvertimeFlag, stepOvertimeFlag } from './overtimeFlag';
+import { type Vec3, vec3 } from './vec';
 
 /** How a match is played (config/hits.ts ROUNDS). */
 export interface RoundRules {
-  /** Round length (s). Elimination: a round that runs out of time is a draw, played again. Flag: the defenders win. */
+  /**
+   * Round length (s). Elimination: a round that runs out of time level goes to overtime (`overtime`), a draw, played
+   * again, if nobody takes the flag. Flag: the defenders win.
+   */
   roundTime: number;
   /** Seconds between a round ending and the next one starting. */
   resetDelay: number;
@@ -22,8 +26,8 @@ export interface RoundRules {
    */
   winBy: number;
   /**
-   * Elimination (M39): a round that runs out of time goes to the team with more players left in play; level, it is a
-   * draw (played again) as without this rule.
+   * Elimination (M39): a round that runs out of time goes to the team with more players left in play; level, it goes to
+   * overtime as without this rule.
    */
   timeOutToMorePlayers: boolean;
   /**
@@ -34,6 +38,8 @@ export interface RoundRules {
   /** Elimination: the end of the map (0 west, 1 east) Alpha starts the match at (Beta the other). */
   eliminationFirstEnd: number;
   flag: FlagRules;
+  /** Elimination's overtime flag (Dev 6 item 45). */
+  overtime: OvertimeRules;
 }
 
 /**
@@ -53,12 +59,19 @@ export interface RoundContext {
   spawnLift: number;
   /** Extraction (M43): the run's rules and places; absent in the other modes. */
   extraction?: ExtractionContext | undefined;
+  /**
+   * Elimination (Dev 6 item 45): the foot of the overtime flag, near the middle (map data). Absent: a round that runs out
+   * of time level is decided by the time-out rule at once (a draw), with no overtime.
+   */
+  overtimeFlag?: Vec3 | undefined;
 }
 
 /**
  * Match flow: rounds against the clock. In both modes a team with nobody left in play loses the round.
- * Elimination: if time runs out first the round is a draw (or, by M39's rule, goes to the team with more players
- * left). A draw (both teams out at once, in either mode) is played again under the same number. Attack / Defend: the attackers win by raising
+ * Elimination: if time runs out first with the teams level (under M39's rule the team with more players left takes it),
+ * the overtime flag goes up near the middle and the first team to touch it wins (Dev 6 item 45); untouched when its time
+ * is up, the time-out rule decides (a draw by default). A draw (both teams out at once, in either mode, or a time-out
+ * nobody takes) is played again under the same number. Attack / Defend: the attackers win by raising
  * their flag on the defenders' pole, the defenders by holding out until time runs out (with overtime
  * while the attackers are still working the rope). The teams swap ends at half-time in both modes (in
  * Attack / Defend that swaps attack and defence too). After a short pause everyone respawns for the next
@@ -92,6 +105,8 @@ export interface RoundState {
   flag: FlagState;
   /** Extraction: the run (sim/extraction.ts); the match is one run, `clock` its time left. Unused in the other modes. */
   run: RunState;
+  /** Elimination: the overtime flag (sim/overtimeFlag.ts), up once the clock ran out level. Never up in the other modes. */
+  overtimeFlag: OvertimeFlagState;
 }
 
 /** A match ready to play round 1 in `mode` (characters are put at their spawns with placeTeams and respawnCharacter). */
@@ -111,7 +126,9 @@ export function createRoundState(rules: RoundRules, mode: MatchMode = 'eliminati
     attackers: -1,
     flag: createFlagState(),
     run: createRunState(),
+    overtimeFlag: createOvertimeFlag(),
   };
+  resetOvertimeFlag(round.overtimeFlag, rules.overtime);
   setUpObjective(round, rules, pole);
   return round;
 }
@@ -201,7 +218,7 @@ export function stepRound(round: RoundState, characters: Character[], bbs: BBPoo
 
 /**
  * A mode played in rounds, live: a team wiped out loses the round, then (with `flagMode`) the flag raised wins it for the
- * attackers, then the clock (Attack / Defend's overtime while the rope is worked).
+ * attackers, then the clock (Attack / Defend's overtime while the rope is worked; Elimination's overtime flag).
  */
 function stepRoundsRound(round: RoundState, characters: Character[], ctx: RoundContext, events: GameEvent[], dt: number, flagMode: boolean): void {
   // Live. A team with members but nobody left in play is wiped out (an empty team never is).
@@ -224,12 +241,52 @@ function stepRoundsRound(round: RoundState, characters: Character[], ctx: RoundC
   round.clock = Math.max(0, round.clock - dt);
   if (blueOut || orangeOut) endRound(round, blueOut && orangeOut ? -1 : blueOut ? 1 : 0, 'eliminated', ctx.rules, events);
   else if (flagMode && stepFlag(round.flag, characters, round.attackers, ctx.rules.flag, events, dt)) endRound(round, round.attackers, 'captured', ctx.rules, events);
-  else if (round.clock <= 0) {
+  else if (flagMode) {
+    if (round.clock > 0) return;
     // Overtime: attackers still working the rope (alone or contested) when time runs out get to finish.
-    const ropeWorked = flagMode && (round.flag.status === 'raising' || round.flag.status === 'contested');
+    const ropeWorked = round.flag.status === 'raising' || round.flag.status === 'contested';
     if (ropeWorked && round.overtime < ctx.rules.flag.maxOvertime) round.overtime += dt;
-    else endRound(round, flagMode ? 1 - round.attackers : timeOutWinner(blueInPlay, orangeInPlay, ctx.rules), 'time', ctx.rules, events);
+    else endRound(round, 1 - round.attackers, 'time', ctx.rules, events);
+  } else stepEliminationClock(round, characters, ctx, events, dt, blueInPlay, orangeInPlay);
+}
+
+/**
+ * Elimination once nobody is wiped out (Dev 6 item 45): the overtime flag while it is up (the first team to touch it wins;
+ * its time out, the time-out rule decides), else at the buzzer the time-out rule, or the flag going up when that gives
+ * nobody the round, on a map with a spot for it and with its time not run out (End the round now, runOutRound).
+ */
+function stepEliminationClock(round: RoundState, characters: readonly Character[], ctx: RoundContext, events: GameEvent[], dt: number, blue: number, orange: number): void {
+  const flag = round.overtimeFlag;
+  if (flag.up) {
+    const taken = stepOvertimeFlag(flag, characters, ctx.rules.overtime, dt);
+    if (taken >= 0) endRound(round, taken, 'overtimeFlag', ctx.rules, events);
+    else if (flag.left <= 0) endRound(round, timeOutWinner(blue, orange, ctx.rules), 'time', ctx.rules, events);
+    return;
   }
+  if (round.clock > 0) return;
+  const winner = timeOutWinner(blue, orange, ctx.rules);
+  const spot = ctx.overtimeFlag;
+  if (winner >= 0 || !spot || flag.left <= 0) {
+    endRound(round, winner, 'time', ctx.rules, events);
+    return;
+  }
+  raiseOvertimeFlag(flag, spot);
+  events.push({ type: 'overtime', position: vec3(spot.x, spot.y, spot.z) });
+}
+
+/**
+ * Dev settings › End the round now (M90): the live round's clock and any overtime run out, so the next tick ends it as
+ * on time, by the mode's own rule (Elimination's flag doesn't go up for it, or comes down if it is up).
+ */
+export function runOutRound(round: RoundState, rules: RoundRules): void {
+  round.clock = 0;
+  round.overtime = rules.flag.maxOvertime;
+  round.overtimeFlag.left = 0;
+}
+
+/** The most a round can run past its clock: Attack / Defend's rope overtime or Elimination's flag, the longer (s). */
+export function longestOvertime(rules: Pick<RoundRules, 'flag' | 'overtime'>): number {
+  return Math.max(rules.flag.maxOvertime, rules.overtime.time);
 }
 
 /**
@@ -293,6 +350,7 @@ function startRound(round: RoundState, characters: Character[], bbs: BBPool, ctx
   round.clock = ctx.rules.roundTime;
   round.timer = 0;
   round.overtime = 0;
+  resetOvertimeFlag(round.overtimeFlag, ctx.rules.overtime);
   setUpObjective(round, ctx.rules, ctx.pole);
   switch (round.mode) {
     case 'elimination':

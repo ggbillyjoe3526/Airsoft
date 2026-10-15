@@ -33,6 +33,7 @@ const LINES: Record<CalloutEvent, string> = {
   holding: 'Holding {area}.',
   raising: 'Raising!',
   flag: 'Flag!',
+  overtime: 'Overtime, {area}!',
   pingGoing: 'Going to {area}.',
   pingWatching: 'Watching {area}.',
   needMag: 'Need a mag!',
@@ -52,7 +53,7 @@ interface Setup {
 
 /** A callouts.md with every event (in the shipped order of urgency), always called unless `chance` says otherwise. */
 function calloutsText(s: Setup = {}): string {
-  const order: CalloutEvent[] = ['lastOne', 'down', 'tagged', 'pingGoing', 'pingWatching', 'needMag', 'magComing', 'flag', 'raising', 'contacts', 'contact', 'reloading', 'magThanks', 'heard', 'pushing', 'flanking', 'checking', 'holding'];
+  const order: CalloutEvent[] = ['lastOne', 'down', 'tagged', 'pingGoing', 'pingWatching', 'needMag', 'magComing', 'overtime', 'flag', 'raising', 'contacts', 'contact', 'reloading', 'magThanks', 'heard', 'pushing', 'flanking', 'checking', 'holding'];
   const name = (id: CalloutEvent) => CALLOUT_EVENTS.find((e) => e.id === id)!.name;
   const p = { bot: 4, team: 1.5, enemy: 10, wait: 1.5, ...s.pace };
   return [

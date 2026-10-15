@@ -5,11 +5,13 @@ import { halfTimeAfterRound, roundDrawn, type RoundRules, type RoundState } from
 /**
  * The round message in the middle of the screen, worded from your side: the result of the round just
  * played (and the countdown to the next, with a note at half-time), the match result, or
- * "Round N" (with your job in flag mode) just after a round starts. Empty when there's nothing to say.
+ * "Round N" (with your job in flag mode) just after a round starts, or in Elimination "Overtime · touch the flag" just
+ * after its overtime flag goes up (`showOvertime`, Dev 6 item 45). Empty when there's nothing to say.
  */
-export function roundBanner(r: RoundState, playerTeam: number, showStart: boolean, secondsToNext: number, rules: RoundRules): string {
+export function roundBanner(r: RoundState, playerTeam: number, showStart: boolean, secondsToNext: number, rules: RoundRules, showOvertime = false): string {
   switch (r.mode) {
     case 'elimination':
+      if (showOvertime && r.phase === 'live') return OVERTIME_START;
       return roundsBanner(r, playerTeam, showStart, secondsToNext, rules, false);
     case 'attackDefend':
       return roundsBanner(r, playerTeam, showStart, secondsToNext, rules, true);
@@ -28,7 +30,10 @@ function roundsBanner(r: RoundState, playerTeam: number, showStart: boolean, sec
     const winner = r.winner >= 0 ? TEAMS[r.winner]!.name : '';
     let result: string;
     if (r.reason === 'captured') result = mine ? 'Flag raised · your team wins the round' : `${winner} raised their flag · your team loses the round`;
+    // Elimination's overtime flag (Dev 6 item 45): touched first, or its time out with nobody at it.
+    else if (r.reason === 'overtimeFlag') result = mine ? 'Flag touched · your team wins the round' : `${winner} touched the flag · your team loses the round`;
     else if (flagMode && r.reason === 'time') result = mine ? "Time's up · your team held the pole" : `Time's up · ${winner} held the pole`;
+    else if (r.reason === 'time' && r.overtimeFlag.up) result = r.winner < 0 ? 'Nobody touched the flag · draw' : mine ? 'Nobody touched the flag · your team had more players left' : `Nobody touched the flag · ${winner} had more players left`;
     else if (r.winner < 0) result = r.reason === 'time' ? "Time's up · draw" : 'Draw';
     // An Elimination time-out given to the team with more players left (Tournament, M39; BP2).
     else if (r.reason === 'time') result = mine ? "Time's up · your team had more players left" : `Time's up · ${winner} had more players left`;
@@ -61,13 +66,15 @@ export function respawnBanner(left: number): string {
 
 /** "Round 2", and in flag mode "Round 2 · Attack" or "· Defend": the words a round starts with (roundBanner). */
 const ROUND_START = /^Round \d+(?: · (?:Attack|Defend))?$/;
+/** Said as Elimination's overtime flag goes up (Dev 6 item 45): a headline, as a round's start is. */
+const OVERTIME_START = 'Overtime · touch the flag';
 
 /**
- * Whether `text` is the message a round starts with ("Round 2", with your job in flag mode), which the banner shows as
- * its headline: larger, in the HUD's heavy capitals (G4, ui/hudCss/round.css).
+ * Whether `text` is the message a round starts with ("Round 2", with your job in flag mode), or overtime does, which
+ * the banner shows as its headline: larger, in the HUD's heavy capitals (G4, ui/hudCss/round.css).
  */
 export function isRoundStart(text: string): boolean {
-  return ROUND_START.test(text);
+  return text === OVERTIME_START || ROUND_START.test(text);
 }
 
 /** Before the countdown in the between-rounds message. */

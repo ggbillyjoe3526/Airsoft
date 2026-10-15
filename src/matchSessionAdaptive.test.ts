@@ -15,7 +15,7 @@ function bare(adaptive: AdaptiveRun | null, phase = 'matchOver', matchWinner = 0
   Object.assign(s, {
     player: { armament: { bottomless: false }, ghost: false, team: 0 },
     match: { setWatchingBots: vi.fn(), setBotIntents: vi.fn() },
-    state: { round: { phase, matchWinner, clock: 100, overtime: 0 } },
+    state: { round: { phase, matchWinner, clock: 100, overtime: 0, overtimeFlag: { left: ROUNDS.overtime.time } } },
     rounds: ROUNDS,
     setup: { devContentUsed: false },
     standardRules: true,

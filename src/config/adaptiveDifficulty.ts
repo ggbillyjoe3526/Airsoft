@@ -67,6 +67,7 @@ export const ADAPTIVE_BLENDED = [
   'preAimReactionTime',
   'preAimSettled',
   'peekWatchTime',
+  'overtimeReaction',
   'huntMemory',
 ] as const satisfies readonly (keyof BotSkill)[];
 

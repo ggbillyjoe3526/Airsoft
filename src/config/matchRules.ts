@@ -30,9 +30,9 @@ export interface MatchRules {
    * The Rules picker's switches (M39). Each is off (heardOnMinimap: on) in Skirmish, the match the game always had;
    * Tournament and Pro CQB set them (RULESETS), and Custom lets the player set each one.
    */
-  /** Win by two (overtime): a team needs `winsNeeded` round wins and a lead of WIN_BY_TWO rounds. */
+  /** Win by two (the Rules picker's row, called Overtime before Dev 6): a team needs `winsNeeded` round wins and a lead of WIN_BY_TWO rounds. */
   winByTwo: boolean;
-  /** Elimination: a round that runs out of time goes to the side with more players left (a draw, replayed, if level). */
+  /** Elimination: a round that runs out of time goes to the side with more players left (if level, to the overtime flag, Dev 6 item 45). */
   timeOutToMorePlayers: boolean;
   /** The minimap shows the other team where you last heard them (M23); off, it shows your teammates only. */
   heardOnMinimap: boolean;
@@ -53,7 +53,7 @@ export interface MatchRules {
 /** The rules that are on or off (friendly fire, ricochets and the Rules picker's switches). */
 export type RuleSwitch = { [K in keyof MatchRules]: MatchRules[K] extends boolean ? K : never }[keyof MatchRules];
 
-/** Win by two: the lead a team needs to take the match once `winsNeeded` is reached (overtime). */
+/** Win by two: the lead a team needs to take the match once `winsNeeded` is reached. */
 export const WIN_BY_TWO = 2;
 
 /**
@@ -127,13 +127,13 @@ export const DEFAULT_MATCH_RULES: MatchRules = {
 /** The Custom switches' choices (M39), each saved under its own setting (ui/menus/savedChoices.ts). */
 export const OVERTIME_CHOICES: readonly MatchChoice<Switch>[] = [
   { id: 'off', label: 'Off', blurb: 'The first team to the rounds to win takes the match.' },
-  { id: 'on', label: 'Win by two', blurb: 'Level one round short of the win, play on until one team is two rounds ahead.' },
+  { id: 'on', label: 'On', blurb: 'Level one round short of the win, play on until one team is two rounds ahead.' },
 ];
 
 export type TimeOutRule = 'draw' | 'morePlayers';
 export const TIME_OUT_CHOICES: readonly MatchChoice<TimeOutRule>[] = [
-  { id: 'draw', label: 'Draw', blurb: 'An Elimination round that runs out of time is a draw, played again.' },
-  { id: 'morePlayers', label: 'More players left', blurb: 'An Elimination round that runs out of time goes to the team with more players left; level, it is a draw.' },
+  { id: 'draw', label: 'Overtime flag', blurb: 'An Elimination round that runs out of time goes to overtime: a flag goes up in the middle and the first team to touch it wins; untouched, a draw, played again.' },
+  { id: 'morePlayers', label: 'More players left', blurb: 'An Elimination round that runs out of time goes to the team with more players left; level, to the overtime flag.' },
 ];
 
 export const MINIMAP_HEARD_CHOICES: readonly MatchChoice<Switch>[] = [

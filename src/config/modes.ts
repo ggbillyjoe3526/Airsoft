@@ -86,3 +86,27 @@ export const FLAG: FlagRules = {
   maxOvertime: 15,
   ropeStep: 1 / 12,
 };
+
+/**
+ * Elimination's overtime flag (Dev 6 item 45): when a round's clock runs out level, a flag goes up at the map's
+ * `overtimeFlag` spot near the middle and the first team to touch it wins the round (sim/overtimeFlag.ts).
+ */
+export interface OvertimeRules {
+  /** How long the flag stays up (s); untouched by then, the time-out rule decides the round (a draw if level). */
+  time: number;
+  /** A player in play within this distance (metres, horizontal) of the flag's foot touches it: about an arm's reach. */
+  reach: number;
+  /** ...with their feet within this height (metres) of its foot: from its own floor, never a balcony over it. */
+  reachHeight: number;
+}
+
+/**
+ * Long enough to reach the middle from anywhere on Woodland, the biggest field (its spawns walk 58 m there, 14 s at a
+ * run), and fight for it; short enough to stay a finish, not a second round. A touch is a hand on the flag: no hold, so
+ * the first one there wins, as at the sites that play it.
+ */
+export const OVERTIME: OvertimeRules = {
+  time: 30,
+  reach: 1.0,
+  reachHeight: 1.0,
+};

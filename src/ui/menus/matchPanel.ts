@@ -150,7 +150,7 @@ export class MatchPanel {
           }).root,
         ),
       ),
-      toggle('winByTwo', 'Overtime', 'Half-time stays one round short of the win.', OVERTIME_CHOICES, 'overtime', 'on', 'off'),
+      toggle('winByTwo', 'Win by two', 'Half-time stays one round short of the win.', OVERTIME_CHOICES, 'overtime', 'on', 'off'),
       toggle('timeOutToMorePlayers', 'Time-out', 'Elimination only: in Attack and Defend the defenders hold.', TIME_OUT_CHOICES, 'timeOut', 'morePlayers', 'draw'),
       toggle('heardOnMinimap', 'Minimap', 'The hit marker and the "you\'re hit" pointer stay either way.', MINIMAP_HEARD_CHOICES, 'minimapHeard', 'on', 'off'),
       toggle('semiAutoOnly', 'Fire modes', 'For everyone, bots included.', FIRE_MODE_CHOICES, 'fireModes', 'semi', 'any'),

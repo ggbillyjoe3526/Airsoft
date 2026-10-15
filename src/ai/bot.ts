@@ -305,6 +305,13 @@ export interface Bot {
   magAskGap: number;
   /** Bringing one and still far off: it sprints (MAG_SHARE.hurryDistance). */
   magRush: boolean;
+  /**
+   * Elimination's overtime flag (Dev 6 item 45): when it goes for the flag (s; the flag going up plus its skill's
+   * overtimeReaction; Infinity until it is up), and whether this overtime it goes round the side (its flankChance, drawn
+   * once when the flag goes up; used up on the way).
+   */
+  overtimeAt: number;
+  overtimeFlank: boolean;
 }
 
 /** Everything a bot's decisions depend on besides its own state. */
@@ -488,6 +495,8 @@ export function createBot(character: Character, seed: number, cfg: BotBehaviour,
     magInAir: false,
     magAskGap: Number.NEGATIVE_INFINITY,
     magRush: false,
+    overtimeAt: Number.POSITIVE_INFINITY,
+    overtimeFlank: false,
   };
   resetBot(bot, -1, 0, cfg);
   return bot;
@@ -572,6 +581,8 @@ export function resetBot(b: Bot, lane: number, startHold: number, cfg: BotBehavi
   b.magInAir = false;
   b.magAskGap = Number.NEGATIVE_INFINITY;
   b.magRush = false;
+  b.overtimeAt = Number.POSITIVE_INFINITY;
+  b.overtimeFlank = false;
 }
 
 /** Drops the current target (its contact stays remembered for contactGrace). */
@@ -622,9 +633,17 @@ export function lastSeenAt(b: Bot): number {
 /** A random value in [min, max] from the bot's own seeded generator. */
 export const pick = (rng: RngState, r: readonly [number, number]): number => r[0] + rngNext(rng) * (r[1] - r[0]);
 
-/** The way `b` faces while holding still (M46): a guard the way into its case, everyone else the enemy's side. */
+/**
+ * The way `b` faces while holding still (M46): a guard the way into its case, a bot watching the overtime flag from cover
+ * (Dev 6 item 45) at the flag from its spot, everyone else the enemy's side.
+ */
 export function holdYaw(b: Bot, w: BotWorld): number {
-  return b.role === 'guard' ? b.postYaw : (w.enemyYaw[b.character.team] ?? 0);
+  if (b.role === 'guard') return b.postYaw;
+  if (b.mode === 'flag' && b.flagGuard && w.round.overtimeFlag.up) {
+    const flag = w.round.overtimeFlag.position;
+    return Math.atan2(-(flag.x - b.flagGoal.x), -(flag.z - b.flagGoal.z));
+  }
+  return w.enemyYaw[b.character.team] ?? 0;
 }
 
 /** Flag mode: whether `b`'s team attacks or defends the pole this round ('none' in elimination). */
@@ -637,10 +656,17 @@ export function flagRole(b: Bot, w: BotWorld): 'attack' | 'defend' | 'none' {
 /**
  * True if `b` should be at the pole now: an attacker that has swept its lane, or a defender picked to
  * retake while the flag is off the bottom (the flag on its pole is in plain view; bots know how far up
- * it is). The others hold their posts.
+ * it is). The others hold their posts. In Elimination's overtime (Dev 6 item 45), every bot once its reaction to the
+ * flag going up is over: the flag comes before chasing noises, as the pole does.
  */
 export function wantsFlag(b: Bot, w: BotWorld): boolean {
   const role = flagRole(b, w);
   if (role === 'attack') return b.laneDone;
-  return role === 'defend' && w.round.flag.progress > 0 && b.retake;
+  if (role === 'defend') return w.round.flag.progress > 0 && b.retake;
+  return w.round.overtimeFlag.up && w.round.phase === 'live' && w.time >= b.overtimeAt;
+}
+
+/** Where flag mode heads: Attack / Defend's pole, or Elimination's overtime flag (Dev 6 item 45). */
+export function flagSpot(w: BotWorld): Vec3 {
+  return w.round.overtimeFlag.up ? w.round.overtimeFlag.position : w.round.flag.position;
 }

@@ -205,6 +205,12 @@ const LANE_POINTS: readonly (readonly [number, number])[][] = [
 const FLAG = { x: 101, z: 47 };
 
 /**
+ * The overtime flag (Dev 6 item 45): in the open in the middle of the field, on the East meadow, where each end's camp
+ * walks about 58 m (content check map.overtimeFlag): seen from cover all round, so whoever goes for it shows themselves.
+ */
+const OVERTIME_FLAG = { x: 62, z: 41.5 };
+
+/**
  * Six spawns a side (Woodland plays 5v5, up to 6v6: owner, 2026-10-06), each camp facing the other way down the field.
  * End 0's stand behind the West Rise; end 1's as far behind the Knoll's crest as the fence allows (M88).
  */
@@ -598,6 +604,7 @@ export const WOODLAND: MapData = {
   deadZones: [END0_DEAD.map(spawnAt), END1_DEAD.map(spawnAt)],
   lanes: LANE_POINTS.map((lane) => lane.map(([x, z]) => onGround(x, z))),
   flag: onGround(FLAG.x, FLAG.z),
+  overtimeFlag: onGround(OVERTIME_FLAG.x, OVERTIME_FLAG.z),
   night: true,
   // Lit by night (M33f): the moon low over the Knoll, so it rims the hill's top while the face towards end 0 stays dark.
   lighting: { presets: ['night'], moonOver: { x: worldX(KNOLL.x), z: worldZ(KNOLL.z) } },

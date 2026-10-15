@@ -59,6 +59,8 @@ export interface SimServices {
   rounds: RoundRules;
   /** The flagpole, at end 1 where the defenders start (map data; absent: no flag mode). */
   pole?: Vec3 | undefined;
+  /** Elimination's overtime flag spot, near the middle (map data, Dev 6 item 45; absent: no overtime). */
+  overtimeFlag?: Vec3 | undefined;
   /** Extraction (M43): the run's rules and places; absent in the other modes. */
   extraction?: ExtractionContext | undefined;
   /** The match's breeze (M30; createWind from the match's seed); still air without one. */
@@ -110,7 +112,7 @@ export function createSimContext(services: SimServices): SimContext {
       rangeTargets: [],
       elimination: createEliminationContext(services.deadZones, services.nav, services.navSnap, services.deadZoneFields),
     },
-    round: { rules: services.rounds, pole: services.pole, spawns: services.spawns ?? [], spawnLift: services.spawnLift ?? 0, extraction: services.extraction },
+    round: { rules: services.rounds, pole: services.pole, spawns: services.spawns ?? [], spawnLift: services.spawnLift ?? 0, extraction: services.extraction, overtimeFlag: services.overtimeFlag },
     propNoise: createPropNoiseContext(NOISE, services.query.noisyProps),
   };
 }

@@ -80,6 +80,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 ## Modes and matches
 
 - Elimination: knock out the whole other team (Phase 1)
+- Overtime flag: a time-out with nobody ahead raises a flag near the middle; first team to touch it wins; 30 s, never in Attack / Defend or Extraction (OT1)
 - Attack / Defend: raise your flag on the other team's pole or keep yours down; overtime; sides swap at half-time (M5)
 - Extraction: your squad against a home team on an 8:00 run; exits counted out in 10 s, a late exit, one automatic
   respawn; home team size follows the difficulty (one more on Pro); a 3 s grace at insertion and respawn (BBs don't hit

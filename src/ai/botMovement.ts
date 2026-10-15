@@ -5,11 +5,11 @@ import type { Character } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
 import { isInPlay } from '../sim/elimination';
 import { rngNext } from '../sim/rng';
-import { type Vec3, vec3, wrapAngle } from '../sim/vec';
-import { type Bot, type BotWorld, flagRole, holdYaw, pick, recallHeardOther } from './bot';
+import { copy, type Vec3, vec3, wrapAngle } from '../sim/vec';
+import { type Bot, type BotWorld, flagRole, flagSpot, holdYaw, pick, recallHeardOther } from './bot';
 import { type CoverSearch, findCover, leanSideToSee } from './cover';
 import { bodyPoint, eyeOf, lineClear, seesSpot } from './perception';
-import { anchorHolding, pushesIn } from './personality';
+import { anchorHolding, overtimeWatching, pushesIn } from './personality';
 import { followRoute, stepOnto, teammateSpots, wantRoute } from './routes';
 import { moveMag } from './magShare';
 import { moveOrder } from './squadOrders';
@@ -351,20 +351,36 @@ function pickHoldCover(b: Bot, w: BotWorld): boolean {
 /**
  * Flag mode: picks where to be and heads there. The raiser (and a defender retaking) stands at a random spot by the
  * pole; any other attacker guards it from cover within flagGuardRadius (AI-06), hidden from where an enemy was last
- * known (or from the defenders' end), or failing that from a random spot that far out.
+ * known (or from the defenders' end), or failing that from a random spot that far out. In Elimination's overtime (Dev 6
+ * item 45) a bot heads for the flag's very foot (a touch wins), round the side first if its flank roll came up, and one
+ * watching the flag first (overtimeWatching) guards it as an attacker guards the pole.
  */
 export function enterFlagMode(b: Bot, w: BotWorld): void {
   b.mode = 'flag';
   pickFlagSpot(b, w);
 }
 
+/** Flag mode: whether `b` guards the flag from cover rather than going to it (see enterFlagMode). */
+function guardsFlag(b: Bot, w: BotWorld): boolean {
+  return w.round.overtimeFlag.up ? overtimeWatching(b, w) : flagRole(b, w) === 'attack' && !b.raiser;
+}
+
 function pickFlagSpot(b: Bot, w: BotWorld): void {
   const cfg = w.cfg;
-  const pole = w.round.flag.position;
-  b.flagGuard = flagRole(b, w) === 'attack' && !b.raiser;
+  const pole = flagSpot(w);
+  b.flagGuard = guardsFlag(b, w);
   b.teamWait = 0;
   b.routeState = 'none';
   b.route.length = 0;
+  b.flanking = false;
+  if (!b.flagGuard && w.round.overtimeFlag.up) {
+    copy(b.flagGoal, pole);
+    if (b.overtimeFlank) {
+      b.overtimeFlank = false;
+      overtimeFlankPoint(b, w, pole);
+    }
+    return;
+  }
   if (!b.flagGuard) {
     jitterPoint(b, w, pole, cfg.flagStand, b.flagGoal);
     return;
@@ -387,6 +403,31 @@ function pickFlagSpot(b: Bot, w: BotWorld): void {
     jitterPoint(b, w, pole, cfg.flagGuardRadius, b.flagGoal);
   }
   b.holdCrouch = crouchedViewClear(b, w, b.flagGoal);
+}
+
+/**
+ * Overtime (Dev 6 item 45): a flanker's way to the flag at `flag` goes round by a point overtimeFlankOffset to one side of
+ * the straight way and overtimeFlankBack short of the flag (walkable, on the flag's floor), so it comes at it from the
+ * side; none from closer than overtimeFlankMinDistance, or where neither side has floor.
+ */
+function overtimeFlankPoint(b: Bot, w: BotWorld, flag: Vec3): void {
+  const cfg = w.cfg;
+  const p = b.character.position;
+  const d = Math.hypot(flag.x - p.x, flag.z - p.z);
+  if (d < cfg.overtimeFlankMinDistance) return;
+  const ux = (flag.x - p.x) / d;
+  const uz = (flag.z - p.z) / d;
+  const first = rngNext(b.rng) < 0.5 ? 1 : -1;
+  for (let side = first, i = 0; i < 2; i++, side = -side) {
+    const x = flag.x - ux * cfg.overtimeFlankBack - uz * cfg.overtimeFlankOffset * side;
+    const z = flag.z - uz * cfg.overtimeFlankBack + ux * cfg.overtimeFlankOffset * side;
+    if (!onSameFloor(w, flag, x, z)) continue;
+    b.flankGoal.x = x;
+    b.flankGoal.y = floorAt(w.nav, x, flag.y, z);
+    b.flankGoal.z = z;
+    b.flanking = true;
+    return;
+  }
 }
 
 /**
@@ -598,9 +639,19 @@ function forgetSearch(b: Bot, w: BotWorld): void {
 /** Flag mode: to the spot by the pole (or the guard spot) and stay there. See enterFlagMode. */
 function flag(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): boolean {
   const cfg = w.cfg;
-  // The raiser changed (hit, or the player took the rope): raise, or guard, instead.
-  if (b.flagGuard !== (flagRole(b, w) === 'attack' && !b.raiser)) pickFlagSpot(b, w);
+  // The raiser changed (hit, or the player took the rope), or an overtime watch is over: raise, or guard, instead.
+  if (b.flagGuard !== guardsFlag(b, w)) pickFlagSpot(b, w);
   const p = b.character.position;
+  if (b.flanking) {
+    // Overtime, round the side first (overtimeFlankPoint); there, or with no way there, straight on for the flag.
+    if (Math.hypot(b.flankGoal.x - p.x, b.flankGoal.z - p.z) > cfg.coverArrive && b.routeState !== 'failed') {
+      wantRoute(b, b.flankGoal, cfg);
+      return followRoute(b, w, dt);
+    }
+    b.flanking = false;
+    b.routeState = 'none';
+    b.route.length = 0;
+  }
   const arrive = b.flagGuard ? cfg.coverArrive : cfg.flagArrive;
   if (Math.hypot(b.flagGoal.x - p.x, b.flagGoal.z - p.z) <= arrive) {
     // At the pole: crouch and stay, working the rope. Guarding: hold there, watching (crouched where that still sees).
@@ -610,7 +661,7 @@ function flag(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): boolean {
     if (b.holding) b.teamWait += dt;
     return false;
   }
-  const pole = w.round.flag.position;
+  const pole = flagSpot(w);
   if (b.routeState === 'failed') {
     if (!b.flagGuard && (b.flagGoal.x !== pole.x || b.flagGoal.z !== pole.z)) {
       // No way to that spot: try the foot of the pole itself.

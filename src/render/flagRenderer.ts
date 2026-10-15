@@ -55,6 +55,26 @@ function drawFlagDesign(): THREE.CanvasTexture {
   return tex;
 }
 
+/** Elimination's overtime flag (Dev 6 item 45): black and white checks, white where its tint shows (FLAG_VISUALS.overtime*). */
+function drawChequer(): THREE.CanvasTexture {
+  const across = F.overtimeChecks;
+  const down = Math.max(1, Math.round((across * F.clothHeight) / F.clothWidth));
+  const size = FD.design.height / down;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(across * size);
+  canvas.height = Math.round(down * size);
+  const g = canvas.getContext('2d');
+  if (g) {
+    g.fillStyle = '#ffffff';
+    g.fillRect(0, 0, canvas.width, canvas.height);
+    g.fillStyle = F.overtimeDark;
+    for (let i = 0; i < across; i++) for (let j = 0; j < down; j++) if ((i + j) % 2 === 1) g.fillRect(i * size, j * size, size, size);
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 /** A cloth hanging from the pole: its left edge on the pole, its bottom edge at y = 0 of the mesh. */
 function clothGeometry(along: number, down: number): THREE.PlaneGeometry {
   const geo = new THREE.PlaneGeometry(F.clothWidth, F.clothHeight, along, down);
@@ -87,8 +107,10 @@ interface Cloth {
 /**
  * Flag mode's pole: a pole on a weighted base, the attackers' flag (their team colour) at the height
  * the simulation says, rippling, and a painted ring on the floor at the rope's reach, coloured by who
- * is working the rope. Hidden in elimination. Reads round state only. With map detail (setDetail): a ball finial, a
- * rope to a cleat, and a finer cloth painted with the site's flag, with a hem and a ripple damped near the pole.
+ * is working the rope. In Elimination, the overtime flag (Dev 6 item 45) while it is up: the same pole with a chequered
+ * cloth, popping up out of the ground as it goes up, and a ring at the touch's reach (neutral, contested, then the
+ * winner's colour, as the cloth turns). Hidden otherwise. Reads round state only. With map detail (setDetail): a ball
+ * finial, a rope to a cleat, and a finer cloth painted with the site's flag, with a hem and a ripple damped near the pole.
  */
 export class FlagRenderer {
   readonly object = new THREE.Group();
@@ -98,6 +120,13 @@ export class FlagRenderer {
   private readonly fine: Cloth;
   private readonly detail = new THREE.Group();
   private readonly ring: THREE.Mesh<THREE.RingGeometry, THREE.MeshBasicMaterial>;
+  /** The overtime flag's ring, at the touch's reach (same material as `ring`; one of the two shows). */
+  private readonly reachRing: THREE.Mesh<THREE.RingGeometry, THREE.MeshBasicMaterial>;
+  /** The overtime flag's checks (drawn the first time it goes up), and which flag the cloth shows now. */
+  private chequer: THREE.Texture | null = null;
+  private overtimeLook = false;
+  /** When the overtime flag was first drawn up this round (s, as update's `time`; -1 while it is down): its rise. */
+  private risingSince = -1;
   private readonly geometries: THREE.BufferGeometry[] = [];
   private readonly materials: THREE.Material[] = [];
   /** The site's flag (drawn the first time detail is on). */
@@ -108,9 +137,11 @@ export class FlagRenderer {
   /** The pole, finial and cleat: painted as before, brushed metal with Environment lighting (setEnvironmentLit). */
   private readonly poleMat: THREE.MeshStandardMaterial;
 
+  /** `ropeRadius`: Attack / Defend's rope reach (FLAG.radius); `reach`: the overtime flag's touch (OVERTIME.reach). */
   constructor(
     private readonly teamColors: readonly number[],
     ropeRadius: number,
+    reach: number,
   ) {
     const poleMat = (this.poleMat = this.track(new THREE.MeshStandardMaterial({ color: F.poleColor, roughness: F.poleRoughness, metalness: F.poleMetalness })));
     const pole = new THREE.Mesh(this.track(new THREE.CylinderGeometry(F.poleRadius, F.poleRadius, F.poleHeight, F.poleSegments)), poleMat);
@@ -143,17 +174,21 @@ export class FlagRenderer {
     this.detail.add(finial, rope, cleat);
     this.detail.visible = false;
 
-    const ringGeo = this.track(new THREE.RingGeometry(ropeRadius - F.ringWidth, ropeRadius, F.ringSegments));
-    ringGeo.rotateX(-Math.PI / 2);
     // Drawn after the floor with a depth offset, so it never flickers against it at a distance.
-    this.ring = new THREE.Mesh(
-      ringGeo,
-      this.track(new THREE.MeshBasicMaterial({ transparent: true, opacity: F.ringOpacity, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 })),
-    );
-    this.ring.position.y = F.ringLift;
-    this.ring.renderOrder = F.ringRenderOrder;
+    const ringMat = this.track(new THREE.MeshBasicMaterial({ transparent: true, opacity: F.ringOpacity, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
+    const ring = (radius: number) => {
+      const geo = this.track(new THREE.RingGeometry(radius - F.ringWidth, radius, F.ringSegments));
+      geo.rotateX(-Math.PI / 2);
+      const mesh = new THREE.Mesh(geo, ringMat);
+      mesh.position.y = F.ringLift;
+      mesh.renderOrder = F.ringRenderOrder;
+      return mesh;
+    };
+    this.ring = ring(ropeRadius);
+    this.reachRing = ring(reach);
+    this.reachRing.visible = false;
 
-    this.object.add(pole, base, this.plain.mesh, this.fine.mesh, this.detail, this.ring);
+    this.object.add(pole, base, this.plain.mesh, this.fine.mesh, this.detail, this.ring, this.reachRing);
     this.object.visible = false;
   }
 
@@ -170,8 +205,10 @@ export class FlagRenderer {
     this.plain.mesh.visible = !on;
     if (on && !this.design) {
       this.design = drawFlagDesign();
-      this.fine.mesh.material.map = this.design;
-      this.fine.mesh.material.needsUpdate = true;
+      if (!this.overtimeLook) {
+        this.fine.mesh.material.map = this.design;
+        this.fine.mesh.material.needsUpdate = true;
+      }
     }
   }
 
@@ -185,31 +222,51 @@ export class FlagRenderer {
     this.poleMat.metalness = look.metalness;
   }
 
-  /** Once per frame. `time` (s) drives the ripple. */
+  /** Once per frame. `time` (s) drives the ripple, and the overtime flag's rise. */
   update(round: RoundState, time: number): void {
-    const show = round.mode === 'attackDefend' && round.attackers >= 0;
-    this.object.visible = show;
-    if (!show) return;
-    const flag = round.flag;
-    this.object.position.set(flag.position.x, flag.position.y, flag.position.z);
-    this.markerAnchor.set(flag.position.x, flag.position.y + F.markerHeight, flag.position.z);
+    const poleUp = round.mode === 'attackDefend' && round.attackers >= 0;
+    const overtime = !poleUp && round.overtimeFlag.up;
+    this.object.visible = poleUp || overtime;
+    if (!overtime) this.risingSince = -1;
+    if (!poleUp && !overtime) return;
+    this.setOvertimeLook(overtime);
+    const at = overtime ? round.overtimeFlag.position : round.flag.position;
+    this.object.position.set(at.x, at.y, at.z);
+    this.markerAnchor.set(at.x, at.y + F.markerHeight, at.z);
+    let height: number;
+    let clothHex: number;
+    let ringColor: number;
+    if (overtime) {
+      // It pops up out of the ground and its cloth runs up the pole (ease out), then waits there to be touched; once a
+      // touch has won the round, cloth and ring take the winner's colour.
+      if (this.risingSince < 0) this.risingSince = time;
+      const k = Math.min(1, (time - this.risingSince) / F.overtimeRise);
+      height = 1 - (1 - k) * (1 - k) * (1 - k);
+      this.object.scale.y = Math.max(height, F.overtimeRiseFrom);
+      const taker = round.phase !== 'live' && round.reason === 'overtimeFlag' ? round.winner : -1;
+      clothHex = taker >= 0 ? this.teamColors[taker]! : F.overtimeCloth;
+      ringColor = taker >= 0 ? this.teamColors[taker]! : round.phase === 'live' && round.overtimeFlag.status === 'contested' ? F.ringContestedColor : F.ringColor;
+    } else {
+      this.object.scale.y = 1;
+      height = round.flag.progress;
+      clothHex = this.teamColors[round.attackers]!;
+      // Between rounds nobody works the rope any more: the ring goes back to neutral.
+      const status = round.phase === 'live' ? round.flag.status : 'idle';
+      ringColor =
+        status === 'raising'
+          ? this.teamColors[round.attackers]!
+          : status === 'lowering'
+            ? this.teamColors[1 - round.attackers]!
+            : status === 'contested'
+              ? F.ringContestedColor
+              : F.ringColor;
+    }
     const cloth = this.fine.mesh.visible ? this.fine : this.plain;
-    cloth.mesh.position.y = F.clothLowest + (F.clothHighest - F.clothLowest) * flag.progress;
-    const clothHex = this.teamColors[round.attackers]!;
+    cloth.mesh.position.y = F.clothLowest + (F.clothHighest - F.clothLowest) * height;
     if (cloth.hex !== clothHex) {
       cloth.hex = clothHex;
       cloth.mesh.material.color.setHex(clothHex);
     }
-    // Between rounds nobody works the rope any more: the ring goes back to neutral.
-    const status = round.phase === 'live' ? flag.status : 'idle';
-    const ringColor =
-      status === 'raising'
-        ? this.teamColors[round.attackers]!
-        : status === 'lowering'
-          ? this.teamColors[1 - round.attackers]!
-          : status === 'contested'
-            ? F.ringContestedColor
-            : F.ringColor;
     if (this.ringHex !== ringColor) {
       this.ringHex = ringColor;
       this.ring.material.color.setHex(ringColor);
@@ -229,10 +286,27 @@ export class FlagRenderer {
     normal.needsUpdate = true;
   }
 
+  /**
+   * The cloth shows the overtime flag's checks (`on`), or the attackers' flag (the site's flag with map detail): swapped
+   * only when that changes, and drawn the first time it is needed. Each ring shows with its own flag.
+   */
+  private setOvertimeLook(on: boolean): void {
+    if (on === this.overtimeLook) return;
+    this.overtimeLook = on;
+    if (on && !this.chequer) this.chequer = drawChequer();
+    this.plain.mesh.material.map = on ? this.chequer : null;
+    this.fine.mesh.material.map = on ? this.chequer : this.design;
+    this.plain.mesh.material.needsUpdate = true;
+    this.fine.mesh.material.needsUpdate = true;
+    this.ring.visible = !on;
+    this.reachRing.visible = on;
+  }
+
   dispose(): void {
     for (const g of this.geometries) g.dispose();
     for (const m of this.materials) m.dispose();
     this.design?.dispose();
+    this.chequer?.dispose();
     this.object.removeFromParent();
   }
 

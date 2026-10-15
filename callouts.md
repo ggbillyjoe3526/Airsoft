@@ -52,6 +52,8 @@ says never changes how it plays: the calls are what it already does, put into wo
   `{area}` (where it holds).
 - **Raising.** Attack / Defend: its team starts raising the flag; the attacker nearest the pole says it.
 - **Flag.** Attack / Defend: the other team is raising the flag; the defender nearest the pole says it.
+- **Overtime.** Elimination: the clock ran out level and the overtime flag went up; on each team, the bot nearest it
+  says it. Fills `{area}` (where the flag stands).
 - **Going to your ping.** You ping a spot or an enemy (the Ping key) and a teammate sets off to look: the one nearest
   it says so. Fills `{area}` (the spot's). Its Checking, Pushing or Flanking is not called as well.
 - **Watching your ping.** As above, when none of them goes (under your order, at its post, holding): the nearest that
@@ -75,6 +77,7 @@ Hit players never talk: they raise a hand, call their hit and walk off, as on a 
 | Watching your ping | 1 | 0 |
 | Need a mag | 1 | 3 |
 | Mag coming | 1 | 0 |
+| Overtime | 1 | 0 |
 | Flag | 1 | 10 |
 | Raising | 1 | 10 |
 | Contacts | 0.9 | 3 |
@@ -174,6 +177,12 @@ Hit players never talk: they raise a hand, call their hit and walk off, as on a 
 | Raising | Any | Raising the flag! |
 | Flag | Any | They're on the flag! |
 | Flag | Any | Flag's going up! |
+| Overtime | Any | Overtime! Flag's up, {area}! |
+| Overtime | Any | Flag's up! First hand on it wins! |
+| Overtime | Rusher | Flag's up! I'm going for it! |
+| Overtime | Anchor | Flag's up. I'll cover it first. |
+| Overtime | Flanker | Flag's up. Going round for it. |
+| Overtime | Careful | Overtime. Watch the flag, then go. |
 | Need a mag | Any | Need a mag! |
 | Need a mag | Any | Low on BBs, anyone got a mag? |
 | Need a mag | Any | Mag, anyone? I'm nearly dry. |

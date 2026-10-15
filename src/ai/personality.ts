@@ -64,3 +64,18 @@ export function anchorHolding(b: Bot, w: BotWorld): boolean {
   for (const c of w.characters) if (c !== me && c.team === me.team && isInPlay(c)) return true;
   return false;
 }
+
+/**
+ * Watching the overtime flag first (bots.md › Habits › Watches the flag first, Dev 6 item 45): from the moment it would
+ * go for the flag (Bot.overtimeAt) and for the personality's seconds, it holds cover by the flag, aiming at it, as the
+ * attackers' guards hold the pole. Not under a squad order, nor once overtimeGoBy or less of the overtime is left, nor
+ * when it is the last of its team in play: then it goes in for the touch.
+ */
+export function overtimeWatching(b: Bot, w: BotWorld): boolean {
+  const watch = b.style.overtimeWatch;
+  const flag = w.round.overtimeFlag;
+  if (watch === null || !flag.up || b.order !== 'none' || w.time >= b.overtimeAt + watch || flag.left <= w.cfg.overtimeGoBy) return false;
+  const me = b.character;
+  for (const c of w.characters) if (c !== me && c.team === me.team && isInPlay(c)) return true;
+  return false;
+}
