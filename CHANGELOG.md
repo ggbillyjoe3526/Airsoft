@@ -69,6 +69,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **OT1** · Elimination overtime: when the clock runs out with nobody ahead, three whistles blow and a chequered flag rises near the middle; the first team to touch it in 30 s wins the round, untouched it's a draw (Depot, Woodland, Neon Heights)
 - **OT1** · In overtime the clock counts down in red, the strip says what's happening, and a distance marker and the minimap show the flag; both teams at it hold each other off
 - **OT1** · Bots go for the overtime flag by personality: rushers straight in, flankers sometimes round the side, anchors and careful bots watch it first; quicker on Hard and Pro, slower on Easy; they call it out
+- **AC1** · Settings › Gameplay › HUD has an Ammo counter, On by default: Off hides the BB counts and shows each spare magazine only as full or hollow
 
 ### Changed
 - **OT1** · Rules: the old "Overtime" row (win by two) is now called "Win by two", and the Time-out rule's "Draw" is now "Overtime flag"
