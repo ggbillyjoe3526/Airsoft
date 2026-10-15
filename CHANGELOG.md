@@ -66,8 +66,12 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **NP1** · Running into a prop makes noise: skips, containers and vans boom, racks and stalls rattle, crates and fences knock; bots hear 13 to 20 m
 - **NP1** · Sprinting on Woodland's creek gravel or steel ramps and stairs is louder: bots hear it a third further; walking stays silent
 - **NP1** · A BB pinging off a skip, container, van, generator or IBC makes an idle bot turn to look there; a bot in a fight never does
+- **OT1** · Elimination overtime: when the clock runs out with nobody ahead, three whistles blow and a chequered flag rises near the middle; the first team to touch it in 30 s wins the round, untouched it's a draw (Depot, Woodland, Neon Heights)
+- **OT1** · In overtime the clock counts down in red, the strip says what's happening, and a distance marker and the minimap show the flag; both teams at it hold each other off
+- **OT1** · Bots go for the overtime flag by personality: rushers straight in, flankers sometimes round the side, anchors and careful bots watch it first; quicker on Hard and Pro, slower on Easy; they call it out
 
 ### Changed
+- **OT1** · Rules: the old "Overtime" row (win by two) is now called "Win by two", and the Time-out rule's "Draw" is now "Overtime flag"
 - **M94** · The practice range is now Practice: pause reads "Practice · Range" or "Practice · Depot", and the tutorial's last button says Practice
 - **M95** · With Disable levelling on, the Loadout says every replica and part is lent to try, and the range's first line names the Loadout key
 - **LV1** · The Armory's gacha is gone: no Field Credits, Tokens, Shots, pity, rarity tiers, spares, scrapping or Disable Armory (#207)
