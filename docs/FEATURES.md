@@ -140,6 +140,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - The field's sound from map data: ambience by day or night (no birds at night on any map); wind, insects, an owl and
   crackling camp fires in the woods at night (Woodland); traffic hum, drones and shop chimes by day with neon sizzle and
   arcade bleeps by night (Neon Heights); footsteps by the ground underfoot on terrain (M33j, M34g)
+- Noisy props and ground: running into a skip, container, van, rack, crate or fence makes a noise bots hear from 13 to 20 m;
+  creek gravel and steel steps carry a third further (NP1)
 - Ramps and raised floors that players and bots use (Phase 3)
 
 ## Loadout, pool and Armory
