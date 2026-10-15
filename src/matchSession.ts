@@ -18,6 +18,7 @@ import { EXTRACTION, homeTeamCap } from './config/extraction';
 import { FOOTSTEPS } from './config/footsteps';
 import type { HitConfig, HitMarkerSettings } from './config/hits';
 import { type DevSettings, devCheating } from './config/dev';
+import { MAG_SHARE } from './config/magShare';
 import { type CrosshairSettings, type HitFeedMode, type WhatGotYouMode, whatGotYouShown } from './config/matchInfo';
 import { countsForRecords, hitRulesFor, kitUnderRules, type MatchRules, recordsKeyOf, roundRulesFor, type RulesetId, standardRules } from './config/matchRules';
 import type { MatchMode } from './config/modes';
@@ -82,7 +83,7 @@ import type { MatchOutcome } from './progress/xp';
 import type { NotCounted } from './ui/recordsView';
 import { pauseText, resultText, type ResultText } from './ui/matchStopText';
 import { rosterNames, rosterTags, statsBlocks, type TeamBlock } from './ui/statsRows';
-import { MagHandoff, startOnLastMag } from './magHandoff';
+import { MagHandoff, putOnLastMag } from './magHandoff';
 
 const PLAYER_ID = 0;
 /** The colour figures glow in someone's torch beam (M33h): the torches' cool white. */
@@ -378,8 +379,13 @@ export class MatchSession {
 
   /** Dev settings › Bots hold fire (M90). */
   private botsHoldFire = false;
-  /** Dev settings › Bots start low on BBs (MG1). */
-  private botsStartLow = false;
+  /** Dev settings › Bots run low on BBs (MG1). */
+  private botsRunLow = false;
+  /**
+   * When this round's bots run low with that switch on (simulation time, MAG_SHARE.devLowAfter after the round starts;
+   * infinite once done). Round 1 starts with the match at time 0, with no roundStart event.
+   */
+  private runLowAt: number = MAG_SHARE.devLowAfter;
   /** A Skip to next round under way (M83): the ticks run so far and the most it may run. */
   private skip: { ticks: number; cap: number } | null = null;
 
@@ -656,7 +662,7 @@ export class MatchSession {
     this.player.armament.bottomless = cheats.bottomlessMags;
     this.player.ghost = cheats.ghost;
     this.botsHoldFire = cheats.botsHoldFire;
-    this.botsStartLow = cheats.botsStartLow;
+    this.botsRunLow = cheats.botsRunLow;
     this.match.setWatchingBots(cheats.spectateBots);
     this.match.setBotIntents(cheats.botIntent);
     // Before play begins (a match built by a Play whose mouse lock was refused) only what applies now counts (bug pass).
@@ -667,6 +673,13 @@ export class MatchSession {
     const others = devCheating({ ...cheats, adaptiveDifficulty: false });
     if (!this.played) this.otherDevHelp = this.devEndedRound || others;
     else if (others) this.otherDevHelp = true;
+  }
+
+  /** Dev settings › Bots run low on BBs (MG1): once a round, MAG_SHARE.devLowAfter in, one bot a team on its last magazine. */
+  private runBotsLow(): void {
+    if (this.state.time < this.runLowAt) return;
+    this.runLowAt = Number.POSITIVE_INFINITY;
+    if (this.botsRunLow && this.state.round.phase === 'live') putOnLastMag(this.bots.bots, this.state.round.number);
   }
 
   /**
@@ -944,12 +957,13 @@ export class MatchSession {
       if (e.type === 'roundStart') {
         this.input.resetView(this.player.spawnYaw);
         this.fitPickedLoadout();
-        if (this.botsStartLow) startOnLastMag(this.bots.bots, this.state.round.number);
+        this.runLowAt = this.state.time + MAG_SHARE.devLowAfter;
       }
       if (e.type === 'matchOver') this.matchOverAt = this.state.time;
       // Back at the insertion after a hit (Extraction): looking the way its spawn faces.
       if (e.type === 'respawned' && e.characterId === this.player.id) this.input.resetView(this.player.spawnYaw);
     }
+    this.runBotsLow();
     // Extraction: your bot teammates follow you unless you order otherwise (ai/squadFollow.ts).
     if (this.extraction) this.squadFollow.update(this.bots, this.player, this.state.characters, this.state.events, this.state.round.phase === 'live');
   }

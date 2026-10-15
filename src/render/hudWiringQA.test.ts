@@ -254,3 +254,20 @@ describe('the HUD reads "your team" from the player, on Beta as on Alpha (M98)',
     }
   });
 });
+
+describe('the magazine hand-off line gives way to the order wheel (MG1)', () => {
+  it('shows while playing, not while the wheel is open (its Mag item says the same), and again once it closes', async () => {
+    const { MagPrompt } = await import('../ui/magPrompt');
+    vi.clearAllMocks();
+    const { match } = rig();
+    match.setPlaying(true);
+    const view = { line: 'H · Toss Beta 2 a mag', toss: true, wheel: 'Toss a Mag', mates: [] };
+    const pointer = { x: 0, y: 0, pick: -1 };
+    const shown = () => vi.mocked(MagPrompt.prototype.show).mock.calls.at(-1);
+    for (const open of [false, true, false]) {
+      match.showOrderWheel(open, pointer, 'none', 'hover', view.wheel);
+      match.showMagHandoff(view);
+      expect(shown(), `wheel open: ${open}`).toEqual(open ? ['', false] : [view.line, true]);
+    }
+  });
+});

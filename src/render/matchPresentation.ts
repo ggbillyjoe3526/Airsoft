@@ -256,6 +256,8 @@ export class MatchPresentation {
   private readonly areas: readonly MapArea[];
   private wheelHintSelect: WheelSelect | '' = '';
   private wheelHintOn = false;
+  /** The order wheel is open this frame: the hand-off's line gives way to it (its Mag item says the same). */
+  private wheelOpen = false;
   private wheelHintText = '';
 
   /** Figures and the flag's cloth shaded by walls and containers (QualitySettings.figureShadows, REN-07). */
@@ -511,7 +513,8 @@ export class MatchPresentation {
    * order it's on (input/playerInput.ts), `current`: the order in force, `select`: how an order is given.
    */
   showOrderWheel(open: boolean, pointer: { readonly x: number; readonly y: number; readonly pick: number }, current: SquadOrderKind | 'none', select: WheelSelect, mag: string): void {
-    if (!open || !this.playing) {
+    this.wheelOpen = open && this.playing;
+    if (!this.wheelOpen) {
       this.orderWheel.hide();
       return;
     }
@@ -528,11 +531,12 @@ export class MatchPresentation {
   /**
    * Once per frame, after `frame`: the magazine hand-off (MG1) as `view` says, its line under the crosshair and the mag
    * tag on the teammates asking you or bringing you one. Neither while you spectate or a menu or the scoreboard is up,
-   * nor with Settings › HUD › Mag hand-off off.
+   * nor with Settings › HUD › Mag hand-off off; the line not while the order wheel is open (call showOrderWheel first).
    */
   showMagHandoff(view: Readonly<MagView>): void {
     const on = this.playing && !this.spectating && !this.boardUp;
-    this.magPrompt.show(on ? view.line : '', on && view.toss);
+    const line = on && !this.wheelOpen;
+    this.magPrompt.show(line ? view.line : '', line && view.toss);
     const tags = on && this.magPrompt.enabled;
     for (let i = 0; i < this.mates.length; i++) this.mateMarkers.setMag(i, tags && view.mates.includes(this.mates[i]!.id));
   }

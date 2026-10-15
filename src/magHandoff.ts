@@ -12,10 +12,10 @@ import { type MagFills, magLine, type MagView, type MagWords } from './ui/magPro
 const pick = createSparePick();
 
 /**
- * Dev settings › Bots start low on BBs (MG1): in round `round`, one bot of each team in turn starts on its last
- * magazine, its pouch for the replica in hand emptied, so the hand-off can be watched.
+ * Dev settings › Bots run low on BBs (MG1): in round `round`, one bot of each team in turn is put on its last magazine,
+ * its pouch for the replica in hand emptied, so the hand-off can be watched (MatchSession, MAG_SHARE.devLowAfter in).
  */
-export function startOnLastMag(bots: readonly Bot[], round: number): void {
+export function putOnLastMag(bots: readonly Bot[], round: number): void {
   for (let team = 0; team < 2; team++) {
     const mine = bots.filter((b) => b.character.team === team);
     const b = mine[round % Math.max(1, mine.length)];

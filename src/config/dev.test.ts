@@ -43,7 +43,7 @@ describe('Dev settings (M24)', () => {
     expect(devCheating({ ...DEV_DEFAULTS, bottomlessMags: true })).toBe(true);
     expect(devCheating({ ...DEV_DEFAULTS, gameSpeed: 0.5 })).toBe(true);
     expect(devIntro()).toBe(
-      "For trying things out. With Disable levelling, Game speed, Bottomless magazines, Ghost, Bots hold fire, Bots start low on BBs, Spectate any bot, Bot intentions, Adaptive difficulty or Time of day changed, matches don't go into your records.",
+      "For trying things out. With Disable levelling, Game speed, Bottomless magazines, Ghost, Bots hold fire, Bots run low on BBs, Spectate any bot, Bot intentions, Adaptive difficulty or Time of day changed, matches don't go into your records.",
     );
   });
 
@@ -160,13 +160,13 @@ describe('Model file switches (RM4)', () => {
   });
 });
 
-describe('Bots start low on BBs (MG1)', () => {
+describe('Bots run low on BBs (MG1)', () => {
   it('is a switch row labelled as a cheat, off by default, read as saved and junk as off', () => {
-    expect(DEV_DEFAULTS.botsStartLow).toBe(false);
-    expect(DEV_ENTRIES.find((e) => e.id === 'botsStartLow')).toMatchObject({ kind: 'switch', label: 'Bots start low on BBs', cheat: true });
-    expect(devCheating({ ...DEV_DEFAULTS, botsStartLow: true })).toBe(true);
-    expect(loadDevSettings(saved({ 'dev.botsStartLow': 'on' })).botsStartLow).toBe(true);
-    expect(loadDevSettings(saved({ 'dev.botsStartLow': 'yes' })).botsStartLow).toBe(false);
-    expect(activeDev(false, { ...DEV_DEFAULTS, botsStartLow: true }).botsStartLow).toBe(false);
+    expect(DEV_DEFAULTS.botsRunLow).toBe(false);
+    expect(DEV_ENTRIES.find((e) => e.id === 'botsRunLow')).toMatchObject({ kind: 'switch', label: 'Bots run low on BBs', cheat: true });
+    expect(devCheating({ ...DEV_DEFAULTS, botsRunLow: true })).toBe(true);
+    expect(loadDevSettings(saved({ 'dev.botsRunLow': 'on' })).botsRunLow).toBe(true);
+    expect(loadDevSettings(saved({ 'dev.botsRunLow': 'yes' })).botsRunLow).toBe(false);
+    expect(activeDev(false, { ...DEV_DEFAULTS, botsRunLow: true }).botsRunLow).toBe(false);
   });
 });

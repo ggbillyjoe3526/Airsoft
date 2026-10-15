@@ -33,9 +33,18 @@ export const MAG_SHARE = {
   playerAskGap: 4,
   /** A bot asks at most this often (s): after an ask ends, or after finding nobody to ask. */
   botAskGap: 20,
+  /**
+   * Dev settings › Bots run low on BBs: this long (s) into each round, once the teams have spread out, so the giver's
+   * walk over shows (at the whistle teammates stand within a toss of each other).
+   */
+  devLowAfter: 8,
   /** Most magazines in the air at once (GameState.magTosses, made once). */
   maxTosses: 6,
-  /** How the tossed magazine looks (render/magTosses.ts): its arc's peak over the straight line (m), and its spin (turns a second). */
+  /**
+   * How the tossed magazine flies (render/magTosses.ts): its arc's peak over the straight line, this much a metre of
+   * toss up to arcHeight (m), so a hand-off up close is a flick and one at full reach a lob; and its spin (turns a second).
+   */
+  arcPerMetre: 0.1,
   arcHeight: 0.6,
   spin: 2.5,
   /**

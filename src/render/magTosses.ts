@@ -4,9 +4,12 @@ import type { Character } from '../sim/character';
 import { catchPoint, type MagShareWorld, type MagToss } from '../sim/magShare';
 import { vec3 } from '../sim/vec';
 
-/** A tossed magazine's height over the straight line at `u` (0 to 1) of its flight: a parabola peaking at the middle. */
-export function tossArc(u: number): number {
-  return 4 * MAG_SHARE.arcHeight * u * (1 - u);
+/**
+ * A tossed magazine's height over the straight line at `u` (0 to 1) of a toss `metres` long: a parabola peaking at the
+ * middle, higher the longer the toss (MAG_SHARE.arcPerMetre, up to arcHeight).
+ */
+export function tossArc(u: number, metres: number): number {
+  return 4 * Math.min(MAG_SHARE.arcHeight, MAG_SHARE.arcPerMetre * metres) * u * (1 - u);
 }
 
 /**
@@ -55,9 +58,11 @@ export class MagTossRenderer {
       const u = Math.min(1, (t.age + alpha * this.tickSeconds) / t.flight);
       catchPoint(r, this.world, this.to);
       m.geometry = this.rifleMag(t) ? this.rifle : this.pistol;
-      m.position.set(t.from.x + (this.to.x - t.from.x) * u, t.from.y + (this.to.y - t.from.y) * u + tossArc(u), t.from.z + (this.to.z - t.from.z) * u);
+      const dx = this.to.x - t.from.x;
+      const dz = this.to.z - t.from.z;
+      m.position.set(t.from.x + dx * u, t.from.y + (this.to.y - t.from.y) * u + tossArc(u, Math.sqrt(dx * dx + dz * dz)), t.from.z + dz * u);
       // End over end along its flight, and turned to face the way it goes.
-      m.rotation.set(u * t.flight * MAG_SHARE.spin * Math.PI * 2, Math.atan2(this.to.x - t.from.x, this.to.z - t.from.z), 0, 'YXZ');
+      m.rotation.set(u * t.flight * MAG_SHARE.spin * Math.PI * 2, Math.atan2(dx, dz), 0, 'YXZ');
       m.visible = true;
     }
   }

@@ -790,13 +790,15 @@ there maps each symptom to its numbers):
   coming!" (each personality its own way), comes to you, tosses a magazine you can see arc into your hands with a swish
   and a slap, and the line says "+1 mag from Dash · 60 BBs"; your spares go up by that much and theirs down. H with a
   full spare: "You still have a full spare mag". H with nobody near: "Nobody near has a mag to spare".
-- [ ] **A teammate asks you.** Settings › Dev › Bots start low on BBs, then play a round: one of your teammates calls
-  "Need a mag!", its name tag gets "· mag" and the line says "Dash needs a mag · 12 m". They walk to you; once in reach
-  the line turns team-coloured, "H · Toss Dash a mag", and the wheel's item reads Toss a Mag. Press H: "Mag to Dash",
-  the magazine flies, and they say thanks. A pistol only gets a pistol's magazine. Watch a bot ask a bot too: the
-  giver walks over and tosses. On Easy and Pro alike it works the same, and nothing stutters.
-- [ ] **Settings › HUD › Mag hand-off.** Off: no line or tag, but H still asks and tosses and teammates still call it.
-  Rebind it under Settings › Controls (Squad: ask for a mag / toss one), and unbound the lines name the order wheel.
+- [ ] **A teammate asks you.** Settings › Dev › Bots run low on BBs, then play: 8 s into each round one bot of each
+  team is down to its last magazine and calls "Need a mag!" to its nearest teammate. When that is you, its name tag
+  gets "· mag" and the line says "Dash needs a mag · 12 m"; they walk to you, and once in reach the line reads
+  "H · Toss Dash a mag" over a bar in your team's colour, and the wheel's item reads Toss a Mag (the line hides while
+  the wheel is open). Press H: "Mag to Dash", the magazine flies, and they say thanks. A pistol only gets a pistol's
+  magazine. When it asks a bot, the giver walks over and tosses. On Easy and Pro alike it works the same.
+- [ ] **Settings › HUD › Mag hand-off.** Off: no line or tag, but H still asks and tosses and teammates still call
+  it. Rebind it under Settings › Controls (Squad: ask for a mag / toss one), and unbound the lines name the order
+  wheel.
 - [ ] **The minimap.** A square map at the top left on a navy panel, "Depot · Round 2" under it, the way you look
   always up, you the white arrow. Teammates are dots in your team's colour (blue on Alpha; pinned to the edge when off it), grey once hit. An opponent you hear shows as a patch in theirs (orange on Alpha) roughly where
   (dashed for steps, a dot for a shot) for a few seconds; far sounds give wider patches; nothing for one you can't

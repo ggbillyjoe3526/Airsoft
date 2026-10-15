@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { DEV_DEFAULTS, type DevSettings } from './config/dev';
 import { ROUNDS } from './config/hits';
+import { MAG_SHARE } from './config/magShare';
+import { LOADOUT } from './config/replicas';
 import { MatchSession } from './matchSession';
+import { createCharacter } from './sim/character';
+import { vec3 } from './sim/vec';
 
 /**
  * BP3b QA: a round ended from Dev settings keeps the match out of the records however the switches are set after it,
@@ -66,5 +70,40 @@ describe('beginSkip drops the AEG wind-downs still owed', () => {
     Object.defineProperty(s, 'skipOffer', { value: 'round', configurable: true });
     expect(s.beginSkip()).toBe(true);
     expect(combat.skipBegins).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('Dev settings › Bots run low on BBs (MG1)', () => {
+  /** A bare session with three bots on each team, in round `round` at simulation time `time`. */
+  function lowSession(time: number, round = 1) {
+    const { s } = bare(false);
+    const bots = [0, 0, 0, 1, 1, 1].map((team, i) => ({ character: createCharacter(i + 1, vec3(), 0, LOADOUT, team) }));
+    Object.assign(s, { state: { time, round: { phase: 'live', clock: 100, overtime: 0, number: round } }, bots: { bots }, runLowAt: MAG_SHARE.devLowAfter });
+    const empty = () => bots.filter((b) => b.character.armament.ammo[0]!.pouch.every((n) => n === 0)).map((b) => b.character.id);
+    const tick = () => (s as unknown as { runBotsLow(): void }).runBotsLow();
+    return { s, bots, empty, tick, state: (s as unknown as { state: { time: number } }).state };
+  }
+  const low: DevSettings = { ...DEV_DEFAULTS, botsRunLow: true };
+
+  it('puts one bot a team on its last magazine once, devLowAfter into the round, round 1 included', () => {
+    const f = lowSession(0);
+    f.s.setDevCheats(low);
+    f.tick();
+    expect(f.empty()).toEqual([]);
+    f.state.time = MAG_SHARE.devLowAfter;
+    f.tick();
+    // Round 1: the second bot of each team (round % count).
+    expect(f.empty()).toEqual([2, 5]);
+    for (const b of f.bots) b.character.armament.ammo[0]!.pouch.fill(60);
+    f.state.time += 30;
+    f.tick();
+    expect(f.empty()).toEqual([]);
+  });
+
+  it('with the switch off, nobody', () => {
+    const f = lowSession(MAG_SHARE.devLowAfter);
+    f.s.setDevCheats(DEV_DEFAULTS);
+    f.tick();
+    expect(f.empty()).toEqual([]);
   });
 });

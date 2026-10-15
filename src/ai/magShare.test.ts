@@ -8,7 +8,7 @@ import { BODY, MOVEMENT } from '../config/movement';
 import { NAV } from '../config/nav';
 import { PHYSICS } from '../config/physics';
 import { AEG, LOADOUT } from '../config/replicas';
-import { MagHandoff, startOnLastMag } from '../magHandoff';
+import { MagHandoff, putOnLastMag } from '../magHandoff';
 import { initPhysics, PhysicsWorld } from '../physics/physicsWorld';
 import { spareBBs } from '../sim/armament';
 import { type Character, createCharacter, respawnCharacter } from '../sim/character';
@@ -234,10 +234,10 @@ describe('MG1: a bot teammate asks', () => {
   });
 });
 
-describe('MG1: Dev settings › Bots start low on BBs', () => {
+describe('MG1: Dev settings › Bots run low on BBs', () => {
   it('puts one bot of each team in turn on its last magazine', () => {
     const f = field();
-    startOnLastMag(f.bots.bots, 1);
+    putOnLastMag(f.bots.bots, 1);
     const low = f.bots.bots.filter((b) => lowOnMags(b.character.armament)).map((b) => b.character.id);
     expect(low).toEqual([2, 3]);
     f.physics.dispose();
