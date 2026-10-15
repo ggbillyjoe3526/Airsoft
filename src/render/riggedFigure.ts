@@ -599,7 +599,6 @@ export class RiggedFigure {
     return this.chestRest.clone().invert().multiply(m);
   }
 
-  /** The loadout slot of the character's first replica of kind `hold`, or -1. */
   /** The replica drawn as `hold`: the one out when it is held so, else the loadout's first held so, or none. */
   private heldFor(hold: PoseHold): Held | undefined {
     const out = this.held[this.setup.character.armament.active];

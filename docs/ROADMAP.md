@@ -229,6 +229,7 @@ when their work starts. Numbers are from the owner's list of 50 candidates
 | 46 | An option to hide the ammo counter (no mag-check key: owner) | HUD |
 | PT1 | The owner's Dev 5 playtest fixes (2026-10-13): text kept inside its buttons, louder shots and a Power source volume, no BB halo, a bolder hit marker with its own settings, the 2x scope like the red dot and without its gap, the ammo count clear of the panel, firing on the run, Esc skips the round; done (2026-10-13, `docs/records/PT1.md`) | Polish |
 | – | Figure redesign: more realistic human and robot figures, from the owner's reference photos, built in Blender, with the figures' animations for Dev 6's new moves such as vaulting and resting on cover (M104 has only a placeholder lean) (owner, 2026-10-13); done (2026-10-13: the human, `docs/records/RM9.md`; the robot and both figures' vault and rest-on-cover clips, `docs/records/RM10.md`) | Art |
+| BP4 | Bug pass over the Blender models behind the Dev switches (figures, replicas, attachments, first person), with the figures' holstered pose: the arms hang and the rifle rides slung on the back; done (2026-10-15, `docs/records/BP4.md`) | Art |
 
 Built in Dev 5 instead: the blowback pistol (pick 14) is the GBB Pistol (RM7), and the AEG Rifle redesign (RM6) gave
 the built-in rifle its small, low iron sights.

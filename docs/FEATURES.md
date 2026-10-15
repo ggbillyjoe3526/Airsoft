@@ -263,6 +263,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - An optional glTF player model dropped into the assets folder replaces the built-in figures (M25a)
 - Blender human figure, shown when the Dev figure switches are off: realistic body, gloved hands that grip the AEG and pistol, four heads (high-cut helmet, goggled cap, boonie hat, full-cut helmet) and team colour on the vest, armbands and bands (RM9)
 - Blender robot figure, shown when the Dev figure switches are off: boxier mechanical limbs, visor head with headset and antenna, white suit with team shoulder caps; both Blender figures rest on cover and vault with their own animations (RM10)
+- Blender figures have a holstered pose: arms hang with the replica holstered, and the rifle is slung across the back until drawn (BP4)
 - Block surface finishes and paints (plaster, metal, glazed tiles, asphalt, paving); six city props (arcade cabinet,
   vending machine, market stall, planter, phone booth, delivery van); painted ground markings and plaster ceilings under
   raised floors; flat finishes at 512 × 512 on Medium, High and Ultra (M34f, M78)
