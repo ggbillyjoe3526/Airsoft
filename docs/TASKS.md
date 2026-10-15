@@ -22,3 +22,18 @@ item 5, with the G4 HUD restyle); note 3 was a bug, fixed in BP2; note 2 is alre
 
 **0.1 Dev 6 (confirmed with the roadmap, 2026-10-06).** M92–M95, the holster and the practice upgrades, are done
 (2026-10-13); the blocks for the rest of `docs/ROADMAP.md` › 0.1 Dev 6 are written when that work starts.
+
+## NP1 · Noisy ground and props (Dev 6 item 41)
+tier: core
+perf: required
+touches: src/ai/botController.ts, src/audio/sfx.ts, src/audio/soundMaterials.ts, src/audio/soundscape.ts, src/config/audio.ts, src/config/noise.ts, src/config/renderEffects.ts, src/config/sounds.ts, src/map/groundSurfaces.ts, src/map/underfoot.ts, src/physics/physicsWorld.ts, src/render/combatPresentation.ts, src/sim/armament.ts, src/sim/bbs.ts, src/sim/events.ts, src/sim/footsteps.ts, src/sim/propNoise.ts, src/sim/simulation.ts, src/sim/state.ts, src/ui/soundCues.ts
+contract: GameState (`propQuiet`) and the events (`propNoise`, `footstep.surface`), WorldQuery (`noisyProps`, `surfaceUnder`, both optional), stepSimulation's phase order (a knock after the move, a ring in the BB step: `stepBBs`' `noise` context, `SimContext.propNoise`)
+acceptance:
+  1. Running into a noisy prop (`NOISE.props`: skips, containers, the van; generators, IBCs; racks, stalls, vending machines; phone booths; site toilets, arcade cabinets; crates, pallet loads, Woodland's board fence) at NOISE.bumpSpeed or more into its face (a run or sprint straight in) knocks it once, from the face hit (`propNoise`, `shot: false`). Walking, crouching, glancing along it (under about 45° at a run), pushing on against it, standing on it or a wall beside it never do. A prop sounds at most once per NOISE.quiet, whoever sets it off.
+  2. A BB landing at NOISE.shotMinSpeed or faster on steel that rings (`shot` above 0) rings it where it stopped (`propNoise`, `shot: true`), sharing the prop's quiet.
+  3. The other team's bots hear a knock to the prop's `bumped` range (every one further than a run's 11 m), placed on whoever hit it, walls muffling it as any sound, shared by teamPlay bots as a step is. A ring is heard to its `shot` range, where it rang, only by a bot with nobody in sight and nothing seen or heard within hearingContactTime, and is not shared. The same at every difficulty.
+  4. A run, sprint or landing carries the ground it came down on (`footstep.surface` from `WorldQuery.surfaceUnder`, the same answer the audio plays): on gravel or steel plate bots hear it NOISE.ground times as far and you hear it that much louder and further; walking stays silent on every ground; anything else as before.
+  5. You hear a knock from where it happened, in its prop's sound (steel, clank, rattle, glass, plastic, wood), within AUDIO.propNoise.maxDistance, with a puff of the prop's dust; a ring plays as the BB's impact only. The Sound cues ring and the minimap mark an enemy's knock as a step out to that range. Prop sounds are map cues rendered only for maps with that prop, each within the map sound budget; the title screen renders nothing more and no fingerprinted cue changes.
+  6. Every number is data (`config/noise.ts`, AUDIO.levels.propBump, AUDIO.propNoise, PROP_BUMP_DUST). Nothing is allocated per tick or per frame unless a prop sounds; determinism and the bot-match guards hold; the balance figures stay in their bands (or within noise) on all three maps; the main chunk stays at or under 1,250 kB.
+status: open
+attempts: 0

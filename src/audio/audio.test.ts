@@ -17,7 +17,8 @@ import { measureSeam, seamFailures } from './loopSeamSupport';
 import { MotorSound } from './motor';
 import { blockedShare, lineBlocked, muffleFor, type OcclusionQuery } from './occlusion';
 import { renderMapCue, renderSounds, suppressedCopies, variantsOf } from './soundBank';
-import { impactMaterialAt, surfaceUnder } from './soundMaterials';
+import { impactMaterialAt } from './soundMaterials';
+import { surfaceUnder } from '../map/underfoot';
 
 const RATE = 48000;
 

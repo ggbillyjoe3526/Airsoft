@@ -99,6 +99,20 @@ export function buildGroundGrid(map: MapData, cell: number = GROUND_LOOK.cell): 
   return { minX: x0, minZ: z0, cell, cols, rows, surface, underTrees };
 }
 
+/** Each map's ground grid at the default cell, built once (groundGridOf). Weakly held, as the soundscapes are. */
+const grids = new WeakMap<MapData, GroundGrid | null>();
+
+/**
+ * buildGroundGrid(map) at the default cell, built once per map and then shared (NP1): the soundscape's footsteps and the
+ * physics world's WorldQuery.surfaceUnder read the same grid, and Woodland's (30-50 ms) is built once. Never changed by
+ * its readers.
+ */
+export function groundGridOf(map: MapData): GroundGrid | null {
+  let grid = grids.get(map);
+  if (grid === undefined) grids.set(map, (grid = buildGroundGrid(map)));
+  return grid;
+}
+
 /** The cell (i, j) holding (x, z), clamped to the grid's edge (the ground past it is its edge's). */
 function cellIndex(grid: GroundGrid, x: number, z: number): number {
   const i = Math.min(grid.cols - 1, Math.max(0, Math.floor((x - grid.minX) / grid.cell)));

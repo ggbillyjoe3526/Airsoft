@@ -360,6 +360,20 @@ replaces its line; the old one stays findable in the archive or in git.
 - **Vaults are loud (owner, 2026-10-13: "Vaulting should create noise that makes enemies aware. Just like footsteps.
   Vaulting allows quick movement but at the cost of making noise.").** A vault is the loudest step there is: bots hear
   its hands and kit on the obstacle from 18 m (a sprint 16, a landing 12, a run 11), and its landing as well.
+- **Running into a noisy prop gives you away, and a BB ringing off steel draws a look (2026-10-15, NP1, the owner's Dev
+  6 item 41; Claude's defaults, any can change).** A run or sprint straight into a skip, container, van, generator,
+  IBC, rack, stall, vending machine, phone booth, site toilet, arcade cabinet, crate, pallet load or Woodland's board
+  fence (3 m/s or more into its face) knocks it: you hear its boom, clank, rattle or knock from where it was hit, with
+  a puff of dust, and the other team's bots hear it from 13 to 20 m by prop, placed on you, like a step. Walking,
+  crouching, glancing along it, leaning on it or standing on it stay quiet, and a prop sounds at most once every 1.2 s.
+  A BB landing hard on steel (a skip, container or the van 12 m; a generator or IBC 10 m) rings: only a bot with nothing
+  fresher on its mind turns to check it, and it tells nobody, so a ring is a distraction, never a pull off a fight.
+  Walls, floors, ramps, barriers, gabions, sandbags, logs, boulders, trees and planters are silent; a timber or plastic
+  prop only knocks when run into. All the numbers are in `config/noise.ts`, beside the bots' hearing ranges they scale.
+- **Steps on gravel and steel plate carry 1.35 times as far (2026-10-15, NP1).** A run, sprint or landing on
+  Woodland's creek gravel, Depot's dock ramps or Neon Heights' metal stairs is heard by bots that much further and
+  plays that much louder (+2.6 dB) to you, yours included; walking stays silent on every ground. The simulation names
+  the ground (`WorldQuery.surfaceUnder`), so the bots hear exactly the ground you hear.
 - **Aiming at a ledge rests the replica on it, automatically and with no setting (M104, 2026-10-13).** Down the sights,
   still, grounded and no more than slightly leaned, with a flat top 8 to 70 cm below the eye straight ahead and within
   0.8 m (`MOVEMENT.rest`, `sim/coverRest.ts`), the spread takes ×0.65 on top of the stance and the kick halves; moving,
@@ -734,7 +748,8 @@ replaces its line; the old one stays findable in the archive or in git.
   airsoft replica. An empty AEG still cycles; an empty gas pistol only clicks.
 - **Footsteps are information, so gameplay audio comes first (owner rule, 2026-10-05).** Every ground's step stays
   within 1.5 dB of concrete overall and within 3 dB in the 0.7 to 4 kHz band, so a soft ground never hides anyone. Bots'
-  hearing is unchanged and surface-blind.
+  hearing was surface-blind until NP1 made gravel and steel plate carry further (Gameplay and feel); the step sounds
+  themselves are unchanged.
 - **A field's ambience is map data, with a day and a night variant picked by the lighting preset, never a map name
   (owner rule, 2026-10-05).** Calls are no louder than a bird and beds no louder than the yard's, with no more in the
   footstep band than Depot's bed (tested).

@@ -1,5 +1,6 @@
 import type { BallisticsConfig } from '../config/ballistics';
 import type { FootstepConfig } from '../config/footsteps';
+import { NOISE } from '../config/noise';
 import type { HitConfig } from '../config/hits';
 import type { BodyConfig, MovementConfig } from '../config/movement';
 import type { SpawnPoint } from '../map/mapTypes';
@@ -19,6 +20,7 @@ import { stepWalkCycle } from './hitbox';
 import { type CharacterMover, createMovementScratch, type MovementScratch, stepMovement } from './movement';
 import { leanedEye, stepLean } from './lean';
 import { stepMagTosses, tossMag } from './magShare';
+import { createPropNoiseContext, type PropNoiseContext, readyQuiet, stepPropBump } from './propNoise';
 import { refillSpares, stepRangeTargets } from './rangeTargets';
 import { stepTorch } from './torch';
 import { createRng } from './rng';
@@ -82,6 +84,8 @@ export interface SimContext extends SimServices {
   armament: ArmamentContext;
   targets: BBTargets;
   round: RoundContext;
+  /** The noisy props' rules (NP1): the map's props (WorldQuery.noisyProps); the state-dependent fields filled each tick. */
+  propNoise: PropNoiseContext;
 }
 
 export function createSimContext(services: SimServices): SimContext {
@@ -107,6 +111,7 @@ export function createSimContext(services: SimServices): SimContext {
       elimination: createEliminationContext(services.deadZones, services.nav, services.navSnap, services.deadZoneFields),
     },
     round: { rules: services.rounds, pole: services.pole, spawns: services.spawns ?? [], spawnLift: services.spawnLift ?? 0, extraction: services.extraction },
+    propNoise: createPropNoiseContext(NOISE, services.query.noisyProps),
   };
 }
 
@@ -115,7 +120,8 @@ export function createSimContext(services: SimServices): SimContext {
  * its id; the player and bots are indistinguishable here. Characters without a command this tick
  * keep their view and stand still (gravity still applies); characters that have been hit follow the
  * hit-calling routine instead of their command; once out and standing in the dead zone they are only timed (isParked).
- * Order: move (a vault's start and its tick in place of the movement step; then footsteps), lean, rest on cover and
+ * Order: move (a vault's start and its tick in place of the movement step; a run into a noisy prop sounds it, NP1; then
+ * footsteps), lean, rest on cover and
  * settle the aim, then use replicas (BBs leave from the new eye position) and toss a magazine to a teammate (MG1), then
  * fly BBs (hitting walls or characters), then land the magazines in the air, then round flow.
  */
@@ -132,6 +138,11 @@ export function stepSimulation(
   armCtx.events = state.events;
   ctx.targets.characters = state.characters;
   ctx.targets.rangeTargets = state.targets;
+  const noise = ctx.propNoise;
+  readyQuiet(state.propQuiet, noise.props.length);
+  noise.quiet = state.propQuiet;
+  noise.time = state.time;
+  noise.events = state.events;
   // Once the round is decided it's a cease-fire, as after the end whistle at a site: nobody can fire,
   // and BBs still in the air can't hit anyone (they still stop on whoever they reach, M85).
   const live = state.round.phase === 'live';
@@ -174,7 +185,11 @@ export function stepSimulation(
     c.using = inPlay && live && cmd.use;
     // A vault under way finishes even if its vaulter is hit meanwhile (nobody is left hanging over the obstacle).
     if (c.vault.active) stepVault(c, cmd, ctx.movement, dt, ctx.mover, ctx.scratch);
-    else stepMovement(c, cmd, ctx.movement, dt, ctx.mover, ctx.scratch);
+    else {
+      stepMovement(c, cmd, ctx.movement, dt, ctx.mover, ctx.scratch);
+      // Ran into a noisy prop (NP1): it sounds. A vault makes its own noise; someone hit and walking off makes none.
+      if (inPlay && noise.props.length > 0) stepPropBump(c, ctx.scratch.desired, ctx.scratch.corrected, dt, ctx.body.radius, ctx.body.height, noise);
+    }
     rescueIfOutOfWorld(c, ctx.killY);
     stepWalkCycle(c, ctx.hits); // the legs' swing, for their hit volumes and the drawn figure (M85)
     stepLean(c, cmd, ctx.body, ctx.hits, ctx.movement, ctx.query, dt);
@@ -185,7 +200,7 @@ export function stepSimulation(
       stepElimination(c, ctx.hits, dt);
       continue;
     }
-    stepFootsteps(c, ctx.footsteps, state.events);
+    stepFootsteps(c, ctx.footsteps, state.events, ctx.query);
 
     const m = ctx.muzzle;
     leanedEye(c, ctx.body, ctx.hits, m.eye); // BBs leave from the eyes, wherever a lean puts them
@@ -204,7 +219,7 @@ export function stepSimulation(
   }
 
   if (ctx.wind) windAt(ctx.wind, state.time, state.wind);
-  stepBBs(state.bbs, ctx.ballistics, ctx.query, ctx.killY, state.events, dt, ctx.targets, state.rng, state.wind);
+  stepBBs(state.bbs, ctx.ballistics, ctx.query, ctx.killY, state.events, dt, ctx.targets, state.rng, state.wind, noise.props.length > 0 ? noise : undefined);
   // After the BBs: a catcher hit this tick is out of play, and the magazine is lost (MG1).
   stepMagTosses(state.magTosses, state.characters, live, state.events, dt);
   if (ctx.practice) {

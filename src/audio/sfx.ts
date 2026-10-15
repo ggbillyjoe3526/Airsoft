@@ -1,5 +1,6 @@
 import { AUDIO, CASE_OPEN_SOUND, caseWorkSound, FIRE_SOUND, matchOverBlastStart, REST_SOUND, type SoundLevel } from '../config/audio';
 import { CALLOUTS } from '../config/callouts';
+import { NOISE } from '../config/noise';
 import type { ReplicaConfig } from '../config/replicas';
 import type { InspectCue } from '../config/render';
 import { SIM_DT } from '../config/sim';
@@ -15,7 +16,7 @@ import { FoleyTracker, type FoleyMove } from './foley';
 import { MotorSound } from './motor';
 import { blockedShare, lineBlocked, type Muffle, muffleFor, type OcclusionQuery } from './occlusion';
 import { type Soundscape, YARD_BY_DAY } from './soundscape';
-import { surfaceUnder } from './soundMaterials';
+import { surfaceUnder } from '../map/underfoot';
 import { VoiceLimit } from './voiceLimit';
 import { Whistle } from './whistle';
 
@@ -387,14 +388,30 @@ export class Sfx {
         // A hi-cap rattles on a quiet walk where no step is heard (M17b); it plays at a step's level, yours turned down. A
         // vault's hands and kit (M102) play whatever the floor, louder than a step.
         const vault = e.kind === 'vault';
-        const cue: SoundCue = e.kind === 'rattle' ? 'magRattle' : e.kind === 'vault' ? 'vault' : cues.step(surfaceUnder(this.blocks, c.position, this.scene.ground), e.kind);
+        let cue: SoundCue;
+        let carry = 1;
+        if (e.kind === 'rattle') cue = 'magRattle';
+        else if (e.kind === 'vault') cue = 'vault';
+        else {
+          // What it came down on: the simulation's answer (WorldQuery.surfaceUnder), else worked out here as before.
+          const surface = e.surface ?? surfaceUnder(this.blocks, c.position, this.scene.ground);
+          cue = cues.step(surface, e.kind);
+          // Noisy ground (NP1): a step on gravel or steel plate plays louder and further, as the bots hear it further.
+          carry = NOISE.ground[surface];
+        }
         // Your own steps always play: they're how you judge your own pace and noise.
         if (c.id === localId) {
-          this.play(cue, this.self!, vault ? L.ownVault : L.ownStep);
+          this.play(cue, this.self!, vault ? L.ownVault : L.ownStep, undefined, carry);
           return;
         }
-        if (this.distanceTo(c.position) > AUDIO.footsteps.maxDistance || !this.stepLimit.take(this.ctx.currentTime)) return;
-        this.play(cue, this.channel(c).panner, vault ? L.vault : L.step);
+        if (this.distanceTo(c.position) > AUDIO.footsteps.maxDistance * carry || !this.stepLimit.take(this.ctx.currentTime)) return;
+        this.play(cue, this.channel(c).panner, vault ? L.vault : L.step, undefined, carry);
+        return;
+      }
+      case 'propNoise': {
+        // NP1: someone ran into a noisy prop: its boom, rattle or knock, from where they hit it. A BB's ring is its tick.
+        const sound = e.shot ? undefined : NOISE.props[e.kind]?.sound;
+        if (sound) this.oneShot(cues.prop(sound), e.position, L.propBump, AUDIO.propNoise.maxDistance);
         return;
       }
       case 'characterHit': {

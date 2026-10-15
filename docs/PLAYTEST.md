@@ -365,6 +365,15 @@ team puts you on Beta instead.
   like a wallhack, or too little?
 - [ ] **Shoot near a bot from past 22 m, unseen.** It ducks and comes looking or takes cover. A search that finds
   nobody ends with a crouched look round.
+- [ ] **Noisy props (NP1).** Run (not walk) straight into a skip, container, crate stack, rack or the like: a boom,
+  rattle or knock from where you hit it and a puff of dust, and a Beta bot 15 m off, facing away, turns and comes
+  looking. Walk or crouch into the same prop, slide along its side, or keep pushing against it: silent. Does a knock
+  feel fair, or does it catch you out where you didn't expect a prop to be noisy?
+- [ ] **A BB off steel (NP1).** From cover, shoot the side of a skip or container near an idle bot that hasn't seen
+  you: it turns to look at the skip, not at you. Shoot one near a bot that's fighting: it ignores it.
+- [ ] **Noisy ground (NP1).** Sprint across Woodland's creek gravel or up a steel ramp (Depot's docks, Neon Heights'
+  stairs): your steps are louder, and bots hear you a little further off than on grass or concrete. Walking there
+  stays silent.
 - [ ] **Fight a bot beside a wall or container.** It sidesteps away from the wall and keeps you in sight; on the
   dock's edge it never steps off.
 - [ ] **Hit a bot's teammate from 30 m or more.** The others turn towards roughly the right side, not straight at you.

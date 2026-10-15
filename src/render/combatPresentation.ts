@@ -6,8 +6,9 @@ import { FIGURE } from '../config/characters';
 import { impactMaterialAt } from '../audio/soundMaterials';
 import type { Action } from '../config/controls';
 import type { HitConfig } from '../config/hits';
+import { BLOCK_MATERIALS } from '../config/materials';
 import type { CrosshairSettings } from '../config/matchInfo';
-import { BB_VISUALS, DUST_MOTES, GAS_PUFFS, HIT_PUFFS, HUD, IMPACT_DUST, IMPACT_PUFFS, IMPACT_RINGS, LEAF_FLECKS, type LightingPreset, type QualitySettings } from '../config/render';
+import { BB_VISUALS, DUST_MOTES, GAS_PUFFS, HIT_PUFFS, HUD, IMPACT_DUST, IMPACT_PUFFS, IMPACT_RINGS, LEAF_FLECKS, type LightingPreset, PROP_BUMP_DUST, type QualitySettings } from '../config/render';
 import type { ImpactMaterial } from '../config/sounds';
 import { BODY, type MovementConfig } from '../config/movement';
 import { AIMING, type SightId, sightConfig } from '../config/optics';
@@ -367,6 +368,12 @@ export class CombatPresentation {
         const at = leafSurface(this.field.foliage ?? [], e.position, from, this.leafAt);
         this.leaves.spawn(at, from, LEAF_FLECKS.perBrush);
         this.sfx.leafBrush(at);
+      } else if (e.type === 'propNoise') {
+        // NP1: a run into a noisy prop knocks a puff of dust off it where it was hit (a BB's ring has its impact's puff).
+        if (!e.shot) {
+          const material = BLOCK_MATERIALS[e.kind];
+          this.puffs.spawn(e.position, this.dustTints.get(material), IMPACT_DUST[material].scale * PROP_BUMP_DUST.scale);
+        }
       } else if (e.type === 'targetHit') this.puffs.spawn(e.position);
       else if (e.type === 'characterHit') {
         // Your own hit: the replica jolts in your hands (the puff would fill your view).

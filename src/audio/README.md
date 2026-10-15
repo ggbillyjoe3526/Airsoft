@@ -13,13 +13,16 @@ and never changes the simulation.
   world sounds get a panner of their own. A bot's callout keys a radio (`radioCall`, CL1): a teammate's click on the
   interface bus, panned to where they are; an enemy's from them, only within 15 m. Your ping gives a soft pip
   (`pingPlaced`, PG1), a short tone on the whistle's output (`AUDIO.pingPip`). A tossed magazine swishes from the
-  thrower (`magToss`) and slaps into the catcher's hands (`magCatch`, MG1).
+  thrower (`magToss`) and slaps into the catcher's hands (`magCatch`, MG1). A run into a noisy prop plays its sound from
+  where it was hit (`propNoise`, NP1: `prop.<sound>`, map cues each map renders only for the props it has), and a step
+  on gravel or steel plate plays louder and further (`NOISE.ground`, the ground the simulation named).
 - `audioMix.ts`: buses master, effects (in-world, with the field's echo) and interface (hit tick, hit marker, whistle,
   dry), set by Settings › Audio. The limiter and ducking sit on effects only. The Ambience slider (M86) has no bus: each
   match's ambience (beds, fires, calls) plays into its world through one gain the engine holds at the slider's level
   (`AudioEngine.ambienceLevel`), so it is muffled and echoed like the rest, under Effects too.
 - `motor.ts` (an AEG winds up and down), `foley.ts` (crouch, stand and lean rustle; presentation only),
-  `soundMaterials.ts` (BB impacts by block material; leaves in a planter's top, FO1), `whistle.ts`, `voiceLimit.ts`.
+  `soundMaterials.ts` (BB impacts by block material; leaves in a planter's top, FO1; what is underfoot is
+  `map/underfoot.ts`, NP1), `whistle.ts`, `voiceLimit.ts`.
 - `ambience.ts` (seeded outdoor bed, and the calls: each kind of a field's calls on its own seeded gaps, M86) and `soundscape.ts` (pure: picks a field's ambience by day or night from
   its map data and the lighting preset's night flag).
 - Tuning: `config/audio.ts` (`AUDIO`, `AMBIENCES`, `AMBIENT_LOOPS`), `config/sounds.ts` (recipes, `MAP_CUE_SEEDS`). A

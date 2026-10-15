@@ -4,7 +4,9 @@ The bots: they play through the same `PlayerCommand` as the player, read game st
 seeded per bot.
 
 - `botController.ts`: `BotController` runs before each tick (`think` fills every bot's command, one route search a tick)
-  and after it (`observe`: bots hear shots, near misses, hit calls and footsteps from `state.events`). `giveOrder` takes
+  and after it (`observe`: bots hear shots, near misses, hit calls and footsteps from `state.events`; NP1: a run into a
+  noisy prop like a step, to the prop's range, steps on gravel or steel plate further, and a BB ringing off steel only
+  when nothing fresher is on their mind, kept to themselves). `giveOrder` takes
   a player's squad order. Each round it deals a team's bots onto lanes by a plan (`teamPlan.ts`).
 - `bot.ts`: a bot's plain-data state (one contact record per enemy seen, `skill`, `role`, `post`, `patrol`, and its
   `personality` and `style`).

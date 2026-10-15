@@ -4,6 +4,7 @@ import type { HitConfig } from '../config/hits';
 import { WHAT_GOT_YOU } from '../config/matchInfo';
 import { FLAG, unknownMode } from '../config/modes';
 import { type BodyConfig, MOVEMENT } from '../config/movement';
+import { NOISE } from '../config/noise';
 import { NAV } from '../config/nav';
 import type { ReplicaConfig } from '../config/replicas';
 import { SQUAD_ORDERS, type SquadOrderKind } from '../config/squad';
@@ -507,7 +508,17 @@ export class BotController {
                 : e.kind === 'rattle'
                   ? cfg.footstepHearingRattle
                   : cfg.footstepHearingRun;
-        if (walker && isInPlay(walker)) this.hear(walker.team, walker.position, walker.position, time, walker.position, range, walker.id);
+        // Steps on noisy ground carry further (NP1): gravel, steel plate.
+        const carry = e.surface ? NOISE.ground[e.surface] : 1;
+        if (walker && isInPlay(walker)) this.hear(walker.team, walker.position, walker.position, time, walker.position, range * carry, walker.id);
+      } else if (e.type === 'propNoise') {
+        // NP1: someone ran into a noisy prop, heard as far as the prop carries, from them; or a BB of theirs rang off one,
+        // heard where it rang, and only by a bot with no fresher news (a look that never pulls one off a fight).
+        const maker = this.character(state, e.characterId);
+        if (maker && isInPlay(maker)) {
+          if (e.shot) this.hear(maker.team, e.position, e.position, time, e.position, e.range, maker.id, undefined, false, true);
+          else this.hear(maker.team, e.position, maker.position, time, maker.position, e.range, maker.id);
+        }
       } else if (e.type === 'returned') {
         // Extraction (M45): an opponent back in a wave sets out afresh from its regen point.
         for (const b of this.bots) {
@@ -552,14 +563,17 @@ export class BotController {
   /**
    * Those of the other team within `range` of `heardAt` (walls muffle it) hear a noise from `shooterPos`. `only` limits
    * it to one bot; `call` marks a teammate's hit call, which a bot that heard it and plays as a team (M38) goes to trade
-   * (see tradeTime). A teamPlay bot shares where it heard someone with its teamPlay teammates (M38).
+   * (see tradeTime). A teamPlay bot shares where it heard someone with its teamPlay teammates (M38). A `faint` noise (a
+   * BB ringing off a prop, NP1) is heard only by a bot with nobody in sight and nothing seen or heard within
+   * hearingContactTime, and isn't shared: it draws an idle bot's look, never one busy with real news.
    */
-  private hear(shooterTeam: number, heardAt: Vec3, sourceFeet: Vec3, time: number, shooterPos: Vec3, range: number, sourceId: number, only?: Bot, call = false): void {
+  private hear(shooterTeam: number, heardAt: Vec3, sourceFeet: Vec3, time: number, shooterPos: Vec3, range: number, sourceId: number, only?: Bot, call = false, faint = false): void {
     const cfg = this.world.cfg;
     for (const b of this.bots) {
       if (only && b !== only) continue;
       const c = b.character;
       if (c.team === shooterTeam || !isInPlay(c) || (b.targetVisible && b.targetId === sourceId)) continue;
+      if (faint && (b.targetVisible || time - Math.max(lastSeenAt(b), b.heardAt) < cfg.hearingContactTime)) continue;
       const heard = Math.hypot(heardAt.x - c.position.x, heardAt.z - c.position.z);
       if (heard > range) continue;
       // Within the range a wall leaves, nothing to check; beyond it, cast the rays.
@@ -582,7 +596,7 @@ export class BotController {
       b.hasLastKnown = true;
       b.heardAt = time;
       b.lastThreatAt = time;
-      if (!b.skill.teamPlay) continue;
+      if (!b.skill.teamPlay || faint) continue;
       if (call) {
         b.tradeAt = time;
         b.tradeTried = false;

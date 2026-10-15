@@ -1,4 +1,6 @@
 import { SOUND_CUES, type SoundCueKind } from '../config/accessibility';
+import { AUDIO } from '../config/audio';
+import { NOISE } from '../config/noise';
 import { shotHeardScale } from '../sim/armament';
 import type { Character } from '../sim/character';
 import type { GameEvent } from '../sim/events';
@@ -16,8 +18,10 @@ export interface HeardSound {
 
 /**
  * The cue for a tick's event, written into `out`, or false if it gets none: your own sounds, and your teammates'
- * footsteps (you know where your team is), get none, as do sounds nobody hears as a person (impacts, the whistle).
- * Shots and hit calls come from everyone else, footsteps (and a hi-cap's rattle) from the other team.
+ * footsteps (you know where your team is), get none, as do sounds nobody hears as a person (impacts, a BB's ring off a
+ * prop, the whistle). Shots and hit calls come from everyone else, footsteps (and a hi-cap's rattle) from the other team,
+ * as does someone running into a noisy prop (NP1), a step cue from them that carries as far as the prop's sound plays.
+ * Steps on noisy ground carry further (NOISE.ground).
  */
 export function soundCueOf(e: GameEvent, local: Character, characterOf: (id: number) => Character | undefined, out: HeardSound): boolean {
   let source: Character | undefined;
@@ -26,6 +30,13 @@ export function soundCueOf(e: GameEvent, local: Character, characterOf: (id: num
     source = characterOf(e.characterId);
     if (!source || source.team === local.team) return false;
     out.kind = 'step';
+    if (e.surface) out.reach = NOISE.ground[e.surface];
+  } else if (e.type === 'propNoise') {
+    if (e.shot) return false;
+    source = characterOf(e.characterId);
+    if (!source || source.team === local.team) return false;
+    out.kind = 'step';
+    out.reach = AUDIO.propNoise.maxDistance / AUDIO.footsteps.maxDistance;
   } else if (e.type === 'shot') {
     source = characterOf(e.characterId);
     out.kind = 'shot';
@@ -53,9 +64,12 @@ export function cueAngle(viewYaw: number, fromX: number, fromZ: number, x: numbe
   return wrapAngle(viewYaw - towards);
 }
 
-/** How opaque a cue is `age` seconds after its sound, `metres` away, for `kind` (0 = not shown). */
-export function cueOpacity(kind: SoundCueKind, age: number, metres: number): number {
-  const range = SOUND_CUES.range[kind];
+/**
+ * How opaque a cue is `age` seconds after its sound, `metres` away, for `kind` (0 = not shown); `reach`: how far that
+ * sound carries as a share of its kind's range (HeardSound.reach), so a run into a skip fades over its own range.
+ */
+export function cueOpacity(kind: SoundCueKind, age: number, metres: number, reach = 1): number {
+  const range = SOUND_CUES.range[kind] * reach;
   if (age < 0 || age >= SOUND_CUES.life || metres > range) return 0;
   const fade = Math.min(1, (SOUND_CUES.life - age) / SOUND_CUES.fade);
   const near = 1 - (1 - SOUND_CUES.farOpacity) * (metres / range);
@@ -147,6 +161,7 @@ export class SoundCues {
     m.sound.sourceId = sound.sourceId;
     m.sound.x = sound.x;
     m.sound.z = sound.z;
+    m.sound.reach = sound.reach ?? 1;
     m.at = time;
   }
 
@@ -157,7 +172,7 @@ export class SoundCues {
     for (const m of this.markers) {
       if (Number.isNaN(m.at)) continue;
       const s = m.sound;
-      const opacity = roundTo(cueOpacity(s.kind, time - m.at, Math.hypot(s.x - x, s.z - z)), SOUND_CUES.opacityStep);
+      const opacity = roundTo(cueOpacity(s.kind, time - m.at, Math.hypot(s.x - x, s.z - z), s.reach), SOUND_CUES.opacityStep);
       if (opacity <= 0) {
         this.free(m);
         continue;

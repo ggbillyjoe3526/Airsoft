@@ -143,6 +143,8 @@ export const AUDIO = {
     /** Extraction's cases (M44): worked while opened, and the lid popping. */
     caseWork: { gain: 0.8, pitchSpread: 0.06 },
     caseOpen: { gain: 0.9, pitchSpread: 0.05 },
+    /** Someone running into a noisy prop (NP1): above a vault's level, as it carries further (NOISE.props), yours too. */
+    propBump: { gain: 0.85, pitchSpread: 0.08 },
     rope: { gain: 1, pitchSpread: 0.04 },
     /** A bird somewhere round the yard (the ambience). */
     bird: { gain: 0.35, pitchSpread: 0.08 },
@@ -220,6 +222,11 @@ export const AUDIO = {
    * `maxPerWindow` of them start within `window` seconds (six sprinters stay readable).
    */
   footsteps: { maxDistance: 22, maxPerWindow: 4, window: 0.1 },
+  /**
+   * A run into a noisy prop (NP1) further than this (m) isn't played: a little past the furthest a bot hears one
+   * (NOISE.props, 20 m), as a step plays a little past a sprint's reach. One prop sounds at most once per NOISE.quiet.
+   */
+  propNoise: { maxDistance: 26 },
   /** Crouching, standing and leaning rustle: heard this close (m), at most this many per window. */
   foley: { maxDistance: 9, maxPerWindow: 3, window: 0.15 },
   /** At most this many impact ticks start within `impactWindow` seconds (a hose of BBs stays readable). */

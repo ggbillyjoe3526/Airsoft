@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SOUND_CUES } from '../config/accessibility';
+import { AUDIO } from '../config/audio';
+import { NOISE } from '../config/noise';
 import { MUZZLES, type ReplicaParts } from '../config/attachments';
 import { LOADOUT } from '../config/replicas';
 import { createArmament } from '../sim/armament';
@@ -50,6 +52,21 @@ describe('soundCueOf (M18b)', () => {
     expect(cue({ type: 'bbImpact', position: vec3(), ownerId: 3 })).toBeNull();
     expect(cue({ type: 'roundStart', round: 2 })).toBeNull();
   });
+
+  it("carries an enemy's step on gravel or steel plate NOISE.ground as far, and a step elsewhere as before (NP1)", () => {
+    expect(cue({ type: 'footstep', characterId: 3, kind: 'sprint', surface: 'gravel' })).toEqual({ kind: 'step', sourceId: 3, x: -4, z: 9, reach: NOISE.ground.gravel });
+    expect(cue({ type: 'footstep', characterId: 3, kind: 'run', surface: 'metal' })?.reach).toBe(NOISE.ground.metal);
+    expect(cue({ type: 'footstep', characterId: 3, kind: 'run', surface: 'grass' })?.reach).toBe(1);
+    expect(cue({ type: 'footstep', characterId: 1, kind: 'run', surface: 'gravel' })).toBeNull();
+  });
+
+  it("marks an enemy running into a noisy prop as a step where they stand, as far as the prop's sound plays; never a BB's ring (NP1)", () => {
+    const knock = (characterId: number, shot = false): GameEvent => ({ type: 'propNoise', characterId, prop: 0, kind: 'skip', position: vec3(1, 1, 1), range: 20, shot });
+    expect(cue(knock(3))).toEqual({ kind: 'step', sourceId: 3, x: -4, z: 9, reach: AUDIO.propNoise.maxDistance / AUDIO.footsteps.maxDistance });
+    expect(cue(knock(3, true))).toBeNull();
+    expect(cue(knock(1))).toBeNull();
+    expect(cue(knock(0))).toBeNull();
+  });
 });
 
 describe('cueAngle', () => {
@@ -80,6 +97,10 @@ describe('cueOpacity', () => {
   it('shows nothing beyond the range the sound is played to', () => {
     expect(cueOpacity('step', 0, SOUND_CUES.range.step + 0.1)).toBe(0);
     expect(cueOpacity('shot', 0, SOUND_CUES.range.step + 0.1)).toBeGreaterThan(0);
+    // A sound that carries further (NP1: a run into a prop, a step on gravel) fades over its own range.
+    expect(cueOpacity('step', 0, SOUND_CUES.range.step + 0.1, 1.35)).toBeGreaterThan(0);
+    expect(cueOpacity('step', 0, SOUND_CUES.range.step * 1.35, 1.35)).toBeCloseTo(SOUND_CUES.farOpacity);
+    expect(cueOpacity('step', 0, SOUND_CUES.range.step * 1.35 + 0.1, 1.35)).toBe(0);
   });
 });
 
@@ -174,6 +195,22 @@ describe('SoundCues (the ring)', () => {
     cues.update(0, 0, 0, 0.1);
     expect(shown()).toHaveLength(SOUND_CUES.markers);
     expect(shown().every((m) => m.classes.has('cue-shot'))).toBe(true);
+  });
+
+  it('shows a sound that carries further than its kind (NP1: a run into a prop) out to its own range, and drops it past that', () => {
+    const { cues, shown } = make();
+    cues.setEnabled(true);
+    cues.update(0, 0, 0, 0);
+    const reach = AUDIO.propNoise.maxDistance / AUDIO.footsteps.maxDistance;
+    cues.add({ kind: 'step', sourceId: 7, x: SOUND_CUES.range.step + 1, z: 0, reach }, 0.05);
+    cues.update(0, 0, 0, 0.1);
+    expect(shown()).toHaveLength(1);
+    cues.add({ kind: 'step', sourceId: 8, x: SOUND_CUES.range.step * reach + 0.5, z: 0, reach }, 0.15);
+    cues.update(0, 0, 0, 0.2);
+    expect(shown()).toHaveLength(1);
+    // Walking off past its range lets it go.
+    cues.update(-(SOUND_CUES.range.step * reach), 0, 0, 0.25);
+    expect(shown()).toHaveLength(0);
   });
 
   it('moves the same player\'s marker for a burst, and measures from the first listener spot it is given', () => {

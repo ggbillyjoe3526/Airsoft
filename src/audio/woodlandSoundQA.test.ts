@@ -10,7 +10,7 @@ import { WOODLAND } from '../map/woodland';
 import { resolveLighting } from '../render/lightingPreset';
 import { vec3 } from '../sim/vec';
 import { AmbientCalls } from './ambience';
-import { surfaceUnder } from './soundMaterials';
+import { surfaceUnder } from '../map/underfoot';
 import { soundscapeOf } from './soundscape';
 
 /**
@@ -154,7 +154,9 @@ describe('M33j QA acceptance 2: a distant owl now and then', () => {
   });
 });
 
-describe("M33j QA acceptance 3: bots' hearing unchanged (surface-blind)", () => {
+// NP1 (the owner's Dev 6 item 41) made bots hear steps on gravel and steel plate further: they learn the ground through
+// WorldQuery.surfaceUnder (map/underfoot.ts, the physics world), never through the audio, which reads the same answer.
+describe("M33j QA acceptance 3: bots' hearing never reads the audio (the ground only through WorldQuery, NP1)", () => {
   /** Every non-test source of the bots and the simulation, as text. */
   const sources: Record<string, string> = {
     ...import.meta.glob<string>(['../ai/**/*.ts', '!../ai/**/*.test.ts'], { query: '?raw', import: 'default', eager: true }),

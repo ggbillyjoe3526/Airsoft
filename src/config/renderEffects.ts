@@ -103,6 +103,12 @@ export const IMPACT_DUST: Readonly<Record<ImpactMaterial, { tint: number; scale:
 };
 
 /**
+ * A run into a noisy prop (NP1, config/noise.ts): a puff of dust knocked off it where it was hit, in its material's dust
+ * (IMPACT_DUST) and this many times a BB's puff, so the knock shows from across the yard. Dust, never debris.
+ */
+export const PROP_BUMP_DUST = { scale: 4 };
+
+/**
  * Impact grit (QualitySettings.impactGrit, FA8): with each impact puff, a fainter, wider ring of dust (IMPACT_RINGS) and
  * `perImpact` chips of the surface (in its dust tint) thrown out at `speed` m/s, falling under `gravity` and gone after
  * `lifetime` s. Each chip is a small square `size` metres across (never under `minAngularSize` radians on screen),
