@@ -26,6 +26,7 @@ vi.mock('../ui/pingMarkers', async (orig) => ({ ...(await orig<typeof import('..
 vi.mock('../ui/matchBoard');
 vi.mock('../ui/minimap');
 vi.mock('../ui/minimapView');
+vi.mock('../ui/magPrompt');
 vi.mock('../ui/orderWheel');
 vi.mock('../ui/roundBanner');
 vi.mock('../ui/scoreboard');

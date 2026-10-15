@@ -1,4 +1,5 @@
 import type { Action } from '../config/controls';
+import { MAG_WHEEL_LABELS } from '../config/magShare';
 import { ORDER_WHEEL, type SquadCommand, type SquadOrderKind, type WheelSelect } from '../config/squad';
 
 /** The key that gives each wheel order directly (audit UI-22); the team plan has none (an order's own key cancels it). */
@@ -7,6 +8,7 @@ export const ORDER_KEYS: Readonly<Record<SquadCommand, Action | null>> = {
   hold: 'orderHold',
   regroup: 'orderRegroup',
   cancel: null,
+  mag: 'askMag',
 };
 
 /** The line in the wheel's middle: how to give the order pointed at, or how to leave. */
@@ -23,11 +25,13 @@ export function wheelHint(select: WheelSelect, pick: number, keyName: string): s
 export class OrderWheel {
   private readonly root: HTMLDivElement;
   private readonly items: HTMLDivElement[];
+  /** Each order's label (its own span, so the key under it stays): the Mag item's reads Need a Mag or Toss a Mag (MG1). */
+  private readonly labels: HTMLSpanElement[] = [];
   /** Under each order, its direct key (audit UI-22): the wheel teaches the keys it stands in for. */
   private readonly keys: (HTMLElement | null)[];
   private readonly dot: HTMLElement;
   private readonly hint: HTMLDivElement;
-  private shown = { open: false, pick: -2, current: '', hint: '', x: Number.NaN, y: Number.NaN };
+  private shown = { open: false, pick: -2, current: '', hint: '', x: Number.NaN, y: Number.NaN, mag: '' };
 
   /**
    * `team`: your team's CSS colour, which lights the order pointed at; `keyName`: the key bound to an action ('' if
@@ -51,7 +55,11 @@ export class OrderWheel {
       const angle = (i / n) * Math.PI * 2;
       el.style.setProperty('--x', `${Math.round(Math.sin(angle) * ORDER_WHEEL.radius)}px`);
       el.style.setProperty('--y', `${Math.round(-Math.cos(angle) * ORDER_WHEEL.radius)}px`);
-      el.textContent = item.label;
+      const label = document.createElement('span');
+      label.className = 'order-wheel-label';
+      label.textContent = item.label;
+      this.labels.push(label);
+      el.append(label);
       this.root.append(el);
       return el;
     });
@@ -72,9 +80,9 @@ export class OrderWheel {
 
   /**
    * Once per frame: the wheel open or not, the order pointed at (-1: none), the pointer (px from the middle), the
-   * order in force (marked on the wheel) and the hint in the middle.
+   * order in force (marked on the wheel), the hint in the middle and what the Mag item reads (MG1).
    */
-  update(open: boolean, pick: number, x: number, y: number, current: SquadOrderKind | 'none', hint: string): void {
+  update(open: boolean, pick: number, x: number, y: number, current: SquadOrderKind | 'none', hint: string, mag: string = MAG_WHEEL_LABELS.ask): void {
     const s = this.shown;
     if (open !== s.open) {
       this.root.hidden = !(s.open = open);
@@ -92,6 +100,12 @@ export class OrderWheel {
       s.current = current;
     }
     if (hint !== s.hint) this.hint.textContent = s.hint = hint;
+    if (mag !== s.mag) {
+      s.mag = mag;
+      ORDER_WHEEL.items.forEach((item, i) => {
+        if (item.command === 'mag') this.labels[i]!.textContent = mag;
+      });
+    }
     const rx = Math.round(x);
     const ry = Math.round(y);
     if (rx !== s.x || ry !== s.y) {

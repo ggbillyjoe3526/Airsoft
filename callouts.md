@@ -25,7 +25,7 @@ says never changes how it plays: the calls are what it already does, put into wo
   within its gap, and the same enemy is not called twice within its gap. A call the team gap holds back waits at most
   the last row's seconds, then is dropped.
 - **Personalities.** Talks (×) multiplies every chance: 1 changes nothing, above 1 is chattier. It never makes the
-  answers to your ping less likely. Every personality in [bots.md](bots.md) needs a row.
+  answers to your ping, or the asks and answers for a magazine, less likely. Every personality in [bots.md](bots.md) needs a row.
 - **Marks.** A teammate calling Contact or Contacts that still sees the enemy may also mark them for you, a ping over
   where they are: the chance is how likely, and the team marks at most once in its seconds. Marks only show; they
   never change how anyone plays.
@@ -56,6 +56,11 @@ says never changes how it plays: the calls are what it already does, put into wo
   it says so. Fills `{area}` (the spot's). Its Checking, Pushing or Flanking is not called as well.
 - **Watching your ping.** As above, when none of them goes (under your order, at its post, holding): the nearest that
   took it says it watches. Fills `{area}`. One answer per ping, so a line with no `{area}` is worth keeping.
+- **Need a mag.** It runs low on BBs (less than a full spare left) and asks the nearest teammate with one to spare:
+  you, when you are nearest, or a bot. Said as soon as its own gap lets it, while it still asks. Fills nothing.
+- **Mag coming.** It sets off to bring a teammate a magazine: one who asked it, or you, when you asked (the Mag key or
+  the order wheel's Need a Mag). Said as soon as its own gap lets it, while it still brings it. Fills nothing.
+- **Thanks for the mag.** It catches a magazine a teammate tossed it. Fills nothing.
 
 Hit players never talk: they raise a hand, call their hit and walk off, as on a real field ("dead men don't talk").
 
@@ -68,11 +73,14 @@ Hit players never talk: they raise a hand, call their hit and walk off, as on a 
 | Tagged | 0.6 | 3 |
 | Going to your ping | 1 | 0 |
 | Watching your ping | 1 | 0 |
+| Need a mag | 1 | 3 |
+| Mag coming | 1 | 0 |
 | Flag | 1 | 10 |
 | Raising | 1 | 10 |
 | Contacts | 0.9 | 3 |
 | Contact | 0.85 | 3 |
 | Reloading | 0.5 | 6 |
+| Thanks for the mag | 0.7 | 5 |
 | Heard | 0.5 | 8 |
 | Pushing | 0.6 | 8 |
 | Flanking | 0.7 | 10 |
@@ -166,3 +174,24 @@ Hit players never talk: they raise a hand, call their hit and walk off, as on a 
 | Raising | Any | Raising the flag! |
 | Flag | Any | They're on the flag! |
 | Flag | Any | Flag's going up! |
+| Need a mag | Any | Need a mag! |
+| Need a mag | Any | Low on BBs, anyone got a mag? |
+| Need a mag | Any | Mag, anyone? I'm nearly dry. |
+| Need a mag | Rusher | Throw me a mag, I'm going back in! |
+| Need a mag | Anchor | Running dry here. Need a mag. |
+| Need a mag | Flanker | Need a mag before I go round. |
+| Need a mag | Careful | Low on BBs. A mag when you can? |
+| Mag coming | Any | Mag coming! |
+| Mag coming | Any | Got a spare, coming to you. |
+| Mag coming | Any | Hang on, bringing you a mag. |
+| Mag coming | Rusher | On my way with a mag! |
+| Mag coming | Anchor | Got one spare. Coming over. |
+| Mag coming | Flanker | Mag coming, keep your head down. |
+| Mag coming | Careful | Mag on the way. Stay put. |
+| Thanks for the mag | Any | Thanks for the mag! |
+| Thanks for the mag | Any | Cheers, got it. |
+| Thanks for the mag | Any | Got it, thanks! |
+| Thanks for the mag | Rusher | Cheers! Back to it! |
+| Thanks for the mag | Anchor | Got it. Back on my lane. |
+| Thanks for the mag | Flanker | Nice throw, thanks. |
+| Thanks for the mag | Careful | Got it. Thanks. |

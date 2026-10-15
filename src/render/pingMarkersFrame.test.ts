@@ -46,6 +46,7 @@ vi.mock('../ui/pingMarkers', async (orig) => ({
 vi.mock('../ui/matchBoard');
 vi.mock('../ui/minimap');
 vi.mock('../ui/minimapView');
+vi.mock('../ui/magPrompt');
 vi.mock('../ui/orderWheel');
 vi.mock('../ui/roundBanner');
 vi.mock('../ui/scoreboard');

@@ -66,6 +66,9 @@ export type SoundCue =
   | 'magRattle'
   /** A vault (M102): hands slapping onto the obstacle's top and the kit swinging over it. */
   | 'vault'
+  /** A magazine tossed to a teammate (MG1): the arm's swing and the kit's rustle; and the catch, a glove's slap and the pouch's clack. */
+  | 'magToss'
+  | 'magCatch'
   | `impact.${ImpactMaterial}`
   | 'bodyHit'
   /** A BB ringing a steel plate on the practice range (M21). */
@@ -606,6 +609,25 @@ export const SOUNDS: Readonly<Record<SoundCue, SoundRecipe>> = {
     pitchSpread: LOOSE.pitchSpread,
     timeSpread: 0.08,
     gainSpread: LOOSE.gainSpread,
+  },
+  /** A magazine tossed (MG1): a quick swish of sleeve and air, a soft rattle of the BBs in it. */
+  magToss: {
+    layers: [
+      { kind: 'noise', attack: 0.02, decay: 0.09, gain: 0.3, filter: { type: 'bandpass', hz: 900, hzTo: 1900, q: 0.8 } },
+      { kind: 'noise', at: 0.01, attack: 0.004, decay: 0.05, gain: 0.12, filter: { type: 'highpass', hz: 3500, q: 0.7 } },
+      { kind: 'modes', at: 0.03, gain: 0.05, modes: [{ hz: 2700, decay: 0.02, gain: 1 }, { hz: 4300, decay: 0.015, gain: 0.5 }] },
+    ],
+    ...LOOSE,
+  },
+  /** Caught (MG1): a slap into a glove, then the plastic magazine clacking into the pouch. */
+  magCatch: {
+    layers: [
+      { kind: 'noise', attack: 0.001, decay: 0.035, gain: 0.5, filter: { type: 'lowpass', hz: 700, q: 0.9 } },
+      { kind: 'tone', wave: 'sine', attack: 0.002, decay: 0.04, gain: 0.14, hz: 190, hzTo: 90 },
+      { kind: 'modes', at: 0.09, gain: 0.3, modes: [{ hz: 1100, decay: 0.03, gain: 0.8 }, { hz: 2500, decay: 0.02, gain: 0.5 }] },
+      click(0.09, 2800, 0.25),
+    ],
+    ...TIGHT,
   },
 
   // ---- Only for the maps that use them (M33j: MAP_CUE_SEEDS) --------------------------------------

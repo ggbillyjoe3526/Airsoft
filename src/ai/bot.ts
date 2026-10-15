@@ -31,8 +31,11 @@ import { type BotIdentity, personalSkill } from './personality';
  *   lane instead of advancing, and nobody hunts.
  * - order: carrying out a squad order from a player on its team (M22): following them, holding a spot or regrouping
  *   on them. It takes the place of advancing, searching and the pole; fights and cover still come first.
+ * - mag: the magazine hand-off (MG1, ai/magShare.ts): bringing a teammate who asked one of its spares and tossing it
+ *   (before a squad order), or low itself, waiting where it is for the teammate bot bringing one, or going over to the
+ *   player it asked (after the order and the pole). Fights and cover still come first.
  */
-export type BotMode = 'advance' | 'fight' | 'cover' | 'search' | 'flag' | 'order';
+export type BotMode = 'advance' | 'fight' | 'cover' | 'search' | 'flag' | 'order' | 'mag';
 
 /**
  * Extraction (M46; plan, section 3): a home-team bot's job in a run, which takes the place of its lane ('none' in the
@@ -287,6 +290,21 @@ export interface Bot {
   patrolLead: boolean;
   /** Hunter: when the news of the squad it last went after was had (s). */
   newsTaken: number;
+
+  // The magazine hand-off (MG1, ai/magShare.ts).
+  /** The teammate who asked that it is bringing a spare to, and when it took that on (s). */
+  magFor: Character | undefined;
+  magForAt: number;
+  /** Its own ask, when it is low: since when (s; -Infinity: none open), whom it asked, and whether that is a player. */
+  magAskAt: number;
+  magFrom: Character | undefined;
+  magFromPlayer: boolean;
+  /** A magazine tossed to it is in the air: its ask stays open until it lands. */
+  magInAir: boolean;
+  /** It asks again no sooner than this (s). */
+  magAskGap: number;
+  /** Bringing one and still far off: it sprints (MAG_SHARE.hurryDistance). */
+  magRush: boolean;
 }
 
 /** Everything a bot's decisions depend on besides its own state. */
@@ -462,6 +480,14 @@ export function createBot(character: Character, seed: number, cfg: BotBehaviour,
     patrolPartner: undefined,
     patrolLead: false,
     newsTaken: Number.NEGATIVE_INFINITY,
+    magFor: undefined,
+    magForAt: Number.NEGATIVE_INFINITY,
+    magAskAt: Number.NEGATIVE_INFINITY,
+    magFrom: undefined,
+    magFromPlayer: false,
+    magInAir: false,
+    magAskGap: Number.NEGATIVE_INFINITY,
+    magRush: false,
   };
   resetBot(bot, -1, 0, cfg);
   return bot;
@@ -539,6 +565,13 @@ export function resetBot(b: Bot, lane: number, startHold: number, cfg: BotBehavi
   b.patrolIndex = -1;
   b.patrolPartner = undefined;
   b.newsTaken = Number.NEGATIVE_INFINITY;
+  // A new round starts with full magazines: no hand-off carries over.
+  b.magFor = undefined;
+  b.magAskAt = Number.NEGATIVE_INFINITY;
+  b.magFrom = undefined;
+  b.magInAir = false;
+  b.magAskGap = Number.NEGATIVE_INFINITY;
+  b.magRush = false;
 }
 
 /** Drops the current target (its contact stays remembered for contactGrace). */

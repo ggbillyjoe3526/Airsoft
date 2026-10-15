@@ -11,6 +11,7 @@ export class TeammateMarkers {
     y: number;
     visible: boolean;
     hit: boolean;
+    mag: boolean;
   }[];
 
   /** One marker per teammate, in `color` (CSS), labelled with `names`. */
@@ -24,7 +25,7 @@ export class TeammateMarkers {
       label.textContent = name;
       root.append(label, document.createElement('i'));
       parent.appendChild(root);
-      return { root, label, x: Number.NaN, y: Number.NaN, visible: false, hit: false };
+      return { root, label, x: Number.NaN, y: Number.NaN, visible: false, hit: false, mag: false };
     });
   }
 
@@ -46,6 +47,12 @@ export class TeammateMarkers {
       m.root.style.transform = `translate(${rx}px, ${ry}px)`;
     }
     if (hit !== m.hit) m.root.classList.toggle('hit', (m.hit = hit));
+  }
+
+  /** Marker `i` tagged "mag" (MG1): that teammate is asking you for a magazine, or bringing you one. */
+  setMag(i: number, on: boolean): void {
+    const m = this.markers[i];
+    if (m && on !== m.mag) m.root.classList.toggle('mag', (m.mag = on));
   }
 
   hide(i: number): void {

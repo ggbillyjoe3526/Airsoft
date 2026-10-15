@@ -202,7 +202,7 @@ function arrivedFor(b: Bot, goal: Vec3, w: BotWorld): boolean {
  * Walks to `goal` until within `arrive`, or until at the end of a route planned for about there (`settle`: a goal
  * that stays put); returns whether the bot is walking a route (see moveBot).
  */
-function walkTo(b: Bot, w: BotWorld, goal: Vec3, arrive: number, dt: number, settle = true): boolean {
+export function walkTo(b: Bot, w: BotWorld, goal: Vec3, arrive: number, dt: number, settle = true): boolean {
   const p = b.character.position;
   if (Math.hypot(goal.x - p.x, goal.z - p.z) <= arrive || (settle && arrivedFor(b, goal, w))) {
     if (b.routeState !== 'wanted') b.routeState = 'none';

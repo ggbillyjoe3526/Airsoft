@@ -111,6 +111,8 @@ export type SettingField =
   | 'callouts'
   /** Settings › HUD › Ping markers (PG1): 'on' or 'off', on when nothing is saved. */
   | 'pingMarkers'
+  /** Settings › HUD › Mag hand-off (MG1): 'on' or 'off', on when nothing is saved. */
+  | 'magPrompts'
   | 'hudSize'
   /** Settings → HUD → HUD opacity (G4): how opaque the HUD's panels are, 0.5 to 1. */
   | 'hudOpacity'

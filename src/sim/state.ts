@@ -2,6 +2,7 @@ import type { MatchMode } from '../config/modes';
 import { type BBPool, createBBPool } from './ballistics';
 import type { Character } from './character';
 import type { GameEvent } from './events';
+import { createMagTosses, type MagToss } from './magShare';
 import type { RangeTarget } from './rangeTargets';
 import { createRoundState, type RoundRules, type RoundState } from './round';
 import { createRng, type RngState } from './rng';
@@ -21,6 +22,8 @@ export interface GameState {
   targets: RangeTarget[];
   /** The wind (m/s) BBs flew through this tick (M30; SimServices.wind); still air without one. */
   wind: Vec3;
+  /** Magazines tossed to a teammate and still in the air (MG1, sim/magShare.ts): a fixed pool, `active` the ones out. */
+  magTosses: MagToss[];
 }
 
 /** A fresh game in `mode` (flag mode needs the map's flagpole). */
@@ -35,5 +38,6 @@ export function createGameState(seed: number, maxBBs: number, rules: RoundRules,
     round: createRoundState(rules, mode, pole),
     targets: [],
     wind: vec3(),
+    magTosses: createMagTosses(),
   };
 }

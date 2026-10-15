@@ -361,6 +361,13 @@ export class Sfx {
       case 'draw':
         this.playFrom(e.characterId, localId, characterOf, 'draw', L.mechanism);
         return;
+      // The magazine hand-off (MG1): the toss from the thrower, the catch from the catcher.
+      case 'magToss':
+        this.playFrom(e.fromId, localId, characterOf, 'magToss', L.mechanism);
+        return;
+      case 'magCaught':
+        this.playFrom(e.toId, localId, characterOf, 'magCatch', L.mechanism);
+        return;
       case 'bbImpact': {
         // Played by impact(), with the material the caller already worked out for the dust (audit L-15); a BB stopped
         // on a body (M85) knocks on it as a ricochet does.

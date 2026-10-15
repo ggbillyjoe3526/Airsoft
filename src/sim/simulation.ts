@@ -18,6 +18,7 @@ import { stepFootsteps } from './footsteps';
 import { stepWalkCycle } from './hitbox';
 import { type CharacterMover, createMovementScratch, type MovementScratch, stepMovement } from './movement';
 import { leanedEye, stepLean } from './lean';
+import { stepMagTosses, tossMag } from './magShare';
 import { refillSpares, stepRangeTargets } from './rangeTargets';
 import { stepTorch } from './torch';
 import { createRng } from './rng';
@@ -115,8 +116,8 @@ export function createSimContext(services: SimServices): SimContext {
  * keep their view and stand still (gravity still applies); characters that have been hit follow the
  * hit-calling routine instead of their command; once out and standing in the dead zone they are only timed (isParked).
  * Order: move (a vault's start and its tick in place of the movement step; then footsteps), lean, rest on cover and
- * settle the aim, then use replicas (BBs leave from the new eye position), then fly BBs (hitting walls or characters),
- * then round flow.
+ * settle the aim, then use replicas (BBs leave from the new eye position) and toss a magazine to a teammate (MG1), then
+ * fly BBs (hitting walls or characters), then land the magazines in the air, then round flow.
  */
 export function stepSimulation(
   state: GameState,
@@ -198,10 +199,14 @@ export function stepSimulation(
     stepArmament(c.id, c.armament, cmd, m, live && c.fireLockout <= 0, armCtx, dt);
     // After the armament: a switch this tick to a replica without a light puts the torch out (M33h).
     stepTorch(c, cmd, state.events, dt);
+    // A magazine tossed to a teammate (MG1): only while the round is live.
+    if (live && cmd.tossMag >= 0) tossMag(c, cmd.tossMag, state.characters, state.magTosses, ctx, state.events);
   }
 
   if (ctx.wind) windAt(ctx.wind, state.time, state.wind);
   stepBBs(state.bbs, ctx.ballistics, ctx.query, ctx.killY, state.events, dt, ctx.targets, state.rng, state.wind);
+  // After the BBs: a catcher hit this tick is out of play, and the magazine is lost (MG1).
+  stepMagTosses(state.magTosses, state.characters, live, state.events, dt);
   if (ctx.practice) {
     stepRangeTargets(state.targets, dt, state.rng);
     for (const c of state.characters) refillSpares(c.armament);

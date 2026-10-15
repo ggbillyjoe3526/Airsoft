@@ -58,7 +58,7 @@ import { type NoXp, settleMatch } from './stats/settleMatch';
 import { adaptedPicks, adaptiveNote, adaptiveSetup, settleAdaptive } from './adaptivePicks';
 import { loadCrosshair } from './ui/crosshair';
 import { loadHitMarker } from './ui/hitMarkerLook';
-import { loadCallouts, loadMinimapTurn, loadPingMarkers } from './ui/hudSettings';
+import { loadCallouts, loadMagPrompts, loadMinimapTurn, loadPingMarkers } from './ui/hudSettings';
 import { CrashScreen } from './ui/crashScreen';
 import { DebugOverlay } from './ui/debugOverlay';
 import { onFullscreenChange, relockAfterFullscreen, toggleFullscreen } from './ui/fullscreen';
@@ -271,6 +271,8 @@ export class Game {
   private callouts = loadCallouts();
   /** Settings › HUD › Ping markers (PG1): your pings and your teammates' marks shown in a match. */
   private pingMarkers = loadPingMarkers();
+  /** Settings › HUD › Mag hand-off (MG1): its line and tags shown in a match. */
+  private magPrompts = loadMagPrompts();
   /** The local records (M19), and what the last match finished changed in them. */
   private readonly records: Records = loadRecords(browserStorage());
   private recordNews: RecordNews = noNews();
@@ -600,6 +602,7 @@ export class Game {
         minimapTurn: { initial: this.minimapTurn, onChange: (t) => ((this.minimapTurn = t), this.session?.setMinimapTurn(t)) },
         callouts: { initial: this.callouts, onChange: (m) => ((this.callouts = m), this.session instanceof MatchSession && this.session.setCallouts(m === 'on')) },
         pingMarkers: { initial: this.pingMarkers, onChange: (m) => ((this.pingMarkers = m), this.session instanceof MatchSession && this.session.setPingMarkers(m === 'on')) },
+        magPrompts: { initial: this.magPrompts, onChange: (m) => ((this.magPrompts = m), this.session instanceof MatchSession && this.session.setMagPrompts(m === 'on')) },
       },
       dev: {
         initial: this.devPicked,
@@ -1201,6 +1204,7 @@ export class Game {
       this.session.setMinimapTurn(this.minimapTurn);
       this.session.setCallouts(this.callouts === 'on');
       this.session.setPingMarkers(this.pingMarkers === 'on');
+      this.session.setMagPrompts(this.magPrompts === 'on');
       // The kit the match plays (a ruleset's factory kit, say), not the Loadout's (BP3).
       this.session.combat.setReplicaPictures(this.pictures, kitSubjects(this.session.kit, this.look.realisticColours));
       this.applyDevTo(this.session);

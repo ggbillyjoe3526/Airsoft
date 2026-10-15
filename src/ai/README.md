@@ -17,10 +17,15 @@ seeded per bot.
 - `callouts.ts` (CL1): `CalloutDirector` puts what the bots just did into words for their team after each tick
   (`callouts.md`: sightings, hits, reloads, noises, searches, holds, the flag), at the file's pace and one call a team at
   a time. It reads the bots and the state and never writes either, so callouts never change how anyone plays. It also
-  has one teammate answer a ping (Going to / Watching your ping) and marks some sightings for the team (PG1).
+  has one teammate answer a ping (Going to / Watching your ping) and marks some sightings for the team (PG1), and says
+  the magazine hand-off's ask, answer and thanks (MG1).
 - `pings.ts` (PG1): `aimPing` finds what a player's ping marks (the floor where the view meets the field, or an enemy
   under the crosshair the bots' sight rules let them see), and `takePing` hands it to a bot teammate as a noise heard
   exactly there (`BotController.ping`), kept in mind `pingMemory` (`bot.ts pingInMind`).
+- `magShare.ts` (MG1): `MagShare`, the bots' side of a magazine hand-off. A bot low on BBs asks the nearest teammate
+  with one to spare (`hasMagFor`, which keeps the giver a full spare); a bot giver walks over (`Bot.magFor`, mode
+  `mag`) and names the asker in `tossMag`; an asker waits where it is, or walks to a player it asked. `ask` takes the
+  player's ask (`BotController.askForMag`). The callouts say the ask, the answer and the thanks.
 - `botBrain.ts`: the per-tick decision and mode choice (lane → fight → cover → search; also `order` and `flag`). It
   calls `botSenses.ts` (target choice, contacts, reaction), `botMovement.ts` (lane points, hunting, strafing, and one
   glance a tick into the view for the team's hunt memory, M87: a spot seen empty isn't walked to),

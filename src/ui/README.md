@@ -8,7 +8,8 @@ game state and never write it. Tests use the fake DOM in `testSupport.ts` (no js
   `teammateMarkers.ts`, `flagMarker.ts`, `flagStatus.ts`, `runStatus.ts`, `casePrompt.ts`, `whatGotYou.ts`,
   `squadOrderLine.ts`, `orderWheel.ts`, `playPrompt.ts` ("Click to play" after Esc skips a round), `vaultPrompt.ts`
   (the key to vault while a vault is there, M102), `calloutFeed.ts` (the bots' callouts, bottom left, CL1),
-  `pingMarkers.ts` (your pings and your teammates' marks over the field, PG1; the minimap draws the same slots).
+  `pingMarkers.ts` (your pings and your teammates' marks over the field, PG1; the minimap draws the same slots),
+  `magPrompt.ts` (the magazine hand-off's line under the crosshair, MG1; its words from `src/magHandoff.ts`).
 - Map and stats: `minimap.ts` (the field drawn once per match on a canvas) with `minimapView.ts` (teammates and heard
   players), `matchBoard.ts` (Tab), `statsRows.ts` (pure) and `statsTable.ts`, `recordsView.ts`, `rangeReadout.ts`
   (Practice's line and the timed challenge's banner), `performanceSheet.ts` (the Customise screen's Performance sheet).

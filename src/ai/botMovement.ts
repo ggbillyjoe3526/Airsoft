@@ -11,6 +11,7 @@ import { type CoverSearch, findCover, leanSideToSee } from './cover';
 import { bodyPoint, eyeOf, lineClear, seesSpot } from './perception';
 import { anchorHolding, pushesIn } from './personality';
 import { followRoute, stepOnto, teammateSpots, wantRoute } from './routes';
+import { moveMag } from './magShare';
 import { moveOrder } from './squadOrders';
 
 const DEG = Math.PI / 180;
@@ -658,6 +659,8 @@ export function moveBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number, tar
     }
     case 'order':
       return moveOrder(b, w, cmd, dt);
+    case 'mag':
+      return moveMag(b, w, cmd, dt);
     case 'fight': {
       // Fighting over crouch cover: stay put behind it. The raiser at the rope stays on it too (AI-06): a sidestep out
       // of the pole's reach would stop the flag.

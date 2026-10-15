@@ -418,18 +418,25 @@ describe('order wheel (M23)', () => {
   it('click: a click on an order gives it; letting go without one gives nothing', () => {
     const { keys, input, frame, move, lastOrder } = wheelSetup('click');
     frame(() => keys.press('orderWheel'));
-    move(0, 400); // down: Regroup
+    move(235, 324); // lower right: Regroup
     frame();
     keys.release('orderWheel');
     frame();
     expect(lastOrder()).toBeNull();
 
     frame(() => keys.press('orderWheel'));
-    move(-400, 0); // left: Team plan
+    move(-235, 324); // lower left: Team plan
     frame();
     frame(() => keys.press('fire'));
     expect(input.wheelOpen).toBe(false);
     expect(lastOrder()).toBe('cancel');
+
+    // Upper left: Need a Mag (MG1), the fifth order, which the Mag key gives too.
+    frame(() => keys.press('orderWheel'));
+    move(-380, -124);
+    frame();
+    frame(() => keys.press('fire'));
+    expect(lastOrder()).toBe('mag');
   });
 
   it('never fires: not the click that picks, nor a trigger held through it until it is pulled again', () => {

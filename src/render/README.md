@@ -49,7 +49,8 @@ and never writes the simulation.
   `computeKit.ts` `followSwappedBuffers` makes that back end's draws read the buffer a pass wrote last. The page switch
   `?noGpuDressing` (DEV and e2e builds) leaves the grass and stand-ins out for the WebGL comparison.
 - `matchPresentation.ts`: other players, hit feedback, spectator camera, round banner, scoreboard, flag.
-  `combatPresentation.ts`: after each tick it consumes `state.events`; each frame it draws the BBs, puffs, the held
+  `combatPresentation.ts`: after each tick it consumes `state.events`; each frame it draws the BBs, puffs, tossed
+  magazines (`magTosses.ts`, MG1: a code-made box on an arc, one mesh a slot of `GameState.magTosses`), the held
   replica (a second render pass) and the HUD. Also `cameraRig.ts`, `viewmodel.ts`, and `eyepiece.ts` (aimed, a
   scope's rear glass shows the world: a depth-only disc in the held replica's pass).
 - The practice range's targets: `rangeTargetsRenderer.ts` (instanced plates, figures and the START plate, moved by the

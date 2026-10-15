@@ -12,6 +12,10 @@ The gameplay rules: plain data and pure functions, with no Three.js, no DOM and 
   moves the body along it through `CharacterMover` in place of the movement step. Tuning: `config/vault.ts`.
 - `armament.ts`: fire, switch, holster (M92: put away for the faster sprint, drawn back slower), reload by magazine
   swap, `WorldQuery`. `shotHeardScale` is the one place a shot's reach is read (bots, minimap, sound cues).
+- `magShare.ts` (MG1): a teammate's magazine. `PlayerCommand.tossMag` names who gets one; `canTossTo` (teammates in
+  play, in reach and sight, a spare of the right class with room), `tossMag` takes the BBs out of the thrower's pouch
+  into `GameState.magTosses`, `stepMagTosses` lands them in the catcher's emptiest spares (`magToss`, `magCaught`,
+  `magLost`). BBs move, never appear. `lowOnMags` is the one "low on BBs" rule. Tuning: `config/magShare.ts`.
 - `ballistics.ts`, `air.ts`, `wind.ts`, `hopUp.ts`: BB flight. Gravity, drag by Reynolds number and Magnus lift from the
   hop-up's decaying backspin, one midpoint step a tick; `wind.ts` writes `GameState.wind` from the match seed. What
   leaves the muzzle (`muzzleVelocity`, `bbMass` in `config/replicas.ts`) is the boundary: flight only reads it.

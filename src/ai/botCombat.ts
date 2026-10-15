@@ -79,6 +79,10 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
     // Watch where the threat was, even while moving there; slicing corners (M38), at head height there.
     const y = b.skill.slicesCorners ? b.lastKnown.y + w.body.standEyeHeight : eye.y;
     lookAngles(eye.x, eye.y, eye.z, b.lastKnown.x, y, b.lastKnown.z, look);
+  } else if (b.mode === 'mag' && !walking && (b.magFor ?? b.magFrom)) {
+    // The magazine hand-off (MG1): standing to toss one, or waiting for one, it looks at the teammate it hands off with.
+    const partner = (b.magFor ?? b.magFrom)!.position;
+    look.yaw = Math.atan2(-(partner.x - me.position.x), -(partner.z - me.position.z));
   } else if (b.mode === 'order' && (!walking || (b.order === 'follow' && !b.orderRush))) {
     // A squad order (M22): at its spot, look the way the order says; keeping up behind a leader, keep covering their
     // back on the move too (only hurrying, it looks where it runs).

@@ -772,10 +772,10 @@ there maps each symptom to its numbers):
   the same spot: back to the plan.
 - [ ] **Regroup (V).** They sprint back to you, then follow. Get hit: the order ends, and order keys say "Orders wait
   for the next round". A new round starts with no order.
-- [ ] **The order wheel (hold Z).** Four orders round the crosshair, each with its key under it. The view and replica
-  stay still while a small pointer lights the order it's on; let go on one to give it, or without moving to give
-  none. You keep walking with Z held; firing stops and needs a new pull after. Settings › Controls › Order wheel ›
-  Click: point and click instead (that click fires no BB).
+- [ ] **The order wheel (hold Z).** Five items round the crosshair (Need a Mag upper left), each with its key under
+  it. The view and replica stay still while a small pointer lights the order it's on; let go on one to give it, or
+  without moving to give none. You keep walking with Z held; firing stops and needs a new pull after. Settings ›
+  Controls › Order wheel › Click: point and click instead (that click fires no BB).
 - [ ] **Pings (middle mouse).** Ping the floor or a wall: a soft pip, a ring in your team's colour with "Ping · 24 m"
   under it, on the minimap too; it pops in, sits faint on the screen's edge when you turn away and fades after about
   8 s. Ping again: the old one goes. A teammate answers once ("On it, Dock." or "Eyes on Dock.") and one goes to look,
@@ -785,6 +785,18 @@ there maps each symptom to its numbers):
   a teammate calling "Contact" marks the enemy for you the same way. On Easy and Pro alike nothing stutters.
 - [ ] **Settings › HUD › Ping markers.** Off: no markers over the field or on the minimap, but teammates still answer
   and go. Rebind Ping under Settings › Controls and the new key pings.
+- [ ] **Ask for a mag (H).** Fire until your pouch holds less than one full magazine (the ammo counter's spares): for
+  5 s the line under the crosshair says "Low on BBs · H to ask for a mag". Press H: the nearest teammate says "Mag
+  coming!" (each personality its own way), comes to you, tosses a magazine you can see arc into your hands with a swish
+  and a slap, and the line says "+1 mag from Dash · 60 BBs"; your spares go up by that much and theirs down. H with a
+  full spare: "You still have a full spare mag". H with nobody near: "Nobody near has a mag to spare".
+- [ ] **A teammate asks you.** Settings › Dev › Bots start low on BBs, then play a round: one of your teammates calls
+  "Need a mag!", its name tag gets "· mag" and the line says "Dash needs a mag · 12 m". They walk to you; once in reach
+  the line turns team-coloured, "H · Toss Dash a mag", and the wheel's item reads Toss a Mag. Press H: "Mag to Dash",
+  the magazine flies, and they say thanks. A pistol only gets a pistol's magazine. Watch a bot ask a bot too: the
+  giver walks over and tosses. On Easy and Pro alike it works the same, and nothing stutters.
+- [ ] **Settings › HUD › Mag hand-off.** Off: no line or tag, but H still asks and tosses and teammates still call it.
+  Rebind it under Settings › Controls (Squad: ask for a mag / toss one), and unbound the lines name the order wheel.
 - [ ] **The minimap.** A square map at the top left on a navy panel, "Depot · Round 2" under it, the way you look
   always up, you the white arrow. Teammates are dots in your team's colour (blue on Alpha; pinned to the edge when off it), grey once hit. An opponent you hear shows as a patch in theirs (orange on Alpha) roughly where
   (dashed for steps, a dot for a shot) for a few seconds; far sounds give wider patches; nothing for one you can't

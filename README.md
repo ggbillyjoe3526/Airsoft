@@ -132,6 +132,9 @@ Then open **http://localhost:4173**.
 - **Pings.** Press the middle mouse button to ping where you look: a marker with its distance for your team, and your
   bot teammates go to check it or watch it, and say so. Ping an enemy you can see and it is marked as a contact; your
   teammates sometimes mark the enemies they call for you. **Settings › HUD › Ping markers** hides the markers.
+- **Asking for a magazine.** Low on BBs, press H (or Need a Mag on the order wheel): the nearest teammate with one to
+  spare comes over and tosses you one. When a teammate asks you, get close and press H to toss them one. Bots ask each
+  other too. **Settings › HUD › Mag hand-off** hides the line under the crosshair.
 - **Dev content.** **Settings › Dev** (tick **Dev settings** under the list) has a **Dev content** switch for maps,
   modes and gear still being built, and **Disable levelling**, which unlocks every replica and part. Matches that use
   either aren't recorded and give no XP.
@@ -159,6 +162,7 @@ Every action can be rebound under **Settings › Key Bindings**, mouse buttons a
 | Tab (hold) | Scoreboard |
 | Z (hold), F, X, V | Squad order wheel; Follow me, Hold here, Regroup (press again to cancel) |
 | Middle mouse | Ping where you look (or an enemy you can see) for your team |
+| H | Ask a teammate for a magazine, or toss one to a teammate who asked |
 | G (hold) | Use: open a case in Extraction (dev content) |
 | T | Weapon torch on and off (dev content) |
 | Y | Inspect: turn the replica in hand over to look it over (the rifle's charging handle and hop-up dial, the pistol's press check) |

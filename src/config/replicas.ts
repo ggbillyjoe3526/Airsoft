@@ -48,6 +48,11 @@ export interface ReplicaConfig {
    */
   energyLimit: number;
   /**
+   * Its class in stats.md (`rifle`, `pistol`): the site limit it is chronoed against, and which magazines fit it when a
+   * teammate tosses you one (MG1, sim/magShare.ts): a rifle's for a rifle, a pistol's for a pistol.
+   */
+  siteClass: string;
+  /**
    * The BB weight it comes set up for (grams, within BB_WEIGHT's range): the player's starting choice on the Loadout
    * screen, and what bots always shoot. Changes speed, drag and hop-up lift (config/ballistics.ts).
    */
@@ -112,11 +117,11 @@ export interface ReplicaLook {
  * `base` (the built-in numbers) with the performance numbers stats.md gives its key (M29), and the energy limit of the
  * class it names. The built-in numbers are only used where the file can't be read.
  */
-export function withStats(base: Omit<ReplicaConfig, 'energyLimit'> & { siteClass: string }, stats: StatsFile = GAME_STATS): ReplicaConfig {
+export function withStats(base: Omit<ReplicaConfig, 'energyLimit'>, stats: StatsFile = GAME_STATS): ReplicaConfig {
   const { siteClass: builtInClass, ...rest } = base;
   const { siteClass = builtInClass, ...numbers } = stats.replicas[base.id] ?? {};
   const energyLimit = stats.siteLimits[siteClass] ?? DEFAULT_SITE_LIMITS[siteClass] ?? Number.POSITIVE_INFINITY;
-  return { ...rest, ...numbers, energyLimit };
+  return { ...rest, ...numbers, siteClass, energyLimit };
 }
 
 /**

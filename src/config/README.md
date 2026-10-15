@@ -15,7 +15,8 @@ holds no magic numbers.
   `BOT_PERSONALITIES`. `calloutsFile.ts` reads `callouts.md` (CL1: what the bots call and how often) and
   `calloutLines.ts` holds `CALLOUT_LINES`; `callouts.ts` has the feed's and radio click's numbers and the setting.
   `pings.ts` (PG1): how far a ping reaches, what counts as an enemy under it, the markers' life and the Ping markers
-  setting.
+  setting. `magShare.ts` (MG1): the magazine hand-off's reach, flight, "low", what a giver keeps, the bots' ask gaps,
+  the tossed magazine's look, the HUD's lines and the Mag hand-off setting.
 - Rendering: `render.ts` re-exports `renderQuality.ts`, `renderEffects.ts`, `renderLighting.ts`, `renderSurfaces.ts` and
   `renderView.ts`: import from `render.ts`. Also `graphics.ts` (the Custom rows), `post.ts`, `look.ts`, `weathering.ts`,
   `bake.ts`, `dressing.ts`, `materials.ts`, `gpuDressing.ts` (W5: the node path's GPU grass and tree stand-ins, capped

@@ -42,6 +42,11 @@ export interface PlayerCommand {
   toggleTorch: boolean;
   /** Use key held (M44): opens the case beside you in Extraction. */
   use: boolean;
+  /**
+   * Toss a spare magazine to the teammate with this character id (one-shot; MG1, sim/magShare.ts), or -1 for none.
+   * The simulation tosses only what its rules allow (canTossTo).
+   */
+  tossMag: number;
 }
 
 export function createCommand(): PlayerCommand {
@@ -63,5 +68,6 @@ export function createCommand(): PlayerCommand {
     cycleFireMode: false,
     toggleTorch: false,
     use: false,
+    tossMag: -1,
   };
 }
