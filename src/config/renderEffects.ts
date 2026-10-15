@@ -98,6 +98,8 @@ export const IMPACT_DUST: Readonly<Record<ImpactMaterial, { tint: number; scale:
   metal: { tint: 0xc9d2dc, scale: 0.6 },
   /** Ground (M33c, terrain): a puff of brown soil. */
   earth: { tint: 0xb89a72, scale: 0.9 },
+  /** Leaves (Dev 6 item 44): a faint green breath of torn leaf; the leaves that flutter out are LEAF_FLECKS. */
+  leaves: { tint: 0xa9c98a, scale: 0.7 },
 };
 
 /**
@@ -121,6 +123,36 @@ export const IMPACT_GRIT = {
   /** Chips are a touch darker than the dust's tint, so they read against the puff. */
   shade: 0.75,
   seed: 4413,
+} as const;
+
+/**
+ * Leaves knocked out of a bush by a BB (Dev 6 item 44, render/leafFlecks.ts): a BB the leaves stop sends `perStop` of them
+ * fluttering out, one that brushes through an edge `perBrush`, at every quality (they say where your BB went). Each is a
+ * small leaf `size` metres long (never under `minAngularSize` radians on screen), thrown out at `speed` m/s, mostly back
+ * towards the shooter's side (`toward`) and up (`up`), then falling under `gravity` but held back by the air (`drag`,
+ * per second: they drift down at about gravity / drag), swaying `sway` m/s side to side every `swayPeriod` s and turning
+ * over as they go, gone after `lifetime` s (fading over its last `fade`). Greens picked from `colours`, darker by up to
+ * `shade`. A pool of `max` (the oldest reused), one draw call.
+ */
+export const LEAF_FLECKS = {
+  max: 48,
+  perStop: [4, 6] as const,
+  perBrush: [1, 2] as const,
+  speed: [0.8, 1.8] as const,
+  toward: 0.5,
+  up: 0.6,
+  gravity: 6,
+  drag: 5,
+  sway: 0.5,
+  swayPeriod: [0.5, 0.9] as const,
+  spin: 7,
+  lifetime: 1.1,
+  fade: 0.35,
+  size: [0.035, 0.055] as const,
+  minAngularSize: 0.002,
+  colours: [0x4f7d3c, 0x5f8f45, 0x3f6a33, 0x7a9a4a] as const,
+  shade: 0.25,
+  seed: 4451,
 } as const;
 
 /** The faint ring of dust round an impact puff with impact grit on (FA8): wider, fainter and slower than the puff. */

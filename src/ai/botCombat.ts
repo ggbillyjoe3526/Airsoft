@@ -4,6 +4,7 @@ import { bbMass, muzzleVelocity } from '../config/replicas';
 import { flightTimeEstimate } from '../sim/ballistics';
 import { type Character, eyeHeight } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
+import { foliageDepth } from '../map/foliage';
 import { isInPlay } from '../sim/elimination';
 import { characterHitVolume, createHitVolume, type HitVolume, inflateHitVolume, rayCharacter, shiftHitVolume } from '../sim/hitbox';
 import { length3, type Vec3, vec3, wrapAngle } from '../sim/vec';
@@ -232,18 +233,31 @@ function bodyInLine(b: Bot, w: BotWorld, from: Vec3, dir: Vec3, dist: number, to
 
 /**
  * True if the bot must hold fire at `aimPoint` (`dist` metres away): cover in the way (sight is refreshed
- * 10×/s, so the target may have just stepped behind some), a wall close in front along the aim `dir` (unit),
- * or a teammate in the line of fire `dir`,
+ * 10×/s, so the target may have just stepped behind some), more leaves in the way than it shoots through (leavesInLine),
+ * a wall close in front along the aim `dir` (unit), or a teammate in the line of fire `dir`,
  * up to the first wall past the target (a BB that misses flies on, but not through walls), or someone already hit in
  * front of the target (bodyInLine).
  */
 function lineOfFireBlocked(b: Bot, w: BotWorld, eye: Vec3, aimPoint: Vec3, dir: Vec3, dist: number): boolean {
   if (!lineClear(w.query, eye, aimPoint)) return true;
+  if (leavesInLine(b, w, eye, aimPoint)) return true;
   const wall = w.query.raycastStatic(eye, dir, dist + w.cfg.friendlyBeyondTarget);
   // The BB flies along the actual aim, not the line to the target: hold fire rather than shoot the wall beside you.
   if (wall >= 0 && wall < dist * w.cfg.aimWallFraction) return true;
   const stray = strayPerMetre(b, w);
   return bodyInLine(b, w, eye, dir, friendlyReach(w, eye, dir, dist, wall, stray), dist, stray);
+}
+
+/**
+ * True if the line from `eye` to `aimPoint` runs through more bush than the bot will shoot through (Dev 6 item 44): more
+ * than foliageFireThrough of leaves, or, for a bot that fires into them (Easy, BotSkill.firesIntoLeaves), as much as
+ * stops a BB. A bot can notice someone in a bush close by (closeAwareness) and still have no shot at them.
+ */
+function leavesInLine(b: Bot, w: BotWorld, eye: Vec3, aimPoint: Vec3): boolean {
+  const leaves = w.query.foliage;
+  if (!leaves || leaves.length === 0) return false;
+  const most = b.skill.firesIntoLeaves ? BALLISTICS.leaves.stopDepth : w.cfg.foliageFireThrough;
+  return foliageDepth(leaves, eye, aimPoint, most) > most;
 }
 
 /**

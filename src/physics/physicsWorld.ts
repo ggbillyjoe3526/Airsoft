@@ -1,6 +1,7 @@
 import type * as Rapier from '@dimforge/rapier3d-compat';
 import type { BodyConfig } from '../config/movement';
 import { PHYSICS } from '../config/physics';
+import type { Bush } from '../map/foliage';
 import type { MapBlock, MapData } from '../map/mapTypes';
 import { RAMP_FACES, rampCorners } from '../map/surfaces';
 import { terrainMesh } from '../map/terrain';
@@ -110,6 +111,8 @@ export class PhysicsWorld implements CharacterMover {
   private readonly probeHit = new RAPIER.ColliderShapeCastHit(null as unknown as Rapier.Collider, 0, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
   /** Ray casts against the level (sim/levelRay.ts, audit SIM-01): no Rapier query, nothing allocated per cast. */
   private readonly level: LevelRay;
+  /** The map's bushes (WorldQuery.foliage): BBs push into their leaves (Dev 6 item 44); nothing here collides with them. */
+  readonly foliage: readonly Bush[];
 
   /** Call `initPhysics()` first. */
   constructor(
@@ -135,6 +138,7 @@ export class PhysicsWorld implements CharacterMover {
       this.world.createCollider(RAPIER.ColliderDesc.trimesh(positions, indices, RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES).setCollisionGroups(STATIC_GROUPS));
     }
     this.level = buildLevelRay(map.blocks, PHYSICS.rayGridCell, map.terrain ?? null);
+    this.foliage = map.foliage ?? [];
 
     this.controller = this.world.createCharacterController(PHYSICS.controllerOffset);
     this.controller.setUp({ x: 0, y: 1, z: 0 });

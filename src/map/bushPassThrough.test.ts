@@ -23,9 +23,10 @@ import { RANGE_MAP } from './range';
 import { WOODLAND } from './woodland';
 
 /**
- * M33e QA, acceptance 2 (BBs, players and bots pass straight through bushes: no collider, no level-ray surface, the nav
- * grid walkable under them) and the "maps without foliage are unchanged" half of acceptance 3, in the simulation proper:
- * real Rapier world, real stepSimulation, real nav grid.
+ * M33e QA, acceptance 2 (players and bots pass straight through bushes: no collider, no level-ray surface, the nav grid
+ * walkable under them) and the "maps without foliage are unchanged" half of acceptance 3, in the simulation proper: real
+ * Rapier world, real stepSimulation, real nav grid. BBs no longer pass (Dev 6 item 44): a bush's leaves stop them, so the
+ * first block checks that instead.
  */
 
 const DT = 1 / 60;
@@ -74,30 +75,37 @@ function duel(map: MapData, targetZ: number) {
   return { physics, state, shooter, target, ctx: context(map, physics, 3), commands };
 }
 
-/** Ticks of fire until the target is hit (or `max`); -1 if never. Also the furthest a BB got along -Z while flying. */
+/** Ticks of fire until the target is hit (or `max`); -1 if never. Also where the BBs the leaves stopped ended (z). */
 function firstHit(map: MapData, targetZ: number, max = 180) {
   const { physics, state, target, ctx, commands } = duel(map, targetZ);
   let hitAt = -1;
+  const inLeaves: number[] = [];
   for (let i = 0; i < max && hitAt < 0; i++) {
     stepSimulation(state, commands, ctx, DT);
     if (state.events.some((e) => e.type === 'characterHit' && e.victimId === target.id)) hitAt = i;
+    for (const e of state.events) if (e.type === 'bbImpact' && e.leaves) inLeaves.push(e.position.z);
   }
   physics.dispose();
-  return { hitAt };
+  return { hitAt, inLeaves };
 }
 
-describe('BBs fly through a bush (M33e, acceptance 2)', () => {
+describe('a bush stops the BBs (Dev 6 item 44; M33e let them through)', () => {
   beforeAll(async () => {
     await initPhysics();
   });
 
-  it('hits a player standing behind a bush just as with no bush there', () => {
+  it('never hits a player standing behind a bush, where the same shots hit them in the open', () => {
     const open = firstHit(OPEN_FIELD, -9);
     expect(open.hitAt, 'control: open field').toBeGreaterThanOrEqual(0);
+    expect(open.inLeaves).toHaveLength(0);
     const bushed = firstHit(withBush(), -9);
-    expect(bushed.hitAt, 'a bush between them').toBeGreaterThanOrEqual(0);
-    // Not stopped or slowed on the way: the same tick, the same everything (the bush is no surface, no drag).
-    expect(bushed.hitAt).toBe(open.hitAt);
+    expect(bushed.hitAt, 'a bush between them').toBe(-1);
+    // Every BB ended in the leaves, a little way in: none got through the bush's middle.
+    expect(bushed.inLeaves.length).toBeGreaterThan(10);
+    for (const z of bushed.inLeaves) {
+      expect(z).toBeLessThan(BUSH.z + BUSH.radius);
+      expect(z).toBeGreaterThan(BUSH.z - BUSH.radius);
+    }
   });
 
   it('is stopped by a wall of the same size in the same place (the control: the test can fail)', () => {

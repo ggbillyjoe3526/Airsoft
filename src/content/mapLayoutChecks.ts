@@ -212,8 +212,8 @@ export function flagCheck(entry: MapEntry, map: MapData): CheckResult | null {
 /**
  * What you see is what stops a BB: every block is drawn inside its own box (render/mapMeshes.ts blockPieces, plain and
  * with map detail), so nothing drawn hangs out where a BB passes but a player cannot see through. Look-only blocks
- * lie flat (map.lookOnly); bushes hide and let BBs through by design (airsoft concealment); tree crowns hang
- * CANOPY.minBase over the ground, above a standing player. Ramps are wedges inside their box and are not drawn in pieces.
+ * lie flat (map.lookOnly); bushes stop a BB as deep in as you can't see through them, and one through an edge flies on
+ * thrown off (Dev 6 item 44, BallisticsConfig.leaves); tree crowns hang CANOPY.minBase over the ground, above a standing player. Ramps are wedges inside their box and are not drawn in pieces.
  * `pieces` is the drawing (the game's; a test's for a fault).
  */
 export function seeThroughCheck(entry: MapEntry, map: MapData, pieces: typeof blockPieces = blockPieces): CheckResult {
@@ -231,7 +231,7 @@ export function seeThroughCheck(entry: MapEntry, map: MapData, pieces: typeof bl
   }
   if (out.length > 0) return result('compatibility', 'map.seeThrough', item, 'fail', `${plural(out.length, 'block')} drawn where a BB passes through: ${out.slice(0, 3).join('; ')}. Draw it inside its box, or make the box fit what is drawn.`);
   const crowns = map.blocks.some((b) => b.kind === 'tree') ? `; tree crowns hang ${num(CANOPY.minBase)} m over the ground, above everyone` : '';
-  const bushes = map.foliage?.length ? `; its ${plural(map.foliage.length, 'bush', 'bushes')} hide and let BBs through, as in airsoft` : '';
+  const bushes = map.foliage?.length ? `; its ${plural(map.foliage.length, 'bush', 'bushes')} stop a BB as deep in as you can't see through them, as in airsoft` : '';
   return result('compatibility', 'map.seeThrough', item, 'pass', `Every block is drawn inside its own box, so a BB stops on what you see${crowns}${bushes}.`);
 }
 

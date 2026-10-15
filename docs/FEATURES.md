@@ -75,6 +75,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Bot kits: opponents on every difficulty carry kits from bot-kits.md by level, leaning to personality (Easy mostly
   plain, Pro never plain, Cyber Pistols from Hard); a bot aims through its own scope or red dot, silenced bots are
   heard nearer, and bots' figures show their gear (BG1)
+- Bushes: bots hold fire into thick bush (more than 0.25 m of leaves in the way); Easy fires into the leaves anyway (FO1)
 
 ## Modes and matches
 
@@ -115,8 +116,9 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   M35, M88)
 - Sloping ground (terrain) for maps: walkable slopes and hills, BBs stop in earth with no bounce; first used by Woodland
   (M33c)
-- Bushes on any map that lists them: bots can't see someone deep in or behind one, BBs and people pass through, drawn on
-  the minimap; Woodland has 70 (M33e)
+- Bushes on any map that lists them: bots can't see someone deep in or behind one, and it hides you too; a BB stops
+  0.6 m deep in the leaves, an edge shot comes out thrown off and slower; people walk through; drawn on the minimap;
+  Woodland has 70 (M33e, FO1)
 - Night sight on any night map: bots see 40 m into a light pool, 25 m in the open, 10 m under the trees, and 15 m in
   unlit spots under roofs or indoors (M33g, M34e)
 - Night lighting on any map that asks for it: a dark sky and haze, a low moon as the key light, light pools that glow

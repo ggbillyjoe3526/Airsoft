@@ -138,6 +138,12 @@ export const BOT_BEHAVIOUR = {
    * distance to the target: the clear line to the target doesn't help if the BB would go into the door frame.
    */
   aimWallFraction: 0.5,
+  /**
+   * Hold fire when the line to the target runs through more than this much bush (metres of leaves; Dev 6 item 44): BBs
+   * pushed that far in come out well off their line or not at all (BallisticsConfig.leaves), so the bot waits for a
+   * clearer shot. Easy fires into the leaves anyway, as far as BBs could get through them (BotSkill.firesIntoLeaves).
+   */
+  foliageFireThrough: 0.25,
 
   // ---- Movement and cover -----------------------------------------------------------------------
   // How long a bot pauses at each lane point is its skill's holdTime (BOT_SKILL).
@@ -608,6 +614,12 @@ export interface BotSkill {
    */
   readonly torchOnTheMove?: boolean;
   /**
+   * Shooting into bushes (Dev 6 item 44, ai/botCombat.ts): true fires through the leaves wherever its BBs could still get
+   * through (BallisticsConfig.leaves.stopDepth), however far off they come out (sloppy: Easy). Absent: holds fire through
+   * more than BOT_BEHAVIOUR.foliageFireThrough of them, as the levels above play it.
+   */
+  readonly firesIntoLeaves?: boolean;
+  /**
    * Map balance (M40; every level since Audit 2, BAL-01): its lane swept with no one found, it hunts the middle of the
    * map rather than the far end (see huntMiddleBias), where the other team, which swept a lane of its own the other way,
    * comes back through. Off, both teams sweep each other's empty ends and the round runs out the clock.
@@ -699,6 +711,7 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     peekWatchTime: [0, 0],
     teamPlay: false,
     torchOnTheMove: true,
+    firesIntoLeaves: true,
     huntsMiddle: true,
     huntMemory: 20,
     keepsDark: false,

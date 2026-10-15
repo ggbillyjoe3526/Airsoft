@@ -31,8 +31,11 @@ export type BlockSurface = 'concrete' | 'metal';
  */
 export type FloorSurface = BlockSurface | GroundSurface;
 
-/** What a BB ticks off (from the kind of block it hit; see audio/soundMaterials.ts). */
-export type ImpactMaterial = 'concrete' | 'metal' | 'wood' | 'earth';
+/**
+ * What a BB ticks off (from the kind of block it hit; see audio/soundMaterials.ts), or `leaves`: a bush that stopped it, or
+ * a planter's shrubs (Dev 6 item 44). No block is made of leaves, so the BBs' physics never meets them as a surface.
+ */
+export type ImpactMaterial = 'concrete' | 'metal' | 'wood' | 'earth' | 'leaves';
 
 export type FootstepPace = 'run' | 'sprint' | 'land';
 /** Every footstep pace, for the cues a surface needs (M33j). */
@@ -628,6 +631,19 @@ export const SOUNDS: Readonly<Record<SoundCue, SoundRecipe>> = {
       click(0.09, 2800, 0.25),
     ],
     ...TIGHT,
+  },
+  /**
+   * A BB into a bush's leaves (Dev 6 item 44): a quick shiver of leaves round a soft, muffled "thup", no hard tick. Played
+   * quieter for a BB that only brushes through a bush's edge (AUDIO.levels.leafBrush). Last of the title cues, so every
+   * cue before it sounds as it did.
+   */
+  'impact.leaves': {
+    layers: [
+      { kind: 'noise', attack: 0.004, decay: 0.09, gain: 0.3, filter: { type: 'bandpass', hz: 3600, hzTo: 2300, q: 0.9 } },
+      { kind: 'noise', at: 0.014, attack: 0.012, decay: 0.07, gain: 0.12, filter: { type: 'highpass', hz: 5500, q: 0.6 } },
+      { kind: 'noise', attack: 0.0008, decay: 0.02, gain: 0.16, filter: { type: 'lowpass', hz: 900, q: 0.7 } },
+    ],
+    ...LOOSE,
   },
 
   // ---- Only for the maps that use them (M33j: MAP_CUE_SEEDS) --------------------------------------

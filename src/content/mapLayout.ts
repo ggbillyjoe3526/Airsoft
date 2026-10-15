@@ -9,8 +9,9 @@ import { type Vec3, vec3 } from '../sim/vec';
 /**
  * A map's layout, measured (CT2, the content toolkit's map checks): what a player standing anywhere on it can see and
  * how far they walk. Built from the same nav grid the bots walk and the same ray the BBs and the bots' sight use
- * (sim/levelRay.ts: blocks and terrain; bushes hide but stop nothing, so they never shorten a line here). Pure over the
- * map's data; allocates while measuring, so it is for checks and reports, never for play.
+ * (sim/levelRay.ts: blocks and terrain). Bushes are left out, so a line through one measures as open, though they hide
+ * people and stop BBs deep inside them (Dev 6 item 44). Pure over the map's data; allocates while measuring, so it is
+ * for checks and reports, never for play.
  */
 
 /** Where an eye is above the floor: a character stands PHYSICS.groundRestGap above it. */

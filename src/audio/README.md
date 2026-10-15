@@ -19,7 +19,7 @@ and never changes the simulation.
   match's ambience (beds, fires, calls) plays into its world through one gain the engine holds at the slider's level
   (`AudioEngine.ambienceLevel`), so it is muffled and echoed like the rest, under Effects too.
 - `motor.ts` (an AEG winds up and down), `foley.ts` (crouch, stand and lean rustle; presentation only),
-  `soundMaterials.ts` (BB impacts by block material), `whistle.ts`, `voiceLimit.ts`.
+  `soundMaterials.ts` (BB impacts by block material; leaves in a planter's top, FO1), `whistle.ts`, `voiceLimit.ts`.
 - `ambience.ts` (seeded outdoor bed, and the calls: each kind of a field's calls on its own seeded gaps, M86) and `soundscape.ts` (pure: picks a field's ambience by day or night from
   its map data and the lighting preset's night flag).
 - Tuning: `config/audio.ts` (`AUDIO`, `AMBIENCES`, `AMBIENT_LOOPS`), `config/sounds.ts` (recipes, `MAP_CUE_SEEDS`). A

@@ -53,6 +53,12 @@ export const HUD = {
   ricochetNotice: "Ricochet · doesn't count, play on",
   /** Said when your BB reaches someone after a bounce and doesn't count (M20). */
   ricochetShooterNotice: "Your BB ricocheted · doesn't count",
+  /**
+   * Said when a bush's leaves stop your BB within `leavesNoticeNear` m of you (Dev 6 item 44): you're in or right behind
+   * one, which hides you but stops your shots.
+   */
+  leavesNotice: 'Leaves in the way · step clear to shoot',
+  leavesNoticeNear: 2,
   /** How long "Round N" stays up after a round starts (seconds). */
   roundStartMessageTime: 1.8,
   /** Extraction (M43): how long the banner says you're back in, after a respawn (seconds). */

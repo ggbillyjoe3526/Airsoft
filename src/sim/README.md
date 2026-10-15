@@ -24,7 +24,9 @@ The gameplay rules: plain data and pure functions, with no Three.js, no DOM and 
   `render/figureHitVolume.test.ts`; with the rigged figures drawn the legs sit on theirs, `figureLegs.ts` blending their
   leg clips by the figure's own rules, IM8). Every body stops a BB; only one in play is knocked out (M85). A ricochet knocks
   someone out only if `HitConfig.ricochetsCount`. `levelRay.ts` is the
-  allocation-free slab test that answers Rapier's static ray casts.
+  allocation-free slab test that answers Rapier's static ray casts. `leaves.ts` (FO1): a BB that runs into a bush
+  (`WorldQuery.foliage`) stops once it has crossed `stopDepth` of leaves (`BB.leaf`), and one out of an edge is thrown
+  off and slowed by how much it crossed.
 - `elimination.ts`: hit calling, alive → calling → walkingOff → out (`leaving` for a walk-off that gets stuck). A hit
   character follows a built-in command and can't fire or be hit.
 - `round.ts`, `flag.ts`, `extraction.ts`: the match mode, round clock, score, `restartMatch(mode)`, who attacks, the

@@ -198,10 +198,10 @@ describe('M33j acceptance 4: every existing cue buffer is unchanged (Depot sound
 
   it("renders every title-screen cue sample for sample as before, in the same order, and no map cue with them", () => {
     const rendered = renderSounds(RATE);
-    // M86's yard calls (a crow, a dog), then M92's holster, M102's vault and MG1's toss and catch, come last on the title stream, so every cue
+    // M86's yard calls (a crow, a dog), then M92's holster, M102's vault, MG1's toss and catch and FO1's leaves, come last on the title stream, so every cue
     // before them is as it was. A shot's power part (the 0.1 Dev 5 playtest) comes from its shot's own pass, so the
     // stream is the same.
-    expect([...rendered.keys()].filter((c) => !isPowerPart(c))).toEqual([...Object.keys(BEFORE), 'ambience.crow', 'ambience.dog', 'foley.holster', 'vault', 'magToss', 'magCatch']);
+    expect([...rendered.keys()].filter((c) => !isPowerPart(c))).toEqual([...Object.keys(BEFORE), 'ambience.crow', 'ambience.dog', 'foley.holster', 'vault', 'magToss', 'magCatch', 'impact.leaves']);
     for (const cue of Object.keys(BEFORE) as SoundCue[]) expect(fingerprint(rendered.get(cue)!), cue).toBe(BEFORE[cue]);
   });
 

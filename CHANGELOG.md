@@ -60,6 +60,9 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **MG1** · New callouts in each personality's voice: "Need a mag!", "Mag coming!", "Thanks for the mag!" (in callouts.md)
 - **MG1** · Settings › HUD › Mag hand-off (On by default) hides the prompt and the tags; H and the callouts still work
 - **MG1** · Dev settings › Bots run low on BBs (off by default): 8 s into each round one bot per team is down to its last magazine
+- **FO1** · Bushes stop BBs: one that goes 0.6 m into the leaves stops there; one clipping an edge flies on, thrown off its line and slower
+- **FO1** · A BB in the leaves makes a soft rustle and knocks a few leaves down; a planter's shrubs on Neon Heights rustle too
+- **FO1** · Firing from deep inside a bush shows "Leaves in the way · step clear to shoot"
 
 ### Changed
 - **M94** · The practice range is now Practice: pause reads "Practice · Range" or "Practice · Depot", and the tutorial's last button says Practice
@@ -81,6 +84,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **PT1** · The 2× scope works like the red dot: the replica stays in view and the world shows round it, with a fine crosshair and red dot in the eyepiece; still 2× zoom
 - **PT1** · You can fire while sprinting (Alt), less accurately than walking or running, with wider spread and more kick; the short lockout after a sprint is gone; bots still stop sprinting to fight
 - **PT1** · Esc while you are out skips the round at once, without opening the pause menu; click to play on, or Esc again for the menu
+- **FO1** · Bots don't fire into thick bush (more than 0.25 m of leaves in the way); Easy bots still blast bushes anyway
 
 ### Fixed
 - **M92** · Bots firing on the move hold fire when a teammate is down the line, so they no longer hit teammates past the end of a wall

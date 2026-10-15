@@ -75,6 +75,7 @@ export const ADAPTIVE_FROM_LEVEL = [
   'slicesCorners',
   'teamPlay',
   'torchOnTheMove',
+  'firesIntoLeaves',
   'huntsMiddle',
   'keepsDark',
   'lockerGuards',
