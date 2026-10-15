@@ -480,6 +480,12 @@ export class Sfx {
     if (this.impactLimit.take(this.ctx.currentTime)) this.oneShot(cues.impact(material), at, AUDIO.levels.impact);
   }
 
+  /** A BB brushed through a bush's edge at `at` and flew on (Dev 6 item 44): the leaves' rustle, softer, in the impacts' window. */
+  leafBrush(at: Vec3): void {
+    if (!this.ctx || this.distanceTo(at) > AUDIO.spatial.maxDistance) return;
+    if (this.impactLimit.take(this.ctx.currentTime)) this.oneShot(cues.impact('leaves'), at, AUDIO.levels.leafBrush);
+  }
+
   /**
    * A sound of your replica's parts as you inspect it (RM2, VIEWMODEL.inspect): the magazine's and trigger's in the
    * replica's own sound (`replicaId`), or a selector's, a torch's or a draw's click; heard from your own hands.

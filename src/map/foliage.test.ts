@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { vec3 } from '../sim/vec';
-import { type Bush, foliageDepth } from './foliage';
+import { type Bush, firstLeaves, foliageDepth, type LeafCrossing } from './foliage';
 
 /** A bush 2 m across and 1.6 m tall, its foot at the origin: the leaves fill an ellipsoid centred 0.8 m up. */
 const BUSH: Bush = { x: 0, y: 0, z: 0, radius: 1, height: 1.6 };
@@ -33,5 +33,52 @@ describe('foliageDepth (M33e)', () => {
   it('is zero with no bushes or a zero-length line', () => {
     expect(foliageDepth([], vec3(-5, 0.8, 0), vec3(5, 0.8, 0))).toBe(0);
     expect(foliageDepth([BUSH], vec3(0, 0.8, 0), vec3(0, 0.8, 0))).toBe(0);
+  });
+});
+
+describe('firstLeaves (Dev 6 item 44)', () => {
+  const out: LeafCrossing = { enter: -1, exit: -1, through: false };
+  const east = vec3(1, 0, 0);
+
+  it('gives where a path goes into a bush and where it comes out, in metres along it', () => {
+    expect(firstLeaves([BUSH], vec3(-5, 0.8, 0), east, 10, out)).toBe(true);
+    expect(out.enter).toBeCloseTo(4, 6);
+    expect(out.exit).toBeCloseTo(6, 6);
+    expect(out.through).toBe(true);
+  });
+
+  it('clips the crossing to the path: one ending among the leaves is not through, one starting inside goes in at 0', () => {
+    expect(firstLeaves([BUSH], vec3(-5, 0.8, 0), east, 4.5, out)).toBe(true);
+    expect(out.enter).toBeCloseTo(4, 6);
+    expect(out.exit).toBeCloseTo(4.5, 6);
+    expect(out.through).toBe(false);
+    expect(firstLeaves([BUSH], vec3(0, 0.8, 0), east, 10, out)).toBe(true);
+    expect(out.enter).toBe(0);
+    expect(out.exit).toBeCloseTo(1, 6);
+    expect(out.through).toBe(true);
+  });
+
+  it('takes the nearest bush of a row, whichever order the map lists them in', () => {
+    const row: Bush[] = [{ ...BUSH, x: 6 }, { ...BUSH, x: 3 }, BUSH];
+    expect(firstLeaves(row, vec3(-5, 0.8, 0), east, 20, out)).toBe(true);
+    expect(out.enter).toBeCloseTo(4, 6);
+    expect(out.exit).toBeCloseTo(6, 6);
+    expect(firstLeaves(row, vec3(1.5, 0.8, 0), east, 20, out)).toBe(true);
+    expect(out.enter).toBeCloseTo(0.5, 6);
+  });
+
+  it('meets nothing short of a bush, beside it or over it, or with none', () => {
+    expect(firstLeaves([BUSH], vec3(-5, 0.8, 0), east, 3.9, out)).toBe(false);
+    expect(firstLeaves([BUSH], vec3(-5, 0.8, 1.05), east, 10, out)).toBe(false);
+    expect(firstLeaves([BUSH], vec3(-5, 1.7, 0), east, 10, out)).toBe(false);
+    expect(firstLeaves([], vec3(-5, 0.8, 0), east, 10, out)).toBe(false);
+  });
+
+  it('counts a sliver at the very rim, or leaving from the surface, as no leaves (a BB never stalls there)', () => {
+    // Out from where the last tick left it, on the surface: no crossing, whichever way it goes on.
+    expect(firstLeaves([BUSH], vec3(1, 0.8, 0), east, 10, out)).toBe(false);
+    expect(firstLeaves([BUSH], vec3(1, 0.8, 0), vec3(0.8, 0.6, 0), 10, out)).toBe(false);
+    // A chord of under a millimetre, just inside the rim.
+    expect(firstLeaves([BUSH], vec3(-5, 0.8, 0.9999999), east, 10, out)).toBe(false);
   });
 });

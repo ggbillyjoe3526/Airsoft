@@ -480,8 +480,14 @@ then pick it on the Play screen.
 - [ ] **The night.** A dark sky under a low moon over the Knoll; camp fires flicker with embers, lanterns glow and
   light the ground; on Medium and up the nearest ones light players too (Settings › Graphics › Night lights).
 - [ ] **Readable on Medium with your torch off.** The tracks, the creek and the cabin's boards stay readable.
-- [ ] **Bushes** hide you from bots when you're deep in or behind one; BBs and people pass through. The minimap
-  draws them.
+- [ ] **Bushes** hide you from bots when you're deep in or behind one, and you walk through them. The minimap draws
+  them.
+- [ ] **Bushes stop BBs (FO1).** Shoot into the middle of a bush: the BB never comes out the far side, you hear a soft
+  leafy rustle and a few green leaves pop out and drift down. Shoot through just the edge: the BB comes out the other
+  side, a little off its line and slower, with a quieter rustle. Stand deep inside a bush and fire out: "Leaves in the
+  way · step clear to shoot" under the crosshair. Stand just inside a bush's edge where a Normal bot can still see you:
+  it holds fire until it has a clearer line; an Easy bot fires into the leaves anyway. On Neon Heights, a BB that lands in a planter's shrubs
+  rustles too. On Low and Ultra alike nothing stutters.
 - [ ] **Night sight.** Bots see about 40 m into a light pool, 25 m in the open and 10 m under the trees; the fires and
   lanterns give you away.
 - [ ] **The look.** Bark trunks and log walls, faceted boulders, plank fences, pine and broadleaf crowns against the

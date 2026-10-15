@@ -39,6 +39,7 @@ export interface BallisticsConfig {
   /** Size of the BB pool (maximum BBs in flight at once). */
   maxBBs: number;
   ricochet: RicochetConfig;
+  leaves: LeavesConfig;
 }
 
 /** The air's state; density from the ideal gas law, viscosity from Sutherland's law (sim/air.ts). */
@@ -89,6 +90,24 @@ export interface RicochetConfig {
   liftOff: number;
 }
 
+/**
+ * Bushes and leaves (Dev 6 item 44, sim/leaves.ts; map/foliage.ts): a BB that runs into a bush pushes through its
+ * leaves. Once it has crossed `stopDepth` of them it stops there; a BB that comes out of a bush having crossed less (an
+ * edge) flies on, thrown off its line and slowed by how much it crossed. So a bush you can't see through is cover, and a
+ * shot through its edge is a gamble, as at a real woodland site. First guesses, to tune in play.
+ */
+export interface LeavesConfig {
+  /**
+   * Metres of leaves that stop a BB, counted over its whole flight. The same as how much bush a bot can see someone
+   * through (BOT_BEHAVIOUR.foliageSeeThrough; a test holds them equal): if you can't see through it, a BB can't get through.
+   */
+  stopDepth: number;
+  /** How far (radians) a BB that gets through is thrown off its line per metre of leaves it crossed, at most (any way round it). */
+  scatterPerMetre: number;
+  /** Share of its speed and of its backspin a BB keeps per metre of leaves (exponential: 0.35 over a metre, about 0.73 over 0.3 m). */
+  keptPerMetre: number;
+}
+
 export const BALLISTICS: BallisticsConfig = {
   gravity: 9.81,
   air: { temperature: 20, pressure: 101_325 },
@@ -104,7 +123,8 @@ export const BALLISTICS: BallisticsConfig = {
     // G12 (owner's ruling, 2026-10-10: "Bounced BBs lose more speed, so fewer of them knock players out"): three
     // quarters of M20's 0.4 and 0.55. The ricochets that knock players out are mostly wide BBs coming back off the
     // wall beside or behind a target, so the share into the surface is the lever; `slide` barely moves them.
-    restitution: { concrete: 0.3, metal: 0.41, wood: 0, earth: 0 },
+    // Leaves (Dev 6 item 44) are no surface a BB bounces off: a bush stops it or lets it through (BallisticsConfig.leaves).
+    restitution: { concrete: 0.3, metal: 0.41, wood: 0, earth: 0, leaves: 0 },
     slide: 0.75,
     minSpeed: 12,
     maxBounces: 2,
@@ -112,6 +132,8 @@ export const BALLISTICS: BallisticsConfig = {
     spinKept: 0,
     liftOff: 0.002,
   },
+  // Through 0.1 m of a bush's edge a BB is off by up to 0.05 rad (0.5 m at 10 m), through 0.4 m by up to 0.2 rad.
+  leaves: { stopDepth: 0.6, scatterPerMetre: 0.5, keptPerMetre: 0.35 },
 };
 
 export const WIND: WindConfig = {

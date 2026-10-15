@@ -380,6 +380,10 @@ replaces its line; the old one stays findable in the archive or in git.
   view, sight checks 10 times a second, a reaction delay, a capped turn rate and aim error. They never fire with a
   teammate in the line of fire. A test plays each level twice with a hidden, silent enemy and needs identical commands,
   so no bot aims at someone it hasn't seen or heard (M37).
+- **Bots hold fire through more than 0.25 m of bush; Easy fires into the leaves as far as a BB could get through
+  (2026-10-15, FO1).** Through more, BBs come out well off their line or not at all, so Normal and up wait for a clearer
+  shot and Easy wastes BBs in the leaves (`foliageFireThrough` in `config/bots.ts`, `firesIntoLeaves` per level). Bushes
+  still block bots' sight past 0.6 m and never block hearing.
 - **Difficulty is skill plus a few tactics, never different senses (2026-10-01).** Easy, Normal, Hard and Pro see and
   hear alike. Opponents and teammates have separate difficulties (owner, 2026-10-03).
 - **Normal is the baseline (owner, 2026-10-06, playtest note 19).** Tune on Normal, then check that Easy, Hard and Pro
@@ -530,8 +534,16 @@ replaces its line; the old one stays findable in the archive or in git.
   with a 1.2 m sill, 4v4, both modes and Night first.
 - **Team size belongs to the map: picking a map sets its standard size, and the Match pop-up offers up to the map's
   spawns (owner default, 2026-10-04).**
-- **Bushes hide but BBs pass (owner approved, 2026-10-04).** Concealment, not cover: whoever is more than 0.6 m inside
-  or behind a bush is hidden from bots.
+- **Bushes hide you and stop BBs, but not people: a BB stops 0.6 m into the leaves, and one through an edge flies on,
+  thrown off and slowed (2026-10-15, FO1, the owner's Dev 6 item 44; Claude's defaults, any can change; replaces
+  "Bushes hide but BBs pass", owner 2026-10-04).** Whoever is more than 0.6 m inside or behind a bush is still hidden
+  from bots, and the same 0.6 m of leaves, counted over a BB's whole flight, stops it (a test holds the two equal): if
+  you can't see through it, a BB can't get through it. A BB that crosses less comes out off its line by up to 0.5 rad a
+  metre of leaves and keeps 0.35 of its speed and spin a metre, so a shot through a bush's edge is a gamble. Someone at
+  a bush's edge, less than 0.6 m in, can still be hit. People walk through bushes as before. A BB into leaves rustles
+  and knocks out a few leaves; firing from deep inside one says "Leaves in the way". The numbers are in
+  `config/ballistics.ts` (`leaves`). Woodland has the bushes; Neon Heights' planters were always solid and only sound
+  and look like leaves where a BB lands in their tops; Depot has no plants.
 - **The practice range is its own small map (2026-10-04).** Practice is the last mode on the Match screen, and the
   Tutorial shows on the title screen only on a clean save, with Replay tutorial in Settings (owner, 2026-10-07; replaces
   his 2026-10-04 rulings that put the range and an always-shown Tutorial button on the title screen).

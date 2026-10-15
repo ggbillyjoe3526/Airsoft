@@ -5,6 +5,7 @@ import type { OpticId } from '../config/optics';
 import type { ReplicaConfig } from '../config/replicas';
 import type { ImpactMaterial } from '../config/sounds';
 import { bbMass, type FireMode, HOP_UP, hopUpLift, muzzleVelocity, RECOIL, TRIGGER, validBbWeight } from '../config/replicas';
+import type { Bush } from '../map/foliage';
 import { type BBPool, spawnBB } from './ballistics';
 import type { PlayerCommand } from './commands';
 import type { GameEvent } from './events';
@@ -219,6 +220,11 @@ export interface WorldQuery {
    * has BBs stop dead where they land, as before ricochets.
    */
   raycastSurface?(origin: Vec3, dir: Vec3, maxDist: number, out: SurfaceHit): number;
+  /**
+   * The map's bushes (M33e, map/foliage.ts): no surface a ray meets, but BBs push into their leaves and are stopped or
+   * thrown off there (Dev 6 item 44, sim/bbs.ts), and the bots won't shoot through them (ai/botCombat.ts). Absent: none.
+   */
+  readonly foliage?: readonly Bush[];
 }
 
 export interface ArmamentContext {

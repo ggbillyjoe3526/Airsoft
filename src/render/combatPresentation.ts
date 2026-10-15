@@ -7,7 +7,7 @@ import { impactMaterialAt } from '../audio/soundMaterials';
 import type { Action } from '../config/controls';
 import type { HitConfig } from '../config/hits';
 import type { CrosshairSettings } from '../config/matchInfo';
-import { BB_VISUALS, DUST_MOTES, GAS_PUFFS, HIT_PUFFS, HUD, IMPACT_DUST, IMPACT_PUFFS, IMPACT_RINGS, type LightingPreset, type QualitySettings } from '../config/render';
+import { BB_VISUALS, DUST_MOTES, GAS_PUFFS, HIT_PUFFS, HUD, IMPACT_DUST, IMPACT_PUFFS, IMPACT_RINGS, LEAF_FLECKS, type LightingPreset, type QualitySettings } from '../config/render';
 import type { ImpactMaterial } from '../config/sounds';
 import { BODY, type MovementConfig } from '../config/movement';
 import { AIMING, type SightId, sightConfig } from '../config/optics';
@@ -23,7 +23,7 @@ import type { ChallengeCue } from '../sim/rangeChallenge';
 import type { GameState } from '../sim/state';
 import { lightInHand, torchLit } from '../sim/torch';
 import { createVaultState, findVault } from '../sim/vault';
-import { length3 } from '../sim/vec';
+import { length3, type Vec3 } from '../sim/vec';
 import { Hud } from '../ui/hud';
 import { VaultPrompt } from '../ui/vaultPrompt';
 import { MagTossRenderer } from './magTosses';
@@ -37,6 +37,7 @@ import { DressingEffects } from './dressingEffects';
 import { DustMotes } from './dustMotes';
 import { ImpactGrit, shooterSide } from './impactGrit';
 import { ImpactPuffs } from './impactPuffs';
+import { LeafFlecks } from './leafFlecks';
 import type { Renderer } from './renderer';
 import { SprintCarry, Viewmodel } from './viewmodel';
 import type { ReplicaPaint } from '../config/schemes';
@@ -83,8 +84,10 @@ export class CombatPresentation {
    */
   private rings: ImpactPuffs | null = null;
   private readonly grit = new ImpactGrit();
-  /** Where a landed BB's shooter is, for its grit (reused). */
+  /** Where a landed BB's shooter is, for its grit and leaves (reused). */
   private readonly gritFrom = { x: 0, y: 0, z: 0 };
+  /** Leaves a BB knocks out of a bush or a planter's shrubs (Dev 6 item 44), at every quality. */
+  private readonly leaves = new LeafFlecks();
   /** Bigger puffs where BBs land on players: hit confirmation at range. */
   private readonly hitPuffs = new ImpactPuffs(HIT_PUFFS);
   /** A gas replica's breath at the muzzle and ejection port on each shot (M14). */
@@ -174,7 +177,7 @@ export class CombatPresentation {
     this.bbs = new BBRenderer(state.bbs, tickSeconds);
     this.paths = new BBPathsDebug(state.bbs);
     this.magTosses = new MagTossRenderer(state.magTosses, state.characters, { query, body: BODY, hits }, tickSeconds);
-    renderer.scene.add(this.magTosses.object, this.bbs.object, this.puffs.object, this.grit.object, this.hitPuffs.object, this.gasPuffs.object, this.motes.object, this.paths.object);
+    renderer.scene.add(this.magTosses.object, this.bbs.object, this.puffs.object, this.grit.object, this.leaves.object, this.hitPuffs.object, this.gasPuffs.object, this.motes.object, this.paths.object);
     for (const [material, dust] of Object.entries(IMPACT_DUST)) this.dustTints.set(material as ImpactMaterial, new THREE.Color(dust.tint));
     this.motes.setMapDust(field.dressing?.motes?.tint ?? null);
     this.dressing = new DressingEffects(renderer.scene, field);
@@ -339,15 +342,23 @@ export class CombatPresentation {
         // A BB stopped on a body it couldn't knock out (M85): the plain puff, as a ricochet's knock; its sound is Sfx's.
         if (e.bodyId !== this.player.id) this.puffs.spawn(e.position);
       } else if (e.type === 'bbImpact') {
-        // Dust by what the BB hit, and its tick: one lookup for both (audit L-15).
-        const material = impactMaterialAt(this.field.blocks, e.position, this.field.terrain ?? null);
+        // Dust by what the BB hit, and its tick: one lookup for both (audit L-15). Leaves when a bush stopped it (Dev 6 item 44).
+        const material = e.leaves ? 'leaves' : impactMaterialAt(this.field.blocks, e.position, this.field.terrain ?? null);
         const tint = this.dustTints.get(material);
         this.puffs.spawn(e.position, tint, IMPACT_DUST[material].scale);
-        if (this.grit.active && tint) {
+        if (material === 'leaves') {
+          // Leaves flutter out in place of grit, at every quality: they show where the BB went.
+          this.leaves.spawn(e.position, shooterSide(this.state.characters, e.ownerId, this.renderer.camera.position, this.gritFrom), LEAF_FLECKS.perStop);
+          if (e.leaves) this.leavesInTheWay(e.ownerId, e.position);
+        } else if (this.grit.active && tint) {
           this.rings?.spawn(e.position, tint, IMPACT_DUST[material].scale);
           this.grit.spawn(e.position, tint, shooterSide(this.state.characters, e.ownerId, this.renderer.camera.position, this.gritFrom));
         }
         this.sfx.impact(e.position, material);
+      } else if (e.type === 'bbLeaves') {
+        // Through a bush's edge (Dev 6 item 44): a leaf or two and a soft rustle where it came out.
+        this.leaves.spawn(e.position, shooterSide(this.state.characters, e.ownerId, this.renderer.camera.position, this.gritFrom), LEAF_FLECKS.perBrush);
+        this.sfx.leafBrush(e.position);
       } else if (e.type === 'targetHit') this.puffs.spawn(e.position);
       else if (e.type === 'characterHit') {
         // Your own hit: the replica jolts in your hands (the puff would fill your view).
@@ -381,6 +392,16 @@ export class CombatPresentation {
   }
 
   /**
+   * Your own BB stopped in a bush's leaves within HUD.leavesNoticeNear of you (Dev 6 item 44): you are in or right behind
+   * one, which hides you but stops your shots, so the line under the crosshair says so (each such BB keeps it up).
+   */
+  private leavesInTheWay(ownerId: number, at: Vec3): void {
+    const p = this.player;
+    if (ownerId !== p.id || Math.hypot(at.x - p.position.x, at.z - p.position.z) > HUD.leavesNoticeNear) return;
+    this.hud.showNotice(HUD.leavesNotice, HUD.noticeTime);
+  }
+
+  /**
    * Once per rendered frame, after the camera has been placed. `alpha` interpolates ticks. `command`: the player's
    * latest, for the vault prompt (the way a Jump press would vault goes with the movement keys).
    */
@@ -391,6 +412,7 @@ export class CombatPresentation {
     this.puffs.update(dt, this.renderer.camera);
     this.rings?.update(dt, this.renderer.camera);
     this.grit.update(dt, this.renderer.camera);
+    this.leaves.update(dt, this.renderer.camera);
     this.hitPuffs.update(dt, this.renderer.camera);
     this.gasPuffs.update(dt, this.renderer.camera);
     this.motes.setPixelRatio(this.renderer.renderer.getPixelRatio());
@@ -456,6 +478,7 @@ export class CombatPresentation {
     this.puffs.dispose();
     this.rings?.dispose();
     this.grit.dispose();
+    this.leaves.dispose();
     this.hitPuffs.dispose();
     this.gasPuffs.dispose();
     this.motes.dispose();

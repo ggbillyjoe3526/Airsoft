@@ -48,6 +48,7 @@ function rapierQuery(map: MapData): Required<WorldQuery> & { free(): void } {
     return ray;
   };
   return {
+    foliage: map.foliage ?? [],
     raycastStatic(o, d, max) {
       const hit = world.castRay(aim(o, d), max, true);
       return hit ? hit.timeOfImpact : -1;

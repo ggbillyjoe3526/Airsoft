@@ -28,6 +28,8 @@ export interface BB {
   mass: number;
   /** Times it has bounced off a surface (M20): a BB with bounces > 0 is a ricochet. */
   bounces: number;
+  /** Metres of bush it has pushed through so far (Dev 6 item 44, sim/leaves.ts): at BallisticsConfig.leaves.stopDepth it stops. */
+  leaf: number;
 }
 
 export interface BBPool {
@@ -50,6 +52,7 @@ export function createBBPool(size: number): BBPool {
       spinAxis: vec3(1, 0, 0),
       mass: 0,
       bounces: 0,
+      leaf: 0,
     });
   }
   return { bbs, nextSerial: 1 };
@@ -94,6 +97,7 @@ export function spawnBB(pool: BBPool, ownerId: number, origin: Vec3, dir: Vec3, 
   bb.spinAxis.z = len > 1e-6 ? az / len : 0;
   bb.mass = mass;
   bb.bounces = 0;
+  bb.leaf = 0;
   return bb;
 }
 

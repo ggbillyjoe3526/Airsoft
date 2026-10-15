@@ -22,3 +22,18 @@ item 5, with the G4 HUD restyle); note 3 was a bug, fixed in BP2; note 2 is alre
 
 **0.1 Dev 6 (confirmed with the roadmap, 2026-10-06).** M92–M95, the holster and the practice upgrades, are done
 (2026-10-13); the blocks for the rest of `docs/ROADMAP.md` › 0.1 Dev 6 are written when that work starts.
+
+## FO1 · Bushes stop and throw off BBs (Dev 6 item 44)
+tier: core
+perf: required
+touches: src/ai/botCombat.ts, src/audio/sfx.ts, src/audio/soundMaterials.ts, src/config/adaptiveDifficulty.ts, src/config/audio.ts, src/config/ballistics.ts, src/config/bots.ts, src/config/minimap.ts, src/config/renderEffects.ts, src/config/renderView.ts, src/config/sounds.ts, src/content/mapLayout.ts, src/content/mapLayoutChecks.ts, src/map/foliage.ts, src/map/mapTypes.ts, src/physics/physicsWorld.ts, src/render/combatPresentation.ts, src/render/leafFlecks.ts, src/sim/armament.ts, src/sim/ballistics.ts, src/sim/bbs.ts, src/sim/events.ts, src/sim/leaves.ts
+contract: WorldQuery (`foliage`, optional: the map's bushes), the BB pool (`BB.leaf`), two events (`bbImpact.leaves`, new `bbLeaves`), BallisticsConfig (`leaves`), ImpactMaterial (`leaves`, a new title cue `impact.leaves` appended last) and BotSkill (`firesIntoLeaves`, taken from the level under adaptive difficulty)
+acceptance:
+  1. A BB that runs into a bush (MapData.foliage, the same ellipsoid bots' sight uses) stops once it has crossed BALLISTICS.leaves.stopDepth of leaves, counted over its whole flight (`BB.leaf`), at the point where it reached it, and reports `bbImpact` with `leaves: true`. stopDepth equals BOT_BEHAVIOUR.foliageSeeThrough (a test holds them equal). Someone standing behind a bush's middle is never hit through it; someone whose body starts less than stopDepth into the leaves still is. A BB fired from deep inside a bush stops before it gets out.
+  2. A BB that comes out of a bush having crossed less flies on from where its path leaves the leaves, its speed and backspin times keptPerMetre^depth, its direction turned by at most scatterPerMetre × depth (from the simulation's seeded stream, any way round its line), and reports `bbLeaves`. A crossing that spans ticks counts every piece. A BB that misses every bush, and every BB on a map with none (Depot), flies exactly as before.
+  3. People walk through bushes as before; bushes still hide whoever is more than foliageSeeThrough inside or behind one from bots, and never block hearing.
+  4. Bots hold fire when the line to their target runs through more than BOT_BEHAVIOUR.foliageFireThrough of bush; Easy (BotSkill.firesIntoLeaves) fires through as much as a BB could cross. Both teams alike; the bot-match guards on Woodland still pass.
+  5. A BB stopped by leaves plays a soft leafy rustle (`impact.leaves`, appended last among the title cues so every other cue's sound is unchanged) and knocks a few green leaves out that drift down and fade; one through an edge plays it quieter (AUDIO.levels.leafBrush) with fewer leaves. A BB landing in the top of a Neon Heights planter (its shrubs) rustles the same way; the planter still stops it as before. Your own BB stopped within HUD.leavesNoticeNear of you shows "Leaves in the way · step clear to shoot".
+  6. The leaves are one instanced draw at every quality, pooled, with nothing allocated per frame or per tick for them; the BB step allocates nothing for bushes. Every tunable is in config (`BALLISTICS.leaves`, `BOT_BEHAVIOUR.foliageFireThrough`, `LEAF_FLECKS`, `AUDIO.levels.leafBrush`, `HUD.leavesNotice`); the main chunk stays at or under 1,250 kB.
+status: open
+attempts: 0

@@ -168,10 +168,14 @@ request. Each entry says where the contract lives, what it holds today and what 
     where it left the hand. `magToss` reports one leaving a hand (its BBs already out of the thrower's spare),
     `magCaught` one landing (with the BBs that went into the catcher's spares) and `magLost` one lost (the catcher out
     of play, or the round decided while it flew). No BB is ever made.
+  - `BB.leaf` counts the metres of bush a BB has pushed through (FO1, `sim/bbs.ts`, `sim/leaves.ts`; 0 at spawn).
+    At `BALLISTICS.leaves.stopDepth` it stops there and reports `bbImpact` with `leaves: true`; one that comes out of
+    a bush having crossed less is thrown off and slowed and reports `bbLeaves` (presentation's rustle and leaves).
+    Bushes come from `WorldQuery.foliage`; a world without it flies BBs as before.
 
   Pinned by `sim/simulation.test.ts`, `sim/extraction.test.ts`, `sim/extractionCases.test.ts`,
   `sim/extractionWaves.test.ts`, `sim/torch.test.ts`, `sim/coverRest.test.ts`, `sim/vault.test.ts`,
-  `sim/magShare.test.ts`.
+  `sim/magShare.test.ts`, `sim/bbsLeaves.test.ts`.
 - **`stepSimulation(state, commands, ctx, dt)`** (`sim/simulation.ts`). The fixed 60 Hz step and the order of its
   phases (a parked out-of-play character goes straight to the elimination step); randomness only from `state.rng`.
   Per character: aim, move, walk cycle, lean, rest on cover (M104: after the lean, so it reads the eye the tick left,
@@ -182,7 +186,8 @@ request. Each entry says where the contract lives, what it holds today and what 
   `ai/depotMatch*.test.ts` guards.
 - **`WorldQuery` and `CharacterMover`** (`sim/armament.ts`, `sim/movement.ts`; implemented by
   `physics/physicsWorld.ts`). The ray and shape casts and the character controller the simulation sees; the
-  simulation never calls Rapier. Pinned by `physics/physicsWorld.test.ts`.
+  simulation never calls Rapier. `WorldQuery.foliage` (optional, FO1) is the map's bushes, read by the BBs and by the
+  bots' check for leaves in their line of fire. Pinned by `physics/physicsWorld.test.ts`.
 - **`MatchSession.advance(dt)` / `draw(dt)` / `afterTick()`** (`matchSession.ts`). Simulation first, presentation
   after. `afterTick` (private, run after every tick) is where stats, the HUD and sound read the tick's events;
   `draw` also takes `boardHeld`. Pinned by the smoke test.

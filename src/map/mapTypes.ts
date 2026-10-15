@@ -123,7 +123,9 @@ export interface MapData {
    */
   terrain?: Terrain;
   /**
-   * Bushes (M33e, map/foliage.ts): they hide whoever is in or behind them, but BBs and people pass through. Absent: none.
+   * Bushes (M33e, map/foliage.ts): they hide whoever is in or behind them and people walk through them; a BB that pushes
+   * deep into one stops there, one through its edge flies on thrown off its line (Dev 6 item 44, BallisticsConfig.leaves).
+   * Absent: none.
    */
   foliage?: readonly Bush[];
   /**

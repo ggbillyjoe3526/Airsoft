@@ -1,5 +1,6 @@
 import type { BallisticsConfig } from '../config/ballistics';
 import type { HitConfig } from '../config/hits';
+import { firstLeaves, type LeafCrossing } from '../map/foliage';
 import type { SurfaceHit, WorldQuery } from './armament';
 import { airModel } from './air';
 import { type BB, type BBPool, stepFlight } from './ballistics';
@@ -7,6 +8,7 @@ import type { Character } from './character';
 import { type EliminationContext, eliminate, isInPlay } from './elimination';
 import type { GameEvent } from './events';
 import { characterHitVolume, createHitVolume, type HitVolume, rayCharacter } from './hitbox';
+import { deflectInLeaves } from './leaves';
 import { firstRangeTargetHit, hitRangeTarget, type RangeTarget, type RangeTargetHit } from './rangeTargets';
 import { ricochet } from './ricochet';
 import type { RngState } from './rng';
@@ -24,6 +26,8 @@ const volumes: HitVolume[] = [];
 const teamOf = new Map<number, number>();
 const surface: SurfaceHit = { normal: vec3(), material: 'concrete' };
 const targetHit: RangeTargetHit = { index: -1, at: 0, post: false };
+/** Where this tick's segment of a BB runs through a bush (firstLeaves); reused. */
+const crossing: LeafCrossing = { enter: 0, exit: 0, through: false };
 
 /** Who BBs can hit this tick, and what happens to them. */
 export interface BBTargets {
@@ -88,9 +92,11 @@ function knocksOut(body: Character, ownerId: number, t: BBTargets): boolean {
 }
 
 /**
- * Moves every BB in flight one tick and stops it at whatever its path crosses first this tick: a body (firstBody), or
- * a level surface (bbImpact event), where a hard surface bounces it off instead (a ricochet, M20; it flies on from there
- * next tick). A body in play is knocked out (characterHit event; knocksOut says who can be); any other body (already
+ * Moves every BB in flight one tick and stops it at whatever its path crosses first this tick: a body (firstBody), a
+ * bush's leaves once it has pushed through stopDepth of them (bbImpact event with `leaves`, Dev 6 item 44), or a level
+ * surface (bbImpact event), where a hard surface bounces it off instead (a ricochet, M20; it flies on from there next
+ * tick). A BB that comes out of a bush having crossed less flies on from where it came out, slowed and thrown off its
+ * line (bbLeaves event, sim/leaves.ts); as with a bounce, the rest of that tick's travel is dropped. A body in play is knocked out (characterHit event; knocksOut says who can be); any other body (already
  * hit, a teammate with friendly fire off, anyone in a cease-fire) stops the BB as a wall would (bbImpact event), so a BB
  * never goes on through someone to whoever is behind (M85). A ricochet only knocks someone out when the match counts
  * ricochets (HitConfig.ricochetsCount); otherwise it ticks them and stops (ricochetTick event), and they play on. On the
@@ -111,6 +117,7 @@ export function stepBBs(
 ): void {
   let prepared = false;
   const air = airModel(cfg);
+  const leaves = query.foliage;
   for (const bb of pool.bbs) {
     if (!bb.active) continue;
     copy(bb.prevPosition, bb.position);
@@ -125,14 +132,27 @@ export function stepBBs(
       segmentDir.y = dy / len;
       segmentDir.z = dz / len;
       const t = query.raycastSurface ? query.raycastSurface(bb.prevPosition, segmentDir, len, surface) : query.raycastStatic(bb.prevPosition, segmentDir, len);
+      // Leaves before the surface (Dev 6 item 44): where the BB stops in them, or comes out of them, ends its path here;
+      // a path that ends still among them (`inLeaves` m of them crossed) flies on through them next tick.
+      let leafEnd = -1;
+      let leafStop = false;
+      let inLeaves = 0;
+      if (leaves && leaves.length > 0 && firstLeaves(leaves, bb.prevPosition, segmentDir, t >= 0 ? t : len, crossing)) {
+        const left = Math.max(0, cfg.leaves.stopDepth - bb.leaf);
+        leafStop = crossing.exit - crossing.enter >= left;
+        if (leafStop) leafEnd = crossing.enter + left;
+        else if (crossing.through) leafEnd = crossing.exit;
+        else inLeaves = crossing.exit - crossing.enter;
+      }
+      const clear = leafEnd >= 0 ? leafEnd : t >= 0 ? t : len;
       if (targets && !prepared) {
         prepareTargets(targets);
         prepared = true;
       }
-      if (targets) firstBody(bb, len, t >= 0 ? t : len, targets);
+      if (targets) firstBody(bb, len, clear, targets);
       const hit = targets ? reached.body : undefined;
       if (targets?.rangeTargets && targets.rangeTargets.length > 0 && !targets.ceaseFire) {
-        firstRangeTargetHit(bb.prevPosition, segmentDir, hit ? reached.at : t >= 0 ? t : len, targets.rangeTargets, targets.hits, targetHit);
+        firstRangeTargetHit(bb.prevPosition, segmentDir, hit ? reached.at : clear, targets.rangeTargets, targets.hits, targetHit);
         if (targetHit.index >= 0) {
           const target = targets.rangeTargets[targetHit.index]!;
           bb.position.x = bb.prevPosition.x + segmentDir.x * targetHit.at;
@@ -176,6 +196,23 @@ export function stepBBs(
         events.push({ type: 'characterHit', victimId: hit.id, shooterId: bb.ownerId, position, direction, ricochet: ricocheted });
         continue;
       }
+      if (leafEnd >= 0) {
+        bb.position.x = bb.prevPosition.x + segmentDir.x * leafEnd;
+        bb.position.y = bb.prevPosition.y + segmentDir.y * leafEnd;
+        bb.position.z = bb.prevPosition.z + segmentDir.z * leafEnd;
+        const depth = leafEnd - crossing.enter;
+        bb.leaf += depth;
+        if (leafStop) {
+          bb.active = false;
+          events.push({ type: 'bbImpact', position: vec3(bb.position.x, bb.position.y, bb.position.z), ownerId: bb.ownerId, leaves: true });
+          continue;
+        }
+        // Out of the bush (through its edge, or the last of a crossing that took more than a tick): it flies on from here
+        // next tick, slowed and off its line.
+        deflectInLeaves(bb, depth, cfg.leaves, rng);
+        events.push({ type: 'bbLeaves', position: vec3(bb.position.x, bb.position.y, bb.position.z), ownerId: bb.ownerId });
+        continue;
+      }
       if (t >= 0) {
         bb.position.x = bb.prevPosition.x + segmentDir.x * t;
         bb.position.y = bb.prevPosition.y + segmentDir.y * t;
@@ -186,6 +223,11 @@ export function stepBBs(
         if (query.raycastSurface && ricochet(bb, surface, cfg.ricochet, rng)) continue;
         bb.active = false;
         continue;
+      }
+      if (inLeaves > 0) {
+        // Still among the leaves at the end of its path: it pushes on through them, slowed and turned by what it crossed.
+        bb.leaf += inLeaves;
+        deflectInLeaves(bb, inLeaves, cfg.leaves, rng);
       }
     }
     if (bb.age > cfg.maxLifetime || bb.position.y < killY) {
