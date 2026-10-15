@@ -5,6 +5,7 @@ import type { SchemeId } from '../config/schemes';
 import { buildReplicaModels, fitLight, fitMuzzle, REPLICA_PART_TABLES, type ReplicaDetail, type ReplicaModel } from './replicaModels';
 import { NO_POWER_SOURCES, type PowerSourceLoader, type PowerSourceModel } from './powerSourceModels';
 import { NO_REPLICA_FILES, type ReplicaFiles } from './replicaFiles';
+import { SIGHTS_FOLD } from './replicaRig';
 
 /**
  * Item pictures (graphics overhaul G2): small images of a replica, a part or a colour scheme for the menus, drawn by the
@@ -260,6 +261,12 @@ export function fitParts(model: ReplicaModel, fit: PictureFit): void {
   const down = model.group.getObjectByName('sightsDown');
   if (up) up.visible = !optic;
   if (down) down.visible = optic;
+  // A model file's iron sights are a moving part (RM1): folded under an optic, as the viewmodel poses them.
+  const rig = model.rig;
+  if (rig?.has(SIGHTS_FOLD)) {
+    rig.set(SIGHTS_FOLD, optic ? rig.duration(SIGHTS_FOLD) : 0);
+    rig.apply();
+  }
   fitMuzzle(model.mount, fit.barrel ?? null, fit.muzzle ?? null);
   fitLight(model.light, fit.laser ?? null);
 }

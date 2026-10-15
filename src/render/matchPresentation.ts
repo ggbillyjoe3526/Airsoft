@@ -399,6 +399,11 @@ export class MatchPresentation {
     this.intents.hideFrom(bots.length);
   }
 
+  /** Where `c`'s replica muzzle is drawn on their rigged figure (BP4), or false: CharacterRenderer.riggedMuzzle. */
+  riggedMuzzle(c: Character, out: THREE.Vector3): boolean {
+    return this.characters.riggedMuzzle(c, out);
+  }
+
   /** Call after every simulation tick, while that tick's events are still in the state. */
   afterTick(cameraYaw: number): void {
     let warned = false;

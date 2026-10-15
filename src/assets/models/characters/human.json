@@ -246,6 +246,22 @@
    "loop": false,
    "upperBodyOnly": false,
    "speed": null
+  },
+  {
+   "name": "Holster",
+   "seconds": 0.033,
+   "frames": 1,
+   "loop": true,
+   "upperBodyOnly": true,
+   "speed": null
+  },
+  {
+   "name": "Holster_Sprint",
+   "seconds": 0.5,
+   "frames": 15,
+   "loop": true,
+   "upperBodyOnly": true,
+   "speed": null
   }
  ],
  "fitToNote": "Clips with fitTo are time-scaled to that replica stat (e.g. AEG drawTime 0.45 s, pistol 0.3 s; reloads 1.8 s and 1.2 s).",

@@ -105,10 +105,10 @@ describe('budgets of the shipped human.glb', () => {
     expect((await readFile(new URL('../assets/models/characters/human.glb', import.meta.url))).byteLength).toBeLessThan(3_500_000);
   });
 
-  it('keeps the clip set and its names as on main (ad9bb88), plus the rest and vault clips both figures share (RM10)', () => {
+  it('keeps the clip set and its names as on main (ad9bb88), plus the rest, vault (RM10) and holster (BP4) clips both figures share', () => {
     const onMain = ["CrouchIdle", "CrouchWalk", "HitCall", "Idle", "Jump", "Pistol_Aim", "Pistol_AimDown", "Pistol_AimUp", "Pistol_Fire", "Pistol_Reload", "Rifle_Aim", "Rifle_AimDown", "Rifle_AimUp", "Rifle_Fire", "Rifle_Reload", "Run_B", "Run_F", "Run_L", "Run_R", "Sprint", "Switch", "WalkOff", "Walk_F"];
     const shared = ['Pistol_Rest', 'Pistol_RestDown', 'Pistol_RestUp', 'Rifle_Rest', 'Rifle_RestDown', 'Rifle_RestUp', 'Vault'];
-    const want = [...onMain, ...shared].sort();
+    const want = [...onMain, ...shared, 'Holster', 'Holster_Sprint'].sort();
     const names = scene.animations.map((c) => c.name);
     expect([...names].sort()).toEqual(want);
     expect(sidecar.clips.map((c) => c.name).sort()).toEqual(want);

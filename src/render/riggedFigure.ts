@@ -10,11 +10,12 @@ import type { Character } from '../sim/character';
 import { vaultClipShare } from '../sim/figureLegs';
 import { lerpAngle } from '../sim/vec';
 import { PartBuilder } from './figureParts';
-import { createFigurePose, createPoseState, type FigurePose, hasRest, type MagazineShow, magazinesAt, POSE_CLIPS, type PoseHold, type PoseInput, type PoseState, poseRestartCall, poseShot, releasedBetween, stepPose } from './figurePose';
+import { createFigurePose, createPoseState, type FigurePose, hasHolster, hasRest, type MagazineShow, magazinesAt, POSE_CLIPS, type PoseHold, type PoseInput, type PoseState, poseRestartCall, poseShot, releasedBetween, stepPose } from './figurePose';
 import { addShape, type FigureReplicaColours, type FigureReplicaShape } from './figureReplicas';
 import type { FigureMagazines, FigureRig } from './figureRig';
 import type { ReplicaFiles } from './replicaFiles';
 import { barrelReach } from './replicaParts';
+import { clipEndMoves, SIGHTS_FOLD } from './replicaRig';
 import type { ThrownMagazines } from './thrownMagazines';
 
 /**
@@ -74,6 +75,8 @@ export interface RiggedFrame {
 
 /** A replica in the fist and its magazines. */
 interface Held {
+  /** How it is held (the pistol's hold or the rifle's). */
+  hold: PoseHold;
   holder: THREE.Group;
   near: THREE.Mesh | null;
   far: THREE.Mesh | null;
@@ -88,6 +91,11 @@ interface Held {
   magazines: FigureMagazines | null;
   /** Geometries it made (freed with it). */
   made: THREE.BufferGeometry[];
+  /** The rifle's place slung across the back, on the chest bone (FIGURE_RIG.sling), or null; and whether it is there now. */
+  sling: THREE.Matrix4 | null;
+  onBack: boolean;
+  /** The muzzle in the holder's space (out at a longer barrel's end), or null: no model. */
+  muzzle: THREE.Vector3 | null;
 }
 
 const IDENTITY = new THREE.Matrix4();
@@ -108,7 +116,6 @@ const euler = new THREE.Euler();
 const v1 = new THREE.Vector3();
 const v2 = new THREE.Vector3();
 const v3 = new THREE.Vector3();
-const HOLDS: readonly PoseHold[] = ['rifle', 'pistol'];
 const shown: MagazineShow = { fresh: false, old: false, replicaHidden: false };
 /** A rough sphere round a figure in any pose (its arms up, a rifle out): the skinned meshes' frustum test, never recomputed. */
 const BOUNDS = new THREE.Sphere(new THREE.Vector3(0, 0.95, 0), 1.45);
@@ -135,7 +142,11 @@ export class RiggedFigure {
   private readonly arms: THREE.Object3D[];
   private readonly grip: THREE.Object3D;
   private readonly hand: THREE.Object3D;
-  private held: Record<PoseHold, Held>;
+  private readonly chest: THREE.Object3D;
+  /** The chest bone at rest, in the figure's own frame (the sling is placed from it). */
+  private readonly chestRest = new THREE.Matrix4();
+  /** Each loadout slot's replica on the grip, by slot: the one out is drawn (a kit of two pistols shows either, BP4). */
+  private readonly held: Held[];
   private readonly state: PoseState = createPoseState();
   private readonly pose: FigurePose = createFigurePose();
   private readonly input: PoseInput = {
@@ -155,6 +166,7 @@ export class RiggedFigure {
     vaulting: false,
     vaultAt: 0,
     rest: 0,
+    holster: 0,
     cycle: null,
   };
   private readonly draw = { progress: 0, from: 'rifle' as PoseHold };
@@ -162,6 +174,11 @@ export class RiggedFigure {
   private drawFrom: PoseHold | null = null;
   private lastStatus: Character['status'] | null = null;
   private lastReloadAt = 0;
+  /** Holstered, or drawing from the holster (M92): the rifle is slung on the back until FIGURE.holster.swapAt of the draw. */
+  private fromHolster = false;
+  private slung = false;
+  /** The height of the ground the figure last stood on: a magazine thrown in the air lands there. */
+  private groundY = 0;
   private lod = 0;
   private firstPerson = false;
   private parts: readonly string[];
@@ -195,6 +212,9 @@ export class RiggedFigure {
     this.arms = FIGURE_RIG.bones.arms.map(bone);
     this.grip = bone(FIGURE_RIG.bones.grip);
     this.hand = bone(FIGURE_RIG.bones.hand);
+    this.chest = bone(FIGURE_RIG.bones.chest);
+    this.root.updateMatrixWorld(true);
+    this.chestRest.copy(this.chest.matrixWorld);
 
     // Its own materials, in its team's colour.
     const prefix = FIGURE_RIG.teamMaterialPrefix;
@@ -222,7 +242,7 @@ export class RiggedFigure {
       this.upperActions.push(this.action(rig.upper[slot] ?? null));
     });
 
-    this.held = { rifle: this.buildHeld('rifle'), pistol: this.buildHeld('pistol') };
+    this.held = this.replicas().map((_, slot) => this.buildHeld(slot));
 
     this.callout = new THREE.Sprite(setup.calloutMaterial);
     this.callout.scale.set(FIGURE.callout.width, FIGURE.callout.width * FIGURE.callout.aspect, 1);
@@ -234,6 +254,18 @@ export class RiggedFigure {
   /** A shot left this figure's replica: its trigger finger presses. */
   shot(pistol: boolean): void {
     poseShot(this.state, pistol ? 'pistol' : 'rifle');
+  }
+
+  /**
+   * Where the replica in its hand (the pistol's or the rifle's) has its muzzle in the world as last drawn, for the
+   * shot's BB to be drawn from (BP4). False when that replica isn't drawn in the hand: first person, slung, the other
+   * replica out, or no model.
+   */
+  muzzleWorld(pistol: boolean, out: THREE.Vector3): boolean {
+    const h = this.heldFor(pistol ? 'pistol' : 'rifle');
+    if (!h?.muzzle || !h.holder.visible || h.onBack || !this.root.visible) return false;
+    out.copy(h.muzzle).applyMatrix4(h.holder.matrixWorld);
+    return true;
   }
 
   /**
@@ -281,6 +313,14 @@ export class RiggedFigure {
       this.lastActive = arm.active;
     }
     if (arm.draw <= 0) this.drawFrom = null;
+    // Holstered (M92, BP4): the arms hang and the rifle rides on the back. Drawn from the holster, the rifle comes to the
+    // hand FIGURE.holster.swapAt of the way through the draw and the arms rise to the aim over the rest of it (as the
+    // built-in figures do). A file without the Holster clips holds the replica in the hands (KNOWN_ISSUES).
+    if (arm.holstered) this.fromHolster = true;
+    else if (arm.draw <= 0) this.fromHolster = false;
+    const drawn = arm.holstered ? 0 : this.fromHolster && arm.drawTotal > 0 ? 1 - arm.draw / arm.drawTotal : 1;
+    const holstering = c.status === 'alive' && hasHolster(this.setup.rig.table);
+    this.slung = holstering && drawn < FIGURE.holster.swapAt;
     if (c.status === 'calling' && this.lastStatus !== 'calling') poseRestartCall(this.state);
     this.lastStatus = c.status;
 
@@ -300,12 +340,13 @@ export class RiggedFigure {
     // Resting on cover (M104): the Rest clips lean the aim in over it. A file without them leans by FIGURE_RIG.rest: the
     // aim posed `rest` higher and the spine leaned `rest` forward, so the bore stays on the shot. Not your own body.
     input.rest = f.firstPerson ? 0 : c.coverRest;
+    input.holster = holstering ? 1 - THREE.MathUtils.smoothstep(drawn, FIGURE.holster.swapAt, 1) : 0;
     const rest = hasRest(this.setup.rig.table, hold) ? 0 : input.rest * FIGURE_RIG.rest.lean;
     input.pitch = c.prevPitch + (c.pitch - c.prevPitch) * a + rest;
     input.hold = hold;
     const handling = arm.handling[arm.active];
     input.reload = arm.reload > 0 && handling && handling.reloadTime > 0 ? 1 - arm.reload / handling.reloadTime : null;
-    // Out of the holster the draw takes longer (M92, Armament.drawTotal). No holstered pose yet: KNOWN_ISSUES.
+    // Out of the holster the draw takes longer (M92, Armament.drawTotal): the arms rise from hanging (input.holster).
     const drawTotal = arm.drawTotal > 0 ? arm.drawTotal : (handling?.drawTime ?? 0);
     if (this.drawFrom && drawTotal > 0) {
       this.draw.progress = 1 - arm.draw / drawTotal;
@@ -335,12 +376,16 @@ export class RiggedFigure {
     this.adjustSpine(pose.overlay, f.leanX + pose.pitchLean - rest, f.leanZ, twist);
     this.peekAbout(f.peek, f.peekPivot);
     if (f.firstPerson) for (const b of this.arms) b.scale.setScalar(FIGURE_RIG.firstPerson.armScale);
+    // Where a magazine thrown now comes to rest: the ground last stood on (a throw mid-jump lands, not hangs in the air).
+    if (c.grounded) this.groundY = y;
 
-    // The level of detail by distance (a metre of give, so it doesn't flicker on the line).
+    // The level of detail by distance, a step at a time with some give past each line (so it doesn't flicker on it): a
+    // jump across both lines (a new spectator target) steps all the way at once.
     const dist = Math.hypot(x - f.eyeX, y + 1 - f.eyeY, z - f.eyeZ);
     const lod = FIGURE_RIG.lod[this.detail];
-    const want = dist > lod[1] ? 2 : dist > lod[0] ? 1 : 0;
-    if (want !== this.lod && Math.abs(dist - lod[Math.min(want, this.lod)]!) > 0.5) this.lod = want;
+    const give = FIGURE_RIG.lodGive;
+    while (this.lod < 2 && dist > lod[this.lod]! + give) this.lod++;
+    while (this.lod > 0 && dist < lod[this.lod - 1]! - give) this.lod--;
     for (let i = 0; i < 3; i++) {
       const m = this.lods[i]!;
       m.visible = !f.firstPerson && i === this.lod;
@@ -348,11 +393,11 @@ export class RiggedFigure {
     }
     // Your own body casts no shadow (as before it was drawn: a headless, armless one would look wrong).
     if (this.firstPersonMesh) this.firstPersonMesh.visible = f.firstPerson;
-    this.updateHeld(c, pose, dist, f, y, yaw);
+    this.updateHeld(c, pose, f, yaw);
   }
 
   dispose(): void {
-    for (const h of Object.values(this.held)) this.freeHeld(h);
+    for (const h of this.held) this.freeHeld(h);
     this.mixer.stopAllAction();
     this.mixer.uncacheRoot(this.bones);
     for (const m of this.materials) m.dispose();
@@ -446,18 +491,19 @@ export class RiggedFigure {
     spine.position.add(v3.applyQuaternion(q1));
   }
 
-  /** The replica held as `hold`, built on the grip bone with its magazines on the hand. */
-  private buildHeld(hold: PoseHold): Held {
+  /** The replica in loadout slot `slot`, built on the grip bone with its magazines on the hand. */
+  private buildHeld(slot: number): Held {
     const s = this.setup;
+    const replica = this.replicaAt(slot);
+    const hold: PoseHold = replica?.look.model === 'pistol' ? 'pistol' : 'rifle';
     const holder = new THREE.Group();
     holder.name = `held:${hold}`;
+    holder.userData.slot = slot;
     holder.matrixAutoUpdate = false;
     holder.matrix.copy(s.rig.replicaOnGrip[hold]);
     holder.visible = false;
     this.grip.add(holder);
-    const held: Held = { holder, near: null, far: null, magazine: null, handMagazine: null, fresh: null, old: null, slide: null, slideSeconds: 0, magazines: s.rig.magazines[hold], made: [] };
-    const slot = this.slotOf(hold);
-    const replica = slot >= 0 ? this.replicaAt(slot) : undefined;
+    const held: Held = { hold, holder, near: null, far: null, magazine: null, handMagazine: null, fresh: null, old: null, slide: null, slideSeconds: 0, magazines: s.rig.magazines[hold], made: [], sling: null, onBack: false, muzzle: null };
     const file = replica ? s.files.get(replica.id) : undefined;
     if (!file) return held;
     const parts = this.partsOf(slot);
@@ -487,13 +533,24 @@ export class RiggedFigure {
     const muzzleShape = muzzle.length > 0 ? muzzle : file.flashHider;
     const muzzleAt = reach > 0 ? { shape: muzzleShape, frame: new THREE.Matrix4().makeTranslation(0, 0, -reach) } : muzzleShape;
     const grip = parts?.grip && parts.grip !== 'none' ? parts.grip : null;
-    const fitted = [part('optic', this.opticOf(slot)), part('grip', grip), part('laser', parts?.laser), part('barrel', parts?.barrel)];
-    held.near = make([file.body, file.rig?.pieces ?? [], ...fitted, muzzleAt, part('light', parts?.light)]);
+    const optic = this.opticOf(slot);
+    const fitted = [part('optic', optic), part('grip', grip), part('laser', parts?.laser), part('barrel', parts?.barrel)];
+    // Under a fitted optic the iron sights lie folded, as in first person (the file's fold clip at its end).
+    const folds = optic && file.rig ? clipEndMoves(file.rig, SIGHTS_FOLD) : null;
+    const moving = file.rig ? (folds ? file.rig.pieces.map((p) => ({ shape: [p], frame: folds[p.bone]! })) : [file.rig.pieces]) : [];
+    // A torch clips under a fitted laser where the parts file marks it (RM8), as in first person.
+    const light = part('light', parts?.light);
+    const under = parts?.light && parts.laser ? file.underLaser.get(`light:${parts.light}`) : undefined;
+    const lightAt = under ? { shape: light, frame: new THREE.Matrix4().makeTranslation(under.x, under.y, under.z) } : light;
+    held.near = make([file.body, ...moving, ...fitted, muzzleAt, lightAt]);
     held.far = make([file.figureHeld]);
     const magazinePart = part('magazine', parts?.magazine);
     const magazine = magazinePart.length > 0 ? magazinePart : file.magazine;
     held.magazine = make([magazine]);
     for (const m of [held.near, held.far, held.magazine]) if (m) holder.add(m);
+    if (hold === 'rifle' && held.near) held.sling = this.slingFrame(held.near.geometry, file.muzzle.y);
+    held.muzzle = file.muzzle.clone();
+    held.muzzle.z -= reach;
     // The magazine in its bone's frame, as the sidecar places it on the hand.
     if (held.magazines && file.magazineFrame && magazine.length > 0) {
       const toBone = file.magazineFrame.clone().invert();
@@ -522,9 +579,33 @@ export class RiggedFigure {
     return held;
   }
 
+  /**
+   * The rifle's frame slung across the back (FIGURE_RIG.sling) on the chest bone, for the near model's geometry (in the
+   * replica's space: x right, y up, the butt toward +z) with its bore `boreY` up: the butt's end over the right shoulder
+   * blade, the muzzle down to the left, its right side facing out behind.
+   */
+  private slingFrame(geometry: THREE.BufferGeometry, boreY: number): THREE.Matrix4 {
+    const S = FIGURE_RIG.sling;
+    geometry.computeBoundingBox();
+    const sin = Math.sin(S.tilt);
+    const cos = Math.cos(S.tilt);
+    // The figure faces -Z with +X to its right: the rifle's x (its right side) faces +Z, its z (muzzle to butt) leans to +X.
+    const m = new THREE.Matrix4().makeBasis(v1.set(0, 0, 1), v2.set(cos, -sin, 0), v3.set(sin, cos, 0));
+    const butt = v1.set(0, boreY, geometry.boundingBox!.max.z).applyMatrix4(m);
+    const { kind, parts } = this.setup.rig;
+    const pack = this.setup.pack && parts.includes(FIGURE_RIG.parts.human.pack);
+    const back = kind === 'robot' ? S.back.robot : pack ? S.back.humanPack : S.back.human;
+    m.setPosition(S.buttX - butt.x, S.buttY - butt.y, back - butt.z);
+    return this.chestRest.clone().invert().multiply(m);
+  }
+
   /** The loadout slot of the character's first replica of kind `hold`, or -1. */
-  private slotOf(hold: PoseHold): number {
-    return this.replicas().findIndex((r) => (r.look.model === 'pistol') === (hold === 'pistol'));
+  /** The replica drawn as `hold`: the one out when it is held so, else the loadout's first held so, or none. */
+  private heldFor(hold: PoseHold): Held | undefined {
+    const out = this.held[this.setup.character.armament.active];
+    if (out?.hold === hold) return out;
+    for (const h of this.held) if (h.hold === hold) return h;
+    return undefined;
   }
 
   private replicas(): readonly ReplicaConfig[] {
@@ -554,14 +635,23 @@ export class RiggedFigure {
   }
 
   /** The replica in the fist this frame, near or far, and the reload's magazines (one thrown as it is let go). */
-  private updateHeld(c: Character, pose: FigurePose, dist: number, f: RiggedFrame, y: number, yaw: number): void {
+  private updateHeld(c: Character, pose: FigurePose, f: RiggedFrame, yaw: number): void {
     const reloading = pose.reload > 0.5;
-    for (const hold of HOLDS) {
-      const h = this.held[hold];
-      const on = !f.firstPerson && hold === pose.hold;
+    const inHand = this.heldFor(pose.hold);
+    // Holstered, the rifle rides on the back (the pistol is away); else the replica in hand.
+    const slung = this.slung ? this.heldFor('rifle') : undefined;
+    for (const h of this.held) {
+      const back = h === slung && h.sling !== null;
+      if (back !== h.onBack) {
+        h.onBack = back;
+        (back ? this.chest : this.grip).add(h.holder);
+        h.holder.matrix.copy(back ? h.sling! : this.setup.rig.replicaOnGrip[h.hold]);
+      }
+      const on = !f.firstPerson && (this.slung ? back : h === inHand);
       h.holder.visible = on;
-      const mine = on && reloading && pose.reloadHold === hold && h.magazines !== null;
-      const near = !h.far || mine || dist <= FIGURE_RIG.fullReplica[this.detail];
+      const mine = on && reloading && pose.reloadHold === h.hold && h.magazines !== null;
+      // The whole model at the body's full detail, the small figure version beyond it, on the same give.
+      const near = !h.far || mine || this.lod === 0;
       if (h.near) h.near.visible = near;
       if (h.far) h.far.visible = !near;
       if (h.near) h.near.castShadow = f.castShadow;
@@ -576,7 +666,7 @@ export class RiggedFigure {
           h.magazine.visible = near && !shown.replicaHidden;
           if (h.slide) h.magazine.position.fromArray(h.slide.evaluate(u * h.slideSeconds));
         }
-        if (h.old && h.handMagazine && releasedBetween(times, this.lastReloadAt, u)) this.throwOld(c, h, y, yaw, f.castShadow);
+        if (h.old && h.handMagazine && releasedBetween(times, this.lastReloadAt, u)) this.throwOld(c, h, this.groundY, yaw, f.castShadow);
         this.lastReloadAt = u;
       } else {
         if (h.fresh) h.fresh.visible = false;
@@ -585,7 +675,9 @@ export class RiggedFigure {
           h.magazine.visible = near;
           h.magazine.position.set(0, 0, 0);
         }
-        if (hold === pose.hold) this.lastReloadAt = 0;
+        // A reload carried on under a sprint or a vault keeps its place: a release it passed meanwhile isn't thrown late
+        // when the arms come back to it (a new reload starts from its own beginning, below the last place).
+        if (h === inHand) this.lastReloadAt = pose.reloadAt;
       }
     }
   }

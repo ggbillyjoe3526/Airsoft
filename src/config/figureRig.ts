@@ -28,7 +28,7 @@ export const FIGURE_RIG = {
    */
   lowerBones: ['Root', 'Hips', 'Thigh_L', 'Shin_L', 'Foot_L', 'Toe_L', 'Thigh_R', 'Shin_R', 'Foot_R', 'Toe_R'] as readonly string[],
   /** The bones the drawing reads or moves itself. */
-  bones: { hips: 'Hips', spine: 'Spine', grip: 'Grip_R', hand: 'Hand_L', arms: ['UpperArm_L', 'UpperArm_R'] as readonly string[] },
+  bones: { hips: 'Hips', spine: 'Spine', chest: 'Chest', grip: 'Grip_R', hand: 'Hand_L', arms: ['UpperArm_L', 'UpperArm_R'] as readonly string[] },
   /** The parts in the files, by role (each has `_LOD1` and `_LOD2` copies, except where the file lacks one). */
   parts: {
     human: {
@@ -50,12 +50,12 @@ export const FIGURE_RIG = {
   /** The Switch clip goes from the rifle to the pistol and holds the pistol from this share of it on (the sidecar's note). */
   switchPistolFrom: 0.35,
   /**
-   * Distances (metres) beyond which a figure draws its LOD1 and LOD2 meshes, on Player detail High and Low. Within
-   * `fullReplica` it holds the replica's whole model, beyond it the file's small figure version (but the whole model
-   * while it reloads, so the magazine comes out).
+   * Distances (metres) beyond which a figure draws its LOD1 and LOD2 meshes, on Player detail High and Low, each line
+   * crossed only `lodGive` past it (so a figure on the line doesn't flicker). At LOD0 it holds the replica's whole model,
+   * beyond it the file's small figure version (but the whole model while it reloads, so the magazine comes out).
    */
   lod: { high: [12, 28], low: [6, 16] } as Readonly<Record<'high' | 'low', readonly [number, number]>>,
-  fullReplica: { high: 12, low: 6 } as Readonly<Record<'high' | 'low', number>>,
+  lodGive: 0.5,
   /** Below this horizontal speed (m/s) a figure stands; the legs' hit volumes swing only above it too. */
   stillBelow: HITS.legs.walkingSpeed,
   /** The paces the walk blends into the run between (m/s): the movement's own. */
@@ -98,4 +98,14 @@ export const FIGURE_RIG = {
    * the legs' clips instead (the jump, tucked by the crouch).
    */
   vault: { top: 0.4 },
+  /**
+   * Holstered (M92; the clips are bot23.py's, BP4): the arms hang (the Holster clip, the Holster_Sprint's pumping arms
+   * in a sprint) and the rifle rides slung across the back on the chest bone, as the built-in figures sling it
+   * (config/characters.ts FIGURE.holster): its butt `buttX` to the right of the spine and `buttY` above the feet, `back`
+   * behind the spine line (more over the human's pack), tilted `tilt` radians from upright with its muzzle down to the
+   * left and its right side facing out. Drawn from the holster, the rifle comes to the hand FIGURE.holster.swapAt of the
+   * way through the draw and the arms rise from hanging to the aim over the rest of it. A file without the clips holds
+   * the replica in the hands while holstered.
+   */
+  sling: { buttX: 0.17, buttY: 1.42, tilt: 0.75, back: { human: 0.19, humanPack: 0.27, robot: 0.17 } },
 } as const;

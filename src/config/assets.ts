@@ -42,10 +42,10 @@ export const REPLICA_FILE = {
   nodes: { body: 'Body', magazine: 'Magazine', figure: 'Figure', muzzle: 'Muzzle', torchMount: 'TorchMount', flashHider: 'FlashHider', slideBack: 'SlideBack' },
   /**
    * The markers a parts file hangs from a part (empties named `<part>_<marker>`, RM8): an optic's sight line (aimed,
-   * the replica is raised so it runs through the eye) and where a torch moves to while the laser is fitted too (both
-   * clip to the same rail, so the torch sits under the laser).
+   * the replica is raised so it runs through the eye), where a torch moves to while the laser is fitted too (both
+   * clip to the same rail, so the torch sits under the laser), and a laser's lens, where its beam starts.
    */
-  partMarkers: { sightLine: 'SightLine', underLaser: 'UnderLaser' },
+  partMarkers: { sightLine: 'SightLine', underLaser: 'UnderLaser', beam: 'Beam' },
   /** The replicas drawn as rifles (RM1): the AEG's hands, holds and parts, and the figures' rifle frame. */
   rifles: ['aeg'] as readonly string[],
   /**
