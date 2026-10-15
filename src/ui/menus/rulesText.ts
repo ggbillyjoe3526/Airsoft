@@ -114,7 +114,10 @@ function describeRounds(r: MatchRulesText, mode: 'elimination' | 'attackDefend')
   const sw = r.switches;
   const winBy = sw?.winByTwo ? `, by two clear: level at ${r.winsNeeded - 1} all, play on until one team is two ahead` : '';
   // Elimination's overtime flag (Dev 6 item 45).
-  const overtime = `a flag goes up near the middle and the first team to touch it in ${OVERTIME.time} s wins the round, or it's a draw`;
+  const flag = `a flag goes up near the middle and the first team to touch it in ${OVERTIME.time} s wins the round`;
+  const timeOut = sw?.timeOutToMorePlayers
+    ? `the team with more players left wins it; level, ${flag}, or else the team with more players left then (a draw if still level)`
+    : `${flag}, or it's a draw`;
   const end = `First to ${r.winsNeeded} rounds wins the match${winBy}. One hit and you're out.${fire}${ricochets}${switchSentences(sw)}`;
   if (mode === 'attackDefend') {
     return (
@@ -127,7 +130,7 @@ function describeRounds(r: MatchRulesText, mode: 'elimination' | 'attackDefend')
   }
   return (
     teams +
-    `Knock out the whole other team to win a round (${minutes}:${seconds} on the clock; if time runs out ${sw?.timeOutToMorePlayers ? `the team with more players left wins it; level, ${overtime}` : overtime}). ` +
+    `Knock out the whole other team to win a round (${minutes}:${seconds} on the clock; if time runs out ${timeOut}). ` +
     `You start at the ${END_NAMES[r.eliminationStartEnd === 0 ? 0 : 1]} end; teams swap ends after round ${r.halfTimeAfter}. ` +
     end
   );

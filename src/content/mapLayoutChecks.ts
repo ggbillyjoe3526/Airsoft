@@ -220,7 +220,6 @@ const FLAG_FOOT_CLEAR = 0.1;
  * past walkSpreadWarn a failure), close enough that both ends get there within the overtime at a run (else a look), and
  * out of the bushes, where nobody would see it. Without one a level time-out is a draw at once: a look, not a failure.
  */
-
 export function overtimeFlagCheck(entry: MapEntry, map: MapData): CheckResult {
   const item = mapItem(entry);
   const spot = map.overtimeFlag;
