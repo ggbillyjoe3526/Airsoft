@@ -27,11 +27,12 @@ export class Whistle {
 
   /**
    * The practice range's shot timer (M93): one plain beep of `duration` seconds, now, on the same dry output (no warble:
-   * an electronic tone, not a whistle). Silenced by stopAll like a blast.
+   * an electronic tone, not a whistle), at `tone`'s pitch and volume (the shot timer's, or a ping's pip, PG1). Silenced
+   * by stopAll like a blast.
    */
-  beep(duration: number): void {
+  beep(duration: number, tone: { readonly pitch: number; readonly volume: number } = AUDIO.shotTimer): void {
     const ctx = this.ctx;
-    const T = AUDIO.shotTimer;
+    const T = tone;
     const t = ctx.currentTime;
     const osc = ctx.createOscillator();
     osc.type = 'sine';

@@ -285,8 +285,8 @@ describe('the title\'s ground (M100: plain, no picture)', () => {
 
 describe('the HUD\'s sheets (G4)', () => {
   it('read every file hud.css imports, each part\'s rules among them', () => {
-    expect(hudFiles.length).toBe(8);
-    for (const rule of ['.scoreboard', '.minimap-frame', '.hit-feed-line', '.hud-replica', '.match-board', '.hitfx-round', '.callout-feed']) {
+    expect(hudFiles.length).toBe(9);
+    for (const rule of ['.scoreboard', '.minimap-frame', '.hit-feed-line', '.hud-replica', '.match-board', '.hitfx-round', '.callout-feed', '.ping-marker']) {
       expect(blockOf(rule), rule).not.toBeNull();
     }
     // Moved, not copied: style.css keeps none of them.

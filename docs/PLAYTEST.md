@@ -776,6 +776,15 @@ there maps each symptom to its numbers):
   stay still while a small pointer lights the order it's on; let go on one to give it, or without moving to give
   none. You keep walking with Z held; firing stops and needs a new pull after. Settings › Controls › Order wheel ›
   Click: point and click instead (that click fires no BB).
+- [ ] **Pings (middle mouse).** Ping the floor or a wall: a soft pip, a ring in your team's colour with "Ping · 24 m"
+  under it, on the minimap too; it pops in, sits faint on the screen's edge when you turn away and fades after about
+  8 s. Ping again: the old one goes. A teammate answers once ("On it, Dock." or "Eyes on Dock.") and one goes to look,
+  each its own way (a rusher runs, a careful one walks in); under Follow me they stay with you. Ping the sky: nothing.
+- [ ] **Ping an enemy.** Ping an opponent you can see: an orange diamond "Contact · 30 m" where they stood, and your
+  teammates treat it as a threat. One hidden in a bush or the dark is not marked (you get the spot behind). Sometimes
+  a teammate calling "Contact" marks the enemy for you the same way. On Easy and Pro alike nothing stutters.
+- [ ] **Settings › HUD › Ping markers.** Off: no markers over the field or on the minimap, but teammates still answer
+  and go. Rebind Ping under Settings › Controls and the new key pings.
 - [ ] **The minimap.** A square map at the top left on a navy panel, "Depot · Round 2" under it, the way you look
   always up, you the white arrow. Teammates are dots in your team's colour (blue on Alpha; pinned to the edge when off it), grey once hit. An opponent you hear shows as a patch in theirs (orange on Alpha) roughly where
   (dashed for steps, a dot for a shot) for a few seconds; far sounds give wider patches; nothing for one you can't

@@ -8,7 +8,22 @@ import { missingColumns, type PoolTable, readTables } from '../pool/poolFile';
  */
 
 /** The events a bot calls (callouts.md › The events), each found in the file by its `name`. */
-export type CalloutEvent = 'contact' | 'contacts' | 'heard' | 'down' | 'lastOne' | 'tagged' | 'reloading' | 'pushing' | 'flanking' | 'checking' | 'holding' | 'raising' | 'flag';
+export type CalloutEvent =
+  | 'contact'
+  | 'contacts'
+  | 'heard'
+  | 'down'
+  | 'lastOne'
+  | 'tagged'
+  | 'reloading'
+  | 'pushing'
+  | 'flanking'
+  | 'checking'
+  | 'holding'
+  | 'raising'
+  | 'flag'
+  | 'pingGoing'
+  | 'pingWatching';
 
 /** What a line may fill in: the named area, how many were seen, how many are left. */
 export type CalloutFill = 'area' | 'count' | 'left';
@@ -28,6 +43,8 @@ export const CALLOUT_EVENTS: readonly { readonly id: CalloutEvent; readonly name
   { id: 'holding', name: 'Holding', fills: ['area'] },
   { id: 'raising', name: 'Raising', fills: [] },
   { id: 'flag', name: 'Flag', fills: [] },
+  { id: 'pingGoing', name: 'Going to your ping', fills: ['area'] },
+  { id: 'pingWatching', name: 'Watching your ping', fills: ['area'] },
 ];
 
 /** When an event is called (callouts.md › When they call). */
@@ -52,6 +69,14 @@ export interface CalloutPace {
   readonly maxWait: number;
 }
 
+/** callouts.md › Marks (PG1): how often a sighting call also marks the enemy for the team's players. */
+export interface CalloutMarks {
+  /** The chance (0 to 1) a Contact or Contacts call marks the enemy it calls, when the caller still sees them. */
+  readonly chance: number;
+  /** Seconds between two of a team's marks. */
+  readonly gap: number;
+}
+
 /** One line: `who` is a personality's key ("rusher") or '' for Any; `text` has its `{fills}` still in. */
 export interface CalloutLine {
   readonly who: string;
@@ -63,6 +88,7 @@ export interface CalloutLine {
 export interface CalloutsFile {
   readonly rules: Readonly<Record<CalloutEvent, CalloutRule>>;
   readonly pace: CalloutPace;
+  readonly marks: CalloutMarks;
   /** Talks (×) per personality key; a bot without a personality, or one the table lacks, talks × 1. */
   readonly talks: ReadonlyMap<string, number>;
   readonly lines: Readonly<Record<CalloutEvent, readonly CalloutLine[]>>;
@@ -87,6 +113,12 @@ const PACE_ROWS: readonly { name: string; field: keyof CalloutPace; fallback: nu
 ];
 /** Longest gap any Pace or Team gap cell may give (s). */
 const GAP_MAX = 120;
+
+/** The Marks rows, by the words in their first column, with what each may be. */
+const MARK_ROWS: readonly { name: string; field: keyof CalloutMarks; fallback: number; max: number; what: string }[] = [
+  { name: 'A sighting is marked (chance)', field: 'chance', fallback: 0.35, max: 1, what: 'a number from 0 to 1' },
+  { name: "The team's marks apart (s)", field: 'gap', fallback: 12, max: GAP_MAX, what: `seconds from 0 to ${GAP_MAX}` },
+];
 
 /** A number as written in the file (a plain or Unicode minus, a decimal point); NaN when it isn't one. */
 function numberOf(s: string): number {
@@ -170,6 +202,23 @@ export function loadCalloutsFile(text: string, personalities: ReadonlySet<string
   }
   if (paceTable) for (const p of PACE_ROWS) if (!paced.has(p.field)) fail(paceTable.line, `Pace: no row for ${p.name}, so it is ${p.fallback} s`);
 
+  // Marks (PG1): a sighting call marking the enemy for the team's players.
+  const marks = Object.fromEntries(MARK_ROWS.map((m) => [m.field, m.fallback])) as Record<keyof CalloutMarks, number>;
+  const marked = new Set<string>();
+  const markTable = required(tables, 'Marks', ['Rule', 'Value'], fail);
+  for (const row of markTable?.rows ?? []) {
+    const m = MARK_ROWS.find((x) => keyOf(x.name) === keyOf(row.cells['Rule']!));
+    const v = numberOf(row.cells['Value']!);
+    if (!m) fail(row.line, `"${row.cells['Rule']}" is not a marks rule (${MARK_ROWS.map((x) => x.name).join(', ')})`);
+    else if (marked.has(m.field)) fail(row.line, `${m.name} is listed twice`);
+    else if (!(v >= 0 && v <= m.max)) fail(row.line, `${m.name}: "${row.cells['Value']}" is not ${m.what}`);
+    else {
+      marked.add(m.field);
+      marks[m.field] = v;
+    }
+  }
+  if (markTable) for (const m of MARK_ROWS) if (!marked.has(m.field)) fail(markTable.line, `Marks: no row for ${m.name}, so it is ${m.fallback}`);
+
   // Personalities: how chatty each is.
   const talks = new Map<string, number>();
   const people = required(tables, 'Personalities', ['Personality', 'Talks (×)'], fail);
@@ -208,7 +257,7 @@ export function loadCalloutsFile(text: string, personalities: ReadonlySet<string
   }
   if (said) for (const e of CALLOUT_EVENTS) if (rules[e.id].chance > 0 && !lines[e.id].some((l) => l.who === '')) fail(said.line, `Lines: no Any line for ${e.name}, so a bot whose personality has none never calls it`);
 
-  return { rules, pace, talks, lines, errors };
+  return { rules, pace, marks, talks, lines, errors };
 }
 
 /** What is wrong with a Lines cell for an event that fills `fills`, or null. */

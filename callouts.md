@@ -24,8 +24,11 @@ says never changes how it plays: the calls are what it already does, put into wo
 - **Pace** keeps the feed calm, whatever the chances say: one bot never talks twice within its gap, the team never
   within its gap, and the same enemy is not called twice within its gap. A call the team gap holds back waits at most
   the last row's seconds, then is dropped.
-- **Personalities.** Talks (×) multiplies every chance: 1 changes nothing, above 1 is chattier. Every personality in
-  [bots.md](bots.md) needs a row.
+- **Personalities.** Talks (×) multiplies every chance: 1 changes nothing, above 1 is chattier. It never makes the
+  answers to your ping less likely. Every personality in [bots.md](bots.md) needs a row.
+- **Marks.** A teammate calling Contact or Contacts that still sees the enemy may also mark them for you, a ping over
+  where they are: the chance is how likely, and the team marks at most once in its seconds. Marks only show; they
+  never change how anyone plays.
 - **Lines** are what a bot says: one picked at random from the event's rows for its personality and the rows for
   Any. Words in braces are filled in: `{area}` is the named area ("Dock"), `{count}` how many ("Two") and `{left}` how
   many of the other team are left. A line with `{area}` is skipped when there is no area to name. Keep lines short (48
@@ -49,6 +52,10 @@ says never changes how it plays: the calls are what it already does, put into wo
   `{area}` (where it holds).
 - **Raising.** Attack / Defend: its team starts raising the flag; the attacker nearest the pole says it.
 - **Flag.** Attack / Defend: the other team is raising the flag; the defender nearest the pole says it.
+- **Going to your ping.** You ping a spot or an enemy (the Ping key) and a teammate sets off to look: the one nearest
+  it says so. Fills `{area}` (the spot's). Its Checking, Pushing or Flanking is not called as well.
+- **Watching your ping.** As above, when none of them goes (under your order, at its post, holding): the nearest that
+  took it says it watches. Fills `{area}`. One answer per ping, so a line with no `{area}` is worth keeping.
 
 Hit players never talk: they raise a hand, call their hit and walk off, as on a real field ("dead men don't talk").
 
@@ -59,6 +66,8 @@ Hit players never talk: they raise a hand, call their hit and walk off, as on a 
 | Last one | 1 | 0 |
 | Down | 0.9 | 0 |
 | Tagged | 0.6 | 3 |
+| Going to your ping | 1 | 0 |
+| Watching your ping | 1 | 0 |
 | Flag | 1 | 10 |
 | Raising | 1 | 10 |
 | Contacts | 0.9 | 3 |
@@ -78,6 +87,13 @@ Hit players never talk: they raise a hand, call their hit and walk off, as on a 
 | The team's calls apart | 1.5 |
 | The same enemy again after | 10 |
 | A call waits at most | 1.5 |
+
+## Marks
+
+| Rule | Value |
+|---|---|
+| A sighting is marked (chance) | 0.35 |
+| The team's marks apart (s) | 12 |
 
 ## Personalities
 
@@ -120,6 +136,16 @@ Hit players never talk: they raise a hand, call their hit and walk off, as on a 
 | Tagged | Any | Got one! |
 | Tagged | Any | Tagged one! |
 | Tagged | Any | One down! |
+| Going to your ping | Any | On it, {area}. |
+| Going to your ping | Any | Going to check {area}. |
+| Going to your ping | Any | Copy, on my way. |
+| Going to your ping | Rusher | On my way to {area}! |
+| Going to your ping | Flanker | Going round to {area}. |
+| Going to your ping | Careful | Checking {area}, slowly. |
+| Watching your ping | Any | Eyes on {area}. |
+| Watching your ping | Any | Watching {area}. |
+| Watching your ping | Any | Copy, watching it. |
+| Watching your ping | Anchor | Got {area} covered. |
 | Reloading | Any | Reloading! |
 | Reloading | Any | Changing mags! |
 | Reloading | Any | Mag change, cover me! |

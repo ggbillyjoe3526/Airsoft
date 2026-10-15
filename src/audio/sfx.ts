@@ -509,6 +509,11 @@ export class Sfx {
     else pan.disconnect();
   }
 
+  /** Your ping placed (PG1): a short soft pip in your ear. */
+  pingPlaced(): void {
+    if (this.ctx) this.whistle?.beep(AUDIO.pingPip.length, AUDIO.pingPip);
+  }
+
   /**
    * The practice range's timed challenge (M93): a short shot-timer beep for each second of the countdown, a long one as
    * the run starts, and the referee's long blast when time is up.

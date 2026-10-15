@@ -7,7 +7,8 @@ import { drawIdentities } from './ai/botRoster';
 import type { BotIdentity } from './ai/personality';
 import { SquadFollow } from './ai/squadFollow';
 import { lowCoverBlocks, tallCoverBlocks } from './ai/cover';
-import { sightConditionsOf } from './ai/perception';
+import { bodyPoint, sightConditionsOf } from './ai/perception';
+import { createPing } from './ai/pings';
 import type { SfxSetup } from './audio/sfx';
 import { FULL_MOTION, type MotionScale } from './config/accessibility';
 import { BALLISTICS, WIND } from './config/ballistics';
@@ -24,6 +25,7 @@ import { BODY, MOVEMENT } from './config/movement';
 import { NAV } from './config/nav';
 import { perfScriptFor } from './config/perfScript';
 import { PHYSICS } from './config/physics';
+import { PINGS } from './config/pings';
 import { type LightingPreset, matchOverScreenDelay, type QualitySettings } from './config/render';
 import { LOADOUT, REALCAP, type ReplicaConfig, replicaUnderRules } from './config/replicas';
 import { TORCHES } from './config/torches';
@@ -177,6 +179,11 @@ export class MatchSession {
   /** What the bots call to their team (CL1): read off them after each tick; shown and heard while `calloutsOn`. */
   private readonly callouts: CalloutDirector;
   private calloutsOn = true;
+  /** Your last ping (PG1), and when you placed it: one at a time, at most one per PINGS.minGap. */
+  private readonly playerPing = createPing();
+  private pingedAt = Number.NEGATIVE_INFINITY;
+  /** Where a teammate's mark of a sighting goes (PG1): the enemy's chest. */
+  private readonly markPoint = vec3();
   private readonly daylight: Daylight;
   /** The map's light as resolved (M33f): a night preset gives the bots their torches and draws the beams (M33h). */
   private readonly lighting: LightingPreset;
@@ -402,6 +409,7 @@ export class MatchSession {
     if (this.input.takeInspect() && p.status === 'alive') this.combat.inspect();
     const order = this.input.takeOrder();
     if (order) this.giveOrder(order);
+    if (this.input.takePing()) this.placePing();
     const ticks = advanceStepper(this.stepper, dt);
     // Dev settings › Spectate any bot (M90): while you watch a bot you stand still, and your clicks change who is watched.
     const watching = this.match.watchingBots && p.status === 'alive';
@@ -703,6 +711,11 @@ export class MatchSession {
     if (!on) this.match.clearCallouts();
   }
 
+  /** Settings › HUD › Ping markers (PG1): yours and your teammates' marks shown, or not (the pings go on). */
+  setPingMarkers(on: boolean): void {
+    this.match.setPingMarkers(on);
+  }
+
   /** Settings › HUD › Minimap (M83): turning with the view, or fixed north up. */
   setMinimapTurn(turn: MinimapTurn): void {
     this.match.setMinimapRotating(turn === 'rotating');
@@ -853,7 +866,26 @@ export class MatchSession {
     if (result !== 'none') this.combat.orderHeard();
   }
 
-  /** This tick's callouts (CL1): a teammate's in the feed and in your ear, an enemy's as a radio click if close by. */
+  /**
+   * The Ping key (PG1): marks where you look (your crosshair, recoil and all) for your team, and your bot teammates take
+   * it up (BotController.ping); a contact if an enemy you can see is under it. While you are out, watch bots or between
+   * rounds, nothing; nor more than one per PINGS.minGap.
+   */
+  private placePing(): void {
+    const p = this.player;
+    const time = this.state.time;
+    if (!isInPlay(p) || this.state.round.phase !== 'live' || this.match.watchingBots || time - this.pingedAt < PINGS.minGap) return;
+    const ping = this.playerPing;
+    if (!this.bots.ping(p, this.input.yaw, this.input.pitch + p.armament.recoil, time, ping)) return;
+    this.pingedAt = time;
+    this.match.ping(p.id, ping.kind, ping.point);
+    this.combat.pingPlaced();
+  }
+
+  /**
+   * This tick's callouts (CL1): a teammate's in the feed and in your ear, an enemy's as a radio click if close by. A
+   * teammate's call of a sighting the director marks (PG1) pings the enemy where they are.
+   */
   private sayCallouts(): void {
     const said = this.callouts;
     for (let i = 0; i < said.saidCount; i++) {
@@ -863,6 +895,8 @@ export class MatchSession {
       const mate = call.team === this.player.team;
       if (mate) this.match.callout(call.speakerId, call.team, call.text);
       this.combat.radioCall(speaker, mate);
+      const marked = mate && call.markId >= 0 ? this.state.characters[call.markId] : undefined;
+      if (marked && marked.id === call.markId) this.match.ping(call.speakerId, 'enemy', bodyPoint(marked, this.hits, BOT_BEHAVIOUR.aimHeightFraction, this.markPoint));
     }
   }
 

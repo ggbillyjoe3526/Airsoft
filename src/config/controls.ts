@@ -54,6 +54,11 @@ export const DEFAULT_BINDINGS = {
   orderFollow: ['KeyF'],
   orderHold: ['KeyX'],
   orderRegroup: ['KeyV'],
+  /**
+   * Marks where you look for your team (PG1, config/pings.ts): the middle mouse button, as in most team shooters, so you
+   * ping without taking a hand off the keys. A mouse without one binds a key in Settings › Key Bindings.
+   */
+  ping: ['Mouse1'],
   /** Fullscreen on and off while playing (M18b). F11 is the browser's own and would leave the page's fullscreen; F10 is free once the game takes it. */
   fullscreen: ['F10'],
   debugOverlay: ['Backquote', 'F3'],
@@ -91,6 +96,7 @@ export const REBINDABLE: readonly { action: Action; label: string }[] = [
   { action: 'orderFollow', label: 'Squad: follow me' },
   { action: 'orderHold', label: 'Squad: hold here' },
   { action: 'orderRegroup', label: 'Squad: regroup' },
+  { action: 'ping', label: 'Squad: ping a spot' },
   { action: 'fullscreen', label: 'Fullscreen' },
 ];
 

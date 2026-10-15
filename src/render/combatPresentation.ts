@@ -305,6 +305,11 @@ export class CombatPresentation {
     this.sfx.radioCall(speaker, teammate);
   }
 
+  /** Your ping placed (PG1): its pip. */
+  pingPlaced(): void {
+    this.sfx.pingPlaced();
+  }
+
   /** The practice range's timed challenge (M93): the countdown's beeps, the start's long one, the end's whistle. */
   challengeCue(cue: ChallengeCue): void {
     this.sfx.challengeCue(cue);

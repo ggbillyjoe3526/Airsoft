@@ -5,6 +5,7 @@ import type { Bush } from '../map/foliage';
 import type { MapBlock } from '../map/mapTypes';
 import { type Terrain, terrainMaxX, terrainMaxZ, terrainRange, vertexHeight } from '../map/terrain';
 import { clampToSquare, coverHeight, FrameCheck, type HeardPlayer, insideSquare, type MapPoint, minimapPixelRatio, noiseAlpha, toMinimap } from './minimapView';
+import { pingAlpha, type ShownPing } from './pingMarkers';
 
 /** A teammate as the minimap shows them: where they are (`y`: their feet), and whether they've called a hit (greyed). */
 export interface MinimapMate {
@@ -40,7 +41,12 @@ export interface MinimapFrame {
   /** Extraction (M43): the exits drawn (`exitCount` of `exits`), open ones green, a late one still shut grey. */
   exits: MinimapExit[];
   exitCount: number;
-  /** Simulation time, for the heard players' fading. */
+  /**
+   * Pings (PG1): your team's, as over the field (ui/pingMarkers.ts PingMarkers.pings, each slot placed or not); none
+   * (empty, or left out as on the range) while Settings › HUD › Ping markers is off.
+   */
+  pings?: readonly ShownPing[];
+  /** Simulation time, for the heard players' and the pings' fading. */
   time: number;
 }
 
@@ -56,6 +62,11 @@ interface FieldLayer {
 /** Exit icons' colours (config/render.ts EXIT_VISUALS, as CSS). */
 const EXIT_OPEN = cssColor(EXIT_VISUALS.openColor);
 const EXIT_SHUT = cssColor(EXIT_VISUALS.shutColor);
+
+/** How solid ping `p` shows at `time`, in steps of 5 % (so a fade redraws the minimap at most 20 times); 0 if none. */
+function shownPingAlpha(p: ShownPing, time: number): number {
+  return Number.isNaN(p.at) ? 0 : Math.round(pingAlpha(time - p.at) * 20) / 20;
+}
 
 /** The step patch's dashed outline (made once). */
 const STEP_DASH: readonly number[] = [3, 3];
@@ -267,6 +278,7 @@ export class Minimap {
     if (f.flag) this.drawFlag(f, scale, rim);
     for (let i = 0; i < f.exitCount; i++) this.drawExit(f, f.exits[i]!, scale, rim);
     if (f.hold) this.drawHold(f, scale, rim);
+    if (f.pings) for (const p of f.pings) this.drawPing(f, p, scale, rim);
     for (let i = 0; i < f.count; i++) this.drawMate(f, f.mates[i]!, scale, rim);
     this.drawYou(this.turn - f.yaw);
     ctx.restore();
@@ -296,6 +308,16 @@ export class Minimap {
       c.add(e.x);
       c.add(e.z);
       c.add(e.open ? 1 : 0);
+    }
+    if (f.pings) {
+      for (const p of f.pings) {
+        const alpha = shownPingAlpha(p, f.time);
+        if (alpha <= 0) continue;
+        c.add(p.x);
+        c.add(p.z);
+        c.add(p.kind === 'enemy' ? 1 : 0);
+        c.add(alpha);
+      }
     }
     if (this.heardShown) {
       for (const h of heard) {
@@ -383,6 +405,41 @@ export class Minimap {
     ctx.lineWidth = 1.5;
     ctx.fill();
     ctx.stroke();
+  }
+
+  /**
+   * A ping (PG1): a ring in your team's colour round a white dot, as over the field; a contact a diamond in the other
+   * team's. Pinned to the edge when further off, and fading out with the marker.
+   */
+  private drawPing(f: MinimapFrame, ping: ShownPing, scale: number, rim: number): void {
+    const alpha = shownPingAlpha(ping, f.time);
+    if (alpha <= 0) return;
+    const ctx = this.ctx!;
+    const p = toMinimap(this.turn, f.x, f.z, ping.x, ping.z, scale, this.at);
+    clampToSquare(p, rim - 6);
+    const enemy = ping.kind === 'enemy';
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    if (enemy) {
+      ctx.moveTo(p.x, p.y - 6);
+      ctx.lineTo(p.x + 6, p.y);
+      ctx.lineTo(p.x, p.y + 6);
+      ctx.lineTo(p.x - 6, p.y);
+      ctx.closePath();
+    } else {
+      ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+    }
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.lineWidth = 4.5;
+    ctx.stroke();
+    ctx.strokeStyle = enemy ? this.theirs : this.mine;
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 1.5, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.globalAlpha = 1;
   }
 
   /** An Extraction exit: a small square doorway, green while open, grey while it's a late exit still shut. */

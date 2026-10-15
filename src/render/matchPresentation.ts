@@ -23,6 +23,7 @@ import type { RoundRules } from '../sim/round';
 import type { GameState } from '../sim/state';
 import { type Vec3, wrapAngle } from '../sim/vec';
 import type { MatchStats } from '../stats/matchStats';
+import { PINGS } from '../config/pings';
 import { CasePrompt } from '../ui/casePrompt';
 import { FlagMarker } from '../ui/flagMarker';
 import { CalloutFeed } from '../ui/calloutFeed';
@@ -33,6 +34,7 @@ import { MatchBoard } from '../ui/matchBoard';
 import { Minimap, type MinimapFrame } from '../ui/minimap';
 import { HeardPlayers } from '../ui/minimapView';
 import { OrderWheel, wheelHint } from '../ui/orderWheel';
+import { pingAlpha, PingMarkers, type ShownPing, type ShownPingKind } from '../ui/pingMarkers';
 import { restartAnimation } from '../ui/restartAnimation';
 import { respawnBanner, roundBanner } from '../ui/roundBanner';
 import { runNews } from '../ui/runStatus';
@@ -53,6 +55,9 @@ import { projectMarker, type ScreenMarker } from './screenMarker';
 import { SpectatorCamera } from './spectatorCamera';
 import type { FigureRigs } from './figureRig';
 import { type FigureCrowd, HUMAN_CROWD } from './figureMix';
+
+/** The minimap's pings while Settings › HUD › Ping markers is off: none. */
+const NO_PINGS: readonly ShownPing[] = [];
 
 /** The exit markers' colour (EXIT_VISUALS.openColor as CSS). */
 const EXIT_CSS = cssColor(EXIT_VISUALS.openColor);
@@ -107,6 +112,10 @@ export class MatchPresentation {
   private readonly holdMarker: HoldMarker;
   private readonly holdAnchor = new THREE.Vector3();
   private readonly holdAt: ScreenMarker = { x: 0, y: 0, onScreen: false };
+  /** Pings (PG1): yours and your teammates' marks, over the field and on the minimap. */
+  private readonly pingMarkers: PingMarkers;
+  private readonly pingAnchor = new THREE.Vector3();
+  private readonly pingAt: ScreenMarker = { x: 0, y: 0, onScreen: false };
   private readonly heard: HeardSound = { kind: 'step', sourceId: -1, x: 0, z: 0, reach: 1 };
   /** The minimap (M23): the other team where last heard, from where the camera was at the last frame. */
   private readonly minimap: Minimap;
@@ -201,6 +210,7 @@ export class MatchPresentation {
     this.soundCues = new SoundCues(container);
     this.squadLine = new SquadOrderLine(container);
     this.holdMarker = new HoldMarker(container, teamCss(player.team));
+    this.pingMarkers = new PingMarkers(container, [player.id, ...this.mates.map((c) => c.id)], teamCss(player.team), teamCss(1 - player.team));
     this.minimap = new Minimap(container, field.blocks, cssColor(teamColours.hud[player.team]!), cssColor(teamColours.hud[1 - player.team]!), field.terrain ?? null, field.foliage ?? [], field.storeys);
     this.mapName = field.name ?? '';
     this.areas = field.areas ?? [];
@@ -339,6 +349,7 @@ export class MatchPresentation {
       this.marker.hide();
       for (const m of this.exitMarkers) m?.hide();
       this.mateMarkers.hideAll();
+      this.pingMarkers.hideAll();
       this.board.setVisible(false);
       this.whatGotYou.setShown(false);
       this.shownBoard.view = 'none';
@@ -449,6 +460,7 @@ export class MatchPresentation {
         this.spectator.reset();
         this.feed.roundStarted(e.round);
         this.calloutFeed.clear();
+        this.pingMarkers.clear();
         this.soundCues.clear();
         this.squadLine.clear();
         this.heardPlayers.clear();
@@ -539,6 +551,7 @@ export class MatchPresentation {
       m.hit = c.status !== 'alive';
     }
     f.hold = hold;
+    f.pings = this.pingMarkers.markersShown ? this.pingMarkers.pings : NO_PINGS;
     const r = this.state.round;
     f.flag = this.flag.object.visible && r.mode === 'attackDefend' ? r.flag.position : null;
     f.exitCount = 0;
@@ -597,6 +610,7 @@ export class MatchPresentation {
     this.casePrompt?.update(this.state.round.run, this.state.time);
     this.updateExitMarkers(camera, spectating);
     this.updateMateMarkers(camera, alpha, watched);
+    this.updatePingMarkers(camera, spectating);
     this.feed.update(this.state.time);
     this.calloutFeed.update(this.state.time);
     // The cues are placed for wherever the camera is (your eyes, or the player you watch), as the ears are.
@@ -640,6 +654,7 @@ export class MatchPresentation {
     this.soundCues.dispose();
     this.squadLine.dispose();
     this.holdMarker.dispose();
+    this.pingMarkers.dispose();
     this.minimap.dispose();
     this.orderWheel.dispose();
   }
@@ -652,6 +667,19 @@ export class MatchPresentation {
   /** A teammate's callout (CL1): `speakerId`'s line in the callout feed, under their name. */
   callout(speakerId: number, team: number, text: string): void {
     this.calloutFeed.add(this.names.get(speakerId) ?? '', team, text, this.state.time);
+  }
+
+  /**
+   * A ping (PG1): `owner` (you, or a teammate marking a sighting) marked `kind` at `point`, in place of their last one.
+   * Shown while Settings › HUD › Ping markers is on; the minimap shows it too.
+   */
+  ping(owner: number, kind: ShownPingKind, point: Vec3): void {
+    this.pingMarkers.place(owner, kind, point, this.state.time);
+  }
+
+  /** Settings › HUD › Ping markers: false hides them, over the field and on the minimap (the pings themselves go on). */
+  setPingMarkers(on: boolean): void {
+    this.pingMarkers.setShown(on);
   }
 
   /** Callouts turned off (Settings › HUD): the lines up now go. */
@@ -674,6 +702,29 @@ export class MatchPresentation {
       this.state.time,
       ricochet,
     );
+  }
+
+  /**
+   * Each ping over the field: a ring over its point (a little above a spot, so it clears the floor) with what it marks
+   * and how far it is from the camera, pinned to the screen's edge while out of view, fading at the end of its time.
+   * None with a menu or the scoreboard up, or while you spectate (the hold marker's rules); none under the minimap.
+   */
+  private updatePingMarkers(camera: THREE.PerspectiveCamera, spectating: boolean): void {
+    const markers = this.pingMarkers;
+    if (!markers.markersShown) return;
+    const pings = markers.pings;
+    for (let i = 0; i < pings.length; i++) {
+      const p = pings[i]!;
+      const alpha = Number.isNaN(p.at) ? 0 : pingAlpha(this.state.time - p.at);
+      if (!this.playing || spectating || this.boardUp || alpha <= 0) {
+        markers.hide(i);
+        continue;
+      }
+      this.pingAnchor.set(p.x, p.y + (p.kind === 'spot' ? PINGS.markerHeight : 0), p.z);
+      const m = projectMarker(this.pingAnchor, camera, this.view.width, this.view.height, PINGS.markerEdge, this.pingAt);
+      if (this.minimap.covers(m.x, m.y)) markers.hide(i);
+      else markers.show(i, m.x, m.y, camera.position.distanceTo(this.pingAnchor), !m.onScreen, alpha);
+    }
   }
 
   /**

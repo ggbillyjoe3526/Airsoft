@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { MINIMAP } from '../config/minimap';
 import { Minimap, type MinimapFrame } from './minimap';
+import { PINGS } from '../config/pings';
 import type { HeardPlayer } from './minimapView';
+import type { ShownPing } from './pingMarkers';
 
 /**
  * G4 criterion 2: the minimap's canvas is drawn again only when something on it changed (where you stand or look, a
@@ -106,6 +108,41 @@ describe('the minimap draws only on a change (G4)', () => {
       minimap.update(f, []);
       expect(minimap.draws, `${what}, then still`).toBe(draws);
     }
+  });
+
+  it('draws a ping as it comes (PG1), redraws it only in steps while it fades, and stops once it has gone', () => {
+    const { minimap } = shown();
+    const f = frame();
+    const pings: ShownPing[] = [{ owner: 0, kind: 'spot', x: 6, y: 0, z: -6, at: Number.NaN }];
+    f.pings = pings;
+    minimap.update(f, []);
+    const first = minimap.draws;
+    pings[0]!.at = 1;
+    minimap.update(f, []);
+    expect(minimap.draws).toBe(first + 1);
+    // Whole until its fade; a contact's diamond is a new drawing.
+    f.time = 1 + (PINGS.lifetime - PINGS.fadeTime) / 2;
+    minimap.update(f, []);
+    expect(minimap.draws).toBe(first + 1);
+    pings[0]!.kind = 'enemy';
+    minimap.update(f, []);
+    expect(minimap.draws).toBe(first + 2);
+    // The fade, frame by frame at 60 Hz: at most one drawing per 5 % step.
+    let frames = 0;
+    for (f.time = 1 + PINGS.lifetime - PINGS.fadeTime; f.time < 1 + PINGS.lifetime + 1; f.time += 1 / 60, frames++) minimap.update(f, []);
+    expect(minimap.draws - (first + 2)).toBeLessThanOrEqual(21);
+    expect(minimap.draws - (first + 2)).toBeLessThan(frames / 2);
+    const gone = minimap.draws;
+    minimap.update(f, []);
+    expect(minimap.draws).toBe(gone);
+    // Ping markers off: none drawn (the frame carries none), one redraw to take it away.
+    pings[0]!.at = f.time;
+    minimap.update(f, []);
+    f.pings = [];
+    minimap.update(f, []);
+    const off = minimap.draws;
+    minimap.update(f, []);
+    expect(minimap.draws).toBe(off);
   });
 
   it('redraws a heard patch while it fades, and stops once it has gone', () => {

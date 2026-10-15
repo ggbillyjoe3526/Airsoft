@@ -322,6 +322,33 @@ describe('inspect key (RM2)', () => {
   });
 });
 
+describe('ping key (PG1)', () => {
+  it('latches a press once, clearLatches drops one not yet taken, and the open order wheel takes none', () => {
+    const keys = fakeKeyboard();
+    const input = new PlayerInput(keys.kb, pointer, MOVEMENT);
+    input.ordersEnabled = true;
+    expect(input.takePing()).toBe(false);
+    keys.press('ping');
+    input.update(0, 2);
+    keys.endFrame();
+    expect(input.takePing()).toBe(true);
+    expect(input.takePing()).toBe(false);
+    keys.press('ping');
+    input.update(0, 2);
+    input.clearLatches(); // the game paused before it was taken
+    expect(input.takePing()).toBe(false);
+    keys.endFrame();
+    keys.press('orderWheel');
+    input.update(0, 2);
+    keys.endFrame();
+    expect(input.wheelOpen).toBe(true);
+    keys.press('ping');
+    input.update(0, 2);
+    keys.endFrame();
+    expect(input.takePing()).toBe(false);
+  });
+});
+
 describe('order wheel (M23)', () => {
   function wheelSetup(select: 'hover' | 'click' = 'hover') {
     const keys = fakeKeyboard();

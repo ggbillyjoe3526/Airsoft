@@ -71,6 +71,8 @@ export class PlayerInput {
   private inspectLatch = false;
   /** A squad order key pressed (M22), or an order picked on the wheel (M23), since the last takeOrder. */
   private orderLatch: SquadCommand | null = null;
+  /** The Ping key pressed since the last takePing (PG1); never while the order wheel is open. */
+  private pingLatch = false;
   private switchLatch = -1;
   /** The Holster key pressed since the last tick (M92); a slot key pressed after it draws instead. */
   private holsterLatch = false;
@@ -151,6 +153,7 @@ export class PlayerInput {
     if (kb.wasPressed('orderFollow')) this.latchOrder('follow', false);
     if (kb.wasPressed('orderHold')) this.latchOrder('hold', false);
     if (kb.wasPressed('orderRegroup')) this.latchOrder('regroup', false);
+    if (kb.wasPressed('ping') && !this.wheel.open) this.pingLatch = true;
     if (this.crouchModeValue === 'toggle') {
       if (kb.wasPressed('crouch')) this.crouchToggled = !this.crouchToggled;
       // Sprinting or jumping stands you up; that press only stands you up (the jump comes on the next one).
@@ -288,6 +291,13 @@ export class PlayerInput {
     return order;
   }
 
+  /** The Ping key pressed this frame, once (PG1): you mark where you look for your team (MatchSession). */
+  takePing(): boolean {
+    const ping = this.pingLatch;
+    this.pingLatch = false;
+    return ping;
+  }
+
   /** The Inspect key pressed this frame, once (RM2): the held replica is turned over to look at (render/viewmodel.ts). */
   takeInspect(): boolean {
     const inspect = this.inspectLatch;
@@ -326,6 +336,7 @@ export class PlayerInput {
     this.torchLatch = false;
     this.inspectLatch = false;
     this.orderLatch = null;
+    this.pingLatch = false;
     this.switchLatch = -1;
     this.holsterLatch = false;
   }

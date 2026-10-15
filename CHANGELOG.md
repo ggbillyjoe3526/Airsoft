@@ -47,6 +47,11 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **PT1** · Settings › Audio has a Power source volume slider under Effects for each replica's battery motor, gas and spring sounds
 - **PT1** · Settings › Gameplay › Crosshair has hit marker scale, thickness, outline and colour settings; the hit marker stays Off by default
 - **BP4** · Blender figures have a holstered pose: arms hang and pump when sprinting, the rifle is slung across the back and comes to the hands when drawn
+- **PG1** · Middle mouse pings where you look (rebind in Settings › Controls): a ring with its distance, "Ping · 24 m", in your team's colour, fading after about 8 seconds
+- **PG1** · One ping each, with a soft pip; pinging an enemy you can see marks a contact, "Contact · 30 m" (one hidden in a bush or the dark can't be found)
+- **PG1** · Bot teammates go to check a ping or watch it, each in their own way; one answers in the callout feed ("On it, Dock." or "Eyes on Dock.")
+- **PG1** · A teammate calling "Contact" sometimes marks that enemy for you
+- **PG1** · Settings › HUD › Ping markers (On by default) hides the markers; pings still reach your teammates
 
 ### Changed
 - **M94** · The practice range is now Practice: pause reads "Practice · Range" or "Practice · Depot", and the tutorial's last button says Practice

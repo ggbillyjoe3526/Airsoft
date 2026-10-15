@@ -55,6 +55,11 @@ export const BOT_BEHAVIOUR = {
   hearingContactTime: 2,
   /** How long a bot keeps hunting a last-known position after losing sight or hearing (s); after this it forgets the contact. */
   memoryTime: 6,
+  /**
+   * A teammate's ping (PG1, ai/pings.ts) stays in a bot's mind this long (s), longer than a noise: long enough to cross
+   * a map to check it, unless it gets there and has looked, or real news of an enemy takes its place first.
+   */
+  pingMemory: 20,
   /** An enemy BB landing this close (metres) makes a bot want cover. */
   suppressionRadius: 1.6,
   /** A bot counts as under fire for this long after a near miss (s). */

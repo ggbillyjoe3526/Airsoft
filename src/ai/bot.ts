@@ -100,6 +100,12 @@ export interface Bot {
    */
   heardOther: Vec3;
   heardOtherAt: number;
+  /**
+   * A teammate's ping it took (PG1, ai/pings.ts): when (-Infinity: none this round) and the floor spot. It is the bot's
+   * last-known spot until real news replaces it, kept in mind for BOT_BEHAVIOUR.pingMemory (pingInMind).
+   */
+  pingAt: number;
+  pingSpot: Vec3;
 
   // Firing.
   burstLeft: number;
@@ -362,6 +368,8 @@ export function createBot(character: Character, seed: number, cfg: BotBehaviour,
     suppressedAt: Number.NEGATIVE_INFINITY,
     heardOther: vec3(),
     heardOtherAt: Number.NEGATIVE_INFINITY,
+    pingAt: Number.NEGATIVE_INFINITY,
+    pingSpot: vec3(),
     burstLeft: 0,
     pauseLeft: 0,
     lane: 0,
@@ -476,6 +484,7 @@ export function resetBot(b: Bot, lane: number, startHold: number, cfg: BotBehavi
   b.lastThreatAt = Number.NEGATIVE_INFINITY;
   b.suppressedAt = Number.NEGATIVE_INFINITY;
   b.heardOtherAt = Number.NEGATIVE_INFINITY;
+  b.pingAt = Number.NEGATIVE_INFINITY;
   b.burstLeft = 0;
   b.pauseLeft = 0;
   b.lane = lane;
@@ -554,9 +563,22 @@ export function recallHeardOther(b: Bot, time: number, cfg: BotBehaviour): boole
   return true;
 }
 
-/** True while the bot still remembers an enemy it saw or heard (memoryTime). */
+/** True while the bot still remembers an enemy it saw or heard (memoryTime), or a teammate's ping it took (pingInMind). */
 export function threatInMind(b: Bot, w: BotWorld): boolean {
-  return b.hasLastKnown && w.time - Math.max(lastSeenAt(b), b.heardAt) < w.cfg.memoryTime;
+  return b.hasLastKnown && (w.time - Math.max(lastSeenAt(b), b.heardAt) < w.cfg.memoryTime || pingInMind(b, w));
+}
+
+/**
+ * A teammate's ping (PG1) is what the bot has in mind: taken within pingMemory, and still its last-known spot (real
+ * news since, a sighting, a noise or a teammate's, writes another; a search that got there and looked forgets it).
+ */
+export function pingInMind(b: Bot, w: BotWorld): boolean {
+  return w.time - b.pingAt < w.cfg.pingMemory && onPingSpot(b);
+}
+
+/** Whether `b`'s last-known spot is still the one a teammate's ping gave it (PG1), however long ago. */
+export function onPingSpot(b: Bot): boolean {
+  return b.hasLastKnown && b.pingAt > Number.NEGATIVE_INFINITY && b.lastKnown.x === b.pingSpot.x && b.lastKnown.z === b.pingSpot.z && b.lastKnown.y === b.pingSpot.y;
 }
 
 /** When the current target was last seen, or -Infinity without one. */

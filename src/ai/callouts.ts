@@ -8,7 +8,7 @@ import type { GameEvent } from '../sim/events';
 import { createRng, type RngState, rngNext } from '../sim/rng';
 import type { GameState } from '../sim/state';
 import type { Vec3 } from '../sim/vec';
-import { type Bot, type BotMode, lastSeenAt } from './bot';
+import { type Bot, type BotMode, lastSeenAt, onPingSpot } from './bot';
 import { pushesIn } from './personality';
 
 /**
@@ -29,6 +29,8 @@ export interface Callout {
   team: number;
   event: CalloutEvent;
   text: string;
+  /** A sighting that marks the enemy it calls for the team's players (PG1, callouts.md › Marks): their id, or -1. */
+  markId: number;
 }
 
 /** A call waiting for its team's gap: the event, the bot (index into the bots) and what its line fills in. */
@@ -45,7 +47,10 @@ interface Pending {
   until: number;
 }
 
-/** Per team: when it last said anything and each event, the enemies it called, the last noise it called, its queue. */
+/**
+ * Per team: when it last said anything and each event, the enemies it called, the last noise it called, its queue, the
+ * last ping it answered (PG1: the time the bots took it) and when it last marked a sighting.
+ */
 interface TeamTalk {
   saidAt: number;
   eventAt: Float64Array;
@@ -53,15 +58,24 @@ interface TeamTalk {
   heardArea: string;
   heardAt: number;
   queue: Pending[];
+  pingAnswered: number;
+  markedAt: number;
 }
 
 const EVENT_INDEX: ReadonlyMap<CalloutEvent, number> = new Map(CALLOUT_EVENTS.map((e, i) => [e.id, i]));
-/** The events any teammate may say (the nearest to where it happened), not only the bot it happened to. */
-const TEAM_EVENTS: ReadonlySet<CalloutEvent> = new Set(['down', 'lastOne', 'tagged', 'raising', 'flag']);
+/**
+ * The events any teammate may say (the nearest to where it happened), not only the bot it happened to: its own gap
+ * doesn't hold one back. The answers to a ping (PG1) are picked a speaker the same way.
+ */
+const TEAM_EVENTS: ReadonlySet<CalloutEvent> = new Set(['down', 'lastOne', 'tagged', 'raising', 'flag', 'pingGoing', 'pingWatching']);
+/** The answers to a player's ping (PG1): a personality's Talks (×) never makes them less likely. */
+const ANSWERS: ReadonlySet<CalloutEvent> = new Set(['pingGoing', 'pingWatching']);
 /** The events that say how many are left: a newer one makes any still waiting out of date. */
 const COUNTS: ReadonlySet<CalloutEvent> = new Set(['down', 'lastOne', 'tagged']);
 /** Salts the match seed so the callouts' generator never runs in step with another. */
 const SEED_SALT = 0x5ca11;
+/** The marks' own (PG1), so marking a sighting or not never changes which lines are said. */
+const MARK_SALT = 0x3a7c5;
 
 /** The character with this id (ids are indices, as MatchSession checks; the loop keeps a mismatch harmless). */
 function characterOf(chars: readonly Character[], id: number): Character | undefined {
@@ -78,10 +92,11 @@ function botOf(bots: readonly Bot[], id: number): number {
 
 export class CalloutDirector {
   /** What was said this tick (`saidCount` of them; at most one a team), reused tick to tick. */
-  readonly said: Callout[] = [0, 1].map((team) => ({ speakerId: -1, team, event: 'contact' as CalloutEvent, text: '' }));
+  readonly said: Callout[] = [0, 1].map((team) => ({ speakerId: -1, team, event: 'contact' as CalloutEvent, text: '', markId: -1 }));
   saidCount = 0;
 
   private readonly rng: RngState;
+  private readonly markRng: RngState;
   private readonly teams: TeamTalk[];
   /** Per bot (index into the bots): when it last spoke, its mode and post last tick, and whether it called its hold. */
   private saidAt = new Float64Array(0);
@@ -104,6 +119,7 @@ export class CalloutDirector {
     private readonly countsLeft: boolean,
   ) {
     this.rng = createRng((seed ^ SEED_SALT) >>> 0);
+    this.markRng = createRng((seed ^ MARK_SALT) >>> 0);
     this.teams = [0, 1].map(() => ({
       saidAt: Number.NEGATIVE_INFINITY,
       eventAt: new Float64Array(CALLOUT_EVENTS.length).fill(Number.NEGATIVE_INFINITY),
@@ -111,6 +127,8 @@ export class CalloutDirector {
       heardArea: '',
       heardAt: Number.NEGATIVE_INFINITY,
       queue: Array.from({ length: CALLOUTS.queue }, (): Pending => ({ event: 'contact', priority: 0, bot: -1, area: '', count: 0, left: 0, enemy: -1, until: Number.NEGATIVE_INFINITY })),
+      pingAnswered: Number.NEGATIVE_INFINITY,
+      markedAt: Number.NEGATIVE_INFINITY,
     }));
   }
 
@@ -124,7 +142,10 @@ export class CalloutDirector {
       if (e.type === 'roundStart') this.reset();
       else if (live) this.onEvent(e, state, bots);
     }
-    if (live) for (let i = 0; i < bots.length; i++) this.watch(i, state, bots);
+    if (live) {
+      for (let t = 0; t < this.teams.length; t++) this.answerPing(t, bots);
+      for (let i = 0; i < bots.length; i++) this.watch(i, state, bots);
+    }
     for (let t = 0; t < this.teams.length; t++) this.flush(t, state, bots, live);
     for (let i = 0; i < bots.length; i++) {
       this.lastMode[i] = bots[i]!.mode;
@@ -158,6 +179,8 @@ export class CalloutDirector {
       t.heardArea = '';
       t.heardAt = Number.NEGATIVE_INFINITY;
       for (const p of t.queue) p.until = Number.NEGATIVE_INFINITY;
+      t.pingAnswered = Number.NEGATIVE_INFINITY;
+      t.markedAt = Number.NEGATIVE_INFINITY;
     }
     this.saidAt.fill(Number.NEGATIVE_INFINITY);
     this.heldCalled.fill(false);
@@ -197,6 +220,35 @@ export class CalloutDirector {
     }
   }
 
+  /**
+   * A player's ping that `team`'s bots took since the last one it answered (PG1, ai/pings.ts takePing, which the bots
+   * have thought on since): one of them says what it does. Going to your ping by the one nearest the spot that set off
+   * to look (a search), else Watching your ping by the nearest of the others that took it (under an order, at a post,
+   * watching from where it holds). The spot names the area.
+   */
+  private answerPing(team: number, bots: readonly Bot[]): void {
+    const talk = this.teams[team]!;
+    let newest = talk.pingAnswered;
+    for (const b of bots) if (b.character.team === team && isInPlay(b.character) && b.pingAt > newest) newest = b.pingAt;
+    if (newest === talk.pingAnswered) return;
+    talk.pingAnswered = newest;
+    let speaker = -1;
+    let going = false;
+    let best = Number.POSITIVE_INFINITY;
+    for (let i = 0; i < bots.length; i++) {
+      const b = bots[i]!;
+      if (b.character.team !== team || !isInPlay(b.character) || b.pingAt !== newest) continue;
+      const goes = b.mode === 'search';
+      const d = Math.hypot(b.character.position.x - b.pingSpot.x, b.character.position.z - b.pingSpot.z);
+      if ((goes && !going) || (goes === going && d < best)) {
+        speaker = i;
+        going = goes;
+        best = d;
+      }
+    }
+    if (speaker >= 0) this.offer(team, going ? 'pingGoing' : 'pingWatching', speaker, bots, this.areaOf(bots[speaker]!.pingSpot), 0, 0, -1);
+  }
+
   /** What bot `i` is doing now that it calls: a fresh sighting, a noise, a search setting off, a hold settled. */
   private watch(i: number, state: GameState, bots: readonly Bot[]): void {
     const b = bots[i]!;
@@ -225,8 +277,8 @@ export class CalloutDirector {
       const team = this.teams[t]!;
       if (area !== team.heardArea || this.now - team.heardAt >= this.file.pace.sameEnemyGap) this.offer(t, 'heard', i, bots, area, 0, 0, -1);
     }
-    // Setting off to where someone was.
-    if (b.mode === 'search' && this.lastMode[i] !== 'search') this.offer(t, pushesIn(b) ? 'pushing' : b.flanking ? 'flanking' : 'checking', i, bots, this.areaOf(b.lastKnown), 0, 0, -1);
+    // Setting off to where someone was; not to a ping, which the team's answer to it already said (PG1).
+    if (b.mode === 'search' && this.lastMode[i] !== 'search' && !onPingSpot(b)) this.offer(t, pushesIn(b) ? 'pushing' : b.flanking ? 'flanking' : 'checking', i, bots, this.areaOf(b.lastKnown), 0, 0, -1);
     // Settled at the spot it holds: once a round, whether it says so or not.
     if (b.atPost && !this.wasAtPost[i] && !this.heldCalled[i]) {
       this.heldCalled[i] = true;
@@ -293,7 +345,8 @@ export class CalloutDirector {
       else if (!slot || (slot.until >= this.now && p.priority > slot.priority)) slot = p;
     }
     if (!slot || (slot.until >= this.now && slot.priority <= rule.priority)) return;
-    if (rngNext(this.rng) >= Math.min(1, rule.chance * (this.file.talks.get(b.personality) ?? 1))) return;
+    const talks = ANSWERS.has(event) ? 1 : (this.file.talks.get(b.personality) ?? 1);
+    if (rngNext(this.rng) >= Math.min(1, rule.chance * talks)) return;
     slot.event = event;
     slot.priority = rule.priority;
     slot.bot = i;
@@ -354,6 +407,23 @@ export class CalloutDirector {
     out.team = t;
     out.event = next.event;
     out.text = text;
+    out.markId = this.mark(talk, next, b, state);
+  }
+
+  /**
+   * Whether a sighting just said marks the enemy it calls (PG1, callouts.md › Marks): the speaker still sees them, the
+   * team hasn't marked one within the gap, and the chance comes up (on the marks' own generator). Their id, or -1.
+   */
+  private mark(talk: TeamTalk, said: Pending, b: Bot, state: GameState): number {
+    const marks = this.file.marks;
+    if ((said.event !== 'contact' && said.event !== 'contacts') || said.enemy < 0 || marks.chance <= 0) return -1;
+    if (this.now - talk.markedAt < marks.gap) return -1;
+    const enemy = state.characters[said.enemy];
+    const contact = enemy && b.contacts.get(enemy.id);
+    if (!enemy || !isInPlay(enemy) || !contact || this.now - contact.seenAt > CALLOUTS.inSight) return -1;
+    if (rngNext(this.markRng) >= marks.chance) return -1;
+    talk.markedAt = this.now;
+    return enemy.id;
   }
 
   /** How many of `event`'s lines a bot of `personality` can say, with `area` named or not ('' leaves out {area} lines). */

@@ -1,6 +1,7 @@
 import { HIT_FEED_MODES, type HitFeedMode, HUD_OPACITY, HUD_SIZE, SCOREBOARD_SIZE, WHAT_GOT_YOU_MODES, type WhatGotYouMode } from '../config/matchInfo';
 import { CALLOUT_CHOICES, type CalloutsMode, DEFAULT_CALLOUTS } from '../config/callouts';
 import { DEFAULT_MINIMAP_TURN, MINIMAP_TURN_CHOICES, type MinimapTurn } from '../config/minimap';
+import { DEFAULT_PING_MARKERS, PING_MARKER_CHOICES, type PingMarkersMode } from '../config/pings';
 import { browserStorage, loadSetting, oneOf } from '../settings/storage';
 import { menuRow, rangeControl } from './menus/menuParts';
 import { OptionPicker } from './optionPicker';
@@ -19,6 +20,8 @@ export interface HudSettingsOptions {
   minimapTurn?: { initial: MinimapTurn; onChange: (turn: MinimapTurn) => void };
   /** Your teammates' callouts (CL1). No row without it. */
   callouts?: { initial: CalloutsMode; onChange: (mode: CalloutsMode) => void };
+  /** The ping markers (PG1). No row without it. */
+  pingMarkers?: { initial: PingMarkersMode; onChange: (mode: PingMarkersMode) => void };
 }
 
 /** Settings › HUD › Minimap (M83): Rotating (as it always was) unless the player picked Fixed. */
@@ -29,6 +32,11 @@ export function loadMinimapTurn(storage = browserStorage()): MinimapTurn {
 /** Settings › HUD › Callouts (CL1): on unless the player turned them off. */
 export function loadCallouts(storage = browserStorage()): CalloutsMode {
   return loadSetting('callouts', oneOf(CALLOUT_CHOICES.map((c) => c.id)), DEFAULT_CALLOUTS, storage);
+}
+
+/** Settings › HUD › Ping markers (PG1): on unless the player turned them off. */
+export function loadPingMarkers(storage = browserStorage()): PingMarkersMode {
+  return loadSetting('pingMarkers', oneOf(PING_MARKER_CHOICES.map((c) => c.id)), DEFAULT_PING_MARKERS, storage);
 }
 
 /** The HUD tab's rows (Settings → HUD, M24), each saved and applied as it changes. */
@@ -60,6 +68,9 @@ export function hudSettings(opts: HudSettingsOptions): HTMLDivElement[] {
       : []),
     ...(opts.callouts
       ? [menuRow('Callouts', 'Your bot teammates calling what they see and do ("Contact, Dock!", "Two left"), bottom left.', new OptionPicker('Callouts', CALLOUT_CHOICES, opts.callouts.initial, 'callouts', opts.callouts.onChange).root)]
+      : []),
+    ...(opts.pingMarkers
+      ? [menuRow('Ping markers', 'The marks you place with the Ping key, and the sightings your teammates mark for you, over the field and on the minimap.', new OptionPicker('Ping markers', PING_MARKER_CHOICES, opts.pingMarkers.initial, 'pingMarkers', opts.pingMarkers.onChange).root)]
       : []),
   ];
 }

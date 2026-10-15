@@ -249,6 +249,11 @@ export const AUDIO = {
    * long blast (roundOverWhistle).
    */
   shotTimer: { pitch: 3200, volume: 0.22, beep: 0.12, go: 0.45 },
+  /**
+   * Your ping (PG1): one short soft pip, `length` seconds at `pitch` (Hz) as loud as `volume`, lower and quieter than the
+   * shot timer so it reads as a mark, not a countdown; your teammates' radio answers it.
+   */
+  pingPip: { pitch: 1700, volume: 0.13, length: 0.08 },
   /** Round start: two short blasts, the second starting this many blast-lengths after the first. */
   roundStartWhistle: 0.14,
   roundStartWhistleGap: 1.6,

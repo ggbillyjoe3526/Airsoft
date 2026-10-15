@@ -1,0 +1,92 @@
+/* Pings (PG1, ui/pingMarkers.ts): a ring over the spot in your team's colour (a contact in the other team's), with what it
+   marks and its distance under it. It pops in, sits a little fainter pinned to the screen's edge, and fades out at the
+   end (--ping-alpha). Shadows rather than filters, as nothing over the field may filter (styleSheet.test.ts). */
+.ping-marker {
+  --ping: var(--ping-mine);
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(4px * var(--hud-scale, 1));
+  margin: calc(-9px * var(--hud-scale, 1)) 0 0 calc(-60px * var(--hud-scale, 1));
+  width: calc(120px * var(--hud-scale, 1));
+  color: var(--hud-fg);
+  font: 700 calc(15px * var(--hud-scale, 1)) / 1.1 var(--ui-font);
+  text-shadow: var(--hud-shadow);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 11;
+  opacity: calc(var(--ping-alpha, 1) * var(--hud-l2, 0.9));
+}
+
+.ping-marker[hidden] {
+  display: none;
+}
+
+.ping-marker.enemy {
+  --ping: var(--ping-theirs);
+}
+
+.ping-marker.edge {
+  opacity: calc(var(--ping-alpha, 1) * var(--hud-l3));
+}
+
+/* The ring: the team's colour round a white dot, edged dark so it reads on sky, sand and snow alike. */
+.ping-marker i {
+  width: calc(18px * var(--hud-scale, 1));
+  height: calc(18px * var(--hud-scale, 1));
+  border: calc(3px * var(--hud-scale, 1)) solid var(--ping);
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--hud-fg) 0 28%, transparent 32%);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.65),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.45);
+}
+
+/* A contact's ring is a diamond, so it reads as an enemy without its colour too. */
+.ping-marker.enemy i {
+  border-radius: 3px;
+  transform: rotate(45deg) scale(0.85);
+}
+
+.ping-marker span {
+  padding: calc(2px * var(--hud-scale, 1)) calc(7px * var(--hud-scale, 1));
+  border-radius: 4px;
+  background: var(--hud-panel);
+  box-shadow: inset 0 -2px 0 var(--ping);
+}
+
+/* Kept at its end (both), so a new ping in the same slot finds it listed and restarts it (ui/restartAnimation.ts). */
+.ping-marker i.pop {
+  animation: ping-pop 0.35s var(--ease, ease-out) both;
+}
+
+@keyframes ping-pop {
+  from {
+    scale: 2.2;
+    opacity: 0;
+  }
+  to {
+    scale: 1;
+    opacity: 1;
+  }
+}
+
+.reduced-motion .ping-marker i.pop {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #app:not(.full-motion) .ping-marker i.pop {
+    animation: none;
+  }
+}
+
+/* With the system's colours forced, the ring keeps the teams' (as every marker over the field does, style.css). */
+@media (forced-colors: active) {
+  .ping-marker {
+    forced-color-adjust: none;
+  }
+}
