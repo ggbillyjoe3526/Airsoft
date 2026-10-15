@@ -233,6 +233,12 @@ wears off, and each match has a light breeze (calm to about 2 m/s) that pushes B
   towards the shooter.
 - [ ] **Name tags.** Walk up to a teammate (1 to 2 m): the tag sits just above the head; at 30 m and more it still
   sits above it. Try a field of view of 80.
+- [ ] **Blender models** (Settings › Dev: turn off Disable all models, then Disable figure models). Bots are the
+  Blender humans and robots holding the Blender replicas and parts. Bots holster for a calm sprint through their own
+  half (watch your teammates at the round start): the arms pump, the rifle hangs across the back clear of a pack and
+  the ground, and as they draw again it leaves the back partway through without a pop. A bot's BB leaves its own
+  muzzle, with a silencer or long barrel too. Walk away from a bot past 12 m and 28 m: no flicker as its detail steps down. A red dot or scope folds
+  the AEG's iron sights, in the menus too. (BP4)
 
 ## Loadout and Customise
 
