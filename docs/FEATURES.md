@@ -215,6 +215,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - A minimap: the field, teammates always, the other team where last heard; a setting picks Fixed (north up) or Rotating (M23, M83)
 - Minimap on multi-level maps shows the floor you stand on (floors below darker) and marks teammates on other floors
   with an up or down arrow (M34c)
+- Pings: middle mouse marks a spot for your team, bot teammates go to it or watch it, and Ping markers hides the marks (PG1)
 
 ## Audio
 
