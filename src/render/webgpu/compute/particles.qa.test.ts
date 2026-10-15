@@ -204,7 +204,7 @@ describe('BB flight stays in the simulation (acceptance 1: the GPU only draws BB
       expect(twins.claims(o)).toBe(false);
     });
     for (const child of bbs.object.children) expect(child.layers.mask).not.toBe(0);
-    expect(bbs.object.children).toHaveLength(3);
+    expect(bbs.object.children).toHaveLength(2); // the balls and the streaks (no halo since the 0.1 Dev 5 playtest)
     bbs.dispose();
   });
 });

@@ -15,7 +15,7 @@ import { CALLOUT_LINES } from './config/calloutLines';
 import { BOT_BEHAVIOUR, BOTS, type BotConfig, botConfig, type Difficulty, difficultyAtLeast } from './config/bots';
 import { EXTRACTION, homeTeamCap } from './config/extraction';
 import { FOOTSTEPS } from './config/footsteps';
-import type { HitConfig } from './config/hits';
+import type { HitConfig, HitMarkerSettings } from './config/hits';
 import { type DevSettings, devCheating } from './config/dev';
 import { type CrosshairSettings, type HitFeedMode, type WhatGotYouMode, whatGotYouShown } from './config/matchInfo';
 import { countsForRecords, hitRulesFor, kitUnderRules, type MatchRules, recordsKeyOf, roundRulesFor, type RulesetId, standardRules } from './config/matchRules';
@@ -706,9 +706,9 @@ export class MatchSession {
     this.match.setMinimapRotating(turn === 'rotating');
   }
 
-  /** Settings › Gameplay › Hit marker (M97): the red X when your BB lands. */
-  setHitMarker(on: boolean): void {
-    this.match.setHitMarker(on);
+  /** Settings › Gameplay › Hit marker (M97): the X when your BB lands, and its look. */
+  setHitMarker(settings: HitMarkerSettings): void {
+    this.match.setHitMarker(settings);
   }
 
   /** Settings → HUD → What got you (M41): the card by this match's opponents (Auto: Pro only). */

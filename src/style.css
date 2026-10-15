@@ -330,14 +330,19 @@ kbd {
 }
 
 /*
- * Aiming down a scope (M17b): only the round eyepiece shows, with a crosshair reticle and a lit centre dot in it. The
- * lines are dark with a pale halo and the dot is red with a dark ring, so both read against dark walls and bright ones.
+ * Aiming down a scope (M17b): a fine crosshair reticle with a lit centre dot, over the scope's glass. The replica stays
+ * in view and the world shows round it, as at a red dot (the owner's 0.1 Dev 5 playtest, note 5). The glass's radius
+ * on screen is about 7.5vh (the held replica's 50° view): the lines stop well inside it, so the steadied sway keeps
+ * them in the glass. Dark lines with a pale halo and a red dot with a dark ring read on any wall.
  */
 .hud-scope {
   position: absolute;
-  inset: 0;
-  --eyepiece: 40vmin;
-  background: radial-gradient(circle at center, transparent calc(var(--eyepiece) - 1px), rgba(8, 9, 10, 0.97) var(--eyepiece));
+  left: 50%;
+  top: 50%;
+  --reach: 3vh;
+  width: calc(2 * var(--reach));
+  height: calc(2 * var(--reach));
+  margin: calc(-1 * var(--reach)) 0 0 calc(-1 * var(--reach));
   display: none;
 }
 
@@ -350,15 +355,15 @@ kbd {
 }
 
 .hud-scope i:nth-child(1) {
-  width: calc(2 * var(--eyepiece));
+  width: calc(2 * var(--reach));
   height: 2px;
-  margin: -1px 0 0 calc(-1 * var(--eyepiece));
+  margin: -1px 0 0 calc(-1 * var(--reach));
 }
 
 .hud-scope i:nth-child(2) {
   width: 2px;
-  height: calc(2 * var(--eyepiece));
-  margin: calc(-1 * var(--eyepiece)) 0 0 -1px;
+  height: calc(2 * var(--reach));
+  margin: calc(-1 * var(--reach)) 0 0 -1px;
 }
 
 .hud-scope i:nth-child(3) {
@@ -448,43 +453,82 @@ kbd {
 }
 
 /* Hit marker: four short diagonal ticks around the crosshair. */
+/* The hit marker (M97; its look from Settings › Gameplay, the owner's 0.1 Dev 5 playtest, note 4): an X of four arms on
+   the diagonals, each --hm-arm long from --hm-gap out, popping in and holding before it fades so it reads in a firefight. */
 .hitfx-marker {
   position: absolute;
   left: 50%;
   top: 50%;
+  width: 0;
+  height: 0;
   opacity: 0;
+  --hm-arm: 12px;
+  --hm-gap: 7px;
+  --hm-thick: 3px;
+  --hm-colour: #ff3b30;
+  --hm-friendly: #7fd0ff;
+  --hm-edge: 0 0 0 1px rgba(0, 0, 0, 0.8), 0 0 3px rgba(0, 0, 0, 0.6);
+}
+
+.hitfx-marker.no-outline {
+  --hm-edge: none;
 }
 
 .hitfx-marker i {
   position: absolute;
-  width: 9px;
-  height: 2px;
-  background: var(--hud-fg);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
+  left: calc(var(--hm-arm) / -2);
+  top: calc(var(--hm-thick) / -2);
+  width: var(--hm-arm);
+  height: var(--hm-thick);
+  background: var(--hm-colour);
+  box-shadow: var(--hm-edge);
 }
 
 .hitfx-marker.friendly i {
-  background: #7fd0ff;
+  background: var(--hm-friendly);
 }
 
+/* Each arm turned onto its diagonal, then out along it so it starts --hm-gap from the centre. */
 .hitfx-marker i:nth-child(1) {
-  transform: translate(-15px, -15px) rotate(45deg);
+  transform: rotate(45deg) translateX(calc(var(--hm-gap) + var(--hm-arm) / 2));
 }
 
 .hitfx-marker i:nth-child(2) {
-  transform: translate(6px, -15px) rotate(-45deg);
+  transform: rotate(135deg) translateX(calc(var(--hm-gap) + var(--hm-arm) / 2));
 }
 
 .hitfx-marker i:nth-child(3) {
-  transform: translate(-15px, 13px) rotate(-45deg);
+  transform: rotate(225deg) translateX(calc(var(--hm-gap) + var(--hm-arm) / 2));
 }
 
 .hitfx-marker i:nth-child(4) {
-  transform: translate(6px, 13px) rotate(45deg);
+  transform: rotate(315deg) translateX(calc(var(--hm-gap) + var(--hm-arm) / 2));
 }
 
 .hitfx-marker.show {
-  animation: hitfx-fade 0.35s ease-out forwards;
+  animation: hitfx-marker 0.5s ease-out forwards;
+}
+
+/* Settings' preview: held on screen. */
+.hitfx-marker.preview {
+  opacity: 1;
+}
+
+@keyframes hitfx-marker {
+  0% {
+    opacity: 1;
+    scale: 1.3;
+  }
+  12% {
+    scale: 1;
+  }
+  45% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    scale: 1;
+  }
 }
 
 @keyframes hitfx-fade {
@@ -647,6 +691,11 @@ kbd {
   animation-name: hitfx-flash-soft;
 }
 
+/* The hit marker shows and fades without its pop. */
+.reduced-motion .hitfx-marker.show {
+  animation-name: hitfx-fade;
+}
+
 .reduced-motion .hitfx-direction.show {
   animation: none;
   opacity: 1;
@@ -665,6 +714,10 @@ kbd {
 
   #app:not(.full-motion) .hitfx-flash.show {
     animation-name: hitfx-flash-soft;
+  }
+
+  #app:not(.full-motion) .hitfx-marker.show {
+    animation-name: hitfx-fade;
   }
 
   #app:not(.full-motion) .hitfx-direction.show {
@@ -1560,4 +1613,26 @@ a.bug-report-link {
 .what-got-you-notes p {
   margin: 4px 0 0;
   font-size: var(--fs-md);
+}
+
+/* Esc skipped the round (the owner's 0.1 Dev 5 playtest, note 10): the browser took the mouse back, so this says how to
+   play on. Over the HUD, under the menus; clicks pass through to the field, which takes the mouse again. */
+.play-prompt {
+  position: absolute;
+  left: 50%;
+  top: 62%;
+  translate: -50% 0;
+  max-width: calc(100% - 2 * var(--sp-5));
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--radius-md);
+  background: rgb(0 0 0 / 0.6);
+  color: var(--paper);
+  font: 600 var(--fs-md) / 1.35 var(--ui-font);
+  text-align: center;
+  pointer-events: none;
+  z-index: 12;
+}
+
+.play-prompt[hidden] {
+  display: none;
 }

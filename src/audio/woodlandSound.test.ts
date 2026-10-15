@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AMBIENCES, type AmbienceId, AMBIENT_LOOPS, AUDIO, FIRE_SOUND, type LoopId } from '../config/audio';
-import { cues, FOOTSTEP_PACES, isMapCue, MAP_CUE_SEEDS, SOUNDS, type SoundCue, TITLE_CUES } from '../config/sounds';
+import { cues, FOOTSTEP_PACES, isMapCue, isPowerPart, MAP_CUE_SEEDS, SOUNDS, type SoundCue, TITLE_CUES } from '../config/sounds';
 import { buildGroundGrid, GROUND_SURFACES, groundAt } from '../map/groundSurfaces';
 import { lightingChoices, mapUnderLighting, playsAtNight } from '../map/lightingChoice';
 import { MAPS, mapData } from '../map/maps';
@@ -148,9 +148,10 @@ describe('M33j acceptance 4: every existing cue buffer is unchanged (Depot sound
    * of its peak, then a 64-sample fade, and count.beep keeps one variant of its five.
    */
   const BEFORE: Readonly<Record<string, string>> = {
-    'shot.electric': '9c973f89',
-    'shot.gas': 'aec8f467',
-    'shot.spring': '7c720792',
+    // Re-baked by the 0.1 Dev 5 playtest (note 2): the shots' power layers render into their power parts (POWER_PARTS).
+    'shot.electric': '81ade17c',
+    'shot.gas': '956e6da4',
+    'shot.spring': 'f0f986c1',
     'shot.cyber': '5c441fb2',
     'motor.spinUp': 'fa107c30',
     'motor.spinDown': '8ea75488',
@@ -198,8 +199,9 @@ describe('M33j acceptance 4: every existing cue buffer is unchanged (Depot sound
   it("renders every title-screen cue sample for sample as before, in the same order, and no map cue with them", () => {
     const rendered = renderSounds(RATE);
     // M86's yard calls (a crow, a dog), then M92's holster and M102's vault, come last on the title stream, so every cue
-    // before them is as it was.
-    expect([...rendered.keys()]).toEqual([...Object.keys(BEFORE), 'ambience.crow', 'ambience.dog', 'foley.holster', 'vault']);
+    // before them is as it was. A shot's power part (the 0.1 Dev 5 playtest) comes from its shot's own pass, so the
+    // stream is the same.
+    expect([...rendered.keys()].filter((c) => !isPowerPart(c))).toEqual([...Object.keys(BEFORE), 'ambience.crow', 'ambience.dog', 'foley.holster', 'vault']);
     for (const cue of Object.keys(BEFORE) as SoundCue[]) expect(fingerprint(rendered.get(cue)!), cue).toBe(BEFORE[cue]);
   });
 
@@ -211,7 +213,7 @@ describe('M33j acceptance 4: every existing cue buffer is unchanged (Depot sound
   it('puts the new cues last in SOUNDS, each with a seed of its own, and keeps them off the title screen', () => {
     const all = Object.keys(SOUNDS) as SoundCue[];
     const firstMapCue = all.findIndex(isMapCue);
-    expect(all.slice(0, firstMapCue)).toEqual(TITLE_CUES);
+    expect(all.slice(0, firstMapCue).filter((c) => !isPowerPart(c))).toEqual(TITLE_CUES);
     expect(all.slice(firstMapCue).every(isMapCue)).toBe(true);
     const seeds = Object.values(MAP_CUE_SEEDS);
     expect(new Set(seeds).size).toBe(seeds.length);
@@ -433,7 +435,8 @@ describe('M33j acceptance 4: gameplay first, the ambience under BBs, footsteps a
 
   it('leaves the levels of shots, impacts, steps and the hit cues as they were', () => {
     const L = AUDIO.levels;
-    expect([L.shot.gain, L.impact.gain, L.step.gain, L.ownStep.gain, L.bodyHit.gain, L.hitTick.gain, L.hitMarker.gain, L.radioAck.gain]).toEqual([1, 0.9, 0.48, 0.25, 1, 1, 0.55, 0.5]);
+    // Since the 0.1 Dev 5 playtest (note 2) shots are louder (1 to 1.4) and a bot's steps 1 dB up with them (0.48 to 0.54).
+    expect([L.shot.gain, L.impact.gain, L.step.gain, L.ownStep.gain, L.bodyHit.gain, L.hitTick.gain, L.hitMarker.gain, L.radioAck.gain]).toEqual([1.4, 0.9, 0.54, 0.25, 1, 1, 0.55, 0.5]);
     expect(AUDIO.footsteps).toEqual({ maxDistance: 22, maxPerWindow: 4, window: 0.1 });
   });
 });

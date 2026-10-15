@@ -10,7 +10,7 @@ import type { PictureSource } from './menus/menuPictures';
 import { REPLICA_PANEL_HTML, ReplicaPanel } from './replicaPanel';
 
 /**
- * The in-game HUD: the crosshair (the player's own, Settings → Crosshair; or the red dot, or a scope's eyepiece and
+ * The in-game HUD: the crosshair (the player's own, Settings → Crosshair; or the red dot, or a scope's fine
  * reticle, while aiming down one), the "Rested" tag under it while the replica rests on cover (M104), and the replica
  * panel (ui/replicaPanel.ts: picture, name, fire modes, BBs and magazines, reload). The DOM is only touched when a
  * displayed value changes.

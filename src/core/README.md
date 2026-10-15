@@ -11,6 +11,8 @@ Loop and session plumbing: small pure modules with no Three.js.
 - `onDemand.ts`: code fetched the first time it is needed (IM1): the Loadout, Armory and Settings screens
   (`ui/menus/lazyScreens.ts`) and the practice range (`rangeSession.ts`), preloaded once the page is idle after start-up.
 - `framePacer.ts`: the frame-rate cap; it skips draws, never ticks. `awayWatch.ts`: a hidden tab or lost focus pauses.
+- `escSkip.ts`: once you are out, Esc skips the round without the pause menu (the browser takes the mouse back, so the
+  skip runs without it and a click takes it again); Esc again opens the menu.
 - `crashReport.ts`, `reportFields.ts`: the copyable crash report (seed, map, mode, tick, GPU, settings, stack), shown by
   `ui/crashScreen.ts`; Dev › Diagnostics copies the same fields. `buildTiming.ts`: match build phases (`?perf`).
 - What a report adds of the moments before it (IM7), each a fixed ring filled as things happen and read only when a

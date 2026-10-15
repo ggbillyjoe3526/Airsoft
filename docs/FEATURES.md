@@ -5,7 +5,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 
 ## Movement and stance
 
-- Walk (hold Shift, quiet), run, sprint (Alt, no shooting for a moment) and a small jump (Phase 1, M1)
+- Walk (hold Shift, quiet), run, sprint (Alt) and a small jump (Phase 1, M1); you can fire while sprinting, less accurately, with wider spread and more kick (PT1)
 - Crouch, as a hold or a toggle (Phase 1, M12a)
 - Lean left and right with Q and E to peek round cover; leaning slows you to walking pace (M7b)
 - Accuracy by stance and movement: steadier crouched and still, worse walking, running or in the air; crouch-walking is
@@ -35,7 +35,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - BB weight from 0.20 to 0.30 g per replica, with the speed, reach and flight time shown (M17a, M26b)
 - Wind: a light breeze each match drifts BBs downwind; dust in the air drifts with it too (M30)
 - A limited set of magazines each round; a reload swaps in the fullest spare, no topping up (M8)
-- Optics: iron sights on every replica, a red dot or a 2× scope on top; aiming down sights with right click, at its own sensitivity; aimed fire twice as tight as hip fire (M12b, M17b, M84)
+- Optics: iron sights on every replica, a red dot or a 2× scope on top; aiming down sights with right click, at its own sensitivity; aimed fire twice as tight as hip fire; the 2× scope keeps the replica and the world in view round it, with a fine crosshair and red dot in the eyepiece (M12b, M17b, M84, PT1)
 - Grips (vertical, angled) and magazines (hi-cap, low-cap, the pistol's extended one) trade handling for noise and sway
   (M17b)
 - A laser module and a choice of power source on the pistol, from the pool (M26b)
@@ -46,8 +46,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 
 ## Hits and elimination
 
-- One hit and you're out: a tick, a hit marker (on or off in Settings, Off by default), hand up, walk to the dead zone, then spectate your team (Phase 1, M97)
-- Skip to next round from the spectator camera while you are out: the rest of the round plays out at once (M83)
+- One hit and you're out: a tick, a hit marker (a bold red X; on or off in Settings, Off by default; scale, thickness, outline and colour in Gameplay › Crosshair), hand up, walk to the dead zone, then spectate your team (Phase 1, M97, PT1)
+- Skip to next round from the spectator camera while you are out: the rest of the round plays out at once; Esc does the same without opening the pause menu (M83, PT1)
 - Bots always call their hits (Phase 1)
 - BBs stop at the first body they hit; hit areas follow the drawn figure in every pose, and on Dev figures the legs follow their walk, run and crouch (M85, IM8); a BB that hits a player already out knocks on the body (M85)
 - Friendly fire, on by default, as a match setting (Phase 1, M20)
@@ -225,7 +225,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Getting hit and the round and match whistles briefly dip the rest of the mix (FA6)
 - Outdoor ambience with distant birds plays during play (FA6); rare, distant crows, dogs, pigeons, a creaking branch and a car horn by map (M86)
 - Pause fades audio in 30 ms; hint when the browser blocks audio (FA6)
-- Master, effects, ambience and interface volume sliders; ambience turns only the field's background down (M13, M86)
+- Master, effects, ambience and interface volume sliders; ambience turns only the field's background down; a Power source slider under Effects covers each replica's battery motor, gas and spring sounds (M13, M86, PT1)
 
 ## Graphics and art
 

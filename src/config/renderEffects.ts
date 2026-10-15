@@ -24,7 +24,8 @@ export const BB_VISUALS = {
   /**
    * Glowing BBs (M33b, the Loadout's Glowing BBs row): glow-in-the-dark green, drawn a little larger and with a longer
    * streak so a shot can be followed all the way, at night above all. Presentation only: they fly like any BB. A
-   * Loadout choice, so drawn on every graphics preset (it costs nothing: a colour); `glow` below is FA8's halo.
+   * Loadout choice, so drawn on every graphics preset (it costs nothing: a colour). The ball is lit itself, with nothing
+   * drawn round it (the owner's 0.1 Dev 5 playtest, note 3, took away FA8's halo round every BB).
    */
   glowInDark: {
     color: 0x9dff7a,
@@ -46,11 +47,6 @@ export const BB_VISUALS = {
   convergeBeforeImpact: 0.7,
   /** Point-blank shots still blend over at least this long (s) instead of snapping. */
   minConvergeTime: 0.01,
-  /**
-   * The glow round each BB (QualitySettings.bbGlow, FA8): a soft warm dot `scale` times the ball's size, added (not
-   * blended) at `opacity`, so a BB at 25 m is a warm dot and not a grey pixel. One more instanced draw while BBs fly.
-   */
-  glow: { scale: 2.6, opacity: 0.35, color: 0xffe2a8 },
   /** Debug BB-path overlay: how many recent paths, and points per path. */
   debugPaths: 48,
   debugPathPoints: 150,

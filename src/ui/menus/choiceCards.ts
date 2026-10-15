@@ -229,7 +229,11 @@ export class ChoiceCards<T extends string> {
     text.append(note);
     button.append(text);
     const tags = el('span', 'choice-card-tags');
-    if (option.tag === 'dev' && this.extras.devTag) tags.append(tagPill(this.extras.devTag, 'dev'));
+    if (option.tag === 'dev' && this.extras.devTag) {
+      tags.append(tagPill(this.extras.devTag, 'dev'));
+      // The card makes room for the tag above its words (play.css), which a selector can't tell from the tag alone (no :has()).
+      button.classList.add('has-dev-tag');
+    }
     // The side tag is filled in by refresh: a dev map's data (which says it is night only) may arrive later (M50).
     const side = { pill: tagPill('', 'blue'), text: '' };
     side.pill.hidden = true;

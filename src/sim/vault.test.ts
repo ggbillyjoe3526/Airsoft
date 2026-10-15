@@ -239,7 +239,7 @@ describe('stepVault', () => {
       stepVault(c, cmd, MOVEMENT, DT, free, scratch);
       ticks++;
       expect(c.grounded).toBe(false);
-      expect(c.sprintLockout).toBe(VAULT.fireLockout);
+      expect(c.fireLockout).toBe(VAULT.fireLockout);
       // Never lower than the top once over the face (no clipping through it).
       if (-c.position.z > v.front + 0.02 && -c.position.z < v.far - 0.02) expect(c.position.y).toBeGreaterThanOrEqual(v.overY - 1e-9);
       if (c.position.y >= v.overY - 1e-9) topReached = true;

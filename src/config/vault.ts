@@ -43,7 +43,7 @@ export interface VaultConfig {
   dropSpeed: number;
   /** How far the body tucks over the top, as a crouch (0..1): the eyes, the hit volume and the figure all follow it. */
   tuck: number;
-  /** The replica stays carried (no firing) through the vault and this long after it (the sprint's lockout rule). */
+  /** The replica stays carried (no firing) through the vault and this long after it (Character.fireLockout). */
   fireLockout: number;
   /** A body held back this far from its path (by a wall it couldn't see) gives up the vault and falls where it is. */
   blockedAt: number;

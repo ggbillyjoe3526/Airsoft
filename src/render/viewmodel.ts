@@ -3,7 +3,9 @@ import { FULL_MOTION, type MotionScale } from '../config/accessibility';
 import { type InspectCue, type InspectKey, type InspectPose, LIGHTING_PRESETS, type LightingPreset, VIEWMODEL } from '../config/render';
 import type { FireMode, ReplicaConfig } from '../config/replicas';
 import type { ReplicaPaint } from '../config/schemes';
+import { type OpticId, OPTICS } from '../config/optics';
 import type { Armament } from '../sim/armament';
+import { eyepieceMask, eyepieceMaskMaterial } from './eyepiece';
 import { type ArmStyle, buildReplicaModels, fitLight, fitMuzzle, fitSupportHand, HUMAN_ARMS, type LightMount, LOW_DETAIL, type MagazinePart, type MuzzleMount, type ReplicaDetail, type ReplicaModels, type SupportHandPart } from './replicaModels';
 import { NO_REPLICA_FILES, type ReplicaFiles } from './replicaFiles';
 import type { ReplicaRig } from './replicaRig';
@@ -32,14 +34,48 @@ export function magazineOut(p: number): number {
 }
 
 /**
- * How far the replica is still carried for a sprint (0..1) with `lockout` seconds of the post-sprint fire lockout
- * (`total`) left: it comes down over the lockout and is square to the view (0) a few ticks before firing unlocks, so
- * a shot straight out of a sprint leaves in line with the barrel.
+ * How far the replica is still carried for a sprint (0..1) with `left` seconds of its come-down (`total`,
+ * VIEWMODEL.carryOutTime) to go: it comes down over that time and is square to the view (0) once
+ * VIEWMODEL.carrySquareAt of it is left.
  */
-export function sprintCarry(lockout: number, total: number): number {
-  if (!(total > 0) || lockout <= 0) return 0;
+export function sprintCarry(left: number, total: number): number {
+  if (!(total > 0) || left <= 0) return 0;
   const share = VIEWMODEL.carrySquareAt;
-  return smooth((lockout / total - share) / (1 - share)); // eased, so the replica settles rather than stopping hard
+  return smooth((left / total - share) / (1 - share)); // eased, so the replica settles rather than stopping hard
+}
+
+/**
+ * The replica's sprint carry, frame by frame (presentation only): held while sprinting, eased out after a sprint
+ * (sprintCarry), and brought up out of it in VIEWMODEL.sprintFireRaise to fire on the run (the owner's 0.1 Dev 5 note
+ * 9), staying up VIEWMODEL.sprintFireHold after the trigger is let go.
+ */
+export class SprintCarry {
+  /** How far the replica is carried now (0..1). */
+  value = 0;
+  /** Seconds of the come-down after a sprint still to go. */
+  private left = 0;
+  /** Seconds the replica stays up after firing on the run. */
+  private firing = 0;
+
+  /** One frame: `sprinting` now, and whether the trigger is down or a shot just left. */
+  update(dt: number, sprinting: boolean, shooting: boolean): number {
+    const V = VIEWMODEL;
+    this.firing = shooting ? V.sprintFireHold : Math.max(0, this.firing - dt);
+    this.left = sprinting ? V.carryOutTime : Math.max(0, this.left - dt);
+    if (sprinting) {
+      // Up to fire quickly, but not in one frame; the viewmodel eases into the carry itself.
+      const target = this.firing > 0 ? 0 : 1;
+      this.value = target < this.value ? Math.max(target, this.value - dt / V.sprintFireRaise) : target;
+    } else {
+      // Down out of the carry, never above where it was: a replica up to fire on the run stays up.
+      this.value = Math.min(this.value, sprintCarry(this.left, V.carryOutTime));
+    }
+    return this.value;
+  }
+
+  reset(): void {
+    this.value = this.left = this.firing = 0;
+  }
 }
 
 const clampSway = (v: number, max: number): number => Math.max(-max, Math.min(max, v));
@@ -191,6 +227,10 @@ export class Viewmodel {
   private beamOn = false;
   /** The laser beams, one per replica with a laser rail (found by name after each build). */
   private beams: THREE.Object3D[] = [];
+  /** Each scope's eyepiece opened to the world while it is at your eye (eyepiece.ts), and their material (per build). */
+  private eyepieces: THREE.Mesh[] = [];
+  private eyepieceMaterial: THREE.Material | null = null;
+  private scoped = false;
   /** The replica's own three lights (a fill, a key, a rim): their colours follow the map's light (M33h), never their number. */
   private readonly hemi: THREE.HemisphereLight;
   private readonly key: THREE.DirectionalLight;
@@ -234,6 +274,8 @@ export class Viewmodel {
     const replicas = buildReplicaModels(this.loadout, this.teamColor, VIEWMODEL.orangeTips, detail, this.paint, 'hands', this.arms, this.files);
     this.slots.length = 0;
     this.beams = [];
+    this.disposeEyepieces();
+    const eyepieceMaterial = (this.eyepieceMaterial = eyepieceMaskMaterial());
     this.inspectT = -1;
     this.inspectWeight = 0;
     for (const r of this.loadout) {
@@ -268,7 +310,13 @@ export class Viewmodel {
       model.visible = false;
       this.rig.add(model);
       model.traverse((o) => o.name === 'laserBeam' && this.beams.push(o));
+      for (const p of this.slots.at(-1)!.parts) {
+        if (p.kind !== 'optic' || OPTICS[p.id as OpticId]?.scope !== true) continue;
+        const mask = eyepieceMask(p.object, (m) => m.name === 'lens', eyepieceMaterial, VIEWMODEL.eyepieceInset);
+        if (mask) this.eyepieces.push(mask);
+      }
     }
+    for (const mask of this.eyepieces) mask.visible = this.scoped;
     for (const beam of this.beams) beam.visible = this.beamOn;
     replicas.raisedHand.visible = false;
     this.scene.add(replicas.raisedHand);
@@ -353,11 +401,13 @@ export class Viewmodel {
   }
 
   /**
-   * Looking through a scope's eyepiece (M17b): the replica isn't drawn, as its own tube would fill the eyepiece; the
-   * HUD draws the eyepiece and reticle.
+   * Looking through a scope's eyepiece (M17b): the replica stays in view, as at a red dot (the owner's 0.1 Dev 5
+   * playtest, note 5), and the scope's rear glass shows the world (eyepiece.ts); the HUD draws the reticle.
    */
   setScoped(scoped: boolean): void {
-    this.rig.visible = !scoped;
+    if (this.scoped === scoped) return;
+    this.scoped = scoped;
+    for (const mask of this.eyepieces) mask.visible = scoped;
   }
 
   /**
@@ -411,8 +461,8 @@ export class Viewmodel {
 
   /**
    * Called once per frame. `speed` is the player's horizontal speed and `runSpeed` its normal (run) speed;
-   * `carry` is how far the replica is carried for a sprint (1 while sprinting, falling to 0 over the post-sprint
-   * lockout, so it is square to the view again the moment it can fire); `callingHit` lowers the replica
+   * `carry` is how far the replica is carried for a sprint (SprintCarry: 1 while sprinting, 0 while firing on the run,
+   * falling to 0 after a sprint); `callingHit` lowers the replica
    * and raises your hand. `aim` is how far a fitted optic is raised to your eye (0..1).
    */
   update(
@@ -515,8 +565,8 @@ export class Viewmodel {
 
     const moving = Math.min(1, speed / runSpeed);
     this.bobPhase += dt * VIEWMODEL.bobFrequency * Math.PI * 2 * moving;
-    // Eases into the carry, but comes back no later than `carry` does: a shot fired straight out of a sprint leaves a
-    // replica pointing straight ahead, in line with its BBs.
+    // Eases into the carry, but comes back no later than `carry` does: a shot fired on the run or straight out of a
+    // sprint leaves a replica pointing straight ahead, in line with its BBs.
     this.sprintBlend = Math.min(carry, this.sprintBlend + (carry - this.sprintBlend) * (1 - settle));
 
     const handling = armament.handling[armament.active]!;
@@ -659,6 +709,14 @@ export class Viewmodel {
 
   dispose(): void {
     this.replicas.dispose();
+    this.disposeEyepieces();
+  }
+
+  private disposeEyepieces(): void {
+    for (const mask of this.eyepieces) mask.geometry.dispose();
+    this.eyepieceMaterial?.dispose();
+    this.eyepieces = [];
+    this.eyepieceMaterial = null;
   }
 }
 

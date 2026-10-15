@@ -243,7 +243,7 @@ class FakeContext {
 const OPEN: OcclusionQuery = { raycastStatic: () => -1 };
 const WALLED: OcclusionQuery = { raycastStatic: () => 1 };
 const FLOOR: MapBlock[] = [{ kind: 'floor', center: vec3(0, -0.25, 0), size: vec3(100, 0.5, 100) }];
-const VOLUMES = { master: 1, effects: 1, ambience: 1, interface: 1 };
+const VOLUMES = { master: 1, effects: 1, power: 1, ambience: 1, interface: 1 };
 /** Shared across tests: the sounds render once. */
 const LIBRARY = new SoundLibrary();
 const PLAYER = 0;
@@ -431,24 +431,42 @@ describe('the sound engine (M13)', () => {
     };
     tick(1);
     sfx.onEvent(shot(bot.id), PLAYER, characterOf);
-    // Shot and spin-up; the wind-down waits for the trigger.
-    expect(ctx.sources).toHaveLength(2);
+    // Shot, its power part (the motor and gears, the 0.1 Dev 5 playtest) and spin-up; the wind-down waits for the trigger.
+    expect(ctx.sources).toHaveLength(3);
+    expect(plays(ctx.sources[1]!, 'power.electric')).toBe(true);
+    expect(plays(ctx.sources[2]!, 'motor.spinUp')).toBe(true);
     // A full-auto burst: shots 4 or 5 ticks apart (the cooldown at 60 Hz), with no wind-down in between, whatever
     // the frame rate the audio sees them at (bug pass: the audio clock let wind-downs through at 30–50 fps).
     for (const gap of [5, 4, 5, 5, 4, 5]) {
       tick(gap);
       sfx.onEvent(shot(bot.id), PLAYER, characterOf);
     }
-    expect(ctx.sources).toHaveLength(2 + 6); // the six shots only
+    expect(ctx.sources).toHaveLength(3 + 6 * 2); // the six shots and their power parts only
     // Let go: the wind-down plays once spinDownAfterCycles have passed on the simulation's clock.
     const ticksToDown = Math.ceil((AUDIO.motor.spinDownAfterCycles / rate) * 60 - 1e-9);
     tick(ticksToDown - 1);
-    expect(ctx.sources).toHaveLength(8);
+    expect(ctx.sources).toHaveLength(15);
     tick(1);
-    expect(ctx.sources).toHaveLength(9);
-    expect(plays(ctx.sources[8]!, 'motor.spinDown')).toBe(true);
+    expect(ctx.sources).toHaveLength(16);
+    expect(plays(ctx.sources[15]!, 'motor.spinDown')).toBe(true);
     tick(30);
-    expect(ctx.sources).toHaveLength(9); // once
+    expect(ctx.sources).toHaveLength(16); // once
+  });
+
+  it('plays the power source (an AEG: the motor and gears, the spin-up and wind-down) at the Power source slider, the shot as it was (the 0.1 Dev 5 playtest, note 2)', () => {
+    const { sfx, ctx, engine, player, bot, characterOf } = setup();
+    engine.setVolume('power', 0.5);
+    sfx.afterTick([player, bot], PLAYER);
+    sfx.onEvent(shot(bot.id), PLAYER, characterOf);
+    const level = (src: FakeSource): number => ([...src.outputs][0] as FakeGain).gain.value;
+    expect(plays(ctx.sources[0]!, 'shot.electric')).toBe(true);
+    expect(level(ctx.sources[0]!)).toBeCloseTo(AUDIO.levels.shot.gain, 9);
+    expect(level(ctx.sources[1]!)).toBeCloseTo(AUDIO.levels.power.gain * volumeGain(0.5), 9);
+    expect(level(ctx.sources[2]!)).toBeCloseTo(AUDIO.levels.motor.gain * volumeGain(0.5), 9);
+    engine.setVolume('power', 0);
+    for (let i = 0; i < 30; i++) sfx.afterTick([player, bot], PLAYER);
+    sfx.onEvent(shot(bot.id), PLAYER, characterOf);
+    expect(ctx.sources.slice(3).filter((s) => plays(s, 'power.electric')).map(level)).toEqual([0]);
   });
 
   it('drops a wind-down still owed when the motors are settled (a Skip to next round), so none plays later (BP3)', () => {
@@ -1321,10 +1339,14 @@ describe('a silenced shot sounds muffled (M29b)', () => {
     const muffled = suppressedCopies(LIBRARY.get(48000).get(cue)!, 48000);
     expect(muffled.some((v) => same(v, usual))).toBe(false);
     fitParts(bot.armament, [{ grip: 'none', magazine: 'standard', muzzle: 'silencer' }]);
+    const before = ctx.sources.length;
     sfx.onEvent(shot(bot.id), PLAYER, characterOf);
-    const heard = bufferOf(ctx.sources[ctx.sources.length - 1]!);
+    const heard = bufferOf(ctx.sources[before]!);
     expect(muffled.some((v) => same(v, heard)), 'muffled copy').toBe(true);
     expect(same(heard, usual)).toBe(false);
+    // Its power part (the motor and gears, the 0.1 Dev 5 playtest) plays as ever: a silencer quiets the air, not the gearbox.
+    const power = LIBRARY.get(48000).get('power.electric')!;
+    expect(power.some((v) => same(v, bufferOf(ctx.sources[before + 1]!))), 'power part as it is').toBe(true);
     // A shooter without one is not muffled by another's silencer, and your own silenced shot is muffled too.
     const { sfx: sfx2, ctx: ctx2, player, characterOf: of2 } = setup();
     fitParts(player.armament, [{ grip: 'none', magazine: 'standard', muzzle: 'silencer' }]);
@@ -1395,8 +1417,9 @@ describe('M32 acceptance 7: the Cyber Pistol sounds its own in a match', () => {
   it("still gives an AEG its motor, and the GBB Pistol its pop, beside it", () => {
     const { sfx, ctx, bot, characterOf } = match([...LOADOUT, CYBER_PISTOL], LOADOUT);
     sfx.onEvent(shot(bot.id), PLAYER, characterOf);
-    expect(ctx.sources).toHaveLength(2);
-    expect(plays(ctx.sources[1]!, 'motor.spinUp')).toBe(true);
+    expect(ctx.sources).toHaveLength(3);
+    expect(plays(ctx.sources[1]!, 'power.electric')).toBe(true);
+    expect(plays(ctx.sources[2]!, 'motor.spinUp')).toBe(true);
   });
 });
 
@@ -1483,7 +1506,9 @@ describe('M33j: Depot sounds exactly as before (its Sfx node graph pinned)', () 
     // an impact) end at -60 dB of their peak; every node, setting, connection, the bed and the yard's echo as before.
     // Re-baked by M86 (the owner's playtest note 14): the ambience's level (the Ambience slider) between the bed and
     // the world, and the yard's calls timed one kind at a time (its birds, a crow, a dog); the rest as before.
-    expect(fingerprint(graphOf(ctx))).toBe('84dbb4dd');
+    // Re-baked by the 0.1 Dev 5 playtest (note 2): a bot's step level 1 dB up with the louder shots (0.48 to 0.54); with
+    // the old level it is the same graph.
+    expect(fingerprint(graphOf(ctx))).toBe('0b0e85f0');
     expect([...engine.cueBuffers().keys()].some((c) => c.startsWith('step.grass') || c === 'ambience.owl')).toBe(false);
   });
 });

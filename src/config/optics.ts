@@ -18,8 +18,8 @@ export interface OpticConfig {
   /** Multiplies AIMING.raiseTime: a heavier optic is slower to bring to your eye. */
   raiseScale: number;
   /**
-   * Looking through it hides the view around it: the HUD darkens everything outside the eyepiece and draws a fine
-   * crosshair reticle instead of a dot.
+   * A scope: the HUD draws a fine crosshair reticle instead of a dot, and its rear glass shows the world (the replica
+   * stays in view and the world round it, as at a red dot: the owner's 0.1 Dev 5 playtest, note 5).
    */
   scope: boolean;
 }
@@ -28,8 +28,8 @@ export interface OpticConfig {
 export const OPTICS: Readonly<Record<OpticId, OpticConfig>> = overlay<OpticConfig>({
   // "Narrows the view slightly" (roadmap): about 100° → 84° across a 16:9 screen. A first guess to tune in play.
   redDot: { name: 'Red Dot', zoom: 1.25, raiseScale: 1, scope: false },
-  // A closer look down Depot's long lanes (about 100° → 56° across a 16:9 screen), paid for with a slower raise and
-  // nothing seen around the eyepiece. First guesses to tune in play.
+  // A closer look down Depot's long lanes (about 100° → 56° across a 16:9 screen), paid for with a slower raise. First
+  // guesses to tune in play.
   scope2x: { name: '2x Scope', zoom: 2, raiseScale: 1.6, scope: true },
 }, GAME_STATS.optics) as Record<OpticId, OpticConfig>;
 
@@ -51,7 +51,7 @@ export function sightConfig(sight: SightId): OpticConfig {
 export const OPTIC_BLURBS: Readonly<Record<'none' | OpticId, string>> = {
   none: 'No optic: aim down the iron sights (right mouse by default), or fire from the hip with the crosshair.',
   redDot: 'A red dot: press the aim button (right mouse by default) to aim through it (walking pace).',
-  scope2x: 'A low-power scope: a closer view down the long lanes, but slower to raise and you see nothing around it.',
+  scope2x: 'A low-power scope: a closer view down the long lanes, but slower to raise.',
 };
 
 export const AIMING = {

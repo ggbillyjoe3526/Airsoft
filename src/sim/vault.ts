@@ -256,8 +256,8 @@ export function stepVault(c: Character, cmd: PlayerCommand, cfg: MovementConfig,
   c.groundRise = 0;
   c.jumpWanted = 0;
   c.jumpCooldown = Math.max(0, c.jumpCooldown - dt);
-  // Carried through the vault, and up again only a moment after it (the sprint's rule, MovementConfig.sprintFireLockout).
-  c.sprintLockout = vc.fireLockout;
+  // Carried through the vault, and up again only a moment after it (Character.fireLockout).
+  c.fireLockout = vc.fireLockout;
 
   if (Math.hypot(desired.x - corrected.x, desired.y - corrected.y, desired.z - corrected.z) > vc.blockedAt) {
     v.active = false;

@@ -100,7 +100,7 @@ describe('vaulting with the replica holstered (M92 with M102)', () => {
     run.tick((k) => (k.fire = true));
     while (run.player.vault.active) run.tick(() => {});
     expect(run.shots()).toBe(0);
-    expect(run.player.sprintLockout).toBeGreaterThan(0);
+    expect(run.player.fireLockout).toBeGreaterThan(0);
     // A new press straight after landing is held off for the lockout, then fires.
     let ticks = 0;
     while (run.shots() === 0 && ticks < 60) {

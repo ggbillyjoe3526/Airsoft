@@ -44,6 +44,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **AD1** · Adaptive difficulty, a Dev setting: the other team starts at your Opponents level and adapts to how you do; teammates and Extraction don't
 - **CL1** · Bot teammates call what they see and do in a text feed, bottom left, each with a radio click: "Contact, Dock!", "Reloading!" (Settings › HUD › Callouts)
 - **CL1** · Map places have names (Dock, Bay, Fort, Atrium, Sky Bridge and more), and the minimap shows the name of the area you stand in
+- **PT1** · Settings › Audio has a Power source volume slider under Effects for each replica's battery motor, gas and spring sounds
+- **PT1** · Settings › Gameplay › Crosshair has hit marker scale, thickness, outline and colour settings; the hit marker stays Off by default
 
 ### Changed
 - **M94** · The practice range is now Practice: pause reads "Practice · Range" or "Practice · Depot", and the tutorial's last button says Practice
@@ -60,14 +62,24 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **RM10** · Both Dev figures rest the replica on cover (rifle and pistol, level, up or down) and vault low walls in their own animations
 - **RM10** · A vaulting figure's hit area follows its legs over the wall
 - **BG1** · Hard and Pro's random gear roll and the Cyber Pistol carrier that needed you to have one are replaced by the bot kits
+- **PT1** · Shots are louder on every replica
+- **PT1** · The hit marker is a bold red X
+- **PT1** · The 2× scope works like the red dot: the replica stays in view and the world shows round it, with a fine crosshair and red dot in the eyepiece; still 2× zoom
+- **PT1** · You can fire while sprinting (Alt), less accurately than walking or running, with wider spread and more kick; the short lockout after a sprint is gone; bots still stop sprinting to fight
+- **PT1** · Esc while you are out skips the round at once, without opening the pause menu; click to play on, or Esc again for the menu
 
 ### Fixed
 - **M92** · Bots firing on the move hold fire when a teammate is down the line, so they no longer hit teammates past the end of a wall
 - **M102** · Bots taking a lean spot or an Extraction guard post settle right on it, so their lean sees round the corner
 - **BN1** · Sprinting with the replica holstered over the top of a steep stair (Neon Heights) no longer lifts you off the ground for a moment
+- **PT1** · Menu and HUD text stays inside its buttons and backgrounds at 1280×720, 1920×1080 and 2560×1440 (Match, saved loadout names, map Dev tags, replica chips)
+- **PT1** · Glowing BBs have no halo: only the BB and its streak glow
+- **PT1** · Both 2× scope models have no gap between the glass and the body
+- **PT1** · The ammo count no longer overlaps the fire mode chip on the replica panel, however many rounds
 
 ### Internal
 - **SL1** · Saved loadouts are part of save format 2 with their own store (airsoft.loadouts); the context menu's styles have their own sheet
+- **PT1** · Docs: playtest fixes from the 0.1 Dev 5 notes recorded; the UI redesign is parked in IDEAS for a later version
 
 ## 0.1 Dev 5 · 2026-10-13
 
