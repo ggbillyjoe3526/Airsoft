@@ -83,3 +83,10 @@
     animation: none;
   }
 }
+
+/* With the system's colours forced, the ring keeps the teams' (as every marker over the field does, style.css). */
+@media (forced-colors: active) {
+  .ping-marker {
+    forced-color-adjust: none;
+  }
+}
