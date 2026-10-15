@@ -73,6 +73,11 @@ export class Hud {
     if (this.shownRested !== rested) this.root.classList.toggle('rested', (this.shownRested = rested));
   }
 
+  /** Settings › HUD › Ammo counter (AC1): false hides the BB counts on the replica panel (ui/replicaPanel.ts setCounts). */
+  setAmmoCounter(shown: boolean): void {
+    this.panel.setCounts(shown);
+  }
+
   /** Shows `text` in the status line for `seconds` (unless a reload is under way). */
   showNotice(text: string, seconds: number): void {
     this.panel.showNotice(text, seconds);

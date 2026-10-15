@@ -787,6 +787,12 @@ there maps each symptom to its numbers):
   mid-match: the lines fade over the next few seconds.
 - [ ] **Wide screens.** At 1920×1080 and on 21:9 (2560×1080) the corners keep the same margin; on 21:9 the ammo and
   minimap sit inside a 16:9 area. The scoreboard's "out" pips read against a bright sky.
+- [ ] **Ammo counter** (Settings › Gameplay › HUD, AC1). On by default. Off in a match: no big BB count and no
+  "/ N · M spare" line; the magazine bars stay, each full until that magazine is empty, then hollow. Fire a magazine
+  dry: the replica clicks (pistol) or whirs (AEG) and the panel says Empty; reload and the bar you swapped out goes
+  hollow. Low on spares, H's "Low on BBs" hint still shows, and a caught magazine says "+1 mag from …" with no count.
+  Flip it on the pause menu: it changes at once, in Practice too. With it off, the tutorial's Reload step says to keep
+  count yourself. Does playing without numbers feel fun, or just frustrating?
 
 ## Squad orders and minimap
 

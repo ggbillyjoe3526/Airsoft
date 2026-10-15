@@ -28,9 +28,11 @@ export const REPLICA_PANEL_HTML = `
  * its scheme with its parts, from the game's ItemPictures; its line drawing until it arrives), its name, a chip per fire
  * mode it has with the current one lit, the loaded BBs large with the spare BBs and magazines beside them, a bar per
  * spare magazine filled to its BBs (the one a reload takes marked), the reload bar and the status line. Every write is
- * made only when what it shows changes; the reload bar's fill runs on one CSS transition (ui/timedFill.ts).
+ * made only when what it shows changes; the reload bar's fill runs on one CSS transition (ui/timedFill.ts). With the ammo
+ * counter off (Settings › HUD, AC1) the counts go and each bar shows only whether its magazine holds any BBs.
  */
 export class ReplicaPanel {
+  private readonly box: HTMLElement;
   private readonly panel: HTMLElement;
   private readonly name: HTMLSpanElement;
   private readonly modes: HTMLElement;
@@ -62,6 +64,8 @@ export class ReplicaPanel {
   private hintKey: string | null = null;
   private emptyHint = '';
   private readonly shown = { name: '', mag: -1, low: false, spareBBs: -1, spareMags: -1, status: '', reloadPct: -1, holstered: false };
+  /** Settings › HUD › Ammo counter (AC1): the BB counts and each bar's fill shown (true), or only whether a spare holds any. */
+  private counts = true;
 
   /** `root`: the HUD, holding REPLICA_PANEL_HTML. `keyName`: the reload key's name now, for the empty-magazine hint. */
   constructor(
@@ -69,6 +73,7 @@ export class ReplicaPanel {
     private readonly keyName: () => string,
   ) {
     const find = <T extends HTMLElement>(selector: string) => root.querySelector(selector) as T;
+    this.box = find('.hud-replica');
     this.panel = find('.hud-replica-main');
     this.name = find('.hud-replica-name > span');
     this.modes = find('.hud-modes');
@@ -86,6 +91,18 @@ export class ReplicaPanel {
     this.source = source;
     this.subjects = subjects;
     this.shownSlot = -1;
+  }
+
+  /**
+   * Settings › HUD › Ammo counter (AC1): false takes the loaded count and the spare line away (replica.css) and draws each
+   * spare's bar full while it holds any BBs and hollow once empty, with no low stripes and no mark on the one a reload
+   * takes; the status line still says Empty, Last magazine and Out of BBs. Every bar is redrawn the next frame.
+   */
+  setCounts(shown: boolean): void {
+    if (this.counts === shown) return;
+    this.counts = shown;
+    this.box.classList.toggle('no-count', !shown);
+    this.shownFill.length = 0;
   }
 
   /** Shows `text` in the status line for `seconds` (unless a reload is under way). */
@@ -183,7 +200,10 @@ export class ReplicaPanel {
     this.spare.textContent = HUD_TEXT.spare(bbs, mags);
   }
 
-  /** A bar per spare magazine, filled to how many BBs it has; the one a reload would take is marked. */
+  /**
+   * A bar per spare magazine, filled to how many BBs it has; the one a reload would take is marked. With the counts off,
+   * a bar is full while its magazine holds any BBs, and none is marked.
+   */
   private updateGauges(ammo: ReplicaAmmo, magSize: number): void {
     if (this.gauges.length !== ammo.pouch.length) {
       this.mags.innerHTML = '<i><b></b></i>'.repeat(ammo.pouch.length);
@@ -192,16 +212,18 @@ export class ReplicaPanel {
       this.shownNext = -1;
     }
     for (let i = 0; i < ammo.pouch.length; i++) {
-      const pct = Math.round((ammo.pouch[i]! / magSize) * 100);
+      const bbs = ammo.pouch[i]!;
+      const pct = !this.counts ? (bbs > 0 ? 100 : 0) : Math.round((bbs / magSize) * 100);
       if (this.shownFill[i] === pct) continue;
       this.shownFill[i] = pct;
       const gauge = this.gauges[i]!;
       (gauge.firstElementChild as HTMLElement).style.width = `${pct}%`;
       gauge.classList.toggle('empty', pct === 0);
       // Same threshold as the loaded magazine's count turning orange.
-      gauge.classList.toggle('low', ammo.pouch[i]! > 0 && isLowAmmo(ammo.pouch[i]!, magSize));
+      gauge.classList.toggle('low', this.counts && bbs > 0 && isLowAmmo(bbs, magSize));
     }
-    const next = nextSpare(ammo); // the one a reload would take (none if no spare is fuller)
+    // The one a reload would take (none if no spare is fuller); unmarked with the counts off, where it would say which is fullest.
+    const next = this.counts ? nextSpare(ammo) : -1;
     if (next !== this.shownNext) {
       this.gauges[this.shownNext]?.classList.remove('next');
       this.gauges[next]?.classList.add('next');

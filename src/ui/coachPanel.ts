@@ -1,4 +1,5 @@
 import type { Action } from '../config/controls';
+import { coachText } from '../config/tutorial';
 import { keySegments, type TutorialTracker } from '../tutorial/tutorial';
 
 /**
@@ -13,6 +14,8 @@ export class CoachPanel {
   /** Where your last BB landed (the range readout's line), shown on the steps that ask for a hit. */
   private readonly shot: HTMLParagraphElement;
   private shownKey = '';
+  /** Settings › HUD › Ammo counter (AC1): off, a step with words for it says them instead (config/tutorial.ts coachText). */
+  private ammoCounter = true;
 
   constructor(
     parent: HTMLElement,
@@ -37,6 +40,11 @@ export class CoachPanel {
     this.root.hidden = !visible;
   }
 
+  /** The ammo counter shown or not (AC1); the next show redraws the step if its words change with it. */
+  setAmmoCounter(shown: boolean): void {
+    this.ammoCounter = shown;
+  }
+
   /** The last BB's line ('' for none yet); shown only while a step asks for a hit. */
   setShot(text: string): void {
     if (this.shot.textContent !== text) this.shot.textContent = text;
@@ -45,8 +53,9 @@ export class CoachPanel {
   /** Shows the tracker's step (call when it changes, and when play resumes: a key may have been rebound). */
   show(t: TutorialTracker): void {
     const step = t.step;
-    // The key names are part of what's shown: a rebind on the pause menu redraws the text.
-    const key = step ? `${step.id}:${t.showingDone}:${step.text.replace(/\{(\w+)\}/g, (_, a: string) => this.keyName(a as Action))}` : '';
+    const text = step ? coachText(step, this.ammoCounter) : '';
+    // The key names are part of what's shown: a rebind on the pause menu redraws the text (and so does the ammo counter).
+    const key = step ? `${step.id}:${t.showingDone}:${text.replace(/\{(\w+)\}/g, (_, a: string) => this.keyName(a as Action))}` : '';
     if (key === this.shownKey) return;
     this.shownKey = key;
     if (!step) {
@@ -57,7 +66,7 @@ export class CoachPanel {
     this.shot.hidden = step.goal.kind !== 'hit';
     this.head.textContent = `Tutorial · ${t.stepIndex + 1} of ${t.steps.length} · ${step.title}${t.showingDone ? ' ✓' : ''}`;
     this.body.replaceChildren(
-      ...keySegments(step.text, this.keyName).map((s) => {
+      ...keySegments(text, this.keyName).map((s) => {
         if (!s.key) return document.createTextNode(s.text);
         const k = document.createElement('kbd');
         k.textContent = s.text;

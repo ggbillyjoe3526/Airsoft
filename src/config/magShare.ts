@@ -66,6 +66,8 @@ export const MAG_SHARE = {
     ask: 'Low on BBs · {key} to ask for a mag',
     askWheel: 'Low on BBs · ask for a mag on the order wheel',
     caught: '+1 mag from {name} · {bbs} BBs',
+    /** The same with the ammo counter off (Settings › HUD, AC1): you can't tell how full a magazine is from its feel. */
+    caughtUncounted: '+1 mag from {name}',
     tossed: 'Mag to {name}',
     nobody: 'Nobody near has a mag to spare',
     notLow: 'You still have a full spare mag',

@@ -22,3 +22,17 @@ item 5, with the G4 HUD restyle); note 3 was a bug, fixed in BP2; note 2 is alre
 
 **0.1 Dev 6 (confirmed with the roadmap, 2026-10-06).** M92–M95, the holster and the practice upgrades, are done
 (2026-10-13); the blocks for the rest of `docs/ROADMAP.md` › 0.1 Dev 6 are written when that work starts.
+
+## AC1 · Hide the ammo counter (Dev 6 item 46)
+tier: ui
+perf: skip
+touches: src/config/magShare.ts, src/config/matchInfo.ts, src/config/tutorial.ts, src/game.ts, src/magHandoff.ts, src/matchSession.ts, src/rangeSession.ts, src/render/combatPresentation.ts, src/settings/storage.ts, src/ui/coachPanel.ts, src/ui/hud.ts, src/ui/hudCss/replica.css, src/ui/hudSettings.ts, src/ui/replicaPanel.ts
+contract: the settings store (key `ammoCounter`, `on` or `off`) and TutorialStep (`countHidden`, said instead of `text` while the counter is off)
+acceptance:
+  1. Settings › HUD › Ammo counter (Off or On, On when nothing is saved, kept after a reload): Off takes the loaded BB count and the "/ N · M spare" line off the replica panel; each spare magazine still shows as its bar, solid while it holds any BBs and hollow once empty, with no fill level, low stripes or next-magazine caret. On is as before.
+  2. With it off the rest plays as before: the reload bar and Reloading, the empty-magazine hint naming the reload key, Last magazine, Out of BBs, Holstered, the dry-fire click, the Mag key's Low on BBs hint and the hand-off; the caught-magazine notice leaves out the BB count ("+1 mag from {name}").
+  3. A change on the pause menu applies at once, in a match and in Practice (the range and any map), and to every later match and Practice.
+  4. The tutorial follows it: the HUD as set, and with the counter off the Reload step says to keep count yourself instead of "watch your count", redrawn at once if changed mid-step.
+  5. Nothing is allocated per frame for it; the panel writes the DOM only when what it shows changes; the main chunk stays at or under 1,250 kB.
+status: open
+attempts: 0

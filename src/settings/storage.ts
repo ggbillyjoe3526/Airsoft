@@ -113,6 +113,8 @@ export type SettingField =
   | 'pingMarkers'
   /** Settings › HUD › Mag hand-off (MG1): 'on' or 'off', on when nothing is saved. */
   | 'magPrompts'
+  /** Settings › HUD › Ammo counter (AC1): 'on' or 'off', on when nothing is saved. */
+  | 'ammoCounter'
   | 'hudSize'
   /** Settings → HUD → HUD opacity (G4): how opaque the HUD's panels are, 0.5 to 1. */
   | 'hudOpacity'

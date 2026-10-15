@@ -135,6 +135,20 @@ export const HUD_OPACITY = {
   default: 0.9,
 } as const;
 
+/**
+ * Settings › HUD › Ammo counter (AC1, Dev 6 item 46): the replica panel's BB counts shown, or off so you keep count
+ * yourself, as on a field. Off leaves each spare magazine's bar, solid while it holds any BBs: you know by feel how many
+ * magazines your pouches hold and which are empty, never how full.
+ */
+export type AmmoCounterMode = 'on' | 'off';
+
+export const AMMO_COUNTER_CHOICES: readonly { id: AmmoCounterMode; label: string; blurb: string }[] = [
+  { id: 'off', label: 'Off', blurb: 'Keep count yourself: no BB counts, and a spare magazine shows only whether it still holds any. Reloading and the empty click work as ever.' },
+  { id: 'on', label: 'On', blurb: 'The BBs in your magazine, the BBs and magazines left in your pouch, and a bar per spare filled to its BBs.' },
+];
+
+export const DEFAULT_AMMO_COUNTER: AmmoCounterMode = 'on';
+
 /** The marker with the name over each teammate (never over an enemy). */
 export const TEAMMATE_MARKERS = {
   /**
