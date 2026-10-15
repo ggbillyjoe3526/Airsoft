@@ -8,7 +8,7 @@ import type { Armament } from '../sim/armament';
 import { eyepieceMask, eyepieceMaskMaterial } from './eyepiece';
 import { type ArmStyle, buildReplicaModels, fitLight, fitMuzzle, fitSupportHand, HUMAN_ARMS, type LightMount, LOW_DETAIL, type MagazinePart, type MuzzleMount, type ReplicaDetail, type ReplicaModels, type SupportHandPart } from './replicaModels';
 import { NO_REPLICA_FILES, type ReplicaFiles } from './replicaFiles';
-import type { ReplicaRig } from './replicaRig';
+import { type ReplicaRig, SIGHTS_FOLD } from './replicaRig';
 
 const smooth = (t: number): number => {
   const c = Math.max(0, Math.min(1, t));
@@ -763,9 +763,9 @@ function poseParts(s: { fire: number; selector: number; sights: number }, rig: R
   const selector = (mode ? VIEWMODEL.parts.selector[mode] : 0) * rig.duration('Selector');
   s.selector = s.selector < 0 ? selector : approach(s.selector, selector, dt);
   rig.set('Selector', s.selector);
-  const sights = optic ? rig.duration('SightsFold') : 0;
+  const sights = optic ? rig.duration(SIGHTS_FOLD) : 0;
   s.sights = s.sights < 0 ? sights : approach(s.sights, sights, dt);
-  rig.set('SightsFold', s.sights);
+  rig.set(SIGHTS_FOLD, s.sights);
   rig.set('Reload', reloadP * rig.duration('Reload'));
   rig.apply();
 }

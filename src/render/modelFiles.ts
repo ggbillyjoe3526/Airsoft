@@ -25,7 +25,14 @@ export class ModelFiles {
   constructor(
     private readonly loadFigure: () => Promise<FigureModel | null> = () => loadFigureModel(),
     private readonly loadReplicas: () => Promise<ReplicaFiles> = () => loadReplicaFiles(),
-    private readonly loadRigs: () => Promise<FigureRigs | null> = () => import('./figureRig').then((m) => m.loadFigureRigs()),
+    private readonly loadRigs: () => Promise<FigureRigs | null> = () =>
+      import('./figureRig')
+        .then((m) => m.loadFigureRigs())
+        .catch((err: unknown) => {
+          // A chunk that can't be fetched (a tab left open across a new release, a dropped connection): the built-in figures.
+          console.warn('The rigged figures could not be loaded, so the built-in figures are drawn instead:', err);
+          return null;
+        }),
   ) {}
 
   /** Which files are drawn now (the last `use` to finish loading). */

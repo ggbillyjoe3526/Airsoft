@@ -39,6 +39,8 @@ export const POSE_CLIPS = [
   'Pistol_Rest',
   'Pistol_RestUp',
   'Pistol_RestDown',
+  'Holster',
+  'Holster_Sprint',
   'Rifle_Fire',
   'Pistol_Fire',
 ] as const;
@@ -51,9 +53,10 @@ export const FIRE_CLIPS = 2;
 /**
  * Clips a figure's file may lack (made with the figure redesign, Dev 6): their slots are then empty, with a length of 0
  * in the clip table. A file without the Rest clips leans by FIGURE_RIG.rest instead (render/riggedFigure.ts); one
- * without the Vault clip vaults on the legs' clips (the jump, tucked by the crouch).
+ * without the Vault clip vaults on the legs' clips (the jump, tucked by the crouch); one without the Holster clips (BP4)
+ * holds the replica in the hands while holstered.
  */
-export const OPTIONAL_CLIPS: ReadonlySet<PoseClip> = new Set<PoseClip>(['Vault', 'Rifle_Rest', 'Rifle_RestUp', 'Rifle_RestDown', 'Pistol_Rest', 'Pistol_RestUp', 'Pistol_RestDown']);
+export const OPTIONAL_CLIPS: ReadonlySet<PoseClip> = new Set<PoseClip>(['Vault', 'Rifle_Rest', 'Rifle_RestUp', 'Rifle_RestDown', 'Pistol_Rest', 'Pistol_RestUp', 'Pistol_RestDown', 'Holster', 'Holster_Sprint']);
 
 const S = Object.fromEntries(POSE_CLIPS.map((name, i) => [name, i])) as Record<PoseClip, number>;
 export const POSE_SLOT: Readonly<Record<PoseClip, number>> = S;
@@ -61,6 +64,11 @@ export const POSE_SLOT: Readonly<Record<PoseClip, number>> = S;
 /** Whether the clip table has `hold`'s Rest clips (the file had them). */
 export function hasRest(table: PoseClipTable, hold: PoseHold): boolean {
   return len(table, hold === 'pistol' ? S.Pistol_Rest : S.Rifle_Rest) > 0;
+}
+
+/** Whether the clip table has the Holster clips (the file had them: bot23.py, BP4). */
+export function hasHolster(table: PoseClipTable): boolean {
+  return len(table, S.Holster) > 0;
 }
 
 /** Whether the clip table has the Vault clip (the file had it). */
@@ -113,6 +121,12 @@ export interface PoseInput {
   /** Where in the Vault clip the vault is (0..1, sim/figureLegs.ts vaultClipShare), read while vaulting. */
   vaultAt: number;
   /**
+   * Holstered (M92): 1 with the replica holstered, falling to 0 as it is drawn from the holster (the arms rising from
+   * hanging to the aim), else 0. The arms hang (the Holster clip, the Holster_Sprint's in a sprint) by this much where
+   * the file has the clips.
+   */
+  holster: number;
+  /**
    * The simulation's walk cycle (cycles, interpolated) when the match's hit volumes follow the figures' legs (IM8): every
    * cycle clip is played at it, so the drawn legs step with their hit volumes. Null: the figure steps its own cycles.
    */
@@ -131,6 +145,12 @@ export interface PoseState {
   /** The step's direction weights: ahead, back, left, right (sum 1), eased. */
   dir: Float32Array;
   jump: number;
+  /** Where in the Jump clip the legs are (seconds): held from the landing while the jump eases out, never snapped back. */
+  jumpAt: number;
+  /** How settled the replica is on cover, eased: a rest taken away at once (a hit) leans back out, not in one frame. */
+  rest: number;
+  /** The holstered arms' share, eased. */
+  holster: number;
   /** The upper body's layer (aim, reload or switch) over the legs' clips, and within it the reload's and the switch's share. */
   overlay: number;
   reload: number;
@@ -167,6 +187,9 @@ export function createPoseState(): PoseState {
     move: 0,
     dir,
     jump: 0,
+    jumpAt: FIGURE_RIG.jump.from,
+    rest: 0,
+    holster: 0,
     overlay: 0,
     reload: 0,
     switching: 0,
@@ -322,7 +345,9 @@ export function stepPose(state: PoseState, input: PoseInput, dt: number, table: 
   t[S.Sprint] = at(table, S.Sprint, state.sprint);
   t[S.WalkOff] = at(table, S.WalkOff, state.walkOff);
   const J = FIGURE_RIG.jump;
-  t[S.Jump] = Math.min(J.to, J.from + Math.max(0, input.airTime));
+  // On landing the time in the air goes back to 0: the clip stays at its tuck while the jump eases out.
+  if (input.airborne) state.jumpAt = Math.min(J.to, J.from + Math.max(0, input.airTime));
+  t[S.Jump] = state.jumpAt;
   t[S.HitCall] = Math.min(state.call, len(table, S.HitCall) * LAST);
   if (vaulting) state.vaultAt = clamp01(input.vaultAt);
   t[S.Vault] = state.vaultAt * len(table, S.Vault) * LAST;
@@ -345,6 +370,8 @@ export function stepPose(state: PoseState, input: PoseInput, dt: number, table: 
   }
   state.switching += ((switching ? 1 : 0) - state.switching) * ko;
   state.pistol += ((input.hold === 'pistol' ? 1 : 0) - state.pistol) * ease(dt, B.hold);
+  state.rest += (clamp01(input.rest) - state.rest) * ko;
+  state.holster += ((hasHolster(table) ? clamp01(input.holster) : 0) - state.holster) * ko;
 
   const overlay = state.overlay;
   const share = Math.min(1, state.reload + state.switching);
@@ -360,11 +387,20 @@ export function stepPose(state: PoseState, input: PoseInput, dt: number, table: 
   const u = out.upper;
   for (let i = 0; i < BODY_CLIPS; i++) u[i] = w[i]! * (1 - overlay);
   for (let i = BODY_CLIPS; i < POSE_CLIPS.length; i++) u[i] = 0;
-  const rifleAim = overlay * aim * (1 - state.pistol);
-  const pistolAim = overlay * aim * state.pistol;
+  // Holstered: the arms hang in place of the aim, and pump in a sprint in place of the Sprint's rifle carry (its legs' stride).
+  const holster = state.holster;
+  const holsterSprint = len(table, S.Holster_Sprint) > 0 ? holster : 0;
+  u[S.Holster_Sprint] = u[S.Sprint]! * holsterSprint;
+  u[S.Sprint] = u[S.Sprint]! * (1 - holsterSprint);
+  t[S.Holster_Sprint] = at(table, S.Holster_Sprint, state.sprint);
+  t[S.Holster] = 0;
+  const armed = aim * (1 - holster);
+  u[S.Holster] = overlay * aim * holster;
+  const rifleAim = overlay * armed * (1 - state.pistol);
+  const pistolAim = overlay * armed * state.pistol;
   // Resting on cover: each aim clip blends into its Rest clip (the same pitch, leaned in over the cover).
-  const rifleRest = hasRest(table, 'rifle') ? clamp01(input.rest) : 0;
-  const pistolRest = hasRest(table, 'pistol') ? clamp01(input.rest) : 0;
+  const rifleRest = hasRest(table, 'rifle') ? state.rest : 0;
+  const pistolRest = hasRest(table, 'pistol') ? state.rest : 0;
   u[S.Rifle_Aim] = rifleAim * level * (1 - rifleRest);
   u[S.Rifle_AimUp] = rifleAim * up * (1 - rifleRest);
   u[S.Rifle_AimDown] = rifleAim * down * (1 - rifleRest);
@@ -392,15 +428,17 @@ export function stepPose(state: PoseState, input: PoseInput, dt: number, table: 
   u[S.Rifle_Fire] = 0;
   u[S.Pistol_Fire] = 0;
   if (state.fireAge < len(table, fireSlot)) {
-    u[fireSlot] = overlay * aim;
+    u[fireSlot] = overlay * armed;
     t[fireSlot] = state.fireAge;
   }
 
   out.overlay = overlay;
-  out.pitchLean = (input.pitch - a * reach) * overlay * aim;
+  out.pitchLean = (input.pitch - a * reach) * overlay * armed;
   out.rifleAim = rifleAim;
   out.pistolAim = pistolAim;
-  out.hold = switchShare > 0.5 ? (state.switchAt >= FIGURE_RIG.switchPistolFrom ? 'pistol' : 'rifle') : input.hold;
+  // In a switch the hand holds what the Switch clip shows from its start (not the replica drawn next until the clip
+  // gets there), and on until the clip has eased out.
+  out.hold = switching || switchShare > 0.5 ? (state.switchAt >= FIGURE_RIG.switchPistolFrom ? 'pistol' : 'rifle') : input.hold;
   out.reload = overlay * reloadShare;
   out.reloadAt = state.reloadAt;
   out.reloadHold = state.reloadHold;

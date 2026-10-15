@@ -478,7 +478,9 @@ function buildFromFile(file: ReplicaFile, table: FileTable): ReplicaBuild {
     mergeTwins(group, own, file.rig !== null);
     const rig = file.rig ? new ReplicaRig(group, file.rig) : null;
     for (const [name, partDraw] of Object.entries(T.parts)) group.add(drawnPart(fromFile(name, partDraw), m, detail, name));
-    group.getObjectByName('laser:redLaser')?.add(laserBeam(PISTOL_LASER_LENS));
+    // The beam leaves the file laser's own lens where its parts file marks it (forward, up), else the built-in's.
+    const lens = file.beams.get('laser:redLaser');
+    group.getObjectByName('laser:redLaser')?.add(laserBeam(lens ? [-lens.z, lens.y] : PISTOL_LASER_LENS));
     const magazines: Partial<Record<MagazineId, PartDraw>> = {};
     for (const [id, magDraw] of Object.entries(T.magazines)) magazines[id as MagazineId] = fromFile(`magazine:${id}`, magDraw);
     if (file.magazine.length > 0) magazines.standard = filePieces(file.magazine);

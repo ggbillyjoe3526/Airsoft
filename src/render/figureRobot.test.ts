@@ -56,9 +56,9 @@ describe('the robot clip set (acceptance 2 and 5)', () => {
   const v11 = ['CrouchIdle', 'CrouchWalk', 'HitCall', 'Idle', 'Jump', 'Pistol_Aim', 'Pistol_AimDown', 'Pistol_AimUp', 'Pistol_Fire', 'Pistol_Reload', 'Rifle_Aim', 'Rifle_AimDown', 'Rifle_AimUp', 'Rifle_Fire', 'Rifle_Reload', 'Run_B', 'Run_F', 'Run_L', 'Run_R', 'Sprint', 'Switch', 'WalkOff', 'Walk_F'];
   const added = ['Pistol_Rest', 'Pistol_RestDown', 'Pistol_RestUp', 'Rifle_Rest', 'Rifle_RestDown', 'Rifle_RestUp', 'Vault'];
 
-  it('keeps every v11 clip by name and adds the six rest clips and the vault: 30 in the file and the sidecar', () => {
-    const want = [...v11, ...added].sort();
-    expect(want).toHaveLength(30);
+  it('keeps every v11 clip by name and adds the six rest clips, the vault and the two holster clips (BP4): 32 in the file and the sidecar', () => {
+    const want = [...v11, ...added, 'Holster', 'Holster_Sprint'].sort();
+    expect(want).toHaveLength(32);
     expect(scene.animations.map((c) => c.name).sort()).toEqual(want);
     expect(sidecar.clips.map((c) => c.name).sort()).toEqual(want);
   });

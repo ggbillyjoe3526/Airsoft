@@ -90,7 +90,9 @@ describe('the AEG and gas pistol model files (RM1)', () => {
       const builtIn = buildReplicaModels([AEG, GAS_PISTOL], 0x3a7bd5, true, detail, null, 'hands', HUMAN_ARMS);
       for (const id of ['aeg', 'pistol']) {
         expect(fromFile.models.get(id)!.rig).toBeTruthy();
-        expect(drawn(fromFile.models.get(id)!.group)).toBeLessThanOrEqual(drawn(builtIn.models.get(id)!.group));
+        // A file that paints no muzzle tip of its own (the GBB Pistol's) gets the orange disc over it: one call more (BP4).
+        const disc = files.get(id)!.ownTip ? 0 : 1;
+        expect(drawn(fromFile.models.get(id)!.group)).toBeLessThanOrEqual(drawn(builtIn.models.get(id)!.group) + disc);
       }
       fromFile.dispose();
       builtIn.dispose();

@@ -47,6 +47,7 @@ const input = (over: Partial<PoseInput> = {}): PoseInput => ({
   vaulting: false,
   vaultAt: 0,
   rest: 0,
+  holster: 0,
   cycle: null,
   ...over,
 });

@@ -203,6 +203,16 @@ export class CharacterRenderer {
     }
   }
 
+  /**
+   * Where `c`'s replica muzzle is drawn on their rigged figure (BP4), into `out`; false for a built-in figure or no
+   * replica in the hand (figureMuzzle places theirs).
+   */
+  riggedMuzzle(c: Character, out: THREE.Vector3): boolean {
+    if (!this.rigs) return false;
+    const i = this.characters.indexOf(c);
+    return this.figures[i]?.rigged?.muzzleWorld(holdsPistol(c), out) ?? false;
+  }
+
   /** A new round: the magazines thrown in the last one are cleared away with the field. */
   roundStarted(): void {
     this.thrown?.clear();

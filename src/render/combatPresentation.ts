@@ -124,6 +124,8 @@ export class CombatPresentation {
   /** The held replica's sprint carry, and whether the player fired since the last frame (firing on the run raises it). */
   private readonly sprintCarry = new SprintCarry();
   private shotThisFrame = false;
+  /** A rigged figure's drawn muzzle (setRiggedMuzzle), or null: every figure's is figureMuzzle's. */
+  private riggedMuzzle: ((c: Character, out: THREE.Vector3) => boolean) | null = null;
 
   /** How far the player's optic is raised to their eye (0..1); the aiming sensitivity blends in with it. */
   get aimRaised(): number {
@@ -462,6 +464,7 @@ export class CombatPresentation {
    */
   private shooterMuzzle(shooter: Character, out: THREE.Vector3): boolean {
     if (shooter === this.player) return this.viewmodel.muzzleWorld(this.renderer.camera, out);
+    if (this.riggedMuzzle?.(shooter, out)) return true;
     figureMuzzle(shooter, out, this.holdOf(shooter), this.hits);
     return true;
   }
@@ -517,6 +520,15 @@ export class CombatPresentation {
     const reach = speed * BB_VISUALS.muzzleConvergeTime;
     const d = this.query.raycastStatic(bb.prevPosition, this.dir, reach);
     return d < 0 ? Number.POSITIVE_INFINITY : d / speed;
+  }
+
+  /**
+   * Where a rigged figure (behind the Dev switches) draws `c`'s muzzle, or false for a built-in figure: the session
+   * hands it the figures' own (MatchPresentation.riggedMuzzle). Their replicas sit up to about 0.2 m from the built-in
+   * figures' muzzle, so a BB drawn from figureMuzzle would leave the air beside the rigged replica (BP4).
+   */
+  setRiggedMuzzle(muzzle: ((c: Character, out: THREE.Vector3) => boolean) | null): void {
+    this.riggedMuzzle = muzzle;
   }
 
   /** The third-person figure's hold for `c`'s active replica: where its muzzle is. */

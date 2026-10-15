@@ -21,17 +21,18 @@ by `bot20`-`bot22` on top of the earlier layers; the robot's redesign is the rob
 ## What is here
 
 - `scripts/`: every script that builds the figures, in load order (`load.py` lists it): `bot_helpers`, `bot_body`,
-  `bot_kit`, `bot2`-`bot4`, `bot_main`, `bot5`, `bot_final`, `bot6`-`bot22` (`bot18` and `bot19` are the robot
-  redesign's, `bot20`-`bot22` the human's), `bot_render`; then `session.py`
+  `bot_kit`, `bot2`-`bot4`, `bot_main`, `bot5`, `bot_final`, `bot6`-`bot23` (`bot18` and `bot19` are the robot
+  redesign's, `bot20`-`bot22` the human's, `bot23` both figures' holstered clips), `bot_render`; then `session.py`
   (build, pose, render and export helpers) and `session16.py` (checking helpers: bake one clip, arm-in-torso and
   wrist metrics, finger solves on the real replicas and magazines, `export_v(kind, stem)`). `review_v12.py` (not
   part of the build) renders the v12 review pictures: turnaround, heads, hands on each replica, poses.
 - The current figures are the game's `src/assets/models/characters/human.glb` and `robot.glb`, each with LOD1/LOD2
   meshes. The human is v12 (RM9): 19,966 triangles with its largest head (body and kit 17,468; heads high-cut
   2,498, cap 1,652, boonie 1,228, full-cut 1,128), one atlas of three materials (`Outfit`, `TeamColour`, `Lens`),
-  1.74 m; v11's 23 clips with `bot18`'s six Rest clips and the Vault spliced in (RM10), 30 in all; 2.93 MB packed.
+  1.74 m; v11's 23 clips with `bot18`'s six Rest clips and the Vault spliced in (RM10) and `bot23`'s Holster and
+  Holster_Sprint (BP4), 32 in all; 2.95 MB packed.
   Blender's export and .blend are in the project files (`models/bot-human/v12/`). The robot is v12 (RM10, 13 Oct
-  2026): `bot19` on v11's skeleton, built whole in the cloud with `bot18`'s clips; 30 clips; 19,308 triangles, its
+  2026): `bot19` on v11's skeleton, built whole in the cloud with `bot18`'s clips, `bot23`'s two spliced in (BP4); 32 clips; 19,308 triangles, its
   headset head 2,374. Each has a sidecar (clip lengths, loops, speeds,
   `fitTo` stats, first-person parts to hide, `replicaOnGrip`: where each replica glb sits on the `Grip_R` bone, and
   `magazineInHand`: the reloads' magazines). The game's files are packed with `pack.mjs` (below).
@@ -48,6 +49,8 @@ by `bot20`-`bot22` on top of the earlier layers; the robot's redesign is the rob
   the cloud).
 - `splice.mjs` (IM8): swaps named clips of an export for the same clips of another export of the same figure, by bone
   name, leaving everything else in the file as it is.
+- `unpack.mjs` (BP4): turns a packed game file back into a plain export, so a clip can be spliced into a figure whose
+  Blender export isn't kept; `pack.mjs` then packs it to the same bytes plus the new clips.
 - `check/`: `arms-check.mjs` (wrists, elbows, skin and snaps per clip) and `render/` (the picture page and its shooter).
 
 ## What each script does
@@ -75,6 +78,7 @@ Read the newest layer first when looking for a function: it is the one that wins
 | `bot20` | v12 | The redesigned human: combat shirt and trousers, carrier and pouches, gloves rebuilt finger by finger (knuckles, pads, a knuckle guard), the high-cut head (RM9) |
 | `bot21` | v12 | The atlas bake, `finalise_v12` and `export_v12`; `TEAM_CARRIER` puts the carrier in the team colour |
 | `bot22` | v12 | The cap, boonie and full-cut heads on copies of the balaclava, cloth a hat hides dropped (`HEAD_ORDER`) |
+| `bot23` | v12 | Clips only, for either figure: Holster (arms hanging, hands empty) and Holster_Sprint (arms pumping), BP4 |
 | `bot_render` | all | Picture cameras and lights |
 | `session`, `session16` | v8-v10 | Build, pose, check and export helpers (`export_v`) |
 
@@ -121,6 +125,13 @@ Read the newest layer first when looking for a function: it is the one that wins
 The robot (v12) is built whole in the cloud: steps 1 and 2 below, then `BF_HOME=<folder> python
 tools/blender/bot-figure/headless.py robot bot_robot_v12` (about 30 s), pack it as in Rebuild step 5 and copy
 `bot_robot_v12_animations.json` beside it as `robot.json`.
+
+A new clip for figures already shipped goes into the game's files themselves (BP4: a rebuild moves a few of the
+robot's vertices, and the human's export is v12's): build either figure headless with the new layer (step 3 below),
+then for each figure `node tools/blender/bot-figure/unpack.mjs src/assets/models/characters/human.glb human_plain.glb`,
+`splice.mjs human_plain.glb <folder>/bot_robot_x.glb human_x.glb Holster,Holster_Sprint` (the clips are the same on
+both figures' shared skeleton), `pack.mjs human_x.glb src/assets/models/characters/human.glb`, and add the clips'
+entries from the build's sidecar to `human.json` (and the same for the robot).
 
 For the human, re-make a clip without the owner's Blender, then put it into the approved v10 export (a headless build
 reproduces the clips to about 0.000001 but not the meshes to the bit):

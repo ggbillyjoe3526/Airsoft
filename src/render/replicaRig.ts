@@ -8,6 +8,9 @@ import { RIG_PREFIX, type ReplicaFileRig } from './replicaFiles';
  * (`set`) and `apply` poses the bones; nothing is played on a clock here, so the pose always follows the game's state.
  */
 
+/** The file animation that folds the iron sights down (the AEG's, RM6): played to its end while an optic is fitted. */
+export const SIGHTS_FOLD = 'SightsFold';
+
 /** The attribute a file's shapes carry through ModelBuilder: the bone each vertex rides on (0: the root, still). */
 export const RIG_BONE = 'rigBone';
 
@@ -32,6 +35,38 @@ export function slidingRig(name: string, travel: number, step: number, clips: Re
   }
   const bone = { name, position: new THREE.Vector3(), quaternion: new THREE.Quaternion(), scale: new THREE.Vector3(1, 1, 1) };
   return { root: new THREE.Matrix4(), bones: [bone], pieces: [], clips: animations, magazine: new Map() };
+}
+
+/**
+ * Where `clip` leaves each of a file's moving parts at its end, for a model built once and never posed again (a rigged
+ * figure's replica, BF1): per bone (ReplicaFileRig.bones), the move from its rest to there in the replica's space (the
+ * identity for a bone the clip doesn't move, and for every bone when the file lacks the clip). Not for a frame loop.
+ */
+export function clipEndMoves(rig: ReplicaFileRig, clip: string): THREE.Matrix4[] {
+  const moves = rig.bones.map(() => new THREE.Matrix4());
+  const animation = rig.clips.get(clip);
+  if (!animation) return moves;
+  const rootInverse = rig.root.clone().invert();
+  rig.bones.forEach((b, i) => {
+    const position = b.position.clone();
+    const quaternion = b.quaternion.clone();
+    const scale = b.scale.clone();
+    let moved = false;
+    for (const track of animation.tracks) {
+      const { nodeName, propertyName } = THREE.PropertyBinding.parseTrackName(track.name);
+      if (nodeName !== `${RIG_PREFIX}${b.name}`) continue;
+      const target = propertyName === 'quaternion' ? quaternion : propertyName === 'position' ? position : propertyName === 'scale' ? scale : null;
+      if (!target) continue;
+      target.fromArray(interpolant(track).evaluate(animation.duration) as unknown as number[]);
+      moved = true;
+    }
+    if (!moved) return;
+    const rest = new THREE.Matrix4().compose(b.position, b.quaternion, b.scale);
+    const posed = new THREE.Matrix4().compose(position, quaternion, scale);
+    // root · posed · rest⁻¹ · root⁻¹: the part's rest place in the replica's space carried to where the clip ends.
+    moves[i]!.copy(rig.root).multiply(posed).multiply(rest.invert()).multiply(rootInverse);
+  });
+  return moves;
 }
 
 /** One animated property of one bone and how to read it at a time. */

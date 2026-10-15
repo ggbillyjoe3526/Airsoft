@@ -7,8 +7,9 @@ import type { MaterialKey } from './replicaBuilder';
 
 /**
  * Replica models from files (M101, config/assets.ts REPLICA_FILE, docs/CC0_ASSETS.md › Replica models). Each
- * `src/assets/models/replicas/<replica id>.glb` in the build loads once at start; the viewmodel, the menus' pictures and
- * the figures then draw that replica from it in place of its built-in model. Without a file, or with one that can't be
+ * `src/assets/models/replicas/<replica id>.glb` in the build loads once the Dev tab's "Disable all models" lets the files
+ * in (RM4, render/modelFiles.ts); the viewmodel, the menus' pictures and the figures then draw that replica from it in
+ * place of its built-in model. Without a file, or with one that can't be
  * used (a warning says why), the built-in model is drawn as before.
  */
 const FILES = import.meta.glob<string>('../assets/models/replicas/*.glb', { query: '?url', import: 'default', eager: true });
@@ -122,6 +123,8 @@ export interface ReplicaFile {
    */
   sightLines: ReadonlyMap<string, number>;
   underLaser: ReadonlyMap<string, THREE.Vector3>;
+  /** Where a laser's beam leaves its lens (its `_Beam` marker), in the replica's space, by part name; a part without one has none. */
+  beams: ReadonlyMap<string, THREE.Vector3>;
   /** The file paints its own muzzle tip (a `Tip` material): no orange disc is added over it. */
   ownTip: boolean;
   /**
@@ -251,16 +254,20 @@ export function prepareReplicaFile(id: string, scene: THREE.Object3D, partsScene
       figure = pieces(figureNode, new THREE.Matrix4().makeTranslation(0, -muzzle.y, -back).multiply(toFigure), []);
     }
   }
-  const figureHeld = figureNode ? pieces(figureNode, toScene, []) : [];
+  // Where the replica is: the file parks its figure version off to one side (the pistols' 0.3 m under the body), so
+  // that offset comes off.
+  const figureHeld = figureNode ? pieces(figureNode, new THREE.Matrix4().makeTranslation(at(figureNode).negate()).multiply(toScene), []) : [];
   const magazineBone = magazineNode?.parent instanceof THREE.Bone ? magazineNode.parent : null;
   const magazineFrame = magazineBone ? new THREE.Matrix4().multiplyMatrices(toScene, magazineBone.matrixWorld) : null;
-  const { parts, sightLines, underLaser } = partsScene ? partsOf(partsScene) : NO_PARTS;
+  const { parts, sightLines, underLaser, beams } = partsScene ? partsOf(partsScene) : NO_PARTS;
   const held = triangles(body) + triangles(magazine) + triangles(flashHider) + triangles(rig?.file.pieces ?? []);
   const onFigure = triangles(figure);
   const heldBudget = budget(REPLICA_FILE.warnTriangles, id);
   if (held > heldBudget) console.warn(`The ${id} replica model has ${held} triangles in the hands, over its ${heldBudget} budget (docs/CC0_ASSETS.md).`);
   if (onFigure > REPLICA_FILE.warnFigureTriangles) console.warn(`The ${id} replica model's figure has ${onFigure} triangles, over its ${REPLICA_FILE.warnFigureTriangles} budget (docs/CC0_ASSETS.md).`);
   const all = [...body, ...magazine, ...flashHider, ...figure, ...figureHeld, ...(rig?.file.pieces ?? []), ...[...parts.values()].flat()];
+  // Only the replica's own muzzle counts: a parts file's tipped silencer doesn't paint the bare muzzle.
+  const muzzleOwn = [...body, ...flashHider, ...(rig?.file.pieces ?? [])];
   return {
     id,
     body,
@@ -270,7 +277,8 @@ export function prepareReplicaFile(id: string, scene: THREE.Object3D, partsScene
     parts,
     sightLines,
     underLaser,
-    ownTip: all.some((p) => p.key === 'orange'),
+    beams,
+    ownTip: muzzleOwn.some((p) => p.key === 'orange'),
     figure,
     figureHeld,
     magazineFrame,
@@ -364,14 +372,15 @@ function magazineMoves(scene: THREE.Object3D, toScene: THREE.Matrix4, clips: rea
 export const RIG_PREFIX = 'rig_';
 
 /** A replica without a parts file: no parts, sight lines or torch moves. */
-const NO_PARTS: Pick<ReplicaFile, 'parts' | 'sightLines' | 'underLaser'> = { parts: new Map(), sightLines: new Map(), underLaser: new Map() };
+const NO_PARTS: Pick<ReplicaFile, 'parts' | 'sightLines' | 'underLaser' | 'beams'> = { parts: new Map(), sightLines: new Map(), underLaser: new Map(), beams: new Map() };
 
 /**
  * A parts file's parts (RM1): each top-level object named `<kind>_<id>` ('optic_redDot', 'muzzle_silencer' …) is the
  * part `<kind>:<id>`, in the replica's space where it fits; its `<name>_Figure` copy (a figure's) is not drawn in the
- * hands, and its markers have no meshes. Its `<name>_SightLine` and `<name>_UnderLaser` markers (RM8) are read too.
+ * hands, and its markers have no meshes. Its `<name>_SightLine` and `<name>_UnderLaser` markers (RM8) and a laser's
+ * `<name>_Beam` (its lens) are read too.
  */
-function partsOf(scene: THREE.Object3D): Pick<ReplicaFile, 'parts' | 'sightLines' | 'underLaser'> {
+function partsOf(scene: THREE.Object3D): Pick<ReplicaFile, 'parts' | 'sightLines' | 'underLaser' | 'beams'> {
   scene.updateMatrixWorld(true);
   const toScene = new THREE.Matrix4().copy(scene.matrixWorld).invert();
   const at = (o: THREE.Object3D): THREE.Vector3 => o.getWorldPosition(new THREE.Vector3()).applyMatrix4(toScene);
@@ -379,6 +388,7 @@ function partsOf(scene: THREE.Object3D): Pick<ReplicaFile, 'parts' | 'sightLines
   const parts = new Map<string, ReplicaFilePiece[]>();
   const sightLines = new Map<string, number>();
   const underLaser = new Map<string, THREE.Vector3>();
+  const beams = new Map<string, THREE.Vector3>();
   for (const child of scene.children) {
     const match = /^([a-z]+)_([A-Za-z0-9]+)$/.exec(child.name);
     if (!match) continue;
@@ -391,8 +401,10 @@ function partsOf(scene: THREE.Object3D): Pick<ReplicaFile, 'parts' | 'sightLines
     if (sight) sightLines.set(name, at(sight).y);
     const under = child.getObjectByName(`${child.name}_${M.underLaser}`);
     if (under) underLaser.set(name, at(under).sub(at(child)));
+    const beam = child.getObjectByName(`${child.name}_${M.beam}`);
+    if (beam) beams.set(name, at(beam));
   }
-  return { parts, sightLines, underLaser };
+  return { parts, sightLines, underLaser, beams };
 }
 
 /**

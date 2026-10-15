@@ -46,6 +46,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **CL1** · Map places have names (Dock, Bay, Fort, Atrium, Sky Bridge and more), and the minimap shows the name of the area you stand in
 - **PT1** · Settings › Audio has a Power source volume slider under Effects for each replica's battery motor, gas and spring sounds
 - **PT1** · Settings › Gameplay › Crosshair has hit marker scale, thickness, outline and colour settings; the hit marker stays Off by default
+- **BP4** · Blender figures have a holstered pose: arms hang and pump when sprinting, the rifle is slung across the back and comes to the hands when drawn
 
 ### Changed
 - **M94** · The practice range is now Practice: pause reads "Practice · Range" or "Practice · Depot", and the tutorial's last button says Practice
@@ -76,6 +77,9 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **PT1** · Glowing BBs have no halo: only the BB and its streak glow
 - **PT1** · Both 2× scope models have no gap between the glass and the body
 - **PT1** · The ammo count no longer overlaps the fire mode chip on the replica panel, however many rounds
+- **BP4** · Blender figures: no jolt on landing or on cover, no double magazine after a sprint or vault, no flicker at range, and pistols sit in the hands
+- **BP4** · Bots' BBs leave the replica's muzzle, and bots with two pistols show the one they hold; AEG iron sights fold under an optic
+- **BP4** · If the figure models fail to download, the game uses the built-in figures instead of showing an error
 
 ### Internal
 - **SL1** · Saved loadouts are part of save format 2 with their own store (airsoft.loadouts); the context menu's styles have their own sheet
