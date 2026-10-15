@@ -223,7 +223,7 @@ when their work starts. Numbers are from the owner's list of 50 candidates
 | 22 | Location callouts: named areas, and teammates calling "Contact, Dock!" or "Two left" (text first); done (2026-10-13, `docs/records/CL1.md`) | Team play |
 | 24 | Pings: mark a spot and bots act on it: the Ping key (middle mouse) marks a spot or an enemy you see for your team, bot teammates go to look or watch it by personality and answer, and they mark some sightings for you; done (2026-10-15, `docs/records/PG1.md`) | Team play |
 | 43 | Ask a teammate for a magazine, from the comms wheel (owner); done (2026-10-15, `docs/records/MG1.md`) | Team play |
-| 44 | Bushes and leaves can stop or deflect BBs | World |
+| 44 | Bushes and leaves can stop or deflect BBs: 0.6 m of leaves stops a BB, an edge throws it off and slows it, bots hold fire through thick bush (Easy doesn't); done (2026-10-15, `docs/records/FO1.md`) | World |
 | 41 | Noisy ground and props: gravel, cans, pallets and fences rattle, and bots hear it | World |
 | 45 | Overtime: when the clock runs out, a flag appears in the middle and the first team to touch it wins | Rounds |
 | 46 | An option to hide the ammo counter (no mag-check key: owner) | HUD |
