@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { vec3 } from '../sim/vec';
-import { type Bush, firstLeaves, foliageDepth, type LeafCrossing } from './foliage';
+import { type Bush, firstLeaves, foliageDepth, type LeafCrossing, leafSurface } from './foliage';
 
 /** A bush 2 m across and 1.6 m tall, its foot at the origin: the leaves fill an ellipsoid centred 0.8 m up. */
 const BUSH: Bush = { x: 0, y: 0, z: 0, radius: 1, height: 1.6 };
@@ -80,5 +80,34 @@ describe('firstLeaves (Dev 6 item 44)', () => {
     expect(firstLeaves([BUSH], vec3(1, 0.8, 0), vec3(0.8, 0.6, 0), 10, out)).toBe(false);
     // A chord of under a millimetre, just inside the rim.
     expect(firstLeaves([BUSH], vec3(-5, 0.8, 0.9999999), east, 10, out)).toBe(false);
+  });
+});
+
+describe('leafSurface (Dev 6 item 44: where knocked-out leaves show)', () => {
+  it('brings a BB stopped deep in a bush back out to the leaves on its shooter’s side', () => {
+    const out = vec3();
+    // Stopped 0.6 m in from the -x side, shooter 5 m off that way at the same height: the leaves show at x = -1.
+    expect(leafSurface([BUSH], vec3(-0.4, 0.8, 0), vec3(-5, 0.8, 0), out)).toBe(out);
+    expect(out.x).toBeCloseTo(-1, 6);
+    expect(out.y).toBeCloseTo(0.8, 6);
+    expect(out.z).toBeCloseTo(0, 6);
+  });
+
+  it('takes a BB that came out of an edge back to where it went in', () => {
+    const out = vec3();
+    // A chord 0.6 m to the side: in at x = -0.8, out at x = 0.8; shooter off to -x.
+    leafSurface([BUSH], vec3(0.8, 0.8, 0.6), vec3(-5, 0.8, 0.6), out);
+    expect(out.x).toBeCloseTo(-0.8, 6);
+    expect(out.z).toBeCloseTo(0.6, 6);
+  });
+
+  it('stays where the BB stopped when it was fired from inside the same bush, or is in no bush', () => {
+    const out = vec3();
+    leafSurface([BUSH], vec3(0.6, 0.8, 0), vec3(0, 0.8, 0), out);
+    expect(out).toEqual(vec3(0.6, 0.8, 0));
+    leafSurface([BUSH], vec3(3, 0.8, 0), vec3(-5, 0.8, 0), out);
+    expect(out).toEqual(vec3(3, 0.8, 0));
+    leafSurface([], vec3(0, 0.8, 0), vec3(-5, 0.8, 0), out);
+    expect(out).toEqual(vec3(0, 0.8, 0));
   });
 });

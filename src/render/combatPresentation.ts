@@ -13,6 +13,7 @@ import { BODY, type MovementConfig } from '../config/movement';
 import { AIMING, type SightId, sightConfig } from '../config/optics';
 import type { ReplicaConfig } from '../config/replicas';
 import { TORCHES } from '../config/torches';
+import { leafSurface } from '../map/foliage';
 import type { MapData } from '../map/mapTypes';
 import { aimRaiseTime } from '../sim/aiming';
 import type { WorldQuery } from '../sim/armament';
@@ -86,6 +87,8 @@ export class CombatPresentation {
   private readonly grit = new ImpactGrit();
   /** Where a landed BB's shooter is, for its grit and leaves (reused). */
   private readonly gritFrom = { x: 0, y: 0, z: 0 };
+  /** Where a BB in a bush's leaves shows (map/foliage.ts leafSurface): reused, so nothing is allocated per impact. */
+  private readonly leafAt = { x: 0, y: 0, z: 0 };
   /** Leaves a BB knocks out of a bush or a planter's shrubs (Dev 6 item 44), at every quality. */
   private readonly leaves = new LeafFlecks();
   /** Bigger puffs where BBs land on players: hit confirmation at range. */
@@ -342,23 +345,28 @@ export class CombatPresentation {
         // A BB stopped on a body it couldn't knock out (M85): the plain puff, as a ricochet's knock; its sound is Sfx's.
         if (e.bodyId !== this.player.id) this.puffs.spawn(e.position);
       } else if (e.type === 'bbImpact') {
-        // Dust by what the BB hit, and its tick: one lookup for both (audit L-15). Leaves when a bush stopped it (Dev 6 item 44).
+        // Dust by what the BB hit, and its tick: one lookup for both (audit L-15). Leaves when a bush stopped it (Dev 6 item
+        // 44): it stopped deep in the leaves, so they show, and rustle, on the side it went in (leafSurface).
         const material = e.leaves ? 'leaves' : impactMaterialAt(this.field.blocks, e.position, this.field.terrain ?? null);
         const tint = this.dustTints.get(material);
-        this.puffs.spawn(e.position, tint, IMPACT_DUST[material].scale);
+        const from = shooterSide(this.state.characters, e.ownerId, this.renderer.camera.position, this.gritFrom);
+        const at = e.leaves ? leafSurface(this.field.foliage ?? [], e.position, from, this.leafAt) : e.position;
+        this.puffs.spawn(at, tint, IMPACT_DUST[material].scale);
         if (material === 'leaves') {
           // Leaves flutter out in place of grit, at every quality: they show where the BB went.
-          this.leaves.spawn(e.position, shooterSide(this.state.characters, e.ownerId, this.renderer.camera.position, this.gritFrom), LEAF_FLECKS.perStop);
+          this.leaves.spawn(at, from, LEAF_FLECKS.perStop);
           if (e.leaves) this.leavesInTheWay(e.ownerId, e.position);
         } else if (this.grit.active && tint) {
           this.rings?.spawn(e.position, tint, IMPACT_DUST[material].scale);
-          this.grit.spawn(e.position, tint, shooterSide(this.state.characters, e.ownerId, this.renderer.camera.position, this.gritFrom));
+          this.grit.spawn(e.position, tint, from);
         }
-        this.sfx.impact(e.position, material);
+        this.sfx.impact(at, material);
       } else if (e.type === 'bbLeaves') {
-        // Through a bush's edge (Dev 6 item 44): a leaf or two and a soft rustle where it came out.
-        this.leaves.spawn(e.position, shooterSide(this.state.characters, e.ownerId, this.renderer.camera.position, this.gritFrom), LEAF_FLECKS.perBrush);
-        this.sfx.leafBrush(e.position);
+        // Through a bush's edge (Dev 6 item 44): a leaf or two and a soft rustle where it went in.
+        const from = shooterSide(this.state.characters, e.ownerId, this.renderer.camera.position, this.gritFrom);
+        const at = leafSurface(this.field.foliage ?? [], e.position, from, this.leafAt);
+        this.leaves.spawn(at, from, LEAF_FLECKS.perBrush);
+        this.sfx.leafBrush(at);
       } else if (e.type === 'targetHit') this.puffs.spawn(e.position);
       else if (e.type === 'characterHit') {
         // Your own hit: the replica jolts in your hands (the puff would fill your view).

@@ -126,3 +126,33 @@ export function firstLeaves(bushes: readonly Bush[], origin: Vec3, dir: Vec3, le
   }
   return Number.isFinite(best);
 }
+
+/** Where the line back from a BB in the leaves meets their surface (leafSurface). Reused, so nothing is allocated. */
+const back: LeafCrossing = { enter: 0, exit: 0, through: false };
+const backDir = { x: 0, y: 0, z: 0 };
+
+/**
+ * Where leaves knocked out by a BB at `at` (stopped inside a bush, or come out of its edge) show, into `out` (Dev 6 item
+ * 44; presentation only): where the line from `at` back towards `from` (its shooter) leaves the bush round `at`, so the
+ * side the BB went in, where the leaves can be seen. `at` itself when that line is still among the leaves on reaching
+ * `from` (a BB fired from inside the bush) or starts in no bush. Allocates nothing.
+ */
+export function leafSurface(bushes: readonly Bush[], at: Vec3, from: Vec3, out: Vec3): Vec3 {
+  out.x = at.x;
+  out.y = at.y;
+  out.z = at.z;
+  const dx = from.x - at.x;
+  const dy = from.y - at.y;
+  const dz = from.z - at.z;
+  const len = length3(dx, dy, dz);
+  if (bushes.length === 0 || !(len > 0)) return out;
+  backDir.x = dx / len;
+  backDir.y = dy / len;
+  backDir.z = dz / len;
+  // Only the bush `at` is in (or on the surface of): a crossing that starts right there and comes out before `from`.
+  if (!firstLeaves(bushes, at, backDir, len, back) || back.enter > MIN_LEAVES || !back.through) return out;
+  out.x = at.x + backDir.x * back.exit;
+  out.y = at.y + backDir.y * back.exit;
+  out.z = at.z + backDir.z * back.exit;
+  return out;
+}
