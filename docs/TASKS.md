@@ -23,21 +23,3 @@ item 5, with the G4 HUD restyle); note 3 was a bug, fixed in BP2; note 2 is alre
 **0.1 Dev 6 (confirmed with the roadmap, 2026-10-06).** M92–M95, the holster and the practice upgrades, are done
 (2026-10-13); the blocks for the rest of `docs/ROADMAP.md` › 0.1 Dev 6 are written when that work starts.
 
-
-## BP4 · Blender models bug pass (Dev 6)
-tier: core
-perf: required
-touches: src/, e2e/, docs/, tools/blender/bot-figure/, CHANGELOG.md
-contract: RiggedFigure, stepPose, ReplicaFile
-acceptance:
-  1. Every model behind Settings › Dev "Disable figure models" and "Disable all models" (the human and robot figures,
-     the GBB Pistol, the AEG Rifle v2, the Cyber Pistol, the red dot, 2x scope, silencers, lasers and torches) is
-     checked on pictures in third and first person: hand holds, clips, hit volumes, LOD swaps, team colours, sight
-     pictures and part placement.
-  2. What turns up is fixed with a test per fix, or left as a KNOWN_ISSUES row with its reason; the KNOWN_ISSUES rows
-     on these models are cross-checked (fixed rows deleted with a test).
-  3. The rigged figures have a holstered pose (KNOWN_ISSUES, M92): arms down, the rifle slung on the back, drawn from
-     there; figure re-exports go through `pack.mjs` and keep the shared clips.
-  4. The perf gate passes; the review pictures (JPEG) are in the project files.
-status: building
-attempts: 0
