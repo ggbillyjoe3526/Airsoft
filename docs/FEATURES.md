@@ -216,7 +216,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Minimap on multi-level maps shows the floor you stand on (floors below darker) and marks teammates on other floors
   with an up or down arrow (M34c)
 - Pings: middle mouse marks a spot for your team, bot teammates go to it or watch it, and Ping markers hides the marks (PG1)
-- Ask for a mag: H or the order wheel asks the nearest teammate for a magazine when you run low, or tosses one to a teammate who asked; bots ask each other too, and Mag hand-off hides the prompt (MG1)
+- Ask for a mag: H or the order wheel asks a teammate for a magazine when you run low, or tosses one to a teammate who asked (MG1)
 
 ## Audio
 

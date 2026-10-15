@@ -469,12 +469,13 @@ replaces its line; the old one stays findable in the archive or in git.
   asking a bot waits where it is while the giver comes to it; a bot asking you walks to you and waits by you. Fights and
   cover come first, then bringing one, then a squad order, then waiting for one. A bot asks again no sooner than 20 s
   after an ask ends, and an ask lapses after 15 s. The same at every difficulty, and for both teams.
-- **Bots rarely run low in a normal round, so Dev settings › Bots run low on BBs shows the bot side (2026-10-15,
+- **Bots with factory magazines rarely run low, so Dev settings › Bots run low on BBs shows the bot side (2026-10-15,
   MG1).** In headless matches bots fired 15 to 61 BBs a round out of the AEG's 240, so none ran low on Normal pace, and
-  only one bot-round in nine Realcap matches (30 × 3), with no teammate in reach. The switch (a cheat, off) puts one
-  bot of each team on its last magazine 8 s into each round, once the teams have spread out: at the whistle teammates
-  stand within a toss, so the giver's walk over would not show. Smaller bot pouches or more bot fire to make it common
-  is his call.
+  only one bot-round in nine Realcap matches (30 × 3), with no teammate in reach. A bot with a Hi-Cap magazine (the
+  Support kit: one 120-BB spare) is low after its first reload and asks; only the other team carries kits (your
+  teammates stay plain), so you mostly hear theirs. The switch (a cheat, off) puts one bot of each team on its last
+  magazine 8 s into each round, once the teams have spread out: at the whistle teammates stand within a toss, so the
+  giver's walk over would not show. Smaller bot pouches or more bot fire to make it common is his call.
 - **The mag calls keep the callouts' pace (2026-10-15, MG1).** "Need a mag", "Mag coming" and "Thanks for the mag" wait
   for the bot's own 4 s gap and the team's 1.5 s gap and are then said once, so a call never jumps the queue or is
   dropped for waiting. Talks never lowers the ask or the answer (like a ping's answer); it scales the thanks.
