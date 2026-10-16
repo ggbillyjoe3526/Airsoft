@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { assemblePacket, contractEntries, contractsForDiff, gateSummary, leftOutReason, parseNumstat, splitDiff, writePacket } from './packet.mjs';
+import { assemblePacket, contractEntries, contractsForDiff, gateSummary, leftOutReason, parseNumstat, reportFor, splitDiff, writePacket } from './packet.mjs';
 import { taskBlockText } from './scope.mjs';
 
 /** The review packet the critic and QA read first (pipeline/packet.mjs, TE3: token-efficiency plan, item 15). */
@@ -25,6 +25,16 @@ The interfaces a task may not change.
 
 - **Not a contract** (\`sim/other.ts\`).
 `;
+
+describe('reportFor', () => {
+  it('keeps a report whose first line names the task, or reads "Task: none" when there is no task', () => {
+    expect(reportFor('Task: M99 · QA\nok', ['M99'])).toBe('Task: M99 · QA\nok');
+    expect(reportFor('Task: M98 · QA\nok', ['M99'])).toBeNull();
+    expect(reportFor('Task: none · head abc · Verdict: Pass', [])).toContain('Verdict: Pass');
+    expect(reportFor('Task: M99 · QA', [])).toBeNull();
+    expect(reportFor(null, ['M99'])).toBeNull();
+  });
+});
 
 describe('what the packet leaves out (leftOutReason)', () => {
   it('leaves out the change records and generated files', () => {
@@ -156,6 +166,11 @@ describe('the packet\'s layout (assemblePacket)', () => {
     expect(text).toContain('(12 contracts), and the task names none.');
     expect(text).toContain('## QA report\n\nTask: M1 · QA\nTests added: 3');
     expect(text).not.toContain('Over 40 KB');
+  });
+
+  it('quotes the performance agent\'s report after QA\'s, or says it is missing', () => {
+    expect(assemblePacket({ ...parts, perf: 'Task: M1 · head abcdef1 · Verdict: Pass\nNo hot path touched.' })).toContain('## Performance report\n\nTask: M1 · head abcdef1 · Verdict: Pass\nNo hot path touched.');
+    expect(assemblePacket(parts)).toContain('## Performance report\n\nNone for M1 yet (the performance agent writes `pipeline/out/performance.md`');
   });
 
   it('tells the reader to go by range once the packet is over the read guard\'s 40 KB', () => {

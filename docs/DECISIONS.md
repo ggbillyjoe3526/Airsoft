@@ -144,10 +144,19 @@ replaces its line; the old one stays findable in the archive or in git.
   `src/` folder README in any task.
 - **Agents start from the gate's own summaries, and an agent runs only where it can change the outcome (owner,
   2026-10-06, token plan step 3; built 2026-10-08, TE3).** The critic and QA read the review packet first
-  (`pipeline/out/review-packet.md`); the performance agent runs only when the perf gate fails; the triage agent only for
-  a failure the gate's summary (`pipeline/out/failures.md`) can't place; the changelog agent reads only `Unreleased`
-  and one FEATURES heading; a near miss is re-run on Opus only when its failed check is a judgment, never a measured
-  number. Models and effort levels are unchanged.
+  (`pipeline/out/review-packet.md`); the performance agent runs only when the perf gate fails (superseded 2026-10-16:
+  it reviews every code change, below); the triage agent only for a failure the gate's summary
+  (`pipeline/out/failures.md`) can't place; the changelog agent reads only `Unreleased` and one FEATURES heading; a near
+  miss is re-run on Opus only when its failed check is a judgment, never a measured number. Models and effort levels
+  are unchanged.
+- **Every code change gets all three review agents: critic, QA and performance (owner, 2026-10-16: "I need everything
+  to go through a critic agent, qa agent, and performance agent").** This replaces token step 3's "the performance
+  agent runs only when the perf gate fails" and the critic skip for trivial tasks. Any pull request touching code,
+  config, assets or gameplay data, inside the pipeline or not, is marked ready and merged only once each agent says
+  Pass (critic: Accept, or the 6/8 auto-accept) and its description's `Review:` line gives the verdicts; CI's `review`
+  gate (`pipeline/review.mjs`) checks the line on every pull request out of draft. Docs-only changes (every file
+  Markdown, and at the root only README, CHANGELOG and CLAUDE.md: the other root `.md` files are game data) skip them.
+  Models and effort levels are unchanged.
 - **Token step 4 (owner, 2026-10-06, token plan items 8, 21 and 22; built 2026-10-08, TE4).** The project chat
   carries only results, blockers and decisions, from threads and the coordinator alike (`docs/PROCESS.md` ›
   Sessions). Off CI the gate runs the slow bot-match guards only when the diff reaches a file they load (by their
