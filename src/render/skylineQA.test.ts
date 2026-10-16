@@ -59,7 +59,7 @@ describe('G8 QA: skyline geometry', () => {
       for (const g of gs) box.union(new THREE.Box3().setFromBufferAttribute(g.getAttribute('position') as THREE.BufferAttribute));
       expect(box.min.y, piece.kind).toBeGreaterThanOrEqual(-0.1);
       // Roofs and bands sit a little over the walls; a chimney or a crane never over its height.
-      expect(box.max.y, piece.kind).toBeLessThanOrEqual(piece.height + 0.5);
+      expect(box.max.y, piece.kind).toBeLessThanOrEqual(('height' in piece ? piece.height : piece.y) + 0.5);
       free(gs);
     }
   });

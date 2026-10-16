@@ -7,7 +7,6 @@ import type { SkylinePiece, Surroundings } from '../map/mapTypes';
 import { buildNightSky } from './nightSky';
 import { hostSkyGuests, SKY_PART, type SkyGuests, skyGuests, tagged } from './skyHost';
 import { skylineClear, skylineGeometries } from './skyline';
-import { apronGeometry } from './surroundings';
 
 /**
  * The world round the field (M14; the visual overhaul, audit section 5 "Sky and trees"): a gradient sky dome with a
@@ -197,7 +196,7 @@ export function detailedTree(rng: RngState, x: number, z: number, height: number
 
 /**
  * The detailed ring (Trees: Detailed): more trees, broadleaves of two or three stacked crowns, pines of two cone tiers,
- * seven-sided trunks, every crown self-shaded; and a hedge of shrubs round `field` (the map's bounds), just outside it.
+ * seven-sided trunks, every crown self-shaded. MS1: the hedge round the field is gone (no player ever saw it over the walls).
  * With a map's `skyline` (G8, render/skyline.ts) its pieces join the ring, and the trees standing on them are left out.
  */
 function detailedTrees(centre: THREE.Vector3, sun: THREE.Vector3, field: THREE.Box3 | null, skyline: readonly SkylinePiece[] = []): THREE.BufferGeometry[] {
@@ -211,43 +210,7 @@ function detailedTrees(centre: THREE.Vector3, sun: THREE.Vector3, field: THREE.B
     if (skyline.length > 0 && !skylineClear(skyline, x, z)) continue;
     detailedTree(rng, x, z, height, color, broad, (geo, c, cy, r) => shadedCrown(geo, c, cy, r, sun), parts);
   }
-  if (field) parts.push(...shrubs(field, sun));
   parts.push(...skylineGeometries(skyline, centre));
-  return parts;
-}
-
-/** A hedge of shrubs round the field's bounds, a little outside them, so the yard sits in greenery, not on a lawn. */
-function shrubs(field: THREE.Box3, sun: THREE.Vector3): THREE.BufferGeometry[] {
-  const S = ATMOSPHERE.detailedTrees.shrubs;
-  const rng = createRng(ATMOSPHERE.trees.seed + 1);
-  const parts: THREE.BufferGeometry[] = [];
-  const corners: [number, number][] = [
-    [field.min.x, field.min.z],
-    [field.max.x, field.min.z],
-    [field.max.x, field.max.z],
-    [field.min.x, field.max.z],
-  ];
-  const cx = (field.min.x + field.max.x) / 2;
-  const cz = (field.min.z + field.max.z) / 2;
-  for (let side = 0; side < 4; side++) {
-    const [ax, az] = corners[side]!;
-    const [bx, bz] = corners[(side + 1) % 4]!;
-    const length = Math.hypot(bx - ax, bz - az);
-    const count = Math.max(1, Math.round(length / S.spacing));
-    for (let k = 0; k < count; k++) {
-      const t = (k + rngNext(rng)) / count;
-      let x = ax + (bx - ax) * t;
-      let z = az + (bz - az) * t;
-      // Out from the field's middle, by `gapFrom`..`gapTo` metres.
-      const out = S.gapFrom + rngNext(rng) * (S.gapTo - S.gapFrom);
-      if (side % 2 === 0) z += Math.sign(z - cz) * out;
-      else x += Math.sign(x - cx) * out;
-      const r = S.radiusMin + rngNext(rng) * (S.radiusMax - S.radiusMin);
-      const y = r * S.squash * 0.7;
-      const color = S.colors[Math.floor(rngNext(rng) * S.colors.length)]!;
-      parts.push(shadedCrown(new THREE.IcosahedronGeometry(r, 0).scale(1, S.squash, 1).translate(x, y, z), color, y, r * S.squash, sun));
-    }
-  }
   return parts;
 }
 
@@ -266,9 +229,8 @@ export function horizonTreeLevel(setting: TreeDetail, night: boolean, ownTrees: 
  */
 function buildTrees(level: TreeDetail, centre: THREE.Vector3, sun: THREE.Vector3, field: THREE.Box3 | null, skyline: readonly SkylinePiece[], guests: SkyGuests | null = null, surroundings: Surroundings = {}): THREE.Mesh | null {
   if (level === 0) return null;
-  // MS1: a city has no tree ring; its skyline stands alone. The ground beyond the field joins at every level.
+  // MS1: a city has no tree ring; its skyline stands alone.
   const parts = surroundings.trees === false ? skylineGeometries(skyline, centre) : level === 1 ? simpleTrees(centre, field, skyline) : detailedTrees(centre, sun, field, skyline);
-  if (surroundings.ground && field) parts.push(...apronGeometry(surroundings.ground, field));
   if (parts.length === 0) return null;
   const hosting = guests !== null && guests.parts.length > 0;
   if (hosting) {

@@ -353,7 +353,7 @@ export interface MapDressing {
   strips?: readonly GlowStrip[];
   /** The skyline round the field (Trees: Detailed), with smoke from its chimneys. */
   skyline?: readonly SkylinePiece[];
-  /** MS1: the ground beyond the field and what stands round it (render/surroundings.ts). */
+  /** MS1: what stands round the field besides the skyline. */
   surroundings?: Surroundings;
   /** The dust motes' colour (sRGB). */
   motes?: { tint: number };
@@ -410,23 +410,9 @@ export interface NeonSign {
   flicker?: 1 | 2 | 3;
 }
 
-/**
- * MS1, the world beyond the field (MapDressing.surroundings): `ground`, a flat apron `y` m up (just under the field's own
- * floor) from the field out into the haze, `near` by the field fading to `far`, with flat `patches` on it (roads, yards,
- * kerbs; `width` along x, `depth` along z); `trees: false` leaves the tree ring and its hedge out (a city).
- */
+/** MS1, the world beyond the field (MapDressing.surroundings): `trees: false` leaves the tree ring out (a city). */
 export interface Surroundings {
-  ground?: { y: number; near: number; far: number; patches?: readonly ApronPatch[] };
   trees?: boolean;
-}
-
-/** A flat patch on the surroundings' ground (a road, a yard, a kerb): its middle, size (m) and colour (sRGB). */
-export interface ApronPatch {
-  x: number;
-  z: number;
-  width: number;
-  depth: number;
-  colour: number;
 }
 
 /** A puddle (MapDressing.puddles): `width` along x and `depth` along z, its outline seeded. */
@@ -459,14 +445,12 @@ export type SkylinePiece =
    * G9: a city block standing from `base` m up to `height`: rows of windows on the side facing the field (some lit by
    * night), a cornice, and on its roof a tank or a mast with a warm light; `sign` hangs a blade sign of that colour.
    */
-  | { kind: 'tower'; x: number; z: number; width: number; depth: number; height: number; base: number; colour?: number; sign?: number; setback?: { at: number; inset: number }; billboard?: number }
+  | { kind: 'tower'; x: number; z: number; width: number; depth: number; height: number; base: number; colour?: number; sign?: number; setback?: { at: number; inset: number }; billboard?: number; strips?: number }
+  /** MS1: an air-conditioning unit on a wall facing `facing`, its middle at (x, y, z) on the face. */
+  | { kind: 'wallUnit'; x: number; y: number; z: number; facing: '+x' | '-x' | '+z' | '-z' }
+  /** MS1: a cable strung from one point to the other at `y` m, sagging, hung with paper lanterns glowing `lanterns`. */
+  | { kind: 'wire'; points: readonly { x: number; z: number }[]; y: number; lanterns?: number }
   /** MS1: a cluster of grain or cement silos (`width` × `depth` holds a row of them), with a walkway over their tops. */
   | { kind: 'silo'; x: number; z: number; width: number; depth: number; height: number; turned?: boolean; colour?: number }
-  /** MS1: a parked lorry, its trailer `width` long (along x, or z when `turned`), in `colour`. */
-  | { kind: 'truck'; x: number; z: number; width: number; depth: number; height: number; turned?: boolean; colour?: number }
-  /** MS1: a fence of posts and rails along `points`, `height` tall. */
-  | { kind: 'fence'; points: readonly { x: number; z: number }[]; height: number }
-  /** MS1: street lamps along `points`, `height` tall, their heads leaning towards the field. */
-  | { kind: 'lamps'; points: readonly { x: number; z: number }[]; height: number }
   /** MS1: an enclosed footbridge between two towers at `y` m, `width` m wide and `height` tall. */
   | { kind: 'skybridge'; points: readonly { x: number; z: number }[]; y: number; width: number; height: number; colour?: number };

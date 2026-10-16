@@ -175,10 +175,12 @@ function footprintGround(x0: number, x1: number, z0: number, z1: number): { low:
  * A block standing on the ground over plan footprint x0..x1 × z0..z1: from just under the lowest ground beneath it to
  * `height` over the ground at its middle (from `from` over it, for a window's lintel).
  */
-function standing(kind: BlockKind, x0: number, x1: number, z0: number, z1: number, height: number, from = 0): MapBlock {
+function standing(kind: BlockKind, x0: number, x1: number, z0: number, z1: number, height: number, from = 0, level?: number): MapBlock {
   const g = footprintGround(x0, x1, z0, z1);
-  const y0 = from > 0 ? g.mid + from : g.low - SINK;
-  const y1 = g.mid + height;
+  // `level` (MS1): the height everything is measured from, where blocks must line up (the cabin's walls under its roof).
+  const mid = level ?? g.mid;
+  const y0 = from > 0 ? mid + from : g.low - SINK;
+  const y1 = mid + height;
   return { kind, center: vec3(worldX((x0 + x1) / 2), (y0 + y1) / 2, worldZ((z0 + z1) / 2)), size: vec3(x1 - x0, y1 - y0, z1 - z0) };
 }
 
@@ -280,8 +282,10 @@ function cabin(): MapBlock[] {
   const z1 = 26.4;
   const t = CABIN_WALL;
   const h = CABIN_HEIGHT;
-  const wall = (ax: number, bx: number, az: number, bz: number): MapBlock => standing('log', ax, bx, az, bz, h);
-  const sill = (ax: number, bx: number, az: number, bz: number): MapBlock[] => [standing('log', ax, bx, az, bz, WINDOW_SILL), standing('log', ax, bx, az, bz, h, WINDOW_TOP)];
+  // MS1: every wall from the cabin's one floor level, so their tops meet the roof without a gap or a step.
+  const level = footprintGround(x0, x1, z0, z1).mid;
+  const wall = (ax: number, bx: number, az: number, bz: number): MapBlock => standing('log', ax, bx, az, bz, h, 0, level);
+  const sill = (ax: number, bx: number, az: number, bz: number): MapBlock[] => [standing('log', ax, bx, az, bz, WINDOW_SILL, 0, level), standing('log', ax, bx, az, bz, h, WINDOW_TOP, level)];
   const mid = 66.2;
   const walls: MapBlock[] = [
     // North wall, with the door into the west room.
@@ -293,7 +297,7 @@ function cabin(): MapBlock[] {
     wall(68.8, x1, z0, z0 + t),
     // West wall, with a low stretch to vault (no lintel: a body going over needs its full height clear).
     wall(x0, x0 + t, z0 + t, 21),
-    standing('log', x0, x0 + t, 21, 23, VAULT_WALL_HEIGHT),
+    standing('log', x0, x0 + t, 21, 23, VAULT_WALL_HEIGHT, 0, level),
     wall(x0, x0 + t, 23, z1 - t),
     // East wall, with the door towards the track.
     wall(x1 - t, x1, z0 + t, 20.6),
@@ -464,9 +468,12 @@ function woods(lanes: readonly (readonly (readonly [number, number])[])[], block
   return out;
 }
 
-/** A bush's size (m): radius across, height from its foot. Most hide a crouched player; a standing one shows a head. */
-const BUSH_RADIUS = [0.8, 1.4] as const;
-const BUSH_HEIGHT = [1.2, 1.8] as const;
+/**
+ * A bush's size (m): radius across, height from its foot. MS1 (owner: "small and decorative", were 0.8–1.4 by 1.2–1.8):
+ * the taller ones still hide a crouched player; nobody standing is hidden by one.
+ */
+const BUSH_RADIUS = [0.5, 0.85] as const;
+const BUSH_HEIGHT = [0.75, 1.15] as const;
 /** How close (m) a bush's edge may come to a lane's line, another bush's edge, or a block; how deep its foot sits. */
 const BUSH_LANE_GAP = 0.8;
 const BUSH_GAP = 0.4;
@@ -555,7 +562,9 @@ const LANTERN = { colour: 0xffd27a, radius: 5.5, height: 2.2 };
  */
 const LIGHTS: readonly MapLight[] = [
   ...[[4.5, 52], [115.5, 52]].map(([x, z]) => ({ position: vec3(worldX(x!), ground(x!, z!) + FIRE.height, worldZ(z!)), radius: FIRE.radius, colour: FIRE.colour, kind: 'fire' as const })),
-  ...[[101, 52], [101, 42], [66, 27.5]].map(([x, z]) => ({ position: vec3(worldX(x!), ground(x!, z!) + LANTERN.height, worldZ(z!)), radius: LANTERN.radius, colour: LANTERN.colour, kind: 'lantern' as const })),
+  // MS1: the cabin lit up: a lantern on the east room's inner wall (spilling out of its window and door) and one by the
+  // east door, towards the track.
+  ...[[101, 52], [101, 42], [66, 27.5], [67, 24.6], [71.1, 22.6]].map(([x, z]) => ({ position: vec3(worldX(x!), ground(x!, z!) + LANTERN.height, worldZ(z!)), radius: LANTERN.radius, colour: LANTERN.colour, kind: 'lantern' as const })),
 ];
 
 // --- The ground (M33i) ---------------------------------------------------------------------------------------------
@@ -633,7 +642,8 @@ export const WOODLAND: MapData = {
   overtimeFlag: onGround(OVERTIME_FLAG.x, OVERTIME_FLAG.z),
   night: true,
   // Lit by night (M33f): the moon low over the Knoll, so it rims the hill's top while the face towards end 0 stays dark.
-  lighting: { presets: ['night'], moonOver: { x: worldX(KNOLL.x), z: worldZ(KNOLL.z) } },
+  // MS1 (owner, Dev 6 playtest: "still a bit too dark"): a brighter moon and fill, and more exposure, on this map only.
+  lighting: { presets: ['night'], moonOver: { x: worldX(KNOLL.x), z: worldZ(KNOLL.z) }, overrides: { night: { hemi: { intensity: 1.4 }, key: { intensity: 1.35 }, exposureScale: 1.55 } } },
   terrain: TERRAIN,
   foliage: bushes(LANE_POINTS, BLOCKS),
   lights: LIGHTS,

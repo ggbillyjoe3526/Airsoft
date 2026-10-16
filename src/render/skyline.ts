@@ -44,7 +44,7 @@ function bar(a: THREE.Vector3, b: THREE.Vector3, thick: number, colour: number):
 }
 
 /** A piece standing on a footprint (not a line of pylons or trees). */
-type Standing = Exclude<SkylinePiece, { kind: 'powerLine' } | { kind: 'treeline' } | { kind: 'fence' } | { kind: 'lamps' } | { kind: 'skybridge' }>;
+type Standing = Exclude<SkylinePiece, { kind: 'powerLine' } | { kind: 'treeline' } | { kind: 'skybridge' } | { kind: 'wire' } | { kind: 'wallUnit' }>;
 
 /** A piece's footprint (x along world x, z along world z), its `turned` applied. */
 function footprint(p: Standing): [number, number] {
@@ -64,16 +64,16 @@ export function skylineGeometries(pieces: readonly SkylinePiece[], centre: { x: 
       treeline(p.points, p.height, p.depth, index, out);
       return;
     }
-    if (p.kind === 'fence') {
-      fence(p.points, p.height, out);
-      return;
-    }
-    if (p.kind === 'lamps') {
-      lamps(p.points, p.height, centre, out);
-      return;
-    }
     if (p.kind === 'skybridge') {
       skybridge(p, out);
+      return;
+    }
+    if (p.kind === 'wire') {
+      wire(p, out);
+      return;
+    }
+    if (p.kind === 'wallUnit') {
+      wallUnit(p, index, out);
       return;
     }
     const [w, d] = footprint(p);
@@ -141,9 +141,6 @@ export function skylineGeometries(pieces: readonly SkylinePiece[], centre: { x: 
       case 'silo':
         silos(p, w, d, out);
         break;
-      case 'truck':
-        truck(p, w, d, index, centre, out);
-        break;
       case 'chimney': {
         const D = S.chimney;
         const r = Math.min(w, d) / 2;
@@ -205,7 +202,8 @@ export function skylineClear(pieces: readonly SkylinePiece[], x: number, z: numb
   return pieces.every((p) => {
     // G9: trees may stand on a hill (their crowns rise out of it) and behind a treeline.
     if (p.kind === 'hill' || p.kind === 'treeline') return true;
-    if (p.kind === 'powerLine' || p.kind === 'fence' || p.kind === 'lamps' || p.kind === 'skybridge') {
+    if (p.kind === 'wallUnit') return true;
+    if (p.kind === 'powerLine' || p.kind === 'skybridge' || p.kind === 'wire') {
       return p.points.every((q) => Math.hypot(q.x - x, q.z - z) >= S.treeClear);
     }
     const [w, d] = footprint(p);
@@ -391,7 +389,7 @@ function blade(p: { x: number; z: number; base: number; height: number }, w: num
   return f.alongX ? { x: along, y, z: out } : { x: out, y, z: along };
 }
 
-// --- MS1: the industrial estate's and the city's new pieces ----------------------------------------------------------
+// --- MS1: the estate's silos and the city's skybridges ----------------------------------------------------------
 
 /** A row of silos along the longer side of the footprint, each a drum with a cone roof, a walkway over their tops. */
 function silos(p: Extract<SkylinePiece, { kind: 'silo' }>, w: number, d: number, out: THREE.BufferGeometry[]): void {
@@ -418,69 +416,6 @@ function silos(p: Extract<SkylinePiece, { kind: 'silo' }>, w: number, d: number,
   out.push(box(2, drum + r * D.roof * 0.6, 2, ex, 0, ez, hex(D.walkway)));
 }
 
-/** A lorry: a cab and a box trailer on a dark chassis, its cab towards the field. */
-function truck(p: Extract<SkylinePiece, { kind: 'truck' }>, w: number, d: number, index: number, centre: { x: number; z: number }, out: THREE.BufferGeometry[]): void {
-  const D = DRESSING.truck;
-  const longX = w >= d;
-  const len = longX ? w : d;
-  const wid = longX ? d : w;
-  const toward = longX ? -Math.sign(p.x - centre.x) || 1 : -Math.sign(p.z - centre.z) || 1;
-  const trailer = p.colour ?? hex(D.colours[index % D.colours.length]!);
-  const at = (u: number): [number, number] => (longX ? [p.x + u * toward, p.z] : [p.x, p.z + u * toward]);
-  const piece = (u: number, l: number, h: number, y: number, ww: number, c: number): THREE.BufferGeometry => {
-    const [x, z] = at(u);
-    return longX ? box(l, h, ww, x, y, z, c) : box(ww, h, l, x, y, z, c);
-  };
-  out.push(piece(0, len, 0.5, 0.6, wid * 0.9, hex(D.chassis)));
-  out.push(piece(-D.cab / 2, len - D.cab, p.height - 1.1, 1.1, wid, trailer));
-  out.push(piece(len / 2 - D.cab / 2, D.cab, D.cabHeight, 0.9, wid, hex(D.cabColour)));
-  out.push(piece(len / 2 - D.cab / 2 + D.cab / 2 - 0.02, 0.05, D.cabHeight * 0.4, 0.9 + D.cabHeight * 0.5, wid * 0.8, hex(D.glass)));
-  for (const u of [-len / 2 + 1.4, -len / 2 + 2.8, len / 2 - D.cab / 2]) for (const s of [-1, 1]) {
-    const [x, z] = at(u);
-    const g = new THREE.CylinderGeometry(0.5, 0.5, 0.35, 10).rotateX(Math.PI / 2);
-    if (longX) g.translate(x, 0.5, z + s * (wid / 2 - 0.1));
-    else g.rotateY(Math.PI / 2).translate(x + s * (wid / 2 - 0.1), 0.5, z);
-    out.push(painted(g, hex(D.chassis)));
-  }
-}
-
-/** A post-and-rail fence along `points`: posts every DRESSING.fence.post m, a top and a middle rail, mesh shown as rails. */
-function fence(points: readonly { x: number; z: number }[], h: number, out: THREE.BufferGeometry[]): void {
-  const D = DRESSING.fence;
-  const c = hex(D.colour);
-  for (let i = 0; i + 1 < points.length; i++) {
-    const a = points[i]!;
-    const b = points[i + 1]!;
-    const len = Math.hypot(b.x - a.x, b.z - a.z);
-    const n = Math.max(1, Math.round(len / D.post));
-    for (let k = 0; k <= n; k++) {
-      if (k === n && i + 2 < points.length) continue;
-      const t = k / n;
-      out.push(box(D.thick, h, D.thick, a.x + (b.x - a.x) * t, 0, a.z + (b.z - a.z) * t, c));
-    }
-    for (const y of D.rails) {
-      from.set(a.x, h * y, a.z);
-      to.set(b.x, h * y, b.z);
-      out.push(bar(from, to, D.thick * 0.6, c));
-    }
-  }
-}
-
-/** Street lamps along `points`: a post with an arm and a head over the field side. */
-function lamps(points: readonly { x: number; z: number }[], h: number, centre: { x: number; z: number }, out: THREE.BufferGeometry[]): void {
-  const D = DRESSING.lamp;
-  for (const p of points) {
-    const len = Math.hypot(centre.x - p.x, centre.z - p.z) || 1;
-    const ux = (centre.x - p.x) / len;
-    const uz = (centre.z - p.z) / len;
-    out.push(box(D.post, h, D.post, p.x, 0, p.z, hex(D.colour)));
-    from.set(p.x, h - 0.1, p.z);
-    to.set(p.x + ux * D.arm, h + 0.2, p.z + uz * D.arm);
-    out.push(bar(from, to, D.post * 0.6, hex(D.colour)));
-    out.push(box(0.6, 0.2, 0.35, p.x + ux * D.arm, h + 0.05, p.z + uz * D.arm, hex(D.head)));
-  }
-}
-
 /** An enclosed footbridge from one point to the next at `y`, glazed along its sides. */
 function skybridge(p: Extract<SkylinePiece, { kind: 'skybridge' }>, out: THREE.BufferGeometry[]): void {
   const D = DRESSING.skybridge;
@@ -495,6 +430,44 @@ function skybridge(p: Extract<SkylinePiece, { kind: 'skybridge' }>, out: THREE.B
     out.push(painted(new THREE.BoxGeometry(p.width + 0.06, p.height * 0.45, len - 0.4).translate(0, p.height * 0.55, 0).applyMatrix4(m), hex(DRESSING.tower.glass)));
     out.push(painted(new THREE.BoxGeometry(p.width + 0.3, 0.5, len).translate(0, -0.25, 0).applyMatrix4(m), hex(DRESSING.tower.cornice)));
   }
+}
+
+/** A cable's points: from its first point to its last, sagging DRESSING.wire.sag m in the middle, `segments` pieces. */
+function wirePoints(p: Extract<SkylinePiece, { kind: 'wire' }>): THREE.Vector3[] {
+  const D = DRESSING.wire;
+  const a = p.points[0]!;
+  const b = p.points.at(-1)!;
+  const out: THREE.Vector3[] = [];
+  for (let i = 0; i <= D.segments; i++) {
+    const t = i / D.segments;
+    out.push(new THREE.Vector3(a.x + (b.x - a.x) * t, p.y - D.sag * 4 * t * (1 - t), a.z + (b.z - a.z) * t));
+  }
+  return out;
+}
+
+/** An air-conditioning unit on a wall (MS1): a box standing out from the face, a darker grille, two brackets under it. */
+function wallUnit(p: Extract<SkylinePiece, { kind: 'wallUnit' }>, index: number, out: THREE.BufferGeometry[]): void {
+  const D = DRESSING.wallUnit;
+  const alongX = p.facing === '+z' || p.facing === '-z';
+  const sign = p.facing[0] === '+' ? 1 : -1;
+  const at = (out: number): [number, number] => (alongX ? [p.x, p.z + sign * out] : [p.x + sign * out, p.z]);
+  const sized = (w: number, h: number, d: number, outBy: number, y: number, c: number): THREE.BufferGeometry => {
+    const [x, z] = at(outBy);
+    return alongX ? box(w, h, d, x, y, z, c) : box(d, h, w, x, y, z, c);
+  };
+  const colour = hex(D.colours[index % D.colours.length]!);
+  out.push(sized(D.width, D.height, D.depth, D.depth / 2, p.y - D.height / 2, colour));
+  out.push(sized(D.height * 0.7, D.height * 0.7, 0.04, D.depth + 0.01, p.y - D.height * 0.35, hex(D.grille)));
+  for (const e of [-1, 1]) {
+    const [x, z] = at(D.depth / 2);
+    out.push(alongX ? box(0.05, 0.06, D.depth, x + e * D.width * 0.35, p.y - D.height / 2 - 0.06, z, hex(D.grille)) : box(D.depth, 0.06, 0.05, x, p.y - D.height / 2 - 0.06, z + e * D.width * 0.35, hex(D.grille)));
+  }
+}
+
+/** A cable strung across a street (MS1). */
+function wire(p: Extract<SkylinePiece, { kind: 'wire' }>, out: THREE.BufferGeometry[]): void {
+  const pts = wirePoints(p);
+  for (let i = 0; i + 1 < pts.length; i++) out.push(bar(pts[i]!, pts[i + 1]!, DRESSING.wire.thick, hex(DRESSING.wire.colour)));
 }
 
 /**
@@ -512,11 +485,32 @@ export function skylineLights(pieces: readonly SkylinePiece[], centre: { x: numb
     return p;
   };
   pieces.forEach((p, index) => {
+    if (p.kind === 'wire' && p.lanterns !== undefined) {
+      // Paper lanterns hung along the cable, a little under it.
+      const L = DRESSING.wire.lantern;
+      const pts = wirePoints(p);
+      for (let i = 1; i + 1 < pts.length; i += L.every) {
+        const q = pts[i]!;
+        out.push(glowing(new THREE.CylinderGeometry(L.radius, L.radius, L.height, 6).translate(q.x, q.y - L.height / 2 - 0.1, q.z), p.lanterns, night ? L.night : L.day));
+      }
+      return;
+    }
     if (p.kind !== 'tower') return;
     const [w, d] = footprint(p);
     if (night) {
       for (const q of towerWindows(p, w, d, index, centre)) {
         if (q.lit) out.push(glowing(faceQuad(q, paneWidth(q) - 0.08, T.window.height * 0.9, 0.05), hex(T.lit.colours[Math.floor(hash01(q.x, q.y, q.z) * T.lit.colours.length) % T.lit.colours.length]!), 1.25));
+      }
+    }
+    if (p.strips !== undefined) {
+      // MS1: a light strip up each edge of the field face, the whole height of the first section.
+      const sec = towerSections(p, w, d)[0]!;
+      const f = towerFace(p, sec.w, sec.d, centre);
+      const half = (f.alongX ? sec.w : sec.d) / 2 - T.strip.inset;
+      const y = (sec.y0 + 1 + sec.y1) / 2;
+      for (const e of [-1, 1]) {
+        const q = { x: f.alongX ? p.x + e * half : f.at, y, z: f.alongX ? f.at : p.z + e * half, alongX: f.alongX, sign: f.sign };
+        out.push(glowing(faceQuad(q, T.strip.width, sec.y1 - sec.y0 - 1, 0.06), p.strips, night ? T.strip.night : T.strip.day));
       }
     }
     if (p.billboard !== undefined) {
@@ -525,6 +519,12 @@ export function skylineLights(pieces: readonly SkylinePiece[], centre: { x: numb
       const k = night ? T.billboard.night : T.billboard.day;
       out.push(glowing(faceQuad({ ...b, y: b.y + b.height / 4 }, b.width, b.height / 2, 0.25), p.billboard, k));
       out.push(glowing(faceQuad({ ...b, y: b.y - b.height / 4 }, b.width, b.height / 2, 0.25), p.billboard, k * T.billboard.lower));
+      // An advert's layout over it: a bright logo block to one side and lines of copy, so it reads as an ad, not a panel.
+      const side = (q: number): typeof b => (b.alongX ? { ...b, x: b.x + q } : { ...b, z: b.z + q });
+      out.push(glowing(faceQuad({ ...side(-b.width * 0.28), y: b.y + b.height * 0.12 }, b.width * 0.3, b.height * 0.55, 0.28), 0xffffff, k * 0.9));
+      for (const [row, share] of [[0.3, 0.5], [0.12, 0.42], [-0.2, 0.36]] as const) {
+        out.push(glowing(faceQuad({ ...side(b.width * 0.18), y: b.y + b.height * row }, b.width * share, b.height * 0.07, 0.28), 0x101018, 1));
+      }
     }
     if (hash01(index, 3, 9) >= 0.5) {
       const roof = towerSections(p, w, d).at(-1)!;

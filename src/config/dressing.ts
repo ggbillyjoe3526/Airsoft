@@ -182,7 +182,7 @@ export const DRESSING = {
     /** Windows on the side facing the field: `width` × `height`, `pitch` apart, a row every `floor` m from `from` over the base. */
     window: { width: 1.1, height: 1.3, pitch: 2.3, floor: 3.1, from: 1.6 },
     /** Lit by night (pale, never a team's warm orange or blue): the share lit, and their colours. */
-    lit: { share: 0.38, colours: ['#fffbe6', '#f0eaff', '#e0fff2'] },
+    lit: { share: 0.5, colours: ['#fffbe6', '#f0eaff', '#e0fff2'] },
     tank: { colour: '#5d5650', legs: '#3a3e46' },
     /** The mast's beacon: a warm white, not the usual red (no prop glows in a colour that reads as a team's, G8's rule). */
     mast: { colour: '#8a9096', light: '#fffbe6' },
@@ -198,21 +198,18 @@ export const DRESSING = {
      * `frame` m dark plate; its screen glows `day` / `night` times its colour, the lower half `lower` of that.
      */
     billboard: { share: 0.7, height: 9, below: 2.5, frame: 0.5, plate: '#16161e', day: 1.05, night: 1.5, lower: 0.6 },
+    /** MS1: light strips up a tower's field face, `width` m wide, `inset` m in from its edges, glowing `day` / `night`. */
+    strip: { width: 0.35, inset: 0.4, day: 0.9, night: 1.6 },
   },
-  /**
-   * MS1: the ground beyond the field (render/surroundings.ts): `rings` rings of `around` quads out to `radius` m from the
-   * field's middle (past the haze's far edge), tucked `overlap` m under the field's edge, turning from the near colour to
-   * the far one over the first `1 / fadeShare` of the way; patches `patchLift` m over it.
-   */
-  surroundings: { radius: 230, rings: 10, around: 48, overlap: 0.5, fadeShare: 1.6, patchLift: 0.03 },
   /** MS1: silos (render/skyline.ts): drums `gap` m apart, cone roofs `roof` radii tall, a band `band` m tall at `bandAt` m. */
   silo: { colour: '#d8d6cf', roofColour: '#9aa0a6', bandColour: '#5f7f8a', walkway: '#6d737a', gap: 0.8, roof: 0.6, band: 1.2, bandAt: 3 },
-  /** MS1: a parked lorry: its trailer's colours, a `cab` m cab `cabHeight` tall. */
-  truck: { colours: ['#e8e6e0', '#3f6f9a', '#c9a23a', '#7c8a6e'], cab: 2.4, cabHeight: 2.6, cabColour: '#c04a36', chassis: '#2a2c30', glass: '#22303a' },
-  /** MS1: a perimeter fence: posts `post` m apart, `thick` m square, rails at `rails` of its height. */
-  fence: { colour: '#8d949a', post: 3, thick: 0.12, rails: [0.98, 0.5] },
-  /** MS1: street lamps: a `post` m post, an `arm` m arm, a head. */
-  lamp: { colour: '#6f757c', head: '#e8e6dc', post: 0.18, arm: 1.6 },
+  /**
+   * MS1: cables strung across the streets: `thick` m, sagging `sag` m in `segments` pieces; paper lanterns on every
+   * `every`th joint, `radius` × `height` m, glowing `day` / `night` times their colour.
+   */
+  wire: { colour: '#16161a', thick: 0.04, sag: 0.6, segments: 10, lantern: { every: 2, radius: 0.16, height: 0.32, day: 0.8, night: 1.5 } },
+  /** MS1: air-conditioning units on the city's walls: `width` × `height`, standing `depth` out; a dark grille. */
+  wallUnit: { width: 0.9, height: 0.62, depth: 0.45, colours: ['#c9ccc8', '#b8bcb9', '#d6d2c6', '#9fa5a8'], grille: '#2a2c30' },
   /** MS1: a skybridge's walls. */
   skybridge: { colour: '#7d8794' },
 } as const;

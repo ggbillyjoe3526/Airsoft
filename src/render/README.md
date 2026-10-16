@@ -65,8 +65,8 @@ and never writes the simulation.
   it, with `dressingSpots.ts` (the rules for where a loose piece may lie), `woodsDressing.ts` (fallen branches, twigs,
   logs and leaf drifts on terrain), `streetDressing.ts` (pasted posters), `neonDressing.ts` (tube-letter signs and
   their flicker); `dressingMeshes.ts` merges the lot into one junk mesh and one puddle mesh. The horizon beyond the
-  field is `skyline.ts` (towers, treelines, hills, silos, lorries, fences and the lights they carry at night) on the
-  ground of `surroundings.ts` (MS1: the apron beyond the field, its roads and yards). Moving pieces are owned by
+  field is `skyline.ts` (towers, treelines, hills, silos, skybridges, and the lights they carry at night). Moving
+  pieces are owned by
   `dressingEffects.ts`: `smokePlumes.ts` (chimney smoke and vent steam), `fireflies.ts`, `passingPlane.ts`. The
   skyline's lights and the plane ride the tree ring's draw call (`skyHost.ts`).
 - Light: `lighting.ts` (sun and sky fill; on High the shadow map follows the view), `lightingPreset.ts` (day or night),
