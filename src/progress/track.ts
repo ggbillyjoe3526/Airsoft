@@ -15,6 +15,11 @@ export interface TrackLevel {
   total: number;
   /** What it unlocks that is offered (M35: dev items only with Dev content on), by pool asset id. */
   items: readonly string[];
+  /**
+   * Which of `items` the player has (all of them on a reached level, or with levelling off): a level a hand edit of
+   * levels.md moved up still lists an item unlocked on its old level as theirs (BP6), as Ownership does.
+   */
+  owned: readonly boolean[];
   state: LevelState;
 }
 
@@ -43,7 +48,8 @@ export function levelTrack(t: LevelTable, progress: Progress, offered: (id: stri
   const nextLevel = off ? null : (t.levels.find((l) => l.level > s.level && l.unlocks.some(offered))?.level ?? null);
   const levels = t.levels.map((l): TrackLevel => {
     const state: LevelState = off || l.level <= s.level ? 'unlocked' : l.level === nextLevel ? 'next' : 'locked';
-    return { level: l.level, total: l.total, items: l.unlocks.filter(offered), state };
+    const items = l.unlocks.filter(offered);
+    return { level: l.level, total: l.total, items, owned: items.map((id) => state === 'unlocked' || has.has(id)), state };
   });
   const all = levels.flatMap((l) => l.items);
   return {

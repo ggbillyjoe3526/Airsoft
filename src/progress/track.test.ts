@@ -76,6 +76,18 @@ describe('the level track (LV1)', () => {
     expect(levelTrack(GAME_LEVELS, p, offered, false).unlocked).toBe(5);
   });
 
+  it('marks an item the player already has as theirs on a level still ahead (levels.md moved it up, BP6)', () => {
+    const p = playerAt(0);
+    p.unlocked.push(id('Silencer'));
+    const t = levelTrack(GAME_LEVELS, p, offered, false);
+    const row = t.levels.find((l) => names(l.items).includes('Silencer'))!;
+    expect(row.state).toBe('locked');
+    expect(row.owned).toEqual(row.items.map((i) => i === id('Silencer')));
+    // Every item of a reached level is theirs; none of a level ahead they don't hold.
+    expect(t.levels[0]!.owned.every(Boolean)).toBe(true);
+    expect(t.levels[1]!.owned).toEqual([false]);
+  });
+
   it('has everything unlocked and nothing next at the cap, and XP past the cap counts no further', () => {
     const t = levelTrack(GAME_LEVELS, playerAt(9000), offered, false);
     expect(t.standing).toEqual({ level: 10, into: 0, next: null, xp: 6500 });
