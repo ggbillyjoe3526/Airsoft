@@ -63,7 +63,7 @@ attempts: 0
 ## HD1 · In-match HUD, feeds and hop-up (playtest items 15, 22, 24, 25, 31–33)
 tier: ui
 perf: required
-touches: src/ui/, src/ui/hud.css, src/ui/hudCss/, src/input/orderWheel.ts, src/input/keyBindings.ts, src/config/controls.ts, src/config/hudText.ts, src/sim/commands.ts, src/sim/armament.ts, src/render/impactPuffs.ts, src/render/impactGrit.ts, src/config/renderEffects.ts, src/input/playerInput.ts, src/sim/events.ts, src/audio/sfx.ts, src/core/eventLog.ts, src/config/callouts.ts, src/config/matchInfo.ts, src/config/renderView.ts, src/config/squad.ts, src/settings/storage.ts, src/render/matchPresentation.ts, src/render/combatPresentation.ts, src/matchSession.ts, src/game.ts, src/style.css
+touches: src/ui/, src/ui/hud.css, src/ui/hudCss/, src/input/orderWheel.ts, src/input/keyBindings.ts, src/config/controls.ts, src/config/hudText.ts, src/sim/commands.ts, src/sim/armament.ts, src/render/impactPuffs.ts, src/render/impactGrit.ts, src/config/renderEffects.ts, src/input/playerInput.ts, src/sim/events.ts, src/audio/sfx.ts, src/core/eventLog.ts, src/config/callouts.ts, src/config/matchInfo.ts, src/config/renderView.ts, src/config/squad.ts, src/settings/storage.ts, src/render/matchPresentation.ts, src/render/combatPresentation.ts, src/matchSession.ts, src/game.ts, src/style.css, src/sim/vault.ts, src/sim/elimination.ts, src/ai/botBrain.ts, src/input/scriptedInput.ts
 contract: PlayerCommand (a hop-up step, by addition)
 acceptance:
   1. A rebindable control adjusts the held replica's hop-up mid-match, through the command interface (bots unchanged), with a HUD readout that shows it changing in real time.
