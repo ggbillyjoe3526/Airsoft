@@ -4,7 +4,7 @@ Three.js presentation, all procedural. It reads `GameState` and `state.events`, 
 and never writes the simulation.
 
 - `renderer.ts`: `Renderer` owns the scene, camera, quality (`setQuality`), lighting and environment, tone mapping,
-  field of view and zoom, the retro filter (the node renderer's, `webgpu/post/nodeRetro.ts`; Settings › Look › Retro look), `warmUp` and
+  field of view and zoom, the retro filter (the node renderer's, `webgpu/post/nodeRetro.ts`; Settings › Dev › Retro look), `warmUp` and
   `warmShaders`. `mapMeshCache.ts` keeps the last map's meshes. `rendererParts.ts` holds its helpers (field of view,
   tone mapping, idle warm-up, handing GPU resources to a new renderer). The Renderer draws with the node renderer
   (`webgpu/nodeBackend.ts`) and recovers a lost device itself (`nodeLost`): a new device, or the WebGL2 back end, with

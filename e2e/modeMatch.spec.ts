@@ -156,8 +156,8 @@ for (const mode of MATCH_MODES.filter((m) => !ONLY_MODE || m.id === ONLY_MODE)) 
 
 /**
  * Resting on cover (M104): the player is put still on Depot's floor at (-10, -15.6) facing +x, where a 1.2 m crate stands
- * a step ahead (found with sim/coverRest.ts restTop, standing eye); the sight goes up with the right mouse button (the
- * default aim, held), and the HUD's "Rested" tag shows once the replica has settled on it, then hides when the aim is let go.
+ * a step ahead (found with sim/coverRest.ts restTop, standing eye); the sight goes up with the right mouse button (aim
+ * set to Hold for the test), and the HUD's "Rested" tag shows once the replica has settled on it, then hides when the aim is let go.
  * Ghost is on so no bot hits the player meanwhile; `input.resetView` (the Game's private PlayerInput) sets the yaw, since
  * ?nolock has no mouse look.
  */
@@ -179,6 +179,8 @@ test('Rest on cover: aiming still at a crate shows the Rested tag, and letting g
       game.input.resetView(Math.PI / 2);
     });
   await place();
+  // A held aim: Toggle is the default since ST1, and each re-placing (resetView) would lower a toggled sight.
+  await page.evaluate(() => ((window as unknown as { airsoft: { input: { aimMode: string } } }).airsoft.input.aimMode = 'hold'));
   await page.mouse.move(400, 300);
   await page.mouse.down({ button: 'right' });
   await expect
@@ -188,9 +190,6 @@ test('Rest on cover: aiming still at a crate shows the Rested tag, and letting g
     }, { timeout: 60_000 })
     .toBe(true);
   await expect(tag).toHaveText('Rested');
-  await page.mouse.up({ button: 'right' });
-  // Aim is Toggle by default (ST1): a second click lowers it.
-  await page.mouse.down({ button: 'right' });
   await page.mouse.up({ button: 'right' });
   await expect(tag).toBeHidden({ timeout: 30_000 });
   expect(errors, errors.join(' | ')).toEqual([]);

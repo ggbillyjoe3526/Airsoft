@@ -338,9 +338,8 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   // Master, Effects, Power source (the owner's 0.1 Dev 5 playtest, note 2), Ambience and Interface, at William's
   // defaults (ST1); no Voices row.
   await expect(settings.getByRole('slider', { name: /volume/i })).toHaveCount(5);
-  for (const [name, value] of [['Master volume', '1'], ['Effects volume', '0.8'], ['Power source volume', '1'], ['Ambience volume', '0.6'], ['Interface volume', '0.5']]) {
-    await expect(settings.getByRole('slider', { name }), name).toHaveValue(value!);
-  }
+  const volumes = [['Master volume', '1'], ['Effects volume', '0.8'], ['Power source volume', '1'], ['Ambience volume', '0.6'], ['Interface volume', '0.5']] as const;
+  for (const [name, value] of volumes) await expect(settings.getByRole('slider', { name }), name).toHaveValue(value);
   await expect(settings.getByText('Voices (hit calls)')).toHaveCount(0);
   // The groups follow the tabs pattern (audit L-31): Arrow Up from Audio picks Looks, then Gameplay, and moves the
   // focus there.

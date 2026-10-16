@@ -203,7 +203,8 @@ replaces its line; the old one stays findable in the archive or in git.
 - **Torches cast shadows on High and Ultra only; Low keeps today's beams (owner, 2026-10-06).** Keeps Low's 60 fps; an
   exception to the graphics plan's shadow-light limit on the higher presets (M91).
 - **The Retro look goes public as soon as possible, not in 0.5 (owner, 2026-10-06).** He tested the Dev-tab "Retro
-  pixels" filter and is happy with it. It changes only the picture, on every map and the range.
+  pixels" filter and is happy with it. It changes only the picture, on every map and the range. Back on the Dev tab
+  since the Dev 6 playtest (owner, 2026-10-16; ST1, Menus below).
 - **What you see is what stops you and your BBs (owner rule, 2026-10-05).** Art never strays more than 8 cm from its
   collision block (`NATURE_SHAPES.maxGap`), so trunks are straight posts, not tapered. Detail is drawn inside each
   block's own bounds, and sloping ground is one heightfield shared by physics, BB rays, nav and the mesh (2026-10-04).
@@ -715,6 +716,12 @@ replaces its line; the old one stays findable in the archive or in git.
 
 ## Menus, HUD, settings and accessibility
 
+- **Settings after the Dev 6 playtest (owner, 2026-10-16; ST1).** The groups run Display, Graphics, Gameplay, Looks,
+  Audio, Controls, Accessibility, Save file, Dev, and Settings opens on Display. New defaults: sound cues red,
+  scoreboard 100 %, aim Toggle, crouch Hold, volumes master 100 %, effects 80 %, power source 100 %, ambience 60 %,
+  interface 50 %; a save that picked otherwise keeps its pick. The Retro look is a Dev setting again (it shows only
+  while the Dev box is ticked), Realistic colours leaves Settings for the Loadout's Colour tab (MR1), and the Voices
+  (hit calls) placeholder is gone. The top bar's level reads "LVL 3".
 - **The menu and UI redesign is approved (owner, 2026-10-05, 21:35); the HUD is restyled in place, with the same
   positions.**
 - **The menus use Inter instead of Barlow (owner, 2026-10-07).** He finds Barlow hard to read, numbers above all; Inter
