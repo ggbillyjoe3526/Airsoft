@@ -216,20 +216,21 @@ replaces its line; the old one stays findable in the archive or in git.
 - **Higher-detail models come later, after the WebGPU overhaul (owner, 2026-10-09: "I want to try improve characters
   and all other models in the future but this will be later").** Figures, replicas and every other model. It widens
   the Blender art pass the owner planned on 2026-10-05, now tied to no update (`docs/ROADMAP.md` › Not tied to an
-  update); the Blender models built in Dev 5 stay behind the Dev switches (below). The figures come
+  update); the Blender models built in Dev 5 are the game's own since 0.1 Beta 1 (below). The figures came
   forward to 0.1 Dev 6 (below).
-- **The Blender models are locked behind the Dev tab, and the game draws its code-built models by default (owner,
-  2026-10-11: "I'm not happy with the quality of figure models so blender models should be locked in dev settings").**
-  Two Dev switches, both on by default (RM4, `config/dev.ts`): "Disable figure models" keeps the built-in figures and
-  "Disable all models" keeps every built-in model (replicas, parts, figures, the menus' battery and gas pictures).
-  With "Disable all models" off the Blender replicas, parts and power-source pictures return; the figure model then
-  still needs "Disable figure models" off. The files stay in the build and are fetched only when let in.
+- **The Blender models are the default everywhere (owner, 2026-10-16, Dev 6 playtest item 1: "Blender models default.
+  Code models removed or on low settings only"; BD1).** Replicas, parts, the menus' battery and gas pictures and the
+  rigged figures load as the game starts and every match and menu draws them. The Dev switches "Disable figure models"
+  and "Disable all models" (RM4, 2026-10-11) are gone with the code behind them. The code-built models are not kept for
+  Low: Low with the models in measured inside every budget line (Depot, container: 35 draw calls of 100, 54k
+  triangles of 150k, 78 MB of GPU memory of 300); they stay only as what is drawn when a file can't be loaded. Low's
+  frame time on the owner's laptop is still to be measured (PF2).
 - **The Blender figures (owner, 2026-10-10; approved 2026-10-12: "happy with it for now").** The hands hold the
   replica naturally, the trigger finger in the guard; humans wore the high-cut helmet head only (four heads since
   2026-10-13, below); robots wear no vest,
   holsters, magazines or accessories, their team shown by its colour on their highlights; the figure is also the
   player's first-person body, without its head. A reload pulls the old magazine and throws it; bots drop it (owner,
-  2026-10-11). BF1 draws them with the Dev model switches off, ahead of a CC0 `figure.glb`.
+  2026-10-11). Every match draws them (BD1), ahead of a CC0 `figure.glb`.
 - **A rigged figure points its replica where the shot goes (2026-10-12).** The aim clips turn the replica through 55 %
   of their ±60 degrees: the game blends them by the replica's pitch, leans the upper body for the rest and twists out
   the rifle stance's 6 degrees, so a bot visibly aims at what it shoots (BF1).
@@ -337,12 +338,11 @@ replaces its line; the old one stays findable in the archive or in git.
   obstacles, 0.7 to 0.9 m (2026-10-12).
 - **The Blender figures in the game (BF1) are part of 0.1 Dev 5 (owner, 2026-10-12: "This is for Dev 5").** They
   merge before the Dev 5 tag, still behind the Dev switches.
-- **The rigged figures stay behind the Dev switches until they pass M85's hit-volume check (2026-10-12).** They don't
-  yet (the volume's upper body is rounder than theirs, KNOWN_ISSUES › Figures and art); `render/riggedHitVolume.test.ts`
-  measures them and holds each pose to its numbers, so a change only brings them closer (BF1).
+- **The rigged figures had to pass M85's hit-volume check before becoming the default (2026-10-12).** They do since
+  HV1 (2026-10-16): `render/riggedHitVolume.test.ts` holds every pose of both figures to the bar (BF1, HV1).
 - **With the rigged figures drawn, the hit volume's legs are the figures' own (owner, 2026-10-13: "Legs follow"; IM8).**
   Their thighs, shins and boots stand on the figure's leg joints from its clips, and the walk cycle steps at the clips'
-  strides; the head, chest and hips stay the built-in volume's, and with the figures off nothing changes.
+  strides. The head, chest and hips followed in HV1 (below); the built-in figures keep the built-in volume.
 - **Vaulting comes in 0.1 Dev 6; slide into cover is no for now (owner, 2026-10-12).** Vaulting goes over low
   obstacles of 0.7 to 0.9 m, with a few added to the maps where they open a route; slide waits in `docs/IDEAS.md`.
 - **3 holsters the replica (1 primary, 2 secondary, rebindable): sprinting holstered is faster, and the draw from the
@@ -393,8 +393,9 @@ replaces its line; the old one stays findable in the archive or in git.
   once. A vault still carries the replica, with no shot until 0.3 s after it (M102). Bots still stop sprinting to
   fight; whether bold bots spray on the run is for the bot personalities.
 - **The hit area is fitted to each figure (owner, 2026-10-16, Dev 6 playtest: "fit to each figure").** The head,
-  chest and hips follow each rigged figure, as the legs already do; the human's and the robot's may differ. Task HV1
-  does it when the rigged figures leave the Dev switches; until then nothing changes.
+  chest, shoulders and hips sit on each rigged figure's own bones, as the legs do, with a shape fitted per figure
+  (`FIGURE_HIT_SHAPES`, read from the clips as the figures load). Done in HV1: every pose of both figures is within
+  M85's bar (4 % missed, 3 % thin air); a character's volume takes the shape of the figure it is drawn as.
 
 ## Bots and balance
 
@@ -440,7 +441,7 @@ replaces its line; the old one stays findable in the archive or in git.
   fire from the hip while they strafe (anchors aim, BN1), so the error on the move stays the level's. A silencer, laser, barrel, magazine
   or power source works on a bot as on the player.
 - **Bots' figures show their kit (2026-10-13, BG1).** The built-in figures draw the rifle's optic at every detail, so a
-  scoped bot reads at a glance; grips, lasers and barrels show on the rigged figures behind the Dev switches, where
+  scoped bot reads at a glance; grips, lasers and barrels show on the rigged figures (the default since BD1), where
   each replica's own model takes its fitted parts. No new model files.
 - **Bots have names and personalities, read from `bots.md` (BN1, 2026-10-13; Claude's defaults, Dev 6 item 21).** Each
   match every bot draws a made-up name off the roster, and a name always plays the same personality (rusher, anchor,

@@ -74,7 +74,7 @@ and never writes the simulation.
   (`surfaceShader.ts`, which also weathers them).
 - Figures: `characterRenderer.ts`, `characterModels.ts`, `figureHuman.ts` / `figureRobot.ts`; `figureFinish.ts` (the
   per-vertex finish) and `figureCamo.ts` (the team camo printed per pixel on clothes and sleeves, G11). The rigged Blender
-  human and robot (BF1, drawn only with the Dev tab's model switches off): `figureRig.ts` (a kind's files taken apart
+  human and robot (BF1, every player and bot since BD1): `figureRig.ts` (a kind's files taken apart
   into bones, merged meshes and clips, and `figureLegs.ts` reading the legs' clips out for the hit volume, IM8),
   `figurePose.ts` (the pure blend of clips from the character's state),
   `riggedFigure.ts` (one figure: skinned, posed, each loadout replica on the grip bone with its fitted optic, grip, laser,
@@ -82,7 +82,7 @@ and never writes the simulation.
   muzzle for the BBs, BP4, your first-person body) and `thrownMagazines.ts` (the empty magazines thrown in reloads); `modelFiles.ts` imports
   `figureRig.ts` on demand, so the four ride in their own chunk and the game's carries only their types. Replicas and hands:
   `replicaModels.ts` (the bodies and assembly), `replicaParts.ts` (optics, grips, magazines and the other fitted parts),
-  `replicaBuilder.ts` (the mesh builder both use), `replicaFiles.ts` (the Blender model files, M101, RM1, and their parts' sight-line and under-laser markers, RM8, and a laser's lens, BP4; `modelFiles.ts` loads them, and the figure model, only while the Dev tab's model switches let them in, RM4) and `replicaRig.ts`
+  `replicaBuilder.ts` (the mesh builder both use), `replicaFiles.ts` (the Blender model files, M101, RM1, and their parts' sight-line and under-laser markers, RM8, and a laser's lens, BP4; `modelFiles.ts` loads them, and the figure model, as the game starts, BD1) and `replicaRig.ts`
   (their moving parts, skinned and posed from the game's state, RM1; the Inspect key plays a file's Inspect clip, RM2; the built-in GBB Pistol's slide rides one too, and a GBB's slide locks back on an empty magazine, RM7), `replicaFinish.ts` (moulded speckle), `replicaSheen.ts` (the
   environment reflection), `replicaArms.ts` (the first-person arms), `handModels.ts`; `itemPictures.ts` draws them off
   screen for the menus, with the power sources from `powerSourceModels.ts` (the menus' battery, LiPo and gas bottle, RM3).
