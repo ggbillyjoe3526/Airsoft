@@ -9,7 +9,7 @@ The gameplay rules: plain data and pure functions, with no Three.js, no DOM and 
 - `vault.ts` (M102): Jump at a low obstacle vaults it. `planVault` reads the level's rays (height, depth, a floor to land
   on, the body's height clear over it), `tryVault` starts one in place of the jump (a `vault` footstep), `stepVault`
   moves the body along it through `CharacterMover` in place of the movement step. Tuning: `config/vault.ts`.
-- `armament.ts`: fire, switch, holster (M92: put away for the faster sprint, drawn back slower), reload by magazine
+- `armament.ts`: fire, switch, holster (M92: put away for a faster run, never past the sprint, drawn back slower), reload by magazine
   swap, `WorldQuery`. `shotHeardScale` is the one place a shot's reach is read (bots, minimap, sound cues).
 - `magShare.ts` (MG1): a teammate's magazine. `PlayerCommand.tossMag` names who gets one; `canTossTo` (teammates in
   play, in reach and sight, a spare of the right class with room), `tossMag` takes the BBs out of the thrower's pouch
