@@ -69,6 +69,12 @@ describe('bots.md as shipped (BN1)', () => {
 });
 
 describe('reading bots.md (BN1)', () => {
+  it('says so when a blank line cuts the roster short, rather than dropping every name after it unsaid (BP5)', () => {
+    const f = loadBotsFile(mini((t) => t.replace('| Owl | Rusher |', '\n| Owl | Rusher |')));
+    expect(f.roster.map((e) => e.name)).toEqual(['Dash']);
+    expect(f.errors.some((e) => /^bots.md:6: row outside its table/.test(e))).toBe(true);
+  });
+
   it('reads every column of a row', () => {
     const f = loadBotsFile(mini());
     expect(f.errors).toEqual([]);

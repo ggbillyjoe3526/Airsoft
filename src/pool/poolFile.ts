@@ -39,7 +39,9 @@ function isSeparator(line: string): boolean {
 /**
  * Every table in `text`, in file order. A table is a header row, a separator row and its body rows, all starting with
  * `|`; any other line ends it. A row with fewer cells than the header leaves the rest empty (pool.ts reports the
- * missing values); extra cells are dropped and listed in the table's `problems`, as is a column header used twice.
+ * missing values); extra cells are dropped and listed in the table's `problems`, as is a column header used twice. Rows
+ * cut off from the table above them (by blank lines, under the same heading) are not read, and each such run's first
+ * line is listed in that table's `problems` (BP5: one blank line in bots.md dropped every name after it, unsaid).
  */
 export function readTables(text: string): PoolTable[] {
   const lines = text.split(/\r?\n/);
@@ -47,23 +49,31 @@ export function readTables(text: string): PoolTable[] {
   let heading = '';
   let fenced = false;
   let table: PoolTable | null = null;
+  /** The table blank lines just ended, under the current heading: rows after them look like its rows. */
+  let ended: PoolTable | null = null;
+  /** Inside a run of rows outside any table (only the run's first line is listed). */
+  let orphans = false;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]!;
     const trimmed = line.trim();
     if (trimmed.startsWith('```')) {
       fenced = !fenced;
-      table = null;
+      table = ended = null;
       continue;
     }
     if (fenced) continue;
     const head = /^#{1,6}\s+(.*)$/.exec(trimmed);
     if (head) {
       heading = head[1]!.trim();
-      table = null;
+      table = ended = null;
       continue;
     }
     if (!trimmed.startsWith('|')) {
+      // Rows after blank lines still look like the table's to whoever edits the file; after prose, they don't.
+      if (table) ended = trimmed === '' ? table : null;
+      else if (trimmed !== '') ended = null;
       table = null;
+      orphans = false;
       continue;
     }
     if (table) {
@@ -77,7 +87,11 @@ export function readTables(text: string): PoolTable[] {
       table = { heading, headers, rows: [], line: i + 1, problems: [] };
       for (const [c, h] of headers.entries()) if (headers.indexOf(h) !== c) table.problems.push({ line: i + 1, message: `column "${h}" appears twice` });
       tables.push(table);
+      ended = null;
       i++; // the separator
+    } else if (ended && !orphans) {
+      ended.problems.push({ line: i + 1, message: 'row outside its table, so it and the rows after it are not read: a blank line ends a table' });
+      orphans = true;
     }
   }
   return tables;

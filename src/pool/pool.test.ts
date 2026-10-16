@@ -200,6 +200,24 @@ describe('pool.md, mistakes the owner could make by hand (audit POOL-06, POOL-18
     expect(t.rows[0]!.cells).toEqual({ a: 'x | y', b: 'z' });
     expect(t.problems).toEqual([]);
   });
+
+  it('names rows a blank line cut off from their table, once per run, and never rows after prose or a heading (BP5)', () => {
+    const t = readTables(['## A', '| a | b |', '|---|---|', '| 1 | 2 |', '', '| 3 | 4 |', '| 5 | 6 |', '', '', '| 7 | 8 |'].join('\n'))[0]!;
+    expect(t.rows.map((r) => r.cells.a)).toEqual(['1']);
+    expect(t.problems).toEqual([
+      { line: 6, message: 'row outside its table, so it and the rows after it are not read: a blank line ends a table' },
+      { line: 10, message: 'row outside its table, so it and the rows after it are not read: a blank line ends a table' },
+    ]);
+    // Prose or a heading between: the line is something else, not the table's.
+    for (const between of ['A note.', '## B']) {
+      const [first] = readTables(['## A', '| a | b |', '|---|---|', '| 1 | 2 |', '', between, '| 3 | 4 |'].join('\n'));
+      expect(first!.problems, between).toEqual([]);
+    }
+    // A second table after a blank line is a table, not stray rows.
+    const two = readTables(['| a | b |', '|---|---|', '| 1 | 2 |', '', '| c | d |', '|---|---|', '| 3 | 4 |'].join('\n'));
+    expect(two.map((x) => x.problems)).toEqual([[], []]);
+    expect(two[1]!.rows[0]!.cells).toEqual({ c: '3', d: '4' });
+  });
 });
 
 describe('pool.md, the Access column (M35)', () => {

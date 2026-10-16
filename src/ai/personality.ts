@@ -55,11 +55,12 @@ export function pushesIn(b: Bot): boolean {
 /**
  * An anchor holding (bots.md › Holds until): in Elimination, on its lane and under no squad order, while the round clock
  * is above the personality's mark and a teammate is still in play. It stops at the last lane point short of the middle
- * (BotController.planRound) and holds there as a defender holds its post.
+ * (BotController.planRound) and holds there as a defender holds its post. Not once it hunts (BP5): a squad order ended
+ * mid-round, or the late push, sends it hunting from where it is, and it stood there instead until its mark.
  */
 export function anchorHolding(b: Bot, w: BotWorld): boolean {
   const until = b.style.holdUntil;
-  if (until === null || b.role !== 'none' || b.order !== 'none' || w.round.mode !== 'elimination' || w.round.clock <= until) return false;
+  if (until === null || b.hunting || b.role !== 'none' || b.order !== 'none' || w.round.mode !== 'elimination' || w.round.clock <= until) return false;
   const me = b.character;
   for (const c of w.characters) if (c !== me && c.team === me.team && isInPlay(c)) return true;
   return false;

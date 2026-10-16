@@ -389,8 +389,10 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
   }
   // A personality that aims from cover (BN1, the anchor) raises its sight while it stands still to fight, look over
   // its cover or hold: over a ledge or crate the replica settles on it (M104), as yours does. Never to draw a holstered
-  // replica: an aim press would (M92), and that is holsterBot's to decide.
-  if (b.style.aimsFromCover && !moving && !me.armament.holstered && (b.mode === 'fight' || (b.mode === 'cover' && b.coverPhase === 'peek') || b.holding)) cmd.aim = true;
+  // replica: an aim press would (M92), and that is holsterBot's to decide. Standing still: a fight's sidestep moves it
+  // with no route (BP5: it aimed while it strafed, at walking pace, which is not how an anchor plays but how well).
+  const still = !moving && cmd.forward === 0 && cmd.right === 0;
+  if (b.style.aimsFromCover && still && !me.armament.holstered && (b.mode === 'fight' || (b.mode === 'cover' && b.coverPhase === 'peek') || b.holding)) cmd.aim = true;
   shootBot(b, w, target, myEye, aimAt, offAim, cmd, dt);
   reloadBot(b, w, cmd);
   holsterBot(b, w, cmd, dt);
