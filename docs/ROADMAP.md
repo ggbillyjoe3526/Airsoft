@@ -300,8 +300,9 @@ Beta adds no features (owner, 2026-10-06). It starts once he calls the game feat
 QoL, balance, refinement and polish. Its likely work, collected here so the Dev builds stay focused:
 
 - **Optimisation.** Profile, then fix. The "can wait" performance items in `docs/KNOWN_ISSUES.md` land here. The
-  "60 FPS on an integrated-graphics laptop" target is unmeasured: the owner plays on a high-end desktop, so someone with
-  such a laptop compares the quality presets here. From the audit: a lint / format tool if a second person joins
+  targets (owner, 2026-10-16): Low holds 60 FPS on modern low-powered hardware, and maxed-out settings aim at a PC built
+  for 4K at 240 Hz (his RTX 5090 desktop). Both are unmeasured until his laptop and desktop baselines are in (PF2,
+  PF3). From the audit: a lint / format tool if a second person joins
   (D-02); the smaller Rapier download (D-01) was done early, on the owner's word (IM3, 2026-10-12).
 - **Balance.** Replicas, how many magazines each carries (4 × 60 AEG, 4 × 18 pistol today), bot difficulty levels, and
   Attack / Defend (about 1 bot round in 10 is won at the pole today; raise time, holds and retakes).
