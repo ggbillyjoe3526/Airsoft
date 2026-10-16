@@ -392,6 +392,9 @@ replaces its line; the old one stays findable in the archive or in git.
   fire and stays up 0.35 s after the trigger is let go. A toggled sprint still ends on a fire press, which now fires at
   once. A vault still carries the replica, with no shot until 0.3 s after it (M102). Bots still stop sprinting to
   fight; whether bold bots spray on the run is for the bot personalities.
+- **The hit area is fitted to each figure (owner, 2026-10-16, Dev 6 playtest: "fit to each figure").** The head,
+  chest and hips follow each rigged figure, as the legs already do; the human's and the robot's may differ. Task HV1
+  does it when the rigged figures leave the Dev switches; until then nothing changes.
 
 ## Bots and balance
 
@@ -478,8 +481,8 @@ replaces its line; the old one stays findable in the archive or in git.
   call shows bottom left with the walkie-talkie click an order gets (no new sound to render), panned to where they
   are; an enemy's is only its click, from them, within 15 m. The callouts read the bots and never write them, on a
   random stream of their own, so seeds still replay. Hit players never talk: hit calling stays the raised hand.
-- **Callouts keep a slow, readable pace (2026-10-13, CL1).** A team says one call at a time, 1.5 s apart, a bot its own
-  4 s apart and the same enemy 10 s apart; the most urgent first, and a call kept waiting over 1.5 s is dropped. About
+- **Callouts keep a slow, readable pace (2026-10-13, CL1; the owner found it OK in play, 2026-10-16).** A team says
+  one call at a time, 1.5 s apart, a bot its own 4 s apart and the same enemy 10 s apart; the most urgent first, and a call kept waiting over 1.5 s is dropped. About
   5 to 11 calls a team a minute in the headless matches. All of it, and every line, is in `callouts.md`.
 - **A ping marks a spot or an enemy for your team, and your bot teammates play it their way (2026-10-15, PG1; Claude's
   defaults, any can change).** The Ping key marks where the crosshair meets the field within 120 m. An enemy under it
