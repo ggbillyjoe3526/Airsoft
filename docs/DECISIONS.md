@@ -90,9 +90,9 @@ replaces its line; the old one stays findable in the archive or in git.
 ## How work runs
 
 - **Every change is a pull request from a new branch made from the latest `main`; never push to `main` (owner,
-  2026-10-02).** A pull request built through the pipeline is merged by its own thread once CI is green and the critic
-  accepted (owner, 2026-10-04: "Claude merges"); so are docs-only pull requests (owner, 2026-10-06: "just you handle
-  it"). Any other pull request waits for the owner.
+  2026-10-02).** Every pull request is merged by its own thread, code included: once CI is green and
+  the review agents passed, or once CI is green for docs-only (owner, 2026-10-16: "You should be merging. Not me";
+  before, 2026-10-04 and 2026-10-06, only pipeline and docs pull requests). The owner doesn't merge.
 - **When unsure about a design decision, ask the owner first; for a small, easy-to-change detail, pick a default and
   record it with a one-line reason (owner, 2026-10-02).** The record is the task's own, `docs/records/<id>.md`. A check
   that can only pass by changing an acceptance criterion goes to the owner at once (owner, 2026-10-06).
