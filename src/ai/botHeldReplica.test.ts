@@ -10,7 +10,7 @@ import { createCommand } from '../sim/commands';
 import { vec3 } from '../sim/vec';
 import { aimBot, shootBot } from './botCombat';
 import { bodyPoint, eyeOf } from './perception';
-import { duel } from './testSupport';
+import { duel, facing } from './testSupport';
 
 /**
  * BP3b QA: a bot leads and judges its line of fire by the replica in its hands (and the BBs it loads), not the factory
@@ -103,5 +103,22 @@ describe('what past the target holds fire (bodyInLine)', () => {
     expect(t.fires()).toBe(false);
     t.w.hits = { ...t.w.hits, friendlyFire: false };
     expect(t.fires()).toBe(false);
+  });
+
+  it('holds for a teammate in front who leans their torso into the line, not for the same teammate upright or leaning away (KNOWN_ISSUES, M-06)', () => {
+    // 0.8 m off the line half-way to the target, facing the way the bot shoots: clear upright (measured: clear from
+    // 0.45 m upright, from 1.0 m leaning in), so only the tilted torso and head reach the line.
+    for (const side of [-1, 1]) {
+      const at = (lean: number) =>
+        ready(20, (s) => {
+          const mate = createCharacter(2, vec3(0.8 * side, 0, -10), 0, LOADOUT, 1);
+          mate.yaw = facing(mate.position, vec3(0, 0, 0));
+          mate.lean = lean;
+          s.characters.push(mate);
+        }).fires();
+      expect(at(0), `upright at x ${0.8 * side}`).toBe(true);
+      expect(at(side), `leaning into the line at x ${0.8 * side}`).toBe(false);
+      expect(at(-side), `leaning away at x ${0.8 * side}`).toBe(true);
+    }
   });
 });
