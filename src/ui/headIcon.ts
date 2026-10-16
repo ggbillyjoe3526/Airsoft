@@ -4,7 +4,7 @@
  * figure's own head. The helmet takes `--team` from the stylesheet (.head-icon), so one drawing serves every team and colour set.
  * Decoration only: the player's name beside it is what a screen reader reads.
  */
-export const HEAD_ICON =
+const HEAD_ICON =
   '<svg class="head-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
   '<path class="head-face" d="M6.5 11.5h11v4.5a5.5 5.5 0 0 1-11 0z"/>' +
   '<path class="head-helmet" d="M4 12.5a8 8 0 0 1 16 0v1H4z"/>' +

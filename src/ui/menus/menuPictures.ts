@@ -20,7 +20,7 @@ export interface PictureSource {
 }
 
 /** The parts a kit slot has fitted, as a picture fits them. */
-export function pictureFit(kit: KitSlot): PictureFit {
+function pictureFit(kit: KitSlot): PictureFit {
   const p = kit.parts;
   const fit: { -readonly [K in keyof PictureFit]: string } = { grip: p.grip, magazine: p.magazine };
   if (kit.optic) fit.optic = kit.optic;

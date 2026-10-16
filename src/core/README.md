@@ -5,6 +5,7 @@ Loop and session plumbing: small pure modules with no Three.js.
 - `fixedStepper.ts`: turns frame time into fixed ticks, at most `SIM.maxTicksPerFrame` (10) a frame, with frame time
   capped at `SIM.maxFrameDt` (0.25 s). Below about 6 frames/s the rest is dropped and the whole game runs in slow
   motion; only the debug overlay's "sim ticks/s" shows it. A browser drawing in software starts on Low to stay above it.
+- `math.ts`: `clamp`, `clamp01` and `lerp`, the number helpers the simulation, the bots and the textures share (DX0).
 - `seed.ts`: the visit's seed (fresh each page load, or `?seed=N`) and the exact 32-bit derivation of the streams made
   from it (bot plans, each bot, runs, cases). `matchFlow.ts` at `src/` derives each match's seed.
 - `sessionPlan.ts`: what Play does (build a match or the range, rebuild the range, reuse what is loaded), pure.
