@@ -21,9 +21,9 @@ that is the owner's decision.
    it). The gate runs the perf harness when the diff reaches a perf path (`pipeline/README.md`, step 4): each run's
    numbers are there and in `pipeline/out/perf-<env>*.json`.
 2. If the report's `perfRequired` is true but `gates.perf` shows no runs for this head (a `--quick` or CI report),
-   run `node --expose-gc pipeline/perf-run.mjs --env <env> --map … --mode … --preset … --backend …` for each entry of
-   the report's `perfRuns`, with the flags the gate's perf step passes (`pipeline/gate.mjs`, step 4; the env is in your
-   brief: `container` here, `laptop` on the owner's machine). If
+   run `node --expose-gc pipeline/perf-run.mjs --env <env> --map <map> --mode <mode> --preset <preset> --backend
+   <backend>` for each name in the report's `perfRuns` (`<map> <mode> <preset>[ <backend>]`, `perfMatrix.mjs` ›
+   `runName`; no backend means `webgl`). The env is in your brief: `container` here, `laptop` on the owner's machine. If
    `perfRequired` is false, there is nothing to measure: say so and review the diff.
 3. Compare with `pipeline/perf-budget.json` (the preset the budget names) and `pipeline/baseline/`. In the cloud
    container there is no GPU (SwiftShader draws a few frames a second): frame times there are **not** evidence of

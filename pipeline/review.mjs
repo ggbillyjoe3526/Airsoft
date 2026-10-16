@@ -16,13 +16,17 @@ export const REVIEW_AGENTS = {
 };
 const VERDICTS = ['auto-accept', 'accept', 'retry', 'pass', 'fail'];
 
-/** Markdown files the game's build reads (pipeline/build-cached.mjs hashes them): not docs. */
-const BUILD_MARKDOWN = new Set(['pool.md', 'stats.md']);
+/**
+ * The Markdown files at the repository's root that are docs. Every other root `.md` is game data the build reads
+ * (`pool.md`, `stats.md`, `levels.md`, `bots.md`, `bot-kits.md`, `callouts.md`: pipeline/build-cached.mjs › ROOT_FILES),
+ * so a new one counts as code until it is listed here.
+ */
+const ROOT_DOCS = new Set(['README.md', 'CHANGELOG.md', 'CLAUDE.md']);
 
-/** True when every changed file is a Markdown doc (the README, CHANGELOG, `docs/`, the agents and skills). */
+/** True when every changed file is a Markdown doc (the root docs above, `docs/`, the agents, skills and folder READMEs). */
 export function docsOnly(changed) {
   const files = [...changed];
-  return files.length > 0 && files.every((f) => f.endsWith('.md') && !BUILD_MARKDOWN.has(f));
+  return files.length > 0 && files.every((f) => f.endsWith('.md') && (f.includes('/') || ROOT_DOCS.has(f)));
 }
 
 /**
@@ -37,7 +41,8 @@ export function parseReviewLine(body) {
   if (line === undefined) return null;
   const verdicts = {};
   for (const agent of Object.keys(REVIEW_AGENTS)) {
-    const m = new RegExp(`\\b${agent}\\b\\s*[:=]?\\s*(${VERDICTS.join('|')})\\b`, 'i').exec(line);
+    // A verdict followed by "/", "|" or "or" is a template's list of choices ("Accept/Retry", "Pass or Fail"), not one.
+    const m = new RegExp(`\\b${agent}\\b\\s*[:=]?\\s*(${VERDICTS.join('|')})\\b(?!\\s*(?:/|\\||or\\b))`, 'i').exec(line);
     verdicts[agent] = m ? m[1].toLowerCase() : null;
   }
   return verdicts;

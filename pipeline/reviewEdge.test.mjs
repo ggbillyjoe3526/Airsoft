@@ -70,10 +70,10 @@ describe('judgeReview: a description that was not filled in must not pass', () =
     expect(judge('## Review:\n\n').pass).toBe(false);
     expect(judge('Review: critic <Accept n/8> · qa <Pass|Fail> · performance <Pass|Fail>').pass).toBe(false);
   });
-  it.fails('KNOWN GAP: fails a template that lists the choices instead of choosing one (Accept/Retry, Pass/Fail)', () => {
+  it('fails a template that lists the choices instead of choosing one (Accept/Retry, Pass/Fail)', () => {
     expect(judge('Review: critic Accept/Retry · qa Pass/Fail · performance Pass/Fail').pass).toBe(false);
   });
-  it.fails('KNOWN GAP: fails when the template also lists the choices as "Pass or Fail"', () => {
+  it('fails when the template also lists the choices as "Pass or Fail"', () => {
     expect(judge('Review: critic Accept or Retry · qa Pass or Fail · performance Pass or Fail').pass).toBe(false);
   });
   it('reason names the missing agents and the failing ones, for failures.md', () => {
