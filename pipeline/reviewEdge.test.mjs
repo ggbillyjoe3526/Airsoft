@@ -177,7 +177,7 @@ describe('after the choice-list fix (7aab146)', () => {
     expect(judge('Review: critic Accept, qa Pass; performance Pass').pass).toBe(true);
     expect(judge('Review: critic Accept - qa Pass - performance Pass').pass).toBe(true);
   });
-  it('KNOWN GAP: a "|" used as the separator between agents drops the verdict before it', () => {
-    expect(judge('Review: critic Accept 8/8 | qa Pass | performance Pass').pass).toBe(false);
+  it('reads "|" used as the separator between agents', () => {
+    expect(judge('Review: critic Accept 8/8 | qa Pass | performance Pass').pass).toBe(true);
   });
 });

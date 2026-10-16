@@ -41,8 +41,10 @@ export function parseReviewLine(body) {
   if (line === undefined) return null;
   const verdicts = {};
   for (const agent of Object.keys(REVIEW_AGENTS)) {
-    // A verdict followed by "/", "|" or "or" is a template's list of choices ("Accept/Retry", "Pass or Fail"), not one.
-    const m = new RegExp(`\\b${agent}\\b\\s*[:=]?\\s*(${VERDICTS.join('|')})\\b(?!\\s*(?:/|\\||or\\b))`, 'i').exec(line);
+    // A verdict followed by "/", "|" or "or" and another verdict is a template's list of choices ("Accept/Retry",
+    // "Pass or Fail"), not one; "Accept 8/8" and "|" between agents still read.
+    const choice = `(?!\\s*(?:/|\\||or\\b)\\s*(?:${VERDICTS.join('|')})\\b)`;
+    const m = new RegExp(`\\b${agent}\\b\\s*[:=]?\\s*(${VERDICTS.join('|')})\\b${choice}`, 'i').exec(line);
     verdicts[agent] = m ? m[1].toLowerCase() : null;
   }
   return verdicts;
