@@ -103,6 +103,8 @@ export type SettingField =
   /** Settings → HUD (M24); the HUD's size (audit UI-04). */
   | 'scoreboardSize'
   | 'hitFeed'
+  /** Settings › HUD › Feed position (Dev 6 playtest item 32): 'topRight' or 'bottomLeft', top right when nothing is saved. */
+  | 'feedCorner'
   /** Settings › HUD › Minimap (M83): 'rotating' or 'fixed'. */
   | 'minimapTurn'
   /** Settings → HUD → What got you (M41): 'auto', 'on' or 'off'. */

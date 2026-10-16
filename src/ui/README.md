@@ -7,7 +7,7 @@ game state and never write it. Tests use the fake DOM in `testSupport.ts` (no js
   `hitFeed.ts`, `hitFeedback.ts` (with `hitMarkerLook.ts`, the hit marker's saved look), `soundCues.ts`,
   `teammateMarkers.ts` (with `tagStack.ts`, close teammates' name tags laid out one over the other, BP5), `flagMarker.ts`, `flagStatus.ts`, `runStatus.ts`, `casePrompt.ts`, `whatGotYou.ts`,
   `squadOrderLine.ts`, `orderWheel.ts`, `playPrompt.ts` ("Click to play" after Esc skips a round), `vaultPrompt.ts`
-  (the key to vault while a vault is there, M102), `calloutFeed.ts` (the bots' callouts, bottom left, CL1),
+  (the key to vault while a vault is there, M102), the bots' callouts (CL1) in `hitFeed.ts`, the one feed of hits and callouts (Dev 6 playtest item 32), with `roundResult.ts` (WON or LOST at a round's end, item 33) and `hopGauge.ts` (the hop-up readout, item 15),
   `pingMarkers.ts` (your pings and your teammates' marks over the field, PG1; the minimap draws the same slots),
   `magPrompt.ts` (the magazine hand-off's line under the crosshair, MG1; its words from `src/magHandoff.ts`),
   `holdMarker.ts` (the diamond over a Hold here spot, M22).

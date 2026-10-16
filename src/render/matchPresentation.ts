@@ -7,7 +7,7 @@ import type { Bot } from '../ai/bot';
 import type { BotIdentity } from '../ai/personality';
 import { BotIntentLabels, botIntentText, botRoleText } from '../ui/botIntentLabels';
 import type { HitConfig, HitMarkerSettings } from '../config/hits';
-import { type HitFeedMode, TEAMMATE_MARKERS } from '../config/matchInfo';
+import { type FeedCorner, type HitFeedMode, TEAMMATE_MARKERS } from '../config/matchInfo';
 import type { BodyConfig } from '../config/movement';
 import { type DetailLevel, EXIT_VISUALS, FLAG_VISUALS, HUD, type QualitySettings } from '../config/render';
 import { proTip } from '../config/tutorial';
@@ -26,7 +26,6 @@ import type { MatchStats } from '../stats/matchStats';
 import { PINGS } from '../config/pings';
 import { CasePrompt } from '../ui/casePrompt';
 import { FlagMarker } from '../ui/flagMarker';
-import { CalloutFeed } from '../ui/calloutFeed';
 import { HitFeed } from '../ui/hitFeed';
 import { HitFeedback } from '../ui/hitFeedback';
 import { HoldMarker } from '../ui/holdMarker';
@@ -38,6 +37,7 @@ import { OrderWheel, wheelHint } from '../ui/orderWheel';
 import { pingAlpha, PingMarkers, type ShownPing, type ShownPingKind } from '../ui/pingMarkers';
 import { restartAnimation } from '../ui/restartAnimation';
 import { respawnBanner, roundBanner } from '../ui/roundBanner';
+import { RoundResult, roundResultWords } from '../ui/roundResult';
 import { runNews } from '../ui/runStatus';
 import { Scoreboard } from '../ui/scoreboard';
 import { type HeardSound, SoundCues, soundCueOf } from '../ui/soundCues';
@@ -81,8 +81,13 @@ export class MatchPresentation {
   private readonly marker: FlagMarker;
   private readonly markerAt: ScreenMarker = { x: 0, y: 0, onScreen: false };
   private readonly feed: HitFeed;
+  /** WON or LOST at a round's end (Dev 6 playtest item 33) and the line saying a click moves on. */
+  private readonly roundResult: RoundResult;
+  /** Simulation time WON or LOST came up for the round just ended (NaN: the round is live, or your hit call is still on). */
+  private resultAt = Number.NaN;
+  /** The click that moves on was taken for this round's end (the line goes while the next round or the results come). */
+  private resultTaken = false;
   /** Your bot teammates' callouts (CL1), bottom left. */
-  private readonly calloutFeed: CalloutFeed;
   private readonly board: MatchBoard;
   /** The "what got you" card (M41), whether it is on, and the record of the hit it words (the bots' controller fills it). */
   private readonly whatGotYou: WhatGotYouCard;
@@ -208,7 +213,7 @@ export class MatchPresentation {
     this.intents = new BotIntentLabels(container);
     this.mateMarkers = new TeammateMarkers(container, this.mates.map((c) => this.names.get(c.id) ?? ''), teamCss(player.team));
     this.feed = new HitFeed(container);
-    this.calloutFeed = new CalloutFeed(container);
+    this.roundResult = new RoundResult(container);
     this.board = new MatchBoard(container, true);
     this.whatGotYou = new WhatGotYouCard(container);
     this.soundCues = new SoundCues(container);
@@ -291,6 +296,11 @@ export class MatchPresentation {
     this.soundCues.setEnabled(on);
   }
 
+  /** Settings → HUD → Feed position (Dev 6 playtest item 32; also called once as the match is built). */
+  setFeedCorner(corner: FeedCorner): void {
+    this.feed.setCorner(corner);
+  }
+
   /** The hit feed fades or keeps its lines (Settings → HUD, M24; also called once as the match is built). */
   setHitFeedMode(mode: HitFeedMode): void {
     this.feed.setMode(mode);
@@ -343,7 +353,7 @@ export class MatchPresentation {
     this.feedback.setVisible(playing);
     this.scoreboard.setVisible(playing);
     this.feed.setVisible(playing);
-    this.calloutFeed.setVisible(playing);
+    this.roundResult.setVisible(playing);
     this.soundCues.setVisible(playing);
     this.squadLine.setVisible(playing);
     this.minimap.setVisible(playing);
@@ -467,7 +477,6 @@ export class MatchPresentation {
         this.whatGotYou.clear();
         this.spectator.reset();
         this.feed.roundStarted(e.round);
-        this.calloutFeed.clear();
         this.pingMarkers.clear();
         this.soundCues.clear();
         this.squadLine.clear();
@@ -640,8 +649,7 @@ export class MatchPresentation {
     this.updateMateMarkers(camera, alpha, watched);
     this.updatePingMarkers(camera, spectating);
     this.feed.update(this.state.time);
-    this.calloutFeed.update(this.state.time);
-    this.calloutFeed.setCovered(this.boardUp);
+    this.feed.setCovered(this.boardUp);
     // The cues are placed for wherever the camera is (your eyes, or the player you watch), as the ears are.
     camera.getWorldDirection(this.viewDir);
     this.listener.x = camera.position.x;
@@ -657,6 +665,7 @@ export class MatchPresentation {
     // Extraction: respawns left first, as the banner says them on the frame you're back.
     if (this.extraction) this.runInfo.respawnsLeft = respawnsLeft(this.state.round.run, this.player, this.extraction);
     this.updateRoundMessage(status === 'calling');
+    this.updateRoundResult(status === 'calling');
     if (this.extraction) {
       this.scoreboard.update(this.state.round, this.state.characters, this.runInfo);
     } else this.scoreboard.update(this.state.round, this.state.characters);
@@ -676,7 +685,7 @@ export class MatchPresentation {
     this.scoreboard.dispose();
     this.marker.dispose();
     this.feed.dispose();
-    this.calloutFeed.dispose();
+    this.roundResult.dispose();
     this.board.dispose();
     this.whatGotYou.dispose();
     this.mateMarkers.dispose();
@@ -694,9 +703,9 @@ export class MatchPresentation {
     return undefined;
   };
 
-  /** A teammate's callout (CL1): `speakerId`'s line in the callout feed, under their name. */
+  /** A teammate's callout (CL1): `speakerId`'s line in the match feed, under their name. */
   callout(speakerId: number, team: number, text: string): void {
-    this.calloutFeed.add(this.names.get(speakerId) ?? '', team, text, this.state.time);
+    this.feed.addCallout(this.names.get(speakerId) ?? '', team, text, this.state.time);
   }
 
   /**
@@ -714,7 +723,7 @@ export class MatchPresentation {
 
   /** Callouts turned off (Settings › HUD): the lines up now go. */
   clearCallouts(): void {
-    this.calloutFeed.clear();
+    this.feed.clearCallouts();
   }
 
   /** A hit feed line for `victimId` calling a hit from `shooterId`'s BB. */
@@ -812,7 +821,12 @@ export class MatchPresentation {
   /** What the board over the field shows: the match while the key is held or once decided, the round between rounds. */
   private boardView(held: boolean): BoardView {
     const phase = this.state.round.phase;
-    return phase === 'matchOver' || held ? 'match' : phase === 'over' ? 'round' : 'none';
+    if (held) return 'match';
+    if (phase !== 'over' && phase !== 'matchOver') return 'none';
+    // WON or LOST first (Dev 6 playtest item 33): the table waits for the stamp, which waits for your hit call. An
+    // Extraction run has no stamp.
+    if (this.extraction === undefined && !(this.state.time - this.resultAt >= HUD.roundResultTime)) return 'none';
+    return phase === 'matchOver' ? 'match' : 'round';
   }
 
   /**
@@ -869,6 +883,51 @@ export class MatchPresentation {
       this.outLabelText = by && hitBy !== this.player.id ? `OUT · hit by ${by}` : 'OUT';
     }
     return this.outLabelText;
+  }
+
+  /**
+   * A round's end (Dev 6 playtest item 33): WON, LOST or DRAW for HUD.roundResultTime from when it can show (once your
+   * own hit call is over, as the banner waits), then the round's table; from HUD.roundResultContinueAfter a line says a
+   * click moves on, until it is taken. Nothing in an Extraction run, whose banner says how it ended. The words are made
+   * once per round's end, not per frame.
+   */
+  private updateRoundResult(calling: boolean): void {
+    const r = this.state.round;
+    if (this.extraction !== undefined) return;
+    if (r.phase !== 'over' && r.phase !== 'matchOver') {
+      // A round under way: ready for its end.
+      if (Number.isNaN(this.resultAt) && !this.resultTaken) return;
+      this.resultAt = Number.NaN;
+      this.resultTaken = false;
+      this.roundResult.clear();
+      this.board.setNext('');
+      return;
+    }
+    if (Number.isNaN(this.resultAt)) {
+      if (calling) return;
+      this.resultAt = this.state.time;
+      this.roundResult.setWords(roundResultWords(r, this.player.team));
+    }
+    const since = this.state.time - this.resultAt;
+    if (since >= HUD.roundResultTime) this.roundResult.setWords(null);
+    const text = HUD_TEXT.result;
+    const hint = this.resultContinuable ? (r.phase === 'matchOver' ? text.results : text.nextRound) : '';
+    this.roundResult.setHint(hint);
+    this.board.setNext(hint);
+  }
+
+  /** Whether a click now moves on from a round's end (to the next round, or the results): see updateRoundResult. */
+  get resultContinuable(): boolean {
+    const r = this.state.round;
+    if (this.resultTaken || this.extraction !== undefined || (r.phase !== 'over' && r.phase !== 'matchOver')) return false;
+    return this.state.time - this.resultAt >= HUD.roundResultContinueAfter;
+  }
+
+  /** The click that moves on was taken (MatchSession.continueFromResult): its line goes. */
+  resultContinued(): void {
+    this.resultTaken = true;
+    this.roundResult.setHint('');
+    this.board.setNext('');
   }
 
   /**

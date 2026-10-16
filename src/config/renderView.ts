@@ -59,6 +59,16 @@ export const HUD = {
    */
   leavesNotice: 'Leaves in the way · step clear to shoot',
   leavesNoticeNear: 2,
+  /**
+   * A round's end (Dev 6 playtest item 33, ui/roundResult.ts): WON or LOST stays up this long (seconds, from when it
+   * shows: after your own hit call, never under it), then the round's table comes up. Short, so it marks the moment
+   * and gets out of the way inside the pause between rounds (RoundRules.resetDelay, 4 s).
+   */
+  roundResultTime: 1.3,
+  /** From this long after WON or LOST shows (s), a click moves on: to the next round, or the result screen. */
+  roundResultContinueAfter: 0.5,
+  /** The hop-up readout stays on the replica panel this long (s) after the dial was last turned (Dev 6 playtest item 15). */
+  hopShowTime: 1.8,
   /** How long "Round N" stays up after a round starts (seconds). */
   roundStartMessageTime: 1.8,
   /** How long "Overtime · touch the flag" stays up after Elimination's overtime flag goes up (seconds; Dev 6 item 45). */

@@ -356,6 +356,10 @@ export class Sfx {
       case 'fireMode':
         this.playFrom(e.characterId, localId, characterOf, 'selector', L.mechanism);
         return;
+      // The hop-up dial turned a notch (Dev 6 playtest item 15): the selector's small click; nothing at the end of its range.
+      case 'hopUp':
+        if (e.moved) this.playFrom(e.characterId, localId, characterOf, 'selector', L.mechanism);
+        return;
       case 'torch':
         this.playFrom(e.characterId, localId, characterOf, 'torchClick', L.mechanism);
         return;

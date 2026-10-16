@@ -394,6 +394,10 @@ export class CombatPresentation {
         }
       } else if (e.type === 'reloadRefused' && e.characterId === this.player.id) {
         this.hud.showNotice('No fuller magazine', HUD.noticeTime);
+      } else if (e.type === 'hopUp' && e.characterId === this.player.id) {
+        // The hop-up turned in play (Dev 6 playtest item 15): the panel's readout shows the dial and what it does.
+        const a = this.player.armament;
+        this.hud.showHop(a.replicas[a.active]!, e.dial, a.bbWeights[a.active] ?? a.replicas[a.active]!.bbWeight);
       }
       if (e.type === 'shot') {
         if (e.characterId === this.player.id) {

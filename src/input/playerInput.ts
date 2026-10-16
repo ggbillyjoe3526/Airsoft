@@ -65,6 +65,8 @@ export class PlayerInput {
   private reloadLatch = false;
   private fireLatch = false;
   private fireModeLatch = false;
+  /** Hop-up notches asked for since the last tick (Dev 6 playtest item 15): + more lift, - less. */
+  private hopSteps = 0;
   /** The Weapon torch key pressed since the last tick (M33h). */
   private torchLatch = false;
   /** The Inspect key pressed since the last takeInspect (RM2; presentation only, so never part of a command). */
@@ -149,6 +151,8 @@ export class PlayerInput {
     if (kb.wasPressed('reload')) this.reloadLatch = true;
     if (kb.wasPressed('fireMode')) this.fireModeLatch = true;
     if (kb.wasPressed('torch')) this.torchLatch = true;
+    if (kb.wasPressed('hopUp')) this.hopSteps++;
+    if (kb.wasPressed('hopDown')) this.hopSteps--;
     if (kb.wasPressed('inspect')) this.inspectLatch = true;
     if (kb.wasPressed('orderFollow')) this.latchOrder('follow', false);
     if (kb.wasPressed('orderHold')) this.latchOrder('hold', false);
@@ -273,6 +277,7 @@ export class PlayerInput {
     cmd.holster = this.holsterLatch;
     cmd.cycleFireMode = this.fireModeLatch;
     cmd.toggleTorch = this.torchLatch;
+    cmd.hopUpSteps = this.hopSteps;
     cmd.use = kb.isDown('use');
     // A toss is the session's to name (MatchSession, src/magHandoff.ts): never from the keys straight.
     cmd.tossMag = -1;
@@ -337,6 +342,7 @@ export class PlayerInput {
     this.fireLatch = false;
     this.fireModeLatch = false;
     this.torchLatch = false;
+    this.hopSteps = 0;
     this.inspectLatch = false;
     this.orderLatch = null;
     this.pingLatch = false;
