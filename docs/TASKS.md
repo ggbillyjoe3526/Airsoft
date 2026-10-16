@@ -22,3 +22,23 @@ item 5, with the G4 HUD restyle); note 3 was a bug, fixed in BP2; note 2 is alre
 
 **0.1 Dev 6 (confirmed with the roadmap, 2026-10-06).** M92–M95, the holster and the practice upgrades, are done
 (2026-10-13); the blocks for the rest of `docs/ROADMAP.md` › 0.1 Dev 6 are written when that work starts.
+
+## BP5 · Full bug pass (Dev 6)
+tier: core
+perf: required
+touches: src/, e2e/, docs/, README.md, CHANGELOG.md
+contract: GameState (Character.vault.held: the presses kept through a vault), stepSimulation (while vaulting the trigger and aim stay as the vault found them; presses made meanwhile play into the first command after it)
+acceptance:
+  1. Every map (Depot, Woodland, Neon Heights, by day and night) and every mode (Elimination with its overtime flag,
+     Attack / Defend, Extraction, Practice, the Tutorial) is played in the browser across Easy, Normal, Hard and Pro,
+     with every Dev 6 action on the keys; nothing errors, stalls, falls out of the map or shows NaN.
+  2. Every change since the last pass (Dev 6, #206 to #228) is reviewed; each bug found is fixed with a test, or left as
+     a KNOWN_ISSUES row with its class and reason.
+  3. Every KNOWN_ISSUES row is cross-checked against the code: fixed rows deleted (with a test), stale notes corrected.
+  4. The known items: Woodland Pro Attack / Defend re-measured (Normal unchanged), the BP3 and BP4 rows (name tags of
+     close teammates, the first-frame hitch, the holstered vault hand, far figures' parts) fixed or kept with why, the
+     README's How to play menu paths current. Hard's close-range figure is the owner's call and is not changed.
+  5. The perf gate passes on every preset; the diff is read for per-frame allocations; the main file stays under its
+     limit.
+status: building
+attempts: 0

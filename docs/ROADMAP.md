@@ -9,8 +9,8 @@ in `docs/PROCESS.md`.
 - **Building 0.1 Dev 6.** The game stays in Dev until the owner calls it feature complete (owner, 2026-10-06). Beta then
   adds no features.
 - **Last tag:** `0.1-dev.5`, on 2026-10-13. The owner creates tags.
-- **Next:** the owner playtests 0.1 Dev 5; [0.1 Dev 6](#01-dev-6-the-last-planned-dev-build) has M92–M95 done (2026-10-13)
-  and goes on with the rest of its list.
+- **Next:** [0.1 Dev 6](#01-dev-6-the-last-planned-dev-build) is complete with its bug pass (BP5, 2026-10-16) and
+  ready for the owner to tag `0.1-dev.6` and playtest.
 - **The release path** (owner, 2026-10-12): 0.1 Dev 6, 0.1 Beta, then 0.1.0 opens Early Access to the public. Themed
   updates follow (Replica, Modes, Maps, Progression and any more), up to 1.0, the full launch. See
   [Early Access](#early-access-the-themed-updates).
@@ -230,6 +230,7 @@ when their work starts. Numbers are from the owner's list of 50 candidates
 | PT1 | The owner's Dev 5 playtest fixes (2026-10-13): text kept inside its buttons, louder shots and a Power source volume, no BB halo, a bolder hit marker with its own settings, the 2x scope like the red dot and without its gap, the ammo count clear of the panel, firing on the run, Esc skips the round; done (2026-10-13, `docs/records/PT1.md`) | Polish |
 | – | Figure redesign: more realistic human and robot figures, from the owner's reference photos, built in Blender, with the figures' animations for Dev 6's new moves such as vaulting and resting on cover (M104 has only a placeholder lean) (owner, 2026-10-13); done (2026-10-13: the human, `docs/records/RM9.md`; the robot and both figures' vault and rest-on-cover clips, `docs/records/RM10.md`) | Art |
 | BP4 | Bug pass over the Blender models behind the Dev switches (figures, replicas, attachments, first person), with the figures' holstered pose: the arms hang and the rifle rides slung on the back; done (2026-10-15, `docs/records/BP4.md`) | Art |
+| BP5 | Full bug pass over Dev 6 and the whole game: every map, mode and difficulty played in the browser, all Dev 6 code reviewed, every known issue cross-checked, the perf harness on every preset; fixes for vaulting, anchors, name tags, the overtime banner and more; done (2026-10-16, `docs/records/BP5.md`) | All |
 
 Built in Dev 5 instead: the blowback pistol (pick 14) is the GBB Pistol (RM7), and the AEG Rifle redesign (RM6) gave
 the built-in rifle its small, low iron sights.
