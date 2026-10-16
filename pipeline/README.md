@@ -21,7 +21,8 @@ config, asset loading, docs; `trivial` is a one-constant change, a wording fix, 
 
 **The review agents** (owner, 2026-10-16): QA, performance and the critic review every change that touches code,
 config, assets or gameplay data, inside the pipeline or not (a bug pass, an audit's fix, a pipeline change); a
-docs-only change (every file Markdown, `pool.md` and `stats.md` aside) skips them. A pull request is marked ready, and
+docs-only change (every file Markdown; at the root only README, CHANGELOG and CLAUDE.md, since the other root `.md`
+files are game data the build reads) skips them. A pull request is marked ready, and
 merged, only once all three have run and passed, and its description's `Review:` line says so (below); CI's `review`
 gate checks that line.
 
