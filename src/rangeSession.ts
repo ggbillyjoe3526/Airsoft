@@ -39,7 +39,7 @@ import { canAimDownSights } from './sim/aiming';
 import { fitOptics, fitParts, setBbWeights, setHopUps } from './sim/armament';
 import { type Character, createCharacter, eyeHeight, respawnCharacter } from './sim/character';
 import { createCommand, type PlayerCommand } from './sim/commands';
-import { type ChallengePhase, type ChallengeRun, type ChallengeSight, createChallenge, helpChallenge, type RangeChallenge, seesTarget, setChallengeOn, stepChallenge } from './sim/rangeChallenge';
+import { type ChallengeAway, type ChallengePhase, type ChallengeRun, type ChallengeSight, createChallenge, helpChallenge, type RangeChallenge, seesTarget, setChallengeOn, stepChallenge } from './sim/rangeChallenge';
 import { createRangeTargets, type RangeTarget } from './sim/rangeTargets';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
 import { partsUnder } from './sim/torch';
@@ -137,6 +137,8 @@ export class RangeSession {
   readonly course: string;
   /** Which targets the challenge may light (M94): on a map only those you can see; on the range any. */
   private readonly sight: ChallengeSight;
+  /** How far a target is for its lit time (BP6): from where you stand on a map; null on the range (from the line). */
+  private readonly away: ChallengeAway;
   /** Whether a START plate stands here, so the challenge can be played (M94: a map may have no room for one). */
   private readonly hasChallenge: boolean;
   private readonly banner: ChallengeBanner;
@@ -209,6 +211,7 @@ export class RangeSession {
     this.state.targets = createRangeTargets(specs, this.state.rng);
     this.course = setup.course ?? RANGE_CHALLENGE.course;
     this.sight = onRange ? null : (t) => this.inSight(t);
+    this.away = onRange ? null : (t) => across(this.player.position, t.position);
     this.challenge = createChallenge(setup.challengeBest ?? 0);
     // A map with no room for the START plate in front of your start has no challenge (map/practiceLayout.ts startPlate).
     this.hasChallenge = this.state.targets.some((t) => t.start);
@@ -391,7 +394,7 @@ export class RangeSession {
     for (let i = 0; i < ticks; i++) {
       this.input.fillCommand(this.playerCommand);
       stepSimulation(this.state, this.commands, this.ctx, SIM_DT);
-      stepChallenge(this.challenge, this.state.targets, this.state.events, PLAYER_ID, SIM_DT, this.state.rng, this.sight);
+      stepChallenge(this.challenge, this.state.targets, this.state.events, PLAYER_ID, SIM_DT, this.state.rng, this.sight, this.away);
       if (this.devHelp) helpChallenge(this.challenge);
       this.afterTick();
     }
