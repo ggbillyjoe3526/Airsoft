@@ -8,13 +8,13 @@ each `src/` folder's `README.md`.
 
 - **0.1 Dev 6 is out.** The owner tagged `0.1-dev.6` on 2026-10-16 (commit `c810dd3`). Every item in
   `docs/ROADMAP.md` › 0.1 Dev 6 is done, the last its full bug pass (BP5, `docs/records/BP5.md`).
-- **Next.** The owner playtests 0.1 Dev 6, then 0.1 Beta (fixes, balance and polish, no features). The spring sniper
-  waits for 0.2 and his specs.
-- **Waiting on the owner:** the hit area's shape before the figures leave the Dev switches; whether Adaptive
-  difficulty's steps and the callouts' pace feel right; whether an overtime flag taken at once by someone already on
-  its spot feels cheap; and from before, the laptop and desktop Ultra perf baselines, the Save checks in Firefox and
-  Edge, and playing Woodland and Neon Heights (`docs/PLAYTEST.md` › Only you can do these; Pro Woodland Attack /
-  Defend waits on that, `docs/KNOWN_ISSUES.md`).
+- **Next: 0.1 Beta 1.** The owner played Dev 6 (2026-10-16). The Beta 1 blocks are in `docs/TASKS.md`, highest
+  priority first: fixes, balance, performance and polish, with no features. His playtest made three of them: WL1
+  (Woodland Attack / Defend), NH1 (Neon Heights' upper floors, placed with the Maps Update) and HV1 (the hit area
+  fitted to each figure, his ruling, placed with the figures leaving the Dev switches). The callouts' pace is fine, and
+  the overtime flag went unseen because rounds ended first. The spring sniper waits for 0.2 and his specs.
+- **Waiting on the owner:** trying Adaptive difficulty, the laptop and desktop Ultra perf baselines (PF2 waits on
+  them), and the Save checks in Firefox and Edge (`docs/PLAYTEST.md` › Only you can do these).
 - **Vault and rest-on-cover clips.** Both rigged figures behind the Dev switches have their own (shared in
   `tools/blender/bot-figure/scripts/bot18.py`: the robot's built with it in RM10, the human's spliced into its RM9
   export); a figure file without them falls back to the old placeholders. The built-in figures don't change. Of the
