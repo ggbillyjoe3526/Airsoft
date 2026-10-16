@@ -7,6 +7,9 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 ### Changed
 - **TT1** · Tutorial cards are one or two short sentences; the four you only read move on by themselves after 5–8 s, with a bar filling; the lean step is gone
 
+### Internal
+- **Pipeline** · Code changes get critic, QA and performance review before a pull request is ready; CI fails it without passing verdicts
+
 ## 0.1 Dev 6 · 2026-10-16
 
 ### Added

@@ -59,6 +59,11 @@ replaces its line; the old one stays findable in the archive or in git.
 - **Dev builds continue until the owner calls the game feature complete; Beta then adds no features (owner,
   2026-10-06).** Beta is bug fixes, QoL, balance, refinement and polish, so features once parked in Beta moved into Dev
   builds or became maybes.
+- **0.1 Beta 1 has begun, and it carries the owner's Dev 6 playtest list (owner, 2026-10-16).** He called the game out
+  of Dev and tags 0.1 Beta 1 when it is complete. His 34 items are Beta 1 work, including the few small additions he
+  asked for: an in-match hop-up control, a home-screen fullscreen button, one feed with a placement setting, and WON or
+  LOST at a round's end. He also removes features: resting on cover, the Voices setting, and the Skins option (it
+  moves into Colour). Blender models become the default. Each item is a block in `docs/TASKS.md`.
 - **Dev 5 order (owner, 2026-10-06).** Docs rewrite with token step 2, token step 3, token step 4, bug pass BP2,
   graphics, the playtest notes, the content toolkit (all four parts, mode checks included), bug pass BP3, then the tag.
   Dev 7 is folded into Dev 6 ("I want bigger builds"). The order is in `docs/ROADMAP.md`.
@@ -139,10 +144,19 @@ replaces its line; the old one stays findable in the archive or in git.
   `src/` folder README in any task.
 - **Agents start from the gate's own summaries, and an agent runs only where it can change the outcome (owner,
   2026-10-06, token plan step 3; built 2026-10-08, TE3).** The critic and QA read the review packet first
-  (`pipeline/out/review-packet.md`); the performance agent runs only when the perf gate fails; the triage agent only for
-  a failure the gate's summary (`pipeline/out/failures.md`) can't place; the changelog agent reads only `Unreleased`
-  and one FEATURES heading; a near miss is re-run on Opus only when its failed check is a judgment, never a measured
-  number. Models and effort levels are unchanged.
+  (`pipeline/out/review-packet.md`); the performance agent runs only when the perf gate fails (superseded 2026-10-16:
+  it reviews every code change, below); the triage agent only for a failure the gate's summary
+  (`pipeline/out/failures.md`) can't place; the changelog agent reads only `Unreleased` and one FEATURES heading; a near
+  miss is re-run on Opus only when its failed check is a judgment, never a measured number. Models and effort levels
+  are unchanged.
+- **Every code change gets all three review agents: critic, QA and performance (owner, 2026-10-16: "I need everything
+  to go through a critic agent, qa agent, and performance agent").** This replaces token step 3's "the performance
+  agent runs only when the perf gate fails" and the critic skip for trivial tasks. Any pull request touching code,
+  config, assets or gameplay data, inside the pipeline or not, is marked ready and merged only once each agent says
+  Pass (critic: Accept, or the 6/8 auto-accept) and its description's `Review:` line gives the verdicts; CI's `review`
+  gate (`pipeline/review.mjs`) checks the line on every pull request out of draft. Docs-only changes (every file
+  Markdown, and at the root only README, CHANGELOG and CLAUDE.md: the other root `.md` files are game data) skip them.
+  Models and effort levels are unchanged.
 - **Token step 4 (owner, 2026-10-06, token plan items 8, 21 and 22; built 2026-10-08, TE4).** The project chat
   carries only results, blockers and decisions, from threads and the coordinator alike (`docs/PROCESS.md` ›
   Sessions). Off CI the gate runs the slow bot-match guards only when the diff reaches a file they load (by their
@@ -852,11 +866,16 @@ replaces its line; the old one stays findable in the archive or in git.
 - **No ray or path tracing; the game keeps its current lighting (owner, 2026-10-11).** A Dev switch for ray traced
   light (RT1) was built and shown, then scrapped as too much work for what it adds. Its code is archived as a git
   bundle in the project's shared files (`archive/ray-tracing/`), not in the repository.
-- **The Low preset must hold 60 fps on weak hardware (owner, 2026-10-04).** `pipeline/perf-budget.json`, measured on the
+- **The Low preset must hold 60 fps on modern low-powered hardware (owner, 2026-10-04; restated 2026-10-16).** The
+  absolute lowest settings are the floor. `pipeline/perf-budget.json`, measured on the
   owner's laptop: p95 ≤ 14 ms and p99 ≤ 20 ms; Low draw calls ≤ 100 and triangles ≤ 150k; GPU memory ≤ 300 MB; heap
   growth ≤ 5 MB over 60 s; nothing more than 10 % worse than the baseline. His ceilings of 150 draw calls and 250k
   triangles stay on High. Dynamic resolution scaling is not in the budget (owner: no). Raising any line needs a decision
   line.
+- **Maxed-out settings target a PC built for 4K at 240 Hz (owner, 2026-10-16).** His own desktop is the reference: a
+  Ryzen 9 9950X3D, 64 GB DDR5 and an RTX 5090 with 32 GB. Ultra at 3840×2160 aims for a 240 Hz frame (about 4.2 ms).
+  The desktop run's frame times stay reported, not judged, until task PF3 sets the line in `pipeline/perf-budget.json`
+  from his desktop baseline. Low's 60 fps floor above is unchanged.
 - **Medium has map-scoped draw-call lines: Woodland 120 and Neon Heights 145 (owner, 2026-10-11, W6a; 115 and 140
   since 2026-10-06, audit decision 4).** The other Medium lines (200k triangles, memory, heap) and every Low line stay
   the presets'. Raised on the owner's card ("Raise a little"): with the old renderer gone, Woodland's GPU grass and
