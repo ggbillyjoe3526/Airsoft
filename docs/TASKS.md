@@ -338,7 +338,7 @@ attempts: 0
 ## DX0 · Audit quick wins: a faster test loop, one math module, README coverage, the stage lines
 tier: ui
 perf: skip
-touches: vite.config.ts, package.json, .editorconfig, .nvmrc, .github/workflows/pages.yml, CLAUDE.md, src/core/math.ts, src/sim/propNoise.ts, src/sim/figureLegs.ts, src/ai/personality.ts, src/ai/adaptiveSkill.ts, src/render/texelNoise.ts, src/render/textureLibrary.ts, src/render/renderer.ts, src/ai/botController.ts, src/ui/headIcon.ts, src/ui/menus/menuParts.ts, src/ui/menus/menuPictures.ts, src/ui/menus/savedLoadoutsBar.ts, src/ui/performanceSheet.ts, src/render/mapMeshes.ts, src/config/replicas.ts
+touches: vite.config.ts, package.json, .editorconfig, .nvmrc, .github/workflows/pages.yml, CLAUDE.md, src/core/math.ts, src/sim/propNoise.ts, src/sim/figureLegs.ts, src/render/figurePose.ts, src/ai/personality.ts, src/ai/adaptiveSkill.ts, src/render/texelNoise.ts, src/render/textureLibrary.ts, src/render/renderer.ts, src/ai/botController.ts, src/ui/headIcon.ts, src/ui/menus/menuParts.ts, src/ui/menus/menuPictures.ts, src/ui/menus/savedLoadoutsBar.ts, src/ui/performanceSheet.ts, src/render/mapMeshes.ts, src/config/replicas.ts
 contract: none
 acceptance:
   1. `npm run t` leaves the headless guards that took a third of its time (Woodland's matches, the duel and route guards, the figure hit-volume sweep) to the `slow` project, which CI still runs in full; no test is dropped.

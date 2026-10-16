@@ -24,7 +24,8 @@ describe('the shared number helpers (DX0)', () => {
   it('lives once: no other source file defines its own clamp, clamp01 or lerp', () => {
     const sources = import.meta.glob<string>(['../**/*.ts', '!../**/*.test.ts', '!../**/*.d.ts'], { query: '?raw', import: 'default', eager: true });
     const own = Object.entries(sources)
-      .filter(([file]) => !file.endsWith('/core/math.ts'))
+      // The glob's keys are relative to this folder, so the module itself is './math.ts'.
+      .filter(([file]) => file !== './math.ts')
       .filter(([, text]) => /(?:function|const|let)\s+(?:clamp|clamp01|lerp)\s*(?:=|\()/.test(text))
       .map(([file]) => file);
     expect(own).toEqual([]);

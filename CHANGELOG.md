@@ -6,6 +6,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 
 ### Internal
 - **Pipeline** · Code changes get critic, QA and performance review before a pull request is ready; CI fails it without passing verdicts
+- **DX0** · Developer-only: a quicker test loop with a changed-tests run, one shared math module, a README coverage test, read-only game state for bots
 
 ## 0.1 Dev 6 · 2026-10-16
 

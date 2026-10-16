@@ -33,7 +33,7 @@ describe('every source file is named in its folder README (DX0)', () => {
     for (const file of SOURCES) {
       const { name, text } = readmeFor(file);
       const base = file.slice(file.lastIndexOf('/') + 1);
-      if (!text.includes(base)) missing.push(`${file.replace(/^\.\//, 'src/')} (add it to ${name})`);
+      if (!new RegExp(`(^|[^\\w.])${base.replace(/\./g, '\\.')}(?![\\w.])`).test(text)) missing.push(`${file.replace(/^\.\//, 'src/')} (add it to ${name})`);
     }
     expect(missing, 'files no README names').toEqual([]);
   });
