@@ -71,6 +71,16 @@ export class TutorialTracker {
     return this.index;
   }
 
+  /**
+   * How far a read step is through its time (0..1; TT1: the coach's bar, so the player sees the card moves on by
+   * itself), or -1 when the step shown is not one being read.
+   */
+  get readProgress(): number {
+    const step = this.steps[this.index];
+    if (this.doneLeft > 0 || !step || step.goal.kind !== 'read') return -1;
+    return Math.min(1, this.amount / step.goal.seconds);
+  }
+
   get finished(): boolean {
     return this.index >= this.steps.length && this.doneLeft === 0;
   }
@@ -145,8 +155,6 @@ export class TutorialTracker {
         return p.position.z <= g.z;
       case 'crouch':
         return p.crouchAmount >= TUTORIAL.crouchedAt;
-      case 'lean':
-        return Math.abs(p.lean) >= g.amount;
       case 'aim':
         if (p.aiming) this.amount += v.dt;
         return this.amount >= g.seconds;

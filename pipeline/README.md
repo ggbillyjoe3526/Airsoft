@@ -263,7 +263,8 @@ node pipeline/perf-run.mjs --env desktop --preset all --viewport 3840x2160 --bas
 ```
 
 The same as the laptop run without CPU throttling, at 3840×2160 at pixel ratio 1, writing `pipeline/baseline/desktop.json`
-and `desktop-<preset>.json`. Its frame times are reported, not judged, until the owner sets a 4K target.
+and `desktop-<preset>.json`. Its frame times are reported, not judged, until PF3 sets
+the line. The target is set (owner, 2026-10-16): maxed-out settings aim at 4K at 240 Hz, about 4.2 ms a frame.
 
 ## `balance.mjs`: the bot balance report
 

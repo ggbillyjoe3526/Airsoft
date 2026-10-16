@@ -97,8 +97,9 @@ bug pass: `docs/PROCESS.md` (grep the heading you need). The rules every session
   (Replica, Modes, Maps, Progression) follow up to 1.0, the full launch (`docs/ROADMAP.md`).
 - **The owner creates tags.** Don't create, rename or move them. After he tags, the release checklist in
   `docs/PROCESS.md` is due in the next pull request.
-- **Never push to `main`.** Every change is a pull request from a new branch made from the latest `main`. Pipeline
-  and docs-only pull requests are merged by their own thread once CI is green (and the review agents passed).
+- **Never push to `main`.** Every change is a pull request from a new branch made from the latest `main`. Every pull
+  request, code included, is merged by its own thread once CI is green and, for code, the review agents passed (owner,
+  2026-10-16: "You should be merging. Not me"). The owner doesn't merge.
 - **Three review agents on every code change** (owner, 2026-10-16): critic (the quality bar), QA (bugs) and
   performance (frame time, allocations, GPU disposal, budgets), in `.claude/agents/`. A pull request touching code,
   config, assets or gameplay data is marked ready, and merged, only once all three passed and its `Review:` line says
