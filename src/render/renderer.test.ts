@@ -419,6 +419,48 @@ describe('the shader warm-up (M63, audit REN-06)', () => {
   });
 });
 
+describe('the idle surface warm-up and dispose (DX0)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+  /** A canvas whose 2D context accepts every call and draws nothing (no DOM here). */
+  function stubDocument(): void {
+    const ctx: unknown = new Proxy(function () {}, { get: (_t, key) => (key === 'createImageData' || key === 'getImageData' ? (w: number, h: number) => ({ data: new Uint8ClampedArray(w * h * 4), width: w, height: h }) : () => ctx), set: () => true });
+    vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => ctx }) });
+    vi.stubGlobal('ImageData', class { constructor(public data: Uint8ClampedArray, public width: number, public height: number) {} });
+  }
+  function queued() {
+    const jobs: (() => void)[] = [];
+    return { idle: (work: () => void) => void jobs.push(work), drain: () => { while (jobs.length > 0) jobs.shift()!(); }, size: () => jobs.length };
+  }
+
+  it('draws and uploads the core surfaces while the renderer is live', () => {
+    stubDocument();
+    const { r } = stubbedRenderer();
+    const init = vi.fn();
+    (glOf(r) as unknown as { initTexture: unknown }).initTexture = init;
+    const q = queued();
+    r.warmUp(q.idle);
+    q.drain();
+    expect(init).toHaveBeenCalled();
+    expect((r as unknown as { surfaces: object | null }).surfaces).not.toBeNull();
+  });
+
+  it('does nothing once disposed: no surface set is drawn afresh and nothing is uploaded', () => {
+    stubDocument();
+    const { r } = stubbedRenderer();
+    const init = vi.fn();
+    (glOf(r) as unknown as { initTexture: unknown }).initTexture = init;
+    const q = queued();
+    r.warmUp(q.idle);
+    r.dispose();
+    q.drain();
+    expect(init).not.toHaveBeenCalled();
+    expect((r as unknown as { surfaces: object | null }).surfaces).toBeNull();
+  });
+});
+
 /**
  * Where the warm-up is called from (M63, audit REN-06): MatchSession needs a page to build (its HUD), so this reads the
  * sources. One call per session build, at the end of MatchSession's constructor and (since M94: Practice plays on any
