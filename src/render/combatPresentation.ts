@@ -482,9 +482,13 @@ export class CombatPresentation {
     this.sfx.placeSources(this.state.characters, this.player.id);
   }
 
-  /** Compiles the world's and the held replica's shaders before the first frame (M63, audit REN-06: Renderer.warmShaders). */
-  warmShaders(): void {
-    this.renderer.warmShaders(this.overlay);
+  /**
+   * Compiles the world's and the held replica's shaders before the first frame (M63, audit REN-06: Renderer.warmShaders),
+   * with what is hidden now but shows mid-session (BP6): `hidden` (the session's: the overtime flag), a tossed magazine
+   * and the scopes' eyepiece masks.
+   */
+  warmShaders(hidden: readonly THREE.Object3D[] = []): void {
+    this.renderer.warmShaders(this.overlay, [...hidden, ...this.magTosses.warmTargets(), ...this.viewmodel.warmTargets()]);
   }
 
   /** Draws the frame; the held replica only when the camera is in first person. */

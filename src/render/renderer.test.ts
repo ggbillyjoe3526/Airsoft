@@ -410,6 +410,29 @@ describe('the shader warm-up (M63, audit REN-06)', () => {
     expect(calls).toEqual(['compile world into the post target with the environment', 'render']);
   });
 
+  it('compiles what is hidden but may show mid-session (BP6): shown, with its hidden parents, only while the compile gathers', () => {
+    const { r } = stubbedRenderer();
+    const group = new THREE.Group();
+    group.visible = false;
+    const flag = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial());
+    const cloth = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial());
+    cloth.visible = false;
+    flag.add(cloth);
+    group.add(flag);
+    r.scene.add(group);
+    const seen: boolean[] = [];
+    const gl = glOf(r);
+    const compile = gl.compileAsync.bind(gl);
+    vi.spyOn(gl, 'compileAsync').mockImplementation((scene) => {
+      if (scene === r.scene) seen.push(group.visible, flag.visible, flag.frustumCulled, cloth.visible);
+      return compile(scene);
+    });
+    r.warmShaders(replica(), [flag]);
+    // The flag and its group shown, culling off; its hidden cloth stays hidden (its owner shows what it will draw).
+    expect(seen).toEqual([true, true, false, false]);
+    expect([group.visible, flag.visible, flag.frustumCulled, cloth.visible]).toEqual([false, true, true, false]);
+  });
+
   it('with no post stack and the retro filter off, never moves the render target off the canvas', () => {
     const { r } = stubbedRenderer();
     const targets = vi.spyOn(glOf(r), 'setRenderTarget');
@@ -450,7 +473,7 @@ describe('the shader warm-up runs once per session build, never per frame (M63, 
     // CombatPresentation.warmShaders hands over to Renderer.warmShaders: that and the two sessions' are the three calls.
     expect(callers.sort()).toEqual(['/src/matchSession.ts', '/src/rangeSession.ts', '/src/render/combatPresentation.ts']);
     const ctor = bodyOf(sources['/src/matchSession.ts']!, '  constructor(');
-    const call = ctor.indexOf('this.combat.warmShaders()');
+    const call = ctor.indexOf('this.combat.warmShaders(this.match.warmTargets())');
     expect(call).toBeGreaterThan(0);
     expect(ctor.split('warmShaders(').length - 1).toBe(1);
     // Everything the session draws is in the scene by then.
@@ -462,7 +485,7 @@ describe('the shader warm-up runs once per session build, never per frame (M63, 
     // CombatPresentation's hand-over is its own method, not its frame.
     const combat = sources['/src/render/combatPresentation.ts']!;
     expect(bodyOf(combat, '  render(firstPerson')).not.toMatch(/warmShaders|compile/);
-    expect(bodyOf(combat, '  warmShaders(')).toMatch(/this\.renderer\.warmShaders\(this\.overlay\)/);
+    expect(bodyOf(combat, '  warmShaders(')).toMatch(/this\.renderer\.warmShaders\(this\.overlay, /);
     // Practice (M94): its last call too, after its map, torch beams and targets are in the scene.
     const range = bodyOf(sources['/src/rangeSession.ts']!, '  constructor(');
     const rangeCall = range.indexOf('this.combat.warmShaders()');

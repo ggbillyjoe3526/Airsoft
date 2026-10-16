@@ -67,6 +67,11 @@ export class MagTossRenderer {
     }
   }
 
+  /** What the warm-up shows to compile ahead (BP6): one magazine (both boxes share the material), none without slots. */
+  warmTargets(): THREE.Object3D[] {
+    return this.meshes.slice(0, 1);
+  }
+
   /** Whether `t` came out of a rifle's pouch (the class of the thrower's replica it was tossed from); else a pistol's. */
   private rifleMag(t: MagToss): boolean {
     const from = this.characters[t.fromId];
