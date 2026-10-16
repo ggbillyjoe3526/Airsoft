@@ -141,13 +141,13 @@ describe('stair and ramp tops (M40)', () => {
     expect(stack).toHaveLength(2);
     for (const t of stack) expect(t.y).toBeCloseTo(3, 1);
     expect(topsOf(featuresOf(RAMP_YARD)).length).toBeGreaterThan(0);
-    // Neon Heights (three storeys, stairs only): every top found is a stair's top, and six of its seven stairs have one
-    // (measured 2026-10-05: the Plaza stair's is the one the landing rule misses).
+    // Neon Heights (three storeys, stairs only): every top found is a stair's top, and all seven stairs have one (six
+    // until BP5 ended the Plaza landing where its stair starts: the landing rule missed the stair under its overhang).
     const city = topsOf(featuresOf(NEON_HEIGHTS));
     const links = NEON_HEIGHTS_LAYOUT.links;
     const linkOf = (t: Vec3) => links.find((l) => Math.hypot(l.top.x - t.x, l.top.z - t.z) < 1.2 && Math.abs(l.top.y - t.y) < 0.1);
     for (const t of city) expect(linkOf(t), `top at ${t.x}, ${t.y}, ${t.z}`).toBeDefined();
-    expect(new Set(city.map((t) => linkOf(t)!.name)).size).toBeGreaterThanOrEqual(6);
+    expect(new Set(city.map((t) => linkOf(t)!.name)).size).toBe(7);
     // A hillside is not a stair: the Knoll's slopes ease into a field that still slopes.
     expect(featuresOf(WOODLAND).topCount).toBe(0);
   });

@@ -14,8 +14,8 @@ each `src/` folder's `README.md`.
 - **Waiting on the owner:** the hit area's shape before the figures leave the Dev switches; whether Adaptive
   difficulty's steps and the callouts' pace feel right; whether an overtime flag taken at once by someone already on
   its spot feels cheap; and from before, the laptop and desktop Ultra perf baselines, the Save checks in Firefox and
-  Edge, and playing Woodland and Neon Heights (`docs/PLAYTEST.md` › Only you can do these; the Plaza stair and Pro
-  Woodland Attack / Defend wait on that, `docs/KNOWN_ISSUES.md`).
+  Edge, and playing Woodland and Neon Heights (`docs/PLAYTEST.md` › Only you can do these; Pro Woodland Attack /
+  Defend waits on that, `docs/KNOWN_ISSUES.md`).
 - **Vault and rest-on-cover clips.** Both rigged figures behind the Dev switches have their own (shared in
   `tools/blender/bot-figure/scripts/bot18.py`: the robot's built with it in RM10, the human's spliced into its RM9
   export); a figure file without them falls back to the old placeholders. The built-in figures don't change. Of the

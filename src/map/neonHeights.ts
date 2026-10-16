@@ -309,7 +309,8 @@ const BLOCK_LANE_A: Rect = [-11.7, -10.3, -12.6, -12.6 + STAIR_RUN];
 const BLOCK_LANE_B: Rect = [-10.15, -8.75, -12.6, -12.6 + STAIR_RUN];
 const BLOCK_STAIRWELL_EAST = -8.75;
 const PLAZA_STAIR: Rect = [-14.6, -13.2, -12, -12 + STAIR_RUN];
-const PLAZA_LANDING: Rect = [-14.6, -12, -6.6, -3.6];
+/** It starts where the stair ends (BP5: it overhung the stair's top by 0.6 m, so walking up met its edge 0.3 m overhead). */
+const PLAZA_LANDING: Rect = [-14.6, -12, -6, -3.6];
 /** The walkway along the Repair Shop block's north face, over Lantern Lane, from the plaza landing to the footbridge. */
 const WALKWAY: Rect = [-12, FOOTBRIDGE[0], -5, -3.6];
 const SKY_BRIDGE: Rect = [-3.5, 4.3, -8.2, -6.4];
