@@ -171,17 +171,18 @@ export const HAUL_TEXT = {
 export type SettingsTab = 'graphics' | 'display' | 'audio' | 'controls' | 'gameplay' | 'accessibility' | 'look' | 'save' | 'dev';
 
 export const SETTINGS_TABS: readonly { id: SettingsTab; label: string; blurb: string; hidden?: boolean }[] = [
-  { id: 'graphics', label: 'Graphics', blurb: 'Quality, effects, frame rate' },
+  // William's order (Dev 6 playtest, 2026-10-16); the first is the group Settings opens on.
   { id: 'display', label: 'Display', blurb: 'Screen, field of view, tone' },
-  { id: 'audio', label: 'Audio', blurb: 'Volume and voices' },
-  { id: 'controls', label: 'Controls', blurb: 'Mouse, keys, aim and sprint' },
+  { id: 'graphics', label: 'Graphics', blurb: 'Quality, effects, frame rate' },
   { id: 'gameplay', label: 'Gameplay', blurb: 'Crosshair, HUD, hit feed' },
+  /** Robots (graphics overhaul G1). */
+  { id: 'look', label: 'Looks', blurb: 'Humans and robots' },
+  { id: 'audio', label: 'Audio', blurb: 'Volume for each part' },
+  { id: 'controls', label: 'Controls', blurb: 'Mouse, keys, aim and sprint' },
   { id: 'accessibility', label: 'Accessibility', blurb: 'Colours, motion, sound cues' },
-  /** Robots and Realistic colours (graphics overhaul G1). */
-  { id: 'look', label: 'Look', blurb: 'Robots, realistic colours' },
   /** The save: download, load, restore points (M31). */
   { id: 'save', label: 'Save file', blurb: 'Download, load, restore' },
-  { id: 'dev', label: 'Dev', blurb: 'Switches for testing', hidden: true },
+  { id: 'dev', label: 'Dev', blurb: 'Switches for testing, Retro look', hidden: true },
 ];
 
 /** The box under the Settings groups that shows the Dev group (M24). */
@@ -221,7 +222,7 @@ export const SETTINGS_TEXT = {
 export const SETTINGS_LATER: Readonly<Record<SettingsTab, readonly { label: string; help: string }[]>> = {
   graphics: [],
   display: [],
-  audio: [{ label: 'Voices (hit calls)', help: 'Players calling their hits out loud, in a later version.' }],
+  audio: [],
   controls: [],
   gameplay: [],
   accessibility: [],

@@ -14,6 +14,7 @@ import { GraphicsSettings, type GraphicsSettingsOptions } from '../graphicsSetti
 import { type HudSettingsOptions, hudSettings } from '../hudSettings';
 import { KeySettings } from '../keySettings';
 import { type LookSettingsOptions, lookSettings } from '../lookSettings';
+import { type RetroSettingsOptions, retroSettings } from '../retroSettings';
 import { SaveSettings } from '../saveSettings';
 import type { SaveManager } from '../../save/saveManager';
 import type { MenuHint } from './chrome';
@@ -38,10 +39,13 @@ export interface SettingsOptions {
   accessibility: AccessibilitySettingsOptions;
   /** The HUD rows, under Gameplay (ui/hudSettings.ts, M24). */
   hud: HudSettingsOptions;
-  /** The Look group (ui/lookSettings.ts, G1): robots and Realistic colours. */
+  /** The Looks group (ui/lookSettings.ts, G1): Robots. */
   look: LookSettingsOptions;
-  /** The hidden Dev group (ui/devSettings.ts, M24): `enabled`, the box under the groups is ticked and the group shown. */
-  dev: DevSettingsOptions & { enabled: boolean; onEnabled: (on: boolean) => void };
+  /**
+   * The hidden Dev group (ui/devSettings.ts, M24): `enabled`, the box under the groups is ticked and the group shown;
+   * `retro`, the Retro look's rows at its top (ui/retroSettings.ts).
+   */
+  dev: DevSettingsOptions & { enabled: boolean; onEnabled: (on: boolean) => void; retro: RetroSettingsOptions };
   /** The save (M31), for the Save group: download, load, restore points. */
   save: SaveManager;
   /** Gameplay › Replay tutorial (M97): starts the tutorial from its first step, finished or not. */
@@ -64,9 +68,9 @@ export function matchesSearch(text: string, query: string): boolean {
 }
 
 /**
- * The Settings screen (G3: William's groups): Graphics, Display, Audio, Controls, Gameplay, Accessibility and Look down
- * the left, then the save and, once the box under them is ticked, Dev; a search box over them finds a setting in any
- * group. The picked group's rows fill the middle, each with a line on what it does; the side panel says more about the
+ * The Settings screen (G3; William's order since the Dev 6 playtest): Display, Graphics, Gameplay, Looks, Audio,
+ * Controls and Accessibility down the left, then the save and, once the box under them is ticked, Dev; a search box over
+ * them finds a setting in any group. The picked group's rows fill the middle, each with a line on what it does; the side panel says more about the
  * row pointed at. Everything saves as it changes. Back returns to whichever screen opened it.
  */
 export class SettingsScreen {
@@ -80,7 +84,7 @@ export class SettingsScreen {
   private readonly panels: HTMLDivElement;
   private readonly about: { title: HTMLHeadingElement; text: HTMLParagraphElement; cost: HTMLParagraphElement };
   private readonly stutters: HTMLElement;
-  private tab: SettingsTab = 'graphics';
+  private tab: SettingsTab = SETTINGS_TABS[0]!.id;
   private origin: SettingsOrigin = 'setup';
   /** Stops the Fullscreen button following the page's fullscreen state. */
   private unwatchFullscreen: () => void = () => undefined;
@@ -179,7 +183,7 @@ export class SettingsScreen {
     this.root.append(el('h1', 'menu-heading sr-only', 'Settings'), columns);
     // The Save group's pop-up lives in the page: a dialog inside a hidden panel can't show.
     this.root.append(this.saveSettings.dialog.root, this.confirm.root);
-    this.showTab('graphics');
+    this.showTab(SETTINGS_TABS[0]!.id);
   }
 
   /** Called as the screen opens: remembers where Back returns to. */
@@ -225,7 +229,7 @@ export class SettingsScreen {
       saveSetting(DEV_ENABLED_FIELD, box.checked);
       dev.onEnabled(box.checked);
       if (box.checked) this.showTab('dev');
-      else if (this.tab === 'dev') this.showTab('graphics');
+      else if (this.tab === 'dev') this.showTab(SETTINGS_TABS[0]!.id);
     });
     label.append(box, el('span', 'toggle-track'), el('span', '', DEV_TOGGLE_LABEL));
     return label;
@@ -365,7 +369,11 @@ export class SettingsScreen {
       this.saveSettings.acceptDrops(panel);
     } else if (id === 'dev') {
       // The Dev buttons that ask first (M90: Reset the save) use the screen's pop-up.
-      panel.append(el('p', 'menu-readout', devIntro()), ...devSettings({ ...opts.dev, ask: (title, question, yes, run) => this.confirm.ask(title, question, yes, run) }));
+      panel.append(
+        el('p', 'menu-readout', devIntro()),
+        ...retroSettings(opts.dev.retro),
+        ...devSettings({ ...opts.dev, ask: (title, question, yes, run) => this.confirm.ask(title, question, yes, run) }),
+      );
     }
   }
 }

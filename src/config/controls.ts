@@ -194,27 +194,28 @@ export const PREVENT_DEFAULT_KEYS: ReadonlySet<string> = new Set([
 export type HoldMode = 'toggle' | 'hold';
 
 /**
- * The crouch key: toggle by default (owner's 0.1 Dev 3 playtest). In toggle mode, sprinting or jumping stands you up.
+ * The crouch key: hold by default (William, Dev 6 playtest, 2026-10-16; toggle from the 0.1 Dev 3 playtest until then).
+ * In toggle mode, sprinting or jumping stands you up. The default is listed first.
  */
 export type CrouchMode = HoldMode;
 
 export const CROUCH_MODES: readonly { id: CrouchMode; label: string; blurb: string }[] = [
-  { id: 'toggle', label: 'Toggle', blurb: 'Press crouch to go down, press again to stand. Sprint or jump also stands you up.' },
   { id: 'hold', label: 'Hold', blurb: 'Crouch while the key is held.' },
+  { id: 'toggle', label: 'Toggle', blurb: 'Press crouch to go down, press again to stand. Sprint or jump also stands you up.' },
 ];
 
-export const DEFAULT_CROUCH_MODE: CrouchMode = 'toggle';
+export const DEFAULT_CROUCH_MODE: CrouchMode = 'hold';
 
 /**
- * The aim button: hold by default, as before M18. In toggle mode, sprinting, switching replicas or holstering lowers the
- * sight.
+ * The aim button: toggle by default (William, Dev 6 playtest, 2026-10-16; hold until then). In toggle mode, sprinting,
+ * switching replicas or holstering lowers the sight. The default is listed first.
  */
 export const AIM_MODES: readonly { id: HoldMode; label: string; blurb: string }[] = [
-  { id: 'hold', label: 'Hold', blurb: 'Aim while the button is held.' },
   { id: 'toggle', label: 'Toggle', blurb: 'Press aim to raise the sight, press again to lower it. Sprinting, switching replicas or holstering lowers it too.' },
+  { id: 'hold', label: 'Hold', blurb: 'Aim while the button is held.' },
 ];
 
-export const DEFAULT_AIM_MODE: HoldMode = 'hold';
+export const DEFAULT_AIM_MODE: HoldMode = 'toggle';
 
 /** The sprint key: hold by default, as before M18. A toggled sprint stops when you let go of forward, or crouch, aim, walk or fire. */
 export const SPRINT_MODES: readonly { id: HoldMode; label: string; blurb: string }[] = [

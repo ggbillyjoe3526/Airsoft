@@ -182,9 +182,9 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   realistic colours (Black, Wolf Grey, Ranger Green, Tan) per replica (G3, RM3, MR1)
 - Error screen on a crash with the seed, a report, a note box, Reload, Copy Report and Report a Bug buttons; Play Again starts a new match with
   its own seed (FA1, IM7)
-- Settings groups: Graphics (quality presets with Custom option, frame-rate limit), Display (fullscreen, field of view,
-  tone mapping, show FPS), Audio, Controls (every action rebindable, mouse buttons and mouse wheel), Gameplay
-  (crosshair, hit marker, HUD), Accessibility, Look (Robots, Realistic colours, Retro), Save file; a search box and a note on every row
+- Settings groups, opening on Display: Display (fullscreen, field of view, tone mapping, show FPS), Graphics (quality presets with
+  Custom option, frame-rate limit), Gameplay (crosshair, hit marker, HUD), Looks (Robots), Audio, Controls (every action rebindable,
+  mouse buttons and mouse wheel), Accessibility, Save file, Dev; a search box and a note on every row
   (M15, M18a, M19, M24, FA2, FA5, G1, G3, M96, M97)
 - Save system: automatic saving in the browser, download to a JSON file, load from file with a side-by-side comparison,
   restore points (one per day), Undo the last load, Delete and start over; warns if storage is blocked or full, or if

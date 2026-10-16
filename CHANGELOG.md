@@ -13,6 +13,11 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **HD1** · Feed position under Settings › HUD moves the kill feed to the bottom left
 
 ### Changed
+- **ST1** · Settings opens on Display; the tabs run Display, Graphics, Gameplay, Looks, Audio, Controls, Accessibility, Save file, Dev
+- **ST1** · Fresh saves start with aim Toggle, crouch Hold, red sound cues and scoreboard 100 %; a save keeps the picks it already made
+- **ST1** · Fresh-save volumes: master 100 %, effects 80 %, power source 100 %, ambience 60 %, interface 50 %
+- **ST1** · Retro look is a Dev setting again, at the top of the Dev tab, and shows only while Dev settings is ticked
+- **ST1** · Realistic colours leaves Settings for the Loadout's Colour tab; the greyed-out Voices (hit calls) row is gone
 - **MR1** · Match, Loadout and Armory are smaller and tidier; the title screen shows its version at the bottom right
 - **MR1** · Match mode cards are text boxes with their sign; a map offers only the modes it hosts; your match lists its rules as chips
 - **MR1** · Match rules sit in two columns, one line each; rules set by the ruleset show locked as "set by Skirmish", unused rules are hidden

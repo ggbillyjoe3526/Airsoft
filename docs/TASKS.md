@@ -28,22 +28,6 @@ below. The item numbers are his. Where an older block overlaps one of these, the
 
 MS1 shows the owner concept images and waits for his approval before any code changes.
 
-## ST1 · Settings defaults and menu order (playtest items 3–8, 18, 20, 34; the Settings side of 1 and 17)
-tier: ui
-perf: skip
-touches: src/settings/, src/config/menus.ts, src/config/controls.ts, src/config/audio.ts, src/config/graphics.ts, src/config/dev.ts, src/ui/menus/, src/ui/, src/game.ts
-contract: none
-acceptance:
-  1. Defaults (new saves): sound cue colour red, scoreboard size 100 %, aim button Toggle, crouch Hold, volumes master 100 %, effects 80 %, power source 100 %, ambience 60 %, interface 50 %.
-  2. The Retro look setting moves to Settings › Dev. The "Voices (hit calls)" setting is gone.
-  3. Settings tabs run top to bottom: Display, Graphics, Gameplay, Looks, Audio, Controls, Accessibility, Save file, Dev.
-  4. The realistic colours leave Settings (they move to the Loadout's Colour tab, MR1).
-  5. The Dev toggles "Disable figure models" and "Disable all models" leave the menu (BD1 removes their code paths).
-  6. The level display reads "LVL", not "LV".
-  7. A save holding the old values still loads.
-status: open
-attempts: 0
-
 ## MV1 · Movement, holster speed and hands (playtest items 26–30)
 tier: core
 perf: required

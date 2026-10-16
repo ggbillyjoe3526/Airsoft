@@ -28,11 +28,8 @@ async function newGameWithDevContent(page: Page, errors: string[], retro: boolea
   const settings = page.locator('.menu-settings');
   await settings.getByRole('checkbox', { name: 'Dev settings' }).check();
   await settings.getByRole('group', { name: 'Dev content' }).getByRole('button', { name: 'On' }).click();
-  // The Retro look is public since M96: Settings › Look.
-  if (retro) {
-    await settings.getByRole('tab', { name: 'Look', exact: true }).click();
-    await settings.getByRole('group', { name: 'Retro look' }).getByRole('button', { name: 'On' }).click();
-  }
+  // The Retro look is on the Dev tab (ST1; Settings › Look from M96 until then), shown now the box is ticked.
+  if (retro) await settings.locator('#settings-panel-dev').getByRole('group', { name: 'Retro look' }).getByRole('button', { name: 'On' }).click();
   await page.keyboard.press('Escape');
   await expect(setup).toBeVisible();
 }

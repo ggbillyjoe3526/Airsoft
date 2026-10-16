@@ -60,16 +60,16 @@ describe('M86: more varied ambience', () => {
 });
 
 describe('M86: an Ambience volume', () => {
-  it('is a slider of its own, between Effects (and Power source, the 0.1 Dev 5 playtest) and Interface, full by default', () => {
+  it('is a slider of its own, between Effects (and Power source, the 0.1 Dev 5 playtest) and Interface, at 60% by default (Dev 6 playtest)', () => {
     expect(VOLUME_CHANNELS).toEqual(['master', 'effects', 'power', 'ambience', 'interface']);
-    expect(VOLUME.defaults.ambience).toBe(1);
+    expect(VOLUME.defaults.ambience).toBe(0.6);
     expect(volumeField('ambience')).toBe('volume.ambience');
   });
 
-  it('loads an old save (no ambience slider saved) at full, and a saved one as saved', () => {
+  it('loads an old save (no ambience slider saved) at its default, and a saved one as saved', () => {
     const old = new MemoryStorage();
     saveSetting('volume.effects', 0.5, old);
-    expect(loadVolumes(old)).toEqual({ master: 1, effects: 0.5, power: 1, ambience: 1, interface: 1 });
+    expect(loadVolumes(old)).toEqual({ master: 1, effects: 0.5, power: 1, ambience: 0.6, interface: 0.5 });
     const saved = new MemoryStorage();
     saveSetting('volume.ambience', 0.3, saved);
     expect(loadVolumes(saved).ambience).toBe(0.3);
