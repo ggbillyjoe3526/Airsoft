@@ -238,7 +238,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   // The Armory (LV1): your level on the top bar opens it. Level 7 of 10, 100 of level 8's 900 XP, the LiPo battery next,
   // and every level on the track with its state.
   const badge = topBar.locator('.menu-chip-level');
-  await expect(badge).toHaveText(/Lv 7/);
+  await expect(badge).toHaveText(/LVL 7/);
   await badge.click();
   const armory = page.locator('.menu-armory');
   await expect(armory).toBeVisible();
@@ -256,17 +256,19 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await page.keyboard.press('Escape');
   await expect(setup).toBeVisible();
 
-  // Settings (G3): the groups down the left, opening on Graphics; Esc works as Back and returns to the Play screen.
+  // Settings (G3; William's order since the Dev 6 playtest, ST1): the groups down the left, opening on Display; Esc works
+  // as Back and returns to the Play screen.
   await topBar.getByRole('button', { name: 'Settings' }).click();
   const settings = page.locator('.menu-settings');
   await expect(settings).toBeVisible();
   const group = (name: string | RegExp) => settings.getByRole('tab', { name });
-  await expect(group(/Graphics/i)).toHaveAttribute('aria-selected', 'true');
-  await expect(settings.getByRole('group', { name: 'Quality' }).getByRole('button', { name: 'Low' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(settings.getByRole('tab')).toHaveText([/^Display/, /^Graphics/, /^Gameplay/, /^Looks/, /^Audio/, /^Controls/, /^Accessibility/, /^Save file/]);
   // Display: the field of view and fullscreen, out of the old Graphics tab.
-  await group(/Display/i).click();
+  await expect(group(/Display/i)).toHaveAttribute('aria-selected', 'true');
   await expect(settings.getByRole('slider', { name: 'Field of view' })).toHaveValue('90');
   await expect(settings.getByRole('button', { name: 'Enter Fullscreen' })).toBeVisible();
+  await group(/Graphics/i).click();
+  await expect(settings.getByRole('group', { name: 'Quality' }).getByRole('button', { name: 'Low' })).toHaveAttribute('aria-pressed', 'true');
   // Controls (M18): the sensitivity as cm/360 at the mouse's DPI; typing a cm/360 moves the slider to match.
   await group(/Controls/i).click();
   const cm = settings.getByRole('spinbutton', { name: /cm per 360/ });
@@ -274,7 +276,9 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await cm.fill('40');
   await cm.press('Enter');
   await expect(settings.getByRole('slider', { name: 'Mouse sensitivity' })).toHaveValue('0.5');
-  await expect(settings.getByRole('group', { name: 'Aim button' }).getByRole('button', { name: 'Hold' })).toHaveAttribute('aria-pressed', 'true');
+  // ST1: aim on Toggle and crouch on Hold by default.
+  await expect(settings.getByRole('group', { name: 'Aim button' }).getByRole('button', { name: 'Toggle' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(settings.getByRole('group', { name: 'Crouch key' }).getByRole('button', { name: 'Hold' })).toHaveAttribute('aria-pressed', 'true');
   await expect(settings.getByRole('group', { name: 'Order wheel' }).getByRole('button', { name: 'Hover' })).toHaveAttribute('aria-pressed', 'true');
   // The key bindings sit under Controls (G3). Fire and aim are bindings like the rest (M18), on the mouse buttons by
   // default. A rebind by a real key press (audit L-27): each key box is named for its action (L-31); Reload moves to T,
@@ -314,36 +318,39 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await settings.getByRole('group', { name: 'Team colours' }).getByRole('button', { name: 'High Contrast' }).click();
   await expect(settings.locator('.team-swatch')).toHaveCount(2);
   await settings.getByRole('group', { name: 'Sound cues' }).getByRole('button', { name: 'On' }).click();
-  // M24: the cues' colour and size reach the HUD as CSS variables on the container.
+  // M24: the cues' colour and size reach the HUD as CSS variables on the container. Red by default (ST1).
+  await expect(settings.getByRole('group', { name: 'Sound cue colour' }).getByRole('button', { name: 'Red' })).toHaveAttribute('aria-pressed', 'true');
   await settings.getByRole('group', { name: 'Sound cue colour' }).getByRole('button', { name: 'Yellow' }).click();
   await expect.poll(() => page.evaluate(() => document.getElementById('app')!.style.getPropertyValue('--cue-colour'))).toBe('#ffe94a');
   await expect(settings.getByRole('slider', { name: 'Sound cue size' })).toHaveValue('1');
-  // G1: the Look group has Robots (Mixed by default) and Realistic colours (Bold by default); each pick is saved.
-  await group(/Look/i).click();
-  await expect(group(/Look/i)).toHaveAttribute('aria-selected', 'true');
+  // G1: the Looks group has Robots (Mixed by default), saved as picked; Realistic colours left for the Loadout (ST1).
+  await group(/Looks/i).click();
+  await expect(group(/Looks/i)).toHaveAttribute('aria-selected', 'true');
   const robots = settings.getByRole('group', { name: 'Robots' });
-  const realistic = settings.getByRole('group', { name: 'Replica colours' });
   await expect(robots.getByRole('button', { name: 'Mixed' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(realistic.getByRole('button', { name: 'Bold' })).toHaveAttribute('aria-pressed', 'true');
-  const savedLook = () => page.evaluate(() => JSON.parse(localStorage.getItem('airsoft.settings') ?? '{}') as { robots?: string; realisticColours?: string });
+  await expect(settings.getByRole('group', { name: 'Replica colours' })).toHaveCount(0);
+  const savedLook = () => page.evaluate(() => JSON.parse(localStorage.getItem('airsoft.settings') ?? '{}') as { robots?: string });
   await robots.getByRole('button', { name: 'Humans only' }).click();
-  await realistic.getByRole('button', { name: 'Realistic' }).click();
-  await expect.poll(savedLook).toMatchObject({ robots: 'off', realisticColours: 'on' });
+  await expect.poll(savedLook).toMatchObject({ robots: 'off' });
   await robots.getByRole('button', { name: 'Mixed' }).click();
-  await realistic.getByRole('button', { name: 'Bold' }).click();
-  await expect.poll(savedLook).toMatchObject({ robots: 'on', realisticColours: 'off' });
+  await expect.poll(savedLook).toMatchObject({ robots: 'on' });
   await group(/Audio/i).click();
-  // Master, Effects, Power source (the owner's 0.1 Dev 5 playtest, note 2), Ambience and Interface.
+  // Master, Effects, Power source (the owner's 0.1 Dev 5 playtest, note 2), Ambience and Interface, at William's
+  // defaults (ST1); no Voices row.
   await expect(settings.getByRole('slider', { name: /volume/i })).toHaveCount(5);
-  // The groups follow the tabs pattern (audit L-31): Arrow Down from Audio picks Controls, then Gameplay, and moves
-  // the focus there.
-  await page.keyboard.press('ArrowDown');
-  await expect(group(/Controls/i)).toHaveAttribute('aria-selected', 'true');
-  await page.keyboard.press('ArrowDown');
+  for (const [name, value] of [['Master volume', '1'], ['Effects volume', '0.8'], ['Power source volume', '1'], ['Ambience volume', '0.6'], ['Interface volume', '0.5']]) {
+    await expect(settings.getByRole('slider', { name }), name).toHaveValue(value!);
+  }
+  await expect(settings.getByText('Voices (hit calls)')).toHaveCount(0);
+  // The groups follow the tabs pattern (audit L-31): Arrow Up from Audio picks Looks, then Gameplay, and moves the
+  // focus there.
+  await page.keyboard.press('ArrowUp');
+  await expect(group(/Looks/i)).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('ArrowUp');
   await expect(group(/Gameplay/i)).toHaveAttribute('aria-selected', 'true');
   await expect(group(/Gameplay/i)).toBeFocused();
-  // Gameplay (G3): the HUD's rows (M24) with the crosshair's.
-  await expect(settings.getByRole('slider', { name: 'Scoreboard size' })).toHaveValue('1.3');
+  // Gameplay (G3): the HUD's rows (M24) with the crosshair's. The scoreboard at 100% by default (ST1).
+  await expect(settings.getByRole('slider', { name: 'Scoreboard size' })).toHaveValue('1');
   // G4: HUD opacity, 90 % by default, reaches the HUD as --hud-opacity on the container and is saved as hudOpacity.
   const hudOpacity = settings.getByRole('slider', { name: 'HUD opacity' });
   await expect(hudOpacity).toHaveValue('0.9');
@@ -377,9 +384,16 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(group(/^Dev/i)).toHaveAttribute('aria-selected', 'true');
   await settings.getByRole('group', { name: 'Debug info' }).getByRole('button', { name: 'On' }).click();
   await expect(page.locator('.debug-overlay')).toBeVisible();
-  // M96: the Retro look left the Dev group for Settings › Look (checked below).
+  // ST1: the Retro look is back on the Dev group (it was on Settings › Look from M96): Off, its sliders at 4 px and 216
+  // colours; the smoke run leaves the filter off.
   const devPanel = settings.locator('#settings-panel-dev');
-  await expect(devPanel.getByRole('group', { name: /Retro/ })).toHaveCount(0);
+  const retro = devPanel.getByRole('group', { name: 'Retro look' });
+  await expect(retro.getByRole('button', { name: 'Off' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(retro.getByRole('button', { name: 'On' })).toHaveAttribute('aria-pressed', 'false');
+  await expect(devPanel.getByRole('slider', { name: 'Retro pixel size' })).toHaveValue('4');
+  await expect(devPanel.getByRole('slider', { name: 'Retro colours' })).toHaveValue('6');
+  await expect(devPanel.getByText('4 px', { exact: true })).toBeVisible();
+  await expect(devPanel.getByText('216', { exact: true })).toBeVisible();
   // LV1: Disable levelling unlocks everything while it applies, so the level badge goes from the top bar; the Armory stays.
   const armoryPlace = topBar.getByRole('button', { name: 'Armory', exact: true });
   await settings.getByRole('group', { name: 'Disable levelling' }).getByRole('button', { name: 'On' }).click();
@@ -390,17 +404,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(badge).toBeVisible();
   await expect(armoryPlace).toBeEnabled();
   await expect(group(/^Dev/i)).toBeHidden();
-  await expect(group(/Graphics/i)).toHaveAttribute('aria-selected', 'true');
-  // M96: Settings › Look › Retro look, Off, its sliders at 4 px and 216 colours; the smoke run leaves the filter off.
-  await group(/^Look/i).click();
-  const lookPanel = settings.locator('#settings-panel-look');
-  const retro = lookPanel.getByRole('group', { name: 'Retro look' });
-  await expect(retro.getByRole('button', { name: 'Off' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(retro.getByRole('button', { name: 'On' })).toHaveAttribute('aria-pressed', 'false');
-  await expect(lookPanel.getByRole('slider', { name: 'Retro pixel size' })).toHaveValue('4');
-  await expect(lookPanel.getByRole('slider', { name: 'Retro colours' })).toHaveValue('6');
-  await expect(lookPanel.getByText('4 px', { exact: true })).toBeVisible();
-  await expect(lookPanel.getByText('216', { exact: true })).toBeVisible();
+  await expect(group(/Display/i)).toHaveAttribute('aria-selected', 'true');
   await page.keyboard.press('Escape');
   await expect(setup).toBeVisible();
   await expect(setup.locator(':focus')).toHaveCount(1); // the keyboard is back on the Play screen
@@ -513,13 +517,17 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
 
   await testInfo.attach('in-match', { body: await page.screenshot(), contentType: 'image/png' });
 
-  // Aim down the scope: hold the right button and the HUD swaps the crosshair for the eyepiece; let go and it's back.
+  // Aim down the scope: a right click raises it (Toggle, the default since ST1) and the HUD swaps the crosshair for the
+  // eyepiece, which stays up after the button is let go; a second click lowers it.
   const hud = page.locator('.hud');
   await page.mouse.down({ button: 'right' });
   await expect(hud).toHaveClass(/\bscoped\b/, { timeout: 10_000 });
+  await page.mouse.up({ button: 'right' });
   await expect(page.locator('.hud-scope')).toBeVisible();
   await expect(page.locator('.hud-reddot')).toBeHidden();
   await testInfo.attach('aiming', { body: await page.screenshot(), contentType: 'image/png' });
+  await expect(hud).toHaveClass(/\bscoped\b/);
+  await page.mouse.down({ button: 'right' });
   await page.mouse.up({ button: 'right' });
   await expect(hud).not.toHaveClass(/\baiming\b/, { timeout: 10_000 });
 

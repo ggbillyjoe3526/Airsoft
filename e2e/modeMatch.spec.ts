@@ -189,6 +189,9 @@ test('Rest on cover: aiming still at a crate shows the Rested tag, and letting g
     .toBe(true);
   await expect(tag).toHaveText('Rested');
   await page.mouse.up({ button: 'right' });
+  // Aim is Toggle by default (ST1): a second click lowers it.
+  await page.mouse.down({ button: 'right' });
+  await page.mouse.up({ button: 'right' });
   await expect(tag).toBeHidden({ timeout: 30_000 });
   expect(errors, errors.join(' | ')).toEqual([]);
 });
