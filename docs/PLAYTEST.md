@@ -618,11 +618,11 @@ The Match screen's Practice card (the last mode), then Start practice.
   first match (also after a reload).
 - [ ] **Play it through.** The coach says "Tutorial · 1 of 15 · Look around" and moves on as you do each thing: look
   around, walk to the line, ring a plate, knock down a figure at 50 m or more (the coach shows where your last BB
-  landed), reload, the fire selector, aim (or, with iron sights, a pointer to the optics), crouch, lean, shooting out
-  of a sprint, switch replica and hit something, then the cards to read: one hit, the scoreboard, the order wheel,
+  landed), reload, the fire selector, aim (or, with iron sights, a pointer to the optics), crouch, shooting out of a
+  sprint, vault, switch replica and hit something, then four cards to read: one hit, the scoreboard, the order wheel,
   winning a match. Each finished step ticks green. Did any step feel stuck or unclear?
-- [ ] **Plain words (M80).** Read every card: is each one simple, and does it say how the thing works, not only what
-  it's called? Is there time to read each card before it moves on?
+- [ ] **Short and quick (TT1).** Every card is a sentence or two. The four read cards show a thin bar filling as they
+  read and move on by themselves within 5 to 8 seconds. Is there time to read each, without waiting around?
 - [ ] **It shows what it teaches (M80).** The scoreboard card opens the scoreboard (a sample match) under it, and the
   order wheel card opens the wheel with its pointer moving from order to order; each closes as the next card comes up,
   and both hide on the pause menu.
@@ -632,7 +632,7 @@ The Match screen's Practice card (the last mode), then Start practice.
   practice, and the title stops tagging it.
 - [ ] **After the last step (M80)** a "Tutorial complete" pop-up offers Practice range (Enter: back on the range, the
   readout in the coach's place) or Menu (the Match screen, to start a match). Esc closes it to the pause menu.
-- [ ] **Fitting an optic (BP5).** The "Aim down the sight" card also says you can fit a red dot or a 2× scope on the
+- [ ] **Fitting an optic (BP5).** The "Aim down the sight" card also says you can fit a red dot or scope on the
   Loadout (Esc, then Loadout).
 
 ### Extraction (dev content)

@@ -12,19 +12,24 @@ export class FlagMarker {
   private shownVisible = false;
   private shownColor = '';
   private shownEdge = false;
+  private shownTowards = Number.NaN;
 
   /** `variant`: an extra class for another objective's marker (Extraction's exits: 'exit-marker'). */
   constructor(parent: HTMLElement, variant = '') {
     this.root = document.createElement('div');
     this.root.className = variant ? `flag-marker ${variant}` : 'flag-marker';
     this.root.hidden = true;
-    this.root.innerHTML = '<i class="flag-marker-icon"></i><span></span>';
+    // The arrow shows only while the marker is pinned to the edge (style.css .flag-marker.edge), pointing the way to turn.
+    this.root.innerHTML = '<i class="flag-marker-icon"></i><span></span><b class="flag-marker-arrow"></b>';
     this.distance = this.root.querySelector('span') as HTMLSpanElement;
     parent.appendChild(this.root);
   }
 
-  /** Shows the marker at (x, y) pixels, `metres` away, in the colour `color` (CSS); `edge` when pinned to the screen edge. */
-  show(x: number, y: number, metres: number, color: string, edge: boolean): void {
+  /**
+   * Shows the marker at (x, y) pixels, `metres` away, in the colour `color` (CSS); `edge` when pinned to the screen edge,
+   * with an arrow pointing `towards` (degrees clockwise from right, screenMarker.ts edgeAngle: the way to turn, KI1).
+   */
+  show(x: number, y: number, metres: number, color: string, edge: boolean, towards = 0): void {
     if (!this.shownVisible) this.root.hidden = !(this.shownVisible = true);
     const rx = Math.round(x);
     const ry = Math.round(y);
@@ -37,6 +42,9 @@ export class FlagMarker {
     if (m !== this.shownMetres) this.distance.textContent = `${(this.shownMetres = m)} m`;
     if (color !== this.shownColor) this.root.style.setProperty('--flag', (this.shownColor = color));
     if (edge !== this.shownEdge) this.root.classList.toggle('edge', (this.shownEdge = edge));
+    if (!edge) return;
+    const deg = Math.round(towards);
+    if (deg !== this.shownTowards) this.root.style.setProperty('--towards', `${(this.shownTowards = deg)}deg`);
   }
 
   hide(): void {

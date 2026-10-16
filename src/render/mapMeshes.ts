@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { BAKED_LIGHT } from '../config/bake';
 import { type BakedLightMode, type QualitySettings, SURFACES, type SurfaceTextureId } from '../config/render';
-import { WEATHERING } from '../config/weathering';
+import { type ShaderWear, WEATHERING } from '../config/weathering';
 import { groundGridOf } from '../map/groundSurfaces';
 import type { BlockKind, MapBlock, MapData } from '../map/mapTypes';
 import { RAMP_FACES, rampCorners } from '../map/surfaces';
@@ -705,7 +705,7 @@ export function mapLookOf(q: QualitySettings, probes: ProbeGrid | null = null): 
 }
 
 /** How a look draws the baked light: its mode, or off without probes. */
-export function bakedLightOf(look: MapLook): BakedLightMode {
+function bakedLightOf(look: MapLook): BakedLightMode {
   return look.probes ? (look.bakedLight ?? 'off') : 'off';
 }
 
@@ -731,7 +731,7 @@ function surfaceMaterial(surface: ProceduralTexture, id: SurfaceTextureId, look:
   const base = { map: surface.texture, vertexColors: true, bumpScale: SURFACES.relief[id] };
   const environment = look.steelSheen && id === 'steelPlate';
   const mat: SurfaceMaterial = environment ? new THREE.MeshStandardMaterial({ ...base, ...SURFACES.steelSheen }) : new THREE.MeshLambertMaterial(base);
-  const patch: SurfacePatch = { wear: look.weathering ? WEATHERING.shader[id] : null, probes };
+  const patch: SurfacePatch = { wear: wearOf(id, look), probes };
   if (patchesShader(patch)) patchSurfaceMaterial(mat, patch);
   setReliefMaps(mat, surface, look.relief, look.normalMaps);
   return mat;
@@ -813,8 +813,30 @@ export function groundNoise(x: number, z: number): number {
 /** Appends `from`'s vertices and triangles to `into` (its indices moved past `into`'s vertices). */
 function appendBuffers(into: Buffers, from: Buffers): void {
   const base = into.positions.length / 3;
+  if (into.feet || from.feet) {
+    footTo(into, 0);
+    footTo(from, 0);
+    for (const f of from.feet!) into.feet!.push(f);
+  }
   for (const key of ['positions', 'normals', 'uvs', 'colors'] as const) for (const v of from[key]) into[key].push(v);
   for (const i of from.indices) into.indices.push(base + i);
+}
+
+/**
+ * Weathering's creep (G6) measures up a wall from its foot: `foot` (m) for each vertex written into `buf` since the
+ * last call, so a piece's vertices carry its block's foot (KI1: it measured from y = 0, so a wall on an upper floor or
+ * raised ground had no creep). Vertices nothing filled in measure from 0, as before.
+ */
+export function footTo(buf: Buffers, foot: number): void {
+  const feet = (buf.feet ??= []);
+  const count = buf.positions.length / 3;
+  while (feet.length < count) feet.push(foot);
+}
+
+/** The surface's weathering in the shader at `look`, or null: none without Weathering, or where it would add nothing. */
+function wearOf(id: SurfaceTextureId, look: MapLook): ShaderWear | null {
+  const wear = look.weathering ? WEATHERING.shader[id] : null;
+  return wear && (wear.grime > 0 || wear.rust > 0) ? wear : null;
 }
 
 /**
@@ -874,6 +896,8 @@ export function buildMapMeshes(map: MapData, textures: SurfaceTextures, look: Ma
     return castShadow ? { buf: e.cast, shadow: e.shadow } : { buf: e.flat, shadow: null };
   };
 
+  // With weathering, each vertex's foot for the creep (footTo); filled in as each piece is written.
+  const feet = look.weathering === true;
   const pieces: { piece: Piece; block: MapBlock }[] = [];
   for (const block of drawnBlocks(map)) {
     if (block.kind === 'ramp') {
@@ -882,6 +906,7 @@ export function buildMapMeshes(map: MapData, textures: SurfaceTextures, look: Ma
       const e = entry(style.texture, castsShadow(block));
       appendRamp(e.buf, block, surfaceTexture(textures, style.texture), color);
       if (e.shadow) appendRamp(e.shadow, block, surfaceTexture(textures, style.texture), color);
+      if (feet) footTo(e.buf, 0);
       continue;
     }
     for (const piece of blockPieces(block, map.blocks, look.detail)) pieces.push({ piece, block });
@@ -899,6 +924,7 @@ export function buildMapMeshes(map: MapData, textures: SurfaceTextures, look: Ma
     if (isNatureKind(block.kind)) appendNatureShape(e.buf, block, moss ? { ...paint, moss } : paint, pieceShape(p, block, i, occ).shade);
     else appendCuboid(e.buf, p.box, paint, pieceShape(p, block, i, occ, plainShape));
     if (e.shadow) appendCuboid(e.shadow, p.box, paint, PLAIN);
+    if (feet) footTo(e.buf, p.grime ? bottom : 0);
   });
   // M33i: the light fixtures' stones, logs, lanterns and posts, and the pebbles on gravel: drawn, never in the shadow map.
   const groundAt = (x: number, z: number, below: number): number => groundUnder(map, x, z, below) ?? 0;
@@ -918,6 +944,10 @@ export function buildMapMeshes(map: MapData, textures: SurfaceTextures, look: Ma
     geo.setAttribute('normal', new THREE.Float32BufferAttribute(buf.normals, 3));
     geo.setAttribute('uv', new THREE.Float32BufferAttribute(buf.uvs, 2));
     geo.setAttribute('color', new THREE.Float32BufferAttribute(buf.colors, 3));
+    if (feet && wearOf(texture, look)) {
+      footTo(buf, 0);
+      geo.setAttribute('wearFoot', new THREE.Float32BufferAttribute(buf.feet!, 1));
+    }
     geo.setIndex(buf.indices);
     geo.computeBoundingSphere();
     const mesh = new THREE.Mesh(geo, surfaceMaterial(surfaceTexture(textures, texture), texture, look, probes));

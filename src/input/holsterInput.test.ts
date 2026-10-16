@@ -13,13 +13,13 @@ import { fillScriptedCommand } from './scriptedInput';
 
 function fakeKeyboard() {
   const down = new Set<Action>();
-  const pressed = new Set<Action>();
-  const kb = { isDown: (a: Action) => down.has(a), wasPressed: (a: Action) => pressed.has(a) } as unknown as Keyboard;
+  const pressed = new Map<Action, number>();
+  const kb = { isDown: (a: Action) => down.has(a), wasPressed: (a: Action) => pressed.has(a), pressCount: (a: Action) => pressed.get(a) ?? 0 } as unknown as Keyboard;
   return {
     kb,
     press(a: Action) {
       down.add(a);
-      pressed.add(a);
+      pressed.set(a, (pressed.get(a) ?? 0) + 1);
     },
     release(a: Action) {
       down.delete(a);

@@ -1,6 +1,8 @@
-/* The hit feed (M19; G4 look), top right: a navy row per hit, read left to right as the shooter, a BB and who called
-   it, each name in its team's colour, then a Hit tag; a screen reader hears the airsoft sentence instead (ui/hitFeed.ts).
-   Its rows are panels, as opaque as Settings → HUD → HUD opacity (--hud-panel, style.css #app). */
+/* The match feed (M19; G4 look; one feed of hits and callouts since Dev 6 playtest item 32), top right: a navy row per
+   hit, read left to right as the shooter, a BB and who called it, each name in its team's colour, then a Hit tag, and a
+   row per teammate's callout, their name then what they said; a screen reader hears the airsoft sentence instead
+   (ui/hitFeed.ts). Its rows are panels, as opaque as Settings → HUD → HUD opacity (--hud-panel, style.css #app). The
+   newest row is first in the DOM: on top here, at the bottom in the bottom-left corner (.bottom-left). */
 .hit-feed {
   position: absolute;
   top: var(--hud-margin);
@@ -10,15 +12,33 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 6px;
+  gap: 5px;
   /* Never under the score bar (bug pass: at 1024 px a friendly-fire line ran beneath it): the feed keeps to the right
      of the bar as it is (--sb-half, half its width at size 1, set by ui/scoreboard.ts; before that its widest form,
      Attack and Defend's, about 730 px), scaled by --sb-scale and --sb-fit, before the HUD's scale, and a long row wraps. */
   max-width: calc((50% - var(--hud-edge-x) - 12px - var(--sb-half, 365px) * var(--sb-scale, 1) * var(--sb-fit, 1)) / var(--hud-scale, 1));
-  font: 700 17px/1.2 var(--ui-font);
+  font: 700 16px/1.2 var(--ui-font);
   color: var(--paper);
   pointer-events: none;
   z-index: 11;
+}
+
+/* Bottom left (Settings → HUD → Feed position): the newest row at the bottom, as in a chat, rows hugging the left edge.
+   Narrow enough to stay clear of the "what got you" card in the middle at any width (as the callout feed was). */
+.hit-feed.bottom-left {
+  top: auto;
+  right: auto;
+  left: var(--hud-edge-x);
+  bottom: var(--hud-margin);
+  transform-origin: 0 100%;
+  flex-direction: column-reverse;
+  align-items: flex-start;
+  max-width: min(440px, calc(30% / var(--hud-scale, 1)));
+}
+
+/* Out of sight while the scoreboard is up in the bottom-left corner (BP5), its lines still timed. */
+.hit-feed.covered {
+  visibility: hidden;
 }
 
 .hit-feed[hidden] {
@@ -33,10 +53,26 @@
   justify-content: flex-end;
   align-items: center;
   gap: 4px 8px;
-  padding: 7px 14px 7px 12px;
+  padding: 6px 12px 6px 11px;
   background: var(--hud-panel);
   box-shadow: inset 3px 0 0 var(--hitter, transparent);
   transition: opacity var(--feed-fade, 1s) linear;
+}
+
+.hit-feed.bottom-left .hit-feed-line {
+  justify-content: flex-start;
+}
+
+/* A teammate's callout: their name in the team's colour, then what they said, lighter than a hit's row (no tag), on
+   its own fade. */
+.hit-feed-line.callout {
+  display: block;
+  font-weight: 600;
+  transition-duration: var(--callout-fade, 0.6s);
+}
+
+.hit-feed-line.callout .hit-feed-name {
+  margin-right: 2px;
 }
 
 /* Yours (you hit, or were hit): darker, with an acid edge on the outside. */
@@ -54,7 +90,7 @@
 .hit-feed-row {
   display: inline-flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: inherit;
   align-items: center;
   gap: 4px 8px;
 }

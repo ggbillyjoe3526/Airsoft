@@ -152,7 +152,7 @@ describe('bots holster in a match (acceptance 3)', () => {
     await initPhysics();
   });
 
-  it('some bot puts its replica away on a run in the first half minute of a Depot round and draws it again', { timeout: 120_000 }, () => {
+  it('some bot puts its replica away on a run in the first half minute of a Depot round and draws it again', { timeout: 30_000 }, () => {
     let away = false;
     let drawn = false;
     const held = new Set<number>();

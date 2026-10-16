@@ -18,13 +18,30 @@ export function wheelHint(select: WheelSelect, pick: number, keyName: string): s
 }
 
 /**
- * The order wheel on screen (M23): the orders round the middle of the screen, the one pointed at lit, the one your
- * teammates are carrying out marked, and the wheel's own pointer. Input (input/orderWheel.ts) decides what it shows;
- * the DOM is only touched when that changes.
+ * One order's slice of the ring (Dev 6 playtest item 22) as an SVG path round (0, 0): the `i`-th of `count`, centred
+ * clockwise from the top as the input reads the pointer (input/orderWheel.ts wheelSlice), between `inner` and `outer`
+ * px with half of `gapDeg` taken off each side, so every slice is the same shape.
+ */
+export function slicePath(i: number, count: number, inner: number, outer: number, gapDeg: number): string {
+  const half = Math.PI / count - (gapDeg * Math.PI) / 360;
+  const mid = (i / count) * Math.PI * 2;
+  const at = (r: number, a: number) => `${(Math.sin(a) * r).toFixed(1)} ${(-Math.cos(a) * r).toFixed(1)}`;
+  const large = half * 2 > Math.PI ? 1 : 0;
+  return `M ${at(outer, mid - half)} A ${outer} ${outer} 0 ${large} 1 ${at(outer, mid + half)} L ${at(inner, mid + half)} A ${inner} ${inner} 0 ${large} 0 ${at(inner, mid - half)} Z`;
+}
+
+/**
+ * The order wheel on screen (M23; redrawn as a ring for Dev 6 playtest item 22): a ring of equal slices round the middle
+ * of the screen, one per order, each with the order's name and its direct key in a box the same size; the slice pointed
+ * at filled in your team's colour, the order your teammates are carrying out underlined, the wheel's own pointer, and
+ * how to give the order under the ring. Input (input/orderWheel.ts) decides what it shows; the DOM is only touched when
+ * that changes.
  */
 export class OrderWheel {
   private readonly root: HTMLDivElement;
   private readonly items: HTMLDivElement[];
+  /** Each order's slice of the ring (an SVG path in a box of its own), lit with its item. */
+  private readonly slices: HTMLDivElement[] = [];
   /** Each order's label (its own span, so the key under it stays): the Mag item's reads Need a Mag or Toss a Mag (MG1). */
   private readonly labels: HTMLSpanElement[] = [];
   /** Under each order, its direct key (audit UI-22): the wheel teaches the keys it stands in for. */
@@ -46,15 +63,28 @@ export class OrderWheel {
     this.root.className = 'order-wheel';
     this.root.hidden = true;
     this.root.style.setProperty('--team', team);
-    this.root.style.setProperty('--wheel-radius', `${ORDER_WHEEL.radius}px`);
+    const { inner, outer, gap, radius } = ORDER_WHEEL;
+    this.root.style.setProperty('--wheel-outer', `${outer}px`);
     const n = ORDER_WHEEL.items.length;
+    const size = outer * 2;
+    // The ring, drawn once: a slice per order, each its own box so it lights with its order.
+    for (let i = 0; i < n; i++) {
+      const slice = document.createElement('div');
+      slice.className = 'order-wheel-slice';
+      slice.innerHTML = `<svg viewBox="${-outer} ${-outer} ${size} ${size}" width="${size}" height="${size}" aria-hidden="true"><path d="${slicePath(i, n, inner, outer, gap)}"/></svg>`;
+      this.slices.push(slice);
+      this.root.append(slice);
+    }
+    const hub = document.createElement('i');
+    hub.className = 'order-wheel-hub';
+    this.root.append(hub);
     this.items = ORDER_WHEEL.items.map((item, i) => {
       const el = document.createElement('div');
       el.className = 'order-wheel-item';
       // Clockwise from the top, as the input reads the pointer.
       const angle = (i / n) * Math.PI * 2;
-      el.style.setProperty('--x', `${Math.round(Math.sin(angle) * ORDER_WHEEL.radius)}px`);
-      el.style.setProperty('--y', `${Math.round(-Math.cos(angle) * ORDER_WHEEL.radius)}px`);
+      el.style.setProperty('--x', `${Math.round(Math.sin(angle) * radius)}px`);
+      el.style.setProperty('--y', `${Math.round(-Math.cos(angle) * radius)}px`);
       const label = document.createElement('span');
       label.className = 'order-wheel-label';
       label.textContent = item.label;
@@ -91,12 +121,14 @@ export class OrderWheel {
     if (!open) return;
     if (pick !== s.pick) {
       this.items.forEach((el, i) => el.classList.toggle('picked', i === pick));
+      this.slices.forEach((el, i) => el.classList.toggle('picked', i === pick));
       s.pick = pick;
     }
     if (current !== s.current) {
       // With no order in force, the team plan is what they follow.
       const now = current === 'none' ? 'cancel' : current;
       this.items.forEach((el, i) => el.classList.toggle('current', ORDER_WHEEL.items[i]!.command === now));
+      this.slices.forEach((el, i) => el.classList.toggle('current', ORDER_WHEEL.items[i]!.command === now));
       s.current = current;
     }
     if (hint !== s.hint) this.hint.textContent = s.hint = hint;

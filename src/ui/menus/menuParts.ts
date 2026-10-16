@@ -67,7 +67,7 @@ export function watchScroll(root: HTMLElement): () => void {
 }
 
 /** The "LATER" tag on things not built yet. */
-export function laterTag(): HTMLSpanElement {
+function laterTag(): HTMLSpanElement {
   return el('span', 'menu-later', 'Later');
 }
 

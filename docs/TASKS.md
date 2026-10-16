@@ -60,22 +60,6 @@ acceptance:
 status: open
 attempts: 0
 
-## HD1 · In-match HUD, feeds and hop-up (playtest items 15, 22, 24, 25, 31–33)
-tier: ui
-perf: required
-touches: src/ui/, src/ui/hud.css, src/ui/hudCss/, src/input/orderWheel.ts, src/input/keyBindings.ts, src/config/controls.ts, src/config/hudText.ts, src/sim/commands.ts, src/sim/armament.ts, src/render/impactPuffs.ts, src/render/impactGrit.ts, src/config/renderEffects.ts
-contract: PlayerCommand (a hop-up step, by addition)
-acceptance:
-  1. A rebindable control adjusts the held replica's hop-up mid-match, through the command interface (bots unchanged), with a HUD readout that shows it changing in real time.
-  2. The comms wheel is redesigned: minimal and easy to read, with every button the same size.
-  3. BB impacts kick up a smaller, subtler puff.
-  4. The weapon, magazine, ammo and fire-mode panel is smaller and more minimal, and still easy to read.
-  5. The scoreboard has no YOU tag.
-  6. The hit feed and the bot callouts are one feed, top right by default, with a setting that moves it bottom left.
-  7. WON or LOST shows at a round's end before the result, briefly and without getting in the way, and the player can move on at once.
-status: open
-attempts: 0
-
 ## MV1 · Movement, holster speed and hands (playtest items 26–30)
 tier: core
 perf: required
@@ -115,17 +99,6 @@ acceptance:
   3. Woodland's hut has a roof, and its trees and bushes no longer look low-poly or broken.
   4. Neon Heights feels more open inside, with towering, oppressive city edges.
   5. Each map has more detail overall, the perf gate is green on every preset, and every external asset is in `docs/ASSETS.md`.
-status: open
-attempts: 0
-
-## TT1 · A simpler tutorial (playtest item 2)
-tier: ui
-perf: skip
-touches: src/tutorial/, src/config/tutorial.ts, src/ui/tutorialShowcase.ts
-contract: none
-acceptance:
-  1. Every tip is shorter and easier to understand.
-  2. No tip makes the player wait long before the next one, tips 13–16 above all.
 status: open
 attempts: 0
 
@@ -220,7 +193,7 @@ touches: src/matchSession.ts, src/render/flagRenderer.ts, src/render/characterRe
 contract: none
 acceptance:
   1. Each first-use hitch is measured before and after with `?perf` on a cold cache, and recorded: the first overtime flag, first tossed magazine, first 2x scope aim, first figure fade, the shadow depth shaders and the post stack's pipelines.
-  2. The warm-up compiles all of them before the round starts (shown for the compile, then hidden), so none compiles mid-match on Medium, High or Ultra.
+  2. The warm-up compiles all of them before the round starts (shown for the compile, then hidden), so none compiles mid-match on Medium, High or Ultra. (KI1 did the overtime flag, the tossed magazine, the scope eyepiece and all but two post passes; left: the shadow depth shaders, a figure's first fade, the last pass's canvas draw and the reflections' mask, and every before-and-after measurement.)
   3. Load time grows by no more than 10 % on any preset. The perf gate is green.
 status: open
 attempts: 0
@@ -306,8 +279,8 @@ touches: src/ai/botCombat.ts, src/ai/cover.ts, src/ai/botMovement.ts, src/ai/squ
 contract: none
 acceptance:
   1. A bot fighting from crouch cover keeps fighting a second enemy in sight after its target goes down.
-  2. The pause between bursts counts down while the line of fire is blocked, bundled with the spacing fix BP2 named (teammates inside each other in tight spots). Re-measured over 48 seeds, and every guard stays green.
-  3. Tests cover the cover → search → re-sighting → cover cycle, and the audit's AI-05 and AI-06 gaps.
+  2. (KI1 retried it alone: it failed `depotMatch.overtime` and `depotMatch.stackHouse`'s follow check.) The pause between bursts counts down while the line of fire is blocked, bundled with the spacing fix BP2 named (teammates inside each other in tight spots). Re-measured over 48 seeds, and every guard stays green.
+  3. Done in KI1: `ai/coverCycle.test.ts` covers the cycle; M72's `holdLeanSweep.test.ts` already covers AI-05 and AI-06.
   4. The old soak rows (long rounds, friendly hits, the office doorway) are measured again, then either closed or updated.
 status: open
 attempts: 0
@@ -326,14 +299,116 @@ acceptance:
 status: open
 attempts: 0
 
-## DC1 · Known issues tidy-up
+**The repository audit (2026-10-16; owner: "go ahead").** DX1–DX8 come from
+`/mnt/project-files/audit/repo-audit-2026-10-16.md`, in the order to run them. Each one waits until the playtest
+threads' branches it touches have merged (ST1, MR1, HD1, MV1, BD1, MS1, TT1), so none conflicts with them. DX2 takes
+over DC1's known-issues tidy-up. DX0, the quick wins, is the audit thread's own pull request.
+
+## DX1 · Docs: one source for each rule, and the stage everywhere (audit A7, A9, B11, B12)
 tier: trivial
 perf: skip
-touches: docs/KNOWN_ISSUES.md, docs/IDEAS.md, docs/ROADMAP.md
+touches: CLAUDE.md, docs/, pipeline/README.md, .claude/skills/pipeline/SKILL.md, .claude/agents/, .github/workflows/pages.yml
 contract: none
 acceptance:
-  1. Merge the duplicate rows the triage found: the Esc re-lock rows, pistol magazine asks, the spacing rows, and the shader-on-first-use rows.
-  2. Move "skip to the last round" to `docs/IDEAS.md`. Close the missing-CHANGELOG row as accepted history.
+  1. The pipeline's steps, the attempt rule, the near-miss rule, the changelog-agent rule, the models and "one task per thread" each live in one place (`pipeline/README.md` for protocol, `docs/PROCESS.md` for policy); CLAUDE.md, SKILL.md and the agents point there instead of restating them.
+  2. No doc cites a "token plan item" or "token step" number; each such citation carries its one-line reason instead, or is dropped.
+  3. `docs/ARCHITECTURE.md` › Contracts has a `###` heading per contract, so `grep '^#'` indexes them; nothing else in the section changes.
+  4. `pipeline/README.md`'s worked example (the M27 block) is a fenced block, not a `##` heading.
+  5. Every stage statement (CLAUDE.md, ROADMAP › Where we are, HANDOFF, TASKS, PROCESS) says 0.1 Beta 1 and nothing says Dev now or "not scheduled".
+status: open
+attempts: 0
+
+## DX2 · Docs slimming: the 50 KB rule applied, and the finished plan archived (audit A6; folds DC1)
+tier: trivial
+perf: skip
+touches: docs/
+contract: none
+acceptance:
+  1. `docs/ROADMAP.md` › 0.1 Dev 5 and › 0.1 Dev 6 (with their playtest notes, the audit list and the token table) move to `docs/archive/0.1-dev/ROADMAP.md`; Builds and Where we are still name both tags.
+  2. `docs/DECISIONS.md` is under 50 KB: split by subject (gameplay and modes, bots, maps and art, process and tooling) with an index at the top, or each ruling kept to its one-line decision with the "why" in the task's record; superseded rulings are marked or moved to the archive.
+  3. `docs/KNOWN_ISSUES.md` is under 50 KB: no row over about 300 characters, the detail in the task's record it names; fixed rows gone to the archive. (DC1's acceptance folds in here; its merges and moves were done in KI1.)
+  4. `docs/PLAYTEST.md` is under 50 KB: the current build's guide only, earlier builds' sections in the archive.
+  5. `docs/PROCESS.md` › Releases gains an "archive check" step, and `docs/archive/README.md` names the `0.1-beta/` folder it creates.
+status: open
+attempts: 0
+
+## DX3 · A fix-tier path through the pipeline (audit A5)
+tier: ui
+perf: skip
+touches: pipeline/, .claude/skills/pipeline/SKILL.md, .claude/agents/, docs/PROCESS.md, docs/records/README.md
+contract: none
+acceptance:
+  1. A task block may say `tier: fix`: gates, QA and the three review agents still run, but the record is the review line, one attempt row and a Decisions line, and no FEATURES or PLAYTEST edit is due unless the fix changes what the player sees (the changelog agent decides from the summary).
+  2. The agents' prompts each lose anything a build thread already reads elsewhere (the pipeline steps, the house style), citing the file instead; the six agents and two skills together are under 25 KB.
+  3. `gate.mjs`'s options are documented in one table, and any option CI never uses and no skill names is removed or folded.
+  4. `docs/PROCESS.md` › The pipeline says what a fix-tier task skips and why.
+status: open
+attempts: 0
+
+## DX4 · Tooling and CI: one build per pull request, balanced shards, a formatter (audit B1, B2, B3)
+tier: ui
+perf: skip
+touches: .github/workflows/check.yml, package.json, package-lock.json, .prettierrc, .prettierignore, pipeline/build-cached.mjs, pipeline/gate.mjs, src/ai/, vite.config.ts
+contract: none
+acceptance:
+  1. A pull request's CI builds the e2e and production bundles once and hands them to the browser shards (an artifact or a cache keyed on the sources); each browser shard no longer builds.
+  2. The slow shards finish within about a minute of each other: the Woodland Extraction balance guard is split or the shard count raised.
+  3. Prettier is a dev dependency with `printWidth: 140`, single quotes and trailing commas as the code already has them; `npm run format:check` runs on CI once the one-off format commit is in (that commit is made only after the Dev 6 playtest branches merge, and the owner has said yes to the formatter).
+  4. The 13 `eslint-disable` comments for an uninstalled linter become plain comments that keep their reason.
+  5. `npm run t` finishes under two minutes on the owner's desktop and under four in the cloud container, with no test dropped (any file still over 20 s is in `slow` or has a smaller fixture).
+status: open
+attempts: 0
+
+## DX5 · App root: one preferences object and one session interface (audit A1 step one, A2, B7)
+tier: core
+perf: required
+touches: src/game.ts, src/matchSession.ts, src/rangeSession.ts, src/settings/, src/ui/menus/savedChoices.ts, src/ui/crosshair.ts, src/ui/hitMarkerLook.ts, src/ui/hudSettings.ts, src/ui/menus/menus.ts, src/render/matchPresentation.ts, src/render/combatPresentation.ts
+contract: none
+acceptance:
+  1. A `HudPrefs` object (or the name the thread picks) holds every HUD and accessibility preference once; `Game`, `Menus`, both sessions and the presentations read it by reference, so a new preference is added in one place and the `set*` forwarders in `game.ts` and `matchSession.ts` are gone.
+  2. `MatchSession` and `RangeSession` implement one `Session` interface for what `Game` calls on both; `game.ts` has no `instanceof MatchSession` where the interface answers.
+  3. The typed `load*` and `save*` helpers live under `src/settings/`, with `src/settings/README.md` naming them; the UI files keep only what draws.
+  4. Every setting still loads, applies live and saves as before (the settings tests and the smoke test pass unchanged apart from import paths), and a save from 0.1 Dev 6 loads.
+  5. `game.ts` is under 1,300 lines.
+status: open
+attempts: 0
+
+## DX6 · Render: the folder regrouped, the prop builders as data, no per-frame vault rays (audit A3, A8 part, B4, B9 part)
+tier: core
+perf: required
+touches: src/render/, src/sim/vault.ts, src/sim/character.ts, src/sim/simulation.ts, src/matchSession.ts, pipeline/cycles.mjs, e2e/
+contract: none
+acceptance:
+  1. `src/render/` is grouped as its README describes: `field/`, `figures/`, `replicas/`, `light/`, `effects/` (names the thread picks), each with a README; `post/` and `webgpu/` keep theirs. Pure moves: no behaviour change, the import-cycle check and every test pass, and `render/README.md` is the index of the subfolders.
+  2. `mapMeshes.ts`'s prop builders (containers, pallets, racks, gabions, IBCs, skips, generators, barriers and the rest) live in a `mapPieces/` table, leaving merge, restyle and dispose behind; `mapMeshes.ts` is under 400 lines.
+  3. The vault prompt reads the simulation's per-tick answer (on the character or an event) and `combatPresentation.ts` casts no rays.
+  4. The six HUD marker updaters in `matchPresentation.ts` share one project-and-pin helper.
+  5. The perf gate is green on every matrix entry, and the Low frame-time, draw-call and heap lines are unchanged within noise.
+status: open
+attempts: 0
+
+## DX7 · Bots: the hub files split, two sources of truth closed (audit A8 part, B5, B6, B13)
+tier: core
+perf: required
+touches: src/ai/, src/config/bots.ts, src/config/, src/ui/devSettings.ts, src/pool/, src/progress/
+contract: none
+acceptance:
+  1. Hearing and round planning leave `ai/botController.ts` for modules of their own (as `squadOrders.ts` and `magShare.ts` already did); `botController.ts` is under 600 lines and every headless guard passes with the same seeds.
+  2. `config/bots.ts` is split by concern (movement, senses, squad, extraction, skill), each file under 300 lines, with `config/README.md` naming them and `config/bots.ts` re-exporting so no importer changes.
+  3. A malformed row in any root table (`pool.md`, `stats.md`, `levels.md`, `bots.md`, `bot-kits.md`, `callouts.md`) shows in the Dev tab's diagnostics and the console, not the console alone.
+  4. The six root tables live in one `data/` folder, named in `README.md` › Layout and `docs/ARCHITECTURE.md`, with every import and test path updated.
+status: open
+attempts: 0
+
+## DX8 · Game: the play flow and the dev glue out of the composition root (audit A1 step two; optional, after DX5)
+tier: core
+perf: required
+touches: src/game.ts, src/core/, src/matchFlow.ts, src/ui/menus/menus.ts
+contract: none
+acceptance:
+  1. Play, enter, resume, pause and leave live in a `PlayFlow` module (name the thread's) with its own tests; the dev and report glue in a module of its own; `Game` keeps the loop, the lifecycle and the wiring.
+  2. `game.ts` is under 800 lines and imports under 50 modules.
+  3. Pause, resume, restart and return to menu leave the same state as before (the session tests and the smoke test pass), and the frame loop's crash guard is unchanged.
 status: open
 attempts: 0
 

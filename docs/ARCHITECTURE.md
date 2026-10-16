@@ -164,7 +164,7 @@ request. Each entry says where the contract lives, what it holds today and what 
     `caseOpened` and `caseDropped` report the cases; `returned` reports an opponent back in a wave; `torch` reports a
     weapon light switched on or off.
   - `Character.vault` holds a vault over a low obstacle (`sim/vault.ts`, M102): its plan and how far through it is,
-    and the one-shot presses made during it (`held`, BP5: reload, slot, holster, fire selector, torch, magazine), kept
+    and the one-shot presses made during it (`held`, BP5: reload, slot, holster, fire selector, torch, magazine, hop-up), kept
     for the first command after it. A `footstep` of kind `vault` reports one starting (the loudest step: bots hear it
     from `footstepHearingVault`).
   - `GameState.magTosses` holds the magazines in the air (MG1, `sim/magShare.ts`; MAG_SHARE.maxTosses slots, made

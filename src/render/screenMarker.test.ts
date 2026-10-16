@@ -6,7 +6,7 @@ import { BODY } from '../config/movement';
 import { FOV_SETTING } from '../config/render';
 import { buildFigure, disposeFigure, HUMAN_DRESS } from './characterModels';
 import { verticalFovFor } from './renderer';
-import { projectMarker, type ScreenMarker } from './screenMarker';
+import { EdgePins, edgeAngle, projectMarker, type ScreenMarker } from './screenMarker';
 
 const W = 1600;
 const H = 900;
@@ -99,5 +99,93 @@ describe("teammates' name markers (FA13)", () => {
   it('sits just over the head up close, not a hand above it (it was 0.45 m over the eyes: 170 px at 2 m)', () => {
     // The narrowest field of view magnifies most. Within about 4% of the screen's height at 1.5 m and 2 m.
     for (const d of [1.5, 2]) expect(gapPx(d, FOV_SETTING.min)).toBeLessThan(HEIGHT * 0.045);
+  });
+});
+
+describe('edge markers laid out together (KI1)', () => {
+  const step = { down: 48, across: 96 };
+  const pin = (x: number, y: number): ScreenMarker => ({ x, y, onScreen: false });
+
+  it('moves a marker pinned within a label of another on the same edge along it, a step apart', () => {
+    const pins = new EdgePins();
+    pins.begin();
+    const a = pins.place(pin(M, 400), W, H, step);
+    const b = pins.place(pin(M, 410), W, H, step);
+    const c = pins.place(pin(M, 395), W, H, step);
+    expect(a.y).toBe(400);
+    expect(b.y).toBe(448); // below the first, the side it was on
+    expect(c.y).toBe(352); // above it
+    expect(b.x).toBe(M);
+    // The top edge steps across, by a label's width.
+    const t1 = pins.place(pin(800, M), W, H, step);
+    const t2 = pins.place(pin(820, M), W, H, step);
+    expect(t1.x).toBe(800);
+    expect(t2.x).toBe(896);
+  });
+
+  it('leaves markers on other edges, far apart, or in view where they are, and starts afresh each frame', () => {
+    const pins = new EdgePins();
+    pins.begin();
+    pins.place(pin(M, 400), W, H, step);
+    expect(pins.place(pin(W - M, 400), W, H, step).y).toBe(400); // the right edge
+    expect(pins.place(pin(M, 500), W, H, step).y).toBe(500); // two labels away
+    expect(pins.place({ x: M, y: 400, onScreen: true }, W, H, step).y).toBe(400); // in view
+    pins.begin();
+    expect(pins.place(pin(M, 410), W, H, step).y).toBe(410);
+  });
+
+  it('never pushes one off the screen: at the end of an edge it moves the other way', () => {
+    const pins = new EdgePins();
+    pins.begin();
+    pins.place(pin(M, H - 40), W, H, step);
+    const b = pins.place(pin(M, H - 35), W, H, step);
+    expect(b.y).toBe(H - 40 - step.down);
+  });
+
+  it('points an edge marker the way to turn: right 0°, down 90°, left 180°, up -90°', () => {
+    expect(edgeAngle(pin(W - M, H / 2), W, H)).toBeCloseTo(0, 6);
+    expect(edgeAngle(pin(W / 2, H - M), W, H)).toBeCloseTo(90, 6);
+    expect(edgeAngle(pin(M, H / 2), W, H)).toBeCloseTo(180, 6);
+    expect(edgeAngle(pin(W / 2, M), W, H)).toBeCloseTo(-90, 6);
+  });
+});
+
+describe('edge markers laid out together: QA edge cases (KI1)', () => {
+  const step = { down: 48, across: 96 };
+  const pin = (x: number, y: number): ScreenMarker => ({ x, y, onScreen: false });
+
+  it('keeps a crowd on one edge on the screen, and never throws past the most it lays out', () => {
+    const pins = new EdgePins();
+    pins.begin();
+    for (let i = 0; i < 40; i++) {
+      const m = pins.place(pin(M, 450 + (i % 3)), W, H, step);
+      expect(Number.isFinite(m.y)).toBe(true);
+      expect(m.y).toBeGreaterThanOrEqual(0);
+      expect(m.y).toBeLessThanOrEqual(H);
+      expect(m.x).toBe(M);
+    }
+  });
+
+  it('lays out the left and the right edge independently when markers are on both at once', () => {
+    const pins = new EdgePins();
+    pins.begin();
+    const l1 = pins.place(pin(M, 300), W, H, step);
+    const r1 = pins.place(pin(W - M, 300), W, H, step);
+    const l2 = pins.place(pin(M, 310), W, H, step);
+    const r2 = pins.place(pin(W - M, 310), W, H, step);
+    expect([l1.y, r1.y]).toEqual([300, 300]);
+    expect(l2.y).toBe(r2.y);
+    expect(Math.abs(l2.y - 300)).toBe(48);
+    expect(l2.x).toBe(M);
+    expect(r2.x).toBe(W - M);
+  });
+
+  it('is a no-op for a marker in view, and lays a corner marker out on one edge only', () => {
+    const pins = new EdgePins();
+    pins.begin();
+    const corner = pins.place(pin(M, M), W, H, step);
+    const next = pins.place(pin(M + 5, M + 5), W, H, step);
+    expect(Number.isFinite(corner.x + corner.y + next.x + next.y)).toBe(true);
+    expect(Math.hypot(next.x - corner.x, next.y - corner.y)).toBeGreaterThanOrEqual(Math.min(step.down, step.across) - 1e-6);
   });
 });

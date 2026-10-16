@@ -140,7 +140,12 @@ export class ArmoryScreen {
     head.append(el('span', 'armory-level-state', ARMORY_TEXT.state[l.state]));
     const items = el('div', 'armory-level-items');
     if (l.items.length === 0) items.append(el('span', 'armory-level-empty menu-faint', ARMORY_TEXT.nothingYet));
-    for (const id of l.items) items.append(this.itemCard(pool, id, 'armory-item', 'armory-item-pic'));
+    l.items.forEach((id, i) => {
+      const card = this.itemCard(pool, id, 'armory-item', 'armory-item-pic');
+      // Yours already though the level is ahead (levels.md moved it up, KI1): drawn as yours, not greyed.
+      if (l.owned[i]) card.dataset.owned = '';
+      items.append(card);
+    });
     row.append(head, items);
     return row;
   }

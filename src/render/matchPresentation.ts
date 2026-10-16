@@ -7,7 +7,7 @@ import type { Bot } from '../ai/bot';
 import type { BotIdentity } from '../ai/personality';
 import { BotIntentLabels, botIntentText, botRoleText } from '../ui/botIntentLabels';
 import type { HitConfig, HitMarkerSettings } from '../config/hits';
-import { type HitFeedMode, TEAMMATE_MARKERS } from '../config/matchInfo';
+import { type FeedCorner, type HitFeedMode, TEAMMATE_MARKERS } from '../config/matchInfo';
 import type { BodyConfig } from '../config/movement';
 import { type DetailLevel, EXIT_VISUALS, FLAG_VISUALS, HUD, type QualitySettings } from '../config/render';
 import { proTip } from '../config/tutorial';
@@ -26,11 +26,11 @@ import type { MatchStats } from '../stats/matchStats';
 import { PINGS } from '../config/pings';
 import { CasePrompt } from '../ui/casePrompt';
 import { FlagMarker } from '../ui/flagMarker';
-import { CalloutFeed } from '../ui/calloutFeed';
 import { HitFeed } from '../ui/hitFeed';
 import { HitFeedback } from '../ui/hitFeedback';
 import { HoldMarker } from '../ui/holdMarker';
 import { MatchBoard } from '../ui/matchBoard';
+import { MINIMAP } from '../config/minimap';
 import { Minimap, type MinimapFrame } from '../ui/minimap';
 import { HeardPlayers } from '../ui/minimapView';
 import { MagPrompt, type MagView } from '../ui/magPrompt';
@@ -38,6 +38,7 @@ import { OrderWheel, wheelHint } from '../ui/orderWheel';
 import { pingAlpha, PingMarkers, type ShownPing, type ShownPingKind } from '../ui/pingMarkers';
 import { restartAnimation } from '../ui/restartAnimation';
 import { respawnBanner, roundBanner } from '../ui/roundBanner';
+import { RoundResult, roundResultWords } from '../ui/roundResult';
 import { runNews } from '../ui/runStatus';
 import { Scoreboard } from '../ui/scoreboard';
 import { type HeardSound, SoundCues, soundCueOf } from '../ui/soundCues';
@@ -52,7 +53,7 @@ import { ExitRenderer } from './exitRenderer';
 import type { FigureModel } from './externalModels';
 import { FlagRenderer } from './flagRenderer';
 import type { ProbeGrid } from './probeGrid';
-import { projectMarker, type ScreenMarker } from './screenMarker';
+import { EdgePins, type EdgeStep, edgeAngle, projectMarker, type ScreenMarker } from './screenMarker';
 import { SpectatorCamera } from './spectatorCamera';
 import type { FigureRigs } from './figureRig';
 import { type FigureCrowd, HUMAN_CROWD } from './figureMix';
@@ -80,9 +81,17 @@ export class MatchPresentation {
   private readonly flag: FlagRenderer;
   private readonly marker: FlagMarker;
   private readonly markerAt: ScreenMarker = { x: 0, y: 0, onScreen: false };
+  /** This frame's edge-pinned markers (pings, the flag, exits, the hold marker), laid out a label apart (KI1). */
+  private readonly edgePins = new EdgePins();
+  private readonly edgeStep: EdgeStep = { down: 0, across: 0 };
   private readonly feed: HitFeed;
+  /** WON or LOST at a round's end (Dev 6 playtest item 33) and the line saying a click moves on. */
+  private readonly roundResult: RoundResult;
+  /** Simulation time WON or LOST came up for the round just ended (NaN: the round is live, or your hit call is still on). */
+  private resultAt = Number.NaN;
+  /** The click that moves on was taken for this round's end (the line goes while the next round or the results come). */
+  private resultTaken = false;
   /** Your bot teammates' callouts (CL1), bottom left. */
-  private readonly calloutFeed: CalloutFeed;
   private readonly board: MatchBoard;
   /** The "what got you" card (M41), whether it is on, and the record of the hit it words (the bots' controller fills it). */
   private readonly whatGotYou: WhatGotYouCard;
@@ -208,7 +217,7 @@ export class MatchPresentation {
     this.intents = new BotIntentLabels(container);
     this.mateMarkers = new TeammateMarkers(container, this.mates.map((c) => this.names.get(c.id) ?? ''), teamCss(player.team));
     this.feed = new HitFeed(container);
-    this.calloutFeed = new CalloutFeed(container);
+    this.roundResult = new RoundResult(container);
     this.board = new MatchBoard(container, true);
     this.whatGotYou = new WhatGotYouCard(container);
     this.soundCues = new SoundCues(container);
@@ -276,6 +285,11 @@ export class MatchPresentation {
     this.flag.setEnvironmentLit(quality.environment);
   }
 
+  /** What the warm-up shows to compile ahead (KI1): the flag, hidden in Elimination until overtime puts it up. */
+  warmTargets(): THREE.Object3D[] {
+    return [this.flag.warmTarget(this.state.round.mode)];
+  }
+
   /** Player detail (QualitySettings.figureDetail, FA8): the figures are built again at the new level. */
   setFigureDetail(level: DetailLevel): void {
     this.characters.setDetail(level);
@@ -289,6 +303,11 @@ export class MatchPresentation {
   /** On-screen sound cues turned on or off (also called once as the match is built). */
   setSoundCues(on: boolean): void {
     this.soundCues.setEnabled(on);
+  }
+
+  /** Settings → HUD → Feed position (Dev 6 playtest item 32; also called once as the match is built). */
+  setFeedCorner(corner: FeedCorner): void {
+    this.feed.setCorner(corner);
   }
 
   /** The hit feed fades or keeps its lines (Settings → HUD, M24; also called once as the match is built). */
@@ -343,7 +362,7 @@ export class MatchPresentation {
     this.feedback.setVisible(playing);
     this.scoreboard.setVisible(playing);
     this.feed.setVisible(playing);
-    this.calloutFeed.setVisible(playing);
+    this.roundResult.setVisible(playing);
     this.soundCues.setVisible(playing);
     this.squadLine.setVisible(playing);
     this.minimap.setVisible(playing);
@@ -467,7 +486,6 @@ export class MatchPresentation {
         this.whatGotYou.clear();
         this.spectator.reset();
         this.feed.roundStarted(e.round);
-        this.calloutFeed.clear();
         this.pingMarkers.clear();
         this.soundCues.clear();
         this.squadLine.clear();
@@ -504,7 +522,7 @@ export class MatchPresentation {
       return;
     }
     this.holdAnchor.set(hold.x, hold.y + SQUAD_ORDERS.markerHeight, hold.z);
-    const m = this.minimap.clearPinned(projectMarker(this.holdAnchor, camera, this.view.width, this.view.height, SQUAD_ORDERS.markerEdge, this.holdAt), SQUAD_ORDERS.markerEdge);
+    const m = this.pinned(projectMarker(this.holdAnchor, camera, this.view.width, this.view.height, SQUAD_ORDERS.markerEdge, this.holdAt), SQUAD_ORDERS.markerEdge);
     const p = this.player.position;
     this.holdMarker.show(m.x, m.y, Math.hypot(hold.x - p.x, hold.z - p.z), !m.onScreen);
   }
@@ -634,6 +652,10 @@ export class MatchPresentation {
     this.characters.update(alpha, dt, spectating ? -1 : this.player.id, camera.position, -e[9]! / Math.hypot(e[8]!, e[9]!, e[10]!));
     this.flag.update(this.state.round, this.state.time);
     this.minimap.beginPins();
+    this.edgePins.begin();
+    const pinScale = this.minimap.hudScale;
+    this.edgeStep.down = MINIMAP.pinStep.down * pinScale;
+    this.edgeStep.across = MINIMAP.pinStep.across * pinScale;
     this.updateMarker(camera, spectating);
     this.exits?.update(this.state.round.run);
     this.cases?.update(this.state.round.run);
@@ -642,8 +664,7 @@ export class MatchPresentation {
     this.updateMateMarkers(camera, alpha, watched);
     this.updatePingMarkers(camera, spectating);
     this.feed.update(this.state.time);
-    this.calloutFeed.update(this.state.time);
-    this.calloutFeed.setCovered(this.boardUp);
+    this.feed.setCovered(this.boardUp);
     // The cues are placed for wherever the camera is (your eyes, or the player you watch), as the ears are.
     camera.getWorldDirection(this.viewDir);
     this.listener.x = camera.position.x;
@@ -659,6 +680,7 @@ export class MatchPresentation {
     // Extraction: respawns left first, as the banner says them on the frame you're back.
     if (this.extraction) this.runInfo.respawnsLeft = respawnsLeft(this.state.round.run, this.player, this.extraction);
     this.updateRoundMessage(status === 'calling');
+    this.updateRoundResult(status === 'calling');
     if (this.extraction) {
       this.scoreboard.update(this.state.round, this.state.characters, this.runInfo);
     } else this.scoreboard.update(this.state.round, this.state.characters);
@@ -678,7 +700,7 @@ export class MatchPresentation {
     this.scoreboard.dispose();
     this.marker.dispose();
     this.feed.dispose();
-    this.calloutFeed.dispose();
+    this.roundResult.dispose();
     this.board.dispose();
     this.whatGotYou.dispose();
     this.mateMarkers.dispose();
@@ -696,9 +718,9 @@ export class MatchPresentation {
     return undefined;
   };
 
-  /** A teammate's callout (CL1): `speakerId`'s line in the callout feed, under their name. */
+  /** A teammate's callout (CL1): `speakerId`'s line in the match feed, under their name. */
   callout(speakerId: number, team: number, text: string): void {
-    this.calloutFeed.add(this.names.get(speakerId) ?? '', team, text, this.state.time);
+    this.feed.addCallout(this.names.get(speakerId) ?? '', team, text, this.state.time);
   }
 
   /**
@@ -716,7 +738,7 @@ export class MatchPresentation {
 
   /** Callouts turned off (Settings › HUD): the lines up now go. */
   clearCallouts(): void {
-    this.calloutFeed.clear();
+    this.feed.clearCallouts();
   }
 
   /** A hit feed line for `victimId` calling a hit from `shooterId`'s BB. */
@@ -753,7 +775,7 @@ export class MatchPresentation {
         continue;
       }
       this.pingAnchor.set(p.x, p.y + (p.kind === 'spot' ? PINGS.markerHeight : 0), p.z);
-      const m = this.minimap.clearPinned(projectMarker(this.pingAnchor, camera, this.view.width, this.view.height, PINGS.markerEdge, this.pingAt), PINGS.markerEdge);
+      const m = this.pinned(projectMarker(this.pingAnchor, camera, this.view.width, this.view.height, PINGS.markerEdge, this.pingAt), PINGS.markerEdge);
       if (this.minimap.covers(m.x, m.y)) markers.hide(i);
       else markers.show(i, m.x, m.y, camera.position.distanceTo(this.pingAnchor), !m.onScreen, alpha);
     }
@@ -814,7 +836,12 @@ export class MatchPresentation {
   /** What the board over the field shows: the match while the key is held or once decided, the round between rounds. */
   private boardView(held: boolean): BoardView {
     const phase = this.state.round.phase;
-    return phase === 'matchOver' || held ? 'match' : phase === 'over' ? 'round' : 'none';
+    if (held) return 'match';
+    if (phase !== 'over' && phase !== 'matchOver') return 'none';
+    // WON or LOST first (Dev 6 playtest item 33): the table waits for the stamp, which waits for your hit call. An
+    // Extraction run has no stamp.
+    if (this.extraction === undefined && !(this.state.time - this.resultAt >= HUD.roundResultTime)) return 'none';
+    return phase === 'matchOver' ? 'match' : 'round';
   }
 
   /**
@@ -833,9 +860,12 @@ export class MatchPresentation {
       this.marker.hide();
       return;
     }
-    const m = this.minimap.clearPinned(projectMarker(this.flag.markerAnchor, camera, this.view.width, this.view.height, FLAG_VISUALS.markerEdge, this.markerAt), FLAG_VISUALS.markerEdge);
+    const at = projectMarker(this.flag.markerAnchor, camera, this.view.width, this.view.height, FLAG_VISUALS.markerEdge, this.markerAt);
+    // The way to turn, taken before the marker is moved along the edge clear of the others (KI1).
+    const towards = edgeAngle(at, this.view.width, this.view.height);
+    const m = this.pinned(at, FLAG_VISUALS.markerEdge);
     const from = camera.position;
-    this.marker.show(m.x, m.y, Math.hypot(pole.x - from.x, pole.z - from.z), overtime ? FLAG_VISUALS.overtimeCss : teamCss(r.attackers), !m.onScreen);
+    this.marker.show(m.x, m.y, Math.hypot(pole.x - from.x, pole.z - from.z), overtime ? FLAG_VISUALS.overtimeCss : teamCss(r.attackers), !m.onScreen, towards);
   }
 
   /**
@@ -857,9 +887,19 @@ export class MatchPresentation {
         continue;
       }
       this.exitAnchor.set(e.position.x, e.position.y + EXIT_VISUALS.markerHeight, e.position.z);
-      const m = this.minimap.clearPinned(projectMarker(this.exitAnchor, camera, this.view.width, this.view.height, EXIT_VISUALS.markerEdge, this.exitAt), EXIT_VISUALS.markerEdge);
-      marker.show(m.x, m.y, Math.hypot(e.position.x - from.x, e.position.z - from.z), EXIT_CSS, !m.onScreen);
+      const at = projectMarker(this.exitAnchor, camera, this.view.width, this.view.height, EXIT_VISUALS.markerEdge, this.exitAt);
+      const towards = edgeAngle(at, this.view.width, this.view.height);
+      const m = this.pinned(at, EXIT_VISUALS.markerEdge);
+      marker.show(m.x, m.y, Math.hypot(e.position.x - from.x, e.position.z - from.z), EXIT_CSS, !m.onScreen, towards);
     }
+  }
+
+  /**
+   * A projected marker, if pinned to the screen's edge, moved off the minimap's panel (`gap` px clear) and then along
+   * its edge clear of this frame's other edge markers (KI1: two in almost the same direction overlapped).
+   */
+  private pinned(m: ScreenMarker, gap: number): ScreenMarker {
+    return this.edgePins.place(this.minimap.clearPinned(m, gap), this.view.width, this.view.height, this.edgeStep);
   }
 
   /** "OUT · hit by Beta 2", rebuilt only when who hit you changes. */
@@ -871,6 +911,51 @@ export class MatchPresentation {
       this.outLabelText = by && hitBy !== this.player.id ? `OUT · hit by ${by}` : 'OUT';
     }
     return this.outLabelText;
+  }
+
+  /**
+   * A round's end (Dev 6 playtest item 33): WON, LOST or DRAW for HUD.roundResultTime from when it can show (once your
+   * own hit call is over, as the banner waits), then the round's table; from HUD.roundResultContinueAfter a line says a
+   * click moves on, until it is taken. Nothing in an Extraction run, whose banner says how it ended. The words are made
+   * once per round's end, not per frame.
+   */
+  private updateRoundResult(calling: boolean): void {
+    const r = this.state.round;
+    if (this.extraction !== undefined) return;
+    if (r.phase !== 'over' && r.phase !== 'matchOver') {
+      // A round under way: ready for its end.
+      if (Number.isNaN(this.resultAt) && !this.resultTaken) return;
+      this.resultAt = Number.NaN;
+      this.resultTaken = false;
+      this.roundResult.clear();
+      this.board.setNext('');
+      return;
+    }
+    if (Number.isNaN(this.resultAt)) {
+      if (calling) return;
+      this.resultAt = this.state.time;
+      this.roundResult.setWords(roundResultWords(r, this.player.team));
+    }
+    const since = this.state.time - this.resultAt;
+    if (since >= HUD.roundResultTime) this.roundResult.setWords(null);
+    const text = HUD_TEXT.result;
+    const hint = this.resultContinuable ? (r.phase === 'matchOver' ? text.results : text.nextRound) : '';
+    this.roundResult.setHint(hint);
+    this.board.setNext(hint);
+  }
+
+  /** Whether a click now moves on from a round's end (to the next round, or the results): see updateRoundResult. */
+  get resultContinuable(): boolean {
+    const r = this.state.round;
+    if (this.resultTaken || this.extraction !== undefined || (r.phase !== 'over' && r.phase !== 'matchOver')) return false;
+    return this.state.time - this.resultAt >= HUD.roundResultContinueAfter;
+  }
+
+  /** The click that moves on was taken (MatchSession.continueFromResult): its line goes. */
+  resultContinued(): void {
+    this.resultTaken = true;
+    this.roundResult.setHint('');
+    this.board.setNext('');
   }
 
   /**

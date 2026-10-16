@@ -2,6 +2,7 @@ import type { BotSkill } from '../config/bots';
 import { NEUTRAL_STYLE, type PersonalityStyle } from '../config/botsFile';
 import { isInPlay } from '../sim/elimination';
 import type { Bot, BotWorld } from './bot';
+import { clamp01 } from '../core/math';
 
 /**
  * Bot personalities (BN1, bots.md): how a bot plays on top of its difficulty. A personality scales the difficulty's
@@ -18,7 +19,6 @@ export interface BotIdentity {
   readonly style: PersonalityStyle;
 }
 
-const clamp01 = (v: number): number => Math.min(1, Math.max(0, v));
 const scaled = (r: readonly [number, number], k: number): readonly [number, number] => (k === 1 ? r : [r[0] * k, r[1] * k]);
 
 /**

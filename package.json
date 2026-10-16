@@ -15,6 +15,7 @@
     "test": "vitest run",
     "t": "vitest run --project fast --reporter=dot",
     "t:all": "vitest run --reporter=dot",
+    "t:changed": "vitest run --project fast --reporter=dot --changed origin/main",
     "check": "npm run test && npm run build",
     "build:e2e": "node pipeline/build-cached.mjs --mode e2e",
     "test:browser": "playwright test",

@@ -190,6 +190,15 @@ describe('PG1: what a ping marks', () => {
     expect(bushed.ping.kind).toBe('spot');
     expect(bushed.ping.enemyId).toBe(-1);
     bushed.physics.dispose();
+
+    // KI1: nor one behind the body of someone already hit (the bots' sight stops on it, perception.ts bodyInSight).
+    const behindBody = field({ enemy, blocks: [backstop] });
+    const body = behindBody.state.characters[1]!;
+    body.status = 'out';
+    body.position = vec3(-20, PHYSICS.groundRestGap, 20);
+    expect(behindBody.pingToward(chest(behindBody.orange))).toBe(true);
+    expect(behindBody.ping.enemyId).toBe(-1);
+    behindBody.physics.dispose();
   });
 
   it("is your team's: the other team's bots never take it, and nobody's while you are out", () => {
