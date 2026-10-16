@@ -5,6 +5,7 @@ import type { FigureBody, FigureLegs } from '../config/hits';
 import { loadGltfScene } from './externalModels';
 import { figureBodyFrom } from './figureBody';
 import { figureLegsFrom, legsWithSpares } from './figureLegs';
+import { figureFinish } from './figureRigFinish';
 import { RiggedFigure, type RiggedFigureSetup } from './riggedFigure';
 import { ThrownMagazines } from './thrownMagazines';
 import { BODY_CLIPS, FIRE_CLIPS, type MagazineTimes, OPTIONAL_CLIPS, POSE_CLIPS, POSE_SLOT, type PoseClipTable, type PoseHold } from './figurePose';
@@ -244,11 +245,15 @@ export function prepareFigureRig(kind: FigureRigKind, scene: THREE.Object3D, sid
   const parts = [...roles.body, ...roles.head, ...(roles.pack ? [roles.pack] : []), ...(roles.radio ? [roles.radio] : [])];
   for (const part of [...roles.body, roles.head[0]!]) if (!meshesOf.has(part)) throw new Error(`the ${kind} figure has no "${part}"`);
 
-  // The materials, in a fixed order, each once.
-  const materials: THREE.Material[] = [];
+  // The materials, in a fixed order, each once; the plain ones drawn as one (render/figureRigFinish.ts, BD1).
+  const fileMaterials: THREE.Material[] = [];
   for (const mesh of skinned) {
-    for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) if (!materials.includes(m)) materials.push(m);
+    for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) if (!fileMaterials.includes(m)) fileMaterials.push(m);
   }
+  const finish = figureFinish(fileMaterials, FIGURE_RIG.teamMaterialPrefix);
+  const materials = finish ? [...finish.materials] : fileMaterials;
+  const indexOf = (m: THREE.Material): number => (finish ? finish.indexOf(m) : materials.indexOf(m));
+  const geometryOf = (mesh: THREE.SkinnedMesh): THREE.BufferGeometry => (finish ? finish.geometryOf(mesh) : mesh.geometry);
 
   const merged = new Map<string, THREE.BufferGeometry>();
   const suffix = (lod: number): string => (lod === 0 ? '' : `_LOD${lod}`);
@@ -259,9 +264,9 @@ export function prepareFigureRig(kind: FigureRigKind, scene: THREE.Object3D, sid
     const byMaterial = new Map<number, THREE.BufferGeometry[]>();
     for (const name of names) {
       for (const mesh of meshesOf.get(name + suffix(lod)) ?? []) {
-        const index = materials.indexOf(mesh.material as THREE.Material);
+        const index = indexOf(mesh.material as THREE.Material);
         const list = byMaterial.get(index) ?? [];
-        list.push(mesh.geometry);
+        list.push(geometryOf(mesh));
         byMaterial.set(index, list);
       }
     }
@@ -409,7 +414,8 @@ export function prepareFigureRig(kind: FigureRigKind, scene: THREE.Object3D, sid
       for (const g of merged.values()) g.dispose();
       merged.clear();
       for (const mesh of skinned) mesh.geometry.dispose();
-      for (const m of materials) {
+      finish?.dispose();
+      for (const m of fileMaterials) {
         for (const value of Object.values(m)) if (value instanceof THREE.Texture) value.dispose();
         m.dispose();
       }

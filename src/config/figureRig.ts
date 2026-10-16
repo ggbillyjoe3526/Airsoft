@@ -56,6 +56,12 @@ export const FIGURE_RIG = {
    */
   lod: { high: [12, 28], low: [6, 16] } as Readonly<Record<'high' | 'low', readonly [number, number]>>,
   lodGive: 0.5,
+  /**
+   * The layer of a figure's shadow twin (BD1): the body at its coarsest level of detail, in one draw, seen only by the
+   * shadow-casting lights' cameras (their `shadow.camera.layers`, render/lighting.ts and render/torchBeams.ts), never by
+   * the view. The body's own materials would cost a shadow draw each.
+   */
+  shadowLayer: 2,
   /** Below this horizontal speed (m/s) a figure stands; the legs' hit volumes swing only above it too. */
   stillBelow: HITS.legs.walkingSpeed,
   /** The paces the walk blends into the run between (m/s): the movement's own. */
@@ -79,9 +85,12 @@ export const FIGURE_RIG = {
   /**
    * The first-person body (your own figure seen when you look down): the model drawn this far behind the eyes (metres)
    * so the camera is never inside the chest, with the head and arms left out (the hands and replica in view are the
-   * first-person ones). The arms are folded into the shoulders by scaling their bones to `armScale`.
+   * first-person ones). The arms are folded into the shoulders by scaling their bones to `armScale`. It is drawn only
+   * while the view looks down further than `showBelow` (the sine of its pitch) or vaults (BD1): no part of it comes
+   * higher than about 70° below the eyes, and the widest field of view (120°) reaches 44° below the view's middle, so
+   * looking down less than 15° leaves room for a lean's roll and spares its 20,000 triangles.
    */
-  firstPerson: { back: 0.17, armScale: 1e-3 },
+  firstPerson: { back: 0.17, armScale: 1e-3, showBelow: -0.26 },
   /** Thrown-away magazines out at most (the oldest goes first); each lies for its sidecar lifetime. */
   thrownMagazines: { max: 12 },
   /**

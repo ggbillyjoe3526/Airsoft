@@ -77,6 +77,7 @@ and never writes the simulation.
   human and robot (BF1, every player and bot since BD1): `figureRig.ts` (a kind's files taken apart
   into bones, merged meshes and clips, and `figureLegs.ts` reading the legs' clips out for the hit volume, IM8, and `figureBody.ts` the upper body's, with
   each figure's fitted shape, HV1),
+  `figureRigFinish.ts` (a kind's plain one-colour materials drawn as one vertex-coloured finish, BD1),
   `figurePose.ts` (the pure blend of clips from the character's state),
   `riggedFigure.ts` (one figure: skinned, posed, each loadout replica on the grip bone with its fitted optic, grip, laser,
   barrel and muzzle part, BG1, the reload's magazines, the rifle slung on the back while holstered and its drawn

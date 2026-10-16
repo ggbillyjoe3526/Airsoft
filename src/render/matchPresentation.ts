@@ -629,7 +629,9 @@ export class MatchPresentation {
     // The camera is placed now (by the session, or the spectator above): its matrices are made once for every marker below.
     camera.updateMatrixWorld();
     this.boardUp = this.boardView(boardHeld) !== 'none';
-    this.characters.update(alpha, dt, spectating ? -1 : this.player.id, camera.position);
+    // Where the view looks (its forward axis's height): your own body is drawn only looking down (BD1).
+    const e = camera.matrixWorld.elements;
+    this.characters.update(alpha, dt, spectating ? -1 : this.player.id, camera.position, -e[9]! / Math.hypot(e[8]!, e[9]!, e[10]!));
     this.flag.update(this.state.round, this.state.time);
     this.minimap.beginPins();
     this.updateMarker(camera, spectating);

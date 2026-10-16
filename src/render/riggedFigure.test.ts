@@ -35,7 +35,7 @@ function figure(kind: FigureRigKind, c: Character, thrown = new ThrownMagazines(
   return { f, thrown };
 }
 
-const frame = (over: Partial<RiggedFrame> = {}): RiggedFrame => ({ alpha: 1, dt: 1 / 60, eyeX: 0, eyeY: 1.6, eyeZ: 3, firstPerson: false, leanX: 0, leanZ: 0, peek: 0, peekPivot: 0.92, cycle: null, castShadow: true, ...over });
+const frame = (over: Partial<RiggedFrame> = {}): RiggedFrame => ({ alpha: 1, dt: 1 / 60, eyeX: 0, eyeY: 1.6, eyeZ: 3, firstPerson: false, viewY: -1, leanX: 0, leanZ: 0, peek: 0, peekPivot: 0.92, cycle: null, castShadow: true, ...over });
 
 const visibleMeshes = (root: THREE.Object3D): THREE.Mesh[] => {
   const out: THREE.Mesh[] = [];
@@ -144,11 +144,29 @@ describe('the rigged figures (BF1)', () => {
     expect(f.root.getObjectByName('held:rifle')!.visible).toBe(false);
     expectAimed(f, c, 'held:pistol');
 
-    const third = visibleMeshes(f.root).filter((m) => m instanceof THREE.SkinnedMesh);
+    // What the view draws (layer 0), and the body's shadow twin, in one draw on the shadow layer (BD1).
+    const view = new THREE.Layers();
+    const shadow = new THREE.Layers();
+    shadow.set(FIGURE_RIG.shadowLayer);
+    const skinnedOn = (layers: THREE.Layers): THREE.SkinnedMesh[] => visibleMeshes(f.root).filter((m): m is THREE.SkinnedMesh => m instanceof THREE.SkinnedMesh && m.layers.test(layers));
+    const third = skinnedOn(view);
     expect(third.length).toBe(1);
+    const twins = skinnedOn(shadow);
+    expect(twins.length).toBe(1);
+    expect(twins[0]!.layers.test(view)).toBe(false);
+    expect(twins[0]!.geometry.getAttribute('position').count).toBeLessThan(third[0]!.geometry.getAttribute('position').count);
+    expect(Array.isArray(twins[0]!.material)).toBe(false);
+    expect(twins[0]!.castShadow).toBe(true);
+    expect(third[0]!.castShadow).toBe(false);
     f.update(c, frame({ firstPerson: true }));
-    const first = visibleMeshes(f.root).filter((m) => m instanceof THREE.SkinnedMesh);
+    const first = skinnedOn(view);
     expect(first.length).toBe(1);
+    expect(skinnedOn(shadow).length).toBe(0);
+    // Looking level, your own body is out of view and not drawn; looking down past FIGURE_RIG.firstPerson.showBelow it is.
+    f.update(c, frame({ firstPerson: true, viewY: 0 }));
+    expect(skinnedOn(view).length).toBe(0);
+    f.update(c, frame({ firstPerson: true, viewY: FIGURE_RIG.firstPerson.showBelow - 0.01 }));
+    expect(skinnedOn(view)).toEqual(first);
     expect(first[0]).not.toBe(third[0]);
     expect(first[0]!.geometry.getAttribute('position').count).toBeLessThan(third[0]!.geometry.getAttribute('position').count);
     expect(first[0]!.castShadow).toBe(false);
