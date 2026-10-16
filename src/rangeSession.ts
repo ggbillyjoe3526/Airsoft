@@ -594,6 +594,7 @@ export class RangeSession {
       this.tutorialMoved(t);
       if (t.finished) this.completeDue = this.completePopup = true;
     }
+    if (t) this.coach!.setReadProgress(t.readProgress);
     const c = this.challenge;
     if (c.cue) {
       this.combat.challengeCue(c.cue);

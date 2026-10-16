@@ -4,6 +4,9 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 
 ## Unreleased
 
+### Changed
+- **TT1** · Tutorial cards are one or two short sentences; the four you only read move on by themselves after 5–8 s, with a bar filling; the lean step is gone
+
 ### Fixed
 - **KI1** · Leaning beside a wall that cuts the lean eases the view over 0.1 s instead of jumping
 - **KI1** · Two quick taps of the fire selector step it twice

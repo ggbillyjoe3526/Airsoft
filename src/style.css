@@ -1539,6 +1539,26 @@ a.bug-report-link {
   display: none;
 }
 
+/* A read card's time (TT1): fills as the card reads, then the next one comes up by itself */
+.coach-timer {
+  height: 3px;
+  margin-top: 8px;
+  border-radius: 2px;
+  background: rgba(247, 243, 234, 0.18);
+  overflow: hidden;
+}
+
+.coach-timer[hidden] {
+  display: none;
+}
+
+.coach-timer-fill {
+  height: 100%;
+  background: var(--orange);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+}
+
 /* Windows High Contrast / forced colours (audit UI-16): the browser would strip the HUD's colours and backgrounds, so
    the crosshair, team pips, the hit wedge and the sound cues would vanish or all turn one colour. The game's overlays
    (the case prompt and the range's coach and readout, siblings of `.hud`, included: audit UI-03) keep their own colours (they are drawn for contrast against the field already); the menus follow the system's. */
