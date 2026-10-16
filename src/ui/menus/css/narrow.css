@@ -5,15 +5,6 @@
 
 /* Narrower windows: the three-column screens drop their right column under the rest, then stack. */
 @media (max-width: 1500px) {
-  .loadout-view {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
-
-  .loadout-selected {
-    grid-column: 1 / -1;
-    position: static;
-  }
-
   .customise-layout,
   .settings-columns {
     grid-template-columns: clamp(240px, 24vw, 320px) minmax(0, 1fr);
@@ -23,10 +14,6 @@
   .settings-about {
     grid-column: 2;
     position: static;
-  }
-
-  .armory-columns {
-    grid-template-columns: clamp(280px, 30vw, 420px) minmax(0, 1fr);
   }
 
   .menu-nav-item svg.icon {
@@ -59,6 +46,10 @@
 }
 
 @media (max-width: 900px) {
+  .loadout-view {
+    grid-template-areas: 'saved' 'carried' 'replicas' 'aside';
+  }
+
   .loadout-view,
   .customise-layout,
   .settings-columns,

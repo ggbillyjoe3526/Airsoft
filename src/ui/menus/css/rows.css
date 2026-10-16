@@ -37,15 +37,6 @@
   color: var(--menu-soft);
 }
 
-.match-panel .menu-row-label {
-  font-family: var(--ui-display);
-  font-size: var(--fs-md);
-  font-weight: 600;
-  letter-spacing: var(--ls-wide);
-  text-transform: uppercase;
-  color: var(--menu-muted);
-}
-
 .menu-row.later .menu-row-label {
   color: var(--menu-faint);
 }
@@ -216,6 +207,3 @@
   color: var(--menu-muted);
 }
 
-.match-panel .picker-blurb {
-  display: none;
-}

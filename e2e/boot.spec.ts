@@ -238,7 +238,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   // The Armory (LV1): your level on the top bar opens it. Level 7 of 10, 100 of level 8's 900 XP, the LiPo battery next,
   // and every level on the track with its state.
   const badge = topBar.locator('.menu-chip-level');
-  await expect(badge).toHaveText(/Lv 7/);
+  await expect(badge).toHaveText(/LVL 7/);
   await badge.click();
   const armory = page.locator('.menu-armory');
   await expect(armory).toBeVisible();

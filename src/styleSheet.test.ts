@@ -413,12 +413,14 @@ describe('the font (M100: Inter replaces Barlow)', () => {
     expect(menuSheet).not.toMatch(/menu-hint-key|\.menu-hints|menu-build/);
   });
 
-  it('lays the Armory out as your level over the next unlock on the left, and the level track beside them (LV1)', () => {
-    expect(declared('.armory-columns', 'grid-template-columns')).toMatch(/^clamp\(\d+px, [\d.]+vw, \d+px\) minmax\(0, 1fr\)$/);
+  it('lays the Armory out as your level with the next unlock beside it, and the level track across under them (LV1, MR1)', () => {
+    expect(declared('.armory-columns', 'grid-template-columns')).toMatch(/^minmax\(0, 1fr\) clamp\(\d+px, [\d.]+vw, \d+px\)$/);
     expect([declared('.armory-left', 'grid-column'), declared('.armory-left', 'grid-row')]).toEqual(['1', '1']);
-    expect([declared('.armory-next', 'grid-column'), declared('.armory-next', 'grid-row')]).toEqual(['1', '2']);
-    expect([declared('.armory-track', 'grid-column'), declared('.armory-track', 'grid-row')]).toEqual(['2', '1 / span 2']);
-    expect(declared('.armory-levels', 'flex-direction')).toBe('column');
+    expect([declared('.armory-next', 'grid-column'), declared('.armory-next', 'grid-row')]).toEqual(['2', '1']);
+    expect([declared('.armory-track', 'grid-column'), declared('.armory-track', 'grid-row')]).toEqual(['1 / -1', '2']);
+    // The levels run across, a column each, scrolled sideways.
+    expect(declared('.armory-levels', 'flex-direction')).toBe('row');
+    expect(declared('.armory-levels', 'overflow-x')).toBe('auto');
     expect(declared('.armory-next-grid', 'grid-template-columns')).toMatch(/^repeat\(auto-fill, minmax\(\d+px, 1fr\)\)$/);
     // In a narrow window the three cards stack: none keeps a row of its own.
     expect(menuSheet).toMatch(/\.armory-left,\s*\.armory-next,\s*\.armory-track\s*\{[^}]*grid-row:\s*auto/);
@@ -481,7 +483,8 @@ describe('layout polish before the screenshots (G4, M100)', () => {
 
   it('lays the Match rules out in as many columns as fit, so the page holds in a 1080 px window', () => {
     expect(declared('.match-grid', 'grid-template-columns')).toMatch(/^repeat\(auto-fit, minmax\(\d+px, 1fr\)\)$/);
-    expect(declared('.match-panel .match-rules-row', 'flex-direction')).toBe('row');
+    // One line a rule (MR1): the name in its column, the options beside it.
+    expect(declared('.match-panel .menu-row', 'flex-wrap')).toBe('nowrap');
   });
 
   it('puts no backdrop blur on any of these', () => {

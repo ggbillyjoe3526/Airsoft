@@ -1,5 +1,5 @@
 import { POWER_SOURCE_FILE } from '../../config/assets';
-import { defaultScheme, type SchemeId } from '../../config/schemes';
+import { defaultScheme, type PaintId } from '../../config/schemes';
 import type { KitSlot } from '../../pool/kit';
 import type { PlayerKit } from '../../pool/loadoutModel';
 import { type Asset, REPLICA_KEYS, replicaOf } from '../../pool/pool';
@@ -32,7 +32,7 @@ export function pictureFit(kit: KitSlot): PictureFit {
 }
 
 /** A replica asset's picture: in `scheme`, with `kit`'s parts fitted when given. */
-export function replicaSubject(asset: Asset, scheme: SchemeId, realistic: boolean, kit?: KitSlot, shape?: PictureShape): PictureSubject {
+export function replicaSubject(asset: Asset, scheme: PaintId, realistic: boolean, kit?: KitSlot, shape?: PictureShape): PictureSubject {
   const subject: PictureSubject = { replica: replicaOf(asset), scheme, realistic };
   if (kit) subject.fit = pictureFit(kit);
   if (shape) subject.shape = shape;

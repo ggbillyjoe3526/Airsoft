@@ -4,7 +4,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import type { DetailLevel } from '../config/render';
 import { REPLICA_FINISH } from '../config/replicaFinish';
 import type { ReplicaConfig } from '../config/replicas';
-import { CYBER_COLOURS, type CyberColours, hasFixedColours, type ReplicaPaint, schemeColours } from '../config/schemes';
+import { CYBER_COLOURS, type CyberColours, hasFixedColours, paintColours, type ReplicaPaint } from '../config/schemes';
 import { LASERS } from '../config/lasers';
 import { TORCHES } from '../config/torches';
 import { armMaterials, type ArmStyle, HUMAN_ARMS } from './replicaArms';
@@ -216,7 +216,7 @@ export function coloursOf(r: ReplicaConfig, slot: number, paint: ReplicaPaint | 
     return { colours: { body: cyber.frame, furniture: cyber.frame, detail: cyber.frame, accent: cyber.line, steel: F.unpainted.steel, glow: cyber.glow }, cyber };
   }
   const id = paint?.schemes[slot];
-  return id ? { colours: schemeColours(id, paint!.realistic), cyber: CYBER_COLOURS.bold } : null;
+  return id ? { colours: paintColours(id, paint!.realistic), cyber: CYBER_COLOURS.bold } : null;
 }
 
 /** A flat face's vertex colour when parts are coloured: the brightest edge (a worn one) is white. */

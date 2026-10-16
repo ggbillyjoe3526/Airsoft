@@ -48,7 +48,7 @@ describe('the top bar (G3)', () => {
     expect(status(bar).children.map((c) => c.className)).toEqual(['menu-chip menu-chip-level']);
     expect(nav!.children).toHaveLength(4);
     bar.setLevel({ level: 3, into: 150, next: 600, toNext: '450 XP to level 4' });
-    expect(badge(bar).children[0]!.textContent).toBe('Lv 3');
+    expect(badge(bar).children[0]!.textContent).toBe('LVL 3');
     expect(fake(bar.root).children.some((c) => c.className.includes('menu-build'))).toBe(false);
     // The gacha's wallet is gone (LV1): no Field Credits, no Tokens.
     expect(fake(bar.root).children.some((c) => c.className.includes('menu-wallet'))).toBe(false);
@@ -93,7 +93,7 @@ describe('the top bar (G3)', () => {
     const bar = new TopBar(() => {}, () => {});
     bar.setLevel({ level: 10, into: 0, next: null, toNext: '' });
     const [text, track] = badge(bar).children;
-    expect(text!.textContent).toBe('Lv 10');
+    expect(text!.textContent).toBe('LVL 10');
     expect(track!.style['--xp']).toBe('1');
     expect(badge(bar).getAttribute('aria-label')).toBe('Level 10. Open the Armory');
     // More XP than the level takes (a cap raised later) never overfills it.
@@ -174,13 +174,12 @@ describe('the Your match panel (G3, playView.ts)', () => {
     loadout: { summary: () => ({ replicas: 'AEG Rifle · GBB Pistol', detail: '' }) },
   }) as unknown as Parameters<typeof playView>[1];
 
-  it("names the light only on a map that offers two, and shows that light's still", () => {
+  it('names the light only on a map that offers two, and carries no picture (MR1: the map cards show it)', () => {
     const depot = playView(picks(), opts(false), () => 'day');
     expect(depot.mapLine).toBe('Depot');
-    expect(depot.still).toMatch(/depot-day\.jpg$/);
+    expect(depot).not.toHaveProperty('still');
     const city = playView(picks({ map: 'neonHeights' }), opts(true), () => 'night');
     expect(city.mapLine).toBe('Neon Heights · Night');
-    expect(city.still).toMatch(/neonHeights-night\.jpg$/);
   });
 
   it('plays a dev map as Depot while Dev content is off, and says so in the notes when dev content is used', () => {

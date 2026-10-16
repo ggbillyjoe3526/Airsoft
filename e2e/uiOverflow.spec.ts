@@ -188,7 +188,7 @@ for (const [width, height] of [[1280, 720], [1920, 1080], [2560, 1440]] as const
     // Loadout with a saved loadout carrying a long name, and the slots; the Armory's level, next unlock and track.
     await page.locator('.menu-nav-item', { hasText: 'Loadout' }).click();
     await expect(page.locator('.menu-loadout')).toBeVisible();
-    await page.locator('.saved-tab.is-empty .saved-tab-button').first().click();
+    await page.locator('.saved-action', { hasText: 'New' }).click();
     await page.keyboard.type('A very long loadout name indeed');
     await page.keyboard.press('Enter');
     await expectFits(page, 'Loadout');
