@@ -8,10 +8,26 @@ import { PRECOMPRESS, precompressedCopies, precompressWanted } from './src/confi
 import { plainWasmBundle, RAPIER_WASM } from './src/config/rapierWasm.ts';
 
 
-/** The headless bot-match guards (src/ai/depotMatchSupport.ts): most of the unit suite's time, project `slow`; the
- * Pro guards on every map (M40), the Extraction runs on every map (M46, M48) and every mode's short matches (CT3) with
- * them. */
-const SLOW_TESTS = ['src/ai/depotMatch*.test.ts', 'src/ai/*Match.pro*.test.ts', 'src/ai/proBalance.test.ts', 'src/ai/*Match.extraction*.test.ts', 'src/ai/*Match.levels*.test.ts', 'src/content/modePlays*.test.ts'];
+/** The headless guards (src/ai/depotMatchSupport.ts): most of the unit suite's time, project `slow`; the Pro guards on
+ * every map (M40), the Extraction runs on every map (M46, M48), every mode's short matches (CT3), Woodland's matches
+ * and the duel and route guards with them, and the figure hit-volume sweep (M85), each a minute or more of headless
+ * play or ray casts (DX0: together they were a third of `npm run t`). CI runs them all (`.github/workflows/check.yml`);
+ * the local gate runs them when the diff reaches one (pipeline/testReach.mjs). */
+const SLOW_TESTS = [
+  'src/ai/depotMatch*.test.ts',
+  'src/ai/*Match.pro*.test.ts',
+  'src/ai/proBalance.test.ts',
+  'src/ai/*Match.extraction*.test.ts',
+  'src/ai/*Match.levels*.test.ts',
+  'src/ai/woodland*Match.test.ts',
+  'src/ai/extractionGuardsSee.test.ts',
+  'src/ai/huntMemory.qa.test.ts',
+  'src/ai/aimedFire.test.ts',
+  'src/ai/firstShots.test.ts',
+  'src/ai/botRouteBudget.test.ts',
+  'src/content/modePlays*.test.ts',
+  'src/render/figureHitVolume.test.ts',
+];
 /**
  * The bot balance figures (src/ai/balance/, token plan item 22): who wins, who lands the first hit, how often the squad
  * gets out. Project `balance`, which exists only when AIRSOFT_BALANCE is set: `node pipeline/balance.mjs` sets it and

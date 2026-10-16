@@ -334,3 +334,19 @@ acceptance:
   2. Every KNOWN_ISSUES row in a public area is checked against the build.
 status: open
 attempts: 0
+
+## DX0 · Audit quick wins: a faster test loop, one math module, README coverage, the stage lines
+tier: ui
+perf: skip
+touches: vite.config.ts, package.json, .editorconfig, .nvmrc, .github/workflows/pages.yml, CLAUDE.md, src/core/math.ts, src/sim/propNoise.ts, src/sim/figureLegs.ts, src/ai/personality.ts, src/ai/adaptiveSkill.ts, src/render/texelNoise.ts, src/render/textureLibrary.ts, src/render/renderer.ts, src/ai/botController.ts, src/ui/headIcon.ts, src/ui/menus/menuParts.ts, src/ui/menus/menuPictures.ts, src/ui/menus/savedLoadoutsBar.ts, src/ui/performanceSheet.ts, src/render/mapMeshes.ts, src/config/replicas.ts
+contract: none
+acceptance:
+  1. `npm run t` leaves the headless guards that took a third of its time (Woodland's matches, the duel and route guards, the figure hit-volume sweep) to the `slow` project, which CI still runs in full; no test is dropped.
+  2. `npm run t:changed` runs the fast tests the branch's changes reach.
+  3. `clamp`, `clamp01` and `lerp` live once, in `src/core/math.ts`.
+  4. A test keeps the built-in replica numbers equal to their `stats.md` rows.
+  5. A test fails when a source file under `src/` is named in no folder README; every file is named today.
+  6. CLAUDE.md and ROADMAP say the game is in 0.1 Beta 1.
+  7. The renderer's idle warm-up does nothing after dispose; bots take the game state as read-only; nothing exports a name only its own file uses.
+status: open
+attempts: 0

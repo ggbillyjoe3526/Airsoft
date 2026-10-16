@@ -52,7 +52,7 @@ jobs:
     steps:
       # The whole history and its tags: the release is checked out from them, and the build's `git describe` names it on
       # the title screen (config/buildVersion.ts).
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -83,7 +83,7 @@ jobs:
           fi
           git checkout -q --detach "refs/tags/$tag"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm

@@ -1,6 +1,7 @@
 import { ADAPTIVE, ADAPTIVE_BLENDED, ADAPTIVE_TEXT } from '../config/adaptiveDifficulty';
 import { BOT_SKILL, type BotSkill, DIFFICULTIES, type Difficulty } from '../config/bots';
 import { isAvailable } from '../config/content';
+import { lerp } from '../core/math';
 
 /**
  * Adaptive difficulty's arithmetic (AD1; tuning in config/adaptiveDifficulty.ts): a skill rating on the difficulty
@@ -34,7 +35,6 @@ export function levelAt(rating: number): Difficulty {
   return LEVELS[Math.min(Math.max(Math.round(rating), 0), LEVELS.length - 1)]!;
 }
 
-const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 
 /** A blended field's value: a number, or a pair blended end by end. */
 type Blended = BotSkill[(typeof ADAPTIVE_BLENDED)[number]];
