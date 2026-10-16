@@ -25,10 +25,15 @@ export type GameEvent =
    * A BB hit level geometry; `ownerId` fired it. `bodyId` is set when it stopped on a body that couldn't be knocked out
    * (M85: already hit, a teammate with friendly fire off, a cease-fire, a grace): a soft knock on that body, no dust.
    * `leaves` is set when a bush's leaves stopped it (Dev 6 item 44, sim/leaves.ts): a rustle and leaves, no tick.
+   * `from` is set once the BB has bounced (BP6): where this tick's path began, the side it came from (before a bounce
+   * that is the shooter's side, so presentation reads `ownerId` instead).
    */
-  | { type: 'bbImpact'; position: Vec3; ownerId: number; bodyId?: number; leaves?: true }
-  /** A BB came out through the edge of a bush and flew on, thrown off its line (Dev 6 item 44): a brush of leaves there. */
-  | { type: 'bbLeaves'; position: Vec3; ownerId: number }
+  | { type: 'bbImpact'; position: Vec3; ownerId: number; bodyId?: number; leaves?: true; from?: Vec3 | undefined }
+  /**
+   * A BB came out through the edge of a bush and flew on, thrown off its line (Dev 6 item 44): a brush of leaves there.
+   * `from` as for bbImpact.
+   */
+  | { type: 'bbLeaves'; position: Vec3; ownerId: number; from?: Vec3 | undefined }
   /**
    * A character's footstep or landing, heard at its feet (walking and crouched moves are silent). `surface`: what a run,
    * sprint or landing came down on (WorldQuery.surfaceUnder; absent where the world can't tell, or for a hi-cap's
