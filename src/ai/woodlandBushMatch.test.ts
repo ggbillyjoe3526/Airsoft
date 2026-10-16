@@ -32,7 +32,7 @@ describe('a 5v5 bot match on Woodland with its bushes (M33e, acceptances 1 and 5
     let worstDepth = 0;
     const eye = vec3();
     const point = vec3();
-    const stats = playMatch(150, 2, undefined, BOTS, 'elimination', ROUNDS, WOODLAND, TEAM_SIZE, HITS, (state, controller) => {
+    const stats = playMatch(150, 2, undefined, BOTS, 'elimination', ROUNDS, WOODLAND, TEAM_SIZE, undefined, (state, controller) => {
       if (state.tick % SAMPLE_EVERY !== 0 || state.round.phase !== 'live') return;
       const world = controller.worldForTests;
       for (const b of controller.bots) {

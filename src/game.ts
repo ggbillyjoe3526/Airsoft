@@ -359,7 +359,7 @@ export class Game {
   private crashScreen: CrashScreen | null = null;
 
   static async create(container: HTMLElement, options: GameOptions): Promise<Game> {
-    // The model files (the Blender replicas, parts and figures; MD1) load alongside the physics. With Dev content on, so
+    // The model files (the Blender replicas, parts and figures; BD1) load alongside the physics. With Dev content on, so
     // do the dev maps (M50), so New game can show a dev map picked last time. The maps' baked light (G6) too.
     const dev = activeDev(loadDevEnabled(), loadDevSettings());
     const devMaps = dev.devContent ? loadDevMaps() : null;

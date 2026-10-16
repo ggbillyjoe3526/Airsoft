@@ -20,7 +20,7 @@ function rig() {
   return { models: new ModelFiles(loadFigure, loadReplicas, loadRigs), loadFigure, loadReplicas, loadRigs, rigs, rigsDisposed, figDisposed, fileDisposed, figure, files, figResolvers, gearResolvers };
 }
 
-describe('ModelFiles (MD1: the Blender models by default)', () => {
+describe('ModelFiles (BD1: the Blender models by default)', () => {
   it('draws nothing from files until they are in, then every kind', async () => {
     const r = rig();
     const loading = r.models.load();

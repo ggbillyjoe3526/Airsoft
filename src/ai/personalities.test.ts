@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { BOT_PERSONALITIES } from '../config/botPersonalities';
 import { BOTS } from '../config/bots';
-import { HITS, ROUNDS } from '../config/hits';
+import { ROUNDS } from '../config/hits';
 import { initPhysics } from '../physics/physicsWorld';
 import { playMatch } from './depotMatchSupport';
 import { anchorHolding, type BotIdentity } from './personality';
@@ -39,7 +39,7 @@ function play(key: string): Play {
     for (let id = 0; id < 6; id++) identities.set(id, { name: `${key} ${id}`, personality: key, style });
     let firstShot = SECONDS;
     let planned = -1;
-    playMatch(SECONDS, seed, undefined, BOTS, 'elimination', ROUNDS, undefined, undefined, HITS, (state, bots) => {
+    playMatch(SECONDS, seed, undefined, BOTS, 'elimination', ROUNDS, undefined, undefined, undefined, (state, bots) => {
       if (firstShot === SECONDS && state.events.some((e) => e.type === 'shot')) firstShot = state.time;
       if (state.round.phase !== 'live') return;
       if (planned !== state.round.number) {

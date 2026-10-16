@@ -135,7 +135,7 @@ describe('more Dev settings for playtesting (M90)', () => {
   });
 });
 
-describe('The model switches are gone (MD1)', () => {
+describe('The model switches are gone (BD1)', () => {
   it('leaves no Dev row or setting that draws the built-in models', () => {
     for (const id of ['disableFigureModels', 'disableAllModels']) {
       expect(DEV_ENTRIES.map((e) => e.id as string)).not.toContain(id);

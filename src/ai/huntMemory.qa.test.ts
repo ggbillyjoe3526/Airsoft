@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { BOTS, type BotConfig } from '../config/bots';
-import { HITS, ROUNDS } from '../config/hits';
+import { ROUNDS } from '../config/hits';
 import { TEST_YARD } from '../map/testYard';
 import { WOODLAND } from '../map/woodland';
 import { initPhysics } from '../physics/physicsWorld';
@@ -136,7 +136,7 @@ describe('a hunting bot whose goal its team checked meanwhile turns to another (
     const out = { longest: 0, ticks: 0, hunting: 0 };
     // Bots without personalities (BN1), passed last: this measures the hunt's re-pick, and with personalities drawn
     // fewer bots hunt (anchors hold, rushers push in), so the blind bots' longest stale walk fell to 1.45 s on seed 1.
-    playMatch(150, seed, undefined, BOTS, 'elimination', ROUNDS, WOODLAND, 5, HITS, (state, controller) => {
+    playMatch(150, seed, undefined, BOTS, 'elimination', ROUNDS, WOODLAND, 5, undefined, (state, controller) => {
       const w = worldOf(controller);
       if (!checked) {
         checked = w.huntGoalChecked;

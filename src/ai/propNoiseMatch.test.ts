@@ -100,7 +100,7 @@ describe('the simulation stays deterministic with propQuiet (NP1 AC6)', () => {
     let quiet: number[] | undefined;
     let surfaced = 0;
     let steps = 0;
-    playMatch(25, seed, undefined, BOTS, 'elimination', ROUNDS, DEPOT, 3, HITS, (state) => {
+    playMatch(25, seed, undefined, BOTS, 'elimination', ROUNDS, DEPOT, 3, undefined, (state) => {
       // Grown once, then the same array of the same length every tick (nothing allocated per tick).
       quiet ??= state.propQuiet;
       if (quietLength >= 0) expect(state.propQuiet.length).toBe(quietLength);

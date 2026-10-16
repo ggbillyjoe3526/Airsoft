@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type * as BotsConfig from '../config/bots';
-import { HITS, ROUNDS } from '../config/hits';
+import { ROUNDS } from '../config/hits';
 import { SIM_DT } from '../config/sim';
 import type * as NightSight from '../map/nightSight';
 import type { MapData } from '../map/mapTypes';
@@ -56,7 +56,7 @@ describe('a 5v5 bot match on Woodland at night (M33g, acceptances 1, 2 and 5)', 
     let sightRef: unknown;
     let gridRef: unknown;
     let sightChanged = false;
-    const stats = playMatch(150, 3, undefined, BOTS, 'elimination', ROUNDS, WOODLAND, TEAM_SIZE, HITS, (state, controller) => {
+    const stats = playMatch(150, 3, undefined, BOTS, 'elimination', ROUNDS, WOODLAND, TEAM_SIZE, undefined, (state, controller) => {
       const world = controller.worldForTests;
       if (buildsAtFirstTick < 0) {
         buildsAtFirstTick = build.mock.calls.length;

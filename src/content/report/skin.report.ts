@@ -7,7 +7,7 @@ import { contentSkins, ENV, nodeReplicaFiles, reportMeta } from './reportSupport
 
 /**
  * The content report's skin runner (CT4): levels 1 to 3 (all but the maps) for the skin AIRSOFT_CONTENT_ITEM names
- * ("skin:<id>", or "skin:all"), on the built-in models and the model files (what the game draws, MD1), with every skin beside it, the pictures to draw (it on each replica, bold and under Realistic colours)
+ * ("skin:<id>", or "skin:all"), on the built-in models and the model files (what the game draws, BD1), with every skin beside it, the pictures to draw (it on each replica, bold and under Realistic colours)
  * and the maps whose colours the browser measures for skinMaps.report.ts. Everything goes into the test's meta as
  * `content`; `pipeline/content-check.mjs` reads it.
  */

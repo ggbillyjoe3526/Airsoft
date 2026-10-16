@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { HITS, ROUNDS } from '../config/hits';
+import { ROUNDS } from '../config/hits';
 import { BOTS } from '../config/bots';
 import { NAV } from '../config/nav';
 import { PHYSICS } from '../config/physics';
@@ -282,7 +282,7 @@ describe('Neon Heights in the game (M34c acceptance 2)', () => {
 
   it('plays a 5v5 for twenty seconds with all ten on their spawns and on the ground, nobody falling', () => {
     const placed: Vec3[] = [];
-    const stats = playMatch(20, 3, undefined, BOTS, 'elimination', ROUNDS, NEON_HEIGHTS, 5, HITS, (state) => {
+    const stats = playMatch(20, 3, undefined, BOTS, 'elimination', ROUNDS, NEON_HEIGHTS, 5, undefined, (state) => {
       if (placed.length === 0) for (const c of state.characters) placed.push(vec3(c.position.x, c.position.y, c.position.z));
     });
     expect(placed).toHaveLength(10);

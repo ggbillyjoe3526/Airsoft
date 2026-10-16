@@ -3,7 +3,7 @@ import { BALLISTICS, WIND } from '../config/ballistics';
 import { BOTS, botConfig, type Difficulty, defaultTeammateDifficulty } from '../config/bots';
 import { EXTRACTION, type ExtractionRules, homeTeamCap } from '../config/extraction';
 import { FOOTSTEPS } from '../config/footsteps';
-import { type HitConfig, HITS, ROUNDS } from '../config/hits';
+import { type HitConfig, ROUNDS } from '../config/hits';
 import { BODY, MOVEMENT } from '../config/movement';
 import { NAV } from '../config/nav';
 import { PHYSICS } from '../config/physics';
@@ -16,6 +16,7 @@ import { PhysicsWorld } from '../physics/physicsWorld';
 import { rollRunCases } from '../pool/caches';
 import { GAME_POOL } from '../pool/gamePool';
 import { type Character, createCharacter } from '../sim/character';
+import { dressFigures, RIGGED_HITS } from './riggedHitsSupport';
 import { createCommand, type PlayerCommand } from '../sim/commands';
 import { eliminate, isInPlay } from '../sim/elimination';
 import { createRunContext, haulTotals, type RunState, reserveSize, runHaul } from '../sim/extraction';
@@ -56,7 +57,10 @@ export interface RunOptions {
   torches?: boolean;
   /** The run's rules (default EXTRACTION); SAME_SIZE_AT_EVERY_LEVEL for a test written for the home team's old size. */
   rules?: ExtractionRules;
-  /** The hit rules (default HITS): friendly fire and ricochets as a match's rules set them (CT3, the mode checks). */
+  /**
+   * The hit rules (default a match's with the rigged figures' hit volumes, BD1 and HV1): friendly fire and ricochets as
+   * a match's rules set them (CT3, the mode checks).
+   */
   hits?: HitConfig;
   /** What everyone carries (default LOADOUT): the replicas under a match's semi-only and realcap rules (CT3). */
   loadout?: readonly ReplicaConfig[];
@@ -104,7 +108,7 @@ export function setUpRun(opts: RunOptions) {
   const map = opts.map ?? DEPOT;
   const x = map.extraction!;
   const squad = opts.squad ?? 3;
-  const hits = opts.hits ?? HITS;
+  const hits = opts.hits ?? RIGGED_HITS;
   const loadout = opts.loadout ?? LOADOUT;
   const opponents = opts.opponents ?? 'normal';
   const teammates = opts.teammates ?? defaultTeammateDifficulty(opponents);
@@ -151,6 +155,8 @@ export function setUpRun(opts: RunOptions) {
     const team = id < squad ? 0 : 1;
     state.characters.push(opts.carry?.(id, team) ?? createCharacter(id, vec3(), 0, loadout, team));
   }
+  // Humans and robots mixed as a match mixes them: each one's hit volume takes its figure's shape (HV1).
+  dressFigures(opts.seed, state.characters);
   const you = state.characters[0]!;
   // The bots: everyone, or everyone but you when you play the runner by hand.
   const botCharacters = opts.runnerBot ? state.characters : state.characters.filter((c) => c !== you);

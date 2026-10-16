@@ -1,6 +1,6 @@
 import { beforeAll, describe, it } from 'vitest';
 import { BOTS } from '../../config/bots';
-import { HITS, ROUNDS } from '../../config/hits';
+import { ROUNDS } from '../../config/hits';
 import { mapUnderLighting } from '../../map/lightingChoice';
 import { NEON_HEIGHTS } from '../../map/neonHeights';
 import { initPhysics } from '../../physics/physicsWorld';
@@ -37,7 +37,7 @@ describe('a 4v4 Elimination match on Neon Heights at Normal by night (M73, audit
     for (let seed = 1; seed <= SEEDS; seed++) {
       // A round's first BB hit: the end its shooter belongs to (and its victim's, counted apart). Armed from each round's start.
       let armed = true;
-      playMatch(SECONDS, seed, undefined, BOTS, 'elimination', ROUNDS, map, TEAM_SIZE, HITS, (state) => {
+      playMatch(SECONDS, seed, undefined, BOTS, 'elimination', ROUNDS, map, TEAM_SIZE, undefined, (state) => {
         for (const e of state.events) {
           if (e.type === 'roundStart') armed = true;
           else if (e.type === 'roundOver') armed = false;

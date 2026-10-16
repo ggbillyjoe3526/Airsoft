@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { BOTS } from '../config/bots';
-import { HITS, ROUNDS } from '../config/hits';
+import { ROUNDS } from '../config/hits';
 import { LOADOUT } from '../config/replicas';
 import { DEPOT } from '../map/depot';
 import { lightingChoices, mapUnderLighting, playsAtNight } from '../map/lightingChoice';
@@ -44,7 +44,7 @@ const partsOf = (cs: readonly Character[]) => cs.map((c) => c.armament.parts.map
 function rosterOf(map: MapData, opts: { hider?: boolean; torches?: boolean } = {}): Character[] {
   let roster: Character[] = [];
   const hider = opts.hider ? map.spawns[1]![0]!.position : undefined;
-  playMatch(DT, 1, hider, BOTS, 'elimination', ROUNDS, map, 4, HITS, (state) => {
+  playMatch(DT, 1, hider, BOTS, 'elimination', ROUNDS, map, 4, undefined, (state) => {
     if (state.tick === 1) roster = state.characters.map((c) => ({ ...c, armament: { ...c.armament, parts: c.armament.parts.map((p) => ({ ...p })) } }));
   }, undefined, opts.torches);
   return roster;

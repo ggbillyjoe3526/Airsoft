@@ -5,7 +5,7 @@ import { loadReplicaFiles, NO_REPLICA_FILES, type ReplicaFiles } from './replica
 /**
  * The game's model files: the Blender-made replicas and parts (M101, RM1), the rigged human and robot figures (BF1) and
  * a dropped-in figure model (M25a). Since 0.1 Beta 1 they are what the game draws (owner, 2026-10-16: "Blender models
- * default"; MD1): every one loads as the game starts, alongside the physics. The built-in models are drawn only where a
+ * default"; BD1): every one loads as the game starts, alongside the physics. The built-in models are drawn only where a
  * file is missing or can't be loaded (a dropped connection, a tab left open across a release): each loader warns and
  * resolves to nothing for it. Everything is freed with the renderer.
  */

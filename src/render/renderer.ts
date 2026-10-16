@@ -100,7 +100,7 @@ export class Renderer {
   motion = true;
   /**
    * The model files (render/modelFiles.ts): the rigged figures (BF1), the replica models (M101) and a figure model
-   * (M25a), loaded as the game starts (MD1). Shared by every match and freed with the renderer.
+   * (M25a), loaded as the game starts (BD1). Shared by every match and freed with the renderer.
    */
   models = new ModelFiles();
   /** The figure model the next match draws its players with; null for the built-in figures. */

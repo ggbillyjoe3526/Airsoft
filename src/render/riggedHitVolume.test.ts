@@ -18,7 +18,8 @@ import { figureFilesForTests } from './testSupport';
  * don't count, DECISIONS 2026-10-01), and does the simulation count it. The skinned triangles are posed on the CPU and
  * laid on the grid (the rays of a side are parallel, so a ray touches a triangle when its grid point is inside the
  * triangle's outline): the same answer as casting each ray, in a fraction of the time on 20,000 triangles. The hit rules
- * are a match's with the rigged figures: the volume's legs on the figures' own legs (HitConfig.figureLegs, IM8).
+ * are a match's with the rigged figures: the volume's legs on the figures' own legs (HitConfig.figureLegs, IM8) and its
+ * head, chest, shoulders and hips on each figure's upper body (HitConfig.figureBodies, HV1).
  */
 
 interface Pose {
@@ -92,42 +93,21 @@ const AZIMUTHS = 8;
 const RANGE = 4;
 const TOLERANCE = 0.02;
 /**
- * The rigged figures do not pass M85's bar yet (at most 4 % of the drawn body missed and 3 % of the volume thin air,
- * past the rim): KNOWN_ISSUES › Figures and art. Since IM8 the volume's legs are the figures' own and their crouch is
- * as low as the volume's, so the drawn body is missed on 0-5 % of the grid on every pose but a vault's rise (up to
- * 9 %); what is left is thin air: the volume's head, chest and hips are the built-in human's, rounder than the Blender
- * human (4-8 %) and the robot (7-11 %; the v12 robot's armour fills more of it than v11's bare shell did), and upright
- * while the figures lean into a run and a sprint (up to 16 %). They are drawn only with the Dev switches off, and must
- * reach M85's bar before they become the default (DECISIONS › Gameplay and feel). Until then each pose is held to
- * today's worst case over the human looks and the robot plus a point (measured 2026-10-13, the v12 figures), so a
- * change can only bring them closer.
+ * M85's bar (render/figureHitVolume.test.ts), on every pose of every figure, the vault's rise included: at most 4 % of
+ * the drawn body missed and 3 % of the volume thin air, past the rim. Since HV1 the head, chest, shoulders and hips sit
+ * on each figure's own bones (config/figureRig.ts FIGURE_HIT_SHAPES, sim/figureBody.ts), as the legs have since IM8,
+ * so the volume leans into the sprint and tucks over the vault with the figure (measured 2026-10-16: at most 3.4 %
+ * missed and 2.4 % thin air, both on a heel coming down).
  */
-const LIMITS: Readonly<Record<string, { missed: number; phantom: number }>> = {
-  standing: { missed: 0.041, phantom: 0.08 },
-  crouched: { missed: 0.036, phantom: 0.097 },
-  'leaning left': { missed: 0.036, phantom: 0.079 },
-  'leaning right': { missed: 0.036, phantom: 0.085 },
-  'crouched, leaning': { missed: 0.032, phantom: 0.086 },
-  walking: { missed: 0.046, phantom: 0.104 },
-  'walking, heel down': { missed: 0.055, phantom: 0.115 },
-  running: { missed: 0.047, phantom: 0.124 },
-  sprinting: { missed: 0.057, phantom: 0.169 },
-  'crouch walking': { missed: 0.045, phantom: 0.124 },
-  'crouch walking, other foot': { missed: 0.054, phantom: 0.118 },
-  'calling the hit': { missed: 0.045, phantom: 0.093 },
-  'walking off': { missed: 0.039, phantom: 0.094 },
-  out: { missed: 0.042, phantom: 0.096 },
-  vaulting: { missed: 0.056, phantom: 0.086 },
-  'vaulting, rising': { missed: 0.098, phantom: 0.115 },
-};
+const BAR = { missed: 0.04, phantom: 0.03 } as const;
 
 /** The bones whose vertices are arm (the shoulders' are the torso's): UpperArm and everything down to the fingertips. */
 const ARM_BONE = /^(UpperArm|Forearm|ForearmTwist|Elbow|Hand|Grip|Thumb|Index|Middle|Ring|Pinky|Finger)/;
 
 const { rigs: kinds, files } = await figureFilesForTests();
 const rigs = figureRigs(kinds.human, kinds.robot, () => {});
-/** A match's hit rules with the rigged figures (matchSession.ts): the volume's legs on theirs. */
-const hits: HitConfig = { ...HITS, figureLegs: rigs.legs };
+/** A match's hit rules with the rigged figures (matchSession.ts): the volume's legs and upper bodies on theirs. */
+const hits: HitConfig = { ...HITS, figureLegs: rigs.legs, figureBodies: rigs.bodies };
 
 interface Tally {
   body: number;
@@ -192,6 +172,7 @@ function measure(pose: Pose, id: number, robot: boolean): Tally {
   const c = createCharacter(id, vec3(), 0.3);
   // On the ground, as the movement leaves a character standing (a new one starts in the air).
   c.grounded = true;
+  c.figure = robot ? 1 : 0;
   const crowd: FigureCrowd = { robots: [robot], realistic: false };
   const renderer = new CharacterRenderer([c], [0x3d8bff], hits, null, 'high', crowd, files, rigs);
   pose.set(c);
@@ -269,7 +250,7 @@ function measure(pose: Pose, id: number, robot: boolean): Tally {
   return t;
 }
 
-describe('the hit volume against the rigged figures, on every pose (BF1, M85: not passed yet)', () => {
+describe('the hit volume against the rigged figures, on every pose (BF1, M85, HV1)', () => {
   beforeAll(() => {
     vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => null }) });
   });
@@ -285,15 +266,14 @@ describe('the hit volume against the rigged figures, on every pose (BF1, M85: no
     { id: 0, robot: true },
   ];
   for (const { id, robot } of cases) {
-    it(`${robot ? 'the robot' : `the human, look ${id}`}: no further from the hit volume than measured, on any pose`, () => {
+    it(`${robot ? 'the robot' : `the human, look ${id}`}: within M85's bar of the hit volume on every pose`, () => {
       const rows: string[] = [];
       let worst = 0;
       for (const pose of POSES) {
         const t = measure(pose, id, robot);
         const missed = t.missed / t.body;
         const phantom = t.phantom / t.volume;
-        const limit = LIMITS[pose.name]!;
-        worst = Math.max(worst, missed / limit.missed, phantom / limit.phantom);
+        worst = Math.max(worst, missed / BAR.missed, phantom / BAR.phantom);
         rows.push(`${pose.name}: missed ${(100 * missed).toFixed(1)}%, thin air ${(100 * phantom).toFixed(1)}%`);
       }
       if ((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.FIGURE_REPORT) console.log(`${robot ? 'robot' : `human ${id}`}\n  ${rows.join('\n  ')}`);
