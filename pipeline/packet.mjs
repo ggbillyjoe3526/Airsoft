@@ -2,14 +2,14 @@
 /**
  * The review packet (token-efficiency plan, item 15): pipeline/out/review-packet.md holds what the critic and QA read
  * first, so they stop exploring: the task block, the gate's summary, the contracts whose files the diff touches, QA's
- * report, the file list and the diff itself without the change records and generated files. They open other files only
+ * and the performance agent's reports, the file list and the diff itself without the change records and generated files. They open other files only
  * where the packet isn't enough. Its second line says where the diff starts, and the file list gives each file's lines,
  * so a packet over the read guard's 40 KB (.claude/hooks/read-guard.mjs) is read by range.
  *
  *   node pipeline/packet.mjs [--task M27[,M28]] [--base origin/main]
  *
  * The gate (pipeline/gate.mjs) writes it at the end of every run but CI's; run this to rebuild it alone, after a commit
- * or once QA's report is in. Without --task it takes the ids from pipeline/out/gate-report.json.
+ * or once QA's or the performance agent's report is in. Without --task it takes the ids from pipeline/out/gate-report.json.
  */
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -19,9 +19,22 @@ import { failureSections } from './failures.mjs';
 import { parseTaskList, taskBlockText, tasksVersions } from './scope.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-/** Where the packet is written, and QA's report (.claude/agents/qa.md), both relative to the repository. */
+/** Where the packet is written, QA's report and the performance agent's (.claude/agents/), relative to the repository. */
 export const PACKET = 'pipeline/out/review-packet.md';
 export const QA_REPORT = 'pipeline/out/qa-artifacts/qa-report.md';
+export const PERF_REPORT = 'pipeline/out/performance.md';
+
+/**
+ * A review agent's report text when it is this packet's: its first line names one of the task ids, or with no task
+ * reads `Task: none` (a pull request outside the pipeline). Otherwise null, so a stale report is never quoted.
+ */
+export function reportFor(text, ids) {
+  if (!text) return null;
+  const first = text.split('\n')[0];
+  if (ids.length === 0) return /^Task:\s*none\b/i.test(first) ? text : null;
+  return ids.some((id) => new RegExp(`\\b${id}\\b`).test(first)) ? text : null;
+}
+
 /** Lines of context around each change: enough to judge most hunks without opening the file. */
 export const CONTEXT_LINES = 8;
 /** The diff stops growing past this; the files after it are listed with the command that shows them. */
@@ -152,10 +165,10 @@ export function gateSummary(report, head) {
 /**
  * The packet as Markdown, from its parts: `ids`, `head` and `base` (the base's name and merge base), `blocks` (each
  * task's block text, or null), `report` (the gate report or null), `contracts` (contractsForDiff) and `contractCount`,
- * `qa` (QA's report text, or null), `files` (`[{ file, added, deleted, binary, diff, leftOut }]`, `diff` null when left
+ * `qa` and `perf` (QA's and the performance agent's report texts, or null), `files` (`[{ file, added, deleted, binary, diff, leftOut }]`, `diff` null when left
  * out) and `diffCommand` (how to see a left-out file's diff). The line ranges the file list gives are this text's own.
  */
-export function assemblePacket({ ids, head, base, blocks, report, contracts, contractCount, qa, files, diffCommand }) {
+export function assemblePacket({ ids, head, base, blocks, report, contracts, contractCount, qa, perf = null, files, diffCommand }) {
   const idText = ids.length ? ids.join(', ') : 'no task';
   const head7 = String(head).slice(0, 7);
   const lines = [`# Review packet · ${idText} · head ${head7}`, '{{READ}}', ''];
@@ -182,6 +195,9 @@ export function assemblePacket({ ids, head, base, blocks, report, contracts, con
 
   lines.push('## QA report', '');
   lines.push(...(qa ? qa.trimEnd().split('\n') : [`None for ${idText} yet (QA writes \`${QA_REPORT}\`, first line naming the task).`]), '');
+
+  lines.push('## Performance report', '');
+  lines.push(...(perf ? perf.trimEnd().split('\n') : [`None for ${idText} yet (the performance agent writes \`${PERF_REPORT}\`, first line naming the task).`]), '');
 
   const added = files.reduce((n, f) => n + f.added, 0);
   const deleted = files.reduce((n, f) => n + f.deleted, 0);
@@ -261,12 +277,11 @@ export function writePacket({ ids = [], base = 'origin/main', mergeBase = null, 
   const entries = contractEntries(read('docs/ARCHITECTURE.md'));
   const contracts = contractsForDiff(entries, stats.map((s) => s.file), contractLine);
 
-  const qaText = read(QA_REPORT);
-  const qaFirst = qaText?.split('\n')[0] ?? '';
-  const qa = qaText && ids.some((id) => new RegExp(`\\b${id}\\b`).test(qaFirst)) ? qaText : null;
+  const qa = reportFor(read(QA_REPORT), ids);
+  const perf = reportFor(read(PERF_REPORT), ids);
 
   const baseName = `${base}@${mb.slice(0, 7)}`;
-  const text = assemblePacket({ ids, head, base: baseName, blocks, report, contracts, contractCount: entries.length, qa, files, diffCommand: `\`git diff ${mb.slice(0, 7)} -- <file>\`` });
+  const text = assemblePacket({ ids, head, base: baseName, blocks, report, contracts, contractCount: entries.length, qa, perf, files, diffCommand: `\`git diff ${mb.slice(0, 7)} -- <file>\`` });
   const out = join(root, PACKET);
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, text);

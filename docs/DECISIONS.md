@@ -59,6 +59,11 @@ replaces its line; the old one stays findable in the archive or in git.
 - **Dev builds continue until the owner calls the game feature complete; Beta then adds no features (owner,
   2026-10-06).** Beta is bug fixes, QoL, balance, refinement and polish, so features once parked in Beta moved into Dev
   builds or became maybes.
+- **0.1 Beta 1 has begun, and it carries the owner's Dev 6 playtest list (owner, 2026-10-16).** He called the game out
+  of Dev and tags 0.1 Beta 1 when it is complete. His 34 items are Beta 1 work, including the few small additions he
+  asked for: an in-match hop-up control, a home-screen fullscreen button, one feed with a placement setting, and WON or
+  LOST at a round's end. He also removes features: resting on cover, the Voices setting, and the Skins option (it
+  moves into Colour). Blender models become the default. Each item is a block in `docs/TASKS.md`.
 - **Dev 5 order (owner, 2026-10-06).** Docs rewrite with token step 2, token step 3, token step 4, bug pass BP2,
   graphics, the playtest notes, the content toolkit (all four parts, mode checks included), bug pass BP3, then the tag.
   Dev 7 is folded into Dev 6 ("I want bigger builds"). The order is in `docs/ROADMAP.md`.
@@ -139,10 +144,19 @@ replaces its line; the old one stays findable in the archive or in git.
   `src/` folder README in any task.
 - **Agents start from the gate's own summaries, and an agent runs only where it can change the outcome (owner,
   2026-10-06, token plan step 3; built 2026-10-08, TE3).** The critic and QA read the review packet first
-  (`pipeline/out/review-packet.md`); the performance agent runs only when the perf gate fails; the triage agent only for
-  a failure the gate's summary (`pipeline/out/failures.md`) can't place; the changelog agent reads only `Unreleased`
-  and one FEATURES heading; a near miss is re-run on Opus only when its failed check is a judgment, never a measured
-  number. Models and effort levels are unchanged.
+  (`pipeline/out/review-packet.md`); the performance agent runs only when the perf gate fails (superseded 2026-10-16:
+  it reviews every code change, below); the triage agent only for a failure the gate's summary
+  (`pipeline/out/failures.md`) can't place; the changelog agent reads only `Unreleased` and one FEATURES heading; a near
+  miss is re-run on Opus only when its failed check is a judgment, never a measured number. Models and effort levels
+  are unchanged.
+- **Every code change gets all three review agents: critic, QA and performance (owner, 2026-10-16: "I need everything
+  to go through a critic agent, qa agent, and performance agent").** This replaces token step 3's "the performance
+  agent runs only when the perf gate fails" and the critic skip for trivial tasks. Any pull request touching code,
+  config, assets or gameplay data, inside the pipeline or not, is marked ready and merged only once each agent says
+  Pass (critic: Accept, or the 6/8 auto-accept) and its description's `Review:` line gives the verdicts; CI's `review`
+  gate (`pipeline/review.mjs`) checks the line on every pull request out of draft. Docs-only changes (every file
+  Markdown, and at the root only README, CHANGELOG and CLAUDE.md: the other root `.md` files are game data) skip them.
+  Models and effort levels are unchanged.
 - **Token step 4 (owner, 2026-10-06, token plan items 8, 21 and 22; built 2026-10-08, TE4).** The project chat
   carries only results, blockers and decisions, from threads and the coordinator alike (`docs/PROCESS.md` ›
   Sessions). Off CI the gate runs the slow bot-match guards only when the diff reaches a file they load (by their
@@ -392,6 +406,9 @@ replaces its line; the old one stays findable in the archive or in git.
   fire and stays up 0.35 s after the trigger is let go. A toggled sprint still ends on a fire press, which now fires at
   once. A vault still carries the replica, with no shot until 0.3 s after it (M102). Bots still stop sprinting to
   fight; whether bold bots spray on the run is for the bot personalities.
+- **The hit area is fitted to each figure (owner, 2026-10-16, Dev 6 playtest: "fit to each figure").** The head,
+  chest and hips follow each rigged figure, as the legs already do; the human's and the robot's may differ. Task HV1
+  does it when the rigged figures leave the Dev switches; until then nothing changes.
 
 ## Bots and balance
 
@@ -478,8 +495,8 @@ replaces its line; the old one stays findable in the archive or in git.
   call shows bottom left with the walkie-talkie click an order gets (no new sound to render), panned to where they
   are; an enemy's is only its click, from them, within 15 m. The callouts read the bots and never write them, on a
   random stream of their own, so seeds still replay. Hit players never talk: hit calling stays the raised hand.
-- **Callouts keep a slow, readable pace (2026-10-13, CL1).** A team says one call at a time, 1.5 s apart, a bot its own
-  4 s apart and the same enemy 10 s apart; the most urgent first, and a call kept waiting over 1.5 s is dropped. About
+- **Callouts keep a slow, readable pace (2026-10-13, CL1; the owner found it OK in play, 2026-10-16).** A team says
+  one call at a time, 1.5 s apart, a bot its own 4 s apart and the same enemy 10 s apart; the most urgent first, and a call kept waiting over 1.5 s is dropped. About
   5 to 11 calls a team a minute in the headless matches. All of it, and every line, is in `callouts.md`.
 - **A ping marks a spot or an enemy for your team, and your bot teammates play it their way (2026-10-15, PG1; Claude's
   defaults, any can change).** The Ping key marks where the crosshair meets the field within 120 m. An enemy under it
