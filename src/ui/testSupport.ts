@@ -112,6 +112,7 @@ function fakeStyle(): Record<string, string> {
   const style: Record<string, string> = {};
   // Out of sight of a test's toEqual on the styles: not an own enumerable property.
   Object.defineProperty(style, 'setProperty', { value: (name: string, value: string) => (style[name] = value), enumerable: false, writable: true });
+  Object.defineProperty(style, 'getPropertyValue', { value: (name: string) => style[name] ?? '', enumerable: false, writable: true });
   return style;
 }
 

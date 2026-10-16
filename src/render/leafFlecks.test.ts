@@ -83,4 +83,56 @@ describe('LeafFlecks', () => {
     expect(meanZ / f.object.count).toBeGreaterThan(at.z);
     f.dispose();
   });
+
+  it('holds every leaf of a full-auto burst into a bush for its whole life (BP5: cut short mid-air at 48)', () => {
+    const f = new LeafFlecks();
+    const rate = 13; // the fastest replica's shots a second
+    const dt = 1 / 60;
+    let next = 0;
+    let shown = 0;
+    for (let t = 0; t < 3; t += dt) {
+      if (t >= next) {
+        f.spawn(at, from, [L.perStop[1], L.perStop[1]]);
+        next += 1 / rate;
+        shown += L.perStop[1];
+      }
+      f.update(dt, camera);
+    }
+    // In the air: every leaf of the last lifetime's shots, none dropped early.
+    expect(f.live).toBeGreaterThanOrEqual(Math.floor(L.lifetime * rate) * L.perStop[1]);
+    expect(shown).toBeGreaterThan(L.max);
+    f.dispose();
+  });
+
+  it('comes to rest on the ground under the bush, and lies still there (BP5: they fell on through it)', () => {
+    const f = new LeafFlecks();
+    const low = vec3(0, 0.6, 0);
+    f.spawn(low, from, [6, 6], 0.25);
+    const m = new THREE.Matrix4();
+    const p = new THREE.Vector3();
+    const lowest = (): number => {
+      let y = Infinity;
+      for (let i = 0; i < f.object.count; i++) {
+        f.object.getMatrixAt(i, m);
+        y = Math.min(y, p.setFromMatrixPosition(m).y);
+      }
+      return y;
+    };
+    for (let i = 0; i < 50; i++) f.update(1 / 60, camera);
+    expect(lowest()).toBeCloseTo(0.25, 6);
+    const down: THREE.Vector3[] = [];
+    for (let i = 0; i < f.object.count; i++) {
+      f.object.getMatrixAt(i, m);
+      p.setFromMatrixPosition(m);
+      if (Math.abs(p.y - 0.25) < 1e-9) down[i] = p.clone();
+    }
+    for (let i = 0; i < 5; i++) f.update(1 / 60, camera);
+    expect(f.object.count).toBe(6);
+    expect(lowest()).toBeGreaterThanOrEqual(0.25 - 1e-9);
+    down.forEach((was, i) => {
+      f.object.getMatrixAt(i, m);
+      expect(p.setFromMatrixPosition(m).distanceTo(was), `leaf ${i} lies still`).toBeLessThan(1e-9);
+    });
+    f.dispose();
+  });
 });

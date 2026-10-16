@@ -26,9 +26,10 @@ import type { PuffConfig, QualitySettings } from './render';
  *   log), the puddle mesh the mud and the puddles (2 040), and the treeline and hills join the tree ring (2 722, no draw
  *   call). The moss on the trunks, logs and boulders is vertex colour on meshes that were already there (nothing
  *   added). Moving: the fireflies at night are one draw.
- * - Neon Heights (Medium, High): 9 654 more triangles and 2 more draw calls — the junk mesh carries the street litter,
- *   the posters and every neon tube, the flickering ones too (5 666 triangles), the dirt, litter scraps and sprays join
- *   the decal mesh (428, no draw call), the puddle mesh the puddles (840), and the towers join the tree ring (2 354)
+ * - Neon Heights (Medium, High): 9 630 more triangles and 2 more draw calls — the junk mesh carries the street litter,
+ *   the posters and every neon tube, the flickering ones too (5 632 triangles since BP5 ended the Plaza landing where
+ *   its stair starts: the junk and litter laid on and along it changed with it), the dirt, litter scraps and sprays join the decal mesh (438, no draw
+ *   call), the puddle mesh the puddles (840), and the towers join the tree ring (2 354)
  *   with their lit windows, blades and beacons (366, unlit; no draw call either, render/skyHost.ts). Moving: the vents'
  *   steam is one instanced draw while in view; the passing plane rides the tree ring too (108 triangles, collapsed to a
  *   point between passes: no draw call).

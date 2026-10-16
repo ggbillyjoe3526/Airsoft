@@ -25,6 +25,8 @@ export interface ChallengeRun {
   missed: number;
   /** It beat the best kept before it. */
   best: boolean;
+  /** Dev settings that change play were on during it (RangeChallenge.helped): never a best, never kept. */
+  helped?: true;
 }
 
 export interface RangeChallenge {
@@ -43,11 +45,21 @@ export interface RangeChallenge {
   cue: ChallengeCue | null;
   /** Seconds before the run looks again for a target in sight to light, after finding none (Practice on a map, M94). */
   look: number;
+  /**
+   * Dev settings that change play (Game speed, Bottomless magazines: config/dev.ts devCheating) were on at some point
+   * since the START plate was shot (BP5): the run is not a best, as such a match goes into no records.
+   */
+  helped: boolean;
 }
 
 /** The challenge, off, with the best score kept so far. */
 export function createChallenge(best: number): RangeChallenge {
-  return { phase: 'off', clock: 0, hits: 0, shots: 0, missed: 0, best, last: null, cue: null, look: 0 };
+  return { phase: 'off', clock: 0, hits: 0, shots: 0, missed: 0, best, last: null, cue: null, look: 0, helped: false };
+}
+
+/** Marks the run under way (its countdown included) as played with Dev help (RangeChallenge.helped); nothing otherwise. */
+export function helpChallenge(c: RangeChallenge): void {
+  if (c.phase === 'countdown' || c.phase === 'running') c.helped = true;
 }
 
 /** The target's lit time when it lights: longer for a far one (the BB's flight), and a lying pop-up's rise on top. */
@@ -153,6 +165,7 @@ export function stepChallenge(c: RangeChallenge, targets: readonly RangeTarget[]
         c.phase = 'countdown';
         c.clock = RANGE_CHALLENGE.countdown;
         c.cue = 'count';
+        c.helped = false;
         clearTargets(targets, false);
         setPopupsAuto(targets, false);
         return;
@@ -214,9 +227,9 @@ function stepRun(c: RangeChallenge, targets: readonly RangeTarget[], events: rea
   c.clock -= dt;
   if (c.clock > 0) return;
   // Time: the run's score is kept if it's the best, and the START plate stands for another go.
-  const best = c.hits > c.best;
+  const best = !c.helped && c.hits > c.best;
   if (best) c.best = c.hits;
-  c.last = { hits: c.hits, shots: c.shots, missed: c.missed, best };
+  c.last = { hits: c.hits, shots: c.shots, missed: c.missed, best, ...(c.helped ? { helped: true as const } : {}) };
   c.phase = 'ready';
   c.clock = 0;
   c.cue = 'time';

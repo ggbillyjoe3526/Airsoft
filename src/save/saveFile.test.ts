@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { GAME_LEVELS } from '../progress/gameLevels';
+import { unlocksUpTo } from '../progress/levels';
 import { PROGRESS_VERSION } from '../progress/progress';
 import { SAVED_LOADOUTS_VERSION } from '../pool/savedLoadouts';
 import { SETTINGS_VERSION } from '../settings/storage';
@@ -30,7 +32,7 @@ describe('save file (M31)', () => {
 
   it('is readable JSON naming the game, format, version, date and a summary', () => {
     const file = JSON.parse(saveFileText(save));
-    expect(file).toMatchObject({ game: 'Airsoft', format: SAVE_FORMAT, build: save.build, savedAt: save.savedAt, summary: { level: 1, xp: 120, unlocked: 3, matches: 6 } });
+    expect(file).toMatchObject({ game: 'Airsoft', format: SAVE_FORMAT, build: save.build, savedAt: save.savedAt, summary: { level: 1, xp: 120, unlocked: new Set([...unlocksUpTo(GAME_LEVELS, 1), '000001', '000002', '000003']).size, matches: 6 } });
     expect(file.checksum).toMatch(/^sha256:[0-9a-f]{64}$/);
     expect(saveFileText(save)).toContain('\n  "game": "Airsoft"');
   });
@@ -82,7 +84,8 @@ describe('save file (M31)', () => {
     expect(parsed.checksumOk).toBe(true);
     expect(parsed.save.format).toBe(SAVE_FORMAT);
     expect(parsed.save.stores).toEqual({ settings: stores.settings, keyBindings: stores.keyBindings, records: stores.records, progress: null, loadouts: null });
-    expect(summarize(parsed.save.stores)).toEqual({ level: 0, xp: 0, unlocked: 0, matches: 5 });
+    // The starting kit, which the game gives such a save on load (BP5).
+    expect(summarize(parsed.save.stores)).toEqual({ level: 0, xp: 0, unlocked: unlocksUpTo(GAME_LEVELS, 0).length, matches: 5 });
   });
 
   it('loads a format 2 save (SL1\'s saved loadouts beside the collection) at level 0, its saved loadouts kept (LV1)', () => {

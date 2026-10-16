@@ -28,6 +28,20 @@ describe('the callout feed', () => {
     expect(root().hidden).toBe(true);
   });
 
+  it('steps out of sight while the scoreboard is up, its lines kept and still timed (BP5)', () => {
+    feed.setVisible(true);
+    feed.add('Rook', 1, 'Contact, Dock!', 0);
+    feed.setCovered(true);
+    expect(root().classList.contains('covered')).toBe(true);
+    expect(root().hidden).toBe(false);
+    feed.update(CALLOUTS.lineTime + 0.1);
+    expect(rows()).toHaveLength(0);
+    feed.add('Kit', 1, 'Two left!', 10);
+    feed.setCovered(false);
+    expect(root().classList.contains('covered')).toBe(false);
+    expect(rows()).toHaveLength(1);
+  });
+
   it('shows the name in the team colour, then the line; a screen reader hears a colon between', () => {
     feed.add('Rook', 1, 'Contact, Dock!', 0);
     const row = rows()[0]!;

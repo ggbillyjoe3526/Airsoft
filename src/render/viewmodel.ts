@@ -212,8 +212,17 @@ export class Viewmodel {
   private readonly muzzleView = new THREE.Vector3();
   /** 0 = playing, 1 = hand fully raised calling a hit. */
   private hitBlend = 0;
-  /** The holster (M92): how far the replica is put away (0..1, over VIEWMODEL.holster.putAwayTime). */
+  /** The holster (M92): how far the put-away under way has gone (0..1, over VIEWMODEL.holster.putAwayTime). */
   private stow = 0;
+  /**
+   * How far out of view the replica was (0..1) last frame, when the put-away under way began, and when the draw under way
+   * out of the holster began (BP5): a put-away or draw that starts part-way through the other picks up from there instead
+   * of jumping (a quick tap of the holster, then fire, dropped it 0.42 m in one frame).
+   */
+  private away = 0;
+  private putFrom = 0;
+  private drawFrom = 1;
+  private wasHolstered = false;
   /** How settled the replica is on cover (M104, Character.coverRest, 0..1), and seconds into its settling dip (-1: none). */
   private rest = 0;
   private settleT = -1;
@@ -481,7 +490,15 @@ export class Viewmodel {
     const H = VIEWMODEL.holster;
     if (armament.holstered) this.fromHolster = true;
     else if (armament.draw <= 0) this.fromHolster = false;
-    this.stow = armament.holstered ? Math.min(1, this.stow + dt / H.putAwayTime) : 0;
+    if (armament.holstered !== this.wasHolstered) {
+      if (armament.holstered) this.putFrom = this.away;
+      else this.drawFrom = this.away;
+      this.wasHolstered = armament.holstered;
+      this.stow = 0;
+    }
+    // The rest of the way out of view, in the time that part takes.
+    const left = 1 - this.putFrom;
+    this.stow = armament.holstered ? (left > 0 ? Math.min(1, this.stow + dt / (H.putAwayTime * left)) : 1) : 0;
     const stowed = armament.holstered && this.stow >= 1;
     for (let i = 0; i < this.slots.length; i++) {
       const s = this.slots[i]!;
@@ -603,7 +620,8 @@ export class Viewmodel {
     const drawTotal = armament.drawTotal > 0 ? armament.drawTotal : handling.drawTime;
     const drawP = drawTotal > 0 ? armament.draw / drawTotal : 0;
     // A switch's draw dips the replica a little; the holster's takes it right out of view (and brings it back up).
-    const away = armament.holstered ? smooth(this.stow) : this.fromHolster ? drawP : 0;
+    const away = armament.holstered ? this.putFrom + (1 - this.putFrom) * smooth(this.stow) : this.fromHolster ? drawP * this.drawFrom : 0;
+    this.away = away;
     const dip = this.fromHolster ? 0 : drawP;
 
     const bob = VIEWMODEL.bobAmount * moving * motion * m.bob;

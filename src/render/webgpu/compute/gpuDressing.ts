@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { WebGPURenderer } from 'three/webgpu';
 import type { GpuDressingTier } from '../../../config/gpuDressing';
 import { type QualitySettings, qualityChoiceOf } from '../../../config/render';
-import { buildGroundGrid } from '../../../map/groundSurfaces';
+import { groundGridOf } from '../../../map/groundSurfaces';
 import type { MapData } from '../../../map/mapTypes';
 import { terrainMaxX, terrainMaxZ } from '../../../map/terrain';
 import { type FieldBounds, forestCount, placeForest } from './forestLayout';
@@ -131,7 +131,7 @@ export class GpuDressing {
     const grass = map.dressing?.grass;
     const terrainMesh = group.getObjectByName('map-terrain') as THREE.Mesh | undefined;
     const colours = terrainMesh?.geometry.getAttribute('color') as THREE.BufferAttribute | undefined;
-    const grid = grass && map.terrain && colours ? buildGroundGrid(map) : null;
+    const grid = grass && map.terrain && colours ? groundGridOf(map) : null;
     if (grass && map.terrain && colours && grid) {
       this.grass = new GrassField(this.renderer, tier, map.terrain, grassMask(map, map.terrain, grid), colours, grass.height, this.webgpu);
       this.count(this.grass.mesh);

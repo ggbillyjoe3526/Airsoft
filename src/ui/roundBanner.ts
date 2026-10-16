@@ -77,6 +77,14 @@ export function isRoundStart(text: string): boolean {
   return text === OVERTIME_START || ROUND_START.test(text);
 }
 
+/**
+ * Whether `text` is overtime's headline, which the banner sets a size smaller than a round's so it fits one line at
+ * 1280 px (BP5: at the round's size it broke after "Overtime ·").
+ */
+export function isOvertimeStart(text: string): boolean {
+  return text === OVERTIME_START;
+}
+
 /** Before the countdown in the between-rounds message. */
 const NEXT_ROUND = ' · next round in ';
 /** Before the countdown after a drawn round, which is played again ("· round 3 again in 4"). */

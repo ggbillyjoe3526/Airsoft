@@ -108,8 +108,11 @@ function setup() {
   match.setPlaying(true);
   // A camera at the origin facing -Z (three.js default).
   const camera = new THREE.PerspectiveCamera(70, 800 / 600, 0.05, 200);
-  const covers = vi.mocked(Minimap).mock.instances.at(-1)!.covers as unknown as ReturnType<typeof vi.fn>;
+  const minimap = vi.mocked(Minimap).mock.instances.at(-1)!;
+  const covers = minimap.covers as unknown as ReturnType<typeof vi.fn>;
   covers.mockReturnValue(false);
+  // A marker pinned to the edge keeps where projectMarker put it (BP5: clearPinned moves it only off the minimap's panel).
+  vi.mocked(minimap.clearPinned).mockImplementation((m) => m);
   return { match, state, player, camera, covers };
 }
 const ahead = (at: number, kind = 'spot') => ({ kind, x: 0, y: 0, z: -10, at });

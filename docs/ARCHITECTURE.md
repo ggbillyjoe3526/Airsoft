@@ -163,8 +163,10 @@ request. Each entry says where the contract lives, what it holds today and what 
   - Events: `respawned`, `exitCount`, `exitOpened` and `runWarning` report the run; `caseNoise` (bots hear it),
     `caseOpened` and `caseDropped` report the cases; `returned` reports an opponent back in a wave; `torch` reports a
     weapon light switched on or off.
-  - `Character.vault` holds a vault over a low obstacle (`sim/vault.ts`, M102): its plan and how far through it is. A
-    `footstep` of kind `vault` reports one starting (the loudest step: bots hear it from `footstepHearingVault`).
+  - `Character.vault` holds a vault over a low obstacle (`sim/vault.ts`, M102): its plan and how far through it is,
+    and the one-shot presses made during it (`held`, BP5: reload, slot, holster, fire selector, torch, magazine), kept
+    for the first command after it. A `footstep` of kind `vault` reports one starting (the loudest step: bots hear it
+    from `footstepHearingVault`).
   - `GameState.magTosses` holds the magazines in the air (MG1, `sim/magShare.ts`; MAG_SHARE.maxTosses slots, made
     once): who threw it to whom, the catcher's loadout slot, its BBs, the replica it came from, its age and flight and
     where it left the hand. `magToss` reports one leaving a hand (its BBs already out of the thrower's spare),
@@ -199,8 +201,11 @@ request. Each entry says where the contract lives, what it holds today and what 
   vault), and a BB stopped on a ringing prop rings it in the BB step (`ringProp`, through `stepBBs`' `noise` context,
   `SimContext.propNoise`). A Jump
   press at a low obstacle starts a vault before the aim (`tryVault`, M102), and a vault in progress steps in place of
-  the move (`stepVault`, through the same `CharacterMover`). Pinned by the `sim/*.test.ts` files and the
-  `ai/depotMatch*.test.ts` guards.
+  the move (`stepVault`, through the same `CharacterMover`). While vaulting a character follows the view of its
+  command, with the trigger and aim as the vault found them (`vaultingCommand`, BP5: one held through it is no new
+  pull after it); presses made meanwhile play into its first command after the vault (`withVaultPresses`), and a
+  walk-off route is planned only once it is down. Pinned by the `sim/*.test.ts` files (`sim/vaultPresses.test.ts`)
+  and the `ai/depotMatch*.test.ts` guards.
 - **`WorldQuery` and `CharacterMover`** (`sim/armament.ts`, `sim/movement.ts`; implemented by
   `physics/physicsWorld.ts`). The ray and shape casts and the character controller the simulation sees; the
   simulation never calls Rapier. `WorldQuery.foliage` (optional, FO1) is the map's bushes, read by the BBs and by the

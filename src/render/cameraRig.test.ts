@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { HITS } from '../config/hits';
+import { RENDER } from '../config/render';
 import { BODY } from '../config/movement';
 import { SIM_DT } from '../config/sim';
 import { VAULT } from '../config/vault';
-import { createCharacter } from '../sim/character';
+import { createCharacter, eyeHeight } from '../sim/character';
 import { vec3 } from '../sim/vec';
 import { updateFirstPersonCamera } from './cameraRig';
 
@@ -45,5 +46,41 @@ describe('updateFirstPersonCamera: a vault (M102)', () => {
     expect(camera.rotation.x).toBeCloseTo(0, 9);
     updateFirstPersonCamera(camera, c, BODY, HITS, 1, 0, 0);
     expect(camera.rotation.x).toBeLessThan(0);
+  });
+});
+
+describe('updateFirstPersonCamera: a lean (BP5: the offset and roll had no test)', () => {
+  function leaning(lean: number) {
+    const c = createCharacter(0, vec3(2, 0, 3), 0);
+    c.lean = c.prevLean = lean;
+    return c;
+  }
+
+  it('moves the eye to the side leaned to and rolls the view that way, and mirrors for the other side', () => {
+    const camera = new THREE.PerspectiveCamera();
+    updateFirstPersonCamera(camera, leaning(0), BODY, HITS, 1, 0, 0);
+    const upright = camera.position.clone();
+    expect(upright.x).toBeCloseTo(2, 9);
+    expect(upright.y).toBeCloseTo(eyeHeight(0, BODY), 9);
+    // Facing -z (yaw 0), the right is +x: a right lean moves the eye right, a little lower, and tips the view clockwise.
+    updateFirstPersonCamera(camera, leaning(1), BODY, HITS, 1, 0, 0);
+    const right = camera.position.clone();
+    expect(right.x).toBeGreaterThan(upright.x + 0.1);
+    expect(right.y).toBeLessThan(upright.y);
+    expect(right.z).toBeCloseTo(3, 9);
+    expect(camera.rotation.z).toBeCloseTo(-RENDER.leanCameraRoll, 9);
+    updateFirstPersonCamera(camera, leaning(-1), BODY, HITS, 1, 0, 0);
+    expect(camera.position.x - upright.x).toBeCloseTo(-(right.x - upright.x), 9);
+    expect(camera.position.y).toBeCloseTo(right.y, 9);
+    expect(camera.rotation.z).toBeCloseTo(RENDER.leanCameraRoll, 9);
+  });
+
+  it('rolls a quarter as far with reduced motion, from the same eye', () => {
+    const camera = new THREE.PerspectiveCamera();
+    updateFirstPersonCamera(camera, leaning(1), BODY, HITS, 1, 0, 0);
+    const full = camera.position.clone();
+    updateFirstPersonCamera(camera, leaning(1), BODY, HITS, 1, 0, 0, 0.25);
+    expect(camera.rotation.z).toBeCloseTo(-0.25 * RENDER.leanCameraRoll, 9);
+    expect(camera.position.distanceTo(full)).toBeLessThan(1e-9);
   });
 });

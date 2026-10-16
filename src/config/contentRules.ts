@@ -248,13 +248,11 @@ export const MAP_EXCEPTIONS: Readonly<Record<string, MapException>> = {
   neonHeights: {
     clashes: {
       list: [
-        'ramp at -13.90, 1.50, 9.00 and floor at -13.30, 2.85, 5.10 fill the same space',
-        'wall at -13.05, 2.10, 9.00 and floor at -13.30, 2.85, 5.10 fill the same space',
         'floor at 9.50, 2.85, 5.35 and barrier at 11.30, 2.00, 7.63 fill the same space',
         'floor at 12.15, 2.85, -1.50 and barrier at 11.30, 2.00, 7.63 fill the same space',
       ],
       reason:
-        "the Plaza stair runs on under its landing's floor and two walls rise through a floor's edge, out of sight; cutting them changes the bots' nav grid and how the map plays, so it waits for its own change (M55)",
+        "two walls rise through a floor's edge, out of sight; cutting them changes the bots' nav grid and how the map plays, so it waits for its own change (M55; BP5 ended the Plaza landing where its stair starts)",
     },
   },
 };

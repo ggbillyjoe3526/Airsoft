@@ -167,6 +167,13 @@ describe('the tutorial (M16)', () => {
     expect(t.goalIndex).toBe(2);
   });
 
+  it('points the player to the optics on the Loadout from the aiming step, which every replica plays (BP5)', () => {
+    const aim = TUTORIAL_STEPS.find((s) => s.id === 'aim')!;
+    expect(aim.text).toContain('On the Loadout (press Esc, then Loadout) you can fit a red dot or a 2× scope.');
+    // Still no longer than the longest card the coach already shows.
+    expect(aim.text.length).toBeLessThanOrEqual(Math.max(...TUTORIAL_STEPS.filter((s) => s.id !== 'aim').map((s) => s.text.length)));
+  });
+
   it('swaps aiming down the sight for how to fit an optic when the replica has none, and can start part way', () => {
     const ids = new TutorialTracker(TUTORIAL_STEPS, false).steps.map((s) => s.id);
     expect(ids).not.toContain('aim');

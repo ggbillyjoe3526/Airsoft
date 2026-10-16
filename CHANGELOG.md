@@ -105,10 +105,25 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **BP4** · Blender figures: no jolt on landing or on cover, no double magazine after a sprint or vault, no flicker at range, and pistols sit in the hands
 - **BP4** · Bots' BBs leave the replica's muzzle, and bots with two pistols show the one they hold; AEG iron sights fold under an optic
 - **BP4** · If the figure models fail to download, the game uses the built-in figures instead of showing an error
+- **BP5** · Vaulting: a trigger held over a wall no longer fires a second semi-auto BB or draws a holstered replica; presses made mid-vault happen as you land
+- **BP5** · Hit mid-vault, you walk off from where you land, not back through the wall
+- **BP5** · Anchor bots sent hunting (an order ended mid-round, or the late push) hunt, not stand still, and no longer aim down sights while sidestepping
+- **BP5** · A blank line in an editable table (bots.md, callouts.md, bot-kits.md) no longer drops every row after it; the game reports it
+- **BP5** · Close teammates' name tags no longer sit on top of each other
+- **BP5** · The overtime banner fits its line, and the callout feed hides under the scoreboard
+- **BP5** · Ping, flag, exit and hold markers pinned to the screen's edge keep off the minimap, and two moved off it sit one under the other
+- **BP5** · Timed challenge: a run with Game speed or Bottomless magazines on is no longer kept as a best ("not kept (Dev settings)")
+- **BP5** · The save summary before your first XP shows your starting kit, not "Items unlocked 0"; the Match loadout tip names the loadout it cuts short
+- **BP5** · A quick tap of the holster key no longer makes the held replica jump
+- **BP5** · Leaves knocked out of a bush land on the ground and lie there; full auto into a bush no longer cuts them short in the air
+- **BP5** · The tutorial's aiming card says you can fit a red dot or 2× scope on the Loadout
+- **BP5** · Woodland starts a little quicker (its ground grid is built once)
+- **BP5** · Neon Heights: the Plaza stair can be walked up without jumping and run down without a drop, and bots use it
 
 ### Internal
 - **SL1** · Saved loadouts are part of save format 2 with their own store (airsoft.loadouts); the context menu's styles have their own sheet
 - **PT1** · Docs: playtest fixes from the 0.1 Dev 5 notes recorded; the UI redesign is parked in IDEAS for a later version
+- **BP5** · Docs: README How to play menu paths, playtest guide opens with what is new since 0.1 Dev 5, known issues cross-checked; lean camera tests
 
 ## 0.1 Dev 5 · 2026-10-13
 

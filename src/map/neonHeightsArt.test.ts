@@ -52,13 +52,16 @@ describe('Neon Heights art (M34f)', () => {
     // SIM-04): 297 blocks, the same space filled without two blocks in one place (walls stop under the floors laid
     // into them, the Sky Bridge ends at the Tower's wall, planters stand against walls); the nav grid below is as it was.
     // Re-pinned for M102: 296, a Capsules window broken down to a low wall to vault (its lintel gone, the sill 0.9 m).
-    expect(playFingerprint(NEON_HEIGHTS.blocks)).toBe('296:13c8cae2');
+    // Re-pinned for BP5: the Plaza landing (its slab and west rail) starts where its stair ends, 0.6 m shorter.
+    expect(playFingerprint(NEON_HEIGHTS.blocks)).toBe('296:8487919a');
   });
 
   it('gives the bots exactly the same nav grid as before its art', () => {
     // Pinned from main before M34f (2026-10-05, 7ec2c27). The street split into three strips once laid this grid from
     // -23.509999999999998 instead of -23.51 and lifted the Pro attackers from 55 % to 64 %; the road is decor now.
-    expect(navFingerprint()).toBe('52822:7b34b809');
+    // Re-pinned for BP5: the Plaza stair climbs to its landing, no longer under its overhang (18 nodes fewer, the
+    // overhang's top and the stair under it now one walk), and the Neon guards re-measured on it.
+    expect(navFingerprint()).toBe('52804:edb020e7');
   });
 
   it('gives the bots the same cover and night roofs after M55 seated its floors (audit SIM-04)', () => {
@@ -77,7 +80,8 @@ describe('Neon Heights art (M34f)', () => {
       const c = nav.nodeCell[k]!;
       roofed += underRoof(field, { x: nav.minX + ((c % nav.cols) + 0.5) * nav.cell, y: nav.floorY[k]!, z: nav.minZ + (Math.floor(c / nav.cols) + 0.5) * nav.cell }) ? '1' : '0';
     }
-    expect(fnv(roofed)).toBe('94eda2d0');
+    // BP5: the stair's top 0.6 m is no longer under the Plaza landing's slab.
+    expect(fnv(roofed)).toBe('32b072b0');
   });
 
   it('fills the space it did before M55 moved its overlaps: the solid blocks (not the ramps) hold the same volume to a few cubic metres (QA)', () => {
@@ -85,6 +89,7 @@ describe('Neon Heights art (M34f)', () => {
     // on a 0.2 m grid over the map's plan; M55's 297 blocks measure the same, but for a 0.1 m sliver of a planter at the
     // grand stair's foot (0.13 m³ on a 0.1 m grid). Cutting a wall under a floor, or a strip beside it, and losing it
     // is 3 to 5 m³. M102 broke a Capsules window down to a low wall to vault: 0.8 m³ less (its lintel, 0.3 m off its sill).
+    // BP5 ended the Plaza landing where its stair starts: 0.5 m³ less (0.6 m of slab and rail over the stair's top).
     const CELL = 0.2;
     let volume = 0;
     for (let x = -23.6 + CELL / 2; x < 23.6; x += CELL) {
@@ -103,7 +108,7 @@ describe('Neon Heights art (M34f)', () => {
         }
       }
     }
-    expect(Math.abs(volume - 2643.4)).toBeLessThan(0.5);
+    expect(Math.abs(volume - 2642.9)).toBeLessThan(0.5);
   });
 
   it('is a city: every wall, floor and rail finished, the street paving with an asphalt road, no site toilet or container left', () => {

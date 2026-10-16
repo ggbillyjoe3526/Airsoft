@@ -357,6 +357,11 @@ replaces its line; the old one stays findable in the archive or in git.
   even from its uphill side on a slope. Anywhere else Jump is a jump, as before. The Controls list calls it "Jump / vault"
   and a prompt shows the key while a vault is there. A vault takes about 0.4 s, carries the replica and holds fire
   0.3 s after it; crouched, you can't vault (stand first). Values in `config/vault.ts`.
+- **A vault keeps what you press during it, and a trigger held through it is the same pull (BP5, 2026-10-16; Claude's
+  default).** Nothing starts mid-vault, as before, but a reload, slot, holster, fire selector, torch or magazine press
+  made during it happens as you land (each once), and the trigger and aim count as they were when it began: a semi-auto
+  pull held over a wall fires no second BB, and a trigger held holstered doesn't draw on landing. Hit mid-vault, you
+  land first and walk off from there (`sim/vault.ts`).
 - **Vaults are loud (owner, 2026-10-13: "Vaulting should create noise that makes enemies aware. Just like footsteps.
   Vaulting allows quick movement but at the cost of making noise.").** A vault is the loudest step there is: bots hear
   its hands and kit on the obstacle from 18 m (a sprint 16, a landing 12, a run 11), and its landing as well.
@@ -443,7 +448,9 @@ replaces its line; the old one stays findable in the archive or in git.
   bot under your order does what you asked.
 - **Anchors aim from cover, so they rest on it; every other bot still fires from the hip (BN1, M104's open question).**
   An anchor raises its sight when it stands still to fight, look over its cover or hold, with the player's aimed and
-  rested spread.
+  rested spread. Still means no sidestep either (BP5): a fight's strafe sets no route, and anchors aimed through it at
+  walking pace, playing worse, not differently. An anchor sent hunting (a squad order ended mid-round, or the late
+  push) hunts and no longer holds (BP5: it stood where the order left it until its mark).
 - **What a personality carries belongs to the bot gear table, not to bots.md (BN1, Dev 6 item 23).** The roadmap's
   "loadouts" for item 21 come with item 23's data-driven bot loadout table, which reads `Bot.personality`; bots.md
   holds names and play only. `bot-kits.md`'s Suits column names the personalities each kit suits, and a bot picks a
@@ -580,7 +587,9 @@ replaces its line; the old one stays findable in the archive or in git.
   challenge is off by default and switched in Practice's pause menu (saved): a START plate stands near the line; shoot
   it, wait out a 3 s countdown, then hit as many orange-lit targets as you can in 60 s, two lit at a time, each for
   3 s plus 0.04 s a metre (`RANGE_CHALLENGE`). The score is lit targets hit; the best is kept in the records per
-  course (`bestChallenge.range`), and the Tutorial never offers it.
+  course (`bestChallenge.range`), and the Tutorial never offers it. A run with a Dev setting that changes play on at
+  any point from the START plate (Game speed, Bottomless magazines: `devCheating`) is never a best and says "not kept
+  (Dev settings)", as such a match goes into no records (BP5).
 - **A map's checks measure it against Depot (2026-10-11, CT2; the standard is the owner's, 2026-10-05).** The numbers are
   `MAP_STANDARD` and `MAP_BALANCE_BANDS` (`src/config/contentRules.ts`): 3 lanes (2 a look, 1 a fail), the longest
   clear sightline 34 m, spawn yards 5 m round, each end's walk to the middle of the walkable ground within 15 % (25 % a

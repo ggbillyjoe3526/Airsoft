@@ -26,7 +26,7 @@ import { stepTorch } from './torch';
 import { createRng } from './rng';
 import { type RoundContext, type RoundRules, stepRound } from './round';
 import type { GameState } from './state';
-import { stepVault, tryVault } from './vault';
+import { stepVault, tryVault, vaultingCommand, withVaultPresses } from './vault';
 import { copy, type Vec3, vec3 } from './vec';
 import { type WindState, windAt } from './wind';
 
@@ -79,8 +79,13 @@ export interface SimContext extends SimServices {
   idleCommand: PlayerCommand;
   /** Command followed by characters that have been hit (they don't take orders from their controller). */
   eliminatedCommand: PlayerCommand;
-  /** Followed while vaulting (M102): the controller's view and nothing else (no firing, aiming, reloading or switching). */
+  /**
+   * Followed while vaulting (M102): the controller's view, the trigger and aim as the vault found them, nothing else (no
+   * firing, aiming, reloading or switching starts; sim/vault.ts vaultingCommand).
+   */
   vaultCommand: PlayerCommand;
+  /** The first command after a vault, with the presses made during it (BP5, sim/vault.ts withVaultPresses). */
+  afterVaultCommand: PlayerCommand;
   muzzle: Muzzle;
   /** Reused every tick; the state-dependent fields are filled in by stepSimulation. */
   armament: ArmamentContext;
@@ -97,6 +102,7 @@ export function createSimContext(services: SimServices): SimContext {
     idleCommand: createCommand(),
     eliminatedCommand: createCommand(),
     vaultCommand: createCommand(),
+    afterVaultCommand: createCommand(),
     muzzle: { eye: vec3(), yaw: 0, pitch: 0, spreadScale: 1, kickScale: 1 },
     armament: {
       ballistics: services.ballistics,
@@ -171,13 +177,13 @@ export function stepSimulation(
       cmd.yaw = c.yaw;
       cmd.pitch = c.pitch;
     }
-    // A Jump press at a low obstacle vaults it instead (M102); while vaulting, only the view follows the command.
-    if (inPlay && !c.vault.active) tryVault(c, cmd, ctx.movement, ctx.body, ctx.query, state.events);
-    if (inPlay && c.vault.active) {
-      ctx.vaultCommand.yaw = cmd.yaw;
-      ctx.vaultCommand.pitch = cmd.pitch;
-      cmd = ctx.vaultCommand;
+    // A Jump press at a low obstacle vaults it instead (M102); while vaulting, only the view follows the command, the
+    // trigger and aim stay as they were, and other presses wait for the vault's end (BP5, sim/vault.ts).
+    if (inPlay && !c.vault.active) {
+      cmd = withVaultPresses(c.vault, cmd, ctx.afterVaultCommand);
+      tryVault(c, cmd, ctx.movement, ctx.body, ctx.query, state.events);
     }
+    if (inPlay && c.vault.active) cmd = vaultingCommand(c, cmd, ctx.vaultCommand);
     if (inPlay) stepAiming(c, cmd, dt);
     else {
       c.aiming = false;

@@ -350,6 +350,14 @@ describe('criterion 4: the Match screen picks a saved loadout', () => {
     expect(name.text).toBe('Long range');
   });
 
+  it('gives the name in full and what it carries as the button\'s tip, for a name cut short on it (BP5)', () => {
+    const r = rig();
+    r.saved.create(1);
+    r.saved.rename(1, 'Long range woodlands');
+    const p = picker(r);
+    expect(node(p.picker.root).title).toBe('Long range woodlands · AEG Rifle · GBB Pistol');
+  });
+
   it('lists every saved loadout, marks the current one, and ends with Manage loadouts', () => {
     const r = rig();
     r.saved.create(1);

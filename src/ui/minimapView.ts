@@ -1,5 +1,6 @@
 import { MINIMAP } from '../config/minimap';
 import type { MapBlock } from '../map/mapTypes';
+import type { ScreenMarker } from '../render/screenMarker';
 import type { HeardSound } from './soundCues';
 
 /** A point on the minimap, in pixels from its middle (x right, y down). */
@@ -190,4 +191,45 @@ export function coverHeight(b: MapBlock, blocks: readonly MapBlock[]): number {
     floor = fTop;
   }
   return top - floor;
+}
+
+/** A box on screen, px from the view's top left (the minimap's panel). */
+export interface ScreenBox {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/**
+ * The next free places past a box for the markers moved off it this frame (clearOfBox): px down the left edge, and
+ * along the top. Zero both at the start of each frame.
+ */
+export interface PinStack {
+  below: number;
+  right: number;
+}
+
+/**
+ * Moves an edge-pinned marker (`onScreen` false) off `box`, grown by `gap`, if it would sit on it (BP5: a ping or a
+ * flag pinned to the left edge sat under the minimap's caption, or was hidden under the minimap): down the left edge
+ * past its foot when it is pinned nearer the box's left than its top, else along the top edge past its right. With a
+ * `stack`, markers moved the same way in one frame sit `step` px apart (the next one under, or right of, the last) and
+ * not on top of each other. A marker in view is left where it is. Pure but for `stack`.
+ */
+export function clearOfBox(m: ScreenMarker, box: Readonly<ScreenBox>, gap: number, stack?: PinStack, step?: { down: number; across: number }): ScreenMarker {
+  if (m.onScreen || box.w <= 0 || box.h <= 0) return m;
+  const left = box.x - gap;
+  const top = box.y - gap;
+  const right = box.x + box.w + gap;
+  const bottom = box.y + box.h + gap;
+  if (m.x < left || m.x > right || m.y < top || m.y > bottom) return m;
+  if (m.x - left <= m.y - top) {
+    m.y = stack ? Math.max(bottom, stack.below) : bottom;
+    if (stack && step) stack.below = m.y + step.down;
+  } else {
+    m.x = stack ? Math.max(right, stack.right) : right;
+    if (stack && step) stack.right = m.x + step.across;
+  }
+  return m;
 }

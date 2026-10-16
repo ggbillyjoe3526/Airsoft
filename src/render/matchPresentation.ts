@@ -504,7 +504,7 @@ export class MatchPresentation {
       return;
     }
     this.holdAnchor.set(hold.x, hold.y + SQUAD_ORDERS.markerHeight, hold.z);
-    const m = projectMarker(this.holdAnchor, camera, this.view.width, this.view.height, SQUAD_ORDERS.markerEdge, this.holdAt);
+    const m = this.minimap.clearPinned(projectMarker(this.holdAnchor, camera, this.view.width, this.view.height, SQUAD_ORDERS.markerEdge, this.holdAt), SQUAD_ORDERS.markerEdge);
     const p = this.player.position;
     this.holdMarker.show(m.x, m.y, Math.hypot(hold.x - p.x, hold.z - p.z), !m.onScreen);
   }
@@ -631,6 +631,7 @@ export class MatchPresentation {
     this.boardUp = this.boardView(boardHeld) !== 'none';
     this.characters.update(alpha, dt, spectating ? -1 : this.player.id, camera.position);
     this.flag.update(this.state.round, this.state.time);
+    this.minimap.beginPins();
     this.updateMarker(camera, spectating);
     this.exits?.update(this.state.round.run);
     this.cases?.update(this.state.round.run);
@@ -640,6 +641,7 @@ export class MatchPresentation {
     this.updatePingMarkers(camera, spectating);
     this.feed.update(this.state.time);
     this.calloutFeed.update(this.state.time);
+    this.calloutFeed.setCovered(this.boardUp);
     // The cues are placed for wherever the camera is (your eyes, or the player you watch), as the ears are.
     camera.getWorldDirection(this.viewDir);
     this.listener.x = camera.position.x;
@@ -749,7 +751,7 @@ export class MatchPresentation {
         continue;
       }
       this.pingAnchor.set(p.x, p.y + (p.kind === 'spot' ? PINGS.markerHeight : 0), p.z);
-      const m = projectMarker(this.pingAnchor, camera, this.view.width, this.view.height, PINGS.markerEdge, this.pingAt);
+      const m = this.minimap.clearPinned(projectMarker(this.pingAnchor, camera, this.view.width, this.view.height, PINGS.markerEdge, this.pingAt), PINGS.markerEdge);
       if (this.minimap.covers(m.x, m.y)) markers.hide(i);
       else markers.show(i, m.x, m.y, camera.position.distanceTo(this.pingAnchor), !m.onScreen, alpha);
     }
@@ -778,6 +780,7 @@ export class MatchPresentation {
       if (m.onScreen && !this.minimap.covers(m.x, m.y)) this.mateMarkers.show(i, m.x, m.y, c.status !== 'alive');
       else this.mateMarkers.hide(i);
     }
+    this.mateMarkers.commit();
   }
 
   /**
@@ -828,7 +831,7 @@ export class MatchPresentation {
       this.marker.hide();
       return;
     }
-    const m = projectMarker(this.flag.markerAnchor, camera, this.view.width, this.view.height, FLAG_VISUALS.markerEdge, this.markerAt);
+    const m = this.minimap.clearPinned(projectMarker(this.flag.markerAnchor, camera, this.view.width, this.view.height, FLAG_VISUALS.markerEdge, this.markerAt), FLAG_VISUALS.markerEdge);
     const from = camera.position;
     this.marker.show(m.x, m.y, Math.hypot(pole.x - from.x, pole.z - from.z), overtime ? FLAG_VISUALS.overtimeCss : teamCss(r.attackers), !m.onScreen);
   }
@@ -852,7 +855,7 @@ export class MatchPresentation {
         continue;
       }
       this.exitAnchor.set(e.position.x, e.position.y + EXIT_VISUALS.markerHeight, e.position.z);
-      const m = projectMarker(this.exitAnchor, camera, this.view.width, this.view.height, EXIT_VISUALS.markerEdge, this.exitAt);
+      const m = this.minimap.clearPinned(projectMarker(this.exitAnchor, camera, this.view.width, this.view.height, EXIT_VISUALS.markerEdge, this.exitAt), EXIT_VISUALS.markerEdge);
       marker.show(m.x, m.y, Math.hypot(e.position.x - from.x, e.position.z - from.z), EXIT_CSS, !m.onScreen);
     }
   }

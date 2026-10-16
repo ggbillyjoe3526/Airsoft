@@ -26,8 +26,18 @@ export class CalloutFeed {
     parent.appendChild(this.root);
   }
 
+  private covered = false;
+
   setVisible(visible: boolean): void {
     this.root.hidden = !visible;
+  }
+
+  /**
+   * While the scoreboard is up (between rounds, or Tab held) the feed steps out of sight, as the name tags and markers
+   * do (BP5: in a small window the round's table covered its lines half-way). Its lines keep their time meanwhile.
+   */
+  setCovered(covered: boolean): void {
+    if (covered !== this.covered) this.root.classList.toggle('covered', (this.covered = covered));
   }
 
   /** `name` (on `team`) said `text`, at simulation time `time`. */

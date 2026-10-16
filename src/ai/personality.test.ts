@@ -3,7 +3,8 @@ import { BOT_PERSONALITIES } from '../config/botPersonalities';
 import { botConfig, type BotSkill, type Difficulty } from '../config/bots';
 import { NEUTRAL_STYLE, type PersonalityStyle } from '../config/botsFile';
 import { anchorHolding, type BotIdentity, personalSkill, pushesIn } from './personality';
-import { depotBots } from './testSupport';
+import { endOrder } from './squadOrders';
+import { depotBots, duel } from './testSupport';
 
 /**
  * BN1: a personality is how a bot plays on top of its difficulty, never how well it sees, reacts or aims (the owner's
@@ -109,6 +110,17 @@ describe('pushesIn and anchorHolding (BN1)', () => {
     expect(anchorHolding(anchor, w)).toBe(false);
   });
 
+  it('has an anchor sent hunting (an order ended mid-round, or the late push) hunt, not freeze where it was (BP5)', () => {
+    const { bots, state } = team('anchor', 'rusher', 'careful');
+    const w = bots.worldForTests;
+    const anchor = bots.bots[0]!;
+    state.round.clock = anchor.style.holdUntil! + 30;
+    anchor.order = 'follow';
+    endOrder(anchor, w);
+    expect(anchor.hunting).toBe(true);
+    expect(anchorHolding(anchor, w)).toBe(false);
+  });
+
   it('stops an anchor’s lane one point short of the middle in Elimination; the others walk theirs to the end', () => {
     const { bots } = team('anchor', 'rusher', 'careful');
     const [anchor, rusher, careful] = bots.bots;
@@ -125,5 +137,32 @@ describe('pushesIn and anchorHolding (BN1)', () => {
       expect(b.style).toBe(NEUTRAL_STYLE);
       expect(b.skill).toBe(bots.bots[0]!.skill);
     }
+  });
+});
+
+describe('an anchor fighting in the open (BN1, BP5)', () => {
+  /** A 12 m duel: the fight ticks the bot sidesteps on, and how many of those it aimed on, and its mean pace then. */
+  function strafe(key: string | null) {
+    const ids = new Map<number, BotIdentity>(key ? [[1, identity(key)]] : []);
+    const { state, bot, bots, run, commands } = duel(12, undefined, undefined, undefined, undefined, undefined, undefined, undefined, ids);
+    const b = bots.bots[0]!;
+    let strafing = 0;
+    let aiming = 0;
+    let pace = 0;
+    run(6, () => {
+      if (bot.status !== 'alive' || state.characters[0]!.status !== 'alive' || b.mode !== 'fight' || commands.get(1)!.right === 0) return;
+      strafing++;
+      pace += Math.hypot(bot.velocity.x, bot.velocity.z);
+      if (bot.aiming) aiming++;
+    });
+    return { strafing, aiming, pace: pace / Math.max(1, strafing) };
+  }
+
+  it('aims from cover only standing still: never while it sidesteps, which it does at the pace any bot does', () => {
+    const neutral = strafe(null);
+    const anchor = strafe('anchor');
+    expect(anchor.strafing).toBeGreaterThan(30);
+    expect(anchor.aiming).toBe(0);
+    expect(anchor.pace).toBeCloseTo(neutral.pace, 1);
   });
 });

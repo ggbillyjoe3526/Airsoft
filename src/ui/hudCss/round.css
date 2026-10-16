@@ -44,3 +44,8 @@
   box-shadow: inset 6px 0 0 var(--orange);
   clip-path: polygon(var(--hud-cut-lg) 0, 100% 0, 100% 100%, 0 100%, 0 var(--hud-cut-lg));
 }
+
+/* Overtime's headline, "OVERTIME · TOUCH THE FLAG", a size smaller so it fits one line at 1280 px (BP5). */
+.hitfx-round.start.overtime {
+  font-size: 34px;
+}

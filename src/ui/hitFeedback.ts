@@ -2,7 +2,7 @@ import { DEFAULT_HIT_MARKER, HITS, type HitMarkerSettings } from '../config/hits
 import { HUD_TEXT, type SkipLabel } from '../config/hudText';
 import { styleHitMarker } from './hitMarkerLook';
 import { restartAnimation } from './restartAnimation';
-import { isRoundStart, spokenRoundMessage } from './roundBanner';
+import { isOvertimeStart, isRoundStart, spokenRoundMessage } from './roundBanner';
 
 /**
  * Hit feedback and round messages over the game view: the hit marker when your BB lands, the "you're
@@ -153,6 +153,7 @@ export class HitFeedback {
     this.round.textContent = text;
     this.round.classList.toggle('show', text !== '');
     this.round.classList.toggle('start', isRoundStart(text));
+    this.round.classList.toggle('overtime', isOvertimeStart(text));
     // Without the countdown, so the reader says the result once rather than every second.
     const spoken = spokenRoundMessage(text);
     if (spoken && spoken !== this.spokenRound) this.news.textContent = spoken;

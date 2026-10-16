@@ -407,18 +407,20 @@ describe('PhysicsWorld (Rapier)', () => {
     // M92's holstered sprint (6.8 m/s) left the ground for a third of a second over the top of these ramps when the
     // ground settle was 6 cm, and a bot's spread spiked (depotMatch.neonHeights.test.ts). Down each from its landing at
     // full pace from the first tick, along its middle and near each side, from four points of a tick's travel back.
-    // The west stair's lower flight is left out: its landing overhangs the ramp, a 30 cm step (KNOWN_ISSUES › Maps).
-    const OVERHUNG = { x: -13.9, z: 9 };
+    // The Plaza stair (west, lower flight) is in since BP5 ended its landing where it starts; that landing's rail stands
+    // 0.15 m in from the ramp's west side, so the runs near its sides start 0.05 m further in, clear of the rail, as a
+    // player on the landing stands.
+    const PLAZA = { x: -13.9, z: 9 };
     const world = new PhysicsWorld(NEON_HEIGHTS, BODY, DT);
     let id = 0;
     let runs = 0;
     for (const ramp of NEON_HEIGHTS.blocks) {
       if (ramp.kind !== 'ramp' || !ramp.rise) continue;
-      if (Math.abs(ramp.center.x - OVERHUNG.x) < 0.05 && Math.abs(ramp.center.z - OVERHUNG.z) < 0.05) continue;
+      const plaza = Math.abs(ramp.center.x - PLAZA.x) < 0.05 && Math.abs(ramp.center.z - PLAZA.z) < 0.05;
       const alongX = ramp.rise === '+x' || ramp.rise === '-x';
       const sign = ramp.rise === '+x' || ramp.rise === '+z' ? 1 : -1;
       const half = (alongX ? ramp.size.x : ramp.size.z) / 2;
-      const across = (alongX ? ramp.size.z : ramp.size.x) / 2 - BODY.radius - 0.1;
+      const across = (alongX ? ramp.size.z : ramp.size.x) / 2 - BODY.radius - 0.1 - (plaza ? 0.05 : 0);
       const top = ramp.center.y + ramp.size.y / 2;
       for (const pace of ['sprint', 'holstered sprint'] as const) {
         const speed = pace === 'sprint' ? MOVEMENT.sprintSpeed : MOVEMENT.holsterSprintSpeed;
@@ -455,7 +457,7 @@ describe('PhysicsWorld (Rapier)', () => {
         }
       }
     }
-    expect(runs).toBe(6 * 2 * 3 * 4);
+    expect(runs).toBe(7 * 2 * 3 * 4);
     world.dispose();
   });
 

@@ -563,8 +563,9 @@ describe('defence and moving in pairs', () => {
       let departures = 0;
       let together = 0;
       const moving = (o: Bot) => o.mode === 'advance' && !o.hunting && !o.holding && o.routeState === 'ok';
-      // Two seeds (one before BN1): a rusher or a flanker doesn't wait for the team, so fewer bots' departures count.
-      for (const seed of [3, 4]) {
+      // Four seeds (two before BN1; BP5 added 5 and 6 when 3 and 4 gave 5 departures): a rusher or a flanker doesn't wait
+      // for the team, so fewer bots' departures count.
+      for (const seed of [3, 4, 5, 6]) {
         const wasHolding = new Map<Bot, boolean>();
         playMatch(90, seed, undefined, cfg, 'elimination', undefined, undefined, undefined, undefined, (_s, bots) => {
           for (const b of bots.bots) {

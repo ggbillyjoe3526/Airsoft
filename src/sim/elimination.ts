@@ -93,7 +93,9 @@ export function eliminate(victim: Character, shooterId: number, characters: read
  */
 export function planWalkOffRoutes(characters: readonly Character[], ctx: EliminationContext): boolean {
   for (const c of characters) {
-    if (!c.walkOffRoutePending) continue;
+    // Hit mid-vault, it lands on the far side first (BP5): planned from the take-off, the route led back through the
+    // wall. The call lasts far longer than a vault, so the route is still ready before the walk.
+    if (!c.walkOffRoutePending || c.vault.active) continue;
     c.walkOffRoutePending = false;
     c.walkOffLeg = 0;
     const field = ctx.deadZoneFields[c.end];

@@ -91,7 +91,7 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
   {
     id: 'aim',
     title: 'Aim down the sight',
-    text: 'Aim with {aim} to look through your sight: the view zooms in and your BBs land closer together. Keep it on a target for a second.',
+    text: 'Aim with {aim} to look through your sight: the view zooms in and your BBs land closer together. Keep it on a target for a second. On the Loadout (press Esc, then Loadout) you can fit a red dot or a 2× scope.',
     goal: { kind: 'aim', seconds: 1 },
     withoutOptic: {
       id: 'optics',

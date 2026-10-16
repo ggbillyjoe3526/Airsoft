@@ -52,7 +52,10 @@ test('Settings → Save downloads the save and loads it back, with Undo', async 
   let text = '';
   for await (const chunk of stream as unknown as AsyncIterable<{ toString(): string }>) text += chunk.toString();
   const file = JSON.parse(text);
-  expect(file).toMatchObject({ game: 'Airsoft', format: 3, summary: { level: 2, xp: 400, unlocked: 3 } });
+  // The summary counts what the game holds: the 3 listed and what levels 0 to 2 give (BP5: it counted the list only).
+  const held = await page.evaluate(() => (window as unknown as { airsoft: { progress: { unlocked: string[] } } }).airsoft.progress.unlocked.length);
+  expect(held).toBeGreaterThan(3);
+  expect(file).toMatchObject({ game: 'Airsoft', format: 3, summary: { level: 2, xp: 400, unlocked: held } });
   expect(file.stores.settings.fov).toBe(100);
   expect(file.stores.progress.futureField).toBe('kept');
   expect(file.checksum).toMatch(/^sha256:/);

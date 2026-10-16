@@ -49,7 +49,8 @@ export class LoadoutPicker {
     const name = view?.name ?? '';
     if (this.name.textContent !== name) this.name.textContent = name;
     this.root.classList.toggle('has-locked', (view?.missing.length ?? 0) > 0);
-    this.root.title = view ? carriesLine(view) : '';
+    // The name in full (cut short on the button when long, css/saved.css), then what it carries (BP5).
+    this.root.title = view ? `${view.name} · ${carriesLine(view)}` : '';
     this.root.setAttribute('aria-label', SAVED_TEXT.pickName(name));
   }
 

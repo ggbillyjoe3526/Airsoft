@@ -80,6 +80,13 @@ describe('the challenge line and banner (M93)', () => {
     expect(challengeText(at({ phase: 'ready', last: { hits: 0, shots: 0, missed: 0, best: false } }))).not.toContain('accuracy');
   });
 
+  it('says a run played with Dev settings was not kept (BP5)', () => {
+    const t = challengeText(at({ phase: 'ready', best: 4, last: { hits: 30, shots: 31, missed: 0, best: false, helped: true } }));
+    expect(t).toContain('Time! 30 hits');
+    expect(t).toContain('not kept (Dev settings)');
+    expect(t).not.toContain('best 4');
+  });
+
   describe('banner', () => {
     const make = () => {
       const parent = new EventNode('div');

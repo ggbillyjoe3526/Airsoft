@@ -5,7 +5,7 @@ game state and never write it. Tests use the fake DOM in `testSupport.ts` (no js
 
 - In-match HUD: `hud.ts` (crosshair, replica panel), `ammoStatus.ts`, `crosshair.ts`, `scoreboard.ts`, `roundBanner.ts`,
   `hitFeed.ts`, `hitFeedback.ts` (with `hitMarkerLook.ts`, the hit marker's saved look), `soundCues.ts`,
-  `teammateMarkers.ts`, `flagMarker.ts`, `flagStatus.ts`, `runStatus.ts`, `casePrompt.ts`, `whatGotYou.ts`,
+  `teammateMarkers.ts` (with `tagStack.ts`, close teammates' name tags laid out one over the other, BP5), `flagMarker.ts`, `flagStatus.ts`, `runStatus.ts`, `casePrompt.ts`, `whatGotYou.ts`,
   `squadOrderLine.ts`, `orderWheel.ts`, `playPrompt.ts` ("Click to play" after Esc skips a round), `vaultPrompt.ts`
   (the key to vault while a vault is there, M102), `calloutFeed.ts` (the bots' callouts, bottom left, CL1),
   `pingMarkers.ts` (your pings and your teammates' marks over the field, PG1; the minimap draws the same slots),
