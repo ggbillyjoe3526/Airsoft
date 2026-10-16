@@ -273,6 +273,7 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 
 | Issue | Class | Notes |
 |---|---|---|
+| Edge markers (pings, the flag, exits, the hold marker) in almost the same direction overlap on the screen's edge | can wait | Each is pinned to the edge alone, where its direction puts it; BP5 stacks only the ones moved off the minimap's panel (`ui/minimapView.ts` clearOfBox). A fix: lay out each frame's edge markers together along each edge, a label's height apart. (BP5) |
 | The spare-magazine gauges show no number for each magazine | can wait | Beta UX/QoL (moved from M18 at M18b): the ammo panel already prints the total ("/ 120 · 2 spare"); a gauge's low is striped and next has a caret, so they don't rely on colour. (BP5) |
 | Menu pages scrolled in a 1280×720 window before M100's redesign; they need measuring again | can wait | Last measured 2026-10-08 (BP2, after G3, before M100; page scroll in px): Controls 1332, Gameplay 1137, Customise 1111, Loadout 1010, Dev 908, New game 545, Save file 445, Accessibility 306, Graphics 258, Display, Audio and Look 185 (the page's header and tabs alone passed 720); the Armory was not measured. M100 rebuilt the title, the top bar and the Match screen (New game's page). (M15, audit 2, FA5, BP5) |
 | New game still scrolls below ~900 × 600 (two tiles a row) | can wait | Below the desktop sizes the game targets; fits 1024×640, 1366×657 and up. (M15b) |

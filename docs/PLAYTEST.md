@@ -37,27 +37,39 @@ goes wrong: it replays the same match.
 
 ## Play these first
 
-What is new since 0.1 Dev 4. Each line points to the section with the full checks.
+What is new since 0.1 Dev 5. Each line points to the section with more checks.
 
-- [ ] **New menus.** The plain title screen, the bar across the top, the Match screen's picture cards (Practice the last mode) and the grouped
-  Settings with a search box ([Menus](#menus), [Settings and controls](#settings-and-controls)).
-- [ ] **New players and hands.** Masked humans and robots in team colours, and your own gloved or robot arms
-  ([Players and replicas](#players-and-replicas)).
-- [ ] **New replicas and colours.** Blockier two-tone replicas, a colour per replica in Customise, and Settings ›
-  Look › Realistic colours ([Players and replicas](#players-and-replicas), [Loadout and Customise](#loadout-and-customise)).
-- [ ] **Depot's new light and dressing.** A lower, warmer sun with light bounced into the shade, new walls and
-  gabions, dirt, junk, puddles and a skyline on Medium and up ([Depot](#depot)).
-- [ ] **Ultra and the new effects.** The Ultra preset and the effects each preset adds
-  ([Graphics and performance](#graphics-and-performance)).
-- [ ] **Bots at night and in the hunt.** Every level hunts the middle once its lane is clear, keeps out of lantern
-  light at night and switches the torch on only up close ([Bots](#bots)).
-- [ ] **Hit players walk off quickly** on every map, by a sensible route ([Rounds and matches](#rounds-and-matches)).
-- [ ] **Extraction's home team by level** and the 3-second grace when you come in (dev content,
-  [Extraction](#extraction-dev-content)).
-- [ ] **Iron sights on every replica.** Right click aims down the sights with no optic fitted, tighter than the hip,
-  and Shift while aiming creeps slower ([Aiming and optics](#aiming-and-optics)).
-- [ ] **Levels in the Armory.** You start at level 0, matches give XP and each level up to 10 unlocks parts, the Cyber
-  Pistol last ([Levels and the Armory](#levels-and-the-armory)).
+- [ ] **Holster and two sprints.** Press 3 to holster the replica. Sprinting holstered is faster, but bringing the
+  replica up to aim takes longer than from a ready sprint ([Movement](#movement)).
+- [ ] **Vaulting and resting on cover.** Jump at a low wall (0.7 to 0.9 m) and you vault it, loudly. Aim standing still
+  over a ledge, crate or window and a "Rested" tag shows: steadier aim ([Movement](#movement)).
+- [ ] **Practice upgrades.** Moving targets, new target types and a timed challenge (off by default), Practice on any
+  map with targets in place of bots, and any replica you own ([Practice range](#practice-range)).
+- [ ] **Levels in the Armory.** The Armory's random unlocks are gone: matches give XP and levels 0 to 10 unlock the
+  gear, the Cyber Pistol last ([Levels and the Armory](#levels-and-the-armory)).
+- [ ] **Saved loadouts.** Several named loadouts, picked on the Loadout screen or from the list beside Change on the
+  Match screen ([Loadout and Customise](#loadout-and-customise)).
+- [ ] **Bot names, personalities and gear.** Named bots that rush, hold a spot, flank or play it careful, with kits by
+  level and scoped bots that aim differently ([Bots](#bots)).
+- [ ] **Adaptive difficulty.** Settings › Dev, off by default: bots get a little better when you win and a little
+  easier when you lose ([Bots](#bots)).
+- [ ] **Bot callouts.** A text feed at the bottom left: teammates call "Contact, Dock!" or "Two left", and the minimap
+  names the area you are in ([Squad orders and minimap](#squad-orders-and-minimap)).
+- [ ] **Pings and magazine requests.** Middle mouse pings a spot or an enemy and teammates act on it; H asks a teammate
+  for a magazine, and they can ask you ([Squad orders and minimap](#squad-orders-and-minimap)).
+- [ ] **Bushes stop BBs.** Thick leaves stop a BB and an edge throws it off ([Woodland](#woodland-dev-content)).
+- [ ] **Noisy ground and props.** Running into skips and crates knocks them and bots hear it; gravel and steel steps
+  carry further ([Bots](#bots)).
+- [ ] **Overtime flag.** In timed Elimination, when the clock runs out a flag appears in the middle and the first team
+  to touch it wins ([Rounds and matches](#rounds-and-matches)).
+- [ ] **Hide the ammo counter.** Settings › Gameplay › HUD › Ammo counter Off takes the BB counts away and leaves each
+  magazine's bar ([HUD and match info](#hud-and-match-info)).
+- [ ] **Your Dev 5 playtest fixes.** Louder shots and a Power source volume ([Sound](#sound)), firing while sprinting
+  allowed but much less accurate ([Movement](#movement)), red X hit marker options, off by default
+  ([HUD and match info](#hud-and-match-info)), and Esc while out skips the round
+  ([Rounds and matches](#rounds-and-matches)).
+- [ ] **Redesigned figures.** The new human and robot figures, with their vault, rest and holstered poses: turn off both
+  figure switches in Settings › Dev to see them ([Players and replicas](#players-and-replicas)).
 
 ### Your five calls, confirmed
 
@@ -106,6 +118,10 @@ Play › Mode Elimination on Depot, Match › Opponents Normal. Set the mouse se
 - [ ] **Sprint up and down Depot's dock ramps.** Uphill loses about a quarter of a sprint's pace (your confirmed
   call, above).
 - [ ] **Walk into walls, crates and corners.** You slide along them and never stick or fall through the floor.
+- [ ] **Controls through a vault (BP5).** Run at a low wall and jump to vault it (Depot's office hall has one). On Semi
+  (press B), hold left click through the vault: one BB, not a second when you land. Hold right click through it: the
+  sight drops during the vault and comes back after. Press R, 1 or 2, 3 (holster) or B mid-vault: it happens when you
+  land.
 
 ## Shooting and reloads
 
@@ -410,6 +426,9 @@ team puts you on Beta instead.
   when a dark spot is near. A bot switches its torch on for a fight within about 20 m and for the last stretch of a
   search (12 m from the spot on Normal, 20 m on Hard, 30 m on Pro): a beam far off across the field is rare. Easy
   bots keep theirs on as they move.
+- [ ] **Anchors (BP5).** In Elimination, with more than a minute left, give an anchor teammate Follow me (F), then end
+  it with F again: it goes hunting instead of standing where the order ended. In a fight in the open an anchor aims
+  down its sights only while standing still behind cover, never while it sidesteps.
 
 ## Rounds and matches
 
@@ -443,6 +462,8 @@ One BB hit puts anyone out. A round lasts up to 2:30 and the first team to 5 rou
   flankers may come round the side, and a teammate calls "Flag's up". Does 30 s feel right on each map? Custom ›
   Time-out › More players left: a time-out with your team ahead wins at once, no flag. Attack / Defend has no overtime
   flag.
+- [ ] **Overtime banner (BP5).** The OVERTIME · TOUCH THE FLAG banner fits on one line at 1280 px wide. The bottom-left
+  callout feed hides while the scoreboard (Tab) is up.
 - [ ] **Half-time.** The teams swap ends after round 4; the banner says so.
 - [ ] **Finish a match.** The Match summary comes first (see [HUD and match info](#hud-and-match-info)), then the
   result screen. Finish, then go straight to Stats without pausing: the match is counted and its XP given at once.
@@ -539,6 +560,8 @@ default). Turn on Dev content, then pick it with its Day | Night switch on the P
   hear a click every 3 s. If you hear a pulse that often, it is the flicker's swell, not a click; say so.
 - [ ] **Balance.** Play Elimination by Day and by Night: are the two ends even? The middle lane's holds should keep
   either end from running away with it.
+- [ ] **The Plaza stair (BP5).** Walk up the outdoor stair from the plaza to the landing without jumping: you reach
+  the landing without stopping. Sprint down it: no drop.
 
 ## Modes
 
@@ -585,6 +608,9 @@ The Match screen's Practice card (the last mode), then Start practice.
 - [ ] **Esc › Loadout.** Change the BB weight or hop-up, go back and Resume: you're where you stood with the new setup
   at once, looking the same. Quit and start a match: it plays as before.
 - [ ] **Walk downrange.** Nothing stops you; BBs fired from there still hit the targets.
+- [ ] **Dev help isn't a best (BP5).** Press Esc and switch Timed challenge on, then set Settings › Dev › Game speed or
+  Bottomless magazines before you shoot the START plate. When the time is up the result says "not kept (Dev settings)"
+  and your best doesn't change. With the Dev aid off, a run can set a best again.
 
 ### Tutorial
 
@@ -606,6 +632,8 @@ The Match screen's Practice card (the last mode), then Start practice.
   practice, and the title stops tagging it.
 - [ ] **After the last step (M80)** a "Tutorial complete" pop-up offers Practice range (Enter: back on the range, the
   readout in the coach's place) or Menu (the Match screen, to start a match). Esc closes it to the pause menu.
+- [ ] **Fitting an optic (BP5).** The "Aim down the sight" card also says you can fit a red dot or a 2× scope on the
+  Loadout (Esc, then Loadout).
 
 ### Extraction (dev content)
 
@@ -793,6 +821,8 @@ there maps each symptom to its numbers):
   hollow. Low on spares, H's "Low on BBs" hint still shows, and a caught magazine says "+1 mag from …" with no count.
   Flip it on the pause menu: it changes at once, in Practice too. With it off, the tutorial's Reload step says to keep
   count yourself. Does playing without numbers feel fun, or just frustrating?
+- [ ] **Name tags up close (BP5).** Stand with two teammates close together: their name tags stack, never on top of
+  each other.
 
 ## Squad orders and minimap
 
@@ -843,6 +873,9 @@ there maps each symptom to its numbers):
   floors with an up or down arrow.
 - [ ] **A second screen.** Drag the window to a screen with other scaling mid-match (or zoom the browser), pause and
   resume: the minimap is sharp and the right size.
+- [ ] **Markers off the minimap (BP5).** Turn so a ping, the overtime flag, an Extraction exit or a hold marker is off
+  to your left: its edge marker sits under the minimap, never behind it. Two moved there sit one under the other.
+  (Two markers in almost the same direction can still overlap on an edge: known.)
 
 ## Settings and controls
 
