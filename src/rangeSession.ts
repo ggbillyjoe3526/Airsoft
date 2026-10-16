@@ -240,7 +240,7 @@ export class RangeSession {
     const at = pose ? vec3(pose.x, pose.y ?? spawn.position.y, pose.z) : spawn.position;
     const yaw = pose?.yaw ?? (onRange ? undefined : specs.find((t) => t.start)?.yaw) ?? spawn.yaw;
     this.player = createCharacter(PLAYER_ID, vec3(at.x, at.y + PHYSICS.groundRestGap, at.z), yaw, this.loadout, 0);
-    this.tutorialView = { dt: SIM_DT, player: this.player, events: this.state.events, targets: this.state.targets };
+    this.tutorialView = { dt: SIM_DT, player: this.player, events: this.state.events, targets: this.state.targets, bbs: this.state.bbs.bbs };
     respawnCharacter(this.player);
     this.state.characters.push(this.player);
     this.physics.addCharacter(this.player);
@@ -586,6 +586,7 @@ export class RangeSession {
     v.player = this.player;
     v.events = this.state.events;
     v.targets = this.state.targets;
+    v.bbs = this.state.bbs.bbs;
     if (t && !t.finished && t.observe(v)) {
       this.tutorialMoved(t);
       if (t.finished) this.completeDue = this.completePopup = true;
