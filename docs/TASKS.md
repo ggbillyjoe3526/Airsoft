@@ -118,17 +118,6 @@ acceptance:
 status: open
 attempts: 0
 
-## TT1 · A simpler tutorial (playtest item 2)
-tier: ui
-perf: skip
-touches: src/tutorial/, src/config/tutorial.ts, src/ui/tutorialShowcase.ts
-contract: none
-acceptance:
-  1. Every tip is shorter and easier to understand.
-  2. No tip makes the player wait long before the next one, tips 13–16 above all.
-status: open
-attempts: 0
-
 ## BL1 · Attack / Defend: fewer attacker wins, more rounds won at the pole (after playtest)
 tier: core
 perf: skip
