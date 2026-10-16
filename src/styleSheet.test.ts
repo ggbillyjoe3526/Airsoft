@@ -428,7 +428,8 @@ describe('the font (M100: Inter replaces Barlow)', () => {
   it("marks each level row by its state: reached ones edged green, the next one in orange, locked ones dimmed (LV1)", () => {
     expect(declared(".armory-level-row[data-state='unlocked']", 'border-left-color')).toBe('var(--menu-good)');
     expect(declared(".armory-level-row[data-state='next']", 'border-left-color')).toBe('var(--orange)');
-    expect(declared(".armory-level-row[data-state='locked'] .armory-item > .pic-slot", 'filter')).toBe('grayscale(1)');
+    // An item you already have stays in colour there (KI1: levels.md moved it up).
+    expect(declared(".armory-level-row[data-state='locked'] .armory-item:not([data-owned]) > .pic-slot", 'filter')).toBe('grayscale(1)');
     expect(declared(".armory-level-row[data-state='next'] .armory-level-state", 'color')).toBe('var(--orange-text)');
   });
 });

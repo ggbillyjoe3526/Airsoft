@@ -773,6 +773,28 @@ kbd {
   opacity: calc(0.9 * var(--hud-l3));
 }
 
+/* Pinned to the edge (KI1): a small arrow beside the icon, in its colour, pointing the way to turn (--towards, set by
+   ui/flagMarker.ts from the marker's direction off the middle of the screen). */
+.flag-marker-arrow {
+  display: none;
+  position: absolute;
+  left: 50%;
+  top: calc(8px * var(--hud-scale, 1));
+  width: 0;
+  height: 0;
+  margin-top: calc(-5px * var(--hud-scale, 1));
+  border-top: calc(5px * var(--hud-scale, 1)) solid transparent;
+  border-bottom: calc(5px * var(--hud-scale, 1)) solid transparent;
+  border-left: calc(8px * var(--hud-scale, 1)) solid var(--flag);
+  transform-origin: 0 50%;
+  transform: rotate(var(--towards, 0deg)) translateX(calc(14px * var(--hud-scale, 1)));
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6));
+}
+
+.flag-marker.edge .flag-marker-arrow {
+  display: block;
+}
+
 /* Extraction's exit markers (M43): the flag marker's frame with a door icon in the exit's green. */
 .flag-marker.exit-marker .flag-marker-icon {
   width: calc(12px * var(--hud-scale, 1));
@@ -1117,6 +1139,8 @@ kbd {
   position: absolute;
   left: 0;
   top: 0;
+  /* Placed by ui/botIntentLabels.ts through --x and --y (kept strings: nothing allocated per move, KI1). */
+  transform: translate(var(--x, 0), var(--y, 0));
   display: flex;
   gap: 0.35em;
   translate: -50% -100%;

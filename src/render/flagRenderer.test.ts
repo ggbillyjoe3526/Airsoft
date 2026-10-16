@@ -77,3 +77,31 @@ describe('FlagRenderer.setEnvironmentLit', () => {
     flag.dispose();
   });
 });
+
+describe('FlagRenderer.warmTarget (KI1: the first overtime compiles nothing)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const clothMaps = (flag: FlagRenderer): (THREE.Texture | null)[] =>
+    flag.object.children
+      .filter((o): o is THREE.Mesh => o instanceof THREE.Mesh && o.material instanceof THREE.MeshStandardMaterial && o.material.side === THREE.DoubleSide)
+      .map((m) => (m.material as THREE.MeshStandardMaterial).map);
+
+  it('in Elimination hands over the hidden flag with its cloth already chequered, as overtime will draw it', () => {
+    vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => null }) });
+    const flag = new FlagRenderer([0x2f6fd6, 0xf07a22], 2, 1);
+    expect(clothMaps(flag)).toEqual([null, null]);
+    expect(flag.warmTarget('elimination')).toBe(flag.object);
+    const [plain, fine] = clothMaps(flag);
+    expect(plain).toBeInstanceOf(THREE.Texture);
+    expect(fine).toBe(plain);
+    expect(flag.object.visible).toBe(false);
+    flag.dispose();
+  });
+
+  it('in Attack / Defend leaves the attackers’ cloth as it is', () => {
+    const flag = new FlagRenderer([0x2f6fd6, 0xf07a22], 2, 1);
+    expect(flag.warmTarget('attackDefend')).toBe(flag.object);
+    expect(clothMaps(flag)).toEqual([null, null]);
+    flag.dispose();
+  });
+});

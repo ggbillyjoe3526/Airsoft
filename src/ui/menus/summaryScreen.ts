@@ -187,7 +187,7 @@ export function noXpLine(x: XpSummary | null, noXp: NoXp | null): string {
 function recordsBlock(view: RecordsView): HTMLElement[] {
   const grid = el('table', 'records-grid');
   const head = grid.createTHead().insertRow();
-  head.append(el('th', '', 'Your records'), ...view.modes.map((m) => el('th', '', m)));
+  head.append(el('th', '', view.title), ...view.modes.map((m) => el('th', '', m)));
   const body = grid.createTBody();
   for (const row of view.rows) {
     const tr = body.insertRow();

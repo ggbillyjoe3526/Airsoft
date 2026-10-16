@@ -6,7 +6,8 @@ import { createCharacter } from '../sim/character';
 import { vec3 } from '../sim/vec';
 import { emptyStats, type PlayerStats } from '../stats/matchStats';
 import { addMatch, emptyRecords, noNews } from '../stats/records';
-import { DEV_CONTENT_NOT_RECORDED, extractionBests, recordsView } from './recordsView';
+import { DEV_CONTENT_NOT_RECORDED, extractionBests, recordsRulesetShown, recordsView } from './recordsView';
+import { standardMatchText } from '../config/matchRules';
 import { formatAccuracy, formatTime, rosterNames, rosterTags, statsBlocks } from './statsRows';
 
 /** You (0) and Alpha 2 (1) against Beta 1 (2) and Beta 2 (3). */
@@ -179,6 +180,29 @@ describe('records view (M19)', () => {
     expect(view.bests.every((b) => !b.isNew)).toBe(true);
     expect(recordsView(r, news, 'hard', 'attackDefend', 'dev').notCounted).not.toBe(DEV_CONTENT_NOT_RECORDED);
     expect(recordsView(r, news, 'hard', 'attackDefend').notCounted).toBe('');
+  });
+
+  it("shows a named ruleset's own cells and quotes its standard match after its match (M39, KI1)", () => {
+    const r = emptyRecords();
+    addMatch(r, { difficulty: 'hard', mode: 'elimination', won: true, hits: 3, bbsFired: 40 });
+    const news = addMatch(r, { difficulty: 'hard', mode: 'elimination', ruleset: 'tournament', won: false, hits: 1, bbsFired: 30 });
+    const modes = MATCH_MODES.filter((m) => m.tag === 'public');
+    const hardRow = DIFFICULTIES.filter((d) => d.tag === 'public').findIndex((d) => d.id === 'hard');
+    const elim = modes.findIndex((m) => m.id === 'elimination');
+    const view = recordsView(r, news, 'hard', 'elimination', '', 'tournament');
+    expect(view.title).toBe('Your Tournament records');
+    expect(view.rows[hardRow]!.cells[elim]).toEqual({ text: '0 W · 1 L', current: true });
+    const custom = recordsView(r, news, 'hard', 'elimination', 'rules', 'tournament');
+    expect(custom.notCounted).toContain(standardMatchText('tournament'));
+    expect(custom.notCounted).toContain('Tournament records');
+    // Skirmish, Custom (no cells of its own) and an Extraction run show the plain cells and Skirmish's standard match.
+    for (const [ruleset, mode] of [['skirmish', 'elimination'], ['custom', 'elimination'], ['tournament', 'extraction']] as const) {
+      expect(recordsRulesetShown(ruleset, mode)).toBe('skirmish');
+    }
+    const plain = recordsView(r, news, 'hard', 'elimination', 'rules', 'custom');
+    expect(plain.title).toBe('Your records');
+    expect(plain.rows[hardRow]!.cells[elim]!.text).toBe('1 W · 0 L');
+    expect(plain.notCounted).toContain(standardMatchText());
   });
 });
 

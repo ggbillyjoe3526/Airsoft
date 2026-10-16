@@ -1,4 +1,4 @@
-import { type Action, type CrouchMode, DEFAULT_AIM_MODE, DEFAULT_CROUCH_MODE, DEFAULT_SPRINT_MODE, type HoldMode, MOUSE } from '../config/controls';
+import { type Action, type CrouchMode, DEFAULT_AIM_MODE, DEFAULT_CROUCH_MODE, DEFAULT_SPRINT_MODE, type HoldMode, FIRE_MODE_QUEUE_MAX, MOUSE } from '../config/controls';
 import { AIMING } from '../config/optics';
 import type { MovementConfig } from '../config/movement';
 import { SIM_DT } from '../config/sim';
@@ -64,7 +64,11 @@ export class PlayerInput {
   private jumpLatch = false;
   private reloadLatch = false;
   private fireLatch = false;
-  private fireModeLatch = false;
+  /**
+   * Fire selector presses not yet handed to a tick: one step per tick, so two taps inside one slow frame are two steps
+   * (KI1; a latch counted them as one). Dropped with the other one-shots on a pause or a new round.
+   */
+  private fireModePresses = 0;
   /** Hop-up notches asked for since the last tick (Dev 6 playtest item 15): + more lift, - less. */
   private hopSteps = 0;
   /** The Weapon torch key pressed since the last tick (M33h). */
@@ -149,7 +153,7 @@ export class PlayerInput {
     const kb = this.keyboard;
     if (kb.wasPressed('jump')) this.jumpLatch = true;
     if (kb.wasPressed('reload')) this.reloadLatch = true;
-    if (kb.wasPressed('fireMode')) this.fireModeLatch = true;
+    this.fireModePresses = Math.min(FIRE_MODE_QUEUE_MAX, this.fireModePresses + kb.pressCount('fireMode'));
     if (kb.wasPressed('torch')) this.torchLatch = true;
     if (kb.wasPressed('hopUp')) this.hopSteps++;
     if (kb.wasPressed('hopDown')) this.hopSteps--;
@@ -275,13 +279,16 @@ export class PlayerInput {
     cmd.fire = !this.fireBlocked && (kb.isDown('fire') || this.fireLatch);
     cmd.switchTo = this.switchLatch;
     cmd.holster = this.holsterLatch;
-    cmd.cycleFireMode = this.fireModeLatch;
+    cmd.cycleFireMode = this.fireModePresses > 0;
+    // Taken one at a time: clearOneShots keeps the rest for the next ticks.
+    const fireModeLeft = Math.max(0, this.fireModePresses - 1);
     cmd.toggleTorch = this.torchLatch;
     cmd.hopUpSteps = this.hopSteps;
     cmd.use = kb.isDown('use');
     // A toss is the session's to name (MatchSession, src/magHandoff.ts): never from the keys straight.
     cmd.tossMag = -1;
     this.clearOneShots();
+    this.fireModePresses = fireModeLeft;
   }
 
   /** Returns true once per trigger click since the last tick (used for menus-in-play such as spectating). */
@@ -340,7 +347,7 @@ export class PlayerInput {
     this.jumpLatch = false;
     this.reloadLatch = false;
     this.fireLatch = false;
-    this.fireModeLatch = false;
+    this.fireModePresses = 0;
     this.torchLatch = false;
     this.hopSteps = 0;
     this.inspectLatch = false;

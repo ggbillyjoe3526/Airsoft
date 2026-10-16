@@ -9,7 +9,7 @@ import type { PointerLock } from './pointerLock';
 /** Dev 6 playtest item 15 (QA): the hop-up keys, from the key to the command. */
 function setup() {
   const pressed = new Set<Action>();
-  const kb = { isDown: () => false, wasPressed: (a: Action) => pressed.has(a) } as unknown as Keyboard;
+  const kb = { isDown: () => false, wasPressed: (a: Action) => pressed.has(a), pressCount: (a: Action) => (pressed.has(a) ? 1 : 0) } as unknown as Keyboard;
   const pointer = { consumeDelta: () => {}, consumeWheelSteps: () => 0 } as unknown as PointerLock;
   const input = new PlayerInput(kb, pointer, MOVEMENT);
   const cmd = createCommand();

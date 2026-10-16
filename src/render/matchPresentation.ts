@@ -30,6 +30,7 @@ import { HitFeed } from '../ui/hitFeed';
 import { HitFeedback } from '../ui/hitFeedback';
 import { HoldMarker } from '../ui/holdMarker';
 import { MatchBoard } from '../ui/matchBoard';
+import { MINIMAP } from '../config/minimap';
 import { Minimap, type MinimapFrame } from '../ui/minimap';
 import { HeardPlayers } from '../ui/minimapView';
 import { MagPrompt, type MagView } from '../ui/magPrompt';
@@ -52,7 +53,7 @@ import { ExitRenderer } from './exitRenderer';
 import type { FigureModel } from './externalModels';
 import { FlagRenderer } from './flagRenderer';
 import type { ProbeGrid } from './probeGrid';
-import { projectMarker, type ScreenMarker } from './screenMarker';
+import { EdgePins, type EdgeStep, edgeAngle, projectMarker, type ScreenMarker } from './screenMarker';
 import { SpectatorCamera } from './spectatorCamera';
 import type { FigureRigs } from './figureRig';
 import { type FigureCrowd, HUMAN_CROWD } from './figureMix';
@@ -80,6 +81,9 @@ export class MatchPresentation {
   private readonly flag: FlagRenderer;
   private readonly marker: FlagMarker;
   private readonly markerAt: ScreenMarker = { x: 0, y: 0, onScreen: false };
+  /** This frame's edge-pinned markers (pings, the flag, exits, the hold marker), laid out a label apart (KI1). */
+  private readonly edgePins = new EdgePins();
+  private readonly edgeStep: EdgeStep = { down: 0, across: 0 };
   private readonly feed: HitFeed;
   /** WON or LOST at a round's end (Dev 6 playtest item 33) and the line saying a click moves on. */
   private readonly roundResult: RoundResult;
@@ -279,6 +283,11 @@ export class MatchPresentation {
   setFlagQuality(quality: Pick<QualitySettings, 'mapDetail' | 'environment'>): void {
     this.flag.setDetail(quality.mapDetail);
     this.flag.setEnvironmentLit(quality.environment);
+  }
+
+  /** What the warm-up shows to compile ahead (KI1): the flag, hidden in Elimination until overtime puts it up. */
+  warmTargets(): THREE.Object3D[] {
+    return [this.flag.warmTarget(this.state.round.mode)];
   }
 
   /** Player detail (QualitySettings.figureDetail, FA8): the figures are built again at the new level. */
@@ -513,7 +522,7 @@ export class MatchPresentation {
       return;
     }
     this.holdAnchor.set(hold.x, hold.y + SQUAD_ORDERS.markerHeight, hold.z);
-    const m = this.minimap.clearPinned(projectMarker(this.holdAnchor, camera, this.view.width, this.view.height, SQUAD_ORDERS.markerEdge, this.holdAt), SQUAD_ORDERS.markerEdge);
+    const m = this.pinned(projectMarker(this.holdAnchor, camera, this.view.width, this.view.height, SQUAD_ORDERS.markerEdge, this.holdAt), SQUAD_ORDERS.markerEdge);
     const p = this.player.position;
     this.holdMarker.show(m.x, m.y, Math.hypot(hold.x - p.x, hold.z - p.z), !m.onScreen);
   }
@@ -641,6 +650,10 @@ export class MatchPresentation {
     this.characters.update(alpha, dt, spectating ? -1 : this.player.id, camera.position);
     this.flag.update(this.state.round, this.state.time);
     this.minimap.beginPins();
+    this.edgePins.begin();
+    const pinScale = this.minimap.hudScale;
+    this.edgeStep.down = MINIMAP.pinStep.down * pinScale;
+    this.edgeStep.across = MINIMAP.pinStep.across * pinScale;
     this.updateMarker(camera, spectating);
     this.exits?.update(this.state.round.run);
     this.cases?.update(this.state.round.run);
@@ -760,7 +773,7 @@ export class MatchPresentation {
         continue;
       }
       this.pingAnchor.set(p.x, p.y + (p.kind === 'spot' ? PINGS.markerHeight : 0), p.z);
-      const m = this.minimap.clearPinned(projectMarker(this.pingAnchor, camera, this.view.width, this.view.height, PINGS.markerEdge, this.pingAt), PINGS.markerEdge);
+      const m = this.pinned(projectMarker(this.pingAnchor, camera, this.view.width, this.view.height, PINGS.markerEdge, this.pingAt), PINGS.markerEdge);
       if (this.minimap.covers(m.x, m.y)) markers.hide(i);
       else markers.show(i, m.x, m.y, camera.position.distanceTo(this.pingAnchor), !m.onScreen, alpha);
     }
@@ -845,9 +858,12 @@ export class MatchPresentation {
       this.marker.hide();
       return;
     }
-    const m = this.minimap.clearPinned(projectMarker(this.flag.markerAnchor, camera, this.view.width, this.view.height, FLAG_VISUALS.markerEdge, this.markerAt), FLAG_VISUALS.markerEdge);
+    const at = projectMarker(this.flag.markerAnchor, camera, this.view.width, this.view.height, FLAG_VISUALS.markerEdge, this.markerAt);
+    // The way to turn, taken before the marker is moved along the edge clear of the others (KI1).
+    const towards = edgeAngle(at, this.view.width, this.view.height);
+    const m = this.pinned(at, FLAG_VISUALS.markerEdge);
     const from = camera.position;
-    this.marker.show(m.x, m.y, Math.hypot(pole.x - from.x, pole.z - from.z), overtime ? FLAG_VISUALS.overtimeCss : teamCss(r.attackers), !m.onScreen);
+    this.marker.show(m.x, m.y, Math.hypot(pole.x - from.x, pole.z - from.z), overtime ? FLAG_VISUALS.overtimeCss : teamCss(r.attackers), !m.onScreen, towards);
   }
 
   /**
@@ -869,9 +885,19 @@ export class MatchPresentation {
         continue;
       }
       this.exitAnchor.set(e.position.x, e.position.y + EXIT_VISUALS.markerHeight, e.position.z);
-      const m = this.minimap.clearPinned(projectMarker(this.exitAnchor, camera, this.view.width, this.view.height, EXIT_VISUALS.markerEdge, this.exitAt), EXIT_VISUALS.markerEdge);
-      marker.show(m.x, m.y, Math.hypot(e.position.x - from.x, e.position.z - from.z), EXIT_CSS, !m.onScreen);
+      const at = projectMarker(this.exitAnchor, camera, this.view.width, this.view.height, EXIT_VISUALS.markerEdge, this.exitAt);
+      const towards = edgeAngle(at, this.view.width, this.view.height);
+      const m = this.pinned(at, EXIT_VISUALS.markerEdge);
+      marker.show(m.x, m.y, Math.hypot(e.position.x - from.x, e.position.z - from.z), EXIT_CSS, !m.onScreen, towards);
     }
+  }
+
+  /**
+   * A projected marker, if pinned to the screen's edge, moved off the minimap's panel (`gap` px clear) and then along
+   * its edge clear of this frame's other edge markers (KI1: two in almost the same direction overlapped).
+   */
+  private pinned(m: ScreenMarker, gap: number): ScreenMarker {
+    return this.edgePins.place(this.minimap.clearPinned(m, gap), this.view.width, this.view.height, this.edgeStep);
   }
 
   /** "OUT · hit by Beta 2", rebuilt only when who hit you changes. */

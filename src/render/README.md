@@ -5,7 +5,9 @@ and never writes the simulation.
 
 - `renderer.ts`: `Renderer` owns the scene, camera, quality (`setQuality`), lighting and environment, tone mapping,
   field of view and zoom, the retro filter (the node renderer's, `webgpu/post/nodeRetro.ts`; Settings › Look › Retro look), `warmUp` and
-  `warmShaders`. `mapMeshCache.ts` keeps the last map's meshes. `rendererParts.ts` holds its helpers (field of view,
+  `warmShaders` (which also compiles what is hidden at a session's start but shows later: the overtime flag, a tossed
+  magazine, a scope's eyepiece; `rendererParts.ts` `withShown`, KI1; and the post stack's passes, `nodePostStack.ts`
+  `compilePasses`). `mapMeshCache.ts` keeps the last map's meshes. `rendererParts.ts` holds its helpers (field of view,
   tone mapping, idle warm-up, handing GPU resources to a new renderer). The Renderer draws with the node renderer
   (`webgpu/nodeBackend.ts`) and recovers a lost device itself (`nodeLost`): a new device, or the WebGL2 back end, with
   the post stack, retro filter and sheen back. `retroFilter.ts` is the retro view's size maths (pure), read by the
@@ -57,7 +59,7 @@ and never writes the simulation.
   magazines (`magTosses.ts`, MG1: a code-made box on an arc, one mesh a slot of `GameState.magTosses`), leaves a BB
   knocks out of a bush (`leafFlecks.ts`, FO1: CPU only, one instanced draw), a puff of dust off a noisy prop run into
   (`propNoise`, NP1: a bigger impact puff in the prop's dust tint), the held
-  replica (a second render pass) and the HUD. Also `cameraRig.ts`, `viewmodel.ts`, and `eyepiece.ts` (aimed, a
+  replica (a second render pass) and the HUD. Also `cameraRig.ts` (`LeanViewEase` eases a lean a wall cuts, within `RENDER.leanCut`, KI1), `viewmodel.ts`, and `eyepiece.ts` (aimed, a
   scope's rear glass shows the world: a depth-only disc in the held replica's pass).
 - The practice range's targets: `rangeTargetsRenderer.ts` (instanced plates, figures and the START plate, moved by the
   sim's data; a lit challenge target draws through an orange twin), `rangeTargetGear.ts` (the posts, swinger frames,
@@ -103,7 +105,8 @@ and never writes the simulation.
 - Surface textures: `proceduralTextures.ts` draws each at the quality's Texture detail, the city's flat finishes capped
   at 512² (`drawnSize`, M78), with `natureTextures.ts`, `cityTextures.ts` and `textureLibrary.ts`.
 - Pooled effects (nothing in flight uploads nothing): `impactPuffs.ts`, `bbRenderer.ts`, `dustMotes.ts`, drawn with
-  `softDot.ts`'s dot; `bbPathsDebug.ts` draws the last BBs' flight paths for the debug overlay. The post stack
+  `softDot.ts`'s dot; `bbPathsDebug.ts` draws the last BBs' flight paths for the debug overlay; `ownShotStarts.ts`
+  holds your shots until the frame's camera is placed, so your BB starts at the muzzle you see (KI1). The post stack
   is `post/` (`postPlan.ts` picks passes per preset, `postHost.ts` makes and frees the node renderer's, `postPass.ts`
   is what each pass may read about the frame, `webgpu/post/tsl.ts` the TSL functions the passes share); Low builds
   none.
