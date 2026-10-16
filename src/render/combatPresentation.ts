@@ -38,6 +38,7 @@ import { holdsPistol } from './characterRenderer';
 import { DressingEffects } from './dressingEffects';
 import { DustMotes } from './dustMotes';
 import { ImpactGrit, shooterSide } from './impactGrit';
+import { OwnShotStarts } from './ownShotStarts';
 import { ImpactPuffs } from './impactPuffs';
 import { LeafFlecks } from './leafFlecks';
 import type { Renderer } from './renderer';
@@ -123,6 +124,10 @@ export class CombatPresentation {
   private readonly viewRight = new THREE.Vector3();
   /** Newest BB serial already given a muzzle start, per shooter. */
   private readonly lastSerialByOwner = new Map<number, number>();
+  /** Your shots this frame, started from the muzzle once the frame's camera is placed (BP6). */
+  private readonly ownShots: OwnShotStarts;
+  /** Your gas replica's breaths owed this frame (gasBreath skips an electric replica). */
+  private ownBreaths = 0;
   private readonly overlay: { scene: THREE.Scene; camera: THREE.Camera };
   private playing = false;
   /** The round in play started behind a screen (round 1 of a match, set up before play): whistle on Play. */
@@ -179,6 +184,7 @@ export class CombatPresentation {
   ) {
     this.sfx = new Sfx(heardReplicas(loadout, state.characters), field.blocks, query, audio, seed);
     this.bbs = new BBRenderer(state.bbs, tickSeconds);
+    this.ownShots = new OwnShotStarts(state.bbs.bbs.length);
     this.paths = new BBPathsDebug(state.bbs);
     this.magTosses = new MagTossRenderer(state.magTosses, state.characters, { query, body: BODY, hits }, tickSeconds);
     renderer.scene.add(this.magTosses.object, this.bbs.object, this.puffs.object, this.grit.object, this.leaves.object, this.hitPuffs.object, this.gasPuffs.object, this.motes.object, this.paths.object);
@@ -339,6 +345,8 @@ export class CombatPresentation {
     for (const e of this.state.events) {
       if (e.type === 'roundStart') {
         this.viewmodel.resetSway(); // the view snaps to the spawn yaw
+        this.ownShots.clear();
+        this.ownBreaths = 0;
         this.sprintCarry.reset();
         this.aimBlend = 0; // a new round starts with the sight down
         this.renderer.setZoom(1);
@@ -401,8 +409,13 @@ export class CombatPresentation {
           this.shotThisFrame = true;
         }
         const shooter = this.characterOf(e.characterId);
-        // The drawn muzzle once per shot, for the BB and the gas breath both (audit REN-11).
-        if (shooter && this.shooterMuzzle(shooter, this.muzzle)) {
+        if (shooter === this.player) {
+          // Yours wait for this frame's camera (frame, startOwnShots).
+          const newest = this.newestShot(shooter);
+          if (newest) this.ownShots.record(newest, this.estimateFlightTime(newest));
+          this.ownBreaths = Math.min(this.ownBreaths + 1, this.state.bbs.bbs.length);
+        } else if (shooter && this.shooterMuzzle(shooter, this.muzzle)) {
+          // The drawn muzzle once per shot, for the BB and the gas breath both (audit REN-11).
           this.drawFromMuzzle(shooter, this.muzzle);
           this.gasBreath(shooter, this.muzzle);
         }
@@ -426,6 +439,7 @@ export class CombatPresentation {
    * latest, for the vault prompt (the way a Jump press would vault goes with the movement keys).
    */
   frame(dt: number, alpha: number, yaw: number, pitch: number, command?: Readonly<PlayerCommand>): void {
+    this.startOwnShots();
     this.bbs.setPixelAngle(this.renderer.retroPixelAngle);
     this.bbs.update(alpha, this.renderer.camera.position);
     this.magTosses.update(alpha);
@@ -528,16 +542,39 @@ export class CombatPresentation {
    * leave from the eyes, which would look like they come out of faces).
    */
   private drawFromMuzzle(shooter: Character, at: THREE.Vector3): void {
+    const newest = this.newestShot(shooter);
+    if (newest) this.bbs.startFromMuzzle(newest, at, this.estimateFlightTime(newest));
+  }
+
+  /**
+   * The BB `shooter`'s latest shot spawned, not yet given a muzzle start, with its glow set; undefined if the shot hit
+   * cover at once (a blocked muzzle).
+   */
+  private newestShot(shooter: Character): BB | undefined {
     const shooterId = shooter.id;
     const last = this.lastSerialByOwner.get(shooterId) ?? 0;
     let newest: BB | undefined;
     for (const bb of this.state.bbs.bbs) {
       if (bb.active && bb.ownerId === shooterId && bb.serial > last && (!newest || bb.serial > newest.serial)) newest = bb;
     }
-    if (!newest) return; // blocked muzzle: the shot hit cover immediately
+    if (!newest) return undefined;
     this.lastSerialByOwner.set(shooterId, newest.serial);
     this.bbs.setGlowInDark(newest, shooter === this.player ? (this.glow.player[shooter.armament.active] ?? false) : this.glow.others);
-    this.bbs.startFromMuzzle(newest, at, this.estimateFlightTime(newest));
+    return newest;
+  }
+
+  /**
+   * Your shots' BBs and gas breath, from the held replica's muzzle as this frame's camera sees it (BP6): the ticks that
+   * fired them ran before the camera was placed. Call once the camera is placed, before the BBs are drawn.
+   */
+  private startOwnShots(): void {
+    if (this.ownShots.pending === 0 && this.ownBreaths === 0) return;
+    const cam = this.renderer.camera;
+    cam.updateMatrixWorld();
+    const at = this.viewmodel.muzzleWorld(cam, this.muzzle) ? this.muzzle : null;
+    this.ownShots.start(this.bbs, at);
+    if (at) for (let i = 0; i < this.ownBreaths; i++) this.gasBreath(this.player, at);
+    this.ownBreaths = 0;
   }
 
   /**

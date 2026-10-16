@@ -88,7 +88,8 @@ and never writes the simulation.
   screen for the menus, with the power sources from `powerSourceModels.ts` (the menus' battery, LiPo and gas bottle, RM3).
 - Surface textures: `proceduralTextures.ts` draws each at the quality's Texture detail, the city's flat finishes capped
   at 512² (`drawnSize`, M78), with `natureTextures.ts`, `cityTextures.ts` and `textureLibrary.ts`.
-- Pooled effects (nothing in flight uploads nothing): `impactPuffs.ts`, `bbRenderer.ts`, `dustMotes.ts`. The post stack
+- Pooled effects (nothing in flight uploads nothing): `impactPuffs.ts`, `bbRenderer.ts`, `dustMotes.ts`;
+  `ownShotStarts.ts` holds your shots until the frame's camera is placed, so your BB starts at the muzzle you see (BP6). The post stack
   is `post/` (`postPlan.ts` picks passes per preset, `postHost.ts` makes and frees the node renderer's); Low builds
   none.
 - Quality: `gpuCheck.ts` rates the GPU, `qualityStepDown.ts` steps down on slow frames (never saved).
