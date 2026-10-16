@@ -2,36 +2,67 @@
  * The Loadout (G3): what you carry, the replicas you own as picture tiles, and the Performance sheet.
  */
 
-/* The Loadout: what you carry, the replicas you own, the picked slot's numbers. */
+/* The Loadout (MR1, the approved concept): the saved loadouts across the top; what you carry side by side over the
+   replicas you own; the picked slot's numbers in a panel at the right, as tall as they need. */
 .loadout-view {
   display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) clamp(280px, 21vw, 400px);
-  gap: clamp(16px, 1.6vw, 32px);
+  grid-template-columns: minmax(0, 1fr) clamp(300px, 21vw, 420px);
+  grid-template-areas: 'saved saved' 'carried aside' 'replicas aside';
+  grid-template-rows: auto auto 1fr;
+  gap: var(--sp-4) clamp(16px, 1.6vw, 32px);
   align-items: start;
+}
+
+.loadout-view > .saved-loadouts {
+  grid-area: saved;
+}
+
+.loadout-carried {
+  grid-area: carried;
+}
+
+.loadout-replicas {
+  grid-area: replicas;
 }
 
 .loadout-carried,
 .loadout-replicas {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--sp-3);
   min-width: 0;
 }
 
-.carried-card {
-  position: relative;
+.loadout-carried > :not(.carried-card),
+.loadout-replicas > * {
+  grid-column: 1 / -1;
 }
 
+.loadout-view .menu-section-head {
+  margin: 0;
+}
+
+.loadout-view .menu-section-title {
+  font-size: var(--fs-lg);
+  letter-spacing: var(--ls-wide);
+}
+
+.carried-card {
+  position: relative;
+  display: flex;
+}
+
+/* A carried replica: its slot at the top, its picture large, then its name, colour and numbers, its parts as chips. */
 .gear-slot {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.4fr);
-  grid-template-rows: 1fr auto;
-  grid-template-areas: 'words pic' 'chips chips';
-  gap: var(--sp-3);
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 1fr auto auto;
+  grid-template-areas: 'pic' 'words' 'chips';
+  gap: var(--sp-2);
   width: 100%;
-  min-height: clamp(180px, 15vw, 300px);
-  padding: var(--sp-5) var(--sp-5) var(--sp-5) var(--sp-5);
+  min-height: clamp(300px, 36vh, 430px);
+  padding: var(--sp-4) var(--sp-5);
   font: inherit;
   color: var(--paper);
   text-align: left;
@@ -47,12 +78,13 @@
 
 .gear-slot.selected {
   border-color: var(--orange);
-  box-shadow: inset 0 0 0 1px var(--orange);
+  box-shadow: inset 0 0 0 1px var(--orange), inset 0 -3px 0 var(--orange);
 }
 
 .gear-slot > .pic-slot {
   grid-area: pic;
-  min-height: 140px;
+  min-height: 150px;
+  margin-top: var(--sp-5);
   background: none;
 }
 
@@ -60,19 +92,28 @@
   grid-area: words;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
+}
+
+/* The slot's name sits at the card's top, over the picture's empty band. */
+.carried-card .gear-words > .menu-kicker {
+  position: absolute;
+  top: var(--sp-4);
+  left: var(--sp-5);
 }
 
 .gear-name {
-  font-size: clamp(30px, 2.3vw, 44px);
+  font-size: clamp(20px, 1.5vw, 28px);
   font-weight: 800;
-  line-height: 1;
+  line-height: 1.05;
   letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
+.gear-colour,
 .gear-stats,
 .gear-note {
-  font-size: var(--fs-md);
+  font-size: var(--fs-sm);
   color: var(--menu-muted);
 }
 
@@ -81,43 +122,65 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  align-content: flex-end;
-  gap: 6px;
-  min-height: var(--control-md);
-  /* Clear of the Customise button over the card's bottom-right corner. */
-  padding-right: clamp(150px, 11vw, 210px);
+  gap: 4px;
+  min-height: 28px;
+  /* Clear of the Customise button at the card's bottom-right corner. */
+  padding-right: clamp(130px, 9vw, 170px);
 }
 
 .part-chip {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 12px 4px 4px;
-  font-size: var(--fs-md);
+  gap: 6px;
+  padding: 2px 8px 2px 2px;
+  font: 700 var(--fs-sm) / 1.2 var(--ui-display);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
   background: rgba(7, 13, 31, 0.7);
   border: 1px solid var(--menu-line-soft);
 }
 
 .chip-pic {
-  width: 44px;
-  height: 30px;
+  width: 34px;
+  height: 22px;
   background: none;
 }
 
-.carried-customise {
+/* Customise: outlined, at the card's bottom-right. */
+.carried-customise.menu-button {
   position: absolute;
-  right: var(--sp-5);
-  bottom: var(--sp-5);
+  right: var(--sp-4);
+  bottom: var(--sp-4);
+  min-height: var(--control-sm);
+  padding: 0 var(--sp-4);
+  font-size: var(--fs-sm);
+  letter-spacing: var(--ls-wide);
+  color: var(--paper);
+  background: rgba(7, 13, 31, 0.6);
+  border: 1px solid var(--orange);
+  box-shadow: none;
+}
+
+.carried-customise.menu-button:hover {
+  background: rgba(255, 107, 26, 0.18);
 }
 
 /* Grenades: empty until they arrive, with hazard stripes and a lock. */
 .gear-grenades {
   grid-template-columns: auto 1fr;
+  grid-template-rows: auto;
   grid-template-areas: 'lock words';
   align-items: center;
   min-height: 0;
-  padding-left: calc(var(--sp-5) + 6px);
+  padding: var(--sp-2) var(--sp-4) var(--sp-2) calc(var(--sp-4) + 6px);
   cursor: default;
+}
+
+.gear-grenades .gear-words {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--sp-3);
 }
 
 .gear-grenades .stripes {
@@ -133,8 +196,8 @@
 }
 
 .gear-lock svg.icon {
-  width: 30px;
-  height: 30px;
+  width: 20px;
+  height: 20px;
 }
 
 .gear-grenades:hover {
@@ -283,11 +346,16 @@
 }
 
 .replica-grid {
-  grid-template-columns: repeat(auto-fill, minmax(max(150px, calc((100% - 2 * var(--sp-3)) / 3)), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
 }
 
 .replica-tile {
-  min-height: clamp(160px, 10.5vw, 200px);
+  min-height: clamp(140px, 8.8vw, 170px);
+}
+
+.replica-tile .item-name {
+  font-size: var(--fs-md);
+  text-transform: uppercase;
 }
 
 /* Room for the tick beside the words. */
@@ -311,17 +379,19 @@
 }
 
 .loadout-selected {
+  grid-area: aside;
   position: sticky;
   top: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--sp-2);
-  padding: var(--sp-5);
+  gap: var(--sp-1);
+  padding: var(--sp-4) var(--sp-5);
 }
 
 .selected-name {
   margin: 0;
-  font-size: clamp(28px, 2vw, 36px);
+  font-size: clamp(24px, 1.6vw, 30px);
+  text-transform: uppercase;
   font-weight: 800;
   line-height: 1;
   letter-spacing: 0.04em;
@@ -329,7 +399,7 @@
 
 .selected-line {
   margin: 0;
-  font-size: var(--fs-md);
+  font-size: var(--fs-sm);
   color: var(--menu-muted);
 }
 
@@ -365,18 +435,18 @@
 .perf-rows {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 4px var(--sp-3);
+  gap: 2px var(--sp-3);
   margin: var(--sp-2) 0 0;
 }
 
 .perf-label {
-  font-size: var(--fs-md);
+  font-size: var(--fs-sm);
 }
 
 .perf-value {
   display: contents;
   margin: 0;
-  font-size: var(--fs-md);
+  font-size: var(--fs-sm);
   font-weight: 700;
 }
 
@@ -402,7 +472,7 @@
 .perf-bar {
   grid-column: 1 / -1;
   position: relative;
-  height: 8px;
+  height: 4px;
   margin: 2px 0 var(--sp-2);
   background: rgba(255, 255, 255, 0.08);
 }

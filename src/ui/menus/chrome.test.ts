@@ -174,13 +174,12 @@ describe('the Your match panel (G3, playView.ts)', () => {
     loadout: { summary: () => ({ replicas: 'AEG Rifle · GBB Pistol', detail: '' }) },
   }) as unknown as Parameters<typeof playView>[1];
 
-  it("names the light only on a map that offers two, and shows that light's still", () => {
+  it('names the light only on a map that offers two, and carries no picture (MR1: the map cards show it)', () => {
     const depot = playView(picks(), opts(false), () => 'day');
     expect(depot.mapLine).toBe('Depot');
-    expect(depot.still).toMatch(/depot-day\.jpg$/);
+    expect(depot).not.toHaveProperty('still');
     const city = playView(picks({ map: 'neonHeights' }), opts(true), () => 'night');
     expect(city.mapLine).toBe('Neon Heights · Night');
-    expect(city.still).toMatch(/neonHeights-night\.jpg$/);
   });
 
   it('plays a dev map as Depot while Dev content is off, and says so in the notes when dev content is used', () => {

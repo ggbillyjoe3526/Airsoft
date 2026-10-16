@@ -789,6 +789,10 @@ replaces its line; the old one stays findable in the archive or in git.
 - **The hit marker is a bold red X with its own settings, still off by default (owner, 2026-10-13, Dev 5 playtest
   note 4).** Settings › Gameplay › Crosshair: on or off, scale, thickness, outline and colour (red unless changed; blue
   and orange left out as the teams'). Whether it starts on is his call.
+- **The menus are compact, to concepts the owner approved (owner, 2026-10-16, Dev 6 playtest items 9 to 21; MR1).**
+  Match, Loadout, Customise and the Armory use the 15 px step for small text and 32 to 40 px controls; the top bar and
+  Settings keep their sizes. A mode is offered only on a map that hosts it, and a rule the mode doesn't read is hidden.
+  The realistic colours are picked per replica in Customise › Colour. Saved loadouts are a dropdown.
 - **Another UI redesign is planned for later, its version not set (owner, 2026-10-13).** Maybe a future Dev release,
   maybe after 1.0; parked in `docs/IDEAS.md` until he places it, with no redesign work before.
 - **A Visual redesign, an Audio redesign and a Performance update are also planned for later, their versions not set

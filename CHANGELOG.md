@@ -5,6 +5,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 ## Unreleased
 
 ### Added
+- **MR1** · Fullscreen button at the bottom left of the title screen; it reads Exit fullscreen while in fullscreen
+- **MR1** · Realistic colours in Customise: Black, Wolf Grey, Ranger Green and Tan for each replica, beside the bold schemes
 - **HD1** · Hop-up turns mid-match: 4 for less lift, 5 for more (Page Down and Page Up too, rebindable in Controls); the setting lasts the match
 - **HD1** · Hop-up readout over the ammo panel: the dial, a tick at the best setting for your BBs, and how far BBs stay flat ("Flat to 39 m")
 - **HD1** · WON, LOST or DRAW stamp at round end; a click after half a second moves on to the next round or the match results
@@ -16,7 +18,13 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **ST1** · Fresh-save volumes: master 100 %, effects 80 %, power source 100 %, ambience 60 %, interface 50 %
 - **ST1** · Retro look is a Dev setting again, at the top of the Dev tab, and shows only while Dev settings is ticked
 - **ST1** · Realistic colours leaves Settings for the Loadout's Colour tab; the greyed-out Voices (hit calls) row is gone
-- **ST1** · The level on the top bar reads LVL 3
+- **MR1** · Match, Loadout and Armory are smaller and tidier; the title screen shows its version at the bottom right
+- **MR1** · Match mode cards are text boxes with their sign; a map offers only the modes it hosts; your match lists its rules as chips
+- **MR1** · Match rules sit in two columns, one line each; rules set by the ruleset show locked as "set by Skirmish", unused rules are hidden
+- **MR1** · Loadout shows your two carried replicas side by side over your replicas; saved loadouts are a dropdown with Rename, Duplicate, New and Delete
+- **MR1** · Customise has a Back button, the LOADOUT breadcrumb is plain text and the Skins part is gone
+- **MR1** · Armory shows your level and XP with the next unlock beside them; every level is a column on a progress line that scrolls sideways
+- **MR1** · The top bar reads LVL for your level
 - **HD1** · Kill feed and teammate callouts are one feed in the top right
 - **HD1** · Replica panel in the bottom right is smaller and plainer: picture, name and fire modes on one row, loaded count with spare BBs below
 - **HD1** · Comms wheel is a ring of equal slices, each with the same size label
