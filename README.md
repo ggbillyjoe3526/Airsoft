@@ -204,8 +204,8 @@ follow (the Replica, Modes, Maps and Progression Updates, and more), up to **1.0
 
 **More.** Plans: [`docs/ROADMAP.md`](docs/ROADMAP.md). How to test: [`docs/PLAYTEST.md`](docs/PLAYTEST.md). Every change
 by release: [`CHANGELOG.md`](CHANGELOG.md) and [`docs/patch-notes/`](docs/patch-notes/). What the game has today:
-[`docs/FEATURES.md`](docs/FEATURES.md). Every change arrives as a pull request that the owner reviews and merges; the
-tagged commits on `main` are the releases.
+[`docs/FEATURES.md`](docs/FEATURES.md). Every change arrives as a pull request, merged once CI and the review agents
+pass; the tagged commits on `main` are the releases.
 
 ---
 
