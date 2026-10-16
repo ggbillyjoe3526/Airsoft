@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { BAKED_LIGHT } from '../config/bake';
 import { type BakedLightMode, type QualitySettings, SURFACES, type SurfaceTextureId } from '../config/render';
 import { WEATHERING } from '../config/weathering';
-import { buildGroundGrid } from '../map/groundSurfaces';
+import { groundGridOf } from '../map/groundSurfaces';
 import type { BlockKind, MapBlock, MapData } from '../map/mapTypes';
 import { RAMP_FACES, rampCorners } from '../map/surfaces';
 import { terrainHeightAt } from '../map/terrain';
@@ -931,7 +931,8 @@ export function buildMapMeshes(map: MapData, textures: SurfaceTextures, look: Ma
     group.add(mesh);
   }
   // M33i: the ground's surfaces on the terrain, and its tree crowns; crowns and bushes baked towards the key light.
-  const grid = map.terrain ? buildGroundGrid(map) : null;
+  // The ground grid the physics and the footsteps already built (groundGridOf, BP5: Woodland's was built again here).
+  const grid = map.terrain ? groundGridOf(map) : null;
   if (map.terrain) {
     const detail = grid ? surfaceTexture(textures, 'groundDetail') : null;
     group.add(buildTerrainMesh(map.terrain, grid && detail ? { grid, material: surfaceMaterial(detail, 'groundDetail', look, probes), tile: detail.worldSize, mean: detail.mean ?? 1 } : null));

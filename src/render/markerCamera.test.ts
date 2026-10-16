@@ -10,6 +10,7 @@ import { createGameState } from '../sim/state';
 import { vec3 } from '../sim/vec';
 import { MatchStats } from '../stats/matchStats';
 import { HoldMarker } from '../ui/holdMarker';
+import { Minimap } from '../ui/minimap';
 import type { MatchPresentation as MatchPresentationClass } from './matchPresentation';
 
 // The camera's world matrix is made once a frame for all the markers (audit UI-13), by MatchPresentation.frame, not by
@@ -113,6 +114,8 @@ function presentation(): { match: InstanceType<typeof MatchPresentationClass>; p
     'low',
     { rules: {} } as unknown as ExtractionContext,
   );
+  // A marker pinned to the edge keeps where projectMarker put it (BP5: clearPinned moves it only off the minimap's panel).
+  vi.mocked(vi.mocked(Minimap).mock.instances.at(-1)!.clearPinned).mockImplementation((m) => m);
   return { match, player };
 }
 
