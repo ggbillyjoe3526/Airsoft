@@ -157,6 +157,10 @@ export const KEY_SETTINGS = {
  */
 export const PAUSE_ESC_GUARD_MS = 400;
 
+/** Fire-selector taps kept for later ticks at most: one full cycle of the longest selector (semi, burst, auto), so
+ * taps made while no command is filled (Dev › Spectate any bot) can't replay as a long run of steps (KI1 QA). */
+export const FIRE_MODE_QUEUE_MAX = 3;
+
 /**
  * Keys whose browser default (page scroll, find bar, Alt opening the menu bar) is suppressed while
  * playing, on key down and up. Any bound key is suppressed too.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Action } from '../config/controls';
+import { type Action, FIRE_MODE_QUEUE_MAX } from '../config/controls';
 import { MOVEMENT } from '../config/movement';
 import { createCommand } from '../sim/commands';
 import type { Keyboard } from './keyboard';
@@ -131,6 +131,23 @@ describe('fire selector key', () => {
     input.clearLatches();
     input.fillCommand(cmd);
     expect(cmd.cycleFireMode).toBe(false);
+  });
+
+  it('keeps at most one full cycle of taps made while no command is filled (Dev › Spectate any bot; KI1)', () => {
+    const { keys, input } = setup('toggle');
+    const cmd = createCommand();
+    for (let i = 0; i < 8; i++) {
+      keys.press('fireMode');
+      input.update(0, 2);
+      keys.release('fireMode');
+      keys.endFrame();
+    }
+    let steps = 0;
+    for (let tick = 0; tick < 10; tick++) {
+      input.fillCommand(cmd);
+      if (cmd.cycleFireMode) steps++;
+    }
+    expect(steps).toBe(FIRE_MODE_QUEUE_MAX);
   });
 });
 

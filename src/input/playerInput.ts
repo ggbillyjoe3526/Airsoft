@@ -1,4 +1,4 @@
-import { type Action, type CrouchMode, DEFAULT_AIM_MODE, DEFAULT_CROUCH_MODE, DEFAULT_SPRINT_MODE, type HoldMode, MOUSE } from '../config/controls';
+import { type Action, type CrouchMode, DEFAULT_AIM_MODE, DEFAULT_CROUCH_MODE, DEFAULT_SPRINT_MODE, type HoldMode, FIRE_MODE_QUEUE_MAX, MOUSE } from '../config/controls';
 import { AIMING } from '../config/optics';
 import type { MovementConfig } from '../config/movement';
 import { SIM_DT } from '../config/sim';
@@ -151,7 +151,7 @@ export class PlayerInput {
     const kb = this.keyboard;
     if (kb.wasPressed('jump')) this.jumpLatch = true;
     if (kb.wasPressed('reload')) this.reloadLatch = true;
-    this.fireModePresses += kb.pressCount('fireMode');
+    this.fireModePresses = Math.min(FIRE_MODE_QUEUE_MAX, this.fireModePresses + kb.pressCount('fireMode'));
     if (kb.wasPressed('torch')) this.torchLatch = true;
     if (kb.wasPressed('inspect')) this.inspectLatch = true;
     if (kb.wasPressed('orderFollow')) this.latchOrder('follow', false);
