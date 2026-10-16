@@ -14,7 +14,7 @@ import { BODY, type MovementConfig } from '../config/movement';
 import { AIMING, type SightId, sightConfig } from '../config/optics';
 import type { ReplicaConfig } from '../config/replicas';
 import { TORCHES } from '../config/torches';
-import { leafSurface } from '../map/foliage';
+import { leafFloor, leafSurface } from '../map/foliage';
 import type { MapData } from '../map/mapTypes';
 import { aimRaiseTime } from '../sim/aiming';
 import type { WorldQuery } from '../sim/armament';
@@ -360,7 +360,7 @@ export class CombatPresentation {
         this.puffs.spawn(at, tint, IMPACT_DUST[material].scale);
         if (material === 'leaves') {
           // Leaves flutter out in place of grit, at every quality: they show where the BB went.
-          this.leaves.spawn(at, from, LEAF_FLECKS.perStop);
+          this.leaves.spawn(at, from, LEAF_FLECKS.perStop, leafFloor(this.field.foliage ?? [], at));
           if (e.leaves) this.leavesInTheWay(e.ownerId, e.position);
         } else if (this.grit.active && tint) {
           this.rings?.spawn(e.position, tint, IMPACT_DUST[material].scale);
@@ -371,7 +371,7 @@ export class CombatPresentation {
         // Through a bush's edge (Dev 6 item 44): a leaf or two and a soft rustle where it went in.
         const from = shooterSide(this.state.characters, e.ownerId, this.renderer.camera.position, this.gritFrom);
         const at = leafSurface(this.field.foliage ?? [], e.position, from, this.leafAt);
-        this.leaves.spawn(at, from, LEAF_FLECKS.perBrush);
+        this.leaves.spawn(at, from, LEAF_FLECKS.perBrush, leafFloor(this.field.foliage ?? [], at));
         this.sfx.leafBrush(at);
       } else if (e.type === 'propNoise') {
         // NP1: a run into a noisy prop knocks a puff of dust off it where it was hit (a BB's ring has its impact's puff).

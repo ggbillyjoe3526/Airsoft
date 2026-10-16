@@ -25,6 +25,8 @@ interface Fleck {
   b: number;
   /** Seconds since knocked out; >= lifetime means free. */
   age: number;
+  /** The ground it settles on (BP5: they fell on through it), -Infinity for none known. */
+  floor: number;
 }
 
 const Z_AXIS = new THREE.Vector3(0, 0, 1);
@@ -54,7 +56,7 @@ export class LeafFlecks {
   constructor() {
     const L = LEAF_FLECKS;
     for (let i = 0; i < L.max; i++) {
-      this.flecks.push({ x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, swayX: 1, swayZ: 0, swayPhase: 0, swayRate: 0, size: 0, roll: 0, flip: 0, spin: 0, r: 1, g: 1, b: 1, age: L.lifetime });
+      this.flecks.push({ x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, swayX: 1, swayZ: 0, swayPhase: 0, swayRate: 0, size: 0, roll: 0, flip: 0, spin: 0, r: 1, g: 1, b: 1, age: L.lifetime, floor: Number.NEGATIVE_INFINITY });
     }
     this.colours = L.colours.map((c) => new THREE.Color().setHex(c, THREE.SRGBColorSpace));
     // A diamond, a leaf's outline at this size: a four-sided disc, stretched along its length when drawn.
@@ -71,9 +73,10 @@ export class LeafFlecks {
 
   /**
    * A BB went into the leaves at `at`: a few leaves (`count`: LEAF_FLECKS.perStop for a BB they stopped, perBrush for one
-   * through an edge) thrown out towards `from` (the shooter's side: impactGrit.ts shooterSide) and up.
+   * through an edge) thrown out towards `from` (the shooter's side: impactGrit.ts shooterSide) and up, coming to rest on
+   * `floor` (the ground under the bush: map/foliage.ts leafFloor) if they get that far down.
    */
-  spawn(at: Vec3, from: Vec3, count: readonly [number, number]): void {
+  spawn(at: Vec3, from: Vec3, count: readonly [number, number], floor = Number.NEGATIVE_INFINITY): void {
     const L = LEAF_FLECKS;
     let tx = from.x - at.x;
     let ty = from.y - at.y;
@@ -115,6 +118,7 @@ export class LeafFlecks {
       f.g = c.g * dark;
       f.b = c.b * dark;
       f.age = 0;
+      f.floor = floor;
     }
     if (n > 0) this.fresh = true;
   }
@@ -140,6 +144,12 @@ export class LeafFlecks {
       f.z += f.vz * dt + f.swayZ * sway;
       f.roll += f.spin * dt;
       f.flip += f.spin * dt;
+      // Down on the ground: it lies there, still, for the rest of its fade.
+      if (f.y < f.floor) {
+        f.y = f.floor;
+        f.vx = f.vy = f.vz = 0;
+        f.swayX = f.swayZ = f.spin = 0;
+      }
       const left = L.lifetime - f.age;
       const fade = left < L.fade ? Math.max(0, left / L.fade) : 1;
       const dist = length3(f.x - eye.x, f.y - eye.y, f.z - eye.z);

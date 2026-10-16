@@ -131,6 +131,24 @@ export function firstLeaves(bushes: readonly Bush[], origin: Vec3, dir: Vec3, le
 const back: LeafCrossing = { enter: 0, exit: 0, through: false };
 const backDir = { x: 0, y: 0, z: 0 };
 
+/** How far out of a bush (in its radii, and metres up and down) a point still counts as on it (leafFloor). */
+const LEAF_FLOOR_REACH = 1.05;
+const LEAF_FLOOR_SLACK = 0.05;
+
+/**
+ * The ground under the bush `at` is in or on (its base: a bush stands on it), for the leaves a BB knocks out of it to come
+ * to rest on (BP5); -Infinity when `at` is in no bush. The lowest base of those it is in, as bushes overlap.
+ */
+export function leafFloor(bushes: readonly Bush[], at: Vec3): number {
+  let floor = Number.POSITIVE_INFINITY;
+  for (const b of bushes) {
+    const dx = (at.x - b.x) / b.radius;
+    const dz = (at.z - b.z) / b.radius;
+    if (dx * dx + dz * dz <= LEAF_FLOOR_REACH * LEAF_FLOOR_REACH && at.y >= b.y - LEAF_FLOOR_SLACK && at.y <= b.y + b.height + LEAF_FLOOR_SLACK) floor = Math.min(floor, b.y);
+  }
+  return floor === Number.POSITIVE_INFINITY ? Number.NEGATIVE_INFINITY : floor;
+}
+
 /**
  * Where leaves knocked out by a BB at `at` (stopped inside a bush, or come out of its edge) show, into `out` (Dev 6 item
  * 44; presentation only): where the line from `at` back towards `from` (its shooter) leaves the bush round `at`, so the

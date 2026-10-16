@@ -138,10 +138,12 @@ export const IMPACT_GRIT = {
  * towards the shooter's side (`toward`) and up (`up`), then falling under `gravity` but held back by the air (`drag`,
  * per second: they drift down at about gravity / drag), swaying `sway` m/s side to side every `swayPeriod` s and turning
  * over as they go, gone after `lifetime` s (fading over its last `fade`). Greens picked from `colours`, darker by up to
- * `shade`. A pool of `max` (the oldest reused), one draw call.
+ * `shade`. They come to rest on the ground under the bush. A pool of `max` (the oldest reused), one draw call.
  */
 export const LEAF_FLECKS = {
-  max: 48,
+  // Full auto into a bush (13 a second, up to 6 leaves each, 1.1 s each) keeps about 86 in the air (BP5: at 48 they
+  // were cut short mid-air).
+  max: 96,
   perStop: [4, 6] as const,
   perBrush: [1, 2] as const,
   speed: [0.8, 1.8] as const,

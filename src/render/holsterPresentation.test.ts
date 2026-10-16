@@ -37,6 +37,47 @@ describe('the first-person replica (VIEWMODEL.holster)', () => {
     expect(visible()).toBe(true);
     vm.dispose?.();
   });
+
+  it('never jumps: a put-away or draw started part-way through the other picks up from where the replica is (BP5)', () => {
+    const vm = new Viewmodel(16 / 9, 0x3a7bd5, LOADOUT);
+    const arm = createArmament(LOADOUT);
+    const rig = (vm as unknown as { rig: THREE.Object3D }).rig;
+    const H = VIEWMODEL.holster;
+    // The steepest a put-away moves it in a frame: smoothstep's slope (1.5) over the whole drop in putAwayTime.
+    const most = (1.5 * H.drop * DT) / H.putAwayTime + 1e-4;
+    let y = 0;
+    let steepest = 0;
+    const frame = (): void => {
+      vm.update(DT, 0, 0, 0, 4.2, 0, arm, false, 0);
+      steepest = Math.max(steepest, Math.abs(rig.position.y - y));
+      y = rig.position.y;
+    };
+    for (let i = 0; i < 30; i++) frame();
+    const inHand = y;
+    steepest = 0;
+    const draw = (frames: number): void => {
+      for (let i = 0; i < frames; i++) {
+        frame();
+        arm.draw = Math.max(0, arm.draw - DT);
+      }
+    };
+    // A quick tap: put away for 3 frames, then fire draws it.
+    arm.holstered = true;
+    for (let i = 0; i < 3; i++) frame();
+    arm.holstered = false;
+    arm.draw = arm.drawTotal = arm.handling[0]!.drawTime * HOLSTER.drawScale;
+    draw(20);
+    // Put away again part-way through that draw, all the way, then drawn and back in hand.
+    arm.holstered = true;
+    arm.draw = 0;
+    for (let t = 0; t < H.putAwayTime + 3 * DT; t += DT) frame();
+    arm.holstered = false;
+    arm.draw = arm.drawTotal;
+    draw(Math.ceil(arm.drawTotal / DT) + 5);
+    expect(steepest).toBeLessThanOrEqual(most);
+    expect(y).toBeCloseTo(inHand, 6);
+    vm.dispose?.();
+  });
 });
 
 describe('the third-person figure (FIGURE.holster)', () => {

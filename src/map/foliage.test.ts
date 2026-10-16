@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { vec3 } from '../sim/vec';
-import { type Bush, firstLeaves, foliageDepth, type LeafCrossing, leafSurface } from './foliage';
+import { type Bush, firstLeaves, foliageDepth, type LeafCrossing, leafFloor, leafSurface } from './foliage';
 
 /** A bush 2 m across and 1.6 m tall, its foot at the origin: the leaves fill an ellipsoid centred 0.8 m up. */
 const BUSH: Bush = { x: 0, y: 0, z: 0, radius: 1, height: 1.6 };
@@ -109,5 +109,19 @@ describe('leafSurface (Dev 6 item 44: where knocked-out leaves show)', () => {
     expect(out).toEqual(vec3(3, 0.8, 0));
     leafSurface([], vec3(0, 0.8, 0), vec3(-5, 0.8, 0), out);
     expect(out).toEqual(vec3(0, 0.8, 0));
+  });
+});
+
+describe('leafFloor (BP5: where knocked-out leaves come to rest)', () => {
+  const bush: Bush = { x: 0, y: 1.5, z: 0, radius: 1, height: 1.2 };
+  const lower: Bush = { x: 0.8, y: 1.2, z: 0, radius: 1, height: 1.2 };
+
+  it('is the base of the bush the point is in or on, the lowest of overlapping ones, and none outside any', () => {
+    expect(leafFloor([bush], vec3(0.3, 2, 0.2))).toBe(1.5);
+    expect(leafFloor([bush], vec3(1, 2, 0))).toBe(1.5); // on its side
+    expect(leafFloor([bush, lower], vec3(0.5, 2, 0))).toBe(1.2);
+    expect(leafFloor([bush], vec3(3, 2, 0))).toBe(Number.NEGATIVE_INFINITY);
+    expect(leafFloor([bush], vec3(0, 4, 0))).toBe(Number.NEGATIVE_INFINITY); // well over it
+    expect(leafFloor([], vec3(0, 2, 0))).toBe(Number.NEGATIVE_INFINITY);
   });
 });
