@@ -327,7 +327,7 @@ attempts: 0
 ## KI1 · Known issues fix pass (owner, 2026-10-16)
 tier: core
 perf: required
-touches: src/, e2e/, docs/, README.md, CHANGELOG.md
+touches: src/, e2e/, docs/, README.md, CHANGELOG.md, pipeline/baseline/
 contract: none
 acceptance:
   1. Every row in `docs/KNOWN_ISSUES.md` is gone through. A row fixed at its root is deleted, with a test where the
