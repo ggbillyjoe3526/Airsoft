@@ -4,8 +4,30 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 
 ## Unreleased
 
+### Fixed
+- **KI1** · Leaning beside a wall that cuts the lean eases the view over 0.1 s instead of jumping
+- **KI1** · Two quick taps of the fire selector step it twice
+- **KI1** · Your own BB's streak starts at the muzzle when you turn fast
+- **KI1** · A BB that bounces off a wall inside a bush keeps the leaves' speed it should
+- **KI1** · A camp fire's crackle is muffled by walls
+- **KI1** · Bots no longer see past a player who has called their hit, pings included
+- **KI1** · Markers pinned to the screen edge (pings, flag, exits, hold marker) no longer pile on each other
+- **KI1** · Flag and exit edge markers show an arrow pointing which way to turn
+- **KI1** · The summary's records grid after a Tournament match shows that rule set's records
+- **KI1** · The Tutorial's switch-replica step no longer counts a rifle BB still in the air
+- **KI1** · Practice's timed challenge on a map times a target from where you stand
+- **KI1** · The first overtime flag, first tossed magazine and first 2x scope aim no longer hitch as they load
+- **KI1** · Fewer post effects stall the first frame of a match
+- **KI1** · Wall grime starts at each block's own foot, upper floors included
+- **KI1** · The vertical grip's steady time counts the slow-down after a sprint (0.18 s)
+- **KI1** · The Armory keeps an item you own in colour
+
 ### Internal
 - **Pipeline** · Code changes get critic, QA and performance review before a pull request is ready; CI fails it without passing verdicts
+- **KI1** · Bot tests cover the cycle, a leaning teammate's torso, Follow me's trail and the squad order lip fallback
+- **KI1** · Game test covers settling a match; Dev Time of day bake test added; Your team match test plays Woodland and Neon Heights
+- **KI1** · Bots' aim-wall check measures in 3D; Dev Bot intentions labels build no string each move
+- **KI1** · Four Low performance baselines re-recorded for the first-frame warm-up (about 0.22 MB of GPU memory at match build)
 
 ## 0.1 Dev 6 · 2026-10-16
 
