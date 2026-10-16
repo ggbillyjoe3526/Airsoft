@@ -160,7 +160,7 @@ export const GRAPHICS_ROWS: readonly GraphicsRow[] = [
   choice({
     field: 'trees',
     label: 'Trees',
-    help: 'The trees round the field: none, a simple ring, or layered trees (a simple ring at night in the woods, where the haze hides it).',
+    help: 'The trees round the field: none, a simple ring, or layered trees (a simple ring at night in the woods, where the haze hides it). Layered also draws the buildings beyond the walls, and the cables and wall units over Neon Heights\' streets.',
     cost: 'Small',
     options: [
       { id: 'none', label: 'None', value: 0 },

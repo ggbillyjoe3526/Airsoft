@@ -525,6 +525,12 @@ replaces its line; the old one stays findable in the archive or in git.
 
 ## Maps and modes
 
+- **What no player can see is not drawn (owner, 2026-10-16, MS1).** Beyond a map's walls only what shows over them from
+  a lane, a spawn or a raised floor is built: no ground, hedge or low prop out there (`render/skylineSeen.test.ts`
+  fails on a skyline piece nobody sees). Look-only fixtures hung over the field (Neon Heights' wall units and cables)
+  stay out of the room a player takes up, so none reads as cover a BB passes through. Woodland's bushes are small and
+  decorative (0.9 to 1.25 m tall): crouch cover, never full cover, never in the way.
+
 - **The maps' vault walls are 0.9 m, at most 0.4 m deep, open above (M102, 2026-10-13).** The top of the owner's 0.7
   to 0.9 m: over 0.85 m a plain jump rides over one time in nine (Rapier's capsule slides up the edge), over 0.9 m one
   in thirty, and nobody stands on a wall thinner than a body. Not cover: a crouched player's eyes are over it. One per

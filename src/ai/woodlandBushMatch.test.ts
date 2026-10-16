@@ -29,11 +29,10 @@ describe('a 5v5 bot match on Woodland with its bushes (M33e, acceptances 1 and 5
     await initPhysics();
   });
 
-  it('bots never see through bush deeper than foliageSeeThrough, bushes hide enemies from them in play, and rounds still finish', { timeout: 45_000 }, () => {
+  it('bots never see through bush deeper than foliageSeeThrough, and rounds still finish', { timeout: 45_000 }, () => {
     const bushes = WOODLAND.foliage!;
     expect(bushes.length).toBeGreaterThanOrEqual(50);
     let sampled = 0;
-    let hiddenByBush = 0;
     let worstDepth = 0;
     const eye = vec3();
     const point = vec3();
@@ -48,9 +47,7 @@ describe('a 5v5 bot match on Woodland with its bushes (M33e, acceptances 1 and 5
           const dist = Math.hypot(other.position.x - me.position.x, other.position.z - me.position.z);
           if (dist > BOTS.viewDistance) continue;
           sampled++;
-          const without = visiblePart(me, other, world.query, BOTS, BODY, HITS);
           const withLeaves = visiblePart(me, other, world.query, BOTS, BODY, HITS, { foliage: bushes, night: null });
-          if (without > 0 && withLeaves < without) hiddenByBush++;
           if (withLeaves > 0 && dist > BOTS.closeAwareness) {
             // What it sees, it sees through at most foliageSeeThrough of leaves.
             eyeOf(me, BODY, HITS, eye);
@@ -63,8 +60,7 @@ describe('a 5v5 bot match on Woodland with its bushes (M33e, acceptances 1 and 5
     expect(sampled).toBeGreaterThan(500);
     expect(worstDepth).toBeLessThanOrEqual(BOTS.foliageSeeThrough + 1e-9);
     // MS1: bushes are crouch-high at most now, and bots seldom crouch behind one, so a match may hide nobody; the
-    // hiding is checked on its own below. Counted so a run that does can be read.
-    expect(hiddenByBush).toBeGreaterThanOrEqual(0);
+    // hiding is checked on its own below.
     // Bots still play: a round ended, BBs flew and hit, and the match stayed inside the fence.
     expect(stats.rounds).toBeGreaterThanOrEqual(1);
     expect(stats.shots).toBeGreaterThan(50);

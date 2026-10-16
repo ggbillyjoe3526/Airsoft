@@ -10,8 +10,8 @@ import { skylineClear, skylineGeometries } from './skyline';
 
 /**
  * The world round the field (M14; the visual overhaul, audit section 5 "Sky and trees"): a gradient sky dome with a
- * warm glow towards the sun, a ring of trees beyond the walls (simple, or layered crowns and a hedge of shrubs round
- * the field), and on Medium and High clouds and the sun's disc. One draw call each, built once per match and again
+ * warm glow towards the sun, a ring of trees beyond the walls (simple, or layered crowns; none round a city, MS1), and
+ * on Medium and High clouds and the sun's disc. One draw call each, built once per match and again
  * when the Trees or Clouds setting changes; the haze (Renderer's fog) fades the trees into the horizon.
  */
 
@@ -371,7 +371,7 @@ export interface Atmosphere {
 
 /**
  * Adds the sky dome, the tree ring, the clouds and a night preset's stars and moon round the field centred on `centre`
- * (sun along `sunDirection`, a unit vector towards the key light; `field` the map's bounds, for the hedge) at `quality`'s
+ * (sun along `sunDirection`, a unit vector towards the key light; `field` the map's bounds, which keep the ring's trees out of it) at `quality`'s
  * Trees and Clouds, and returns its handle. Changing either setting rebuilds that mesh only. `preset` (M33f) paints the
  * sky, the clouds and the key light's disc: the day's unless a map's lighting says otherwise. `skyline` (G8, a map's
  * MapDressing.skyline) joins the detailed ring. `ownTrees`: the map has trees of its own (horizonTreeLevel). G9: with
