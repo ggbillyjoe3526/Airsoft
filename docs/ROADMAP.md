@@ -6,11 +6,10 @@ in `docs/PROCESS.md`.
 
 ## Where we are
 
-- **Building 0.1 Dev 6.** The game stays in Dev until the owner calls it feature complete (owner, 2026-10-06). Beta then
-  adds no features.
-- **Last tag:** `0.1-dev.5`, on 2026-10-13. The owner creates tags.
-- **Next:** [0.1 Dev 6](#01-dev-6-the-last-planned-dev-build) is complete with its bug pass (BP5, 2026-10-16) and
-  ready for the owner to tag `0.1-dev.6` and playtest.
+- **Building 0.1 Beta.** [0.1 Dev 6](#01-dev-6-the-last-planned-dev-build) is tagged, the last planned Dev build; Beta
+  adds no features (owner, 2026-10-06): fixes, balance and polish from the owner's playtests only.
+- **Last tag:** `0.1-dev.6`, on 2026-10-16. The owner creates tags.
+- **Next:** the owner playtests 0.1 Dev 6, and 0.1 Beta 1 follows from what he finds.
 - **The release path** (owner, 2026-10-12): 0.1 Dev 6, 0.1 Beta, then 0.1.0 opens Early Access to the public. Themed
   updates follow (Replica, Modes, Maps, Progression and any more), up to 1.0, the full launch. See
   [Early Access](#early-access-the-themed-updates).
@@ -28,6 +27,7 @@ in `docs/PROCESS.md`.
 | 0.1 Dev 3 | 2026-10-03 | Leaning, magazines and reloads, BB physics, movement and positioning, ramps and raised floors | `0.1-dev.3` |
 | 0.1 Dev 4 | 2026-10-06 | Loadout, Customise and Armory, new menus, fire modes and aiming down sights, real BB flight, a rebuilt Depot and a new look, new sounds; Woodland, Neon Heights, Extraction and Pro in development | `0.1-dev.4` (commit `63e6500`) |
 | 0.1 Dev 5 | 2026-10-13 | New menus and HUD, a play link in the browser, iron sights and Inspect, the GBB Pistol, new players and hands, Ultra and WebGPU, a dressed Depot, faster loading; Blender models in testing behind the Dev switches | `0.1-dev.5` (commit `6bbb680`) |
+| 0.1 Dev 6 | 2026-10-16 | Levels and XP in place of the gacha, practice with moving targets and a timed challenge on any map, saved loadouts, holstering, vaulting and resting on cover, named bots with personalities, gear and callouts, pings, asking for a magazine, bushes that stop BBs, noisy props, the overtime flag, new human and robot figures; the full Dev 6 bug pass | `0.1-dev.6` (commit `c810dd3`) |
 
 Only full releases are tagged (owner, 2026-10-01): playtests in between are plain commits. Two checkpoint tags,
 `v0.1-alpha.2a` (commit `d8c4568`) and `v0.1-alpha.2b` (commit `08b37e3`), were removed after `0.1-dev.2`. The
@@ -198,7 +198,7 @@ Models and effort levels stay as they are.
 
 ## 0.1 Dev 6: the last planned Dev build
 
-Dev 6 is the last planned Dev build, though the owner may add more (owner, 2026-10-12). It holds the systems the game
+Dev 6 is the last planned Dev build (tagged 2026-10-16), though the owner may add more (owner, 2026-10-12). It holds the systems the game
 still needs to be feature complete; the content once planned here moved to its themed update
 ([below](#what-moved-out-of-dev-6)). Beta then adds no features: bug fixes, QoL, balance, refinement and polish
 (owner, 2026-10-06).

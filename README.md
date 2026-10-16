@@ -1,14 +1,14 @@
-# Airsoft 0.1 Dev 5
+# Airsoft 0.1 Dev 6
 
 A browser-based, first-person team shooter built around recreational airsoft: visible BBs, one hit and you're out,
 call your hit and walk off. You play single-player against bots, on a desktop browser.
 
-**New since 0.1 Dev 4:** a link to play in your browser, new menus and HUD in a navy and orange look, the GBB Pistol in
-place of the Gas Pistol, iron sights and an Inspect key, new players and gloved hands, an Ultra preset and WebGPU,
-Depot dressed up, and faster loading. The Blender models of the replicas, attachments and players are being tested and
-are off by default (**Settings › Dev**). Woodland, Neon Heights, Extraction and Pro bots are still in development and
-show only with **Settings › Dev › Dev content** on. All changes:
-[`docs/patch-notes/0.1-dev.5.md`](docs/patch-notes/0.1-dev.5.md).
+**New since 0.1 Dev 5:** levels and XP in place of the Armory's gacha, a practice range with moving targets and a timed
+challenge on any map, saved loadouts, holstering and vaulting, resting your replica on cover, named bots with
+personalities, gear and radio callouts, pings, asking a teammate for a magazine, bushes that stop BBs, noisy props, an
+overtime flag in Elimination, and new human and robot figures. The Blender figures stay behind **Settings › Dev**.
+Woodland, Neon Heights, Extraction and Pro bots are still in development and show only with **Settings › Dev › Dev
+content** on. All changes: [`docs/patch-notes/0.1-dev.6.md`](docs/patch-notes/0.1-dev.6.md).
 
 ---
 
@@ -29,11 +29,11 @@ The game uses Node.js to run a small local web server; nothing is installed into
 
 ### 2. Download the game
 
-Download 0.1 Dev 5 as a ZIP file:
+Download 0.1 Dev 6 as a ZIP file:
 
-**https://github.com/ggbillyjoe3526/Airsoft/archive/refs/tags/0.1-dev.5.zip**
+**https://github.com/ggbillyjoe3526/Airsoft/archive/refs/tags/0.1-dev.6.zip**
 
-Unzip it somewhere easy to find, such as your Desktop. You get a folder called `Airsoft-0.1-dev.5`. Older versions are
+Unzip it somewhere easy to find, such as your Desktop. You get a folder called `Airsoft-0.1-dev.6`. Older versions are
 on the repository's **Releases / Tags** page.
 
 If that link doesn't work, open **https://github.com/ggbillyjoe3526/Airsoft**, click the green **Code** button, then
@@ -42,7 +42,7 @@ this guide. Use it the same way.
 
 ### 3. Open a terminal in that folder
 
-- **Windows:** open the unzipped folder (`Airsoft-0.1-dev.5`, or `Airsoft-main` if you used the Download ZIP button),
+- **Windows:** open the unzipped folder (`Airsoft-0.1-dev.6`, or `Airsoft-main` if you used the Download ZIP button),
   click the address bar at the top of the window, type `cmd` and press Enter.
 - **Mac:** right-click the unzipped folder and choose **New Terminal at Folder**.
 - **Linux:** right-click inside the folder and choose **Open in Terminal**.
@@ -183,14 +183,14 @@ each.
 
 ---
 
-## What's in 0.1 Dev 5
+## What's in 0.1 Dev 6
 
 - **Maps.** Depot, a 50 × 32 m warehouse yard. Woodland and Neon Heights are in development.
-- **Modes.** Elimination and Attack / Defend, under Skirmish or Custom rules, and Practice on the range. Extraction,
+- **Modes.** Elimination and Attack / Defend, under Skirmish or Custom rules, and Practice on any map. Extraction,
   Tournament and Pro CQB are in development.
 - **Replicas.** AEG Rifle, GBB Pistol and the rare Cyber Pistol, each with iron sights, and optics, grips, barrels, a
   silencer, magazines and batteries.
-- **Bots.** Easy, Normal and Hard. Pro is in development.
+- **Bots.** Easy, Normal and Hard, with names, personalities and gear. Pro is in development.
 - **Blender models.** New replicas, attachments and players, still being tested and off by default (**Settings › Dev**).
 
 **Not yet:** grenades, replica skins and voices for hit calls (marked Later in the menus), and downloaded art: the art
