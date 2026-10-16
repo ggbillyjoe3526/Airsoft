@@ -10,6 +10,10 @@ import { PHYSICS } from '../config/physics';
 import { LOADOUT } from '../config/replicas';
 import { TEAMS } from '../config/teams';
 import { DEPOT } from '../map/depot';
+import { mapEntry } from '../map/maps';
+import type { MapData } from '../map/mapTypes';
+import { NEON_HEIGHTS } from '../map/neonHeights';
+import { WOODLAND } from '../map/woodland';
 import { buildNavGrid } from '../nav/navGrid';
 import { initPhysics, PhysicsWorld } from '../physics/physicsWorld';
 import { createCharacter, respawnCharacter } from '../sim/character';
@@ -30,7 +34,8 @@ import { DT } from './depotMatchSupport';
 import { sightConditionsOf } from './perception';
 
 /**
- * Your team (M98): a full match on Depot in each team mode with you on Alpha and one with you on Beta, built as the
+ * Your team (M98): a full match on Depot in each team mode with you on Alpha and one with you on Beta (and since BP6 the
+ * same on Woodland and Neon Heights, at each map's standard team size), built as the
  * match build builds it (matchSession.ts: sim/roster.ts's roster, you character 0 and not one of the match's bots, your
  * bot teammates at the teammates' level). Checked every round: your team's end (and in Attack / Defend its job)
  * swapping at half-time, your squad order reaching your teammates only, and at the end the result, the summary and the
@@ -38,11 +43,22 @@ import { sightConditionsOf } from './perception';
  * the player the match's bots take orders from. Real physics, headless.
  */
 
-const RULES = roundRulesFor(DEFAULT_MATCH_RULES);
 type TeamMode = 'elimination' | 'attackDefend';
+type Rules = ReturnType<typeof roundRulesFor>;
 
-function playAs(team: number, mode: TeamMode, seed: number) {
-  const map = DEPOT;
+/** The maps a match is played on here, each at its standard team size (Depot's is the standard match's). */
+const MAPS: readonly { map: MapData; label: string; rules: Rules }[] = (
+  [
+    ['depot', DEPOT],
+    ['woodland', WOODLAND],
+    ['neonHeights', NEON_HEIGHTS],
+  ] as const
+).map(([id, map]) => {
+  const entry = mapEntry(id);
+  return { map, label: entry.label, rules: roundRulesFor({ ...DEFAULT_MATCH_RULES, teamSize: entry.teamSize.standard }) };
+});
+
+function playAs(team: number, mode: TeamMode, seed: number, map: MapData, RULES: Rules) {
   const size = RULES.teamSize;
   const physics = new PhysicsWorld(map, BODY, DT);
   const nav = buildNavGrid(map, NAV);
@@ -132,10 +148,10 @@ describe('a full match on either team (M98)', () => {
     await initPhysics();
   });
 
-  for (const mode of ['attackDefend', 'elimination'] as const) {
+  for (const { map, label, rules: RULES, mode } of MAPS.flatMap((m) => (['attackDefend', 'elimination'] as const).map((mode) => ({ ...m, mode })))) {
     for (const team of [0, 1]) {
-      it(`plays a whole ${mode} match on Depot with you on ${TEAMS[team]!.name}`, { timeout: 180_000 }, () => {
-        const { state, player, stats, rounds, order, bots, mates } = playAs(team, mode, 8);
+      it(`plays a whole ${mode} match on ${label} with you on ${TEAMS[team]!.name}`, { timeout: 180_000 }, () => {
+        const { state, player, stats, rounds, order, bots, mates } = playAs(team, mode, 8, map, RULES);
         const r = state.round;
         expect(r.phase, 'the match is decided').toBe('matchOver');
         expect(player.team).toBe(team);
