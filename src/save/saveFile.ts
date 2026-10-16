@@ -1,6 +1,6 @@
 import { SAVE_GAME_ID, SAVE_FILE_PREFIX } from '../config/save';
 import { GAME_LEVELS } from '../progress/gameLevels';
-import { levelOf } from '../progress/levels';
+import { levelOf, unlocksUpTo } from '../progress/levels';
 import { sha256 } from './sha256';
 import { SAVE_STORES, type StoreData, type StoreId } from './stores';
 
@@ -145,11 +145,15 @@ function cleanStores(stores: Record<string, unknown>): StoreData {
 export function summarize(stores: StoreData): SaveSummary {
   const p = field(stores, 'progress');
   const xp = whole(p.xp);
-  const unlocked = Array.isArray(p.unlocked) ? p.unlocked.filter((id) => typeof id === 'string').length : 0;
+  const level = levelOf(GAME_LEVELS, xp);
+  // What the game gives on load (progress.ts grantReached): every level's items up to this one, with or without a saved
+  // list (BP5: a save from before the first XP, or one migrated from before levelling, showed "Items unlocked 0").
+  const ids = new Set(unlocksUpTo(GAME_LEVELS, level));
+  if (Array.isArray(p.unlocked)) for (const id of p.unlocked) if (typeof id === 'string') ids.add(id);
   let matches = 0;
   const r = field(stores, 'records');
   if (isObject(r.results)) for (const wl of Object.values(r.results)) if (isObject(wl)) matches += whole(wl.wins) + whole(wl.losses);
-  return { level: levelOf(GAME_LEVELS, xp), xp, unlocked, matches };
+  return { level, xp, unlocked: ids.size, matches };
 }
 
 /** Nothing saved in any store (a new player, or a deleted save). */

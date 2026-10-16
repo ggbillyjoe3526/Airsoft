@@ -85,7 +85,8 @@ export function challengeText(c: RangeChallenge, onMap = false): string {
       const last = c.last;
       if (!last) return onMap ? `Timed challenge · shoot START, then move up: targets light orange as you see them · ${best}` : `Timed challenge · shoot the START plate to begin · ${best}`;
       const accuracy = last.shots > 0 ? ` · ${Math.round((100 * last.hits) / last.shots)} % accuracy` : '';
-      return `Time! ${hitsText(last.hits)}${accuracy} · ${last.best ? 'new best!' : best} · shoot START to go again`;
+      const kept = last.helped ? 'not kept (Dev settings)' : last.best ? 'new best!' : best;
+      return `Time! ${hitsText(last.hits)}${accuracy} · ${kept} · shoot START to go again`;
     }
     case 'countdown':
       return onMap ? `Timed challenge · move up: targets light orange as you see them · ${best}` : `Timed challenge · hit the orange targets · ${best}`;

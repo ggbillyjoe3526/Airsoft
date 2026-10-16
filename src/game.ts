@@ -1253,9 +1253,10 @@ export class Game {
     this.session.setMinimapTurn(this.minimapTurn);
     this.session.setAmmoCounter(this.ammoCounter === 'on');
     this.session.onTutorialStep = (step) => saveSetting('tutorialStep', step);
-    // A timed challenge run that beats the best is kept at once (M93), like a match's records.
+    // A timed challenge run that beats the best is kept at once (M93), like a match's records, and as with a match's,
+    // never one played with Dev help (BP5).
     this.session.onChallengeRun = (run) => {
-      if (addChallengeRun(this.records, course, run.hits)) saveRecords(this.records, browserStorage());
+      if (!run.helped && addChallengeRun(this.records, course, run.hits)) saveRecords(this.records, browserStorage());
     };
     this.session.combat.setReplicaPictures(this.pictures, kitSubjects(this.loadout.kit(), this.look.realisticColours));
     this.steppedDown = false;

@@ -39,14 +39,14 @@ import { canAimDownSights } from './sim/aiming';
 import { fitOptics, fitParts, setBbWeights, setHopUps } from './sim/armament';
 import { type Character, createCharacter, eyeHeight, respawnCharacter } from './sim/character';
 import { createCommand, type PlayerCommand } from './sim/commands';
-import { type ChallengePhase, type ChallengeRun, type ChallengeSight, createChallenge, type RangeChallenge, seesTarget, setChallengeOn, stepChallenge } from './sim/rangeChallenge';
+import { type ChallengePhase, type ChallengeRun, type ChallengeSight, createChallenge, helpChallenge, type RangeChallenge, seesTarget, setChallengeOn, stepChallenge } from './sim/rangeChallenge';
 import { createRangeTargets, type RangeTarget } from './sim/rangeTargets';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
 import { partsUnder } from './sim/torch';
 import { createWind } from './sim/wind';
 import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
-import type { DevSettings } from './config/dev';
+import { type DevSettings, devCheating } from './config/dev';
 import { tutorialSteps } from './config/tutorial';
 import { TutorialTracker, type TutorialView } from './tutorial/tutorial';
 import { CoachPanel } from './ui/coachPanel';
@@ -144,6 +144,8 @@ export class RangeSession {
   private readonly challengeShown: { phase: ChallengePhase | null; second: number; hits: number; best: number } = { phase: null, second: -1, hits: -1, best: -1 };
   /** Told each finished run of the timed challenge (M93), so the game can keep a new best. */
   onChallengeRun: ((run: ChallengeRun) => void) | null = null;
+  /** Dev settings that change play are on (setDevCheats): a timed challenge run meanwhile is not kept. */
+  private devHelp = false;
   /** The tutorial (M16), when the range was opened for it, and its coach. */
   private tutorial: TutorialTracker | null = null;
   private coach: CoachPanel | null = null;
@@ -390,6 +392,7 @@ export class RangeSession {
       this.input.fillCommand(this.playerCommand);
       stepSimulation(this.state, this.commands, this.ctx, SIM_DT);
       stepChallenge(this.challenge, this.state.targets, this.state.events, PLAYER_ID, SIM_DT, this.state.rng, this.sight);
+      if (this.devHelp) helpChallenge(this.challenge);
       this.afterTick();
     }
     return ticks;
@@ -448,10 +451,12 @@ export class RangeSession {
 
   /**
    * The Dev settings that change play (M24). Nobody shoots at you here, so only Bottomless magazines applies, and not
-   * in the tutorial: its reload steps need a magazine to run down.
+   * in the tutorial: its reload steps need a magazine to run down. Any of them on keeps a timed challenge run out of
+   * the records (BP5: Game speed and Bottomless magazines set a best no run could beat).
    */
   setDevCheats(cheats: DevSettings): void {
     this.player.armament.bottomless = cheats.bottomlessMags && !this.tutorial;
+    this.devHelp = devCheating(cheats);
   }
 
   /** New quality settings (Settings → Graphics): as MatchSession.setQuality. */

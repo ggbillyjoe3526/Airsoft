@@ -117,7 +117,7 @@ export class MatchPanel {
         'roundTime',
         menuRow(
           'Round time',
-          'Out of time: a draw in Elimination, the defenders\' round in Attack and Defend.',
+          'Out of time: the overtime flag in Elimination (unless Time-out gives the round), the defenders\' round in Attack and Defend.',
           rangeControl('Round time', ROUND_TIME_SETTING, m.roundTime, formatRoundTime, 'roundTime', (v) => {
             m.roundTime = v;
             changed();

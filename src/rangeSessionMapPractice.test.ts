@@ -97,6 +97,9 @@ function build(extra: { map?: MapData; course?: string; challenge?: boolean; bes
     pitch: 0,
     yaw: 0,
     keyName: () => '',
+    update() {},
+    takeInspect: () => false,
+    fillCommand() {},
   };
   const kit = {
     slots: LOADOUT.map((replica) => ({ replica, optic: null, parts: [] })),
@@ -172,6 +175,22 @@ describe('Practice on a map (M94): the session', () => {
     expect(s.status).toContain(`Practice · ${DEPOT.name}`);
     expect(s.status).toContain('best 7');
     s.dispose();
+  });
+
+  it('marks a challenge run played with Dev settings that change play, and only then (BP5)', async () => {
+    const { DEV_DEFAULTS } = await import('./config/dev');
+    for (const [cheats, helped] of [[DEV_DEFAULTS, false], [{ ...DEV_DEFAULTS, bottomlessMags: true }, true], [{ ...DEV_DEFAULTS, gameSpeed: 0.25 }, true]] as const) {
+      const { s } = build({ map: DEPOT, course: 'depot' });
+      s.setDevCheats(cheats);
+      // Only the simulation and the challenge: the presentation's tick is not what this is about.
+      vi.spyOn(s as unknown as { afterTick: () => void }, 'afterTick').mockImplementation(() => {});
+      const c = (s as unknown as { challenge: { phase: string; clock: number; helped: boolean } }).challenge;
+      c.phase = 'countdown';
+      c.clock = RANGE_CHALLENGE.countdown;
+      s.advance(0.05);
+      expect(c.helped, JSON.stringify(cheats)).toBe(helped);
+      s.dispose();
+    }
   });
 
   it('shows a minimap captioned with the map on a map, and none on the range', () => {

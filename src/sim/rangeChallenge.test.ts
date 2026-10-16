@@ -3,7 +3,7 @@ import { HITS } from '../config/hits';
 import { RANGE, RANGE_CHALLENGE, RANGE_VISUALS, targetSpec } from '../config/range';
 import type { WorldQuery } from './armament';
 import type { GameEvent } from './events';
-import { createChallenge, seesTarget, setChallengeOn, stepChallenge } from './rangeChallenge';
+import { createChallenge, helpChallenge, seesTarget, setChallengeOn, stepChallenge } from './rangeChallenge';
 import { createRangeTargets, type RangeTarget, stepRangeTargets } from './rangeTargets';
 import { createRng } from './rng';
 import { vec3 } from './vec';
@@ -120,6 +120,27 @@ describe('the timed challenge (M93)', () => {
     expect(start.hidden).toBe(false);
     expect(targets.every((t) => t.lit === 0)).toBe(true);
     expect(targets.filter((t) => t.motion === 'popup').every((t) => t.auto)).toBe(true);
+  });
+
+  it('a run with Dev help (marked at any point from the START plate on) is never a best, and the next run starts clean (BP5)', () => {
+    const { c, start, tick, run, targets } = range(1);
+    helpChallenge(c);
+    expect(c.helped, 'nothing to mark before a run').toBe(false);
+    tick([hit(start)]);
+    run(RANGE_CHALLENGE.countdown + 1);
+    helpChallenge(c);
+    let ended = false;
+    for (let i = 0; i < (RANGE_CHALLENGE.runTime + 1) / DT && !ended; i++) {
+      tick(targets.filter((t) => t.lit > 0).map((t) => hit(t)));
+      ended = c.cue === 'time';
+    }
+    expect(c.last!.hits).toBeGreaterThan(1);
+    expect(c.last!.best).toBe(false);
+    expect(c.last!.helped).toBe(true);
+    expect(c.best).toBe(1);
+    // Shot START again with no help: clean.
+    tick([hit(start)]);
+    expect(c.helped).toBe(false);
   });
 
   it('a worse run keeps the best', () => {

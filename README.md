@@ -95,9 +95,9 @@ Then open **http://localhost:4173**.
 
 ## How to play
 
-- **Goal.** On the New game screen (**Start**) pick a map, a mode and the bot difficulty, then **Play**. The first team
-  to win 5 rounds takes the match; **Match** changes the rules (rounds to win, round time, 1v1 to 3v3, friendly fire,
-  ricochets).
+- **Goal.** Press **Start**, then on the **Match** screen pick a map, a mode and the bots' difficulty (**Opponents**
+  and **Teammates**), then **Start match**. The first team to win 5 rounds takes the match; the same screen changes the
+  rules (rounds to win, round time, team size, friendly fire, ricochets).
   - **Elimination.** Knock out every player on the other team. If the clock runs out, a flag goes up near the middle:
     the first team to touch it wins the round; nobody in 30 s, and the round is a draw.
   - **Attack / Defend.** Attackers stand inside the painted ring round the defenders' pole for 5 s to raise their flag;
@@ -112,7 +112,8 @@ Then open **http://localhost:4173**.
 - **Magazines are limited.** A reload swaps in your fullest spare, and the old one keeps what is left in it. Nothing
   refills until the next round.
 - **Sound matters.** Running and sprinting are heard by you and the bots; walking (Shift) and moving crouched are
-  silent. You can't shoot for a moment after a sprint.
+  silent. Running or sprinting into a crate, skip, rack or container knocks it, and bots hear that too. You can fire
+  on the run, but far less accurately.
 - **Rest on cover.** Aim down sights standing still at a crate, low wall, sandbags or window sill and your replica rests
   on it: a steadier aim with half the kick, and **Rested** shows under the sight. Move or let go of the aim to come off.
 - **Loadout.** **Start › Loadout** (or Esc in a match) sets your replicas; right-click one to **Customise** it: optic,
@@ -124,29 +125,32 @@ Then open **http://localhost:4173**.
   good, with the Cyber Pistol at level 10. The top bar shows your level; click it, or **Armory** beside **Loadout**,
   to see what you have unlocked and what each level gives. Items still to unlock show in the Loadout greyed, with
   their level. Nothing is ever sold. The levels are in [levels.md](levels.md), which you can edit.
-- **Tutorial and Practice range.** The title screen's **Tutorial** teaches the basics in short coached steps (skip it,
-  or resume it from the pause screen). **Practice range** puts you alone on a range with targets at 10 to 60 m.
+- **Tutorial and Practice.** The title screen's **Tutorial** teaches the basics in short coached steps (skip it, or
+  resume it from the pause screen). **Practice** (the last mode on the Match screen) puts you alone on the range, or on
+  any map with targets in place of bots, with any replica you own; its timed challenge lights targets for you to hit.
 - **Squad orders and minimap.** Hold Z for the order wheel, or press F, X or V for Follow me, Hold here or Regroup. The
   minimap shows your teammates, the other team where you last heard them, and the name of the area you're in.
 - **Callouts.** Your bot teammates call what they see and do ("Contact, Dock!", "Two left!") in the bottom left, with a
-  radio click. **Settings › HUD › Callouts** turns them off.
+  radio click. **Settings › Gameplay › HUD › Callouts** turns them off.
 - **Pings.** Press the middle mouse button to ping where you look: a marker with its distance for your team, and your
   bot teammates go to check it or watch it, and say so. Ping an enemy you can see and it is marked as a contact; your
-  teammates sometimes mark the enemies they call for you. **Settings › HUD › Ping markers** hides the markers.
+  teammates sometimes mark the enemies they call for you. **Settings › Gameplay › HUD › Ping markers** hides the
+  markers.
 - **Asking for a magazine.** Low on BBs, press H (or Need a Mag on the order wheel): the nearest teammate with one to
   spare comes over and tosses you one. When a teammate asks you, get close and press H to toss them one. Bots ask each
-  other too. **Settings › HUD › Mag hand-off** hides the line under the crosshair.
+  other too. **Settings › Gameplay › HUD › Mag hand-off** hides the line under the crosshair.
 - **Count your own BBs.** **Settings › Gameplay › HUD › Ammo counter** Off hides the BB counts, as on a real field: the
   magazine bars only show which spares still hold BBs, an empty replica clicks, and reloading works as ever.
 - **Dev content.** **Settings › Dev** (tick **Dev settings** under the list) has a **Dev content** switch for maps,
   modes and gear still being built, and **Disable levelling**, which unlocks every replica and part. Matches that use
   either aren't recorded and give no XP.
-- **Your save** (settings, level, records, saved loadouts) lives in your browser. **Settings › Save** downloads it as a file and
-  loads it back, and keeps a restore point each day.
+- **Your save** (settings, level, records, saved loadouts) lives in your browser. **Settings › Save file** downloads it
+  as a file and loads it back, and keeps a restore point each day.
 
 ### Controls
 
-Every action can be rebound under **Settings › Key Bindings**, mouse buttons and wheel included, with a second key each.
+Every action can be rebound under **Settings › Controls › Keys**, mouse buttons and wheel included, with a second key
+each.
 
 | Key | Action |
 |---|---|
@@ -162,6 +166,7 @@ Every action can be rebound under **Settings › Key Bindings**, mouse buttons a
 | Space | Jump (a small hop); at a low wall (about waist high), vault over it: quick, but loud enough for anyone near to hear |
 | R | Reload (an empty trigger pull also reloads) |
 | 1 / 2 or mouse wheel | Switch between your primary and secondary replica |
+| 3 | Holster: put your replica away to sprint a little faster; drawing it again (1, 2, fire, aim or reload) takes longer |
 | Tab (hold) | Scoreboard |
 | Z (hold), F, X, V | Squad order wheel; Follow me, Hold here, Regroup (press again to cancel) |
 | Middle mouse | Ping where you look (or an enemy you can see) for your team |
@@ -172,7 +177,7 @@ Every action can be rebound under **Settings › Key Bindings**, mouse buttons a
 | L | In Practice: the Loadout straight from play, on the slot in your hands; L again (or Back to practice) and you are back where you stood |
 | F10 | Fullscreen |
 | Left click while out | Watch the next player still in play |
-| Esc | Pause: Resume, Loadout, Settings or Quit |
+| Esc | Pause: Resume, Loadout, Settings or Quit. Once you are out, Esc skips to the next round (Esc again pauses) |
 | `` ` `` or F3 | Frame rate and debug info |
 | ] | Debug: show BB flight paths |
 
