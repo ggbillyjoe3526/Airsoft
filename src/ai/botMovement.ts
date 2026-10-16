@@ -830,14 +830,18 @@ export function keepApart(b: Bot, w: BotWorld, moving: boolean, cmd: PlayerComma
   }
   const len = Math.hypot(px, pz);
   // Never walked aside off a floor: a teammate standing beside a bot at a platform's open edge pushed it over (a seed of
-  // the Ramp Yard follow match, MV1). A wall is no harm (the body slides along it), so only a drop stops the push.
-  const p = me.position;
-  const ahead = w.cfg.edgeLookahead / len;
-  if (dropOnLine(w.nav, p.x, p.y, p.z, p.x + px * ahead, p.z + pz * ahead)) return moving;
-  b.moveDir.x = px / len;
-  b.moveDir.z = pz / len;
-  cmd.walk = true;
-  return true;
+  // the Ramp Yard follow match, MV1). With a drop that way it steps aside along the edge instead, either way round, and
+  // stands only if both are drops too. A wall is no harm (the body slides along it), so only a drop turns the push.
+  const ux = px / len;
+  const uz = pz / len;
+  for (const [x, z] of [[ux, uz], [-uz, ux], [uz, -ux]] as const) {
+    if (dropAhead(me, w, x, z)) continue;
+    b.moveDir.x = x;
+    b.moveDir.z = z;
+    cmd.walk = true;
+    return true;
+  }
+  return moving;
 }
 
 /**
@@ -865,6 +869,13 @@ function stepOffGround(b: Bot, w: BotWorld, right: number, forward: number): boo
   const p = b.character.position;
   const reach = w.cfg.edgeLookahead;
   return dropOnLine(w.nav, p.x, p.y, p.z, p.x + dx * reach, p.z + dz * reach) || !isWalkableAt(w.nav, p.x + dx * reach, p.y, p.z + dz * reach);
+}
+
+/** A drop within edgeLookahead of `c` in the ground direction (`x`, `z`), a unit vector (nav only, no rays). */
+function dropAhead(c: Character, w: BotWorld, x: number, z: number): boolean {
+  const p = c.position;
+  const reach = w.cfg.edgeLookahead;
+  return dropOnLine(w.nav, p.x, p.y, p.z, p.x + x * reach, p.z + z * reach);
 }
 
 /** The sight half of stepBlocked: eyes moved that way would lose the target it sees (one ray). */
