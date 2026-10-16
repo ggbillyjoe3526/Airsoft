@@ -121,7 +121,7 @@ attempts: 0
 ## TT1 · A simpler tutorial (playtest item 2)
 tier: ui
 perf: skip
-touches: src/tutorial/, src/config/tutorial.ts, src/ui/tutorialShowcase.ts
+touches: src/tutorial/, src/config/tutorial.ts, src/ui/tutorialShowcase.ts, src/ui/coachPanel.ts, src/rangeSession.ts, src/style.css
 contract: none
 acceptance:
   1. Every tip is shorter and easier to understand.
