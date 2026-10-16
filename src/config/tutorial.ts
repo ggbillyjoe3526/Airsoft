@@ -84,7 +84,7 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
   {
     id: 'selector',
     title: 'Fire mode',
-    text: 'Press {fireMode} to switch between full auto and single shots. Single shots save BBs at range.',
+    text: 'Press {fireMode} to change fire mode, such as single shots or full auto. Single shots save BBs at range.',
     goal: { kind: 'fireMode' },
   },
   {
