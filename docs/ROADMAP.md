@@ -9,7 +9,7 @@ in `docs/PROCESS.md`.
 - **Building 0.1 Beta.** [0.1 Dev 6](#01-dev-6-the-last-planned-dev-build) is tagged, the last planned Dev build; Beta
   adds no features (owner, 2026-10-06): fixes, balance and polish from the owner's playtests only.
 - **Last tag:** `0.1-dev.6`, on 2026-10-16. The owner creates tags.
-- **Next:** the owner playtests 0.1 Dev 6, and 0.1 Beta 1 follows from what he finds.
+- **Next:** 0.1 Beta 1. The owner played Dev 6 on 2026-10-16, and its task blocks are in `docs/TASKS.md`.
 - **The release path** (owner, 2026-10-12): 0.1 Dev 6, 0.1 Beta, then 0.1.0 opens Early Access to the public. Themed
   updates follow (Replica, Modes, Maps, Progression and any more), up to 1.0, the full launch. See
   [Early Access](#early-access-the-themed-updates).
