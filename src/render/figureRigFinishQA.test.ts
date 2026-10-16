@@ -118,7 +118,7 @@ describe('the rigs with the finish (BD1, second round)', () => {
   it('every part set at every level of detail merges, groups index the materials, attributes agree', () => {
     for (const kind of FIGURE_RIG_KINDS) {
       const rig = rigs[kind];
-      const p = FIGURE_RIG.parts[kind];
+      const p = FIGURE_RIG.parts[kind] as { body: readonly string[]; head: readonly string[]; pack?: string; radio?: string };
       const sets = [p.body, [...p.body, ...p.head], [...p.body, ...p.head, ...(p.pack ? [p.pack] : []), ...(p.radio ? [p.radio] : [])]];
       for (const names of sets) {
         const keys = new Set<string>();

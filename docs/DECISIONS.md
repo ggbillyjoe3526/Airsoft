@@ -259,7 +259,7 @@ replaces its line; the old one stays findable in the archive or in git.
   rail (0.104 m above the AEG's origin, was 0.126); a parts file's optic marks its own sight line and the aim follows
   it, so the built-in optics keep theirs. The silencers are round with the same lengths, so muzzles stay put. The
   pistol torch clips straight to the rail and, with the Red Laser fitted too, sits 1.6 cm lower under it (its
-  `UnderLaser` marker). Behind "Disable all models", like every Blender model.
+  `UnderLaser` marker). Behind "Disable all models", like every Blender model, until BD1 made them the default.
 - **The human and robot figures are redesigned to look more realistic in 0.1 Dev 6 (owner, 2026-10-13: "In dev 6 I want
   to redesign the bot/player figures to be more realistic").** The owner does it himself at his PC, in his own Blender
   through the port 9876 bridge, from reference photos he shares first. The same session makes the figures' animations

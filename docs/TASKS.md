@@ -78,7 +78,7 @@ attempts: 0
 ## BD1 · Blender models by default (playtest item 1)
 tier: core
 perf: required
-touches: src/config/dev.ts, src/settings/dev.ts, src/ui/devSettings.ts, src/render/, src/assets/, src/config/assets.ts, src/config/renderQuality.ts, src/ui/menus/, src/game.ts, src/matchSession.ts, src/config/figureRig.ts, src/config/hits.ts, src/content/report/skin.report.ts, src/content/skinCheckSupport.ts, pipeline/perf-run.mjs, pipeline/baseline/
+touches: src/config/dev.ts, src/settings/dev.ts, src/ui/devSettings.ts, src/render/, src/assets/, src/config/assets.ts, src/config/renderQuality.ts, src/ui/menus/, src/game.ts, src/matchSession.ts, src/config/figureRig.ts, src/config/hits.ts, src/content/report/skin.report.ts, src/content/skinCheckSupport.ts, pipeline/perf-run.mjs, pipeline/baseline/, tools/blender/bot-figure/README.md
 contract: none
 acceptance:
   1. The Blender figures, replicas and attachments are the default everywhere, menu pictures included. The code-built models remain only on Low, or go.
