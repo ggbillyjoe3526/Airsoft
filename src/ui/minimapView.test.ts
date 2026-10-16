@@ -147,4 +147,23 @@ describe('clearOfBox (BP5: edge-pinned markers kept off the minimap)', () => {
     expect(clearOfBox(pinned(100, 100, true), panel, 20)).toEqual({ x: 100, y: 100, onScreen: true });
     expect(clearOfBox(pinned(12, 150), { x: 0, y: 0, w: 0, h: 0 }, 20)).toEqual({ x: 12, y: 150, onScreen: false });
   });
+
+  it('stacks the markers moved off it in one frame a step apart, not on one spot, and afresh each frame', () => {
+    const step = { down: 48, across: 96 };
+    const frame = () => {
+      const stack = { below: 0, right: 0 };
+      // A flag (gap 36) then a ping (gap 48) then an exit (gap 36), all pinned on the panel's left.
+      return [clearOfBox(pinned(12, 60), panel, 36, stack, step).y, clearOfBox(pinned(12, 200), panel, 48, stack, step).y, clearOfBox(pinned(12, 120), panel, 36, stack, step).y];
+    };
+    expect(frame()).toEqual([284, 332, 380]);
+    // The next frame starts again from the panel's foot: nothing creeps down the screen.
+    expect(frame()).toEqual([284, 332, 380]);
+    // Along the top: the next one right of the last, a label's width on.
+    const stack = { below: 0, right: 0 };
+    expect(clearOfBox(pinned(80, 12), panel, 20, stack, step).x).toBe(236);
+    expect(clearOfBox(pinned(150, 12), panel, 20, stack, step).x).toBe(332);
+    // A marker not on the panel is left alone and does not take a place.
+    expect(clearOfBox(pinned(12, 500), panel, 20, stack, step).y).toBe(500);
+    expect(stack.below).toBe(0);
+  });
 });

@@ -1,21 +1,26 @@
 # Handoff
 
-What is happening now (as of 2026-10-13), for a session picking up the work. The planning thread rewrites it once per
+What is happening now (as of 2026-10-16), for a session picking up the work. The planning thread rewrites it once per
 batch. The plan is `docs/ROADMAP.md`, the open tasks `docs/TASKS.md`, and the engine facts `docs/ARCHITECTURE.md` and
 each `src/` folder's `README.md`.
 
 ## Now
 
-- **0.1 Dev 5 is out.** The owner tagged `0.1-dev.5` on 2026-10-13 (commit `6bbb680`). All eleven items in
-  `docs/ROADMAP.md` › 0.1 Dev 5 are done.
-- **Next.** The owner playtests 0.1 Dev 5. 0.1 Dev 6 starts with M92–M95 (`docs/ROADMAP.md`). A later bug pass looks
-  at the Blender models (owner, 2026-10-12).
-- **Waiting on the owner:** the laptop and desktop Ultra perf baselines, the Save checks in Firefox and Edge, and
-  playing Woodland and Neon Heights (`docs/PLAYTEST.md` › Only you can do these).
+- **0.1 Dev 6 is complete and ready to tag.** Every item in `docs/ROADMAP.md` › 0.1 Dev 6 is done, the last its full
+  bug pass (BP5, `docs/records/BP5.md`). The owner tags `0.1-dev.6`; the release checklist (`docs/PROCESS.md`) is due
+  in the next pull request after he does.
+- **Next.** The owner playtests 0.1 Dev 6, then 0.1 Beta (fixes, balance and polish, no features). The spring sniper
+  waits for 0.2 and his specs.
+- **Waiting on the owner:** the hit area's shape before the figures leave the Dev switches; whether Adaptive
+  difficulty's steps and the callouts' pace feel right; whether an overtime flag taken at once by someone already on
+  its spot feels cheap; and from before, the laptop and desktop Ultra perf baselines, the Save checks in Firefox and
+  Edge, and playing Woodland and Neon Heights (`docs/PLAYTEST.md` › Only you can do these; the Plaza stair and Pro
+  Woodland Attack / Defend wait on that, `docs/KNOWN_ISSUES.md`).
 - **Vault and rest-on-cover clips.** Both rigged figures behind the Dev switches have their own (shared in
   `tools/blender/bot-figure/scripts/bot18.py`: the robot's built with it in RM10, the human's spliced into its RM9
   export); a figure file without them falls back to the old placeholders. The built-in figures don't change. Of the
-  bots, anchors rest on cover (they aim where they stand still to fight or hold, BN1); the rest fire from the hip.
+  bots, anchors rest on cover where they stand still to fight or hold (BN1; not while sidestepping or hunting, BP5);
+  the rest fire from the hip.
 
 ## Where to look
 

@@ -631,6 +631,7 @@ export class MatchPresentation {
     this.boardUp = this.boardView(boardHeld) !== 'none';
     this.characters.update(alpha, dt, spectating ? -1 : this.player.id, camera.position);
     this.flag.update(this.state.round, this.state.time);
+    this.minimap.beginPins();
     this.updateMarker(camera, spectating);
     this.exits?.update(this.state.round.run);
     this.cases?.update(this.state.round.run);
