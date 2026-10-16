@@ -591,3 +591,40 @@ describe('use key (M44: opens a case in Extraction)', () => {
     for (const a of ['fire', 'reload', 'jump', 'fireMode', 'crouch'] as const) expect(frame(() => keys.press(a)).use, a).toBe(false);
   });
 });
+
+describe('fire selector presses: QA edge cases (BP6)', () => {
+  it('drops queued presses on a new round (resetView) as on a pause', () => {
+    const { keys, input } = setup('toggle');
+    const cmd = createCommand();
+    for (let i = 0; i < 3; i++) {
+      keys.press('fireMode');
+      keys.release('fireMode');
+    }
+    input.update(0, 2);
+    keys.endFrame();
+    input.fillCommand(cmd);
+    expect(cmd.cycleFireMode).toBe(true);
+    input.resetView(0);
+    input.fillCommand(cmd);
+    expect(cmd.cycleFireMode).toBe(false);
+  });
+
+  it('hands over exactly as many steps as presses over several frames', () => {
+    const { keys, input } = setup('toggle');
+    const cmd = createCommand();
+    let steps = 0;
+    for (let frame = 0; frame < 4; frame++) {
+      keys.press('fireMode');
+      keys.release('fireMode');
+      input.update(0, 2);
+      keys.endFrame();
+      if (frame % 2 === 1) {
+        for (let t = 0; t < 3; t++) {
+          input.fillCommand(cmd);
+          if (cmd.cycleFireMode) steps++;
+        }
+      }
+    }
+    expect(steps).toBe(4);
+  });
+});

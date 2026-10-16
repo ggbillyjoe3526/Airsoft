@@ -98,3 +98,16 @@ describe('Keyboard (audit L-27)', () => {
     expect(keyboard.isDown('reload')).toBe(false);
   });
 });
+
+describe('Keyboard.pressCount: QA edge cases (BP6)', () => {
+  it('adds up presses of every key bound to the action, and clears them at the end of the frame', () => {
+    const { keyboard, key } = setup();
+    key('keydown', 'KeyR');
+    key('keyup', 'KeyR');
+    key('keydown', 'KeyR');
+    expect(keyboard.pressCount('reload')).toBe(2);
+    keyboard.endFrame();
+    expect(keyboard.wasPressed('reload')).toBe(false);
+    expect(keyboard.pressCount('reload')).toBe(0);
+  });
+});

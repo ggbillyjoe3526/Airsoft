@@ -146,3 +146,36 @@ describe('LeanViewEase: a lean a wall cuts short (BP6)', () => {
     expect(camera.rotation.z).toBeCloseTo(-0.5 * RENDER.leanCameraRoll, 12);
   });
 });
+
+describe('LeanViewEase: QA edge cases (BP6)', () => {
+  const lean = (l: number, crouch = 0, prev = l) => {
+    const c = createCharacter(0, vec3(), 0);
+    c.lean = l;
+    c.prevLean = prev;
+    c.crouchAmount = c.prevCrouchAmount = crouch;
+    return c;
+  };
+
+  it('stays finite for a zero, a huge (hidden tab) and a crouched frame, and never overshoots upright', () => {
+    for (const dt of [0, 1e-6, 0.5, 60]) {
+      for (const crouch of [0, 1]) {
+        const ease = new LeanViewEase();
+        ease.update(lean(1, crouch), BODY, HITS, 1, 1 / 60);
+        const s = ease.update(lean(0.2, crouch, 1), BODY, HITS, 1, dt);
+        expect(Number.isFinite(s)).toBe(true);
+        expect(s).toBeGreaterThanOrEqual(0.2 - 1e-12);
+        expect(s).toBeLessThanOrEqual(1);
+      }
+    }
+  });
+
+  it('eases a cut to the other side of upright from the same side it was on, and to nothing when the lean key is let go', () => {
+    const ease = new LeanViewEase();
+    ease.update(lean(-1), BODY, HITS, 1, 1 / 60);
+    const s = ease.update(lean(0, 0, -1), BODY, HITS, 1, 1 / 120);
+    expect(s).toBeLessThan(0);
+    expect(s).toBeGreaterThan(-1);
+    for (let i = 0; i < 60; i++) ease.update(lean(0), BODY, HITS, 1, 1 / 120);
+    expect(ease.update(lean(0), BODY, HITS, 1, 1 / 120)).toBe(0);
+  });
+});
