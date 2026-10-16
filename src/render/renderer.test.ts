@@ -407,7 +407,13 @@ describe('the shader warm-up (M63, audit REN-06)', () => {
   it('compiles the world for the stack’s target and warms the held replica by drawing it into its own once (BP3)', () => {
     const { r, calls } = stubbedRenderer(QUALITY.high);
     r.warmShaders(replica());
-    expect(calls).toEqual(['compile world into the post target with the environment', 'render']);
+    expect(calls.slice(0, 2)).toEqual(['compile world into the post target with the environment', 'render']);
+    // BP6: then every pass's quads compile into the targets they draw into, the last onto the canvas; none is drawn.
+    const passes = calls.slice(2);
+    expect(passes.length).toBeGreaterThan(5);
+    expect(passes.every((c) => c.startsWith('compile  into'))).toBe(true);
+    expect(passes.at(-1)).toBe('compile  into the canvas with none');
+    expect(glOf(r).getRenderTarget()).toBeNull();
   });
 
   it('compiles what is hidden but may show mid-session (BP6): shown, with its hidden parents, only while the compile gathers', () => {
@@ -510,6 +516,7 @@ describe('the shader warm-up runs once per session build, never per frame (M63, 
       '/src/render/webgpu/nodeBackend.ts',
       `${post}nodeOutput.ts`,
       `${post}nodeOutput.ts`,
+      `${post}nodePostStack.ts`,
       `${post}nodePostStack.ts`,
       `${post}nodeRetro.ts`,
       `${post}nodeRetro.ts`,

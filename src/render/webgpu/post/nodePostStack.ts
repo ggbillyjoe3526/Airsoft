@@ -115,7 +115,34 @@ export class NodePostStack extends PostChain<NodeRenderer, NodeTarget> implement
       this.overlayHeld = true;
       gl.setRenderTarget(null);
     }
-    return this.compiles.track(world);
+    const passes = this.compilePasses(gl, scene, camera);
+    return this.compiles.track(Promise.all([world, passes]).then(() => undefined));
+  }
+
+  /**
+   * Compiles the passes' pipelines ahead of the first frame (BP6; the BP3 review found about 20 built in it): the
+   * frame's own `draw` runs once over the renderer with each draw turned into a compile, so every pass's quads compile
+   * into the targets they draw into, under the state the frame sets; the world (compiled above) isn't drawn again, and
+   * nothing reaches the screen. The temporal history that run leaves is forgotten. A compile builds its draws after an
+   * await, by when the renderer's own output state is back, so the last pass's draw onto the canvas may still build on
+   * the first frame; the reflections' mask waits for the reflective meshes, found on the first frame.
+   */
+  private compilePasses(gl: NodeRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera): Promise<void> {
+    const pending: Promise<void>[] = [];
+    const compileInstead = (object: THREE.Object3D, view: THREE.Camera): void => {
+      if (object !== scene) pending.push(gl.compileAsync(object, view));
+    };
+    const compiling = new Proxy(gl, {
+      get(target, key) {
+        if (key === 'render') return compileInstead;
+        const value: unknown = Reflect.get(target, key);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+      set: (target, key, value) => Reflect.set(target, key, value),
+    });
+    this.draw(compiling, scene, camera);
+    this.reset();
+    return Promise.all(pending).then(() => undefined);
   }
 
   override setSize(width: number, height: number): void {
