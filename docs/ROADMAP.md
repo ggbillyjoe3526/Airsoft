@@ -6,10 +6,12 @@ in `docs/PROCESS.md`.
 
 ## Where we are
 
-- **Building 0.1 Beta.** [0.1 Dev 6](#01-dev-6-the-last-planned-dev-build) is tagged, the last planned Dev build; Beta
-  adds no features (owner, 2026-10-06): fixes, balance and polish from the owner's playtests only.
+- **Building 0.1 Beta 1.** The game is out of Dev (owner, 2026-10-16), and he tags 0.1 Beta 1 when it is complete.
+  [0.1 Dev 6](#01-dev-6-the-last-planned-dev-build) was the last Dev build. Beta adds no features (owner,
+  2026-10-06): fixes, balance and polish from the owner's playtests only. The small additions in his Dev 6 playtest
+  list are the exception, on his word.
 - **Last tag:** `0.1-dev.6`, on 2026-10-16. The owner creates tags.
-- **Next:** 0.1 Beta 1. The owner played Dev 6 on 2026-10-16, and its task blocks are in `docs/TASKS.md`.
+- **Next:** the 0.1 Beta 1 tag. The owner's Dev 6 playtest list (34 items) and the Beta 1 blocks are in `docs/TASKS.md`.
 - **The release path** (owner, 2026-10-12): 0.1 Dev 6, 0.1 Beta, then 0.1.0 opens Early Access to the public. Themed
   updates follow (Replica, Modes, Maps, Progression and any more), up to 1.0, the full launch. See
   [Early Access](#early-access-the-themed-updates).
@@ -298,8 +300,9 @@ Beta adds no features (owner, 2026-10-06). It starts once he calls the game feat
 QoL, balance, refinement and polish. Its likely work, collected here so the Dev builds stay focused:
 
 - **Optimisation.** Profile, then fix. The "can wait" performance items in `docs/KNOWN_ISSUES.md` land here. The
-  "60 FPS on an integrated-graphics laptop" target is unmeasured: the owner plays on a high-end desktop, so someone with
-  such a laptop compares the quality presets here. From the audit: a lint / format tool if a second person joins
+  targets (owner, 2026-10-16): Low holds 60 FPS on modern low-powered hardware, and maxed-out settings aim at a PC built
+  for 4K at 240 Hz (his RTX 5090 desktop). Both are unmeasured until his laptop and desktop baselines are in (PF2,
+  PF3). From the audit: a lint / format tool if a second person joins
   (D-02); the smaller Rapier download (D-01) was done early, on the owner's word (IM3, 2026-10-12).
 - **Balance.** Replicas, how many magazines each carries (4 × 60 AEG, 4 × 18 pistol today), bot difficulty levels, and
   Attack / Defend (about 1 bot round in 10 is won at the pole today; raise time, holds and retakes).
