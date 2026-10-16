@@ -188,7 +188,9 @@ describe('squad orders (M22)', () => {
       for (const n of r.longestStand) expect(n, pace).toBeLessThanOrEqual(6); // never a stop-and-go
       for (const d of r.meanBehind) {
         expect(d, pace).toBeGreaterThan(SQUAD_ORDERS.followDistance - 1);
-        expect(d, pace).toBeLessThan(SQUAD_ORDERS.followDistance + SQUAD_ORDERS.catchUpGap + 1);
+        // On average within arriving distance of its spot (BP6: was followDistance + catchUpGap + 1, 5.7 m; measured
+        // 2026-10-16: walk 3.62 / 3.22, run 3.30 / 3.59, sprint 3.13 / 2.72 m).
+        expect(d, pace).toBeLessThan(SQUAD_ORDERS.followDistance + SQUAD_ORDERS.followArrive);
       }
       // Sprinting along with you: on once, and off no more than once or twice, even as you weave.
       if (pace === 'sprint') for (const f of [...r.flips, ...followAlong('sprint', 7, true).flips]) expect(f).toBeLessThanOrEqual(3);
