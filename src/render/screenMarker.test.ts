@@ -6,7 +6,7 @@ import { BODY } from '../config/movement';
 import { FOV_SETTING } from '../config/render';
 import { buildFigure, disposeFigure, HUMAN_DRESS } from './characterModels';
 import { verticalFovFor } from './renderer';
-import { projectMarker, type ScreenMarker } from './screenMarker';
+import { EdgePins, edgeAngle, projectMarker, type ScreenMarker } from './screenMarker';
 
 const W = 1600;
 const H = 900;
@@ -99,5 +99,53 @@ describe("teammates' name markers (FA13)", () => {
   it('sits just over the head up close, not a hand above it (it was 0.45 m over the eyes: 170 px at 2 m)', () => {
     // The narrowest field of view magnifies most. Within about 4% of the screen's height at 1.5 m and 2 m.
     for (const d of [1.5, 2]) expect(gapPx(d, FOV_SETTING.min)).toBeLessThan(HEIGHT * 0.045);
+  });
+});
+
+describe('edge markers laid out together (BP6)', () => {
+  const step = { down: 48, across: 96 };
+  const pin = (x: number, y: number): ScreenMarker => ({ x, y, onScreen: false });
+
+  it('moves a marker pinned within a label of another on the same edge along it, a step apart', () => {
+    const pins = new EdgePins();
+    pins.begin();
+    const a = pins.place(pin(M, 400), W, H, step);
+    const b = pins.place(pin(M, 410), W, H, step);
+    const c = pins.place(pin(M, 395), W, H, step);
+    expect(a.y).toBe(400);
+    expect(b.y).toBe(448); // below the first, the side it was on
+    expect(c.y).toBe(352); // above it
+    expect(b.x).toBe(M);
+    // The top edge steps across, by a label's width.
+    const t1 = pins.place(pin(800, M), W, H, step);
+    const t2 = pins.place(pin(820, M), W, H, step);
+    expect(t1.x).toBe(800);
+    expect(t2.x).toBe(896);
+  });
+
+  it('leaves markers on other edges, far apart, or in view where they are, and starts afresh each frame', () => {
+    const pins = new EdgePins();
+    pins.begin();
+    pins.place(pin(M, 400), W, H, step);
+    expect(pins.place(pin(W - M, 400), W, H, step).y).toBe(400); // the right edge
+    expect(pins.place(pin(M, 500), W, H, step).y).toBe(500); // two labels away
+    expect(pins.place({ x: M, y: 400, onScreen: true }, W, H, step).y).toBe(400); // in view
+    pins.begin();
+    expect(pins.place(pin(M, 410), W, H, step).y).toBe(410);
+  });
+
+  it('never pushes one off the screen: at the end of an edge it moves the other way', () => {
+    const pins = new EdgePins();
+    pins.begin();
+    pins.place(pin(M, H - 40), W, H, step);
+    const b = pins.place(pin(M, H - 35), W, H, step);
+    expect(b.y).toBe(H - 40 - step.down);
+  });
+
+  it('points an edge marker the way to turn: right 0°, down 90°, left 180°, up -90°', () => {
+    expect(edgeAngle(pin(W - M, H / 2), W, H)).toBeCloseTo(0, 6);
+    expect(edgeAngle(pin(W / 2, H - M), W, H)).toBeCloseTo(90, 6);
+    expect(edgeAngle(pin(M, H / 2), W, H)).toBeCloseTo(180, 6);
+    expect(edgeAngle(pin(W / 2, M), W, H)).toBeCloseTo(-90, 6);
   });
 });

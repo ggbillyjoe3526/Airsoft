@@ -239,6 +239,34 @@ describe('the timed challenge on a map (M94)', () => {
   });
 });
 
+describe('a lit target\'s time on a map counts its distance from where you stand (BP6)', () => {
+  /** The first targets lit as the run starts, by `away` (null: their marked distance, as on the range). */
+  function firstLit(away: ((t: RangeTarget) => number) | null): RangeTarget[] {
+    const rng = createRng(7);
+    const targets = createRangeTargets(undefined, rng);
+    const c = createChallenge(0);
+    setChallengeOn(c, targets, true, rng);
+    const tick = (events: GameEvent[] = []) => {
+      stepRangeTargets(targets, DT, rng);
+      stepChallenge(c, targets, events, PLAYER, DT, rng, null, away);
+    };
+    tick([hit(targets.find((t) => t.start)!)]);
+    while (c.phase === 'countdown') tick();
+    return targets.filter((t) => t.lit > 0);
+  }
+
+  it('gives a target beside you only the base time, a far one the flight on top, and the range its marked distance', () => {
+    const rise = (t: RangeTarget) => (t.motion === 'popup' && t.down > 0 ? RANGE.riseTime : 0);
+    const near = firstLit(() => 0);
+    expect(near).toHaveLength(RANGE_CHALLENGE.litAtOnce);
+    for (const t of near) expect(t.lit).toBeCloseTo(RANGE_CHALLENGE.litTime + rise(t), 6);
+    const far = firstLit(() => 50);
+    for (const t of far) expect(t.lit).toBeCloseTo(RANGE_CHALLENGE.litTime + RANGE_CHALLENGE.litPerMetre * 50 + rise(t), 6);
+    const range = firstLit(null);
+    for (const t of range) expect(t.lit).toBeCloseTo(RANGE_CHALLENGE.litTime + RANGE_CHALLENGE.litPerMetre * t.distance + rise(t), 6);
+  });
+});
+
 describe('which targets are in your sight (M94)', () => {
   const [plate, figure, crouched] = createRangeTargets([
     targetSpec({ kind: 'steel', x: 0, y: RANGE.plateHeight, z: -20, label: 'Steel', distance: 20 }),

@@ -207,6 +207,11 @@ export class Minimap {
     return clearOfBox(m, this.panel, gap, this.pins, this.pinStep);
   }
 
+  /** The HUD's scale (style.css --hud-scale) as last laid out, 1 before the first layout. */
+  get hudScale(): number {
+    return this.scale || 1;
+  }
+
   /** Once a frame, before the first `clearPinned`: the markers moved off the panel stack afresh. */
   beginPins(): void {
     this.pins.below = 0;
