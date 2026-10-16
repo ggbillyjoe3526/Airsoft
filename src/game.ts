@@ -617,7 +617,8 @@ export class Game {
         onEnabled: (on) => {
           this.devEnabled = on;
           this.applyDev();
-          this.showRetro();
+          // Only a Retro look that is on changes the picture; setRetro rebuilds the post stack, so skip it otherwise.
+          if (this.retro.on) this.showRetro();
         },
         cheating: () => devCheating(this.dev),
         devContent: () => this.dev.devContent,
