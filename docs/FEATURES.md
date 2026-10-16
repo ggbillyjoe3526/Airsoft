@@ -161,21 +161,25 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   for good, and the table is in `levels.md` (LV1)
 - Starters: the GBB Pistol and AEG Rifle, with battery and gas, are yours at level 0 (LV1)
 - Your collection is saved apart from the settings (M26a)
-- Armory: your level, XP to the next level, what the next level unlocks, how to earn XP, and every level's items
-  (unlocked, next, locked) (LV1)
+- Armory: your level and XP in a band with the next unlock beside it; every level as a column on a progress line that
+  scrolls sideways (unlocked, next, locked) (LV1, MR1)
 - Locked items show greyed in Loadout and Customise, with the level that unlocks them (LV1)
-- Saved loadouts: five tabs on the Loadout hold whole kits; keys 1 to 5 switch, edits go to the current tab, Disable levelling keeps its own set (SL1)
+- Saved loadouts: five slots in a dropdown on the Loadout hold whole kits, with Rename, Duplicate, New and Delete; keys 1 to 5 switch, edits go to the current slot, Disable levelling keeps its own set (SL1, MR1)
 
 ## Menus and settings
 
 - Menus in a navy and orange look in Inter type (G3, M100): a plain title on navy (wordmark, tagline, START, the Tutorial on a
   clean save), then a top bar of Match, Loadout, Armory and Settings with your level badge at the right;
-  no key strip, every screen works by mouse and the keys still work; Practice is the last mode on the Match screen- Play screen: map and mode picture cards (a Dev tag on maps still being built), the match rows and a Your match panel
-  on one page; no map is loaded until Play (M15, M15b, G3)
-- Title screen, pause, match summary and result screens; the pause screen shows the match's seed for bug reports (M15,
+  no key strip, every screen works by mouse and the keys still work; Practice is the last mode on the Match screen- Match screen: map picture cards (a Dev tag on maps still being built), mode cards as text boxes with their sign, each map
+  offering only its own modes; Match and Teams on the left and House rules on the right, one line each, ruleset-set rules
+  locked as "set by Skirmish", unused rules hidden, one help line at the foot; Your match lists rules as chips with no map
+  picture; no map is loaded until Play (M15, M15b, G3, MR1)
+- Title screen with a Fullscreen button at the bottom left (it reads Exit fullscreen while in fullscreen) and the version at
+  the bottom right (MR1); pause, match summary and result screens; the pause screen shows the match's seed for bug reports (M15,
   M24, BP1, G3)
 - Replica, battery and gas bottle pictures on Loadout, Customise and Armory; Customise lists the parts down the left, Colour first, each option
-  a picture tile beside the replica and its numbers (G3, RM3)
+  a picture tile beside the replica and its numbers; a Back button, no Skins part; Colour offers the bold schemes and four
+  realistic colours (Black, Wolf Grey, Ranger Green, Tan) per replica (G3, RM3, MR1)
 - Error screen on a crash with the seed, a report, a note box, Reload, Copy Report and Report a Bug buttons; Play Again starts a new match with
   its own seed (FA1, IM7)
 - Settings groups: Graphics (quality presets with Custom option, frame-rate limit), Display (fullscreen, field of view,

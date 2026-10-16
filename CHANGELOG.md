@@ -4,6 +4,19 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 
 ## Unreleased
 
+### Added
+- **MR1** · Fullscreen button at the bottom left of the title screen; it reads Exit fullscreen while in fullscreen
+- **MR1** · Realistic colours in Customise: Black, Wolf Grey, Ranger Green and Tan for each replica, beside the bold schemes
+
+### Changed
+- **MR1** · Match, Loadout and Armory are smaller and tidier; the title screen shows its version at the bottom right
+- **MR1** · Match mode cards are text boxes with their sign; a map offers only the modes it hosts; your match lists its rules as chips
+- **MR1** · Match rules sit in two columns, one line each; rules set by the ruleset show locked as "set by Skirmish", unused rules are hidden
+- **MR1** · Loadout shows your two carried replicas side by side over your replicas; saved loadouts are a dropdown with Rename, Duplicate, New and Delete
+- **MR1** · Customise has a Back button, the LOADOUT breadcrumb is plain text and the Skins part is gone
+- **MR1** · Armory shows your level and XP with the next unlock beside them; every level is a column on a progress line that scrolls sideways
+- **MR1** · The top bar reads LVL for your level
+
 ### Internal
 - **Pipeline** · Code changes get critic, QA and performance review before a pull request is ready; CI fails it without passing verdicts
 
