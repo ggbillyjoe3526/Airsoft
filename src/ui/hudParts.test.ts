@@ -140,20 +140,20 @@ describe('the replica panel (G4 criterion 4)', () => {
     expect(status.textContent).not.toBe('Holstered');
   });
 
-  it('reads the spare BBs and how many magazines still hold any, written only when they change', () => {
+  it('reads the spare BBs (the bars say how many magazines hold any), written only when they change', () => {
     const { p, spare } = panel();
     const armament = createArmament(LOADOUT);
     const pouch = armament.ammo[0]!.pouch;
     p.update(armament, LOADOUT, 1 / 60);
     const bbs = pouch.reduce((a, b) => a + b, 0);
-    expect(spare.textContent).toBe(`/ ${bbs} · ${pouch.filter((m) => m > 0).length} spare`);
+    expect(spare.textContent).toBe(`/ ${bbs}`);
     const writes = spare.writes;
     for (let i = 0; i < 60; i++) p.update(armament, LOADOUT, 1 / 60);
     expect(spare.writes).toBe(writes);
     const first = pouch[0]!;
     pouch[0] = 0;
     p.update(armament, LOADOUT, 1 / 60);
-    expect(spare.textContent).toBe(`/ ${bbs - first} · ${pouch.filter((m) => m > 0).length} spare`);
+    expect(spare.textContent).toBe(`/ ${bbs - first}`);
     expect(spare.writes).toBe(writes + 1);
   });
 
@@ -327,6 +327,7 @@ describe('the HUD\'s words (config/hudText.ts)', () => {
     expect(HUD_TEXT.firstTo(7, 2)).toBe('First to 7, by 2');
     expect(HUD_TEXT.where('Depot', 2)).toBe('Depot · Round 2');
     expect(HUD_TEXT.where('Depot', 0)).toBe('Depot');
-    expect(HUD_TEXT.spare(120, 2)).toBe('/ 120 · 2 spare');
+    // The magazines that hold any are the bars under it (Dev 6 playtest item 25), so the line is the BBs alone.
+    expect(HUD_TEXT.spare(120)).toBe('/ 120');
   });
 });

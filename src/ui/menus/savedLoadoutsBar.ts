@@ -15,7 +15,7 @@ export interface SavedBarOptions {
 }
 
 /** A locked pick in words: what it is, why, and what plays instead. */
-export function missingText(m: MissingPick): string {
+function missingText(m: MissingPick): string {
   return SAVED_TEXT.missing(m.wanted.name, m.reason === 'dev', m.instead?.name ?? null, m.level);
 }
 

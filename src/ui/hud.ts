@@ -78,6 +78,11 @@ export class Hud {
     this.panel.setCounts(shown);
   }
 
+  /** The hop-up of the replica in hand (`replica`, `grams` BBs) was turned to `dial` (Dev 6 playtest item 15). */
+  showHop(replica: ReplicaConfig, dial: number, grams: number): void {
+    this.panel.showHop(replica, dial, grams);
+  }
+
   /** Shows `text` in the status line for `seconds` (unless a reload is under way). */
   showNotice(text: string, seconds: number): void {
     this.panel.showNotice(text, seconds);

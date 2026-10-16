@@ -21,7 +21,8 @@ choices to `src/game.ts`.
   `matchPanel.ts`, one line a rule in two columns with one help line at the foot, a rule the mode doesn't read hidden
   and one the ruleset sets shown locked with its value (MR1), with Your team (M98: Alpha or Beta, hidden for an
   Extraction run); and "Your match" from `playView.ts`, the rules as chips, whose rules text follows your team,
-  `rulesText.ts` › `sideText`);
+  `rulesText.ts` › `sideText`; `perfBars.ts` draws the Performance
+  sheet's rows for the Selected panel and Customise);
   `loadoutScreen.ts` with `customiseView.ts` (items still to unlock greyed with a lock and their level, and a line
   pointing to the Armory; `itemTile.ts`, `kitStrip.ts`) and `savedLoadoutsBar.ts` (the saved loadouts as a dropdown with Rename, Duplicate, New and Delete, SL1 and MR1; the
   Match screen picks one with `loadoutPicker.ts`, both on `contextMenu.ts`: built once, reused, listeners on the page
@@ -34,10 +35,13 @@ choices to `src/game.ts`.
   top bar and the key going back too, M95); `summaryScreen.ts` (the match's XP line by line, a level-up line with what
   it unlocked, the level bar, an Extraction haul);
   `resultScreen.ts`.
+- Shared parts: `menuParts.ts` (the small DOM builders every screen uses: buttons, rows, range controls, hint lines)
+  and `confirmDialog.ts` (the pop-up that asks before a big or irreversible step, keyboard on Cancel).
 - Pictures: replica, part and colour pictures come from `render/itemPictures.ts` via `menuPictures.ts`; map stills are
   files in `public/menu/`, made by `pipeline/map-stills.mjs` (`config/menuArt.ts`). The mode stills there are no
   longer shown (MR1). Customise's Colour tab offers the bold schemes and the four realistic colours
   (`config/schemes.ts` › `PaintId`), kept per replica.
+- Icons: `icons.ts`, the small line icons the menus, the mode cards and the hit feed use.
 - Choices are saved in the browser and read back by `savedChoices.ts` (`loadMatchStarted`: the title's Tutorial offer).
   Map, mode, difficulty and loadout are picked only on the Match screen, with no match loaded.
 - Styles: `menus.css` imports `css/` (one file per screen or concern; `css/match.css` is the Match rules panel); the typeface is Inter (`css/fonts.css`, `src/assets/fonts/`). Tuning:

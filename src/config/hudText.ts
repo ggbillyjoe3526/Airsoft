@@ -10,8 +10,18 @@ export const HUD_TEXT = {
   holstered: 'Holstered',
   /** Under the sight while the replica rests on cover (M104): steadier aim, lighter kick. */
   rested: 'Rested',
-  /** Under the loaded count: the BBs in the spare magazines and how many of them still hold any. */
-  spare: (bbs: number, mags: number) => `/ ${bbs} · ${mags} spare`,
+  /** Under the loaded count: the BBs in the spare magazines (how many magazines hold any, the bars show). */
+  spare: (bbs: number) => `/ ${bbs}`,
+  /**
+   * The hop-up readout on the replica panel while you turn the dial in play (Dev 6 playtest item 15, ui/hopGauge.ts):
+   * its label, and what the setting does to a level shot.
+   */
+  hop: {
+    label: 'Hop-up',
+    flatTo: (m: number) => `Flat to ${m} m`,
+    past: (m: number) => `Flat past ${m} m`,
+    floats: 'Too much · floats',
+  },
   /** Under the clock: what wins the match. */
   firstTo: (wins: number, by = 1) => (by > 1 ? `First to ${wins}, by ${by}` : `First to ${wins}`),
   /** Under the clock in Extraction (no round score): the run itself. */
@@ -32,6 +42,19 @@ export const HUD_TEXT = {
   playPrompt: 'Click to play · Esc for the menu',
   /** The pause menu's button, by what it skips to. */
   skipButton: { round: 'Skip to next round', result: 'Skip to the result' },
+  /**
+   * The stamp at a round's end (Dev 6 playtest item 33, ui/roundResult.ts): the word, the line under it, and how a click
+   * moves on. Set in capitals by the stylesheet.
+   */
+  result: {
+    won: 'Won',
+    lost: 'Lost',
+    draw: 'Draw',
+    round: (n: number) => `Round ${n}`,
+    match: 'Match',
+    nextRound: 'Click for the next round',
+    results: 'Click for the results',
+  },
   /** The practice range's pause menu (M93): the timed challenge's switch, by whether it is on. */
   challengeButton: { on: 'Timed challenge: On', off: 'Timed challenge: Off' },
 } as const;

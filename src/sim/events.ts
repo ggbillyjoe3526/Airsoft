@@ -22,6 +22,11 @@ export type GameEvent =
   /** The fire selector moved to `mode`. */
   | { type: 'fireMode'; characterId: number; replicaId: string; mode: FireMode }
   /**
+   * The hop-up dial of the replica in hand was turned (Dev 6 playtest item 15): it now reads `dial`; `moved` is false
+   * when it was already at the end of its range in that direction (the HUD still shows where it is).
+   */
+  | { type: 'hopUp'; characterId: number; replicaId: string; dial: number; moved: boolean }
+  /**
    * A BB hit level geometry; `ownerId` fired it. `bodyId` is set when it stopped on a body that couldn't be knocked out
    * (M85: already hit, a teammate with friendly fire off, a cease-fire, a grace): a soft knock on that body, no dust.
    * `leaves` is set when a bush's leaves stopped it (Dev 6 item 44, sim/leaves.ts): a rustle and leaves, no tick.

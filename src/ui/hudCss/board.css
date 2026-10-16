@@ -78,3 +78,17 @@
 .match-board-tip[hidden] {
   display: none;
 }
+
+/* A round's end (Dev 6 playtest item 33): "Click for the next round" (or the results) at the table's foot. */
+.match-board-next {
+  margin: 12px 0 0;
+  font: 700 15px/1.2 var(--ui-font);
+  letter-spacing: var(--ls-caps);
+  text-align: center;
+  text-transform: uppercase;
+  color: var(--paper);
+}
+
+.match-board-next[hidden] {
+  display: none;
+}

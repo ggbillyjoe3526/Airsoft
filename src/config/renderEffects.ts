@@ -74,17 +74,18 @@ export const IMPACT_PUFFS: PuffConfig = {
   growTime: 0.06,
   /** Half size at once, so a close-range hit shows a puff on its first frame rather than a near-empty one (M28). */
   startScale: 0.5,
-  radius: 0.06,
+  /** About a BB's own knock, not a cloud (Dev 6 playtest item 24: 0.06 read as kicked-up dirt). */
+  radius: 0.035,
   /**
-   * Never smaller than this on screen (radians of view; 0.013 ≈ 20 px wide at 1080p), so a puff reads
-   * at 20 m and isn't hidden inside the crosshair's centre gap.
+   * Never smaller than this on screen (radians of view; 0.008 ≈ 12 px wide at 1080p), so a puff still says where a
+   * BB landed at 20 m, small enough to stay a speck (it was 0.013, about 20 px, before Dev 6 playtest item 24).
    */
-  minAngularRadius: 0.013,
-  /** Bright warm dust, strong enough to stand out on grey concrete and dark wood (each material tints it, IMPACT_DUST). */
+  minAngularRadius: 0.008,
+  /** Pale warm dust, a touch see-through so it reads on grey concrete and dark wood without a bloom (IMPACT_DUST tints it). */
   color: 0xfff1c9,
-  opacity: 0.8,
+  opacity: 0.6,
   /** Upward drift while fading (m/s). */
-  drift: 0.15,
+  drift: 0.1,
 };
 
 /**
@@ -104,9 +105,10 @@ export const IMPACT_DUST: Readonly<Record<ImpactMaterial, { tint: number; scale:
 
 /**
  * A run into a noisy prop (NP1, config/noise.ts): a puff of dust knocked off it where it was hit, in its material's dust
- * (IMPACT_DUST) and this many times a BB's puff, so the knock shows from across the yard. Dust, never debris.
+ * (IMPACT_DUST) and this many times a BB's puff (7 × 0.035 m, the size it had before the BB's puff was toned down), so
+ * the knock shows from across the yard. Dust, never debris.
  */
-export const PROP_BUMP_DUST = { scale: 4 };
+export const PROP_BUMP_DUST = { scale: 7 };
 
 /**
  * Impact grit (QualitySettings.impactGrit, FA8): with each impact puff, a fainter, wider ring of dust (IMPACT_RINGS) and
@@ -116,11 +118,12 @@ export const PROP_BUMP_DUST = { scale: 4 };
  */
 export const IMPACT_GRIT = {
   max: 256,
-  perImpact: [4, 6] as const,
-  speed: [2, 4] as const,
+  /** A few crumbs, not a spray (Dev 6 playtest item 24: it was 4 to 6 chips at 2 to 4 m/s). */
+  perImpact: [2, 3] as const,
+  speed: [1.2, 2.4] as const,
   gravity: 9.8,
   lifetime: 0.35,
-  size: [0.006, 0.012] as const,
+  size: [0.005, 0.009] as const,
   minAngularSize: 0.0016,
   /** Thrown out towards the side the BB came from (its shooter's): this much of the direction, the rest random and up. */
   toward: 0.6,
@@ -170,10 +173,11 @@ export const IMPACT_RINGS: PuffConfig = {
   lifetime: 0.5,
   growTime: 0.12,
   startScale: 0.4,
-  radius: IMPACT_PUFFS.radius * 1.8,
-  minAngularRadius: IMPACT_PUFFS.minAngularRadius * 1.8,
-  opacity: 0.25,
-  drift: 0.08,
+  radius: IMPACT_PUFFS.radius * 1.6,
+  minAngularRadius: IMPACT_PUFFS.minAngularRadius * 1.6,
+  /** Barely there: a haze round the puff, not a second cloud (Dev 6 playtest item 24; it was 0.25). */
+  opacity: 0.12,
+  drift: 0.06,
 };
 
 /**

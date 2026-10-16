@@ -62,6 +62,8 @@ export interface VaultPresses {
   toggleTorch: number;
   /** The last teammate asked to catch a magazine (-1 none). */
   tossMag: number;
+  /** Hop-up notches turned (HD1), summed. */
+  hopUpSteps: number;
 }
 
 export function createVaultState(): VaultState {
@@ -80,7 +82,7 @@ export function createVaultState(): VaultState {
     speed: 0,
     riseEnd: 0,
     end: 0,
-    held: { any: false, reload: false, switchTo: -1, holster: false, cycleFireMode: 0, toggleTorch: 0, tossMag: -1 },
+    held: { any: false, reload: false, switchTo: -1, holster: false, cycleFireMode: 0, toggleTorch: 0, tossMag: -1, hopUpSteps: 0 },
   };
 }
 
@@ -107,6 +109,10 @@ export function vaultingCommand(c: Character, cmd: Readonly<PlayerCommand>, out:
   }
   if (cmd.tossMag >= 0) {
     h.tossMag = cmd.tossMag;
+    h.any = true;
+  }
+  if (cmd.hopUpSteps !== 0) {
+    h.hopUpSteps += cmd.hopUpSteps;
     h.any = true;
   }
   out.yaw = cmd.yaw;
@@ -137,8 +143,10 @@ export function withVaultPresses(v: VaultState, cmd: PlayerCommand, out: PlayerC
     h.toggleTorch--;
   }
   if (h.tossMag >= 0 && out.tossMag < 0) out.tossMag = h.tossMag;
+  out.hopUpSteps += h.hopUpSteps;
   h.reload = h.holster = false;
   h.switchTo = h.tossMag = -1;
+  h.hopUpSteps = 0;
   h.any = h.cycleFireMode > 0 || h.toggleTorch > 0;
   return out;
 }
@@ -147,7 +155,7 @@ export function withVaultPresses(v: VaultState, cmd: PlayerCommand, out: PlayerC
 function dropVaultPresses(h: VaultPresses): void {
   h.any = h.reload = h.holster = false;
   h.switchTo = h.tossMag = -1;
-  h.cycleFireMode = h.toggleTorch = 0;
+  h.cycleFireMode = h.toggleTorch = h.hopUpSteps = 0;
 }
 
 /** The gap the planned path keeps from the obstacle's faces: the controller's skin and a hair more. */

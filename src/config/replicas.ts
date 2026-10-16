@@ -117,7 +117,10 @@ export interface ReplicaLook {
  * `base` (the built-in numbers) with the performance numbers stats.md gives its key (M29), and the energy limit of the
  * class it names. The built-in numbers are only used where the file can't be read.
  */
-export function withStats(base: Omit<ReplicaConfig, 'energyLimit'>, stats: StatsFile = GAME_STATS): ReplicaConfig {
+/** A replica as the code defines it: everything but the energy limit, which the site class's row in stats.md gives. */
+export type BuiltInReplica = Omit<ReplicaConfig, 'energyLimit'>;
+
+export function withStats(base: BuiltInReplica, stats: StatsFile = GAME_STATS): ReplicaConfig {
   const { siteClass: builtInClass, ...rest } = base;
   const { siteClass = builtInClass, ...numbers } = stats.replicas[base.id] ?? {};
   const energyLimit = stats.siteLimits[siteClass] ?? DEFAULT_SITE_LIMITS[siteClass] ?? Number.POSITIVE_INFINITY;
@@ -128,7 +131,7 @@ export function withStats(base: Omit<ReplicaConfig, 'energyLimit'>, stats: Stats
  * Electric rifle (AR pattern): single, burst and full auto, medium range, medium magazine. The numbers below are the
  * built-in ones; stats.md's are what the game uses (withStats).
  */
-export const AEG: ReplicaConfig = withStats({
+const AEG_BUILT_IN: BuiltInReplica = {
   id: 'aeg',
   name: 'AEG Rifle',
   power: 'electric',
@@ -163,13 +166,14 @@ export const AEG: ReplicaConfig = withStats({
     // post stands on its shorter handguard, nearer the eye; at equal heights that leaves the hold the same.
     ironSight: { rear: [0.088, 0.0693], front: [0.088, -0.4875], eyeRelief: 0.16 },
   },
-});
+};
+export const AEG: ReplicaConfig = withStats(AEG_BUILT_IN);
 
 /**
  * GBB Pistol (the gas pistol, a blowback replica since RM7: the owner's redesign, 2026-10-12, same numbers): semi auto,
  * shorter range, quick to handle, small magazine. Built-in numbers; stats.md's win (withStats).
  */
-export const GAS_PISTOL: ReplicaConfig = withStats({
+const GAS_PISTOL_BUILT_IN: BuiltInReplica = {
   id: 'pistol',
   name: 'GBB Pistol',
   power: 'gas',
@@ -198,7 +202,8 @@ export const GAS_PISTOL: ReplicaConfig = withStats({
     // file marks the same two points), the pistol held out at arm's length.
     ironSight: { rear: [0.0323, 0.079], front: [0.032, -0.0896], eyeRelief: 0.36 },
   },
-});
+};
+export const GAS_PISTOL: ReplicaConfig = withStats(GAS_PISTOL_BUILT_IN);
 
 /**
  * Cyber Pistol (M32, owner's design 2026-10-04): an electric pistol with a battery built in, the reward at the level
@@ -206,7 +211,7 @@ export const GAS_PISTOL: ReplicaConfig = withStats({
  * parts fit it. Its spec, as stats.md has it: 1.0 J, 14 BBs/s, 0.30° spread, 1.1 s reload, 0.28 s draw (LV1 folded in
  * the Legendary bonus it used to come with, so it plays as it did).
  */
-export const CYBER_PISTOL: ReplicaConfig = withStats({
+const CYBER_PISTOL_BUILT_IN: BuiltInReplica = {
   id: 'cyber',
   name: 'Cyber Pistol',
   power: 'electric',
@@ -238,7 +243,14 @@ export const CYBER_PISTOL: ReplicaConfig = withStats({
     // Small, low sights (the owner, 12 Oct 2026): a notch at the back of the rear housing, a post on the front block.
     ironSight: { rear: [0.04, 0.0768], front: [0.04, -0.1038], eyeRelief: 0.33 },
   },
-});
+};
+export const CYBER_PISTOL: ReplicaConfig = withStats(CYBER_PISTOL_BUILT_IN);
+
+/**
+ * The built-in numbers as written above, for the test that keeps them equal to stats.md's rows (DX0): the file is what
+ * plays, so a reader of either must see the same number.
+ */
+export const BUILT_IN_REPLICAS: readonly BuiltInReplica[] = [AEG_BUILT_IN, GAS_PISTOL_BUILT_IN, CYBER_PISTOL_BUILT_IN];
 
 /** The hop-up dial the player turns before a match (0..1 of a replica's hopUpMax), shown as a percentage. */
 export const HOP_UP = {

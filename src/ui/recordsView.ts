@@ -1,5 +1,5 @@
 import { DIFFICULTIES, type Difficulty } from '../config/bots';
-import { standardMatchText } from '../config/matchRules';
+import { DEFAULT_RULESET, recordsKeyOf, rulesetOf, type RulesetId, standardMatchText } from '../config/matchRules';
 import { isAvailable } from '../config/content';
 import { HAUL_TEXT } from '../config/menus';
 import { MATCH_MODES, type MatchMode } from '../config/modes';
@@ -8,6 +8,8 @@ import { formatTime } from './statsRows';
 
 /** How the records read on the summary screen: a wins and losses grid, then the bests. Pure, so it's tested without a page. */
 export interface RecordsView {
+  /** The grid's corner heading: "Your records", or a named ruleset's ("Your Tournament records", M39). */
+  title: string;
   /** Column headings: the modes. */
   modes: string[];
   /** A row per difficulty: its label and a cell per mode ("3 W · 1 L", or "–" before a match). */
@@ -26,29 +28,53 @@ export const DEV_CONTENT_NOT_RECORDED = "This match used content still being bui
  */
 export type NotCounted = '' | 'rules' | 'dev' | 'devContent';
 
-/** The line over the records after a match that didn't count. */
-function notCountedLine(why: NotCounted): string {
+/**
+ * The line over the records after a match that didn't count. Custom rules quote the standard match of the ruleset the
+ * grid shows (`shown`: a named ruleset's own, M39, or Skirmish's).
+ */
+function notCountedLine(why: NotCounted, shown: RulesetId): string {
   if (why === 'dev') return "Dev settings changed how this match played, so it isn't in your records.";
   if (why === 'devContent') return DEV_CONTENT_NOT_RECORDED;
-  return `Custom rules, so this match isn't in your records. They count the standard match: ${standardMatchText()}`;
+  const named = shown === DEFAULT_RULESET ? '' : `${rulesetOf(shown).label} `;
+  return `Custom rules, so this match isn't in your ${named}records. They count the standard match: ${standardMatchText(shown)}`;
+}
+
+/**
+ * The ruleset whose cells the summary's grid shows after a match of `ruleset` in `mode`: a named ruleset's own (M39);
+ * Skirmish's after Skirmish, after Custom (which has none) and after an Extraction run, which always files under the
+ * plain cells (MatchSession's result).
+ */
+export function recordsRulesetShown(ruleset: RulesetId, mode: MatchMode): RulesetId {
+  return mode === 'extraction' || !recordsKeyOf(ruleset) ? DEFAULT_RULESET : ruleset;
 }
 
 /**
  * The records, with the match just played (`difficulty`, `mode`) marked and `news` flagging the bests it beat. A match
- * that didn't count (`notCounted` says why) marks nothing and says why instead.
+ * that didn't count (`notCounted` says why) marks nothing and says why instead. After a named ruleset's match (M39) the
+ * grid shows that ruleset's cells and quotes its standard match (recordsRulesetShown).
  */
-export function recordsView(records: Records, news: RecordNews, difficulty: Difficulty, mode: MatchMode, notCounted: NotCounted = ''): RecordsView {
+export function recordsView(
+  records: Records,
+  news: RecordNews,
+  difficulty: Difficulty,
+  mode: MatchMode,
+  notCounted: NotCounted = '',
+  ruleset: RulesetId = DEFAULT_RULESET,
+): RecordsView {
   const counted = notCounted === '';
   if (!counted) news = noNews();
   const modes = MATCH_MODES.filter((m) => isAvailable(m.tag, false));
+  const shown = recordsRulesetShown(ruleset, mode);
+  const cellsOf = recordsKeyOf(shown) ?? '';
   return {
+    title: shown === DEFAULT_RULESET ? 'Your records' : `Your ${rulesetOf(shown).label} records`,
     modes: modes.map((m) => m.label),
     // A dev level (Pro, M36) or mode (Extraction, M43) never enters the records (M35), so its row or column would stay
     // empty: only public ones get one.
     rows: DIFFICULTIES.filter((d) => isAvailable(d.tag, false)).map((d) => ({
       label: d.label,
       cells: modes.map((m) => {
-        const wl = records.results[resultKey(d.id, m.id)];
+        const wl = records.results[resultKey(d.id, m.id, cellsOf)];
         return { text: wl ? `${wl.wins} W · ${wl.losses} L` : '–', current: counted && d.id === difficulty && m.id === mode };
       }),
     })),
@@ -62,7 +88,7 @@ export function recordsView(records: Records, news: RecordNews, difficulty: Diff
       // Extraction's (M47), with its column: never while the mode is dev content, whose runs aren't recorded.
       ...(modes.some((m) => m.id === 'extraction') ? extractionBests(records, news) : []),
     ],
-    notCounted: counted ? '' : notCountedLine(notCounted),
+    notCounted: counted ? '' : notCountedLine(notCounted, shown),
   };
 }
 

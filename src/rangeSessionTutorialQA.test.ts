@@ -3,6 +3,7 @@ import { TUTORIAL, TUTORIAL_STEPS } from './config/tutorial';
 import { LOADOUT } from './config/replicas';
 import { EventLog } from './core/eventLog';
 import { RangeSession } from './rangeSession';
+import { createBBPool } from './sim/ballistics';
 import { createCharacter } from './sim/character';
 import { createChallenge } from './sim/rangeChallenge';
 import { createRangeTargets } from './sim/rangeTargets';
@@ -29,7 +30,7 @@ function bare(from?: number | string) {
     combat: { afterTick: vi.fn() },
     targets: { afterTick: vi.fn() },
     eventLog: new EventLog(),
-    state: { tick: 0, events: [], targets: createRangeTargets() },
+    state: { tick: 0, events: [], targets: createRangeTargets(), bbs: createBBPool(4) },
     player,
     tutorialView: { dt: DT, player, events: [], targets: [] },
     playing: true,

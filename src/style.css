@@ -773,6 +773,28 @@ kbd {
   opacity: calc(0.9 * var(--hud-l3));
 }
 
+/* Pinned to the edge (KI1): a small arrow beside the icon, in its colour, pointing the way to turn (--towards, set by
+   ui/flagMarker.ts from the marker's direction off the middle of the screen). */
+.flag-marker-arrow {
+  display: none;
+  position: absolute;
+  left: 50%;
+  top: calc(8px * var(--hud-scale, 1));
+  width: 0;
+  height: 0;
+  margin-top: calc(-5px * var(--hud-scale, 1));
+  border-top: calc(5px * var(--hud-scale, 1)) solid transparent;
+  border-bottom: calc(5px * var(--hud-scale, 1)) solid transparent;
+  border-left: calc(8px * var(--hud-scale, 1)) solid var(--flag);
+  transform-origin: 0 50%;
+  transform: rotate(var(--towards, 0deg)) translateX(calc(14px * var(--hud-scale, 1)));
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6));
+}
+
+.flag-marker.edge .flag-marker-arrow {
+  display: block;
+}
+
 /* Extraction's exit markers (M43): the flag marker's frame with a door icon in the exit's green. */
 .flag-marker.exit-marker .flag-marker-icon {
   width: calc(12px * var(--hud-scale, 1));
@@ -887,7 +909,10 @@ kbd {
   display: none;
 }
 
-/* The order wheel (M23): the orders round the middle of the screen while its key is held */
+/* The order wheel (M23; a ring since Dev 6 playtest item 22): while its key is held, a ring of equal slices round the
+   middle of the screen, one per order, its name and direct key on it in a box the same size for each; the slice pointed
+   at fills with your team's colour (and its words turn dark: not colour alone), the order in force is underlined, and
+   the line under the ring says how to give it (ui/orderWheel.ts). */
 .order-wheel {
   position: absolute;
   left: 50%;
@@ -906,42 +931,82 @@ kbd {
   display: none;
 }
 
-.order-wheel::before {
-  content: '';
+.order-wheel-slice {
   position: absolute;
-  left: calc(-1 * var(--wheel-radius) - 70px);
-  top: calc(-1 * var(--wheel-radius) - 70px);
-  width: calc(2 * var(--wheel-radius) + 140px);
-  height: calc(2 * var(--wheel-radius) + 140px);
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(10, 12, 16, 0.55) 55%, transparent 72%);
+  left: calc(-1 * var(--wheel-outer));
+  top: calc(-1 * var(--wheel-outer));
+  line-height: 0;
 }
 
+.order-wheel-slice path {
+  fill: var(--hud-panel-solid);
+  stroke: rgb(255 255 255 / 0.1);
+  stroke-width: 1;
+  transition: fill var(--t-fast) var(--ease);
+}
+
+.order-wheel-slice.picked path {
+  fill: var(--team);
+  stroke: var(--hud-fg);
+  stroke-width: 1.5;
+}
+
+/* The dead middle: a ring that says "point out of here". */
+.order-wheel-hub {
+  position: absolute;
+  left: -24px;
+  top: -24px;
+  width: 48px;
+  height: 48px;
+  border: 1px solid rgb(255 255 255 / 0.25);
+  border-radius: 50%;
+}
+
+/* Every order's words in the same box, centred on its slice. */
 .order-wheel-item {
   position: absolute;
   left: 0;
   top: 0;
   translate: calc(var(--x) - 50%) calc(var(--y) - 50%);
-  min-width: 104px;
-  padding: 8px 12px;
-  border: 2px solid rgba(255, 255, 255, 0.25);
-  border-radius: var(--hud-radius);
-  background: rgba(16, 18, 22, 0.8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 112px;
+  height: 52px;
   font-size: var(--fs-md);
   font-weight: 700;
+  line-height: 1.1;
   letter-spacing: var(--ls-caps);
   text-align: center;
-  white-space: nowrap;
+  text-transform: uppercase;
 }
 
-/* The order your teammates carry out now: an underline in your team's colour */
+.order-wheel-label {
+  padding-bottom: 2px;
+}
+
 /* An order's own key under its name (audit UI-22). */
 .order-wheel-key {
   display: block;
   width: fit-content;
-  margin: 5px auto 0;
   font-family: var(--ui-font);
   font-size: var(--fs-2xs);
+}
+
+/* The order your teammates carry out now: an underline in your team's colour. */
+.order-wheel-item.current .order-wheel-label {
+  box-shadow: inset 0 -2px 0 var(--team);
+}
+
+/* The order pointed at: dark words on your team's colour. */
+.order-wheel-item.picked {
+  color: var(--ink);
+}
+
+.order-wheel-item.picked .order-wheel-label {
+  box-shadow: inset 0 -2px 0 var(--ink);
 }
 
 .order-wheel-item.picked .order-wheel-key {
@@ -950,30 +1015,25 @@ kbd {
   background: rgba(16, 20, 26, 0.75);
 }
 
-.order-wheel-item.current {
-  box-shadow: inset 0 -3px 0 var(--team);
-}
-
-/* The order pointed at: lit in your team's colour and a little bigger (not colour alone) */
-.order-wheel-item.picked {
-  border-color: var(--hud-fg);
-  background: var(--team);
-  color: var(--ink);
-  scale: 1.08;
-}
-
+/* How to give the order, under the ring. */
 .order-wheel-hint {
   position: absolute;
   left: 0;
-  top: 26px;
+  top: calc(var(--wheel-outer) + 14px);
   translate: -50% 0;
-  width: 170px;
+  width: max-content;
+  max-width: 320px;
+  padding: 4px 12px;
+  border-radius: 4px;
+  background: var(--hud-panel);
   text-align: center;
   font-size: var(--fs-md);
   font-weight: 600;
   letter-spacing: var(--ls-caps);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-  opacity: 0.85;
+}
+
+.order-wheel-hint:empty {
+  display: none;
 }
 
 .order-wheel-pointer {
@@ -1079,6 +1139,8 @@ kbd {
   position: absolute;
   left: 0;
   top: 0;
+  /* Placed by ui/botIntentLabels.ts through --x and --y (kept strings: nothing allocated per move, KI1). */
+  transform: translate(var(--x, 0), var(--y, 0));
   display: flex;
   gap: 0.35em;
   translate: -50% -100%;

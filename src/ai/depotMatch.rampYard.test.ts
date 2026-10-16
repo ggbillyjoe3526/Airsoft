@@ -35,13 +35,21 @@ describe('a 3v3 bot match on the Ramp Yard', () => {
     // along an edge), so squadOrders.test.ts's pit case is the regression guard for that.
     // Measured 2026-10-04 (seeds 1-3, 60 s, after the bug pass put follow spots along the ramp rather than at the
     // leader): within a few metres of the leader all the time, at worst about 6.1 m behind, never in the air.
+    let allCounted = 0;
+    let allStanding = 0;
     for (const seed of [1, 2, 3]) {
-      const { stats, counted, near, worst } = playFollowMatch(60, seed, RAMP_YARD);
+      const { stats, counted, near, worst, standing } = playFollowMatch(60, seed, RAMP_YARD);
+      allCounted += counted;
+      allStanding += standing;
       expect(counted, `seed ${seed}`).toBeGreaterThan(500);
       expect(near / counted, `seed ${seed}`).toBeGreaterThan(0.9);
       expect(worst, `seed ${seed}`).toBeLessThan(SQUAD_ORDERS.catchUp);
       expect(stats.maxAliveY, `seed ${seed}`).toBeGreaterThan(1); // someone went up on the platform
       expectGrounded(stats, RAMP_YARD);
     }
+    // Standing still while the leader moves, judged over the seeds together as on Depot (depotMatch.test.ts, the same
+    // 3 % limit). Measured 2026-10-16 (KI1, KNOWN_ISSUES audit M-08 row): seeds 1-3 0.12 / 2.86 / 1.30 %, 1.58 %
+    // together; seeds 4-6 0.55 / 1.02 / 1.42 %.
+    expect(allStanding / allCounted).toBeLessThan(0.03);
   });
 });

@@ -294,10 +294,11 @@ below. 0.1.0 opens Early Access (owner, 2026-10-12): feature complete, but light
   `Settings › Dev › Disable levelling` unlocks everything. The starting kit (AEG Rifle, GBB Pistol, Standard Battery,
   Green Gas) is a full loadout, and BBs are always free.
 
-## Beta: finishing 0.1 (not scheduled yet)
+## Beta: finishing 0.1
 
-Beta adds no features (owner, 2026-10-06). It starts once he calls the game feature complete, and is for bug fixes,
-QoL, balance, refinement and polish. Its likely work, collected here so the Dev builds stay focused:
+Beta adds no features (owner, 2026-10-06). It began on 2026-10-16, when he called the game out of Dev, and is for bug
+fixes, QoL, balance, refinement and polish; its task blocks are in `docs/TASKS.md`. The work collected here before it
+began:
 
 - **Optimisation.** Profile, then fix. The "can wait" performance items in `docs/KNOWN_ISSUES.md` land here. The
   targets (owner, 2026-10-16): Low holds 60 FPS on modern low-powered hardware, and maxed-out settings aim at a PC built

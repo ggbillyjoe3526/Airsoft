@@ -107,6 +107,11 @@ export class Sfx {
   private ambience: GainNode | null = null;
   /** The ambience's looping sources (its beds' copies, the fires' crackle), once play has started (audit CORE-34). */
   private readonly bed: AudioBufferSourceNode[] = [];
+  /**
+   * Each camp fire's muffling (KI1): a low-pass and level after its panner, set like a character's channel by the
+   * occlusion rays once per tick while the fire is within earshot (FIRE_SOUND.maxDistance). `share` -1 before the first.
+   */
+  private readonly fireMuffles: { at: Vec3; filter: BiquadFilterNode; gain: GainNode; share: number }[] = [];
   /** Where the match is played (M33j): the field's ambience by day or night, the ground underfoot, its fires. */
   private scene: Soundscape = YARD_BY_DAY;
   /** The ambience's calls (birds by day, an owl in the woods at night, M86's others), each kind timed on its own. */
@@ -356,6 +361,10 @@ export class Sfx {
       case 'fireMode':
         this.playFrom(e.characterId, localId, characterOf, 'selector', L.mechanism);
         return;
+      // The hop-up dial turned a notch (Dev 6 playtest item 15): the selector's small click; nothing at the end of its range.
+      case 'hopUp':
+        if (e.moved) this.playFrom(e.characterId, localId, characterOf, 'selector', L.mechanism);
+        return;
       case 'torch':
         this.playFrom(e.characterId, localId, characterOf, 'torchClick', L.mechanism);
         return;
@@ -581,6 +590,7 @@ export class Sfx {
     this.whistle?.stopAll();
     for (const src of this.bed.splice(0)) src.stop();
     for (const node of this.graph.splice(0)) node.disconnect();
+    this.fireMuffles.length = 0;
     this.outlets.length = 0;
     for (const ch of this.channels.values()) {
       ch.panner.disconnect();
@@ -771,6 +781,21 @@ export class Sfx {
       }
       ch.share = share;
     }
+    // The camp fires (KI1), within earshot only: beyond it they're silent, and keep what they had.
+    for (const f of this.fireMuffles) {
+      if (this.distanceTo(f.at) > FIRE_SOUND.maxDistance) continue;
+      const share = blockedShare(this.query, this.listener, f.at);
+      if (share === f.share) continue;
+      muffleFor(share, this.muffle);
+      if (f.share < 0) {
+        f.filter.frequency.value = this.muffle.hz;
+        f.gain.gain.value = this.muffle.gain;
+      } else {
+        f.filter.frequency.setTargetAtTime(this.muffle.hz, t, AUDIO.occlusion.smoothing);
+        f.gain.gain.setTargetAtTime(this.muffle.gain, t, AUDIO.occlusion.smoothing);
+      }
+      f.share = share;
+    }
   }
 
   /**
@@ -844,8 +869,14 @@ export class Sfx {
     const src = ctx.createBufferSource();
     src.buffer = buffer;
     src.loop = true;
-    src.connect(level).connect(panner).connect(this.ambience!);
-    this.graph.push(src, level, panner);
+    // Muffled by a wall or the cabin between you and it, as a character is (KI1: updateMuffling).
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = AUDIO.occlusion.openHz;
+    const gain = ctx.createGain();
+    src.connect(level).connect(panner).connect(filter).connect(gain).connect(this.ambience!);
+    this.graph.push(src, level, panner, filter, gain);
+    this.fireMuffles.push({ at, filter, gain, share: -1 });
     src.start(ctx.currentTime, ((i * GOLDEN) % 1) * buffer.duration);
     this.bed.push(src);
   }

@@ -28,6 +28,19 @@ describe('Keyboard (audit L-27)', () => {
     expect(keyboard.isDown('reload')).toBe(false);
   });
 
+  it('counts every press within a frame, auto-repeats excepted (KI1)', () => {
+    const { keyboard, key } = setup();
+    expect(keyboard.pressCount('reload')).toBe(0);
+    key('keydown', 'KeyR');
+    key('keydown', 'KeyR', true);
+    key('keyup', 'KeyR');
+    key('keydown', 'KeyR');
+    keyboard.press('KeyR');
+    expect(keyboard.pressCount('reload')).toBe(3);
+    keyboard.endFrame();
+    expect(keyboard.pressCount('reload')).toBe(0);
+  });
+
   it('ignores the auto-repeat of a held key: it is not a new press', () => {
     const { keyboard, key } = setup();
     key('keydown', 'KeyR');
@@ -83,5 +96,18 @@ describe('Keyboard (audit L-27)', () => {
     keyboard.dispose();
     key('keydown', 'KeyR');
     expect(keyboard.isDown('reload')).toBe(false);
+  });
+});
+
+describe('Keyboard.pressCount: QA edge cases (KI1)', () => {
+  it('adds up presses of every key bound to the action, and clears them at the end of the frame', () => {
+    const { keyboard, key } = setup();
+    key('keydown', 'KeyR');
+    key('keyup', 'KeyR');
+    key('keydown', 'KeyR');
+    expect(keyboard.pressCount('reload')).toBe(2);
+    keyboard.endFrame();
+    expect(keyboard.wasPressed('reload')).toBe(false);
+    expect(keyboard.pressCount('reload')).toBe(0);
   });
 });

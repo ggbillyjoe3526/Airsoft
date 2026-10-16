@@ -136,6 +136,7 @@ export function fillEliminatedCommand(c: Character, cfg: HitConfig, out: PlayerC
   out.lean = 0;
   out.aim = false;
   out.cycleFireMode = false;
+  out.hopUpSteps = 0;
   out.toggleTorch = false;
   out.tossMag = -1;
   out.yaw = c.yaw;

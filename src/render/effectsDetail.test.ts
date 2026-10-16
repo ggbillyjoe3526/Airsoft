@@ -65,10 +65,11 @@ describe('impact grit (FA8, QualitySettings.impactGrit)', () => {
     bot.crouchAmount = 1;
     expect(shooterSide(characters, 3, eye, out).y).toBeCloseTo(FIGURE.shoulderHeight - FIGURE.crouchDrop, 6);
     expect(shooterSide(characters, -1, eye, out)).toEqual(eye); // no character fired it
-    // A bot to the right of the camera: its BB's chips go right, not at the camera.
+    // A bot to the right of the camera: its BB's chips go right, not at the camera. A few impacts, so the majority
+    // means something with two or three chips each (Dev 6 playtest item 24).
     const grit = new ImpactGrit();
     grit.setEnabled(true);
-    grit.spawn(at, tint, shooterSide(characters, 3, eye, out));
+    for (let k = 0; k < 4; k++) grit.spawn(at, tint, shooterSide(characters, 3, eye, out));
     grit.update(1 / 60, camera);
     const m = new THREE.Matrix4();
     const p = new THREE.Vector3();

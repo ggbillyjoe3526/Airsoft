@@ -134,6 +134,17 @@ describe('the Armory: the next unlock and the level track (LV1)', () => {
     expect(a.count()).toBe('9 / 19 unlocked');
   });
 
+  it('draws an item you already have as yours on a locked level (levels.md moved it up, KI1)', () => {
+    const p = playerAt(0);
+    p.unlocked.push(GAME_POOL.assets.find((x) => x.name === 'Silencer')!.id);
+    const rows = armory({ progress: () => p }).rows();
+    const row = rows.find((r) => itemNames(r).includes('Silencer'))!;
+    expect(row.dataset.state).toBe('locked');
+    const cards = row.querySelectorAll('.armory-item');
+    expect(cards.map((c) => [one(c, '.item-name').text, c.dataset.owned !== undefined])).toEqual(itemNames(row).map((n) => [n, n === 'Silencer']));
+    expect(rows[1]!.querySelectorAll('.armory-item').map((c) => c.dataset.owned)).toEqual([undefined]);
+  });
+
   it('shows the Weapon Torch (dev) in the starting kit only with Dev content on, and counts it then', () => {
     expect(itemNames(armory().rows()[0]!)).not.toContain('Weapon Torch');
     const dev = armory({ devContent: true });

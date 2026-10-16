@@ -16,7 +16,7 @@ import { createGameState } from '../sim/state';
 import { DEPOT } from '../map/depot';
 import { RAMP_YARD } from '../map/testYard';
 import type { MapData } from '../map/mapTypes';
-import { buildNavGrid, clearLine, dropOnLine, floorAt, isWalkableAt, type NavGrid } from '../nav/navGrid';
+import { buildNavGrid, clearLine, dropOnLine, floorAt, isWalkableAt, nearestWalkable, type NavGrid, nodeX, nodeZ } from '../nav/navGrid';
 import { OPEN_FIELD, OPEN_NAV } from '../sim/testSupport';
 import { vec3, wrapAngle } from '../sim/vec';
 import { BotController } from './botController';
@@ -188,7 +188,9 @@ describe('squad orders (M22)', () => {
       for (const n of r.longestStand) expect(n, pace).toBeLessThanOrEqual(6); // never a stop-and-go
       for (const d of r.meanBehind) {
         expect(d, pace).toBeGreaterThan(SQUAD_ORDERS.followDistance - 1);
-        expect(d, pace).toBeLessThan(SQUAD_ORDERS.followDistance + SQUAD_ORDERS.catchUpGap + 1);
+        // On average within arriving distance of its spot (KI1: was followDistance + catchUpGap + 1, 5.7 m; measured
+        // 2026-10-16: walk 3.62 / 3.22, run 3.30 / 3.59, sprint 3.13 / 2.72 m).
+        expect(d, pace).toBeLessThan(SQUAD_ORDERS.followDistance + SQUAD_ORDERS.followArrive);
       }
       // Sprinting along with you: on once, and off no more than once or twice, even as you weave.
       if (pace === 'sprint') for (const f of [...r.flips, ...followAlong('sprint', 7, true).flips]) expect(f).toBeLessThanOrEqual(3);
@@ -466,6 +468,42 @@ describe('squad orders (M22)', () => {
       }
     }
     expect(snapped, 'the lip is inside the margin the nav grid keeps from the drop').toBeGreaterThan(0);
+  });
+
+  it('follow me at the foot of a ramp, inside the margin: spots measured from the ground beside you, not on you (the lip fallback\'s ramp branch)', () => {
+    // Ramp Yard's ramps run 2 m from the ground up to the platform (x 6 to 8 either side), 3 m wide, their sides open.
+    // At a foot corner you can stand more than a step up the slope, inside the margin, with the nearest walkable cell on
+    // the ground beside you and no drop between: the spots are measured from that cell (the lip test's fallback, that
+    // keeps them on you, is for a drop).
+    const nav = buildNavGrid(RAMP_YARD, NAV);
+    const w = { nav } as unknown as BotWorld;
+    const leader = createCharacter(0, vec3(), EAST, LOADOUT, 0);
+    leader.grounded = true;
+    let corners = 0;
+    for (let i = 0; i <= 40; i++) for (let j = 0; j <= 80; j++) for (const side of [-1, 1]) {
+      const x = side * (7.2 + i * 0.025);
+      const z = -2 + j * 0.05;
+      const y = floorAt(nav, x, 0.5, z);
+      if (!(y > nav.maxStep) || isWalkableAt(nav, x, y, z)) continue;
+      const c = nearestWalkable(nav, x, y, z, SQUAD_ORDERS.followLineSnap);
+      if (c < 0 || Math.abs(nav.floorY[c]! - y) <= nav.maxStep || dropOnLine(nav, x, y, z, nodeX(nav, c), nodeZ(nav, c))) continue;
+      corners++;
+      leader.position = vec3(x, y, z);
+      // Facing up the ramp the spots behind you are out on the open ground: never on you. Facing any other way they
+      // may be (with nothing walkable in a straight line behind, followSpot's last fallback), else on the floor there.
+      const upRamp = side < 0 ? EAST : -EAST;
+      for (const heading of [EAST, -EAST, 0, Math.PI]) for (const slot of [0, 1]) {
+        const out = followSpot(leader, heading, slot, w, vec3());
+        const at = `slot ${slot} at ${x.toFixed(3)}, ${z.toFixed(2)} heading ${heading.toFixed(2)}`;
+        const onYou = out.x === x && out.y === y && out.z === z;
+        if (heading === upRamp) expect(flat(out, leader.position), at).toBeGreaterThan(SQUAD_ORDERS.followDistance - SQUAD_ORDERS.followFallbackStep - 1);
+        if (onYou) continue;
+        expect(isWalkableAt(nav, out.x, out.y, out.z), at).toBe(true);
+        expect(out.y, at).toBeCloseTo(floorAt(nav, out.x, out.y, out.z), 5);
+        expect(out.y, `${at}: on the ground the spots are measured from`).toBeLessThan(y);
+      }
+    }
+    expect(corners, 'standing spots at the ramp feet that take the branch').toBeGreaterThan(0);
   });
 
   it('follow me steers by the line it checked when the blended direction runs off a drop (M-08)', () => {
