@@ -96,6 +96,8 @@
 }
 
 .hud-mag {
+  /* The digits' glyph box runs 0.15em past the tight line box: the margin keeps the spare line clear of it. */
+  margin-bottom: 0.15em;
   font: 800 40px/0.9 var(--ui-display);
   font-variant-numeric: tabular-nums;
 }
@@ -121,7 +123,7 @@
 /* "/ 120" under the count (its own row in the count's column, never beside the chips). */
 .hud-spare {
   display: block;
-  margin-top: 3px;
+  margin-top: 4px;
   font: 600 15px/1 var(--ui-display);
   font-variant-numeric: tabular-nums;
   letter-spacing: var(--ls-caps);
