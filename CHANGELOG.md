@@ -16,6 +16,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **HD1** · Comms wheel is a ring of equal slices, each with the same size label
 - **HD1** · BB impacts kick up a smaller, fainter puff with less grit
 - **HD1** · Scoreboard no longer shows a YOU tag (screen readers still hear which side is yours)
+- **TT1** · Tutorial cards are one or two short sentences; the four you only read move on by themselves after 5–8 s, with a bar filling; the lean step is gone
 
 ### Internal
 - **Pipeline** · Code changes get critic, QA and performance review before a pull request is ready; CI fails it without passing verdicts
