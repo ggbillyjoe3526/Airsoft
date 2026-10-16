@@ -76,6 +76,9 @@ export class EventLog {
         case 'torch':
           if (e.characterId === playerId) this.take(e.type, tick, e.characterId, -1, e.on, '');
           break;
+        case 'hopUp':
+          if (e.characterId === playerId && e.moved) this.take(e.type, tick, e.characterId, -1, false, `${Math.round(e.dial * 100)}%`);
+          break;
         case 'characterHit':
           this.take(e.type, tick, e.shooterId, e.victimId, e.ricochet, '');
           break;
@@ -213,6 +216,8 @@ function describe(s: Slot, who: (id: number) => string): string {
       return `${who(s.actor)} switched to ${s.word}`;
     case 'torch':
       return `${who(s.actor)} turned the torch ${s.flag ? 'on' : 'off'}`;
+    case 'hopUp':
+      return `${who(s.actor)} set the hop-up to ${s.word}`;
     case 'characterHit':
       return `${who(s.actor)} hit ${who(s.other)}${s.flag ? ' (ricochet)' : ''}`;
     case 'ricochetTick':

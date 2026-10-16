@@ -53,7 +53,10 @@ export class Scoreboard {
   /** Publishes half the bar's width as it changes, so the hit feed keeps clear of the bar as it is, not its widest form. */
   private readonly sizeWatch: ResizeObserver | null;
 
-  /** `teamSizes`: characters per team (Extraction's sides differ, its reserve included). `playerTeam` is marked "you" so it's obvious which score is yours. */
+  /**
+   * `teamSizes`: characters per team (Extraction's sides differ, its reserve included). `playerTeam` is told to a screen
+   * reader only: on screen the YOU tag went (Dev 6 playtest item 31), as the HUD's team colours already say it.
+   */
   constructor(
     parent: HTMLElement,
     teamSizes: readonly number[],
@@ -64,7 +67,7 @@ export class Scoreboard {
     this.root.hidden = true;
     const side = (team: number) => `
       <div class="sb-team sb-team-${team}" style="--team:${teamCss(team)}">
-        <span class="sb-name">${TEAMS[team]!.name}${team === playerTeam ? ' <em>you</em>' : ''}<span class="sb-role"></span></span>
+        <span class="sb-name">${TEAMS[team]!.name}${team === playerTeam ? ' <span class="sr-only">(your team)</span>' : ''}<span class="sb-role"></span></span>
         <span class="sb-pips">${'<i></i>'.repeat(teamSizes[team] ?? 0)}</span>
         <span class="sb-score">0</span>
       </div>`;

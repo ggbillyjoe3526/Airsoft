@@ -19,7 +19,7 @@ import { FOOTSTEPS } from './config/footsteps';
 import type { HitConfig, HitMarkerSettings } from './config/hits';
 import { type DevSettings, devCheating } from './config/dev';
 import { MAG_SHARE } from './config/magShare';
-import { type CrosshairSettings, type HitFeedMode, type WhatGotYouMode, whatGotYouShown } from './config/matchInfo';
+import { type CrosshairSettings, type FeedCorner, type HitFeedMode, type WhatGotYouMode, whatGotYouShown } from './config/matchInfo';
 import { countsForRecords, hitRulesFor, kitUnderRules, type MatchRules, recordsKeyOf, roundRulesFor, type RulesetId, standardRules } from './config/matchRules';
 import type { MatchMode } from './config/modes';
 import { BODY, MOVEMENT } from './config/movement';
@@ -327,6 +327,7 @@ export class MatchSession {
     this.playerTeam = this.extraction ? RUN_SQUAD_TEAM : (setup.playerTeam ?? 0);
     this.player = this.spawnRoster(map, seed);
     this.fitPickedLoadout();
+    setHopUps(this.player.armament, this.kit.hopUps);
     this.commands.set(PLAYER_ID, this.playerCommand);
     this.adaptive = setup.adaptive && !this.extraction ? new AdaptiveRun(setup.adaptive.rating, setup.adaptive.top, setup.difficulty, this.player) : null;
     this.bots = new BotController(
@@ -419,7 +420,9 @@ export class MatchSession {
       this.input.clearLatches();
       return this.fastForward();
     }
-    if (this.match.spectating && this.input.takeClick()) this.match.nextSpectateTarget();
+    // A round's end (Dev 6 playtest item 33): once WON or LOST has been up a moment, a click moves on.
+    if (this.match.resultContinuable && this.input.takeClick()) this.continueFromResult();
+    else if (this.match.spectating && this.input.takeClick()) this.match.nextSpectateTarget();
     if (this.input.takeInspect() && p.status === 'alive') this.combat.inspect();
     const order = this.input.takeOrder();
     if (order) this.giveOrder(order);
@@ -468,6 +471,22 @@ export class MatchSession {
     this.skip = { ticks: 0, cap: skipTickCap(this.rounds) };
     this.combat.skipBegins();
     return true;
+  }
+
+  /**
+   * A click at a round's end (Dev 6 playtest item 33): between rounds, the pause before the next is played out at once
+   * (as a skip, so the bots, the stats and the round's events run exactly as they would have); once the match is
+   * decided, the result screen comes on the next frame instead of after the whistles.
+   */
+  private continueFromResult(): void {
+    this.match.resultContinued();
+    if (this.state.round.phase === 'matchOver') {
+      if (!Number.isNaN(this.matchOverAt)) this.matchOverAt = this.state.time - matchOverScreenDelay();
+      return;
+    }
+    if (this.skip) return;
+    this.skip = { ticks: 0, cap: skipTickCap(this.rounds) };
+    this.combat.skipBegins();
   }
 
   /**
@@ -725,6 +744,11 @@ export class MatchSession {
     return matchStanding({ standardRules: this.standardRules, devAssisted: this.devAssisted, devContentUsed: this.setup.devContentUsed });
   }
 
+  /** Settings → HUD → Feed position (Dev 6 playtest item 32). */
+  setFeedCorner(corner: FeedCorner): void {
+    this.match.setFeedCorner(corner);
+  }
+
   /** Settings → HUD → Hit feed (M24). */
   setHitFeedMode(mode: HitFeedMode): void {
     this.match.setHitFeedMode(mode);
@@ -869,14 +893,14 @@ export class MatchSession {
   }
 
   /**
-   * Fits the picked optic, hop-up dials, BB weights, grips and magazines to the player's replicas (fresh magazines of
-   * the picked kind), and the weapon light only on a night preset (M33h). A direct sim-state change, between rounds.
+   * Fits the picked optic, BB weights, grips and magazines to the player's replicas (fresh magazines of the picked
+   * kind), and the weapon light only on a night preset (M33h). A direct sim-state change, between rounds. The hop-up
+   * dials are set once, as the match is built: turned in play (Dev 6 playtest item 15), they stay for the match.
    */
   private fitPickedLoadout(): void {
     const kit = this.kit;
     fitOptics(this.player.armament, kit.slots.map((s) => s.optic));
     fitParts(this.player.armament, kit.slots.map((s) => partsUnder(s.parts, this.lighting.night)));
-    setHopUps(this.player.armament, kit.hopUps);
     setBbWeights(this.player.armament, kit.bbWeights);
   }
 

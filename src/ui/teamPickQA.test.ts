@@ -60,12 +60,12 @@ describe('the score bar marks your side (M98 criterion 1)', () => {
   };
   const side = (html: string, team: number): string => html.split(`sb-team sb-team-${team}`)[1]!.split('</div>')[0]!;
 
-  it('puts the YOU tag on the team you are on, names the teams Alpha and Beta, each in its own colour', () => {
+  it('shows no YOU tag (Dev 6 playtest item 31), tells only a screen reader your side, names Alpha and Beta in their colours', () => {
     for (const team of [0, 1]) {
       const html = board(team);
-      expect(side(html, team), `team ${team}`).toContain('<em>you</em>');
-      expect(side(html, 1 - team), `team ${team}`).not.toContain('<em>you</em>');
-      expect(html.match(/<em>you<\/em>/g)).toHaveLength(1);
+      expect(html).not.toMatch(/<em>you<\/em>/i);
+      expect(side(html, team), `team ${team}`).toContain('<span class="sr-only">(your team)</span>');
+      expect(side(html, 1 - team), `team ${team}`).not.toContain('(your team)');
       for (const t of [0, 1]) {
         expect(side(html, t)).toContain(`>${TEAMS[t]!.name}`);
         expect(side(html, t)).toContain(`--team:${teamCss(t)}`);
