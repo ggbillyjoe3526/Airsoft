@@ -97,8 +97,13 @@ bug pass: `docs/PROCESS.md` (grep the heading you need). The rules every session
   (Replica, Modes, Maps, Progression) follow up to 1.0, the full launch (`docs/ROADMAP.md`).
 - **The owner creates tags.** Don't create, rename or move them. After he tags, the release checklist in
   `docs/PROCESS.md` is due in the next pull request.
-- **Never push to `main`.** Every change is a pull request from a new branch made from the latest `main`. Pipeline
-  and docs-only pull requests are merged by their own thread once CI is green (and the critic accepted).
+- **Never push to `main`.** Every change is a pull request from a new branch made from the latest `main`. Every pull
+  request, code included, is merged by its own thread once CI is green and, for code, the review agents passed (owner,
+  2026-10-16: "You should be merging. Not me"). The owner doesn't merge.
+- **Three review agents on every code change** (owner, 2026-10-16): critic (the quality bar), QA (bugs) and
+  performance (frame time, allocations, GPU disposal, budgets), in `.claude/agents/`. A pull request touching code,
+  config, assets or gameplay data is marked ready, and merged, only once all three passed and its `Review:` line says
+  so (`pipeline/README.md` › Pull request description; CI checks it). Docs-only pull requests skip them.
 - **Placing work:** new systems, modes and content are Dev; fixing, balance, performance, stability, UX/QoL, polish
   are Beta (note them in `docs/ROADMAP.md` › Beta or `docs/KNOWN_ISSUES.md` unless they block Dev work). Don't build
   later-version features unless the owner pulled them into 0.1 (`docs/ROADMAP.md`).
@@ -168,5 +173,6 @@ The goal is a genuinely fun airsoft game in the browser, not an impressive codeb
 ## 12. The Pipeline
 
 Every task runs through the pipeline: `pipeline/README.md` (protocol), `.claude/skills/pipeline/SKILL.md` (steps),
-`docs/TASKS.md` (open tasks), `.claude/agents/` (agents). `node pipeline/gate.mjs --task <id>` runs the gates; the
-critic ticks eight binary checks on green gates (the table and the attempt rules: `docs/PROCESS.md` › The pipeline).
+`docs/TASKS.md` (open tasks), `.claude/agents/` (agents). `node pipeline/gate.mjs --task <id>` runs the gates; on
+green gates QA and performance review the change, then the critic ticks eight binary checks (the table and the attempt
+rules: `docs/PROCESS.md` › The pipeline).

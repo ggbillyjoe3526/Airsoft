@@ -1,16 +1,19 @@
 # Runs the project's own checks on every pull request and every push to main through the pipeline's gate script:
 # the production build with its type check, the unit tests and the browser smoke test (pipeline/README.md), split over
 # parallel jobs. On a pull request whose title starts with its task id(s) ("FA12: …", "FA5 + FA9: …") it also runs the
-# scope and changelog gates (audit CORE-08). What runs only on a worker's machine or the owner's: the perf gate (no
-# baseline or GPU on a runner), the frame-time budget (the owner's laptop, by hand) and the critic.
+# scope and changelog gates (audit CORE-08), and on every pull request that is not a draft the review gate: unless the
+# change is docs only, its description's Review line says the critic, QA and performance agents passed (owner,
+# 2026-10-16). What runs only on a worker's machine or the owner's: the perf gate (no baseline or GPU on a runner), the
+# frame-time budget (the owner's laptop, by hand) and the three review agents themselves.
 name: Check
 
 on:
   push:
     branches: [main]
   pull_request:
-    # `edited` too, so renaming a pull request's title (its task ids) runs the scope and changelog gates again.
-    types: [opened, synchronize, reopened, edited]
+    # `edited` too, so renaming a pull request's title (its task ids) or editing its Review line runs the gates again, and
+    # `ready_for_review`, so a draft marked ready is held to its Review line.
+    types: [opened, synchronize, reopened, edited, ready_for_review]
 
 # A newer push to a pull request cancels its older run. Pushes to main are grouped by commit, so no run on main is
 # cancelled (GitHub drops a pending run in the same group whatever cancel-in-progress says) and every merge shows
@@ -47,12 +50,14 @@ jobs:
           cache: npm
       - run: npm ci
       # The pipeline's gate script (pipeline/README.md): the production build, the unit tests, and on a pull request
-      # the scope and changelog gates for the task ids its title starts with. Writes pipeline/out/gate-report.json with
+      # the scope and changelog gates for the task ids its title starts with and the review gate (pipeline/review.mjs). Writes pipeline/out/gate-report.json with
       # pass / fail per gate. A pull request is checked out as its merge commit, whose first parent is the base it would
       # merge into.
       - name: Gates
         env:
           GATE_PR_TITLE: ${{ github.event.pull_request.title }}
+          GATE_PR_BODY: ${{ github.event.pull_request.body }}
+          GATE_PR_DRAFT: ${{ github.event.pull_request.draft }}
         run: node pipeline/gate.mjs --ci --tests fast --no-smoke ${{ github.event_name == 'pull_request' && '--base HEAD^1' || '' }}
       - name: Upload the gate report and the test report
         if: ${{ !cancelled() }}

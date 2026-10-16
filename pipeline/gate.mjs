@@ -11,7 +11,8 @@
  * Gates: build (tsc + vite build with the chunk budgets), tests (vitest), smoke (playwright), perf (one perf-run.mjs
  * run per map, mode and preset of perf-budget.json's matrix that the diff reaches, pipeline/perfMatrix.mjs; --perf runs
  * the whole matrix), scope (the diff stays inside the task's `touches`, QA commits touch only tests) and changelog
- * (CHANGELOG.md names the task under Unreleased).
+ * (CHANGELOG.md names the task under Unreleased), and on a pull request on CI `review` (pipeline/review.mjs: unless the
+ * change is docs only or a draft, its description's Review line says the critic, QA and performance agents passed).
  * --quick runs build and tests only, and builds without the .br/.gz copies (AIRSOFT_PRECOMPRESS=0, audit CORE-11).
  * Every run writes the failures-only summary, pipeline/out/failures.md (pipeline/failures.mjs: each failure's test,
  * error, file and line, the same lines the gate prints as it goes), and every run but CI's the review packet the critic
@@ -38,6 +39,7 @@ import { metricsRow } from './records.mjs';
 import { MAX_FAILURES, buildFailures, failureLines, failuresSummary, vitestFailures } from './failures.mjs';
 import { writePacket } from './packet.mjs';
 import { reachNote, slowGuardsReached } from './testReach.mjs';
+import { judgeReview } from './review.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'pipeline', 'out');
@@ -54,6 +56,9 @@ const args = process.argv.slice(2);
 const flag = (name) => args.includes(name);
 const value = (name, fallback) => (args.includes(name) ? args[args.indexOf(name) + 1] : fallback);
 const prTitle = flag('--ci') ? process.env.GATE_PR_TITLE ?? '' : '';
+/** On a pull request CI also passes its description and draft flag ("true" or "false"; empty on a push), for `review`. */
+const prDraft = flag('--ci') ? process.env.GATE_PR_DRAFT ?? '' : '';
+const isPullRequest = prDraft === 'true' || prDraft === 'false';
 /** CI, and a run that names a shard, run every test they are given; a local run judges whether the slow guards matter. */
 const testsDefault = flag('--ci') || args.includes('--shard') ? 'all' : 'auto';
 const options = {
@@ -302,6 +307,15 @@ else if (options.tasks.length === 0) {
     const missing = lines.filter((l) => !l.line).map((l) => `**${l.id}**`);
     record('changelog', { pass: missing.length === 0, ...(missing.length ? { reason: `no line naming ${missing.join(', ')} under Unreleased` } : { lines: lines.map((l) => l.line.trim()) }) });
   }
+}
+
+// 7. review: a pull request that changes more than docs says in its description that the critic, QA and performance
+// agents ran and passed (owner, 2026-10-16). Only on CI, where the description is; a draft is checked once it is ready.
+if (skipAllBut('review')) record('review', { pass: null, reason: `skipped (--only ${options.only})` });
+else if (!isPullRequest) {
+  record('review', { pass: null, reason: 'skipped (pull requests on CI only)' });
+} else {
+  record('review', judgeReview({ changed, body: process.env.GATE_PR_BODY ?? '', draft: prDraft === 'true' }));
 }
 
 writeFileSync(REPORT, `${JSON.stringify(report, null, 2)}\n`);
