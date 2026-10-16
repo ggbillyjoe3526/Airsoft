@@ -94,7 +94,7 @@ attempts: 0
 ## BD1 · Blender models by default (playtest item 1)
 tier: core
 perf: required
-touches: src/config/dev.ts, src/settings/dev.ts, src/ui/devSettings.ts, src/render/, src/assets/, src/config/assets.ts, src/config/renderQuality.ts, src/ui/menus/
+touches: src/config/dev.ts, src/settings/dev.ts, src/ui/devSettings.ts, src/render/, src/assets/, src/config/assets.ts, src/config/renderQuality.ts, src/ui/menus/, src/game.ts, src/matchSession.ts, src/config/figureRig.ts, src/config/hits.ts, src/content/report/skin.report.ts, src/content/skinCheckSupport.ts, pipeline/perf-run.mjs, pipeline/baseline/
 contract: none
 acceptance:
   1. The Blender figures, replicas and attachments are the default everywhere, menu pictures included. The code-built models remain only on Low, or go.
@@ -175,7 +175,7 @@ attempts: 0
 ## HV1 · The hit area fits each rigged figure (with the figures going default)
 tier: core
 perf: skip
-touches: src/config/hits.ts, src/config/figureRig.ts, src/render/riggedFigure.ts, src/render/riggedHitVolume.test.ts, src/render/figureHitVolume.test.ts
+touches: src/config/hits.ts, src/config/figureRig.ts, src/render/riggedFigure.ts, src/render/riggedHitVolume.test.ts, src/render/figureHitVolume.test.ts, src/render/figureRig.ts, src/render/figureBody.ts, src/sim/hitbox.ts, src/sim/figureBody.ts, src/sim/figureLegs.ts, src/sim/character.ts, src/matchSession.ts, src/ai/riggedHitsSupport.ts, src/ai/depotMatchSupport.ts, src/ai/extractionRunSupport.ts, src/ai/balance/
 contract: none
 acceptance:
   1. William's ruling (2026-10-16: fit to each figure): the head, chest and hips of the hit volume follow each rigged figure, the human's and the robot's, as the legs already do (IM8). The two may differ.
