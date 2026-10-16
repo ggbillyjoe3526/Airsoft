@@ -71,8 +71,12 @@ release description:
 
 - **Every change is a pull request** (owner, 2026-10-02) from a new branch made from the latest `main`, one per
   milestone or batch. **Never push to `main`.** One pull request may hold several commits.
+- **Review agents on every code change** (owner, 2026-10-16). A pull request that touches code, config, assets or
+  gameplay data is marked ready only once the critic, QA and performance agents (`.claude/agents/`) have run and
+  passed, and its description's `Review:` line gives their verdicts (`pipeline/README.md` › Pull request description);
+  CI's `review` gate checks the line. This holds outside the pipeline too. Docs-only pull requests skip them.
 - **Who merges.** A pull request built through the pipeline is merged by its own thread once CI is green and the
-  critic accepted (owner, 2026-10-04: "Claude merges"). A docs-only pull request is merged by its thread once CI is
+  review agents passed (owner, 2026-10-04: "Claude merges"). A docs-only pull request is merged by its thread once CI is
   green (owner, 2026-10-06: "just you handle it"). Any other pull request waits for the owner.
 - **Branches** (owner, 2026-10-01). `main` holds the latest stable release.
   - **Now (the 0.1 cycle):** work reaches `main` only through merged pull requests, and the tagged commits on `main`
@@ -110,8 +114,8 @@ never changes a model or an effort level unless the owner asks.
   an audit hands on among them. Opus threads run at Extra effort (`xhigh`), the owner's project setting. The critic
   runs on Opus for core tasks and near misses, and the performance agent when a regression stays unexplained.
 - **Sonnet 5.5, medium, for `tier: ui` and `tier: trivial` tasks,** QA, and the other critic and performance runs.
-- **Haiku 5.5, low, for small helper jobs:** the changelog and triage agents, and the diff check on a `tier: trivial`
-  task.
+- **Haiku 5.5, low, for small helper jobs:** the changelog and triage agents, and the diff check on a docs-only
+  `tier: trivial` task.
 - **Fable 5.1 only with the owner's explicit approval, asked for each time.** It costs far more than Opus, so it is
   proposed only where it would do significantly better: an audit, or a review of a major architectural change, a
   major redesign, or how a new system fits into the project. The ask names the job, why Opus is not enough and the
@@ -166,8 +170,17 @@ changelog check. It writes `pipeline/out/gate-report.json`, the attempt row for 
 and line) and the review packet the critic and QA read first (`pipeline/out/review-packet.md`: the task block, the gate
 summary, the contracts the diff touches, QA's report and the diff). Off CI the slow bot-match guards run only when the
 diff reaches a file they load; CI always runs them (token step 4, `pipeline/README.md` › `gate.mjs`). A failed
-gate goes back to the worker with the evidence; the critic never sees it. The performance agent runs only when the perf gate fails, and the triage agent
-only for a failure the summary can't place (token step 3, `pipeline/README.md`).
+gate goes back to the worker with the evidence; the critic never sees it. On a pull request out of draft, CI also runs
+the `review` gate (above). The triage agent runs only for a failure the summary can't place (token step 3,
+`pipeline/README.md`).
+
+### QA and performance
+
+On green gates, before the critic, every code change gets QA (`.claude/agents/qa.md`: the tests for each acceptance
+criterion, then a hunt for bugs, regressions, edge cases and browser-state problems) and the performance agent
+(`.claude/agents/performance.md`: frame time on the owner's laptop, per-frame allocations, GPU disposal, the budgets
+in `pipeline/perf-budget.json`, and the causes of a failed perf run). Each writes a Pass or Fail verdict that the
+review packet quotes for the critic; a Fail goes back to the worker like a failed gate (owner, 2026-10-16).
 
 ### Critic
 
@@ -186,14 +199,15 @@ QA's report and the diff), opens a file in full only where a hunk can't settle a
 | 7 | Maintainability (small modules, GPU disposal, no copy-paste) | no |
 | 8 | Scope (nothing beyond the task; the docs it affects updated) | no |
 
-- **Score** is the checks passed, out of 8. **Accept** when every blocking check passes and at most one non-blocking
-  check fails. Otherwise **Retry** with only the failed checks and their evidence.
+- **Score** is the checks passed, out of 8. **Accept** when every blocking check passes, at most one non-blocking
+  check fails, and QA and performance both say Pass. Otherwise **Retry** with only the failed checks and their evidence.
 - **Near miss.** A verdict one check short of Accept is re-run on Opus before the task goes back, when its failed
   check is a judgment (checks 5 to 8, or one of 1 to 4 decided by reading). A check failed on a measured number (a
   budget, a count) goes straight back, or to the owner when only a changed criterion can pass it: a re-run can't
   change a number (token plan item 18).
-- **Trivial tasks.** Small changes (typo fixes, config tweaks, docs) are `tier: trivial`: they skip the critic, and
-  green gates plus a Haiku diff check accept them.
+- **Trivial tasks.** Small changes (typo fixes, config tweaks, docs) are `tier: trivial`. One that touches code or
+  config still gets QA, performance and the critic (owner, 2026-10-16); a docs-only one is accepted by green gates plus
+  a Haiku diff check.
 - **The owner's playtest wins.** The critic cannot play the game: it lists browser tests for the owner, whose
   playtest overrides it.
 
