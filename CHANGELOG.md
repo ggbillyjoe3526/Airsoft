@@ -4,6 +4,14 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 
 ## Unreleased
 
+### Changed
+- **ST1** · Settings opens on Display; the tabs run Display, Graphics, Gameplay, Looks, Audio, Controls, Accessibility, Save file, Dev
+- **ST1** · Fresh saves start with aim Toggle, crouch Hold, red sound cues and scoreboard 100 %; a save keeps the picks it already made
+- **ST1** · Fresh-save volumes: master 100 %, effects 80 %, power source 100 %, ambience 60 %, interface 50 %
+- **ST1** · Retro look is a Dev setting again, at the top of the Dev tab, and shows only while Dev settings is ticked
+- **ST1** · Realistic colours leaves Settings for the Loadout's Colour tab; the greyed-out Voices (hit calls) row is gone
+- **ST1** · The level on the top bar reads LVL 3
+
 ## 0.1 Dev 6 · 2026-10-16
 
 ### Added
