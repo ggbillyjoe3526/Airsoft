@@ -28,7 +28,8 @@ export function aimRaiseTime(a: Armament): number {
 export function stepAiming(c: Character, cmd: PlayerCommand, dt: number): void {
   const a = c.armament;
   // Reload, draw and holster are as the last tick left them: a reload started this tick drops the sight on the next one.
-  c.aiming = cmd.aim && !a.holstered && canAimDownSights(a) && a.reload <= 0 && a.draw <= 0;
+  // Not mid-vault (M102): the aim held through one comes up again only after it (BP5).
+  c.aiming = cmd.aim && !c.vault.active && !a.holstered && canAimDownSights(a) && a.reload <= 0 && a.draw <= 0;
   const step = dt / aimRaiseTime(a);
   c.aimRaise = c.aiming ? Math.min(1, c.aimRaise + step) : Math.max(0, c.aimRaise - step);
 }

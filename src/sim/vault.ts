@@ -40,10 +40,114 @@ export interface VaultState {
   /** Seconds from the start: the rise onto the top ends, and the vault hands over to the fall. */
   riseEnd: number;
   end: number;
+  /**
+   * The one-shot presses made while vaulting (BP5): kept, and played into the first command after the vault
+   * (`withVaultPresses`), as a reload pressed during a draw waits for it. Nothing starts mid-vault, and nothing pressed
+   * is lost.
+   */
+  held: VaultPresses;
+}
+
+/** A command's one-shot presses (PlayerCommand's), as kept through a vault. */
+export interface VaultPresses {
+  /** Any kept at all. */
+  any: boolean;
+  reload: boolean;
+  /** The last slot pressed (-1 none). */
+  switchTo: number;
+  holster: boolean;
+  /** Fire selector presses (each steps the mode once). */
+  cycleFireMode: number;
+  /** Torch presses (each switches it). */
+  toggleTorch: number;
+  /** The last teammate asked to catch a magazine (-1 none). */
+  tossMag: number;
 }
 
 export function createVaultState(): VaultState {
-  return { active: false, time: 0, startX: 0, startY: 0, startZ: 0, dirX: 0, dirZ: -1, front: 0, far: 0, topY: 0, overY: 0, speed: 0, riseEnd: 0, end: 0 };
+  return {
+    active: false,
+    time: 0,
+    startX: 0,
+    startY: 0,
+    startZ: 0,
+    dirX: 0,
+    dirZ: -1,
+    front: 0,
+    far: 0,
+    topY: 0,
+    overY: 0,
+    speed: 0,
+    riseEnd: 0,
+    end: 0,
+    held: { any: false, reload: false, switchTo: -1, holster: false, cycleFireMode: 0, toggleTorch: 0, tossMag: -1 },
+  };
+}
+
+/**
+ * The command `c` follows while vaulting, written into `out` (BP5): the view from `cmd`, the trigger and the aim as they
+ * were when the vault began (one held through it is no new pull or aim press after it, and one pressed during it counts
+ * once it is over), nothing else. `cmd`'s one-shot presses are kept in the vault for after it.
+ */
+export function vaultingCommand(c: Character, cmd: Readonly<PlayerCommand>, out: PlayerCommand): PlayerCommand {
+  const h = c.vault.held;
+  if (cmd.reload) h.reload = h.any = true;
+  if (cmd.switchTo >= 0) {
+    h.switchTo = cmd.switchTo;
+    h.any = true;
+  }
+  if (cmd.holster) h.holster = h.any = true;
+  if (cmd.cycleFireMode) {
+    h.cycleFireMode++;
+    h.any = true;
+  }
+  if (cmd.toggleTorch) {
+    h.toggleTorch++;
+    h.any = true;
+  }
+  if (cmd.tossMag >= 0) {
+    h.tossMag = cmd.tossMag;
+    h.any = true;
+  }
+  out.yaw = cmd.yaw;
+  out.pitch = cmd.pitch;
+  out.fire = c.armament.triggerWasDown;
+  out.aim = c.armament.aimWasDown;
+  return out;
+}
+
+/**
+ * The first command after a vault: `cmd` with the presses kept through it (vaultingCommand), written into `out`, and
+ * those presses cleared. A fire selector or torch pressed twice plays the second on the tick after. `cmd` itself when
+ * nothing was kept.
+ */
+export function withVaultPresses(v: VaultState, cmd: PlayerCommand, out: PlayerCommand): PlayerCommand {
+  const h = v.held;
+  if (!h.any) return cmd;
+  Object.assign(out, cmd);
+  out.reload ||= h.reload;
+  if (h.switchTo >= 0 && out.switchTo < 0) out.switchTo = h.switchTo;
+  out.holster ||= h.holster;
+  if (h.cycleFireMode > 0 && !out.cycleFireMode) {
+    out.cycleFireMode = true;
+    h.cycleFireMode--;
+  }
+  if (h.toggleTorch > 0 && !out.toggleTorch) {
+    out.toggleTorch = true;
+    h.toggleTorch--;
+  }
+  if (h.tossMag >= 0 && out.tossMag < 0) out.tossMag = h.tossMag;
+  h.reload = h.holster = false;
+  h.switchTo = h.tossMag = -1;
+  h.any = h.cycleFireMode > 0 || h.toggleTorch > 0;
+  return out;
+}
+
+/** Drops whatever was kept through a vault (a respawn, or a hit: nothing pressed then is owed). */
+function dropVaultPresses(h: VaultPresses): void {
+  h.any = h.reload = h.holster = false;
+  h.switchTo = h.tossMag = -1;
+  h.cycleFireMode = h.toggleTorch = 0;
 }
 
 /** The gap the planned path keeps from the obstacle's faces: the controller's skin and a hair more. */
@@ -274,6 +378,7 @@ export function stepVault(c: Character, cmd: PlayerCommand, cfg: MovementConfig,
 export function cancelVault(c: Character): void {
   c.vault.active = false;
   c.vault.time = 0;
+  dropVaultPresses(c.vault.held);
 }
 
 /**
