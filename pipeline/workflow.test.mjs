@@ -59,6 +59,18 @@ describe('check.yml runs the smoke test once (IM6)', () => {
   });
 });
 
+describe('check.yml runs the review gate (owner, 2026-10-16)', () => {
+  it('the check job passes the pull request\'s description and draft flag to the gate', () => {
+    const check = jobs.find((j) => j.name === 'check');
+    expect(check.body).toMatch(/GATE_PR_BODY: \$\{\{ github\.event\.pull_request\.body \}\}/);
+    expect(check.body).toMatch(/GATE_PR_DRAFT: \$\{\{ github\.event\.pull_request\.draft \}\}/);
+  });
+
+  it('re-runs when the description is edited or a draft is marked ready', () => {
+    expect(text).toMatch(/types: \[[^\]]*\bedited\b[^\]]*\bready_for_review\b[^\]]*\]/);
+  });
+});
+
 describe('check.yml actions are on Node 24 majors (IM6)', () => {
   const minimum = { 'actions/checkout': 5, 'actions/setup-node': 5, 'actions/cache': 5, 'actions/upload-artifact': 6 };
 

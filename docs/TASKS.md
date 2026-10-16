@@ -13,11 +13,121 @@ commit, before its pull request merges (CI's scope gate finds the block in the b
 
 - **Order.** Highest priority first. A block marked *after playtest* waits until the owner has played the parts it
   tunes, and PF2 also waits for his laptop baseline.
-- **Placed in later updates.** NH1 goes with the Maps Update, because Neon Heights stays dev in 0.1. HV1 goes with the
-  rigged figures leaving the Dev switches. The owner can move either into Beta.
+- **Placed in a later update.** NH1 goes with the Maps Update, because Neon Heights stays dev in 0.1. HV1 goes with the
+  rigged figures leaving the Dev switches, which BD1 now does in Beta 1, so HV1 lands with BD1 or straight after it.
 - **Numbers are first guesses.** Numeric targets can be changed by the owner. Note 19 applies to every balance block:
   tune on Normal, then check that Easy, Hard and Pro still scale.
 - **`touches` are first guesses.** The build thread confirms them before it starts.
+
+**The owner's Dev 6 playtest list (2026-10-16).** These are his 34 items, taken in Beta 1 on his word, small
+additions included (`docs/DECISIONS.md`). Seven threads build them, one block each, and they come before the blocks
+below. The item numbers are his. Where an older block overlaps one of these, the owner's item wins:
+- UX1 overlaps MR1 and HD1.
+- RV2 overlaps ST1.
+- AX1's kit colours overlap MR1's colour tab.
+
+MR1 and MS1 show the owner concept images and wait for his approval before any code changes.
+
+## ST1 · Settings defaults and menu order (playtest items 3–8, 18, 20, 34; the Settings side of 1 and 17)
+tier: ui
+perf: skip
+touches: src/settings/, src/config/menus.ts, src/config/controls.ts, src/config/audio.ts, src/config/graphics.ts, src/config/dev.ts, src/ui/menus/, src/ui/, src/game.ts
+contract: none
+acceptance:
+  1. Defaults (new saves): sound cue colour red, scoreboard size 100 %, aim button Toggle, crouch Hold, volumes master 100 %, effects 80 %, power source 100 %, ambience 60 %, interface 50 %.
+  2. The Retro look setting moves to Settings › Dev. The "Voices (hit calls)" setting is gone.
+  3. Settings tabs run top to bottom: Display, Graphics, Gameplay, Looks, Audio, Controls, Accessibility, Save file, Dev.
+  4. The realistic colours leave Settings (they move to the Loadout's Colour tab, MR1).
+  5. The Dev toggles "Disable figure models" and "Disable all models" leave the menu (BD1 removes their code paths).
+  6. The level display reads "LVL", not "LV".
+  7. A save holding the old values still loads.
+status: open
+attempts: 0
+
+## MR1 · Match, Loadout and Armory redesign, and the home screen (playtest items 9–14, 16, 17, 19, 21)
+tier: ui
+perf: skip
+touches: src/ui/menus/, src/ui/loadoutChoice.ts, src/ui/lookSettings.ts, src/ui/fullscreen.ts, src/config/menus.ts, src/config/menuArt.ts, src/render/itemPictures.ts, src/style.css
+contract: none
+acceptance:
+  1. The owner approves concept images of the Match screen's rules, and of the Match, Loadout and Armory screens, before code changes (items 11, 13).
+  2. The menus, except the top navigation bar and Settings, are smaller and more compact, to the approved concepts. The Armory is laid out horizontally.
+  3. Mode buttons are text boxes with the mode's name, its description and its small white icon, with no game images. Your match shows no map image.
+  4. A picked map offers only the modes and rules that apply to it (checked again, with a test).
+  5. Loadout › Customise has no Skins option; skins join the Colour section, and the Colour tab offers the realistic colours (ST1 takes them out of Settings). A Back button returns to the main Loadout screen, and the LOADOUT tab no longer does.
+  6. Saved loadouts are a dropdown.
+  7. The home screen has a fullscreen button bottom left, which becomes "exit fullscreen" while in fullscreen. The version tag moves bottom right.
+status: open
+attempts: 0
+
+## HD1 · In-match HUD, feeds and hop-up (playtest items 15, 22, 24, 25, 31–33)
+tier: ui
+perf: required
+touches: src/ui/, src/ui/hud.css, src/ui/hudCss/, src/input/orderWheel.ts, src/input/keyBindings.ts, src/config/controls.ts, src/config/hudText.ts, src/sim/commands.ts, src/sim/armament.ts, src/render/impactPuffs.ts, src/render/impactGrit.ts, src/config/renderEffects.ts
+contract: PlayerCommand (a hop-up step, by addition)
+acceptance:
+  1. A rebindable control adjusts the held replica's hop-up mid-match, through the command interface (bots unchanged), with a HUD readout that shows it changing in real time.
+  2. The comms wheel is redesigned: minimal and easy to read, with every button the same size.
+  3. BB impacts kick up a smaller, subtler puff.
+  4. The weapon, magazine, ammo and fire-mode panel is smaller and more minimal, and still easy to read.
+  5. The scoreboard has no YOU tag.
+  6. The hit feed and the bot callouts are one feed, top right by default, with a setting that moves it bottom left.
+  7. WON or LOST shows at a round's end before the result, briefly and without getting in the way, and the player can move on at once.
+status: open
+attempts: 0
+
+## MV1 · Movement, holster speed and hands (playtest items 26–30)
+tier: core
+perf: required
+touches: src/sim/movement.ts, src/sim/armament.ts, src/sim/accuracy.ts, src/sim/character.ts, src/sim/simulation.ts, src/sim/coverRest.ts, src/config/movement.ts, src/config/figureRig.ts, src/config/renderView.ts, src/audio/foley.ts, src/render/viewmodel.ts, src/render/handModels.ts, src/render/figureHands.ts, src/render/robotHands.ts, src/matchSession.ts
+contract: none
+acceptance:
+  1. Holstered, the player moves faster than with a replica out, and never faster than a Left Alt sprint.
+  2. Holding Left Shift walks a little slower and tightens the spread.
+  3. Resting on cover is gone, for the player and the bots. Nobody leans on any object.
+  4. The first-person thumbs and grip look natural on every replica, with no clipping into the replica.
+  5. Switching replicas mid-match causes no frame hitch, including the first switch (measured with `?perf`).
+  6. Bots follow the same movement rules through the same commands.
+status: open
+attempts: 0
+
+## BD1 · Blender models by default (playtest item 1)
+tier: core
+perf: required
+touches: src/config/dev.ts, src/settings/dev.ts, src/ui/devSettings.ts, src/render/, src/assets/, src/config/assets.ts, src/config/renderQuality.ts, src/ui/menus/
+contract: none
+acceptance:
+  1. The Blender figures, replicas and attachments are the default everywhere, menu pictures included. The code-built models remain only on Low, or go.
+  2. The code paths behind the Dev toggles "Disable figure models" and "Disable all models" are gone (ST1 takes the toggles out of the menu).
+  3. Load size stays under the 30 MB target, and the perf gate is green on every preset.
+  4. The hit volume fits the rigged figures (HV1) in this task or straight after it.
+status: open
+attempts: 0
+
+## MS1 · Map surroundings and detail (playtest item 23)
+tier: core
+perf: required
+touches: src/map/depotDressing.ts, src/map/woodland.ts, src/map/woodlandDressing.ts, src/map/neonHeightsDressing.ts, src/map/foliage.ts, src/render/, docs/ASSETS.md
+contract: none
+acceptance:
+  1. The owner approves concept images before code changes.
+  2. Depot has more buildings and objects in the distance.
+  3. Woodland's hut has a roof, and its trees and bushes no longer look low-poly or broken.
+  4. Neon Heights feels more open inside, with towering, oppressive city edges.
+  5. Each map has more detail overall, the perf gate is green on every preset, and every external asset is in `docs/ASSETS.md`.
+status: open
+attempts: 0
+
+## TT1 · A simpler tutorial (playtest item 2)
+tier: ui
+perf: skip
+touches: src/tutorial/, src/config/tutorial.ts, src/ui/tutorialShowcase.ts
+contract: none
+acceptance:
+  1. Every tip is shorter and easier to understand.
+  2. No tip makes the player wait long before the next one, tips 13–16 above all.
+status: open
+attempts: 0
 
 ## BL1 · Attack / Defend: fewer attacker wins, more rounds won at the pole (after playtest)
 tier: core
@@ -123,7 +233,7 @@ contract: none
 acceptance:
   1. Starts once `pipeline/baseline/laptop*.json` is committed (PLAYTEST › Only you can do these).
   2. Profile first. The record ranks the top causes of frame time on Low and Medium on Depot and Woodland, by day and by night.
-  3. Fix the top causes until Low and Medium hold 60 FPS on the laptop baseline's scenes, or say what would cost too much and why.
+  3. Fix the top causes until Low holds 60 FPS on modern low-powered hardware (the owner's ruling, 2026-10-16), Medium too where it can, on the laptop baseline's scenes. If a fix would cost too much, say what and why.
   4. Add a High or Ultra night run to the perf gate, so the torch shadow map's cost is measured.
 status: open
 attempts: 0
@@ -160,6 +270,19 @@ contract: none
 acceptance:
   1. Settings › Graphics has no Tone mapping row, and everyone gets Neutral (today's default).
   2. The choice moves to Settings › Dev. With Dev settings off, a save holding another tone mapping plays as Neutral.
+status: open
+attempts: 0
+
+## PF3 · The 4K 240 Hz line for maxed-out settings (after William's desktop baseline)
+tier: core
+perf: required
+touches: pipeline/perf-budget.json, pipeline/gate.mjs, pipeline/perf-run.mjs, pipeline/README.md
+contract: none
+acceptance:
+  1. This starts once `pipeline/baseline/desktop*.json` is committed (PLAYTEST › Only you can do these).
+  2. The owner's ruling (2026-10-16): maxed-out settings aim at a PC built for 4K at 240 Hz. `perf-budget.json` gains a desktop frame-time line for Ultra at 3840×2160. The first guess is p95 ≤ 4.2 ms and p99 ≤ 6 ms. `desktop` joins `frameTimeGatedEnvs` for Ultra only.
+  3. The record lists any map or mode over the line on the baseline, with its top causes. Fixes are their own tasks.
+  4. Draw-call and triangle lines change only with an owner decision line (DECISIONS).
 status: open
 attempts: 0
 
@@ -203,14 +326,116 @@ acceptance:
 status: open
 attempts: 0
 
-## DC1 · Known issues tidy-up
+**The repository audit (2026-10-16; owner: "go ahead").** DX1–DX8 come from
+`/mnt/project-files/audit/repo-audit-2026-10-16.md`, in the order to run them. Each one waits until the playtest
+threads' branches it touches have merged (ST1, MR1, HD1, MV1, BD1, MS1, TT1), so none conflicts with them. DX2 takes
+over DC1's known-issues tidy-up. DX0, the quick wins, is the audit thread's own pull request.
+
+## DX1 · Docs: one source for each rule, and the stage everywhere (audit A7, A9, B11, B12)
 tier: trivial
 perf: skip
-touches: docs/KNOWN_ISSUES.md, docs/IDEAS.md, docs/ROADMAP.md
+touches: CLAUDE.md, docs/, pipeline/README.md, .claude/skills/pipeline/SKILL.md, .claude/agents/, .github/workflows/pages.yml
 contract: none
 acceptance:
-  1. Merge the duplicate rows the triage found: the Esc re-lock rows, pistol magazine asks, the spacing rows, and the shader-on-first-use rows.
-  2. Move "skip to the last round" to `docs/IDEAS.md`. Close the missing-CHANGELOG row as accepted history.
+  1. The pipeline's steps, the attempt rule, the near-miss rule, the changelog-agent rule, the models and "one task per thread" each live in one place (`pipeline/README.md` for protocol, `docs/PROCESS.md` for policy); CLAUDE.md, SKILL.md and the agents point there instead of restating them.
+  2. No doc cites a "token plan item" or "token step" number; each such citation carries its one-line reason instead, or is dropped.
+  3. `docs/ARCHITECTURE.md` › Contracts has a `###` heading per contract, so `grep '^#'` indexes them; nothing else in the section changes.
+  4. `pipeline/README.md`'s worked example (the M27 block) is a fenced block, not a `##` heading.
+  5. Every stage statement (CLAUDE.md, ROADMAP › Where we are, HANDOFF, TASKS, PROCESS) says 0.1 Beta 1 and nothing says Dev now or "not scheduled".
+status: open
+attempts: 0
+
+## DX2 · Docs slimming: the 50 KB rule applied, and the finished plan archived (audit A6; folds DC1)
+tier: trivial
+perf: skip
+touches: docs/
+contract: none
+acceptance:
+  1. `docs/ROADMAP.md` › 0.1 Dev 5 and › 0.1 Dev 6 (with their playtest notes, the audit list and the token table) move to `docs/archive/0.1-dev/ROADMAP.md`; Builds and Where we are still name both tags.
+  2. `docs/DECISIONS.md` is under 50 KB: split by subject (gameplay and modes, bots, maps and art, process and tooling) with an index at the top, or each ruling kept to its one-line decision with the "why" in the task's record; superseded rulings are marked or moved to the archive.
+  3. `docs/KNOWN_ISSUES.md` is under 50 KB: no row over about 300 characters, the detail in the task's record it names; fixed rows gone to the archive. (DC1's acceptance folds in here.)
+  4. `docs/PLAYTEST.md` is under 50 KB: the current build's guide only, earlier builds' sections in the archive.
+  5. `docs/PROCESS.md` › Releases gains an "archive check" step, and `docs/archive/README.md` names the `0.1-beta/` folder it creates.
+status: open
+attempts: 0
+
+## DX3 · A fix-tier path through the pipeline (audit A5)
+tier: ui
+perf: skip
+touches: pipeline/, .claude/skills/pipeline/SKILL.md, .claude/agents/, docs/PROCESS.md, docs/records/README.md
+contract: none
+acceptance:
+  1. A task block may say `tier: fix`: gates, QA and the three review agents still run, but the record is the review line, one attempt row and a Decisions line, and no FEATURES or PLAYTEST edit is due unless the fix changes what the player sees (the changelog agent decides from the summary).
+  2. The agents' prompts each lose anything a build thread already reads elsewhere (the pipeline steps, the house style), citing the file instead; the six agents and two skills together are under 25 KB.
+  3. `gate.mjs`'s options are documented in one table, and any option CI never uses and no skill names is removed or folded.
+  4. `docs/PROCESS.md` › The pipeline says what a fix-tier task skips and why.
+status: open
+attempts: 0
+
+## DX4 · Tooling and CI: one build per pull request, balanced shards, a formatter (audit B1, B2, B3)
+tier: ui
+perf: skip
+touches: .github/workflows/check.yml, package.json, package-lock.json, .prettierrc, .prettierignore, pipeline/build-cached.mjs, pipeline/gate.mjs, src/ai/, vite.config.ts
+contract: none
+acceptance:
+  1. A pull request's CI builds the e2e and production bundles once and hands them to the browser shards (an artifact or a cache keyed on the sources); each browser shard no longer builds.
+  2. The slow shards finish within about a minute of each other: the Woodland Extraction balance guard is split or the shard count raised.
+  3. Prettier is a dev dependency with `printWidth: 140`, single quotes and trailing commas as the code already has them; `npm run format:check` runs on CI once the one-off format commit is in (that commit is made only after the Dev 6 playtest branches merge, and the owner has said yes to the formatter).
+  4. The 13 `eslint-disable` comments for an uninstalled linter become plain comments that keep their reason.
+  5. `npm run t` finishes under two minutes on the owner's desktop and under four in the cloud container, with no test dropped (any file still over 20 s is in `slow` or has a smaller fixture).
+status: open
+attempts: 0
+
+## DX5 · App root: one preferences object and one session interface (audit A1 step one, A2, B7)
+tier: core
+perf: required
+touches: src/game.ts, src/matchSession.ts, src/rangeSession.ts, src/settings/, src/ui/menus/savedChoices.ts, src/ui/crosshair.ts, src/ui/hitMarkerLook.ts, src/ui/hudSettings.ts, src/ui/menus/menus.ts, src/render/matchPresentation.ts, src/render/combatPresentation.ts
+contract: none
+acceptance:
+  1. A `HudPrefs` object (or the name the thread picks) holds every HUD and accessibility preference once; `Game`, `Menus`, both sessions and the presentations read it by reference, so a new preference is added in one place and the `set*` forwarders in `game.ts` and `matchSession.ts` are gone.
+  2. `MatchSession` and `RangeSession` implement one `Session` interface for what `Game` calls on both; `game.ts` has no `instanceof MatchSession` where the interface answers.
+  3. The typed `load*` and `save*` helpers live under `src/settings/`, with `src/settings/README.md` naming them; the UI files keep only what draws.
+  4. Every setting still loads, applies live and saves as before (the settings tests and the smoke test pass unchanged apart from import paths), and a save from 0.1 Dev 6 loads.
+  5. `game.ts` is under 1,300 lines.
+status: open
+attempts: 0
+
+## DX6 · Render: the folder regrouped, the prop builders as data, no per-frame vault rays (audit A3, A8 part, B4, B9 part)
+tier: core
+perf: required
+touches: src/render/, src/sim/vault.ts, src/sim/character.ts, src/sim/simulation.ts, src/matchSession.ts, pipeline/cycles.mjs, e2e/
+contract: none
+acceptance:
+  1. `src/render/` is grouped as its README describes: `field/`, `figures/`, `replicas/`, `light/`, `effects/` (names the thread picks), each with a README; `post/` and `webgpu/` keep theirs. Pure moves: no behaviour change, the import-cycle check and every test pass, and `render/README.md` is the index of the subfolders.
+  2. `mapMeshes.ts`'s prop builders (containers, pallets, racks, gabions, IBCs, skips, generators, barriers and the rest) live in a `mapPieces/` table, leaving merge, restyle and dispose behind; `mapMeshes.ts` is under 400 lines.
+  3. The vault prompt reads the simulation's per-tick answer (on the character or an event) and `combatPresentation.ts` casts no rays.
+  4. The six HUD marker updaters in `matchPresentation.ts` share one project-and-pin helper.
+  5. The perf gate is green on every matrix entry, and the Low frame-time, draw-call and heap lines are unchanged within noise.
+status: open
+attempts: 0
+
+## DX7 · Bots: the hub files split, two sources of truth closed (audit A8 part, B5, B6, B13)
+tier: core
+perf: required
+touches: src/ai/, src/config/bots.ts, src/config/, src/ui/devSettings.ts, src/pool/, src/progress/
+contract: none
+acceptance:
+  1. Hearing and round planning leave `ai/botController.ts` for modules of their own (as `squadOrders.ts` and `magShare.ts` already did); `botController.ts` is under 600 lines and every headless guard passes with the same seeds.
+  2. `config/bots.ts` is split by concern (movement, senses, squad, extraction, skill), each file under 300 lines, with `config/README.md` naming them and `config/bots.ts` re-exporting so no importer changes.
+  3. A malformed row in any root table (`pool.md`, `stats.md`, `levels.md`, `bots.md`, `bot-kits.md`, `callouts.md`) shows in the Dev tab's diagnostics and the console, not the console alone.
+  4. The six root tables live in one `data/` folder, named in `README.md` › Layout and `docs/ARCHITECTURE.md`, with every import and test path updated.
+status: open
+attempts: 0
+
+## DX8 · Game: the play flow and the dev glue out of the composition root (audit A1 step two; optional, after DX5)
+tier: core
+perf: required
+touches: src/game.ts, src/core/, src/matchFlow.ts, src/ui/menus/menus.ts
+contract: none
+acceptance:
+  1. Play, enter, resume, pause and leave live in a `PlayFlow` module (name the thread's) with its own tests; the dev and report glue in a module of its own; `Game` keeps the loop, the lifecycle and the wiring.
+  2. `game.ts` is under 800 lines and imports under 50 modules.
+  3. Pause, resume, restart and return to menu leave the same state as before (the session tests and the smoke test pass), and the frame loop's crash guard is unchanged.
 status: open
 attempts: 0
 

@@ -1,6 +1,6 @@
 ---
 name: pipeline
-description: Run one task of the Airsoft FPS through the build pipeline (gates, QA, performance, critic, changelog, retries, merge). Use at the start of any build thread that has a task block in docs/TASKS.md, and for a retry after a failed gate or critic.
+description: Run one task of the Airsoft FPS through the build pipeline (gates, QA, performance, critic, changelog, retries, merge), and the three review agents on any other code pull request. Use at the start of any build thread that has a task block in docs/TASKS.md, for a retry after a failed gate or critic, and before marking any pull request that touches code ready.
 ---
 
 # Running a task through the pipeline
@@ -18,10 +18,12 @@ frontmatter) at the top of the prompt, the task content last. Tell every worker 
    `status` and `attempts` are set once, in the records commit (token-efficiency plan, item 13).
 2. **Build** (CLAUDE.md §8, §9). Run `npm run t` (dots and failures only) as you go, `node pipeline/gate.mjs --quick`
    before QA. Every gate run but CI's writes the review packet, `pipeline/out/review-packet.md` (task block, gate
-   summary, touched contracts, QA's report, file list, diff); `node pipeline/packet.mjs --task <id>` rebuilds it after
-   a commit (token-efficiency plan, item 15).
-3. **QA**: spawn `qa` with the task id and the base commit; it reads the packet first. It commits its tests with the
-   trailer `Agent: qa` and writes its report to `pipeline/out/qa-artifacts/qa-report.md`, which the packet quotes.
+   summary, touched contracts, QA's and performance's reports, file list, diff); `node pipeline/packet.mjs --task
+   <id>` rebuilds it after a commit (token-efficiency plan, item 15).
+3. **QA**: spawn `qa` with the task id and the base commit; it reads the packet first, writes the tests and hunts
+   the change's bugs. It commits its tests with the trailer `Agent: qa` and writes its report, with a Pass or Fail
+   verdict, to `pipeline/out/qa-artifacts/qa-report.md`, which the packet quotes. On Fail, fix what it found and run it
+   again before the full gate.
 4. **Changelog**: spawn `changelog` with the lines' inputs, so it reads only CHANGELOG's `Unreleased` section and one
    FEATURES heading (item 17a): the task id and title, the PR title (and number when known), a one-paragraph summary
    in player words, the group(s) (Added, Changed, Fixed, Internal), the FEATURES heading to edit or none, and the
@@ -35,19 +37,23 @@ frontmatter) at the top of the prompt, the task content last. Tell every worker 
      error, file and line; the gate prints the same lines as it goes; item 19). Spawn `triage` only for an entry it
      marks with no file and line whose log is long. Count an attempt in the block's `attempts:` line, go to 2. No
      critic on a failed gate.
-   - `perf` failed: spawn `performance` with the env for the cause and ranked fixes; a regression it leaves as
-     Unexplained: spawn it again with `model: opus`. A passing perf run needs no agent: the gate's report is the
-     record and the critic's check 3 reads the hot paths (item 16).
-6. **Critic** (not for `tier: trivial`: spawn `triage` for a diff summary of the packet instead and check it against
-   the task yourself): spawn `critic`; `model: opus` when `tier: core`. It reads the packet first. On `Retry`: a near
-   miss marked `judgment` is re-run on Opus first; a near miss marked `measured` is not (a re-run can't change a
-   number, item 18). Then fix only the failed checks, count an attempt, go to 2.
+   - `perf` failed: the performance review below also ranks its causes and fixes.
+6. **Review agents** (owner, 2026-10-16: every change that touches code, config, assets or gameplay data; a docs-only
+   change skips them, and a docs-only `tier: trivial` task gets `triage`'s diff summary of the packet instead, checked
+   against the task by you). Run all three, in this order, each from the packet:
+   - **Performance**: spawn `performance` with the env. It writes `pipeline/out/performance.md` with a Pass or Fail
+     verdict; a regression it leaves as Unexplained: spawn it again with `model: opus`. Then `node pipeline/packet.mjs
+     --task <id>` so the packet quotes it.
+   - **Critic**: spawn `critic`; `model: opus` when `tier: core`. It reads the packet first, with QA's and the
+     performance agent's reports in it, and says Retry while either says Fail. On `Retry`: a near miss marked
+     `judgment` is re-run on Opus first; a near miss marked `measured` is not (a re-run can't change a number, item
+     18). Then fix only the failed checks and findings, count an attempt, go to 2.
    - **Ask the owner at once** (token-efficiency plan, item 9) when a failed check can only pass by changing an
      acceptance criterion (a budget the build can't meet, a target his ruling set): post a decision card and stop. No
      further critic runs or attempts on that check until he answers.
-7. **Four attempts** in all. After the fourth: if the gates are green and the critic score is at least 6/8 with
-   checks 1 and 2 passing, accept it (the owner's auto-accept, 2026-10-04) and log every failed check in
-   `docs/KNOWN_ISSUES.md`; otherwise stop, keep the best attempt on the branch and reply to the owner with what failed
+7. **Four attempts** in all. After the fourth: if the gates are green, QA and performance say Pass, and the critic
+   score is at least 6/8 with checks 1 and 2 passing, accept it (the owner's auto-accept, 2026-10-04; the `Review:`
+   line reads `critic auto-accept <score>`) and log every failed check in `docs/KNOWN_ISSUES.md`; otherwise stop, keep the best attempt on the branch and reply to the owner with what failed
    and what each attempt tried.
 8. **Record**: a task that changes bot or map balance on purpose first runs its figures, `node pipeline/balance.mjs
    <filter>` (`pipeline/README.md` › `balance.mjs`), and quotes them in its decisions; figures never fail a gate (item
@@ -60,5 +66,14 @@ frontmatter) at the top of the prompt, the task content last. Tell every worker 
    never the raw `playwright.json`, `vitest.json` or logs (`docs/PROCESS.md` › Sessions).
 9. **Ship**: merge `origin/main` in, push once with the work and the records together (no separate status or records
    pushes, no PR title edits afterwards: each push or title edit re-runs CI and wakes the thread), open the PR (template in `pipeline/README.md`; its title starts with the
-   task id, `<id>: …`, so CI runs the scope and changelog gates), subscribe to it, and once CI is green merge it (the
-   owner's standing choice, 2026-10-04).
+   task id, `<id>: …`, so CI runs the scope and changelog gates; its `Review:` line gives the three verdicts, which
+   CI's review gate checks), subscribe to it, and once CI is green merge it (the owner's standing choice, 2026-10-04).
+   Never mark a pull request ready, or merge one, with a review agent unrun or failing.
+
+## Code pull requests outside the pipeline
+
+A bug pass, an audit's fix, a content item or a pipeline change with no task block still runs the review agents
+before its pull request is marked ready (owner, 2026-10-16): open it as a draft if you open it early. Run
+`node pipeline/gate.mjs` (no `--task`; it writes the packet), then step 6's three agents with "Task: none" in their
+brief, so their reports' first lines read `Task: none` and the packet quotes them. Put the `Review:` line in the
+description (`pipeline/README.md` › Pull request description) before marking it ready.
