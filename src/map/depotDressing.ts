@@ -72,7 +72,6 @@ export function depotDressing(blocks: readonly MapBlock[]): MapDressing {
       // player can stand: render/skylineSeen.test.ts).
       // North: the crane over its container stacks, and a second warehouse behind the first.
       { kind: 'containers', x: 14, z: -37, width: 12.2, depth: 2.5, height: 7.8 },
-      { kind: 'containers', x: 30, z: -36, width: 6.1, depth: 2.5, height: 5.2 },
       { kind: 'shed', x: 26, z: -62, width: 32, depth: 16, height: 12, colour: 0xc9d3d6 },
       { kind: 'shed', x: -40, z: -58, width: 22, depth: 14, height: 8, colour: 0xd7c9a8 },
       // East: a container yard under a second crane.
@@ -87,7 +86,6 @@ export function depotDressing(blocks: readonly MapBlock[]): MapDressing {
       { kind: 'shed', x: -62, z: 0, width: 14, depth: 34, height: 11, colour: 0xd9d4c6 },
       // Far off, through the haze: the rest of the industrial park, a power station's chimneys and low hills.
       { kind: 'shed', x: -24, z: -118, width: 54, depth: 22, height: 15, colour: 0xc7ccd0 },
-      { kind: 'shed', x: 64, z: -108, width: 40, depth: 24, height: 13 },
       { kind: 'shed', x: 122, z: 28, width: 24, depth: 46, height: 14, colour: 0xd5d0c4 },
       { kind: 'shed', x: -118, z: -46, width: 26, depth: 40, height: 12, colour: 0xc9d3d6 },
       { kind: 'shed', x: -96, z: 92, width: 40, depth: 22, height: 11 },

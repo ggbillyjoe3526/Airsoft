@@ -79,9 +79,13 @@ describe('a block finish and paint (M34f)', () => {
     for (const id of ['tiles', 'plaster', 'glass', 'planks'] as const) expect(ids.has(id), id).toBe(true);
     for (const map of [DEPOT, WOODLAND]) {
       const own = texturesFor(map);
-      for (const id of ['plaster', 'cladding', 'tiles', 'asphalt', 'paving', 'glass'] as const) expect(own, `${map.name} ${id}`).not.toContain(id);
-      expect(map.blocks.some((b) => b.finish !== undefined || b.paint !== undefined || isCityProp(b.kind)), map.name).toBe(false);
+      // MS1: Woodland's cabin roof is its one finished block, in cladding.
+      const roof = map === WOODLAND ? map.blocks.filter((b) => b.finish !== undefined) : [];
+      expect(roof.every((b) => b.kind === 'ramp' && b.finish === 'cladding'), map.name).toBe(true);
+      for (const id of ['plaster', 'cladding', 'tiles', 'asphalt', 'paving', 'glass'] as const) if (!(roof.length && id === 'cladding')) expect(own, `${map.name} ${id}`).not.toContain(id);
+      expect(map.blocks.some((b) => (!roof.includes(b) && (b.finish !== undefined || b.paint !== undefined)) || isCityProp(b.kind)), map.name).toBe(false);
     }
+    expect(WOODLAND.blocks.filter((b) => b.finish !== undefined)).toHaveLength(2);
   });
 
   it('builds a finished city into meshes, one per surface, with no surface left undrawn', () => {

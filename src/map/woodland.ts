@@ -51,9 +51,10 @@ const FENCE_SECTION = 8;
 const SINK = 0.03;
 /** Cabin walls. */
 const CABIN_WALL = 0.4;
-const CABIN_HEIGHT = 2.6;
-/** MS1: the cabin's tin roof: its ridge `ridge` m over the walls' top, the eaves `overhang` m out, in `paint`. */
-const CABIN_ROOF = { ridge: 1.4, overhang: 0.45, paint: 0x7a3f32 } as const;
+/** MS1: 3 m (was 2.6), so a body vaulting the west wall clears the roof over it (M102). */
+const CABIN_HEIGHT = 3.0;
+/** MS1: the cabin's tin roof: its ridge `ridge` m over the walls' top, the eaves `overhang` m out, in weathered grey `paint` (rust red read as a team colour). */
+const CABIN_ROOF = { ridge: 1.4, overhang: 0.45, paint: 0x5d5a52 } as const;
 const WINDOW_SILL = CROUCH;
 const WINDOW_TOP = 2.0;
 
@@ -297,7 +298,8 @@ function cabin(): MapBlock[] {
     wall(68.8, x1, z0, z0 + t),
     // West wall, with a low stretch to vault (no lintel: a body going over needs its full height clear).
     wall(x0, x0 + t, z0 + t, 21),
-    standing('log', x0, x0 + t, 21, 23, VAULT_WALL_HEIGHT, 0, level),
+    // On its own ground, not the cabin's level: its height over the ground each side is the vault's (M102).
+    standing('log', x0, x0 + t, 21, 23, VAULT_WALL_HEIGHT),
     wall(x0, x0 + t, 23, z1 - t),
     // East wall, with the door towards the track.
     wall(x1 - t, x1, z0 + t, 20.6),
@@ -473,7 +475,7 @@ function woods(lanes: readonly (readonly (readonly [number, number])[])[], block
  * the taller ones still hide a crouched player; nobody standing is hidden by one.
  */
 const BUSH_RADIUS = [0.5, 0.85] as const;
-const BUSH_HEIGHT = [0.75, 1.15] as const;
+const BUSH_HEIGHT = [0.9, 1.25] as const;
 /** How close (m) a bush's edge may come to a lane's line, another bush's edge, or a block; how deep its foot sits. */
 const BUSH_LANE_GAP = 0.8;
 const BUSH_GAP = 0.4;

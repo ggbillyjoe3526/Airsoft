@@ -25,6 +25,11 @@ import { playMatch } from './depotMatchSupport';
 const SECONDS = { Woodland: 120, 'Neon Heights': 60 } as const;
 /** Neon Heights plays 4v4; Woodland is checked at its largest, 6v6 (M88), where the most bots search at once. */
 const TEAM_SIZE = { Woodland: 6, 'Neon Heights': 4 } as const;
+/**
+ * The match's seed. Woodland's is 4 since MS1 (smaller bushes, the cabin's roof and walls): seed 1's longest search fell
+ * to 7,877 nodes, under the budget, and seeds 2 and 3 ran none longer either; seed 4's runs to 9,888.
+ */
+const SEED = { Woodland: 4, 'Neon Heights': 1 } as const;
 
 const proto = BotController.prototype as unknown as { planRoutes(): void };
 const realPlanRoutes = proto.planRoutes;
@@ -100,7 +105,7 @@ describe.each([
   });
 
   it(`no tick of a ${SECONDS[name]} s ${TEAM_SIZE[name]}v${TEAM_SIZE[name]} expands more than NAV.searchBudget nodes in all, and searches longer than that carry over`, { timeout: 120_000 }, () => {
-    const seen = measure(map, 1, TEAM_SIZE[name], SECONDS[name]);
+    const seen = measure(map, SEED[name], TEAM_SIZE[name], SECONDS[name]);
     console.log(`QA M74 probe ${name}: ${JSON.stringify(seen)}, stepRoute calls ${tally.calls}, longest search ${tally.longestSearch}`);
     expect(NAV.searchBudget).toBeGreaterThan(0);
     expect(Number.isFinite(NAV.searchBudget)).toBe(true);

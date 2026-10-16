@@ -151,11 +151,10 @@ const NEAR: SkylinePiece[] = [
   { kind: 'tower', x: 33, z: -24, width: 12, depth: 12, height: 57, base: 9.6, sign: NEON_COLOURS.magenta, billboard: NEON_COLOURS.lime, strips: NEON_COLOURS.violet },
   { kind: 'tower', x: -33, z: 23, width: 12, depth: 12, height: 41, base: 9.6, sign: NEON_COLOURS.teal, strips: NEON_COLOURS.lime },
   { kind: 'tower', x: 34, z: 23, width: 12, depth: 12, height: 49, base: 9.6, sign: NEON_COLOURS.yellow, strips: NEON_COLOURS.magenta },
-  // MS1: cables across the avenue and the yards, hung with paper lanterns (look only: high over every head).
-  ...[-12, -9, -6, -3, 0, 3, 6, 9, 12].map((z, k): SkylinePiece => ({ kind: 'wire', points: [{ x: -3.5, z }, { x: 4.3, z: z + (k % 2 ? 1.2 : -0.8) }], y: 5.2 + (k % 3) * 0.7, ...(k % 3 !== 1 ? { lanterns: [NEON_COLOURS.magenta, NEON_COLOURS.yellow, NEON_COLOURS.teal][k % 3]! } : {}) })),
-  { kind: 'wire', points: [{ x: -14.7, z: -2 }, { x: -12, z: 2.5 }], y: 4.6, lanterns: NEON_COLOURS.yellow },
-  { kind: 'wire', points: [{ x: 13.4, z: 5 }, { x: 17, z: 0 }], y: 5, lanterns: NEON_COLOURS.magenta },
-  { kind: 'wire', points: [{ x: 13.4, z: 8 }, { x: 17, z: 10 }], y: 5.6 },
+  // MS1: cables across the avenue, hung with paper lanterns (look only): their lowest lantern over the room a player
+  // takes up on every balcony and walkway under them (render/skylineSeen.test.ts). None at z −6, where the walkway at 6 m
+  // crosses; the yards' walkways leave no room for one.
+  ...[-12, -9, -3, 0, 3, 6, 9, 12].map((z, k): SkylinePiece => ({ kind: 'wire', points: [{ x: -3.5, z }, { x: 4.3, z: z + (k % 2 ? 1.2 : -0.8) }], y: 5.8 + (k % 3) * 0.35, ...(k % 3 !== 1 ? { lanterns: [NEON_COLOURS.magenta, NEON_COLOURS.yellow, NEON_COLOURS.teal][k % 3]! } : {}) })),
   // Skybridges across the avenue's ends, high over the street.
   { kind: 'skybridge', points: [{ x: -10, z: -24 }, { x: 4, z: -24 }], y: 34, width: 3, height: 3.2 },
   { kind: 'skybridge', points: [{ x: -11.5, z: 25 }, { x: 3, z: 25 }], y: 28, width: 3, height: 3.2 },
@@ -185,6 +184,16 @@ const CITY = {
   base: 9.6,
 } as const;
 
+/**
+ * The grid cells (gx,gz) whose tower no player ever sees, behind the first row and the nearer towers (owner, 2026-10-16:
+ * "if the player will never see it, remove it"). render/skylineSeen.test.ts finds them: it fails on a tower nobody sees.
+ */
+const UNSEEN = new Set([
+  '-5,-2', '-5,-1', '-5,0', '-5,2', '-4,-3', '-4,-2', '-4,-1', '-4,0', '-4,1', '-4,2', '-4,3', '-3,-4', '-3,-3',
+  '-3,-2', '-3,3', '-3,4', '-2,-5', '-2,-4', '-2,-3', '-2,-2', '-2,-1', '-2,3', '-2,4', '-2,5', '-1,-5', '-1,-4',
+  '2,-4', '2,3', '2,4', '3,-4', '3,-3', '3,-2', '3,3', '3,4', '4,-3', '4,-2', '4,0', '4,2', '4,3', '5,0', '5,1',
+]);
+
 /** The city beyond the first row: a grid of towers to the haze, taller further out, the avenue's line kept open. */
 function outerCity(): SkylinePiece[] {
   const out: SkylinePiece[] = [];
@@ -199,6 +208,7 @@ function outerCity(): SkylinePiece[] {
       if (Math.abs(x) < HALF_X + CITY.clear - 20 && Math.abs(z) < HALF_Z + CITY.clear - 20) continue;
       // The avenue's line runs on north and south: no block on it within the haze's near half.
       if (Math.abs(x) < 8 && dist < CITY.reach * 0.6) continue;
+      if (UNSEEN.has(`${gx},${gz}`)) continue;
       const t = Math.min(1, (dist - CITY.clear) / (CITY.reach - CITY.clear));
       const lo = CITY.near[0] + (CITY.far[0] - CITY.near[0]) * t;
       const hi = CITY.near[1] + (CITY.far[1] - CITY.near[1]) * t;
@@ -228,14 +238,12 @@ const unit = (x: number, y: number, z: number, facing: NeonSign['facing']): Skyl
 
 /**
  * MS1, grit: air-conditioning units on the walls over the street and the yards, every one on a face that backs it, clear
- * of the signs, the openings and each other (placed as the signs are, render/neonDressing.ts mountNeon's rule).
+ * of the signs, the openings and each other (placed as the signs are, render/neonDressing.ts mountNeon's rule), and out of
+ * the room a player takes up on any balcony or walkway (render/skylineSeen.test.ts).
  */
 const UNITS: SkylinePiece[] = [
-  unit(-7.2, 3, -14.98, '+z'),
-  unit(-14.68, 3, 0.3, '+x'),
   unit(-15.02, 3, 6.9, '-x'),
   unit(-15.02, 3, 4.7, '-x'),
-  unit(-3.48, 3, -0.9, '+x'),
   unit(-11.6, 3, -2.02, '-z'),
   unit(-9.4, 3, -2.02, '-z'),
   unit(-15.02, 5.6, 6.9, '-x'),
@@ -248,19 +256,12 @@ const UNITS: SkylinePiece[] = [
   unit(-7.5, 3, 10.02, '+z'),
   unit(-12.02, 3, -12.5, '-x'),
   unit(-12.02, 5.6, -12.5, '-x'),
-  unit(-8.43, 3, -7.5, '+x'),
   unit(-8.43, 5.6, -6.2, '+x'),
   unit(-8.43, 5.6, -8.4, '+x'),
-  unit(-8.43, 7.2, -10.6, '+x'),
   unit(-6.7, 5.6, -4.98, '+z'),
-  unit(-4.88, 7.2, -7.5, '+x'),
   unit(-14.92, 3, -6.9, '-x'),
   unit(-12.88, 3, -9.1, '+x'),
-  unit(4.32, 3, -2.3, '+x'),
-  unit(4.32, 3, -6.7, '+x'),
-  unit(4.32, 3, -8.9, '+x'),
   unit(3.98, 3, 6.1, '-x'),
-  unit(4.32, 3, 8.1, '+x'),
   unit(3.98, 5.6, -9.1, '-x'),
   unit(17.02, 3, -1.4, '+x'),
   unit(17.02, 3, -3.6, '+x'),
@@ -283,10 +284,6 @@ const UNITS: SkylinePiece[] = [
   unit(14.8, 3, -10.02, '-z'),
   unit(14.8, 7.2, -10.02, '-z'),
   unit(3.98, 7.2, -5.3, '-x'),
-  unit(13.72, 7.2, 3.2, '+x'),
-  unit(13.38, 3, 7.6, '-x'),
-  unit(13.38, 3, 3.2, '-x'),
-  unit(5.92, 7.2, -6.9, '+x'),
 ];
 
 export const NEON_HEIGHTS_DRESSING: MapDressing = {

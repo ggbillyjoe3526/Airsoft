@@ -23,10 +23,10 @@ export const FOLIAGE_LOOK = {
   colour: 0x2f5a2a,
   jitter: 0.12,
   lump: 0.18,
-  /** MS1: `lobes` broad lobes a bush, and a leafy jitter of up to `leafy` of the radius a vertex, on an icosphere of `detail` 2 (320 triangles). */
+  /** MS1: `lobes` broad lobes a bush, and a leafy jitter of up to `leafy` of the radius a vertex, on an icosphere of `detail` 1 (80 triangles). */
   lobes: 3,
   leafy: 0.06,
-  detail: 2,
+  detail: 1,
   /**
    * M33i, on a map lit by a key light from one side: the side facing it turns towards `rim` by up to `rimStrength`, and
    * the leaves below `footFrom` (of the half-height, -1 the very foot) are `footShade` darker, baked. Same triangles.
@@ -91,15 +91,15 @@ export const CANOPY = {
   minBase: 3,
   broadFrom: 1,
   pine: {
-    sides: 8,
+    sides: 6,
     apexAbove: 1.3,
     depth: 0.7,
-    // MS1: four tiers of branches (were two plain six-sided cones), each a star of branch tips `notch` deep, drooping.
+    // MS1: three tiers of branches (were two plain six-sided cones), each a star of branch tips `notch` deep, drooping:
+    // 54 triangles a pine (were 12), which keeps Woodland's Low under its 56k triangles (render/mapMeshes.test.ts).
     tiers: [
-      { from: 0, to: 0.42, radius: 1.85 },
-      { from: 0.24, to: 0.64, radius: 1.5 },
-      { from: 0.46, to: 0.84, radius: 1.12 },
-      { from: 0.66, to: 1, radius: 0.72 },
+      { from: 0, to: 0.5, radius: 1.85 },
+      { from: 0.3, to: 0.78, radius: 1.35 },
+      { from: 0.58, to: 1, radius: 0.85 },
     ],
     notch: 0.62,
     droop: 0.22,

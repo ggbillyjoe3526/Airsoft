@@ -209,11 +209,13 @@ describe('the lighting preset on the renderer (M33f, acceptance 4)', () => {
     const day = look(r);
     expect(day).toEqual({ fog: [ATMOSPHERE.horizon, ATMOSPHERE.fogNear, ATMOSPHERE.fogFar], background: ATMOSPHERE.horizon, exposure: TONE_MAPPING.exposure[TONE_MAPPING.default], env: environmentKey(defaultEnvironmentLook()) });
     const fog = r.scene.fog;
-    r.setLighting(resolveLighting(WOODLAND));
-    const night = LIGHTING_PRESETS.night;
+    // Woodland's night is the preset with its own overrides (MS1: a brighter exposure).
+    const night = resolveLighting(WOODLAND);
+    r.setLighting(night);
     expect(look(r).fog).toEqual([night.fog.colour, night.fog.near, night.fog.far]);
     expect(look(r).background).toBe(night.fog.colour);
     expect(look(r).exposure).toBeCloseTo(TONE_MAPPING.exposure[TONE_MAPPING.default] * night.exposureScale);
+    expect(night.exposureScale).toBeGreaterThan(LIGHTING_PRESETS.night.exposureScale);
     expect(look(r).env).not.toBe(day.env);
     expect(r.scene.fog).toBe(fog); // changed in place, never a new object
     r.setLighting(resolveLighting(DEPOT));

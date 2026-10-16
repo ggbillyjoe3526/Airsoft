@@ -18,21 +18,21 @@ import type { PuffConfig, QualitySettings } from './render';
  * - dust motes: only their colour and a fade with height (the same draw).
  *
  * G9 dresses Woodland and Neon Heights through the same engine, and costs them the same way (measured in
- * render/g9DressingCost.test.ts, which holds both to the same budget):
+ * render/g9DressingCost.test.ts, which holds Woodland to Depot's budget and Neon Heights to its own):
  * - Low draws none of it on either map: the same meshes, triangles, shaders, textures and horizon as before, and no
  *   moving effect at all.
- * - Woodland (Medium, High): 11 808 more triangles and 2 more draw calls — the junk mesh carries the fallen branches,
- *   twigs and logs and the leaf drifts (7 046 triangles since M102 changed the cabin's west wall and turned a Knoll
- *   log), the puddle mesh the mud and the puddles (2 040), and the treeline and hills join the tree ring (2 722, no draw
+ * - Woodland (Medium, High): 11 888 more triangles and 2 more draw calls — the junk mesh carries the fallen branches,
+ *   twigs and logs and the leaf drifts (7 126 triangles since MS1 stood the cabin's walls on one level), the puddle mesh the mud and the puddles (2 040), and the treeline and hills join the tree ring (2 722, no draw
  *   call). The moss on the trunks, logs and boulders is vertex colour on meshes that were already there (nothing
  *   added). Moving: the fireflies at night are one draw.
- * - Neon Heights (Medium, High): 9 630 more triangles and 2 more draw calls — the junk mesh carries the street litter,
- *   the posters and every neon tube, the flickering ones too (5 632 triangles since BP5 ended the Plaza landing where
- *   its stair starts: the junk and litter laid on and along it changed with it), the dirt, litter scraps and sprays join the decal mesh (438, no draw
- *   call), the puddle mesh the puddles (840), and the towers join the tree ring (2 354)
- *   with their lit windows, blades and beacons (366, unlit; no draw call either, render/skyHost.ts). Moving: the vents'
- *   steam is one instanced draw while in view; the passing plane rides the tree ring too (108 triangles, collapsed to a
- *   point between passes: no draw call).
+ * - Neon Heights (Medium, High): 34 102 more triangles and 2 more draw calls (MS1, owner 2026-10-16: a city that
+ *   overwhelms with lights, adverts and signs; render/g9DressingCost.test.ts holds it to 36 000) — the junk mesh carries
+ *   the street litter, the posters and every neon tube, the flickering ones too (16 066 triangles with MS1's 27 more
+ *   signs), the dirt, litter scraps and sprays join the decal mesh (706, no draw call), the puddle mesh the puddles
+ *   (840), and the towers, cables, wall units and skybridges join the tree ring with their lit windows, adverts, light
+ *   strips, lanterns and beacons (16 490, unlit; no draw call either, render/skyHost.ts). Moving: the vents' steam is
+ *   one instanced draw while in view; the passing plane rides the tree ring too (108 triangles, collapsed to a point
+ *   between passes: no draw call).
  * - The totals are pinned against the real meshes by render/g9EffectsQA.test.ts (it reads them from this comment).
  * - Depot is untouched: it draws exactly what it drew before, to the vertex (pinned from `main`).
  * - The signs' gentle flicker rides the junk mesh's own material as one vec3 uniform and a per-vertex channel: no extra
@@ -202,7 +202,7 @@ export const DRESSING = {
     strip: { width: 0.35, inset: 0.4, day: 0.9, night: 1.6 },
   },
   /** MS1: silos (render/skyline.ts): drums `gap` m apart, cone roofs `roof` radii tall, a band `band` m tall at `bandAt` m. */
-  silo: { colour: '#d8d6cf', roofColour: '#9aa0a6', bandColour: '#5f7f8a', walkway: '#6d737a', gap: 0.8, roof: 0.6, band: 1.2, bandAt: 3 },
+  silo: { colour: '#d8d6cf', roofColour: '#9aa0a6', bandColour: '#6f7378', walkway: '#6d737a', gap: 0.8, roof: 0.6, band: 1.2, bandAt: 3 },
   /**
    * MS1: cables strung across the streets: `thick` m, sagging `sag` m in `segments` pieces; paper lanterns on every
    * `every`th joint, `radius` × `height` m, glowing `day` / `night` times their colour.

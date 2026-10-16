@@ -37,8 +37,8 @@ export interface Crown {
 
 /**
  * MS1: a conifer's tier of branches: a skirt from a ring at `y0` (radius `r`) to its apex at `y1`, its rim a star of
- * `sides` branch tips (out to `r`, drooping `droop` m) between notches `notch` of the way in, closed underneath. Twice
- * the outline points of a plain cone, so the crown reads as branches rather than a faceted cone.
+ * `sides` branch tips (out to `r`, drooping `droop` m) between notches `notch` of the way in, closed underneath: 3 ×
+ * `sides` triangles. Twice the outline points of a plain cone, so the crown reads as branches rather than a faceted cone.
  */
 function skirt(out: number[], x: number, z: number, y0: number, y1: number, r: number, sides: number, turn: number, notch: number, droop: number): void {
   const ring: [number, number, number][] = [];
@@ -54,11 +54,11 @@ function skirt(out: number[], x: number, z: number, y0: number, y1: number, r: n
     const [bx, by, bz] = ring[(i + 1) % n]!;
     out.push(bx, by, bz, ax, ay, az, x, y1, z);
   }
-  // The underside, a shallow cone up to the trunk (seen from below).
+  // The underside, a shallow cone from tip to tip up to the trunk (seen from below; the notches need no face of their own).
   const under = y0 + (y1 - y0) * 0.12;
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < n; i += 2) {
     const [ax, ay, az] = ring[i]!;
-    const [bx, by, bz] = ring[(i + 1) % n]!;
+    const [bx, by, bz] = ring[(i + 2) % n]!;
     out.push(ax, ay, az, bx, by, bz, x, under, z);
   }
 }
