@@ -75,9 +75,9 @@ release description:
   gameplay data is marked ready only once the critic, QA and performance agents (`.claude/agents/`) have run and
   passed, and its description's `Review:` line gives their verdicts (`pipeline/README.md` › Pull request description);
   CI's `review` gate checks the line. This holds outside the pipeline too. Docs-only pull requests skip them.
-- **Who merges.** A pull request built through the pipeline is merged by its own thread once CI is green and the
-  review agents passed (owner, 2026-10-04: "Claude merges"). A docs-only pull request is merged by its thread once CI is
-  green (owner, 2026-10-06: "just you handle it"). Any other pull request waits for the owner.
+- **Who merges.** Every pull request is merged by its own thread, never by the owner (owner, 2026-10-16: "You should
+  be merging. Not me"). A code pull request merges once CI is green and the review agents passed (its `Review:` line);
+  a docs-only one once CI is green.
 - **Branches** (owner, 2026-10-01). `main` holds the latest stable release.
   - **Now (the 0.1 cycle):** work reaches `main` only through merged pull requests, and the tagged commits on `main`
     are the releases.

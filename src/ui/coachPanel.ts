@@ -13,6 +13,11 @@ export class CoachPanel {
   private readonly body: HTMLParagraphElement;
   /** Where your last BB landed (the range readout's line), shown on the steps that ask for a hit. */
   private readonly shot: HTMLParagraphElement;
+  /** A read step's time (TT1): a thin bar that fills as the card reads, so the player sees it moves on by itself. */
+  private readonly timer: HTMLDivElement;
+  private readonly timerFill: HTMLDivElement;
+  /** The bar's fill last drawn, in hundredths (-1: hidden), so a tick that changes nothing visible writes nothing. */
+  private timerShown = -1;
   private shownKey = '';
   /** Settings › HUD › Ammo counter (AC1): off, a step with words for it says them instead (config/tutorial.ts coachText). */
   private ammoCounter = true;
@@ -32,7 +37,13 @@ export class CoachPanel {
     this.shot = document.createElement('p');
     this.shot.className = 'coach-shot';
     this.shot.hidden = true;
-    this.root.append(this.head, this.body, this.shot);
+    this.timer = document.createElement('div');
+    this.timer.className = 'coach-timer';
+    this.timer.hidden = true;
+    this.timerFill = document.createElement('div');
+    this.timerFill.className = 'coach-timer-fill';
+    this.timer.appendChild(this.timerFill);
+    this.root.append(this.head, this.body, this.shot, this.timer);
     parent.appendChild(this.root);
   }
 
@@ -48,6 +59,15 @@ export class CoachPanel {
   /** The last BB's line ('' for none yet); shown only while a step asks for a hit. */
   setShot(text: string): void {
     if (this.shot.textContent !== text) this.shot.textContent = text;
+  }
+
+  /** A read step's progress (0..1), or below 0 to hide the bar (TutorialTracker.readProgress). */
+  setReadProgress(progress: number): void {
+    const shown = progress < 0 ? -1 : Math.round(progress * 100);
+    if (shown === this.timerShown) return;
+    this.timerShown = shown;
+    this.timer.hidden = shown < 0;
+    if (shown >= 0) this.timerFill.style.transform = `scaleX(${shown / 100})`;
   }
 
   /** Shows the tracker's step (call when it changes, and when play resumes: a key may have been rebound). */

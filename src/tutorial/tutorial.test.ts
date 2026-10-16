@@ -88,12 +88,6 @@ describe('the tutorial (M16)', () => {
     tick();
     finishStep();
 
-    expectStep('lean');
-    player.lean = -0.9;
-    tick();
-    player.lean = 0;
-    finishStep();
-
     expectStep('sprint');
     const fired: GameEvent = { type: 'shot', characterId: 0, replicaId: 'aeg', position: vec3() };
     tick([fired]); // no sprint yet
@@ -169,7 +163,7 @@ describe('the tutorial (M16)', () => {
 
   it('points the player to the optics on the Loadout from the aiming step, which every replica plays (BP5)', () => {
     const aim = TUTORIAL_STEPS.find((s) => s.id === 'aim')!;
-    expect(aim.text).toContain('On the Loadout (press Esc, then Loadout) you can fit a red dot or a 2× scope.');
+    expect(aim.text).toContain('Fit a red dot or scope on the Loadout (Esc, then Loadout).');
     // Still no longer than the longest card the coach already shows.
     expect(aim.text.length).toBeLessThanOrEqual(Math.max(...TUTORIAL_STEPS.filter((s) => s.id !== 'aim').map((s) => s.text.length)));
   });
@@ -223,7 +217,7 @@ describe('the tutorial (M16)', () => {
     const far = TUTORIAL_STEPS.find((x) => x.id === 'far')!;
     const reach = hopUpReach(AEG, AEG.hopUpDial, BALLISTICS).onTargetTo;
     // A retune of the ballistics or the hop-up that moves the reach has to update the text.
-    expect(far.text).toContain(`(the stock rifle: about ${Math.round(reach)} m)`);
+    expect(far.text).toContain(`flying flat to about ${Math.round(reach)} m`);
     // The step asks for a hit beyond it, so it teaches aiming high or turning the hop-up up.
     if (far.goal.kind !== 'hit') throw new Error('the far step asks for a hit');
     expect(far.goal.minDistance).toBeGreaterThan(reach);
@@ -239,9 +233,38 @@ describe('the tutorial (M16)', () => {
     expect(TUTORIAL_STEPS.find((s) => s.id === 'orderWheel')!.text).toContain('hold {orderWheel}');
   });
 
-  it("names the order wheel's orders as the wheel labels them (M80)", () => {
+  it('keeps every card short, and no read card waits long (TT1, owner note 2: less wordy, no long waits)', () => {
+    const words = (text = '') => text.split(/\s+/).filter(Boolean).length;
+    for (const s of TUTORIAL_STEPS.flatMap((x) => (x.withoutOptic ? [x, x.withoutOptic] : [x]))) {
+      expect(words(s.text), s.id).toBeLessThanOrEqual(25);
+      expect(words(s.countHidden), s.id).toBeLessThanOrEqual(25);
+      expect(words(s.levelling), s.id).toBeLessThanOrEqual(10);
+      if (s.goal.kind === 'read') expect(s.goal.seconds, s.id).toBeLessThanOrEqual(8);
+    }
+    // Leaning is gone from the game (owner note 30), so the tutorial no longer teaches it.
+    expect(TUTORIAL_STEPS.some((s) => /\{lean(Left|Right)\}|\blean/i.test(s.text))).toBe(false);
+  });
+
+  it("names no order the wheel doesn't have: the card shows the wheel itself (TT1)", () => {
     const text = TUTORIAL_STEPS.find((s) => s.id === 'orderWheel')!.text;
-    for (const item of ORDER_WHEEL.items) expect(text).toContain(item.label);
+    const named = ORDER_WHEEL.items.map((i) => i.label).filter((l) => text.includes(l));
+    expect(named).toEqual([]);
+  });
+
+  it("fills the coach's bar as a read card reads, and has none on a step that asks for something (TT1)", () => {
+    const { t, tick } = setup();
+    expect(t.readProgress).toBe(-1); // looking around
+    const hits = t.steps.findIndex((s) => s.id === 'hits');
+    const goal = t.steps[hits]!.goal;
+    if (goal.kind !== 'read') throw new Error('hits is read');
+    t.debugJumpTo(hits);
+    tick();
+    expect(t.readProgress).toBeGreaterThan(0);
+    for (let i = 0; i < goal.seconds / 2 / DT; i++) tick();
+    expect(t.readProgress).toBeCloseTo(0.5, 1);
+    for (let i = 0; i < goal.seconds / DT && !t.showingDone; i++) tick();
+    expect(t.showingDone).toBe(true);
+    expect(t.readProgress).toBe(-1); // the tick shows, then the next card
   });
 
   it('names keys only through the bindings, never a key itself (M80: a rebound key reads right)', () => {
