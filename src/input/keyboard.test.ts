@@ -28,6 +28,19 @@ describe('Keyboard (audit L-27)', () => {
     expect(keyboard.isDown('reload')).toBe(false);
   });
 
+  it('counts every press within a frame, auto-repeats excepted (BP6)', () => {
+    const { keyboard, key } = setup();
+    expect(keyboard.pressCount('reload')).toBe(0);
+    key('keydown', 'KeyR');
+    key('keydown', 'KeyR', true);
+    key('keyup', 'KeyR');
+    key('keydown', 'KeyR');
+    keyboard.press('KeyR');
+    expect(keyboard.pressCount('reload')).toBe(3);
+    keyboard.endFrame();
+    expect(keyboard.pressCount('reload')).toBe(0);
+  });
+
   it('ignores the auto-repeat of a held key: it is not a new press', () => {
     const { keyboard, key } = setup();
     key('keydown', 'KeyR');

@@ -64,7 +64,11 @@ export class PlayerInput {
   private jumpLatch = false;
   private reloadLatch = false;
   private fireLatch = false;
-  private fireModeLatch = false;
+  /**
+   * Fire selector presses not yet handed to a tick: one step per tick, so two taps inside one slow frame are two steps
+   * (BP6; a latch counted them as one). Dropped with the other one-shots on a pause or a new round.
+   */
+  private fireModePresses = 0;
   /** The Weapon torch key pressed since the last tick (M33h). */
   private torchLatch = false;
   /** The Inspect key pressed since the last takeInspect (RM2; presentation only, so never part of a command). */
@@ -147,7 +151,7 @@ export class PlayerInput {
     const kb = this.keyboard;
     if (kb.wasPressed('jump')) this.jumpLatch = true;
     if (kb.wasPressed('reload')) this.reloadLatch = true;
-    if (kb.wasPressed('fireMode')) this.fireModeLatch = true;
+    this.fireModePresses += kb.pressCount('fireMode');
     if (kb.wasPressed('torch')) this.torchLatch = true;
     if (kb.wasPressed('inspect')) this.inspectLatch = true;
     if (kb.wasPressed('orderFollow')) this.latchOrder('follow', false);
@@ -271,12 +275,15 @@ export class PlayerInput {
     cmd.fire = !this.fireBlocked && (kb.isDown('fire') || this.fireLatch);
     cmd.switchTo = this.switchLatch;
     cmd.holster = this.holsterLatch;
-    cmd.cycleFireMode = this.fireModeLatch;
+    cmd.cycleFireMode = this.fireModePresses > 0;
+    // Taken one at a time: clearOneShots keeps the rest for the next ticks.
+    const fireModeLeft = Math.max(0, this.fireModePresses - 1);
     cmd.toggleTorch = this.torchLatch;
     cmd.use = kb.isDown('use');
     // A toss is the session's to name (MatchSession, src/magHandoff.ts): never from the keys straight.
     cmd.tossMag = -1;
     this.clearOneShots();
+    this.fireModePresses = fireModeLeft;
   }
 
   /** Returns true once per trigger click since the last tick (used for menus-in-play such as spectating). */
@@ -335,7 +342,7 @@ export class PlayerInput {
     this.jumpLatch = false;
     this.reloadLatch = false;
     this.fireLatch = false;
-    this.fireModeLatch = false;
+    this.fireModePresses = 0;
     this.torchLatch = false;
     this.inspectLatch = false;
     this.orderLatch = null;
