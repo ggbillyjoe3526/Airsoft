@@ -59,6 +59,11 @@ replaces its line; the old one stays findable in the archive or in git.
 - **Dev builds continue until the owner calls the game feature complete; Beta then adds no features (owner,
   2026-10-06).** Beta is bug fixes, QoL, balance, refinement and polish, so features once parked in Beta moved into Dev
   builds or became maybes.
+- **0.1 Beta 1 has begun, and it carries the owner's Dev 6 playtest list (owner, 2026-10-16).** He called the game out
+  of Dev and tags 0.1 Beta 1 when it is complete. His 34 items are Beta 1 work, including the few small additions he
+  asked for: an in-match hop-up control, a home-screen fullscreen button, one feed with a placement setting, and WON or
+  LOST at a round's end. He also removes features: resting on cover, the Voices setting, and the Skins option (it
+  moves into Colour). Blender models become the default. Each item is a block in `docs/TASKS.md`.
 - **Dev 5 order (owner, 2026-10-06).** Docs rewrite with token step 2, token step 3, token step 4, bug pass BP2,
   graphics, the playtest notes, the content toolkit (all four parts, mode checks included), bug pass BP3, then the tag.
   Dev 7 is folded into Dev 6 ("I want bigger builds"). The order is in `docs/ROADMAP.md`.
