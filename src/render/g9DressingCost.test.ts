@@ -100,7 +100,9 @@ describe('G9: what the two maps’ dressing costs', { timeout: 30_000 }, () => {
 
   for (const [name, map] of MAPS) {
     for (const preset of ['medium', 'high'] as const) {
-      it(`${name} on ${preset}: at most four more static draw calls, one per moving effect, and 15 000 more triangles`, () => {
+      // MS1 (owner, 2026-10-16: Neon Heights should overwhelm with lights, adverts and signs) raised Neon's to 36 000.
+      const cap = map === NEON_HEIGHTS ? 36_000 : 15_000;
+      it(`${name} on ${preset}: at most four more static draw calls, one per moving effect, and ${cap} more triangles`, () => {
         const q = QUALITY[preset];
         const dressed = buildMapMeshes(map, textures(map), look(q), atlas);
         const bare = buildMapMeshes(bareOf(map), textures(map), look(q), atlas);
@@ -116,7 +118,7 @@ describe('G9: what the two maps’ dressing costs', { timeout: 30_000 }, () => {
         expect(staticDraws).toBeLessThanOrEqual(4);
         const extra = triangles(dressed) - triangles(bare) + hDressed.tris - hBare.tris;
         expect(extra).toBeGreaterThan(2000);
-        expect(extra).toBeLessThanOrEqual(15000);
+        expect(extra).toBeLessThanOrEqual(cap);
         // The moving effects G9 adds, over what the map ran without a dressing: one mesh, so one draw, each.
         const scene = new THREE.Scene();
         const fx = new DressingEffects(scene, map);
@@ -184,8 +186,9 @@ describe('G9: what the two maps’ dressing costs', { timeout: 30_000 }, () => {
       const dressed = buildMapMeshes(DEPOT, textures(DEPOT), look(q), atlas);
       const bare = buildMapMeshes(bareOf(DEPOT), textures(DEPOT), look(q), atlas);
       const extra = triangles(dressed) - triangles(bare) + horizon(q, DEPOT).tris - horizon(q, bareOf(DEPOT)).tris;
-      // What G8's dressing costs Depot: nothing on Low (no map detail), 6 718 triangles on Medium and High.
-      expect(extra, preset).toBe(preset === 'low' ? 0 : 6718);
+      // What G8's dressing costs Depot: nothing on Low (no map detail), 6 716 triangles on Medium and High (MS1's skyline
+      // clears a few more trees from the ring than its new pieces add).
+      expect(extra, preset).toBe(preset === 'low' ? 0 : 6716);
       // Depot has no skyline, so its horizon stays the tree ring alone at every Trees level.
       expect(horizon(q, DEPOT).names, preset).toEqual(['trees']);
       disposeMapMeshes(dressed);

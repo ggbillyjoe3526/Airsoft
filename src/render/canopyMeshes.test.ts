@@ -27,8 +27,8 @@ describe('the canopy (M33i: a crown over every tree block, standing against the 
     expect(off.castShadow).toBe(false);
     expect(on.receiveShadow).toBe(false);
     const tris = on.geometry.getAttribute('position').count / 3;
-    // Cheap: under 30 triangles a tree on average (Low's budget is 150k for the whole frame).
-    expect(tris / trees.length).toBeLessThan(30);
+    // Cheap: under 60 triangles a tree on average (Low's budget is 150k for the whole frame; MS1's pines are 54).
+    expect(tris / trees.length).toBeLessThan(60);
     for (const m of [on, off]) {
       m.geometry.dispose();
       (m.material as THREE.Material).dispose();

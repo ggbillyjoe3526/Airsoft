@@ -3,15 +3,15 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { skylineShown } from '../config/dressing';
 import { ATMOSPHERE, type LightingPreset, LIGHTING_PRESETS, type QualitySettings, type SkyPalette, type TreeDetail } from '../config/render';
 import { createRng, rngNext, type RngState } from '../sim/rng';
-import type { SkylinePiece } from '../map/mapTypes';
+import type { SkylinePiece, Surroundings } from '../map/mapTypes';
 import { buildNightSky } from './nightSky';
 import { hostSkyGuests, SKY_PART, type SkyGuests, skyGuests, tagged } from './skyHost';
 import { skylineClear, skylineGeometries } from './skyline';
 
 /**
  * The world round the field (M14; the visual overhaul, audit section 5 "Sky and trees"): a gradient sky dome with a
- * warm glow towards the sun, a ring of trees beyond the walls (simple, or layered crowns and a hedge of shrubs round
- * the field), and on Medium and High clouds and the sun's disc. One draw call each, built once per match and again
+ * warm glow towards the sun, a ring of trees beyond the walls (simple, or layered crowns; none round a city, MS1), and
+ * on Medium and High clouds and the sun's disc. One draw call each, built once per match and again
  * when the Trees or Clouds setting changes; the haze (Renderer's fog) fades the trees into the horizon.
  */
 
@@ -196,7 +196,7 @@ export function detailedTree(rng: RngState, x: number, z: number, height: number
 
 /**
  * The detailed ring (Trees: Detailed): more trees, broadleaves of two or three stacked crowns, pines of two cone tiers,
- * seven-sided trunks, every crown self-shaded; and a hedge of shrubs round `field` (the map's bounds), just outside it.
+ * seven-sided trunks, every crown self-shaded. MS1: the hedge round the field is gone (no player ever saw it over the walls).
  * With a map's `skyline` (G8, render/skyline.ts) its pieces join the ring, and the trees standing on them are left out.
  */
 function detailedTrees(centre: THREE.Vector3, sun: THREE.Vector3, field: THREE.Box3 | null, skyline: readonly SkylinePiece[] = []): THREE.BufferGeometry[] {
@@ -210,43 +210,7 @@ function detailedTrees(centre: THREE.Vector3, sun: THREE.Vector3, field: THREE.B
     if (skyline.length > 0 && !skylineClear(skyline, x, z)) continue;
     detailedTree(rng, x, z, height, color, broad, (geo, c, cy, r) => shadedCrown(geo, c, cy, r, sun), parts);
   }
-  if (field) parts.push(...shrubs(field, sun));
   parts.push(...skylineGeometries(skyline, centre));
-  return parts;
-}
-
-/** A hedge of shrubs round the field's bounds, a little outside them, so the yard sits in greenery, not on a lawn. */
-function shrubs(field: THREE.Box3, sun: THREE.Vector3): THREE.BufferGeometry[] {
-  const S = ATMOSPHERE.detailedTrees.shrubs;
-  const rng = createRng(ATMOSPHERE.trees.seed + 1);
-  const parts: THREE.BufferGeometry[] = [];
-  const corners: [number, number][] = [
-    [field.min.x, field.min.z],
-    [field.max.x, field.min.z],
-    [field.max.x, field.max.z],
-    [field.min.x, field.max.z],
-  ];
-  const cx = (field.min.x + field.max.x) / 2;
-  const cz = (field.min.z + field.max.z) / 2;
-  for (let side = 0; side < 4; side++) {
-    const [ax, az] = corners[side]!;
-    const [bx, bz] = corners[(side + 1) % 4]!;
-    const length = Math.hypot(bx - ax, bz - az);
-    const count = Math.max(1, Math.round(length / S.spacing));
-    for (let k = 0; k < count; k++) {
-      const t = (k + rngNext(rng)) / count;
-      let x = ax + (bx - ax) * t;
-      let z = az + (bz - az) * t;
-      // Out from the field's middle, by `gapFrom`..`gapTo` metres.
-      const out = S.gapFrom + rngNext(rng) * (S.gapTo - S.gapFrom);
-      if (side % 2 === 0) z += Math.sign(z - cz) * out;
-      else x += Math.sign(x - cx) * out;
-      const r = S.radiusMin + rngNext(rng) * (S.radiusMax - S.radiusMin);
-      const y = r * S.squash * 0.7;
-      const color = S.colors[Math.floor(rngNext(rng) * S.colors.length)]!;
-      parts.push(shadedCrown(new THREE.IcosahedronGeometry(r, 0).scale(1, S.squash, 1).translate(x, y, z), color, y, r * S.squash, sun));
-    }
-  }
   return parts;
 }
 
@@ -263,9 +227,11 @@ export function horizonTreeLevel(setting: TreeDetail, night: boolean, ownTrees: 
  * The tree ring for a Trees setting, as one mesh (null for none); `skyline` is empty where the setting draws none. G9:
  * `guests` (the skyline's lights and the plane, render/skyHost.ts) ride the same mesh and its one draw call.
  */
-function buildTrees(level: TreeDetail, centre: THREE.Vector3, sun: THREE.Vector3, field: THREE.Box3 | null, skyline: readonly SkylinePiece[], guests: SkyGuests | null = null): THREE.Mesh | null {
+function buildTrees(level: TreeDetail, centre: THREE.Vector3, sun: THREE.Vector3, field: THREE.Box3 | null, skyline: readonly SkylinePiece[], guests: SkyGuests | null = null, surroundings: Surroundings = {}): THREE.Mesh | null {
   if (level === 0) return null;
-  const parts = level === 1 ? simpleTrees(centre, field, skyline) : detailedTrees(centre, sun, field, skyline);
+  // MS1: a city has no tree ring; its skyline stands alone.
+  const parts = surroundings.trees === false ? skylineGeometries(skyline, centre) : level === 1 ? simpleTrees(centre, field, skyline) : detailedTrees(centre, sun, field, skyline);
+  if (parts.length === 0) return null;
   const hosting = guests !== null && guests.parts.length > 0;
   if (hosting) {
     for (const p of parts) tagged(p, SKY_PART.ring);
@@ -405,7 +371,7 @@ export interface Atmosphere {
 
 /**
  * Adds the sky dome, the tree ring, the clouds and a night preset's stars and moon round the field centred on `centre`
- * (sun along `sunDirection`, a unit vector towards the key light; `field` the map's bounds, for the hedge) at `quality`'s
+ * (sun along `sunDirection`, a unit vector towards the key light; `field` the map's bounds, which keep the ring's trees out of it) at `quality`'s
  * Trees and Clouds, and returns its handle. Changing either setting rebuilds that mesh only. `preset` (M33f) paints the
  * sky, the clouds and the key light's disc: the day's unless a map's lighting says otherwise. `skyline` (G8, a map's
  * MapDressing.skyline) joins the detailed ring. `ownTrees`: the map has trees of its own (horizonTreeLevel). G9: with
@@ -421,6 +387,7 @@ export function addAtmosphere(
   skyline: readonly SkylinePiece[] = [],
   ownTrees = false,
   plane?: { height: number },
+  surroundings: Surroundings = {},
 ): Atmosphere {
   const sky = buildSky(sunDirection, preset.sky);
   sky.position.copy(centre);
@@ -451,7 +418,7 @@ export function addAtmosphere(
       skylineOn = wantSkyline;
       // G9: the skyline's lights (by the preset's night or day) and the plane ride the ring (render/skyHost.ts).
       const guests = wantSkyline ? skyGuests(skyline, centre, preset.night, plane) : null;
-      trees = buildTrees(level, centre, sunDirection, field, wantSkyline ? skyline : [], guests);
+      trees = buildTrees(level, centre, sunDirection, field, wantSkyline ? skyline : [], guests, surroundings);
       if (trees) scene.add(trees);
     }
     if (q.clouds !== (clouds !== null)) {

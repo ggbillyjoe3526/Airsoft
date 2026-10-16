@@ -56,20 +56,6 @@ acceptance:
 status: open
 attempts: 0
 
-## MS1 · Map surroundings and detail (playtest item 23)
-tier: core
-perf: required
-touches: src/map/depotDressing.ts, src/map/woodland.ts, src/map/woodlandDressing.ts, src/map/neonHeightsDressing.ts, src/map/foliage.ts, src/render/, docs/ASSETS.md
-contract: none
-acceptance:
-  1. The owner approves concept images before code changes.
-  2. Depot has more buildings and objects in the distance.
-  3. Woodland's hut has a roof, and its trees and bushes no longer look low-poly or broken.
-  4. Neon Heights feels more open inside, with towering, oppressive city edges.
-  5. Each map has more detail overall, the perf gate is green on every preset, and every external asset is in `docs/ASSETS.md`.
-status: open
-attempts: 0
-
 ## BL1 · Attack / Defend: fewer attacker wins, more rounds won at the pole (after playtest)
 tier: core
 perf: skip

@@ -156,12 +156,12 @@ describe("Woodland's light pools (acceptance 4)", () => {
   const lights = WOODLAND.lights ?? [];
   const { halfX, halfZ } = WOODLAND_LAYOUT;
 
-  it('lists two camp fires and three lanterns, one at each end behind the camp lines', () => {
-    expect(lights).toHaveLength(5);
+  it('lists two camp fires and five lanterns (two at the cabin, MS1), one at each end behind the camp lines', () => {
+    expect(lights).toHaveLength(7);
     const [west, east] = WOODLAND_LAYOUT.campLines as readonly [number, number];
     expect(lights.some((l) => l.position.x < west)).toBe(true);
     expect(lights.some((l) => l.position.x > east)).toBe(true);
-    expect(lights.filter((l) => l.position.x > west && l.position.x < east)).toHaveLength(3);
+    expect(lights.filter((l) => l.position.x > west && l.position.x < east)).toHaveLength(5);
   });
 
   it('has every light inside the field, above the ground it lights, with a real radius and colour', () => {
@@ -205,15 +205,14 @@ describe("Woodland's light pools (acceptance 4)", () => {
     expect(lit / total).toBeLessThan(0.2);
   });
 
-  // Woodland has no roofs: until M102 the cabin's west window lintel was the one underside a night cell's centre fell
-  // under, and it went when that window became a low wall to vault. Indoors is Neon Heights' (neonHeightsNight.test.ts).
-  it('makes the range at a spot depend only on its light, canopy and roof: Woodland has the three outdoor ranges, ordered lit > open > canopy', () => {
+  // Woodland's one roof is the cabin's (MS1): the cells under it are indoors, unless its lanterns light them.
+  it('makes the range at a spot depend only on its light, canopy and roof: Woodland has the three outdoor ranges and the cabin indoors, ordered lit > open > indoor > canopy', () => {
     const field = buildNightField(WOODLAND, NIGHT_SIGHT)!;
     const seen = new Set<number>();
     for (let x = -halfX + 0.5; x < halfX; x += 2) {
       for (let z = -halfZ + 0.5; z < halfZ; z += 2) seen.add(nightSightRange(field, vec3(x, terrainHeightAt(WOODLAND.terrain!, x, z), z)));
     }
-    expect([...seen].sort((a, b) => b - a)).toEqual([NIGHT_SIGHT.lit, NIGHT_SIGHT.open, NIGHT_SIGHT.canopy]);
+    expect([...seen].sort((a, b) => b - a)).toEqual([NIGHT_SIGHT.lit, NIGHT_SIGHT.open, NIGHT_SIGHT.indoor, NIGHT_SIGHT.canopy]);
     expect(NIGHT_SIGHT.open).toBeGreaterThan(NIGHT_SIGHT.indoor);
     expect(NIGHT_SIGHT.indoor).toBeGreaterThan(NIGHT_SIGHT.canopy);
   });

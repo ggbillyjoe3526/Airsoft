@@ -203,7 +203,8 @@ const nameOf = (s: NeonSign): string => `${s.text ?? s.emblem} at ${s.centre.x},
 
 describe('G9 QA: Neon Heights’ neon signs hang on walls (acceptance 2: nothing floats)', () => {
   it('control: the checker sees a sign that is on its wall (the Noodle Alley, Hotel, Taxi, Kiosk, Parts and Bar signs)', () => {
-    const ok = NEON.neon.filter((s) => ['NOODLE', 'HOTEL', 'TAXI', 'KIOSK', 'PARTS', 'BAR'].includes(s.text ?? ''));
+    // The first of each (MS1 hung a second HOTEL, TAXI, BAR and NOODLE elsewhere).
+    const ok = NEON.neon.filter((s, i, all) => ['NOODLE', 'HOTEL', 'TAXI', 'KIOSK', 'PARTS', 'BAR'].includes(s.text ?? '') && all.findIndex((o) => o.text === s.text) === i);
     expect(ok.length).toBe(6);
     for (const s of ok) expect(backing(NEON_HEIGHTS, s), nameOf(s)).toBe(9);
   });
@@ -314,7 +315,8 @@ function skylineBlocksSight(map: MapData): { blocked: number; pairs: number } {
 
 describe('G9 QA: the background stays out of the field and hides nobody (acceptance 2)', () => {
   it('control: Neon Heights’ towers stand wholly outside its walls, and block no line between the teams', () => {
-    expect(skylineInField(NEON_HEIGHTS, 0)).toEqual([]);
+    // MS1's wall units and cables hang over the field on purpose, out of every player's room (render/skylineSeen.test.ts).
+    expect(skylineInField(NEON_HEIGHTS, 0).filter((v) => v.kind !== 'wallUnit' && v.kind !== 'wire')).toEqual([]);
     expect(skylineBlocksSight(NEON_HEIGHTS)).toEqual({ blocked: 0, pairs: 25 });
   });
 
@@ -367,15 +369,16 @@ describe('G9 QA: the maps are exactly what main shipped, and dressing code write
   // on purpose, and by M88 QA, which took a lane point out of the fort on each lane. All three re-pinned by M102, which
   // broke a wall down to a low wall to vault on each (Depot's office, Woodland's cabin, the Capsules' front), and
   // turned a Knoll log across the slope (Woodland). Neon Heights' re-pinned by BP5, which ended the Plaza landing where
-  // its stair starts. The named areas (CL1) and the overtime flag's spot (OT1) are left out: they name or mark the field,
-  // they don't change it.
+  // its stair starts. Woodland's and Depot's re-pinned by MS1: the cabin's roof, its 3 m walls on one level and its two
+  // lanterns, smaller bushes, and Depot's skyline. The named areas (CL1) and the overtime flag's spot (OT1) are left
+  // out: they name or mark the field, they don't change it.
   it('Woodland, Neon Heights and Depot have the data they had on main (blocks, lanes, spawns, terrain, bushes, extraction)', () => {
-    expect(fingerprint(WOODLAND, ['dressing', 'areas', 'overtimeFlag'])).toBe('fd4f17c7');
+    expect(fingerprint(WOODLAND, ['dressing', 'areas', 'overtimeFlag'])).toBe('03c1b7df');
     expect(fingerprint(NEON_HEIGHTS, ['dressing', 'areas', 'overtimeFlag'])).toBe('77cc54d5');
-    expect(fingerprint(WOODLAND.blocks)).toBe('3ca7a570');
+    expect(fingerprint(WOODLAND.blocks)).toBe('582b9012');
     expect(fingerprint(NEON_HEIGHTS.blocks)).toBe('dff1039c');
     // Depot's dressing too: "Depot draws exactly as it does on main".
-    expect(fingerprint(DEPOT, ['areas', 'overtimeFlag'])).toBe('9fb8e2bb');
+    expect(fingerprint(DEPOT, ['areas', 'overtimeFlag'])).toBe('a89137e4');
   });
 
   it('placing, building, drawing the horizon and running the effects writes nothing into either map', async () => {

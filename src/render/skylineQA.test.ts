@@ -57,9 +57,10 @@ describe('G8 QA: skyline geometry', () => {
       const gs = skylineGeometries([piece], CENTRE);
       const box = new THREE.Box3();
       for (const g of gs) box.union(new THREE.Box3().setFromBufferAttribute(g.getAttribute('position') as THREE.BufferAttribute));
-      expect(box.min.y, piece.kind).toBeGreaterThanOrEqual(-0.1);
+      // A hill is sunk a metre so no edge shows a gap (MS1 gave Depot three).
+      expect(box.min.y, piece.kind).toBeGreaterThanOrEqual(piece.kind === 'hill' ? -1.1 : -0.1);
       // Roofs and bands sit a little over the walls; a chimney or a crane never over its height.
-      expect(box.max.y, piece.kind).toBeLessThanOrEqual(piece.height + 0.5);
+      expect(box.max.y, piece.kind).toBeLessThanOrEqual(('height' in piece ? piece.height : piece.y) + 0.5);
       free(gs);
     }
   });
@@ -76,7 +77,7 @@ describe('G8 QA: skyline geometry', () => {
 
   it('skylineClear keeps trees off every piece, turned or not, and leaves the open ring alone', () => {
     const T = DRESSING.skyline.treeClear;
-    for (const p of SKY) if (p.kind !== 'powerLine' && p.kind !== 'treeline' && p.kind !== 'hill') expect(skylineClear(SKY, p.x, p.z)).toBe(false);
+    for (const p of SKY) if (!('points' in p) && p.kind !== 'hill') expect(skylineClear(SKY, p.x, p.z)).toBe(false);
     for (const p of SKY) if (p.kind === 'powerLine') for (const q of p.points) expect(skylineClear(SKY, q.x, q.z)).toBe(false);
     expect(skylineClear(SKY, 0, 0)).toBe(true);
     const turned: SkylinePiece = { kind: 'shed', x: 0, z: 0, width: 20, depth: 4, height: 6, turned: true };

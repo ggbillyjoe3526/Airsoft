@@ -135,6 +135,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Neon Heights by Night: 12 lamps light separate floors, neon signs glow, lit and dark windows on the perimeter (M34e)
 - Neon Heights art: pastel painted buildings (mint, pink, cyan, amber on slate), paved street with asphalt, neon trim
   strips, lit arcade cabinets; night: softer purple sky with city lighting and 180 stars (M34f)
+- Map surroundings: the world beyond each field, drawn only where a player can see it; Depot's industrial skyline, Woodland's
+  cabin roof and layered pines, Neon Heights' ring of towers, adverts and skybridges (MS1)
 - The woodland look on any map that asks for it: trees, logs and boulders drawn as bark and stone inside their boxes,
   crowns over the trees, ground patches (gravel, earth, wood, leaf litter under the trees), camp fires with flickering
   flames and embers, lanterns, and a moon and stars under the night preset; first used by Woodland (M33i)

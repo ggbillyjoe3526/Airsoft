@@ -60,7 +60,7 @@ export const ATMOSPHERE = {
    * The detailed ring (QualitySettings.trees 2; audit section 5 "Sky and trees"): more trees, broadleaves of two or
    * three stacked crowns (radii as a share of the first, each offset sideways up to `crownJitter` of its radius), pines
    * of two cone tiers, seven-sided trunks; every crown darker on its lower half (`underShade`) and warmer on the sun's
-   * side (`sunWarm`, baked: free self-shading). A hedge of shrubs runs round the field just outside its walls.
+   * side (`sunWarm`, baked: free self-shading).
    */
   detailedTrees: {
     count: 110,
@@ -72,7 +72,6 @@ export const ATMOSPHERE = {
     underShade: 0.8,
     sunWarm: 0.12,
     warmColour: 0xffe2a8,
-    shrubs: { spacing: 3, gapFrom: 1.2, gapTo: 3.2, radiusMin: 0.75, radiusMax: 1.25, squash: 0.8, colors: [0x5b8448, 0x678f4d, 0x51773f] },
   },
   /**
    * Clouds and the sun's disc (QualitySettings.clouds, row 21): `count` flat-bottomed cumulus clouds round the sky at

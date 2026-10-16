@@ -35,25 +35,31 @@ export interface Crown {
   triangles: number[];
 }
 
-/** A cone of `sides` sides from a base ring at `y0` (radius `r`, turned by `turn`) to its apex at `y1`, with its base. */
-function cone(out: number[], x: number, z: number, y0: number, y1: number, r: number, sides: number, turn: number): void {
-  const ring: [number, number][] = [];
-  for (let i = 0; i < sides; i++) {
-    const a = turn + (i / sides) * Math.PI * 2;
-    ring.push([x + Math.cos(a) * r, z + Math.sin(a) * r]);
+/**
+ * MS1: a conifer's tier of branches: a skirt from a ring at `y0` (radius `r`) to its apex at `y1`, its rim a star of
+ * `sides` branch tips (out to `r`, drooping `droop` m) between notches `notch` of the way in, closed underneath: 3 ×
+ * `sides` triangles. Twice the outline points of a plain cone, so the crown reads as branches rather than a faceted cone.
+ */
+function skirt(out: number[], x: number, z: number, y0: number, y1: number, r: number, sides: number, turn: number, notch: number, droop: number): void {
+  const ring: [number, number, number][] = [];
+  for (let i = 0; i < sides * 2; i++) {
+    const a = turn + (i / (sides * 2)) * Math.PI * 2;
+    const tip = i % 2 === 0;
+    const rr = tip ? r : r * notch;
+    ring.push([x + Math.cos(a) * rr, tip ? y0 - droop : y0 + droop * 0.3, z + Math.sin(a) * rr]);
   }
-  for (let i = 0; i < sides; i++) {
-    const [ax, az] = ring[i]!;
-    const [bx, bz] = ring[(i + 1) % sides]!;
-    // Counter-clockwise seen from outside (from above, the ring runs counter-clockwise in x, -z: the order is reversed).
-    out.push(bx, y0, bz, ax, y0, az, x, y1, z);
+  const n = ring.length;
+  for (let i = 0; i < n; i++) {
+    const [ax, ay, az] = ring[i]!;
+    const [bx, by, bz] = ring[(i + 1) % n]!;
+    out.push(bx, by, bz, ax, ay, az, x, y1, z);
   }
-  // The base, facing down (seen from below the ring runs the other way).
-  for (let i = 1; i + 1 < sides; i++) {
-    const [ax, az] = ring[0]!;
-    const [bx, bz] = ring[i]!;
-    const [cx, cz] = ring[i + 1]!;
-    out.push(ax, y0, az, bx, y0, bz, cx, y0, cz);
+  // The underside, a shallow cone from tip to tip up to the trunk (seen from below; the notches need no face of their own).
+  const under = y0 + (y1 - y0) * 0.12;
+  for (let i = 0; i < n; i += 2) {
+    const [ax, ay, az] = ring[i]!;
+    const [bx, by, bz] = ring[(i + 2) % n]!;
+    out.push(ax, ay, az, bx, by, bz, x, under, z);
   }
 }
 
@@ -85,7 +91,7 @@ export function crownOf(block: MapBlock, terrain: Terrain | undefined): Crown {
     const B = CANOPY.broad;
     const r = B.radius * height * j(1);
     const cy = Math.max(ground + CANOPY.minBase + r, ground + B.lift * height);
-    const sizes = [1, 0.78, 0.66];
+    const sizes = B.sizes;
     base = Number.POSITIVE_INFINITY;
     for (let k = 0; k < B.lumps; k++) {
       const rk = r * sizes[k % sizes.length]!;
@@ -102,8 +108,13 @@ export function crownOf(block: MapBlock, terrain: Terrain | undefined): Crown {
     const bottom = Math.max(ground + CANOPY.minBase, top - P.depth * height * j(3));
     const span = apex - bottom;
     const turn = hash01(block, 4) * Math.PI * 2;
-    for (const t of P.tiers) cone(triangles, x, z, bottom + t.from * span, bottom + t.to * span, t.radius * j(5), P.sides, turn);
-    base = bottom;
+    P.tiers.forEach((t, k) => skirt(triangles, x, z, bottom + t.from * span, bottom + t.to * span, t.radius * j(5 + k), P.sides, turn + k * 0.7, P.notch, P.droop * t.radius));
+    // The lowest branch tips droop under the tier's ring: lift the crown so they too stay minBase over the ground.
+    let low = Number.POSITIVE_INFINITY;
+    for (let i = 1; i < triangles.length; i += 3) low = Math.min(low, triangles[i]!);
+    const up = Math.max(0, ground + CANOPY.minBase - low);
+    for (let i = 1; i < triangles.length; i += 3) triangles[i]! += up;
+    base = low + up;
   }
   // On a slope the ground under a crown's edge is higher than at its trunk: lift the whole crown until every point of
   // it is CANOPY.minBase over the ground directly beneath.

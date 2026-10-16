@@ -33,7 +33,16 @@ export function buildFoliageMesh(bushes: readonly Bush[], moon: THREE.Vector3 | 
       const uy = unitPos.getY(v);
       const uz = unitPos.getZ(v);
       const k = key(ux, uy, uz) + b * 7919;
-      const push = 1 + FOLIAGE_LOOK.lump * hash(k);
+      // MS1: a few broad lobes (towards seeded directions) and a fine leafy jitter, rather than one hash per vertex.
+      let lobes = 0;
+      for (let l = 0; l < FOLIAGE_LOOK.lobes; l++) {
+        const lx = hash(b * 31 + l * 3);
+        const ly = 0.3 + 0.7 * Math.abs(hash(b * 31 + l * 3 + 1));
+        const lz = hash(b * 31 + l * 3 + 2);
+        const len = Math.hypot(lx, ly, lz) || 1;
+        lobes += Math.max(0, (ux * lx + uy * ly + uz * lz) / len) ** 2;
+      }
+      const push = 1 + FOLIAGE_LOOK.lump * (lobes / FOLIAGE_LOOK.lobes * 2 - 0.6) + FOLIAGE_LOOK.leafy * hash(k);
       const o = (b * perBush + v) * 3;
       positions[o] = bush.x + ux * bush.radius * push;
       positions[o + 1] = bush.y + half + uy * half * push;
