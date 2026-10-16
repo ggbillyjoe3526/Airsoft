@@ -30,7 +30,41 @@ const fake = (e: unknown): FakeElement => e as FakeElement;
 const texts = (nodes: FakeElement[]): string[] => nodes.filter((n) => !n.hidden).map((n) => n.text);
 const all = (root: FakeElement, tag: string): FakeElement[] => [...(root.tag === tag ? [root] : []), ...root.children.flatMap((c) => all(c, tag))];
 
-beforeEach(() => vi.stubGlobal('document', { createElement: (tag: string) => new Node(tag) }));
+/** The page as the title sees it: elements, fullscreen and its change event (MR1). */
+const page = {
+  fullscreenEnabled: true as boolean,
+  fullscreenElement: null as unknown,
+  listeners: new Map<string, (() => void)[]>(),
+  requestCalls: 0,
+  exitCalls: 0,
+};
+beforeEach(() => {
+  page.fullscreenEnabled = true;
+  page.fullscreenElement = null;
+  page.listeners.clear();
+  page.requestCalls = page.exitCalls = 0;
+  vi.stubGlobal('document', {
+    createElement: (tag: string) => new Node(tag),
+    get fullscreenEnabled() {
+      return page.fullscreenEnabled;
+    },
+    get fullscreenElement() {
+      return page.fullscreenElement;
+    },
+    addEventListener: (type: string, fn: () => void) => page.listeners.set(type, [...(page.listeners.get(type) ?? []), fn]),
+    removeEventListener: () => undefined,
+    exitFullscreen: () => {
+      page.exitCalls++;
+      return Promise.resolve();
+    },
+    documentElement: {
+      requestFullscreen: () => {
+        page.requestCalls++;
+        return Promise.resolve();
+      },
+    },
+  });
+});
 afterEach(() => vi.unstubAllGlobals());
 
 describe('the title screen (M100: plain)', () => {
@@ -42,7 +76,7 @@ describe('the title screen (M100: plain)', () => {
     expect(texts(findAll(t, 'menu-title-wordmark'))).toEqual(['Airsoft']);
     expect(texts(findAll(t, 'menu-title-tagline'))).toEqual(['Call your hit. Go again.']);
     expect(TITLE_TEXT.tagline).toBe('Call your hit. Go again.');
-    expect(texts(all(t, 'button'))).toEqual(['START']);
+    expect(texts(all(t, 'button'))).toEqual(['START', 'Fullscreen']);
     expect(findAll(t, 'title-version')).toHaveLength(1);
     // Gone from the title: the tip, the next match, the kit, the wallet, the range, Loadout, Armory and Settings buttons.
     for (const gone of ['title-tip', 'title-next', 'title-side', 'title-wallet', 'title-list', 'title-kicker', 'menu-hints', 'menu-chip']) expect(findAll(t, gone)).toEqual([]);
@@ -65,23 +99,39 @@ describe('the title screen (M100: plain)', () => {
     const t = fake(screen.root);
     const body = t.children.find((c) => c.className === 'title-body')!;
     expect(body.children.map((c) => c.className)).toEqual(['menu-title-warning', 'title-hero', 'title-actions']);
-    expect(t.children.map((c) => c.className)).toEqual(['title-body', 'title-version']);
+    expect(t.children.map((c) => c.className)).toEqual(['title-body', 'menu-button menu-button-secondary title-fullscreen', 'title-version']);
     const warning = body.children[0]!;
     expect([warning.hidden, warning.text]).toEqual([false, expect.stringContaining('hardware acceleration')]);
     screen.setWarning('');
     expect(warning.hidden).toBe(true);
   });
 
-  it('puts the version small at the bottom left, as its own line after the buttons', () => {
+  it('puts the version small at the bottom right, as its own line after the buttons (MR1)', () => {
     const t = fake(title(false).root);
     const version = findAll(t, 'title-version')[0]!;
     expect(version.text).toBe(__BUILD_VERSION__.label);
     expect(t.children.at(-1)).toBe(version);
   });
 
+  it('offers Fullscreen, reads Exit fullscreen while the page is in it however it got there, and hides where none is offered (MR1)', () => {
+    const t = fake(title(false).root);
+    const button = findAll(t, 'title-fullscreen')[0]!;
+    expect([button.text, button.hidden]).toEqual(['Fullscreen', false]);
+    button.click();
+    expect([page.requestCalls, page.exitCalls]).toEqual([1, 0]);
+    // The page went fullscreen (this click, F11 or Settings): the button follows the event.
+    page.fullscreenElement = {};
+    for (const fn of page.listeners.get('fullscreenchange') ?? []) fn();
+    expect([button.text, button.getAttribute('aria-pressed')]).toEqual(['Exit fullscreen', 'true']);
+    button.click();
+    expect(page.exitCalls).toBe(1);
+    page.fullscreenEnabled = false;
+    expect(findAll(fake(title(false).root), 'title-fullscreen')[0]!.hidden).toBe(true);
+  });
+
   it('shows the Tutorial under START while the save is clean, and hides it once it should not be offered', () => {
     const shown = title(true);
-    expect(texts(all(fake(shown.root), 'button'))).toEqual(['START', 'Tutorial']);
+    expect(texts(all(fake(shown.root), 'button'))).toEqual(['START', 'Tutorial', 'Fullscreen']);
     expect(shown.tutorialShown()).toBe(true);
     shown.setTutorialShown(false);
     expect(shown.tutorialShown()).toBe(false);

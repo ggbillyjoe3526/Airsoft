@@ -1,7 +1,7 @@
 import { BOT_GLOW_BBS, bbsGlow, DEFAULT_GLOW_BBS, GLOW_BB_CHOICES, type GlowBBs } from '../config/glowBBs';
 import { HOP_UP, LOADOUT, type ReplicaConfig, validBbWeight } from '../config/replicas';
 import { DEFAULT_LOOK, type LookSettings } from '../config/look';
-import { defaultScheme, isSchemeId, offeredSchemes, type ReplicaPaint, type SchemeId } from '../config/schemes';
+import { defaultScheme, isFamilyId, isSchemeId, offeredSchemes, type PaintId, type ReplicaPaint, type SchemeId } from '../config/schemes';
 import { loadSetting, numberIn, oneOf, saveSetting, type SettingField } from '../settings/storage';
 import { isAvailable } from '../config/content';
 import { isDevItem } from './contentPool';
@@ -30,7 +30,7 @@ export interface PlayerKit {
   /** Each slot's Glowing BBs choice (M33b); the session resolves it against the field's day or night. */
   glowBBs: readonly GlowBBs[];
   /** Each slot's colour scheme (graphics overhaul G1): presentation only. */
-  schemes: readonly SchemeId[];
+  schemes: readonly PaintId[];
 }
 
 /**
@@ -338,13 +338,14 @@ export class LoadoutModel {
   /**
    * A replica asset's colour scheme (G1), or its default (a Cobalt rifle, a Ghost pistol). Cosmetic, so one pick per
    * asset whether or not everything is unlocked: a colour picked on borrowed gear is waiting when the player unlocks it.
-   * A dev scheme picked with Dev content on plays as the default while it is off (CT4), and comes back with it.
+   * A dev scheme picked with Dev content on plays as the default while it is off (CT4), and comes back with it. A plain
+   * family (MR1) is always offered.
    */
-  scheme(replicaId: string): SchemeId {
+  scheme(replicaId: string): PaintId {
     const r = this.replicaConfig(replicaId);
     const fallback = r ? defaultScheme(r) : 'cobalt';
     const offered = this.schemes();
-    return this.store.load(`scheme.${replicaId}`, (raw) => (isSchemeId(raw) && offered.includes(raw) ? raw : undefined), fallback);
+    return this.store.load(`scheme.${replicaId}`, (raw) => (isFamilyId(raw) || (isSchemeId(raw) && offered.includes(raw)) ? raw : undefined), fallback);
   }
 
   /** The schemes Customise offers (CT4): the public ones, and the dev ones while Dev content is on. */
@@ -352,7 +353,7 @@ export class LoadoutModel {
     return offeredSchemes(this.ownership.devContent?.() ?? false);
   }
 
-  setScheme(replicaId: string, scheme: SchemeId): void {
+  setScheme(replicaId: string, scheme: PaintId): void {
     this.store.save(`scheme.${replicaId}`, scheme);
   }
 
@@ -419,7 +420,7 @@ export class LoadoutModel {
       out[`bbWeight.${id}`] = this.bbWeight(id);
       out[`glowBBs.${id}`] = this.glowBBs(id);
       // A dev scheme stays picked while Dev content is off (CT4), as it does on the replica itself.
-      out[`scheme.${id}`] = this.store.load(`scheme.${id}`, (raw) => (isSchemeId(raw) ? raw : undefined), this.scheme(id));
+      out[`scheme.${id}`] = this.store.load(`scheme.${id}`, (raw) => (isSchemeId(raw) || isFamilyId(raw) ? raw : undefined), this.scheme(id));
     }
     return out;
   }
@@ -458,7 +459,7 @@ export class LoadoutModel {
           break;
         }
         case 'scheme':
-          if (this.replicaConfig(rest) && isSchemeId(value)) this.setScheme(rest, value);
+          if (this.replicaConfig(rest) && (isSchemeId(value) || isFamilyId(value))) this.setScheme(rest, value);
           break;
       }
     }

@@ -1,6 +1,6 @@
 /**
  * Saved loadouts (SL1, Dev 6 item 19): how many there are, how long a name may be, and their words. The model is
- * `pool/savedLoadouts.ts`; the Loadout's tabs `ui/menus/savedLoadoutsBar.ts`, the Match screen's pick
+ * `pool/savedLoadouts.ts`; the Loadout's dropdown `ui/menus/savedLoadoutsBar.ts`, the Match screen's pick
  * `ui/menus/loadoutPicker.ts`.
  */
 
@@ -18,11 +18,11 @@ export const SAVED_TEXT = {
   copySuffix: ' copy',
   current: 'Current',
   newLoadout: 'New loadout',
+  /** The Loadout's New button beside the dropdown (MR1). */
+  newShort: 'New',
   newNote: 'Starts as a copy of yours',
-  use: 'Use',
   rename: 'Rename',
   duplicate: 'Duplicate',
-  replace: 'Replace with yours',
   delete: 'Delete',
   cancel: 'Cancel',
   nameLabel: 'Loadout name',
@@ -38,14 +38,11 @@ export const SAVED_TEXT = {
   deleteTitle: (name: string): string => `Delete ${name}?`,
   deleteBody: 'It is gone for good.',
   deleteCurrentBody: (next: string): string => `It is gone for good, and you carry ${next} instead.`,
-  replaceTitle: (name: string): string => `Replace ${name}?`,
-  replaceBody: (name: string): string => `${name} becomes a copy of the loadout you carry now. What it held is gone.`,
-  /** A tab's name for a screen reader. */
-  tabName: (slot: number, name: string, carries: string, current: boolean, locked: number): string =>
-    `Loadout ${slot}: ${name}, ${carries}${current ? ', current' : ''}${locked > 0 ? `, ${locked} locked` : ''}`,
-  emptyTabName: (slot: number): string => `Loadout ${slot}: empty. New loadout, a copy of yours`,
-  /** The Loadout's line under the tabs. */
-  hint: `Your changes save to the current loadout. Keys 1 to ${SAVED_LOADOUTS.slots} switch; right-click a loadout for more.`,
+  /** The Loadout's dropdown for a screen reader (MR1). */
+  pickerName: (slot: number, name: string, carries: string, locked: number): string =>
+    `Saved loadout ${slot}: ${name}, ${carries}${locked > 0 ? `, ${locked} locked` : ''}. Pick another`,
+  /** The Loadout's line beside the dropdown. */
+  hint: `Changes save as you go · keys 1 to ${SAVED_LOADOUTS.slots} switch`,
   /** The Match screen's pick: its button, its menu's title and the way to the Loadout. */
   pickName: (name: string): string => `Saved loadout: ${name}. Pick another`,
   pickTitle: 'Saved loadouts',

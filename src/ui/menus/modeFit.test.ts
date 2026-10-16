@@ -111,7 +111,7 @@ describe('M89: the Match section shows only what fits the mode', () => {
       const root = panel.root as unknown as FakeElement;
       expect(buttons(root, 'Rules').map((b) => !b.hidden), mode.id).toEqual(RULESETS.map((r) => rulesetFits(played.mode, r.id)));
       // Each rule's row shows exactly while the ruleset leaves it to you and the mode reads it.
-      const rows = (panel as unknown as { switchRows: { field: keyof MatchRules; row: FakeElement }[] }).switchRows;
+      const rows = (panel as unknown as { ruleRows: { field: keyof MatchRules; row: FakeElement }[] }).ruleRows;
       expect(rows.length).toBeGreaterThan(0);
       for (const r of rows) expect(!r.row.hidden, `${mode.id} ${r.field}`).toBe(offersRow(played.ruleset, r.field, played.mode));
     }

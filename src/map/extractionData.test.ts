@@ -162,9 +162,9 @@ describe('Extraction map data (M43)', () => {
     expect(playableMode({}, 'extraction')).toBe('elimination');
     expect(playableMode({}, 'attackDefend')).toBe('elimination');
     expect(playableMode({}, 'elimination')).toBe('elimination');
-    // New game doesn't offer Extraction there at all; the other modes it offers on every map, as before.
+    // The Match screen offers only what the map hosts (MR1): neither Extraction nor Attack / Defend without a flagpole.
     expect(modeOffered({}, 'extraction')).toBe(false);
-    expect(modeOffered({}, 'attackDefend')).toBe(true);
+    expect(modeOffered({}, 'attackDefend')).toBe(false);
     expect(modeOffered({}, 'elimination')).toBe(true);
   });
 });

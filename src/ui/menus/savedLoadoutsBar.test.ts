@@ -11,9 +11,10 @@ import { LoadoutScreen } from './loadoutScreen';
 import { EventNode, stubMenuPage } from './menuTestSupport';
 
 /**
- * SL1 acceptance on the fake DOM: the five tabs of the Loadout (current one marked, empty ones offer New loadout, keys 1
- * to 5), the tab's right-click menu with its confirmations, inline rename, locked gear in words, the Match screen's pick,
- * and bots untouched. The model itself is in pool/savedLoadouts.test.ts.
+ * SL1 / MR1 acceptance on the fake DOM: the Loadout's saved-loadout dropdown (one button naming the loadout carried, its
+ * list with the current one marked and New loadout while a slot is free, keys 1 to 5), the Rename, Duplicate, New and
+ * Delete buttons with their confirmations, inline rename, locked gear in words, the Match screen's pick, and bots
+ * untouched. The model itself is in pool/savedLoadouts.test.ts.
  */
 const pool = GAME_POOL;
 const id = (name: string) => pool.assets.find((a) => a.name === name)!.id;
@@ -55,20 +56,24 @@ function rig(own = owning([...STARTERS, item('Red Dot'), item('Cyber Pistol')]))
   return { model, saved, screen, root: node(screen.root), changes: () => changes, own };
 }
 
-const tabs = (r: Rig): EventNode[] => findAll(r.root, 'saved-tab') as EventNode[];
-const part = (tab: EventNode, cls: string): EventNode => findAll(tab, cls)[0] as EventNode;
-const button = (tab: EventNode): EventNode => tab.children[0] as EventNode;
-const input = (tab: EventNode): EventNode => tab.children[1] as EventNode;
+const part = (n: EventNode, cls: string): EventNode => findAll(n, cls)[0] as EventNode;
+const pick = (r: Rig): EventNode => part(r.root, 'saved-pick');
+const pickText = (r: Rig, cls: 'key' | 'name' | 'line'): string => part(pick(r), `saved-pick-${cls}`).text;
+const bar = (r: Rig): EventNode => (r.root.all('section') as EventNode[]).find((s) => s.classList.contains('saved-loadouts'))!;
+const input = (r: Rig): EventNode => part(r.root, 'saved-pick-input');
+const typed = (r: Rig, text: string): void => void ((input(r) as unknown as { value: string }).value = text);
 const key = (r: Rig, k: string): void => void r.screen.hints.find((h) => h.keys.includes(k))!.run?.();
-const names = (r: Rig): string[] => tabs(r).map((t) => part(t, 'saved-tab-name').text);
 const carried = (r: Rig): string[] => (findAll(r.root, 'gear-slot') as EventNode[]).filter((b) => !b.classList.contains('gear-grenades')).map((b) => b.text);
 
-function menuFor(r: Rig, slot: number): { labels: string[]; choose: (label: string) => void; isOpen: () => boolean } {
-  button(tabs(r)[slot]!).fire('contextmenu', { clientX: 20, clientY: 20 });
-  const menu = findAll(r.root, 'context-menu')[0] as EventNode;
+/** Opens the dropdown with a click on its button; reads and drives the list that appears. */
+function listOf(r: Rig): { labels: string[]; details: string[]; items: EventNode[]; choose: (label: string) => void; isOpen: () => boolean } {
+  pick(r).click();
+  const menu = part(r.root, 'context-menu');
   const shown = (): EventNode[] => (findAll(menu, 'context-item') as EventNode[]).filter((b) => !b.hidden);
   return {
     labels: shown().map((b) => part(b, 'context-label').text),
+    details: shown().map((b) => part(b, 'context-detail').text),
+    items: shown(),
     choose: (label) => shown().find((b) => part(b, 'context-label').text === label)!.click(),
     isOpen: () => !menu.hidden,
   };
@@ -79,56 +84,107 @@ const dialogButton = (r: Rig, label: string): EventNode => dialog(r).all('button
 const barButton = (r: Rig, label: string): EventNode =>
   (findAll(r.root, 'saved-actions')[0] as EventNode).all('button').find((b) => b.text === label)!;
 
-describe('criterion 1: five tabs, the current one marked', () => {
-  it('draws one tab per slot, numbered 1 to 5, and tags only the current one', () => {
+/** Adds a second loadout (slot 2, a copy of yours) with the New button and settles its name; it is the one carried. */
+function addSecond(r: Rig): void {
+  barButton(r, SAVED_TEXT.newShort).click();
+  input(r).fire('keydown', { key: 'Enter' });
+}
+
+describe('criterion 1: one dropdown names the loadout carried', () => {
+  it('draws one button with the number, the name and the replicas carried, a caret, and no name box open', () => {
     const r = rig();
-    expect(tabs(r)).toHaveLength(SAVED_LOADOUTS.slots);
+    expect(findAll(r.root, 'saved-pick')).toHaveLength(1);
     expect(SAVED_LOADOUTS.slots).toBe(5);
-    tabs(r).forEach((t, i) => expect(part(t, 'saved-tab-key').text).toBe(String(i + 1)));
-    const [first, second] = tabs(r) as [EventNode, EventNode];
-    expect(first.classList.contains('is-current')).toBe(true);
-    expect(button(first).getAttribute('aria-current')).toBe('true');
-    expect(part(first, 'saved-tab-tag').text).toBe(SAVED_TEXT.current);
-    expect(second.classList.contains('is-current')).toBe(false);
-    expect(button(second).getAttribute('aria-current')).toBeNull();
-    expect(part(second, 'saved-tab-tag').text).toBe('');
+    expect(pickText(r, 'key')).toBe('1');
+    expect(pickText(r, 'name')).toBe('Loadout 1');
+    expect(pickText(r, 'line')).toBe('AEG Rifle · GBB Pistol');
+    expect(findAll(pick(r), 'saved-pick-caret')).toHaveLength(1);
+    expect(pick(r).getAttribute('aria-haspopup')).toBe('true');
+    expect(pick(r).getAttribute('aria-label')).toBe(SAVED_TEXT.pickerName(1, 'Loadout 1', 'AEG Rifle · GBB Pistol', 0));
+    expect(input(r).hidden).toBe(true);
+    expect(node(r.root).all('button').filter((b) => b.classList.contains('saved-tab-button'))).toHaveLength(0);
   });
 
-  it('moves the mark to the tab switched to', () => {
+  it('follows the loadout switched to: its number, name and replicas', () => {
     const r = rig();
-    button(tabs(r)[1]!).click(); // empty: becomes a new loadout and current
-    expect(tabs(r).map((t) => t.classList.contains('is-current'))).toEqual([false, true, false, false, false]);
-    expect(tabs(r).map((t) => part(t, 'saved-tab-tag').text)).toEqual(['', SAVED_TEXT.current, '', '', '']);
-    expect(button(tabs(r)[1]!).getAttribute('aria-current')).toBe('true');
-    expect(button(tabs(r)[0]!).getAttribute('aria-current')).toBeNull();
+    addSecond(r);
+    r.model.equip('primary', item('Cyber Pistol'));
+    r.screen.refresh();
+    expect(pickText(r, 'key')).toBe('2');
+    expect(pickText(r, 'name')).toBe('Loadout 2');
+    expect(pickText(r, 'line')).toContain('Cyber Pistol');
+    key(r, '1');
+    expect(pickText(r, 'key')).toBe('1');
+    expect(pickText(r, 'name')).toBe('Loadout 1');
+    expect(pickText(r, 'line')).toBe('AEG Rifle · GBB Pistol');
+    expect(pick(r).getAttribute('aria-label')).toBe(SAVED_TEXT.pickerName(1, 'Loadout 1', 'AEG Rifle · GBB Pistol', 0));
   });
 
-  it('names the replicas a tab carries on its second line', () => {
+  it('gives the whole name and what it lacks as the button\'s tip, for a name cut short on it', () => {
     const r = rig();
-    expect(part(tabs(r)[0]!, 'saved-tab-line').text).toBe('AEG Rifle · GBB Pistol');
+    barButton(r, SAVED_TEXT.newShort).click(); // its name is open for typing
+    typed(r, 'Long range woodlands');
+    input(r).fire('keydown', { key: 'Enter' });
+    expect(pick(r).title).toBe('Long range woodlands');
   });
 });
 
-describe('criterion 2: an empty tab offers New loadout; keys 1 to 5 and a click switch', () => {
-  it('shows an empty tab as New loadout, with the note that it starts as a copy, and no Current tag', () => {
+describe('criterion 2: the list holds every loadout and New loadout; keys 1 to 5 and a pick switch', () => {
+  it('lists each saved loadout as "N · Name" with what it carries, marks the current one, and ends with New loadout', () => {
     const r = rig();
-    const empty = tabs(r)[2]!;
-    expect(empty.classList.contains('is-empty')).toBe(true);
-    expect(part(empty, 'saved-tab-name').text).toBe(SAVED_TEXT.newLoadout);
-    expect(part(empty, 'saved-tab-line').text).toBe(SAVED_TEXT.newNote);
-    expect(button(empty).getAttribute('aria-label')).toBe(SAVED_TEXT.emptyTabName(3));
-    expect(tabs(r)[0]!.classList.contains('is-empty')).toBe(false);
+    addSecond(r);
+    r.saved.create(3);
+    key(r, '2');
+    const list = listOf(r);
+    expect(list.isOpen()).toBe(true);
+    expect(list.labels).toEqual(['1 · Loadout 1', '2 · Loadout 2', '4 · Loadout 4', SAVED_TEXT.newLoadout]);
+    expect(list.details).toEqual(['AEG Rifle · GBB Pistol', 'AEG Rifle · GBB Pistol', 'AEG Rifle · GBB Pistol', SAVED_TEXT.newNote]);
+    expect(list.items.map((b) => b.classList.contains('is-current'))).toEqual([false, true, false, false]);
+    expect(list.items[1]!.getAttribute('aria-current')).toBe('true');
+    expect(list.items[0]!.getAttribute('aria-current')).toBeNull();
   });
 
-  it('clicking an empty tab makes a copy of the loadout carried, carries it and opens its name for typing', () => {
+  it('lists no New loadout with every slot in use', () => {
+    const r = rig();
+    for (let i = 1; i < SAVED_LOADOUTS.slots; i++) addSecond(r);
+    expect(r.saved.hasRoom()).toBe(false);
+    const list = listOf(r);
+    expect(list.labels).toHaveLength(SAVED_LOADOUTS.slots);
+    expect(list.labels).not.toContain(SAVED_TEXT.newLoadout);
+    expect(list.labels.at(-1)).toBe('5 · Loadout 5');
+  });
+
+  it('opens with ArrowDown on the button as well', () => {
+    const r = rig();
+    const ev = pick(r).fire('keydown', { key: 'ArrowDown' });
+    expect(ev.defaultPrevented).toBe(true);
+    expect(part(r.root, 'context-menu').hidden).toBe(false);
+  });
+
+  it('picking New loadout makes a copy of the loadout carried in the first free slot, carries it and opens its name for typing', () => {
     const r = rig();
     const before = r.changes();
-    button(tabs(r)[1]!).click();
-    expect(names(r)).toEqual(['Loadout 1', 'Loadout 2', SAVED_TEXT.newLoadout, SAVED_TEXT.newLoadout, SAVED_TEXT.newLoadout]);
+    listOf(r).choose(SAVED_TEXT.newLoadout);
+    expect(r.saved.views().map((v) => v?.name ?? null)).toEqual(['Loadout 1', 'Loadout 2', null, null, null]);
     expect(r.saved.current()).toBe(1);
     expect(r.changes()).toBe(before + 1);
-    expect(input(tabs(r)[1]!).hidden).toBe(false);
-    expect(tabs(r)[1]!.classList.contains('is-renaming')).toBe(true);
+    expect(pickText(r, 'key')).toBe('2');
+    expect(input(r).hidden).toBe(false);
+    expect(bar(r).classList.contains('is-renaming')).toBe(true);
+    expect((input(r) as unknown as { value: string }).value).toBe('Loadout 2');
+  });
+
+  it('the New button does the same, and fills the first free slot even when a later one is in use', () => {
+    const r = rig();
+    r.saved.create(1);
+    r.saved.create(3);
+    r.screen.refresh();
+    const before = r.changes();
+    barButton(r, SAVED_TEXT.newShort).click();
+    expect(r.saved.view(2)).not.toBeNull();
+    expect(r.saved.current()).toBe(2);
+    expect(r.changes()).toBe(before + 1);
+    expect(input(r).hidden).toBe(false);
   });
 
   it('offers a hint for each of the keys 1 to 5, and only a filled slot answers', () => {
@@ -144,8 +200,7 @@ describe('criterion 2: an empty tab offers New loadout; keys 1 to 5 and a click 
 
   it('switches with the keys: the carried cards and the model kit follow, and the game hears of it', () => {
     const r = rig();
-    button(tabs(r)[1]!).click();
-    input(tabs(r)[1]!).fire('keydown', { key: 'Enter' });
+    addSecond(r);
     // Slot 2 carries a Cyber Pistol in the primary slot; slot 1 keeps the AEG Rifle.
     r.model.equip('primary', item('Cyber Pistol'));
     r.screen.refresh();
@@ -159,171 +214,203 @@ describe('criterion 2: an empty tab offers New loadout; keys 1 to 5 and a click 
     expect(carried(r).join('|')).not.toContain('Cyber Pistol');
     expect(carried(r).join('|')).toContain('AEG Rifle');
     expect(r.model.kit().slots.map((s) => s.replica.id)).not.toEqual(kit2);
-    expect(tabs(r)[0]!.classList.contains('is-current')).toBe(true);
+    expect(pickText(r, 'name')).toBe('Loadout 1');
 
     key(r, '2');
     expect(carried(r).join('|')).toContain('Cyber Pistol');
     expect(r.model.kit().slots.map((s) => s.replica.id)).toEqual(kit2);
+    expect(pickText(r, 'name')).toBe('Loadout 2');
   });
 
-  it('does nothing when the key (or a click) is for the loadout already carried', () => {
+  it('switches with a pick from the list in the same way, and the list closes', () => {
+    const r = rig();
+    addSecond(r);
+    r.model.equip('primary', item('Cyber Pistol'));
+    r.screen.refresh();
+    const kit2 = r.model.kit().slots.map((s) => s.replica.id);
+    const before = r.changes();
+
+    const list = listOf(r);
+    list.choose('1 · Loadout 1');
+    expect(list.isOpen()).toBe(false);
+    expect(r.saved.current()).toBe(0);
+    expect(r.changes()).toBe(before + 1);
+    expect(carried(r).join('|')).not.toContain('Cyber Pistol');
+    expect(r.model.kit().slots.map((s) => s.replica.id)).not.toEqual(kit2);
+
+    listOf(r).choose('2 · Loadout 2');
+    expect(r.saved.current()).toBe(1);
+    expect(carried(r).join('|')).toContain('Cyber Pistol');
+    expect(r.model.kit().slots.map((s) => s.replica.id)).toEqual(kit2);
+  });
+
+  it('does nothing when the key (or a pick) is for the loadout already carried', () => {
     const r = rig();
     key(r, '1');
-    button(tabs(r)[0]!).click();
+    listOf(r).choose('1 · Loadout 1');
+    expect(r.saved.current()).toBe(0);
     expect(r.changes()).toBe(0);
   });
 });
 
-describe('criterion 3: the tab menu, confirmations and rename', () => {
+describe('criterion 3: the buttons beside the dropdown, confirmations and rename', () => {
   const twoLoadouts = (): Rig => {
     const r = rig();
-    button(tabs(r)[1]!).click();
-    input(tabs(r)[1]!).fire('keydown', { key: 'Enter' });
+    addSecond(r);
     return r;
   };
 
-  it('offers Rename, Duplicate and Delete on the current loadout, and Use and Replace on another', () => {
-    const r = twoLoadouts(); // current: slot 2
-    expect(menuFor(r, 1).labels).toEqual([SAVED_TEXT.rename, SAVED_TEXT.duplicate, SAVED_TEXT.delete]);
-    expect(menuFor(r, 0).labels).toEqual([SAVED_TEXT.use, SAVED_TEXT.rename, SAVED_TEXT.duplicate, SAVED_TEXT.replace, SAVED_TEXT.delete]);
-  });
-
-  it('offers New loadout alone on an empty tab, and a right-click is the tab menu, not the browser menu', () => {
+  it('has Rename, Duplicate, New and Delete beside the dropdown, all enabled with two loadouts and room', () => {
     const r = twoLoadouts();
-    const ev = button(tabs(r)[3]!).fire('contextmenu', { clientX: 5, clientY: 5 });
-    expect(ev.defaultPrevented).toBe(true);
-    expect(menuFor(r, 3).labels).toEqual([SAVED_TEXT.newLoadout]);
+    const actions = (findAll(r.root, 'saved-actions')[0] as EventNode).all('button').map((b) => b.text);
+    expect(actions).toEqual([SAVED_TEXT.rename, SAVED_TEXT.duplicate, SAVED_TEXT.newShort, SAVED_TEXT.delete]);
+    for (const label of actions.slice(1)) expect(barButton(r, label).getAttribute('aria-disabled')).toBe('false');
   });
 
-  it('offers no Duplicate with every slot in use', () => {
+  it('offers no Duplicate and no New with every slot in use, on the bar or in the list', () => {
     const r = rig();
-    for (let i = 1; i < SAVED_LOADOUTS.slots; i++) {
-      button(tabs(r)[i]!).click();
-      input(tabs(r)[i]!).fire('keydown', { key: 'Enter' });
-    }
+    for (let i = 1; i < SAVED_LOADOUTS.slots; i++) addSecond(r);
     expect(r.saved.hasRoom()).toBe(false);
-    expect(menuFor(r, 0).labels).not.toContain(SAVED_TEXT.duplicate);
-    expect(barButton(r, SAVED_TEXT.duplicate).getAttribute('aria-disabled')).toBe('true');
-  });
-
-  it('Use switches at once', () => {
-    const r = twoLoadouts();
-    menuFor(r, 0).choose(SAVED_TEXT.use);
-    expect(r.saved.current()).toBe(0);
+    for (const label of [SAVED_TEXT.duplicate, SAVED_TEXT.newShort]) {
+      expect(barButton(r, label).getAttribute('aria-disabled')).toBe('true');
+      expect(barButton(r, label).title).toBe(SAVED_TEXT.full);
+    }
+    barButton(r, SAVED_TEXT.duplicate).click();
+    barButton(r, SAVED_TEXT.newShort).click();
+    expect(r.saved.views().filter(Boolean)).toHaveLength(SAVED_LOADOUTS.slots);
+    expect(r.saved.current()).toBe(SAVED_LOADOUTS.slots - 1);
+    expect(listOf(r).labels).not.toContain(SAVED_TEXT.newLoadout);
   });
 
   it('Delete asks first and removes only on confirm', () => {
-    const r = twoLoadouts();
-    menuFor(r, 0).choose(SAVED_TEXT.delete);
+    const r = twoLoadouts(); // current: slot 2
+    barButton(r, SAVED_TEXT.delete).click();
     expect(dialog(r).open).toBe(true);
-    expect(findAll(dialog(r), 'menu-dialog-title')[0]!.text).toBe(SAVED_TEXT.deleteTitle('Loadout 1'));
-    expect(r.saved.view(0)).not.toBeNull();
+    expect(findAll(dialog(r), 'menu-dialog-title')[0]!.text).toBe(SAVED_TEXT.deleteTitle('Loadout 2'));
+    expect(r.saved.view(1)).not.toBeNull();
     dialogButton(r, 'Cancel').click();
     expect(dialog(r).open).toBe(false);
-    expect(r.saved.view(0)).not.toBeNull();
-    expect(names(r)[0]).toBe('Loadout 1');
+    expect(r.saved.view(1)).not.toBeNull();
+    expect(listOf(r).labels).toEqual(['1 · Loadout 1', '2 · Loadout 2', SAVED_TEXT.newLoadout]);
 
-    menuFor(r, 0).choose(SAVED_TEXT.delete);
+    barButton(r, SAVED_TEXT.delete).click();
     dialogButton(r, SAVED_TEXT.delete).click();
     expect(dialog(r).open).toBe(false);
-    expect(r.saved.view(0)).toBeNull();
-    expect(names(r)[0]).toBe(SAVED_TEXT.newLoadout);
-    expect(tabs(r)[0]!.classList.contains('is-empty')).toBe(true);
+    expect(r.saved.view(1)).toBeNull();
+    expect(listOf(r).labels).toEqual(['1 · Loadout 1', SAVED_TEXT.newLoadout]);
   });
 
   it('deleting the current loadout says which one is carried instead, and carries it', () => {
     const r = twoLoadouts(); // current slot 2, next-after falls back to slot 1
     const before = r.changes();
-    button(tabs(r)[1]!).fire('keydown', { key: 'Delete' });
+    pick(r).fire('keydown', { key: 'Delete' });
+    expect(dialog(r).open).toBe(true);
     expect(findAll(dialog(r), 'confirm-text')[0]!.text).toBe(SAVED_TEXT.deleteCurrentBody('Loadout 1'));
     dialogButton(r, SAVED_TEXT.delete).click();
     expect(r.saved.current()).toBe(0);
+    expect(r.saved.view(1)).toBeNull();
     expect(r.changes()).toBe(before + 1);
-    expect(tabs(r)[0]!.classList.contains('is-current')).toBe(true);
+    expect(pickText(r, 'key')).toBe('1');
+    expect(pickText(r, 'name')).toBe('Loadout 1');
   });
 
-  it('Replace asks first and copies the loadout carried over the other only on confirm', () => {
-    const r = twoLoadouts(); // current: slot 2 (a copy of 1)
-    r.model.equip('primary', item('Cyber Pistol'));
-    r.screen.refresh();
-    const was = r.saved.view(0)!.replicas.map((a) => a?.name);
-    menuFor(r, 0).choose(SAVED_TEXT.replace);
-    expect(dialog(r).open).toBe(true);
-    expect(findAll(dialog(r), 'confirm-text')[0]!.text).toBe(SAVED_TEXT.replaceBody('Loadout 1'));
-    expect(r.saved.view(0)!.replicas.map((a) => a?.name)).toEqual(was);
-    dialogButton(r, 'Cancel').click();
-    expect(r.saved.view(0)!.replicas.map((a) => a?.name)).toEqual(was);
-
-    menuFor(r, 0).choose(SAVED_TEXT.replace);
-    dialogButton(r, SAVED_TEXT.replace).click();
-    expect(r.saved.view(0)!.replicas.map((a) => a?.name)).toContain('Cyber Pistol');
-    expect(r.saved.view(0)!.name).toBe('Loadout 1'); // keeps its name
-    expect(r.saved.current()).toBe(1); // and the one carried is unchanged
-    expect(part(tabs(r)[0]!, 'saved-tab-line').text).toContain('Cyber Pistol');
+  it('deleting the current loadout among three names the one the model carries next', () => {
+    const r = twoLoadouts();
+    r.saved.create(2);
+    key(r, '1');
+    const next = r.saved.view(r.saved.nextAfter(0))!;
+    barButton(r, SAVED_TEXT.delete).click();
+    expect(findAll(dialog(r), 'confirm-text')[0]!.text).toBe(SAVED_TEXT.deleteCurrentBody(next.name));
+    dialogButton(r, SAVED_TEXT.delete).click();
+    expect(r.saved.view(0)).toBeNull();
+    expect(r.saved.current()).toBe(next.slot);
+    expect(pickText(r, 'name')).toBe(next.name);
   });
 
-  it('offers no Delete on the last loadout: not in the menu, not on the bar, and the Delete key asks nothing', () => {
+  it('offers no Delete on the last loadout: not in the list, not on the bar, and the Delete key asks nothing', () => {
     const r = rig();
-    expect(menuFor(r, 0).labels).not.toContain(SAVED_TEXT.delete);
+    expect(listOf(r).labels).toEqual(['1 · Loadout 1', SAVED_TEXT.newLoadout]);
     expect(barButton(r, SAVED_TEXT.delete).getAttribute('aria-disabled')).toBe('true');
     expect(barButton(r, SAVED_TEXT.delete).title).toBe(SAVED_TEXT.onlyOne);
-    button(tabs(r)[0]!).fire('keydown', { key: 'Delete' });
+    pick(r).fire('keydown', { key: 'Delete' });
     barButton(r, SAVED_TEXT.delete).click();
     expect(dialog(r).open).toBe(false);
     expect(r.saved.view(0)).not.toBeNull();
   });
 
-  it('enables Delete once there are two', () => {
+  it('enables Delete once there are two, and disables it again when one is left', () => {
     const r = twoLoadouts();
     expect(barButton(r, SAVED_TEXT.delete).getAttribute('aria-disabled')).toBe('false');
+    barButton(r, SAVED_TEXT.delete).click();
+    dialogButton(r, SAVED_TEXT.delete).click();
+    expect(barButton(r, SAVED_TEXT.delete).getAttribute('aria-disabled')).toBe('true');
   });
 
-  it('renames inline: the box shows the name, Enter commits it to the tab and the model', () => {
+  it('renames inline: the box shows the name, Enter commits it to the dropdown and the model', () => {
     const r = twoLoadouts();
-    menuFor(r, 0).choose(SAVED_TEXT.rename);
-    const box = input(tabs(r)[0]!);
+    barButton(r, SAVED_TEXT.rename).click();
+    const box = input(r);
     expect(box.hidden).toBe(false);
-    expect((box as unknown as { value: string }).value).toBe('Loadout 1');
+    expect((box as unknown as { value: string }).value).toBe('Loadout 2');
     expect(box.getAttribute('aria-label')).toBe(SAVED_TEXT.nameLabel);
-    (box as unknown as { value: string }).value = 'CQB rush';
+    typed(r, 'CQB rush');
     const ev = box.fire('keydown', { key: 'Enter' });
     expect(ev.defaultPrevented).toBe(true);
     expect(box.hidden).toBe(true);
-    expect(names(r)[0]).toBe('CQB rush');
-    expect(r.saved.view(0)!.name).toBe('CQB rush');
+    expect(pickText(r, 'name')).toBe('CQB rush');
+    expect(r.saved.view(1)!.name).toBe('CQB rush');
+    expect(listOf(r).labels).toContain('2 · CQB rush');
+  });
+
+  it('F2 on the dropdown starts the same rename', () => {
+    const r = twoLoadouts();
+    const ev = pick(r).fire('keydown', { key: 'F2' });
+    expect(ev.defaultPrevented).toBe(true);
+    expect(input(r).hidden).toBe(false);
+    expect((input(r) as unknown as { value: string }).value).toBe('Loadout 2');
   });
 
   it('cancels a rename with Escape: the old name stays, and the Esc goes no further (it would be Back)', () => {
     const r = twoLoadouts();
-    menuFor(r, 0).choose(SAVED_TEXT.rename);
-    const box = input(tabs(r)[0]!);
-    (box as unknown as { value: string }).value = 'Nope';
-    const ev = box.fire('keydown', { key: 'Escape' });
+    barButton(r, SAVED_TEXT.rename).click();
+    typed(r, 'Nope');
+    const ev = input(r).fire('keydown', { key: 'Escape' });
     expect(ev.stopped).toBe(true);
-    expect(box.hidden).toBe(true);
-    expect(names(r)[0]).toBe('Loadout 1');
-    expect(r.saved.view(0)!.name).toBe('Loadout 1');
+    expect(input(r).hidden).toBe(true);
+    expect(pickText(r, 'name')).toBe('Loadout 2');
+    expect(r.saved.view(1)!.name).toBe('Loadout 2');
   });
 
   it('keeps the old name when the typed one is empty', () => {
     const r = twoLoadouts();
-    menuFor(r, 0).choose(SAVED_TEXT.rename);
-    (input(tabs(r)[0]!) as unknown as { value: string }).value = '   ';
-    input(tabs(r)[0]!).fire('keydown', { key: 'Enter' });
-    expect(names(r)[0]).toBe('Loadout 1');
+    barButton(r, SAVED_TEXT.rename).click();
+    typed(r, '   ');
+    input(r).fire('keydown', { key: 'Enter' });
+    expect(pickText(r, 'name')).toBe('Loadout 2');
+    expect(r.saved.view(1)!.name).toBe('Loadout 2');
   });
 
   it('limits the typed name to the name length', () => {
     const r = rig();
-    expect((input(tabs(r)[0]!) as unknown as { maxLength: number }).maxLength).toBe(SAVED_LOADOUTS.nameMax);
+    expect((input(r) as unknown as { maxLength: number }).maxLength).toBe(SAVED_LOADOUTS.nameMax);
   });
 
-  it('Duplicate fills the first free slot with a "copy" and opens its name', () => {
-    const r = twoLoadouts();
-    menuFor(r, 0).choose(SAVED_TEXT.duplicate);
-    expect(names(r)[2]).toBe('Loadout 1 copy');
-    expect(input(tabs(r)[2]!).hidden).toBe(false);
-    expect(r.saved.current()).toBe(1); // the one carried stays
+  it('Duplicate fills the first free slot with a "copy", carries it, hands the game the change and opens its name', () => {
+    const r = twoLoadouts(); // current: slot 2
+    r.model.equip('primary', item('Cyber Pistol'));
+    r.screen.refresh();
+    const before = r.changes();
+    barButton(r, SAVED_TEXT.duplicate).click();
+    expect(r.saved.view(2)!.name).toBe('Loadout 2 copy');
+    expect(r.saved.current()).toBe(2);
+    expect(r.changes()).toBe(before + 1);
+    expect(pickText(r, 'key')).toBe('3');
+    expect(pickText(r, 'name')).toBe('Loadout 2 copy');
+    expect(pickText(r, 'line')).toContain('Cyber Pistol'); // the copy carries what the original did
+    expect(carried(r).join('|')).toContain('Cyber Pistol');
+    expect(input(r).hidden).toBe(false);
+    expect((input(r) as unknown as { value: string }).value).toBe('Loadout 2 copy');
+    expect(r.saved.view(1)!.name).toBe('Loadout 2'); // the original is untouched
   });
 });
 
@@ -404,8 +491,9 @@ describe('criterion 4: the Match screen picks a saved loadout', () => {
   });
 });
 
+
 describe('criterion 5: locked gear is said in words', () => {
-  it('counts what is locked on the tab and lists it, with what plays instead, under the tabs', () => {
+  it('counts what is locked on the dropdown and lists it, with what plays instead, under it', () => {
     const own = owning([...STARTERS, item('Red Dot'), item('Cyber Pistol')]);
     const r = rig(own);
     r.model.setFit(AEG, 'optic', item('Red Dot'));
@@ -413,16 +501,17 @@ describe('criterion 5: locked gear is said in words', () => {
     r.screen.refresh();
     const box = findAll(r.root, 'saved-locked')[0] as EventNode;
     expect(box.hidden).toBe(true);
-    expect(part(tabs(r)[0]!, 'saved-tab-line').text).not.toContain('locked');
+    expect(pickText(r, 'line')).not.toContain('locked');
 
     own.items.delete(id('Red Dot'));
     own.items.delete(id('Cyber Pistol'));
     r.screen.refresh();
-    const line = part(tabs(r)[0]!, 'saved-tab-line').text;
+    const line = pickText(r, 'line');
     expect(line).toContain(SAVED_TEXT.locked(r.saved.view(0)!.missing.length));
     expect(line).toMatch(/\d+ locked$/);
-    expect(tabs(r)[0]!.classList.contains('has-locked')).toBe(true);
-    expect(button(tabs(r)[0]!).getAttribute('aria-label')).toContain('locked');
+    expect(pick(r).classList.contains('has-locked')).toBe(true);
+    expect(pick(r).getAttribute('aria-label')).toContain('locked');
+    expect(listOf(r).details[0]).toMatch(/\d+ locked$/);
     expect(box.hidden).toBe(false);
     const items = (findAll(box, 'saved-locked-list')[0] as EventNode).children.map((c) => c.text);
     const missing = r.saved.view(0)!.missing;
@@ -430,26 +519,31 @@ describe('criterion 5: locked gear is said in words', () => {
     expect(items.length).toBeGreaterThanOrEqual(2);
     expect(items.some((t) => t.startsWith('Cyber Pistol (locked): ') && t.endsWith(' instead'))).toBe(true);
     expect(items).toContain('Red Dot (locked): nothing in its place');
+    for (const t of items) expect(pick(r).title).toContain(t);
+    // The list sits under the dropdown, in the same section.
+    const section = bar(r);
+    const order = section.children.map((c) => c.classList.contains('saved-locked'));
+    expect(order.indexOf(true)).toBeGreaterThan(section.children.findIndex((c) => findAll(c, 'saved-pick').length > 0));
 
     own.items.add(id('Red Dot'));
     own.items.add(id('Cyber Pistol'));
     r.screen.refresh();
     expect(box.hidden).toBe(true);
-    expect(part(tabs(r)[0]!, 'saved-tab-line').text).not.toContain('locked');
+    expect(pickText(r, 'line')).not.toContain('locked');
+    expect(pick(r).classList.contains('has-locked')).toBe(false);
   });
 
-  it("shows another tab's locked gear on that tab only", () => {
+  it("shows another loadout's locked gear in the list only: the list under the dropdown is the current loadout's", () => {
     const own = owning([...STARTERS, item('Red Dot')]);
     const r = rig(own);
-    button(tabs(r)[1]!).click();
-    input(tabs(r)[1]!).fire('keydown', { key: 'Enter' });
+    addSecond(r);
     r.model.setFit(AEG, 'optic', item('Red Dot'));
     key(r, '1');
     own.items.delete(id('Red Dot'));
     r.screen.refresh();
-    expect(part(tabs(r)[1]!, 'saved-tab-line').text).toMatch(/1 locked$/);
-    expect(part(tabs(r)[0]!, 'saved-tab-line').text).not.toContain('locked');
-    expect((findAll(r.root, 'saved-locked')[0] as EventNode).hidden).toBe(true); // the list is the current loadout's
+    expect(listOf(r).details[1]).toMatch(/1 locked$/);
+    expect(pickText(r, 'line')).not.toContain('locked');
+    expect((findAll(r.root, 'saved-locked')[0] as EventNode).hidden).toBe(true);
   });
 
   it('says dev gear is off, not locked, in the words of the list', () => {
@@ -485,8 +579,7 @@ describe('criterion 6: bots do not read the saved loadouts', () => {
         }),
       );
     const before = roll();
-    button(tabs(r)[1]!).click();
-    input(tabs(r)[1]!).fire('keydown', { key: 'Enter' });
+    addSecond(r);
     r.model.equip('primary', item('Cyber Pistol'));
     expect(roll()).toBe(before);
   });

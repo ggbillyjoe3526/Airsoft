@@ -1,0 +1,201 @@
+/*
+ * The Match screen's rules panel (MR1): compact, one line a rule. After rows.css, whose shared row rules it narrows.
+ */
+
+/* The Match rules (MR1, the approved concept): a panel; the ruleset across the top with its note at the right, then
+   one line per rule in two columns (each a label at the left and its options), the rules the ruleset sets locked with
+   their value, and one help line at the foot for the row under the pointer or the keyboard. */
+.match-panel {
+  display: flex;
+  flex-direction: column;
+  background: rgba(14, 24, 52, 0.72);
+  border: 1px solid var(--menu-line-soft);
+}
+
+.match-rules-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2) var(--sp-5);
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--menu-line-soft);
+}
+
+.match-rules-top .picker-label,
+.match-rules-top .picker-blurb {
+  display: none;
+}
+
+.match-panel .match-rules-top .picker {
+  flex: none;
+}
+
+.match-rules-top .picker-row {
+  gap: 2px;
+}
+
+.match-panel .match-rules-top .picker-button {
+  flex: none;
+  min-height: var(--control-sm);
+  min-width: 128px;
+  padding-inline: var(--sp-4);
+  font-size: var(--fs-sm);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+}
+
+.match-ruleset-note {
+  flex: 1 1 280px;
+  max-width: 560px;
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  text-align: right;
+  color: var(--menu-muted);
+}
+
+.match-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: var(--sp-2) clamp(20px, 2vw, 36px);
+  padding: var(--sp-3) var(--sp-4) var(--sp-4);
+}
+
+.match-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.match-group-title {
+  margin: var(--sp-1) 0 2px;
+  font: 700 var(--fs-sm) / 1.2 var(--ui-display);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  color: var(--orange-text);
+}
+
+/* One line a rule: its name in a fixed column, its options filling the rest; the note goes to the help line. */
+.match-panel .menu-row {
+  flex-wrap: nowrap;
+  gap: var(--sp-3);
+  min-height: 0;
+  padding: 3px 0 3px var(--sp-2);
+  border-top: 0;
+  border-bottom: 1px solid var(--menu-line-soft);
+  box-shadow: inset 2px 0 0 transparent;
+}
+
+.match-panel .menu-row:hover,
+.match-panel .menu-row:focus-within {
+  background: rgba(255, 255, 255, 0.025);
+  box-shadow: inset 2px 0 0 var(--menu-blue);
+}
+
+.match-panel .menu-row-name {
+  flex: 0 0 clamp(120px, 8.4vw, 160px);
+  min-width: 0;
+}
+
+.match-panel .menu-row-label {
+  font-family: var(--ui-font);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--paper);
+}
+
+.match-panel .menu-row-help,
+.match-panel .picker-label,
+.match-panel .picker-blurb {
+  display: none;
+}
+
+.match-panel .menu-row-control,
+.match-panel .picker {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.match-panel .picker-row {
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+/* Equal shares while the words fit; a row with more options than room (four levels in a narrow window) takes a second
+   line rather than cut a word. */
+.match-panel .picker-button {
+  flex: 1 0 auto;
+  min-height: var(--control-xs);
+  padding: 0 var(--sp-2);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.match-panel .picker-button.selected {
+  box-shadow: none;
+}
+
+.match-panel .menu-range {
+  gap: var(--sp-3);
+}
+
+.match-panel .menu-range input {
+  flex: 1;
+  width: auto;
+}
+
+.match-panel .menu-range output {
+  min-width: 3em;
+  font-size: var(--fs-md);
+  text-align: right;
+}
+
+/* A rule the ruleset sets: its name dimmed, its value and the ruleset's name in place of the control, with a lock. */
+.match-panel .menu-row.is-fixed > :not(.menu-row-name, .match-fixed) {
+  display: none;
+}
+
+.match-panel .menu-row.is-fixed .menu-row-label {
+  color: var(--menu-faint);
+}
+
+.match-fixed {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+  min-height: var(--control-xs);
+  font: 700 var(--fs-sm) / 1.2 var(--ui-display);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  color: var(--menu-faint);
+}
+
+.match-fixed svg.icon {
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+
+.match-help {
+  display: flex;
+  gap: 0.4em;
+  min-height: calc(1.4em + 2 * var(--sp-3));
+  margin: 0;
+  padding: var(--sp-3) var(--sp-4);
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  color: var(--menu-muted);
+  border-top: 1px solid var(--menu-line-soft);
+}
+
+.match-help b {
+  flex: none;
+  color: var(--paper);
+}

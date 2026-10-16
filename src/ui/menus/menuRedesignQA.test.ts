@@ -99,9 +99,9 @@ describe('the plain title (M100 QA)', () => {
     return shown(node(t.root));
   };
 
-  it('reads exactly: the wordmark, the tagline, START, the Tutorial under it on a clean save, and the version, in that order', () => {
-    expect(read(true)).toEqual(['Airsoft', 'Call your hit. Go again.', 'START', 'Tutorial', __BUILD_VERSION__.label]);
-    expect(read(false)).toEqual(['Airsoft', 'Call your hit. Go again.', 'START', __BUILD_VERSION__.label]);
+  it('reads exactly: the wordmark, the tagline, START, the Tutorial under it on a clean save, Fullscreen and the version, in that order', () => {
+    expect(read(true)).toEqual(['Airsoft', 'Call your hit. Go again.', 'START', 'Tutorial', 'Fullscreen', __BUILD_VERSION__.label]);
+    expect(read(false)).toEqual(['Airsoft', 'Call your hit. Go again.', 'START', 'Fullscreen', __BUILD_VERSION__.label]);
   });
 
   it('puts the Tutorial after START in the same column, and the version after everything else as the last child', () => {
@@ -160,9 +160,9 @@ describe('the top bar (M100 QA)', () => {
     const bar = new TopBar(noop, noop);
     const chips = (): string[] => node(bar.root).querySelector('.menu-status')!.children.filter((c) => !c.hidden).map((c) => c.text);
     bar.setLevel({ level: 0, into: 0, next: 100, toNext: '100 XP to level 1' });
-    expect(chips()).toEqual(['Lv 0']);
+    expect(chips()).toEqual(['LVL 0']);
     bar.setLevel({ level: 10, into: 0, next: null, toNext: '' });
-    expect(chips()).toEqual(['Lv 10']);
+    expect(chips()).toEqual(['LVL 10']);
     bar.setLevel(null);
     expect(chips()).toEqual([]);
   });
@@ -174,7 +174,7 @@ describe('the top bar (M100 QA)', () => {
     // The third, Back to practice (M95), shows only on the Loadout opened from Practice.
     expect(root.children.map((c) => (c as EventNode).tag)).toEqual(['button', 'nav', 'button', 'div']);
     expect(root.children[2]!.hidden).toBe(true);
-    expect(shown(root)).toEqual(['Airsoft', ...MENU_TEXT.nav.map((n) => n.label), 'Lv 3']);
+    expect(shown(root)).toEqual(['Airsoft', ...MENU_TEXT.nav.map((n) => n.label), 'LVL 3']);
     expect(shown(root).join(' ')).not.toMatch(/\bFC\b|Token/);
     expect(shown(root).join(' ')).not.toContain(__BUILD_VERSION__.label);
   });
@@ -209,7 +209,8 @@ describe('every screen can be left and used with the mouse, and the keys still w
     const pool = loadPool(poolText);
     const screen = new ArmoryScreen({ pool: () => pool, levels: GAME_LEVELS, progress: () => newProgress(GAME_LEVELS), levellingOff: () => false, devContent: () => false });
     expect(screen.hints).toEqual([]);
-    expect(node(screen.root).all('button')).toHaveLength(0);
+    // Its only buttons are the level track's scroll arrows (MR1), out of the tab order.
+    expect(node(screen.root).all('button').map((b) => b.tabIndex)).toEqual([-1, -1]);
     expect(node(screen.root).querySelectorAll('[data-autofocus]').map((n) => n.tag)).toEqual(['h1']);
   });
 
@@ -224,7 +225,7 @@ describe('every screen can be left and used with the mouse, and the keys still w
 
 describe('Practice, the last mode of the Match screen (M100 QA)', () => {
   const view = (picks: unknown, devContent = false) =>
-    ({ played: picks, devContent, run: false, sizeMax: 3, sizeMin: 1, mapLine: 'Depot · Day', still: null, modeLabel: 'Elimination', rules: 'Skirmish · 3v3', bots: 'Normal bots', notes: 'a note', loadout: { replicas: 'AEG', detail: '' }, pays: 'Gives XP', practice: { mapLine: 'Range', still: null } }) as unknown as PlayView;
+    ({ played: picks, devContent, run: false, sizeMax: 3, sizeMin: 1, mapLine: 'Depot · Day', modeLabel: 'Elimination', rules: 'Skirmish · 3v3', bots: 'Normal bots', notes: 'a note', loadout: { replicas: 'AEG', detail: '' }, pays: 'Gives XP', practice: { mapLine: 'Range' } }) as unknown as PlayView;
 
   function setup(mode = 'elimination') {
     const picks = { map: 'depot', mode, difficulty: 'normal', teammateDifficulty: 'normal', ruleset: 'skirmish', rules: { ...DEFAULT_MATCH_RULES } };

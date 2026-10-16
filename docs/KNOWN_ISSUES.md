@@ -266,6 +266,7 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | The round's table shows by itself between rounds and covers the middle of the screen | document | A first guess from the roadmap. Since HD1 it waits for the WON or LOST stamp, and a click moves on to the next round at once. The owner's playtest decides whether it should wait for Tab. (M19, HD1) |
 | Dev settings' Ghost: bots still see you and shoot at you (their BBs pass through) | document | Deliberate: for walking the field under fire, not for hiding. (M24) |
 | With Dev content on, a Match screen map card with a Dev tag or the Day and Night buttons is about twice as tall at 1280 px wide (190 px) | can wait | It grows so the tags stay off the map's name and words (the owner's Dev 5 playtest, note 1). Dev content only. (M94, PT1) Beta 1: MR1. |
+| The mode stills (`public/menu/mode-*.jpg`, `config/menuArt.ts` › `MODE_STILLS`, `pipeline/map-stills.mjs`) are no longer shown | can wait | The mode cards became text boxes (owner, Dev 6 playtest item 10). Kept until the owner says to delete them; removing them trims the download. (MR1) |
 
 ## Save and browsers
 

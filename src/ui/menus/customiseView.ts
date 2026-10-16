@@ -1,10 +1,10 @@
 import { BARRELS, GRIPS, handlingOf, MAGAZINES, MUZZLES, type ReplicaParts } from '../../config/attachments';
 import { GLOW_BB_CHOICES } from '../../config/glowBBs';
 import { LASERS } from '../../config/lasers';
-import { GEAR_TEXT, LOADOUT_TEXT } from '../../config/menus';
+import { GEAR_TEXT, LOADOUT_TEXT, MENU_TEXT } from '../../config/menus';
 import { OPTIC_BLURBS } from '../../config/optics';
 import { BB_WEIGHT, type FireMode, HOP_UP, type PowerSource, type ReplicaConfig } from '../../config/replicas';
-import { FAMILIES, type FamilyId, hasFixedColours, SCHEME_IDS, SCHEMES, type SchemeId, schemeColours } from '../../config/schemes';
+import { FAMILY_IDS, hasFixedColours, type PaintId, paintColours, paintName } from '../../config/schemes';
 import { TORCHES } from '../../config/torches';
 import { type ItemRef, itemKey } from '../../pool/item';
 import type { FitSlot, KitSlot } from '../../pool/kit';
@@ -30,7 +30,7 @@ import { type MenuHint, optionTick } from './chrome';
 import { itemIcon, MENU_ICONS } from './icons';
 import type { PictureContext } from './kitStrip';
 import { tabAfterKey } from './menuNav';
-import { el, menuRow, rangeControl } from './menuParts';
+import { el, menuButton, menuRow, rangeControl, withIcon } from './menuParts';
 import { partSubject, PictureSlot, replicaSubject } from './menuPictures';
 import { perfRows, perfSheet } from './perfBars';
 
@@ -68,7 +68,7 @@ const FIT_ROWS: readonly { slot: FitSlot; label: string; none: string | null }[]
   { slot: 'power', label: 'Power Source', none: null },
 ];
 
-type PartId = 'colour' | FitSlot | 'bbs' | 'skins';
+type PartId = 'colour' | FitSlot | 'bbs';
 
 /** One row of the part list: its tab, what it shows now, and its panel (made when first shown). */
 interface Part {
@@ -88,15 +88,16 @@ export interface CustomiseOptions {
   context: PictureContext;
   /** Something changed (it is already saved): the Loadout and the Play screen follow it. */
   onChange: () => void;
-  /** Back to the gear (Esc, Back, the breadcrumb). */
+  /** Back to the gear (Esc, the Back button). */
   onBack: () => void;
 }
 
 /**
- * Customise (M26b, M29; G3 layout): one replica's parts down the left, Colour first (William: the scheme is picked per
- * replica here), then each part with what is fitted, the BBs and the Skins to come; the picked part's options as
- * picture tiles in the middle under the replica's own picture; the Performance sheet on the right, or on Colour the
- * colour's story (the other replica's, Realistic colours). Built when it opens; a pick changes only what it touches.
+ * Customise (M26b, M29; G3 layout; MR1): a Back button over one replica's parts down the left, Colour first (William:
+ * the colour is picked per replica here, a bold scheme or a realistic plain colour), then each part with what is fitted
+ * and the BBs (Skins left, MR1: outfits get their own place later); the picked part's options as picture tiles in the
+ * middle under the replica's own picture; the Performance sheet on the right, or on Colour the other replica's colour.
+ * Built when it opens; a pick changes only what it touches.
  */
 export class CustomiseView {
   readonly root: HTMLDivElement;
@@ -127,11 +128,13 @@ export class CustomiseView {
     this.dial = m.hopUp(this.asset.id);
     this.root = el('div', 'customise');
 
+    // A Back button (MR1, owner 2026-10-16): the way back to the Loadout, with Esc; the trail beside it is only words.
+    const bar = el('div', 'customise-bar');
+    const back = withIcon(menuButton(MENU_TEXT.hints.back, 'secondary', opts.onBack), MENU_ICONS.arrowLeft);
+    back.classList.add('customise-back');
     const crumbs = el('p', 'customise-crumbs');
-    const toGear = el('button', 'customise-crumb', GEAR_TEXT.breadcrumb);
-    toGear.type = 'button';
-    toGear.addEventListener('click', opts.onBack);
-    crumbs.append(toGear, el('span', '', ` › ${this.asset.name} › `), el('b', '', LOADOUT_TEXT.customise));
+    crumbs.append(el('span', '', `${GEAR_TEXT.breadcrumb} › ${this.asset.name} › `), el('b', '', LOADOUT_TEXT.customise));
+    bar.append(back, crumbs);
 
     const list = el('div', 'customise-parts');
     list.setAttribute('role', 'tablist');
@@ -162,9 +165,9 @@ export class CustomiseView {
 
     const layout = el('div', 'customise-layout');
     layout.append(list, centre, side);
-    // Esc goes back to the gear (the Loadout handles it; the breadcrumb above does it for the mouse); ↑ ↓ move between parts.
+    // Esc goes back to the gear (the Loadout handles it; the Back button does it for the mouse); ↑ ↓ move between parts.
     this.hints = [];
-    this.root.append(crumbs, layout);
+    this.root.append(bar, layout);
     this.refreshHead();
     this.livePerformance();
     this.current = this.parts[0]!.id;
@@ -201,9 +204,6 @@ export class CustomiseView {
     this.addPart('bbs', GEAR_TEXT.ammo, 'none', () => this.bbRows(), () => {
       this.part('bbs').value.textContent = `${bbWeightLabel(this.grams)} · ${hopUpLabel(this.dial)}`;
     });
-    const skins = this.addPart('skins', 'Skins', 'none', () => [el('p', 'customise-later', GEAR_TEXT.skinsLater)], () => (skins.value.textContent = LOADOUT_TEXT.skinsLater));
-    skins.tab.setAttribute('aria-disabled', 'true');
-    skins.tab.classList.add('later');
     for (const p of this.parts) p.update();
   }
 
@@ -274,7 +274,7 @@ export class CustomiseView {
     const m = this.opts.model;
     const scheme = m.scheme(this.asset.id);
     const fitted = (['optic', 'grip', 'laser', 'barrel', 'muzzle', 'light'] as const).filter((k) => (k === 'optic' ? this.kit.optic : k === 'grip' ? this.kit.parts.grip !== 'none' : this.kit.parts[k])).length + (this.kit.parts.magazine !== 'standard' ? 1 : 0);
-    const colour = hasFixedColours(this.base) ? '' : `${this.schemeName(scheme)} · `;
+    const colour = hasFixedColours(this.base) ? '' : `${paintName(scheme, this.opts.context.realistic())} · `;
     this.titleLine.textContent = `${colour}${GEAR_TEXT.partsFitted(fitted)}`;
     this.summary.textContent = `${replicaSummary(this.kit.replica, this.kit.parts)}.`;
     this.hero.show(this.opts.context.pictures, replicaSubject(this.asset, scheme, this.opts.context.realistic(), this.kit), itemIcon(this.asset));
@@ -287,90 +287,88 @@ export class CustomiseView {
     this.perf.rows.replaceChildren(...perfRows(sheetRows(now, factory, HOP_UP.readoutRange)));
   }
 
-  /** A scheme's name, or under Realistic colours its family's ("Cobalt" shows as "Black"). */
-  private schemeName(id: SchemeId): string {
-    return this.opts.context.realistic() ? FAMILIES[SCHEMES[id].family].name : SCHEMES[id].name;
-  }
-
-  // Colour (G3) ----------------------------------------------------------------------------------------------------
+  // Colour (G3; MR1: bold schemes and realistic plain colours, picked per replica) ----------------------------------
 
   private colourTab(): void {
     const p = this.part('colour');
-    const scheme = this.opts.model.scheme(this.asset.id);
-    p.value.textContent = this.schemeName(scheme);
-    const c = schemeColours(scheme, this.opts.context.realistic());
+    const paint = this.opts.model.scheme(this.asset.id);
+    const realistic = this.opts.context.realistic();
+    p.value.textContent = paintName(paint, realistic);
+    const c = paintColours(paint, realistic);
     p.swatch!.style.setProperty('--a', hex(c.furniture));
     p.swatch!.style.setProperty('--b', hex(c.body));
     if (p.panel) {
       for (const b of p.panel.querySelectorAll<HTMLButtonElement>('.scheme-tile')) {
-        const on = b.dataset.scheme === scheme;
+        const on = b.dataset.scheme === paint;
         b.classList.toggle('selected', on);
         b.setAttribute('aria-pressed', String(on));
       }
-      for (const [id, slot] of this.schemeSlots) slot.show(this.opts.context.pictures, replicaSubject(this.asset, id, this.opts.context.realistic(), this.kit, 'wide'), itemIcon(this.asset));
+      for (const [id, slot] of this.schemeSlots) slot.show(this.opts.context.pictures, replicaSubject(this.asset, id, realistic, this.kit, 'wide'), itemIcon(this.asset));
     }
   }
 
-  private readonly schemeSlots = new Map<SchemeId, PictureSlot>();
+  private readonly schemeSlots = new Map<PaintId, PictureSlot>();
 
-  /** The schemes offered (CT4: dev ones with Dev content on) as pictures of this replica in each; under Realistic colours each shows its family. */
+  /**
+   * The colours as pictures of this replica in each: the bold schemes offered (CT4: dev ones with Dev content on; under
+   * the Realistic colours setting each shows its family), then the four realistic plain colours (MR1).
+   */
   private colourPanel(): HTMLElement[] {
     const realistic = this.opts.context.realistic();
-    const offered = this.opts.model.schemes();
-    const head = el('div', 'customise-panel-head');
-    head.append(el('h3', 'customise-panel-title', `${GEAR_TEXT.colour} · ${GEAR_TEXT.schemes(offered.length)}`), el('p', 'customise-panel-note', GEAR_TEXT.colourNote));
-    const group = el('div', 'scheme-grid');
-    group.setAttribute('role', 'group');
-    group.setAttribute('aria-label', GEAR_TEXT.colour);
-    for (const id of offered) {
-      const b = el('button', 'scheme-tile option-tile');
-      b.type = 'button';
-      b.dataset.scheme = id;
-      const slot = new PictureSlot('option-pic');
-      this.schemeSlots.set(id, slot);
-      const words = el('span', 'option-words');
-      words.append(el('span', 'option-name', SCHEMES[id].name));
-      if (realistic) words.append(el('span', 'option-line', GEAR_TEXT.showsAs(FAMILIES[SCHEMES[id].family].name)));
-      b.append(slot.root, words, optionTick());
-      b.addEventListener('click', () => {
-        if (this.opts.model.scheme(this.asset.id) === id) return;
-        this.opts.model.setScheme(this.asset.id, id);
-        this.changed();
-      });
-      group.append(b);
-    }
-    return [head, group];
+    const bold = this.opts.model.schemes();
+    const group = (title: string, note: string, ids: readonly PaintId[], line: (id: PaintId) => string): HTMLElement => {
+      const box = el('div', 'colour-group');
+      const sub = el('div', 'colour-group-head');
+      sub.append(el('h4', 'colour-group-title', title), el('p', 'colour-group-note', note));
+      const grid = el('div', 'scheme-grid');
+      grid.setAttribute('role', 'group');
+      grid.setAttribute('aria-label', `${GEAR_TEXT.colour}: ${title}`);
+      for (const id of ids) grid.append(this.colourTile(id, line(id)));
+      box.append(sub, grid);
+      return box;
+    };
+    return [
+      group(GEAR_TEXT.bold, GEAR_TEXT.boldNote, bold, (id) => (realistic ? GEAR_TEXT.showsAs(paintName(id, true)) : '')),
+      group(GEAR_TEXT.realistic, GEAR_TEXT.realisticNote, FAMILY_IDS, () => ''),
+    ];
   }
 
-  /** The Colour side panel: the other replica's colour, and what Realistic colours does with this one. */
+  private colourTile(id: PaintId, line: string): HTMLButtonElement {
+    const b = el('button', 'scheme-tile option-tile');
+    b.type = 'button';
+    b.dataset.scheme = id;
+    const slot = new PictureSlot('option-pic');
+    this.schemeSlots.set(id, slot);
+    const words = el('span', 'option-words');
+    words.append(el('span', 'option-name', paintName(id, false)));
+    if (line) words.append(el('span', 'option-line', line));
+    b.append(slot.root, words, optionTick());
+    b.addEventListener('click', () => {
+      if (this.opts.model.scheme(this.asset.id) === id) return;
+      this.opts.model.setScheme(this.asset.id, id);
+      this.changed();
+    });
+    return b;
+  }
+
+  /** The Colour side panel: the colour picked, that it is this replica's own, and the other replica's colour. */
   private fillColourAside(): void {
     const m = this.opts.model;
     const realistic = this.opts.context.realistic();
-    const scheme = m.scheme(this.asset.id);
-    const family = SCHEMES[scheme].family;
+    const paint = m.scheme(this.asset.id);
     const other = m.equipped().find((r): r is ItemRef => r !== null && r.asset !== this.asset.id);
-    const parts: HTMLElement[] = [el('p', 'menu-kicker', GEAR_TEXT.appliesTo), el('p', 'colour-applies', this.asset.name)];
+    const parts: HTMLElement[] = [el('p', 'menu-kicker', GEAR_TEXT.colour), el('h3', 'colour-applies', paintName(paint, realistic)), el('p', 'colour-note', GEAR_TEXT.ownColourNote)];
     if (other) {
       const otherAsset = m.pool.byId.get(other.asset)!;
       const otherFixed = hasFixedColours(replicaOf(otherAsset));
-      parts.push(el('p', 'colour-note', otherFixed ? GEAR_TEXT.fixedColours : GEAR_TEXT.ownColour(otherAsset.name, this.schemeName(m.scheme(otherAsset.id)))));
+      const card = el('div', 'colour-other-card');
       const pic = new PictureSlot('colour-other');
       pic.show(this.opts.context.pictures, replicaSubject(otherAsset, m.scheme(otherAsset.id), realistic, m.slotKit(other)), itemIcon(otherAsset));
-      parts.push(pic.root);
+      const words = el('div', 'colour-other-words');
+      words.append(el('b', '', otherAsset.name), el('span', '', otherFixed ? GEAR_TEXT.ownColours : paintName(m.scheme(otherAsset.id), realistic)));
+      card.append(pic.root, words);
+      parts.push(card);
     }
-    const realHead = el('div', 'colour-real-head');
-    realHead.append(el('h3', 'colour-real-title', GEAR_TEXT.realistic), el('b', `colour-real-state${realistic ? ' on' : ''}`, realistic ? 'On' : 'Off'));
-    parts.push(realHead, el('p', 'colour-note', (realistic ? GEAR_TEXT.realisticOn : GEAR_TEXT.realisticOff)(SCHEMES[scheme].name, FAMILIES[family].name)));
-    const families = el('div', 'family-grid');
-    for (const f of Object.keys(FAMILIES) as FamilyId[]) {
-      const tile = el('div', `family-tile${f === family ? ' selected' : ''}`);
-      const slot = new PictureSlot('option-pic');
-      const as = SCHEME_IDS.find((s) => SCHEMES[s].family === f)!;
-      slot.show(this.opts.context.pictures, replicaSubject(this.asset, as, true, this.kit, 'wide'), itemIcon(this.asset));
-      tile.append(slot.root, el('span', 'option-name', FAMILIES[f].name));
-      families.append(tile);
-    }
-    parts.push(families, el('p', 'colour-note', GEAR_TEXT.skinsLater));
     this.colourAside.replaceChildren(...parts);
   }
 
