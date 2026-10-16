@@ -40,8 +40,8 @@ describe('accuracy by stance and movement', () => {
     const crouchWalk = targetSpreadScale(at(MOVEMENT.crouchSpeed, 1), MOVEMENT);
     expect(crouchWalk).toBeLessThan(targetSpreadScale(at(MOVEMENT.crouchSpeed), MOVEMENT));
     expect(crouchWalk).toBeGreaterThan(A.crouched);
-    // ... and moving crouched at full crouch pace is less accurate than standing still (audit SIM-10).
-    expect(crouchWalk).toBeGreaterThan(targetSpreadScale(at(), MOVEMENT));
+    // ... and moving crouched at full crouch pace is less accurate than standing still, steadied (audit SIM-10).
+    expect(crouchWalk).toBeGreaterThan(A.steady);
     expect(crouchWalk).toBeCloseTo(targetSpreadScale(at(MOVEMENT.crouchSpeed), MOVEMENT) * A.crouchedMoving, 9);
   });
 
@@ -121,7 +121,7 @@ describe('accuracy by stance and movement', () => {
     for (const speed of [MOVEMENT.walkSpeed, MOVEMENT.runSpeed]) {
       const c = at(speed);
       for (let i = 0; i < 30; i++) stepAccuracy(c, MOVEMENT, DT);
-      expect(c.spreadScale).toBeGreaterThan(1);
+      expect(c.spreadScale).toBeGreaterThan(A.steady + 0.1);
       c.velocity.x = 0; // stopped (the ground deceleration itself takes 0.05 s from walking, 0.1 s from running)
       let t = 0;
       while (c.spreadScale > A.steady + 0.01) {
@@ -167,8 +167,8 @@ describe('accuracy by stance and movement', () => {
     expect(settleAfterSprint('angled')).toBeGreaterThan(none + 0.02);
   });
 
-  it('makes walking with the walk key only a little shakier than standing (owner, 2026-10-03)', () => {
-    expect(A.walk).toBeGreaterThan(1);
+  it('makes walking with the walk key only a little shakier than standing still (owner, 2026-10-03; Dev 6 note 29)', () => {
+    expect(A.walk).toBeGreaterThan(A.steady);
     expect(A.walk).toBeLessThanOrEqual(1.2);
     expect(A.walk).toBeLessThan(A.run);
   });

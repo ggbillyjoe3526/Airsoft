@@ -13,8 +13,7 @@ import { LEG_CLIPS, LEG_MODE, LEG_MODES, type LegBlend, legClipWeights, legDirec
  * sim/figureLegs.ts, which weighs the legs' clips by the same rules); the vault's clip is run by the vault's progress
  * (where the file has it). The upper body is the same clips' unless the figure is in play and not sprinting or
  * vaulting: then it aims (the rifle's or the pistol's three clips blended by the view's pitch), reloads (the clip run by
- * the reload's progress) or switches replica (the Switch clip, run backwards from the pistol to the rifle). The replica
- * resting on cover blends the aim into the Rest clips, which lean it in over the cover (where the file has them); one
+ * the reload's progress) or switches replica (the Switch clip, run backwards from the pistol to the rifle); one
  * trigger press plays on top for each shot. Every blend eases in (FIGURE_RIG.blend), so nothing snaps.
  */
 
@@ -33,12 +32,6 @@ export const POSE_CLIPS = [
   'Rifle_Reload',
   'Pistol_Reload',
   'Switch',
-  'Rifle_Rest',
-  'Rifle_RestUp',
-  'Rifle_RestDown',
-  'Pistol_Rest',
-  'Pistol_RestUp',
-  'Pistol_RestDown',
   'Holster',
   'Holster_Sprint',
   'Rifle_Fire',
@@ -52,19 +45,13 @@ export const BODY_CLIPS = LEG_CLIPS.length;
 export const FIRE_CLIPS = 2;
 /**
  * Clips a figure's file may lack (made with the figure redesign, Dev 6): their slots are then empty, with a length of 0
- * in the clip table. A file without the Rest clips leans by FIGURE_RIG.rest instead (render/riggedFigure.ts); one
- * without the Vault clip vaults on the legs' clips (the jump, tucked by the crouch); one without the Holster clips (BP4)
+ * in the clip table. A file without the Vault clip vaults on the legs' clips (the jump, tucked by the crouch); one without the Holster clips (BP4)
  * holds the replica in the hands while holstered.
  */
-export const OPTIONAL_CLIPS: ReadonlySet<PoseClip> = new Set<PoseClip>(['Vault', 'Rifle_Rest', 'Rifle_RestUp', 'Rifle_RestDown', 'Pistol_Rest', 'Pistol_RestUp', 'Pistol_RestDown', 'Holster', 'Holster_Sprint']);
+export const OPTIONAL_CLIPS: ReadonlySet<PoseClip> = new Set<PoseClip>(['Vault', 'Holster', 'Holster_Sprint']);
 
 const S = Object.fromEntries(POSE_CLIPS.map((name, i) => [name, i])) as Record<PoseClip, number>;
 export const POSE_SLOT: Readonly<Record<PoseClip, number>> = S;
-
-/** Whether the clip table has `hold`'s Rest clips (the file had them). */
-export function hasRest(table: PoseClipTable, hold: PoseHold): boolean {
-  return len(table, hold === 'pistol' ? S.Pistol_Rest : S.Rifle_Rest) > 0;
-}
 
 /** Whether the clip table has the Holster clips (the file had them: bot23.py, BP4). */
 export function hasHolster(table: PoseClipTable): boolean {
@@ -111,8 +98,6 @@ export interface PoseInput {
   draw: { progress: number; from: PoseHold } | null;
   /** The player's own figure seen from the eyes: the upper body stays the legs' clips' (the arms aren't drawn). */
   firstPerson: boolean;
-  /** How settled the replica is on cover (0..1, Character.coverRest): the aim blends into the Rest clips by this much. */
-  rest: number;
   /**
    * Vaulting (M102): the whole body plays the Vault clip at `vaultAt`, the replica carried in it. A file without the
    * clip plays the legs' clips instead (the jump, tucked by the crouch), the replica carried as they hold it.
@@ -147,8 +132,6 @@ export interface PoseState {
   jump: number;
   /** Where in the Jump clip the legs are (seconds): held from the landing while the jump eases out, never snapped back. */
   jumpAt: number;
-  /** How settled the replica is on cover, eased: a rest taken away at once (a hit) leans back out, not in one frame. */
-  rest: number;
   /** The holstered arms' share, eased. */
   holster: number;
   /** The upper body's layer (aim, reload or switch) over the legs' clips, and within it the reload's and the switch's share. */
@@ -188,7 +171,6 @@ export function createPoseState(): PoseState {
     dir,
     jump: 0,
     jumpAt: FIGURE_RIG.jump.from,
-    rest: 0,
     holster: 0,
     overlay: 0,
     reload: 0,
@@ -370,7 +352,6 @@ export function stepPose(state: PoseState, input: PoseInput, dt: number, table: 
   }
   state.switching += ((switching ? 1 : 0) - state.switching) * ko;
   state.pistol += ((input.hold === 'pistol' ? 1 : 0) - state.pistol) * ease(dt, B.hold);
-  state.rest += (clamp01(input.rest) - state.rest) * ko;
   state.holster += ((hasHolster(table) ? clamp01(input.holster) : 0) - state.holster) * ko;
 
   const overlay = state.overlay;
@@ -398,29 +379,19 @@ export function stepPose(state: PoseState, input: PoseInput, dt: number, table: 
   u[S.Holster] = overlay * aim * holster;
   const rifleAim = overlay * armed * (1 - state.pistol);
   const pistolAim = overlay * armed * state.pistol;
-  // Resting on cover: each aim clip blends into its Rest clip (the same pitch, leaned in over the cover).
-  const rifleRest = hasRest(table, 'rifle') ? state.rest : 0;
-  const pistolRest = hasRest(table, 'pistol') ? state.rest : 0;
-  u[S.Rifle_Aim] = rifleAim * level * (1 - rifleRest);
-  u[S.Rifle_AimUp] = rifleAim * up * (1 - rifleRest);
-  u[S.Rifle_AimDown] = rifleAim * down * (1 - rifleRest);
-  u[S.Rifle_Rest] = rifleAim * level * rifleRest;
-  u[S.Rifle_RestUp] = rifleAim * up * rifleRest;
-  u[S.Rifle_RestDown] = rifleAim * down * rifleRest;
-  u[S.Pistol_Aim] = pistolAim * level * (1 - pistolRest);
-  u[S.Pistol_AimUp] = pistolAim * up * (1 - pistolRest);
-  u[S.Pistol_AimDown] = pistolAim * down * (1 - pistolRest);
-  u[S.Pistol_Rest] = pistolAim * level * pistolRest;
-  u[S.Pistol_RestUp] = pistolAim * up * pistolRest;
-  u[S.Pistol_RestDown] = pistolAim * down * pistolRest;
+  u[S.Rifle_Aim] = rifleAim * level;
+  u[S.Rifle_AimUp] = rifleAim * up;
+  u[S.Rifle_AimDown] = rifleAim * down;
+  u[S.Pistol_Aim] = pistolAim * level;
+  u[S.Pistol_AimUp] = pistolAim * up;
+  u[S.Pistol_AimDown] = pistolAim * down;
   const reloadSlot = state.reloadHold === 'pistol' ? S.Pistol_Reload : S.Rifle_Reload;
   u[reloadSlot] = overlay * reloadShare;
   t[reloadSlot] = state.reloadAt * len(table, reloadSlot) * LAST;
   u[S.Switch] = overlay * switchShare;
   t[S.Switch] = state.switchAt * len(table, S.Switch) * LAST;
-  // The aim clips are held poses: their first frame (and so are the rests).
+  // The aim clips are held poses: their first frame.
   for (let i = S.Rifle_Aim; i <= S.Pistol_AimDown; i++) t[i] = 0;
-  for (let i = S.Rifle_Rest; i <= S.Pistol_RestDown; i++) t[i] = 0;
 
   // A shot's trigger press, on top while it lasts (the aim layer must be in).
   state.fireAge += dt;

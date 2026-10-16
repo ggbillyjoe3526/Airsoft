@@ -34,14 +34,14 @@ function approach(current: number, target: number, maxDelta: number): number {
 }
 
 /**
- * Speed the character is aiming for given current stance and pace (walk / run / sprint: faster with the replica
- * holstered, M92). A lean slows
+ * Speed the character is aiming for given current stance and pace (walk / run / sprint). With the replica holstered the
+ * run is faster (M92, Dev 6 note 27), up to but never past the sprint, which the holster doesn't change. A lean slows
  * running smoothly down to walking pace, reached at cfg.leanQuietFrom of a full lean; `walkHeld` while aiming down
  * sights slows it below that (cfg.aimWalkScale).
  */
 function targetSpeed(c: Character, cfg: MovementConfig, walkHeld: boolean): number {
-  const sprint = c.armament.holstered ? cfg.holsterSprintSpeed : cfg.sprintSpeed;
-  let base = c.walking ? cfg.walkSpeed : c.sprinting ? sprint : cfg.runSpeed;
+  const run = c.armament.holstered ? Math.min(cfg.holsterRunSpeed, cfg.sprintSpeed) : cfg.runSpeed;
+  let base = c.walking ? cfg.walkSpeed : c.sprinting ? cfg.sprintSpeed : run;
   const lean = Math.abs(c.lean);
   if (lean > 0 && !c.walking) base += (cfg.walkSpeed - base) * Math.min(1, lean / cfg.leanQuietFrom);
   const speed = base + (cfg.crouchSpeed - base) * c.crouchAmount;

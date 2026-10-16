@@ -445,7 +445,12 @@ describe('Extraction: the home team’s jobs (M46)', () => {
       if (!isInPlay(m.character) || !m.orderCovering || !m.orderLeanChecked || m.orderLean === 0) continue;
       leaning++;
       expect(m.character.lean, `Blue ${m.character.id}`).not.toBe(0);
+      // Seen from its slot's view: a teammate may glance off at a fight nearby (this seed has one since the holstered
+      // sprint stopped being faster, Dev 6 note 27), and what this checks is the corner and the side it leans out to.
+      const yaw = m.character.yaw;
+      m.character.yaw = m.orderYaw;
       expect(lineClear(r.physics, eyeOf(m.character, BODY, HITS, eye), m.orderWatch), `Blue ${m.character.id}`).toBe(true);
+      m.character.yaw = yaw;
     }
     expect(leaning).toBeGreaterThan(0);
     r.yours.use = false;

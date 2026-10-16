@@ -388,7 +388,7 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
     if (b.vaultLeg) cmd.jump = findVault(me, cmd, MOVEMENT, w.body, w.query, vaultCheck);
   }
   // A personality that aims from cover (BN1, the anchor) raises its sight while it stands still to fight, look over
-  // its cover or hold: over a ledge or crate the replica settles on it (M104), as yours does. Never to draw a holstered
+  // its cover or hold. Never to draw a holstered
   // replica: an aim press would (M92), and that is holsterBot's to decide. Standing still: a fight's sidestep moves it
   // with no route (BP5: it aimed while it strafed, at walking pace, which is not how an anchor plays but how well).
   const still = !moving && cmd.forward === 0 && cmd.right === 0;

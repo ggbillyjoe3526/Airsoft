@@ -8,13 +8,13 @@ export interface MovementConfig {
   runSpeed: number;
   /** Walking (hold the walk key): slow and quiet, for sneaking and holding angles. */
   walkSpeed: number;
-  /** Sprinting with the replica in hand, ready to raise. */
+  /** Sprinting, with the replica in hand or holstered: the top speed, which the holster never adds to. */
   sprintSpeed: number;
   /**
-   * Sprinting with the replica holstered (M92, the owner's playtest note 3): a little faster than `sprintSpeed`, paid
-   * for with the slower draw from the holster (HOLSTER.drawScale).
+   * The normal pace with the replica holstered (M92; the owner's Dev 6 playtest note 27): faster than `runSpeed` without
+   * holding sprint, never as fast as `sprintSpeed`. Paid for with the slower draw from the holster (HOLSTER.drawScale).
    */
-  holsterSprintSpeed: number;
+  holsterRunSpeed: number;
   crouchSpeed: number;
   /** Horizontal acceleration while grounded and pushing a direction (m/s^2). */
   groundAccel: number;
@@ -47,7 +47,7 @@ export interface MovementConfig {
   /**
    * A standing character stays glued to ground up to this far below its feet (so it follows small
    * drops such as stepping off a ledge). Larger drops become a fall. Deeper than the fastest pace drops in a tick
-   * down the steepest ramp (the holstered sprint: 6.8 m/s × 1/60 s × 0.5 = 5.7 cm) plus the probe rounding the ramp's
+   * down the steepest ramp (the sprint: 6.3 m/s × 1/60 s × 0.5 = 5.3 cm) plus the probe rounding the ramp's
    * crest: at 6 cm that sprint left the ground for 0.3 s over the top of Neon Heights' stairs (BN1).
    */
   groundSettleDistance: number;
@@ -80,39 +80,6 @@ export interface MovementConfig {
   accuracy: AccuracyConfig;
   /** Vaulting over low obstacles (M102, sim/vault.ts). */
   vault: VaultConfig;
-  /** Resting the replica on cover while aiming (sim/coverRest.ts, M104). */
-  rest: RestConfig;
-}
-
-/**
- * Resting the replica on cover (M104, the owner's Dev 6 pick 40): aiming down sights, still and upright, with a ledge
- * in front at the right height (a crate, a low wall, a window sill, sandbags), the replica settles on it. Heights are
- * below the eye, so one rule fits standing (chest-high cover) and crouching (waist-high cover).
- */
-export interface RestConfig {
-  /** The cover's face must be within this of the body's centre, straight ahead (m): the support hand's reach. */
-  reach: number;
-  /**
-   * The cover's top must be at least `minDrop` and at most `maxDrop` below the eye (m): any higher and it blocks the
-   * sight line, any lower and the replica can't reach down to it.
-   */
-  minDrop: number;
-  maxDrop: number;
-  /** The top is looked for this far past the cover's face (m), so a thin wall's top is found too. */
-  inset: number;
-  /** The top's normal must be at least this upright (its y; 1 is level), so a ramp or a slope ahead is no ledge. */
-  minFlat: number;
-  /** The aim must be clear this far past the cover's face (m): never resting with the BBs' way blocked. */
-  clearAhead: number;
-  /** No rest while leaning further than this (0..1 of a full lean): the rest is upright, over the cover. */
-  maxLean: number;
-  /** Seconds to settle onto the cover (Character.coverRest easing to 1), and to come off it. */
-  settleTime: number;
-  releaseTime: number;
-  /** Fully settled, the spread is multiplied by this (on top of stance and aim, sim/accuracy.ts). */
-  spread: number;
-  /** Fully settled, each shot's kick is multiplied by this (sim/armament.ts). */
-  kick: number;
 }
 
 /**
@@ -196,9 +163,9 @@ export const MOVEMENT: MovementConfig = {
   runSpeed: 4.2,
   walkSpeed: 2.3,
   sprintSpeed: 6.3,
-  // 8 % over the ready sprint (owner's note 3: "slightly faster"): about 2 m gained on a 25 m dash, for a draw 0.36 s
-  // slower than a switch (rifle) before the first shot.
-  holsterSprintSpeed: 6.8,
+  // Owner's Dev 6 note 27: holstering alone makes you faster than armed, but no faster than a sprint, and a holstered
+  // sprint is the same sprint. About a fifth over the run: 25 m in 5.0 s rather than 6.0, against 4.0 s sprinting.
+  holsterRunSpeed: 5.0,
   crouchSpeed: 2.1,
   groundAccel: 45,
   groundDecel: 38,
@@ -224,12 +191,13 @@ export const MOVEMENT: MovementConfig = {
   aimWalkScale: 0.6,
   accuracy: {
     stillBelow: 0.4,
-    // Owner's 0.1 Dev 3 playtest: standing still steadies to ×0.7, and walking with Shift costs ×1.15 (was 1.5).
+    // Owner's 0.1 Dev 3 playtest: standing still steadies to ×0.7, and walking with Shift costs ×1.15 (was 1.5); his
+    // Dev 6 note 29 asks that Shift's slower pace clearly pays off in accuracy, so walking is now ×1.0.
     // M12a eased to ×0.7 over half a second; the owner found that too slow and smooth and asked for an "instant
     // lock" (2026-10-03), so it now takes a few ticks. Gentler than CS / Valorant, but the same idea.
     steady: 0.7,
     steadyTime: 0.05,
-    walk: 1.15,
+    walk: 1.0,
     run: 2.6,
     // Firing on the run (owner's 0.1 Dev 5 playtest, note 9): ×3.5, three times walking's spread and a third wider than
     // running's, with half as much kick again, so a sprint-and-spray only lands close in.
@@ -250,32 +218,12 @@ export const MOVEMENT: MovementConfig = {
     lockTime: 0.015,
   },
   vault: VAULT,
-  rest: {
-    // A forearm's reach ahead of the body (its radius is 0.32): leaning in to a crate a step away still rests.
-    reach: 0.8,
-    // The sight line clears the top by at least 8 cm, and the top is at most 70 cm below the eye: standing, cover from
-    // 0.96 to 1.58 m high (waist to chest: Depot's 1.2 m crates, barriers and sandbags); crouched, from 0.39 to 1.01 m
-    // (Woodland's logs, Neon Heights' 1 m barriers). Measured on every map in sim/coverRestMaps.test.ts.
-    minDrop: 0.08,
-    maxDrop: 0.7,
-    inset: 0.03,
-    // About 18° at most: the steepest ramp a map may use (PHYSICS.maxRampSlope, 27°) is never a ledge.
-    minFlat: 0.95,
-    clearAhead: 0.5,
-    maxLean: 0.2,
-    settleTime: 0.15,
-    releaseTime: 0.1,
-    // As steady again as crouching (accuracy.crouched), and the two add up: crouched at a low wall is the steadiest.
-    spread: 0.65,
-    // Half the kick: full auto and quick semi stay on target (the AEG's climb 0.38° → 0.19° at its rate of fire).
-    kick: 0.5,
-  },
 };
 
 /**
- * The holster (M92, the owner's playtest note 3): key 3 puts the replica away for the faster sprint
- * (MovementConfig.holsterSprintSpeed); drawing it again takes the replica's own draw time (Handling.drawTime) times
- * `drawScale`, so a holstered player is slower to the first shot than one sprinting with the replica ready.
+ * The holster (M92, the owner's playtest note 3): key 3 puts the replica away for a faster pace without sprinting
+ * (MovementConfig.holsterRunSpeed; Dev 6 note 27); drawing it again takes the replica's own draw time (Handling.drawTime) times
+ * `drawScale`, so a holstered player is slower to the first shot than one running with the replica ready.
  */
 export const HOLSTER = {
   /** The rifle's 0.45 s draw becomes 0.81 s, the pistol's 0.3 s 0.54 s; parts that speed a draw speed this one too. */

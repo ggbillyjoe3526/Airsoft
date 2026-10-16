@@ -37,7 +37,7 @@ export const DEFAULT_BINDINGS = {
   loadout: ['KeyL'],
   slot1: ['Digit1'],
   slot2: ['Digit2'],
-  /** Puts the replica in hand away for the faster sprint (M92, the owner's note 3: 1 primary, 2 secondary, 3 holster). */
+  /** Puts the replica in hand away for a faster pace without sprinting (M92, the owner's note 3: 1 primary, 2 secondary, 3 holster). */
   holster: ['Digit3'],
   /** Hold to see the match so far: everyone's hits, BBs fired, accuracy and time alive (M19). */
   scoreboard: ['Tab'],

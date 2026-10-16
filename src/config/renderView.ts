@@ -45,8 +45,6 @@ export const SPECTATOR = {
 export const HUD = {
   /** The magazine count turns to a warning colour at or below this fraction of a full magazine. */
   lowAmmoFraction: 0.2,
-  /** "Rested" shows under the sight from this far settled on cover (M104, Character.coverRest 0..1). */
-  restedFrom: 0.5,
   /** How long a short HUD notice (e.g. "No fuller magazine" after a reload that can't help) stays up (s). */
   noticeTime: 1.4,
   /** Said when a ricochet ticks you in a match where ricochets don't count (M20). */
@@ -163,13 +161,6 @@ export const VIEWMODEL = {
    * dot. A quarter keeps the dot inside the glass even at kickMax (a viewmodel test pins it).
    */
   aimKick: 0.25,
-  /**
-   * Resting on cover (M104, Character.coverRest): settled, the replica's mouse sway and walk bob shrink by `steady` more
-   * (on top of aimSteady) and its kick by the simulation's share (MovementConfig.rest.kick). As it starts to settle it dips
-   * `settleDrop` metres onto the cover and comes back up over `settleTime` seconds: a short, visible thunk that leaves
-   * the sights lined up again.
-   */
-  rest: { steady: 0.8, settleDrop: 0.012, settleTime: 0.22 },
   /** Viewmodel camera clip planes (metres); the replica is always within arm's reach. */
   near: 0.01,
   far: 5,

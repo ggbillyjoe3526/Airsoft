@@ -4,7 +4,6 @@ import { FIGURE_RIG, FIGURE_RIG_KINDS, type FigureRigKind } from '../config/figu
 import { type Character, createCharacter } from '../sim/character';
 import { vec3 } from '../sim/vec';
 import { figureDress, HUMAN_CROWD } from './figureMix';
-import { hasRest } from './figurePose';
 import { type RiggedFrame, RiggedFigure } from './riggedFigure';
 import { figureFilesForTests } from './testSupport';
 import { ThrownMagazines } from './thrownMagazines';
@@ -175,37 +174,6 @@ describe('the rigged figures (BF1)', () => {
       }
       f.dispose();
     }
-  });
-
-  it('leans over cover it rests on (M104) with the bore still on the shot, but not as your own body', () => {
-    // The robot has its own Rest clips (the figure redesign); a file without them leans by FIGURE_RIG.rest.
-    expect(hasRest(rigs.robot.table, 'rifle') && hasRest(rigs.robot.table, 'pistol')).toBe(true);
-    for (const kind of FIGURE_RIG_KINDS) {
-      const c = createCharacter(1, vec3(0, 0, 0), 0);
-      const { f } = figure(kind, c);
-      for (let i = 0; i < 40; i++) f.update(c, frame());
-      const upright = worldOf(f.root, 'Head');
-      c.coverRest = 1;
-      for (let i = 0; i < 40; i++) f.update(c, frame());
-      const over = worldOf(f.root, 'Head');
-      // Forward (-Z) and a little down, by the spine's share of the lean.
-      expect(upright.z - over.z, kind).toBeGreaterThan(0.04);
-      expect(over.y, kind).toBeLessThan(upright.y);
-      expectAimed(f, c, 'held:rifle');
-      f.dispose();
-    }
-    // Your own body, drawn the same with the replica rested or not.
-    const own = [0, 1].map((rest) => {
-      const c = createCharacter(1, vec3(0, 0, 0), 0);
-      c.coverRest = rest;
-      const { f } = figure('human', c);
-      for (let i = 0; i < 40; i++) f.update(c, frame({ firstPerson: true }));
-      const at = [worldOf(f.root, 'Spine'), worldOf(f.root, 'Neck')];
-      f.dispose();
-      return at;
-    });
-    expect(own[1]![0]!.distanceTo(own[0]![0]!)).toBeLessThan(1e-6);
-    expect(own[1]![1]!.distanceTo(own[0]![1]!)).toBeLessThan(1e-6);
   });
 
   it('calls its hit with the hand up and the replica lowered, and draws farther figures lighter', () => {

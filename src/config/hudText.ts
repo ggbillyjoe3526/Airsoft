@@ -8,8 +8,6 @@ export const HUD_TEXT = {
   lastMagazine: 'Last magazine',
   /** The replica is put away (M92): a trigger pull, aim or its key draws it. */
   holstered: 'Holstered',
-  /** Under the sight while the replica rests on cover (M104): steadier aim, lighter kick. */
-  rested: 'Rested',
   /** Under the loaded count: the BBs in the spare magazines and how many of them still hold any. */
   spare: (bbs: number, mags: number) => `/ ${bbs} · ${mags} spare`,
   /** Under the clock: what wins the match. */

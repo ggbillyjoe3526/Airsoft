@@ -153,63 +153,6 @@ describe('Viewmodel sway', () => {
   });
 });
 
-describe('Viewmodel resting on cover (M104)', () => {
-  const dt = 1 / 60;
-  const setup = () => {
-    const vm = new Viewmodel(16 / 9, 0x3a7bd5, LOADOUT);
-    const arm = createArmament(LOADOUT);
-    const rig = vm.scene.children.find((o) => o instanceof THREE.Group && o.children.length > 0)!;
-    return { vm, arm, rig };
-  };
-
-  it('dips onto the cover as it settles and comes back up level, the sights lined up again', () => {
-    const { vm, arm, rig } = setup();
-    const frame = () => vm.update(dt, 0, 0, 0, 4.2, 0, arm, false, 1);
-    for (let i = 0; i < 30; i++) frame();
-    const level = rig.position.y;
-    vm.setRest(0.1, 0.5);
-    let lowest = level;
-    for (let t = 0; t < VIEWMODEL.rest.settleTime + 2 * dt; t += dt) {
-      frame();
-      lowest = Math.min(lowest, rig.position.y);
-    }
-    expect(level - lowest).toBeCloseTo(VIEWMODEL.rest.settleDrop, 3);
-    expect(rig.position.y).toBeCloseTo(level, 9);
-    // Settled, no second dip; off and on again, one more.
-    vm.setRest(1, 0.5);
-    frame();
-    expect(rig.position.y).toBeCloseTo(level, 9);
-    vm.setRest(0, 0.5);
-    frame();
-    vm.setRest(0.2, 0.5);
-    frame();
-    expect(rig.position.y).toBeLessThan(level - 1e-4);
-    vm.dispose();
-  });
-
-  it('sways less behind a mouse turn and kicks less, settled', () => {
-    const swing = (rest: number) => {
-      const { vm, arm, rig } = setup();
-      vm.update(dt, 0, 0, 0, 4.2, 0, arm, false, 1);
-      vm.setRest(rest, 0.5);
-      for (let t = 0; t < VIEWMODEL.rest.settleTime + dt; t += dt) vm.update(dt, 0, 0, 0, 4.2, 0, arm, false, 1);
-      const x = rig.position.x;
-      const z = rig.position.z;
-      vm.update(dt, 0.05, 0, 0, 4.2, 0, arm, false, 1);
-      const sway = Math.abs(rig.position.x - x);
-      vm.onShot();
-      vm.update(dt, 0.05, 0, 0, 4.2, 0, arm, false, 1);
-      const kick = rig.position.z - z;
-      vm.dispose();
-      return { sway, kick };
-    };
-    const free = swing(0);
-    const rested = swing(1);
-    expect(rested.sway).toBeCloseTo(free.sway * (1 - VIEWMODEL.rest.steady), 6);
-    expect(rested.kick).toBeCloseTo(free.kick * 0.5, 6);
-  });
-});
-
 describe('Viewmodel optic', () => {
   const named = (vm: Viewmodel, name: string): THREE.Object3D[] => {
     const found: THREE.Object3D[] = [];

@@ -138,7 +138,7 @@ describe('bots in a headless match cannot see a player hiding in a bush (M33e, a
         lookedAt.set(b.character.id, seenAt);
         const d = Math.hypot(b.character.position.x - hider.position.x, b.character.position.z - hider.position.z);
         // The callback runs after the step, so a bot is up to one step on (at its fastest) from where it looked.
-        if (d > BOTS.closeAwareness + MOVEMENT.holsterSprintSpeed * DT) {
+        if (d > BOTS.closeAwareness + MOVEMENT.sprintSpeed * DT) {
           seenFar++;
           // The bush's depth along the line to the hider's chest, from the bot's eyes.
           const eye = vec3();

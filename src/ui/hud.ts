@@ -1,5 +1,4 @@
 import type { Action } from '../config/controls';
-import { HUD_TEXT } from '../config/hudText';
 import type { CrosshairSettings } from '../config/matchInfo';
 import { type SightId, sightConfig } from '../config/optics';
 import type { ReplicaConfig } from '../config/replicas';
@@ -11,9 +10,8 @@ import { REPLICA_PANEL_HTML, ReplicaPanel } from './replicaPanel';
 
 /**
  * The in-game HUD: the crosshair (the player's own, Settings → Crosshair; or the red dot, or a scope's fine
- * reticle, while aiming down one), the "Rested" tag under it while the replica rests on cover (M104), and the replica
- * panel (ui/replicaPanel.ts: picture, name, fire modes, BBs and magazines, reload). The DOM is only touched when a
- * displayed value changes.
+ * reticle, while aiming down one) and the replica panel (ui/replicaPanel.ts: picture, name, fire modes, BBs and
+ * magazines, reload). The DOM is only touched when a displayed value changes.
  */
 export class Hud {
   private readonly root: HTMLDivElement;
@@ -22,7 +20,6 @@ export class Hud {
   private shownAiming = false;
   private shownIrons = false;
   private shownScoped = false;
-  private shownRested = false;
   private readonly crosshair: HTMLDivElement;
   /** The smallest gap the crosshair shows (px, Settings → Crosshair); the spread opens it further. */
   private minGap: number;
@@ -37,8 +34,7 @@ export class Hud {
     this.root.hidden = true;
     this.root.innerHTML = `
       <div class="hud-reddot"></div>
-      <div class="hud-scope"><i></i><i></i><i></i></div>
-      <div class="hud-rest" aria-hidden="true">${HUD_TEXT.rested}</div>${REPLICA_PANEL_HTML}`;
+      <div class="hud-scope"><i></i><i></i><i></i></div>${REPLICA_PANEL_HTML}`;
     parent.appendChild(this.root);
     this.panel = new ReplicaPanel(this.root, () => keyName('reload'));
     this.crosshair = crosshairElement();
@@ -63,14 +59,6 @@ export class Hud {
 
   setVisible(visible: boolean): void {
     this.root.hidden = !visible;
-  }
-
-  /**
-   * The replica rests on cover (M104): the "Rested" tag shows under the sight. Shown from halfway settled, so it comes
-   * and goes with the steadier aim rather than flickering at its edges.
-   */
-  setRested(rested: boolean): void {
-    if (this.shownRested !== rested) this.root.classList.toggle('rested', (this.shownRested = rested));
   }
 
   /** Settings › HUD › Ammo counter (AC1): false hides the BB counts on the replica panel (ui/replicaPanel.ts setCounts). */

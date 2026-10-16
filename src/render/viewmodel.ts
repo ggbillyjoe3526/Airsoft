@@ -223,11 +223,6 @@ export class Viewmodel {
   private putFrom = 0;
   private drawFrom = 1;
   private wasHolstered = false;
-  /** How settled the replica is on cover (M104, Character.coverRest, 0..1), and seconds into its settling dip (-1: none). */
-  private rest = 0;
-  private settleT = -1;
-  /** The share of the kick left fully settled (the simulation's, MovementConfig.rest.kick). */
-  private restKick = 1;
   /** The draw under way (or the next) comes out of the holster: the replica rises from out of view. */
   private fromHolster = false;
   /** What's left of the bob, sway and kick (Settings → Accessibility → Reduced motion). */
@@ -419,17 +414,6 @@ export class Viewmodel {
     for (const mask of this.eyepieces) mask.visible = scoped;
   }
 
-  /**
-   * How settled the replica is on cover (M104, Character.coverRest), and the share of the kick left fully settled (the
-   * simulation's, MovementConfig.rest.kick): steadier as it settles, and it dips onto the cover as it starts to (once it
-   * has come right off, it can dip again).
-   */
-  setRest(amount: number, kick: number): void {
-    if (amount > 0 && this.rest <= 0) this.settleT = 0;
-    this.rest = amount;
-    this.restKick = kick;
-  }
-
   /** The view is about to be set, not turned (a new round): the next update takes it without swaying. */
   resetSway(): void {
     this.snapView = true;
@@ -545,18 +529,9 @@ export class Viewmodel {
     slot.model.position.set(h[0] + (t[0] - h[0]) * raised, h[1] + (t[1] - h[1]) * raised, h[2] + (t[2] - h[2]) * raised);
     const holdYaw = slot.hold.yaw * (1 - raised);
     // Steadier on the shoulder: sway and bob shrink while aiming, and the kick only nudges the sight (the dot stays in the glass).
-    // Rested on cover (M104) they shrink further, and the kick as the simulation's does.
-    const RS = VIEWMODEL.rest;
-    const motion = (1 - VIEWMODEL.aimSteady * raised) * (1 - RS.steady * this.rest);
+    const motion = 1 - VIEWMODEL.aimSteady * raised;
     const m = this.motionScale;
-    const kick = this.kick * (1 - (1 - VIEWMODEL.aimKick) * raised) * (1 + (this.restKick - 1) * this.rest) * m.kick;
-    // Settling onto the cover: one dip down and back up (a half sine), as a jolt it shrinks with reduced motion.
-    let restDip = 0;
-    if (this.settleT >= 0) {
-      this.settleT += dt;
-      if (this.settleT >= RS.settleTime) this.settleT = -1;
-      else restDip = Math.sin((Math.PI * this.settleT) / RS.settleTime) * RS.settleDrop * m.kick;
-    }
+    const kick = this.kick * (1 - (1 - VIEWMODEL.aimKick) * raised) * m.kick;
 
     // Sway: the replica lags behind the view a little, then springs back.
     if (this.snapView) {
@@ -641,8 +616,7 @@ export class Viewmodel {
         dip * VIEWMODEL.drawDrop -
         away * H.drop -
         this.sprintBlend * VIEWMODEL.sprintDrop -
-        raise * VIEWMODEL.hitDrop -
-        restDip +
+        raise * VIEWMODEL.hitDrop +
         kick * VIEWMODEL.kickLift,
       kick * VIEWMODEL.kickBack + ip.back,
     );

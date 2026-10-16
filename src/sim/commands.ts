@@ -32,8 +32,8 @@ export interface PlayerCommand {
    */
   switchTo: number;
   /**
-   * Put the replica in hand away (one-shot; M92, the holster): nothing to fire or aim, a faster sprint, and a slower
-   * draw (sim/armament.ts, sim/movement.ts). A slot in `switchTo`, or a fresh trigger pull, aim or reload, draws it.
+   * Put the replica in hand away (one-shot; M92, the holster): nothing to fire or aim, a faster run (never past the
+   * sprint), and a slower draw (sim/armament.ts, sim/movement.ts). A slot in `switchTo`, or a fresh trigger pull, aim or reload, draws it.
    */
   holster: boolean;
   /** Step the active replica's fire selector to its next mode (one-shot). */
