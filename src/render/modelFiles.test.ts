@@ -74,3 +74,28 @@ describe('ModelFiles (BD1: the Blender models by default)', () => {
     expect(late.models.replicaFiles.size).toBe(0);
   });
 });
+
+describe('ModelFiles when files fail (BD1, QA)', () => {
+  it('keeps nothing and does not reject when every loader resolves to nothing', async () => {
+    const m = new ModelFiles(
+      () => Promise.resolve(null),
+      () => Promise.resolve(new Map() as ReplicaFiles),
+      () => Promise.resolve(null),
+    );
+    await expect(m.load()).resolves.toBeUndefined();
+    expect(m.figureRigs).toBeNull();
+    expect(m.figureModel).toBeNull();
+    expect(m.replicaFiles.size).toBe(0);
+  });
+
+  it('keeps the files that did load when the rigs did not', async () => {
+    const r = rig();
+    const m = new ModelFiles(r.loadFigure, r.loadReplicas, () => Promise.resolve(null));
+    const p = m.load();
+    r.gearResolvers[0]!();
+    r.figResolvers[0]!();
+    await p;
+    expect(m.figureRigs).toBeNull();
+    expect(m.replicaFiles).toBe(r.files);
+  });
+});

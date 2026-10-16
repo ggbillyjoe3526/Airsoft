@@ -154,3 +154,13 @@ describe('Bots run low on BBs (MG1)', () => {
     expect(activeDev(false, { ...DEV_DEFAULTS, botsRunLow: true }).botsRunLow).toBe(false);
   });
 });
+
+describe('old saved model switches (BD1, QA)', () => {
+  it('load cleanly and leave no trace in the settings', () => {
+    const d = loadDevSettings(saved({ 'dev.disableFigureModels': 'on', 'dev.disableAllModels': 'on', 'dev.gameSpeed': 0.5 }));
+    expect(d.gameSpeed).toBe(0.5);
+    expect(Object.keys(d).sort()).toEqual(Object.keys(DEV_DEFAULTS).sort());
+    expect(d).not.toHaveProperty('disableFigureModels');
+    expect(d).not.toHaveProperty('disableAllModels');
+  });
+});
