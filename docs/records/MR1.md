@@ -1,10 +1,12 @@
-# MR1 · Match, Loadout and Armory redesign, and the home screen (playtest items 9–14, 16, 17, 19–21)
+# MR1 · Match, Loadout and Armory redesign, and the home screen (playtest items 9–14, 16, 17, 19, 21)
 
-**Review:** REVIEW_LINE
+**Review:** 2 attempts · 8/8 · Accept (Opus)
 
 ## Attempts
 
-ATTEMPTS_TABLE
+| Date | Attempt | Worker model | build | tests | smoke | perf | scope | changelog | Critic | Retry reason | Wall time | Worker tokens |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 2026-10-16 | 1 | Opus 5.5 (build thread) | ✓ 19 s | ✗ 514 s (draft record format) | ✗ 1050 s (old crumb, facts) | – stopped, task perf skip | – not reached | – not reached | – no critic on a red gate | smoke specs still used the crumb | ~2.5 h | tests worker ~100k, QA ~93k |
 
 ## Decisions
 

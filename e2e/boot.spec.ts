@@ -109,8 +109,9 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(setup.locator('.play-map-line')).toHaveText('Depot');
 
   // Match (M20): rounds to win, round time, team size, friendly fire and ricochets; Your match sums them up.
+  // The rules as chips (MR1): the ruleset, the size and the wins.
   const facts = setup.locator('.play-facts');
-  await expect(facts).toContainText('3v3 · first to 5');
+  await expect(setup.locator('.play-chip')).toHaveText(['Skirmish', '3v3', 'first to 5']);
   const match = setup.locator('.match-panel');
   await expect(match.getByRole('group', { name: 'Ricochets count' }).getByRole('button', { name: 'Off' })).toHaveAttribute('aria-pressed', 'true');
   // Rules (M39): Skirmish is picked, Tournament and Pro CQB are dev content (hidden with Dev content off), Custom opens
@@ -128,7 +129,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(match.getByRole('group', { name: 'Win by two' })).toBeHidden();
   await match.getByRole('group', { name: 'Team size' }).getByRole('button', { name: '2v2' }).click();
   await match.getByRole('group', { name: 'Rounds to win' }).getByRole('button', { name: '3' }).click();
-  await expect(facts).toContainText('2v2 · first to 3');
+  await expect(setup.locator('.play-chip')).toHaveText(['Skirmish', '2v2', 'first to 3']);
   await expect(page.locator('.setup-rules')).toContainText('you and 1 bot teammate');
   await expect(page.locator('.setup-rules')).toContainText("won't go into your records"); // custom rules, said before Play
 
@@ -195,9 +196,9 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(loadout.getByRole('group', { name: 'Glowing BBs' }).getByRole('button', { name: 'Always' })).toHaveAttribute('aria-pressed', 'true');
   await loadout.getByRole('group', { name: 'Glowing BBs' }).getByRole('button', { name: 'At Night' }).click();
   await expect(loadout.getByRole('group', { name: 'Glowing BBs' }).getByRole('button', { name: 'At Night' })).toHaveAttribute('aria-pressed', 'true');
-  // The Loadout crumb leaves Customise for the gear, then the top bar's Match returns to the Match screen (no key prompts
+  // Back leaves Customise for the gear (MR1), then the top bar's Match returns to the Match screen (no key prompts
   // along the bottom since M100: the mouse has a button for each).
-  await loadout.getByRole('button', { name: 'Loadout', exact: true }).click();
+  await loadout.locator('.customise-back').click(); // Back to the gear (MR1)
   await expect(loadout.locator('.item-grid')).toBeVisible();
   await topBar.getByRole('button', { name: 'Match', exact: true }).click();
   const loadoutLine = setup.locator('.play-loadout-line');
@@ -893,8 +894,8 @@ test('the practice range opens from the title screen and reads out the last BB',
   await loadout.getByRole('button', { name: /^Primary: AEG Rifle/ }).click({ button: 'right' });
   await loadout.getByRole('tab', { name: /^BBs/ }).click();
   await loadout.getByRole('slider', { name: 'AEG Rifle BB weight' }).fill('0.3');
-  // The crumb back to the gear, then Back (the top bar's wordmark, alone there from the pause menu) to the pause menu.
-  await loadout.getByRole('button', { name: 'Loadout', exact: true }).click();
+  // Customise's Back to the gear, then Back (the top bar's wordmark, alone there from the pause menu) to the pause menu.
+  await loadout.locator('.customise-back').click(); // Back to the gear (MR1)
   await page.locator('.menu-topbar').getByRole('button', { name: 'Back', exact: true }).click();
   await pauseMenu.getByRole('button', { name: 'Resume' }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 10_000 });
@@ -921,10 +922,11 @@ test('the tutorial opens on the range with the coach', async ({ page }) => {
   // Low, so the range draws fast enough in software on a CI runner (as the first test).
   await page.goto('/?nolock&seed=1&quality=low');
   await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
-  // A clean save: the Tutorial shows under START (M100), and nothing else but the wordmark, the tagline and the version.
+  // A clean save: the Tutorial shows under START (M100), and nothing else but the wordmark, the tagline, Fullscreen and
+  // the version (MR1).
   const tutorial = page.locator('.menu-title').getByRole('button', { name: 'Tutorial', exact: true });
   await expect(tutorial).toBeVisible();
-  await expect(page.locator('.menu-title').getByRole('button')).toHaveText(['START', 'Tutorial']);
+  await expect(page.locator('.menu-title').getByRole('button')).toHaveText(['START', 'Tutorial', 'Fullscreen']);
   await expect(page.locator('.menu-title-tagline')).toHaveText('Call your hit. Go again.');
   await expect(page.locator('.menu-title .title-version')).toBeVisible();
   await tutorial.click();

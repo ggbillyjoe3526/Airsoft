@@ -47,7 +47,7 @@ attempts: 0
 ## MR1 · Match, Loadout and Armory redesign, and the home screen (playtest items 9–14, 16, 17, 19, 21)
 tier: ui
 perf: skip
-touches: src/ui/menus/, src/ui/loadoutChoice.ts, src/ui/lookSettings.ts, src/ui/fullscreen.ts, src/config/menus.ts, src/config/menuArt.ts, src/render/itemPictures.ts, src/style.css
+touches: src/ui/menus/, src/ui/loadoutChoice.ts, src/ui/lookSettings.ts, src/ui/fullscreen.ts, src/config/menus.ts, src/config/menuArt.ts, src/render/itemPictures.ts, src/style.css, src/ui/optionPicker.ts, src/config/schemes.ts, src/config/savedLoadouts.ts, src/pool/loadoutModel.ts, src/render/replicaBuilder.ts, src/map/playableMode.ts
 contract: none
 acceptance:
   1. The owner approves concept images of the Match screen's rules, and of the Match, Loadout and Armory screens, before code changes (items 11, 13).
