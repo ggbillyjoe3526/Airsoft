@@ -398,8 +398,8 @@ replaces its line; the old one stays findable in the archive or in git.
   the game"; MV1).** M104's rest on cover is gone for the player and the bots: aiming at a ledge changes nothing, and
   there is no "Rested" tag. Leaning with Q and E (peeking) stays. The figures' files still hold their unused Rest clips
   until they are next exported (`docs/KNOWN_ISSUES.md`).
-- **Walking with Shift pays off in accuracy: ×1.0 against running's ×2.6 (Dev 6 note 29, 2026-10-16; MV1, Claude's
-  default while the owner's pick is open).** Shift already walked at 2.3 m/s against 4.2; its spread was ×1.15. Now a
+- **Walking with Shift pays off in accuracy: ×1.0 against running's ×2.6 (owner, 2026-10-16, Dev 6 note 29: picked
+  "Steadier walk"; MV1).** Shift already walked at 2.3 m/s against 4.2; its spread was ×1.15. Now a
   walk is as steady as standing before the still bonus (×0.7), so the crosshair visibly closes. Crouch-walking stays
   steadier than walking and shakier than standing still.
 - **You can fire while sprinting, less accurately (owner, 2026-10-13, Dev 5 playtest note 9).** On the run the spread
