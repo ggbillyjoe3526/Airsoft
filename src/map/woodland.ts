@@ -52,6 +52,8 @@ const SINK = 0.03;
 /** Cabin walls. */
 const CABIN_WALL = 0.4;
 const CABIN_HEIGHT = 2.6;
+/** MS1: the cabin's tin roof: its ridge `ridge` m over the walls' top, the eaves `overhang` m out, in `paint`. */
+const CABIN_ROOF = { ridge: 1.4, overhang: 0.45, paint: 0x7a3f32 } as const;
 const WINDOW_SILL = CROUCH;
 const WINDOW_TOP = 2.0;
 
@@ -281,7 +283,7 @@ function cabin(): MapBlock[] {
   const wall = (ax: number, bx: number, az: number, bz: number): MapBlock => standing('log', ax, bx, az, bz, h);
   const sill = (ax: number, bx: number, az: number, bz: number): MapBlock[] => [standing('log', ax, bx, az, bz, WINDOW_SILL), standing('log', ax, bx, az, bz, h, WINDOW_TOP)];
   const mid = 66.2;
-  return [
+  const walls: MapBlock[] = [
     // North wall, with the door into the west room.
     wall(x0, 64.2, z1 - t, z1),
     wall(65.4, x1, z1 - t, z1),
@@ -300,6 +302,30 @@ function cabin(): MapBlock[] {
     wall(mid, mid + t, z0 + t, 21.8),
     wall(mid, mid + t, 23, z1 - t),
   ];
+  return [...walls, ...cabinRoof(walls, x0, x1, z0, z1)];
+}
+
+/**
+ * MS1: the cabin's roof, a pitched tin roof of two ramps meeting at a ridge along x, from the highest wall's top, its
+ * eaves CABIN_ROOF.overhang m past the walls. Solid like the walls (BBs and sight stop on it); nobody can reach its top.
+ */
+function cabinRoof(walls: readonly MapBlock[], x0: number, x1: number, z0: number, z1: number): MapBlock[] {
+  const R = CABIN_ROOF;
+  const base = Math.max(...walls.map((b) => b.center.y + b.size.y / 2));
+  const zm = (z0 + z1) / 2;
+  const ax = x0 - R.overhang;
+  const bx = x1 + R.overhang;
+  const half = (za: number, zb: number, rise: '+z' | '-z'): MapBlock => ({
+    kind: 'ramp',
+    rise,
+    center: vec3(worldX((ax + bx) / 2), base + R.ridge / 2, worldZ((za + zb) / 2)),
+    size: vec3(bx - ax, R.ridge, zb - za),
+    finish: 'cladding',
+    paint: R.paint,
+    surface: 'metal',
+  });
+  // Plan +z is world −z: the south half rises north (world −z), the north half south.
+  return [half(z0 - R.overhang, zm, '-z'), half(zm, z1 + R.overhang, '+z')];
 }
 
 /** Boulders on the meadow and round the field: crouch cover, and big ones that are full cover. */

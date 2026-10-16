@@ -188,7 +188,33 @@ export const DRESSING = {
     mast: { colour: '#8a9096', light: '#fffbe6' },
     /** A blade sign: `width` out from the wall, `height` tall, its glowing face. */
     sign: { width: 1.2, height: 5.5, plate: '#14141c' },
+    /** MS1: a tower further than `ribbonFrom` m from the field's middle has ribbon windows, `ribbon` windows to a pane. */
+    ribbonFrom: 70,
+    ribbon: 3,
+    /** MS1: a roof plant room on a tower more than `plantFrom` m tall. */
+    plantFrom: 30,
+    /**
+     * MS1: a billboard on a tower's field face, `share` of its width, `height` tall, its top `below` m under the roof, in a
+     * `frame` m dark plate; its screen glows `day` / `night` times its colour, the lower half `lower` of that.
+     */
+    billboard: { share: 0.7, height: 9, below: 2.5, frame: 0.5, plate: '#16161e', day: 1.05, night: 1.5, lower: 0.6 },
   },
+  /**
+   * MS1: the ground beyond the field (render/surroundings.ts): `rings` rings of `around` quads out to `radius` m from the
+   * field's middle (past the haze's far edge), tucked `overlap` m under the field's edge, turning from the near colour to
+   * the far one over the first `1 / fadeShare` of the way; patches `patchLift` m over it.
+   */
+  surroundings: { radius: 230, rings: 10, around: 48, overlap: 0.5, fadeShare: 1.6, patchLift: 0.03 },
+  /** MS1: silos (render/skyline.ts): drums `gap` m apart, cone roofs `roof` radii tall, a band `band` m tall at `bandAt` m. */
+  silo: { colour: '#d8d6cf', roofColour: '#9aa0a6', bandColour: '#5f7f8a', walkway: '#6d737a', gap: 0.8, roof: 0.6, band: 1.2, bandAt: 3 },
+  /** MS1: a parked lorry: its trailer's colours, a `cab` m cab `cabHeight` tall. */
+  truck: { colours: ['#e8e6e0', '#3f6f9a', '#c9a23a', '#7c8a6e'], cab: 2.4, cabHeight: 2.6, cabColour: '#c04a36', chassis: '#2a2c30', glass: '#22303a' },
+  /** MS1: a perimeter fence: posts `post` m apart, `thick` m square, rails at `rails` of its height. */
+  fence: { colour: '#8d949a', post: 3, thick: 0.12, rails: [0.98, 0.5] },
+  /** MS1: street lamps: a `post` m post, an `arm` m arm, a head. */
+  lamp: { colour: '#6f757c', head: '#e8e6dc', post: 0.18, arm: 1.6 },
+  /** MS1: a skybridge's walls. */
+  skybridge: { colour: '#7d8794' },
 } as const;
 
 /**

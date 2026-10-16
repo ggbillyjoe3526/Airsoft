@@ -3,10 +3,11 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { skylineShown } from '../config/dressing';
 import { ATMOSPHERE, type LightingPreset, LIGHTING_PRESETS, type QualitySettings, type SkyPalette, type TreeDetail } from '../config/render';
 import { createRng, rngNext, type RngState } from '../sim/rng';
-import type { SkylinePiece } from '../map/mapTypes';
+import type { SkylinePiece, Surroundings } from '../map/mapTypes';
 import { buildNightSky } from './nightSky';
 import { hostSkyGuests, SKY_PART, type SkyGuests, skyGuests, tagged } from './skyHost';
 import { skylineClear, skylineGeometries } from './skyline';
+import { apronGeometry } from './surroundings';
 
 /**
  * The world round the field (M14; the visual overhaul, audit section 5 "Sky and trees"): a gradient sky dome with a
@@ -263,9 +264,12 @@ export function horizonTreeLevel(setting: TreeDetail, night: boolean, ownTrees: 
  * The tree ring for a Trees setting, as one mesh (null for none); `skyline` is empty where the setting draws none. G9:
  * `guests` (the skyline's lights and the plane, render/skyHost.ts) ride the same mesh and its one draw call.
  */
-function buildTrees(level: TreeDetail, centre: THREE.Vector3, sun: THREE.Vector3, field: THREE.Box3 | null, skyline: readonly SkylinePiece[], guests: SkyGuests | null = null): THREE.Mesh | null {
+function buildTrees(level: TreeDetail, centre: THREE.Vector3, sun: THREE.Vector3, field: THREE.Box3 | null, skyline: readonly SkylinePiece[], guests: SkyGuests | null = null, surroundings: Surroundings = {}): THREE.Mesh | null {
   if (level === 0) return null;
-  const parts = level === 1 ? simpleTrees(centre, field, skyline) : detailedTrees(centre, sun, field, skyline);
+  // MS1: a city has no tree ring; its skyline stands alone. The ground beyond the field joins at every level.
+  const parts = surroundings.trees === false ? skylineGeometries(skyline, centre) : level === 1 ? simpleTrees(centre, field, skyline) : detailedTrees(centre, sun, field, skyline);
+  if (surroundings.ground && field) parts.push(...apronGeometry(surroundings.ground, field));
+  if (parts.length === 0) return null;
   const hosting = guests !== null && guests.parts.length > 0;
   if (hosting) {
     for (const p of parts) tagged(p, SKY_PART.ring);
@@ -421,6 +425,7 @@ export function addAtmosphere(
   skyline: readonly SkylinePiece[] = [],
   ownTrees = false,
   plane?: { height: number },
+  surroundings: Surroundings = {},
 ): Atmosphere {
   const sky = buildSky(sunDirection, preset.sky);
   sky.position.copy(centre);
@@ -451,7 +456,7 @@ export function addAtmosphere(
       skylineOn = wantSkyline;
       // G9: the skyline's lights (by the preset's night or day) and the plane ride the ring (render/skyHost.ts).
       const guests = wantSkyline ? skyGuests(skyline, centre, preset.night, plane) : null;
-      trees = buildTrees(level, centre, sunDirection, field, wantSkyline ? skyline : [], guests);
+      trees = buildTrees(level, centre, sunDirection, field, wantSkyline ? skyline : [], guests, surroundings);
       if (trees) scene.add(trees);
     }
     if (q.clouds !== (clouds !== null)) {

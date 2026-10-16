@@ -44,7 +44,7 @@ function bar(a: THREE.Vector3, b: THREE.Vector3, thick: number, colour: number):
 }
 
 /** A piece standing on a footprint (not a line of pylons or trees). */
-type Standing = Exclude<SkylinePiece, { kind: 'powerLine' } | { kind: 'treeline' }>;
+type Standing = Exclude<SkylinePiece, { kind: 'powerLine' } | { kind: 'treeline' } | { kind: 'fence' } | { kind: 'lamps' } | { kind: 'skybridge' }>;
 
 /** A piece's footprint (x along world x, z along world z), its `turned` applied. */
 function footprint(p: Standing): [number, number] {
@@ -62,6 +62,18 @@ export function skylineGeometries(pieces: readonly SkylinePiece[], centre: { x: 
     }
     if (p.kind === 'treeline') {
       treeline(p.points, p.height, p.depth, index, out);
+      return;
+    }
+    if (p.kind === 'fence') {
+      fence(p.points, p.height, out);
+      return;
+    }
+    if (p.kind === 'lamps') {
+      lamps(p.points, p.height, centre, out);
+      return;
+    }
+    if (p.kind === 'skybridge') {
+      skybridge(p, out);
       return;
     }
     const [w, d] = footprint(p);
@@ -126,6 +138,12 @@ export function skylineGeometries(pieces: readonly SkylinePiece[], centre: { x: 
       case 'tower':
         tower(p, w, d, index, centre, out);
         break;
+      case 'silo':
+        silos(p, w, d, out);
+        break;
+      case 'truck':
+        truck(p, w, d, index, centre, out);
+        break;
       case 'chimney': {
         const D = S.chimney;
         const r = Math.min(w, d) / 2;
@@ -187,7 +205,7 @@ export function skylineClear(pieces: readonly SkylinePiece[], x: number, z: numb
   return pieces.every((p) => {
     // G9: trees may stand on a hill (their crowns rise out of it) and behind a treeline.
     if (p.kind === 'hill' || p.kind === 'treeline') return true;
-    if (p.kind === 'powerLine') {
+    if (p.kind === 'powerLine' || p.kind === 'fence' || p.kind === 'lamps' || p.kind === 'skybridge') {
       return p.points.every((q) => Math.hypot(q.x - x, q.z - z) >= S.treeClear);
     }
     const [w, d] = footprint(p);
@@ -235,21 +253,69 @@ function towerFace(p: { x: number; z: number }, w: number, d: number, centre: { 
   return { alongX, at: alongX ? p.z + sign * (d / 2) : p.x + sign * (w / 2), sign };
 }
 
-/** Each window of a tower's field side: its middle (world), and whether it is lit by night. */
-function towerWindows(p: Extract<SkylinePiece, { kind: 'tower' }>, w: number, d: number, index: number, centre: { x: number; z: number }): { x: number; y: number; z: number; lit: boolean; alongX: boolean; sign: number }[] {
-  const W = DRESSING.tower.window;
-  const f = towerFace(p, w, d, centre);
-  const length = f.alongX ? w : d;
-  const cols = Math.floor((length - 0.8) / W.pitch);
-  const out: { x: number; y: number; z: number; lit: boolean; alongX: boolean; sign: number }[] = [];
-  for (let y = p.base + W.from; y + W.height / 2 < p.height - 1.2; y += W.floor) {
-    for (let c = 0; c < cols; c++) {
-      const along = (f.alongX ? p.x : p.z) - ((cols - 1) * W.pitch) / 2 + c * W.pitch;
-      out.push({ x: f.alongX ? along : f.at, y, z: f.alongX ? f.at : along, lit: hash01(index, y, c) < DRESSING.tower.lit.share, alongX: f.alongX, sign: f.sign });
+type Tower = Extract<SkylinePiece, { kind: 'tower' }>;
+
+/** A storey band of a tower: its footprint (`w` × `d` round the tower's middle) from `y0` up to `y1`. */
+interface TowerSection {
+  w: number;
+  d: number;
+  y0: number;
+  y1: number;
+}
+
+/** A tower's body: one section from its base to its roof, or two where it steps in (MS1 `setback`). */
+function towerSections(p: Tower, w: number, d: number): TowerSection[] {
+  if (!p.setback) return [{ w, d, y0: p.base, y1: p.height }];
+  const at = p.base + (p.height - p.base) * p.setback.at;
+  const i = p.setback.inset * 2;
+  return [
+    { w, d, y0: p.base, y1: at },
+    { w: Math.max(2, w - i), d: Math.max(2, d - i), y0: at, y1: p.height },
+  ];
+}
+
+/** A window (or, on a far tower, a strip of `span` windows) of a tower's field side: its middle, whether lit by night. */
+interface TowerWindow {
+  x: number;
+  y: number;
+  z: number;
+  lit: boolean;
+  alongX: boolean;
+  sign: number;
+  span: number;
+}
+
+/**
+ * Each window of a tower's field side, section by section (a setback's upper storeys have their own face). MS1: a tower
+ * further than DRESSING.tower.ribbonFrom m from the field's middle has ribbon windows, `ribbon` windows to a pane, a
+ * third of the triangles where nobody reads single panes through the haze.
+ */
+function towerWindows(p: Tower, w: number, d: number, index: number, centre: { x: number; z: number }): TowerWindow[] {
+  const T = DRESSING.tower;
+  const W = T.window;
+  const far = Math.hypot(p.x - centre.x, p.z - centre.z) > T.ribbonFrom;
+  const span = far ? T.ribbon : 1;
+  const out: TowerWindow[] = [];
+  const sections = towerSections(p, w, d);
+  sections.forEach((sec, si) => {
+    const f = towerFace(p, sec.w, sec.d, centre);
+    const length = f.alongX ? sec.w : sec.d;
+    const cols = Math.floor(Math.floor((length - 0.8) / W.pitch) / span);
+    const pitch = W.pitch * span;
+    // The billboard covers the top storeys of the first section's face (MS1): no windows behind it.
+    const top = si === 0 && p.billboard !== undefined ? sec.y1 - T.billboard.height - T.billboard.below : sec.y1 - 1.2;
+    for (let y = sec.y0 + W.from; y + W.height / 2 < top; y += W.floor) {
+      for (let c = 0; c < cols; c++) {
+        const along = (f.alongX ? p.x : p.z) - ((cols - 1) * pitch) / 2 + c * pitch;
+        out.push({ x: f.alongX ? along : f.at, y, z: f.alongX ? f.at : along, lit: hash01(index, y, c) < T.lit.share, alongX: f.alongX, sign: f.sign, span });
+      }
     }
-  }
+  });
   return out;
 }
+
+/** A window's pane width: a single window's, or a ribbon's across `span` of them. */
+const paneWidth = (q: TowerWindow): number => DRESSING.tower.window.width + (q.span - 1) * DRESSING.tower.window.pitch;
 
 /** A flat quad on a tower's face (normal along x or z, `sign`), `lift` m off it. */
 function faceQuad(q: { x: number; y: number; z: number; alongX: boolean; sign: number }, width: number, height: number, lift: number): THREE.BufferGeometry {
@@ -260,27 +326,49 @@ function faceQuad(q: { x: number; y: number; z: number; alongX: boolean; sign: n
   return g.translate(q.x + (q.alongX ? 0 : q.sign * lift), q.y, q.z + (q.alongX ? q.sign * lift : 0));
 }
 
-/** A city block: its body from `base` up, a cornice, dark glass windows on its field side, and a tank or a mast on its roof. */
-function tower(p: Extract<SkylinePiece, { kind: 'tower' }>, w: number, d: number, index: number, centre: { x: number; z: number }, out: THREE.BufferGeometry[]): void {
+/** Where a tower's billboard hangs: the middle of its panel on the first section's field face, and the panel's size. */
+function billboardAt(p: Tower, w: number, d: number, centre: { x: number; z: number }): { x: number; y: number; z: number; alongX: boolean; sign: number; width: number; height: number } {
+  const B = DRESSING.tower.billboard;
+  const sec = towerSections(p, w, d)[0]!;
+  const f = towerFace(p, sec.w, sec.d, centre);
+  const width = (f.alongX ? sec.w : sec.d) * B.share;
+  const y = sec.y1 - B.below - B.height / 2;
+  return { x: f.alongX ? p.x : f.at, y, z: f.alongX ? f.at : p.z, alongX: f.alongX, sign: f.sign, width, height: B.height };
+}
+
+/**
+ * A city block: its body from `base` up (stepping in at a `setback`), a cornice on each section, dark glass windows on
+ * its field side, a billboard's frame if it has one, and a tank or a mast on its roof.
+ */
+function tower(p: Tower, w: number, d: number, index: number, centre: { x: number; z: number }, out: THREE.BufferGeometry[]): void {
   const T = DRESSING.tower;
   const colour = p.colour ?? hex(T.colours[index % T.colours.length]!);
-  out.push(box(w, p.height - p.base, d, p.x, p.base, p.z, colour));
-  out.push(box(w + 0.3, 0.4, d + 0.3, p.x, p.height - 0.4, p.z, hex(T.cornice)));
-  for (const q of towerWindows(p, w, d, index, centre)) out.push(painted(faceQuad(q, T.window.width, T.window.height, 0.03), hex(T.glass)));
+  for (const sec of towerSections(p, w, d)) {
+    out.push(box(sec.w, sec.y1 - sec.y0, sec.d, p.x, sec.y0, p.z, colour));
+    out.push(box(sec.w + 0.3, 0.4, sec.d + 0.3, p.x, sec.y1 - 0.4, p.z, hex(T.cornice)));
+  }
+  for (const q of towerWindows(p, w, d, index, centre)) out.push(painted(faceQuad(q, paneWidth(q), T.window.height, 0.03), hex(T.glass)));
+  if (p.billboard !== undefined) {
+    const b = billboardAt(p, w, d, centre);
+    out.push(painted(faceQuad(b, b.width + T.billboard.frame * 2, b.height + T.billboard.frame * 2, 0.2), hex(T.billboard.plate)));
+  }
   const top = p.height;
+  const roof = towerSections(p, w, d).at(-1)!;
   if (hash01(index, 3, 9) < 0.5) {
     // A water tank on legs, its lid a shallow cone.
-    const tx = p.x + (hash01(index, 1, 2) - 0.5) * w * 0.4;
-    const tz = p.z + (hash01(index, 2, 1) - 0.5) * d * 0.4;
+    const tx = p.x + (hash01(index, 1, 2) - 0.5) * roof.w * 0.4;
+    const tz = p.z + (hash01(index, 2, 1) - 0.5) * roof.d * 0.4;
     for (const [sx, sz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]] as const) out.push(box(0.15, 1.4, 0.15, tx + sx * 0.8, top, tz + sz * 0.8, hex(T.tank.legs)));
     out.push(painted(new THREE.CylinderGeometry(1.2, 1.25, 2.4, 10).translate(tx, top + 1.4 + 1.2, tz), hex(T.tank.colour)));
     out.push(painted(new THREE.ConeGeometry(1.3, 0.6, 10).translate(tx, top + 3.8 + 0.3, tz), hex(T.tank.legs)));
   } else {
-    const m = towerMast(p, w, d, index);
+    const m = towerMast(p, roof.w, roof.d, index);
     from.set(m.x, top, m.z);
     to.set(m.x, m.top, m.z);
     out.push(bar(from, to, 0.18, hex(T.mast.colour)));
   }
+  // A plant room on the roof of a tall one breaks its box.
+  if (p.height - p.base > T.plantFrom) out.push(box(roof.w * 0.4, 3, roof.d * 0.35, p.x - roof.w * 0.15, top, p.z + roof.d * 0.12, hex(T.cornice)));
   if (p.sign !== undefined) {
     const f = towerFace(p, w, d, centre);
     const s = blade(p, w, d, f);
@@ -303,6 +391,112 @@ function blade(p: { x: number; z: number; base: number; height: number }, w: num
   return f.alongX ? { x: along, y, z: out } : { x: out, y, z: along };
 }
 
+// --- MS1: the industrial estate's and the city's new pieces ----------------------------------------------------------
+
+/** A row of silos along the longer side of the footprint, each a drum with a cone roof, a walkway over their tops. */
+function silos(p: Extract<SkylinePiece, { kind: 'silo' }>, w: number, d: number, out: THREE.BufferGeometry[]): void {
+  const D = DRESSING.silo;
+  const longX = w >= d;
+  const r = Math.min(w, d) / 2;
+  const n = Math.max(1, Math.floor((longX ? w : d) / (r * 2 + D.gap)));
+  const c = p.colour ?? hex(D.colour);
+  const drum = p.height - r * D.roof;
+  for (let i = 0; i < n; i++) {
+    const along = -((n - 1) * (r * 2 + D.gap)) / 2 + i * (r * 2 + D.gap);
+    const x = p.x + (longX ? along : 0);
+    const z = p.z + (longX ? 0 : along);
+    out.push(painted(new THREE.CylinderGeometry(r, r, drum, S.segments).translate(x, drum / 2, z), c));
+    out.push(painted(new THREE.ConeGeometry(r * 1.03, r * D.roof, S.segments).translate(x, drum + (r * D.roof) / 2, z), hex(D.roofColour)));
+    // A darker band near the foot, where the hoppers are.
+    out.push(painted(new THREE.CylinderGeometry(r + 0.05, r + 0.05, D.band, S.segments).translate(x, D.bandAt, z), hex(D.bandColour)));
+  }
+  const span = n * (r * 2 + D.gap);
+  out.push(longX ? box(span, 0.5, 1.4, p.x, drum + r * D.roof * 0.6, p.z, hex(D.walkway)) : box(1.4, 0.5, span, p.x, drum + r * D.roof * 0.6, p.z, hex(D.walkway)));
+  // A stair tower at one end.
+  const ex = p.x + (longX ? span / 2 + 1 : 0);
+  const ez = p.z + (longX ? 0 : span / 2 + 1);
+  out.push(box(2, drum + r * D.roof * 0.6, 2, ex, 0, ez, hex(D.walkway)));
+}
+
+/** A lorry: a cab and a box trailer on a dark chassis, its cab towards the field. */
+function truck(p: Extract<SkylinePiece, { kind: 'truck' }>, w: number, d: number, index: number, centre: { x: number; z: number }, out: THREE.BufferGeometry[]): void {
+  const D = DRESSING.truck;
+  const longX = w >= d;
+  const len = longX ? w : d;
+  const wid = longX ? d : w;
+  const toward = longX ? -Math.sign(p.x - centre.x) || 1 : -Math.sign(p.z - centre.z) || 1;
+  const trailer = p.colour ?? hex(D.colours[index % D.colours.length]!);
+  const at = (u: number): [number, number] => (longX ? [p.x + u * toward, p.z] : [p.x, p.z + u * toward]);
+  const piece = (u: number, l: number, h: number, y: number, ww: number, c: number): THREE.BufferGeometry => {
+    const [x, z] = at(u);
+    return longX ? box(l, h, ww, x, y, z, c) : box(ww, h, l, x, y, z, c);
+  };
+  out.push(piece(0, len, 0.5, 0.6, wid * 0.9, hex(D.chassis)));
+  out.push(piece(-D.cab / 2, len - D.cab, p.height - 1.1, 1.1, wid, trailer));
+  out.push(piece(len / 2 - D.cab / 2, D.cab, D.cabHeight, 0.9, wid, hex(D.cabColour)));
+  out.push(piece(len / 2 - D.cab / 2 + D.cab / 2 - 0.02, 0.05, D.cabHeight * 0.4, 0.9 + D.cabHeight * 0.5, wid * 0.8, hex(D.glass)));
+  for (const u of [-len / 2 + 1.4, -len / 2 + 2.8, len / 2 - D.cab / 2]) for (const s of [-1, 1]) {
+    const [x, z] = at(u);
+    const g = new THREE.CylinderGeometry(0.5, 0.5, 0.35, 10).rotateX(Math.PI / 2);
+    if (longX) g.translate(x, 0.5, z + s * (wid / 2 - 0.1));
+    else g.rotateY(Math.PI / 2).translate(x + s * (wid / 2 - 0.1), 0.5, z);
+    out.push(painted(g, hex(D.chassis)));
+  }
+}
+
+/** A post-and-rail fence along `points`: posts every DRESSING.fence.post m, a top and a middle rail, mesh shown as rails. */
+function fence(points: readonly { x: number; z: number }[], h: number, out: THREE.BufferGeometry[]): void {
+  const D = DRESSING.fence;
+  const c = hex(D.colour);
+  for (let i = 0; i + 1 < points.length; i++) {
+    const a = points[i]!;
+    const b = points[i + 1]!;
+    const len = Math.hypot(b.x - a.x, b.z - a.z);
+    const n = Math.max(1, Math.round(len / D.post));
+    for (let k = 0; k <= n; k++) {
+      if (k === n && i + 2 < points.length) continue;
+      const t = k / n;
+      out.push(box(D.thick, h, D.thick, a.x + (b.x - a.x) * t, 0, a.z + (b.z - a.z) * t, c));
+    }
+    for (const y of D.rails) {
+      from.set(a.x, h * y, a.z);
+      to.set(b.x, h * y, b.z);
+      out.push(bar(from, to, D.thick * 0.6, c));
+    }
+  }
+}
+
+/** Street lamps along `points`: a post with an arm and a head over the field side. */
+function lamps(points: readonly { x: number; z: number }[], h: number, centre: { x: number; z: number }, out: THREE.BufferGeometry[]): void {
+  const D = DRESSING.lamp;
+  for (const p of points) {
+    const len = Math.hypot(centre.x - p.x, centre.z - p.z) || 1;
+    const ux = (centre.x - p.x) / len;
+    const uz = (centre.z - p.z) / len;
+    out.push(box(D.post, h, D.post, p.x, 0, p.z, hex(D.colour)));
+    from.set(p.x, h - 0.1, p.z);
+    to.set(p.x + ux * D.arm, h + 0.2, p.z + uz * D.arm);
+    out.push(bar(from, to, D.post * 0.6, hex(D.colour)));
+    out.push(box(0.6, 0.2, 0.35, p.x + ux * D.arm, h + 0.05, p.z + uz * D.arm, hex(D.head)));
+  }
+}
+
+/** An enclosed footbridge from one point to the next at `y`, glazed along its sides. */
+function skybridge(p: Extract<SkylinePiece, { kind: 'skybridge' }>, out: THREE.BufferGeometry[]): void {
+  const D = DRESSING.skybridge;
+  for (let i = 0; i + 1 < p.points.length; i++) {
+    const a = p.points[i]!;
+    const b = p.points[i + 1]!;
+    const len = Math.hypot(b.x - a.x, b.z - a.z);
+    m.lookAt(from.set(a.x, 0, a.z), to.set(b.x, 0, b.z), UP);
+    m.setPosition((a.x + b.x) / 2, p.y, (a.z + b.z) / 2);
+    out.push(painted(new THREE.BoxGeometry(p.width, p.height, len).translate(0, p.height / 2, 0).applyMatrix4(m), p.colour ?? hex(D.colour)));
+    // A glazed band down each side and a darker deck under it.
+    out.push(painted(new THREE.BoxGeometry(p.width + 0.06, p.height * 0.45, len - 0.4).translate(0, p.height * 0.55, 0).applyMatrix4(m), hex(DRESSING.tower.glass)));
+    out.push(painted(new THREE.BoxGeometry(p.width + 0.3, 0.5, len).translate(0, -0.25, 0).applyMatrix4(m), hex(DRESSING.tower.cornice)));
+  }
+}
+
 /**
  * The skyline's lights (G9): a warm light on each tower's mast and its blade sign's faces always, and by `night` the lit
  * windows, as unlit vertex-coloured parts. They ride the tree ring's mesh (render/skyHost.ts): no draw call of their
@@ -322,11 +516,19 @@ export function skylineLights(pieces: readonly SkylinePiece[], centre: { x: numb
     const [w, d] = footprint(p);
     if (night) {
       for (const q of towerWindows(p, w, d, index, centre)) {
-        if (q.lit) out.push(glowing(faceQuad(q, T.window.width * 0.92, T.window.height * 0.9, 0.05), hex(T.lit.colours[Math.floor(hash01(q.x, q.y, q.z) * T.lit.colours.length) % T.lit.colours.length]!), 1.25));
+        if (q.lit) out.push(glowing(faceQuad(q, paneWidth(q) - 0.08, T.window.height * 0.9, 0.05), hex(T.lit.colours[Math.floor(hash01(q.x, q.y, q.z) * T.lit.colours.length) % T.lit.colours.length]!), 1.25));
       }
     }
+    if (p.billboard !== undefined) {
+      // MS1: the billboard's screen, lit by day and night, in two tones (a picture's lit half over its darker half).
+      const b = billboardAt(p, w, d, centre);
+      const k = night ? T.billboard.night : T.billboard.day;
+      out.push(glowing(faceQuad({ ...b, y: b.y + b.height / 4 }, b.width, b.height / 2, 0.25), p.billboard, k));
+      out.push(glowing(faceQuad({ ...b, y: b.y - b.height / 4 }, b.width, b.height / 2, 0.25), p.billboard, k * T.billboard.lower));
+    }
     if (hash01(index, 3, 9) >= 0.5) {
-      const m = towerMast(p, w, d, index);
+      const roof = towerSections(p, w, d).at(-1)!;
+      const m = towerMast(p, roof.w, roof.d, index);
       out.push(glowing(new THREE.BoxGeometry(0.4, 0.4, 0.4).translate(m.x, m.top + 0.2, m.z), hex(T.mast.light), night ? 1.6 : 1));
     }
     if (p.sign !== undefined) {

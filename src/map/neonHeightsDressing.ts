@@ -97,31 +97,92 @@ const STEAM: Vec3[] = [
 
 /**
  * The city round the site: towers standing behind the 10 m perimeter walls (their base just under the wall's top, so
- * none of them shows inside the field), taller to the north and west, lower where the avenue runs out so the sky and the
- * far city show down the street. Some carry a lit blade sign.
+ * none of them shows inside the field). MS1: they loom, 40 to 75 m in the first row, stepping in near the top, with
+ * billboards and blade signs on their field faces; lower where the avenue runs out (north and south, plan x 0) so the
+ * street's canyon carries on into the city. Behind them the city goes on in blocks to the haze (`outerCity`).
  */
-const SKYLINE: SkylinePiece[] = [
-  // North of the site (plan +z: world −z).
-  { kind: 'tower', x: -17, z: -24, width: 14, depth: 11, height: 27, base: 9.6, sign: NEON_COLOURS.magenta },
-  { kind: 'tower', x: -3, z: -26, width: 12, depth: 13, height: 20, base: 9.6 },
-  { kind: 'tower', x: 9.5, z: -23.5, width: 11, depth: 10, height: 31, base: 9.6, sign: NEON_COLOURS.teal },
-  { kind: 'tower', x: 21, z: -27, width: 13, depth: 12, height: 23, base: 9.6 },
+const NEAR: SkylinePiece[] = [
+  // North of the site (plan +z: world −z), either side of the avenue's end.
+  { kind: 'tower', x: -17, z: -24, width: 14, depth: 11, height: 58, base: 9.6, sign: NEON_COLOURS.magenta, setback: { at: 0.72, inset: 2 } },
+  { kind: 'tower', x: -4.5, z: -27, width: 9, depth: 13, height: 26, base: 9.6 },
+  { kind: 'tower', x: 9.5, z: -23.5, width: 11, depth: 10, height: 66, base: 9.6, sign: NEON_COLOURS.teal, billboard: NEON_COLOURS.violet },
+  { kind: 'tower', x: 21, z: -27, width: 13, depth: 12, height: 48, base: 9.6, setback: { at: 0.6, inset: 1.5 } },
   // South of the site.
-  { kind: 'tower', x: -19, z: 24, width: 15, depth: 10, height: 21, base: 9.6 },
-  { kind: 'tower', x: -4.5, z: 27, width: 11, depth: 12, height: 17, base: 9.6 },
-  { kind: 'tower', x: 10, z: 24.5, width: 14, depth: 11, height: 25, base: 9.6, sign: NEON_COLOURS.yellow },
+  { kind: 'tower', x: -19, z: 24, width: 15, depth: 10, height: 52, base: 9.6, billboard: NEON_COLOURS.magenta },
+  { kind: 'tower', x: -4.5, z: 27, width: 9, depth: 12, height: 22, base: 9.6 },
+  { kind: 'tower', x: 10, z: 24.5, width: 14, depth: 11, height: 61, base: 9.6, sign: NEON_COLOURS.yellow, setback: { at: 0.68, inset: 2.5 } },
+  { kind: 'tower', x: 24, z: 26, width: 10, depth: 12, height: 44, base: 9.6 },
   // West and east, beyond the yards.
-  { kind: 'tower', x: -34, z: -8, width: 12, depth: 14, height: 29, base: 9.6, sign: NEON_COLOURS.violet },
-  { kind: 'tower', x: -33, z: 7.5, width: 11, depth: 13, height: 22, base: 9.6 },
-  { kind: 'tower', x: 33, z: -7, width: 12, depth: 13, height: 24, base: 9.6 },
-  { kind: 'tower', x: 34.5, z: 8, width: 13, depth: 12, height: 18, base: 9.6, sign: NEON_COLOURS.magenta },
-  // Further out, filling the skyline behind the first row.
-  { kind: 'tower', x: -46, z: -28, width: 16, depth: 14, height: 34, base: 9.6 },
-  { kind: 'tower', x: 2, z: -44, width: 18, depth: 15, height: 30, base: 9.6 },
-  { kind: 'tower', x: 44, z: -34, width: 15, depth: 14, height: 28, base: 9.6 },
-  { kind: 'tower', x: -40, z: 40, width: 17, depth: 14, height: 26, base: 9.6 },
-  { kind: 'tower', x: 36, z: 42, width: 16, depth: 15, height: 32, base: 9.6 },
+  { kind: 'tower', x: -34, z: -8, width: 12, depth: 14, height: 72, base: 9.6, sign: NEON_COLOURS.violet, setback: { at: 0.75, inset: 2 } },
+  { kind: 'tower', x: -33, z: 7.5, width: 11, depth: 13, height: 55, base: 9.6, billboard: NEON_COLOURS.teal },
+  { kind: 'tower', x: 33, z: -7, width: 12, depth: 13, height: 63, base: 9.6, billboard: NEON_COLOURS.yellow },
+  { kind: 'tower', x: 34.5, z: 8, width: 13, depth: 12, height: 50, base: 9.6, sign: NEON_COLOURS.magenta, setback: { at: 0.7, inset: 1.5 } },
+  // The corners, so no gap shows between the rows.
+  { kind: 'tower', x: -33, z: -24, width: 12, depth: 12, height: 46, base: 9.6 },
+  { kind: 'tower', x: 33, z: -24, width: 12, depth: 12, height: 57, base: 9.6 },
+  { kind: 'tower', x: -33, z: 23, width: 12, depth: 12, height: 41, base: 9.6 },
+  { kind: 'tower', x: 34, z: 23, width: 12, depth: 12, height: 49, base: 9.6 },
+  // Skybridges across the avenue's ends, high over the street.
+  { kind: 'skybridge', points: [{ x: -10, z: -24 }, { x: 4, z: -24 }], y: 34, width: 3, height: 3.2 },
+  { kind: 'skybridge', points: [{ x: -11.5, z: 25 }, { x: 3, z: 25 }], y: 28, width: 3, height: 3.2 },
 ];
+
+/** A fixed hash of two integers to 0..1, so the outer city is the same every load. */
+const cityHash = (a: number, b: number, salt: number): number => {
+  const h = Math.imul(a * 374761393 + b * 668265263 + salt * 2147483647, 1274126177) >>> 0;
+  return (Math.imul(h ^ (h >>> 13), 1103515245) >>> 0) / 4294967296;
+};
+
+const CITY = {
+  /** Blocks on a `pitch` m grid (streets between them), kept `clear` m (plan) clear of the site and its first row. */
+  pitch: 26,
+  clear: 44,
+  /** Out to `reach` m from the site's middle; nearer blocks are `near` tall, the furthest `far` (min, max). */
+  reach: 140,
+  near: [55, 95],
+  far: [70, 110],
+  /** Each block `size` m across (min, max); a share `setbacks` step in, `billboards` carry one. */
+  size: [14, 21],
+  setbacks: 0.45,
+  billboards: 0.12,
+} as const;
+
+/** The city beyond the first row: a grid of towers to the haze, taller further out, the avenue's line kept open. */
+function outerCity(): SkylinePiece[] {
+  const out: SkylinePiece[] = [];
+  const billboards = [NEON_COLOURS.magenta, NEON_COLOURS.teal, NEON_COLOURS.yellow, NEON_COLOURS.violet];
+  const n = Math.ceil(CITY.reach / CITY.pitch);
+  for (let gx = -n; gx <= n; gx++) {
+    for (let gz = -n; gz <= n; gz++) {
+      const x = gx * CITY.pitch + (cityHash(gx, gz, 1) - 0.5) * 4;
+      const z = gz * CITY.pitch + (cityHash(gx, gz, 2) - 0.5) * 4;
+      const dist = Math.hypot(x, z);
+      if (dist > CITY.reach) continue;
+      if (Math.abs(x) < HALF_X + CITY.clear - 20 && Math.abs(z) < HALF_Z + CITY.clear - 20) continue;
+      // The avenue's line runs on north and south: no block on it within the haze's near half.
+      if (Math.abs(x) < 8 && dist < CITY.reach * 0.6) continue;
+      const t = Math.min(1, (dist - CITY.clear) / (CITY.reach - CITY.clear));
+      const lo = CITY.near[0] + (CITY.far[0] - CITY.near[0]) * t;
+      const hi = CITY.near[1] + (CITY.far[1] - CITY.near[1]) * t;
+      const height = Math.round(lo + (hi - lo) * cityHash(gx, gz, 3));
+      const size = (k: number): number => Math.round(CITY.size[0] + (CITY.size[1] - CITY.size[0]) * cityHash(gx, gz, k));
+      out.push({
+        kind: 'tower',
+        x,
+        z,
+        width: size(4),
+        depth: size(5),
+        height,
+        base: 0,
+        ...(cityHash(gx, gz, 6) < CITY.setbacks ? { setback: { at: 0.55 + cityHash(gx, gz, 7) * 0.25, inset: 2 + cityHash(gx, gz, 8) * 2 } } : {}),
+        ...(cityHash(gx, gz, 9) < CITY.billboards ? { billboard: billboards[(gx + 7 * gz + 99) % billboards.length]! } : {}),
+      });
+    }
+  }
+  return out;
+}
+
+const SKYLINE: SkylinePiece[] = [...NEAR, ...outerCity()];
 
 export const NEON_HEIGHTS_DRESSING: MapDressing = {
   seed: 7331,
@@ -134,10 +195,12 @@ export const NEON_HEIGHTS_DRESSING: MapDressing = {
   puddles: POOLS,
   neon: SIGNS,
   steam: STEAM.map((s) => ({ x: s.x, y: s.y, z: s.z })),
-  skyline: SKYLINE.map((p) => ('points' in p ? p : { ...p, z: -p.z })),
+  skyline: SKYLINE.map((p) => ('points' in p ? { ...p, points: p.points.map((q) => ({ x: q.x, z: -q.z })) } : { ...p, z: -p.z })),
+  // MS1: no tree ring in the city; dark streets beyond the walls, fading into the haze.
+  surroundings: { trees: false, ground: { y: -0.03, near: 0x3e4046, far: 0x55565c } },
   // A plane crossing the city's sky: a pass starts every twenty seconds and takes ten.
-  // 85 m up (BP3, was 130): high over the towers and inside the sky dome for the whole of its line.
-  plane: { height: 85, every: 20 },
+  // 120 m up (MS1, was 85 since BP3): over the taller city's towers and inside the sky dome for the whole of its line.
+  plane: { height: 120, every: 20 },
   // The dust in the air and underfoot: city grey, a touch cool.
   motes: { tint: 0xc6cad4 },
   kickedDust: { tint: 0xb0b4bc, scale: 0.9 },
