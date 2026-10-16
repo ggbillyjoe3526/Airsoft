@@ -164,3 +164,20 @@ describe('reportFor (packet.mjs) with no task id', () => {
     expect(reportFor('Task: none · Verdict: Pass\r\nok', [])).not.toBeNull();
   });
 });
+
+describe('after the choice-list fix (7aab146)', () => {
+  it('root docs are README, CHANGELOG, CLAUDE only; any other root .md is code', () => {
+    expect(docsOnly(new Set(['README.md', 'CHANGELOG.md', 'CLAUDE.md']))).toBe(true);
+    expect(docsOnly(new Set(['newmode.md']))).toBe(false);
+  });
+  it('the usual "8/8" score after a verdict does not read as a choice list', () => {
+    expect(parseReviewLine('Review: critic Accept 8/8 · qa Pass · performance Pass')).toEqual({ critic: 'accept', qa: 'pass', performance: 'pass' });
+  });
+  it('comma, semicolon, dash and slash-free separators still work', () => {
+    expect(judge('Review: critic Accept, qa Pass; performance Pass').pass).toBe(true);
+    expect(judge('Review: critic Accept - qa Pass - performance Pass').pass).toBe(true);
+  });
+  it('KNOWN GAP: a "|" used as the separator between agents drops the verdict before it', () => {
+    expect(judge('Review: critic Accept 8/8 | qa Pass | performance Pass').pass).toBe(false);
+  });
+});
