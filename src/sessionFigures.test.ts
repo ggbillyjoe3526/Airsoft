@@ -27,10 +27,12 @@ describe('the sessions draw the Robots mix (G7)', () => {
     expect(source('./render/combatPresentation.ts')).toMatch(/new Viewmodel\([^;]*, arms, renderer\.replicaFiles\)/);
   });
 
-  it('the match gives the hit rules the figures\' legs only when the rigs are drawn (IM8)', () => {
+  it('the match gives the hit rules the figures\' legs and upper bodies only when the rigs are drawn (IM8, HV1)', () => {
     const match = source('./matchSession.ts');
-    // The human's legs, any clip its file lacks taken from the robot's (FigureRigs.legs).
-    expect(match).toMatch(/const figureLegs = renderer\.figureRigs\?\.legs;/);
-    expect(match).toMatch(/this\.hits = figureLegs \? \{ \.\.\.hitRulesFor\(setup\.rules\), figureLegs \} : hitRulesFor\(setup\.rules\);/);
+    // The human's legs, any clip its file lacks taken from the robot's (FigureRigs.legs); each figure's upper body.
+    expect(match).toMatch(/const rigs = renderer\.figureRigs;/);
+    expect(match).toMatch(/this\.hits = rigs \? \{ \.\.\.hitRulesFor\(setup\.rules\), figureLegs: rigs\.legs, figureBodies: rigs\.bodies \} : hitRulesFor\(setup\.rules\);/);
+    // Each character's volume takes the shape of the figure it is drawn as (0 human, 1 robot).
+    expect(match).toMatch(/c\.figure = crowd\.robots\[i\] \? 1 : 0/);
   });
 });

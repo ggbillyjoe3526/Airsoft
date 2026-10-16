@@ -122,5 +122,12 @@ export function gameSkinContext(playImports: readonly PlayImport[], files: Repli
   };
 }
 
-/** Whether `file` (a path under the repository root) is one of PLAY_MODULES. */
-export const isPlayModule = (file: string, roots: readonly string[] = PLAY_MODULES): boolean => roots.some((r) => (r.endsWith('/') ? file.startsWith(r) : file === r));
+/** Test-only files under the play folders: they never ship (src/ai/README.md, src/ai/balance/README.md). */
+const TEST_ONLY = /(Support\.ts|\.test\.ts)$|^src\/ai\/balance\//;
+
+/**
+ * Whether `file` (a path under the repository root) is one of PLAY_MODULES. A test-only file there is not: the headless
+ * matches' support reads the figure files (render/) for their hit rules since BD1, and none of it ships.
+ */
+export const isPlayModule = (file: string, roots: readonly string[] = PLAY_MODULES): boolean =>
+  !TEST_ONLY.test(file) && roots.some((r) => (r.endsWith('/') ? file.startsWith(r) : file === r));
