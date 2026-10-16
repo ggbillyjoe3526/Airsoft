@@ -4,9 +4,9 @@ import { MOVEMENT } from './movement';
 /**
  * The rigged bot figures made in Blender (BF1, tools/blender/bot-figure/): the human and the robot,
  * `src/assets/models/characters/human.glb` and `robot.glb`, each with the export's sidecar (`human.json`, `robot.json`:
- * its clips, where the replicas sit in the fist and where the magazines go in the reloads). They are drawn only with the
- * Dev tab's "Disable figure models" and "Disable all models" both off (RM4, config/dev.ts); otherwise, as on a fresh
- * save, the built-in figures are. Players and bots wear them alike, and the player's own is their first-person body.
+ * its clips, where the replicas sit in the fist and where the magazines go in the reloads). Every match draws them
+ * (MD1; the built-in figures only when the files can't be loaded). Players and bots wear them alike, and the player's
+ * own is their first-person body.
  */
 
 /** The figure kinds, each a file pair under `src/assets/models/characters/`. */

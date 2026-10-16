@@ -109,8 +109,8 @@ export interface FigureRig {
 }
 
 /**
- * Both kinds, loaded together, with the drawing that plays them: this module and the ones below it are loaded only
- * when the Dev switches let the figures in (ModelFiles), so the game's own chunk doesn't carry them.
+ * Both kinds, loaded together, with the drawing that plays them: this module and the ones below it are a chunk of
+ * their own, loaded with the figure files as the game starts (ModelFiles), so the game's own chunk doesn't carry them.
  */
 export interface FigureRigs {
   readonly human: FigureRig;

@@ -296,7 +296,7 @@ export class MatchSession {
         : undefined;
     // An Extraction run is one "round" of the map's run time (sim/round.ts); there is nothing to win twice.
     this.rounds = this.extraction && map.extraction ? { ...roundRulesFor(setup.rules), roundTime: map.extraction.runTime, winsNeeded: 1, winBy: 1 } : roundRulesFor(setup.rules);
-    // With the rigged figures drawn (the Dev switches off), the legs' hit volumes follow theirs (IM8): the human's
+    // With the rigged figures drawn (MD1: unless they couldn't be loaded), the legs' hit volumes follow theirs (IM8): the human's
     // legs, which the robot shares but for a couple of centimetres crouched (render/riggedHitVolume.test.ts measures both),
     // with any clip the human's file lacks taken from the robot's (FigureRigs.legs).
     const figureLegs = renderer.figureRigs?.legs;

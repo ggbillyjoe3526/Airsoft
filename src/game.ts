@@ -5,7 +5,7 @@ import { motionScale, type SoundCueColour, soundCueCss } from './config/accessib
 import type { VolumeChannel } from './config/audio';
 import { type LookSettings, type RetroSettings, retroLookOf } from './config/look';
 import type { Difficulty } from './config/bots';
-import { activeDev, DEV_ACTION_TEXT, DEV_GIFTS, type DevActionId, type DevSettings, devCheating, modelFilesInUse } from './config/dev';
+import { activeDev, DEV_ACTION_TEXT, DEV_GIFTS, type DevActionId, type DevSettings, devCheating } from './config/dev';
 import { PERF_SCRIPT } from './config/perfScript';
 import { ROUNDS } from './config/hits';
 import type { MatchRules, RulesetId } from './config/matchRules';
@@ -359,8 +359,8 @@ export class Game {
   private crashScreen: CrashScreen | null = null;
 
   static async create(container: HTMLElement, options: GameOptions): Promise<Game> {
-    // The model files the Dev tab lets in (RM4: none by default) load alongside the physics. With Dev content on, so do
-    // the dev maps (M50), so New game can show a dev map picked last time. The maps' baked light (G6) too.
+    // The model files (the Blender replicas, parts and figures; MD1) load alongside the physics. With Dev content on, so
+    // do the dev maps (M50), so New game can show a dev map picked last time. The maps' baked light (G6) too.
     const dev = activeDev(loadDevEnabled(), loadDevSettings());
     const devMaps = dev.devContent ? loadDevMaps() : null;
     const models = new ModelFiles();
@@ -369,7 +369,7 @@ export class Game {
     // one is given, else on WebGL2. A browser with neither can't play: the start-up pane says so.
     const choice = loadRendererChoice();
     const starting = import('./render/rendererStart').then((m) => m.bootRenderer(choice, options.forceWebGL === true, options.qualitySettings.antialias));
-    const [, , , , start] = await Promise.all([initPhysics(), models.use(modelFilesInUse(dev)), devMaps, loadBakedLight(), starting]);
+    const [, , , , start] = await Promise.all([initPhysics(), models.load(), devMaps, loadBakedLight(), starting]);
     const game = new Game(container, options, start);
     game.renderer.models = models;
     return game;
@@ -452,14 +452,14 @@ export class Game {
     });
 
     // The menus' pictures of replicas and parts (G3), drawn by the game's renderer (W6; a new one after a lost device),
-    // once a match's warm-up compile is done. The power sources' models are Blender files too (RM4): pictured only while
-    // the Dev tab's model switches let the replicas' in, else their line drawings stay.
+    // once a match's warm-up compile is done. The power sources' models are Blender files too (RM3), loaded the first time
+    // one is pictured; one that can't be loaded keeps its line drawing.
     const powerSources = powerSourceLoader();
     this.pictures = new ItemPictures(
       followingPictureTarget(() => this.renderer.renderer, nodePictureTarget),
       undefined,
       () => this.renderer.replicaFiles,
-      (file) => (this.renderer.models.inUse.gear ? powerSources(file) : Promise.resolve(null)),
+      powerSources,
       () => this.renderer.afterCompiles(),
     );
     this.menus = new Menus(container, {
@@ -969,25 +969,11 @@ export class Game {
     // plays; the next Play rebuilds the match with it.
     if (this.dev.unlockAllGear !== before.unlockAllGear || this.dev.devContent !== before.devContent) this.loadoutChanged = this.setupChanged = true;
     if (this.dev.devContent !== before.devContent) this.prefetchFieldSounds();
-    if (this.dev.disableAllModels !== before.disableAllModels || this.dev.disableFigureModels !== before.disableFigureModels) this.useModelFiles();
     // Time of day (M90) changes the light the next match is built under, and its sounds.
     if (this.dev.timeOfDay !== before.timeOfDay) {
       this.setupChanged = true;
       this.prefetchFieldSounds();
     }
-  }
-
-  /**
-   * The model files the Dev tab's switches let in now (RM4), fetched if they aren't yet: the menus' pictures are drawn
-   * again from them, and the next match or range is built with them (one under way keeps what it was built with).
-   */
-  private useModelFiles(): void {
-    void this.renderer.models.use(modelFilesInUse(this.dev)).then((changed) => {
-      if (!changed || this.disposed) return;
-      this.pictures.forget();
-      this.loadoutChanged = this.setupChanged = true;
-      this.menus.refresh();
-    });
   }
 
   /**

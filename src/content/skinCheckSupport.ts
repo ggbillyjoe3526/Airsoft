@@ -54,7 +54,7 @@ export interface SkinContext {
    * (pool/loadoutModel.ts kit()), as text to compare.
    */
   kitWith(replica: string, skin: string): string;
-  /** Replica model files to draw on too (the Dev switch "Disable all models" off); none by default. */
+  /** Replica model files to draw on too (what the game draws, MD1); none by default. */
   files: ReplicaFiles;
   rules: { readonly [K in keyof typeof SKIN_RULES]: number };
 }

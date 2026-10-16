@@ -61,7 +61,7 @@ export interface HitConfig {
     maxStride: number;
   };
   /**
-   * The rigged figures' own legs (IM8), when a match draws them (the Dev switches off): with them the legs' hit volumes
+   * The rigged figures' own legs (IM8), when a match draws them (MD1: unless their files can't be loaded): with them the legs' hit volumes
    * sit on the drawn legs' joints on every pose and the walk cycle steps at the figures' strides (sim/figureLegs.ts);
    * without them (the built-in figures) the legs swing as `legs` says.
    */

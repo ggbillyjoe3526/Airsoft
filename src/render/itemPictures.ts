@@ -145,7 +145,7 @@ export class ItemPictures {
   }
 
   /**
-   * The models pictures are drawn from have changed (RM4: the Dev tab's model switches): every picture is drawn afresh
+   * The models pictures are drawn from have changed: every picture is drawn afresh
    * on its next ask. One already queued is drawn from the new models.
    */
   forget(): void {

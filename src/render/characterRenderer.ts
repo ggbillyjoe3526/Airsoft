@@ -21,7 +21,7 @@ import { type ProbeGrid, type ProbeSample, probeTint, sampleProbes } from './pro
 interface FigureState {
   /** The built-in figure, or null when it is drawn as a rigged one (BF1). */
   figure: Figure | null;
-  /** The rigged figure (BF1, render/riggedFigure.ts) it is drawn as when the Dev switches let them in, or null. */
+  /** The rigged figure (BF1, render/riggedFigure.ts) it is drawn as, or null when the figure files couldn't be loaded. */
   rigged: RiggedFigure | null;
   /** Per-figure copy of the shared material, so one figure can fade out on its own. */
   material: THREE.MeshStandardMaterial;

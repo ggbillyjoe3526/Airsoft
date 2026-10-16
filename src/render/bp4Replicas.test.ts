@@ -194,7 +194,7 @@ describe('R6 a rigged-figure chunk that fails to load gives null with a warning'
       () => Promise.resolve({ dispose() {} } as never),
       () => Promise.resolve(new Map() as ReplicaFiles),
     );
-    await expect(models.use({ gear: false, figures: true })).resolves.toBeDefined();
+    await expect(models.load()).resolves.toBeUndefined();
     expect(models.figureRigs).toBeNull();
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('built-in figures'), expect.anything());
   });

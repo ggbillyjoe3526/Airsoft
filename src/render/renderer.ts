@@ -99,8 +99,8 @@ export class Renderer {
   /** Whether the world may move (the match's MotionScale, set by CombatPresentation): the grass sway (W5). */
   motion = true;
   /**
-   * The model files (render/modelFiles.ts): the figure model (M25a) and the replica models (M101), loaded as the Dev
-   * tab's model switches let them in (RM4). Shared by every match and freed with the renderer.
+   * The model files (render/modelFiles.ts): the rigged figures (BF1), the replica models (M101) and a figure model
+   * (M25a), loaded as the game starts (MD1). Shared by every match and freed with the renderer.
    */
   models = new ModelFiles();
   /** The figure model the next match draws its players with; null for the built-in figures. */
