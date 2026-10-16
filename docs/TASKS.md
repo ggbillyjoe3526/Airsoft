@@ -19,6 +19,17 @@ commit, before its pull request merges (CI's scope gate finds the block in the b
   tune on Normal, then check that Easy, Hard and Pro still scale.
 - **`touches` are first guesses.** The build thread confirms them before it starts.
 
+## TT1 · A simpler tutorial (playtest item 2)
+tier: ui
+perf: skip
+touches: src/tutorial/, src/config/tutorial.ts, src/ui/tutorialShowcase.ts, src/ui/coachPanel.ts, src/rangeSession.ts, src/style.css
+contract: none
+acceptance:
+  1. Every tip is shorter and easier to understand.
+  2. No tip makes the player wait long before the next one, tips 13–16 above all.
+status: open
+attempts: 0
+
 ## BL1 · Attack / Defend: fewer attacker wins, more rounds won at the pole (after playtest)
 tier: core
 perf: skip
