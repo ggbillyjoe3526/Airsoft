@@ -277,6 +277,16 @@ describe('the round banner (G4, owner 2026-10-08: "ROUND 1")', () => {
     expect(round.classList.contains('start')).toBe(false);
   });
 
+  it('sets overtime\'s headline a size smaller, and only that one (BP5)', () => {
+    const { feedback, round } = banner();
+    feedback.setRoundMessage('Overtime · touch the flag');
+    expect(round.classList.contains('start')).toBe(true);
+    expect(round.classList.contains('overtime')).toBe(true);
+    feedback.setRoundMessage('Round 2');
+    expect(round.classList.contains('start')).toBe(true);
+    expect(round.classList.contains('overtime')).toBe(false);
+  });
+
   it('writes the DOM only when the message changes', () => {
     const { feedback, round } = banner();
     feedback.setRoundMessage('Round 2');

@@ -4,7 +4,8 @@ import { cssColor } from '../config/teams';
 import type { Bush } from '../map/foliage';
 import type { MapBlock } from '../map/mapTypes';
 import { type Terrain, terrainMaxX, terrainMaxZ, terrainRange, vertexHeight } from '../map/terrain';
-import { clampToSquare, coverHeight, FrameCheck, type HeardPlayer, insideSquare, type MapPoint, minimapPixelRatio, noiseAlpha, toMinimap } from './minimapView';
+import type { ScreenMarker } from '../render/screenMarker';
+import { clampToSquare, clearOfBox, coverHeight, FrameCheck, type HeardPlayer, insideSquare, type MapPoint, minimapPixelRatio, noiseAlpha, type ScreenBox, toMinimap } from './minimapView';
 import { pingAlpha, type ShownPing } from './pingMarkers';
 
 /** A teammate as the minimap shows them: where they are (`y`: their feet), and whether they've called a hit (greyed). */
@@ -103,6 +104,8 @@ export class Minimap {
   private scale = 0;
   /** Where the minimap's square is on the screen (px from the game's top left), for the markers it hides (audit UI-13). */
   private readonly box = { x: 0, y: 0, size: 0 };
+  /** The whole panel (the square, its area tag and its caption), px from the game's top left: kept clear by pinned markers. */
+  private readonly panel: ScreenBox = { x: 0, y: 0, w: 0, h: 0 };
   private readonly at: MapPoint = { x: 0, y: 0 };
   private visible = false;
   /** Whether the other team shows where heard (M23); off under rules that show teammates only (M39). */
@@ -190,6 +193,14 @@ export class Minimap {
   }
 
   /**
+   * A marker pinned to the screen's edge moved off the minimap's panel (BP5, minimapView.ts clearOfBox), `gap`
+   * px clear of it, while the minimap shows; a marker in view is left to `covers`.
+   */
+  clearPinned(m: ScreenMarker, gap: number): ScreenMarker {
+    return this.visible ? clearOfBox(m, this.panel, gap) : m;
+  }
+
+  /**
    * Sizes the canvas for the HUD's scale and the screen's pixel ratio, re-read each time (audit UI-14: once per match
    * left it blurry or oversized after a move to another screen), and notes where its square is.
    */
@@ -212,6 +223,11 @@ export class Minimap {
     this.box.size = box.width;
     this.box.x = box.left - origin.left;
     this.box.y = box.top - origin.top;
+    // The panel: the square (the area tag sits inside its top) and the caption's room under it.
+    this.panel.x = this.box.x;
+    this.panel.y = this.box.y;
+    this.panel.w = this.box.size;
+    this.panel.h = this.box.size + MINIMAP.captionRoom * scale;
   };
 
   /** Once per frame while playing: drawn only when it would differ from the last frame drawn. */

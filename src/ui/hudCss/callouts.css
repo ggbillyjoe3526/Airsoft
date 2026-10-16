@@ -22,6 +22,11 @@
   display: none;
 }
 
+/* Out of sight while the scoreboard is up (BP5), its lines still timed. */
+.callout-feed.covered {
+  visibility: hidden;
+}
+
 .callout-line {
   padding: 5px 12px 5px 11px;
   border-radius: 4px;

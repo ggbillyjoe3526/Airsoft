@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MINIMAP } from '../config/minimap';
 import { DEPOT } from '../map/depot';
-import { clampToSquare, coverHeight, HeardPlayers, insideSquare, minimapPixelRatio, noiseAlpha, noiseBlur, toMinimap } from './minimapView';
+import { clampToSquare, clearOfBox, coverHeight, HeardPlayers, insideSquare, minimapPixelRatio, noiseAlpha, noiseBlur, toMinimap } from './minimapView';
 import type { HeardSound } from './soundCues';
 
 const at = { x: 0, y: 0 };
@@ -123,5 +123,28 @@ describe('the minimap on screen (audit UI-13, UI-14)', () => {
     expect(minimapPixelRatio(0.8)).toBe(1);
     expect(minimapPixelRatio(1.5)).toBe(1.5);
     expect(minimapPixelRatio(3)).toBe(MINIMAP.maxPixelRatio);
+  });
+});
+
+describe('clearOfBox (BP5: edge-pinned markers kept off the minimap)', () => {
+  // The minimap's panel at the top left: a 200 px square from (16, 16), its caption's 32 px under it.
+  const panel = { x: 16, y: 16, w: 200, h: 232 };
+  const pinned = (x: number, y: number, onScreen = false) => ({ x, y, onScreen });
+
+  it('moves a marker pinned to the left edge on the panel down past its foot, gap clear', () => {
+    expect(clearOfBox(pinned(12, 150), panel, 20)).toEqual({ x: 12, y: 16 + 232 + 20, onScreen: false });
+    // On the caption, just above its foot: still moved.
+    expect(clearOfBox(pinned(12, 240), panel, 20).y).toBe(268);
+  });
+
+  it('moves a marker pinned to the top edge on the panel right past it', () => {
+    expect(clearOfBox(pinned(150, 12), panel, 20)).toEqual({ x: 16 + 200 + 20, y: 12, onScreen: false });
+  });
+
+  it('leaves a marker clear of the panel, one in view, and everything when the panel has no size', () => {
+    expect(clearOfBox(pinned(12, 400), panel, 20)).toEqual({ x: 12, y: 400, onScreen: false });
+    expect(clearOfBox(pinned(600, 12), panel, 20)).toEqual({ x: 600, y: 12, onScreen: false });
+    expect(clearOfBox(pinned(100, 100, true), panel, 20)).toEqual({ x: 100, y: 100, onScreen: true });
+    expect(clearOfBox(pinned(12, 150), { x: 0, y: 0, w: 0, h: 0 }, 20)).toEqual({ x: 12, y: 150, onScreen: false });
   });
 });

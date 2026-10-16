@@ -4,7 +4,7 @@ import { OVERTIME } from '../config/modes';
 import { createRoundState, type RoundState } from '../sim/round';
 import { vec3 } from '../sim/vec';
 import { overtimeLine } from './flagStatus';
-import { isRoundStart, roundBanner, spokenRoundMessage } from './roundBanner';
+import { isOvertimeStart, isRoundStart, roundBanner, spokenRoundMessage } from './roundBanner';
 import { Scoreboard } from './scoreboard';
 import { FakeElement } from './testSupport';
 
@@ -32,6 +32,9 @@ describe('the round banner in overtime', () => {
 
   it('is a headline like a round start: gone by the same test, read once for a screen reader', () => {
     expect(isRoundStart('Overtime · touch the flag')).toBe(true);
+    // A size smaller than a round's headline (BP5), so it keeps to one line at 1280 px.
+    expect(isOvertimeStart('Overtime · touch the flag')).toBe(true);
+    expect(isOvertimeStart('Round 2')).toBe(false);
     expect(isRoundStart('Flag touched · your team wins the round · next round in 3')).toBe(false);
     expect(spokenRoundMessage('Overtime · touch the flag')).toBe('Overtime · touch the flag');
   });

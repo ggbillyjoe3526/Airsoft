@@ -8,6 +8,8 @@ import { SOUND_CUES } from './accessibility';
 export const MINIMAP = {
   /** On-screen size (CSS px, square: the field fills the square panel, G4), before the HUD's scale. */
   size: 200,
+  /** The room under the panel for its caption ("Depot · Round 2"), gap included (px before the HUD's scale): style.css's --minimap-caption. */
+  captionRoom: 32,
   /** The canvas never draws finer than this many pixels per CSS pixel: the field drawing's detail (layerScale). */
   maxPixelRatio: 2,
   /** Metres from the middle to the panel's edge (its corners reach a little further). */

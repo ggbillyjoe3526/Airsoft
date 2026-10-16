@@ -1,5 +1,6 @@
 import { MINIMAP } from '../config/minimap';
 import type { MapBlock } from '../map/mapTypes';
+import type { ScreenMarker } from '../render/screenMarker';
 import type { HeardSound } from './soundCues';
 
 /** A point on the minimap, in pixels from its middle (x right, y down). */
@@ -190,4 +191,30 @@ export function coverHeight(b: MapBlock, blocks: readonly MapBlock[]): number {
     floor = fTop;
   }
   return top - floor;
+}
+
+/** A box on screen, px from the view's top left (the minimap's panel). */
+export interface ScreenBox {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/**
+ * Moves an edge-pinned marker (`onScreen` false) off `box`, grown by `gap`, if it would sit on it (BP5: a ping or a
+ * flag pinned to the left edge sat under the minimap's caption, or was hidden under the minimap): down the left edge
+ * past its foot when it is pinned nearer the box's left than its top, else along the top edge past its right. A marker
+ * in view is left where it is. Pure.
+ */
+export function clearOfBox(m: ScreenMarker, box: Readonly<ScreenBox>, gap: number): ScreenMarker {
+  if (m.onScreen || box.w <= 0 || box.h <= 0) return m;
+  const left = box.x - gap;
+  const top = box.y - gap;
+  const right = box.x + box.w + gap;
+  const bottom = box.y + box.h + gap;
+  if (m.x < left || m.x > right || m.y < top || m.y > bottom) return m;
+  if (m.x - left <= m.y - top) m.y = bottom;
+  else m.x = right;
+  return m;
 }
