@@ -8,7 +8,8 @@ each `src/` folder's `README.md`.
 
 - **0.1 Dev 6 is out.** The owner tagged `0.1-dev.6` on 2026-10-16 (commit `c810dd3`). Every item in
   `docs/ROADMAP.md` › 0.1 Dev 6 is done, the last its full bug pass (BP5, `docs/records/BP5.md`).
-- **Next: 0.1 Beta 1.** The owner played Dev 6 (2026-10-16). The Beta 1 blocks are in `docs/TASKS.md`, highest
+- **Now: 0.1 Beta 1** (owner, 2026-10-16; he tags it when complete). His Dev 6 playtest list (34 items) is seven blocks
+  at the top of `docs/TASKS.md` (ST1, MR1, HD1, MV1, BD1, MS1, TT1), each built by its own thread. He played Dev 6 (2026-10-16). The Beta 1 blocks are in `docs/TASKS.md`, highest
   priority first: fixes, balance, performance and polish, with no features. His playtest made three of them: WL1
   (Woodland Attack / Defend), NH1 (Neon Heights' upper floors, placed with the Maps Update) and HV1 (the hit area
   fitted to each figure, his ruling, done in HV1 with BD1, which made the rigged figures the default). The callouts' pace is fine, and
