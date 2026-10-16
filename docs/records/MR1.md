@@ -1,12 +1,14 @@
 # MR1 · Match, Loadout and Armory redesign, and the home screen (playtest items 9–14, 16, 17, 19, 21)
 
-**Review:** 2 attempts · 8/8 · Accept (Opus)
+**Review:** 3 attempts · 8/8 · Accept (Sonnet)
 
 ## Attempts
 
 | Date | Attempt | Worker model | build | tests | smoke | perf | scope | changelog | Critic | Retry reason | Wall time | Worker tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 2026-10-16 | 1 | Opus 5.5 (build thread) | ✓ 19 s | ✗ 514 s (draft record format) | ✗ 1050 s (old crumb, facts) | – stopped, task perf skip | – not reached | – not reached | – no critic on a red gate | smoke specs still used the crumb | ~2.5 h | tests worker ~100k, QA ~93k |
+| 2026-10-16 | 2 | Opus 5.5 (build thread) | ✓ 33 s | ✓ 510 s | ✗ 941 s (Skins tab assertion) | ✓ 1833 s | ✓ | ✓ | – no critic on a red gate | boot.spec still expected a Skins tab | ~1 h | perf agent ~40k |
+| 2026-10-16 | 3 | Opus 5.5 (build thread) | – not re-run (attempt 2 ✓) | – not re-run (attempt 2 ✓) | ✓ 1017 s | – not re-run (attempt 2 ✓) | – not re-run (attempt 2 ✓) | – not re-run (attempt 2 ✓) | 8/8 Accept (Sonnet) | – | ~25 min | critic ~28k |
 
 ## Decisions
 
