@@ -67,7 +67,7 @@ export class MagTossRenderer {
     }
   }
 
-  /** What the warm-up shows to compile ahead (BP6): one magazine (both boxes share the material), none without slots. */
+  /** What the warm-up shows to compile ahead (KI1): one magazine (both boxes share the material), none without slots. */
   warmTargets(): THREE.Object3D[] {
     return this.meshes.slice(0, 1);
   }

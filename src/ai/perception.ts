@@ -58,7 +58,7 @@ const NO_FOLIAGE: readonly Bush[] = [];
 
 /**
  * True if the body of someone already hit (calling or out, any team; not `viewer` or `target`, not a Ghost) stands in
- * the line from `a` to `b` (BP6: a body stops BBs, M85, and the bots' sight now stops on it too; before, they saw past
+ * the line from `a` to `b` (KI1: a body stops BBs, M85, and the bots' sight now stops on it too; before, they saw past
  * it and only held fire, botCombat.ts bodyInLine). Bodies further from the line than a standing figure is tall are
  * skipped before their hit volume is built.
  */
@@ -120,7 +120,7 @@ export function sightConditionsOf(map: MapData, atNight?: boolean): SightConditi
  * Which part of `target` `viewer` can see right now, as a fraction of the target's height: the chest
  * (bots.aimHeightFraction) if it's in view, else the head (bots.headHeightFraction), else 0 (not seen).
  * Seeing needs the target within view distance, inside the field of view (unless very close), and a
- * clear line from the viewer's eyes: nothing static in the way, no body of someone already hit (`bodies`, BP6), and no
+ * clear line from the viewer's eyes: nothing static in the way, no body of someone already hit (`bodies`, KI1), and no
  * more than `bots.foliageSeeThrough` of bush
  * (M33e; within `closeAwareness` a bush hides no one). On a night field (M33g) the view distance is how far the
  * target's light lets them be made out: lit, in the moonlit open, or under the trees (map/nightSight.ts), or in a

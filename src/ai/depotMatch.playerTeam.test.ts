@@ -34,7 +34,7 @@ import { DT } from './depotMatchSupport';
 import { sightConditionsOf } from './perception';
 
 /**
- * Your team (M98): a full match on Depot in each team mode with you on Alpha and one with you on Beta (and since BP6 the
+ * Your team (M98): a full match on Depot in each team mode with you on Alpha and one with you on Beta (and since KI1 the
  * same on Woodland and Neon Heights, at each map's standard team size), built as the
  * match build builds it (matchSession.ts: sim/roster.ts's roster, you character 0 and not one of the match's bots, your
  * bot teammates at the teammates' level). Checked every round: your team's end (and in Attack / Defend its job)

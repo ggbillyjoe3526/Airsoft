@@ -77,7 +77,7 @@ describe('bots see less far at night (M33g)', () => {
   });
 });
 
-describe('the body of someone already hit hides what is behind it (BP6, KNOWN_ISSUES "Bots still see through a body already out")', () => {
+describe('the body of someone already hit hides what is behind it (KI1, KNOWN_ISSUES "Bots still see through a body already out")', () => {
   const viewer = createCharacter(0, vec3(0, 0, 0), 0, LOADOUT, 0); // faces -Z
   const target = createCharacter(1, vec3(0, 0, -20), 0, LOADOUT, 1);
   const bodyAt = (x: number, status: 'alive' | 'calling' | 'out', team = 1) => {

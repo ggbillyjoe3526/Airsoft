@@ -81,7 +81,7 @@ export class MatchPresentation {
   private readonly flag: FlagRenderer;
   private readonly marker: FlagMarker;
   private readonly markerAt: ScreenMarker = { x: 0, y: 0, onScreen: false };
-  /** This frame's edge-pinned markers (pings, the flag, exits, the hold marker), laid out a label apart (BP6). */
+  /** This frame's edge-pinned markers (pings, the flag, exits, the hold marker), laid out a label apart (KI1). */
   private readonly edgePins = new EdgePins();
   private readonly edgeStep: EdgeStep = { down: 0, across: 0 };
   private readonly feed: HitFeed;
@@ -280,7 +280,7 @@ export class MatchPresentation {
     this.flag.setEnvironmentLit(quality.environment);
   }
 
-  /** What the warm-up shows to compile ahead (BP6): the flag, hidden in Elimination until overtime puts it up. */
+  /** What the warm-up shows to compile ahead (KI1): the flag, hidden in Elimination until overtime puts it up. */
   warmTargets(): THREE.Object3D[] {
     return [this.flag.warmTarget(this.state.round.mode)];
   }
@@ -845,7 +845,7 @@ export class MatchPresentation {
       return;
     }
     const at = projectMarker(this.flag.markerAnchor, camera, this.view.width, this.view.height, FLAG_VISUALS.markerEdge, this.markerAt);
-    // The way to turn, taken before the marker is moved along the edge clear of the others (BP6).
+    // The way to turn, taken before the marker is moved along the edge clear of the others (KI1).
     const towards = edgeAngle(at, this.view.width, this.view.height);
     const m = this.pinned(at, FLAG_VISUALS.markerEdge);
     const from = camera.position;
@@ -880,7 +880,7 @@ export class MatchPresentation {
 
   /**
    * A projected marker, if pinned to the screen's edge, moved off the minimap's panel (`gap` px clear) and then along
-   * its edge clear of this frame's other edge markers (BP6: two in almost the same direction overlapped).
+   * its edge clear of this frame's other edge markers (KI1: two in almost the same direction overlapped).
    */
   private pinned(m: ScreenMarker, gap: number): ScreenMarker {
     return this.edgePins.place(this.minimap.clearPinned(m, gap), this.view.width, this.view.height, this.edgeStep);

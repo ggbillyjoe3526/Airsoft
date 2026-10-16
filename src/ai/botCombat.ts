@@ -298,7 +298,7 @@ export function shootBot(b: Bot, w: BotWorld, target: Character | undefined, eye
     return;
   }
   aimDirection(aimLine, b.aim.yaw, b.aim.pitch);
-  // Along the 3D aim line, as every ray it is set against (BP6: the feet's 2D distance, ~11 % short on a ramp or across
+  // Along the 3D aim line, as every ray it is set against (KI1: the feet's 2D distance, ~11 % short on a ramp or across
   // floors, set the aim-wall check's 3D hit against a 2D reach, and stopped the body checks short of the target).
   const dist = length3(aimPoint.x - eye.x, aimPoint.y - eye.y, aimPoint.z - eye.z);
   if (lineOfFireBlocked(b, w, eye, aimPoint, aimLine, dist)) return;

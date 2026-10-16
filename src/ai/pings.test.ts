@@ -191,7 +191,7 @@ describe('PG1: what a ping marks', () => {
     expect(bushed.ping.enemyId).toBe(-1);
     bushed.physics.dispose();
 
-    // BP6: nor one behind the body of someone already hit (the bots' sight stops on it, perception.ts bodyInSight).
+    // KI1: nor one behind the body of someone already hit (the bots' sight stops on it, perception.ts bodyInSight).
     const behindBody = field({ enemy, blocks: [backstop] });
     const body = behindBody.state.characters[1]!;
     body.status = 'out';

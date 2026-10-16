@@ -124,7 +124,7 @@ export class CombatPresentation {
   private readonly viewRight = new THREE.Vector3();
   /** Newest BB serial already given a muzzle start, per shooter. */
   private readonly lastSerialByOwner = new Map<number, number>();
-  /** Your shots this frame, started from the muzzle once the frame's camera is placed (BP6). */
+  /** Your shots this frame, started from the muzzle once the frame's camera is placed (KI1). */
   private readonly ownShots: OwnShotStarts;
   /** Your gas replica's breaths owed this frame (gasBreath skips an electric replica). */
   private ownBreaths = 0;
@@ -498,7 +498,7 @@ export class CombatPresentation {
 
   /**
    * Compiles the world's and the held replica's shaders before the first frame (M63, audit REN-06: Renderer.warmShaders),
-   * with what is hidden now but shows mid-session (BP6): `hidden` (the session's: the overtime flag), a tossed magazine
+   * with what is hidden now but shows mid-session (KI1): `hidden` (the session's: the overtime flag), a tossed magazine
    * and the scopes' eyepiece masks.
    */
   warmShaders(hidden: readonly THREE.Object3D[] = []): void {
@@ -568,7 +568,7 @@ export class CombatPresentation {
   }
 
   /**
-   * Your shots' BBs and gas breath, from the held replica's muzzle as this frame's camera sees it (BP6): the ticks that
+   * Your shots' BBs and gas breath, from the held replica's muzzle as this frame's camera sees it (KI1): the ticks that
    * fired them ran before the camera was placed. Call once the camera is placed, before the BBs are drawn.
    */
   private startOwnShots(): void {

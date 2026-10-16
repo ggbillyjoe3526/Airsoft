@@ -20,7 +20,7 @@ export const RENDER = {
    */
   leanCameraRoll: 0.12,
   /**
-   * A lean a wall cuts short (sim/lean.ts stepLean cuts it at once, BP6) eases out of the view at a full lean's worth
+   * A lean a wall cuts short (sim/lean.ts stepLean cuts it at once, KI1) eases out of the view at a full lean's worth
    * in `easeTime` seconds, but the eye is never drawn more than `allowance` metres further out than the simulation's:
    * within MOVEMENT.leanWallClearance (0.2 m) less the near plane's reach to the side (up to ~0.09 m at 120° field of
    * view), so the view never reaches into the wall. The rest of the cut stays instant. A normal release is slower than

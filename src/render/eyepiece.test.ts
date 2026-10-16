@@ -136,7 +136,7 @@ describe('aiming down the 2× scope (the 0.1 Dev 5 playtest, note 5)', () => {
     });
   }
 
-  it('hands its hidden masks to the warm-up (BP6), so the first aim through the scope compiles nothing', () => {
+  it('hands its hidden masks to the warm-up (KI1), so the first aim through the scope compiles nothing', () => {
     const vm = new Viewmodel(16 / 9, 0x3a7bd5, LOADOUT, LOW_DETAIL);
     expect(vm.warmTargets()).toEqual(masksOf(vm));
     expect(vm.warmTargets()).toHaveLength(1);

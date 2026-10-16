@@ -222,7 +222,7 @@ export function stepBBs(
         bb.position.z = bb.prevPosition.z + segmentDir.z * t;
         if (inLeaves > 0) {
           // It met the surface still among the leaves: what it crossed on the way counts, and slows it before it lands
-          // (BP6). Not turned: the line it met the surface on is the one already traced.
+          // (KI1). Not turned: the line it met the surface on is the one already traced.
           bb.leaf += inLeaves;
           deflectInLeaves(bb, inLeaves, cfg.leaves);
         }

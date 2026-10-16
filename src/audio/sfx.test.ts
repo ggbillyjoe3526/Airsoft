@@ -1566,7 +1566,7 @@ describe('M33j: the woods at night in a match', () => {
     expect(FakeContext.last.sources.filter((s) => s.loop).every((s) => s.stopAt === 0)).toBe(true);
   });
 
-  it('muffles a camp fire behind a wall, leaves one in the open clear, and casts no ray to one out of earshot (BP6)', () => {
+  it('muffles a camp fire behind a wall, leaves one in the open clear, and casts no ray to one out of earshot (KI1)', () => {
     const fire = WOODLAND.lights!.find((l) => l.kind === 'fire')!.position;
     const heard = (query: OcclusionQuery, away: number) => {
       let casts = 0;

@@ -12,7 +12,7 @@ export interface TutorialView {
   events: readonly GameEvent[];
   targets: readonly RangeTarget[];
   /**
-   * The BB pool's slots (GameState.bbs.bbs), read only, so a hit is told apart by the replica that fired its BB (BP6:
+   * The BB pool's slots (GameState.bbs.bbs), read only, so a hit is told apart by the replica that fired its BB (KI1:
    * the switch-replica step); without it, a hit counts once the asked-for replica has fired this step.
    */
   bbs?: readonly BB[];
@@ -44,7 +44,7 @@ export class TutorialTracker {
   private moved = false;
   /**
    * Per BB pool slot: the serial of the player's BB fired from it and the replica slot (armament.active) that fired it
-   * (BP6), so the switch-replica step counts only its own replica's BBs. Sized to the pool on the first view with BBs.
+   * (KI1), so the switch-replica step counts only its own replica's BBs. Sized to the pool on the first view with BBs.
    */
   private firedSerial: Float64Array | null = null;
   private firedFrom: Int8Array | null = null;
@@ -230,7 +230,7 @@ export class TutorialTracker {
         this.amount += v.dt;
         return this.sprinted && this.amount <= g.within && v.events.some((e) => e.type === 'shot' && e.characterId === p.id);
       case 'hit': {
-        // With the BBs in view (BP6), a hit counts only from a BB the asked-for replica fired, so one from the first
+        // With the BBs in view (KI1), a hit counts only from a BB the asked-for replica fired, so one from the first
         // replica still in flight after the switch doesn't. Without them, once you've fired that replica this step.
         const byBB = g.slot !== undefined && v.bbs !== undefined;
         if (g.slot !== undefined && !byBB && !this.firedSlot) {

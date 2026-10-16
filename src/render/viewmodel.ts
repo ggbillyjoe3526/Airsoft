@@ -409,7 +409,7 @@ export class Viewmodel {
     this.motionScale = scale;
   }
 
-  /** What the warm-up shows to compile ahead (BP6): the scopes' eyepiece masks, hidden until a scope is at your eye. */
+  /** What the warm-up shows to compile ahead (KI1): the scopes' eyepiece masks, hidden until a scope is at your eye. */
   warmTargets(): readonly THREE.Object3D[] {
     return this.eyepieces;
   }

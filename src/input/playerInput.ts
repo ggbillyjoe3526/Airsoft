@@ -66,7 +66,7 @@ export class PlayerInput {
   private fireLatch = false;
   /**
    * Fire selector presses not yet handed to a tick: one step per tick, so two taps inside one slow frame are two steps
-   * (BP6; a latch counted them as one). Dropped with the other one-shots on a pause or a new round.
+   * (KI1; a latch counted them as one). Dropped with the other one-shots on a pause or a new round.
    */
   private fireModePresses = 0;
   /** The Weapon torch key pressed since the last tick (M33h). */

@@ -10,7 +10,7 @@ import { bodyPoint, eyeOf } from './perception';
 import { duel } from './testSupport';
 
 /**
- * BP6 (KNOWN_ISSUES "Bots measure most distances in 2D ... the aim-wall check mixes a 3D and a 2D distance"): a bot
+ * KI1 (KNOWN_ISSUES "Bots measure most distances in 2D ... the aim-wall check mixes a 3D and a 2D distance"): a bot
  * holds fire when its actual aim line (aim error included) meets a wall within aimWallFraction of the way to the target,
  * measured along that 3D line, so a target up a ramp or on a higher floor is judged like one on the flat.
  */
@@ -58,7 +58,7 @@ function firesWithWallAt(rise: number, fraction: number): boolean {
   return cmd.fire;
 }
 
-describe('the aim-wall check measures along the 3D aim line (BP6)', () => {
+describe('the aim-wall check measures along the 3D aim line (KI1)', () => {
   const f = BOTS.aimWallFraction;
 
   it('on the flat: holds for a wall just inside aimWallFraction of the way, fires past it', () => {

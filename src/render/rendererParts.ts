@@ -63,7 +63,7 @@ export function warmSurfacesInIdle<Id>(ids: readonly Id[], draw: (id: Id) => THR
 
 /**
  * Runs `run` (the warm-up compile) with each of `hidden` shown, with its hidden ancestors, and every mesh under them
- * drawn wherever it stands (frustum culling off), then puts every flag back as it was (BP6). Three's compile gathers
+ * drawn wherever it stands (frustum culling off), then puts every flag back as it was (KI1). Three's compile gathers
  * what it compiles before its first wait, so the overtime flag, a tossed magazine or a scope's eyepiece, hidden at a
  * session's start, compile with the rest instead of on the frame they first show. Once per session build.
  */

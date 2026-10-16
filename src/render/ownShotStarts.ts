@@ -12,7 +12,7 @@ interface OwnShot {
 }
 
 /**
- * Your own shots wait here from the tick that fired them until the frame's camera is placed (BP6): the held replica's
+ * Your own shots wait here from the tick that fired them until the frame's camera is placed (KI1): the held replica's
  * muzzle is read from the main camera, which during the ticks still stood where the last frame left it, so on a fast
  * turn the drawn BB started off to the side of the replica. `record` on the shot, `start` once per frame with the
  * muzzle seen from the camera that frame draws with. Entries are reused: nothing is allocated once the most shots a

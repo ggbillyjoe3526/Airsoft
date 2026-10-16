@@ -209,7 +209,7 @@ touches: src/matchSession.ts, src/render/flagRenderer.ts, src/render/characterRe
 contract: none
 acceptance:
   1. Each first-use hitch is measured before and after with `?perf` on a cold cache, and recorded: the first overtime flag, first tossed magazine, first 2x scope aim, first figure fade, the shadow depth shaders and the post stack's pipelines.
-  2. The warm-up compiles all of them before the round starts (shown for the compile, then hidden), so none compiles mid-match on Medium, High or Ultra.
+  2. The warm-up compiles all of them before the round starts (shown for the compile, then hidden), so none compiles mid-match on Medium, High or Ultra. (KI1 did the overtime flag, the tossed magazine, the scope eyepiece and all but two post passes; left: the shadow depth shaders, a figure's first fade, the last pass's canvas draw and the reflections' mask, and every before-and-after measurement.)
   3. Load time grows by no more than 10 % on any preset. The perf gate is green.
 status: open
 attempts: 0
@@ -295,8 +295,8 @@ touches: src/ai/botCombat.ts, src/ai/cover.ts, src/ai/botMovement.ts, src/ai/squ
 contract: none
 acceptance:
   1. A bot fighting from crouch cover keeps fighting a second enemy in sight after its target goes down.
-  2. The pause between bursts counts down while the line of fire is blocked, bundled with the spacing fix BP2 named (teammates inside each other in tight spots). Re-measured over 48 seeds, and every guard stays green.
-  3. Tests cover the cover → search → re-sighting → cover cycle, and the audit's AI-05 and AI-06 gaps.
+  2. (KI1 retried it alone: it failed `depotMatch.overtime` and `depotMatch.stackHouse`'s follow check.) The pause between bursts counts down while the line of fire is blocked, bundled with the spacing fix BP2 named (teammates inside each other in tight spots). Re-measured over 48 seeds, and every guard stays green.
+  3. Done in KI1: `ai/coverCycle.test.ts` covers the cycle; M72's `holdLeanSweep.test.ts` already covers AI-05 and AI-06.
   4. The old soak rows (long rounds, friendly hits, the office doorway) are measured again, then either closed or updated.
 status: open
 attempts: 0
@@ -426,24 +426,6 @@ acceptance:
   2. `game.ts` is under 800 lines and imports under 50 modules.
   3. Pause, resume, restart and return to menu leave the same state as before (the session tests and the smoke test pass), and the frame loop's crash guard is unchanged.
 status: open
-attempts: 0
-
-## KI1 · Known issues fix pass (owner, 2026-10-16)
-tier: core
-perf: required
-touches: src/, e2e/, docs/, README.md, CHANGELOG.md, pipeline/baseline/
-contract: none
-acceptance:
-  1. Every row in `docs/KNOWN_ISSUES.md` is gone through. A row fixed at its root is deleted, with a test where the
-     logic is testable. A row left open keeps or gains its reason: a feature (Beta adds none), the owner's balance or
-     playtest call, an accepted limit, needs a real browser or GPU, too risky for the guards, or handed off to a
-     Beta 1 playtest block.
-  2. Rows owned by the Beta 1 playtest blocks (ST1, MR1, HD1, MV1, BD1, MS1, TT1) are not touched in code; their rows
-     name the block.
-  3. Stale notes are corrected; DC1's merges and moves are done.
-  4. No balance number is retuned; the bot-match guards stay green with no threshold loosened.
-  5. A browser check of every public map and mode finds no new error, stall or NaN. The perf gate is green.
-status: building
 attempts: 0
 
 ## BP6 · Beta 1 bug pass (when William says go)

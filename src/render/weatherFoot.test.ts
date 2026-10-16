@@ -9,7 +9,7 @@ import { buildMapMeshes, disposeMapMeshes, type MapLook, texturesFor } from './m
 import type { SurfaceTextures } from './proceduralTextures';
 
 /**
- * Weathering's creep (G6) measures up a wall from its own foot (BP6; KNOWN_ISSUES: it measured from world y = 0, so a
+ * Weathering's creep (G6) measures up a wall from its own foot (KI1; KNOWN_ISSUES: it measured from world y = 0, so a
  * wall on an upper floor or raised ground got none): each weathered map mesh carries `wearFoot` per vertex, the foot of
  * the block it belongs to where the block has a grime band, else 0 as before.
  */
@@ -31,7 +31,7 @@ const meshOf = (group: THREE.Group, name: string): THREE.Mesh => {
   return mesh as THREE.Mesh;
 };
 
-describe('weathering creeps up from a wall’s own foot (BP6)', () => {
+describe('weathering creeps up from a wall’s own foot (KI1)', () => {
   // A wall standing on a slab 3 m up, beside one on the ground.
   const map: MapData = { ...OPEN_FIELD, blocks: [...OPEN_FIELD.blocks, block('floor', 4, 10, 2.8, 3, -3, 3), block('wall', 5, 9, 3, 5.5, 0, 0.2), block('wall', -9, -5, 0, 2.5, 0, 0.2)] };
 

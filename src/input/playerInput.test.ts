@@ -100,7 +100,7 @@ describe('fire selector key', () => {
     expect(frame().cycleFireMode).toBe(false); // held: no repeat
   });
 
-  it('steps twice for two presses inside one slow frame, one step a tick (BP6)', () => {
+  it('steps twice for two presses inside one slow frame, one step a tick (KI1)', () => {
     const { keys, input } = setup('toggle');
     const cmd = createCommand();
     keys.press('fireMode');
@@ -116,7 +116,7 @@ describe('fire selector key', () => {
     expect(steps).toEqual([true, true, false]);
   });
 
-  it('keeps a press for the next frame that runs a tick, and drops it on a pause (BP6)', () => {
+  it('keeps a press for the next frame that runs a tick, and drops it on a pause (KI1)', () => {
     const { keys, input } = setup('toggle');
     const cmd = createCommand();
     keys.press('fireMode');
@@ -609,7 +609,7 @@ describe('use key (M44: opens a case in Extraction)', () => {
   });
 });
 
-describe('fire selector presses: QA edge cases (BP6)', () => {
+describe('fire selector presses: QA edge cases (KI1)', () => {
   it('drops queued presses on a new round (resetView) as on a pause', () => {
     const { keys, input } = setup('toggle');
     const cmd = createCommand();

@@ -94,7 +94,7 @@ const candidates: number[] = [];
 export type ChallengeSight = ((t: RangeTarget) => boolean) | null;
 
 /**
- * How far (m) target `t` is from where you stand now, for its lit time (BP6: in Practice on a map, where you walk about,
+ * How far (m) target `t` is from where you stand now, for its lit time (KI1: in Practice on a map, where you walk about,
  * not the distance from your start); null on the range, whose targets' marked distances are from the line you shoot from.
  */
 export type ChallengeAway = ((t: RangeTarget) => number) | null;

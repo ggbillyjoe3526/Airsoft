@@ -68,7 +68,7 @@ describe('the tossed magazine (MG1)', () => {
   });
 });
 
-describe('the tossed magazine’s warm-up (BP6)', () => {
+describe('the tossed magazine’s warm-up (KI1)', () => {
   it('hands the warm-up one hidden magazine to compile, and none to a match with no toss slots', () => {
     const { r, mesh } = scene(6);
     expect(r.warmTargets()).toEqual([mesh]);

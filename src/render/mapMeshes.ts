@@ -824,7 +824,7 @@ function appendBuffers(into: Buffers, from: Buffers): void {
 
 /**
  * Weathering's creep (G6) measures up a wall from its foot: `foot` (m) for each vertex written into `buf` since the
- * last call, so a piece's vertices carry its block's foot (BP6: it measured from y = 0, so a wall on an upper floor or
+ * last call, so a piece's vertices carry its block's foot (KI1: it measured from y = 0, so a wall on an upper floor or
  * raised ground had no creep). Vertices nothing filled in measure from 0, as before.
  */
 export function footTo(buf: Buffers, foot: number): void {

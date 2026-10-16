@@ -85,7 +85,7 @@ describe('updateFirstPersonCamera: a lean (BP5: the offset and roll had no test)
   });
 });
 
-describe('LeanViewEase: a lean a wall cuts short (BP6)', () => {
+describe('LeanViewEase: a lean a wall cuts short (KI1)', () => {
   const FRAME = 1 / 120;
   /** The eye's sideways reach at lean `l`, standing (as leanOffset puts it). */
   const reach = (l: number) => (eyeHeight(0, BODY) - HITS.lean.pivotHeight) * Math.sin(Math.abs(l) * HITS.lean.maxAngle);
@@ -147,7 +147,7 @@ describe('LeanViewEase: a lean a wall cuts short (BP6)', () => {
   });
 });
 
-describe('LeanViewEase: QA edge cases (BP6)', () => {
+describe('LeanViewEase: QA edge cases (KI1)', () => {
   const lean = (l: number, crouch = 0, prev = l) => {
     const c = createCharacter(0, vec3(), 0);
     c.lean = l;

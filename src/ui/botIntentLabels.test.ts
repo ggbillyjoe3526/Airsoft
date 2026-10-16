@@ -17,7 +17,7 @@ function fakeElement() {
   };
 }
 
-describe('Dev › Bot intentions labels move without making strings (BP6)', () => {
+describe('Dev › Bot intentions labels move without making strings (KI1)', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it('pxText says a pixel offset in CSS, the same kept text each time, off-range values too', () => {

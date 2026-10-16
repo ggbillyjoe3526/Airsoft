@@ -286,11 +286,11 @@ describe('time to steady after a sprint (the Loadout grip line)', () => {
     }
   });
 
-  it('counts the steps it takes to stop after a sprint, not an instant stop (BP6)', () => {
+  it('counts the steps it takes to stop after a sprint, not an instant stop (KI1)', () => {
     const c = createCharacter(0, vec3(), 0);
     const t = timeToSteady(c, MOVEMENT, DT, 0.1);
     expect(c.velocity.x).toBe(0); // it came to a stop on the way
-    // An instant stop, as before BP6: never later than slowing down at groundDecel.
+    // An instant stop, as before KI1: never later than slowing down at groundDecel.
     const d = createCharacter(0, vec3(), 0);
     d.grounded = true;
     d.sprinting = true;

@@ -341,7 +341,7 @@ describe('skipping and resuming the tutorial (audit POOL-14, POOL-16)', () => {
   });
 });
 
-describe('the switch-replica step tells BBs apart by the replica that fired them (BP6)', () => {
+describe('the switch-replica step tells BBs apart by the replica that fired them (KI1)', () => {
   it("doesn't count the first replica's BB landing after the switch, and counts the second's", () => {
     const player = createCharacter(0, vec3(0, 0, 2), 0, LOADOUT, 0);
     const targets = createRangeTargets();

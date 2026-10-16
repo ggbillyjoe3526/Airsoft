@@ -131,7 +131,7 @@ describe('the Armory: the next unlock and the level track (LV1)', () => {
     expect(a.count()).toBe('9 / 19 unlocked');
   });
 
-  it('draws an item you already have as yours on a locked level (levels.md moved it up, BP6)', () => {
+  it('draws an item you already have as yours on a locked level (levels.md moved it up, KI1)', () => {
     const p = playerAt(0);
     p.unlocked.push(GAME_POOL.assets.find((x) => x.name === 'Silencer')!.id);
     const rows = armory({ progress: () => p }).rows();

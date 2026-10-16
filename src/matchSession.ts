@@ -206,7 +206,7 @@ export class MatchSession {
   private readonly holdSpot = vec3();
   /** Reduced motion (Settings → Accessibility): the lean's roll here, the held replica's motion in `combat`. */
   private motion: MotionScale = FULL_MOTION;
-  /** The lean your view shows: a wall's cut eased a little (BP6). */
+  /** The lean your view shows: a wall's cut eased a little (KI1). */
   private readonly leanView = new LeanViewEase();
   private readonly ctx: SimContext;
   /** The match's round rules and hit rules (from setup.rules). */

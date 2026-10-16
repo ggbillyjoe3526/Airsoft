@@ -17,7 +17,7 @@ const lean = vec3();
  * the latest input (not the last tick) so aiming never lags behind the mouse. Leaning shifts the eye
  * sideways (the simulation's geometry and facing, so BBs leave from the eye you see from) and rolls the view a
  * little; over a vault the view dips and tips, eased in and out (M102). `rollScale` of each: less with reduced motion.
- * `shownLean`: the lean to draw in place of the simulation's (LeanViewEase, BP6).
+ * `shownLean`: the lean to draw in place of the simulation's (LeanViewEase, KI1).
  */
 export function updateFirstPersonCamera(
   camera: THREE.PerspectiveCamera,
@@ -47,7 +47,7 @@ export function updateFirstPersonCamera(
 }
 
 /**
- * The lean the view shows (BP6): the simulation's, interpolated, except where a wall cut it short (sim/lean.ts stepLean
+ * The lean the view shows (KI1): the simulation's, interpolated, except where a wall cut it short (sim/lean.ts stepLean
  * cuts it within a tick, a jump of the view of up to ~0.3 m). Then the view eases back towards upright at
  * RENDER.leanCut.easeTime per full lean, never more than RENDER.leanCut.allowance metres further out than the
  * simulation's eye (still clear of the wall). Presentation only: BBs and bots use the simulation's lean. One per view;

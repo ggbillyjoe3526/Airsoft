@@ -182,7 +182,7 @@ describe('records view (M19)', () => {
     expect(recordsView(r, news, 'hard', 'attackDefend').notCounted).toBe('');
   });
 
-  it("shows a named ruleset's own cells and quotes its standard match after its match (M39, BP6)", () => {
+  it("shows a named ruleset's own cells and quotes its standard match after its match (M39, KI1)", () => {
     const r = emptyRecords();
     addMatch(r, { difficulty: 'hard', mode: 'elimination', won: true, hits: 3, bbsFired: 40 });
     const news = addMatch(r, { difficulty: 'hard', mode: 'elimination', ruleset: 'tournament', won: false, hits: 1, bbsFired: 30 });

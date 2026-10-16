@@ -5,7 +5,7 @@ import type { CoverBlock } from './cover';
 import { boxQuery, duel } from './testSupport';
 
 /**
- * BP6 (KNOWN_ISSUES "No test covers the cover → search → re-sighting → cover again cycle", M4b): a bot that takes
+ * KI1 (KNOWN_ISSUES "No test covers the cover → search → re-sighting → cover again cycle", M4b): a bot that takes
  * contact cover, loses sight of its target, searches, sees it again and takes cover again. The mode machine bounds the
  * cycle: a cover episode starts no sooner than coverCooldown after the last one began, and none outlasts
  * coverEpisodeMax.

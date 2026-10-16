@@ -35,7 +35,7 @@ export function botRoleText(bot: Readonly<Bot>): string {
   return ROLE_TEXT[bot.role];
 }
 
-/** The pixel offsets' CSS texts, each made the first time it is needed (BP6: no string made per move after that). */
+/** The pixel offsets' CSS texts, each made the first time it is needed (KI1: no string made per move after that). */
 const PX_FROM = -2048;
 const PX_TO = 8192;
 const pxTexts: string[] = [];
@@ -72,7 +72,7 @@ export class BotIntentLabels {
     if (rx !== l.x || ry !== l.y) {
       l.x = rx;
       l.y = ry;
-      // Two custom properties the style sheet's transform reads, each a kept string: nothing made per move (BP6).
+      // Two custom properties the style sheet's transform reads, each a kept string: nothing made per move (KI1).
       l.root.style.setProperty('--x', pxText(rx));
       l.root.style.setProperty('--y', pxText(ry));
     }

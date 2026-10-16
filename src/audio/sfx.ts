@@ -108,7 +108,7 @@ export class Sfx {
   /** The ambience's looping sources (its beds' copies, the fires' crackle), once play has started (audit CORE-34). */
   private readonly bed: AudioBufferSourceNode[] = [];
   /**
-   * Each camp fire's muffling (BP6): a low-pass and level after its panner, set like a character's channel by the
+   * Each camp fire's muffling (KI1): a low-pass and level after its panner, set like a character's channel by the
    * occlusion rays once per tick while the fire is within earshot (FIRE_SOUND.maxDistance). `share` -1 before the first.
    */
   private readonly fireMuffles: { at: Vec3; filter: BiquadFilterNode; gain: GainNode; share: number }[] = [];
@@ -777,7 +777,7 @@ export class Sfx {
       }
       ch.share = share;
     }
-    // The camp fires (BP6), within earshot only: beyond it they're silent, and keep what they had.
+    // The camp fires (KI1), within earshot only: beyond it they're silent, and keep what they had.
     for (const f of this.fireMuffles) {
       if (this.distanceTo(f.at) > FIRE_SOUND.maxDistance) continue;
       const share = blockedShare(this.query, this.listener, f.at);
@@ -865,7 +865,7 @@ export class Sfx {
     const src = ctx.createBufferSource();
     src.buffer = buffer;
     src.loop = true;
-    // Muffled by a wall or the cabin between you and it, as a character is (BP6: updateMuffling).
+    // Muffled by a wall or the cabin between you and it, as a character is (KI1: updateMuffling).
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
     filter.frequency.value = AUDIO.occlusion.openHz;

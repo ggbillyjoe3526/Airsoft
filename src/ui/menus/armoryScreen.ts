@@ -142,7 +142,7 @@ export class ArmoryScreen {
     if (l.items.length === 0) items.append(el('span', 'armory-level-empty menu-faint', ARMORY_TEXT.nothingYet));
     l.items.forEach((id, i) => {
       const card = this.itemCard(pool, id, 'armory-item', 'armory-item-pic');
-      // Yours already though the level is ahead (levels.md moved it up, BP6): drawn as yours, not greyed.
+      // Yours already though the level is ahead (levels.md moved it up, KI1): drawn as yours, not greyed.
       if (l.owned[i]) card.dataset.owned = '';
       items.append(card);
     });

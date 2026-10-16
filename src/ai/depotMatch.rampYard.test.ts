@@ -48,7 +48,7 @@ describe('a 3v3 bot match on the Ramp Yard', () => {
       expectGrounded(stats, RAMP_YARD);
     }
     // Standing still while the leader moves, judged over the seeds together as on Depot (depotMatch.test.ts, the same
-    // 3 % limit). Measured 2026-10-16 (BP6, KNOWN_ISSUES audit M-08 row): seeds 1-3 0.12 / 2.86 / 1.30 %, 1.58 %
+    // 3 % limit). Measured 2026-10-16 (KI1, KNOWN_ISSUES audit M-08 row): seeds 1-3 0.12 / 2.86 / 1.30 %, 1.58 %
     // together; seeds 4-6 0.55 / 1.02 / 1.42 %.
     expect(allStanding / allCounted).toBeLessThan(0.03);
   });

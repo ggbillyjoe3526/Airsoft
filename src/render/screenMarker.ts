@@ -68,7 +68,7 @@ function edgeOf(m: ScreenMarker, width: number, height: number): number {
 const EDGE_PINS_MAX = 32;
 
 /**
- * This frame's edge-pinned markers, laid out together (BP6): one pinned within a label of another on the same edge
+ * This frame's edge-pinned markers, laid out together (KI1): one pinned within a label of another on the same edge
  * moves along that edge, away from it, until it is `step` px clear of every marker placed before it (past the end of
  * the edge that way, to the other side of it). `begin` once a frame, then `place` each marker after it is projected
  * (and moved off the minimap). Nothing allocated per frame.
@@ -120,7 +120,7 @@ export class EdgePins {
 
 /**
  * Which way (degrees, clockwise from pointing right) an edge-pinned marker at `m` lies from the middle of a
- * `width` × `height` view: the way to turn for what it marks (BP6: the arrow on an edge-pinned flag or exit marker).
+ * `width` × `height` view: the way to turn for what it marks (KI1: the arrow on an edge-pinned flag or exit marker).
  */
 export function edgeAngle(m: Readonly<ScreenMarker>, width: number, height: number): number {
   return (Math.atan2(m.y - height / 2, m.x - width / 2) * 180) / Math.PI;

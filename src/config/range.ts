@@ -280,7 +280,7 @@ export const RANGE_VISUALS = {
  * START plate, wait out the countdown, then hit as many lit targets as you can before time runs out; the best score is
  * kept. Lit targets come `litAtOnce` at a time, chosen at random among those standing; each stays lit for `litTime` plus
  * `litPerMetre` for every metre of its distance (the BB's flight to a far one: from the line on the range, from where
- * you stand as it lights on a map, BP6), then goes out (a miss) and another lights. First guesses, to tune in play.
+ * you stand as it lights on a map, KI1), then goes out (a miss) and another lights. First guesses, to tune in play.
  */
 export const RANGE_CHALLENGE = {
   /** Seconds of the run, and of the countdown before it. */

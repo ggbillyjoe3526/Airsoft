@@ -427,7 +427,7 @@ export class Renderer {
    * Compiles the pipelines the first frame would (M63, audit REN-06): every material in the world and in `overlay`
    * under the lights, haze, environment and target that frame draws with, so a match's first frame is not where they
    * are compiled. Called once, as a session's build ends; the renderer compiles them in the background (W1, W4).
-   * `hidden`: what is hidden now but may show mid-session (in the world or the overlay), compiled too (BP6, withShown).
+   * `hidden`: what is hidden now but may show mid-session (in the world or the overlay), compiled too (KI1, withShown).
    */
   warmShaders(overlay?: { scene: THREE.Scene; camera: THREE.Camera }, hidden: readonly THREE.Object3D[] = []): void {
     if (this.environmentDirty) this.applyEnvironment();

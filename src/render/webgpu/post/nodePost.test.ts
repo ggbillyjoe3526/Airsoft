@@ -449,7 +449,7 @@ describe('a warm-up compile builds each draw for the context the frames draw it 
     await b.compile(gl, world, new THREE.PerspectiveCamera(), held);
     const scenes = built.filter((x) => x.scene instanceof THREE.Scene);
     expect(scenes.map((x) => x.scene), 'the replica is not compiled: it was drawn').toEqual([world]);
-    // The passes' quads compile too (BP6), and none is drawn: only the replica was.
+    // The passes' quads compile too (KI1), and none is drawn: only the replica was.
     expect(built.length).toBeGreaterThan(scenes.length);
     const warm = drawn.splice(0);
     expect(warm.map((x) => x.scene)).toEqual([held.scene]);

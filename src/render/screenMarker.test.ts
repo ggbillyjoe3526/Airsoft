@@ -102,7 +102,7 @@ describe("teammates' name markers (FA13)", () => {
   });
 });
 
-describe('edge markers laid out together (BP6)', () => {
+describe('edge markers laid out together (KI1)', () => {
   const step = { down: 48, across: 96 };
   const pin = (x: number, y: number): ScreenMarker => ({ x, y, onScreen: false });
 
@@ -150,7 +150,7 @@ describe('edge markers laid out together (BP6)', () => {
   });
 });
 
-describe('edge markers laid out together: QA edge cases (BP6)', () => {
+describe('edge markers laid out together: QA edge cases (KI1)', () => {
   const step = { down: 48, across: 96 };
   const pin = (x: number, y: number): ScreenMarker => ({ x, y, onScreen: false });
 

@@ -78,7 +78,7 @@ describe('FlagRenderer.setEnvironmentLit', () => {
   });
 });
 
-describe('FlagRenderer.warmTarget (BP6: the first overtime compiles nothing)', () => {
+describe('FlagRenderer.warmTarget (KI1: the first overtime compiles nothing)', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   const clothMaps = (flag: FlagRenderer): (THREE.Texture | null)[] =>

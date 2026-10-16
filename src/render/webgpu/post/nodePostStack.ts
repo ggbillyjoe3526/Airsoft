@@ -120,7 +120,7 @@ export class NodePostStack extends PostChain<NodeRenderer, NodeTarget> implement
   }
 
   /**
-   * Compiles the passes' pipelines ahead of the first frame (BP6; the BP3 review found about 20 built in it): the
+   * Compiles the passes' pipelines ahead of the first frame (KI1; the BP3 review found about 20 built in it): the
    * frame's own `draw` runs once over the renderer with each draw turned into a compile, so every pass's quads compile
    * into the targets they draw into, under the state the frame sets; the world (compiled above) isn't drawn again, and
    * nothing reaches the screen. The temporal history that run leaves is forgotten. A compile builds its draws after an

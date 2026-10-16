@@ -224,7 +224,7 @@
   background: rgba(7, 13, 31, 0.55);
 }
 
-/* An item you already have stays in colour on a level still ahead (levels.md moved it up, BP6). */
+/* An item you already have stays in colour on a level still ahead (levels.md moved it up, KI1). */
 .armory-level-row[data-state='locked'] .armory-item:not([data-owned]) > .pic-slot {
   opacity: 0.45;
   filter: grayscale(1);

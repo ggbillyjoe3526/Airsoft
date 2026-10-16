@@ -10,7 +10,7 @@ import type { KeyBindings } from './keyBindings';
 export class Keyboard {
   capturing = false;
   private readonly held = new Set<string>();
-  /** Presses since the last `endFrame()`, by code: two quick taps in one slow frame are two presses (BP6). */
+  /** Presses since the last `endFrame()`, by code: two quick taps in one slow frame are two presses (KI1). */
   private readonly pressedThisFrame = new Map<string, number>();
 
   constructor(

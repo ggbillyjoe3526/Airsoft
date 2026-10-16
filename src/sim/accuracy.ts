@@ -61,7 +61,7 @@ export function stepAccuracy(c: Character, cfg: MovementConfig, dt: number): voi
  * Seconds from the end of a sprint, letting go of the keys, until `c`'s aim is back within `margin` of steady standing
  * (spreadScale at most 1 + margin), found by running stepAccuracy tick by tick so it follows the sim's own rule (the
  * grip on the replica in hand included). The body slows from a sprint to a stop at cfg.groundDecel as it does in play
- * (sim/movement.ts, movement before accuracy in a tick), so the shake of the last steps counts (BP6). For the Loadout
+ * (sim/movement.ts, movement before accuracy in a tick), so the shake of the last steps counts (KI1). For the Loadout
  * screen; `c` is changed.
  */
 export function timeToSteady(c: Character, cfg: MovementConfig, dt: number, margin: number): number {

@@ -239,7 +239,7 @@ describe('the timed challenge on a map (M94)', () => {
   });
 });
 
-describe('a lit target\'s time on a map counts its distance from where you stand (BP6)', () => {
+describe('a lit target\'s time on a map counts its distance from where you stand (KI1)', () => {
   /** The first targets lit as the run starts, by `away` (null: their marked distance, as on the range). */
   function firstLit(away: ((t: RangeTarget) => number) | null): RangeTarget[] {
     const rng = createRng(7);

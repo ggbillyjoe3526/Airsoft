@@ -17,7 +17,7 @@ export interface TrackLevel {
   items: readonly string[];
   /**
    * Which of `items` the player has (all of them on a reached level, or with levelling off): a level a hand edit of
-   * levels.md moved up still lists an item unlocked on its old level as theirs (BP6), as Ownership does.
+   * levels.md moved up still lists an item unlocked on its old level as theirs (KI1), as Ownership does.
    */
   owned: readonly boolean[];
   state: LevelState;

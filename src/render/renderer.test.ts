@@ -408,7 +408,7 @@ describe('the shader warm-up (M63, audit REN-06)', () => {
     const { r, calls } = stubbedRenderer(QUALITY.high);
     r.warmShaders(replica());
     expect(calls.slice(0, 2)).toEqual(['compile world into the post target with the environment', 'render']);
-    // BP6: then every pass's quads compile into the targets they draw into, the last onto the canvas; none is drawn.
+    // KI1: then every pass's quads compile into the targets they draw into, the last onto the canvas; none is drawn.
     const passes = calls.slice(2);
     expect(passes.length).toBeGreaterThan(5);
     expect(passes.every((c) => c.startsWith('compile  into'))).toBe(true);
@@ -416,7 +416,7 @@ describe('the shader warm-up (M63, audit REN-06)', () => {
     expect(glOf(r).getRenderTarget()).toBeNull();
   });
 
-  it('compiles what is hidden but may show mid-session (BP6): shown, with its hidden parents, only while the compile gathers', () => {
+  it('compiles what is hidden but may show mid-session (KI1): shown, with its hidden parents, only while the compile gathers', () => {
     const { r } = stubbedRenderer();
     const group = new THREE.Group();
     group.visible = false;

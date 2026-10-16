@@ -773,7 +773,7 @@ kbd {
   opacity: calc(0.9 * var(--hud-l3));
 }
 
-/* Pinned to the edge (BP6): a small arrow beside the icon, in its colour, pointing the way to turn (--towards, set by
+/* Pinned to the edge (KI1): a small arrow beside the icon, in its colour, pointing the way to turn (--towards, set by
    ui/flagMarker.ts from the marker's direction off the middle of the screen). */
 .flag-marker-arrow {
   display: none;
@@ -1101,7 +1101,7 @@ kbd {
   position: absolute;
   left: 0;
   top: 0;
-  /* Placed by ui/botIntentLabels.ts through --x and --y (kept strings: nothing allocated per move, BP6). */
+  /* Placed by ui/botIntentLabels.ts through --x and --y (kept strings: nothing allocated per move, KI1). */
   transform: translate(var(--x, 0), var(--y, 0));
   display: flex;
   gap: 0.35em;

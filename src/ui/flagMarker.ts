@@ -27,7 +27,7 @@ export class FlagMarker {
 
   /**
    * Shows the marker at (x, y) pixels, `metres` away, in the colour `color` (CSS); `edge` when pinned to the screen edge,
-   * with an arrow pointing `towards` (degrees clockwise from right, screenMarker.ts edgeAngle: the way to turn, BP6).
+   * with an arrow pointing `towards` (degrees clockwise from right, screenMarker.ts edgeAngle: the way to turn, KI1).
    */
   show(x: number, y: number, metres: number, color: string, edge: boolean, towards = 0): void {
     if (!this.shownVisible) this.root.hidden = !(this.shownVisible = true);

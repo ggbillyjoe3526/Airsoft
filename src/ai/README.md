@@ -36,7 +36,7 @@ seeded per bot.
   shared with `squadOrders.ts`, so the two files don't import each other) and `botCombat.ts` (aim, bursts, reloads; bots lead a target with `flightTimeEstimate`, and hold fire through more bush than `foliageFireThrough`, Easy as far as a BB gets through, FO1); `botTorch.ts` handles weapon
   lights at night, and `botHolster.ts` the holster (M92: put away on a calm sprint through its own half).
 - `perception.ts`, `aim.ts`, `cover.ts`: view cone and static ray casts (sight also stops on the body of someone already
-  hit, BP6); turn rate and aim error (a fresh contact's first aim starts wide
+  hit, KI1); turn rate and aim error (a fresh contact's first aim starts wide
   to one side and settles from the trigger, G11; the sight on the replica in hand scales it, `BOT_SIGHT_AIM`, BG1); hidden spots, low
   cover and wall corners (a bot leans out at a corner). `angles.ts`, `angleFeatures.ts`: held angles.
 - `squadOrders.ts`, `squadFollow.ts`: Follow me, Hold here, Regroup (default keys F, X, V, or the order wheel on Z); in

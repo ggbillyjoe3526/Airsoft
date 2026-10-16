@@ -129,7 +129,7 @@ export class RangeSession {
   private readonly commands = new Map<number, PlayerCommand>();
   private readonly playerCommand = createCommand();
   private motion: MotionScale = FULL_MOTION;
-  /** The lean your view shows: a wall's cut eased a little (BP6). */
+  /** The lean your view shows: a wall's cut eased a little (KI1). */
   private readonly leanView = new LeanViewEase();
   private readonly ctx: SimContext;
   private lastShot: LastShot | null = null;
@@ -139,7 +139,7 @@ export class RangeSession {
   readonly course: string;
   /** Which targets the challenge may light (M94): on a map only those you can see; on the range any. */
   private readonly sight: ChallengeSight;
-  /** How far a target is for its lit time (BP6): from where you stand on a map; null on the range (from the line). */
+  /** How far a target is for its lit time (KI1): from where you stand on a map; null on the range (from the line). */
   private readonly away: ChallengeAway;
   /** Whether a START plate stands here, so the challenge can be played (M94: a map may have no room for one). */
   private readonly hasChallenge: boolean;

@@ -224,7 +224,7 @@ export class FlagRenderer {
   }
 
   /**
-   * What the warm-up shows to compile ahead (BP6), hidden until it goes up: in Elimination the overtime flag, its cloth
+   * What the warm-up shows to compile ahead (KI1), hidden until it goes up: in Elimination the overtime flag, its cloth
    * already chequered (the only look it shows in that mode), so the first overtime compiles nothing.
    */
   warmTarget(mode: MatchMode): THREE.Object3D {

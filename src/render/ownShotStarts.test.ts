@@ -17,7 +17,7 @@ function recorder() {
   };
 }
 
-describe('your shots start from the muzzle as this frame\'s camera sees it (BP6)', () => {
+describe('your shots start from the muzzle as this frame\'s camera sees it (KI1)', () => {
   it('starts each shot of the frame from the muzzle given at the frame, measured from where it really left', () => {
     const pool = createBBPool(4);
     const shots = new OwnShotStarts(pool.bbs.length);

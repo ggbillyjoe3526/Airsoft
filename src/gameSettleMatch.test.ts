@@ -7,7 +7,7 @@ import { emptyRecords, type MatchResult, type Records, resultKey } from './stats
 import { MatchTakes } from './stats/settleMatch';
 
 /**
- * `Game` settling a decided match (KNOWN_ISSUES: only checked by hand until BP6): its private `settleMatch` run on a
+ * `Game` settling a decided match (KNOWN_ISSUES: only checked by hand until KI1): its private `settleMatch` run on a
  * stand-in game and session (a Game needs a page to build), and where the game calls it, read from its source.
  */
 
@@ -54,7 +54,7 @@ function standIn(pays = true) {
   return { game, session, round, settle };
 }
 
-describe('Game settles a decided match once (M19, FA1, FA10; BP6)', () => {
+describe('Game settles a decided match once (M19, FA1, FA10; KI1)', () => {
   it('does nothing while the match is still on', () => {
     const { game, session, settle } = standIn();
     settle();
@@ -92,7 +92,7 @@ describe('Game settles a decided match once (M19, FA1, FA10; BP6)', () => {
   });
 });
 
-describe('where Game settles (BP6)', () => {
+describe('where Game settles (KI1)', () => {
   const source = (import.meta.glob<string>('/src/game.ts', { query: '?raw', import: 'default', eager: true })['/src/game.ts'] ?? '').replace(/\r\n/g, '\n');
 
   it('every frame of a match, straight after the simulation advances, and again as the result screen opens', () => {

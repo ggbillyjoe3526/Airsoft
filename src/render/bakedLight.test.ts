@@ -48,7 +48,7 @@ describe('which maps draw baked light (G6)', () => {
     expect(bakedLightFor(mapUnderLighting(NEON_HEIGHTS, 'day'))).toBeNull();
     // A Depot played at night (were it offered) would not take its day bake.
     expect(bakedLightFor({ ...DEPOT, lighting: { presets: ['night'] } })).toBeNull();
-    // Dev › Time of day (M90; BP6 checked the KNOWN_ISSUES row): a forced preset the bake wasn't made under drops it.
+    // Dev › Time of day (M90; KI1 checked the KNOWN_ISSUES row): a forced preset the bake wasn't made under drops it.
     expect(bakedLightFor(mapUnderPreset(DEPOT, 'night'))).toBeNull();
     expect(bakedLightFor(mapUnderPreset(DEPOT, 'day'))).toBe(grid);
   });

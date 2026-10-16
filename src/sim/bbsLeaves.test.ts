@@ -164,7 +164,7 @@ describe('a BB that clips the edge of a bush flies on, slowed and off its line (
   });
 });
 
-describe('a BB that meets a wall while still among the leaves (BP6)', () => {
+describe('a BB that meets a wall while still among the leaves (KI1)', () => {
   /** A concrete wall across the line at z = -9.2, facing the shooter: 0.35 m into the bush, short of the stop depth. */
   const WALL_Z = -9.2;
   const wallIn = (foliage: readonly Bush[]): WorldQuery => ({

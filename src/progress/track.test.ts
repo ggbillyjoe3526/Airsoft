@@ -76,7 +76,7 @@ describe('the level track (LV1)', () => {
     expect(levelTrack(GAME_LEVELS, p, offered, false).unlocked).toBe(5);
   });
 
-  it('marks an item the player already has as theirs on a level still ahead (levels.md moved it up, BP6)', () => {
+  it('marks an item the player already has as theirs on a level still ahead (levels.md moved it up, KI1)', () => {
     const p = playerAt(0);
     p.unlocked.push(id('Silencer'));
     const t = levelTrack(GAME_LEVELS, p, offered, false);
