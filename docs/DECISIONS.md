@@ -767,6 +767,9 @@ replaces its line; the old one stays findable in the archive or in git.
   and orange left out as the teams'). Whether it starts on is his call.
 - **Another UI redesign is planned for later, its version not set (owner, 2026-10-13).** Maybe a future Dev release,
   maybe after 1.0; parked in `docs/IDEAS.md` until he places it, with no redesign work before.
+- **A Visual redesign, an Audio redesign and a Performance update are also planned for later, their versions not set
+  (owner, 2026-10-16).** He asked for them to be logged next to the UI redesign, timing undecided; parked in
+  `docs/IDEAS.md` until he places them, with no work before.
 
 ## Audio
 
