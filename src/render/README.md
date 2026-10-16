@@ -53,7 +53,7 @@ and never writes the simulation.
   magazines (`magTosses.ts`, MG1: a code-made box on an arc, one mesh a slot of `GameState.magTosses`), leaves a BB
   knocks out of a bush (`leafFlecks.ts`, FO1: CPU only, one instanced draw), a puff of dust off a noisy prop run into
   (`propNoise`, NP1: a bigger impact puff in the prop's dust tint), the held
-  replica (a second render pass) and the HUD. Also `cameraRig.ts`, `viewmodel.ts`, and `eyepiece.ts` (aimed, a
+  replica (a second render pass) and the HUD. Also `cameraRig.ts` (`LeanViewEase` eases a lean a wall cuts, within `RENDER.leanCut`, BP6), `viewmodel.ts`, and `eyepiece.ts` (aimed, a
   scope's rear glass shows the world: a depth-only disc in the held replica's pass).
 - The practice range's targets: `rangeTargetsRenderer.ts` (instanced plates, figures and the START plate, moved by the
   sim's data; a lit challenge target draws through an orange twin), `rangeTargetGear.ts` (the posts, swinger frames,

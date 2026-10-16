@@ -52,7 +52,7 @@ import type { MapData } from './map/mapTypes';
 import { playableMode } from './map/playableMode';
 import { buildNavGrid, type NavGrid } from './nav/navGrid';
 import { PhysicsWorld } from './physics/physicsWorld';
-import { updateFirstPersonCamera } from './render/cameraRig';
+import { LeanViewEase, updateFirstPersonCamera } from './render/cameraRig';
 import { CombatPresentation } from './render/combatPresentation';
 import { ContactShadows } from './render/contactShadows';
 import { bakedLightFor, bakedLightMode } from './render/bakedLight';
@@ -206,6 +206,8 @@ export class MatchSession {
   private readonly holdSpot = vec3();
   /** Reduced motion (Settings → Accessibility): the lean's roll here, the held replica's motion in `combat`. */
   private motion: MotionScale = FULL_MOTION;
+  /** The lean your view shows: a wall's cut eased a little (BP6). */
+  private readonly leanView = new LeanViewEase();
   private readonly ctx: SimContext;
   /** The match's round rules and hit rules (from setup.rules). */
   readonly rounds: ReturnType<typeof roundRulesFor>;
@@ -595,7 +597,8 @@ export class MatchSession {
     const alpha = stepperAlpha(this.stepper); // frozen while paused, so the view holds still
     // The camera shows where BBs actually go: view pitch plus the replica's recoil kick.
     const pitch = this.input.pitch + this.player.armament.recoil;
-    updateFirstPersonCamera(this.renderer.camera, this.player, BODY, this.hits, alpha, this.input.yaw, pitch, this.motion.leanRoll);
+    const lean = this.leanView.update(this.player, BODY, this.hits, alpha, dt);
+    updateFirstPersonCamera(this.renderer.camera, this.player, BODY, this.hits, alpha, this.input.yaw, pitch, this.motion.leanRoll, lean);
     this.match.setSkipLabel(this.skip ? 'skipping' : this.skipOffer);
     const spectating = this.match.frame(this.renderer.camera, alpha, dt, this.input.yaw, boardHeld);
     // Dev settings › Bot intentions (M90): a label over each bot, from where the camera is now.
@@ -963,12 +966,16 @@ export class MatchSession {
     for (const e of this.state.events) {
       if (e.type === 'roundStart') {
         this.input.resetView(this.player.spawnYaw);
+        this.leanView.reset();
         this.fitPickedLoadout();
         this.runLowAt = this.state.time + MAG_SHARE.devLowAfter;
       }
       if (e.type === 'matchOver') this.matchOverAt = this.state.time;
       // Back at the insertion after a hit (Extraction): looking the way its spawn faces.
-      if (e.type === 'respawned' && e.characterId === this.player.id) this.input.resetView(this.player.spawnYaw);
+      if (e.type === 'respawned' && e.characterId === this.player.id) {
+        this.input.resetView(this.player.spawnYaw);
+        this.leanView.reset();
+      }
     }
     this.runBotsLow();
     // Extraction: your bot teammates follow you unless you order otherwise (ai/squadFollow.ts).
