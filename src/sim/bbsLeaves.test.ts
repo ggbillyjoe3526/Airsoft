@@ -163,3 +163,45 @@ describe('a BB that clips the edge of a bush flies on, slowed and off its line (
     expect(eb).toEqual(ea);
   });
 });
+
+describe('a BB that meets a wall while still among the leaves (BP6)', () => {
+  /** A concrete wall across the line at z = -9.2, facing the shooter: 0.35 m into the bush, short of the stop depth. */
+  const WALL_Z = -9.2;
+  const wallIn = (foliage: readonly Bush[]): WorldQuery => ({
+    raycastStatic: () => -1,
+    raycastSurface: (origin, dir, maxDist, out) => {
+      if (dir.z >= 0 || origin.z <= WALL_Z) return -1;
+      const t = (origin.z - WALL_Z) / -dir.z;
+      if (t > maxDist) return -1;
+      out.normal.x = 0;
+      out.normal.y = 0;
+      out.normal.z = 1;
+      out.material = 'concrete';
+      return t;
+    },
+    foliage,
+  });
+
+  /** One BB from just inside the bush's near side, flown one tick: it crosses 0.35 m of leaves and bounces off the wall. */
+  function bounce(foliage: readonly Bush[]) {
+    const pool = createBBPool(1);
+    const bb = spawnBB(pool, 1, vec3(0, 1.3, BUSH.z + BUSH.radius - 0.05), vec3(0, 0, -1), 88, 0, 0.25e-3);
+    const events: GameEvent[] = [];
+    stepBBs(pool, FLAT, wallIn(foliage), KILL_Y, events, DT);
+    return { bb, events };
+  }
+
+  it('counts the leaves it crossed before the wall, and they slow it before it bounces', () => {
+    const crossed = BUSH.z + BUSH.radius - 0.05 - WALL_Z;
+    expect(crossed).toBeLessThan(STOP);
+    const inBush = bounce([BUSH]);
+    const open = bounce([]);
+    expect(inBush.bb.active).toBe(true);
+    expect(inBush.bb.bounces).toBe(1);
+    expect(inBush.bb.leaf).toBeCloseTo(crossed, 6);
+    expect(open.bb.leaf).toBe(0);
+    const speed = (v: { x: number; y: number; z: number }) => length3(v.x, v.y, v.z);
+    expect(speed(inBush.bb.velocity) / speed(open.bb.velocity)).toBeCloseTo(BALLISTICS.leaves.keptPerMetre ** crossed, 3);
+    expect(inBush.events.filter((e) => e.type === 'bbImpact')).toHaveLength(1);
+  });
+});

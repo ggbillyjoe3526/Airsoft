@@ -25,7 +25,7 @@ import { buildNavGrid } from './nav/navGrid';
 import { PhysicsWorld } from './physics/physicsWorld';
 import { bbGlowFor, kitPaint } from './pool/loadoutModel';
 import { figureCrowd, playerArms } from './render/figureMix';
-import { updateFirstPersonCamera } from './render/cameraRig';
+import { LeanViewEase, updateFirstPersonCamera } from './render/cameraRig';
 import { CombatPresentation } from './render/combatPresentation';
 import { bakedLightFor } from './render/bakedLight';
 import { addLighting, type Daylight } from './render/lighting';
@@ -129,6 +129,8 @@ export class RangeSession {
   private readonly commands = new Map<number, PlayerCommand>();
   private readonly playerCommand = createCommand();
   private motion: MotionScale = FULL_MOTION;
+  /** The lean your view shows: a wall's cut eased a little (BP6). */
+  private readonly leanView = new LeanViewEase();
   private readonly ctx: SimContext;
   private lastShot: LastShot | null = null;
   /** The timed challenge (M93) and its big word over the middle of the screen. */
@@ -411,7 +413,8 @@ export class RangeSession {
   draw(dt: number): void {
     const alpha = stepperAlpha(this.stepper);
     const pitch = this.input.pitch + this.player.armament.recoil;
-    updateFirstPersonCamera(this.renderer.camera, this.player, BODY, HITS, alpha, this.input.yaw, pitch, this.motion.leanRoll);
+    const lean = this.leanView.update(this.player, BODY, HITS, alpha, dt);
+    updateFirstPersonCamera(this.renderer.camera, this.player, BODY, HITS, alpha, this.input.yaw, pitch, this.motion.leanRoll, lean);
     this.targets.update(dt, alpha);
     this.banner.frame(dt, this.challenge, this.playing);
     this.showcase?.frame(dt);

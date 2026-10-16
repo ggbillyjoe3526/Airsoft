@@ -220,6 +220,12 @@ export function stepBBs(
         bb.position.x = bb.prevPosition.x + segmentDir.x * t;
         bb.position.y = bb.prevPosition.y + segmentDir.y * t;
         bb.position.z = bb.prevPosition.z + segmentDir.z * t;
+        if (inLeaves > 0) {
+          // It met the surface still among the leaves: what it crossed on the way counts, and slows it before it lands
+          // (BP6). Not turned: the line it met the surface on is the one already traced.
+          bb.leaf += inLeaves;
+          deflectInLeaves(bb, inLeaves, cfg.leaves);
+        }
         events.push({ type: 'bbImpact', position: vec3(bb.position.x, bb.position.y, bb.position.z), ownerId: bb.ownerId });
         if (noise) ringProp(bb.position, length3(bb.velocity.x, bb.velocity.y, bb.velocity.z), bb.ownerId, noise);
         // A bounce flies on from the surface next tick: the rest of this tick's travel is dropped, so a ricochet

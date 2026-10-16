@@ -9,14 +9,14 @@ import type { PointerLock } from './pointerLock';
 /** Keys held and pressed this frame, standing in for the real keyboard. */
 function fakeKeyboard() {
   const down = new Set<Action>();
-  const pressed = new Set<Action>();
-  const kb = { isDown: (a: Action) => down.has(a), wasPressed: (a: Action) => pressed.has(a) } as unknown as Keyboard;
+  const pressed = new Map<Action, number>();
+  const kb = { isDown: (a: Action) => down.has(a), wasPressed: (a: Action) => pressed.has(a), pressCount: (a: Action) => pressed.get(a) ?? 0 } as unknown as Keyboard;
   return {
     kb,
     /** Presses (and holds) `a` this frame. */
     press(a: Action) {
       down.add(a);
-      pressed.add(a);
+      pressed.set(a, (pressed.get(a) ?? 0) + 1);
     },
     release(a: Action) {
       down.delete(a);
@@ -98,6 +98,39 @@ describe('fire selector key', () => {
     const { keys, frame } = setup('toggle');
     expect(frame(() => keys.press('fireMode')).cycleFireMode).toBe(true);
     expect(frame().cycleFireMode).toBe(false); // held: no repeat
+  });
+
+  it('steps twice for two presses inside one slow frame, one step a tick (BP6)', () => {
+    const { keys, input } = setup('toggle');
+    const cmd = createCommand();
+    keys.press('fireMode');
+    keys.release('fireMode');
+    keys.press('fireMode');
+    input.update(0, 2);
+    const steps: boolean[] = [];
+    for (let tick = 0; tick < 3; tick++) {
+      input.fillCommand(cmd);
+      steps.push(cmd.cycleFireMode);
+    }
+    keys.endFrame();
+    expect(steps).toEqual([true, true, false]);
+  });
+
+  it('keeps a press for the next frame that runs a tick, and drops it on a pause (BP6)', () => {
+    const { keys, input } = setup('toggle');
+    const cmd = createCommand();
+    keys.press('fireMode');
+    input.update(0, 2); // a fast frame: no tick due
+    keys.endFrame();
+    input.update(0, 2);
+    input.fillCommand(cmd);
+    expect(cmd.cycleFireMode).toBe(true);
+    keys.press('fireMode');
+    input.update(0, 2);
+    keys.endFrame();
+    input.clearLatches();
+    input.fillCommand(cmd);
+    expect(cmd.cycleFireMode).toBe(false);
   });
 });
 

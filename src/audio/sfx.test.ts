@@ -1566,6 +1566,29 @@ describe('M33j: the woods at night in a match', () => {
     expect(FakeContext.last.sources.filter((s) => s.loop).every((s) => s.stopAt === 0)).toBe(true);
   });
 
+  it('muffles a camp fire behind a wall, leaves one in the open clear, and casts no ray to one out of earshot (BP6)', () => {
+    const fire = WOODLAND.lights!.find((l) => l.kind === 'fire')!.position;
+    const heard = (query: OcclusionQuery, away: number) => {
+      let casts = 0;
+      const counting: OcclusionQuery = { raycastStatic: (o, d, m) => (casts++, query.raycastStatic(o, d, m)) };
+      const sfx = new Sfx(LOADOUT, WOODLAND.blocks, counting, engineFor());
+      sfx.setScene(soundscapeOf(WOODLAND, true));
+      sfx.unlock();
+      sfx.setListener(vec3(fire.x + away, fire.y + 1.6, fire.z), 0, 0, -1);
+      sfx.setPaused(false);
+      const ctx = FakeContext.last;
+      sfx.afterTick([], PLAYER);
+      const panner = ctx.panners.find((p) => p.distanceModel === 'linear' && p.positionX.value === fire.x && p.positionZ.value === fire.z)!;
+      return { filter: [...panner.outputs][0] as FakeFilter, casts };
+    };
+    expect(heard(OPEN, 4).filter.frequency.value).toBe(AUDIO.occlusion.openHz);
+    const walled = heard(WALLED, 4);
+    expect(walled.filter.frequency.value).toBeCloseTo(AUDIO.occlusion.muffledHz);
+    expect(walled.casts).toBeGreaterThan(0);
+    // Out of earshot (and far from every other fire): no rays for it.
+    expect(heard(WALLED, 400).casts).toBe(0);
+  });
+
   it('lets an owl hoot now and then, and never a bird, the whole night through', () => {
     const { sfx, ctx, engine, all } = match(WOODLAND, true);
     for (let t = 0; t < Math.round(130 / SIM_DT); t++) sfx.afterTick(all, PLAYER);

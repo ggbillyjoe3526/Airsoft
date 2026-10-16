@@ -15,7 +15,7 @@ repository root is the plan the game reads; the owner edits it by hand. Pure apa
   (stops at the cap's total; returns a `LevelUp`), `grantReached`, `xpToNext`, `resetProgress` (Dev › Reset level),
   and `loadProgress`, `syncProgress`, `saveProgress`, which never overwrite another tab's newer save or a newer build's.
 - `track.ts`: `levelTrack`, the level track the Armory screen draws: every level with its items, each unlocked, next
-  or locked, and what comes next.
+  or locked (each item marked if the player has it, BP6), and what comes next.
 - Who uses it: `stats/settleMatch.ts` gives a match's XP once (none with Dev settings or dev content, `matchStanding`);
   `pool/loadoutModel.ts` `gameOwnership` turns the unlocks into what the Loadout offers; `ui/menus/armoryScreen.ts`,
   `summaryScreen.ts` and the top bar show it; `save/stores.ts` saves it.

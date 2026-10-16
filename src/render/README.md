@@ -55,7 +55,7 @@ and never writes the simulation.
   magazines (`magTosses.ts`, MG1: a code-made box on an arc, one mesh a slot of `GameState.magTosses`), leaves a BB
   knocks out of a bush (`leafFlecks.ts`, FO1: CPU only, one instanced draw), a puff of dust off a noisy prop run into
   (`propNoise`, NP1: a bigger impact puff in the prop's dust tint), the held
-  replica (a second render pass) and the HUD. Also `cameraRig.ts`, `viewmodel.ts`, and `eyepiece.ts` (aimed, a
+  replica (a second render pass) and the HUD. Also `cameraRig.ts` (`LeanViewEase` eases a lean a wall cuts, within `RENDER.leanCut`, BP6), `viewmodel.ts`, and `eyepiece.ts` (aimed, a
   scope's rear glass shows the world: a depth-only disc in the held replica's pass).
 - The practice range's targets: `rangeTargetsRenderer.ts` (instanced plates, figures and the START plate, moved by the
   sim's data; a lit challenge target draws through an orange twin), `rangeTargetGear.ts` (the posts, swinger frames,
@@ -90,7 +90,8 @@ and never writes the simulation.
   screen for the menus, with the power sources from `powerSourceModels.ts` (the menus' battery, LiPo and gas bottle, RM3).
 - Surface textures: `proceduralTextures.ts` draws each at the quality's Texture detail, the city's flat finishes capped
   at 512² (`drawnSize`, M78), with `natureTextures.ts`, `cityTextures.ts` and `textureLibrary.ts`.
-- Pooled effects (nothing in flight uploads nothing): `impactPuffs.ts`, `bbRenderer.ts`, `dustMotes.ts`. The post stack
+- Pooled effects (nothing in flight uploads nothing): `impactPuffs.ts`, `bbRenderer.ts`, `dustMotes.ts`;
+  `ownShotStarts.ts` holds your shots until the frame's camera is placed, so your BB starts at the muzzle you see (BP6). The post stack
   is `post/` (`postPlan.ts` picks passes per preset, `postHost.ts` makes and frees the node renderer's); Low builds
   none.
 - Quality: `gpuCheck.ts` rates the GPU, `qualityStepDown.ts` steps down on slow frames (never saved).

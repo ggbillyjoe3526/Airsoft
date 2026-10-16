@@ -5,7 +5,7 @@ Raw keyboard and mouse into the player's `PlayerCommand`. Pointer Lock API, keyb
 - `keyboard.ts`, `pointerLock.ts`: raw input. Mouse buttons go into the keyboard as binding codes (`Mouse0` …), so every
   action binds to a key or a button; unlocked play (`?nolock`) counts the buttons and wheel without the lock.
 - `playerInput.ts`: `PlayerInput` latches one-shot actions (jump, reload, switch, holster, trigger clicks) until a tick
-  consumes them, and the frame-level ones (squad orders, inspect, the Ping key's `takePing`, PG1, the Mag key as the
+  consumes them (the fire selector counts its presses, `Keyboard.pressCount`, one step a tick, BP6), and the frame-level ones (squad orders, inspect, the Ping key's `takePing`, PG1, the Mag key as the
   wheel's `mag` order, MG1) until the match takes them, runs the hold or toggle modes of crouch, aim and sprint, and
   fills the command (`fillCommand`).
 - `keyBindings.ts`, `keyboardLayout.ts`: the saved bindings and the player's keyboard layout (key names follow it).

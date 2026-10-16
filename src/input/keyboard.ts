@@ -10,7 +10,8 @@ import type { KeyBindings } from './keyBindings';
 export class Keyboard {
   capturing = false;
   private readonly held = new Set<string>();
-  private readonly pressedThisFrame = new Set<string>();
+  /** Presses since the last `endFrame()`, by code: two quick taps in one slow frame are two presses (BP6). */
+  private readonly pressedThisFrame = new Map<string, number>();
 
   constructor(
     private readonly target: Window,
@@ -37,10 +38,17 @@ export class Keyboard {
     return false;
   }
 
+  /** How many times the action was pressed since the last `endFrame()` (0 if not): for keys where every tap counts. */
+  pressCount(action: Action): number {
+    let n = 0;
+    for (const code of this.bindings.codes(action)) n += this.pressedThisFrame.get(code) ?? 0;
+    return n;
+  }
+
   /** A button went down: a mouse button while playing (input/pointerLock.ts), by its binding code. */
   press(code: string): void {
     // Mouse buttons never auto-repeat, so every press is a new one.
-    this.pressedThisFrame.add(code);
+    this.countPress(code);
     this.held.add(code);
   }
 
@@ -70,7 +78,7 @@ export class Keyboard {
 
   private readonly onKeyDown = (e: KeyboardEvent): void => {
     if (this.suppress(e.code)) e.preventDefault();
-    if (!e.repeat) this.pressedThisFrame.add(e.code);
+    if (!e.repeat) this.countPress(e.code);
     this.held.add(e.code);
   };
 
@@ -79,6 +87,10 @@ export class Keyboard {
     if (this.suppress(e.code)) e.preventDefault();
     this.held.delete(e.code);
   };
+
+  private countPress(code: string): void {
+    this.pressedThisFrame.set(code, (this.pressedThisFrame.get(code) ?? 0) + 1);
+  }
 
   /** While playing, game keys don't do their browser thing (scrolling, find bar, menu bar...). */
   private suppress(code: string): boolean {
