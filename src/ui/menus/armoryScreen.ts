@@ -6,6 +6,7 @@ import type { LevelTable } from '../../progress/levels';
 import type { Progress } from '../../progress/progress';
 import { levelTrack, type Track, type TrackLevel } from '../../progress/track';
 import { type MenuHint, tagPill } from './chrome';
+import { MENU_ICONS } from './icons';
 import { itemPicture, KIND_LABELS } from './itemTile';
 import type { PictureContext } from './kitStrip';
 import { el } from './menuParts';
@@ -26,9 +27,11 @@ export interface ArmoryOptions {
 }
 
 /**
- * The Armory (LV1, in place of M26c's Shots): your level and what it unlocked. The left card holds your level, the XP
- * into the next one and how XP is earned; the middle what the next level unlocks; the right every level from the
- * starting kit to the cap, each with its items, reached ones lit. Nothing here changes anything: matches give the XP.
+ * The Armory (LV1, in place of M26c's Shots; across since MR1, owner 2026-10-16): your level and what it unlocked. A band
+ * across the top holds your level, the XP into the next one and how XP is earned, with the next unlock beside it; under
+ * it every level from the starting kit to the cap as a column on a progress line, reached ones lit, scrolled sideways
+ * (the wheel, the arrow keys on the track, or the two arrows at its ends). Nothing here changes anything: matches give
+ * the XP.
  */
 export class ArmoryScreen {
   readonly root: HTMLDivElement;
@@ -39,6 +42,10 @@ export class ArmoryScreen {
   private readonly track: HTMLOListElement;
   private readonly count: HTMLSpanElement;
   private readonly earn: HTMLElement;
+  private readonly arrows: { back: HTMLButtonElement; on: HTMLButtonElement };
+  private readonly body: HTMLDivElement;
+  /** The next level's column, brought into view as the screen opens. */
+  private nextRow: HTMLElement | null = null;
 
   constructor(private readonly opts: ArmoryOptions) {
     this.root = el('div', 'menu-screen menu-page menu-armory menu-hub');
@@ -60,7 +67,25 @@ export class ArmoryScreen {
     this.count = el('span', 'armory-count');
     head.append(el('h2', 'menu-panel-title', ARMORY_TEXT.levels), this.count);
     this.track = el('ol', 'armory-levels');
-    levels.append(head, this.track);
+    // The keyboard scrolls the track with the arrow keys once on it; the wheel scrolls it sideways.
+    this.track.tabIndex = 0;
+    this.track.setAttribute('aria-label', ARMORY_TEXT.levels);
+    this.track.addEventListener('wheel', (e) => this.onWheel(e), { passive: false });
+    this.track.addEventListener('scroll', () => this.showArrows());
+    // The arrows are for the mouse: out of the tab order and hidden from a screen reader, which reads the track itself.
+    const arrow = (cls: string, icon: string, dir: number): HTMLButtonElement => {
+      const b = el('button', `armory-scroll ${cls}`);
+      b.type = 'button';
+      b.tabIndex = -1;
+      b.setAttribute('aria-hidden', 'true');
+      b.innerHTML = icon;
+      b.addEventListener('click', () => this.track.scrollBy({ left: dir * this.track.clientWidth * 0.8, behavior: 'smooth' }));
+      return b;
+    };
+    this.arrows = { back: arrow('armory-scroll-back', MENU_ICONS.arrowLeft, -1), on: arrow('armory-scroll-on', MENU_ICONS.arrowRight, 1) };
+    this.body = el('div', 'armory-track-body');
+    this.body.append(this.track, this.arrows.back, this.arrows.on);
+    levels.append(head, this.body);
     const columns = el('div', 'armory-columns');
     columns.append(left, this.next, levels);
     this.root.append(columns);
@@ -75,6 +100,34 @@ export class ArmoryScreen {
     this.renderEarn();
     this.renderNext(t, pool);
     this.renderTrack(t, pool);
+    this.showArrows();
+  }
+
+  /** Brings the next level into view as the screen opens (the menus call it once it shows). */
+  opened(): void {
+    const next = this.nextRow;
+    if (next && typeof this.track.scrollTo === 'function') this.track.scrollTo({ left: Math.max(0, next.offsetLeft - this.track.clientWidth / 3) });
+    this.showArrows();
+  }
+
+  /** Each arrow while there is more that way. */
+  private showArrows(): void {
+    const t = this.track;
+    const max = t.scrollWidth - t.clientWidth;
+    this.arrows.back.hidden = !(t.scrollLeft > 1);
+    this.arrows.on.hidden = !(t.scrollLeft < max - 1);
+    // The fade at the right edge says there is more (armory.css).
+    this.body.classList.toggle('has-more', !this.arrows.on.hidden);
+  }
+
+  /** The wheel scrolls the track sideways while it can go that way; past its end the page scrolls as before. */
+  private onWheel(e: WheelEvent): void {
+    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+    const t = this.track;
+    const max = t.scrollWidth - t.clientWidth;
+    if ((e.deltaY < 0 && t.scrollLeft <= 0) || (e.deltaY > 0 && t.scrollLeft >= max)) return;
+    e.preventDefault();
+    t.scrollLeft += e.deltaY;
   }
 
   /** Your level, the bar into the next one and the lines under it. */
@@ -128,7 +181,9 @@ export class ArmoryScreen {
 
   /** Every level, the starting kit first, each with what it unlocks. */
   private renderTrack(t: Track, pool: Pool): void {
-    this.track.replaceChildren(...t.levels.map((l) => this.levelRow(l, pool)));
+    const rows = t.levels.map((l) => this.levelRow(l, pool));
+    this.nextRow = rows[t.levels.findIndex((l) => l.state === 'next')] ?? null;
+    this.track.replaceChildren(...rows);
   }
 
   private levelRow(l: TrackLevel, pool: Pool): HTMLLIElement {
@@ -140,7 +195,12 @@ export class ArmoryScreen {
     head.append(el('span', 'armory-level-state', ARMORY_TEXT.state[l.state]));
     const items = el('div', 'armory-level-items');
     if (l.items.length === 0) items.append(el('span', 'armory-level-empty menu-faint', ARMORY_TEXT.nothingYet));
-    for (const id of l.items) items.append(this.itemCard(pool, id, 'armory-item', 'armory-item-pic'));
+    l.items.forEach((id, i) => {
+      const card = this.itemCard(pool, id, 'armory-item', 'armory-item-pic');
+      // Yours already though the level is ahead (levels.md moved it up, KI1): drawn as yours, not greyed.
+      if (l.owned[i]) card.dataset.owned = '';
+      items.append(card);
+    });
     row.append(head, items);
     return row;
   }

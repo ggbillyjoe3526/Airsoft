@@ -7,18 +7,25 @@ game state and never write it. Tests use the fake DOM in `testSupport.ts` (no js
   `hitFeed.ts`, `hitFeedback.ts` (with `hitMarkerLook.ts`, the hit marker's saved look), `soundCues.ts`,
   `teammateMarkers.ts` (with `tagStack.ts`, close teammates' name tags laid out one over the other, BP5), `flagMarker.ts`, `flagStatus.ts`, `runStatus.ts`, `casePrompt.ts`, `whatGotYou.ts`,
   `squadOrderLine.ts`, `orderWheel.ts`, `playPrompt.ts` ("Click to play" after Esc skips a round), `vaultPrompt.ts`
-  (the key to vault while a vault is there, M102), `calloutFeed.ts` (the bots' callouts, bottom left, CL1),
+  (the key to vault while a vault is there, M102), the bots' callouts (CL1) in `hitFeed.ts`, the one feed of hits and callouts (Dev 6 playtest item 32), with `roundResult.ts` (WON or LOST at a round's end, item 33) and `hopGauge.ts` (the hop-up readout, item 15),
   `pingMarkers.ts` (your pings and your teammates' marks over the field, PG1; the minimap draws the same slots),
-  `magPrompt.ts` (the magazine hand-off's line under the crosshair, MG1; its words from `src/magHandoff.ts`).
+  `magPrompt.ts` (the magazine hand-off's line under the crosshair, MG1; its words from `src/magHandoff.ts`),
+  `holdMarker.ts` (the diamond over a Hold here spot, M22).
 - Map and stats: `minimap.ts` (the field drawn once per match on a canvas) with `minimapView.ts` (teammates and heard
   players), `matchBoard.ts` (Tab), `statsRows.ts` (pure) and `statsTable.ts`, `recordsView.ts`, `rangeReadout.ts`
   (Practice's line and the timed challenge's banner), `performanceSheet.ts` (the Customise screen's Performance sheet).
-- Settings tabs: one `*Settings.ts` per tab (graphics, audio, controls and `keySettings.ts`, hud, look, accessibility,
-  crosshair, dev, save), shown by `menus/settingsScreen.ts`; `rendererRow.ts` builds Graphics' Renderer row (W1) in the
+- Settings tabs: one file per tab (`graphicsSettings.ts`, `audioSettings.ts`, `controlsSettings.ts` with
+  `keySettings.ts`, `hudSettings.ts`, `lookSettings.ts`, `accessibilitySettings.ts`, `crosshairSettings.ts`,
+  `devSettings.ts`, `saveSettings.ts`), shown by `menus/settingsScreen.ts`; `retroSettings.ts` is the Retro look's rows at
+  the top of the Dev tab (ST1); `rendererRow.ts` builds Graphics' Renderer row (W1) in the
   lazy boot chunk. `optionPicker.ts` is the shared pop-up choice.
 - Overlays: `debugOverlay.ts`, `botIntentLabels.ts` (Dev › Bot intentions, M90: a label over each bot), `crashScreen.ts` (with `bugReport.ts`: the note box and Report a Bug, IM7, also in Dev › Diagnostics), `loadingScreen.ts`, `graphicsNotice.ts`, `otherTabNotice.ts`,
   `coachPanel.ts` (the tutorial) and `tutorialShowcase.ts` (the scoreboard and order wheel its steps open, M80),
-  `saveDialog.ts`.
+  `saveDialog.ts`; `loadingProgress.ts` counts the physics download's bytes for the loading bar.
+- Small parts: `clipboard.ts` (copy to the clipboard, with the old command as a fallback), `fullscreen.ts` (M18b),
+  `headIcon.ts` (the helmet drawing beside a name in the stats tables), `loadoutChoice.ts` (how the menus word a BB
+  weight and a loadout's picks), `restartAnimation.ts` (restarting a CSS animation), `timedFill.ts` (a bar's fill that
+  runs on a transition, or steps with Reduced motion).
 - Wording that needs testing is pure (`matchStopText.ts`, `keyNotes.ts`, `statsRows.ts`).
 - The HUD reads `--team-0` / `--team-1` (set by `Game.play`) and `--hud-scale`, `--hud-opacity`, `--sb-scale`,
   `--cue-scale`, `--cue-colour` (set on `#app` by `Game.showHudLook`). The panel tokens `--hud-panel` and

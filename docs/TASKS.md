@@ -26,55 +26,7 @@ below. The item numbers are his. Where an older block overlaps one of these, the
 - RV2 overlaps ST1.
 - AX1's kit colours overlap MR1's colour tab.
 
-MR1 and MS1 show the owner concept images and wait for his approval before any code changes.
-
-## ST1 · Settings defaults and menu order (playtest items 3–8, 18, 20, 34; the Settings side of 1 and 17)
-tier: ui
-perf: skip
-touches: src/settings/, src/config/menus.ts, src/config/controls.ts, src/config/audio.ts, src/config/graphics.ts, src/config/dev.ts, src/ui/menus/, src/ui/, src/game.ts
-contract: none
-acceptance:
-  1. Defaults (new saves): sound cue colour red, scoreboard size 100 %, aim button Toggle, crouch Hold, volumes master 100 %, effects 80 %, power source 100 %, ambience 60 %, interface 50 %.
-  2. The Retro look setting moves to Settings › Dev. The "Voices (hit calls)" setting is gone.
-  3. Settings tabs run top to bottom: Display, Graphics, Gameplay, Looks, Audio, Controls, Accessibility, Save file, Dev.
-  4. The realistic colours leave Settings (they move to the Loadout's Colour tab, MR1).
-  5. The Dev toggles "Disable figure models" and "Disable all models" leave the menu (BD1 removes their code paths).
-  6. The level display reads "LVL", not "LV".
-  7. A save holding the old values still loads.
-status: open
-attempts: 0
-
-## MR1 · Match, Loadout and Armory redesign, and the home screen (playtest items 9–14, 16, 17, 19, 21)
-tier: ui
-perf: skip
-touches: src/ui/menus/, src/ui/loadoutChoice.ts, src/ui/lookSettings.ts, src/ui/fullscreen.ts, src/config/menus.ts, src/config/menuArt.ts, src/render/itemPictures.ts, src/style.css
-contract: none
-acceptance:
-  1. The owner approves concept images of the Match screen's rules, and of the Match, Loadout and Armory screens, before code changes (items 11, 13).
-  2. The menus, except the top navigation bar and Settings, are smaller and more compact, to the approved concepts. The Armory is laid out horizontally.
-  3. Mode buttons are text boxes with the mode's name, its description and its small white icon, with no game images. Your match shows no map image.
-  4. A picked map offers only the modes and rules that apply to it (checked again, with a test).
-  5. Loadout › Customise has no Skins option; skins join the Colour section, and the Colour tab offers the realistic colours (ST1 takes them out of Settings). A Back button returns to the main Loadout screen, and the LOADOUT tab no longer does.
-  6. Saved loadouts are a dropdown.
-  7. The home screen has a fullscreen button bottom left, which becomes "exit fullscreen" while in fullscreen. The version tag moves bottom right.
-status: open
-attempts: 0
-
-## HD1 · In-match HUD, feeds and hop-up (playtest items 15, 22, 24, 25, 31–33)
-tier: ui
-perf: required
-touches: src/ui/, src/ui/hud.css, src/ui/hudCss/, src/input/orderWheel.ts, src/input/keyBindings.ts, src/config/controls.ts, src/config/hudText.ts, src/sim/commands.ts, src/sim/armament.ts, src/render/impactPuffs.ts, src/render/impactGrit.ts, src/config/renderEffects.ts
-contract: PlayerCommand (a hop-up step, by addition)
-acceptance:
-  1. A rebindable control adjusts the held replica's hop-up mid-match, through the command interface (bots unchanged), with a HUD readout that shows it changing in real time.
-  2. The comms wheel is redesigned: minimal and easy to read, with every button the same size.
-  3. BB impacts kick up a smaller, subtler puff.
-  4. The weapon, magazine, ammo and fire-mode panel is smaller and more minimal, and still easy to read.
-  5. The scoreboard has no YOU tag.
-  6. The hit feed and the bot callouts are one feed, top right by default, with a setting that moves it bottom left.
-  7. WON or LOST shows at a round's end before the result, briefly and without getting in the way, and the player can move on at once.
-status: open
-attempts: 0
+MS1 shows the owner concept images and waits for his approval before any code changes.
 
 ## MV1 · Movement, holster speed and hands (playtest items 26–30)
 tier: core
@@ -115,17 +67,6 @@ acceptance:
   3. Woodland's hut has a roof, and its trees and bushes no longer look low-poly or broken.
   4. Neon Heights feels more open inside, with towering, oppressive city edges.
   5. Each map has more detail overall, the perf gate is green on every preset, and every external asset is in `docs/ASSETS.md`.
-status: open
-attempts: 0
-
-## TT1 · A simpler tutorial (playtest item 2)
-tier: ui
-perf: skip
-touches: src/tutorial/, src/config/tutorial.ts, src/ui/tutorialShowcase.ts
-contract: none
-acceptance:
-  1. Every tip is shorter and easier to understand.
-  2. No tip makes the player wait long before the next one, tips 13–16 above all.
 status: open
 attempts: 0
 
@@ -220,7 +161,7 @@ touches: src/matchSession.ts, src/render/flagRenderer.ts, src/render/characterRe
 contract: none
 acceptance:
   1. Each first-use hitch is measured before and after with `?perf` on a cold cache, and recorded: the first overtime flag, first tossed magazine, first 2x scope aim, first figure fade, the shadow depth shaders and the post stack's pipelines.
-  2. The warm-up compiles all of them before the round starts (shown for the compile, then hidden), so none compiles mid-match on Medium, High or Ultra.
+  2. The warm-up compiles all of them before the round starts (shown for the compile, then hidden), so none compiles mid-match on Medium, High or Ultra. (KI1 did the overtime flag, the tossed magazine, the scope eyepiece and all but two post passes; left: the shadow depth shaders, a figure's first fade, the last pass's canvas draw and the reflections' mask, and every before-and-after measurement.)
   3. Load time grows by no more than 10 % on any preset. The perf gate is green.
 status: open
 attempts: 0
@@ -306,8 +247,8 @@ touches: src/ai/botCombat.ts, src/ai/cover.ts, src/ai/botMovement.ts, src/ai/squ
 contract: none
 acceptance:
   1. A bot fighting from crouch cover keeps fighting a second enemy in sight after its target goes down.
-  2. The pause between bursts counts down while the line of fire is blocked, bundled with the spacing fix BP2 named (teammates inside each other in tight spots). Re-measured over 48 seeds, and every guard stays green.
-  3. Tests cover the cover → search → re-sighting → cover cycle, and the audit's AI-05 and AI-06 gaps.
+  2. (KI1 retried it alone: it failed `depotMatch.overtime` and `depotMatch.stackHouse`'s follow check.) The pause between bursts counts down while the line of fire is blocked, bundled with the spacing fix BP2 named (teammates inside each other in tight spots). Re-measured over 48 seeds, and every guard stays green.
+  3. Done in KI1: `ai/coverCycle.test.ts` covers the cycle; M72's `holdLeanSweep.test.ts` already covers AI-05 and AI-06.
   4. The old soak rows (long rounds, friendly hits, the office doorway) are measured again, then either closed or updated.
 status: open
 attempts: 0
@@ -353,7 +294,7 @@ contract: none
 acceptance:
   1. `docs/ROADMAP.md` › 0.1 Dev 5 and › 0.1 Dev 6 (with their playtest notes, the audit list and the token table) move to `docs/archive/0.1-dev/ROADMAP.md`; Builds and Where we are still name both tags.
   2. `docs/DECISIONS.md` is under 50 KB: split by subject (gameplay and modes, bots, maps and art, process and tooling) with an index at the top, or each ruling kept to its one-line decision with the "why" in the task's record; superseded rulings are marked or moved to the archive.
-  3. `docs/KNOWN_ISSUES.md` is under 50 KB: no row over about 300 characters, the detail in the task's record it names; fixed rows gone to the archive. (DC1's acceptance folds in here.)
+  3. `docs/KNOWN_ISSUES.md` is under 50 KB: no row over about 300 characters, the detail in the task's record it names; fixed rows gone to the archive. (DC1's acceptance folds in here; its merges and moves were done in KI1.)
   4. `docs/PLAYTEST.md` is under 50 KB: the current build's guide only, earlier builds' sections in the archive.
   5. `docs/PROCESS.md` › Releases gains an "archive check" step, and `docs/archive/README.md` names the `0.1-beta/` folder it creates.
 status: open

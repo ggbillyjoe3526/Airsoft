@@ -409,6 +409,11 @@ export class Viewmodel {
     this.motionScale = scale;
   }
 
+  /** What the warm-up shows to compile ahead (KI1): the scopes' eyepiece masks, hidden until a scope is at your eye. */
+  warmTargets(): readonly THREE.Object3D[] {
+    return this.eyepieces;
+  }
+
   /**
    * Looking through a scope's eyepiece (M17b): the replica stays in view, as at a red dot (the owner's 0.1 Dev 5
    * playtest, note 5), and the scope's rear glass shows the world (eyepiece.ts); the HUD draws the reticle.

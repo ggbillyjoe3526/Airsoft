@@ -285,8 +285,9 @@ describe('the title\'s ground (M100: plain, no picture)', () => {
 
 describe('the HUD\'s sheets (G4)', () => {
   it('read every file hud.css imports, each part\'s rules among them', () => {
-    expect(hudFiles.length).toBe(10);
-    for (const rule of ['.scoreboard', '.minimap-frame', '.hit-feed-line', '.hud-replica', '.match-board', '.hitfx-round', '.callout-feed', '.ping-marker', '.mag-prompt']) {
+    // Nine since the callout feed joined the hit feed (Dev 6 playtest item 32).
+    expect(hudFiles.length).toBe(9);
+    for (const rule of ['.scoreboard', '.minimap-frame', '.hit-feed-line', '.hud-replica', '.match-board', '.hitfx-round', '.hit-feed.bottom-left', '.ping-marker', '.mag-prompt']) {
       expect(blockOf(rule), rule).not.toBeNull();
     }
     // Moved, not copied: style.css keeps none of them.
@@ -413,12 +414,14 @@ describe('the font (M100: Inter replaces Barlow)', () => {
     expect(menuSheet).not.toMatch(/menu-hint-key|\.menu-hints|menu-build/);
   });
 
-  it('lays the Armory out as your level over the next unlock on the left, and the level track beside them (LV1)', () => {
-    expect(declared('.armory-columns', 'grid-template-columns')).toMatch(/^clamp\(\d+px, [\d.]+vw, \d+px\) minmax\(0, 1fr\)$/);
+  it('lays the Armory out as your level with the next unlock beside it, and the level track across under them (LV1, MR1)', () => {
+    expect(declared('.armory-columns', 'grid-template-columns')).toMatch(/^minmax\(0, 1fr\) clamp\(\d+px, [\d.]+vw, \d+px\)$/);
     expect([declared('.armory-left', 'grid-column'), declared('.armory-left', 'grid-row')]).toEqual(['1', '1']);
-    expect([declared('.armory-next', 'grid-column'), declared('.armory-next', 'grid-row')]).toEqual(['1', '2']);
-    expect([declared('.armory-track', 'grid-column'), declared('.armory-track', 'grid-row')]).toEqual(['2', '1 / span 2']);
-    expect(declared('.armory-levels', 'flex-direction')).toBe('column');
+    expect([declared('.armory-next', 'grid-column'), declared('.armory-next', 'grid-row')]).toEqual(['2', '1']);
+    expect([declared('.armory-track', 'grid-column'), declared('.armory-track', 'grid-row')]).toEqual(['1 / -1', '2']);
+    // The levels run across, a column each, scrolled sideways.
+    expect(declared('.armory-levels', 'flex-direction')).toBe('row');
+    expect(declared('.armory-levels', 'overflow-x')).toBe('auto');
     expect(declared('.armory-next-grid', 'grid-template-columns')).toMatch(/^repeat\(auto-fill, minmax\(\d+px, 1fr\)\)$/);
     // In a narrow window the three cards stack: none keeps a row of its own.
     expect(menuSheet).toMatch(/\.armory-left,\s*\.armory-next,\s*\.armory-track\s*\{[^}]*grid-row:\s*auto/);
@@ -427,7 +430,8 @@ describe('the font (M100: Inter replaces Barlow)', () => {
   it("marks each level row by its state: reached ones edged green, the next one in orange, locked ones dimmed (LV1)", () => {
     expect(declared(".armory-level-row[data-state='unlocked']", 'border-left-color')).toBe('var(--menu-good)');
     expect(declared(".armory-level-row[data-state='next']", 'border-left-color')).toBe('var(--orange)');
-    expect(declared(".armory-level-row[data-state='locked'] .armory-item > .pic-slot", 'filter')).toBe('grayscale(1)');
+    // An item you already have stays in colour there (KI1: levels.md moved it up).
+    expect(declared(".armory-level-row[data-state='locked'] .armory-item:not([data-owned]) > .pic-slot", 'filter')).toBe('grayscale(1)');
     expect(declared(".armory-level-row[data-state='next'] .armory-level-state", 'color')).toBe('var(--orange-text)');
   });
 });
@@ -441,10 +445,11 @@ describe('layout polish before the screenshots (G4, M100)', () => {
     expect(declared('.minimap-caption', 'max-width')).toMatch(/^calc\(var\(--minimap-size\) \* [\d.]+\)$/);
   });
 
-  it('keeps the fire-mode chips and the spare line in rows of their own: the spare line is a block under the chips', () => {
+  it('keeps the fire-mode chips and the spare line apart: the spare line is a block under the count, in its column (Dev 6 playtest item 25)', () => {
     expect(declared('.hud-spare', 'display')).toBe('block');
     expect(declared('.hud-spare', 'margin-top')).toMatch(/^\d+px$/);
-    expect(declared('.hud-ammo', 'flex-direction')).toBeUndefined();
+    expect(declared('.hud-ammo', 'flex-direction')).toBe('column');
+    expect(declared('.hud-ammo', 'flex')).toBe('none');
   });
 
   it('fills the level bars (the top bar\'s and the Armory\'s) from the left by --xp, on a transform, not a width (LV1)', () => {
@@ -481,7 +486,8 @@ describe('layout polish before the screenshots (G4, M100)', () => {
 
   it('lays the Match rules out in as many columns as fit, so the page holds in a 1080 px window', () => {
     expect(declared('.match-grid', 'grid-template-columns')).toMatch(/^repeat\(auto-fit, minmax\(\d+px, 1fr\)\)$/);
-    expect(declared('.match-panel .match-rules-row', 'flex-direction')).toBe('row');
+    // One line a rule (MR1): the name in its column, the options beside it.
+    expect(declared('.match-panel .menu-row', 'flex-wrap')).toBe('nowrap');
   });
 
   it('puts no backdrop blur on any of these', () => {

@@ -9,6 +9,7 @@ import { audioSettings } from '../audioSettings';
 import { crosshairSettings } from '../crosshairSettings';
 import { hudSettings } from '../hudSettings';
 import { lookSettings } from '../lookSettings';
+import { retroSettings } from '../retroSettings';
 import { FakeElement, findAll } from '../testSupport';
 import { matchesSearch } from './settingsScreen';
 
@@ -108,9 +109,12 @@ describe('every settings row keeps its saved key (G3, criterion 8)', () => {
     expect(walk(rows[2]!).filter((n) => n.tag === 'input')).toHaveLength(1);
   });
 
-  it('saves the Look rows as robots, realisticColours and the Retro look (M96) as retroLook, retroPixelSize and retroColours', () => {
-    const rows = lookSettings({ initial: DEFAULT_LOOK, onChange: () => {}, retro: { initial: { ...DEFAULT_RETRO }, onChange: () => {} } }) as unknown as FakeElement[];
-    expect(savedKeys(rows)).toEqual(['realisticColours', 'retroColours', 'retroLook', 'retroPixelSize', 'robots']);
+  it('saves the Looks row as robots, and the Retro look (M96, on the Dev tab) as retroLook, retroPixelSize and retroColours', () => {
+    const rows = lookSettings({ initial: DEFAULT_LOOK, onChange: () => {} }) as unknown as FakeElement[];
+    expect(savedKeys(rows)).toEqual(['robots']);
+    const retro = retroSettings({ initial: { ...DEFAULT_RETRO }, onChange: () => {} }) as unknown as FakeElement[];
+    // The store is shared across the two, so the retro rows add their three keys to Robots'.
+    expect(savedKeys(retro)).toEqual(['retroColours', 'retroLook', 'retroPixelSize', 'robots']);
   });
 
   it('saves the crosshair rows each under crosshair.<part>, so the saved crosshair survives the move to Gameplay', () => {
@@ -184,7 +188,8 @@ describe('a note on every settings row (G3, criterion 8)', () => {
         soundCueSize: { initial: 1, onChange: noop },
         soundCueColour: { initial: DEFAULT_SOUND_CUE_COLOUR, onChange: noop },
       }),
-      ...lookSettings({ initial: DEFAULT_LOOK, onChange: noop, retro: { initial: { ...DEFAULT_RETRO }, onChange: noop } }),
+      ...lookSettings({ initial: DEFAULT_LOOK, onChange: noop }),
+      ...retroSettings({ initial: { ...DEFAULT_RETRO }, onChange: noop }),
     ] as unknown as FakeElement[];
     for (const r of rows) expect(note(r), label(r)).not.toBe('');
   });

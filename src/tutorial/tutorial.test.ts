@@ -3,6 +3,7 @@ import { TUTORIAL, TUTORIAL_STEPS, tutorialSteps } from '../config/tutorial';
 import { BALLISTICS } from '../config/ballistics';
 import { AEG, LOADOUT } from '../config/replicas';
 import { ORDER_WHEEL } from '../config/squad';
+import { type BB, createBBPool, spawnBB } from '../sim/ballistics';
 import { createCharacter } from '../sim/character';
 import type { GameEvent } from '../sim/events';
 import { hopUpReach } from '../sim/hopUp';
@@ -88,12 +89,6 @@ describe('the tutorial (M16)', () => {
     tick();
     finishStep();
 
-    expectStep('lean');
-    player.lean = -0.9;
-    tick();
-    player.lean = 0;
-    finishStep();
-
     expectStep('sprint');
     const fired: GameEvent = { type: 'shot', characterId: 0, replicaId: 'aeg', position: vec3() };
     tick([fired]); // no sprint yet
@@ -169,7 +164,7 @@ describe('the tutorial (M16)', () => {
 
   it('points the player to the optics on the Loadout from the aiming step, which every replica plays (BP5)', () => {
     const aim = TUTORIAL_STEPS.find((s) => s.id === 'aim')!;
-    expect(aim.text).toContain('On the Loadout (press Esc, then Loadout) you can fit a red dot or a 2× scope.');
+    expect(aim.text).toContain('Fit a red dot or scope on the Loadout (Esc, then Loadout).');
     // Still no longer than the longest card the coach already shows.
     expect(aim.text.length).toBeLessThanOrEqual(Math.max(...TUTORIAL_STEPS.filter((s) => s.id !== 'aim').map((s) => s.text.length)));
   });
@@ -223,7 +218,7 @@ describe('the tutorial (M16)', () => {
     const far = TUTORIAL_STEPS.find((x) => x.id === 'far')!;
     const reach = hopUpReach(AEG, AEG.hopUpDial, BALLISTICS).onTargetTo;
     // A retune of the ballistics or the hop-up that moves the reach has to update the text.
-    expect(far.text).toContain(`(the stock rifle: about ${Math.round(reach)} m)`);
+    expect(far.text).toContain(`flying flat to about ${Math.round(reach)} m`);
     // The step asks for a hit beyond it, so it teaches aiming high or turning the hop-up up.
     if (far.goal.kind !== 'hit') throw new Error('the far step asks for a hit');
     expect(far.goal.minDistance).toBeGreaterThan(reach);
@@ -239,9 +234,38 @@ describe('the tutorial (M16)', () => {
     expect(TUTORIAL_STEPS.find((s) => s.id === 'orderWheel')!.text).toContain('hold {orderWheel}');
   });
 
-  it("names the order wheel's orders as the wheel labels them (M80)", () => {
+  it('keeps every card short, and no read card waits long (TT1, owner note 2: less wordy, no long waits)', () => {
+    const words = (text = '') => text.split(/\s+/).filter(Boolean).length;
+    for (const s of TUTORIAL_STEPS.flatMap((x) => (x.withoutOptic ? [x, x.withoutOptic] : [x]))) {
+      expect(words(s.text), s.id).toBeLessThanOrEqual(25);
+      expect(words(s.countHidden), s.id).toBeLessThanOrEqual(25);
+      expect(words(s.levelling), s.id).toBeLessThanOrEqual(10);
+      if (s.goal.kind === 'read') expect(s.goal.seconds, s.id).toBeLessThanOrEqual(8);
+    }
+    // Leaning is gone from the game (owner note 30), so the tutorial no longer teaches it.
+    expect(TUTORIAL_STEPS.some((s) => /\{lean(Left|Right)\}|\blean/i.test(s.text))).toBe(false);
+  });
+
+  it("names no order the wheel doesn't have: the card shows the wheel itself (TT1)", () => {
     const text = TUTORIAL_STEPS.find((s) => s.id === 'orderWheel')!.text;
-    for (const item of ORDER_WHEEL.items) expect(text).toContain(item.label);
+    const named = ORDER_WHEEL.items.map((i) => i.label).filter((l) => text.includes(l));
+    expect(named).toEqual([]);
+  });
+
+  it("fills the coach's bar as a read card reads, and has none on a step that asks for something (TT1)", () => {
+    const { t, tick } = setup();
+    expect(t.readProgress).toBe(-1); // looking around
+    const hits = t.steps.findIndex((s) => s.id === 'hits');
+    const goal = t.steps[hits]!.goal;
+    if (goal.kind !== 'read') throw new Error('hits is read');
+    t.debugJumpTo(hits);
+    tick();
+    expect(t.readProgress).toBeGreaterThan(0);
+    for (let i = 0; i < goal.seconds / 2 / DT; i++) tick();
+    expect(t.readProgress).toBeCloseTo(0.5, 1);
+    for (let i = 0; i < goal.seconds / DT && !t.showingDone; i++) tick();
+    expect(t.showingDone).toBe(true);
+    expect(t.readProgress).toBe(-1); // the tick shows, then the next card
   });
 
   it('names keys only through the bindings, never a key itself (M80: a rebound key reads right)', () => {
@@ -314,6 +338,41 @@ describe('skipping and resuming the tutorial (audit POOL-14, POOL-16)', () => {
   it('leaves out the switch-replica step for a player carrying one replica', () => {
     expect(new TutorialTracker(TUTORIAL_STEPS, true, 0, 1).steps.map((s) => s.id)).not.toContain('secondary');
     expect(new TutorialTracker(TUTORIAL_STEPS, true, 0, 2).steps.map((s) => s.id)).toContain('secondary');
+  });
+});
+
+describe('the switch-replica step tells BBs apart by the replica that fired them (KI1)', () => {
+  it("doesn't count the first replica's BB landing after the switch, and counts the second's", () => {
+    const player = createCharacter(0, vec3(0, 0, 2), 0, LOADOUT, 0);
+    const targets = createRangeTargets();
+    const steel = targets.find((x) => x.kind === 'steel')!;
+    const pool = createBBPool(8);
+    const t = new TutorialTracker(TUTORIAL_STEPS, true, 'secondary');
+    expect(t.step?.id).toBe('secondary');
+    const tick = (events: GameEvent[] = []) => t.observe({ dt: DT, player, events, targets, bbs: pool.bbs });
+    const shot: GameEvent = { type: 'shot', characterId: 0, replicaId: 'x', position: vec3() };
+    const fire = () => {
+      const bb = spawnBB(pool, 0, vec3(0, 1.5, 0), vec3(0, 0, -1), 90, 0, 0.0002);
+      tick([shot]);
+      return bb;
+    };
+    /** `bb` stops on the steel plate at `z`, as the simulation leaves a BB that hit a target. */
+    const lands = (bb: BB, z: number) => {
+      bb.active = false;
+      bb.position.x = 0;
+      bb.position.y = 1;
+      bb.position.z = z;
+      tick([{ type: 'targetHit', targetId: steel.id, kind: 'steel', shooterId: 0, position: vec3(0, 1, z), ricochet: false }]);
+    };
+    player.armament.active = 0;
+    const first = fire();
+    player.armament.active = 1;
+    const second = fire();
+    lands(first, -20); // still in flight from the first replica when the second fired
+    expect(t.showingDone).toBe(false);
+    player.armament.active = 0; // switched back while the second replica's BB flies: it still counts
+    lands(second, -20.5);
+    expect(t.showingDone).toBe(true);
   });
 });
 

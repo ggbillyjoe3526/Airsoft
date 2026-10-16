@@ -32,9 +32,9 @@ export interface ChoiceVariants<T extends string> {
 export interface ExtraCard {
   label: string;
   blurb: string;
-  /** The card's sign ('' for none), and its picture as inline SVG (decoration; there is no still for it). */
+  /** The card's sign ('' for none), and a picture as inline SVG (decoration; none on a text card, MR1). */
   icon: string;
-  art: string;
+  art?: string;
   onToggle: (on: boolean) => void;
 }
 
@@ -195,10 +195,12 @@ export class ChoiceCards<T extends string> {
     const wrap = el('div', 'choice-card-wrap');
     const button = el('button', 'choice-card choice-card-extra');
     button.type = 'button';
-    const frame = el('span', 'choice-card-pic');
-    frame.setAttribute('aria-hidden', 'true');
-    frame.innerHTML = extra.art;
-    button.append(frame);
+    if (extra.art) {
+      const frame = el('span', 'choice-card-pic');
+      frame.setAttribute('aria-hidden', 'true');
+      frame.innerHTML = extra.art;
+      button.append(frame);
+    }
     if (extra.icon) button.insertAdjacentHTML('beforeend', `<span class="choice-card-icon">${extra.icon}</span>`);
     button.append(this.text(extra.label, extra.blurb), el('span', 'choice-card-tags'));
     button.insertAdjacentHTML('beforeend', `<span class="choice-tick">${MENU_ICONS.check}</span>`);

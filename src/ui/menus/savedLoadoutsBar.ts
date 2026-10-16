@@ -4,8 +4,9 @@ import type { SavedLoadouts } from '../../pool/savedLoadouts';
 import type { MenuHint } from './chrome';
 import { ConfirmDialog } from './confirmDialog';
 import { type ContextChoice, ContextMenu } from './contextMenu';
+import { SAVED_ICONS } from './icons';
 import { carriesLine } from './loadoutPicker';
-import { el, menuButton } from './menuParts';
+import { el, menuButton, withIcon } from './menuParts';
 
 export interface SavedBarOptions {
   saved: SavedLoadouts;
@@ -13,34 +14,28 @@ export interface SavedBarOptions {
   onSwitch: () => void;
 }
 
-/** A slot's tab: its button (number, name, what it carries, the Current tag) and the box that renames it. */
-interface Tab {
-  root: HTMLDivElement;
-  button: HTMLButtonElement;
-  name: HTMLSpanElement;
-  line: HTMLSpanElement;
-  tag: HTMLSpanElement;
-  input: HTMLInputElement;
-}
-
 /** A locked pick in words: what it is, why, and what plays instead. */
-export function missingText(m: MissingPick): string {
+function missingText(m: MissingPick): string {
   return SAVED_TEXT.missing(m.wanted.name, m.reason === 'dev', m.instead?.name ?? null, m.level);
 }
 
 /**
- * The Loadout's saved loadouts (SL1): a tab per slot along the top, numbered 1 to 5 (the keys switch), the current one
- * marked. A tab switches to its loadout; an empty one starts a new loadout, a copy of yours, and asks its name. Rename,
- * Duplicate and Delete act on the current one; a right-click (or the Menu key, Shift+F10) on any tab offers them for that
- * one, with Use and Replace with yours. Under the tabs: the gear the current loadout holds that isn't available now, and
- * what it carries instead. Built once; `update` touches only what changed.
+ * The Loadout's saved loadouts (SL1; a dropdown since MR1, owner 2026-10-16): one button naming the loadout carried (its
+ * number, name and what it carries) that opens the saved ones as a list, the last entry a new loadout while a slot is
+ * free; beside it Rename, Duplicate, New and Delete for the one carried. Keys 1 to 5 switch. Rename types over the
+ * name in place. Under it: the gear the current loadout holds that isn't available now, and what it carries instead.
+ * Built once; `update` touches only what changed.
  */
 export class SavedLoadoutsBar {
   readonly root: HTMLElement;
   /** Keys 1 to 5: carry that saved loadout (an empty slot does nothing). */
   readonly hints: readonly MenuHint[];
-  private readonly tabs: Tab[];
-  private readonly actions: { rename: HTMLButtonElement; duplicate: HTMLButtonElement; remove: HTMLButtonElement };
+  private readonly pick: HTMLButtonElement;
+  private readonly key: HTMLSpanElement;
+  private readonly name: HTMLSpanElement;
+  private readonly line: HTMLSpanElement;
+  private readonly input: HTMLInputElement;
+  private readonly actions: { rename: HTMLButtonElement; duplicate: HTMLButtonElement; create: HTMLButtonElement; remove: HTMLButtonElement };
   private readonly lockedBox: HTMLDivElement;
   private readonly locked: HTMLUListElement;
   private readonly menu = new ContextMenu();
@@ -51,60 +46,91 @@ export class SavedLoadoutsBar {
   constructor(private readonly opts: SavedBarOptions) {
     this.root = el('section', 'saved-loadouts');
     this.root.setAttribute('aria-label', SAVED_TEXT.heading);
-    const head = el('div', 'saved-head');
+    const box = el('div', 'saved-pick-box');
+    this.pick = el('button', 'saved-pick');
+    this.pick.type = 'button';
+    this.pick.setAttribute('aria-haspopup', 'true');
+    this.key = el('span', 'saved-pick-key');
+    this.key.setAttribute('aria-hidden', 'true');
+    this.name = el('span', 'saved-pick-name');
+    this.line = el('span', 'saved-pick-line');
+    const caret = el('span', 'saved-pick-caret');
+    caret.innerHTML = SAVED_ICONS.caret;
+    this.pick.append(this.key, this.name, this.line, caret);
+    this.pick.addEventListener('click', () => this.openList());
+    this.pick.addEventListener('keydown', (e) => this.onPickKey(e));
+    this.input = el('input', 'saved-pick-input');
+    this.input.type = 'text';
+    this.input.maxLength = SAVED_LOADOUTS.nameMax;
+    this.input.spellcheck = false;
+    this.input.autocomplete = 'off';
+    this.input.hidden = true;
+    this.input.setAttribute('aria-label', SAVED_TEXT.nameLabel);
+    this.input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this.endRename(true, true);
+      } else if (e.key === 'Escape') {
+        // The old name back; the menus never see this Esc (it would be Back).
+        e.preventDefault();
+        e.stopPropagation();
+        this.endRename(false, true);
+      }
+    });
+    // Clicking away keeps the name typed; the keyboard goes where the click sent it.
+    this.input.addEventListener('blur', () => this.endRename(true, false));
+    box.append(this.pick, this.input);
+    const action = (label: string, icon: string, run: () => void): HTMLButtonElement => {
+      const b = withIcon(menuButton(label, 'secondary', run), icon);
+      b.classList.add('saved-action');
+      return b;
+    };
     this.actions = {
-      rename: menuButton(SAVED_TEXT.rename, 'ghost', () => this.rename(this.current())),
-      duplicate: menuButton(SAVED_TEXT.duplicate, 'ghost', () => this.duplicate(this.current())),
-      remove: menuButton(SAVED_TEXT.delete, 'ghost', () => this.askDelete(this.current())),
+      rename: action(SAVED_TEXT.rename, SAVED_ICONS.rename, () => this.rename(this.current())),
+      duplicate: action(SAVED_TEXT.duplicate, SAVED_ICONS.duplicate, () => this.duplicate(this.current())),
+      create: action(SAVED_TEXT.newShort, SAVED_ICONS.create, () => this.create()),
+      remove: action(SAVED_TEXT.delete, SAVED_ICONS.remove, () => this.askDelete(this.current())),
     };
     const actions = el('div', 'saved-actions');
-    actions.append(this.actions.rename, this.actions.duplicate, this.actions.remove);
-    head.append(el('p', 'menu-kicker', SAVED_TEXT.heading), actions);
-    const list = el('div', 'saved-tabs');
-    this.tabs = Array.from({ length: SAVED_LOADOUTS.slots }, (_, i) => this.tab(i));
-    list.append(...this.tabs.map((t) => t.root));
+    actions.append(this.actions.rename, this.actions.duplicate, this.actions.create, this.actions.remove);
+    const row = el('div', 'saved-row');
+    row.append(box, actions, el('p', 'saved-hint', SAVED_TEXT.hint));
     this.locked = el('ul', 'saved-locked-list');
     this.lockedBox = el('div', 'saved-locked');
     this.lockedBox.append(el('p', 'menu-kicker', SAVED_TEXT.lockedHead), this.locked);
-    this.root.append(head, list, this.lockedBox, el('p', 'saved-hint', SAVED_TEXT.hint), this.menu.root, this.confirm.root);
-    this.hints = this.tabs.map((_, i) => ({
+    this.root.append(row, this.lockedBox, this.menu.root, this.confirm.root);
+    this.hints = Array.from({ length: SAVED_LOADOUTS.slots }, (_, i) => ({
       keys: [String(i + 1)],
       label: SAVED_TEXT.defaultName(i + 1),
       code: `Digit${i + 1}`,
       run: () => {
-        if (this.opts.saved.view(i)) this.pick(i);
+        if (this.opts.saved.view(i)) this.use(i);
       },
     }));
     this.update();
   }
 
-  /** Shows the slots as they are now: each tab's text changes only if it changed. */
+  /** Shows the loadout carried and what can be done with it: each text changes only if it changed. */
   update(): void {
     const saved = this.opts.saved;
-    const views = saved.views();
-    views.forEach((v, i) => {
-      const tab = this.tabs[i]!;
-      tab.root.classList.toggle('is-empty', !v);
-      tab.root.classList.toggle('is-current', !!v?.current);
-      tab.root.classList.toggle('has-locked', (v?.missing.length ?? 0) > 0);
-      setText(tab.name, v ? v.name : SAVED_TEXT.newLoadout);
-      // A name longer than the tab is cut with an ellipsis (saved.css): the whole name is the tip.
-      tab.name.title = v ? v.name : '';
-      setText(tab.line, v ? carriesLine(v) : SAVED_TEXT.newNote);
-      setText(tab.tag, v?.current ? SAVED_TEXT.current : '');
-      setAttr(tab.button, 'aria-label', v ? SAVED_TEXT.tabName(i + 1, v.name, carriesLine(v), v.current, v.missing.length) : SAVED_TEXT.emptyTabName(i + 1));
-      if (v?.current) setAttr(tab.button, 'aria-current', 'true');
-      else tab.button.removeAttribute('aria-current');
-      tab.button.title = v ? v.missing.map(missingText).join('\n') : '';
-    });
     const current = saved.current();
+    const view = saved.view(current);
+    setText(this.key, String(current + 1));
+    setText(this.name, view?.name ?? '');
+    setText(this.line, view ? carriesLine(view) : '');
+    // A name longer than the button is cut with an ellipsis (saved.css): the whole name is the tip, with what it lacks.
+    this.pick.title = view ? [view.name, ...view.missing.map(missingText)].join('\n') : '';
+    this.pick.classList.toggle('has-locked', (view?.missing.length ?? 0) > 0);
+    setAttr(this.pick, 'aria-label', view ? SAVED_TEXT.pickerName(current + 1, view.name, carriesLine(view), view.missing.length) : '');
     const roomy = saved.hasRoom();
     const deletable = saved.canDelete(current);
     setAttr(this.actions.duplicate, 'aria-disabled', String(!roomy));
     this.actions.duplicate.title = roomy ? '' : SAVED_TEXT.full;
+    setAttr(this.actions.create, 'aria-disabled', String(!roomy));
+    this.actions.create.title = roomy ? SAVED_TEXT.newNote : SAVED_TEXT.full;
     setAttr(this.actions.remove, 'aria-disabled', String(!deletable));
     this.actions.remove.title = deletable ? '' : SAVED_TEXT.onlyOne;
-    const lines = (views[current]?.missing ?? []).map(missingText);
+    const lines = (view?.missing ?? []).map(missingText);
     const signature = lines.join('\n');
     if (this.locked.dataset.lines !== signature) {
       this.locked.dataset.lines = signature;
@@ -117,94 +143,74 @@ export class SavedLoadoutsBar {
     return this.opts.saved.current();
   }
 
-  private tab(slot: number): Tab {
-    const root = el('div', 'saved-tab');
-    const button = el('button', 'saved-tab-button');
-    button.type = 'button';
-    const key = el('span', 'saved-tab-key', String(slot + 1));
-    key.setAttribute('aria-hidden', 'true');
-    const words = el('span', 'saved-tab-words');
-    const top = el('span', 'saved-tab-top');
-    const name = el('span', 'saved-tab-name');
-    const tag = el('span', 'saved-tab-tag');
-    top.append(name, tag);
-    const line = el('span', 'saved-tab-line');
-    words.append(top, line);
-    button.append(key, words);
-    button.addEventListener('click', () => this.pick(slot));
-    button.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      this.openMenu(slot, e.clientX + 2, e.clientY + 2);
-    });
-    button.addEventListener('keydown', (e) => this.onTabKey(e, slot));
-    const input = el('input', 'saved-tab-input');
-    input.type = 'text';
-    input.maxLength = SAVED_LOADOUTS.nameMax;
-    input.spellcheck = false;
-    input.autocomplete = 'off';
-    input.hidden = true;
-    input.setAttribute('aria-label', SAVED_TEXT.nameLabel);
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        this.endRename(true, true);
-      } else if (e.key === 'Escape') {
-        // The old name back; the menus never see this Esc (it would be Back).
-        e.preventDefault();
-        e.stopPropagation();
-        this.endRename(false, true);
-      }
-    });
-    // Clicking away keeps the name typed; the keyboard goes where the click sent it.
-    input.addEventListener('blur', () => this.endRename(true, false));
-    root.append(button, input);
-    return { root, button, name, line, tag, input };
+  /** The list under the button: every saved loadout (the one carried ticked), then a new one while a slot is free. */
+  private openList(): void {
+    this.endRename(true, false);
+    const saved = this.opts.saved;
+    const choices: ContextChoice[] = saved.views().flatMap((v) =>
+      v
+        ? [
+            {
+              label: `${v.slot + 1} · ${v.name}`,
+              detail: carriesLine(v),
+              current: v.current,
+              name: `${v.name}: ${carriesLine(v)}${v.current ? `, ${SAVED_TEXT.current}` : ''}`,
+              run: () => this.use(v.slot),
+            },
+          ]
+        : [],
+    );
+    if (saved.hasRoom()) choices.push({ label: SAVED_TEXT.newLoadout, detail: SAVED_TEXT.newNote, run: () => this.create() });
+    const box = this.pick.getBoundingClientRect();
+    this.menu.open(SAVED_TEXT.heading, choices, box.left, box.bottom + 4, this.pick, [box]);
   }
 
-  /** A tab pressed (or its key): carry that loadout, or in an empty slot start a new one and ask its name. */
-  private pick(slot: number): void {
+  /** Carry the loadout in `slot`. */
+  private use(slot: number): void {
+    if (this.opts.saved.use(slot)) this.opts.onSwitch();
+  }
+
+  /** A new loadout, a copy of yours, in the first free slot: carried at once, its name ready to type. */
+  private create(): void {
     const saved = this.opts.saved;
-    if (saved.view(slot)) {
-      if (saved.use(slot)) this.opts.onSwitch();
-      return;
-    }
-    if (!saved.create(slot)) return;
+    const slot = saved.views().findIndex((v) => v === null);
+    if (slot < 0 || !saved.create(slot)) return;
     this.opts.onSwitch();
     this.rename(slot);
   }
 
   private rename(slot: number): void {
     const view = this.opts.saved.view(slot);
-    if (!view) return;
+    if (!view || slot !== this.current()) return;
     this.endRename(true, false);
-    const tab = this.tabs[slot]!;
     this.renaming = slot;
-    tab.input.value = view.name;
-    tab.input.hidden = false;
-    tab.root.classList.add('is-renaming');
-    tab.input.focus({ preventScroll: true });
-    tab.input.select();
+    this.input.value = view.name;
+    this.input.hidden = false;
+    this.root.classList.add('is-renaming');
+    this.input.focus({ preventScroll: true });
+    this.input.select();
   }
 
-  /** Ends the typing: the name kept (`keep`, when it isn't empty) or the old one back; `refocus`: the tab gets the keyboard. */
+  /** Ends the typing: the name kept (`keep`, when it isn't empty) or the old one back; `refocus`: the button gets the keyboard. */
   private endRename(keep: boolean, refocus: boolean): void {
     const slot = this.renaming;
     if (slot === null) return;
     // First, so the blur that hiding the box causes doesn't end it twice.
     this.renaming = null;
-    const tab = this.tabs[slot]!;
-    if (keep) this.opts.saved.rename(slot, tab.input.value);
-    tab.input.hidden = true;
-    tab.root.classList.remove('is-renaming');
+    if (keep) this.opts.saved.rename(slot, this.input.value);
+    this.input.hidden = true;
+    this.root.classList.remove('is-renaming');
     this.update();
-    if (refocus) tab.button.focus({ preventScroll: true });
+    if (refocus) this.pick.focus({ preventScroll: true });
   }
 
-  /** A copy of `slot` in the first free slot, named "… copy" and ready to rename. */
+  /** A copy of `slot` in the first free slot, named "… copy", carried and ready to rename. */
   private duplicate(slot: number): void {
-    const copy = this.opts.saved.duplicate(slot);
+    const saved = this.opts.saved;
+    const copy = saved.duplicate(slot);
     if (copy < 0) return;
-    this.update();
+    if (saved.use(copy)) this.opts.onSwitch();
+    else this.update();
     this.rename(copy);
   }
 
@@ -217,55 +223,22 @@ export class SavedLoadoutsBar {
       if (!saved.remove(slot)) return;
       if (view.current) this.opts.onSwitch();
       else this.update();
-      this.tabs[saved.current()]!.button.focus({ preventScroll: true });
+      this.pick.focus({ preventScroll: true });
     });
   }
 
-  private askReplace(slot: number): void {
-    const saved = this.opts.saved;
-    const view = saved.view(slot);
-    if (!view || view.current) return;
-    this.confirm.ask(SAVED_TEXT.replaceTitle(view.name), SAVED_TEXT.replaceBody(view.name), SAVED_TEXT.replace, () => {
-      if (saved.replace(slot)) this.update();
-      this.tabs[slot]!.button.focus({ preventScroll: true });
-    });
-  }
-
-  /** The tab's menu at (`x`, `y`): what can be done with that slot, clear of its name. */
-  private openMenu(slot: number, x: number, y: number): void {
-    this.endRename(true, false);
-    const saved = this.opts.saved;
-    const view = saved.view(slot);
-    const tab = this.tabs[slot]!;
-    const choices: ContextChoice[] = [];
-    if (!view) choices.push({ label: SAVED_TEXT.newLoadout, run: () => this.pick(slot) });
-    else {
-      if (!view.current) choices.push({ label: SAVED_TEXT.use, run: () => this.pick(slot) });
-      choices.push({ label: SAVED_TEXT.rename, run: () => this.rename(slot) });
-      if (saved.hasRoom()) choices.push({ label: SAVED_TEXT.duplicate, run: () => this.duplicate(slot) });
-      if (!view.current) choices.push({ label: SAVED_TEXT.replace, run: () => this.askReplace(slot) });
-      if (saved.canDelete(slot)) choices.push({ label: SAVED_TEXT.delete, run: () => this.askDelete(slot) });
-    }
-    this.menu.open(view?.name ?? SAVED_TEXT.defaultName(slot + 1), choices, x, y, tab.button, [tab.name.getBoundingClientRect()]);
-  }
-
-  /** The tabs' keys: the Menu key or Shift+F10 opens its menu, F2 renames, Delete deletes, Left and Right move along. */
-  private onTabKey(e: KeyboardEvent, slot: number): void {
+  /** The button's keys: Down opens the list, F2 renames, Delete deletes. */
+  private onPickKey(e: KeyboardEvent): void {
     if (e.repeat) return;
-    const n = this.tabs.length;
-    if (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) {
+    if (e.key === 'ArrowDown') {
       e.preventDefault();
-      const box = this.tabs[slot]!.button.getBoundingClientRect();
-      this.openMenu(slot, box.left + 12, box.bottom - 8);
+      this.openList();
     } else if (e.key === 'F2') {
       e.preventDefault();
-      this.rename(slot);
+      this.rename(this.current());
     } else if (e.key === 'Delete') {
       e.preventDefault();
-      this.askDelete(slot);
-    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-      e.preventDefault();
-      this.tabs[(slot + (e.key === 'ArrowRight' ? 1 : n - 1)) % n]!.button.focus({ preventScroll: true });
+      this.askDelete(this.current());
     }
   }
 }

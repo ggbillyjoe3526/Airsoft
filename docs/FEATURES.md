@@ -31,7 +31,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Replica colour schemes: eight two-tone colours (Cobalt, Signal, Acid, Teal, Hazard, Coral, Onyx, Ghost); rifles Cobalt
   and pistols Ghost until the Customise screen lets players pick one per replica (G1)
 - BBs are real projectiles: visible flight with air physics and drag, travel time, drop, and hop-up lift set by a dial
-  per replica (Phase 1, M9, M12c, M30)
+  per replica, turned mid-match with 4 and 5 (Phase 1, M9, M12c, M30, HD1)
 - BB weight from 0.20 to 0.30 g per replica, with the speed, reach and flight time shown (M17a, M26b)
 - Wind: a light breeze each match drifts BBs downwind; dust in the air drifts with it too (M30)
 - A limited set of magazines each round; a reload swaps in the fullest spare, no topping up (M8)
@@ -163,26 +163,30 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   for good, and the table is in `levels.md` (LV1)
 - Starters: the GBB Pistol and AEG Rifle, with battery and gas, are yours at level 0 (LV1)
 - Your collection is saved apart from the settings (M26a)
-- Armory: your level, XP to the next level, what the next level unlocks, how to earn XP, and every level's items
-  (unlocked, next, locked) (LV1)
+- Armory: your level and XP in a band with the next unlock beside it; every level as a column on a progress line that
+  scrolls sideways (unlocked, next, locked) (LV1, MR1)
 - Locked items show greyed in Loadout and Customise, with the level that unlocks them (LV1)
-- Saved loadouts: five tabs on the Loadout hold whole kits; keys 1 to 5 switch, edits go to the current tab, Disable levelling keeps its own set (SL1)
+- Saved loadouts: five slots in a dropdown on the Loadout hold whole kits, with Rename, Duplicate, New and Delete; keys 1 to 5 switch, edits go to the current slot, Disable levelling keeps its own set (SL1, MR1)
 
 ## Menus and settings
 
 - Menus in a navy and orange look in Inter type (G3, M100): a plain title on navy (wordmark, tagline, START, the Tutorial on a
   clean save), then a top bar of Match, Loadout, Armory and Settings with your level badge at the right;
-  no key strip, every screen works by mouse and the keys still work; Practice is the last mode on the Match screen- Play screen: map and mode picture cards (a Dev tag on maps still being built), the match rows and a Your match panel
-  on one page; no map is loaded until Play (M15, M15b, G3)
-- Title screen, pause, match summary and result screens; the pause screen shows the match's seed for bug reports (M15,
+  no key strip, every screen works by mouse and the keys still work; Practice is the last mode on the Match screen- Match screen: map picture cards (a Dev tag on maps still being built), mode cards as text boxes with their sign, each map
+  offering only its own modes; Match and Teams on the left and House rules on the right, one line each, ruleset-set rules
+  locked as "set by Skirmish", unused rules hidden, one help line at the foot; Your match lists rules as chips with no map
+  picture; no map is loaded until Play (M15, M15b, G3, MR1)
+- Title screen with a Fullscreen button at the bottom left (it reads Exit fullscreen while in fullscreen) and the version at
+  the bottom right (MR1); pause, match summary and result screens; the pause screen shows the match's seed for bug reports (M15,
   M24, BP1, G3)
 - Replica, battery and gas bottle pictures on Loadout, Customise and Armory; Customise lists the parts down the left, Colour first, each option
-  a picture tile beside the replica and its numbers (G3, RM3)
+  a picture tile beside the replica and its numbers; a Back button, no Skins part; Colour offers the bold schemes and four
+  realistic colours (Black, Wolf Grey, Ranger Green, Tan) per replica (G3, RM3, MR1)
 - Error screen on a crash with the seed, a report, a note box, Reload, Copy Report and Report a Bug buttons; Play Again starts a new match with
   its own seed (FA1, IM7)
-- Settings groups: Graphics (quality presets with Custom option, frame-rate limit), Display (fullscreen, field of view,
-  tone mapping, show FPS), Audio, Controls (every action rebindable, mouse buttons and mouse wheel), Gameplay
-  (crosshair, hit marker, HUD), Accessibility, Look (Robots, Realistic colours, Retro), Save file; a search box and a note on every row
+- Settings groups, opening on Display: Display (fullscreen, field of view, tone mapping, show FPS), Graphics (quality presets with
+  Custom option, frame-rate limit), Gameplay (crosshair, hit marker, HUD), Looks (Robots), Audio, Controls (every action rebindable,
+  mouse buttons and mouse wheel), Accessibility, Save file, Dev; a search box and a note on every row
   (M15, M18a, M19, M24, FA2, FA5, G1, G3, M96, M97)
 - Save system: automatic saving in the browser, download to a JSON file, load from file with a side-by-side comparison,
   restore points (one per day), Undo the last load, Delete and start over; warns if storage is blocked or full, or if
@@ -207,10 +211,11 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Ammo and magazine gauges; the empty-magazine hint names your reload key (Phase 1, M8)
 - Ammo counter option (Settings › Gameplay › HUD, On by default): Off hides the BB counts, leaving each spare magazine full or hollow (AC1)
 - Round clock, score, round banners worded from your side (Phase 1)
+- One feed of hits and callouts (top right, or bottom left under Settings › HUD › Feed position), a WON, LOST or DRAW stamp
+  that a click skips past, a smaller replica panel, and a hop-up readout over the ammo panel (HD1, M19, FA9)
 - Hit feed with team colour bars, teammate markers, the scoreboard on Tab, round stats between rounds (M19, FA9)
 - HUD in the menus' look (G4): a score bar with slanted pips, score blocks and the match's aim under the clock; a framed
-  square minimap with the map and round; hit feed rows with a BB mark and a Hit tag; a replica panel with the replica's
-  picture, fire-mode chips and magazine bars; the Tab scoreboard on a navy panel; a "ROUND 1" banner in heavy capitals;
+  square minimap with the map and round; hit feed rows with a BB mark and a Hit tag; the Tab scoreboard on a navy panel; a "ROUND 1" banner in heavy capitals;
   HUD opacity (Settings → Gameplay, 50–100 %, 90 % by default); squad orders on the order wheel only
 - End-of-match summary with your stats and local records (wins, accuracy, streaks) (M19)
 - What got you: after you're hit, a card with the shot's direction and distance, whether the bot held the angle, your
@@ -298,7 +303,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - A practice range, picked as Practice (the last mode) on the Match screen: steel plates that ring, figures that fall, at 10–60 m,
   with a readout of your last BB; figures stand at the same height as match characters; moving targets (sliding figures, a swinging plate, pop-up figures) and an optional Timed challenge with a best score, off by default (M21, FA1, M93)
 - Range in Depot's new look: baked light, post effects, props behind the firing line (portable toilet, replica rack, water tank, generator, crate bench), a sandbag berm at the backstop, dirt, litter, puddles and sprays, and wooded hills, treelines, site huts, a water tower and a power line beyond the walls; chains, bands and brackets on the plates (FA7, M81)
-- A tutorial of fifteen coached steps on the range, with your own key bindings and the real scoreboard and order wheel; finishing opens Tutorial complete with Practice or Menu; skip and resume from pause; Replay tutorial in Settings starts it again at once (M16, FA10, M80, M97)
+- A tutorial of fifteen coached steps on the range, with short cards, your own key bindings and the real scoreboard and order wheel; read-only cards move on after 5–8 s with a bar; no lean step; finishing opens Tutorial complete with Practice or Menu; skip and resume from pause; Replay tutorial in Settings starts it again at once (M16, FA10, M80, M97)
 - Practice on any map: the Range or any map (dev maps with Dev content on), picked on the Match screen's Map cards, never changing the match's map; on a map no bots, and plates, figures, pop-ups, sliders and swingers stand where the other team's bots would play, facing you; minimap and torch at night; the timed challenge has its own best per map, a START plate a few steps ahead, and targets light only once in your sight, within 50 m (M94)
 - In Practice, L opens the Loadout from play to try and customise any replica you own (everything with Disable levelling); Back to practice returns you where you stood (M95)
 

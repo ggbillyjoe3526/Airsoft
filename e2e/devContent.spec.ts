@@ -202,7 +202,7 @@ test('with Dev content off there is no Light row, no torch in the match, and T d
   // Customise's parts are tabs (G3): Optic is offered, Light is not.
   await expect(loadout.getByRole('tab', { name: /^Optic/ })).toBeVisible();
   await expect(loadout.getByRole('tab', { name: /^Light/ })).toHaveCount(0);
-  await loadout.getByRole('button', { name: 'Loadout', exact: true }).click(); // the crumb: back to the gear
+  await loadout.locator('.customise-back').click(); // Back to the gear (MR1)
   await page.locator('.menu-topbar').getByRole('button', { name: 'Match', exact: true }).click();
   await setup.getByRole('button', { name: 'Start match', exact: true }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 20_000 });

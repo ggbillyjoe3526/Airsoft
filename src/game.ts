@@ -9,7 +9,7 @@ import { activeDev, DEV_ACTION_TEXT, DEV_GIFTS, type DevActionId, type DevSettin
 import { PERF_SCRIPT } from './config/perfScript';
 import { ROUNDS } from './config/hits';
 import type { MatchRules, RulesetId } from './config/matchRules';
-import { type CrosshairSettings, type HitFeedMode, hudInsetX, hudScale, scoreboardScale, type WhatGotYouMode } from './config/matchInfo';
+import { type CrosshairSettings, type FeedCorner, type HitFeedMode, hudInsetX, hudScale, scoreboardScale, type WhatGotYouMode } from './config/matchInfo';
 import { MINIMAP } from './config/minimap';
 import { FULLSCREEN_RELOCK_MS, PAUSE_ESC_GUARD_MS } from './config/controls';
 import { HUD_TEXT } from './config/hudText';
@@ -58,7 +58,7 @@ import { type NoXp, settleMatch } from './stats/settleMatch';
 import { adaptedPicks, adaptiveNote, adaptiveSetup, settleAdaptive } from './adaptivePicks';
 import { loadCrosshair } from './ui/crosshair';
 import { loadHitMarker } from './ui/hitMarkerLook';
-import { loadAmmoCounter, loadCallouts, loadMagPrompts, loadMinimapTurn, loadPingMarkers } from './ui/hudSettings';
+import { loadAmmoCounter, loadCallouts, loadFeedCorner, loadMagPrompts, loadMinimapTurn, loadPingMarkers } from './ui/hudSettings';
 import { CrashScreen } from './ui/crashScreen';
 import { DebugOverlay } from './ui/debugOverlay';
 import { onFullscreenChange, relockAfterFullscreen, toggleFullscreen } from './ui/fullscreen';
@@ -293,13 +293,15 @@ export class Game {
   private soundCues = loadSoundCues();
   /** Settings › Look (G1): robots and Realistic colours, for the next match or range visit. */
   private look: LookSettings = loadLook();
-  /** Settings › Look › Retro look (M96; a Dev setting before, carried over once as the game starts). */
+  /** Settings › Dev › Retro look (M96, back on the Dev tab since the Dev 6 playtest; applies while the Dev tab is shown). */
   private retro: RetroSettings;
   /** The sound cues' size and colour (Settings → Accessibility) and the scoreboard's size and hit feed (Settings → HUD), M24. */
   private soundCueSize = loadSoundCueSize();
   private soundCueColour: SoundCueColour = loadSoundCueColour();
   private scoreboardSize = loadScoreboardSize();
   private hitFeedMode: HitFeedMode = loadHitFeedMode();
+  /** Settings → HUD → Feed position (Dev 6 playtest item 32). */
+  private feedCorner: FeedCorner = loadFeedCorner();
   /** Settings → HUD → What got you (M41): the card after a hit; Auto turns it on against Pro opponents only. */
   private whatGotYouMode: WhatGotYouMode = loadWhatGotYouMode();
   /** The HUD's size as picked (Settings → HUD, audit UI-04); the screen's height scales it further (hudScale). */
@@ -414,7 +416,7 @@ export class Game {
     this.scripted = options.scriptedPlayer === true;
     carryOverDevRetro();
     this.retro = loadRetroSettings();
-    this.renderer.setRetro(retroLookOf(this.retro, this.scripted));
+    this.showRetro();
     this.input.crouchMode = loadCrouchMode();
     this.input.aimMode = loadAimMode();
     this.input.sprintMode = loadSprintMode();
@@ -592,14 +594,13 @@ export class Game {
       look: {
         initial: this.look,
         onChange: (look) => ((this.look = look), (this.setupChanged = this.loadoutChanged = true)),
-        // The filter is a screen effect: on, off and its sliders show at once.
-        retro: { initial: this.retro, onChange: (r) => ((this.retro = r), this.renderer.setRetro(retroLookOf(r, this.scripted))) },
       },
       hud: {
         hudSize: { initial: this.hudSize, onChange: (v) => ((this.hudSize = v), this.showHudLook()) },
         scoreboardSize: { initial: this.scoreboardSize, onChange: (v) => ((this.scoreboardSize = v), this.showHudLook()) },
         hudOpacity: { initial: this.hudOpacity, onChange: (v) => ((this.hudOpacity = v), this.showHudLook()) },
         hitFeed: { initial: this.hitFeedMode, onChange: (m) => this.changeHitFeed(m) },
+        feedCorner: { initial: this.feedCorner, onChange: (c) => ((this.feedCorner = c), this.session instanceof MatchSession && this.session.setFeedCorner(c)) },
         whatGotYou: { initial: this.whatGotYouMode, onChange: (m) => this.changeWhatGotYou(m) },
         minimapTurn: { initial: this.minimapTurn, onChange: (t) => ((this.minimapTurn = t), this.session?.setMinimapTurn(t)) },
         callouts: { initial: this.callouts, onChange: (m) => ((this.callouts = m), this.session instanceof MatchSession && this.session.setCallouts(m === 'on')) },
@@ -610,6 +611,8 @@ export class Game {
       dev: {
         initial: this.devPicked,
         enabled: this.devEnabled,
+        // The filter is a screen effect: on, off and its sliders show at once.
+        retro: { initial: this.retro, onChange: (r) => ((this.retro = r), this.showRetro()) },
         onChange: (id, value) => {
           this.devPicked[id] = value;
           this.applyDev();
@@ -617,6 +620,8 @@ export class Game {
         onEnabled: (on) => {
           this.devEnabled = on;
           this.applyDev();
+          // Only a Retro look that is on changes the picture; setRetro rebuilds the post stack, so skip it otherwise.
+          if (this.retro.on) this.showRetro();
         },
         cheating: () => devCheating(this.dev),
         devContent: () => this.dev.devContent,
@@ -977,6 +982,11 @@ export class Game {
     }
   }
 
+  /** The Retro look (Settings › Dev) on screen as saved while the Dev tab is shown, else off. */
+  private showRetro(): void {
+    this.renderer.setRetro(retroLookOf(this.retro, this.scripted, this.devEnabled));
+  }
+
   /**
    * The model files the Dev tab's switches let in now (RM4), fetched if they aren't yet: the menus' pictures are drawn
    * again from them, and the next match or range is built with them (one under way keeps what it was built with).
@@ -1202,6 +1212,7 @@ export class Game {
       this.session.setMotion(motionScale(this.motionReduced()));
       this.session.setSoundCues(this.soundCues);
       this.session.setHitFeedMode(this.hitFeedMode);
+      this.session.setFeedCorner(this.feedCorner);
       this.session.setWhatGotYouMode(this.whatGotYouMode);
       this.session.setHitMarker(this.hitMarker);
       this.session.setMinimapTurn(this.minimapTurn);
@@ -1338,7 +1349,7 @@ export class Game {
       this.menus.showResult(view.headline, view.scoreLine, {
         result: view.result,
         blocks: view.summaryBlocks,
-        records: recordsView(this.records, this.recordNews, s.setup.difficulty, s.mode, s.notCountedReason),
+        records: recordsView(this.records, this.recordNews, s.setup.difficulty, s.mode, s.notCountedReason, s.setup.ruleset),
         xp: this.lastXp,
         noXp: this.noXpReason,
         haul: haulSummary(s.runFinds(), this.lastXp !== null),
@@ -1472,7 +1483,7 @@ export class Game {
       ['Frames', read(() => framesLine(this.frameWindow.summary(), this.simMs, this.drawMs))],
       ['Quality', read(() => this.qualityText())],
       ['Retro pixels', read(() => {
-        const look = retroLookOf(this.retro, this.scripted);
+        const look = retroLookOf(this.retro, this.scripted, this.devEnabled);
         return look ? `${look.pixelSize} px, ${look.levels} levels` : 'off';
       })],
       ['Post', read(() => this.renderer.postPasses.join(' ') || 'none')],

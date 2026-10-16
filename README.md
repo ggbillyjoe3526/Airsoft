@@ -204,8 +204,8 @@ follow (the Replica, Modes, Maps and Progression Updates, and more), up to **1.0
 
 **More.** Plans: [`docs/ROADMAP.md`](docs/ROADMAP.md). How to test: [`docs/PLAYTEST.md`](docs/PLAYTEST.md). Every change
 by release: [`CHANGELOG.md`](CHANGELOG.md) and [`docs/patch-notes/`](docs/patch-notes/). What the game has today:
-[`docs/FEATURES.md`](docs/FEATURES.md). Every change arrives as a pull request that the owner reviews and merges; the
-tagged commits on `main` are the releases.
+[`docs/FEATURES.md`](docs/FEATURES.md). Every change arrives as a pull request, merged once CI and the review agents
+pass; the tagged commits on `main` are the releases.
 
 ---
 
@@ -218,6 +218,7 @@ npm install
 npm run dev                  # development server with hot reload
 npm run t                    # fast unit tests, dots and failures only
 npm run t:all                # all unit tests
+npm run t:changed            # fast tests reached by the files changed since origin/main (fetch it first in a shallow clone)
 npm run check                # unit tests, then type check and production build
 npm run build                # static site in dist/ (relative paths; any static host; see Hosting)
 npm run preview              # serve dist/ locally

@@ -28,7 +28,7 @@ export class TopBar {
   private readonly places = new Map<NavPlace, HTMLButtonElement>();
   private readonly mark: HTMLButtonElement;
   private readonly markText: HTMLSpanElement;
-  /** The level badge (LV1): "Lv 3" over a bar of the XP into the next level. Hidden while levelling is off. */
+  /** The level badge (LV1): "LVL 3" over a bar of the XP into the next level. Hidden while levelling is off. */
   private readonly level: HTMLButtonElement;
   private readonly levelText: HTMLSpanElement;
   private readonly levelBar: HTMLSpanElement;

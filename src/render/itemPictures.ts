@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { ITEM_PICTURE } from '../config/itemPictures';
 import type { ReplicaConfig } from '../config/replicas';
-import type { SchemeId } from '../config/schemes';
+import type { PaintId } from '../config/schemes';
 import { buildReplicaModels, fitLight, fitMuzzle, REPLICA_PART_TABLES, type ReplicaDetail, type ReplicaModel } from './replicaModels';
 import { NO_POWER_SOURCES, type PowerSourceLoader, type PowerSourceModel } from './powerSourceModels';
 import { NO_REPLICA_FILES, type ReplicaFiles } from './replicaFiles';
@@ -25,7 +25,7 @@ const PART_KINDS: readonly string[] = ['optic', 'grip', 'magazine', 'laser', 'ba
  */
 export interface PictureSubject {
   replica: ReplicaConfig;
-  scheme: SchemeId;
+  scheme: PaintId;
   realistic: boolean;
   fit?: PictureFit;
   part?: string;

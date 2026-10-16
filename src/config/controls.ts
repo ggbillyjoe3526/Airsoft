@@ -39,6 +39,13 @@ export const DEFAULT_BINDINGS = {
   slot2: ['Digit2'],
   /** Puts the replica in hand away for the faster sprint (M92, the owner's note 3: 1 primary, 2 secondary, 3 holster). */
   holster: ['Digit3'],
+  /**
+   * Turn the hop-up of the replica in hand a notch down or up in play (Dev 6 playtest item 15): 4 and 5, the free keys
+   * beside the replica keys, within reach of the movement hand; Page Down and Page Up as their second keys. The mouse
+   * wheel binds here too (Settings › Key Bindings).
+   */
+  hopDown: ['Digit4', 'PageDown'],
+  hopUp: ['Digit5', 'PageUp'],
   /** Hold to see the match so far: everyone's hits, BBs fired, accuracy and time alive (M19). */
   scoreboard: ['Tab'],
   /** Mouse buttons are codes too (`Mouse0` left … `Mouse4` the forward side button; see input/keyBindings.ts), so fire and aim rebind like any key (M18). */
@@ -96,6 +103,8 @@ export const REBINDABLE: readonly { action: Action; label: string }[] = [
   { action: 'slot1', label: 'Rifle' },
   { action: 'slot2', label: 'Pistol' },
   { action: 'holster', label: 'Holster' },
+  { action: 'hopDown', label: 'Hop-up: less lift' },
+  { action: 'hopUp', label: 'Hop-up: more lift' },
   { action: 'scoreboard', label: 'Scoreboard (hold)' },
   { action: 'orderWheel', label: 'Squad: order wheel (hold)' },
   { action: 'orderFollow', label: 'Squad: follow me' },
@@ -157,6 +166,10 @@ export const KEY_SETTINGS = {
  */
 export const PAUSE_ESC_GUARD_MS = 400;
 
+/** Fire-selector taps kept for later ticks at most: one full cycle of the longest selector (semi, burst, auto), so
+ * taps made while no command is filled (Dev › Spectate any bot) can't replay as a long run of steps (KI1 QA). */
+export const FIRE_MODE_QUEUE_MAX = 3;
+
 /**
  * Keys whose browser default (page scroll, find bar, Alt opening the menu bar) is suppressed while
  * playing, on key down and up. Any bound key is suppressed too.
@@ -181,27 +194,28 @@ export const PREVENT_DEFAULT_KEYS: ReadonlySet<string> = new Set([
 export type HoldMode = 'toggle' | 'hold';
 
 /**
- * The crouch key: toggle by default (owner's 0.1 Dev 3 playtest). In toggle mode, sprinting or jumping stands you up.
+ * The crouch key: hold by default (William, Dev 6 playtest, 2026-10-16; toggle from the 0.1 Dev 3 playtest until then).
+ * In toggle mode, sprinting or jumping stands you up. The default is listed first.
  */
 export type CrouchMode = HoldMode;
 
 export const CROUCH_MODES: readonly { id: CrouchMode; label: string; blurb: string }[] = [
-  { id: 'toggle', label: 'Toggle', blurb: 'Press crouch to go down, press again to stand. Sprint or jump also stands you up.' },
   { id: 'hold', label: 'Hold', blurb: 'Crouch while the key is held.' },
+  { id: 'toggle', label: 'Toggle', blurb: 'Press crouch to go down, press again to stand. Sprint or jump also stands you up.' },
 ];
 
-export const DEFAULT_CROUCH_MODE: CrouchMode = 'toggle';
+export const DEFAULT_CROUCH_MODE: CrouchMode = 'hold';
 
 /**
- * The aim button: hold by default, as before M18. In toggle mode, sprinting, switching replicas or holstering lowers the
- * sight.
+ * The aim button: toggle by default (William, Dev 6 playtest, 2026-10-16; hold until then). In toggle mode, sprinting,
+ * switching replicas or holstering lowers the sight. The default is listed first.
  */
 export const AIM_MODES: readonly { id: HoldMode; label: string; blurb: string }[] = [
-  { id: 'hold', label: 'Hold', blurb: 'Aim while the button is held.' },
   { id: 'toggle', label: 'Toggle', blurb: 'Press aim to raise the sight, press again to lower it. Sprinting, switching replicas or holstering lowers it too.' },
+  { id: 'hold', label: 'Hold', blurb: 'Aim while the button is held.' },
 ];
 
-export const DEFAULT_AIM_MODE: HoldMode = 'hold';
+export const DEFAULT_AIM_MODE: HoldMode = 'toggle';
 
 /** The sprint key: hold by default, as before M18. A toggled sprint stops when you let go of forward, or crouch, aim, walk or fire. */
 export const SPRINT_MODES: readonly { id: HoldMode; label: string; blurb: string }[] = [

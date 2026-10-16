@@ -1,14 +1,14 @@
 /*
- * The Armory (LV1): your level and how XP is earned, what the next level unlocks, and every level from the starting
- * kit to the cap.
+ * The Armory (LV1; across since MR1): your level, the XP into the next and how XP is earned in a band across the top
+ * with the next unlock beside it, then every level from the starting kit to the cap as columns on a progress line.
  */
 
-/* Your level and the next unlock on the left, one over the other; the level track beside them. */
+/* The band and the next unlock across the top; the level track under them, the page's width. */
 .armory-columns {
   display: grid;
-  grid-template-columns: clamp(300px, 26vw, 480px) minmax(0, 1fr);
-  gap: clamp(16px, 1.6vw, 32px);
-  align-items: start;
+  grid-template-columns: minmax(0, 1fr) clamp(320px, 24vw, 480px);
+  gap: var(--sp-4) clamp(16px, 1.6vw, 32px);
+  align-items: stretch;
 }
 
 .armory-left {
@@ -17,13 +17,13 @@
 }
 
 .armory-next {
-  grid-column: 1;
-  grid-row: 2;
+  grid-column: 2;
+  grid-row: 1;
 }
 
 .armory-track {
-  grid-column: 2;
-  grid-row: 1 / span 2;
+  grid-column: 1 / -1;
+  grid-row: 2;
 }
 
 .armory-left,
@@ -33,7 +33,16 @@
   flex-direction: column;
   gap: var(--sp-3);
   min-width: 0;
-  padding: var(--sp-5);
+  padding: var(--sp-4) var(--sp-5);
+}
+
+/* The band: the heading small over your level at the left, the XP line, the bar and how XP is earned beside it. */
+.armory-left > .menu-heading {
+  margin: 0;
+  font: 700 var(--fs-sm) / 1.2 var(--ui-display);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  color: var(--menu-muted);
 }
 
 /* The heading takes the focus as the screen opens (nothing here is a control); it is not a stop to draw. */
@@ -41,34 +50,40 @@
   outline: none;
 }
 
+/* Your level at the left; the XP into the next and what's left on one line, the bar under them, at the right. */
 .armory-standing {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px clamp(20px, 2.4vw, 48px);
 }
 
-/* "LV 3" large, "of 10" after it. */
+/* "Level 3" large, "of 10" after it. */
 .armory-level {
+  grid-column: 1;
+  grid-row: 1 / span 3;
   display: flex;
   align-items: baseline;
-  gap: 10px;
-  margin: var(--sp-2) 0 0;
+  gap: 8px;
+  margin: 2px 0 0;
 }
 
 .armory-level-n {
-  font: 800 clamp(44px, 3.4vw, 64px) / 1 var(--ui-display);
+  font: 800 clamp(36px, 2.8vw, 54px) / 1 var(--ui-display);
   letter-spacing: 0.02em;
   text-transform: uppercase;
   color: var(--orange-text);
 }
 
 .armory-level-cap {
-  font-size: var(--fs-xl);
+  font-size: var(--fs-lg);
   color: var(--menu-muted);
 }
 
 .armory-standing .armory-xp {
-  height: 10px;
+  grid-column: 2 / -1;
+  grid-row: 2;
+  height: 8px;
 }
 
 .armory-xp-line,
@@ -76,12 +91,21 @@
 .armory-total,
 .armory-off {
   margin: 0;
+  font-size: var(--fs-sm);
   font-variant-numeric: tabular-nums;
 }
 
 .armory-xp-line {
-  font-size: var(--fs-lg);
+  grid-column: 2;
+  grid-row: 1;
   font-weight: 700;
+}
+
+/* What's left to the next level at the right of the XP line, over the bar's end. */
+.armory-to-next {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
 }
 
 .armory-to-next,
@@ -89,19 +113,25 @@
   color: var(--menu-soft);
 }
 
-.armory-off {
-  padding: 8px 12px;
-  border-left: 4px solid var(--menu-blue);
+.armory-total {
+  grid-column: 2 / -1;
+  grid-row: 3;
+  color: var(--menu-muted);
 }
 
-/* How XP is earned: a short list from levels.md's numbers, then the difficulties' multipliers. */
+.armory-off {
+  grid-column: 2 / -1;
+  padding: 6px 10px;
+  border-left: 3px solid var(--menu-blue);
+}
+
+/* How XP is earned: levels.md's numbers as chips, then the difficulties' multipliers and that practice gives none. */
 .armory-earn {
   display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-  margin-top: var(--sp-2);
-  padding-top: var(--sp-4);
-  border-top: 1px solid var(--menu-line-soft);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px var(--sp-3);
+  margin-top: var(--sp-1);
 }
 
 .armory-earn > .menu-kicker {
@@ -110,8 +140,8 @@
 
 .armory-earn-list {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  flex-wrap: wrap;
+  gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -119,16 +149,24 @@
 }
 
 .armory-earn-list li {
-  padding-left: 10px;
+  padding: 3px 8px;
+  font-size: var(--fs-sm);
+  background: rgba(7, 13, 31, 0.55);
+  border: 1px solid var(--menu-line-soft);
   border-left: 3px solid var(--orange);
 }
 
 .armory-earn-note {
   margin: 0;
-  color: var(--menu-soft);
+  font-size: var(--fs-sm);
+  color: var(--menu-muted);
 }
 
-/* The next unlock: its level as an orange tag, then each item as a big card. */
+/* The next unlock: its level as an orange tag, then each item as a card. */
+.armory-next {
+  border-color: rgba(255, 107, 26, 0.55);
+}
+
 .armory-next-head,
 .armory-track-head {
   display: flex;
@@ -141,21 +179,29 @@
 .armory-next-head .menu-panel-title,
 .armory-track-head .menu-panel-title {
   margin: 0;
+  font: 700 var(--fs-sm) / 1.2 var(--ui-display);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  color: var(--orange-text);
+}
+
+.armory-track-head .menu-panel-title {
+  color: var(--paper);
 }
 
 .armory-next-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-  gap: var(--sp-3);
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: var(--sp-2);
 }
 
 .armory-next-item,
 .armory-item {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
-  padding: 8px 10px 10px;
+  padding: 6px 10px 8px;
   background: rgba(7, 13, 31, 0.55);
   border: 1px solid var(--menu-line-soft);
 }
@@ -166,12 +212,12 @@
 
 .armory-next-item > .pic-slot {
   width: 100%;
-  height: 96px;
+  height: 64px;
 }
 
 .armory-item > .pic-slot {
   width: 100%;
-  height: 56px;
+  height: 72px;
 }
 
 .armory-item-words {
@@ -180,63 +226,133 @@
   gap: 2px;
 }
 
+.armory-item-words .item-name {
+  font: 800 var(--fs-sm) / 1.15 var(--ui-display);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+}
+
 .armory-next-none {
   margin: 0;
+  font-size: var(--fs-sm);
   color: var(--menu-soft);
 }
 
 .armory-count {
-  font-size: var(--fs-lg);
+  font-size: var(--fs-sm);
   color: var(--menu-muted);
 }
 
-/* The level track: a row per level, the starting kit first; reached ones lit, the next edged in orange. */
+/* The level track: a column per level along a progress line, the starting kit first; a diamond on the line for each,
+   orange where reached, outlined at the next. It scrolls sideways, fading out at the right while there is more. */
+.armory-track-body {
+  position: relative;
+}
+
 .armory-levels {
   display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--sp-3);
   margin: 0;
-  padding: 0;
+  padding: 0 0 var(--sp-2);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
   list-style: none;
 }
 
+.armory-levels:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+}
+
+.armory-track-body.has-more .armory-levels {
+  mask-image: linear-gradient(90deg, #000 calc(100% - 80px), transparent);
+}
+
 .armory-level-row {
-  display: grid;
-  grid-template-columns: clamp(130px, 9vw, 170px) minmax(0, 1fr);
-  gap: var(--sp-3);
-  align-items: center;
-  padding: 10px 12px;
+  position: relative;
+  display: flex;
+  flex: 0 0 clamp(190px, 11.2vw, 220px);
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: 34px 12px 12px;
   background: rgba(14, 24, 52, 0.92);
   border: 1px solid var(--menu-line-soft);
-  border-left: 4px solid var(--menu-line);
+  border-left: 1px solid var(--menu-line-soft);
+  scroll-snap-align: start;
+}
+
+/* The progress line through the column's top and its diamond at the left. */
+.armory-level-row::before,
+.armory-level-row::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+}
+
+.armory-level-row::before {
+  top: 14px;
+  left: 0;
+  right: calc(-1 * var(--sp-3) - 1px);
+  height: 2px;
+  background: var(--menu-line);
+}
+
+.armory-level-row::after {
+  top: 9px;
+  left: 10px;
+  width: 10px;
+  height: 10px;
+  background: var(--menu-line);
+  transform: rotate(45deg);
 }
 
 .armory-level-row[data-state='unlocked'] {
   border-left-color: var(--menu-good);
 }
 
+.armory-level-row[data-state='unlocked']::before,
+.armory-level-row[data-state='unlocked']::after {
+  background: var(--orange);
+}
+
 .armory-level-row[data-state='next'] {
   border-color: var(--orange);
   border-left-color: var(--orange);
+  box-shadow: inset 0 3px 0 var(--orange);
+}
+
+.armory-level-row[data-state='next']::after {
+  background: var(--menu-bg);
+  box-shadow: 0 0 0 2px var(--orange);
+}
+
+.armory-level-row:last-child::before {
+  right: 0;
 }
 
 .armory-level-row[data-state='locked'] {
   background: rgba(7, 13, 31, 0.55);
 }
 
-.armory-level-row[data-state='locked'] .armory-item > .pic-slot {
+/* An item you already have stays in colour on a level still ahead (levels.md moved it up, KI1). */
+.armory-level-row[data-state='locked'] .armory-item:not([data-owned]) > .pic-slot {
   opacity: 0.45;
   filter: grayscale(1);
 }
 
 .armory-level-head {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 2px var(--sp-2);
 }
 
 .armory-level-name {
-  font: 800 var(--fs-xl) / 1.05 var(--ui-display);
+  font: 800 var(--fs-md) / 1.1 var(--ui-display);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -248,6 +364,7 @@
 }
 
 .armory-level-state {
+  grid-column: 1 / -1;
   font: 700 var(--fs-sm) / 1.2 var(--ui-display);
   letter-spacing: var(--ls-wide);
   text-transform: uppercase;
@@ -263,11 +380,43 @@
 }
 
 .armory-level-items {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: var(--sp-2);
 }
 
 .armory-level-empty {
-  align-self: center;
+  font-size: var(--fs-sm);
+}
+
+/* The arrows at the track's ends, for the mouse; each shows while there is more that way. */
+.armory-scroll {
+  position: absolute;
+  top: 120px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: var(--control-md);
+  height: 64px;
+  color: var(--paper);
+  background: rgba(22, 35, 74, 0.94);
+  border: 1px solid var(--menu-line);
+  cursor: pointer;
+}
+
+.armory-scroll:hover {
+  border-color: var(--orange);
+}
+
+.armory-scroll-back {
+  left: -8px;
+}
+
+.armory-scroll-on {
+  right: -8px;
+}
+
+.armory-scroll svg.icon {
+  width: 20px;
+  height: 20px;
 }

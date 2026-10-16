@@ -9,7 +9,8 @@ import type { ReplicaConfig } from './replicas';
  * until then rifles stay Cobalt and pistols Ghost); bots carry their team's.
  *
  * The Realistic colours setting swaps each bold scheme for one plain family (black, wolf grey, ranger green or tan),
- * never mixed on one replica. Colours are sRGB hex.
+ * never mixed on one replica. The player can also pick a plain family for one replica in Customise (MR1, owner
+ * 2026-10-16): a replica's paint is a scheme or a family (PaintId). Colours are sRGB hex.
  */
 export interface Scheme {
   /** The name shown in Customise. */
@@ -54,6 +55,12 @@ export const FAMILIES: Readonly<Record<FamilyId, Scheme>> = {
   ranger: { name: 'Ranger green', body: 0x4a5439, furniture: 0x5a6645, detail: 0x434c34, accent: 0x6c7856, steel: 0x3f4536, family: 'ranger' },
   tan: { name: 'Tan', body: 0xb49668, furniture: 0xc9ab79, detail: 0x564a39, accent: 0x8c7250, steel: 0x45433f, family: 'tan' },
 };
+
+/** The plain families in the order Customise lists them (MR1). Ids are save keys: never rename one. */
+export const FAMILY_IDS: readonly FamilyId[] = ['black', 'grey', 'ranger', 'tan'];
+
+/** What a player's replica is painted in (MR1): a bold scheme, or one plain family picked as it is. */
+export type PaintId = SchemeId | FamilyId;
 
 /** The schemes in the order Customise lists them. */
 export const SCHEME_IDS: readonly SchemeId[] = ['cobalt', 'signal', 'acid', 'teal', 'hazard', 'coral', 'onyx', 'ghost'];
@@ -117,8 +124,23 @@ export function isSchemeId(raw: unknown): raw is SchemeId {
   return typeof raw === 'string' && (SCHEME_IDS as readonly string[]).includes(raw);
 }
 
-/** How each replica of a loadout is painted: its scheme by slot, and the Realistic colours setting. */
+/** True for a saved value that is one of the four plain families (MR1). */
+export function isFamilyId(raw: unknown): raw is FamilyId {
+  return typeof raw === 'string' && (FAMILY_IDS as readonly string[]).includes(raw);
+}
+
+/** The colours a replica's paint is drawn in: a family as it is, a scheme as schemeColours draws it. */
+export function paintColours(id: PaintId, realistic: boolean): Scheme {
+  return isFamilyId(id) ? FAMILIES[id] : schemeColours(id, realistic);
+}
+
+/** A paint's name as Customise shows it: a family's, or a scheme's (its family's under Realistic colours). */
+export function paintName(id: PaintId, realistic: boolean): string {
+  return paintColours(id, realistic).name;
+}
+
+/** How each replica of a loadout is painted: its paint by slot, and the Realistic colours setting. */
 export interface ReplicaPaint {
-  schemes: readonly SchemeId[];
+  schemes: readonly PaintId[];
   realistic: boolean;
 }

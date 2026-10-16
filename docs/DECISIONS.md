@@ -90,9 +90,9 @@ replaces its line; the old one stays findable in the archive or in git.
 ## How work runs
 
 - **Every change is a pull request from a new branch made from the latest `main`; never push to `main` (owner,
-  2026-10-02).** A pull request built through the pipeline is merged by its own thread once CI is green and the critic
-  accepted (owner, 2026-10-04: "Claude merges"); so are docs-only pull requests (owner, 2026-10-06: "just you handle
-  it"). Any other pull request waits for the owner.
+  2026-10-02).** Every pull request is merged by its own thread, code included: once CI is green and
+  the review agents passed, or once CI is green for docs-only (owner, 2026-10-16: "You should be merging. Not me";
+  before, 2026-10-04 and 2026-10-06, only pipeline and docs pull requests). The owner doesn't merge.
 - **When unsure about a design decision, ask the owner first; for a small, easy-to-change detail, pick a default and
   record it with a one-line reason (owner, 2026-10-02).** The record is the task's own, `docs/records/<id>.md`. A check
   that can only pass by changing an acceptance criterion goes to the owner at once (owner, 2026-10-06).
@@ -212,7 +212,8 @@ replaces its line; the old one stays findable in the archive or in git.
 - **Torches cast shadows on High and Ultra only; Low keeps today's beams (owner, 2026-10-06).** Keeps Low's 60 fps; an
   exception to the graphics plan's shadow-light limit on the higher presets (M91).
 - **The Retro look goes public as soon as possible, not in 0.5 (owner, 2026-10-06).** He tested the Dev-tab "Retro
-  pixels" filter and is happy with it. It changes only the picture, on every map and the range.
+  pixels" filter and is happy with it. It changes only the picture, on every map and the range. Back on the Dev tab
+  since the Dev 6 playtest (owner, 2026-10-16; ST1, Menus below).
 - **What you see is what stops you and your BBs (owner rule, 2026-10-05).** Art never strays more than 8 cm from its
   collision block (`NATURE_SHAPES.maxGap`), so trunks are straight posts, not tapered. Detail is drawn inside each
   block's own bounds, and sloping ground is one heightfield shared by physics, BB rays, nav and the mesh (2026-10-04).
@@ -730,6 +731,12 @@ replaces its line; the old one stays findable in the archive or in git.
 
 ## Menus, HUD, settings and accessibility
 
+- **Settings after the Dev 6 playtest (owner, 2026-10-16; ST1).** The groups run Display, Graphics, Gameplay, Looks,
+  Audio, Controls, Accessibility, Save file, Dev, and Settings opens on Display. New defaults: sound cues red,
+  scoreboard 100 %, aim Toggle, crouch Hold, volumes master 100 %, effects 80 %, power source 100 %, ambience 60 %,
+  interface 50 %; a save that picked otherwise keeps its pick. The Retro look is a Dev setting again (it shows only
+  while the Dev box is ticked), Realistic colours leaves Settings for the Loadout's Colour tab (MR1), and the Voices
+  (hit calls) placeholder is gone. The top bar's level reads "LVL 3".
 - **The menu and UI redesign is approved (owner, 2026-10-05, 21:35); the HUD is restyled in place, with the same
   positions.**
 - **The menus use Inter instead of Barlow (owner, 2026-10-07).** He finds Barlow hard to read, numbers above all; Inter
@@ -788,6 +795,10 @@ replaces its line; the old one stays findable in the archive or in git.
 - **The hit marker is a bold red X with its own settings, still off by default (owner, 2026-10-13, Dev 5 playtest
   note 4).** Settings › Gameplay › Crosshair: on or off, scale, thickness, outline and colour (red unless changed; blue
   and orange left out as the teams'). Whether it starts on is his call.
+- **The menus are compact, to concepts the owner approved (owner, 2026-10-16, Dev 6 playtest items 9 to 21; MR1).**
+  Match, Loadout, Customise and the Armory use the 15 px step for small text and 32 to 40 px controls; the top bar and
+  Settings keep their sizes. A mode is offered only on a map that hosts it, and a rule the mode doesn't read is hidden.
+  The realistic colours are picked per replica in Customise › Colour. Saved loadouts are a dropdown.
 - **Another UI redesign is planned for later, its version not set (owner, 2026-10-13).** Maybe a future Dev release,
   maybe after 1.0; parked in `docs/IDEAS.md` until he places it, with no redesign work before.
 - **A Visual redesign, an Audio redesign and a Performance update are also planned for later, their versions not set

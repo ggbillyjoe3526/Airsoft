@@ -24,7 +24,8 @@ meshes. The format, coordinates and Extraction block are in `docs/ARCHITECTURE.m
   targets stand on a map, from the map's lanes, starts and overlooks) and `practiceLayout.ts` (which of the range's kinds
   stands at each, and the timed challenge's START plate; tuning `config/practice.ts`).
 - `lightingChoice.ts` (the Day | Night pick, saved as `lighting.<map id>`), `nightSight.ts` and `torchLight.ts` (what
-  bots make out in the dark), `bakes/` (baked light probe files, written by `node pipeline/bake-light.mjs`).
+  bots make out in the dark), `bakes/` (baked light probe files, written by `node pipeline/bake-light.mjs`, each loaded through
+  `bakes/files.ts` in a chunk of its own).
 - Tuning: `config/materials.ts` (block materials), `config/range.ts`, `config/practice.ts`, `config/bake.ts`,
   `config/dressing.ts`.
 - Tests: one file per map; the rules every map keeps (on the floor, ramps, blocks, team colours, sightlines, walk

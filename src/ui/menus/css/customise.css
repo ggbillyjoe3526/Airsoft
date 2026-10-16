@@ -2,14 +2,26 @@
  * Customise (G3): the parts down the left, the replica large in the middle with its options, the colour schemes.
  */
 
-/* Customise: the parts down the left, the replica large in the middle with its options under it, its numbers right. */
-.customise-crumbs {
+/* Customise (MR1): Back and where you are across the top; the parts down the left, the replica large in the middle
+   with its options under it, its numbers right. */
+.customise-bar {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--sp-5);
   margin: 0 0 var(--sp-4);
-  font: 600 var(--fs-md) / 1 var(--ui-display);
-  letter-spacing: 0.14em;
+}
+
+.customise-back.menu-button {
+  min-height: var(--control-md);
+  padding: 0 var(--sp-4);
+  font-size: var(--fs-sm);
+  letter-spacing: var(--ls-wide);
+}
+
+.customise-crumbs {
+  margin: 0;
+  font: 600 var(--fs-sm) / 1 var(--ui-display);
+  letter-spacing: var(--ls-wide);
   text-transform: uppercase;
   color: var(--menu-faint);
 }
@@ -18,24 +30,9 @@
   color: var(--orange-text);
 }
 
-.customise-crumb {
-  padding: 4px 0;
-  font: inherit;
-  letter-spacing: inherit;
-  text-transform: inherit;
-  color: var(--menu-muted);
-  background: none;
-  border: 0;
-  cursor: pointer;
-}
-
-.customise-crumb:hover {
-  color: var(--paper);
-}
-
 .customise-layout {
   display: grid;
-  grid-template-columns: clamp(260px, 21vw, 400px) minmax(0, 1fr) clamp(280px, 21vw, 400px);
+  grid-template-columns: clamp(240px, 16vw, 320px) minmax(0, 1fr) clamp(280px, 20vw, 380px);
   gap: clamp(16px, 1.4vw, 28px);
   align-items: start;
 }
@@ -51,8 +48,8 @@
   display: flex;
   align-items: center;
   gap: var(--sp-3);
-  min-height: 60px;
-  padding: 6px;
+  min-height: 54px;
+  padding: 4px 6px;
   font: inherit;
   color: var(--paper);
   text-align: left;
@@ -160,7 +157,8 @@
 
 .customise-title {
   margin: 0;
-  font-size: clamp(44px, 3.6vw, 68px);
+  font-size: clamp(34px, 2.6vw, 50px);
+  text-transform: uppercase;
   font-weight: 800;
   line-height: 0.95;
   letter-spacing: 0.02em;
@@ -168,13 +166,13 @@
 
 .customise-line {
   margin: 0;
-  font-size: var(--fs-lg);
+  font-size: var(--fs-md);
 }
 
 .customise-summary {
   margin: 0;
   max-width: 48em;
-  font-size: var(--fs-md);
+  font-size: var(--fs-sm);
   color: var(--menu-muted);
 }
 
@@ -199,15 +197,15 @@
 
 .customise-panel-title {
   margin: 0;
-  font: 800 clamp(22px, 1.6vw, 30px) / 1 var(--ui-display);
-  letter-spacing: 0.05em;
+  font: 800 var(--fs-lg) / 1 var(--ui-display);
+  letter-spacing: var(--ls-wide);
   text-transform: uppercase;
 }
 
 .customise-panel-note,
 .customise-later {
   margin: 0;
-  font-size: var(--fs-md);
+  font-size: var(--fs-sm);
   color: var(--menu-muted);
 }
 
@@ -221,12 +219,81 @@
 }
 
 /* Options and colour schemes as picture tiles. */
-.option-grid,
+.option-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: var(--sp-2);
+  width: 100%;
+}
+
+/* The colours (MR1): Bold, then Realistic, a row of small tiles each with its line beside the title. */
+.colour-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.colour-group-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px var(--sp-3);
+}
+
+.colour-group-title {
+  margin: 0;
+  font: 800 var(--fs-sm) / 1.2 var(--ui-display);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+}
+
+.colour-group-note {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--menu-muted);
+}
+
 .scheme-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: var(--sp-3);
+  grid-template-columns: repeat(auto-fill, minmax(124px, 1fr));
+  gap: var(--sp-2);
   width: 100%;
+}
+
+.scheme-grid .option-tile {
+  min-height: 0;
+  padding: var(--sp-2) 10px;
+}
+
+.scheme-grid .option-tile > .pic-slot {
+  min-height: 0;
+  margin: calc(-1 * var(--sp-2)) -10px 2px;
+}
+
+.scheme-grid .option-name {
+  font: 800 var(--fs-sm) / 1.15 var(--ui-display);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+}
+
+/* Room for a name on two lines (Ranger Green) in every tile, so the rows keep one height. */
+.scheme-grid .option-words {
+  justify-content: flex-end;
+  min-height: 2.3em;
+  padding-right: 24px;
+}
+
+/* The tick by the name, clear of the picture (M99). */
+.scheme-grid .option-tick {
+  right: 6px;
+  bottom: 8px;
+  width: 20px;
+  height: 20px;
+}
+
+.scheme-grid .option-tick svg.icon {
+  width: 12px;
+  height: 12px;
 }
 
 .option-tile {
@@ -251,7 +318,7 @@
 
 .option-tile.selected {
   border: 2px solid var(--orange);
-  box-shadow: 0 0 0 4px rgba(255, 107, 26, 0.22);
+  box-shadow: 0 0 0 3px rgba(255, 107, 26, 0.22);
 }
 
 /* In the tile's flow above its words, as the item tiles (M99): the whole picture, clear of the name and the tick. */
@@ -347,7 +414,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--sp-2);
-  padding: var(--sp-5);
+  padding: var(--sp-4) var(--sp-5);
 }
 
 .colour-applies {
@@ -359,73 +426,41 @@
 
 .colour-note {
   margin: 0;
-  font-size: var(--fs-md);
+  font-size: var(--fs-sm);
   line-height: 1.45;
   color: var(--menu-soft);
 }
 
-.colour-other {
-  aspect-ratio: 2 / 1;
-  background: none;
+/* The other replica carried, in its own colour: a small picture with its name and colour beside it. */
+.colour-other-card {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-top: var(--sp-1);
+  padding: var(--sp-2);
+  background: rgba(7, 13, 31, 0.5);
   border: 1px solid var(--menu-line-soft);
 }
 
-.colour-real-head {
+.colour-other {
+  flex: none;
+  width: 104px;
+  aspect-ratio: 2 / 1;
+  background: none;
+}
+
+.colour-other-words {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: var(--sp-3);
-  padding-top: var(--sp-3);
-  border-top: 1px solid var(--menu-line-soft);
-}
-
-.colour-real-title {
-  margin: 0;
-  font-size: var(--fs-xl);
-  font-weight: 800;
-  letter-spacing: 0.05em;
-}
-
-.colour-real-state {
-  font: 700 var(--fs-md) / 1 var(--ui-display);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: var(--fs-sm);
   color: var(--menu-muted);
 }
 
-.colour-real-state.on {
-  color: var(--menu-acid);
-}
-
-.family-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--sp-2);
-}
-
-.family-tile {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  min-height: 90px;
-  padding: 8px 10px;
-  border: 1px solid var(--menu-line-soft);
-}
-
-.family-tile.selected {
-  border-color: var(--orange);
-}
-
-/* The replica in this colour family, whole, above its name (M99). */
-.family-tile .pic-slot {
-  flex: 1 0 auto;
-  aspect-ratio: 2 / 1;
-  margin: -8px -10px 2px;
-  background: none;
-}
-
-.family-tile .option-name {
-  position: relative;
-  font-size: var(--fs-md);
+.colour-other-words b {
+  font: 800 var(--fs-sm) / 1.2 var(--ui-display);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  color: var(--paper);
 }

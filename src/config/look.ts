@@ -1,8 +1,9 @@
 import type { RetroLook } from './render';
 
 /**
- * Settings › Look (graphics overhaul G1; William, 5 October 2026): who the players are drawn as, and how their replicas
- * are coloured. Presentation only: neither changes a hit, a sight line or a sound.
+ * Settings › Looks (graphics overhaul G1; William, 5 October 2026): who the players are drawn as. How their replicas are
+ * coloured is saved here too, though its row left Settings (William, Dev 6 playtest, 2026-10-16: it belongs on the
+ * Loadout's colour tab). Presentation only: neither changes a hit, a sight line or a sound.
  */
 
 /** Robots: on, each match mixes humans and robots on both teams; off, every figure is human. */
@@ -33,9 +34,10 @@ export interface LookSettings {
 export const DEFAULT_LOOK: LookSettings = { robots: DEFAULT_ROBOTS, realisticColours: DEFAULT_REALISTIC_COLOURS };
 
 /**
- * The Retro look (M42's pixel filter, render/retroFilter.ts; public since M96, owner 2026-10-06: "I've tested it and I'm
- * happy with it"): the 3D view in chunky pixels and a small dithered palette, the HUD and menus left sharp. Unlike the
- * rows above it shows at once, in the menus' backdrop of a match and in play. Presentation only.
+ * The Retro look (M42's pixel filter, render/retroFilter.ts): the 3D view in chunky pixels and a small dithered palette,
+ * the HUD and menus left sharp. Public on Settings › Look from M96 (owner, 2026-10-06); back on the Dev tab since the
+ * Dev 6 playtest (William, 2026-10-16), so like every Dev setting it shows only while the Dev settings box is ticked.
+ * It shows at once, in the menus' backdrop of a match and in play. Presentation only.
  */
 export const RETRO_LOOK_CHOICES: readonly { id: 'on' | 'off'; label: string; blurb: string }[] = [
   { id: 'off', label: 'Off', blurb: '' },
@@ -58,7 +60,10 @@ export const DEFAULT_RETRO: Readonly<RetroSettings> = { on: false, pixelSize: RE
 export const retroPixelText = (v: number): string => `${v} px`;
 export const retroColoursText = (v: number): string => String(v ** 3);
 
-/** The retro filter's look while the Retro look is on, else null. `scripted`: the perf harness, which always runs without it. */
-export function retroLookOf(r: RetroSettings, scripted: boolean): RetroLook | null {
-  return r.on && !scripted ? { pixelSize: r.pixelSize, levels: r.colours } : null;
+/**
+ * The retro filter's look while the Retro look is on and the Dev tab shown (`devShown`), else null. `scripted`: the perf
+ * harness, which always runs without it.
+ */
+export function retroLookOf(r: RetroSettings, scripted: boolean, devShown: boolean): RetroLook | null {
+  return r.on && devShown && !scripted ? { pixelSize: r.pixelSize, levels: r.colours } : null;
 }

@@ -77,6 +77,11 @@ export class OptionPicker<T extends string> {
     this.refresh();
   }
 
+  /** The picked option's line (the Match panel's help line reads it, MR1). */
+  get blurbText(): string {
+    return this.blurb.textContent ?? '';
+  }
+
   /** A swatch of each option's colour in front of its button (the crosshair's colours, the sound cues'). */
   addSwatches(colours: readonly { css: string }[]): void {
     let i = 0;

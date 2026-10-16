@@ -1,5 +1,5 @@
 /**
- * Callouts (CL1): how the bots' calls are read off what they do (ai/callouts.ts) and how they show (ui/calloutFeed.ts,
+ * Callouts (CL1): how the bots' calls are read off what they do (ai/callouts.ts) and how they show (ui/hitFeed.ts, the match feed,
  * audio/sfx.ts radioCall). What they say and how often is callouts.md, the owner's to edit.
  */
 export const CALLOUTS = {
@@ -26,7 +26,7 @@ export type CalloutsMode = 'on' | 'off';
 
 export const CALLOUT_CHOICES: readonly { id: CalloutsMode; label: string; blurb: string }[] = [
   { id: 'off', label: 'Off', blurb: 'No calls and no radio clicks. Your orders are still answered.' },
-  { id: 'on', label: 'On', blurb: `Your teammates' calls, bottom left, with a radio click from where each one stands; enemies close by are heard keying their radios.` },
+  { id: 'on', label: 'On', blurb: `Your teammates' calls in the feed, with a radio click from where each one stands; enemies close by are heard keying their radios.` },
 ];
 
 export const DEFAULT_CALLOUTS: CalloutsMode = 'on';

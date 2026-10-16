@@ -3,6 +3,7 @@ import { TUTORIAL, TUTORIAL_STEPS } from './config/tutorial';
 import { LOADOUT } from './config/replicas';
 import { EventLog } from './core/eventLog';
 import { RangeSession } from './rangeSession';
+import { createBBPool } from './sim/ballistics';
 import { createCharacter } from './sim/character';
 import { createChallenge } from './sim/rangeChallenge';
 import { createRangeTargets } from './sim/rangeTargets';
@@ -18,7 +19,7 @@ const DT = 1 / 60;
 function bare(from?: number | string) {
   const player = createCharacter(0, vec3(0, 0, 2), 0, LOADOUT, 0);
   const t = new TutorialTracker(TUTORIAL_STEPS, true, from);
-  const coach = { show: vi.fn(), setVisible: vi.fn(), setShot: vi.fn() };
+  const coach = { show: vi.fn(), setVisible: vi.fn(), setShot: vi.fn(), setReadProgress: vi.fn() };
   const showcase = { set: vi.fn(), setVisible: vi.fn() };
   const s = Object.create(RangeSession.prototype) as Record<string, unknown> & RangeSession;
   Object.assign(s, {
@@ -29,7 +30,7 @@ function bare(from?: number | string) {
     combat: { afterTick: vi.fn() },
     targets: { afterTick: vi.fn() },
     eventLog: new EventLog(),
-    state: { tick: 0, events: [], targets: createRangeTargets() },
+    state: { tick: 0, events: [], targets: createRangeTargets(), bbs: createBBPool(4) },
     player,
     tutorialView: { dt: DT, player, events: [], targets: [] },
     playing: true,

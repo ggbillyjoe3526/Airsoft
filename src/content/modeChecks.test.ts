@@ -309,12 +309,12 @@ describe('which maps host a mode', () => {
     for (const mode of ['elimination', 'attackDefend', 'extraction'] as const) expect(mapHosts(depotData, mode), mode).toBe(true);
   });
 
-  it('plays Attack / Defend there as Elimination, and does not offer Extraction', () => {
+  it('plays Attack / Defend there as Elimination, and offers neither it nor Extraction (MR1)', () => {
     expect(playableMode(bare, 'attackDefend')).toBe('elimination');
     expect(playableMode(bare, 'extraction')).toBe('elimination');
     expect(playableMode(depotData, 'attackDefend')).toBe('attackDefend');
     expect(modeOffered(bare, 'elimination')).toBe(true);
-    expect(modeOffered(bare, 'attackDefend')).toBe(true);
+    expect(modeOffered(bare, 'attackDefend')).toBe(false);
     expect(modeOffered(bare, 'extraction')).toBe(false);
     expect(modeOffered(depotData, 'extraction')).toBe(true);
   });
