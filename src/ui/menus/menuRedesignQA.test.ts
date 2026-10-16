@@ -160,9 +160,9 @@ describe('the top bar (M100 QA)', () => {
     const bar = new TopBar(noop, noop);
     const chips = (): string[] => node(bar.root).querySelector('.menu-status')!.children.filter((c) => !c.hidden).map((c) => c.text);
     bar.setLevel({ level: 0, into: 0, next: 100, toNext: '100 XP to level 1' });
-    expect(chips()).toEqual(['Lv 0']);
+    expect(chips()).toEqual(['LVL 0']);
     bar.setLevel({ level: 10, into: 0, next: null, toNext: '' });
-    expect(chips()).toEqual(['Lv 10']);
+    expect(chips()).toEqual(['LVL 10']);
     bar.setLevel(null);
     expect(chips()).toEqual([]);
   });
@@ -174,7 +174,7 @@ describe('the top bar (M100 QA)', () => {
     // The third, Back to practice (M95), shows only on the Loadout opened from Practice.
     expect(root.children.map((c) => (c as EventNode).tag)).toEqual(['button', 'nav', 'button', 'div']);
     expect(root.children[2]!.hidden).toBe(true);
-    expect(shown(root)).toEqual(['Airsoft', ...MENU_TEXT.nav.map((n) => n.label), 'Lv 3']);
+    expect(shown(root)).toEqual(['Airsoft', ...MENU_TEXT.nav.map((n) => n.label), 'LVL 3']);
     expect(shown(root).join(' ')).not.toMatch(/\bFC\b|Token/);
     expect(shown(root).join(' ')).not.toContain(__BUILD_VERSION__.label);
   });
