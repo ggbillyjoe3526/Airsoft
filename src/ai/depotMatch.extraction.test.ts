@@ -71,7 +71,7 @@ describe('Extraction on Depot, headless (M43)', () => {
     expect(locker.finds[0]!.xp).toBeLessThanOrEqual(kind.xp.max);
     r.yours.use = false;
     r.moveYou(run.exits.find((e) => e.open)!.position);
-    r.play(r.run.rules.extractTime + 1);
+    r.play(r.run.rules.extractTime + 1, r.clearExit);
     expect(r.state.round.reason).toBe('extracted');
     expect(haulTotals(runHaul(run))).toEqual({ xp: locker.finds[0]!.xp });
     r.dispose();

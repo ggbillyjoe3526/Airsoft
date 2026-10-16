@@ -43,10 +43,11 @@ describe('a 3v3 bot match on the Stack House (floors over floors, M34b)', () => 
   it('has bot teammates follow a leader up a stair and across the upper floor without stepping off an edge', { timeout: 60_000 }, () => {
     // Measured 2026-10-04 (seeds 1-3, 60 s): within a few metres of the leader all the time, at worst about 5.3 m behind.
     // The count is a sample size: with personalities (BN1) seed 3 counts 490 ticks (seeds 1-6: 490 to 2,070), every one
-    // of them near.
+    // of them near. With each figure's own hit area (HV1, 2026-10-16) seed 1's leader is hit early: seeds 1-16 count 281
+    // to 2,801 ticks, every one of them near, so the floor is 250.
     for (const seed of [1, 2, 3]) {
       const { stats, counted, near, worst } = playFollowMatch(60, seed, STACK_HOUSE);
-      expect(counted, `seed ${seed}`).toBeGreaterThan(400);
+      expect(counted, `seed ${seed}`).toBeGreaterThan(250);
       expect(near / counted, `seed ${seed}`).toBeGreaterThan(0.9);
       expect(worst, `seed ${seed}`).toBeLessThan(SQUAD_ORDERS.catchUp);
       expect(stats.maxAliveY, `seed ${seed}`).toBeGreaterThan(UPSTAIRS);

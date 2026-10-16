@@ -59,8 +59,8 @@ export interface RiggedFrame {
   eyeY: number;
   eyeZ: number;
   firstPerson: boolean;
-  /** The view's forward direction's height (-1 straight down, 0 level): your own body shows looking down (BD1). */
-  viewY: number;
+  /** The angle of the bottom of the view below level (radians, negative down): your own body shows looking down (BD1). */
+  viewLow: number;
   /** The upper body's lean (the flinch and the peek), radians about the figure's own X and Z (it faces -Z). */
   leanX: number;
   leanZ: number;
@@ -401,7 +401,11 @@ export class RiggedFigure {
     this.shadow.visible = !f.firstPerson && f.castShadow;
     this.shadow.castShadow = this.shadow.visible;
     // Your own body casts no shadow (as before it was drawn: a headless, armless one would look wrong).
-    if (this.firstPersonMesh) this.firstPersonMesh.visible = f.firstPerson && (f.viewY < FIGURE_RIG.firstPerson.showBelow || c.vault.active);
+    if (this.firstPersonMesh) {
+      const fp = FIGURE_RIG.firstPerson;
+      const highest = fp.highest.standing + (fp.highest.crouched - fp.highest.standing) * c.crouchAmount;
+      this.firstPersonMesh.visible = f.firstPerson && (f.viewLow < highest + fp.margin || c.vault.active);
+    }
     this.updateHeld(c, pose, f, yaw);
   }
 

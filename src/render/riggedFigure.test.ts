@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { FIGURE_RIG, FIGURE_RIG_KINDS, type FigureRigKind } from '../config/figureRig';
-import { type Character, createCharacter } from '../sim/character';
+import { BODY } from '../config/movement';
+import { type Character, createCharacter, eyeHeight } from '../sim/character';
 import { vec3 } from '../sim/vec';
 import { figureDress, HUMAN_CROWD } from './figureMix';
 import { hasRest } from './figurePose';
@@ -35,7 +36,7 @@ function figure(kind: FigureRigKind, c: Character, thrown = new ThrownMagazines(
   return { f, thrown };
 }
 
-const frame = (over: Partial<RiggedFrame> = {}): RiggedFrame => ({ alpha: 1, dt: 1 / 60, eyeX: 0, eyeY: 1.6, eyeZ: 3, firstPerson: false, viewY: -1, leanX: 0, leanZ: 0, peek: 0, peekPivot: 0.92, cycle: null, castShadow: true, ...over });
+const frame = (over: Partial<RiggedFrame> = {}): RiggedFrame => ({ alpha: 1, dt: 1 / 60, eyeX: 0, eyeY: 1.6, eyeZ: 3, firstPerson: false, viewLow: -Math.PI / 2, leanX: 0, leanZ: 0, peek: 0, peekPivot: 0.92, cycle: null, castShadow: true, ...over });
 
 const visibleMeshes = (root: THREE.Object3D): THREE.Mesh[] => {
   const out: THREE.Mesh[] = [];
@@ -162,10 +163,11 @@ describe('the rigged figures (BF1)', () => {
     const first = skinnedOn(view);
     expect(first.length).toBe(1);
     expect(skinnedOn(shadow).length).toBe(0);
-    // Looking level, your own body is out of view and not drawn; looking down past FIGURE_RIG.firstPerson.showBelow it is.
-    f.update(c, frame({ firstPerson: true, viewY: 0 }));
+    // With the bottom of the view well above its highest point, your own body is not drawn; reaching it, it is.
+    const fp = FIGURE_RIG.firstPerson;
+    f.update(c, frame({ firstPerson: true, viewLow: -0.5 }));
     expect(skinnedOn(view).length).toBe(0);
-    f.update(c, frame({ firstPerson: true, viewY: FIGURE_RIG.firstPerson.showBelow - 0.01 }));
+    f.update(c, frame({ firstPerson: true, viewLow: fp.highest.standing + fp.margin - 0.01 }));
     expect(skinnedOn(view)).toEqual(first);
     expect(first[0]).not.toBe(third[0]);
     expect(first[0]!.geometry.getAttribute('position').count).toBeLessThan(third[0]!.geometry.getAttribute('position').count);
@@ -245,5 +247,48 @@ describe('the rigged figures (BF1)', () => {
     expect(far).not.toBe(near);
     expect(far.geometry.getAttribute('position').count).toBeLessThan(near.geometry.getAttribute('position').count);
     f.dispose();
+  });
+});
+
+describe('your own body stays below FIGURE_RIG.firstPerson.highest (BD1)', () => {
+  // Drawn only when the bottom of the view reaches within `margin` of it: if a pose lifted a knee or foot higher, it
+  // would be missing from view, so every stepping clip and the jump are measured, standing and crouched.
+  it.each(FIGURE_RIG_KINDS)('the %s, on every clip a body ahead of the eyes can show', (kind) => {
+    const fp = FIGURE_RIG.firstPerson;
+    const v = new THREE.Vector3();
+    const states: [string, (c: Character) => void][] = [
+      ['standing', () => {}],
+      ['walking', (c) => (c.velocity.z = -2.5)],
+      ['sprinting', (c) => ((c.velocity.z = -6.5), (c.sprinting = true))],
+      ['backing off', (c) => (c.velocity.z = 2.5)],
+      ['strafing', (c) => (c.velocity.x = 2.5)],
+      ['in the air', (c) => ((c.grounded = false), (c.velocity.y = 2))],
+      ['crouched', (c) => ((c.crouchAmount = 1), (c.prevCrouchAmount = 1))],
+      ['crouch walking', (c) => ((c.crouchAmount = 1), (c.prevCrouchAmount = 1), (c.velocity.z = -1.5))],
+    ];
+    for (const [name, set] of states) {
+      const c = createCharacter(2, vec3(0, 0, 0), 0);
+      const { f } = figure(kind, c);
+      set(c);
+      const allowed = fp.highest.standing + (fp.highest.crouched - fp.highest.standing) * c.crouchAmount;
+      let highest = -Math.PI;
+      for (let k = 0; k < 60; k++) {
+        c.walkCycle += 0.24;
+        c.prevWalkCycle = c.walkCycle;
+        f.update(c, frame({ firstPerson: true, eyeZ: 0, cycle: c.walkCycle / (Math.PI * 2) }));
+        if (k % 3) continue;
+        f.root.updateMatrixWorld(true);
+        const mesh = visibleMeshes(f.root).find((m): m is THREE.SkinnedMesh => m instanceof THREE.SkinnedMesh && m.layers.mask === 1)!;
+        const eye = eyeHeight(c.crouchAmount, BODY);
+        const n = mesh.geometry.getAttribute('position').count;
+        for (let i = 0; i < n; i += 4) {
+          mesh.getVertexPosition(i, v).applyMatrix4(mesh.matrixWorld);
+          // Ahead of the eyes (the figure faces -Z), the angle below level in the view's upright plane.
+          if (-v.z > 0.02) highest = Math.max(highest, Math.atan2(v.y - eye, -v.z));
+        }
+      }
+      expect(highest, `${kind} ${name}`).toBeLessThan(allowed);
+      f.dispose();
+    }
   });
 });

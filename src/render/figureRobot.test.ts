@@ -93,7 +93,7 @@ describe('the robot head and team colour (acceptance 1, 3 and 7)', () => {
     const material = new THREE.MeshStandardMaterial({ vertexColors: true });
     material.userData.authored = { opacity: 1, transparent: false };
     const f = new RiggedFigure({ rig: rigs.robot, character: c, id: 0, teamColour: 0x3d8bff, replicaMaterial: material, rifleColours: dress.rifle, pistolColours: dress.pistol, files, detail: 'high', pack: true, radio: true, thrown: new ThrownMagazines(), calloutMaterial: new THREE.SpriteMaterial() });
-    const frame = (firstPerson: boolean): RiggedFrame => ({ alpha: 1, dt: 1 / 60, eyeX: 0, eyeY: 1.6, eyeZ: 3, firstPerson, viewY: -1, leanX: 0, leanZ: 0, peek: 0, peekPivot: 0.92, cycle: null, castShadow: true });
+    const frame = (firstPerson: boolean): RiggedFrame => ({ alpha: 1, dt: 1 / 60, eyeX: 0, eyeY: 1.6, eyeZ: 3, firstPerson, viewLow: -Math.PI / 2, leanX: 0, leanZ: 0, peek: 0, peekPivot: 0.92, cycle: null, castShadow: true });
     const shown = (): number[] => {
       const out: number[] = [];
       f.root.traverseVisible((o) => {

@@ -112,7 +112,7 @@ describe('R3 iron sights fold under an optic', () => {
 });
 
 describe('the figures\' near model (R2, R3)', () => {
-  const frame: RiggedFrame = { alpha: 1, dt: 1 / 60, eyeX: 0, eyeY: 1, eyeZ: 3, firstPerson: false, viewY: -1, leanX: 0, leanZ: 0, peek: 0, peekPivot: 0.92, cycle: null, castShadow: true };
+  const frame: RiggedFrame = { alpha: 1, dt: 1 / 60, eyeX: 0, eyeY: 1, eyeZ: 3, firstPerson: false, viewLow: -Math.PI / 2, leanX: 0, leanZ: 0, peek: 0, peekPivot: 0.92, cycle: null, castShadow: true };
 
   /** The near model's vertex positions of the replica in slot 0, for a character with `loadout`. */
   async function nearOf(loadout: Parameters<typeof createArmament>[0], parts: Parameters<typeof createArmament>[1], optic: 'redDot' | null = null): Promise<Float32Array> {

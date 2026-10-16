@@ -86,11 +86,12 @@ export const FIGURE_RIG = {
    * The first-person body (your own figure seen when you look down): the model drawn this far behind the eyes (metres)
    * so the camera is never inside the chest, with the head and arms left out (the hands and replica in view are the
    * first-person ones). The arms are folded into the shoulders by scaling their bones to `armScale`. It is drawn only
-   * while the view looks down further than `showBelow` (the sine of its pitch) or vaults (BD1): no part of it comes
-   * higher than about 70° below the eyes, and the widest field of view (120°) reaches 44° below the view's middle, so
-   * looking down less than 15° leaves room for a lean's roll and spares its 20,000 triangles.
+   * while the bottom of the view reaches within `margin` of its `highest` point below the eyes, or in a vault (BD1),
+   * which spares its 20,000 triangles while you look ahead. `highest` is measured over the clips (the angle below the
+   * eyes, ahead of them, of the body's highest vertex): standing, the sprint's knee; crouched, the crouch walk's.
+   * `margin` covers a lean's camera roll (RENDER.leanCameraRoll) and the eyes' bob.
    */
-  firstPerson: { back: 0.17, armScale: 1e-3, showBelow: -0.26 },
+  firstPerson: { back: 0.17, armScale: 1e-3, highest: { standing: -72 * DEG, crouched: -53 * DEG }, margin: 10 * DEG },
   /** Thrown-away magazines out at most (the oldest goes first); each lies for its sidecar lifetime. */
   thrownMagazines: { max: 12 },
   /**

@@ -218,7 +218,19 @@ export function setUpRun(opts: RunOptions) {
   const hitYou = () => eliminate(you, squad, state.characters, elimination);
   /** `c` is hit by you. */
   const hitThem = (c: Character) => eliminate(c, you.id, state.characters, elimination);
-  return { state, run, you, yours, bots, play, moveYou, hitYou, hitThem, physics, squad, dispose: () => physics.dispose() };
+  /**
+   * You hit every opponent in play standing in the exit you count at, as you would: one there pauses your count
+   * (contested, extraction.test.ts), so a test of what you get out with doesn't hang on where a guard walks.
+   */
+  const clearExit = () => {
+    const exit = state.round.run.exits[state.round.run.countExit];
+    if (!exit) return;
+    for (const c of state.characters) {
+      if (c.team === you.team || !isInPlay(c)) continue;
+      if (Math.hypot(c.position.x - exit.position.x, c.position.z - exit.position.z) <= exit.radius) hitThem(c);
+    }
+  };
+  return { state, run, you, yours, bots, play, moveYou, hitYou, hitThem, clearExit, physics, squad, dispose: () => physics.dispose() };
 }
 
 /** What a run came to: how it ended, after how long (s), and the XP it got out with (LV1). */
