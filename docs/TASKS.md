@@ -233,7 +233,7 @@ contract: none
 acceptance:
   1. Starts once `pipeline/baseline/laptop*.json` is committed (PLAYTEST › Only you can do these).
   2. Profile first. The record ranks the top causes of frame time on Low and Medium on Depot and Woodland, by day and by night.
-  3. Fix the top causes until Low and Medium hold 60 FPS on the laptop baseline's scenes, or say what would cost too much and why.
+  3. Fix the top causes until Low holds 60 FPS on modern low-powered hardware (the owner's ruling, 2026-10-16), Medium too where it can, on the laptop baseline's scenes. If a fix would cost too much, say what and why.
   4. Add a High or Ultra night run to the perf gate, so the torch shadow map's cost is measured.
 status: open
 attempts: 0
@@ -270,6 +270,19 @@ contract: none
 acceptance:
   1. Settings › Graphics has no Tone mapping row, and everyone gets Neutral (today's default).
   2. The choice moves to Settings › Dev. With Dev settings off, a save holding another tone mapping plays as Neutral.
+status: open
+attempts: 0
+
+## PF3 · The 4K 240 Hz line for maxed-out settings (after William's desktop baseline)
+tier: core
+perf: required
+touches: pipeline/perf-budget.json, pipeline/gate.mjs, pipeline/perf-run.mjs, pipeline/README.md
+contract: none
+acceptance:
+  1. This starts once `pipeline/baseline/desktop*.json` is committed (PLAYTEST › Only you can do these).
+  2. The owner's ruling (2026-10-16): maxed-out settings aim at a PC built for 4K at 240 Hz. `perf-budget.json` gains a desktop frame-time line for Ultra at 3840×2160. The first guess is p95 ≤ 4.2 ms and p99 ≤ 6 ms. `desktop` joins `frameTimeGatedEnvs` for Ultra only.
+  3. The record lists any map or mode over the line on the baseline, with its top causes. Fixes are their own tasks.
+  4. Draw-call and triangle lines change only with an owner decision line (DECISIONS).
 status: open
 attempts: 0
 
