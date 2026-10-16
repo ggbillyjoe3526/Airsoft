@@ -76,3 +76,34 @@ describe('bots see less far at night (M33g)', () => {
     expect(visiblePart(close, at(-15, 0), noWalls, BOTS, BODY, HITS, night)).toBeGreaterThan(0);
   });
 });
+
+describe('the body of someone already hit hides what is behind it (BP6, KNOWN_ISSUES "Bots still see through a body already out")', () => {
+  const viewer = createCharacter(0, vec3(0, 0, 0), 0, LOADOUT, 0); // faces -Z
+  const target = createCharacter(1, vec3(0, 0, -20), 0, LOADOUT, 1);
+  const bodyAt = (x: number, status: 'alive' | 'calling' | 'out', team = 1) => {
+    const c = createCharacter(2, vec3(x, 0, -10), 0, LOADOUT, team);
+    c.status = status;
+    return c;
+  };
+  const sees = (...bodies: ReturnType<typeof createCharacter>[]) =>
+    visiblePart(viewer, target, noWalls, BOTS, BODY, HITS, undefined, [viewer, target, ...bodies]);
+
+  it('hides someone behind a body calling its hit or walking off, of either team', () => {
+    expect(sees()).toBeGreaterThan(0);
+    expect(sees(bodyAt(0, 'calling'))).toBe(0);
+    expect(sees(bodyAt(0, 'out'))).toBe(0);
+    expect(sees(bodyAt(0, 'out', 0))).toBe(0);
+  });
+
+  it('still sees past a body off the line, and past someone still in play (as before)', () => {
+    expect(sees(bodyAt(1.5, 'out'))).toBeGreaterThan(0);
+    expect(sees(bodyAt(0, 'alive', 0))).toBeGreaterThan(0);
+  });
+
+  it('a Ghost (Dev setting) hides nobody; without the list of bodies nothing changes', () => {
+    const ghost = bodyAt(0, 'out');
+    ghost.ghost = true;
+    expect(sees(ghost)).toBeGreaterThan(0);
+    expect(visiblePart(viewer, target, noWalls, BOTS, BODY, HITS)).toBeGreaterThan(0);
+  });
+});
