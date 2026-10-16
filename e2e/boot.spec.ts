@@ -226,7 +226,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   const hiCapLine = loadout.locator('.menu-row', { has: page.getByRole('group', { name: 'Magazine' }) }).getByText(/\d+ BBs each, \d+ carried \(\d+ in all\)\. Reload [\d.]+ s\./);
   await expect(hiCapLine).toBeVisible();
   const hiCap = Number((await hiCapLine.textContent())!.match(/(\d+) BBs each/)![1]); // checked in the match below
-  await expect(partTab('Skins')).toHaveAttribute('aria-disabled', 'true'); // in a later version
+  await expect(partTab('Skins')).toHaveCount(0); // Skins joined Colour (MR1)
   // The pistol has no top rail: its Optic part is greyed. Esc goes back to the gear like Back.
   await page.keyboard.press('Escape');
   await loadout.getByRole('button', { name: /^Secondary: GBB Pistol/ }).click({ button: 'right' });
