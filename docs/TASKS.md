@@ -60,22 +60,6 @@ acceptance:
 status: open
 attempts: 0
 
-## HD1 · In-match HUD, feeds and hop-up (playtest items 15, 22, 24, 25, 31–33)
-tier: ui
-perf: required
-touches: src/ui/, src/ui/hud.css, src/ui/hudCss/, src/input/orderWheel.ts, src/input/keyBindings.ts, src/config/controls.ts, src/config/hudText.ts, src/sim/commands.ts, src/sim/armament.ts, src/render/impactPuffs.ts, src/render/impactGrit.ts, src/config/renderEffects.ts, src/input/playerInput.ts, src/sim/events.ts, src/audio/sfx.ts, src/core/eventLog.ts, src/config/callouts.ts, src/config/matchInfo.ts, src/config/renderView.ts, src/config/squad.ts, src/settings/storage.ts, src/render/matchPresentation.ts, src/render/combatPresentation.ts, src/matchSession.ts, src/game.ts, src/style.css, src/sim/vault.ts, src/sim/elimination.ts, src/ai/botBrain.ts, src/input/scriptedInput.ts
-contract: PlayerCommand (a hop-up step, by addition)
-acceptance:
-  1. A rebindable control adjusts the held replica's hop-up mid-match, through the command interface (bots unchanged), with a HUD readout that shows it changing in real time.
-  2. The comms wheel is redesigned: minimal and easy to read, with every button the same size.
-  3. BB impacts kick up a smaller, subtler puff.
-  4. The weapon, magazine, ammo and fire-mode panel is smaller and more minimal, and still easy to read.
-  5. The scoreboard has no YOU tag.
-  6. The hit feed and the bot callouts are one feed, top right by default, with a setting that moves it bottom left.
-  7. WON or LOST shows at a round's end before the result, briefly and without getting in the way, and the player can move on at once.
-status: open
-attempts: 0
-
 ## MV1 · Movement, holster speed and hands (playtest items 26–30)
 tier: core
 perf: required
