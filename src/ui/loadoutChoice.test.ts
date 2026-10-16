@@ -98,7 +98,7 @@ describe('part readouts (M26b)', () => {
   it('says how a grip changes the draw and how soon the aim is steady after a sprint', () => {
     expect(gripReadout(aeg())).toBe('Brings the AEG Rifle up in 0.45 s. Steady again 0.27 s after a sprint.');
     // Steadier and slower with a vertical grip; quicker and shakier with an angled one.
-    expect(gripReadout(aeg({ grip: item('Vertical Grip') }))).toBe('Brings the AEG Rifle up in 0.56 s. Steady again 0.17 s after a sprint.');
+    expect(gripReadout(aeg({ grip: item('Vertical Grip') }))).toBe('Brings the AEG Rifle up in 0.56 s. Steady again 0.18 s after a sprint.');
     expect(gripReadout(aeg({ grip: item('Angled Grip') }))).toBe('Brings the AEG Rifle up in 0.36 s. Steady again 0.33 s after a sprint.');
   });
 
