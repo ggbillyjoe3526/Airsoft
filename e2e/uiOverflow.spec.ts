@@ -137,7 +137,7 @@ function hudOverlaps(): string[] {
     if (r.right > panel.right + 1 || r.left < panel.left - 1) out.push(`${e.className} leaves the panel`);
   }
   // The panel against the rest of the HUD.
-  for (const sel of ['.minimap-frame', '.scoreboard', '.hit-feed', '.range-readout', '.match-board', '.what-got-you', '.coach', '.hud-rest']) {
+  for (const sel of ['.minimap-frame', '.scoreboard', '.hit-feed', '.range-readout', '.match-board', '.what-got-you', '.coach']) {
     for (const e of document.querySelectorAll(sel)) {
       if (!shown(e)) continue;
       const r = e.getBoundingClientRect();

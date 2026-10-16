@@ -16,6 +16,7 @@
 - **Every carried replica is shown to the warm-up compile, then hidden again.** The compile skips hidden objects, so the replica not in hand built its pipelines on the first switch (11 render objects and a program link on Low, 15 and 2 pipelines on Medium, headless Chromium on WebGL2); after, none.
 - **The Blender replicas get their own hand poses (`FILE_HANDS`), with a thumb root.** Their grips are wider and rounder than the built-in boxes, and the thumb's fixed base put it through the frame; the deepest hand part went from up to 14.9 mm inside a replica to under 2 mm.
 - **Three seed-sensitive bot tests were adjusted, not loosened in what they check.** The Depot hunt guard moved from seed 5 to seed 2 (seed 5 went from 65 s to 94 s; seeds 1–12 spread from 12 s to over 120 s on main and here alike); the magazine-lapse test holds Orange at its corner so no fight ends the round; the cover-while-opening test reads the corner's sight line from the slot's view, as a teammate may glance at a nearby fight.
+- **A bot standing still is never walked aside off a floor (`keepApart` in `ai/botMovement.ts`).** After the merge with main, the steadier walk's new shots let a Ramp Yard teammate push its leader off the platform's open edge (0.3 s in the air on seed 1); the push now checks the ground ahead, as a sidestep already does. Test in `botM71Gaps.test.ts`.
 
 ## Known issues left
 
