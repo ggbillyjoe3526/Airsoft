@@ -239,7 +239,8 @@ replaces its line; the old one stays findable in the archive or in git.
   and "Disable all models" (RM4, 2026-10-11) are gone with the code behind them. The code-built models are not kept for
   Low: Low with the models in measured inside every budget line (Depot, container: 35 draw calls of 100, 54k
   triangles of 150k, 78 MB of GPU memory of 300); they stay only as what is drawn when a file can't be loaded. Low's
-  frame time on the owner's laptop is still to be measured (PF2).
+  frame time on the owner's laptop is still to be measured (PF2). The Medium preset's Player detail is Low, so its
+  figures drop to their middle detail beyond 6 m as on Low (Woodland 5v5's spawn was over Medium's 200k triangles).
 - **The Blender figures (owner, 2026-10-10; approved 2026-10-12: "happy with it for now").** The hands hold the
   replica naturally, the trigger finger in the guard; humans wore the high-cut helmet head only (four heads since
   2026-10-13, below); robots wear no vest,

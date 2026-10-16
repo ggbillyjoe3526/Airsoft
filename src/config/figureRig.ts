@@ -50,7 +50,8 @@ export const FIGURE_RIG = {
   /** The Switch clip goes from the rifle to the pistol and holds the pistol from this share of it on (the sidecar's note). */
   switchPistolFrom: 0.35,
   /**
-   * Distances (metres) beyond which a figure draws its LOD1 and LOD2 meshes, on Player detail High and Low, each line
+   * Distances (metres) beyond which a figure draws its LOD1 and LOD2 meshes, on Player detail High and Low (the Medium
+   * preset is Low since BD1: four teammates at full detail at the spawn put Woodland 5v5 over its 200k), each line
    * crossed only `lodGive` past it (so a figure on the line doesn't flicker). At LOD0 it holds the replica's whole model,
    * beyond it the file's small figure version (but the whole model while it reloads, so the magazine comes out).
    */
