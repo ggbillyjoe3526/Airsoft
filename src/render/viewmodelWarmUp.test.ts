@@ -74,4 +74,20 @@ describe('the warm-up compile reaches every carried replica (Dev 6 playtest note
     expect(models(vm).every((m) => !m.visible)).toBe(true);
     vm.dispose();
   });
+
+  it('with the replica holstered, restores every slot hidden, and a nested call restores what it found', () => {
+    const vm = new Viewmodel(16 / 9, 0x3a7bd5, LOADOUT);
+    const arm = createArmament(LOADOUT);
+    arm.holstered = true;
+    for (let i = 0; i < 90; i++) vm.update(1 / 60, 0, 0, 0, 4.2, 0, arm, false, 0);
+    const before = models(vm).map((m) => m.visible);
+    expect(before.some(Boolean)).toBe(false);
+    vm.withEverySlotShown(() => {
+      expect(models(vm).every((m) => m.visible)).toBe(true);
+      vm.withEverySlotShown(() => {});
+      expect(models(vm).every((m) => m.visible)).toBe(true);
+    });
+    expect(models(vm).map((m) => m.visible)).toEqual(before);
+    vm.dispose();
+  });
 });
