@@ -16,10 +16,10 @@ each `src/` folder's `README.md`.
   the overtime flag went unseen because rounds ended first. The spring sniper waits for 0.2 and his specs.
 - **Waiting on the owner:** trying Adaptive difficulty, the laptop and desktop Ultra perf baselines (PF2 waits on
   them), and the Save checks in Firefox and Edge (`docs/PLAYTEST.md` › Only you can do these).
-- **Vault and rest-on-cover clips.** Both rigged figures behind the Dev switches have their own (shared in
+- **Vault clips.** Both rigged figures behind the Dev switches have their own (shared in
   `tools/blender/bot-figure/scripts/bot18.py`: the robot's built with it in RM10, the human's spliced into its RM9
-  export); a figure file without them falls back to the old placeholders. The built-in figures don't change. Of the
-  bots, anchors rest on cover where they stand still to fight or hold (BN1; not while sidestepping or hunting, BP5);
+  export); a figure file without them falls back to the old placeholder. The built-in figures don't change. Of the
+  bots, anchors aim from cover where they stand still to fight or hold (BN1; not while sidestepping or hunting, BP5);
   the rest fire from the hip.
 
 ## Where to look

@@ -39,10 +39,10 @@ goes wrong: it replays the same match.
 
 What is new since 0.1 Dev 5. Each line points to the section with more checks.
 
-- [ ] **Holster and two sprints.** Press 3 to holster the replica. Sprinting holstered is faster, but bringing the
-  replica up to aim takes longer than from a ready sprint ([Movement](#movement)).
-- [ ] **Vaulting and resting on cover.** Jump at a low wall (0.7 to 0.9 m) and you vault it, loudly. Aim standing still
-  over a ledge, crate or window and a "Rested" tag shows: steadier aim ([Movement](#movement)).
+- [ ] **Holster.** Press 3 to holster the replica. You move faster than with it out, but never faster than a Left Alt
+  sprint, and bringing it up to aim takes longer ([Movement](#movement)).
+- [ ] **Vaulting.** Jump at a low wall (0.7 to 0.9 m) and you vault it, loudly. Aiming at a ledge, crate or window
+  changes nothing: there is no rest on cover ([Movement](#movement)).
 - [ ] **Practice upgrades.** Moving targets, new target types and a timed challenge (off by default), Practice on any
   map with targets in place of bots, and any replica you own ([Practice range](#practice-range)).
 - [ ] **Levels in the Armory.** The Armory's random unlocks are gone: matches give XP and levels 0 to 10 unlock the
@@ -68,7 +68,7 @@ What is new since 0.1 Dev 5. Each line points to the section with more checks.
   allowed but much less accurate ([Movement](#movement)), red X hit marker options, off by default
   ([HUD and match info](#hud-and-match-info)), and Esc while out skips the round
   ([Rounds and matches](#rounds-and-matches)).
-- [ ] **Redesigned figures.** The new human and robot figures, with their vault, rest and holstered poses: turn off both
+- [ ] **Redesigned figures.** The new human and robot figures, with their vault and holstered poses: turn off both
   figure switches in Settings › Dev to see them ([Players and replicas](#players-and-replicas)).
 
 ### Your five calls, confirmed
@@ -98,7 +98,10 @@ Play › Mode Elimination on Depot, Match › Opponents Normal. Set the mouse se
 
 - [ ] **Look around with the mouse.** The view turns smoothly, with no jumps, and no drift once the mouse stops.
 - [ ] **Move with W A S D.** You run at a steady pace and hear your own footsteps.
-- [ ] **Hold Shift and move.** You walk slowly and your footsteps go silent.
+- [ ] **Hold Shift and move.** You walk slowly and your footsteps go silent, and the crosshair closes to about what it
+  is standing still: a walk pays off in accuracy, a run doesn't. Is the gain clear enough? (Dev 6 note 29.)
+- [ ] **Press 3, then run.** Holstered, you run faster than with the replica out. Hold Left Alt too: the sprint is the
+  same as armed, never faster. (Dev 6 note 27.)
 - [ ] **Hold Left Alt and run forward.** You sprint. Shoot while sprinting: it fires (the replica comes up from the
   carry), but the BBs spread far wider than walking and the rifle climbs faster. Let go of the trigger and it drops
   back into the carry a moment later. (Dev 5 playtest, note 9.)

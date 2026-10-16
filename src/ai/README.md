@@ -15,7 +15,7 @@ seeded per bot.
   its personality. `personalSkill` lays the personality over the level's `BotSkill` when the bot is made (never its
   senses, reaction, turning or aim); the habits no level has are read from `Bot.style` where they apply: `pushesIn`
   (rushers, with no run job and no squad order), `anchorHolding` (an anchor in Elimination short of the middle until its
-  mark on the clock), Own lane (`teamPlan.ts takeOwnLanes`), Aims from cover (`botBrain.ts`, so it rests on cover).
+  mark on the clock), Own lane (`teamPlan.ts takeOwnLanes`), Aims from cover (`botBrain.ts`).
 - `callouts.ts` (CL1): `CalloutDirector` puts what the bots just did into words for their team after each tick
   (`callouts.md`: sightings, hits, reloads, noises, searches, holds, the flag), at the file's pace and one call a team at
   a time. It reads the bots and the state and never writes either, so callouts never change how anyone plays. It also

@@ -5,8 +5,7 @@ The gameplay rules: plain data and pure functions, with no Three.js, no DOM and 
 - `simulation.ts`: `stepSimulation`, the fixed 60 Hz step and the order of its phases.
 - `state.ts`, `events.ts`, `commands.ts`, `character.ts`: `GameState`, `state.events`, `PlayerCommand`, `Character`.
 - `movement.ts`, `aiming.ts`, `lean.ts`, `accuracy.ts`, `footsteps.ts`: the per-tick stance rules. Lean is one geometry
-  (`HITS.lean`): eye, BB origin, hit volume, drawn figure and what bots see all use it. `coverRest.ts` (M104): aiming
-  still at a ledge rests the replica on it (`Character.coverRest`, `MOVEMENT.rest`), steadying the spread and the kick.
+  (`HITS.lean`): eye, BB origin, hit volume, drawn figure and what bots see all use it.
 - `vault.ts` (M102): Jump at a low obstacle vaults it. `planVault` reads the level's rays (height, depth, a floor to land
   on, the body's height clear over it), `tryVault` starts one in place of the jump (a `vault` footstep), `stepVault`
   moves the body along it through `CharacterMover` in place of the movement step. Tuning: `config/vault.ts`.

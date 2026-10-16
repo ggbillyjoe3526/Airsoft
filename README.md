@@ -114,8 +114,8 @@ Then open **http://localhost:4173**.
 - **Sound matters.** Running and sprinting are heard by you and the bots; walking (Shift) and moving crouched are
   silent. Running or sprinting into a crate, skip, rack or container knocks it, and bots hear that too. You can fire
   on the run, but far less accurately.
-- **Rest on cover.** Aim down sights standing still at a crate, low wall, sandbags or window sill and your replica rests
-  on it: a steadier aim with half the kick, and **Rested** shows under the sight. Move or let go of the aim to come off.
+- **Walk to aim, holster to move.** Walking (Shift) keeps your aim nearly as steady as standing still. Holstering (3)
+  makes you faster than with a replica out, though never faster than a sprint, and the draw back out takes longer.
 - **Loadout.** **Start › Loadout** (or Esc in a match) sets your replicas; right-click one to **Customise** it: optic,
   hop-up, BB weight, grips, barrels, a silencer, magazines and batteries. Every choice is a trade-off, shown in numbers.
   Keep up to five **saved loadouts** (the tabs at the top, or keys 1 to 5): your changes go to the current one, and

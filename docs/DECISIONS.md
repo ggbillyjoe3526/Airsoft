@@ -359,12 +359,13 @@ replaces its line; the old one stays findable in the archive or in git.
   strides; the head, chest and hips stay the built-in volume's, and with the figures off nothing changes.
 - **Vaulting comes in 0.1 Dev 6; slide into cover is no for now (owner, 2026-10-12).** Vaulting goes over low
   obstacles of 0.7 to 0.9 m, with a few added to the maps where they open a route; slide waits in `docs/IDEAS.md`.
-- **3 holsters the replica (1 primary, 2 secondary, rebindable): sprinting holstered is faster, and the draw from the
-  holster slower (owner, 2026-10-06, playtest note 3; M92, 2026-10-13).** The holstered sprint is 6.8 m/s against
-  6.3 with the replica ready (`MOVEMENT.holsterSprintSpeed`), and a draw from the holster takes 1.8 times the replica's
-  own (`HOLSTER.drawScale`: the rifle 0.81 s, the pistol 0.54 s), so a ready sprint is quicker to the first shot. A
-  slot key, a fresh trigger pull, an aim press or a reload draws it. Bots follow the same rules through the same
-  command, holstering only on a calm sprint through their own half (`ai/botHolster.ts`).
+- **3 holsters the replica (1 primary, 2 secondary, rebindable): moving holstered is faster, never past the sprint, and
+  the draw from the holster slower (owner, 2026-10-06, playtest note 3; Dev 6 note 27, 2026-10-16; M92, MV1).** The
+  holstered run is 5.0 m/s against 4.2 with the replica out (`MOVEMENT.holsterRunSpeed`); the sprint is 6.3 m/s
+  either way, as the holster never adds to it. A draw from the holster takes 1.8 times the replica's own
+  (`HOLSTER.drawScale`: the rifle 0.81 s, the pistol 0.54 s). A slot key, a fresh trigger pull, an aim press or a
+  reload draws it. Bots follow the same rules through the same command, holstering only on a calm sprint through their
+  own half (`ai/botHolster.ts`).
 - **Vaulting is Jump at a low obstacle, with no key of its own (M102, 2026-10-13).** Jump within reach of something
   0.6 to 0.95 m over your floor and at most 0.95 m over the floor past it (at most 1 m deep, your full height clear over
   it), heading within 70° of where you look, vaults it: only what is low from both sides, so crouch cover never is, not
@@ -393,13 +394,14 @@ replaces its line; the old one stays findable in the archive or in git.
   Woodland's creek gravel, Depot's dock ramps or Neon Heights' metal stairs is heard by bots that much further and
   plays that much louder (+2.6 dB) to you, yours included; walking stays silent on every ground. The simulation names
   the ground (`WorldQuery.surfaceUnder`), so the bots hear exactly the ground you hear.
-- **Aiming at a ledge rests the replica on it, automatically and with no setting (M104, 2026-10-13).** Down the sights,
-  still, grounded and no more than slightly leaned, with a flat top 8 to 70 cm below the eye straight ahead and within
-  0.8 m (`MOVEMENT.rest`, `sim/coverRest.ts`), the spread takes ×0.65 on top of the stance and the kick halves; moving,
-  letting go of the aim, a reload, a lean or looking away lets go in 0.1 s. It works standing at crouch cover and
-  waist-high cover, and crouched at lower cover and window sills, on all three maps (`sim/coverRestMaps.test.ts`).
-  Bots fire from the hip, so only the player rests for now; the figures' rest pose is a placeholder until the figure
-  redesign (`docs/HANDOFF.md`).
+- **Nobody rests or leans on cover or any other object (owner, 2026-10-16, Dev 6 note 30: "It doesn't add anything to
+  the game"; MV1).** M104's rest on cover is gone for the player and the bots: aiming at a ledge changes nothing, and
+  there is no "Rested" tag. Leaning with Q and E (peeking) stays. The figures' files still hold their unused Rest clips
+  until they are next exported (`docs/KNOWN_ISSUES.md`).
+- **Walking with Shift pays off in accuracy: ×1.0 against running's ×2.6 (Dev 6 note 29, 2026-10-16; MV1, Claude's
+  default while the owner's pick is open).** Shift already walked at 2.3 m/s against 4.2; its spread was ×1.15. Now a
+  walk is as steady as standing before the still bonus (×0.7), so the crosshair visibly closes. Crouch-walking stays
+  steadier than walking and shakier than standing still.
 - **You can fire while sprinting, less accurately (owner, 2026-10-13, Dev 5 playtest note 9).** On the run the spread
   is ×3.5 (walking ×1.15, running ×2.6) and each shot kicks 1.5 times as hard (`MOVEMENT.accuracy.sprint` and
   `.sprintKick`); the 0.2 s lockout after a sprint is gone. The replica comes up out of the sprint carry in 0.06 s to
@@ -463,9 +465,9 @@ replaces its line; the old one stays findable in the archive or in git.
   hears, reacts, turns or aims: the level stays the level. The tables are the owner's to edit; a cell the game can't
   read plays neutral. A run's jobs and your squad orders come first: guards, patrols and hunters work their jobs, and a
   bot under your order does what you asked.
-- **Anchors aim from cover, so they rest on it; every other bot still fires from the hip (BN1, M104's open question).**
-  An anchor raises its sight when it stands still to fight, look over its cover or hold, with the player's aimed and
-  rested spread. Still means no sidestep either (BP5): a fight's strafe sets no route, and anchors aimed through it at
+- **Anchors aim from cover; every other bot still fires from the hip (BN1).**
+  An anchor raises its sight when it stands still to fight, look over its cover or hold, with the player's aimed
+  spread. Still means no sidestep either (BP5): a fight's strafe sets no route, and anchors aimed through it at
   walking pace, playing worse, not differently. An anchor sent hunting (a squad order ended mid-round, or the late
   push) hunts and no longer holds (BP5: it stood where the order left it until its mark).
 - **What a personality carries belongs to the bot gear table, not to bots.md (BN1, Dev 6 item 23).** The roadmap's
