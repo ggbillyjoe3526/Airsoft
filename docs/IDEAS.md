@@ -11,6 +11,10 @@ Work the owner wants one day but hasn't placed in a version.
 
 - **Another UI redesign (owner, 2026-10-13).** "We're probably going to have to do another UI redesign at some point.
   Maybe in a future Dev release or after 1.0." Nothing is built for it until he places it.
+- **A Visual redesign (owner, 2026-10-16).** A fresh look for the game's visuals, to be done at some point. Timing not
+  decided; nothing is built for it until he places it.
+- **An Audio redesign (owner, 2026-10-16).** A fresh sound for the game, to be done at some point. Timing not decided;
+  nothing is built for it until he places it.
 
 ## Maybe
 
