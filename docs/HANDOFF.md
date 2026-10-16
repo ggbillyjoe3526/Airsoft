@@ -6,9 +6,8 @@ each `src/` folder's `README.md`.
 
 ## Now
 
-- **0.1 Dev 6 is complete and ready to tag.** Every item in `docs/ROADMAP.md` › 0.1 Dev 6 is done, the last its full
-  bug pass (BP5, `docs/records/BP5.md`). The owner tags `0.1-dev.6`; the release checklist (`docs/PROCESS.md`) is due
-  in the next pull request after he does.
+- **0.1 Dev 6 is out.** The owner tagged `0.1-dev.6` on 2026-10-16 (commit `c810dd3`). Every item in
+  `docs/ROADMAP.md` › 0.1 Dev 6 is done, the last its full bug pass (BP5, `docs/records/BP5.md`).
 - **Next.** The owner playtests 0.1 Dev 6, then 0.1 Beta (fixes, balance and polish, no features). The spring sniper
   waits for 0.2 and his specs.
 - **Waiting on the owner:** the hit area's shape before the figures leave the Dev switches; whether Adaptive
