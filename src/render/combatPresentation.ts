@@ -478,9 +478,12 @@ export class CombatPresentation {
     this.sfx.placeSources(this.state.characters, this.player.id);
   }
 
-  /** Compiles the world's and the held replica's shaders before the first frame (M63, audit REN-06: Renderer.warmShaders). */
+  /**
+   * Compiles the world's and every carried replica's shaders before the first frame (M63, audit REN-06:
+   * Renderer.warmShaders), the replicas not in hand too, so a first switch to one is not where it compiles (Dev 6 note 26).
+   */
   warmShaders(): void {
-    this.renderer.warmShaders(this.overlay);
+    this.viewmodel.withEverySlotShown(() => this.renderer.warmShaders(this.overlay));
   }
 
   /** Draws the frame; the held replica only when the camera is in first person. */

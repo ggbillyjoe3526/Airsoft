@@ -377,6 +377,21 @@ export class Viewmodel {
     this.replicas = this.build({ ...detail });
   }
 
+  /**
+   * Runs `compile` (a warm-up compile, synchronous in its gathering) with every carried replica shown, then puts each
+   * slot's visibility back. A compile reaches only visible objects, so the replicas not in hand were built (their
+   * pipelines and buffers) on the first switch to each, a hitch mid-round (the owner's 0.1 Dev 6 playtest, note 26).
+   */
+  withEverySlotShown(compile: () => void): void {
+    const shown = this.slots.map((s) => s.model.visible);
+    for (const s of this.slots) s.model.visible = true;
+    try {
+      compile();
+    } finally {
+      for (let i = 0; i < this.slots.length; i++) this.slots[i]!.model.visible = shown[i]!;
+    }
+  }
+
   /** The laser module's beam drawn or not (QualitySettings.laserBeam, FA8; it shows only while the laser is fitted). */
   setLaserBeam(on: boolean): void {
     this.beamOn = on;
