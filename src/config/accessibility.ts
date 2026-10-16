@@ -73,11 +73,11 @@ export const SOUND_CUE_SIZE = { min: 0.6, max: 2, step: 0.1, default: 1 } as con
 
 /**
  * Settings → Accessibility → Sound cue colour (M24): one colour for every marker, from the crosshair's list (no team
- * colours). White was their colour before M24.
+ * colours). Red by default (William, Dev 6 playtest, 2026-10-16; white until then).
  */
 export const SOUND_CUE_COLOURS = CROSSHAIR_COLORS;
 export type SoundCueColour = CrosshairColor;
-export const DEFAULT_SOUND_CUE_COLOUR: SoundCueColour = 'white';
+export const DEFAULT_SOUND_CUE_COLOUR: SoundCueColour = 'red';
 
 /** The CSS colour for a sound cue colour id. */
 export function soundCueCss(id: SoundCueColour): string {

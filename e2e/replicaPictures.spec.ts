@@ -10,7 +10,7 @@ import { expect, type Page, test } from '@playwright/test';
 type PictureCheck = { where: string; opaque: number; cut: number; covered: number };
 
 /** The tiles a picture sits in, and what is drawn over a tile's picture. */
-const TILE = '.item-tile, .gear-slot, .option-tile, .option-locked, .family-tile, .armory-item, .armory-next-item, .kit-card, .colour-other';
+const TILE = '.item-tile, .gear-slot, .option-tile, .option-locked, .armory-item, .armory-next-item, .kit-card, .colour-other';
 const OVER = '.item-words, .item-name, .item-note, .item-kind, .item-lock, .armory-item-words, .option-tick, .option-words, .option-name, .option-lock, .carried-customise';
 
 /** Checks every drawn picture on screen. Pictures scrolled out of view aren't drawn wrong, so only the slot and tile clip. */

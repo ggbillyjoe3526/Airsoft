@@ -1,6 +1,7 @@
 import { MENU_TEXT, TITLE_TEXT } from '../../config/menus';
+import { isFullscreen, onFullscreenChange, toggleFullscreen } from '../fullscreen';
 import type { MenuHint } from './chrome';
-import { MENU_ICONS, NAV_ICONS, WARNING_ICON } from './icons';
+import { FULLSCREEN_ICONS, MENU_ICONS, NAV_ICONS, WARNING_ICON } from './icons';
 import { el, hintLine, menuButton, setHint, withIcon } from './menuParts';
 
 export interface TitleActions {
@@ -19,8 +20,9 @@ export function tutorialOffered(tutorialDone: boolean, matchStarted: boolean): b
 
 /**
  * The first thing a player sees (M100): the wordmark on a plain background (no picture: the owner, 2026-10-08), the tagline, START, and under it the Tutorial on
- * a clean save; the build's version small at the bottom left. Nothing else. START opens the Match screen, whose top
- * bar leads to the Loadout, the Armory and Settings.
+ * a clean save; a Fullscreen button at the bottom left (Exit fullscreen while in it, MR1) and the build's version small at
+ * the bottom right. Nothing else. START opens the Match screen, whose top bar leads to the Loadout, the Armory and
+ * Settings.
  */
 export class TitleScreen {
   readonly root: HTMLDivElement;
@@ -28,6 +30,9 @@ export class TitleScreen {
   private readonly warning: HTMLParagraphElement;
   private readonly warningText: HTMLSpanElement;
   private readonly tutorial: HTMLButtonElement;
+  private readonly fullscreen: HTMLButtonElement;
+  private readonly fullscreenSign = el('span', 'title-fullscreen-sign');
+  private readonly fullscreenLabel = el('span');
   /** Over the buttons: e.g. the browser refused the mouse lock for the tutorial (audit L-29). */
   private readonly hint = hintLine();
 
@@ -61,6 +66,17 @@ export class TitleScreen {
     const version = el('p', 'title-version', __BUILD_VERSION__.label);
     version.title = __BUILD_VERSION__.title;
 
+    // Fullscreen in one click (MR1), the label and sign following the page however it got there (F11, Settings, Esc).
+    // Hidden where the browser offers no fullscreen (a page in a frame without permission).
+    this.fullscreen = el('button', 'menu-button menu-button-secondary title-fullscreen');
+    this.fullscreen.type = 'button';
+    this.fullscreenSign.setAttribute('aria-hidden', 'true');
+    this.fullscreen.append(this.fullscreenSign, this.fullscreenLabel);
+    this.fullscreen.addEventListener('click', () => toggleFullscreen());
+    this.fullscreen.hidden = document.fullscreenEnabled === false;
+    this.showFullscreen(isFullscreen());
+    onFullscreenChange((on) => this.showFullscreen(on));
+
     // The keys the title answers to: Enter presses START (it has the focus), T the Tutorial, Esc opens Settings.
     this.hints = [
       { keys: ['Enter'], label: MENU_TEXT.hints.start, run: actions.onStart },
@@ -70,7 +86,13 @@ export class TitleScreen {
     const body = el('div', 'title-body');
     // The warning sits in the title's own column (the wordmark's left edge), with the column's gap above the wordmark.
     body.append(this.warning, hero, buttons);
-    this.root.append(body, version);
+    this.root.append(body, this.fullscreen, version);
+  }
+
+  private showFullscreen(on: boolean): void {
+    this.fullscreenSign.innerHTML = on ? FULLSCREEN_ICONS.exit : FULLSCREEN_ICONS.enter;
+    this.fullscreenLabel.textContent = on ? MENU_TEXT.exitFullscreen : MENU_TEXT.fullscreen;
+    this.fullscreen.setAttribute('aria-pressed', String(on));
   }
 
   /** Whether the Tutorial button is on show. */

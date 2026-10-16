@@ -60,10 +60,11 @@ describe('the Retro look as saved (M96)', () => {
     expect(empty.getItem(SETTINGS_KEY)).toBeNull();
   });
 
-  it('turns the filter on only while on and not scripted (the perf harness)', () => {
-    expect(retroLookOf(DEFAULT_RETRO, false)).toBeNull();
-    expect(retroLookOf({ ...DEFAULT_RETRO, pixelSize: 8 }, false)).toBeNull();
-    expect(retroLookOf({ on: true, pixelSize: 6, colours: 4 }, false)).toEqual({ pixelSize: 6, levels: 4 });
-    expect(retroLookOf({ on: true, pixelSize: 6, colours: 4 }, true)).toBeNull();
+  it('turns the filter on only while on, with the Dev tab shown (Dev 6 playtest), and not scripted (the perf harness)', () => {
+    expect(retroLookOf(DEFAULT_RETRO, false, true)).toBeNull();
+    expect(retroLookOf({ ...DEFAULT_RETRO, pixelSize: 8 }, false, true)).toBeNull();
+    expect(retroLookOf({ on: true, pixelSize: 6, colours: 4 }, false, true)).toEqual({ pixelSize: 6, levels: 4 });
+    expect(retroLookOf({ on: true, pixelSize: 6, colours: 4 }, true, true)).toBeNull();
+    expect(retroLookOf({ on: true, pixelSize: 6, colours: 4 }, false, false)).toBeNull();
   });
 });

@@ -16,7 +16,8 @@ game state and never write it. Tests use the fake DOM in `testSupport.ts` (no js
   (Practice's line and the timed challenge's banner), `performanceSheet.ts` (the Customise screen's Performance sheet).
 - Settings tabs: one file per tab (`graphicsSettings.ts`, `audioSettings.ts`, `controlsSettings.ts` with
   `keySettings.ts`, `hudSettings.ts`, `lookSettings.ts`, `accessibilitySettings.ts`, `crosshairSettings.ts`,
-  `devSettings.ts`, `saveSettings.ts`), shown by `menus/settingsScreen.ts`; `rendererRow.ts` builds Graphics' Renderer row (W1) in the
+  `devSettings.ts`, `saveSettings.ts`), shown by `menus/settingsScreen.ts`; `retroSettings.ts` is the Retro look's rows at
+  the top of the Dev tab (ST1); `rendererRow.ts` builds Graphics' Renderer row (W1) in the
   lazy boot chunk. `optionPicker.ts` is the shared pop-up choice.
 - Overlays: `debugOverlay.ts`, `botIntentLabels.ts` (Dev › Bot intentions, M90: a label over each bot), `crashScreen.ts` (with `bugReport.ts`: the note box and Report a Bug, IM7, also in Dev › Diagnostics), `loadingScreen.ts`, `graphicsNotice.ts`, `otherTabNotice.ts`,
   `coachPanel.ts` (the tutorial) and `tutorialShowcase.ts` (the scoreboard and order wheel its steps open, M80),

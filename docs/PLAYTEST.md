@@ -229,7 +229,7 @@ wears off, and each match has a light breeze (calm to about 2 m/s) that pushes B
 - [ ] **Team camo** (Medium and up). Trousers, shirt and sleeves wear clear dark and light blotches in the team's
   colour, a hand or two across, crisp up close and blending to the team colour far off without shimmering. Does the
   camo still let you pick Alpha blue from Beta orange at a glance? Low keeps plain clothes.
-- [ ] **Settings › Look › Robots.** Mixed (the default) puts humans and robots on both teams each match; Off makes
+- [ ] **Settings › Looks › Robots.** Mixed (the default) puts humans and robots on both teams each match; Off makes
   everyone human.
 - [ ] **Your hands.** Dark gloves, both sleeves printed in your team's camo (Hand detail High; plain on Low) and
   the team armband in view on the left forearm; robot arms when your player is a robot. The support hand holds the rifle's handguard, thumb up the near side, no finger through it; through a
@@ -239,8 +239,8 @@ wears off, and each match has a light breeze (calm to about 2 m/s) that pushes B
   square hood and the silencer six-sided. Other players' replicas are in their team's colours.
 - [ ] **Colour schemes.** Your rifle starts Cobalt and your pistol Ghost; Loadout › Customise › Colour picks one of
   eight two-tone schemes per replica.
-- [ ] **Settings › Look › Realistic colours.** Every replica shows in one real colour instead (black, wolf grey,
-  ranger green or tan, by its scheme); others' replicas turn plain.
+- [ ] **Realistic colours** (on the Loadout's Colour tab from MR1; no longer in Settings). Every replica shows in one
+  real colour instead (black, wolf grey, ranger green or tan, by its scheme); others' replicas turn plain.
 - [ ] **Replica detail on High.** Fine speckle on the plastic, rounded lit edges, rail slots and sights. In Loadout
   try every optic, grip and magazine: nothing floats or clips the hands.
 - [ ] **Gas puffs and impacts.** The pistol puffs a little gas at the muzzle and ejection port each shot; the rifle
@@ -929,10 +929,10 @@ Settings has groups down the left (Graphics, Display, Audio, Controls, Gameplay,
   from the pause menu's Settings › Dev, then Resume: the round ends as on time. Each of those (not the XP buttons)
   keeps the match out of your records. **Reset the save** asks first, then reloads as a new player;
   Settings › Save › Undo brings it back.
-- [ ] **Settings › Look › Retro look** (M96; the Dev tab's Retro pixels before). Off by default; On gives chunky pixels
+- [ ] **Settings › Dev › Retro look** (M96; back on the Dev tab since ST1). Off by default; On gives chunky pixels
   and a small dithered palette, like a 1990s shooter, at once; Pixel size and Colours change it; the HUD and menus
-  stay sharp. A save that had Retro pixels on in the Dev tab (with the Dev box ticked) opens with it on here, at the
-  same sliders, and the Dev tab no longer lists it.
+  stay sharp. Untick the Dev settings box and the picture goes back to normal at once; tick it and the Retro look
+  returns as you left it. Settings › Looks no longer lists it.
 
 ## Sound
 

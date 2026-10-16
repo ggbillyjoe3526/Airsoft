@@ -548,6 +548,8 @@ export class Menus {
       this.origins.armory = from;
       this.armoryScreen().refresh();
       this.go('armory');
+      // Shown now, so the track has its size: the next level in view.
+      this.armoryScreen().opened();
     });
   }
 

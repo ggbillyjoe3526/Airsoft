@@ -114,12 +114,12 @@ export function loadMode(): MatchMode {
   return loadChoice('mode', MATCH_MODES, DEFAULT_MODE);
 }
 
-/** The crouch key's behaviour (toggle or hold). */
+/** The crouch key's behaviour (hold or toggle). */
 export function loadCrouchMode(): CrouchMode {
   return loadChoice('crouch', CROUCH_MODES, DEFAULT_CROUCH_MODE);
 }
 
-/** The aim button's behaviour (hold or toggle). */
+/** The aim button's behaviour (toggle or hold). */
 export function loadAimMode(): HoldMode {
   return loadChoice('aimMode', AIM_MODES, DEFAULT_AIM_MODE);
 }

@@ -42,13 +42,12 @@ describe("Practice's places (M94)", () => {
     }
   });
 
-  it('says where Practice plays: the range with its picture, a map with its light where it offers two', () => {
+  it('says where Practice plays: the range, a map with its light where it offers two', () => {
     const night = () => 'night' as const;
     const range = practiceView('range', true, night);
     expect(range.mapLine).toBe(PLAY_TEXT.practice.mapLine);
-    expect(range.still).toContain('range-day.jpg');
     expect(practiceView('depot', false, night).mapLine).toBe('Depot');
-    expect(practiceView('neonHeights', true, night)).toEqual({ mapLine: 'Neon Heights · Night', still: expect.stringContaining('neonHeights-night.jpg') });
+    expect(practiceView('neonHeights', true, night)).toEqual({ mapLine: 'Neon Heights · Night' });
     expect(practiceView('neonHeights', true, () => 'day').mapLine).toBe('Neon Heights · Day');
     expect(practiceView('woodland', true, night).mapLine).toBe('Woodland'); // one light: no light named
     // Dev content off: a dev map's pick plays (and reads) as the range.

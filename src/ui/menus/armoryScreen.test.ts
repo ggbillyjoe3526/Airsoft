@@ -85,7 +85,10 @@ describe('the Armory: your level (LV1)', () => {
     const a = armory();
     expect(a.screen.hints).toEqual([]);
     expect(a.root.querySelectorAll('[data-autofocus]').map((n) => n.tag)).toEqual(['h1']);
-    expect(a.root.all('button')).toHaveLength(0);
+    // Only the track's two scroll arrows (MR1), for the mouse: out of the tab order and hidden from a screen reader.
+    const arrows = a.root.all('button');
+    expect(arrows.map((b) => b.className)).toEqual(['armory-scroll armory-scroll-back', 'armory-scroll armory-scroll-on']);
+    for (const b of arrows) expect([b.tabIndex, b.getAttribute('aria-hidden')]).toEqual([-1, 'true']);
   });
 });
 

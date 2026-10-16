@@ -126,19 +126,22 @@ test('saved loadouts: a new loadout on the Loadout, key 1 back, and the Match sc
   await expect(pick).toHaveAttribute('aria-label', 'Saved loadout: Loadout 1. Pick another');
   await setup.getByRole('button', { name: /^Change/ }).click();
   const loadout = page.locator('.menu-loadout');
-  await expect(loadout.locator('.saved-tab')).toHaveCount(5);
-  await expect(loadout.locator('.saved-tab.is-current .saved-tab-name')).toHaveText('Loadout 1');
-  // An empty tab starts a new loadout and asks its name.
-  await loadout.locator('.saved-tab.is-empty .saved-tab-button').first().click();
-  const box = loadout.locator('.saved-tab-input:visible');
+  // The dropdown names the loadout carried (MR1); New makes one and asks its name.
+  const current = loadout.locator('.saved-pick-name');
+  await expect(current).toHaveText('Loadout 1');
+  await loadout.locator('.saved-action', { hasText: 'New' }).click();
+  const box = loadout.locator('.saved-pick-input');
   await expect(box).toBeFocused();
   await box.fill('Long range');
   await box.press('Enter');
-  await expect(loadout.locator('.saved-tab.is-current .saved-tab-name')).toHaveText('Long range');
-  // Key 1 carries the first loadout again.
+  await expect(current).toHaveText('Long range');
+  // Key 1 carries the first loadout again; the list marks the one carried.
   await page.keyboard.press('Digit1');
-  await expect(loadout.locator('.saved-tab.is-current .saved-tab-name')).toHaveText('Loadout 1');
-  await expect(loadout.locator('.saved-tab.is-current .saved-tab-tag')).toHaveText('Current');
+  await expect(current).toHaveText('Loadout 1');
+  await loadout.locator('.saved-pick').click();
+  const saved = page.locator('.context-menu:visible');
+  await expect(saved.getByRole('button', { name: /^Long range/ })).toBeVisible();
+  await page.keyboard.press('Escape');
   // The Match screen's pick lists both, and a pick switches.
   await page.keyboard.press('Escape'); // Back
   await expect(pick).toBeVisible();

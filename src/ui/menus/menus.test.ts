@@ -90,8 +90,9 @@ describe('menu data', () => {
     }
   });
 
-  it('groups Settings as the G3 brief asks: Graphics, Display, Audio, Controls, Gameplay, Accessibility, Look, Save, Dev', () => {
-    expect(SETTINGS_TABS.map((t) => t.id)).toEqual(['graphics', 'display', 'audio', 'controls', 'gameplay', 'accessibility', 'look', 'save', 'dev']);
+  it("groups Settings in William's order (Dev 6 playtest): Display, Graphics, Gameplay, Looks, Audio, Controls, Accessibility, Save, Dev", () => {
+    expect(SETTINGS_TABS.map((t) => t.id)).toEqual(['display', 'graphics', 'gameplay', 'look', 'audio', 'controls', 'accessibility', 'save', 'dev']);
+    expect(SETTINGS_TABS.map((t) => t.label)).toEqual(['Display', 'Graphics', 'Gameplay', 'Looks', 'Audio', 'Controls', 'Accessibility', 'Save file', 'Dev']);
     expect(SETTINGS_TABS.filter((t) => t.hidden).map((t) => t.id)).toEqual(['dev']);
   });
 
@@ -282,8 +283,8 @@ describe('match info menus (M19)', () => {
 });
 
 describe('HUD settings (M24)', () => {
-  it('makes the scoreboard larger by default, as picked on a wide screen', () => {
-    expect(SCOREBOARD_SIZE.default).toBeGreaterThan(1);
+  it('shows the scoreboard at 100% by default (Dev 6 playtest), as picked on a wide screen', () => {
+    expect(SCOREBOARD_SIZE.default).toBe(1);
     expect(scoreboardScale(SCOREBOARD_SIZE.default, 1920)).toBe(SCOREBOARD_SIZE.default);
     expect(scoreboardScale(SCOREBOARD_SIZE.max, 2560)).toBe(SCOREBOARD_SIZE.max);
     expect(scoreboardScale(0.8, 1024)).toBe(0.8);

@@ -1,6 +1,6 @@
 import { HOP_UP } from '../../config/replicas';
 import { GEAR_TEXT, LOADOUT_TEXT, MENU_TEXT } from '../../config/menus';
-import { defaultScheme, SCHEMES, hasFixedColours, FAMILIES } from '../../config/schemes';
+import { defaultScheme, hasFixedColours, paintName } from '../../config/schemes';
 import { type ItemRef, itemKey } from '../../pool/item';
 import { GEAR_SLOTS, type GearSlot, type LoadoutModel } from '../../pool/loadoutModel';
 import { type Asset, replicaOf } from '../../pool/pool';
@@ -339,8 +339,7 @@ export class LoadoutScreen {
   }
 
   private schemeName(asset: Asset): string {
-    const scheme = this.opts.model.scheme(asset.id);
-    return this.opts.context.realistic() ? FAMILIES[SCHEMES[scheme].family].name : SCHEMES[scheme].name;
+    return paintName(this.opts.model.scheme(asset.id), this.opts.context.realistic());
   }
 }
 

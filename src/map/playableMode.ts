@@ -16,9 +16,10 @@ export function playableMode(map: Pick<MapData, 'flag' | 'extraction'>, wanted: 
 }
 
 /**
- * Whether New game offers `mode` on `map`: Extraction only where the map has its data (M43); the others everywhere,
- * as before (Attack / Defend on a map without a flagpole still plays as Elimination, above).
+ * Whether the Match screen offers `mode` on `map`: only where the map has what the mode needs (owner, 2026-10-16, MR1:
+ * a map shows only the modes that apply to it), so Attack / Defend needs a flagpole and Extraction its data (M43).
+ * A saved pick the map can't host plays as `playableMode` says.
  */
 export function modeOffered(map: Pick<MapData, 'flag' | 'extraction'>, mode: MatchMode): boolean {
-  return MODE_SHAPES[mode].without === 'elimination' || mapHosts(map, mode);
+  return mapHosts(map, mode);
 }
