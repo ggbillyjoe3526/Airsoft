@@ -5,7 +5,9 @@ and never writes the simulation.
 
 - `renderer.ts`: `Renderer` owns the scene, camera, quality (`setQuality`), lighting and environment, tone mapping,
   field of view and zoom, the retro filter (the node renderer's, `webgpu/post/nodeRetro.ts`; Settings › Look › Retro look), `warmUp` and
-  `warmShaders`. `mapMeshCache.ts` keeps the last map's meshes. `rendererParts.ts` holds its helpers (field of view,
+  `warmShaders` (which also compiles what is hidden at a session's start but shows later: the overtime flag, a tossed
+  magazine, a scope's eyepiece; `rendererParts.ts` `withShown`, BP6; and the post stack's passes, `nodePostStack.ts`
+  `compilePasses`). `mapMeshCache.ts` keeps the last map's meshes. `rendererParts.ts` holds its helpers (field of view,
   tone mapping, idle warm-up, handing GPU resources to a new renderer). The Renderer draws with the node renderer
   (`webgpu/nodeBackend.ts`) and recovers a lost device itself (`nodeLost`): a new device, or the WebGL2 back end, with
   the post stack, retro filter and sheen back.

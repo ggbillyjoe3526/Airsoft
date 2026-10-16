@@ -62,6 +62,37 @@ export function warmSurfacesInIdle<Id>(ids: readonly Id[], draw: (id: Id) => THR
 }
 
 /**
+ * Runs `run` (the warm-up compile) with each of `hidden` shown, with its hidden ancestors, and every mesh under them
+ * drawn wherever it stands (frustum culling off), then puts every flag back as it was (BP6). Three's compile gathers
+ * what it compiles before its first wait, so the overtime flag, a tossed magazine or a scope's eyepiece, hidden at a
+ * session's start, compile with the rest instead of on the frame they first show. Once per session build.
+ */
+export function withShown(hidden: readonly THREE.Object3D[], run: () => void): void {
+  const shown: THREE.Object3D[] = [];
+  const culled: THREE.Object3D[] = [];
+  for (const object of hidden) {
+    for (let o: THREE.Object3D | null = object; o; o = o.parent) {
+      if (!o.visible) {
+        o.visible = true;
+        shown.push(o);
+      }
+    }
+    object.traverse((o) => {
+      if (o.frustumCulled) {
+        o.frustumCulled = false;
+        culled.push(o);
+      }
+    });
+  }
+  try {
+    run();
+  } finally {
+    for (const o of shown) o.visible = false;
+    for (const o of culled) o.frustumCulled = true;
+  }
+}
+
+/**
  * What `handOverRenderer` needs of the renderer it retires (a stub stands in for it in tests): a lost node renderer
  * (W1), which frees its own context or device on dispose.
  */

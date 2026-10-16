@@ -33,6 +33,7 @@ import {
   toneMappingOf,
   verticalFovFor,
   warmSurfacesInIdle,
+  withShown,
   zoomedFov,
 } from './rendererParts';
 import { retroPixelAngle, type RetroView } from './retroFilter';
@@ -426,12 +427,14 @@ export class Renderer {
    * Compiles the pipelines the first frame would (M63, audit REN-06): every material in the world and in `overlay`
    * under the lights, haze, environment and target that frame draws with, so a match's first frame is not where they
    * are compiled. Called once, as a session's build ends; the renderer compiles them in the background (W1, W4).
+   * `hidden`: what is hidden now but may show mid-session (in the world or the overlay), compiled too (BP6, withShown).
    */
-  warmShaders(overlay?: { scene: THREE.Scene; camera: THREE.Camera }): void {
+  warmShaders(overlay?: { scene: THREE.Scene; camera: THREE.Camera }, hidden: readonly THREE.Object3D[] = []): void {
     if (this.environmentDirty) this.applyEnvironment();
     // A session's build has just ended: its reflective meshes (if any) are found on the next frame.
     this.post.rescan();
-    this.node.compile(this.scene, this.camera, overlay, this.retro ?? this.postStack(), this.quality);
+    const drawer = this.retro ?? this.postStack();
+    withShown(hidden, () => this.node.compile(this.scene, this.camera, overlay, drawer, this.quality));
   }
 
   /**

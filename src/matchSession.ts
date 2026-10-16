@@ -374,7 +374,7 @@ export class MatchSession {
     input.ordersEnabled = true;
     this.build.phase('figures, flag and HUD');
     // The scene is whole: its shaders are compiled now, not in the first frame (M63, audit REN-06).
-    this.combat.warmShaders();
+    this.combat.warmShaders(this.match.warmTargets());
     this.build.phase('shaders');
   }
 

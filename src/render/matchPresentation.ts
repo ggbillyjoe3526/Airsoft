@@ -280,6 +280,11 @@ export class MatchPresentation {
     this.flag.setEnvironmentLit(quality.environment);
   }
 
+  /** What the warm-up shows to compile ahead (BP6): the flag, hidden in Elimination until overtime puts it up. */
+  warmTargets(): THREE.Object3D[] {
+    return [this.flag.warmTarget(this.state.round.mode)];
+  }
+
   /** Player detail (QualitySettings.figureDetail, FA8): the figures are built again at the new level. */
   setFigureDetail(level: DetailLevel): void {
     this.characters.setDetail(level);

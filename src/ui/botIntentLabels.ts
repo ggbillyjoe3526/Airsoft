@@ -3,7 +3,7 @@ import type { Bot, BotMode, RunRole } from '../ai/bot';
 /**
  * Dev settings › Bot intentions (M90): a small label over each bot in play saying what its brain is doing, read from
  * its plain state (`Bot.mode` and the flags under it), never written back. Presentation only: MatchPresentation
- * projects the positions; the DOM is touched only when a label's place or words change.
+ * projects the positions; the DOM is touched only when a label's place or words change, with no string made per move.
  */
 
 /** What each brain mode reads as. Advancing has finer words from the bot's flags (botIntentText). */
@@ -35,6 +35,17 @@ export function botRoleText(bot: Readonly<Bot>): string {
   return ROLE_TEXT[bot.role];
 }
 
+/** The pixel offsets' CSS texts, each made the first time it is needed (BP6: no string made per move after that). */
+const PX_FROM = -2048;
+const PX_TO = 8192;
+const pxTexts: string[] = [];
+
+/** `n` pixels as CSS ("12px"): kept for every on-screen value, so moving a label allocates nothing once warm. */
+export function pxText(n: number): string {
+  if (n < PX_FROM || n >= PX_TO) return `${n}px`;
+  return (pxTexts[n - PX_FROM] ??= `${n}px`);
+}
+
 interface Label {
   root: HTMLDivElement;
   role: HTMLSpanElement;
@@ -61,7 +72,9 @@ export class BotIntentLabels {
     if (rx !== l.x || ry !== l.y) {
       l.x = rx;
       l.y = ry;
-      l.root.style.transform = `translate(${rx}px, ${ry}px)`;
+      // Two custom properties the style sheet's transform reads, each a kept string: nothing made per move (BP6).
+      l.root.style.setProperty('--x', pxText(rx));
+      l.root.style.setProperty('--y', pxText(ry));
     }
     if (role !== l.shownRole) {
       l.role.textContent = l.shownRole = role;

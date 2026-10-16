@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { MatchMode } from '../config/modes';
 import { FLAG_VISUALS } from '../config/render';
 import type { RoundState } from '../sim/round';
 
@@ -220,6 +221,15 @@ export class FlagRenderer {
     const look = on ? F.poleLit : { roughness: F.poleRoughness, metalness: F.poleMetalness };
     this.poleMat.roughness = look.roughness;
     this.poleMat.metalness = look.metalness;
+  }
+
+  /**
+   * What the warm-up shows to compile ahead (BP6), hidden until it goes up: in Elimination the overtime flag, its cloth
+   * already chequered (the only look it shows in that mode), so the first overtime compiles nothing.
+   */
+  warmTarget(mode: MatchMode): THREE.Object3D {
+    if (mode === 'elimination') this.setOvertimeLook(true);
+    return this.object;
   }
 
   /** Once per frame. `time` (s) drives the ripple, and the overtime flag's rise. */

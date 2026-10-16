@@ -1101,6 +1101,8 @@ kbd {
   position: absolute;
   left: 0;
   top: 0;
+  /* Placed by ui/botIntentLabels.ts through --x and --y (kept strings: nothing allocated per move, BP6). */
+  transform: translate(var(--x, 0), var(--y, 0));
   display: flex;
   gap: 0.35em;
   translate: -50% -100%;
