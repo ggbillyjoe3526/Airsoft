@@ -89,7 +89,7 @@ type Better = 'higher' | 'lower' | 'neither';
 type Bar = (typeof PERFORMANCE_BARS)[Exclude<keyof typeof PERFORMANCE_BARS, 'min'>];
 
 /** How full a stat's bar is: `v` along its span, at least PERFORMANCE_BARS.min, at most full. */
-export function barShare(v: number | null, bar: Bar): number | null {
+function barShare(v: number | null, bar: Bar): number | null {
   if (v === null || !Number.isFinite(v)) return null;
   const t = (v - bar.from) / (bar.to - bar.from);
   return Math.min(1, Math.max(PERFORMANCE_BARS.min, t));

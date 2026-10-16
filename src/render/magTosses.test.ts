@@ -67,3 +67,13 @@ describe('the tossed magazine (MG1)', () => {
     pistol.r.dispose();
   });
 });
+
+describe('the tossed magazine’s warm-up (KI1)', () => {
+  it('hands the warm-up one hidden magazine to compile, and none to a match with no toss slots', () => {
+    const { r, mesh } = scene(6);
+    expect(r.warmTargets()).toEqual([mesh]);
+    expect(mesh.visible).toBe(false);
+    expect(new MagTossRenderer([], [], world, DT).warmTargets()).toEqual([]);
+    r.dispose();
+  });
+});

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { BAKED_LIGHT } from '../config/bake';
 import { QUALITY, SURFACES } from '../config/render';
 import { DEPOT } from '../map/depot';
-import { mapUnderLighting } from '../map/lightingChoice';
+import { mapUnderLighting, mapUnderPreset } from '../map/lightingChoice';
 import { NEON_HEIGHTS } from '../map/neonHeights';
 import { bakedLightFor, bakedLightMode, probeUniforms, registerBakedLight, tintVertices } from './bakedLight';
 import { emptyBuffers } from './cuboidMesh';
@@ -48,6 +48,9 @@ describe('which maps draw baked light (G6)', () => {
     expect(bakedLightFor(mapUnderLighting(NEON_HEIGHTS, 'day'))).toBeNull();
     // A Depot played at night (were it offered) would not take its day bake.
     expect(bakedLightFor({ ...DEPOT, lighting: { presets: ['night'] } })).toBeNull();
+    // Dev › Time of day (M90; KI1 checked the KNOWN_ISSUES row): a forced preset the bake wasn't made under drops it.
+    expect(bakedLightFor(mapUnderPreset(DEPOT, 'night'))).toBeNull();
+    expect(bakedLightFor(mapUnderPreset(DEPOT, 'day'))).toBe(grid);
   });
 
   it('draws it off without probes, else as the quality says', () => {

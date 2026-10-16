@@ -64,4 +64,3 @@ export function smooth(e0: number, e1: number, x: number): number {
   return t * t * (3 - 2 * t);
 }
 
-export const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;

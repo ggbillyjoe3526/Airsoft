@@ -3,7 +3,8 @@
 The tutorial's progress tracking. It reads the game and never writes it.
 
 - `tutorial.ts`: `TutorialTracker` watches the player and each tick's events against the steps in `config/tutorial.ts`;
-  `keySegments` shows a step's keys as the player has them bound.
+  `keySegments` shows a step's keys as the player has them bound. The switch-replica step reads the BB pool (the
+  view's `bbs`) to count only a BB its replica fired (KI1), not one from the first replica still in flight.
 - It runs on the practice range (`src/rangeSession.ts`), with `ui/coachPanel.ts` showing the current step (the range
   readout takes over once it is finished). A step's `shows` opens the scoreboard or the order wheel on screen while it
   is up (`ui/tutorialShowcase.ts`, M80). `Game` saves `tutorialDone` when the tracker reports the end; played to its

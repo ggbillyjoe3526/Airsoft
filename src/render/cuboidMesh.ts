@@ -17,6 +17,11 @@ export interface Buffers {
   uvs: number[];
   colors: number[];
   indices: number[];
+  /**
+   * With weathering, each vertex's foot height (m): where the shader's creep starts up a wall (mapMeshes.ts `footTo`,
+   * read as `wearFoot`). Absent without weathering.
+   */
+  feet?: number[];
 }
 
 export function emptyBuffers(): Buffers {

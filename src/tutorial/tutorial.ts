@@ -1,5 +1,6 @@
 import type { Action } from '../config/controls';
 import { TUTORIAL, type TutorialStep } from '../config/tutorial';
+import type { BB } from '../sim/ballistics';
 import type { Character } from '../sim/character';
 import type { GameEvent } from '../sim/events';
 import type { RangeTarget } from '../sim/rangeTargets';
@@ -10,6 +11,11 @@ export interface TutorialView {
   player: Character;
   events: readonly GameEvent[];
   targets: readonly RangeTarget[];
+  /**
+   * The BB pool's slots (GameState.bbs.bbs), read only, so a hit is told apart by the replica that fired its BB (KI1:
+   * the switch-replica step); without it, a hit counts once the asked-for replica has fired this step.
+   */
+  bbs?: readonly BB[];
 }
 
 /**
@@ -36,6 +42,14 @@ export class TutorialTracker {
   private doneLeft = 0;
   /** A jump or a skip moved the step since the last tick: the next observe reports a change, so the step is redrawn. */
   private moved = false;
+  /**
+   * Per BB pool slot: the serial of the player's BB fired from it and the replica slot (armament.active) that fired it
+   * (KI1), so the switch-replica step counts only its own replica's BBs. Sized to the pool on the first view with BBs.
+   */
+  private firedSerial: Float64Array | null = null;
+  private firedFrom: Int8Array | null = null;
+  /** The highest serial of the player's BBs already noted in firedSerial. */
+  private seenSerial = -1;
 
   /**
    * `start`: the step to begin at, by index, or by id (a saved step: an id still finds its lesson after a later build
@@ -134,6 +148,7 @@ export class TutorialTracker {
       this.doneLeft = Math.max(0, this.doneLeft - v.dt);
       changed = this.doneLeft === 0;
     }
+    this.noteShots(v);
     const step = this.steps[this.index];
     if (!step || !this.goalMet(step, v, yawStep)) return changed;
     this.doneIndex = this.index++;
@@ -142,6 +157,44 @@ export class TutorialTracker {
     this.firedSlot = false;
     this.sprinted = false;
     return true;
+  }
+
+  /** On a tick the player fired: notes which replica fired each of their new BBs (firedFrom). Nothing allocated after the first. */
+  private noteShots(v: TutorialView): void {
+    const bbs = v.bbs;
+    const p = v.player;
+    if (!bbs) return;
+    let fired = false;
+    for (const e of v.events) if (e.type === 'shot' && e.characterId === p.id) fired = true;
+    if (!fired) return;
+    if (!this.firedSerial || this.firedSerial.length !== bbs.length) {
+      this.firedSerial = new Float64Array(bbs.length).fill(-1);
+      this.firedFrom = new Int8Array(bbs.length).fill(-1);
+    }
+    let seen = this.seenSerial;
+    for (let i = 0; i < bbs.length; i++) {
+      const b = bbs[i]!;
+      if (b.ownerId !== p.id || b.serial <= this.seenSerial) continue;
+      this.firedSerial[i] = b.serial;
+      this.firedFrom![i] = p.armament.active;
+      if (b.serial > seen) seen = b.serial;
+    }
+    this.seenSerial = seen;
+  }
+
+  /**
+   * The replica slot that fired the player's BB which made hit `e` (it stopped where the event says, BallisticsConfig's
+   * targetHit), or -1 when it can't be told (no BBs in the view, or a BB fired before the tracker saw it).
+   */
+  private hitFrom(v: TutorialView, e: { position: { x: number; y: number; z: number } }): number {
+    const bbs = v.bbs;
+    if (!bbs || !this.firedSerial) return -1;
+    for (let i = 0; i < bbs.length; i++) {
+      const b = bbs[i]!;
+      if (b.active || b.ownerId !== v.player.id || b.position.x !== e.position.x || b.position.y !== e.position.y || b.position.z !== e.position.z) continue;
+      return this.firedSerial[i] === b.serial ? this.firedFrom![i]! : -1;
+    }
+    return -1;
   }
 
   private goalMet(step: TutorialStep, v: TutorialView, yawStep: number): boolean {
@@ -176,17 +229,20 @@ export class TutorialTracker {
         }
         this.amount += v.dt;
         return this.sprinted && this.amount <= g.within && v.events.some((e) => e.type === 'shot' && e.characterId === p.id);
-      case 'hit':
-        // A replica's BBs aren't told apart in flight: a hit counts once you've fired the asked-for replica this step.
-        if (g.slot !== undefined && !this.firedSlot) {
+      case 'hit': {
+        // With the BBs in view (KI1), a hit counts only from a BB the asked-for replica fired, so one from the first
+        // replica still in flight after the switch doesn't. Without them, once you've fired that replica this step.
+        const byBB = g.slot !== undefined && v.bbs !== undefined;
+        if (g.slot !== undefined && !byBB && !this.firedSlot) {
           this.firedSlot = p.armament.active === g.slot && v.events.some((e) => e.type === 'shot' && e.characterId === p.id);
         }
-        if (g.slot !== undefined && !this.firedSlot) return false;
+        if (g.slot !== undefined && !byBB && !this.firedSlot) return false;
         return v.events.some((e) => {
-          if (e.type !== 'targetHit' || e.shooterId !== p.id) return false;
+          if (e.type !== 'targetHit' || e.shooterId !== p.id || (byBB && this.hitFrom(v, e) !== g.slot)) return false;
           const t = v.targets.find((x) => x.id === e.targetId);
           return t !== undefined && t.distance >= g.minDistance && (!g.target || t.kind === g.target);
         });
+      }
     }
   }
 }

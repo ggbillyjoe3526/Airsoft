@@ -440,9 +440,11 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   // The minimap (M23) is up while playing, with the map and round under it (G4).
   await expect(page.locator('.minimap')).toBeVisible();
   await expect(page.locator('.minimap-caption')).toHaveText(/^Depot · Round \d+$/);
-  // CL1: the minimap names the area you stand in, and the callout feed waits bottom left for your teammates' calls.
+  // CL1: the minimap names the area you stand in, and the one feed (Dev 6 playtest item 32) waits top right for hits
+  // and your teammates' calls.
   await expect(page.locator('.minimap-area')).toHaveText(/^[A-Z][A-Za-z ]+$/);
-  await expect(page.locator('.callout-feed')).toHaveAttribute('aria-live', 'polite');
+  await expect(page.locator('.hit-feed')).toHaveAttribute('aria-live', 'polite');
+  await expect(page.locator('.hit-feed')).not.toHaveClass(/bottom-left/);
   // G4: the score bar says what wins the match; the replica panel has a chip per fire mode the AEG has, on the panel
   // navy at HUD opacity's 90 %; the round banner sets its words in capitals.
   await expect(page.locator('.sb-aim')).toHaveText(/^First to \d+/);

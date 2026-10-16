@@ -60,7 +60,7 @@ function richDocument() {
     },
   };
 }
-const RECORDS = { modes: [], rows: [], bests: [], notCounted: '' };
+const RECORDS = { title: 'Your records', modes: [], rows: [], bests: [], notCounted: '' };
 const walk = (n: FakeElement): FakeElement[] => [n, ...n.children.flatMap(walk)];
 const textOf = (n: FakeElement): string[] => walk(n).map((c) => c.textContent).filter(Boolean);
 const byClass = (root: FakeElement, name: string): Node[] => walk(root).filter((n) => n.className.split(' ').includes(name)) as Node[];

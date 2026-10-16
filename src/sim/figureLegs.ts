@@ -2,6 +2,7 @@ import { FIGURE_RIG } from '../config/figureRig';
 import type { FigureLegs } from '../config/hits';
 import type { Character, LifeStatus } from './character';
 import type { VaultState } from './vault';
+import { clamp01 } from '../core/math';
 
 /**
  * The rigged figures' legs in the simulation (IM8). The Blender figures walk, crouch and kneel on real legs that bend at
@@ -45,7 +46,6 @@ export function legMode(status: LifeStatus, sprinting: boolean, speed: number, v
   return status === 'alive' && sprinting && speed > FIGURE_RIG.stillBelow ? LEG_MODE.sprint : LEG_MODE.gait;
 }
 
-const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
 
 /**
  * Where in the Vault clip (0..1) vault `v` is `time` seconds from its start: the clip's first FIGURE_RIG.vault.top over

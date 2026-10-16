@@ -3,6 +3,7 @@ import { TUTORIAL, TUTORIAL_STEPS, tutorialSteps } from '../config/tutorial';
 import { BALLISTICS } from '../config/ballistics';
 import { AEG, LOADOUT } from '../config/replicas';
 import { ORDER_WHEEL } from '../config/squad';
+import { type BB, createBBPool, spawnBB } from '../sim/ballistics';
 import { createCharacter } from '../sim/character';
 import type { GameEvent } from '../sim/events';
 import { hopUpReach } from '../sim/hopUp';
@@ -337,6 +338,41 @@ describe('skipping and resuming the tutorial (audit POOL-14, POOL-16)', () => {
   it('leaves out the switch-replica step for a player carrying one replica', () => {
     expect(new TutorialTracker(TUTORIAL_STEPS, true, 0, 1).steps.map((s) => s.id)).not.toContain('secondary');
     expect(new TutorialTracker(TUTORIAL_STEPS, true, 0, 2).steps.map((s) => s.id)).toContain('secondary');
+  });
+});
+
+describe('the switch-replica step tells BBs apart by the replica that fired them (KI1)', () => {
+  it("doesn't count the first replica's BB landing after the switch, and counts the second's", () => {
+    const player = createCharacter(0, vec3(0, 0, 2), 0, LOADOUT, 0);
+    const targets = createRangeTargets();
+    const steel = targets.find((x) => x.kind === 'steel')!;
+    const pool = createBBPool(8);
+    const t = new TutorialTracker(TUTORIAL_STEPS, true, 'secondary');
+    expect(t.step?.id).toBe('secondary');
+    const tick = (events: GameEvent[] = []) => t.observe({ dt: DT, player, events, targets, bbs: pool.bbs });
+    const shot: GameEvent = { type: 'shot', characterId: 0, replicaId: 'x', position: vec3() };
+    const fire = () => {
+      const bb = spawnBB(pool, 0, vec3(0, 1.5, 0), vec3(0, 0, -1), 90, 0, 0.0002);
+      tick([shot]);
+      return bb;
+    };
+    /** `bb` stops on the steel plate at `z`, as the simulation leaves a BB that hit a target. */
+    const lands = (bb: BB, z: number) => {
+      bb.active = false;
+      bb.position.x = 0;
+      bb.position.y = 1;
+      bb.position.z = z;
+      tick([{ type: 'targetHit', targetId: steel.id, kind: 'steel', shooterId: 0, position: vec3(0, 1, z), ricochet: false }]);
+    };
+    player.armament.active = 0;
+    const first = fire();
+    player.armament.active = 1;
+    const second = fire();
+    lands(first, -20); // still in flight from the first replica when the second fired
+    expect(t.showingDone).toBe(false);
+    player.armament.active = 0; // switched back while the second replica's BB flies: it still counts
+    lands(second, -20.5);
+    expect(t.showingDone).toBe(true);
   });
 });
 

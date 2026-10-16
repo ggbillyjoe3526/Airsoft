@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Action } from '../config/controls';
+import { type Action, FIRE_MODE_QUEUE_MAX } from '../config/controls';
 import { MOVEMENT } from '../config/movement';
 import { createCommand } from '../sim/commands';
 import type { Keyboard } from './keyboard';
@@ -9,14 +9,14 @@ import type { PointerLock } from './pointerLock';
 /** Keys held and pressed this frame, standing in for the real keyboard. */
 function fakeKeyboard() {
   const down = new Set<Action>();
-  const pressed = new Set<Action>();
-  const kb = { isDown: (a: Action) => down.has(a), wasPressed: (a: Action) => pressed.has(a) } as unknown as Keyboard;
+  const pressed = new Map<Action, number>();
+  const kb = { isDown: (a: Action) => down.has(a), wasPressed: (a: Action) => pressed.has(a), pressCount: (a: Action) => pressed.get(a) ?? 0 } as unknown as Keyboard;
   return {
     kb,
     /** Presses (and holds) `a` this frame. */
     press(a: Action) {
       down.add(a);
-      pressed.add(a);
+      pressed.set(a, (pressed.get(a) ?? 0) + 1);
     },
     release(a: Action) {
       down.delete(a);
@@ -98,6 +98,56 @@ describe('fire selector key', () => {
     const { keys, frame } = setup('toggle');
     expect(frame(() => keys.press('fireMode')).cycleFireMode).toBe(true);
     expect(frame().cycleFireMode).toBe(false); // held: no repeat
+  });
+
+  it('steps twice for two presses inside one slow frame, one step a tick (KI1)', () => {
+    const { keys, input } = setup('toggle');
+    const cmd = createCommand();
+    keys.press('fireMode');
+    keys.release('fireMode');
+    keys.press('fireMode');
+    input.update(0, 2);
+    const steps: boolean[] = [];
+    for (let tick = 0; tick < 3; tick++) {
+      input.fillCommand(cmd);
+      steps.push(cmd.cycleFireMode);
+    }
+    keys.endFrame();
+    expect(steps).toEqual([true, true, false]);
+  });
+
+  it('keeps a press for the next frame that runs a tick, and drops it on a pause (KI1)', () => {
+    const { keys, input } = setup('toggle');
+    const cmd = createCommand();
+    keys.press('fireMode');
+    input.update(0, 2); // a fast frame: no tick due
+    keys.endFrame();
+    input.update(0, 2);
+    input.fillCommand(cmd);
+    expect(cmd.cycleFireMode).toBe(true);
+    keys.press('fireMode');
+    input.update(0, 2);
+    keys.endFrame();
+    input.clearLatches();
+    input.fillCommand(cmd);
+    expect(cmd.cycleFireMode).toBe(false);
+  });
+
+  it('keeps at most one full cycle of taps made while no command is filled (Dev › Spectate any bot; KI1)', () => {
+    const { keys, input } = setup('toggle');
+    const cmd = createCommand();
+    for (let i = 0; i < 8; i++) {
+      keys.press('fireMode');
+      input.update(0, 2);
+      keys.release('fireMode');
+      keys.endFrame();
+    }
+    let steps = 0;
+    for (let tick = 0; tick < 10; tick++) {
+      input.fillCommand(cmd);
+      if (cmd.cycleFireMode) steps++;
+    }
+    expect(steps).toBe(FIRE_MODE_QUEUE_MAX);
   });
 });
 
@@ -557,5 +607,42 @@ describe('use key (M44: opens a case in Extraction)', () => {
   it('is not set by any other key', () => {
     const { keys, frame } = setup('toggle');
     for (const a of ['fire', 'reload', 'jump', 'fireMode', 'crouch'] as const) expect(frame(() => keys.press(a)).use, a).toBe(false);
+  });
+});
+
+describe('fire selector presses: QA edge cases (KI1)', () => {
+  it('drops queued presses on a new round (resetView) as on a pause', () => {
+    const { keys, input } = setup('toggle');
+    const cmd = createCommand();
+    for (let i = 0; i < 3; i++) {
+      keys.press('fireMode');
+      keys.release('fireMode');
+    }
+    input.update(0, 2);
+    keys.endFrame();
+    input.fillCommand(cmd);
+    expect(cmd.cycleFireMode).toBe(true);
+    input.resetView(0);
+    input.fillCommand(cmd);
+    expect(cmd.cycleFireMode).toBe(false);
+  });
+
+  it('hands over exactly as many steps as presses over several frames', () => {
+    const { keys, input } = setup('toggle');
+    const cmd = createCommand();
+    let steps = 0;
+    for (let frame = 0; frame < 4; frame++) {
+      keys.press('fireMode');
+      keys.release('fireMode');
+      input.update(0, 2);
+      keys.endFrame();
+      if (frame % 2 === 1) {
+        for (let t = 0; t < 3; t++) {
+          input.fillCommand(cmd);
+          if (cmd.cycleFireMode) steps++;
+        }
+      }
+    }
+    expect(steps).toBe(4);
   });
 });

@@ -7,7 +7,7 @@ import { carryNodePatch, type PatchUniforms, type SurfaceRecipe } from './nodePa
  * render/webgpu/surfaceNodes.ts on top of Three's own Lambert or Standard model):
  *
  * - **Weathering** (QualitySettings.weathering, the concept's kit.ts): world-space dirt patches, dirt creeping up the
- *   lowest half metre of every wall, streaks running down from the tops and rust on steel. In world space, so it never
+ *   lowest half metre of every wall (from its block's foot, the `wearFoot` vertex attribute), streaks running down from the tops and rust on steel. In world space, so it never
  *   repeats with the texture. Its strengths (config/weathering.ts) are uniforms, so every weathered surface shares
  *   one program (a match start compiles at most a few).
  * - **Baked bounce light** (QualitySettings.bakedLight `pixel`, render/bakedLight.ts): after Three's light sum, the

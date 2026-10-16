@@ -114,6 +114,13 @@ export const ORDER_WHEEL = {
   pointerReach: 90,
   /** Within this of the middle the pointer is on no order (px). */
   deadZone: 24,
-  /** Distance of the orders from the wheel's middle on screen (px). */
-  radius: 112,
+  /**
+   * The wheel on screen (Dev 6 playtest item 22): a ring of equal slices, one per order, from `inner` to `outer` px from
+   * the middle with `gap` degrees between slices; each order's name sits on its slice at `radius` px, in a box the same
+   * size for every order. The pointer's reach (pointerReach) ends inside the ring, so it always sits over a slice.
+   */
+  radius: 122,
+  inner: 70,
+  outer: 186,
+  gap: 2.5,
 } as const;
