@@ -6,6 +6,13 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 
 ### Changed
 - **TT1** · Tutorial cards are one or two short sentences; the four you only read move on by themselves after 5–8 s, with a bar filling; the lean step is gone
+- **MV1** · Nobody rests a replica on cover any more, you or the bots; aiming at a ledge no longer steadies you and the Rested tag is gone; Q and E leaning stay
+- **MV1** · Holstered you run at 5.0 m/s against 4.2 armed, never faster than the 6.3 m/s sprint, which is the same armed or holstered
+- **MV1** · Walking with Shift keeps your aim as steady as standing still, where it was a little looser before
+
+### Fixed
+- **MV1** · The first switch to your other replica in a match no longer stutters; every carried replica is ready before the round
+- **MV1** · On the Blender replicas the first-person thumbs wrap round the grip and along the frame instead of sinking into it
 
 ### Internal
 - **Pipeline** · Code changes get critic, QA and performance review before a pull request is ready; CI fails it without passing verdicts
