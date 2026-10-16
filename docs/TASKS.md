@@ -107,7 +107,7 @@ attempts: 0
 ## MS1 · Map surroundings and detail (playtest item 23)
 tier: core
 perf: required
-touches: src/map/depotDressing.ts, src/map/woodland.ts, src/map/woodlandDressing.ts, src/map/neonHeightsDressing.ts, src/map/foliage.ts, src/render/, docs/ASSETS.md
+touches: src/map/depotDressing.ts, src/map/woodland.ts, src/map/woodlandDressing.ts, src/map/neonHeightsDressing.ts, src/map/foliage.ts, src/map/mapTypes.ts, src/render/, src/config/dressing.ts, src/config/graphics.ts, src/config/renderLighting.ts, src/config/renderQuality.ts, src/config/renderSurfaces.ts, docs/ASSETS.md
 contract: none
 acceptance:
   1. The owner approves concept images before code changes.
