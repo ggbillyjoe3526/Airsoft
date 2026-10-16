@@ -31,14 +31,14 @@ MR1 and MS1 show the owner concept images and wait for his approval before any c
 ## ST1 · Settings defaults and menu order (playtest items 3–8, 18, 20, 34; the Settings side of 1 and 17)
 tier: ui
 perf: skip
-touches: src/settings/, src/config/menus.ts, src/config/controls.ts, src/config/audio.ts, src/config/graphics.ts, src/config/dev.ts, src/ui/menus/, src/ui/, src/game.ts
+touches: src/settings/, src/config/menus.ts, src/config/controls.ts, src/config/audio.ts, src/config/graphics.ts, src/config/dev.ts, src/config/look.ts, src/config/accessibility.ts, src/config/matchInfo.ts, src/audio/ambienceM86.test.ts, src/input/playerInput.test.ts, src/ui/menus/, src/ui/, src/game.ts
 contract: none
 acceptance:
   1. Defaults (new saves): sound cue colour red, scoreboard size 100 %, aim button Toggle, crouch Hold, volumes master 100 %, effects 80 %, power source 100 %, ambience 60 %, interface 50 %.
   2. The Retro look setting moves to Settings › Dev. The "Voices (hit calls)" setting is gone.
   3. Settings tabs run top to bottom: Display, Graphics, Gameplay, Looks, Audio, Controls, Accessibility, Save file, Dev.
   4. The realistic colours leave Settings (they move to the Loadout's Colour tab, MR1).
-  5. The Dev toggles "Disable figure models" and "Disable all models" leave the menu (BD1 removes their code paths).
+  5. The Dev toggles "Disable figure models" and "Disable all models" leave the menu: BD1 removes them with their code paths (one change, agreed between the threads).
   6. The level display reads "LVL", not "LV".
   7. A save holding the old values still loads.
 status: open
