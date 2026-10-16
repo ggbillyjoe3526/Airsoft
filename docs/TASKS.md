@@ -324,6 +324,24 @@ acceptance:
 status: open
 attempts: 0
 
+## KI1 · Known issues fix pass (owner, 2026-10-16)
+tier: core
+perf: required
+touches: src/, e2e/, docs/, README.md, CHANGELOG.md
+contract: none
+acceptance:
+  1. Every row in `docs/KNOWN_ISSUES.md` is gone through. A row fixed at its root is deleted, with a test where the
+     logic is testable. A row left open keeps or gains its reason: a feature (Beta adds none), the owner's balance or
+     playtest call, an accepted limit, needs a real browser or GPU, too risky for the guards, or handed off to a
+     Beta 1 playtest block.
+  2. Rows owned by the Beta 1 playtest blocks (ST1, MR1, HD1, MV1, BD1, MS1, TT1) are not touched in code; their rows
+     name the block.
+  3. Stale notes are corrected; DC1's merges and moves are done.
+  4. No balance number is retuned; the bot-match guards stay green with no threshold loosened.
+  5. A browser check of every public map and mode finds no new error, stall or NaN. The perf gate is green.
+status: building
+attempts: 0
+
 ## BP6 · Beta 1 bug pass (when William says go)
 tier: core
 perf: required
