@@ -1338,7 +1338,7 @@ export class Game {
       this.menus.showResult(view.headline, view.scoreLine, {
         result: view.result,
         blocks: view.summaryBlocks,
-        records: recordsView(this.records, this.recordNews, s.setup.difficulty, s.mode, s.notCountedReason),
+        records: recordsView(this.records, this.recordNews, s.setup.difficulty, s.mode, s.notCountedReason, s.setup.ruleset),
         xp: this.lastXp,
         noXp: this.noXpReason,
         haul: haulSummary(s.runFinds(), this.lastXp !== null),
