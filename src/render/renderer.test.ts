@@ -407,7 +407,36 @@ describe('the shader warm-up (M63, audit REN-06)', () => {
   it('compiles the world for the stack’s target and warms the held replica by drawing it into its own once (BP3)', () => {
     const { r, calls } = stubbedRenderer(QUALITY.high);
     r.warmShaders(replica());
-    expect(calls).toEqual(['compile world into the post target with the environment', 'render']);
+    expect(calls.slice(0, 2)).toEqual(['compile world into the post target with the environment', 'render']);
+    // KI1: then every pass's quads compile into the targets they draw into, the last onto the canvas; none is drawn.
+    const passes = calls.slice(2);
+    expect(passes.length).toBeGreaterThan(5);
+    expect(passes.every((c) => c.startsWith('compile  into'))).toBe(true);
+    expect(passes.at(-1)).toBe('compile  into the canvas with none');
+    expect(glOf(r).getRenderTarget()).toBeNull();
+  });
+
+  it('compiles what is hidden but may show mid-session (KI1): shown, with its hidden parents, only while the compile gathers', () => {
+    const { r } = stubbedRenderer();
+    const group = new THREE.Group();
+    group.visible = false;
+    const flag = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial());
+    const cloth = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial());
+    cloth.visible = false;
+    flag.add(cloth);
+    group.add(flag);
+    r.scene.add(group);
+    const seen: boolean[] = [];
+    const gl = glOf(r);
+    const compile = gl.compileAsync.bind(gl);
+    vi.spyOn(gl, 'compileAsync').mockImplementation((scene) => {
+      if (scene === r.scene) seen.push(group.visible, flag.visible, flag.frustumCulled, cloth.visible);
+      return compile(scene);
+    });
+    r.warmShaders(replica(), [flag]);
+    // The flag and its group shown, culling off; its hidden cloth stays hidden (its owner shows what it will draw).
+    expect(seen).toEqual([true, true, false, false]);
+    expect([group.visible, flag.visible, flag.frustumCulled, cloth.visible]).toEqual([false, true, true, false]);
   });
 
   it('with no post stack and the retro filter off, never moves the render target off the canvas', () => {
@@ -416,6 +445,48 @@ describe('the shader warm-up (M63, audit REN-06)', () => {
     r.warmShaders(replica());
     r.render(replica());
     expect(targets.mock.calls.every(([t]) => t === null)).toBe(true);
+  });
+});
+
+describe('the idle surface warm-up and dispose (DX0)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+  /** A canvas whose 2D context accepts every call and draws nothing (no DOM here). */
+  function stubDocument(): void {
+    const ctx: unknown = new Proxy(function () {}, { get: (_t, key) => (key === 'createImageData' || key === 'getImageData' ? (w: number, h: number) => ({ data: new Uint8ClampedArray(w * h * 4), width: w, height: h }) : () => ctx), set: () => true });
+    vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => ctx }) });
+    vi.stubGlobal('ImageData', class { constructor(public data: Uint8ClampedArray, public width: number, public height: number) {} });
+  }
+  function queued() {
+    const jobs: (() => void)[] = [];
+    return { idle: (work: () => void) => void jobs.push(work), drain: () => { while (jobs.length > 0) jobs.shift()!(); }, size: () => jobs.length };
+  }
+
+  it('draws and uploads the core surfaces while the renderer is live', () => {
+    stubDocument();
+    const { r } = stubbedRenderer();
+    const init = vi.fn();
+    (glOf(r) as unknown as { initTexture: unknown }).initTexture = init;
+    const q = queued();
+    r.warmUp(q.idle);
+    q.drain();
+    expect(init).toHaveBeenCalled();
+    expect((r as unknown as { surfaces: object | null }).surfaces).not.toBeNull();
+  });
+
+  it('does nothing once disposed: no surface set is drawn afresh and nothing is uploaded', () => {
+    stubDocument();
+    const { r } = stubbedRenderer();
+    const init = vi.fn();
+    (glOf(r) as unknown as { initTexture: unknown }).initTexture = init;
+    const q = queued();
+    r.warmUp(q.idle);
+    r.dispose();
+    q.drain();
+    expect(init).not.toHaveBeenCalled();
+    expect((r as unknown as { surfaces: object | null }).surfaces).toBeNull();
   });
 });
 
@@ -450,7 +521,7 @@ describe('the shader warm-up runs once per session build, never per frame (M63, 
     // CombatPresentation.warmShaders hands over to Renderer.warmShaders: that and the two sessions' are the three calls.
     expect(callers.sort()).toEqual(['/src/matchSession.ts', '/src/rangeSession.ts', '/src/render/combatPresentation.ts']);
     const ctor = bodyOf(sources['/src/matchSession.ts']!, '  constructor(');
-    const call = ctor.indexOf('this.combat.warmShaders()');
+    const call = ctor.indexOf('this.combat.warmShaders(this.match.warmTargets())');
     expect(call).toBeGreaterThan(0);
     expect(ctor.split('warmShaders(').length - 1).toBe(1);
     // Everything the session draws is in the scene by then.
@@ -462,9 +533,9 @@ describe('the shader warm-up runs once per session build, never per frame (M63, 
     // CombatPresentation's hand-over is its own method, not its frame.
     const combat = sources['/src/render/combatPresentation.ts']!;
     expect(bodyOf(combat, '  render(firstPerson')).not.toMatch(/warmShaders|compile/);
-    expect(bodyOf(combat, '  warmShaders(')).toMatch(/this\.renderer\.warmShaders\(this\.overlay\)/);
+    expect(bodyOf(combat, '  warmShaders(')).toMatch(/this\.renderer\.warmShaders\(this\.overlay, /);
     // With every carried replica shown, not only the one in hand (Dev 6 playtest note 26: a hitch on the first switch).
-    expect(bodyOf(combat, '  warmShaders(')).toMatch(/this\.viewmodel\.withEverySlotShown\(\(\) => this\.renderer\.warmShaders\(this\.overlay\)\)/);
+    expect(bodyOf(combat, '  warmShaders(')).toMatch(/this\.viewmodel\.withEverySlotShown\(\(\) => this\.renderer\.warmShaders\(this\.overlay, /);
     // Practice (M94): its last call too, after its map, torch beams and targets are in the scene.
     const range = bodyOf(sources['/src/rangeSession.ts']!, '  constructor(');
     const rangeCall = range.indexOf('this.combat.warmShaders()');
@@ -489,6 +560,7 @@ describe('the shader warm-up runs once per session build, never per frame (M63, 
       '/src/render/webgpu/nodeBackend.ts',
       `${post}nodeOutput.ts`,
       `${post}nodeOutput.ts`,
+      `${post}nodePostStack.ts`,
       `${post}nodePostStack.ts`,
       `${post}nodeRetro.ts`,
       `${post}nodeRetro.ts`,

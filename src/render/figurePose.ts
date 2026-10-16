@@ -1,4 +1,5 @@
 import { FIGURE_RIG } from '../config/figureRig';
+import { clamp01 } from '../core/math';
 import type { LifeStatus } from '../sim/character';
 import { LEG_CLIPS, LEG_MODE, LEG_MODES, type LegBlend, legClipWeights, legDirection, legMode, legRun } from '../sim/figureLegs';
 
@@ -225,7 +226,6 @@ const ease = (dt: number, tau: number): number => (tau > 0 ? 1 - Math.exp(-dt / 
 const want = new Float32Array(4);
 const dir = new Float32Array(4);
 const blend: LegBlend = { mode: dir, move: 0, dir, jump: 0, crouch: 0, run: 0 };
-const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
 const frac = (v: number): number => v - Math.floor(v);
 
 /** Starts the trigger press of a shot from `hold`. */

@@ -35,7 +35,8 @@ seeded per bot.
   rather than over a ledge, G11; a leg over a low obstacle sets `vaultLeg`, and the brain presses Jump at it, M102;
   shared with `squadOrders.ts`, so the two files don't import each other) and `botCombat.ts` (aim, bursts, reloads; bots lead a target with `flightTimeEstimate`, and hold fire through more bush than `foliageFireThrough`, Easy as far as a BB gets through, FO1); `botTorch.ts` handles weapon
   lights at night, and `botHolster.ts` the holster (M92: put away on a calm sprint through its own half).
-- `perception.ts`, `aim.ts`, `cover.ts`: view cone and static ray casts; turn rate and aim error (a fresh contact's first aim starts wide
+- `perception.ts`, `aim.ts`, `cover.ts`: view cone and static ray casts (sight also stops on the body of someone already
+  hit, KI1); turn rate and aim error (a fresh contact's first aim starts wide
   to one side and settles from the trigger, G11; the sight on the replica in hand scales it, `BOT_SIGHT_AIM`, BG1); hidden spots, low
   cover and wall corners (a bot leans out at a corner). `angles.ts`, `angleFeatures.ts`: held angles.
 - `squadOrders.ts`, `squadFollow.ts`: Follow me, Hold here, Regroup (default keys F, X, V, or the order wheel on Z); in
@@ -57,7 +58,7 @@ seeded per bot.
 - Tests: `ai.test.ts`, `botTactics.test.ts` and one file per behaviour. The match guards (`depotMatch.*`, `*Match.*`
   over `depotMatchSupport.ts` and `extractionRunSupport.ts`) are the `slow` project: they check what must never happen
   (rounds played and settled, nobody stuck, falling or hit by a teammate, each mode's rules). They are seed-sensitive:
-  re-measure over 16 seeds before changing a threshold (`docs/DECISIONS.md`). Files named `*Support.ts` here are
-  test-only.
+  re-measure over 16 seeds before changing a threshold (`docs/DECISIONS.md`). `testSupport.ts` (the small worlds and
+  the one-bot duel the unit tests share) and the other files named `*Support.ts` here are test-only.
 - `balance/`: the bot balance figures (who wins, the first hit, Extraction's get-out rates), measured on demand by
   `node pipeline/balance.mjs`, never asserted (token plan item 22; `balance/README.md`).

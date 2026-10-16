@@ -38,6 +38,11 @@ export interface PlayerCommand {
   holster: boolean;
   /** Step the active replica's fire selector to its next mode (one-shot). */
   cycleFireMode: boolean;
+  /**
+   * Notches to turn the hop-up dial of the replica in hand this tick (one-shot; Dev 6 playtest item 15): positive for
+   * more lift, negative for less, each notch HOP_UP.dialStep (sim/armament.ts). Bots leave it at 0.
+   */
+  hopUpSteps: number;
   /** Switch the weapon torch on the replica in hand on or off (one-shot; M33h, sim/torch.ts). */
   toggleTorch: boolean;
   /** Use key held (M44): opens the case beside you in Extraction. */
@@ -66,6 +71,7 @@ export function createCommand(): PlayerCommand {
     switchTo: -1,
     holster: false,
     cycleFireMode: false,
+    hopUpSteps: 0,
     toggleTorch: false,
     use: false,
     tossMag: -1,

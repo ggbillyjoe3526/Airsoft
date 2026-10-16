@@ -164,6 +164,20 @@ export function setBbWeights(a: Armament, grams: readonly number[]): void {
   }
 }
 
+/**
+ * Turns the hop-up dial of the replica in hand by `steps` notches (Dev 6 playtest item 15): onto the dial's own steps
+ * (HOP_UP.dialStep) and within its range, kept for the rest of the match (a new round's kit leaves it). Only with the
+ * replica in hand, as at a field you open the hop chamber to turn it. Says so in a `hopUp` event, even at an end of the
+ * range, so the HUD shows where the dial stands.
+ */
+export function turnHopUp(characterId: number, a: Armament, replica: ReplicaConfig, steps: number, ctx: ArmamentContext): void {
+  const before = a.hopUps[a.active] ?? replica.hopUpDial;
+  const notch = Math.round(before / HOP_UP.dialStep) + steps;
+  const dial = Math.min(HOP_UP.maxDial, Math.max(HOP_UP.minDial, Number((notch * HOP_UP.dialStep).toFixed(4))));
+  a.hopUps[a.active] = dial;
+  ctx.events.push({ type: 'hopUp', characterId, replicaId: replica.id, dial, moved: dial !== before });
+}
+
 /** Sets each replica's hop-up dial (by loadout slot; missing slots keep theirs), kept within the dial's range. */
 export function setHopUps(a: Armament, dials: readonly number[]): void {
   for (let i = 0; i < a.hopUps.length && i < dials.length; i++) {
@@ -362,6 +376,7 @@ export function stepArmament(
     ctx.events.push({ type: 'fireMode', characterId, replicaId: replica.id, mode });
   }
   const mode = a.modes[a.active]!;
+  if (cmd.hopUpSteps !== 0) turnHopUp(characterId, a, replica, cmd.hopUpSteps, ctx);
 
   const ready = a.draw <= 0 && a.reload <= 0;
   // Reload pressed while the replica is still coming up (switch, then R straight away): kept until it's up.

@@ -29,7 +29,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Replica colour schemes: eight two-tone colours (Cobalt, Signal, Acid, Teal, Hazard, Coral, Onyx, Ghost); rifles Cobalt
   and pistols Ghost until the Customise screen lets players pick one per replica (G1)
 - BBs are real projectiles: visible flight with air physics and drag, travel time, drop, and hop-up lift set by a dial
-  per replica (Phase 1, M9, M12c, M30)
+  per replica, turned mid-match with 4 and 5 (Phase 1, M9, M12c, M30, HD1)
 - BB weight from 0.20 to 0.30 g per replica, with the speed, reach and flight time shown (M17a, M26b)
 - Wind: a light breeze each match drifts BBs downwind; dust in the air drifts with it too (M30)
 - A limited set of magazines each round; a reload swaps in the fullest spare, no topping up (M8)
@@ -203,10 +203,11 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Ammo and magazine gauges; the empty-magazine hint names your reload key (Phase 1, M8)
 - Ammo counter option (Settings › Gameplay › HUD, On by default): Off hides the BB counts, leaving each spare magazine full or hollow (AC1)
 - Round clock, score, round banners worded from your side (Phase 1)
+- One feed of hits and callouts (top right, or bottom left under Settings › HUD › Feed position), a WON, LOST or DRAW stamp
+  that a click skips past, a smaller replica panel, and a hop-up readout over the ammo panel (HD1, M19, FA9)
 - Hit feed with team colour bars, teammate markers, the scoreboard on Tab, round stats between rounds (M19, FA9)
 - HUD in the menus' look (G4): a score bar with slanted pips, score blocks and the match's aim under the clock; a framed
-  square minimap with the map and round; hit feed rows with a BB mark and a Hit tag; a replica panel with the replica's
-  picture, fire-mode chips and magazine bars; the Tab scoreboard on a navy panel; a "ROUND 1" banner in heavy capitals;
+  square minimap with the map and round; hit feed rows with a BB mark and a Hit tag; the Tab scoreboard on a navy panel; a "ROUND 1" banner in heavy capitals;
   HUD opacity (Settings → Gameplay, 50–100 %, 90 % by default); squad orders on the order wheel only
 - End-of-match summary with your stats and local records (wins, accuracy, streaks) (M19)
 - What got you: after you're hit, a card with the shot's direction and distance, whether the bot held the angle, your

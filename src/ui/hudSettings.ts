@@ -2,6 +2,9 @@ import {
   AMMO_COUNTER_CHOICES,
   type AmmoCounterMode,
   DEFAULT_AMMO_COUNTER,
+  DEFAULT_FEED_CORNER,
+  FEED_CORNERS,
+  type FeedCorner,
   HIT_FEED_MODES,
   type HitFeedMode,
   HUD_OPACITY,
@@ -26,6 +29,8 @@ export interface HudSettingsOptions {
   /** How opaque the HUD's panels are (G4): 0.5 to 1. */
   hudOpacity: { initial: number; onChange: (opacity: number) => void };
   hitFeed: { initial: HitFeedMode; onChange: (mode: HitFeedMode) => void };
+  /** Where the match feed sits (Dev 6 playtest item 32). No row without it. */
+  feedCorner?: { initial: FeedCorner; onChange: (corner: FeedCorner) => void };
   /** The "what got you" card after a hit (M41). */
   whatGotYou: { initial: WhatGotYouMode; onChange: (mode: WhatGotYouMode) => void };
   /** Whether the minimap turns with the view or stays north up (M83). No row without it. */
@@ -43,6 +48,11 @@ export interface HudSettingsOptions {
 /** Settings › HUD › Minimap (M83): Rotating (as it always was) unless the player picked Fixed. */
 export function loadMinimapTurn(storage = browserStorage()): MinimapTurn {
   return loadSetting('minimapTurn', oneOf(MINIMAP_TURN_CHOICES.map((c) => c.id)), DEFAULT_MINIMAP_TURN, storage);
+}
+
+/** Settings › HUD › Feed position (Dev 6 playtest item 32): top right unless the player moved it. */
+export function loadFeedCorner(storage = browserStorage()): FeedCorner {
+  return loadSetting('feedCorner', oneOf(FEED_CORNERS.map((c) => c.id)), DEFAULT_FEED_CORNER, storage);
 }
 
 /** Settings › HUD › Callouts (CL1): on unless the player turned them off. */
@@ -83,7 +93,10 @@ export function hudSettings(opts: HudSettingsOptions): HTMLDivElement[] {
       'How solid the panels behind the score, minimap, hit feed, ammo and round banner are. Lower lets more of the field show through.',
       rangeControl('HUD opacity', HUD_OPACITY, opts.hudOpacity.initial, (v) => `${Math.round(v * 100)}%`, 'hudOpacity', opts.hudOpacity.onChange),
     ),
-    menuRow('Hit feed', 'Who hit whom, in the top-right corner.', new OptionPicker('Hit feed', HIT_FEED_MODES, opts.hitFeed.initial, 'hitFeed', opts.hitFeed.onChange).root),
+    menuRow('Hit feed', 'Who hit whom, in the feed with your teammates\' callouts.', new OptionPicker('Hit feed', HIT_FEED_MODES, opts.hitFeed.initial, 'hitFeed', opts.hitFeed.onChange).root),
+    ...(opts.feedCorner
+      ? [menuRow('Feed position', 'Where the feed of hits and callouts sits: top right, or bottom left.', new OptionPicker('Feed position', FEED_CORNERS, opts.feedCorner.initial, 'feedCorner', opts.feedCorner.onChange).root)]
+      : []),
     menuRow(
       'What got you',
       'After you are hit: where it came from, whether that bot held the angle, how long you were in view and whether you were moving. Auto shows it against Pro opponents only.',
@@ -93,7 +106,7 @@ export function hudSettings(opts: HudSettingsOptions): HTMLDivElement[] {
       ? [menuRow('Minimap', 'Turning with you, so the way you look is up, or fixed north up with your arrow turning.', new OptionPicker('Minimap', MINIMAP_TURN_CHOICES, opts.minimapTurn.initial, 'minimapTurn', opts.minimapTurn.onChange).root)]
       : []),
     ...(opts.callouts
-      ? [menuRow('Callouts', 'Your bot teammates calling what they see and do ("Contact, Dock!", "Two left"), bottom left.', new OptionPicker('Callouts', CALLOUT_CHOICES, opts.callouts.initial, 'callouts', opts.callouts.onChange).root)]
+      ? [menuRow('Callouts', 'Your bot teammates calling what they see and do ("Contact, Dock!", "Two left"), in the feed.', new OptionPicker('Callouts', CALLOUT_CHOICES, opts.callouts.initial, 'callouts', opts.callouts.onChange).root)]
       : []),
     ...(opts.pingMarkers
       ? [menuRow('Ping markers', 'The marks you place with the Ping key, and the sightings your teammates mark for you, over the field and on the minimap.', new OptionPicker('Ping markers', PING_MARKER_CHOICES, opts.pingMarkers.initial, 'pingMarkers', opts.pingMarkers.onChange).root)]

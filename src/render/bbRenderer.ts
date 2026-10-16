@@ -259,9 +259,10 @@ export class BBRenderer {
    * Draw `bb` as if fired from `muzzle` (world space): it starts there and blends onto its real path
    * over BB_VISUALS.muzzleConvergeTime, or sooner if it will hit something first (`flightTime`, s), so
    * the streak always arrives where the impact puff appears. Only the visuals move; the simulated BB
-   * is untouched.
+   * is untouched. `origin`: where it really left from (default its first segment's start, `bb.prevPosition`, as when
+   * called on the tick that fired it; render/ownShotStarts.ts keeps it for a start made later in the frame).
    */
-  startFromMuzzle(bb: BB, muzzle: { x: number; y: number; z: number }, flightTime: number): void {
+  startFromMuzzle(bb: BB, muzzle: { x: number; y: number; z: number }, flightTime: number, origin: { x: number; y: number; z: number } = bb.prevPosition): void {
     const i = this.pool.bbs.indexOf(bb);
     if (i < 0) return;
     this.offsetSerial[i] = bb.serial;
@@ -269,9 +270,9 @@ export class BBRenderer {
       BB_VISUALS.minConvergeTime,
       Math.min(BB_VISUALS.muzzleConvergeTime, flightTime * BB_VISUALS.convergeBeforeImpact),
     );
-    this.offsets[i * 3] = muzzle.x - bb.prevPosition.x;
-    this.offsets[i * 3 + 1] = muzzle.y - bb.prevPosition.y;
-    this.offsets[i * 3 + 2] = muzzle.z - bb.prevPosition.z;
+    this.offsets[i * 3] = muzzle.x - origin.x;
+    this.offsets[i * 3 + 1] = muzzle.y - origin.y;
+    this.offsets[i * 3 + 2] = muzzle.z - origin.z;
   }
 
   get visibleCount(): number {

@@ -73,7 +73,7 @@ These are defaults to prototype, not final. Tune them through play.
 - Prototype bots always call their hits honestly. Honesty is enforced by the game, not the player.
 - Later: a **medic mode** with a bleed-out timer, where a medic revives a hit player (owner, 2026-10-03: a future feature; the Modes Update since 2026-10-12).
 
-**Replicas (Phase 1 needs only two)**
+**Replicas (the first two)**
 - **AEG rifle**: full auto, medium range, medium magazine.
 - **Gas pistol**: semi auto, short range, fast handling, small magazine.
 - All weapon stats are data files (JSON or TS config), not hardcoded.
@@ -92,8 +92,9 @@ Done (0.1 Dev 1). Its definition of done is in `docs/archive/0.1-dev/ROADMAP.md`
 The plan and build status: `docs/ROADMAP.md`. Versioning, branches, pull requests, the release checklist and the
 bug pass: `docs/PROCESS.md` (grep the heading you need). The rules every session must keep:
 
-- **Dev now.** The game is in 0.1 Dev until the owner calls it feature complete; Beta adds no features. Names read
-  "0.1 Dev 5", "0.1 Beta 1" (no "v"); tags `0.1-dev.5`, `0.1-beta.1`, `0.1.0`. 0.1.0 opens Early Access; themed updates
+- **Beta now.** The owner called the game out of Dev on 2026-10-16: 0.1 Beta 1 is fixes, balance, performance and
+  polish, with no features unless he asks for one (`docs/ROADMAP.md` › Where we are). Names read "0.1 Dev 5",
+  "0.1 Beta 1" (no "v"); tags `0.1-dev.5`, `0.1-beta.1`, `0.1.0`. 0.1.0 opens Early Access; themed updates
   (Replica, Modes, Maps, Progression) follow up to 1.0, the full launch (`docs/ROADMAP.md`).
 - **The owner creates tags.** Don't create, rename or move them. After he tags, the release checklist in
   `docs/PROCESS.md` is due in the next pull request.
@@ -124,7 +125,8 @@ feels to play), tell the owner exactly what to test in the browser.
 - **One task per thread.** After a merge, follow-on work starts a fresh thread with a short brief.
 - **Grep first, then read ranges.** A hook stops whole-file reads of files over 40 KB (`.claude/hooks/`); the big docs
   (PLAYTEST, KNOWN_ISSUES, DECISIONS and everything in `docs/archive/`) are read by heading, never whole.
-- **Quiet output:** `npm run t` (fast tests, dots and failures only), `npm run t:all`; filter any other command's output
+- **Quiet output:** `npm run t` (fast tests, dots and failures only), `npm run t:changed` (only the tests the
+  branch's changes reach), `npm run t:all`; filter any other command's output
   to failures and totals.
 - **One push when the gates are green:** records in the same push, no separate status pushes, no pull request title
   edits (each re-runs CI and wakes the thread).

@@ -7,26 +7,45 @@ import { type Difficulty, difficultyAtLeast } from './bots';
 
 /** The hit feed in the top-right corner, newest at the top (a screen reader hears "Beta 2 called HIT · Alpha 1"). */
 export const HIT_FEED = {
-  /** Most lines shown at once; an older line is dropped when a new one comes in. */
-  maxLines: 5,
-  /** Seconds a line stays up (simulation time, so a pause holds it), the last `fadeTime` of them fading out. */
+  /**
+   * Most lines shown at once, hits and your teammates' callouts together (one feed since Dev 6 playtest item 32); the
+   * oldest is dropped when a new one comes in.
+   */
+  maxLines: 6,
+  /** Seconds a hit's line stays up (simulation time, so a pause holds it), the last `fadeTime` of them fading out. */
   lineTime: 6,
   fadeTime: 1,
-  /** Lines kept when the feed is set to Keep (Settings → HUD, M24): the match's last this many hits, none fading. */
+  /**
+   * Hit lines kept when the feed is set to Keep (Settings → HUD, M24): the match's last this many hits, none fading.
+   * Callouts still come and go beside them (CALLOUTS.feedLines at most, on their own time).
+   */
   keptLines: 10,
-  /** The tag at the end of each row (G4). */
+  /** The tag at the end of each hit's row (G4). */
   tag: 'Hit',
 } as const;
 
-/** Settings → HUD → Hit feed (M24): lines fade as before, or the last few stay up for the whole match. */
+/** Settings → HUD → Hit feed (M24): lines fade as before, or the last few hits stay up for the whole match. */
 export type HitFeedMode = 'fade' | 'keep';
 
 export const HIT_FEED_MODES: readonly { id: HitFeedMode; label: string; blurb: string }[] = [
-  { id: 'fade', label: 'Fade', blurb: `Each hit shows for ${HIT_FEED.lineTime} s, up to ${HIT_FEED.maxLines} at once.` },
+  { id: 'fade', label: 'Fade', blurb: `Each hit shows for ${HIT_FEED.lineTime} s.` },
   { id: 'keep', label: 'Keep', blurb: `The last ${HIT_FEED.keptLines} hits stay on screen for the whole match.` },
 ];
 
 export const DEFAULT_HIT_FEED_MODE: HitFeedMode = 'fade';
+
+/**
+ * Settings → HUD → Feed position (Dev 6 playtest item 32): the one feed of hits and callouts in the top-right corner
+ * (newest at the top), or bottom left (newest at the bottom, as in a chat).
+ */
+export type FeedCorner = 'topRight' | 'bottomLeft';
+
+export const FEED_CORNERS: readonly { id: FeedCorner; label: string; blurb: string }[] = [
+  { id: 'topRight', label: 'Top right', blurb: 'Under the corner, beside the score bar; the newest line on top.' },
+  { id: 'bottomLeft', label: 'Bottom left', blurb: 'Low on the left, clear of the score; the newest line at the bottom.' },
+];
+
+export const DEFAULT_FEED_CORNER: FeedCorner = 'topRight';
 
 /**
  * Settings → HUD → What got you (M41, owner's esports plan 2026-10-04, question 9): the card after you're hit that says

@@ -19,7 +19,7 @@ import { FOOTSTEPS } from './config/footsteps';
 import type { HitConfig, HitMarkerSettings } from './config/hits';
 import { type DevSettings, devCheating } from './config/dev';
 import { MAG_SHARE } from './config/magShare';
-import { type CrosshairSettings, type HitFeedMode, type WhatGotYouMode, whatGotYouShown } from './config/matchInfo';
+import { type CrosshairSettings, type FeedCorner, type HitFeedMode, type WhatGotYouMode, whatGotYouShown } from './config/matchInfo';
 import { countsForRecords, hitRulesFor, kitUnderRules, type MatchRules, recordsKeyOf, roundRulesFor, type RulesetId, standardRules } from './config/matchRules';
 import type { MatchMode } from './config/modes';
 import { BODY, MOVEMENT } from './config/movement';
@@ -52,7 +52,7 @@ import type { MapData } from './map/mapTypes';
 import { playableMode } from './map/playableMode';
 import { buildNavGrid, type NavGrid } from './nav/navGrid';
 import { PhysicsWorld } from './physics/physicsWorld';
-import { updateFirstPersonCamera } from './render/cameraRig';
+import { LeanViewEase, updateFirstPersonCamera } from './render/cameraRig';
 import { CombatPresentation } from './render/combatPresentation';
 import { ContactShadows } from './render/contactShadows';
 import { bakedLightFor, bakedLightMode } from './render/bakedLight';
@@ -206,6 +206,8 @@ export class MatchSession {
   private readonly holdSpot = vec3();
   /** Reduced motion (Settings → Accessibility): the lean's roll here, the held replica's motion in `combat`. */
   private motion: MotionScale = FULL_MOTION;
+  /** The lean your view shows: a wall's cut eased a little (KI1). */
+  private readonly leanView = new LeanViewEase();
   private readonly ctx: SimContext;
   /** The match's round rules and hit rules (from setup.rules). */
   readonly rounds: ReturnType<typeof roundRulesFor>;
@@ -327,6 +329,7 @@ export class MatchSession {
     this.playerTeam = this.extraction ? RUN_SQUAD_TEAM : (setup.playerTeam ?? 0);
     this.player = this.spawnRoster(map, seed);
     this.fitPickedLoadout();
+    setHopUps(this.player.armament, this.kit.hopUps);
     this.commands.set(PLAYER_ID, this.playerCommand);
     this.adaptive = setup.adaptive && !this.extraction ? new AdaptiveRun(setup.adaptive.rating, setup.adaptive.top, setup.difficulty, this.player) : null;
     this.bots = new BotController(
@@ -374,7 +377,7 @@ export class MatchSession {
     input.ordersEnabled = true;
     this.build.phase('figures, flag and HUD');
     // The scene is whole: its shaders are compiled now, not in the first frame (M63, audit REN-06).
-    this.combat.warmShaders();
+    this.combat.warmShaders(this.match.warmTargets());
     this.build.phase('shaders');
   }
 
@@ -419,7 +422,9 @@ export class MatchSession {
       this.input.clearLatches();
       return this.fastForward();
     }
-    if (this.match.spectating && this.input.takeClick()) this.match.nextSpectateTarget();
+    // A round's end (Dev 6 playtest item 33): once WON or LOST has been up a moment, a click moves on.
+    if (this.match.resultContinuable && this.input.takeClick()) this.continueFromResult();
+    else if (this.match.spectating && this.input.takeClick()) this.match.nextSpectateTarget();
     if (this.input.takeInspect() && p.status === 'alive') this.combat.inspect();
     const order = this.input.takeOrder();
     if (order) this.giveOrder(order);
@@ -468,6 +473,22 @@ export class MatchSession {
     this.skip = { ticks: 0, cap: skipTickCap(this.rounds) };
     this.combat.skipBegins();
     return true;
+  }
+
+  /**
+   * A click at a round's end (Dev 6 playtest item 33): between rounds, the pause before the next is played out at once
+   * (as a skip, so the bots, the stats and the round's events run exactly as they would have); once the match is
+   * decided, the result screen comes on the next frame instead of after the whistles.
+   */
+  private continueFromResult(): void {
+    this.match.resultContinued();
+    if (this.state.round.phase === 'matchOver') {
+      if (!Number.isNaN(this.matchOverAt)) this.matchOverAt = this.state.time - matchOverScreenDelay();
+      return;
+    }
+    if (this.skip) return;
+    this.skip = { ticks: 0, cap: skipTickCap(this.rounds) };
+    this.combat.skipBegins();
   }
 
   /**
@@ -595,7 +616,8 @@ export class MatchSession {
     const alpha = stepperAlpha(this.stepper); // frozen while paused, so the view holds still
     // The camera shows where BBs actually go: view pitch plus the replica's recoil kick.
     const pitch = this.input.pitch + this.player.armament.recoil;
-    updateFirstPersonCamera(this.renderer.camera, this.player, BODY, this.hits, alpha, this.input.yaw, pitch, this.motion.leanRoll);
+    const lean = this.leanView.update(this.player, BODY, this.hits, alpha, dt);
+    updateFirstPersonCamera(this.renderer.camera, this.player, BODY, this.hits, alpha, this.input.yaw, pitch, this.motion.leanRoll, lean);
     this.match.setSkipLabel(this.skip ? 'skipping' : this.skipOffer);
     const spectating = this.match.frame(this.renderer.camera, alpha, dt, this.input.yaw, boardHeld);
     // Dev settings › Bot intentions (M90): a label over each bot, from where the camera is now.
@@ -723,6 +745,11 @@ export class MatchSession {
 
   private standing(): ReturnType<typeof matchStanding> {
     return matchStanding({ standardRules: this.standardRules, devAssisted: this.devAssisted, devContentUsed: this.setup.devContentUsed });
+  }
+
+  /** Settings → HUD → Feed position (Dev 6 playtest item 32). */
+  setFeedCorner(corner: FeedCorner): void {
+    this.match.setFeedCorner(corner);
   }
 
   /** Settings → HUD → Hit feed (M24). */
@@ -869,14 +896,14 @@ export class MatchSession {
   }
 
   /**
-   * Fits the picked optic, hop-up dials, BB weights, grips and magazines to the player's replicas (fresh magazines of
-   * the picked kind), and the weapon light only on a night preset (M33h). A direct sim-state change, between rounds.
+   * Fits the picked optic, BB weights, grips and magazines to the player's replicas (fresh magazines of the picked
+   * kind), and the weapon light only on a night preset (M33h). A direct sim-state change, between rounds. The hop-up
+   * dials are set once, as the match is built: turned in play (Dev 6 playtest item 15), they stay for the match.
    */
   private fitPickedLoadout(): void {
     const kit = this.kit;
     fitOptics(this.player.armament, kit.slots.map((s) => s.optic));
     fitParts(this.player.armament, kit.slots.map((s) => partsUnder(s.parts, this.lighting.night)));
-    setHopUps(this.player.armament, kit.hopUps);
     setBbWeights(this.player.armament, kit.bbWeights);
   }
 
@@ -963,12 +990,16 @@ export class MatchSession {
     for (const e of this.state.events) {
       if (e.type === 'roundStart') {
         this.input.resetView(this.player.spawnYaw);
+        this.leanView.reset();
         this.fitPickedLoadout();
         this.runLowAt = this.state.time + MAG_SHARE.devLowAfter;
       }
       if (e.type === 'matchOver') this.matchOverAt = this.state.time;
       // Back at the insertion after a hit (Extraction): looking the way its spawn faces.
-      if (e.type === 'respawned' && e.characterId === this.player.id) this.input.resetView(this.player.spawnYaw);
+      if (e.type === 'respawned' && e.characterId === this.player.id) {
+        this.input.resetView(this.player.spawnYaw);
+        this.leanView.reset();
+      }
     }
     this.runBotsLow();
     // Extraction: your bot teammates follow you unless you order otherwise (ai/squadFollow.ts).

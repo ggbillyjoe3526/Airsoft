@@ -316,6 +316,7 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
   cmd.jump = false;
   cmd.aim = false; // bots aim from the hip (but an anchor, below) and keep the fire mode their replica starts in
   cmd.cycleFireMode = false;
+  cmd.hopUpSteps = 0; // bots keep the dial their loadout set
   cmd.fire = false;
   cmd.reload = false;
   cmd.switchTo = 0; // bots use their primary (holsterBot may keep it away, M92)

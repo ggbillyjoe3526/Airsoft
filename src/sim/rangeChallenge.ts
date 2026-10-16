@@ -62,10 +62,13 @@ export function helpChallenge(c: RangeChallenge): void {
   if (c.phase === 'countdown' || c.phase === 'running') c.helped = true;
 }
 
-/** The target's lit time when it lights: longer for a far one (the BB's flight), and a lying pop-up's rise on top. */
-function litTime(t: RangeTarget): number {
+/**
+ * The target's lit time when it lights: longer for a far one (the BB's flight: its distance from you, `away`, or its
+ * marked distance from the line when that's null), and a lying pop-up's rise on top.
+ */
+function litTime(t: RangeTarget, away: ChallengeAway): number {
   const rise = t.motion === 'popup' && t.down > 0 ? RANGE.riseTime : 0;
-  return RANGE_CHALLENGE.litTime + RANGE_CHALLENGE.litPerMetre * t.distance + rise;
+  return RANGE_CHALLENGE.litTime + RANGE_CHALLENGE.litPerMetre * (away === null ? t.distance : away(t)) + rise;
 }
 
 /** Whether `t` can light now: in play, not lit or just put out, and standing (or a pop-up lying ready to rise). */
@@ -90,6 +93,12 @@ const candidates: number[] = [];
  */
 export type ChallengeSight = ((t: RangeTarget) => boolean) | null;
 
+/**
+ * How far (m) target `t` is from where you stand now, for its lit time (KI1: in Practice on a map, where you walk about,
+ * not the distance from your start); null on the range, whose targets' marked distances are from the line you shoot from.
+ */
+export type ChallengeAway = ((t: RangeTarget) => number) | null;
+
 /** seesTarget's ray, reused. */
 const look = vec3();
 
@@ -112,13 +121,16 @@ export function seesTarget(eye: Vec3, t: RangeTarget, reach: number, query: Worl
   return query.raycastStatic(eye, look, len) < 0;
 }
 
-/** Lights one target chosen at random (from `rng`) among those that can light (and `sees` allows); false when none can. */
-function lightOne(targets: readonly RangeTarget[], rng: RngState, sees: ChallengeSight): boolean {
+/**
+ * Lights one target chosen at random (from `rng`) among those that can light (and `sees` allows), for its time from
+ * `away`; false when none can.
+ */
+function lightOne(targets: readonly RangeTarget[], rng: RngState, sees: ChallengeSight, away: ChallengeAway): boolean {
   candidates.length = 0;
   for (let i = 0; i < targets.length; i++) if (canLight(targets[i]!) && (sees === null || sees(targets[i]!))) candidates.push(i);
   if (candidates.length === 0) return false;
   const t = targets[candidates[Math.min(candidates.length - 1, Math.floor(rngNext(rng) * candidates.length))]!]!;
-  t.lit = litTime(t);
+  t.lit = litTime(t, away);
   return true;
 }
 
@@ -151,10 +163,19 @@ export function setChallengeOn(c: RangeChallenge, targets: readonly RangeTarget[
 /**
  * One tick of the challenge, after the simulation's (its events in `events`): the START plate hit by `playerId` starts
  * the countdown; in a run, their BBs are counted, a lit target they hit scores, a lit target whose time is up goes out
- * (a miss), another lights in each one's place (from `rng`, among those `sees` allows), and the run ends when its time
- * is up, raising the best.
+ * (a miss), another lights in each one's place (from `rng`, among those `sees` allows, lit for longer the further it is
+ * by `away`), and the run ends when its time is up, raising the best.
  */
-export function stepChallenge(c: RangeChallenge, targets: readonly RangeTarget[], events: readonly GameEvent[], playerId: number, dt: number, rng: RngState, sees: ChallengeSight = null): void {
+export function stepChallenge(
+  c: RangeChallenge,
+  targets: readonly RangeTarget[],
+  events: readonly GameEvent[],
+  playerId: number,
+  dt: number,
+  rng: RngState,
+  sees: ChallengeSight = null,
+  away: ChallengeAway = null,
+): void {
   c.cue = null;
   switch (c.phase) {
     case 'off':
@@ -184,16 +205,25 @@ export function stepChallenge(c: RangeChallenge, targets: readonly RangeTarget[]
       c.last = null;
       c.cue = 'go';
       c.look = 0;
-      for (let i = 0; i < RANGE_CHALLENGE.litAtOnce; i++) lightOne(targets, rng, sees);
+      for (let i = 0; i < RANGE_CHALLENGE.litAtOnce; i++) lightOne(targets, rng, sees, away);
       return;
     }
     case 'running':
-      stepRun(c, targets, events, playerId, dt, rng, sees);
+      stepRun(c, targets, events, playerId, dt, rng, sees, away);
   }
 }
 
 /** A tick of the run itself (stepChallenge). */
-function stepRun(c: RangeChallenge, targets: readonly RangeTarget[], events: readonly GameEvent[], playerId: number, dt: number, rng: RngState, sees: ChallengeSight): void {
+function stepRun(
+  c: RangeChallenge,
+  targets: readonly RangeTarget[],
+  events: readonly GameEvent[],
+  playerId: number,
+  dt: number,
+  rng: RngState,
+  sees: ChallengeSight,
+  away: ChallengeAway,
+): void {
   for (const e of events) {
     if (e.type === 'shot' && e.characterId === playerId) c.shots++;
     else if (e.type === 'targetHit' && e.shooterId === playerId) {
@@ -218,7 +248,7 @@ function stepRun(c: RangeChallenge, targets: readonly RangeTarget[], events: rea
   if (c.look > 0) c.look = Math.max(0, c.look - dt);
   else {
     for (; lit < RANGE_CHALLENGE.litAtOnce; lit++) {
-      if (lightOne(targets, rng, sees)) continue;
+      if (lightOne(targets, rng, sees, away)) continue;
       // None in sight: look again in a moment, not every tick (each look casts a ray per target).
       if (sees) c.look = RANGE_CHALLENGE.lookAgain;
       break;

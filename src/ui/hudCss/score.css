@@ -78,16 +78,6 @@
   padding: 0 2px 0 10px;
 }
 
-/* "You" on your side: dark on the team's colour. */
-.sb-name em {
-  padding: 2px 5px 1px;
-  font: 700 15px/1 var(--ui-display);
-  font-style: normal;
-  letter-spacing: var(--ls-caps);
-  color: var(--ink);
-  background: var(--team);
-}
-
 /* Flag mode: ATK / DEF after the name. */
 .sb-role {
   font: 700 15px/1 var(--ui-display);

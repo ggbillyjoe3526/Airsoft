@@ -117,7 +117,9 @@ export class SurfaceNodes {
     const big = wF(wp.mul(r3(N.patchScale))).toVar();
     const fine = wN(wp.mul(r3(N.fineScale))).toVar();
     const patchy = smoothstep(0.5, 0.82, big.mul(0.85).add(fine.mul(0.2)));
-    const creep = float(1.0).sub(smoothstep(0.0, fine.mul(r3(N.creepVary)).add(r3(N.creep)), wp.y)).mul(vert).toVar();
+    // The creep measures up from the foot of the block the vertex belongs to (mapMeshes.ts `wearFoot`), not from y = 0.
+    const above = wp.y.sub(attribute('wearFoot', 'float'));
+    const creep = float(1.0).sub(smoothstep(0.0, fine.mul(r3(N.creepVary)).add(r3(N.creep)), above)).mul(vert).toVar();
     const across = r3(N.streakAcross);
     const streakAt = vec3(wp.x.add(wp.z).mul(across), wp.y.mul(r3(N.streakAlong)), wp.z.sub(wp.x).mul(across));
     const streak = smoothstep(0.58, 0.95, wN(streakAt)).mul(vert).mul(big.mul(0.6).add(0.4)).toVar();

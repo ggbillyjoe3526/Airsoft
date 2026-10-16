@@ -19,6 +19,14 @@ export const RENDER = {
    * feel the peek without making the world swing.
    */
   leanCameraRoll: 0.12,
+  /**
+   * A lean a wall cuts short (sim/lean.ts stepLean cuts it at once, KI1) eases out of the view at a full lean's worth
+   * in `easeTime` seconds, but the eye is never drawn more than `allowance` metres further out than the simulation's:
+   * within MOVEMENT.leanWallClearance (0.2 m) less the near plane's reach to the side (up to ~0.09 m at 120° field of
+   * view), so the view never reaches into the wall. The rest of the cut stays instant. A normal release is slower than
+   * this and is drawn as it is.
+   */
+  leanCut: { easeTime: 0.1, allowance: 0.1 },
 } as const;
 
 /**
@@ -57,6 +65,16 @@ export const HUD = {
    */
   leavesNotice: 'Leaves in the way · step clear to shoot',
   leavesNoticeNear: 2,
+  /**
+   * A round's end (Dev 6 playtest item 33, ui/roundResult.ts): WON or LOST stays up this long (seconds, from when it
+   * shows: after your own hit call, never under it), then the round's table comes up. Short, so it marks the moment
+   * and gets out of the way inside the pause between rounds (RoundRules.resetDelay, 4 s).
+   */
+  roundResultTime: 1.3,
+  /** From this long after WON or LOST shows (s), a click moves on: to the next round, or the result screen. */
+  roundResultContinueAfter: 0.5,
+  /** The hop-up readout stays on the replica panel this long (s) after the dial was last turned (Dev 6 playtest item 15). */
+  hopShowTime: 1.8,
   /** How long "Round N" stays up after a round starts (seconds). */
   roundStartMessageTime: 1.8,
   /** How long "Overtime · touch the flag" stays up after Elimination's overtime flag goes up (seconds; Dev 6 item 45). */

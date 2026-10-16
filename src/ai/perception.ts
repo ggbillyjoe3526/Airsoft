@@ -7,13 +7,16 @@ import { createTorchLight, type TorchLight, torchSightRange } from '../map/torch
 import type { BodyConfig } from '../config/movement';
 import type { WorldQuery } from '../sim/armament';
 import type { Character } from '../sim/character';
-import { hitTop } from '../sim/hitbox';
+import { isInPlay } from '../sim/elimination';
+import { characterHitVolume, createHitVolume, hitTop, rayCharacter } from '../sim/hitbox';
 import { leanedEye, leanOffset } from '../sim/lean';
 import { length3, type Vec3, vec3 } from '../sim/vec';
 
 const eye = vec3();
 const point = vec3();
 const dir = vec3();
+const bodyVolume = createHitVolume();
+const NO_BODIES: readonly Character[] = [];
 
 /** Where a character's eyes are, lean included. */
 export function eyeOf(c: Character, body: BodyConfig, hits: HitConfig, out: Vec3): Vec3 {
@@ -53,6 +56,43 @@ function sightClear(query: WorldQuery, a: Vec3, b: Vec3, foliage: readonly Bush[
 
 const NO_FOLIAGE: readonly Bush[] = [];
 
+/**
+ * True if the body of someone already hit (calling or out, any team; not `viewer` or `target`, not a Ghost) stands in
+ * the line from `a` to `b` (KI1: a body stops BBs, M85, and the bots' sight now stops on it too; before, they saw past
+ * it and only held fire, botCombat.ts bodyInLine). Bodies further from the line than a standing figure is tall are
+ * skipped before their hit volume is built.
+ */
+function bodyInSight(a: Vec3, b: Vec3, viewer: Character, target: Character, bodies: readonly Character[], hits: HitConfig): boolean {
+  const dx = b.x - a.x;
+  const dz = b.z - a.z;
+  const flat = Math.hypot(dx, dz);
+  const reach = hitTop(0, hits);
+  let d = -1;
+  for (const c of bodies) {
+    if (c === viewer || c === target || c.ghost || isInPlay(c)) continue;
+    // Quick reject in the plan view: how far along the line the body stands, and how far off it.
+    const px = c.position.x - a.x;
+    const pz = c.position.z - a.z;
+    const along = flat > 1e-6 ? (px * dx + pz * dz) / flat : 0;
+    if (along < -reach || along > flat + reach) continue;
+    const off = flat > 1e-6 ? Math.abs(px * dz - pz * dx) / flat : Math.hypot(px, pz);
+    if (off > reach) continue;
+    if (d < 0) {
+      dir.x = b.x - a.x;
+      dir.y = b.y - a.y;
+      dir.z = b.z - a.z;
+      d = length3(dir.x, dir.y, dir.z);
+      if (d < 1e-6) return false;
+      dir.x /= d;
+      dir.y /= d;
+      dir.z /= d;
+    }
+    characterHitVolume(c, hits, bodyVolume);
+    if (rayCharacter(a, dir, d, bodyVolume) >= 0) return true;
+  }
+  return false;
+}
+
 /** What on the map hides people from bots besides walls: bushes (M33e) and the dark of a night field (M33g). */
 export interface SightConditions {
   foliage: readonly Bush[];
@@ -80,7 +120,8 @@ export function sightConditionsOf(map: MapData, atNight?: boolean): SightConditi
  * Which part of `target` `viewer` can see right now, as a fraction of the target's height: the chest
  * (bots.aimHeightFraction) if it's in view, else the head (bots.headHeightFraction), else 0 (not seen).
  * Seeing needs the target within view distance, inside the field of view (unless very close), and a
- * clear line from the viewer's eyes: nothing static in the way, and no more than `bots.foliageSeeThrough` of bush
+ * clear line from the viewer's eyes: nothing static in the way, no body of someone already hit (`bodies`, KI1), and no
+ * more than `bots.foliageSeeThrough` of bush
  * (M33e; within `closeAwareness` a bush hides no one). On a night field (M33g) the view distance is how far the
  * target's light lets them be made out: lit, in the moonlit open, or under the trees (map/nightSight.ts), or in a
  * torch's beam or by their own lit torch facing the viewer (M33h, map/torchLight.ts).
@@ -93,6 +134,8 @@ export function visiblePart(
   body: BodyConfig,
   hits: HitConfig,
   sight: SightConditions = OPEN_SIGHT,
+  /** Everyone on the field: the bodies of those already hit hide what is behind them (bodyInSight). */
+  bodies: readonly Character[] = NO_BODIES,
 ): number {
   const dx = target.position.x - viewer.position.x;
   const dz = target.position.z - viewer.position.z;
@@ -106,8 +149,10 @@ export function visiblePart(
   }
   const leaves = dist > bots.closeAwareness ? sight.foliage : NO_FOLIAGE;
   eyeOf(viewer, body, hits, eye);
-  if (sightClear(query, eye, bodyPoint(target, hits, bots.aimHeightFraction, point), leaves, bots.foliageSeeThrough)) return bots.aimHeightFraction;
-  if (sightClear(query, eye, bodyPoint(target, hits, bots.headHeightFraction, point), leaves, bots.foliageSeeThrough)) return bots.headHeightFraction;
+  bodyPoint(target, hits, bots.aimHeightFraction, point);
+  if (sightClear(query, eye, point, leaves, bots.foliageSeeThrough) && !bodyInSight(eye, point, viewer, target, bodies, hits)) return bots.aimHeightFraction;
+  bodyPoint(target, hits, bots.headHeightFraction, point);
+  if (sightClear(query, eye, point, leaves, bots.foliageSeeThrough) && !bodyInSight(eye, point, viewer, target, bodies, hits)) return bots.headHeightFraction;
   return 0;
 }
 

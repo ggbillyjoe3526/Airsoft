@@ -1,6 +1,7 @@
 import type { SurfaceTextureId } from '../config/render';
 import { type TextureWear, WEATHERING } from '../config/weathering';
-import { fbm, hash3, lerp, smooth, tnoise, tnoise2 } from './texelNoise';
+import { lerp } from '../core/math';
+import { fbm, hash3, smooth, tnoise, tnoise2 } from './texelNoise';
 
 /**
  * The texture library's drawings (G6, from the concept's textures.ts): surfaces worked out texel by texel from tiling

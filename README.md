@@ -218,6 +218,7 @@ npm install
 npm run dev                  # development server with hot reload
 npm run t                    # fast unit tests, dots and failures only
 npm run t:all                # all unit tests
+npm run t:changed            # fast tests reached by the files changed since origin/main (fetch it first in a shallow clone)
 npm run check                # unit tests, then type check and production build
 npm run build                # static site in dist/ (relative paths; any static host; see Hosting)
 npm run preview              # serve dist/ locally

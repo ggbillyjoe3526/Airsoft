@@ -4,7 +4,18 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 
 ## Unreleased
 
+### Added
+- **HD1** · Hop-up turns mid-match: 4 for less lift, 5 for more (Page Down and Page Up too, rebindable in Controls); the setting lasts the match
+- **HD1** · Hop-up readout over the ammo panel: the dial, a tick at the best setting for your BBs, and how far BBs stay flat ("Flat to 39 m")
+- **HD1** · WON, LOST or DRAW stamp at round end; a click after half a second moves on to the next round or the match results
+- **HD1** · Feed position under Settings › HUD moves the kill feed to the bottom left
+
 ### Changed
+- **HD1** · Kill feed and teammate callouts are one feed in the top right
+- **HD1** · Replica panel in the bottom right is smaller and plainer: picture, name and fire modes on one row, loaded count with spare BBs below
+- **HD1** · Comms wheel is a ring of equal slices, each with the same size label
+- **HD1** · BB impacts kick up a smaller, fainter puff with less grit
+- **HD1** · Scoreboard no longer shows a YOU tag (screen readers still hear which side is yours)
 - **TT1** · Tutorial cards are one or two short sentences; the four you only read move on by themselves after 5–8 s, with a bar filling; the lean step is gone
 - **MV1** · Nobody rests a replica on cover any more, you or the bots; aiming at a ledge no longer steadies you and the Rested tag is gone; Q and E leaning stay
 - **MV1** · Holstered you run at 5.0 m/s against 4.2 armed, never faster than the 6.3 m/s sprint, which is the same armed or holstered
@@ -14,8 +25,31 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **MV1** · The first switch to your other replica in a match no longer stutters; every carried replica is ready before the round
 - **MV1** · On the Blender replicas the first-person thumbs wrap round the grip and along the frame instead of sinking into it
 
+### Fixed
+- **KI1** · Leaning beside a wall that cuts the lean eases the view over 0.1 s instead of jumping
+- **KI1** · Two quick taps of the fire selector step it twice
+- **KI1** · Your own BB's streak starts at the muzzle when you turn fast
+- **KI1** · A BB that bounces off a wall inside a bush keeps the leaves' speed it should
+- **KI1** · A camp fire's crackle is muffled by walls
+- **KI1** · Bots no longer see past a player who has called their hit, pings included
+- **KI1** · Markers pinned to the screen edge (pings, flag, exits, hold marker) no longer pile on each other
+- **KI1** · Flag and exit edge markers show an arrow pointing which way to turn
+- **KI1** · The summary's records grid after a Tournament match shows that rule set's records
+- **KI1** · The Tutorial's switch-replica step no longer counts a rifle BB still in the air
+- **KI1** · Practice's timed challenge on a map times a target from where you stand
+- **KI1** · The first overtime flag, first tossed magazine and first 2x scope aim no longer hitch as they load
+- **KI1** · Fewer post effects stall the first frame of a match
+- **KI1** · Wall grime starts at each block's own foot, upper floors included
+- **KI1** · The vertical grip's steady time counts the slow-down after a sprint (0.18 s)
+- **KI1** · The Armory keeps an item you own in colour
+
 ### Internal
 - **Pipeline** · Code changes get critic, QA and performance review before a pull request is ready; CI fails it without passing verdicts
+- **KI1** · Bot tests cover the cycle, a leaning teammate's torso, Follow me's trail and the squad order lip fallback
+- **KI1** · Game test covers settling a match; Dev Time of day bake test added; Your team match test plays Woodland and Neon Heights
+- **KI1** · Bots' aim-wall check measures in 3D; Dev Bot intentions labels build no string each move
+- **KI1** · Four Low performance baselines re-recorded for the first-frame warm-up (about 0.22 MB of GPU memory at match build)
+- **DX0** · Developer-only: a quicker test loop with a changed-tests run, one shared math module, a README coverage test, read-only game state for bots
 
 ## 0.1 Dev 6 · 2026-10-16
 

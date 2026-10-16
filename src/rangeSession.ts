@@ -25,7 +25,7 @@ import { buildNavGrid } from './nav/navGrid';
 import { PhysicsWorld } from './physics/physicsWorld';
 import { bbGlowFor, kitPaint } from './pool/loadoutModel';
 import { figureCrowd, playerArms } from './render/figureMix';
-import { updateFirstPersonCamera } from './render/cameraRig';
+import { LeanViewEase, updateFirstPersonCamera } from './render/cameraRig';
 import { CombatPresentation } from './render/combatPresentation';
 import { bakedLightFor } from './render/bakedLight';
 import { addLighting, type Daylight } from './render/lighting';
@@ -39,7 +39,7 @@ import { canAimDownSights } from './sim/aiming';
 import { fitOptics, fitParts, setBbWeights, setHopUps } from './sim/armament';
 import { type Character, createCharacter, eyeHeight, respawnCharacter } from './sim/character';
 import { createCommand, type PlayerCommand } from './sim/commands';
-import { type ChallengePhase, type ChallengeRun, type ChallengeSight, createChallenge, helpChallenge, type RangeChallenge, seesTarget, setChallengeOn, stepChallenge } from './sim/rangeChallenge';
+import { type ChallengeAway, type ChallengePhase, type ChallengeRun, type ChallengeSight, createChallenge, helpChallenge, type RangeChallenge, seesTarget, setChallengeOn, stepChallenge } from './sim/rangeChallenge';
 import { createRangeTargets, type RangeTarget } from './sim/rangeTargets';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
 import { partsUnder } from './sim/torch';
@@ -129,6 +129,8 @@ export class RangeSession {
   private readonly commands = new Map<number, PlayerCommand>();
   private readonly playerCommand = createCommand();
   private motion: MotionScale = FULL_MOTION;
+  /** The lean your view shows: a wall's cut eased a little (KI1). */
+  private readonly leanView = new LeanViewEase();
   private readonly ctx: SimContext;
   private lastShot: LastShot | null = null;
   /** The timed challenge (M93) and its big word over the middle of the screen. */
@@ -137,6 +139,8 @@ export class RangeSession {
   readonly course: string;
   /** Which targets the challenge may light (M94): on a map only those you can see; on the range any. */
   private readonly sight: ChallengeSight;
+  /** How far a target is for its lit time (KI1): from where you stand on a map; null on the range (from the line). */
+  private readonly away: ChallengeAway;
   /** Whether a START plate stands here, so the challenge can be played (M94: a map may have no room for one). */
   private readonly hasChallenge: boolean;
   private readonly banner: ChallengeBanner;
@@ -209,6 +213,7 @@ export class RangeSession {
     this.state.targets = createRangeTargets(specs, this.state.rng);
     this.course = setup.course ?? RANGE_CHALLENGE.course;
     this.sight = onRange ? null : (t) => this.inSight(t);
+    this.away = onRange ? null : (t) => across(this.player.position, t.position);
     this.challenge = createChallenge(setup.challengeBest ?? 0);
     // A map with no room for the START plate in front of your start has no challenge (map/practiceLayout.ts startPlate).
     this.hasChallenge = this.state.targets.some((t) => t.start);
@@ -237,7 +242,7 @@ export class RangeSession {
     const at = pose ? vec3(pose.x, pose.y ?? spawn.position.y, pose.z) : spawn.position;
     const yaw = pose?.yaw ?? (onRange ? undefined : specs.find((t) => t.start)?.yaw) ?? spawn.yaw;
     this.player = createCharacter(PLAYER_ID, vec3(at.x, at.y + PHYSICS.groundRestGap, at.z), yaw, this.loadout, 0);
-    this.tutorialView = { dt: SIM_DT, player: this.player, events: this.state.events, targets: this.state.targets };
+    this.tutorialView = { dt: SIM_DT, player: this.player, events: this.state.events, targets: this.state.targets, bbs: this.state.bbs.bbs };
     respawnCharacter(this.player);
     this.state.characters.push(this.player);
     this.physics.addCharacter(this.player);
@@ -391,7 +396,7 @@ export class RangeSession {
     for (let i = 0; i < ticks; i++) {
       this.input.fillCommand(this.playerCommand);
       stepSimulation(this.state, this.commands, this.ctx, SIM_DT);
-      stepChallenge(this.challenge, this.state.targets, this.state.events, PLAYER_ID, SIM_DT, this.state.rng, this.sight);
+      stepChallenge(this.challenge, this.state.targets, this.state.events, PLAYER_ID, SIM_DT, this.state.rng, this.sight, this.away);
       if (this.devHelp) helpChallenge(this.challenge);
       this.afterTick();
     }
@@ -408,7 +413,8 @@ export class RangeSession {
   draw(dt: number): void {
     const alpha = stepperAlpha(this.stepper);
     const pitch = this.input.pitch + this.player.armament.recoil;
-    updateFirstPersonCamera(this.renderer.camera, this.player, BODY, HITS, alpha, this.input.yaw, pitch, this.motion.leanRoll);
+    const lean = this.leanView.update(this.player, BODY, HITS, alpha, dt);
+    updateFirstPersonCamera(this.renderer.camera, this.player, BODY, HITS, alpha, this.input.yaw, pitch, this.motion.leanRoll, lean);
     this.targets.update(dt, alpha);
     this.banner.frame(dt, this.challenge, this.playing);
     this.showcase?.frame(dt);
@@ -583,6 +589,7 @@ export class RangeSession {
     v.player = this.player;
     v.events = this.state.events;
     v.targets = this.state.targets;
+    v.bbs = this.state.bbs.bbs;
     if (t && !t.finished && t.observe(v)) {
       this.tutorialMoved(t);
       if (t.finished) this.completeDue = this.completePopup = true;

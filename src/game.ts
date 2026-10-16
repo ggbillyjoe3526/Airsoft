@@ -9,7 +9,7 @@ import { activeDev, DEV_ACTION_TEXT, DEV_GIFTS, type DevActionId, type DevSettin
 import { PERF_SCRIPT } from './config/perfScript';
 import { ROUNDS } from './config/hits';
 import type { MatchRules, RulesetId } from './config/matchRules';
-import { type CrosshairSettings, type HitFeedMode, hudInsetX, hudScale, scoreboardScale, type WhatGotYouMode } from './config/matchInfo';
+import { type CrosshairSettings, type FeedCorner, type HitFeedMode, hudInsetX, hudScale, scoreboardScale, type WhatGotYouMode } from './config/matchInfo';
 import { MINIMAP } from './config/minimap';
 import { FULLSCREEN_RELOCK_MS, PAUSE_ESC_GUARD_MS } from './config/controls';
 import { HUD_TEXT } from './config/hudText';
@@ -58,7 +58,7 @@ import { type NoXp, settleMatch } from './stats/settleMatch';
 import { adaptedPicks, adaptiveNote, adaptiveSetup, settleAdaptive } from './adaptivePicks';
 import { loadCrosshair } from './ui/crosshair';
 import { loadHitMarker } from './ui/hitMarkerLook';
-import { loadAmmoCounter, loadCallouts, loadMagPrompts, loadMinimapTurn, loadPingMarkers } from './ui/hudSettings';
+import { loadAmmoCounter, loadCallouts, loadFeedCorner, loadMagPrompts, loadMinimapTurn, loadPingMarkers } from './ui/hudSettings';
 import { CrashScreen } from './ui/crashScreen';
 import { DebugOverlay } from './ui/debugOverlay';
 import { onFullscreenChange, relockAfterFullscreen, toggleFullscreen } from './ui/fullscreen';
@@ -300,6 +300,8 @@ export class Game {
   private soundCueColour: SoundCueColour = loadSoundCueColour();
   private scoreboardSize = loadScoreboardSize();
   private hitFeedMode: HitFeedMode = loadHitFeedMode();
+  /** Settings → HUD → Feed position (Dev 6 playtest item 32). */
+  private feedCorner: FeedCorner = loadFeedCorner();
   /** Settings → HUD → What got you (M41): the card after a hit; Auto turns it on against Pro opponents only. */
   private whatGotYouMode: WhatGotYouMode = loadWhatGotYouMode();
   /** The HUD's size as picked (Settings → HUD, audit UI-04); the screen's height scales it further (hudScale). */
@@ -600,6 +602,7 @@ export class Game {
         scoreboardSize: { initial: this.scoreboardSize, onChange: (v) => ((this.scoreboardSize = v), this.showHudLook()) },
         hudOpacity: { initial: this.hudOpacity, onChange: (v) => ((this.hudOpacity = v), this.showHudLook()) },
         hitFeed: { initial: this.hitFeedMode, onChange: (m) => this.changeHitFeed(m) },
+        feedCorner: { initial: this.feedCorner, onChange: (c) => ((this.feedCorner = c), this.session instanceof MatchSession && this.session.setFeedCorner(c)) },
         whatGotYou: { initial: this.whatGotYouMode, onChange: (m) => this.changeWhatGotYou(m) },
         minimapTurn: { initial: this.minimapTurn, onChange: (t) => ((this.minimapTurn = t), this.session?.setMinimapTurn(t)) },
         callouts: { initial: this.callouts, onChange: (m) => ((this.callouts = m), this.session instanceof MatchSession && this.session.setCallouts(m === 'on')) },
@@ -1202,6 +1205,7 @@ export class Game {
       this.session.setMotion(motionScale(this.motionReduced()));
       this.session.setSoundCues(this.soundCues);
       this.session.setHitFeedMode(this.hitFeedMode);
+      this.session.setFeedCorner(this.feedCorner);
       this.session.setWhatGotYouMode(this.whatGotYouMode);
       this.session.setHitMarker(this.hitMarker);
       this.session.setMinimapTurn(this.minimapTurn);
@@ -1338,7 +1342,7 @@ export class Game {
       this.menus.showResult(view.headline, view.scoreLine, {
         result: view.result,
         blocks: view.summaryBlocks,
-        records: recordsView(this.records, this.recordNews, s.setup.difficulty, s.mode, s.notCountedReason),
+        records: recordsView(this.records, this.recordNews, s.setup.difficulty, s.mode, s.notCountedReason, s.setup.ruleset),
         xp: this.lastXp,
         noXp: this.noXpReason,
         haul: haulSummary(s.runFinds(), this.lastXp !== null),

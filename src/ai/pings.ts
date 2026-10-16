@@ -105,7 +105,7 @@ function enemyUnderView(leader: Character, reach: number, w: BotWorld, sight: Bo
       const across = Math.hypot(px - dir.x * along, py - dir.y * along, pz - dir.z * along);
       if (across <= Math.max(PINGS.enemyReach, along * cone)) off = Math.min(off, across / along);
     }
-    if (off >= bestOff || visiblePart(leader, c, w.query, sight, w.body, w.hits, w.sight) === 0) continue;
+    if (off >= bestOff || visiblePart(leader, c, w.query, sight, w.body, w.hits, w.sight, w.characters) === 0) continue;
     best = c;
     bestOff = off;
   }

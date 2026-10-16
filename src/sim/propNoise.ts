@@ -3,6 +3,7 @@ import type { BlockKind, MapBlock } from '../map/mapTypes';
 import type { Character } from './character';
 import type { GameEvent } from './events';
 import { type Vec3, vec3 } from './vec';
+import { clamp } from '../core/math';
 
 /**
  * Noisy props (NP1, Dev 6 item 41): someone who runs into one, or a BB that rings off one, makes a noise there (a
@@ -60,7 +61,6 @@ function sound(ctx: PropNoiseContext, index: number, characterId: number, x: num
   ctx.events.push({ type: 'propNoise', characterId, prop: index, kind: prop.kind, position: vec3(x, y, z), range, shot });
 }
 
-const clamp = (v: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, v));
 
 /**
  * After character `c`'s move this tick (`desired` the move it wanted, `corrected` the one it made, over `dt` seconds): a
