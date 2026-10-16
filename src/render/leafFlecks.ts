@@ -73,7 +73,7 @@ export class LeafFlecks {
 
   /**
    * A BB went into the leaves at `at`: a few leaves (`count`: LEAF_FLECKS.perStop for a BB they stopped, perBrush for one
-   * through an edge) thrown out towards `from` (the side it came from: impactGrit.ts impactSide) and up, coming to rest on
+   * through an edge) thrown out towards `from` (the shooter's side: impactGrit.ts shooterSide) and up, coming to rest on
    * `floor` (the ground under the bush: map/foliage.ts leafFloor) if they get that far down.
    */
   spawn(at: Vec3, from: Vec3, count: readonly [number, number], floor = Number.NEGATIVE_INFINITY): void {

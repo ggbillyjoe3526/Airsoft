@@ -46,19 +46,6 @@ export function shooterSide(characters: readonly Character[], ownerId: number, f
 }
 
 /**
- * The side a BB that landed came from, for its grit and leaves to fly back towards: `from` when the sim gave one (the
- * bbImpact or bbLeaves event of a BB that has bounced, BP6: its shooter may be anywhere by then), else its shooter's
- * side (shooterSide). Written into `out`; allocates nothing.
- */
-export function impactSide(characters: readonly Character[], ownerId: number, from: Vec3 | undefined, fallback: Vec3, out: Vec3): Vec3 {
-  if (!from) return shooterSide(characters, ownerId, fallback, out);
-  out.x = from.x;
-  out.y = from.y;
-  out.z = from.z;
-  return out;
-}
-
-/**
  * Impact grit (FA8, QualitySettings.impactGrit): a BB landing throws a few chips of the surface it hit (IMPACT_GRIT),
  * small spinning squares in the dust's tint that fly out towards the side it came from and fall. Pooled, one draw call,
  * nothing allocated per frame; the throws come from a seeded generator (presentation only, never the simulation's).
@@ -105,7 +92,7 @@ export class ImpactGrit {
     return this.enabled;
   }
 
-  /** A BB landed at `at`: chips in `tint` (linear), thrown towards `from` (the side it came from: `impactSide`) and up. */
+  /** A BB landed at `at`: chips in `tint` (linear), thrown towards `from` (the shooter's side: `shooterSide`) and up. */
   spawn(at: Vec3, tint: THREE.Color, from: Vec3): void {
     if (!this.enabled) return;
     const G = IMPACT_GRIT;

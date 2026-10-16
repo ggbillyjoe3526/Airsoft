@@ -7,7 +7,7 @@ import { vec3 } from '../sim/vec';
 import { BBRenderer } from './bbRenderer';
 import { placeCallout } from './characterRenderer';
 import { createCharacter } from '../sim/character';
-import { ImpactGrit, impactSide, shooterSide } from './impactGrit';
+import { ImpactGrit, shooterSide } from './impactGrit';
 
 beforeAll(() => {
   // Soft dots are drawn on a canvas: stood in for (it draws nothing here).
@@ -78,29 +78,6 @@ describe('impact grit (FA8, QualitySettings.impactGrit)', () => {
       if (p.setFromMatrixPosition(m).x > at.x) right++;
     }
     expect(right).toBeGreaterThan(grit.object.count / 2);
-    grit.dispose();
-  });
-
-  it('throws a bounced BB\'s chips back the way it came, not towards its shooter (BP6)', () => {
-    const bot = createCharacter(3, vec3(6, 0, -2), 0);
-    const characters = [createCharacter(0, vec3(0, 0, 0), 0), bot];
-    const out = { x: 0, y: 0, z: 0 };
-    const cameFrom = { x: -4, y: 1, z: -9 };
-    expect(impactSide(characters, 3, cameFrom, eye, out)).toEqual(cameFrom);
-    expect(impactSide(characters, 3, undefined, eye, out)).toEqual({ x: 6, y: FIGURE.shoulderHeight, z: -2 });
-    // Off a wall to the left: the chips go left, away from the bot on the right.
-    const grit = new ImpactGrit();
-    grit.setEnabled(true);
-    grit.spawn(at, tint, impactSide(characters, 3, cameFrom, eye, out));
-    grit.update(1 / 60, camera);
-    const m = new THREE.Matrix4();
-    const p = new THREE.Vector3();
-    let left = 0;
-    for (let i = 0; i < grit.object.count; i++) {
-      grit.object.getMatrixAt(i, m);
-      if (p.setFromMatrixPosition(m).x < at.x) left++;
-    }
-    expect(left).toBeGreaterThan(grit.object.count / 2);
     grit.dispose();
   });
 
