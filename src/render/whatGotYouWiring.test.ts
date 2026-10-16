@@ -51,7 +51,7 @@ type SpyCard = InstanceType<typeof SpyCard>;
 vi.mock('../ui/whatGotYou', async (orig) => ({ ...(await orig<typeof import('../ui/whatGotYou')>()), WhatGotYouCard: SpyCard }));
 vi.mock('../ui/casePrompt');
 vi.mock('../ui/flagMarker');
-vi.mock('../ui/calloutFeed');
+vi.mock('../ui/roundResult');
 vi.mock('../ui/hitFeed');
 vi.mock('../ui/hitFeedback');
 vi.mock('../ui/holdMarker');
@@ -283,6 +283,9 @@ describe('Pro briefing tips on the board', () => {
       r.state.round.number = n;
       r.state.round.phase = 'over';
       r.frame();
+      // The table comes up once WON or LOST has had its moment (Dev 6 playtest item 33).
+      r.state.time += HUD.roundResultTime + 0.01;
+      r.frame();
       expect(r.board.setTip, `round ${n}`).toHaveBeenLastCalledWith(proTip(n));
       expect(proTip(n)).toBe(PRO_TIPS[(n - 1) % PRO_TIPS.length]);
     }
@@ -293,6 +296,8 @@ describe('Pro briefing tips on the board', () => {
     const r = rig();
     r.match.setProTips(false);
     r.state.round.phase = 'over';
+    r.frame();
+    r.state.time += HUD.roundResultTime + 0.01;
     r.frame();
     expect(r.board.setTip).toHaveBeenCalled();
     for (const call of vi.mocked(r.board.setTip).mock.calls) expect(call[0]).toBe('');

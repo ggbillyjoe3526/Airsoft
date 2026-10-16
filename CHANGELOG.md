@@ -4,7 +4,18 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 
 ## Unreleased
 
+### Added
+- **HD1** · Hop-up turns mid-match: 4 for less lift, 5 for more (Page Down and Page Up too, rebindable in Controls); the setting lasts the match
+- **HD1** · Hop-up readout over the ammo panel: the dial, a tick at the best setting for your BBs, and how far BBs stay flat ("Flat to 39 m")
+- **HD1** · WON, LOST or DRAW stamp at round end; a click after half a second moves on to the next round or the match results
+- **HD1** · Feed position under Settings › HUD moves the kill feed to the bottom left
+
 ### Changed
+- **HD1** · Kill feed and teammate callouts are one feed in the top right
+- **HD1** · Replica panel in the bottom right is smaller and plainer: picture, name and fire modes on one row, loaded count with spare BBs below
+- **HD1** · Comms wheel is a ring of equal slices, each with the same size label
+- **HD1** · BB impacts kick up a smaller, fainter puff with less grit
+- **HD1** · Scoreboard no longer shows a YOU tag (screen readers still hear which side is yours)
 - **TT1** · Tutorial cards are one or two short sentences; the four you only read move on by themselves after 5–8 s, with a bar filling; the lean step is gone
 
 ### Fixed
@@ -31,6 +42,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **KI1** · Game test covers settling a match; Dev Time of day bake test added; Your team match test plays Woodland and Neon Heights
 - **KI1** · Bots' aim-wall check measures in 3D; Dev Bot intentions labels build no string each move
 - **KI1** · Four Low performance baselines re-recorded for the first-frame warm-up (about 0.22 MB of GPU memory at match build)
+- **DX0** · Developer-only: a quicker test loop with a changed-tests run, one shared math module, a README coverage test, read-only game state for bots
 
 ## 0.1 Dev 6 · 2026-10-16
 

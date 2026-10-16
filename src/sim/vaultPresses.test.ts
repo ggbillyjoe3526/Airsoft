@@ -19,7 +19,7 @@ import { cancelVault, createVaultState, vaultingCommand, withVaultPresses } from
 
 /**
  * What a vault does with the controls (BP5): a trigger or aim held through one is no new pull or aim press after it,
- * and a press made during one (reload, slot, holster, fire selector, torch, magazine) waits for its end instead of
+ * and a press made during one (reload, slot, holster, fire selector, torch, magazine, hop-up) waits for its end instead of
  * being lost. And a player hit mid-vault plans the walk-off from where it lands, not back through the wall.
  */
 
@@ -259,6 +259,25 @@ describe('vaultingCommand and withVaultPresses (BP5)', () => {
     expect(withVaultPresses(c.vault, next, createCommand()).toggleTorch).toBe(true);
     expect(withVaultPresses(c.vault, next, createCommand()).toggleTorch).toBe(true);
     expect(withVaultPresses(c.vault, next, createCommand())).toBe(next);
+  });
+
+  it('sums the hop-up notches turned mid-vault and adds them to the first command after, once (HD1)', () => {
+    const c = holder();
+    const during = createCommand();
+    during.hopUpSteps = 1;
+    vaultingCommand(c as never, during, createCommand());
+    vaultingCommand(c as never, during, createCommand());
+    during.hopUpSteps = -1;
+    expect(vaultingCommand(c as never, during, createCommand()).hopUpSteps).toBe(0);
+    const next = createCommand();
+    next.hopUpSteps = 1;
+    expect(withVaultPresses(c.vault, next, createCommand()).hopUpSteps).toBe(2);
+    expect(withVaultPresses(c.vault, createCommand(), createCommand()).hopUpSteps).toBe(0);
+    during.hopUpSteps = 1;
+    vaultingCommand(c as never, during, createCommand());
+    cancelVault(c as never);
+    const after = createCommand();
+    expect(withVaultPresses(c.vault, after, createCommand())).toBe(after);
   });
 
   it('drops what was kept when the vault is cancelled (a respawn)', () => {

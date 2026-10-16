@@ -58,7 +58,7 @@ seeded per bot.
 - Tests: `ai.test.ts`, `botTactics.test.ts` and one file per behaviour. The match guards (`depotMatch.*`, `*Match.*`
   over `depotMatchSupport.ts` and `extractionRunSupport.ts`) are the `slow` project: they check what must never happen
   (rounds played and settled, nobody stuck, falling or hit by a teammate, each mode's rules). They are seed-sensitive:
-  re-measure over 16 seeds before changing a threshold (`docs/DECISIONS.md`). Files named `*Support.ts` here are
-  test-only.
+  re-measure over 16 seeds before changing a threshold (`docs/DECISIONS.md`). `testSupport.ts` (the small worlds and
+  the one-bot duel the unit tests share) and the other files named `*Support.ts` here are test-only.
 - `balance/`: the bot balance figures (who wins, the first hit, Extraction's get-out rates), measured on demand by
   `node pipeline/balance.mjs`, never asserted (token plan item 22; `balance/README.md`).

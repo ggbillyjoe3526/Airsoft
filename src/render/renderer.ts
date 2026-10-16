@@ -330,13 +330,15 @@ export class Renderer {
    * map. Harmless if Play comes first: the set is drawn once either way and an uploaded texture isn't uploaded again.
    */
   warmUp(idle: IdleScheduler = browserIdle): void {
+    // A step that comes round after dispose() would draw a fresh surface set nobody frees (DX0): it runs nothing.
+    const whileLive: IdleScheduler = (work) => idle(() => (this.disposed ? undefined : work()));
     warmSurfacesInIdle(
       CORE_SURFACES,
       (id: CoreSurfaceId) => addSurfaceTextures(this.surfaceSet(), [id], this.surfacesSize!, this.quality.anisotropy)[id]!.texture,
       (texture) => {
         if (this.surfaces && (Object.values(this.surfaces) as ProceduralTexture[]).some((t) => t.texture === texture)) this.gl.initTexture(texture);
       },
-      idle,
+      whileLive,
     );
   }
 

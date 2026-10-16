@@ -235,7 +235,7 @@ export class BotController {
   }
 
   /** Before a simulation tick: plan routes (rationed) and decide every bot's command. */
-  think(state: GameState, dt: number): void {
+  think(state: Readonly<GameState>, dt: number): void {
     const w = this.world;
     w.time = state.time;
     w.live = state.round.phase === 'live';
@@ -460,7 +460,7 @@ export class BotController {
   }
 
   /** After a simulation tick, while its events are still in the state. */
-  observe(state: GameState): void {
+  observe(state: Readonly<GameState>): void {
     const time = state.time;
     for (const e of state.events) {
       const cfg = this.world.cfg;
@@ -881,7 +881,7 @@ export class BotController {
     b.laneIndex = nearest - b.laneDir;
   }
 
-  private character(state: GameState, id: number): Character | undefined {
+  private character(state: Readonly<GameState>, id: number): Character | undefined {
     for (const c of state.characters) if (c.id === id) return c;
     return undefined;
   }

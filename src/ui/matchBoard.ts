@@ -43,6 +43,9 @@ export class MatchBoard {
   /** A tip under the table (Pro briefing tips, M41); '' for none. */
   private readonly tip: HTMLParagraphElement;
   private shownTip = '';
+  /** A line at the foot saying a click moves on, at a round's end (Dev 6 playtest item 33); '' for none. */
+  private readonly next: HTMLParagraphElement;
+  private shownNext = '';
   /** Measured again on the next `set` while shown (each time it comes up, or the window changes height). */
   private fitDue = true;
   private fittedViewport = -1;
@@ -60,7 +63,10 @@ export class MatchBoard {
     this.tip = document.createElement('p');
     this.tip.className = 'match-board-tip';
     this.tip.hidden = true;
-    this.root.append(this.heading, this.table.root, this.tip);
+    this.next = document.createElement('p');
+    this.next.className = 'match-board-next';
+    this.next.hidden = true;
+    this.root.append(this.heading, this.table.root, this.tip, this.next);
     parent.appendChild(this.root);
   }
 
@@ -108,6 +114,14 @@ export class MatchBoard {
     this.shownTip = text;
     this.tip.textContent = text;
     this.tip.hidden = text === '';
+  }
+
+  /** The line saying a click moves on (to the next round, or the results), or '' to hide it. */
+  setNext(text: string): void {
+    if (text === this.shownNext) return;
+    this.shownNext = text;
+    this.next.textContent = text;
+    this.next.hidden = text === '';
   }
 
   dispose(): void {

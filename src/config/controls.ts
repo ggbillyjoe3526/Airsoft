@@ -39,6 +39,13 @@ export const DEFAULT_BINDINGS = {
   slot2: ['Digit2'],
   /** Puts the replica in hand away for the faster sprint (M92, the owner's note 3: 1 primary, 2 secondary, 3 holster). */
   holster: ['Digit3'],
+  /**
+   * Turn the hop-up of the replica in hand a notch down or up in play (Dev 6 playtest item 15): 4 and 5, the free keys
+   * beside the replica keys, within reach of the movement hand; Page Down and Page Up as their second keys. The mouse
+   * wheel binds here too (Settings › Key Bindings).
+   */
+  hopDown: ['Digit4', 'PageDown'],
+  hopUp: ['Digit5', 'PageUp'],
   /** Hold to see the match so far: everyone's hits, BBs fired, accuracy and time alive (M19). */
   scoreboard: ['Tab'],
   /** Mouse buttons are codes too (`Mouse0` left … `Mouse4` the forward side button; see input/keyBindings.ts), so fire and aim rebind like any key (M18). */
@@ -96,6 +103,8 @@ export const REBINDABLE: readonly { action: Action; label: string }[] = [
   { action: 'slot1', label: 'Rifle' },
   { action: 'slot2', label: 'Pistol' },
   { action: 'holster', label: 'Holster' },
+  { action: 'hopDown', label: 'Hop-up: less lift' },
+  { action: 'hopUp', label: 'Hop-up: more lift' },
   { action: 'scoreboard', label: 'Scoreboard (hold)' },
   { action: 'orderWheel', label: 'Squad: order wheel (hold)' },
   { action: 'orderFollow', label: 'Squad: follow me' },

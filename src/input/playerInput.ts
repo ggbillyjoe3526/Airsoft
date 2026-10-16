@@ -69,6 +69,8 @@ export class PlayerInput {
    * (KI1; a latch counted them as one). Dropped with the other one-shots on a pause or a new round.
    */
   private fireModePresses = 0;
+  /** Hop-up notches asked for since the last tick (Dev 6 playtest item 15): + more lift, - less. */
+  private hopSteps = 0;
   /** The Weapon torch key pressed since the last tick (M33h). */
   private torchLatch = false;
   /** The Inspect key pressed since the last takeInspect (RM2; presentation only, so never part of a command). */
@@ -153,6 +155,8 @@ export class PlayerInput {
     if (kb.wasPressed('reload')) this.reloadLatch = true;
     this.fireModePresses = Math.min(FIRE_MODE_QUEUE_MAX, this.fireModePresses + kb.pressCount('fireMode'));
     if (kb.wasPressed('torch')) this.torchLatch = true;
+    if (kb.wasPressed('hopUp')) this.hopSteps++;
+    if (kb.wasPressed('hopDown')) this.hopSteps--;
     if (kb.wasPressed('inspect')) this.inspectLatch = true;
     if (kb.wasPressed('orderFollow')) this.latchOrder('follow', false);
     if (kb.wasPressed('orderHold')) this.latchOrder('hold', false);
@@ -279,6 +283,7 @@ export class PlayerInput {
     // Taken one at a time: clearOneShots keeps the rest for the next ticks.
     const fireModeLeft = Math.max(0, this.fireModePresses - 1);
     cmd.toggleTorch = this.torchLatch;
+    cmd.hopUpSteps = this.hopSteps;
     cmd.use = kb.isDown('use');
     // A toss is the session's to name (MatchSession, src/magHandoff.ts): never from the keys straight.
     cmd.tossMag = -1;
@@ -344,6 +349,7 @@ export class PlayerInput {
     this.fireLatch = false;
     this.fireModePresses = 0;
     this.torchLatch = false;
+    this.hopSteps = 0;
     this.inspectLatch = false;
     this.orderLatch = null;
     this.pingLatch = false;

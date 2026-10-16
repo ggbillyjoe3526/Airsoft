@@ -285,8 +285,9 @@ describe('the title\'s ground (M100: plain, no picture)', () => {
 
 describe('the HUD\'s sheets (G4)', () => {
   it('read every file hud.css imports, each part\'s rules among them', () => {
-    expect(hudFiles.length).toBe(10);
-    for (const rule of ['.scoreboard', '.minimap-frame', '.hit-feed-line', '.hud-replica', '.match-board', '.hitfx-round', '.callout-feed', '.ping-marker', '.mag-prompt']) {
+    // Nine since the callout feed joined the hit feed (Dev 6 playtest item 32).
+    expect(hudFiles.length).toBe(9);
+    for (const rule of ['.scoreboard', '.minimap-frame', '.hit-feed-line', '.hud-replica', '.match-board', '.hitfx-round', '.hit-feed.bottom-left', '.ping-marker', '.mag-prompt']) {
       expect(blockOf(rule), rule).not.toBeNull();
     }
     // Moved, not copied: style.css keeps none of them.
@@ -442,10 +443,11 @@ describe('layout polish before the screenshots (G4, M100)', () => {
     expect(declared('.minimap-caption', 'max-width')).toMatch(/^calc\(var\(--minimap-size\) \* [\d.]+\)$/);
   });
 
-  it('keeps the fire-mode chips and the spare line in rows of their own: the spare line is a block under the chips', () => {
+  it('keeps the fire-mode chips and the spare line apart: the spare line is a block under the count, in its column (Dev 6 playtest item 25)', () => {
     expect(declared('.hud-spare', 'display')).toBe('block');
     expect(declared('.hud-spare', 'margin-top')).toMatch(/^\d+px$/);
-    expect(declared('.hud-ammo', 'flex-direction')).toBeUndefined();
+    expect(declared('.hud-ammo', 'flex-direction')).toBe('column');
+    expect(declared('.hud-ammo', 'flex')).toBe('none');
   });
 
   it('fills the level bars (the top bar\'s and the Armory\'s) from the left by --xp, on a transform, not a width (LV1)', () => {

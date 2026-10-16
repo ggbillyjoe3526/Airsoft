@@ -705,7 +705,7 @@ export function mapLookOf(q: QualitySettings, probes: ProbeGrid | null = null): 
 }
 
 /** How a look draws the baked light: its mode, or off without probes. */
-export function bakedLightOf(look: MapLook): BakedLightMode {
+function bakedLightOf(look: MapLook): BakedLightMode {
   return look.probes ? (look.bakedLight ?? 'off') : 'off';
 }
 
