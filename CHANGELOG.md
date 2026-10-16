@@ -4,8 +4,14 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 
 ## Unreleased
 
+### Changed
+- **BD1** · Blender models are the default: players and bots are the rigged humans and robots, and menus show the Blender replicas, parts, power sources and figures; the Dev model switches are gone
+- **HV1** · Hit areas fit each figure: head, chest, shoulders and hips follow the human's and robot's bodies as they move, so BBs land where the figure is drawn
+
 ### Internal
 - **Pipeline** · Code changes get critic, QA and performance review before a pull request is ready; CI fails it without passing verdicts
+- **BD1** · Headless bot matches and balance figures play with the rigged figures' hit rules; perf-run loses its models option; perf baselines re-recorded with models drawn
+- **HV1** · Hit shapes are fitted per figure and sampled from the clips as the figures load
 
 ## 0.1 Dev 6 · 2026-10-16
 
