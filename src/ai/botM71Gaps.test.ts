@@ -327,9 +327,13 @@ describe('keepApart: a bot sidestepping in a fight steps to the side the push po
   });
 
   it('never walks a standing bot aside off a floor (MV1: a teammate beside it at an open edge pushed it over)', () => {
-    // The teammate on the left pushes towards +X, where the ground ends: the bot stays put.
-    const { w, bot } = world(EDGE, [mate(1, -0.3, 0)]);
+    // At x = 0.6 the teammate on the left pushes towards +X, where the ground ends within edgeLookahead: the bot stays
+    // put. A wall would not stop it (the body slides along), so the nav's inset alone (x = 0.1) does not either.
+    const { w, bot, me } = world(EDGE, [mate(1, 0.2, 0)]);
+    me.position.x = 0.6;
     expect(keepApart(bot, w, false, createCommand())).toBe(false);
+    const inset = world(EDGE, [mate(1, -0.3, 0)]);
+    expect(keepApart(inset.bot, inset.w, false, createCommand())).toBe(true);
     // Pushed the other way, onto the ground, it walks aside.
     const open = world(EDGE, [mate(1, 0.3, 0)]);
     expect(keepApart(open.bot, open.w, false, createCommand())).toBe(true);

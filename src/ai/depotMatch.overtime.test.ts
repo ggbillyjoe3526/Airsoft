@@ -28,6 +28,7 @@ describe('the overtime flag in bot matches (OT1)', () => {
   it.each(MAPS)('on %s the bots go and take it: by touch in most overtimes, each within its time', { timeout: 300_000 }, (_name, map, size) => {
     let overtimes = 0;
     let touched = 0;
+    let timedOut = 0;
     const takers = [0, 0];
     for (let seed = 1; seed <= 2; seed++) {
       let upAt = -1;
@@ -42,14 +43,18 @@ describe('the overtime flag in bot matches (OT1)', () => {
             if (e.reason === 'overtimeFlag') {
               touched++;
               takers[e.winner]!++;
-            }
+            } else if (e.reason === 'time') timedOut++;
             upAt = -1;
           }
         }
       });
     }
     expect(overtimes).toBeGreaterThanOrEqual(4);
-    expect(touched).toBeGreaterThanOrEqual(overtimes / 2);
+    // Taken by a touch far more often than its time runs out; a wipe-out still wins an overtime, and since walking aims
+    // as steady as standing (MV1, the owner's ruling) more overtimes end in one: Woodland seeds 1-6 end 18 of 40 by a
+    // touch, none by time (21 of 37 before), so the floor is a third.
+    expect(touched).toBeGreaterThan(3 * timedOut);
+    expect(touched).toBeGreaterThanOrEqual(overtimes / 3);
     expect(takers[0]! + takers[1]!).toBe(touched);
   });
 });

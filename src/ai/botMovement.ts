@@ -830,10 +830,10 @@ export function keepApart(b: Bot, w: BotWorld, moving: boolean, cmd: PlayerComma
   }
   const len = Math.hypot(px, pz);
   // Never walked aside off a floor: a teammate standing beside a bot at a platform's open edge pushed it over (a seed of
-  // the Ramp Yard follow match, MV1).
+  // the Ramp Yard follow match, MV1). A wall is no harm (the body slides along it), so only a drop stops the push.
   const p = me.position;
   const ahead = w.cfg.edgeLookahead / len;
-  if (dropOnLine(w.nav, p.x, p.y, p.z, p.x + px * ahead, p.z + pz * ahead) || !isWalkableAt(w.nav, p.x + px * ahead, p.y, p.z + pz * ahead)) return moving;
+  if (dropOnLine(w.nav, p.x, p.y, p.z, p.x + px * ahead, p.z + pz * ahead)) return moving;
   b.moveDir.x = px / len;
   b.moveDir.z = pz / len;
   cmd.walk = true;
