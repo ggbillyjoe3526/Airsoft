@@ -293,7 +293,7 @@ src/input     keyboard, mouse and pointer lock → commands
 src/map       map data (Depot, Woodland, Neon Heights), lighting, foliage
 src/nav       walkability grid and route finding
 src/physics   Rapier wrapper: level collision, character controller, ray casts
-src/pool      the asset pool, the Loadout's model, bot kits, Extraction cases, supply events
+src/pool      the asset pool, the Loadout's model, bot kits, Extraction cases
 src/progress  levels, XP and what the player has unlocked
 src/render    Three.js presentation: maps, replicas, characters, BBs, effects, cameras
 src/save      guarded storage, save file, restore points, tab lock
@@ -305,7 +305,7 @@ src/ui        menus, HUD, scoreboard, minimap, hit feedback, debug overlay
 e2e           browser tests (Playwright)
 pipeline      gate script, perf harness, agent scripts
 docs          design notes, roadmap, process, playtest guide
-pool.md       every item, Extraction's cases and supply events (hand-editable)
+pool.md       every item and Extraction's cases (hand-editable)
 levels.md     what each level unlocks, the XP it takes and what a match gives (hand-editable)
 stats.md      how every replica and part performs (hand-editable)
 callouts.md   what the bots call and how often (hand-editable)

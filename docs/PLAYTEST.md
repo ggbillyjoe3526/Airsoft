@@ -434,8 +434,6 @@ Neon Heights). A run gives no XP while it is dev content.
   feeling unfair?
 - [ ] **By level and map.** The home team is the map's base plus your squad, one more on Pro: Easy lets you out with
   three cases most runs, Normal about a third, Hard rarely, Pro hardly ever.
-- [ ] **Supply events.** From Friday to Sunday the Mode card says "Supply weekend" (+25 % XP); 30 October to 1
-  November 2026 names the Halloween night run (+50 %).
 
 ## Pro difficulty (dev content)
 
