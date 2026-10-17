@@ -60,8 +60,8 @@ What changed in 0.1 Beta 1, from your Dev 6 playtest. Each line points to the se
   and commit the `pipeline/baseline/laptop*.json` files it writes.
 - **Desktop Ultra baseline.** On your desktop run `npm run perf:desktop` (about 15 minutes; leave the window alone) and
   send the thread `pipeline/out/perf-desktop-summary.md` and `pipeline/baseline/desktop*.json`.
-- **Save in Edge** (William has no Firefox since 2026-10-17; Firefox's save tests ran in the cloud, KNOWN_ISSUES),
-  and playing Woodland and Neon Heights, which stay dev content until you make each public.
+- **Playing Woodland and Neon Heights**, which stay dev content until you make each public. (Save in Edge: done
+  2026-10-17, [Save](#save).)
 
 ## Movement
 
@@ -618,19 +618,21 @@ Settings › Graphics › Quality: Low, Medium, High, Ultra or Custom.
 
 Settings › Save file. Everything saves as it changes; nothing to press.
 
-- [ ] **Saved automatically.** Change the field of view: "Last saved just now"; reload and your settings, Loadout,
+- [x] **Saved automatically.** Change the field of view: "Last saved just now"; reload and your settings, Loadout,
   level and records are as you left them.
-- [ ] **Download and load.** `airsoft-save-<today>.json` is readable JSON. In a private window Load file (or drag it
+- [x] **Download and load.** `airsoft-save-<today>.json` is readable JSON. In a private window Load file (or drag it
   on) shows both saves side by side; Replace reloads with yours; Undo brings back what was there.
 - [ ] **An edited file.** Change `xp` in a download and load it: the pop-up warns and the button reads Load anyway; any
   other file says "That file isn't an Airsoft save".
 - [ ] **Mid-match.** Download works; Load, Restore, Undo and Delete are greyed with "Leave the match to load a save."
 - [ ] **Restore points and Delete.** One restore point per day you play (three at most), with the same pop-up and an
   Undo.
-- [ ] **Two tabs.** A second tab shows "Airsoft is open in another tab" and waits; Play here moves the game to it with
+- [x] **Two tabs.** A second tab shows "Airsoft is open in another tab" and waits; Play here moves the game to it with
   nothing lost. **Protect:** Chrome and Edge answer at once (often "said no for now"); once allowed it reads Protected.
-- [ ] **Edge.** Download, Load (button and drag and drop), the two-tab notice and Protect once. Firefox: the cloud
-  harness (`/mnt/project-files/playtest/firefox-harness/`) runs the save tests there; nobody checks it by hand.
+- [x] **Edge.** Download, Load (button and drag and drop), the two-tab notice and Protect once. William, Edge 155,
+  Dev 6 build, 2026-10-17: everything kept after a browser restart, a private window started fresh, Protect said
+  "no for now". Firefox: the cloud harness (`/mnt/project-files/playtest/firefox-harness/`) runs the save tests
+  there; nobody checks it by hand.
 
 ## Browsers and builds
 
