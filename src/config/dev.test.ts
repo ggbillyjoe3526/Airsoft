@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { loadDevEnabled, loadDevSettings } from '../settings/dev';
 import { SETTINGS_KEY, SETTINGS_VERSION } from '../settings/storage';
-import { activeDev, DEV_ACTIONS, DEV_DEFAULTS, DEV_ENTRIES, DEV_GIFTS, devCheating, devIntro, modelFilesInUse } from './dev';
+import { activeDev, DEV_ACTIONS, DEV_DEFAULTS, DEV_ENTRIES, DEV_GIFTS, devCheating, devIntro } from './dev';
 
 /** A Storage holding one saved settings object. */
 function saved(fields: Record<string, unknown>): Storage {
@@ -135,28 +135,12 @@ describe('more Dev settings for playtesting (M90)', () => {
   });
 });
 
-describe('Model file switches (RM4)', () => {
-  it('are two switch rows, on by default and not cheats', () => {
-    for (const id of ['disableFigureModels', 'disableAllModels'] as const) {
-      expect(DEV_ENTRIES.find((e) => e.id === id)).toMatchObject({ kind: 'switch', cheat: false });
-      expect(DEV_DEFAULTS[id]).toBe(true);
+describe('The model switches are gone (BD1)', () => {
+  it('leaves no Dev row or setting that draws the built-in models', () => {
+    for (const id of ['disableFigureModels', 'disableAllModels']) {
+      expect(DEV_ENTRIES.map((e) => e.id as string)).not.toContain(id);
+      expect(Object.keys(DEV_DEFAULTS)).not.toContain(id);
     }
-    expect(devCheating({ ...DEV_DEFAULTS, disableFigureModels: false, disableAllModels: false })).toBe(false);
-  });
-
-  it('lets in files by the truth table: gear needs all-models off, figures need both off', () => {
-    const f = (disableAllModels: boolean, disableFigureModels: boolean) => modelFilesInUse({ disableAllModels, disableFigureModels });
-    expect(f(true, true)).toEqual({ gear: false, figures: false });
-    expect(f(true, false)).toEqual({ gear: false, figures: false });
-    expect(f(false, true)).toEqual({ gear: true, figures: false });
-    expect(f(false, false)).toEqual({ gear: true, figures: true });
-    expect(modelFilesInUse(DEV_DEFAULTS)).toEqual({ gear: false, figures: false });
-  });
-
-  it('lets no file in when the Dev tab is hidden, whatever was picked', () => {
-    const picked = { ...DEV_DEFAULTS, disableAllModels: false, disableFigureModels: false };
-    expect(modelFilesInUse(activeDev(true, picked))).toEqual({ gear: true, figures: true });
-    expect(modelFilesInUse(activeDev(false, picked))).toEqual({ gear: false, figures: false });
   });
 });
 
@@ -168,5 +152,15 @@ describe('Bots run low on BBs (MG1)', () => {
     expect(loadDevSettings(saved({ 'dev.botsRunLow': 'on' })).botsRunLow).toBe(true);
     expect(loadDevSettings(saved({ 'dev.botsRunLow': 'yes' })).botsRunLow).toBe(false);
     expect(activeDev(false, { ...DEV_DEFAULTS, botsRunLow: true }).botsRunLow).toBe(false);
+  });
+});
+
+describe('old saved model switches (BD1, QA)', () => {
+  it('load cleanly and leave no trace in the settings', () => {
+    const d = loadDevSettings(saved({ 'dev.disableFigureModels': 'on', 'dev.disableAllModels': 'on', 'dev.gameSpeed': 0.5 }));
+    expect(d.gameSpeed).toBe(0.5);
+    expect(Object.keys(d).sort()).toEqual(Object.keys(DEV_DEFAULTS).sort());
+    expect(d).not.toHaveProperty('disableFigureModels');
+    expect(d).not.toHaveProperty('disableAllModels');
   });
 });

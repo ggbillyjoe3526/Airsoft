@@ -91,15 +91,17 @@ and never writes the simulation.
   `figureReplicas.ts` (the blocky replicas they carry); `figureMix.ts` picks which figures are robots this match;
   `externalModels.ts` loads the optional figure GLB (M25a). `figureFinish.ts` (the
   per-vertex finish) and `figureCamo.ts` (the team camo printed per pixel on clothes and sleeves, G11). The rigged Blender
-  human and robot (BF1, drawn only with the Dev tab's model switches off): `figureRig.ts` (a kind's files taken apart
-  into bones, merged meshes and clips, and `figureLegs.ts` reading the legs' clips out for the hit volume, IM8),
+  human and robot (BF1, every player and bot since BD1): `figureRig.ts` (a kind's files taken apart
+  into bones, merged meshes and clips, and `figureLegs.ts` reading the legs' clips out for the hit volume, IM8, and `figureBody.ts` the upper body's, with
+  each figure's fitted shape, HV1),
+  `figureRigFinish.ts` (a kind's plain one-colour materials drawn as one vertex-coloured finish, BD1),
   `figurePose.ts` (the pure blend of clips from the character's state),
   `riggedFigure.ts` (one figure: skinned, posed, each loadout replica on the grip bone with its fitted optic, grip, laser,
   barrel and muzzle part, BG1, the reload's magazines, the rifle slung on the back while holstered and its drawn
   muzzle for the BBs, BP4, your first-person body) and `thrownMagazines.ts` (the empty magazines thrown in reloads); `modelFiles.ts` imports
   `figureRig.ts` on demand, so the four ride in their own chunk and the game's carries only their types. Replicas and hands:
   `replicaModels.ts` (the bodies and assembly), `replicaParts.ts` (optics, grips, magazines and the other fitted parts),
-  `replicaBuilder.ts` (the mesh builder both use), `replicaFiles.ts` (the Blender model files, M101, RM1, and their parts' sight-line and under-laser markers, RM8, and a laser's lens, BP4; `modelFiles.ts` loads them, and the figure model, only while the Dev tab's model switches let them in, RM4) and `replicaRig.ts`
+  `replicaBuilder.ts` (the mesh builder both use), `replicaFiles.ts` (the Blender model files, M101, RM1, and their parts' sight-line and under-laser markers, RM8, and a laser's lens, BP4; `modelFiles.ts` loads them, and the figure model, as the game starts, BD1) and `replicaRig.ts`
   (their moving parts, skinned and posed from the game's state, RM1; the Inspect key plays a file's Inspect clip, RM2; the built-in GBB Pistol's slide rides one too, and a GBB's slide locks back on an empty magazine, RM7), `replicaFinish.ts` (moulded speckle), `replicaSheen.ts` (the
   environment reflection), `replicaArms.ts` (the first-person arms), `handModels.ts` and `robotHands.ts` (a robot's first-person hands on the
   same skeleton); `itemPictures.ts` draws them off

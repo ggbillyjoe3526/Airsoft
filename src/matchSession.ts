@@ -298,11 +298,13 @@ export class MatchSession {
         : undefined;
     // An Extraction run is one "round" of the map's run time (sim/round.ts); there is nothing to win twice.
     this.rounds = this.extraction && map.extraction ? { ...roundRulesFor(setup.rules), roundTime: map.extraction.runTime, winsNeeded: 1, winBy: 1 } : roundRulesFor(setup.rules);
-    // With the rigged figures drawn (the Dev switches off), the legs' hit volumes follow theirs (IM8): the human's
+    // With the rigged figures drawn (BD1: unless they couldn't be loaded), the legs' hit volumes follow theirs (IM8): the human's
     // legs, which the robot shares but for a couple of centimetres crouched (render/riggedHitVolume.test.ts measures both),
     // with any clip the human's file lacks taken from the robot's (FigureRigs.legs).
-    const figureLegs = renderer.figureRigs?.legs;
-    this.hits = figureLegs ? { ...hitRulesFor(setup.rules), figureLegs } : hitRulesFor(setup.rules);
+    // Their head, chest and hips follow each figure's own upper body (HV1), the human's or the robot's (Character.figure,
+    // set from the crowd below).
+    const rigs = renderer.figureRigs;
+    this.hits = rigs ? { ...hitRulesFor(setup.rules), figureLegs: rigs.legs, figureBodies: rigs.bodies } : hitRulesFor(setup.rules);
     this.standardRules = countsForRecords(setup.rules, setup.difficulty, setup.teammateDifficulty, setup.ruleset);
     this.customRules = !standardRules(setup.ruleset, setup.rules);
     this.state = createGameState(seed, BALLISTICS.maxBBs, this.rounds, this.mode, map.flag);
@@ -350,6 +352,8 @@ export class MatchSession {
     this.daylight.reserveLights(this.torches.reserved);
     // Who the figures are drawn as (G7): humans and robots mixed from the seed when Settings › Look › Robots is on.
     const crowd = figureCrowd(seed, this.state.characters, setup.look);
+    // Each character's hit volume takes the shape of the figure it is drawn as (HV1).
+    this.state.characters.forEach((c, i) => (c.figure = crowd.robots[i] ? 1 : 0));
     this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map, audio, (action) => input.keyName(action), crosshair, quality, this.hits, bbGlowFor(this.kit, this.lighting.night), seed, kitPaint(this.kit, setup.look), playerArms(crowd, this.state.characters.indexOf(this.player), this.player.team));
     this.build.phase('replica and effects');
     // The field's own sounds (M33j): whatever New game's spare time didn't render ahead is finished here (M65, audit

@@ -1,9 +1,11 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { FIGURE_RIG, FIGURE_RIG_KINDS, type FigureRigKind } from '../config/figureRig';
-import type { FigureLegs } from '../config/hits';
+import { FIGURE_HIT_SHAPES, FIGURE_RIG, FIGURE_RIG_KINDS, type FigureRigKind } from '../config/figureRig';
+import type { FigureBody, FigureLegs } from '../config/hits';
 import { loadGltfScene } from './externalModels';
+import { figureBodyFrom } from './figureBody';
 import { figureLegsFrom, legsWithSpares } from './figureLegs';
+import { figureFinish } from './figureRigFinish';
 import { RiggedFigure, type RiggedFigureSetup } from './riggedFigure';
 import { ThrownMagazines } from './thrownMagazines';
 import { BODY_CLIPS, FIRE_CLIPS, type MagazineTimes, OPTIONAL_CLIPS, POSE_CLIPS, POSE_SLOT, type PoseClipTable, type PoseHold } from './figurePose';
@@ -105,12 +107,14 @@ export interface FigureRig {
   triangles: readonly number[];
   /** Its legs' clips as plain numbers, for the hit volume (IM8, render/figureLegs.ts). */
   legs: FigureLegs;
+  /** Its upper body's hit shape through the same clips, for the hit volume (HV1, render/figureBody.ts). */
+  body: FigureBody;
   dispose(): void;
 }
 
 /**
- * Both kinds, loaded together, with the drawing that plays them: this module and the ones below it are loaded only
- * when the Dev switches let the figures in (ModelFiles), so the game's own chunk doesn't carry them.
+ * Both kinds, loaded together, with the drawing that plays them: this module and the ones below it are a chunk of
+ * their own, loaded with the figure files as the game starts (ModelFiles), so the game's own chunk doesn't carry them.
  */
 export interface FigureRigs {
   readonly human: FigureRig;
@@ -120,6 +124,8 @@ export interface FigureRigs {
    * centimetres crouched, with any clip the human's file lacks from the robot's.
    */
   readonly legs: FigureLegs;
+  /** The upper bodies a match's hit volume takes (HV1), by figure kind (Character.figure: the human's, then the robot's). */
+  readonly bodies: readonly FigureBody[];
   /** One figure drawn from a rig (render/riggedFigure.ts). */
   figure(setup: RiggedFigureSetup): RiggedFigure;
   /** The thrown-away magazines of a match's figures (render/thrownMagazines.ts). */
@@ -129,7 +135,7 @@ export interface FigureRigs {
 
 /** Both kinds as FigureRigs, with `dispose` freeing them (or whatever the caller says, for shared test files). */
 export function figureRigs(human: FigureRig, robot: FigureRig, dispose: () => void): FigureRigs {
-  return { human, robot, legs: legsWithSpares(human.legs, robot.legs), figure: (setup) => new RiggedFigure(setup), thrownMagazines: () => new ThrownMagazines(), dispose };
+  return { human, robot, legs: legsWithSpares(human.legs, robot.legs), bodies: [human.body, robot.body], figure: (setup) => new RiggedFigure(setup), thrownMagazines: () => new ThrownMagazines(), dispose };
 }
 
 /** The URLs of `kind`'s file and sidecar loader in this build, or null when it lacks either. */
@@ -239,11 +245,15 @@ export function prepareFigureRig(kind: FigureRigKind, scene: THREE.Object3D, sid
   const parts = [...roles.body, ...roles.head, ...(roles.pack ? [roles.pack] : []), ...(roles.radio ? [roles.radio] : [])];
   for (const part of [...roles.body, roles.head[0]!]) if (!meshesOf.has(part)) throw new Error(`the ${kind} figure has no "${part}"`);
 
-  // The materials, in a fixed order, each once.
-  const materials: THREE.Material[] = [];
+  // The materials, in a fixed order, each once; the plain ones drawn as one (render/figureRigFinish.ts, BD1).
+  const fileMaterials: THREE.Material[] = [];
   for (const mesh of skinned) {
-    for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) if (!materials.includes(m)) materials.push(m);
+    for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) if (!fileMaterials.includes(m)) fileMaterials.push(m);
   }
+  const finish = figureFinish(fileMaterials, FIGURE_RIG.teamMaterialPrefix);
+  const materials = finish ? [...finish.materials] : fileMaterials;
+  const indexOf = (m: THREE.Material): number => (finish ? finish.indexOf(m) : materials.indexOf(m));
+  const geometryOf = (mesh: THREE.SkinnedMesh): THREE.BufferGeometry => (finish ? finish.geometryOf(mesh) : mesh.geometry);
 
   const merged = new Map<string, THREE.BufferGeometry>();
   const suffix = (lod: number): string => (lod === 0 ? '' : `_LOD${lod}`);
@@ -254,9 +264,9 @@ export function prepareFigureRig(kind: FigureRigKind, scene: THREE.Object3D, sid
     const byMaterial = new Map<number, THREE.BufferGeometry[]>();
     for (const name of names) {
       for (const mesh of meshesOf.get(name + suffix(lod)) ?? []) {
-        const index = materials.indexOf(mesh.material as THREE.Material);
+        const index = indexOf(mesh.material as THREE.Material);
         const list = byMaterial.get(index) ?? [];
-        list.push(mesh.geometry);
+        list.push(geometryOf(mesh));
         byMaterial.set(index, list);
       }
     }
@@ -373,6 +383,7 @@ export function prepareFigureRig(kind: FigureRigKind, scene: THREE.Object3D, sid
   const boneNames = skeleton.bones.map((b) => b.name);
   const bindMatrix = first.bindMatrix.clone();
   const legs = figureLegsFrom({ rig, boneNames, boneInverses: skeleton.boneInverses, bindMatrix, bodies: roles.body.flatMap((p) => (meshesOf.get(p) ?? []).map((m) => m.geometry)), lower, table });
+  const body = figureBodyFrom({ rig, lower, upper, table, hipsUnderAim, shape: FIGURE_HIT_SHAPES[kind] });
 
   const triangles = [0, 1, 2].map((lod) => {
     const g = geometry(lod, parts.filter((p) => meshesOf.has(p + suffix(lod))));
@@ -398,11 +409,13 @@ export function prepareFigureRig(kind: FigureRigKind, scene: THREE.Object3D, sid
     aimYaw,
     triangles,
     legs,
+    body,
     dispose: () => {
       for (const g of merged.values()) g.dispose();
       merged.clear();
       for (const mesh of skinned) mesh.geometry.dispose();
-      for (const m of materials) {
+      finish?.dispose();
+      for (const m of fileMaterials) {
         for (const value of Object.values(m)) if (value instanceof THREE.Texture) value.dispose();
         m.dispose();
       }

@@ -1,5 +1,6 @@
-import type { HitConfig } from '../config/hits';
+import type { FigureLegs, HitConfig } from '../config/hits';
 import type { Character } from './character';
+import { BODY_POINT, BODY_ROLLED, BODY_SAMPLE, figureBodyPose } from './figureBody';
 import { figureLegCycleStep, figureLegPose, LEG_POINT, LEG_POINTS, LEG_SAMPLE } from './figureLegs';
 import { copy, type Vec3, vec3 } from './vec';
 
@@ -135,9 +136,12 @@ export function hitTop(crouchAmount: number, cfg: HitConfig): number {
  * shoulders, PART.chest), the hips as two side by side (an oval: they're narrower front to back than across), and each
  * leg's thigh, shin and boot. The head, chest and hips roll with a lean about the hip pivot (sim/lean.ts), as the drawn
  * upper body does, so only what pokes out past cover can be hit; the legs stay put, hang from the hips (squashed
- * towards them by a crouch, as the drawn legs are) and swing on the walk cycle (legSwing); in a match that draws the
- * rigged figures they sit on those figures' leg joints instead (HitConfig.figureLegs, sim/figureLegs.ts; IM8,
- * render/riggedHitVolume.test.ts measures it). Arms and replicas aren't part of it (owner, DECISIONS 2026-10-01).
+ * towards them by a crouch, as the drawn legs are) and swing on the walk cycle (legSwing). In a match that draws the
+ * rigged figures (every match since BD1, unless their files can't be loaded) the legs sit on those figures' leg joints
+ * (HitConfig.figureLegs, sim/figureLegs.ts; IM8) and the head, chest (two side by side), shoulders and hips on each
+ * figure's own upper body (HitConfig.figureBodies, sim/figureBody.ts; HV1), the hips not rolled by a peek, as the
+ * figure's aren't (render/riggedHitVolume.test.ts measures it). The built-in figures have no second chest or shoulders
+ * (radius 0: not there). Arms and replicas aren't part of it (owner, DECISIONS 2026-10-01).
  * `bound` holds all of it: a ray that misses the bound misses everything.
  */
 export interface HitVolume {
@@ -147,7 +151,7 @@ export interface HitVolume {
 }
 
 /** Where each part sits in HitVolume.parts. */
-export const PART = { chest: 0, hipL: 1, hipR: 2, thighL: 3, shinL: 4, bootL: 5, thighR: 6, shinR: 7, bootR: 8, count: 9 } as const;
+export const PART = { chest: 0, chestR: 1, shoulders: 2, hipL: 3, hipR: 4, thighL: 5, shinL: 6, bootL: 7, thighR: 8, shinR: 9, bootR: 10, count: 11 } as const;
 
 const capsule = (): VerticalCapsule => ({ x: 0, z: 0, y0: 0, y1: 0, r: 0 });
 const segment = (): SegmentCapsule => ({ ax: 0, ay: 0, az: 0, bx: 0, by: 0, bz: 0, r: 0 });
@@ -212,6 +216,19 @@ const pa = vec3();
 const pb = vec3();
 /** The rigged figures' legs this tick (sim/figureLegs.ts figureLegPose), when the hit rules carry them. */
 const legPoints = new Float32Array(LEG_SAMPLE);
+/** A rigged figure's upper body this tick (sim/figureBody.ts figureBodyPose), when the hit rules carry them. */
+const bodyPoints = new Float32Array(BODY_SAMPLE);
+
+/** Point `point` (BODY_POINT) of bodyPoints, rolled by the peek about the hip pivot unless it is the hips', placed. */
+function bodyPoint(point: number, out: Vec3): Vec3 {
+  const k = point * 3;
+  const x = bodyPoints[k]!;
+  const y = bodyPoints[k + 1]!;
+  const z = bodyPoints[k + 2]!;
+  if (point >= BODY_ROLLED) return place(x, y, z, out);
+  const h = y - frame.pivot;
+  return place(x * frame.cosRoll + h * frame.sinRoll, frame.pivot + h * frame.cosRoll - x * frame.sinRoll, z, out);
+}
 
 /** Point `point` (LEG_POINT) of leg `side` (0 left, 1 right) of legPoints, placed. */
 function legPoint(side: number, point: number, out: Vec3): Vec3 {
@@ -229,6 +246,23 @@ function setSegment(s: SegmentCapsule, r: number): void {
   s.r = r;
 }
 
+/** The legs' parts on the rigged figures' leg joints (IM8), with these radii. */
+function figureLegParts(c: Character, legs: FigureLegs, parts: SegmentCapsule[], thigh: number, shin: number, boot: number): void {
+  figureLegPose(c, legs, legPoints);
+  for (let side = 0; side < 2; side++) {
+    const first = side === 0 ? PART.thighL : PART.thighR;
+    legPoint(side, LEG_POINT.hip, pa);
+    legPoint(side, LEG_POINT.knee, pb);
+    setSegment(parts[first]!, thigh);
+    copy(pa, pb);
+    legPoint(side, LEG_POINT.ankle, pb);
+    setSegment(parts[first + 1]!, shin);
+    legPoint(side, LEG_POINT.heel, pa);
+    legPoint(side, LEG_POINT.toe, pb);
+    setSegment(parts[first + 2]!, boot);
+  }
+}
+
 /** Writes the character's current hit volume (see HitVolume) into `v`. */
 export function characterHitVolume(c: Character, cfg: HitConfig, v: HitVolume): void {
   const drop = cfg.crouchDrop * c.crouchAmount;
@@ -243,6 +277,37 @@ export function characterHitVolume(c: Character, cfg: HitConfig, v: HitVolume): 
   frame.pivot = cfg.lean.pivotHeight - drop;
   const parts = v.parts;
 
+  const body = cfg.figureLegs && cfg.figureBodies ? (cfg.figureBodies[c.figure] ?? cfg.figureBodies[0]) : undefined;
+  if (body && cfg.figureLegs) {
+    figureBodyPose(c, cfg.figureLegs, body, bodyPoints);
+    const S = body.shape;
+    const P = BODY_POINT;
+    bodyPoint(P.head, pa);
+    const head = v.head;
+    head.x = pa.x;
+    head.z = pa.z;
+    head.y0 = head.y1 = pa.y;
+    head.r = S.head.radius;
+    bodyPoint(P.chestBottomL, pa);
+    bodyPoint(P.chestTopL, pb);
+    setSegment(parts[PART.chest]!, S.chest.radius);
+    bodyPoint(P.chestBottomR, pa);
+    bodyPoint(P.chestTopR, pb);
+    setSegment(parts[PART.chestR]!, S.chest.radius);
+    bodyPoint(P.shoulderL, pa);
+    bodyPoint(P.shoulderR, pb);
+    setSegment(parts[PART.shoulders]!, S.shoulders.radius);
+    bodyPoint(P.hipBottomL, pa);
+    bodyPoint(P.hipTopL, pb);
+    setSegment(parts[PART.hipL]!, S.hips.radius);
+    bodyPoint(P.hipBottomR, pa);
+    bodyPoint(P.hipTopR, pb);
+    setSegment(parts[PART.hipR]!, S.hips.radius);
+    figureLegParts(c, cfg.figureLegs, parts, S.legs.thigh, S.legs.shin, S.legs.boot);
+    boundHitVolume(v);
+    return;
+  }
+
   upper(0, cfg.headHeight - drop, pa);
   const head = v.head;
   head.x = pa.x;
@@ -253,6 +318,9 @@ export function characterHitVolume(c: Character, cfg: HitConfig, v: HitVolume): 
   upper(0, cfg.torsoBottom - drop, pa);
   upper(0, cfg.torsoTop - drop, pb);
   setSegment(parts[PART.chest]!, cfg.bodyRadius);
+  // The built-in figures have no second chest or shoulders: radius 0, never hit and out of the bound.
+  setSegment(parts[PART.chestR]!, 0);
+  setSegment(parts[PART.shoulders]!, 0);
   const H = cfg.hips;
   for (let side = -1; side <= 1; side += 2) {
     upper(side * H.halfWidth, H.bottom - drop, pa);
@@ -262,19 +330,7 @@ export function characterHitVolume(c: Character, cfg: HitConfig, v: HitVolume): 
 
   const L = cfg.legs;
   if (cfg.figureLegs) {
-    figureLegPose(c, cfg.figureLegs, legPoints);
-    for (let side = 0; side < 2; side++) {
-      const first = side === 0 ? PART.thighL : PART.thighR;
-      legPoint(side, LEG_POINT.hip, pa);
-      legPoint(side, LEG_POINT.knee, pb);
-      setSegment(parts[first]!, L.thighRadius);
-      copy(pa, pb);
-      legPoint(side, LEG_POINT.ankle, pb);
-      setSegment(parts[first + 1]!, L.shinRadius);
-      legPoint(side, LEG_POINT.heel, pa);
-      legPoint(side, LEG_POINT.toe, pb);
-      setSegment(parts[first + 2]!, L.boot.radius);
-    }
+    figureLegParts(c, cfg.figureLegs, parts, L.thighRadius, L.shinRadius, L.boot.radius);
     boundHitVolume(v);
     return;
   }
@@ -322,6 +378,7 @@ function boundHitVolume(v: HitVolume): void {
   grow.hi = Number.NEGATIVE_INFINITY;
   growBound(v.head.x, v.head.y0, v.head.z, v.head.r);
   for (const s of v.parts) {
+    if (s.r <= 0) continue;
     growBound(s.ax, s.ay, s.az, s.r);
     growBound(s.bx, s.by, s.bz, s.r);
   }
@@ -336,7 +393,8 @@ function boundHitVolume(v: HitVolume): void {
 /** Widens every part of `v` by `margin` (bots' line-of-fire check: a margin round a teammate). Negative narrows it. */
 export function inflateHitVolume(v: HitVolume, margin: number): void {
   v.head.r = Math.max(0, v.head.r + margin);
-  for (const s of v.parts) s.r = Math.max(0, s.r + margin);
+  // A part that isn't there (radius 0) stays away.
+  for (const s of v.parts) if (s.r > 0) s.r = Math.max(0, s.r + margin);
   v.bound.r = Math.max(0, v.bound.r + margin);
 }
 

@@ -11,8 +11,6 @@ test('the power sources are pictured in the Armory, and no picture spills out of
   page.on('console', (msg) => {
     if (msg.type() === 'error') errors.push(`console: ${msg.text()}`);
   });
-  // The models are Blender files, locked behind the Dev tab (RM4): a fresh save with them let in.
-  await page.addInitScript(() => localStorage.setItem('airsoft.settings', JSON.stringify({ version: 1, 'dev.enabled': true, 'dev.disableAllModels': 'off' })));
   await page.goto('/?nolock&seed=3&quality=low');
   await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
   await page.locator('.menu-title-start').click();

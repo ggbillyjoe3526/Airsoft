@@ -58,7 +58,7 @@ describe('Extraction: M46 edges', () => {
       const out = vec3();
       let news = 0;
       let bots = 0;
-      playMatch(6, 3, undefined, BOTS, mode, ROUNDS, DEPOT, ROUNDS.teamSize, HITS, (_state, ctl) => {
+      playMatch(6, 3, undefined, BOTS, mode, ROUNDS, DEPOT, ROUNDS.teamSize, undefined, (_state, ctl) => {
         for (const b of ctl.bots) {
           seen.add(b.role);
           bots++;

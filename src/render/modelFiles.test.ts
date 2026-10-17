@@ -4,10 +4,6 @@ import type { FigureRigs } from './figureRig';
 import { ModelFiles } from './modelFiles';
 import type { ReplicaFile, ReplicaFiles } from './replicaFiles';
 
-const NONE = { gear: false, figures: false };
-const GEAR = { gear: true, figures: false };
-const BOTH = { gear: true, figures: true };
-
 /** Loaders whose files arrive when the test says so; each load counts and every made file records its disposal. */
 function rig() {
   const figDisposed = vi.fn();
@@ -18,72 +14,42 @@ function rig() {
   const gearResolvers: (() => void)[] = [];
   const loadFigure = vi.fn(() => new Promise<FigureModel | null>((r) => figResolvers.push(() => r(figure))));
   const loadReplicas = vi.fn(() => new Promise<ReplicaFiles>((r) => gearResolvers.push(() => r(files))));
-  // The rigged figures (BF1) land at once: the figure model's resolver paces the figure switch.
   const rigsDisposed = vi.fn();
   const rigs = { dispose: rigsDisposed } as unknown as FigureRigs;
   const loadRigs = vi.fn(() => Promise.resolve(rigs));
   return { models: new ModelFiles(loadFigure, loadReplicas, loadRigs), loadFigure, loadReplicas, loadRigs, rigs, rigsDisposed, figDisposed, fileDisposed, figure, files, figResolvers, gearResolvers };
 }
 
-describe('ModelFiles (RM4)', () => {
-  it('loads nothing while both kinds are locked', async () => {
+describe('ModelFiles (BD1: the Blender models by default)', () => {
+  it('draws nothing from files until they are in, then every kind', async () => {
     const r = rig();
-    expect(await r.models.use(NONE)).toBe(false);
-    expect(r.loadFigure).not.toHaveBeenCalled();
-    expect(r.loadReplicas).not.toHaveBeenCalled();
-    expect(r.loadRigs).not.toHaveBeenCalled();
-    expect(r.models.figureModel).toBeNull();
+    const loading = r.models.load();
     expect(r.models.figureRigs).toBeNull();
     expect(r.models.replicaFiles.size).toBe(0);
+    r.gearResolvers[0]!();
+    r.figResolvers[0]!();
+    await loading;
+    expect(r.models.replicaFiles).toBe(r.files);
+    expect(r.models.figureRigs).toBe(r.rigs);
+    expect(r.models.figureModel).toBe(r.figure);
   });
 
-  it('loads each kind once however often it is asked, and reports whether what is drawn changed', async () => {
+  it('loads each file once however often it is asked', async () => {
     const r = rig();
-    const first = r.models.use(GEAR);
-    const second = r.models.use({ ...GEAR });
+    const first = r.models.load();
+    const second = r.models.load();
+    expect(second).toBe(first);
     r.gearResolvers[0]!();
-    // The first ask was overtaken by the second (same wish): only the latest applies.
-    expect(await first).toBe(false);
-    expect(await second).toBe(true);
-    expect(r.loadReplicas).toHaveBeenCalledTimes(1);
-    expect(r.loadFigure).not.toHaveBeenCalled();
-    expect(r.models.replicaFiles).toBe(r.files);
-    expect(r.models.figureModel).toBeNull();
-    expect(r.models.figureRigs).toBeNull();
-    expect(r.loadRigs).not.toHaveBeenCalled();
-    expect(await r.models.use(GEAR)).toBe(false);
-
-    const both = r.models.use(BOTH);
     r.figResolvers[0]!();
-    expect(await both).toBe(true);
-    expect(r.models.figureModel).toBe(r.figure);
-    expect(r.models.figureRigs).toBe(r.rigs);
-    expect(await r.models.use(GEAR)).toBe(true);
-    expect(r.models.figureRigs).toBeNull();
-    expect(await r.models.use(NONE)).toBe(true);
-    expect(r.models.figureModel).toBeNull();
-    expect(r.models.replicaFiles.size).toBe(0);
-    // Back on: kept for the visit, no second fetch.
-    expect(await r.models.use(BOTH)).toBe(true);
+    await Promise.all([first, second, r.models.load()]);
     expect(r.loadFigure).toHaveBeenCalledTimes(1);
     expect(r.loadReplicas).toHaveBeenCalledTimes(1);
     expect(r.loadRigs).toHaveBeenCalledTimes(1);
-    expect(r.models.inUse).toEqual(BOTH);
-  });
-
-  it('ignores an earlier ask that lands after a later one', async () => {
-    const r = rig();
-    const early = r.models.use(GEAR); // still loading
-    expect(await r.models.use(NONE)).toBe(false); // nothing to load, nothing changed from NONE
-    r.gearResolvers[0]!();
-    expect(await early).toBe(false);
-    expect(r.models.inUse).toEqual(NONE);
-    expect(r.models.replicaFiles.size).toBe(0);
   });
 
   it('frees loaded files on dispose, and a load landing after dispose is freed at once', async () => {
     const r = rig();
-    const p = r.models.use(BOTH);
+    const p = r.models.load();
     r.gearResolvers[0]!();
     r.figResolvers[0]!();
     await p;
@@ -93,16 +59,43 @@ describe('ModelFiles (RM4)', () => {
     expect(r.rigsDisposed).toHaveBeenCalledTimes(1);
     expect(r.models.figureModel).toBeNull();
     expect(r.models.figureRigs).toBeNull();
+    expect(r.models.replicaFiles.size).toBe(0);
 
     const late = rig();
-    const pending = late.models.use(BOTH);
+    const pending = late.models.load();
     late.models.dispose();
     late.gearResolvers[0]!();
     late.figResolvers[0]!();
-    expect(await pending).toBe(false);
+    await pending;
     expect(late.figDisposed).toHaveBeenCalledTimes(1);
     expect(late.fileDisposed).toHaveBeenCalledTimes(1);
     expect(late.rigsDisposed).toHaveBeenCalledTimes(1);
     expect(late.models.anyFigure).toBeNull();
+    expect(late.models.replicaFiles.size).toBe(0);
+  });
+});
+
+describe('ModelFiles when files fail (BD1, QA)', () => {
+  it('keeps nothing and does not reject when every loader resolves to nothing', async () => {
+    const m = new ModelFiles(
+      () => Promise.resolve(null),
+      () => Promise.resolve(new Map() as ReplicaFiles),
+      () => Promise.resolve(null),
+    );
+    await expect(m.load()).resolves.toBeUndefined();
+    expect(m.figureRigs).toBeNull();
+    expect(m.figureModel).toBeNull();
+    expect(m.replicaFiles.size).toBe(0);
+  });
+
+  it('keeps the files that did load when the rigs did not', async () => {
+    const r = rig();
+    const m = new ModelFiles(r.loadFigure, r.loadReplicas, () => Promise.resolve(null));
+    const p = m.load();
+    r.gearResolvers[0]!();
+    r.figResolvers[0]!();
+    await p;
+    expect(m.figureRigs).toBeNull();
+    expect(m.replicaFiles).toBe(r.files);
   });
 });

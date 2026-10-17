@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { BOT_SKILL, type BotConfig, botConfig, type Difficulty } from '../config/bots';
-import { HITS, ROUNDS } from '../config/hits';
+import { ROUNDS } from '../config/hits';
 import { DEPOT } from '../map/depot';
 import { inLight } from '../map/nightSight';
 import { WOODLAND } from '../map/woodland';
@@ -58,7 +58,7 @@ describe('map balance habits (M40, Audit 2)', () => {
       const litAtPost = (cfg: BotConfig) => {
         let atPost = 0;
         let lit = 0;
-        for (let seed = 1; seed <= SEEDS; seed++) playMatch(120, seed, undefined, cfg, 'attackDefend', ROUNDS, WOODLAND, 4, HITS, (state, bots) => {
+        for (let seed = 1; seed <= SEEDS; seed++) playMatch(120, seed, undefined, cfg, 'attackDefend', ROUNDS, WOODLAND, 4, undefined, (state, bots) => {
           if (state.round.phase !== 'live') return;
           const night = bots.worldForTests.sight!.night!;
           for (const b of bots.bots) {

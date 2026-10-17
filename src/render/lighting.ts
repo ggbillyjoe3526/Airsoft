@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { FIGURE_RIG } from '../config/figureRig';
 import { LIGHTING, type LightingPreset, type QualitySettings } from '../config/render';
 import type { MapData } from '../map/mapTypes';
 import { terrainMaxX, terrainMaxZ, terrainRange } from '../map/terrain';
@@ -165,6 +166,8 @@ export function addLighting(scene: THREE.Scene, map: MapData, quality: QualitySe
   const offset = keyLightOffset(preset.key.offset, box, LIGHTING.shadowMargin);
   sun.position.set(centre.x + offset.x, offset.y, centre.z + offset.z);
   const cam = sun.shadow.camera;
+  // The rigged figures' shadow twins (FIGURE_RIG.shadowLayer) as well as everything the view sees.
+  cam.layers.enable(FIGURE_RIG.shadowLayer);
   fitShadowCamera(cam, sun.position, sun.target.position, box, LIGHTING.shadowMargin);
   const level: ShadowBounds = { left: cam.left, right: cam.right, bottom: cam.bottom, top: cam.top };
   const viewHalf = LIGHTING.shadowView.radius + LIGHTING.shadowMargin;

@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { BOTS, NIGHT_SIGHT } from '../config/bots';
-import { HITS, ROUNDS } from '../config/hits';
+import { ROUNDS } from '../config/hits';
 import type { MapData } from '../map/mapTypes';
 import { nightSightRange } from '../map/nightSight';
 import { initPhysics } from '../physics/physicsWorld';
@@ -41,7 +41,7 @@ describe('bots hunting a still player at night, in a headless match (acceptance 
     let farthest = 0;
     let sightings = 0;
     let beyondRange = 0;
-    playMatch(seconds, 5, HIDER, BOTS, 'elimination', { ...ROUNDS, eliminationFirstEnd: 0 }, map, 3, HITS, (state, controller) => {
+    playMatch(seconds, 5, HIDER, BOTS, 'elimination', { ...ROUNDS, eliminationFirstEnd: 0 }, map, 3, undefined, (state, controller) => {
       const hider = state.characters[0]!;
       if (hider.status !== 'alive' || state.round.phase !== 'live') return;
       const range = sight.night ? Math.min(BOTS.viewDistance, nightSightRange(sight.night, hider.position)) : BOTS.viewDistance;

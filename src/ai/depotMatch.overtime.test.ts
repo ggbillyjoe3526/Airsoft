@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { BOTS } from '../config/bots';
-import { HITS, ROUNDS } from '../config/hits';
+import { ROUNDS } from '../config/hits';
 import { DEPOT } from '../map/depot';
 import type { MapData } from '../map/mapTypes';
 import { NEON_HEIGHTS } from '../map/neonHeights';
@@ -31,7 +31,7 @@ describe('the overtime flag in bot matches (OT1)', () => {
     const takers = [0, 0];
     for (let seed = 1; seed <= 2; seed++) {
       let upAt = -1;
-      playMatch(240, seed, undefined, BOTS, 'elimination', SHORT, map, size, HITS, (state) => {
+      playMatch(240, seed, undefined, BOTS, 'elimination', SHORT, map, size, undefined, (state) => {
         for (const e of state.events) {
           if (e.type === 'overtime') {
             overtimes++;

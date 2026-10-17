@@ -167,7 +167,7 @@ The rifle comes with flip-up iron sights; a red dot or a 2× scope is a part you
   rear glass you see the world, with a fine crosshair and a red centre dot (find it against a dark wall). Turning
   feels the same as with the red dot. (Dev 5 playtest, note 5.)
 - [ ] **Look at the 2× scope from the hip, and in Loadout › Customise.** Each glass is dark glass over black: no
-  gap, and no view through the scope's body (Dev 5 playtest, note 6), with Dev › Disable all models on and off.
+  gap, and no view through the scope's body (Dev 5 playtest, note 6).
 - [ ] **Press Esc in a match.** The pause menu has no Loadout: parts are set between matches (on the range the pause
   menu does have one).
 
@@ -249,7 +249,7 @@ wears off, and each match has a light breeze (calm to about 2 m/s) that pushes B
   towards the shooter.
 - [ ] **Name tags.** Walk up to a teammate (1 to 2 m): the tag sits just above the head; at 30 m and more it still
   sits above it. Try a field of view of 80.
-- [ ] **Blender models** (Settings › Dev: turn off Disable all models, then Disable figure models). Bots are the
+- [ ] **Blender models** (the default since BD1). Bots are the
   Blender humans and robots holding the Blender replicas and parts. Bots holster for a calm sprint through their own
   half (watch your teammates at the round start): the arms pump, the rifle hangs across the back clear of a pack and
   the ground, and as they draw again it leaves the back partway through without a pop. A bot's BB leaves its own

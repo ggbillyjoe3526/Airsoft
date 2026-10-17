@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { BOTS, type BotConfig } from '../config/bots';
-import { HITS, ROUNDS } from '../config/hits';
+import { ROUNDS } from '../config/hits';
 import { NAV } from '../config/nav';
 import { DEPOT } from '../map/depot';
 import type { MapData } from '../map/mapTypes';
@@ -74,7 +74,7 @@ function visits(map: MapData, teamSize: number, seeds: number, cfg: BotConfig): 
   let count = 0;
   for (let seed = 1; seed <= seeds; seed++) {
     const entered = new Map<number, { t: number; x: number; z: number; counted: boolean }>();
-    playMatch(SECONDS, seed, undefined, cfg, 'elimination', ROUNDS, map, teamSize, HITS, (state, controller) => {
+    playMatch(SECONDS, seed, undefined, cfg, 'elimination', ROUNDS, map, teamSize, undefined, (state, controller) => {
       for (const b of controller.bots) {
         const c = b.character;
         const n = nodeAt(nav, c.position.x, c.position.y + LOOK_ABOVE, c.position.z);

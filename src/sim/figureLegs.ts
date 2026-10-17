@@ -177,8 +177,8 @@ export function figureLegCycleStep(c: Character, legs: FigureLegs, moved: number
 /** Just short of a clip's end, so a cycle's last frame never wraps round to its first (as the figure plays them). */
 const LAST = 0.9999;
 
-/** Where in each clip (0..1 of its length) the legs are for `c`, by slot. */
-function shareOf(c: Character, slot: number, seconds: number): number {
+/** Where in each clip (0..1 of its length) the legs are for `c`, by slot (the upper body's too, sim/figureBody.ts). */
+export function legClipShare(c: Character, slot: number, seconds: number): number {
   if (CYCLES.includes(slot)) {
     const cycles = c.walkCycle / (Math.PI * 2);
     return (cycles - Math.floor(cycles)) * LAST;
@@ -206,7 +206,7 @@ export function figureLegPose(c: Character, legs: FigureLegs, out: Float32Array)
     const clip = legs.clips[slot];
     if (w <= 1e-6 || !clip || clip.frames < 1) continue;
     total += w;
-    const at = shareOf(c, slot, clip.seconds) * (clip.frames - 1);
+    const at = legClipShare(c, slot, clip.seconds) * (clip.frames - 1);
     const i0 = Math.min(clip.frames - 1, Math.max(0, Math.floor(at)));
     const i1 = Math.min(clip.frames - 1, i0 + 1);
     const u = at - i0;

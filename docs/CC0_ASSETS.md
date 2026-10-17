@@ -50,7 +50,7 @@ Poly Haven and Quaternius). A file reaches the repository one of two ways:
 ```
 src/assets/models/characters/figure.glb   the player and bot model (M25a, wired up)
 src/assets/models/characters/human.glb    the rigged Blender human and robot with their sidecars (BF1, wired up;
-                          robot.glb       drawn ahead of figure.glb, with the Dev model switches off)
+                          robot.glb       drawn ahead of figure.glb, the default since BD1)
 src/assets/models/replicas/<id>.glb       a replica's model, by replica id: aeg, pistol and cyber (M101, RM1, wired up)
 src/assets/models/replicaParts/<id>.glb   that replica's fittable parts, by replica id: aeg and pistol (RM1, wired up)
 src/assets/models/powerSources/<file>.glb the menus' battery, LiPo and gas bottle pictures (RM3, wired up)
@@ -58,9 +58,8 @@ src/assets/models/props/                  props (planned: not created or wired u
 src/assets/textures/                      loose surface textures (planned: not created or wired up yet)
 ```
 
-Every model file here is locked behind the Dev tab (RM4, owner 2026-10-11): the game draws its built-in models until
-"Disable all models" is turned off there, and the figure model also needs "Disable figure models" off. To see a file
-you add, tick "Dev settings" under the Settings tabs and turn those switches off.
+Every model file here is drawn by default (BD1, owner 2026-10-16): `render/modelFiles.ts` fetches them as the game
+starts, and the built-in models are drawn only when a file can't load.
 
 ### The figure model
 

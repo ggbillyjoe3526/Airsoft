@@ -14,6 +14,11 @@ export type LifeStatus = 'alive' | 'calling' | 'walkingOff' | 'leaving' | 'out';
 /** Plain-data character state. No Three.js objects live here. */
 export interface Character {
   id: number;
+  /**
+   * The rigged figure it is drawn as (HV1): 0 the human, 1 the robot (render/figureMix.ts robotFigures, set by the
+   * session). Its hit volume takes that figure's shape where the match carries them (HitConfig.figureBodies).
+   */
+  figure: number;
   /** Team index (0 = Alpha, 1 = Beta). */
   team: number;
   /**
@@ -133,6 +138,7 @@ export function createCharacter(
 ): Character {
   return {
     id,
+    figure: 0,
     team,
     end: team,
     status: 'alive',

@@ -6,13 +6,7 @@ import { expect, test } from '@playwright/test';
  */
 type Rig = { clips: Map<string, { time: number; duration: number }>; bones: { name: string; position: { x: number; y: number; z: number } }[]; rest: { position: { x: number; y: number; z: number } }[] };
 type Slot = { model: { traverse: (f: (o: { isSkinnedMesh?: boolean }) => void) => void }; parts3d: Rig | null };
-/**
- * The Blender files are locked behind the Dev tab (RM4: "Disable all models" is on by default): every test here plays
- * with them let in, as a fresh save with the Dev tab shown and that switch off.
- */
-test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem('airsoft.settings', JSON.stringify({ version: 1, 'dev.enabled': true, 'dev.disableAllModels': 'off' })));
-});
+// The Blender files are what a fresh save draws (BD1): no setting needed.
 
 type Game = { airsoft: { state: { tick: number } | null; session: { combat: { viewmodel: { slots: Slot[]; shownSlot: number } } } } };
 

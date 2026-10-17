@@ -1,12 +1,12 @@
-import { HITS } from './hits';
+import { type FigureHitShape, HITS } from './hits';
 import { MOVEMENT } from './movement';
 
 /**
  * The rigged bot figures made in Blender (BF1, tools/blender/bot-figure/): the human and the robot,
  * `src/assets/models/characters/human.glb` and `robot.glb`, each with the export's sidecar (`human.json`, `robot.json`:
- * its clips, where the replicas sit in the fist and where the magazines go in the reloads). They are drawn only with the
- * Dev tab's "Disable figure models" and "Disable all models" both off (RM4, config/dev.ts); otherwise, as on a fresh
- * save, the built-in figures are. Players and bots wear them alike, and the player's own is their first-person body.
+ * its clips, where the replicas sit in the fist and where the magazines go in the reloads). Every match draws them
+ * (BD1; the built-in figures only when the files can't be loaded). Players and bots wear them alike, and the player's
+ * own is their first-person body.
  */
 
 /** The figure kinds, each a file pair under `src/assets/models/characters/`. */
@@ -20,7 +20,7 @@ export const FIGURE_RIG = {
   yaw: Math.PI,
   /** Materials whose name starts with this (any case) are painted in each figure's team colour (Team, TeamPaint, TeamGlow). */
   teamMaterialPrefix: 'team',
-  /** Above this many bytes a file is warned about. They are fetched only with both switches off, never on a fresh save. */
+  /** Above this many bytes a file is warned about (both are fetched as the game starts, BD1). */
   warnBytes: 5_000_000,
   /**
    * The bones the legs' clips drive. Everything else is the upper body, which the aim, reload, switch and fire clips
@@ -50,12 +50,19 @@ export const FIGURE_RIG = {
   /** The Switch clip goes from the rifle to the pistol and holds the pistol from this share of it on (the sidecar's note). */
   switchPistolFrom: 0.35,
   /**
-   * Distances (metres) beyond which a figure draws its LOD1 and LOD2 meshes, on Player detail High and Low, each line
+   * Distances (metres) beyond which a figure draws its LOD1 and LOD2 meshes, on Player detail High and Low (the Medium
+   * preset is Low since BD1: four teammates at full detail at the spawn put Woodland 5v5 over its 200k), each line
    * crossed only `lodGive` past it (so a figure on the line doesn't flicker). At LOD0 it holds the replica's whole model,
    * beyond it the file's small figure version (but the whole model while it reloads, so the magazine comes out).
    */
   lod: { high: [12, 28], low: [6, 16] } as Readonly<Record<'high' | 'low', readonly [number, number]>>,
   lodGive: 0.5,
+  /**
+   * The layer of a figure's shadow twin (BD1): the body at its coarsest level of detail, in one draw, seen only by the
+   * shadow-casting lights' cameras (their `shadow.camera.layers`, render/lighting.ts and render/torchBeams.ts), never by
+   * the view. The body's own materials would cost a shadow draw each.
+   */
+  shadowLayer: 2,
   /** Below this horizontal speed (m/s) a figure stands; the legs' hit volumes swing only above it too. */
   stillBelow: HITS.legs.walkingSpeed,
   /** The paces the walk blends into the run between (m/s): the movement's own. */
@@ -79,9 +86,13 @@ export const FIGURE_RIG = {
   /**
    * The first-person body (your own figure seen when you look down): the model drawn this far behind the eyes (metres)
    * so the camera is never inside the chest, with the head and arms left out (the hands and replica in view are the
-   * first-person ones). The arms are folded into the shoulders by scaling their bones to `armScale`.
+   * first-person ones). The arms are folded into the shoulders by scaling their bones to `armScale`. It is drawn only
+   * while the bottom of the view reaches within `margin` of its `highest` point below the eyes, or in a vault (BD1),
+   * which spares its 20,000 triangles while you look ahead. `highest` is measured over the clips (the angle below the
+   * eyes, ahead of them, of the body's highest vertex): standing, the sprint's knee; crouched, the crouch walk's.
+   * `margin` covers a lean's camera roll (RENDER.leanCameraRoll) and the eyes' bob.
    */
-  firstPerson: { back: 0.17, armScale: 1e-3 },
+  firstPerson: { back: 0.17, armScale: 1e-3, highest: { standing: -72 * DEG, crouched: -53 * DEG }, margin: 10 * DEG },
   /** Thrown-away magazines out at most (the oldest goes first); each lies for its sidecar lifetime. */
   thrownMagazines: { max: 12 },
   /**
@@ -109,3 +120,26 @@ export const FIGURE_RIG = {
    */
   sling: { buttX: 0.17, buttY: 1.42, tilt: 0.75, back: { human: 0.19, humanPack: 0.27, robot: 0.17 } },
 } as const;
+
+/**
+ * Each figure's hit shape (HV1; owner, 2026-10-16: "fit to each figure"; config/hits.ts FigureHitShape): its points on
+ * its own bones, so the volume follows the figure through every clip. Fitted to the drawn figure on every pose by
+ * render/riggedHitVolume.test.ts, which holds each to M85's bar (at most 4 % of the drawn body missed and 3 % of the
+ * volume thin air); the human's covers all four heads, with and without the pack.
+ */
+export const FIGURE_HIT_SHAPES: Readonly<Record<FigureRigKind, FigureHitShape>> = {
+  human: {
+    head: { centre: { bone: 'Head', at: [0, 0.09, 0.016] }, radius: 0.13 },
+    chest: { bottom: { bone: 'Spine1', at: [0, -0.04, -0.001] }, top: { bone: 'Chest', at: [0, 0.04, 0.01] }, halfWidth: 0.036, radius: 0.17 },
+    shoulders: { left: { bone: 'Chest', at: [-0.09, 0.13, 0.005] }, right: { bone: 'Chest', at: [0.09, 0.13, 0.005] }, radius: 0.07 },
+    hips: { bottom: { bone: 'Hips', at: [0, -0.065, -0.005] }, top: { bone: 'Hips', at: [0, 0.04, -0.005] }, halfWidth: 0.097, radius: 0.11 },
+    legs: { thigh: 0.078, shin: 0.065, boot: 0.053 },
+  },
+  robot: {
+    head: { centre: { bone: 'Head', at: [0, 0.087, 0] }, radius: 0.135 },
+    chest: { bottom: { bone: 'Spine1', at: [0, 0.03, 0.014] }, top: { bone: 'Chest', at: [0, 0.07, 0.029] }, halfWidth: 0.058, radius: 0.115 },
+    shoulders: { left: { bone: 'Chest', at: [-0.06, 0.13, -0.03] }, right: { bone: 'Chest', at: [0.06, 0.13, -0.03] }, radius: 0.06 },
+    hips: { bottom: { bone: 'Hips', at: [0, -0.08, 0.001] }, top: { bone: 'Hips', at: [0, 0.08, 0.001] }, halfWidth: 0.007, radius: 0.11 },
+    legs: { thigh: 0.069, shin: 0.059, boot: 0.047 },
+  },
+};

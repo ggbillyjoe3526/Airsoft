@@ -100,8 +100,11 @@ describe('render quality presets (final alpha audit section 4)', () => {
   it('keeps every FA8 overhaul item off Low (today\'s meshes, no grit or beam), and the laser beam off every preset', () => {
     expect(QUALITY.low).toMatchObject({ figureDetail: 'low', replicaDetail: 'low', handDetail: 'low', impactGrit: false, laserBeam: false });
     for (const p of ['medium', 'high'] as const) {
-      expect(QUALITY[p]).toMatchObject({ figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', impactGrit: true, laserBeam: false });
+      expect(QUALITY[p]).toMatchObject({ replicaDetail: 'high', handDetail: 'high', impactGrit: true, laserBeam: false });
     }
+    // Medium's figures take Low's level-of-detail distances (BD1): the Blender figures' full detail is High's and up.
+    expect(QUALITY.medium.figureDetail).toBe('low');
+    expect(QUALITY.high.figureDetail).toBe('high');
   });
 
   it('has no BB glow row any more: no halo round a BB on any preset (the owner\'s 0.1 Dev 5 playtest, note 3)', () => {
@@ -279,9 +282,10 @@ describe('config/render.ts keeps every name it had before the split (G5 QA)', ()
 
   it('leaves every field Low, Medium and High had before G5 at the value it had (Low drawn exactly as before)', () => {
     // The presets' values on main before G5, field by field (FA8's BB glow since taken away); G5 only adds the post fields.
+    // BD1 since put Medium's Player detail on Low: its Blender figures drop to their middle detail at Low's distances.
     const BEFORE = {
       low: { renderScale: 0.8, maxPixelRatio: 1, antialias: false, shadows: false, shadowMapSize: 1024, shadowRadius: 1, shadowFollowsView: false, figureShadows: false, surfaceRelief: false, textureSize: 256, anisotropy: 1, dustMotes: 0, replicaSheen: false, environment: false, normalMaps: false, mapDetail: false, trees: 1, clouds: false, figureDetail: 'low', replicaDetail: 'low', handDetail: 'low', impactGrit: false, laserBeam: false, poolLights: 0 },
-      medium: { renderScale: 1, maxPixelRatio: 1.25, antialias: true, shadows: true, shadowMapSize: 1024, shadowRadius: 1.5, shadowFollowsView: false, figureShadows: true, surfaceRelief: true, textureSize: 512, anisotropy: 4, dustMotes: 90, replicaSheen: true, environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', impactGrit: true, laserBeam: false, poolLights: 2 },
+      medium: { renderScale: 1, maxPixelRatio: 1.25, antialias: true, shadows: true, shadowMapSize: 1024, shadowRadius: 1.5, shadowFollowsView: false, figureShadows: true, surfaceRelief: true, textureSize: 512, anisotropy: 4, dustMotes: 90, replicaSheen: true, environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'low', replicaDetail: 'high', handDetail: 'high', impactGrit: true, laserBeam: false, poolLights: 2 },
       high: { renderScale: 1, maxPixelRatio: 1.5, antialias: true, shadows: true, shadowMapSize: 2048, shadowRadius: 2.5, shadowFollowsView: true, figureShadows: true, surfaceRelief: true, textureSize: 1024, anisotropy: 16, dustMotes: 180, replicaSheen: true, environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', impactGrit: true, laserBeam: false, poolLights: 4 },
     } as const;
     for (const p of ['low', 'medium', 'high'] as const) expect(renderBarrel.QUALITY[p], p).toMatchObject(BEFORE[p]);

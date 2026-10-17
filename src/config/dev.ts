@@ -20,16 +20,6 @@ export interface DevSettings {
    * stays `unlockAllGear` so saved Dev settings keep it.
    */
   unlockAllGear: boolean;
-  /**
-   * The figures drawn with the built-in ones, not the figure model file (RM4; owner, 2026-10-11): on by default, as
-   * the owner isn't happy with the Blender figures yet. Replicas and parts follow "Disable all models".
-   */
-  disableFigureModels: boolean;
-  /**
-   * Every model drawn built-in (RM4): the replicas, their parts, the figures and the menus' battery and gas pictures,
-   * none of the Blender files fetched. On by default; off, the files are used (figures still per the switch above).
-   */
-  disableAllModels: boolean;
   /** The debug panel (FPS, frame time, position …) on from the start; ` or F3 still toggle it. */
   showDebug: boolean;
   /** The BB flight paths drawn in the world, as the ] key toggles them. */
@@ -67,8 +57,6 @@ export interface DevSettings {
 export const DEV_DEFAULTS: Readonly<DevSettings> = {
   devContent: false,
   unlockAllGear: false,
-  disableFigureModels: true,
-  disableAllModels: true,
   showDebug: false,
   showBbPaths: false,
   bottomlessMags: false,
@@ -108,20 +96,6 @@ export const DEV_ENTRIES: readonly DevEntry[] = [
     label: 'Disable levelling',
     help: 'Every replica and part is unlocked to equip, and matches give no XP. Your own level and unlocks stay as they are and come back when you turn it off.',
     cheat: true,
-  },
-  {
-    kind: 'switch',
-    id: 'disableFigureModels',
-    label: 'Disable figure models',
-    help: "Players and bots are drawn with the game's own built-in figures instead of the Blender models. Replicas and parts keep theirs. From the next match.",
-    cheat: false,
-  },
-  {
-    kind: 'switch',
-    id: 'disableAllModels',
-    label: 'Disable all models',
-    help: "Everything is drawn with the game's own built-in models instead of the Blender ones: replicas, parts, figures and the battery and gas pictures. From the next match.",
-    cheat: false,
   },
   { kind: 'switch', id: 'showDebug', label: 'Debug info', help: 'Frame rate, position and other numbers in the top-left corner.', cheat: false },
   { kind: 'switch', id: 'showBbPaths', label: 'BB paths', help: 'Draws the flight of every BB, to watch hop-up lift it and drop take over.', cheat: false },
@@ -218,17 +192,6 @@ export function activeDev(enabled: boolean, picked: DevSettings): DevSettings {
 export function devIntro(): string {
   const cheats = DEV_ENTRIES.filter((e) => e.cheat).map((e) => e.label);
   return `For trying things out. With ${cheats.slice(0, -1).join(', ')} or ${cheats.at(-1)} changed, matches don't go into your records.`;
-}
-
-/** Which model files are drawn (RM4, render/modelFiles.ts): `gear` the replicas, their parts and the power sources; `figures` the figure model. */
-export interface ModelFilesInUse {
-  readonly gear: boolean;
-  readonly figures: boolean;
-}
-
-/** The model files `d` lets in: none unless "Disable all models" is off, and the figure model only with "Disable figure models" off too. */
-export function modelFilesInUse(d: Pick<DevSettings, 'disableAllModels' | 'disableFigureModels'>): ModelFilesInUse {
-  return { gear: !d.disableAllModels, figures: !d.disableAllModels && !d.disableFigureModels };
 }
 
 /** True when a setting that changes play (a `cheat` entry) is off its default: the match won't go into the records. */

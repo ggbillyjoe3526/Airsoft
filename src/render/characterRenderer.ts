@@ -21,7 +21,7 @@ import { type ProbeGrid, type ProbeSample, probeTint, sampleProbes } from './pro
 interface FigureState {
   /** The built-in figure, or null when it is drawn as a rigged one (BF1). */
   figure: Figure | null;
-  /** The rigged figure (BF1, render/riggedFigure.ts) it is drawn as when the Dev switches let them in, or null. */
+  /** The rigged figure (BF1, render/riggedFigure.ts) it is drawn as, or null when the figure files couldn't be loaded. */
   rigged: RiggedFigure | null;
   /** Per-figure copy of the shared material, so one figure can fade out on its own. */
   material: THREE.MeshStandardMaterial;
@@ -168,7 +168,7 @@ export class CharacterRenderer {
   private readonly torchColour = new THREE.Color();
   /** The empty magazines rigged figures throw away (BF1), with the rigs only. */
   private readonly thrown: ThrownMagazines | null;
-  private readonly frame: RiggedFrame = { alpha: 0, dt: 0, eyeX: 0, eyeY: 0, eyeZ: 0, firstPerson: false, leanX: 0, leanZ: 0, peek: 0, peekPivot: 0, cycle: null, castShadow: true };
+  private readonly frame: RiggedFrame = { alpha: 0, dt: 0, eyeX: 0, eyeY: 0, eyeZ: 0, firstPerson: false, viewLow: -Math.PI / 2, leanX: 0, leanZ: 0, peek: 0, peekPivot: 0, cycle: null, castShadow: true };
 
   constructor(
     private readonly characters: readonly Character[],
@@ -370,8 +370,9 @@ export class CharacterRenderer {
   /**
    * `alpha` interpolates ticks; `dt` is the frame time; `hiddenId` is the character the camera is
    * inside (drawn in first person instead), or -1. `eye`: where the camera is, so a far HIT! sign keeps its size on screen.
+   * `viewLow`: the angle of the bottom of the view below level; your own rigged body is drawn only looking down (BD1).
    */
-  update(alpha: number, dt: number, hiddenId: number, eye?: { x: number; y: number; z: number }): void {
+  update(alpha: number, dt: number, hiddenId: number, eye?: { x: number; y: number; z: number }, viewLow = -Math.PI / 2): void {
     for (let i = 0; i < this.characters.length; i++) {
       const c = this.characters[i]!;
       const s = this.figures[i]!;
@@ -393,7 +394,7 @@ export class CharacterRenderer {
         }
       }
       if (s.rigged) {
-        this.updateRigged(c, s, s.rigged, alpha, dt, hiddenId, eye);
+        this.updateRigged(c, s, s.rigged, alpha, dt, hiddenId, eye, viewLow);
         continue;
       }
       const f = s.figure!;
@@ -483,7 +484,7 @@ export class CharacterRenderer {
    * A rigged figure's frame (BF1): placed, posed and faded as the built-in one is; your own (the camera's, `hiddenId`)
    * is drawn as your first-person body. The thrown magazines fly on with the first figure.
    */
-  private updateRigged(c: Character, s: FigureState, r: RiggedFigure, alpha: number, dt: number, hiddenId: number, eye?: { x: number; y: number; z: number }): void {
+  private updateRigged(c: Character, s: FigureState, r: RiggedFigure, alpha: number, dt: number, hiddenId: number, eye: { x: number; y: number; z: number } | undefined, viewLow: number): void {
     if (s === this.figures[0]) this.thrown?.update(dt);
     const x = c.prevPosition.x + (c.position.x - c.prevPosition.x) * alpha;
     const y = c.prevPosition.y + (c.position.y - c.prevPosition.y) * alpha;
@@ -501,6 +502,7 @@ export class CharacterRenderer {
     f.eyeY = eye ? eye.y : y + 1;
     f.eyeZ = eye ? eye.z : z;
     f.firstPerson = c.id === hiddenId;
+    f.viewLow = viewLow;
     f.peek = figureLeanRoll(leaning, this.hits);
     f.leanX = lean.x;
     f.leanZ = lean.z + f.peek;
