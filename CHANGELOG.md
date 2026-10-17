@@ -43,7 +43,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **KI2** · Unused mode pictures are gone from the download, about 51 KB smaller
 - **RV2** · Tone mapping leaves Graphics: everyone plays with Neutral colours; Neutral, AgX and ACES are a Dev setting that applies at once, and a pick made on the old row becomes the Dev pick
 - **RV1** · Extraction has no Supply weekends or dated events like the Halloween run; its Mode card shows no event and cases always hold the usual loot
-- **MV2** · Holstered you run a little faster, at 5.4 m/s (up from 5.0); the sprint stays at 6.3 m/s
+- **MV2** · The holstered run is a little faster after the Beta 1 playtest, 5.4 m/s where MV1 first set 5.0; the sprint stays at 6.3 m/s
 - **MV2** · The firing hand on the rifle and both pistols holds the grip more naturally: the wrist sits low behind the grip, bent slightly up
 - **MV2** · Your own body is never drawn in first person; looking down, crouched or vaulting you see the ground, not your legs
 
