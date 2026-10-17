@@ -4,6 +4,9 @@
  * tests them.
  */
 
+/** The packages the suite needs: the build (Vite, and Vitest's config helper the Vite config imports) and the browser. */
+export const NEEDED_PACKAGES = ['vite', 'vitest', '@playwright/test'];
+
 /** The owner's screen (DECISIONS: Ultra at 3840×2160 aims for a 240 Hz frame). */
 export const DESKTOP_4K = '3840x2160';
 /** The same run at a quarter of the pixels: how much faster it goes says whether the GPU or the CPU sets the pace. */

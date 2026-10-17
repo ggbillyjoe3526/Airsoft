@@ -58,7 +58,7 @@ What changed in 0.1 Beta 1, from your Dev 6 playtest. Each line points to the se
 
 - **Laptop baseline.** On the low-spec laptop run `node pipeline/perf-run.mjs --env laptop --preset all --baseline`
   and commit the `pipeline/baseline/laptop*.json` files it writes.
-- **Desktop Ultra baseline.** On your desktop run `npm run perf:desktop` (about 15 minutes; leave the window alone) and
+- **Desktop Ultra baseline.** On your desktop, in a new download run `npm install` first, then `npm run perf:desktop` (about 15 minutes; leave the window alone) and
   send the thread `pipeline/out/perf-desktop-summary.md` and `pipeline/baseline/desktop*.json`.
 - **Save in Firefox and Edge** (automated tests run Chromium only), and playing Woodland and Neon Heights, which stay
   dev content until you make each public.

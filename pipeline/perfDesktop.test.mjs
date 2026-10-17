@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { baselineFileName } from './perfMatrix.mjs';
-import { boundHint, DESKTOP_4K, DESKTOP_HD, DESKTOP_SUITE, FAILURE_CHARS, failureLine, runPresets, suiteArgs, summaryMarkdown, UNCAPPED_ARGS, vsyncHeld } from './perfDesktop.mjs';
+import { boundHint, DESKTOP_4K, DESKTOP_HD, DESKTOP_SUITE, FAILURE_CHARS, failureLine, NEEDED_PACKAGES, runPresets, suiteArgs, summaryMarkdown, UNCAPPED_ARGS, vsyncHeld } from './perfDesktop.mjs';
 
 const budgets = JSON.parse(readFileSync('pipeline/perf-budget.json', 'utf8'));
 const metrics = (fps, p50Ms, extra = {}) => ({ fps, onePercentLowFps: fps * 0.7, p50Ms, p95Ms: p50Ms * 1.2, p99Ms: p50Ms * 1.5, worstMs: p50Ms * 3, simTicksPerSecond: 60, figureMs: 0.4, drawCalls: 80, ...extra });
@@ -101,5 +101,15 @@ describe('a failed run\'s row', () => {
   it('shows the error in the summary', () => {
     const md = summaryMarkdown([{ run: depot4k, preset: 'low', result: null, failure: 'Error: no adapter' }], 'now');
     expect(md).toContain('| depot | elimination | webgpu | 4K | low | no result: Error: no adapter |');
+  });
+});
+
+describe('the packages the suite checks first', () => {
+  it('are the build\'s and the browser\'s, each in package.json', () => {
+    const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+    const declared = { ...pkg.dependencies, ...pkg.devDependencies };
+    expect(NEEDED_PACKAGES).toEqual(['vite', 'vitest', '@playwright/test']);
+    for (const name of NEEDED_PACKAGES) expect(declared[name], name).toBeTruthy();
+    expect(readFileSync('vite.config.ts', 'utf8')).toContain("from 'vitest/config'");
   });
 });

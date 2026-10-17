@@ -6,15 +6,16 @@
  *
  *   node pipeline/perf-desktop.mjs [--channel chrome|msedge] [--chromium /path] [--port 4181]   (npm run perf:desktop)
  *
- * The game is built once first (build-cached.mjs, its output shown); a failed build stops the suite. The browser's
- * arguments are passed on to every run; the suite's own (map, mode, preset, size) are refused. A run that fails is a
- * row with its error; the suite goes on.
+ * It checks the packages it needs are installed (NEEDED_PACKAGES; a download whose `npm install` stopped early is
+ * told to run it), then builds the game once (build-cached.mjs, its output shown); a failed build stops the suite. The
+ * browser's arguments are passed on to every run; the suite's own (map, mode, preset, size) are refused. A run that
+ * fails is a row with its error; the suite goes on.
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DESKTOP_SUITE, failureLine, runPresets, suiteArgs, summaryMarkdown } from './perfDesktop.mjs';
+import { DESKTOP_SUITE, failureLine, NEEDED_PACKAGES, runPresets, suiteArgs, summaryMarkdown } from './perfDesktop.mjs';
 import { runFileName } from './perfMatrix.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -28,6 +29,13 @@ if (clash.length) {
   process.exit(1);
 }
 const started = new Date();
+
+// A download whose `npm install` didn't run or stopped early can't build (vitest/config is the Vite config's import).
+const missing = NEEDED_PACKAGES.filter((name) => !existsSync(join(ROOT, 'node_modules', name, 'package.json')));
+if (missing.length) {
+  console.error(`perf-desktop: ${missing.join(', ')} ${missing.length > 1 ? 'are' : 'is'} not installed; run \`npm install\` in this folder, then this again`);
+  process.exit(1);
+}
 
 console.log('perf-desktop: building the game');
 if (spawnSync(process.execPath, [join(ROOT, 'pipeline', 'build-cached.mjs'), '--mode', 'e2e'], { cwd: ROOT, stdio: 'inherit' }).status !== 0) {
