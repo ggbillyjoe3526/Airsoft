@@ -70,7 +70,7 @@ describe('the crosshair gap follows the spread the shot uses', () => {
     vi.stubGlobal('document', { createElement: (tag: string) => new GapElement(tag) });
     vi.spyOn(performance, 'now').mockReturnValue(0);
     const parent = new GapElement('div');
-    hud = new Hud(parent as unknown as HTMLElement, () => 'R', { ...DEFAULT_CROSSHAIR, gap: 2, dynamic: 'on' });
+    hud = new Hud(parent as unknown as HTMLElement, { ...DEFAULT_CROSSHAIR, gap: 2, dynamic: 'on' });
     crosshair = (parent.children[0] as GapElement).children[0] as GapElement;
   });
   afterEach(() => {
@@ -98,7 +98,7 @@ describe('the crosshair gap follows the spread the shot uses', () => {
   it('keeps the player\'s own gap for a spread tighter than it, and holds still when the crosshair is not dynamic', () => {
     expect(gapAfter(0)).toBe(2);
     const parent = new GapElement('div');
-    const still = new Hud(parent as unknown as HTMLElement, () => 'R', { ...DEFAULT_CROSSHAIR, gap: 3, dynamic: 'off' });
+    const still = new Hud(parent as unknown as HTMLElement, { ...DEFAULT_CROSSHAIR, gap: 3, dynamic: 'off' });
     const el = (parent.children[0] as GapElement).children[0] as GapElement;
     still.update(armament, LOADOUT, true, 40, null, 1 / 60);
     expect(parseFloat(el.style['--gap']!)).toBe(3);

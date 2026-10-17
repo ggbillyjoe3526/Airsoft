@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { minimapScale } from '../config/minimap';
 import { loadHudPrefs, setHudPref } from '../settings/hudPrefs';
 import { HudLook } from './hudLook';
 
@@ -35,6 +36,8 @@ describe('the HUD look follows the preferences object (DX5)', () => {
     look.show();
     expect(Number(t.vars.get('--hud-scale'))).toBeCloseTo(Number(before) * 1.5, 5);
     expect([t.vars.get('--hud-opacity'), t.vars.get('--cue-scale')]).toEqual(['0.6', '1.4']);
+    // UX1: the minimap's own scale, held back in a narrow window, carried into the HUD look after the merge.
+    expect(t.vars.get('--minimap-scale')).toBe(minimapScale(Number(t.vars.get('--hud-scale')), 1280, 720).toFixed(3));
     expect([t.classes.has('reduced-motion'), t.classes.has('full-motion')]).toEqual([true, false]);
     setHudPref(prefs, 'reducedMotion', false);
     look.show();

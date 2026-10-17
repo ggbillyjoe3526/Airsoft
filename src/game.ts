@@ -63,7 +63,7 @@ import { addXp, loadProgress, type Progress, resetProgress, saveProgress, syncPr
 import { contentPool } from './pool/contentPool';
 import { GAME_POOL } from './pool/gamePool';
 import { matchUsesDev, type NewGamePicks, playedPicks, playedTeamSize } from './newGamePicks';
-import { gameOwnership, type GearSlot, LoadoutModel, type PlayerKit } from './pool/loadoutModel';
+import { gameOwnership, type GearSlot, LoadoutModel } from './pool/loadoutModel';
 import { haulSummary, type XpSummary, xpSummary } from './ui/menus/summaryScreen';
 import type { MenuLevel } from './ui/menus/menusOptions';
 import { loadDevEnabled, loadDevSettings } from './settings/dev';
@@ -74,7 +74,6 @@ import { SAVE_TEXT } from './config/save';
 import { screenWhenStopped } from './ui/menus/menuNav';
 import { Menus } from './ui/menus/menus';
 import { followingPictureTarget, ItemPictures, nodePictureTarget } from './render/itemPictures';
-import { kitSubjects } from './ui/menus/menuPictures';
 import { recordsView } from './ui/recordsView';
 import {
   hasSavedTeammateDifficulty,
@@ -950,8 +949,7 @@ export class Game {
         ...(adaptive ? { adaptive } : {}),
       }, this.matchSeed, this.quality, this.audio, this.prefs);
       if (this.options.perfLog) console.info(this.session.build.line());
-      // The kit the match plays (a ruleset's factory kit, say), not the Loadout's (BP3).
-      this.setUp(this.session, this.session.kit);
+      this.setUp(this.session);
     }
     this.session!.combat.unlockAudio();
     if (this.options.allowUnlocked) {
@@ -995,12 +993,11 @@ export class Game {
     this.session.onChallengeRun = (run) => {
       if (!run.helped && addChallengeRun(this.records, course, run.hits)) saveRecords(this.records, browserStorage());
     };
-    this.setUp(this.session, this.loadout.kit());
+    this.setUp(this.session);
   }
 
-  /** A session just built: its replica pictures of the kit it plays, the Dev settings in force (M24), its team colours. */
-  private setUp(session: Session, kit: PlayerKit): void {
-    session.combat.setReplicaPictures(this.pictures, kitSubjects(kit, this.look.realisticColours));
+  /** A session just built: the Dev settings in force (M24), its team colours. */
+  private setUp(session: Session): void {
     session.combat.setBbPaths(this.dev.showBbPaths);
     session.setDevCheats(this.dev);
     this.steppedDown = false;

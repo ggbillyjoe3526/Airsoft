@@ -191,6 +191,7 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | The rigged figures hold the pistol in the rifle's grip pose in the sprint, the hit call and the walk-off; the Cyber Pistol sits where the gas pistol does | can wait | Those clips were made holding the AEG. (BF1) BD1 kept it. |
 | A holstered figure that vaults keeps the Vault clip's arms, its right hand closed as if on the rifle that is slung on its back | can wait | The vault has no holstered version yet; a Holster_Vault clip would fix it. (BP4) BD1 kept it. |
 | The figure files still carry the six unused Rest clips (Rifle_ and Pistol_Rest, RestUp, RestDown) | can wait | Rest on cover is gone (MV1); the game ignores the clips, so they cost only download size. (MV1) |
+| A figure's held replica casts its shadow from its small version (PF4), so in a close reload the shadow keeps the magazine in place for a moment beside the hand's copy | can wait | A few shadow-map texels for about a second; the whole model's shadow cost ~9k triangles a figure. (PF4) |
 | Your own body casts no shadow, and you see it only looking well down | document | It is drawn 0.17 m behind the eyes without its head and arms, so a headless shadow would look wrong. (BF1, BD1) |
 | First-person hand poses are hand-tuned numbers, checked by geometry tests rather than by eye | document | Poses live in `replicaModels.ts`; `handPoses.test.ts` and `fileHandPoses.test.ts` measure them against the replicas' triangles. Whether a hold looks natural is the owner's call. |
 
@@ -218,8 +219,7 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | At Medium and up the node renderer keeps three multisampled buffers: the canvas, the post stack's scene target (4 samples, half float) and the held replica's own target | can wait | Estimated ~235 MB at 1920 × 1080 (not measured on a GPU) |
 | Night lamps' real point lights (Medium and High) light the slab above them, so a ceiling reads warm (faintly olive on Neon Heights' plaster) and a lamp can light the room above | document | Kept (owner, 2026-10-05): physically right, Medium and High only. |
 | Woodland at 6v6 (M88) is unmeasured on Medium and High; the perf harness picks Woodland at its standard 5v5 | document | Low is checked at 6v6 (74 draw calls, 86k triangles). Medium's Extraction run already averages 113 of its 120 draw calls. Needs a laptop run. (BP5) |
-| Woodland on Medium at 5v5 sits close to its ceiling: ~197k of 200k triangles and 114 of 120 draw calls (before M75) | document | Ten figures and their shadows take 108k. (M33i, M48, M75, G9) |
-| Neon Heights Extraction on Medium (WebGPU) sits on its 200k triangle line, so a slow container run can fail the perf gate | document | The mean depends on which frames the run samples (max 223k). Container, 360 ticks: 193.7k at baseline, 203.9k then 197.6k on RV2's branch (no new geometry). Re-run once before reading a fail here as a regression. (RV2) |
+| Woodland on Medium at 5v5 sits close to its draw-call ceiling: 112 of 120 (Extraction, container, 2026-10-17) | document | Triangles are well clear since PF4: 127k of 200k (145k before). (M33i, M48, M75, G9, PF4) |
 | Neon Heights on Medium (Extraction) sits close to its draw-call budget: about 138 of 145 after G9's dressing | document | The budget is `maps.neon` in `pipeline/perf-budget.json`. (BP5) |
 | Medium keeps a 6.3 MB prefiltered environment map on the GPU | document | Built once from the sky and shared with the replica sheen. (FA7, F1) |
 | Baked light (G6): under a roof the probes keep about a third of the sky light, so a covered spot reads lighter than a real one | document | Rays that reach open ground count as open, standing for the hemisphere's ground light. |
@@ -254,19 +254,15 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | Issue | Class | Notes |
 |---|---|---|
 | The spare-magazine gauges show no number for each magazine | can wait | Beta UX/QoL: the ammo panel already prints the spare BBs ("/ 120"); a gauge's low is striped and next has a caret, so they don't rely on colour. (BP5, HD1) |
-| Menu pages scrolled in a 1280×720 window before M100's redesign; they need measuring again | can wait | Last measured 2026-10-08: Controls 1332 px, Gameplay 1137, Customise 1111, Loadout 1010. (M15, FA5, BP5) Beta 1: UX1. |
-| New game still scrolls below ~900 × 600 (two tiles a row) | can wait | Below the desktop sizes the game targets; fits 1024×640, 1366×657 and up. (M15b) Beta 1: UX1. |
-| The menus have no size step for 4K at 100 % OS scaling: body text stays 15 px while the HUD grows to 1.5× | can wait | Decision 16: nothing now (most 4K desktops run 150–200 % scaling). (audit UI-12) Beta 1: UX1. |
 | Sound cues for several sounds from the same direction stack on the ring (hit calls sit just outside it) | can wait | One marker per player and kind; playtest whether a busy fight reads. (M18b) |
 | The hit feed wraps a long line (friendly fire with a ricochet tag) to two rows to keep clear of the scoreboard | can wait | Since BP3 a plain line fits on one row at 1280 and 1366 px. (bug pass, FA5) |
-| At 1280 px with Settings › HUD size over about 120 %, the widest score bar (Attack and Defend, 5v5) can come within the minimap's 14 px gap | can wait | `scoreboardScale` never takes the bar below size 1, by design. (BP3) |
-| At 1280 × 720 the held pistol's grip sits partly under the ammo panel | can wait | The viewmodel is placed for 16:9 at any size and the panel scales with the HUD. (BP3) |
 | The minimap draws Depot's loading dock at the floor's level (a lighter shade); a patch for a player heard on the dock looks like one below | can wait | A map with storeys (Neon Heights) gets one drawing per storey. (M23, BP5) |
 | Dev settings' Game speed runs the simulation slower or faster, but sounds keep their pitch and the replica's bob and sway run on real time | can wait | A toy for watching BBs fly; timing-sensitive presentation isn't speed-aware. (M24) |
 | The crosshair shows the spread only, not the recoil kick | document | Recoil is light on toy-like replicas; revisit in the Phase 4 HUD pass. (M10) |
 | The round's table shows by itself between rounds and covers the middle of the screen | document | Since HD1 it waits for the WON or LOST stamp, and a click moves on at once. The owner's playtest decides whether it should wait for Tab. (M19, HD1) |
 | Dev settings' Ghost: bots still see you and shoot at you (their BBs pass through) | document | Deliberate: for walking the field under fire, not for hiding. (M24) |
 | With Dev content on, a Match screen map card with a Dev tag or the Day and Night buttons is about twice as tall at 1280 px wide | can wait | It grows so the tags stay off the map's name (Dev 5 playtest, note 1). Dev content only. (M94, PT1) MR1 kept the taller card. |
+| Below about 1390 px wide (1280 and 1366 among them) the Match screen's Time-out rule puts its two options (Overtime flag, More players left) on two lines | can wait | Its row needs 493 px; House rules' column gets 421 at 1280 px. The options wrap rather than cut a word; UI2 brought the line down from about 1540 px. (UI2) |
 
 ## Save and browsers
 

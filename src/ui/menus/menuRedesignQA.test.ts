@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import poolText from '../../../pool.md?raw';
+import poolText from '../../../data/pool.md?raw';
 import { RECORDS_KEY } from '../../config/matchInfo';
 import { DEFAULT_MATCH_RULES } from '../../config/matchRules';
 import { MENU_TEXT, PLAY_TEXT } from '../../config/menus';

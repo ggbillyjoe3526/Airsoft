@@ -61,7 +61,7 @@ describe('the HUD\'s stylesheets have a rule for each state the HUD parts switch
 
   it('styles every class the parts give their elements', () => {
     const classes = [
-      'hud-replica', 'hud-replica-main', 'hud-replica-pic', 'hud-replica-words', 'hud-replica-name', 'hud-modes', 'hud-mode', 'hud-ammo', 'hud-mag',
+      'hud-replica', 'hud-replica-main', 'hud-replica-side', 'hud-modes', 'hud-mode', 'hud-ammo', 'hud-mag',
       'hud-spare', 'hud-mags', 'hud-reload', 'hud-status', 'sb-row', 'sb-team', 'sb-name', 'sb-role', 'sb-pips', 'sb-score', 'sb-mid', 'sb-clock', 'sb-aim',
       'sb-flag', 'minimap-frame', 'minimap', 'minimap-caption', 'hit-feed', 'hit-feed-line', 'hit-feed-row', 'hit-feed-name', 'hit-feed-bb',
       'hit-feed-tag', 'match-board', 'match-board-heading',

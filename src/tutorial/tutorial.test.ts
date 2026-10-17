@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TUTORIAL, TUTORIAL_STEPS, tutorialSteps } from '../config/tutorial';
+import { READ_TIME, TUTORIAL, TUTORIAL_STEPS, tutorialSteps } from '../config/tutorial';
 import { BALLISTICS } from '../config/ballistics';
 import { AEG, LOADOUT } from '../config/replicas';
 import { ORDER_WHEEL } from '../config/squad';
@@ -87,6 +87,21 @@ describe('the tutorial (M16)', () => {
     expectStep('crouch');
     player.crouchAmount = 1;
     tick();
+    finishStep();
+    player.crouchAmount = 0;
+
+    expectStep('lean');
+    player.lean = -0.5; // not far enough out
+    tick();
+    player.lean = -1;
+    tick();
+    player.lean = 0;
+    tick();
+    expect(t.showingDone).toBe(false); // left only: the right is still to do
+    player.lean = 0.9;
+    tick();
+    expect(t.showingDone).toBe(true);
+    player.lean = 0;
     finishStep();
 
     expectStep('sprint');
@@ -234,16 +249,44 @@ describe('the tutorial (M16)', () => {
     expect(TUTORIAL_STEPS.find((s) => s.id === 'orderWheel')!.text).toContain('hold {orderWheel}');
   });
 
-  it('keeps every card short, and no read card waits long (TT1, owner note 2: less wordy, no long waits)', () => {
+  it('keeps every card short, and every read card lasts 10 s (TT1, owner note 2: less wordy; TT2: read cards 10 s)', () => {
     const words = (text = '') => text.split(/\s+/).filter(Boolean).length;
     for (const s of TUTORIAL_STEPS.flatMap((x) => (x.withoutOptic ? [x, x.withoutOptic] : [x]))) {
       expect(words(s.text), s.id).toBeLessThanOrEqual(25);
       expect(words(s.countHidden), s.id).toBeLessThanOrEqual(25);
       expect(words(s.levelling), s.id).toBeLessThanOrEqual(10);
-      if (s.goal.kind === 'read') expect(s.goal.seconds, s.id).toBeLessThanOrEqual(8);
+      if (s.goal.kind === 'read') expect(s.goal.seconds, s.id).toBe(10);
     }
-    // Leaning is gone from the game (owner note 30), so the tutorial no longer teaches it.
-    expect(TUTORIAL_STEPS.some((s) => /\{lean(Left|Right)\}|\blean/i.test(s.text))).toBe(false);
+    expect(READ_TIME).toBe(10);
+  });
+
+  it('teaches peeking with both lean keys, in the movement part after crouching (TT2, owner 2026-10-17)', () => {
+    const ids = TUTORIAL_STEPS.map((s) => s.id);
+    expect(ids.indexOf('lean')).toBe(ids.indexOf('crouch') + 1);
+    const lean = TUTORIAL_STEPS.find((s) => s.id === 'lean')!;
+    expect(lean.text).toContain('{leanLeft}');
+    expect(lean.text).toContain('{leanRight}');
+    // Leaning is peeking with Q and E, never resting on cover (owner note 30, MV1).
+    expect(lean.text).not.toMatch(/\brest/i);
+  });
+
+  it('ticks the lean step only once both sides are leaned, in either order, and starts afresh after a skip', () => {
+    const { player, t, tick } = setup();
+    const at = t.steps.findIndex((s) => s.id === 'lean');
+    t.debugJumpTo(at);
+    player.lean = 1;
+    tick();
+    player.lean = 0;
+    tick();
+    expect(t.showingDone).toBe(false);
+    // Jumping back to the step forgets the right lean already done.
+    t.debugJumpTo(at);
+    player.lean = -1;
+    tick();
+    expect(t.showingDone).toBe(false);
+    player.lean = 1;
+    tick();
+    expect(t.showingDone).toBe(true);
   });
 
   it("names no order the wheel doesn't have: the card shows the wheel itself (TT1)", () => {
@@ -318,6 +361,10 @@ describe('skipping and resuming the tutorial (audit POOL-14, POOL-16)', () => {
     expect([noOptic.step?.id, noOptic.goalId]).toEqual(['optics', 'aim']);
     // An id no longer listed starts from the beginning; an old saved index still works; done reads ''.
     expect(new TutorialTracker(TUTORIAL_STEPS, true, 'gone').goalIndex).toBe(0);
+    // A save made on the lean step before TT1 removed it resumes there again (TT2), and one made on a step after it in
+    // a TT1 build still finds its lesson by id.
+    expect(new TutorialTracker(TUTORIAL_STEPS, true, 'lean').step?.id).toBe('lean');
+    expect(new TutorialTracker(TUTORIAL_STEPS, true, 'sprint').step?.id).toBe('sprint');
     expect(new TutorialTracker(TUTORIAL_STEPS, true, 3).step?.id).toBe(TUTORIAL_STEPS[3]!.id);
     expect(new TutorialTracker(TUTORIAL_STEPS, true, TUTORIAL_STEPS.length).goalId).toBe('');
   });

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import levelsText from '../../levels.md?raw';
-import poolText from '../../pool.md?raw';
-import statsText from '../../stats.md?raw';
+import levelsText from '../../data/levels.md?raw';
+import poolText from '../../data/pool.md?raw';
+import statsText from '../../data/stats.md?raw';
 import { GAME_POOL } from '../pool/gamePool';
 import { MemoryStorage } from '../pool/testStorage';
 import { STORES_BY_FORMAT, SAVE_FORMAT } from '../save/saveFile';

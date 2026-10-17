@@ -4,6 +4,29 @@
  * listed greyed out and marked "Later" so the layout already has their place.
  */
 
+/**
+ * The menus' size (UX1, audit UI-12): the whole menus, type and controls alike, are drawn for a window 1080 CSS px high
+ * and grow with a taller one as the HUD does (`hudScale`, config/matchInfo.ts), up to `max` (4K at 100 % OS scaling
+ * draws them 1.5×). Never below 1: 1280×720 keeps the sizes it was made at. The growth is held back so the layout stays
+ * at least `minLayoutWidth` wide, the narrowest window that keeps the three columns (ui/menus/css/narrow.css), so a tall,
+ * narrow window doesn't stack them while the window-size rules still read it as wide.
+ */
+export const MENU_SCALE = {
+  /** The window height (CSS px) the menus are drawn for at 1×. */
+  referenceHeight: 1080,
+  /** The most a tall window grows them. */
+  max: 1.5,
+  /** The layout's narrowest width (CSS px) once grown: narrow.css's widest step. */
+  minLayoutWidth: 1500,
+} as const;
+
+/** The menus' scale on a `width` × `height` CSS px window (1 = as drawn; applied as CSS `zoom` on `.menus`). */
+export function menuScale(width: number, height: number): number {
+  const grown = Math.min(MENU_SCALE.max, height / MENU_SCALE.referenceHeight, width / MENU_SCALE.minLayoutWidth);
+  // `!(grown > 1)` also keeps 1 for a window not measured yet (0 or NaN).
+  return !(grown > 1) ? 1 : Math.round(grown * 1000) / 1000;
+}
+
 /** Browser basics (M18b): what the game says when the browser gets in the way. */
 export const BROWSER_NOTES = {
   /** On the title screen when the browser draws without hardware acceleration (render/gpuCheck.ts). */

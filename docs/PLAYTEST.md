@@ -47,10 +47,11 @@ What changed in 0.1 Beta 1, from your Dev 6 playtest. Each line points to the se
   body; your own body shows only when you look well down ([Players and replicas](#players-and-replicas)).
 - [ ] **Map surroundings.** Cranes and a water tower over Depot's walls; Woodland's cabin, layered pines and brighter
   nights; Neon Heights ringed by lit towers and signs ([Maps](#maps)).
-- [ ] **A shorter tutorial.** One or two sentences a card; read-only cards move on by themselves; the lean step is
-  gone ([Tutorial](#tutorial)).
+- [ ] **A shorter tutorial.** One or two sentences a card; read-only cards fill a bar and move on after 10 s; a lean
+  step after Crouch teaches peeking with Q and E ([Tutorial](#tutorial)).
 - [ ] **Movement and hands.** Holstered you run faster than armed, never past a sprint; no resting on cover; walking
   with Shift aims as steadily as standing; the first replica switch no longer stutters ([Movement](#movement)).
+- [ ] **Menus at 4K and in a small window.** 1.5× at 4K; at 1280×720 only a page's long list scrolls ([Menus](#menus)).
 - [ ] **Bug fixes.** The Q/E lean eases, a double-tap on the fire selector steps twice, a ricochet's grit flies off
   the wall, edge markers point the way to turn ([Old bugs to recheck](#old-bugs-to-recheck)).
 
@@ -237,7 +238,7 @@ until 10.
 ## Levels and the Armory
 
 Finished matches give XP, each level up to 10 unlocks parts for good, and nothing is ever sold. What each level
-unlocks is in `levels.md` at the repository root; the Armory shows it in the game.
+unlocks is in `data/levels.md`; the Armory shows it in the game.
 
 - [ ] **Level 0 to start.** On a fresh save (a private window, or Settings › Save › Delete) the top bar reads "LVL 0"
   with an empty bar.
@@ -417,11 +418,13 @@ The Match screen's Practice card, then Start practice.
 ### Tutorial
 
 - [ ] **The title screen** offers Tutorial under START on a clean save until you finish it or start a first match.
-- [ ] **Play it through.** The coach says "Tutorial · 1 of 15 · Look around" and moves on as you do each thing (look,
-  walk, ring a plate, knock down a figure at 50 m, reload, selector, aim, crouch, sprint-fire, vault, switch replica,
-  then four cards to read); finished steps tick green. Does any step feel stuck or unclear?
-- [ ] **Short and quick (TT1).** Every card is a sentence or two; the four read cards fill a thin bar and move on
-  within 5 to 8 s.
+- [ ] **Play it through.** The coach says "Tutorial · 1 of 16 · Look around" and moves on as you do each thing (look,
+  walk, ring a plate, knock down a figure at 50 m, reload, selector, aim, crouch, lean, sprint-fire, vault, switch
+  replica, then four cards to read); finished steps tick green. Does any step feel stuck or unclear?
+- [ ] **Lean (TT2).** After Crouch, the Lean card names Q and E (your bindings); it ticks only once you have peeked
+  both ways, in either order.
+- [ ] **Short and quick (TT1, TT2).** Every card is a sentence or two; the four read cards fill a thin bar and move on
+  after 10 s.
 - [ ] **Esc mid-tutorial.** The pause menu names your step and offers Skip step and Skip tutorial; quitting at step 5
   and starting again resumes there. Rebinding reload changes the coach's key.
 
@@ -477,6 +480,10 @@ Defend. Pro pays XP ×2 but counts for nothing while it is dev content.
 - [ ] **The result screen.** MATCH OVER, YOU WIN! (or YOU LOSE), the score, and Play again, New game, Summary and Quit.
 - [ ] **The look.** All text is Inter (numbers keep their width), headings in capitals, tidy at 1280×720 and
   1920×1080; a button lifts when pointed at; Tab shows an orange focus ring; with reduced motion no fades.
+- [ ] **Window sizes (UX1).** At 4K with 100 % Windows scaling the menus are about 1.5× their 1080p size, and the
+  saved loadouts' menu opens at the pointer. At 1280×720 the top bar, heading and main button always show; the long
+  list scrolls, fading at its foot (Settings › Gameplay and Controls scroll a long way, even at 4K: tell me if that
+  grates). At 900×600 Start match is in sight.
 - [ ] **The loading screen** (`npm run build`, `npm run preview`, DevTools › Network › Slow 4G, cache off).
 
 ## HUD and match info
@@ -503,12 +510,14 @@ Defend. Pro pays XP ×2 but counts for nothing while it is dev content.
 - [ ] **Replay tutorial** (Settings › Gameplay, M97). Starts the tutorial at its first step, even after you finished
   it; from a match's pause menu it asks first, then leaves the match (not recorded).
 - [ ] **HUD size and opacity** (Settings › Gameplay › HUD). 150 % scales the replica panel, score bar, minimap, feed,
-  banners, wheel and markers with nothing overlapping at 1280×720; the crosshair keeps its size.
+  banners, wheel and markers with nothing overlapping at 1280×720 (the minimap grows a little less there, so an
+  Attack / Defend score bar stays clear of it, UX1); the crosshair keeps its size.
 - [ ] **The layout.** A score bar top middle (team blocks, the clock, "First to N"); the replica panel bottom right
-  (picture, mode chips, "/ N · M spare", the magazine bars); no squad cards or key hints; "ROUND 1" shows large;
-  corners keep their margin at 1920×1080 and on 21:9.
+  (UI2: S / B / A chips over a small box per spare magazine, the count and "/ N" at the right; no picture, no name, no
+  reload hint); no squad cards or key hints; "ROUND 1" shows large; corners keep their margin at 1920×1080 and on 21:9.
+  Is the panel compact enough, and are the magazine boxes easy to read at a glance?
 - [ ] **Ammo counter** (Settings › Gameplay › HUD, AC1). On by default. Off: no BB count and no "/ N · M spare" line;
-  each magazine bar stays full until empty, then hollow.
+  each magazine box stays full until empty, then hollow.
 
 ## Squad orders and minimap
 
