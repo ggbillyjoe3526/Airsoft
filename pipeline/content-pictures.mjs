@@ -1,6 +1,6 @@
 /**
  * The content report's pictures (CT1, the spec test): a replica on its own and with each part fitted, drawn by the
- * game's own menu pictures (render/itemPictures.ts, at high detail), and the item in first person in a real match; and
+ * game's own menu pictures (render/replicas/itemPictures.ts, at high detail), and the item in first person in a real match; and
  * a map from above, its minimap and the view from each end's spawns (CT2, drawMapPictures).
  * `pipeline/content-check.mjs` calls `drawPictures` and `drawMapPictures`; it needs the e2e build (`window.airsoft`), which it builds and
  * serves itself unless given a URL. Software rendering (SwiftShader) draws what a GPU would, only slower.

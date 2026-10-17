@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
  * to the Viewmodel (viewmodel.test.ts checks the paint reaches the colours), and the play flow passes the Look settings to
  * both (DX8: the setup, playSetup.ts, holds them).
  */
-const sources = import.meta.glob<string>(['./matchSession.ts', './rangeSession.ts', './playSetup.ts', './playFlow.ts', './render/combatPresentation.ts'], { query: '?raw', import: 'default', eager: true });
+const sources = import.meta.glob<string>(['./matchSession.ts', './rangeSession.ts', './playSetup.ts', './playFlow.ts', './render/match/combatPresentation.ts'], { query: '?raw', import: 'default', eager: true });
 const source = (file: string): string => sources[file]!;
 
 describe('the sessions pass the paint through (G1)', () => {
@@ -20,7 +20,7 @@ describe('the sessions pass the paint through (G1)', () => {
   });
 
   it('the combat presentation gives its paint to the viewmodel', () => {
-    expect(source('./render/combatPresentation.ts')).toMatch(/new Viewmodel\([^;]*\bpaint[,)]/); // G7: the arms follow the paint
+    expect(source('./render/match/combatPresentation.ts')).toMatch(/new Viewmodel\([^;]*\bpaint[,)]/); // G7: the arms follow the paint
   });
 
   it('the play flow hands the Look settings the setup loaded to both the match and the range', () => {

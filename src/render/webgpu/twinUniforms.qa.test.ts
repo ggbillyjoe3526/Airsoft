@@ -3,7 +3,7 @@ import type { NodeFrame } from 'three/webgpu';
 import { describe, expect, it } from 'vitest';
 import { WEATHERING } from '../../config/weathering';
 import { carryNodePatch } from '../nodePatch';
-import { patchSurfaceMaterial } from '../surfaceShader';
+import { patchSurfaceMaterial } from '../light/surfaceShader';
 import { emptyGrid, type SurfaceLambertTwin } from './surfaceNodes';
 import { objectTexture3D } from './twinUniforms';
 import { worldTwin } from './worldTwins';

@@ -2,7 +2,7 @@
 /**
  * The baked bounce light (G6): bakes the light probes of every map that opts in (MapData.bakedLight) and writes each
  * map's probe file, src/map/bakes/<file>.probes.b64, which the game ships and loads with the map. Node only, no browser:
- * the map data and the bake (src/render/lightBake.ts) are loaded through Vite's module runner, as the game builds them.
+ * the map data and the bake (src/render/light/lightBake.ts) are loaded through Vite's module runner, as the game builds them.
  *
  *   node pipeline/bake-light.mjs [depot range …]
  *
@@ -23,8 +23,8 @@ const [{ MAPS, mapData, registerMaps }, { DEV_MAP_DATA }, { RANGE_MAP }, bake, p
   load('/src/map/maps.ts'),
   load('/src/map/devMaps.ts'),
   load('/src/map/range.ts'),
-  load('/src/render/lightBake.ts'),
-  load('/src/render/probeFile.ts'),
+  load('/src/render/light/lightBake.ts'),
+  load('/src/render/light/probeFile.ts'),
   load('/src/map/bakes/files.ts'),
 ]);
 registerMaps(DEV_MAP_DATA);

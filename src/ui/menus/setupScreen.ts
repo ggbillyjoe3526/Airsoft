@@ -28,8 +28,6 @@ export interface PlayModel extends MatchModel {
   setPracticePlace(id: PracticePlaceId): void;
   setLight(id: MapId, light: LightingPresetId): void;
   setMode(mode: MatchMode): void;
-  /** The line under Extraction for the supply event on now (M49), or null. */
-  supply(): string | null;
 }
 
 /** What the Play screen shows of the match as it will play (the menus work it out from the picks). */
@@ -94,7 +92,7 @@ export class SetupScreen {
   private view: PlayView | null = null;
 
   constructor(
-    private readonly model: PlayModel,
+    model: PlayModel,
     loadout: LoadoutModel,
     context: PictureContext,
     actions: SetupActions,
@@ -158,7 +156,7 @@ export class SetupScreen {
     this.modes.root.classList.add('mode-cards');
     this.match = new MatchPanel(model);
 
-    const main = el('div', 'play-main');
+    const main = el('div', 'play-main menu-scroll');
     const section = (n: string, title: string, body: HTMLElement, extra?: string): HTMLElement => {
       const s = el('section', 'play-section');
       s.append(sectionHead(n, title, extra), body);
@@ -276,11 +274,6 @@ export class SetupScreen {
     if (chips.dataset.line === line) return;
     chips.dataset.line = line;
     chips.replaceChildren(...line.split(' · ').map((part) => el('span', 'play-chip', part)));
-  }
-
-  /** The line under Extraction for the supply event on now (M49): read as the screen opens. */
-  opened(): void {
-    this.modes.setNote('extraction', this.model.supply());
   }
 
   showHint(text: string): void {

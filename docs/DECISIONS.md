@@ -126,8 +126,9 @@ The pipeline's protocol is `pipeline/README.md`; its policy `docs/PROCESS.md`.
   measured inside every budget line (Depot, container: 35 draw calls of 100, 54k triangles of 150k, 78 MB of 300); its
   frame time on the owner's laptop is still to be measured (PF2). Medium's Player detail is Low.
 - **The Blender figures (owner, 2026-10-10; approved 2026-10-12).** Hands hold the replica naturally; robots wear no
-  vest, holsters, magazines or accessories, their team shown by colour on their highlights; the figure is also the
-  player's first-person body, without its head. A reload pulls the old magazine and throws it (owner, 2026-10-11). The
+  vest, holsters, magazines or accessories, their team shown by colour on their highlights. Your own figure is never
+  drawn in first person, looking down or vaulting included (owner, 2026-10-17, Beta 1 playtest item 24; MV2, replacing
+  BD1's body drawn when you look well down). A reload pulls the old magazine and throws it (owner, 2026-10-11). The
   aim clips turn the replica through 55 % of their ±60 degrees (BF1). Files are packed losslessly after each export
   (`tools/blender/bot-figure/pack.mjs`; no gltfpack: it renames what the game reads). Attachments sit on a sight line
   3.05 cm over the rail; a parts file's optic marks its own (RM8).
@@ -136,15 +137,19 @@ The pipeline's protocol is `pipeline/README.md`; its policy `docs/PROCESS.md`.
   head and its team colour on the arm. The human has four heads picked by figure id (`config/figureRig.ts`); its vest,
   armbands, patches and hat bands show the team colour. A human is at most 20,000 triangles and its packed file under
   3.5 MB. A BB has no glow round it; Glowing BBs keep a lit green ball and longer streak (owner, 2026-10-13).
+- **Every figure keeps its team-colour plate carrier (owner, 2026-10-17, AX1).** Shown the options on the real
+  figure, he kept the carriers rather than dress four of six in a combat shirt with armbands only: the carrier reads like
+  a site's team bib and is the strongest team cue at range, and the bare shirt looks more military, not less. A
+  civilian outfit (a new texture from Blender) is in `docs/IDEAS.md`.
 ## Gameplay and feel
 
 - **Hit volume is a body capsule plus a head sphere, no arms or replica (2026-09-30; owner, 2026-10-01).** The drawn
   figure is built from the same numbers; a crouched head top stays at or below 1.15 m, because crouch cover is 1.2 m.
-  `render/figureHitVolume.test.ts` measures it against the drawn figure on every pose (M85). **Every body stops a BB
+  `render/figures/figureHitVolume.test.ts` measures it against the drawn figure on every pose (M85). **Every body stops a BB
   (2026-10-06):** a hit BB knocks the player out and stops, with no bounce off bodies.
 - **The hit area is fitted to each rigged figure (owner, 2026-10-16, Dev 6 playtest; HV1, IM8).** Head, chest,
   shoulders, hips and legs sit on each figure's own bones (`FIGURE_HIT_SHAPES`, read from the clips as the figures
-  load); `render/riggedHitVolume.test.ts` holds every pose of both figures to M85's bar (4 % missed, 3 % thin air). A
+  load); `render/figures/riggedHitVolume.test.ts` holds every pose of both figures to M85's bar (4 % missed, 3 % thin air). A
   new figure must pass it; the built-in figures keep the built-in volume.
 - **Hit calling stays a raised hand and a sign, with no dead rag, night light or shouted "HIT!" for now (owner,
   2026-10-06).**
@@ -192,8 +197,8 @@ The pipeline's protocol is `pipeline/README.md`; its policy `docs/PROCESS.md`.
   and jump height (2026-09-28).** Crouched eyes (1.09 m) hide behind 1.2 m cover and standing eyes (1.66 m) shoot over
   it. Crouch cover is unclimbable (tested).
 - **3 holsters the replica (1 primary, 2 secondary, rebindable): moving holstered is faster, never past the sprint, and
-  the draw from the holster slower (owner, 2026-10-06 and 2026-10-16; M92, MV1).** Holstered run 5.0 m/s against 4.2
-  with the replica out (`MOVEMENT.holsterRunSpeed`); sprint 6.3 either way. A draw takes 1.8 times the replica's own
+  the draw from the holster slower (owner, 2026-10-06, 2026-10-16 and 2026-10-17; M92, MV1, MV2).** Holstered run
+  5.4 m/s against 4.2 with the replica out (`MOVEMENT.holsterRunSpeed`); sprint 6.3 either way. A draw takes 1.8 times the replica's own
   (`HOLSTER.drawScale`). A slot key, a fresh trigger pull, an aim press or a reload draws it. Bots holster only on a
   calm sprint through their own half (`ai/botHolster.ts`).
 - **Vaulting is Jump at a low obstacle, with no key of its own (owner, 2026-10-12; M102).** Obstacles 0.6 to 0.95 m
@@ -257,7 +262,7 @@ The pipeline's protocol is `pipeline/README.md`; its policy `docs/PROCESS.md`.
 ## Maps and modes
 
 - **What no player can see is not drawn (owner, 2026-10-16, MS1).** Beyond a map's walls only what shows over them from
-  a lane, a spawn or a raised floor is built (`render/skylineSeen.test.ts`). Look-only fixtures hung over the field stay
+  a lane, a spawn or a raised floor is built (`render/dressing/skylineSeen.test.ts`). Look-only fixtures hung over the field stay
   out of the room a player takes up. Woodland's bushes are small and decorative (0.9 to 1.25 m): crouch cover, never
   full cover.
 - **The maps' vault walls are 0.9 m, at most 0.4 m deep, open above (M102, 2026-10-13).** Not cover: a crouched
@@ -356,7 +361,7 @@ The pipeline's protocol is `pipeline/README.md`; its policy `docs/PROCESS.md`.
   picks are the sandboxed ones. The owner can rule for a separate practice loadout.
 - **Aiming down the 2x scope looks like the red dot: the replica stays in view and the world shows round it (owner,
   2026-10-13, Dev 5 playtest note 5).** The view zooms 2× and the scope's rear glass shows the world
-  (`render/eyepiece.ts`); the dark surround is gone, so the scope's cost is its slower raise alone.
+  (`render/replicas/eyepiece.ts`); the dark surround is gone, so the scope's cost is its slower raise alone.
 
 ## Menus, HUD, settings and accessibility
 
@@ -367,7 +372,14 @@ The pipeline's protocol is `pipeline/README.md`; its policy `docs/PROCESS.md`.
   Colour tab (MR1), and the Voices placeholder is gone. The top bar's level reads "LVL 3".
 - **Small menu rulings (owner, 2026-10-03 to 2026-10-07).** The tagline is "Call your hit. Go again." Menu headings and
   labels are in capitals (in the stylesheet), descriptions as written. Unbuilt items are listed greyed out with a LATER
-  tag (`config/menus.ts`). Menus at 4K with 100 % OS scaling stay as they are; scaling them like the HUD is a Beta task.
+  tag (`config/menus.ts`).
+- **The menus grow with a tall window as the HUD does (UX1, 2026-10-17; replaces decision 16's "as they are").**
+  `menuScale` zooms `.menus` by the window height over 1080, up to 1.5× at 4K, held back so the layout keeps 1500 px of
+  width; 1080p and smaller draw as before. Heights inside use `--vh`, since the zoom multiplies `vh`.
+- **A menu page is pinned to the window; only its long part scrolls (UX1, 2026-10-17).** The top bar, the heading and the
+  main button always show; the Match choices, a Settings group's rows, the Loadout's numbers, the Armory's levels and
+  Customise's lists scroll inside (`.menu-scroll`, fading at the foot while more lies below). A window under 821 px high
+  draws spacing and controls a step closer. Below 901 px wide only the Match screen stays pinned.
 - **The order wheel is on Z (owner, 2026-10-04); Hold here X, Regroup V, Follow me F.** Orders end when their giver is
   hit and at each round start. A hidden tab or a window that loses focus pauses the match. Esc while you are out skips the
   round at once (owner, 2026-10-13).
@@ -377,7 +389,11 @@ The pipeline's protocol is `pipeline/README.md`; its policy `docs/PROCESS.md`.
   2026-10-07).** The hit feed reads "Beta 2 called HIT · Alpha 3": who called the hit, then whose BB it was; the player
   is "You".
 - **Team colours come in Standard and High contrast sets, and props, kit and paint never use a team colour's hue
-  (tested) (2026-10-04).** Colour is never the only cue: names carry a bar, exits a glyph and a distance.
+  (tested) (2026-10-04).** Colour is never the only cue: names carry a bar, exits a glyph and a distance. Exits take
+  their set's colour (owner, 2026-10-17, AX1; replaces decision 17 of 2026-10-05, one green in every set): Standard
+  keeps the green, High Contrast's are hi-vis yellow, as the green sits close to the orange team for a deuteranope. On day
+  fields High Contrast's team paint glows faintly (0.3 of its colour; owner, 2026-10-17, AX1: "HC only"), so its dark
+  orange holds in shaded corners; Standard's paint has none.
 - **Menus are opaque (owner, 2026-10-03).** The controls list lives under Settings. The pause menu is Resume, Settings
   and Quit.
 - **No map is loaded until Play (owner, 2026-10-03).** A match is a session built on Play and disposed on leaving.
@@ -405,6 +421,10 @@ The pipeline's protocol is `pipeline/README.md`; its policy `docs/PROCESS.md`.
   only on a map that hosts it, and a rule the mode doesn't read is hidden.
 - **The mode cards' pictures are deleted (owner, 2026-10-17; KI2).** The cards are text boxes since MR1, so the pictures
   were never shown; a picture the player never sees doesn't ship.
+- **The tutorial teaches leaning, and its read cards last 10 s (owner, 2026-10-17, Beta 1 playtest item 33; TT2).** The
+  lean step comes back after Crouch: hold Q and E (or their bindings) to peek either way, ticked once both sides are
+  done. It teaches peeking, not resting on cover (note 30). Every read card stays up 10 s with its filling bar, in place
+  of TT1's 5 to 8 s.
 - **A UI redesign, a Visual redesign, an Audio redesign and a Performance update are planned for later, their versions
   not set (owner, 2026-10-13 and 2026-10-16).** Parked in `docs/IDEAS.md` until he places them, with no work before.
 

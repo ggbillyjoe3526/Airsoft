@@ -173,7 +173,7 @@ export const SPEC_SHEET = {
 
 /**
  * The spec test's model budget (src/content/census.ts): the most triangles a replica draws as it comes on High, hands
- * included, by site class (one viewmodel drawn once a frame, render/replicaDetail.test.ts's G2 budgets), and the most
+ * included, by site class (one viewmodel drawn once a frame, render/replicas/replicaDetail.test.ts's G2 budgets), and the most
  * meshes (draw calls) one part may add.
  */
 export const MODEL_BUDGET = {

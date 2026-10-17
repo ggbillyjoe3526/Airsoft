@@ -3,8 +3,15 @@
  * and the numbered section heads.
  */
 
-/* Base: the menus' own type scale (15 px the smallest), the cut corner, the top bar's height and the page's edges. */
+/*
+ * Base: the menus' own type scale (15 px the smallest), the cut corner, the top bar's height and the page's edges.
+ * --menu-zoom (UX1, set by ui/menus/menus.ts from config/menus.ts › menuScale) grows the whole menus in a window taller
+ * than 1080 px. A zoom multiplies viewport units too, so a height from the window is written in --vh, which takes it off.
+ */
 .menus {
+  --menu-zoom: 1;
+  --vh: calc(1vh / var(--menu-zoom));
+  zoom: var(--menu-zoom);
   --fs-2xs: 15px;
   --fs-xs: 15px;
   --fs-sm: 15px;

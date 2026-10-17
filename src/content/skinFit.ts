@@ -1,5 +1,5 @@
 import type { ReplicaPaint, SchemeId } from '../config/schemes';
-import type { MaterialKey } from '../render/replicaBuilder';
+import type { MaterialKey } from '../render/replicas/replicaBuilder';
 import { type CheckResult, num, result } from './checks';
 import { colourDistance } from './colour';
 import { claimedReplicas, hex, listWords, type SkinContext, type SkinEntry, skinItem, type SkinReplica } from './skinCheckSupport';
@@ -15,7 +15,7 @@ import { DETAILS, surveyViewmodel, type ViewmodelSurvey } from './skinDraw';
 /** A drawn colour is the scheme's when they are this close (ΔE00): the builders' brightening rounds a little. */
 const SAME = 1.5;
 
-/** The colour each painted material of a replica is drawn in, by the scheme's roles (render/replicaBuilder.ts paintedMaterials). */
+/** The colour each painted material of a replica is drawn in, by the scheme's roles (render/replicas/replicaBuilder.ts paintedMaterials). */
 const ROLE_OF: Partial<Record<MaterialKey, 'body' | 'furniture' | 'detail' | 'steel' | 'accent'>> = {
   polymer: 'body',
   furniture: 'furniture',

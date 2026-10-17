@@ -37,7 +37,7 @@ export interface MenusOptions {
   rules: FixedRulesText;
   bindings: KeyBindings;
   /**
-   * The game's picture studio (G3, render/itemPictures.ts): the menus ask it for replica, part and scheme pictures and
+   * The game's picture studio (G3, render/replicas/itemPictures.ts): the menus ask it for replica, part and scheme pictures and
    * show a drawing until each arrives. Null where there is none (a test): every item keeps its drawing.
    */
   pictures: PictureSource | null;
@@ -50,6 +50,8 @@ export interface MenusOptions {
   armory: Omit<ArmoryOptions, 'context'> & { level: () => MenuLevel };
   /** Start (or resume) play: Start match, Resume, Play again. */
   onPlay: () => void;
+  /** The click the Fullscreen key asked for on the pause menu (IN1): fullscreen, and play resumes once it is. */
+  onFullscreenPlay: () => void;
   /** The player leaves the match (Quit; New Game or Quit after it): it is unloaded. */
   onLeaveMatch: () => void;
   /** Practice, the Match screen's last mode (M21, M100): open it on the picked place (M94) and play. */
@@ -74,8 +76,7 @@ export interface MenusOptions {
   practicePlace: { initial: PracticePlaceId; onChange: (p: PracticePlaceId) => void };
   /** Each map's Day or Night pick (M34d), on the maps that offer both. */
   lighting: { initial: Partial<Record<MapId, LightingPresetId>>; onChange: (m: MapId, light: LightingPresetId) => void };
-  /** `supply`: the line under Extraction for the supply event on as the Play screen opens (M49), or null when none is. */
-  mode: { initial: MatchMode; onChange: (m: MatchMode) => void; supply?: () => string | null };
+  mode: { initial: MatchMode; onChange: (m: MatchMode) => void };
   /** The opponents' bot difficulty and your bot teammates' (M20). */
   difficulty: { initial: Difficulty; onChange: (d: Difficulty) => void };
   /** `follows`: no teammate level is saved yet, so it follows the opponents' picks until one is chosen. */

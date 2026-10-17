@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HUD_TEXT } from '../config/hudText';
+import { MENU_TEXT } from '../config/menus';
 import { RANGE_CHALLENGE, RANGE_VISUALS } from '../config/range';
 import { MemoryStorage } from '../pool/testStorage';
 import { SETTINGS_KEY, saveSetting } from '../settings/storage';
@@ -144,7 +145,7 @@ describe('the challenge line and banner (M93)', () => {
 });
 
 describe('the pause screen\'s Timed challenge button (M93)', () => {
-  const pause = () => new PauseScreen({ onResume: noop, onLoadout: noop, onSettings: noop, onQuit: noop, onSkipStep: noop, onSkipTutorial: noop, onSkipRound: noop, onChallenge: noop });
+  const pause = () => new PauseScreen({ onResume: noop, onLoadout: noop, onSettings: noop, onQuit: noop, onSkipStep: noop, onSkipTutorial: noop, onSkipRound: noop, onChallenge: noop, onFullscreen: noop });
   const button = (p: PauseScreen): EventNode => (p.root as unknown as EventNode).all('button').find((b) => b.text.startsWith('Timed challenge'))!;
 
   it('is hidden until a screen offers it (a match, the tutorial), and shows on the range', () => {
@@ -168,10 +169,43 @@ describe('the pause screen\'s Timed challenge button (M93)', () => {
 
   it('calls onChallenge when pressed', () => {
     const onChallenge = vi.fn();
-    const p = new PauseScreen({ onResume: noop, onLoadout: noop, onSettings: noop, onQuit: noop, onSkipStep: noop, onSkipTutorial: noop, onSkipRound: noop, onChallenge });
+    const p = new PauseScreen({ onResume: noop, onLoadout: noop, onSettings: noop, onQuit: noop, onSkipStep: noop, onSkipTutorial: noop, onSkipRound: noop, onChallenge, onFullscreen: noop });
     p.setChallenge(false);
     button(p).fire('click');
     expect(onChallenge).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('the pause screen\'s click to resume (IN1)', () => {
+  const hint = (p: PauseScreen): EventNode => (p.root as unknown as EventNode).all('p').find((n) => n.className.includes('menu-hint'))!;
+
+  it('resumes on a click anywhere only once the browser refused the mouse, and says so', () => {
+    const onResume = vi.fn();
+    const p = new PauseScreen({ onResume, onLoadout: noop, onSettings: noop, onQuit: noop, onSkipStep: noop, onSkipTutorial: noop, onSkipRound: noop, onChallenge: noop, onFullscreen: noop });
+    const root = p.root as unknown as EventNode;
+    root.fire('click');
+    expect(onResume).not.toHaveBeenCalled();
+    p.askForClick('first');
+    expect(hint(p).text).toBe(MENU_TEXT.clickToResume.first);
+    expect(root.classList.contains('click-to-resume')).toBe(true);
+    root.fire('click');
+    expect(onResume).toHaveBeenCalledTimes(1);
+    // Any other hint (or clearing it, as Resume does) ends it.
+    p.showHint('');
+    root.fire('click');
+    expect(onResume).toHaveBeenCalledTimes(1);
+    expect(root.classList.contains('click-to-resume')).toBe(false);
+  });
+
+  it('goes fullscreen on the click the Fullscreen key asked for', () => {
+    const onResume = vi.fn();
+    const onFullscreen = vi.fn();
+    const p = new PauseScreen({ onResume, onLoadout: noop, onSettings: noop, onQuit: noop, onSkipStep: noop, onSkipTutorial: noop, onSkipRound: noop, onChallenge: noop, onFullscreen });
+    p.askForClick('fullscreen');
+    expect(hint(p).text).toBe(MENU_TEXT.clickToResume.fullscreen);
+    (p.root as unknown as EventNode).fire('click');
+    expect(onFullscreen).toHaveBeenCalledTimes(1);
+    expect(onResume).not.toHaveBeenCalled();
   });
 });
 

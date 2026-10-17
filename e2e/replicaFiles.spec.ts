@@ -49,7 +49,7 @@ test('the held AEG and GBB pistol are skinned file models, the selector turns wi
     });
   await expect.poll(selector, { timeout: 20_000 }).toBeCloseTo(1, 2);
   await page.keyboard.press('b');
-  await expect(page.locator('.hud-mode.on')).toHaveText('Semi', { timeout: 10_000 });
+  await expect(page.locator('.hud-mode.on')).toHaveText('S', { timeout: 10_000 });
   await expect.poll(selector, { timeout: 20_000 }).toBeCloseTo(0.5, 2);
 
   // The GBB pistol (slot 2, RM7): a shot kicks the slide back and it comes home; the last shot leaves it locked back until a reload.

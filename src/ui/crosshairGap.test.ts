@@ -70,7 +70,7 @@ describe('the crosshair gap follows the spread the shot uses', () => {
     vi.stubGlobal('document', { createElement: (tag: string) => new GapElement(tag) });
     vi.spyOn(performance, 'now').mockReturnValue(0);
     const parent = new GapElement('div');
-    hud = new Hud(parent as unknown as HTMLElement, () => 'R', { ...DEFAULT_CROSSHAIR, gap: 2, dynamic: 'on' });
+    hud = new Hud(parent as unknown as HTMLElement, { ...DEFAULT_CROSSHAIR, gap: 2, dynamic: 'on' });
     crosshair = (parent.children[0] as GapElement).children[0] as GapElement;
   });
   afterEach(() => {
@@ -98,15 +98,15 @@ describe('the crosshair gap follows the spread the shot uses', () => {
   it('keeps the player\'s own gap for a spread tighter than it, and holds still when the crosshair is not dynamic', () => {
     expect(gapAfter(0)).toBe(2);
     const parent = new GapElement('div');
-    const still = new Hud(parent as unknown as HTMLElement, () => 'R', { ...DEFAULT_CROSSHAIR, gap: 3, dynamic: 'off' });
+    const still = new Hud(parent as unknown as HTMLElement, { ...DEFAULT_CROSSHAIR, gap: 3, dynamic: 'off' });
     const el = (parent.children[0] as GapElement).children[0] as GapElement;
     still.update(armament, LOADOUT, true, 40, null, 1 / 60);
     expect(parseFloat(el.style['--gap']!)).toBe(3);
   });
 
   it('is pinned at the source: the pixels given to the HUD come from the same replica spread × the shooter\'s scale the sim uses', async () => {
-    const files = import.meta.glob<string>(['../render/combatPresentation.ts', '../sim/armament.ts', '../sim/simulation.ts'], { query: '?raw', import: 'default', eager: true });
-    const combat = files['../render/combatPresentation.ts']!;
+    const files = import.meta.glob<string>(['../render/match/combatPresentation.ts', '../sim/armament.ts', '../sim/simulation.ts'], { query: '?raw', import: 'default', eager: true });
+    const combat = files['../render/match/combatPresentation.ts']!;
     expect(combat).toMatch(/degToRad\(p\.armament\.replicas\[p\.armament\.active\]!\.spreadDeg \* p\.spreadScale\)/);
     expect(combat).toMatch(/focalPx = this\.renderer\.height \/ 2 \/ Math\.tan\(THREE\.MathUtils\.degToRad\(cam\.fov\) \/ 2\)/);
     expect(combat).toMatch(/this\.hud\.update\([^;]*Math\.tan\(spread\) \* focalPx/);

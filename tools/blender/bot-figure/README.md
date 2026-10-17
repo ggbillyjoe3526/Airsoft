@@ -86,8 +86,8 @@ Read the newest layer first when looking for a function: it is the one that wins
 
 - The crouch: the game lowers a crouched player's hit volume by 0.62 m above the hips (`HITS.crouchDrop`) and holds
   the figure's upper body upright over its legs, so the kneel and the crouch walk lower the hips by the same 0.62 m
-  (`bot17.py`; `render/figureLegs.test.ts` checks it in the shipped files). With the figures drawn, the hit volume's
-  legs are the figures' own, read from the leg clips as the file loads (`render/figureLegs.ts`).
+  (`bot17.py`; `render/figures/figureLegs.test.ts` checks it in the shipped files). With the figures drawn, the hit volume's
+  legs are the figures' own, read from the leg clips as the file loads (`render/figures/figureLegs.ts`).
 - The vault: the game lifts the body straight up onto the top in a crouch (0.6 of the way down), its feet just clear
   of it, and slides it across (`src/sim/vault.ts`). The Vault clip is played by the vault's progress, not by time: its
   first 40 % on the rise, the rest across (`VAULT_TOP`, `FIGURE_RIG.vault.top`), so it is a tucked hop in the body's
@@ -103,7 +103,7 @@ Read the newest layer first when looking for a function: it is the one that wins
   the sidecar's `replicaOnGrip` matrix (Blender axes, row-major). `Pistol_*` clips, and `Switch` from 35 %, hold the
   pistol; all other clips hold the AEG.
 - Upper-body clips (`upperBodyOnly`) are authored over a still pelvis: layer them over the legs' clip as they are.
-- First person: hide the parts listed under `firstPerson.hide` (every head) to see the body when looking down.
+- First person: the game never draws your own figure (MV2); `firstPerson.hide` (every head) is no longer read.
 - Heads (v12): the human's head parts are listed in `parts.human.head` of `src/config/figureRig.ts`, in
   `HEAD_ORDER`; a figure wears `head[id % 4]`.
 

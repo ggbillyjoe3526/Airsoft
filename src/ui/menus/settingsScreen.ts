@@ -29,7 +29,7 @@ export interface SettingsOptions {
   controls: ControlsSettingsOptions;
   /** Field of view (horizontal degrees on a 16:9 screen), applied at once. */
   fov: { initial: number; onChange: (v: number) => void };
-  /** The quality preset or Custom mix, the frame-rate cap, the FPS readout and tone mapping (ui/graphicsSettings.ts). */
+  /** The quality preset or Custom mix, the frame-rate cap, and the FPS readout (ui/graphicsSettings.ts). */
   graphics: GraphicsSettingsOptions;
   /** The volume sliders on the Audio group (ui/audioSettings.ts). */
   audio: AudioSettingsOptions;
@@ -129,7 +129,7 @@ export class SettingsScreen {
     tabList.setAttribute('aria-label', 'Settings groups');
     tabList.setAttribute('aria-orientation', 'vertical');
     tabList.addEventListener('keydown', (e) => this.onTabKey(e));
-    this.panels = el('div', 'settings-panels');
+    this.panels = el('div', 'settings-panels menu-scroll');
     for (const { id, label, blurb, hidden } of SETTINGS_TABS) {
       const button = el('button', `settings-tab settings-tab-${id}`);
       button.type = 'button';
@@ -158,7 +158,7 @@ export class SettingsScreen {
       this.panels.append(panel);
       this.tabs.set(id, { button, panel });
     }
-    const nav = el('div', 'settings-side');
+    const nav = el('div', 'settings-side menu-scroll');
     nav.append(searchBox, this.searchNote, tabList, this.devToggle(opts.dev));
 
     // The side panel: what the row pointed at (or focused) does, and what it costs.
@@ -342,7 +342,6 @@ export class SettingsScreen {
           'How wide you see, across a 16:9 screen. Aiming through an optic zooms in from it.',
           rangeControl('Field of view', FOV_SETTING, opts.fov.initial, (v) => `${Math.round(v)}°`, 'fov', opts.fov.onChange),
         ),
-        this.graphics.toneMappingRow,
         this.graphics.showFpsRow,
       );
     } else if (id === 'controls') {

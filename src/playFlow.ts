@@ -18,25 +18,19 @@ import { MatchSession } from './matchSession';
 import { playedTeamSize } from './newGamePicks';
 import type { PlayResults } from './playResults';
 import type { PlaySetup, PracticeAt } from './playSetup';
-import type { GearSlot, PlayerKit } from './pool/loadoutModel';
-import { GAME_POOL } from './pool/gamePool';
-import { activeSupplyEvent } from './pool/supplyEvents';
+import type { GearSlot } from './pool/loadoutModel';
 import type { RangePose, RangeSession } from './rangeSession';
-import type { ItemPictures } from './render/itemPictures';
 import type { Renderer } from './render/renderer';
 import type { Session } from './session';
 import type { HudPrefs } from './settings/hudPrefs';
 import { loadPracticeChallenge, loadTutorialDone, loadTutorialStep } from './settings/savedChoices';
 import { saveSetting } from './settings/storage';
-import { relockAfterFullscreen } from './ui/fullscreen';
+import { FullscreenPlay } from './ui/fullscreenPlay';
 import type { GraphicsNotice } from './ui/graphicsNotice';
 import { screenWhenStopped } from './ui/menus/menuNav';
-import { kitSubjects } from './ui/menus/menuPictures';
 import type { Menus } from './ui/menus/menus';
 import type { MenusOptions } from './ui/menus/menusOptions';
 import type { PlayPrompt } from './ui/playPrompt';
-
-const LOCK_REFUSED_HINT = 'The browser needs a moment before re-capturing the mouse. Click again.';
 
 /** The session loaded: both are a Session (session.ts); `kind` tells them apart where only one has the answer. */
 export type Loaded = MatchSession | RangeSession;
@@ -51,8 +45,6 @@ export interface PlayParts {
   readonly menus: Menus;
   readonly audio: AudioEngine;
   readonly prefs: HudPrefs;
-  /** The menus' replica pictures, which a session's HUD shows too (G3). */
-  readonly pictures: ItemPictures;
   readonly setup: PlaySetup;
   readonly results: PlayResults;
   /** Esc skipped the round (core/escSkip.ts): click to play on, Esc for the menu. Disposed with the flow. */
@@ -77,13 +69,14 @@ export interface PlayParts {
 /** The menus' buttons that start, stop and steer play. */
 export type PlayMenus = Pick<
   MenusOptions,
-  'onPlay' | 'onLeaveMatch' | 'onRange' | 'onTutorial' | 'tutorialDone' | 'onReplayTutorial' | 'onSkipRound' | 'onToggleChallenge' | 'onSkipTutorialStep' | 'onSkipTutorial'
+  'onPlay' | 'onFullscreenPlay' | 'onLeaveMatch' | 'onRange' | 'onTutorial' | 'tutorialDone' | 'onReplayTutorial' | 'onSkipRound' | 'onToggleChallenge' | 'onSkipTutorialStep' | 'onSkipTutorial'
 >;
 
 /** The menus' play buttons wired to the play flow, built after the menus (it shows them): `flow` reads it per press. */
 export function playMenus(flow: () => PlayFlow): PlayMenus {
   return {
     onPlay: () => flow().newGamePlay(),
+    onFullscreenPlay: () => flow().fullscreen.click(() => flow().play()),
     onLeaveMatch: () => flow().leaveMatch(),
     onRange: () => flow().practiceRange(),
     onTutorial: () => flow().startTutorial(),
@@ -141,13 +134,15 @@ export class PlayFlow {
    */
   escSkip = false;
   escSkipAt = 0;
-  /** When the Fullscreen key was last pressed in play (performance.now()), to take the mouse again (audit UI-19). */
-  fullscreenKeyAt = Number.NEGATIVE_INFINITY;
+  /** The Fullscreen key in play and the mouse lock across the change (audit UI-19, IN1). */
+  readonly fullscreen: FullscreenPlay;
   /** Set by dispose(): a lock answered after it builds nothing. */
   private disposed = false;
 
   constructor(private readonly parts: PlayParts) {
     this.matchSeed = parts.seed;
+    // A crash gives the mouse back for good (FA1).
+    this.fullscreen = new FullscreenPlay(parts.pointer, () => this.started && this.session !== null && !parts.crashed(), () => this.unlockedPlay);
   }
 
   /** Play is running: the mouse is locked, play runs without it (`?nolock`), or a round skips without it. */
@@ -291,8 +286,6 @@ export class PlayFlow {
         ruleset: picks.ruleset,
         rules: { ...picks.rules, teamSize: playedTeamSize(picks) },
         kit: setup.loadout.kit(),
-        // The supply event on by the device's clock as Play is pressed (M49): the run keeps it to the end.
-        supply: activeSupplyEvent(GAME_POOL.supplyEvents, new Date()),
         devContent: dev.devContent,
         devContentUsed: setup.devContentUsed(picks),
         teamColours: TEAM_COLOUR_SETS[this.parts.prefs.teamColours],
@@ -301,8 +294,7 @@ export class PlayFlow {
         ...(adaptive ? { adaptive } : {}),
       }, this.matchSeed, this.parts.quality(), this.parts.audio, this.parts.prefs);
       if (this.parts.perfLog) console.info(this.session.build.line());
-      // The kit the match plays (a ruleset's factory kit, say), not the Loadout's (BP3).
-      this.setUp(this.session, this.session.kit);
+      this.setUp(this.session);
     }
     this.session!.combat.unlockAudio();
     if (this.parts.allowUnlocked) {
@@ -338,13 +330,12 @@ export class PlayFlow {
     this.session.onChallengeRun = (run) => {
       if (!run.helped) results.challengeRun(course, run.hits);
     };
-    this.setUp(this.session, setup.loadout.kit());
+    this.setUp(this.session);
   }
 
-  /** A session just built: its replica pictures of the kit it plays, the Dev settings in force (M24), its team colours. */
-  private setUp(session: Session, kit: PlayerKit): void {
+  /** A session just built: the Dev settings in force (M24), its team colours. */
+  private setUp(session: Session): void {
     const dev = this.parts.dev();
-    session.combat.setReplicaPictures(this.parts.pictures, kitSubjects(kit, this.parts.setup.look.realisticColours));
     session.combat.setBbPaths(dev.showBbPaths);
     session.setDevCheats(dev);
     this.parts.built();
@@ -353,6 +344,7 @@ export class PlayFlow {
 
   resume(): void {
     this.endEscSkip();
+    this.fullscreen.stopHolding();
     const s = this.session;
     const { keyboard, pointer } = this.parts;
     // A mouse lock granted after the graphics context was lost (the lock was still pending): nothing can be drawn.
@@ -401,6 +393,7 @@ export class PlayFlow {
   }
 
   pause(): void {
+    this.fullscreen.stopHolding();
     const { keyboard, menus, seed } = this.parts;
     keyboard.capturing = false;
     keyboard.releaseAll();
@@ -443,6 +436,8 @@ export class PlayFlow {
       this.pause();
     } else if (this.parts.pointer.locked) {
       this.parts.pointer.release();
+    } else if (this.fullscreen.holding) {
+      this.pause();
     }
   }
 
@@ -457,16 +452,24 @@ export class PlayFlow {
       if (!this.askingLock) this.resume();
     } else if (this.escSkipDrop(released)) {
       this.startEscSkip();
+    } else if (!released && this.fullscreen.relock() !== 'none') {
+      // The lock dropped as fullscreen changes (Firefox): play holds, without the pause menu, while it is taken again.
+      this.fullscreen.hold();
     } else {
       this.pause();
-      this.relockAfterFullscreen();
+      if (this.fullscreen.takeByClick() && released) this.parts.menus.askFullscreenClick();
+      this.fullscreen.takeAgain();
     }
   }
 
-  /** The browser refused the mouse lock. While the round skips without the mouse the prompt over the field says so, not the hidden menus. */
+  /**
+   * The browser refused the mouse lock. While the round skips without the mouse the prompt over the field says so, not
+   * the hidden menus; while play held for fullscreen, the pause menu, asking for the click (IN1).
+   */
   lockRefused(): void {
-    if (this.escSkip) this.parts.playPrompt.show(LOCK_REFUSED_HINT);
-    else this.parts.menus.showHint(LOCK_REFUSED_HINT);
+    if (this.escSkip) return this.parts.playPrompt.show(MENU_TEXT.lockRefused);
+    if (this.fullscreen.holding) this.pause();
+    this.parts.menus.lockRefused();
   }
 
   /** The browser wouldn't let the sound start (audit CORE-21): the menus say so, and again on the next screen stopped on. */
@@ -501,18 +504,6 @@ export class PlayFlow {
     this.parts.menus.setBlocked(true);
   }
 
-  /**
-   * The page entered or left fullscreen, or the mouse lock dropped: just after the Fullscreen key in play, the lock is
-   * taken again, so the key doesn't stop the match on the pause menu (audit UI-19; Resume follows the lock as usual).
-   */
-  relockAfterFullscreen(): void {
-    const since = performance.now() - this.fullscreenKeyAt;
-    const inMatch = this.started && this.session !== null && !this.parts.crashed(); // a crash gives the mouse back for good (FA1)
-    if (!relockAfterFullscreen(since, FULLSCREEN_RELOCK_MS, inMatch, this.parts.pointer.locked, this.unlockedPlay)) return;
-    this.fullscreenKeyAt = Number.NEGATIVE_INFINITY;
-    void this.parts.pointer.request();
-  }
-
   /** The mouse lock dropped (not the game's own release): whether it was Esc to skip the round (core/escSkip.ts). */
   private escSkipDrop(released: boolean): boolean {
     const s = this.session;
@@ -521,7 +512,7 @@ export class PlayFlow {
       released,
       skippable: s.skipping || s.skipOffer !== null,
       focused: document.visibilityState === 'visible' && document.hasFocus(),
-      msSinceFullscreenKey: performance.now() - this.fullscreenKeyAt,
+      msSinceFullscreenKey: this.fullscreen.sinceKey(performance.now()),
       fullscreenWindowMs: FULLSCREEN_RELOCK_MS,
     });
   }

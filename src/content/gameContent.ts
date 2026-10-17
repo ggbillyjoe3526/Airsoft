@@ -7,10 +7,10 @@ import { GAME_BOT_KITS } from '../pool/gameBotKits';
 import { GAME_POOL } from '../pool/gamePool';
 import { GAME_LEVELS } from '../progress/gameLevels';
 import { loadLevels } from '../progress/levels';
-import levelsText from '../../levels.md?raw';
+import levelsText from '../../data/levels.md?raw';
 import { BARREL_KEYS, GRIP_KEYS, LASER_KEYS, LIGHT_KEYS, MAGAZINE_KEYS, MUZZLE_KEYS, OPTIC_KEYS, REPLICA_KEYS } from '../pool/pool';
 import type { Asset, Pool } from '../pool/pool';
-import { REPLICA_PART_TABLES } from '../render/replicaParts';
+import { REPLICA_PART_TABLES } from '../render/replicas/replicaParts';
 import { type CheckResult } from './checks';
 import { type ContentInputs, type DrawTable, effect, flagEffect, type PartEffect, shareEffect } from './contentInputs';
 import { partCompatibility, partRules } from './partChecks';
@@ -68,7 +68,7 @@ export function gameEffects(part: Asset): PartEffect[] {
   }
 }
 
-/** The model tables' names (render/replicaParts.ts), by table. */
+/** The model tables' names (render/replicas/replicaParts.ts), by table. */
 export function gameDrawTables(): Record<string, DrawTable> {
   const out: Record<string, DrawTable> = {};
   for (const [name, t] of Object.entries(REPLICA_PART_TABLES)) out[name] = { parts: Object.keys(t.parts), magazines: Object.keys(t.magazines), muzzles: Object.keys(t.muzzles) };

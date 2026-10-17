@@ -64,7 +64,6 @@ interface Card<T extends string> {
   wrap: HTMLDivElement;
   button: HTMLButtonElement;
   img: HTMLImageElement | null;
-  note: HTMLElement;
   sides: { root: HTMLElement; buttons: { id: string; button: HTMLButtonElement }[] } | null;
   /** The side tag's pill (Woodland's Night), kept with its words: worked out again on refresh (BP2). */
   side: { pill: HTMLSpanElement; text: string };
@@ -146,14 +145,6 @@ export class ChoiceCards<T extends string> {
     this.refresh();
   }
 
-  /** A line under option `id`'s description (M49: the supply event on), or none (null). */
-  setNote(id: T, text: string | null): void {
-    const card = this.cards.get(id);
-    if (!card) return;
-    card.note.textContent = text ?? '';
-    card.note.hidden = text === null;
-  }
-
   /** What is picked, as it plays: a dev pick is the fallback while Dev content is off, as is one not offered here. */
   get value(): T {
     const v = availableChoice(this.options, this.current, this.devContent, this.fallback);
@@ -225,11 +216,7 @@ export class ChoiceCards<T extends string> {
     }
     const icon = this.extras.icon?.(option.id);
     if (icon) button.insertAdjacentHTML('beforeend', `<span class="choice-card-icon">${icon}</span>`);
-    const note = el('span', 'choice-note');
-    note.hidden = true;
-    const text = this.text(option.label, option.blurb);
-    text.append(note);
-    button.append(text);
+    button.append(this.text(option.label, option.blurb));
     const tags = el('span', 'choice-card-tags');
     if (option.tag === 'dev' && this.extras.devTag) {
       tags.append(tagPill(this.extras.devTag, 'dev'));
@@ -244,7 +231,7 @@ export class ChoiceCards<T extends string> {
     button.insertAdjacentHTML('beforeend', `<span class="choice-tick">${MENU_ICONS.check}</span>`);
     button.addEventListener('click', () => this.pick(option.id));
     wrap.append(button);
-    const card: Card<T> = { option, wrap, button, img, note, sides: null, side };
+    const card: Card<T> = { option, wrap, button, img, sides: null, side };
     this.cards.set(option.id, card);
     return card;
   }

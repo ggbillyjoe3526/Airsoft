@@ -32,17 +32,16 @@ import { botKitSeed, botLight, fitBotLight, kittedBot, pickBotKit } from './pool
 import { GAME_BOT_KITS } from './pool/gameBotKits';
 import { contentPool } from './pool/contentPool';
 import { rollRunCases } from './pool/caches';
-import type { SupplyEvent } from './pool/supplyEvents';
 import { GAME_POOL } from './pool/gamePool';
 import { bbGlowFor, kitPaint, type PlayerKit } from './pool/loadoutModel';
 import type { LookSettings } from './config/look';
 import { SIM, SIM_DT, SKIP_ROUND } from './config/sim';
 import { idleCommand, type SkipOffer, skipEnds, skipOffer, skipTickCap, skipTickShown } from './matchFlow';
 import type { SquadCommand } from './config/squad';
-import type { TeamColours } from './config/teams';
+import { dayColours, type TeamColours } from './config/teams';
 import { BuildTiming } from './core/buildTiming';
 import { caseSeed, runSeed } from './core/seed';
-import { figureCrowd, playerArms } from './render/figureMix';
+import { figureCrowd, playerArms } from './render/figures/figureMix';
 import { EventLog } from './core/eventLog';
 import { advanceStepper, createStepper, stepperAlpha } from './core/fixedStepper';
 import type { PlayerInput } from './input/playerInput';
@@ -50,16 +49,16 @@ import type { MapData } from './map/mapTypes';
 import { playableMode } from './map/playableMode';
 import { buildNavGrid, type NavGrid } from './nav/navGrid';
 import { PhysicsWorld } from './physics/physicsWorld';
-import { LeanViewEase, updateFirstPersonCamera } from './render/cameraRig';
-import { CombatPresentation } from './render/combatPresentation';
-import { ContactShadows } from './render/contactShadows';
-import { bakedLightFor, bakedLightMode } from './render/bakedLight';
-import { addLighting, type Daylight } from './render/lighting';
-import { resolveLighting } from './render/lightingPreset';
-import { mapLookOf } from './render/mapMeshes';
-import { MatchPresentation } from './render/matchPresentation';
-import type { ProbeGrid } from './render/probeGrid';
-import { TorchBeams } from './render/torchBeams';
+import { LeanViewEase, updateFirstPersonCamera } from './render/match/cameraRig';
+import { CombatPresentation } from './render/match/combatPresentation';
+import { ContactShadows } from './render/light/contactShadows';
+import { bakedLightFor, bakedLightMode } from './render/light/bakedLight';
+import { addLighting, type Daylight } from './render/light/lighting';
+import { resolveLighting } from './render/light/lightingPreset';
+import { mapLookOf } from './render/field/mapMeshes';
+import { MatchPresentation } from './render/match/matchPresentation';
+import type { ProbeGrid } from './render/light/probeGrid';
+import { TorchBeams } from './render/light/torchBeams';
 import type { Renderer } from './render/renderer';
 import { canAimDownSights } from './sim/aiming';
 import { fitOptics, fitParts, setBbWeights, setHopUps } from './sim/armament';
@@ -117,11 +116,6 @@ export interface MatchSetup {
    * may carry): it stays out of the records and gives no XP.
    */
   devContentUsed: boolean;
-  /**
-   * The supply event on as the match starts (M49, pool/supplyEvents.ts): an Extraction run's cases hold more while it
-   * is on. Absent: none.
-   */
-  supply?: SupplyEvent | null;
   /** The team colours picked on Settings → Accessibility (M18b): the figures, the flag and your armband. */
   teamColours: TeamColours;
   /**
@@ -193,7 +187,7 @@ export class MatchSession implements Session {
   private readonly daylight: Daylight;
   /** The map's light as resolved (M33f): a night preset gives the bots their torches and draws the beams (M33h). */
   private readonly lighting: LightingPreset;
-  /** The map's baked bounce light (G6, render/bakedLight.ts), or null when it has none. */
+  /** The map's baked bounce light (G6, render/light/bakedLight.ts), or null when it has none. */
   private readonly probes: ProbeGrid | null;
   /** The map's built meshes (G9: the dressing's neon flicker is a uniform on its junk mesh). */
   private mapGroup: Group;
@@ -288,9 +282,8 @@ export class MatchSession implements Session {
             squadTeam: RUN_SQUAD_TEAM,
             respawnAfter: hitRulesFor(setup.rules).callTime,
             spawnLift: PHYSICS.groundRestGap,
-            // The run's cases (M44), filled from pool.md with the parts weighted towards what you don't own yet, richer
-            // under a supply event (M49).
-            cases: rollRunCases(GAME_POOL, map.extraction.cases, caseSeed(seed), setup.supply ?? null),
+            // The run's cases (M44), filled from pool.md's Caches table.
+            cases: rollRunCases(GAME_POOL, map.extraction.cases, caseSeed(seed)),
             // The home team's waves (M45): as often as the opponents' difficulty says, out of the squad's sight.
             waveEvery: EXTRACTION.waveEvery[setup.difficulty],
             sight: { query: this.physics, body: BODY },
@@ -302,7 +295,7 @@ export class MatchSession implements Session {
     // An Extraction run is one "round" of the map's run time (sim/round.ts); there is nothing to win twice.
     this.rounds = this.extraction && map.extraction ? { ...roundRulesFor(setup.rules), roundTime: map.extraction.runTime, winsNeeded: 1, winBy: 1 } : roundRulesFor(setup.rules);
     // With the rigged figures drawn (BD1: unless they couldn't be loaded), the legs' hit volumes follow theirs (IM8): the human's
-    // legs, which the robot shares but for a couple of centimetres crouched (render/riggedHitVolume.test.ts measures both),
+    // legs, which the robot shares but for a couple of centimetres crouched (render/figures/riggedHitVolume.test.ts measures both),
     // with any clip the human's file lacks taken from the robot's (FigureRigs.legs).
     // Their head, chest and hips follow each figure's own upper body (HV1), the human's or the robot's (Character.figure,
     // set from the crowd below).
@@ -365,7 +358,7 @@ export class MatchSession implements Session {
     this.combat.setMapGroup(this.mapGroup);
     this.build.phase('sound');
     this.stats = new MatchStats(this.state.characters);
-    this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, this.teamSizes(), this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours, map, renderer.figureModel, quality.figureDetail, this.extraction, crowd, renderer.replicaFiles, renderer.figureRigs);
+    this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, this.teamSizes(), this.rounds, this.stats, (action) => input.keyName(action), dayColours(setup.teamColours, this.lighting.night), map, renderer.figureModel, quality.figureDetail, this.extraction, crowd, renderer.replicaFiles, renderer.figureRigs);
     this.match.setHitFacts(this.bots.lastHit);
     // The "what got you" card's Auto follows the opponents' level, not your teammates' (M41).
     this.match.usePrefs(prefs, setup.difficulty);
@@ -644,7 +637,7 @@ export class MatchSession implements Session {
     this.match.showMagHandoff(mag);
     this.match.showMinimap(holding ? this.holdSpot : null);
     // The vault prompt (M102) only from your own eyes.
-    this.combat.frame(dt, alpha, this.input.yaw, pitch, spectating ? undefined : this.playerCommand);
+    this.combat.frame(dt, alpha, this.input.yaw, pitch, !spectating);
     // High's shadow map follows the view (REN-08), the spectator's too.
     this.daylight.follow(this.renderer.camera, dt);
     this.combat.render(!spectating);

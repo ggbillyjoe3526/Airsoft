@@ -64,6 +64,8 @@ export class GameDev {
     carryOverDevRetro();
     this.retro = loadRetroSettings();
     this.showRetro();
+    // Tone mapping (RV2) as in force: the Dev tab's pick while it is shown, else Neutral.
+    host.renderer.setToneMapping(this.inForce.toneMapping);
   }
 
   /** The Dev settings in force while their tab is shown; null while it is hidden (the reports). */
@@ -123,6 +125,8 @@ export class GameDev {
       setup.setupChanged = true;
       setup.prefetchFieldSounds();
     }
+    // Tone mapping (RV2) is a look: it shows at once, and with the Dev tab hidden it's Neutral again.
+    if (dev.toneMapping !== before.toneMapping) this.host.renderer.setToneMapping(dev.toneMapping);
   }
 
   /** The Retro look (Settings › Dev) on screen as saved while the Dev tab is shown, else off. */

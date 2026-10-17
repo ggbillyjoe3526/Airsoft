@@ -20,24 +20,25 @@ game state and never write it. Tests use the fake DOM in `testSupport.ts` (no js
   the top of the Dev tab (ST1); `rendererRow.ts` builds Graphics' Renderer row (W1) in the
   lazy boot chunk. `optionPicker.ts` is the shared pop-up choice. The tabs only draw: what they save is read back by
   `settings/` (DX5), the HUD and accessibility preferences into `settings/hudPrefs.ts` `HudPrefs`.
-- `hudLook.ts` (DX5): the HUD's size, opacity, sound cue size and colour and scoreboard size as CSS variables on the
+- `hudLook.ts` (DX5): the HUD's size, the minimap's (UX1), opacity, sound cue size and colour and scoreboard size as CSS variables on the
   game's container, and the reduced-motion classes, from `HudPrefs`; it keeps the system's reduce-motion setting in it.
 - Overlays: `debugOverlay.ts`, `botIntentLabels.ts` (Dev › Bot intentions, M90: a label over each bot), `crashScreen.ts` (with `bugReport.ts`: the note box and Report a Bug, IM7, also in Dev › Diagnostics), `loadingScreen.ts`, `graphicsNotice.ts`, `otherTabNotice.ts`,
   `coachPanel.ts` (the tutorial) and `tutorialShowcase.ts` (the scoreboard and order wheel its steps open, M80),
   `saveDialog.ts`; `loadingProgress.ts` counts the physics download's bytes for the loading bar.
 - Small parts: `clipboard.ts` (copy to the clipboard, with the old command as a fallback), `fullscreen.ts` (M18b),
+  `fullscreenPlay.ts` (the Fullscreen key in play and the mouse lock across the change, IN1; out of `game.ts`, DX5; the play flow's, DX8),
   `headIcon.ts` (the helmet drawing beside a name in the stats tables), `loadoutChoice.ts` (how the menus word a BB
   weight and a loadout's picks), `restartAnimation.ts` (restarting a CSS animation), `timedFill.ts` (a bar's fill that
   runs on a transition, or steps with Reduced motion).
 - Wording that needs testing is pure (`matchStopText.ts`, `keyNotes.ts`, `statsRows.ts`).
-- The HUD reads `--team-0` / `--team-1` (set by `Game.play`) and `--hud-scale`, `--hud-opacity`, `--sb-scale`,
-  `--cue-scale`, `--cue-colour` (set on `#app` by `hudLook.ts`). The panel tokens `--hud-panel` and
+- The HUD reads `--team-0` / `--team-1` (set by `Game.play`) and `--hud-scale`, `--minimap-scale`, `--hud-opacity`,
+  `--sb-scale`, `--cue-scale`, `--cue-colour` (set on `#app` by `hudLook.ts`). The panel tokens `--hud-panel` and
   `--hud-panel-solid` are declared on `#app` (style.css) from `--hud-opacity` (Settings → HUD opacity). Team colours come
   from `teamCss(team)`, never hard-coded.
 - The HUD's look (G4): `hud.css` imports one sheet per part (`hudCss/`: score bar, minimap, hit feed, replica panel,
-  Tab scoreboard, round banner), loaded after the menus'; the words are `config/hudText.ts`. `replicaPanel.ts` shows the
-  replica's picture (the game's `ItemPictures`, via `CombatPresentation.setReplicaPictures`), fire-mode chips, ammo and
-  magazine bars (with Settings › Gameplay › HUD › Ammo counter off, AC1: no counts, each bar only full or hollow); the minimap skips a frame that would draw the same (`FrameCheck`, `minimapView.ts`). No squad cards or
+  Tab scoreboard, round banner), loaded after the menus'; the words are `config/hudText.ts`. `replicaPanel.ts` shows lettered
+  fire-mode chips (S, B, A), ammo and a small box per spare magazine (UI2: no picture or name; with Settings › Gameplay ›
+  HUD › Ammo counter off, AC1: no counts, each box only full or hollow); the minimap skips a frame that would draw the same (`FrameCheck`, `minimapView.ts`). No squad cards or
   order keys on screen (owner, 2026-10-08): the orders show on `orderWheel.ts` only, and `squadOrderLine.ts` is an
   off-screen status region for screen readers. The round banner's start ("Round 2") is its headline (`isRoundStart`,
   `roundBanner.ts`), set in capitals by the stylesheet.

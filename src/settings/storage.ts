@@ -67,7 +67,7 @@ export type SettingField =
   /** Settings → Graphics: the frame-rate cap and the FPS readout (not part of a preset). */
   | 'frameRateCap'
   | 'showFps'
-  /** Settings → Graphics → Tone mapping (audit section 5 F2; not part of a preset). */
+  /** Tone mapping as Settings → Graphics saved it before RV2: read as `dev.toneMapping` until that is saved (settings/dev.ts). */
   | 'toneMapping'
   /** Settings → Graphics → Renderer (WebGPU overhaul W1, config/renderBackend.ts): 'auto', 'webgpu' or 'webgl'. */
   | 'renderer'

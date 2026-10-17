@@ -15,7 +15,7 @@ import { grassMask } from './grassLayout';
  * stand-ins (forestStandIns.ts) of the map in the scene, for maps whose dressing asks for them (MapDressing.grass and
  * .forest), on Medium and up (a Custom preset with Map detail on draws High's; Low and Custom without it, neither).
  * Made when the scene changes (a session's build, a quality change: `rescan`) for the map group in it
- * (render/mapMeshes.ts, which carries its MapData), and freed when the preset or the map changes, the map leaves the
+ * (render/field/mapMeshes.ts, which carries its MapData), and freed when the preset or the map changes, the map leaves the
  * scene, or the device goes (`dispose`). Each frame before the draws, both are culled for the camera.
  *
  * `?noGpuDressing` (dev server and the e2e build only) leaves both out: the WebGPU comparison draws its W2 to W4 views

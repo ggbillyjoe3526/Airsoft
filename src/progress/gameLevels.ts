@@ -1,9 +1,9 @@
-import levelsText from '../../levels.md?raw';
+import levelsText from '../../data/levels.md?raw';
 import { GAME_POOL } from '../pool/gamePool';
 import { type LevelTable, loadLevels } from './levels';
 
 /**
- * The game's levels: levels.md at the repository's root, bundled into the build and read once at start against the
+ * The game's levels: data/levels.md, bundled into the build and read once at start against the
  * asset pool (LV1). What it can't read is left out and listed in the console (src/progress/levels.test.ts fails on it,
  * with its lines).
  */

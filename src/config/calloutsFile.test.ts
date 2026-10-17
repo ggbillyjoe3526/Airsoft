@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import SHIPPED from '../../callouts.md?raw';
+import SHIPPED from '../../data/callouts.md?raw';
 import { AREA_NAME_MAX_LENGTH } from '../map/areas';
 import { BOT_PERSONALITIES } from './botPersonalities';
 import { CALLOUT_LINES } from './calloutLines';

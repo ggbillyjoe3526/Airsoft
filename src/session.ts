@@ -1,7 +1,7 @@
 import type { DevSettings } from './config/dev';
 import type { QualitySettings } from './config/render';
 import type { EventLog } from './core/eventLog';
-import type { CombatPresentation } from './render/combatPresentation';
+import type { CombatPresentation } from './render/match/combatPresentation';
 import type { Character } from './sim/character';
 import type { GameState } from './sim/state';
 

@@ -36,12 +36,12 @@ A task that adds, renames or moves a file keeps its folder's `README.md` current
 |---|---|---|
 | `src/` (root) | The app that outlives matches; one match or range session at a time | `main.ts`, `game.ts`, `playFlow.ts`, `session.ts`, `matchSession.ts`, `rangeSession.ts`, `matchFlow.ts`, `newGamePicks.ts` |
 | `src/sim/` | Gameplay rules, pure, fixed 60 Hz | `simulation.ts`, `state.ts`, `commands.ts`, `armament.ts`, `ballistics.ts`, `round.ts` |
-| `src/ai/` | Bots: senses, decisions, cover, squad orders, Extraction roles | `botController.ts`, `botBrain.ts`, `bot.ts`, `perception.ts`, `cover.ts`, `squadOrders.ts` |
+| `src/ai/` | Bots: senses, hearing, round plans, decisions, cover, squad orders, Extraction roles | `botController.ts`, `hearing.ts`, `roundPlanner.ts`, `botBrain.ts`, `bot.ts`, `perception.ts`, `cover.ts`, `squadOrders.ts` |
 | `src/nav/` | The layered walkability grid, A* routes, walk-off fields, vault links | `navGrid.ts`, `vaultLinks.ts` |
 | `src/physics/` | Rapier: level collision and the character mover | `physicsWorld.ts` |
 | `src/map/` | Map data (blocks, spawns, lanes, flag, Extraction) and map helpers | `mapTypes.ts`, `maps.ts`, `depot.ts`, `woodland.ts`, `neonHeights.ts`, `range.ts` |
 | `src/input/` | Keyboard, pointer lock, key bindings, order wheel; builds the player's command | `playerInput.ts`, `keyBindings.ts`, `keyboard.ts`, `pointerLock.ts` |
-| `src/render/` | Three.js: field meshes, figures, replicas, lighting, effects, post stack, cameras | `renderer.ts`, `matchPresentation.ts`, `combatPresentation.ts`, `mapMeshes.ts`, `characterRenderer.ts`, `viewmodel.ts` |
+| `src/render/` | Three.js, by subfolder (DX6): `field/` (with `mapPieces/`), `dressing/`, `light/`, `figures/`, `replicas/`, `effects/`, `match/`, `post/`, `webgpu/` | `renderer.ts`, `match/matchPresentation.ts`, `match/combatPresentation.ts`, `field/mapMeshes.ts`, `figures/characterRenderer.ts`, `replicas/viewmodel.ts` |
 | `src/audio/` | Web Audio: synthesised sounds, mix, 3D positioning, ambience | `audioEngine.ts`, `sfx.ts`, `dsp.ts`, `soundBank.ts`, `audioMix.ts` |
 | `src/ui/` | DOM HUD, overlays and settings tabs; the menus in `ui/menus/` | `hud.ts`, `scoreboard.ts`, `minimap.ts`, `debugOverlay.ts`, `menus/menus.ts` |
 | `src/config/` | Every tunable number and data table | `replicas.ts`, `bots.ts`, `hits.ts`, `render.ts`, `controls.ts`, `dev.ts` |
@@ -54,7 +54,7 @@ A task that adds, renames or moves a file keeps its folder's `README.md` current
 | `src/settings/` | The saved settings object, the typed loaders of every setting, the HUD and accessibility preferences, the Dev settings' saved values | `storage.ts`, `savedChoices.ts`, `hudPrefs.ts`, `dev.ts` |
 | `src/tutorial/` | The tutorial tracker | `tutorial.ts` |
 | `src/assets/` | Bundled fonts and the optional character model | `fonts/`, `models/characters/` |
-| `pool.md`, `stats.md`, `levels.md`, `bots.md`, `bot-kits.md`, `callouts.md` | Hand-edited tables the game and its tests read: assets and Extraction's cases, replica and part numbers, levels and XP, bot names and personalities, the bots' kits, the bots' callouts | read by `pool/poolFile.ts`, `config/statsFile.ts`, `progress/levels.ts`, `config/botsFile.ts`, `pool/botKit.ts`, `config/calloutsFile.ts` |
+| `data/` | Hand-edited tables the game and its tests read (DX7): `pool.md` (assets and Extraction's cases), `stats.md` (replica and part numbers), `levels.md` (levels and XP), `bots.md` (bot names and personalities), `bot-kits.md` (the bots' kits), `callouts.md` (the bots' callouts). A row the game can't read is left out and listed in the console and in Settings › Dev › Data tables (`config/dataTables.ts`) | read by `pool/poolFile.ts`, `config/statsFile.ts`, `progress/levels.ts`, `config/botsFile.ts`, `pool/botKit.ts`, `config/calloutsFile.ts` |
 | `public/` | Static files: icon, manifest, menu stills (from `pipeline/map-stills.mjs`) | `menu/` |
 | `pipeline/` | Gates, perf runs, light bakes, build cache, task records, the content check: the task pipeline's scripts | `README.md`, `gate.mjs`, `perf-run.mjs`, `records.mjs`, `content-check.mjs` |
 | `e2e/` | Playwright smoke tests on the `e2e` build; `release.spec.ts` on `dist/` | `boot.spec.ts`, `crash.spec.ts`, `release.spec.ts` |
@@ -72,7 +72,8 @@ The root files in more detail:
   is loaded on the title and New game screens. Split out of it (DX8, audit A1):
   - **`PlayFlow`** (`playFlow.ts`): play, enter, resume, pause, stop and leave. Play asks for the mouse lock, then builds
     or reuses a session (`core/sessionPlan.ts`); the lock taken resumes, dropped it pauses, or skips the round once you
-    are out (`core/escSkip.ts`); also the range's pause-menu buttons and the graphics context's loss. It holds the
+    are out (`core/escSkip.ts`), or holds while the Fullscreen key's change takes it again (`ui/fullscreenPlay.ts`, IN1);
+    also the range's pause-menu buttons and the graphics context's loss. It holds the
     session loaded (`Game.session` reads it for the console and the browser tests).
   - **`PlaySetup`** (`playSetup.ts`): what the next Play builds from: New game's picks as they play, Practice's place,
     each map's Day or Night, the Look settings, the Loadout and the level progress, and the flags saying they changed
@@ -133,7 +134,7 @@ Maps are plain data (`map/mapTypes.ts`). One source builds both the Rapier colli
 - **Look-only data.** `signs`, `decor`, `dressing` and `bakedLight` are drawn but never read by physics, nav, cover or
   sight.
   - **`dressing`** (`MapDressing`) is a map's set dressing, in a file of its own per map (`map/depotDressing.ts`,
-    `map/woodlandDressing.ts`, `map/neonHeightsDressing.ts`). `render/mapDressing.ts` turns it into a placement the
+    `map/woodlandDressing.ts`, `map/neonHeightsDressing.ts`). `render/dressing/mapDressing.ts` turns it into a placement the
     same way every time from `dressing.seed`; `config/dressing.ts` holds the sizes, colours and what each part costs.
     The fields: `clutter` (dirt, junk and litter along block feet, `mix` picking the yard's or the street's kinds),
     `marks` (logos and wall sprays), `posters`, `puddles` (`mud` for a mud patch), `woods` (leaf litter and fallen
@@ -182,8 +183,9 @@ request. Each entry says where the contract lives, what it holds today and what 
     `caseOpened` and `caseDropped` report the cases; `returned` reports an opponent back in a wave; `torch` reports a
     weapon light switched on or off.
   - `Character.vault` holds a vault over a low obstacle (`sim/vault.ts`, M102): its plan and how far through it is,
-    and the one-shot presses made during it (`held`, BP5: reload, slot, holster, fire selector, torch, magazine, hop-up), kept
-    for the first command after it. A `footstep` of kind `vault` reports one starting (the loudest step: bots hear it
+    whether a Jump press would vault now (`ready`, the tick's answer the vault prompt reads, DX6), and the one-shot
+    presses made during it (`held`, BP5: reload, slot, holster, fire selector, torch, magazine, hop-up), kept for the
+    first command after it. A `footstep` of kind `vault` reports one starting (the loudest step: bots hear it
     from `footstepHearingVault`).
   - `GameState.magTosses` holds the magazines in the air (MG1, `sim/magShare.ts`; MAG_SHARE.maxTosses slots, made
     once): who threw it to whom, the catcher's loadout slot, its BBs, the replica it came from, its age and flight and
@@ -347,10 +349,6 @@ request. Each entry says where the contract lives, what it holds today and what 
   - A Caches table (`| Case | Key | Per run | Open s | Heard m | XP | BB resupply % |`, read as `Pool.caseKinds`). A
     case holds XP (a range) or a BB resupply, never parts (`CaseFind { xp, resupply }`). The Key is what map data's
     case spots name. A missing or unreadable table falls back to the shipped rows.
-  - A Supply events table (`| Supply event | Key | When | XP % |`, read as `Pool.supplyEvents` by
-    `pool/supplyEvents.ts`). When is two weekdays or two dates; the first row that applies wins; `MatchSetup.supply`
-    carries it into `rollRunCases(pool, spots, seed, event?)`. No table means no events. XP % is 0 or 10 to 1000, and
-    a missing column is reported once, at the header.
   - A Lights table: category `light`, slot `light`, Fits by tag like the other parts.
   - Every shipped ID is pinned to its asset in `pool/pool.test.ts` (IDs are save keys).
 
@@ -435,8 +433,8 @@ request. Each entry says where the contract lives, what it holds today and what 
   - `overtimeFlag` (OT1): Elimination's overtime flag spot (see Map data › Overtime flag).
 
   Pinned by the content toolkit's map checks on every map (`content/mapChecks.test.ts`), `nav/navGrid.test.ts`, `map/neonHeights.test.ts`, `map/extractionData.test.ts`,
-  `render/depotLook.test.ts` (a map using none of the woodland look's fields, M33i, builds as before),
-  `render/cityLook.test.ts` and `map/neonHeightsArt.test.ts` (Neon Heights' boxes, materials and floors).
+  `render/field/depotLook.test.ts` (a map using none of the woodland look's fields, M33i, builds as before),
+  `render/field/cityLook.test.ts` and `map/neonHeightsArt.test.ts` (Neon Heights' boxes, materials and floors).
 
 ## Working notes
 

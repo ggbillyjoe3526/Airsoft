@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { GAME_POOL } from '../pool/gamePool';
 import { GAME_LEVELS } from '../progress/gameLevels';
 import { unlocksUpTo } from '../progress/levels';
 import { PROGRESS_VERSION } from '../progress/progress';
@@ -102,6 +103,26 @@ describe('save file (M31)', () => {
     expect(parsed.checksumOk).toBe(true);
     expect(parsed.save.format).toBe(SAVE_FORMAT);
     expect(parsed.save.stores).toEqual({ settings: stores.settings, keyBindings: null, records: null, progress: null, loadouts: stores.loadouts });
+  });
+
+  it('loads a save taken before RV1 removed the supply events unchanged: no store held one, and every ID it names is in the pool', () => {
+    // As 0.1 Dev 6 wrote it on a Supply weekend: the run's richer cases went into the XP, nothing of the event itself.
+    const stores = {
+      settings: { version: 1, 'equip.primary': '000002', 'equip.secondary': '000001', 'fit.000002.optic': '000007' },
+      keyBindings: null,
+      records: { version: 1, results: { 'normal.extraction': { wins: 2, losses: 1 } }, bestAccuracy: 0.25, streak: 0, bestStreak: 2 },
+      progress: { version: 1, xp: 940, unlocked: ['000007', '000012', '000015'], rev: 4 },
+      loadouts: { version: 1, slots: [{ name: 'Runs', picks: { 'equip.primary': '000002', 'fit.000002.magazine': '000012' } }, null, null, null, null], current: 0 },
+    };
+    const parsed = parseSaveText(JSON.stringify({ game: 'Airsoft', format: 3, build: '0.1 Dev 6+30 · abc1234', stores, checksum: checksum(3, stores) }));
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.checksumOk).toBe(true);
+    expect(parsed.save.format).toBe(SAVE_FORMAT);
+    expect(parsed.save.stores).toEqual(stores);
+    const ids = JSON.stringify(stores).match(/\b\d{6}\b/g) ?? [];
+    expect(ids.length).toBeGreaterThan(0);
+    for (const id of ids) expect(GAME_POOL.byId.has(id), id).toBe(true);
   });
 
   it('walks an old format up one step at a time, and refuses a gap', () => {

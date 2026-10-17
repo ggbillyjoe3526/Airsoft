@@ -1,8 +1,8 @@
-import botsText from '../../bots.md?raw';
+import botsText from '../../data/bots.md?raw';
 import { type BotsFile, loadBotsFile } from './botsFile';
 
 /**
- * The bots' names and personalities (BN1): bots.md at the repository's root, bundled into the build and read once at
+ * The bots' names and personalities (BN1): data/bots.md, bundled into the build and read once at
  * start, as stats.md is (config/gameStats.ts). Anything it can't read plays neutral and is listed in the console
  * (src/config/botsFile.test.ts fails on it).
  */

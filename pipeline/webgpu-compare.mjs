@@ -311,7 +311,7 @@ async function draw(scene, views, quality, renderer, withPost, dressing = false)
           cam.lookAt(fire.x, foot + camera.lookUp, fire.z);
         }
         if (view === 'sun') {
-          // Towards the key light (render/lightingPreset.ts keyDirection), a little below it.
+          // Towards the key light (render/light/lightingPreset.ts keyDirection), a little below it.
           const k = r.lighting.key.offset;
           const kl = Math.hypot(k.x, k.y, k.z) || 1;
           const mid = { x: (blue.x + orange.x) / 2, y: (blue.y + orange.y) / 2 + camera.up, z: (blue.z + orange.z) / 2 };

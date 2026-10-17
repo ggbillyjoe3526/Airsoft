@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SETTINGS_WRITE_DELAY_MS } from '../config/menus';
 import { QUALITY, resolveQuality } from '../config/render';
-import { loadCustomQuality, loadSavedQuality, loadToneMapping } from './savedChoices';
+import { activeDev } from '../config/dev';
+import { loadCustomQuality, loadSavedQuality } from './savedChoices';
+import { loadDevSettings } from './dev';
 import { flushSettings, loadSetting, numberIn, oneOf, saveSetting, saveSettingSoon, SETTINGS_KEY, SETTINGS_VERSION } from './storage';
 
 /** A Storage backed by a Map (only the calls the settings use); `writes` and `parses` count the work done. */
@@ -132,13 +134,18 @@ describe('the visual overhaul’s settings (FA7)', () => {
     expect(resolveQuality('custom', loadCustomQuality(s))).toEqual({ ...QUALITY.high, trees: 0, normalMaps: false });
   });
 
-  it('maps tones with Neutral until the player picks another, and ignores a value it does not offer', () => {
-    vi.stubGlobal('localStorage', memoryStorage());
-    expect(loadToneMapping()).toBe('neutral');
-    vi.stubGlobal('localStorage', memoryStorage({ [SETTINGS_KEY]: JSON.stringify({ version: 1, toneMapping: 'agx' }) }));
-    expect(loadToneMapping()).toBe('agx');
-    vi.stubGlobal('localStorage', memoryStorage({ [SETTINGS_KEY]: JSON.stringify({ version: 1, toneMapping: 'sepia' }) }));
-    expect(loadToneMapping()).toBe('neutral');
+  it('maps tones with Neutral unless a pick is saved and the Dev tab is shown (RV2), ignoring a value it does not offer', () => {
+    const saved = (fields: Record<string, unknown>) => loadDevSettings(memoryStorage({ [SETTINGS_KEY]: JSON.stringify({ version: 1, ...fields }) }));
+    expect(loadDevSettings(memoryStorage()).toneMapping).toBe('neutral');
+    expect(saved({ 'dev.toneMapping': 'aces' }).toneMapping).toBe('aces');
+    // A pick from the Graphics row before RV2 is kept as the Dev pick, until the Dev row saves its own.
+    expect(saved({ toneMapping: 'agx' }).toneMapping).toBe('agx');
+    expect(saved({ toneMapping: 'agx', 'dev.toneMapping': 'neutral' }).toneMapping).toBe('neutral');
+    expect(saved({ toneMapping: 'sepia' }).toneMapping).toBe('neutral');
+    expect(saved({ 'dev.toneMapping': 'sepia', toneMapping: 'aces' }).toneMapping).toBe('aces');
+    // With Dev settings off, any saved pick plays as Neutral.
+    expect(activeDev(false, saved({ toneMapping: 'agx', 'dev.toneMapping': 'aces' })).toneMapping).toBe('neutral');
+    expect(activeDev(true, saved({ toneMapping: 'agx', 'dev.toneMapping': 'aces' })).toneMapping).toBe('aces');
   });
 });
 

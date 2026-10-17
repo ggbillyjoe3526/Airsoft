@@ -15,7 +15,7 @@
   lines with what it reads. So: `playSetup.ts` (`PlaySetup`: what the next Play builds from, New game's picks as played,
   Practice's place, Day or Night, Look, the Loadout and the progress, and the changed flags), `playResults.ts`
   (`PlayResults`: settling a decided match, its result summary, the range's challenge best) and `gameDev.ts` (`GameDev`).
-  That is what brings `game.ts` to 556 lines and 46 imported modules.
+  That is what brings `game.ts` to 556 lines and 46 imported modules (552 after merging DX5, DX6 and main).
 - **The Dev glue is `gameDev.ts`, not more of `gameReport.ts`.** The Dev settings in force, the Retro look, the Dev
   tab's buttons and its menu options are a different concern from reading the game for reports; the report glue left
   in `game.ts` (`diagnostics()`) moved to `gameReport.ts` (`diagnosticsText`).
@@ -39,9 +39,12 @@
   `flow.dispose()`, where the session was disposed before; each is independent of what moved past it.
 - **RV1's and RV2's touches** name the files their code moved to (`playSetup.ts` and `playFlow.ts` for supply events,
   `gameDev.ts` for the Dev tab).
+- **Merging DX5, DX6 and main:** IN1's `ui/fullscreenPlay.ts` is the play flow's (`flow.fullscreen`: its "in a match"
+  reads the flow's started flag), with the Fullscreen-click button in `playMenus`; RV2's tone mapping is set and changed
+  by `GameDev`; RV1's supply event and DX5's dropped replica pictures leave `playSetup.ts` and `playFlow.ts`; render
+  imports take DX6's subfolders.
 
 ## Known issues left
 
 - None. Under heavy load a few tests hit their timeouts and pass alone (`audio/citySound.test.ts` this run); test
-  speed is DX4's. `src/render/` paths imported by `game.ts`, `playFlow.ts` and `gameDev.ts` will need DX6's new
-  folders at merge.
+  speed is DX4's.

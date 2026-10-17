@@ -1,8 +1,8 @@
 // Packs a figure glb as Blender exports it into the file the game ships (IM5), with nothing the game draws changed:
-//   1. drops the animation tracks that hold a bone at its rest value, by the rule render/figureRig.ts drops them with
+//   1. drops the animation tracks that hold a bone at its rest value, by the rule render/figures/figureRig.ts drops them with
 //      at load (the mixer leaves an undriven bone at rest), keeping at least one track per clip so its length stays;
 //   2. stores the vertex, index, skin and animation data with meshopt's lossless codec (EXT_meshopt_compression, which
-//      the game decodes with three's MeshoptDecoder, render/externalModels.ts). No quantisation, no filters and no
+//      the game decodes with three's MeshoptDecoder, render/figures/externalModels.ts). No quantisation, no filters and no
 //      reordering: every value the game reads decodes to the same bits, so the figures draw pixel for pixel the same;
 //   3. re-deflates the PNG textures harder (Blender saves them fast): the same pixels and the same colour chunks.
 // Node, mesh, material, bone and clip names, every kept key and everything else in the file stay as they are.
@@ -22,7 +22,7 @@ const GLB_MAGIC = 0x46546c67;
 const CHUNK_JSON = 0x4e4f534a;
 const CHUNK_BIN = 0x004e4942;
 const EXT = 'EXT_meshopt_compression';
-/** The game's tolerance for "at rest" (render/figureRig.ts stillAt). */
+/** The game's tolerance for "at rest" (render/figures/figureRig.ts stillAt). */
 const REST_EPS = 1e-5;
 const COMPONENTS = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4, MAT4: 16 };
 const ARRAYS = { 5121: Uint8Array, 5123: Uint16Array, 5125: Uint32Array, 5126: Float32Array };
@@ -54,7 +54,7 @@ const floats = (index) => {
 };
 
 // ---- 1: the tracks the game plays ----
-/** Track values that never leave `rest` (a quaternion's sign aside): render/figureRig.ts stillAt. */
+/** Track values that never leave `rest` (a quaternion's sign aside): render/figures/figureRig.ts stillAt. */
 function stillAt(v, rest) {
   const n = rest.length;
   for (let k = 0; k < v.length; k += n) {

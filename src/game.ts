@@ -19,9 +19,9 @@ import { PlayerInput } from './input/playerInput';
 import { PointerLock } from './input/pointerLock';
 import { initPhysics } from './physics/physicsWorld';
 import { awayWatch } from './core/awayWatch';
-import { loadBakedLight } from './render/bakedLight';
-import { ModelFiles } from './render/modelFiles';
-import { powerSourceLoader } from './render/powerSourceModels';
+import { loadBakedLight } from './render/light/bakedLight';
+import { ModelFiles } from './render/figures/modelFiles';
+import { powerSourceLoader } from './render/replicas/powerSourceModels';
 import { FrameTimeWatch, presetBelow, slowFrameMs } from './render/qualityStepDown';
 import { Renderer } from './render/renderer';
 import type { RendererBoot } from './render/rendererStart';
@@ -33,7 +33,7 @@ import { PlaySetup } from './playSetup';
 import type { GameState } from './sim/state';
 import { CrashScreen } from './ui/crashScreen';
 import { DebugOverlay } from './ui/debugOverlay';
-import { onFullscreenChange, toggleFullscreen } from './ui/fullscreen';
+import { onFullscreenChange } from './ui/fullscreen';
 import { GraphicsNotice } from './ui/graphicsNotice';
 import { HudLook } from './ui/hudLook';
 import { PlayPrompt } from './ui/playPrompt';
@@ -41,8 +41,8 @@ import { browserStorage, flushSettings } from './settings/storage';
 import type { SaveManager } from './save/saveManager';
 import { SAVE_TEXT } from './config/save';
 import { Menus } from './ui/menus/menus';
-import { followingPictureTarget, ItemPictures, nodePictureTarget } from './render/itemPictures';
-import { loadControls, loadFov, loadFrameRateCap, loadRawInput, loadRendererChoice, loadShowFps, loadToneMapping } from './settings/savedChoices';
+import { followingPictureTarget, ItemPictures, nodePictureTarget } from './render/replicas/itemPictures';
+import { loadControls, loadFov, loadFrameRateCap, loadRawInput, loadRendererChoice, loadShowFps } from './settings/savedChoices';
 import { type HudPrefKey, type HudPrefs, loadHudPrefs } from './settings/hudPrefs';
 
 export interface GameOptions {
@@ -200,7 +200,6 @@ export class Game {
       errors: options.errors,
     };
     this.renderer.setFov(loadFov());
-    this.renderer.setToneMapping(loadToneMapping());
     // The menus show the team colours of the saved set (the Match screen's Your team), as each match sets them again.
     applyTeamCss(container, TEAM_COLOUR_SETS[this.prefs.teamColours]);
     this.hudLook = new HudLook(container, this.prefs);
@@ -262,7 +261,6 @@ export class Game {
         },
         frameRateCap: { initial: this.frameRateCap, onChange: (cap) => (this.frameRateCap = cap) },
         showFps: { initial: loadShowFps(), onChange: (on) => this.debug.setFpsReadout(on) },
-        toneMapping: { initial: this.renderer.toneMappingId, onChange: (id) => this.renderer.setToneMapping(id) },
         renderer: (row) => this.rendering.fillRow(row, this.renderer),
       },
       audio: { initial: this.audio.volumes, onChange: (channel, v) => this.audio.setVolume(channel, v), onRelease: (channel) => this.audio.preview(channel) },
@@ -285,7 +283,6 @@ export class Game {
       menus: this.menus,
       audio: this.audio,
       prefs: this.prefs,
-      pictures: this.pictures,
       setup: this.setup,
       results: this.results,
       graphicsNotice: new GraphicsNotice(container, BROWSER_NOTES.graphicsLost),
@@ -305,7 +302,7 @@ export class Game {
     this.stopWatchingAway = awayWatch({ doc: document, win: window }, this.goneAway);
     this.audio.onBlocked = () => this.flow.audioRefused();
     this.pointer.onChange((locked, released) => this.flow.lockChanged(locked, released));
-    this.unwatchFullscreen = onFullscreenChange(() => this.flow.relockAfterFullscreen());
+    this.unwatchFullscreen = onFullscreenChange(() => this.flow.fullscreen.takeAgain());
     // Slider changes wait a moment before they are written (settings/storage.ts saveSettingSoon): write them as the page goes.
     window.addEventListener('pagehide', this.flushSettings);
     this.pointer.onError(() => this.flow.lockRefused());
@@ -499,16 +496,15 @@ export class Game {
 
     const flow = this.flow;
     const s = flow.session;
+    // Held for fullscreen and the lock never came back: the pause menu, as for any other drop.
+    if (flow.fullscreen.holdRanOut(performance.now())) flow.pause();
     const running = flow.inPlay && s !== null;
     if (running) {
       // Only while playing: on the pause screen F3 belongs to the browser (find bar).
       if (this.keyboard.wasPressed('debugOverlay')) this.debug.toggle();
       if (this.keyboard.wasPressed('debugBbPaths')) s.combat.toggleBbPaths();
       // Still within the key press's user activation, which the browser needs for fullscreen (and to take the mouse again).
-      if (this.keyboard.wasPressed('fullscreen')) {
-        flow.fullscreenKeyAt = now;
-        toggleFullscreen();
-      }
+      if (this.keyboard.wasPressed('fullscreen')) flow.fullscreen.key(now);
       // The Dev settings' Game speed (M24) runs the simulation slower or faster than the clock.
       const simStart = performance.now();
       // Esc skipped the round without the mouse (core/escSkip.ts): once the next round is up it waits for the click that

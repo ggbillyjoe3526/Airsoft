@@ -1,6 +1,6 @@
 import { soundCueCss } from '../config/accessibility';
 import { hudInsetX, hudScale, scoreboardScale } from '../config/matchInfo';
-import { MINIMAP } from '../config/minimap';
+import { MINIMAP, minimapScale } from '../config/minimap';
 import { type HudPrefs, motionClass, motionReduced, setHudPref, systemReducedMotionQuery } from '../settings/hudPrefs';
 
 /**
@@ -27,7 +27,7 @@ export class HudLook {
 
   /**
    * The preferences as CSS on the container (style.css): the HUD's size (audit UI-04; the screen's height scales it
-   * further), its panels' opacity (G4), the sound cues' size and colour, and the scoreboard's size, held back in a narrow
+   * further) and the minimap's (held back in a narrow window to clear the score bar, UX1), its panels' opacity (G4), the sound cues' size and colour, and the scoreboard's size, held back in a narrow
    * window so the hit feed and the minimap keep their room. And reduced motion for the HUD's CSS animations (audit
    * M-03): `reduced-motion` calms them; `full-motion` marks an explicit Off, so the stylesheet's
    * `prefers-reduced-motion` fallback doesn't override the player's choice; neither before the player picks (UI-07), so
@@ -39,12 +39,14 @@ export class HudLook {
     const width = this.container.clientWidth || window.innerWidth;
     const height = this.container.clientHeight || window.innerHeight;
     const hud = hudScale(p.hudSize, height);
+    const minimap = minimapScale(hud, width, height);
     style.setProperty('--hud-scale', String(hud));
+    style.setProperty('--minimap-scale', minimap.toFixed(3));
     style.setProperty('--hud-opacity', String(p.hudOpacity));
     style.setProperty('--cue-scale', String(p.soundCueSize));
     style.setProperty('--cue-colour', soundCueCss(p.soundCueColour));
     // The scoreboard grows with the HUD, still only as far as leaves the hit feed its room and clears the minimap.
-    const minimapEdge = hudInsetX(width, height) + MINIMAP.size * hud;
+    const minimapEdge = hudInsetX(width, height) + MINIMAP.size * minimap;
     style.setProperty('--sb-scale', scoreboardScale(p.scoreboardSize * hud, width, minimapEdge).toFixed(3));
     const cls = motionClass(p.reducedMotion);
     this.container.classList.toggle('reduced-motion', cls === 'reduced-motion');

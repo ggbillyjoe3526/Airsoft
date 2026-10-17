@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { FULL_MOTION, REDUCED_MOTION } from './config/accessibility';
 import { MatchSession } from './matchSession';
 import { RangeSession } from './rangeSession';
-import { MatchPresentation } from './render/matchPresentation';
+import { MatchPresentation } from './render/match/matchPresentation';
 import { type HudPrefs, loadHudPrefs, setHudPref } from './settings/hudPrefs';
 
 /**

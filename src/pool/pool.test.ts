@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import poolText from '../../pool.md?raw';
+import poolText from '../../data/pool.md?raw';
 import { inPool, itemKey, parseItemKey } from './item';
 import { assetOfReplica, fits, hasBuiltInPower, loadPool, replicaOf } from './pool';
 import { readTables } from './poolFile';
 import { AEG, CYBER_PISTOL, GAS_PISTOL } from '../config/replicas';
 import { loadLevels } from '../progress/levels';
-import levelsText from '../../levels.md?raw';
+import levelsText from '../../data/levels.md?raw';
 
 const pool = loadPool(poolText);
 const byName = (name: string) => pool.assets.find((a) => a.name === name)!;
@@ -34,6 +34,32 @@ describe('pool.md', () => {
     expect(byName('AEG Rifle').id).toBe('000002');
     for (const name of ['Standard Battery', 'Green Gas', 'Red Laser', 'Vertical Grip', 'Red Dot', 'Red Gas']) expect(byName(name)).toBeDefined();
     expect(new Set(pool.assets.map((a) => a.id)).size).toBe(pool.assets.length);
+  });
+
+  it('keeps every ID it shipped with as RV1 took the supply events out, each on its asset (IDs are save keys)', () => {
+    const shipped: [string, string][] = [
+      ['000001', 'GBB Pistol'],
+      ['000002', 'AEG Rifle'],
+      ['000003', 'Standard Battery'],
+      ['000004', 'Green Gas'],
+      ['000005', 'Red Laser'],
+      ['000006', 'Vertical Grip'],
+      ['000007', 'Red Dot'],
+      ['000008', 'Red Gas'],
+      ['000009', 'Black Gas'],
+      ['000010', '2x Scope'],
+      ['000011', 'Angled Grip'],
+      ['000012', 'Hi-Cap Magazine'],
+      ['000013', 'Low-Cap Magazine'],
+      ['000014', 'Extended Magazine'],
+      ['000015', '11.1 V LiPo Battery'],
+      ['000016', 'Tight-Bore Barrel'],
+      ['000017', 'Long Barrel'],
+      ['000018', 'Silencer'],
+      ['000019', 'Cyber Pistol'],
+      ['000020', 'Weapon Torch'],
+    ];
+    for (const [id, name] of shipped) expect(pool.byId.get(id)?.name, id).toBe(name);
   });
 
   it('starts every player with the AEG Rifle, GBB Pistol, Standard Battery, Green Gas and the (dev) Weapon Torch, nothing else', () => {
@@ -105,7 +131,15 @@ describe('reading pool.md', () => {
   it('reads no economy, rarity or cache-part columns: a pool.md without them has no errors about them (LV1)', () => {
     const p = loadPool(mini(''));
     expect(p.errors.filter((e) => /Rarity|Field Credits|Tokens|Shots|Tier/.test(e))).toEqual([]);
-    expect(Object.keys(p).sort()).toEqual(['assets', 'byId', 'caseKinds', 'errors', 'supplyEvents']);
+    expect(Object.keys(p).sort()).toEqual(['assets', 'byId', 'caseKinds', 'errors']);
+  });
+
+  it('ignores a leftover Supply events table in a pool.md edited before RV1: no error, no asset, no event field', () => {
+    const stale = ['### Supply events', '| Supply event | Key | When | XP % |', '|---|---|---|---|', '| Supply weekend | supply-weekend | Friday to Sunday | 125 |'].join('\n');
+    const p = loadPool(mini(stale));
+    expect(p.errors).toEqual(loadPool(mini('')).errors);
+    expect(p.assets.map((a) => a.id)).toEqual(['000001']);
+    expect('supplyEvents' in p).toBe(false);
   });
 
   it('rejects a Key the code has no behaviour for', () => {

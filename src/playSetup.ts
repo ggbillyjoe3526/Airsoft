@@ -15,7 +15,6 @@ import { contentPool } from './pool/contentPool';
 import { GAME_POOL } from './pool/gamePool';
 import type { ItemRef } from './pool/item';
 import { gameOwnership, LoadoutModel } from './pool/loadoutModel';
-import { activeSupplyEvent, supplyLine } from './pool/supplyEvents';
 import { GAME_LEVELS } from './progress/gameLevels';
 import { standing } from './progress/levels';
 import { loadProgress, type Progress, syncProgress } from './progress/progress';
@@ -160,11 +159,6 @@ export class PlaySetup {
       mode: {
         initial: this.picks.mode,
         onChange: (m) => ((this.picks.mode = m), (this.setupChanged = true)),
-        // The supply event on by the device's clock as the Mode pop-up opens (M49).
-        supply: () => {
-          const event = activeSupplyEvent(GAME_POOL.supplyEvents, new Date());
-          return event ? supplyLine(event) : null;
-        },
       },
       difficulty: { initial: this.picks.difficulty, onChange: (d) => ((this.picks.difficulty = d), (this.setupChanged = true)) },
       teammateDifficulty: { initial: this.picks.teammateDifficulty, follows: !hasSavedTeammateDifficulty(), onChange: (d) => ((this.picks.teammateDifficulty = d), (this.setupChanged = true)) },

@@ -13,17 +13,17 @@ import {
 } from '../config/render';
 import type { RenderBackend } from '../config/renderBackend';
 import type { MapData } from '../map/mapTypes';
-import type { FigureModel } from './externalModels';
-import type { FigureRigs } from './figureRig';
-import { ModelFiles } from './modelFiles';
-import type { ReplicaFiles } from './replicaFiles';
-import { environmentLookOf } from './lightingPreset';
-import { MapMeshCache } from './mapMeshCache';
-import { mapLookOf, texturesFor } from './mapMeshes';
+import type { FigureModel } from './figures/externalModels';
+import type { FigureRigs } from './figures/figureRig';
+import { ModelFiles } from './figures/modelFiles';
+import type { ReplicaFiles } from './replicas/replicaFiles';
+import { environmentLookOf } from './light/lightingPreset';
+import { MapMeshCache } from './field/mapMeshCache';
+import { mapLookOf, texturesFor } from './field/mapMeshes';
 import { type AnyPostChain, PostHost } from './post/postHost';
 import type { PostPassId } from './post/postPlan';
-import { addSurfaceTextures, CORE_SURFACES, disposeSurfaceTextures, type ProceduralTexture, setSurfaceAnisotropy, type SurfaceTextures } from './proceduralTextures';
-import { defaultEnvironmentLook, type EnvironmentLook } from './replicaSheen';
+import { addSurfaceTextures, CORE_SURFACES, disposeSurfaceTextures, type ProceduralTexture, setSurfaceAnisotropy, type SurfaceTextures } from './field/proceduralTextures';
+import { defaultEnvironmentLook, type EnvironmentLook } from './replicas/replicaSheen';
 import {
   browserIdle,
   type DrawingRenderer,
@@ -37,7 +37,7 @@ import {
   zoomedFov,
 } from './rendererParts';
 import { retroPixelAngle, type RetroView } from './retroFilter';
-import { releaseNormalMaps, usesNormalMaps } from './surfaceNormals';
+import { releaseNormalMaps, usesNormalMaps } from './field/surfaceNormals';
 import type { NodeBackend } from './webgpu/nodeBackend';
 
 export {
@@ -91,7 +91,7 @@ export class Renderer {
   private environmentLook: EnvironmentLook = defaultEnvironmentLook();
   /** The scene's environment must be set again before the next frame (settings changed, a new device). */
   private environmentDirty = true;
-  /** Settings → Graphics → Tone mapping (F2): not part of a preset. */
+  /** Tone mapping (F2; Settings › Dev since RV2, else Neutral). */
   private toneMapping: ToneMappingId = TONE_MAPPING.default;
   /** The lighting preset in force (M33f, setLighting): its haze, exposure and environment. Day until a session sets one. */
   private lighting: LightingPreset = LIGHTING_PRESETS.day;
@@ -100,7 +100,7 @@ export class Renderer {
   /** Whether the world may move (the match's MotionScale, set by CombatPresentation): the grass sway (W5). */
   motion = true;
   /**
-   * The model files (render/modelFiles.ts): the rigged figures (BF1), the replica models (M101) and a figure model
+   * The model files (render/figures/modelFiles.ts): the rigged figures (BF1), the replica models (M101) and a figure model
    * (M25a), loaded as the game starts (BD1). Shared by every match and freed with the renderer.
    */
   models = new ModelFiles();
@@ -159,7 +159,7 @@ export class Renderer {
     this.camera = new THREE.PerspectiveCamera(this.baseFov, 1, RENDER.near, RENDER.far);
     this.camera.rotation.order = 'YXZ';
 
-    // The match's sky dome covers this (render/atmosphere.ts); the haze fades far things into the horizon's colour.
+    // The match's sky dome covers this (render/light/atmosphere.ts); the haze fades far things into the horizon's colour.
     // Both follow the lighting preset (setLighting).
     this.scene.background = new THREE.Color();
     this.scene.fog = new THREE.Fog(0xffffff);
@@ -235,7 +235,7 @@ export class Renderer {
   }
 
   /**
-   * The map surfaces' textures (render/proceduralTextures.ts), shared by every match and range: they are the same each
+   * The map surfaces' textures (render/field/proceduralTextures.ts), shared by every match and range: they are the same each
    * time (fixed seeds), so they are drawn and uploaded once, the first time they are wanted, and freed with the renderer
    * (audit L-04). Sessions must not dispose them.
    */
@@ -272,7 +272,7 @@ export class Renderer {
   }
 
   /**
-   * The sky the environment map and the replica's sheen reflect (render/replicaSheen.ts EnvironmentLook): a map with
+   * The sky the environment map and the replica's sheen reflect (render/replicas/replicaSheen.ts EnvironmentLook): a map with
    * another sky passes its own; the prefiltered target is made again for a new look on the next frame. Sessions that
    * hold the sheen (CombatPresentation) ask for it again after this.
    */
@@ -282,7 +282,7 @@ export class Renderer {
   }
 
   /**
-   * The map's light (M33f, render/lightingPreset.ts resolveLighting): the haze and background, the exposure, and the
+   * The map's light (M33f, render/light/lightingPreset.ts resolveLighting): the haze and background, the exposure, and the
    * environment map's sky, ground and strength. Every session sets it as it is built, so a map never keeps the last one's.
    */
   setLighting(preset: LightingPreset): void {
@@ -312,13 +312,8 @@ export class Renderer {
     fog.far = far;
   }
 
-  /** The tone mapping in use (Settings → Graphics). */
-  get toneMappingId(): ToneMappingId {
-    return this.toneMapping;
-  }
-
   /**
-   * Tone mapping (Settings → Graphics, F2): applies at once. The exposure goes with it (TONE_MAPPING.exposure), so the
+   * Tone mapping (Settings › Dev since RV2, F2): applies at once. The exposure goes with it (TONE_MAPPING.exposure), so the
    * field stays about as bright under each.
    */
   setToneMapping(id: ToneMappingId): void {
@@ -502,7 +497,7 @@ export class Renderer {
   /**
    * Environment lighting (F1): the prefiltered sky as the scene's environment while the setting is on, made on the
    * first frame that wants it (the sheen's prefilter, shared), none otherwise. Materials that must not take it (the
-   * map's painted surfaces) opt out themselves (render/surfaceMaterials.ts).
+   * map's painted surfaces) opt out themselves (render/field/surfaceMaterials.ts).
    */
   private applyEnvironment(): void {
     this.environmentDirty = false;

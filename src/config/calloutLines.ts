@@ -1,9 +1,9 @@
-import calloutsText from '../../callouts.md?raw';
+import calloutsText from '../../data/callouts.md?raw';
 import { BOT_PERSONALITIES } from './botPersonalities';
 import { type CalloutsFile, loadCalloutsFile } from './calloutsFile';
 
 /**
- * What the bots call and when (CL1): callouts.md at the repository's root, bundled into the build and read once at
+ * What the bots call and when (CL1): data/callouts.md, bundled into the build and read once at
  * start, as bots.md is (config/botPersonalities.ts). Anything it can't read is left out and listed in the console
  * (src/config/calloutsFile.test.ts fails on it).
  */
