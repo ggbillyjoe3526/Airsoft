@@ -11,7 +11,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Accuracy by stance and movement: steadier crouched and still, worse walking, running or in the air; crouch-walking is
   slightly less accurate than standing still (M10, FA1)
 - Walking while aiming: hold Shift while aiming and you creep slower than the aiming pace; walking with Shift is as steady as standing still (M84, MV1)
-- Holster on 3 (1 and 2 pick primary and secondary): holstered you run faster (5.0 against 4.2 m/s), never past the 6.3 m/s sprint; the draw
+- Holster on 3 (1 and 2 pick primary and secondary): holstered you run faster (5.4 against 4.2 m/s), never past the 6.3 m/s sprint; the draw
   takes longer; a fresh trigger pull, aim, reload or slot key draws it; bots holster the same way (M92, MV1)
 - Vault: Jump at a low wall about waist high (0.6 to 0.95 m) to go over it; vaults are loud (bots hear one from 18 m),
   and bots vault too where it saves them a walk (M102)
@@ -271,7 +271,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Players as masked humans (high-cut or bump helmet, balaclava, visor; no bare faces) in team camo with a team-colour
   plate carrier, or robots in a light or dark shell by team, mixed on both teams when Look › Robots is on; their
   replicas in the team's colours (G7)
-- Your first-person arms: dark gloves, team camo sleeves and armband, or robot arms when your player is a robot; your own body shows only when you look down far enough to see it (G7, BD1)
+- Your first-person arms: dark gloves, team camo sleeves and armband, or robot arms when your player is a robot; the firing wrist sits low behind the grip; your own body is never drawn in first person (G7, BD1, MV2)
 - An optional glTF player model dropped into the assets folder replaces the built-in figures (M25a)
 - Blender human figure, realistic body, gloved hands that grip the AEG and pistol, four heads (high-cut helmet, goggled cap, boonie hat, full-cut helmet) and team colour on the vest, armbands and bands (RM9)
 - Blender robot figure, boxier mechanical limbs, visor head with headset and antenna, white suit with team shoulder caps; both Blender figures vault with their own animations (RM10)
