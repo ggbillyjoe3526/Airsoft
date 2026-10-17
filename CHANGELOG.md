@@ -42,6 +42,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **BD1** · Your own body in first person shows only when you look down far enough to see it
 - **BD1** · Medium's Player detail is Low: figures drop to middle detail beyond 6 m and the coarsest beyond 16 m (High and Ultra keep 12 m and 28 m)
 - **KI2** · Unused mode pictures are gone from the download, about 51 KB smaller
+- **AX1** · With High Contrast team colours, Extraction's exits are hi-vis yellow instead of green, on the ring, cones, EXIT sign, minimap and screen marker
+- **AX1** · High Contrast team paint (vests, armbands, helmet bands) glows faintly on day fields so the dark orange team shows in shade
 
 ### Fixed
 - **MV1** · The first switch to your other replica in a match no longer stutters; every carried replica is ready before the round
