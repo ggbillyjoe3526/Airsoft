@@ -32,9 +32,9 @@ game state and never write it. Tests use the fake DOM in `testSupport.ts` (no js
   `--hud-panel-solid` are declared on `#app` (style.css) from `--hud-opacity` (Settings → HUD opacity). Team colours come
   from `teamCss(team)`, never hard-coded.
 - The HUD's look (G4): `hud.css` imports one sheet per part (`hudCss/`: score bar, minimap, hit feed, replica panel,
-  Tab scoreboard, round banner), loaded after the menus'; the words are `config/hudText.ts`. `replicaPanel.ts` shows the
-  replica's picture (the game's `ItemPictures`, via `CombatPresentation.setReplicaPictures`), fire-mode chips, ammo and
-  magazine bars (with Settings › Gameplay › HUD › Ammo counter off, AC1: no counts, each bar only full or hollow); the minimap skips a frame that would draw the same (`FrameCheck`, `minimapView.ts`). No squad cards or
+  Tab scoreboard, round banner), loaded after the menus'; the words are `config/hudText.ts`. `replicaPanel.ts` shows lettered
+  fire-mode chips (S, B, A), ammo and a small box per spare magazine (UI2: no picture or name; with Settings › Gameplay ›
+  HUD › Ammo counter off, AC1: no counts, each box only full or hollow); the minimap skips a frame that would draw the same (`FrameCheck`, `minimapView.ts`). No squad cards or
   order keys on screen (owner, 2026-10-08): the orders show on `orderWheel.ts` only, and `squadOrderLine.ts` is an
   off-screen status region for screen readers. The round banner's start ("Round 2") is its headline (`isRoundStart`,
   `roundBanner.ts`), set in capitals by the stylesheet.

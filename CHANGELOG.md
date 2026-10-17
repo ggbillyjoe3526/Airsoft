@@ -47,6 +47,13 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **AX1** · With High Contrast team colours, Extraction's exits are hi-vis yellow instead of green, on the ring, cones, EXIT sign, minimap and screen marker
 - **AX1** · High Contrast team paint (vests, armbands, helmet bands) glows faintly on day fields so the dark orange team shows in shade
 - **TT2** · Tutorial teaches leaning again: a Lean step after Crouch ticks once you've leaned both ways; read-only cards stay up 10 s
+- **PF4** · Medium runs lighter in busy fights: other players' replicas cast their shadow from a simpler figure, looking the same
+- **UI2** · Match rule options are only as wide as their words, sit closer to their names, and the round-time slider is shorter
+- **UI2** · Replica panel is about half as wide: no picture or name, fire modes as S / B / A, the spare magazines as small boxes that fill from the bottom, and no "press R to reload" hint when the magazine runs dry
+- **UX1** · Menus grow with the window at 4K, up to 1.5×; 1080p and smaller look as before
+- **UX1** · In a 1280×720 window a menu's top bar, heading and Start match or Back stay pinned; only its long list scrolls
+- **UX1** · A short window draws the menus a little tighter; New game's Start match is in sight down to 900×600
+- **UX1** · The Armory's starting kit lies two across
 - **WL2** · Woodland: no boulders or middle oak; approach cover is log piles and crouch-high logs; fort walls 1.5 m; fort hut 3 m, tin roof
 
 ### Fixed
@@ -75,6 +82,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **IN1** · In Firefox F10 no longer drops you onto the pause menu: play carries on and the mouse returns once the page changes size (#251)
 - **IN1** · Where Firefox refuses fullscreen from F10, the pause menu says "Click anywhere to go fullscreen" and one click does it (#251)
 - **IN1** · Settings › Controls › Raw mouse input says Firefox gives no raw input as soon as you open it (#251)
+- **UX1** · In a 1280 px window with HUD size 120 % or more, the widest score bar no longer crowds the minimap
 
 ### Internal
 - **MS1** · Tests remove skyline pieces no player can see and keep hung units and cables clear of the player's room; perf baselines re-recorded
@@ -94,6 +102,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **DX2** · Developer-only: Dev 5 and 6 plans, decisions, known issues and playtest guide archived or trimmed under 50 KB each
 - **IN1** · CI runs the boot and save browser tests in Firefox too, in a new firefox job (#251)
 - **DX4** · Developer-only: each pull request builds the game once for all its checks, the slow test jobs finish together, a code formatter is set up, and the quick test run drops its three slowest files to the full run
+- **PF4** · Developer-only: the perf harness measures the same stretch of play every run, so its triangle counts stop swinging between runs
+- **DX7** · Developer-only: bot code and settings split by concern; six data tables move to a data folder, and bad rows show in Settings › Dev
 
 ## 0.1 Dev 6 · 2026-10-16
 

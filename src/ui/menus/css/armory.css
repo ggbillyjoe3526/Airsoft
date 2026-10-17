@@ -385,6 +385,17 @@
   gap: var(--sp-2);
 }
 
+/* A level with three things or more (the starting kit, armoryScreen's TWO_ACROSS_FROM) lays them two across in a column
+   twice as wide, so no column is taller than two and the track fits the page under the band (UX1). */
+.armory-level-row.two-across {
+  flex-basis: calc(2 * clamp(190px, 11.2vw, 220px) - 16px);
+}
+
+.armory-level-row.two-across > .armory-level-items {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .armory-level-empty {
   font-size: var(--fs-sm);
 }

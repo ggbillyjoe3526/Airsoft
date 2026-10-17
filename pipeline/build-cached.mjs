@@ -7,7 +7,7 @@
  *   node pipeline/build-cached.mjs [--mode production|e2e] [--force]
  *
  * "The same source" is a hash of everything the bundle is made from (src/ without its tests, public/, index.html,
- * pool.md, stats.md, levels.md, bots.md, bot-kits.md, callouts.md, the Vite, TypeScript and npm files), the mode,
+ * data/ (pool.md, stats.md, levels.md, bots.md, bot-kits.md, callouts.md), the Vite, TypeScript and npm files), the mode,
  * `git describe` (the title screen's version) and, for the production build, whether it writes the .br/.gz copies
  * (AIRSOFT_PRECOMPRESS=0 leaves them out: the gate's --quick build, audit CORE-11), so a build without them is never
  * reused where the release smoke test needs them; kept in pipeline/out/build-<mode>.json with the output's index.html
@@ -37,8 +37,10 @@ if (!build) {
 }
 
 /** Files the bundle is made from, as git sees them (tracked and new, not ignored). */
-const ROOT_FILES = new Set(['index.html', 'pool.md', 'stats.md', 'levels.md', 'bots.md', 'bot-kits.md', 'callouts.md', 'vite.config.ts', 'tsconfig.json', 'package.json', 'package-lock.json']);
-const isInput = (f) => ROOT_FILES.has(f) || f.startsWith('public/') || (f.startsWith('src/') && !f.endsWith('.test.ts'));
+const ROOT_FILES = new Set(['index.html', 'vite.config.ts', 'tsconfig.json', 'package.json', 'package-lock.json']);
+/** The folders whose every file goes into the bundle: the hand-edited tables (data/, DX7) and the static files. */
+const INPUT_DIRS = ['data/', 'public/'];
+const isInput = (f) => ROOT_FILES.has(f) || INPUT_DIRS.some((d) => f.startsWith(d)) || (f.startsWith('src/') && !f.endsWith('.test.ts'));
 
 const git = (...a) => {
   try {

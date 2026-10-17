@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import botsText from '../../bots.md?raw';
+import botsText from '../../data/bots.md?raw';
 import { loadBotsFile, NAME_MAX_LENGTH, NEUTRAL_STYLE } from './botsFile';
 
 /**

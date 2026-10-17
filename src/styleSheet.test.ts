@@ -484,10 +484,26 @@ describe('layout polish before the screenshots (G4, M100)', () => {
     expect(blockOf('.option-line,\n.option-note')).not.toBeNull();
   });
 
-  it('lays the Match rules out in as many columns as fit, so the page holds in a 1080 px window', () => {
-    expect(declared('.match-grid', 'grid-template-columns')).toMatch(/^repeat\(auto-fit, minmax\(\d+px, 1fr\)\)$/);
+  it('lays the Match rules out in two columns while they fit, so the page holds in a 1080 px window', () => {
+    // Two columns each as wide as its rows (UI2), one column in a narrower window.
+    expect(declared('.match-grid', 'grid-template-columns')).toBe('repeat(2, auto)');
+    expect(sheet).toMatch(/@media \(max-width: \d+px\) \{\s*\.match-grid \{\s*grid-template-columns: minmax\(0, 1fr\);/);
     // One line a rule (MR1): the name in its column, the options beside it.
     expect(declared('.match-panel .menu-row', 'flex-wrap')).toBe('nowrap');
+  });
+
+  it('keeps the Match rules and the replica panel compact (UI2: Beta 1 playtest items 3, 11)', () => {
+    // Each option as wide as its word, never stretched across the column; the name column a set width.
+    expect(declared('.match-panel .picker-button', 'flex')).toBe('0 0 auto');
+    expect(declared('.match-panel .menu-row-name', 'flex')).toBe('0 0 var(--match-name-w)');
+    expect(declared('.match-panel .menu-range input', 'flex')).toBe('0 1 var(--match-slider-w)');
+    // 320 px with a picture and a name before UI2; letters for the fire modes and small boxes for the magazines now.
+    expect(Number(declared('.hud-replica', 'width')?.replace('px', ''))).toBeLessThanOrEqual(176);
+    expect(sheet).not.toMatch(/\.hud-replica-(pic|name|words)\b/);
+    // A three- to five-digit count is no wider than two digits at 40 px, so the fire-mode chips keep one line.
+    expect(declared(".hud-mag[data-digits='3']", 'font-size')).toBe('26px');
+    expect(declared(".hud-mag[data-digits='4']", 'font-size')).toBe('20px');
+    expect(declared(".hud-mag[data-digits='5']", 'font-size')).toBe('16px');
   });
 
   it('puts no backdrop blur on any of these', () => {

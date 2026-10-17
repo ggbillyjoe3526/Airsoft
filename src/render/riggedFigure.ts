@@ -664,9 +664,16 @@ export class RiggedFigure {
       // The whole model at the body's full detail, the small figure version beyond it, on the same give.
       const near = !h.far || mine || this.lod === 0;
       if (h.near) h.near.visible = near;
-      if (h.far) h.far.visible = !near;
-      if (h.near) h.near.castShadow = f.castShadow;
-      if (h.far) h.far.castShadow = f.castShadow;
+      // The shadow is the small version's whatever is drawn (PF4), as the body's twin is its coarsest level: the whole
+      // model's thousands of triangles make the same few texels in a shadow map. Up close it is seen by the shadow
+      // cameras only (FIGURE_RIG.shadowLayer).
+      if (h.far) {
+        h.far.visible = !near || f.castShadow;
+        h.far.castShadow = f.castShadow;
+        h.far.layers.set(near ? FIGURE_RIG.shadowLayer : 0);
+      }
+      if (h.near) h.near.castShadow = f.castShadow && !h.far;
+      if (h.magazine) h.magazine.castShadow = f.castShadow && !h.far;
       if (mine) {
         const times = h.magazines!.times;
         const u = pose.reloadAt;

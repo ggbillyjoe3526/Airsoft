@@ -136,7 +136,7 @@ export class CustomiseView {
     crumbs.append(el('span', '', `${GEAR_TEXT.breadcrumb} › ${this.asset.name} › `), el('b', '', LOADOUT_TEXT.customise));
     bar.append(back, crumbs);
 
-    const list = el('div', 'customise-parts');
+    const list = el('div', 'customise-parts menu-scroll');
     list.setAttribute('role', 'tablist');
     list.setAttribute('aria-label', GEAR_TEXT.parts);
     list.setAttribute('aria-orientation', 'vertical');
@@ -144,7 +144,7 @@ export class CustomiseView {
     this.makeParts();
     for (const p of this.parts) list.append(p.tab);
 
-    const centre = el('div', 'customise-centre');
+    const centre = el('div', 'customise-centre menu-scroll');
     const head = el('div', 'customise-head');
     const title = el('h2', 'customise-title');
     title.append(el('span', 'sr-only', `${LOADOUT_TEXT.customise}: `), this.asset.name);
@@ -163,7 +163,7 @@ export class CustomiseView {
     this.perf.root.classList.add('menu-card');
     side.append(this.perf.root, this.colourAside);
 
-    const layout = el('div', 'customise-layout');
+    const layout = el('div', 'customise-layout menu-scroll');
     layout.append(list, centre, side);
     // Esc goes back to the gear (the Loadout handles it; the Back button does it for the mouse); ↑ ↓ move between parts.
     this.hints = [];

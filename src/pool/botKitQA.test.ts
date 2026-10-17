@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import kitsText from '../../bot-kits.md?raw';
+import kitsText from '../../data/bot-kits.md?raw';
 import { DIFFICULTIES } from '../config/bots';
 import { botsMayCarryDev } from '../newGamePicks';
 import { botKitSeed, kitAssets, kitsMayHoldDev, pickBotKit, readBotKits } from './botKit';
@@ -13,14 +13,14 @@ const HEADER = '| Kit | Primary | Primary parts | Secondary | Secondary parts | 
 
 describe('the console warning when bot-kits.md has a bad row (BG1 criterion 1)', () => {
   afterEach(() => {
-    vi.doUnmock('../../bot-kits.md?raw');
+    vi.doUnmock('../../data/bot-kits.md?raw');
     vi.resetModules();
     vi.restoreAllMocks();
   });
 
   async function loadWith(text: string) {
     vi.resetModules();
-    vi.doMock('../../bot-kits.md?raw', () => ({ default: text }));
+    vi.doMock('../../data/bot-kits.md?raw', () => ({ default: text }));
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const mod = await import('./gameBotKits');
     return { table: mod.GAME_BOT_KITS, warn };

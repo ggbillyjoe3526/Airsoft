@@ -17,10 +17,11 @@ default, and only results, blockers and decisions.
    the game (`node pipeline/content-check.mjs all --levels spec --no-pictures`), what it is good and bad at, its look
    and sound. Attach it and wait for the owner's OK: the spec is his decision.
 4. **Task.** The build is a pipeline task (`.claude/skills/pipeline/SKILL.md`) with a block in `docs/TASKS.md`.
-5. **Build as `dev`:** the `pool.md` row with the next free pool ID (000021 stays free; add the ID to `pool.test.ts`'s
-   pinned IDs), the `stats.md` row, its Name in one level's Unlocks in `levels.md`, the code key and config, the model
-   (every part that fits, at Low and High) and the sounds. A number outside its range, a part that fits by ID or one
-   better at everything goes to the owner; only with his OK into its register in `src/config/contentRules.ts`.
+5. **Build as `dev`** (the tables are in `data/`): the `pool.md` row with the next free pool ID (000021 stays free; add
+   the ID to `pool.test.ts`'s pinned IDs), the `stats.md` row, its Name in one level's Unlocks in `levels.md`, the code
+   key and config, the model (every part that fits, at Low and High) and the sounds. A number outside its range, a part
+   that fits by ID or one better at everything goes to the owner; only with his OK into its register in
+   `src/config/contentRules.ts`.
 6. **Check:** `PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium node pipeline/content-check.mjs <id> --balance` (`map:<id>`,
    `mode:<id>`, `skin:<id>`; a map's perf runs add about ten minutes). Fix every fail; re-run a figure outside within
    noise on more seeds (`--seeds 16 --maps <map>`) before acting on it.
