@@ -26,10 +26,12 @@ const SECONDS = { Woodland: 120, 'Neon Heights': 60 } as const;
 /** Neon Heights plays 4v4; Woodland is checked at its largest, 6v6 (M88), where the most bots search at once. */
 const TEAM_SIZE = { Woodland: 6, 'Neon Heights': 4 } as const;
 /**
- * The match's seed. Woodland's is 4 since MS1 (smaller bushes, the cabin's roof and walls): seed 1's longest search fell
- * to 7,877 nodes, under the budget, and seeds 2 and 3 ran none longer either; seed 4's runs to 9,888.
+ * The match's seed. Woodland's is 6 since MV1 (the holstered run and the steadier walk): MS1 had moved it to 4 (seed 1's
+ * longest search fell to 7,877 nodes, under the budget, and seeds 2 and 3 ran none longer either), and after MV1 seed
+ * 4's longest is 6,442; seeds 5, 6 and 7 run to 15,046, 11,575 and 9,704, and 6 spends a tick's whole budget most often
+ * (5 ticks).
  */
-const SEED = { Woodland: 4, 'Neon Heights': 1 } as const;
+const SEED = { Woodland: 6, 'Neon Heights': 1 } as const;
 
 const proto = BotController.prototype as unknown as { planRoutes(): void };
 const realPlanRoutes = proto.planRoutes;
