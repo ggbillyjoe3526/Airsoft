@@ -63,7 +63,7 @@ const press = ([started, practice, loaded, matchOver, setupChanged, loadoutChang
 });
 
 /**
- * The combinations Game can reach (game.ts): play has begun only in something loaded; on the range `practice` stays
+ * The combinations Game can reach (playFlow.ts): play has begun only in something loaded; on the range `practice` stays
  * set and in a match it is cleared (New game's Play clears it); only a match that has been played can be decided.
  */
 function reachable(): PlayPress[] {

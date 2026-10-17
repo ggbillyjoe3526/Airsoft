@@ -108,6 +108,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **DX7** · Developer-only: bot code and settings split by concern; six data tables move to a data folder, and bad rows show in Settings › Dev
 - **DX5** · Developer-only: one object holds all HUD and accessibility settings; match and range share one session; settings helpers move; game file trimmed
 - **DX6** · Developer-only: render code grouped into folders; vault prompt reads the simulation's answer, no HUD rays; HUD markers share one step
+- **DX8** · Developer-only: play flow, match and range setup, Dev settings and results split out of the game file; players see no change
 
 ## 0.1 Dev 6 · 2026-10-16
 

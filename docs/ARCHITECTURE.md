@@ -34,7 +34,7 @@ A task that adds, renames or moves a file keeps its folder's `README.md` current
 
 | Folder | What it owns | Key files |
 |---|---|---|
-| `src/` (root) | The app that outlives matches; one match or range session at a time | `main.ts`, `game.ts`, `session.ts`, `matchSession.ts`, `rangeSession.ts`, `matchFlow.ts`, `newGamePicks.ts` |
+| `src/` (root) | The app that outlives matches; one match or range session at a time | `main.ts`, `game.ts`, `playFlow.ts`, `session.ts`, `matchSession.ts`, `rangeSession.ts`, `matchFlow.ts`, `newGamePicks.ts` |
 | `src/sim/` | Gameplay rules, pure, fixed 60 Hz | `simulation.ts`, `state.ts`, `commands.ts`, `armament.ts`, `ballistics.ts`, `round.ts` |
 | `src/ai/` | Bots: senses, hearing, round plans, decisions, cover, squad orders, Extraction roles | `botController.ts`, `hearing.ts`, `roundPlanner.ts`, `botBrain.ts`, `bot.ts`, `perception.ts`, `cover.ts`, `squadOrders.ts` |
 | `src/nav/` | The layered walkability grid, A* routes, walk-off fields, vault links | `navGrid.ts`, `vaultLinks.ts` |
@@ -68,10 +68,22 @@ The root files in more detail:
   loading bar, reads the URL flags, probes the GPU and builds `Game`. An error before the game runs shows the crash
   pane.
 - **`Game`** (`game.ts`) is the composition root and main loop: the app that outlives matches (renderer, input, menus,
-  debug overlay, audio engine) and New game's picks. No map is loaded on the title and New game screens.
+  debug overlay, audio engine), its lifecycle (start, dispose, the crash pane) and the wiring of the parts below. No map
+  is loaded on the title and New game screens. Split out of it (DX8, audit A1):
+  - **`PlayFlow`** (`playFlow.ts`): play, enter, resume, pause, stop and leave. Play asks for the mouse lock, then builds
+    or reuses a session (`core/sessionPlan.ts`); the lock taken resumes, dropped it pauses, or skips the round once you
+    are out (`core/escSkip.ts`), or holds while the Fullscreen key's change takes it again (`ui/fullscreenPlay.ts`, IN1);
+    also the range's pause-menu buttons and the graphics context's loss. It holds the
+    session loaded (`Game.session` reads it for the console and the browser tests).
+  - **`PlaySetup`** (`playSetup.ts`): what the next Play builds from: New game's picks as they play, Practice's place,
+    each map's Day or Night, the Look settings, the Loadout and the level progress, and the flags saying they changed
+    since the session was built.
+  - **`PlayResults`** (`playResults.ts`): a decided match's records, XP and adaptive line, settled the frame it is decided
+    and shown on its result screen, and the range's timed challenge best.
+  - **`GameDev`** (`gameDev.ts`): the Dev settings in force, the Retro look and Settings › Dev's buttons.
 - **`MatchSession`** (`matchSession.ts`) is one match on one map: the field's meshes and lighting, physics, nav, the
-  simulation, the bots, and the combat and match presentation. `Game` builds it on Play and disposes it when the player
-  leaves; Play Again builds a new one with its own seed (`matchFlow.ts` `matchSeed`). What Play does is the pure
+  simulation, the bots, and the combat and match presentation. The play flow builds it on Play and disposes it when the
+  player leaves; Play Again builds a new one with its own seed (`matchFlow.ts` `matchSeed`). What Play does is the pure
   `core/sessionPlan.ts`. A decided match is recorded and its XP given once, the frame it is decided
   (`stats/settleMatch.ts`). Skip to next round (M83) runs the same per-tick body as watched play flat out over a few
   frames, showing only the round's end and the next start (`matchFlow.ts` `skipOffer`, `skipTickCap`; `config/sim.ts`
@@ -80,8 +92,8 @@ The root files in more detail:
   Its `MatchSetup` carries New game's Match rules (`config/matchRules.ts`), a bot difficulty per team and the Rules
   picker's ruleset (`RULESETS`, laid over the match panel's picks by `playedPicks` in `newGamePicks.ts`). With the Dev
   tab's Adaptive difficulty on (AD1) it also carries the other team's starting rating (`adaptivePicks.ts`): the session
-  drifts it a little after each round (`ai/adaptiveRun.ts`), and `Game` saves the next match's when the match is
-  decided.
+  drifts it a little after each round (`ai/adaptiveRun.ts`), and the results (`playResults.ts`) save the next match's
+  when the match is decided.
 - **`RangeSession`** (`rangeSession.ts`) is Practice: the player alone, no bots and no rounds, on `map/range.ts` (with
   the tutorial) or on any map (M94), whose targets stand where the other team's bots would play
   (`map/practiceSpots.ts`, kinds by `map/practiceLayout.ts`). Changing the loadout from its pause menu, or from the
@@ -90,8 +102,8 @@ The root files in more detail:
   settings, the result's timing, dispose); `kind` (`'match'` or `'range'`) tells them apart where only one has the
   answer. Both read the HUD and accessibility preferences (`settings/hudPrefs.ts` `HudPrefs`) by reference and show a
   change as play runs again (their `syncPrefs`, on `setPlaying(true)` and each frame drawn), so `Game` forwards none.
-- **`gameReport.ts`** (DX5) is the debug overlay's lines and the crash and diagnostics reports' fields, read off the
-  game through `GameReadout` (`Game.readout`) only when asked.
+- **`gameReport.ts`** (DX5) is the debug overlay's lines and the crash and diagnostics reports (`diagnosticsText`, DX8),
+  read off the game through `GameReadout` (`Game.readout`) only when asked.
 
 ## Map data
 
@@ -390,8 +402,8 @@ request. Each entry says where the contract lives, what it holds today and what 
     bot-kits.md the difficulty weights may bring (`kitsMayHoldDev`).
   - The dev maps' data is a chunk of its own (`map/devMaps.ts`), fetched by `loadDevMaps` once Dev content is on (at
     start when it was left on). `MapEntry` carries no data; `mapData(id)` reads what is loaded (the default map's for
-    a dev map not loaded yet). Dev content applies only once the dev maps are in (`Game.devInForce`), so a dev map is
-    never listed or played without its data.
+    a dev map not loaded yet). Dev content applies only once the dev maps are in (`gameDev.ts` `devInForce`), so a dev
+    map is never listed or played without its data.
   - The unit tests register every map before each file (`src/testSetup.ts`).
 
   Pinned by `config/content.test.ts`, `pool/contentPool.test.ts`, `map/maps.test.ts`.
