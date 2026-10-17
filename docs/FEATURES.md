@@ -96,8 +96,6 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Extraction on Woodland (15 min against 4 to 7, the locker in the cabin or the fort, home team keeps 30 m from the
   insertion at the start) and Neon Heights (10 min against 3 to 6, the locker on Level 2, exits on the street) (M48,
   M72)
-- Extraction supply events: a Supply weekend every Friday to Sunday (+25 % FC, +50 % parts) and dated events from
-  pool.md (Halloween night run 2026), by the device's clock; the Play screen says which is on under Extraction (M49)
 - 3v3 by default with a round clock; first to 5 rounds wins; a whistle starts each round (Phase 1)
 - Teams: Alpha (blue) and Beta (orange); Your team on the Match screen picks your side, and an Extraction run is always Alpha (M98)
 - Custom matches: rounds to win, round time, 1v1 to 3v3 (to 5v5 on maps with room, M33d), friendly fire, ricochets; only
