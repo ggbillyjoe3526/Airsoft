@@ -25,14 +25,48 @@ concurrency:
 permissions:
   contents: read
 
-# Three kinds of job run side by side (audit CORE-04, IM6): `check` (the build, the fast unit tests, scope and
-# changelog), `browser` (the smoke test in shares) and `slow` (the headless bot-match guards in shares). In one job the
-# smoke test alone took about 1,290 s by RM8 (2026-10-12, main 19d3858), so every check took about 25 minutes while the
-# other jobs sat idle after 2 to 4; split, the longest job is a few minutes.
+# Four kinds of job (audit CORE-04, IM6, DX4): `bundles` builds the production and e2e bundles once, then `check` (the
+# build gate, the fast unit tests, scope and changelog) and `browser` (the smoke test in shares) start from them, while
+# `slow` (the headless bot-match guards in shares) runs beside them from the start. In one job the smoke test alone took
+# about 1,290 s by RM8 (2026-10-12, main 19d3858), so every check took about 25 minutes; split, the longest job is a
+# few minutes. Before DX4 each browser share built both bundles itself, eight builds a run.
 jobs:
+  # Both bundles, built once per run from this commit and handed on as one tar in a cache entry keyed by the run, so
+  # `check` and every `browser` share reuse them (pipeline/build-cached.mjs finds its stamp matches the source and skips
+  # the build). The tar keeps each file's time to the nanosecond, which the stamp checks. Same full checkout as
+  # `check`, so `git describe`, part of the source hash, is the same in every job.
+  bundles:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # The production build is the type check and the chunk budgets too (npm run build), with the .br/.gz copies the
+      # release smoke test serves.
+      - name: Build the production and e2e bundles
+        env:
+          AIRSOFT_PRECOMPRESS: '1'
+        run: |
+          node pipeline/build-cached.mjs --mode production --force
+          node pipeline/build-cached.mjs --mode e2e --force
+          tar --format=posix -cf bundles.tar dist dist-e2e pipeline/out/build-production.json pipeline/out/build-e2e.json
+      - name: Hand the bundles on
+        uses: actions/cache@v6
+        with:
+          path: bundles.tar
+          key: bundles-${{ github.run_id }}-${{ github.run_attempt }}
+
   # The build with its type check and chunk budgets, the fast unit tests (177 s on main 19d3858), and on a pull request
   # the scope and changelog gates. No browser: the smoke test runs in the `browser` jobs.
   check:
+    needs: bundles
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -49,7 +83,14 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      # The pipeline's gate script (pipeline/README.md): the production build, the unit tests, and on a pull request
+      - name: The bundles job's build
+        uses: actions/cache@v6
+        with:
+          path: bundles.tar
+          key: bundles-${{ github.run_id }}-${{ github.run_attempt }}
+      - run: if [ -f bundles.tar ]; then tar -xf bundles.tar; else echo "No bundles from this run; the build steps make their own"; fi
+      # The pipeline's gate script (pipeline/README.md): the production build (on CI the bundles job's, reused),
+      # the unit tests, and on a pull request
       # the scope and changelog gates for the task ids its title starts with and the review gate (pipeline/review.mjs). Writes pipeline/out/gate-report.json with
       # pass / fail per gate. A pull request is checked out as its merge commit, whose first parent is the base it would
       # merge into.
@@ -69,9 +110,10 @@ jobs:
           retention-days: 7
 
   # The browser smoke test (e2e/, Playwright in software rendering) in four shares of its files (playwright --shard,
-  # which splits by test count and keeps a file's tests together). Each share's two servers build the e2e bundle and the
-  # production one themselves (pipeline/build-cached.mjs, about a minute), so each starts without waiting for `check`.
+  # which splits by test count and keeps a file's tests together). Each share's two servers serve the bundles job's
+  # builds: pipeline/build-cached.mjs sees they are this source's and builds nothing.
   browser:
+    needs: bundles
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -79,13 +121,22 @@ jobs:
       matrix:
         shard: [1, 2, 3, 4]
     steps:
-      # No smoke test reads the version label, so the default shallow checkout (no tags) is enough.
+      # The full checkout the bundles job had, so the source hash (which includes `git describe`) matches its stamps.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
       - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: The bundles job's builds
+        uses: actions/cache@v6
+        with:
+          path: bundles.tar
+          key: bundles-${{ github.run_id }}-${{ github.run_attempt }}
+      - run: if [ -f bundles.tar ]; then tar -xf bundles.tar; else echo "No bundles from this run; the build steps make their own"; fi
       # Playwright's Chromium is cached per lockfile (the Playwright version pins the browser build).
       - name: Cache the Playwright browser
         id: playwright-cache
@@ -119,10 +170,10 @@ jobs:
           retention-days: 7
 
   # The headless bot-match guards (src/ai/depotMatch*.test.ts, the Pro, levels and Extraction balance guards), in three
-  # shares of their files (vitest --shard): no build or browser, so each starts on its tests at once. Nothing here is
-  # built, so the default shallow checkout (no tags) is enough: the version label only matters in `check`'s build.
-  # Measured 2026-10-05 in a 4-core container they are about 1,420 s of work (the longest file, Woodland's Extraction
-  # balance, 213 s); on main 19d3858 the three shares took 84 s, 88 s and 239 s.
+  # shares of their files: no build or browser, so each starts on its tests at once. Nothing here is built, so the
+  # default shallow checkout (no tags) is enough. vitest's own --shard split them by a hash of their paths, so on main
+  # f42ecc0 one share drew 290 s and another 69 s; the gate now deals them by their measured seconds
+  # (pipeline/slow-times.json, pipeline/shards.mjs), about 450 s of a 4-core container's work each (DX4).
   slow:
     runs-on: ubuntu-latest
     timeout-minutes: 20

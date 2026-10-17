@@ -15,7 +15,7 @@ import { WEBGL_REFERENCE as WEBGL } from './webglReference';
  * W6a deleted them (webglReference.ts).
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any -- the passes' fields are private; the tests read them. */
+/* `any` in this file: the passes' fields are private; the tests read them. */
 
 interface Quiet {
   gl: any;

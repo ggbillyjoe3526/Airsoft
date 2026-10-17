@@ -157,26 +157,29 @@ it is required; set `PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium` there. The r
 
 **Builds.** `build-cached.mjs` builds the production bundle (`dist/`) or the e2e bundle (`dist-e2e/`, `--mode e2e`) and
 skips the build when the output is already that of the same source (a hash of `src/` without tests, `public/`,
-`index.html`, `pool.md`, `stats.md`, the Vite, TypeScript and npm files, `git describe` and, for `dist/`, whether it
-has the `.br`/`.gz` copies: a `--quick` build is never reused where the release smoke test needs them). The gate's build step always
-builds; the smoke test's two servers and the perf harness then reuse what is there, so one gate run makes each bundle
-once. Two bundles stay necessary: the e2e one has the test hooks, the production one is what players get.
+`index.html`, `pool.md`, `stats.md`, the Vite, TypeScript and npm files, `git describe` and, for `dist/`, whether it has
+the `.br`/`.gz` copies: a `--quick` build is never reused where the release smoke test needs them). The gate's build
+step always builds off CI; the smoke test's two servers and the perf harness then reuse what is there, so one gate run
+makes each bundle once (on CI the reuse reaches across jobs, below). Two bundles stay necessary: the e2e one has the
+test hooks, the production one is what players get.
 
 **CI** (`.github/workflows/check.yml`) runs `--ci`: build, tests and smoke on every pull request and push to `main`,
 split across jobs since M50's audit (CORE-04): job `check` runs `--ci --tests fast --no-smoke` (the build, the fast
 project, scope and changelog), the four `browser` jobs `--ci --only smoke --shard k/4` (a quarter of the smoke test
-each, Playwright's own sharding by file; their servers build both bundles, IM6) and the three `slow` jobs `--ci --tests
-slow --shard k/3 --only tests` (a third of the headless bot-match guards each, vitest's own sharding by file).
-`--tests all|fast|slow`, `--shard k/n` and `--only tests|smoke` work locally too; locally without them the gate runs
-`--tests auto` (above).
-On a pull request whose title starts with its task id(s) (`FA12: …`, `FA5 + FA9: …`), `--ci` reads the ids from the
-title (`GATE_PR_TITLE`) and also runs `scope` and `changelog`, diffing the merge commit against its first parent (the
-base it merges into). A title without an id, and a push to `main`, skip those two. Every pull request out of draft
-also runs `review` (CI passes `GATE_PR_BODY` and `GATE_PR_DRAFT`; the workflow re-runs on `edited` and
-`ready_for_review`); a push to `main` skips it. **What runs only off CI:** the `perf` gate (a runner has no baseline
-and no GPU; the worker's full gate runs it in the container), the frame-time budget (below), and the three review
-agents themselves. Playwright's system libraries are installed on a runner only when the cached Chromium
-can't start without them.
+each, Playwright's own sharding by file, IM6) and the three `slow` jobs `--ci --tests slow --shard k/3 --only tests` (a
+third of the headless bot-match guards each by their measured seconds, so the three finish together:
+`pipeline/shards.mjs` deals the files longest first from `pipeline/slow-times.json`; refresh the table as its header
+says when the jobs drift a minute apart). Since DX4 a `bundles` job builds both bundles once and hands them to `check`
+and the `browser` jobs, whose builds then find the stamp matches and build nothing; on CI the gate's build step reuses a
+matching stamp instead of forcing a build. `--tests all|fast|slow`, `--shard k/n` and `--only tests|smoke` work locally
+too; locally without them the gate runs `--tests auto` (above). On a pull request whose title starts with its task id(s)
+(`FA12: …`, `FA5 + FA9: …`), `--ci` reads the ids from the title (`GATE_PR_TITLE`) and also runs `scope` and
+`changelog`, diffing the merge commit against its first parent (the base it merges into). A title without an id, and a
+push to `main`, skip those two. Every pull request out of draft also runs `review` (CI passes `GATE_PR_BODY` and
+`GATE_PR_DRAFT`; the workflow re-runs on `edited` and `ready_for_review`); a push to `main` skips it. **What runs only
+off CI:** the `perf` gate (a runner has no baseline and no GPU; the worker's full gate runs it in the container), the
+frame-time budget (below), and the three review agents themselves. Playwright's system libraries are installed on a
+runner only when the cached Chromium can't start without them.
 
 Perf environments: `container` (SwiftShader, no GPU; frame times are noise, counts and memory are real), `laptop`
 (the owner's low-spec laptop with CPU throttled 4×; the only environment whose frame times are judged), `ci` (no
