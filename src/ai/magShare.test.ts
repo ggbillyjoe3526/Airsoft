@@ -238,17 +238,27 @@ describe('MG1: a bot teammate asks', () => {
   it('lets an ask you never answer lapse after askTime, and asks again no sooner than botAskGap', () => {
     const f = field([vec3(-30, 0, 20), vec3(-27, 0, 20), vec3(10, 0, 45), vec3(40, 0, -40)]);
     const asker = f.bot(1);
+    // Orange is held at its corner throughout: left to advance, it meets Blue 2 and a hit ends the round (and so the ask)
+    // before the ask can lapse, on some seeds' timing.
+    const orange = f.state.characters[3]!;
+    const hold = (seconds: number) => {
+      for (let t = 0; t < seconds - 1e-9; t += 0.5) {
+        f.run(Math.min(0.5, seconds - t));
+        Object.assign(orange.position, { x: 40, z: -40 });
+        orange.velocity.x = orange.velocity.z = 0;
+      }
+    };
     empty(asker.character);
-    f.run(0.1);
+    hold(0.1);
     const first = asker.magAskAt;
     expect(first).toBeGreaterThan(Number.NEGATIVE_INFINITY);
-    f.run(MAG_SHARE.askTime + 0.2);
+    hold(MAG_SHARE.askTime + 0.2);
     expect(asking(asker)).toBe(false);
     expect(kinds(f.events)).toEqual([]);
     // Lapsed at first + askTime: no new ask for botAskGap, wherever it goes meanwhile.
     expect(asker.magAskGap).toBeCloseTo(first + MAG_SHARE.askTime + MAG_SHARE.botAskGap, 1);
     for (let t = 0; t < MAG_SHARE.botAskGap - 1; t += 0.5) {
-      f.run(0.5);
+      hold(0.5);
       expect(asking(asker)).toBe(false);
     }
     f.physics.dispose();

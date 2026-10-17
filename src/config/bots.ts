@@ -316,7 +316,7 @@ export const BOT_BEHAVIOUR = {
   sprintWhenCalmFor: 3,
   sprintForward: 0.9,
   /**
-   * The holster (M92, ai/botHolster.ts): a bot puts its replica away for the faster sprint once it has sprinted
+   * The holster (M92, ai/botHolster.ts): a bot puts its replica away (slung for the run) once it has sprinted
    * `holsterAfter` seconds without a break in its own half, nobody seen or heard for `holsterCalmFor` seconds, and draws
    * it again (the slower draw) at once on a threat or in the enemy's half, or `holsterDrawAfter` seconds after the sprint
    * ends (a turn on the route doesn't draw it). Every level plays it the same way.

@@ -100,6 +100,93 @@ export const AEG_SIGHT = { line: 0.088, rearBase: 0.074, frontBase: AEG_HANDGUAR
 /** Support-hand fingers wrapped over the shooting hand. */
 const SUPPORT: FingerCurl = [1.0, 1.05, 0.6];
 
+/** A replica's hand poses: the right hand on its grip, the left's support hold, and (the rifle) the left on a fitted vertical grip. */
+export interface ReplicaHandPoses {
+  grip: HandPose;
+  support: HandPose;
+  verticalGrip?: HandPose;
+}
+
+/** The built-in rifle's right hand on its pistol grip: back of the hand to the right, the thumb across the left of the receiver. */
+const AEG_GRIP_POSE: HandPose = { side: 'right', palm: [0.034, -0.092, -0.074], across: GRIP_DOWN, back: [1, 0, 0], fingers: [STRAIGHT_INDEX, WRAP, WRAP, WRAP], thumb: { swing: 0.9, curl: [0.3, 0.3] } };
+/** The built-in rifle's hands. */
+const AEG_HANDS: ReplicaHandPoses = { grip: AEG_GRIP_POSE, support: AEG_SUPPORT_POSE, verticalGrip: AEG_VERTICAL_GRIP_POSE };
+/** The built-in pistols' hands: the right round the grip, the left pressed against it, its fingers over the right hand's. */
+const PISTOL_HANDS: ReplicaHandPoses = {
+  grip: { side: 'right', palm: [0.03, -0.068, -0.078], across: GRIP_DOWN, back: [1, 0, 0], fingers: [STRAIGHT_INDEX, WRAP, WRAP, WRAP], thumb: { swing: 0.6, curl: [0.2, 0.2] } },
+  support: { side: 'left', palm: [-0.034, -0.072, -0.066], across: GRIP_DOWN, back: [-1, 0, 0], fingers: [SUPPORT, SUPPORT, SUPPORT, SUPPORT], thumb: { swing: 0.3, curl: [0.1, 0.1] } },
+};
+
+/*
+ * The hands on the replicas drawn from their model files (RM1). The built-in poses were fitted to the built-in boxes; on
+ * the files' rounder, wider grips they put the thumbs 5 to 15 mm inside the replica, crossing the frame under the slide
+ * or the receiver, with the pinky and the thenar pad in the grip (playtest Dev 6, note 28). Each file has its own fit
+ * instead: the firing hand's thumb springs from the web behind the backstrap (`root`) and wraps round to lie forward
+ * along the grip's far side; a pistol's support thumb lies forward along the frame under the slide (thumbs forward).
+ * Every finger is bent the closest it wraps the file's grip without going in (`fileHandPoses.test.ts` measures them
+ * against the file's triangles: nothing more than 2 mm in, a robot's plates 3 mm).
+ */
+/** No swing or bend: a thumb set by `aim` and `tipAim` alone. */
+const THUMB_SET = { swing: 0, curl: [0, 0] } as const;
+/** The index finger dead straight along the AEG file's trigger guard: the slight bend of STRAIGHT_INDEX takes its tip into the magazine. */
+const FILE_AEG_INDEX: FingerCurl = [0.06, 0.04, 0.02];
+/** The AEG file's right hand: under the deep trigger guard, its thumb round the grip's top to under the receiver's left edge. */
+const FILE_AEG_GRIP_POSE: HandPose = {
+  side: 'right',
+  palm: [0.035, -0.084, -0.076],
+  across: GRIP_DOWN,
+  back: [1, 0, 0],
+  fingers: [FILE_AEG_INDEX, [1.1, 1.2, 0.4], [1.1, 1.1, 0.3], [0.9, 0.7, 0.2]],
+  thumb: { ...THUMB_SET, root: [-0.0085, -0.0192, -0.035], aim: [-1, 0, 0.05], tipAim: [-0.1, 0.2, 1] },
+};
+/** The AEG file's support hand: the built-in one with its thumb a touch lower, off the handguard's bottom chamfer, and the middle fingertip off its rail. */
+const FILE_AEG_SUPPORT_POSE: HandPose = {
+  ...AEG_SUPPORT_POSE,
+  fingers: [AEG_SUPPORT_POSE.fingers[0], [1.1, 0.6, 0.4], AEG_SUPPORT_POSE.fingers[2], AEG_SUPPORT_POSE.fingers[3]],
+  thumb: { ...AEG_SUPPORT_POSE.thumb, aim: [-0.03, 0.012, 0.008], tipAim: [0.04, 0.1, 1] },
+};
+/** The AEG file's support hand on its vertical grip: the built-in one with the index finger's tip off the file's grip. */
+const FILE_AEG_VERTICAL_GRIP_POSE: HandPose = {
+  ...AEG_VERTICAL_GRIP_POSE,
+  fingers: [[1.1, 0.9, 0.6], AEG_VERTICAL_GRIP_POSE.fingers[1], AEG_VERTICAL_GRIP_POSE.fingers[2], AEG_VERTICAL_GRIP_POSE.fingers[3]],
+};
+/** The GBB Pistol file's right hand: high on the grip, the index along the trigger guard, the thumb under the beavertail. */
+const FILE_PISTOL_GRIP_POSE: HandPose = {
+  side: 'right',
+  palm: [0.03, -0.056, -0.078],
+  across: GRIP_DOWN,
+  back: [1, 0, 0],
+  fingers: [STRAIGHT_INDEX, [1.2, 1.5, 0.4], [1.0, 1.4, 0.5], [0.6, 1.0, 0.6]],
+  thumb: { ...THUMB_SET, root: [0.0087, -0.0274, -0.03], aim: [-1, 0, -0.05], tipAim: [0.15, 0, 1] },
+};
+/** A pistol file's support thumb, laid forward along the frame under the slide. */
+const FILE_SUPPORT_THUMB = { ...THUMB_SET, aim: [-0.05, 0.02, 1], tipAim: [0, 0, 1] } as const;
+/** The GBB Pistol file's support hand: on the grip's left panel, fingers over the right hand's, thumb forward. */
+const FILE_PISTOL_SUPPORT_POSE: HandPose = {
+  side: 'left',
+  palm: [-0.0345, -0.072, -0.066],
+  across: GRIP_DOWN,
+  back: [-1, 0, 0],
+  fingers: [SUPPORT, SUPPORT, SUPPORT, [0.8, 0.85, 0.4]],
+  thumb: { ...FILE_SUPPORT_THUMB, root: [-0.034, 0.004, -0.009] },
+};
+/** The Cyber Pistol file's hands: the GBB's, a few millimetres out for its wider grip and frame. */
+const FILE_CYBER_GRIP_POSE: HandPose = {
+  ...FILE_PISTOL_GRIP_POSE,
+  palm: [0.031, -0.056, -0.078],
+  fingers: [STRAIGHT_INDEX, [1.3, 1.4, 0.5], [1.1, 1.4, 0.4], [0.8, 0.7, 0.4]],
+  thumb: { ...FILE_PISTOL_GRIP_POSE.thumb, root: [0.0104, -0.0235, -0.031] },
+};
+/** The Cyber Pistol file's support hand: the GBB's, its thumb out for the wider frame. */
+const FILE_CYBER_SUPPORT_POSE: HandPose = { ...FILE_PISTOL_SUPPORT_POSE, palm: [-0.032, -0.072, -0.066], thumb: { ...FILE_SUPPORT_THUMB, root: [-0.034, 0.004, -0.0035] } };
+
+/** The hands on the replicas drawn from their model files, by part table (above). */
+export const FILE_HANDS: Readonly<Record<FileTable, ReplicaHandPoses>> = {
+  aeg: { grip: FILE_AEG_GRIP_POSE, support: FILE_AEG_SUPPORT_POSE, verticalGrip: FILE_AEG_VERTICAL_GRIP_POSE },
+  pistol: { grip: FILE_PISTOL_GRIP_POSE, support: FILE_PISTOL_SUPPORT_POSE },
+  cyber: { grip: FILE_CYBER_GRIP_POSE, support: FILE_CYBER_SUPPORT_POSE },
+};
+
 
 /**
  * Whether a replica is built with the hands holding it (in first person) or on its own (a picture of it in the
@@ -203,22 +290,18 @@ const AEG_MAG_BASES = { lowCap: [0, 0.064, -0.002] } as const;
  * The rifle's hands (built-in and from its file, RM1): the right on the pistol grip in `b`, the left on the handguard in
  * `support` and, for a fitted vertical grip, on the grip in `supportOnGrip`.
  */
-function aegHands(b: ModelBuilder, support: ModelBuilder, supportOnGrip: ModelBuilder, detail: ReplicaDetail, arms: ArmBuilders): void {
+function aegHands(b: ModelBuilder, support: ModelBuilder, supportOnGrip: ModelBuilder, detail: ReplicaDetail, arms: ArmBuilders, poses: ReplicaHandPoses = AEG_HANDS): void {
   // Right hand on the pistol grip: back of the hand to the right, knuckle row running down the grip, three fingers
   // wrapped round its front, index finger straight along the frame (trigger discipline), thumb across the left of the
   // receiver.
-  const rightWrist = arms.hand(
-    b,
-    { side: 'right', palm: [0.034, -0.092, -0.074], across: GRIP_DOWN, back: [1, 0, 0], fingers: [STRAIGHT_INDEX, WRAP, WRAP, WRAP], thumb: { swing: 0.9, curl: [0.3, 0.3] } },
-    detail.hands,
-  );
+  const rightWrist = arms.hand(b, poses.grip, detail.hands);
   arms.forearm(b, rightWrist, [0.2, -0.3, -0.42], undefined, detail.hands);
   // Left hand cradling the handguard: palm underneath, index finger forward, fingers curling up the right side, thumb
   // up the left side. Its own part: on reloads it cups the magazine's base plate.
-  const leftWrist = arms.hand(support, AEG_SUPPORT_POSE, detail.hands);
+  const leftWrist = arms.hand(support, poses.support, detail.hands);
   arms.forearm(support, leftWrist, [-0.3, -0.28, 0.02], undefined, detail.hands);
   // With a vertical grip fitted, the left hand holds the grip instead (on reloads it takes the magazine by its side).
-  const gripWrist = arms.hand(supportOnGrip, AEG_VERTICAL_GRIP_POSE, detail.hands);
+  const gripWrist = arms.hand(supportOnGrip, poses.verticalGrip ?? AEG_VERTICAL_GRIP_POSE, detail.hands);
   arms.forearm(supportOnGrip, gripWrist, [-0.3, -0.3, 0.0], undefined, detail.hands);
 }
 
@@ -231,18 +314,10 @@ function aegHolds(support: ModelBuilder, supportOnGrip: ModelBuilder, arms: ArmB
 }
 
 /** The pistols' two-handed grip (the Gas and Cyber Pistols share the grip's line): the right hand round the grip, index finger along the frame; the left pressed against the grip, its fingers over the right hand's. */
-function pistolHands(b: ModelBuilder, support: ModelBuilder, detail: ReplicaDetail, arms: ArmBuilders): void {
-  const rightWrist = arms.hand(
-    b,
-    { side: 'right', palm: [0.03, -0.068, -0.078], across: GRIP_DOWN, back: [1, 0, 0], fingers: [STRAIGHT_INDEX, WRAP, WRAP, WRAP], thumb: { swing: 0.6, curl: [0.2, 0.2] } },
-    detail.hands,
-  );
+function pistolHands(b: ModelBuilder, support: ModelBuilder, detail: ReplicaDetail, arms: ArmBuilders, poses: ReplicaHandPoses = PISTOL_HANDS): void {
+  const rightWrist = arms.hand(b, poses.grip, detail.hands);
   arms.forearm(b, rightWrist, [0.1, -0.26, -0.3], undefined, detail.hands);
-  const leftWrist = arms.hand(
-    support,
-    { side: 'left', palm: [-0.034, -0.072, -0.066], across: GRIP_DOWN, back: [-1, 0, 0], fingers: [SUPPORT, SUPPORT, SUPPORT, SUPPORT], thumb: { swing: 0.3, curl: [0.1, 0.1] } },
-    detail.hands,
-  );
+  const leftWrist = arms.hand(support, poses.support, detail.hands);
   arms.forearm(support, leftWrist, [-0.16, -0.26, -0.28], undefined, detail.hands);
 }
 
@@ -469,8 +544,8 @@ function buildFromFile(file: ReplicaFile, table: FileTable): ReplicaBuild {
     const support = new ModelBuilder(detail);
     const supportOnGrip = new ModelBuilder(detail);
     if (arms) {
-      if (rifle) aegHands(b, support, supportOnGrip, detail, arms);
-      else pistolHands(b, support, detail, arms);
+      if (rifle) aegHands(b, support, supportOnGrip, detail, arms, FILE_HANDS[table]);
+      else pistolHands(b, support, detail, arms, FILE_HANDS[table]);
     }
     const group = b.build(m);
     const own = [...fb.build(m).children] as THREE.Mesh[];

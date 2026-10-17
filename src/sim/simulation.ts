@@ -12,7 +12,6 @@ import { createBBPool } from './ballistics';
 import { type BBTargets, stepBBs } from './bbs';
 import { rescueIfOutOfWorld } from './character';
 import { createCommand, type PlayerCommand } from './commands';
-import { stepCoverRest } from './coverRest';
 import { createEliminationContext, fillEliminatedCommand, isInPlay, isParked, planWalkOffRoutes, stepElimination } from './elimination';
 import type { ExtractionContext } from './extraction';
 import { stepFootsteps } from './footsteps';
@@ -129,9 +128,8 @@ export function createSimContext(services: SimServices): SimContext {
  * keep their view and stand still (gravity still applies); characters that have been hit follow the
  * hit-calling routine instead of their command; once out and standing in the dead zone they are only timed (isParked).
  * Order: move (a vault's start and its tick in place of the movement step; a run into a noisy prop sounds it, NP1; then
- * footsteps), lean, rest on cover and
- * settle the aim, then use replicas (BBs leave from the new eye position) and toss a magazine to a teammate (MG1), then
- * fly BBs (hitting walls or characters), then land the magazines in the air, then round flow.
+ * footsteps), lean and settle the aim, then use replicas (BBs leave from the new eye position) and toss a magazine to a
+ * teammate (MG1), then fly BBs (hitting walls or characters), then land the magazines in the air, then round flow.
  */
 export function stepSimulation(
   state: GameState,
@@ -188,7 +186,6 @@ export function stepSimulation(
     else {
       c.aiming = false;
       c.aimRaise = 0;
-      c.coverRest = 0;
     }
     c.using = inPlay && live && cmd.use;
     // A vault under way finishes even if its vaulter is hit meanwhile (nobody is left hanging over the obstacle).
@@ -201,8 +198,6 @@ export function stepSimulation(
     rescueIfOutOfWorld(c, ctx.killY);
     stepWalkCycle(c, ctx.hits); // the legs' swing, for their hit volumes and the drawn figure (M85)
     stepLean(c, cmd, ctx.body, ctx.hits, ctx.movement, ctx.query, dt);
-    // Resting on cover (M104) reads the stance this tick left; the spread reads the rest.
-    if (inPlay) stepCoverRest(c, ctx.body, ctx.movement.rest, ctx.movement.accuracy.stillBelow, ctx.query, dt);
     stepAccuracy(c, ctx.movement, dt);
     if (!inPlay) {
       stepElimination(c, ctx.hits, dt);
@@ -215,8 +210,8 @@ export function stepSimulation(
     m.yaw = c.yaw;
     m.pitch = c.pitch;
     m.spreadScale = c.spreadScale;
-    // Rested on cover the kick halves (M104); fired on the run it grows (the owner's 0.1 Dev 5 note 9), as the spread does.
-    m.kickScale = (1 + (ctx.movement.rest.kick - 1) * c.coverRest) * (c.sprinting ? ctx.movement.accuracy.sprintKick : 1);
+    // Fired on the run the kick grows (the owner's 0.1 Dev 5 note 9), as the spread does.
+    m.kickScale = c.sprinting ? ctx.movement.accuracy.sprintKick : 1;
     // No shot through a vault or the moment after it (M102); a click in that moment is kept until it ends.
     armCtx.fireHoldOff = c.vault.active ? 0 : c.fireLockout;
     stepArmament(c.id, c.armament, cmd, m, live && c.fireLockout <= 0, armCtx, dt);

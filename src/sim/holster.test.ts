@@ -249,13 +249,33 @@ describe('the draw from the holster (acceptance 2: it takes longer, with a draw 
   }
 });
 
-describe('sprinting holstered (acceptance 2: a little faster)', () => {
-  it('is faster than the ready sprint, but by under 15 %', () => {
-    expect(MOVEMENT.holsterSprintSpeed).toBeGreaterThan(MOVEMENT.sprintSpeed);
-    expect(MOVEMENT.holsterSprintSpeed / MOVEMENT.sprintSpeed).toBeLessThan(1.15);
+describe('moving holstered (Dev 6 note 27: faster than armed, never past the sprint)', () => {
+  it('the holstered run sits between the armed run and the sprint', () => {
+    expect(MOVEMENT.holsterRunSpeed).toBeGreaterThan(MOVEMENT.runSpeed);
+    expect(MOVEMENT.holsterRunSpeed).toBeLessThan(MOVEMENT.sprintSpeed);
   });
 
-  it('a character sprints at holsterSprintSpeed only while the replica is away', () => {
+  it('a character runs at holsterRunSpeed only while the replica is away, and back at runSpeed once drawn', () => {
+    const w = world();
+    w.run(60, (k) => (k.forward = 1));
+    expect(horizontal(w.c)).toBeCloseTo(MOVEMENT.runSpeed, 3);
+    w.tick((k) => {
+      k.forward = 1;
+      k.holster = true;
+    });
+    w.run(60, (k) => (k.forward = 1));
+    expect(w.c.sprinting).toBe(false);
+    expect(horizontal(w.c)).toBeCloseTo(MOVEMENT.holsterRunSpeed, 3);
+    w.tick((k) => {
+      k.forward = 1;
+      k.switchTo = RIFLE;
+    });
+    w.run(60, (k) => (k.forward = 1));
+    expect(w.a.holstered).toBe(false);
+    expect(horizontal(w.c)).toBeCloseTo(MOVEMENT.runSpeed, 3);
+  });
+
+  it('a holstered sprint is the same sprint: holstering never stacks on it', () => {
     const w = world();
     w.run(60, (k) => {
       k.forward = 1;
@@ -272,26 +292,23 @@ describe('sprinting holstered (acceptance 2: a little faster)', () => {
       k.forward = 1;
       k.sprint = true;
     });
-    expect(horizontal(w.c)).toBeCloseTo(MOVEMENT.holsterSprintSpeed, 3);
-    // Drawn again (a slot): back to the ready sprint's pace.
-    w.tick((k) => {
-      k.forward = 1;
-      k.sprint = true;
-      k.switchTo = RIFLE;
-    });
-    w.run(60, (k) => {
-      k.forward = 1;
-      k.sprint = true;
-    });
-    expect(w.a.holstered).toBe(false);
+    expect(w.a.holstered).toBe(true);
     expect(horizontal(w.c)).toBeCloseTo(MOVEMENT.sprintSpeed, 3);
   });
 
-  it('running and walking are not faster for being holstered', () => {
+  it('walking and crouching are not faster for being holstered', () => {
     const w = world();
     w.tick((k) => (k.holster = true));
-    w.run(60, (k) => (k.forward = 1));
-    expect(horizontal(w.c)).toBeCloseTo(MOVEMENT.runSpeed, 3);
+    w.run(60, (k) => {
+      k.forward = 1;
+      k.walk = true;
+    });
+    expect(horizontal(w.c)).toBeCloseTo(MOVEMENT.walkSpeed, 3);
+    w.run(60, (k) => {
+      k.forward = 1;
+      k.crouch = true;
+    });
+    expect(horizontal(w.c)).toBeCloseTo(MOVEMENT.crouchSpeed, 3);
   });
 });
 

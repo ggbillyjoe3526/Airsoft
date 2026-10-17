@@ -325,4 +325,22 @@ describe('keepApart: a bot sidestepping in a fight steps to the side the push po
     expect(c2.right).toBe(-1);
     expect(b.bot.moveDir.x).toBeGreaterThan(0);
   });
+
+  it('never walks a standing bot aside off a floor: it steps along the edge instead (MV1: a teammate beside it at an open edge pushed it over)', () => {
+    // At x = 0.6 the teammate on its left pushes it towards +X, where the ground ends within edgeLookahead: it steps
+    // along the edge (Z) instead. A wall would not turn it (the body slides along), so the nav's inset alone (x = 0.1)
+    // does not either.
+    const { w, bot, me } = world(EDGE, [mate(1, 0.2, 0)]);
+    me.position.x = 0.6;
+    expect(keepApart(bot, w, false, createCommand())).toBe(true);
+    expect(bot.moveDir.x).toBeCloseTo(0, 9);
+    expect(Math.abs(bot.moveDir.z)).toBeCloseTo(1, 9);
+    const inset = world(EDGE, [mate(1, -0.3, 0)]);
+    expect(keepApart(inset.bot, inset.w, false, createCommand())).toBe(true);
+    expect(inset.bot.moveDir.x).toBeGreaterThan(0.99);
+    // Pushed the other way, onto the ground, it walks straight aside.
+    const open = world(EDGE, [mate(1, 0.3, 0)]);
+    expect(keepApart(open.bot, open.w, false, createCommand())).toBe(true);
+    expect(open.bot.moveDir.x).toBeLessThan(-0.99);
+  });
 });

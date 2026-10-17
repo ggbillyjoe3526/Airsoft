@@ -188,23 +188,3 @@ describe('the HUD reload bar through a cancelled, chained, paused and calm reloa
     expect(log.filter((entry) => entry.startsWith('transform=')).length).toBeLessThanOrEqual(102);
   });
 });
-
-describe('the "Rested" tag under the sight (M104)', () => {
-  afterEach(() => vi.unstubAllGlobals());
-
-  it('shows while the replica rests on cover and goes when it comes off, touching the page only when that changes', () => {
-    vi.stubGlobal('document', { createElement: (tag: string) => new HudElement(tag) });
-    const parent = new HudElement('div');
-    const hud = new Hud(parent as unknown as HTMLElement, () => 'R', DEFAULT_CROSSHAIR);
-    const root = parent.children[0] as HudElement;
-    expect(root.innerHTML).toContain('<div class="hud-rest" aria-hidden="true">Rested</div>');
-    const toggle = vi.spyOn(root.classList, 'toggle');
-    expect(root.classList.contains('rested')).toBe(false);
-    hud.setRested(true);
-    hud.setRested(true);
-    expect(root.classList.contains('rested')).toBe(true);
-    hud.setRested(false);
-    expect(root.classList.contains('rested')).toBe(false);
-    expect(toggle).toHaveBeenCalledTimes(2);
-  });
-});

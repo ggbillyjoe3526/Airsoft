@@ -37,7 +37,7 @@ export const DEFAULT_BINDINGS = {
   loadout: ['KeyL'],
   slot1: ['Digit1'],
   slot2: ['Digit2'],
-  /** Puts the replica in hand away for the faster sprint (M92, the owner's note 3: 1 primary, 2 secondary, 3 holster). */
+  /** Puts the replica in hand away for a faster pace without sprinting (M92, the owner's note 3: 1 primary, 2 secondary, 3 holster). */
   holster: ['Digit3'],
   /**
    * Turn the hop-up of the replica in hand a notch down or up in play (Dev 6 playtest item 15): 4 and 5, the free keys
