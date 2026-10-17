@@ -144,7 +144,8 @@ describe('F5 level of detail', () => {
     const shows = (d: number): boolean[] => {
       settle(f, c, 1, { eyeZ: d });
       const meshes = meshChildren(holder(f, 'held:rifle')).concat(meshChildren(holder(f, 'held:pistol')));
-      return meshes.map((m) => m.visible);
+      // Drawn by the view: the small version stays on as the shadow's caster up close, on the shadow layer only (PF4).
+      return meshes.map((m) => m.visible && m.layers.isEnabled(0));
     };
     const nearOnes = meshChildren(holder(f, 'held:pistol'));
     expect(nearOnes.length).toBeGreaterThanOrEqual(2);
@@ -156,6 +157,31 @@ describe('F5 level of detail', () => {
     expect(near.some((v, i) => v && !far[i])).toBe(true);
     expect(far.some((v, i) => v && !near[i])).toBe(true);
     expect('fullReplica' in FIGURE_RIG).toBe(false);
+    f.dispose();
+  });
+
+  it('casts the held replica\'s shadow from the small version at every distance (PF4)', () => {
+    const [l1] = FIGURE_RIG.lod.high;
+    const { f, c } = at('human', 3);
+    const casters = (d: number): THREE.Mesh[] => {
+      settle(f, c, 1, { eyeZ: d });
+      return meshChildren(holder(f, 'held:rifle')).filter((m) => m.visible && m.castShadow);
+    };
+    const shadowOnly = new THREE.Layers();
+    shadowOnly.set(FIGURE_RIG.shadowLayer);
+    for (const d of [l1! - 1, l1! + FIGURE_RIG.lodGive * 2]) {
+      const cast = casters(d);
+      // One caster, the small version, whether the view draws it or the whole model.
+      expect(cast.length).toBe(1);
+      expect(cast[0]!.geometry.getAttribute('position').count).toBeLessThan(
+        Math.max(...meshChildren(holder(f, 'held:rifle')).map((m) => m.geometry.getAttribute('position').count)),
+      );
+      if (d < l1!) expect(cast[0]!.layers.mask).toBe(shadowOnly.mask);
+      else expect(cast[0]!.layers.isEnabled(0)).toBe(true);
+    }
+    // A fading figure casts none (shadow maps ignore opacity).
+    settle(f, c, 1, { eyeZ: l1! - 1, castShadow: false });
+    expect(meshChildren(holder(f, 'held:rifle')).filter((m) => m.visible && m.castShadow)).toEqual([]);
     f.dispose();
   });
 });
