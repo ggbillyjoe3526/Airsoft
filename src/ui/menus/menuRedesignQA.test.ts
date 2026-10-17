@@ -14,7 +14,7 @@ import { TopBar } from './chrome';
 import { EventNode, stubMenuPage } from './menuTestSupport';
 import { PauseScreen } from './pauseScreen';
 import { ResultScreen } from './resultScreen';
-import { loadMatchStarted, loadMode, loadTutorialDone } from './savedChoices';
+import { loadMatchStarted, loadMode, loadTutorialDone } from '../../settings/savedChoices';
 import { type PlayModel, type PlayView, SetupScreen } from './setupScreen';
 import { TitleScreen, tutorialOffered } from './titleScreen';
 

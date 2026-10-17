@@ -3,7 +3,7 @@ import type * as THREE from 'three';
 /**
  * The node patch a world material carries (WebGPU overhaul W6b): what it draws beyond Three's own node material of its
  * type, and the uniforms that drawing reads. It is set where the material is made: the map surfaces and what rides on
- * them (render/surfaceShader.ts: the set dressing's junk and puddles, the sky host), the night sky's stars, the
+ * them (render/light/surfaceShader.ts: the set dressing's junk and puddles, the sky host), the night sky's stars, the
  * fixtures' flames and embers, the smoke and steam, the torches' soft beam, the fireflies, the dust motes, the figures'
  * per-vertex finish and your sleeves' camo. The node renderer reads it as it builds the material's program and makes
  * the node material that draws it (render/webgpu/worldTwins.ts); the sized points draw as sprites
@@ -16,7 +16,7 @@ import type * as THREE from 'three';
  * program.
  */
 
-/** What a surface patch draws: the map surfaces' additions (render/surfaceShader.ts) and what rides on them. */
+/** What a surface patch draws: the map surfaces' additions (render/light/surfaceShader.ts) and what rides on them. */
 export interface SurfaceRecipe {
   /** World-space weathering (`wearGrime`, `wearRust`). */
   readonly wear: boolean;
@@ -35,8 +35,8 @@ export type PointKind = 'stars' | 'embers' | 'fireflies' | 'motes';
  * The patches that need no recipe: the sized points (above), the fires' flames and lantern panes (sway and flicker on
  * the fixtures' clock, `fxTime`), the smoke and steam puffs (each instance's `puffAlpha`), the torches' soft beam (M91:
  * fading where the cone is seen edge on and near the eyes), the detailed figure's
- * per-vertex roughness, metalness and camo (render/figureFinish.ts) and your sleeves' camo all over
- * (render/figureCamo.ts).
+ * per-vertex roughness, metalness and camo (render/figures/figureFinish.ts) and your sleeves' camo all over
+ * (render/figures/figureCamo.ts).
  */
 export type PlainPatchKind = PointKind | 'flames' | 'smoke' | 'torch-beam' | 'figure-finish' | 'sleeve-camo';
 

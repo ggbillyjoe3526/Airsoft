@@ -5,7 +5,7 @@ import { DEPOT } from '../map/depot';
 import { MemoryStorage } from '../pool/testStorage';
 import { SETTINGS_KEY } from '../settings/storage';
 import { attackersInRound, createRoundState, type RoundState } from '../sim/round';
-import { loadTeamPick } from './menus/savedChoices';
+import { loadTeamPick } from '../settings/savedChoices';
 import { pauseText, resultText } from './matchStopText';
 import { roundBanner } from './roundBanner';
 import { Scoreboard } from './scoreboard';

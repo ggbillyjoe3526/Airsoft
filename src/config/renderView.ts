@@ -162,7 +162,7 @@ export const VIEWMODEL = {
   kickLift: 0.012,
   /**
    * After a sprint the replica comes down out of the carry over `carryOutTime` seconds, square to the view (and ready
-   * to aim) once `carrySquareAt` of it is left (render/viewmodel.ts sprintCarry). Firing on the run (the owner's 0.1
+   * to aim) once `carrySquareAt` of it is left (render/replicas/viewmodel.ts sprintCarry). Firing on the run (the owner's 0.1
    * Dev 5 note 9) brings it up out of the carry in `sprintFireRaise` seconds, and it stays up `sprintFireHold` seconds
    * after the last shot before the carry takes it again.
    */
@@ -183,7 +183,7 @@ export const VIEWMODEL = {
   near: 0.01,
   far: 5,
   /**
-   * How far past a scope's rear glass, looking in, the disc that opens it to the world sits (m, render/eyepiece.ts):
+   * How far past a scope's rear glass, looking in, the disc that opens it to the world sits (m, render/replicas/eyepiece.ts):
    * behind the glass and before the dark core (0.5 mm or more past the glass on every scope).
    */
   eyepieceInset: 0.0002,
@@ -217,7 +217,7 @@ export const VIEWMODEL = {
     magSeated: 0.97,
   },
   /**
-   * The moving parts of a replica drawn from its model file (RM1, render/replicaRig.ts), posed from the file's
+   * The moving parts of a replica drawn from its model file (RM1, render/replicas/replicaRig.ts), posed from the file's
    * animations. Fire: the trigger (and a pistol's slide), from the start each shot, or back at `firePeak` (its share of
    * the clip, the trigger fully pulled, the slide fully back) for a shot while it is still moving, so full auto holds it
    * back. Selector: how far into its clip each fire mode sits (safe at 0), turned at the clip's own speed. SightsFold:
@@ -331,7 +331,7 @@ export function matchOverScreenDelay(): number {
  * they raise it, and a painted ring on the floor marking how close you must be to work the rope.
  */
 /**
- * Extraction's exits (M43, render/exitRenderer.ts): a ring painted on the floor, site cones round it and a sign on a
+ * Extraction's exits (M43, render/match/exitRenderer.ts): a ring painted on the floor, site cones round it and a sign on a
  * post, in the team colour set's exit colour while the exit is open (config/teams.ts ExitColours), grey while a late
  * exit is still shut. Closed exits aren't drawn.
  */

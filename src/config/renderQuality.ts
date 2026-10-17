@@ -58,7 +58,7 @@ export interface QualitySettings {
   textureSize: TextureSize;
   /** Anisotropic filtering on the surface textures: keeps the floor sharp at grazing angles (REN-13). */
   anisotropy: Anisotropy;
-  /** Dust motes drifting in the sunlight round you (render/dustMotes.ts); 0 draws none. */
+  /** Dust motes drifting in the sunlight round you (render/effects/dustMotes.ts); 0 draws none. */
   dustMotes: number;
   /** The held replica picks up soft reflections (an environment map), so its plastic has a moulded sheen. */
   replicaSheen: boolean;
@@ -86,7 +86,7 @@ export interface QualitySettings {
   // FA8 (visual overhaul: figures, replicas, attachments, hands and effects; audit section 5 rows 17-20, 23).
   /**
    * Players' detail (row 17): `high` models the head, goggles, gloves, kit and clothing folds, with glossy goggles, helmet
-   * shells and replicas from a per-vertex finish on the figure's one material (no extra draw call; render/figureFinish.ts).
+   * shells and replicas from a per-vertex finish on the figure's one material (no extra draw call; render/figures/figureFinish.ts).
    */
   figureDetail: DetailLevel;
   /**
@@ -115,13 +115,13 @@ export interface QualitySettings {
   torchShadows: boolean;
   // G6: materials and baked lighting.
   /**
-   * Baked bounce light (G6, render/bakedLight.ts) on a map that ships a bake (MapData.bakedLight): `pixel` reads the
+   * Baked bounce light (G6, render/light/bakedLight.ts) on a map that ships a bake (MapData.bakedLight): `pixel` reads the
    * probe grid on every surface pixel (one 3D texture read), `vertex` bakes it into the map's vertex colours when the
    * map is built (no per-pixel cost), `off` draws without it. Figures read it on the CPU either way.
    */
   bakedLight: BakedLightMode;
   /**
-   * Weathering (G6, render/surfaceShader.ts): dirt creeping up from the ground, patches, rain streaks and rust on
+   * Weathering (G6, render/light/surfaceShader.ts): dirt creeping up from the ground, patches, rain streaks and rust on
    * steel, worked out per pixel in world space, so it never repeats with the texture. A rebuild of the map's shaders.
    */
   weathering: boolean;
@@ -187,7 +187,7 @@ export const QUALITY_FIELDS = Object.keys(QUALITY.high) as readonly (keyof Quali
 
 /**
  * The settings in force for a choice: a preset's row, or (Custom) High's row overlaid with the saved custom fields.
- * The custom fields are trusted: the store's loader (ui/menus/savedChoices.ts loadCustomQuality) has checked them.
+ * The custom fields are trusted: the store's loader (settings/savedChoices.ts loadCustomQuality) has checked them.
  */
 export function resolveQuality(choice: QualityChoice, custom: Partial<QualitySettings>): QualitySettings {
   if (choice !== 'custom') return QUALITY[choice];

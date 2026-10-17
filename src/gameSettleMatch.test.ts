@@ -98,8 +98,8 @@ describe('where Game settles (KI1)', () => {
   it('every frame of a match, straight after the simulation advances, and again as the result screen opens', () => {
     const advance = source.indexOf('s.advance(dt * this.dev.gameSpeed)');
     expect(advance).toBeGreaterThan(0);
-    const after = source.slice(advance, source.indexOf('\n', source.indexOf('if (s instanceof MatchSession) this.settleMatch(s);', advance)));
-    expect(after).toContain('if (s instanceof MatchSession) this.settleMatch(s);');
+    const after = source.slice(advance, source.indexOf('\n', source.indexOf("if (s.kind === 'match') this.settleMatch(s);", advance)));
+    expect(after).toContain("if (s.kind === 'match') this.settleMatch(s);");
     // No more than a few lines on (the smoothing of the sim time between).
     expect(after.split('\n').length).toBeLessThan(5);
     const result = source.indexOf("screen === 'result'");

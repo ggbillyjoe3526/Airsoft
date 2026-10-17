@@ -48,7 +48,7 @@ export interface VaultConfig {
   /** A body held back this far from its path (by a wall it couldn't see) gives up the vault and falls where it is. */
   blockedAt: number;
   /**
-   * Presentation (render/cameraRig.ts): the view dips (`pitch`, down) and tips (`roll`) at the middle of a vault, eased
+   * Presentation (render/match/cameraRig.ts): the view dips (`pitch`, down) and tips (`roll`) at the middle of a vault, eased
    * in and out, so it reads as a hop over rather than a lift. Less with reduced motion.
    */
   camera: { pitch: number; roll: number };

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GRAPHICS_ROWS, graphicsKey, storedValue } from '../config/graphics';
 import { QUALITY, resolveQuality, type QualityChoice } from '../config/render';
-import { loadCustomQuality, loadFrameRateCap } from './menus/savedChoices';
+import { loadCustomQuality, loadFrameRateCap } from '../settings/savedChoices';
 import { MemoryStorage } from '../pool/testStorage';
 import { GraphicsSettings } from './graphicsSettings';
 import { fillRendererRow } from './rendererRow';

@@ -3,7 +3,8 @@ import { CALLOUT_CHOICES, DEFAULT_CALLOUTS } from '../config/callouts';
 import { DEFAULT_HIT_FEED_MODE, DEFAULT_WHAT_GOT_YOU_MODE } from '../config/matchInfo';
 import { MemoryStorage } from '../pool/testStorage';
 import { flushSettings, SETTINGS_KEY, SETTINGS_VERSION } from '../settings/storage';
-import { hudSettings, loadCallouts } from './hudSettings';
+import { hudSettings } from './hudSettings';
+import { loadCallouts } from '../settings/hudPrefs';
 import { Minimap } from './minimap';
 import { FakeElement, fakeDocument, findAll } from './testSupport';
 

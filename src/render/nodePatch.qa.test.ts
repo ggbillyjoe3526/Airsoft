@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { WEATHERING } from '../config/weathering';
 import { carryNodePatch, nodePatchOf, patchKey, patchUniforms, type NodePatch, type PlainPatchKind } from './nodePatch';
-import { hostSkyGuests } from './skyHost';
-import { patchSurfaceMaterial, type ProbeUniforms } from './surfaceShader';
+import { hostSkyGuests } from './dressing/skyHost';
+import { patchSurfaceMaterial, type ProbeUniforms } from './light/surfaceShader';
 
 // W6b QA: the node patch a world material carries (acceptance: every GLSL patch is a node patch; no GLSL for a scene material).
 
@@ -82,7 +82,7 @@ describe('carryNodePatch', () => {
   });
 });
 
-describe('the sky host (render/skyHost.ts hostSkyGuests)', () => {
+describe('the sky host (render/dressing/skyHost.ts hostSkyGuests)', () => {
   const ring = (material: THREE.MeshLambertMaterial) => new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), material);
 
   it('merges onto the surface patch the ring already carries: its recipe and uniforms stay, the sky host and plane are added', () => {

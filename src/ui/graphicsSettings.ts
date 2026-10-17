@@ -19,7 +19,7 @@ import {
 } from '../config/render';
 import { saveSetting } from '../settings/storage';
 import { el, menuRow, rangeControl } from './menus/menuParts';
-import { loadCustomQuality } from './menus/savedChoices';
+import { loadCustomQuality } from '../settings/savedChoices';
 import { OptionPicker } from './optionPicker';
 
 /** What the renderer really gives, for the rows a browser can't always honour (REN-21). */
@@ -164,7 +164,7 @@ export class GraphicsSettings {
     this.refreshNotes();
   }
 
-  /** Every Custom row's value, saved: the mix the Custom choice reads back (savedChoices.ts loadCustomQuality). */
+  /** Every Custom row's value, saved: the mix the Custom choice reads back (settings/savedChoices.ts loadCustomQuality). */
   private saveCustom(settings: QualitySettings): void {
     for (const row of GRAPHICS_ROWS) {
       const v = storedValue(row, settings[row.field]);

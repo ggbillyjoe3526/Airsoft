@@ -164,7 +164,7 @@ describe('the timed challenge (M93)', () => {
   });
 
   it('pop-ups lying when a run ends, or when it is turned off, lie on: never drawn falling again', () => {
-    // Drawn flat (render/rangeTargetsRenderer.ts figureTilt): its fall done, its rise not begun.
+    // Drawn flat (render/match/rangeTargetsRenderer.ts figureTilt): its fall done, its rise not begun.
     const flat = (t: RangeTarget) => t.downFor - t.down >= RANGE_VISUALS.fallTime && t.down >= RANGE.riseTime;
     const popups = (ts: RangeTarget[]) => ts.filter((t) => t.motion === 'popup');
     const { c, start, tick, run, targets, rng } = range();

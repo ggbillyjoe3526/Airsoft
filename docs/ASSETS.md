@@ -11,12 +11,12 @@ generated on a canvas at runtime.
 
 The art is procedural too (M14; DECISIONS 2026-10-04: the CC0 asset sites were unreachable from the build environment):
 
-- **Surface textures:** `src/render/proceduralTextures.ts`.
-- **Depot's prop detail:** `src/render/mapMeshes.ts`.
-- **The sky and trees:** `src/render/atmosphere.ts`.
-- **The figures:** `src/render/characterModels.ts`.
+- **Surface textures:** `src/render/field/proceduralTextures.ts`.
+- **Depot's prop detail:** `src/render/field/mapMeshes.ts`.
+- **The sky and trees:** `src/render/light/atmosphere.ts`.
+- **The figures:** `src/render/figures/characterModels.ts`.
 - **Replicas, hands, puffs and dust.**
-- **The replica's sheen:** lit by the game's own sky (`src/render/replicaSheen.ts`).
+- **The replica's sheen:** lit by the game's own sky (`src/render/replicas/replicaSheen.ts`).
 
 CC0 models and textures can replace parts of this later. Record each one here, one row per file, in the format below
 ([CC0_ASSETS.md](CC0_ASSETS.md) is the how-to). A player model goes in `src/assets/models/characters/figure.glb` (M25a),

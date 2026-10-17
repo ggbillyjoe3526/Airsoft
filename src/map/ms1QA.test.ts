@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { VAULT_WALL_HEIGHT } from "../config/vault";
 import { BODY } from "../config/movement";
-import { neonPlate } from "../render/neonDressing";
-import { resolveLighting } from "../render/lightingPreset";
+import { neonPlate } from "../render/dressing/neonDressing";
+import { resolveLighting } from "../render/light/lightingPreset";
 import { LIGHTING_PRESETS } from "../config/renderLighting";
 import type { MapBlock, NeonSign } from "./mapTypes";
 import { NEON_HEIGHTS } from "./neonHeights";
 import { WOODLAND, WOODLAND_LAYOUT } from "./woodland";
 
 /**
- * MS1 QA (acceptances 3 and 4): what src/render/skylineSeen.test.ts and the placement tests do not pin. The cabin's roof
+ * MS1 QA (acceptances 3 and 4): what src/render/dressing/skylineSeen.test.ts and the placement tests do not pin. The cabin's roof
  * closes the cabin; Woodland's bushes stay small and out of the way; Woodland's night is brighter than the preset;
  * no two Neon Heights signs overlap.
  */

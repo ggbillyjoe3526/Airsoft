@@ -15,7 +15,7 @@ export type LifeStatus = 'alive' | 'calling' | 'walkingOff' | 'leaving' | 'out';
 export interface Character {
   id: number;
   /**
-   * The rigged figure it is drawn as (HV1): 0 the human, 1 the robot (render/figureMix.ts robotFigures, set by the
+   * The rigged figure it is drawn as (HV1): 0 the human, 1 the robot (render/figures/figureMix.ts robotFigures, set by the
    * session). Its hit volume takes that figure's shape where the match carries them (HitConfig.figureBodies).
    */
   figure: number;

@@ -8,8 +8,8 @@ import { clamp01 } from '../core/math';
  * The rigged figures' legs in the simulation (IM8). The Blender figures walk, crouch and kneel on real legs that bend at
  * the knee, which the built-in hit volume's legs (straight, swinging on the walk cycle, squashed by a crouch) can't
  * follow. When a match draws them, its hit rules carry their leg clips as plain numbers (HitConfig.figureLegs, read
- * from the figure file by render/figureLegs.ts) and the legs' hit volumes sit on the drawn legs' joints instead: the
- * same clips blended by the same rules the figure plays them by (render/figurePose.ts uses legClipWeights too), at the
+ * from the figure file by render/figures/figureLegs.ts) and the legs' hit volumes sit on the drawn legs' joints instead: the
+ * same clips blended by the same rules the figure plays them by (render/figures/figurePose.ts uses legClipWeights too), at the
  * walk cycle, which then steps at the clips' own strides so the drawn feet don't slide.
  *
  * The figure eases between its clips (FIGURE_RIG.blend, about a tenth of a second); the hit volume takes the blend the
@@ -17,7 +17,7 @@ import { clamp01 } from '../core/math';
  * Vault clip where the legs have one (the figure redesign's, Dev 6); otherwise the jump, as the figure does.
  */
 
-/** The legs' clips, by slot: the first thirteen of the figure's (render/figurePose.ts POSE_CLIPS), in the same order. */
+/** The legs' clips, by slot: the first thirteen of the figure's (render/figures/figurePose.ts POSE_CLIPS), in the same order. */
 export const LEG_CLIPS = ['Idle', 'Walk_F', 'Run_F', 'Run_B', 'Run_L', 'Run_R', 'Sprint', 'CrouchIdle', 'CrouchWalk', 'Jump', 'HitCall', 'WalkOff', 'Vault'] as const;
 export type LegClip = (typeof LEG_CLIPS)[number];
 export const LEG_SLOT = Object.fromEntries(LEG_CLIPS.map((name, i) => [name, i])) as Readonly<Record<LegClip, number>>;

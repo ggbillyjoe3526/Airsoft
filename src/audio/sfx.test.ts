@@ -14,7 +14,7 @@ import { NEON_HEIGHTS } from '../map/neonHeights';
 import { lightingChoices, mapUnderLighting, playsAtNight } from '../map/lightingChoice';
 import { DEFAULT_MAP, type MapId, MAPS, mapData } from '../map/maps';
 import { RANGE_MAP } from '../map/range';
-import { resolveLighting } from '../render/lightingPreset';
+import { resolveLighting } from '../render/light/lightingPreset';
 import { terrainHeightAt } from '../map/terrain';
 import { WOODLAND } from '../map/woodland';
 import { FIRE_SOUND } from '../config/audio';

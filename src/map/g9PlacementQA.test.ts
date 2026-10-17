@@ -3,15 +3,15 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { DRESSING } from '../config/dressing';
 import { QUALITY, SURFACES } from '../config/render';
-import { buildMapMeshes, disposeMapMeshes, mapLookOf, texturesFor } from '../render/mapMeshes';
-import { placeDressing } from '../render/mapDressing';
-import { skylineGeometries } from '../render/skyline';
-import type { SurfaceTextures } from '../render/proceduralTextures';
+import { buildMapMeshes, disposeMapMeshes, mapLookOf, texturesFor } from '../render/field/mapMeshes';
+import { placeDressing } from '../render/dressing/mapDressing';
+import { skylineGeometries } from '../render/dressing/skyline';
+import type { SurfaceTextures } from '../render/field/proceduralTextures';
 import { DEPOT } from './depot';
 import { MAPS } from './maps';
 import type { MapBlock, MapData, NeonSign } from './mapTypes';
 import { NEON_HEIGHTS } from './neonHeights';
-import { neonPlate } from '../render/neonDressing';
+import { neonPlate } from '../render/dressing/neonDressing';
 import { terrainHeightAt } from './terrain';
 import { WOODLAND } from './woodland';
 
@@ -315,7 +315,7 @@ function skylineBlocksSight(map: MapData): { blocked: number; pairs: number } {
 
 describe('G9 QA: the background stays out of the field and hides nobody (acceptance 2)', () => {
   it('control: Neon Heights’ towers stand wholly outside its walls, and block no line between the teams', () => {
-    // MS1's wall units and cables hang over the field on purpose, out of every player's room (render/skylineSeen.test.ts).
+    // MS1's wall units and cables hang over the field on purpose, out of every player's room (render/dressing/skylineSeen.test.ts).
     expect(skylineInField(NEON_HEIGHTS, 0).filter((v) => v.kind !== 'wallUnit' && v.kind !== 'wire')).toEqual([]);
     expect(skylineBlocksSight(NEON_HEIGHTS)).toEqual({ blocked: 0, pairs: 25 });
   });
@@ -384,9 +384,9 @@ describe('G9 QA: the maps are exactly what main shipped, and dressing code write
 
   it('placing, building, drawing the horizon and running the effects writes nothing into either map', async () => {
     vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => null }) });
-    const { DressingEffects } = await import('../render/dressingEffects');
-    const { addAtmosphere } = await import('../render/atmosphere');
-    const { resolveLighting } = await import('../render/lightingPreset');
+    const { DressingEffects } = await import('../render/dressing/dressingEffects');
+    const { addAtmosphere } = await import('../render/light/atmosphere');
+    const { resolveLighting } = await import('../render/light/lightingPreset');
     try {
       const before = [WOODLAND, NEON_HEIGHTS, DEPOT].map((m) => fingerprint(m));
       for (const map of [WOODLAND, NEON_HEIGHTS, DEPOT]) {

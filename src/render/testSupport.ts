@@ -3,16 +3,16 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { FIGURE_RIG_KINDS, type FigureRigKind } from '../config/figureRig';
 import type { MapData } from '../map/mapTypes';
-import { type FigureRig, type FigureSidecar, prepareFigureRig } from './figureRig';
-import { prepareReplicaFile, type ReplicaFiles } from './replicaFiles';
+import { type FigureRig, type FigureSidecar, prepareFigureRig } from './figures/figureRig';
+import { prepareReplicaFile, type ReplicaFiles } from './replicas/replicaFiles';
 
 /**
  * Test helpers for the render folder's QA tests (W5): a canvas as much as Three's renderer constructor touches, a scene
- * holding a map as render/mapMeshes.ts builds it, a measure of what a loop allocates, and the rigged figures' and the
+ * holding a map as render/field/mapMeshes.ts builds it, a measure of what a loop allocates, and the rigged figures' and the
  * replicas' model files read from disk (BF1).
  */
 
-/** A scene holding `map`'s group as render/mapMeshes.ts builds it (the map on it, its terrain mesh coloured). */
+/** A scene holding `map`'s group as render/field/mapMeshes.ts builds it (the map on it, its terrain mesh coloured). */
 export function mapSceneOf(map: MapData): { scene: THREE.Scene; group: THREE.Group } {
   const scene = new THREE.Scene();
   const group = new THREE.Group();
@@ -131,7 +131,7 @@ export async function readFile(path: URL): Promise<Uint8Array> {
 
 /**
  * A model file under src/assets/models/, parsed as the game parses it (its clips on the scene, meshopt decoded as
- * render/externalModels.ts decodes it), without its textures.
+ * render/figures/externalModels.ts decodes it), without its textures.
  */
 export async function modelScene(path: string): Promise<THREE.Object3D> {
   const buf = await readFile(new URL(`../assets/models/${path}`, import.meta.url));

@@ -32,7 +32,7 @@ describe('what the main chunk holds of the compute passes (acceptance 3)', () =>
   });
 
   it('has the CPU pools (main chunk) knowing the GPU path only as a type and a hook, never importing a node module or TSL', () => {
-    for (const rel of ['render/dustMotes.ts', 'render/fireflies.ts', 'render/smokePlumes.ts', 'render/impactPuffs.ts', 'render/impactGrit.ts', 'render/mapMeshes.ts', 'render/atmosphere.ts', 'render/dressingEffects.ts', 'render/renderer.ts']) {
+    for (const rel of ['render/effects/dustMotes.ts', 'render/dressing/fireflies.ts', 'render/dressing/smokePlumes.ts', 'render/effects/impactPuffs.ts', 'render/effects/impactGrit.ts', 'render/field/mapMeshes.ts', 'render/light/atmosphere.ts', 'render/dressing/dressingEffects.ts', 'render/renderer.ts']) {
       const file = files.find((f) => f.rel === rel);
       expect(file, rel).toBeDefined();
       expect(valueImports(file!.text, /from\s+['"](three\/(webgpu|tsl)|[^'"]*\/webgpu\/)/), rel).toEqual([]);

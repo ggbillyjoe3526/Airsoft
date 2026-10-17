@@ -131,7 +131,7 @@ export function hitTop(crouchAmount: number, cfg: HitConfig): number {
 }
 
 /**
- * A character's hit volume, matching the drawn figure on every pose (M85; render/figureHitVolume.test.ts measures it):
+ * A character's hit volume, matching the drawn figure on every pose (M85; render/figures/figureHitVolume.test.ts measures it):
  * the `head` (a sphere, stored as a capsule with y0 = y1) and `parts`, capsules along segments: the chest (hips to
  * shoulders, PART.chest), the hips as two side by side (an oval: they're narrower front to back than across), and each
  * leg's thigh, shin and boot. The head, chest and hips roll with a lean about the hip pivot (sim/lean.ts), as the drawn
@@ -140,7 +140,7 @@ export function hitTop(crouchAmount: number, cfg: HitConfig): number {
  * rigged figures (every match since BD1, unless their files can't be loaded) the legs sit on those figures' leg joints
  * (HitConfig.figureLegs, sim/figureLegs.ts; IM8) and the head, chest (two side by side), shoulders and hips on each
  * figure's own upper body (HitConfig.figureBodies, sim/figureBody.ts; HV1), the hips not rolled by a peek, as the
- * figure's aren't (render/riggedHitVolume.test.ts measures it). The built-in figures have no second chest or shoulders
+ * figure's aren't (render/figures/riggedHitVolume.test.ts measures it). The built-in figures have no second chest or shoulders
  * (radius 0: not there). Arms and replicas aren't part of it (owner, DECISIONS 2026-10-01).
  * `bound` holds all of it: a ray that misses the bound misses everything.
  */

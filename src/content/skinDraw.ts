@@ -2,12 +2,12 @@ import * as THREE from 'three';
 import { FIGURE } from '../config/characters';
 import type { ReplicaConfig } from '../config/replicas';
 import type { ReplicaPaint } from '../config/schemes';
-import { PartBuilder, type PartLook } from '../render/figureParts';
-import { addPistol, addRifle, BARE_KIT, type FigureReplicaColours } from '../render/figureReplicas';
-import { flatColour, type MaterialKey, PAINTED, type ReplicaDetail } from '../render/replicaBuilder';
-import { fitParts } from '../render/itemPictures';
-import { NO_REPLICA_FILES, type ReplicaFiles } from '../render/replicaFiles';
-import { buildReplicaModels, LOW_DETAIL } from '../render/replicaModels';
+import { PartBuilder, type PartLook } from '../render/figures/figureParts';
+import { addPistol, addRifle, BARE_KIT, type FigureReplicaColours } from '../render/figures/figureReplicas';
+import { flatColour, type MaterialKey, PAINTED, type ReplicaDetail } from '../render/replicas/replicaBuilder';
+import { fitParts } from '../render/replicas/itemPictures';
+import { NO_REPLICA_FILES, type ReplicaFiles } from '../render/replicas/replicaFiles';
+import { buildReplicaModels, LOW_DETAIL } from '../render/replicas/replicaModels';
 
 /**
  * What a skin looks like once drawn (CT4, the skin checks' measurements): a replica built by the game's own builders in a
@@ -150,7 +150,7 @@ export function surveyViewmodel(replica: ReplicaConfig, paint: ReplicaPaint | nu
   }
 }
 
-/** The colour roles of a replica on a figure (render/figureReplicas.ts). */
+/** The colour roles of a replica on a figure (render/figures/figureReplicas.ts). */
 export type FigureRole = keyof FigureReplicaColours;
 export const FIGURE_ROLES: readonly FigureRole[] = ['body', 'furniture', 'detail', 'accent', 'steel'];
 

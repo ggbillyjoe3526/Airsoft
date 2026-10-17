@@ -44,6 +44,6 @@
   "src/ai/woodlandTorchMatch.test.ts": 10,
   "src/audio/sfx.test.ts": 39,
   "src/content/modePlays.test.ts": 13,
-  "src/render/figureHitVolume.test.ts": 41,
-  "src/render/g9EffectsQA.test.ts": 30
+  "src/render/figures/figureHitVolume.test.ts": 41,
+  "src/render/dressing/g9EffectsQA.test.ts": 30
 }

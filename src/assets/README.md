@@ -5,10 +5,10 @@ Bundled files that are not code. Greybox and procedural art come first, so there
 - Art is procedural for now: the CC0 sites are blocked by the cloud sessions' network policy.
 - `fonts/`: Inter as `.woff2` (four weights) (SIL Open Font License, `fonts/OFL.txt`), used by the menus.
 - `models/characters/`: where an optional `figure.glb` goes (see its `README.md`). Without one the built-in figures are
-  drawn. `render/externalModels.ts` and `config/assets.ts` load and describe it.
+  drawn. `render/figures/externalModels.ts` and `config/assets.ts` load and describe it.
 - `models/replicas/`: replica models by replica id (`cyber.glb`, the Cyber Pistol's; see its `README.md`).
-  `render/replicaFiles.ts` and `config/assets.ts` load and describe them.
-- Every model here is drawn by default (BD1, owner 2026-10-16): `render/modelFiles.ts` fetches them as the game starts,
+  `render/replicas/replicaFiles.ts` and `config/assets.ts` load and describe them.
+- Every model here is drawn by default (BD1, owner 2026-10-16): `render/figures/modelFiles.ts` fetches them as the game starts,
   and the built-in models are drawn only when a file can't load.
 - Every external asset is recorded in `docs/ASSETS.md`; the how-to, sources and size budget are in `docs/CC0_ASSETS.md`.
   Only CC0 or clearly permissive licences.

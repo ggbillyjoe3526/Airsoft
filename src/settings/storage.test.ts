@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SETTINGS_WRITE_DELAY_MS } from '../config/menus';
 import { QUALITY, resolveQuality } from '../config/render';
 import { activeDev } from '../config/dev';
-import { loadCustomQuality, loadSavedQuality } from '../ui/menus/savedChoices';
+import { loadCustomQuality, loadSavedQuality } from './savedChoices';
 import { loadDevSettings } from './dev';
 import { flushSettings, loadSetting, numberIn, oneOf, saveSetting, saveSettingSoon, SETTINGS_KEY, SETTINGS_VERSION } from './storage';
 

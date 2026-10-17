@@ -3,7 +3,8 @@ import { DEFAULT_PING_MARKERS, PING_MARKER_CHOICES, PINGS } from '../config/ping
 import { DEFAULT_HIT_FEED_MODE, DEFAULT_WHAT_GOT_YOU_MODE } from '../config/matchInfo';
 import { MemoryStorage } from '../pool/testStorage';
 import { flushSettings, SETTINGS_KEY, SETTINGS_VERSION } from '../settings/storage';
-import { hudSettings, loadPingMarkers } from './hudSettings';
+import { hudSettings } from './hudSettings';
+import { loadPingMarkers } from '../settings/hudPrefs';
 import { pingAlpha, PingMarkers } from './pingMarkers';
 import { FakeElement, fakeDocument, findAll } from './testSupport';
 

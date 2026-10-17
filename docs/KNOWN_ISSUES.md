@@ -50,7 +50,7 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | Issue | Class | Notes |
 |---|---|---|
 | Bushes stopping BBs are first guesses: 0.6 m of leaves stops a BB; one through an edge leaves up to 0.5 rad a metre off its line at 0.35 of its speed | playtest | `BALLISTICS.leaves` (FO1). Play Woodland: a shot through a bush's edge should feel like a gamble, and bots holding fire should not leave fights stuck. |
-| The hit volume is capsules, so it misses or overhangs the drawn figure by a few cm at the rim (at most 3.5% of the drawn body, 2.7% of the volume) | can wait | Built-in figures only (`render/figureHitVolume.test.ts`). |
+| The hit volume is capsules, so it misses or overhangs the drawn figure by a few cm at the rim (at most 3.5% of the drawn body, 2.7% of the volume) | can wait | Built-in figures only (`render/figures/figureHitVolume.test.ts`). |
 | Arms and replicas neither count as hits nor stop BBs: a BB through a figure's forearm flies on | document | Owner ruling (DECISIONS 2026-10-01, arm hits off). (M85) |
 | Against a bot that strafes, aiming barely raises your share of BBs that hit (Normal, 15 to 35 m: 49 / 31 / 14% hip, 51 / 25 / 14% aimed) | can wait | The strafe, not the spread, decides most misses. (M84) |
 | Tracer visibility was reviewed on paper only (no per-replica tracer setting) | can wait | Fine with three replicas; give tracers per-replica settings when more platforms arrive. (M9) |
@@ -58,7 +58,7 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | With Ricochets count on, bounced BBs still decide about a fifth of hits, and Attack / Defend's attackers win more of those matches | document | The owner's ruling (2026-10-10): bounced BBs lose more speed. (G12) |
 | The spacing and friendly-ricochet guards pass or fail on which fixed seeds a change reshuffles | can wait | `depotMatch.spacing` and `depotMatch.ricochet` sit near their limits. (M87) Beta 1: BT1. |
 | The wind can only be read from the dust in the air, and Low quality (and Reduced motion) shows no dust | can wait | The owner's "dust only" default (M30). On Low you learn it from your BBs' drift. |
-| A bush doesn't move when a BB goes in: only a few leaves pop out and drift down, with a rustle | can wait | `render/leafFlecks.ts` (FO1). A shiver of the bush's mesh near the hit would read better; it is one merged mesh per map. |
+| A bush doesn't move when a BB goes in: only a few leaves pop out and drift down, with a rustle | can wait | `render/effects/leafFlecks.ts` (FO1). A shiver of the bush's mesh near the hit would read better; it is one merged mesh per map. |
 | The BBs' bush is a smooth ellipsoid and the drawn one is lumpy, so a BB can rustle up to a hand's width off the drawn leaves | document | `map/foliage.ts` (shared with bots' sight); the drawn lumps sit up to 14 % of the radius either side of it. (FO1) |
 | From deep inside a bush you can still see out (its leaves are drawn from outside only), yet your BBs stop in the leaves | document | "Leaves in the way · step clear to shoot" shows when your own BB stops within 2 m of you. (FO1) |
 
@@ -192,7 +192,7 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | A holstered figure that vaults keeps the Vault clip's arms, its right hand closed as if on the rifle that is slung on its back | can wait | The vault has no holstered version yet; a Holster_Vault clip would fix it. (BP4) BD1 kept it. |
 | The figure files still carry the six unused Rest clips (Rifle_ and Pistol_Rest, RestUp, RestDown) | can wait | Rest on cover is gone (MV1); the game ignores the clips, so they cost only download size. (MV1) |
 | A figure's held replica casts its shadow from its small version (PF4), so in a close reload the shadow keeps the magazine in place for a moment beside the hand's copy | can wait | A few shadow-map texels for about a second; the whole model's shadow cost ~9k triangles a figure. (PF4) |
-| Your own body casts no shadow, and you see it only looking well down | document | It is drawn 0.17 m behind the eyes without its head and arms, so a headless shadow would look wrong. (BF1, BD1) |
+| Your own figure casts no shadow | document | It is never drawn in first person, and holds no replica there (the first-person one is in view), so its shadow would show empty hands. (BF1, BD1, MV2) |
 | First-person hand poses are hand-tuned numbers, checked by geometry tests rather than by eye | document | Poses live in `replicaModels.ts`; `handPoses.test.ts` and `fileHandPoses.test.ts` measure them against the replicas' triangles. Whether a hold looks natural is the owner's call. |
 
 ## Graphics and performance

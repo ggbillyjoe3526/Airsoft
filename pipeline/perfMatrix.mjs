@@ -22,14 +22,14 @@ export const PERF_SCOPES = [
   { path: 'src/map/depot.ts', map: 'depot' },
   { path: 'src/map/woodland.ts', map: 'woodland' },
   { path: 'src/map/neonHeights.ts', map: 'neon' },
-  { path: 'src/render/cityProps.ts', map: 'neon' },
-  { path: 'src/render/cityTextures.ts', map: 'neon' },
+  { path: 'src/render/field/mapPieces/cityProps.ts', map: 'neon' },
+  { path: 'src/render/field/cityTextures.ts', map: 'neon' },
   { path: 'src/sim/extraction.ts', mode: 'extraction' },
   { path: 'src/config/extraction.ts', mode: 'extraction' },
   { path: 'src/map/extractionBlock.ts', mode: 'extraction' },
   { path: 'src/ai/extraction', mode: 'extraction' },
-  { path: 'src/render/exitRenderer.ts', mode: 'extraction' },
-  { path: 'src/render/caseRenderer.ts', mode: 'extraction' },
+  { path: 'src/render/match/exitRenderer.ts', mode: 'extraction' },
+  { path: 'src/render/match/caseRenderer.ts', mode: 'extraction' },
 ];
 
 /**
