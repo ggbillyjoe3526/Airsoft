@@ -87,4 +87,15 @@ describe('team colour sets (M18b)', () => {
     const std = TEAM_COLOUR_SETS.standard.figures;
     expect(lightnessGap(figures[0]!, figures[1]!, 'normal')).toBeGreaterThan(3 * lightnessGap(std[0]!, std[1]!, 'normal'));
   });
+
+  it("keeps High Contrast's exits apart from both teams for every kind of colour vision (AX1)", () => {
+    // Today's green sits ΔE 29-33 from the orange team under deuteranopia; High Contrast is the set for colour vision.
+    const { figures, hud, exit } = TEAM_COLOUR_SETS.highContrast;
+    for (const team of [...figures, ...hud]) {
+      for (const vision of VISIONS) expect(deltaE(exit.open, team, vision), `exit vs #${team.toString(16)}, ${vision}`).toBeGreaterThan(40);
+    }
+    expect(deltaE(exit.open, figures[1]!, 'deuteranopia')).toBeGreaterThan(50);
+    // The sign's ink reads on its colour: far apart in lightness.
+    expect(lightnessGap(exit.open, exit.ink, 'normal')).toBeGreaterThan(60);
+  });
 });

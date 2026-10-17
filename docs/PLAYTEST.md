@@ -431,7 +431,8 @@ Your squad against a home team on a timed run. Turn on Dev content, then Play �
 Neon Heights). A run gives no XP while it is dev content.
 
 - [ ] **Play screen and exits.** The Match line reads "Squad of 3 · 5 in the home team", "One 8:00 run"; with Dev
-  content off it isn't offered.
+  content off it isn't offered. Exits are green rings with cones and an EXIT sign, yellow with Settings › Accessibility ›
+  Team colours on High Contrast (the minimap door and the marker too); a late exit is grey until it opens.
 - [ ] **Counted out.** Stand in an open exit: a beep a second, "Counting you out · 9 … 1", "Counted out · you made
   it!"; stepping out restarts it and a Beta bot in the ring pauses it.
 - [ ] **Respawn and coming in.** Hit once: back at the insertion, "no respawn left"; hit again: "Out of the run". For 3

@@ -24,7 +24,6 @@ commit, before its pull request merges (CI's scope gate finds the block in the b
 additions included (`docs/DECISIONS.md`). Seven threads build them, one block each, and they come before the blocks
 below. The item numbers are his. Where an older block overlaps one of these, the owner's item wins:
 - UX1 overlaps MR1 and HD1.
-- AX1's kit colours overlap MR1's colour tab.
 
 MS1 shows the owner concept images and waits for his approval before any code changes.
 
@@ -130,18 +129,6 @@ acceptance:
   2. Profile first. The record ranks the top causes of frame time on Low and Medium on Depot and Woodland, by day and by night.
   3. Fix the top causes until Low holds 60 FPS on modern low-powered hardware (the owner's ruling, 2026-10-16), Medium too where it can, on the laptop baseline's scenes. If a fix would cost too much, say what and why.
   4. Add a High or Ultra night run to the perf gate, so the torch shadow map's cost is measured.
-status: open
-attempts: 0
-
-## AX1 · Readability and tone: kit colours, High contrast, exit markers
-tier: ui
-perf: skip
-touches: src/config/characters.ts, src/config/accessibility.ts, src/config/schemes.ts, src/config/colourVision.test.ts, src/render/exitRenderer.ts, src/ui/hud.css
-contract: none
-acceptance:
-  1. Kit looks read as a weekend airsoft site, not a military unit: at most two of the six looks wear plate carriers, and at least two vests are in a civilian colour. Team armbands still read first.
-  2. High contrast's orange figures meet the colour test's contrast bar in Depot's shaded corners (measured, not judged by eye).
-  3. Exit rings and markers stay apart from the orange team under the deuteranopia check in `colourVision.test.ts`.
 status: open
 attempts: 0
 
