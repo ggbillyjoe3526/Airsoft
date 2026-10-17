@@ -21,7 +21,7 @@
 - **A figure's fade is warmed with see-through copies of its materials, kept for the match and freed with it.** Toggling the figure's own materials made Three re-key its draws and free the see-through pipelines the moment they turned solid again.
 - **The light shafts draw at zero strength with the sun off screen while warming (`PostFrame.warming`).** They draw only while the sun is on screen, so facing it built three pipelines on High and Ultra.
 - **`?perf` logs "perf: N pipelines built mid-play at tick T" for any frame that builds one.** The check William runs on his PC (PLAYTEST › Graphics and performance).
-- **Only SwiftShader (WebGL2) was measured.** On a real GPU the wait before round 1 and anything left are unmeasured; auto picks WebGPU on most desktops.
+- **Only SwiftShader (WebGL2 and WebGPU) was measured.** On a real GPU the wait before round 1 and anything left are unmeasured; auto picks WebGPU on most desktops.
 
 - **The 60 s limit's timer is not cleared when the warm-up settles first.** Its late call does nothing; it keeps a finished match's warm-up closure for at most 60 s (critic's advisory, left as is).
 
