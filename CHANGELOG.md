@@ -38,6 +38,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **MS1** · Neon Heights is ringed by towers up to 72 m with adverts, lit windows, 27 more neon signs, lantern cables and skybridges
 - **BD1** · Your own body in first person shows only when you look down far enough to see it
 - **BD1** · Medium's Player detail is Low: figures drop to middle detail beyond 6 m and the coarsest beyond 16 m (High and Ultra keep 12 m and 28 m)
+- **KI2** · Unused mode pictures are gone from the download, about 51 KB smaller
 
 ### Fixed
 - **KI1** · Leaning beside a wall that cuts the lean eases the view over 0.1 s instead of jumping
@@ -56,6 +57,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **KI1** · Wall grime starts at each block's own foot, upper floors included
 - **KI1** · The vertical grip's steady time counts the slow-down after a sprint (0.18 s)
 - **KI1** · The Armory keeps an item you own in colour
+- **KI2** · A BB that ricochets throws its grit and leaves back off the wall it bounced from, not towards whoever fired it
+- **KI2** · Depot, Woodland and Neon Heights show their updated pictures on the Match screen
 
 ### Internal
 - **MS1** · Tests remove skyline pieces no player can see and keep hung units and cables clear of the player's room; perf baselines re-recorded
@@ -68,6 +71,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **BD1** · Headless bot matches and balance figures play with the rigged figures' hit rules; perf-run loses its models option; perf baselines re-recorded with models drawn
 - **HV1** · Hit shapes are fitted per figure and sampled from the clips as the figures load
 - **BD1** · Each rigged figure casts its shadow from one coarse copy, and the robot's plain materials share one finish
+- **KI2** · The content toolkit's mode checks use each figure's own hit area, as matches do; known issues and the playtest guide are updated for Beta 1
 
 ## 0.1 Dev 6 · 2026-10-16
 
