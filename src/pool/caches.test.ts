@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import poolText from '../../pool.md?raw';
 import { createRng } from '../sim/rng';
@@ -6,6 +5,7 @@ import { vec3 } from '../sim/vec';
 import { type CaseSpotLike, placeCases, rollFind, rollRunCases } from './caches';
 import { type CaseKind, DEFAULT_CASE_KINDS } from './tables';
 import { loadPool } from './pool';
+import { sha256 } from '../save/sha256';
 
 const pool = loadPool(poolText);
 const kind = (key: string): CaseKind => pool.caseKinds.find((k) => k.key === key)!;
@@ -129,11 +129,11 @@ describe('what a run’s cases hold, from the real pool (M44; LV1: XP, never gea
 });
 
 describe('a run’s cases are what they were before RV1 took the supply events out', () => {
-  it('rolls the same cases for a seed as the build before it did (hashes taken from 406b0db with no event on)', () => {
+  it('rolls the same cases for a seed as the build before it did (sha256 hashes taken from 406b0db with no event on)', () => {
     const gamePool = loadPool(poolText);
-    const gold: [number, string][] = [[1, 'ed1b1091c912'], [7, '4b99520eea49'], [42, 'f5db54cb950c'], [1234, '5160033fed2a']];
+    const gold: [number, string][] = [[1, '3781fba843d9'], [7, '44eaed8fddc1'], [42, 'cc81c5f94b99'], [1234, 'e021e397c6ad']];
     for (const [seed, hash] of gold) {
-      expect(createHash('sha1').update(JSON.stringify(rollRunCases(gamePool, SPOTS, seed))).digest('hex').slice(0, 12), `seed ${seed}`).toBe(hash);
+      expect(sha256(JSON.stringify(rollRunCases(gamePool, SPOTS, seed))).slice(0, 12), `seed ${seed}`).toBe(hash);
     }
   });
 });
