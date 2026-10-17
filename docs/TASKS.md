@@ -198,17 +198,3 @@ acceptance:
   2. Every KNOWN_ISSUES row in a public area is checked against the build.
 status: open
 attempts: 0
-
-## DX6 · Render: the folder regrouped, the prop builders as data, no per-frame vault rays (audit A3, A8 part, B4, B9 part)
-tier: core
-perf: required
-touches: src/render/, src/sim/vault.ts, src/sim/character.ts, src/sim/simulation.ts, src/matchSession.ts, pipeline/cycles.mjs, e2e/, src/ai/riggedHitsSupport.ts, src/content/census.ts, src/content/gameContent.ts, src/content/mapCheckSupport.ts, src/content/mapLayoutChecks.ts, src/content/report/reportSupport.ts, src/content/skinCheckSupport.ts, src/content/skinDraw.ts, src/content/skinFit.ts, src/game.ts, src/rangeSession.ts, src/session.ts, src/ui/hud.ts, src/ui/menus/menuPictures.ts, src/ui/minimap.ts, src/ui/minimapView.ts, src/ui/replicaPanel.ts, pipeline/bake-light.mjs, pipeline/content-pictures.mjs, pipeline/perfMatrix.mjs, pipeline/perfMatrix.test.mjs, pipeline/webgpu-compare.mjs, src/audio/soundMaterials.ts, src/config/accessibility.ts, src/config/assets.ts, src/config/bake.ts, src/config/characters.ts, src/config/contentRules.ts, src/config/dressing.ts, src/config/figureRig.ts, src/config/glowBBs.ts, src/config/gpuDressing.ts, src/config/hits.ts, src/config/itemPictures.ts, src/config/magShare.ts, src/config/post.ts, src/config/range.ts, src/config/renderEffects.ts, src/config/renderLighting.ts, src/config/renderQuality.ts, src/config/renderSurfaces.ts, src/config/renderView.ts, src/config/replicas.ts, src/config/vault.ts, src/config/weathering.ts, src/content/contentInputs.ts, src/content/replicaChecks.ts, src/input/playerInput.ts, src/map/bakes/files.ts, src/map/depotDressing.ts, src/map/groundSurfaces.ts, src/map/lightingChoice.ts, src/map/mapTypes.ts, src/map/neonHeightsDressing.ts, src/map/nightSight.ts, src/map/rangeDressing.ts, src/map/woodlandDressing.ts, src/sim/figureBody.ts, src/sim/figureLegs.ts, src/sim/hitbox.ts, src/sim/torch.ts, src/ui/menus/menusOptions.ts, vite.config.ts, tools/blender/bot-figure/README.md, tools/blender/bot-figure/pack.mjs, pipeline/slow-times.json, src/ui/hudCss/round.css
-contract: none
-acceptance:
-  1. `src/render/` is grouped as its README describes: `field/`, `figures/`, `replicas/`, `light/`, `effects/` (names the thread picks), each with a README; `post/` and `webgpu/` keep theirs. Pure moves: no behaviour change, the import-cycle check and every test pass, and `render/README.md` is the index of the subfolders.
-  2. `mapMeshes.ts`'s prop builders (containers, pallets, racks, gabions, IBCs, skips, generators, barriers and the rest) live in a `mapPieces/` table, leaving merge, restyle and dispose behind; `mapMeshes.ts` is under 400 lines.
-  3. The vault prompt reads the simulation's per-tick answer (on the character or an event) and `combatPresentation.ts` casts no rays.
-  4. The six HUD marker updaters in `matchPresentation.ts` share one project-and-pin helper.
-  5. The perf gate is green on every matrix entry, and the Low frame-time, draw-call and heap lines are unchanged within noise.
-status: open
-attempts: 0
