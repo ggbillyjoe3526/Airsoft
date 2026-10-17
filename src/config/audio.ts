@@ -20,12 +20,6 @@ export function caseWorkSound(kind: string): SoundCue {
   return CASE_WORK_SOUNDS[kind] ?? CASE_WORK_SOUND;
 }
 
-/**
- * The replica settling on cover to rest it there (M104) reuses the pouch's dull pat (a reload with no fuller magazine)
- * for the same reason: a padded handguard set down on a crate, played at the kit's quieter foley level.
- */
-export const REST_SOUND: SoundCue = 'reloadRefused';
-
 export const AUDIO = {
   /** Headroom under the player's master volume (several shots and steps at once must not clip). */
   masterVolume: 0.7,

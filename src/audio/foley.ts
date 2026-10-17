@@ -2,9 +2,9 @@ import type { Character } from '../sim/character';
 
 /**
  * A body movement worth a rustle of kit: dropping into a crouch, standing back up, starting to lean out, putting the
- * replica away (M92; drawing it is the simulation's `draw` event), or settling it on cover to rest it (M104).
+ * replica away (M92; drawing it is the simulation's `draw` event).
  */
-export type FoleyMove = 'crouch' | 'stand' | 'lean' | 'holster' | 'rest';
+export type FoleyMove = 'crouch' | 'stand' | 'lean' | 'holster';
 
 /** Less change per tick than this (crouch 0..1, lean -1..1) counts as holding still. */
 const MOTION_EPSILON = 1e-4;
@@ -16,16 +16,14 @@ function motion(now: number, prev: number): number {
 }
 
 /**
- * Turns characters' crouch, lean, holster and rest into rustle cues, once per movement: when a crouch, a stand or a lean
- * away from upright starts, not every tick it continues, the tick a replica goes into the holster, and the tick it starts
- * settling on cover (Character.coverRest leaving 0; it must come right off before it can sound again). Leaning back to
- * upright and coming off the cover are quiet. Presentation only (bots don't hear these); call once per simulation tick.
+ * Turns characters' crouch, lean and holster into rustle cues, once per movement: when a crouch, a stand or a lean
+ * away from upright starts, not every tick it continues, and the tick a replica goes into the holster. Leaning back to
+ * upright is quiet. Presentation only (bots don't hear these); call once per simulation tick.
  */
 export class FoleyTracker {
   private readonly crouchMotion = new Map<number, number>();
   private readonly leanMotion = new Map<number, number>();
   private readonly holstered = new Map<number, boolean>();
-  private readonly rested = new Map<number, boolean>();
 
   /** Calls `onMove` for each movement that started this tick. Characters that aren't alive are skipped. */
   update(characters: readonly Character[], onMove: (c: Character, move: FoleyMove) => void): void {
@@ -40,9 +38,6 @@ export class FoleyTracker {
       const away = c.status === 'alive' && c.armament.holstered;
       if (away && !(this.holstered.get(c.id) ?? false)) onMove(c, 'holster');
       this.holstered.set(c.id, away);
-      const rested = c.status === 'alive' && c.coverRest > 0;
-      if (rested && !(this.rested.get(c.id) ?? false)) onMove(c, 'rest');
-      this.rested.set(c.id, rested);
     }
   }
 }

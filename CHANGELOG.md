@@ -33,6 +33,9 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **HD1** · BB impacts kick up a smaller, fainter puff with less grit
 - **HD1** · Scoreboard no longer shows a YOU tag (screen readers still hear which side is yours)
 - **TT1** · Tutorial cards are one or two short sentences; the four you only read move on by themselves after 5–8 s, with a bar filling; the lean step is gone
+- **MV1** · Nobody rests a replica on cover any more, you or the bots; aiming at a ledge no longer steadies you and the Rested tag is gone; Q and E leaning stay
+- **MV1** · Holstered you run at 5.0 m/s against 4.2 armed, never faster than the 6.3 m/s sprint, which is the same armed or holstered
+- **MV1** · Walking with Shift keeps your aim as steady as standing still, where it was a little looser before
 - **MS1** · Depot has cranes, container stacks, sheds, silos, chimneys, a water tower and a power line over its walls
 - **MS1** · Woodland's cabin has a grey tin roof, taller walls and lanterns; pines have layered branches, bushes are smaller, nights brighter
 - **MS1** · Neon Heights is ringed by towers up to 72 m with adverts, lit windows, 27 more neon signs, lantern cables and skybridges
@@ -40,6 +43,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **BD1** · Medium's Player detail is Low: figures drop to middle detail beyond 6 m and the coarsest beyond 16 m (High and Ultra keep 12 m and 28 m)
 
 ### Fixed
+- **MV1** · The first switch to your other replica in a match no longer stutters; every carried replica is ready before the round
+- **MV1** · On the Blender replicas the first-person thumbs wrap round the grip and along the frame instead of sinking into it
 - **KI1** · Leaning beside a wall that cuts the lean eases the view over 0.1 s instead of jumping
 - **KI1** · Two quick taps of the fire selector step it twice
 - **KI1** · Your own BB's streak starts at the muzzle when you turn fast
@@ -69,6 +74,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **HV1** · Hit shapes are fitted per figure and sampled from the clips as the figures load
 - **BD1** · Each rigged figure casts its shadow from one coarse copy, and the robot's plain materials share one finish
 - **DX1** · Developer-only: each pipeline rule lives in one doc the others point to; architecture contracts get headings; process docs say 0.1 Beta 1
+- **Pipeline** · Desktop perf suite: one command records the 4K maxed-out baseline across Depot presets and Ultra maps, uncapped, with a summary
 - **DX3** · Developer-only: a task can be marked as a fix, with every check and review kept and a shorter record; the perf run needs no separate flag
 
 ## 0.1 Dev 6 · 2026-10-16

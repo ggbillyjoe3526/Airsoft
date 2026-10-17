@@ -96,14 +96,6 @@ export const FIGURE_RIG = {
   /** Thrown-away magazines out at most (the oldest goes first); each lies for its sidecar lifetime. */
   thrownMagazines: { max: 12 },
   /**
-   * Resting on cover (M104) for a file without its own Rest clips (the figure redesign's, Dev 6: tools/blender/bot-figure
-   * bot18.py), radians at Character.coverRest 1: the aim is posed `lean` higher and the spine leaned `lean` forward, so
-   * the upper body leans over the cover by the share the aim clips don't turn (1 - aimReach, about 5°) while the bore
-   * stays on the shot. Not on your own first-person body, and not on the built-in figures, which stay on their hit
-   * volume.
-   */
-  rest: { lean: 0.2 },
-  /**
    * The Vault clip (M102, the figure redesign's: bot18.py), played by the vault's progress: its first `top` on the rise
    * onto the top (bot18.py VAULT_TOP), the rest across it (sim/figureLegs.ts vaultClipShare). A file without it plays
    * the legs' clips instead (the jump, tucked by the crouch).

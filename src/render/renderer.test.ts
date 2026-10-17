@@ -536,6 +536,8 @@ describe('the shader warm-up runs once per session build, never per frame (M63, 
     const combat = sources['/src/render/combatPresentation.ts']!;
     expect(bodyOf(combat, '  render(firstPerson')).not.toMatch(/warmShaders|compile/);
     expect(bodyOf(combat, '  warmShaders(')).toMatch(/this\.renderer\.warmShaders\(this\.overlay, /);
+    // With every carried replica shown, not only the one in hand (Dev 6 playtest note 26: a hitch on the first switch).
+    expect(bodyOf(combat, '  warmShaders(')).toMatch(/this\.viewmodel\.withEverySlotShown\(\(\) => this\.renderer\.warmShaders\(this\.overlay, /);
     // Practice (M94): its last call too, after its map, torch beams and targets are in the scene.
     const range = bodyOf(sources['/src/rangeSession.ts']!, '  constructor(');
     const rangeCall = range.indexOf('this.combat.warmShaders()');

@@ -28,21 +28,6 @@ below. The item numbers are his. Where an older block overlaps one of these, the
 
 MS1 shows the owner concept images and waits for his approval before any code changes.
 
-## MV1 · Movement, holster speed and hands (playtest items 26–30)
-tier: core
-perf: required
-touches: src/sim/movement.ts, src/sim/armament.ts, src/sim/accuracy.ts, src/sim/character.ts, src/sim/simulation.ts, src/sim/coverRest.ts, src/config/movement.ts, src/config/figureRig.ts, src/config/renderView.ts, src/audio/foley.ts, src/render/viewmodel.ts, src/render/handModels.ts, src/render/figureHands.ts, src/render/robotHands.ts, src/matchSession.ts
-contract: none
-acceptance:
-  1. Holstered, the player moves faster than with a replica out, and never faster than a Left Alt sprint.
-  2. Holding Left Shift walks a little slower and tightens the spread.
-  3. Resting on cover is gone, for the player and the bots. Nobody leans on any object.
-  4. The first-person thumbs and grip look natural on every replica, with no clipping into the replica.
-  5. Switching replicas mid-match causes no frame hitch, including the first switch (measured with `?perf`).
-  6. Bots follow the same movement rules through the same commands.
-status: open
-attempts: 0
-
 ## BL1 · Attack / Defend: fewer attacker wins, more rounds won at the pole (after playtest)
 tier: core
 perf: skip

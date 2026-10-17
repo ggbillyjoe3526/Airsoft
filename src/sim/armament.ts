@@ -216,7 +216,7 @@ export interface Muzzle {
   pitch: number;
   /** The shooter's stance and movement multiplier on the replica's spread (sim/accuracy.ts). */
   spreadScale: number;
-  /** The multiplier on each shot's kick: below 1 while the replica rests on cover (sim/coverRest.ts, M104). */
+  /** The multiplier on each shot's kick: above 1 when fired on the run (MovementConfig.accuracy.sprintKick). */
   kickScale: number;
 }
 

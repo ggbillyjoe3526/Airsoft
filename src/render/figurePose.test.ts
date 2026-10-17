@@ -6,7 +6,6 @@ import {
   createPoseState,
   FIRE_CLIPS,
   type FigurePose,
-  hasRest,
   hasVault,
   magazinesAt,
   type MagazineShow,
@@ -46,7 +45,6 @@ const input = (over: Partial<PoseInput> = {}): PoseInput => ({
   firstPerson: false,
   vaulting: false,
   vaultAt: 0,
-  rest: 0,
   holster: 0,
   cycle: null,
   ...over,
@@ -268,48 +266,6 @@ describe('upper body: the aim layer', () => {
   it('the aim clips are held poses at their first frame', () => {
     const { out } = run(input({ forward: 1.5 }), 1);
     for (let i = S.Rifle_Aim; i <= S.Pistol_AimDown; i++) expect(out.time[i]).toBe(0);
-  });
-});
-
-describe('upper body: resting on cover (M104)', () => {
-  const aims = (o: FigurePose, kind: 'Rifle' | 'Pistol') => [o.upper[S[`${kind}_Aim`]]!, o.upper[S[`${kind}_AimUp`]]!, o.upper[S[`${kind}_AimDown`]]!];
-  const rests = (o: FigurePose, kind: 'Rifle' | 'Pistol') => [o.upper[S[`${kind}_Rest`]]!, o.upper[S[`${kind}_RestUp`]]!, o.upper[S[`${kind}_RestDown`]]!];
-  const total = (a: number[]) => a.reduce((x, y) => x + y, 0);
-
-  it('blends each aim clip into its Rest clip at the same pitch, by how settled the replica is, at their first frame', () => {
-    const half = run(input({ rest: 0.5, pitch: 0.3 })).out;
-    expect(total(aims(half, 'Rifle'))).toBeCloseTo(0.5, 3);
-    expect(total(rests(half, 'Rifle'))).toBeCloseTo(0.5, 3);
-    for (let k = 0; k < 3; k++) expect(rests(half, 'Rifle')[k]).toBeCloseTo(aims(half, 'Rifle')[k]!, 4);
-    expect(total(rests(half, 'Pistol'))).toBeCloseTo(0, 3);
-    for (let i = S.Rifle_Rest; i <= S.Pistol_RestDown; i++) expect(half.time[i]).toBe(0);
-    const pistol = run(input({ rest: 1, hold: 'pistol' })).out;
-    expect(total(rests(pistol, 'Pistol'))).toBeCloseTo(1, 3);
-    expect(total(aims(pistol, 'Pistol'))).toBeCloseTo(0, 3);
-    expect(total(rests(pistol, 'Rifle'))).toBeCloseTo(0, 3);
-  });
-
-  it('keeps the aim whole for a file without Rest clips (it leans by FIGURE_RIG.rest instead)', () => {
-    expect(hasRest(TABLE, 'rifle')).toBe(true);
-    const none = TABLE.map((c, i) => (i >= S.Rifle_Rest && i <= S.Pistol_RestDown ? { seconds: 0, speed: null } : c));
-    expect(hasRest(none, 'rifle')).toBe(false);
-    expect(hasRest(none, 'pistol')).toBe(false);
-    const state = createPoseState();
-    const out = createFigurePose();
-    for (let i = 0; i < 180; i++) stepPose(state, input({ rest: 1 }), DT, none, out);
-    expect(total(aims(out, 'Rifle'))).toBeCloseTo(1, 3);
-    expect(total(rests(out, 'Rifle'))).toBe(0);
-  });
-
-  it('does not rest without the aim: reloading, sprinting, out, or as your own body', () => {
-    const rested = (over: Partial<PoseInput>) => {
-      const { out } = run(input({ rest: 1, ...over }));
-      return total(rests(out, 'Rifle')) + total(rests(out, 'Pistol'));
-    };
-    expect(rested({ reload: 0.4 })).toBeCloseTo(0, 3);
-    expect(rested({ forward: 6, sprinting: true })).toBeCloseTo(0, 3);
-    expect(rested({ status: 'out' })).toBeCloseTo(0, 3);
-    expect(rested({ firstPerson: true })).toBeCloseTo(0, 3);
   });
 });
 

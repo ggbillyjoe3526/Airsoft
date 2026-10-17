@@ -363,16 +363,16 @@ describe('PhysicsWorld (Rapier)', () => {
     };
     const world = new PhysicsWorld(map, BODY, DT);
     const RAMP_PACE = { ...MOVEMENT, rampPace: 1 };
-    for (const pace of ['walk', 'run', 'sprint', 'holstered sprint', 'crouch'] as const) {
+    for (const pace of ['walk', 'run', 'holstered run', 'sprint', 'crouch'] as const) {
       for (const up of [true, false]) {
         const c = createCharacter(0, vec3(up ? -2 : run + 2, (up ? 0 : 1) + REST, 0.3), up ? -Math.PI / 2 : Math.PI / 2);
-        c.armament.holstered = pace === 'holstered sprint';
+        c.armament.holstered = pace === 'holstered run';
         world.addCharacter(c);
         const cmd = createCommand();
         cmd.yaw = c.yaw;
         cmd.forward = 1;
         cmd.walk = pace === 'walk';
-        cmd.sprint = pace === 'sprint' || pace === 'holstered sprint';
+        cmd.sprint = pace === 'sprint';
         cmd.crouch = pace === 'crouch';
         let streak = 0;
         let longest = 0;
@@ -388,7 +388,7 @@ describe('PhysicsWorld (Rapier)', () => {
         expect(longest, label).toBe(0);
         // Up or down, the ramp keeps the pace with `rampPace` 1 (audit SIM-17: a sprint up the dock ramp lost a quarter
         // of it). The game ships with it at 0 until the owner's playtest (DECISIONS FA1), so the test sets it.
-        const full = { walk: MOVEMENT.walkSpeed, run: MOVEMENT.runSpeed, sprint: MOVEMENT.sprintSpeed, 'holstered sprint': MOVEMENT.holsterSprintSpeed, crouch: MOVEMENT.crouchSpeed }[pace];
+        const full = { walk: MOVEMENT.walkSpeed, run: MOVEMENT.runSpeed, sprint: MOVEMENT.sprintSpeed, 'holstered run': MOVEMENT.holsterRunSpeed, crouch: MOVEMENT.crouchSpeed }[pace];
         expect(slowest, label).toBeGreaterThanOrEqual(0.95 * full);
         expect(c.position.y, label).toBeCloseTo((up ? 1 : 0) + REST, 2);
       }
@@ -398,8 +398,8 @@ describe('PhysicsWorld (Rapier)', () => {
 
   it('keeps the ground settle deeper than the fastest pace drops in a tick on the steepest ramp (BN1)', () => {
     // MOVEMENT.groundSettleDistance glues a character to the ground below it; a pace that drops further than that in
-    // one tick down a ramp leaves the ground at its crest (the holstered sprint, M92, did at 6 cm: see below).
-    const fastest = Math.max(MOVEMENT.sprintSpeed, MOVEMENT.holsterSprintSpeed);
+    // one tick down a ramp leaves the ground at its crest (M92's holstered sprint at 6.8 m/s did at 6 cm: see below).
+    const fastest = Math.max(MOVEMENT.sprintSpeed, MOVEMENT.holsterRunSpeed);
     expect(MOVEMENT.groundSettleDistance).toBeGreaterThan(fastest * DT * PHYSICS.maxRampSlope + 0.01);
   });
 
@@ -423,7 +423,8 @@ describe('PhysicsWorld (Rapier)', () => {
       const across = (alongX ? ramp.size.z : ramp.size.x) / 2 - BODY.radius - 0.1 - (plaza ? 0.05 : 0);
       const top = ramp.center.y + ramp.size.y / 2;
       for (const pace of ['sprint', 'holstered sprint'] as const) {
-        const speed = pace === 'sprint' ? MOVEMENT.sprintSpeed : MOVEMENT.holsterSprintSpeed;
+        // Holstered or not, a sprint is the same pace (Dev 6 note 27).
+        const speed = MOVEMENT.sprintSpeed;
         for (const side of [-1, 0, 1]) {
           for (const phase of [0, 0.25, 0.5, 0.75]) {
             // Half a metre and part of a tick back from the crest, on the landing, heading down the slope.
