@@ -296,7 +296,7 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | Issue | Class | Notes |
 |---|---|---|
 | The picture compare's WebGL reference (b10c006) no longer matches Woodland or the figures, so those pairs fail on content, not drawing | document | Since b10c006, M88 rebuilt Woodland and RM4's replicas draw part by part. (W6b) |
-| The hand-pose test on the replica files (`fileHandPoses.test.ts`, the AEG case) runs past Vitest's 5 s limit in a loaded container's full run | can wait | 3.7 s alone (it loads the model files); timed out in two of three local gates on PF3's branch, which touches no `src/` file. Give it its own timeout if it recurs. (PF3) |
+| The hand-pose test on the replica files (`fileHandPoses.test.ts`, the AEG case) takes about 3.7 s alone | can wait | It ran past Vitest's 5 s limit in three local gates on PF3's branch under load, so each case now has 20 s. Speed up its fit if it grows. (PF3) |
 | The WebGPU twins' and particles' allocation tests count heap growth, which can run over their limit while the bot-match guards run beside them | can wait | Seen four times on a local gate, never alone; each passed on the re-run. Widen or isolate them if it recurs. |
 | A map's team-colour rule reads each block's tint, and a textured block's tint is white, so an orange or blue texture would pass it | can wait | The skin checks measure each map as painted in the browser (`measureMapPalettes`). (CT2, CT4) |
 | `config/renderView.ts` and `config/audio.ts` hold small derived helpers (whistle schedule, result-screen delay), and renderView imports audio | can wait | Fine at this size; move derived timing into a module if config grows more logic. (BP2) |

@@ -135,7 +135,7 @@ describe('the hands on the replica model files (playtest Dev 6, note 28)', () =>
           for (const [i, part] of partsOf(build, pose, detail).entries()) expect(fit(tris, part).depth, `${hold} ${style} ${detail} part ${i}`).toBeLessThanOrEqual(into);
         }
       }
-    });
+    }, 20_000); // about 3.7 s alone; past Vitest's 5 s in a loaded full run (KNOWN_ISSUES, PF3)
   }
 
   it('hold on: each palm, the firing hand\'s fingertips and every thumb against the replica, not off it', () => {
