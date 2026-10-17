@@ -46,6 +46,10 @@ acceptance:
      or removed too. Cover and sight lines near it are noted in the record.
   4. Woodland's balance guards and M88's hidden starts still pass; Low and Medium perf hold. Before and after
      screenshots of each spot go to William.
+  5. William's picks on the first pictures (2026-10-17): roof the hut, not the whole fort. His tweaks at 12:58: "make
+     the walls around the structure on the hill lower and the structure with the roof a little bit taller", and
+     "completely remove all boulders. I hate them." Every boulder goes; cover they gave stays as logs where balance
+     needs it. His item 3 (more elevation, maybe a stream) is a concept first and a later pull request.
 status: open
 attempts: 0
 

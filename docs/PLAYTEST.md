@@ -331,9 +331,10 @@ Meadow, Creek with the cabin). 5v5 by default, or 6v6. Turn on Settings › Dev 
   lanterns give you away.
 - [ ] **The look and sound.** Bark trunks, log walls, boulders, plank fences, a gravel creek; wind in the pines,
   insects, a distant owl, a crackle at each fire, and footsteps that sound like the ground, as loud as on concrete.
-- [ ] **The meadow and the fort (WL2).** No lone oak in the middle (a low rock stands there); no tall grey blocks: the
-  meadow's big boulders are low and wide, and the three on the climbs to the fort are log piles you can stand behind.
-  The fort's hut has a grey tin roof like the cabin's, and the flag still shows over the walls from the meadow.
+- [ ] **The meadow and the fort (WL2).** No lone oak in the middle and no boulders anywhere: the meadow has fallen
+  trunks and the three climbs to the fort have log piles you can stand behind. The fort's outer walls are chest high
+  (1.5 m): stand to shoot over, crouch to hide. The hut is taller, under a grey tin roof like the cabin's, and the flag
+  still shows over the walls from the meadow.
 
 ### Neon Heights (dev content)
 
