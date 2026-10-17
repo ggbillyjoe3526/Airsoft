@@ -32,6 +32,15 @@ describe('per-task records (pipeline/records.mjs, TE2)', () => {
     expect(r.review).toMatchObject({ attempts: 1, score: 'trivial', critic: 'Haiku diff check', note: 'a typo only' });
   });
 
+  it('takes a fix-tier record without a Known issues section, and still wants Attempts and Decisions', () => {
+    const fix = record().replace(/\n## Known issues left\n\n- None\.\n$/, '\n');
+    expect(fix).not.toContain('Known issues left');
+    const r = parseRecord(fix, 'M80.md');
+    expect(r.problems).toEqual([]);
+    expect(r.issues).toEqual([]);
+    expect(parseRecord(fix.replace('## Decisions', '## Notes'), 'M80.md').problems).toContain('no "## Decisions" section');
+  });
+
   it.each([
     [{ title: '# Bots stop at the flag' }, 'the first line is not'],
     [{ review: '**Review:** M80 took two goes and the critic liked it' }, 'the review line is not'],
