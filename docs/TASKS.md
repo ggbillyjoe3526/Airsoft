@@ -218,19 +218,6 @@ acceptance:
 status: open
 attempts: 0
 
-## DX7 · Bots: the hub files split, two sources of truth closed (audit A8 part, B5, B6, B13)
-tier: core
-perf: required
-touches: src/ai/, src/config/bots.ts, src/config/, src/ui/devSettings.ts, src/pool/, src/progress/, data/, pool.md, stats.md, levels.md, bots.md, bot-kits.md, callouts.md, src/content/, pipeline/build-cached.mjs, pipeline/review.mjs, pipeline/reviewEdge.test.mjs, pipeline/scope.mjs, pipeline/testReach.mjs, pipeline/testReach.test.mjs, pipeline/README.md, .claude/skills/new-content/SKILL.md
-contract: none
-acceptance:
-  1. Hearing and round planning leave `ai/botController.ts` for modules of their own (as `squadOrders.ts` and `magShare.ts` already did); `botController.ts` is under 600 lines and every headless guard passes with the same seeds.
-  2. `config/bots.ts` is split by concern (movement, senses, squad, extraction, skill), each file under 300 lines, with `config/README.md` naming them and `config/bots.ts` re-exporting so no importer changes.
-  3. A malformed row in any root table (`pool.md`, `stats.md`, `levels.md`, `bots.md`, `bot-kits.md`, `callouts.md`) shows in the Dev tab's diagnostics and the console, not the console alone.
-  4. The six root tables live in one `data/` folder, named in `README.md` › Layout and `docs/ARCHITECTURE.md`, with every import and test path updated.
-status: open
-attempts: 0
-
 ## DX8 · Game: the play flow and the dev glue out of the composition root (audit A1 step two; optional, after DX5)
 tier: core
 perf: required
