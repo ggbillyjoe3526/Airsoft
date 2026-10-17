@@ -36,6 +36,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **MS1** · Depot has cranes, container stacks, sheds, silos, chimneys, a water tower and a power line over its walls
 - **MS1** · Woodland's cabin has a grey tin roof, taller walls and lanterns; pines have layered branches, bushes are smaller, nights brighter
 - **MS1** · Neon Heights is ringed by towers up to 72 m with adverts, lit windows, 27 more neon signs, lantern cables and skybridges
+- **BD1** · Your own body in first person shows only when you look down far enough to see it
+- **BD1** · Medium's Player detail is Low: figures drop to middle detail beyond 6 m and the coarsest beyond 16 m (High and Ultra keep 12 m and 28 m)
 
 ### Fixed
 - **KI1** · Leaning beside a wall that cuts the lean eases the view over 0.1 s instead of jumping
@@ -65,6 +67,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **DX0** · Developer-only: a quicker test loop with a changed-tests run, one shared math module, a README coverage test, read-only game state for bots
 - **BD1** · Headless bot matches and balance figures play with the rigged figures' hit rules; perf-run loses its models option; perf baselines re-recorded with models drawn
 - **HV1** · Hit shapes are fitted per figure and sampled from the clips as the figures load
+- **BD1** · Each rigged figure casts its shadow from one coarse copy, and the robot's plain materials share one finish
 
 ## 0.1 Dev 6 · 2026-10-16
 

@@ -263,7 +263,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   (FA2, FA7, G5)
 - Raised dock and ramps cast shadows; BB streaks consistent on any screen; replica sheen now on Medium and preserved
   across preset switches; contact shadows under every player on all presets (FA3, FA7)
-- Players, replicas, parts and hands rebuilt in Counter-Strike / Valorant style with more detail on Medium and High;
+- Players, replicas, parts and hands rebuilt in Counter-Strike / Valorant style with more detail on High, and on Medium figures drop to lower detail with distance;
   barrels and silencer model details on High; third-person rifles show a fitted silencer (FA8)
 - Replicas and attachments redesigned: blockier two-tone style with stippled grips; red dot as enclosed square hood,
   silencer hexagonal body (G2)
@@ -274,7 +274,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Players as masked humans (high-cut or bump helmet, balaclava, visor; no bare faces) in team camo with a team-colour
   plate carrier, or robots in a light or dark shell by team, mixed on both teams when Look › Robots is on; their
   replicas in the team's colours (G7)
-- Your first-person arms: dark gloves, team camo sleeves and armband, or robot arms when your player is a robot (G7)
+- Your first-person arms: dark gloves, team camo sleeves and armband, or robot arms when your player is a robot; your own body shows only when you look down far enough to see it (G7, BD1)
 - An optional glTF player model dropped into the assets folder replaces the built-in figures (M25a)
 - Blender human figure, realistic body, gloved hands that grip the AEG and pistol, four heads (high-cut helmet, goggled cap, boonie hat, full-cut helmet) and team colour on the vest, armbands and bands (RM9)
 - Blender robot figure, boxier mechanical limbs, visor head with headset and antenna, white suit with team shoulder caps; both Blender figures rest on cover and vault with their own animations (RM10)
