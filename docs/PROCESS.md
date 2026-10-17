@@ -67,6 +67,10 @@ release description:
 5. **The play link** (IM2): the tag publishes itself to https://ggbillyjoe3526.github.io/Airsoft/
    (`.github/workflows/pages.yml`). Check the title screen there names the new release; if it doesn't, the Play link
    run in Actions says why, and **Run workflow** publishes it again.
+6. **The archive check** (DX2): run `wc -c docs/*.md`. A live doc over about 50 KB gets its finished parts moved word
+   for word to `docs/archive/<release>/` (the folder is named for the stage just closed, such as `0.1-beta/`; make it
+   if it is missing), the full wording of anything shortened goes there too, and `docs/archive/README.md` names the
+   folder. Fix every `›` heading reference that pointed at moved text (`grep -rn "<heading>" . --exclude-dir=archive`).
 
 ## Pull requests and branches
 
