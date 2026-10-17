@@ -22,6 +22,7 @@
     "check:all": "npm run check && npm run test:browser",
     "gate": "node pipeline/gate.mjs",
     "perf": "node pipeline/perf-run.mjs",
+    "perf:desktop": "node pipeline/perf-desktop.mjs",
     "balance": "node pipeline/balance.mjs"
   },
   "dependencies": {
