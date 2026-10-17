@@ -48,6 +48,13 @@ export interface TeamColours {
   readonly hud: readonly number[];
   /** Extraction's exits (AX1): their colour stands apart from both teams, so a set picked for colour vision has its own. */
   readonly exit: ExitColours;
+  /**
+   * The figures' team paint glows this share of its colour (AX1), as hi-vis cloth holds its colour in shade. High
+   * Contrast's dark orange sank into Depot's darkest corners (ΔE 8-11 from the wall for a deuteranope, measured in the
+   * game; 25-26 with the glow). Day light only: on a night field the lamps and torches light the figures
+   * (`dayColours`).
+   */
+  readonly paintGlow: number;
 }
 
 /**
@@ -64,8 +71,8 @@ export interface ExitColours {
 export const TEAM_COLOUR_SETS: Readonly<Record<TeamColourSetId, TeamColours>> = {
   // Standard keeps the exit green (owner decision 17); High Contrast's exits are hi-vis yellow, as green sits close to
   // the orange team for a deuteranope (colourVision.test.ts).
-  standard: { figures: TEAM_COLORS, hud: TEAM_COLORS, exit: { open: 0x3fcf6a, ink: 0xffffff, cone: 0xf08a24 } },
-  highContrast: { figures: [0x8ccfff, 0xb8460c], hud: [0x8ccfff, 0xe0601a], exit: { open: 0xfff000, ink: 0x1d1f23, cone: 0xfff000 } },
+  standard: { figures: TEAM_COLORS, hud: TEAM_COLORS, exit: { open: 0x3fcf6a, ink: 0xffffff, cone: 0xf08a24 }, paintGlow: 0 },
+  highContrast: { figures: [0x8ccfff, 0xb8460c], hud: [0x8ccfff, 0xe0601a], exit: { open: 0xfff000, ink: 0x1d1f23, cone: 0xfff000 }, paintGlow: 0.3 },
 };
 
 export const TEAM_COLOUR_CHOICES: readonly { id: TeamColourSetId; label: string; blurb: string }[] = [
@@ -74,6 +81,11 @@ export const TEAM_COLOUR_CHOICES: readonly { id: TeamColourSetId; label: string;
 ];
 
 export const DEFAULT_TEAM_COLOURS: TeamColourSetId = 'standard';
+
+/** A set's colours on a field lit by day or at night: no paint glow at night (TeamColours.paintGlow). */
+export function dayColours(colours: TeamColours, night: boolean): TeamColours {
+  return night && colours.paintGlow > 0 ? { ...colours, paintGlow: 0 } : colours;
+}
 
 /**
  * A team's colour for CSS: a custom property the game sets on its container from the picked set as each match is

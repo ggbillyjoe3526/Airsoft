@@ -41,7 +41,7 @@ import type { LookSettings } from './config/look';
 import { SIM, SIM_DT, SKIP_ROUND } from './config/sim';
 import { idleCommand, type SkipOffer, skipEnds, skipOffer, skipTickCap, skipTickShown } from './matchFlow';
 import type { SquadCommand } from './config/squad';
-import type { TeamColours } from './config/teams';
+import { dayColours, type TeamColours } from './config/teams';
 import { BuildTiming } from './core/buildTiming';
 import { caseSeed, runSeed } from './core/seed';
 import { figureCrowd, playerArms } from './render/figureMix';
@@ -362,7 +362,7 @@ export class MatchSession {
     this.combat.setMapGroup(this.mapGroup);
     this.build.phase('sound');
     this.stats = new MatchStats(this.state.characters);
-    this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, this.teamSizes(), this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours, map, renderer.figureModel, quality.figureDetail, this.extraction, crowd, renderer.replicaFiles, renderer.figureRigs);
+    this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, this.teamSizes(), this.rounds, this.stats, (action) => input.keyName(action), dayColours(setup.teamColours, this.lighting.night), map, renderer.figureModel, quality.figureDetail, this.extraction, crowd, renderer.replicaFiles, renderer.figureRigs);
     this.match.setHitFacts(this.bots.lastHit);
     // A rigged figure's BBs leave its own replica's muzzle (BP4).
     this.combat.setRiggedMuzzle((c, out) => this.match.riggedMuzzle(c, out));

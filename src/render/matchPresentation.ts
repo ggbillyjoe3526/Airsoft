@@ -202,7 +202,7 @@ export class MatchPresentation {
   ) {
     this.keyName = keyName;
     // Each figure holds its own active replica (Armament.replicas): rifle or pistol pose.
-    this.characters = new CharacterRenderer(state.characters, teamColours.figures, hits, figureModel, figureDetail, crowd, replicaFiles, figureRigs);
+    this.characters = new CharacterRenderer(state.characters, teamColours.figures, hits, figureModel, figureDetail, crowd, replicaFiles, figureRigs, teamColours.paintGlow);
     this.flag = new FlagRenderer(teamColours.figures, rules.flag.radius, rules.overtime.reach);
     scene.add(this.characters.object, this.flag.object);
     this.feedback = new HitFeedback(container, () => keyName('fire'));
