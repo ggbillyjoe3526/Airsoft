@@ -115,7 +115,8 @@ never changes a model or an effort level unless the owner asks.
   audit hands on among them. Opus threads run at Extra effort (`xhigh`), the owner's project setting; a `worker` agent a
   thread splits its task to inherits the thread's model at high effort. The critic runs on Opus for core tasks and near
   misses, and the performance agent when a regression stays unexplained.
-- **Sonnet 5.5, medium, for `tier: ui` and `tier: trivial` tasks,** QA, and the other critic and performance runs.
+- **Sonnet 5.5, medium, for `tier: ui`, `tier: trivial` and `tier: fix` tasks** (a fix in a core system, such as the
+  simulation, physics or bots, on Opus), QA, and the other critic and performance runs.
 - **Haiku 5.5, low, for small helper jobs:** the changelog and triage agents, and the diff check on a docs-only
   `tier: trivial` task.
 - **Fable 5.1 only with the owner's explicit approval, asked for each time.** It costs far more than Opus, so it is
@@ -171,6 +172,11 @@ performance, triage, critic, changelog; the critic's eight checks are in `critic
   the owner instead of looping.
 - **The owner's playtest wins.** The critic cannot play the game: it lists browser tests for the owner, whose playtest
   overrides it.
+- **Fixes are lighter (`tier: fix`, audit A5, 2026-10-17).** Beta is mostly small fixes, and the full record and
+  change notes were sized for Dev features: up to nine documents for a balance tweak. A fix keeps every check that
+  catches a bug (the gates, QA, performance, the critic) and skips only paperwork that tells nobody anything new: no
+  FEATURES or PLAYTEST edit unless the player sees a difference, no Known issues section when it leaves none, and the
+  critic on Sonnet unless a judgment near miss needs Opus.
 - **Records.** Each task writes `docs/records/<id>.md` (format in `docs/records/README.md`); records before 2026-10-08
   are in `docs/archive/0.1-dev/REVIEWS.md` and `METRICS.md`.
 

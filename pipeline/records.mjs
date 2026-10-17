@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Per-task records (token-efficiency plan, items 3 and 4; docs/records/README.md): each task keeps its review line,
+ * Per-task records (docs/records/README.md): each task keeps its review line,
  * its attempt rows, its own decisions and the known issues it left in one file, `docs/records/<id>.md`, instead of
  * appending to shared tables. This module reads and checks those files and prints the index tables built from them;
  * `metricsRow` is the attempt row the gate (pipeline/gate.mjs) writes from its own report.
@@ -28,7 +28,8 @@ export const REVIEW_NOTE_MAX = 80;
 const TASK_ID = /^[A-Z]{1,3}\d+[a-z]?$/;
 /** `**Review:** 2 attempts · 8/8 · Accept (Opus)`, optionally ` · <short note>`. */
 const REVIEW = /^\*\*Review:\*\* (\d+) attempts? · (\d\/8|trivial) · (Accept|Auto-accept|Escalated) \(([^)]+)\)(?: · (.+))?$/;
-const SECTIONS = ['Attempts', 'Decisions', 'Known issues left'];
+/** Required sections; `## Known issues left` is optional, since a `tier: fix` record leaves it out when it has none. */
+const SECTIONS = ['Attempts', 'Decisions'];
 
 const clip = (text, max) => (text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text);
 /** A value made safe for one table cell: one line, no column breaks. */
@@ -43,7 +44,7 @@ const splitRow = (line) => line.trim().replace(/^\||\|$/g, '').split(/(?<!\\)\|/
 export function gateCell(gate) {
   if (!gate) return '–';
   const secs = typeof gate.ms === 'number' ? ` ${Math.round(gate.ms / 1000)} s` : '';
-  // A tests gate that left the slow guards to CI says so (token plan item 21).
+  // A tests gate that left the slow guards to CI says so.
   if (gate.pass === true) return `✓${secs}${gate.projects === 'fast' ? ' (fast)' : ''}`;
   if (gate.pass === false) {
     const failures = gate.failures ?? [];

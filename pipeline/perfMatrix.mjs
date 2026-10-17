@@ -60,7 +60,7 @@ export const runName = (run) => `${run.map} ${run.mode} ${run.preset}${run.backe
 
 /**
  * The combinations the gate runs for a diff: each matrix entry some changed perf path reaches, in the matrix's order.
- * `force` (gate --perf) runs the whole matrix.
+ * `force` (gate --env laptop) runs the whole matrix.
  */
 export function selectPerfRuns(changedFiles, matrix, { force = false } = {}) {
   if (force) return [...matrix];
