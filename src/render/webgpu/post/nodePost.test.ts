@@ -122,6 +122,26 @@ describe('the node post stack matches WebGL’s, pass for pass (W4)', () => {
     b.dispose();
   });
 
+  it('draws the light shafts with the sun off screen only while warming up, at no strength (PF1)', () => {
+    const b = node('high');
+    b.setLight(new THREE.Vector3(0, 0.1, 1), false);
+    const camera = new THREE.PerspectiveCamera(60, 16 / 9, 0.1, 400);
+    const shafts = (b as unknown as { passes: { id: string; u?: { strength: { value: number } } }[] }).passes.find((p) => p.id === 'lightShafts')!;
+    const quads = (warming: boolean): number => {
+      const { gl, draws } = stubRenderer();
+      b.setWarming(warming);
+      b.draw(gl as unknown as NodeRenderer, new THREE.Scene(), camera);
+      return draws.filter((d) => d.what === 'quad').length;
+    };
+    const plain = quads(false);
+    shafts.u!.strength.value = 1;
+    // The mask, the blur and the add: three quads more, the last adding nothing.
+    expect(quads(true)).toBe(plain + 3);
+    expect(shafts.u!.strength.value).toBe(0);
+    expect(quads(false)).toBe(plain);
+    b.dispose();
+  });
+
   it('holds targets of the same sizes and types as WebGL’s, and resizes them alike', () => {
     for (const preset of ['medium', 'high', 'ultra'] as const) {
       const b = node(preset);

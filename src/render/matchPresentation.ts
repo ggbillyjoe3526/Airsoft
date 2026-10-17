@@ -57,6 +57,7 @@ import { EdgePins, type EdgeStep, edgeAngle, projectMarker, type ScreenMarker } 
 import { SpectatorCamera } from './spectatorCamera';
 import type { FigureRigs } from './figureRig';
 import { type FigureCrowd, HUMAN_CROWD } from './figureMix';
+import type { WarmStage } from './rendererParts';
 
 /** The minimap's pings while Settings › HUD › Ping markers is off: none. */
 const NO_PINGS: readonly ShownPing[] = [];
@@ -283,6 +284,11 @@ export class MatchPresentation {
   setFlagQuality(quality: Pick<QualitySettings, 'mapDetail' | 'environment'>): void {
     this.flag.setDetail(quality.mapDetail);
     this.flag.setEnvironmentLit(quality.environment);
+  }
+
+  /** How the warm-up draws the figures (PF1): every part shown, then see-through too, as one walking off fades. */
+  warmPoses(): WarmStage[] {
+    return this.characters.warmPoses();
   }
 
   /** What the warm-up shows to compile ahead (KI1): the flag, hidden in Elimination until overtime puts it up. */

@@ -32,13 +32,17 @@ import {
   type IdleScheduler,
   toneMappingOf,
   verticalFovFor,
+  unstaged,
+  type WarmStage,
   warmSurfacesInIdle,
+  withEverythingInView,
   withShown,
   zoomedFov,
 } from './rendererParts';
 import { retroPixelAngle, type RetroView } from './retroFilter';
 import { releaseNormalMaps, usesNormalMaps } from './surfaceNormals';
 import type { NodeBackend } from './webgpu/nodeBackend';
+import type { Overlay } from './webgpu/post/nodePostStack';
 
 export {
   type DrawingRenderer,
@@ -136,6 +140,11 @@ export class Renderer {
   private recovery: Promise<void> | null = null;
   private recovered: () => void = () => undefined;
   /**
+   * The warm-up's draws still to come (PF1): one under each of `setUp`, ahead of the first frame after its compile has
+   * settled (`ready`); `done` is told once they are drawn, or once there is nothing left to draw them for.
+   */
+  private warmDraw: { overlay: Overlay | undefined; setUp: readonly WarmStage[]; ready: boolean; done: () => void } | null = null;
+  /**
    * The post stack (G5, render/post/postHost.ts) for the quality in force: none on Low (the frame is drawn straight to
    * the screen), and none while the retro filter is on.
    */
@@ -193,6 +202,11 @@ export class Renderer {
   /** This frame's draw calls and triangles (both passes) and what the renderer holds (one object, refilled each read). */
   get stats(): DrawStats {
     return this.node.stats;
+  }
+
+  /** The pipelines built so far (`?perf` names a frame of play that built any, PF1). */
+  get pipelinesBuilt(): number {
+    return this.node.pipelinesBuilt;
   }
 
   /**
@@ -429,17 +443,34 @@ export class Renderer {
   }
 
   /**
-   * Compiles the pipelines the first frame would (M63, audit REN-06): every material in the world and in `overlay`
-   * under the lights, haze, environment and target that frame draws with, so a match's first frame is not where they
-   * are compiled. Called once, as a session's build ends; the renderer compiles them in the background (W1, W4).
-   * `hidden`: what is hidden now but may show mid-session (in the world or the overlay), compiled too (KI1, withShown).
+   * Warms every pipeline the session can draw (M63, audit REN-06, KI1, PF1), in two steps; settles once both are done.
+   * First a compile of every material in the world and in `overlay`, wherever it stands, under the lights, haze,
+   * environment and target the frames draw with; the renderer compiles them in the background (W1, W4). Then, once
+   * that has settled, real draws ahead of the next frame, which that frame draws over before any reaches the screen:
+   * what only a draw builds (the shadow pass, the stack's last pass onto the canvas, the reflections' mask, and on Low
+   * every render object). `hidden`: what is hidden now but may show mid-session (KI1, withShown); `poses`: the ways the
+   * session can draw its scene later (its figures fading, then with every part shown), a draw under each in turn, the
+   * compile under the last. A material's change rebuilds the render objects drawn with it, so the last pose is the one
+   * the frames draw: the draws leave every render object as the frames will find it. Called once, as a session's build
+   * ends.
    */
-  warmShaders(overlay?: { scene: THREE.Scene; camera: THREE.Camera }, hidden: readonly THREE.Object3D[] = []): void {
+  warmShaders(overlay?: Overlay, hidden: readonly THREE.Object3D[] = [], poses: readonly WarmStage[] = [unstaged]): Promise<void> {
     if (this.environmentDirty) this.applyEnvironment();
     // A session's build has just ended: its reflective meshes (if any) are found on the next frame.
     this.post.rescan();
     const drawer = this.retro ?? this.postStack();
-    withShown(hidden, () => this.node.compile(this.scene, this.camera, overlay, drawer, this.quality));
+    const roots = overlay ? [this.scene, overlay.scene] : [this.scene];
+    const setUp = poses.map((pose): WarmStage => (run) => pose(() => withShown(hidden, () => withEverythingInView(roots, run))));
+    (setUp.at(-1) ?? unstaged)(() => this.node.compile(this.scene, this.camera, overlay, drawer, this.quality));
+    // A session built before this one never had its draws: nothing waits on them any more.
+    this.warmDraw?.done();
+    return new Promise<void>((done) => {
+      const warm = { overlay, setUp, ready: false, done };
+      this.warmDraw = warm;
+      void this.afterCompiles().then(() => {
+        warm.ready = true;
+      });
+    });
   }
 
   /**
@@ -462,10 +493,28 @@ export class Renderer {
    * Draws the world, then (optionally) an overlay scene such as the held replica on top of it: through the retro filter
    * or the post stack, or on Low straight onto the canvas (W4: render/webgpu/nodeBackend.ts draw).
    */
-  render(overlay?: { scene: THREE.Scene; camera: THREE.Camera }): void {
-    const node = this.node;
+  render(overlay?: Overlay): void {
     // A lost device draws nothing until its replacement takes over (nodeLost).
-    if (node.lost) return;
+    if (this.node.lost) return;
+    const warm = this.warmDraw;
+    if (warm?.ready) {
+      // The warm-up's draws (PF1): never seen, as this frame draws over them before it reaches the screen. The temporal
+      // history they leave (everything shown, the figures see-through) is forgotten.
+      this.warmDraw = null;
+      this.post.warming(true);
+      try {
+        for (const setUp of warm.setUp) setUp(() => this.draw(warm.overlay));
+      } finally {
+        this.post.warming(false);
+      }
+      warm.done();
+    }
+    this.draw(overlay);
+  }
+
+  /** One frame of the world, and of `overlay` over it. */
+  private draw(overlay: Overlay | undefined): void {
+    const node = this.node;
     if (this.environmentDirty) this.applyEnvironment();
     node.prepare(this.scene, this.quality, this.motion);
     node.setTiming(this.gpuTiming);
@@ -494,6 +543,8 @@ export class Renderer {
     this.retro = null;
     this.models.dispose();
     this.disposed = true;
+    this.warmDraw?.done();
+    this.warmDraw = null;
     // Frees the device (or the WebGL2 context) at once rather than when the canvas is collected (REN-24).
     this.node.dispose();
     this.gl.domElement.remove();

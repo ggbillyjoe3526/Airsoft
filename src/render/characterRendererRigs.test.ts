@@ -119,6 +119,63 @@ describe('the rigged figures in CharacterRenderer', () => {
     r.dispose();
   });
 
+  it('the warm-up draws every figure fading, then solid, each time with every part shown, and gets each back (PF1)', () => {
+    for (const rigged of [true, false]) {
+      const r = make(chars(), rigged);
+      settle(r);
+      const figures = inside(r).figures;
+      const rootOf = (s: (typeof figures)[number]) => s.rigged?.root ?? (s.figure as { root: THREE.Object3D }).root;
+      const own = (s: (typeof figures)[number]) => new Set<THREE.Material>([s.material, ...(s.rigged?.materials ?? (s.figure as { modelMaterials: THREE.Material[] }).modelMaterials)]);
+      const all = (): THREE.Object3D[] => {
+        const out: THREE.Object3D[] = [];
+        r.object.traverse((o) => void out.push(o));
+        return out;
+      };
+      const listOf = (m: THREE.Mesh): THREE.Material[] => (Array.isArray(m.material) ? m.material : [m.material]);
+      const meshes = figures.flatMap((s) => meshesOf(rootOf(s)));
+      const materialsBefore = meshes.map((m) => m.material);
+      const castBefore = meshes.map((m) => m.castShadow);
+      const versions = figures.flatMap((s) => [...own(s)].map((m) => [m.version, m.transparent]));
+      const shownBefore = all().map((o) => o.visible);
+      expect(shownBefore.some((v) => !v)).toBe(true);
+      const [fading, solid] = r.warmPoses();
+      let shown: boolean[] = [];
+      let drawnIn: THREE.Material[] = [];
+      solid!(() => {
+        shown = all().map((o) => o.visible);
+        drawnIn = meshes.flatMap(listOf);
+      });
+      expect(shown.every(Boolean)).toBe(true);
+      expect(drawnIn).toEqual(materialsBefore.flatMap((m) => (Array.isArray(m) ? m : [m])));
+      let copies: THREE.Material[] = [];
+      let casting = 0;
+      fading!(() => {
+        shown = all().map((o) => o.visible);
+        copies = figures.flatMap((s) => meshesOf(rootOf(s)).flatMap(listOf).filter((m) => !own(s).has(m) && m.transparent));
+        casting = meshes.filter((m) => m.castShadow).length;
+      });
+      expect(shown.every(Boolean)).toBe(true);
+      // Every figure is drawn in see-through copies, its own materials untouched (no render object rebuilt for them).
+      expect(copies.length).toBeGreaterThan(0);
+      for (const s of figures) expect(meshesOf(rootOf(s)).flatMap(listOf).some((m) => own(s).has(m))).toBe(true);
+      expect(casting).toBe(0);
+      expect(all().map((o) => o.visible)).toEqual(shownBefore);
+      expect(meshes.map((m) => m.material)).toEqual(materialsBefore);
+      expect(meshes.map((m) => m.castShadow)).toEqual(castBefore);
+      expect(figures.flatMap((s) => [...own(s)].map((m) => [m.version, m.transparent]))).toEqual(versions);
+      // The same copies the next time; freed with the renderer.
+      let again: THREE.Material[] = [];
+      fading!(() => {
+        again = figures.flatMap((s) => meshesOf(rootOf(s)).flatMap(listOf).filter((m) => !own(s).has(m) && m.transparent));
+      });
+      expect(again).toEqual(copies);
+      const freed = vi.fn();
+      for (const c of new Set(copies)) c.addEventListener('dispose', freed);
+      r.dispose();
+      expect(freed).toHaveBeenCalledTimes(new Set(copies).size);
+    }
+  });
+
   it('a leaving figure fades its rigged materials and drops its shadow; a standing one does neither', () => {
     const cs = chars();
     const r = make(cs, true);

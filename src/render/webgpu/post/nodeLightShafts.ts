@@ -10,6 +10,9 @@ const { clamp, float, Fn, length, Loop, max, perspectiveDepthToViewZ, pow, textu
 
 const C = POST.lightShafts;
 
+/** Where the warm-up's frames (PF1) draw the shafts from while the sun is off screen: the middle, faded out. */
+const OFF_SCREEN: Readonly<SunOnScreen> = { u: 0.5, v: 0.5, fade: 0 };
+
 /**
  * Light shafts on the node path (W4): WebGL's GLSL pass (G5, deleted in W6) in TSL, the same three draws (the sky round the
  * sun or moon masked by the depth, blurred towards it at half resolution, added back) at the same strengths. Three's
@@ -69,7 +72,9 @@ export class NodeLightShaftsPass implements PostPass<NodeRenderer, NodeTarget> {
 
   render(gl: NodeRenderer, frame: PostFrame, read: NodeTarget): boolean {
     const cam = frame.camera;
-    const sun = frame.depth ? sunOnScreen(cam, frame.sun, this.scratch, this.onScreen) : null;
+    if (!frame.depth) return false;
+    // Off screen they draw nothing, but the warm-up's frames (PF1) draw them anyway, at no strength, to build them.
+    const sun = sunOnScreen(cam, frame.sun, this.scratch, this.onScreen) ?? (frame.warming ? OFF_SCREEN : null);
     if (!sun) return false;
     const u = this.u;
     this.colour.value = read.texture;

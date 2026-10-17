@@ -892,14 +892,23 @@ export class Game {
   }
 
   /**
+   * `?perf` (PF1): names a frame of play that built pipelines, which the warm-up should have built before the round
+   * (a quality change mid-round builds its own, as it says).
+   */
+  private logBuilds(s: MatchSession | RangeSession, built: number, drawMs: number): void {
+    if (built > 0 && s.state.tick > 0) console.info(`perf: ${built} pipeline${built === 1 ? '' : 's'} built mid-play at tick ${s.state.tick} (draw ${drawMs.toFixed(1)} ms)`);
+  }
+
+  /**
    * The automatic step-down (REN-03), after each frame drawn in play: frame times go to the watch while the game's own
    * pick is in force; a step decided mid-round waits for the round to end (a new preset compiles new pipelines, a
    * hitch nobody wants mid-fight), then applies, unsaved, with a line on the HUD.
    */
   private watchFrameTimes(s: MatchSession | RangeSession, frameSeconds: number): void {
     if (!this.autoQuality || this.steppedDown) return;
-    // A skipped round (M83) spends each frame simulating on purpose: its frames say nothing about the graphics.
-    if (s instanceof MatchSession && s.skipping) return this.frameWatch.reset();
+    // A skipped round (M83) spends each frame simulating on purpose, and the warm-up's (PF1) compiling: their frames say
+    // nothing about the graphics.
+    if (s instanceof MatchSession && (s.skipping || s.warmingUp)) return this.frameWatch.reset();
     if (this.stepDownTo === null) {
       const below = presetBelow(this.qualityChoice);
       if (below && this.frameWatch.add(frameSeconds * 1000, slowFrameMs(this.frameRateCap))) this.stepDownTo = below;
@@ -1633,9 +1642,13 @@ export class Game {
     if (running) {
       this.renderer.gpuTiming = this.debug.visible;
       const drawStart = performance.now();
+      const built = this.options.perfLog ? this.renderer.pipelinesBuilt : 0;
       s.draw(frameSeconds, this.keyboard.isDown('scoreboard'));
-      this.drawMs += (performance.now() - drawStart - this.drawMs) * FRAME_TIMING.smoothing;
-      this.frameWindow.add(frameSeconds * 1000);
+      const drawn = performance.now() - drawStart;
+      this.drawMs += (drawn - this.drawMs) * FRAME_TIMING.smoothing;
+      if (this.options.perfLog) this.logBuilds(s, this.renderer.pipelinesBuilt - built, drawn);
+      // The warm-up's frames (PF1) are not play: `?perf`'s worst frame is play's.
+      if (!(s instanceof MatchSession && s.warmingUp)) this.frameWindow.add(frameSeconds * 1000);
       this.watchFrameTimes(s, frameSeconds);
     }
     this.debug.frame(frameSeconds);

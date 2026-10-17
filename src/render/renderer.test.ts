@@ -327,6 +327,7 @@ function stubNode(calls: string[], targetName: (target: unknown) => string) {
     compile: (scene: THREE.Scene, camera: THREE.PerspectiveCamera, overlay: Overlay | undefined, drawer: object | null) =>
       void (drawer ? (drawer as NodePostStack).compile(drawing, scene, camera, overlay) : output.compile(drawing, scene, camera, overlay)),
     replacement: () => Promise.resolve(node.next),
+    afterCompiles: () => Promise.resolve(),
     dispose: () => undefined,
     lose: () => {
       node.lost = true;
@@ -441,6 +442,62 @@ describe('the shader warm-up (M63, audit REN-06)', () => {
     expect([group.visible, flag.visible, flag.frustumCulled, cloth.visible]).toEqual([false, true, true, false]);
   });
 
+  it('draws the frame once per pose after the compile, with nothing culled, under the next frame (PF1)', async () => {
+    const { r, calls } = stubbedRenderer();
+    const overlay = replica();
+    const box = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial());
+    r.scene.add(box);
+    const staged: string[] = [];
+    const culled: boolean[] = [];
+    const gl = glOf(r);
+    const compile = gl.compileAsync.bind(gl);
+    vi.spyOn(gl, 'compileAsync').mockImplementation((scene) => {
+      if (scene === r.scene) culled.push(box.frustumCulled);
+      return compile(scene);
+    });
+    const pose = (name: string) => (run: () => void) => {
+      staged.push(`${name} on`);
+      run();
+      staged.push(`${name} off`);
+    };
+    let settled = false;
+    const warm = r.warmShaders(overlay, [], [pose('fading'), pose('parts')]);
+    void warm.then(() => (settled = true));
+    // The compile under the last pose only: the scene as the frames will draw it.
+    expect(staged).toEqual(['parts on', 'parts off']);
+    // A frame before the compile has settled draws only itself.
+    r.render(overlay);
+    expect(calls.slice(2)).toEqual(['render', 'render']);
+    await r.afterCompiles();
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    const render = gl.render.bind(gl);
+    vi.spyOn(gl, 'render').mockImplementation((scene, camera) => {
+      if (scene === r.scene) culled.push(box.frustumCulled);
+      return render(scene, camera);
+    });
+    // The next frame draws the warm-up's frames first, one under each pose in turn, then its own; the frames after only
+    // theirs.
+    r.render(overlay);
+    expect(calls.slice(4)).toEqual(['render', 'render', 'render', 'render', 'render', 'render']);
+    expect(staged).toEqual(['parts on', 'parts off', 'fading on', 'fading off', 'parts on', 'parts off']);
+    expect(culled).toEqual([false, false, false, true]);
+    expect(box.frustumCulled).toBe(true);
+    await warm;
+    expect(settled).toBe(true);
+    r.render(overlay);
+    expect(calls.slice(10)).toEqual(['render', 'render']);
+  });
+
+  it('lets go of a warm-up still waiting for its draw when the next session warms up or the renderer goes (PF1)', async () => {
+    const { r } = stubbedRenderer();
+    const first = r.warmShaders(replica());
+    const second = r.warmShaders(replica());
+    await expect(first).resolves.toBeUndefined();
+    r.dispose();
+    await expect(second).resolves.toBeUndefined();
+  });
+
   it('with no post stack and the retro filter off, never moves the render target off the canvas', () => {
     const { r } = stubbedRenderer();
     const targets = vi.spyOn(glOf(r), 'setRenderTarget');
@@ -523,7 +580,8 @@ describe('the shader warm-up runs once per session build, never per frame (M63, 
     // CombatPresentation.warmShaders hands over to Renderer.warmShaders: that and the two sessions' are the three calls.
     expect(callers.sort()).toEqual(['/src/matchSession.ts', '/src/rangeSession.ts', '/src/render/combatPresentation.ts']);
     const ctor = bodyOf(sources['/src/matchSession.ts']!, '  constructor(');
-    const call = ctor.indexOf('this.combat.warmShaders(this.match.warmTargets())');
+    // PF1: with the ways its figures can be drawn.
+    const call = ctor.indexOf('this.combat.warmShaders(this.match.warmTargets(), this.match.warmPoses())');
     expect(call).toBeGreaterThan(0);
     expect(ctor.split('warmShaders(').length - 1).toBe(1);
     // Everything the session draws is in the scene by then.
@@ -537,10 +595,11 @@ describe('the shader warm-up runs once per session build, never per frame (M63, 
     expect(bodyOf(combat, '  render(firstPerson')).not.toMatch(/warmShaders|compile/);
     expect(bodyOf(combat, '  warmShaders(')).toMatch(/this\.renderer\.warmShaders\(this\.overlay, /);
     // With every carried replica shown, not only the one in hand (Dev 6 playtest note 26: a hitch on the first switch).
-    expect(bodyOf(combat, '  warmShaders(')).toMatch(/this\.viewmodel\.withEverySlotShown\(\(\) => this\.renderer\.warmShaders\(this\.overlay, /);
+    expect(bodyOf(combat, '  warmShaders(')).toMatch(/this\.viewmodel\.withEverySlotShown\(\(\) => pose\(run\)\)/);
+    expect(bodyOf(combat, '  warmShaders(')).toMatch(/this\.renderer\.warmShaders\(this\.overlay, shown, everySlot\)/);
     // Practice (M94): its last call too, after its map, torch beams and targets are in the scene.
     const range = bodyOf(sources['/src/rangeSession.ts']!, '  constructor(');
-    const rangeCall = range.indexOf('this.combat.warmShaders()');
+    const rangeCall = range.indexOf('void this.combat.warmShaders()');
     expect(rangeCall).toBeGreaterThan(0);
     expect(range.split('warmShaders(').length - 1).toBe(1);
     for (const built of ['this.combat = new CombatPresentation', 'renderer.scene.add(group)', 'renderer.scene.add(this.torches.object)', 'renderer.scene.add(this.targets.object)']) {

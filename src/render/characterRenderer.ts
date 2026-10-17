@@ -17,6 +17,8 @@ import type { RiggedFigure, RiggedFrame } from './riggedFigure';
 import type { ThrownMagazines } from './thrownMagazines';
 import { NO_REPLICA_FILES, type ReplicaFiles } from './replicaFiles';
 import { type ProbeGrid, type ProbeSample, probeTint, sampleProbes } from './probeGrid';
+import type { WarmStage } from './rendererParts';
+import { carryNodePatch, nodePatchOf } from './nodePatch';
 
 interface FigureState {
   /** The built-in figure, or null when it is drawn as a rigged one (BF1). */
@@ -168,6 +170,8 @@ export class CharacterRenderer {
   private readonly torchColour = new THREE.Color();
   /** The empty magazines rigged figures throw away (BF1), with the rigs only. */
   private readonly thrown: ThrownMagazines | null;
+  /** See-through copies of the figures' materials, the warm-up's (withEveryFigureFading), kept for the session. */
+  private readonly seeThrough = new Map<THREE.Material, THREE.Material>();
   private readonly frame: RiggedFrame = { alpha: 0, dt: 0, eyeX: 0, eyeY: 0, eyeZ: 0, firstPerson: false, viewLow: -Math.PI / 2, leanX: 0, leanZ: 0, peek: 0, peekPivot: 0, cycle: null, castShadow: true };
 
   constructor(
@@ -475,6 +479,82 @@ export class CharacterRenderer {
     }
   }
 
+  /**
+   * How the warm-up draws the figures (PF1, Renderer.warmShaders): see-through, as a figure walking off fades, then
+   * solid as they are, each time with every part shown (a raised hand, a holstered replica, a callout). A part's first
+   * showing, or a figure's first fade, built its pipelines on that frame mid-round.
+   */
+  warmPoses(): WarmStage[] {
+    return [(run) => this.withEveryPartShown(() => this.withEveryFigureFading(run)), (run) => this.withEveryPartShown(run)];
+  }
+
+  /** Runs `run` with every part of every figure shown, then hides again what was hidden. */
+  private withEveryPartShown(run: () => void): void {
+    const hidden: THREE.Object3D[] = [];
+    this.object.traverse((o) => {
+      if (!o.visible) {
+        o.visible = true;
+        hidden.push(o);
+      }
+    });
+    try {
+      run();
+    } finally {
+      for (const o of hidden) o.visible = false;
+    }
+  }
+
+  /**
+   * Runs `run` with every figure drawn in see-through copies of its materials, as a fading figure is (update), then
+   * gives each mesh its own back. The copies stay for the session, each drawn with once: Three frees a pipeline as soon
+   * as nothing draws with it, and they keep the see-through ones a figure's first fade uses. Swapping, rather than
+   * switching the figures' own materials, leaves the render objects the frames draw with as they are.
+   */
+  private withEveryFigureFading(run: () => void): void {
+    const swapped: { mesh: THREE.Mesh; material: THREE.Mesh['material'] }[] = [];
+    const casting: THREE.Mesh[] = [];
+    for (const s of this.figures) {
+      if (s.material.transparent) continue;
+      const fades = new Set<THREE.Material>([s.material, ...(s.rigged?.materials ?? s.figure?.modelMaterials ?? [])]);
+      (s.rigged?.root ?? s.figure?.root)?.traverse((o) => {
+        if (!(o instanceof THREE.Mesh)) return;
+        const material: THREE.Mesh['material'] = o.material;
+        if (Array.isArray(material) ? material.some((m) => fades.has(m)) : fades.has(material)) {
+          swapped.push({ mesh: o, material });
+          o.material = Array.isArray(material) ? material.map((m) => this.seeThroughOf(m, fades)) : this.seeThroughOf(material, fades);
+        }
+        // A fading figure casts no shadow (update).
+        if (o.castShadow) {
+          o.castShadow = false;
+          casting.push(o);
+        }
+      });
+    }
+    try {
+      run();
+    } finally {
+      for (const { mesh, material } of swapped) mesh.material = material;
+      for (const m of casting) m.castShadow = true;
+    }
+  }
+
+  /** `m`'s see-through copy if it is one of a figure's fading materials (`fades`), else `m`; made on first ask. */
+  private seeThroughOf(m: THREE.Material, fades: ReadonlySet<THREE.Material>): THREE.Material {
+    if (!fades.has(m)) return m;
+    let copy = this.seeThrough.get(m);
+    if (!copy) {
+      copy = m.clone();
+      // The figures' finish is drawn by a node patch the copy must carry too, or it would draw (and warm) another shader.
+      const carried = nodePatchOf(m);
+      if (carried) carryNodePatch(copy, carried.patch, carried.uniforms);
+      // Only the pipeline matters: the warm-up's draw never reaches the screen, so any opacity under 1 does.
+      copy.opacity = m.opacity / 2;
+      copy.transparent = true;
+      this.seeThrough.set(m, copy);
+    }
+    return copy;
+  }
+
   /** A figure's opacity: one that leaves the field fades out where it stands. */
   private opacity(c: Character): number {
     return c.status === 'leaving' ? Math.min(1, Math.max(0, 1 - c.statusTime / this.hits.vanishTime)) : 1;
@@ -530,6 +610,7 @@ export class CharacterRenderer {
       s.material.dispose();
     }
     this.thrown?.dispose();
+    for (const copy of this.seeThrough.values()) copy.dispose();
     this.material.dispose();
     this.calloutMaterial.dispose();
     this.calloutTexture.dispose();
