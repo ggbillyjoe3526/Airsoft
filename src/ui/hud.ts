@@ -1,16 +1,13 @@
-import type { Action } from '../config/controls';
 import type { CrosshairSettings } from '../config/matchInfo';
 import { type SightId, sightConfig } from '../config/optics';
 import type { ReplicaConfig } from '../config/replicas';
-import type { PictureSubject } from '../render/itemPictures';
 import type { Armament } from '../sim/armament';
 import { crosshairElement, crosshairGap, setCrosshairGap, styleCrosshair } from './crosshair';
-import type { PictureSource } from './menus/menuPictures';
 import { REPLICA_PANEL_HTML, ReplicaPanel } from './replicaPanel';
 
 /**
  * The in-game HUD: the crosshair (the player's own, Settings → Crosshair; or the red dot, or a scope's fine
- * reticle, while aiming down one) and the replica panel (ui/replicaPanel.ts: picture, name, fire modes, BBs and
+ * reticle, while aiming down one) and the replica panel (ui/replicaPanel.ts: fire modes, BBs and
  * magazines, reload). The DOM is only touched when a displayed value changes.
  */
 export class Hud {
@@ -27,8 +24,7 @@ export class Hud {
   private dynamic: boolean;
   private shownGap = -1;
 
-  /** `keyName` gives the key the player has bound to an action now ('' if unbound), so hints follow rebinding. */
-  constructor(parent: HTMLElement, keyName: (action: Action) => string, crosshair: CrosshairSettings) {
+  constructor(parent: HTMLElement, crosshair: CrosshairSettings) {
     this.root = document.createElement('div');
     this.root.className = 'hud';
     this.root.hidden = true;
@@ -36,7 +32,7 @@ export class Hud {
       <div class="hud-reddot"></div>
       <div class="hud-scope"><i></i><i></i><i></i></div>${REPLICA_PANEL_HTML}`;
     parent.appendChild(this.root);
-    this.panel = new ReplicaPanel(this.root, () => keyName('reload'));
+    this.panel = new ReplicaPanel(this.root);
     this.crosshair = crosshairElement();
     this.root.prepend(this.crosshair);
     this.minGap = crosshair.gap;
@@ -50,11 +46,6 @@ export class Hud {
     this.minGap = crosshair.gap;
     this.dynamic = crosshair.dynamic === 'on';
     this.shownGap = -1;
-  }
-
-  /** The carried replicas' pictures (graphics overhaul G4): the game's ItemPictures and each slot's subject. */
-  setPictures(source: PictureSource | null, subjects: readonly (PictureSubject | null)[]): void {
-    this.panel.setPictures(source, subjects);
   }
 
   setVisible(visible: boolean): void {

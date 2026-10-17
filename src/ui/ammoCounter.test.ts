@@ -12,7 +12,6 @@ import { createCharacter } from '../sim/character';
 import type { GameEvent } from '../sim/events';
 import { vec3 } from '../sim/vec';
 import { TutorialTracker } from '../tutorial/tutorial';
-import { emptyMagHint } from './ammoStatus';
 import { CoachPanel } from './coachPanel';
 import { Hud } from './hud';
 import { hudSettings, loadAmmoCounter } from './hudSettings';
@@ -93,7 +92,7 @@ class PanelElement extends FakeElement {
     super(tag);
     this.style = new Proxy(this.style, {
       set: (t, p: string, v: string) => {
-        if (p === 'width') barWrites++;
+        if (p === 'height') barWrites++;
         t[p] = v;
         return true;
       },
@@ -136,7 +135,7 @@ describe('AC1 criteria 1 and 2: the replica panel with the counts off', () => {
   const setup = () => {
     const root = new PanelElement('div');
     root.innerHTML = REPLICA_PANEL_HTML;
-    const panel = new ReplicaPanel(root as unknown as HTMLElement, () => 'R');
+    const panel = new ReplicaPanel(root as unknown as HTMLElement);
     const bars = () => root.querySelector('.hud-mags').querySelectorAll('i');
     return {
       root,
@@ -145,7 +144,7 @@ describe('AC1 criteria 1 and 2: the replica panel with the counts off', () => {
       status: root.querySelector('.hud-status').textContent,
       statusEl: root.querySelector('.hud-status'),
       bars,
-      width: (i: number) => bars()[i]!.firstElementChild!.style.width,
+      height: (i: number) => bars()[i]!.firstElementChild!.style.height,
     };
   };
   const is = (el: FakeElement, ...names: string[]) => names.map((n) => el.classList.contains(n));
@@ -172,7 +171,7 @@ describe('AC1 criteria 1 and 2: the replica panel with the counts off', () => {
     const f = setup();
     f.panel.setCounts(false);
     f.panel.update(arm(size, [size, 1, Math.floor(size / 4), 0]), LOADOUT, 1 / 60);
-    expect([0, 1, 2, 3].map(f.width)).toEqual(['100%', '100%', '100%', '0%']);
+    expect([0, 1, 2, 3].map(f.height)).toEqual(['100%', '100%', '100%', '0%']);
     expect(f.bars().map((b) => is(b, 'empty'))).toEqual([[false], [false], [false], [true]]);
     for (const b of f.bars()) expect(is(b, 'low', 'next')).toEqual([false, false]);
   });
@@ -191,7 +190,7 @@ describe('AC1 criteria 1 and 2: the replica panel with the counts off', () => {
     f.panel.update(a, LOADOUT, 1 / 60);
     f.panel.setCounts(true);
     f.panel.update(a, LOADOUT, 1 / 60);
-    expect([0, 1, 2].map(f.width)).toEqual([`100%`, `${Math.round((3 / size) * 100)}%`, '0%']);
+    expect([0, 1, 2].map(f.height)).toEqual([`100%`, `${Math.round((3 / size) * 100)}%`, '0%']);
     expect(is(f.bars()[1]!, 'low')).toEqual([true]);
     expect(is(f.bars()[0]!, 'next')).toEqual([true]);
     expect(is(f.bars()[2]!, 'empty')).toEqual([true]);
@@ -201,20 +200,19 @@ describe('AC1 criteria 1 and 2: the replica panel with the counts off', () => {
     const f = setup();
     const a = arm(size, [size, 7]);
     f.panel.update(a, LOADOUT, 1 / 60);
-    expect(f.width(1)).not.toBe('100%');
+    expect(f.height(1)).not.toBe('100%');
     f.panel.setCounts(false);
     f.panel.update(a, LOADOUT, 1 / 60);
-    expect(f.width(1)).toBe('100%');
+    expect(f.height(1)).toBe('100%');
     expect(is(f.bars()[1]!, 'low')).toEqual([false]);
   });
 
-  it('leaves the status lines as they were: Empty hint naming the reload key, Last magazine, Out of BBs, Reloading', () => {
+  it('leaves the status lines as they were: nothing for an empty magazine (UI2), Last magazine, Out of BBs, Reloading', () => {
     const f = setup();
     f.panel.setCounts(false);
     const text = () => f.statusEl.textContent;
     f.panel.update(arm(0, [size]), LOADOUT, 1 / 60);
-    expect(text()).toBe(emptyMagHint('R'));
-    expect(text()).toContain('R');
+    expect(text()).toBe('');
     f.panel.update(arm(5, []), LOADOUT, 1 / 60);
     expect(text()).toBe('Last magazine');
     f.panel.update(arm(0, []), LOADOUT, 1 / 60);
@@ -226,7 +224,7 @@ describe('AC1 criteria 1 and 2: the replica panel with the counts off', () => {
     // The same four with the counts on: identical words.
     const on = setup();
     on.panel.update(arm(0, [size]), LOADOUT, 1 / 60);
-    expect(on.statusEl.textContent).toBe(emptyMagHint('R'));
+    expect(on.statusEl.textContent).toBe('');
     on.panel.update(arm(5, []), LOADOUT, 1 / 60);
     expect(on.statusEl.textContent).toBe('Last magazine');
   });
@@ -256,7 +254,7 @@ describe('AC1 criteria 1 and 2: the replica panel with the counts off', () => {
     a.ammo[0]!.pouch[1] = 0;
     f.panel.update(a, LOADOUT, 1 / 60);
     expect(barWrites).toBe(after + 1);
-    expect(f.width(1)).toBe('0%');
+    expect(f.height(1)).toBe('0%');
     expect(is(f.bars()[1]!, 'empty')).toEqual([true]);
   });
 
@@ -272,7 +270,7 @@ describe('AC1 criteria 1 and 2: the replica panel with the counts off', () => {
 
   it('is reached from the Hud: setAmmoCounter(false) puts no-count on the panel', () => {
     const parent = new PanelElement('div');
-    const hud = new Hud(parent as unknown as HTMLElement, () => 'R', DEFAULT_CROSSHAIR);
+    const hud = new Hud(parent as unknown as HTMLElement, DEFAULT_CROSSHAIR);
     const box = (parent.children[0] as unknown as PanelElement).querySelector('.hud-replica');
     hud.setAmmoCounter(false);
     expect(box.classList.contains('no-count')).toBe(true);

@@ -92,6 +92,9 @@ export default defineConfig({
     baseURL: `http://localhost:${PORT}`,
     screenshot: 'only-on-failure',
   },
+  // One Firefox at a time: two headed windows share xvfb-run's one display, and Firefox slows the one without focus to
+  // about a frame a second, so a click (which waits for steady frames) can time out (measured on CI, IN1, 2026-10-17).
+  ...(FIREFOX ? { workers: 1 } : {}),
   projects: FIREFOX ? FIREFOX_PROJECTS : CHROMIUM_PROJECTS,
   webServer: FIREFOX ? E2E_SERVER : [E2E_SERVER, RELEASE_SERVER],
 });
