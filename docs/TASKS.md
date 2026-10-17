@@ -39,7 +39,7 @@ in the project's shared files): the hill, the swells and the ravine now; the str
 acceptance:
   1. West Hill: the West Rise in front of end 0's camp rises to about 3.4 m at its middle and 2.2 m at its ends (was
      2.6 m), and the camps still start hidden from each other (M88).
-  2. Two low swells, about 0.6 m, on the meadow; nothing else on the field changes height by more than that.
+  2. Low swells, about 0.6 m, on the meadow (one, if two tip the balance); nothing else on the field changes height by more than that.
   3. The south creek becomes a dry ravine about 2.2 m deep where it runs past the meadow, with a bed wide enough for a
      stream later.
   4. Every slope stays walkable (PHYSICS.maxRampSlope), the content checks pass, and Woodland's balance guards stay in

@@ -111,11 +111,12 @@ const RISE_FALL = 12.5;
 /** The West Hill crest's height at plan z: RISE_END at z0 and z1, RISE_PEAK half way (half a sine). */
 const riseCrest = (z: number): number => RISE_END + (RISE_PEAK - RISE_END) * Math.sin(Math.PI * Math.min(1, Math.max(0, (z - RISE.z0) / (RISE.z1 - RISE.z0))));
 
-/** WL3: two low swells on the meadow (owner: "any other elevation changes should be small"), each SWELL m high. */
-const SWELLS = [
-  { x: 46, z: 53 },
-  { x: 66, z: 37 },
-] as const;
+/**
+ * WL3: a low swell on the meadow (owner: "any other elevation changes should be small"), SWELL m high, by the meadow
+ * lane's west half. The concept had a second at (66, 37): with both, the downhill end won 37.5 % of Pro Elimination's
+ * decided rounds (40–60 %), with this one alone 45.8 %.
+ */
+const SWELLS = [{ x: 46, z: 53 }] as const;
 const SWELL = { height: 0.6, top: 1.5, fall: 6 } as const;
 
 /** The Knoll: a flat top of radius KNOLL_TOP round its centre, falling off over KNOLL_FALL metres. */
