@@ -257,20 +257,6 @@ acceptance:
 status: open
 attempts: 0
 
-## DX5 · App root: one preferences object and one session interface (audit A1 step one, A2, B7)
-tier: core
-perf: required
-touches: src/game.ts, src/matchSession.ts, src/rangeSession.ts, src/settings/, src/ui/menus/savedChoices.ts, src/ui/crosshair.ts, src/ui/hitMarkerLook.ts, src/ui/hudSettings.ts, src/ui/menus/menus.ts, src/render/matchPresentation.ts, src/render/combatPresentation.ts, src/session.ts, src/main.ts, src/ui/menus/menusOptions.ts, src/ui/optionPicker.ts, src/ui/crosshairSettings.ts, src/ui/graphicsSettings.ts, src/config/matchRules.ts, src/config/renderQuality.ts, src/gameReport.ts, src/ui/hudLook.ts
-contract: none
-acceptance:
-  1. A `HudPrefs` object (or the name the thread picks) holds every HUD and accessibility preference once; `Game`, `Menus`, both sessions and the presentations read it by reference, so a new preference is added in one place and the `set*` forwarders in `game.ts` and `matchSession.ts` are gone.
-  2. `MatchSession` and `RangeSession` implement one `Session` interface for what `Game` calls on both; `game.ts` has no `instanceof MatchSession` where the interface answers.
-  3. The typed `load*` and `save*` helpers live under `src/settings/`, with `src/settings/README.md` naming them; the UI files keep only what draws.
-  4. Every setting still loads, applies live and saves as before (the settings tests and the smoke test pass unchanged apart from import paths), and a save from 0.1 Dev 6 loads.
-  5. `game.ts` is under 1,300 lines.
-status: open
-attempts: 0
-
 ## DX6 · Render: the folder regrouped, the prop builders as data, no per-frame vault rays (audit A3, A8 part, B4, B9 part)
 tier: core
 perf: required
