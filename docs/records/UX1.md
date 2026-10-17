@@ -36,8 +36,8 @@
   runs. The critic marked this outside the task (check 8, not blocking); it is kept so the gate can pass. The rifle
   file's hand-pose test, which also timed out, got its room from DX4 (20 s), taken in the merge.
 - **The perf gate's one failure is main's.** Neon Heights' Extraction Medium run on WebGPU reads about 203k triangles
-  against 200k on main at 69d69f5 as on this branch; UX1 changes no scene. RV2's KNOWN_ISSUES row (it sits on its line and
-  a run's sample decides) covers it, so UX1's own row was dropped in the merge.
+  against 200k on main at 69d69f5 as on this branch; UX1 changes no scene. PF4 (#263) has since brought it under its line,
+  taken in the merge; UX1's own KNOWN_ISSUES row was dropped.
 
 ## Known issues left
 

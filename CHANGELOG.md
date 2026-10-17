@@ -47,6 +47,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **AX1** · With High Contrast team colours, Extraction's exits are hi-vis yellow instead of green, on the ring, cones, EXIT sign, minimap and screen marker
 - **AX1** · High Contrast team paint (vests, armbands, helmet bands) glows faintly on day fields so the dark orange team shows in shade
 - **TT2** · Tutorial teaches leaning again: a Lean step after Crouch ticks once you've leaned both ways; read-only cards stay up 10 s
+- **PF4** · Medium runs lighter in busy fights: other players' replicas cast their shadow from a simpler figure, looking the same
 - **UX1** · Menus grow with the window at 4K, up to 1.5×; 1080p and smaller look as before
 - **UX1** · In a 1280×720 window a menu's top bar, heading and Start match or Back stay pinned; only its long list scrolls
 - **UX1** · A short window draws the menus a little tighter; New game's Start match is in sight down to 900×600
@@ -98,6 +99,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **DX2** · Developer-only: Dev 5 and 6 plans, decisions, known issues and playtest guide archived or trimmed under 50 KB each
 - **IN1** · CI runs the boot and save browser tests in Firefox too, in a new firefox job (#251)
 - **DX4** · Developer-only: each pull request builds the game once for all its checks, the slow test jobs finish together, a code formatter is set up, and the quick test run drops its three slowest files to the full run
+- **PF4** · Developer-only: the perf harness measures the same stretch of play every run, so its triangle counts stop swinging between runs
 
 ## 0.1 Dev 6 · 2026-10-16
 
