@@ -48,6 +48,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **AX1** · High Contrast team paint (vests, armbands, helmet bands) glows faintly on day fields so the dark orange team shows in shade
 - **TT2** · Tutorial teaches leaning again: a Lean step after Crouch ticks once you've leaned both ways; read-only cards stay up 10 s
 - **PF4** · Medium runs lighter in busy fights: other players' replicas cast their shadow from a simpler figure, looking the same
+- **UI2** · Match rule options are only as wide as their words, sit closer to their names, and the round-time slider is shorter
+- **UI2** · Replica panel is about half as wide: no picture or name, fire modes as S / B / A, the spare magazines as small boxes that fill from the bottom, and no "press R to reload" hint when the magazine runs dry
 - **UX1** · Menus grow with the window at 4K, up to 1.5×; 1080p and smaller look as before
 - **UX1** · In a 1280×720 window a menu's top bar, heading and Start match or Back stay pinned; only its long list scrolls
 - **UX1** · A short window draws the menus a little tighter; New game's Start match is in sight down to 900×600

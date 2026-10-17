@@ -1,12 +1,9 @@
 import { HUD_TEXT } from '../config/hudText';
 import { HUD } from '../config/render';
-import { FIRE_MODE_LABELS, type FireMode, type ReplicaConfig } from '../config/replicas';
-import type { PictureSubject } from '../render/itemPictures';
+import { FIRE_MODE_LABELS, FIRE_MODE_LETTERS, type FireMode, type ReplicaConfig } from '../config/replicas';
 import { type Armament, canReload, nextSpare, type ReplicaAmmo, spareBBs } from '../sim/armament';
-import { emptyMagHint, isLowAmmo } from './ammoStatus';
+import { isLowAmmo } from './ammoStatus';
 import { HopGauge } from './hopGauge';
-import { ITEM_ICONS } from './menus/icons';
-import { PictureSlot, type PictureSource } from './menus/menuPictures';
 import { TimedFill } from './timedFill';
 
 /** The replica panel's markup, inside the HUD (ui/hud.ts), which finds its parts by class. */
@@ -14,31 +11,29 @@ export const REPLICA_PANEL_HTML = `
       <div class="hud-replica">
         <div class="hud-hop" hidden><span class="hud-hop-label">${HUD_TEXT.hop.label}</span><span class="hud-hop-track"><b></b><i></i></span><span class="hud-hop-value"></span><span class="hud-hop-reach"></span></div>
         <div class="hud-replica-main">
-          <div class="hud-replica-words">
-            <div class="hud-replica-name"><span></span></div>
+          <div class="hud-replica-side">
             <div class="hud-modes"></div>
+            <div class="hud-mags"></div>
           </div>
           <div class="hud-ammo"><span class="hud-mag"></span><span class="hud-spare"></span></div>
         </div>
-        <div class="hud-mags"></div>
         <div class="hud-reload"><div></div></div>
         <div class="hud-status"></div>
       </div>`;
 
 /**
- * The replica panel (graphics overhaul G4; the ammo block since M19; smaller since Dev 6 playtest item 25): bottom
- * right, the carried replica's small picture (in its scheme with its parts, from the game's ItemPictures; its line
- * drawing until it arrives), its name over a chip per fire mode it has with the current one lit, the loaded BBs with the
- * spare BBs under them, a thin bar per spare magazine filled to its BBs (the one a reload takes marked), the reload bar
- * and the status line; over them, while you turn it, the hop-up readout (ui/hopGauge.ts, Dev 6 playtest item 15).
+ * The replica panel (graphics overhaul G4; the ammo block since M19; compact since UI2, Beta 1 playtest): bottom right,
+ * a lettered chip per fire mode the replica has (S, B, A) with the current one lit, a small box per spare magazine
+ * filled to its BBs (the one a reload takes marked) under them, the loaded BBs with the spare BBs under them at the
+ * right, the reload bar and the status line; over them, while you turn it, the hop-up readout (ui/hopGauge.ts, Dev 6
+ * playtest item 15). No picture or name: the replica in hand shows which it is.
  * Every write is made only when what it shows changes; the reload bar's fill runs on one CSS transition
- * (ui/timedFill.ts). With the ammo counter off (Settings › HUD, AC1) the counts go and each bar shows only whether its
+ * (ui/timedFill.ts). With the ammo counter off (Settings › HUD, AC1) the counts go and each box shows only whether its
  * magazine holds any BBs.
  */
 export class ReplicaPanel {
   private readonly box: HTMLElement;
   private readonly panel: HTMLElement;
-  private readonly name: HTMLSpanElement;
   private readonly modes: HTMLElement;
   private readonly mag: HTMLSpanElement;
   private readonly spare: HTMLSpanElement;
@@ -46,41 +41,30 @@ export class ReplicaPanel {
   private readonly status: HTMLElement;
   private readonly reloadBar: HTMLElement;
   private readonly reloadFill: TimedFill;
-  private readonly picture = new PictureSlot('hud-replica-pic');
   private readonly hop: HopGauge;
-  /** The game's pictures and each carried replica's subject, by slot (setPictures); none until given. */
-  private source: PictureSource | null = null;
-  private subjects: readonly (PictureSubject | null)[] = [];
   /** One chip per fire mode of the replica shown, and which is lit. */
   private chips: HTMLElement[] = [];
   private chipModes: readonly FireMode[] = [];
   private shownMode = -1;
-  /** One bar per spare magazine, and what each shows (percent full). */
+  /** One box per spare magazine, and what each shows (percent full). */
   private gauges: HTMLElement[] = [];
   private readonly shownFill: number[] = [];
   private shownNext = -1;
-  /** The slot and replica shown (a switch redraws the chips, the bars and the picture). */
+  /** The slot and replica shown (a switch redraws the chips and the boxes). */
   private shownSlot = -1;
   private shownReplica = '';
   /** A short notice that briefly takes the status line (see showNotice). */
   private noticeText = '';
   private noticeLeft = 0;
-  /** The reload key the empty-magazine hint was last worded for, and that hint (rebuilt only when the key changes). */
-  private hintKey: string | null = null;
-  private emptyHint = '';
-  private readonly shown = { name: '', mag: -1, low: false, spareBBs: -1, status: '', reloadPct: -1, holstered: false };
-  /** Settings › HUD › Ammo counter (AC1): the BB counts and each bar's fill shown (true), or only whether a spare holds any. */
+  private readonly shown = { mag: -1, low: false, spareBBs: -1, status: '', reloadPct: -1, holstered: false };
+  /** Settings › HUD › Ammo counter (AC1): the BB counts and each box's fill shown (true), or only whether a spare holds any. */
   private counts = true;
 
-  /** `root`: the HUD, holding REPLICA_PANEL_HTML. `keyName`: the reload key's name now, for the empty-magazine hint. */
-  constructor(
-    root: HTMLElement,
-    private readonly keyName: () => string,
-  ) {
+  /** `root`: the HUD, holding REPLICA_PANEL_HTML. */
+  constructor(root: HTMLElement) {
     const find = <T extends HTMLElement>(selector: string) => root.querySelector(selector) as T;
     this.box = find('.hud-replica');
     this.panel = find('.hud-replica-main');
-    this.name = find('.hud-replica-name > span');
     this.modes = find('.hud-modes');
     this.mag = find('.hud-mag');
     this.spare = find('.hud-spare');
@@ -89,7 +73,6 @@ export class ReplicaPanel {
     this.reloadBar = find('.hud-reload');
     this.reloadFill = new TimedFill(this.reloadBar.firstElementChild as HTMLElement);
     this.hop = new HopGauge(find('.hud-hop'));
-    this.panel.prepend(this.picture.root);
   }
 
   /** The hop-up dial of the replica in hand (`replica`, with `grams` BBs) was turned to `dial`: the readout shows it. */
@@ -97,17 +80,10 @@ export class ReplicaPanel {
     this.hop.show(replica, dial, grams, HUD.hopShowTime);
   }
 
-  /** The game's pictures and each carried replica's subject, by slot (a null subject keeps the drawing). */
-  setPictures(source: PictureSource | null, subjects: readonly (PictureSubject | null)[]): void {
-    this.source = source;
-    this.subjects = subjects;
-    this.shownSlot = -1;
-  }
-
   /**
    * Settings › HUD › Ammo counter (AC1): false takes the loaded count and the spare line away (replica.css) and draws each
-   * spare's bar full while it holds any BBs and hollow once empty, with no low stripes and no mark on the one a reload
-   * takes; the status line still says Empty, Last magazine and Out of BBs. Every bar is redrawn the next frame.
+   * spare's box full while it holds any BBs and hollow once empty, with no low stripes and no mark on the one a reload
+   * takes; the status line still says Empty, Last magazine and Out of BBs. Every box is redrawn the next frame.
    */
   setCounts(shown: boolean): void {
     if (this.counts === shown) return;
@@ -133,7 +109,6 @@ export class ReplicaPanel {
     if (switched) this.switchTo(slot, replica);
     // The readout is about the replica it was turned on: a switch or the holster takes it away.
     this.hop.update(dt, switched || armament.holstered);
-    if (s.name !== replica.name) this.name.textContent = s.name = replica.name;
     const mode = this.chipModes.indexOf(armament.modes[slot]!);
     if (mode !== this.shownMode) {
       this.chips[this.shownMode]?.classList.remove('on');
@@ -142,7 +117,7 @@ export class ReplicaPanel {
     }
     if (s.mag !== ammo.mag) {
       this.mag.textContent = String((s.mag = ammo.mag));
-      // The count's size follows its digits (replica.css), so a big count never runs into the words beside it.
+      // The count's size follows its digits (replica.css), so a big count never runs into the chips beside it.
       this.mag.setAttribute('data-digits', String(this.mag.textContent.length));
     }
     // Compared on its own: switching replicas can change it with the count unchanged.
@@ -169,41 +144,33 @@ export class ReplicaPanel {
     else if (reloading) status = HUD_TEXT.reloading;
     else if (this.noticeLeft > 0) status = this.noticeText;
     else if (ammo.mag === 0 && !canReload(ammo)) status = HUD_TEXT.outOfBBs;
-    else if (ammo.mag === 0) status = this.emptyMagHint();
     else if (spareBBs(ammo) === 0) status = HUD_TEXT.lastMagazine;
     if (s.status !== status) this.status.textContent = s.status = status;
   }
 
-  /** Another replica in hand: its picture, its fire modes' chips, and every bar drawn afresh. */
+  /** Another replica in hand: its fire modes' chips, and every box drawn afresh. */
   private switchTo(slot: number, replica: ReplicaConfig): void {
     this.shownSlot = slot;
     this.shownReplica = replica.id;
-    const drawing = replica.look.model === 'pistol' ? ITEM_ICONS.pistol : ITEM_ICONS.aeg;
-    this.picture.show(this.source, this.subjects[slot] ?? null, drawing);
     if (this.chipModes !== replica.fireModes) {
       this.chipModes = replica.fireModes;
       this.chips = replica.fireModes.map((m) => {
         const chip = document.createElement('span');
         chip.className = 'hud-mode';
-        chip.textContent = FIRE_MODE_LABELS[m];
+        chip.textContent = FIRE_MODE_LETTERS[m];
+        chip.setAttribute('aria-label', FIRE_MODE_LABELS[m]);
         return chip;
       });
       this.modes.replaceChildren(...this.chips);
       this.shownMode = -1;
     }
-    this.shownFill.length = 0; // different magazines: redraw every bar
+    this.shownFill.length = 0; // different magazines: redraw every box
     for (const gauge of this.gauges) gauge.classList.remove('next');
     this.shownNext = -1;
     this.noticeLeft = 0; // a notice about the other replica no longer applies
   }
 
-  private emptyMagHint(): string {
-    const key = this.keyName();
-    if (key !== this.hintKey) this.emptyHint = emptyMagHint((this.hintKey = key));
-    return this.emptyHint;
-  }
-
-  /** "/ 120": the BBs in the spare magazines (how many magazines hold any, the bars under it show). */
+  /** "/ 120": the BBs in the spare magazines (how many magazines hold any, the boxes show). */
   private updateSpare(ammo: ReplicaAmmo): void {
     const bbs = spareBBs(ammo);
     if (bbs === this.shown.spareBBs) return;
@@ -212,8 +179,8 @@ export class ReplicaPanel {
   }
 
   /**
-   * A bar per spare magazine, filled to how many BBs it has; the one a reload would take is marked. With the counts off,
-   * a bar is full while its magazine holds any BBs, and none is marked.
+   * A box per spare magazine, filled from the foot to how many BBs it has; the one a reload would take is marked. With
+   * the counts off, a box is full while its magazine holds any BBs, and none is marked.
    */
   private updateGauges(ammo: ReplicaAmmo, magSize: number): void {
     if (this.gauges.length !== ammo.pouch.length) {
@@ -228,7 +195,7 @@ export class ReplicaPanel {
       if (this.shownFill[i] === pct) continue;
       this.shownFill[i] = pct;
       const gauge = this.gauges[i]!;
-      (gauge.firstElementChild as HTMLElement).style.width = `${pct}%`;
+      (gauge.firstElementChild as HTMLElement).style.height = `${pct}%`;
       gauge.classList.toggle('empty', pct === 0);
       // Same threshold as the loaded magazine's count turning orange.
       gauge.classList.toggle('low', this.counts && bbs > 0 && isLowAmmo(bbs, magSize));

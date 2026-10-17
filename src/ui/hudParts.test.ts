@@ -3,12 +3,9 @@ import { HUD_TEXT } from '../config/hudText';
 import { HIT_FEED } from '../config/matchInfo';
 import { AEG, GAS_PISTOL, LOADOUT } from '../config/replicas';
 import { SQUAD_ORDERS } from '../config/squad';
-import { defaultScheme } from '../config/schemes';
-import type { PictureSubject } from '../render/itemPictures';
 import { createArmament } from '../sim/armament';
 import { HitFeed } from './hitFeed';
 import { HitFeedback } from './hitFeedback';
-import { kitSubjects } from './menus/menuPictures';
 import { REPLICA_PANEL_HTML, ReplicaPanel } from './replicaPanel';
 import { SquadOrderLine } from './squadOrderLine';
 import { FakeElement, findAll } from './testSupport';
@@ -76,7 +73,7 @@ describe('the replica panel (G4 criterion 4)', () => {
   const panel = () => {
     const root = new Counted('div');
     root.innerHTML = REPLICA_PANEL_HTML;
-    const p = new ReplicaPanel(root as unknown as HTMLElement, () => 'R');
+    const p = new ReplicaPanel(root as unknown as HTMLElement);
     return { root, p, modes: root.querySelector('.hud-modes'), spare: root.querySelector('.hud-spare'), main: root.querySelector('.hud-replica-main') };
   };
 
@@ -84,17 +81,17 @@ describe('the replica panel (G4 criterion 4)', () => {
     const { p, modes } = panel();
     const armament = createArmament(LOADOUT);
     p.update(armament, LOADOUT, 1 / 60);
-    expect(modes.children.map((c) => c.textContent)).toEqual(AEG.fireModes.map((m) => ({ semi: 'Semi', burst: 'Burst', auto: 'Auto' })[m]));
+    expect(modes.children.map((c) => c.textContent)).toEqual(AEG.fireModes.map((m) => ({ semi: 'S', burst: 'B', auto: 'A' })[m]));
     const lit = () => modes.children.filter((c) => c.classList.contains('on')).map((c) => c.textContent);
-    expect(lit()).toEqual([{ semi: 'Semi', burst: 'Burst', auto: 'Auto' }[AEG.defaultFireMode]]);
+    expect(lit()).toEqual([{ semi: 'S', burst: 'B', auto: 'A' }[AEG.defaultFireMode]]);
     armament.modes[0] = 'semi';
     p.update(armament, LOADOUT, 1 / 60);
-    expect(lit()).toEqual(['Semi']);
+    expect(lit()).toEqual(['S']);
     // The pistol has one mode: one chip, lit.
     armament.active = 1;
     p.update(armament, LOADOUT, 1 / 60);
     expect(modes.children).toHaveLength(GAS_PISTOL.fireModes.length);
-    expect(lit()).toEqual(['Semi']);
+    expect(lit()).toEqual(['S']);
   });
 
   it('builds the chips once per replica, not per frame', () => {
@@ -155,40 +152,6 @@ describe('the replica panel (G4 criterion 4)', () => {
     p.update(armament, LOADOUT, 1 / 60);
     expect(spare.textContent).toBe(`/ ${bbs - first}`);
     expect(spare.writes).toBe(writes + 1);
-  });
-
-  it('shows the carried replica\'s picture from the game\'s pictures, the drawing until then, and the other slot\'s on a switch', () => {
-    const { p, main } = panel();
-    const asked: PictureSubject[] = [];
-    const source = { picture: (s: PictureSubject) => (asked.push(s), new Promise<string>(() => undefined)) };
-    const subjects = kitSubjects({ slots: LOADOUT.map((replica) => ({ replica, optic: null, parts: { grip: 'none', magazine: 'standard' } })), schemes: [] }, false);
-    p.setPictures(source, subjects);
-    const armament = createArmament(LOADOUT);
-    p.update(armament, LOADOUT, 1 / 60);
-    // The slot is the panel's first part, before the words.
-    const slot = main.children[0]!;
-    expect(slot.className).toContain('hud-replica-pic');
-    expect(asked).toEqual([subjects[0]]);
-    expect(findAll(slot, 'pic-placeholder')[0]!.innerHTML).toContain('<svg');
-    for (let i = 0; i < 30; i++) p.update(armament, LOADOUT, 1 / 60);
-    expect(asked).toHaveLength(1);
-    armament.active = 1;
-    p.update(armament, LOADOUT, 1 / 60);
-    expect(asked).toEqual([subjects[0], subjects[1]]);
-  });
-});
-
-describe('kitSubjects (G4: the HUD\'s pictures of the carried replicas)', () => {
-  it('gives each slot its replica, its scheme (the replica\'s own by default) and its parts', () => {
-    const slots = [
-      { replica: AEG, optic: 'redDot' as const, parts: { grip: 'none' as const, magazine: 'standard' as const, muzzle: null } },
-      { replica: GAS_PISTOL, optic: null, parts: { grip: 'none' as const, magazine: 'standard' as const } },
-    ];
-    const [aeg, pistol] = kitSubjects({ slots, schemes: ['tan'] as never }, true);
-    expect(aeg).toMatchObject({ replica: AEG, scheme: 'tan', realistic: true, fit: { optic: 'redDot', grip: 'none', magazine: 'standard' } });
-    expect(aeg!.fit).not.toHaveProperty('muzzle');
-    expect(pistol).toMatchObject({ replica: GAS_PISTOL, scheme: defaultScheme(GAS_PISTOL), realistic: true });
-    expect(pistol!.fit).not.toHaveProperty('optic');
   });
 });
 

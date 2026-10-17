@@ -513,10 +513,11 @@ Defend. Pro pays XP ×2 but counts for nothing while it is dev content.
   banners, wheel and markers with nothing overlapping at 1280×720 (the minimap grows a little less there, so an
   Attack / Defend score bar stays clear of it, UX1); the crosshair keeps its size.
 - [ ] **The layout.** A score bar top middle (team blocks, the clock, "First to N"); the replica panel bottom right
-  (picture, mode chips, "/ N · M spare", the magazine bars); no squad cards or key hints; "ROUND 1" shows large;
-  corners keep their margin at 1920×1080 and on 21:9.
+  (UI2: S / B / A chips over a small box per spare magazine, the count and "/ N" at the right; no picture, no name, no
+  reload hint); no squad cards or key hints; "ROUND 1" shows large; corners keep their margin at 1920×1080 and on 21:9.
+  Is the panel compact enough, and are the magazine boxes easy to read at a glance?
 - [ ] **Ammo counter** (Settings › Gameplay › HUD, AC1). On by default. Off: no BB count and no "/ N · M spare" line;
-  each magazine bar stays full until empty, then hollow.
+  each magazine box stays full until empty, then hollow.
 
 ## Squad orders and minimap
 

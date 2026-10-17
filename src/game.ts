@@ -83,7 +83,6 @@ import { SAVE_TEXT } from './config/save';
 import { screenWhenStopped } from './ui/menus/menuNav';
 import { Menus } from './ui/menus/menus';
 import { followingPictureTarget, ItemPictures, nodePictureTarget } from './render/itemPictures';
-import { kitSubjects } from './ui/menus/menuPictures';
 import { recordsView } from './ui/recordsView';
 import {
   effectiveReducedMotion,
@@ -1259,8 +1258,6 @@ export class Game {
       this.session.setPingMarkers(this.pingMarkers === 'on');
       this.session.setMagPrompts(this.magPrompts === 'on');
       this.session.setAmmoCounter(this.ammoCounter === 'on');
-      // The kit the match plays (a ruleset's factory kit, say), not the Loadout's (BP3).
-      this.session.combat.setReplicaPictures(this.pictures, kitSubjects(this.session.kit, this.look.realisticColours));
       this.applyDevTo(this.session);
       applyTeamCss(this.container, TEAM_COLOUR_SETS[this.teamColours]);
     }
@@ -1308,7 +1305,6 @@ export class Game {
     this.session.onChallengeRun = (run) => {
       if (!run.helped && addChallengeRun(this.records, course, run.hits)) saveRecords(this.records, browserStorage());
     };
-    this.session.combat.setReplicaPictures(this.pictures, kitSubjects(this.loadout.kit(), this.look.realisticColours));
     this.steppedDown = false;
     this.session.setMotion(motionScale(this.motionReduced()));
     this.applyDevTo(this.session);
