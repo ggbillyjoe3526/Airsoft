@@ -48,6 +48,8 @@ function stubParts(over: Partial<{ crashed: boolean }> = {}) {
     setBlocked: vi.fn(),
     updatePause: vi.fn(),
     markTutorialDone: vi.fn(),
+    lockRefused: vi.fn(),
+    askFullscreenClick: vi.fn(),
   };
   const results = { settle: vi.fn(), summary: vi.fn(() => ({ summary: true })) };
   const hooks = { built: vi.fn(), resumed: vi.fn() };
@@ -274,5 +276,141 @@ describe("the menus' play buttons (DX8)", () => {
     expect(flow.newGamePlay).toHaveBeenCalledOnce();
     expect(flow.leaveMatch).toHaveBeenCalledOnce();
     expect(flow.skipTutorial.mock.calls).toEqual([[false], [true]]);
+  });
+});
+
+describe('PlayFlow: the Fullscreen key and the mouse lock across it (DX8, IN1)', () => {
+  let page: { fullscreenElement: object | null; documentElement: { requestFullscreen: ReturnType<typeof vi.fn> }; exitFullscreen: ReturnType<typeof vi.fn> };
+
+  beforeEach(() => {
+    page = {
+      fullscreenElement: null,
+      documentElement: { requestFullscreen: vi.fn(() => Promise.resolve()) },
+      exitFullscreen: vi.fn(() => Promise.resolve()),
+    };
+    vi.stubGlobal('document', { visibilityState: 'visible', hasFocus: () => true, ...page, addEventListener: vi.fn(), removeEventListener: vi.fn() });
+    vi.stubGlobal('navigator', { userActivation: { isActive: true } });
+  });
+
+  /** Play with the lock held (not `?nolock`), the Fullscreen key just pressed in it. */
+  function keyed(activation = true) {
+    vi.stubGlobal('navigator', { userActivation: { isActive: activation } });
+    const p = playing();
+    p.flow.unlockedPlay = false;
+    p.pointer.locked = true;
+    p.flow.fullscreen.key(performance.now());
+    return p;
+  }
+
+  it('the key asks the page for fullscreen, and the lock dropping before the change holds play without the pause menu', () => {
+    const { flow, pointer, menus, session } = keyed();
+    expect(page.documentElement.requestFullscreen).toHaveBeenCalledOnce();
+    pointer.locked = false;
+    flow.lockChanged(false, false);
+    expect(flow.fullscreen.holding).toBe(true);
+    expect(menus.showPause).not.toHaveBeenCalled();
+    expect(session.setPlaying).not.toHaveBeenLastCalledWith(false);
+    expect(pointer.request).not.toHaveBeenCalled();
+  });
+
+  it('once the page has changed, the held play takes the mouse again; a granted lock ends the hold', () => {
+    const { flow, pointer } = keyed();
+    pointer.locked = false;
+    flow.lockChanged(false, false);
+    page.fullscreenElement = {};
+    (document as unknown as { fullscreenElement: object }).fullscreenElement = page.fullscreenElement;
+    flow.fullscreen.takeAgain();
+    expect(pointer.request).toHaveBeenCalledOnce();
+    pointer.locked = true;
+    flow.lockChanged(true, false);
+    expect(flow.fullscreen.holding).toBe(false);
+  });
+
+  it('a drop already after the change takes the mouse back at once, holding', () => {
+    const { flow, pointer, menus } = keyed();
+    (document as unknown as { fullscreenElement: object }).fullscreenElement = {};
+    pointer.locked = false;
+    flow.lockChanged(false, false);
+    expect(pointer.request).toHaveBeenCalledOnce();
+    expect(menus.showPause).not.toHaveBeenCalled();
+  });
+
+  it('a hold the lock never answers runs out and the frame pauses; stopPlay in the hold pauses at once', () => {
+    const a = keyed();
+    a.pointer.locked = false;
+    a.flow.lockChanged(false, false);
+    expect(a.flow.fullscreen.holdRanOut(performance.now())).toBe(false);
+    expect(a.flow.fullscreen.holdRanOut(performance.now() + 5000)).toBe(true);
+    a.flow.stopPlay();
+    expect(a.menus.showPause).toHaveBeenCalledOnce();
+    expect(a.flow.fullscreen.holding).toBe(false);
+  });
+
+  it('a refused lock while holding opens the pause menu and says why; without a hold it only says why', () => {
+    const a = keyed();
+    a.pointer.locked = false;
+    a.flow.lockChanged(false, false);
+    a.flow.lockRefused();
+    expect(a.menus.showPause).toHaveBeenCalledOnce();
+    expect(a.menus.lockRefused).toHaveBeenCalledOnce();
+    const b = playing();
+    b.flow.lockRefused();
+    expect(b.menus.showPause).not.toHaveBeenCalled();
+    expect(b.menus.lockRefused).toHaveBeenCalledOnce();
+  });
+
+  it('a lock refused while the round skips without the mouse shows the prompt, not the hidden menus', () => {
+    const { flow, session, menus, parts } = playing();
+    flow.unlockedPlay = false;
+    session.skipOffer = 'round';
+    flow.lockChanged(false, false);
+    parts.playPrompt.show.mockClear();
+    flow.lockRefused();
+    expect(parts.playPrompt.show).toHaveBeenCalledOnce();
+    expect(menus.lockRefused).not.toHaveBeenCalled();
+  });
+
+  it('pausing or resuming ends a hold', () => {
+    const { flow, pointer } = keyed();
+    pointer.locked = false;
+    flow.lockChanged(false, false);
+    flow.pause();
+    expect(flow.fullscreen.holding).toBe(false);
+    flow.fullscreen.hold();
+    flow.resume();
+    expect(flow.fullscreen.holding).toBe(false);
+  });
+
+  it('with no user activation (Firefox) the key gives the mouse back, the pause menu asks for the click, and the click goes fullscreen', () => {
+    const { flow, pointer, menus } = keyed(false);
+    expect(pointer.release).toHaveBeenCalledOnce();
+    expect(page.documentElement.requestFullscreen).not.toHaveBeenCalled();
+    pointer.locked = false;
+    flow.lockChanged(false, true);
+    expect(menus.showPause).toHaveBeenCalledOnce();
+    expect(menus.askFullscreenClick).toHaveBeenCalledOnce();
+    flow.fullscreen.click(() => flow.play());
+    expect(page.documentElement.requestFullscreen).toHaveBeenCalledOnce();
+  });
+
+  it('the pause menu Fullscreen button, with the page already fullscreen, plays at once', () => {
+    const { flow, session } = playing();
+    flow.unlockedPlay = false;
+    (document as unknown as { fullscreenElement: object }).fullscreenElement = {};
+    const play = vi.spyOn(flow, 'play').mockImplementation(() => undefined);
+    const menus = playMenus(() => flow);
+    menus.onFullscreenPlay();
+    expect(play).toHaveBeenCalledOnce();
+    expect(session.dispose).not.toHaveBeenCalled();
+  });
+
+  it('a drop with no Fullscreen key pressed pauses, with no hold', () => {
+    const { flow, pointer, menus } = playing();
+    flow.unlockedPlay = false;
+    pointer.locked = false;
+    flow.lockChanged(false, false);
+    expect(flow.fullscreen.holding).toBe(false);
+    expect(menus.showPause).toHaveBeenCalledOnce();
+    expect(menus.askFullscreenClick).not.toHaveBeenCalled();
   });
 });
