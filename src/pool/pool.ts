@@ -4,7 +4,6 @@ import { LASERS, type LaserId } from '../config/lasers';
 import { type OpticId, OPTICS } from '../config/optics';
 import { LIGHT_KEYS } from '../config/torches';
 import { AEG, CYBER_PISTOL, GAS_PISTOL, type ReplicaConfig } from '../config/replicas';
-import { readSupplyEvents, type SupplyEvent } from './supplyEvents';
 import { type PoolRow, type PoolTable, readTables } from './poolFile';
 import { type CaseKind, readCaseKinds } from './tables';
 
@@ -53,8 +52,6 @@ export interface Pool {
   byId: ReadonlyMap<string, Asset>;
   /** Extraction's kinds of case (M44, pool.md's Caches table), in the table's order. */
   caseKinds: readonly CaseKind[];
-  /** Extraction's supply events (M49, pool.md's Supply events table), in the table's order: the first on applies. */
-  supplyEvents: readonly SupplyEvent[];
   /** What couldn't be read, each with its pool.md line ("line 12: …"). Those rows are left out. */
   errors: readonly string[];
 }
@@ -98,8 +95,6 @@ export function loadPool(text: string): Pool {
   const table = (name: string): PoolTable | undefined => tables.find((t) => t.headers[0] === name) ?? tables.find((t) => t.heading === name);
 
   const caseKinds = readCaseKinds(table('Case'), fail, errors);
-  // Also by its heading, so a mis-typed first column is reported at the header, not read as no events (audit POOL-07).
-  const supplyEvents = readSupplyEvents(table('Supply event') ?? table('Supply events'), fail);
   const assets: Asset[] = [];
   const byId = new Map<string, Asset>();
   // Each asset's pool.md line, for the fits check's messages (audit POOL-20: no scan of every row per asset).
@@ -134,7 +129,7 @@ export function loadPool(text: string): Pool {
   const misfits = checkFits(assets, lines, fail);
   const kept = assets.filter((a) => !misfits.has(a.id));
   for (const id of misfits) byId.delete(id);
-  return { assets: kept, byId, caseKinds, supplyEvents, errors };
+  return { assets: kept, byId, caseKinds, errors };
 }
 
 function cell(row: PoolRow, header: string): string {

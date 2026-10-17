@@ -73,7 +73,6 @@ import { contentPool } from './pool/contentPool';
 import { GAME_POOL } from './pool/gamePool';
 import { matchUsesDev, type NewGamePicks, playedPicks, playedTeamSize } from './newGamePicks';
 import { gameOwnership, type GearSlot, LoadoutModel } from './pool/loadoutModel';
-import { activeSupplyEvent, supplyLine } from './pool/supplyEvents';
 import { haulSummary, type XpSummary, xpSummary } from './ui/menus/summaryScreen';
 import type { MenuLevel } from './ui/menus/menusOptions';
 import { loadDevEnabled, loadDevSettings } from './settings/dev';
@@ -107,7 +106,6 @@ import {
   loadRendererChoice,
   loadSensitivity,
   loadShowFps,
-  loadToneMapping,
   loadHitFeedMode,
   loadHudOpacity,
   loadHudSize,
@@ -389,7 +387,7 @@ export class Game {
     this.matchSeed = options.seed;
     this.renderer = new Renderer(container, this.quality, rendering.node);
     this.renderer.setFov(loadFov());
-    this.renderer.setToneMapping(loadToneMapping());
+    this.renderer.setToneMapping(this.dev.toneMapping);
     this.map = loadMap();
     this.lighting = loadLightingPicks();
     this.mode = loadMode();
@@ -527,11 +525,6 @@ export class Game {
       mode: {
         initial: this.mode,
         onChange: (m) => ((this.mode = m), (this.setupChanged = true)),
-        // The supply event on by the device's clock as the Mode pop-up opens (M49).
-        supply: () => {
-          const event = activeSupplyEvent(GAME_POOL.supplyEvents, new Date());
-          return event ? supplyLine(event) : null;
-        },
       },
       difficulty: { initial: this.difficulty, onChange: (d) => ((this.difficulty = d), (this.setupChanged = true)) },
       teammateDifficulty: { initial: this.teammateDifficulty, follows: !hasSavedTeammateDifficulty(), onChange: (d) => ((this.teammateDifficulty = d), (this.setupChanged = true)) },
@@ -564,7 +557,6 @@ export class Game {
         },
         frameRateCap: { initial: this.frameRateCap, onChange: (cap) => (this.frameRateCap = cap) },
         showFps: { initial: loadShowFps(), onChange: (on) => this.debug.setFpsReadout(on) },
-        toneMapping: { initial: this.renderer.toneMappingId, onChange: (id) => this.renderer.setToneMapping(id) },
         renderer: (row) => this.rendering.fillRow(row, this.renderer),
       },
       audio: { initial: this.audio.volumes, onChange: (channel, v) => this.changeVolume(channel, v), onRelease: (channel) => this.audio.preview(channel) },
@@ -979,6 +971,8 @@ export class Game {
       this.setupChanged = true;
       this.prefetchFieldSounds();
     }
+    // Tone mapping (RV2) is a look: it shows at once, and with the Dev tab hidden it's Neutral again.
+    if (this.dev.toneMapping !== before.toneMapping) this.renderer.setToneMapping(this.dev.toneMapping);
   }
 
   /** The Retro look (Settings › Dev) on screen as saved while the Dev tab is shown, else off. */
@@ -1184,8 +1178,6 @@ export class Game {
         ruleset: picks.ruleset,
         rules: { ...picks.rules, teamSize: playedTeamSize(picks) },
         kit: this.loadout.kit(),
-        // The supply event on by the device's clock as Play is pressed (M49): the run keeps it to the end.
-        supply: activeSupplyEvent(GAME_POOL.supplyEvents, new Date()),
         devContent: this.dev.devContent,
         devContentUsed: this.devContentUsed(picks),
         teamColours: TEAM_COLOUR_SETS[this.teamColours],

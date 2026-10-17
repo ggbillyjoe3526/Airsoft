@@ -79,7 +79,7 @@ describe('which combinations a diff runs (pipeline/perfMatrix.mjs)', () => {
     expect(names(['src/map/depot.ts', 'src/render/renderer.ts'])).toEqual(matrix.map(runName));
   });
 
-  it('runs the whole matrix on --perf, whatever changed', () => {
+  it('runs the whole matrix on --env laptop, whatever changed', () => {
     expect(names([], { force: true })).toEqual(matrix.map(runName));
     expect(names(['docs/TASKS.md'], { force: true })).toEqual(matrix.map(runName));
   });

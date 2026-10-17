@@ -42,6 +42,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **BD1** · Your own body in first person shows only when you look down far enough to see it
 - **BD1** · Medium's Player detail is Low: figures drop to middle detail beyond 6 m and the coarsest beyond 16 m (High and Ultra keep 12 m and 28 m)
 - **KI2** · Unused mode pictures are gone from the download, about 51 KB smaller
+- **RV2** · Tone mapping leaves Graphics: everyone plays with Neutral colours; Neutral, AgX and ACES are a Dev setting that applies at once, and a pick made on the old row becomes the Dev pick
+- **RV1** · Extraction has no Supply weekends or dated events like the Halloween run; its Mode card shows no event and cases always hold the usual loot
 - **AX1** · With High Contrast team colours, Extraction's exits are hi-vis yellow instead of green, on the ring, cones, EXIT sign, minimap and screen marker
 - **AX1** · High Contrast team paint (vests, armbands, helmet bands) glows faintly on day fields so the dark orange team shows in shade
 
@@ -81,6 +83,8 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **KI2** · The content toolkit's mode checks use each figure's own hit area, as matches do; known issues and the playtest guide are updated for Beta 1
 - **DX1** · Developer-only: each pipeline rule lives in one doc the others point to; architecture contracts get headings; process docs say 0.1 Beta 1
 - **Pipeline** · Desktop perf suite: one command records the 4K maxed-out baseline across Depot presets and Ultra maps, uncapped, with a summary
+- **DX3** · Developer-only: a task can be marked as a fix, with every check and review kept and a shorter record; the perf run needs no separate flag
+- **DX2** · Developer-only: Dev 5 and 6 plans, decisions, known issues and playtest guide archived or trimmed under 50 KB each
 
 ## 0.1 Dev 6 · 2026-10-16
 

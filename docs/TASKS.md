@@ -13,7 +13,8 @@ commit, before its pull request merges (CI's scope gate finds the block in the b
 
 - **Order.** Highest priority first. A block marked *after playtest* waits until the owner has played the parts it
   tunes, and PF2 also waits for his laptop baseline.
-- **Placed in a later update.** NH1 goes with the Maps Update, because Neon Heights stays dev in 0.1. HV1 goes with the
+- **Placed in a later update.** NH1 and NH2 go with the Maps Update, because Neon Heights stays dev in 0.1 (NH2: owner,
+  2026-10-17). HV1 goes with the
   rigged figures leaving the Dev switches, which BD1 now does in Beta 1, so HV1 lands with BD1 or straight after it.
 - **Numbers are first guesses.** Numeric targets can be changed by the owner. Note 19 applies to every balance block:
   tune on Normal, then check that Easy, Hard and Pro still scale.
@@ -23,7 +24,6 @@ commit, before its pull request merges (CI's scope gate finds the block in the b
 additions included (`docs/DECISIONS.md`). Seven threads build them, one block each, and they come before the blocks
 below. The item numbers are his. Where an older block overlaps one of these, the owner's item wins:
 - UX1 overlaps MR1 and HD1.
-- RV2 overlaps ST1.
 
 MS1 shows the owner concept images and waits for his approval before any code changes.
 
@@ -70,6 +70,30 @@ acceptance:
 status: open
 attempts: 0
 
+## NH2 · Neon Heights: doors you open and close, and furnished interiors (Maps Update, after NH1)
+tier: core
+perf: required
+touches: src/sim/, src/physics/, src/ai/, src/audio/, src/render/, src/config/, src/map/neonHeights.ts, src/map/neonHeightsDressing.ts, src/map/neonHeights.test.ts, src/ai/balance/neonHeights.balance.ts, src/ai/balance/neonHeightsFlag.balance.ts
+contract: needed (a new door system: its state, the open and close command, what it blocks, what bots hear)
+William's Beta 1 playtest, 2026-10-17 (item 32), placed with the Maps Update on his pick: "neon heights map looks much
+better. however some changes to the map i'd like to make. buildings have doors that the player must open/close. this
+affects gameplay because it's a visual cue to see where players have been. also if a door is closed the player needs
+to be careful as there may be an enemy behind it. the player can close the door behind them too. also interiors need
+to be more detailed. they should look like normal interiors like shops, offices, storage rooms, cafes, hotels, etc."
+acceptance:
+  1. Neon Heights' building doorways have hinged doors that players and bots open and close with one bindable key,
+     through the same command interface; a door stays as it was left, so it shows where someone went, and it makes a
+     sound bots hear.
+  2. A closed door blocks sight and BBs. Bots open doors to pass, sometimes close them behind, and treat a closed door
+     they haven't seen through with care.
+  3. Interiors are furnished by type (shops, offices, storage rooms, cafes, a hotel lobby) in the house style
+     (`docs/ART.md`), with cover that plays and nothing a player can never see (MS1's ruling), inside Neon Heights'
+     triangle and draw-call lines.
+  4. The ends stay even (neither over 55 % of decided Elimination rounds by Day or by Night) and Attack / Defend stays
+     in its 40–60 % band at every difficulty. Built after NH1, so the doors and rooms fit its upper floors.
+status: open
+attempts: 0
+
 ## BL2 · Difficulty spread: Easy plays easier than Normal (after playtest)
 tier: core
 perf: skip
@@ -91,7 +115,7 @@ contract: none
 acceptance:
   1. Esc on the pause screen never leaves a stuck state. Where Chrome refuses the re-lock, a clear "Click to resume" appears and one click resumes.
   2. The fullscreen key keeps or restores the mouse lock in Chrome and Firefox.
-  3. CI runs the boot and save specs in Firefox as well. If CI can't install Firefox within its time budget, the thread asks William instead of dropping it.
+  3. CI runs the boot and save specs in Firefox as well. If CI can't install Firefox within its time budget, the thread asks William instead of dropping it. William has no Firefox (2026-10-17), so CI is the only Firefox check; a cloud recipe that ran the save specs in Firefox 136 is in `/mnt/project-files/playtest/firefox-harness/`.
   4. Firefox's missing raw mouse input (`unadjustedMovement`) stays a documented limit, with a line in Settings › Controls saying so.
   5. The two duplicate Esc re-lock rows in KNOWN_ISSUES merge into one, or close.
 status: open
@@ -119,29 +143,6 @@ acceptance:
   2. Profile first. The record ranks the top causes of frame time on Low and Medium on Depot and Woodland, by day and by night.
   3. Fix the top causes until Low holds 60 FPS on modern low-powered hardware (the owner's ruling, 2026-10-16), Medium too where it can, on the laptop baseline's scenes. If a fix would cost too much, say what and why.
   4. Add a High or Ultra night run to the perf gate, so the torch shadow map's cost is measured.
-status: open
-attempts: 0
-
-## RV1 · Remove supply weekends and dated events (feature triage, 2026-10-05)
-tier: core
-perf: skip
-touches: src/pool/supplyEvents.ts, src/pool/supplyEvents.test.ts, src/pool/supplyEvents.edge.test.ts, src/pool/caches.ts, src/pool/pool.ts, src/game.ts, src/matchSession.ts, pool.md, docs/IDEAS.md
-contract: none
-acceptance:
-  1. No supply weekend or dated event shows anywhere, and their code and their table in `pool.md` are gone.
-  2. No pool item ID changes, and an existing save loads unchanged.
-  3. The KNOWN_ISSUES row about IDEAS and M49 closes.
-status: open
-attempts: 0
-
-## RV2 · Tone mapping leaves Graphics (feature triage, 2026-10-05)
-tier: ui
-perf: skip
-touches: src/ui/graphicsSettings.ts, src/ui/menus/settingsScreen.ts, src/ui/devSettings.ts, src/config/graphics.ts, src/config/dev.ts, src/settings/storage.ts, src/game.ts
-contract: none
-acceptance:
-  1. Settings › Graphics has no Tone mapping row, and everyone gets Neutral (today's default).
-  2. The choice moves to Settings › Dev. With Dev settings off, a save holding another tone mapping plays as Neutral.
 status: open
 attempts: 0
 
@@ -202,33 +203,6 @@ attempts: 0
 `/mnt/project-files/audit/repo-audit-2026-10-16.md`, in the order to run them. Each one waits until the playtest
 threads' branches it touches have merged (ST1, MR1, HD1, MV1, BD1, MS1, TT1), so none conflicts with them. DX2 takes
 over DC1's known-issues tidy-up. DX0, the quick wins, is the audit thread's own pull request.
-
-## DX2 · Docs slimming: the 50 KB rule applied, and the finished plan archived (audit A6; folds DC1)
-tier: trivial
-perf: skip
-touches: docs/
-contract: none
-acceptance:
-  1. `docs/ROADMAP.md` › 0.1 Dev 5 and › 0.1 Dev 6 (with their playtest notes, the audit list and the token table) move to `docs/archive/0.1-dev/ROADMAP.md`; Builds and Where we are still name both tags.
-  2. `docs/DECISIONS.md` is under 50 KB: split by subject (gameplay and modes, bots, maps and art, process and tooling) with an index at the top, or each ruling kept to its one-line decision with the "why" in the task's record; superseded rulings are marked or moved to the archive.
-  3. `docs/KNOWN_ISSUES.md` is under 50 KB: no row over about 300 characters, the detail in the task's record it names; fixed rows gone to the archive. (DC1's acceptance folds in here; its merges and moves were done in KI1.)
-  4. `docs/PLAYTEST.md` is under 50 KB: the current build's guide only, earlier builds' sections in the archive.
-  5. `docs/PROCESS.md` › Releases gains an "archive check" step, and `docs/archive/README.md` names the `0.1-beta/` folder it creates.
-status: open
-attempts: 0
-
-## DX3 · A fix-tier path through the pipeline (audit A5)
-tier: ui
-perf: skip
-touches: pipeline/, .claude/skills/pipeline/SKILL.md, .claude/agents/, docs/PROCESS.md, docs/records/README.md
-contract: none
-acceptance:
-  1. A task block may say `tier: fix`: gates, QA and the three review agents still run, but the record is the review line, one attempt row and a Decisions line, and no FEATURES or PLAYTEST edit is due unless the fix changes what the player sees (the changelog agent decides from the summary).
-  2. The agents' prompts each lose anything a build thread already reads elsewhere (the pipeline steps, the house style), citing the file instead; the six agents and two skills together are under 25 KB.
-  3. `gate.mjs`'s options are documented in one table, and any option CI never uses and no skill names is removed or folded.
-  4. `docs/PROCESS.md` › The pipeline says what a fix-tier task skips and why.
-status: open
-attempts: 0
 
 ## DX4 · Tooling and CI: one build per pull request, balanced shards, a formatter (audit B1, B2, B3)
 tier: ui

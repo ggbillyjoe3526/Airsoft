@@ -29,7 +29,7 @@ export interface SettingsOptions {
   controls: ControlsSettingsOptions;
   /** Field of view (horizontal degrees on a 16:9 screen), applied at once. */
   fov: { initial: number; onChange: (v: number) => void };
-  /** The quality preset or Custom mix, the frame-rate cap, the FPS readout and tone mapping (ui/graphicsSettings.ts). */
+  /** The quality preset or Custom mix, the frame-rate cap, and the FPS readout (ui/graphicsSettings.ts). */
   graphics: GraphicsSettingsOptions;
   /** The volume sliders on the Audio group (ui/audioSettings.ts). */
   audio: AudioSettingsOptions;
@@ -342,7 +342,6 @@ export class SettingsScreen {
           'How wide you see, across a 16:9 screen. Aiming through an optic zooms in from it.',
           rangeControl('Field of view', FOV_SETTING, opts.fov.initial, (v) => `${Math.round(v)}°`, 'fov', opts.fov.onChange),
         ),
-        this.graphics.toneMappingRow,
         this.graphics.showFpsRow,
       );
     } else if (id === 'controls') {

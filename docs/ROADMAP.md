@@ -7,7 +7,7 @@ in `docs/PROCESS.md`.
 ## Where we are
 
 - **Building 0.1 Beta 1.** The game is out of Dev (owner, 2026-10-16), and he tags 0.1 Beta 1 when it is complete.
-  [0.1 Dev 6](#01-dev-6-the-last-planned-dev-build) was the last Dev build. Beta adds no features (owner,
+  0.1 Dev 6 was the last Dev build (its plan: `docs/archive/0.1-dev/ROADMAP.md`). Beta adds no features (owner,
   2026-10-06): fixes, balance and polish from the owner's playtests only. The small additions in his Dev 6 playtest
   list are the exception, on his word.
 - **Last tag:** `0.1-dev.6`, on 2026-10-16. The owner creates tags.
@@ -35,237 +35,11 @@ Only full releases are tagged (owner, 2026-10-01): playtests in between are plai
 `v0.1-alpha.2a` (commit `d8c4568`) and `v0.1-alpha.2b` (commit `08b37e3`), were removed after `0.1-dev.2`. The
 versioning policy (what Dev and Beta mean, tag names, branches) is in `docs/PROCESS.md › Versioning`.
 
-## 0.1 Dev 5: the plan
-
-Confirmed by the owner on 2026-10-06: the token-efficiency steps and the docs rewrite come first, the content toolkit is
-pulled into Dev 5, and Dev 7 is folded away (its mode checks join the toolkit here, its features go to
-[0.1 Dev 6](#01-dev-6-the-last-planned-dev-build)). The order:
-
-1. **Docs rewrite with token step 2** (TE2 below).
-2. **Token step 3** (TE3, a pipeline pull request). Done (2026-10-08).
-3. **Token step 4** (TE4, approved 2026-10-06). Done (2026-10-08).
-4. **Bug pass BP2** (the Dev 4 rows in `docs/KNOWN_ISSUES.md`). Done (2026-10-08; `docs/records/BP2.md`). The last
-   Audit 2 tasks M77–M79 followed it (done 2026-10-08), before BP3.
-5. **Graphics** (the overhaul the owner pulled forward from 0.2 on 2026-10-05). G1–G3 and G5–G8 are merged. Left: G4,
-   G9, WebGPU as a complete overhaul (W0–W6) and the map pictures (see Graphics below).
-6. **The owner's playtest notes:** the Dev 4 notes M80–M91 and M96, and the 2026-10-07 notes M97–M99 (M100 is part of
-   the graphics work, item 5; tables below). Done so far: M80, M81, M82, M83, M84, M85, M86, M87, M88, M89, M90, M91, M96, M97, M98, M99 (2026-10-11).
-7. **The content toolkit, all four parts** (plan `plans/content-toolkit-concept.md`, approved with all defaults
-   2026-10-05; about six to eight pull requests): 1 rulebooks and briefs, replica and attachment checks and the report
-   with pictures (CT1, done 2026-10-11: `docs/content/`, `node pipeline/content-check.mjs`); 2 map checks (CT2, done 2026-10-11: `map:<id>`); 3 mode
-   checks (CT3, done 2026-10-11: `mode:<id>`); 4 skin checks (CT4, done 2026-10-11: `skin:<id>`).
-8. **Bug pass BP3**, then the owner tags 0.1 Dev 5 and playtests it. In two parts: BP3a, the HUD and the menus (done
-   2026-10-12; `docs/records/BP3a.md`), and BP3b, gameplay, graphics, WebGPU and the rest of the KNOWN_ISSUES sweep (done 2026-10-12;
-   `docs/records/BP3b.md`).
-9. **The Cyber Pistol redesign** (RM5, the owner's ask 2026-10-12, pulled into Dev 5 on his pick): the model redesigned
-   from his reference pictures, with small iron sights and a slide that kicks back on each shot (done 2026-10-12;
-   `docs/records/RM5.md`).
-10. **The attachment redesigns** (RM8, the owner's ask 2026-10-12, into Dev 5 on his word the same day): the red dot,
-   2x scope, silencers and weapon torches remodelled lower, rounder and smaller in Blender, behind "Disable all models"
-   (done 2026-10-12; `docs/records/RM8.md`).
-11. **The Blender figures in the game** (BF1, pulled into Dev 5 by the owner 2026-10-12): the rigged human and robot as
-   every player and bot, behind the Dev switches until BD1 made them the default (done 2026-10-12;
-   `docs/records/BF1.md`). All eleven items are done, and the owner tagged 0.1 Dev 5 on 2026-10-13.
-
-### Audit 2: the last tasks
-
-Audit 2 is the full audit of 2026-10-05 (91 findings: 0 critical, 1 high, 18 medium, 51 low, 21 improvements). The owner
-confirmed all 34 decisions on their defaults. It was built as tasks from M50 on; the last three are done (2026-10-08,
-records in `docs/records/`), after bug pass BP2 and before BP3.
-
-| Task | What | Audit findings | Status |
-|---|---|---|---|
-| M77 | Hot-path trims | SIM-06, SIM-07, REN-10 | Done |
-| M78 | Splits: replica models, render config and city texture size | REN-09, REN-11 | Done |
-| M79 | Small leaks and import cycles | CORE-07, CORE-08, CORE-14, AUD-06 (CORE-13 and the report's section 5 docs went into TE2) | Done |
-
-### Graphics: what is left
-
-The overhaul (plan `plans/graphics-overhaul-0.2.md` in the project files) is a stylised look, an Ultra preset and a
-post-processing stack, with all three maps re-dressed. **WebGPU is now a complete overhaul** (owner, 2026-10-07;
-replaces G10 and its "only if the perf run shows a gain"; scope `plans/webgpu-overhaul-scope.md`):
-
-- WebGPU draws every preset, with WebGL2 only as the automatic fallback through the same code.
-- Every material, shader and post pass is rebuilt on the node material system.
-- GPU compute handles particles, Woodland's grass and culling.
-- A performance gate covers every map and both back ends.
-
-| Step | What |
-|---|---|
-| G4 | HUD restyle, with the menu redesign M100 (his 2026-10-07 notes) |
-| G9 | Woodland and Neon Heights re-dressed |
-| W0 | The owner's laptop and desktop WebGL baselines |
-| W1 | Foundation |
-| W2 | World materials |
-| W3 | Figures, replicas and clustered lights |
-| W4 | Post stack and retro filter |
-| W5 | Compute |
-| W6 | The switch, in two parts: W6a deletes the old renderer and its post passes and gives each renderer its own perf lines; W6b turns the world's GLSL patches into node patches; done (W6a and W6b, 2026-10-11) |
-| W7 | The map pictures, from the new renderer on WebGPU; done (W7, 2026-10-12) |
-
-### Playtest notes: 0.1 Dev 4
-
-The owner's notes of 2026-10-06. Open: none of it is built yet. His words, the type and the reasoning per item are in
-the project's shared files (`plans/playtest-feedback-0.1-dev-4.md`). The tasks are blocks M80–M96 in `docs/TASKS.md`:
-M80–M91 and M96 are Dev 5 item 6, M92–M95 are in [0.1 Dev 6](#01-dev-6-the-last-planned-dev-build). **Normal
-difficulty is the baseline** for every change (note 19): tune on Normal, then check that Easy, Hard and Pro still
-scale. He ruled on every conflict with an earlier decision on 2026-10-06 (below the table and in `docs/DECISIONS.md`).
-
-| # | Note | Goes to |
-|---|---|---|
-| 1 | The tutorial shows the scoreboard and the comm wheel when it names them; plainer but complete wording; a finish pop-up offering the practice range or the menu | M80 (0.1 Dev 5); done (2026-10-11) |
-| 2 | Keep the Retro filter | M96 (0.1 Dev 5): public as soon as possible (ruled 2026-10-06; was 0.5 in the triage); done (2026-10-11) |
-| 3 | Holster on 3 (1 primary, 2 secondary); sprinting holstered is faster but drawing to aim is slower; sprinting with the replica ready aims faster | M92 (0.1 Dev 6); done (2026-10-13) |
-| 4 | Sort and filter replicas by rarity in the Loadout, and parts by rarity in Customise | M82 (0.1 Dev 5, after G3); done (2026-10-11) |
-| 5 | A 2–4x variable scope (mouse wheel while aiming) and a holographic sight | The Replica Update (feature pick 15; moved from 0.1 Dev 6, 2026-10-12) |
-| 6 | Skip to the next round from the spectator camera | M83 (0.1 Dev 5); done (2026-10-11) |
-| 7 | A setting for a fixed or rotating minimap | M83 (0.1 Dev 5); done (2026-10-11) |
-| 8 | Walking (Shift) while aiming down sights slows you further | M84 (0.1 Dev 5): done (2026-10-11) |
-| 9 | The practice range and tutorial area in the new graphics | M81 (0.1 Dev 5, after G5 and G6; the graphics plan re-dresses only the three maps); done (2026-10-11) |
-| 10 | Practice: moving targets, more target types, a timed high-score challenge (off by default) | M93 (0.1 Dev 6); done (2026-10-13) |
-| 11 | Practice on any map with targets instead of bots; rename the range "Practice" | M94 (0.1 Dev 6); done (2026-10-13) |
-| 12 | Practice with any unlocked replica and Customise; everything with Dev on | M95 (0.1 Dev 6); done (2026-10-13) |
-| 13 | Woodland: too open, the far team visible from the start, the blue end's height edge; hidden starts; 5v5 default, 6v6, maybe Woodland only for 5v5 and 6v6 | M88 (0.1 Dev 5): 5v5 default, 6v6 allowed, Woodland only for those two (ruled 2026-10-06); done (2026-10-11) |
-| 14 | More varied, less distracting ambience; an Ambience volume | M86 (0.1 Dev 5): done (2026-10-11) |
-| 15 | Bots on both teams check spots that are plainly empty (corners); refine on every level | M87 (0.1 Dev 5, after M71); done (2026-10-11) |
-| 16 | Every replica aims down sights: iron sights without an optic; hip fire stays viable | M84 (0.1 Dev 5): iron sights now, beside scopes (ruled 2026-10-06; replaces his 0.1 Dev 3 note 3); done (2026-10-11) |
-| 17 | BBs seem to pass through the nearer bot and hit the one behind; check, and tighten hit detection | M85 (0.1 Dev 5): done (2026-10-11) |
-| 18 | Modes and match settings make sense together (no Tournament rules in Extraction) | M89 (0.1 Dev 5): done (2026-10-11) |
-| 19 | Normal difficulty is the baseline for all feedback; check every change on the other levels | Standing rule for M80–M95 |
-| 20 | Extraction loot looks like loot: crates and chests with a glow | The Modes Update, with the Extraction rework (feature pick 7) |
-| 21 | Battle royale: pick a map and spawn point, a shrinking zone with a countdown outside it, start with nothing, weapons lie on the map as models, 10 players; experimental dev mode first | The Modes Update, dev first: an exception to the Free-for-all cut (ruled 2026-10-06); his answers below |
-| 22 | An inventory: owned items in the menus, carried items on I in a match; a small carry limit in Extraction; currency takes one slot | The Replica Update (feature pick 38, the inventory); the carry limit comes with the Extraction rework |
-| 23 | Extraction: solo against bots, more of them, quicker and closer waves, bots that hunt, guard and converge on an extraction, a longer extract timer, no respawn; a duo / trio revive later | The Modes Update, the Extraction rework (feature pick 7): replaces his 2026-10-04 picks (squad of 3, one respawn) and M72's idea of one opponent fewer on Normal (ruled 2026-10-06); the revive goes with Medic |
-| 24 | More Dev settings for playtesting, starting with field credits and tokens on demand | M90 (0.1 Dev 5); done (2026-10-11) |
-| 25 | With the Armory turned off in Dev, hide it instead of greying it | M83 (0.1 Dev 5); done (2026-10-11) |
-| 26 | Softer, diffused torch beams that cast shadows | M91 (0.1 Dev 5, with the graphics work): shadows on High and Ultra only, Low as today for 60 fps (ruled 2026-10-06); done (2026-10-11) |
-
-**His rulings (2026-10-06, after the notes):**
-- The Retro look goes public as soon as possible (M96).
-- Woodland takes the new team sizes (5v5 default, 6v6, only those two).
-- Iron sights come now, beside scopes.
-- Torch shadows are for the higher presets only; Low stays as today.
-- Extraction follows these notes (solo, more and harder opponents, no respawn). This replaces his 2026-10-04 picks and
-  M72's idea of fewer Normal opponents.
-- Battle royale goes ahead as an experimental dev mode, the exception to the Free-for-all cut.
-
-**Battle royale, his answers:**
-- A found replica holds one magazine and no spares, so BBs must be looted or it runs dry.
-- Lootable replicas are rolled at random, with or without attachments that fit them (no loose attachments). Items show
-  their rarity colour.
-- One or two supply crates drop mid-match, announced by a flare.
-- Four zone shrinks over about eight minutes, with a 10-second countdown outside the zone.
-- Two replicas plus a small pack. Solo only for now.
-- A placement screen, then spectating with Skip and Quit.
-- No credits or records while it is dev, but both in the finished version.
-- Throwables become loot once they exist.
-
-### Playtest notes: main after G3
-
-The owner's notes of 2026-10-07, on the latest `main` (with the G3 menus). Open: none of it is built yet. His words, the
-type and the defaults per note are in the project's shared files (`plans/playtest-feedback-2026-10-07.md`). The tasks
-are blocks M97–M100 in `docs/TASKS.md`. All of it is 0.1 Dev 5.
-
-| # | Note | Goes to |
-|---|---|---|
-| 1 | A setting for the red X hit marker, Off by default | M97 (Dev 5 item 6); done (2026-10-11) |
-| 2 | Aim down sights by Hold or Toggle, Hold by default | Already in the game: `Settings › Controls › Aim button` (Hold by default) |
-| 3 | Customise won't take "No light" on the AEG rifle; check every replica | Fixed in BP2 (Dev 5 item 4), on every replica |
-| 4 | Teams renamed Alpha (blue) and Beta (orange); the player picks a team | M98 (Dev 5 item 6): done (2026-10-11) |
-| 5 | A plain title screen (Airsoft, the tagline, START, the version small at the bottom left); Play renamed Match; the top bar is the navigation (Match, Loadout, Armory, Settings; FC and Tokens on the right; no version); no key prompts along the bottom; Practice as the last mode; a more readable font | M100 (Dev 5 item 5, the graphics work, with the G4 HUD restyle) |
-| 6 | Replica pictures in "Your replicas" are cropped | M99 (Dev 5 item 6); done (2026-10-11) |
-| 7 | The Armory's "Your collection" in columns, one per kind | M100 |
-| 8 | The Tutorial under START on a clean save only; a Replay tutorial setting | M100 (the title) and M97 (the setting) |
-
-**His rulings (2026-10-07, all four recommendations):**
-- Inter replaces Barlow in the menus.
-- The tagline becomes "Call your hit. Go again."
-- The teams are Alpha and Beta even beside the Beta builds (colours unchanged).
-- Practice and the Tutorial leave the title screen as his notes say, replacing his M21 and M16 rulings of 2026-10-04.
-
-### Token efficiency
-
-The owner approved the recommended set of the token-efficiency plan (`plans/token-efficiency-plan.md` in the project's
-shared files; item numbers below are the plan's), and on 2026-10-06 put every step first in 0.1 Dev 5, step 4 included.
-Models and effort levels stay as they are.
-
-| Step | Items | When | Status |
-|---|---|---|---|
-| TE1 | 2 shorter CLAUDE.md (process detail in `docs/PROCESS.md`), 9 ask the owner at once, 10 lean thread start, 12 one push, 13 no status commits, 20 quiet test output, 23 session setup hook, 24 big-file read guard, 25 measure | Now (after M76) | Done |
-| TE1 (memory) | 5 project memory at about 5 KB, 11 fresh threads for follow-ons, 14 pause on a branch, not in patch folders | With TE1, by the coordinator | Open |
-| TE2 | 1 finished history to `docs/archive/`, 3 one record file per task, 4 one-line record formats, 6 HANDOFF shrunk or retired, 7 one-page module map | Inside the docs rewrite, Dev 5 item 1 | Done |
-| TE3 | 15 review packet for the critic and QA, 16 performance agent only on a flagged perf run, 17 (a) leaner changelog agent, 18 near-miss re-run only for judgment checks, 19 failures-only gate summary | Dev 5 item 2 | Done |
-| TE4 | 8 fewer chat lines, 21 lighter local test run, 22 bot balance as a report | Dev 5 item 3 (approved 2026-10-06, 23:27 UTC) | Done |
-| Gradual | 26 split the largest files when a task already edits them | Ongoing | Open |
-
-## 0.1 Dev 6: the last planned Dev build
-
-Dev 6 is the last planned Dev build (tagged 2026-10-16), though the owner may add more (owner, 2026-10-12). It holds the systems the game
-still needs to be feature complete; the content once planned here moved to its themed update
-([below](#what-moved-out-of-dev-6)). Beta then adds no features: bug fixes, QoL, balance, refinement and polish
-(owner, 2026-10-06).
-
-M92–M95, the holster and the practice upgrades, came first and are done (2026-10-13); the other blocks are written
-when their work starts. Numbers are from the owner's list of 50 candidates
-(`plans/dev6-plus-feature-candidates.md` in the project files).
-
-| # | Feature | Area |
-|---|---|---|
-| M92 | Holster on 3, and two kinds of sprint: holstered is faster, but drawing to aim takes longer; done (2026-10-13, `docs/records/M92.md`) | Movement |
-| M93 | Practice: moving targets, new target types and a timed challenge (off by default); done (2026-10-13, `docs/records/M93.md`) | Practice |
-| M94 | Practice on any map, with targets instead of bots; done (2026-10-13, `docs/records/M94.md`) | Practice |
-| M95 | Practice with any replica you own, and everything with Dev on; done (2026-10-13, `docs/records/M95.md`) | Practice |
-| LV1 | Levelling in place of the Armory's gacha: matches give XP, levels 0 to 10 unlock the gear (`levels.md`), the Armory shows your level and what comes next, rarity gone and the gear rebalanced; done (2026-10-13, `docs/records/LV1.md`) | Progression |
-| M102 | Vaulting over low obstacles (0.7–0.9 m), with a few added to the maps where they open a route; crouch cover stays peek-only (owner, 2026-10-12); vaults are loud (owner, 2026-10-13); done (2026-10-13, `docs/records/M102.md`) | Movement |
-| 40 | Rest your replica on cover (a ledge, crate or window) for steadier aim; done (2026-10-13, `docs/records/M104.md`) | Movement |
-| 19 | Saved loadouts, picked from the Match screen (once the Map pop-up) as well as the Loadout screen; done (2026-10-13, `docs/records/SL1.md`) | Loadout |
-| 21 | Bot names, personalities (rusher, anchor, flanker, careful) and loadouts; names and personalities done (2026-10-13, `docs/records/BN1.md`), the loadouts with item 23 (2026-10-13, `docs/records/BG1.md`) | Bots |
-| 23 | Bots' gear keeps up with yours: kits per level from the hand-edited `bot-kits.md`, leaning to each bot's personality, scopes and red dots change how bots aim, and their figures show it; done (2026-10-13, `docs/records/BG1.md`) | Bots |
-| 48 | Auto difficulty as a Dev setting: bots get a little better when you win, a little easier when you lose; done (2026-10-13, `docs/records/AD1.md`) | Bots |
-| 22 | Location callouts: named areas, and teammates calling "Contact, Dock!" or "Two left" (text first); done (2026-10-13, `docs/records/CL1.md`) | Team play |
-| 24 | Pings: mark a spot and bots act on it: the Ping key (middle mouse) marks a spot or an enemy you see for your team, bot teammates go to look or watch it by personality and answer, and they mark some sightings for you; done (2026-10-15, `docs/records/PG1.md`) | Team play |
-| 43 | Ask a teammate for a magazine, from the comms wheel (owner); done (2026-10-15, `docs/records/MG1.md`) | Team play |
-| 44 | Bushes and leaves can stop or deflect BBs: 0.6 m of leaves stops a BB, an edge throws it off and slows it, bots hold fire through thick bush (Easy doesn't); done (2026-10-15, `docs/records/FO1.md`) | World |
-| 41 | Noisy ground and props: running into skips, crates, racks and fences knocks them and bots hear it, a BB off steel draws a look, gravel and steel steps carry further; done (2026-10-15, `docs/records/NP1.md`) | World |
-| 45 | Overtime: when the clock runs out, a flag appears in the middle and the first team to touch it wins; done (2026-10-15, `docs/records/OT1.md`) | Rounds |
-| 46 | An option to hide the ammo counter (no mag-check key: owner): Settings › Gameplay › HUD › Ammo counter Off takes the BB counts away and leaves each spare magazine's bar full or hollow; done (2026-10-15, `docs/records/AC1.md`) | HUD |
-| PT1 | The owner's Dev 5 playtest fixes (2026-10-13): text kept inside its buttons, louder shots and a Power source volume, no BB halo, a bolder hit marker with its own settings, the 2x scope like the red dot and without its gap, the ammo count clear of the panel, firing on the run, Esc skips the round; done (2026-10-13, `docs/records/PT1.md`) | Polish |
-| – | Figure redesign: more realistic human and robot figures, from the owner's reference photos, built in Blender, with the figures' animations for Dev 6's new moves such as vaulting and resting on cover (M104 has only a placeholder lean) (owner, 2026-10-13); done (2026-10-13: the human, `docs/records/RM9.md`; the robot and both figures' vault and rest-on-cover clips, `docs/records/RM10.md`) | Art |
-| BP4 | Bug pass over the Blender models behind the Dev switches (figures, replicas, attachments, first person), with the figures' holstered pose: the arms hang and the rifle rides slung on the back; done (2026-10-15, `docs/records/BP4.md`) | Art |
-| BP5 | Full bug pass over Dev 6 and the whole game: every map, mode and difficulty played in the browser, all Dev 6 code reviewed, every known issue cross-checked, the perf harness on every preset; fixes for vaulting, anchors, name tags, the overtime banner, the Neon Heights Plaza stair and more; done (2026-10-16, `docs/records/BP5.md`) | All |
-
-Built in Dev 5 instead: the blowback pistol (pick 14) is the GBB Pistol (RM7), and the AEG Rifle redesign (RM6) gave
-the built-in rifle its small, low iron sights.
-
-### What moved out of Dev 6
-
-The owner moved content to the themed updates (owner, 2026-10-12). He named the optics and the sniper; Claude placed the
-rest, and the owner can move any back.
-
-| # | Feature | Goes to | Placed by |
-|---|---|---|---|
-| 15 | A 2–4x variable scope and a holographic sight | Replica Update | Owner |
-| 11 | The spring sniper rifle | Replica Update | Owner |
-| 10 | Grenades, smoke and flash | Replica Update | Claude: items |
-| 18 | Chest rigs and pouches | Replica Update | Claude: items |
-| 38 | The inventory | Replica Update | Claude: it holds the new items |
-| 16 | Gas cooling | Replica Update | Claude: how replicas behave |
-| 17 | The chrono and field limits | Replica Update | Claude: it matters once the sniper brings a higher limit |
-| 20 | A suppressor sound of its own | Replica Update | Claude: an attachment's sound |
-| 1 | Field rule presets and house rules | Modes Update | Claude: ways to play |
-| 2 | Medic | Modes Update | Claude: it changes how a match plays |
-| 7 | The Extraction rework | Modes Update | Claude: Extraction goes public there |
-| 31 | Weather | Maps Update | Claude: a map condition, beside Day and Night |
-| 35 | Replica skins and kit looks | Progression Update | Claude: rewards to earn |
-
-0.1 ships without them: the Loadout's Grenades slot and Skins row stay greyed ("Later") until their updates. Ideas the
-owner said no to for now, slide into cover among them (owner, 2026-10-12), are listed in `docs/IDEAS.md`.
-
 ## What 0.1 is
 
 The owner's definition (2026-10-01): 0.1 focuses on core gameplay and foundations. Later content builds on those
-foundations. The owner has since pulled more into 0.1: see the Dev 5 plan and 0.1 Dev 6 above, and the feature triage
-below. 0.1.0 opens Early Access (owner, 2026-10-12): feature complete, but light on content.
+foundations. The owner has since pulled more into 0.1: see the Dev 5 plan and 0.1 Dev 6
+(`docs/archive/0.1-dev/ROADMAP.md`), and the feature triage below. 0.1.0 opens Early Access (owner, 2026-10-12): feature complete, but light on content.
 
 - **Replicas:** the AEG Rifle and the GBB Pistol (the starting kit), and the Cyber Pistol at level 10. More
   platforms come with the Replica Update.
@@ -312,10 +86,10 @@ began:
   (W-07), if playtesting shows it frozen.
 - **UX/QoL, polish and accessibility.**
 - **Removals** (feature triage, 2026-10-05): small tasks, no pool item ID changes.
-  - **Supply weekends and dated events** (M49) come out: calendar pressure suits online games, not an offline one.
-    Their table in `pool.md` goes with care (the tests read it).
+  - **Supply weekends and dated events** (M49) come out: calendar pressure suits online games, not an offline one
+    (done 2026-10-17; `docs/records/RV1.md`).
   - **The Tone mapping choice** leaves Graphics: the best-looking one becomes everyone's, and the switch moves to the
-    Dev tab.
+    Dev tab. Done (RV2, 2026-10-17).
 - **Small additions, now placed elsewhere** (owner, 2026-10-06; they were the 2026-10-04 picks and the 2026-10-05
   triage's Beta list):
   - **Saved loadouts** (0.1 Dev 6): several named loadouts (such as "CQB" and "Long range") to switch between, picked
@@ -424,7 +198,7 @@ After 0.1.0 the game grows through themed updates, each a mini expansion (owner,
   rules such as pistols only or one magazine a round. Builds on M20's custom match settings.
 - **Battle royale,** an experimental dev mode first (Dev 4 note 21; the exception to the Free-for-all cut). Pick a map
   and a spawn point, a shrinking zone, start with nothing and find gear, 10 players. The owner's answers are under the
-  Dev 4 playtest table above.
+  Dev 4 playtest table (`docs/archive/0.1-dev/ROADMAP.md`).
 - **Survival:** you and your teammates hold a building against waves of bots that grow each wave. Needs bots that push,
   which they don't yet (`docs/KNOWN_ISSUES.md`).
 - **Rush:** Attack / Defend in stages: attackers take point A, then the front moves to B. Needs a field bigger than
@@ -443,6 +217,9 @@ After 0.1.0 the game grows through themed updates, each a mini expansion (owner,
   in what order, is the owner's pick.
 - **Neon Heights goes public** with its new look, once its open map findings are fixed (overlapping blocks, cases that
   open through walls, the east end winning first fights at night).
+- **Neon Heights' doors and interiors** (owner, 2026-10-17, Beta 1 playtest; NH2 in `docs/TASKS.md`). Doors players
+  and bots open and close, so an open door shows where someone went and a closed one may hide an enemy; furnished
+  shops, offices, storage rooms, cafes and a hotel. Built with its upper floors (NH1).
 - **Weather** (from 0.1 Dev 6). A general weather system, not only rain and fog, picked like Day / Night: rain masks
   footsteps and drops BBs a little sooner; fog shortens how far you can see.
 - **Day and Night on every map** (maybe). The Day / Night switch (M34d) for every map, not only those built for both.
