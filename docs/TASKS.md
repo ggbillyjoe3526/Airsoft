@@ -26,32 +26,6 @@ below. The item numbers are his. Where an older block overlaps one of these, the
 
 MS1 shows the owner concept images and waits for his approval before any code changes.
 
-## WL2 · Woodland: a roof on the hill fort, the grey blocks and the odd tree gone (Beta 1 playtest item 30)
-tier: fix
-perf: required
-touches: src/map/woodland.ts, src/map/woodlandExtraction.ts, src/map/woodlandDressing.ts, src/config/dressing.ts, public/menu/, pipeline/baseline/
-contract: none
-William, 2026-10-17: "woodland has a roof and bushes look better. however the other structure (on the hill) doesn't
-have a roof. there are large grey vertical rectangular blocks on the map which need to be removed. There is also a
-tree roughly in the middle of the map that looks bad. it has foliage above half way up it near the top. it doesn't
-look natural. remove this tree."
-acceptance:
-  1. The structure on the hill (first guess: the Knoll's log fort) gets a roof in the cabin's style (MS1: weathered
-     grey tin), high enough that standing, crouching, vaulting and the fort's firing lines still work; bots' sight
-     through it is unchanged where the roof doesn't block.
-  2. The large grey vertical blocks are found, named in the record (what they were and why they showed), and removed
-     or given their intended material. If one carries collision or cover, the record says what replaces it.
-  3. The tree near the middle with foliage only near the top is removed; any other tree built the same way is fixed
-     or removed too. Cover and sight lines near it are noted in the record.
-  4. Woodland's balance guards and M88's hidden starts still pass; Low and Medium perf hold. Before and after
-     screenshots of each spot go to William.
-  5. William's picks on the first pictures (2026-10-17): roof the hut, not the whole fort. His tweaks at 12:58: "make
-     the walls around the structure on the hill lower and the structure with the roof a little bit taller", and
-     "completely remove all boulders. I hate them." Every boulder goes; cover they gave stays as logs where balance
-     needs it. His item 3 (more elevation, maybe a stream) is a concept first and a later pull request.
-status: open
-attempts: 0
-
 ## BL1 · Attack / Defend: fewer attacker wins, more rounds won at the pole (after playtest)
 tier: core
 perf: skip
