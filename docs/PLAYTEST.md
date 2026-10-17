@@ -47,12 +47,22 @@ What changed in 0.1 Beta 1, from your Dev 6 playtest. Each line points to the se
   body; your own body shows only when you look well down ([Players and replicas](#players-and-replicas)).
 - [ ] **Map surroundings.** Cranes and a water tower over Depot's walls; Woodland's cabin, layered pines and brighter
   nights; Neon Heights ringed by lit towers and signs ([Maps](#maps)).
-- [ ] **A shorter tutorial.** One or two sentences a card; read-only cards move on by themselves; the lean step is
-  gone ([Tutorial](#tutorial)).
+- [ ] **A shorter tutorial.** One or two sentences a card; read-only cards fill a bar and move on after 10 s; a lean
+  step after Crouch teaches peeking with Q and E ([Tutorial](#tutorial)).
 - [ ] **Movement and hands.** Holstered you run faster than armed, never past a sprint; no resting on cover; walking
   with Shift aims as steadily as standing; the first replica switch no longer stutters ([Movement](#movement)).
 - [ ] **Bug fixes.** The Q/E lean eases, a double-tap on the fire selector steps twice, a ricochet's grit flies off
   the wall, edge markers point the way to turn ([Old bugs to recheck](#old-bugs-to-recheck)).
+
+### Your Beta 1 playtest (2026-10-17)
+
+Your first pass (the checklist is `playtest/beta1-checklist.md` in the project's shared files): Settings, the menus,
+the HUD, movement, the figures and their hit areas, Depot and BBs in bushes passed. These became tasks: more compact
+menus and replica panel (UI2), a longer round-end stamp and table (RE1), a faster holstered run, a natural wrist and
+no own body in view (MV2), Woodland's hill roof, grey blocks and middle tree (WL2), the lean step and 10 s read cards
+in the tutorial (TT2), and Neon Heights' doors and interiors (NH2, the Maps Update). Still to play: the bots at each
+difficulty and adaptive difficulty, Woodland Attack / Defend, Neon Heights by Day, the overtime flag, and the hitch and
+[old bug](#old-bugs-to-recheck) rechecks.
 
 ### Only you can do these
 
@@ -407,11 +417,13 @@ The Match screen's Practice card, then Start practice.
 ### Tutorial
 
 - [ ] **The title screen** offers Tutorial under START on a clean save until you finish it or start a first match.
-- [ ] **Play it through.** The coach says "Tutorial · 1 of 15 · Look around" and moves on as you do each thing (look,
-  walk, ring a plate, knock down a figure at 50 m, reload, selector, aim, crouch, sprint-fire, vault, switch replica,
-  then four cards to read); finished steps tick green. Does any step feel stuck or unclear?
-- [ ] **Short and quick (TT1).** Every card is a sentence or two; the four read cards fill a thin bar and move on
-  within 5 to 8 s.
+- [ ] **Play it through.** The coach says "Tutorial · 1 of 16 · Look around" and moves on as you do each thing (look,
+  walk, ring a plate, knock down a figure at 50 m, reload, selector, aim, crouch, lean, sprint-fire, vault, switch
+  replica, then four cards to read); finished steps tick green. Does any step feel stuck or unclear?
+- [ ] **Lean (TT2).** After Crouch, the Lean card names Q and E (your bindings); it ticks only once you have peeked
+  both ways, in either order.
+- [ ] **Short and quick (TT1, TT2).** Every card is a sentence or two; the four read cards fill a thin bar and move on
+  after 10 s.
 - [ ] **Esc mid-tutorial.** The pause menu names your step and offers Skip step and Skip tutorial; quitting at step 5
   and starting again resumes there. Rebinding reload changes the coach's key.
 
@@ -421,7 +433,8 @@ Your squad against a home team on a timed run. Turn on Dev content, then Play �
 Neon Heights). A run gives no XP while it is dev content.
 
 - [ ] **Play screen and exits.** The Match line reads "Squad of 3 · 5 in the home team", "One 8:00 run"; with Dev
-  content off it isn't offered.
+  content off it isn't offered. Exits are green rings with cones and an EXIT sign, yellow with Settings › Accessibility ›
+  Team colours on High Contrast (the minimap door and the marker too); a late exit is grey until it opens.
 - [ ] **Counted out.** Stand in an open exit: a beep a second, "Counting you out · 9 … 1", "Counted out · you made
   it!"; stepping out restarts it and a Beta bot in the ring pauses it.
 - [ ] **Respawn and coming in.** Hit once: back at the insertion, "no respawn left"; hit again: "Out of the run". For 3
@@ -538,8 +551,8 @@ Settings opens on Display, with groups down the left (Display, Graphics, Gamepla
   same sensitivity for CS2 and Valorant.
 - [ ] **Aim button and Sprint key: Toggle.** One right click keeps the sight up; sprint or a switch to the pistol
   drops it.
-- [ ] **Raw mouse input.** After the first Play the line says "Raw input is active" in Chrome and Edge, "no raw
-  input" in Firefox.
+- [ ] **Raw mouse input.** After the first Play the line says "Raw input is active" in Chrome and Edge; in Firefox
+  it says "Firefox never does" from the start.
 - [ ] **Keys** (Settings › Controls › Keys). Each action has a main and a second key box. Binding a used key swaps the
   two ("R was Reload: Reload is now Space"); Backspace clears (Move forward keeps one); the wheel and side buttons
   bind; F5, F11 and F12 are refused; Reset All asks first. By keyboard only: Tab to a box, Enter, press a key.
@@ -636,12 +649,17 @@ Settings › Save file. Everything saves as it changes; nothing to press.
 
 ## Browsers and builds
 
+You play in Chrome (2026-10-17, no Firefox installed): skip the Firefox lines. CI's `firefox` job runs the boot and
+save tests in Firefox on every pull request, and IN1 checked mouse lock, F10 and the raw input line in Firefox 136 in
+the cloud.
+
 - [ ] **Edge, production build** (`npm run build`, `npm run preview`). It boots to the title with no
   console errors; Play takes the mouse, Esc pauses and Resume takes it back; the back and forward side buttons don't
-  leave the page. `npm run dev` still boots. Firefox has no hand check (William has none since 2026-10-17): IN1
-  puts it on CI.
-- [ ] **Chrome, production build.** Mouse look is smooth with no jump on the first move after Play or Resume. Right
-  after pausing it may show "click again"; a second Esc a second later resumes.
+  leave the page. `npm run dev` still boots.
+- [ ] **Chrome, production build.** Mouse look is smooth with no jump on the first move after Play or Resume.
+- [ ] **Esc on the pause screen** (Chrome, Edge). Esc is no click, so the browser usually won't give the mouse
+  back: the menu says "Click anywhere to resume" in large type, and one click anywhere on it carries on. A click within
+  a second of the first Esc gets "needs a moment, click again" in Chrome. Esc again and Resume still work.
 - [ ] **Tabbing away.** Switching tab, Alt+Tab, clicking a window on a second screen or opening an overlay mid-round
   pauses the match and nothing happened while you were away; away while running forward, you stand still on Resume.
 - [ ] **Hardware acceleration off** (restart the browser): the title warns the game will run slowly and where to turn

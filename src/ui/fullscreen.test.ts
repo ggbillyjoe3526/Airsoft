@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FULLSCREEN_RELOCK_MS } from '../config/controls';
-import { relockAfterFullscreen } from './fullscreen';
+import { fullscreenRelock, relockAfterFullscreen } from './fullscreen';
 
 describe('the mouse taken again after the Fullscreen key (audit UI-19)', () => {
   it('re-locks when the lock dropped just after the key was pressed in play', () => {
@@ -13,5 +13,19 @@ describe('the mouse taken again after the Fullscreen key (audit UI-19)', () => {
     expect(relockAfterFullscreen(Number.POSITIVE_INFINITY, FULLSCREEN_RELOCK_MS, true, false, false)).toBe(false);
     expect(relockAfterFullscreen(50, FULLSCREEN_RELOCK_MS, false, false, false)).toBe(false);
     expect(relockAfterFullscreen(50, FULLSCREEN_RELOCK_MS, true, false, true)).toBe(false);
+  });
+});
+
+describe('the lock around fullscreen changing (IN1: Firefox drops it and refuses it back until the change is done)', () => {
+  it('waits for the change when the lock drops before it, and takes the lock once it is done', () => {
+    expect(fullscreenRelock(20, FULLSCREEN_RELOCK_MS, true, false, false, false)).toBe('wait');
+    expect(fullscreenRelock(40, FULLSCREEN_RELOCK_MS, true, false, false, true)).toBe('take');
+  });
+
+  it('does nothing where the lock held (Chrome), long after the key, with no match or in unlocked play', () => {
+    expect(fullscreenRelock(40, FULLSCREEN_RELOCK_MS, true, true, false, true)).toBe('none');
+    expect(fullscreenRelock(FULLSCREEN_RELOCK_MS + 1, FULLSCREEN_RELOCK_MS, true, false, false, false)).toBe('none');
+    expect(fullscreenRelock(40, FULLSCREEN_RELOCK_MS, false, false, false, true)).toBe('none');
+    expect(fullscreenRelock(40, FULLSCREEN_RELOCK_MS, true, false, true, true)).toBe('none');
   });
 });

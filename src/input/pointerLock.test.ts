@@ -108,9 +108,64 @@ describe('pointer lock requests', () => {
     expect(lock.locked).toBe(true);
   });
 
+  it('reports a refusal once when the second try\'s error event straggles in after the request ended', async () => {
+    const { lock, log } = setup(['refuse', 'refuseEventLater']);
+    await lock.request();
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    expect(log).toEqual(['error']);
+  });
+
+  it('drops a request while the lock is held', async () => {
+    const { lock, log } = setup(['lock', 'refuse', 'refuse']);
+    await lock.request();
+    await lock.request();
+    expect(log).toEqual(['change:true']);
+  });
+
   it('still reports a refusal the browser only signals by event, outside a request', () => {
     const { log } = setup([]);
     globalThis.document.dispatchEvent(new Event('pointerlockerror'));
+    expect(log).toEqual(['error']);
+  });
+});
+
+describe('a browser that answers only by event (Firefox 136 returns no promise, IN1)', () => {
+  /** A canvas whose request returns nothing and answers a task later by event: the lock taken, or refused. */
+  function eventCanvas(doc: ReturnType<typeof fakeDocument>, answers: ('lock' | 'refuse')[]): HTMLElement {
+    const canvas = {
+      requestPointerLock: (): undefined => {
+        const answer = answers.shift();
+        setTimeout(() => {
+          if (answer === 'lock') doc.pointerLockElement = canvas;
+          doc.dispatchEvent(new Event(answer === 'lock' ? 'pointerlockchange' : 'pointerlockerror'));
+        }, 1);
+        return undefined;
+      },
+    };
+    return canvas as unknown as HTMLElement;
+  }
+
+  function eventSetup(answers: ('lock' | 'refuse')[]) {
+    const doc = fakeDocument();
+    (globalThis as { document?: unknown }).document = doc;
+    const log: string[] = [];
+    const lock = new PointerLock(eventCanvas(doc, answers), { press: () => undefined, release: () => undefined, bound: () => false });
+    lock.onChange((locked) => log.push(`change:${locked}`));
+    lock.onError(() => log.push('error'));
+    return { lock, log };
+  }
+
+  it('waits for the lock before the request ends, so Play resumes from its answer', async () => {
+    const { lock, log } = eventSetup(['lock']);
+    await lock.request();
+    expect(lock.locked).toBe(true);
+    expect(log).toEqual(['change:true']);
+  });
+
+  it('tries without raw input after a refusal by event, and reports once when that is refused too', async () => {
+    const { lock, log } = eventSetup(['refuse', 'refuse']);
+    await lock.request();
+    expect(lock.locked).toBe(false);
     expect(log).toEqual(['error']);
   });
 });
