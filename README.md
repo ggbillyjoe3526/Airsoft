@@ -231,8 +231,10 @@ npm run perf -- --env laptop # the perf harness: a scripted 60 s match, frame ti
 The browser smoke test needs Playwright's Chromium once per machine: `npx playwright install chromium`. It builds the
 game in `e2e` mode into `dist-e2e/` (port 4180; specs in `e2e/`) and plays the release build in `dist/` with the real
 pointer lock (port 4182; `e2e/release.spec.ts`). Each build is made once per source and reused
-(`pipeline/build-cached.mjs`). GitHub runs the pipeline's gate script on every pull request and every push to `main`
-(`.github/workflows/check.yml`, `pipeline/README.md`).
+(`pipeline/build-cached.mjs`). With `E2E_FIREFOX=1` it runs the boot and save specs in Playwright's Firefox instead
+(`npx playwright install firefox`; headed, so under `xvfb-run` on Linux without a display). GitHub runs the pipeline's
+gate script on every pull request and every push to `main` (`.github/workflows/check.yml`, `pipeline/README.md`), and
+the Firefox run in its `firefox` job.
 
 ### Hosting
 
@@ -293,7 +295,7 @@ src/input     keyboard, mouse and pointer lock → commands
 src/map       map data (Depot, Woodland, Neon Heights), lighting, foliage
 src/nav       walkability grid and route finding
 src/physics   Rapier wrapper: level collision, character controller, ray casts
-src/pool      the asset pool, the Loadout's model, bot kits, Extraction cases, supply events
+src/pool      the asset pool, the Loadout's model, bot kits, Extraction cases
 src/progress  levels, XP and what the player has unlocked
 src/render    Three.js presentation: maps, replicas, characters, BBs, effects, cameras
 src/save      guarded storage, save file, restore points, tab lock
@@ -305,7 +307,7 @@ src/ui        menus, HUD, scoreboard, minimap, hit feedback, debug overlay
 e2e           browser tests (Playwright)
 pipeline      gate script, perf harness, agent scripts
 docs          design notes, roadmap, process, playtest guide
-pool.md       every item, Extraction's cases and supply events (hand-editable)
+pool.md       every item and Extraction's cases (hand-editable)
 levels.md     what each level unlocks, the XP it takes and what a match gives (hand-editable)
 stats.md      how every replica and part performs (hand-editable)
 callouts.md   what the bots call and how often (hand-editable)

@@ -194,7 +194,6 @@ describe('Practice is the last mode on the Match screen (M100)', () => {
     const model = {
       picks: () => ({ map: 'depot', mode: 'elimination', difficulty: 'normal', teammateDifficulty: 'normal', ruleset: 'skirmish', rules: { ...DEFAULT_MATCH_RULES } }),
       lightingOf: () => 'day',
-      supply: () => null,
       setMode: () => {},
       practicePlace: () => 'range',
       setPracticePlace: () => {},

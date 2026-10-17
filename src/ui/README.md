@@ -26,6 +26,7 @@ game state and never write it. Tests use the fake DOM in `testSupport.ts` (no js
   `coachPanel.ts` (the tutorial) and `tutorialShowcase.ts` (the scoreboard and order wheel its steps open, M80),
   `saveDialog.ts`; `loadingProgress.ts` counts the physics download's bytes for the loading bar.
 - Small parts: `clipboard.ts` (copy to the clipboard, with the old command as a fallback), `fullscreen.ts` (M18b),
+  `fullscreenPlay.ts` (the Fullscreen key in play and the mouse lock across the change, IN1; out of `game.ts`, DX5),
   `headIcon.ts` (the helmet drawing beside a name in the stats tables), `loadoutChoice.ts` (how the menus word a BB
   weight and a loadout's picks), `restartAnimation.ts` (restarting a CSS animation), `timedFill.ts` (a bar's fill that
   runs on a transition, or steps with Reduced motion).

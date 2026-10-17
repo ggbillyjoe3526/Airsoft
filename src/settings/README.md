@@ -18,7 +18,7 @@ The player's saved settings: one versioned object in the browser, plus the Dev s
   game's (`loadNewGamePicks`: `loadMap`, `loadMode`, `loadDifficulty`, `loadTeammateDifficulty`, `loadTeamPick`,
   `loadRuleset`, `loadMatchRules`; and `loadLightingPicks`, `loadPracticePlace`, `loadPracticeChallenge`), the
   controls (`loadControls`, laid onto `PlayerInput`; `loadMouseDpi`, `loadRawInput`), the graphics (`loadFov`,
-  `loadSavedQuality`, `loadCustomQuality`, `loadFrameRateCap`, `loadToneMapping`, `loadRendererChoice`, `loadShowFps`),
+  `loadSavedQuality`, `loadCustomQuality`, `loadFrameRateCap`, `loadRendererChoice`, `loadShowFps`),
   `loadLook`, and the tutorial's and the title's flags (`loadTutorialDone`, `loadTutorialStep`, `loadMatchStarted`).
 - `dev.ts`: the Dev settings' values as `dev.<id>` (a switch is `'on'` / `'off'`, a choice its option's id), read back as `DevSettings`.
   `Game.dev` holds what applies (the defaults while the Dev settings box is unticked).

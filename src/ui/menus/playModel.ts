@@ -22,7 +22,6 @@ export interface PlayPicksHooks {
   onDifficulty: (d: Difficulty) => void;
   onTeammates: (d: Difficulty) => void;
   onTeam: (t: TeamPickId) => void;
-  supply: (() => string | null) | undefined;
   /** The screens again, after a pick. */
   refresh: () => void;
 }
@@ -91,10 +90,6 @@ export class PlayPicks implements PlayModel {
     this.picked.mode = mode;
     this.hooks.onMode(mode);
     this.hooks.refresh();
-  }
-
-  supply(): string | null {
-    return this.hooks.supply?.() ?? null;
   }
 
   setRuleset(r: RulesetId): void {
