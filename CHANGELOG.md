@@ -106,6 +106,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **PF4** · Developer-only: the perf harness measures the same stretch of play every run, so its triangle counts stop swinging between runs
 - **DX7** · Developer-only: bot code and settings split by concern; six data tables move to a data folder, and bad rows show in Settings › Dev
 - **DX5** · Developer-only: one object holds all HUD and accessibility settings; match and range share one session; settings helpers move; game file trimmed
+- **DX6** · Developer-only: render code grouped into folders; vault prompt reads the simulation's answer, no HUD rays; HUD markers share one step
 
 ## 0.1 Dev 6 · 2026-10-16
 
