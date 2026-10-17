@@ -39,6 +39,8 @@ William, 2026-10-17:
 acceptance:
   1. The Match screen's columns and controls are narrower at 1280×720 and 1920×1080, with no wasted width between a
      label and its control; nothing wraps, overflows or is cut off, and the 15 px type floor holds (`styleSheet.test.ts`).
+     Owner, 2026-10-17: the Time-out rule keeps its full words (Overtime flag, More players left) and may stack them on
+     two lines below about 1390 px.
   2. The HUD replica panel (bottom right) is narrower at HUD size 100 % and 150 %, keeping picture, name, fire modes,
      loaded count and spares readable, and still clear of the held replica and the minimap at 1280×720.
   3. The record lists before and after widths for both, and screenshots go to William before merging (MR1's
