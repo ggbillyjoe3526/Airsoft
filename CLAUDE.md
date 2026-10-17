@@ -122,7 +122,7 @@ failed and what's incomplete. Never claim something works if you haven't verifie
 feels to play), tell the owner exactly what to test in the browser.
 
 **Token and context hygiene** (owner, 2026-10-02 and 2026-10-06; usage runs out fast):
-- **One task per thread.** After a merge, follow-on work starts a fresh thread with a short brief.
+- **One task per thread** (`docs/PROCESS.md` › Sessions).
 - **Grep first, then read ranges.** A hook stops whole-file reads of files over 40 KB (`.claude/hooks/`); the big docs
   (PLAYTEST, KNOWN_ISSUES, DECISIONS and everything in `docs/archive/`) are read by heading, never whole.
 - **Quiet output:** `npm run t` (fast tests, dots and failures only), `npm run t:changed` (only the tests the
@@ -159,7 +159,7 @@ it is an owner ruling or binds later tasks, say which, and keep going.
   short "now", rewritten once per batch by the planning thread) in `docs/`. Each task's record goes in `docs/records/`,
   finished history in `docs/archive/`.
 - `CHANGELOG.md`, `docs/FEATURES.md` and `docs/patch-notes/` are kept by the changelog agent
-  (`.claude/agents/changelog.md`): run it in every pull request once the change is final. Don't edit them by hand
+  (`.claude/agents/changelog.md`; when it runs: `pipeline/README.md` › The eight steps). Don't edit them by hand
   except to fix a mistake.
 
 ## 11. Tone Check
@@ -174,7 +174,6 @@ The goal is a genuinely fun airsoft game in the browser, not an impressive codeb
 
 ## 12. The Pipeline
 
-Every task runs through the pipeline: `pipeline/README.md` (protocol), `.claude/skills/pipeline/SKILL.md` (steps),
-`docs/TASKS.md` (open tasks), `.claude/agents/` (agents). `node pipeline/gate.mjs --task <id>` runs the gates; on
-green gates QA and performance review the change, then the critic ticks eight binary checks (the table and the attempt
-rules: `docs/PROCESS.md` › The pipeline).
+Every task runs through the pipeline: `pipeline/README.md` (the protocol, the critic's verdict and the attempt rule),
+`.claude/skills/pipeline/SKILL.md` (steps), `docs/TASKS.md` (open tasks), `.claude/agents/` (agents).
+`node pipeline/gate.mjs --task <id>` runs the gates.

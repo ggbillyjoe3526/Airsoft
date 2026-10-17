@@ -1,6 +1,6 @@
 ---
 name: performance
-description: Reviews every change that touches code, config, assets or gameplay data (owner, 2026-10-16) for frame time, per-frame allocations, GPU resource disposal and the budgets in pipeline/perf-budget.json, and gives a Pass or Fail verdict; when the perf gate fails it also ranks the causes and fixes. Reads the review packet first. Never edits game code. Sonnet; the thread re-runs it on Opus when a regression stays unexplained.
+description: Reviews every change that touches code, config, assets or gameplay data (owner, 2026-10-16) for frame time, per-frame allocations, GPU resource disposal and the budgets in pipeline/perf-budget.json, and gives a Pass or Fail verdict; when the perf gate fails it also ranks the causes and fixes. Reads the review packet first. Never edits game code. Its model per run is in docs/PROCESS.md › Models.
 tools: Read, Glob, Grep, Bash
 model: sonnet
 effort: medium

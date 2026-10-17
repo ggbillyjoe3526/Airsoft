@@ -17,8 +17,9 @@ ends, time passes or small improvements pile up.
 | 0.2, 0.3 … (`0.2.0` …, each with `.x` maintenance) | A themed update, a mini expansion (owner, 2026-10-12): the Replica, Modes, Maps and Progression Updates and any more he adds, in the order he picks. Each has its own Dev and Beta builds; the next one shipped takes the next number. |
 | 1.0 (`1.0.0`) | The full launch: the owner considers the game complete, and Early Access ends (owner, 2026-10-12). |
 
-- **Dev until feature complete.** The game stays in 0.1 Dev until the owner calls it feature complete (owner,
-  2026-10-06); Beta then adds no features. Dev replaced the name Alpha (owner, 2026-10-05): the old `v0.1-alpha`
+- **Dev until feature complete, then Beta.** A version stays in Dev until the owner calls it feature complete (owner,
+  2026-10-06); Beta then adds no features. He called 0.1 out of Dev on 2026-10-16, so the game is in 0.1 Beta 1 now
+  (`docs/ROADMAP.md` › Where we are). Dev replaced the name Alpha (owner, 2026-10-05): the old `v0.1-alpha`
   tags became `0.1-dev.1` to `0.1-dev.3`.
 - **Names.** Written "0.1 Dev 5" or "0.1 Beta 1", with no "v" (owner, 2026-10-05). Tags can't hold spaces, so they use
   the dotted forms above (`0.1-dev.2`, never `0.1-dev-2`). A GitHub release is titled "Airsoft 0.1 Dev 2".
@@ -92,7 +93,7 @@ release description:
   `git ls-remote --tags origin`: a tag newer than the one `README.md` names means the release checklist is due.
 - **One task per thread** (owner, 2026-10-02 and 2026-10-06). After a merge, follow-on work starts a fresh thread
   with a short brief.
-- **The project chat carries results, blockers and decisions only** (owner, 2026-10-06, token plan item 8). A thread
+- **The project chat carries results, blockers and decisions only** (owner, 2026-10-06). A thread
   replies when it has a result, hits something only the owner can unblock, or needs his decision; progress goes in its
   status checklist. The coordinator posts the same three in the project chat (plus the one-line receipt for a new ask),
   never a per-milestone progress line.
@@ -107,12 +108,13 @@ release description:
 
 ## Models
 
-Which model runs which job (owner, 2026-10-08). The per-agent detail is in `pipeline/README.md` › Roles. A thread
+Which model runs which job (owner, 2026-10-08); the roles themselves are in `pipeline/README.md` › Roles. A thread
 never changes a model or an effort level unless the owner asks.
 
-- **Opus 5.5 for the coordinator, the planning thread and `tier: core` tasks,** each bug pass (`BP<n>`) and the fixes
-  an audit hands on among them. Opus threads run at Extra effort (`xhigh`), the owner's project setting. The critic
-  runs on Opus for core tasks and near misses, and the performance agent when a regression stays unexplained.
+- **Opus 5.5 for the coordinator, the planning thread and `tier: core` tasks,** each bug pass (`BP<n>`) and the fixes an
+  audit hands on among them. Opus threads run at Extra effort (`xhigh`), the owner's project setting; a `worker` agent a
+  thread splits its task to inherits the thread's model at high effort. The critic runs on Opus for core tasks and near
+  misses, and the performance agent when a regression stays unexplained.
 - **Sonnet 5.5, medium, for `tier: ui` and `tier: trivial` tasks,** QA, and the other critic and performance runs.
 - **Haiku 5.5, low, for small helper jobs:** the changelog and triage agents, and the diff check on a docs-only
   `tier: trivial` task.
@@ -151,79 +153,26 @@ A full bug pass plus a `docs/KNOWN_ISSUES.md` sweep is a standing practice (owne
   to the run folder. Each figure **outside** its band by two standard errors or more is a balance issue: fix it in the
   pass or log it in `docs/KNOWN_ISSUES.md`. One **outside, within noise** is re-measured on more seeds before anyone acts;
   one **near an edge** is noted. A task that changes balance on purpose runs its own filter and quotes the figures in
-  its record (token plan item 22).
+  its record: figures are reported, never asserted, since noise across seeds made pass/fail bands cost re-measure loops.
 - **Seeds.** The headless bot guards keep only what must never happen, but a fix that touches movement or materials
   can still fail one seed. Re-measure over 16 seeds before changing a threshold.
 
 ## The pipeline
 
-Every task runs through the build pipeline (owner's design, 2026-10-04). `pipeline/README.md` is the protocol,
-`.claude/skills/pipeline/SKILL.md` the step list, `docs/TASKS.md` the open tasks with their acceptance criteria, and
-`.claude/agents/` the agents (worker, qa, performance, triage, critic, changelog).
+Every task runs through the build pipeline (owner's design, 2026-10-04). `pipeline/README.md` is the protocol: the
+roles, the eight steps, the gates, the critic's verdict, the near-miss re-run and the four-attempt rule with the owner's
+auto-accept, and the record. `.claude/skills/pipeline/SKILL.md` is the step list a build thread follows,
+`docs/TASKS.md` the open tasks with their acceptance criteria, and `.claude/agents/` the agents (worker, qa,
+performance, triage, critic, changelog; the critic's eight checks are in `critic.md`). The policy it carries:
 
-### Gates
-
-A script, not a model. `node pipeline/gate.mjs --task <id>` runs the build, the unit tests, the browser smoke test,
-the perf harness when the diff touches a perf-relevant path, a scope check against the task's `touches`, and a
-changelog check. It writes `pipeline/out/gate-report.json`, the attempt row for the task's record
-(`pipeline/out/metrics-row.md`), a failures-only summary (`pipeline/out/failures.md`: each failure's test, error, file
-and line) and the review packet the critic and QA read first (`pipeline/out/review-packet.md`: the task block, the gate
-summary, the contracts the diff touches, QA's report and the diff). Off CI the slow bot-match guards run only when the
-diff reaches a file they load; CI always runs them (token step 4, `pipeline/README.md` › `gate.mjs`). A failed
-gate goes back to the worker with the evidence; the critic never sees it. On a pull request out of draft, CI also runs
-the `review` gate (above). The triage agent runs only for a failure the summary can't place (token step 3,
-`pipeline/README.md`).
-
-### QA and performance
-
-On green gates, before the critic, every code change gets QA (`.claude/agents/qa.md`: the tests for each acceptance
-criterion, then a hunt for bugs, regressions, edge cases and browser-state problems) and the performance agent
-(`.claude/agents/performance.md`: frame time on the owner's laptop, per-frame allocations, GPU disposal, the budgets
-in `pipeline/perf-budget.json`, and the causes of a failed perf run). Each writes a Pass or Fail verdict that the
-review packet quotes for the critic; a Fail goes back to the worker like a failed gate (owner, 2026-10-16).
-
-### Critic
-
-Judgment only, on green gates. The critic (`.claude/agents/critic.md`) runs as a separate subagent with fresh context.
-It reads the review packet first (the task's acceptance criteria, the gate summary, the contracts the diff touches,
-QA's report and the diff), opens a file in full only where a hunk can't settle a check, and ticks eight binary checks:
-
-| # | Check | Blocking |
-|---|---|---|
-| 1 | Every acceptance criterion met, with the diff line that meets it | yes |
-| 2 | No contract (`docs/ARCHITECTURE.md` › Contracts) changed unless the task allows it | yes |
-| 3 | No new per-frame or per-tick allocation in the diff | yes |
-| 4 | The new tests exercise the feature (would fail without it) | yes |
-| 5 | Simulation apart from presentation, no magic numbers, no hidden global state (§9) | yes |
-| 6 | Fits the pillars, the fixed decisions and the assets policy (§2, §3, §4, §11) | yes |
-| 7 | Maintainability (small modules, GPU disposal, no copy-paste) | no |
-| 8 | Scope (nothing beyond the task; the docs it affects updated) | no |
-
-- **Score** is the checks passed, out of 8. **Accept** when every blocking check passes, at most one non-blocking
-  check fails, and QA and performance both say Pass. Otherwise **Retry** with only the failed checks and their evidence.
-- **Near miss.** A verdict one check short of Accept is re-run on Opus before the task goes back, when its failed
-  check is a judgment (checks 5 to 8, or one of 1 to 4 decided by reading). A check failed on a measured number (a
-  budget, a count) goes straight back, or to the owner when only a changed criterion can pass it: a re-run can't
-  change a number (token plan item 18).
-- **Trivial tasks.** Small changes (typo fixes, config tweaks, docs) are `tier: trivial`. One that touches code or
-  config still gets QA, performance and the critic (owner, 2026-10-16); a docs-only one is accepted by green gates plus
-  a Haiku diff check.
-- **The owner's playtest wins.** The critic cannot play the game: it lists browser tests for the owner, whose
-  playtest overrides it.
-
-### Attempts
-
-Four attempts per task: one build plus three targeted retries. After the fourth:
-
-- gates green and at least **6 of 8**, with checks 1 and 2 passing: **auto-accept** (owner, 2026-10-04), and every
-  failed check goes to `docs/KNOWN_ISSUES.md`;
-- otherwise stop, keep the best attempt on its branch and report to the owner what failed and what each attempt tried.
-
-### Records
-
-Each task writes one file, `docs/records/<id>.md`: its review line, a row per attempt, its own decisions and the known
-issues it left (format in `docs/records/README.md`). `node pipeline/records.mjs` prints the index tables. Records
-before 2026-10-08 are in `docs/archive/0.1-dev/REVIEWS.md` and `METRICS.md`.
+- **Review agents on every code change** (owner, 2026-10-16): above, › Pull requests and branches. A docs-only
+  `tier: trivial` task is accepted by green gates plus a Haiku diff check.
+- **Four attempts, then auto-accept or the owner** (owner, 2026-10-04): a task stops after four, so a hard one reaches
+  the owner instead of looping.
+- **The owner's playtest wins.** The critic cannot play the game: it lists browser tests for the owner, whose playtest
+  overrides it.
+- **Records.** Each task writes `docs/records/<id>.md` (format in `docs/records/README.md`); records before 2026-10-08
+  are in `docs/archive/0.1-dev/REVIEWS.md` and `METRICS.md`.
 
 ## Writing docs
 

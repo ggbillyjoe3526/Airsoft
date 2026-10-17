@@ -134,6 +134,8 @@ The interfaces a task may not change unless its block in `docs/TASKS.md` says so
 list; `pipeline/README.md`). A contract change is a plan step: the planning thread updates this list in the same pull
 request. Each entry says where the contract lives, what it holds today and what pins it.
 
+### PlayerCommand
+
 - **`PlayerCommand`** (`sim/commands.ts`). One command per character per tick, with absolute view angles; the only way
   input or bots drive the simulation. `toggleTorch` switches the weapon light in hand (`sim/torch.ts`); `holster` puts
   the replica in hand away, and a slot in `switchTo`, a fresh trigger pull, aim press or reload draws it again (M92,
@@ -141,6 +143,8 @@ request. Each entry says where the contract lives, what it holds today and what 
   `sim/magShare.ts`): the bots set it when they bring one, MatchSession when your Mag key tosses one, never the keys
   straight.
   Pinned by `sim/simulation.test.ts`, `input/playerInput.test.ts`, `sim/magShare.test.ts`.
+### GameState and its events
+
 - **`GameState` and `state.events`** (`sim/state.ts`, `sim/events.ts`). Plain data with no Three.js or DOM. Events are
   the only channel to presentation and are cleared each tick. For Extraction:
   - `RoundState.run` holds the run (`sim/extraction.ts`): exits, respawns used, the exit count, its outcome, the
@@ -192,6 +196,8 @@ request. Each entry says where the contract lives, what it holds today and what 
   Pinned by `sim/simulation.test.ts`, `sim/overtimeFlag.test.ts`, `sim/extraction.test.ts`, `sim/extractionCases.test.ts`,
   `sim/extractionWaves.test.ts`, `sim/torch.test.ts`, `sim/coverRest.test.ts`, `sim/vault.test.ts`,
   `sim/magShare.test.ts`, `sim/bbsLeaves.test.ts`, `sim/propNoise.test.ts`, `sim/propNoisePhysics.test.ts`.
+### stepSimulation
+
 - **`stepSimulation(state, commands, ctx, dt)`** (`sim/simulation.ts`). The fixed 60 Hz step and the order of its
   phases (a parked out-of-play character goes straight to the elimination step); randomness only from `state.rng`.
   Per character: aim, move, walk cycle, lean, rest on cover (M104: after the lean, so it reads the eye the tick left,
@@ -206,6 +212,8 @@ request. Each entry says where the contract lives, what it holds today and what 
   pull after it); presses made meanwhile play into its first command after the vault (`withVaultPresses`), and a
   walk-off route is planned only once it is down. Pinned by the `sim/*.test.ts` files (`sim/vaultPresses.test.ts`)
   and the `ai/depotMatch*.test.ts` guards.
+### WorldQuery and CharacterMover
+
 - **`WorldQuery` and `CharacterMover`** (`sim/armament.ts`, `sim/movement.ts`; implemented by
   `physics/physicsWorld.ts`). The ray and shape casts and the character controller the simulation sees; the
   simulation never calls Rapier. `WorldQuery.foliage` (optional, FO1) is the map's bushes, read by the BBs and by the
@@ -213,9 +221,13 @@ request. Each entry says where the contract lives, what it holds today and what 
   (`sim/propNoise.ts noisyPropsOf`, from `NOISE.props`), and `WorldQuery.surfaceUnder` (optional, NP1) names the ground
   under a pair of feet (`map/underfoot.ts`, the same answer the audio plays); a world without them makes no prop noise
   and steps carry as on concrete. Pinned by `physics/physicsWorld.test.ts`, `physics/levelRay.rapier.test.ts`.
+### MatchSession advance, draw and afterTick
+
 - **`MatchSession.advance(dt)` / `draw(dt)` / `afterTick()`** (`matchSession.ts`). Simulation first, presentation
   after. `afterTick` (private, run after every tick) is where stats, the HUD and sound read the tick's events;
   `draw` also takes `boardHeld`. Pinned by the smoke test.
+### Quality settings
+
 - **`QualitySettings`, `QUALITY`, `QualityChoice`, `resolveQuality`, `qualityChoiceOf`** (`config/render.ts`, which
   re-exports them from `config/renderQuality.ts`: import from `config/render.ts`).
   - `QualitySettings` lists the fields a preset or the Custom rows may set. Every preset sets every field; `QUALITY`
@@ -230,6 +242,8 @@ request. Each entry says where the contract lives, what it holds today and what 
     unread and never used again (`bbGlow`, PT1: the owner took the BB halo away in his Dev 5 playtest).
 
   Pinned by `config/render.test.ts`, `config/graphics.test.ts`, `render/renderer.test.ts`.
+### The renderer back end
+
 - **The renderer back end** (WebGPU overhaul W1, one renderer since W6a; `config/renderBackend.ts`,
   `render/rendererStart.ts`). Graphics › Renderer picks Auto (the default), WebGPU or WebGL (owner, 2026-10-08: WebGPU
   is the default, behind no Dev setting). `Game.create` loads `render/rendererStart.ts` (a small chunk with the adapter
@@ -262,6 +276,8 @@ request. Each entry says where the contract lives, what it holds today and what 
   `render/webgpuFoundation.qa.test.ts`, `render/webgpu/worldTwins.test.ts`, `render/webgpu/figureTwins.test.ts`,
   `render/webgpu/nightLights.test.ts`, `e2e/webgpu.spec.ts`, `e2e/webgpuDevice.spec.ts`, `e2e/webgpuWorld.spec.ts`,
   `e2e/webgpuLights.spec.ts`.
+### The settings store keys
+
 - **The settings store keys** (`settings/storage.ts`, `settings/dev.ts`). Saved under `airsoft.*` and versioned
   (`SETTINGS_VERSION` 1). Renaming a key needs a migration: one `case` in `migrate` (the per-setting keys of the first
   builds are its "version 0"). An object from a newer version is never read or overwritten. Fields are only ever
@@ -271,6 +287,8 @@ request. Each entry says where the contract lives, what it holds today and what 
   reads as the nearest) and `showFps` are the two Graphics rows outside the presets; `renderer` (`auto`, `webgpu` or
   `webgl`, W1) is the Renderer row; `callouts`, `pingMarkers`, `magPrompts` and `ammoCounter` (CL1, PG1, MG1, AC1) are `on` or `off`.
   `browserStorage()` returns the save system's guarded storage once it has started (same keys, same values). Pinned by `settings/storage.test.ts`.
+### The save file format
+
 - **The save file format** (`save/saveFile.ts`). `{ game, format, build, savedAt, summary, stores, checksum }`, the
   stores as their own modules store them. A save from any earlier `format` loads (one `MIGRATIONS` step per format);
   a later one is refused. `SAVE_FORMAT` goes up with any store's version or a new store (`STORES_BY_FORMAT`). Format 3
@@ -280,11 +298,15 @@ request. Each entry says where the contract lives, what it holds today and what 
   every store module (the settings, the progress, the records) an object from a newer version is never read or
   overwritten (`save/overStored.ts` `storedIsNewer`). Pinned by `save/saveFile.test.ts`, `pool/pool.test.ts`,
   `stats/records.test.ts`.
+### The progress store
+
 - **The progress store** (`progress/progress.ts`). `Progress { xp, unlocked, rev }` under `airsoft.progress`
   (`PROGRESS_VERSION` 1). `unlocked` lists pool asset ids and is only ever added to, never worked out again from the
   level: an item `levels.md` moves up stays with whoever has it, and one it moves down reaches everyone past that level
   on the next load (`grantReached`). `rev` lets `syncProgress` and `saveProgress` keep another tab's newer save. Ids
   `pool.md` no longer has stay in the save but are never offered. Pinned by `progress/progress.test.ts`.
+### The levels.md format
+
 - **`levels.md`'s format** (`progress/levels.ts`). The hand-edited level plan the game reads against the pool
   (`loadLevels`, never throws).
   - A Levels table (`| Level | XP | Unlocks |`): levels from 0 with no gaps, the last row the cap. XP is what a level
@@ -298,6 +320,8 @@ request. Each entry says where the contract lives, what it holds today and what 
     content or Dev settings that change play (`stats/settleMatch.ts` `matchStanding`, `NoXp`).
 
   Pinned by `progress/levels.test.ts`, `progress/xp.test.ts`, `stats/settleMatch.test.ts`.
+### The pool.md format
+
 - **`pool.md`'s format** (`pool/poolFile.ts`). The hand-edited asset register the game reads.
   - Power sources carry a Type, not a Power %; what they do is in `stats.md`.
   - An item is its asset id alone (`pool/item.ts` `ItemRef { asset }`); `parseItemKey` reads a legacy `ID@tier` key
@@ -316,6 +340,8 @@ request. Each entry says where the contract lives, what it holds today and what 
   - Every shipped ID is pinned to its asset in `pool/pool.test.ts` (IDs are save keys).
 
   Pinned by `pool/pool.test.ts`, `pool/caches.test.ts`.
+### The bot-kits.md format
+
 - **`bot-kits.md`'s format** (`pool/botKit.ts` `readBotKits`, BG1). The hand-edited kits the other team's bots carry:
   one table, `| Kit | Primary | Primary parts | Secondary | Secondary parts | Easy | Normal | Hard | Pro |`. Replicas
   and parts by pool.md Name or ID, parts comma-separated, one per slot and fitting their replica; a weapon torch is
@@ -326,9 +352,13 @@ request. Each entry says where the contract lives, what it holds today and what 
   picks with `pickBotKit` (seed `botKitSeed(match seed, id)`, its personality) from a `contentPool`; teammates and the factory kit rule carry
   `LOADOUT`; nothing of the player's collection or loadout enters. Pinned by `pool/botKitTable.test.ts`,
   `pool/botKit.test.ts`.
+### The stats.md format
+
 - **`stats.md`'s format** (`config/statsFile.ts`). The hand-edited performance numbers the config modules lay over
   their built-in ones: replicas and parts by Key, power sources by pool ID, Barrels and Muzzle parts by Key, Lights by
   Key, and Site limits, one row per item. Pinned by `config/stats.test.ts`.
+### The bots.md format
+
 - **`bots.md`'s format** (`config/botsFile.ts`, BN1). The bots' names and personalities, found by their `##` headings:
   Roster (Name, Personality: a made-up name of at most 12 letters, spaces, hyphens or apostrophes, unique, always
   playing that personality), Personalities (Personality, Card note with `{name}`), How they move (scales × of the
@@ -336,6 +366,8 @@ request. Each entry says where the contract lives, what it holds today and what 
   seconds left or –; Watches the flag first, seconds or –, an optional column, OT1). A cell it can't read plays neutral and is reported
   with its line; it never throws. A personality changes how a bot plays, never its senses, reaction, turning or aim
   (`ai/personality.ts personalSkill`). Pinned by `config/botsFile.test.ts`.
+### The callouts.md format
+
 - **`callouts.md`'s format** (`config/calloutsFile.ts`, CL1). What the bots call and how often, found by their `##`
   headings: When they call (Event, Chance 0 to 1, Team gap (s); the row order is the urgency), Pace (four named
   seconds), Marks (Rule, Value: the chance a Contact call marks its enemy and the team's seconds between marks, PG1),
@@ -344,6 +376,8 @@ request. Each entry says where the contract lives, what it holds today and what 
   personality, Line with `{area}`, `{count}` or `{left}` where the event fills them; OT1 added the Overtime event). An event without a row is never called; a line it can't read is left out and reported with its
   line; it never throws. The callouts read the bots and the state and never write either (`ai/callouts.ts`); a mark
   is presentation only, on its own random stream. Pinned by `config/calloutsFile.test.ts`, `ai/callouts.test.ts`.
+### Content tags
+
 - **Content tags** (`config/content.ts`). Every map, mode, difficulty and ruleset (`tag` on `MAPS`, `MATCH_MODES`,
   `DIFFICULTIES`, `RULESETS`) and every pooled asset (`Asset.tag`, from pool.md's Access) is `public` or `dev`; Match
   panel choices may carry one too (untagged is public). `isAvailable(tag, devContent)` is the one check. `devContent`
@@ -360,6 +394,8 @@ request. Each entry says where the contract lives, what it holds today and what 
   - The unit tests register every map before each file (`src/testSetup.ts`).
 
   Pinned by `config/content.test.ts`, `pool/contentPool.test.ts`, `map/maps.test.ts`.
+### The map block format
+
 - **The map block format** (`map/mapTypes.ts`). What `navGrid`, `mapMeshes` and the physics read. `MapData` fields are
   only added, and optional, so every map stays valid. Today's optional fields:
   - `storeys`: the floor heights the minimap draws one at a time. `overlooks`: each watched area and the spots above
