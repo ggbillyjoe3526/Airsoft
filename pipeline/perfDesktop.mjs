@@ -71,11 +71,28 @@ export function boundHint(fps4k, fpsHd) {
   return `Mixed: ${times}, so both the pixels and the work each frame count`;
 }
 
+/** The longest a failed run's error may be in the summary's table. */
+export const FAILURE_CHARS = 200;
+
+/** Lines of a Node crash that say nothing: its stack, the source line and caret, the error's fields, Node's version. */
+const STDERR_NOISE = /^(at |node:|Node\.js v|\^|[{}]|const |triggerUncaughtException|(log|name|code|status|signal|output|pid|stdout|stderr|errors): )/;
+
+/**
+ * A failed run's error for its row, from what it wrote to stderr: the first line opening with an error's name or
+ * perf-run.mjs's own `perf:`, else the first line that isn't a crash's noise, kept on one table cell (no `|`) and short.
+ */
+export function failureLine(stderr) {
+  const lines = String(stderr ?? '').split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !STDERR_NOISE.test(l));
+  const line = lines.find((l) => /^(\w*Error\b|perf: )/.test(l)) ?? lines[0] ?? 'no output';
+  const cell = line.replaceAll('|', '/');
+  return cell.length > FAILURE_CHARS ? `${cell.slice(0, FAILURE_CHARS - 1)}…` : cell;
+}
+
 const fixed = (v, digits = 1) => (typeof v === 'number' ? v.toFixed(digits) : '-');
 
 /**
- * The summary (markdown) the owner sends back: one row per run, the hints under it. `rows`: `{ run, preset, result }`
- * with `result` perf-run.mjs's file (null when the run wrote none).
+ * The summary (markdown) the owner sends back: one row per run, the hints under it. `rows`: `{ run, preset, result,
+ * failure? }` with `result` perf-run.mjs's file (null when the run wrote none) and `failure` its error then.
  */
 export function summaryMarkdown(rows, when) {
   const targetMs = 1000 / TARGET_HZ;
@@ -90,10 +107,10 @@ export function summaryMarkdown(rows, when) {
     '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|',
   ];
   const held = new Set();
-  for (const { run, preset, result } of rows) {
+  for (const { run, preset, result, failure } of rows) {
     const size = run.viewport === DESKTOP_4K ? '4K' : run.viewport;
     if (!result) {
-      lines.push(`| ${run.map} | ${run.mode} | ${run.backend} | ${size} | ${preset} | no result: see the run's output above |  |  |  |  |  |  |  |  |  |  |`);
+      lines.push(`| ${run.map} | ${run.mode} | ${run.backend} | ${size} | ${preset} | no result: ${failure ?? 'see the run\'s output above'} |  |  |  |  |  |  |  |  |  |  |`);
       continue;
     }
     const m = result.metrics;

@@ -131,7 +131,15 @@ const head = (() => {
 // after the gate's smoke test it is already there. --no-build uses whatever dist-e2e/ holds.
 if (options.build || !existsSync(join(ROOT, 'dist-e2e', 'index.html'))) {
   console.log('perf: the e2e bundle');
-  execFileSync('node', ['pipeline/build-cached.mjs', '--mode', 'e2e'], { cwd: ROOT, stdio: 'ignore' });
+  // Quiet when it works; the build's own output when it fails (a failure said only "Command failed" on the owner's PC).
+  try {
+    execFileSync(process.execPath, ['pipeline/build-cached.mjs', '--mode', 'e2e'], { cwd: ROOT, stdio: 'pipe' });
+  } catch (e) {
+    process.stdout.write(e.stdout ?? '');
+    process.stderr.write(e.stderr ?? '');
+    console.error('perf: the e2e build failed (its output is above)');
+    process.exit(1);
+  }
 }
 const urlFor = (preset) => `http://localhost:${PORT}/?nolock&seed=1&script=perf&quality=${preset}${options.backend === 'webgl' ? '&forceWebGL' : ''}`;
 // A server already on the port (another run's, left over) would be measured instead of this build: refuse.

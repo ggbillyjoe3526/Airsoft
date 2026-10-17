@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { baselineFileName } from './perfMatrix.mjs';
-import { boundHint, DESKTOP_4K, DESKTOP_HD, DESKTOP_SUITE, runPresets, suiteArgs, summaryMarkdown, UNCAPPED_ARGS, vsyncHeld } from './perfDesktop.mjs';
+import { boundHint, DESKTOP_4K, DESKTOP_HD, DESKTOP_SUITE, FAILURE_CHARS, failureLine, runPresets, suiteArgs, summaryMarkdown, UNCAPPED_ARGS, vsyncHeld } from './perfDesktop.mjs';
 
 const budgets = JSON.parse(readFileSync('pipeline/perf-budget.json', 'utf8'));
 const metrics = (fps, p50Ms, extra = {}) => ({ fps, onePercentLowFps: fps * 0.7, p50Ms, p95Ms: p50Ms * 1.2, p99Ms: p50Ms * 1.5, worstMs: p50Ms * 3, simTicksPerSecond: 60, figureMs: 0.4, drawCalls: 80, ...extra });
@@ -79,5 +79,27 @@ describe('the summary\'s hints', () => {
     const md = summaryMarkdown(rows, 'now');
     expect(md).toContain('sat on a 240 Hz screen');
     expect(md).not.toMatch(/bound/);
+  });
+});
+
+describe('a failed run\'s row', () => {
+  it('names the first error line of the run\'s stderr', () => {
+    const stderr = 'node:internal/errors:985\n  const err = new Error(message);\n\nError: Command failed: node pipeline/build-cached.mjs --mode e2e\n    at genericNodeError\n';
+    expect(failureLine(stderr)).toBe('Error: Command failed: node pipeline/build-cached.mjs --mode e2e');
+    expect(failureLine('perf: asked for the webgpu back end but webgl drew; no file written\r\n')).toMatch(/^perf: asked for the webgpu/);
+  });
+
+  it('falls back to the first line that isn\'t a crash\'s noise, keeps the cell whole and short', () => {
+    const launch = 'node:internal/modules/run_main:123\n    triggerUncaughtException(\n    ^\n\nbrowserType.launch: Failed to launch chromium because executable doesn\'t exist at /x\n    at /y/perf-run.mjs:163:4 {\n  log: [],\n  name: \'Error\'\n}\n\nNode.js v22.22.0\n';
+    expect(failureLine(launch)).toBe('browserType.launch: Failed to launch chromium because executable doesn\'t exist at /x');
+    expect(failureLine('')).toBe('no output');
+    expect(failureLine(undefined)).toBe('no output');
+    expect(failureLine('TypeError: a | b')).toBe('TypeError: a / b');
+    expect(failureLine(`Error: ${'x'.repeat(500)}`)).toHaveLength(FAILURE_CHARS);
+  });
+
+  it('shows the error in the summary', () => {
+    const md = summaryMarkdown([{ run: depot4k, preset: 'low', result: null, failure: 'Error: no adapter' }], 'now');
+    expect(md).toContain('| depot | elimination | webgpu | 4K | low | no result: Error: no adapter |');
   });
 });
