@@ -47,6 +47,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **AX1** · With High Contrast team colours, Extraction's exits are hi-vis yellow instead of green, on the ring, cones, EXIT sign, minimap and screen marker
 - **AX1** · High Contrast team paint (vests, armbands, helmet bands) glows faintly on day fields so the dark orange team shows in shade
 - **TT2** · Tutorial teaches leaning again: a Lean step after Crouch ticks once you've leaned both ways; read-only cards stay up 10 s
+- **WL2** · Woodland: no boulders or middle oak; approach cover is log piles and crouch-high logs; fort walls 1.5 m; fort hut 3 m, tin roof
 
 ### Fixed
 - **MV1** · The first switch to your other replica in a match no longer stutters; every carried replica is ready before the round
