@@ -87,7 +87,7 @@ const CASE_SPOTS: RunPlan['cases'] = [
   [60, 0, 54.6, NORTH, LANE], // the big boulder by the Pine Belt
   [40, 0, 51.6, NORTH, LANE], // the big boulder on the meadow's west side
   [42.5, 0, 38.5, SOUTH, LANE], // the fallen tree on the meadow
-  [55, 0, 42.3, SOUTH, LANE], // the lone oak
+  [55, 0, 42.3, SOUTH, LANE], // the meadow rock (the lone oak until WL2)
   [73.5, 0, 59.5, NORTH, LANE], // the fallen tree under the Pine Belt
 ];
 

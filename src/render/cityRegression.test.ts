@@ -268,23 +268,25 @@ const PINNED = {
   // M102: both re-pinned for the cabin's west window broken down to a low wall to vault (its sill lower, its lintel gone),
   // and for a Knoll log turned across the slope (fewer courses of bark; the leaf drifts and moss around it fall anew).
   // MS1: bark for the cabin's walls (3 m, on one level), canopy and foliage for the fuller crowns and smaller, lobed
-  // bushes, and the cabin's roof, Woodland's one finished block (cladding, the city's engine feature, M34f).
+  // bushes, and the cabin's roof, Woodland's one finished block (cladding, the city's engine feature, M34f). WL2: both
+  // re-pinned for the fort hut's roof (cladding), the big boulders lowered to crouch height and the lone oak's trunk and
+  // crown swapped for a boulder (bark, stone, canopy; with detail the drifts and moss round them fall anew).
   woodlandDetail: [
-    "map-bark v25165 i59040 850eef8c/57f6a5bb/ffb31201",
-    "map-canopy v32628 i0 55f8e07d/811c9dc5/c54b6676",
-    "map-cladding v72 i96 6681214d/1d145e1d/92422e4d",
+    "map-bark v25106 i58884 ae87c015/eafcf9c4/4979d748",
+    "map-canopy v31428 i0 bd13720f/811c9dc5/c8382a34",
+    "map-cladding v144 i192 5e2f3ced/3b944405/a89ee055",
     "map-foliage v16800 i0 2d3ea6ce/811c9dc5/5d0ab568",
     "map-planks v6500 i12600 27873f91/9f349b8d/5691af2a",
-    "map-stone v12744 i13500 b79b51fc/dd536c62/0baf4c4f",
+    "map-stone v13046 i13830 9ed0096c/8908e134/4862b432",
     "map-terrain v9801 i57600 4e80f9d2/006bce1d/4298d710",
   ],
   woodlandPlain: [
-    "map-bark v17549 i44760 f0c0dc80/20ad07f5/d0fb2c70",
-    "map-canopy v32628 i0 55f8e07d/811c9dc5/c54b6676",
-    "map-cladding v36 i48 e46da959/ff8bb6b9/81074131",
+    "map-bark v17522 i44664 217fe299/8b9197fe/6be31a55",
+    "map-canopy v31428 i0 bd13720f/811c9dc5/c8382a34",
+    "map-cladding v72 i96 c231a0b9/d7bca701/3bb51a6d",
     "map-foliage v16800 i0 2d3ea6ce/811c9dc5/5d0ab568",
     "map-planks v1600 i3000 b1e0a709/eef7627d/cbf74e3d",
-    "map-stone v11880 i11880 be9ecda0/c94609ce/01695e44",
+    "map-stone v12150 i12150 45fcb830/e8790a44/9f0d2967",
     "map-terrain v9801 i57600 4e80f9d2/006bce1d/4298d710",
   ],
 } as const;
