@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BACKDROPS, MAP_STILLS, MENU_ART_DIR, MODE_STILLS, STILL_SIZE } from './menuArt';
+import { BACKDROPS, MAP_STILLS, MENU_ART_DIR, STILL_SIZE } from './menuArt';
 
 // Node's fs, without its types (the project compiles for the browser).
 const nodeFs = 'node:fs';
@@ -19,7 +19,6 @@ interface Art { file: string; width: number; height: number; maxBytes: number }
 const still = (file: string): Art => ({ file, width: STILL_SIZE.width, height: STILL_SIZE.height, maxBytes: STILL_SIZE.maxBytes });
 const ART: Art[] = [
   ...MAP_STILLS.map((s) => still(s.file)),
-  ...Object.values(MODE_STILLS).map((s) => still(s.file)),
   ...Object.values(BACKDROPS).map((b) => ({ file: b.file, width: b.width, height: b.height, maxBytes: b.maxBytes })),
 ];
 

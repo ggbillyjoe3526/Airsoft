@@ -50,14 +50,13 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | Issue | Class | Notes |
 |---|---|---|
 | Bushes stopping BBs are first guesses: 0.6 m of leaves stops a BB; one through an edge leaves up to 0.5 rad a metre off its line at 0.35 of its speed | playtest | `BALLISTICS.leaves` (FO1). Play Woodland: a shot through a bush's edge should feel like a gamble, and bots holding fire should not leave fights stuck. |
-| The hit volume is capsules, so it misses or overhangs the drawn figure by a few cm at the rim (at most 3.5% of the drawn body, 2.7% of the volume) | can wait | Built-in figures only (`render/figureHitVolume.test.ts`). Beta 1: HV1. |
+| The hit volume is capsules, so it misses or overhangs the drawn figure by a few cm at the rim (at most 3.5% of the drawn body, 2.7% of the volume) | can wait | Built-in figures only (`render/figureHitVolume.test.ts`). |
 | Arms and replicas neither count as hits nor stop BBs: a BB through a figure's forearm flies on | document | Owner ruling (DECISIONS 2026-10-01, arm hits off). (M85) |
 | Against a bot that strafes, aiming barely raises your share of BBs that hit (Normal, 15 to 35 m: 49 / 31 / 14% hip, 51 / 25 / 14% aimed) | can wait | The strafe, not the spread, decides most misses. (M84) |
 | Tracer visibility was reviewed on paper only (no per-replica tracer setting) | can wait | Fine with three replicas; give tracers per-replica settings when more platforms arrive. (M9) |
 | Depot IBC tanks bounce BBs like steel though most of one is plastic; sandbag and gabion textures add 2 draw calls | can wait | Their memory (0.7 MB on Low) is in each preset's texture budget. (M25b, FA2) |
 | With Ricochets count on, bounced BBs still decide about a fifth of hits, and Attack / Defend's attackers win more of those matches | document | The owner's ruling (2026-10-10): bounced BBs lose more speed. (G12) |
 | The spacing and friendly-ricochet guards pass or fail on which fixed seeds a change reshuffles | can wait | `depotMatch.spacing` and `depotMatch.ricochet` sit near their limits. (M87) Beta 1: BT1. |
-| Impact grit from a ricochet flies towards the original shooter, not from the surface the BB bounced off | can wait | The grit reads the `bbImpact` event's `ownerId`; the fix is the impact normal. |
 | The wind can only be read from the dust in the air, and Low quality (and Reduced motion) shows no dust | can wait | The owner's "dust only" default (M30). On Low you learn it from your BBs' drift. |
 | A bush doesn't move when a BB goes in: only a few leaves pop out and drift down, with a rustle | can wait | `render/leafFlecks.ts` (FO1). A shiver of the bush's mesh near the hit would read better; it is one merged mesh per map. |
 | The BBs' bush is a smooth ellipsoid and the drawn one is lumpy, so a BB can rustle up to a hand's width off the drawn leaves | document | `map/foliage.ts` (shared with bots' sight); the drawn lumps sit up to 14 % of the radius either side of it. (FO1) |
@@ -138,7 +137,7 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | Attack / Defend overtime: an attacker and a defender both at the pole (contested) keep overtime going the full 15 s; a pole tagged for a moment at 0:00 gets none | can wait | Overtime counts time the rope is being worked. |
 | Strict marshal (`MatchRules.strictMarshal`) is inert: Tournament and Pro CQB set it, nothing reads it, Custom doesn't offer it | can wait | It doubles the overshooting rule (one warning, then you sit the next round out), which doesn't exist until v0.2. (M39) |
 | Your team (M98): the score bar keeps Alpha on the left and Beta on the right whichever you pick; menu stills and Practice's armband are Alpha's | document | Fixed sides read the same every match. (M98) |
-| Tutorial: the scoreboard and order wheel cards show them (a sample match, a pointer moving round the orders) but the player can't try them there | can wait | The range has no teams or squad to show or order. (M80) Beta 1: TT1. |
+| Tutorial: the scoreboard and order wheel cards show them (a sample match, a pointer moving round the orders) but the player can't try them there | can wait | The range has no teams or squad to show or order. (M80) TT1 kept these cards. |
 | Attack / Defend: bots know how far up the flag is without seeing the pole | document | Deliberate (a flag on a pole is in plain view at a site). |
 | The flagpole has no collider: players walk through it and BBs pass through | document | Deliberate (DECISIONS 2026-10-01). |
 | The Attack / Defend capture-rate guard (`depotMatch.flag.test.ts`) sits close to the measured values on some layouts | document | M11 Depot: attackers win 51 % on the 16 guard seeds against 38–67 %, 15 captures against a floor of 9. |
@@ -153,8 +152,7 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | Woodland (dev) Elimination at 5v5: the downhill (west) end still wins a little more, about 57 % of decided rounds at Normal | playtest | Levers if it climbs: lane-point spacing near each camp, `RISE_HEIGHT`, `EAST_FALL`. (M87, M88) Beta 1: WL1. |
 | Depot Elimination: the east end wins a little more often in bot-only matches | can wait | West end 48 % over 64 seeds, 49 % on the guard's 16 (`src/ai/balance/depotEnds.balance.ts`). |
 | Low draws no skyline: Depot and Neon Heights show plain sky over their walls | can wait | The skyline joins the tree ring at Trees: Layered (`skylineShown`, Medium and up). (MS1) |
-| The menus' map pictures still show Depot, Woodland and Neon Heights as they were before MS1 | can wait | The map cards still show them after MR1; `node pipeline/map-stills.mjs` redraws them. (MS1) |
-| Woodland's boulders keep their collision box's silhouette: they read as stone by texture, facets and moss, not by outline | can wait | Owner rule: no point of a block's box (M33i) Beta 1: MS1. |
+| Woodland's boulders keep their collision box's silhouette: they read as stone by texture, facets and moss, not by outline | can wait | Owner rule: no point of a block's box (M33i) MS1 kept the box colliders. |
 | A map offering Day and Night with fire lights would show its fire pits cold by day | can wait | Flames, embers and lantern panes are built with the light pools, under a night preset only. (M33i) |
 | Practice range: on Low the targets are plain greybox (white discs on a post, flat plywood cut-outs) | can wait | With Map detail (Medium and up) FA7 adds scuffed plates, scoring-zone figures, chains, arms and a shelf. (M21, BP5) |
 | Practice range: a BB still in the air when its 2.5 s lifetime ends outside the walls reads as "flew out of bounds · aim lower or turn the hop-up down" | can wait | A very steep lob; rare. Playtest whether the wording fits. (M21, BP5) |
@@ -177,25 +175,25 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 
 | Issue | Class | Notes |
 |---|---|---|
-| The pistol armband is off screen | can wait | The glove fingers were slimmed in the art pass. (M14) Beta 1: MV1. |
-| The team camo is printed per part, so its blotches don't run on across a seam, and your sleeves' print is smaller than the figures' | can wait | Readable at play distances on Medium and up. Tune `FIGURE.camo` in `config/characters.ts`. (G11) Beta 1: BD1. |
-| A teammate calling a hit raises an arm to ~0.55 m over the eyes, so up close their grey name tag sits over the raised hand | can wait | FA13 lowered the tag to 0.2 m over the eyes. Beta 1: BD1. |
-| Figure models (M25a): a baked rig turns normals by the bone matrix, not its inverse transpose; copies carry empty bones | can wait | Only rigs with non-uniform bone scale shade wrong (rare in CC0 packs). Beta 1: BD1. |
+| The pistol armband is off screen | can wait | The glove fingers were slimmed in the art pass. (M14) MV1 kept it. |
+| The team camo is printed per part, so its blotches don't run on across a seam, and your sleeves' print is smaller than the figures' | can wait | Readable at play distances on Medium and up. Tune `FIGURE.camo` in `config/characters.ts`. (G11) BD1 kept it. |
+| A teammate calling a hit raises an arm to ~0.55 m over the eyes, so up close their grey name tag sits over the raised hand | can wait | FA13 lowered the tag to 0.2 m over the eyes. BD1 kept it. |
+| Figure models (M25a): a baked rig turns normals by the bone matrix, not its inverse transpose; copies carry empty bones | can wait | Only rigs with non-uniform bone scale shade wrong (rare in CC0 packs). BD1 kept it. |
 | The art pass is mostly procedural: canvas textures, code-built geometry, trees and the built-in figures | can wait | The replicas, parts and rigged figures are Blender GLBs and the font is Inter (OFL). (M14, BP5) |
 | Normal maps (Relief maps: Normal, on Medium and High) are worked out from each colour texture's brightness, so a dark stain reads as a slight dent | can wait | Low keeps the bump maps. Proper height data would come with CC0 textures. (FA7, audit F4) |
-| Map detail leaves out some of the audit's prop extras | can wait | Container corner castings and door hinges, crate rope handles, the IBC's cage, a cable reel and several signs. (FA7) Beta 1: MS1. |
-| Third-person figures: crouching squashes the legs, the walk cycle is a simple leg swing, the rifle isn't shown with the pistol drawn, and the hit pose always hangs the rifle | can wait | Animation (knees, slinging) is later work. (M14) Beta 1: BD1. |
+| Map detail leaves out some of the audit's prop extras | can wait | Container corner castings and door hinges, crate rope handles, the IBC's cage, a cable reel and several signs. (FA7) MS1 left them out too. |
+| Third-person figures: crouching squashes the legs, the walk cycle is a simple leg swing, the rifle isn't shown with the pistol drawn, and the hit pose always hangs the rifle | can wait | Animation (knees, slinging) is later work. (M14) BD1 kept it. |
 | Some kit still leans military: three of the six looks wear plate carriers, two a bump helmet and headset, and vests and pouches are olive, coyote or charcoal | can wait | A brighter vest or two (`config/characters.ts`) if playtests find the figures too mil-sim. (M14) Beta 1: AX1. |
 | The figures' colour test leaves out skin and colours under 0.3 saturation; two darker skin tones sit near the High-contrast orange's hue | can wait | The face is small; check in play with High-contrast team colours. (M14) Beta 1: AX1. |
-| The built-in figures show only the rifle's optic, both replicas' torches and (on Player detail High) the rifle's silencer, not grips, lasers or barrels | can wait | The rigged figures (the default since BD1) show every fitted part, except on their far model. (M29b, BG1, BP4) Beta 1: BD1. |
-| A leaning figure's tilt is a simple rotation from the hips (the legs don't shift their weight) | can wait | Phase 4 art and animation pass. Beta 1: BD1. |
+| The built-in figures show only the rifle's optic, both replicas' torches and (on Player detail High) the rifle's silencer, not grips, lasers or barrels | can wait | The rigged figures (the default since BD1) show every fitted part, except on their far model. (M29b, BG1, BP4) BD1 kept it. |
+| A leaning figure's tilt is a simple rotation from the hips (the legs don't shift their weight) | can wait | Phase 4 art and animation pass. BD1 kept it. |
 | High contrast's dark orange figures (#b8460c) may be hard to pick out in Depot's shaded corners | can wait | The HUD uses a lighter orange (#e0601a) for text contrast on its panels. (M18b) Beta 1: AX1. |
-| A rigged figure that peeks while aiming well up or down points its replica up to about 19° off the shot | can wait | The aim clips pitch the replica in the upper body's frame, then the peek rolls it. Beta 1: BD1. |
-| The rigged robot reloads from its bare chest: it carries no magazine pouch | can wait | Owner's ruling: robots wear no vest, holsters, mags or accessories (2026-10-10). (BF1) Beta 1: BD1. |
-| The rigged figures hold the pistol in the rifle's grip pose in the sprint, the hit call and the walk-off; the Cyber Pistol sits where the gas pistol does | can wait | Those clips were made holding the AEG. (BF1) Beta 1: BD1. |
-| A holstered figure that vaults keeps the Vault clip's arms, its right hand closed as if on the rifle that is slung on its back | can wait | The vault has no holstered version yet; a Holster_Vault clip would fix it. (BP4) Beta 1: BD1. |
-| The figure files still carry the six unused Rest clips (Rifle_ and Pistol_Rest, RestUp, RestDown) | can wait | Rest on cover is gone (MV1); the game ignores the clips, so they cost only download size. (MV1) Beta 1: BD1. |
-| Your own body casts no shadow, and you see it only looking well down | document | It is drawn 0.17 m behind the eyes without its head and arms, so a headless shadow would look wrong. (BF1, BD1) Beta 1: BD1. |
+| A rigged figure that peeks while aiming well up or down points its replica up to about 19° off the shot | can wait | The aim clips pitch the replica in the upper body's frame, then the peek rolls it. BD1 kept it. |
+| The rigged robot reloads from its bare chest: it carries no magazine pouch | can wait | Owner's ruling: robots wear no vest, holsters, mags or accessories (2026-10-10). (BF1) BD1 kept it. |
+| The rigged figures hold the pistol in the rifle's grip pose in the sprint, the hit call and the walk-off; the Cyber Pistol sits where the gas pistol does | can wait | Those clips were made holding the AEG. (BF1) BD1 kept it. |
+| A holstered figure that vaults keeps the Vault clip's arms, its right hand closed as if on the rifle that is slung on its back | can wait | The vault has no holstered version yet; a Holster_Vault clip would fix it. (BP4) BD1 kept it. |
+| The figure files still carry the six unused Rest clips (Rifle_ and Pistol_Rest, RestUp, RestDown) | can wait | Rest on cover is gone (MV1); the game ignores the clips, so they cost only download size. (MV1) |
+| Your own body casts no shadow, and you see it only looking well down | document | It is drawn 0.17 m behind the eyes without its head and arms, so a headless shadow would look wrong. (BF1, BD1) |
 | First-person hand poses are hand-tuned numbers, checked by geometry tests rather than by eye | document | Poses live in `replicaModels.ts`; `handPoses.test.ts` and `fileHandPoses.test.ts` measure them against the replicas' triangles. Whether a hold looks natural is the owner's call. |
 
 ## Graphics and performance
@@ -216,7 +214,7 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | The practice range compiles ~24 shader programs on Medium and High (Depot ~13) | can wait | FA7's painted plates, figures, chains and fittings each get their own material variant. |
 | On Medium and up the shadow depth shaders, a figure's first fade and two post-stack pipelines may still compile in a match's first frame | can wait | Three's compile skips the shadow pass, so warming it needs a real shadow draw. (M63, KI1) Beta 1: PF1. |
 | On Low, the first switch to the replica not in hand still costs about 10–25 ms of CPU on its first draw | can wait | MV1 compiles every carried replica before the round. (MV1) Beta 1: PF1. |
-| Baked light (G6): a `figure.glb` dropped into the assets folder keeps its own materials, so the probes don't dim or tint it | can wait | A model's materials need the same two lines as the built-in one in `externalModels.ts`. (M25a, BP5) Beta 1: BD1. |
+| Baked light (G6): a `figure.glb` dropped into the assets folder keeps its own materials, so the probes don't dim or tint it | can wait | A model's materials need the same two lines as the built-in one in `externalModels.ts`. (M25a, BP5) |
 | Depot's signs and stains are one blended mesh (G6), so where a sign is seen through another see-through surface the order may be wrong | can wait | `mapDecals.ts`. Depot has no glass; splitting the stains costs a draw call. |
 | At High (1024 px) one library surface texture takes ~0.7-0.9 s to draw (container), so a map's first Play draws its set in the click | can wait | BP2 moved the title screen's warm-up to one core surface per idle moment. |
 | At Medium and up the node renderer keeps three multisampled buffers: the canvas, the post stack's scene target (4 samples, half float) and the held replica's own target | can wait | Estimated ~235 MB at 1920 × 1080 (not measured on a GPU) |
@@ -234,7 +232,7 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | On real WebGPU the retro filter's picture sits over the look bar's pixel share (1.5–3.1 % of pixels against 1 %) | can wait | Container only: the filter draws at a quarter size, so SwiftShader's edge differences cover 16 pixels each. The owner ruled. (W4, BP3) |
 | On the node renderer's WebGL2 back end the GPU grass and tree stand-ins draw every slot, culled ones as nothing | document | Transform-feedback compute has no indirect draws. (W5) |
 | On WebGPU the perf harness and the comparison count the grass and stand-ins' triangles at their caps | document | Three counts an indirect draw from the CPU's instance count. (W5, W6a) |
-| The tree stand-ins beyond Woodland's fence are flat cards close up and cast no shadow | can wait | Each is a billboard blending two of 8 pictured views. (W5) Beta 1: MS1. |
+| The tree stand-ins beyond Woodland's fence are flat cards close up and cast no shadow | can wait | Each is a billboard blending two of 8 pictured views. (W5) MS1 kept them. |
 | The node path's compute passes and lights lean on Three 0.186's private API | document | `computeKit.ts`, `nightLights.ts`, `deferredFrees.ts` and `nodeBackend.ts` log one console error when an upgrade renames what they use. Recheck all on a Three upgrade. (W5, BP3) |
 | In the container's software WebGPU, growing the window mid-match on Medium without the retro look stops the page's frames for good | can wait | Seen in BP3 and the same on main before it; likely the software GPU process, not the game. (BP3) |
 | On the node renderer an antialiasing change waits for the next load | document | A node renderer can't change its samples in place. (W1, W6a) |
@@ -257,9 +255,9 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | Issue | Class | Notes |
 |---|---|---|
 | The spare-magazine gauges show no number for each magazine | can wait | Beta UX/QoL: the ammo panel already prints the spare BBs ("/ 120"); a gauge's low is striped and next has a caret, so they don't rely on colour. (BP5, HD1) |
-| Menu pages scrolled in a 1280×720 window before M100's redesign; they need measuring again | can wait | Last measured 2026-10-08: Controls 1332 px, Gameplay 1137, Customise 1111, Loadout 1010. (M15, FA5, BP5) Beta 1: MR1. |
-| New game still scrolls below ~900 × 600 (two tiles a row) | can wait | Below the desktop sizes the game targets; fits 1024×640, 1366×657 and up. (M15b) Beta 1: MR1. |
-| The menus have no size step for 4K at 100 % OS scaling: body text stays 15 px while the HUD grows to 1.5× | can wait | Decision 16: nothing now (most 4K desktops run 150–200 % scaling). (audit UI-12) Beta 1: MR1. |
+| Menu pages scrolled in a 1280×720 window before M100's redesign; they need measuring again | can wait | Last measured 2026-10-08: Controls 1332 px, Gameplay 1137, Customise 1111, Loadout 1010. (M15, FA5, BP5) Beta 1: UX1. |
+| New game still scrolls below ~900 × 600 (two tiles a row) | can wait | Below the desktop sizes the game targets; fits 1024×640, 1366×657 and up. (M15b) Beta 1: UX1. |
+| The menus have no size step for 4K at 100 % OS scaling: body text stays 15 px while the HUD grows to 1.5× | can wait | Decision 16: nothing now (most 4K desktops run 150–200 % scaling). (audit UI-12) Beta 1: UX1. |
 | Exit rings and markers are one green in every team colour set, which a deuteranope can find muddy beside the orange team | can wait | Decision 17: keep until a (audit UI-15) Beta 1: AX1. |
 | Sound cues for several sounds from the same direction stack on the ring (hit calls sit just outside it) | can wait | One marker per player and kind; playtest whether a busy fight reads. (M18b) |
 | The hit feed wraps a long line (friendly fire with a ricochet tag) to two rows to keep clear of the scoreboard | can wait | Since BP3 a plain line fits on one row at 1280 and 1366 px. (bug pass, FA5) |
@@ -270,8 +268,7 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | The crosshair shows the spread only, not the recoil kick | document | Recoil is light on toy-like replicas; revisit in the Phase 4 HUD pass. (M10) |
 | The round's table shows by itself between rounds and covers the middle of the screen | document | Since HD1 it waits for the WON or LOST stamp, and a click moves on at once. The owner's playtest decides whether it should wait for Tab. (M19, HD1) |
 | Dev settings' Ghost: bots still see you and shoot at you (their BBs pass through) | document | Deliberate: for walking the field under fire, not for hiding. (M24) |
-| With Dev content on, a Match screen map card with a Dev tag or the Day and Night buttons is about twice as tall at 1280 px wide | can wait | It grows so the tags stay off the map's name (Dev 5 playtest, note 1). Dev content only. (M94, PT1) Beta 1: MR1. |
-| The mode stills (`public/menu/mode-*.jpg`, `config/menuArt.ts` › `MODE_STILLS`, `pipeline/map-stills.mjs`) are no longer shown | can wait | The mode cards became text boxes (owner, Dev 6 playtest item 10). (MR1) |
+| With Dev content on, a Match screen map card with a Dev tag or the Day and Night buttons is about twice as tall at 1280 px wide | can wait | It grows so the tags stay off the map's name (Dev 5 playtest, note 1). Dev content only. (M94, PT1) MR1 kept the taller card. |
 
 ## Save and browsers
 
@@ -281,7 +278,7 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | Firefox ignores `unadjustedMovement` (raw mouse input) | can wait | Sensitivity may feel different from Chrome and Edge when OS acceleration is on. Beta 1: IN1. |
 | No browser test runs in Firefox | can wait | The fix is a Playwright `firefox` project, but the pipeline containers have Chromium only and block the download. (audit CORE-09) Beta 1: IN1. |
 | The side mouse buttons' back / forward is blocked by `preventDefault` on mousedown, mouseup and auxclick; checked in Chromium only | can wait | If Firefox still goes back a page, guard with a history entry or warn on the Key bindings tab. (M18a) Beta 1: IN1. |
-| The fullscreen key drops the mouse lock in Chrome and Firefox as the page enters or leaves fullscreen | can wait | FA5 takes the lock again straight away; checked only in headless Chromium, which has neither. (audit UI-19) Beta 1: IN1 and MR1. |
+| The fullscreen key drops the mouse lock in Chrome and Firefox as the page enters or leaves fullscreen | can wait | FA5 takes the lock again straight away; checked only in headless Chromium, which has neither. (audit UI-19) Beta 1: IN1. |
 | The hardware acceleration warning trusts a `failIfMajorPerformanceCaveat` probe where the browser hides the renderer's name | can wait | Checked only on SwiftShader; the owner to confirm no warning shows in Firefox and Chrome with acceleration on. (M18b) Beta 1: IN1. |
 | Mouse look and Esc's lock exit have no automated test | document | Headless Chromium grants the pointer lock and `e2e/release.spec.ts` plays the release build with it. (FA11a, audit CORE-09) |
 | The save can't tell a private window: the browser keeps it only until the window closes, and the game doesn't warn | document | Browsers don't say they are private; the Save tab's first line says so, and Download is the backup. (M31) |
@@ -294,7 +291,6 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 
 | Issue | Class | Notes |
 |---|---|---|
-| The content toolkit's mode checks play with the built-in hit volume, while matches and the bot-match guards use each figure's own (HV1) | can wait | `src/content/modePlay.ts` would match the game by wrapping its runs in `riggedHits(..)`. Its checks are about modes running to their end. (BD1) |
 | The picture compare's WebGL reference (b10c006) no longer matches Woodland or the figures, so those pairs fail on content, not drawing | document | Since b10c006, M88 rebuilt Woodland and RM4's replicas draw part by part. (W6b) |
 | The WebGPU twins' and particles' allocation tests count heap growth, which can run over their limit while the bot-match guards run beside them | can wait | Seen four times on a local gate, never alone; each passed on the re-run. Widen or isolate them if it recurs. |
 | A map's team-colour rule reads each block's tint, and a textured block's tint is white, so an orange or blue texture would pass it | can wait | The skin checks measure each map as painted in the browser (`measureMapPalettes`). (CT2, CT4) |

@@ -403,6 +403,8 @@ The pipeline's protocol is `pipeline/README.md`; its policy `docs/PROCESS.md`.
 - **The menus are compact, to concepts the owner approved (owner, 2026-10-16, Dev 6 playtest items 9 to 21; MR1).**
   Match, Loadout, Customise and the Armory use the 15 px step for small text and 32 to 40 px controls. A mode is offered
   only on a map that hosts it, and a rule the mode doesn't read is hidden.
+- **The mode cards' pictures are deleted (owner, 2026-10-17; KI2).** The cards are text boxes since MR1, so the pictures
+  were never shown; a picture the player never sees doesn't ship.
 - **A UI redesign, a Visual redesign, an Audio redesign and a Performance update are planned for later, their versions
   not set (owner, 2026-10-13 and 2026-10-16).** Parked in `docs/IDEAS.md` until he places them, with no work before.
 
