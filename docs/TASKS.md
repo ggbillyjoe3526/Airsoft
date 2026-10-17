@@ -27,6 +27,24 @@ below. The item numbers are his. Where an older block overlaps one of these, the
 
 MS1 shows the owner concept images and waits for his approval before any code changes.
 
+## RE1 · Round end: the WON stamp and the round's table stay longer (Beta 1 playtest item 15)
+tier: fix
+perf: skip
+touches: src/config/renderView.ts, src/config/hits.ts, src/ui/roundResult.ts, src/render/matchPresentation.ts
+contract: none
+William, 2026-10-17: "round displays WON and option to click but moves too quickly to the score table (which also
+disappears too quickly. add a small delay to both."
+acceptance:
+  1. WON, LOST or DRAW stays up longer before the round's table: default `HUD.roundResultTime` 1.3 → 2.0 s.
+  2. The round's table stays up longer before the next round starts: default about 1.5 s more (through
+     `ROUNDS.resetDelay`, 4 s today, or the table's own hold, whichever the build thread finds owns it). The sim's
+     between-round cease-fire covers the whole wait.
+  3. The click to move on still works from `roundResultContinueAfter` (0.5 s) and still fires no BB; Extraction is
+     unchanged; the round timer, the scoreboard and XP are unaffected.
+  4. Tests pin the new times; the record notes both defaults for William to tune.
+status: open
+attempts: 0
+
 ## BL1 · Attack / Defend: fewer attacker wins, more rounds won at the pole (after playtest)
 tier: core
 perf: skip

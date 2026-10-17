@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ROUNDS } from '../config/hits';
 import { HUD_TEXT } from '../config/hudText';
+import { HUD } from '../config/render';
 import { createRoundState, type RoundState } from '../sim/round';
 import { RoundResult, roundResultWords } from './roundResult';
 import { FakeElement, fakeDocument } from './testSupport';
@@ -54,5 +55,15 @@ describe('the stamp', () => {
     expect(stamp.hidden).toBe(false);
     r.clear();
     expect(stamp.hidden).toBe(true);
+  });
+});
+
+describe('how long a round\'s end lasts (Beta 1 playtest item 15, RE1)', () => {
+  it('keeps WON or LOST up 2 s, then the round\'s table 4 s before the next round, with the click to move on from 0.5 s', () => {
+    expect(HUD.roundResultTime).toBe(2);
+    expect(ROUNDS.resetDelay).toBe(6);
+    expect(ROUNDS.resetDelay - HUD.roundResultTime).toBe(4);
+    expect(HUD.roundResultContinueAfter).toBe(0.5);
+    expect(HUD.roundResultContinueAfter).toBeLessThan(HUD.roundResultTime);
   });
 });
