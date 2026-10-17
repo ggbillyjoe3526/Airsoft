@@ -28,8 +28,10 @@
 - **The minimap gets its own scale, `minimapScale`: the HUD's, held back in a narrow window so the widest score bar
   keeps its 14 px gap.** The bar already stops shrinking at size 1; only the square shrinks, its caption and the
   markers keep the HUD's scale. At 1280 px it holds back past about 120 %.
-- **MV1's pistol hold stays.** At 1280×720 the pistol, grip included, ends 42 px left of the ammo panel; the firing
-  glove and sleeve still pass about 110 px under it, and clearing them would put the pistol near mid-view (KNOWN_ISSUES).
+- **MV1's pistol hold stays.** At 1280×720 the pistol, grip included, ended 42 px left of the ammo panel, but the glove
+  passed about 110 px under it. UI2's narrower panel (merged in) moved the panel's edge to 1085 px: the glove now ends
+  32 px clear, and only the sleeve's cuff meets the panel's bottom-left corner at the screen's edge. The KNOWN_ISSUES row
+  is closed.
 - **`touches` widened to the menu scripts, the menus' and minimap's config, the minimap and `game.ts`.** The first guess
   named only stylesheets and the viewmodel.
 - **The boot smoke test gets 360 s (was 180).** It ran out of time on main itself in the container in two of three solo
@@ -41,5 +43,4 @@
 
 ## Known issues left
 
-- The held pistol's firing glove and sleeve pass under the ammo panel at 1280×720 (KNOWN_ISSUES, Menus, HUD and input).
 - Settings › Gameplay and Controls scroll a long way inside their panel, at 4K too; for the owner's playtest (PLAYTEST).
