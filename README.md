@@ -231,8 +231,10 @@ npm run perf -- --env laptop # the perf harness: a scripted 60 s match, frame ti
 The browser smoke test needs Playwright's Chromium once per machine: `npx playwright install chromium`. It builds the
 game in `e2e` mode into `dist-e2e/` (port 4180; specs in `e2e/`) and plays the release build in `dist/` with the real
 pointer lock (port 4182; `e2e/release.spec.ts`). Each build is made once per source and reused
-(`pipeline/build-cached.mjs`). GitHub runs the pipeline's gate script on every pull request and every push to `main`
-(`.github/workflows/check.yml`, `pipeline/README.md`).
+(`pipeline/build-cached.mjs`). With `E2E_FIREFOX=1` it runs the boot and save specs in Playwright's Firefox instead
+(`npx playwright install firefox`; headed, so under `xvfb-run` on Linux without a display). GitHub runs the pipeline's
+gate script on every pull request and every push to `main` (`.github/workflows/check.yml`, `pipeline/README.md`), and
+the Firefox run in its `firefox` job.
 
 ### Hosting
 

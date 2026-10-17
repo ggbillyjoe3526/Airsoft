@@ -15,7 +15,7 @@ import { renders } from './rendererRow';
  * draws in software and starts on Low itself (audit M-02), since the art pass (M14) on Medium or High draws too slowly
  * in software on a CI runner for the reload and range steps to finish in time.
  */
-test('the game boots, starts a match, fires, reloads and aims without errors', async ({ page }, testInfo) => {
+test('the game boots, starts a match, fires, reloads and aims without errors', async ({ page, browserName }, testInfo) => {
   // The longest test (since the audit fixes it also rebinds a key and plays to the result screen): about 30 s here,
   // three to four times that on a CI runner in software, so it gets twice the default budget.
   test.setTimeout(180_000);
@@ -77,10 +77,14 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
           .map((e) => ({ full: (e as PerformanceResourceTiming).transferSize > (e as PerformanceResourceTiming).encodedBodySize / 2, bytes: (e as PerformanceResourceTiming).decodedBodySize })),
       name.source,
     );
+  // Firefox reports a revalidated response (304, as the test server's no-cache asks for) with the full body's transfer
+  // size (checked in Firefox 136, IN1), so a second download can't be told from the cache there: Chromium checks it.
   const wasmLoads = await physicsLoads(/rapier_wasm3d_bg-.*\.wasm$/);
-  expect(wasmLoads.filter((load) => load.full)).toHaveLength(1);
   const chunkLoads = await physicsLoads(/rapier-.*\.js$/);
-  expect(chunkLoads.filter((load) => load.full)).toHaveLength(1);
+  if (browserName !== 'firefox') {
+    expect(wasmLoads.filter((load) => load.full)).toHaveLength(1);
+    expect(chunkLoads.filter((load) => load.full)).toHaveLength(1);
+  }
   expect(chunkLoads[0]!.bytes).toBeLessThan(500_000);
   // SwiftShader is a software renderer: the title screen warns that the game will run slowly (M18b), and that it picked
   // Low for this visit as nothing was saved (audit M-02).

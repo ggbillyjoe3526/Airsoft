@@ -24,7 +24,6 @@ commit, before its pull request merges (CI's scope gate finds the block in the b
 additions included (`docs/DECISIONS.md`). Seven threads build them, one block each, and they come before the blocks
 below. The item numbers are his. Where an older block overlaps one of these, the owner's item wins:
 - UX1 overlaps MR1 and HD1.
-- AX1's kit colours overlap MR1's colour tab.
 
 MS1 shows the owner concept images and waits for his approval before any code changes.
 
@@ -131,20 +130,6 @@ acceptance:
 status: open
 attempts: 0
 
-## IN1 · Mouse lock and Firefox
-tier: core
-perf: skip
-touches: src/input/pointerLock.ts, src/ui/fullscreen.ts, src/ui/menus/pauseScreen.ts, playwright.config.ts, e2e/, .github/workflows/check.yml
-contract: none
-acceptance:
-  1. Esc on the pause screen never leaves a stuck state. Where Chrome refuses the re-lock, a clear "Click to resume" appears and one click resumes.
-  2. The fullscreen key keeps or restores the mouse lock in Chrome and Firefox.
-  3. CI runs the boot and save specs in Firefox as well. If CI can't install Firefox within its time budget, the thread asks William instead of dropping it. William has no Firefox (2026-10-17), so CI is the only Firefox check; a cloud recipe that ran the save specs in Firefox 136 is in `/mnt/project-files/playtest/firefox-harness/`.
-  4. Firefox's missing raw mouse input (`unadjustedMovement`) stays a documented limit, with a line in Settings › Controls saying so.
-  5. The two duplicate Esc re-lock rows in KNOWN_ISSUES merge into one, or close.
-status: open
-attempts: 0
-
 ## PF1 · No shader hitches mid-match
 tier: core
 perf: required
@@ -167,18 +152,6 @@ acceptance:
   2. Profile first. The record ranks the top causes of frame time on Low and Medium on Depot and Woodland, by day and by night.
   3. Fix the top causes until Low holds 60 FPS on modern low-powered hardware (the owner's ruling, 2026-10-16), Medium too where it can, on the laptop baseline's scenes. If a fix would cost too much, say what and why.
   4. Add a High or Ultra night run to the perf gate, so the torch shadow map's cost is measured.
-status: open
-attempts: 0
-
-## AX1 · Readability and tone: kit colours, High contrast, exit markers
-tier: ui
-perf: skip
-touches: src/config/characters.ts, src/config/accessibility.ts, src/config/schemes.ts, src/config/colourVision.test.ts, src/render/exitRenderer.ts, src/ui/hud.css
-contract: none
-acceptance:
-  1. Kit looks read as a weekend airsoft site, not a military unit: at most two of the six looks wear plate carriers, and at least two vests are in a civilian colour. Team armbands still read first.
-  2. High contrast's orange figures meet the colour test's contrast bar in Depot's shaded corners (measured, not judged by eye).
-  3. Exit rings and markers stay apart from the orange team under the deuteranopia check in `colourVision.test.ts`.
 status: open
 attempts: 0
 

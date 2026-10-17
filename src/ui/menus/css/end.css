@@ -368,3 +368,14 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+
+/* The browser refused the mouse (IN1): a click anywhere on the pause menu resumes, and its hint says so plainly. */
+.menu-pause.click-to-resume {
+  cursor: pointer;
+}
+
+.menu-pause.click-to-resume .menu-hint {
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  color: var(--paper);
+}
