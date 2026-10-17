@@ -64,8 +64,11 @@ const CABIN_ROOF: TinRoof = { ridge: 1.4, overhang: 0.45, paint: 0x5d5a52 };
 const HUT_ROOF: TinRoof = { ...CABIN_ROOF, ridge: 0.9 };
 /** The fort's hut (plan x0..x1 × z0..z1), behind its east gap, and its walls' height (WL2: "a little bit taller", was 2.4). */
 const HUT = { x0: 104, x1: 107, z0: 45.5, z1: 49.5, height: 3 } as const;
-/** WL2: the fort's outer log walls (were full height, 2.4 m): crouch cover, so a defender stands to shoot over them. */
-const FORT_WALL = CROUCH;
+/**
+ * WL2: the fort's outer log walls (were full height, 2.4 m): chest high, under a standing eye (MOVEMENT.standEyeHeight
+ * 1.62), so a defender stands to shoot over them and ducks behind them. At crouch height (1.2) Hard attackers won 76 %.
+ */
+const FORT_WALL = 1.5;
 const WINDOW_SILL = CROUCH;
 const WINDOW_TOP = 2.0;
 

@@ -374,9 +374,9 @@ describe('G9 QA: the maps are exactly what main shipped, and dressing code write
   // walls, the lone oak and every boulder gone (log piles and fallen trunks in their place), the bushes laid anew. The named areas (CL1) and the overtime flag's spot (OT1) are left
   // out: they name or mark the field, they don't change it.
   it('Woodland, Neon Heights and Depot have the data they had on main (blocks, lanes, spawns, terrain, bushes, extraction)', () => {
-    expect(fingerprint(WOODLAND, ['dressing', 'areas', 'overtimeFlag'])).toBe('71b8dbdc');
+    expect(fingerprint(WOODLAND, ['dressing', 'areas', 'overtimeFlag'])).toBe('9f92e80e');
     expect(fingerprint(NEON_HEIGHTS, ['dressing', 'areas', 'overtimeFlag'])).toBe('77cc54d5');
-    expect(fingerprint(WOODLAND.blocks)).toBe('bd09c833');
+    expect(fingerprint(WOODLAND.blocks)).toBe('42e1ac69');
     expect(fingerprint(NEON_HEIGHTS.blocks)).toBe('dff1039c');
     // Depot's dressing too: "Depot draws exactly as it does on main".
     expect(fingerprint(DEPOT, ['areas', 'overtimeFlag'])).toBe('a89137e4');

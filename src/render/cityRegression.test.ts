@@ -273,7 +273,7 @@ const PINNED = {
   // every boulder taken out for log piles and fallen trunks (bark, stone: the pebbles and fire rings are what's left of
   // it; canopy; foliage: the bushes fill the boulders' old spots in the same number).
   woodlandDetail: [
-    "map-bark v26776 i62484 426c2043/4cd18484/788108e1",
+    "map-bark v27048 i63060 2fd9cd43/e339154e/9cc2c2f7",
     "map-canopy v31428 i0 bd13720f/811c9dc5/c8382a34",
     "map-cladding v144 i192 9218a64d/ad29be65/757be29d",
     "map-foliage v16800 i0 819fd41e/811c9dc5/5d0ab568",
@@ -282,7 +282,7 @@ const PINNED = {
     "map-terrain v9801 i57600 4e80f9d2/006bce1d/4298d710",
   ],
   woodlandPlain: [
-    "map-bark v18712 i47364 b27442ef/fa8a22ee/05402af3",
+    "map-bark v18984 i47940 aabad60f/36629624/c94b5edf",
     "map-canopy v31428 i0 bd13720f/811c9dc5/c8382a34",
     "map-cladding v72 i96 d7488e59/17877439/521c38c1",
     "map-foliage v16800 i0 819fd41e/811c9dc5/5d0ab568",
