@@ -89,7 +89,8 @@ jobs:
         with:
           path: bundles.tar
           key: bundles-${{ github.run_id }}-${{ github.run_attempt }}
-      - run: if [ -f bundles.tar ]; then tar -xf bundles.tar; else echo "No bundles from this run; the build steps make their own"; fi
+      # The tar goes once unpacked: the gate's scope check counts untracked files as part of the change.
+      - run: if [ -f bundles.tar ]; then tar -xf bundles.tar && rm bundles.tar; else echo "No bundles from this run; the build steps make their own"; fi
       # The pipeline's gate script (pipeline/README.md): the production build (on CI the bundles job's, reused),
       # the unit tests, and on a pull request
       # the scope and changelog gates for the task ids its title starts with and the review gate (pipeline/review.mjs). Writes pipeline/out/gate-report.json with
@@ -137,7 +138,7 @@ jobs:
         with:
           path: bundles.tar
           key: bundles-${{ github.run_id }}-${{ github.run_attempt }}
-      - run: if [ -f bundles.tar ]; then tar -xf bundles.tar; else echo "No bundles from this run; the build steps make their own"; fi
+      - run: if [ -f bundles.tar ]; then tar -xf bundles.tar && rm bundles.tar; else echo "No bundles from this run; the build steps make their own"; fi
       # Playwright's Chromium is cached per lockfile (the Playwright version pins the browser build).
       - name: Cache the Playwright browser
         id: playwright-cache
