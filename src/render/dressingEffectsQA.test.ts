@@ -82,6 +82,20 @@ describe('G8 QA: dressing effects', () => {
     fx.dispose();
   });
 
+  it('hands the warm-up the kicked dust, hidden until kicked, only while it is on (PF1)', () => {
+    const scene = new THREE.Scene();
+    const fx = new DressingEffects(scene, DEPOT.dressing);
+    fx.setQuality(QUALITY.low);
+    expect(fx.warmTargets()).toEqual([]);
+    fx.setQuality(QUALITY.high);
+    const dust = scene.getObjectByName('kickedDust')!;
+    expect(dust.visible).toBe(false);
+    expect(fx.warmTargets()).toEqual([dust]);
+    fx.setQuality(QUALITY.low);
+    expect(fx.warmTargets()).toEqual([]);
+    fx.dispose();
+  });
+
   it('Custom: Trees detailed with Impact grit off shows smoke only, and grit alone shows dust only', () => {
     const a = new THREE.Scene();
     const fa = new DressingEffects(a, DEPOT.dressing);
