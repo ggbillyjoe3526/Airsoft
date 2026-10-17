@@ -88,6 +88,10 @@ if (!['auto', 'all', 'fast', 'slow'].includes(options.tests)) throw new Error(`g
 const shardOk = (s) => { const m = /^(\d+)\/(\d+)$/.exec(s); return m !== null && Number(m[1]) >= 1 && Number(m[1]) <= Number(m[2]); };
 if (options.shard !== null && !shardOk(options.shard)) throw new Error(`gate: --shard takes k/n with 1 ≤ k ≤ n, not ${options.shard}`);
 if (options.only !== null && !['tests', 'smoke'].includes(options.only)) throw new Error(`gate: --only takes tests or smoke, not ${options.only}`);
+// An option the gate doesn't know (a typo, or one folded away such as `--perf`) stops it rather than run a different gate.
+const KNOWN = ['--task', '--quick', '--ci', '--no-smoke', '--env', '--base', '--tests', '--shard', '--only'];
+const unknown = args.filter((a, i) => a.startsWith('--') && !KNOWN.includes(a) && !['--task', '--env', '--base', '--tests', '--shard', '--only'].includes(args[i - 1]));
+if (unknown.length) throw new Error(`gate: unknown option ${unknown.join(', ')} (pipeline/README.md › gate.mjs › Options)`);
 const skipAllBut = (gate) => options.only !== null && options.only !== gate;
 
 mkdirSync(ARTIFACTS, { recursive: true });
