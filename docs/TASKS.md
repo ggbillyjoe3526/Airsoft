@@ -13,7 +13,8 @@ commit, before its pull request merges (CI's scope gate finds the block in the b
 
 - **Order.** Highest priority first. A block marked *after playtest* waits until the owner has played the parts it
   tunes, and PF2 also waits for his laptop baseline.
-- **Placed in a later update.** NH1 goes with the Maps Update, because Neon Heights stays dev in 0.1. HV1 goes with the
+- **Placed in a later update.** NH1 and NH2 go with the Maps Update, because Neon Heights stays dev in 0.1 (NH2: owner,
+  2026-10-17). HV1 goes with the
   rigged figures leaving the Dev switches, which BD1 now does in Beta 1, so HV1 lands with BD1 or straight after it.
 - **Numbers are first guesses.** Numeric targets can be changed by the owner. Note 19 applies to every balance block:
   tune on Normal, then check that Easy, Hard and Pro still scale.
@@ -85,6 +86,30 @@ acceptance:
   3. Bots use height: anchors and careful bots hold upper-floor spots, and flankers take the high routes. At least a third of knockouts involve a player above the street (first guess; tune in play).
   4. The ends stay even: neither wins more than 55 % of decided Elimination rounds by Day or by Night, and Attack / Defend stays in its 40–60 % band at every difficulty.
   5. The stairs and the Plaza stair still climb without a jump (BP5), and Extraction on Neon Heights stays in its bands.
+status: open
+attempts: 0
+
+## NH2 · Neon Heights: doors you open and close, and furnished interiors (Maps Update, after NH1)
+tier: core
+perf: required
+touches: src/sim/, src/physics/, src/ai/, src/audio/, src/render/, src/config/, src/map/neonHeights.ts, src/map/neonHeightsDressing.ts, src/map/neonHeights.test.ts, src/ai/balance/neonHeights.balance.ts, src/ai/balance/neonHeightsFlag.balance.ts
+contract: needed (a new door system: its state, the open and close command, what it blocks, what bots hear)
+William's Beta 1 playtest, 2026-10-17 (item 32), placed with the Maps Update on his pick: "neon heights map looks much
+better. however some changes to the map i'd like to make. buildings have doors that the player must open/close. this
+affects gameplay because it's a visual cue to see where players have been. also if a door is closed the player needs
+to be careful as there may be an enemy behind it. the player can close the door behind them too. also interiors need
+to be more detailed. they should look like normal interiors like shops, offices, storage rooms, cafes, hotels, etc."
+acceptance:
+  1. Neon Heights' building doorways have hinged doors that players and bots open and close with one bindable key,
+     through the same command interface; a door stays as it was left, so it shows where someone went, and it makes a
+     sound bots hear.
+  2. A closed door blocks sight and BBs. Bots open doors to pass, sometimes close them behind, and treat a closed door
+     they haven't seen through with care.
+  3. Interiors are furnished by type (shops, offices, storage rooms, cafes, a hotel lobby) in the house style
+     (`docs/ART.md`), with cover that plays and nothing a player can never see (MS1's ruling), inside Neon Heights'
+     triangle and draw-call lines.
+  4. The ends stay even (neither over 55 % of decided Elimination rounds by Day or by Night) and Attack / Defend stays
+     in its 40–60 % band at every difficulty. Built after NH1, so the doors and rooms fit its upper floors.
 status: open
 attempts: 0
 
