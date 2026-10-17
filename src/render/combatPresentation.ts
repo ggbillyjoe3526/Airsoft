@@ -37,7 +37,7 @@ import { figureMuzzle, type FigureHold } from './characterModels';
 import { holdsPistol } from './characterRenderer';
 import { DressingEffects } from './dressingEffects';
 import { DustMotes } from './dustMotes';
-import { ImpactGrit, shooterSide } from './impactGrit';
+import { ImpactGrit, impactSide } from './impactGrit';
 import { OwnShotStarts } from './ownShotStarts';
 import { ImpactPuffs } from './impactPuffs';
 import { LeafFlecks } from './leafFlecks';
@@ -363,7 +363,7 @@ export class CombatPresentation {
         // 44): it stopped deep in the leaves, so they show, and rustle, on the side it went in (leafSurface).
         const material = e.leaves ? 'leaves' : impactMaterialAt(this.field.blocks, e.position, this.field.terrain ?? null);
         const tint = this.dustTints.get(material);
-        const from = shooterSide(this.state.characters, e.ownerId, this.renderer.camera.position, this.gritFrom);
+        const from = impactSide(this.state.characters, e.ownerId, e.from, this.renderer.camera.position, this.gritFrom);
         const at = e.leaves ? leafSurface(this.field.foliage ?? [], e.position, from, this.leafAt) : e.position;
         this.puffs.spawn(at, tint, IMPACT_DUST[material].scale);
         if (material === 'leaves') {
@@ -377,7 +377,7 @@ export class CombatPresentation {
         this.sfx.impact(at, material);
       } else if (e.type === 'bbLeaves') {
         // Through a bush's edge (Dev 6 item 44): a leaf or two and a soft rustle where it went in.
-        const from = shooterSide(this.state.characters, e.ownerId, this.renderer.camera.position, this.gritFrom);
+        const from = impactSide(this.state.characters, e.ownerId, e.from, this.renderer.camera.position, this.gritFrom);
         const at = leafSurface(this.field.foliage ?? [], e.position, from, this.leafAt);
         this.leaves.spawn(at, from, LEAF_FLECKS.perBrush, leafFloor(this.field.foliage ?? [], at));
         this.sfx.leafBrush(at);

@@ -1,6 +1,7 @@
 import type { BotController } from '../ai/botController';
 import { DT, playMatch } from '../ai/depotMatchSupport';
 import { setUpRun } from '../ai/extractionRunSupport';
+import { riggedHits } from '../ai/riggedHitsSupport';
 import { botConfig, type Difficulty } from '../config/bots';
 import { squadSize } from '../config/extraction';
 import { hitRulesFor, type MatchRules, roundRulesFor } from '../config/matchRules';
@@ -66,15 +67,17 @@ export function playModeMatch(m: ModeMatch, onTick: (state: GameState, bots: Bot
   };
   const ended: ModeMatchResult['ended'] = [];
   const kit = loadoutUnder(m.rules);
+  // Each figure's own hit volume (HV1), as a match and the headless bot matches play with since BD1 (KI2).
+  const hits = riggedHits(hitRulesFor(m.rules));
   switch (m.mode) {
     case 'elimination':
     case 'attackDefend': {
-      const stats = playMatch(m.seconds, m.seed, undefined, botConfig(m.level), m.mode, { ...roundRulesFor(m.rules), ...(m.firstEnd === undefined ? {} : { eliminationFirstEnd: m.firstEnd }) }, m.map, m.teamSize, hitRulesFor(m.rules), tick, (id, team) => createCharacter(id, vec3(), 0, kit, team));
+      const stats = playMatch(m.seconds, m.seed, undefined, botConfig(m.level), m.mode, { ...roundRulesFor(m.rules), ...(m.firstEnd === undefined ? {} : { eliminationFirstEnd: m.firstEnd }) }, m.map, m.teamSize, hits, tick, (id, team) => createCharacter(id, vec3(), 0, kit, team));
       for (const r of stats.results) ended.push({ winner: r.winner, reason: r.reason, seconds: r.length });
       break;
     }
     case 'extraction': {
-      const run = setUpRun({ seed: m.seed, map: m.map, squad: squadSize(m.teamSize), opponents: m.level, runnerBot: true, hits: hitRulesFor(m.rules), loadout: kit });
+      const run = setUpRun({ seed: m.seed, map: m.map, squad: squadSize(m.teamSize), opponents: m.level, runnerBot: true, hits, loadout: kit });
       const start = run.state.round.clock;
       run.play(m.seconds, () => tick(run.state, run.bots));
       const r = run.state.round;
