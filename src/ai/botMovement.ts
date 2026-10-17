@@ -832,16 +832,22 @@ export function keepApart(b: Bot, w: BotWorld, moving: boolean, cmd: PlayerComma
   // Never walked aside off a floor: a teammate standing beside a bot at a platform's open edge pushed it over (a seed of
   // the Ramp Yard follow match, MV1). With a drop that way it steps aside along the edge instead, either way round, and
   // stands only if both are drops too. A wall is no harm (the body slides along it), so only a drop turns the push.
-  const ux = px / len;
-  const uz = pz / len;
-  for (const [x, z] of [[ux, uz], [-uz, ux], [uz, -ux]] as const) {
-    if (dropAhead(me, w, x, z)) continue;
-    b.moveDir.x = x;
-    b.moveDir.z = z;
-    cmd.walk = true;
-    return true;
+  let x = px / len;
+  let z = pz / len;
+  if (dropAhead(me, w, x, z)) {
+    const ux = x;
+    x = -z;
+    z = ux;
+    if (dropAhead(me, w, x, z)) {
+      x = -x;
+      z = -z;
+      if (dropAhead(me, w, x, z)) return moving;
+    }
   }
-  return moving;
+  b.moveDir.x = x;
+  b.moveDir.z = z;
+  cmd.walk = true;
+  return true;
 }
 
 /**

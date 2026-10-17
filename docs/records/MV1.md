@@ -6,7 +6,7 @@
 
 | Date | Attempt | Worker model | build | tests | smoke | perf | scope | changelog | Critic | Retry reason | Wall time | Worker tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 2026-10-16 | 1 | Opus 5.5 (build thread, two Opus workers) | ✓ 19 s | ✓ 526 s | ✓ 996 s | ✓ 1754 s | ✓ | ✓ | 7/8 Accept (Opus) | – | ~3 h | hands 386k, hitch 125k, explore 149k, QA 71k, performance 30k, critic 147k, changelog 19k |
+| 2026-10-16 | 1 | Opus 5.5 (build thread, two Opus workers) | ✓ 18 s | ✓ 491 s | ✓ 981 s | ✓ 1629 s | ✓ | ✓ | 7/8 Accept (Opus) | – | ~3 h | hands 386k, hitch 125k, explore 149k, QA 71k, performance 30k, critic 147k, changelog 19k |
 
 ## Decisions
 
