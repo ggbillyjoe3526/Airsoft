@@ -34,12 +34,11 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **HD1** · Scoreboard no longer shows a YOU tag (screen readers still hear which side is yours)
 - **TT1** · Tutorial cards are one or two short sentences; the four you only read move on by themselves after 5–8 s, with a bar filling; the lean step is gone
 - **MV1** · Nobody rests a replica on cover any more, you or the bots; aiming at a ledge no longer steadies you and the Rested tag is gone; Q and E leaning stay
-- **MV1** · Holstered you run at 5.0 m/s against 4.2 armed, never faster than the 6.3 m/s sprint, which is the same armed or holstered
+- **MV1** · Holstered you run at 5.4 m/s against 4.2 armed, never faster than the 6.3 m/s sprint, which is the same armed or holstered
 - **MV1** · Walking with Shift keeps your aim as steady as standing still, where it was a little looser before
 - **MS1** · Depot has cranes, container stacks, sheds, silos, chimneys, a water tower and a power line over its walls
 - **MS1** · Woodland's cabin has a grey tin roof, taller walls and lanterns; pines have layered branches, bushes are smaller, nights brighter
 - **MS1** · Neon Heights is ringed by towers up to 72 m with adverts, lit windows, 27 more neon signs, lantern cables and skybridges
-- **BD1** · Your own body in first person shows only when you look down far enough to see it
 - **BD1** · Medium's Player detail is Low: figures drop to middle detail beyond 6 m and the coarsest beyond 16 m (High and Ultra keep 12 m and 28 m)
 - **KI2** · Unused mode pictures are gone from the download, about 51 KB smaller
 - **RV2** · Tone mapping leaves Graphics: everyone plays with Neutral colours; Neutral, AgX and ACES are a Dev setting that applies at once, and a pick made on the old row becomes the Dev pick
@@ -54,6 +53,9 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **UX1** · In a 1280×720 window a menu's top bar, heading and Start match or Back stay pinned; only its long list scrolls
 - **UX1** · A short window draws the menus a little tighter; New game's Start match is in sight down to 900×600
 - **UX1** · The Armory's starting kit lies two across
+- **MV2** · The holstered run is a little faster after the Beta 1 playtest, 5.4 m/s where MV1 first set 5.0; the sprint stays at 6.3 m/s
+- **MV2** · The firing hand on the rifle and both pistols holds the grip more naturally: the wrist sits low behind the grip, bent slightly up
+- **MV2** · Your own body is never drawn in first person; looking down, crouched or vaulting you see the ground, not your legs
 
 ### Fixed
 - **MV1** · The first switch to your other replica in a match no longer stutters; every carried replica is ready before the round

@@ -192,7 +192,7 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | A holstered figure that vaults keeps the Vault clip's arms, its right hand closed as if on the rifle that is slung on its back | can wait | The vault has no holstered version yet; a Holster_Vault clip would fix it. (BP4) BD1 kept it. |
 | The figure files still carry the six unused Rest clips (Rifle_ and Pistol_Rest, RestUp, RestDown) | can wait | Rest on cover is gone (MV1); the game ignores the clips, so they cost only download size. (MV1) |
 | A figure's held replica casts its shadow from its small version (PF4), so in a close reload the shadow keeps the magazine in place for a moment beside the hand's copy | can wait | A few shadow-map texels for about a second; the whole model's shadow cost ~9k triangles a figure. (PF4) |
-| Your own body casts no shadow, and you see it only looking well down | document | It is drawn 0.17 m behind the eyes without its head and arms, so a headless shadow would look wrong. (BF1, BD1) |
+| Your own figure casts no shadow | document | It is never drawn in first person, and holds no replica there (the first-person one is in view), so its shadow would show empty hands. (BF1, BD1, MV2) |
 | First-person hand poses are hand-tuned numbers, checked by geometry tests rather than by eye | document | Poses live in `replicaModels.ts`; `handPoses.test.ts` and `fileHandPoses.test.ts` measure them against the replicas' triangles. Whether a hold looks natural is the owner's call. |
 
 ## Graphics and performance

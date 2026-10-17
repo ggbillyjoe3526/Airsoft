@@ -103,7 +103,7 @@ Read the newest layer first when looking for a function: it is the one that wins
   the sidecar's `replicaOnGrip` matrix (Blender axes, row-major). `Pistol_*` clips, and `Switch` from 35 %, hold the
   pistol; all other clips hold the AEG.
 - Upper-body clips (`upperBodyOnly`) are authored over a still pelvis: layer them over the legs' clip as they are.
-- First person: hide the parts listed under `firstPerson.hide` (every head) to see the body when looking down.
+- First person: the game never draws your own figure (MV2); `firstPerson.hide` (every head) is no longer read.
 - Heads (v12): the human's head parts are listed in `parts.human.head` of `src/config/figureRig.ts`, in
   `HEAD_ORDER`; a figure wears `head[id % 4]`.
 

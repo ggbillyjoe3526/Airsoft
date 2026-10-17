@@ -153,7 +153,7 @@ function figure(kind: (typeof FIGURE_RIG_KINDS)[number]) {
   const f = new RiggedFigure({ rig: rigs[kind], character: c, id: c.id, teamColour: 0x3d8bff, replicaMaterial: material, rifleColours: dress.rifle, pistolColours: dress.pistol, files, detail: 'high', pack: true, radio: true, thrown: new ThrownMagazines(), calloutMaterial: new THREE.SpriteMaterial() });
   return { f, c };
 }
-const frame = (over: Record<string, unknown> = {}) => ({ alpha: 1, dt: 1 / 60, eyeX: 0, eyeY: 1.6, eyeZ: 3, firstPerson: false, viewLow: -Math.PI / 2, leanX: 0, leanZ: 0, peek: 0, peekPivot: 0.92, cycle: null, castShadow: true, ...over }) as Parameters<RiggedFigure['update']>[1];
+const frame = (over: Record<string, unknown> = {}) => ({ alpha: 1, dt: 1 / 60, eyeX: 0, eyeY: 1.6, eyeZ: 3, firstPerson: false, leanX: 0, leanZ: 0, peek: 0, peekPivot: 0.92, cycle: null, castShadow: true, ...over }) as Parameters<RiggedFigure['update']>[1];
 const drawnOnView = (root: THREE.Object3D): THREE.SkinnedMesh[] => {
   const out: THREE.SkinnedMesh[] = [];
   root.traverseVisible((o) => {
@@ -204,21 +204,20 @@ describe('the shadow twin and the first-person gate (BD1, second round)', () => 
     expect(() => f.dispose()).not.toThrow();
   });
 
-  it('your own body: shown at the threshold edge, hidden above it, shown while vaulting, never when not first person', () => {
+  it('your own body: never drawn in first person, crouched or vaulting included, and drawn again out of it (MV2)', () => {
     const { f, c } = figure('human');
-    const first = (viewLow: number) => {
-      f.update(c, frame({ firstPerson: true, viewLow }));
-      return drawnOnView(f.root).length > 0;
+    const first = () => {
+      f.update(c, frame({ firstPerson: true }));
+      return drawnOnView(f.root).length;
     };
-    const below = FIGURE_RIG.firstPerson.highest.standing + FIGURE_RIG.firstPerson.margin;
-    expect(first(below - 1e-6)).toBe(true);
-    expect(first(below)).toBe(false);
-    expect(first(0.5)).toBe(false);
+    expect(first()).toBe(0);
+    c.crouchAmount = c.prevCrouchAmount = 1;
+    expect(first()).toBe(0);
     c.vault.active = true;
-    expect(first(0.5)).toBe(true);
+    expect(first()).toBe(0);
     c.vault.active = false;
-    expect(first(0.5)).toBe(false);
-    f.update(c, frame({ firstPerson: false, viewLow: -Math.PI / 2 }));
+    c.crouchAmount = c.prevCrouchAmount = 0;
+    f.update(c, frame({ firstPerson: false }));
     expect(drawnOnView(f.root).length).toBe(1);
     f.dispose();
   });

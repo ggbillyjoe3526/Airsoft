@@ -226,7 +226,7 @@ export function prepareFigureRig(kind: FigureRigKind, scene: THREE.Object3D, sid
   const skeleton = first.skeleton;
   const rootBone = skeleton.bones.find((b) => !(b.parent instanceof THREE.Bone));
   if (!rootBone?.parent) throw new Error(`the ${kind} figure's skeleton has no root`);
-  for (const name of [FIGURE_RIG.bones.hips, FIGURE_RIG.bones.spine, FIGURE_RIG.bones.grip, FIGURE_RIG.bones.hand, ...FIGURE_RIG.bones.arms]) {
+  for (const name of [FIGURE_RIG.bones.hips, FIGURE_RIG.bones.spine, FIGURE_RIG.bones.grip, FIGURE_RIG.bones.hand]) {
     if (!skeleton.getBoneByName(name)) throw new Error(`the ${kind} figure has no "${name}" bone`);
   }
 
