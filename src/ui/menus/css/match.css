@@ -6,6 +6,11 @@
    one line per rule in two columns (each a label at the left and its options), the rules the ruleset sets locked with
    their value, and one help line at the foot for the row under the pointer or the keyboard. */
 .match-panel {
+  /* UI2 (Beta 1 playtest item 3): each rule's name column as wide as the longest name (Ricochets count, 117 px), its
+     options as wide as their words, the slider a set length; the rest of the line is left over, as on Settings. */
+  --match-name-w: 124px;
+  --match-option-w: 60px;
+  --match-slider-w: 180px;
   display: flex;
   flex-direction: column;
   background: rgba(14, 24, 52, 0.72);
@@ -95,7 +100,7 @@
 }
 
 .match-panel .menu-row-name {
-  flex: 0 0 clamp(120px, 8.4vw, 160px);
+  flex: 0 0 var(--match-name-w);
   min-width: 0;
 }
 
@@ -125,12 +130,13 @@
   gap: 2px;
 }
 
-/* Equal shares while the words fit; a row with more options than room (four levels in a narrow window) takes a second
-   line rather than cut a word. */
+/* Each option as wide as its word (UI2, as on Settings), short ones (3, ON) evened to one least width; a row with more
+   options than room (four levels in a narrow window) takes a second line rather than cut a word. */
 .match-panel .picker-button {
-  flex: 1 0 auto;
+  flex: 0 0 auto;
+  min-width: var(--match-option-w);
   min-height: var(--control-xs);
-  padding: 0 var(--sp-2);
+  padding: 0 var(--sp-3);
   font-size: var(--fs-sm);
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -145,7 +151,7 @@
 }
 
 .match-panel .menu-range input {
-  flex: 1;
+  flex: 0 1 var(--match-slider-w);
   width: auto;
 }
 

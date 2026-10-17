@@ -490,6 +490,15 @@ describe('layout polish before the screenshots (G4, M100)', () => {
     expect(declared('.match-panel .menu-row', 'flex-wrap')).toBe('nowrap');
   });
 
+  it('keeps the Match rules and the replica panel compact (UI2: Beta 1 playtest items 3, 11)', () => {
+    // Each option as wide as its word, never stretched across the column; the name column a set width.
+    expect(declared('.match-panel .picker-button', 'flex')).toBe('0 0 auto');
+    expect(declared('.match-panel .menu-row-name', 'flex')).toBe('0 0 var(--match-name-w)');
+    expect(declared('.match-panel .menu-range input', 'flex')).toBe('0 1 var(--match-slider-w)');
+    // 320 px before UI2.
+    expect(Number(declared('.hud-replica', 'width')?.replace('px', ''))).toBeLessThanOrEqual(292);
+  });
+
   it('puts no backdrop blur on any of these', () => {
     for (const rule of ['.minimap-caption', '.hud-replica', '.armory-level-row', '.menu-chip-level', '.summary-level-up', '.menu-title-warning']) {
       expect(blockOf(rule), rule).not.toBeNull();

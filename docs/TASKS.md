@@ -27,6 +27,24 @@ below. The item numbers are his. Where an older block overlaps one of these, the
 
 MS1 shows the owner concept images and waits for his approval before any code changes.
 
+## UI2 · Compact Match screen and replica panel (Beta 1 playtest items 3, 11)
+tier: ui
+perf: skip
+touches: src/ui/menus/css/match.css, src/ui/hudCss/replica.css, src/styleSheet.test.ts, src/ui/hudCss/, src/ui/menus/css/
+contract: none
+William, 2026-10-17:
+  - 3: "UI elements are still quite wide horizontally. They could be more compact. Otherwise ok."
+  - 11: "replica panel looks good but still a little too wide. it could be more compact"
+acceptance:
+  1. The Match screen's columns and controls are narrower at 1280×720 and 1920×1080, with no wasted width between a
+     label and its control; nothing wraps, overflows or is cut off, and the 15 px type floor holds (`styleSheet.test.ts`).
+  2. The HUD replica panel (bottom right) is narrower at HUD size 100 % and 150 %, keeping picture, name, fire modes,
+     loaded count and spares readable, and still clear of the held replica and the minimap at 1280×720.
+  3. The record lists before and after widths for both, and screenshots go to William before merging (MR1's
+     concepts-first habit; one image per screen is enough).
+status: open
+attempts: 0
+
 ## BL1 · Attack / Defend: fewer attacker wins, more rounds won at the pole (after playtest)
 tier: core
 perf: skip

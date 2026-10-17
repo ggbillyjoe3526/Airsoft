@@ -2,15 +2,16 @@
    replica's small picture, its name over a chip per fire mode (the current one orange), the loaded BBs with the spare BBs
    under them, a thin bar per spare magazine, then the reload bar and the status line (ui/replicaPanel.ts), as opaque as
    HUD opacity; its size is Settings → HUD (--hud-scale, set on the game's container), grown from the corner. The count
-   is the one large thing on it, so the eye finds it first. */
+   is the one large thing on it, so the eye finds it first. As narrow as three fire-mode chips and a two-digit count allow
+   (UI2, Beta 1 playtest item 11: 320 px before): a smaller picture, tighter gaps and chips. */
 .hud-replica {
   position: absolute;
   right: var(--hud-edge-x);
   bottom: var(--hud-margin);
   scale: var(--hud-scale, 1);
   transform-origin: 100% 100%;
-  width: 320px;
-  padding: 8px 12px 9px;
+  width: 292px;
+  padding: 8px 10px 9px;
   color: var(--hud-fg);
   background: var(--hud-panel);
   clip-path: polygon(var(--hud-cut) 0, 100% 0, 100% 100%, 0 100%, 0 var(--hud-cut));
@@ -19,7 +20,7 @@
 .hud-replica-main {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 /* Holstered (M92): the replica put away is shown faded, the status line saying so. */
@@ -30,8 +31,8 @@
 /* The picture (ItemPictures, the game's own; the line drawing until it is drawn): small, a cue to which replica it is. */
 .hud-replica-pic {
   flex: none;
-  width: 56px;
-  height: 36px;
+  width: 44px;
+  height: 28px;
   margin: -4px 0 -4px -4px;
   background: none;
 }
@@ -68,12 +69,12 @@
 .hud-modes {
   display: flex;
   flex-wrap: wrap;
-  gap: 3px;
+  gap: 2px;
 }
 
 .hud-mode {
   flex: none;
-  padding: 2px 4px 1px;
+  padding: 2px 3px 1px;
   font: 700 15px/1 var(--ui-display);
   letter-spacing: var(--ls-caps);
   text-transform: uppercase;
