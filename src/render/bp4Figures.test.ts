@@ -186,6 +186,63 @@ describe('F5 level of detail', () => {
   });
 });
 
+describe('PF4 the held replica is drawn once and cast once in every state', () => {
+  // The meshes of a held replica in the order it is built: the whole model, the small version, the magazine.
+  const states: [string, (c: Character) => void, Partial<RiggedFrame>][] = [
+    ['near, in hand', () => {}, { eyeZ: 3 }],
+    ['far, in hand', () => {}, { eyeZ: FIGURE_RIG.lod.high[0]! + FIGURE_RIG.lodGive * 2 }],
+    ['near, holstered (rifle on the back)', (c) => { c.armament.holstered = true; }, { eyeZ: 3 }],
+    ['far, holstered', (c) => { c.armament.holstered = true; }, { eyeZ: FIGURE_RIG.lod.high[1]! + 10 }],
+  ];
+  const view = new THREE.Layers();
+  for (const kind of FIGURE_RIG_KINDS) {
+    for (const [name, setup, over] of states) {
+      it(`${kind}, ${name}: one body in the view, the small version the only caster`, () => {
+        const c = createCharacter(1, vec3(0, 0, 0), 0);
+        const { f } = figure(kind, c);
+        setup(c);
+        settle(f, c, 40, over);
+        let shown = 0;
+        for (const h of [...holders(f, 'held:rifle'), ...holders(f, 'held:pistol')]) {
+          if (!h.visible) continue;
+          shown++;
+          const [near, far] = meshChildren(h);
+          expect(near && far).toBeTruthy();
+          expect([near!, far!].filter((m) => m.visible && m.layers.test(view)).length).toBe(1);
+          expect(meshChildren(h).filter((m) => m.visible && m.castShadow)).toEqual([far]);
+        }
+        expect(shown).toBe(1);
+        f.dispose();
+      });
+    }
+  }
+
+  it('shows the whole model in the view and the small one to the shadow cameras only while reloading far away', () => {
+    const c = createCharacter(1, vec3(0, 0, 0), 0);
+    const { f } = figure('human', c);
+    const d = FIGURE_RIG.lod.high[1]! + 10;
+    settle(f, c, 40, { eyeZ: d });
+    const [near, far] = meshChildren(holder(f, 'held:rifle'));
+    expect(near!.visible).toBe(false);
+    expect(far!.layers.test(view)).toBe(true);
+    c.armament.reload = c.armament.handling[c.armament.active]!.reloadTime * 0.5;
+    settle(f, c, 10, { eyeZ: d });
+    expect(near!.visible && near!.layers.test(view)).toBe(true);
+    expect(far!.layers.test(view)).toBe(false);
+    expect(far!.castShadow).toBe(true);
+    expect(near!.castShadow).toBe(false);
+    f.dispose();
+  });
+
+  it('draws and casts nothing of the held replica in first person', () => {
+    const c = createCharacter(1, vec3(0, 0, 0), 0);
+    const { f } = figure('human', c);
+    settle(f, c, 5, { firstPerson: true });
+    for (const h of [...holders(f, 'held:rifle'), ...holders(f, 'held:pistol')]) expect(h.visible).toBe(false);
+    f.dispose();
+  });
+});
+
 describe('F7 a magazine thrown in the air lands on the ground last stood on', () => {
   it('rests near the ground, not at the airborne height', () => {
     const c = createCharacter(1, vec3(0, 0, 0), 0);
