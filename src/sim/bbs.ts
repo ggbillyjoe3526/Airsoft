@@ -207,13 +207,13 @@ export function stepBBs(
         bb.leaf += depth;
         if (leafStop) {
           bb.active = false;
-          events.push({ type: 'bbImpact', position: vec3(bb.position.x, bb.position.y, bb.position.z), ownerId: bb.ownerId, leaves: true });
+          events.push({ type: 'bbImpact', position: vec3(bb.position.x, bb.position.y, bb.position.z), ownerId: bb.ownerId, leaves: true, from: bouncedFrom(bb) });
           continue;
         }
         // Out of the bush (through its edge, or the last of a crossing that took more than a tick): it flies on from here
         // next tick, slowed and off its line.
         deflectInLeaves(bb, depth, cfg.leaves, rng);
-        events.push({ type: 'bbLeaves', position: vec3(bb.position.x, bb.position.y, bb.position.z), ownerId: bb.ownerId });
+        events.push({ type: 'bbLeaves', position: vec3(bb.position.x, bb.position.y, bb.position.z), ownerId: bb.ownerId, from: bouncedFrom(bb) });
         continue;
       }
       if (t >= 0) {
@@ -226,7 +226,7 @@ export function stepBBs(
           bb.leaf += inLeaves;
           deflectInLeaves(bb, inLeaves, cfg.leaves);
         }
-        events.push({ type: 'bbImpact', position: vec3(bb.position.x, bb.position.y, bb.position.z), ownerId: bb.ownerId });
+        events.push({ type: 'bbImpact', position: vec3(bb.position.x, bb.position.y, bb.position.z), ownerId: bb.ownerId, from: bouncedFrom(bb) });
         if (noise) ringProp(bb.position, length3(bb.velocity.x, bb.velocity.y, bb.velocity.z), bb.ownerId, noise);
         // A bounce flies on from the surface next tick: the rest of this tick's travel is dropped, so a ricochet
         // arrives at most one tick (1/60 s) late, which nobody can see at these speeds.
@@ -245,6 +245,14 @@ export function stepBBs(
       events.push({ type: 'bbLost', position: vec3(bb.position.x, bb.position.y, bb.position.z), ownerId: bb.ownerId });
     }
   }
+}
+
+/**
+ * Where a BB that has bounced came from this tick (its path's start), for its impact's grit and leaves to fly back
+ * towards (KI2); undefined before a bounce, when that side is its shooter's. Allocates only for a bounced BB's impact.
+ */
+function bouncedFrom(bb: BB): Vec3 | undefined {
+  return bb.bounces > 0 ? vec3(bb.prevPosition.x, bb.prevPosition.y, bb.prevPosition.z) : undefined;
 }
 
 /** Whether the character with `id` (a BB's owner) is in its insertion grace. */
