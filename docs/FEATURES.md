@@ -175,6 +175,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   offering only its own modes; Match and Teams on the left and House rules on the right, one line each, ruleset-set rules
   locked as "set by Skirmish", unused rules hidden, one help line at the foot; Your match lists rules as chips with no map
   picture; no map is loaded until Play (M15, M15b, G3, MR1)
+- Menus scale with the window height like the HUD, up to 1.5× at 4K; a menu page stays pinned to the window and only its long list scrolls, fading at its foot (UX1)
 - Title screen with a Fullscreen button at the bottom left (it reads Exit fullscreen while in fullscreen) and the version at
   the bottom right (MR1); pause, match summary and result screens; the pause screen shows the match's seed for bug reports (M15,
   M24, BP1, G3)

@@ -42,6 +42,10 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **BD1** · Your own body in first person shows only when you look down far enough to see it
 - **BD1** · Medium's Player detail is Low: figures drop to middle detail beyond 6 m and the coarsest beyond 16 m (High and Ultra keep 12 m and 28 m)
 - **KI2** · Unused mode pictures are gone from the download, about 51 KB smaller
+- **UX1** · Menus grow with the window at 4K, up to 1.5×; 1080p and smaller look as before
+- **UX1** · In a 1280×720 window a menu's top bar, heading and Start match or Back stay pinned; only its long list scrolls
+- **UX1** · A short window draws the menus a little tighter; New game's Start match is in sight down to 900×600
+- **UX1** · The Armory's starting kit lies two across
 
 ### Fixed
 - **MV1** · The first switch to your other replica in a match no longer stutters; every carried replica is ready before the round
@@ -64,6 +68,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **KI1** · The Armory keeps an item you own in colour
 - **KI2** · A BB that ricochets throws its grit and leaves back off the wall it bounced from, not towards whoever fired it
 - **KI2** · Depot, Woodland and Neon Heights show their updated pictures on the Match screen
+- **UX1** · In a 1280 px window with HUD size 120 % or more, the widest score bar no longer crowds the minimap
 
 ### Internal
 - **MS1** · Tests remove skyline pieces no player can see and keep hung units and cables clear of the player's room; perf baselines re-recorded
