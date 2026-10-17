@@ -100,8 +100,23 @@ const EAST_FALL = 0.75;
  * metres all round (half a cosine), gentle enough to walk over anywhere.
  */
 const RISE = { x: 22, z0: 28, z1: 60 };
-const RISE_HEIGHT = 2.6;
-const RISE_FALL = 10;
+/**
+ * WL3, West Hill (owner, 2026-10-17: "a small hill (enough to stop the other side immediately seeing them)"): the
+ * crest is RISE_PEAK m at its middle and RISE_END m at its two ends (was 2.6 m all along), with a longer RISE_FALL
+ * (was 10 m) so its steepest face stays under a ramp's slope.
+ */
+const RISE_END = 2.2;
+const RISE_PEAK = 3.4;
+const RISE_FALL = 12.5;
+/** The West Hill crest's height at plan z: RISE_END at z0 and z1, RISE_PEAK half way (half a sine). */
+const riseCrest = (z: number): number => RISE_END + (RISE_PEAK - RISE_END) * Math.sin(Math.PI * Math.min(1, Math.max(0, (z - RISE.z0) / (RISE.z1 - RISE.z0))));
+
+/** WL3: two low swells on the meadow (owner: "any other elevation changes should be small"), each SWELL m high. */
+const SWELLS = [
+  { x: 46, z: 53 },
+  { x: 66, z: 37 },
+] as const;
+const SWELL = { height: 0.6, top: 1.5, fall: 6 } as const;
 
 /** The Knoll: a flat top of radius KNOLL_TOP round its centre, falling off over KNOLL_FALL metres. */
 const KNOLL = { x: 101, z: 47 };
@@ -109,10 +124,18 @@ const KNOLL_HEIGHT = 3.8;
 const KNOLL_TOP = 6;
 const KNOLL_FALL = 13.5;
 
-/** The creek: its bed follows z = 12 + 3·sin(x / 14), 0.7 m down, 2 m wide, with 2.8 m banks; it ends before the Knoll. */
-const CREEK_DEPTH = 0.7;
-const CREEK_BED = 1;
-const CREEK_BANK = 2.8;
+/**
+ * The creek: its bed follows z = 12 + 3·sin(x / 14) and it ends before the Knoll. WL3 (owner: "one side of the map should
+ * have a more significant elevation change") made it a dry ravine, CREEK_DEPTH m down with a 3.2 m bed and 8 m banks
+ * (was 0.7 m, 2 m and 2.8 m), so the creek lane along its north bank sits lower than the meadow. It is CREEK_DEPTH_WEST m deep
+ * west of CREEK_DEEPENS[0] and deepens to CREEK_DEPTH by CREEK_DEEPENS[1], so where West Hill's south end falls towards
+ * it the two slopes together stay under a ramp's.
+ */
+const CREEK_DEPTH = 2.2;
+const CREEK_DEPTH_WEST = 1;
+const CREEK_DEEPENS = [20, 40] as const;
+const CREEK_BED = 1.6;
+const CREEK_BANK = 8;
 const CREEK_END = [86, 94] as const;
 const creekZ = (x: number): number => 12 + 3 * Math.sin(x / 14);
 
@@ -152,12 +175,14 @@ function woodlandHeight(x: number, z: number): number {
       : x <= SLOPE_X1
         ? WEST_LIFT + ((SLOPE_RISE - WEST_LIFT) * (x - SLOPE_X0)) / (SLOPE_X1 - SLOPE_X0)
         : SLOPE_RISE + EAST_RISE * Math.min(1, (x - SLOPE_X1) / (SIZE_X - SLOPE_X1)) - EAST_FALL * smoothstep(EAST_TOP_X, SIZE_X, x);
-  const rise = dip(segmentDistance(x, z, { x: RISE.x, z: RISE.z0 }, { x: RISE.x, z: RISE.z1 }), RISE_HEIGHT, 0, RISE_FALL);
+  const rise = dip(segmentDistance(x, z, { x: RISE.x, z: RISE.z0 }, { x: RISE.x, z: RISE.z1 }), riseCrest(z), 0, RISE_FALL);
+  const swells = SWELLS.reduce((sum, w) => sum + dip(Math.hypot(x - w.x, z - w.z), SWELL.height, SWELL.top, SWELL.fall), 0);
   const r = Math.hypot(x - KNOLL.x, z - KNOLL.z);
   const knoll = r <= KNOLL_TOP ? KNOLL_HEIGHT : r >= KNOLL_TOP + KNOLL_FALL ? 0 : (KNOLL_HEIGHT * (1 + Math.cos((Math.PI * (r - KNOLL_TOP)) / KNOLL_FALL))) / 2;
-  const creek = dip(Math.abs(z - creekZ(x)), CREEK_DEPTH, CREEK_BED, CREEK_BANK) * (1 - smoothstep(CREEK_END[0], CREEK_END[1], x));
+  const creekDepth = CREEK_DEPTH_WEST + (CREEK_DEPTH - CREEK_DEPTH_WEST) * smoothstep(CREEK_DEEPENS[0], CREEK_DEEPENS[1], x);
+  const creek = dip(Math.abs(z - creekZ(x)), creekDepth, CREEK_BED, CREEK_BANK) * (1 - smoothstep(CREEK_END[0], CREEK_END[1], x));
   const track = dip(segmentDistance(x, z, TRACK.from, TRACK.to), TRACK_DEPTH, TRACK_BED, TRACK_BANK) * (1 - smoothstep(TRACK_FADE[0], TRACK_FADE[1], x));
-  return slope + rise + knoll - creek - track;
+  return slope + rise + swells + knoll - creek - track;
 }
 
 // --- Plan to world -----------------------------------------------------------------------------------------------
@@ -214,7 +239,7 @@ const centred = (kind: BlockKind, x: number, z: number, w: number, d: number, h:
 const LANE_POINTS: readonly (readonly [number, number])[][] = [
   // Pine Belt: out of the camp's north gap, along the forest track, down the Knoll's north shoulder into the fort.
   [[13, 51], [24, 62], [38, 69.5], [55, 72], [72, 72], [86, 67], [95, 60], [101, 57], [98.3, 52.7], [98.3, 48.5]],
-  // Meadow: straight across, past the meadow rock's north side, up the Knoll's west face.
+  // Meadow: straight across, past the meadow's fallen trunks, up the Knoll's west face.
   [[13, 44], [30, 46.5], [49, 47.5], [62, 46.5], [76, 46], [89, 46.5], [95.8, 44.2], [98.5, 44.2]],
   // Creek: down to the creek's north bank, past the cabin's south and east sides, up the sunken track into the fort.
   [[13, 36], [22, 24], [34, 17.5], [50, 17], [60, 16], [73, 16.5], [76, 24], [86, 29], [94, 36], [101, 37], [103.8, 41.3], [103.8, 44]],
