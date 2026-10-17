@@ -909,13 +909,14 @@ Accessibility, Save file) and a "Dev settings" box under them that shows the Dev
   wheel as W (AZERTY) or Y (QWERTZ); the tutorial and the reload hint use the same letters, and switching layout while
   the game is open updates them. Firefox says names follow a US keyboard; the keys still work by position.
 - [ ] **Display.** Field of view starts at 90°: 120° shows more at the sides and 80° less, and the red dot still zooms.
-  Fullscreen (or F10 in a match) goes fullscreen and back with play carrying on; Esc leaves it and pauses. Tone mapping
-  Neutral (the default), AgX and ACES each change the colours at once, team colours clear on Neutral. Show FPS adds a
-  small "NN FPS · N.N ms" counter.
+  Fullscreen (or F10 in a match) goes fullscreen and back with play carrying on; Esc leaves it and pauses. Show FPS
+  adds a small "NN FPS · N.N ms" counter. No Tone mapping row here or in Graphics (it is under Dev).
 - [ ] **Dev group.** Debug info shows the panel in a match; BB paths draws the BBs' flight; Game speed at 25 % and
   200 % slows and speeds the round (mouse look stays normal); Bottomless magazines never empties; Ghost lets BBs pass
   through you. With any of them on, the summary says Dev settings kept the match out of your records. Untick the box
-  and Play again: everything is back to normal and the match counts. Diagnostics › Copy pastes a report starting
+  and Play again: everything is back to normal and the match counts. Tone mapping Neutral (the default), AgX and ACES
+  each change the colours at once, team colours clear on Neutral; with AgX picked, untick the box and the colours go
+  back to Neutral at once, and the match still counts. Diagnostics › Copy pastes a report starting
   "Airsoft diagnostics" with your GPU and settings, where you stand ("Player: at …"), "Frames: last 10 s of play", and
   "Recent events" naming shots, hits and bot changes from the last moments. Type a note in the box first: it is the
   report's "Note:" line. **Report a Bug** opens a new GitHub issue on the game's page (sign in if asked) titled "Bug:"

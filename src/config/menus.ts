@@ -166,7 +166,7 @@ export const HAUL_TEXT = {
  * The Settings screen's groups, top to bottom (graphics overhaul G3: William's seven, then the save and the hidden Dev
  * group), each with the line under its name. `hidden`: shown only once the "Dev settings" box under them is ticked
  * (M24). Every earlier tab's rows live on in one of them: Key Bindings under Controls, Crosshair and HUD under Gameplay,
- * the screen rows (fullscreen, field of view, tone mapping, the FPS readout) under Display.
+ * the screen rows (fullscreen, field of view, the FPS readout) under Display; Tone mapping under Dev (RV2).
  */
 export type SettingsTab = 'graphics' | 'display' | 'audio' | 'controls' | 'gameplay' | 'accessibility' | 'look' | 'save' | 'dev';
 

@@ -315,7 +315,7 @@ began:
   - **Supply weekends and dated events** (M49) come out: calendar pressure suits online games, not an offline one.
     Their table in `pool.md` goes with care (the tests read it).
   - **The Tone mapping choice** leaves Graphics: the best-looking one becomes everyone's, and the switch moves to the
-    Dev tab.
+    Dev tab. Done (RV2, 2026-10-17).
 - **Small additions, now placed elsewhere** (owner, 2026-10-06; they were the 2026-10-04 picks and the 2026-10-05
   triage's Beta list):
   - **Saved loadouts** (0.1 Dev 6): several named loadouts (such as "CQB" and "Long range") to switch between, picked

@@ -107,7 +107,6 @@ import {
   loadRendererChoice,
   loadSensitivity,
   loadShowFps,
-  loadToneMapping,
   loadHitFeedMode,
   loadHudOpacity,
   loadHudSize,
@@ -389,7 +388,7 @@ export class Game {
     this.matchSeed = options.seed;
     this.renderer = new Renderer(container, this.quality, rendering.node);
     this.renderer.setFov(loadFov());
-    this.renderer.setToneMapping(loadToneMapping());
+    this.renderer.setToneMapping(this.dev.toneMapping);
     this.map = loadMap();
     this.lighting = loadLightingPicks();
     this.mode = loadMode();
@@ -564,7 +563,6 @@ export class Game {
         },
         frameRateCap: { initial: this.frameRateCap, onChange: (cap) => (this.frameRateCap = cap) },
         showFps: { initial: loadShowFps(), onChange: (on) => this.debug.setFpsReadout(on) },
-        toneMapping: { initial: this.renderer.toneMappingId, onChange: (id) => this.renderer.setToneMapping(id) },
         renderer: (row) => this.rendering.fillRow(row, this.renderer),
       },
       audio: { initial: this.audio.volumes, onChange: (channel, v) => this.changeVolume(channel, v), onRelease: (channel) => this.audio.preview(channel) },
@@ -979,6 +977,8 @@ export class Game {
       this.setupChanged = true;
       this.prefetchFieldSounds();
     }
+    // Tone mapping (RV2) is a look: it shows at once, and with the Dev tab hidden it's Neutral again.
+    if (this.dev.toneMapping !== before.toneMapping) this.renderer.setToneMapping(this.dev.toneMapping);
   }
 
   /** The Retro look (Settings › Dev) on screen as saved while the Dev tab is shown, else off. */
