@@ -4,7 +4,7 @@ import { skirmish } from './testSupport';
 
 /**
  * Extraction (M45): the 'returned' event a wave puts out makes the bot of that opponent start afresh (the
- * BotController's sendBack), and no other bot.
+ * RoundPlanner.sendBack, ai/roundPlanner.ts), and no other bot.
  */
 describe('a bot whose opponent returned in a wave (M45)', () => {
   /** Two Orange bots on Depot's middle lane, far from Blue's character 0, each having heard Blue at its feet. */

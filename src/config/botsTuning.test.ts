@@ -1,17 +1,36 @@
 import { describe, expect, it } from 'vitest';
 import { BOT_BEHAVIOUR } from './bots';
-import source from './bots.ts?raw';
+import botsSource from './bots.ts?raw';
+import extractionSource from './botsExtraction.ts?raw';
+import movementSource from './botsMovement.ts?raw';
+import sensesSource from './botsSenses.ts?raw';
+import squadSource from './botsSquad.ts?raw';
 
 // M41 gathered every Pro-only bot number into one "Pro tuning" block of BOT_BEHAVIOUR: keys moved, no value changed
 // (checked once against the M40 source when the block was made; a snapshot here would fail every future tuning change).
+// DX7 split BOT_BEHAVIOUR by concern into the files bots.ts spreads in this order; the block is in botsSquad.ts.
+
+/** BOT_BEHAVIOUR's source as bots.ts gathers it: each part's object, in spread order, then bots.ts's own keys. */
+const source = [
+  [sensesSource, 'BOT_SENSES'],
+  [movementSource, 'BOT_MOVEMENT'],
+  [squadSource, 'BOT_SQUAD'],
+  [extractionSource, 'BOT_EXTRACTION'],
+  [botsSource, 'BOT_BEHAVIOUR'],
+]
+  .map(([text, name]) => {
+    const lines = text!.split('\n');
+    const start = lines.findIndex((l) => l.startsWith(`export const ${name} = {`));
+    const end = lines.findIndex((l, i) => i > start && l.startsWith('} as const'));
+    return lines.slice(start + 1, end).join('\n');
+  })
+  .join('\n');
 
 /** The keys of BOT_BEHAVIOUR as the source lists them (top-level `  name:` lines), with the line each is on. */
 function behaviourKeys(): { key: string; line: number }[] {
   const lines = source.split('\n');
-  const start = lines.findIndex((l) => l.startsWith('export const BOT_BEHAVIOUR'));
-  const end = lines.findIndex((l, i) => i > start && l.startsWith('} as const'));
   const keys: { key: string; line: number }[] = [];
-  for (let i = start + 1; i < end; i++) {
+  for (let i = 0; i < lines.length; i++) {
     const m = /^ {2}([A-Za-z0-9]+):/.exec(lines[i]!);
     if (m) keys.push({ key: m[1]!, line: i });
   }

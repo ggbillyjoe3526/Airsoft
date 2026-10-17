@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import statsText from '../../stats.md?raw';
+import statsText from '../../data/stats.md?raw';
 import { GAME_POOL } from '../pool/gamePool';
 import { createCharacter } from '../sim/character';
 import { BARREL_KEYS, GRIP_KEYS, LASER_KEYS, MAGAZINE_KEYS, MUZZLE_KEYS, OPTIC_KEYS, REPLICA_KEYS } from '../pool/pool';

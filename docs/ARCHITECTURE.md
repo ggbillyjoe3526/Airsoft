@@ -36,7 +36,7 @@ A task that adds, renames or moves a file keeps its folder's `README.md` current
 |---|---|---|
 | `src/` (root) | The app that outlives matches; one match or range session at a time | `main.ts`, `game.ts`, `matchSession.ts`, `rangeSession.ts`, `matchFlow.ts`, `newGamePicks.ts` |
 | `src/sim/` | Gameplay rules, pure, fixed 60 Hz | `simulation.ts`, `state.ts`, `commands.ts`, `armament.ts`, `ballistics.ts`, `round.ts` |
-| `src/ai/` | Bots: senses, decisions, cover, squad orders, Extraction roles | `botController.ts`, `botBrain.ts`, `bot.ts`, `perception.ts`, `cover.ts`, `squadOrders.ts` |
+| `src/ai/` | Bots: senses, hearing, round plans, decisions, cover, squad orders, Extraction roles | `botController.ts`, `hearing.ts`, `roundPlanner.ts`, `botBrain.ts`, `bot.ts`, `perception.ts`, `cover.ts`, `squadOrders.ts` |
 | `src/nav/` | The layered walkability grid, A* routes, walk-off fields, vault links | `navGrid.ts`, `vaultLinks.ts` |
 | `src/physics/` | Rapier: level collision and the character mover | `physicsWorld.ts` |
 | `src/map/` | Map data (blocks, spawns, lanes, flag, Extraction) and map helpers | `mapTypes.ts`, `maps.ts`, `depot.ts`, `woodland.ts`, `neonHeights.ts`, `range.ts` |
@@ -54,7 +54,7 @@ A task that adds, renames or moves a file keeps its folder's `README.md` current
 | `src/settings/` | The saved settings object and the Dev settings' saved values | `storage.ts`, `dev.ts` |
 | `src/tutorial/` | The tutorial tracker | `tutorial.ts` |
 | `src/assets/` | Bundled fonts and the optional character model | `fonts/`, `models/characters/` |
-| `pool.md`, `stats.md`, `levels.md`, `bots.md`, `bot-kits.md`, `callouts.md` | Hand-edited tables the game and its tests read: assets and Extraction's cases, replica and part numbers, levels and XP, bot names and personalities, the bots' kits, the bots' callouts | read by `pool/poolFile.ts`, `config/statsFile.ts`, `progress/levels.ts`, `config/botsFile.ts`, `pool/botKit.ts`, `config/calloutsFile.ts` |
+| `data/` | Hand-edited tables the game and its tests read (DX7): `pool.md` (assets and Extraction's cases), `stats.md` (replica and part numbers), `levels.md` (levels and XP), `bots.md` (bot names and personalities), `bot-kits.md` (the bots' kits), `callouts.md` (the bots' callouts). A row the game can't read is left out and listed in the console and in Settings › Dev › Diagnostics (`config/dataTables.ts`) | read by `pool/poolFile.ts`, `config/statsFile.ts`, `progress/levels.ts`, `config/botsFile.ts`, `pool/botKit.ts`, `config/calloutsFile.ts` |
 | `public/` | Static files: icon, manifest, menu stills (from `pipeline/map-stills.mjs`) | `menu/` |
 | `pipeline/` | Gates, perf runs, light bakes, build cache, task records, the content check: the task pipeline's scripts | `README.md`, `gate.mjs`, `perf-run.mjs`, `records.mjs`, `content-check.mjs` |
 | `e2e/` | Playwright smoke tests on the `e2e` build; `release.spec.ts` on `dist/` | `boot.spec.ts`, `crash.spec.ts`, `release.spec.ts` |

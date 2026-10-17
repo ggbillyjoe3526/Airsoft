@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import botsText from '../../bots.md?raw';
+import botsText from '../../data/bots.md?raw';
 import { loadBotsFile, NEUTRAL_STYLE } from './botsFile';
 
 /** bots.md's optional Habits column "Watches the flag first (s)" (OT1, Dev 6 item 45). */

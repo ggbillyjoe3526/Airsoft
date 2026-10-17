@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import poolText from '../../pool.md?raw';
+import poolText from '../../data/pool.md?raw';
 import { createRng } from '../sim/rng';
 import { vec3 } from '../sim/vec';
 import { type CaseSpotLike, placeCases, rollFind, rollRunCases } from './caches';
