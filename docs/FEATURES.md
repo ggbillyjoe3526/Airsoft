@@ -257,7 +257,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   reflections in puddles and glass, film grain and lens fringe on Ultra; each a Custom row; Low draws none (G5)
 - Custom graphics option: pick a preset and modify any row (shadows, shadow detail, softness, range, render scale, edge
   smoothing, surface relief (Normal or Bump), texture detail, dust and more); Custom is saved (FA2, FA7)
-- Graphics settings: frame-rate limit (Unlimited, 30, 60, 120, 144, 240), show FPS counter; the first run picks a preset from the graphics card (Medium for integrated, High for discrete)
+- Graphics settings: frame-rate limit (Unlimited, 30, 60, 120, 144, 240) and show FPS counter; the first run picks a
+  preset from the graphics card (Medium for integrated, High for discrete)
   (FA2, FA7, G5)
 - Raised dock and ramps cast shadows; BB streaks consistent on any screen; replica sheen now on Medium and preserved
   across preset switches; contact shadows under every player on all presets (FA3, FA7)
