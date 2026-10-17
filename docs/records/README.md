@@ -3,7 +3,7 @@
 One file per task that ran through the pipeline, `docs/records/<id>.md`: how its review went, a row per attempt, the
 small decisions it made and the known issues it left. Each task writes only its own file, so parallel branches never
 conflict on shared tables. The thread writes it in the pipeline's records step (`.claude/skills/pipeline/SKILL.md`,
-step 8), in the same push as the work.
+step 7), in the same push as the work.
 
 Records before 2026-10-08 are in the archived tables: `docs/archive/0.1-dev/REVIEWS.md` (one line per task) and
 `docs/archive/0.1-dev/METRICS.md` (one row per attempt).
@@ -54,6 +54,8 @@ Records before 2026-10-08 are in the archived tables: `docs/archive/0.1-dev/REVI
   plus the build thread's own when its session shows one (`thread 350k`).
 - **Decisions.** One line each, `- **<what was decided>.** <why, one sentence>.` A line that also went into
   `docs/DECISIONS.md` ends `(also in DECISIONS)`.
+- **A `tier: fix` record** is the review line, the attempt rows and its Decisions (one line is usual); the Known
+  issues section may be left out when it would say `- None.`.
 - **Known issues left.** One line each, naming the `docs/KNOWN_ISSUES.md` section and class:
   `- <issue> (KNOWN_ISSUES › <section>, can wait).` Write `- None.` when there are none, in either section.
 
