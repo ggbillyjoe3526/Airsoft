@@ -27,6 +27,24 @@ below. The item numbers are his. Where an older block overlaps one of these, the
 
 MS1 shows the owner concept images and waits for his approval before any code changes.
 
+## TT2 · Tutorial: the lean step back, read cards last 10 s (Beta 1 playtest item 33)
+tier: fix
+perf: skip
+touches: src/config/tutorial.ts, src/tutorial/tutorial.ts, docs/DECISIONS.md
+contract: none
+William, 2026-10-17: "tutorial is correct however there is no lean tutorial. this needs to be in. read only cards
+should last 10s."
+acceptance:
+  1. A lean step comes back: lean left with Q and right with E (or the player's bindings, named by the coach),
+     ticked when both are done, in the movement part of the tutorial. TT1 dropped it citing note 30; MV1 kept Q and E
+     peeking, so the step teaches peeking, not resting on cover. Its card follows TT1's rule (one or two short
+     sentences, at most 25 words).
+  2. Every read card lasts 10 s, the filling bar kept; TT1's test limits (5 to 8 s, a second per 4 words) change to
+     match. DECISIONS records both rulings.
+  3. A save holding any step id still resumes or restarts cleanly (TT1's rule for unknown ids).
+status: open
+attempts: 0
+
 ## BL1 · Attack / Defend: fewer attacker wins, more rounds won at the pole (after playtest)
 tier: core
 perf: skip
