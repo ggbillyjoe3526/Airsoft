@@ -804,6 +804,8 @@ replaces its line; the old one stays findable in the archive or in git.
   Match, Loadout, Customise and the Armory use the 15 px step for small text and 32 to 40 px controls; the top bar and
   Settings keep their sizes. A mode is offered only on a map that hosts it, and a rule the mode doesn't read is hidden.
   The realistic colours are picked per replica in Customise › Colour. Saved loadouts are a dropdown.
+- **The mode cards' pictures are deleted (owner, 2026-10-17; KI2).** The cards are text boxes since MR1, so the pictures
+  were never shown; a picture the player never sees doesn't ship.
 - **Another UI redesign is planned for later, its version not set (owner, 2026-10-13).** Maybe a future Dev release,
   maybe after 1.0; parked in `docs/IDEAS.md` until he places it, with no redesign work before.
 - **A Visual redesign, an Audio redesign and a Performance update are also planned for later, their versions not set

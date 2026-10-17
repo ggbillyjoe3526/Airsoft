@@ -37,39 +37,29 @@ goes wrong: it replays the same match.
 
 ## Play these first
 
-What is new since 0.1 Dev 5. Each line points to the section with more checks.
+What changed in 0.1 Beta 1, from your Dev 6 playtest. Each line points to the section with more checks.
 
-- [ ] **Holster.** Press 3 to holster the replica. You move faster than with it out, but never faster than a Left Alt
-  sprint, and bringing it up to aim takes longer ([Movement](#movement)).
-- [ ] **Vaulting.** Jump at a low wall (0.7 to 0.9 m) and you vault it, loudly. Aiming at a ledge, crate or window
-  changes nothing: there is no rest on cover ([Movement](#movement)).
-- [ ] **Practice upgrades.** Moving targets, new target types and a timed challenge (off by default), Practice on any
-  map with targets in place of bots, and any replica you own ([Practice range](#practice-range)).
-- [ ] **Levels in the Armory.** The Armory's random unlocks are gone: matches give XP and levels 0 to 10 unlock the
-  gear, the Cyber Pistol last ([Levels and the Armory](#levels-and-the-armory)).
-- [ ] **Saved loadouts.** Several named loadouts, picked on the Loadout screen or from the list beside Change on the
-  Match screen ([Loadout and Customise](#loadout-and-customise)).
-- [ ] **Bot names, personalities and gear.** Named bots that rush, hold a spot, flank or play it careful, with kits by
-  level and scoped bots that aim differently ([Bots](#bots)).
-- [ ] **Adaptive difficulty.** Settings › Dev, off by default: bots get a little better when you win and a little
-  easier when you lose ([Bots](#bots)).
-- [ ] **Bot callouts.** A text feed at the bottom left: teammates call "Contact, Dock!" or "Two left", and the minimap
-  names the area you are in ([Squad orders and minimap](#squad-orders-and-minimap)).
-- [ ] **Pings and magazine requests.** Middle mouse pings a spot or an enemy and teammates act on it; H asks a teammate
-  for a magazine, and they can ask you ([Squad orders and minimap](#squad-orders-and-minimap)).
-- [ ] **Bushes stop BBs.** Thick leaves stop a BB and an edge throws it off ([Woodland](#woodland-dev-content)).
-- [ ] **Noisy ground and props.** Running into skips and crates knocks them and bots hear it; gravel and steel steps
-  carry further ([Bots](#bots)).
-- [ ] **Overtime flag.** In timed Elimination, when the clock runs out a flag appears in the middle and the first team
-  to touch it wins ([Rounds and matches](#rounds-and-matches)).
-- [ ] **Hide the ammo counter.** Settings › Gameplay › HUD › Ammo counter Off takes the BB counts away and leaves each
-  magazine's bar ([HUD and match info](#hud-and-match-info)).
-- [ ] **Your Dev 5 playtest fixes.** Louder shots and a Power source volume ([Sound](#sound)), firing while sprinting
-  allowed but much less accurate ([Movement](#movement)), red X hit marker options, off by default
-  ([HUD and match info](#hud-and-match-info)), and Esc while out skips the round
-  ([Rounds and matches](#rounds-and-matches)).
-- [ ] **Redesigned figures.** The new human and robot figures, with their vault and holstered poses: turn off both
-  figure switches in Settings › Dev to see them ([Players and replicas](#players-and-replicas)).
+- [ ] **Settings.** Opens on Display; the tabs run Display, Graphics, Gameplay, Looks, Audio, Controls, Accessibility,
+  Save file and Dev. A fresh save starts with aim Toggle, crouch Hold, red sound cues and new volumes; Retro look is a
+  Dev setting ([Settings and controls](#settings-and-controls)).
+- [ ] **Match, Loadout and Armory.** Smaller and tidier: mode cards as text boxes, rules in two columns with "set by
+  Skirmish" locks, saved loadouts as one dropdown, the Armory's levels on a sideways progress line, LVL in the top bar
+  and a Fullscreen button on the title ([Menus](#menus), [Loadout and Customise](#loadout-and-customise)).
+- [ ] **The HUD.** Hop-up mid-match with 4 / 5 (Page Down / Up) and its readout over the ammo panel, one feed for hits
+  and callouts in the top right, a smaller replica panel, a WON / LOST / DRAW stamp you click past, and Settings ›
+  HUD › Feed position ([HUD and match info](#hud-and-match-info)).
+- [ ] **Blender figures by default.** Players and bots are the rigged humans and robots, with hit areas fitted to
+  each body, and your own body shows only when you look well down
+  ([Players and replicas](#players-and-replicas)).
+- [ ] **Map surroundings.** Cranes, stacks and a water tower over Depot's walls; Woodland's tin-roofed cabin, layered
+  pines and brighter nights; Neon Heights ringed by lit towers and signs ([Maps](#maps)).
+- [ ] **A shorter tutorial.** One or two sentences a card; the read-only cards move on by themselves with a bar
+  filling; the lean step is gone ([Tutorial](#tutorial)).
+- [ ] **Movement and hands.** Holstered you run faster than armed but never faster than a sprint; nobody rests on
+  cover any more; walking with Shift aims as steadily as standing; the first switch to your other replica no longer
+  stutters; the thumbs wrap the Blender replicas' grips ([Movement](#movement)).
+- [ ] **Bug fixes.** The Q/E lean cut eases, double-tapping the fire selector steps twice, a ricochet's grit flies off
+  the wall it hit, and edge markers point the way to turn ([Old bugs to recheck](#old-bugs-to-recheck)).
 
 ### Your five calls, confirmed
 
@@ -265,9 +255,12 @@ replicas are listed below, and one still to unlock is greyed with a lock and its
 replica, or use Customise, to change its parts. To try every part below before you have levelled, turn on Settings ›
 Dev › Disable levelling.
 
+- [ ] **Saved loadouts.** One dropdown on the Loadout screen picks a saved loadout, with Rename, Duplicate, New and
+  Delete beside it. Your two carried replicas show side by side over Your replicas.
 - [ ] **Swap slots.** Put the GBB Pistol in Primary: the AEG rifle moves to Secondary. Any replica goes in either slot.
 - [ ] **Customise.** Colour first, then the optic, BB weight, hop-up, grip, laser, magazine, power source, barrel,
-  muzzle and light, each offering the parts that fit. Skins say they come later. Esc goes back.
+  muzzle and light, each offering the parts that fit. Back (or Esc) returns to the Loadout, named in a plain-text
+  breadcrumb.
 - [ ] **Locked parts.** At a low level each part's options list the ones still to unlock after the ones you have, greyed
   with a lock and "Level N" (the level that unlocks it), and they can't be picked. Under them: "Level up to unlock more:
   the Armory shows what each level gives." With everything in a row unlocked, the line goes.
@@ -331,10 +324,10 @@ press Settings › Dev › Level up until you reach 10.
 Completely free: finished matches give XP, each level up to 10 unlocks parts for good, and nothing is ever sold. What
 each level unlocks is in `levels.md` at the repository root; the Armory shows it in the game.
 
-- [ ] **Level 0 to start.** On a fresh save (a private window, or Settings › Save › Delete): the top bar reads "Lv 0"
+- [ ] **Level 0 to start.** On a fresh save (a private window, or Settings › Save › Delete): the top bar reads "LVL 0"
   with an empty bar. The Loadout offers the AEG Rifle and the GBB Pistol; Customise offers the Standard Battery, Green
   Gas and the Weapon Torch, and every other part greyed with its level.
-- [ ] **The level badge.** On every screen after the title, "Lv N" with a thin XP bar at the far right of the top bar.
+- [ ] **The level badge.** On every screen after the title, "LVL N" with a thin XP bar at the far right of the top bar.
   Point at it: "Level N, X XP to level N+1. Open the Armory". Click it: the Armory opens. From the pause menu it shows
   but does nothing.
 - [ ] **The Armory.** Top bar › Armory. On the left your level "of 10", the XP bar ("120 / 300 XP"), how much to the
@@ -464,8 +457,8 @@ One BB hit puts anyone out. A round lasts up to 2:30 and the first team to 5 rou
   flankers may come round the side, and a teammate calls "Flag's up". Does 30 s feel right on each map? Custom ›
   Time-out › More players left: a time-out with your team ahead wins at once, no flag. Attack / Defend has no overtime
   flag.
-- [ ] **Overtime banner (BP5).** The OVERTIME · TOUCH THE FLAG banner fits on one line at 1280 px wide. The bottom-left
-  callout feed hides while the scoreboard (Tab) is up.
+- [ ] **Overtime banner (BP5).** The OVERTIME · TOUCH THE FLAG banner fits on one line at 1280 px wide. The feed (top right,
+  hits and callouts together) hides while the scoreboard (Tab) is up.
 - [ ] **Half-time.** The teams swap ends after round 4; the banner says so.
 - [ ] **Finish a match.** The Match summary comes first (see [HUD and match info](#hud-and-match-info)), then the
   result screen. Finish, then go straight to Stats without pausing: the match is counted and its XP given at once.
@@ -726,14 +719,14 @@ there maps each symptom to its numbers):
 - [ ] **The title screen.** Only "AIRSOFT", the tagline "Call your hit. Go again." and a **START** button; on a clean
   save (tutorial never finished, no match started) a **Tutorial** button under START, gone for good after the tutorial
   or your first match. The build ("0.1 Dev 6+N · …" on `main`, just the release name on a release download; hover it
-  for how many commits after the release it is) sits small at the bottom left. Nothing else: no tip, no next match, no
-  level badge. No map is loaded behind the menus.
+  for how many commits after the release it is) sits small at the bottom right, and a **Fullscreen** button (Exit
+  fullscreen while in it) at the bottom left. Nothing else: no tip, no next match, no level badge. No map is loaded behind the menus.
 - [ ] **Keys.** On the title, Enter presses START, T starts the tutorial (while it is offered) and Esc opens
   Settings. No key prompts are drawn along the bottom of any screen; every screen works with the mouse alone (the
   Airsoft wordmark on the top bar goes back to the title) and the keys still work (Esc is Back, C customises, / searches
   Settings).
 - [ ] **The top bar** on every screen after the title: MATCH, LOADOUT, ARMORY, SETTINGS from the left, your level
-  ("Lv 3" and its XP bar) on the far right, no version; the current place is marked. Opened from the pause menu, only
+  ("LVL 3" over its XP bar) on the far right, no version; the current place is marked. Opened from the pause menu, only
   the current place shows and the wordmark reads Back.
 - [ ] **The Match screen** (START). 01 Map as picture cards (a Day | Night switch on maps that have both, kept per
   map), 02 Mode as cards with **Practice last**, 03 Match rules. On the right, Your match: the map, Mode, Rules, Teams,
@@ -772,7 +765,13 @@ there maps each symptom to its numbers):
 
 ## HUD and match info
 
-- [ ] **Hit feed.** Each hit adds a line at the top right, newest on top: "Beta 2 called HIT · Alpha 3" (who called
+- [ ] **Hop-up mid-match.** 4 turns the hop-up down and 5 up (Page Down and Page Up too, rebindable in Controls). The
+  readout over the ammo panel shows the dial, a tick at the best setting for your BBs and how far they stay flat
+  ("Flat to 39 m"). The setting lasts the match.
+- [ ] **Round end stamp.** WON, LOST or DRAW stamps at the end of a round; a click after half a second moves on to the
+  next round or the match results.
+- [ ] **Feed position** (Settings › HUD). Bottom left moves the feed there; top right is the default.
+- [ ] **Hit feed.** Hits and teammates' callouts share one feed. Each hit adds a line at the top right, newest on top: "Beta 2 called HIT · Alpha 3" (who called
   it, then whose BB), names in team colours with a thin bar in the shooter's colour. Lines about you say "You" and
   stand out; friendly fire says FRIENDLY and a ricochet RICOCHET, each with a small glyph. Lines fade after about six
   seconds and a new round clears them.
@@ -881,8 +880,8 @@ there maps each symptom to its numbers):
 
 ## Settings and controls
 
-Settings has groups down the left (Graphics, Display, Audio, Controls, Gameplay, Accessibility, Look, Save file) and a
-"Dev settings" box under them that shows the Dev group.
+Settings opens on Display, with groups down the left (Display, Graphics, Gameplay, Looks, Audio, Controls,
+Accessibility, Save file) and a "Dev settings" box under them that shows the Dev group.
 
 - [ ] **Search.** Type "shadow": only matching rows show, with "N settings found". Nonsense: "Nothing matches".
 - [ ] **Notes.** Point at a row (or Tab to it): the side panel says what it does, and in Graphics what it costs.

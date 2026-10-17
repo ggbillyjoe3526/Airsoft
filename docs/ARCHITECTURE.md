@@ -177,6 +177,8 @@ request. Each entry says where the contract lives, what it holds today and what 
     At `BALLISTICS.leaves.stopDepth` it stops there and reports `bbImpact` with `leaves: true`; one that comes out of
     a bush having crossed less is thrown off and slowed and reports `bbLeaves` (presentation's rustle and leaves).
     Bushes come from `WorldQuery.foliage`; a world without it flies BBs as before.
+  - `bbImpact.from` and `bbLeaves.from` (optional, KI2) say where a bounced BB's path began that tick; presentation's
+    grit and leaves fly back towards it. Before a bounce they are unset and the shooter's side stands in.
   - `GameState.propQuiet` is, per noisy prop (`WorldQuery.noisyProps`, by index), the time until which it makes no
     noise (NP1, `sim/propNoise.ts`; grown once to one slot per prop). `propNoise` reports a noisy prop sounding: run
     into (`shot: false`, from its face; bots hear it to the prop's `bumped` range, from the one who hit it) or rung by a
