@@ -54,6 +54,16 @@ What changed in 0.1 Beta 1, from your Dev 6 playtest. Each line points to the se
 - [ ] **Bug fixes.** The Q/E lean eases, a double-tap on the fire selector steps twice, a ricochet's grit flies off
   the wall, edge markers point the way to turn ([Old bugs to recheck](#old-bugs-to-recheck)).
 
+### Your Beta 1 playtest (2026-10-17)
+
+Your first pass (the checklist is `playtest/beta1-checklist.md` in the project's shared files): Settings, the menus,
+the HUD, movement, the figures and their hit areas, Depot and BBs in bushes passed. These became tasks: more compact
+menus and replica panel (UI2), a longer round-end stamp and table (RE1), a faster holstered run, a natural wrist and
+no own body in view (MV2), Woodland's hill roof, grey blocks and middle tree (WL2), the lean step and 10 s read cards
+in the tutorial (TT2), and Neon Heights' doors and interiors (NH2, the Maps Update). Still to play: the bots at each
+difficulty and adaptive difficulty, Woodland Attack / Defend, Neon Heights by Day, the overtime flag, and the hitch and
+[old bug](#old-bugs-to-recheck) rechecks.
+
 ### Only you can do these
 
 - **Laptop baseline.** On the low-spec laptop run `node pipeline/perf-run.mjs --env laptop --preset all --baseline`
