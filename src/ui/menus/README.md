@@ -35,6 +35,9 @@ choices to `src/game.ts`.
   top bar and the key going back too, M95); `summaryScreen.ts` (the match's XP line by line, a level-up line with what
   it unlocked, the level bar, an Extraction haul);
   `resultScreen.ts`.
+- Fitting the window (UX1): `Menus` zooms `.menus` by `menuScale` (`config/menus.ts`; up to 1.5× at 4K), and a page
+  stays pinned under the top bar while its one long part (`.menu-scroll`) scrolls inside, marked by
+  `menuParts.watchScroll`; `css/fit.css` holds those rules and the short-window step.
 - Shared parts: `menuParts.ts` (the small DOM builders every screen uses: buttons, rows, range controls, hint lines)
   and `confirmDialog.ts` (the pop-up that asks before a big or irreversible step, keyboard on Cancel).
 - Pictures: replica, part and colour pictures come from `render/itemPictures.ts` via `menuPictures.ts`; map stills are
@@ -47,4 +50,4 @@ choices to `src/game.ts`.
   `config/menus.ts`, `config/menuArt.ts`.
 - Tests: `menus.test.ts`, `menuRedesign.test.ts`, `teamPick.test.ts`, `choiceCards.test.ts`, `chrome.test.ts`
   (with `menuTestSupport.ts`), `settingsRows.test.ts`, `rulesText.test.ts`, `modeFit.test.ts` (M89: what fits each
-  mode), `summaryHaul.test.ts`.
+  mode), `summaryHaul.test.ts`, `menuFit.test.ts` (UX1: the menus' scale, the scrolling parts, the minimap's room).

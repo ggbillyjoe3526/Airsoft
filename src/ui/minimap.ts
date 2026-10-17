@@ -99,9 +99,13 @@ export class Minimap {
   private readonly fields: (FieldLayer | null)[];
   /** The map's storey heights (M34c), lowest first: empty on a map with one. */
   private readonly storeys: readonly number[];
-  /** The backing canvas's pixels per CSS pixel, and the HUD's scale (style.css --hud-scale), as last laid out. */
+  /**
+   * The backing canvas's pixels per CSS pixel, the HUD's scale (style.css --hud-scale: the caption and the markers) and
+   * the square's own (--minimap-scale, held back in a narrow window, UX1), as last laid out.
+   */
   private pixelRatio = 0;
   private scale = 0;
+  private sizeScale = 0;
   /** Where the minimap's square is on the screen (px from the game's top left), for the markers it hides (audit UI-13). */
   private readonly box = { x: 0, y: 0, size: 0 };
   /** The whole panel (the square, its area tag and its caption), px from the game's top left: kept clear by pinned markers. */
@@ -219,21 +223,23 @@ export class Minimap {
   }
 
   /**
-   * Sizes the canvas for the HUD's scale and the screen's pixel ratio, re-read each time (audit UI-14: once per match
+   * Sizes the canvas for its own scale and the screen's pixel ratio, re-read each time (audit UI-14: once per match
    * left it blurry or oversized after a move to another screen), and notes where its square is.
    */
   private readonly layout = (): void => {
     const scale = Number(this.parent.style.getPropertyValue('--hud-scale')) || 1;
+    const size = Number(this.parent.style.getPropertyValue('--minimap-scale')) || scale;
     const ratio = minimapPixelRatio(globalThis.devicePixelRatio);
-    if (scale !== this.scale || ratio !== this.pixelRatio) {
-      this.scale = scale;
+    this.scale = scale;
+    if (size !== this.sizeScale || ratio !== this.pixelRatio) {
+      this.sizeScale = size;
       this.pixelRatio = ratio;
-      const px = Math.round(MINIMAP.size * scale * ratio);
+      const px = Math.round(MINIMAP.size * size * ratio);
       this.root.width = px;
       this.root.height = px;
       this.check.reset(); // a resized canvas is blank
       // On the container, so the debug panel can move clear of the minimap too (style.css, bug pass).
-      this.parent.style.setProperty('--minimap-size', `${MINIMAP.size * scale}px`);
+      this.parent.style.setProperty('--minimap-size', `${MINIMAP.size * size}px`);
     }
     if (!this.visible) return;
     const box = this.root.getBoundingClientRect();
@@ -257,7 +263,7 @@ export class Minimap {
     const half = MINIMAP.size / 2;
     const rim = half - 3;
     const scale = rim / MINIMAP.viewRadius;
-    const k = this.pixelRatio * this.scale;
+    const k = this.pixelRatio * this.sizeScale;
     ctx.setTransform(k, 0, 0, k, 0, 0);
     ctx.clearRect(0, 0, MINIMAP.size, MINIMAP.size);
 

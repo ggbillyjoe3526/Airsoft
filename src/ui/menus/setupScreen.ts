@@ -158,7 +158,7 @@ export class SetupScreen {
     this.modes.root.classList.add('mode-cards');
     this.match = new MatchPanel(model);
 
-    const main = el('div', 'play-main');
+    const main = el('div', 'play-main menu-scroll');
     const section = (n: string, title: string, body: HTMLElement, extra?: string): HTMLElement => {
       const s = el('section', 'play-section');
       s.append(sectionHead(n, title, extra), body);

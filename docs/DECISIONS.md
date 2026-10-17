@@ -763,8 +763,13 @@ replaces its line; the old one stays findable in the archive or in git.
 - **A hidden tab or a window that loses focus pauses the match (2026-10-04).**
 - **Unbuilt menu items are listed greyed out with a LATER tag (owner, 2026-10-03).** He wants the menus laid out for
   what is coming; the list is data in `config/menus.ts`.
-- **Menus at 4K with 100 % OS scaling stay as they are (owner decision 16, 2026-10-05).** Scaling them from the window
-  height like the HUD is a Beta task.
+- **The menus grow with a tall window as the HUD does (UX1, 2026-10-17; replaces owner decision 16's "as they are").**
+  `menuScale` zooms `.menus` by the window height over 1080, up to 1.5× at 4K, held back so the layout keeps 1500 px of
+  width; 1080p and smaller draw as before. Window-relative heights inside use `--vh`, since the zoom multiplies `vh`.
+- **A menu page is pinned to the window; only its long part scrolls (UX1, 2026-10-17).** The top bar, the page's heading
+  and its main button always show; the Match choices, a Settings group's rows, the Loadout's numbers, the Armory's
+  levels and the Customise lists scroll inside (`.menu-scroll`, a fade at the foot while more lies below). A window
+  under 821 px high draws spacing and controls a step closer. Below 901 px wide only the Match screen stays pinned.
 - **The minimap shows teammates, and the other team only as patches where they were last heard ("approximate, from the
   last noise", owner, 2026-10-04).** A hit call removes that player's patch.
 - **The minimap names the area you stand in, top left on the map (2026-10-13, CL1).** The same names the bots call, so
