@@ -15,6 +15,8 @@ export type TutorialGoal =
   /** Aim down the sight for this long in all (s). */
   | { kind: 'aim'; seconds: number }
   | { kind: 'crouch' }
+  /** Lean out at least `amount` (0..1) to the left and to the right, in either order (TT2). */
+  | { kind: 'lean'; amount: number }
   /** Nothing to do: the step reads for this long (s). */
   | { kind: 'read'; seconds: number }
   /** Change the fire mode (audit POOL-15). */
@@ -42,6 +44,9 @@ export interface TutorialStep {
   /** Said instead of `text` while the ammo counter is off (Settings › HUD, AC1), so the step never points at a count the HUD doesn't show. */
   countHidden?: string;
 }
+
+/** How long every read card stays up (s; TT2, owner 2026-10-17: "read only cards should last 10s"; TT1 had 5 to 8). */
+export const READ_TIME = 10;
 
 /**
  * The steps in order (M80 wording; TT1, owner's 0.1 Dev 6 note 2: shorter and simpler, and the read cards move on
@@ -96,7 +101,7 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
       id: 'optics',
       title: 'Optics',
       text: 'This replica has no sight. Fit a red dot or scope on the Loadout (Esc, then Loadout), then aim with {aim}.',
-      goal: { kind: 'read', seconds: 6 },
+      goal: { kind: 'read', seconds: READ_TIME },
     },
   },
   {
@@ -104,6 +109,12 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
     title: 'Crouch',
     text: 'Hold {crouch} to crouch. You make a smaller target, and low cover hides you.',
     goal: { kind: 'crouch' },
+  },
+  {
+    id: 'lean',
+    title: 'Lean',
+    text: 'Hold {leanLeft} to peek left and {leanRight} to peek right. A quick peek shows little of you round cover.',
+    goal: { kind: 'lean', amount: 0.8 },
   },
   {
     id: 'sprint',
@@ -127,20 +138,20 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
     id: 'hits',
     title: "One hit, you're out",
     text: "One BB hit and you're out: hand up, call your hit, walk off. Bots do the same, and hitting a teammate counts too.",
-    goal: { kind: 'read', seconds: 6 },
+    goal: { kind: 'read', seconds: READ_TIME },
   },
   {
     id: 'scoreboard',
     title: 'Scoreboard',
     text: 'In a match, hold {scoreboard} to see the scoreboard. Greyed-out players have been hit.',
-    goal: { kind: 'read', seconds: 5 },
+    goal: { kind: 'read', seconds: READ_TIME },
     shows: 'scoreboard',
   },
   {
     id: 'orderWheel',
     title: 'Order wheel',
     text: 'In a match, hold {orderWheel}, point at an order and let go. Your bot teammates carry it out.',
-    goal: { kind: 'read', seconds: 6 },
+    goal: { kind: 'read', seconds: READ_TIME },
     shows: 'orderWheel',
   },
   {
@@ -148,7 +159,7 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
     title: 'Winning a match',
     text: 'Knock out the other team to win a round. In Attack / Defend, attackers also win by raising their flag at the pole.',
     levelling: 'Matches give XP; the Armory shows what comes next.',
-    goal: { kind: 'read', seconds: 8 },
+    goal: { kind: 'read', seconds: READ_TIME },
   },
 ];
 
