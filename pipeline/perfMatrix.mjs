@@ -99,11 +99,22 @@ export function baselineFileName(env, run, budgetPreset) {
 /**
  * The budget for a map on a preset and a back end: the preset's lines, then the map's own (`maps.<map>.<preset>`), then
  * the back end's for the preset (`backends.<backend>.presets.<preset>`), then its for the map
- * (`backends.<backend>.maps.<map>.<preset>`); a later line wins.
+ * (`backends.<backend>.maps.<map>.<preset>`), then the environment's for the preset (`envs.<env>.<preset>`, PF3: the
+ * desktop's Ultra frame times at 4K); a later line wins.
  */
-export function budgetFor(budgets, map, preset, backend = 'webgl') {
+export function budgetFor(budgets, map, preset, backend = 'webgl', env = undefined) {
   const own = budgets.backends?.[backend];
-  return { ...(budgets.presets?.[preset] ?? {}), ...(budgets.maps?.[map]?.[preset] ?? {}), ...(own?.presets?.[preset] ?? {}), ...(own?.maps?.[map]?.[preset] ?? {}) };
+  return { ...(budgets.presets?.[preset] ?? {}), ...(budgets.maps?.[map]?.[preset] ?? {}), ...(own?.presets?.[preset] ?? {}), ...(own?.maps?.[map]?.[preset] ?? {}), ...((env && budgets.envs?.[env]?.[preset]) ?? {}) };
+}
+
+/**
+ * Whether an environment's frame times are judged on a preset: `frameTimeGatedEnvs` lists the environment and
+ * `frameTimeGatedPresets.<env>`, where there is one, lists the preset (PF3: the desktop on Ultra only).
+ */
+export function frameTimesGatedFor(budgets, env, preset) {
+  if (!(budgets.frameTimeGatedEnvs ?? []).includes(env)) return false;
+  const only = budgets.frameTimeGatedPresets?.[env];
+  return !only || only.includes(preset);
 }
 
 /**

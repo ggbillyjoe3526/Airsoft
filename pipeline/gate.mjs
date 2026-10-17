@@ -35,7 +35,7 @@ import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'no
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { allowedFile, findTaskBlock, parseTaskList, qaAllowedFile, taskIdsFromTitle, tasksVersions } from './scope.mjs';
-import { baselineFileName, baselineLag, baselineLagWarning, budgetFor, judgeRun, runFileName, runName, selectPerfRuns } from './perfMatrix.mjs';
+import { baselineFileName, baselineLag, baselineLagWarning, budgetFor, frameTimesGatedFor, judgeRun, runFileName, runName, selectPerfRuns } from './perfMatrix.mjs';
 import { smokeFailures } from './smokeReport.mjs';
 import { metricsRow } from './records.mjs';
 import { MAX_FAILURES, buildFailures, failureLines, failuresSummary, vitestFailures } from './failures.mjs';
@@ -236,6 +236,7 @@ else if (!perfRequired) {
   record('perf', { pass: null, reason: 'required but the harness (pipeline/perf-run.mjs) is not installed yet' });
 } else {
   const started = Date.now();
+  // The environment's frame times count somewhere (frameTimesGatedFor says on which presets).
   const frameTimesGated = (budgets.frameTimeGatedEnvs ?? []).includes(options.env);
   const runs = [];
   const warnings = [];
@@ -252,7 +253,7 @@ else if (!perfRequired) {
       const baselineName = baselineFileName(options.env, combo, budgets.budgetPreset);
       const baselinePath = join(ROOT, 'pipeline', 'baseline', baselineName);
       const baseline = existsSync(baselinePath) ? JSON.parse(readFileSync(baselinePath, 'utf8')) : null;
-      const { over, worse, note: baselineNote } = judgeRun({ run: combo, metrics: result.metrics, budget: budgetFor(budgets, combo.map, combo.preset, combo.backend), baseline, baselineName, frameTimesGated });
+      const { over, worse, note: baselineNote } = judgeRun({ run: combo, metrics: result.metrics, budget: budgetFor(budgets, combo.map, combo.preset, combo.backend, options.env), baseline, baselineName, frameTimesGated: frameTimesGatedFor(budgets, options.env, combo.preset) });
       if (baseline) {
         const warning = baselineLagWarning(baselineName, baseline.head, baselineLag(baseline.head, (h) => git('rev-list', '--count', `${h}..HEAD`)), budgets.baselineMaxLag ?? 20);
         if (warning) warnings.push(warning);

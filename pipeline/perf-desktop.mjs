@@ -59,7 +59,8 @@ DESKTOP_SUITE.forEach((run, i) => {
   }
 });
 
-const summary = summaryMarkdown(rows, started.toISOString());
+const budgets = JSON.parse(readFileSync(join(ROOT, 'pipeline', 'perf-budget.json'), 'utf8'));
+const summary = summaryMarkdown(rows, started.toISOString(), budgets);
 mkdirSync(OUT, { recursive: true });
 writeFileSync(join(OUT, 'perf-desktop-summary.md'), summary);
 console.log(`\n${summary}\nperf-desktop: written to pipeline/out/perf-desktop-summary.md; send it with pipeline/baseline/desktop*.json`);

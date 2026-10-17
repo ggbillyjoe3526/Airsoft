@@ -308,8 +308,9 @@ target is the 240 Hz cap's own period, so a capped run can't show headroom. It w
 (the result's `head` reads `unknown`; the thread that commits the files sets it). It prints and writes
 `pipeline/out/perf-desktop-summary.md`: FPS, 1 % low, p50, p95, p99 and worst per run, whether p95 holds 240 Hz, the
 GPU name, and two hints: GPU- or CPU-bound from 4K against 1080p, and frames held by vsync if the switches didn't
-take. Its frame times are reported, not judged, until PF3 sets the line. The target is set (owner, 2026-10-16):
-maxed-out settings aim at 4K at 240 Hz, about 4.2 ms a frame.
+take. Ultra's frame times at 4K are judged against `envs.desktop.ultra` in `perf-budget.json` (the Budget column; PF3,
+owner 2026-10-17): the line is the baseline of 2026-10-17 (p95 6.5 ms, p99 9 ms), so Ultra can't get slower. The aim
+stays 4K at 240 Hz, about 4.2 ms a frame (owner, 2026-10-16), which that baseline misses on every map (KNOWN_ISSUES).
 
 ## `balance.mjs`: the bot balance report
 

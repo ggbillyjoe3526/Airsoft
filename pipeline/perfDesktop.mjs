@@ -11,7 +11,9 @@ export const NEEDED_PACKAGES = ['vite', 'vitest', '@playwright/test'];
 export const DESKTOP_4K = '3840x2160';
 /** The same run at a quarter of the pixels: how much faster it goes says whether the GPU or the CPU sets the pace. */
 export const DESKTOP_HD = '1920x1080';
-/** The maxed-out target's refresh rate (owner, 2026-10-16). */
+import { budgetFor, frameTimesGatedFor, judgeRun } from './perfMatrix.mjs';
+
+/** The maxed-out target's refresh rate (owner, 2026-10-16); its line is perf-budget.json `envs.desktop.ultra` (PF3). */
 export const TARGET_HZ = 240;
 
 /**
@@ -94,10 +96,22 @@ export function failureLine(stderr) {
 const fixed = (v, digits = 1) => (typeof v === 'number' ? v.toFixed(digits) : '-');
 
 /**
- * The summary (markdown) the owner sends back: one row per run, the hints under it. `rows`: `{ run, preset, result,
- * failure? }` with `result` perf-run.mjs's file (null when the run wrote none) and `failure` its error then.
+ * A run's verdict against perf-budget.json's lines for the desktop (`budgets`): `ok`, or each line it is over. Frame
+ * times count at 4K on the presets the desktop's are judged on (Ultra, PF3); the 1080p run is there for the hint.
  */
-export function summaryMarkdown(rows, when) {
+export function budgetVerdict(budgets, run, preset, result) {
+  const budget = budgetFor(budgets, run.map, preset, result.backend, 'desktop');
+  const frameTimesGated = run.viewport === DESKTOP_4K && frameTimesGatedFor(budgets, 'desktop', preset);
+  const { over } = judgeRun({ run: { ...run, preset }, metrics: result.metrics, budget, baseline: null, baselineName: '', frameTimesGated });
+  return over.length ? over.map((o) => `${o.metric} ${o.now} > ${o.limit}`).join(', ') : 'ok';
+}
+
+/**
+ * The summary (markdown) the owner sends back: one row per run, the hints under it. `rows`: `{ run, preset, result,
+ * failure? }` with `result` perf-run.mjs's file (null when the run wrote none) and `failure` its error then; `budgets`
+ * is perf-budget.json.
+ */
+export function summaryMarkdown(rows, when, budgets) {
   const targetMs = 1000 / TARGET_HZ;
   const gpu = rows.find((r) => r.result?.gpu)?.result.gpu ?? 'unknown';
   const head = rows.find((r) => r.result?.head)?.result.head ?? 'unknown';
@@ -106,7 +120,7 @@ export function summaryMarkdown(rows, when) {
     '',
     `${when} · GPU: ${gpu} · head ${String(head).slice(0, 7)} · target ${TARGET_HZ} Hz (${targetMs.toFixed(2)} ms)`,
     '',
-    '| Map | Mode | Renderer | Size | Preset | FPS | 1 % low FPS | p50 ms | p95 ms | p99 ms | Worst ms | p95 holds 240 Hz | Sim ticks/s | Figures ms | Draw calls | Errors |',
+    '| Map | Mode | Renderer | Size | Preset | FPS | 1 % low FPS | p50 ms | p95 ms | p99 ms | Worst ms | Budget | Sim ticks/s | Figures ms | Draw calls | Errors |',
     '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|',
   ];
   const held = new Set();
@@ -122,7 +136,7 @@ export function summaryMarkdown(rows, when) {
     const hz = vsyncHeld(m.p50Ms);
     if (hz !== null) held.add(hz);
     lines.push(
-      `| ${run.map} | ${run.mode} | ${result.backend} | ${size} | ${preset} | ${fixed(m.fps, 0)} | ${fixed(m.onePercentLowFps, 0)} | ${fixed(m.p50Ms, 2)} | ${fixed(m.p95Ms, 2)} | ${fixed(m.p99Ms, 2)} | ${fixed(m.worstMs)} | ${m.p95Ms <= targetMs ? 'yes' : 'no'} | ${fixed(m.simTicksPerSecond, 0)} | ${fixed(m.figureMs, 2)} | ${fixed(m.drawCalls, 0)} | ${result.errors.length} |`,
+      `| ${run.map} | ${run.mode} | ${result.backend} | ${size} | ${preset} | ${fixed(m.fps, 0)} | ${fixed(m.onePercentLowFps, 0)} | ${fixed(m.p50Ms, 2)} | ${fixed(m.p95Ms, 2)} | ${fixed(m.p99Ms, 2)} | ${fixed(m.worstMs)} | ${budgetVerdict(budgets, run, preset, result)} | ${fixed(m.simTicksPerSecond, 0)} | ${fixed(m.figureMs, 2)} | ${fixed(m.drawCalls, 0)} | ${result.errors.length} |`,
     );
   }
   const depot = (viewport) => rows.find((r) => r.run.map === 'depot' && r.run.mode === 'elimination' && r.run.backend === 'webgpu' && r.run.viewport === viewport && r.preset === 'ultra')?.result?.metrics;

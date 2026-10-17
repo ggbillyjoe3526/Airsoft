@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { baselineFileName } from './perfMatrix.mjs';
-import { boundHint, DESKTOP_4K, DESKTOP_HD, DESKTOP_SUITE, FAILURE_CHARS, failureLine, NEEDED_PACKAGES, runPresets, suiteArgs, summaryMarkdown, UNCAPPED_ARGS, vsyncHeld } from './perfDesktop.mjs';
+import { boundHint, budgetVerdict, DESKTOP_4K, DESKTOP_HD, DESKTOP_SUITE, FAILURE_CHARS, failureLine, NEEDED_PACKAGES, runPresets, suiteArgs, summaryMarkdown, UNCAPPED_ARGS, vsyncHeld } from './perfDesktop.mjs';
 
 const budgets = JSON.parse(readFileSync('pipeline/perf-budget.json', 'utf8'));
 const metrics = (fps, p50Ms, extra = {}) => ({ fps, onePercentLowFps: fps * 0.7, p50Ms, p95Ms: p50Ms * 1.2, p99Ms: p50Ms * 1.5, worstMs: p50Ms * 3, simTicksPerSecond: 60, figureMs: 0.4, drawCalls: 80, ...extra });
@@ -61,11 +61,13 @@ describe('the summary\'s hints', () => {
       { run: DESKTOP_SUITE[3], preset: 'ultra', result: null },
       { run: hd, preset: 'ultra', result: result('webgpu', metrics(700, 1.4)) },
     ];
-    const md = summaryMarkdown(rows, '2026-10-17T07:00:00Z');
+    const md = summaryMarkdown(rows, '2026-10-17T07:00:00Z', budgets);
     expect(md).toContain('GPU: ANGLE (NVIDIA GeForce RTX 5090)');
     expect(md).toContain('head abcdef1');
-    expect(md).toMatch(/\| depot \| elimination \| webgpu \| 4K \| ultra \| 300 \| 210 \| 3\.20 \| 3\.84 \| .* \| yes \|/);
-    expect(md).toMatch(/\| woodland \| elimination \| webgpu \| 4K \| ultra \| 150 \| .* \| no \|/);
+    expect(md).toMatch(/\| depot \| elimination \| webgpu \| 4K \| ultra \| 300 \| 210 \| 3\.20 \| 3\.84 \| [\d.]+ \| [\d.]+ \| ok \|/);
+    expect(md).toMatch(/\| woodland \| elimination \| webgpu \| 4K \| ultra \| 150 \| .* \| p95Ms 7\.8 > 6\.5, p99Ms 9\.75 > 9 \|/);
+    // At 1080p the frame times aren't judged: the line is 4K's.
+    expect(md).toMatch(/\| depot \| elimination \| webgpu \| 1920x1080 \| ultra \| 700 \| .* \| ok \|/);
     expect(md).toContain('| woodland | extraction | webgpu | 4K | ultra | no result');
     expect(md).toContain('- GPU-bound at 4K: 1080p runs 2.33× as fast as 4K');
     expect(md).not.toContain('uncapped switches');
@@ -76,7 +78,7 @@ describe('the summary\'s hints', () => {
       { run: depot4k, preset: 'ultra', result: result('webgpu', metrics(240, 1000 / 240)) },
       { run: hd, preset: 'ultra', result: result('webgpu', metrics(240, 1000 / 240)) },
     ];
-    const md = summaryMarkdown(rows, 'now');
+    const md = summaryMarkdown(rows, 'now', budgets);
     expect(md).toContain('sat on a 240 Hz screen');
     expect(md).not.toMatch(/bound/);
   });
@@ -99,7 +101,7 @@ describe('a failed run\'s row', () => {
   });
 
   it('shows the error in the summary', () => {
-    const md = summaryMarkdown([{ run: depot4k, preset: 'low', result: null, failure: 'Error: no adapter' }], 'now');
+    const md = summaryMarkdown([{ run: depot4k, preset: 'low', result: null, failure: 'Error: no adapter' }], 'now', budgets);
     expect(md).toContain('| depot | elimination | webgpu | 4K | low | no result: Error: no adapter |');
   });
 });
@@ -120,8 +122,23 @@ describe('a match that ends inside the window', () => {
       { run: DESKTOP_SUITE[5], preset: 'ultra', result: result('webgpu', metrics(180, 5.5, { matchEnded: true, seconds: 41.2 })) },
       { run: DESKTOP_SUITE[4], preset: 'ultra', result: result('webgpu', metrics(198, 5, { matchEnded: false, seconds: 60 })) },
     ];
-    const md = summaryMarkdown(rows, 'now');
+    const md = summaryMarkdown(rows, 'now', budgets);
     expect(md).toContain('- The match ended inside the window, which then stopped at its last tick: neon extraction ultra (41 s).');
     expect(md).not.toContain('neon elimination ultra (');
+  });
+});
+
+describe('the desktop\'s budget column (PF3)', () => {
+  it('judges Ultra\'s frame times at 4K against envs.desktop.ultra, and not at 1080p or on High', () => {
+    expect(budgets.envs.desktop.ultra).toEqual({ p95Ms: 6.5, p99Ms: 9 });
+    const slow = result('webgpu', metrics(140, 6, { p95Ms: 7.1, p99Ms: 9.4 }));
+    expect(budgetVerdict(budgets, depot4k, 'ultra', slow)).toBe('p95Ms 7.1 > 6.5, p99Ms 9.4 > 9');
+    expect(budgetVerdict(budgets, hd, 'ultra', slow)).toBe('ok');
+    expect(budgetVerdict(budgets, depot4k, 'high', slow)).toBe('ok');
+    expect(budgetVerdict(budgets, depot4k, 'ultra', result('webgpu', metrics(210, 4.7, { p95Ms: 5.6, p99Ms: 6.4 })))).toBe('ok');
+  });
+
+  it('still judges the other lines on every preset', () => {
+    expect(budgetVerdict(budgets, depot4k, 'low', result('webgpu', metrics(900, 1, { drawCalls: 140 })))).toBe('drawCalls 140 > 100');
   });
 });
