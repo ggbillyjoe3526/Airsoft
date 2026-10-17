@@ -278,7 +278,8 @@ export type RawInputStatus = 'active' | 'unavailable' | 'off' | 'unknown';
 /** The line under Settings → Controls → Raw mouse input saying which the player has (audit UI-20). */
 export const RAW_INPUT_STATUS: Readonly<Record<RawInputStatus, string>> = {
   active: 'Raw input is active.',
-  unavailable: 'This browser gives no raw input: the system’s acceleration applies.',
+  // Firefox never gives it (a known limit, IN1): the line says so as soon as Settings opens there.
+  unavailable: 'This browser gives no raw input (Firefox never does): your system’s pointer acceleration applies.',
   off: 'Off: the system’s pointer speed and acceleration apply.',
   unknown: 'Takes effect the next time the game takes the mouse; this line then says whether the browser gave it.',
 };

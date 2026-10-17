@@ -217,6 +217,9 @@ After 0.1.0 the game grows through themed updates, each a mini expansion (owner,
   in what order, is the owner's pick.
 - **Neon Heights goes public** with its new look, once its open map findings are fixed (overlapping blocks, cases that
   open through walls, the east end winning first fights at night).
+- **Neon Heights' doors and interiors** (owner, 2026-10-17, Beta 1 playtest; NH2 in `docs/TASKS.md`). Doors players
+  and bots open and close, so an open door shows where someone went and a closed one may hide an enemy; furnished
+  shops, offices, storage rooms, cafes and a hotel. Built with its upper floors (NH1).
 - **Weather** (from 0.1 Dev 6). A general weather system, not only rain and fog, picked like Day / Night: rain masks
   footsteps and drops BBs a little sooner; fog shortens how far you can see.
 - **Day and Night on every map** (maybe). The Day / Night switch (M34d) for every map, not only those built for both.

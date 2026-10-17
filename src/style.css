@@ -770,7 +770,7 @@ kbd {
   display: block;
 }
 
-/* Extraction's exit markers (M43): the flag marker's frame with a door icon in the exit's green. */
+/* Extraction's exit markers (M43): the flag marker's frame with a door icon in the exit's colour (its colour set's, AX1). */
 .flag-marker.exit-marker .flag-marker-icon {
   width: calc(12px * var(--hud-scale, 1));
   height: calc(16px * var(--hud-scale, 1));
