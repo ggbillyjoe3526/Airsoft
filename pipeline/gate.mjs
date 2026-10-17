@@ -5,18 +5,20 @@
  * attempt row for the task's record (pipeline/records.mjs). A failed gate means the task goes back to the worker with
  * this report; the critic runs only on a report where every gate passed.
  *
- *   node pipeline/gate.mjs [--task M27[,M28]] [--quick] [--no-smoke] [--perf] [--env container|laptop|ci] [--base origin/main] [--ci]
+ *   node pipeline/gate.mjs [--task M27[,M28]] [--quick] [--no-smoke] [--env container|laptop] [--base origin/main] [--ci]
  *                          [--tests auto|all|fast|slow] [--shard k/n] [--only tests|smoke]
  *
+ * Each option is in pipeline/README.md › `gate.mjs` › Options.
+ *
  * Gates: build (tsc + vite build with the chunk budgets), tests (vitest), smoke (playwright), perf (one perf-run.mjs
- * run per map, mode and preset of perf-budget.json's matrix that the diff reaches, pipeline/perfMatrix.mjs; --perf runs
- * the whole matrix), scope (the diff stays inside the task's `touches`, QA commits touch only tests) and changelog
+ * run per map, mode and preset of perf-budget.json's matrix that the diff reaches, pipeline/perfMatrix.mjs; on the laptop,
+ * `--env laptop`, the whole matrix), scope (the diff stays inside the task's `touches`, QA commits touch only tests) and changelog
  * (CHANGELOG.md names the task under Unreleased), and on a pull request on CI `review` (pipeline/review.mjs: unless the
  * change is docs only or a draft, its description's Review line says the critic, QA and performance agents passed).
  * --quick runs build and tests only, and builds without the .br/.gz copies (AIRSOFT_PRECOMPRESS=0, audit CORE-11).
  * Every run writes the failures-only summary, pipeline/out/failures.md (pipeline/failures.mjs: each failure's test,
  * error, file and line, the same lines the gate prints as it goes), and every run but CI's the review packet the critic
- * and QA read first, pipeline/out/review-packet.md (pipeline/packet.mjs; token-efficiency plan, items 15 and 19).
+ * and QA read first, pipeline/out/review-packet.md (pipeline/packet.mjs).
  * --ci is what the workflow runs: build, tests, smoke (no perf: a runner has no baseline); without --task it takes
  * the task ids from the pull request's title in GATE_PR_TITLE (audit CORE-08).
  * With no task, scope and changelog are skipped. Exit code 1 when any gate fails.
@@ -25,7 +27,7 @@
  * the tests gate alone (no build, smoke, perf, scope or changelog). `--only smoke --shard k/n` runs one share of the
  * browser smoke test (Playwright's own sharding, by file; its servers build what they need), so the build and unit
  * tests run beside it with `--no-smoke` (2026-10-12). Off CI the default, `--tests auto`, runs the slow
- * project only when the diff reaches one of its files (pipeline/testReach.mjs, token plan item 21); `--tests all` runs
+ * project only when the diff reaches one of its files (pipeline/testReach.mjs); `--tests all` runs
  * both regardless. CI always runs every test.
  */
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -67,12 +69,11 @@ const options = {
   quick: flag('--quick'),
   ci: flag('--ci'),
   smoke: !flag('--no-smoke') && !flag('--quick'),
-  perf: flag('--perf'),
   env: value('--env', flag('--ci') ? 'ci' : 'container'),
   base: value('--base', 'origin/main'),
   /**
    * Which vitest project(s) the tests gate runs, and which share of their files (CI's jobs, audit CORE-04). `auto`: the
-   * fast project, plus the slow one when the diff reaches it (token plan item 21).
+   * fast project, plus the slow one when the diff reaches it.
    */
   tests: value('--tests', testsDefault),
   /** One share of the tests gate's files (vitest) and of the smoke gate's (Playwright), whichever of them run. */
@@ -103,9 +104,9 @@ try {
 const changed = new Set(
   [...git('diff', '--name-only', mergeBase).split('\n'), ...git('ls-files', '--others', '--exclude-standard').split('\n')].filter(Boolean),
 );
-/** The perf runs this diff needs (perf-budget.json › matrix, perfMatrix.mjs): --perf runs them all. */
+/** The perf runs this diff needs (perf-budget.json › matrix, perfMatrix.mjs); on the laptop, every one. */
 const budgets = JSON.parse(readFileSync(join(ROOT, 'pipeline', 'perf-budget.json'), 'utf8'));
-const perfRuns = selectPerfRuns(changed, budgets.matrix ?? [], { force: options.perf });
+const perfRuns = selectPerfRuns(changed, budgets.matrix ?? [], { force: options.env === 'laptop' });
 const perfRequired = perfRuns.length > 0;
 
 const report = {

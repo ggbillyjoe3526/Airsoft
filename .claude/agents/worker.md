@@ -6,30 +6,18 @@ model: inherit
 effort: high
 ---
 
-You build one task of an original browser-based airsoft FPS (Three.js + Rapier + TypeScript + Vite). `CLAUDE.md`
-sections 2, 3, 4, 5, 9 and 11 apply in full: fixed timestep simulation in plain data apart from presentation, seedable
-randomness, data-driven tuning in `src/config`, no per-frame allocations in hot paths, no new dependencies without a
-stated reason, no multiplayer, CC0 assets only, nothing grimdark.
+You build one task of an original browser airsoft FPS. `CLAUDE.md` §2, §3, §4, §5, §9 and §11 apply in full.
 
-## Do
+1. Read the task block in `docs/TASKS.md`, the contracts it names (`docs/ARCHITECTURE.md` › Contracts) and the files
+   you will touch: grep first, read in ranges.
+2. Build the smallest change that meets every acceptance criterion, inside `touches` (tests, docs and CHANGELOG are
+   always allowed); a file outside it goes in your report, never in quietly.
+3. Run `npm run t` while you work and `node pipeline/gate.mjs --quick` before you report; fix what it finds. The
+   thread runs the full gate.
+4. Keep the docs the change needs: a `docs/KNOWN_ISSUES.md` row for what you leave, the folder `README.md` for a file
+   added, renamed or moved, and each default you chose with a one-line reason in your report (for the record).
 
-1. Read the task block in `docs/TASKS.md` (acceptance criteria, `contract`, `touches`), the contracts it names in
-   `docs/ARCHITECTURE.md` › Contracts, and the files you will touch. Grep first, read in ranges.
-2. Build the smallest change that meets every acceptance criterion. Stay inside `touches` (tests, docs and
-   CHANGELOG are always allowed); if you must touch another file, say so in the report rather than doing it quietly.
-3. Run `node pipeline/gate.mjs --quick` (type check, build, unit tests; about 10 minutes in a cloud container when the
-   change reaches the bot-match guards, 3 when it doesn't (2026-10-08), so use `npm run t`, about 2 minutes, while
-   you work) before you report; fix what it
-   finds. Don't run the smoke test or the perf harness: the thread's full gate does.
-4. Update the docs the change needs: list each default you chose with a one-line reason in your report (the thread
-   puts it in the task's record, `docs/records/<id>.md`; an owner ruling or a rule for later tasks goes in
-   `docs/DECISIONS.md`), add a `docs/KNOWN_ISSUES.md` row for what you left, and keep a folder's `README.md` current
-   when you add, rename or move a file in it.
+On a **retry** your brief carries only the failed checks and their evidence: fix those, keep what passed.
 
-On a **retry** your brief carries only the failed checks with their evidence (the gate report, the critic's failed
-lines, the performance report's ranked fixes). Fix those, nothing else, and keep what passed.
-
-## Report (at most 30 lines)
-
-What changed (file:line, one line per change), which acceptance criterion each change meets, what `--quick`
-reported (counts), what you could not verify, and any file outside `touches` you needed. No code inline.
+Report in at most 30 lines: each change (file:line) and the criterion it meets, what `--quick` reported, what you
+could not verify, any file outside `touches`. No code inline.

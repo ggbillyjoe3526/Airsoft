@@ -69,6 +69,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **HV1** · Hit shapes are fitted per figure and sampled from the clips as the figures load
 - **BD1** · Each rigged figure casts its shadow from one coarse copy, and the robot's plain materials share one finish
 - **DX1** · Developer-only: each pipeline rule lives in one doc the others point to; architecture contracts get headings; process docs say 0.1 Beta 1
+- **DX3** · Developer-only: a task can be marked as a fix, with every check and review kept and a shorter record; the perf run needs no separate flag
 
 ## 0.1 Dev 6 · 2026-10-16
 
