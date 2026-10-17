@@ -67,8 +67,8 @@ const OPPONENT_STARTS: RunPlan['opponentStarts'] = [
 /**
  * Case spots (plan, section 6: the cabin and the Knoll fort are the natural locker spots): the marshal's locker in the
  * cabin's west room or the fort's north-east corner, field cases in the cabin's east room, the fort's south-west corner,
- * by the woodpile, a big boulder and the boulder on the track's climb, and ammo cans by the field's cover along the
- * lanes. Fifteen spots for a run's ten cases at most, so a run never has them all. Yaw is the case's front, as a spawn's
+ * by the woodpile, a fallen trunk and the log pile on the track's climb, and ammo cans by the field's cover along the
+ * lanes. Fourteen spots (WL2 took the lone oak's) for a run's ten cases at most, so a run never has them all. Yaw is the case's front, as a spawn's
  * facing: its back to the wall or cover beside it.
  */
 const { locker: LOCKER, room: ROOM, lane: LANE } = SPOT_KINDS;
@@ -79,15 +79,14 @@ const CASE_SPOTS: RunPlan['cases'] = [
   [69.3, 0, 25.3, WEST, ROOM], // the cabin's east room
   [95.8, 0, 41.3, EAST, ROOM], // the fort's south-west corner
   [43.5, 0, 63.6, SOUTH, ROOM], // the woodpile on the forest track
-  [47, 0, 28.9, SOUTH, ROOM], // the big boulder above the creek
-  [104.5, 0, 34.9, SOUTH, ROOM], // the big boulder at the top of the sunken track
+  [47, 0, 29.45, SOUTH, ROOM], // the fallen trunk above the creek (a big boulder until WL2)
+  [104.5, 0, 34.9, SOUTH, ROOM], // the log pile at the top of the sunken track (a big boulder until WL2)
   [29, 0, 26.4, NORTH, LANE], // the log pile above the creek
   [91.7, 0, 24.2, SOUTH, LANE], // the log pile by the track
-  [80, 0, 38.6, NORTH, LANE], // the big boulder on the meadow's south side
-  [60, 0, 54.6, NORTH, LANE], // the big boulder by the Pine Belt
-  [40, 0, 51.6, NORTH, LANE], // the big boulder on the meadow's west side
+  [80, 0, 38.05, NORTH, LANE], // the fallen trunk on the meadow's south side (WL2, as the four below)
+  [60, 0, 54.05, NORTH, LANE], // the fallen trunk by the Pine Belt
+  [40, 0, 51.05, NORTH, LANE], // the fallen trunk on the meadow's west side
   [42.5, 0, 38.5, SOUTH, LANE], // the fallen tree on the meadow
-  [55, 0, 42.3, SOUTH, LANE], // the lone oak
   [73.5, 0, 59.5, NORTH, LANE], // the fallen tree under the Pine Belt
 ];
 

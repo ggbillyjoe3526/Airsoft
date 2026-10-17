@@ -17,6 +17,14 @@ function distinctBlocks(): MapBlock[] {
     const key = `${b.kind} ${b.size.x} ${b.size.y} ${b.size.z} ${(b.center.y - b.size.y / 2).toFixed(2)}`;
     if (!seen.has(key)) seen.set(key, b);
   }
+  // WL2 took Woodland's boulders out (owner); the kind stays in the engine, so its shape is still checked at the two
+  // sizes the map had (crouch and full cover).
+  for (const [w, h, d] of [
+    [1.6, 1.2, 1.4],
+    [2.4, 2.4, 2],
+  ] as const) {
+    seen.set(`boulder ${w} ${h} ${d}`, { kind: 'boulder', center: { x: 0, y: h / 2 - 0.1, z: 0 }, size: { x: w, y: h, z: d } });
+  }
   return [...seen.values()];
 }
 
@@ -73,7 +81,7 @@ function farthest(points: readonly THREE.Vector3[], tris: readonly THREE.Triangl
 describe('the woods’ shapes (M33i, owner rule: what you see is what stops you, to within 8 cm)', () => {
   const blocks = distinctBlocks();
 
-  it('covers trees, logs and boulders on Woodland', () => {
+  it('covers trees and logs on Woodland, and boulders at the sizes it had until WL2', () => {
     expect(new Set(blocks.map((b) => b.kind))).toEqual(new Set(['tree', 'log', 'boulder']));
   });
 

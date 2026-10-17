@@ -268,23 +268,26 @@ const PINNED = {
   // M102: both re-pinned for the cabin's west window broken down to a low wall to vault (its sill lower, its lintel gone),
   // and for a Knoll log turned across the slope (fewer courses of bark; the leaf drifts and moss around it fall anew).
   // MS1: bark for the cabin's walls (3 m, on one level), canopy and foliage for the fuller crowns and smaller, lobed
-  // bushes, and the cabin's roof, Woodland's one finished block (cladding, the city's engine feature, M34f).
+  // bushes, and the cabin's roof, Woodland's one finished block (cladding, the city's engine feature, M34f). WL2: both
+  // re-pinned for the fort hut's roof on taller walls (cladding), the fort's lower outer walls, the lone oak gone, and
+  // every boulder taken out for log piles and fallen trunks (bark, stone: the pebbles and fire rings are what's left of
+  // it; canopy; foliage: the bushes fill the boulders' old spots in the same number).
   woodlandDetail: [
-    "map-bark v25165 i59040 850eef8c/57f6a5bb/ffb31201",
-    "map-canopy v32628 i0 55f8e07d/811c9dc5/c54b6676",
-    "map-cladding v72 i96 6681214d/1d145e1d/92422e4d",
-    "map-foliage v16800 i0 2d3ea6ce/811c9dc5/5d0ab568",
+    "map-bark v27048 i63060 2fd9cd43/e339154e/9cc2c2f7",
+    "map-canopy v31428 i0 bd13720f/811c9dc5/c8382a34",
+    "map-cladding v144 i192 9218a64d/ad29be65/757be29d",
+    "map-foliage v16800 i0 819fd41e/811c9dc5/5d0ab568",
     "map-planks v6500 i12600 27873f91/9f349b8d/5691af2a",
-    "map-stone v12744 i13500 b79b51fc/dd536c62/0baf4c4f",
+    "map-stone v4590 i4590 4b0c4698/4df851f7/3ecb5b8f",
     "map-terrain v9801 i57600 4e80f9d2/006bce1d/4298d710",
   ],
   woodlandPlain: [
-    "map-bark v17549 i44760 f0c0dc80/20ad07f5/d0fb2c70",
-    "map-canopy v32628 i0 55f8e07d/811c9dc5/c54b6676",
-    "map-cladding v36 i48 e46da959/ff8bb6b9/81074131",
-    "map-foliage v16800 i0 2d3ea6ce/811c9dc5/5d0ab568",
+    "map-bark v18984 i47940 aabad60f/36629624/c94b5edf",
+    "map-canopy v31428 i0 bd13720f/811c9dc5/c8382a34",
+    "map-cladding v72 i96 d7488e59/17877439/521c38c1",
+    "map-foliage v16800 i0 819fd41e/811c9dc5/5d0ab568",
     "map-planks v1600 i3000 b1e0a709/eef7627d/cbf74e3d",
-    "map-stone v11880 i11880 be9ecda0/c94609ce/01695e44",
+    "map-stone v4590 i4590 4b0c4698/4df851f7/3ecb5b8f",
     "map-terrain v9801 i57600 4e80f9d2/006bce1d/4298d710",
   ],
 } as const;

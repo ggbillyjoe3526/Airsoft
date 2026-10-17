@@ -93,7 +93,8 @@ describe('AC1: every tree, log and boulder on Woodland, not one per size (what y
     const count = (k: string) => natureBlocks.filter((b) => b.kind === k).length;
     expect(count('tree')).toBeGreaterThan(100);
     expect(count('log')).toBeGreaterThan(20);
-    expect(count('boulder')).toBeGreaterThan(10);
+    // WL2 took Woodland's boulders out (owner); natureShapes.test.ts still draws one of each size.
+    expect(count('boulder')).toBe(0);
   });
 
   it('draws every vertex of every block inside that block’s box', () => {

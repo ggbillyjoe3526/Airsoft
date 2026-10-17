@@ -56,6 +56,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **MV2** · The holstered run is a little faster after the Beta 1 playtest, 5.4 m/s where MV1 first set 5.0; the sprint stays at 6.3 m/s
 - **MV2** · The firing hand on the rifle and both pistols holds the grip more naturally: the wrist sits low behind the grip, bent slightly up
 - **MV2** · Your own body is never drawn in first person; looking down, crouched or vaulting you see the ground, not your legs
+- **WL2** · Woodland: no boulders or middle oak; approach cover is log piles and crouch-high logs; fort walls 1.5 m; fort hut 3 m, tin roof
 
 ### Fixed
 - **MV1** · The first switch to your other replica in a match no longer stutters; every carried replica is ready before the round

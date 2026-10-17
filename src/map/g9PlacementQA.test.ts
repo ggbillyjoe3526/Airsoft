@@ -370,12 +370,13 @@ describe('G9 QA: the maps are exactly what main shipped, and dressing code write
   // broke a wall down to a low wall to vault on each (Depot's office, Woodland's cabin, the Capsules' front), and
   // turned a Knoll log across the slope (Woodland). Neon Heights' re-pinned by BP5, which ended the Plaza landing where
   // its stair starts. Woodland's and Depot's re-pinned by MS1: the cabin's roof, its 3 m walls on one level and its two
-  // lanterns, smaller bushes, and Depot's skyline. The named areas (CL1) and the overtime flag's spot (OT1) are left
+  // lanterns, smaller bushes, and Depot's skyline. Woodland's re-pinned by WL2: the fort hut's roof, the fort's lower
+  // walls, the lone oak and every boulder gone (log piles and fallen trunks in their place), the bushes laid anew. The named areas (CL1) and the overtime flag's spot (OT1) are left
   // out: they name or mark the field, they don't change it.
   it('Woodland, Neon Heights and Depot have the data they had on main (blocks, lanes, spawns, terrain, bushes, extraction)', () => {
-    expect(fingerprint(WOODLAND, ['dressing', 'areas', 'overtimeFlag'])).toBe('03c1b7df');
+    expect(fingerprint(WOODLAND, ['dressing', 'areas', 'overtimeFlag'])).toBe('9f92e80e');
     expect(fingerprint(NEON_HEIGHTS, ['dressing', 'areas', 'overtimeFlag'])).toBe('77cc54d5');
-    expect(fingerprint(WOODLAND.blocks)).toBe('582b9012');
+    expect(fingerprint(WOODLAND.blocks)).toBe('42e1ac69');
     expect(fingerprint(NEON_HEIGHTS.blocks)).toBe('dff1039c');
     // Depot's dressing too: "Depot draws exactly as it does on main".
     expect(fingerprint(DEPOT, ['areas', 'overtimeFlag'])).toBe('a89137e4');
