@@ -10,6 +10,7 @@ import type { RenderBackend } from '../config/renderBackend';
 import { PostHost } from './post/postHost';
 import type { PostSetup } from './post/postStack';
 import { handOverRenderer, releaseGpuResources, Renderer, toneMappingOf, verticalFovFor, warmSurfacesInIdle, zoomedFov } from './renderer';
+import { unstaged } from './rendererParts';
 import { defaultEnvironmentLook, type EnvironmentLook, environmentKey } from './replicaSheen';
 
 import type { NodeBackend } from './webgpu/nodeBackend';
@@ -489,6 +490,33 @@ describe('the shader warm-up (M63, audit REN-06)', () => {
     expect(calls.slice(10)).toEqual(['render', 'render']);
   });
 
+  it('holds the first picture while a waiting session warms up, drawing again only after a resize, then the warm-up (PF1)', async () => {
+    const { r, calls } = stubbedRenderer();
+    const overlay = replica();
+    const warm = r.warmShaders(overlay, [], [unstaged], true);
+    const drawn = (): number => calls.filter((c) => c === 'render').length;
+    const start = drawn();
+    // The first frame draws the field (world and replica); the frames after hold it while the compile runs.
+    r.render(overlay);
+    expect(drawn()).toBe(start + 2);
+    r.render(overlay);
+    r.render(overlay);
+    expect(drawn()).toBe(start + 2);
+    // A resize clears the canvas: the next frame draws it again, then holds.
+    (r as unknown as { resize: () => void }).resize();
+    r.render(overlay);
+    r.render(overlay);
+    expect(drawn()).toBe(start + 4);
+    await r.afterCompiles();
+    await Promise.resolve();
+    // Then the warm-up's draw and the frame's own, and every frame after.
+    r.render(overlay);
+    expect(drawn()).toBe(start + 8);
+    await warm;
+    r.render(overlay);
+    expect(drawn()).toBe(start + 10);
+  });
+
   it('lets go of a warm-up still waiting for its draw when the next session warms up or the renderer goes (PF1)', async () => {
     const { r } = stubbedRenderer();
     const first = r.warmShaders(replica());
@@ -580,8 +608,8 @@ describe('the shader warm-up runs once per session build, never per frame (M63, 
     // CombatPresentation.warmShaders hands over to Renderer.warmShaders: that and the two sessions' are the three calls.
     expect(callers.sort()).toEqual(['/src/matchSession.ts', '/src/rangeSession.ts', '/src/render/combatPresentation.ts']);
     const ctor = bodyOf(sources['/src/matchSession.ts']!, '  constructor(');
-    // PF1: with the ways its figures can be drawn.
-    const call = ctor.indexOf('this.combat.warmShaders(this.match.warmTargets(), this.match.warmPoses())');
+    // PF1: with the ways its figures can be drawn, its first picture held as the round waits.
+    const call = ctor.indexOf('this.combat.warmShaders(this.match.warmTargets(), this.match.warmPoses(), true)');
     expect(call).toBeGreaterThan(0);
     expect(ctor.split('warmShaders(').length - 1).toBe(1);
     // Everything the session draws is in the scene by then.
@@ -593,10 +621,10 @@ describe('the shader warm-up runs once per session build, never per frame (M63, 
     // CombatPresentation's hand-over is its own method, not its frame.
     const combat = sources['/src/render/combatPresentation.ts']!;
     expect(bodyOf(combat, '  render(firstPerson')).not.toMatch(/warmShaders|compile/);
-    expect(bodyOf(combat, '  warmShaders(')).toMatch(/this\.renderer\.warmShaders\(this\.overlay, /);
+    expect(bodyOf(combat, '  warmShaders(')).toMatch(/this\.renderer\.warmShaders\(this\.overlay, shown, everySlot, hold\)/);
     // With every carried replica shown, not only the one in hand (Dev 6 playtest note 26: a hitch on the first switch).
     expect(bodyOf(combat, '  warmShaders(')).toMatch(/this\.viewmodel\.withEverySlotShown\(\(\) => pose\(run\)\)/);
-    expect(bodyOf(combat, '  warmShaders(')).toMatch(/this\.renderer\.warmShaders\(this\.overlay, shown, everySlot\)/);
+    expect(bodyOf(combat, '  warmShaders(')).toMatch(/this\.renderer\.warmShaders\(this\.overlay, shown, everySlot, hold\)/);
     // Practice (M94): its last call too, after its map, torch beams and targets are in the scene.
     const range = bodyOf(sources['/src/rangeSession.ts']!, '  constructor(');
     const rangeCall = range.indexOf('void this.combat.warmShaders()');

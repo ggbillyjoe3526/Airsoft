@@ -381,8 +381,8 @@ export class MatchSession {
     input.ordersEnabled = true;
     this.build.phase('figures, flag and HUD');
     // The scene is whole: its shaders are compiled now, not in the first frame (M63, audit REN-06), and the round waits
-    // for the warm-up's draw (PF1), so nothing builds in its first moments.
-    void this.combat.warmShaders(this.match.warmTargets(), this.match.warmPoses()).then(() => {
+    // for the warm-up's draw (PF1), so nothing builds in its first moments; its first picture holds meanwhile.
+    void this.combat.warmShaders(this.match.warmTargets(), this.match.warmPoses(), true).then(() => {
       this.warm = true;
     });
     this.build.phase('shaders');

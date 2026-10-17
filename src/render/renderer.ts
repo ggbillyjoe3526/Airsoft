@@ -143,7 +143,7 @@ export class Renderer {
    * The warm-up's draws still to come (PF1): one under each of `setUp`, ahead of the first frame after its compile has
    * settled (`ready`); `done` is told once they are drawn, or once there is nothing left to draw them for.
    */
-  private warmDraw: { overlay: Overlay | undefined; setUp: readonly WarmStage[]; ready: boolean; done: () => void } | null = null;
+  private warmDraw: { overlay: Overlay | undefined; setUp: readonly WarmStage[]; ready: boolean; hold: boolean; shown: boolean; done: () => void } | null = null;
   /**
    * The post stack (G5, render/post/postHost.ts) for the quality in force: none on Low (the frame is drawn straight to
    * the screen), and none while the retro filter is on.
@@ -451,10 +451,10 @@ export class Renderer {
    * every render object). `hidden`: what is hidden now but may show mid-session (KI1, withShown); `poses`: the ways the
    * session can draw its scene later (its figures fading, then with every part shown), a draw under each in turn, the
    * compile under the last. A material's change rebuilds the render objects drawn with it, so the last pose is the one
-   * the frames draw: the draws leave every render object as the frames will find it. Called once, as a session's build
-   * ends.
+   * the frames draw: the draws leave every render object as the frames will find it. `hold`: the session waits for the
+   * warm-up, so the picture its first frame draws holds until then (render). Called once, as a session's build ends.
    */
-  warmShaders(overlay?: Overlay, hidden: readonly THREE.Object3D[] = [], poses: readonly WarmStage[] = [unstaged]): Promise<void> {
+  warmShaders(overlay?: Overlay, hidden: readonly THREE.Object3D[] = [], poses: readonly WarmStage[] = [unstaged], hold = false): Promise<void> {
     if (this.environmentDirty) this.applyEnvironment();
     // A session's build has just ended: its reflective meshes (if any) are found on the next frame.
     this.post.rescan();
@@ -465,7 +465,7 @@ export class Renderer {
     // A session built before this one never had its draws: nothing waits on them any more.
     this.warmDraw?.done();
     return new Promise<void>((done) => {
-      const warm = { overlay, setUp, ready: false, done };
+      const warm = { overlay, setUp, ready: false, hold, shown: false, done };
       this.warmDraw = warm;
       void this.afterCompiles().then(() => {
         warm.ready = true;
@@ -497,6 +497,13 @@ export class Renderer {
     // A lost device draws nothing until its replacement takes over (nodeLost).
     if (this.node.lost) return;
     const warm = this.warmDraw;
+    if (warm?.hold && !warm.ready) {
+      // The session waits for the warm-up (PF1): the picture of its first frame holds until the pipelines are built.
+      // Each frame drawn meanwhile slowed them, as they wait on the GPU one by one (WebGPU's error scopes wait for its
+      // queue): minutes in the container on WebGPU.
+      if (warm.shown) return;
+      warm.shown = true;
+    }
     if (warm?.ready) {
       // The warm-up's draws (PF1): never seen, as this frame draws over them before it reaches the screen. The temporal
       // history they leave (everything shown, the figures see-through) is forgotten.
@@ -656,6 +663,8 @@ export class Renderer {
   private readonly resize = (): void => {
     const w = this.container.clientWidth || window.innerWidth;
     const h = this.container.clientHeight || window.innerHeight;
+    // A resized canvas is cleared: a held picture (warmShaders) is drawn again.
+    if (this.warmDraw) this.warmDraw.shown = false;
     this.width = w;
     this.height = h;
     // Re-read on every resize: moving the window to a monitor with another scaling changes it. Below 1 (Render scale)

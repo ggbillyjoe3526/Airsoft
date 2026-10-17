@@ -8,7 +8,7 @@ and never writes the simulation.
   `warmShaders` (which also compiles what is hidden at a session's start but shows later: the overtime flag, a tossed
   magazine, a scope's eyepiece; `rendererParts.ts` `withShown`, KI1; and the post stack's passes, `nodePostStack.ts`
   `compilePasses`; with nothing culled, then draws the frame once more, never shown, for what only a draw builds, under
-  each of the session's poses, such as `characterRenderer.ts` `warmPoses`, PF1; a match's round waits for it). `mapMeshCache.ts` keeps the last map's meshes. `rendererParts.ts` holds its helpers (field of view,
+  each of the session's poses, such as `characterRenderer.ts` `warmPoses`, PF1; a match's round waits for it, its first picture held). `mapMeshCache.ts` keeps the last map's meshes. `rendererParts.ts` holds its helpers (field of view,
   tone mapping, idle warm-up, handing GPU resources to a new renderer). The Renderer draws with the node renderer
   (`webgpu/nodeBackend.ts`) and recovers a lost device itself (`nodeLost`): a new device, or the WebGL2 back end, with
   the post stack, retro filter and sheen back. `retroFilter.ts` is the retro view's size maths (pure), read by the
