@@ -1,6 +1,6 @@
 import { EXIT_VISUALS } from '../config/render';
 import { DEFAULT_MINIMAP_ROTATING, MINIMAP } from '../config/minimap';
-import { cssColor } from '../config/teams';
+import { cssColor, TEAM_COLOUR_SETS } from '../config/teams';
 import type { Bush } from '../map/foliage';
 import type { MapBlock } from '../map/mapTypes';
 import { type Terrain, terrainMaxX, terrainMaxZ, terrainRange, vertexHeight } from '../map/terrain';
@@ -42,7 +42,7 @@ export interface MinimapFrame {
    */
   hold: { x: number; z: number } | null;
   flag: { x: number; z: number } | null;
-  /** Extraction (M43): the exits drawn (`exitCount` of `exits`), open ones green, a late one still shut grey. */
+  /** Extraction (M43): the exits drawn (`exitCount` of `exits`), open ones in the exit colour, a late one still shut grey. */
   exits: MinimapExit[];
   exitCount: number;
   /**
@@ -63,8 +63,7 @@ interface FieldLayer {
   depth: number;
 }
 
-/** Exit icons' colours (config/render.ts EXIT_VISUALS, as CSS). */
-const EXIT_OPEN = cssColor(EXIT_VISUALS.openColor);
+/** A late exit's icon while it is still shut (config/render.ts EXIT_VISUALS, as CSS); an open one is the colour set's. */
 const EXIT_SHUT = cssColor(EXIT_VISUALS.shutColor);
 
 /** How solid ping `p` shows at `time`, in steps of 5 % (so a fade redraws the minimap at most 20 times); 0 if none. */
@@ -85,6 +84,8 @@ const NO_DASH: readonly number[] = [];
  */
 export class Minimap {
   private readonly frame: HTMLDivElement;
+  /** An open exit's icon colour (CSS). */
+  private readonly exitOpen: string;
   private readonly caption: HTMLParagraphElement;
   /** The named area you stand in (CL1), over the panel's top left: what your teammates' callouts call it. */
   private readonly area: HTMLParagraphElement;
@@ -133,7 +134,10 @@ export class Minimap {
     foliage: readonly Bush[] = [],
     /** The map's storeys (M34c, MapData.storeys): one drawing of the field per storey. */
     storeys: readonly number[] = [],
+    /** An open exit's colour: the picked team colour set's (AX1, config/teams.ts ExitColours). */
+    exitColour: number = TEAM_COLOUR_SETS.standard.exit.open,
   ) {
+    this.exitOpen = cssColor(exitColour);
     this.frame = document.createElement('div');
     this.frame.className = 'minimap-frame';
     this.frame.hidden = true;
@@ -479,7 +483,7 @@ export class Minimap {
     ctx.globalAlpha = 1;
   }
 
-  /** An Extraction exit: a small square doorway, green while open, grey while it's a late exit still shut. */
+  /** An Extraction exit: a small square doorway, in the exit colour while open, grey while it's a late exit still shut. */
   private drawExit(f: MinimapFrame, e: MinimapExit, scale: number, rim: number): void {
     const ctx = this.ctx!;
     const p = toMinimap(this.turn, f.x, f.z, e.x, e.z, scale, this.at);
@@ -489,7 +493,7 @@ export class Minimap {
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
     ctx.lineWidth = 3;
     ctx.stroke();
-    ctx.strokeStyle = e.open ? EXIT_OPEN : EXIT_SHUT;
+    ctx.strokeStyle = e.open ? this.exitOpen : EXIT_SHUT;
     ctx.lineWidth = 1.5;
     ctx.stroke();
   }
