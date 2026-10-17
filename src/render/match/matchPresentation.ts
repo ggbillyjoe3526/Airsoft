@@ -83,6 +83,8 @@ export class MatchPresentation {
   private readonly flag: FlagRenderer;
   private readonly marker: FlagMarker;
   private readonly markerAt: ScreenMarker = { x: 0, y: 0, onScreen: false };
+  /** The way to turn towards the marker placeMarker pinned last (radians, edgeAngle). */
+  private markerTowards = 0;
   /** This frame's edge-pinned markers (pings, the flag, exits, the hold marker), laid out a label apart (KI1). */
   private readonly edgePins = new EdgePins();
   private readonly edgeStep: EdgeStep = { down: 0, across: 0 };
@@ -438,7 +440,7 @@ export class MatchPresentation {
         c.prevPosition.y + (c.position.y - c.prevPosition.y) * alpha + eyeHeight(crouch, this.body) + DEV_BOT_INTENT.aboveEyes,
         c.prevPosition.z + (c.position.z - c.prevPosition.z) * alpha,
       );
-      const m = projectMarker(this.intentAnchor, camera, this.view.width, this.view.height, 0, this.intentAt);
+      const m = this.placeMarker(this.intentAnchor, camera, 0, false, this.intentAt);
       if (m.onScreen) this.intents.show(i, m.x, m.y, botRoleText(b), botIntentText(b));
       else this.intents.hide(i);
     }
@@ -530,7 +532,7 @@ export class MatchPresentation {
       return;
     }
     this.holdAnchor.set(hold.x, hold.y + SQUAD_ORDERS.markerHeight, hold.z);
-    const m = this.pinned(projectMarker(this.holdAnchor, camera, this.view.width, this.view.height, SQUAD_ORDERS.markerEdge, this.holdAt), SQUAD_ORDERS.markerEdge);
+    const m = this.placeMarker(this.holdAnchor, camera, SQUAD_ORDERS.markerEdge, true, this.holdAt);
     const p = this.player.position;
     this.holdMarker.show(m.x, m.y, Math.hypot(hold.x - p.x, hold.z - p.z), !m.onScreen);
   }
@@ -771,7 +773,7 @@ export class MatchPresentation {
         continue;
       }
       this.pingAnchor.set(p.x, p.y + (p.kind === 'spot' ? PINGS.markerHeight : 0), p.z);
-      const m = this.pinned(projectMarker(this.pingAnchor, camera, this.view.width, this.view.height, PINGS.markerEdge, this.pingAt), PINGS.markerEdge);
+      const m = this.placeMarker(this.pingAnchor, camera, PINGS.markerEdge, true, this.pingAt);
       if (this.minimap.covers(m.x, m.y)) markers.hide(i);
       else markers.show(i, m.x, m.y, camera.position.distanceTo(this.pingAnchor), !m.onScreen, alpha);
     }
@@ -795,7 +797,7 @@ export class MatchPresentation {
         c.prevPosition.y + (c.position.y - c.prevPosition.y) * alpha + eyeHeight(crouch, this.body) + TEAMMATE_MARKERS.aboveEyes,
         c.prevPosition.z + (c.position.z - c.prevPosition.z) * alpha,
       );
-      const m = projectMarker(this.mateAnchor, camera, this.view.width, this.view.height, 0, this.mateAt);
+      const m = this.placeMarker(this.mateAnchor, camera, 0, false, this.mateAt);
       // Not under the minimap either, where the label would read through its translucent field (audit UI-13).
       if (m.onScreen && !this.minimap.covers(m.x, m.y)) this.mateMarkers.show(i, m.x, m.y, c.status !== 'alive');
       else this.mateMarkers.hide(i);
@@ -856,12 +858,9 @@ export class MatchPresentation {
       this.marker.hide();
       return;
     }
-    const at = projectMarker(this.flag.markerAnchor, camera, this.view.width, this.view.height, FLAG_VISUALS.markerEdge, this.markerAt);
-    // The way to turn, taken before the marker is moved along the edge clear of the others (KI1).
-    const towards = edgeAngle(at, this.view.width, this.view.height);
-    const m = this.pinned(at, FLAG_VISUALS.markerEdge);
+    const m = this.placeMarker(this.flag.markerAnchor, camera, FLAG_VISUALS.markerEdge, true, this.markerAt);
     const from = camera.position;
-    this.marker.show(m.x, m.y, Math.hypot(pole.x - from.x, pole.z - from.z), overtime ? FLAG_VISUALS.overtimeCss : teamCss(r.attackers), !m.onScreen, towards);
+    this.marker.show(m.x, m.y, Math.hypot(pole.x - from.x, pole.z - from.z), overtime ? FLAG_VISUALS.overtimeCss : teamCss(r.attackers), !m.onScreen, this.markerTowards);
   }
 
   /**
@@ -883,19 +882,22 @@ export class MatchPresentation {
         continue;
       }
       this.exitAnchor.set(e.position.x, e.position.y + EXIT_VISUALS.markerHeight, e.position.z);
-      const at = projectMarker(this.exitAnchor, camera, this.view.width, this.view.height, EXIT_VISUALS.markerEdge, this.exitAt);
-      const towards = edgeAngle(at, this.view.width, this.view.height);
-      const m = this.pinned(at, EXIT_VISUALS.markerEdge);
-      marker.show(m.x, m.y, Math.hypot(e.position.x - from.x, e.position.z - from.z), EXIT_CSS, !m.onScreen, towards);
+      const m = this.placeMarker(this.exitAnchor, camera, EXIT_VISUALS.markerEdge, true, this.exitAt);
+      marker.show(m.x, m.y, Math.hypot(e.position.x - from.x, e.position.z - from.z), EXIT_CSS, !m.onScreen, this.markerTowards);
     }
   }
 
   /**
-   * A projected marker, if pinned to the screen's edge, moved off the minimap's panel (`gap` px clear) and then along
-   * its edge clear of this frame's other edge markers (KI1: two in almost the same direction overlapped).
+   * Where `anchor` shows for a HUD marker, the six markers' one step (B9): projected into `out`, kept `edge` px inside
+   * the screen while out of view (0: not kept, the caller hides it). With `pin`, a marker on the edge is then moved off
+   * the minimap's panel (`edge` px clear) and along the edge clear of this frame's other edge markers (KI1: two in
+   * almost the same direction overlapped), and `markerTowards` is the way to turn, read before that move.
    */
-  private pinned(m: ScreenMarker, gap: number): ScreenMarker {
-    return this.edgePins.place(this.minimap.clearPinned(m, gap), this.view.width, this.view.height, this.edgeStep);
+  private placeMarker(anchor: THREE.Vector3, camera: THREE.PerspectiveCamera, edge: number, pin: boolean, out: ScreenMarker): ScreenMarker {
+    const at = projectMarker(anchor, camera, this.view.width, this.view.height, edge, out);
+    if (!pin) return at;
+    this.markerTowards = edgeAngle(at, this.view.width, this.view.height);
+    return this.edgePins.place(this.minimap.clearPinned(at, edge), this.view.width, this.view.height, this.edgeStep);
   }
 
   /** "OUT · hit by Beta 2", rebuilt only when who hit you changes. */
