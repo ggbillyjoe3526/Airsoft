@@ -1194,3 +1194,44 @@ describe('the post stack follows the window and the render scale (G5 QA)', () =>
     within(r, 2880, 1620);
   });
 });
+
+describe('the warm-up draws meet a lost device and a failing draw (PF1 QA)', () => {
+  it('settles once the replacement device has drawn the warm-up, not before and not never', async () => {
+    const { r, lose, recover } = stubbedRenderer();
+    let settled = false;
+    void r.warmShaders(replica()).then(() => (settled = true));
+    lose();
+    r.render(replica());
+    await recover();
+    expect(settled).toBe(false);
+    r.render(replica());
+    await Promise.resolve();
+    expect(settled).toBe(true);
+  });
+
+  it('still settles when a warm-up draw throws, so the round is not held for good', async () => {
+    const { r } = stubbedRenderer();
+    let settled = false;
+    void r.warmShaders(replica()).then(() => (settled = true));
+    await r.afterCompiles();
+    await Promise.resolve();
+    const gl = glOf(r);
+    const render = gl.render.bind(gl);
+    let first = true;
+    vi.spyOn(gl, 'render').mockImplementation((scene, camera) => {
+      if (first) {
+        first = false;
+        throw new Error('device error');
+      }
+      return render(scene, camera);
+    });
+    try {
+      r.render(replica());
+    } catch {
+      // the frame loop would catch it
+    }
+    r.render(replica());
+    await Promise.resolve();
+    expect(settled).toBe(true);
+  });
+});
