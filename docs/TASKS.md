@@ -231,20 +231,6 @@ attempts: 0
 threads' branches it touches have merged (ST1, MR1, HD1, MV1, BD1, MS1, TT1), so none conflicts with them. DX2 takes
 over DC1's known-issues tidy-up. DX0, the quick wins, is the audit thread's own pull request.
 
-## DX1 · Docs: one source for each rule, and the stage everywhere (audit A7, A9, B11, B12)
-tier: trivial
-perf: skip
-touches: CLAUDE.md, docs/, pipeline/README.md, .claude/skills/pipeline/SKILL.md, .claude/agents/, .github/workflows/pages.yml
-contract: none
-acceptance:
-  1. The pipeline's steps, the attempt rule, the near-miss rule, the changelog-agent rule, the models and "one task per thread" each live in one place (`pipeline/README.md` for protocol, `docs/PROCESS.md` for policy); CLAUDE.md, SKILL.md and the agents point there instead of restating them.
-  2. No doc cites a "token plan item" or "token step" number; each such citation carries its one-line reason instead, or is dropped.
-  3. `docs/ARCHITECTURE.md` › Contracts has a `###` heading per contract, so `grep '^#'` indexes them; nothing else in the section changes.
-  4. `pipeline/README.md`'s worked example (the M27 block) is a fenced block, not a `##` heading.
-  5. Every stage statement (CLAUDE.md, ROADMAP › Where we are, HANDOFF, TASKS, PROCESS) says 0.1 Beta 1 and nothing says Dev now or "not scheduled".
-status: open
-attempts: 0
-
 ## DX2 · Docs slimming: the 50 KB rule applied, and the finished plan archived (audit A6; folds DC1)
 tier: trivial
 perf: skip

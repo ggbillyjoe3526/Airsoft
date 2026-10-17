@@ -62,4 +62,4 @@ seeded per bot.
   re-measure over 16 seeds before changing a threshold (`docs/DECISIONS.md`). `testSupport.ts` (the small worlds and
   the one-bot duel the unit tests share) and the other files named `*Support.ts` here are test-only.
 - `balance/`: the bot balance figures (who wins, the first hit, Extraction's get-out rates), measured on demand by
-  `node pipeline/balance.mjs`, never asserted (token plan item 22; `balance/README.md`).
+  `node pipeline/balance.mjs`, never asserted (`balance/README.md`).

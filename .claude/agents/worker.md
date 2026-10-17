@@ -1,6 +1,6 @@
 ---
 name: worker
-description: Builds one task (or one non-overlapping part of a task) of the Airsoft FPS against its acceptance criteria and contract. Used when a build thread splits its task; by default the thread itself is the worker (pipeline/README.md). Spawn with a model override: Opus for core systems, Sonnet for UI, menus, config and boilerplate.
+description: Builds one task (or one non-overlapping part of a task) of the Airsoft FPS against its acceptance criteria and contract. Used when a build thread splits its task; by default the thread itself is the worker (pipeline/README.md). Spawn with the model docs/PROCESS.md › Models names for the task's tier.
 tools: Read, Glob, Grep, Bash, Edit, Write
 model: inherit
 effort: high

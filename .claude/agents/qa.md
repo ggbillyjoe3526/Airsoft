@@ -22,8 +22,8 @@ checks that such a commit touches nothing else. If the feature cannot be tested 
   helpers in `src/sim/testSupport.ts` and drive `stepSimulation`; bot matches run headless through
   `src/ai/depotMatchSupport.ts` (keep a new match test file no longer than the longest today, `depotMatch.neonHeights.test.ts`: about 2.5 minutes
   in a full run on a 4-core container, 2026-10-08). A match test asserts only what must never happen (stuck bots, no
-  shots, a stalled round); who wins and how often is a figure in `src/ai/balance/`, reported, never asserted (token
-  plan item 22). Randomness is seeded (`state.rng`).
+  shots, a stalled round); who wins and how often is a figure in `src/ai/balance/`, reported, never asserted (seed noise
+  made pass/fail bands cost re-measure loops). Randomness is seeded (`state.rng`).
 - **Playwright** (`e2e/*.spec.ts`, `npm run test:browser`; in a cloud container set `PLAYWRIGHT_CHROMIUM` to
   `/opt/pw-browsers/chromium`) for what a player sees. SwiftShader draws a few frames a second: assert on page text
   and `window.airsoft` state, poll with `expect.poll` or `waitForFunction`, never wait a fixed time. Extend the
