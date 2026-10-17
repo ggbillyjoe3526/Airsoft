@@ -238,7 +238,7 @@ until 10.
 ## Levels and the Armory
 
 Finished matches give XP, each level up to 10 unlocks parts for good, and nothing is ever sold. What each level
-unlocks is in `levels.md` at the repository root; the Armory shows it in the game.
+unlocks is in `data/levels.md`; the Armory shows it in the game.
 
 - [ ] **Level 0 to start.** On a fresh save (a private window, or Settings › Save › Delete) the top bar reads "LVL 0"
   with an empty bar.

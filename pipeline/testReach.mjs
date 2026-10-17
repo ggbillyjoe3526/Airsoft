@@ -3,8 +3,8 @@
  * they can say something new (token plan item 21). CI always runs them all.
  *
  * A diff reaches them when it changes a file they load: a guard file itself, anything it imports, directly or through
- * other files (static `import` and `export … from`, dynamic `import('…')`, `?raw` text such as `pool.md` and
- * `stats.md`), the test setup file, or the files that configure the test run itself (ALWAYS_REACHED). Bare package
+ * other files (static `import` and `export … from`, dynamic `import('…')`, `?raw` text such as `data/pool.md` and
+ * `data/stats.md`), the test setup file, or the files that configure the test run itself (ALWAYS_REACHED). Bare package
  * imports (three, Rapier) are left out: a package changes only with package.json and the lockfile, which are in
  * ALWAYS_REACHED. Pure functions here, so the rules are unit-tested (testReach.test.mjs); gate.mjs reads the files.
  */

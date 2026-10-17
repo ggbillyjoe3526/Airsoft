@@ -89,7 +89,7 @@ export const GAME_PROBES: readonly WiringProbe[] = [
  */
 export const COMPILED_PLACES: readonly string[] = [
   'the round rules (sim/round.ts)',
-  "the bots' plan (ai/botController.ts planRound)",
+  "the bots' plan (ai/roundPlanner.ts RoundPlanner.plan)",
   'the scoreboard (ui/scoreboard.ts)',
   'what each mode is and needs (config/modes.ts MODE_SHAPES)',
   'the rulesets and rows it offers (config/matchRules.ts MODE_FIT)',

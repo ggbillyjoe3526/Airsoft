@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it, vi } from 'vitest';
-import kitsText from '../../bot-kits.md?raw';
+import kitsText from '../../data/bot-kits.md?raw';
 import { DEFAULT_DIFFICULTY } from '../config/bots';
 import { DEFAULT_MATCH_RULES, DEFAULT_RULESET } from '../config/matchRules';
 import { DEFAULT_MODE } from '../config/modes';

@@ -17,16 +17,17 @@ export const REVIEW_AGENTS = {
 const VERDICTS = ['auto-accept', 'accept', 'retry', 'pass', 'fail'];
 
 /**
- * The Markdown files at the repository's root that are docs. Every other root `.md` is game data the build reads
- * (`pool.md`, `stats.md`, `levels.md`, `bots.md`, `bot-kits.md`, `callouts.md`: pipeline/build-cached.mjs › ROOT_FILES),
- * so a new one counts as code until it is listed here.
+ * The Markdown files at the repository's root that are docs. Every other root `.md` counts as code until it is listed
+ * here, and so does all of `data/`: the hand-edited tables the build reads (`pool.md`, `stats.md`, `levels.md`,
+ * `bots.md`, `bot-kits.md`, `callouts.md`: pipeline/build-cached.mjs › INPUT_DIRS, DX7).
  */
 const ROOT_DOCS = new Set(['README.md', 'CHANGELOG.md', 'CLAUDE.md']);
+const DATA_DIR = 'data/';
 
 /** True when every changed file is a Markdown doc (the root docs above, `docs/`, the agents, skills and folder READMEs). */
 export function docsOnly(changed) {
   const files = [...changed];
-  return files.length > 0 && files.every((f) => f.endsWith('.md') && (f.includes('/') || ROOT_DOCS.has(f)));
+  return files.length > 0 && files.every((f) => f.endsWith('.md') && !f.startsWith(DATA_DIR) && (f.includes('/') || ROOT_DOCS.has(f)));
 }
 
 /**

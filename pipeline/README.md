@@ -115,7 +115,7 @@ Each option is used by CI, a skill or the owner's laptop run; the old `--perf` (
 | `tests` | `vitest run --reporter=json` (`src/**/*.test.ts` and the pipeline's own `pipeline/**/*.test.mjs`): project `fast`, plus `slow` when the diff reaches a bot-match guard (below; always on CI) | no failures |
 | `smoke` | `playwright test`: project `chromium` runs every `e2e/*.spec.ts` but `release.spec.ts` on the e2e build (`?nolock`, `window.airsoft`); project `release` runs `e2e/release.spec.ts` on `dist/` without test flags, with the real pointer lock. Every test asserts zero console and page errors; a failure prints the test's describe path, project and line and the error's locator, expectation and call-log lines (`smokeReport.mjs`) | no failures |
 | `perf` | `perf-run.mjs` once per combination of the perf matrix the diff reaches (`perfMatrix.mjs`; under `--env laptop`, all of them) | for each: every budget line for the env and map within `perf-budget.json`, nothing more than 10 % worse than its own baseline; a baseline more than 20 commits old is a warning, not a failure |
-| `scope` | the diff vs the task's `touches` (`scope.mjs`) | every changed file is in `touches`, a test, under `e2e/` or `docs/`, CHANGELOG, README or a `src/` folder's README (`pool.md` and `CLAUDE.md` only when listed); `Agent: qa` commits touch only tests |
+| `scope` | the diff vs the task's `touches` (`scope.mjs`) | every changed file is in `touches`, a test, under `e2e/` or `docs/`, CHANGELOG, README or a `src/` folder's README (`data/` and `CLAUDE.md` only when listed); `Agent: qa` commits touch only tests |
 | `changelog` | `CHANGELOG.md` › Unreleased | a line names `**<task>**` (each task, when several) |
 | `review` | on CI, a pull request's description (`GATE_PR_BODY`; `review.mjs`) | a docs-only change or a draft skips it; otherwise its `Review:` line gives `critic Accept` (or `auto-accept`), `qa Pass` and `performance Pass` |
 
@@ -133,7 +133,7 @@ since the base.
 
 **Which tests run.** Off CI the default is `--tests auto`: the `fast` project always, the `slow`
 project's headless bot-match guards only when the diff reaches a file they load (`testReach.mjs`): a guard file, any
-file it imports directly or through others (`pool.md` and `stats.md` too), the test setup file, or `package.json`,
+file it imports directly or through others (`data/pool.md` and `data/stats.md` too), the test setup file, or `package.json`,
 the lockfile, `vite.config.ts` or `tsconfig.json`. The gate's line names what ran and why (`fast project only: the
 diff reaches no bot-match guard (CI runs them)`, or `both projects: src/config/bots.ts reaches the bot-match
 guards`), and the record's tests cell reads `✓ 95 s (fast)` when the guards were left to CI. A HUD, menu, render,
@@ -157,11 +157,11 @@ it is required; set `PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium` there. The r
 
 **Builds.** `build-cached.mjs` builds the production bundle (`dist/`) or the e2e bundle (`dist-e2e/`, `--mode e2e`) and
 skips the build when the output is already that of the same source (a hash of `src/` without tests, `public/`,
-`index.html`, `pool.md`, `stats.md`, the Vite, TypeScript and npm files, `git describe` and, for `dist/`, whether it has
-the `.br`/`.gz` copies: a `--quick` build is never reused where the release smoke test needs them). The gate's build
-step always builds off CI; the smoke test's two servers and the perf harness then reuse what is there, so one gate run
-makes each bundle once (on CI the reuse reaches across jobs, below). Two bundles stay necessary: the e2e one has the
-test hooks, the production one is what players get.
+`index.html`, `data/` (the six hand-edited tables), the Vite, TypeScript and npm files, `git describe` and, for `dist/`,
+whether it has the `.br`/`.gz` copies: a `--quick` build is never reused where the release smoke test needs them). The
+gate's build step always builds off CI; the smoke test's two servers and the perf harness then reuse what is there, so
+one gate run makes each bundle once (on CI the reuse reaches across jobs, below). Two bundles stay necessary: the e2e
+one has the test hooks, the production one is what players get.
 
 **CI** (`.github/workflows/check.yml`) runs `--ci`: build, tests and smoke on every pull request and push to `main`,
 split across jobs since M50's audit (CORE-04): job `check` runs `--ci --tests fast --no-smoke` (the build, the fast

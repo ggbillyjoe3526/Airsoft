@@ -83,6 +83,6 @@ export function botsCheck(mode: ModeEntry, entry: MapEntry, map: MapData, seed =
   const item = modeItem(mode);
   if (mode.id === 'elimination') return result('compatibility', 'mode.bots', item, 'pass', 'The bots’ own mode: every other mode is measured against how they play it.');
   const apart = botsApart(mode.id, map, entry.teamSize.standard, seed, seconds);
-  if (apart < MODE_PLAY_TEST.botApart) return result('compatibility', 'mode.bots', item, 'fail', `In ${seconds} s on ${entry.label} the bots stood ${num(apart)} m on average from where they stand in Elimination: they play it as Elimination. Give them a plan for it (ai/botController.ts planRound).`);
+  if (apart < MODE_PLAY_TEST.botApart) return result('compatibility', 'mode.bots', item, 'fail', `In ${seconds} s on ${entry.label} the bots stood ${num(apart)} m on average from where they stand in Elimination: they play it as Elimination. Give them a plan for it (ai/roundPlanner.ts RoundPlanner.plan).`);
   return result('compatibility', 'mode.bots', item, 'pass', `In ${seconds} s on ${entry.label} the bots stood ${num(apart, 1)} m on average from where they stand in Elimination, from the same start: they play it their own way.`);
 }
