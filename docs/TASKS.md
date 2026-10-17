@@ -233,7 +233,7 @@ attempts: 0
 ## DX4 · Tooling and CI: one build per pull request, balanced shards, a formatter (audit B1, B2, B3)
 tier: ui
 perf: skip
-touches: .github/workflows/check.yml, package.json, package-lock.json, .prettierrc, .prettierignore, pipeline/build-cached.mjs, pipeline/gate.mjs, src/ai/, vite.config.ts
+touches: .github/workflows/check.yml, package.json, package-lock.json, .prettierrc, .prettierignore, pipeline/, src/ai/, src/render/, e2e/, vite.config.ts
 contract: none
 acceptance:
   1. A pull request's CI builds the e2e and production bundles once and hands them to the browser shards (an artifact or a cache keyed on the sources); each browser shard no longer builds.
