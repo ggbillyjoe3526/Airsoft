@@ -1,4 +1,5 @@
 import { HUD_TEXT, type SkipLabel } from '../../config/hudText';
+import { MENU_TEXT } from '../../config/menus';
 import type { MenuHint } from './chrome';
 import { PAUSE_ICONS } from './icons';
 import { el, hintLine, menuButton, setHint, withIcon } from './menuParts';
@@ -16,7 +17,12 @@ export interface PauseActions {
   onSkipRound: () => void;
   /** The practice range only (M93): turn the timed challenge on or off. */
   onChallenge: () => void;
+  /** The click the Fullscreen key asked for (IN1): fullscreen, then play resumes. */
+  onFullscreen: () => void;
 }
+
+/** What a click anywhere on the pause menu does once the browser asked for one (IN1); `none` until then. */
+export type PauseClick = 'none' | keyof typeof MENU_TEXT.clickToResume;
 
 /**
  * Esc during a match: the score so far, then Resume, Settings and Quit (to the title screen). The loadout, mode and
@@ -35,6 +41,8 @@ export class PauseScreen {
   private readonly skipRound: HTMLButtonElement;
   private readonly challenge: HTMLButtonElement;
   private readonly seed: HTMLParagraphElement;
+  /** The browser asked for a click (IN1): one anywhere on the screen resumes, or goes fullscreen and resumes. */
+  private click: PauseClick = 'none';
 
   constructor(actions: PauseActions) {
     this.root = el('div', 'menu-screen menu-pause');
@@ -72,6 +80,12 @@ export class PauseScreen {
     // Esc resumes too: the menus handle it, after a short guard (audit UI-09), so there is no key of its own here.
     this.hints = [];
     this.root.append(panel);
+    // A click is what the browser needs to give the mouse back; one off the buttons resumes too, once it was refused.
+    this.root.addEventListener('click', (e) => {
+      if (this.click === 'none' || (e.target as Element | null)?.closest?.('button, a, input, select, textarea, label')) return;
+      if (this.click === 'fullscreen') actions.onFullscreen();
+      else actions.onResume();
+    });
   }
 
   /** On the practice range (M21): the Loadout button shows; with the tutorial running, Skip step and Skip tutorial. */
@@ -110,6 +124,22 @@ export class PauseScreen {
   }
 
   showHint(text: string): void {
+    this.setClick('none');
     setHint(this.hint, text);
+  }
+
+  /**
+   * The browser needs a click (IN1): it refused the mouse (Esc is no click, and Chrome refuses one for about a second
+   * after Esc; `again`, a click was refused too), or fullscreen from the Fullscreen key (Firefox). The hint says so, and
+   * a click anywhere on the screen does it.
+   */
+  askForClick(click: Exclude<PauseClick, 'none'>): void {
+    setHint(this.hint, MENU_TEXT.clickToResume[click]);
+    this.setClick(click);
+  }
+
+  private setClick(click: PauseClick): void {
+    this.click = click;
+    this.root.classList.toggle('click-to-resume', click !== 'none');
   }
 }

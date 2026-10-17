@@ -51,6 +51,8 @@ export interface MenusOptions {
   armory: Omit<ArmoryOptions, 'context'> & { level: () => MenuLevel };
   /** Start (or resume) play: Start match, Resume, Play again. */
   onPlay: () => void;
+  /** The click the Fullscreen key asked for on the pause menu (IN1): fullscreen, and play resumes once it is. */
+  onFullscreenPlay: () => void;
   /** The player leaves the match (Quit; New Game or Quit after it): it is unloaded. */
   onLeaveMatch: () => void;
   /** Practice, the Match screen's last mode (M21, M100): open it on the picked place (M94) and play. */

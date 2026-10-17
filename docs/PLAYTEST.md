@@ -78,7 +78,8 @@ You confirmed these on 2026-10-05. They are facts to feel in play, not decisions
   and commit the `pipeline/baseline/laptop*.json` files it writes. It gives the frame-time budgets real numbers.
 - **Desktop Ultra baseline.** On your desktop run `npm run perf:desktop` (about 15 minutes; leave the window alone)
   and send the thread `pipeline/out/perf-desktop-summary.md` and `pipeline/baseline/desktop*.json`.
-- **Save in Firefox and Edge.** The automated tests run Chromium only ([Save](#save)).
+- **Save in Firefox and Edge.** The save tests run in Chromium on every pull request and in Firefox on CI too, not in
+  Edge or on Windows ([Save](#save)).
 - **Woodland and Neon Heights** stay dev content until you have played them; you make each one public.
 
 ## Movement
@@ -895,8 +896,9 @@ Accessibility, Save file) and a "Dev settings" box under them that shows the Dev
   drops it, and switching back doesn't raise it by itself.
 - [ ] **Sprint key: Toggle.** Hold W and tap Left Alt: you keep sprinting. Let go of W and the sprint ends. Crouch, aim,
   walk or fire: each ends it.
-- [ ] **Raw mouse input.** After the first Play the line under it says "Raw input is active" in Chrome and Edge, "no
-  raw input" in Firefox. Off: the system's acceleration applies.
+- [ ] **Raw mouse input.** After the first Play the line under it says "Raw input is active" in Chrome and Edge. In
+  Firefox it says "Firefox never does" from the start (Firefox gives no raw input). Off: the system's acceleration
+  applies.
 - [ ] **Keys** (Settings › Controls › Keys). Fire and Aim are at the top. Each action has a main and a second key box.
   Rebind Move forward's main key: ↑ stays as its second. Bind Jump to R: the line under says "R was Reload: Reload is
   now Space" and Reload's row flashes. Backspace clears a box (Move forward's last key refuses). The mouse wheel binds
@@ -909,7 +911,9 @@ Accessibility, Save file) and a "Dev settings" box under them that shows the Dev
   wheel as W (AZERTY) or Y (QWERTZ); the tutorial and the reload hint use the same letters, and switching layout while
   the game is open updates them. Firefox says names follow a US keyboard; the keys still work by position.
 - [ ] **Display.** Field of view starts at 90°: 120° shows more at the sides and 80° less, and the red dot still zooms.
-  Fullscreen (or F10 in a match) goes fullscreen and back with play carrying on; Esc leaves it and pauses. Tone mapping
+  Fullscreen (or F10 in a match) goes fullscreen and back with play carrying on; Esc leaves it and pauses. In Firefox,
+  F10 more than a few seconds after your last click or shot pauses on "Click anywhere to go fullscreen" (and on the way
+  out "Click anywhere to resume"): one click carries on. Tone mapping
   Neutral (the default), AgX and ACES each change the colours at once, team colours clear on Neutral. Show FPS adds a
   small "NN FPS · N.N ms" counter.
 - [ ] **Dev group.** Debug info shows the panel in a match; BB paths draws the BBs' flight; Game speed at 25 % and
@@ -1061,8 +1065,10 @@ Settings › Save file. Everything saves as it changes; nothing to press.
   to your left or right comes from that side; the back and forward side buttons don't leave the page.
 - [ ] **Edge, production build.** The same boot, Play, Esc and Resume. `npm run dev` still boots and reloads on edits.
 - [ ] **Mouse look in Chrome, production build.** Smooth, with no jump on the first move after Play or Resume.
-- [ ] **Esc on the pause screen** resumes. Right after pausing, Chrome may need a moment and shows "click again"; a
-  second Esc a second later resumes.
+- [ ] **Esc on the pause screen** (Chrome, Edge and Firefox). Esc is no click, so the browser usually won't give the
+  mouse back: the pause menu says "Click anywhere to resume" in large type, and one click anywhere on it (not only on
+  Resume) carries on. Clicked within a second of the first Esc, Chrome says it needs a moment: click again. Nothing
+  sticks: Esc again, or Resume, still works.
 - [ ] **Tabbing away.** Switch tab or Alt+Tab to another program mid-round, or click a window on a second screen (or
   open an overlay such as Discord's): the match pauses and nothing happened while you were away. Away while running
   forward: on Resume you stand still.

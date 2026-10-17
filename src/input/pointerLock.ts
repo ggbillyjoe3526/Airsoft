@@ -44,6 +44,8 @@ export class PointerLock {
   private readonly errorListeners = new Set<() => void>();
   /** request() calls under way: a first try may fail and the second succeed, so errors wait for their outcome. */
   private requesting = 0;
+  /** The last request() reported its refusal: an error event that straggles in after it isn't another (IN1). */
+  private refused = false;
 
   constructor(
     private readonly element: HTMLElement,
@@ -67,39 +69,72 @@ export class PointerLock {
 
   /**
    * Must be called from a user gesture (click). Prefers raw, unaccelerated input where supported, else tries
-   * again without it. Refusals (Chrome blocks re-locking for ~1 s after Esc) are reported through `onError` when
+   * again without it. Refusals (Chrome blocks re-locking for ~1 s after Esc) are reported through `onError` once
    * both tries have failed: `pointerlockerror` events during the request are held back (the first try's would
-   * otherwise report a refusal the second try then overturns), and browsers that only fire the event, without a
-   * promise to reject, still report it. A request while one is still under way (a double-click on Play) is dropped:
-   * the browser would refuse it as already pending and show the refusal hint for nothing.
+   * otherwise report a refusal the second try then overturns). Resolves once the browser has answered: Chrome answers
+   * with a promise, Firefox only with the events (checked in Firefox 136, IN1). A request while one is still under way
+   * (a double-click on Play) or while the lock is held is dropped: the browser would refuse it as already pending and
+   * show the refusal hint for nothing.
    */
   async request(): Promise<void> {
-    if (this.requesting > 0) return;
+    if (this.requesting > 0 || this.locked) return;
     this.requesting++;
+    this.refused = false;
     try {
       if (!this.rawInput) {
-        await this.element.requestPointerLock();
-        this.setRaw('off');
+        if (await this.lockOnce()) this.setRaw('off');
+        else this.refuse();
         return;
       }
-      await this.element.requestPointerLock({ unadjustedMovement: true });
-      // Firefox takes the lock but ignores the option (known issue): it never gives raw movement.
-      this.setRaw(ignoresRawInput() ? 'unavailable' : 'active');
-    } catch {
-      try {
-        await this.element.requestPointerLock();
-        this.setRaw(this.rawInput ? 'unavailable' : 'off');
-      } catch {
-        this.reportError();
+      if (await this.lockOnce({ unadjustedMovement: true })) {
+        // Firefox takes the lock but ignores the option (known issue): it never gives raw movement.
+        this.setRaw(ignoresRawInput() ? 'unavailable' : 'active');
+      } else if (await this.lockOnce()) {
+        this.setRaw('unavailable');
+      } else {
+        this.refuse();
       }
     } finally {
       this.requesting--;
     }
   }
 
-  /** How the last lock went for raw input (Settings → Controls shows it). */
+  /**
+   * One request for the lock: true once it is taken, false when refused. A browser that returns a promise answers
+   * through it; one that doesn't (Firefox) through `pointerlockchange` or `pointerlockerror`, one of which always fires.
+   */
+  private lockOnce(options?: PointerLockOptions): Promise<boolean> {
+    return new Promise<boolean>((resolve) => {
+      const settle = (taken: boolean): void => {
+        document.removeEventListener('pointerlockchange', changed);
+        document.removeEventListener('pointerlockerror', refused);
+        resolve(taken);
+      };
+      const changed = (): void => settle(this.locked);
+      const refused = (): void => settle(false);
+      let answer: Promise<void> | undefined;
+      try {
+        answer = this.element.requestPointerLock(options) as Promise<void> | undefined;
+      } catch {
+        settle(false);
+        return;
+      }
+      if (answer) {
+        // Chrome resolves before its `pointerlockchange` (checked, IN1): the resolve is the grant.
+        answer.then(() => settle(true), () => settle(false));
+        return;
+      }
+      document.addEventListener('pointerlockchange', changed);
+      document.addEventListener('pointerlockerror', refused);
+    });
+  }
+
+  /**
+   * How the last lock went for raw input (Settings → Controls shows it). Before any lock, Firefox is known to give none
+   * (IN1), so the line says so from the start.
+   */
   get rawStatus(): RawInputStatus {
-    return this.raw;
+    return this.raw === 'unknown' && this.rawInput && ignoresRawInput() ? 'unavailable' : this.raw;
   }
 
   /** Calls `fn` whenever rawStatus changes. */
@@ -184,9 +219,15 @@ export class PointerLock {
     for (const fn of this.changeListeners) fn(locked, released);
   };
 
+  /** Outside a request: a refusal the browser only signals by event, unless it straggles in after one already reported. */
   private readonly onLockError = (): void => {
-    if (this.requesting === 0) this.reportError();
+    if (this.requesting === 0 && !this.refused && !this.locked) this.reportError();
   };
+
+  private refuse(): void {
+    this.refused = true;
+    this.reportError();
+  }
 
   private reportError(): void {
     for (const fn of this.errorListeners) fn();

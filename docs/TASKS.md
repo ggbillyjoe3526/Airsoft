@@ -87,7 +87,7 @@ attempts: 0
 ## IN1 · Mouse lock and Firefox
 tier: core
 perf: skip
-touches: src/input/pointerLock.ts, src/ui/fullscreen.ts, src/ui/menus/pauseScreen.ts, playwright.config.ts, e2e/, .github/workflows/check.yml
+touches: src/input/pointerLock.ts, src/ui/fullscreen.ts, src/ui/menus/pauseScreen.ts, src/ui/menus/menus.ts, src/ui/menus/menusOptions.ts, src/ui/menus/css/end.css, src/config/menus.ts, src/config/controls.ts, src/game.ts, playwright.config.ts, e2e/, .github/workflows/check.yml, pipeline/workflow.test.mjs, pipeline/README.md
 contract: none
 acceptance:
   1. Esc on the pause screen never leaves a stuck state. Where Chrome refuses the re-lock, a clear "Click to resume" appears and one click resumes.
