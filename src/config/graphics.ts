@@ -304,7 +304,7 @@ export function frameRateCapFromSaved(raw: unknown): FrameRateCap | undefined {
   return best;
 }
 
-/** The tone mapping row (not part of a preset; audit section 5 F2, owner: Neutral by default). */
+/** The tone mapping row (Settings › Dev since RV2; audit section 5 F2, owner: Neutral by default). */
 export const TONE_MAPPING_CHOICES: readonly { id: ToneMappingId; label: string; blurb: string }[] = [
   { id: 'neutral', label: 'Neutral', blurb: 'Clean, saturated colour: the team colours and the sky as painted.' },
   { id: 'agx', label: 'AgX', blurb: 'Softer highlights, a little less saturation.' },
@@ -324,7 +324,6 @@ export const GRAPHICS_TEXT = {
   customIntro: 'Each row applies at once. The cost after each one says what it takes from your graphics card.',
   frameRateHelp: 'The most frames a second the game draws. Unlimited follows the screen.',
   showFpsHelp: 'A frame counter while you play.',
-  toneMappingHelp: 'How bright colours roll off to the screen. Free.',
   /** Under Edge smoothing when the browser gave no multisampling (Firefox on Linux, some drivers; REN-21). */
   antialiasRefused: 'Not available in this browser: the picture is drawn without edge smoothing.',
   /** Under Edge smoothing when a new graphics context could not be made: the change waits for the next load (REN-04). */
