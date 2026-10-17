@@ -51,7 +51,7 @@ const r3 = (x: number): number => Number(x.toFixed(3));
 const N = WEATHERING.noise;
 const M = WEATHERING.mix;
 
-/* eslint-disable @typescript-eslint/no-explicit-any -- TSL's node types don't follow its own swizzles and helpers. */
+/* `any` from here to the end-of-`any` line: TSL's node types don't follow its own swizzles and helpers. */
 type AnyNode = any;
 
 /** The concept's cheap 3D hash, value noise and three-octave sum (wH, wN, wF). */
@@ -270,4 +270,4 @@ export class SurfaceStandardTwin extends MeshStandardNodeMaterial implements Sur
     return this.surface.lightingModel(super.setupLightingModel());
   }
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
+/* end-of-`any` line */

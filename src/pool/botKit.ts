@@ -10,7 +10,7 @@ import { type Asset, assetOfReplica, fits, type Pool } from './pool';
 import { missingColumns, readTables } from './poolFile';
 
 /**
- * The bots' kits (BG1): bot-kits.md at the repository's root, the hand-edited table of what the other team's bots carry
+ * The bots' kits (BG1): data/bot-kits.md, the hand-edited table of what the other team's bots carry
  * and how often each difficulty picks each kit. Every opponent picks its own kit, seeded by the match's seed and its
  * id, so a match replays the same kits, leaning towards the kits that suit its personality; what the player has
  * unlocked never enters into it. Here the table is read, a kit picked and a bot built carrying it, and on a night field

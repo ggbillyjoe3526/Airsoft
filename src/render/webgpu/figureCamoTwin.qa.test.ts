@@ -39,7 +39,7 @@ interface Inputs {
   fwidth: (n: number) => number;
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any -- TSL's node classes are untyped here. */
+/* `any` in this file: TSL's node classes are untyped here. */
 function evalNode(n: any, inp: Inputs, memo = new Map<any, V>()): V {
   const known = memo.get(n);
   if (known !== undefined) return known;

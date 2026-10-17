@@ -27,8 +27,6 @@ import type { Vec3 } from '../../sim/vec';
 import { Hud } from '../../ui/hud';
 import { VaultPrompt } from '../../ui/vaultPrompt';
 import { MagTossRenderer } from '../effects/magTosses';
-import type { PictureSource } from '../../ui/menus/menuPictures';
-import type { PictureSubject } from '../replicas/itemPictures';
 import { bbFlightTime } from '../effects/bbFlightTime';
 import { BBPathsDebug } from '../effects/bbPathsDebug';
 import { BBRenderer } from '../effects/bbRenderer';
@@ -192,7 +190,7 @@ export class CombatPresentation {
     this.viewmodel = new Viewmodel(renderer.camera.aspect, teamColor, loadout, { replica: quality.replicaDetail, hands: quality.handDetail }, paint, arms, renderer.replicaFiles);
     this.overlay = { scene: this.viewmodel.scene, camera: this.viewmodel.camera };
     this.viewmodel.onInspectSound = (cue, replicaId) => this.sfx.inspect(cue, replicaId);
-    this.hud = new Hud(container, keyName, prefs.crosshair);
+    this.hud = new Hud(container, prefs.crosshair);
     this.vaultPrompt = new VaultPrompt(container, () => keyName('jump'));
     this.quality = quality;
     this.setQuality(quality);
@@ -268,11 +266,6 @@ export class CombatPresentation {
     this.motes.setMotion(scale.dust > 0);
     this.dressing.setMotion(scale.dust > 0);
     this.renderer.motion = scale.dust > 0;
-  }
-
-  /** The carried replicas' pictures on the HUD's replica panel (graphics overhaul G4), by slot. */
-  setReplicaPictures(source: PictureSource | null, subjects: readonly (PictureSubject | null)[]): void {
-    this.hud.setPictures(source, subjects);
   }
 
   /** A short line on the HUD (the game's own quality step-down says so, REN-03). */

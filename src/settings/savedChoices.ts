@@ -36,8 +36,8 @@ import {
 import { RECORDS_KEY } from '../config/matchInfo';
 import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../config/modes';
 import { AIMING } from '../config/optics';
-import { frameRateCapFromSaved, GRAPHICS_ROWS, graphicsKey, parseStored, SHOW_FPS_CHOICES, TONE_MAPPING_CHOICES } from '../config/graphics';
-import { FOV_SETTING, type FrameRateCap, type LightingPresetId, QUALITY_CHOICES, type QualityChoice, type QualitySettings, RENDER, TONE_MAPPING, type ToneMappingId } from '../config/render';
+import { frameRateCapFromSaved, GRAPHICS_ROWS, graphicsKey, parseStored, SHOW_FPS_CHOICES } from '../config/graphics';
+import { FOV_SETTING, type FrameRateCap, type LightingPresetId, QUALITY_CHOICES, type QualityChoice, type QualitySettings, RENDER } from '../config/render';
 import { DEFAULT_RENDERER, RENDERER_IDS, type RendererChoice } from '../config/rendererPick';
 import { DEFAULT_WHEEL_SELECT, WHEEL_SELECT_MODES, type WheelSelect } from '../config/squad';
 import { DEFAULT_TEAM_PICK, TEAM_PICKS, type TeamPickId } from '../config/teams';
@@ -209,11 +209,6 @@ export function loadCustomQuality(storage = browserStorage()): Partial<QualitySe
  */
 export function loadFrameRateCap(storage = browserStorage()): FrameRateCap {
   return loadSetting('frameRateCap', frameRateCapFromSaved, 0, storage);
-}
-
-/** Tone mapping (Settings → Graphics; F2): Neutral unless the player picked another (owner decision). */
-export function loadToneMapping(): ToneMappingId {
-  return loadChoice('toneMapping', TONE_MAPPING_CHOICES, TONE_MAPPING.default);
 }
 
 /**

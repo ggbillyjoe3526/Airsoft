@@ -144,7 +144,7 @@
 .customise-hero {
   order: 2;
   aspect-ratio: 2 / 1;
-  max-height: 36vh;
+  max-height: calc(36 * var(--vh));
   background: none;
 }
 

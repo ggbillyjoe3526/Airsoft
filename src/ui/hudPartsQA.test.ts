@@ -1,15 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HIT_FEED } from '../config/matchInfo';
 import { LOADOUT } from '../config/replicas';
-import type { PictureSubject } from '../render/replicas/itemPictures';
 import { createArmament, nextSpare } from '../sim/armament';
 import { createCharacter, type Character } from '../sim/character';
 import { vec3 } from '../sim/vec';
 import { emptyStats } from '../stats/matchStats';
-import { emptyMagHint, isLowAmmo } from './ammoStatus';
+import { isLowAmmo } from './ammoStatus';
 import { HitFeed } from './hitFeed';
 import { FEED_ICONS } from './menus/icons';
-import { kitSubjects } from './menus/menuPictures';
 import { REPLICA_PANEL_HTML, ReplicaPanel } from './replicaPanel';
 import { Scoreboard } from './scoreboard';
 import { rosterNames, statsBlocks } from './statsRows';
@@ -152,139 +150,33 @@ function writesDuring(frames: number, step: (i: number) => void): number {
 // ---------------------------------------------------------------------------------------------------------------- replica
 
 describe('the replica panel (G4 criterion 4)', () => {
-  const panel = (key = () => 'R') => {
+  const panel = () => {
     const root = made();
     root.innerHTML = REPLICA_PANEL_HTML;
-    const p = new ReplicaPanel(root as unknown as HTMLElement, key);
+    const p = new ReplicaPanel(root as unknown as HTMLElement);
     const q = (s: string) => root.querySelector(s);
     return { p, root, main: q('.hud-replica-main'), mags: q('.hud-mags'), status: q('.hud-status'), mag: q('.hud-mag'), modes: q('.hud-modes') };
   };
-  const subjectsFor = () => kitSubjects({ slots: LOADOUT.map((replica) => ({ replica, optic: null, parts: { grip: 'none', magazine: 'standard' } })), schemes: [] }, false);
-
-  /** A picture source whose pictures arrive when the test says so. */
-  function lateSource() {
-    const asks: { subject: PictureSubject; resolve: (url: string) => void; reject: () => void }[] = [];
-    const source = {
-      picture: (subject: PictureSubject) =>
-        new Promise<string>((resolve, reject) => {
-          asks.push({ subject, resolve, reject: () => reject(new Error('lost')) });
-        }),
-    };
-    return { source, asks };
-  }
-  const flush = () => new Promise((r) => setTimeout(r, 0));
-
-  it('shows a picture that arrives after the panel is up, in the slot that asked', async () => {
-    const { p, main } = panel();
-    const { source, asks } = lateSource();
-    const subjects = subjectsFor();
-    p.setPictures(source, subjects);
-    p.update(createArmament(LOADOUT), LOADOUT, 1 / 60);
-    const slot = main.children[0]!;
-    const img = slot.children[1]!;
-    expect(img.hidden).toBe(true);
-    asks[0]!.resolve('aeg.png');
-    await flush();
-    expect(img.src).toBe('aeg.png');
-    expect(img.hidden).toBe(false);
-    expect(slot.classList.contains('has-picture')).toBe(true);
-  });
-
-  it('drops a picture that arrives after the player switched to the other replica', async () => {
-    const { p, main } = panel();
-    const { source, asks } = lateSource();
-    p.setPictures(source, subjectsFor());
-    const armament = createArmament(LOADOUT);
-    p.update(armament, LOADOUT, 1 / 60);
-    armament.active = 1;
-    p.update(armament, LOADOUT, 1 / 60);
-    expect(asks.map((a) => a.subject.replica)).toEqual([LOADOUT[0], LOADOUT[1]]);
-    const slot = main.children[0]!;
-    const img = slot.children[1]!;
-    // The rifle's picture comes late, with the pistol in hand: it must not stand in for the pistol.
-    asks[0]!.resolve('aeg.png');
-    await flush();
-    expect(img.src).toBe('');
-    expect(img.hidden).toBe(true);
-    expect(slot.classList.contains('has-picture')).toBe(false);
-    asks[1]!.resolve('pistol.png');
-    await flush();
-    expect(img.src).toBe('pistol.png');
-    expect(slot.classList.contains('has-picture')).toBe(true);
-  });
-
-  it('takes the picture away on a switch, and asks again for the replica switched back to', async () => {
-    const { p, main } = panel();
-    const { source, asks } = lateSource();
-    p.setPictures(source, subjectsFor());
-    const armament = createArmament(LOADOUT);
-    p.update(armament, LOADOUT, 1 / 60);
-    asks[0]!.resolve('aeg.png');
-    await flush();
-    const slot = main.children[0]!;
-    expect(slot.classList.contains('has-picture')).toBe(true);
-    armament.active = 1;
-    p.update(armament, LOADOUT, 1 / 60);
-    // The rifle's picture is not shown beside the pistol's name while its own comes.
-    expect(slot.children[1]!.hidden).toBe(true);
-    expect(slot.classList.contains('has-picture')).toBe(false);
-    armament.active = 0;
-    p.update(armament, LOADOUT, 1 / 60);
-    expect(asks).toHaveLength(3);
-    asks[2]!.resolve('aeg2.png');
-    await flush();
-    expect(slot.children[1]!.src).toBe('aeg2.png');
-  });
-
-  it('keeps the drawing when a picture cannot be made, and asks again on the next visit', async () => {
-    const { p, main } = panel();
-    const { source, asks } = lateSource();
-    p.setPictures(source, subjectsFor());
-    const armament = createArmament(LOADOUT);
-    p.update(armament, LOADOUT, 1 / 60);
-    asks[0]!.reject();
-    await flush();
-    const slot = main.children[0]!;
-    expect(slot.classList.contains('has-picture')).toBe(false);
-    expect(findAll(slot, 'pic-placeholder')[0]!.innerHTML).toContain('<svg');
-    armament.active = 1;
-    p.update(armament, LOADOUT, 1 / 60);
-    armament.active = 0;
-    p.update(armament, LOADOUT, 1 / 60);
-    expect(asks.filter((a) => a.subject.replica === LOADOUT[0])).toHaveLength(2);
-  });
-
-  it('draws the pistol\'s line drawing, not the rifle\'s, for the pistol before its picture comes', () => {
-    const { p, main } = panel();
-    const armament = createArmament(LOADOUT);
-    p.update(armament, LOADOUT, 1 / 60);
-    const rifle = findAll(main.children[0]!, 'pic-placeholder')[0]!.innerHTML;
-    armament.active = 1;
-    p.update(armament, LOADOUT, 1 / 60);
-    const pistol = findAll(main.children[0]!, 'pic-placeholder')[0]!.innerHTML;
-    expect(pistol).toContain('<svg');
-    expect(pistol).not.toBe(rifle);
-  });
 
   it('has a chip per fire mode, the pistol\'s one chip lit, the rifle\'s moving with the selector', () => {
     const { p, modes } = panel();
     const armament = createArmament(LOADOUT);
     p.update(armament, LOADOUT, 1 / 60);
     const lit = () => modes.children.filter((c) => c.classList.contains('on')).map((c) => c.textContent);
-    expect(modes.children.map((c) => c.textContent)).toEqual(['Semi', 'Burst', 'Auto']);
+    expect(modes.children.map((c) => c.textContent)).toEqual(['S', 'B', 'A']);
     for (const mode of ['semi', 'burst', 'auto'] as const) {
       armament.modes[0] = mode;
       p.update(armament, LOADOUT, 1 / 60);
-      expect(lit()).toEqual([{ semi: 'Semi', burst: 'Burst', auto: 'Auto' }[mode]]);
+      expect(lit()).toEqual([{ semi: 'S', burst: 'B', auto: 'A' }[mode]]);
     }
     armament.active = 1;
     p.update(armament, LOADOUT, 1 / 60);
-    expect(modes.children.map((c) => c.textContent)).toEqual(['Semi']);
-    expect(lit()).toEqual(['Semi']);
+    expect(modes.children.map((c) => c.textContent)).toEqual(['S']);
+    expect(lit()).toEqual(['S']);
     // Back to the rifle: the light is where its selector left it, on a single chip.
     armament.active = 0;
     p.update(armament, LOADOUT, 1 / 60);
-    expect(lit()).toEqual(['Auto']);
+    expect(lit()).toEqual(['A']);
   });
 
   describe('a bar per spare magazine', () => {
@@ -303,7 +195,7 @@ describe('the replica panel (G4 criterion 4)', () => {
       ammo.pouch.push(size, Math.floor(size / 2), 0);
       ammo.mag = 0;
       p.update(armament, LOADOUT, 1 / 60);
-      const fills = bars().map((b) => b.firstElementChild?.style.width);
+      const fills = bars().map((b) => b.firstElementChild?.style.height);
       expect(bars()).toHaveLength(3);
       expect(fills).toEqual(['100%', `${Math.round((Math.floor(size / 2) / size) * 100)}%`, '0%']);
       expect(bars()[2]!.classList.contains('empty')).toBe(true);
@@ -361,19 +253,15 @@ describe('the replica panel (G4 criterion 4)', () => {
     });
   });
 
-  it('words the status line: reloading, out of BBs, the last magazine, and the empty hint with the reload key as bound now', () => {
-    let key = 'R';
-    const { p, status } = panel(() => key);
+  it('words the status line: reloading, out of BBs and the last magazine; nothing for an empty magazine (UI2: no control hints)', () => {
+    const { p, status } = panel();
     const armament = createArmament(LOADOUT);
     const ammo = armament.ammo[0]!;
     p.update(armament, LOADOUT, 1 / 60);
     expect(status.textContent).toBe('');
     ammo.mag = 0;
     p.update(armament, LOADOUT, 1 / 60);
-    expect(status.textContent).toBe(emptyMagHint('R'));
-    key = 'T';
-    p.update(armament, LOADOUT, 1 / 60);
-    expect(status.textContent).toBe(emptyMagHint('T'));
+    expect(status.textContent).toBe('');
     armament.reload = 0.5;
     p.update(armament, LOADOUT, 1 / 60);
     expect(status.textContent).toBe('Reloading');
@@ -386,10 +274,8 @@ describe('the replica panel (G4 criterion 4)', () => {
     expect(status.textContent).toBe('Last magazine');
   });
 
-  it('writes nothing while nothing it shows changes, picture and bars included', () => {
+  it('writes nothing while nothing it shows changes, the magazine boxes included', () => {
     const { p } = panel();
-    const { source } = lateSource();
-    p.setPictures(source, subjectsFor());
     const armament = createArmament(LOADOUT);
     p.update(armament, LOADOUT, 1 / 60);
     expect(writesDuring(300, () => p.update(armament, LOADOUT, 1 / 60))).toBe(0);
@@ -618,7 +504,7 @@ describe('no element is made per frame (G4 criterion 7)', () => {
   it('holds for the replica panel, the hit feed and the score bar over a steady stretch', () => {
     const root = made();
     root.innerHTML = REPLICA_PANEL_HTML;
-    const panel = new ReplicaPanel(root as unknown as HTMLElement, () => 'R');
+    const panel = new ReplicaPanel(root as unknown as HTMLElement);
     const armament = createArmament(LOADOUT);
     const feed = new HitFeed(made() as unknown as HTMLElement);
     feed.add({ name: 'A', team: 0 }, { name: 'B', team: 1 }, false, false, 0);

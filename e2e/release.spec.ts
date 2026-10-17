@@ -57,6 +57,29 @@ test('the release build boots, ignores the test flags and plays with the real po
   await page.waitForFunction(() => document.pointerLockElement?.id === 'app', undefined, { timeout: 10_000 });
   await expect(pauseMenu).toBeHidden();
 
+  // Esc on the pause menu resumes, but Esc is no click, so Chrome refuses the lock (IN1). Stood in for here by refusing
+  // both of the game's tries: the menu asks for a click, and one click off its buttons resumes.
+  await page.evaluate(() => document.exitPointerLock());
+  await expect(pauseMenu).toBeVisible({ timeout: 10_000 });
+  await page.evaluate(() => {
+    const app = document.getElementById('app')!;
+    const real = app.requestPointerLock.bind(app);
+    let refusals = 2;
+    app.requestPointerLock = ((options?: PointerLockOptions) => {
+      if (refusals-- <= 0) return real(options);
+      document.dispatchEvent(new Event('pointerlockerror'));
+      return Promise.reject(new DOMException('Refused', 'NotAllowedError'));
+    }) as typeof app.requestPointerLock;
+  });
+  await page.waitForTimeout(500); // past the pause menu's Esc guard (PAUSE_ESC_GUARD_MS)
+  await page.keyboard.press('Escape');
+  await expect(pauseMenu.locator('.menu-hint')).toHaveText('Click anywhere to resume');
+  await expect(pauseMenu).toBeVisible();
+  const box = (await pauseMenu.boundingBox())!;
+  await page.mouse.click(box.x + box.width - 20, box.y + box.height / 2);
+  await page.waitForFunction(() => document.pointerLockElement?.id === 'app', undefined, { timeout: 10_000 });
+  await expect(pauseMenu).toBeHidden();
+
   expect(errors).toEqual([]);
 });
 

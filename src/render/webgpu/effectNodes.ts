@@ -44,7 +44,7 @@ import { everyDraw, objectFloat } from './twinUniforms';
  * the motes' size cap.
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any -- TSL's node types don't follow its own swizzles and helpers. */
+/* `any` from here to the end-of-`any` line: TSL's node types don't follow its own swizzles and helpers. */
 type AnyNode = any;
 
 const F = FIXTURES;
@@ -190,7 +190,7 @@ export function spriteTwin(points: THREE.Points, kind: PointKind, buffers: Share
   if (alpha) twin.opacityNode = materialOpacity.mul(alpha);
   return twin;
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
+/* end-of-`any` line */
 
 
 /**

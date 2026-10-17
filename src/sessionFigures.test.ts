@@ -23,7 +23,7 @@ describe('the sessions draw the Robots mix (G7)', () => {
   });
 
   it('the presentations pass the crowd to the figures and the arms to the viewmodel', () => {
-    expect(source('./render/match/matchPresentation.ts')).toMatch(/new CharacterRenderer\([^;]*, crowd, replicaFiles, figureRigs\)/);
+    expect(source('./render/match/matchPresentation.ts')).toMatch(/new CharacterRenderer\([^;]*, crowd, replicaFiles, figureRigs, teamColours\.paintGlow\)/);
     expect(source('./render/match/combatPresentation.ts')).toMatch(/new Viewmodel\([^;]*, arms, renderer\.replicaFiles\)/);
   });
 

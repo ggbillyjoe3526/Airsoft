@@ -362,5 +362,8 @@ export const TRIGGER = {
   burstShots: 3,
 } as const;
 
-/** How the HUD names each fire mode. */
+/** How the HUD names each fire mode in full (the chip's spoken name). */
 export const FIRE_MODE_LABELS: Readonly<Record<FireMode, string>> = { semi: 'Semi', burst: 'Burst', auto: 'Auto' };
+
+/** The letter on each fire mode's chip on the replica panel (UI2, Beta 1 playtest: "S/B/A"). */
+export const FIRE_MODE_LETTERS: Readonly<Record<FireMode, string>> = { semi: 'S', burst: 'B', auto: 'A' };

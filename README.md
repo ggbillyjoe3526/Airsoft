@@ -124,7 +124,7 @@ Then open **http://localhost:4173**.
   (more for a win, each round won and each hit, scaled by the difficulty) and each level, up to 10, unlocks parts for
   good, with the Cyber Pistol at level 10. The top bar shows your level; click it, or **Armory** beside **Loadout**,
   to see what you have unlocked and what each level gives. Items still to unlock show in the Loadout greyed, with
-  their level. Nothing is ever sold. The levels are in [levels.md](levels.md), which you can edit.
+  their level. Nothing is ever sold. The levels are in [data/levels.md](data/levels.md), which you can edit.
 - **Tutorial and Practice.** The title screen's **Tutorial** teaches the basics in short coached steps (skip it, or
   resume it from the pause screen). **Practice** (the last mode on the Match screen) puts you alone on the range, or on
   any map with targets in place of bots, with any replica you own; its timed challenge lights targets for you to hit.
@@ -231,8 +231,10 @@ npm run perf -- --env laptop # the perf harness: a scripted 60 s match, frame ti
 The browser smoke test needs Playwright's Chromium once per machine: `npx playwright install chromium`. It builds the
 game in `e2e` mode into `dist-e2e/` (port 4180; specs in `e2e/`) and plays the release build in `dist/` with the real
 pointer lock (port 4182; `e2e/release.spec.ts`). Each build is made once per source and reused
-(`pipeline/build-cached.mjs`). GitHub runs the pipeline's gate script on every pull request and every push to `main`
-(`.github/workflows/check.yml`, `pipeline/README.md`).
+(`pipeline/build-cached.mjs`). With `E2E_FIREFOX=1` it runs the boot and save specs in Playwright's Firefox instead
+(`npx playwright install firefox`; headed, so under `xvfb-run` on Linux without a display). GitHub runs the pipeline's
+gate script on every pull request and every push to `main` (`.github/workflows/check.yml`, `pipeline/README.md`), and
+the Firefox run in its `firefox` job.
 
 ### Hosting
 
@@ -293,7 +295,7 @@ src/input     keyboard, mouse and pointer lock → commands
 src/map       map data (Depot, Woodland, Neon Heights), lighting, foliage
 src/nav       walkability grid and route finding
 src/physics   Rapier wrapper: level collision, character controller, ray casts
-src/pool      the asset pool, the Loadout's model, bot kits, Extraction cases, supply events
+src/pool      the asset pool, the Loadout's model, bot kits, Extraction cases
 src/progress  levels, XP and what the player has unlocked
 src/render    Three.js presentation: maps, replicas, characters, BBs, effects, cameras
 src/save      guarded storage, save file, restore points, tab lock
@@ -305,10 +307,13 @@ src/ui        menus, HUD, scoreboard, minimap, hit feedback, debug overlay
 e2e           browser tests (Playwright)
 pipeline      gate script, perf harness, agent scripts
 docs          design notes, roadmap, process, playtest guide
-pool.md       every item, Extraction's cases and supply events (hand-editable)
-levels.md     what each level unlocks, the XP it takes and what a match gives (hand-editable)
-stats.md      how every replica and part performs (hand-editable)
-callouts.md   what the bots call and how often (hand-editable)
+data          the hand-editable tables the game reads at start:
+  pool.md       every item and Extraction's cases
+  levels.md     what each level unlocks, the XP it takes and what a match gives
+  stats.md      how every replica and part performs
+  bots.md       the bots' names and personalities
+  bot-kits.md   what the other team's bots carry
+  callouts.md   what the bots call and how often
 ```
 
 See `CLAUDE.md` for the project guide and `docs/` for design notes. `docs/PLAYTEST.md` is the step-by-step playtest

@@ -50,7 +50,8 @@ import { type NoXp, settleMatch } from './stats/settleMatch';
 import { adaptedPicks, adaptiveNote, adaptiveSetup, settleAdaptive } from './adaptivePicks';
 import { CrashScreen } from './ui/crashScreen';
 import { DebugOverlay } from './ui/debugOverlay';
-import { onFullscreenChange, relockAfterFullscreen, toggleFullscreen } from './ui/fullscreen';
+import { onFullscreenChange } from './ui/fullscreen';
+import { FullscreenPlay } from './ui/fullscreenPlay';
 import { GraphicsNotice } from './ui/graphicsNotice';
 import { HudLook } from './ui/hudLook';
 import { PlayPrompt } from './ui/playPrompt';
@@ -62,8 +63,7 @@ import { addXp, loadProgress, type Progress, resetProgress, saveProgress, syncPr
 import { contentPool } from './pool/contentPool';
 import { GAME_POOL } from './pool/gamePool';
 import { matchUsesDev, type NewGamePicks, playedPicks, playedTeamSize } from './newGamePicks';
-import { gameOwnership, type GearSlot, LoadoutModel, type PlayerKit } from './pool/loadoutModel';
-import { activeSupplyEvent, supplyLine } from './pool/supplyEvents';
+import { gameOwnership, type GearSlot, LoadoutModel } from './pool/loadoutModel';
 import { haulSummary, type XpSummary, xpSummary } from './ui/menus/summaryScreen';
 import type { MenuLevel } from './ui/menus/menusOptions';
 import { loadDevEnabled, loadDevSettings } from './settings/dev';
@@ -74,7 +74,6 @@ import { SAVE_TEXT } from './config/save';
 import { screenWhenStopped } from './ui/menus/menuNav';
 import { Menus } from './ui/menus/menus';
 import { followingPictureTarget, ItemPictures, nodePictureTarget } from './render/replicas/itemPictures';
-import { kitSubjects } from './ui/menus/menuPictures';
 import { recordsView } from './ui/recordsView';
 import {
   hasSavedTeammateDifficulty,
@@ -89,7 +88,6 @@ import {
   loadRawInput,
   loadRendererChoice,
   loadShowFps,
-  loadToneMapping,
   loadTutorialDone,
   loadTutorialStep,
 } from './settings/savedChoices';
@@ -102,7 +100,6 @@ interface PracticeAt {
   course: string;
 }
 
-const LOCK_REFUSED_HINT = 'The browser needs a moment before re-capturing the mouse. Click again.';
 
 /** The session loaded: both are a Session (session.ts); `kind` tells them apart where only one has the answer. */
 type Loaded = MatchSession | RangeSession;
@@ -232,8 +229,8 @@ export class Game {
   private look: LookSettings = loadLook();
   /** Settings › Dev › Retro look (M96, back on the Dev tab since the Dev 6 playtest; applies while the Dev tab is shown). */
   private retro: RetroSettings;
-  /** When the Fullscreen key was last pressed in play (performance.now()), to take the mouse again (audit UI-19). */
-  private fullscreenKeyAt = Number.NEGATIVE_INFINITY;
+  /** The Fullscreen key in play and the mouse lock across the change (audit UI-19, IN1). */
+  private readonly fullscreen: FullscreenPlay;
   /** Stop following the page's fullscreen state and the keyboard layout. */
   private readonly unwatchFullscreen: () => void;
   private readonly unwatchLayout: () => void;
@@ -335,7 +332,7 @@ export class Game {
       errors: options.errors,
     };
     this.renderer.setFov(loadFov());
-    this.renderer.setToneMapping(loadToneMapping());
+    this.renderer.setToneMapping(this.dev.toneMapping);
     this.lighting = loadLightingPicks();
     // The menus show the team colours of the saved set (the Match screen's Your team), as each match sets them again.
     applyTeamCss(container, TEAM_COLOUR_SETS[this.prefs.teamColours]);
@@ -348,6 +345,8 @@ export class Game {
     this.keyboard = new Keyboard(window, this.bindings);
     // The lock is on the game's container, not the canvas: turning antialiasing on or off replaces the canvas (REN-04).
     this.pointer = new PointerLock(container, this.keyboard);
+    // A crash gives the mouse back for good (FA1).
+    this.fullscreen = new FullscreenPlay(this.pointer, () => this.started && this.session !== null && !this.crashScreen, () => this.unlockedPlay);
     this.pointer.rawInput = loadRawInput();
     // Key names on screen follow the player's keyboard layout where the browser tells it (audit UI-01).
     this.unwatchLayout = watchKeyboardLayout(browserKeyboardMap(), window, (layout) => this.bindings.setLayout(layout));
@@ -396,6 +395,7 @@ export class Game {
         if (!this.started) this.practice = this.tutorial = false;
         this.play();
       },
+      onFullscreenPlay: () => this.fullscreen.click(() => this.play()),
       onLeaveMatch: () => this.leaveMatch(),
       onRange: () => {
         this.practice = true;
@@ -433,11 +433,6 @@ export class Game {
       mode: {
         initial: this.picks.mode,
         onChange: (m) => ((this.picks.mode = m), (this.setupChanged = true)),
-        // The supply event on by the device's clock as the Mode pop-up opens (M49).
-        supply: () => {
-          const event = activeSupplyEvent(GAME_POOL.supplyEvents, new Date());
-          return event ? supplyLine(event) : null;
-        },
       },
       difficulty: { initial: this.picks.difficulty, onChange: (d) => ((this.picks.difficulty = d), (this.setupChanged = true)) },
       teammateDifficulty: { initial: this.picks.teammateDifficulty, follows: !hasSavedTeammateDifficulty(), onChange: (d) => ((this.picks.teammateDifficulty = d), (this.setupChanged = true)) },
@@ -456,7 +451,6 @@ export class Game {
         },
         frameRateCap: { initial: this.frameRateCap, onChange: (cap) => (this.frameRateCap = cap) },
         showFps: { initial: loadShowFps(), onChange: (on) => this.debug.setFpsReadout(on) },
-        toneMapping: { initial: this.renderer.toneMappingId, onChange: (id) => this.renderer.setToneMapping(id) },
         renderer: (row) => this.rendering.fillRow(row, this.renderer),
       },
       audio: { initial: this.audio.volumes, onChange: (channel, v) => this.audio.setVolume(channel, v), onRelease: (channel) => this.audio.preview(channel) },
@@ -515,16 +509,25 @@ export class Game {
         if (!this.askingLock) this.resume();
       } else if (this.escSkipDrop(released)) {
         this.startEscSkip();
+      } else if (!released && this.fullscreen.relock() !== 'none') {
+        // The lock dropped as fullscreen changes (Firefox): play holds, without the pause menu, while it is taken again.
+        this.fullscreen.hold();
       } else {
         this.pause();
-        this.relockAfterFullscreen();
+        if (this.fullscreen.takeByClick() && released) this.menus.askFullscreenClick();
+        this.fullscreen.takeAgain();
       }
     });
-    this.unwatchFullscreen = onFullscreenChange(() => this.relockAfterFullscreen());
+    this.unwatchFullscreen = onFullscreenChange(() => this.fullscreen.takeAgain());
     // Slider changes wait a moment before they are written (settings/storage.ts saveSettingSoon): write them as the page goes.
     window.addEventListener('pagehide', this.flushSettings);
     // Refused while the round skips without the mouse: the prompt over the field says so, not the hidden menus.
-    this.pointer.onError(() => (this.escSkip ? this.playPrompt.show(LOCK_REFUSED_HINT) : this.menus.showHint(LOCK_REFUSED_HINT)));
+    // Refused while play held for fullscreen: the pause menu, asking for the click (IN1).
+    this.pointer.onError(() => {
+      if (this.escSkip) return this.playPrompt.show(MENU_TEXT.lockRefused);
+      if (this.fullscreen.holding) this.pause();
+      this.menus.lockRefused();
+    });
     this.audio.warmUp();
     this.prefetchFieldSounds();
     this.renderer.warmUp();
@@ -573,7 +576,7 @@ export class Game {
       released,
       skippable: s.skipping || s.skipOffer !== null,
       focused: document.visibilityState === 'visible' && document.hasFocus(),
-      msSinceFullscreenKey: performance.now() - this.fullscreenKeyAt,
+      msSinceFullscreenKey: this.fullscreen.sinceKey(performance.now()),
       fullscreenWindowMs: FULLSCREEN_RELOCK_MS,
     });
   }
@@ -613,18 +616,6 @@ export class Game {
     this.endEscSkip();
     this.pause();
   };
-
-  /**
-   * The page entered or left fullscreen, or the mouse lock dropped: just after the Fullscreen key in play, the lock is
-   * taken again, so the key doesn't stop the match on the pause menu (audit UI-19; Resume follows the lock as usual).
-   */
-  private relockAfterFullscreen(): void {
-    const since = performance.now() - this.fullscreenKeyAt;
-    const inMatch = this.started && this.session !== null && !this.crashScreen; // a crash gives the mouse back for good (FA1)
-    if (!relockAfterFullscreen(since, FULLSCREEN_RELOCK_MS, inMatch, this.pointer.locked, this.unlockedPlay)) return;
-    this.fullscreenKeyAt = Number.NEGATIVE_INFINITY;
-    void this.pointer.request();
-  }
 
   /**
    * The graphics context was lost (true) or is back (false) (M18b, audit W-01). While it's gone the match pauses
@@ -682,6 +673,8 @@ export class Game {
       this.pause();
     } else if (this.pointer.locked) {
       this.pointer.release();
+    } else if (this.fullscreen.holding) {
+      this.pause();
     }
   }
 
@@ -751,6 +744,8 @@ export class Game {
       this.setupChanged = true;
       this.prefetchFieldSounds();
     }
+    // Tone mapping (RV2) is a look: it shows at once, and with the Dev tab hidden it's Neutral again.
+    if (this.dev.toneMapping !== before.toneMapping) this.renderer.setToneMapping(this.dev.toneMapping);
   }
 
   /** The Retro look (Settings › Dev) on screen as saved while the Dev tab is shown, else off. */
@@ -946,8 +941,6 @@ export class Game {
         ruleset: picks.ruleset,
         rules: { ...picks.rules, teamSize: playedTeamSize(picks) },
         kit: this.loadout.kit(),
-        // The supply event on by the device's clock as Play is pressed (M49): the run keeps it to the end.
-        supply: activeSupplyEvent(GAME_POOL.supplyEvents, new Date()),
         devContent: this.dev.devContent,
         devContentUsed: this.devContentUsed(picks),
         teamColours: TEAM_COLOUR_SETS[this.prefs.teamColours],
@@ -956,8 +949,7 @@ export class Game {
         ...(adaptive ? { adaptive } : {}),
       }, this.matchSeed, this.quality, this.audio, this.prefs);
       if (this.options.perfLog) console.info(this.session.build.line());
-      // The kit the match plays (a ruleset's factory kit, say), not the Loadout's (BP3).
-      this.setUp(this.session, this.session.kit);
+      this.setUp(this.session);
     }
     this.session!.combat.unlockAudio();
     if (this.options.allowUnlocked) {
@@ -1001,12 +993,11 @@ export class Game {
     this.session.onChallengeRun = (run) => {
       if (!run.helped && addChallengeRun(this.records, course, run.hits)) saveRecords(this.records, browserStorage());
     };
-    this.setUp(this.session, this.loadout.kit());
+    this.setUp(this.session);
   }
 
-  /** A session just built: its replica pictures of the kit it plays, the Dev settings in force (M24), its team colours. */
-  private setUp(session: Session, kit: PlayerKit): void {
-    session.combat.setReplicaPictures(this.pictures, kitSubjects(kit, this.look.realisticColours));
+  /** A session just built: the Dev settings in force (M24), its team colours. */
+  private setUp(session: Session): void {
     session.combat.setBbPaths(this.dev.showBbPaths);
     session.setDevCheats(this.dev);
     this.steppedDown = false;
@@ -1015,6 +1006,7 @@ export class Game {
 
   private resume(): void {
     this.endEscSkip();
+    this.fullscreen.stopHolding();
     const s = this.session;
     // A mouse lock granted after the graphics context was lost (the lock was still pending): nothing can be drawn.
     if (this.graphicsLost) {
@@ -1062,6 +1054,7 @@ export class Game {
   }
 
   private pause(): void {
+    this.fullscreen.stopHolding();
     this.keyboard.capturing = false;
     this.keyboard.releaseAll();
     this.input.clearLatches();
@@ -1241,16 +1234,15 @@ export class Game {
     this.lastTime = now;
 
     const s = this.session;
+    // Held for fullscreen and the lock never came back: the pause menu, as for any other drop.
+    if (this.fullscreen.holdRanOut(performance.now())) this.pause();
     const running = (this.pointer.locked || this.unlockedPlay || this.escSkip) && s !== null;
     if (running) {
       // Only while playing: on the pause screen F3 belongs to the browser (find bar).
       if (this.keyboard.wasPressed('debugOverlay')) this.debug.toggle();
       if (this.keyboard.wasPressed('debugBbPaths')) s.combat.toggleBbPaths();
       // Still within the key press's user activation, which the browser needs for fullscreen (and to take the mouse again).
-      if (this.keyboard.wasPressed('fullscreen')) {
-        this.fullscreenKeyAt = now;
-        toggleFullscreen();
-      }
+      if (this.keyboard.wasPressed('fullscreen')) this.fullscreen.key(now);
       // The Dev settings' Game speed (M24) runs the simulation slower or faster than the clock.
       const simStart = performance.now();
       // Esc skipped the round without the mouse (core/escSkip.ts): once the next round is up it waits for the click that

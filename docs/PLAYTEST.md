@@ -47,12 +47,23 @@ What changed in 0.1 Beta 1, from your Dev 6 playtest. Each line points to the se
   body; your own body shows only when you look well down ([Players and replicas](#players-and-replicas)).
 - [ ] **Map surroundings.** Cranes and a water tower over Depot's walls; Woodland's cabin, layered pines and brighter
   nights; Neon Heights ringed by lit towers and signs ([Maps](#maps)).
-- [ ] **A shorter tutorial.** One or two sentences a card; read-only cards move on by themselves; the lean step is
-  gone ([Tutorial](#tutorial)).
+- [ ] **A shorter tutorial.** One or two sentences a card; read-only cards fill a bar and move on after 10 s; a lean
+  step after Crouch teaches peeking with Q and E ([Tutorial](#tutorial)).
 - [ ] **Movement and hands.** Holstered you run faster than armed, never past a sprint; no resting on cover; walking
   with Shift aims as steadily as standing; the first replica switch no longer stutters ([Movement](#movement)).
+- [ ] **Menus at 4K and in a small window.** 1.5× at 4K; at 1280×720 only a page's long list scrolls ([Menus](#menus)).
 - [ ] **Bug fixes.** The Q/E lean eases, a double-tap on the fire selector steps twice, a ricochet's grit flies off
   the wall, edge markers point the way to turn ([Old bugs to recheck](#old-bugs-to-recheck)).
+
+### Your Beta 1 playtest (2026-10-17)
+
+Your first pass (the checklist is `playtest/beta1-checklist.md` in the project's shared files): Settings, the menus,
+the HUD, movement, the figures and their hit areas, Depot and BBs in bushes passed. These became tasks: more compact
+menus and replica panel (UI2), a longer round-end stamp and table (RE1), a faster holstered run, a natural wrist and
+no own body in view (MV2), Woodland's hill roof, grey blocks and middle tree (WL2), the lean step and 10 s read cards
+in the tutorial (TT2), and Neon Heights' doors and interiors (NH2, the Maps Update). Still to play: the bots at each
+difficulty and adaptive difficulty, Woodland Attack / Defend, Neon Heights by Day, the overtime flag, and the hitch and
+[old bug](#old-bugs-to-recheck) rechecks.
 
 ### Only you can do these
 
@@ -60,8 +71,8 @@ What changed in 0.1 Beta 1, from your Dev 6 playtest. Each line points to the se
   and commit the `pipeline/baseline/laptop*.json` files it writes.
 - **Desktop Ultra baseline.** On your desktop run `npm run perf:desktop` (about 15 minutes; leave the window alone) and
   send the thread `pipeline/out/perf-desktop-summary.md` and `pipeline/baseline/desktop*.json`.
-- **Save in Firefox and Edge** (automated tests run Chromium only), and playing Woodland and Neon Heights, which stay
-  dev content until you make each public.
+- **Playing Woodland and Neon Heights**, which stay dev content until you make each public. (Save in Edge: done
+  2026-10-17, [Save](#save).)
 
 ## Movement
 
@@ -227,7 +238,7 @@ until 10.
 ## Levels and the Armory
 
 Finished matches give XP, each level up to 10 unlocks parts for good, and nothing is ever sold. What each level
-unlocks is in `levels.md` at the repository root; the Armory shows it in the game.
+unlocks is in `data/levels.md`; the Armory shows it in the game.
 
 - [ ] **Level 0 to start.** On a fresh save (a private window, or Settings › Save › Delete) the top bar reads "LVL 0"
   with an empty bar.
@@ -407,11 +418,13 @@ The Match screen's Practice card, then Start practice.
 ### Tutorial
 
 - [ ] **The title screen** offers Tutorial under START on a clean save until you finish it or start a first match.
-- [ ] **Play it through.** The coach says "Tutorial · 1 of 15 · Look around" and moves on as you do each thing (look,
-  walk, ring a plate, knock down a figure at 50 m, reload, selector, aim, crouch, sprint-fire, vault, switch replica,
-  then four cards to read); finished steps tick green. Does any step feel stuck or unclear?
-- [ ] **Short and quick (TT1).** Every card is a sentence or two; the four read cards fill a thin bar and move on
-  within 5 to 8 s.
+- [ ] **Play it through.** The coach says "Tutorial · 1 of 16 · Look around" and moves on as you do each thing (look,
+  walk, ring a plate, knock down a figure at 50 m, reload, selector, aim, crouch, lean, sprint-fire, vault, switch
+  replica, then four cards to read); finished steps tick green. Does any step feel stuck or unclear?
+- [ ] **Lean (TT2).** After Crouch, the Lean card names Q and E (your bindings); it ticks only once you have peeked
+  both ways, in either order.
+- [ ] **Short and quick (TT1, TT2).** Every card is a sentence or two; the four read cards fill a thin bar and move on
+  after 10 s.
 - [ ] **Esc mid-tutorial.** The pause menu names your step and offers Skip step and Skip tutorial; quitting at step 5
   and starting again resumes there. Rebinding reload changes the coach's key.
 
@@ -421,7 +434,8 @@ Your squad against a home team on a timed run. Turn on Dev content, then Play �
 Neon Heights). A run gives no XP while it is dev content.
 
 - [ ] **Play screen and exits.** The Match line reads "Squad of 3 · 5 in the home team", "One 8:00 run"; with Dev
-  content off it isn't offered.
+  content off it isn't offered. Exits are green rings with cones and an EXIT sign, yellow with Settings › Accessibility ›
+  Team colours on High Contrast (the minimap door and the marker too); a late exit is grey until it opens.
 - [ ] **Counted out.** Stand in an open exit: a beep a second, "Counting you out · 9 … 1", "Counted out · you made
   it!"; stepping out restarts it and a Beta bot in the ring pauses it.
 - [ ] **Respawn and coming in.** Hit once: back at the insertion, "no respawn left"; hit again: "Out of the run". For 3
@@ -434,8 +448,6 @@ Neon Heights). A run gives no XP while it is dev content.
   feeling unfair?
 - [ ] **By level and map.** The home team is the map's base plus your squad, one more on Pro: Easy lets you out with
   three cases most runs, Normal about a third, Hard rarely, Pro hardly ever.
-- [ ] **Supply events.** From Friday to Sunday the Mode card says "Supply weekend" (+25 % XP); 30 October to 1
-  November 2026 names the Halloween night run (+50 %).
 
 ## Pro difficulty (dev content)
 
@@ -468,6 +480,10 @@ Defend. Pro pays XP ×2 but counts for nothing while it is dev content.
 - [ ] **The result screen.** MATCH OVER, YOU WIN! (or YOU LOSE), the score, and Play again, New game, Summary and Quit.
 - [ ] **The look.** All text is Inter (numbers keep their width), headings in capitals, tidy at 1280×720 and
   1920×1080; a button lifts when pointed at; Tab shows an orange focus ring; with reduced motion no fades.
+- [ ] **Window sizes (UX1).** At 4K with 100 % Windows scaling the menus are about 1.5× their 1080p size, and the
+  saved loadouts' menu opens at the pointer. At 1280×720 the top bar, heading and main button always show; the long
+  list scrolls, fading at its foot (Settings › Gameplay and Controls scroll a long way, even at 4K: tell me if that
+  grates). At 900×600 Start match is in sight.
 - [ ] **The loading screen** (`npm run build`, `npm run preview`, DevTools › Network › Slow 4G, cache off).
 
 ## HUD and match info
@@ -494,12 +510,14 @@ Defend. Pro pays XP ×2 but counts for nothing while it is dev content.
 - [ ] **Replay tutorial** (Settings › Gameplay, M97). Starts the tutorial at its first step, even after you finished
   it; from a match's pause menu it asks first, then leaves the match (not recorded).
 - [ ] **HUD size and opacity** (Settings › Gameplay › HUD). 150 % scales the replica panel, score bar, minimap, feed,
-  banners, wheel and markers with nothing overlapping at 1280×720; the crosshair keeps its size.
+  banners, wheel and markers with nothing overlapping at 1280×720 (the minimap grows a little less there, so an
+  Attack / Defend score bar stays clear of it, UX1); the crosshair keeps its size.
 - [ ] **The layout.** A score bar top middle (team blocks, the clock, "First to N"); the replica panel bottom right
-  (picture, mode chips, "/ N · M spare", the magazine bars); no squad cards or key hints; "ROUND 1" shows large;
-  corners keep their margin at 1920×1080 and on 21:9.
+  (UI2: S / B / A chips over a small box per spare magazine, the count and "/ N" at the right; no picture, no name, no
+  reload hint); no squad cards or key hints; "ROUND 1" shows large; corners keep their margin at 1920×1080 and on 21:9.
+  Is the panel compact enough, and are the magazine boxes easy to read at a glance?
 - [ ] **Ammo counter** (Settings › Gameplay › HUD, AC1). On by default. Off: no BB count and no "/ N · M spare" line;
-  each magazine bar stays full until empty, then hollow.
+  each magazine box stays full until empty, then hollow.
 
 ## Squad orders and minimap
 
@@ -540,17 +558,19 @@ Settings opens on Display, with groups down the left (Display, Graphics, Gamepla
   same sensitivity for CS2 and Valorant.
 - [ ] **Aim button and Sprint key: Toggle.** One right click keeps the sight up; sprint or a switch to the pistol
   drops it.
-- [ ] **Raw mouse input.** After the first Play the line says "Raw input is active" in Chrome and Edge, "no raw
-  input" in Firefox.
+- [ ] **Raw mouse input.** After the first Play the line says "Raw input is active" in Chrome and Edge; in Firefox
+  it says "Firefox never does" from the start.
 - [ ] **Keys** (Settings › Controls › Keys). Each action has a main and a second key box. Binding a used key swaps the
   two ("R was Reload: Reload is now Space"); Backspace clears (Move forward keeps one); the wheel and side buttons
   bind; F5, F11 and F12 are refused; Reset All asks first. By keyboard only: Tab to a box, Enter, press a key.
 - [ ] **Your keyboard layout** (Chrome or Edge, AZERTY or QWERTZ). Move forward shows as Z (AZERTY) and the order
   wheel as W or Y; the tutorial and reload hint use the same letters.
 - [ ] **Display.** Field of view starts at 90° (120° shows more at the sides, 80° less). Fullscreen (or F10) goes
-  fullscreen and back with play carrying on; Esc leaves it and pauses.
+  fullscreen and back with play carrying on; Esc leaves it and pauses. No Tone mapping row here or in Graphics.
 - [ ] **Dev group.** Debug info, BB paths, Game speed (25 % to 200 %), Bottomless magazines and Ghost (BBs pass
   through you) change play; with any on, the summary says Dev settings kept the match out of your records.
+- [ ] **Settings › Dev › Tone mapping** (RV2). Neutral by default; AgX and ACES change the colours at once. Untick the
+  Dev settings box and the colours go back to Neutral at once; a match played with AgX still counts.
 - [ ] **Dev playtesting aids** (M90). **+500 XP**, **Level up** and **Reset level** change your level at once and
   survive a reload. **Time of day** plays the map under the other light; **Bots hold fire**.
 - [ ] **Settings › Dev › Retro look** (M96, back on the Dev tab since ST1). Off by default; On gives chunky pixels and
@@ -618,31 +638,40 @@ Settings › Graphics › Quality: Low, Medium, High, Ultra or Custom.
 
 Settings › Save file. Everything saves as it changes; nothing to press.
 
-- [ ] **Saved automatically.** Change the field of view: "Last saved just now"; reload and your settings, Loadout,
+- [x] **Saved automatically.** Change the field of view: "Last saved just now"; reload and your settings, Loadout,
   level and records are as you left them.
-- [ ] **Download and load.** `airsoft-save-<today>.json` is readable JSON. In a private window Load file (or drag it
+- [x] **Download and load.** `airsoft-save-<today>.json` is readable JSON. In a private window Load file (or drag it
   on) shows both saves side by side; Replace reloads with yours; Undo brings back what was there.
 - [ ] **An edited file.** Change `xp` in a download and load it: the pop-up warns and the button reads Load anyway; any
   other file says "That file isn't an Airsoft save".
 - [ ] **Mid-match.** Download works; Load, Restore, Undo and Delete are greyed with "Leave the match to load a save."
 - [ ] **Restore points and Delete.** One restore point per day you play (three at most), with the same pop-up and an
   Undo.
-- [ ] **Two tabs.** A second tab shows "Airsoft is open in another tab" and waits; Play here moves the game to it with
-  nothing lost. **Protect:** Chrome and Edge answer at once, Firefox asks; once allowed it reads Protected.
-- [ ] **Firefox and Edge.** Download, Load (button and drag and drop), the two-tab notice and Protect once in each.
+- [x] **Two tabs.** A second tab shows "Airsoft is open in another tab" and waits; Play here moves the game to it with
+  nothing lost. **Protect:** Chrome and Edge answer at once (often "said no for now"); once allowed it reads Protected.
+- [x] **Edge.** Download, Load (button and drag and drop), the two-tab notice and Protect once. William, Edge 155,
+  Dev 6 build, 2026-10-17: everything kept after a browser restart, a private window started fresh, Protect said
+  "no for now". Firefox: the cloud harness (`/mnt/project-files/playtest/firefox-harness/`) runs the save tests
+  there; nobody checks it by hand.
 
 ## Browsers and builds
 
-- [ ] **Firefox and Edge, production build** (`npm run build`, `npm run preview`). It boots to the title with no
+You play in Chrome (2026-10-17, no Firefox installed): skip the Firefox lines. CI's `firefox` job runs the boot and
+save tests in Firefox on every pull request, and IN1 checked mouse lock, F10 and the raw input line in Firefox 136 in
+the cloud.
+
+- [ ] **Edge, production build** (`npm run build`, `npm run preview`). It boots to the title with no
   console errors; Play takes the mouse, Esc pauses and Resume takes it back; the back and forward side buttons don't
   leave the page. `npm run dev` still boots.
-- [ ] **Chrome, production build.** Mouse look is smooth with no jump on the first move after Play or Resume. Right
-  after pausing it may show "click again"; a second Esc a second later resumes.
+- [ ] **Chrome, production build.** Mouse look is smooth with no jump on the first move after Play or Resume.
+- [ ] **Esc on the pause screen** (Chrome, Edge). Esc is no click, so the browser usually won't give the mouse
+  back: the menu says "Click anywhere to resume" in large type, and one click anywhere on it carries on. A click within
+  a second of the first Esc gets "needs a moment, click again" in Chrome. Esc again and Resume still work.
 - [ ] **Tabbing away.** Switching tab, Alt+Tab, clicking a window on a second screen or opening an overlay mid-round
   pauses the match and nothing happened while you were away; away while running forward, you stand still on Resume.
 - [ ] **Hardware acceleration off** (restart the browser): the title warns the game will run slowly and where to turn
-  it on. **Sound blocked** (Firefox › Autoplay › Block Audio and Video): a line under Resume says so. **JavaScript
-  off:** the loading page says the game needs it.
+  it on. **Sound blocked** (Firefox only, so unchecked for now: Autoplay › Block Audio and Video): a line under Resume
+  says so. **JavaScript off:** the loading page says the game needs it.
 - [ ] **A crash** (dev server, mouse locked; console `airsoft.session.advance = () => { throw new Error('test') }`):
   the game stops, the cursor returns, "Something went wrong" shows the seed, Copy Report copies it and Reload starts
   again.

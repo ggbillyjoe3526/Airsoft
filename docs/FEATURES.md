@@ -96,8 +96,6 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Extraction on Woodland (15 min against 4 to 7, the locker in the cabin or the fort, home team keeps 30 m from the
   insertion at the start) and Neon Heights (10 min against 3 to 6, the locker on Level 2, exits on the street) (M48,
   M72)
-- Extraction supply events: a Supply weekend every Friday to Sunday (+25 % FC, +50 % parts) and dated events from
-  pool.md (Halloween night run 2026), by the device's clock; the Play screen says which is on under Extraction (M49)
 - 3v3 by default with a round clock; first to 5 rounds wins; a whistle starts each round (Phase 1)
 - Teams: Alpha (blue) and Beta (orange); Your team on the Match screen picks your side, and an Extraction run is always Alpha (M98)
 - Custom matches: rounds to win, round time, 1v1 to 3v3 (to 5v5 on maps with room, M33d), friendly fire, ricochets; only
@@ -175,6 +173,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   offering only its own modes; Match and Teams on the left and House rules on the right, one line each, ruleset-set rules
   locked as "set by Skirmish", unused rules hidden, one help line at the foot; Your match lists rules as chips with no map
   picture; no map is loaded until Play (M15, M15b, G3, MR1)
+- Menus scale with the window height like the HUD, up to 1.5× at 4K; a menu page stays pinned to the window and only its long list scrolls, fading at its foot (UX1)
 - Title screen with a Fullscreen button at the bottom left (it reads Exit fullscreen while in fullscreen) and the version at
   the bottom right (MR1); pause, match summary and result screens; the pause screen shows the match's seed for bug reports (M15,
   M24, BP1, G3)
@@ -183,7 +182,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   realistic colours (Black, Wolf Grey, Ranger Green, Tan) per replica (G3, RM3, MR1)
 - Error screen on a crash with the seed, a report, a note box, Reload, Copy Report and Report a Bug buttons; Play Again starts a new match with
   its own seed (FA1, IM7)
-- Settings groups, opening on Display: Display (fullscreen, field of view, tone mapping, show FPS), Graphics (quality presets with
+- Settings groups, opening on Display: Display (fullscreen, field of view, show FPS), Graphics (quality presets with
   Custom option, frame-rate limit), Gameplay (crosshair, hit marker, HUD), Looks (Robots), Audio, Controls (every action rebindable,
   mouse buttons and mouse wheel), Accessibility, Save file, Dev; a search box and a note on every row
   (M15, M18a, M19, M24, FA2, FA5, G1, G3, M96, M97)
@@ -198,7 +197,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - A hidden Dev group (tick Dev settings under the list): debug info, BB paths, game speed, bottomless magazines, ghost,
   Disable levelling (unlocks every item; a cheat with no XP and no records), +500 XP, Level up and Reset level buttons,
   free case openings, time of day, bots hold fire, spectate any bot, bot intentions, adaptive difficulty, end the round now, reset the save,
-  Diagnostics Copy and Report a Bug, Dev content switch, Retro pixels (M24, M26d, FA1, M35, M42, M83, M90, IM7)
+  Diagnostics Copy and Report a Bug, Dev content switch, Retro pixels, tone mapping (Neutral, AgX or ACES; applies at once, Neutral when off)
+  (M24, M26d, FA1, M35, M42, M83, M90, IM7, RV2)
 - The build's version on the title screen (M24)
 - Screens fetched on first use: the Loadout, Armory and Settings, and the range, load in the background after the title; a failed download says so and tries again (IM1)
 
@@ -256,8 +256,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   reflections in puddles and glass, film grain and lens fringe on Ultra; each a Custom row; Low draws none (G5)
 - Custom graphics option: pick a preset and modify any row (shadows, shadow detail, softness, range, render scale, edge
   smoothing, surface relief (Normal or Bump), texture detail, dust and more); Custom is saved (FA2, FA7)
-- Graphics settings: frame-rate limit (Unlimited, 30, 60, 120, 144, 240), show FPS counter and tone mapping choice
-  (Neutral, AgX, ACES); the first run picks a preset from the graphics card (Medium for integrated, High for discrete)
+- Graphics settings: frame-rate limit (Unlimited, 30, 60, 120, 144, 240) and show FPS counter; the first run picks a
+  preset from the graphics card (Medium for integrated, High for discrete)
   (FA2, FA7, G5)
 - Raised dock and ramps cast shadows; BB streaks consistent on any screen; replica sheen now on Medium and preserved
   across preset switches; contact shadows under every player on all presets (FA3, FA7)
@@ -302,7 +302,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - A practice range, picked as Practice (the last mode) on the Match screen: steel plates that ring, figures that fall, at 10–60 m,
   with a readout of your last BB; figures stand at the same height as match characters; moving targets (sliding figures, a swinging plate, pop-up figures) and an optional Timed challenge with a best score, off by default (M21, FA1, M93)
 - Range in Depot's new look: baked light, post effects, props behind the firing line (portable toilet, replica rack, water tank, generator, crate bench), a sandbag berm at the backstop, dirt, litter, puddles and sprays, and wooded hills, treelines, site huts, a water tower and a power line beyond the walls; chains, bands and brackets on the plates (FA7, M81)
-- A tutorial of fifteen coached steps on the range, with short cards, your own key bindings and the real scoreboard and order wheel; read-only cards move on after 5–8 s with a bar; no lean step; finishing opens Tutorial complete with Practice or Menu; skip and resume from pause; Replay tutorial in Settings starts it again at once (M16, FA10, M80, M97)
+- A tutorial of sixteen coached steps on the range, with short cards, your own key bindings and the real scoreboard and order wheel; a Lean step after Crouch ticks once you've leaned both ways; read-only cards move on after 10 s with a bar; finishing opens Tutorial complete with Practice or Menu; skip and resume from pause; Replay tutorial in Settings starts it again at once (M16, FA10, M80, M97, TT2)
 - Practice on any map: the Range or any map (dev maps with Dev content on), picked on the Match screen's Map cards, never changing the match's map; on a map no bots, and plates, figures, pop-ups, sliders and swingers stand where the other team's bots would play, facing you; minimap and torch at night; the timed challenge has its own best per map, a START plate a few steps ahead, and targets light only once in your sight, within 50 m (M94)
 - In Practice, L opens the Loadout from play to try and customise any replica you own (everything with Disable levelling); Back to practice returns you where you stood (M95)
 
@@ -310,8 +310,10 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 
 - Team colour sets checked for colour blindness, patterns on the gauges, on-screen sound cues round the crosshair (M18b)
 - High-contrast styling; hit, out and round messages read by screen readers (FA5)
+- High Contrast team colours: exits turn hi-vis yellow, and team paint glows faintly on day fields (AX1)
 - Reduced motion, pause on a hidden tab or when the window loses focus, recovery from a lost graphics context,
-  fullscreen on F10 (M18a, M18b, FA6)
+  fullscreen on F10 (M18a, M18b, FA6); after Esc a click on the pause screen resumes if the browser won't return the mouse,
+  and in Firefox F10 asks for one click where it refuses fullscreen (IN1)
 
 ## Developer and debug
 

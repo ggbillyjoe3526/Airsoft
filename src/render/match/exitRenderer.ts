@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { EXIT_VISUALS } from '../../config/render';
-import { cssColor } from '../../config/teams';
+import { cssColor, type ExitColours, TEAM_COLOUR_SETS } from '../../config/teams';
 import { type Terrain, terrainHeightAt } from '../../map/terrain';
 import type { RunExit, RunState } from '../../sim/extraction';
 
@@ -20,8 +20,8 @@ interface ExitSlot {
   shownOpen: boolean | null;
 }
 
-/** The sign's board: white text on the exit's colour, drawn once per state. */
-function drawBoard(text: string, color: number): THREE.CanvasTexture {
+/** The sign's board: `ink` text and border on the exit's colour, drawn once per state. */
+function drawBoard(text: string, color: number, ink: number): THREE.CanvasTexture {
   const { width, height } = V.boardPixels;
   const canvas = document.createElement('canvas');
   canvas.width = width;
@@ -30,10 +30,10 @@ function drawBoard(text: string, color: number): THREE.CanvasTexture {
   if (g) {
     g.fillStyle = cssColor(color);
     g.fillRect(0, 0, width, height);
-    g.strokeStyle = '#ffffff';
+    g.strokeStyle = cssColor(ink);
     g.lineWidth = height * 0.06;
     g.strokeRect(g.lineWidth, g.lineWidth, width - 2 * g.lineWidth, height - 2 * g.lineWidth);
-    g.fillStyle = '#ffffff';
+    g.fillStyle = cssColor(ink);
     g.textAlign = 'center';
     g.textBaseline = 'middle';
     g.font = `bold ${Math.round(height * (text.length > 5 ? 0.34 : 0.5))}px sans-serif`;
@@ -46,7 +46,7 @@ function drawBoard(text: string, color: number): THREE.CanvasTexture {
 
 /**
  * Extraction's exits in the world (M43): a painted ring with a faint wash inside, site cones round it and an EXIT sign
- * on a post, green while open and grey while a late exit is still shut; exits closed for the run aren't drawn. Built
+ * on a post, in the team colour set's exit colours while open (ExitColours) and grey while a late exit is still shut; exits closed for the run aren't drawn. Built
  * once from the run's exits; a frame only repaints an exit when it opens. Reads the run state only. On a field with
  * terrain (M48: Woodland) the ring, its wash, the cones and the post follow the ground, so a slope buries none of them.
  *
@@ -61,14 +61,14 @@ export class ExitRenderer {
   private readonly geometries: THREE.BufferGeometry[] = [];
   /** The rings' and washes' one material: colour and alpha from the vertices (EXIT_VISUALS' colours and opacities). */
   private readonly floorMaterial = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide });
-  private readonly cone = new THREE.MeshStandardMaterial({ color: V.coneColor, roughness: 0.7 });
+  private readonly cone: THREE.MeshStandardMaterial;
   private readonly post = new THREE.MeshStandardMaterial({ color: V.postColor, roughness: 0.6 });
-  private readonly openTexture = drawBoard(V.openText, V.openColor);
-  private readonly shutTexture = drawBoard(V.shutText, V.shutColor);
-  private readonly boardOpen = new THREE.MeshStandardMaterial({ map: this.openTexture, roughness: 0.8, side: THREE.DoubleSide });
+  private readonly openTexture: THREE.CanvasTexture;
+  private readonly shutTexture = drawBoard(V.shutText, V.shutColor, 0xffffff);
+  private readonly boardOpen: THREE.MeshStandardMaterial;
   private readonly boardShut = new THREE.MeshStandardMaterial({ map: this.shutTexture, roughness: 0.8, side: THREE.DoubleSide });
   /** The open and shut colours in the working colour space, as the materials' `color` took them before M75. */
-  private readonly openColor = new THREE.Color(V.openColor);
+  private readonly openColor: THREE.Color;
   private readonly shutColor = new THREE.Color(V.shutColor);
   private readonly floor: THREE.Mesh;
   private readonly cones: THREE.InstancedMesh;
@@ -79,7 +79,13 @@ export class ExitRenderer {
   constructor(
     run: RunState,
     private readonly terrain: Terrain | null = null,
+    /** The picked team colour set's exit colours (AX1). */
+    colours: ExitColours = TEAM_COLOUR_SETS.standard.exit,
   ) {
+    this.cone = new THREE.MeshStandardMaterial({ color: colours.cone, roughness: 0.7 });
+    this.openTexture = drawBoard(V.openText, colours.open, colours.ink);
+    this.boardOpen = new THREE.MeshStandardMaterial({ map: this.openTexture, roughness: 0.8, side: THREE.DoubleSide });
+    this.openColor = new THREE.Color(colours.open);
     const coneGeo = this.keep(new THREE.ConeGeometry(V.coneRadius, V.coneHeight, V.coneSegments));
     coneGeo.translate(0, V.coneHeight / 2, 0);
     const postGeo = this.keep(new THREE.CylinderGeometry(V.postRadius, V.postRadius, V.postHeight, 8));

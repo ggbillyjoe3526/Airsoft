@@ -11,8 +11,9 @@ import { plainWasmBundle, RAPIER_WASM } from './src/config/rapierWasm.ts';
 /** The headless guards (src/ai/depotMatchSupport.ts): most of the unit suite's time, project `slow`; the Pro guards on
  * every map (M40), the Extraction runs on every map (M46, M48), every mode's short matches (CT3), Woodland's matches
  * and the duel and route guards with them, and the figure hit-volume sweep (M85), each a minute or more of headless
- * play or ray casts (DX0: together they were a third of `npm run t`). CI runs them all (`.github/workflows/check.yml`);
- * the local gate runs them when the diff reaches one (pipeline/testReach.mjs). */
+ * play or ray casts (DX0: together they were a third of `npm run t`), and any other file over 20 s (DX4). CI runs
+ * them all (`.github/workflows/check.yml`, in shares balanced by pipeline/slow-times.json: a new file here gets its
+ * seconds there); the local gate runs them when the diff reaches one (pipeline/testReach.mjs). */
 const SLOW_TESTS = [
   'src/ai/depotMatch*.test.ts',
   'src/ai/*Match.pro*.test.ts',
@@ -27,6 +28,10 @@ const SLOW_TESTS = [
   'src/ai/botRouteBudget.test.ts',
   'src/content/modePlays*.test.ts',
   'src/render/figures/figureHitVolume.test.ts',
+  // Over 20 s each alone in the container (DX4): the sound bank's renders, team play's matches and G9's effect sweep.
+  'src/audio/sfx.test.ts',
+  'src/ai/teamPlay.test.ts',
+  'src/render/dressing/g9EffectsQA.test.ts',
 ];
 /**
  * The bot balance figures (src/ai/balance/, token plan item 22): who wins, who lands the first hit, how often the squad

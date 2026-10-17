@@ -126,17 +126,21 @@ export class ContextMenu {
     choice?.run();
   }
 
-  /** Puts the corner at the pointer, flipped and moved so it stays in the window and off the boxes to avoid. */
+  /**
+   * Puts the corner at the pointer, flipped and moved so it stays in the window and off the boxes to avoid. Measured in
+   * window pixels; the menus' zoom (UX1) multiplies `left` and `top`, so they are written divided by it.
+   */
   private place(x: number, y: number, avoid: readonly Box[]): void {
     const win = document.defaultView;
-    this.root.style.left = `${Math.round(x)}px`;
-    this.root.style.top = `${Math.round(y)}px`;
+    const zoom = this.root.currentCSSZoom || 1;
+    this.root.style.left = `${Math.round(x / zoom)}px`;
+    this.root.style.top = `${Math.round(y / zoom)}px`;
     if (!win) return;
     const r = this.root.getBoundingClientRect();
     if (r.width === 0 && r.height === 0) return;
     const at = placeMenu(x, y, r.width, r.height, win.innerWidth, win.innerHeight, avoid);
-    this.root.style.left = `${Math.round(at.left)}px`;
-    this.root.style.top = `${Math.round(at.top)}px`;
+    this.root.style.left = `${Math.round(at.left / zoom)}px`;
+    this.root.style.top = `${Math.round(at.top / zoom)}px`;
   }
 
   private onKey(e: KeyboardEvent): void {
