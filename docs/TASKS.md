@@ -101,7 +101,7 @@ attempts: 0
 ## PF1 · No shader hitches mid-match
 tier: core
 perf: required
-touches: src/matchSession.ts, src/render/flagRenderer.ts, src/render/characterRenderer.ts, src/render/externalModels.ts, src/render/viewmodel.ts, src/render/renderer.ts
+touches: src/matchSession.ts, src/rangeSession.ts, src/game.ts, src/render/
 contract: none
 acceptance:
   1. Each first-use hitch is measured before and after with `?perf` on a cold cache, and recorded: the first overtime flag, first tossed magazine, first 2x scope aim, first figure fade, the shadow depth shaders and the post stack's pipelines.
