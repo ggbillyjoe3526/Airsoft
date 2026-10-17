@@ -1,12 +1,12 @@
 # DX8 · Game: the play flow and the dev glue out of the composition root (audit A1 step two)
 
-**Review:** 1 attempt · 0/8 · Escalated (pending) · placeholder: critic not run yet, the thread rewrites this line
+**Review:** 1 attempt · 8/8 · Accept (Opus)
 
 ## Attempts
 
 | Date | Attempt | Worker model | build | tests | smoke | perf | scope | changelog | Critic | Retry reason | Wall time | Worker tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 2026-10-17 | 1 | Opus 5.5 (worker) | ✓ 81 s | ✓ 578 s (fast; 1 load timeout, passes alone) | – CI | – pending | – | – | pending | – | – | – |
+| 2026-10-17 | 1 | Opus 5.5 (worker) | ✓ 21 s | ✓ 142 s (fast; guards on CI) | – CI | ✓ 3057 s | ✓ | ✓ | 8/8 Accept (Opus) | – | ~6 h | QA 40k · performance 21k · critic 54k |
 
 ## Decisions
 
@@ -46,5 +46,7 @@
 
 ## Known issues left
 
-- None. Under heavy load a few tests hit their timeouts and pass alone (`audio/citySound.test.ts` this run); test
-  speed is DX4's.
+- Under heavy load a few tests hit their timeouts and pass alone (`audio/citySound.test.ts` this run); test speed is
+  DX4's.
+- Critic note: `Game.crash` sets `flow.unlockedPlay` directly and `escSkip`/`escSkipAt` are public on the flow; a
+  `flow.crashed()` method would keep that state inside `playFlow.ts` (602 lines, near the top for a small module).
