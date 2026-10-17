@@ -758,7 +758,9 @@ replaces its line; the old one stays findable in the archive or in git.
 - **Team colours come in Standard and High contrast sets, and props, kit and paint never use a team colour's hue
   (tested) (2026-10-04).** Colour is never the only cue: names carry a bar, exits a glyph and a distance. Exits take
   their set's colour (owner, 2026-10-17, AX1; replaces decision 17 of 2026-10-05, one green in every set): Standard
-  keeps the green, High Contrast's are hi-vis yellow, as the green sits close to the orange team for a deuteranope.
+  keeps the green, High Contrast's are hi-vis yellow, as the green sits close to the orange team for a deuteranope. On day
+  fields High Contrast's team paint glows faintly (0.3 of its colour; owner, 2026-10-17, AX1: "HC only"), so its dark
+  orange holds in shaded corners; Standard's paint has none.
 - **Menu headings and labels are in capitals, descriptions as written (owner, 2026-10-03, on the menu sketch).** Done
   in the stylesheet (`text-transform`), so the text in code stays readable and searchable.
 - **Menus are opaque (owner, 2026-10-03: nothing of the game should show through).** The controls list lives under

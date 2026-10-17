@@ -126,7 +126,7 @@ attempts: 0
 ## AX1 · Readability and tone: kit colours, High contrast, exit markers
 tier: ui
 perf: skip
-touches: src/config/characters.ts, src/config/teams.ts, src/config/renderView.ts, src/config/colourVision.test.ts, src/render/exitRenderer.ts, src/render/matchPresentation.ts, src/ui/minimap.ts, src/style.css
+touches: src/config/characters.ts, src/config/teams.ts, src/config/renderView.ts, src/config/colourVision.test.ts, src/render/exitRenderer.ts, src/render/matchPresentation.ts, src/render/characterRenderer.ts, src/render/riggedFigure.ts, src/matchSession.ts, src/ui/minimap.ts, src/style.css
 contract: none
 acceptance:
   1. Kit looks read as a weekend airsoft site, not a military unit: at most two of the six looks wear plate carriers, and at least two vests are in a civilian colour. Team armbands still read first.
