@@ -218,7 +218,7 @@ request. Each entry says where the contract lives, what it holds today and what 
 
 - **`stepSimulation(state, commands, ctx, dt)`** (`sim/simulation.ts`). The fixed 60 Hz step and the order of its
   phases (a parked out-of-play character goes straight to the elimination step); randomness only from `state.rng`.
-  Per character: aim, move, walk cycle, lean, accuracy, then footsteps, replicas, the torch and a magazine toss
+  Per character: aim, move, walk cycle, lean, accuracy, the vault answer (`stepVaultReady`, DX6), then footsteps, replicas, the torch and a magazine toss
   (MG1, while the round is live); then BBs, the magazines in the air (they land or are lost) and the round. A character
   in play whose move ran hard into a noisy prop knocks it right after the move (`stepPropBump`, NP1; not during a
   vault), and a BB stopped on a ringing prop rings it in the BB step (`ringProp`, through `stepBBs`' `noise` context,

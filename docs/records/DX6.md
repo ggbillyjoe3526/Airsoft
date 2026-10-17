@@ -1,12 +1,12 @@
 # DX6 · Render: the folder regrouped, the prop builders as data, no per-frame vault rays (audit A3, A8 part, B4, B9 part)
 
-**Review:** 1 attempt · 0/8 · Escalated (pending) · placeholder: critic not run yet, the thread rewrites this line
+**Review:** 1 attempt · 7/8 · Accept (Opus)
 
 ## Attempts
 
 | Date | Attempt | Worker model | build | tests | smoke | perf | scope | changelog | Critic | Retry reason | Wall time | Worker tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 2026-10-17 | 1 | Opus 5.5 (worker) | ✓ 39 s | ✓ 1916 s (fast 342 s, 6086 tests; slow 1574 s, 110 tests: 2 load timeouts, pass alone in 27 s and 93 s) | – CI | – pending | – | – | pending | – | – | – |
+| 2026-10-17 | 1 | Opus 5.5 (worker) | ✓ 19 s | ✓ 606 s (both) | – CI | ✓ 3195 s | ✓ (touches widened for slow-times.json and a round.css comment) | ✓ | 7/8 Accept (Opus) | – | ~6 h | QA 50k · performance 28k · critic 77k |
 
 ## Decisions
 
@@ -53,5 +53,9 @@
 - Import lists in moved files are no longer in path order in places (the rewrite kept each line where it was; no
   linter checks it).
 - `matchPresentation.ts` is still 989 lines; the marker helper saved few lines, and splitting it was not in the block.
+- The vault answer now runs in the simulation for every in-play character each tick, bots included (early returns,
+  allocation-free; the guards ran 26.4 s against 26.9 s). Worth a look if a profile ever shows the sim tick heavy.
+- `markerTowards` is shared between `placeMarker` and its callers; a caller reading it without `pin` gets a stale value.
+- Critic check 8 (ARCHITECTURE's stepSimulation phase list) was fixed before merge.
 - Perf is the build thread's: the vault answer adds up to one level ray a tick for each character in play with nothing
   in reach (more only at an obstacle), against one or more a rendered frame for the player before.
