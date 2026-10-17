@@ -9,7 +9,7 @@ import { expect, type Page } from '@playwright/test';
  * SwiftShader; each pixel threshold was checked against the counts at this size.
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any -- the in-page code reads the game's untyped debug handle. */
+/* `any` in this file: the in-page code reads the game's untyped debug handle. */
 export type Any = any;
 
 /**

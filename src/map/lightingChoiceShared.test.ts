@@ -111,7 +111,8 @@ describe('the map a match is given is never written into (M63, audit REN-01)', (
       for (const mode of ['elimination', 'attackDefend'] as const) playMatch(15, 7, undefined, BOTS, mode, ROUNDS, map);
     }
     expectUntouched();
-  });
+    // About 3 s alone: past the 5 s default under the gate's load (DX4), so the same room as the test above.
+  }, 20_000);
 
   it('sets up and plays an Extraction run under each pick, writing nothing', () => {
     for (const map of played) {
