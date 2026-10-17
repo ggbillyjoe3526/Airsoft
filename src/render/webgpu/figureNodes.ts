@@ -23,7 +23,7 @@ import { copyOnto } from './effectNodes';
  * transparency), the hit and out states (which parts are shown). The low-detail figure has no patch and no twin.
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any -- TSL's node types don't follow its own swizzles and helpers. */
+/* `any` in this file: TSL's node types don't follow its own swizzles and helpers. */
 type AnyNode = any;
 
 /**

@@ -1,0 +1,16 @@
+# What Prettier leaves alone (DX4): build output, generated and binary data, and every Markdown file, since the docs
+# keep their own house style (docs/PROCESS.md › Writing docs) and the root .md tables are game data the build reads.
+node_modules/
+dist/
+dist-e2e/
+pipeline/out/
+pipeline/baseline/
+playwright-report/
+test-results/
+public/
+src/assets/
+src/map/bakes/
+tools/
+docs/
+*.md
+package-lock.json
