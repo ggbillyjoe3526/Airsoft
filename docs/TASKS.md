@@ -204,33 +204,6 @@ attempts: 0
 threads' branches it touches have merged (ST1, MR1, HD1, MV1, BD1, MS1, TT1), so none conflicts with them. DX2 takes
 over DC1's known-issues tidy-up. DX0, the quick wins, is the audit thread's own pull request.
 
-## DX2 · Docs slimming: the 50 KB rule applied, and the finished plan archived (audit A6; folds DC1)
-tier: trivial
-perf: skip
-touches: docs/
-contract: none
-acceptance:
-  1. `docs/ROADMAP.md` › 0.1 Dev 5 and › 0.1 Dev 6 (with their playtest notes, the audit list and the token table) move to `docs/archive/0.1-dev/ROADMAP.md`; Builds and Where we are still name both tags.
-  2. `docs/DECISIONS.md` is under 50 KB: split by subject (gameplay and modes, bots, maps and art, process and tooling) with an index at the top, or each ruling kept to its one-line decision with the "why" in the task's record; superseded rulings are marked or moved to the archive.
-  3. `docs/KNOWN_ISSUES.md` is under 50 KB: no row over about 300 characters, the detail in the task's record it names; fixed rows gone to the archive. (DC1's acceptance folds in here; its merges and moves were done in KI1.)
-  4. `docs/PLAYTEST.md` is under 50 KB: the current build's guide only, earlier builds' sections in the archive.
-  5. `docs/PROCESS.md` › Releases gains an "archive check" step, and `docs/archive/README.md` names the `0.1-beta/` folder it creates.
-status: open
-attempts: 0
-
-## DX3 · A fix-tier path through the pipeline (audit A5)
-tier: ui
-perf: skip
-touches: pipeline/, .claude/skills/pipeline/SKILL.md, .claude/agents/, docs/PROCESS.md, docs/records/README.md
-contract: none
-acceptance:
-  1. A task block may say `tier: fix`: gates, QA and the three review agents still run, but the record is the review line, one attempt row and a Decisions line, and no FEATURES or PLAYTEST edit is due unless the fix changes what the player sees (the changelog agent decides from the summary).
-  2. The agents' prompts each lose anything a build thread already reads elsewhere (the pipeline steps, the house style), citing the file instead; the six agents and two skills together are under 25 KB.
-  3. `gate.mjs`'s options are documented in one table, and any option CI never uses and no skill names is removed or folded.
-  4. `docs/PROCESS.md` › The pipeline says what a fix-tier task skips and why.
-status: open
-attempts: 0
-
 ## DX4 · Tooling and CI: one build per pull request, balanced shards, a formatter (audit B1, B2, B3)
 tier: ui
 perf: skip
