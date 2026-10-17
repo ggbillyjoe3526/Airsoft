@@ -191,7 +191,7 @@ async function measure(preset) {
   // The saved picks are what the Match screen starts: a dev map's data arrives a moment after the title shows. A map or
   // mode the game doesn't have (or doesn't offer on that map) never becomes the pick.
   const offered = await page
-    .waitForFunction(({ map, mode }) => { const p = globalThis.airsoft?.playedPicks?.(); return p?.map === map && p?.mode === mode; }, { map: gameMap, mode: options.mode }, { timeout: 60_000 })
+    .waitForFunction(({ map, mode }) => { const p = globalThis.airsoft?.setup?.playedPicks?.(); return p?.map === map && p?.mode === mode; }, { map: gameMap, mode: options.mode }, { timeout: 60_000 })
     .then(() => true, () => false);
   if (!offered) {
     await page.close();

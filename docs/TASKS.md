@@ -198,18 +198,6 @@ attempts: 0
 threads' branches it touches have merged (ST1, MR1, HD1, MV1, BD1, MS1, TT1), so none conflicts with them. DX2 takes
 over DC1's known-issues tidy-up. DX0, the quick wins, is the audit thread's own pull request.
 
-## DX8 · Game: the play flow and the dev glue out of the composition root (audit A1 step two; optional, after DX5)
-tier: core
-perf: required
-touches: src/game.ts, src/core/, src/matchFlow.ts, src/ui/menus/menus.ts
-contract: none
-acceptance:
-  1. Play, enter, resume, pause and leave live in a `PlayFlow` module (name the thread's) with its own tests; the dev and report glue in a module of its own; `Game` keeps the loop, the lifecycle and the wiring.
-  2. `game.ts` is under 800 lines and imports under 50 modules.
-  3. Pause, resume, restart and return to menu leave the same state as before (the session tests and the smoke test pass), and the frame loop's crash guard is unchanged.
-status: open
-attempts: 0
-
 ## BP6 · Beta 1 bug pass (when William says go)
 tier: core
 perf: required

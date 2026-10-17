@@ -232,7 +232,7 @@ async function draw(scene, views, quality, renderer, withPost, dressing = false)
   await page.waitForFunction(() => globalThis.airsoft?.state && globalThis.airsoft.state.tick > 5, null, { timeout: 180_000 });
   // The simulation held still: the figures stay at their starts and nobody fires; the effects keep drawing.
   await page.evaluate(() => {
-    globalThis.airsoft.dev.gameSpeed = 0;
+    globalThis.airsoft.dev.inForce.gameSpeed = 0;
   });
   await page.waitForTimeout(2500);
   // The night settles as in play, the same on both pages whatever their own loops last did: each real pool light fades
