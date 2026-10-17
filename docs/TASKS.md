@@ -29,7 +29,7 @@ MS1 shows the owner concept images and waits for his approval before any code ch
 ## WL2 · Woodland: a roof on the hill fort, the grey blocks and the odd tree gone (Beta 1 playtest item 30)
 tier: fix
 perf: required
-touches: src/map/woodland.ts, src/map/woodlandExtraction.ts, src/map/woodlandDressing.ts, src/config/dressing.ts, public/menu/
+touches: src/map/woodland.ts, src/map/woodlandExtraction.ts, src/map/woodlandDressing.ts, src/config/dressing.ts, public/menu/, pipeline/baseline/
 contract: none
 William, 2026-10-17: "woodland has a roof and bushes look better. however the other structure (on the hill) doesn't
 have a roof. there are large grey vertical rectangular blocks on the map which need to be removed. There is also a
