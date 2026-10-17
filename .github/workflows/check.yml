@@ -25,11 +25,12 @@ concurrency:
 permissions:
   contents: read
 
-# Four kinds of job (audit CORE-04, IM6, DX4): `bundles` builds the production and e2e bundles once, then `check` (the
-# build gate, the fast unit tests, scope and changelog) and `browser` (the smoke test in shares) start from them, while
-# `slow` (the headless bot-match guards in shares) runs beside them from the start. In one job the smoke test alone took
-# about 1,290 s by RM8 (2026-10-12, main 19d3858), so every check took about 25 minutes; split, the longest job is a
-# few minutes. Before DX4 each browser share built both bundles itself, eight builds a run.
+# Five kinds of job (audit CORE-04, IM6, IN1, DX4): `bundles` builds the production and e2e bundles once, then `check`
+# (the build gate, the fast unit tests, scope and changelog) and `browser` (the smoke test in shares) start from them,
+# while `firefox` (the boot and save specs in Firefox, which builds its own) and `slow` (the headless bot-match guards in
+# shares) run beside them from the start. In one job the smoke test alone took about 1,290 s by RM8 (2026-10-12, main
+# 19d3858), so every check took about 25 minutes; split, the longest job is a few minutes. Before DX4 each browser
+# share built both bundles itself, eight builds a run.
 jobs:
   # Both bundles, built once per run from this commit and handed on as one tar in a cache entry keyed by the run, so
   # `check` and every `browser` share reuse them (pipeline/build-cached.mjs finds its stamp matches the source and skips
@@ -162,6 +163,53 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: gate-report-browser-${{ matrix.shard }}
+          path: |
+            pipeline/out/
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # The boot and save specs in Firefox (IN1): Playwright's own Firefox, headed under xvfb-run (headless Firefox gets no
+  # WebGL 2 without a GPU), through the gate's smoke step with E2E_FIREFOX=1 (playwright.config.ts: the Firefox project
+  # and the e2e build's server only). The cloud containers can't download Playwright's Firefox, so this is where it runs.
+  firefox:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Cached per lockfile, apart from the `browser` jobs' Chromium (the Playwright version pins the browser build).
+      - name: Cache Playwright's Firefox
+        id: firefox-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-firefox-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - if: steps.firefox-cache.outputs.cache-hit != 'true'
+        run: npx playwright install firefox
+      # Its system libraries and xvfb live outside that cache: apt runs only when Firefox can't start without them.
+      - name: Firefox's system libraries, only when missing
+        run: |
+          if command -v xvfb-run && node -e "import('@playwright/test').then(({ firefox }) => firefox.launch()).then((b) => b.close())"; then
+            echo "Firefox starts; no system libraries to install"
+          else
+            npx playwright install-deps firefox
+            sudo apt-get install -y xvfb
+          fi
+      - name: Boot and save specs in Firefox
+        env:
+          E2E_FIREFOX: '1'
+        run: xvfb-run --auto-servernum node pipeline/gate.mjs --ci --only smoke
+      - name: Upload the gate report and the Firefox report (screenshots inside)
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: gate-report-firefox
           path: |
             pipeline/out/
             playwright-report/

@@ -181,24 +181,3 @@ describe('ChoiceCards switches on a card (M34d: Day | Night)', () => {
     expect(card(c, 'Hard').wrap.hidden).toBe(true);
   });
 });
-
-describe('ChoiceCards notes (M49)', () => {
-  beforeEach(() => {
-    vi.stubGlobal('document', fakeDocument());
-    vi.stubGlobal('localStorage', new MemoryStorage());
-  });
-  afterEach(() => vi.unstubAllGlobals());
-
-  const note = (c: ChoiceCards<Id>, name: string) => findAll(card(c, name).button, 'choice-note')[0]!;
-
-  it('shows a line on one card when set, takes it away with null, and ignores an id it does not have', () => {
-    const c = new ChoiceCards<Id>('Mode', OPTIONS, 'normal', 'difficulty' as never, () => {});
-    c.setNote('normal', 'Supply weekend, until Sunday: cases hold +25 % XP.');
-    expect([note(c, 'Normal').textContent, note(c, 'Normal').hidden]).toEqual(['Supply weekend, until Sunday: cases hold +25 % XP.', false]);
-    expect(note(c, 'Easy').hidden).toBe(true);
-    c.setNote('normal', null);
-    expect(note(c, 'Normal').hidden).toBe(true);
-    expect(() => c.setNote('nope' as Id, 'x')).not.toThrow();
-    expect(c.value).toBe('normal');
-  });
-});

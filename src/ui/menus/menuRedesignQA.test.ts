@@ -139,11 +139,11 @@ describe('the plain title (M100 QA)', () => {
 
   it('no screen but the title shows the build\'s version', () => {
     const label = __BUILD_VERSION__.label;
-    const model = { picks: () => ({ map: 'depot', mode: 'elimination', difficulty: 'normal', teammateDifficulty: 'normal', ruleset: 'skirmish', rules: { ...DEFAULT_MATCH_RULES } }), lightingOf: () => 'day', supply: () => null, setMode: noop, practicePlace: () => 'range', setPracticePlace: noop } as unknown as PlayModel;
+    const model = { picks: () => ({ map: 'depot', mode: 'elimination', difficulty: 'normal', teammateDifficulty: 'normal', ruleset: 'skirmish', rules: { ...DEFAULT_MATCH_RULES } }), lightingOf: () => 'day', setMode: noop, practicePlace: () => 'range', setPracticePlace: noop } as unknown as PlayModel;
     const setup = new SetupScreen(model, { equipped: () => [] } as never, { pictures: null, realistic: () => false }, { onLoadout: noop, onBack: noop, onPlay: noop, onPractice: noop });
     const pool = loadPool(poolText);
     const armory = new ArmoryScreen({ pool: () => pool, levels: GAME_LEVELS, progress: () => newProgress(GAME_LEVELS), levellingOff: () => false, devContent: () => false });
-    const pause = new PauseScreen({ onResume: noop, onLoadout: noop, onSettings: noop, onQuit: noop, onSkipStep: noop, onSkipTutorial: noop, onSkipRound: noop, onChallenge: noop });
+    const pause = new PauseScreen({ onResume: noop, onLoadout: noop, onSettings: noop, onQuit: noop, onSkipStep: noop, onSkipTutorial: noop, onSkipRound: noop, onChallenge: noop, onFullscreen: noop });
     const result = new ResultScreen({ onPlayAgain: noop, onSummary: noop, onChangeSetup: noop, onTitle: noop });
     const bar = new TopBar(noop, noop);
     bar.setLevel({ level: 1, into: 50, next: 300, toNext: '250 XP to level 2' });
@@ -215,7 +215,7 @@ describe('every screen can be left and used with the mouse, and the keys still w
   });
 
   it('the pause and result screens answer to no key of their own (Esc and Enter belong to the menus and the focused button)', () => {
-    const pause = new PauseScreen({ onResume: noop, onLoadout: noop, onSettings: noop, onQuit: noop, onSkipStep: noop, onSkipTutorial: noop, onSkipRound: noop, onChallenge: noop });
+    const pause = new PauseScreen({ onResume: noop, onLoadout: noop, onSettings: noop, onQuit: noop, onSkipStep: noop, onSkipTutorial: noop, onSkipRound: noop, onChallenge: noop, onFullscreen: noop });
     const result = new ResultScreen({ onPlayAgain: noop, onSummary: noop, onChangeSetup: noop, onTitle: noop });
     expect([pause.hints, result.hints]).toEqual([[], []]);
     expect(buttons(node(pause.root))).toContain('Resume');
@@ -230,7 +230,7 @@ describe('Practice, the last mode of the Match screen (M100 QA)', () => {
   function setup(mode = 'elimination') {
     const picks = { map: 'depot', mode, difficulty: 'normal', teammateDifficulty: 'normal', ruleset: 'skirmish', rules: { ...DEFAULT_MATCH_RULES } };
     const setMode = vi.fn((m: string) => void (picks.mode = m));
-    const model = { picks: () => picks, lightingOf: () => 'day', supply: () => null, setMode, practicePlace: () => 'range', setPracticePlace: noop } as unknown as PlayModel;
+    const model = { picks: () => picks, lightingOf: () => 'day', setMode, practicePlace: () => 'range', setPracticePlace: noop } as unknown as PlayModel;
     const ran: string[] = [];
     const screen = new SetupScreen(model, { equipped: () => [] } as never, { pictures: null, realistic: () => false }, { onLoadout: noop, onBack: noop, onPlay: () => ran.push('match'), onPractice: () => ran.push('practice') });
     screen.refresh(view(picks));

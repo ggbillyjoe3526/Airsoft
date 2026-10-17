@@ -61,7 +61,7 @@ import { loadHitMarker } from './ui/hitMarkerLook';
 import { loadAmmoCounter, loadCallouts, loadFeedCorner, loadMagPrompts, loadMinimapTurn, loadPingMarkers } from './ui/hudSettings';
 import { CrashScreen } from './ui/crashScreen';
 import { DebugOverlay } from './ui/debugOverlay';
-import { onFullscreenChange, relockAfterFullscreen, toggleFullscreen } from './ui/fullscreen';
+import { type FullscreenRelock, fullscreenRelock, hasUserActivation, isFullscreen, onFullscreenChange, toggleFullscreen } from './ui/fullscreen';
 import { GraphicsNotice } from './ui/graphicsNotice';
 import { PlayPrompt } from './ui/playPrompt';
 import { loadoutTile } from './ui/loadoutChoice';
@@ -73,7 +73,6 @@ import { contentPool } from './pool/contentPool';
 import { GAME_POOL } from './pool/gamePool';
 import { matchUsesDev, type NewGamePicks, playedPicks, playedTeamSize } from './newGamePicks';
 import { gameOwnership, type GearSlot, LoadoutModel } from './pool/loadoutModel';
-import { activeSupplyEvent, supplyLine } from './pool/supplyEvents';
 import { haulSummary, type XpSummary, xpSummary } from './ui/menus/summaryScreen';
 import type { MenuLevel } from './ui/menus/menusOptions';
 import { loadDevEnabled, loadDevSettings } from './settings/dev';
@@ -107,7 +106,6 @@ import {
   loadRendererChoice,
   loadSensitivity,
   loadShowFps,
-  loadToneMapping,
   loadHitFeedMode,
   loadHudOpacity,
   loadHudSize,
@@ -136,7 +134,6 @@ interface PracticeAt {
   course: string;
 }
 
-const LOCK_REFUSED_HINT = 'The browser needs a moment before re-capturing the mouse. Click again.';
 
 /** Whether `s` is the practice range: the one session that isn't a match (its class arrives on first use, IM1). */
 function isRange(s: MatchSession | RangeSession | null): s is RangeSession {
@@ -310,6 +307,16 @@ export class Game {
   private hudOpacity = loadHudOpacity();
   /** When the Fullscreen key was last pressed in play (performance.now()), to take the mouse again (audit UI-19). */
   private fullscreenKeyAt = Number.NEGATIVE_INFINITY;
+  /** Whether the page was fullscreen as the Fullscreen key was pressed: the change is done once that no longer holds. */
+  private fullscreenAtKey = false;
+  /**
+   * When the lock dropped as fullscreen changed (Firefox): play holds, without the pause menu, until the lock is taken
+   * again (at once, or on `fullscreenchange` if the change isn't done yet), or stops on the menu if it is refused or
+   * hasn't come within FULLSCREEN_RELOCK_MS. -Infinity: not holding.
+   */
+  private fullscreenHoldAt = Number.NEGATIVE_INFINITY;
+  /** The Fullscreen key gave the mouse back so the pause menu can ask for the click fullscreen needs (Firefox, IN1). */
+  private fullscreenByClick = false;
   /** Stop following the page's fullscreen state and the keyboard layout. */
   private readonly unwatchFullscreen: () => void;
   private readonly unwatchLayout: () => void;
@@ -389,7 +396,7 @@ export class Game {
     this.matchSeed = options.seed;
     this.renderer = new Renderer(container, this.quality, rendering.node);
     this.renderer.setFov(loadFov());
-    this.renderer.setToneMapping(loadToneMapping());
+    this.renderer.setToneMapping(this.dev.toneMapping);
     this.map = loadMap();
     this.lighting = loadLightingPicks();
     this.mode = loadMode();
@@ -490,6 +497,7 @@ export class Game {
         if (!this.started) this.practice = this.tutorial = false;
         this.play();
       },
+      onFullscreenPlay: () => this.fullscreenAndPlay(),
       onLeaveMatch: () => this.leaveMatch(),
       onRange: () => {
         this.practice = true;
@@ -527,11 +535,6 @@ export class Game {
       mode: {
         initial: this.mode,
         onChange: (m) => ((this.mode = m), (this.setupChanged = true)),
-        // The supply event on by the device's clock as the Mode pop-up opens (M49).
-        supply: () => {
-          const event = activeSupplyEvent(GAME_POOL.supplyEvents, new Date());
-          return event ? supplyLine(event) : null;
-        },
       },
       difficulty: { initial: this.difficulty, onChange: (d) => ((this.difficulty = d), (this.setupChanged = true)) },
       teammateDifficulty: { initial: this.teammateDifficulty, follows: !hasSavedTeammateDifficulty(), onChange: (d) => ((this.teammateDifficulty = d), (this.setupChanged = true)) },
@@ -564,7 +567,6 @@ export class Game {
         },
         frameRateCap: { initial: this.frameRateCap, onChange: (cap) => (this.frameRateCap = cap) },
         showFps: { initial: loadShowFps(), onChange: (on) => this.debug.setFpsReadout(on) },
-        toneMapping: { initial: this.renderer.toneMappingId, onChange: (id) => this.renderer.setToneMapping(id) },
         renderer: (row) => this.rendering.fillRow(row, this.renderer),
       },
       audio: { initial: this.audio.volumes, onChange: (channel, v) => this.changeVolume(channel, v), onRelease: (channel) => this.audio.preview(channel) },
@@ -661,8 +663,14 @@ export class Game {
         if (!this.askingLock) this.resume();
       } else if (this.escSkipDrop(released)) {
         this.startEscSkip();
+      } else if (!released && this.fullscreenRelock() !== 'none') {
+        // The lock dropped as fullscreen changes (Firefox): play holds, without the pause menu, while it is taken again.
+        this.fullscreenHoldAt = performance.now();
+        this.relockAfterFullscreen();
       } else {
         this.pause();
+        if (released && this.fullscreenByClick) this.menus.askFullscreenClick();
+        this.fullscreenByClick = false;
         this.relockAfterFullscreen();
       }
     });
@@ -670,7 +678,12 @@ export class Game {
     // Slider changes wait a moment before they are written (settings/storage.ts saveSettingSoon): write them as the page goes.
     window.addEventListener('pagehide', this.flushSettings);
     // Refused while the round skips without the mouse: the prompt over the field says so, not the hidden menus.
-    this.pointer.onError(() => (this.escSkip ? this.playPrompt.show(LOCK_REFUSED_HINT) : this.menus.showHint(LOCK_REFUSED_HINT)));
+    // Refused while play held for fullscreen: the pause menu, asking for the click (IN1).
+    this.pointer.onError(() => {
+      if (this.escSkip) return this.playPrompt.show(MENU_TEXT.lockRefused);
+      if (this.holdingForFullscreen) this.pause();
+      this.menus.lockRefused();
+    });
     this.audio.warmUp();
     this.prefetchFieldSounds();
     this.renderer.warmUp();
@@ -762,14 +775,49 @@ export class Game {
 
   /**
    * The page entered or left fullscreen, or the mouse lock dropped: just after the Fullscreen key in play, the lock is
-   * taken again, so the key doesn't stop the match on the pause menu (audit UI-19; Resume follows the lock as usual).
+   * taken again once the change is done, so the key doesn't stop the match on the pause menu (audit UI-19, IN1; Resume
+   * follows the lock as usual).
    */
   private relockAfterFullscreen(): void {
-    const since = performance.now() - this.fullscreenKeyAt;
-    const inMatch = this.started && this.session !== null && !this.crashScreen; // a crash gives the mouse back for good (FA1)
-    if (!relockAfterFullscreen(since, FULLSCREEN_RELOCK_MS, inMatch, this.pointer.locked, this.unlockedPlay)) return;
+    if (this.fullscreenRelock() !== 'take') return;
     this.fullscreenKeyAt = Number.NEGATIVE_INFINITY;
     void this.pointer.request();
+  }
+
+  /**
+   * The Fullscreen key in play. Where the key brings no user activation (Firefox), entering fullscreen would be refused:
+   * the mouse is given back and the pause menu asks for a click instead (fullscreenAndPlay). Leaving needs none.
+   */
+  private fullscreenKey(now: number): void {
+    this.fullscreenKeyAt = now;
+    this.fullscreenAtKey = isFullscreen();
+    if (!this.fullscreenAtKey && !hasUserActivation() && this.pointer.locked) {
+      this.fullscreenByClick = true;
+      this.pointer.release();
+      return;
+    }
+    toggleFullscreen();
+  }
+
+  /**
+   * The click the pause menu asked for after the Fullscreen key (Firefox, IN1): the page goes fullscreen within it, and
+   * the lock is taken once it is (relockAfterFullscreen; Firefox grants it to a fullscreen page without a click).
+   */
+  private fullscreenAndPlay(): void {
+    if (isFullscreen()) return this.play();
+    this.fullscreenKeyAt = performance.now();
+    this.fullscreenAtKey = false;
+    toggleFullscreen();
+  }
+
+  private fullscreenRelock(): FullscreenRelock {
+    const inMatch = this.started && this.session !== null && !this.crashScreen; // a crash gives the mouse back for good (FA1)
+    const changed = isFullscreen() !== this.fullscreenAtKey;
+    return fullscreenRelock(performance.now() - this.fullscreenKeyAt, FULLSCREEN_RELOCK_MS, inMatch, this.pointer.locked, this.unlockedPlay, changed);
+  }
+
+  private get holdingForFullscreen(): boolean {
+    return this.fullscreenHoldAt !== Number.NEGATIVE_INFINITY;
   }
 
   /**
@@ -828,6 +876,8 @@ export class Game {
       this.pause();
     } else if (this.pointer.locked) {
       this.pointer.release();
+    } else if (this.holdingForFullscreen) {
+      this.pause();
     }
   }
 
@@ -979,6 +1029,8 @@ export class Game {
       this.setupChanged = true;
       this.prefetchFieldSounds();
     }
+    // Tone mapping (RV2) is a look: it shows at once, and with the Dev tab hidden it's Neutral again.
+    if (this.dev.toneMapping !== before.toneMapping) this.renderer.setToneMapping(this.dev.toneMapping);
   }
 
   /** The Retro look (Settings › Dev) on screen as saved while the Dev tab is shown, else off. */
@@ -1184,8 +1236,6 @@ export class Game {
         ruleset: picks.ruleset,
         rules: { ...picks.rules, teamSize: playedTeamSize(picks) },
         kit: this.loadout.kit(),
-        // The supply event on by the device's clock as Play is pressed (M49): the run keeps it to the end.
-        supply: activeSupplyEvent(GAME_POOL.supplyEvents, new Date()),
         devContent: this.dev.devContent,
         devContentUsed: this.devContentUsed(picks),
         teamColours: TEAM_COLOUR_SETS[this.teamColours],
@@ -1264,6 +1314,7 @@ export class Game {
 
   private resume(): void {
     this.endEscSkip();
+    this.fullscreenHoldAt = Number.NEGATIVE_INFINITY;
     const s = this.session;
     // A mouse lock granted after the graphics context was lost (the lock was still pending): nothing can be drawn.
     if (this.graphicsLost) {
@@ -1311,6 +1362,7 @@ export class Game {
   }
 
   private pause(): void {
+    this.fullscreenHoldAt = Number.NEGATIVE_INFINITY;
     this.keyboard.capturing = false;
     this.keyboard.releaseAll();
     this.input.clearLatches();
@@ -1577,16 +1629,15 @@ export class Game {
     this.lastTime = now;
 
     const s = this.session;
+    // Held for fullscreen and the lock never came back (fullscreenHoldAt): the pause menu, as for any other drop.
+    if (this.holdingForFullscreen && performance.now() - this.fullscreenHoldAt > FULLSCREEN_RELOCK_MS) this.pause();
     const running = (this.pointer.locked || this.unlockedPlay || this.escSkip) && s !== null;
     if (running) {
       // Only while playing: on the pause screen F3 belongs to the browser (find bar).
       if (this.keyboard.wasPressed('debugOverlay')) this.debug.toggle();
       if (this.keyboard.wasPressed('debugBbPaths')) s.combat.toggleBbPaths();
       // Still within the key press's user activation, which the browser needs for fullscreen (and to take the mouse again).
-      if (this.keyboard.wasPressed('fullscreen')) {
-        this.fullscreenKeyAt = now;
-        toggleFullscreen();
-      }
+      if (this.keyboard.wasPressed('fullscreen')) this.fullscreenKey(now);
       // The Dev settings' Game speed (M24) runs the simulation slower or faster than the clock.
       const simStart = performance.now();
       // Esc skipped the round without the mouse (core/escSkip.ts): once the next round is up it waits for the click that

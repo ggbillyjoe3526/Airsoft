@@ -41,7 +41,6 @@ function build(initial: QualityChoice): GraphicsSettings {
     },
     frameRateCap: { initial: 0, onChange: () => {} },
     showFps: { initial: false, onChange: () => {} },
-    toneMapping: { initial: 'neutral', onChange: () => {} },
   });
 }
 
@@ -214,7 +213,6 @@ function buildRecording(initial: QualityChoice, frameRate = 0) {
     },
     frameRateCap: { initial: frameRate as 0, onChange: (cap) => void told.cap.push(cap) },
     showFps: { initial: false, onChange: () => {} },
-    toneMapping: { initial: 'neutral', onChange: () => {} },
   });
   return { g, told };
 }
@@ -308,7 +306,6 @@ describe('the Renderer row (W1)', () => {
       quality: { initial: 'low', settings: QUALITY.low, onChange: () => {}, status: () => ({ antialiased: true, antialiasPending: false, maxAnisotropy: 16 }) },
       frameRateCap: { initial: 0, onChange: () => {} },
       showFps: { initial: false, onChange: () => {} },
-      toneMapping: { initial: 'neutral', onChange: () => {} },
       renderer: (row) => fillRendererRow(row, { initial, drawing }),
     });
     return g;

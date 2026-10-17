@@ -23,6 +23,9 @@ Work the owner wants one day but hasn't placed in a version.
 New ideas the owner wants to think about (owner, 2026-10-06). Roadmap items he marked maybe stay in their place in
 `docs/ROADMAP.md`.
 
+- **A civilian outfit for some figures (AX1, 2026-10-17).** Two of the human's six looks in everyday clothes (a hoodie,
+  work trousers) under the team carrier, so a match reads more like a Sunday site. It needs a second outfit texture
+  from the figure's Blender source; the owner kept today's figures in Beta 1.
 - **Clutch moments.** A "last one standing" banner and a clutch count in your records.
 - **Match wagers.** Stake some of a match's XP on winning it, for more XP if you do.
 - **A downside for the 11.1 V LiPo Battery.** It fires 15 % faster with no number made worse; a cost (more kick, a
@@ -57,7 +60,7 @@ these again unless the owner brings them up:
 - Free-for-all.
 - The overshooting rule (bots never overshoot).
 - Tracer BBs as their own option (glowing BBs do it).
-- Supply weekends and dated events.
+- Supply weekends and dated events (M49 built them; RV1 took them out).
 - VIP escort.
 - Hostage rescue.
 - A referee NPC (the whistles cover it).

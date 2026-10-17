@@ -166,7 +166,8 @@ test hooks, the production one is what players get.
 **CI** (`.github/workflows/check.yml`) runs `--ci`: build, tests and smoke on every pull request and push to `main`,
 split across jobs since M50's audit (CORE-04): job `check` runs `--ci --tests fast --no-smoke` (the build, the fast
 project, scope and changelog), the four `browser` jobs `--ci --only smoke --shard k/4` (a quarter of the smoke test
-each, Playwright's own sharding by file, IM6) and the three `slow` jobs `--ci --tests slow --shard k/3 --only tests` (a
+each, Playwright's own sharding by file, IM6), the `firefox` job `E2E_FIREFOX=1 xvfb-run … --ci --only smoke` (the boot
+and save specs in Playwright's Firefox, IN1) and the three `slow` jobs `--ci --tests slow --shard k/3 --only tests` (a
 third of the headless bot-match guards each by their measured seconds, so the three finish together:
 `pipeline/shards.mjs` deals the files longest first from `pipeline/slow-times.json`; refresh the table as its header
 says when the jobs drift a minute apart). Since DX4 a `bundles` job builds both bundles once and hands them to `check`

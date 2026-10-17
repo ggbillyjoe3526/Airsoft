@@ -83,6 +83,8 @@ export class Menus {
   private titleWarning = '';
   private shownQuality: { choice: QualityChoice; settings: QualitySettings } | null = null;
   private hint = '';
+  /** The pause menu has asked for a click once since it opened (lockRefused). */
+  private pauseRefused = false;
   private current: MenuScreen = 'title';
   /** Where Settings, the Loadout and the Armory were opened from, so Back returns there. */
   private readonly origins: Record<'settings' | 'loadout' | 'armory', SettingsOrigin> = { settings: 'title', loadout: 'title', armory: 'title' };
@@ -121,7 +123,6 @@ export class Menus {
       onDifficulty: (d) => opts.difficulty.onChange(d),
       onTeammates: (d) => opts.teammateDifficulty.onChange(d),
       onTeam: (t) => opts.team.onChange(t),
-      supply: opts.mode.supply,
       refresh: () => this.refreshViews(),
     }, opts.practicePlace.initial);
     this.saved = new SavedLoadouts(opts.loadout.model);
@@ -241,6 +242,21 @@ export class Menus {
   showQuality(choice: QualityChoice, settings: QualitySettings): void {
     this.shownQuality = { choice, settings };
     this.settings?.showQuality(choice, settings);
+  }
+
+  /**
+   * The browser refused the mouse lock. On the pause menu it asks for a click anywhere, which resumes (IN1); the second
+   * refusal since the menu opened says the browser needs a moment. Elsewhere, the hint by the play buttons.
+   */
+  lockRefused(): void {
+    if (this.current !== 'pause' || !this.pause || this.root.hidden) return this.showHint(MENU_TEXT.lockRefused);
+    this.pause.askForClick(this.pauseRefused ? 'again' : 'first');
+    this.pauseRefused = true;
+  }
+
+  /** The Fullscreen key in a browser that allows fullscreen only from a click (Firefox, IN1): the pause menu asks for it. */
+  askFullscreenClick(): void {
+    if (this.current === 'pause' && !this.root.hidden) this.pause?.askForClick('fullscreen');
   }
 
   /** A short message by the play buttons, e.g. when the browser refuses the mouse lock (empty to clear). */
@@ -373,6 +389,7 @@ export class Menus {
     if (!this.pause) {
       this.pause = new PauseScreen({
         onResume: () => this.play(),
+        onFullscreen: () => (this.showHint(''), this.opts.onFullscreenPlay()),
         onLoadout: () => this.openLoadout('pause'),
         onSettings: () => this.openSettings('pause'),
         onQuit: () => this.leaveMatch('title'),
@@ -523,7 +540,6 @@ export class Menus {
   }
 
   private openSetup(): void {
-    this.setupScreen().opened();
     this.go('setup');
   }
 
@@ -581,6 +597,7 @@ export class Menus {
     if (focused instanceof HTMLElement && was?.root.contains(focused)) this.lastFocus.set(this.current, focused);
     this.leave();
     this.showHint('');
+    this.pauseRefused = false;
     const shown = this.screenOf(screen);
     this.current = screen;
     for (const [id, s] of Object.entries(this.built)) s.root.hidden = id !== screen;

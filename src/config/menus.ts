@@ -166,13 +166,13 @@ export const HAUL_TEXT = {
  * The Settings screen's groups, top to bottom (graphics overhaul G3: William's seven, then the save and the hidden Dev
  * group), each with the line under its name. `hidden`: shown only once the "Dev settings" box under them is ticked
  * (M24). Every earlier tab's rows live on in one of them: Key Bindings under Controls, Crosshair and HUD under Gameplay,
- * the screen rows (fullscreen, field of view, tone mapping, the FPS readout) under Display.
+ * the screen rows (fullscreen, field of view, the FPS readout) under Display; Tone mapping under Dev (RV2).
  */
 export type SettingsTab = 'graphics' | 'display' | 'audio' | 'controls' | 'gameplay' | 'accessibility' | 'look' | 'save' | 'dev';
 
 export const SETTINGS_TABS: readonly { id: SettingsTab; label: string; blurb: string; hidden?: boolean }[] = [
   // William's order (Dev 6 playtest, 2026-10-16); the first is the group Settings opens on.
-  { id: 'display', label: 'Display', blurb: 'Screen, field of view, tone' },
+  { id: 'display', label: 'Display', blurb: 'Screen, field of view, FPS' },
   { id: 'graphics', label: 'Graphics', blurb: 'Quality, effects, frame rate' },
   { id: 'gameplay', label: 'Gameplay', blurb: 'Crosshair, HUD, hit feed' },
   /** Robots (graphics overhaul G1). */
@@ -266,6 +266,18 @@ export const MENU_TEXT = {
   /** By the play buttons when a screen's or the range's code, fetched on first use (IM1), didn't download. */
   screenFailed: 'That screen didn’t download. Check the connection and try again.',
   rangeFailed: 'Practice didn’t download. Check the connection and try again.',
+  /**
+   * The pause menu when the browser wouldn't give the mouse back (IN1): Esc is no click, so Chrome refuses it, and it
+   * refuses a click too for about a second after Esc. Any click on the screen then resumes; `again`, after a refused click;
+   * `fullscreen`, after the Fullscreen key in Firefox, which allows fullscreen from a click but not from a function key.
+   */
+  clickToResume: {
+    first: 'Click anywhere to resume',
+    again: 'The browser needs a moment after Esc. Click again to resume',
+    fullscreen: 'Click anywhere to go fullscreen',
+  },
+  /** Elsewhere (Play, the Fullscreen key), the browser refused the mouse: a click takes it. */
+  lockRefused: 'The browser needs a moment before re-capturing the mouse. Click again.',
   /** The buttons and keys the screens name (no key prompts are drawn along the bottom since M100). */
   hints: {
     back: 'Back',

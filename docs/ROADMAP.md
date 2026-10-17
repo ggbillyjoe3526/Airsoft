@@ -86,10 +86,10 @@ began:
   (W-07), if playtesting shows it frozen.
 - **UX/QoL, polish and accessibility.**
 - **Removals** (feature triage, 2026-10-05): small tasks, no pool item ID changes.
-  - **Supply weekends and dated events** (M49) come out: calendar pressure suits online games, not an offline one.
-    Their table in `pool.md` goes with care (the tests read it).
+  - **Supply weekends and dated events** (M49) come out: calendar pressure suits online games, not an offline one
+    (done 2026-10-17; `docs/records/RV1.md`).
   - **The Tone mapping choice** leaves Graphics: the best-looking one becomes everyone's, and the switch moves to the
-    Dev tab.
+    Dev tab. Done (RV2, 2026-10-17).
 - **Small additions, now placed elsewhere** (owner, 2026-10-06; they were the 2026-10-04 picks and the 2026-10-05
   triage's Beta list):
   - **Saved loadouts** (0.1 Dev 6): several named loadouts (such as "CQB" and "Long range") to switch between, picked
@@ -217,6 +217,9 @@ After 0.1.0 the game grows through themed updates, each a mini expansion (owner,
   in what order, is the owner's pick.
 - **Neon Heights goes public** with its new look, once its open map findings are fixed (overlapping blocks, cases that
   open through walls, the east end winning first fights at night).
+- **Neon Heights' doors and interiors** (owner, 2026-10-17, Beta 1 playtest; NH2 in `docs/TASKS.md`). Doors players
+  and bots open and close, so an open door shows where someone went and a closed one may hide an enemy; furnished
+  shops, offices, storage rooms, cafes and a hotel. Built with its upper floors (NH1).
 - **Weather** (from 0.1 Dev 6). A general weather system, not only rain and fog, picked like Day / Night: rain masks
   footsteps and drops BBs a little sooner; fog shortens how far you can see.
 - **Day and Night on every map** (maybe). The Day / Night switch (M34d) for every map, not only those built for both.

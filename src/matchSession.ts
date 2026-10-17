@@ -34,14 +34,13 @@ import { botKitSeed, botLight, fitBotLight, kittedBot, pickBotKit } from './pool
 import { GAME_BOT_KITS } from './pool/gameBotKits';
 import { contentPool } from './pool/contentPool';
 import { rollRunCases } from './pool/caches';
-import type { SupplyEvent } from './pool/supplyEvents';
 import { GAME_POOL } from './pool/gamePool';
 import { bbGlowFor, kitPaint, type PlayerKit } from './pool/loadoutModel';
 import type { LookSettings } from './config/look';
 import { SIM, SIM_DT, SKIP_ROUND } from './config/sim';
 import { idleCommand, type SkipOffer, skipEnds, skipOffer, skipTickCap, skipTickShown } from './matchFlow';
 import type { SquadCommand } from './config/squad';
-import type { TeamColours } from './config/teams';
+import { dayColours, type TeamColours } from './config/teams';
 import { BuildTiming } from './core/buildTiming';
 import { caseSeed, runSeed } from './core/seed';
 import { figureCrowd, playerArms } from './render/figureMix';
@@ -117,11 +116,6 @@ export interface MatchSetup {
    * may carry): it stays out of the records and gives no XP.
    */
   devContentUsed: boolean;
-  /**
-   * The supply event on as the match starts (M49, pool/supplyEvents.ts): an Extraction run's cases hold more while it
-   * is on. Absent: none.
-   */
-  supply?: SupplyEvent | null;
   /** The team colours picked on Settings → Accessibility (M18b): the figures, the flag and your armband. */
   teamColours: TeamColours;
   /**
@@ -285,9 +279,8 @@ export class MatchSession {
             squadTeam: RUN_SQUAD_TEAM,
             respawnAfter: hitRulesFor(setup.rules).callTime,
             spawnLift: PHYSICS.groundRestGap,
-            // The run's cases (M44), filled from pool.md with the parts weighted towards what you don't own yet, richer
-            // under a supply event (M49).
-            cases: rollRunCases(GAME_POOL, map.extraction.cases, caseSeed(seed), setup.supply ?? null),
+            // The run's cases (M44), filled from pool.md's Caches table.
+            cases: rollRunCases(GAME_POOL, map.extraction.cases, caseSeed(seed)),
             // The home team's waves (M45): as often as the opponents' difficulty says, out of the squad's sight.
             waveEvery: EXTRACTION.waveEvery[setup.difficulty],
             sight: { query: this.physics, body: BODY },
@@ -362,7 +355,7 @@ export class MatchSession {
     this.combat.setMapGroup(this.mapGroup);
     this.build.phase('sound');
     this.stats = new MatchStats(this.state.characters);
-    this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, this.teamSizes(), this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours, map, renderer.figureModel, quality.figureDetail, this.extraction, crowd, renderer.replicaFiles, renderer.figureRigs);
+    this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, this.teamSizes(), this.rounds, this.stats, (action) => input.keyName(action), dayColours(setup.teamColours, this.lighting.night), map, renderer.figureModel, quality.figureDetail, this.extraction, crowd, renderer.replicaFiles, renderer.figureRigs);
     this.match.setHitFacts(this.bots.lastHit);
     // A rigged figure's BBs leave its own replica's muzzle (BP4).
     this.combat.setRiggedMuzzle((c, out) => this.match.riggedMuzzle(c, out));

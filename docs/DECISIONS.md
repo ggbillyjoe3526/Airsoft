@@ -136,6 +136,10 @@ The pipeline's protocol is `pipeline/README.md`; its policy `docs/PROCESS.md`.
   head and its team colour on the arm. The human has four heads picked by figure id (`config/figureRig.ts`); its vest,
   armbands, patches and hat bands show the team colour. A human is at most 20,000 triangles and its packed file under
   3.5 MB. A BB has no glow round it; Glowing BBs keep a lit green ball and longer streak (owner, 2026-10-13).
+- **Every figure keeps its team-colour plate carrier (owner, 2026-10-17, AX1).** Shown the options on the real
+  figure, he kept the carriers rather than dress four of six in a combat shirt with armbands only: the carrier reads like
+  a site's team bib and is the strongest team cue at range, and the bare shirt looks more military, not less. A
+  civilian outfit (a new texture from Blender) is in `docs/IDEAS.md`.
 ## Gameplay and feel
 
 - **Hit volume is a body capsule plus a head sphere, no arms or replica (2026-09-30; owner, 2026-10-01).** The drawn
@@ -377,7 +381,11 @@ The pipeline's protocol is `pipeline/README.md`; its policy `docs/PROCESS.md`.
   2026-10-07).** The hit feed reads "Beta 2 called HIT · Alpha 3": who called the hit, then whose BB it was; the player
   is "You".
 - **Team colours come in Standard and High contrast sets, and props, kit and paint never use a team colour's hue
-  (tested) (2026-10-04).** Colour is never the only cue: names carry a bar, exits a glyph and a distance.
+  (tested) (2026-10-04).** Colour is never the only cue: names carry a bar, exits a glyph and a distance. Exits take
+  their set's colour (owner, 2026-10-17, AX1; replaces decision 17 of 2026-10-05, one green in every set): Standard
+  keeps the green, High Contrast's are hi-vis yellow, as the green sits close to the orange team for a deuteranope. On day
+  fields High Contrast's team paint glows faintly (0.3 of its colour; owner, 2026-10-17, AX1: "HC only"), so its dark
+  orange holds in shaded corners; Standard's paint has none.
 - **Menus are opaque (owner, 2026-10-03).** The controls list lives under Settings. The pause menu is Resume, Settings
   and Quit.
 - **No map is loaded until Play (owner, 2026-10-03).** A match is a session built on Play and disposed on leaving.
