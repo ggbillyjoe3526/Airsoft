@@ -6,7 +6,7 @@
 
 | Date | Attempt | Worker model | build | tests | smoke | perf | scope | changelog | Critic | Retry reason | Wall time | Worker tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 2026-10-17 | 1 | Opus 5.5 (build thread) | ? | ? | ? | – not required | ? | ? | trivial Accept (Haiku diff check) | – | ~1 h | changelog 18k |
+| 2026-10-17 | 1 | Opus 5.5 (build thread) | ✓ 23 s | ✓ 188 s (fast) | – CI | – not required | ✓ | ✓ | trivial Accept (Haiku diff check) | – | ~1 h | changelog 18k |
 
 ## Decisions
 
