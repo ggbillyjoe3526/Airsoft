@@ -110,6 +110,7 @@ export function summaryMarkdown(rows, when) {
     '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|',
   ];
   const held = new Set();
+  const ended = [];
   for (const { run, preset, result, failure } of rows) {
     const size = run.viewport === DESKTOP_4K ? '4K' : run.viewport;
     if (!result) {
@@ -117,6 +118,7 @@ export function summaryMarkdown(rows, when) {
       continue;
     }
     const m = result.metrics;
+    if (m.matchEnded) ended.push(`${run.map} ${run.mode} ${preset} (${fixed(m.seconds, 0)} s)`);
     const hz = vsyncHeld(m.p50Ms);
     if (hz !== null) held.add(hz);
     lines.push(
@@ -129,6 +131,7 @@ export function summaryMarkdown(rows, when) {
   const hint = at4k && atHd && vsyncHeld(at4k.p50Ms) === null && vsyncHeld(atHd.p50Ms) === null ? boundHint(at4k.fps, atHd.fps) : null;
   lines.push('');
   if (hint) lines.push(`- ${hint}.`);
+  if (ended.length) lines.push(`- The match ended inside the window, which then stopped at its last tick: ${ended.join(', ')}.`);
   if (held.size) lines.push(`- Frames sat on a ${[...held].join(' / ')} Hz screen's refresh: the uncapped switches may not have taken, so these runs may show the cap, not the headroom.`);
   lines.push('- Sim ticks/s under 60 means the simulation fell behind (CPU). Figures ms is the characters\' drawing work each frame.');
   return `${lines.join('\n')}\n`;

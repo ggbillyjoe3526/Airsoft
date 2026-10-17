@@ -113,3 +113,15 @@ describe('the packages the suite checks first', () => {
     expect(readFileSync('vite.config.ts', 'utf8')).toContain("from 'vitest/config'");
   });
 });
+
+describe('a match that ends inside the window', () => {
+  it('is named under the table with the seconds it measured', () => {
+    const rows = [
+      { run: DESKTOP_SUITE[5], preset: 'ultra', result: result('webgpu', metrics(180, 5.5, { matchEnded: true, seconds: 41.2 })) },
+      { run: DESKTOP_SUITE[4], preset: 'ultra', result: result('webgpu', metrics(198, 5, { matchEnded: false, seconds: 60 })) },
+    ];
+    const md = summaryMarkdown(rows, 'now');
+    expect(md).toContain('- The match ended inside the window, which then stopped at its last tick: neon extraction ultra (41 s).');
+    expect(md).not.toContain('neon elimination ultra (');
+  });
+});
