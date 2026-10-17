@@ -2,7 +2,7 @@ import { MAP_EXCEPTIONS, type MapException, PUBLIC_MAPS } from '../config/conten
 import { TEAM_COLOUR_SETS } from '../config/teams';
 import type { MapEntry } from '../map/maps';
 import type { MapBlock } from '../map/mapTypes';
-import { blockTint } from '../render/field/mapMeshes';
+import { blockTint } from '../render/field/mapPieces/blockStyles';
 import type { Vec3 } from '../sim/vec';
 import { num } from './checks';
 
@@ -14,7 +14,7 @@ export interface MapContext {
   exceptions: Readonly<Record<string, MapException>>;
   /** Every team colour of every set (Settings › Accessibility). */
   teamColours: readonly number[];
-  /** A block's drawn colour (render/field/mapMeshes.ts blockTint: its paint, or its kind's palette). */
+  /** A block's drawn colour (render/field/mapPieces/blockStyles.ts blockTint: its paint, or its kind's palette). */
   tint(block: MapBlock): number;
   /** The ids of the other maps in the list, so an id is never used twice. */
   ids: readonly string[];

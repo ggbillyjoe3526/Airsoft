@@ -3,7 +3,9 @@ import { BAKED_LIGHT } from '../../config/bake';
 import type { MapBlock, MapData } from '../../map/mapTypes';
 import { surfaceHeightAt } from '../../map/surfaces';
 import { keyDirection, resolveLighting } from './lightingPreset';
-import { blockPieces, blockShade, blockTint, drawnBlocks, styleOf } from '../field/mapMeshes';
+import { drawnBlocks } from '../field/mapMeshes';
+import { blockShade, blockTint, styleOf } from '../field/mapPieces/blockStyles';
+import { blockPieces } from '../field/mapPieces/pieceTable';
 import type { ProbeGrid } from './probeGrid';
 
 /**

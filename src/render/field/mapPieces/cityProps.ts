@@ -3,11 +3,11 @@ import { CITY_PROPS, type SurfaceTextureId } from '../../../config/render';
 import type { BlockKind, MapBlock, MapSign } from '../../../map/mapTypes';
 import { vec3 } from '../../../sim/vec';
 import type { Cuboid } from '../cuboidMesh';
-import type { Piece } from '../mapMeshes';
+import type { Piece } from './pieceKit';
 
 /**
  * The city's props (M34f, BlockKind in map/mapTypes.ts): arcade cabinets, vending machines, stalls, planters, booths and
- * vans, built from boxes inside their block like the site props (render/field/mapMeshes.ts). Each is solid to its bounds: a
+ * vans, built from boxes inside their block like the site props (propPieces.ts). Each is solid to its bounds: a
  * face is set in by at most CITY_PROPS.inset, and only where a panel (a screen, a window, a wheel) stands in front of
  * it, so what you see is what stops you and your BBs. Their screens and windows glow by Night (propSigns).
  */

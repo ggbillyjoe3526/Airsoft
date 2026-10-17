@@ -8,7 +8,10 @@ import { OPEN_FIELD } from '../../sim/testSupport';
 import { vec3 } from '../../sim/vec';
 import { cityPropPieces, isCityProp, propSigns } from './mapPieces/cityProps';
 import { decalQuads } from './mapDecals';
-import { blockPieces, blockTint, buildMapMeshes, texturesFor, type Piece } from './mapMeshes';
+import { buildMapMeshes, texturesFor } from './mapMeshes';
+import { blockTint } from './mapPieces/blockStyles';
+import type { Piece } from './mapPieces/pieceKit';
+import { blockPieces } from './mapPieces/pieceTable';
 import { addMapSigns, buildSignGeometry, mapSignsOf } from './mapSigns';
 import type { SurfaceTextures } from './proceduralTextures';
 

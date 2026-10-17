@@ -249,7 +249,7 @@ export const SURFACES = {
   wallCoping: { height: 0.08, overhang: 0.025 },
   pallet: { height: 0.14, deck: 0.025, runner: 0.1, inset: 0.03, shade: 0.85 },
   /**
-   * The site props (M25b, render/field/mapMeshes.ts), in metres; colours are sRGB hex. Every piece stays inside its block.
+   * The site props (M25b, render/field/mapPieces/propPieces.ts), in metres; colours are sRGB hex. Every piece stays inside its block.
    */
   siteProps: {
     toilet: { skid: 0.08, inset: 0.04, roof: 0.14, doorWidth: 0.78, doorHeight: 1.95, latchDepth: 0.015, latchFromEdge: 0.1, latchSize: 0.08, latchY: [1.0, 1.1] },

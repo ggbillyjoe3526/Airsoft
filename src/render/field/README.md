@@ -2,9 +2,9 @@
 
 The field: the map's blocks as merged meshes, its terrain and plants, and the surface textures they are drawn with.
 
-- `mapMeshes.ts` turns blocks into pieces (the prop builders' table, `mapPieces/`) merged per texture by
-  `cuboidMesh.ts`, then restyles a built map for a new look and disposes it. `mapMeshCache.ts` keeps the last map's
-  meshes for the Renderer.
+- `mapMeshes.ts` turns blocks into pieces (`mapPieces/`: the prop builders as one table by kind, their styles and
+  shapes) merged per texture by `cuboidMesh.ts`, then restyles a built map for a new look and disposes it.
+  `mapMeshCache.ts` keeps the last map's meshes for the Renderer.
 - Look-only data is drawn by `mapSigns.ts`, `mapDecals.ts`, `natureShapes.ts`, `canopyMeshes.ts`, `terrainMeshes.ts`,
   `foliageMeshes.ts` (the city's props are builders in `mapPieces/cityProps.ts`).
 - Textures: `proceduralTextures.ts` draws each at the quality's Texture detail, the city's flat finishes capped at 512²

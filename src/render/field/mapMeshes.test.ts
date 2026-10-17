@@ -9,13 +9,8 @@ import { FOLIAGE_LOOK, TERRAIN_LOOK } from '../../config/render';
 import { vec3 } from '../../sim/vec';
 import { QUALITY, SURFACES, type SurfaceTextureId } from '../../config/render';
 import {
-  blockPieces,
-  blockShade,
-  blockTint,
   buildMapMeshes,
-  castsShadow,
   disposeMapMeshes,
-  groundNoise,
   type MapLook,
   mapLookOf,
   mapNeedsRebuild,
@@ -24,6 +19,9 @@ import {
   setMapTextures,
   texturesFor,
 } from './mapMeshes';
+import { blockShade, blockTint, castsShadow } from './mapPieces/blockStyles';
+import { groundNoise } from './mapPieces/pieceShape';
+import { blockPieces } from './mapPieces/pieceTable';
 import type { SurfaceTextures } from './proceduralTextures';
 
 // That no map paints anything in a team colour is the content toolkit's map check on every map (src/content/mapChecks.ts).
