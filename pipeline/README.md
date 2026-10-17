@@ -19,7 +19,10 @@ each finished task's record in `docs/records/`.
 Which model and effort each role runs on is policy: `docs/PROCESS.md` › Models.
 
 Tiers: `core` is the simulation, physics, rendering, bots, navigation, audio engine; `ui` is menus, HUD, settings,
-config, asset loading, docs; `trivial` is a one-constant change, a wording fix, a docs-only change.
+config, asset loading, docs; `trivial` is a one-constant change, a wording fix, a docs-only change; `fix` is a Beta
+fix to what already exists (a bug, a balance or tuning value, a HUD or menu fault) that adds nothing new. A fix runs
+every gate and all three review agents like any code change, with a lighter record and change notes
+(`.claude/skills/pipeline/SKILL.md` › A `tier: fix` task; why: `docs/PROCESS.md` › The pipeline).
 
 **The review agents.** QA, performance and the critic review every change that touches code, config, assets or
 gameplay data, inside the pipeline or not (the owner's rule: `docs/PROCESS.md` › Pull requests and branches). A
@@ -83,16 +86,35 @@ CORE-08). Value imports and re-exports count; `import type`, `export type` and d
 ## `gate.mjs`
 
 ```
-node pipeline/gate.mjs [--task M27[,M28]] [--quick] [--no-smoke] [--perf] [--env container|laptop|ci] [--base origin/main] [--ci]
+node pipeline/gate.mjs [--task M27[,M28]] [--quick] [--no-smoke] [--env container|laptop] [--base origin/main] [--ci]
                        [--tests auto|all|fast|slow] [--shard k/n] [--only tests|smoke]
 ```
+
+### Options
+
+| Option | What it does | Who uses it |
+|---|---|---|
+| `--task <id>[,<id>]` | The task(s) whose block the scope gate reads and whose changelog line it wants; without it, on CI, the ids the pull request's title starts with, else none (scope and changelog skipped) | build threads |
+| `--quick` | Build and tests only, the build without the `.br`/`.gz` copies | build threads while working, `worker.md` |
+| `--no-smoke` | Every gate but the smoke test | CI's `check` job |
+| `--env container\|laptop` | Where the perf harness runs (`container` by default, `ci` under `--ci`); `laptop` judges frame times and runs the whole perf matrix | the owner on the laptop |
+| `--base <ref>` | What the diff is taken against (`origin/main` by default) | CI (`HEAD^1`, the pull request's base) |
+| `--ci` | CI's run: no perf, no review packet, the review gate on a pull request, task ids from the title | CI |
+| `--tests auto\|all\|fast\|slow` | Which vitest projects run (below); `auto` off CI, `all` on CI | build threads (`all`), CI (`fast`, `slow`) |
+| `--shard k/n` | One share of the tests' or the smoke test's files | CI |
+| `--only tests\|smoke` | Just that gate | CI's `slow` and `browser` jobs |
+
+Each option is used by CI, a skill or the owner's laptop run; the old `--perf` (the whole matrix anywhere) folded into
+`--env laptop`, the only run that needed it.
+
+### Gates and reports
 
 | Gate | Runs | Passes when |
 |---|---|---|
 | `build` | `build-cached.mjs --mode production --force`: `npm run build` (tsc, Vite, chunk budgets, the `.br`/`.gz` copies; not under `--quick`) | exit 0 |
 | `tests` | `vitest run --reporter=json` (`src/**/*.test.ts` and the pipeline's own `pipeline/**/*.test.mjs`): project `fast`, plus `slow` when the diff reaches a bot-match guard (below; always on CI) | no failures |
 | `smoke` | `playwright test`: project `chromium` runs every `e2e/*.spec.ts` but `release.spec.ts` on the e2e build (`?nolock`, `window.airsoft`); project `release` runs `e2e/release.spec.ts` on `dist/` without test flags, with the real pointer lock. Every test asserts zero console and page errors; a failure prints the test's describe path, project and line and the error's locator, expectation and call-log lines (`smokeReport.mjs`) | no failures |
-| `perf` | `perf-run.mjs` once per combination of the perf matrix the diff reaches (`perfMatrix.mjs`; `--perf` runs them all) | for each: every budget line for the env and map within `perf-budget.json`, nothing more than 10 % worse than its own baseline; a baseline more than 20 commits old is a warning, not a failure |
+| `perf` | `perf-run.mjs` once per combination of the perf matrix the diff reaches (`perfMatrix.mjs`; under `--env laptop`, all of them) | for each: every budget line for the env and map within `perf-budget.json`, nothing more than 10 % worse than its own baseline; a baseline more than 20 commits old is a warning, not a failure |
 | `scope` | the diff vs the task's `touches` (`scope.mjs`) | every changed file is in `touches`, a test, under `e2e/` or `docs/`, CHANGELOG, README or a `src/` folder's README (`pool.md` and `CLAUDE.md` only when listed); `Agent: qa` commits touch only tests |
 | `changelog` | `CHANGELOG.md` › Unreleased | a line names `**<task>**` (each task, when several) |
 | `review` | on CI, a pull request's description (`GATE_PR_BODY`; `review.mjs`) | a docs-only change or a draft skips it; otherwise its `Review:` line gives `critic Accept` (or `auto-accept`), `qa Pass` and `performance Pass` |
@@ -267,7 +289,7 @@ It builds the e2e bundle, opens a Chrome window (the installed Chrome, `--channe
 another build) on the real GPU (no SwiftShader flags under `--env laptop`), plays the scripted Depot match on each
 preset for 3600 ticks (60 s) with the CPU throttled 4×, and writes `pipeline/baseline/laptop.json`,
 `laptop-medium.json`, `laptop-high.json` and `laptop-ultra.json`. Leave the window alone and the laptop plugged in;
-commit the four files. From then on `node pipeline/gate.mjs --env laptop --perf` judges p95 and p99 against the budget
+commit the four files. From then on `node pipeline/gate.mjs --env laptop` judges p95 and p99 against the budget
 there, on the whole matrix: the combinations without a laptop baseline yet (every one but Depot Elimination) are judged
 on their budgets alone until the owner records them (`--map`, `--mode` as above, with `--baseline`).
 
@@ -391,7 +413,8 @@ margin):
 ```
 
 `touches` lists files, or folders with a trailing slash. `perf` is `required` or `skip` (the gate still decides from
-the diff; `skip` only documents the intent). `status`: open · building · gates · critic · retry n · escalated. A task
+the diff; `skip` only documents the intent). `tier` is `core`, `ui`, `trivial` or `fix` (Roles,
+above). `status`: open · building · gates · critic · retry n · escalated. A task
 that lands leaves the file: the records step deletes its block (no `done` blocks stay behind).
 
 The pull request's title starts with the task id(s), `<id>: …` or `<id> + <id>: …`, so CI can run the scope and
@@ -431,7 +454,7 @@ One file per task, written by the thread in the records step (`docs/records/READ
   coordinator's never; the owner's usage page is the only complete view. Pass rate per tier is what decides whether a
   tier's model is right.
 - **Decisions** the task made for itself, and the **known issues** it left (each also a row in
-  `docs/KNOWN_ISSUES.md`).
+  `docs/KNOWN_ISSUES.md`). A `tier: fix` record may leave out the Known issues section when there are none.
 
 `node pipeline/records.mjs` prints the index tables (`--metrics`, `--decisions`, `--issues`; `--check` checks the
 format, as the fast test suite does). Rows before 2026-10-08 are in `docs/archive/0.1-dev/METRICS.md` and
