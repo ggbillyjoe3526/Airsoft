@@ -42,9 +42,10 @@ describe('Woodland: the ground (M33d, acceptance 1)', () => {
     for (const a of WOODLAND.spawns[1]) for (const b of WOODLAND.spawns[0]) expect(a.position.y - b.position.y).toBeLessThanOrEqual(2);
   });
 
-  it('uses the new block kinds: trees, boulders, logs and a fence round the edge', () => {
+  it('uses the new block kinds: trees, logs and a fence round the edge, and no boulders (WL2, owner: "I hate them")', () => {
     const kinds = new Set(WOODLAND.blocks.map((b) => b.kind));
-    for (const k of ['tree', 'boulder', 'log', 'fence'] as const) expect(kinds.has(k), k).toBe(true);
+    for (const k of ['tree', 'log', 'fence'] as const) expect(kinds.has(k), k).toBe(true);
+    expect(kinds.has('boulder')).toBe(false);
     // The ground is the terrain, not floor blocks.
     expect(kinds.has('floor')).toBe(false);
     // The fence stands outside the field on all four sides, tall enough that you can't see over it standing.
@@ -220,6 +221,37 @@ describe('Woodland: the fort can be attacked (the Pro difficulty plan, owner 19:
       const reach = samples.findIndex((p) => inFort(p.x, p.z));
       expect(reach, `lane ${i + 1} reaches the fort`).toBeGreaterThan(40);
       for (let k = reach; k >= reach - 40; k -= 4) expect(nearestCover(samples[k]!.x, samples[k]!.z), `lane ${i + 1}, ${(reach - k) / 2} m out`).toBeLessThanOrEqual(2.5);
+    }
+  });
+});
+
+describe('Woodland: no boulders, a roofed hut, a lower fort (WL2)', () => {
+  const kinds = (k: string) => WOODLAND.blocks.filter((b) => b.kind === k);
+  const hut = WOODLAND.blocks.find((b) => b.kind === 'log' && Math.abs(b.size.x - 3) < 1e-6 && Math.abs(b.size.z - 4) < 1e-6 && b.size.y >= 2.9)!;
+
+  it('has no boulder and no tree with a bare 12 m trunk standing in the meadow', () => {
+    expect(kinds('boulder')).toHaveLength(0);
+    expect(kinds('tree').filter((b) => b.size.y >= 12 && Math.abs(b.size.x - 1.2) < 1e-9)).toHaveLength(0);
+  });
+
+  it('puts a grey tin roof of two ramps on the fort hut, which is 3 m tall', () => {
+    expect(hut).toBeDefined();
+    const hutTop = hut.center.y + hut.size.y / 2;
+    const roofs = kinds('ramp').filter((r) => r.surface === 'metal' && Math.abs(r.center.x - hut.center.x) < 0.01 && Math.abs(r.center.z - hut.center.z) < 3);
+    expect(roofs).toHaveLength(2);
+    for (const r of roofs) {
+      expect(r.center.y - r.size.y / 2).toBeCloseTo(hutTop, 1);
+      expect(r.size.x).toBeGreaterThan(hut.size.x);
+    }
+  });
+
+  it('keeps case spots out of every solid block', () => {
+    for (const c of WOODLAND.extraction!.cases) {
+      const p = c.position;
+      for (const b of WOODLAND.blocks) {
+        const inside = Math.abs(p.x - b.center.x) < b.size.x / 2 + 0.2 && Math.abs(p.z - b.center.z) < b.size.z / 2 + 0.2 && p.y < b.center.y + b.size.y / 2 && p.y > b.center.y - b.size.y / 2 - 0.5;
+        expect(inside, `case at ${p.x}, ${p.z} in a ${b.kind}`).toBe(false);
+      }
     }
   });
 });
