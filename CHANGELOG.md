@@ -92,6 +92,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **DX2** · Developer-only: Dev 5 and 6 plans, decisions, known issues and playtest guide archived or trimmed under 50 KB each
 - **IN1** · CI runs the boot and save browser tests in Firefox too, in a new firefox job (#251)
 - **DX4** · Developer-only: each pull request builds the game once for all its checks, the slow test jobs finish together, a code formatter is set up, and the quick test run drops its three slowest files to the full run
+- **DX7** · Developer-only: bot code and settings split by concern; six data tables move to a data folder, and bad rows show in Settings › Dev diagnostics
 
 ## 0.1 Dev 6 · 2026-10-16
 
