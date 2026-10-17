@@ -34,6 +34,11 @@ export interface HandPose {
   /** Index, middle, ring, pinky. */
   fingers: readonly [FingerCurl, FingerCurl, FingerCurl, FingerCurl];
   /**
+   * Points the index finger's first segment there (optional; its other two bend by `fingers[0]` as usual): a trigger
+   * finger laid along the frame while the palm tips up round the grip, its wrist low behind it (MV2).
+   */
+  indexAim?: V3;
+  /**
    * Thumb: how far it swings across the palm (0 = alongside, 1 = fully across) and its two bends. `aim` (optional)
    * points its first segment there instead, for a thumb set against the fingers rather than over them: a support hand
    * under a handguard, its thumb up the near side while the fingers curl up the far one (FA13). `tipAim` (optional, with
@@ -165,11 +170,12 @@ export function handSkeleton(pose: HandPose): HandSkeleton {
   for (let f = 0; f < 4; f++) {
     const k = KNUCKLES[f]!;
     let p = local(k.across, k.along - 0.006, 0.002);
-    const dir = d.clone();
+    const aimed = f === 0 && pose.indexAim !== undefined;
+    const dir = aimed ? toVec(pose.indexAim!).normalize() : d.clone();
     const radius = FINGER_RADIUS[f]!;
     for (let s = 0; s < 3; s++) {
       const bend = pose.fingers[f]![s]!;
-      dir.applyQuaternion(new THREE.Quaternion().setFromAxisAngle(pose.side === 'right' ? a : a.clone().negate(), -bend));
+      if (!(aimed && s === 0)) dir.applyQuaternion(new THREE.Quaternion().setFromAxisAngle(pose.side === 'right' ? a : a.clone().negate(), -bend));
       const next = p.clone().addScaledVector(dir, SEGMENTS[f]![s]!);
       fingers.push({ from: p, to: next, radius: radius * (1 - s * 0.07) });
       p = next;

@@ -1,7 +1,7 @@
 import type * as THREE from 'three';
 import { REPLICA_FINISH } from '../../config/replicaFinish';
 import { describe, expect, it } from 'vitest';
-import { buildForearm, buildHand, type FingerCurl, type GeometrySink, type HandPose } from './handModels';
+import { buildForearm, buildHand, type FingerCurl, type GeometrySink, type HandPose, handSkeleton } from './handModels';
 
 /** Triangles in everything a sink was given. */
 function triangles(build: (sink: GeometrySink) => void): number {
@@ -58,5 +58,42 @@ describe('buildForearm (G11)', () => {
     const above = rings.get(ys.find((y) => y > mid)!)!;
     expect(band.boundingBox!.max.x).toBeGreaterThan(Math.min(below, above));
     expect(band.boundingBox!.max.x).toBeLessThan(Math.max(below, above) * REPLICA_FINISH.armband.proud);
+  });
+});
+
+describe('HandPose.indexAim (MV2)', () => {
+  const base = (side: 'left' | 'right', indexAim?: [number, number, number]): HandPose => ({
+    side,
+    palm: [0, 0, 0],
+    across: [0, -1, 0.2],
+    back: [1, 0, 0],
+    fingers: [[0.9, 0.5, 0.3], WRAP, WRAP, WRAP],
+    ...(indexAim ? { indexAim } : {}),
+    thumb: { swing: 0.2, curl: [0.2, 0.2] },
+  });
+  const first = (pose: HandPose) => {
+    const s = handSkeleton(pose).fingers[0]!;
+    return s.to.clone().sub(s.from).normalize();
+  };
+
+  it.each(['right', 'left'] as const)('lays the %s hand\'s index first segment along the aim whatever its bend; the other fingers ignore it', (side) => {
+    const aim: [number, number, number] = [-0.12, -0.37, 0.92];
+    const aimed = handSkeleton(base(side, aim));
+    const plain = handSkeleton(base(side));
+    const d = first(base(side, aim));
+    // Poses are written with +Z behind the replica; the skeleton is in the scene's axes (z negated).
+    const want = { x: aim[0], y: aim[1], z: -aim[2] };
+    const len = Math.hypot(want.x, want.y, want.z);
+    expect(d.x).toBeCloseTo(want.x / len, 5);
+    expect(d.y).toBeCloseTo(want.y / len, 5);
+    expect(d.z).toBeCloseTo(want.z / len, 5);
+    // Without it the first segment bends by 0.9 rad, so it points elsewhere.
+    expect(first(base(side)).distanceTo(d)).toBeGreaterThan(0.1);
+    for (let i = 3; i < 12; i++) {
+      expect(aimed.fingers[i]!.to.distanceTo(plain.fingers[i]!.to)).toBeLessThan(1e-9);
+    }
+    // The finger stays one chain: its second segment starts where the first ends, and no value is NaN.
+    expect(aimed.fingers[1]!.from.distanceTo(aimed.fingers[0]!.to)).toBeLessThan(1e-9);
+    for (const f of aimed.fingers) expect(Number.isFinite(f.to.x + f.to.y + f.to.z)).toBe(true);
   });
 });

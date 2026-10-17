@@ -1,8 +1,7 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { FIGURE_RIG, FIGURE_RIG_KINDS, type FigureRigKind } from '../../config/figureRig';
-import { BODY } from '../../config/movement';
-import { type Character, createCharacter, eyeHeight } from '../../sim/character';
+import { type Character, createCharacter } from '../../sim/character';
 import { vec3 } from '../../sim/vec';
 import { figureDress, HUMAN_CROWD } from './figureMix';
 import { type RiggedFrame, RiggedFigure } from './riggedFigure';
@@ -35,7 +34,7 @@ function figure(kind: FigureRigKind, c: Character, thrown = new ThrownMagazines(
   return { f, thrown };
 }
 
-const frame = (over: Partial<RiggedFrame> = {}): RiggedFrame => ({ alpha: 1, dt: 1 / 60, eyeX: 0, eyeY: 1.6, eyeZ: 3, firstPerson: false, viewLow: -Math.PI / 2, leanX: 0, leanZ: 0, peek: 0, peekPivot: 0.92, cycle: null, castShadow: true, ...over });
+const frame = (over: Partial<RiggedFrame> = {}): RiggedFrame => ({ alpha: 1, dt: 1 / 60, eyeX: 0, eyeY: 1.6, eyeZ: 3, firstPerson: false, leanX: 0, leanZ: 0, peek: 0, peekPivot: 0.92, cycle: null, castShadow: true, ...over });
 
 const visibleMeshes = (root: THREE.Object3D): THREE.Mesh[] => {
   const out: THREE.Mesh[] = [];
@@ -158,22 +157,13 @@ describe('the rigged figures (BF1)', () => {
     expect(Array.isArray(twins[0]!.material)).toBe(false);
     expect(twins[0]!.castShadow).toBe(true);
     expect(third[0]!.castShadow).toBe(false);
+    // Your own figure is never drawn in first person (MV2, Beta 1 playtest item 24), whatever the view's pitch, and
+    // casts no shadow; it stands where you do, posed for when you spectate it.
     f.update(c, frame({ firstPerson: true }));
-    const first = skinnedOn(view);
-    expect(first.length).toBe(1);
-    expect(skinnedOn(shadow).length).toBe(0);
-    // With the bottom of the view well above its highest point, your own body is not drawn; reaching it, it is.
-    const fp = FIGURE_RIG.firstPerson;
-    f.update(c, frame({ firstPerson: true, viewLow: -0.5 }));
     expect(skinnedOn(view).length).toBe(0);
-    f.update(c, frame({ firstPerson: true, viewLow: fp.highest.standing + fp.margin - 0.01 }));
-    expect(skinnedOn(view)).toEqual(first);
-    expect(first[0]).not.toBe(third[0]);
-    expect(first[0]!.geometry.getAttribute('position').count).toBeLessThan(third[0]!.geometry.getAttribute('position').count);
-    expect(first[0]!.castShadow).toBe(false);
+    expect(skinnedOn(shadow).length).toBe(0);
     expect(f.root.getObjectByName('held:pistol')!.visible).toBe(false);
-    // Behind the eyes: drawn back along the facing (+Z at yaw 0).
-    expect(f.root.position.z).toBeCloseTo(FIGURE_RIG.firstPerson.back, 6);
+    expect(f.root.position.z).toBeCloseTo(0, 6);
     f.update(c, frame());
     expect(f.root.position.z).toBeCloseTo(0, 6);
     f.dispose();
@@ -218,45 +208,41 @@ describe('the rigged figures (BF1)', () => {
   });
 });
 
-describe('your own body stays below FIGURE_RIG.firstPerson.highest (BD1)', () => {
-  // Drawn only when the bottom of the view reaches within `margin` of it: if a pose lifted a knee or foot higher, it
-  // would be missing from view, so every stepping clip and the jump are measured, standing and crouched.
-  it.each(FIGURE_RIG_KINDS)('the %s, on every clip a body ahead of the eyes can show', (kind) => {
-    const fp = FIGURE_RIG.firstPerson;
-    const v = new THREE.Vector3();
-    const states: [string, (c: Character) => void][] = [
-      ['standing', () => {}],
-      ['walking', (c) => (c.velocity.z = -2.5)],
-      ['sprinting', (c) => ((c.velocity.z = -6.5), (c.sprinting = true))],
-      ['backing off', (c) => (c.velocity.z = 2.5)],
-      ['strafing', (c) => (c.velocity.x = 2.5)],
-      ['in the air', (c) => ((c.grounded = false), (c.velocity.y = 2))],
-      ['crouched', (c) => ((c.crouchAmount = 1), (c.prevCrouchAmount = 1))],
-      ['crouch walking', (c) => ((c.crouchAmount = 1), (c.prevCrouchAmount = 1), (c.velocity.z = -1.5))],
-    ];
-    for (const [name, set] of states) {
-      const c = createCharacter(2, vec3(0, 0, 0), 0);
-      const { f } = figure(kind, c);
-      set(c);
-      const allowed = fp.highest.standing + (fp.highest.crouched - fp.highest.standing) * c.crouchAmount;
-      let highest = -Math.PI;
-      for (let k = 0; k < 60; k++) {
-        c.walkCycle += 0.24;
-        c.prevWalkCycle = c.walkCycle;
-        f.update(c, frame({ firstPerson: true, eyeZ: 0, cycle: c.walkCycle / (Math.PI * 2) }));
-        if (k % 3) continue;
-        f.root.updateMatrixWorld(true);
-        const mesh = visibleMeshes(f.root).find((m): m is THREE.SkinnedMesh => m instanceof THREE.SkinnedMesh && m.layers.mask === 1)!;
-        const eye = eyeHeight(c.crouchAmount, BODY);
-        const n = mesh.geometry.getAttribute('position').count;
-        for (let i = 0; i < n; i += 4) {
-          mesh.getVertexPosition(i, v).applyMatrix4(mesh.matrixWorld);
-          // Ahead of the eyes (the figure faces -Z), the angle below level in the view's upright plane.
-          if (-v.z > 0.02) highest = Math.max(highest, Math.atan2(v.y - eye, -v.z));
-        }
-      }
-      expect(highest, `${kind} ${name}`).toBeLessThan(allowed);
-      f.dispose();
+describe('your own figure, first person to spectating (MV2)', () => {
+  it.each(FIGURE_RIG_KINDS)('the %s is drawn where it stands, not offset, once the camera leaves it; a vault in first person draws nothing', (kind) => {
+    const c = createCharacter(2, vec3(3, 0, -4), 0.7);
+    c.prevPosition.x = c.position.x;
+    c.prevPosition.z = c.position.z;
+    c.prevYaw = c.yaw;
+    const { f } = figure(kind, c);
+    const view = new THREE.Layers();
+    const drawn = () => visibleMeshes(f.root).filter((m) => m instanceof THREE.SkinnedMesh && m.layers.test(view));
+    for (let i = 0; i < 5; i++) f.update(c, frame({ firstPerson: true }));
+    expect(f.root.position.x).toBeCloseTo(3, 6);
+    expect(f.root.position.z).toBeCloseTo(-4, 6);
+    expect(drawn().length).toBe(0);
+    // Vaulting, crouched, looking straight down: still nothing in view.
+    c.vault.active = true;
+    c.crouchAmount = c.prevCrouchAmount = 1;
+    c.pitch = c.prevPitch = -1.4;
+    for (let i = 0; i < 5; i++) f.update(c, frame({ firstPerson: true }));
+    expect(drawn().length).toBe(0);
+    c.vault.active = false;
+    c.crouchAmount = c.prevCrouchAmount = 0;
+    // Spectating it: exactly at its feet, whole (nothing folded away), and its arm bones at their own size.
+    for (let i = 0; i < 5; i++) f.update(c, frame());
+    expect(f.root.position.x).toBeCloseTo(3, 6);
+    expect(f.root.position.z).toBeCloseTo(-4, 6);
+    expect(drawn().length).toBe(1);
+    for (const n of ['UpperArm_L', 'UpperArm_R']) {
+      const s = f.root.getObjectByName(n)!.scale;
+      expect(s.x).toBeCloseTo(1, 5);
+      expect(s.y).toBeCloseTo(1, 5);
+      expect(s.z).toBeCloseTo(1, 5);
     }
+    // And back into first person: gone again.
+    f.update(c, frame({ firstPerson: true }));
+    expect(drawn().length).toBe(0);
+    f.dispose();
   });
 });

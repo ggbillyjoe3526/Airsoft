@@ -23,7 +23,8 @@ import type { ThrownMagazines } from './thrownMagazines';
  * detail, played by an AnimationMixer from render/figures/figurePose.ts's weights. It holds its replica on the grip bone where
  * the sidecar puts it (the file's whole model near, its small figure version far), and in a reload shows the
  * magazines the sidecar times: the old one pulled out and thrown (render/figures/thrownMagazines.ts), the fresh one drawn from
- * the pouch and seated. As your own first-person body it is drawn without its head and arms, a little behind the eyes.
+ * the pouch and seated. Your own figure is never drawn in first person (MV2): it is posed, unseen, for when you
+ * spectate it.
  * Reads simulation state only; render/figures/characterRenderer.ts places and fades it.
  */
 
@@ -56,13 +57,11 @@ export interface RiggedFigureSetup {
 export interface RiggedFrame {
   alpha: number;
   dt: number;
-  /** Where the camera is (for the level of detail), and whether this is your own body seen from the eyes. */
+  /** Where the camera is (for the level of detail), and whether this is your own figure, seen from its eyes (never drawn). */
   eyeX: number;
   eyeY: number;
   eyeZ: number;
   firstPerson: boolean;
-  /** The angle of the bottom of the view below level (radians, negative down): your own body shows looking down (BD1). */
-  viewLow: number;
   /** The upper body's lean (the flinch and the peek), radians about the figure's own X and Z (it faces -Z). */
   leanX: number;
   leanZ: number;
@@ -142,14 +141,12 @@ export class RiggedFigure {
    */
   private readonly shadow: THREE.SkinnedMesh;
   private readonly shadowMaterial: THREE.Material;
-  private firstPersonMesh: THREE.SkinnedMesh | null = null;
   private readonly hips: THREE.Object3D;
   private readonly spine: THREE.Object3D;
   /** The spine as the mixer last left it (it writes a bone only when its value changes, so the lean is undone first). */
   private readonly spineMixed = new THREE.Quaternion();
   /** The spine joint's place at rest (no clip moves it; the peek shifts it, IM8). */
   private readonly spineRest = new THREE.Vector3();
-  private readonly arms: THREE.Object3D[];
   private readonly grip: THREE.Object3D;
   private readonly hand: THREE.Object3D;
   private readonly chest: THREE.Object3D;
@@ -189,7 +186,6 @@ export class RiggedFigure {
   /** The height of the ground the figure last stood on: a magazine thrown in the air lands there. */
   private groundY = 0;
   private lod = 0;
-  private firstPerson = false;
   private parts: readonly string[];
   private readonly detail: DetailLevel;
   private receiveShadows = false;
@@ -218,7 +214,6 @@ export class RiggedFigure {
     this.spine = bone(FIGURE_RIG.bones.spine);
     this.spineMixed.copy(this.spine.quaternion);
     this.spineRest.copy(this.spine.position);
-    this.arms = FIGURE_RIG.bones.arms.map(bone);
     this.grip = bone(FIGURE_RIG.bones.grip);
     this.hand = bone(FIGURE_RIG.bones.hand);
     this.chest = bone(FIGURE_RIG.bones.chest);
@@ -243,7 +238,7 @@ export class RiggedFigure {
       return { color: s.color?.clone() ?? new THREE.Color(1, 1, 1), emissive: s.emissive?.clone() ?? new THREE.Color(0, 0, 0) };
     });
 
-    this.parts = this.partsFor(false);
+    this.parts = this.partsFor();
     this.shadowMaterial = new THREE.MeshBasicMaterial({ side: this.materials[0]?.side ?? THREE.FrontSide });
     for (let lod = 0; lod < 3; lod++) this.lods.push(this.skinned(rig.geometry(lod, this.parts), this.materials));
     this.shadow = this.skinned(rig.geometry(2, this.parts), this.shadowMaterial);
@@ -311,11 +306,8 @@ export class RiggedFigure {
     const yaw = lerpAngle(c.prevYaw, c.yaw, a);
     const sin = Math.sin(yaw);
     const cos = Math.cos(yaw);
-    // Your own body sits a little behind the eyes, so the camera never looks out from inside the chest.
-    const back = f.firstPerson ? FIGURE_RIG.firstPerson.back : 0;
-    this.root.position.set(x + sin * back, y, z + cos * back);
+    this.root.position.set(x, y, z);
     this.root.rotation.y = yaw;
-    if (f.firstPerson !== this.firstPerson) this.setFirstPerson(f.firstPerson);
 
     const arm = c.armament;
     const active = arm.replicas[arm.active];
@@ -384,7 +376,6 @@ export class RiggedFigure {
     const twist = pose.rifleAim * this.setup.rig.aimYaw.rifle + pose.pistolAim * this.setup.rig.aimYaw.pistol;
     this.adjustSpine(pose.overlay, f.leanX + pose.pitchLean, f.leanZ, twist);
     this.peekAbout(f.peek, f.peekPivot);
-    if (f.firstPerson) for (const b of this.arms) b.scale.setScalar(FIGURE_RIG.firstPerson.armScale);
     // Where a magazine thrown now comes to rest: the ground last stood on (a throw mid-jump lands, not hangs in the air).
     if (c.grounded) this.groundY = y;
 
@@ -398,12 +389,6 @@ export class RiggedFigure {
     for (let i = 0; i < 3; i++) this.lods[i]!.visible = !f.firstPerson && i === this.lod;
     this.shadow.visible = !f.firstPerson && f.castShadow;
     this.shadow.castShadow = this.shadow.visible;
-    // Your own body casts no shadow (as before it was drawn: a headless, armless one would look wrong).
-    if (this.firstPersonMesh) {
-      const fp = FIGURE_RIG.firstPerson;
-      const highest = fp.highest.standing + (fp.highest.crouched - fp.highest.standing) * c.crouchAmount;
-      this.firstPersonMesh.visible = f.firstPerson && (f.viewLow < highest + fp.margin || c.vault.active);
-    }
     this.updateHeld(c, pose, f, yaw);
   }
 
@@ -417,15 +402,15 @@ export class RiggedFigure {
     this.root.removeFromParent();
   }
 
-  /** The parts this figure wears (its looks), with or without the head. */
-  private partsFor(firstPerson: boolean): readonly string[] {
+  /** The parts this figure wears (its looks). */
+  private partsFor(): readonly string[] {
     const { rig } = this.setup;
     const roles = FIGURE_RIG.parts[rig.kind] as { body: readonly string[]; head: readonly string[]; pack?: string; radio?: string };
     const heads = roles.head.filter((h) => rig.parts.includes(h));
     const head = heads[Math.abs(Math.floor(this.setup.id)) % Math.max(1, heads.length)];
     return [
       ...roles.body,
-      ...(firstPerson || !head ? [] : [head]),
+      ...(head ? [head] : []),
       ...(roles.pack && this.setup.pack && rig.parts.includes(roles.pack) ? [roles.pack] : []),
       ...(roles.radio && this.setup.radio && rig.parts.includes(roles.radio) ? [roles.radio] : []),
     ];
@@ -450,13 +435,6 @@ export class RiggedFigure {
     action.setEffectiveWeight(0);
     action.play();
     return action;
-  }
-
-  /** Switches your own first-person body on or off: no head (its own merged mesh, made once) and no arms. */
-  private setFirstPerson(on: boolean): void {
-    this.firstPerson = on;
-    if (on && !this.firstPersonMesh) this.firstPersonMesh = this.skinned(this.setup.rig.geometry(0, this.partsFor(true)), this.materials);
-    if (!on) for (const b of this.arms) b.scale.set(1, 1, 1);
   }
 
   /**

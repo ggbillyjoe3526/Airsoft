@@ -14,7 +14,7 @@ The players and bots as drawn.
   one-colour materials drawn as one vertex-coloured finish, BD1), `figurePose.ts` (the pure blend of clips from the
   character's state), `riggedFigure.ts` (one figure: skinned, posed, each loadout replica on the grip bone with its
   fitted optic, grip, laser, barrel and muzzle part, BG1, the reload's magazines, the rifle slung on the back while
-  holstered and its drawn muzzle for the BBs, BP4, your first-person body) and `thrownMagazines.ts` (the empty
+  holstered and its drawn muzzle for the BBs, BP4; your own is posed but never drawn in first person, MV2) and `thrownMagazines.ts` (the empty
   magazines thrown in reloads).
 - `modelFiles.ts` imports `figureRig.ts` on demand, so the four ride in their own chunk and the game's carries only
   their types; it loads the replica files and the figure model as the game starts (BD1).

@@ -30,8 +30,10 @@ const VISIT_RADIUS = 2;
 /**
  * Seeds per map. Neon Heights' hunters seldom stopped in a dead end even before M87: after the lean-spot yield
  * (2026-10-11, botMovement teammatePassing) seeds 1-6 read 0 against 0, seeds 1-16 7 against 1 (Depot 20 against 1).
+ * Depot's six seeds read 0 against 0 once the holstered run went to 5.4 m/s (MV2; 10 seeds 2 against 1, 16 seeds 5
+ * against 1), so Depot runs 16 too.
  */
-const DEPOT_SEEDS = 6;
+const DEPOT_SEEDS = 16;
 const NEON_SEEDS = 16;
 const SECONDS = 200;
 
