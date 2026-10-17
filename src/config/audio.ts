@@ -583,8 +583,12 @@ export const VOLUME = {
   min: 0,
   max: 1,
   step: 0.05,
-  /** Full by default: the master slider's top is AUDIO.masterVolume, the level the game always played at. */
-  defaults: { master: 1, effects: 1, power: 1, ambience: 1, interface: 1 } satisfies Record<VolumeChannel, number>,
+  /**
+   * Where each slider starts (William, Dev 6 playtest, 2026-10-16): the master full (its top is AUDIO.masterVolume, the
+   * level the game always played at), the effects a touch under, the power sources full, the ambience and interface
+   * back so the field and the replicas lead.
+   */
+  defaults: { master: 1, effects: 0.8, power: 1, ambience: 0.6, interface: 0.5 } satisfies Record<VolumeChannel, number>,
   /** A slider's position is raised to this power for its gain, so each step sounds about as big as the last. */
   curve: 2,
   /** Volume changes ease in over this many seconds (no zipper noise while a slider moves). */

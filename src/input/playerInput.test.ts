@@ -281,11 +281,12 @@ describe('aim toggle (M18)', () => {
     expect(frame().aim).toBe(false);
   });
 
-  it('stays a held button by default', () => {
+  it('toggles by default (Dev 6 playtest: it held before)', () => {
     const { keys, frame } = setup('toggle');
     expect(frame(() => keys.press('aim')).aim).toBe(true);
     keys.release('aim');
-    expect(frame().aim).toBe(false);
+    expect(frame().aim).toBe(true);
+    expect(frame(() => keys.press('aim')).aim).toBe(false);
   });
 });
 

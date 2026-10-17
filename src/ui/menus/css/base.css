@@ -363,7 +363,7 @@
   border: 1px solid var(--menu-line);
 }
 
-/* Your level (LV1): "LV 3" over a thin bar of the XP into the next one; opens the Armory. */
+/* Your level (LV1): "LVL 3" over a thin bar of the XP into the next one; opens the Armory. */
 .menu-chip-level {
   flex-direction: column;
   align-items: stretch;

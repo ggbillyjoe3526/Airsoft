@@ -74,7 +74,7 @@ describe("Depot and Woodland build exactly as before the city (M34f)", () => {
     },
   );
 
-  it("has no city mesh: no map-paint, no city surface, and no sign at all unless the map set one", () => {
+  it("has no city mesh: no map-paint, no city surface (but Woodland's cabin roof, MS1), and no sign at all unless the map set one", () => {
     for (const map of [DEPOT, WOODLAND]) {
       const names = meshFingerprint(map, true).map((s) => s.split(" ")[0]!);
       for (const id of [
@@ -88,7 +88,7 @@ describe("Depot and Woodland build exactly as before the city (M34f)", () => {
         expect(
           names.some((n) => n.startsWith(`map-${id}`)),
           `${map.name} ${id}`,
-        ).toBe(false);
+        ).toBe(map === WOODLAND && id === "cladding");
       for (const night of [true, false]) {
         const scene = new THREE.Scene();
         const signs = addMapSigns(scene, map, night);
@@ -227,6 +227,7 @@ const PINNED = {
     "bark",
     "barrier",
     "blockWall",
+    "cladding",
     "concrete",
     "corrugated",
     "crate",
@@ -266,18 +267,22 @@ const PINNED = {
   // West Rise and the lower east end (every block, tree and bush on the new ground; the logs there fall in more courses).
   // M102: both re-pinned for the cabin's west window broken down to a low wall to vault (its sill lower, its lintel gone),
   // and for a Knoll log turned across the slope (fewer courses of bark; the leaf drifts and moss around it fall anew).
+  // MS1: bark for the cabin's walls (3 m, on one level), canopy and foliage for the fuller crowns and smaller, lobed
+  // bushes, and the cabin's roof, Woodland's one finished block (cladding, the city's engine feature, M34f).
   woodlandDetail: [
-    "map-bark v24319 i57456 26f1265e/9e9e478f/432e1a5a",
-    "map-canopy v12360 i0 031f958f/811c9dc5/32f7476c",
-    "map-foliage v16800 i0 26aeffb2/811c9dc5/5d0ab568",
+    "map-bark v25165 i59040 850eef8c/57f6a5bb/ffb31201",
+    "map-canopy v32628 i0 55f8e07d/811c9dc5/c54b6676",
+    "map-cladding v72 i96 6681214d/1d145e1d/92422e4d",
+    "map-foliage v16800 i0 2d3ea6ce/811c9dc5/5d0ab568",
     "map-planks v6500 i12600 27873f91/9f349b8d/5691af2a",
     "map-stone v12744 i13500 b79b51fc/dd536c62/0baf4c4f",
     "map-terrain v9801 i57600 4e80f9d2/006bce1d/4298d710",
   ],
   woodlandPlain: [
-    "map-bark v16703 i43176 d570bf2e/447acc39/3cc5de82",
-    "map-canopy v12360 i0 031f958f/811c9dc5/32f7476c",
-    "map-foliage v16800 i0 26aeffb2/811c9dc5/5d0ab568",
+    "map-bark v17549 i44760 f0c0dc80/20ad07f5/d0fb2c70",
+    "map-canopy v32628 i0 55f8e07d/811c9dc5/c54b6676",
+    "map-cladding v36 i48 e46da959/ff8bb6b9/81074131",
+    "map-foliage v16800 i0 2d3ea6ce/811c9dc5/5d0ab568",
     "map-planks v1600 i3000 b1e0a709/eef7627d/cbf74e3d",
     "map-stone v11880 i11880 be9ecda0/c94609ce/01695e44",
     "map-terrain v9801 i57600 4e80f9d2/006bce1d/4298d710",

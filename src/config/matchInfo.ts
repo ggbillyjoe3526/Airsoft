@@ -76,14 +76,14 @@ export function whatGotYouShown(mode: WhatGotYouMode, opponents: Difficulty): bo
 }
 
 /**
- * Settings → HUD → Scoreboard size (M24; owner, 2026-10-04: larger than before, and adjustable): a scale on the
- * scoreboard over the field, 1 = its size before M24.
+ * Settings → HUD → Scoreboard size (M24; owner, 2026-10-04: adjustable): a scale on the scoreboard over the field,
+ * 1 = its size before M24. 100% by default (William, Dev 6 playtest, 2026-10-16; 130% until then).
  */
 export const SCOREBOARD_SIZE = {
   min: 0.8,
   max: 2,
   step: 0.1,
-  default: 1.3,
+  default: 1,
   /**
    * Half the score bar's width at size 1 in its widest form (Attack and Defend, 5v5: about 730 px, G4), px: the figure
    * the hit feed keeps clear of until the bar has been measured (ui/hudCss/feed.css, `var(--sb-half, 365px)`, BP3).

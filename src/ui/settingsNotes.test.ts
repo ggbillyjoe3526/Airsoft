@@ -4,6 +4,7 @@ import { DEFAULT_LOOK, DEFAULT_RETRO } from '../config/look';
 import { MemoryStorage } from '../pool/testStorage';
 import { crosshairSettings } from './crosshairSettings';
 import { lookSettings } from './lookSettings';
+import { retroSettings } from './retroSettings';
 import { FakeElement, findAll } from './testSupport';
 
 /** The fake DOM with the simple selectors the crosshair's colour picker reads its buttons back with. */
@@ -47,7 +48,8 @@ describe('a note on every settings row (G3)', () => {
     }
   });
 
-  it('gives each Look row a note too', () => {
-    for (const { label, note } of notes(lookSettings({ initial: DEFAULT_LOOK, onChange: () => {}, retro: { initial: { ...DEFAULT_RETRO }, onChange: () => {} } }) as unknown as FakeElement[])) expect(note, label).not.toBe('');
+  it('gives each Looks and Retro look row a note too', () => {
+    const rows = [...lookSettings({ initial: DEFAULT_LOOK, onChange: () => {} }), ...retroSettings({ initial: { ...DEFAULT_RETRO }, onChange: () => {} })];
+    for (const { label, note } of notes(rows as unknown as FakeElement[])) expect(note, label).not.toBe('');
   });
 });

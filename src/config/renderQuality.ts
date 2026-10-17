@@ -79,7 +79,7 @@ export interface QualitySettings {
    * the range targets' finer parts. Static geometry, built once (a change rebuilds the map); off is the look before.
    */
   mapDetail: boolean;
-  /** Trees round the field: 0 none, 1 the simple ring (the look before the overhaul), 2 layered crowns and a hedge. */
+  /** Trees round the field: 0 none, 1 the simple ring (the look before the overhaul), 2 layered crowns. */
   trees: TreeDetail;
   /** Clouds and the sun's disc in the sky (row 21): one merged mesh of soft discs, no texture. */
   clouds: boolean;

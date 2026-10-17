@@ -5,12 +5,26 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 ## Unreleased
 
 ### Added
+- **MR1** · Fullscreen button at the bottom left of the title screen; it reads Exit fullscreen while in fullscreen
+- **MR1** · Realistic colours in Customise: Black, Wolf Grey, Ranger Green and Tan for each replica, beside the bold schemes
 - **HD1** · Hop-up turns mid-match: 4 for less lift, 5 for more (Page Down and Page Up too, rebindable in Controls); the setting lasts the match
 - **HD1** · Hop-up readout over the ammo panel: the dial, a tick at the best setting for your BBs, and how far BBs stay flat ("Flat to 39 m")
 - **HD1** · WON, LOST or DRAW stamp at round end; a click after half a second moves on to the next round or the match results
 - **HD1** · Feed position under Settings › HUD moves the kill feed to the bottom left
 
 ### Changed
+- **ST1** · Settings opens on Display; the tabs run Display, Graphics, Gameplay, Looks, Audio, Controls, Accessibility, Save file, Dev
+- **ST1** · Fresh saves start with aim Toggle, crouch Hold, red sound cues and scoreboard 100 %; a save keeps the picks it already made
+- **ST1** · Fresh-save volumes: master 100 %, effects 80 %, power source 100 %, ambience 60 %, interface 50 %
+- **ST1** · Retro look is a Dev setting again, at the top of the Dev tab, and shows only while Dev settings is ticked
+- **ST1** · Realistic colours leaves Settings for the Loadout's Colour tab; the greyed-out Voices (hit calls) row is gone
+- **MR1** · Match, Loadout and Armory are smaller and tidier; the title screen shows its version at the bottom right
+- **MR1** · Match mode cards are text boxes with their sign; a map offers only the modes it hosts; your match lists its rules as chips
+- **MR1** · Match rules sit in two columns, one line each; rules set by the ruleset show locked as "set by Skirmish", unused rules are hidden
+- **MR1** · Loadout shows your two carried replicas side by side over your replicas; saved loadouts are a dropdown with Rename, Duplicate, New and Delete
+- **MR1** · Customise has a Back button, the LOADOUT breadcrumb is plain text and the Skins part is gone
+- **MR1** · Armory shows your level and XP with the next unlock beside them; every level is a column on a progress line that scrolls sideways
+- **MR1** · The top bar reads LVL for your level
 - **HD1** · Kill feed and teammate callouts are one feed in the top right
 - **HD1** · Replica panel in the bottom right is smaller and plainer: picture, name and fire modes on one row, loaded count with spare BBs below
 - **HD1** · Comms wheel is a ring of equal slices, each with the same size label
@@ -20,12 +34,13 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **MV1** · Nobody rests a replica on cover any more, you or the bots; aiming at a ledge no longer steadies you and the Rested tag is gone; Q and E leaning stay
 - **MV1** · Holstered you run at 5.0 m/s against 4.2 armed, never faster than the 6.3 m/s sprint, which is the same armed or holstered
 - **MV1** · Walking with Shift keeps your aim as steady as standing still, where it was a little looser before
+- **MS1** · Depot has cranes, container stacks, sheds, silos, chimneys, a water tower and a power line over its walls
+- **MS1** · Woodland's cabin has a grey tin roof, taller walls and lanterns; pines have layered branches, bushes are smaller, nights brighter
+- **MS1** · Neon Heights is ringed by towers up to 72 m with adverts, lit windows, 27 more neon signs, lantern cables and skybridges
 
 ### Fixed
 - **MV1** · The first switch to your other replica in a match no longer stutters; every carried replica is ready before the round
 - **MV1** · On the Blender replicas the first-person thumbs wrap round the grip and along the frame instead of sinking into it
-
-### Fixed
 - **KI1** · Leaning beside a wall that cuts the lean eases the view over 0.1 s instead of jumping
 - **KI1** · Two quick taps of the fire selector step it twice
 - **KI1** · Your own BB's streak starts at the muzzle when you turn fast
@@ -44,6 +59,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **KI1** · The Armory keeps an item you own in colour
 
 ### Internal
+- **MS1** · Tests remove skyline pieces no player can see and keep hung units and cables clear of the player's room; perf baselines re-recorded
 - **Pipeline** · Code changes get critic, QA and performance review before a pull request is ready; CI fails it without passing verdicts
 - **KI1** · Bot tests cover the cycle, a leaning teammate's torso, Follow me's trail and the squad order lip fallback
 - **KI1** · Game test covers settling a match; Dev Time of day bake test added; Your team match test plays Woodland and Neon Heights

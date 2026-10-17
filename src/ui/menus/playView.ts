@@ -1,7 +1,6 @@
 import { DIFFICULTIES, type Difficulty } from '../../config/bots';
 import { countsForRecords, CUSTOM_RULES_PAY_CAP, DEFAULT_RULESET, matchRulesSummary, recordsKeyOf, roundRulesFor, runRulesSummary, type RulesetId, rulesetOf, standardMatchText } from '../../config/matchRules';
 import { squadSize } from '../../config/extraction';
-import { mapStillFile } from '../../config/menuArt';
 import { PLAY_TEXT } from '../../config/menus';
 import { MATCH_MODES } from '../../config/modes';
 import { DEFAULT_TEAM_PICK, TEAMS, teamOfPick } from '../../config/teams';
@@ -10,7 +9,6 @@ import { LIGHTING_LABELS, lightingChoices } from '../../map/lightingChoice';
 import { type MapId, mapData, mapEntry } from '../../map/maps';
 import { DEFAULT_PRACTICE_PLACE, type PracticePlaceId, practiceMapId } from '../../map/practicePlaces';
 import { type NewGamePicks, playedPicks, playedTeamSize } from '../../newGamePicks';
-import { menuArt } from './chrome';
 import type { MenusOptions } from './menus';
 import { describeRules, sideText } from './rulesText';
 import type { PlayView } from './setupScreen';
@@ -41,7 +39,6 @@ export function playView(
   const light = lightingOf(map.id);
   // A map that offers Day and Night names the one picked (M34d).
   const lightLine = lightingChoices(mapData(map.id)).length > 1 ? ` · ${LIGHTING_LABELS[light]}` : '';
-  const still = mapStillFile(map.id, light);
   const match = run ? runRulesSummary(m, run, played.difficulty) : matchRulesSummary(m, played.mode);
   const opponents = difficultyLabel(played.difficulty);
   const mates = difficultyLabel(played.teammateDifficulty);
@@ -62,7 +59,6 @@ export function playView(
     sizeMax,
     sizeMin,
     mapLine: `${map.label}${lightLine}`,
-    still: still ? menuArt(still) : null,
     modeLabel: MATCH_MODES.find((o) => o.id === played.mode)?.label ?? played.mode,
     rules: `${rulesetOf(played.ruleset).label} · ${match.value}`,
     // Your team first ("Beta · Hard / Normal bots"); a run's squad has no pick, so it says only the bots.
@@ -76,19 +72,15 @@ export function playView(
 
 /**
  * Where Practice will play, as the Match screen shows it while Practice is picked (M94): the map's name (and Day or
- * Night where it offers both) and its picture, or the range's line and no picture (Practice's own art). A dev map plays
+ * Night where it offers both), or the range's line. A dev map plays
  * as the range while Dev content is off, as a match's dev map plays as Depot.
  */
 export function practiceView(place: PracticePlaceId, devContent: boolean, lightingOf: (id: MapId) => LightingPresetId): PlayView['practice'] {
   const on = practiceMapId(place, devContent);
-  if (on === null) {
-    const still = mapStillFile('range', 'day');
-    return { mapLine: PLAY_TEXT.practice.mapLine, still: still ? menuArt(still) : null };
-  }
+  if (on === null) return { mapLine: PLAY_TEXT.practice.mapLine };
   const light = lightingOf(on);
   const lightLine = lightingChoices(mapData(on)).length > 1 ? ` · ${LIGHTING_LABELS[light]}` : '';
-  const still = mapStillFile(on, light);
-  return { mapLine: `${mapEntry(on).label}${lightLine}`, still: still ? menuArt(still) : null };
+  return { mapLine: `${mapEntry(on).label}${lightLine}` };
 }
 
 /**

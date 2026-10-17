@@ -293,7 +293,7 @@ export class Game {
   private soundCues = loadSoundCues();
   /** Settings › Look (G1): robots and Realistic colours, for the next match or range visit. */
   private look: LookSettings = loadLook();
-  /** Settings › Look › Retro look (M96; a Dev setting before, carried over once as the game starts). */
+  /** Settings › Dev › Retro look (M96, back on the Dev tab since the Dev 6 playtest; applies while the Dev tab is shown). */
   private retro: RetroSettings;
   /** The sound cues' size and colour (Settings → Accessibility) and the scoreboard's size and hit feed (Settings → HUD), M24. */
   private soundCueSize = loadSoundCueSize();
@@ -416,7 +416,7 @@ export class Game {
     this.scripted = options.scriptedPlayer === true;
     carryOverDevRetro();
     this.retro = loadRetroSettings();
-    this.renderer.setRetro(retroLookOf(this.retro, this.scripted));
+    this.showRetro();
     this.input.crouchMode = loadCrouchMode();
     this.input.aimMode = loadAimMode();
     this.input.sprintMode = loadSprintMode();
@@ -594,8 +594,6 @@ export class Game {
       look: {
         initial: this.look,
         onChange: (look) => ((this.look = look), (this.setupChanged = this.loadoutChanged = true)),
-        // The filter is a screen effect: on, off and its sliders show at once.
-        retro: { initial: this.retro, onChange: (r) => ((this.retro = r), this.renderer.setRetro(retroLookOf(r, this.scripted))) },
       },
       hud: {
         hudSize: { initial: this.hudSize, onChange: (v) => ((this.hudSize = v), this.showHudLook()) },
@@ -613,6 +611,8 @@ export class Game {
       dev: {
         initial: this.devPicked,
         enabled: this.devEnabled,
+        // The filter is a screen effect: on, off and its sliders show at once.
+        retro: { initial: this.retro, onChange: (r) => ((this.retro = r), this.showRetro()) },
         onChange: (id, value) => {
           this.devPicked[id] = value;
           this.applyDev();
@@ -620,6 +620,8 @@ export class Game {
         onEnabled: (on) => {
           this.devEnabled = on;
           this.applyDev();
+          // Only a Retro look that is on changes the picture; setRetro rebuilds the post stack, so skip it otherwise.
+          if (this.retro.on) this.showRetro();
         },
         cheating: () => devCheating(this.dev),
         devContent: () => this.dev.devContent,
@@ -978,6 +980,11 @@ export class Game {
       this.setupChanged = true;
       this.prefetchFieldSounds();
     }
+  }
+
+  /** The Retro look (Settings › Dev) on screen as saved while the Dev tab is shown, else off. */
+  private showRetro(): void {
+    this.renderer.setRetro(retroLookOf(this.retro, this.scripted, this.devEnabled));
   }
 
   /**
@@ -1476,7 +1483,7 @@ export class Game {
       ['Frames', read(() => framesLine(this.frameWindow.summary(), this.simMs, this.drawMs))],
       ['Quality', read(() => this.qualityText())],
       ['Retro pixels', read(() => {
-        const look = retroLookOf(this.retro, this.scripted);
+        const look = retroLookOf(this.retro, this.scripted, this.devEnabled);
         return look ? `${look.pixelSize} px, ${look.levels} levels` : 'off';
       })],
       ['Post', read(() => this.renderer.postPasses.join(' ') || 'none')],

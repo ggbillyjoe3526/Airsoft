@@ -37,6 +37,7 @@ export const MENU_ICONS = {
   sun: icon('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'),
   moon: icon('<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>'),
   arrowRight: icon('<path d="M5 12h14M13 6l6 6-6 6"/>'),
+  arrowLeft: icon('<path d="M19 12H5M11 6l-6 6 6 6"/>'),
   hand: icon(
     '<path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12M11 11V3.5a1.5 1.5 0 0 1 3 0V11M14 11V4.5a1.5 1.5 0 0 1 3 0V13M17 9.5a1.5 1.5 0 0 1 3 0V15a7 7 0 0 1-7 7h-1a7 7 0 0 1-6.2-3.8L3.5 13.5a1.5 1.5 0 0 1 2.6-1.5L8 15"/>',
   ),
@@ -48,6 +49,21 @@ export const MENU_ICONS = {
   coin: icon('<circle cx="12" cy="12" r="8"/><path d="M12 8v8M9.5 10h4a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3h4"/>'),
 } as const;
 
+/** The Loadout's saved loadouts (MR1): the dropdown's caret and the signs on Rename, Duplicate, New and Delete. */
+export const SAVED_ICONS = {
+  caret: icon('<path d="M6 9l6 6 6-6"/>'),
+  rename: icon('<path d="M4 20h4L19 9l-4-4L4 16z"/>'),
+  duplicate: icon('<rect x="8" y="8" width="12" height="12"/><path d="M16 8V4H4v12h4"/>'),
+  create: icon('<path d="M12 5v14M5 12h14"/>'),
+  remove: icon('<path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/>'),
+} as const;
+
+/** The title's Fullscreen button (MR1): corners pointing out to go fullscreen, in to leave it. */
+export const FULLSCREEN_ICONS = {
+  enter: icon('<path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/>'),
+  exit: icon('<path d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5"/>'),
+} as const;
+
 /** The mode cards (G3), by the mode. */
 export const MODE_ICONS = {
   elimination: icon('<circle cx="12" cy="12" r="8"/><path d="M12 1.5v5M12 17.5v5M1.5 12h5M17.5 12h5"/><circle cx="12" cy="12" r="2" fill="currentColor"/>'),
@@ -56,15 +72,6 @@ export const MODE_ICONS = {
   /** Practice, the last mode card (M100). */
   practice: TARGET,
 } as const;
-
-/**
- * Practice's picture (M100): a paper target on the range, drawn rather than shot (the other modes' stills come from the
- * game's own maps, and the range has none yet). Static SVG filling the card's picture frame; decoration only.
- */
-export const PRACTICE_ART =
-  '<svg class="practice-art" viewBox="-12 -12 184 184" preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false">' +
-  '<g transform="translate(80 80)"><circle r="66" fill="#e8ecf8"/><circle r="51" fill="#14214a"/><circle r="38" fill="#e8ecf8"/><circle r="25" fill="#ff6b1a"/><circle r="11" fill="#14214a"/>' +
-  '<circle cx="9" cy="-7" r="3.4" fill="#e8ecf8"/><circle cx="-16" cy="13" r="3.4" fill="#e8ecf8"/><circle cx="28" cy="24" r="3.4" fill="#14214a"/></g></svg>';
 
 /** The Settings groups, by the group. */
 export const SETTINGS_TAB_ICONS: Record<SettingsTab, string> = {

@@ -53,8 +53,6 @@ export const LOADOUT_TEXT = {
     spring: 'A stiffer spring shoots harder.',
   },
   grenadesLater: 'Grenades, smoke and flash bombs come in a later version.',
-  /** Skins come with customisation (v0.5): the row keeps their place (M17b). */
-  skinsLater: 'Replicas and outfit',
 } as const;
 
 /**
@@ -173,17 +171,18 @@ export const HAUL_TEXT = {
 export type SettingsTab = 'graphics' | 'display' | 'audio' | 'controls' | 'gameplay' | 'accessibility' | 'look' | 'save' | 'dev';
 
 export const SETTINGS_TABS: readonly { id: SettingsTab; label: string; blurb: string; hidden?: boolean }[] = [
-  { id: 'graphics', label: 'Graphics', blurb: 'Quality, effects, frame rate' },
+  // William's order (Dev 6 playtest, 2026-10-16); the first is the group Settings opens on.
   { id: 'display', label: 'Display', blurb: 'Screen, field of view, tone' },
-  { id: 'audio', label: 'Audio', blurb: 'Volume and voices' },
-  { id: 'controls', label: 'Controls', blurb: 'Mouse, keys, aim and sprint' },
+  { id: 'graphics', label: 'Graphics', blurb: 'Quality, effects, frame rate' },
   { id: 'gameplay', label: 'Gameplay', blurb: 'Crosshair, HUD, hit feed' },
+  /** Robots (graphics overhaul G1). */
+  { id: 'look', label: 'Looks', blurb: 'Humans and robots' },
+  { id: 'audio', label: 'Audio', blurb: 'Volume for each part' },
+  { id: 'controls', label: 'Controls', blurb: 'Mouse, keys, aim and sprint' },
   { id: 'accessibility', label: 'Accessibility', blurb: 'Colours, motion, sound cues' },
-  /** Robots and Realistic colours (graphics overhaul G1). */
-  { id: 'look', label: 'Look', blurb: 'Robots, realistic colours' },
   /** The save: download, load, restore points (M31). */
   { id: 'save', label: 'Save file', blurb: 'Download, load, restore' },
-  { id: 'dev', label: 'Dev', blurb: 'Switches for testing', hidden: true },
+  { id: 'dev', label: 'Dev', blurb: 'Switches for testing, Retro look', hidden: true },
 ];
 
 /** The box under the Settings groups that shows the Dev group (M24). */
@@ -223,7 +222,7 @@ export const SETTINGS_TEXT = {
 export const SETTINGS_LATER: Readonly<Record<SettingsTab, readonly { label: string; help: string }[]>> = {
   graphics: [],
   display: [],
-  audio: [{ label: 'Voices (hit calls)', help: 'Players calling their hits out loud, in a later version.' }],
+  audio: [],
   controls: [],
   gameplay: [],
   accessibility: [],
@@ -256,10 +255,13 @@ export const MENU_TEXT = {
   toTitle: 'Back to the title screen',
   back: 'Back',
   /** The level badge on the top bar (LV1), and what it says to a screen reader. */
-  level: (n: number) => `Lv ${n}`,
+  level: (n: number) => `LVL ${n}`,
   levelLabel: (n: number, toNext: string) => `Level ${n}${toNext ? `, ${toNext}` : ''}. Open the Armory`,
   /** The top bar's button on the Loadout opened from Practice (M95): straight back to practice, the kit as picked. */
   backToPractice: 'Back to practice',
+  /** The title's fullscreen button (MR1). */
+  fullscreen: 'Fullscreen',
+  exitFullscreen: 'Exit fullscreen',
   dev: 'Dev',
   /** By the play buttons when a screen's or the range's code, fetched on first use (IM1), didn't download. */
   screenFailed: 'That screen didn’t download. Check the connection and try again.',
@@ -289,7 +291,10 @@ export const PLAY_TEXT = {
   map: 'Map',
   mode: 'Mode',
   match: 'Match rules',
-  matchNote: 'Pick a set of rules; the rows they leave open are yours to change',
+  /** The rules' two columns' groups (MR1). */
+  groups: { match: 'Match', teams: 'Teams', house: 'House rules' },
+  /** A rule the ruleset sets, in place of its buttons (MR1): "Off · set by Skirmish". */
+  setBy: (value: string, ruleset: string) => `${value} · set by ${ruleset}`,
   bots: 'Bots',
   yourMatch: 'Your match',
   modeRow: 'Mode',
@@ -334,19 +339,17 @@ export const GEAR_TEXT = {
   none: 'None',
   /** The Colour row (G3, William: picked per replica, first in the list). */
   colour: 'Colour',
-  schemes: (n: number) => `${n} schemes`,
-  colourNote: 'Two-tone schemes, kept for this replica',
+  /** The Colour tab's two rows (MR1): the bold two-tone schemes, then the realistic plain colours. */
+  bold: 'Bold',
+  boldNote: 'Two-tone schemes',
+  realistic: 'Realistic',
+  realisticNote: 'One plain colour, as a real replica comes',
   fixedColours: 'The Cyber Pistol keeps its own colours: no other scheme fits it.',
-  appliesTo: 'Applies to',
-  ownColour: (other: string, scheme: string) => `Each replica keeps its own colour. Your ${other} is ${scheme}.`,
-  realistic: 'Realistic colours',
-  realisticOff: (scheme: string, family: string) =>
-    `Off. Turn it on in Settings › Look and every replica shows in one real colour instead: ${scheme} shows as ${family}.`,
-  realisticOn: (scheme: string, family: string) =>
-    `On (Settings › Look): every replica shows in one real colour, so ${scheme} shows as ${family}. Turn it off there to see the schemes.`,
-  /** A scheme tile's line under Realistic colours. */
+  /** Under the colour's name in the Colour side panel, and the other replica's line when it keeps its own colours. */
+  ownColourNote: 'Each replica keeps its own colour. Colour changes how a replica looks, never how it shoots.',
+  ownColours: 'Its own colours',
+  /** A scheme tile's line under the Realistic colours setting. */
   showsAs: (family: string) => `Shows as ${family}`,
-  skinsLater: 'Skins come in a later version.',
   /** The BB rows' own heading in the part list. */
   ammo: 'BBs',
 } as const;

@@ -26,39 +26,7 @@ below. The item numbers are his. Where an older block overlaps one of these, the
 - RV2 overlaps ST1.
 - AX1's kit colours overlap MR1's colour tab.
 
-MR1 and MS1 show the owner concept images and wait for his approval before any code changes.
-
-## ST1 · Settings defaults and menu order (playtest items 3–8, 18, 20, 34; the Settings side of 1 and 17)
-tier: ui
-perf: skip
-touches: src/settings/, src/config/menus.ts, src/config/controls.ts, src/config/audio.ts, src/config/graphics.ts, src/config/dev.ts, src/ui/menus/, src/ui/, src/game.ts
-contract: none
-acceptance:
-  1. Defaults (new saves): sound cue colour red, scoreboard size 100 %, aim button Toggle, crouch Hold, volumes master 100 %, effects 80 %, power source 100 %, ambience 60 %, interface 50 %.
-  2. The Retro look setting moves to Settings › Dev. The "Voices (hit calls)" setting is gone.
-  3. Settings tabs run top to bottom: Display, Graphics, Gameplay, Looks, Audio, Controls, Accessibility, Save file, Dev.
-  4. The realistic colours leave Settings (they move to the Loadout's Colour tab, MR1).
-  5. The Dev toggles "Disable figure models" and "Disable all models" leave the menu (BD1 removes their code paths).
-  6. The level display reads "LVL", not "LV".
-  7. A save holding the old values still loads.
-status: open
-attempts: 0
-
-## MR1 · Match, Loadout and Armory redesign, and the home screen (playtest items 9–14, 16, 17, 19, 21)
-tier: ui
-perf: skip
-touches: src/ui/menus/, src/ui/loadoutChoice.ts, src/ui/lookSettings.ts, src/ui/fullscreen.ts, src/config/menus.ts, src/config/menuArt.ts, src/render/itemPictures.ts, src/style.css
-contract: none
-acceptance:
-  1. The owner approves concept images of the Match screen's rules, and of the Match, Loadout and Armory screens, before code changes (items 11, 13).
-  2. The menus, except the top navigation bar and Settings, are smaller and more compact, to the approved concepts. The Armory is laid out horizontally.
-  3. Mode buttons are text boxes with the mode's name, its description and its small white icon, with no game images. Your match shows no map image.
-  4. A picked map offers only the modes and rules that apply to it (checked again, with a test).
-  5. Loadout › Customise has no Skins option; skins join the Colour section, and the Colour tab offers the realistic colours (ST1 takes them out of Settings). A Back button returns to the main Loadout screen, and the LOADOUT tab no longer does.
-  6. Saved loadouts are a dropdown.
-  7. The home screen has a fullscreen button bottom left, which becomes "exit fullscreen" while in fullscreen. The version tag moves bottom right.
-status: open
-attempts: 0
+MS1 shows the owner concept images and waits for his approval before any code changes.
 
 ## BD1 · Blender models by default (playtest item 1)
 tier: core
@@ -70,20 +38,6 @@ acceptance:
   2. The code paths behind the Dev toggles "Disable figure models" and "Disable all models" are gone (ST1 takes the toggles out of the menu).
   3. Load size stays under the 30 MB target, and the perf gate is green on every preset.
   4. The hit volume fits the rigged figures (HV1) in this task or straight after it.
-status: open
-attempts: 0
-
-## MS1 · Map surroundings and detail (playtest item 23)
-tier: core
-perf: required
-touches: src/map/depotDressing.ts, src/map/woodland.ts, src/map/woodlandDressing.ts, src/map/neonHeightsDressing.ts, src/map/foliage.ts, src/render/, docs/ASSETS.md
-contract: none
-acceptance:
-  1. The owner approves concept images before code changes.
-  2. Depot has more buildings and objects in the distance.
-  3. Woodland's hut has a roof, and its trees and bushes no longer look low-poly or broken.
-  4. Neon Heights feels more open inside, with towering, oppressive city edges.
-  5. Each map has more detail overall, the perf gate is green on every preset, and every external asset is in `docs/ASSETS.md`.
 status: open
 attempts: 0
 

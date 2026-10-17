@@ -212,7 +212,8 @@ replaces its line; the old one stays findable in the archive or in git.
 - **Torches cast shadows on High and Ultra only; Low keeps today's beams (owner, 2026-10-06).** Keeps Low's 60 fps; an
   exception to the graphics plan's shadow-light limit on the higher presets (M91).
 - **The Retro look goes public as soon as possible, not in 0.5 (owner, 2026-10-06).** He tested the Dev-tab "Retro
-  pixels" filter and is happy with it. It changes only the picture, on every map and the range.
+  pixels" filter and is happy with it. It changes only the picture, on every map and the range. Back on the Dev tab
+  since the Dev 6 playtest (owner, 2026-10-16; ST1, Menus below).
 - **What you see is what stops you and your BBs (owner rule, 2026-10-05).** Art never strays more than 8 cm from its
   collision block (`NATURE_SHAPES.maxGap`), so trunks are straight posts, not tapered. Detail is drawn inside each
   block's own bounds, and sloping ground is one heightfield shared by physics, BB rays, nav and the mesh (2026-10-04).
@@ -527,6 +528,12 @@ replaces its line; the old one stays findable in the archive or in git.
 
 ## Maps and modes
 
+- **What no player can see is not drawn (owner, 2026-10-16, MS1).** Beyond a map's walls only what shows over them from
+  a lane, a spawn or a raised floor is built: no ground, hedge or low prop out there (`render/skylineSeen.test.ts`
+  fails on a skyline piece nobody sees). Look-only fixtures hung over the field (Neon Heights' wall units and cables)
+  stay out of the room a player takes up, so none reads as cover a BB passes through. Woodland's bushes are small and
+  decorative (0.9 to 1.25 m tall): crouch cover, never full cover, never in the way.
+
 - **The maps' vault walls are 0.9 m, at most 0.4 m deep, open above (M102, 2026-10-13).** The top of the owner's 0.7
   to 0.9 m: over 0.85 m a plain jump rides over one time in nine (Rapier's capsule slides up the edge), over 0.9 m one
   in thirty, and nobody stands on a wall thinner than a body. Not cover: a crouched player's eyes are over it. One per
@@ -726,6 +733,12 @@ replaces its line; the old one stays findable in the archive or in git.
 
 ## Menus, HUD, settings and accessibility
 
+- **Settings after the Dev 6 playtest (owner, 2026-10-16; ST1).** The groups run Display, Graphics, Gameplay, Looks,
+  Audio, Controls, Accessibility, Save file, Dev, and Settings opens on Display. New defaults: sound cues red,
+  scoreboard 100 %, aim Toggle, crouch Hold, volumes master 100 %, effects 80 %, power source 100 %, ambience 60 %,
+  interface 50 %; a save that picked otherwise keeps its pick. The Retro look is a Dev setting again (it shows only
+  while the Dev box is ticked), Realistic colours leaves Settings for the Loadout's Colour tab (MR1), and the Voices
+  (hit calls) placeholder is gone. The top bar's level reads "LVL 3".
 - **The menu and UI redesign is approved (owner, 2026-10-05, 21:35); the HUD is restyled in place, with the same
   positions.**
 - **The menus use Inter instead of Barlow (owner, 2026-10-07).** He finds Barlow hard to read, numbers above all; Inter
@@ -784,6 +797,10 @@ replaces its line; the old one stays findable in the archive or in git.
 - **The hit marker is a bold red X with its own settings, still off by default (owner, 2026-10-13, Dev 5 playtest
   note 4).** Settings › Gameplay › Crosshair: on or off, scale, thickness, outline and colour (red unless changed; blue
   and orange left out as the teams'). Whether it starts on is his call.
+- **The menus are compact, to concepts the owner approved (owner, 2026-10-16, Dev 6 playtest items 9 to 21; MR1).**
+  Match, Loadout, Customise and the Armory use the 15 px step for small text and 32 to 40 px controls; the top bar and
+  Settings keep their sizes. A mode is offered only on a map that hosts it, and a rule the mode doesn't read is hidden.
+  The realistic colours are picked per replica in Customise › Colour. Saved loadouts are a dropdown.
 - **Another UI redesign is planned for later, its version not set (owner, 2026-10-13).** Maybe a future Dev release,
   maybe after 1.0; parked in `docs/IDEAS.md` until he places it, with no redesign work before.
 - **A Visual redesign, an Audio redesign and a Performance update are also planned for later, their versions not set
