@@ -200,7 +200,7 @@ async function measure(preset) {
   // The click waits for the menu's page to answer: on a software WebGL2 adapter the menu's item pictures and the
   // match's warm-up compile hold it for 20 s and more (W6a), past Playwright's 30 s default on a slow run.
   await setup.getByRole('button', { name: 'Start match', exact: true }).click({ timeout: 120_000 });
-  await page.waitForFunction((t) => globalThis.airsoft?.state && globalThis.airsoft.state.tick >= t, options.warmupTicks, { timeout: 120_000 });
+  await page.waitForFunction(() => globalThis.airsoft?.state && globalThis.airsoft.state.tick >= 1, null, { timeout: 120_000 });
   const backend = await page.evaluate(() => globalThis.airsoft.renderer.backend);
   console.log(`perf: match running (map ${options.map}, mode ${options.mode}, env ${options.env}, preset ${preset}, cpu ×${options.cpu}, drawn with ${backend}); measuring ${ticks} ticks from tick ${options.warmupTicks}`);
   if (backend !== options.backend) {
@@ -210,14 +210,18 @@ async function measure(preset) {
     process.exit(1);
   }
 
-  const sample = await page.evaluate(async ({ ticks, maxSeconds }) => {
+  const sample = await page.evaluate(async ({ ticks, warmupTicks, maxSeconds }) => {
     const g = globalThis.airsoft;
     // The renderer's draw counts, read the same on WebGL and the node renderer (one object, refilled each read).
     const stats = () => g.renderer.stats;
     const frames = [];
     const heap = [];
     let calls = 0, callsMax = 0, tris = 0, trisMax = 0, dressing = 0, dressingMax = 0;
-    const tick0 = g.state.tick;
+    // The window opens on the first frame at or past the warm-up tick (PF4): waiting for that tick from outside the page
+    // overshot it by up to three of software rendering's ten-tick frames, so each run measured a window shifted by a
+    // different amount, and a window starting later loses the opening's heaviest view (a few thousand triangles on
+    // the mean).
+    let tick0 = -1;
     // The figures' drawing work each frame (BF1): CharacterRenderer.update timed in place.
     const figures = g.session?.match?.characters;
     let figureMs = 0;
@@ -226,7 +230,7 @@ async function measure(preset) {
       figures.update = (...a) => {
         const t = performance.now();
         update(...a);
-        figureMs += performance.now() - t;
+        if (tick0 >= 0) figureMs += performance.now() - t;
       };
     }
     const heapNow = () => performance.memory?.usedJSHeapSize ?? 0;
@@ -236,13 +240,25 @@ async function measure(preset) {
       if (heapGc) for (let i = 0; i < 2; i++) globalThis.gc();
       return heapNow();
     };
-    const heapStart = liveHeap();
-    heap.push(heapStart);
-    await new Promise((done) => {
-      const t0 = performance.now();
-      let last = t0;
-      let nextHeap = t0 + 1000;
+    let heapStart = 0;
+    await new Promise((done, fail) => {
+      let t0 = 0, last = 0, nextHeap = 0;
+      const waitFrom = performance.now();
       const f = (now) => {
+        if (tick0 < 0) {
+          // As long as the old wait for the warm-up allowed.
+          if (now - waitFrom > 120_000) return fail(new Error(`the match never reached its warm-up tick ${warmupTicks}`));
+          if (g.state.tick >= warmupTicks) {
+            tick0 = g.state.tick;
+            heapStart = liveHeap();
+            heap.push(heapStart);
+            // After the collections, so the first frame measured doesn't carry their time.
+            t0 = last = performance.now();
+            nextHeap = t0 + 1000;
+          }
+          requestAnimationFrame(f);
+          return;
+        }
         frames.push(now - last);
         last = now;
         const s = stats();
@@ -301,7 +317,7 @@ async function measure(preset) {
       pixelRatio: g.renderer.renderer.getPixelRatio(), characters: g.session.characterCount,
       figureMs: figureMs / n,
     };
-  }, { ticks, maxSeconds: options.maxSeconds });
+  }, { ticks, warmupTicks: options.warmupTicks, maxSeconds: options.maxSeconds });
   // The graphics card the browser drew with (an integrated GPU instead of the discrete one would show here), read after
   // the window from a context of its own, released at once.
   const gpu = await page.evaluate(() => {
