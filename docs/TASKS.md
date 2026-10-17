@@ -137,7 +137,7 @@ attempts: 0
 ## PF3 · The 4K 240 Hz line for maxed-out settings (after William's desktop baseline)
 tier: core
 perf: required
-touches: pipeline/
+touches: pipeline/, .claude/agents/qa.md
 contract: none
 acceptance:
   1. This starts once `pipeline/baseline/desktop*.json` is committed (PLAYTEST › Only you can do these).

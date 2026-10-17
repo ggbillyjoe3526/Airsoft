@@ -236,8 +236,6 @@ else if (!perfRequired) {
   record('perf', { pass: null, reason: 'required but the harness (pipeline/perf-run.mjs) is not installed yet' });
 } else {
   const started = Date.now();
-  // The environment's frame times count somewhere (frameTimesGatedFor says on which presets).
-  const frameTimesGated = (budgets.frameTimeGatedEnvs ?? []).includes(options.env);
   const runs = [];
   const warnings = [];
   const failures = [];
@@ -253,13 +251,15 @@ else if (!perfRequired) {
       const baselineName = baselineFileName(options.env, combo, budgets.budgetPreset);
       const baselinePath = join(ROOT, 'pipeline', 'baseline', baselineName);
       const baseline = existsSync(baselinePath) ? JSON.parse(readFileSync(baselinePath, 'utf8')) : null;
-      const { over, worse, note: baselineNote } = judgeRun({ run: combo, metrics: result.metrics, budget: budgetFor(budgets, combo.map, combo.preset, combo.backend, options.env), baseline, baselineName, frameTimesGated: frameTimesGatedFor(budgets, options.env, combo.preset) });
+      // Whether this run's frame times count: the environment's, and on the desktop Ultra only (PF3).
+      const frameTimesGated = frameTimesGatedFor(budgets, options.env, combo.preset);
+      const { over, worse, note: baselineNote } = judgeRun({ run: combo, metrics: result.metrics, budget: budgetFor(budgets, combo.map, combo.preset, combo.backend, options.env), baseline, baselineName, frameTimesGated });
       if (baseline) {
         const warning = baselineLagWarning(baselineName, baseline.head, baselineLag(baseline.head, (h) => git('rev-list', '--count', `${h}..HEAD`)), budgets.baselineMaxLag ?? 20);
         if (warning) warnings.push(warning);
       }
       const { drawCalls, drawCallsMax, triangles, dressingTriangles, gpuMemoryMB, heapGrowthMB, p95Ms, p99Ms } = result.metrics;
-      summary = { ...summary, pass: r.ok && over.length === 0 && worse.length === 0, file: relative(ROOT, runFile), metrics: { drawCalls, drawCallsMax, triangles, dressingTriangles, gpuMemoryMB, heapGrowthMB, p95Ms, p99Ms }, ...(over.length ? { overBudget: over } : {}), ...(worse.length ? { worse } : {}), ...(baselineNote ? { reason: baselineNote } : {}), ...(r.ok ? {} : { evidence: tail(r.output, 10) }) };
+      summary = { ...summary, pass: r.ok && over.length === 0 && worse.length === 0, file: relative(ROOT, runFile), frameTimesGated, metrics: { drawCalls, drawCallsMax, triangles, dressingTriangles, gpuMemoryMB, heapGrowthMB, p95Ms, p99Ms }, ...(over.length ? { overBudget: over } : {}), ...(worse.length ? { worse } : {}), ...(baselineNote ? { reason: baselineNote } : {}), ...(r.ok ? {} : { evidence: tail(r.output, 10) }) };
     } catch (e) {
       summary = { ...summary, pass: false, reason: `no readable perf run (${e.message})`, evidence: tail(r.output) };
     }
@@ -271,7 +271,7 @@ else if (!perfRequired) {
     console.log(`  perf ${name}: ${summary.pass ? 'pass' : 'FAIL'}${summary.metrics ? ` · ${summary.metrics.drawCalls} draw calls, ${Math.round(summary.metrics.triangles)} triangles, ${summary.metrics.gpuMemoryMB} MB` : ''}`);
   }
   for (const w of warnings) console.warn(`  perf warning: ${w}`);
-  record('perf', { pass: runs.every((x) => x.pass), ms: Date.now() - started, frameTimesGated, runs, ...(warnings.length ? { warnings } : {}), ...(failures.length ? { failures } : {}) });
+  record('perf', { pass: runs.every((x) => x.pass), ms: Date.now() - started, runs, ...(warnings.length ? { warnings } : {}), ...(failures.length ? { failures } : {}) });
 }
 
 // 5. scope: the diff stays inside the task's `touches` (plus tests and docs), and QA commits touch only tests.

@@ -256,7 +256,8 @@ async function measure(preset) {
       let last = t0;
       let nextHeap = t0 + 1000;
       let tickSeen = g.state.tick, advancedAt = t0;
-      let kept = { n: 0, calls, callsMax, tris, trisMax, dressing, dressingMax };
+      // One object, written in place on each tick, so the window makes no garbage of its own.
+      const kept = { n: 0, calls, callsMax, tris, trisMax, dressing, dressingMax };
       const f = (now) => {
         frames.push(now - last);
         last = now;
@@ -271,7 +272,8 @@ async function measure(preset) {
         if (g.state.tick !== tickSeen) {
           tickSeen = g.state.tick;
           advancedAt = now;
-          kept = { n: frames.length, calls, callsMax, tris, trisMax, dressing, dressingMax };
+          kept.n = frames.length; kept.calls = calls; kept.callsMax = callsMax; kept.tris = tris; kept.trisMax = trisMax;
+          kept.dressing = dressing; kept.dressingMax = dressingMax;
         } else if (now - advancedAt >= stallMs) {
           ({ calls, callsMax, tris, trisMax, dressing, dressingMax } = kept);
           frames.length = kept.n;

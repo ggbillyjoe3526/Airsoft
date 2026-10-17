@@ -271,7 +271,7 @@ async function mapPerf(perf, label, o, problems, check = 'map.perf') {
     const baselineName = baselineFileName(o.env, run, budgets.budgetPreset);
     const baselinePath = join(ROOT, 'pipeline', 'baseline', baselineName);
     const baseline = existsSync(baselinePath) ? JSON.parse(readFileSync(baselinePath, 'utf8')) : null;
-    const judged = judgeRun({ run: combo, metrics: result.metrics, budget: budgetFor(budgets, perf.map, preset, 'webgl', o.env), baseline, baselineName, frameTimesGated: frameTimesGatedFor(budgets, o.env, preset) });
+    const judged = judgeRun({ run: combo, metrics: result.metrics, budget: budgetFor(budgets, perf.map, preset, result.backend ?? 'webgl', o.env), baseline, baselineName, frameTimesGated: frameTimesGatedFor(budgets, o.env, preset) });
     out.push(perfResult(label, { ...run, metrics: result.metrics, errors: result.errors }, judged, check));
   }
   return out;
