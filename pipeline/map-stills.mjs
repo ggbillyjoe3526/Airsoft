@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * The menus' pictures (graphics overhaul G3): draws each map still, each mode picture and the blurred backdrop with the
+ * The menus' pictures (graphics overhaul G3): draws each map still and the blurred backdrop with the
  * game itself, and writes them as small JPEGs into public/menu/ (what src/config/menuArt.ts lists). Run it again when
  * a map, its lighting or the renderer's look changes, and commit the pictures.
  *
@@ -9,7 +9,7 @@
  * Without --url it builds the e2e bundle (pipeline/build-cached.mjs, the build with `window.airsoft`) and serves it on
  * port 4183. Each picture is one page: the map, its light and the mode saved as the player's picks (Dev content on, for
  * the maps still being built), a match started, then the camera stood where config/menuArt.ts STILL_CAMERA says
- * (behind Blue's start, looking across the field at Orange's, or at the flagpole) and one frame drawn with the HUD
+ * (behind Blue's start, looking across the field at Orange's) and one frame drawn with the HUD
  * left out. The frame is scaled down, saved as a JPEG, and checked against its byte budget. The blurred backdrop is
  * a view of Depot blurred once here, so no screen ever blurs live (the title has no picture).
  *
@@ -32,7 +32,7 @@ const value = (name, fallback) => (args.includes(name) ? args[args.indexOf(name)
 
 // config/menuArt.ts has no imports, so Node reads it as it is (types stripped).
 const art = await import(pathToFileURL(join(ROOT, 'src', 'config', 'menuArt.ts')).href);
-const { MAP_STILLS, MODE_STILLS, STILL_SIZE, BACKDROPS, STILL_CAMERA } = art;
+const { MAP_STILLS, STILL_SIZE, BACKDROPS, STILL_CAMERA } = art;
 /**
  * How a still's frame settles before it is taken: frames until the draw count holds for `stillFrames` in a row (the
  * node renderer compiles what comes into view over a few frames; at most `maxFrames`, a pause of `pauseMs` after each),
@@ -59,11 +59,10 @@ if (!base) {
   for (let i = 0; i < 50 && !(await fetch(base).then((r) => r.ok, () => false)); i++) await new Promise((r) => setTimeout(r, 200));
 }
 
-/** Every picture to draw: the blurred backdrop first, then the stills and the modes. */
+/** Every picture to draw: the blurred backdrop first, then the stills. */
 const shots = [
   { ...BACKDROPS.blurred, mode: 'elimination', budget: BACKDROPS.blurred.maxBytes },
   ...MAP_STILLS.map((s) => ({ ...s, mode: s.map === 'range' ? 'practice' : 'elimination', width: STILL_SIZE.width, height: STILL_SIZE.height, quality: STILL_SIZE.quality, budget: STILL_SIZE.maxBytes })),
-  ...Object.entries(MODE_STILLS).map(([mode, s]) => ({ ...s, mode, width: STILL_SIZE.width, height: STILL_SIZE.height, quality: STILL_SIZE.quality, budget: STILL_SIZE.maxBytes })),
 ].filter((s) => only.length === 0 || only.includes(s.file));
 
 const { chromium: browserType } = await import(pathToFileURL(join(ROOT, 'node_modules', '@playwright', 'test', 'index.mjs')).href);
@@ -132,13 +131,13 @@ async function draw(shot) {
       const blue = centre(0);
       // Practice has no other team: the street view, the only one it is drawn with, needs none.
       const orange = state.characters.some((c) => c.team === 1) ? centre(1) : blue;
-      // The flag view looks at the pole; the others across the field from Blue's start to Orange's.
-      const target = view === 'flag' ? state.round.flag.position : view === 'overview' || view === 'aerial' ? { x: (blue.x + orange.x) / 2, y: (blue.y + orange.y) / 2, z: (blue.z + orange.z) / 2 } : orange;
-      // Facing from Blue's start towards what it looks at, `back` metres behind Blue's start (or the pole, for the flag).
+      // The overview and aerial views look across the field at its middle, between Blue's start and Orange's.
+      const target = view === 'overview' || view === 'aerial' ? { x: (blue.x + orange.x) / 2, y: (blue.y + orange.y) / 2, z: (blue.z + orange.z) / 2 } : orange;
+      // Facing from Blue's start towards what it looks at, `back` metres behind Blue's start.
       const dx = target.x - blue.x;
       const dz = target.z - blue.z;
       const len = Math.hypot(dx, dz) || 1;
-      const from = view === 'flag' || view === 'aerial' ? target : blue;
+      const from = view === 'aerial' ? target : blue;
       const cam = r.camera;
       cam.position.set(from.x - (dx / len) * camera.back, from.y + camera.up, from.z - (dz / len) * camera.back);
       cam.fov = camera.fov;
