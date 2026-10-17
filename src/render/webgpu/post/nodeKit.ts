@@ -14,7 +14,7 @@ import { scaled } from '../../post/postPass';
  * reads a render target there, and `clipAt` builds the clip position for the back end in use.
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any -- TSL's node types don't follow its own swizzles and helpers. */
+/* `any` in this file: TSL's node types don't follow its own swizzles and helpers. */
 export type AnyNode = any;
 
 const { clamp, floor, Fn, ivec2, screenCoordinate, screenSize, texture, textureSize, toneMapping, toneMappingExposure, vec2, vec3, vec4, workingToColorSpace } = tsl;

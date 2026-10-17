@@ -190,20 +190,6 @@ attempts: 0
 threads' branches it touches have merged (ST1, MR1, HD1, MV1, BD1, MS1, TT1), so none conflicts with them. DX2 takes
 over DC1's known-issues tidy-up. DX0, the quick wins, is the audit thread's own pull request.
 
-## DX4 · Tooling and CI: one build per pull request, balanced shards, a formatter (audit B1, B2, B3)
-tier: ui
-perf: skip
-touches: .github/workflows/check.yml, package.json, package-lock.json, .prettierrc, .prettierignore, pipeline/build-cached.mjs, pipeline/gate.mjs, src/ai/, vite.config.ts
-contract: none
-acceptance:
-  1. A pull request's CI builds the e2e and production bundles once and hands them to the browser shards (an artifact or a cache keyed on the sources); each browser shard no longer builds.
-  2. The slow shards finish within about a minute of each other: the Woodland Extraction balance guard is split or the shard count raised.
-  3. Prettier is a dev dependency with `printWidth: 140`, single quotes and trailing commas as the code already has them; `npm run format:check` runs on CI once the one-off format commit is in (that commit is made only after the Dev 6 playtest branches merge, and the owner has said yes to the formatter).
-  4. The 13 `eslint-disable` comments for an uninstalled linter become plain comments that keep their reason.
-  5. `npm run t` finishes under two minutes on the owner's desktop and under four in the cloud container, with no test dropped (any file still over 20 s is in `slow` or has a smaller fixture).
-status: open
-attempts: 0
-
 ## DX5 · App root: one preferences object and one session interface (audit A1 step one, A2, B7)
 tier: core
 perf: required

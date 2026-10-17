@@ -44,7 +44,7 @@ export const numberOps: Ops<number> = {
   ifLess: (a, b, x, y) => (a < b ? x : y),
 };
 
-/* eslint-disable @typescript-eslint/no-explicit-any -- TSL's node types don't follow its own operators. */
+/* `any` from here to the end-of-`any` line: TSL's node types don't follow its own operators. */
 /** A TSL node (loosely typed: TSL's types don't follow its own swizzles and operators). */
 export type Node = any;
 
@@ -65,7 +65,7 @@ export const tslOps: Ops<Node> = {
   sqrt: (a) => sqrt(a),
   ifLess: (a, b, x, y) => select(a.lessThan(b), x, y),
 };
-/* eslint-enable @typescript-eslint/no-explicit-any */
+/* end-of-`any` line */
 
 /** `x` clamped to 0..1. */
 export function saturate<T>(o: Ops<T>, x: T): T {

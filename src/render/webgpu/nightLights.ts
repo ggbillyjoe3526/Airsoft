@@ -30,7 +30,7 @@ import { freeBuffer } from './compute/computeKit';
  * buffers in a pixel shader: the node renderer there (`?forceWebGL`) keeps Three's own lights, as WebGL does.
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any -- TSL's node types don't follow its own swizzles and helpers. */
+/* `any` from here to the end-of-`any` line: TSL's node types don't follow its own swizzles and helpers. */
 type AnyNode = any;
 
 /** The parts of Three's clustered node this one reads and replaces (not in its type). */
@@ -335,4 +335,4 @@ export class NightLighting extends Lighting {
     this.made.dispose();
   }
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
+/* end-of-`any` line */

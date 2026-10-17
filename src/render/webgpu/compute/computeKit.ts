@@ -6,13 +6,13 @@ import type { V3 } from './particleKernels';
  * What the compute passes share (WebGPU overhaul W5): vec3 views of a TSL vec4 and freeing a storage buffer's GPU memory.
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any -- TSL nodes are loosely typed (kernelOps.ts Node). */
+/* `any` from here to the end-of-`any` line: TSL nodes are loosely typed (kernelOps.ts Node). */
 
 /** The x, y, z of a TSL vector node, as a kernel's V3. */
 export function xyz(v: any): V3<any> {
   return { x: v.x, y: v.y, z: v.z };
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
+/* end-of-`any` line */
 
 /** The part of Three's renderer that holds every GPU buffer it made (not in its public types; null until it starts). */
 interface AttributeStore {
