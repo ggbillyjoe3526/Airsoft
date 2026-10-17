@@ -41,7 +41,7 @@ A task that adds, renames or moves a file keeps its folder's `README.md` current
 | `src/physics/` | Rapier: level collision and the character mover | `physicsWorld.ts` |
 | `src/map/` | Map data (blocks, spawns, lanes, flag, Extraction) and map helpers | `mapTypes.ts`, `maps.ts`, `depot.ts`, `woodland.ts`, `neonHeights.ts`, `range.ts` |
 | `src/input/` | Keyboard, pointer lock, key bindings, order wheel; builds the player's command | `playerInput.ts`, `keyBindings.ts`, `keyboard.ts`, `pointerLock.ts` |
-| `src/render/` | Three.js: field meshes, figures, replicas, lighting, effects, post stack, cameras | `renderer.ts`, `matchPresentation.ts`, `combatPresentation.ts`, `mapMeshes.ts`, `characterRenderer.ts`, `viewmodel.ts` |
+| `src/render/` | Three.js, by subfolder (DX6): `field/` (with `mapPieces/`), `dressing/`, `light/`, `figures/`, `replicas/`, `effects/`, `match/`, `post/`, `webgpu/` | `renderer.ts`, `match/matchPresentation.ts`, `match/combatPresentation.ts`, `field/mapMeshes.ts`, `figures/characterRenderer.ts`, `replicas/viewmodel.ts` |
 | `src/audio/` | Web Audio: synthesised sounds, mix, 3D positioning, ambience | `audioEngine.ts`, `sfx.ts`, `dsp.ts`, `soundBank.ts`, `audioMix.ts` |
 | `src/ui/` | DOM HUD, overlays and settings tabs; the menus in `ui/menus/` | `hud.ts`, `scoreboard.ts`, `minimap.ts`, `debugOverlay.ts`, `menus/menus.ts` |
 | `src/config/` | Every tunable number and data table | `replicas.ts`, `bots.ts`, `hits.ts`, `render.ts`, `controls.ts`, `dev.ts` |
@@ -171,8 +171,9 @@ request. Each entry says where the contract lives, what it holds today and what 
     `caseOpened` and `caseDropped` report the cases; `returned` reports an opponent back in a wave; `torch` reports a
     weapon light switched on or off.
   - `Character.vault` holds a vault over a low obstacle (`sim/vault.ts`, M102): its plan and how far through it is,
-    whether a Jump press would vault now (`ready`, the tick's answer the vault prompt reads, DX6), and the one-shot presses made during it (`held`, BP5: reload, slot, holster, fire selector, torch, magazine, hop-up), kept
-    for the first command after it. A `footstep` of kind `vault` reports one starting (the loudest step: bots hear it
+    whether a Jump press would vault now (`ready`, the tick's answer the vault prompt reads, DX6), and the one-shot
+    presses made during it (`held`, BP5: reload, slot, holster, fire selector, torch, magazine, hop-up), kept for the
+    first command after it. A `footstep` of kind `vault` reports one starting (the loudest step: bots hear it
     from `footstepHearingVault`).
   - `GameState.magTosses` holds the magazines in the air (MG1, `sim/magShare.ts`; MAG_SHARE.maxTosses slots, made
     once): who threw it to whom, the catcher's loadout slot, its BBs, the replica it came from, its age and flight and
