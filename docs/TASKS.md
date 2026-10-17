@@ -138,7 +138,7 @@ attempts: 0
 ## RV1 · Remove supply weekends and dated events (feature triage, 2026-10-05)
 tier: core
 perf: skip
-touches: src/pool/supplyEvents.ts, src/pool/supplyEvents.test.ts, src/pool/supplyEvents.edge.test.ts, src/pool/caches.ts, src/pool/pool.ts, src/game.ts, src/matchSession.ts, pool.md, docs/IDEAS.md
+touches: src/pool/supplyEvents.ts, src/pool/supplyEvents.test.ts, src/pool/supplyEvents.edge.test.ts, src/pool/caches.ts, src/pool/pool.ts, src/game.ts, src/matchSession.ts, pool.md, docs/IDEAS.md, src/ui/menus/setupScreen.ts, src/ui/menus/playModel.ts, src/ui/menus/menus.ts, src/ui/menus/menusOptions.ts, src/ui/menus/choiceCards.ts, src/ui/menus/css/play.css
 contract: none
 acceptance:
   1. No supply weekend or dated event shows anywhere, and their code and their table in `pool.md` are gone.
