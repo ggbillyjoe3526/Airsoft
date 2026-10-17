@@ -221,7 +221,7 @@ attempts: 0
 ## DX7 · Bots: the hub files split, two sources of truth closed (audit A8 part, B5, B6, B13)
 tier: core
 perf: required
-touches: src/ai/, src/config/bots.ts, src/config/, src/ui/devSettings.ts, src/pool/, src/progress/
+touches: src/ai/, src/config/bots.ts, src/config/, src/ui/devSettings.ts, src/pool/, src/progress/, data/, pool.md, stats.md, levels.md, bots.md, bot-kits.md, callouts.md, src/content/, pipeline/build-cached.mjs, pipeline/review.mjs, pipeline/reviewEdge.test.mjs, pipeline/scope.mjs, pipeline/testReach.mjs, pipeline/README.md, .claude/skills/new-content/SKILL.md
 contract: none
 acceptance:
   1. Hearing and round planning leave `ai/botController.ts` for modules of their own (as `squadOrders.ts` and `magShare.ts` already did); `botController.ts` is under 600 lines and every headless guard passes with the same seeds.
