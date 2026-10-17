@@ -46,6 +46,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **RV1** · Extraction has no Supply weekends or dated events like the Halloween run; its Mode card shows no event and cases always hold the usual loot
 - **AX1** · With High Contrast team colours, Extraction's exits are hi-vis yellow instead of green, on the ring, cones, EXIT sign, minimap and screen marker
 - **AX1** · High Contrast team paint (vests, armbands, helmet bands) glows faintly on day fields so the dark orange team shows in shade
+- **TT2** · Tutorial teaches leaning again: a Lean step after Crouch ticks once you've leaned both ways; read-only cards stay up 10 s
 - **UI2** · Match rule options are only as wide as their words, sit closer to their names, and the round-time slider is shorter
 - **UI2** · Replica panel is about half as wide: no picture or name, fire modes as S / B / A, the spare magazines as small boxes that fill from the bottom, and no "press R to reload" hint when the magazine runs dry
 
