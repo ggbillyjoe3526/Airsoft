@@ -150,6 +150,11 @@ jobs:
             npx playwright install-deps firefox
             sudo apt-get install -y xvfb
           fi
+      - name: TEMPORARY Firefox click diagnostic (IN1 follow-up)
+        continue-on-error: true
+        env:
+          E2E_FIREFOX: '1'
+        run: xvfb-run --auto-servernum npx playwright test e2e/ffdiag.firefox.ts --repeat-each 10 --workers 1 --reporter=list 2>&1 | grep -E "DIAG|✓|✘|passed|failed|flaky|Error|Call log|^ +- " | cut -c1-600
       - name: Boot and save specs in Firefox
         env:
           E2E_FIREFOX: '1'

@@ -69,7 +69,7 @@ const CHROMIUM_PROJECTS = [
 const FIREFOX_PROJECTS = [
   {
     name: 'firefox',
-    testMatch: /(boot|save)\.spec\.ts$/,
+    testMatch: /((boot|save)\.spec|ffdiag\.firefox)\.ts$/,
     use: { ...devices['Desktop Firefox'], headless: false, actionTimeout: 30_000, navigationTimeout: 30_000, launchOptions: { firefoxUserPrefs: { 'webgl.force-enabled': true } } },
   },
 ];
