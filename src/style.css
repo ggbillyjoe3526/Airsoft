@@ -385,34 +385,9 @@ kbd {
   display: none;
 }
 
-/* Resting on cover (M104): a small tag under the sight while the replica rests on a ledge, clear of the case prompt. */
-.hud-rest {
-  position: absolute;
-  left: 50%;
-  top: calc(50% + 44px);
-  translate: -50% 0;
-  scale: var(--hud-scale, 1);
-  transform-origin: top center;
-  padding: 2px 10px;
-  border-radius: var(--radius-sm);
-  background: var(--hud-panel);
-  font-size: var(--fs-md);
-  font-weight: 600;
-  letter-spacing: var(--ls-caps);
-  text-transform: uppercase;
-  color: var(--paper);
-  text-shadow: var(--hud-shadow);
-  display: none;
-}
-
-.hud.rested .hud-rest {
-  display: block;
-}
-
 .hud.out .hud-crosshair,
 .hud.out .hud-reddot,
 .hud.out .hud-scope,
-.hud.out .hud-rest,
 .hud.out .hud-replica {
   display: none;
 }

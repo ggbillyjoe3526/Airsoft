@@ -38,7 +38,7 @@ export interface PersonalityStyle {
   readonly ownLane: boolean;
   /** Elimination: holds the last lane point short of the middle until the clock is down to this (s); null never holds. */
   readonly holdUntil: number | null;
-  /** Raises its sight when it stands still to fight or hold (and so rests on cover, M104). */
+  /** Raises its sight when it stands still to fight or hold. */
   readonly aimsFromCover: boolean;
   /** BotSkill.holdsAngles and slicesCorners in their place, or null to keep the difficulty's. */
   readonly holdsAngles: boolean | null;

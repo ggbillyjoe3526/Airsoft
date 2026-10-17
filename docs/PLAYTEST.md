@@ -55,8 +55,9 @@ What changed in 0.1 Beta 1, from your Dev 6 playtest. Each line points to the se
   pines and brighter nights; Neon Heights ringed by lit towers and signs ([Maps](#maps)).
 - [ ] **A shorter tutorial.** One or two sentences a card; the read-only cards move on by themselves with a bar
   filling; the lean step is gone ([Tutorial](#tutorial)).
-- [ ] **Movement and hands** (when its pull request merges). Holster speed, the steadier Shift walk and the hand
-  poses ([Movement](#movement)).
+- [ ] **Movement and hands.** Holstered you run faster than armed but never faster than a sprint; nobody rests on
+  cover any more; walking with Shift aims as steadily as standing; the first switch to your other replica no longer
+  stutters; the thumbs wrap the Blender replicas' grips ([Movement](#movement)).
 - [ ] **Bug fixes.** The Q/E lean cut eases, double-tapping the fire selector steps twice, a ricochet's grit flies off
   the wall it hit, and edge markers point the way to turn ([Old bugs to recheck](#old-bugs-to-recheck)).
 
@@ -86,7 +87,10 @@ Play › Mode Elimination on Depot, Match › Opponents Normal. Set the mouse se
 
 - [ ] **Look around with the mouse.** The view turns smoothly, with no jumps, and no drift once the mouse stops.
 - [ ] **Move with W A S D.** You run at a steady pace and hear your own footsteps.
-- [ ] **Hold Shift and move.** You walk slowly and your footsteps go silent.
+- [ ] **Hold Shift and move.** You walk slowly and your footsteps go silent, and the crosshair closes to about what it
+  is standing still: a walk pays off in accuracy, a run doesn't. Is the gain clear enough? (Dev 6 note 29.)
+- [ ] **Press 3, then run.** Holstered, you run faster than with the replica out. Hold Left Alt too: the sprint is the
+  same as armed, never faster. (Dev 6 note 27.)
 - [ ] **Hold Left Alt and run forward.** You sprint. Shoot while sprinting: it fires (the replica comes up from the
   carry), but the BBs spread far wider than walking and the rifle climbs faster. Let go of the trigger and it drops
   back into the carry a moment later. (Dev 5 playtest, note 9.)

@@ -161,9 +161,6 @@ request. Each entry says where the contract lives, what it holds today and what 
   - Every body stops BBs (M85): a BB that reaches someone already hit, a teammate with friendly fire off, or anyone in
     the cease-fire after a round is decided stops there and reports `bbImpact`, no hit; only a Ghost lets BBs through.
     `Character.walkCycle` (and `prevWalkCycle`) is the legs' walk cycle, which the hit volume and the drawn legs share.
-  - `Character.coverRest` (0 to 1, M104) is how far the replica has settled on cover (`sim/coverRest.ts`): it steadies
-    the spread and the kick, and presentation reads it for the HUD tag, the settle sound and the poses. It adds no
-    event.
   - Events: `respawned`, `exitCount`, `exitOpened` and `runWarning` report the run; `caseNoise` (bots hear it),
     `caseOpened` and `caseDropped` report the cases; `returned` reports an opponent back in a wave; `torch` reports a
     weapon light switched on or off.
@@ -196,14 +193,13 @@ request. Each entry says where the contract lives, what it holds today and what 
     holds its time and reach (`OVERTIME`); `runOutRound` (Dev settings › End the round now) runs it out too.
 
   Pinned by `sim/simulation.test.ts`, `sim/overtimeFlag.test.ts`, `sim/extraction.test.ts`, `sim/extractionCases.test.ts`,
-  `sim/extractionWaves.test.ts`, `sim/torch.test.ts`, `sim/coverRest.test.ts`, `sim/vault.test.ts`,
+  `sim/extractionWaves.test.ts`, `sim/torch.test.ts`, `sim/vault.test.ts`,
   `sim/magShare.test.ts`, `sim/bbsLeaves.test.ts`, `sim/propNoise.test.ts`, `sim/propNoisePhysics.test.ts`.
 ### stepSimulation
 
 - **`stepSimulation(state, commands, ctx, dt)`** (`sim/simulation.ts`). The fixed 60 Hz step and the order of its
   phases (a parked out-of-play character goes straight to the elimination step); randomness only from `state.rng`.
-  Per character: aim, move, walk cycle, lean, rest on cover (M104: after the lean, so it reads the eye the tick left,
-  and before the accuracy, which reads the rest), accuracy, then footsteps, replicas, the torch and a magazine toss
+  Per character: aim, move, walk cycle, lean, accuracy, then footsteps, replicas, the torch and a magazine toss
   (MG1, while the round is live); then BBs, the magazines in the air (they land or are lost) and the round. A character
   in play whose move ran hard into a noisy prop knocks it right after the move (`stepPropBump`, NP1; not during a
   vault), and a BB stopped on a ringing prop rings it in the BB step (`ringProp`, through `stepBBs`' `noise` context,

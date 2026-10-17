@@ -10,7 +10,7 @@ import type { Character } from '../sim/character';
 import { vaultClipShare } from '../sim/figureLegs';
 import { lerpAngle } from '../sim/vec';
 import { PartBuilder } from './figureParts';
-import { createFigurePose, createPoseState, type FigurePose, hasHolster, hasRest, type MagazineShow, magazinesAt, POSE_CLIPS, type PoseHold, type PoseInput, type PoseState, poseRestartCall, poseShot, releasedBetween, stepPose } from './figurePose';
+import { createFigurePose, createPoseState, type FigurePose, hasHolster, type MagazineShow, magazinesAt, POSE_CLIPS, type PoseHold, type PoseInput, type PoseState, poseRestartCall, poseShot, releasedBetween, stepPose } from './figurePose';
 import { addShape, type FigureReplicaColours, type FigureReplicaShape } from './figureReplicas';
 import type { FigureMagazines, FigureRig } from './figureRig';
 import type { ReplicaFiles } from './replicaFiles';
@@ -173,7 +173,6 @@ export class RiggedFigure {
     firstPerson: false,
     vaulting: false,
     vaultAt: 0,
-    rest: 0,
     holster: 0,
     cycle: null,
   };
@@ -348,12 +347,8 @@ export class RiggedFigure {
     input.vaultAt = c.vault.active ? vaultClipShare(c.vault, c.vault.time - SIM_DT * (1 - a)) : 0;
     input.airborne = !c.grounded;
     input.airTime = c.airTime;
-    // Resting on cover (M104): the Rest clips lean the aim in over it. A file without them leans by FIGURE_RIG.rest: the
-    // aim posed `rest` higher and the spine leaned `rest` forward, so the bore stays on the shot. Not your own body.
-    input.rest = f.firstPerson ? 0 : c.coverRest;
     input.holster = holstering ? 1 - THREE.MathUtils.smoothstep(drawn, FIGURE.holster.swapAt, 1) : 0;
-    const rest = hasRest(this.setup.rig.table, hold) ? 0 : input.rest * FIGURE_RIG.rest.lean;
-    input.pitch = c.prevPitch + (c.pitch - c.prevPitch) * a + rest;
+    input.pitch = c.prevPitch + (c.pitch - c.prevPitch) * a;
     input.hold = hold;
     const handling = arm.handling[arm.active];
     input.reload = arm.reload > 0 && handling && handling.reloadTime > 0 ? 1 - arm.reload / handling.reloadTime : null;
@@ -384,7 +379,7 @@ export class RiggedFigure {
     this.mixer.update(0);
     this.spineMixed.copy(this.spine.quaternion);
     const twist = pose.rifleAim * this.setup.rig.aimYaw.rifle + pose.pistolAim * this.setup.rig.aimYaw.pistol;
-    this.adjustSpine(pose.overlay, f.leanX + pose.pitchLean - rest, f.leanZ, twist);
+    this.adjustSpine(pose.overlay, f.leanX + pose.pitchLean, f.leanZ, twist);
     this.peekAbout(f.peek, f.peekPivot);
     if (f.firstPerson) for (const b of this.arms) b.scale.setScalar(FIGURE_RIG.firstPerson.armScale);
     // Where a magazine thrown now comes to rest: the ground last stood on (a throw mid-jump lands, not hangs in the air).

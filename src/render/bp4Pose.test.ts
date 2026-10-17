@@ -13,7 +13,7 @@ const make = (without: readonly string[] = []): PoseClipTable =>
 const TABLE = make();
 const input = (over: Partial<PoseInput> = {}): PoseInput => ({
   status: 'alive', statusTime: 0, forward: 0, side: 0, crouch: 0, sprinting: false, airborne: false, airTime: 0, pitch: 0, hold: 'rifle',
-  reload: null, draw: null, firstPerson: false, vaulting: false, vaultAt: 0, rest: 0, holster: 0, cycle: null, ...over,
+  reload: null, draw: null, firstPerson: false, vaulting: false, vaultAt: 0, holster: 0, cycle: null, ...over,
 });
 function run(inp: PoseInput, seconds = 3, state: PoseState = createPoseState(), table = TABLE) {
   const out = createFigurePose();
@@ -33,19 +33,6 @@ describe('F2 landing holds the Jump clip where it was', () => {
     expect(state.jump).toBeGreaterThan(0.05);
     expect(out.time[S.Jump]).toBeCloseTo(air, 5);
     expect(out.time[S.Jump]).not.toBeCloseTo(J.from, 3);
-  });
-});
-
-describe('F3 a rest taken away at once eases out', () => {
-  it('blends the Rest clips out over several frames, not in one', () => {
-    const { state } = run(input({ rest: 1 }), 2);
-    const out = createFigurePose();
-    stepPose(state, input({ rest: 0 }), DT, TABLE, out);
-    expect(out.upper[S.Rifle_Rest]).toBeGreaterThan(0.3);
-    expect(out.upper[S.Rifle_Aim]).toBeLessThan(out.upper[S.Rifle_Rest]!);
-    for (let i = 0; i < 120; i++) stepPose(state, input({ rest: 0 }), DT, TABLE, out);
-    expect(out.upper[S.Rifle_Rest]).toBeLessThan(0.01);
-    expect(out.upper[S.Rifle_Aim]).toBeGreaterThan(0.9 * out.overlay);
   });
 });
 
@@ -79,7 +66,7 @@ describe('the Holster clips', () => {
     const { out, state: s } = run(input({ pitch: 1.4, holster: 1 }), 3, state);
     expect(s.holster).toBeGreaterThan(0.99);
     expect(out.upper[S.Holster]).toBeCloseTo(out.overlay, 2);
-    for (const slot of [S.Rifle_Aim, S.Rifle_AimUp, S.Rifle_AimDown, S.Pistol_Aim, S.Rifle_Rest, S.Rifle_Fire, S.Pistol_Fire]) expect(out.upper[slot]!, POSE_CLIPS[slot]).toBeLessThan(0.01);
+    for (const slot of [S.Rifle_Aim, S.Rifle_AimUp, S.Rifle_AimDown, S.Pistol_Aim, S.Rifle_Fire, S.Pistol_Fire]) expect(out.upper[slot]!, POSE_CLIPS[slot]).toBeLessThan(0.01);
     expect(Math.abs(out.pitchLean)).toBeLessThan(0.01);
     // A shot while holstered shows no trigger press.
     const shot = createPoseState();

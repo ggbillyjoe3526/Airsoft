@@ -38,10 +38,19 @@ export interface HandPose {
    * points its first segment there instead, for a thumb set against the fingers rather than over them: a support hand
    * under a handguard, its thumb up the near side while the fingers curl up the far one (FA13). `tipAim` (optional, with
    * `aim`) points its second segment there instead of bending it by `curl`: a thumb that steps out round a corner and
-   * then lies along the side it holds.
+   * then lies along the side it holds. `root` (optional) moves where the thumb and its thenar pad spring from, in the
+   * palm's frame (THUMB_ROOT): a hand round a grip whose thumb wraps the far side from the web behind it.
    */
-  thumb: { swing: number; curl: readonly [number, number]; aim?: V3; tipAim?: V3 };
+  thumb: { swing: number; curl: readonly [number, number]; aim?: V3; tipAim?: V3; root?: PalmPoint };
 }
+
+/** A point in the palm's own frame: across the knuckle row from the index knuckle, along the fingers from the palm's centre, towards the back of the hand. */
+export type PalmPoint = readonly [across: number, along: number, back: number];
+
+/** Where the thumb springs from by default: past the index knuckle, level with the palm's centre, a little to the palm side. */
+const THUMB_ROOT: PalmPoint = [-0.034, 0.004, -0.01];
+/** The thenar pad's centre from the thumb's root: towards the heel of the hand. */
+const THENAR_FROM_ROOT: PalmPoint = [0.004, -0.016, 0.004];
 
 // Proportions (metres, gloved).
 const PALM = { width: 0.078, length: 0.084, thickness: 0.028, radius: 0.013 };
@@ -178,7 +187,8 @@ export function handSkeleton(pose: HandPose): HandSkeleton {
         .addScaledVector(d, 0.65)
         .addScaledVector(nn, -0.5 - 0.4 * swing)
         .normalize();
-  let tpos = local(-0.034, 0.004, -0.01);
+  const root = pose.thumb.root ?? THUMB_ROOT;
+  let tpos = local(root[0], root[1], root[2]);
   const tAxis = tDir.clone().cross(nn).normalize();
   const thumb: HandSegment[] = [];
   const tipAim = aim ? pose.thumb.tipAim : undefined;
@@ -195,7 +205,7 @@ export function handSkeleton(pose: HandPose): HandSkeleton {
     local,
     midAcross,
     fingers,
-    thenar: local(-0.03, -0.012, -0.006),
+    thenar: local(root[0] + THENAR_FROM_ROOT[0], root[1] + THENAR_FROM_ROOT[1], root[2] + THENAR_FROM_ROOT[2]),
     thumb,
     wristA: local(midAcross, -PALM.length / 2 + 0.006, 0),
     wristB: local(midAcross, -PALM.length / 2 - 0.03, 0),

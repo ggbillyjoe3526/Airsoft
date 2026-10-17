@@ -20,7 +20,6 @@ interface Play {
   /** Shares of the live ticks of bots in play. */
   holding: number;
   moving: number;
-  resting: number;
   aiming: number;
   careful: number;
   anchoring: number;
@@ -32,7 +31,7 @@ interface Play {
 /** Six bots of personality `key` play `SECONDS` on Depot, over SEEDS; their habits, summed over the seeds. */
 function play(key: string): Play {
   const style = BOT_PERSONALITIES.styles.get(key)!;
-  const out: Play = { firstShot: 0, holding: 0, moving: 0, resting: 0, aiming: 0, careful: 0, anchoring: 0, ownLanes: 0, plans: 0 };
+  const out: Play = { firstShot: 0, holding: 0, moving: 0, aiming: 0, careful: 0, anchoring: 0, ownLanes: 0, plans: 0 };
   let live = 0;
   for (const seed of SEEDS) {
     const identities = new Map<number, BotIdentity>();
@@ -55,7 +54,6 @@ function play(key: string): Play {
         live++;
         if (b.holding) out.holding++;
         if (Math.hypot(c.velocity.x, c.velocity.z) > 0.5) out.moving++;
-        if (c.coverRest > 0) out.resting++;
         if (c.aiming) out.aiming++;
         if (b.careful) out.careful++;
         if (anchorHolding(b, bots.worldForTests)) out.anchoring++;
@@ -63,7 +61,7 @@ function play(key: string): Play {
     }, undefined, undefined, identities);
     out.firstShot += firstShot / SEEDS.length;
   }
-  for (const k of ['holding', 'moving', 'resting', 'aiming', 'careful', 'anchoring'] as const) out[k] /= Math.max(1, live);
+  for (const k of ['holding', 'moving', 'aiming', 'careful', 'anchoring'] as const) out[k] /= Math.max(1, live);
   return out;
 }
 
@@ -84,16 +82,14 @@ describe('the four personalities play differently (BN1, acceptance 3)', () => {
     }
   });
 
-  it('has anchors hold short of the middle, aiming and resting their replicas on cover; nobody else aims', () => {
+  it('has anchors hold short of the middle, aiming from cover; nobody else aims', () => {
     const a = of('anchor');
     expect(a.anchoring).toBeGreaterThan(0.7);
     expect(a.holding).toBeGreaterThan(0.4);
     expect(a.aiming).toBeGreaterThan(0.3);
-    expect(a.resting).toBeGreaterThan(0.05);
     for (const other of ['rusher', 'flanker', 'careful']) {
       expect(of(other).anchoring, other).toBe(0);
       expect(of(other).aiming, other).toBe(0);
-      expect(of(other).resting, other).toBe(0);
     }
   });
 

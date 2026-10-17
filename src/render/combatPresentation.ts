@@ -477,10 +477,6 @@ export class CombatPresentation {
     this.viewmodel.setAspect(this.renderer.camera.aspect);
     const light = lightInHand(p);
     this.viewmodel.setTorch(torchLit(p), light ? TORCHES[light].colour : TORCHES.weaponTorch.colour);
-    // Resting on cover (M104): the replica settles and steadies, and "Rested" shows under the sight.
-    const rest = p.status === 'alive' ? p.coverRest : 0;
-    this.viewmodel.setRest(rest, this.movement.rest.kick);
-    this.hud.setRested(rest >= HUD.restedFrom);
     this.viewmodel.update(dt, yaw, pitch, Math.hypot(p.velocity.x, p.velocity.z), this.movement.runSpeed, carry, p.armament, p.status === 'calling', this.aimBlend);
     // The shot spread right now (replica × stance and movement), as pixels on screen at the centre.
     const cam = this.renderer.camera;
@@ -501,12 +497,14 @@ export class CombatPresentation {
   }
 
   /**
-   * Compiles the world's and the held replica's shaders before the first frame (M63, audit REN-06: Renderer.warmShaders),
-   * with what is hidden now but shows mid-session (KI1): `hidden` (the session's: the overtime flag), a tossed magazine
-   * and the scopes' eyepiece masks.
+   * Compiles the world's and every carried replica's shaders before the first frame (M63, audit REN-06:
+   * Renderer.warmShaders), the replicas not in hand too, so a first switch to one is not where it compiles (Dev 6 note
+   * 26), with what is hidden now but shows mid-session (KI1): `hidden` (the session's: the overtime flag), a tossed
+   * magazine and the scopes' eyepiece masks.
    */
   warmShaders(hidden: readonly THREE.Object3D[] = []): void {
-    this.renderer.warmShaders(this.overlay, [...hidden, ...this.magTosses.warmTargets(), ...this.viewmodel.warmTargets()]);
+    const shown = [...hidden, ...this.magTosses.warmTargets(), ...this.viewmodel.warmTargets()];
+    this.viewmodel.withEverySlotShown(() => this.renderer.warmShaders(this.overlay, shown));
   }
 
   /** Draws the frame; the held replica only when the camera is in first person. */
