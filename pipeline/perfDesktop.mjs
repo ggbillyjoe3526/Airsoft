@@ -109,7 +109,7 @@ export function summaryMarkdown(rows, when) {
   const hint = at4k && atHd && vsyncHeld(at4k.p50Ms) === null && vsyncHeld(atHd.p50Ms) === null ? boundHint(at4k.fps, atHd.fps) : null;
   lines.push('');
   if (hint) lines.push(`- ${hint}.`);
-  if (held.size) lines.push(`- Frames sat on a ${[...held].join(' / ')} Hz screen's refresh: the uncapped switches didn't take, so these runs show the cap, not the headroom.`);
+  if (held.size) lines.push(`- Frames sat on a ${[...held].join(' / ')} Hz screen's refresh: the uncapped switches may not have taken, so these runs may show the cap, not the headroom.`);
   lines.push('- Sim ticks/s under 60 means the simulation fell behind (CPU). Figures ms is the characters\' drawing work each frame.');
   return `${lines.join('\n')}\n`;
 }

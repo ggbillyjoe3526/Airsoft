@@ -6,7 +6,7 @@
  *
  *   node pipeline/perf-desktop.mjs [--channel chrome|msedge] [--chromium /path] [--port 4181]   (npm run perf:desktop)
  *
- * Any argument is passed on to every run. A run that fails is a row saying so; the suite goes on.
+ * The browser's arguments are passed on to every run; the suite's own (map, mode, preset, size) are refused. A run that fails is a row saying so; the suite goes on.
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -18,6 +18,13 @@ import { runFileName } from './perfMatrix.mjs';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'pipeline', 'out');
 const passOn = process.argv.slice(2);
+/** The suite's own options: passed on, they would replace every run's and its files' names would stop matching. */
+const OWN = ['--env', '--map', '--mode', '--preset', '--backend', '--viewport', '--baseline', '--no-build'];
+const clash = passOn.filter((a) => OWN.includes(a));
+if (clash.length) {
+  console.error(`perf-desktop: ${clash.join(', ')} ${clash.length > 1 ? 'are' : 'is'} the suite's own; pass only the browser's (--channel, --chromium, --port, --vsync)`);
+  process.exit(1);
+}
 const started = new Date();
 
 const rows = [];
