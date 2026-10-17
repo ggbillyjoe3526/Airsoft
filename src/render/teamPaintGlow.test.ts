@@ -17,7 +17,7 @@ function figure(kind: (typeof FIGURE_RIG_KINDS)[number], paintGlow: number | und
   const dress = figureDress(HUMAN_CROWD, 0, c.team, c.armament.replicas, files);
   const material = new THREE.MeshStandardMaterial({ vertexColors: true });
   material.userData.authored = { opacity: 1, transparent: false };
-  return new RiggedFigure({ rig: rigs[kind], character: c, id: c.id, teamColour: HC_ORANGE, paintGlow, replicaMaterial: material, rifleColours: dress.rifle, pistolColours: dress.pistol, files, detail: 'high', pack: true, radio: true, thrown: new ThrownMagazines(), calloutMaterial: new THREE.SpriteMaterial() });
+  return new RiggedFigure({ rig: rigs[kind], character: c, id: c.id, teamColour: HC_ORANGE, ...(paintGlow === undefined ? {} : { paintGlow }), replicaMaterial: material, rifleColours: dress.rifle, pistolColours: dress.pistol, files, detail: 'high', pack: true, radio: true, thrown: new ThrownMagazines(), calloutMaterial: new THREE.SpriteMaterial() });
 }
 
 const teamMaterials = (f: RiggedFigure): THREE.MeshStandardMaterial[] =>
