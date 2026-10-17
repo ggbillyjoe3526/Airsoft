@@ -60,8 +60,8 @@ What changed in 0.1 Beta 1, from your Dev 6 playtest. Each line points to the se
   and commit the `pipeline/baseline/laptop*.json` files it writes.
 - **Desktop Ultra baseline.** On your desktop run `npm run perf:desktop` (about 15 minutes; leave the window alone) and
   send the thread `pipeline/out/perf-desktop-summary.md` and `pipeline/baseline/desktop*.json`.
-- **Save in Firefox and Edge** (automated tests run Chromium, and Firefox on CI; not Edge or Windows), and playing Woodland and Neon Heights, which stay
-  dev content until you make each public.
+- **Save in Edge** (automated tests run Chromium, and Firefox on CI; not Edge itself or Windows), and playing
+  Woodland and Neon Heights, which stay dev content until you make each public.
 
 ## Movement
 
@@ -634,6 +634,10 @@ Settings › Save file. Everything saves as it changes; nothing to press.
 - [ ] **Firefox and Edge.** Download, Load (button and drag and drop), the two-tab notice and Protect once in each.
 
 ## Browsers and builds
+
+You play in Chrome (2026-10-17, no Firefox installed): skip the Firefox lines. CI's `firefox` job runs the boot and
+save tests in Firefox on every pull request, and IN1 checked mouse lock, F10 and the raw input line in Firefox 136 in
+the cloud.
 
 - [ ] **Firefox and Edge, production build** (`npm run build`, `npm run preview`). It boots to the title with no
   console errors; Play takes the mouse, Esc pauses and Resume takes it back; the back and forward side buttons don't
