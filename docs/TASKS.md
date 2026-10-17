@@ -260,7 +260,7 @@ attempts: 0
 ## DX5 · App root: one preferences object and one session interface (audit A1 step one, A2, B7)
 tier: core
 perf: required
-touches: src/game.ts, src/matchSession.ts, src/rangeSession.ts, src/settings/, src/ui/menus/savedChoices.ts, src/ui/crosshair.ts, src/ui/hitMarkerLook.ts, src/ui/hudSettings.ts, src/ui/menus/menus.ts, src/render/matchPresentation.ts, src/render/combatPresentation.ts
+touches: src/game.ts, src/matchSession.ts, src/rangeSession.ts, src/settings/, src/ui/menus/savedChoices.ts, src/ui/crosshair.ts, src/ui/hitMarkerLook.ts, src/ui/hudSettings.ts, src/ui/menus/menus.ts, src/render/matchPresentation.ts, src/render/combatPresentation.ts, src/session.ts, src/main.ts, src/ui/menus/menusOptions.ts, src/ui/optionPicker.ts, src/ui/crosshairSettings.ts, src/ui/graphicsSettings.ts, src/config/matchRules.ts, src/config/renderQuality.ts
 contract: none
 acceptance:
   1. A `HudPrefs` object (or the name the thread picks) holds every HUD and accessibility preference once; `Game`, `Menus`, both sessions and the presentations read it by reference, so a new preference is added in one place and the `set*` forwarders in `game.ts` and `matchSession.ts` are gone.
