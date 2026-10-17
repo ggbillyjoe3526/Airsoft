@@ -110,7 +110,10 @@ export class PointerLock {
         document.removeEventListener('pointerlockerror', refused);
         resolve(taken);
       };
-      const changed = (): void => settle(this.locked);
+      // Only the lock taken answers: a drop of an older lock (fullscreen changing) is no refusal.
+      const changed = (): void => {
+        if (this.locked) settle(true);
+      };
       const refused = (): void => settle(false);
       let answer: Promise<void> | undefined;
       try {
