@@ -27,17 +27,6 @@ below. The item numbers are his. Where an older block overlaps one of these, the
 
 MS1 shows the owner concept images and waits for his approval before any code changes.
 
-## IN1 · Mouse lock and Firefox: the Firefox CI job stops timing out (follow-up)
-tier: fix
-perf: skip
-touches: playwright.config.ts, .github/workflows/check.yml, e2e/
-contract: none
-acceptance:
-  1. CI's `firefox` job no longer times out on the save spec's Display tab click; the cause is found and fixed, not retried.
-  2. No test is skipped, and the job stays blocking.
-status: open
-attempts: 0
-
 ## BL1 · Attack / Defend: fewer attacker wins, more rounds won at the pole (after playtest)
 tier: core
 perf: skip

@@ -1,12 +1,13 @@
 # IN1 · Mouse lock and Firefox
 
-**Review:** 1 attempt · 8/8 · Accept (Opus)
+**Review:** 2 attempts · 8/8 · Accept (Opus; the follow-up, PR #262, Sonnet)
 
 ## Attempts
 
 | Date | Attempt | Worker model | build | tests | smoke | perf | scope | changelog | Critic | Retry reason | Wall time | Worker tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 2026-10-17 | 1 | Opus 5.5 (build thread) | ✓ 16 s | ✓ 468 s | ✓ 1066 s | ✓ 2432 s | ✓ | ✓ | 8/8 Accept (Opus) | – | ~2 h 30 min (the perf matrix ~41 min) | QA 55k, performance 25k, critic 74k, changelog 25k |
+| 2026-10-17 | 1 (follow-up, PR #262) | Opus 5.5 (build thread) | ✓ 32 s | ✓ 198 s | ✓ on CI (Firefox 223 s) | – not required | ✓ | ✓ | 8/8 Accept (Sonnet) | – | ~1 h 45 min (two CI diagnostic runs) | QA 16k, performance 14k, critic 17k |
 
 ## Decisions
 
