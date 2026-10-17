@@ -452,7 +452,8 @@ export class Renderer {
    * session can draw its scene later (its figures fading, then with every part shown), a draw under each in turn, the
    * compile under the last. A material's change rebuilds the render objects drawn with it, so the last pose is the one
    * the frames draw: the draws leave every render object as the frames will find it. `hold`: the session waits for the
-   * warm-up, so the picture its first frame draws holds until then (render). Called once, as a session's build ends.
+   * warm-up, so the picture its first frame draws holds until then (render), or until RENDER.warmUpLimitMs has passed.
+   * Called once, as a session's build ends.
    */
   warmShaders(overlay?: Overlay, hidden: readonly THREE.Object3D[] = [], poses: readonly WarmStage[] = [unstaged], hold = false): Promise<void> {
     if (this.environmentDirty) this.applyEnvironment();
@@ -467,6 +468,12 @@ export class Renderer {
     return new Promise<void>((done) => {
       const warm = { overlay, setUp, ready: false, hold, shown: false, done };
       this.warmDraw = warm;
+      // A session that waits never waits for good (RENDER.warmUpLimitMs): it plays on and draws again.
+      if (hold)
+        setTimeout(() => {
+          warm.hold = false;
+          done();
+        }, RENDER.warmUpLimitMs);
       void this.afterCompiles().then(() => {
         warm.ready = true;
       });

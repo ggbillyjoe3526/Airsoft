@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { ACESFilmicToneMapping, AgXToneMapping, NeutralToneMapping } from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ATMOSPHERE, LIGHTING_PRESETS, QUALITY, type QualitySettings, type RetroLook, TONE_MAPPING } from '../config/render';
+import { ATMOSPHERE, LIGHTING_PRESETS, QUALITY, type QualitySettings, RENDER, type RetroLook, TONE_MAPPING } from '../config/render';
 import { DEPOT } from '../map/depot';
 import { RANGE_MAP } from '../map/range';
 import { WOODLAND } from '../map/woodland';
@@ -515,6 +515,38 @@ describe('the shader warm-up (M63, audit REN-06)', () => {
     await warm;
     r.render(overlay);
     expect(drawn()).toBe(start + 10);
+  });
+
+  it('stops holding a waiting session after RENDER.warmUpLimitMs, and draws the warm-up once the build settles (PF1)', async () => {
+    vi.useFakeTimers();
+    try {
+      const { r, calls } = stubbedRenderer();
+      const node = (r as unknown as { node: { afterCompiles: () => Promise<void> } }).node;
+      let settle!: () => void;
+      node.afterCompiles = () => new Promise<void>((done) => (settle = done));
+      let started = false;
+      void r.warmShaders(undefined, [], [unstaged], true).then(() => (started = true));
+      const drawn = (): number => calls.filter((c) => c === 'render').length;
+      const start = drawn();
+      r.render();
+      r.render();
+      expect(drawn()).toBe(start + 1);
+      await vi.advanceTimersByTimeAsync(RENDER.warmUpLimitMs - 1);
+      expect(started).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      // The build never settled in time: the session plays on, and every frame draws again.
+      expect(started).toBe(true);
+      r.render();
+      expect(drawn()).toBe(start + 2);
+      // Once it settles the warm-up's draw still comes, ahead of the next frame.
+      settle();
+      await Promise.resolve();
+      await Promise.resolve();
+      r.render();
+      expect(drawn()).toBe(start + 4);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('lets go of a warm-up still waiting for its draw when the next session warms up or the renderer goes (PF1)', async () => {
