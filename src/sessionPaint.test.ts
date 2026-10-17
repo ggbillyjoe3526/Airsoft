@@ -3,9 +3,10 @@ import { describe, expect, it } from 'vitest';
 /**
  * The match and range sessions build a WebGL renderer, which Vitest cannot, so what they hand the held replicas is
  * pinned at the source (G1 acceptance 3 and 4): each passes `kitPaint(kit, look)` to CombatPresentation, which gives it
- * to the Viewmodel (viewmodel.test.ts checks the paint reaches the colours), and Game passes its Look settings to both.
+ * to the Viewmodel (viewmodel.test.ts checks the paint reaches the colours), and the play flow passes the Look settings to
+ * both (DX8: the setup, playSetup.ts, holds them).
  */
-const sources = import.meta.glob<string>(['./matchSession.ts', './rangeSession.ts', './game.ts', './render/combatPresentation.ts'], { query: '?raw', import: 'default', eager: true });
+const sources = import.meta.glob<string>(['./matchSession.ts', './rangeSession.ts', './playSetup.ts', './playFlow.ts', './render/combatPresentation.ts'], { query: '?raw', import: 'default', eager: true });
 const source = (file: string): string => sources[file]!;
 
 describe('the sessions pass the paint through (G1)', () => {
@@ -22,9 +23,8 @@ describe('the sessions pass the paint through (G1)', () => {
     expect(source('./render/combatPresentation.ts')).toMatch(/new Viewmodel\([^;]*\bpaint[,)]/); // G7: the arms follow the paint
   });
 
-  it('Game hands the Look settings it loaded to both the match and the range', () => {
-    const game = source('./game.ts');
-    expect(game).toMatch(/private look: LookSettings = loadLook\(\)/);
-    expect(game.match(/^\s*look: this\.look,$/gm)).toHaveLength(2);
+  it('the play flow hands the Look settings the setup loaded to both the match and the range', () => {
+    expect(source('./playSetup.ts')).toMatch(/\blook: LookSettings = loadLook\(\)/);
+    expect(source('./playFlow.ts').match(/^\s*look: setup\.look,$/gm)).toHaveLength(2);
   });
 });

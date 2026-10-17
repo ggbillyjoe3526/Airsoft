@@ -138,7 +138,7 @@ attempts: 0
 ## RV1 · Remove supply weekends and dated events (feature triage, 2026-10-05)
 tier: core
 perf: skip
-touches: src/pool/supplyEvents.ts, src/pool/supplyEvents.test.ts, src/pool/supplyEvents.edge.test.ts, src/pool/caches.ts, src/pool/pool.ts, src/game.ts, src/matchSession.ts, pool.md, docs/IDEAS.md
+touches: src/pool/supplyEvents.ts, src/pool/supplyEvents.test.ts, src/pool/supplyEvents.edge.test.ts, src/pool/caches.ts, src/pool/pool.ts, src/game.ts, src/playSetup.ts, src/playFlow.ts, src/matchSession.ts, pool.md, docs/IDEAS.md
 contract: none
 acceptance:
   1. No supply weekend or dated event shows anywhere, and their code and their table in `pool.md` are gone.
@@ -150,7 +150,7 @@ attempts: 0
 ## RV2 · Tone mapping leaves Graphics (feature triage, 2026-10-05)
 tier: ui
 perf: skip
-touches: src/ui/graphicsSettings.ts, src/ui/menus/settingsScreen.ts, src/ui/devSettings.ts, src/config/graphics.ts, src/config/dev.ts, src/settings/storage.ts, src/game.ts
+touches: src/ui/graphicsSettings.ts, src/ui/menus/settingsScreen.ts, src/ui/devSettings.ts, src/config/graphics.ts, src/config/dev.ts, src/settings/storage.ts, src/game.ts, src/gameDev.ts
 contract: none
 acceptance:
   1. Settings › Graphics has no Tone mapping row, and everyone gets Neutral (today's default).

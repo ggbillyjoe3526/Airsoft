@@ -5,7 +5,7 @@
  * `pipeline/content-check.mjs` calls `drawPictures` and `drawMapPictures`; it needs the e2e build (`window.airsoft`), which it builds and
  * serves itself unless given a URL. Software rendering (SwiftShader) draws what a GPU would, only slower.
  *
- * The page is read through the game's objects at run time (`airsoft.pictures`, `airsoft.loadout`), as the smoke tests
+ * The page is read through the game's objects at run time (`airsoft.pictures`, `airsoft.setup.loadout`), as the smoke tests
  * do: a picture that can't be drawn is reported as missing, never as a failure of the item.
  */
 import { execFileSync, spawn } from 'node:child_process';
@@ -70,7 +70,7 @@ async function menuPictures(browser, base, shots, outDir) {
       const done = [];
       for (const s of list) {
         try {
-          const slot = game.loadout.asItComes(s.replica);
+          const slot = game.setup.loadout.asItComes(s.replica);
           const url = await Promise.race([
             game.pictures.picture({ replica: slot.replica, scheme: s.picture.scheme, realistic: s.picture.realistic ?? false, fit: s.picture.fit, shape: 'wide' }),
             new Promise((_, reject) => setTimeout(() => reject(new Error('no picture after 60 s')), 60_000)),

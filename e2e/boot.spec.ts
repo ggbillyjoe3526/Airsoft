@@ -1014,7 +1014,7 @@ test('the tutorial opens on the range with the coach', async ({ page }) => {
 test.describe('Esc and the lost mouse in a match (0.1 Dev 5 playtest, note 10)', () => {
   type Esc = {
     airsoft: {
-      escSkipAt: number;
+      flow: { escSkipAt: number };
       session: { skipping: boolean; skipOffer: string | null };
       state: { round: { phase: string }; characters: { status: string }[] };
     };
@@ -1046,7 +1046,7 @@ test.describe('Esc and the lost mouse in a match (0.1 Dev 5 playtest, note 10)',
     await expect.poll(() => page.evaluate(() => (window as unknown as Esc).airsoft.session.skipping)).toBe(true);
     await expect(page.locator('.menu-pause')).toBeHidden();
     // Esc inside the guard (the one that let go of the mouse) does nothing; after it, Esc opens the menu.
-    await page.waitForFunction(() => performance.now() - (window as unknown as Esc).airsoft.escSkipAt > 1000);
+    await page.waitForFunction(() => performance.now() - (window as unknown as Esc).airsoft.flow.escSkipAt > 1000);
     await page.keyboard.press('Escape');
     await expect(page.locator('.menu-pause')).toBeVisible({ timeout: 10_000 });
   });

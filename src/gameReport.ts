@@ -1,7 +1,7 @@
 import type { DevSettings } from './config/dev';
 import type { QualityChoice, QualitySettings, RetroLook } from './config/render';
 import type { RulesetId } from './config/matchRules';
-import type { ReportField, ReportInfo } from './core/crashReport';
+import { crashReport, type ReportField, type ReportInfo } from './core/crashReport';
 import type { ErrorLog } from './core/errorLog';
 import type { FrameSummary } from './core/frameWindow';
 import { clockText, framesLine, loadLine, memoryLine, playerLine, qualityLine, runReportLine } from './core/reportFields';
@@ -104,6 +104,11 @@ export function reportInfo(r: GameReadout, title: string, error?: unknown): Repo
       { label: 'Recent events', entries: guarded(() => (s ? s.eventLog.lines(s.state.tick, s.state.characters, s.player.id) : []), []) },
     ],
   };
+}
+
+/** The diagnostics report as text (Settings → Dev → Diagnostics; audit CORE-32): the crash report's, with no error. */
+export function diagnosticsText(r: GameReadout): string {
+  return crashReport(reportInfo(r, 'Airsoft diagnostics'));
 }
 
 /**
