@@ -134,6 +134,14 @@ describe('reading pool.md', () => {
     expect(Object.keys(p).sort()).toEqual(['assets', 'byId', 'caseKinds', 'errors']);
   });
 
+  it('ignores a leftover Supply events table in a pool.md edited before RV1: no error, no asset, no event field', () => {
+    const stale = ['### Supply events', '| Supply event | Key | When | XP % |', '|---|---|---|---|', '| Supply weekend | supply-weekend | Friday to Sunday | 125 |'].join('\n');
+    const p = loadPool(mini(stale));
+    expect(p.errors).toEqual(loadPool(mini('')).errors);
+    expect(p.assets.map((a) => a.id)).toEqual(['000001']);
+    expect('supplyEvents' in p).toBe(false);
+  });
+
   it('rejects a Key the code has no behaviour for', () => {
     const p = loadPool(mini('### Optics\n| ID | Name | Key | Fits |\n|---|---|---|---|\n| 000009 | Holo | holo | pistol |'));
     expect(p.errors.some((e) => e.includes('"holo" isn\'t a optic Key'))).toBe(true);

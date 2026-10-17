@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import poolText from '../../pool.md?raw';
 import { createRng } from '../sim/rng';
@@ -123,6 +124,16 @@ describe('what a run’s cases hold, from the real pool (M44; LV1: XP, never gea
       expect(f.resupply).toBe(false);
       expect(f.xp).toBeGreaterThanOrEqual(100);
       expect(f.xp).toBeLessThanOrEqual(150);
+    }
+  });
+});
+
+describe('a run’s cases are what they were before RV1 took the supply events out', () => {
+  it('rolls the same cases for a seed as the build before it did (hashes taken from 406b0db with no event on)', () => {
+    const gamePool = loadPool(poolText);
+    const gold: [number, string][] = [[1, 'ed1b1091c912'], [7, '4b99520eea49'], [42, 'f5db54cb950c'], [1234, '5160033fed2a']];
+    for (const [seed, hash] of gold) {
+      expect(createHash('sha1').update(JSON.stringify(rollRunCases(gamePool, SPOTS, seed))).digest('hex').slice(0, 12), `seed ${seed}`).toBe(hash);
     }
   });
 });
