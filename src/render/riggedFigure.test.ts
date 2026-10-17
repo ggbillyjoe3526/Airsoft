@@ -208,3 +208,41 @@ describe('the rigged figures (BF1)', () => {
   });
 });
 
+describe('your own figure, first person to spectating (MV2)', () => {
+  it.each(FIGURE_RIG_KINDS)('the %s is drawn where it stands, not offset, once the camera leaves it; a vault in first person draws nothing', (kind) => {
+    const c = createCharacter(2, vec3(3, 0, -4), 0.7);
+    c.prevPosition.x = c.position.x;
+    c.prevPosition.z = c.position.z;
+    c.prevYaw = c.yaw;
+    const { f } = figure(kind, c);
+    const view = new THREE.Layers();
+    const drawn = () => visibleMeshes(f.root).filter((m) => m instanceof THREE.SkinnedMesh && m.layers.test(view));
+    for (let i = 0; i < 5; i++) f.update(c, frame({ firstPerson: true }));
+    expect(f.root.position.x).toBeCloseTo(3, 6);
+    expect(f.root.position.z).toBeCloseTo(-4, 6);
+    expect(drawn().length).toBe(0);
+    // Vaulting, crouched, hit: still nothing in view.
+    c.vault.active = true;
+    c.crouchAmount = c.prevCrouchAmount = 1;
+    c.pitch = c.prevPitch = -1.4;
+    for (let i = 0; i < 5; i++) f.update(c, frame({ firstPerson: true }));
+    expect(drawn().length).toBe(0);
+    c.vault.active = false;
+    c.crouchAmount = c.prevCrouchAmount = 0;
+    // Spectating it: exactly at its feet, whole (nothing folded away), and its arm bones at their own size.
+    for (let i = 0; i < 5; i++) f.update(c, frame());
+    expect(f.root.position.x).toBeCloseTo(3, 6);
+    expect(f.root.position.z).toBeCloseTo(-4, 6);
+    expect(drawn().length).toBe(1);
+    for (const n of ['UpperArm_L', 'UpperArm_R']) {
+      const s = f.root.getObjectByName(n)!.scale;
+      expect(s.x).toBeCloseTo(1, 5);
+      expect(s.y).toBeCloseTo(1, 5);
+      expect(s.z).toBeCloseTo(1, 5);
+    }
+    // And back into first person: gone again.
+    f.update(c, frame({ firstPerson: true }));
+    expect(drawn().length).toBe(0);
+    f.dispose();
+  });
+});
