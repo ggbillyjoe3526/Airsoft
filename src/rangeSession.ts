@@ -423,7 +423,7 @@ export class RangeSession implements Session {
     this.targets.update(dt, alpha);
     this.banner.frame(dt, this.challenge, this.playing);
     this.showcase?.frame(dt);
-    this.combat.frame(dt, alpha, this.input.yaw, pitch, this.playerCommand);
+    this.combat.frame(dt, alpha, this.input.yaw, pitch, true);
     this.torches.update(this.renderer.camera, this.player, true, alpha);
     this.showMinimap();
     this.daylight.follow(this.renderer.camera, dt);

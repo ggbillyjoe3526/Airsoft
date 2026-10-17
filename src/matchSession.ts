@@ -644,7 +644,7 @@ export class MatchSession implements Session {
     this.match.showMagHandoff(mag);
     this.match.showMinimap(holding ? this.holdSpot : null);
     // The vault prompt (M102) only from your own eyes.
-    this.combat.frame(dt, alpha, this.input.yaw, pitch, spectating ? undefined : this.playerCommand);
+    this.combat.frame(dt, alpha, this.input.yaw, pitch, !spectating);
     // High's shadow map follows the view (REN-08), the spectator's too.
     this.daylight.follow(this.renderer.camera, dt);
     this.combat.render(!spectating);

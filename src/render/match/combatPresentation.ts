@@ -7,7 +7,7 @@ import { impactMaterialAt } from '../../audio/soundMaterials';
 import type { Action } from '../../config/controls';
 import type { HitConfig } from '../../config/hits';
 import { BLOCK_MATERIALS } from '../../config/materials';
-import { BB_VISUALS, DUST_MOTES, GAS_PUFFS, HIT_PUFFS, HUD, IMPACT_DUST, IMPACT_PUFFS, IMPACT_RINGS, LEAF_FLECKS, type LightingPreset, PROP_BUMP_DUST, type QualitySettings } from '../../config/render';
+import { DUST_MOTES, GAS_PUFFS, HIT_PUFFS, HUD, IMPACT_DUST, IMPACT_PUFFS, IMPACT_RINGS, LEAF_FLECKS, type LightingPreset, PROP_BUMP_DUST, type QualitySettings } from '../../config/render';
 import type { ImpactMaterial } from '../../config/sounds';
 import { BODY, type MovementConfig } from '../../config/movement';
 import { AIMING, type SightId, sightConfig } from '../../config/optics';
@@ -20,17 +20,16 @@ import type { WorldQuery } from '../../sim/armament';
 import { type HudPrefs, motionReduced } from '../../settings/hudPrefs';
 import type { BB } from '../../sim/ballistics';
 import type { Character } from '../../sim/character';
-import type { PlayerCommand } from '../../sim/commands';
 import type { ChallengeCue } from '../../sim/rangeChallenge';
 import type { GameState } from '../../sim/state';
 import { lightInHand, torchLit } from '../../sim/torch';
-import { createVaultState, findVault } from '../../sim/vault';
-import { length3, type Vec3 } from '../../sim/vec';
+import type { Vec3 } from '../../sim/vec';
 import { Hud } from '../../ui/hud';
 import { VaultPrompt } from '../../ui/vaultPrompt';
 import { MagTossRenderer } from '../effects/magTosses';
 import type { PictureSource } from '../../ui/menus/menuPictures';
 import type { PictureSubject } from '../replicas/itemPictures';
+import { bbFlightTime } from '../effects/bbFlightTime';
 import { BBPathsDebug } from '../effects/bbPathsDebug';
 import { BBRenderer } from '../effects/bbRenderer';
 import { figureMuzzle, type FigureHold } from '../figures/characterModels';
@@ -108,9 +107,8 @@ export class CombatPresentation {
   private readonly paths: BBPathsDebug;
   private readonly viewmodel: Viewmodel;
   private readonly hud: Hud;
-  /** "Space to vault" while a Jump press would vault (M102), and the vault that press would make (reused). */
+  /** "Space to vault" while a Jump press would vault (M102): the simulation's answer for the tick (VaultState.ready, DX6). */
   private readonly vaultPrompt: VaultPrompt;
-  private readonly vaultCheck = createVaultState();
   /** The magazines teammates toss each other (MG1). */
   private readonly magTosses: MagTossRenderer;
   private readonly sfx: Sfx;
@@ -118,7 +116,6 @@ export class CombatPresentation {
   private readonly up = new THREE.Vector3();
   private readonly listenerPos = { x: 0, y: 0, z: 0 };
   private readonly muzzle = new THREE.Vector3();
-  private readonly dir = { x: 0, y: 0, z: 0 };
   private readonly puffVelocity = { x: 0, y: 0, z: 0 };
   private readonly puffAt = new THREE.Vector3();
   private readonly viewRight = new THREE.Vector3();
@@ -418,7 +415,7 @@ export class CombatPresentation {
         if (shooter === this.player) {
           // Yours wait for this frame's camera (frame, startOwnShots).
           const newest = this.newestShot(shooter);
-          if (newest) this.ownShots.record(newest, this.estimateFlightTime(newest));
+          if (newest) this.ownShots.record(newest, bbFlightTime(newest, this.query));
           this.ownBreaths = Math.min(this.ownBreaths + 1, this.state.bbs.bbs.length);
         } else if (shooter && this.shooterMuzzle(shooter, this.muzzle)) {
           // The drawn muzzle once per shot, for the BB and the gas breath both (audit REN-11).
@@ -441,10 +438,10 @@ export class CombatPresentation {
   }
 
   /**
-   * Once per rendered frame, after the camera has been placed. `alpha` interpolates ticks. `command`: the player's
-   * latest, for the vault prompt (the way a Jump press would vault goes with the movement keys).
+   * Once per rendered frame, after the camera has been placed. `alpha` interpolates ticks. `ownView`: the view is your
+   * own (not spectating), so the vault prompt may show.
    */
-  frame(dt: number, alpha: number, yaw: number, pitch: number, command?: Readonly<PlayerCommand>): void {
+  frame(dt: number, alpha: number, yaw: number, pitch: number, ownView: boolean): void {
     this.startOwnShots();
     this.bbs.setPixelAngle(this.renderer.retroPixelAngle);
     this.bbs.update(alpha, this.renderer.camera.position);
@@ -487,7 +484,7 @@ export class CombatPresentation {
     const sight = this.aimBlend >= AIMING.reticleFrom ? inHand : null;
     this.viewmodel.setScoped(sight !== null && sightConfig(sight).scope);
     this.hud.update(p.armament, this.loadout, p.status === 'alive', Math.tan(spread) * focalPx, sight, dt);
-    const canVault = this.playing && command !== undefined && p.status === 'alive' && findVault(p, command, this.movement, BODY, this.query, this.vaultCheck);
+    const canVault = this.playing && ownView && p.status === 'alive' && p.vault.ready;
     this.vaultPrompt.update(canVault, p.vault.active, dt);
 
     listenerAxes(cam, this.forward, this.up);
@@ -551,7 +548,7 @@ export class CombatPresentation {
    */
   private drawFromMuzzle(shooter: Character, at: THREE.Vector3): void {
     const newest = this.newestShot(shooter);
-    if (newest) this.bbs.startFromMuzzle(newest, at, this.estimateFlightTime(newest));
+    if (newest) this.bbs.startFromMuzzle(newest, at, bbFlightTime(newest, this.query));
   }
 
   /**
@@ -606,19 +603,6 @@ export class CombatPresentation {
     v.y = GAS_PUFFS.portSpeed * 0.5;
     v.z = this.viewRight.z * GAS_PUFFS.portSpeed;
     this.gasPuffs.spawn(at.lerp(cam.position, GAS_PUFFS.portBack), undefined, GAS_PUFFS.portScale, v);
-  }
-
-  /** Rough seconds until `bb` hits level geometry (straight line at its launch speed); Infinity if nothing is near. */
-  private estimateFlightTime(bb: BB): number {
-    const v = bb.velocity;
-    const speed = length3(v.x, v.y, v.z);
-    if (speed <= 0) return Number.POSITIVE_INFINITY;
-    this.dir.x = v.x / speed;
-    this.dir.y = v.y / speed;
-    this.dir.z = v.z / speed;
-    const reach = speed * BB_VISUALS.muzzleConvergeTime;
-    const d = this.query.raycastStatic(bb.prevPosition, this.dir, reach);
-    return d < 0 ? Number.POSITIVE_INFINITY : d / speed;
   }
 
   /**

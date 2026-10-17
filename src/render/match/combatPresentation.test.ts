@@ -96,3 +96,12 @@ describe('a Skip to next round (BP3)', () => {
     expect(settleMotors).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('the vault prompt reads the tick, not the level (DX6, audit B4)', () => {
+  const source = Object.values(import.meta.glob<string>('./combatPresentation.ts', { query: '?raw', import: 'default', eager: true }))[0]!;
+
+  it("shows from the simulation's answer for the tick, and the presentation casts no rays", () => {
+    expect(source).toMatch(/p\.vault\.ready/);
+    expect(source).not.toMatch(/raycast|findVault|planVault/);
+  });
+});
