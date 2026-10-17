@@ -157,7 +157,7 @@ async function startMatchOn(page, base, map, light) {
   const setup = page.locator('.menu-setup');
   await setup.locator('.map-cards .choice-card.selected').waitFor({ timeout: 60_000 });
   // A dev map's data arrives after the title shows: the Match screen offers it once it is in.
-  await page.waitForFunction((id) => globalThis.airsoft?.playedPicks?.().map === id, map, { timeout: 60_000 });
+  await page.waitForFunction((id) => globalThis.airsoft?.setup?.playedPicks?.().map === id, map, { timeout: 60_000 });
   await setup.getByRole('button', { name: 'Start match', exact: true }).click();
   await page.waitForFunction(() => globalThis.airsoft?.state && globalThis.airsoft.state.tick > 60, null, { timeout: 240_000 });
 }
