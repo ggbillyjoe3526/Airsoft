@@ -189,4 +189,25 @@ describe('the hands on the replica model files (playtest Dev 6, note 28)', () =>
     expect(tip!.to.x).toBeLessThan(-0.029);
     expect(-tip!.to.clone().sub(tip!.from).normalize().z).toBeGreaterThan(0.9);
   });
+
+  it("hold the firing hand's wrist low behind the grip, bent a little up from a forearm that runs back about level (MV2)", () => {
+    const deg = (rad: number) => (rad * 180) / Math.PI;
+    for (const id of IDS) {
+      const { grip, gripElbow } = FILE_HANDS[id];
+      const hand = handSkeleton(grip);
+      // Pitch up from level, heel to fingers and elbow to wrist (three.js: +y up, -z ahead).
+      const along = hand.wristA.clone().sub(hand.wristB).normalize();
+      const elbow = new THREE.Vector3(gripElbow![0], gripElbow![1], -gripElbow![2]);
+      const forearm = hand.wristB.clone().sub(elbow).normalize();
+      const handPitch = deg(Math.asin(along.y));
+      const armPitch = deg(Math.asin(forearm.y));
+      expect(armPitch, id).toBeGreaterThanOrEqual(-1);
+      expect(armPitch, id).toBeLessThan(6);
+      // Playtest item 21: bent up, never down, and only slightly.
+      expect(handPitch - armPitch, id).toBeGreaterThan(3);
+      expect(handPitch - armPitch, id).toBeLessThan(12);
+      // The wrist below the replica's bore line by most of the grip's top, not tucked up under the receiver.
+      expect(hand.wristB.y, id).toBeLessThan(id === 'aeg' ? -0.08 : -0.05);
+    }
+  });
 });

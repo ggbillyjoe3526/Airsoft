@@ -28,7 +28,7 @@ function figure(kind: FigureRigKind, c: Character, detail: 'high' | 'low' = 'hig
   const f = new RiggedFigure({ rig: rigs[kind], character: c, id: c.id, teamColour: 0x3d8bff, replicaMaterial: material, rifleColours: dress.rifle, pistolColours: dress.pistol, files, detail, pack: true, radio: true, thrown, calloutMaterial: new THREE.SpriteMaterial() });
   return { f, thrown };
 }
-const frame = (over: Partial<RiggedFrame> = {}): RiggedFrame => ({ alpha: 1, dt: 1 / 60, eyeX: 0, eyeY: 1, eyeZ: 3, firstPerson: false, viewLow: -Math.PI / 2, leanX: 0, leanZ: 0, peek: 0, peekPivot: 0.92, cycle: null, castShadow: true, ...over });
+const frame = (over: Partial<RiggedFrame> = {}): RiggedFrame => ({ alpha: 1, dt: 1 / 60, eyeX: 0, eyeY: 1, eyeZ: 3, firstPerson: false, leanX: 0, leanZ: 0, peek: 0, peekPivot: 0.92, cycle: null, castShadow: true, ...over });
 const settle = (f: RiggedFigure, c: Character, n = 40, over: Partial<RiggedFrame> = {}): void => {
   for (let i = 0; i < n; i++) f.update(c, frame(over));
 };
