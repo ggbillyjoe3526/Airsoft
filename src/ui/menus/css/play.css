@@ -252,12 +252,6 @@
   color: var(--paper);
 }
 
-.choice-note {
-  font-size: var(--fs-sm);
-  line-height: 1.35;
-  color: var(--menu-acid);
-}
-
 /* A card's tags: Dev at the top-left, the map's one light (Night) at the bottom-right, clear of its words. */
 .choice-card-tags {
   position: absolute;

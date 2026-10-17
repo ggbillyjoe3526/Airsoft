@@ -677,9 +677,6 @@ Neon Heights). While it is dev content a run gives no XP; the summary says "this
   Normal? (The bot runs say not much.)
 - [ ] **Neon Heights.** A 10-minute run against three to six; the locker is on Level 2, field cases upstairs, ammo cans
   on the street, every exit on the street at a corner of the site; waves come back on every floor.
-- [ ] **Supply events.** From Friday to Sunday the Mode card says "Supply weekend, until Sunday: cases hold +25 %
-  XP", and cases hold more. Set the computer's date to 30 October to 1 November 2026: it names the Halloween night run
-  (+50 % XP). Change a row in `pool.md`'s Supply events table: the line follows.
 - [ ] **XP and records** (only once the mode is public): the XP you get out with plus your hits, times the
   difficulty, with no match or round lines; an Extraction column in your records and its own bests.
 - [ ] **The Use key.** Settings › Controls › Keys has "Use: open a case (hold)"; rebind it and the prompt follows.

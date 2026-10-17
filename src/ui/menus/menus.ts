@@ -121,7 +121,6 @@ export class Menus {
       onDifficulty: (d) => opts.difficulty.onChange(d),
       onTeammates: (d) => opts.teammateDifficulty.onChange(d),
       onTeam: (t) => opts.team.onChange(t),
-      supply: opts.mode.supply,
       refresh: () => this.refreshViews(),
     }, opts.practicePlace.initial);
     this.saved = new SavedLoadouts(opts.loadout.model);
@@ -523,7 +522,6 @@ export class Menus {
   }
 
   private openSetup(): void {
-    this.setupScreen().opened();
     this.go('setup');
   }
 

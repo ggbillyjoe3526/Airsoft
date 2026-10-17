@@ -73,7 +73,6 @@ import { contentPool } from './pool/contentPool';
 import { GAME_POOL } from './pool/gamePool';
 import { matchUsesDev, type NewGamePicks, playedPicks, playedTeamSize } from './newGamePicks';
 import { gameOwnership, type GearSlot, LoadoutModel } from './pool/loadoutModel';
-import { activeSupplyEvent, supplyLine } from './pool/supplyEvents';
 import { haulSummary, type XpSummary, xpSummary } from './ui/menus/summaryScreen';
 import type { MenuLevel } from './ui/menus/menusOptions';
 import { loadDevEnabled, loadDevSettings } from './settings/dev';
@@ -527,11 +526,6 @@ export class Game {
       mode: {
         initial: this.mode,
         onChange: (m) => ((this.mode = m), (this.setupChanged = true)),
-        // The supply event on by the device's clock as the Mode pop-up opens (M49).
-        supply: () => {
-          const event = activeSupplyEvent(GAME_POOL.supplyEvents, new Date());
-          return event ? supplyLine(event) : null;
-        },
       },
       difficulty: { initial: this.difficulty, onChange: (d) => ((this.difficulty = d), (this.setupChanged = true)) },
       teammateDifficulty: { initial: this.teammateDifficulty, follows: !hasSavedTeammateDifficulty(), onChange: (d) => ((this.teammateDifficulty = d), (this.setupChanged = true)) },
@@ -1184,8 +1178,6 @@ export class Game {
         ruleset: picks.ruleset,
         rules: { ...picks.rules, teamSize: playedTeamSize(picks) },
         kit: this.loadout.kit(),
-        // The supply event on by the device's clock as Play is pressed (M49): the run keeps it to the end.
-        supply: activeSupplyEvent(GAME_POOL.supplyEvents, new Date()),
         devContent: this.dev.devContent,
         devContentUsed: this.devContentUsed(picks),
         teamColours: TEAM_COLOUR_SETS[this.teamColours],

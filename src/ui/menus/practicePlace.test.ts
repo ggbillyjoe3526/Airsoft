@@ -76,7 +76,6 @@ describe("the Match screen's Map cards while Practice is picked (M94)", () => {
     const model = {
       picks: () => ({ map: 'depot', mode: 'elimination', difficulty: 'normal', teammateDifficulty: 'normal', ruleset: 'skirmish', rules: { ...DEFAULT_MATCH_RULES } }),
       lightingOf: () => 'day',
-      supply: () => null,
       setMode: () => {},
       setMap: (m: string) => calls.push(`map ${m}`),
       setLight: (m: string, l: string) => calls.push(`light ${m} ${l}`),
