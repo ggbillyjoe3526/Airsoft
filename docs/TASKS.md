@@ -30,7 +30,7 @@ MS1 shows the owner concept images and waits for his approval before any code ch
 ## RE1 · Round end: the WON stamp and the round's table stay longer (Beta 1 playtest item 15)
 tier: fix
 perf: skip
-touches: src/config/renderView.ts, src/config/hits.ts, src/ui/roundResult.ts, src/render/matchPresentation.ts
+touches: src/config/renderView.ts, src/config/hits.ts, src/ui/roundResult.ts, src/render/matchPresentation.ts, src/config/bots.ts, src/ai/botCombat.ts
 contract: none
 William, 2026-10-17: "round displays WON and option to click but moves too quickly to the score table (which also
 disappears too quickly. add a small delay to both."
