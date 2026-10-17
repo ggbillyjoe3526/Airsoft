@@ -15,4 +15,4 @@ The tutorial's progress tracking. It reads the game and never writes it.
   player has leaned out both ways.
 - The step text "about 39 m" is tied to the stock rifle's hop-up reach: its test fails when a ballistics retune
   (`spinPerHop` in `config/ballistics.ts`) moves the reach, so update the text then.
-- Tests: `tutorial.test.ts`.
+- Tests: `tutorial.test.ts`; `leanStepQA.test.ts` (TT2, QA: the lean step on the real range geometry).
