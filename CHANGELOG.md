@@ -66,6 +66,11 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **KI1** · The Armory keeps an item you own in colour
 - **KI2** · A BB that ricochets throws its grit and leaves back off the wall it bounced from, not towards whoever fired it
 - **KI2** · Depot, Woodland and Neon Heights show their updated pictures on the Match screen
+- **IN1** · When the browser won't return the mouse after Esc, the pause screen says "Click anywhere to resume" in large type; one click carries on (#251)
+- **IN1** · A click the browser refuses in the second after Esc asks you to click again (#251)
+- **IN1** · In Firefox F10 no longer drops you onto the pause menu: play carries on and the mouse returns once the page changes size (#251)
+- **IN1** · Where Firefox refuses fullscreen from F10, the pause menu says "Click anywhere to go fullscreen" and one click does it (#251)
+- **IN1** · Settings › Controls › Raw mouse input says Firefox gives no raw input as soon as you open it (#251)
 
 ### Internal
 - **MS1** · Tests remove skyline pieces no player can see and keep hung units and cables clear of the player's room; perf baselines re-recorded
@@ -83,6 +88,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **Pipeline** · Desktop perf suite: one command records the 4K maxed-out baseline across Depot presets and Ultra maps, uncapped, with a summary
 - **DX3** · Developer-only: a task can be marked as a fix, with every check and review kept and a shorter record; the perf run needs no separate flag
 - **DX2** · Developer-only: Dev 5 and 6 plans, decisions, known issues and playtest guide archived or trimmed under 50 KB each
+- **IN1** · CI runs the boot and save browser tests in Firefox too, in a new firefox job (#251)
 
 ## 0.1 Dev 6 · 2026-10-16
 

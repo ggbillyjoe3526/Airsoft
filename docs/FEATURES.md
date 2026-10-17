@@ -310,7 +310,8 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
 - Team colour sets checked for colour blindness, patterns on the gauges, on-screen sound cues round the crosshair (M18b)
 - High-contrast styling; hit, out and round messages read by screen readers (FA5)
 - Reduced motion, pause on a hidden tab or when the window loses focus, recovery from a lost graphics context,
-  fullscreen on F10 (M18a, M18b, FA6)
+  fullscreen on F10 (M18a, M18b, FA6); after Esc a click on the pause screen resumes if the browser won't return the mouse,
+  and in Firefox F10 asks for one click where it refuses fullscreen (IN1)
 
 ## Developer and debug
 
