@@ -1,12 +1,12 @@
 # DX7 · Bots: the hub files split, two sources of truth closed (audit A8 part, B5, B6, B13)
 
-**Review:** 1 attempt · 0/8 · Escalated (pending) · placeholder: critic, QA and performance not yet run
+**Review:** 1 attempt · 8/8 · Accept (Opus)
 
 ## Attempts
 
 | Date | Attempt | Worker model | build | tests | smoke | perf | scope | changelog | Critic | Retry reason | Wall time | Worker tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 2026-10-17 | 1 | Opus 5.5 (worker) | ✓ 55 s | ✓ 287 s fast, 1216 s slow (3 load timeouts, pass alone) | – CI | – pending | – | – | pending | – | ~1.5 h | – |
+| 2026-10-17 | 1 | Opus 5.5 (worker) | ✓ 21 s | ✓ 624 s (both) | – CI | ✓ 3279 s | ✓ (after the rebuild) | ✓ | 8/8 Accept (Opus) | – | ~3 h | QA · performance 22k · critic 54k |
 
 ## Decisions
 
