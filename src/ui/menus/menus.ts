@@ -16,7 +16,7 @@ import { backTarget, escResumes, type MenuScreen, type SettingsOrigin } from './
 import { el, watchScroll } from './menuParts';
 import { PauseScreen } from './pauseScreen';
 import { PlayPicks } from './playModel';
-import { loadMatchStarted } from '../../settings/savedChoices';
+import { loadMatchStarted, loadMouseDpi } from '../../settings/savedChoices';
 import { ResultScreen } from './resultScreen';
 import { playView } from './playView';
 import type { SettingsOptions, SettingsScreen } from './settingsScreen';
@@ -346,7 +346,7 @@ export class Menus {
       const { SettingsScreen } = this.fetched();
       const s = (this.settings = new SettingsScreen({
         bindings: o.bindings,
-        controls: o.controls,
+        controls: controlRows(o.controls),
         fov: o.fov,
         graphics: o.graphics,
         audio: o.audio,
@@ -719,5 +719,20 @@ function prefRows(prefs: MenusOptions['prefs']): Pick<SettingsOptions, 'crosshai
       magPrompts: row('magPrompts'),
       ammoCounter: row('ammoCounter'),
     },
+  };
+}
+
+/** Settings › Controls on the input and the pointer lock that hold them: each row starts from what is in use and changes it there. */
+function controlRows({ input, pointer }: MenusOptions['controls']): SettingsOptions['controls'] {
+  return {
+    sensitivity: { initial: input.sensitivity, onChange: (v) => (input.sensitivity = v) },
+    aimSensitivity: { initial: input.aimSensitivity, onChange: (v) => (input.aimSensitivity = v) },
+    dpi: { initial: loadMouseDpi() },
+    invertMouse: { initial: input.invertY, onChange: (on) => (input.invertY = on) },
+    rawInput: { initial: pointer.rawInput, onChange: (on) => (pointer.rawInput = on), status: () => pointer.rawStatus, watch: (fn) => pointer.onRawStatus(fn) },
+    crouch: { initial: input.crouchMode, onChange: (m) => (input.crouchMode = m) },
+    aim: { initial: input.aimMode, onChange: (m) => (input.aimMode = m) },
+    sprint: { initial: input.sprintMode, onChange: (m) => (input.sprintMode = m) },
+    wheelSelect: { initial: input.wheelSelect, onChange: (m) => (input.wheelSelect = m) },
   };
 }

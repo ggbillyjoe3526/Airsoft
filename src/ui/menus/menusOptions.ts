@@ -5,11 +5,12 @@ import type { LightingPresetId } from '../../config/render';
 import type { TeamPickId } from '../../config/teams';
 import type { GraphicsSettingsOptions } from '../graphicsSettings';
 import type { KeyBindings } from '../../input/keyBindings';
+import type { PlayerInput } from '../../input/playerInput';
+import type { PointerLock } from '../../input/pointerLock';
 import type { MapId } from '../../map/maps';
 import type { PracticePlaceId } from '../../map/practicePlaces';
 import type { HudPrefKey, HudPrefs } from '../../settings/hudPrefs';
 import type { AudioSettingsOptions } from '../audioSettings';
-import type { ControlsSettingsOptions } from '../controlsSettings';
 import type { LookSettingsOptions } from '../lookSettings';
 import type { ArmoryOptions } from './armoryScreen';
 import type { LoadoutOptions } from './loadoutScreen';
@@ -84,7 +85,8 @@ export interface MenusOptions {
   /** The Match section's rules (M20), and its Rules row (M39). */
   matchRules: { initial: MatchRules; onChange: (m: MatchRules) => void };
   ruleset: { initial: RulesetId; onChange: (r: RulesetId) => void };
-  controls: ControlsSettingsOptions;
+  /** Settings › Controls: its rows read and change the input and the pointer lock (raw input) that hold them, by reference. */
+  controls: { input: PlayerInput; pointer: PointerLock };
   fov: { initial: number; onChange: (v: number) => void };
   /** The quality rows on Settings → Graphics (ui/graphicsSettings.ts). */
   graphics: GraphicsSettingsOptions;

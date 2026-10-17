@@ -44,9 +44,20 @@ import { DEFAULT_TEAM_PICK, TEAM_PICKS, type TeamPickId } from '../config/teams'
 import { lightingChoices, parseLightingPick } from '../map/lightingChoice';
 import { DEFAULT_MAP, MAPS, type MapId, mapData, mapLoaded } from '../map/maps';
 import { DEFAULT_PRACTICE_PLACE, PRACTICE_PLACES, type PracticePlaceId } from '../map/practicePlaces';
+import type { PlayerInput } from '../input/playerInput';
+import type { NewGamePicks } from '../newGamePicks';
 import { browserStorage, loadChoice, loadSetting, numberIn, oneOf } from './storage';
 
 /** The choices the menus save in the browser, each read back here with its default. */
+
+/**
+ * New game's picks as saved: the map, the mode, the opponents' and your teammates' difficulty (M20), your team (M98), the
+ * ruleset and the Match pop-up's rules (M39). `Game` holds them and the Match screen changes them.
+ */
+export function loadNewGamePicks(): NewGamePicks {
+  const difficulty = loadDifficulty();
+  return { map: loadMap(), mode: loadMode(), difficulty, teammateDifficulty: loadTeammateDifficulty(difficulty), team: loadTeamPick(), ruleset: loadRuleset(), rules: loadMatchRules() };
+}
 
 /** The opponents' bot difficulty (saved as `difficulty`, the one level every bot had before M20). */
 export function loadDifficulty(): Difficulty {
@@ -103,6 +114,11 @@ function roundTimeIn(raw: unknown): number | undefined {
 
 export function loadMode(): MatchMode {
   return loadChoice('mode', MATCH_MODES, DEFAULT_MODE);
+}
+
+/** Settings › Controls as saved, laid onto the PlayerInput that holds them (the menus' rows change them there). */
+export function loadControls(): Pick<PlayerInput, 'crouchMode' | 'aimMode' | 'sprintMode' | 'invertY' | 'sensitivity' | 'aimSensitivity' | 'wheelSelect'> {
+  return { crouchMode: loadCrouchMode(), aimMode: loadAimMode(), sprintMode: loadSprintMode(), invertY: loadInvertMouse(), sensitivity: loadSensitivity(), aimSensitivity: loadAimSensitivity(), wheelSelect: loadWheelSelect() };
 }
 
 /** The crouch key's behaviour (hold or toggle). */

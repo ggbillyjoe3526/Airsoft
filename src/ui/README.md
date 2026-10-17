@@ -4,7 +4,7 @@ DOM overlays: the HUD, settings tabs, notices and the menus (`menus/`, with its 
 game state and never write it. Tests use the fake DOM in `testSupport.ts` (no jsdom).
 
 - In-match HUD: `hud.ts` (crosshair, replica panel), `ammoStatus.ts`, `crosshair.ts`, `scoreboard.ts`, `roundBanner.ts`,
-  `hitFeed.ts`, `hitFeedback.ts` (with `hitMarkerLook.ts`, the hit marker's saved look), `soundCues.ts`,
+  `hitFeed.ts`, `hitFeedback.ts` (with `hitMarkerLook.ts`, the hit marker's look), `soundCues.ts`,
   `teammateMarkers.ts` (with `tagStack.ts`, close teammates' name tags laid out one over the other, BP5), `flagMarker.ts`, `flagStatus.ts`, `runStatus.ts`, `casePrompt.ts`, `whatGotYou.ts`,
   `squadOrderLine.ts`, `orderWheel.ts`, `playPrompt.ts` ("Click to play" after Esc skips a round), `vaultPrompt.ts`
   (the key to vault while a vault is there, M102), the bots' callouts (CL1) in `hitFeed.ts`, the one feed of hits and callouts (Dev 6 playtest item 32), with `roundResult.ts` (WON or LOST at a round's end, item 33) and `hopGauge.ts` (the hop-up readout, item 15),
@@ -18,7 +18,10 @@ game state and never write it. Tests use the fake DOM in `testSupport.ts` (no js
   `keySettings.ts`, `hudSettings.ts`, `lookSettings.ts`, `accessibilitySettings.ts`, `crosshairSettings.ts`,
   `devSettings.ts`, `saveSettings.ts`), shown by `menus/settingsScreen.ts`; `retroSettings.ts` is the Retro look's rows at
   the top of the Dev tab (ST1); `rendererRow.ts` builds Graphics' Renderer row (W1) in the
-  lazy boot chunk. `optionPicker.ts` is the shared pop-up choice.
+  lazy boot chunk. `optionPicker.ts` is the shared pop-up choice. The tabs only draw: what they save is read back by
+  `settings/` (DX5), the HUD and accessibility preferences into `settings/hudPrefs.ts` `HudPrefs`.
+- `hudLook.ts` (DX5): the HUD's size, opacity, sound cue size and colour and scoreboard size as CSS variables on the
+  game's container, and the reduced-motion classes, from `HudPrefs`; it keeps the system's reduce-motion setting in it.
 - Overlays: `debugOverlay.ts`, `botIntentLabels.ts` (Dev › Bot intentions, M90: a label over each bot), `crashScreen.ts` (with `bugReport.ts`: the note box and Report a Bug, IM7, also in Dev › Diagnostics), `loadingScreen.ts`, `graphicsNotice.ts`, `otherTabNotice.ts`,
   `coachPanel.ts` (the tutorial) and `tutorialShowcase.ts` (the scoreboard and order wheel its steps open, M80),
   `saveDialog.ts`; `loadingProgress.ts` counts the physics download's bytes for the loading bar.
@@ -28,7 +31,7 @@ game state and never write it. Tests use the fake DOM in `testSupport.ts` (no js
   runs on a transition, or steps with Reduced motion).
 - Wording that needs testing is pure (`matchStopText.ts`, `keyNotes.ts`, `statsRows.ts`).
 - The HUD reads `--team-0` / `--team-1` (set by `Game.play`) and `--hud-scale`, `--hud-opacity`, `--sb-scale`,
-  `--cue-scale`, `--cue-colour` (set on `#app` by `Game.showHudLook`). The panel tokens `--hud-panel` and
+  `--cue-scale`, `--cue-colour` (set on `#app` by `hudLook.ts`). The panel tokens `--hud-panel` and
   `--hud-panel-solid` are declared on `#app` (style.css) from `--hud-opacity` (Settings → HUD opacity). Team colours come
   from `teamCss(team)`, never hard-coded.
 - The HUD's look (G4): `hud.css` imports one sheet per part (`hudCss/`: score bar, minimap, hit feed, replica panel,
