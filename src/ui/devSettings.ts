@@ -1,4 +1,5 @@
 import { CRASH_TEXT, DIAGNOSTICS_TEXT } from '../config/crash';
+import { DATA_TABLES, DATA_TABLES_TEXT, type DataTable, dataTableLines } from '../config/dataTables';
 import { withNote } from '../core/bugIssue';
 import { crashReport, type ReportInfo } from '../core/crashReport';
 import { DEV_ACTION_TEXT, DEV_ACTIONS, DEV_ENTRIES, DEV_SWITCH_CHOICES, type DevAction, type DevActionId, type DevSettings } from '../config/dev';
@@ -21,11 +22,16 @@ export interface DevSettingsOptions {
   actions?: (id: DevActionId) => string;
   /** Asks before a button with a `confirm` acts (the Settings screen's pop-up). */
   ask?: (title: string, question: string, yes: string, run: () => void) => void;
+  /** The data/ tables whose problems the Data tables row lists (DX7); absent, the game's own (config/dataTables.ts). */
+  tables?: readonly DataTable[];
 }
 
 const percent = (v: number): string => `${Math.round(v * 100)}%`;
 
-/** The Dev tab's rows (Settings → Dev, M24), one per entry in config/dev.ts, each saved as `dev.<id>` as it changes; then its buttons (M90). */
+/**
+ * The Dev tab's rows (Settings → Dev, M24), one per entry in config/dev.ts, each saved as `dev.<id>` as it changes; then
+ * its buttons (M90), the data tables' problems (DX7) and Diagnostics.
+ */
 export function devSettings(opts: DevSettingsOptions): HTMLDivElement[] {
   const rows = DEV_ENTRIES.map((e) => {
     if (e.kind === 'switch') {
@@ -40,6 +46,7 @@ export function devSettings(opts: DevSettingsOptions): HTMLDivElement[] {
   });
   const run = opts.actions;
   if (run) for (const a of DEV_ACTIONS) rows.push(menuRow(a.label, a.help, actionButton(a, run, opts.ask)));
+  rows.push(menuRow(DATA_TABLES_TEXT.label, DATA_TABLES_TEXT.help, dataTablesNote(opts.tables ?? DATA_TABLES)));
   const diagnostics = opts.diagnostics;
   if (diagnostics) rows.push(menuRow(DIAGNOSTICS_TEXT.label, DIAGNOSTICS_TEXT.help, diagnosticsControls(diagnostics)));
   return rows;
@@ -58,6 +65,13 @@ function actionButton(a: DevAction, run: (id: DevActionId) => string, ask: DevSe
   });
   button.dataset.devAction = a.id;
   return button;
+}
+
+/** Data tables (audit B6, DX7): what the game couldn't read of each data/ table, a line each, or that all read cleanly. */
+function dataTablesNote(tables: readonly DataTable[]): HTMLDivElement {
+  const note = el('div', 'menu-row-control data-tables');
+  for (const line of dataTableLines(tables)) note.append(el('p', 'data-tables-line', line));
+  return note;
 }
 
 /**

@@ -4,10 +4,14 @@ The bots: they play through the same `PlayerCommand` as the player, read game st
 seeded per bot.
 
 - `botController.ts`: `BotController` runs before each tick (`think` fills every bot's command, one route search a tick)
-  and after it (`observe`: bots hear shots, near misses, hit calls and footsteps from `state.events`; NP1: a run into a
-  noisy prop like a step, to the prop's range, steps on gravel or steel plate further, and a BB ringing off steel only
-  when nothing fresher is on their mind, kept to themselves). `giveOrder` takes
-  a player's squad order. Each round it deals a team's bots onto lanes by a plan (`teamPlan.ts`).
+  and after it (`observe` reads `state.events`). `giveOrder` takes a player's squad order. It keeps the hunt's sector
+  memory and the route searches; the two parts below were split out of it (DX7).
+- `hearing.ts`: what the bots hear and feel of a tick's events (`hearEvent`): shots, near misses, hit calls and
+  footsteps; NP1: a run into a noisy prop like a step, to the prop's range, steps on gravel or steel plate further, and a
+  BB ringing off steel only when nothing fresher is on their mind, kept to themselves.
+- `roundPlanner.ts`: `RoundPlanner`, each round's plan per team (where it starts, its plan and lanes from `teamPlan.ts`,
+  how far each bot walks its lane, a bot back mid-round set on a lane again; its own seeded stream), with `inEnemyHalf`
+  and `aheadOfTeam`; `pickRetakers` and `pickRaiser` hand out Attack / Defend's flag jobs each tick.
 - `bot.ts`: a bot's plain-data state (one contact record per enemy seen, `skill`, `role`, `post`, `patrol`, and its
   `personality` and `style`).
 - `botRoster.ts`, `personality.ts` (BN1): who the bots are. `drawIdentities` deals each bot a name off `bots.md`'s

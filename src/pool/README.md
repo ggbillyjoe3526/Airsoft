@@ -1,6 +1,6 @@
 # src/pool
 
-The asset pool, the Loadout's model, bot kits and Extraction's cases. `pool.md` at the repository root is the asset
+The asset pool, the Loadout's model, bot kits and Extraction's cases. `data/pool.md` is the asset
 register the game reads: a new asset is a row there, and a new behaviour (a Key) needs code in `config/` first. Which
 level unlocks an asset is in `levels.md` (`src/progress/`).
 

@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { ALWAYS_REACHED, SETUP_FILES, importClosure, importsOf, reachNote, resolveImport, slowGuardsReached } from './testReach.mjs';
 import { gateCell } from './records.mjs';
@@ -72,5 +72,20 @@ describe('which files the slow bot-match guards load (token plan item 21)', () =
   it('knows the setup file vite.config.ts loads before every test', () => {
     const config = readFileSync(new URL('../vite.config.ts', import.meta.url), 'utf8');
     expect(config).toContain(`setupFiles: [${SETUP_FILES.map((f) => `'${f}'`).join(', ')}]`);
+  });
+});
+
+describe('the data/ tables reach the bot-match guards in the real repo (DX7)', () => {
+  const root = new URL('../', import.meta.url);
+  const realRead = (f) => readFileSync(new URL(f, root), 'utf8');
+  const realIsFile = (f) => existsSync(new URL(f, root)) && statSync(new URL(f, root)).isFile();
+  const guards = [...readdirSync(new URL('src/ai/', root)).filter((f) => /Match.*\.test\.ts$/.test(f)).map((f) => `src/ai/${f}`), 'src/content/modePlays.test.ts'];
+
+  it.each(['pool.md', 'stats.md', 'levels.md', 'bots.md', 'bot-kits.md', 'callouts.md'])('a change to data/%s runs the guards', (table) => {
+    expect(slowGuardsReached(new Set([`data/${table}`]), guards, realRead, realIsFile).reached).toBe(true);
+  });
+
+  it('finds nothing left at the tables\' old root paths', () => {
+    for (const table of ['pool.md', 'stats.md', 'levels.md', 'bots.md', 'bot-kits.md', 'callouts.md']) expect(realIsFile(table)).toBe(false);
   });
 });

@@ -22,8 +22,7 @@ commit, before its pull request merges (CI's scope gate finds the block in the b
 
 **The owner's Dev 6 playtest list (2026-10-16).** These are his 34 items, taken in Beta 1 on his word, small
 additions included (`docs/DECISIONS.md`). Seven threads build them, one block each, and they come before the blocks
-below. The item numbers are his. Where an older block overlaps one of these, the owner's item wins:
-- UX1 overlaps MR1 and HD1.
+below. The item numbers are his. Where an older block overlaps one of these, the owner's item wins.
 
 MS1 shows the owner concept images and waits for his approval before any code changes.
 
@@ -145,19 +144,6 @@ acceptance:
 status: open
 attempts: 0
 
-## UX1 · Menus at 4K and small windows; HUD clashes at 1280 px
-tier: ui
-perf: skip
-touches: src/ui/menus/menus.css, src/ui/menus/css/, src/style.css, src/ui/hud.css, src/ui/hudCss/, src/ui/flagMarker.ts, src/ui/holdMarker.ts, src/render/viewmodel.ts
-contract: none
-acceptance:
-  1. Menu type and controls scale from the window height, as `hudScale` does (DECISIONS: a Beta task). At 3840×2160 and 100 % OS scaling, body text is about 1.5×; 1280×720 is unchanged.
-  2. Menu scrolling is measured again at 1280×720 (the row predates M100), and no main menu page scrolls there. New game fits at 900×600.
-  3. Edge markers pointing almost the same way don't overlap, and the Attack / Defend pole marker at the screen's edge shows which way to turn.
-  4. At 1280×720 the held pistol's grip clears the ammo panel, and at HUD size 120 % or more the widest score bar clears the minimap.
-status: open
-attempts: 0
-
 ## BT1 · Bot quirks from the backlog (after playtest)
 tier: core
 perf: skip
@@ -215,19 +201,6 @@ acceptance:
   3. The vault prompt reads the simulation's per-tick answer (on the character or an event) and `combatPresentation.ts` casts no rays.
   4. The six HUD marker updaters in `matchPresentation.ts` share one project-and-pin helper.
   5. The perf gate is green on every matrix entry, and the Low frame-time, draw-call and heap lines are unchanged within noise.
-status: open
-attempts: 0
-
-## DX7 · Bots: the hub files split, two sources of truth closed (audit A8 part, B5, B6, B13)
-tier: core
-perf: required
-touches: src/ai/, src/config/bots.ts, src/config/, src/ui/devSettings.ts, src/pool/, src/progress/
-contract: none
-acceptance:
-  1. Hearing and round planning leave `ai/botController.ts` for modules of their own (as `squadOrders.ts` and `magShare.ts` already did); `botController.ts` is under 600 lines and every headless guard passes with the same seeds.
-  2. `config/bots.ts` is split by concern (movement, senses, squad, extraction, skill), each file under 300 lines, with `config/README.md` naming them and `config/bots.ts` re-exporting so no importer changes.
-  3. A malformed row in any root table (`pool.md`, `stats.md`, `levels.md`, `bots.md`, `bot-kits.md`, `callouts.md`) shows in the Dev tab's diagnostics and the console, not the console alone.
-  4. The six root tables live in one `data/` folder, named in `README.md` › Layout and `docs/ARCHITECTURE.md`, with every import and test path updated.
 status: open
 attempts: 0
 

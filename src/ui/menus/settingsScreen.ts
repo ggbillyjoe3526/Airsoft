@@ -129,7 +129,7 @@ export class SettingsScreen {
     tabList.setAttribute('aria-label', 'Settings groups');
     tabList.setAttribute('aria-orientation', 'vertical');
     tabList.addEventListener('keydown', (e) => this.onTabKey(e));
-    this.panels = el('div', 'settings-panels');
+    this.panels = el('div', 'settings-panels menu-scroll');
     for (const { id, label, blurb, hidden } of SETTINGS_TABS) {
       const button = el('button', `settings-tab settings-tab-${id}`);
       button.type = 'button';
@@ -158,7 +158,7 @@ export class SettingsScreen {
       this.panels.append(panel);
       this.tabs.set(id, { button, panel });
     }
-    const nav = el('div', 'settings-side');
+    const nav = el('div', 'settings-side menu-scroll');
     nav.append(searchBox, this.searchNote, tabList, this.devToggle(opts.dev));
 
     // The side panel: what the row pointed at (or focused) does, and what it costs.

@@ -1,6 +1,6 @@
 import { PAUSE_ESC_GUARD_MS } from '../../config/controls';
 import { LOADING } from '../../config/loading';
-import { MENU_TEXT } from '../../config/menus';
+import { MENU_TEXT, menuScale } from '../../config/menus';
 import type { QualityChoice, QualitySettings } from '../../config/render';
 import { OnDemand } from '../../core/onDemand';
 import type { NewGamePicks } from '../../newGamePicks';
@@ -139,8 +139,17 @@ export class Menus {
     this.root.append(this.backdrop.root, this.topBar.root);
     parent.appendChild(this.root);
     window.addEventListener('keydown', this.onKeyDown);
+    window.addEventListener('resize', this.showScale);
+    this.showScale();
     this.refreshViews();
   }
+
+  /** The menus' size for the window (UX1, config/menus.ts › menuScale): `--menu-zoom`, one CSS zoom over them all. Again on resize. */
+  private readonly showScale = (): void => {
+    const parent = this.root.parentElement;
+    const scale = menuScale(parent?.clientWidth || window.innerWidth, parent?.clientHeight || window.innerHeight);
+    this.root.style.setProperty('--menu-zoom', String(scale));
+  };
 
   /** The screen on show (while the menus are). */
   get screen(): MenuScreen {
@@ -270,6 +279,7 @@ export class Menus {
 
   dispose(): void {
     window.removeEventListener('keydown', this.onKeyDown);
+    window.removeEventListener('resize', this.showScale);
     // Nothing opens once the menus are gone, from the background fetch or a screen still being fetched.
     this.lazyScreens.cancelPreload();
     this.asked++;

@@ -124,7 +124,7 @@ Then open **http://localhost:4173**.
   (more for a win, each round won and each hit, scaled by the difficulty) and each level, up to 10, unlocks parts for
   good, with the Cyber Pistol at level 10. The top bar shows your level; click it, or **Armory** beside **Loadout**,
   to see what you have unlocked and what each level gives. Items still to unlock show in the Loadout greyed, with
-  their level. Nothing is ever sold. The levels are in [levels.md](levels.md), which you can edit.
+  their level. Nothing is ever sold. The levels are in [data/levels.md](data/levels.md), which you can edit.
 - **Tutorial and Practice.** The title screen's **Tutorial** teaches the basics in short coached steps (skip it, or
   resume it from the pause screen). **Practice** (the last mode on the Match screen) puts you alone on the range, or on
   any map with targets in place of bots, with any replica you own; its timed challenge lights targets for you to hit.
@@ -307,10 +307,13 @@ src/ui        menus, HUD, scoreboard, minimap, hit feedback, debug overlay
 e2e           browser tests (Playwright)
 pipeline      gate script, perf harness, agent scripts
 docs          design notes, roadmap, process, playtest guide
-pool.md       every item and Extraction's cases (hand-editable)
-levels.md     what each level unlocks, the XP it takes and what a match gives (hand-editable)
-stats.md      how every replica and part performs (hand-editable)
-callouts.md   what the bots call and how often (hand-editable)
+data          the hand-editable tables the game reads at start:
+  pool.md       every item and Extraction's cases
+  levels.md     what each level unlocks, the XP it takes and what a match gives
+  stats.md      how every replica and part performs
+  bots.md       the bots' names and personalities
+  bot-kits.md   what the other team's bots carry
+  callouts.md   what the bots call and how often
 ```
 
 See `CLAUDE.md` for the project guide and `docs/` for design notes. `docs/PLAYTEST.md` is the step-by-step playtest

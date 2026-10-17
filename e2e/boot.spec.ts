@@ -17,8 +17,9 @@ import { renders } from './rendererRow';
  */
 test('the game boots, starts a match, fires, reloads and aims without errors', async ({ page, browserName }, testInfo) => {
   // The longest test (since the audit fixes it also rebinds a key and plays to the result screen): about 30 s here,
-  // three to four times that on a CI runner in software, so it gets twice the default budget.
-  test.setTimeout(180_000);
+  // three to four times that on a CI runner in software. In a cloud container it now takes about 3 min alone (main at
+  // 69d69f5 ran out of a 180 s budget in two of three runs, UX1), so it gets four times the default budget.
+  test.setTimeout(360_000);
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
   page.on('console', (msg) => {
@@ -418,7 +419,8 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(page.locator('.menus')).toBeHidden({ timeout: 10_000 });
   expect(await matchLoaded()).toBe(true);
   await expect(page.locator('.hud')).toBeVisible();
-  await expect(page.locator('.hud-replica-name')).toHaveText(/AEG rifle/i);
+  // The AEG in hand: its three fire modes (the panel names no replica since UI2).
+  await expect(page.locator('.hud-mode')).toHaveCount(3);
   await expect(page.locator('.hud .hud-crosshair')).toHaveClass(/\bshape-circle\b/);
   // The match wears the High contrast colours on the HUD, and the sound cue ring is up.
   // The menus already wear the picked set (M98: the Your team dots), and the match keeps it: High contrast's HUD orange.
@@ -453,7 +455,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   // G4: the score bar says what wins the match; the replica panel has a chip per fire mode the AEG has, on the panel
   // navy at HUD opacity's 90 %; the round banner sets its words in capitals.
   await expect(page.locator('.sb-aim')).toHaveText(/^First to \d+/);
-  await expect(page.locator('.hud-mode')).toHaveText(['Semi', 'Burst', 'Auto']);
+  await expect(page.locator('.hud-mode')).toHaveText(['S', 'B', 'A']);
   await expect(page.locator('.hud-replica')).toHaveCSS('background-color', 'rgba(7, 13, 31, 0.9)');
   await expect(page.locator('.hud-replica')).toHaveCSS('opacity', '1');
   await expect(page.locator('.hitfx-round')).toHaveCSS('text-transform', 'uppercase');
@@ -517,9 +519,9 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
 
   // Fire selector: the AEG starts on auto, and B steps it to single (semi).
   const fireMode = page.locator('.hud-mode.on');
-  await expect(fireMode).toHaveText('Auto');
+  await expect(fireMode).toHaveText('A');
   await page.keyboard.press('b');
-  await expect(fireMode).toHaveText('Semi', { timeout: 10_000 });
+  await expect(fireMode).toHaveText('S', { timeout: 10_000 });
 
   await testInfo.attach('in-match', { body: await page.screenshot(), contentType: 'image/png' });
 

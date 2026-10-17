@@ -1,7 +1,7 @@
 # src/progress
 
-Levels and XP: what each level unlocks, what a match gives, and what the player has unlocked. `levels.md` at the
-repository root is the plan the game reads; the owner edits it by hand. Pure apart from the progress store's storage.
+Levels and XP: what each level unlocks, what a match gives, and what the player has unlocked. `data/levels.md` is the
+plan the game reads; the owner edits it by hand. Pure apart from the progress store's storage.
 
 - `levels.ts`: `loadLevels` reads `levels.md`'s Levels, XP and Difficulty tables against the pool into a `LevelTable`
   (each level's XP, running total and unlocks, the cap, each asset's level), listing what it can't read by line and

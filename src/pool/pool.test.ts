@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import poolText from '../../pool.md?raw';
+import poolText from '../../data/pool.md?raw';
 import { inPool, itemKey, parseItemKey } from './item';
 import { assetOfReplica, fits, hasBuiltInPower, loadPool, replicaOf } from './pool';
 import { readTables } from './poolFile';
 import { AEG, CYBER_PISTOL, GAS_PISTOL } from '../config/replicas';
 import { loadLevels } from '../progress/levels';
-import levelsText from '../../levels.md?raw';
+import levelsText from '../../data/levels.md?raw';
 
 const pool = loadPool(poolText);
 const byName = (name: string) => pool.assets.find((a) => a.name === name)!;
