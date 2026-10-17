@@ -36,11 +36,10 @@
   Both ran out of time on main itself in the container (boot: two of three solo runs; hand poses: 4.3 s against 5 s).
   The critic marked this outside the task (check 8, not blocking); it is kept so the gate can pass.
 - **The perf gate's one failure is main's.** Neon Heights' Extraction Medium run on WebGPU reads about 203k triangles
-  against 200k on main at 69d69f5 as on this branch; UX1 changes no scene. A KNOWN_ISSUES row (fix now) and a note to the
-  coordinator.
+  against 200k on main at 69d69f5 as on this branch; UX1 changes no scene. RV2's KNOWN_ISSUES row (it sits on its line and
+  a run's sample decides) covers it, so UX1's own row was dropped in the merge.
 
 ## Known issues left
 
 - The held pistol's firing glove and sleeve pass under the ammo panel at 1280×720 (KNOWN_ISSUES, Menus, HUD and input).
-- Neon Heights' Medium Extraction run on WebGPU is over its triangle line on main (KNOWN_ISSUES, Graphics and performance).
 - Settings › Gameplay and Controls scroll a long way inside their panel, at 4K too; for the owner's playtest (PLAYTEST).

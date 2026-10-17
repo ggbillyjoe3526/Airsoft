@@ -50,9 +50,12 @@ describe('check.yml runs the smoke test once (IM6)', () => {
     expect(check.body).toMatch(/gate\.mjs[^\n]*--no-smoke/);
   });
 
-  it('exactly one job runs --only smoke, and no other gate run line can run the smoke test', () => {
+  it('exactly one job runs --only smoke in Chromium, one in Firefox (IN1), and no other gate run line can run the smoke test', () => {
     const smokeJobs = jobs.filter((j) => /gate\.mjs[^\n]*--only smoke/.test(j.body));
-    expect(smokeJobs.map((j) => j.name)).toEqual(['browser']);
+    // E2E_FIREFOX swaps the Chromium projects for the Firefox one (playwright.config.ts), so the two never overlap.
+    const firefox = (j) => /E2E_FIREFOX: '1'/.test(j.body);
+    expect(smokeJobs.filter((j) => !firefox(j)).map((j) => j.name)).toEqual(['browser']);
+    expect(smokeJobs.filter(firefox).map((j) => j.name)).toEqual(['firefox']);
     for (const l of runLines) {
       expect(/--only smoke/.test(l) || /--no-smoke/.test(l) || /--only tests/.test(l), l).toBe(true);
     }

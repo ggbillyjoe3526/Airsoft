@@ -163,4 +163,26 @@ describe('old saved model switches (BD1, QA)', () => {
     expect(d).not.toHaveProperty('disableFigureModels');
     expect(d).not.toHaveProperty('disableAllModels');
   });
+  describe('Tone mapping (RV2)', () => {
+    it('is a Dev choice row, Neutral by default, offering every tone mapping and not a cheat', () => {
+      const row = DEV_ENTRIES.find((e) => e.id === 'toneMapping');
+      expect(row).toMatchObject({ kind: 'choice', label: 'Tone mapping', cheat: false });
+      expect(row?.kind === 'choice' && row.choices.map((c) => c.id).sort()).toEqual(['aces', 'agx', 'neutral']);
+      expect(DEV_DEFAULTS.toneMapping).toBe('neutral');
+      expect(devCheating({ ...DEV_DEFAULTS, toneMapping: 'aces' })).toBe(false);
+      expect(devIntro()).not.toContain('Tone mapping');
+    });
+
+    it('is saved as dev.toneMapping, which wins over the old top-level pick', () => {
+      expect(loadDevSettings(saved({ 'dev.toneMapping': 'agx' })).toneMapping).toBe('agx');
+      expect(loadDevSettings(saved({ toneMapping: 'aces' }))).toEqual({ ...DEV_DEFAULTS, toneMapping: 'aces' });
+      expect(loadDevSettings(saved({ toneMapping: 'aces', 'dev.toneMapping': 'agx' })).toneMapping).toBe('agx');
+    });
+
+    it('plays Neutral the moment the Dev tab is hidden, whatever is picked', () => {
+      const picked = { ...DEV_DEFAULTS, toneMapping: 'agx' as const };
+      expect(activeDev(true, picked).toneMapping).toBe('agx');
+      expect(activeDev(false, picked).toneMapping).toBe('neutral');
+    });
+  });
 });

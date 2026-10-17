@@ -5,6 +5,7 @@ import { vec3 } from '../sim/vec';
 import { type CaseSpotLike, placeCases, rollFind, rollRunCases } from './caches';
 import { type CaseKind, DEFAULT_CASE_KINDS } from './tables';
 import { loadPool } from './pool';
+import { sha256 } from '../save/sha256';
 
 const pool = loadPool(poolText);
 const kind = (key: string): CaseKind => pool.caseKinds.find((k) => k.key === key)!;
@@ -123,6 +124,16 @@ describe('what a run’s cases hold, from the real pool (M44; LV1: XP, never gea
       expect(f.resupply).toBe(false);
       expect(f.xp).toBeGreaterThanOrEqual(100);
       expect(f.xp).toBeLessThanOrEqual(150);
+    }
+  });
+});
+
+describe('a run’s cases are what they were before RV1 took the supply events out', () => {
+  it('rolls the same cases for a seed as the build before it did (sha256 hashes taken from 406b0db with no event on)', () => {
+    const gamePool = loadPool(poolText);
+    const gold: [number, string][] = [[1, '3781fba843d9'], [7, '44eaed8fddc1'], [42, 'cc81c5f94b99'], [1234, 'e021e397c6ad']];
+    for (const [seed, hash] of gold) {
+      expect(sha256(JSON.stringify(rollRunCases(gamePool, SPOTS, seed))).slice(0, 12), `seed ${seed}`).toBe(hash);
     }
   });
 });

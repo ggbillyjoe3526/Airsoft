@@ -42,6 +42,11 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **BD1** · Your own body in first person shows only when you look down far enough to see it
 - **BD1** · Medium's Player detail is Low: figures drop to middle detail beyond 6 m and the coarsest beyond 16 m (High and Ultra keep 12 m and 28 m)
 - **KI2** · Unused mode pictures are gone from the download, about 51 KB smaller
+- **RV2** · Tone mapping leaves Graphics: everyone plays with Neutral colours; Neutral, AgX and ACES are a Dev setting that applies at once, and a pick made on the old row becomes the Dev pick
+- **RV1** · Extraction has no Supply weekends or dated events like the Halloween run; its Mode card shows no event and cases always hold the usual loot
+- **AX1** · With High Contrast team colours, Extraction's exits are hi-vis yellow instead of green, on the ring, cones, EXIT sign, minimap and screen marker
+- **AX1** · High Contrast team paint (vests, armbands, helmet bands) glows faintly on day fields so the dark orange team shows in shade
+- **TT2** · Tutorial teaches leaning again: a Lean step after Crouch ticks once you've leaned both ways; read-only cards stay up 10 s
 - **UX1** · Menus grow with the window at 4K, up to 1.5×; 1080p and smaller look as before
 - **UX1** · In a 1280×720 window a menu's top bar, heading and Start match or Back stay pinned; only its long list scrolls
 - **UX1** · A short window draws the menus a little tighter; New game's Start match is in sight down to 900×600
@@ -68,6 +73,11 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **KI1** · The Armory keeps an item you own in colour
 - **KI2** · A BB that ricochets throws its grit and leaves back off the wall it bounced from, not towards whoever fired it
 - **KI2** · Depot, Woodland and Neon Heights show their updated pictures on the Match screen
+- **IN1** · When the browser won't return the mouse after Esc, the pause screen says "Click anywhere to resume" in large type; one click carries on (#251)
+- **IN1** · A click the browser refuses in the second after Esc asks you to click again (#251)
+- **IN1** · In Firefox F10 no longer drops you onto the pause menu: play carries on and the mouse returns once the page changes size (#251)
+- **IN1** · Where Firefox refuses fullscreen from F10, the pause menu says "Click anywhere to go fullscreen" and one click does it (#251)
+- **IN1** · Settings › Controls › Raw mouse input says Firefox gives no raw input as soon as you open it (#251)
 - **UX1** · In a 1280 px window with HUD size 120 % or more, the widest score bar no longer crowds the minimap
 
 ### Internal
@@ -86,6 +96,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **Pipeline** · Desktop perf suite: one command records the 4K maxed-out baseline across Depot presets and Ultra maps, uncapped, with a summary
 - **DX3** · Developer-only: a task can be marked as a fix, with every check and review kept and a shorter record; the perf run needs no separate flag
 - **DX2** · Developer-only: Dev 5 and 6 plans, decisions, known issues and playtest guide archived or trimmed under 50 KB each
+- **IN1** · CI runs the boot and save browser tests in Firefox too, in a new firefox job (#251)
 
 ## 0.1 Dev 6 · 2026-10-16
 

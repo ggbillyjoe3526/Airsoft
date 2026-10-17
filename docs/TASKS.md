@@ -13,7 +13,8 @@ commit, before its pull request merges (CI's scope gate finds the block in the b
 
 - **Order.** Highest priority first. A block marked *after playtest* waits until the owner has played the parts it
   tunes, and PF2 also waits for his laptop baseline.
-- **Placed in a later update.** NH1 goes with the Maps Update, because Neon Heights stays dev in 0.1. HV1 goes with the
+- **Placed in a later update.** NH1 and NH2 go with the Maps Update, because Neon Heights stays dev in 0.1 (NH2: owner,
+  2026-10-17). HV1 goes with the
   rigged figures leaving the Dev switches, which BD1 now does in Beta 1, so HV1 lands with BD1 or straight after it.
 - **Numbers are first guesses.** Numeric targets can be changed by the owner. Note 19 applies to every balance block:
   tune on Normal, then check that Easy, Hard and Pro still scale.
@@ -21,9 +22,7 @@ commit, before its pull request merges (CI's scope gate finds the block in the b
 
 **The owner's Dev 6 playtest list (2026-10-16).** These are his 34 items, taken in Beta 1 on his word, small
 additions included (`docs/DECISIONS.md`). Seven threads build them, one block each, and they come before the blocks
-below. The item numbers are his. Where an older block overlaps one of these, the owner's item wins:
-- RV2 overlaps ST1.
-- AX1's kit colours overlap MR1's colour tab.
+below. The item numbers are his. Where an older block overlaps one of these, the owner's item wins.
 
 MS1 shows the owner concept images and waits for his approval before any code changes.
 
@@ -70,6 +69,30 @@ acceptance:
 status: open
 attempts: 0
 
+## NH2 · Neon Heights: doors you open and close, and furnished interiors (Maps Update, after NH1)
+tier: core
+perf: required
+touches: src/sim/, src/physics/, src/ai/, src/audio/, src/render/, src/config/, src/map/neonHeights.ts, src/map/neonHeightsDressing.ts, src/map/neonHeights.test.ts, src/ai/balance/neonHeights.balance.ts, src/ai/balance/neonHeightsFlag.balance.ts
+contract: needed (a new door system: its state, the open and close command, what it blocks, what bots hear)
+William's Beta 1 playtest, 2026-10-17 (item 32), placed with the Maps Update on his pick: "neon heights map looks much
+better. however some changes to the map i'd like to make. buildings have doors that the player must open/close. this
+affects gameplay because it's a visual cue to see where players have been. also if a door is closed the player needs
+to be careful as there may be an enemy behind it. the player can close the door behind them too. also interiors need
+to be more detailed. they should look like normal interiors like shops, offices, storage rooms, cafes, hotels, etc."
+acceptance:
+  1. Neon Heights' building doorways have hinged doors that players and bots open and close with one bindable key,
+     through the same command interface; a door stays as it was left, so it shows where someone went, and it makes a
+     sound bots hear.
+  2. A closed door blocks sight and BBs. Bots open doors to pass, sometimes close them behind, and treat a closed door
+     they haven't seen through with care.
+  3. Interiors are furnished by type (shops, offices, storage rooms, cafes, a hotel lobby) in the house style
+     (`docs/ART.md`), with cover that plays and nothing a player can never see (MS1's ruling), inside Neon Heights'
+     triangle and draw-call lines.
+  4. The ends stay even (neither over 55 % of decided Elimination rounds by Day or by Night) and Attack / Defend stays
+     in its 40–60 % band at every difficulty. Built after NH1, so the doors and rooms fit its upper floors.
+status: open
+attempts: 0
+
 ## BL2 · Difficulty spread: Easy plays easier than Normal (after playtest)
 tier: core
 perf: skip
@@ -80,20 +103,6 @@ acceptance:
   2. Easy's first hit at 5 m stays slower than Normal's, and Hard and Pro stay above Normal on both figures.
   3. Hard's 5 m duel figure follows William's call from his playtest (BP5 left it to him).
   4. Adaptive difficulty's steps (a Dev setting) are re-checked against the new spread (`balance.mjs adaptive` in band).
-status: open
-attempts: 0
-
-## IN1 · Mouse lock and Firefox
-tier: core
-perf: skip
-touches: src/input/pointerLock.ts, src/ui/fullscreen.ts, src/ui/menus/pauseScreen.ts, playwright.config.ts, e2e/, .github/workflows/check.yml
-contract: none
-acceptance:
-  1. Esc on the pause screen never leaves a stuck state. Where Chrome refuses the re-lock, a clear "Click to resume" appears and one click resumes.
-  2. The fullscreen key keeps or restores the mouse lock in Chrome and Firefox.
-  3. CI runs the boot and save specs in Firefox as well. If CI can't install Firefox within its time budget, the thread asks William instead of dropping it.
-  4. Firefox's missing raw mouse input (`unadjustedMovement`) stays a documented limit, with a line in Settings › Controls saying so.
-  5. The two duplicate Esc re-lock rows in KNOWN_ISSUES merge into one, or close.
 status: open
 attempts: 0
 
@@ -119,41 +128,6 @@ acceptance:
   2. Profile first. The record ranks the top causes of frame time on Low and Medium on Depot and Woodland, by day and by night.
   3. Fix the top causes until Low holds 60 FPS on modern low-powered hardware (the owner's ruling, 2026-10-16), Medium too where it can, on the laptop baseline's scenes. If a fix would cost too much, say what and why.
   4. Add a High or Ultra night run to the perf gate, so the torch shadow map's cost is measured.
-status: open
-attempts: 0
-
-## AX1 · Readability and tone: kit colours, High contrast, exit markers
-tier: ui
-perf: skip
-touches: src/config/characters.ts, src/config/accessibility.ts, src/config/schemes.ts, src/config/colourVision.test.ts, src/render/exitRenderer.ts, src/ui/hud.css
-contract: none
-acceptance:
-  1. Kit looks read as a weekend airsoft site, not a military unit: at most two of the six looks wear plate carriers, and at least two vests are in a civilian colour. Team armbands still read first.
-  2. High contrast's orange figures meet the colour test's contrast bar in Depot's shaded corners (measured, not judged by eye).
-  3. Exit rings and markers stay apart from the orange team under the deuteranopia check in `colourVision.test.ts`.
-status: open
-attempts: 0
-
-## RV1 · Remove supply weekends and dated events (feature triage, 2026-10-05)
-tier: core
-perf: skip
-touches: src/pool/supplyEvents.ts, src/pool/supplyEvents.test.ts, src/pool/supplyEvents.edge.test.ts, src/pool/caches.ts, src/pool/pool.ts, src/game.ts, src/matchSession.ts, pool.md, docs/IDEAS.md
-contract: none
-acceptance:
-  1. No supply weekend or dated event shows anywhere, and their code and their table in `pool.md` are gone.
-  2. No pool item ID changes, and an existing save loads unchanged.
-  3. The KNOWN_ISSUES row about IDEAS and M49 closes.
-status: open
-attempts: 0
-
-## RV2 · Tone mapping leaves Graphics (feature triage, 2026-10-05)
-tier: ui
-perf: skip
-touches: src/ui/graphicsSettings.ts, src/ui/menus/settingsScreen.ts, src/ui/devSettings.ts, src/config/graphics.ts, src/config/dev.ts, src/settings/storage.ts, src/game.ts
-contract: none
-acceptance:
-  1. Settings › Graphics has no Tone mapping row, and everyone gets Neutral (today's default).
-  2. The choice moves to Settings › Dev. With Dev settings off, a save holding another tone mapping plays as Neutral.
 status: open
 attempts: 0
 

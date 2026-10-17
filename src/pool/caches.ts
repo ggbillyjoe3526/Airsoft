@@ -2,7 +2,6 @@ import { createRng, rngNext, type RngState } from '../sim/rng';
 import type { CaseFind, CaseSetup } from '../sim/extraction';
 import type { Vec3 } from '../sim/vec';
 import type { Pool } from './pool';
-import { kindsUnder, type SupplyEvent } from './supplyEvents';
 import type { CaseKind, NumberRange } from './tables';
 
 /**
@@ -57,13 +56,12 @@ export function rollFind(kind: CaseKind, rng: RngState): CaseFind {
 }
 
 /**
- * A run's cases (M44), from its seed: placed on the map's spots and filled from pool.md's Caches table, under the
- * supply `event` on as the run starts (M49: richer cases, the same ones in the same places). The same seed and event
- * give the same run. Pure.
+ * A run's cases (M44), from its seed: placed on the map's spots and filled from pool.md's Caches table. The same seed
+ * gives the same run. Pure.
  */
-export function rollRunCases(pool: Pool, spots: readonly CaseSpotLike[], seed: number, event: SupplyEvent | null = null): CaseSetup[] {
+export function rollRunCases(pool: Pool, spots: readonly CaseSpotLike[], seed: number): CaseSetup[] {
   const rng = createRng(seed);
-  return placeCases(kindsUnder(pool.caseKinds, event), spots, rng).map(({ spot, kind }) => {
+  return placeCases(pool.caseKinds, spots, rng).map(({ spot, kind }) => {
     const s = spots[spot]!;
     return {
       kind: kind.key,

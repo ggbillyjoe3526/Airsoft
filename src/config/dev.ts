@@ -1,5 +1,6 @@
 import { ADAPTIVE_TEXT } from './adaptiveDifficulty';
-import type { LightingPresetId } from './render';
+import { TONE_MAPPING_CHOICES } from './graphics';
+import { type LightingPresetId, TONE_MAPPING, type ToneMappingId } from './render';
 
 /**
  * Dev settings (M24; owner, 2026-10-04): a hidden Settings tab, shown by ticking "Dev settings" under the tabs. Each is a
@@ -52,6 +53,11 @@ export interface DevSettings {
    * play no fixed level, so they stay out of the records.
    */
   adaptiveDifficulty: boolean;
+  /**
+   * Tone mapping (audit section 5 F2; RV2, owner's feature triage 2026-10-05: it left Graphics and everyone plays
+   * Neutral). A look only, so not a `cheat`; applies at once.
+   */
+  toneMapping: ToneMappingId;
 }
 
 export const DEV_DEFAULTS: Readonly<DevSettings> = {
@@ -68,6 +74,7 @@ export const DEV_DEFAULTS: Readonly<DevSettings> = {
   spectateBots: false,
   botIntent: false,
   adaptiveDifficulty: false,
+  toneMapping: TONE_MAPPING.default,
 };
 
 type KeysOf<V> = { [K in keyof DevSettings]: DevSettings[K] extends V ? K : never }[keyof DevSettings];
@@ -130,6 +137,14 @@ export const DEV_ENTRIES: readonly DevEntry[] = [
       { id: 'day', label: 'Day', blurb: '' },
       { id: 'night', label: 'Night', blurb: '' },
     ],
+  },
+  {
+    kind: 'choice',
+    id: 'toneMapping',
+    label: 'Tone mapping',
+    help: 'How bright colours roll off to the screen. Everyone else plays Neutral.',
+    cheat: false,
+    choices: TONE_MAPPING_CHOICES,
   },
 ];
 
