@@ -38,9 +38,9 @@ interface Driver {
   dispose(): void;
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any -- the drivers take the module render/gpuPools.ts holds for an object */
+/* `any` from here to the end-of-`any` line: the drivers take the module render/gpuPools.ts holds for an object */
 type Owner = any;
-/* eslint-enable @typescript-eslint/no-explicit-any */
+/* end-of-`any` line */
 
 export class ParticleTwins {
   private readonly drivers = new Map<object, Driver>();
