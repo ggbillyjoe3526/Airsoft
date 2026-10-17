@@ -66,6 +66,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **KI1** · The Armory keeps an item you own in colour
 - **KI2** · A BB that ricochets throws its grit and leaves back off the wall it bounced from, not towards whoever fired it
 - **KI2** · Depot, Woodland and Neon Heights show their updated pictures on the Match screen
+- **RE1** · WON, LOST or DRAW stays up 2 s (was 1.3) and the round's table about 4 s before the next round; bots hold fire for a strafing teammate
 
 ### Internal
 - **MS1** · Tests remove skyline pieces no player can see and keep hung units and cables clear of the player's room; perf baselines re-recorded
