@@ -62,13 +62,15 @@ const CHROMIUM_PROJECTS = [
 
 /**
  * The Firefox run of the boot and save specs (IN1). Headed under xvfb-run (CI's `firefox` job), as headless Firefox
- * gets no WebGL 2 on a machine without a GPU, with WebGL forced on, as Firefox blocks it on software drivers.
+ * gets no WebGL 2 on a machine without a GPU, with WebGL forced on, as Firefox blocks it on software drivers. Each
+ * action, wait and navigation times out on its own, so a step that hangs names itself in the gate's failures summary
+ * rather than the whole test timing out (a save spec run hung once on CI with only the test's line to show).
  */
 const FIREFOX_PROJECTS = [
   {
     name: 'firefox',
     testMatch: /(boot|save)\.spec\.ts$/,
-    use: { ...devices['Desktop Firefox'], headless: false, launchOptions: { firefoxUserPrefs: { 'webgl.force-enabled': true } } },
+    use: { ...devices['Desktop Firefox'], headless: false, actionTimeout: 30_000, navigationTimeout: 30_000, launchOptions: { firefoxUserPrefs: { 'webgl.force-enabled': true } } },
   },
 ];
 

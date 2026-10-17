@@ -15,6 +15,7 @@
 - **Firefox's F10 with no recent click asks for one click instead of doing nothing.** Firefox refuses fullscreen from a function key; a click is the only gesture it accepts.
 - **While Firefox changes fullscreen, play holds without the pause menu** for up to `FULLSCREEN_RELOCK_MS`, then pauses if the lock hasn't come back, so a hold can't stick.
 - **The Firefox CI job runs headed under xvfb-run through the gate's smoke step** (`E2E_FIREFOX=1`), about four minutes; boot.spec skips its download-once check in Firefox, which reports a revalidated (304) response with the full body's transfer size.
+- **Firefox's actions and waits time out after 30 s each.** The save spec's first test hung once on CI's `firefox` job (it had passed there before, on unchanged game code) and the gate could name only the test's line; the container can't fetch CI's artifacts or run Playwright's own Firefox, so a repeat now names the step that hung.
 - **The task's touches grew** to the menus, their options and CSS, `config/menus.ts`, `config/controls.ts`, `game.ts`, `pipeline/workflow.test.mjs` and `pipeline/README.md`, which the click state, the fullscreen hold and the CI job needed.
 
 ## Known issues left
