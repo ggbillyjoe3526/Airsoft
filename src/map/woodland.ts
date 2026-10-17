@@ -401,12 +401,13 @@ const LOGS: MapBlock[] = [
 /**
  * Cover on the last 20 m of each way up to the fort (the Pro difficulty plan, owner 19:08): a log pile or a boulder
  * every few metres beside the Pine Belt's descent, the Meadow's climb and the sunken track, so attackers can bound up
- * from cover to cover instead of crossing open ground under the fort's guns.
+ * from cover to cover instead of crossing open ground under the fort's guns. WL2: the three full-height ones were tall
+ * grey boulders, now stacked log piles of the same size (still full cover: as crouch rocks, Pro attackers won 39 %).
  */
 const APPROACH_COVER: MapBlock[] = [
   // Pine Belt, down the north shoulder.
   centred('log', 97, 60.9, 3, 0.9, CROUCH),
-  centred('boulder', 92, 64.5, BIG_ROCK.w, BIG_ROCK.d, CROUCH),
+  centred('log', 92, 64.5, BIG_ROCK.w, BIG_ROCK.d, FULL),
   centred('boulder', 86.5, 68.9, 1.6, 1.4, CROUCH),
   // Across the slope, clear of the boulder beside it (M55, audit SIM-05: the two once stood 0.2 m into each other). It
   // lay down the slope until M102: its top level, it stood 1.6 m over the ground at its low end and 0.6 m at its high
@@ -415,7 +416,7 @@ const APPROACH_COVER: MapBlock[] = [
   centred('boulder', 102.6, 59.4, 1.6, 1.4, CROUCH),
   // Meadow, up the west face.
   centred('boulder', 76.5, 43.7, 1.6, 1.4, CROUCH),
-  centred('boulder', 82.5, 48.8, BIG_ROCK.w, BIG_ROCK.d, CROUCH),
+  centred('log', 82.5, 48.8, BIG_ROCK.w, BIG_ROCK.d, FULL),
   centred('boulder', 87.5, 44, 1.6, 1.4, CROUCH),
   centred('log', 91.5, 49.3, 0.9, 3, CROUCH),
   // Creek, up the sunken track.
@@ -424,7 +425,7 @@ const APPROACH_COVER: MapBlock[] = [
   centred('boulder', 91, 31.8, 1.6, 1.4, CROUCH),
   centred('log', 93.6, 32.6, 3, 0.9, CROUCH),
   centred('log', 97.5, 34.6, 3, 0.9, CROUCH),
-  centred('boulder', 104.5, 36.5, BIG_ROCK.w, BIG_ROCK.d, CROUCH),
+  centred('log', 104.5, 36.5, BIG_ROCK.w, BIG_ROCK.d, FULL),
 ];
 
 /** Trees standing on the meadow, picked off the sketch. */

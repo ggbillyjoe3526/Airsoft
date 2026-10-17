@@ -269,24 +269,24 @@ const PINNED = {
   // and for a Knoll log turned across the slope (fewer courses of bark; the leaf drifts and moss around it fall anew).
   // MS1: bark for the cabin's walls (3 m, on one level), canopy and foliage for the fuller crowns and smaller, lobed
   // bushes, and the cabin's roof, Woodland's one finished block (cladding, the city's engine feature, M34f). WL2: both
-  // re-pinned for the fort hut's roof (cladding), the big boulders lowered to crouch height and the lone oak's trunk and
-  // crown swapped for a boulder (bark, stone, canopy; with detail the drifts and moss round them fall anew).
+  // re-pinned for the fort hut's roof (cladding), the big boulders lowered to crouch height or stacked as log piles, and
+  // the lone oak's trunk and crown swapped for a boulder (bark, stone, canopy; with detail the moss falls anew).
   woodlandDetail: [
-    "map-bark v25106 i58884 ae87c015/eafcf9c4/4979d748",
+    "map-bark v26086 i60972 b5cf9615/4513d1f8/8b3e4296",
     "map-canopy v31428 i0 bd13720f/811c9dc5/c8382a34",
     "map-cladding v144 i192 5e2f3ced/3b944405/a89ee055",
     "map-foliage v16800 i0 2d3ea6ce/811c9dc5/5d0ab568",
     "map-planks v6500 i12600 27873f91/9f349b8d/5691af2a",
-    "map-stone v13046 i13830 9ed0096c/8908e134/4862b432",
+    "map-stone v12140 i12840 1280a1c6/b5a727ec/a0f0ccbc",
     "map-terrain v9801 i57600 4e80f9d2/006bce1d/4298d710",
   ],
   woodlandPlain: [
-    "map-bark v17522 i44664 217fe299/8b9197fe/6be31a55",
+    "map-bark v18406 i46572 a4508e65/3c595e9e/d591b585",
     "map-canopy v31428 i0 bd13720f/811c9dc5/c8382a34",
     "map-cladding v72 i96 c231a0b9/d7bca701/3bb51a6d",
     "map-foliage v16800 i0 2d3ea6ce/811c9dc5/5d0ab568",
     "map-planks v1600 i3000 b1e0a709/eef7627d/cbf74e3d",
-    "map-stone v12150 i12150 45fcb830/e8790a44/9f0d2967",
+    "map-stone v11340 i11340 6aa34be6/6e3d4570/42bcf424",
     "map-terrain v9801 i57600 4e80f9d2/006bce1d/4298d710",
   ],
 } as const;

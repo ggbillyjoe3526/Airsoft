@@ -80,7 +80,7 @@ const CASE_SPOTS: RunPlan['cases'] = [
   [95.8, 0, 41.3, EAST, ROOM], // the fort's south-west corner
   [43.5, 0, 63.6, SOUTH, ROOM], // the woodpile on the forest track
   [47, 0, 28.9, SOUTH, ROOM], // the big boulder above the creek
-  [104.5, 0, 34.9, SOUTH, ROOM], // the big boulder at the top of the sunken track
+  [104.5, 0, 34.9, SOUTH, ROOM], // the log pile at the top of the sunken track (a big boulder until WL2)
   [29, 0, 26.4, NORTH, LANE], // the log pile above the creek
   [91.7, 0, 24.2, SOUTH, LANE], // the log pile by the track
   [80, 0, 38.6, NORTH, LANE], // the big boulder on the meadow's south side
