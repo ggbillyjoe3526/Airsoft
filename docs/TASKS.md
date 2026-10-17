@@ -132,19 +132,6 @@ acceptance:
 status: open
 attempts: 0
 
-## PF3 · The 4K 240 Hz line for maxed-out settings (after William's desktop baseline)
-tier: core
-perf: required
-touches: pipeline/perf-budget.json, pipeline/gate.mjs, pipeline/perf-run.mjs, pipeline/README.md
-contract: none
-acceptance:
-  1. This starts once `pipeline/baseline/desktop*.json` is committed (PLAYTEST › Only you can do these).
-  2. The owner's ruling (2026-10-16): maxed-out settings aim at a PC built for 4K at 240 Hz. `perf-budget.json` gains a desktop frame-time line for Ultra at 3840×2160. The first guess is p95 ≤ 4.2 ms and p99 ≤ 6 ms. `desktop` joins `frameTimeGatedEnvs` for Ultra only.
-  3. The record lists any map or mode over the line on the baseline, with its top causes. Fixes are their own tasks.
-  4. Draw-call and triangle lines change only with an owner decision line (DECISIONS).
-status: open
-attempts: 0
-
 ## UX1 · Menus at 4K and small windows; HUD clashes at 1280 px
 tier: ui
 perf: skip

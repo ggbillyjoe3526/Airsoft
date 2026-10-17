@@ -91,6 +91,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **DX3** · Developer-only: a task can be marked as a fix, with every check and review kept and a shorter record; the perf run needs no separate flag
 - **DX2** · Developer-only: Dev 5 and 6 plans, decisions, known issues and playtest guide archived or trimmed under 50 KB each
 - **IN1** · CI runs the boot and save browser tests in Firefox too, in a new firefox job (#251)
+- **PF3** · Desktop perf run judges Ultra 4K frame times against the 17 Oct baseline; stops at match end, checks npm install, names failed rows
 
 ## 0.1 Dev 6 · 2026-10-16
 

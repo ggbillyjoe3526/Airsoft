@@ -299,7 +299,9 @@ on their budgets alone until the owner records them (`--map`, `--mode` as above,
 npm run perf:desktop        (node pipeline/perf-desktop.mjs [--channel msedge] [--chromium /path])
 ```
 
-`perf-desktop.mjs` runs `perfDesktop.mjs` DESKTOP_SUITE through `perf-run.mjs --env desktop`, about 15 minutes: Depot
+In a fresh download, `npm install` first: `perf-desktop.mjs` checks `perfDesktop.mjs` NEEDED_PACKAGES and says to run
+it when one is missing, then builds the game once and stops with the build's own output if that fails. It runs
+DESKTOP_SUITE through `perf-run.mjs --env desktop`, about 15 minutes, each failed run's error in its row: Depot
 Elimination on every preset, Ultra on every map in both modes, on WebGPU (Chrome's Auto renderer) at 3840×2160 at
 pixel ratio 1, then Depot Ultra on WebGL2, all with `--baseline` (`pipeline/baseline/desktop-webgpu*.json`,
 `desktop-ultra.json`), and Depot Ultra at 1920×1080 with none, for the hint. `--env desktop` is the laptop run without
@@ -308,8 +310,10 @@ target is the 240 Hz cap's own period, so a capped run can't show headroom. It w
 (the result's `head` reads `unknown`; the thread that commits the files sets it). It prints and writes
 `pipeline/out/perf-desktop-summary.md`: FPS, 1 % low, p50, p95, p99 and worst per run, whether p95 holds 240 Hz, the
 GPU name, and two hints: GPU- or CPU-bound from 4K against 1080p, and frames held by vsync if the switches didn't
-take. Its frame times are reported, not judged, until PF3 sets the line. The target is set (owner, 2026-10-16):
-maxed-out settings aim at 4K at 240 Hz, about 4.2 ms a frame.
+take. Ultra's frame times at 4K are judged against `envs.desktop.ultra` in `perf-budget.json` (the Budget column; PF3,
+owner 2026-10-17): the line is the baseline of 2026-10-17 (p95 6.5 ms, p99 9 ms; WebGL2's own, 7.2 and 11.5, in
+`envs.desktop.backends.webgl`), so Ultra can't get slower. The aim
+stays 4K at 240 Hz, about 4.2 ms a frame (owner, 2026-10-16), which that baseline misses on every map (KNOWN_ISSUES).
 
 ## `balance.mjs`: the bot balance report
 

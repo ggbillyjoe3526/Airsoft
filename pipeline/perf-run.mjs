@@ -88,6 +88,8 @@ if (!['webgl', 'webgpu'].includes(options.backend)) throw new Error('--backend m
 const rendererSettings = { version: 1, renderer: options.backend };
 const [viewWidth, viewHeight] = options.viewport.split('x').map(Number);
 if (!(viewWidth > 0 && viewHeight > 0)) throw new Error('--viewport must be WIDTHxHEIGHT, e.g. 3840x2160');
+/** No tick for this long ends the window: the match is over (a frame-rate dip still advances a tick every frame). */
+const STALL_MS = 1000;
 /** The preview server's port: --port for a second run beside another worktree's (the default 4181 is refused when busy). */
 const PORT = Number(value('--port', '4181'));
 // The game's modes (config/modes.ts has only type imports, so Node reads it as it is); its maps are checked in the page.
@@ -131,7 +133,15 @@ const head = (() => {
 // after the gate's smoke test it is already there. --no-build uses whatever dist-e2e/ holds.
 if (options.build || !existsSync(join(ROOT, 'dist-e2e', 'index.html'))) {
   console.log('perf: the e2e bundle');
-  execFileSync('node', ['pipeline/build-cached.mjs', '--mode', 'e2e'], { cwd: ROOT, stdio: 'ignore' });
+  // Quiet when it works; the build's own output when it fails (a failure said only "Command failed" on the owner's PC).
+  try {
+    execFileSync(process.execPath, ['pipeline/build-cached.mjs', '--mode', 'e2e'], { cwd: ROOT, stdio: 'pipe' });
+  } catch (e) {
+    process.stdout.write(e.stdout ?? '');
+    process.stderr.write(e.stderr ?? '');
+    console.error('perf: the e2e build failed (its output is above)');
+    process.exit(1);
+  }
 }
 const urlFor = (preset) => `http://localhost:${PORT}/?nolock&seed=1&script=perf&quality=${preset}${options.backend === 'webgl' ? '&forceWebGL' : ''}`;
 // A server already on the port (another run's, left over) would be measured instead of this build: refuse.
@@ -210,7 +220,7 @@ async function measure(preset) {
     process.exit(1);
   }
 
-  const sample = await page.evaluate(async ({ ticks, maxSeconds }) => {
+  const sample = await page.evaluate(async ({ ticks, maxSeconds, stallMs }) => {
     const g = globalThis.airsoft;
     // The renderer's draw counts, read the same on WebGL and the node renderer (one object, refilled each read).
     const stats = () => g.renderer.stats;
@@ -238,10 +248,16 @@ async function measure(preset) {
     };
     const heapStart = liveHeap();
     heap.push(heapStart);
+    // A match that ends inside the window (Neon Heights Extraction on the desktop's 3600 ticks) stops the simulation:
+    // its frames from the last tick on are the results screen's, so the window ends at that tick (`matchEnded`).
+    let matchEnded = false;
     await new Promise((done) => {
       const t0 = performance.now();
       let last = t0;
       let nextHeap = t0 + 1000;
+      let tickSeen = g.state.tick, advancedAt = t0;
+      // One object, written in place on each tick, so the window makes no garbage of its own.
+      const kept = { n: 0, calls, callsMax, tris, trisMax, dressing, dressingMax };
       const f = (now) => {
         frames.push(now - last);
         last = now;
@@ -253,6 +269,17 @@ async function measure(preset) {
         tris += s.triangles - d; trisMax = Math.max(trisMax, s.triangles - d);
         dressing += d; dressingMax = Math.max(dressingMax, d);
         if (now >= nextHeap) { heap.push(heapNow()); nextHeap += 1000; }
+        if (g.state.tick !== tickSeen) {
+          tickSeen = g.state.tick;
+          advancedAt = now;
+          kept.n = frames.length; kept.calls = calls; kept.callsMax = callsMax; kept.tris = tris; kept.trisMax = trisMax;
+          kept.dressing = dressing; kept.dressingMax = dressingMax;
+        } else if (now - advancedAt >= stallMs) {
+          ({ calls, callsMax, tris, trisMax, dressing, dressingMax } = kept);
+          frames.length = kept.n;
+          matchEnded = true;
+          return done();
+        }
         if (g.state.tick - tick0 < ticks && now - t0 < maxSeconds * 1000) requestAnimationFrame(f); else done();
       };
       requestAnimationFrame(f);
@@ -300,8 +327,9 @@ async function measure(preset) {
       seconds: secs, ticks: g.state.tick - tick0, simTicksPerSecond: (g.state.tick - tick0) / secs,
       pixelRatio: g.renderer.renderer.getPixelRatio(), characters: g.session.characterCount,
       figureMs: figureMs / n,
+      matchEnded,
     };
-  }, { ticks, maxSeconds: options.maxSeconds });
+  }, { ticks, maxSeconds: options.maxSeconds, stallMs: STALL_MS });
   // The graphics card the browser drew with (an integrated GPU instead of the discrete one would show here), read after
   // the window from a context of its own, released at once.
   const gpu = await page.evaluate(() => {
@@ -313,6 +341,13 @@ async function measure(preset) {
     return name;
   });
   await page.close();
+  if (!sample.frames) {
+    // The match ended before the window drew a frame (`matchEnded` with nothing kept): no numbers to write.
+    console.error(`perf: the match ended before the window measured a frame (map ${options.map}, mode ${options.mode}, preset ${preset}); no file written`);
+    await browser.close();
+    server.kill();
+    process.exit(1);
+  }
   return { env: options.env, backend, map: options.map, mode: options.mode, preset, cpu: options.cpu, vsync, gpu, ticksWanted: ticks, warmupTicks: options.warmupTicks, head, when: new Date().toISOString(), seed: 1, viewport: `${options.viewport}@1`, metrics: sample, errors };
 }
 

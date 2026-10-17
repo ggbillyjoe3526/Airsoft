@@ -4,11 +4,16 @@
  * tests them.
  */
 
+/** The packages the suite needs: the build (Vite, and Vitest's config helper the Vite config imports) and the browser. */
+export const NEEDED_PACKAGES = ['vite', 'vitest', '@playwright/test'];
+
 /** The owner's screen (DECISIONS: Ultra at 3840×2160 aims for a 240 Hz frame). */
 export const DESKTOP_4K = '3840x2160';
 /** The same run at a quarter of the pixels: how much faster it goes says whether the GPU or the CPU sets the pace. */
 export const DESKTOP_HD = '1920x1080';
-/** The maxed-out target's refresh rate (owner, 2026-10-16). */
+import { budgetFor, frameTimesGatedFor, judgeRun } from './perfMatrix.mjs';
+
+/** The maxed-out target's refresh rate (owner, 2026-10-16); its line is perf-budget.json `envs.desktop.ultra` (PF3). */
 export const TARGET_HZ = 240;
 
 /**
@@ -71,13 +76,42 @@ export function boundHint(fps4k, fpsHd) {
   return `Mixed: ${times}, so both the pixels and the work each frame count`;
 }
 
+/** The longest a failed run's error may be in the summary's table. */
+export const FAILURE_CHARS = 200;
+
+/** Lines of a Node crash that say nothing: its stack, the source line and caret, the error's fields, Node's version. */
+const STDERR_NOISE = /^(at |node:|Node\.js v|\^|[{}]|const |triggerUncaughtException|(log|name|code|status|signal|output|pid|stdout|stderr|errors): )/;
+
+/**
+ * A failed run's error for its row, from what it wrote to stderr: the first line opening with an error's name or
+ * perf-run.mjs's own `perf:`, else the first line that isn't a crash's noise, kept on one table cell (no `|`) and short.
+ */
+export function failureLine(stderr) {
+  const lines = String(stderr ?? '').split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !STDERR_NOISE.test(l));
+  const line = lines.find((l) => /^(\w*Error\b|perf: )/.test(l)) ?? lines[0] ?? 'no output';
+  const cell = line.replaceAll('|', '/');
+  return cell.length > FAILURE_CHARS ? `${cell.slice(0, FAILURE_CHARS - 1)}…` : cell;
+}
+
 const fixed = (v, digits = 1) => (typeof v === 'number' ? v.toFixed(digits) : '-');
 
 /**
- * The summary (markdown) the owner sends back: one row per run, the hints under it. `rows`: `{ run, preset, result }`
- * with `result` perf-run.mjs's file (null when the run wrote none).
+ * A run's verdict against perf-budget.json's lines for the desktop (`budgets`): `ok`, or each line it is over. Frame
+ * times count at 4K on the presets the desktop's are judged on (Ultra, PF3); the 1080p run is there for the hint.
  */
-export function summaryMarkdown(rows, when) {
+export function budgetVerdict(budgets, run, preset, result) {
+  const budget = budgetFor(budgets, run.map, preset, result.backend, 'desktop');
+  const frameTimesGated = run.viewport === DESKTOP_4K && frameTimesGatedFor(budgets, 'desktop', preset);
+  const { over } = judgeRun({ run: { ...run, preset }, metrics: result.metrics, budget, baseline: null, baselineName: '', frameTimesGated });
+  return over.length ? over.map((o) => `${o.metric} ${o.now} > ${o.limit}`).join(', ') : 'ok';
+}
+
+/**
+ * The summary (markdown) the owner sends back: one row per run, the hints under it. `rows`: `{ run, preset, result,
+ * failure? }` with `result` perf-run.mjs's file (null when the run wrote none) and `failure` its error then; `budgets`
+ * is perf-budget.json.
+ */
+export function summaryMarkdown(rows, when, budgets) {
   const targetMs = 1000 / TARGET_HZ;
   const gpu = rows.find((r) => r.result?.gpu)?.result.gpu ?? 'unknown';
   const head = rows.find((r) => r.result?.head)?.result.head ?? 'unknown';
@@ -86,21 +120,23 @@ export function summaryMarkdown(rows, when) {
     '',
     `${when} · GPU: ${gpu} · head ${String(head).slice(0, 7)} · target ${TARGET_HZ} Hz (${targetMs.toFixed(2)} ms)`,
     '',
-    '| Map | Mode | Renderer | Size | Preset | FPS | 1 % low FPS | p50 ms | p95 ms | p99 ms | Worst ms | p95 holds 240 Hz | Sim ticks/s | Figures ms | Draw calls | Errors |',
+    '| Map | Mode | Renderer | Size | Preset | FPS | 1 % low FPS | p50 ms | p95 ms | p99 ms | Worst ms | Budget | Sim ticks/s | Figures ms | Draw calls | Errors |',
     '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|',
   ];
   const held = new Set();
-  for (const { run, preset, result } of rows) {
+  const ended = [];
+  for (const { run, preset, result, failure } of rows) {
     const size = run.viewport === DESKTOP_4K ? '4K' : run.viewport;
     if (!result) {
-      lines.push(`| ${run.map} | ${run.mode} | ${run.backend} | ${size} | ${preset} | no result: see the run's output above |  |  |  |  |  |  |  |  |  |  |`);
+      lines.push(`| ${run.map} | ${run.mode} | ${run.backend} | ${size} | ${preset} | no result: ${failure ?? 'see the run\'s output above'} |  |  |  |  |  |  |  |  |  |  |`);
       continue;
     }
     const m = result.metrics;
+    if (m.matchEnded) ended.push(`${run.map} ${run.mode} ${preset} (${fixed(m.seconds, 0)} s)`);
     const hz = vsyncHeld(m.p50Ms);
     if (hz !== null) held.add(hz);
     lines.push(
-      `| ${run.map} | ${run.mode} | ${result.backend} | ${size} | ${preset} | ${fixed(m.fps, 0)} | ${fixed(m.onePercentLowFps, 0)} | ${fixed(m.p50Ms, 2)} | ${fixed(m.p95Ms, 2)} | ${fixed(m.p99Ms, 2)} | ${fixed(m.worstMs)} | ${m.p95Ms <= targetMs ? 'yes' : 'no'} | ${fixed(m.simTicksPerSecond, 0)} | ${fixed(m.figureMs, 2)} | ${fixed(m.drawCalls, 0)} | ${result.errors.length} |`,
+      `| ${run.map} | ${run.mode} | ${result.backend} | ${size} | ${preset} | ${fixed(m.fps, 0)} | ${fixed(m.onePercentLowFps, 0)} | ${fixed(m.p50Ms, 2)} | ${fixed(m.p95Ms, 2)} | ${fixed(m.p99Ms, 2)} | ${fixed(m.worstMs)} | ${budgetVerdict(budgets, run, preset, result)} | ${fixed(m.simTicksPerSecond, 0)} | ${fixed(m.figureMs, 2)} | ${fixed(m.drawCalls, 0)} | ${result.errors.length} |`,
     );
   }
   const depot = (viewport) => rows.find((r) => r.run.map === 'depot' && r.run.mode === 'elimination' && r.run.backend === 'webgpu' && r.run.viewport === viewport && r.preset === 'ultra')?.result?.metrics;
@@ -109,6 +145,7 @@ export function summaryMarkdown(rows, when) {
   const hint = at4k && atHd && vsyncHeld(at4k.p50Ms) === null && vsyncHeld(atHd.p50Ms) === null ? boundHint(at4k.fps, atHd.fps) : null;
   lines.push('');
   if (hint) lines.push(`- ${hint}.`);
+  if (ended.length) lines.push(`- The match ended inside the window, which then stopped at its last tick: ${ended.join(', ')}.`);
   if (held.size) lines.push(`- Frames sat on a ${[...held].join(' / ')} Hz screen's refresh: the uncapped switches may not have taken, so these runs may show the cap, not the headroom.`);
   lines.push('- Sim ticks/s under 60 means the simulation fell behind (CPU). Figures ms is the characters\' drawing work each frame.');
   return `${lines.join('\n')}\n`;

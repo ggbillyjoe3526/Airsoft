@@ -68,8 +68,9 @@ difficulty and adaptive difficulty, Woodland Attack / Defend, Neon Heights by Da
 
 - **Laptop baseline.** On the low-spec laptop run `node pipeline/perf-run.mjs --env laptop --preset all --baseline`
   and commit the `pipeline/baseline/laptop*.json` files it writes.
-- **Desktop Ultra baseline.** On your desktop run `npm run perf:desktop` (about 15 minutes; leave the window alone) and
-  send the thread `pipeline/out/perf-desktop-summary.md` and `pipeline/baseline/desktop*.json`.
+- **Desktop Ultra baseline, Neon Heights Extraction.** The 2026-10-17 run measured that row's results screen. In a new
+  download run `npm install` first, then `npm run perf:desktop` (about 15 minutes; leave the window alone), and send
+  the thread `pipeline/out/perf-desktop-summary.md` and `pipeline/baseline/desktop*.json`.
 - **Playing Woodland and Neon Heights**, which stay dev content until you make each public. (Save in Edge: done
   2026-10-17, [Save](#save).)
 
