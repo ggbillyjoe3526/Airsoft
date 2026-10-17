@@ -17,8 +17,7 @@ You are given everything the lines need: a task id and title (for example `M27 Â
 allocation`), the pull request title and number when known, a short summary of what changed in player words, the
 group or groups the thread expects (`Added`, `Changed`, `Fixed`, `Internal`), the `docs/FEATURES.md` heading to edit
 (or none), and the task's decisions (its record's lines and any new `docs/DECISIONS.md` lines). That brief is your
-input: don't read the diff, the code or any other document. Read only the two parts of the two files you edit (token
-plan item 17a):
+input: don't read the diff, the code or any other document. Read only the two parts of the two files you edit:
 
 - **CHANGELOG.md:** `grep -n '^## ' CHANGELOG.md | head -2` gives the `## Unreleased` line and the next release's;
   Read the lines between them (offset and limit), never the whole file.

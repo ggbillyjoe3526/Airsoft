@@ -68,6 +68,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **BD1** · Headless bot matches and balance figures play with the rigged figures' hit rules; perf-run loses its models option; perf baselines re-recorded with models drawn
 - **HV1** · Hit shapes are fitted per figure and sampled from the clips as the figures load
 - **BD1** · Each rigged figure casts its shadow from one coarse copy, and the robot's plain materials share one finish
+- **DX1** · Developer-only: each pipeline rule lives in one doc the others point to; architecture contracts get headings; process docs say 0.1 Beta 1
 - **Pipeline** · Desktop perf suite: one command records the 4K maxed-out baseline across Depot presets and Ultra maps, uncapped, with a summary
 
 ## 0.1 Dev 6 · 2026-10-16

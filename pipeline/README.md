@@ -6,28 +6,27 @@ each finished task's record in `docs/records/`.
 
 ## Roles
 
-| Role | Where | Model / effort | Edits |
-|---|---|---|---|
-| Coordinator | the project's persistent session, plus a planning thread per batch | Opus 5.5, Extra effort (Fable 5.1 only with the owner's approval) | `docs/TASKS.md`, `docs/ARCHITECTURE.md` › Contracts |
-| Worker | the build thread itself (one task per thread); `.claude/agents/worker.md` only when a thread splits its task | Opus 5.5, Extra effort, for `tier: core` (`worker.md`: high); Sonnet 5.5 medium for `tier: ui` and `tier: trivial` | the task's `touches`, tests, docs |
-| QA | `.claude/agents/qa.md`; every code change; reads the review packet first, tests and hunts bugs, Pass or Fail | Sonnet 5.5 medium | tests only (commit trailer `Agent: qa`; the gate checks); its report to `pipeline/out/qa-artifacts/qa-report.md` |
-| Performance | `.claude/agents/performance.md`; every code change; reads the review packet first, Pass or Fail, ranks the causes when the perf gate fails | Sonnet 5.5 medium; Opus 5.5 high when a regression stays unexplained | nothing (its report to `pipeline/out/performance.md`) |
-| Triage | `.claude/agents/triage.md`; only for what the gate's failures summary can't place | Haiku 5.5 low | nothing (summaries under `pipeline/out/qa-artifacts/`) |
-| Critic | `.claude/agents/critic.md`; every code change, last; reads the review packet first | Sonnet 5.5 medium; Opus 5.5 for `tier: core` and near misses on a judgment check | nothing (`pipeline/out/critic.md`; its verdict goes in the task's record) |
-| Changelog | `.claude/agents/changelog.md`; reads only `Unreleased` and one FEATURES heading | Haiku 5.5 low | `CHANGELOG.md`, `docs/FEATURES.md`, `docs/patch-notes/`, README's "New since" |
+| Role | Where | Edits |
+|---|---|---|
+| Coordinator | the project's persistent session, plus a planning thread per batch | `docs/TASKS.md`, `docs/ARCHITECTURE.md` › Contracts |
+| Worker | the build thread itself (one task per thread); `.claude/agents/worker.md` only when a thread splits its task | the task's `touches`, tests, docs |
+| QA | `.claude/agents/qa.md`; every code change; reads the review packet first, tests and hunts bugs, Pass or Fail | tests only (commit trailer `Agent: qa`; the gate checks); its report to `pipeline/out/qa-artifacts/qa-report.md` |
+| Performance | `.claude/agents/performance.md`; every code change; reads the review packet first, Pass or Fail, ranks the causes when the perf gate fails | nothing (its report to `pipeline/out/performance.md`) |
+| Triage | `.claude/agents/triage.md`; only for what the gate's failures summary can't place | nothing (summaries under `pipeline/out/qa-artifacts/`) |
+| Critic | `.claude/agents/critic.md`; every code change, last; reads the review packet first | nothing (`pipeline/out/critic.md`; its verdict goes in the task's record) |
+| Changelog | `.claude/agents/changelog.md`; reads only `Unreleased` and one FEATURES heading | `CHANGELOG.md`, `docs/FEATURES.md`, `docs/patch-notes/`, README's "New since" |
+
+Which model and effort each role runs on is policy: `docs/PROCESS.md` › Models.
 
 Tiers: `core` is the simulation, physics, rendering, bots, navigation, audio engine; `ui` is menus, HUD, settings,
 config, asset loading, docs; `trivial` is a one-constant change, a wording fix, a docs-only change.
 
-**The review agents** (owner, 2026-10-16): QA, performance and the critic review every change that touches code,
-config, assets or gameplay data, inside the pipeline or not (a bug pass, an audit's fix, a pipeline change); a
-docs-only change (every file Markdown; at the root only README, CHANGELOG and CLAUDE.md, since the other root `.md`
-files are game data the build reads) skips them. A pull request is marked ready, and
-merged, only once all three have run and passed, and its description's `Review:` line says so (below); CI's `review`
-gate checks that line.
+**The review agents.** QA, performance and the critic review every change that touches code, config, assets or
+gameplay data, inside the pipeline or not (the owner's rule: `docs/PROCESS.md` › Pull requests and branches). A
+docs-only change skips them: every file Markdown, and at the root only README, CHANGELOG and CLAUDE.md, since the other
+root `.md` files are game data the build reads. CI's `review` gate checks the pull request's `Review:` line (below).
 
 Audits and major reviews are not pipeline tasks: they run in their own thread and hand their fixes on as tasks.
-Fable 5.1 runs one only when the owner approves it (`docs/PROCESS.md` › Models).
 
 ## The eight steps
 
@@ -40,19 +39,33 @@ Fable 5.1 runs one only when the owner approves it (`docs/PROCESS.md` › Models
    test support and balance figures under them don't count), once for each map, mode and preset of the perf matrix
    the change reaches (below); UI-only changes skip the harness. The performance agent then reviews every code change
    from the packet (frame time, per-frame allocations, GPU disposal, the budgets) with a Pass or Fail verdict, and
-   ranks the causes when a run fails (owner, 2026-10-16, replacing token plan item 16's "only on a failed run").
+   ranks the causes when a run fails (owner, 2026-10-16).
 5. **Triage**: the gate script writes the structured summaries itself, the failures-only summary among them
-   (`pipeline/out/failures.md`, item 19); Haiku condenses only what that can't place (a long log with no file and
-   line, a trace).
-6. **Gates**: `node pipeline/gate.mjs` (below). A failed gate goes straight back to the worker with the evidence.
-7. **Critic**: eight binary checks (`critic.md`), only on green gates, starting from the review packet (item 15), with
-   QA's and the performance agent's verdicts in it. Every code change gets it; a docs-only `tier: trivial` task gets a
-   Haiku diff check instead.
-8. **Retry**: only the failed checks and evidence go back; four attempts in all, then the owner's auto-accept rule
-   (gates green, at least 6/8 with checks 1 and 2 passing, leftovers to KNOWN_ISSUES) or a report to the owner. A near
-   miss is re-run on Opus first only when its failed check is a judgment, not a measured number (item 18).
+   (`pipeline/out/failures.md`), so no model reads a raw log it can place; Haiku condenses only what it can't (a long
+   log with no file and line, a trace).
+6. **Gates**: `node pipeline/gate.mjs` (below). A failed gate goes straight back to the worker with the evidence; the
+   critic never sees it.
+7. **Critic**: eight binary checks (the table is in `.claude/agents/critic.md`), only on green gates, starting from the
+   review packet, so it reads the summary and the diff rather than exploring the repository, with QA's and the
+   performance agent's verdicts in it. Every code change gets it; a docs-only `tier: trivial` task gets a Haiku diff
+   check instead. The verdict and what follows it are below.
+8. **Retry**: only the failed checks and their evidence go back to the worker, and the attempt rule below applies.
 
-Then the thread writes the task's record, `docs/records/<id>.md` (below), and ships the work and the record in one push.
+Then the thread runs the changelog agent once the change is final (every pull request, the task's id under
+`Unreleased`, which the `changelog` gate checks), writes the task's record, `docs/records/<id>.md` (below), and ships
+the work and the record in one push.
+
+### Verdict and attempts
+
+- **Accept** when every blocking check passes, at most one non-blocking check fails, and QA and performance both say
+  Pass; the score is the checks passed, out of 8. Otherwise **Retry** with only the failed checks and their evidence.
+- **Near miss.** A verdict one check short of Accept is re-run on Opus before the task goes back when its failed check
+  is a judgment (checks 5 to 8, or one of 1 to 4 decided by reading). A check failed on a measured number (a budget, a
+  count) goes straight back, or to the owner when only a changed criterion can pass it: a re-run can't change a number.
+- **Four attempts** per task: one build plus three targeted retries. After the fourth, gates green and at least 6 of 8
+  with checks 1 and 2 passing is an **auto-accept** (owner, 2026-10-04; the `Review:` line reads `critic auto-accept
+  <score>`), and every failed check goes to `docs/KNOWN_ISSUES.md`. Otherwise stop, keep the best attempt on its branch
+  and report to the owner what failed and what each attempt tried.
 
 ## `bake-light.mjs`
 
@@ -84,8 +97,8 @@ node pipeline/gate.mjs [--task M27[,M28]] [--quick] [--no-smoke] [--perf] [--env
 | `changelog` | `CHANGELOG.md` › Unreleased | a line names `**<task>**` (each task, when several) |
 | `review` | on CI, a pull request's description (`GATE_PR_BODY`; `review.mjs`) | a docs-only change or a draft skips it; otherwise its `Review:` line gives `critic Accept` (or `auto-accept`), `qa Pass` and `performance Pass` |
 
-Besides its report, every run writes the failures-only summary, `pipeline/out/failures.md` (`failures.mjs`, token plan
-item 19): each failed gate with its log, then each failure's test, error (its first lines), and file and line, the
+Besides its report, every run writes the failures-only summary, `pipeline/out/failures.md` (`failures.mjs`): each
+failed gate with its log, then each failure's test, error (its first lines), and file and line, the
 first stack frame inside the repository. It covers failed tests, test files that fail to load (a syntax error or a
 missing import, which name no test), TypeScript and Vite build errors, smoke and perf failures, scope's stray files and
 the changelog's missing line, and prints the same lines as each gate finishes, on CI too. An entry it can't place
@@ -96,7 +109,7 @@ review packet (`packet.mjs`, below).
 of their `touches`. A block the branch has already cleared from `docs/TASKS.md` is looked for in the branch's history
 since the base.
 
-**Which tests run** (token plan item 21). Off CI the default is `--tests auto`: the `fast` project always, the `slow`
+**Which tests run.** Off CI the default is `--tests auto`: the `fast` project always, the `slow`
 project's headless bot-match guards only when the diff reaches a file they load (`testReach.mjs`): a guard file, any
 file it imports directly or through others (`pool.md` and `stats.md` too), the test setup file, or `package.json`,
 the lockfile, `vite.config.ts` or `tsconfig.json`. The gate's line names what ran and why (`fast project only: the
@@ -280,7 +293,7 @@ maxed-out settings aim at 4K at 240 Hz, about 4.2 ms a frame.
 node pipeline/balance.mjs [filter …]        (npm run balance; e.g. node pipeline/balance.mjs woodland)
 ```
 
-Token plan item 22. Who wins (each end's and side's share of rounds, at every level and map), who lands the first
+Who wins (each end's and side's share of rounds, at every level and map), who lands the first
 hit, how often the squad gets out of Extraction and with what, and the levels' order are **balance figures**, not
 pass/fail tests: noise across seeds pushed them past their bands and cost re-measure loops (M73, M74). They live in
 `src/ai/balance/*.balance.ts`, vitest project `balance`, which exists only when `AIRSOFT_BALANCE` is set:
@@ -340,7 +353,7 @@ for one skin on three maps (2026-10-11); `skin:all` runs levels 1 to 3 on every 
 node pipeline/packet.mjs [--task M27[,M28]] [--base origin/main]
 ```
 
-`pipeline/out/review-packet.md` is what the critic and QA read first (token plan item 15), so they stop exploring. In
+`pipeline/out/review-packet.md` is what the critic and QA read first, so they stop exploring. In
 order: the task block (from `docs/TASKS.md`, or the branch's history once the records commit cleared it), the gate
 summary (where the report is from, a line per gate, each perf run's numbers, and the failures when a gate failed), the
 contracts of `docs/ARCHITECTURE.md` › Contracts that the task names or whose source files the diff touches (for check
@@ -359,17 +372,20 @@ last gate report.
 
 ## Task block (`docs/TASKS.md`)
 
+A worked example (indented here so `grep '^#'` lists no example as a task; in `docs/TASKS.md` each line starts at the
+margin):
+
 ```
-## M27 · probeGround without a per-tick allocation
-tier: core
-perf: required
-touches: src/physics/physicsWorld.ts, src/physics/physicsWorld.test.ts
-contract: CharacterMover
-acceptance:
-  1. ...
-  2. ...
-status: open
-attempts: 0
+  ## M27 · probeGround without a per-tick allocation
+  tier: core
+  perf: required
+  touches: src/physics/physicsWorld.ts, src/physics/physicsWorld.test.ts
+  contract: CharacterMover
+  acceptance:
+    1. ...
+    2. ...
+  status: open
+  attempts: 0
 ```
 
 `touches` lists files, or folders with a trailing slash. `perf` is `required` or `skip` (the gate still decides from
