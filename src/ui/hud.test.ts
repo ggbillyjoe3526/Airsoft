@@ -57,7 +57,7 @@ describe('the HUD reload bar (M64, audit UI-11)', () => {
     vi.stubGlobal('document', { createElement: (tag: string) => new HudElement(tag) });
     vi.spyOn(performance, 'now').mockImplementation(() => clock);
     const parent = new HudElement('div');
-    hud = new Hud(parent as unknown as HTMLElement, () => 'R', DEFAULT_CROSSHAIR);
+    hud = new Hud(parent as unknown as HTMLElement, DEFAULT_CROSSHAIR);
     const root = parent.children[0] as HudElement;
     bar = root.querySelector('.hud-reload');
     fill = bar.firstElementChild!;
@@ -112,7 +112,7 @@ describe('the HUD reload bar through a cancelled, chained, paused and calm reloa
     vi.stubGlobal('document', { createElement: (tag: string) => new HudElement(tag) });
     vi.spyOn(performance, 'now').mockImplementation(() => clock);
     const parent = new HudElement('div');
-    hud = new Hud(parent as unknown as HTMLElement, () => 'R', DEFAULT_CROSSHAIR);
+    hud = new Hud(parent as unknown as HTMLElement, DEFAULT_CROSSHAIR);
     bar = (parent.children[0] as HudElement).querySelector('.hud-reload');
     fill = bar.firstElementChild!;
     armament.reload = 0;

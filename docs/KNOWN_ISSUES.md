@@ -267,6 +267,7 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | The round's table shows by itself between rounds and covers the middle of the screen | document | Since HD1 it waits for the WON or LOST stamp, and a click moves on at once. The owner's playtest decides whether it should wait for Tab. (M19, HD1) |
 | Dev settings' Ghost: bots still see you and shoot at you (their BBs pass through) | document | Deliberate: for walking the field under fire, not for hiding. (M24) |
 | With Dev content on, a Match screen map card with a Dev tag or the Day and Night buttons is about twice as tall at 1280 px wide | can wait | It grows so the tags stay off the map's name (Dev 5 playtest, note 1). Dev content only. (M94, PT1) MR1 kept the taller card. |
+| Below about 1390 px wide (1280 and 1366 among them) the Match screen's Time-out rule puts its two options (Overtime flag, More players left) on two lines | can wait | Its row needs 493 px; House rules' column gets 421 at 1280 px. The options wrap rather than cut a word; UI2 brought the line down from about 1540 px. (UI2) |
 
 ## Save and browsers
 
