@@ -42,9 +42,10 @@ describe('Woodland: the ground (M33d, acceptance 1)', () => {
     for (const a of WOODLAND.spawns[1]) for (const b of WOODLAND.spawns[0]) expect(a.position.y - b.position.y).toBeLessThanOrEqual(2);
   });
 
-  it('uses the new block kinds: trees, boulders, logs and a fence round the edge', () => {
+  it('uses the new block kinds: trees, logs and a fence round the edge, and no boulders (WL2, owner: "I hate them")', () => {
     const kinds = new Set(WOODLAND.blocks.map((b) => b.kind));
-    for (const k of ['tree', 'boulder', 'log', 'fence'] as const) expect(kinds.has(k), k).toBe(true);
+    for (const k of ['tree', 'log', 'fence'] as const) expect(kinds.has(k), k).toBe(true);
+    expect(kinds.has('boulder')).toBe(false);
     // The ground is the terrain, not floor blocks.
     expect(kinds.has('floor')).toBe(false);
     // The fence stands outside the field on all four sides, tall enough that you can't see over it standing.
