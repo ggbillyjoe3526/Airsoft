@@ -91,7 +91,7 @@ contract: none
 acceptance:
   1. Esc on the pause screen never leaves a stuck state. Where Chrome refuses the re-lock, a clear "Click to resume" appears and one click resumes.
   2. The fullscreen key keeps or restores the mouse lock in Chrome and Firefox.
-  3. CI runs the boot and save specs in Firefox as well. If CI can't install Firefox within its time budget, the thread asks William instead of dropping it.
+  3. CI runs the boot and save specs in Firefox as well. If CI can't install Firefox within its time budget, the thread asks William instead of dropping it. William has no Firefox (2026-10-17), so CI is the only Firefox check; a cloud recipe that ran the save specs in Firefox 136 is in `/mnt/project-files/playtest/firefox-harness/`.
   4. Firefox's missing raw mouse input (`unadjustedMovement`) stays a documented limit, with a line in Settings › Controls saying so.
   5. The two duplicate Esc re-lock rows in KNOWN_ISSUES merge into one, or close.
 status: open
