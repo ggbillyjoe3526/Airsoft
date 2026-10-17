@@ -313,7 +313,7 @@ export class PlayerInput {
     return ping;
   }
 
-  /** The Inspect key pressed this frame, once (RM2): the held replica is turned over to look at (render/viewmodel.ts). */
+  /** The Inspect key pressed this frame, once (RM2): the held replica is turned over to look at (render/replicas/viewmodel.ts). */
   takeInspect(): boolean {
     const inspect = this.inspectLatch;
     this.inspectLatch = false;

@@ -4,7 +4,7 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 import { MATCH_MODES } from '../../config/modes';
 import { type MapEntry, MAPS } from '../../map/maps';
 import type { Asset, Pool } from '../../pool/pool';
-import { prepareReplicaFile, type ReplicaFile, type ReplicaFiles } from '../../render/replicaFiles';
+import { prepareReplicaFile, type ReplicaFile, type ReplicaFiles } from '../../render/replicas/replicaFiles';
 
 /**
  * Test-only (vitest project `content`, which exists only when AIRSOFT_CONTENT is set): what the content report's runners

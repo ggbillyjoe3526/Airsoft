@@ -3,7 +3,7 @@
 // there.
 
 /**
- * The sky, haze and the trees round the yard (M14, render/atmosphere.ts): a clear summer day. The haze matches the
+ * The sky, haze and the trees round the yard (M14, render/light/atmosphere.ts): a clear summer day. The haze matches the
  * horizon so far things fade into the sky. It starts at 32 m and is still thin at the longest sight line on the field
  * (34 m on Depot), so nobody is ever hidden by it.
  */
@@ -95,14 +95,14 @@ export const ATMOSPHERE = {
 } as const;
 
 /**
- * The held replica's sheen and the environment lighting (render/replicaSheen.ts, QualitySettings.replicaSheen and
+ * The held replica's sheen and the environment lighting (render/replicas/replicaSheen.ts, QualitySettings.replicaSheen and
  * .environment): the game's own sky prefiltered once into a half-float target (768 × 1024, about 6.3 MB), blurred by
  * `blur` (PMREM sigma, radians) so plastic reads moulded, not mirrored.
  */
 export const REPLICA_SHEEN = { blur: 0.04 } as const;
 
 /**
- * The environment map is the game's own sky (audit section 5, F1): the dome's colours (render/atmosphere.ts skyColour)
+ * The environment map is the game's own sky (audit section 5, F1): the dome's colours (render/light/atmosphere.ts skyColour)
  * over a disc of sunlit concrete, so players, replicas, the flag and steel pick up a blue sky from above and a warm
  * ground from below, at every quality level the same. `intensity` is scene.environmentIntensity: a share of the sky's
  * light on top of the hemisphere fill, not instead of it. The scene is drawn once into the PMREM and freed.
@@ -155,8 +155,8 @@ export const RETRO = {
 } as const;
 
 /**
- * Figures' shadow proxies (M75, audit REN-03 step 1; render/characterModels.ts): on the detailed figure (Player detail
- * High; Low draws no shadows and its parts are plain already) each part of a figure casts its shadow from plain stand-ins kept after its drawn shapes in the same geometry (render/figureParts.ts, render/shadowProxy.ts):
+ * Figures' shadow proxies (M75, audit REN-03 step 1; render/figures/characterModels.ts): on the detailed figure (Player detail
+ * High; Low draws no shadows and its parts are plain already) each part of a figure casts its shadow from plain stand-ins kept after its drawn shapes in the same geometry (render/figures/figureParts.ts, render/field/shadowProxy.ts):
  * a box for each block, a closed tube of `sides` sides for each limb following its profile, a `ball` [sides, rings]
  * for the head and a `dome` [sides, rings] for a helmet's shell; a fraction of the figure's triangles in the shadow
  * pass, the same silhouette at a shadow texel (1.9 cm on High, LIGHTING.shadowView). Too small to show there, and
@@ -176,7 +176,7 @@ export const FIGURE_SHADOW_PROXY = {
 } as const;
 
 /**
- * Contact shadows (F5, render/contactShadows.ts): a soft dark disc on the floor under every player, one draw call for
+ * Contact shadows (F5, render/light/contactShadows.ts): a soft dark disc on the floor under every player, one draw call for
  * all of them, on every preset (free: a few dozen triangles). It grounds a figure on Low, where there are no shadow
  * maps, and under a wall's shade on every preset. Radius (m) standing and fully crouched (a crouch hugs the floor),
  * darkness at the centre, rings and sides of the disc, and its lift off the floor (m).
@@ -227,7 +227,7 @@ export const LIGHTING = {
   shadowView: { radius: 18, ahead: 8 },
 } as const;
 
-/** The values a sky is painted from (sRGB hex colours; render/atmosphere.ts skyColour). */
+/** The values a sky is painted from (sRGB hex colours; render/light/atmosphere.ts skyColour). */
 export interface SkyPalette {
   zenith: number;
   horizon: number;
@@ -242,7 +242,7 @@ export interface SkyPalette {
 export type LightingPresetId = 'day' | 'night';
 
 /**
- * Everything that makes a map's light (M33f, render/lightingPreset.ts): the sky, the haze, the hemisphere fill, the key
+ * Everything that makes a map's light (M33f, render/light/lightingPreset.ts): the sky, the haze, the hemisphere fill, the key
  * light (the sun or the moon) and its disc in the sky, the clouds' colours, the environment map's ground and strength
  * and a factor on the tone mapping's exposure. Any map can use any preset; Renderer.setLighting and addLighting apply it.
  */
@@ -265,12 +265,12 @@ export interface LightingPreset {
   /** Times the tone mapping's own exposure (TONE_MAPPING.exposure). */
   exposureScale: number;
   /**
-   * The held replica's own lights (M33h, render/viewmodel.ts): a hemisphere fill, a key and a rim, colours and
+   * The held replica's own lights (M33h, render/replicas/viewmodel.ts): a hemisphere fill, a key and a rim, colours and
    * intensities. Their directions are VIEWMODEL.light's. The day preset's are VIEWMODEL.light's exactly.
    */
   viewmodel: { hemi: { sky: number; ground: number; intensity: number }; key: { colour: number; intensity: number }; rim: { colour: number; intensity: number } };
   /**
-   * Weapon torches under this light (M33h, render/torchBeams.ts). `beam` 0 builds nothing (the day: the torch is left
+   * Weapon torches under this light (M33h, render/light/torchBeams.ts). `beam` 0 builds nothing (the day: the torch is left
    * off the replica, sim/torch.ts partsUnder). Otherwise: the drawn beam's strength (the cone, additive), the lens
    * glare's and the lit spot's where a beam lands; `spot` the real spot light's intensity on your own torch (candela, Medium and High); `spill` how far the held
    * replica's key light turns to the torch's colour and `spillIntensity` how much stronger it gets while yours is on
@@ -278,7 +278,7 @@ export interface LightingPreset {
    */
   torch: { beam: number; glare: number; hitSpot: number; spot: number; spill: number; spillIntensity: number; figureLift: number };
   /**
-   * The night sky (M33i, render/nightSky.ts): `stars` stars (0: none), and the moon's disc `moonSize` radians across in
+   * The night sky (M33i, render/light/nightSky.ts): `stars` stars (0: none), and the moon's disc `moonSize` radians across in
    * `moonColour` (0: none) inside a halo `halo` times as wide at `haloAlpha` at its middle. On every quality, so Low has
    * its moon too. Nothing by day.
    */
@@ -334,7 +334,7 @@ export const LIGHTING_PRESETS: Readonly<Record<LightingPresetId, LightingPreset>
     // M52 (audit REN-02): a paler moon and a warmer ground fill, both brighter, and a touch more exposure. Under the old
     // blue moon (0xb8c8ff × 0.6, fill 0.4) Neutral tone mapping took browns near black (earth (5,2,5) sRGB); now earth
     // reads (19,11,13), the cabin's boards (20,12,2) and a mid skin tone (48,31,25), and the neon signs glow as before
-    // (render/nightSwatch.test.ts works these out without WebGL).
+    // (render/light/nightSwatch.test.ts works these out without WebGL).
     hemi: { sky: 0x3a4c78, ground: 0x2a2620, intensity: 1 },
     key: {
       colour: 0xc8d4ff,
@@ -349,14 +349,14 @@ export const LIGHTING_PRESETS: Readonly<Record<LightingPresetId, LightingPreset>
     // by day at night (KNOWN_ISSUES, M33f).
     viewmodel: { hemi: { sky: 0x6a7ca8, ground: 0x22242c, intensity: 0.55 }, key: { colour: 0xb8c8ff, intensity: 0.7 }, rim: { colour: 0x8fa6e0, intensity: 0.6 } },
     torch: { beam: 0.16, glare: 1, hitSpot: 0.55, spot: 160, spill: 0.6, spillIntensity: 0.8, figureLift: 0.35 },
-    // M33i: the moon and stars on every quality (render/nightSky.ts); the clouds' key disc is off (size 0), so Medium and
+    // M33i: the moon and stars on every quality (render/light/nightSky.ts); the clouds' key disc is off (size 0), so Medium and
     // High don't draw two moons.
     nightSky: { stars: 520, moonSize: 0.05, moonColour: 0xf1f4ff, halo: 4.5, haloAlpha: 0.22 },
   },
 };
 
 /**
- * The weapon torches drawn (M33h, render/torchBeams.ts), on any preset whose `torch.beam` is above 0. Everyone's torch
+ * The weapon torches drawn (M33h, render/light/torchBeams.ts), on any preset whose `torch.beam` is above 0. Everyone's torch
  * but your own is three instanced draws for the whole match: a cone (`coneSegments` round, `coneShare` of the beam's
  * reach or up to what it lands on, fading out along it), a glare at the lens (`glareSize` m, growing to `glareGrow`
  * times as it points at you; seen from within `glareFromDeg` of its axis) and a lit disc where the beam lands
@@ -420,7 +420,7 @@ export const TORCH_BEAMS = {
 } as const;
 
 /**
- * Light pools on a night field (M33f, render/lightPools.ts; MapLight in map/nightSight.ts), drawn under a night preset
+ * Light pools on a night field (M33f, render/light/lightPools.ts; MapLight in map/nightSight.ts), drawn under a night preset
  * only (M34e). Every pool glows: a bright core (`core` of the pool's radius, its colour `coreWhite` of the way to white) inside faint additive halos (`size` times the core, at `alpha`; they
  * add up towards the middle, so the glow fades out in steps), one mesh for all. The ground under a pool is lit by one additive mesh for all pools (a disc of `rings` × `segments`,
  * `strength` at the middle fading to nothing at the radius, `lift` off the ground), unless a real point light
@@ -447,19 +447,19 @@ export const POOL_LIGHTS = {
   decay: 2,
   intensityPerArea: 0.5,
   /**
-   * WebGPU's clustered lights (W3, render/lightPools.ts): every pool within `near` metres of the eye (to its edge) gets
+   * WebGPU's clustered lights (W3, render/light/lightPools.ts): every pool within `near` metres of the eye (to its edge) gets
    * its own real light beside the fixed ones, fading out over the last `fade` metres.
    */
   own: { near: 16, fade: 6 },
 } as const;
 
 /**
- * Signs and lit windows (M34e, render/mapSigns.ts; MapSign in map/mapTypes.ts), one mesh for all of a map's. By Night
+ * Signs and lit windows (M34e, render/field/mapSigns.ts; MapSign in map/mapTypes.ts), one mesh for all of a map's. By Night
  * they are unlit and self-lit: a neon sign at its colour times `neon`, a window at `window`; by Day a neon sign is a
  * painted board, its colour `paint` of the way to `board`, and a window is dark glass (`glass`), lit by the sun.
  * Each stands `offset` m off its wall, so it never fights the wall for depth. Painted markings (M34f, kind `paint`) are
  * their colour by Day and Night, lit like the floor under them, in a mesh of their own (`map-paint`). A city prop's
- * screens and product windows glow by Night as lit windows (render/cityProps.ts propSigns).
+ * screens and product windows glow by Night as lit windows (render/field/mapPieces/cityProps.ts propSigns).
  */
 export const SIGNS = {
   neon: 1.4,

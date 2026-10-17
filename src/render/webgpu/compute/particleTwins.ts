@@ -1,12 +1,12 @@
 import * as THREE from 'three';
 import type { ComputeNode, WebGPURenderer } from 'three/webgpu';
 import { Fn, If, instancedArray, instanceIndex, materialColor, materialOpacity, select, uniform, varying, vec3, vec4 } from 'three/tsl';
-import { DustMotes } from '../../dustMotes';
-import { Fireflies } from '../../fireflies';
-import { GPU_POOLS } from '../../gpuPools';
-import type { Chip, ImpactGrit } from '../../impactGrit';
-import { ImpactPuffs, type Puff } from '../../impactPuffs';
-import { SmokePlumes } from '../../smokePlumes';
+import { DustMotes } from '../../effects/dustMotes';
+import { Fireflies } from '../../dressing/fireflies';
+import { GPU_POOLS } from '../../effects/gpuPools';
+import type { Chip, ImpactGrit } from '../../effects/impactGrit';
+import { ImpactPuffs, type Puff } from '../../effects/impactPuffs';
+import { SmokePlumes } from '../../dressing/smokePlumes';
 import { IMPACT_GRIT } from '../../../config/render';
 import { makeTwin, type PointTwin } from '../pointSprites';
 import { freeBuffer, xyz } from './computeKit';
@@ -17,7 +17,7 @@ import { basicTwin, type Facing, facing, facingCorner, hangUnder, quads } from '
 /**
  * The particles on the node path, moved by compute passes (WebGPU overhaul W5): the dust motes, the fireflies, the
  * chimney smoke and vent steam, every pool of soft puffs (impacts, hits, gas, the impact rings, kicked dust) and the
- * impact grit. Each CPU module registers its object (render/gpuPools.ts); `scan` gives each a driver that the
+ * impact grit. Each CPU module registers its object (render/effects/gpuPools.ts); `scan` gives each a driver that the
  * module's `update` hands the frame to (its `gpu`), so the CPU's per-particle loop never runs on this path. What a
  * module keeps on the CPU is what is not per particle: its seeded arrays (uploaded once), its clock, the air, and the
  * spawns, which go into a small storage buffer as they happen. The drivers' passes are dispatched together, once a
@@ -38,7 +38,7 @@ interface Driver {
   dispose(): void;
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any -- the drivers take the module render/gpuPools.ts holds for an object */
+/* eslint-disable @typescript-eslint/no-explicit-any -- the drivers take the module render/effects/gpuPools.ts holds for an object */
 type Owner = any;
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
@@ -59,7 +59,7 @@ export class ParticleTwins {
     return owner instanceof DustMotes || owner instanceof Fireflies;
   };
 
-  /** The CPU module whose pool `object` draws (render/gpuPools.ts), if any (tests, the e2e checks). */
+  /** The CPU module whose pool `object` draws (render/effects/gpuPools.ts), if any (tests, the e2e checks). */
   ownerOf(object: THREE.Object3D): object | undefined {
     return GPU_POOLS.get(object);
   }

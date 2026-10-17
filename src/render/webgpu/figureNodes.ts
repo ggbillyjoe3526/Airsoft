@@ -2,13 +2,13 @@ import type * as THREE from 'three';
 import { MeshStandardNodeMaterial } from 'three/webgpu';
 import { attribute, float, fwidth, materialColor, max, mix, positionGeometry, sin, smoothstep, step } from 'three/tsl';
 import { FIGURE } from '../../config/characters';
-import { CAMO_ATTRIBUTE, CAMO_EDGE_MIN, CAMO_WARP_RATE, CAMO_WARP_SEED, CAMO_WAVES, hasSleeveCamo, SLEEVE_CAMO_SEED } from '../figureCamo';
-import { FINISH_ATTRIBUTE, hasVertexFinish } from '../figureFinish';
+import { CAMO_ATTRIBUTE, CAMO_EDGE_MIN, CAMO_WARP_RATE, CAMO_WARP_SEED, CAMO_WAVES, hasSleeveCamo, SLEEVE_CAMO_SEED } from '../figures/figureCamo';
+import { FINISH_ATTRIBUTE, hasVertexFinish } from '../figures/figureFinish';
 import { copyOnto } from './effectNodes';
 
 /**
- * The node materials of the figures' per-vertex finish and the team camo (render/figureFinish.ts, FA8;
- * render/figureCamo.ts, G11; WebGPU overhaul W3, carried as node patches since W6b). The detailed figure (Player detail
+ * The node materials of the figures' per-vertex finish and the team camo (render/figures/figureFinish.ts, FA8;
+ * render/figures/figureCamo.ts, G11; WebGPU overhaul W3, carried as node patches since W6b). The detailed figure (Player detail
  * High: Medium and up) is one vertex-coloured Standard material that reads each vertex's roughness and metalness from
  * its `finish` attribute (vec2) where Three would read the material's: matte fabric, a glossy goggle lens and helmet
  * shell, steel barrels, in one draw; and prints the camo per pixel where the vertex's `camo` attribute names a pattern.
@@ -19,7 +19,7 @@ import { copyOnto } from './effectNodes';
  * Everything else a figure shows is the plain material's, read per drawn object from the material the figure carries
  * (its colour, emissive and opacity; Three's material observer sees them change): the team colours and both looks
  * (humans and robots, in the vertex colours), the baked light on figures (the colour and emissive
- * render/characterRenderer.ts sets as they move), the glow of others' torch beams, the walk-off fade (opacity and
+ * render/figures/characterRenderer.ts sets as they move), the glow of others' torch beams, the walk-off fade (opacity and
  * transparency), the hit and out states (which parts are shown). The low-detail figure has no patch and no twin.
  */
 

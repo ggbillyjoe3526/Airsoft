@@ -37,7 +37,7 @@ export interface MenusOptions {
   rules: FixedRulesText;
   bindings: KeyBindings;
   /**
-   * The game's picture studio (G3, render/itemPictures.ts): the menus ask it for replica, part and scheme pictures and
+   * The game's picture studio (G3, render/replicas/itemPictures.ts): the menus ask it for replica, part and scheme pictures and
    * show a drawing until each arrives. Null where there is none (a test): every item keeps its drawing.
    */
   pictures: PictureSource | null;

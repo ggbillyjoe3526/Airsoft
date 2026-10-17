@@ -2,9 +2,9 @@ import * as THREE from 'three';
 import { renderSounds } from '../audio/soundBank';
 import type { ReplicaConfig } from '../config/replicas';
 import { cues, type ShotProfile } from '../config/sounds';
-import { fitParts } from '../render/itemPictures';
-import { buildReplicaModels, LOW_DETAIL, type ReplicaDetail } from '../render/replicaModels';
-import { NO_REPLICA_FILES, type ReplicaFiles } from '../render/replicaFiles';
+import { fitParts } from '../render/replicas/itemPictures';
+import { buildReplicaModels, LOW_DETAIL, type ReplicaDetail } from '../render/replicas/replicaModels';
+import { NO_REPLICA_FILES, type ReplicaFiles } from '../render/replicas/replicaFiles';
 
 /**
  * The spec test's model and sound census (CT1, level 3): what a replica costs to draw (triangles and meshes, each mesh

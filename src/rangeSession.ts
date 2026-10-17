@@ -24,16 +24,16 @@ import { RANGE_MAP } from './map/range';
 import { buildNavGrid } from './nav/navGrid';
 import { PhysicsWorld } from './physics/physicsWorld';
 import { bbGlowFor, kitPaint } from './pool/loadoutModel';
-import { figureCrowd, playerArms } from './render/figureMix';
-import { LeanViewEase, updateFirstPersonCamera } from './render/cameraRig';
-import { CombatPresentation } from './render/combatPresentation';
-import { bakedLightFor } from './render/bakedLight';
-import { addLighting, type Daylight } from './render/lighting';
-import { resolveLighting } from './render/lightingPreset';
-import { mapLookOf } from './render/mapMeshes';
-import type { ProbeGrid } from './render/probeGrid';
-import { RangeTargetsRenderer } from './render/rangeTargetsRenderer';
-import { TorchBeams } from './render/torchBeams';
+import { figureCrowd, playerArms } from './render/figures/figureMix';
+import { LeanViewEase, updateFirstPersonCamera } from './render/match/cameraRig';
+import { CombatPresentation } from './render/match/combatPresentation';
+import { bakedLightFor } from './render/light/bakedLight';
+import { addLighting, type Daylight } from './render/light/lighting';
+import { resolveLighting } from './render/light/lightingPreset';
+import { mapLookOf } from './render/field/mapMeshes';
+import type { ProbeGrid } from './render/light/probeGrid';
+import { RangeTargetsRenderer } from './render/match/rangeTargetsRenderer';
+import { TorchBeams } from './render/light/torchBeams';
 import type { Renderer } from './render/renderer';
 import { canAimDownSights } from './sim/aiming';
 import { fitOptics, fitParts, setBbWeights, setHopUps } from './sim/armament';
@@ -122,7 +122,7 @@ export class RangeSession implements Session {
   private readonly minimapFrame: MinimapFrame = { x: 0, y: 0, z: 0, yaw: 0, mates: [], count: 0, hold: null, flag: null, exits: [], exitCount: 0, time: 0 };
   private readonly readout: RangeReadout;
   private readonly daylight: Daylight;
-  /** The range's baked bounce light (M81, as Depot's: render/bakedLight.ts), or null before it loads. */
+  /** The range's baked bounce light (M81, as Depot's: render/light/bakedLight.ts), or null before it loads. */
   private readonly probes: ProbeGrid | null;
   /** Whether the range is lit by a night preset (M33h: the weapon light is fitted only then). */
   private readonly night: boolean;

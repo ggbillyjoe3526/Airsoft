@@ -101,7 +101,7 @@ attempts: 0
 ## PF1 · No shader hitches mid-match
 tier: core
 perf: required
-touches: src/matchSession.ts, src/render/flagRenderer.ts, src/render/characterRenderer.ts, src/render/externalModels.ts, src/render/viewmodel.ts, src/render/renderer.ts
+touches: src/matchSession.ts, src/render/match/flagRenderer.ts, src/render/figures/characterRenderer.ts, src/render/figures/externalModels.ts, src/render/replicas/viewmodel.ts, src/render/renderer.ts
 contract: none
 acceptance:
   1. Each first-use hitch is measured before and after with `?perf` on a cold cache, and recorded: the first overtime flag, first tossed magazine, first 2x scope aim, first figure fade, the shadow depth shaders and the post stack's pipelines.
@@ -126,7 +126,7 @@ attempts: 0
 ## AX1 · Readability and tone: kit colours, High contrast, exit markers
 tier: ui
 perf: skip
-touches: src/config/characters.ts, src/config/accessibility.ts, src/config/schemes.ts, src/config/colourVision.test.ts, src/render/exitRenderer.ts, src/ui/hud.css
+touches: src/config/characters.ts, src/config/accessibility.ts, src/config/schemes.ts, src/config/colourVision.test.ts, src/render/match/exitRenderer.ts, src/ui/hud.css
 contract: none
 acceptance:
   1. Kit looks read as a weekend airsoft site, not a military unit: at most two of the six looks wear plate carriers, and at least two vests are in a civilian colour. Team armbands still read first.
@@ -174,7 +174,7 @@ attempts: 0
 ## UX1 · Menus at 4K and small windows; HUD clashes at 1280 px
 tier: ui
 perf: skip
-touches: src/ui/menus/menus.css, src/ui/menus/css/, src/style.css, src/ui/hud.css, src/ui/hudCss/, src/ui/flagMarker.ts, src/ui/holdMarker.ts, src/render/viewmodel.ts
+touches: src/ui/menus/menus.css, src/ui/menus/css/, src/style.css, src/ui/hud.css, src/ui/hudCss/, src/ui/flagMarker.ts, src/ui/holdMarker.ts, src/render/replicas/viewmodel.ts
 contract: none
 acceptance:
   1. Menu type and controls scale from the window height, as `hudScale` does (DECISIONS: a Beta task). At 3840×2160 and 100 % OS scaling, body text is about 1.5×; 1280×720 is unchanged.

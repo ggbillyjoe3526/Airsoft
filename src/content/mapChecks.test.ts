@@ -10,7 +10,7 @@ import { RANGE_MAP } from '../map/range';
 import { vec3 } from '../sim/vec';
 import { type CheckResult, worstVerdict } from './checks';
 import { blockClashes, checkMap, flagCheck, gameMapContext, laneChecks, type MapContext, mapFigures, mapPerfCheck, mapRules, middleCheck, offTheFloor, readsAsTeam, routeCheck, seeThroughCheck, sightlineCheck, spawnSightCheck, tooSteep } from './mapChecks';
-import { blockPieces } from '../render/mapMeshes';
+import { blockPieces } from '../render/field/mapMeshes';
 import { mapGeometry } from './mapLayout';
 
 /**

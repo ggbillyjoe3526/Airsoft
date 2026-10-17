@@ -29,7 +29,7 @@ export function playsAtNight(map: MapData, choice?: LightingPresetId | null): bo
 
 /**
  * The maps already played under each preset (M63, audit REN-01): the same map and pick give back the same object, so
- * the kept map meshes (render/mapMeshCache.ts, which compares maps by identity) are taken back on Play again, and the
+ * the kept map meshes (render/field/mapMeshCache.ts, which compares maps by identity) are taken back on Play again, and the
  * other pick builds them again (its light is baked into them). Weakly held: a map no one keeps goes with its entries.
  */
 const underLighting = new WeakMap<MapData, Map<LightingPresetId, MapData>>();

@@ -86,8 +86,8 @@ Read the newest layer first when looking for a function: it is the one that wins
 
 - The crouch: the game lowers a crouched player's hit volume by 0.62 m above the hips (`HITS.crouchDrop`) and holds
   the figure's upper body upright over its legs, so the kneel and the crouch walk lower the hips by the same 0.62 m
-  (`bot17.py`; `render/figureLegs.test.ts` checks it in the shipped files). With the figures drawn, the hit volume's
-  legs are the figures' own, read from the leg clips as the file loads (`render/figureLegs.ts`).
+  (`bot17.py`; `render/figures/figureLegs.test.ts` checks it in the shipped files). With the figures drawn, the hit volume's
+  legs are the figures' own, read from the leg clips as the file loads (`render/figures/figureLegs.ts`).
 - The vault: the game lifts the body straight up onto the top in a crouch (0.6 of the way down), its feet just clear
   of it, and slides it across (`src/sim/vault.ts`). The Vault clip is played by the vault's progress, not by time: its
   first 40 % on the rise, the rest across (`VAULT_TOP`, `FIGURE_RIG.vault.top`), so it is a tucked hop in the body's

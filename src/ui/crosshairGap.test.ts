@@ -105,8 +105,8 @@ describe('the crosshair gap follows the spread the shot uses', () => {
   });
 
   it('is pinned at the source: the pixels given to the HUD come from the same replica spread × the shooter\'s scale the sim uses', async () => {
-    const files = import.meta.glob<string>(['../render/combatPresentation.ts', '../sim/armament.ts', '../sim/simulation.ts'], { query: '?raw', import: 'default', eager: true });
-    const combat = files['../render/combatPresentation.ts']!;
+    const files = import.meta.glob<string>(['../render/match/combatPresentation.ts', '../sim/armament.ts', '../sim/simulation.ts'], { query: '?raw', import: 'default', eager: true });
+    const combat = files['../render/match/combatPresentation.ts']!;
     expect(combat).toMatch(/degToRad\(p\.armament\.replicas\[p\.armament\.active\]!\.spreadDeg \* p\.spreadScale\)/);
     expect(combat).toMatch(/focalPx = this\.renderer\.height \/ 2 \/ Math\.tan\(THREE\.MathUtils\.degToRad\(cam\.fov\) \/ 2\)/);
     expect(combat).toMatch(/this\.hud\.update\([^;]*Math\.tan\(spread\) \* focalPx/);

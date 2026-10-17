@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DIFFICULTIES, type Difficulty } from '../config/bots';
-import { MatchPresentation } from '../render/matchPresentation';
+import { MatchPresentation } from '../render/match/matchPresentation';
 import { DEFAULT_WHAT_GOT_YOU_MODE, WHAT_GOT_YOU_MODES, type WhatGotYouMode, whatGotYouShown } from '../config/matchInfo';
 import { PRO_TIPS, proTip } from '../config/tutorial';
 import { flushSettings, loadSetting, oneOf, saveSetting } from '../settings/storage';

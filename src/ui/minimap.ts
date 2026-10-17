@@ -4,7 +4,7 @@ import { cssColor } from '../config/teams';
 import type { Bush } from '../map/foliage';
 import type { MapBlock } from '../map/mapTypes';
 import { type Terrain, terrainMaxX, terrainMaxZ, terrainRange, vertexHeight } from '../map/terrain';
-import type { ScreenMarker } from '../render/screenMarker';
+import type { ScreenMarker } from '../render/match/screenMarker';
 import { clampToSquare, clearOfBox, coverHeight, FrameCheck, type HeardPlayer, insideSquare, type MapPoint, minimapPixelRatio, noiseAlpha, type PinStack, type ScreenBox, toMinimap } from './minimapView';
 import { pingAlpha, type ShownPing } from './pingMarkers';
 

@@ -37,7 +37,7 @@ choices to `src/game.ts`.
   `resultScreen.ts`.
 - Shared parts: `menuParts.ts` (the small DOM builders every screen uses: buttons, rows, range controls, hint lines)
   and `confirmDialog.ts` (the pop-up that asks before a big or irreversible step, keyboard on Cancel).
-- Pictures: replica, part and colour pictures come from `render/itemPictures.ts` via `menuPictures.ts`; map stills are
+- Pictures: replica, part and colour pictures come from `render/replicas/itemPictures.ts` via `menuPictures.ts`; map stills are
   files in `public/menu/`, made by `pipeline/map-stills.mjs` (`config/menuArt.ts`). Customise's Colour tab offers the bold schemes and the four realistic colours
   (`config/schemes.ts` › `PaintId`), kept per replica.
 - Icons: `icons.ts`, the small line icons the menus, the mode cards and the hit feed use.

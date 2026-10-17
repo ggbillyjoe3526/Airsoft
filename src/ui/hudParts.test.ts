@@ -4,7 +4,7 @@ import { HIT_FEED } from '../config/matchInfo';
 import { AEG, GAS_PISTOL, LOADOUT } from '../config/replicas';
 import { SQUAD_ORDERS } from '../config/squad';
 import { defaultScheme } from '../config/schemes';
-import type { PictureSubject } from '../render/itemPictures';
+import type { PictureSubject } from '../render/replicas/itemPictures';
 import { createArmament } from '../sim/armament';
 import { HitFeed } from './hitFeed';
 import { HitFeedback } from './hitFeedback';

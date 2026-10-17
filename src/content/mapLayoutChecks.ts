@@ -6,7 +6,7 @@ import { foliageDepth } from '../map/foliage';
 import type { MapData } from '../map/mapTypes';
 import { nearestWalkable, nodeAt, nodeX, nodeZ } from '../nav/navGrid';
 import { CANOPY } from '../config/renderSurfaces';
-import { blockPieces } from '../render/mapMeshes';
+import { blockPieces } from '../render/field/mapMeshes';
 import type { Vec3 } from '../sim/vec';
 import { vec3 } from '../sim/vec';
 import { type CheckResult, num, result } from './checks';
@@ -239,7 +239,7 @@ export function overtimeFlagCheck(entry: MapEntry, map: MapData): CheckResult {
 }
 
 /**
- * What you see is what stops a BB: every block is drawn inside its own box (render/mapMeshes.ts blockPieces, plain and
+ * What you see is what stops a BB: every block is drawn inside its own box (render/field/mapMeshes.ts blockPieces, plain and
  * with map detail), so nothing drawn hangs out where a BB passes but a player cannot see through. Look-only blocks
  * lie flat (map.lookOnly); bushes stop a BB as deep in as you can't see through them, and one through an edge flies on
  * thrown off (Dev 6 item 44, BallisticsConfig.leaves); tree crowns hang CANOPY.minBase over the ground, above a standing player. Ramps are wedges inside their box and are not drawn in pieces.

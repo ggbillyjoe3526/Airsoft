@@ -26,7 +26,7 @@ const SLOW_TESTS = [
   'src/ai/firstShots.test.ts',
   'src/ai/botRouteBudget.test.ts',
   'src/content/modePlays*.test.ts',
-  'src/render/figureHitVolume.test.ts',
+  'src/render/figures/figureHitVolume.test.ts',
 ];
 /**
  * The bot balance figures (src/ai/balance/, token plan item 22): who wins, who lands the first hit, how often the squad

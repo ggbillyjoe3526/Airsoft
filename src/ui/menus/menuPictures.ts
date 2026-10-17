@@ -3,12 +3,12 @@ import { defaultScheme, type PaintId } from '../../config/schemes';
 import type { KitSlot } from '../../pool/kit';
 import type { PlayerKit } from '../../pool/loadoutModel';
 import { type Asset, REPLICA_KEYS, replicaOf } from '../../pool/pool';
-import { type ItemSubject, partHost, pictureKey, type PictureFit, type PictureShape, type PictureSubject } from '../../render/itemPictures';
+import { type ItemSubject, partHost, pictureKey, type PictureFit, type PictureShape, type PictureSubject } from '../../render/replicas/itemPictures';
 import { el } from './menuParts';
 
 /**
  * Pictures on the menus (graphics overhaul G3): replicas, parts, power sources (RM3) and colour schemes, drawn by the game's ItemPictures
- * (render/itemPictures.ts) and shown as they arrive. A slot shows a placeholder (the item's line drawing) until its
+ * (render/replicas/itemPictures.ts) and shown as they arrive. A slot shows a placeholder (the item's line drawing) until its
  * picture is ready, and never waits for one: a screen opens at once and its pictures fill in over the next frames.
  */
 
@@ -45,7 +45,7 @@ export function kitSubjects(kit: Pick<PlayerKit, 'slots' | 'schemes'>, realistic
 }
 
 /**
- * A part asset's own picture, drawn off a replica whose model has it (render/itemPictures.ts partHost), or a power
+ * A part asset's own picture, drawn off a replica whose model has it (render/replicas/itemPictures.ts partHost), or a power
  * source's from its own model (RM3, config/assets.ts POWER_SOURCE_FILE); null for an item with no model of its own (a
  * grenade, a power source without one), which keeps its line drawing.
  */

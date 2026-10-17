@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HIT_FEED } from '../config/matchInfo';
 import { LOADOUT } from '../config/replicas';
-import type { PictureSubject } from '../render/itemPictures';
+import type { PictureSubject } from '../render/replicas/itemPictures';
 import { createArmament, nextSpare } from '../sim/armament';
 import { createCharacter, type Character } from '../sim/character';
 import { vec3 } from '../sim/vec';

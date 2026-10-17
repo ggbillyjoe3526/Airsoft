@@ -10,18 +10,18 @@ import { createBBPool } from '../sim/ballistics';
 import { createCharacter } from '../sim/character';
 import { createRangeTargets } from '../sim/rangeTargets';
 import { vec3 } from '../sim/vec';
-import { addAtmosphere } from './atmosphere';
-import { BBPathsDebug } from './bbPathsDebug';
-import { BBRenderer } from './bbRenderer';
-import { ContactShadows } from './contactShadows';
-import { CharacterRenderer } from './characterRenderer';
-import { DustMotes } from './dustMotes';
-import { FlagRenderer } from './flagRenderer';
-import { ImpactPuffs } from './impactPuffs';
-import { addLighting } from './lighting';
-import { buildMapMeshes, disposeMapMeshes, mapLookOf } from './mapMeshes';
-import type { SurfaceTextures } from './proceduralTextures';
-import { RangeTargetsRenderer } from './rangeTargetsRenderer';
+import { addAtmosphere } from './light/atmosphere';
+import { BBPathsDebug } from './effects/bbPathsDebug';
+import { BBRenderer } from './effects/bbRenderer';
+import { ContactShadows } from './light/contactShadows';
+import { CharacterRenderer } from './figures/characterRenderer';
+import { DustMotes } from './effects/dustMotes';
+import { FlagRenderer } from './match/flagRenderer';
+import { ImpactPuffs } from './effects/impactPuffs';
+import { addLighting } from './light/lighting';
+import { buildMapMeshes, disposeMapMeshes, mapLookOf } from './field/mapMeshes';
+import type { SurfaceTextures } from './field/proceduralTextures';
+import { RangeTargetsRenderer } from './match/rangeTargetsRenderer';
 
 /**
  * Every pooled scene object a session builds leaves the scene empty when disposed and frees every geometry and

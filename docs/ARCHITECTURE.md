@@ -122,7 +122,7 @@ Maps are plain data (`map/mapTypes.ts`). One source builds both the Rapier colli
 - **Look-only data.** `signs`, `decor`, `dressing` and `bakedLight` are drawn but never read by physics, nav, cover or
   sight.
   - **`dressing`** (`MapDressing`) is a map's set dressing, in a file of its own per map (`map/depotDressing.ts`,
-    `map/woodlandDressing.ts`, `map/neonHeightsDressing.ts`). `render/mapDressing.ts` turns it into a placement the
+    `map/woodlandDressing.ts`, `map/neonHeightsDressing.ts`). `render/dressing/mapDressing.ts` turns it into a placement the
     same way every time from `dressing.seed`; `config/dressing.ts` holds the sizes, colours and what each part costs.
     The fields: `clutter` (dirt, junk and litter along block feet, `mix` picking the yard's or the street's kinds),
     `marks` (logos and wall sprays), `posters`, `puddles` (`mud` for a mud patch), `woods` (leaf litter and fallen
@@ -424,8 +424,8 @@ request. Each entry says where the contract lives, what it holds today and what 
   - `overtimeFlag` (OT1): Elimination's overtime flag spot (see Map data › Overtime flag).
 
   Pinned by the content toolkit's map checks on every map (`content/mapChecks.test.ts`), `nav/navGrid.test.ts`, `map/neonHeights.test.ts`, `map/extractionData.test.ts`,
-  `render/depotLook.test.ts` (a map using none of the woodland look's fields, M33i, builds as before),
-  `render/cityLook.test.ts` and `map/neonHeightsArt.test.ts` (Neon Heights' boxes, materials and floors).
+  `render/field/depotLook.test.ts` (a map using none of the woodland look's fields, M33i, builds as before),
+  `render/field/cityLook.test.ts` and `map/neonHeightsArt.test.ts` (Neon Heights' boxes, materials and floors).
 
 ## Working notes
 

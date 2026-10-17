@@ -1,7 +1,7 @@
 /**
  * The maps' baked light files (G6): written by `node pipeline/bake-light.mjs`, one per map that opts in
  * (MapData.bakedLight; the practice range too, M81), base64 text in this folder. Each is imported only through its loader here, so the bundler gives
- * it a chunk of its own, fetched as the game starts (render/bakedLight.ts loadBakedLight).
+ * it a chunk of its own, fetched as the game starts (render/light/bakedLight.ts loadBakedLight).
  */
 
 /** A baked light file, by the name MapData.bakedLight gives. */

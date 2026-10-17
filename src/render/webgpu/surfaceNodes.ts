@@ -33,9 +33,9 @@ import type { SurfaceRecipe } from '../nodePatch';
 import { everyDraw, objectFloat, objectTexture3D, objectValue } from './twinUniforms';
 
 /**
- * The node materials of the map surfaces' patch (render/surfaceShader.ts, G6) and of what rides on it: the set
- * dressing's junk mesh with its glow strips and neon flicker (render/dressingMeshes.ts, G8/G9), the puddles, and the
- * tree ring hosting the skyline's lights and the passing plane (render/skyHost.ts). WebGPU overhaul W2; drawn from the
+ * The node materials of the map surfaces' patch (render/light/surfaceShader.ts, G6) and of what rides on it: the set
+ * dressing's junk mesh with its glow strips and neon flicker (render/dressing/dressingMeshes.ts, G8/G9), the puddles, and the
+ * tree ring hosting the skyline's lights and the passing plane (render/dressing/skyHost.ts). WebGPU overhaul W2; drawn from the
  * patch each material carries since W6b (render/nodePatch.ts SurfaceRecipe).
  *
  * Each term sits in its place of Three's own Lambert or Standard model: the weathering after the texture and vertex

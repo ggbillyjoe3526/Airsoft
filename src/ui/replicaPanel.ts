@@ -1,7 +1,7 @@
 import { HUD_TEXT } from '../config/hudText';
 import { HUD } from '../config/render';
 import { FIRE_MODE_LABELS, type FireMode, type ReplicaConfig } from '../config/replicas';
-import type { PictureSubject } from '../render/itemPictures';
+import type { PictureSubject } from '../render/replicas/itemPictures';
 import { type Armament, canReload, nextSpare, type ReplicaAmmo, spareBBs } from '../sim/armament';
 import { emptyMagHint, isLowAmmo } from './ammoStatus';
 import { HopGauge } from './hopGauge';

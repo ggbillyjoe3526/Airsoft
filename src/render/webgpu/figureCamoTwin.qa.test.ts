@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { FIGURE } from '../../config/characters';
 import { createRng, rngNext } from '../../sim/rng';
-import { CAMO_ATTRIBUTE, camoTone, SLEEVE_CAMO_SEED, useSleeveCamo } from '../figureCamo';
-import { useVertexFinish } from '../figureFinish';
+import { CAMO_ATTRIBUTE, camoTone, SLEEVE_CAMO_SEED, useSleeveCamo } from '../figures/figureCamo';
+import { useVertexFinish } from '../figures/figureFinish';
 import { figureTwin } from './figureNodes';
 
 /**

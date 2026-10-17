@@ -2,7 +2,7 @@ import type { Action } from '../config/controls';
 import type { CrosshairSettings } from '../config/matchInfo';
 import { type SightId, sightConfig } from '../config/optics';
 import type { ReplicaConfig } from '../config/replicas';
-import type { PictureSubject } from '../render/itemPictures';
+import type { PictureSubject } from '../render/replicas/itemPictures';
 import type { Armament } from '../sim/armament';
 import { crosshairElement, crosshairGap, setCrosshairGap, styleCrosshair } from './crosshair';
 import type { PictureSource } from './menus/menuPictures';

@@ -2,7 +2,7 @@ import { type Vec3, vec3 } from '../sim/vec';
 import type { DressingPuddle, MapDressing, NeonSign, SkylinePiece } from './mapTypes';
 
 /**
- * Neon Heights' set dressing (G9, MapData.dressing; render/mapDressing.ts places it): a closed-down market block at
+ * Neon Heights' set dressing (G9, MapData.dressing; render/dressing/mapDressing.ts places it): a closed-down market block at
  * street level. Street litter and junk against the walls, puddles in the avenue and the alleys, a few sprays and
  * warning signs and pasted posters, tube-letter neon signs (a couple of them flickering gently), steam from the vents
  * and the drains, and a city skyline of lit towers beyond the perimeter with a plane crossing over it.
@@ -42,7 +42,7 @@ const NEON_COLOURS = { magenta: 0xff2bd6, lime: 0x8dff3a, violet: 0x9a6bff, teal
 
 /**
  * Tube signs on the walls, each written on the face of the wall it hangs on (the engine mounts it flush and drops any
- * sign whose plate a face does not back whole: render/neonDressing.ts mountNeon), all well above head height and
+ * sign whose plate a face does not back whole: render/dressing/neonDressing.ts mountNeon), all well above head height and
  * clear of every opening and of the map's own panel signs:
  * the Arcade's name over the avenue, a noodle bowl in Noodle Alley, the Tower's bar and a cocktail in the Back Alley,
  * an arrow over the Drone Dock's shutter, a hotel blade on the perimeter by the West Yard. Two flicker gently.
@@ -152,7 +152,7 @@ const NEAR: SkylinePiece[] = [
   { kind: 'tower', x: -33, z: 23, width: 12, depth: 12, height: 41, base: 9.6, sign: NEON_COLOURS.teal, strips: NEON_COLOURS.lime },
   { kind: 'tower', x: 34, z: 23, width: 12, depth: 12, height: 49, base: 9.6, sign: NEON_COLOURS.yellow, strips: NEON_COLOURS.magenta },
   // MS1: cables across the avenue, hung with paper lanterns (look only): their lowest lantern over the room a player
-  // takes up on every balcony and walkway under them (render/skylineSeen.test.ts). None at z −6, where the walkway at 6 m
+  // takes up on every balcony and walkway under them (render/dressing/skylineSeen.test.ts). None at z −6, where the walkway at 6 m
   // crosses; the yards' walkways leave no room for one.
   ...[-12, -9, -3, 0, 3, 6, 9, 12].map((z, k): SkylinePiece => ({ kind: 'wire', points: [{ x: -3.5, z }, { x: 4.3, z: z + (k % 2 ? 1.2 : -0.8) }], y: 5.8 + (k % 3) * 0.35, ...(k % 3 !== 1 ? { lanterns: [NEON_COLOURS.magenta, NEON_COLOURS.yellow, NEON_COLOURS.teal][k % 3]! } : {}) })),
   // Skybridges across the avenue's ends, high over the street.
@@ -186,7 +186,7 @@ const CITY = {
 
 /**
  * The grid cells (gx,gz) whose tower no player ever sees, behind the first row and the nearer towers (owner, 2026-10-16:
- * "if the player will never see it, remove it"). render/skylineSeen.test.ts finds them: it fails on a tower nobody sees.
+ * "if the player will never see it, remove it"). render/dressing/skylineSeen.test.ts finds them: it fails on a tower nobody sees.
  */
 const UNSEEN = new Set([
   '-5,-2', '-5,-1', '-5,0', '-5,2', '-4,-3', '-4,-2', '-4,-1', '-4,0', '-4,1', '-4,2', '-4,3', '-3,-4', '-3,-3',
@@ -238,8 +238,8 @@ const unit = (x: number, y: number, z: number, facing: NeonSign['facing']): Skyl
 
 /**
  * MS1, grit: air-conditioning units on the walls over the street and the yards, every one on a face that backs it, clear
- * of the signs, the openings and each other (placed as the signs are, render/neonDressing.ts mountNeon's rule), and out of
- * the room a player takes up on any balcony or walkway (render/skylineSeen.test.ts).
+ * of the signs, the openings and each other (placed as the signs are, render/dressing/neonDressing.ts mountNeon's rule), and out of
+ * the room a player takes up on any balcony or walkway (render/dressing/skylineSeen.test.ts).
  */
 const UNITS: SkylinePiece[] = [
   unit(-15.02, 3, 6.9, '-x'),
