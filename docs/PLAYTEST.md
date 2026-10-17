@@ -638,7 +638,7 @@ Neon Heights). While it is dev content a run gives no XP; the summary says "this
 - [ ] **Play screen.** The Match line reads like "Squad of 3 · 5 in the home team" and "One 8:00 run"; the rules text
   explains the run. With Dev content off, Extraction isn't offered and a saved pick plays as Elimination.
 - [ ] **Exits.** The strip under the clock names the open exits and when the late one opens; green EXIT rings with
-  cones and a sign, a marker with the distance and a square on the minimap. No exit stands next to your insertion.
+  cones and a sign (yellow with Settings › Accessibility › Team colours on High Contrast), a marker with the distance and a square on the minimap. No exit stands next to your insertion.
   On slopes each ring, cone and sign stands on the ground.
 - [ ] **Counted out.** Stand in an open exit: a beep a second, "Counting you out · 9 … 1", then "Counted out · you made
   it!". Step out at 5 and it starts again; a Beta bot in the ring pauses it.
@@ -646,7 +646,7 @@ Neon Heights). While it is dev content a run gives no XP; the summary says "this
   the run".
 - [ ] **Coming in.** For 3 seconds after you come in, and after a respawn, BBs neither hit you nor leave your replica.
   Does the first fight now start after you've had a look round?
-- [ ] **The clock.** A whistle at 1:00 left; the late exit opens at 3:00 (its sign turns green); at 0:00 "Caught out".
+- [ ] **The clock.** A whistle at 1:00 left; the late exit opens at 3:00 (its sign turns the exit colour); at 0:00 "Caught out".
 - [ ] **Cases.** An olive ammo can, a black field case with an orange band and a grey locker with a yellow band stand
   by cover, elsewhere each run. Walk up: "Hold G to open the field case". Holding G fills a bar (about 2 s for a can,
   4 for a field case, 7 for the locker) with a rummaging sound; let go and it starts again. The lid swings up and the

@@ -289,6 +289,10 @@ replaces its line; the old one stays findable in the archive or in git.
   cummerbund are in the team colour, as on the built-in figures, with the armbands, patches and helmet or hat bands;
   the camo stays. A human is at most 20,000 triangles with its largest head (19,966) and its packed file under 3.5 MB
   (2.84). Built in his Blender (`bot20.py` to `bot22.py`), approved on review pictures before it entered the game.
+- **Every figure keeps its team-colour plate carrier (owner, 2026-10-17, AX1).** Shown the options on the real
+  figure, he kept the carriers rather than dress four of six in a combat shirt with armbands only: the carrier reads like
+  a site's team bib and is the strongest team cue at range, and the bare shirt looks more military, not less. A
+  civilian outfit (a new texture from Blender) is in `docs/IDEAS.md`.
 
 ## Gameplay and feel
 
@@ -752,8 +756,9 @@ replaces its line; the old one stays findable in the archive or in git.
   2026-10-07).** Both colour sets stay. The hit feed reads "Beta 2 called HIT · Alpha 3": who called the hit, then whose
   BB it was, and the player is "You" (the owner's wording). Replaces Blue and Orange.
 - **Team colours come in Standard and High contrast sets, and props, kit and paint never use a team colour's hue
-  (tested) (2026-10-04).** Colour is never the only cue: names carry a bar, exits a glyph and a distance. The exit green
-  stays one colour in every set until a colour-blind playtester asks (owner decision 17, 2026-10-05).
+  (tested) (2026-10-04).** Colour is never the only cue: names carry a bar, exits a glyph and a distance. Exits take
+  their set's colour (owner, 2026-10-17, AX1; replaces decision 17 of 2026-10-05, one green in every set): Standard
+  keeps the green, High Contrast's are hi-vis yellow, as the green sits close to the orange team for a deuteranope.
 - **Menu headings and labels are in capitals, descriptions as written (owner, 2026-10-03, on the menu sketch).** Done
   in the stylesheet (`text-transform`), so the text in code stays readable and searchable.
 - **Menus are opaque (owner, 2026-10-03: nothing of the game should show through).** The controls list lives under

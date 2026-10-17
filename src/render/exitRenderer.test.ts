@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { EXIT_VISUALS as V } from '../config/render';
+import { TEAM_COLOUR_SETS } from '../config/teams';
 import { buildTerrain, terrainHeightAt } from '../map/terrain';
 import { createRunState, type RunExit } from '../sim/extraction';
 import { vec3 } from '../sim/vec';
@@ -135,7 +136,7 @@ describe('ExitRenderer on terrain (M48)', () => {
       for (let v = 0; v < pos.count; v++) if (Math.hypot(pos.getX(v) - x, pos.getZ(v) - z) < 3.01) seen.add([colour.getX(v), colour.getY(v), colour.getZ(v)].map((c) => c.toFixed(4)).join());
       return [...seen].join('|');
     };
-    const open = new THREE.Color(V.openColor);
+    const open = new THREE.Color(TEAM_COLOUR_SETS.standard.exit.open);
     const shut = new THREE.Color(V.shutColor);
     const key = (c: THREE.Color): string => [c.r, c.g, c.b].map((v) => v.toFixed(4)).join();
     // Opens and re-closes a late exit at a time, in different orders, then all at once and all shut.
@@ -208,7 +209,7 @@ describe('ExitRenderer on terrain (M48)', () => {
     const r = new ExitRenderer(run, SLOPE);
     const { floor, alpha } = floorOf(r);
     const colour = floor.geometry.getAttribute('color');
-    const open = new THREE.Color(V.openColor);
+    const open = new THREE.Color(TEAM_COLOUR_SETS.standard.exit.open);
     const shut = new THREE.Color(V.shutColor);
     const boards = (name: string) => r.object.getObjectByName(name) as THREE.InstancedMesh;
     /** The colour each exit's floor vertices show (nearest exit by distance), and their alphas. */

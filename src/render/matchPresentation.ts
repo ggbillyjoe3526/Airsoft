@@ -61,9 +61,6 @@ import { type FigureCrowd, HUMAN_CROWD } from './figureMix';
 /** The minimap's pings while Settings › HUD › Ping markers is off: none. */
 const NO_PINGS: readonly ShownPing[] = [];
 
-/** The exit markers' colour (EXIT_VISUALS.openColor as CSS). */
-const EXIT_CSS = cssColor(EXIT_VISUALS.openColor);
-
 /** What the scoreboard over the field shows: nothing, the round just played, or the match so far. */
 type BoardView = 'none' | 'round' | 'match';
 
@@ -155,6 +152,8 @@ export class MatchPresentation {
   /** Extraction (M43): the exits in the world and their screen markers (null for an exit closed this run). */
   private readonly exits: ExitRenderer | null = null;
   private readonly exitMarkers: (FlagMarker | null)[] = [];
+  /** The exit markers' colour: the team colour set's open exit colour as CSS (AX1). */
+  private readonly exitCss: string = '';
   private readonly exitAnchor = new THREE.Vector3();
   private readonly exitAt: ScreenMarker = { x: 0, y: 0, onScreen: false };
   /** The respawn's fade from black, and when you were last back in (the banner says so for a moment). */
@@ -224,7 +223,7 @@ export class MatchPresentation {
     this.squadLine = new SquadOrderLine(container);
     this.holdMarker = new HoldMarker(container, teamCss(player.team));
     this.pingMarkers = new PingMarkers(container, [player.id, ...this.mates.map((c) => c.id)], teamCss(player.team), teamCss(1 - player.team));
-    this.minimap = new Minimap(container, field.blocks, cssColor(teamColours.hud[player.team]!), cssColor(teamColours.hud[1 - player.team]!), field.terrain ?? null, field.foliage ?? [], field.storeys);
+    this.minimap = new Minimap(container, field.blocks, cssColor(teamColours.hud[player.team]!), cssColor(teamColours.hud[1 - player.team]!), field.terrain ?? null, field.foliage ?? [], field.storeys, teamColours.exit.open);
     this.mapName = field.name ?? '';
     this.areas = field.areas ?? [];
     // The map and round under the minimap (G4); an Extraction run is one long round, so only the map.
@@ -246,7 +245,8 @@ export class MatchPresentation {
     this.orderWheel = new OrderWheel(container, teamCss(player.team), keyName);
     this.magPrompt = new MagPrompt(container, teamCss(player.team));
     if (extraction) {
-      this.exits = new ExitRenderer(run, field.terrain ?? null);
+      this.exits = new ExitRenderer(run, field.terrain ?? null, teamColours.exit);
+      this.exitCss = cssColor(teamColours.exit.open);
       scene.add(this.exits.object);
       this.exitMarkers = run.exits.map((e) => (e.closed ? null : new FlagMarker(container, 'exit-marker')));
       this.respawnFade = document.createElement('div');
@@ -893,7 +893,7 @@ export class MatchPresentation {
       const at = projectMarker(this.exitAnchor, camera, this.view.width, this.view.height, EXIT_VISUALS.markerEdge, this.exitAt);
       const towards = edgeAngle(at, this.view.width, this.view.height);
       const m = this.pinned(at, EXIT_VISUALS.markerEdge);
-      marker.show(m.x, m.y, Math.hypot(e.position.x - from.x, e.position.z - from.z), EXIT_CSS, !m.onScreen, towards);
+      marker.show(m.x, m.y, Math.hypot(e.position.x - from.x, e.position.z - from.z), this.exitCss, !m.onScreen, towards);
     }
   }
 

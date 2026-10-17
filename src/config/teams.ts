@@ -46,16 +46,31 @@ export interface TeamColours {
    * so it still reads as text on the HUD's dark panels.
    */
   readonly hud: readonly number[];
+  /** Extraction's exits (AX1): their colour stands apart from both teams, so a set picked for colour vision has its own. */
+  readonly exit: ExitColours;
+}
+
+/**
+ * An exit's colours (AX1): `open` for its ring and wash, its sign, its minimap door and its screen marker; `ink` for the
+ * sign's text and border on that colour; `cone` for the site cones round its ring. A late exit still shut is grey in
+ * every set (EXIT_VISUALS.shutColor).
+ */
+export interface ExitColours {
+  readonly open: number;
+  readonly ink: number;
+  readonly cone: number;
 }
 
 export const TEAM_COLOUR_SETS: Readonly<Record<TeamColourSetId, TeamColours>> = {
-  standard: { figures: TEAM_COLORS, hud: TEAM_COLORS },
-  highContrast: { figures: [0x8ccfff, 0xb8460c], hud: [0x8ccfff, 0xe0601a] },
+  // Standard keeps the exit green (owner decision 17); High Contrast's exits are hi-vis yellow, as green sits close to
+  // the orange team for a deuteranope (colourVision.test.ts).
+  standard: { figures: TEAM_COLORS, hud: TEAM_COLORS, exit: { open: 0x3fcf6a, ink: 0xffffff, cone: 0xf08a24 } },
+  highContrast: { figures: [0x8ccfff, 0xb8460c], hud: [0x8ccfff, 0xe0601a], exit: { open: 0xfff000, ink: 0x1d1f23, cone: 0xfff000 } },
 };
 
 export const TEAM_COLOUR_CHOICES: readonly { id: TeamColourSetId; label: string; blurb: string }[] = [
   { id: 'standard', label: 'Standard', blurb: 'Blue and orange: they stay apart for the common kinds of colour blindness.' },
-  { id: 'highContrast', label: 'High Contrast', blurb: 'Light blue and dark orange: apart in lightness too, for little or no colour vision. From the next match.' },
+  { id: 'highContrast', label: 'High Contrast', blurb: 'Light blue and dark orange, apart in lightness too, and yellow exits: for little or no colour vision. From the next match.' },
 ];
 
 export const DEFAULT_TEAM_COLOURS: TeamColourSetId = 'standard';
