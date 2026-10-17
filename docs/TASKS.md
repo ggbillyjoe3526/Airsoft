@@ -257,18 +257,6 @@ acceptance:
 status: open
 attempts: 0
 
-## DX8 · Game: the play flow and the dev glue out of the composition root (audit A1 step two; optional, after DX5)
-tier: core
-perf: required
-touches: src/game.ts, src/core/, src/matchFlow.ts, src/ui/menus/menus.ts, src/playFlow.ts, src/playSetup.ts, src/playResults.ts, src/gameDev.ts, src/gameReport.ts, pipeline/perf-run.mjs, pipeline/webgpu-compare.mjs, pipeline/content-pictures.mjs
-contract: none
-acceptance:
-  1. Play, enter, resume, pause and leave live in a `PlayFlow` module (name the thread's) with its own tests; the dev and report glue in a module of its own; `Game` keeps the loop, the lifecycle and the wiring.
-  2. `game.ts` is under 800 lines and imports under 50 modules.
-  3. Pause, resume, restart and return to menu leave the same state as before (the session tests and the smoke test pass), and the frame loop's crash guard is unchanged.
-status: open
-attempts: 0
-
 ## BP6 · Beta 1 bug pass (when William says go)
 tier: core
 perf: required
