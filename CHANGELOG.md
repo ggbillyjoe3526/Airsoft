@@ -82,6 +82,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **DX3** · Developer-only: a task can be marked as a fix, with every check and review kept and a shorter record; the perf run needs no separate flag
 - **DX2** · Developer-only: Dev 5 and 6 plans, decisions, known issues and playtest guide archived or trimmed under 50 KB each
 - **DX4** · Developer-only: each pull request builds the game once for all its checks, the slow test jobs finish together, a code formatter is set up, and the quick test run drops its three slowest files to the full run
+- **DX5** · Developer-only: one object holds all HUD and accessibility settings; match and range share one session; settings helpers move; game file trimmed
 
 ## 0.1 Dev 6 · 2026-10-16
 
