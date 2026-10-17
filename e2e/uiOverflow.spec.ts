@@ -118,8 +118,8 @@ function hudOverlaps(): string[] {
   };
   const ammo = textBox('.hud-mag');
   if (!ammo) return ['no ammo count in the HUD'];
-  // Inside the panel: the count against the chips, the name, the spare line and the status line.
-  const parts = ['.hud-mode', '.hud-replica-name', '.hud-spare', '.hud-status'];
+  // Inside the panel: the count against the chips, the spare line and the status line.
+  const parts = ['.hud-mode', '.hud-spare', '.hud-status'];
   for (const sel of parts) {
     for (const e of document.querySelectorAll(sel)) {
       if (!shown(e)) continue;
@@ -132,7 +132,7 @@ function hudOverlaps(): string[] {
   const box = [panel.left, panel.top, panel.right, panel.bottom];
   // And the count and every part of the panel stay inside it.
   if (ammo[2]! > panel.right + 1 || ammo[0]! < panel.left - 1) out.push('the ammo count is outside the panel');
-  for (const e of document.querySelectorAll('.hud-mode, .hud-replica-name')) {
+  for (const e of document.querySelectorAll('.hud-mode, .hud-mags i')) {
     const r = e.getBoundingClientRect();
     if (r.right > panel.right + 1 || r.left < panel.left - 1) out.push(`${e.className} leaves the panel`);
   }
