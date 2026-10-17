@@ -36,6 +36,8 @@ export class TutorialTracker {
   private sprinted = false;
   /** The current goal so far: whether the player fired the replica in the goal's slot (hit goals with a slot). */
   private firedSlot = false;
+  /** The current goal so far: the sides leaned out to (lean goals; TT2): 1 left, 2 right. */
+  private leaned = 0;
   private lastYaw = Number.NaN;
   /** The step just finished, shown with its tick for `doneLeft` more seconds. */
   private doneIndex = -1;
@@ -133,6 +135,7 @@ export class TutorialTracker {
     this.amount = amount;
     this.firedSlot = false;
     this.sprinted = false;
+    this.leaned = 0;
     this.doneIndex = -1;
     this.doneLeft = 0;
     this.moved = true;
@@ -156,6 +159,7 @@ export class TutorialTracker {
     this.amount = 0;
     this.firedSlot = false;
     this.sprinted = false;
+    this.leaned = 0;
     return true;
   }
 
@@ -208,6 +212,10 @@ export class TutorialTracker {
         return p.position.z <= g.z;
       case 'crouch':
         return p.crouchAmount >= TUTORIAL.crouchedAt;
+      case 'lean':
+        if (p.lean <= -g.amount) this.leaned |= 1;
+        if (p.lean >= g.amount) this.leaned |= 2;
+        return this.leaned === 3;
       case 'aim':
         if (p.aiming) this.amount += v.dt;
         return this.amount >= g.seconds;
