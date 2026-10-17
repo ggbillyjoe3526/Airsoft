@@ -109,7 +109,7 @@ export class LoadoutScreen {
     this.lentNote = el('p', 'loadout-note loadout-lent', GEAR_TEXT.lent);
     owned.append(this.grid, this.practiceNote, this.lentNote, this.levelNote);
 
-    const aside = el('aside', 'loadout-selected menu-card');
+    const aside = el('aside', 'loadout-selected menu-card menu-scroll');
     aside.setAttribute('aria-label', GEAR_TEXT.selected);
     this.selectedName = el('h2', 'selected-name');
     this.selectedLine = el('p', 'selected-line');

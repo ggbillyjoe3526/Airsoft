@@ -72,7 +72,6 @@ describe('picking Woodland in the Match screen sets 5v5 (M88, acceptance 3)', ()
       onDifficulty: () => {},
       onTeammates: () => {},
       onTeam: () => {},
-      supply: undefined,
       refresh: () => {},
     };
     return { m: new PlayPicks(start, {}, true, hooks), rules };

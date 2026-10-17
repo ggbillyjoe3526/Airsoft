@@ -6,7 +6,7 @@ import type { PostChain, PostSetup } from './postStack';
 import { findReflective } from './postHelpers';
 
 /** Any post chain: the node renderer's (W4). */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- the host never draws; the Renderer casts per renderer.
+// `any` on the next line: the host never draws; the Renderer casts per renderer.
 export type AnyPostChain = PostChain<any, any>;
 
 /**

@@ -95,7 +95,7 @@ export class Renderer {
   private environmentLook: EnvironmentLook = defaultEnvironmentLook();
   /** The scene's environment must be set again before the next frame (settings changed, a new device). */
   private environmentDirty = true;
-  /** Settings → Graphics → Tone mapping (F2): not part of a preset. */
+  /** Tone mapping (F2; Settings › Dev since RV2, else Neutral). */
   private toneMapping: ToneMappingId = TONE_MAPPING.default;
   /** The lighting preset in force (M33f, setLighting): its haze, exposure and environment. Day until a session sets one. */
   private lighting: LightingPreset = LIGHTING_PRESETS.day;
@@ -326,13 +326,8 @@ export class Renderer {
     fog.far = far;
   }
 
-  /** The tone mapping in use (Settings → Graphics). */
-  get toneMappingId(): ToneMappingId {
-    return this.toneMapping;
-  }
-
   /**
-   * Tone mapping (Settings → Graphics, F2): applies at once. The exposure goes with it (TONE_MAPPING.exposure), so the
+   * Tone mapping (Settings › Dev since RV2, F2): applies at once. The exposure goes with it (TONE_MAPPING.exposure), so the
    * field stays about as bright under each.
    */
   setToneMapping(id: ToneMappingId): void {

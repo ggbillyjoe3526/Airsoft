@@ -1,4 +1,5 @@
 import { SOUND_CUES } from './accessibility';
+import { hudInsetX, SCOREBOARD_SIZE } from './matchInfo';
 
 /**
  * The minimap (M23), top left while you play: the field round you, turned so the way you look is up. Your teammates
@@ -85,3 +86,13 @@ export const MINIMAP_TURN_CHOICES: readonly { id: MinimapTurn; label: string; bl
 ];
 export const DEFAULT_MINIMAP_TURN: MinimapTurn = 'rotating';
 export const DEFAULT_MINIMAP_ROTATING = DEFAULT_MINIMAP_TURN === 'rotating';
+
+/**
+ * The minimap's scale (UX1; style.css `--minimap-scale`): the HUD's, held back in a narrow window so its right edge
+ * stays SCOREBOARD_SIZE.minimapGap clear of the widest score bar at size 1 (at 1280 px past about 120 %, where the bar
+ * can shrink no further); never below 1, as the bar. The square alone: its caption and the markers keep the HUD's scale.
+ */
+export function minimapScale(hud: number, viewportWidth: number, viewportHeight: number): number {
+  const room = viewportWidth / 2 - SCOREBOARD_SIZE.halfWidth - SCOREBOARD_SIZE.minimapGap - hudInsetX(viewportWidth, viewportHeight);
+  return Math.min(hud, Math.max(1, room / MINIMAP.size));
+}

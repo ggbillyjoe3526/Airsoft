@@ -192,6 +192,8 @@ export class CharacterRenderer {
      * figure model.
      */
     private readonly rigs: FigureRigs | null = null,
+    /** The share of its colour the rigged figures' team paint glows at (TeamColours.paintGlow, AX1). */
+    private readonly paintGlow = 0,
   ) {
     this.thrown = rigs?.thrownMagazines() ?? null;
     if (this.thrown) this.object.add(this.thrown.object);
@@ -341,6 +343,7 @@ export class CharacterRenderer {
         character: c,
         id: c.id,
         teamColour: team,
+        paintGlow: this.paintGlow,
         replicaMaterial: material,
         rifleColours: dress.rifle,
         pistolColours: dress.pistol,

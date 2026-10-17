@@ -115,7 +115,7 @@ describe('Skip to next round on screen (M83)', () => {
 
     it('has the button only where the skip applies, named by what it skips to, and it calls back', () => {
       let skipped = 0;
-      const pause = new PauseScreen({ onResume: noop, onLoadout: noop, onSettings: noop, onQuit: noop, onSkipStep: noop, onSkipTutorial: noop, onSkipRound: () => skipped++, onChallenge: noop });
+      const pause = new PauseScreen({ onResume: noop, onLoadout: noop, onSettings: noop, onQuit: noop, onSkipStep: noop, onSkipTutorial: noop, onSkipRound: () => skipped++, onChallenge: noop, onFullscreen: noop });
       expect(shownButtons(pause)).not.toContain(HUD_TEXT.skipButton.round);
       pause.setSkip('round');
       expect(shownButtons(pause)).toContain('Skip to next round');

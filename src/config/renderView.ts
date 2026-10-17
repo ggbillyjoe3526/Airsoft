@@ -338,10 +338,10 @@ export function matchOverScreenDelay(): number {
  */
 /**
  * Extraction's exits (M43, render/exitRenderer.ts): a ring painted on the floor, site cones round it and a sign on a
- * post, green while the exit is open, grey while a late exit is still shut. Closed exits aren't drawn.
+ * post, in the team colour set's exit colour while the exit is open (config/teams.ts ExitColours), grey while a late
+ * exit is still shut. Closed exits aren't drawn.
  */
 export const EXIT_VISUALS = {
-  openColor: 0x3fcf6a,
   shutColor: 0x8a8a84,
   /** The painted ring: its width (m), how far it floats over the floor (no z-fighting) and how see-through it is. */
   ringWidth: 0.18,
@@ -354,7 +354,6 @@ export const EXIT_VISUALS = {
   cones: 6,
   coneRadius: 0.13,
   coneHeight: 0.42,
-  coneColor: 0xf08a24,
   coneSegments: 8,
   /** The sign's post and board (m), and the board's text. */
   postHeight: 2.1,

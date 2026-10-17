@@ -20,9 +20,8 @@ describe('the pool as the player and bots see it (M35)', () => {
     expect(shown.byId.has(asset('Red Dot').id)).toBe(false);
     expect(shown.byId.has(asset('AEG Rifle').id)).toBe(true);
     expect(shown.byId.size).toBe(shown.assets.length);
-    // Extraction's tables are the pool's own, not copies.
+    // Extraction's table is the pool's own, not a copy.
     expect(shown.caseKinds).toBe(mixed.caseKinds);
-    expect(shown.supplyEvents).toBe(mixed.supplyEvents);
   });
 
   it('is the same pool while Dev content is on, and when nothing in it is dev', () => {
