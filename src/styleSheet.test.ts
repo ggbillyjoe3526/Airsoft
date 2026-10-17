@@ -497,8 +497,9 @@ describe('layout polish before the screenshots (G4, M100)', () => {
     expect(declared('.match-panel .picker-button', 'flex')).toBe('0 0 auto');
     expect(declared('.match-panel .menu-row-name', 'flex')).toBe('0 0 var(--match-name-w)');
     expect(declared('.match-panel .menu-range input', 'flex')).toBe('0 1 var(--match-slider-w)');
-    // 320 px before UI2.
-    expect(Number(declared('.hud-replica', 'width')?.replace('px', ''))).toBeLessThanOrEqual(292);
+    // 320 px with a picture and a name before UI2; letters for the fire modes and small boxes for the magazines now.
+    expect(Number(declared('.hud-replica', 'width')?.replace('px', ''))).toBeLessThanOrEqual(176);
+    expect(sheet).not.toMatch(/\.hud-replica-(pic|name|words)\b/);
     // A three- to five-digit count is no wider than two digits at 40 px, so the fire-mode chips keep one line.
     expect(declared(".hud-mag[data-digits='3']", 'font-size')).toBe('26px');
     expect(declared(".hud-mag[data-digits='4']", 'font-size')).toBe('20px');

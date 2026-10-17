@@ -1,7 +1,6 @@
 import { POWER_SOURCE_FILE } from '../../config/assets';
-import { defaultScheme, type PaintId } from '../../config/schemes';
+import type { PaintId } from '../../config/schemes';
 import type { KitSlot } from '../../pool/kit';
-import type { PlayerKit } from '../../pool/loadoutModel';
 import { type Asset, REPLICA_KEYS, replicaOf } from '../../pool/pool';
 import { type ItemSubject, partHost, pictureKey, type PictureFit, type PictureShape, type PictureSubject } from '../../render/itemPictures';
 import { el } from './menuParts';
@@ -37,11 +36,6 @@ export function replicaSubject(asset: Asset, scheme: PaintId, realistic: boolean
   if (kit) subject.fit = pictureFit(kit);
   if (shape) subject.shape = shape;
   return subject;
-}
-
-/** The carried replicas' pictures (the HUD's replica panel, G4), by gear slot: each in its scheme with its parts. */
-export function kitSubjects(kit: Pick<PlayerKit, 'slots' | 'schemes'>, realistic: boolean): PictureSubject[] {
-  return kit.slots.map((slot, i) => ({ replica: slot.replica, scheme: kit.schemes[i] ?? defaultScheme(slot.replica), realistic, fit: pictureFit(slot) }));
 }
 
 /**

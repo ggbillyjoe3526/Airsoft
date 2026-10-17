@@ -43,6 +43,9 @@ acceptance:
      two lines below about 1390 px.
   2. The HUD replica panel (bottom right) is narrower at HUD size 100 % and 150 %, keeping picture, name, fire modes,
      loaded count and spares readable, and still clear of the held replica and the minimap at 1280×720.
+     Owner, 2026-10-17 12:40 and 12:47 (supersedes the picture and name): "We don't need to see the replica's image/model
+     or name. fire rate could be compacted down to S/B/A. Keep ammo count as it is. Magazines ... small yet bold boxes";
+     no empty-magazine hint ("Assume the player knows the controls"). He approved the picture before the build.
   3. The record lists before and after widths for both, and screenshots go to William before merging (MR1's
      concepts-first habit; one image per screen is enough).
 status: open

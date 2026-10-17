@@ -1,16 +1,15 @@
-/* The replica panel (the M19 ammo block; G4 look; smaller and quieter since Dev 6 playtest item 25), bottom right: the
-   replica's small picture, its name over a chip per fire mode (the current one orange), the loaded BBs with the spare BBs
-   under them, a thin bar per spare magazine, then the reload bar and the status line (ui/replicaPanel.ts), as opaque as
-   HUD opacity; its size is Settings → HUD (--hud-scale, set on the game's container), grown from the corner. The count
-   is the one large thing on it, so the eye finds it first. As narrow as three fire-mode chips and a two-digit count allow
-   (UI2, Beta 1 playtest item 11: 320 px before): a smaller picture, tighter gaps and chips. */
+/* The replica panel (the M19 ammo block; G4 look; compact since UI2, Beta 1 playtest: "still far too wide", 320 px
+   before, no picture or name now), bottom right: a lettered chip per fire mode (S, B, A; the current one orange) over a
+   small box per spare magazine, the loaded BBs with the spare BBs under them at the right, then the reload bar and the
+   status line (ui/replicaPanel.ts), as opaque as HUD opacity; its size is Settings → HUD (--hud-scale, set on the game's
+   container), grown from the corner. The count is the one large thing on it, so the eye finds it first. */
 .hud-replica {
   position: absolute;
   right: var(--hud-edge-x);
   bottom: var(--hud-margin);
   scale: var(--hud-scale, 1);
   transform-origin: 100% 100%;
-  width: 292px;
+  width: 176px;
   padding: 8px 10px 9px;
   color: var(--hud-fg);
   background: var(--hud-panel);
@@ -20,7 +19,7 @@
 .hud-replica-main {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
 }
 
 /* Holstered (M92): the replica put away is shown faded, the status line saying so. */
@@ -28,55 +27,27 @@
   opacity: 0.45;
 }
 
-/* The picture (ItemPictures, the game's own; the line drawing until it is drawn): small, a cue to which replica it is. */
-.hud-replica-pic {
-  flex: none;
-  width: 44px;
-  height: 28px;
-  margin: -4px 0 -4px -4px;
-  background: none;
-}
-
-.hud-replica-pic .pic-placeholder {
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.hud-replica-pic .pic-placeholder svg {
-  width: 84%;
-  height: 84%;
-}
-
-/* The words take what the picture and the count leave (flex 1, min-width 0) and never run under the count: the chips wrap
-   to a second row before they would touch it, and the name gives way with an ellipsis. */
-.hud-replica-words {
+/* The chips over the magazine boxes, taking what the count leaves (flex 1, min-width 0). */
+.hud-replica-side {
   display: flex;
   flex: 1 1 0;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
   min-width: 0;
-}
-
-.hud-replica-name {
-  overflow: hidden;
-  font: 700 15px/1 var(--ui-display);
-  letter-spacing: var(--ls-caps);
-  text-overflow: ellipsis;
-  text-transform: uppercase;
-  white-space: nowrap;
-  color: var(--menu-muted);
 }
 
 .hud-modes {
   display: flex;
-  flex-wrap: wrap;
   gap: 2px;
 }
 
+/* A letter a mode, each chip the same width so S, B and A line up. */
 .hud-mode {
   flex: none;
+  min-width: 20px;
   padding: 2px 3px 1px;
   font: 700 15px/1 var(--ui-display);
-  letter-spacing: var(--ls-caps);
+  text-align: center;
   text-transform: uppercase;
   color: var(--menu-muted);
   background: rgba(255, 255, 255, 0.08);
@@ -202,12 +173,13 @@
   color: var(--paper);
 }
 
-/* A bar per spare magazine, filled to its BBs (the width the panel sets); the one a reload takes in acid with a caret
-   under it (a shape, so colour isn't the only cue). */
+/* A small box per spare magazine (UI2), filled from its foot to its BBs (the height the panel sets); the one a reload takes
+   in acid with a caret under it (a shape, so colour isn't the only cue). They wrap to a second row past six. */
 .hud-mags {
   display: flex;
-  gap: 3px;
-  margin-top: 8px;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-bottom: 6px;
 }
 
 .hud-mags:empty {
@@ -216,17 +188,24 @@
 
 .hud-mags i {
   position: relative;
-  flex: 1;
-  height: 4px;
+  flex: none;
+  width: 11px;
+  height: 18px;
   background: rgba(255, 255, 255, 0.16);
+  outline: 1px solid rgba(255, 255, 255, 0.45);
+  outline-offset: -1px;
 }
 
 .hud-mags i b {
   position: absolute;
-  left: 0;
-  top: 0;
+  right: 0;
   bottom: 0;
-  background: rgba(255, 255, 255, 0.72);
+  left: 0;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.hud-mags i.next {
+  outline-color: var(--menu-acid);
 }
 
 .hud-mags i.next b {
@@ -237,7 +216,7 @@
   content: '';
   position: absolute;
   left: 50%;
-  top: 6px;
+  top: 20px;
   translate: -50% 0;
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
@@ -252,7 +231,6 @@
 .hud-mags i.empty {
   background: none;
   outline: 1px dashed rgba(255, 255, 255, 0.35);
-  outline-offset: -1px;
 }
 
 /* A thin line along the panel's foot, so it takes no room while no reload runs. Its fill runs on one transform
