@@ -147,19 +147,6 @@ acceptance:
 status: open
 attempts: 0
 
-## PF4 · Neon Heights Extraction on Medium back under its triangle line
-tier: fix
-perf: required
-touches: src/render/riggedFigure.ts, pipeline/perf-run.mjs, docs/KNOWN_ISSUES.md
-contract: none
-acceptance:
-  1. The perf gate's Neon Heights Extraction Medium runs (WebGL and WebGPU) average comfortably under the 200k triangle line on main's scene, with no budget line raised (the owner's rule) and nothing a player can see changed.
-  2. The cause is measured, not guessed: the record names what the triangles over the line were.
-  3. If the run-to-run spread is cheap to narrow, narrow it; else say why in the record.
-  4. The KNOWN_ISSUES rows about this run are resolved.
-status: open
-attempts: 0
-
 ## UX1 · Menus at 4K and small windows; HUD clashes at 1280 px
 tier: ui
 perf: skip
