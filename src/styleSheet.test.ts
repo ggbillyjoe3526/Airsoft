@@ -484,8 +484,10 @@ describe('layout polish before the screenshots (G4, M100)', () => {
     expect(blockOf('.option-line,\n.option-note')).not.toBeNull();
   });
 
-  it('lays the Match rules out in as many columns as fit, so the page holds in a 1080 px window', () => {
-    expect(declared('.match-grid', 'grid-template-columns')).toMatch(/^repeat\(auto-fit, minmax\(\d+px, 1fr\)\)$/);
+  it('lays the Match rules out in two columns while they fit, so the page holds in a 1080 px window', () => {
+    // Two columns each as wide as its rows (UI2), one column in a narrower window.
+    expect(declared('.match-grid', 'grid-template-columns')).toBe('repeat(2, auto)');
+    expect(sheet).toMatch(/@media \(max-width: \d+px\) \{\s*\.match-grid \{\s*grid-template-columns: minmax\(0, 1fr\);/);
     // One line a rule (MR1): the name in its column, the options beside it.
     expect(declared('.match-panel .menu-row', 'flex-wrap')).toBe('nowrap');
   });

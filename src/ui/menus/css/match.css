@@ -62,9 +62,19 @@
 
 .match-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  /* Each column as wide as its rows first, the room to spare shared after (UI2): House rules' longer options get the
+     width they need beside the shorter Match ones, so Time-out keeps one line from about 1390 px. */
+  grid-template-columns: repeat(2, auto);
   gap: var(--sp-2) clamp(20px, 2vw, 36px);
   padding: var(--sp-3) var(--sp-4) var(--sp-4);
+}
+
+/* One column once two would squeeze the rows onto second lines (the auto-fit rule this replaced did the same near here;
+   narrow.css keeps it one column below 1180 px). */
+@media (max-width: 1260px) {
+  .match-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .match-col {
