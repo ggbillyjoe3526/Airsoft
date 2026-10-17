@@ -69,7 +69,7 @@ const CHROMIUM_PROJECTS = [
 const FIREFOX_PROJECTS = [
   {
     name: 'firefox',
-    testMatch: /((boot|save)\.spec|ffdiag\.firefox)\.ts$/,
+    testMatch: /(boot|save)\.spec\.ts$/,
     use: { ...devices['Desktop Firefox'], headless: false, actionTimeout: 30_000, navigationTimeout: 30_000, launchOptions: { firefoxUserPrefs: { 'webgl.force-enabled': true } } },
   },
 ];
@@ -92,8 +92,8 @@ export default defineConfig({
     baseURL: `http://localhost:${PORT}`,
     screenshot: 'only-on-failure',
   },
-  // One Firefox at a time: two headed windows share xvfb-run's one display, and the one underneath stops drawing frames,
-  // so its next click waits on a frame that doesn't come (IN1 follow-up, 2026-10-17).
+  // One Firefox at a time: two headed windows share xvfb-run's one display, and Firefox slows the one without focus to
+  // about a frame a second, so a click (which waits for steady frames) can time out (measured on CI, IN1, 2026-10-17).
   ...(FIREFOX ? { workers: 1 } : {}),
   projects: FIREFOX ? FIREFOX_PROJECTS : CHROMIUM_PROJECTS,
   webServer: FIREFOX ? E2E_SERVER : [E2E_SERVER, RELEASE_SERVER],
