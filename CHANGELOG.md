@@ -74,6 +74,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **IN1** · In Firefox F10 no longer drops you onto the pause menu: play carries on and the mouse returns once the page changes size (#251)
 - **IN1** · Where Firefox refuses fullscreen from F10, the pause menu says "Click anywhere to go fullscreen" and one click does it (#251)
 - **IN1** · Settings › Controls › Raw mouse input says Firefox gives no raw input as soon as you open it (#251)
+- **RE1** · WON, LOST or DRAW stays up 2 s (was 1.3) and the round's table about 4 s before the next round; bots hold fire for a strafing teammate
 
 ### Internal
 - **MS1** · Tests remove skyline pieces no player can see and keep hung units and cables clear of the player's room; perf baselines re-recorded

@@ -224,8 +224,11 @@ export const ROUNDS = {
   teamSize: 3,
   /** Round length (s). Elimination: a round that runs out of time level goes to overtime. Flag: the defenders win it. */
   roundTime: 150,
-  /** Seconds between a round ending and everyone respawning. */
-  resetDelay: 4,
+  /**
+   * Seconds between a round ending and everyone respawning: WON or LOST (HUD.roundResultTime, 2 s), then the round's
+   * table for the rest, 4 s (Beta 1 playtest item 15, RE1: 1.3 s longer than the 2.7 s it had). A click moves on sooner.
+   */
+  resetDelay: 6,
   /** Round wins needed to win the match. */
   winsNeeded: 5,
   /** First to 5 is at most 9 decided rounds: swap ends after 4, so the decider is in the second half. */

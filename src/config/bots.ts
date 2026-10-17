@@ -114,6 +114,12 @@ export const BOT_BEHAVIOUR = {
    */
   friendlySpreadSigmas: 2,
   /**
+   * ...and a teammate on the move is checked where they would be had they sped up to this pace (m/s, running) in the
+   * way they are heading while the BBs fly: one strafing in a close duel speeds up across the line between shots (RE1:
+   * Depot, Elimination with ricochets counting, seed 2, a teammate at 2.7 m/s and rising stepped into a BB in flight).
+   */
+  friendlyMateSpeed: MOVEMENT.runSpeed,
+  /**
    * ...and this far (metres) past the target too: a BB that misses keeps flying, so a teammate just
    * behind the target in the line of fire is as much in the way as one in front. 25 since G11 (15 before): a fresh
    * contact's first BBs go wide on purpose, so more of them fly on past the target, and one reached a teammate 23.5 m

@@ -770,6 +770,45 @@ describe('bot line of fire', () => {
   });
 });
 
+describe('bot line of fire: a teammate moving towards it (RE1)', () => {
+  /** Whether the bot (z = -14, Orange) fires at the player (the origin) with an Orange teammate 2 m past them at `x`, moving at `vx`. */
+  function firesPast(x: number, vx: number): boolean {
+    let mate: Character | undefined;
+    const { state, player, bots } = duel(14, (s) => {
+      mate = createCharacter(2, vec3(x, 0, 2), 0, LOADOUT, 1);
+      s.characters.push(mate);
+    });
+    mate!.velocity.x = vx;
+    const b = bots.bots[0]!;
+    const w = bots.worldForTests;
+    b.targetVisible = true;
+    b.contact = { seenAt: state.time, acquiredAt: 0, firstSeenAt: state.time, held: false, reactAt: 0 };
+    w.live = true;
+    w.time = state.time;
+    const eye = eyeOf(b.character, BODY, HITS, vec3());
+    const aimPoint = bodyPoint(player, HITS, BOTS.aimHeightFraction, vec3());
+    b.aim.yaw = Math.atan2(-(aimPoint.x - eye.x), -(aimPoint.z - eye.z));
+    b.aim.pitch = Math.atan2(aimPoint.y - eye.y, Math.hypot(aimPoint.x - eye.x, aimPoint.z - eye.z));
+    b.burstLeft = 0;
+    b.pauseLeft = 0;
+    const cmd = createCommand();
+    shootBot(b, w, player, eye, aimPoint, 0, cmd, DT);
+    return cmd.fire;
+  }
+
+  it('holds fire for one walking into the line who would reach it at a run while the BBs fly, not for one walking away', () => {
+    // The nearest a teammate standing still may be and still be fired past.
+    let clear = 0.5;
+    while (!firesPast(clear, 0) && clear < 4) clear += 0.05;
+    expect(clear).toBeLessThan(4);
+    // A little further out, walking in at 1 m/s: where that pace takes them in the flight is still clear, but a strafe
+    // that speeds up (friendlyMateSpeed) is not (Depot seed 2: a teammate in a close duel stepped into a BB in flight).
+    expect(firesPast(clear + 0.3, -1)).toBe(false);
+    expect(firesPast(clear + 0.3, 1)).toBe(true);
+    expect(firesPast(clear + 0.3, 0)).toBe(true);
+  });
+});
+
 describe('bot contacts', () => {
   it('switch back to someone seen moments ago without a fresh reaction delay', () => {
     // A (the player, id 0) straight ahead at 14 m; B (id 2) closer, off to the side, hidden at first.
