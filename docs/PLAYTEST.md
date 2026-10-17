@@ -75,9 +75,8 @@ You confirmed these on 2026-10-05. They are facts to feel in play, not decisions
 
 - **Laptop baseline.** On the low-spec laptop run `node pipeline/perf-run.mjs --env laptop --preset all --baseline`
   and commit the `pipeline/baseline/laptop*.json` files it writes. It gives the frame-time budgets real numbers.
-- **Desktop Ultra baseline.** On your desktop run
-  `node pipeline/perf-run.mjs --env desktop --preset all --viewport 3840x2160 --baseline` and commit
-  `pipeline/baseline/desktop*.json`.
+- **Desktop Ultra baseline.** On your desktop run `npm run perf:desktop` (about 15 minutes; leave the window alone)
+  and send the thread `pipeline/out/perf-desktop-summary.md` and `pipeline/baseline/desktop*.json`.
 - **Save in Firefox and Edge.** The automated tests run Chromium only ([Save](#save)).
 - **Woodland and Neon Heights** stay dev content until you have played them; you make each one public.
 

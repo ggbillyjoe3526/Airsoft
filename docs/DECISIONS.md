@@ -64,9 +64,9 @@ replaces its line; the old one stays findable in the archive or in git.
   asked for: an in-match hop-up control, a home-screen fullscreen button, one feed with a placement setting, and WON or
   LOST at a round's end. He also removes features: resting on cover, the Voices setting, and the Skins option (it
   moves into Colour). Blender models become the default. Each item is a block in `docs/TASKS.md`.
-- **Dev 5 order (owner, 2026-10-06).** Docs rewrite with token step 2, token step 3, token step 4, bug pass BP2,
-  graphics, the playtest notes, the content toolkit (all four parts, mode checks included), bug pass BP3, then the tag.
-  Dev 7 is folded into Dev 6 ("I want bigger builds"). The order is in `docs/ROADMAP.md`.
+- **Dev 5 order (owner, 2026-10-06).** The docs rewrite and the token-saving pipeline changes (TE2 to TE4), bug pass
+  BP2, graphics, the playtest notes, the content toolkit (all four parts, mode checks included), bug pass BP3, then the
+  tag. Dev 7 is folded into Dev 6 ("I want bigger builds"). The order is in `docs/ROADMAP.md`.
 - **Only full releases are tagged, and only the owner creates tags (owner, 2026-10-01).** No letter checkpoints.
   Playtests between releases use plain pushed commits.
 - **After the owner tags, the release checklist is due in the next pull request (owner, 2026-10-03).** Steps:
@@ -136,28 +136,29 @@ replaces its line; the old one stays findable in the archive or in git.
   and 2026-10-06).** The docs rewrite (TE2, 2026-10-08) archived the Dev 1 to Dev 4 history to `docs/archive/0.1-dev/`
   and set one house style for every doc (`docs/PROCESS.md › Writing docs`). Archived files are never edited.
 - **Each task keeps one record file, `docs/records/<id>.md`, instead of appending to shared tables (owner, 2026-10-06,
-  token plan items 3 and 4).** It holds the review line, a row per attempt (the gate writes the row's gate cells), the
-  task's own decisions and the issues it left. `docs/REVIEWS.md` and `docs/METRICS.md` are retired to the archive;
-  `docs/KNOWN_ISSUES.md` stays the shared list of open issues. Format: `docs/records/README.md`.
+  to save tokens: shared tables cost every thread a read).** It holds the review line, a row per attempt (the gate
+  writes the row's gate cells), the task's own decisions and the issues it left. `docs/REVIEWS.md` and `docs/METRICS.md`
+  are retired to the archive; `docs/KNOWN_ISSUES.md` stays the shared list of open issues. Format:
+  `docs/records/README.md`.
 - **A task that adds, renames or moves a file keeps its folder's `README.md` current (2026-10-08, TE2).** The module
   map (`docs/ARCHITECTURE.md`) and the folder READMEs replace grep sweeps across `src/`; the scope gate allows a
   `src/` folder README in any task.
 - **Agents start from the gate's own summaries, and an agent runs only where it can change the outcome (owner,
-  2026-10-06, token plan step 3; built 2026-10-08, TE3).** The critic and QA read the review packet first
+  2026-10-06, to save tokens; built 2026-10-08, TE3).** The critic and QA read the review packet first
   (`pipeline/out/review-packet.md`); the performance agent runs only when the perf gate fails (superseded 2026-10-16:
   it reviews every code change, below); the triage agent only for a failure the gate's summary
   (`pipeline/out/failures.md`) can't place; the changelog agent reads only `Unreleased` and one FEATURES heading; a near
   miss is re-run on Opus only when its failed check is a judgment, never a measured number. Models and effort levels
   are unchanged.
 - **Every code change gets all three review agents: critic, QA and performance (owner, 2026-10-16: "I need everything
-  to go through a critic agent, qa agent, and performance agent").** This replaces token step 3's "the performance
+  to go through a critic agent, qa agent, and performance agent").** This replaces TE3's "the performance
   agent runs only when the perf gate fails" and the critic skip for trivial tasks. Any pull request touching code,
   config, assets or gameplay data, inside the pipeline or not, is marked ready and merged only once each agent says
   Pass (critic: Accept, or the 6/8 auto-accept) and its description's `Review:` line gives the verdicts; CI's `review`
   gate (`pipeline/review.mjs`) checks the line on every pull request out of draft. Docs-only changes (every file
   Markdown, and at the root only README, CHANGELOG and CLAUDE.md: the other root `.md` files are game data) skip them.
   Models and effort levels are unchanged.
-- **Token step 4 (owner, 2026-10-06, token plan items 8, 21 and 22; built 2026-10-08, TE4).** The project chat
+- **Fewer messages and fewer slow runs (owner, 2026-10-06, to save tokens; built 2026-10-08, TE4).** The project chat
   carries only results, blockers and decisions, from threads and the coordinator alike (`docs/PROCESS.md` ›
   Sessions). Off CI the gate runs the slow bot-match guards only when the diff reaches a file they load (by their
   imports, not by folder: bot tuning in `src/config` and the pool reach them too); CI always runs every test. Balance
@@ -487,13 +488,13 @@ replaces its line; the old one stays findable in the archive or in git.
   bot sees empty, or a teammate stood in, counts as checked for the level's `huntMemory` (Easy 20 s, Normal 40, Hard
   50, Pro 60; `config/bots.ts`); older, it counts as never checked, so the middle keeps drawing the hunt. A bot that
   sees its hunt spot empty turns off for the next before it gets there.
-- **Balance is measured by headless bot matches against bands (2026-09-28), in a report since token step 4 (owner,
-  2026-10-06, token plan item 22; built 2026-10-08, TE4).** Who wins, who lands the first hit, how often the squad gets
-  out of Extraction and the levels' order are figures in `src/ai/balance/`, judged by `node pipeline/balance.mjs`
-  against their bands and standard errors; they never fail a build, and the bug pass reads the report. The `slow`
-  guards keep what must never happen (rounds played and settled, nobody stuck, falling or hit by a teammate, the rules
-  of each mode). A change that moves a figure records its measure beside it. Owner ruling 2026-10-06 (M73): the Normal
-  figures are judged at 45 to 55 %, the Pro ones at their usual 40 to 60 %.
+- **Balance is measured by headless bot matches against bands (2026-09-28), in a report since TE4 (owner, 2026-10-06;
+  built 2026-10-08), since noise across seeds made pass/fail bands cost re-measure loops.** Who wins, who lands the
+  first hit, how often the squad gets out of Extraction and the levels' order are figures in `src/ai/balance/`, judged
+  by `node pipeline/balance.mjs` against their bands and standard errors; they never fail a build, and the bug pass
+  reads the report. The `slow` guards keep what must never happen (rounds played and settled, nobody stuck, falling or
+  hit by a teammate, the rules of each mode). A change that moves a figure records its measure beside it. Owner ruling
+  2026-10-06 (M73): the Normal figures are judged at 45 to 55 %, the Pro ones at their usual 40 to 60 %.
 - **Bot callouts are text and a radio click, never voices, and never change play (2026-10-13, CL1).** A teammate's
   call shows bottom left with the walkie-talkie click an order gets (no new sound to render), panned to where they
   are; an enemy's is only its click, from them, within 15 m. The callouts read the bots and never write them, on a

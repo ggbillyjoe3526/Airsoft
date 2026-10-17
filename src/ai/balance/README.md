@@ -1,10 +1,11 @@
 # src/ai/balance
 
-Test-only: the bot balance figures (token plan item 22). Each `*.balance.ts` plays headless bot matches or Extraction
-runs over many seeds and hands its figures to the balance report; nothing here asserts or ships. Vitest project
-`balance`, which exists only when `AIRSOFT_BALANCE` is set: `node pipeline/balance.mjs [filter]` (`npm run balance`)
-sets it and writes `pipeline/out/balance-report.md`, each figure judged against its band and standard error
-(`pipeline/balanceReport.mjs`). The gate, CI and `vitest run` never run these files.
+Test-only: the bot balance figures, reported and never asserted, since noise across seeds made pass/fail bands cost
+re-measure loops. Each `*.balance.ts` plays headless bot matches or Extraction runs over many seeds and hands its
+figures to the balance report; nothing here asserts or ships. Vitest project `balance`, which exists only when
+`AIRSOFT_BALANCE` is set: `node pipeline/balance.mjs [filter]` (`npm run balance`) sets it and writes
+`pipeline/out/balance-report.md`, each figure judged against its band and standard error (`pipeline/balanceReport.mjs`).
+The gate, CI and `vitest run` never run these files.
 
 - `balanceSupport.ts`: a figure (`BalanceMeasure`: label, value, the count it is a share of, band, unit), `reportMeasure`
   (into the test's `task.meta`, which vitest's JSON report carries), `reportTally` (a match tally's side or end share and

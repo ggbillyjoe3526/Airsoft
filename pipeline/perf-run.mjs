@@ -7,7 +7,7 @@
  *   node pipeline/perf-run.mjs [--env container|laptop|desktop|ci] [--preset low|medium|high|ultra|all] [--cpu N]
  *                              [--ticks 3600] [--warmup-ticks 120] [--max-seconds 300] [--baseline] [--no-build]
  *                              [--chromium /path] [--channel chrome|msedge] [--headless] [--map <map>] [--mode <mode>]
- *                              [--viewport 1920x1080] [--port 4181] [--backend webgl|webgpu]
+ *                              [--viewport 1920x1080] [--port 4181] [--backend webgl|webgpu] [--vsync]
  *
  * The e2e bundle is reused when the source hasn't changed since it was built (pipeline/build-cached.mjs).
  *
@@ -38,6 +38,9 @@
  * to hide it) and the installed Chrome (`--channel chrome`, the default there; or `--chromium /path`).
  *
  * `--env desktop` (G5) is the same on the owner's desktop PC, without CPU throttling: where the Ultra budget is measured.
+ * Its frames run past the screen's refresh (perfDesktop.mjs UNCAPPED_ARGS; `--vsync` keeps the cap), so a 240 Hz
+ * screen doesn't hold them at the target's own period; perf-desktop.mjs runs its whole suite. Every result records
+ * `vsync` and the `gpu` the browser drew with.
  * `--viewport WxH` sets the page's size (default 1920x1080 at pixel ratio 1; 3840x2160 for 4K); the result records it.
  *
  * `--backend webgl|webgpu` (WebGPU overhaul W6; default `webgl`) picks the node renderer's back end: `webgl` is its
@@ -56,6 +59,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { baselineFileName, perfTag, runFileName } from './perfMatrix.mjs';
+import { UNCAPPED_ARGS } from './perfDesktop.mjs';
 import { WEBGPU_ARGS } from './webgpuCompare.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -108,11 +112,20 @@ const laptop = options.env === 'laptop' || options.env === 'desktop';
 // garbage happened to be waiting at the first and last sample (that swung ±10 MB between runs of one head).
 const heapArgs = ['--enable-precise-memory-info', '--js-flags=--expose-gc'];
 // WebGPU in the container and on CI needs the software adapter's switches (the laptop and the desktop have a real GPU).
-const browserArgs = laptop ? heapArgs : ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', ...(options.backend === 'webgpu' ? WEBGPU_ARGS : []), ...heapArgs];
+/** The desktop's frames past the screen's refresh (PF3: the 240 Hz target is the cap's own period). */
+const vsync = options.env !== 'desktop' || flag('--vsync');
+const browserArgs = laptop ? [...heapArgs, ...(vsync ? [] : UNCAPPED_ARGS)] : ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', ...(options.backend === 'webgpu' ? WEBGPU_ARGS : []), ...heapArgs];
 const channel = options.chromium ? undefined : value('--channel', laptop ? 'chrome' : undefined);
 
 mkdirSync(OUT, { recursive: true });
-const head = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).trim();
+/** The commit measured; `unknown` in a download without git (the owner's ZIP of main). */
+const head = (() => {
+  try {
+    return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+  } catch {
+    return 'unknown';
+  }
+})();
 
 // The e2e bundle, rebuilt only when the source changed since the last one (pipeline/build-cached.mjs; audit CORE-22):
 // after the gate's smoke test it is already there. --no-build uses whatever dist-e2e/ holds.
@@ -289,8 +302,18 @@ async function measure(preset) {
       figureMs: figureMs / n,
     };
   }, { ticks, maxSeconds: options.maxSeconds });
+  // The graphics card the browser drew with (an integrated GPU instead of the discrete one would show here), read after
+  // the window from a context of its own, released at once.
+  const gpu = await page.evaluate(() => {
+    const gl = document.createElement('canvas').getContext('webgl2');
+    if (!gl) return 'unknown';
+    const info = gl.getExtension('WEBGL_debug_renderer_info');
+    const name = String(gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER));
+    gl.getExtension('WEBGL_lose_context')?.loseContext();
+    return name;
+  });
   await page.close();
-  return { env: options.env, backend, map: options.map, mode: options.mode, preset, cpu: options.cpu, ticksWanted: ticks, warmupTicks: options.warmupTicks, head, when: new Date().toISOString(), seed: 1, viewport: `${options.viewport}@1`, metrics: sample, errors };
+  return { env: options.env, backend, map: options.map, mode: options.mode, preset, cpu: options.cpu, vsync, gpu, ticksWanted: ticks, warmupTicks: options.warmupTicks, head, when: new Date().toISOString(), seed: 1, viewport: `${options.viewport}@1`, metrics: sample, errors };
 }
 
 /** A run's baseline file: `<env>.json` for the budget preset (what the gate compares), `<env>-<preset>.json` otherwise. */
