@@ -296,6 +296,7 @@ this file (`.claude/agents/changelog.md`); `CHANGELOG.md` has the same changes b
   a deep wood beyond the fence (W5)
 - Night torch beams are soft and diffused, with a soft-edged lit spot; Low keeps the old beams (M91)
 - Torch shadows (High and Ultra): your own torch casts shadows, so a tree or bot in its beam shades what is behind it; off on Low and Medium (M91)
+- Shaders built before round 1: round 1 holds on a still field until fades, light shafts, shadows, magazines, the 2× scope and the overtime flag are ready (PF1)
 
 ## Practice and tutorial
 

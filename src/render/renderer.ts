@@ -505,9 +505,10 @@ export class Renderer {
       try {
         for (const setUp of warm.setUp) setUp(() => this.draw(warm.overlay));
       } finally {
+        // Settled even if a draw throws, or the round would wait for good.
         this.post.warming(false);
+        warm.done();
       }
-      warm.done();
     }
     this.draw(overlay);
   }

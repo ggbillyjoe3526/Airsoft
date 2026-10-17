@@ -64,6 +64,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **KI1** · The Armory keeps an item you own in colour
 - **KI2** · A BB that ricochets throws its grit and leaves back off the wall it bounced from, not towards whoever fired it
 - **KI2** · Depot, Woodland and Neon Heights show their updated pictures on the Match screen
+- **PF1** · Round 1 holds briefly while shaders build, so the first fade, light shaft, shadow, tossed magazine, 2x scope or overtime flag no longer stalls
 
 ### Internal
 - **MS1** · Tests remove skyline pieces no player can see and keep hung units and cables clear of the player's room; perf baselines re-recorded
@@ -80,6 +81,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **DX1** · Developer-only: each pipeline rule lives in one doc the others point to; architecture contracts get headings; process docs say 0.1 Beta 1
 - **Pipeline** · Desktop perf suite: one command records the 4K maxed-out baseline across Depot presets and Ultra maps, uncapped, with a summary
 - **DX3** · Developer-only: a task can be marked as a fix, with every check and review kept and a shorter record; the perf run needs no separate flag
+- **PF1** · `?perf` logs any shader pipeline built mid-play
 - **DX2** · Developer-only: Dev 5 and 6 plans, decisions, known issues and playtest guide archived or trimmed under 50 KB each
 
 ## 0.1 Dev 6 · 2026-10-16
