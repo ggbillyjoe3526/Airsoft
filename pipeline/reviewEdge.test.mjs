@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { docsOnly, judgeReview, parseReviewLine } from './review.mjs';
 import { reportFor } from './packet.mjs';
@@ -9,16 +9,18 @@ const CODE = new Set(['src/sim/step.ts']);
 const GOOD = 'Review: critic Accept 8/8 · qa Pass · performance Pass';
 const judge = (body, extra = {}) => judgeReview({ changed: CODE, body, draft: false, ...extra });
 
-describe('docsOnly: root Markdown the build reads is not docs', () => {
-  const buildInputs = [...readFileSync(new URL('./build-cached.mjs', import.meta.url), 'utf8').matchAll(/'([\w-]+\.md)'/g)].map((m) => m[1]);
-  it('build-cached.mjs names the root .md files (sanity)', () => {
-    expect(buildInputs).toEqual(expect.arrayContaining(['pool.md', 'stats.md']));
+describe('docsOnly: the Markdown tables the build reads are not docs', () => {
+  const buildCached = readFileSync(new URL('./build-cached.mjs', import.meta.url), 'utf8');
+  const tables = ['levels.md', 'bots.md', 'bot-kits.md', 'callouts.md', 'pool.md', 'stats.md'];
+  it('build-cached.mjs hashes data/, where the tables live (sanity, DX7)', () => {
+    expect(buildCached).toMatch(/INPUT_DIRS = \[[^\]]*'data\/'/);
+    for (const f of tables) expect(existsSync(new URL(`../data/${f}`, import.meta.url)), f).toBe(true);
   });
-  it.each(['levels.md', 'bots.md', 'bot-kits.md', 'callouts.md', 'pool.md', 'stats.md'])('%s needs the review line', (f) => {
-    expect(docsOnly(new Set([f]))).toBe(false);
+  it.each(tables)('data/%s needs the review line', (f) => {
+    expect(docsOnly(new Set([`data/${f}`]))).toBe(false);
   });
-  it('every root .md that build-cached.mjs hashes counts as code', () => {
-    for (const f of buildInputs) expect(docsOnly(new Set([f])), f).toBe(false);
+  it('a root .md that is not a listed doc counts as code', () => {
+    for (const f of tables) expect(docsOnly(new Set([f])), f).toBe(false);
   });
   it('nested README and docs files are docs; a docs/ file named like a build input is still docs', () => {
     expect(docsOnly(new Set(['src/ai/README.md', 'docs/foo.md', 'docs/pool.md']))).toBe(true);

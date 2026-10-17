@@ -7,7 +7,7 @@ import { MemoryStorage } from '../../pool/testStorage';
 import { SETTINGS_KEY } from '../../settings/storage';
 import { FakeElement, findAll } from '../testSupport';
 import { practiceView } from './playView';
-import { loadPracticePlace } from './savedChoices';
+import { loadPracticePlace } from '../../settings/savedChoices';
 import { type PlayModel, SetupScreen } from './setupScreen';
 
 /** Practice on any map (M94): where Practice plays, as the Match screen offers it and the game reads it. */

@@ -14,7 +14,8 @@ import { vec3 } from '../sim/vec';
 import { TutorialTracker } from '../tutorial/tutorial';
 import { CoachPanel } from './coachPanel';
 import { Hud } from './hud';
-import { hudSettings, loadAmmoCounter } from './hudSettings';
+import { hudSettings } from './hudSettings';
+import { loadAmmoCounter } from '../settings/hudPrefs';
 import { REPLICA_PANEL_HTML, ReplicaPanel } from './replicaPanel';
 import { FakeElement, fakeDocument, findAll } from './testSupport';
 

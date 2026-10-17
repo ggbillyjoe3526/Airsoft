@@ -172,7 +172,7 @@ export class CharacterRenderer {
   private readonly thrown: ThrownMagazines | null;
   /** See-through copies of the figures' materials, the warm-up's (withEveryFigureFading), kept for the session. */
   private readonly seeThrough = new Map<THREE.Material, THREE.Material>();
-  private readonly frame: RiggedFrame = { alpha: 0, dt: 0, eyeX: 0, eyeY: 0, eyeZ: 0, firstPerson: false, viewLow: -Math.PI / 2, leanX: 0, leanZ: 0, peek: 0, peekPivot: 0, cycle: null, castShadow: true };
+  private readonly frame: RiggedFrame = { alpha: 0, dt: 0, eyeX: 0, eyeY: 0, eyeZ: 0, firstPerson: false, leanX: 0, leanZ: 0, peek: 0, peekPivot: 0, cycle: null, castShadow: true };
 
   constructor(
     private readonly characters: readonly Character[],
@@ -377,9 +377,8 @@ export class CharacterRenderer {
   /**
    * `alpha` interpolates ticks; `dt` is the frame time; `hiddenId` is the character the camera is
    * inside (drawn in first person instead), or -1. `eye`: where the camera is, so a far HIT! sign keeps its size on screen.
-   * `viewLow`: the angle of the bottom of the view below level; your own rigged body is drawn only looking down (BD1).
    */
-  update(alpha: number, dt: number, hiddenId: number, eye?: { x: number; y: number; z: number }, viewLow = -Math.PI / 2): void {
+  update(alpha: number, dt: number, hiddenId: number, eye?: { x: number; y: number; z: number }): void {
     for (let i = 0; i < this.characters.length; i++) {
       const c = this.characters[i]!;
       const s = this.figures[i]!;
@@ -401,7 +400,7 @@ export class CharacterRenderer {
         }
       }
       if (s.rigged) {
-        this.updateRigged(c, s, s.rigged, alpha, dt, hiddenId, eye, viewLow);
+        this.updateRigged(c, s, s.rigged, alpha, dt, hiddenId, eye);
         continue;
       }
       const f = s.figure!;
@@ -565,9 +564,9 @@ export class CharacterRenderer {
 
   /**
    * A rigged figure's frame (BF1): placed, posed and faded as the built-in one is; your own (the camera's, `hiddenId`)
-   * is drawn as your first-person body. The thrown magazines fly on with the first figure.
+   * is posed but never drawn (MV2). The thrown magazines fly on with the first figure.
    */
-  private updateRigged(c: Character, s: FigureState, r: RiggedFigure, alpha: number, dt: number, hiddenId: number, eye: { x: number; y: number; z: number } | undefined, viewLow: number): void {
+  private updateRigged(c: Character, s: FigureState, r: RiggedFigure, alpha: number, dt: number, hiddenId: number, eye: { x: number; y: number; z: number } | undefined): void {
     if (s === this.figures[0]) this.thrown?.update(dt);
     const x = c.prevPosition.x + (c.position.x - c.prevPosition.x) * alpha;
     const y = c.prevPosition.y + (c.position.y - c.prevPosition.y) * alpha;
@@ -585,7 +584,6 @@ export class CharacterRenderer {
     f.eyeY = eye ? eye.y : y + 1;
     f.eyeZ = eye ? eye.z : z;
     f.firstPerson = c.id === hiddenId;
-    f.viewLow = viewLow;
     f.peek = figureLeanRoll(leaning, this.hits);
     f.leanX = lean.x;
     f.leanZ = lean.z + f.peek;

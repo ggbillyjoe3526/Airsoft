@@ -44,7 +44,7 @@ What changed in 0.1 Beta 1, from your Dev 6 playtest. Each line points to the se
   smaller replica panel, a WON / LOST / DRAW stamp you click past, Settings › HUD › Feed position
   ([HUD and match info](#hud-and-match-info)).
 - [ ] **Blender figures by default.** Players and bots are the rigged humans and robots, with hit areas fitted to each
-  body; your own body shows only when you look well down ([Players and replicas](#players-and-replicas)).
+  body; your own body never shows in first person, even looking straight down ([Players and replicas](#players-and-replicas)).
 - [ ] **Map surroundings.** Cranes and a water tower over Depot's walls; Woodland's cabin, layered pines and brighter
   nights; Neon Heights ringed by lit towers and signs ([Maps](#maps)).
 - [ ] **A shorter tutorial.** One or two sentences a card; read-only cards fill a bar and move on after 10 s; a lean
@@ -82,8 +82,8 @@ Play › Mode Elimination on Depot, Match › Opponents Normal. Set the mouse se
   hear your footsteps.
 - [ ] **Hold Shift and move.** You walk slowly and silently, and the crosshair closes to about its standing-still
   size. Is the gain clear enough? (Dev 6 note 29.)
-- [ ] **Press 3, then run.** Holstered, you run faster than with the replica out; with Left Alt the sprint is the
-  same as armed, never faster. (Dev 6 note 27.)
+- [ ] **Press 3, then run.** Holstered, you run faster than with the replica out (5.4 m/s against 4.2); with Left Alt
+  the sprint is the same as armed, never faster. Fast enough now? (Dev 6 note 27, Beta 1 item 18.)
 - [ ] **Hold Left Alt and fire while sprinting.** It fires, but the spread is far wider and the rifle climbs faster;
   let go of the trigger and it drops back into the carry. (Dev 5 playtest, note 9.)
 - [ ] **Press C.** You crouch, slow and silent, and C again stands you up; Left Alt or Space also stands you up. With
@@ -173,7 +173,10 @@ never players.
 - [ ] **Team camo** (Medium and up). Clear dark and light blotches in the team's colour, crisp up close and blending
   far off without shimmering; Low keeps plain clothes.
 - [ ] **Your hands.** Dark gloves, sleeves in your team's camo (Hand detail High) and the team armband on the left
-  forearm.
+  forearm. Inspect (Y) the rifle and each pistol: the firing hand's wrist sits low behind the grip, bent a little up from
+  a forearm running back about level, the thumb where it was (Beta 1 item 21).
+- [ ] **Look straight down.** Standing, crouched and in a vault: you see the ground, never your own body (Beta 1
+  item 24).
 - [ ] **Hit call.** Hit a bot: the HIT! sign, the hand up, the replica hanging; readable at 20 to 30 m.
 - [ ] **Replicas.** The rifle and pistol look like toys: blocky, two-tone, stippled grips; others' replicas are in
   their team's colours.
@@ -238,7 +241,7 @@ until 10.
 ## Levels and the Armory
 
 Finished matches give XP, each level up to 10 unlocks parts for good, and nothing is ever sold. What each level
-unlocks is in `levels.md` at the repository root; the Armory shows it in the game.
+unlocks is in `data/levels.md`; the Armory shows it in the game.
 
 - [ ] **Level 0 to start.** On a fresh save (a private window, or Settings › Save › Delete) the top bar reads "LVL 0"
   with an empty bar.

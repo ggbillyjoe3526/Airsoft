@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import poolText from '../../../pool.md?raw';
+import poolText from '../../../data/pool.md?raw';
 import { RECORDS_KEY } from '../../config/matchInfo';
 import { DEFAULT_MATCH_RULES } from '../../config/matchRules';
 import { MENU_TEXT, PLAY_TEXT } from '../../config/menus';
@@ -14,7 +14,7 @@ import { TopBar } from './chrome';
 import { EventNode, stubMenuPage } from './menuTestSupport';
 import { PauseScreen } from './pauseScreen';
 import { ResultScreen } from './resultScreen';
-import { loadMatchStarted, loadMode, loadTutorialDone } from './savedChoices';
+import { loadMatchStarted, loadMode, loadTutorialDone } from '../../settings/savedChoices';
 import { type PlayModel, type PlayView, SetupScreen } from './setupScreen';
 import { TitleScreen, tutorialOffered } from './titleScreen';
 

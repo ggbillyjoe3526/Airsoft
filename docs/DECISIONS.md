@@ -126,8 +126,9 @@ The pipeline's protocol is `pipeline/README.md`; its policy `docs/PROCESS.md`.
   measured inside every budget line (Depot, container: 35 draw calls of 100, 54k triangles of 150k, 78 MB of 300); its
   frame time on the owner's laptop is still to be measured (PF2). Medium's Player detail is Low.
 - **The Blender figures (owner, 2026-10-10; approved 2026-10-12).** Hands hold the replica naturally; robots wear no
-  vest, holsters, magazines or accessories, their team shown by colour on their highlights; the figure is also the
-  player's first-person body, without its head. A reload pulls the old magazine and throws it (owner, 2026-10-11). The
+  vest, holsters, magazines or accessories, their team shown by colour on their highlights. Your own figure is never
+  drawn in first person, looking down or vaulting included (owner, 2026-10-17, Beta 1 playtest item 24; MV2, replacing
+  BD1's body drawn when you look well down). A reload pulls the old magazine and throws it (owner, 2026-10-11). The
   aim clips turn the replica through 55 % of their ±60 degrees (BF1). Files are packed losslessly after each export
   (`tools/blender/bot-figure/pack.mjs`; no gltfpack: it renames what the game reads). Attachments sit on a sight line
   3.05 cm over the rail; a parts file's optic marks its own (RM8).
@@ -196,8 +197,8 @@ The pipeline's protocol is `pipeline/README.md`; its policy `docs/PROCESS.md`.
   and jump height (2026-09-28).** Crouched eyes (1.09 m) hide behind 1.2 m cover and standing eyes (1.66 m) shoot over
   it. Crouch cover is unclimbable (tested).
 - **3 holsters the replica (1 primary, 2 secondary, rebindable): moving holstered is faster, never past the sprint, and
-  the draw from the holster slower (owner, 2026-10-06 and 2026-10-16; M92, MV1).** Holstered run 5.0 m/s against 4.2
-  with the replica out (`MOVEMENT.holsterRunSpeed`); sprint 6.3 either way. A draw takes 1.8 times the replica's own
+  the draw from the holster slower (owner, 2026-10-06, 2026-10-16 and 2026-10-17; M92, MV1, MV2).** Holstered run
+  5.4 m/s against 4.2 with the replica out (`MOVEMENT.holsterRunSpeed`); sprint 6.3 either way. A draw takes 1.8 times the replica's own
   (`HOLSTER.drawScale`). A slot key, a fresh trigger pull, an aim press or a reload draws it. Bots holster only on a
   calm sprint through their own half (`ai/botHolster.ts`).
 - **Vaulting is Jump at a low obstacle, with no key of its own (owner, 2026-10-12; M102).** Obstacles 0.6 to 0.95 m

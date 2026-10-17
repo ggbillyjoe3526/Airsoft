@@ -6,7 +6,7 @@ import { MemoryStorage } from '../../pool/testStorage';
 import { SETTINGS_KEY } from '../../settings/storage';
 import { FakeElement, findAll } from '../testSupport';
 import { type MatchModel, MatchPanel, type MatchShown } from './matchPanel';
-import { loadTeamPick } from './savedChoices';
+import { loadTeamPick } from '../../settings/savedChoices';
 
 /** The Match screen's Your team row (M98), on the fake DOM: Alpha by default, saved as picked, gone for an Extraction run. */
 

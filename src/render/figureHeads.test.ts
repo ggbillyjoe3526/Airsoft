@@ -37,7 +37,7 @@ function figureWithId(id: number) {
   const f = new RiggedFigure({ rig: rigs.human, character: c, id, teamColour: 0x3d8bff, replicaMaterial: material, rifleColours: dress.rifle, pistolColours: dress.pistol, files, detail: 'high', pack: true, radio: true, thrown: new ThrownMagazines(), calloutMaterial: new THREE.SpriteMaterial() });
   return { f, c };
 }
-const frame = (firstPerson: boolean): RiggedFrame => ({ alpha: 1, dt: 1 / 60, eyeX: 0, eyeY: 1.6, eyeZ: 3, firstPerson, viewLow: -Math.PI / 2, leanX: 0, leanZ: 0, peek: 0, peekPivot: 0.92, cycle: null, castShadow: true });
+const frame = (firstPerson: boolean): RiggedFrame => ({ alpha: 1, dt: 1 / 60, eyeX: 0, eyeY: 1.6, eyeZ: 3, firstPerson, leanX: 0, leanZ: 0, peek: 0, peekPivot: 0.92, cycle: null, castShadow: true });
 const shownTriangles = (f: RiggedFigure): number[] => {
   const out: number[] = [];
   f.root.traverseVisible((o) => {
@@ -76,15 +76,12 @@ describe('four heads, one per figure by id', () => {
     expect(seen.size).toBe(4);
   });
 
-  it('hides every head in first person (sidecar list and drawn mesh)', () => {
+  it('lists every head for first person in the sidecar, and draws nothing of your own figure there (MV2)', () => {
     for (const h of heads) for (const n of [h, `${h}_LOD1`, `${h}_LOD2`]) expect(sidecar.firstPerson.hide, n).toContain(n);
-    const body = tris(rigs.human.geometry(0, bodyParts));
     for (let id = 0; id < 4; id++) {
       const { f, c } = figureWithId(id);
       f.update(c, frame(true));
-      const shown = shownTriangles(f);
-      expect(shown.length).toBeGreaterThan(0);
-      expect(shown, `id ${id} first person shows no head`).toContain(body + meshTris.get('Kit_Pack')! + meshTris.get('Kit_Radio')!);
+      expect(shownTriangles(f), `id ${id}`).toEqual([]);
       f.dispose();
     }
   });

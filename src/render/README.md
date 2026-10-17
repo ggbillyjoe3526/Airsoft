@@ -99,7 +99,7 @@ and never writes the simulation.
   `figurePose.ts` (the pure blend of clips from the character's state),
   `riggedFigure.ts` (one figure: skinned, posed, each loadout replica on the grip bone with its fitted optic, grip, laser,
   barrel and muzzle part, BG1, the reload's magazines, the rifle slung on the back while holstered and its drawn
-  muzzle for the BBs, BP4, your first-person body) and `thrownMagazines.ts` (the empty magazines thrown in reloads); `modelFiles.ts` imports
+  muzzle for the BBs, BP4; your own is posed but never drawn in first person, MV2) and `thrownMagazines.ts` (the empty magazines thrown in reloads); `modelFiles.ts` imports
   `figureRig.ts` on demand, so the four ride in their own chunk and the game's carries only their types. Replicas and hands:
   `replicaModels.ts` (the bodies and assembly), `replicaParts.ts` (optics, grips, magazines and the other fitted parts),
   `replicaBuilder.ts` (the mesh builder both use), `replicaFiles.ts` (the Blender model files, M101, RM1, and their parts' sight-line and under-laser markers, RM8, and a laser's lens, BP4; `modelFiles.ts` loads them, and the figure model, as the game starts, BD1) and `replicaRig.ts`

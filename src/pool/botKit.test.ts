@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import kitsText from '../../bot-kits.md?raw';
+import kitsText from '../../data/bot-kits.md?raw';
 import { DIFFICULTIES } from '../config/bots';
 import { AEG, CYBER_PISTOL, GAS_PISTOL, LOADOUT } from '../config/replicas';
 import { shotHeardScale } from '../sim/armament';

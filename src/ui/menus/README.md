@@ -44,7 +44,9 @@ choices to `src/game.ts`.
   files in `public/menu/`, made by `pipeline/map-stills.mjs` (`config/menuArt.ts`). Customise's Colour tab offers the bold schemes and the four realistic colours
   (`config/schemes.ts` › `PaintId`), kept per replica.
 - Icons: `icons.ts`, the small line icons the menus, the mode cards and the hit feed use.
-- Choices are saved in the browser and read back by `savedChoices.ts` (`loadMatchStarted`: the title's Tutorial offer).
+- Choices are saved in the browser and read back by `settings/savedChoices.ts` (`loadMatchStarted`: the title's Tutorial
+  offer). Settings' HUD, Accessibility and crosshair rows read and change `settings/hudPrefs.ts` `HudPrefs` (`menus.ts`
+  `prefRows`), and the Controls rows the `PlayerInput` and `PointerLock` that hold them (`controlRows`), by reference.
   Map, mode, difficulty and loadout are picked only on the Match screen, with no match loaded.
 - Styles: `menus.css` imports `css/` (one file per screen or concern; `css/match.css` is the Match rules panel); the typeface is Inter (`css/fonts.css`, `src/assets/fonts/`). Tuning:
   `config/menus.ts`, `config/menuArt.ts`.

@@ -28,7 +28,7 @@ export const FIGURE_RIG = {
    */
   lowerBones: ['Root', 'Hips', 'Thigh_L', 'Shin_L', 'Foot_L', 'Toe_L', 'Thigh_R', 'Shin_R', 'Foot_R', 'Toe_R'] as readonly string[],
   /** The bones the drawing reads or moves itself. */
-  bones: { hips: 'Hips', spine: 'Spine', chest: 'Chest', grip: 'Grip_R', hand: 'Hand_L', arms: ['UpperArm_L', 'UpperArm_R'] as readonly string[] },
+  bones: { hips: 'Hips', spine: 'Spine', chest: 'Chest', grip: 'Grip_R', hand: 'Hand_L' },
   /** The parts in the files, by role (each has `_LOD1` and `_LOD2` copies, except where the file lacks one). */
   parts: {
     human: {
@@ -83,16 +83,6 @@ export const FIGURE_RIG = {
    * more than `crouched` of the way down (sim/figureLegs.ts).
    */
   backStep: { share: 0.1, crouched: 0.5 },
-  /**
-   * The first-person body (your own figure seen when you look down): the model drawn this far behind the eyes (metres)
-   * so the camera is never inside the chest, with the head and arms left out (the hands and replica in view are the
-   * first-person ones). The arms are folded into the shoulders by scaling their bones to `armScale`. It is drawn only
-   * while the bottom of the view reaches within `margin` of its `highest` point below the eyes, or in a vault (BD1),
-   * which spares its 20,000 triangles while you look ahead. `highest` is measured over the clips (the angle below the
-   * eyes, ahead of them, of the body's highest vertex): standing, the sprint's knee; crouched, the crouch walk's.
-   * `margin` covers a lean's camera roll (RENDER.leanCameraRoll) and the eyes' bob.
-   */
-  firstPerson: { back: 0.17, armScale: 1e-3, highest: { standing: -72 * DEG, crouched: -53 * DEG }, margin: 10 * DEG },
   /** Thrown-away magazines out at most (the oldest goes first); each lies for its sidecar lifetime. */
   thrownMagazines: { max: 12 },
   /**
