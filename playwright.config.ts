@@ -92,6 +92,9 @@ export default defineConfig({
     baseURL: `http://localhost:${PORT}`,
     screenshot: 'only-on-failure',
   },
+  // One Firefox at a time: two headed windows share xvfb-run's one display, and the one underneath stops drawing frames,
+  // so its next click waits on a frame that doesn't come (IN1 follow-up, 2026-10-17).
+  ...(FIREFOX ? { workers: 1 } : {}),
   projects: FIREFOX ? FIREFOX_PROJECTS : CHROMIUM_PROJECTS,
   webServer: FIREFOX ? E2E_SERVER : [E2E_SERVER, RELEASE_SERVER],
 });
