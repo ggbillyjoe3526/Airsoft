@@ -342,12 +342,12 @@ attempts: 0
 ## KI2 · Known issues fix pass, round two (owner, 2026-10-17)
 tier: core
 perf: required
-touches: src/sim/bbs.ts, src/sim/events.ts, src/render/impactGrit.ts, src/render/leafFlecks.ts, src/render/combatPresentation.ts, src/content/modePlay.ts, public/menu/, docs/
+touches: src/sim/bbs.ts, src/sim/events.ts, src/render/impactGrit.ts, src/render/leafFlecks.ts, src/render/combatPresentation.ts, src/content/modePlay.ts, src/config/menuArt.ts, src/config/menuArt.test.ts, src/ui/menus/README.md, pipeline/map-stills.mjs, public/menu/, docs/, CHANGELOG.md
 contract: none
 acceptance:
   1. The rows KI1 left that no Beta 1 block owns, that wait on no playtest, ruling or real GPU, and that a bug pass can fix are fixed at their root, each with a test where the logic is testable, and their rows deleted.
   2. A ricocheted BB's grit and leaves fly back off the surface it bounced from, not towards its shooter (KI1's commit eaea268).
-  3. The menus' map pictures show Depot, Woodland and Neon Heights as they are after MS1, each inside its byte budget.
+  3. The menus' map pictures show Depot, Woodland and Neon Heights as they are after MS1, each inside its byte budget. The unused mode pictures are deleted (owner, 2026-10-17).
   4. The content toolkit's mode checks play with each figure's own hit volume, as matches do since BD1.
   5. Rows tagged with a Beta 1 block that has merged without changing them say so, or name the open block that now owns them.
   6. No balance number is retuned; the bot-match guards stay green with no threshold loosened. The perf gate is green.
