@@ -132,6 +132,9 @@ export class Renderer {
   private retro: RetroView | null = null;
   /** Told when the device is lost (true) and when a new one draws (false); see onContextChange. */
   private contextListener: (lost: boolean) => void = () => undefined;
+  /** Settles once a lost device's replacement draws (nodeLost); null while the device draws. */
+  private recovery: Promise<void> | null = null;
+  private recovered: () => void = () => undefined;
   /**
    * The post stack (G5, render/post/postHost.ts) for the quality in force: none on Low (the frame is drawn straight to
    * the screen), and none while the retro filter is on.
@@ -444,7 +447,10 @@ export class Renderer {
    * meanwhile waits on the GPU for the whole match's pipelines inside its own draw, holding the page.
    */
   afterCompiles(): Promise<void> {
-    return this.node.afterCompiles();
+    // While the device is lost they also wait for its replacement: drawn on the lost renderer, a picture's new pipeline
+    // would link that context's old shaders once the browser gives it back, and fail (BD1).
+    const recovery = this.recovery;
+    return recovery ? recovery.then(() => this.afterCompiles()) : this.node.afterCompiles();
   }
 
   /** Lets go of `scene` as the overlay to release on a device swap (its match is over and has freed it, BP2). */
@@ -573,16 +579,27 @@ export class Renderer {
    */
   private readonly nodeLost = async (): Promise<void> => {
     const old = this.node;
+    this.recovery ??= new Promise((done) => (this.recovered = done));
     this.contextListener(true);
     const gone = (): boolean => this.disposed || this.node !== old;
     const next = await old.replacement(gone);
-    if (gone()) return next?.dispose();
+    if (gone()) {
+      if (this.disposed) this.endRecovery();
+      return next?.dispose();
+    }
+    // No replacement: the game stays paused under the notice, and what waits on the recovery waits on.
     if (!next) return;
     this.takeOver(old, next);
     if (old.kind === 'webgpu' && next.kind === 'webgl') this.lostToWebGL = true;
     this.resize();
+    this.endRecovery();
     this.contextListener(false);
   };
+
+  private endRecovery(): void {
+    this.recovery = null;
+    this.recovered();
+  }
 
   private readonly resize = (): void => {
     const w = this.container.clientWidth || window.innerWidth;

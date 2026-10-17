@@ -30,6 +30,10 @@
   distances (middle detail beyond 6 m, the coarsest beyond 16 m), because four teammates at full detail at the spawn put
   Woodland 5v5 on Medium at 205,000 to 257,000 triangles of its 200,000; with Low's distances 140,000 to 145,000. High
   and Ultra keep 12 m and 28 m, and anyone on Medium can still pick High.
+- **The menus' pictures wait for a lost device's replacement** (`Renderer.afterCompiles`): CI's boot test lost and
+  restored the context while a Blender replica's picture was queued, and drawn on the old renderer its new pipeline
+  linked that context's dead shaders (3 failures in 6 runs under load; main 0 of 6). With the wait, 6 of 6 and the whole
+  boot spec 24 of 24.
 - **The skin check's play modules leave out test-only files** (`*Support.ts`, `*.test.ts`, `src/ai/balance/`): the
   headless matches now read the figure files for their hit rules, and none of that ships.
 - **The perf baselines are re-recorded with the Blender models drawn** (all 19 container files).
