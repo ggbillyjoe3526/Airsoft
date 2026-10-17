@@ -144,7 +144,8 @@ describe('F5 level of detail', () => {
     const shows = (d: number): boolean[] => {
       settle(f, c, 1, { eyeZ: d });
       const meshes = meshChildren(holder(f, 'held:rifle')).concat(meshChildren(holder(f, 'held:pistol')));
-      return meshes.map((m) => m.visible);
+      // Drawn by the view: the small version stays on as the shadow's caster up close, on the shadow layer only (PF4).
+      return meshes.map((m) => m.visible && m.layers.isEnabled(0));
     };
     const nearOnes = meshChildren(holder(f, 'held:pistol'));
     expect(nearOnes.length).toBeGreaterThanOrEqual(2);
@@ -156,6 +157,88 @@ describe('F5 level of detail', () => {
     expect(near.some((v, i) => v && !far[i])).toBe(true);
     expect(far.some((v, i) => v && !near[i])).toBe(true);
     expect('fullReplica' in FIGURE_RIG).toBe(false);
+    f.dispose();
+  });
+
+  it('casts the held replica\'s shadow from the small version at every distance (PF4)', () => {
+    const [l1] = FIGURE_RIG.lod.high;
+    const { f, c } = at('human', 3);
+    const casters = (d: number): THREE.Mesh[] => {
+      settle(f, c, 1, { eyeZ: d });
+      return meshChildren(holder(f, 'held:rifle')).filter((m) => m.visible && m.castShadow);
+    };
+    const shadowOnly = new THREE.Layers();
+    shadowOnly.set(FIGURE_RIG.shadowLayer);
+    for (const d of [l1! - 1, l1! + FIGURE_RIG.lodGive * 2]) {
+      const cast = casters(d);
+      // One caster, the small version, whether the view draws it or the whole model.
+      expect(cast.length).toBe(1);
+      expect(cast[0]!.geometry.getAttribute('position').count).toBeLessThan(
+        Math.max(...meshChildren(holder(f, 'held:rifle')).map((m) => m.geometry.getAttribute('position').count)),
+      );
+      if (d < l1!) expect(cast[0]!.layers.mask).toBe(shadowOnly.mask);
+      else expect(cast[0]!.layers.isEnabled(0)).toBe(true);
+    }
+    // A fading figure casts none (shadow maps ignore opacity).
+    settle(f, c, 1, { eyeZ: l1! - 1, castShadow: false });
+    expect(meshChildren(holder(f, 'held:rifle')).filter((m) => m.visible && m.castShadow)).toEqual([]);
+    f.dispose();
+  });
+});
+
+describe('PF4 the held replica is drawn once and cast once in every state', () => {
+  // The meshes of a held replica in the order it is built: the whole model, the small version, the magazine.
+  const states: [string, (c: Character) => void, Partial<RiggedFrame>][] = [
+    ['near, in hand', () => {}, { eyeZ: 3 }],
+    ['far, in hand', () => {}, { eyeZ: FIGURE_RIG.lod.high[0]! + FIGURE_RIG.lodGive * 2 }],
+    ['near, holstered (rifle on the back)', (c) => { c.armament.holstered = true; }, { eyeZ: 3 }],
+    ['far, holstered', (c) => { c.armament.holstered = true; }, { eyeZ: FIGURE_RIG.lod.high[1]! + 10 }],
+  ];
+  const view = new THREE.Layers();
+  for (const kind of FIGURE_RIG_KINDS) {
+    for (const [name, setup, over] of states) {
+      it(`${kind}, ${name}: one body in the view, the small version the only caster`, () => {
+        const c = createCharacter(1, vec3(0, 0, 0), 0);
+        const { f } = figure(kind, c);
+        setup(c);
+        settle(f, c, 40, over);
+        let shown = 0;
+        for (const h of [...holders(f, 'held:rifle'), ...holders(f, 'held:pistol')]) {
+          if (!h.visible) continue;
+          shown++;
+          const [near, far] = meshChildren(h);
+          expect(near && far).toBeTruthy();
+          expect([near!, far!].filter((m) => m.visible && m.layers.test(view)).length).toBe(1);
+          expect(meshChildren(h).filter((m) => m.visible && m.castShadow)).toEqual([far]);
+        }
+        expect(shown).toBe(1);
+        f.dispose();
+      });
+    }
+  }
+
+  it('shows the whole model in the view and the small one to the shadow cameras only while reloading far away', () => {
+    const c = createCharacter(1, vec3(0, 0, 0), 0);
+    const { f } = figure('human', c);
+    const d = FIGURE_RIG.lod.high[1]! + 10;
+    settle(f, c, 40, { eyeZ: d });
+    const [near, far] = meshChildren(holder(f, 'held:rifle'));
+    expect(near!.visible).toBe(false);
+    expect(far!.layers.test(view)).toBe(true);
+    c.armament.reload = c.armament.handling[c.armament.active]!.reloadTime * 0.5;
+    settle(f, c, 10, { eyeZ: d });
+    expect(near!.visible && near!.layers.test(view)).toBe(true);
+    expect(far!.layers.test(view)).toBe(false);
+    expect(far!.castShadow).toBe(true);
+    expect(near!.castShadow).toBe(false);
+    f.dispose();
+  });
+
+  it('draws and casts nothing of the held replica in first person', () => {
+    const c = createCharacter(1, vec3(0, 0, 0), 0);
+    const { f } = figure('human', c);
+    settle(f, c, 5, { firstPerson: true });
+    for (const h of [...holders(f, 'held:rifle'), ...holders(f, 'held:pistol')]) expect(h.visible).toBe(false);
     f.dispose();
   });
 });

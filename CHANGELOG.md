@@ -43,6 +43,10 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **KI2** · Unused mode pictures are gone from the download, about 51 KB smaller
 - **RV2** · Tone mapping leaves Graphics: everyone plays with Neutral colours; Neutral, AgX and ACES are a Dev setting that applies at once, and a pick made on the old row becomes the Dev pick
 - **RV1** · Extraction has no Supply weekends or dated events like the Halloween run; its Mode card shows no event and cases always hold the usual loot
+- **AX1** · With High Contrast team colours, Extraction's exits are hi-vis yellow instead of green, on the ring, cones, EXIT sign, minimap and screen marker
+- **AX1** · High Contrast team paint (vests, armbands, helmet bands) glows faintly on day fields so the dark orange team shows in shade
+- **TT2** · Tutorial teaches leaning again: a Lean step after Crouch ticks once you've leaned both ways; read-only cards stay up 10 s
+- **PF4** · Medium runs lighter in busy fights: other players' replicas cast their shadow from a simpler figure, looking the same
 - **MV2** · The holstered run is a little faster after the Beta 1 playtest, 5.4 m/s where MV1 first set 5.0; the sprint stays at 6.3 m/s
 - **MV2** · The firing hand on the rifle and both pistols holds the grip more naturally: the wrist sits low behind the grip, bent slightly up
 - **MV2** · Your own body is never drawn in first person; looking down, crouched or vaulting you see the ground, not your legs
@@ -68,6 +72,11 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **KI1** · The Armory keeps an item you own in colour
 - **KI2** · A BB that ricochets throws its grit and leaves back off the wall it bounced from, not towards whoever fired it
 - **KI2** · Depot, Woodland and Neon Heights show their updated pictures on the Match screen
+- **IN1** · When the browser won't return the mouse after Esc, the pause screen says "Click anywhere to resume" in large type; one click carries on (#251)
+- **IN1** · A click the browser refuses in the second after Esc asks you to click again (#251)
+- **IN1** · In Firefox F10 no longer drops you onto the pause menu: play carries on and the mouse returns once the page changes size (#251)
+- **IN1** · Where Firefox refuses fullscreen from F10, the pause menu says "Click anywhere to go fullscreen" and one click does it (#251)
+- **IN1** · Settings › Controls › Raw mouse input says Firefox gives no raw input as soon as you open it (#251)
 
 ### Internal
 - **MS1** · Tests remove skyline pieces no player can see and keep hung units and cables clear of the player's room; perf baselines re-recorded
@@ -85,6 +94,9 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **Pipeline** · Desktop perf suite: one command records the 4K maxed-out baseline across Depot presets and Ultra maps, uncapped, with a summary
 - **DX3** · Developer-only: a task can be marked as a fix, with every check and review kept and a shorter record; the perf run needs no separate flag
 - **DX2** · Developer-only: Dev 5 and 6 plans, decisions, known issues and playtest guide archived or trimmed under 50 KB each
+- **IN1** · CI runs the boot and save browser tests in Firefox too, in a new firefox job (#251)
+- **DX4** · Developer-only: each pull request builds the game once for all its checks, the slow test jobs finish together, a code formatter is set up, and the quick test run drops its three slowest files to the full run
+- **PF4** · Developer-only: the perf harness measures the same stretch of play every run, so its triangle counts stop swinging between runs
 
 ## 0.1 Dev 6 · 2026-10-16
 

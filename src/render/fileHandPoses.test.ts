@@ -135,7 +135,8 @@ describe('the hands on the replica model files (playtest Dev 6, note 28)', () =>
           for (const [i, part] of partsOf(build, pose, detail).entries()) expect(fit(tris, part).depth, `${hold} ${style} ${detail} part ${i}`).toBeLessThanOrEqual(into);
         }
       }
-    });
+      // About 4 s alone for the rifle's holds: past the 5 s default under the gate's load (DX4).
+    }, 20_000);
   }
 
   it('hold on: each palm, the firing hand\'s fingertips and every thumb against the replica, not off it', () => {

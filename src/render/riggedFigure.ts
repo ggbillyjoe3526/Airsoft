@@ -36,6 +36,8 @@ export interface RiggedFigureSetup {
   /** The character's id: picks its looks (the human's pack and radio, the robot's head). */
   id: number;
   teamColour: number;
+  /** The share of the team colour its team paint glows at (TeamColours.paintGlow, AX1); glowing parts keep their own. */
+  paintGlow?: number;
   /** The figure's own vertex-coloured material, which its replicas and magazines are drawn in (and fade with). */
   replicaMaterial: THREE.Material;
   /** Its rifle's and pistol's colours on a figure (render/figureMix.ts figureDress). */
@@ -227,6 +229,7 @@ export class RiggedFigure {
         const s = c as THREE.MeshStandardMaterial;
         if (s.color) s.color.setHex(setup.teamColour);
         if (s.emissive && (s.emissive.r > 0 || s.emissive.g > 0 || s.emissive.b > 0)) s.emissive.setHex(setup.teamColour);
+        else if (s.emissive && setup.paintGlow) s.emissive.setHex(setup.teamColour).multiplyScalar(setup.paintGlow);
       }
       return c;
     });
@@ -639,9 +642,16 @@ export class RiggedFigure {
       // The whole model at the body's full detail, the small figure version beyond it, on the same give.
       const near = !h.far || mine || this.lod === 0;
       if (h.near) h.near.visible = near;
-      if (h.far) h.far.visible = !near;
-      if (h.near) h.near.castShadow = f.castShadow;
-      if (h.far) h.far.castShadow = f.castShadow;
+      // The shadow is the small version's whatever is drawn (PF4), as the body's twin is its coarsest level: the whole
+      // model's thousands of triangles make the same few texels in a shadow map. Up close it is seen by the shadow
+      // cameras only (FIGURE_RIG.shadowLayer).
+      if (h.far) {
+        h.far.visible = !near || f.castShadow;
+        h.far.castShadow = f.castShadow;
+        h.far.layers.set(near ? FIGURE_RIG.shadowLayer : 0);
+      }
+      if (h.near) h.near.castShadow = f.castShadow && !h.far;
+      if (h.magazine) h.magazine.castShadow = f.castShadow && !h.far;
       if (mine) {
         const times = h.magazines!.times;
         const u = pose.reloadAt;
