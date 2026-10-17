@@ -76,6 +76,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **DX1** · Developer-only: each pipeline rule lives in one doc the others point to; architecture contracts get headings; process docs say 0.1 Beta 1
 - **Pipeline** · Desktop perf suite: one command records the 4K maxed-out baseline across Depot presets and Ultra maps, uncapped, with a summary
 - **DX3** · Developer-only: a task can be marked as a fix, with every check and review kept and a shorter record; the perf run needs no separate flag
+- **DX4** · Developer-only: each pull request builds the game once for all its checks, the slow test jobs finish together, a code formatter is set up, and the quick test run drops its three slowest files to the full run
 
 ## 0.1 Dev 6 · 2026-10-16
 
