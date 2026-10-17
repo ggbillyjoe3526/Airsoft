@@ -30,7 +30,7 @@ MS1 shows the owner concept images and waits for his approval before any code ch
 ## UI2 · Compact Match screen and replica panel (Beta 1 playtest items 3, 11)
 tier: ui
 perf: skip
-touches: src/ui/menus/css/match.css, src/ui/hudCss/replica.css, src/styleSheet.test.ts, src/ui/hudCss/, src/ui/menus/css/
+touches: src/ui/menus/css/match.css, src/ui/hudCss/replica.css, src/styleSheet.test.ts, src/ui/hudCss/, src/ui/menus/css/, src/ui/, src/config/replicas.ts, src/game.ts, src/render/combatPresentation.ts, src/hudStyleQA.test.ts
 contract: none
 William, 2026-10-17:
   - 3: "UI elements are still quite wide horizontally. They could be more compact. Otherwise ok."
