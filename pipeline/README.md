@@ -297,7 +297,9 @@ on their budgets alone until the owner records them (`--map`, `--mode` as above,
 npm run perf:desktop        (node pipeline/perf-desktop.mjs [--channel msedge] [--chromium /path])
 ```
 
-`perf-desktop.mjs` runs `perfDesktop.mjs` DESKTOP_SUITE through `perf-run.mjs --env desktop`, about 15 minutes: Depot
+In a fresh download, `npm install` first: `perf-desktop.mjs` checks `perfDesktop.mjs` NEEDED_PACKAGES and says to run
+it when one is missing, then builds the game once and stops with the build's own output if that fails. It runs
+DESKTOP_SUITE through `perf-run.mjs --env desktop`, about 15 minutes, each failed run's error in its row: Depot
 Elimination on every preset, Ultra on every map in both modes, on WebGPU (Chrome's Auto renderer) at 3840×2160 at
 pixel ratio 1, then Depot Ultra on WebGL2, all with `--baseline` (`pipeline/baseline/desktop-webgpu*.json`,
 `desktop-ultra.json`), and Depot Ultra at 1920×1080 with none, for the hint. `--env desktop` is the laptop run without
