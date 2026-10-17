@@ -32,9 +32,9 @@
   glove and sleeve still pass about 110 px under it, and clearing them would put the pistol near mid-view (KNOWN_ISSUES).
 - **`touches` widened to the menu scripts, the menus' and minimap's config, the minimap and `game.ts`.** The first guess
   named only stylesheets and the viewmodel.
-- **Two of main's tests get more time: the boot smoke test 360 s (was 180) and the rifle file's hand-pose test 30 s.**
-  Both ran out of time on main itself in the container (boot: two of three solo runs; hand poses: 4.3 s against 5 s).
-  The critic marked this outside the task (check 8, not blocking); it is kept so the gate can pass.
+- **The boot smoke test gets 360 s (was 180).** It ran out of time on main itself in the container in two of three solo
+  runs. The critic marked this outside the task (check 8, not blocking); it is kept so the gate can pass. The rifle
+  file's hand-pose test, which also timed out, got its room from DX4 (20 s), taken in the merge.
 - **The perf gate's one failure is main's.** Neon Heights' Extraction Medium run on WebGPU reads about 203k triangles
   against 200k on main at 69d69f5 as on this branch; UX1 changes no scene. RV2's KNOWN_ISSUES row (it sits on its line and
   a run's sample decides) covers it, so UX1's own row was dropped in the merge.

@@ -129,14 +129,14 @@ describe('the hands on the replica model files (playtest Dev 6, note 28)', () =>
     ['robot', buildRobotHand, 'high', ROBOT_INTO],
   ];
   for (const id of IDS) {
-    // The rifle's file takes about 4 s alone, so a busy machine passes Vitest's 5 s default (UX1's gate).
     it(`go into the ${id} file's replica no more than a glove pressed on it, gloved or robot`, () => {
       for (const { hold, pose, tris } of HOLDS.get(id)!) {
         for (const [style, build, detail, into] of styles) {
           for (const [i, part] of partsOf(build, pose, detail).entries()) expect(fit(tris, part).depth, `${hold} ${style} ${detail} part ${i}`).toBeLessThanOrEqual(into);
         }
       }
-    }, 30_000);
+      // About 4 s alone for the rifle's holds: past the 5 s default under the gate's load (DX4).
+    }, 20_000);
   }
 
   it('hold on: each palm, the firing hand\'s fingertips and every thumb against the replica, not off it', () => {
