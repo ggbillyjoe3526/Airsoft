@@ -242,20 +242,24 @@ async function measure(preset) {
     };
     let heapStart = 0;
     await new Promise((done, fail) => {
-      let t0 = 0, last = 0, nextHeap = 0;
-      const waitFrom = performance.now();
+      let t0 = -1, last = 0, nextHeap = 0;
+      // As long as the old wait for the warm-up allowed (a timer: a page that stops drawing stops its frames too).
+      const guard = setTimeout(() => fail(new Error(`the match never reached its warm-up tick ${warmupTicks}`)), 120_000);
       const f = (now) => {
         if (tick0 < 0) {
-          // As long as the old wait for the warm-up allowed.
-          if (now - waitFrom > 120_000) return fail(new Error(`the match never reached its warm-up tick ${warmupTicks}`));
           if (g.state.tick >= warmupTicks) {
+            clearTimeout(guard);
             tick0 = g.state.tick;
             heapStart = liveHeap();
             heap.push(heapStart);
-            // After the collections, so the first frame measured doesn't carry their time.
-            t0 = last = performance.now();
-            nextHeap = t0 + 1000;
           }
+          requestAnimationFrame(f);
+          return;
+        }
+        // The frame after the collections starts the clock, so no frame measured carries their time.
+        if (t0 < 0) {
+          t0 = last = now;
+          nextHeap = t0 + 1000;
           requestAnimationFrame(f);
           return;
         }
