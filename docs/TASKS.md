@@ -84,20 +84,6 @@ acceptance:
 status: open
 attempts: 0
 
-## IN1 · Mouse lock and Firefox
-tier: core
-perf: skip
-touches: src/input/pointerLock.ts, src/ui/fullscreen.ts, src/ui/menus/pauseScreen.ts, src/ui/menus/menus.ts, src/ui/menus/menusOptions.ts, src/ui/menus/css/end.css, src/config/menus.ts, src/config/controls.ts, src/game.ts, playwright.config.ts, e2e/, .github/workflows/check.yml, pipeline/workflow.test.mjs, pipeline/README.md
-contract: none
-acceptance:
-  1. Esc on the pause screen never leaves a stuck state. Where Chrome refuses the re-lock, a clear "Click to resume" appears and one click resumes.
-  2. The fullscreen key keeps or restores the mouse lock in Chrome and Firefox.
-  3. CI runs the boot and save specs in Firefox as well. If CI can't install Firefox within its time budget, the thread asks William instead of dropping it.
-  4. Firefox's missing raw mouse input (`unadjustedMovement`) stays a documented limit, with a line in Settings › Controls saying so.
-  5. The two duplicate Esc re-lock rows in KNOWN_ISSUES merge into one, or close.
-status: open
-attempts: 0
-
 ## PF1 · No shader hitches mid-match
 tier: core
 perf: required
