@@ -44,6 +44,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **KI2** · Unused mode pictures are gone from the download, about 51 KB smaller
 - **RV2** · Tone mapping leaves Graphics: everyone plays with Neutral colours; Neutral, AgX and ACES are a Dev setting that applies at once, and a pick made on the old row becomes the Dev pick
 - **RV1** · Extraction has no Supply weekends or dated events like the Halloween run; its Mode card shows no event and cases always hold the usual loot
+- **PF4** · Medium runs lighter in busy fights: other players' replicas cast their shadow from a simpler figure, looking the same
 
 ### Fixed
 - **MV1** · The first switch to your other replica in a match no longer stutters; every carried replica is ready before the round
@@ -83,6 +84,7 @@ Every change, by release, in [Keep a Changelog](https://keepachangelog.com/) for
 - **Pipeline** · Desktop perf suite: one command records the 4K maxed-out baseline across Depot presets and Ultra maps, uncapped, with a summary
 - **DX3** · Developer-only: a task can be marked as a fix, with every check and review kept and a shorter record; the perf run needs no separate flag
 - **DX2** · Developer-only: Dev 5 and 6 plans, decisions, known issues and playtest guide archived or trimmed under 50 KB each
+- **PF4** · Developer-only: the perf harness measures the same stretch of play every run, so its triangle counts stop swinging between runs
 
 ## 0.1 Dev 6 · 2026-10-16
 
