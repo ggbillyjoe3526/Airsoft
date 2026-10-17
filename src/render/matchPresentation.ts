@@ -6,8 +6,9 @@ import { DEV_BOT_INTENT } from '../config/dev';
 import type { Bot } from '../ai/bot';
 import type { BotIdentity } from '../ai/personality';
 import { BotIntentLabels, botIntentText, botRoleText } from '../ui/botIntentLabels';
-import type { HitConfig, HitMarkerSettings } from '../config/hits';
-import { type FeedCorner, type HitFeedMode, TEAMMATE_MARKERS } from '../config/matchInfo';
+import type { HitConfig } from '../config/hits';
+import { TEAMMATE_MARKERS, whatGotYouShown } from '../config/matchInfo';
+import { DEFAULT_DIFFICULTY, type Difficulty } from '../config/bots';
 import type { BodyConfig } from '../config/movement';
 import { type DetailLevel, EXIT_VISUALS, FLAG_VISUALS, HUD, type QualitySettings } from '../config/render';
 import { proTip } from '../config/tutorial';
@@ -23,6 +24,7 @@ import type { RoundRules } from '../sim/round';
 import type { GameState } from '../sim/state';
 import { type Vec3, wrapAngle } from '../sim/vec';
 import type { MatchStats } from '../stats/matchStats';
+import type { HudPrefs } from '../settings/hudPrefs';
 import { PINGS } from '../config/pings';
 import { CasePrompt } from '../ui/casePrompt';
 import { FlagMarker } from '../ui/flagMarker';
@@ -96,6 +98,9 @@ export class MatchPresentation {
   /** The "what got you" card (M41), whether it is on, and the record of the hit it words (the bots' controller fills it). */
   private readonly whatGotYou: WhatGotYouCard;
   private whatGotYouOn = false;
+  /** The HUD and accessibility preferences and the opponents' level (usePrefs); null until the session hands them over. */
+  private prefs: HudPrefs | null = null;
+  private opponents: Difficulty = DEFAULT_DIFFICULTY;
   /** Skip to next round (M83): how to skip, that a skip is under way, or nothing. */
   private skipLabel: SkipLabel = null;
   private hitFacts: HitFacts | null = null;
@@ -300,19 +305,32 @@ export class MatchPresentation {
     this.characters.setBakedLight(grid);
   }
 
-  /** On-screen sound cues turned on or off (also called once as the match is built). */
-  setSoundCues(on: boolean): void {
-    this.soundCues.setEnabled(on);
+  /**
+   * The HUD and accessibility preferences this match shows (settings/hudPrefs.ts), held by reference, and the opponents'
+   * level, which the "what got you" card's Auto follows (M41). Shown from the first applyPrefs.
+   */
+  usePrefs(prefs: HudPrefs, opponents: Difficulty): void {
+    this.prefs = prefs;
+    this.opponents = opponents;
   }
 
-  /** Settings → HUD → Feed position (Dev 6 playtest item 32; also called once as the match is built). */
-  setFeedCorner(corner: FeedCorner): void {
-    this.feed.setCorner(corner);
-  }
-
-  /** The hit feed fades or keeps its lines (Settings → HUD, M24; also called once as the match is built). */
-  setHitFeedMode(mode: HitFeedMode): void {
-    this.feed.setMode(mode);
+  /**
+   * The preferences as they are now (the session calls this when they changed): the sound cues, the feed's mode and
+   * corner, the "what got you" card, the minimap's turn, the hit marker, the mag hand-off's line, the ping markers, and
+   * the callouts' lines (cleared when they are turned off).
+   */
+  applyPrefs(): void {
+    const p = this.prefs;
+    if (!p) return;
+    this.soundCues.setEnabled(p.soundCues);
+    this.feed.setMode(p.hitFeed);
+    this.feed.setCorner(p.feedCorner);
+    this.setWhatGotYou(whatGotYouShown(p.whatGotYou, this.opponents));
+    this.minimap.setRotating(p.minimapTurn === 'rotating');
+    this.feedback.setHitMarker(p.hitMarker);
+    this.magPrompt.setShown(p.magPrompts === 'on');
+    this.pingMarkers.setShown(p.pingMarkers === 'on');
+    if (p.callouts === 'off') this.feed.clearCallouts();
   }
 
   /** The record the bots' controller keeps of the last hit on you, which the "what got you" card words (M41). */
@@ -320,7 +338,7 @@ export class MatchPresentation {
     this.hitFacts = facts;
   }
 
-  /** The "what got you" card on or off (Settings → HUD, M41; also called once as the match is built). */
+  /** The "what got you" card on or off (Settings → HUD, M41; applyPrefs). */
   setWhatGotYou(on: boolean): void {
     this.whatGotYouOn = on;
     if (!on) this.whatGotYou.clear();
@@ -329,16 +347,6 @@ export class MatchPresentation {
   /** Skip to next round (M83): what the spectating line says about skipping, set by the session each frame. */
   setSkipLabel(label: SkipLabel): void {
     this.skipLabel = label;
-  }
-
-  /** Settings › HUD › Minimap (M83; also called once as the match is built): turning with the view, or fixed north up. */
-  setMinimapRotating(on: boolean): void {
-    this.minimap.setRotating(on);
-  }
-
-  /** Settings › Gameplay › Hit marker (M97) and its look (also called once as the match is built). */
-  setHitMarker(settings: HitMarkerSettings): void {
-    this.feedback.setHitMarker(settings);
   }
 
   /** Pro briefing tips on the board between rounds (M41): on when the opponents are Pro. */
@@ -560,11 +568,6 @@ export class MatchPresentation {
     for (let i = 0; i < this.mates.length; i++) this.mateMarkers.setMag(i, tags && view.mates.includes(this.mates[i]!.id));
   }
 
-  /** Settings › HUD › Mag hand-off: false hides its line and tags (the hand-off goes on; the callouts still say it). */
-  setMagPrompts(on: boolean): void {
-    this.magPrompt.setShown(on);
-  }
-
   /** The other team where heard on the minimap (M23), or teammates only (the Rules picker's minimap switch, M39). */
   setHeardOnMinimap(shown: boolean): void {
     this.minimap.setHeardShown(shown);
@@ -732,16 +735,6 @@ export class MatchPresentation {
    */
   ping(owner: number, kind: ShownPingKind, point: Vec3): void {
     this.pingMarkers.place(owner, kind, point, this.state.time);
-  }
-
-  /** Settings › HUD › Ping markers: false hides them, over the field and on the minimap (the pings themselves go on). */
-  setPingMarkers(on: boolean): void {
-    this.pingMarkers.setShown(on);
-  }
-
-  /** Callouts turned off (Settings › HUD): the lines up now go. */
-  clearCallouts(): void {
-    this.feed.clearCallouts();
   }
 
   /** A hit feed line for `victimId` calling a hit from `shooterId`'s BB. */

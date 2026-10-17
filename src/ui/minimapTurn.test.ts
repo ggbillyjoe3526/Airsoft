@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_MINIMAP_TURN, MINIMAP, MINIMAP_TURN_CHOICES } from '../config/minimap';
 import { MemoryStorage } from '../pool/testStorage';
 import { SETTINGS_KEY, SETTINGS_VERSION } from '../settings/storage';
-import { loadMinimapTurn } from './hudSettings';
+import { loadMinimapTurn } from '../settings/hudPrefs';
 import { Minimap, type MinimapFrame } from './minimap';
 import { toMinimap } from './minimapView';
 

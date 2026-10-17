@@ -5,6 +5,7 @@ import type { QualityChoice, QualitySettings } from '../../config/render';
 import { OnDemand } from '../../core/onDemand';
 import type { NewGamePicks } from '../../newGamePicks';
 import { SavedLoadouts } from '../../pool/savedLoadouts';
+import { type HudPrefKey, type HudPrefs, motionReduced, setHudPref } from '../../settings/hudPrefs';
 import { saveSetting } from '../../settings/storage';
 import type { ArmoryScreen } from './armoryScreen';
 import { Backdrop, type MenuHint, type NavPlace, TopBar } from './chrome';
@@ -15,10 +16,10 @@ import { backTarget, escResumes, type MenuScreen, type SettingsOrigin } from './
 import { el, watchScroll } from './menuParts';
 import { PauseScreen } from './pauseScreen';
 import { PlayPicks } from './playModel';
-import { loadMatchStarted } from './savedChoices';
+import { loadMatchStarted } from '../../settings/savedChoices';
 import { ResultScreen } from './resultScreen';
 import { playView } from './playView';
-import type { SettingsScreen } from './settingsScreen';
+import type { SettingsOptions, SettingsScreen } from './settingsScreen';
 import { type PlayView, SetupScreen } from './setupScreen';
 import { type MatchSummary, SummaryScreen } from './summaryScreen';
 import type { MenusOptions } from './menusOptions';
@@ -349,9 +350,7 @@ export class Menus {
         fov: o.fov,
         graphics: o.graphics,
         audio: o.audio,
-        crosshair: o.crosshair,
-        accessibility: o.accessibility,
-        hud: o.hud,
+        ...prefRows(o.prefs),
         // Realistic colours also changes how the menus draw the replicas.
         look: { ...o.look, onChange: (look) => ((this.realistic = look.realisticColours), o.look.onChange(look), this.refreshViews()) },
         // The Play screen's note on the records follows the Dev settings.
@@ -688,4 +687,37 @@ function typing(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   if (target.isContentEditable || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return true;
   return target instanceof HTMLInputElement && !['checkbox', 'radio', 'range', 'button'].includes(target.type);
+}
+
+/**
+ * Settings › Gameplay's crosshair and hit marker rows and the Accessibility and HUD tabs on the one HudPrefs (DX5): each
+ * row starts from its preference as it is now and changes it there, then says which changed. Reduced motion starts
+ * from what applies (the system's setting until the player picks, audit UI-07).
+ */
+function prefRows(prefs: MenusOptions['prefs']): Pick<SettingsOptions, 'crosshair' | 'accessibility' | 'hud'> {
+  const p = prefs.values;
+  const row = <K extends HudPrefKey>(key: K) => ({ initial: p[key], onChange: (value: HudPrefs[K]) => (setHudPref(p, key, value), prefs.onChange(key)) });
+  return {
+    crosshair: { ...row('crosshair'), hitMarker: row('hitMarker') },
+    accessibility: {
+      reducedMotion: { ...row('reducedMotion'), initial: motionReduced(p), follow: prefs.followMotion },
+      teamColours: row('teamColours'),
+      soundCues: row('soundCues'),
+      soundCueSize: row('soundCueSize'),
+      soundCueColour: row('soundCueColour'),
+    },
+    hud: {
+      hudSize: row('hudSize'),
+      scoreboardSize: row('scoreboardSize'),
+      hudOpacity: row('hudOpacity'),
+      hitFeed: row('hitFeed'),
+      feedCorner: row('feedCorner'),
+      whatGotYou: row('whatGotYou'),
+      minimapTurn: row('minimapTurn'),
+      callouts: row('callouts'),
+      pingMarkers: row('pingMarkers'),
+      magPrompts: row('magPrompts'),
+      ammoCounter: row('ammoCounter'),
+    },
+  };
 }

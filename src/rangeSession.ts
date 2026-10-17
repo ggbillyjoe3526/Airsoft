@@ -1,9 +1,8 @@
 import type { SfxSetup } from './audio/sfx';
-import { FULL_MOTION, type MotionScale } from './config/accessibility';
+import { FULL_MOTION, type MotionScale, motionScale } from './config/accessibility';
 import { BALLISTICS, WIND } from './config/ballistics';
 import { FOOTSTEPS } from './config/footsteps';
 import { HITS, ROUNDS } from './config/hits';
-import type { CrosshairSettings } from './config/matchInfo';
 import { BODY, MOVEMENT } from './config/movement';
 import { NAV } from './config/nav';
 import { PHYSICS } from './config/physics';
@@ -13,11 +12,12 @@ import type { QualitySettings } from './config/render';
 import type { ReplicaConfig } from './config/replicas';
 import { SIM, SIM_DT } from './config/sim';
 import { cssColor, teamCss } from './config/teams';
-import type { MinimapTurn } from './config/minimap';
 import { EventLog } from './core/eventLog';
 import { advanceStepper, createStepper, stepperAlpha } from './core/fixedStepper';
 import type { PlayerInput } from './input/playerInput';
 import type { MatchSetup } from './matchSession';
+import type { Session } from './session';
+import { type HudPrefs, motionReduced } from './settings/hudPrefs';
 import type { MapData } from './map/mapTypes';
 import { practiceLayout } from './map/practiceLayout';
 import { RANGE_MAP } from './map/range';
@@ -105,7 +105,8 @@ export interface RangePose {
  * menu) rebuilds it where you stood. The app around it (renderer, input, menus) outlives it, as it does a match (see
  * MatchSession, whose pieces it shares).
  */
-export class RangeSession {
+export class RangeSession implements Session {
+  readonly kind = 'range';
   readonly state: GameState;
   readonly player: Character;
   readonly combat: CombatPresentation;
@@ -129,6 +130,8 @@ export class RangeSession {
   private readonly commands = new Map<number, PlayerCommand>();
   private readonly playerCommand = createCommand();
   private motion: MotionScale = FULL_MOTION;
+  /** The HUD and accessibility preferences' version this session last showed (syncPrefs). */
+  private prefsSeen = -1;
   /** The lean your view shows: a wall's cut eased a little (KI1). */
   private readonly leanView = new LeanViewEase();
   private readonly ctx: SimContext;
@@ -183,7 +186,8 @@ export class RangeSession {
     seed: number,
     quality: QualitySettings,
     audio: SfxSetup,
-    crosshair: CrosshairSettings,
+    /** The HUD and accessibility preferences (settings/hudPrefs.ts), read by reference: a change shows as play runs again. */
+    private readonly prefs: HudPrefs,
     pose?: RangePose,
     /** Run the tutorial (M16) from this step, by index or id (0: the start); leave out for free practice. */
     tutorialFrom?: number | string,
@@ -260,7 +264,7 @@ export class RangeSession {
     this.daylight.reserveLights(this.torches.reserved);
     // On the range you are alone: a robot half the time when Settings › Look › Robots is on (G7), from the seed.
     const crowd = figureCrowd(seed, this.state.characters, setup.look);
-    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map, audio, (action) => input.keyName(action), crosshair, quality, HITS, bbGlowFor(setup.kit, map.night ?? false), seed, kitPaint(setup.kit, setup.look), playerArms(crowd, this.state.characters.indexOf(this.player), this.player.team));
+    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map, audio, (action) => input.keyName(action), prefs, quality, HITS, bbGlowFor(setup.kit, map.night ?? false), seed, kitPaint(setup.kit, setup.look), playerArms(crowd, this.state.characters.indexOf(this.player), this.player.team));
     // The held replica's light and the range's sound, by day or at night (M33j: the sound follows the preset's flag).
     this.combat.setLighting(lighting);
     this.combat.setMapGroup(group);
@@ -411,6 +415,7 @@ export class RangeSession {
   }
 
   draw(dt: number): void {
+    this.syncPrefs();
     const alpha = stepperAlpha(this.stepper);
     const pitch = this.input.pitch + this.player.armament.recoil;
     const lean = this.leanView.update(this.player, BODY, HITS, alpha, dt);
@@ -425,16 +430,19 @@ export class RangeSession {
     this.combat.render(true);
   }
 
-  /** Settings › HUD › Ammo counter (AC1): the replica panel's BB counts, and the tutorial's words for them, shown or not. */
-  setAmmoCounter(shown: boolean): void {
-    this.combat.setAmmoCounter(shown);
-    this.coach?.setAmmoCounter(shown);
-    if (this.coaching) this.coach!.show(this.tutorial!);
-  }
-
-  /** Settings › HUD › Minimap (M83): turning with the view, or fixed north up (on a map, M94). */
-  setMinimapTurn(turn: MinimapTurn): void {
-    this.minimap?.setRotating(turn === 'rotating');
+  /**
+   * The HUD and accessibility preferences changed since this session last showed them (or it never has), as
+   * MatchSession.syncPrefs: the held replica's motion, the crosshair, the minimap's turn (on a map, M94) and the BB
+   * counts with the tutorial's words for them (AC1).
+   */
+  private syncPrefs(): void {
+    if (this.prefsSeen === this.prefs.version) return;
+    this.prefsSeen = this.prefs.version;
+    this.motion = motionScale(motionReduced(this.prefs));
+    this.combat.applyPrefs();
+    this.minimap?.setRotating(this.prefs.minimapTurn === 'rotating');
+    // The coach's step shows again with its words as play resumes (setPlaying).
+    this.coach?.setAmmoCounter(this.prefs.ammoCounter === 'on');
   }
 
   /** The minimap round where you stand, the way you look (M94): no teammates, no one heard. */
@@ -448,11 +456,6 @@ export class RangeSession {
     f.yaw = this.input.yaw;
     f.time = this.state.time;
     this.minimap.update(f, NOBODY_HEARD);
-  }
-
-  setMotion(scale: MotionScale): void {
-    this.motion = scale;
-    this.combat.setMotion(scale);
   }
 
   /**
@@ -487,6 +490,7 @@ export class RangeSession {
 
   setPlaying(playing: boolean): void {
     this.playing = playing;
+    if (playing) this.syncPrefs();
     this.combat.setPlaying(playing);
     const coaching = this.tutorial !== null && !this.tutorial.finished;
     this.readout.setVisible(playing && !coaching);

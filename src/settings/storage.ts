@@ -309,6 +309,11 @@ export function oneOf<T extends string>(ids: readonly T[]): (raw: unknown) => T 
   return (raw) => ids.find((id) => id === raw);
 }
 
+/** The choice saved as `field`, or `fallback` if nothing valid is saved (or storage is blocked): one of `options`' ids. */
+export function loadChoice<T extends string>(field: SettingField, options: readonly { id: T }[], fallback: T, storage = browserStorage()): T {
+  return loadSetting(field, oneOf(options.map((o) => o.id)), fallback, storage);
+}
+
 /** A parser for a number setting in [min, max] (the old keys stored numbers as strings). */
 export function numberIn(min: number, max: number): (raw: unknown) => number | undefined {
   return (raw) => {

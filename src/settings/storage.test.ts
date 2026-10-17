@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SETTINGS_WRITE_DELAY_MS } from '../config/menus';
 import { QUALITY, resolveQuality } from '../config/render';
-import { loadCustomQuality, loadSavedQuality, loadToneMapping } from '../ui/menus/savedChoices';
+import { loadCustomQuality, loadSavedQuality, loadToneMapping } from './savedChoices';
 import { flushSettings, loadSetting, numberIn, oneOf, saveSetting, saveSettingSoon, SETTINGS_KEY, SETTINGS_VERSION } from './storage';
 
 /** A Storage backed by a Map (only the calls the settings use); `writes` and `parses` count the work done. */

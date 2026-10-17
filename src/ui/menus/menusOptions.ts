@@ -7,11 +7,9 @@ import type { GraphicsSettingsOptions } from '../graphicsSettings';
 import type { KeyBindings } from '../../input/keyBindings';
 import type { MapId } from '../../map/maps';
 import type { PracticePlaceId } from '../../map/practicePlaces';
-import type { AccessibilitySettingsOptions } from '../accessibilitySettings';
+import type { HudPrefKey, HudPrefs } from '../../settings/hudPrefs';
 import type { AudioSettingsOptions } from '../audioSettings';
 import type { ControlsSettingsOptions } from '../controlsSettings';
-import type { CrosshairSettingsOptions } from '../crosshairSettings';
-import type { HudSettingsOptions } from '../hudSettings';
 import type { LookSettingsOptions } from '../lookSettings';
 import type { ArmoryOptions } from './armoryScreen';
 import type { LoadoutOptions } from './loadoutScreen';
@@ -57,7 +55,7 @@ export interface MenusOptions {
   onRange: () => void;
   /**
    * The title screen's Tutorial (M16): the range with the coach. `tutorialDone`: it was played through before (the title
-   * also stops offering it once a first match was started, M100, savedChoices.ts › loadMatchStarted).
+   * also stops offering it once a first match was started, M100, settings/savedChoices.ts › loadMatchStarted).
    */
   onTutorial: () => void;
   tutorialDone: boolean;
@@ -91,9 +89,13 @@ export interface MenusOptions {
   /** The quality rows on Settings → Graphics (ui/graphicsSettings.ts). */
   graphics: GraphicsSettingsOptions;
   audio: AudioSettingsOptions;
-  crosshair: CrosshairSettingsOptions;
-  accessibility: AccessibilitySettingsOptions;
-  hud: HudSettingsOptions;
+  /**
+   * The HUD and accessibility preferences (settings/hudPrefs.ts, DX5): Settings › Gameplay's crosshair and hit marker
+   * rows and the HUD and Accessibility tabs read and change this one object (each row still saves its own key).
+   * `onChange` says which one changed; `followMotion` hands over a way to show the system's reduce-motion setting on
+   * the Reduced motion picker without saving it (audit UI-07, BP2).
+   */
+  prefs: { values: HudPrefs; onChange: (key: HudPrefKey) => void; followMotion: (show: (on: boolean) => void) => void };
   /** Settings › Look (G1); its Realistic colours also decides how the menus' replica pictures look. */
   look: LookSettingsOptions;
   /**

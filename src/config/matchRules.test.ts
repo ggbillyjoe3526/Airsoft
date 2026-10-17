@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { defaultTeammateDifficulty } from './bots';
-import { hasSavedTeammateDifficulty, loadDifficulty, loadMatchRules, loadTeammateDifficulty } from '../ui/menus/savedChoices';
+import { hasSavedTeammateDifficulty, loadDifficulty, loadMatchRules, loadTeammateDifficulty } from '../settings/savedChoices';
 import { SETTINGS_KEY, SETTINGS_VERSION } from '../settings/storage';
 import { HITS, ROUNDS } from './hits';
 import { countsForRecords, DEFAULT_MATCH_RULES, formatRoundTime, SKIRMISH_SWITCHES, TEAM_SIZE_CHOICES, standardMatchText, hitRulesFor, matchRulesSummary, offersRow, roundRulesFor, runRulesSummary, RUN_IGNORES, type MatchRules } from './matchRules';

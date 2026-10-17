@@ -6,7 +6,7 @@ import { SETTINGS_KEY, saveSetting } from '../settings/storage';
 import { createChallenge, type RangeChallenge } from '../sim/rangeChallenge';
 import { EventNode, stubMenuPage } from './menus/menuTestSupport';
 import { PauseScreen } from './menus/pauseScreen';
-import { loadPracticeChallenge } from './menus/savedChoices';
+import { loadPracticeChallenge } from '../settings/savedChoices';
 import { ChallengeBanner, challengeText, clockText } from './rangeReadout';
 
 beforeEach(() => {

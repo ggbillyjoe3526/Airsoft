@@ -8,7 +8,7 @@ import { RECORDS_KEY } from '../../config/matchInfo';
 import { BACKDROPS } from '../../config/menuArt';
 import { FakeElement, findAll } from '../testSupport';
 import { ChoiceCards } from './choiceCards';
-import { loadMatchStarted } from './savedChoices';
+import { loadMatchStarted } from '../../settings/savedChoices';
 import { type PlayModel, SetupScreen } from './setupScreen';
 import { TitleScreen, tutorialOffered } from './titleScreen';
 

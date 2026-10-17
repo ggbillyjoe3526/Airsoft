@@ -1,5 +1,5 @@
 import { isAvailable, type Tagged } from '../config/content';
-import { loadSetting, oneOf, type SettingField, saveSetting } from '../settings/storage';
+import { type SettingField, saveSetting } from '../settings/storage';
 
 /** One choice in an OptionPicker; a `dev` one (M35) is offered only while Dev content is on. */
 export interface PickerOption<T extends string> extends Tagged {
@@ -7,11 +7,6 @@ export interface PickerOption<T extends string> extends Tagged {
   label: string;
   /** One line describing the option, shown under the buttons while it's picked. */
   blurb: string;
-}
-
-/** The choice saved as `field`, or `fallback` if nothing valid is saved (or storage is blocked). */
-export function loadChoice<T extends string>(field: SettingField, options: readonly PickerOption<T>[], fallback: T): T {
-  return loadSetting(field, oneOf(options.map((o) => o.id)), fallback);
 }
 
 /**
@@ -32,7 +27,7 @@ export class OptionPicker<T extends string> {
   private devContent = false;
   private allowed: (id: T) => boolean = () => true;
 
-  /** `initial`: the option shown as picked (normally loadChoice(field, ...)). */
+  /** `initial`: the option shown as picked (normally settings/storage.ts loadChoice(field, ...)). */
   constructor(
     label: string,
     private readonly options: readonly PickerOption<T>[],

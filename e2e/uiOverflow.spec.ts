@@ -218,11 +218,11 @@ for (const [width, height] of [[1280, 720], [1920, 1080], [2560, 1440]] as const
     await setup.getByRole('button', { name: 'Start match', exact: true }).click();
     await page.waitForSelector('.hud-replica', { state: 'visible', timeout: 60_000 });
     await page.waitForTimeout(1000);
-    type Game = { airsoft: { hudSize: number; showHudLook: () => void; state: { characters: { armament: { active: number; ammo: { mag: number }[] } }[] } } };
+    type Game = { airsoft: { prefs: { hudSize: number }; showHudLook: () => void; state: { characters: { armament: { active: number; ammo: { mag: number }[] } }[] } } };
     for (const size of [1, 0.8, 1.5]) {
       await page.evaluate((s) => {
         const g = (window as unknown as Game).airsoft;
-        g.hudSize = s;
+        g.prefs.hudSize = s;
         g.showHudLook();
       }, size);
       for (const mag of [60, 200, 1200, 12000]) {

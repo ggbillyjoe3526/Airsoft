@@ -5,7 +5,8 @@ import { MemoryStorage } from '../pool/testStorage';
 import { SETTINGS_KEY, SETTINGS_VERSION } from '../settings/storage';
 import { crosshairSettings } from './crosshairSettings';
 import { HitFeedback } from './hitFeedback';
-import { hitMarkerCss, hitMarkerSize, loadHitMarker, styleHitMarker } from './hitMarkerLook';
+import { hitMarkerCss, hitMarkerSize, styleHitMarker } from './hitMarkerLook';
+import { loadHitMarker } from '../settings/hudPrefs';
 import { FakeElement } from './testSupport';
 
 /** Every element under `node` with the tag, depth first. */
