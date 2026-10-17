@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HITS, ROUNDS } from '../../config/hits';
 import { BODY } from '../../config/movement';
-import { PINGS } from '../../config/pings';
 import { TEAM_COLOUR_SETS } from '../../config/teams';
 import { LOADOUT } from '../../config/replicas';
 import { createCharacter } from '../../sim/character';
