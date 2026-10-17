@@ -259,12 +259,20 @@ on their budgets alone until the owner records them (`--map`, `--mode` as above,
 **The desktop run** (G5; the owner's desktop PC, where Ultra is measured at 4K, the same setup as the laptop run):
 
 ```
-node pipeline/perf-run.mjs --env desktop --preset all --viewport 3840x2160 --baseline
+npm run perf:desktop        (node pipeline/perf-desktop.mjs [--channel msedge] [--chromium /path])
 ```
 
-The same as the laptop run without CPU throttling, at 3840×2160 at pixel ratio 1, writing `pipeline/baseline/desktop.json`
-and `desktop-<preset>.json`. Its frame times are reported, not judged, until PF3 sets
-the line. The target is set (owner, 2026-10-16): maxed-out settings aim at 4K at 240 Hz, about 4.2 ms a frame.
+`perf-desktop.mjs` runs `perfDesktop.mjs` DESKTOP_SUITE through `perf-run.mjs --env desktop`, about 15 minutes: Depot
+Elimination on every preset, Ultra on every map in both modes, on WebGPU (Chrome's Auto renderer) at 3840×2160 at
+pixel ratio 1, then Depot Ultra on WebGL2, all with `--baseline` (`pipeline/baseline/desktop-webgpu*.json`,
+`desktop-ultra.json`), and Depot Ultra at 1920×1080 with none, for the hint. `--env desktop` is the laptop run without
+CPU throttling and with Chrome's frames past the screen's refresh (`UNCAPPED_ARGS`; `--vsync` keeps the cap): the
+target is the 240 Hz cap's own period, so a capped run can't show headroom. It works from a download without git
+(the result's `head` reads `unknown`; the thread that commits the files sets it). It prints and writes
+`pipeline/out/perf-desktop-summary.md`: FPS, 1 % low, p50, p95, p99 and worst per run, whether p95 holds 240 Hz, the
+GPU name, and two hints: GPU- or CPU-bound from 4K against 1080p, and frames held by vsync if the switches didn't
+take. Its frame times are reported, not judged, until PF3 sets the line. The target is set (owner, 2026-10-16):
+maxed-out settings aim at 4K at 240 Hz, about 4.2 ms a frame.
 
 ## `balance.mjs`: the bot balance report
 
