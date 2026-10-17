@@ -371,7 +371,14 @@ The pipeline's protocol is `pipeline/README.md`; its policy `docs/PROCESS.md`.
   Colour tab (MR1), and the Voices placeholder is gone. The top bar's level reads "LVL 3".
 - **Small menu rulings (owner, 2026-10-03 to 2026-10-07).** The tagline is "Call your hit. Go again." Menu headings and
   labels are in capitals (in the stylesheet), descriptions as written. Unbuilt items are listed greyed out with a LATER
-  tag (`config/menus.ts`). Menus at 4K with 100 % OS scaling stay as they are; scaling them like the HUD is a Beta task.
+  tag (`config/menus.ts`).
+- **The menus grow with a tall window as the HUD does (UX1, 2026-10-17; replaces decision 16's "as they are").**
+  `menuScale` zooms `.menus` by the window height over 1080, up to 1.5× at 4K, held back so the layout keeps 1500 px of
+  width; 1080p and smaller draw as before. Heights inside use `--vh`, since the zoom multiplies `vh`.
+- **A menu page is pinned to the window; only its long part scrolls (UX1, 2026-10-17).** The top bar, the heading and the
+  main button always show; the Match choices, a Settings group's rows, the Loadout's numbers, the Armory's levels and
+  Customise's lists scroll inside (`.menu-scroll`, fading at the foot while more lies below). A window under 821 px high
+  draws spacing and controls a step closer. Below 901 px wide only the Match screen stays pinned.
 - **The order wheel is on Z (owner, 2026-10-04); Hold here X, Regroup V, Follow me F.** Orders end when their giver is
   hit and at each round start. A hidden tab or a window that loses focus pauses the match. Esc while you are out skips the
   round at once (owner, 2026-10-13).

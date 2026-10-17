@@ -11,6 +11,9 @@ import { itemPicture, KIND_LABELS } from './itemTile';
 import type { PictureContext } from './kitStrip';
 import { el } from './menuParts';
 
+/** A level with this many things or more lays them two across (UX1). */
+const TWO_ACROSS_FROM = 3;
+
 export interface ArmoryOptions {
   /** The pool as offered now (M35: dev gear only with Dev content on). */
   pool: () => Pool;
@@ -189,6 +192,8 @@ export class ArmoryScreen {
   private levelRow(l: TrackLevel, pool: Pool): HTMLLIElement {
     const row = el('li', 'armory-level-row');
     row.dataset.state = l.state;
+    // Three things or more (the starting kit) lie two across, so the track fits the page under the band (UX1).
+    row.classList.toggle('two-across', l.items.length >= TWO_ACROSS_FROM);
     const head = el('div', 'armory-level-head');
     head.append(el('span', 'armory-level-name', l.level === 0 ? ARMORY_TEXT.start : ARMORY_TEXT.level(l.level)));
     if (l.level > 0) head.append(el('span', 'armory-level-xp', ARMORY_TEXT.levelXp(l.total)));

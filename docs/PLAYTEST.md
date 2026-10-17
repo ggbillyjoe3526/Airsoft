@@ -51,6 +51,7 @@ What changed in 0.1 Beta 1, from your Dev 6 playtest. Each line points to the se
   step after Crouch teaches peeking with Q and E ([Tutorial](#tutorial)).
 - [ ] **Movement and hands.** Holstered you run faster than armed, never past a sprint; no resting on cover; walking
   with Shift aims as steadily as standing; the first replica switch no longer stutters ([Movement](#movement)).
+- [ ] **Menus at 4K and in a small window.** 1.5× at 4K; at 1280×720 only a page's long list scrolls ([Menus](#menus)).
 - [ ] **Bug fixes.** The Q/E lean eases, a double-tap on the fire selector steps twice, a ricochet's grit flies off
   the wall, edge markers point the way to turn ([Old bugs to recheck](#old-bugs-to-recheck)).
 
@@ -479,6 +480,10 @@ Defend. Pro pays XP ×2 but counts for nothing while it is dev content.
 - [ ] **The result screen.** MATCH OVER, YOU WIN! (or YOU LOSE), the score, and Play again, New game, Summary and Quit.
 - [ ] **The look.** All text is Inter (numbers keep their width), headings in capitals, tidy at 1280×720 and
   1920×1080; a button lifts when pointed at; Tab shows an orange focus ring; with reduced motion no fades.
+- [ ] **Window sizes (UX1).** At 4K with 100 % Windows scaling the menus are about 1.5× their 1080p size, and the
+  saved loadouts' menu opens at the pointer. At 1280×720 the top bar, heading and main button always show; the long
+  list scrolls, fading at its foot (Settings › Gameplay and Controls scroll a long way, even at 4K: tell me if that
+  grates). At 900×600 Start match is in sight.
 - [ ] **The loading screen** (`npm run build`, `npm run preview`, DevTools › Network › Slow 4G, cache off).
 
 ## HUD and match info
@@ -505,7 +510,8 @@ Defend. Pro pays XP ×2 but counts for nothing while it is dev content.
 - [ ] **Replay tutorial** (Settings › Gameplay, M97). Starts the tutorial at its first step, even after you finished
   it; from a match's pause menu it asks first, then leaves the match (not recorded).
 - [ ] **HUD size and opacity** (Settings › Gameplay › HUD). 150 % scales the replica panel, score bar, minimap, feed,
-  banners, wheel and markers with nothing overlapping at 1280×720; the crosshair keeps its size.
+  banners, wheel and markers with nothing overlapping at 1280×720 (the minimap grows a little less there, so an
+  Attack / Defend score bar stays clear of it, UX1); the crosshair keeps its size.
 - [ ] **The layout.** A score bar top middle (team blocks, the clock, "First to N"); the replica panel bottom right
   (UI2: S / B / A chips over a small box per spare magazine, the count and "/ N" at the right; no picture, no name, no
   reload hint); no squad cards or key hints; "ROUND 1" shows large; corners keep their margin at 1920×1080 and on 21:9.

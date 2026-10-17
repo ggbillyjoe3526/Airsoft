@@ -17,8 +17,9 @@ import { renders } from './rendererRow';
  */
 test('the game boots, starts a match, fires, reloads and aims without errors', async ({ page, browserName }, testInfo) => {
   // The longest test (since the audit fixes it also rebinds a key and plays to the result screen): about 30 s here,
-  // three to four times that on a CI runner in software, so it gets twice the default budget.
-  test.setTimeout(180_000);
+  // three to four times that on a CI runner in software. In a cloud container it now takes about 3 min alone (main at
+  // 69d69f5 ran out of a 180 s budget in two of three runs, UX1), so it gets four times the default budget.
+  test.setTimeout(360_000);
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
   page.on('console', (msg) => {

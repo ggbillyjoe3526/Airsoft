@@ -10,7 +10,7 @@ import { PERF_SCRIPT } from './config/perfScript';
 import { ROUNDS } from './config/hits';
 import type { MatchRules, RulesetId } from './config/matchRules';
 import { type CrosshairSettings, type FeedCorner, type HitFeedMode, hudInsetX, hudScale, scoreboardScale, type WhatGotYouMode } from './config/matchInfo';
-import { MINIMAP } from './config/minimap';
+import { MINIMAP, minimapScale } from './config/minimap';
 import { FULLSCREEN_RELOCK_MS, PAUSE_ESC_GUARD_MS } from './config/controls';
 import { HUD_TEXT } from './config/hudText';
 import { escOpensMenu, escSkips } from './core/escSkip';
@@ -994,20 +994,23 @@ export class Game {
 
   /**
    * The HUD's look from the settings (M24), as CSS variables on the game's container (style.css): the HUD's size (audit
-   * UI-04), its panels' opacity (G4), the sound cues' size and colour, and the scoreboard's size (held back in a narrow
-   * window so the hit feed and the minimap keep their room). Again on resize.
+   * UI-04) and the minimap's (held back in a narrow window to clear the score bar, UX1), its panels' opacity (G4), the
+   * sound cues' size and colour, and the scoreboard's size (held back in a narrow window so the hit feed and the minimap
+   * keep their room). Again on resize.
    */
   private readonly showHudLook = (): void => {
     const style = this.container.style;
     const width = this.container.clientWidth || window.innerWidth;
     const height = this.container.clientHeight || window.innerHeight;
     const hud = hudScale(this.hudSize, height);
+    const minimap = minimapScale(hud, width, height);
     style.setProperty('--hud-scale', String(hud));
+    style.setProperty('--minimap-scale', minimap.toFixed(3));
     style.setProperty('--hud-opacity', String(this.hudOpacity));
     style.setProperty('--cue-scale', String(this.soundCueSize));
     style.setProperty('--cue-colour', soundCueCss(this.soundCueColour));
     // The scoreboard grows with the HUD, still only as far as leaves the hit feed its room and clears the minimap.
-    const minimapEdge = hudInsetX(width, height) + MINIMAP.size * hud;
+    const minimapEdge = hudInsetX(width, height) + MINIMAP.size * minimap;
     style.setProperty('--sb-scale', scoreboardScale(this.scoreboardSize * hud, width, minimapEdge).toFixed(3));
   };
 

@@ -254,13 +254,8 @@ Every open bug, limit and known gap in the game, so nobody re-reports or re-meas
 | Issue | Class | Notes |
 |---|---|---|
 | The spare-magazine gauges show no number for each magazine | can wait | Beta UX/QoL: the ammo panel already prints the spare BBs ("/ 120"); a gauge's low is striped and next has a caret, so they don't rely on colour. (BP5, HD1) |
-| Menu pages scrolled in a 1280×720 window before M100's redesign; they need measuring again | can wait | Last measured 2026-10-08: Controls 1332 px, Gameplay 1137, Customise 1111, Loadout 1010. (M15, FA5, BP5) Beta 1: UX1. |
-| New game still scrolls below ~900 × 600 (two tiles a row) | can wait | Below the desktop sizes the game targets; fits 1024×640, 1366×657 and up. (M15b) Beta 1: UX1. |
-| The menus have no size step for 4K at 100 % OS scaling: body text stays 15 px while the HUD grows to 1.5× | can wait | Decision 16: nothing now (most 4K desktops run 150–200 % scaling). (audit UI-12) Beta 1: UX1. |
 | Sound cues for several sounds from the same direction stack on the ring (hit calls sit just outside it) | can wait | One marker per player and kind; playtest whether a busy fight reads. (M18b) |
 | The hit feed wraps a long line (friendly fire with a ricochet tag) to two rows to keep clear of the scoreboard | can wait | Since BP3 a plain line fits on one row at 1280 and 1366 px. (bug pass, FA5) |
-| At 1280 px with Settings › HUD size over about 120 %, the widest score bar (Attack and Defend, 5v5) can come within the minimap's 14 px gap | can wait | `scoreboardScale` never takes the bar below size 1, by design. (BP3) |
-| At 1280 × 720 the held pistol's grip sits partly under the ammo panel | can wait | The viewmodel is placed for 16:9 at any size and the panel scales with the HUD. (BP3) |
 | The minimap draws Depot's loading dock at the floor's level (a lighter shade); a patch for a player heard on the dock looks like one below | can wait | A map with storeys (Neon Heights) gets one drawing per storey. (M23, BP5) |
 | Dev settings' Game speed runs the simulation slower or faster, but sounds keep their pitch and the replica's bob and sway run on real time | can wait | A toy for watching BBs fly; timing-sensitive presentation isn't speed-aware. (M24) |
 | The crosshair shows the spread only, not the recoil kick | document | Recoil is light on toy-like replicas; revisit in the Phase 4 HUD pass. (M10) |
