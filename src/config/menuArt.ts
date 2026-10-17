@@ -1,6 +1,5 @@
 /**
- * The menus' pictures (graphics overhaul G3): a still of each map in each light it offers, a picture per match mode and
- * the backdrop (one picture blurred once for every screen but the title, so no screen blurs live). All are
+ * The menus' pictures (graphics overhaul G3): a still of each map in each light it offers and the backdrop (one picture blurred once for every screen but the title, so no screen blurs live). All are
  * drawn by the game itself (pipeline/map-stills.mjs, from the built game in a browser) and served from public/menu/.
  * This file has no imports, so that script reads it as it is.
  */
@@ -10,10 +9,9 @@ export const MENU_ART_DIR = 'menu';
 
 /**
  * Where a picture's camera stands: over the field looking across it from behind Alpha's start, high over its middle (a
- * city, whose streets only show from above), at eye height behind Alpha's start, where a player on Alpha first stands (a
- * little higher), or on Alpha's side of the flagpole looking at it.
+ * city, whose streets only show from above), or where a player on Alpha first stands (a little higher).
  */
-export type StillView = 'overview' | 'aerial' | 'ground' | 'street' | 'flag';
+export type StillView = 'overview' | 'aerial' | 'street';
 
 export interface StillShot {
   /** The file under MENU_ART_DIR. */
@@ -36,14 +34,7 @@ export const MAP_STILLS: readonly StillShot[] = [
   { file: 'range-day.jpg', map: 'range', light: 'day', view: 'street' },
 ];
 
-/** The mode cards' pictures (by MatchMode): a moment that reads as the mode. */
-export const MODE_STILLS: Readonly<Record<string, StillShot>> = {
-  elimination: { file: 'mode-elimination.jpg', map: 'depot', light: 'day', view: 'ground' },
-  attackDefend: { file: 'mode-attackDefend.jpg', map: 'depot', light: 'day', view: 'flag' },
-  extraction: { file: 'mode-extraction.jpg', map: 'woodland', light: 'night', view: 'street' },
-};
-
-/** Map stills and mode pictures: small JPEGs, a card's size at twice the density of a 1080p screen's half. */
+/** Map stills: small JPEGs, a card's size at twice the density of a 1080p screen's half. */
 export const STILL_SIZE = { width: 480, height: 270, quality: 0.8, maxBytes: 40_000 } as const;
 
 /**
@@ -57,10 +48,8 @@ export const BACKDROPS = {
 /** Where the camera stands for each view, in metres from the start it looks across from (`back`, `up`), and what it looks at. */
 export const STILL_CAMERA: Readonly<Record<StillView, { back: number; up: number; lookUp: number; fov: number }>> = {
   overview: { back: 6, up: 14, lookUp: 0, fov: 55 },
-  ground: { back: 1, up: 1.7, lookUp: 1.4, fov: 62 },
   aerial: { back: 8, up: 30, lookUp: 0, fov: 60 },
   street: { back: 0, up: 1.2, lookUp: 0, fov: 64 },
-  flag: { back: 9, up: 3.2, lookUp: 1.8, fov: 58 },
 };
 
 /** The map still's file for a map in a light, or null when none was drawn. */
