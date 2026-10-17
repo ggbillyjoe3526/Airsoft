@@ -76,8 +76,8 @@ began:
 
 - **Optimisation.** Profile, then fix. The "can wait" performance items in `docs/KNOWN_ISSUES.md` land here. The
   targets (owner, 2026-10-16): Low holds 60 FPS on modern low-powered hardware, and maxed-out settings aim at a PC built
-  for 4K at 240 Hz (his RTX 5090 desktop). Both are unmeasured until his laptop and desktop baselines are in (PF2,
-  PF3). From the audit: a lint / format tool if a second person joins
+  for 4K at 240 Hz (his RTX 5090 desktop). The desktop is measured (PF3, 2026-10-17): Ultra at 4K runs 200 to 230 FPS,
+  short of 240 Hz, and its line holds today's numbers. The laptop waits on PF2. From the audit: a lint / format tool if a second person joins
   (D-02); the smaller Rapier download (D-01) was done early, on the owner's word (IM3, 2026-10-12).
 - **Balance.** Replicas, how many magazines each carries (4 × 60 AEG, 4 × 18 pistol today), bot difficulty levels, and
   Attack / Defend (about 1 bot round in 10 is won at the pole today; raise time, holds and retakes).

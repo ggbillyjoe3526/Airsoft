@@ -472,8 +472,12 @@ The pipeline's protocol is `pipeline/README.md`; its policy `docs/PROCESS.md`.
   His ceilings of 150 draw calls and 250k triangles stay on High. No dynamic resolution scaling. Raising any line needs a
   decision line.
 - **Maxed-out settings target a PC built for 4K at 240 Hz (owner, 2026-10-16).** His desktop is the reference (Ryzen 9
-  9950X3D, 64 GB, RTX 5090). Ultra at 3840×2160 aims for about 4.2 ms. Those frame times stay reported, not judged,
-  until PF3 sets the line from his baseline. Low's 60 fps floor is unchanged.
+  9950X3D, 64 GB, RTX 5090). Ultra at 3840×2160 aims for about 4.2 ms. Low's 60 fps floor is unchanged.
+- **The desktop's Ultra line at 4K is today's baseline, not the 240 Hz aim (owner, 2026-10-17, PF3).** His first
+  baseline ran Ultra at 200 to 230 FPS (p95 5.4 to 6.0 ms on WebGPU), so the gate judges Ultra at 3840×2160 against
+  p95 ≤ 6.5 ms and p99 ≤ 9 ms (`envs.desktop.ultra` in `pipeline/perf-budget.json`): Ultra can't get slower, and
+  nothing in the game was cut to reach 240 Hz. The 240 Hz aim stands and is unmet (KNOWN_ISSUES). Only Ultra's frame
+  times are judged there; its other lines are the preset's.
 - **Medium has map-scoped draw-call lines: Woodland 120 and Neon Heights 145 (owner, 2026-10-11, W6a).** Other Medium
   lines and every Low line stay the presets'. Woodland's GPU grass and stand-ins cost 2 draws on Medium. The GPU
   dressing's triangles have a line of their own (`dressingTriangles`, `pipeline/perf-budget.json`).
